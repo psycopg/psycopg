@@ -8,7 +8,7 @@ implementation.
 
 # Copyright (C) 2020 The Psycopg Team
 
-from .pq_enums import ConnStatusType
+from .pq_enums import ConnStatus
 
 from . import _pq_ctypes as impl
 
@@ -33,7 +33,7 @@ class PGconn:
     @property
     def status(self):
         rv = impl.PQstatus(self.pgconn_ptr)
-        return ConnStatusType(rv)
+        return ConnStatus(rv)
 
     @property
     def error_message(self):

@@ -9,10 +9,10 @@ implementation-dependant but all the implementations share the same interface.
 
 # Copyright (C) 2020 The Psycopg Team
 
-from .pq_enums import ConnStatusType
+from .pq_enums import ConnStatus
 
 from . import pq_ctypes as pq_module
 
 PGconn = pq_module.PGconn
 
-__all__ = ("ConnStatusType", "PGconn")
+__all__ = ("ConnStatus", "PGconn")

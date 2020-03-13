@@ -7,6 +7,6 @@ libpq enum definitions for psycopg3
 from enum import IntEnum
 
 
-class ConnStatusType(IntEnum):
+class ConnStatus(IntEnum):
     CONNECTION_OK = 0
     CONNECTION_BAD = 1
