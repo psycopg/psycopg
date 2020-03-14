@@ -7,7 +7,7 @@ libpq access using ctypes
 import ctypes
 import ctypes.util
 from ctypes import Structure, POINTER
-from ctypes import c_char_p, c_int
+from ctypes import c_char_p, c_int, c_void_p
 
 pq = ctypes.pydll.LoadLibrary(ctypes.util.find_library("pq"))
 
@@ -70,6 +70,10 @@ PQconninfo = pq.PQconninfo
 PQconninfo.argtypes = [PGconn_ptr]
 PQconninfo.restype = PQconninfoOption_ptr
 
+PQconninfoParse = pq.PQconninfoParse
+PQconninfoParse.argtypes = [c_char_p, POINTER(c_char_p)]
+PQconninfoParse.restype = PQconninfoOption_ptr
+
 PQfinish = pq.PQfinish
 PQfinish.argtypes = [PGconn_ptr]
 PQfinish.restype = None
@@ -104,3 +108,10 @@ PQerrorMessage.restype = c_char_p
 PQsocket = pq.PQsocket
 PQsocket.argtypes = [PGconn_ptr]
 PQsocket.restype = c_int
+
+
+# 33.11. Miscellaneous Functions
+
+PQfreemem = pq.PQfreemem
+PQfreemem.argtypes = [c_void_p]
+PQfreemem.restype = None

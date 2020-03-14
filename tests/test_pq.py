@@ -94,6 +94,24 @@ def test_info(pq, dsn):
     assert dbname.dispsize == 20
 
 
+def test_conninfo_parse(pq):
+    info = pq.PGconn.parse_conninfo(
+        "postgresql://host1:123,host2:456/somedb"
+        "?target_session_attrs=any&application_name=myapp"
+    )
+    info = {i.keyword: i.val for i in info if i.val is not None}
+    assert info["host"] == "host1,host2"
+    assert info["port"] == "123,456"
+    assert info["dbname"] == "somedb"
+    assert info["application_name"] == "myapp"
+
+
+def test_conninfo_parse_bad(pq):
+    with pytest.raises(pq.PQerror) as e:
+        pq.PGconn.parse_conninfo("bad_conninfo=")
+        assert "bad_conninfo" in str(e.value)
+
+
 def test_reset(pq, dsn):
     conn = pq.PGconn.connect(dsn)
     assert conn.status == ConnStatus.CONNECTION_OK

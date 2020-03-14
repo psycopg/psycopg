@@ -9,6 +9,7 @@ implementation.
 # Copyright (C) 2020 The Psycopg Team
 
 from collections import namedtuple
+from ctypes import c_char_p, pointer
 
 from .pq_enums import ConnStatus, PostgresPollingStatus, PGPing
 from . import _pq_ctypes as impl
@@ -44,7 +45,6 @@ class PGconn:
     def connect_start(cls, conninfo):
         if isinstance(conninfo, str):
             conninfo = conninfo.encode("utf8")
-
         if not isinstance(conninfo, bytes):
             raise TypeError("bytes expected, got %r instead" % conninfo)
 
@@ -75,6 +75,28 @@ class PGconn:
         finally:
             impl.PQconninfoFree(opts)
 
+    @classmethod
+    def parse_conninfo(cls, conninfo):
+        if isinstance(conninfo, str):
+            conninfo = conninfo.encode("utf8")
+        if not isinstance(conninfo, bytes):
+            raise TypeError("bytes expected, got %r instead" % conninfo)
+
+        errmsg = c_char_p()
+        rv = impl.PQconninfoParse(conninfo, pointer(errmsg))
+        if not rv:
+            if not errmsg:
+                raise MemoryError("couldn't allocate on conninfo parse")
+            else:
+                exc = PQerror(errmsg.value.decode("utf8", "replace"))
+                impl.PQfreemem(errmsg)
+                raise exc
+
+        try:
+            return _conninfoopts_from_array(rv)
+        finally:
+            impl.PQconninfoFree(rv)
+
     def reset(self):
         impl.PQreset(self.pgconn_ptr)
 
@@ -96,6 +118,8 @@ class PGconn:
     def ping(self, conninfo):
         if isinstance(conninfo, str):
             conninfo = conninfo.encode("utf8")
+        if not isinstance(conninfo, bytes):
+            raise TypeError("bytes expected, got %r instead" % conninfo)
 
         rv = impl.PQping(conninfo)
         return PGPing(rv)

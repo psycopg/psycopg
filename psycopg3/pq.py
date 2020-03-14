@@ -14,5 +14,6 @@ from .pq_enums import ConnStatus
 from . import pq_ctypes as pq_module
 
 PGconn = pq_module.PGconn
+PQerror = pq_module.PQerror
 
-__all__ = ("ConnStatus", "PGconn")
+__all__ = ("ConnStatus", "PGconn", "PQerror")
