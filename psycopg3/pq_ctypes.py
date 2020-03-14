@@ -39,7 +39,7 @@ class PGconn:
         if isinstance(conninfo, str):
             conninfo = conninfo.encode("utf8")
         if not isinstance(conninfo, bytes):
-            raise TypeError("bytes expected, got %r instead" % conninfo)
+            raise TypeError(f"bytes expected, got {conninfo!r} instead")
 
         pgconn_ptr = impl.PQconnectdb(conninfo)
         return cls(pgconn_ptr)
@@ -49,7 +49,7 @@ class PGconn:
         if isinstance(conninfo, str):
             conninfo = conninfo.encode("utf8")
         if not isinstance(conninfo, bytes):
-            raise TypeError("bytes expected, got %r instead" % conninfo)
+            raise TypeError(f"bytes expected, got {conninfo!r} instead")
 
         pgconn_ptr = impl.PQconnectStart(conninfo)
         return cls(pgconn_ptr)
@@ -63,47 +63,15 @@ class PGconn:
         if p is not None:
             impl.PQfinish(p)
 
-    @classmethod
-    def get_defaults(cls):
-        opts = impl.PQconndefaults()
-        if not opts:
-            raise MemoryError("couldn't allocate connection defaults")
-        try:
-            return _conninfoopts_from_array(opts)
-        finally:
-            impl.PQconninfoFree(opts)
-
     @property
     def info(self):
         opts = impl.PQconninfo(self.pgconn_ptr)
         if not opts:
             raise MemoryError("couldn't allocate connection info")
         try:
-            return _conninfoopts_from_array(opts)
+            return Conninfo._options_from_array(opts)
         finally:
             impl.PQconninfoFree(opts)
-
-    @classmethod
-    def parse_conninfo(cls, conninfo):
-        if isinstance(conninfo, str):
-            conninfo = conninfo.encode("utf8")
-        if not isinstance(conninfo, bytes):
-            raise TypeError("bytes expected, got %r instead" % conninfo)
-
-        errmsg = c_char_p()
-        rv = impl.PQconninfoParse(conninfo, pointer(errmsg))
-        if not rv:
-            if not errmsg:
-                raise MemoryError("couldn't allocate on conninfo parse")
-            else:
-                exc = PQerror(errmsg.value.decode("utf8", "replace"))
-                impl.PQfreemem(errmsg)
-                raise exc
-
-        try:
-            return _conninfoopts_from_array(rv)
-        finally:
-            impl.PQconninfoFree(rv)
 
     def reset(self):
         impl.PQreset(self.pgconn_ptr)
@@ -122,7 +90,7 @@ class PGconn:
         if isinstance(conninfo, str):
             conninfo = conninfo.encode("utf8")
         if not isinstance(conninfo, bytes):
-            raise TypeError("bytes expected, got %r instead" % conninfo)
+            raise TypeError(f"bytes expected, got {conninfo!r} instead")
 
         rv = impl.PQping(conninfo)
         return Ping(rv)
@@ -212,7 +180,7 @@ class PGconn:
             # TODO: encode in client encoding
             return s.encode("utf8")
         else:
-            raise TypeError("expected bytes or str, got %r instead" % s)
+            raise TypeError(f"expected bytes or str, got {s!r} instead")
 
     def _decode(self, b):
         if b is None:
@@ -226,20 +194,54 @@ ConninfoOption = namedtuple(
 )
 
 
-def _conninfoopts_from_array(opts):
-    def gets(opt, kw):
-        rv = getattr(opt, kw)
-        if rv is not None:
-            rv = rv.decode("utf8", "replace")
+class Conninfo:
+    @classmethod
+    def get_defaults(cls):
+        opts = impl.PQconndefaults()
+        if not opts:
+            raise MemoryError("couldn't allocate connection defaults")
+        try:
+            return cls._options_from_array(opts)
+        finally:
+            impl.PQconninfoFree(opts)
+
+    @classmethod
+    def parse(cls, conninfo):
+        if isinstance(conninfo, str):
+            conninfo = conninfo.encode("utf8")
+        if not isinstance(conninfo, bytes):
+            raise TypeError(f"bytes expected, got {conninfo!r} instead")
+
+        errmsg = c_char_p()
+        rv = impl.PQconninfoParse(conninfo, pointer(errmsg))
+        if not rv:
+            if not errmsg:
+                raise MemoryError("couldn't allocate on conninfo parse")
+            else:
+                exc = PQerror(errmsg.value.decode("utf8", "replace"))
+                impl.PQfreemem(errmsg)
+                raise exc
+
+        try:
+            return cls._options_from_array(rv)
+        finally:
+            impl.PQconninfoFree(rv)
+
+    @classmethod
+    def _options_from_array(cls, opts):
+        def gets(opt, kw):
+            rv = getattr(opt, kw)
+            if rv is not None:
+                rv = rv.decode("utf8", "replace")
+            return rv
+
+        rv = []
+        skws = "keyword envvar compiled val label dispatcher".split()
+        for opt in opts:
+            if not opt.keyword:
+                break
+            d = {kw: gets(opt, kw) for kw in skws}
+            d["dispsize"] = opt.dispsize
+            rv.append(ConninfoOption(**d))
+
         return rv
-
-    rv = []
-    skws = "keyword envvar compiled val label dispatcher".split()
-    for opt in opts:
-        if not opt.keyword:
-            break
-        d = {kw: gets(opt, kw) for kw in skws}
-        d["dispsize"] = opt.dispsize
-        rv.append(ConninfoOption(**d))
-
-    return rv

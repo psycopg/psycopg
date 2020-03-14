@@ -20,6 +20,7 @@ from . import pq_ctypes as pq_module
 
 PGconn = pq_module.PGconn
 PQerror = pq_module.PQerror
+Conninfo = pq_module.Conninfo
 
 __all__ = (
     "ConnStatus",
@@ -27,5 +28,6 @@ __all__ = (
     "TransactionStatus",
     "Ping",
     "PGconn",
+    "Conninfo",
     "PQerror",
 )

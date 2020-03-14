@@ -60,20 +60,7 @@ def test_connect_async_bad(pq, dsn):
     assert conn.status == ConnStatus.CONNECTION_BAD
 
 
-def test_defaults(pq, tempenv):
-    tempenv["PGPORT"] = "15432"
-    defs = pq.PGconn.get_defaults()
-    assert len(defs) > 20
-    port = [d for d in defs if d.keyword == "port"][0]
-    assert port.envvar == "PGPORT"
-    assert port.compiled == "5432"
-    assert port.val == "15432"
-    assert port.label == "Database-Port"
-    assert port.dispatcher == ""
-    assert port.dispsize == 6
-
-
-def test_info(dsn, pgconn):
+def test_info(pq, dsn, pgconn):
     info = pgconn.info
     assert len(info) > 20
     dbname = [d for d in info if d.keyword == "dbname"][0]
@@ -82,27 +69,9 @@ def test_info(dsn, pgconn):
     assert dbname.dispatcher == ""
     assert dbname.dispsize == 20
 
-    parsed = pgconn.parse_conninfo(dsn)
+    parsed = pq.Conninfo.parse(dsn)
     name = [o.val for o in parsed if o.keyword == "dbname"][0]
     assert dbname.val == name
-
-
-def test_conninfo_parse(pq):
-    info = pq.PGconn.parse_conninfo(
-        "postgresql://host1:123,host2:456/somedb"
-        "?target_session_attrs=any&application_name=myapp"
-    )
-    info = {i.keyword: i.val for i in info if i.val is not None}
-    assert info["host"] == "host1,host2"
-    assert info["port"] == "123,456"
-    assert info["dbname"] == "somedb"
-    assert info["application_name"] == "myapp"
-
-
-def test_conninfo_parse_bad(pq):
-    with pytest.raises(pq.PQerror) as e:
-        pq.PGconn.parse_conninfo("bad_conninfo=")
-        assert "bad_conninfo" in str(e.value)
 
 
 def test_reset(pgconn):
@@ -198,14 +167,14 @@ def test_needs_password(pgconn):
     assert pgconn.needs_password is False
 
 
-def test_used_password(pgconn, tempenv, dsn):
+def test_used_password(pq, pgconn, tempenv, dsn):
     assert isinstance(pgconn.used_password, bool)
 
     # Assume that if a password was passed then it was needed.
     # Note that the server may still need a password passed via pgpass
     # so it may be that has_password is false but still a password was
     # requested by the server and passed by libpq.
-    info = pgconn.parse_conninfo(dsn)
+    info = pq.Conninfo.parse(dsn)
     has_password = (
         "PGPASSWORD" in tempenv
         or [i for i in info if i.keyword == "password"][0].val is not None
