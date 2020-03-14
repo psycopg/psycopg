@@ -92,3 +92,29 @@ def test_info(pq, dsn):
     assert dbname.label == "Database-Name"
     assert dbname.dispatcher == ""
     assert dbname.dispsize == 20
+
+
+def test_reset(pq, dsn):
+    conn = pq.PGconn.connect(dsn)
+    assert conn.status == ConnStatus.CONNECTION_OK
+    # TODO: break it
+    conn.reset()
+    assert conn.status == ConnStatus.CONNECTION_OK
+
+
+def test_reset_async(pq, dsn):
+    conn = pq.PGconn.connect(dsn)
+    assert conn.status == ConnStatus.CONNECTION_OK
+    # TODO: break it
+    conn.reset_start()
+    while 1:
+        rv = conn.connect_poll()
+        if rv == PostgresPollingStatus.PGRES_POLLING_READING:
+            select([conn.socket], [], [])
+        elif rv == PostgresPollingStatus.PGRES_POLLING_WRITING:
+            select([], [conn.socket], [])
+        else:
+            break
+
+    assert rv == PostgresPollingStatus.PGRES_POLLING_OK
+    assert conn.status == ConnStatus.CONNECTION_OK

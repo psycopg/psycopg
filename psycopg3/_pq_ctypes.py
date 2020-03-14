@@ -74,6 +74,18 @@ PQfinish = pq.PQfinish
 PQfinish.argtypes = [PGconn_ptr]
 PQfinish.restype = None
 
+PQreset = pq.PQreset
+PQreset.argtypes = [PGconn_ptr]
+PQreset.restype = None
+
+PQresetStart = pq.PQresetStart
+PQresetStart.argtypes = [PGconn_ptr]
+PQresetStart.restype = c_int
+
+PQresetPoll = pq.PQresetPoll
+PQresetPoll.argtypes = [PGconn_ptr]
+PQresetPoll.restype = c_int
+
 
 # 33.2. Connection Status Functions
 

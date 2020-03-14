@@ -14,6 +14,10 @@ from .pq_enums import ConnStatus, PostgresPollingStatus
 from . import _pq_ctypes as impl
 
 
+class PQerror(Exception):
+    pass
+
+
 class PGconn:
     __slots__ = ("pgconn_ptr",)
 
@@ -70,6 +74,18 @@ class PGconn:
             return _conninfoopts_from_array(opts)
         finally:
             impl.PQconninfoFree(opts)
+
+    def reset(self):
+        impl.PQreset(self.pgconn_ptr)
+
+    def reset_start(self):
+        rv = impl.PQresetStart(self.pgconn_ptr)
+        if rv == 0:
+            raise PQerror("couldn't reset connection")
+
+    def reset_poll(self):
+        rv = impl.PQresetPoll(self.pgconn_ptr)
+        return PostgresPollingStatus(rv)
 
     @property
     def status(self):
