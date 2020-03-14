@@ -187,3 +187,7 @@ def test_protocol_version(pgconn):
 
 def test_server_version(pgconn):
     assert pgconn.server_version >= 90400
+
+
+def test_backend_pid(pgconn):
+    assert 2 <= pgconn.backend_pid <= 65535  # Unless increased in kernel?

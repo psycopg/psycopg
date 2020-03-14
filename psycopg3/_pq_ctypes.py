@@ -157,6 +157,10 @@ PQsocket = pq.PQsocket
 PQsocket.argtypes = [PGconn_ptr]
 PQsocket.restype = c_int
 
+PQbackendPID = pq.PQbackendPID
+PQbackendPID.argtypes = [PGconn_ptr]
+PQbackendPID.restype = c_int
+
 
 # 33.11. Miscellaneous Functions
 

@@ -189,6 +189,10 @@ class PGconn:
     def socket(self):
         return impl.PQsocket(self.pgconn_ptr)
 
+    @property
+    def backend_pid(self):
+        return impl.PQbackendPID(self.pgconn_ptr)
+
     def _encode(self, s):
         if isinstance(s, bytes):
             return s
