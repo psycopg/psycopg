@@ -26,7 +26,7 @@ class PGconn:
             impl.PQfinish(p)
 
     @classmethod
-    def connectdb(cls, conninfo):
+    def connect(cls, conninfo):
         if isinstance(conninfo, str):
             conninfo = conninfo.encode("utf8")
 

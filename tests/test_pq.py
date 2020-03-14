@@ -7,24 +7,24 @@ from psycopg3.pq_enums import ConnStatus, PostgresPollingStatus
 
 
 def test_connectdb(pq, dsn):
-    conn = pq.PGconn.connectdb(dsn)
+    conn = pq.PGconn.connect(dsn)
     assert conn.status == ConnStatus.CONNECTION_OK, conn.error_message
 
 
 def test_connectdb_bytes(pq, dsn):
-    conn = pq.PGconn.connectdb(dsn.encode("utf8"))
+    conn = pq.PGconn.connect(dsn.encode("utf8"))
     assert conn.status == ConnStatus.CONNECTION_OK, conn.error_message
 
 
 def test_connectdb_error(pq):
-    conn = pq.PGconn.connectdb("dbname=psycopg3_test_not_for_real")
+    conn = pq.PGconn.connect("dbname=psycopg3_test_not_for_real")
     assert conn.status == ConnStatus.CONNECTION_BAD
 
 
 @pytest.mark.parametrize("baddsn", [None, 42])
 def test_connectdb_badtype(pq, baddsn):
     with pytest.raises(TypeError):
-        pq.PGconn.connectdb(baddsn)
+        pq.PGconn.connect(baddsn)
 
 
 def test_connect_async(pq, dsn):
@@ -83,7 +83,7 @@ def test_defaults(pq):
 
 
 def test_info(pq, dsn):
-    conn = pq.PGconn.connectdb(dsn)
+    conn = pq.PGconn.connect(dsn)
     info = conn.info
     assert len(info) > 20
     dbname = [d for d in info if d.keyword == "dbname"][0]
