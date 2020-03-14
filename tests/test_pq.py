@@ -183,3 +183,7 @@ def test_parameter_status(pq, dsn, tempenv):
 
 def test_protocol_version(pgconn):
     assert pgconn.protocol_version == 3
+
+
+def test_server_version(pgconn):
+    assert pgconn.server_version >= 90400

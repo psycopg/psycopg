@@ -178,6 +178,10 @@ class PGconn:
         return impl.PQprotocolVersion(self.pgconn_ptr)
 
     @property
+    def server_version(self):
+        return impl.PQserverVersion(self.pgconn_ptr)
+
+    @property
     def error_message(self):
         return self._decode(impl.PQerrorMessage(self.pgconn_ptr))
 
