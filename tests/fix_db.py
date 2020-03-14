@@ -20,10 +20,15 @@ def pq():
     return pq
 
 
-@pytest.fixture()
+@pytest.fixture
 def dsn(request):
     """Return the dsn used to connect to the `--test-dsn` database."""
     dsn = request.config.getoption("--test-dsn")
     if not dsn:
         pytest.skip("skipping test as no --test-dsn")
     return dsn
+
+
+@pytest.fixture
+def pgconn(pq, dsn):
+    return pq.PGconn.connect(dsn)

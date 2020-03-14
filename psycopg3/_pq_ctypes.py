@@ -97,6 +97,38 @@ PQping.restype = c_int
 
 # 33.2. Connection Status Functions
 
+PQdb = pq.PQdb
+PQdb.argtypes = [PGconn_ptr]
+PQdb.restype = c_char_p
+
+PQuser = pq.PQuser
+PQuser.argtypes = [PGconn_ptr]
+PQuser.restype = c_char_p
+
+PQpass = pq.PQpass
+PQpass.argtypes = [PGconn_ptr]
+PQpass.restype = c_char_p
+
+PQhost = pq.PQhost
+PQhost.argtypes = [PGconn_ptr]
+PQhost.restype = c_char_p
+
+PQhostaddr = pq.PQhostaddr
+PQhostaddr.argtypes = [PGconn_ptr]
+PQhostaddr.restype = c_char_p
+
+PQport = pq.PQport
+PQport.argtypes = [PGconn_ptr]
+PQport.restype = c_char_p
+
+PQtty = pq.PQtty
+PQtty.argtypes = [PGconn_ptr]
+PQtty.restype = c_char_p
+
+PQoptions = pq.PQoptions
+PQoptions.argtypes = [PGconn_ptr]
+PQoptions.restype = c_char_p
+
 PQstatus = pq.PQstatus
 PQstatus.argtypes = [PGconn_ptr]
 PQstatus.restype = c_int

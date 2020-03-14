@@ -34,7 +34,6 @@ class PGconn:
     def connect(cls, conninfo):
         if isinstance(conninfo, str):
             conninfo = conninfo.encode("utf8")
-
         if not isinstance(conninfo, bytes):
             raise TypeError("bytes expected, got %r instead" % conninfo)
 
@@ -109,11 +108,6 @@ class PGconn:
         rv = impl.PQresetPoll(self.pgconn_ptr)
         return PostgresPollingStatus(rv)
 
-    @property
-    def status(self):
-        rv = impl.PQstatus(self.pgconn_ptr)
-        return ConnStatus(rv)
-
     @classmethod
     def ping(self, conninfo):
         if isinstance(conninfo, str):
@@ -125,13 +119,59 @@ class PGconn:
         return PGPing(rv)
 
     @property
+    def db(self):
+        return self._decode(impl.PQdb(self.pgconn_ptr))
+
+    @property
+    def user(self):
+        return self._decode(impl.PQuser(self.pgconn_ptr))
+
+    @property
+    def password(self):
+        return self._decode(impl.PQpass(self.pgconn_ptr))
+
+    @property
+    def host(self):
+        return self._decode(impl.PQhost(self.pgconn_ptr))
+
+    @property
+    def hostaddr(self):
+        return self._decode(impl.PQhostaddr(self.pgconn_ptr))
+
+    @property
+    def port(self):
+        return self._decode(impl.PQport(self.pgconn_ptr))
+
+    @property
+    def tty(self):
+        return self._decode(impl.PQtty(self.pgconn_ptr))
+
+    @property
+    def options(self):
+        return self._decode(impl.PQoptions(self.pgconn_ptr))
+
+    @property
+    def status(self):
+        rv = impl.PQstatus(self.pgconn_ptr)
+        return ConnStatus(rv)
+
+    @property
     def error_message(self):
-        # TODO: decode
-        return impl.PQerrorMessage(self.pgconn_ptr)
+        return self._decode(impl.PQerrorMessage(self.pgconn_ptr))
 
     @property
     def socket(self):
         return impl.PQsocket(self.pgconn_ptr)
+
+    def _encode(self, s):
+        # TODO: encode in client encoding
+        return s.encode("utf8")
+
+    def _decode(self, b):
+        if b is None:
+            return None
+        # TODO: decode in client encoding
+        return b.decode("utf8", "replace")
 
 
 ConninfoOption = namedtuple(

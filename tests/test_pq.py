@@ -82,16 +82,18 @@ def test_defaults(pq):
     assert port.dispsize == 6
 
 
-def test_info(pq, dsn):
-    conn = pq.PGconn.connect(dsn)
-    info = conn.info
+def test_info(dsn, pgconn):
+    info = pgconn.info
     assert len(info) > 20
     dbname = [d for d in info if d.keyword == "dbname"][0]
     assert dbname.envvar == "PGDATABASE"
-    assert dbname.val == "psycopg3_test"  # TODO: parse from dsn
     assert dbname.label == "Database-Name"
     assert dbname.dispatcher == ""
     assert dbname.dispsize == 20
+
+    parsed = pgconn.parse_conninfo(dsn)
+    name = [o.val for o in parsed if o.keyword == "dbname"][0]
+    assert dbname.val == name
 
 
 def test_conninfo_parse(pq):
@@ -112,30 +114,28 @@ def test_conninfo_parse_bad(pq):
         assert "bad_conninfo" in str(e.value)
 
 
-def test_reset(pq, dsn):
-    conn = pq.PGconn.connect(dsn)
-    assert conn.status == ConnStatus.CONNECTION_OK
+def test_reset(pgconn):
+    assert pgconn.status == ConnStatus.CONNECTION_OK
     # TODO: break it
-    conn.reset()
-    assert conn.status == ConnStatus.CONNECTION_OK
+    pgconn.reset()
+    assert pgconn.status == ConnStatus.CONNECTION_OK
 
 
-def test_reset_async(pq, dsn):
-    conn = pq.PGconn.connect(dsn)
-    assert conn.status == ConnStatus.CONNECTION_OK
+def test_reset_async(pgconn):
+    assert pgconn.status == ConnStatus.CONNECTION_OK
     # TODO: break it
-    conn.reset_start()
+    pgconn.reset_start()
     while 1:
-        rv = conn.connect_poll()
+        rv = pgconn.connect_poll()
         if rv == PostgresPollingStatus.PGRES_POLLING_READING:
-            select([conn.socket], [], [])
+            select([pgconn.socket], [], [])
         elif rv == PostgresPollingStatus.PGRES_POLLING_WRITING:
-            select([], [conn.socket], [])
+            select([], [pgconn.socket], [])
         else:
             break
 
     assert rv == PostgresPollingStatus.PGRES_POLLING_OK
-    assert conn.status == ConnStatus.CONNECTION_OK
+    assert pgconn.status == ConnStatus.CONNECTION_OK
 
 
 def test_ping(pq, dsn):
@@ -144,3 +144,33 @@ def test_ping(pq, dsn):
 
     rv = pq.PGconn.ping("port=99999")
     assert rv == PGPing.PQPING_NO_RESPONSE
+
+
+def test_db(pgconn):
+    name = [o.val for o in pgconn.info if o.keyword == "dbname"][0]
+    assert pgconn.db == name
+
+
+def test_user(pgconn):
+    user = [o.val for o in pgconn.info if o.keyword == "user"][0]
+    assert pgconn.user == user
+
+
+def test_password(pgconn):
+    # not in info
+    assert isinstance(pgconn.password, str)
+
+
+def test_host(pgconn):
+    # might be not in info
+    assert isinstance(pgconn.host, str)
+
+
+def test_hostaddr(pgconn):
+    # not in info
+    assert isinstance(pgconn.hostaddr, str)
+
+
+def test_tty(pgconn):
+    tty = [o.val for o in pgconn.info if o.keyword == "tty"][0]
+    assert pgconn.tty == tty
