@@ -15,11 +15,11 @@ pq = ctypes.pydll.LoadLibrary(ctypes.util.find_library("pq"))
 # libpq data types
 
 
-class PGconn(Structure):
+class PGconn_struct(Structure):
     _fields_ = []
 
 
-PGconn_ptr = POINTER(PGconn)
+PGconn_ptr = POINTER(PGconn_struct)
 
 
 # Function definitions as explained in PostgreSQL 12 documentation
