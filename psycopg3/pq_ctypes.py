@@ -11,7 +11,12 @@ implementation.
 from collections import namedtuple
 from ctypes import c_char_p, pointer
 
-from .pq_enums import ConnStatus, PostgresPollingStatus, PGPing
+from .pq_enums import (
+    ConnStatus,
+    PostgresPollingStatus,
+    TransactionStatus,
+    PGPing,
+)
 from . import _pq_ctypes as impl
 
 
@@ -26,9 +31,7 @@ class PGconn:
         self.pgconn_ptr = pgconn_ptr
 
     def __del__(self):
-        self.pgconn_ptr, p = None, self.pgconn_ptr
-        if p is not None:
-            impl.PQfinish(p)
+        self.finish()
 
     @classmethod
     def connect(cls, conninfo):
@@ -53,6 +56,11 @@ class PGconn:
     def connect_poll(self):
         rv = impl.PQconnectPoll(self.pgconn_ptr)
         return PostgresPollingStatus(rv)
+
+    def finish(self):
+        self.pgconn_ptr, p = None, self.pgconn_ptr
+        if p is not None:
+            impl.PQfinish(p)
 
     @classmethod
     def get_defaults(cls):
@@ -154,6 +162,11 @@ class PGconn:
     def status(self):
         rv = impl.PQstatus(self.pgconn_ptr)
         return ConnStatus(rv)
+
+    @property
+    def transaction_status(self):
+        rv = impl.PQtransactionStatus(self.pgconn_ptr)
+        return TransactionStatus(rv)
 
     @property
     def error_message(self):

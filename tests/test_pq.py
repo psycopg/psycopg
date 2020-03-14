@@ -174,3 +174,10 @@ def test_hostaddr(pgconn):
 def test_tty(pgconn):
     tty = [o.val for o in pgconn.info if o.keyword == "tty"][0]
     assert pgconn.tty == tty
+
+
+def test_transaction_status(pq, pgconn):
+    assert pgconn.transaction_status == pq.TransactionStatus.PQTRANS_IDLE
+    # TODO: test other states
+    pgconn.finish()
+    assert pgconn.transaction_status == pq.TransactionStatus.PQTRANS_UNKNOWN

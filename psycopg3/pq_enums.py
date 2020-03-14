@@ -32,6 +32,14 @@ class PostgresPollingStatus(IntEnum):
     PGRES_POLLING_ACTIVE = auto()
 
 
+class TransactionStatus(IntEnum):
+    PQTRANS_IDLE = 0
+    PQTRANS_ACTIVE = auto()
+    PQTRANS_INTRANS = auto()
+    PQTRANS_INERROR = auto()
+    PQTRANS_UNKNOWN = auto()
+
+
 class PGPing(IntEnum):
     PQPING_OK = 0
     PQPING_REJECT = auto()

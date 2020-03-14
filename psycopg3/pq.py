@@ -9,7 +9,12 @@ implementation-dependant but all the implementations share the same interface.
 
 # Copyright (C) 2020 The Psycopg Team
 
-from .pq_enums import ConnStatus, PostgresPollingStatus, PGPing
+from .pq_enums import (
+    ConnStatus,
+    PostgresPollingStatus,
+    TransactionStatus,
+    PGPing,
+)
 
 from . import pq_ctypes as pq_module
 
@@ -19,6 +24,7 @@ PQerror = pq_module.PQerror
 __all__ = (
     "ConnStatus",
     "PostgresPollingStatus",
+    "TransactionStatus",
     "PGPing",
     "PGconn",
     "PQerror",
