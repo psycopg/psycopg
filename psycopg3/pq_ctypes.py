@@ -51,27 +51,20 @@ class PGconn:
         opts = impl.PQconndefaults()
         if not opts:
             raise MemoryError("couldn't allocate connection defaults")
-
-        def gets(opt, kw):
-            rv = getattr(opt, kw)
-            if rv is not None:
-                rv = rv.decode("utf8", "replace")
-            return rv
-
         try:
-            rv = []
-            skws = "keyword envvar compiled val label dispatcher".split()
-            for opt in opts:
-                if not opt.keyword:
-                    break
-                d = {kw: gets(opt, kw) for kw in skws}
-                d["dispsize"] = opt.dispsize
-                rv.append(ConninfoOption(**d))
-
+            return _conninfoopts_from_array(opts)
         finally:
             impl.PQconninfoFree(opts)
 
-        return rv
+    @property
+    def info(self):
+        opts = impl.PQconninfo(self.pgconn_ptr)
+        if not opts:
+            raise MemoryError("couldn't allocate connection info")
+        try:
+            return _conninfoopts_from_array(opts)
+        finally:
+            impl.PQconninfoFree(opts)
 
     @property
     def status(self):
@@ -91,3 +84,22 @@ class PGconn:
 ConninfoOption = namedtuple(
     "ConninfoOption", "keyword envvar compiled val label dispatcher dispsize"
 )
+
+
+def _conninfoopts_from_array(opts):
+    def gets(opt, kw):
+        rv = getattr(opt, kw)
+        if rv is not None:
+            rv = rv.decode("utf8", "replace")
+        return rv
+
+    rv = []
+    skws = "keyword envvar compiled val label dispatcher".split()
+    for opt in opts:
+        if not opt.keyword:
+            break
+        d = {kw: gets(opt, kw) for kw in skws}
+        d["dispsize"] = opt.dispsize
+        rv.append(ConninfoOption(**d))
+
+    return rv

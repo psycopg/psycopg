@@ -19,9 +19,6 @@ class PGconn_struct(Structure):
     _fields_ = []
 
 
-PGconn_ptr = POINTER(PGconn_struct)
-
-
 class PQconninfoOption_struct(Structure):
     _fields_ = [
         ("keyword", c_char_p),
@@ -32,6 +29,10 @@ class PQconninfoOption_struct(Structure):
         ("dispatcher", c_char_p),
         ("dispsize", c_int),
     ]
+
+
+PGconn_ptr = POINTER(PGconn_struct)
+PQconninfoOption_ptr = POINTER(PQconninfoOption_struct)
 
 
 # Function definitions as explained in PostgreSQL 12 documentation
@@ -59,11 +60,15 @@ PQconnectPoll.restype = c_int
 
 PQconndefaults = pq.PQconndefaults
 PQconndefaults.argtypes = []
-PQconndefaults.restype = POINTER(PQconninfoOption_struct)
+PQconndefaults.restype = PQconninfoOption_ptr
 
 PQconninfoFree = pq.PQconninfoFree
-PQconninfoFree.argtypes = [POINTER(PQconninfoOption_struct)]
+PQconninfoFree.argtypes = [PQconninfoOption_ptr]
 PQconninfoFree.restype = None
+
+PQconninfo = pq.PQconninfo
+PQconninfo.argtypes = [PGconn_ptr]
+PQconninfo.restype = PQconninfoOption_ptr
 
 
 # 33.2. Connection Status Functions

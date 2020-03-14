@@ -1,3 +1,4 @@
+import os
 from select import select
 
 import pytest
@@ -61,11 +62,33 @@ def test_connect_async_bad(pq, dsn):
 
 
 def test_defaults(pq):
-    defs = pq.PGconn.get_defaults()
+    oldport = os.environ.get("PGPORT")
+    try:
+        os.environ["PGPORT"] = "15432"
+        defs = pq.PGconn.get_defaults()
+    finally:
+        if oldport is not None:
+            os.environ["PGPORT"] = oldport
+        else:
+            del os.environ["PGPORT"]
+
     assert len(defs) > 20
     port = [d for d in defs if d.keyword == "port"][0]
     assert port.envvar == "PGPORT"
     assert port.compiled == "5432"
+    assert port.val == "15432"
     assert port.label == "Database-Port"
     assert port.dispatcher == ""
     assert port.dispsize == 6
+
+
+def test_info(pq, dsn):
+    conn = pq.PGconn.connectdb(dsn)
+    info = conn.info
+    assert len(info) > 20
+    dbname = [d for d in info if d.keyword == "dbname"][0]
+    assert dbname.envvar == "PGDATABASE"
+    assert dbname.val == "psycopg3_test"  # TODO: parse from dsn
+    assert dbname.label == "Database-Name"
+    assert dbname.dispatcher == ""
+    assert dbname.dispsize == 20
