@@ -10,7 +10,7 @@ implementation.
 
 from collections import namedtuple
 
-from .pq_enums import ConnStatus, PostgresPollingStatus
+from .pq_enums import ConnStatus, PostgresPollingStatus, PGPing
 from . import _pq_ctypes as impl
 
 
@@ -91,6 +91,14 @@ class PGconn:
     def status(self):
         rv = impl.PQstatus(self.pgconn_ptr)
         return ConnStatus(rv)
+
+    @classmethod
+    def ping(self, conninfo):
+        if isinstance(conninfo, str):
+            conninfo = conninfo.encode("utf8")
+
+        rv = impl.PQping(conninfo)
+        return PGPing(rv)
 
     @property
     def error_message(self):

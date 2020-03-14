@@ -86,6 +86,10 @@ PQresetPoll = pq.PQresetPoll
 PQresetPoll.argtypes = [PGconn_ptr]
 PQresetPoll.restype = c_int
 
+PQping = pq.PQping
+PQping.argtypes = [c_char_p]
+PQping.restype = c_int
+
 
 # 33.2. Connection Status Functions
 

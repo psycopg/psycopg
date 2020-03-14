@@ -3,7 +3,7 @@ from select import select
 
 import pytest
 
-from psycopg3.pq_enums import ConnStatus, PostgresPollingStatus
+from psycopg3.pq_enums import ConnStatus, PostgresPollingStatus, PGPing
 
 
 def test_connectdb(pq, dsn):
@@ -118,3 +118,11 @@ def test_reset_async(pq, dsn):
 
     assert rv == PostgresPollingStatus.PGRES_POLLING_OK
     assert conn.status == ConnStatus.CONNECTION_OK
+
+
+def test_ping(pq, dsn):
+    rv = pq.PGconn.ping(dsn)
+    assert rv == PGPing.PQPING_OK
+
+    rv = pq.PGconn.ping("port=99999")
+    assert rv == PGPing.PQPING_NO_RESPONSE

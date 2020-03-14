@@ -30,3 +30,10 @@ class PostgresPollingStatus(IntEnum):
     PGRES_POLLING_WRITING = auto()
     PGRES_POLLING_OK = auto()
     PGRES_POLLING_ACTIVE = auto()
+
+
+class PGPing(IntEnum):
+    PQPING_OK = 0
+    PQPING_REJECT = auto()
+    PQPING_NO_RESPONSE = auto()
+    PQPING_NO_ATTEMPT = auto()
