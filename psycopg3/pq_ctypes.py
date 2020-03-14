@@ -8,8 +8,9 @@ implementation.
 
 # Copyright (C) 2020 The Psycopg Team
 
-from .pq_enums import ConnStatus, PostgresPollingStatus
+from collections import namedtuple
 
+from .pq_enums import ConnStatus, PostgresPollingStatus
 from . import _pq_ctypes as impl
 
 
@@ -45,6 +46,33 @@ class PGconn:
         rv = impl.PQconnectPoll(self.pgconn_ptr)
         return PostgresPollingStatus(rv)
 
+    @classmethod
+    def get_defaults(cls):
+        opts = impl.PQconndefaults()
+        if not opts:
+            raise MemoryError("couldn't allocate connection defaults")
+
+        def gets(opt, kw):
+            rv = getattr(opt, kw)
+            if rv is not None:
+                rv = rv.decode("utf8", "replace")
+            return rv
+
+        try:
+            rv = []
+            skws = "keyword envvar compiled val label dispatcher".split()
+            for opt in opts:
+                if not opt.keyword:
+                    break
+                d = {kw: gets(opt, kw) for kw in skws}
+                d["dispsize"] = opt.dispsize
+                rv.append(ConninfoOption(**d))
+
+        finally:
+            impl.PQconninfoFree(opts)
+
+        return rv
+
     @property
     def status(self):
         rv = impl.PQstatus(self.pgconn_ptr)
@@ -58,3 +86,8 @@ class PGconn:
     @property
     def socket(self):
         return impl.PQsocket(self.pgconn_ptr)
+
+
+ConninfoOption = namedtuple(
+    "ConninfoOption", "keyword envvar compiled val label dispatcher dispsize"
+)

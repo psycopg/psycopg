@@ -58,3 +58,14 @@ def test_connect_async_bad(pq, dsn):
             assert False, rv
 
     assert conn.status == ConnStatus.CONNECTION_BAD
+
+
+def test_defaults(pq):
+    defs = pq.PGconn.get_defaults()
+    assert len(defs) > 20
+    port = [d for d in defs if d.keyword == "port"][0]
+    assert port.envvar == "PGPORT"
+    assert port.compiled == "5432"
+    assert port.label == "Database-Port"
+    assert port.dispatcher == ""
+    assert port.dispsize == 6
