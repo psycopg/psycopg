@@ -179,3 +179,7 @@ def test_parameter_status(pq, dsn, tempenv):
     pgconn = pq.PGconn.connect(dsn)
     assert pgconn.parameter_status('application_name') == "psycopg3 tests"
     assert pgconn.parameter_status('wat') is None
+
+
+def test_protocol_version(pgconn):
+    assert pgconn.protocol_version == 3

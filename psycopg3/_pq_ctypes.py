@@ -141,6 +141,10 @@ PQparameterStatus = pq.PQparameterStatus
 PQparameterStatus.argtypes = [PGconn_ptr, c_char_p]
 PQparameterStatus.restype = c_char_p
 
+PQprotocolVersion = pq.PQprotocolVersion
+PQprotocolVersion.argtypes = [PGconn_ptr]
+PQprotocolVersion.restype = c_int
+
 PQerrorMessage = pq.PQerrorMessage
 PQerrorMessage.argtypes = [PGconn_ptr]
 PQerrorMessage.restype = c_char_p
