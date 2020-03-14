@@ -20,6 +20,9 @@ class TempEnv:
         self._prev.setdefault(item, os.environ.get(item))
         del os.environ[item]
 
+    def __contains__(self, item):
+        return item in os.environ
+
     def restore(self):
         for k, v in self._prev.items():
             if v is not None:

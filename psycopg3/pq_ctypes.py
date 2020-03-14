@@ -193,6 +193,18 @@ class PGconn:
     def backend_pid(self):
         return impl.PQbackendPID(self.pgconn_ptr)
 
+    @property
+    def needs_password(self):
+        return bool(impl.PQconnectionNeedsPassword(self.pgconn_ptr))
+
+    @property
+    def used_password(self):
+        return bool(impl.PQconnectionUsedPassword(self.pgconn_ptr))
+
+    @property
+    def ssl_in_use(self):
+        return bool(impl.PQsslInUse(self.pgconn_ptr))
+
     def _encode(self, s):
         if isinstance(s, bytes):
             return s

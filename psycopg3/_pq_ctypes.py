@@ -161,6 +161,18 @@ PQbackendPID = pq.PQbackendPID
 PQbackendPID.argtypes = [PGconn_ptr]
 PQbackendPID.restype = c_int
 
+PQconnectionNeedsPassword = pq.PQconnectionNeedsPassword
+PQconnectionNeedsPassword.argtypes = [PGconn_ptr]
+PQconnectionNeedsPassword.restype = c_int
+
+PQconnectionUsedPassword = pq.PQconnectionUsedPassword
+PQconnectionUsedPassword.argtypes = [PGconn_ptr]
+PQconnectionUsedPassword.restype = c_int
+
+PQsslInUse = pq.PQsslInUse
+PQsslInUse.argtypes = [PGconn_ptr]
+PQsslInUse.restype = c_int
+
 
 # 33.11. Miscellaneous Functions
 

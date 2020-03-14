@@ -177,8 +177,8 @@ def test_transaction_status(pq, pgconn):
 def test_parameter_status(pq, dsn, tempenv):
     tempenv["PGAPPNAME"] = "psycopg3 tests"
     pgconn = pq.PGconn.connect(dsn)
-    assert pgconn.parameter_status('application_name') == "psycopg3 tests"
-    assert pgconn.parameter_status('wat') is None
+    assert pgconn.parameter_status("application_name") == "psycopg3 tests"
+    assert pgconn.parameter_status("wat") is None
 
 
 def test_protocol_version(pgconn):
@@ -191,3 +191,38 @@ def test_server_version(pgconn):
 
 def test_backend_pid(pgconn):
     assert 2 <= pgconn.backend_pid <= 65535  # Unless increased in kernel?
+
+
+def test_needs_password(pgconn):
+    # assume connection worked so an eventually needed password wasn't missing
+    assert pgconn.needs_password is False
+
+
+def test_used_password(pgconn, tempenv, dsn):
+    assert isinstance(pgconn.used_password, bool)
+
+    # Assume that if a password was passed then it was needed.
+    # Note that the server may still need a password passed via pgpass
+    # so it may be that has_password is false but still a password was
+    # requested by the server and passed by libpq.
+    info = pgconn.parse_conninfo(dsn)
+    has_password = (
+        "PGPASSWORD" in tempenv
+        or [i for i in info if i.keyword == "password"][0].val is not None
+    )
+    if has_password:
+        assert pgconn.used_password
+
+
+def test_ssl_in_use(pgconn):
+    assert isinstance(pgconn.ssl_in_use, bool)
+
+    # If connecting via socket then ssl is not in use
+    if pgconn.host.startswith("/"):
+        assert not pgconn.ssl_in_use
+    else:
+        sslmode = [i.val for i in pgconn.info if i.keyword == "sslmode"][0]
+        if sslmode not in ("disable", "allow"):
+            # 'prefer' may still connect without ssl
+            # but maybe unlikely in the tests environment?
+            assert pgconn.ssl_in_use
