@@ -3,7 +3,7 @@ from select import select
 
 import pytest
 
-from psycopg3.pq_enums import ConnStatus, PostgresPollingStatus, PGPing
+from psycopg3.pq_enums import ConnStatus, PollingStatus, Ping
 
 
 def test_connectdb(pq, dsn):
@@ -32,11 +32,11 @@ def test_connect_async(pq, dsn):
     while 1:
         assert conn.status != ConnStatus.CONNECTION_BAD
         rv = conn.connect_poll()
-        if rv == PostgresPollingStatus.PGRES_POLLING_OK:
+        if rv == PollingStatus.PGRES_POLLING_OK:
             break
-        elif rv == PostgresPollingStatus.PGRES_POLLING_READING:
+        elif rv == PollingStatus.PGRES_POLLING_READING:
             select([conn.socket], [], [])
-        elif rv == PostgresPollingStatus.PGRES_POLLING_WRITING:
+        elif rv == PollingStatus.PGRES_POLLING_WRITING:
             select([], [conn.socket], [])
         else:
             assert False, rv
@@ -49,11 +49,11 @@ def test_connect_async_bad(pq, dsn):
     while 1:
         assert conn.status != ConnStatus.CONNECTION_BAD
         rv = conn.connect_poll()
-        if rv == PostgresPollingStatus.PGRES_POLLING_FAILED:
+        if rv == PollingStatus.PGRES_POLLING_FAILED:
             break
-        elif rv == PostgresPollingStatus.PGRES_POLLING_READING:
+        elif rv == PollingStatus.PGRES_POLLING_READING:
             select([conn.socket], [], [])
-        elif rv == PostgresPollingStatus.PGRES_POLLING_WRITING:
+        elif rv == PollingStatus.PGRES_POLLING_WRITING:
             select([], [conn.socket], [])
         else:
             assert False, rv
@@ -127,23 +127,23 @@ def test_reset_async(pgconn):
     pgconn.reset_start()
     while 1:
         rv = pgconn.connect_poll()
-        if rv == PostgresPollingStatus.PGRES_POLLING_READING:
+        if rv == PollingStatus.PGRES_POLLING_READING:
             select([pgconn.socket], [], [])
-        elif rv == PostgresPollingStatus.PGRES_POLLING_WRITING:
+        elif rv == PollingStatus.PGRES_POLLING_WRITING:
             select([], [pgconn.socket], [])
         else:
             break
 
-    assert rv == PostgresPollingStatus.PGRES_POLLING_OK
+    assert rv == PollingStatus.PGRES_POLLING_OK
     assert pgconn.status == ConnStatus.CONNECTION_OK
 
 
 def test_ping(pq, dsn):
     rv = pq.PGconn.ping(dsn)
-    assert rv == PGPing.PQPING_OK
+    assert rv == Ping.PQPING_OK
 
     rv = pq.PGconn.ping("port=99999")
-    assert rv == PGPing.PQPING_NO_RESPONSE
+    assert rv == Ping.PQPING_NO_RESPONSE
 
 
 def test_db(pgconn):

@@ -13,9 +13,9 @@ from ctypes import c_char_p, pointer
 
 from .pq_enums import (
     ConnStatus,
-    PostgresPollingStatus,
+    PollingStatus,
     TransactionStatus,
-    PGPing,
+    Ping,
 )
 from . import _pq_ctypes as impl
 
@@ -55,7 +55,7 @@ class PGconn:
 
     def connect_poll(self):
         rv = impl.PQconnectPoll(self.pgconn_ptr)
-        return PostgresPollingStatus(rv)
+        return PollingStatus(rv)
 
     def finish(self):
         self.pgconn_ptr, p = None, self.pgconn_ptr
@@ -114,7 +114,7 @@ class PGconn:
 
     def reset_poll(self):
         rv = impl.PQresetPoll(self.pgconn_ptr)
-        return PostgresPollingStatus(rv)
+        return PollingStatus(rv)
 
     @classmethod
     def ping(self, conninfo):
@@ -124,7 +124,7 @@ class PGconn:
             raise TypeError("bytes expected, got %r instead" % conninfo)
 
         rv = impl.PQping(conninfo)
-        return PGPing(rv)
+        return Ping(rv)
 
     @property
     def db(self):

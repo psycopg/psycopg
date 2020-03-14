@@ -24,7 +24,7 @@ class ConnStatus(IntEnum):
     CONNECTION_CHECK_TARGET = auto()
 
 
-class PostgresPollingStatus(IntEnum):
+class PollingStatus(IntEnum):
     PGRES_POLLING_FAILED = 0
     PGRES_POLLING_READING = auto()
     PGRES_POLLING_WRITING = auto()
@@ -40,7 +40,7 @@ class TransactionStatus(IntEnum):
     PQTRANS_UNKNOWN = auto()
 
 
-class PGPing(IntEnum):
+class Ping(IntEnum):
     PQPING_OK = 0
     PQPING_REJECT = auto()
     PQPING_NO_RESPONSE = auto()

@@ -11,9 +11,9 @@ implementation-dependant but all the implementations share the same interface.
 
 from .pq_enums import (
     ConnStatus,
-    PostgresPollingStatus,
+    PollingStatus,
     TransactionStatus,
-    PGPing,
+    Ping,
 )
 
 from . import pq_ctypes as pq_module
@@ -23,9 +23,9 @@ PQerror = pq_module.PQerror
 
 __all__ = (
     "ConnStatus",
-    "PostgresPollingStatus",
+    "PollingStatus",
     "TransactionStatus",
-    "PGPing",
+    "Ping",
     "PGconn",
     "PQerror",
 )
