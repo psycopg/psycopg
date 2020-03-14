@@ -20,6 +20,11 @@ class PGconn:
     def __init__(self, pgconn_ptr):
         self.pgconn_ptr = pgconn_ptr
 
+    def __del__(self):
+        self.pgconn_ptr, p = None, self.pgconn_ptr
+        if p is not None:
+            impl.PQfinish(p)
+
     @classmethod
     def connectdb(cls, conninfo):
         if isinstance(conninfo, str):

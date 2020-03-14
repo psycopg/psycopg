@@ -70,6 +70,10 @@ PQconninfo = pq.PQconninfo
 PQconninfo.argtypes = [PGconn_ptr]
 PQconninfo.restype = PQconninfoOption_ptr
 
+PQfinish = pq.PQfinish
+PQfinish.argtypes = [PGconn_ptr]
+PQfinish.restype = None
+
 
 # 33.2. Connection Status Functions
 
