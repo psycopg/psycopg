@@ -31,4 +31,5 @@ def dsn(request):
 
 @pytest.fixture
 def pgconn(pq, dsn):
+    """Return a PGconn connection open to `--test-dsn`."""
     return pq.PGconn.connect(dsn)

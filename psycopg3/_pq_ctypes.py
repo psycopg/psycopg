@@ -137,6 +137,10 @@ PQtransactionStatus = pq.PQtransactionStatus
 PQtransactionStatus.argtypes = [PGconn_ptr]
 PQtransactionStatus.restype = c_int
 
+PQparameterStatus = pq.PQparameterStatus
+PQparameterStatus.argtypes = [PGconn_ptr, c_char_p]
+PQparameterStatus.restype = c_char_p
+
 PQerrorMessage = pq.PQerrorMessage
 PQerrorMessage.argtypes = [PGconn_ptr]
 PQerrorMessage.restype = c_char_p

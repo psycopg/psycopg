@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """
 libpq Python wrapper using ctypes bindings.
 
@@ -168,6 +169,10 @@ class PGconn:
         rv = impl.PQtransactionStatus(self.pgconn_ptr)
         return TransactionStatus(rv)
 
+    def parameter_status(self, name):
+        rv = impl.PQparameterStatus(self.pgconn_ptr, self._encode(name))
+        return self._decode(rv)
+
     @property
     def error_message(self):
         return self._decode(impl.PQerrorMessage(self.pgconn_ptr))
@@ -177,8 +182,13 @@ class PGconn:
         return impl.PQsocket(self.pgconn_ptr)
 
     def _encode(self, s):
-        # TODO: encode in client encoding
-        return s.encode("utf8")
+        if isinstance(s, bytes):
+            return s
+        elif isinstance(s, str):
+            # TODO: encode in client encoding
+            return s.encode("utf8")
+        else:
+            raise TypeError("expected bytes or str, got %r instead" % s)
 
     def _decode(self, b):
         if b is None:

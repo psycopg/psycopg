@@ -1,4 +1,3 @@
-import os
 from select import select
 
 import pytest
@@ -61,17 +60,9 @@ def test_connect_async_bad(pq, dsn):
     assert conn.status == ConnStatus.CONNECTION_BAD
 
 
-def test_defaults(pq):
-    oldport = os.environ.get("PGPORT")
-    try:
-        os.environ["PGPORT"] = "15432"
-        defs = pq.PGconn.get_defaults()
-    finally:
-        if oldport is not None:
-            os.environ["PGPORT"] = oldport
-        else:
-            del os.environ["PGPORT"]
-
+def test_defaults(pq, tempenv):
+    tempenv["PGPORT"] = "15432"
+    defs = pq.PGconn.get_defaults()
     assert len(defs) > 20
     port = [d for d in defs if d.keyword == "port"][0]
     assert port.envvar == "PGPORT"
@@ -181,3 +172,10 @@ def test_transaction_status(pq, pgconn):
     # TODO: test other states
     pgconn.finish()
     assert pgconn.transaction_status == pq.TransactionStatus.PQTRANS_UNKNOWN
+
+
+def test_parameter_status(pq, dsn, tempenv):
+    tempenv["PGAPPNAME"] = "psycopg3 tests"
+    pgconn = pq.PGconn.connect(dsn)
+    assert pgconn.parameter_status('application_name') == "psycopg3 tests"
+    assert pgconn.parameter_status('wat') is None
