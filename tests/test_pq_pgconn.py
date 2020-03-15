@@ -8,13 +8,8 @@ def test_connectdb(pq, dsn):
     assert conn.status == pq.ConnStatus.CONNECTION_OK, conn.error_message
 
 
-def test_connectdb_bytes(pq, dsn):
-    conn = pq.PGconn.connect(dsn.encode("utf8"))
-    assert conn.status == pq.ConnStatus.CONNECTION_OK, conn.error_message
-
-
 def test_connectdb_error(pq):
-    conn = pq.PGconn.connect("dbname=psycopg3_test_not_for_real")
+    conn = pq.PGconn.connect(b"dbname=psycopg3_test_not_for_real")
     assert conn.status == pq.ConnStatus.CONNECTION_BAD
 
 
@@ -42,7 +37,7 @@ def test_connect_async(pq, dsn):
 
 
 def test_connect_async_bad(pq, dsn):
-    conn = pq.PGconn.connect_start("dbname=psycopg3_test_not_for_real")
+    conn = pq.PGconn.connect_start(b"dbname=psycopg3_test_not_for_real")
     while 1:
         assert conn.status != pq.ConnStatus.CONNECTION_BAD
         rv = conn.connect_poll()
@@ -61,14 +56,14 @@ def test_connect_async_bad(pq, dsn):
 def test_info(pq, dsn, pgconn):
     info = pgconn.info
     assert len(info) > 20
-    dbname = [d for d in info if d.keyword == "dbname"][0]
-    assert dbname.envvar == "PGDATABASE"
-    assert dbname.label == "Database-Name"
-    assert dbname.dispatcher == ""
+    dbname = [d for d in info if d.keyword == b"dbname"][0]
+    assert dbname.envvar == b"PGDATABASE"
+    assert dbname.label == b"Database-Name"
+    assert dbname.dispatcher == b""
     assert dbname.dispsize == 20
 
     parsed = pq.Conninfo.parse(dsn)
-    name = [o.val for o in parsed if o.keyword == "dbname"][0]
+    name = [o.val for o in parsed if o.keyword == b"dbname"][0]
     assert dbname.val == name
 
 
@@ -100,37 +95,37 @@ def test_ping(pq, dsn):
     rv = pq.PGconn.ping(dsn)
     assert rv == pq.Ping.PQPING_OK
 
-    rv = pq.PGconn.ping("port=99999")
+    rv = pq.PGconn.ping(b"port=99999")
     assert rv == pq.Ping.PQPING_NO_RESPONSE
 
 
 def test_db(pgconn):
-    name = [o.val for o in pgconn.info if o.keyword == "dbname"][0]
+    name = [o.val for o in pgconn.info if o.keyword == b"dbname"][0]
     assert pgconn.db == name
 
 
 def test_user(pgconn):
-    user = [o.val for o in pgconn.info if o.keyword == "user"][0]
+    user = [o.val for o in pgconn.info if o.keyword == b"user"][0]
     assert pgconn.user == user
 
 
 def test_password(pgconn):
     # not in info
-    assert isinstance(pgconn.password, str)
+    assert isinstance(pgconn.password, bytes)
 
 
 def test_host(pgconn):
     # might be not in info
-    assert isinstance(pgconn.host, str)
+    assert isinstance(pgconn.host, bytes)
 
 
 def test_hostaddr(pgconn):
     # not in info
-    assert isinstance(pgconn.hostaddr, str)
+    assert isinstance(pgconn.hostaddr, bytes)
 
 
 def test_tty(pgconn):
-    tty = [o.val for o in pgconn.info if o.keyword == "tty"][0]
+    tty = [o.val for o in pgconn.info if o.keyword == b"tty"][0]
     assert pgconn.tty == tty
 
 
@@ -144,22 +139,22 @@ def test_transaction_status(pq, pgconn):
 def test_parameter_status(pq, dsn, tempenv):
     tempenv["PGAPPNAME"] = "psycopg3 tests"
     pgconn = pq.PGconn.connect(dsn)
-    assert pgconn.parameter_status("application_name") == "psycopg3 tests"
-    assert pgconn.parameter_status("wat") is None
+    assert pgconn.parameter_status(b"application_name") == b"psycopg3 tests"
+    assert pgconn.parameter_status(b"wat") is None
 
 
 def test_encoding(pq, pgconn):
-    res = pgconn.exec_("set client_encoding to latin1")
+    res = pgconn.exec_(b"set client_encoding to latin1")
     assert res.status == pq.ExecStatus.PGRES_COMMAND_OK
-    assert pgconn.parameter_status("client_encoding") == "LATIN1"
+    assert pgconn.parameter_status(b"client_encoding") == b"LATIN1"
 
-    res = pgconn.exec_("set client_encoding to 'utf-8'")
+    res = pgconn.exec_(b"set client_encoding to 'utf-8'")
     assert res.status == pq.ExecStatus.PGRES_COMMAND_OK
-    assert pgconn.parameter_status("client_encoding") == "UTF8"
+    assert pgconn.parameter_status(b"client_encoding") == b"UTF8"
 
-    res = pgconn.exec_("set client_encoding to wat")
+    res = pgconn.exec_(b"set client_encoding to wat")
     assert res.status == pq.ExecStatus.PGRES_FATAL_ERROR
-    assert pgconn.parameter_status("client_encoding") == "UTF8"
+    assert pgconn.parameter_status(b"client_encoding") == b"UTF8"
 
 
 def test_protocol_version(pgconn):
@@ -171,12 +166,10 @@ def test_server_version(pgconn):
 
 
 def test_error_message(pq, pgconn):
-    res = pgconn.exec_("set client_encoding to latin9")
-    assert res.status == pq.ExecStatus.PGRES_COMMAND_OK
-    res = pgconn.exec_(b"set client_encoding to '\xa4'")  # euro sign in latin9
+    res = pgconn.exec_(b"wat")
+    assert res.status == pq.ExecStatus.PGRES_FATAL_ERROR
     msg = pgconn.error_message
-    assert isinstance(msg, str)  # decoded
-    assert "\u20ac" in msg  # decoded ok
+    assert b"wat" in msg
 
 
 def test_backend_pid(pgconn):
@@ -198,7 +191,7 @@ def test_used_password(pq, pgconn, tempenv, dsn):
     info = pq.Conninfo.parse(dsn)
     has_password = (
         "PGPASSWORD" in tempenv
-        or [i for i in info if i.keyword == "password"][0].val is not None
+        or [i for i in info if i.keyword == b"password"][0].val is not None
     )
     if has_password:
         assert pgconn.used_password
@@ -208,11 +201,11 @@ def test_ssl_in_use(pgconn):
     assert isinstance(pgconn.ssl_in_use, bool)
 
     # If connecting via socket then ssl is not in use
-    if pgconn.host.startswith("/"):
+    if pgconn.host.startswith(b"/"):
         assert not pgconn.ssl_in_use
     else:
-        sslmode = [i.val for i in pgconn.info if i.keyword == "sslmode"][0]
-        if sslmode not in ("disable", "allow"):
+        sslmode = [i.val for i in pgconn.info if i.keyword == b"sslmode"][0]
+        if sslmode not in (b"disable", b"allow"):
             # 'prefer' may still connect without ssl
             # but maybe unlikely in the tests environment?
             assert pgconn.ssl_in_use

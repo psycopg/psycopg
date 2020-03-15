@@ -1,10 +1,16 @@
+"""
+Mappings between PostgreSQL and Python encodings.
+"""
+
+# Copyright (C) 2020 The Psycopg Team
+
 py_codecs = {
     "BIG5": "big5",
     "EUC_CN": "gb2312",
     "EUC_JIS_2004": "euc_jis_2004",
     "EUC_JP": "euc_jp",
     "EUC_KR": "euc_kr",
-    "EUC_TW": None,  # not available in Python
+    # "EUC_TW": not available in Python
     "GB18030": "gb18030",
     "GBK": "gbk",
     "ISO_8859_5": "iso8859-5",
@@ -24,7 +30,7 @@ py_codecs = {
     "LATIN7": "iso8859-13",
     "LATIN8": "iso8859-14",
     "LATIN9": "iso8859-15",
-    "MULE_INTERNAL": None,  # not available in Python
+    # "MULE_INTERNAL": not available in Python
     "SHIFT_JIS_2004": "shift_jis_2004",
     "SJIS": "shift_jis",
     "SQL_ASCII": None,  # means no encoding, see PostgreSQL docs

@@ -19,7 +19,6 @@ from .enums import (
     TransactionStatus,
     Ping,
 )
-from .encodings import py_codecs
 from . import _pq_ctypes as impl
 
 
@@ -38,8 +37,6 @@ class PGconn:
 
     @classmethod
     def connect(cls, conninfo):
-        if isinstance(conninfo, str):
-            conninfo = conninfo.encode("utf8")
         if not isinstance(conninfo, bytes):
             raise TypeError(f"bytes expected, got {conninfo!r} instead")
 
@@ -48,8 +45,6 @@ class PGconn:
 
     @classmethod
     def connect_start(cls, conninfo):
-        if isinstance(conninfo, str):
-            conninfo = conninfo.encode("utf8")
         if not isinstance(conninfo, bytes):
             raise TypeError(f"bytes expected, got {conninfo!r} instead")
 
@@ -89,8 +84,6 @@ class PGconn:
 
     @classmethod
     def ping(self, conninfo):
-        if isinstance(conninfo, str):
-            conninfo = conninfo.encode("utf8")
         if not isinstance(conninfo, bytes):
             raise TypeError(f"bytes expected, got {conninfo!r} instead")
 
@@ -99,35 +92,35 @@ class PGconn:
 
     @property
     def db(self):
-        return self._decode(impl.PQdb(self.pgconn_ptr))
+        return impl.PQdb(self.pgconn_ptr)
 
     @property
     def user(self):
-        return self._decode(impl.PQuser(self.pgconn_ptr))
+        return impl.PQuser(self.pgconn_ptr)
 
     @property
     def password(self):
-        return self._decode(impl.PQpass(self.pgconn_ptr))
+        return impl.PQpass(self.pgconn_ptr)
 
     @property
     def host(self):
-        return self._decode(impl.PQhost(self.pgconn_ptr))
+        return impl.PQhost(self.pgconn_ptr)
 
     @property
     def hostaddr(self):
-        return self._decode(impl.PQhostaddr(self.pgconn_ptr))
+        return impl.PQhostaddr(self.pgconn_ptr)
 
     @property
     def port(self):
-        return self._decode(impl.PQport(self.pgconn_ptr))
+        return impl.PQport(self.pgconn_ptr)
 
     @property
     def tty(self):
-        return self._decode(impl.PQtty(self.pgconn_ptr))
+        return impl.PQtty(self.pgconn_ptr)
 
     @property
     def options(self):
-        return self._decode(impl.PQoptions(self.pgconn_ptr))
+        return impl.PQoptions(self.pgconn_ptr)
 
     @property
     def status(self):
@@ -140,10 +133,7 @@ class PGconn:
         return TransactionStatus(rv)
 
     def parameter_status(self, name):
-        rv = impl.PQparameterStatus(
-            self.pgconn_ptr, self._encode(name, "utf8")
-        )
-        return self._decode(rv, "utf8")
+        return impl.PQparameterStatus(self.pgconn_ptr, name)
 
     @property
     def protocol_version(self):
@@ -155,7 +145,7 @@ class PGconn:
 
     @property
     def error_message(self):
-        return self._decode(impl.PQerrorMessage(self.pgconn_ptr))
+        return impl.PQerrorMessage(self.pgconn_ptr)
 
     @property
     def socket(self):
@@ -178,40 +168,12 @@ class PGconn:
         return bool(impl.PQsslInUse(self.pgconn_ptr))
 
     def exec_(self, command):
-        rv = impl.PQexec(self.pgconn_ptr, self._encode(command))
+        if not isinstance(command, bytes):
+            raise TypeError(f"bytes expected, got {command!r} instead")
+        rv = impl.PQexec(self.pgconn_ptr, command)
         if rv is None:
             raise MemoryError("couldn't allocate PGresult")
         return PGresult(rv)
-
-    def _encode(self, s, py_enc=None):
-        if isinstance(s, bytes):
-            return s
-        elif isinstance(s, str):
-            if py_enc is None:
-                pg_enc = self.parameter_status("client_encoding")
-                py_enc = py_codecs[pg_enc]
-                if py_enc is None:
-                    raise PQerror(
-                        f"PostgreSQL encoding {pg_enc} doesn't have a Python codec."
-                        f" Please use bytes instead of str"
-                    )
-            return s.encode(py_enc)
-        else:
-            raise TypeError(f"expected bytes or str, got {s!r} instead")
-
-    def _decode(self, b, py_enc=None):
-        if b is None:
-            return None
-
-        if py_enc is None:
-            pg_enc = self.parameter_status("client_encoding")
-            py_enc = py_codecs[pg_enc]
-
-        if py_enc is not None:
-            return b.decode(py_enc)
-        else:
-            # pretty much a punt, but this is only for communication, no data
-            return b.decode("utf8", "replace")
 
 
 class PGresult:
@@ -252,8 +214,6 @@ class Conninfo:
 
     @classmethod
     def parse(cls, conninfo):
-        if isinstance(conninfo, str):
-            conninfo = conninfo.encode("utf8")
         if not isinstance(conninfo, bytes):
             raise TypeError(f"bytes expected, got {conninfo!r} instead")
 
@@ -263,7 +223,7 @@ class Conninfo:
             if not errmsg:
                 raise MemoryError("couldn't allocate on conninfo parse")
             else:
-                exc = PQerror(errmsg.value.decode("utf8", "replace"))
+                exc = PQerror(errmsg.value)
                 impl.PQfreemem(errmsg)
                 raise exc
 
@@ -274,18 +234,12 @@ class Conninfo:
 
     @classmethod
     def _options_from_array(cls, opts):
-        def gets(opt, kw):
-            rv = getattr(opt, kw)
-            if rv is not None:
-                rv = rv.decode("utf8", "replace")
-            return rv
-
         rv = []
         skws = "keyword envvar compiled val label dispatcher".split()
         for opt in opts:
             if not opt.keyword:
                 break
-            d = {kw: gets(opt, kw) for kw in skws}
+            d = {kw: getattr(opt, kw) for kw in skws}
             d["dispsize"] = opt.dispsize
             rv.append(ConninfoOption(**d))
 

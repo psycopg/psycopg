@@ -26,7 +26,7 @@ def dsn(request):
     dsn = request.config.getoption("--test-dsn")
     if not dsn:
         pytest.skip("skipping test as no --test-dsn")
-    return dsn
+    return dsn.encode("utf8")
 
 
 @pytest.fixture
