@@ -15,6 +15,7 @@ from .enums import (
     ExecStatus,
     TransactionStatus,
     Ping,
+    DiagnosticField,
 )
 
 from . import pq_ctypes as pq_module
@@ -29,6 +30,7 @@ __all__ = (
     "TransactionStatus",
     "ExecStatus",
     "Ping",
+    "DiagnosticField",
     "PGconn",
     "Conninfo",
     "PQerror",
