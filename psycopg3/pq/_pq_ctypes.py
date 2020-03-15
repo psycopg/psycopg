@@ -7,12 +7,15 @@ libpq access using ctypes
 import ctypes
 import ctypes.util
 from ctypes import Structure, POINTER
-from ctypes import c_char_p, c_int, c_void_p
+from ctypes import c_char, c_char_p, c_int, c_uint, c_void_p
 
 pq = ctypes.pydll.LoadLibrary(ctypes.util.find_library("pq"))
 
 
 # libpq data types
+
+
+Oid = c_uint
 
 
 class PGconn_struct(Structure):
@@ -187,13 +190,105 @@ PQexec = pq.PQexec
 PQexec.argtypes = [PGconn_ptr, c_char_p]
 PQexec.restype = PGresult_ptr
 
+PQexecParams = pq.PQexecParams
+PQexecParams.argtypes = [
+    PGconn_ptr,
+    c_char_p,
+    c_int,
+    POINTER(Oid),
+    POINTER(c_char_p),
+    POINTER(c_int),
+    POINTER(c_int),
+    c_int,
+]
+PQexecParams.restype = PGresult_ptr
+
 PQresultStatus = pq.PQresultStatus
 PQresultStatus.argtypes = [PGresult_ptr]
 PQresultStatus.restype = c_int
 
+# PQresStatus: not needed, we have pretty enums
+
+PQresultErrorMessage = pq.PQresultErrorMessage
+PQresultErrorMessage.argtypes = [PGresult_ptr]
+PQresultErrorMessage.restype = c_char_p
+
+# TODO: PQresultVerboseErrorMessage
+
+PQresultErrorField = pq.PQresultErrorField
+PQresultErrorField.argtypes = [PGresult_ptr, c_int]
+PQresultErrorField.restype = c_char_p
+
 PQclear = pq.PQclear
 PQclear.argtypes = [PGresult_ptr]
 PQclear.restype = None
+
+
+# 33.3.2. Retrieving Query Result Information
+
+PQntuples = pq.PQntuples
+PQntuples.argtypes = [PGresult_ptr]
+PQntuples.restype = c_int
+
+PQnfields = pq.PQnfields
+PQnfields.argtypes = [PGresult_ptr]
+PQnfields.restype = c_int
+
+PQfname = pq.PQfname
+PQfname.argtypes = [PGresult_ptr, c_int]
+PQfname.restype = c_char_p
+
+# PQfnumber: useless and hard to use
+
+PQftable = pq.PQftable
+PQftable.argtypes = [PGresult_ptr, c_int]
+PQftable.restype = Oid
+
+PQftablecol = pq.PQftablecol
+PQftablecol.argtypes = [PGresult_ptr, c_int]
+PQftablecol.restype = c_int
+
+PQfformat = pq.PQfformat
+PQfformat.argtypes = [PGresult_ptr, c_int]
+PQfformat.restype = c_int
+
+PQftype = pq.PQftype
+PQftype.argtypes = [PGresult_ptr, c_int]
+PQftype.restype = Oid
+
+PQfmod = pq.PQfmod
+PQfmod.argtypes = [PGresult_ptr, c_int]
+PQfmod.restype = c_int
+
+PQfsize = pq.PQfsize
+PQfsize.argtypes = [PGresult_ptr, c_int]
+PQfsize.restype = c_int
+
+PQbinaryTuples = pq.PQbinaryTuples
+PQbinaryTuples.argtypes = [PGresult_ptr]
+PQbinaryTuples.restype = c_int
+
+PQgetvalue = pq.PQgetvalue
+PQgetvalue.argtypes = [PGresult_ptr, c_int, c_int]
+PQgetvalue.restype = POINTER(c_char)  # not a null-terminated string
+
+PQgetisnull = pq.PQgetisnull
+PQgetisnull.argtypes = [PGresult_ptr, c_int, c_int]
+PQgetisnull.restype = c_int
+
+PQgetlength = pq.PQgetlength
+PQgetlength.argtypes = [PGresult_ptr, c_int, c_int]
+PQgetlength.restype = c_int
+
+PQnparams = pq.PQnparams
+PQnparams.argtypes = [PGresult_ptr]
+PQnparams.restype = c_int
+
+PQparamtype = pq.PQparamtype
+PQparamtype.argtypes = [PGresult_ptr, c_int]
+PQparamtype.restype = Oid
+
+# PQprint: pretty useless
 
 
 # 33.11. Miscellaneous Functions

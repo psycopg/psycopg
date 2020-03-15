@@ -10,7 +10,8 @@ implementation.
 # Copyright (C) 2020 The Psycopg Team
 
 from collections import namedtuple
-from ctypes import c_char_p, pointer
+from ctypes import string_at
+from ctypes import c_char_p, c_int, pointer
 
 from .enums import (
     ConnStatus,
@@ -175,6 +176,60 @@ class PGconn:
             raise MemoryError("couldn't allocate PGresult")
         return PGresult(rv)
 
+    def exec_params(
+        self,
+        command,
+        param_values,
+        param_types=None,
+        param_formats=None,
+        result_format=0,
+    ):
+        if not isinstance(command, bytes):
+            raise TypeError(f"bytes expected, got {command!r} instead")
+
+        nparams = len(param_values)
+        if nparams:
+            aparams = (c_char_p * nparams)(*param_values)
+            alenghts = (c_int * nparams)(
+                *(len(p) if p is not None else 0 for p in param_values)
+            )
+        else:
+            aparams = alenghts = None
+
+        if param_types is None:
+            atypes = None
+        else:
+            if len(param_types) != nparams:
+                raise ValueError(
+                    "got %d param_values but %d param_types"
+                    % (nparams, len(param_types))
+                )
+            atypes = (impl.Oid * nparams)(*param_types)
+
+        if param_formats is None:
+            aformats = None
+        else:
+            if len(param_formats) != nparams:
+                raise ValueError(
+                    "got %d param_values but %d param_types"
+                    % (nparams, len(param_formats))
+                )
+            aformats = (c_int * nparams)(*param_formats)
+
+        rv = impl.PQexecParams(
+            self.pgconn_ptr,
+            command,
+            nparams,
+            atypes,
+            aparams,
+            alenghts,
+            aformats,
+            result_format,
+        )
+        if rv is None:
+            raise MemoryError("couldn't allocate PGresult")
+        return PGresult(rv)
+
 
 class PGresult:
     __slots__ = ("pgresult_ptr",)
@@ -194,6 +249,57 @@ class PGresult:
     def status(self):
         rv = impl.PQresultStatus(self.pgresult_ptr)
         return ExecStatus(rv)
+
+    @property
+    def error_message(self):
+        return impl.PQresultErrorMessage(self.pgresult_ptr)
+
+    def error_field(self, fieldcode):
+        return impl.PQresultErrorField(self.pgresult_ptr, fieldcode)
+
+    @property
+    def ntuples(self):
+        return impl.PQntuples(self.pgresult_ptr)
+
+    @property
+    def nfields(self):
+        return impl.PQnfields(self.pgresult_ptr)
+
+    def fname(self, column_number):
+        return impl.PQfname(self.pgresult_ptr, column_number)
+
+    def ftable(self, column_number):
+        return impl.PQftable(self.pgresult_ptr, column_number)
+
+    def ftablecol(self, column_number):
+        return impl.PQftablecol(self.pgresult_ptr, column_number)
+
+    def fformat(self, column_number):
+        return impl.PQfformat(self.pgresult_ptr, column_number)
+
+    def ftype(self, column_number):
+        return impl.PQftype(self.pgresult_ptr, column_number)
+
+    def fmod(self, column_number):
+        return impl.PQfmod(self.pgresult_ptr, column_number)
+
+    def fsize(self, column_number):
+        return impl.PQfsize(self.pgresult_ptr, column_number)
+
+    @property
+    def binary_tuples(self):
+        return impl.PQbinaryTuples(self.pgresult_ptr)
+
+    def get_value(self, row_number, column_number):
+        length = impl.PQgetlength(self.pgresult_ptr, row_number, column_number)
+        if length:
+            v = impl.PQgetvalue(self.pgresult_ptr, row_number, column_number)
+            return string_at(v, length)
+        else:
+            if impl.PQgetisnull(self.pgresult_ptr, row_number, column_number):
+                return None
+            else:
+                return b""
 
 
 ConninfoOption = namedtuple(
