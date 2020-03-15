@@ -19,6 +19,7 @@ from .pq_enums import (
     TransactionStatus,
     Ping,
 )
+from .pq_encodings import py_codecs
 from . import _pq_ctypes as impl
 
 
@@ -139,8 +140,10 @@ class PGconn:
         return TransactionStatus(rv)
 
     def parameter_status(self, name):
-        rv = impl.PQparameterStatus(self.pgconn_ptr, self._encode(name))
-        return self._decode(rv)
+        rv = impl.PQparameterStatus(
+            self.pgconn_ptr, self._encode(name, "utf8")
+        )
+        return self._decode(rv, "utf8")
 
     @property
     def protocol_version(self):
@@ -180,20 +183,35 @@ class PGconn:
             raise MemoryError("couldn't allocate PGresult")
         return PGresult(rv)
 
-    def _encode(self, s):
+    def _encode(self, s, py_enc=None):
         if isinstance(s, bytes):
             return s
         elif isinstance(s, str):
-            # TODO: encode in client encoding
-            return s.encode("utf8")
+            if py_enc is None:
+                pg_enc = self.parameter_status("client_encoding")
+                py_enc = py_codecs[pg_enc]
+                if py_enc is None:
+                    raise PQerror(
+                        f"PostgreSQL encoding {pg_enc} doesn't have a Python codec."
+                        f" Please use bytes instead of str"
+                    )
+            return s.encode(py_enc)
         else:
             raise TypeError(f"expected bytes or str, got {s!r} instead")
 
-    def _decode(self, b):
+    def _decode(self, b, py_enc=None):
         if b is None:
             return None
-        # TODO: decode in client encoding
-        return b.decode("utf8", "replace")
+
+        if py_enc is None:
+            pg_enc = self.parameter_status("client_encoding")
+            py_enc = py_codecs[pg_enc]
+
+        if py_enc is not None:
+            return b.decode(py_enc)
+        else:
+            # pretty much a punt, but this is only for communication, no data
+            return b.decode("utf8", "replace")
 
 
 class PGresult:

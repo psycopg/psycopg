@@ -150,12 +150,35 @@ def test_parameter_status(pq, dsn, tempenv):
     assert pgconn.parameter_status("wat") is None
 
 
+def test_encoding(pq, pgconn):
+    res = pgconn.exec_("set client_encoding to latin1")
+    assert res.status == pq.ExecStatus.PGRES_COMMAND_OK
+    assert pgconn.parameter_status("client_encoding") == "LATIN1"
+
+    res = pgconn.exec_("set client_encoding to 'utf-8'")
+    assert res.status == pq.ExecStatus.PGRES_COMMAND_OK
+    assert pgconn.parameter_status("client_encoding") == "UTF8"
+
+    res = pgconn.exec_("set client_encoding to wat")
+    assert res.status == pq.ExecStatus.PGRES_FATAL_ERROR
+    assert pgconn.parameter_status("client_encoding") == "UTF8"
+
+
 def test_protocol_version(pgconn):
     assert pgconn.protocol_version == 3
 
 
 def test_server_version(pgconn):
     assert pgconn.server_version >= 90400
+
+
+def test_error_message(pq, pgconn):
+    res = pgconn.exec_("set client_encoding to latin9")
+    assert res.status == pq.ExecStatus.PGRES_COMMAND_OK
+    res = pgconn.exec_(b"set client_encoding to '\xa4'")  # euro sign in latin9
+    msg = pgconn.error_message
+    assert isinstance(msg, str)  # decoded
+    assert "\u20ac" in msg  # decoded ok
 
 
 def test_backend_pid(pgconn):

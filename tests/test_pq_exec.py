@@ -9,3 +9,8 @@ def test_exec_empty(pq, pgconn):
 def test_exec_command(pq, pgconn):
     res = pgconn.exec_("set timezone to utc")
     assert res.status == pq.ExecStatus.PGRES_COMMAND_OK
+
+
+def test_exec_error(pq, pgconn):
+    res = pgconn.exec_("wat")
+    assert res.status == pq.ExecStatus.PGRES_FATAL_ERROR
