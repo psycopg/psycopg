@@ -12,14 +12,14 @@ implementation.
 from collections import namedtuple
 from ctypes import c_char_p, pointer
 
-from .pq_enums import (
+from .enums import (
     ConnStatus,
     PollingStatus,
     ExecStatus,
     TransactionStatus,
     Ping,
 )
-from .pq_encodings import py_codecs
+from .encodings import py_codecs
 from . import _pq_ctypes as impl
 
 

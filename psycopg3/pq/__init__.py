@@ -9,7 +9,7 @@ implementation-dependant but all the implementations share the same interface.
 
 # Copyright (C) 2020 The Psycopg Team
 
-from .pq_enums import (
+from .enums import (
     ConnStatus,
     PollingStatus,
     ExecStatus,
