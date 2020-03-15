@@ -32,6 +32,19 @@ class PollingStatus(IntEnum):
     PGRES_POLLING_ACTIVE = auto()
 
 
+class ExecStatus(IntEnum):
+    PGRES_EMPTY_QUERY = 0
+    PGRES_COMMAND_OK = auto()
+    PGRES_TUPLES_OK = auto()
+    PGRES_COPY_OUT = auto()
+    PGRES_COPY_IN = auto()
+    PGRES_BAD_RESPONSE = auto()
+    PGRES_NONFATAL_ERROR = auto()
+    PGRES_FATAL_ERROR = auto()
+    PGRES_COPY_BOTH = auto()
+    PGRES_SINGLE_TUPLE = auto()
+
+
 class TransactionStatus(IntEnum):
     PQTRANS_IDLE = 0
     PQTRANS_ACTIVE = auto()

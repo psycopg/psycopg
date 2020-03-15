@@ -12,6 +12,7 @@ implementation-dependant but all the implementations share the same interface.
 from .pq_enums import (
     ConnStatus,
     PollingStatus,
+    ExecStatus,
     TransactionStatus,
     Ping,
 )
@@ -26,6 +27,7 @@ __all__ = (
     "ConnStatus",
     "PollingStatus",
     "TransactionStatus",
+    "ExecStatus",
     "Ping",
     "PGconn",
     "Conninfo",

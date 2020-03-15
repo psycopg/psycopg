@@ -15,6 +15,7 @@ from ctypes import c_char_p, pointer
 from .pq_enums import (
     ConnStatus,
     PollingStatus,
+    ExecStatus,
     TransactionStatus,
     Ping,
 )
@@ -173,6 +174,12 @@ class PGconn:
     def ssl_in_use(self):
         return bool(impl.PQsslInUse(self.pgconn_ptr))
 
+    def exec_(self, command):
+        rv = impl.PQexec(self.pgconn_ptr, self._encode(command))
+        if rv is None:
+            raise MemoryError("couldn't allocate PGresult")
+        return PGresult(rv)
+
     def _encode(self, s):
         if isinstance(s, bytes):
             return s
@@ -187,6 +194,26 @@ class PGconn:
             return None
         # TODO: decode in client encoding
         return b.decode("utf8", "replace")
+
+
+class PGresult:
+    __slots__ = ("pgresult_ptr",)
+
+    def __init__(self, pgresult_ptr):
+        self.pgresult_ptr = pgresult_ptr
+
+    def __del__(self):
+        self.clear()
+
+    def clear(self):
+        self.pgresult_ptr, p = None, self.pgresult_ptr
+        if p is not None:
+            impl.PQclear(p)
+
+    @property
+    def status(self):
+        rv = impl.PQresultStatus(self.pgresult_ptr)
+        return ExecStatus(rv)
 
 
 ConninfoOption = namedtuple(

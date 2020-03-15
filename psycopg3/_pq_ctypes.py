@@ -19,6 +19,10 @@ class PGconn_struct(Structure):
     _fields_ = []
 
 
+class PGresult_struct(Structure):
+    _fields_ = []
+
+
 class PQconninfoOption_struct(Structure):
     _fields_ = [
         ("keyword", c_char_p),
@@ -32,6 +36,7 @@ class PQconninfoOption_struct(Structure):
 
 
 PGconn_ptr = POINTER(PGconn_struct)
+PGresult_ptr = POINTER(PGresult_struct)
 PQconninfoOption_ptr = POINTER(PQconninfoOption_struct)
 
 
@@ -172,6 +177,23 @@ PQconnectionUsedPassword.restype = c_int
 PQsslInUse = pq.PQsslInUse
 PQsslInUse.argtypes = [PGconn_ptr]
 PQsslInUse.restype = c_int
+
+# TODO: PQsslAttribute, PQsslAttributeNames, PQsslStruct, PQgetssl
+
+
+# 33.3. Command Execution Functions
+
+PQexec = pq.PQexec
+PQexec.argtypes = [PGconn_ptr, c_char_p]
+PQexec.restype = PGresult_ptr
+
+PQresultStatus = pq.PQresultStatus
+PQresultStatus.argtypes = [PGresult_ptr]
+PQresultStatus.restype = c_int
+
+PQclear = pq.PQclear
+PQclear.argtypes = [PGresult_ptr]
+PQclear.restype = None
 
 
 # 33.11. Miscellaneous Functions
