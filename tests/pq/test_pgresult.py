@@ -111,3 +111,15 @@ def test_get_value(pq, pgconn):
     assert res.get_value(0, 0) == b"a"
     assert res.get_value(0, 1) == b""
     assert res.get_value(0, 2) is None
+
+
+def test_nparams_types(pq, pgconn):
+    res = pgconn.prepare(b"", b"select $1::int, $2::text")
+    assert res.status == pq.ExecStatus.PGRES_COMMAND_OK, res.error_message
+
+    res = pgconn.describe_prepared(b"")
+    assert res.status == pq.ExecStatus.PGRES_COMMAND_OK, res.error_message
+
+    assert res.nparams == 2
+    assert res.param_type(0) == 23
+    assert res.param_type(1) == 25

@@ -203,6 +203,30 @@ PQexecParams.argtypes = [
 ]
 PQexecParams.restype = PGresult_ptr
 
+PQprepare = pq.PQprepare
+PQprepare.argtypes = [PGconn_ptr, c_char_p, c_char_p, c_int, POINTER(Oid)]
+PQprepare.restype = PGresult_ptr
+
+PQexecPrepared = pq.PQexecPrepared
+PQexecPrepared.argtypes = [
+    PGconn_ptr,
+    c_char_p,
+    c_int,
+    POINTER(c_char_p),
+    POINTER(c_int),
+    POINTER(c_int),
+    c_int,
+]
+PQexecPrepared.restype = PGresult_ptr
+
+PQdescribePrepared = pq.PQdescribePrepared
+PQdescribePrepared.argtypes = [PGconn_ptr, c_char_p]
+PQdescribePrepared.restype = PGresult_ptr
+
+PQdescribePortal = pq.PQdescribePortal
+PQdescribePortal.argtypes = [PGconn_ptr, c_char_p]
+PQdescribePortal.restype = PGresult_ptr
+
 PQresultStatus = pq.PQresultStatus
 PQresultStatus.argtypes = [PGresult_ptr]
 PQresultStatus.restype = c_int

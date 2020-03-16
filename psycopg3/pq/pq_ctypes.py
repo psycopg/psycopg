@@ -239,6 +239,82 @@ class PGconn:
             raise MemoryError("couldn't allocate PGresult")
         return PGresult(rv)
 
+    def prepare(
+        self, name, command, param_types=None,
+    ):
+        if not isinstance(name, bytes):
+            raise TypeError(
+                "'name' must be bytes, got %s instead" % type(name).__name__
+            )
+
+        if not isinstance(command, bytes):
+            raise TypeError(
+                "'command' must be bytes, got %s instead"
+                % type(command).__name__
+            )
+
+        if param_types is None:
+            nparams = 0
+            atypes = None
+        else:
+            nparams = len(param_types)
+            atypes = (impl.Oid * nparams)(*param_types)
+
+        rv = impl.PQprepare(self.pgconn_ptr, name, command, nparams, atypes,)
+        if rv is None:
+            raise MemoryError("couldn't allocate PGresult")
+        return PGresult(rv)
+
+    def exec_prepared(
+        self, name, param_values, param_formats=None, result_format=0,
+    ):
+        if not isinstance(name, bytes):
+            raise TypeError(
+                "'name' must be bytes, got %s instead" % type(name).__name__
+            )
+
+        nparams = len(param_values)
+        if nparams:
+            aparams = (c_char_p * nparams)(*param_values)
+            alenghts = (c_int * nparams)(
+                *(len(p) if p is not None else 0 for p in param_values)
+            )
+        else:
+            aparams = alenghts = None
+
+        if param_formats is None:
+            aformats = None
+        else:
+            if len(param_formats) != nparams:
+                raise ValueError(
+                    "got %d param_values but %d param_types"
+                    % (nparams, len(param_formats))
+                )
+            aformats = (c_int * nparams)(*param_formats)
+
+        rv = impl.PQexecPrepared(
+            self.pgconn_ptr,
+            name,
+            nparams,
+            aparams,
+            alenghts,
+            aformats,
+            result_format,
+        )
+        if rv is None:
+            raise MemoryError("couldn't allocate PGresult")
+        return PGresult(rv)
+
+    def describe_prepared(self, name):
+        if not isinstance(name, bytes):
+            raise TypeError(
+                "'name' must be bytes, got %s instead" % type(name).__name__
+            )
+        rv = impl.PQdescribePrepared(self.pgconn_ptr, name)
+        if rv is None:
+            raise MemoryError("couldn't allocate PGresult")
+        return PGresult(rv)
+
 
 class PGresult:
     __slots__ = ("pgresult_ptr",)
@@ -309,6 +385,13 @@ class PGresult:
                 return None
             else:
                 return b""
+
+    @property
+    def nparams(self):
+        return impl.PQnparams(self.pgresult_ptr)
+
+    def param_type(self, param_number):
+        return impl.PQparamtype(self.pgresult_ptr, param_number)
 
 
 ConninfoOption = namedtuple(
