@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 libpq Python wrapper using ctypes bindings.
 
@@ -39,7 +38,9 @@ class PGconn:
     @classmethod
     def connect(cls, conninfo):
         if not isinstance(conninfo, bytes):
-            raise TypeError(f"bytes expected, got {conninfo!r} instead")
+            raise TypeError(
+                "bytes expected, got %s instead" % type(conninfo).__name__
+            )
 
         pgconn_ptr = impl.PQconnectdb(conninfo)
         return cls(pgconn_ptr)
@@ -47,7 +48,9 @@ class PGconn:
     @classmethod
     def connect_start(cls, conninfo):
         if not isinstance(conninfo, bytes):
-            raise TypeError(f"bytes expected, got {conninfo!r} instead")
+            raise TypeError(
+                "bytes expected, got %s instead" % type(conninfo).__name__
+            )
 
         pgconn_ptr = impl.PQconnectStart(conninfo)
         return cls(pgconn_ptr)
@@ -86,7 +89,9 @@ class PGconn:
     @classmethod
     def ping(self, conninfo):
         if not isinstance(conninfo, bytes):
-            raise TypeError(f"bytes expected, got {conninfo!r} instead")
+            raise TypeError(
+                "bytes expected, got %s instead" % type(conninfo).__name__
+            )
 
         rv = impl.PQping(conninfo)
         return Ping(rv)
@@ -170,7 +175,9 @@ class PGconn:
 
     def exec_(self, command):
         if not isinstance(command, bytes):
-            raise TypeError(f"bytes expected, got {command!r} instead")
+            raise TypeError(
+                "bytes expected, got %s instead" % type(command).__name__
+            )
         rv = impl.PQexec(self.pgconn_ptr, command)
         if rv is None:
             raise MemoryError("couldn't allocate PGresult")
@@ -185,7 +192,9 @@ class PGconn:
         result_format=0,
     ):
         if not isinstance(command, bytes):
-            raise TypeError(f"bytes expected, got {command!r} instead")
+            raise TypeError(
+                "bytes expected, got %s instead" % type(command).__name__
+            )
 
         nparams = len(param_values)
         if nparams:
@@ -321,7 +330,9 @@ class Conninfo:
     @classmethod
     def parse(cls, conninfo):
         if not isinstance(conninfo, bytes):
-            raise TypeError(f"bytes expected, got {conninfo!r} instead")
+            raise TypeError(
+                "bytes expected, got %s instead" % type(conninfo).__name__
+            )
 
         errmsg = c_char_p()
         rv = impl.PQconninfoParse(conninfo, pointer(errmsg))
