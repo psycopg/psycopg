@@ -114,3 +114,18 @@ def test_exec_prepared_binary_out(pq, pgconn, fmt, out):
     )
     assert res.status == pq.ExecStatus.PGRES_TUPLES_OK
     assert res.get_value(0, 0) == out
+
+
+def test_describe_portal(pq, pgconn):
+    res = pgconn.exec_(
+        b"""
+        begin;
+        declare cur cursor for select * from generate_series(1,10) foo;
+        """
+    )
+    assert res.status == pq.ExecStatus.PGRES_COMMAND_OK, res.error_message
+
+    res = pgconn.describe_portal(b"cur")
+    assert res.status == pq.ExecStatus.PGRES_COMMAND_OK, res.error_message
+    assert res.nfields == 1
+    assert res.fname(0) == b"foo"

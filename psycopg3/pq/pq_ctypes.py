@@ -315,6 +315,16 @@ class PGconn:
             raise MemoryError("couldn't allocate PGresult")
         return PGresult(rv)
 
+    def describe_portal(self, name):
+        if not isinstance(name, bytes):
+            raise TypeError(
+                "'name' must be bytes, got %s instead" % type(name).__name__
+            )
+        rv = impl.PQdescribePortal(self.pgconn_ptr, name)
+        if rv is None:
+            raise MemoryError("couldn't allocate PGresult")
+        return PGresult(rv)
+
 
 class PGresult:
     __slots__ = ("pgresult_ptr",)
