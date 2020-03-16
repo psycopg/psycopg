@@ -183,6 +183,13 @@ class PGconn:
             raise MemoryError("couldn't allocate PGresult")
         return PGresult(rv)
 
+    def send_query(self, command):
+        if not isinstance(command, bytes):
+            raise TypeError(
+                "bytes expected, got %s instead" % type(command).__name__
+            )
+        return impl.PQsendQuery(self.pgconn_ptr, command)
+
     def exec_params(
         self,
         command,
@@ -324,6 +331,25 @@ class PGconn:
         if rv is None:
             raise MemoryError("couldn't allocate PGresult")
         return PGresult(rv)
+
+    def get_result(self):
+        rv = impl.PQgetResult(self.pgconn_ptr)
+        return PGresult(rv) if rv else None
+
+    def consume_input(self):
+        return impl.PQconsumeInput(self.pgconn_ptr)
+
+    def is_busy(self):
+        return impl.PQisBusy(self.pgconn_ptr)
+
+    def is_non_blocking(self):
+        return impl.PQisnonblocking(self.pgconn_ptr)
+
+    def set_non_blocking(self, arg):
+        return impl.PQsetnonblocking(self.pgconn_ptr, arg)
+
+    def flush(self):
+        return impl.PQflush(self.pgconn_ptr)
 
 
 class PGresult:
