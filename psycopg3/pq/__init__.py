@@ -17,6 +17,7 @@ from .enums import (
     Ping,
     DiagnosticField,
 )
+from .encodings import py_codecs
 
 from . import pq_ctypes as pq_module
 
@@ -34,4 +35,5 @@ __all__ = (
     "PGconn",
     "Conninfo",
     "PQerror",
+    "py_codecs",
 )

@@ -154,6 +154,14 @@ class PGconn:
         return impl.PQerrorMessage(self.pgconn_ptr)
 
     @property
+    def error_str(self):
+        rv = self.error_message
+        if rv:
+            return rv.encode('utf8', 'replace').rstrip()
+        else:
+            return "no details available"
+
+    @property
     def socket(self):
         return impl.PQsocket(self.pgconn_ptr)
 
@@ -337,19 +345,26 @@ class PGconn:
         return PGresult(rv) if rv else None
 
     def consume_input(self):
-        return impl.PQconsumeInput(self.pgconn_ptr)
+        if 1 != impl.PQconsumeInput(self.pgconn_ptr):
+            raise PQerror(f"consuming input failed: {self.error_str}")
 
     def is_busy(self):
         return impl.PQisBusy(self.pgconn_ptr)
 
-    def is_non_blocking(self):
+    @property
+    def nonblocking(self):
         return impl.PQisnonblocking(self.pgconn_ptr)
 
-    def set_non_blocking(self, arg):
-        return impl.PQsetnonblocking(self.pgconn_ptr, arg)
+    @nonblocking.setter
+    def nonblocking(self, arg):
+        if 0 > impl.PQsetnonblocking(self.pgconn_ptr, arg):
+            raise PQerror(f"setting nonblocking failed: {self.error_str}")
 
     def flush(self):
-        return impl.PQflush(self.pgconn_ptr)
+        rv = impl.PQflush(self.pgconn_ptr)
+        if rv < 0:
+            raise PQerror(f"flushing failed: {self.error_str}")
+        return rv
 
 
 class PGresult:
