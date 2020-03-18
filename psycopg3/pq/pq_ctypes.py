@@ -44,6 +44,8 @@ class PGconn:
             )
 
         pgconn_ptr = impl.PQconnectdb(conninfo)
+        if not pgconn_ptr:
+            raise MemoryError("couldn't allocate PGconn")
         return cls(pgconn_ptr)
 
     @classmethod
@@ -54,6 +56,8 @@ class PGconn:
             )
 
         pgconn_ptr = impl.PQconnectStart(conninfo)
+        if not pgconn_ptr:
+            raise MemoryError("couldn't allocate PGconn")
         return cls(pgconn_ptr)
 
     def connect_poll(self):
@@ -188,7 +192,7 @@ class PGconn:
                 "bytes expected, got %s instead" % type(command).__name__
             )
         rv = impl.PQexec(self.pgconn_ptr, command)
-        if rv is None:
+        if not rv:
             raise MemoryError("couldn't allocate PGresult")
         return PGresult(rv)
 
@@ -251,7 +255,7 @@ class PGconn:
             aformats,
             result_format,
         )
-        if rv is None:
+        if not rv:
             raise MemoryError("couldn't allocate PGresult")
         return PGresult(rv)
 
@@ -277,7 +281,7 @@ class PGconn:
             atypes = (impl.Oid * nparams)(*param_types)
 
         rv = impl.PQprepare(self.pgconn_ptr, name, command, nparams, atypes,)
-        if rv is None:
+        if not rv:
             raise MemoryError("couldn't allocate PGresult")
         return PGresult(rv)
 
@@ -317,7 +321,7 @@ class PGconn:
             aformats,
             result_format,
         )
-        if rv is None:
+        if not rv:
             raise MemoryError("couldn't allocate PGresult")
         return PGresult(rv)
 
@@ -327,7 +331,7 @@ class PGconn:
                 "'name' must be bytes, got %s instead" % type(name).__name__
             )
         rv = impl.PQdescribePrepared(self.pgconn_ptr, name)
-        if rv is None:
+        if not rv:
             raise MemoryError("couldn't allocate PGresult")
         return PGresult(rv)
 
@@ -337,7 +341,7 @@ class PGconn:
                 "'name' must be bytes, got %s instead" % type(name).__name__
             )
         rv = impl.PQdescribePortal(self.pgconn_ptr, name)
-        if rv is None:
+        if not rv:
             raise MemoryError("couldn't allocate PGresult")
         return PGresult(rv)
 
