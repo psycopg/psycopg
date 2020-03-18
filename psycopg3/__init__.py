@@ -4,6 +4,30 @@ psycopg3 -- PostgreSQL database adaapter for Python
 
 # Copyright (C) 2020 The Psycopg Team
 
-from .consts import VERSION as __version__
+from .consts import VERSION as __version__  # noqa
 
-__all__ = ["__version__"]
+from .exceptions import (
+    Warning,
+    Error,
+    InterfaceError,
+    DatabaseError,
+    DataError,
+    OperationalError,
+    IntegrityError,
+    InternalError,
+    ProgrammingError,
+    NotSupportedError,
+)
+
+__all__ = [
+    "Warning",
+    "Error",
+    "InterfaceError",
+    "DatabaseError",
+    "DataError",
+    "OperationalError",
+    "IntegrityError",
+    "InternalError",
+    "ProgrammingError",
+    "NotSupportedError",
+]

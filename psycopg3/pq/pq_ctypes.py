@@ -20,9 +20,10 @@ from .enums import (
     Ping,
 )
 from . import _pq_ctypes as impl
+from ..exceptions import OperationalError
 
 
-class PQerror(Exception):
+class PQerror(OperationalError):
     pass
 
 
