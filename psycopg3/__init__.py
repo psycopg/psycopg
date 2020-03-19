@@ -1,5 +1,5 @@
 """
-psycopg3 -- PostgreSQL database adaapter for Python
+psycopg3 -- PostgreSQL database adapter for Python
 """
 
 # Copyright (C) 2020 The Psycopg Team
