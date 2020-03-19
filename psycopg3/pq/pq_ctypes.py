@@ -252,9 +252,7 @@ class PGconn:
             raise MemoryError("couldn't allocate PGresult")
         return PGresult(rv)
 
-    def prepare(
-        self, name, command, param_types=None,
-    ):
+    def prepare(self, name, command, param_types=None):
         if not isinstance(name, bytes):
             raise TypeError(
                 "'name' must be bytes, got %s instead" % type(name).__name__
@@ -273,13 +271,13 @@ class PGconn:
             nparams = len(param_types)
             atypes = (impl.Oid * nparams)(*param_types)
 
-        rv = impl.PQprepare(self.pgconn_ptr, name, command, nparams, atypes,)
+        rv = impl.PQprepare(self.pgconn_ptr, name, command, nparams, atypes)
         if not rv:
             raise MemoryError("couldn't allocate PGresult")
         return PGresult(rv)
 
     def exec_prepared(
-        self, name, param_values, param_formats=None, result_format=0,
+        self, name, param_values, param_formats=None, result_format=0
     ):
         if not isinstance(name, bytes):
             raise TypeError(
