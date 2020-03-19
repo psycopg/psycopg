@@ -19,6 +19,7 @@ from .enums import (
     TransactionStatus,
     Ping,
 )
+from .misc import error_message
 from . import _pq_ctypes as impl
 from ..exceptions import OperationalError
 
@@ -157,14 +158,6 @@ class PGconn:
     @property
     def error_message(self):
         return impl.PQerrorMessage(self.pgconn_ptr)
-
-    @property
-    def error_str(self):
-        rv = self.error_message
-        if rv:
-            return rv.encode('utf8', 'replace').rstrip()
-        else:
-            return "no details available"
 
     @property
     def socket(self):
@@ -351,7 +344,7 @@ class PGconn:
 
     def consume_input(self):
         if 1 != impl.PQconsumeInput(self.pgconn_ptr):
-            raise PQerror(f"consuming input failed: {self.error_str}")
+            raise PQerror(f"consuming input failed: {error_message(self)}")
 
     def is_busy(self):
         return impl.PQisBusy(self.pgconn_ptr)
@@ -363,12 +356,12 @@ class PGconn:
     @nonblocking.setter
     def nonblocking(self, arg):
         if 0 > impl.PQsetnonblocking(self.pgconn_ptr, arg):
-            raise PQerror(f"setting nonblocking failed: {self.error_str}")
+            raise PQerror(f"setting nonblocking failed: {error_message(self)}")
 
     def flush(self):
         rv = impl.PQflush(self.pgconn_ptr)
         if rv < 0:
-            raise PQerror(f"flushing failed: {self.error_str}")
+            raise PQerror(f"flushing failed: {error_message(self)}")
         return rv
 
 
@@ -479,7 +472,7 @@ class Conninfo:
             if not errmsg:
                 raise MemoryError("couldn't allocate on conninfo parse")
             else:
-                exc = PQerror(errmsg.value)
+                exc = PQerror(errmsg.value.decode("utf8", "replace"))
                 impl.PQfreemem(errmsg)
                 raise exc
 

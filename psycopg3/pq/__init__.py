@@ -18,10 +18,12 @@ from .enums import (
     DiagnosticField,
 )
 from .encodings import py_codecs
+from .misc import error_message
 
 from . import pq_ctypes as pq_module
 
 PGconn = pq_module.PGconn
+PGresult = pq_module.PGresult
 PQerror = pq_module.PQerror
 Conninfo = pq_module.Conninfo
 
@@ -35,5 +37,6 @@ __all__ = (
     "PGconn",
     "Conninfo",
     "PQerror",
+    "error_message",
     "py_codecs",
 )
