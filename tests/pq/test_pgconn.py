@@ -209,3 +209,10 @@ def test_ssl_in_use(pgconn):
             # 'prefer' may still connect without ssl
             # but maybe unlikely in the tests environment?
             assert pgconn.ssl_in_use
+
+
+def test_make_empty_result(pq, pgconn):
+    pgconn.exec_(b"wat")
+    res = pgconn.make_empty_result(pq.ExecStatus.PGRES_FATAL_ERROR)
+    assert res.status == pq.ExecStatus.PGRES_FATAL_ERROR
+    assert b"wat" in res.error_message

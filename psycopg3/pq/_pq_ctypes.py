@@ -354,3 +354,7 @@ PQflush.restype == c_int
 PQfreemem = pq.PQfreemem
 PQfreemem.argtypes = [c_void_p]
 PQfreemem.restype = None
+
+PQmakeEmptyPGresult = pq.PQmakeEmptyPGresult
+PQmakeEmptyPGresult.argtypes = [PGconn_ptr, c_int]
+PQmakeEmptyPGresult.restype = PGresult_ptr

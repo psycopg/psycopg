@@ -364,6 +364,12 @@ class PGconn:
             raise PQerror(f"flushing failed: {error_message(self)}")
         return rv
 
+    def make_empty_result(self, exec_status):
+        rv = impl.PQmakeEmptyPGresult(self.pgconn_ptr, exec_status)
+        if not rv:
+            raise MemoryError("couldn't allocate empty PGresult")
+        return PGresult(rv)
+
 
 class PGresult:
     __slots__ = ("pgresult_ptr",)
