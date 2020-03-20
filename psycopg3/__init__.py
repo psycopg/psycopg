@@ -20,7 +20,11 @@ from .exceptions import (
     NotSupportedError,
 )
 
+# DBAPI compliancy
 connect = Connection.connect
+apilevel = "2.0"
+threadsafety = 2
+paramstyle = "pyformat"
 
 __all__ = [
     "Warning",
