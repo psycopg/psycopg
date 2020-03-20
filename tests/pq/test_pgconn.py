@@ -21,6 +21,7 @@ def test_connectdb_badtype(pq, baddsn):
 
 def test_connect_async(pq, dsn):
     conn = pq.PGconn.connect_start(dsn.encode("utf8"))
+    conn.nonblocking = 1
     while 1:
         assert conn.status != pq.ConnStatus.CONNECTION_BAD
         rv = conn.connect_poll()
