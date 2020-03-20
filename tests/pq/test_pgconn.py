@@ -4,7 +4,7 @@ import pytest
 
 
 def test_connectdb(pq, dsn):
-    conn = pq.PGconn.connect(dsn)
+    conn = pq.PGconn.connect(dsn.encode("utf8"))
     assert conn.status == pq.ConnStatus.CONNECTION_OK, conn.error_message
 
 
@@ -20,7 +20,7 @@ def test_connectdb_badtype(pq, baddsn):
 
 
 def test_connect_async(pq, dsn):
-    conn = pq.PGconn.connect_start(dsn)
+    conn = pq.PGconn.connect_start(dsn.encode("utf8"))
     while 1:
         assert conn.status != pq.ConnStatus.CONNECTION_BAD
         rv = conn.connect_poll()
@@ -62,7 +62,7 @@ def test_info(pq, dsn, pgconn):
     assert dbname.dispatcher == b""
     assert dbname.dispsize == 20
 
-    parsed = pq.Conninfo.parse(dsn)
+    parsed = pq.Conninfo.parse(dsn.encode("utf8"))
     name = [o.val for o in parsed if o.keyword == b"dbname"][0]
     assert dbname.val == name
 
@@ -92,7 +92,7 @@ def test_reset_async(pq, pgconn):
 
 
 def test_ping(pq, dsn):
-    rv = pq.PGconn.ping(dsn)
+    rv = pq.PGconn.ping(dsn.encode("utf8"))
     assert rv == pq.Ping.PQPING_OK
 
     rv = pq.PGconn.ping(b"port=99999")
@@ -138,7 +138,7 @@ def test_transaction_status(pq, pgconn):
 
 def test_parameter_status(pq, dsn, tempenv):
     tempenv["PGAPPNAME"] = "psycopg3 tests"
-    pgconn = pq.PGconn.connect(dsn)
+    pgconn = pq.PGconn.connect(dsn.encode("utf8"))
     assert pgconn.parameter_status(b"application_name") == b"psycopg3 tests"
     assert pgconn.parameter_status(b"wat") is None
 
@@ -188,7 +188,7 @@ def test_used_password(pq, pgconn, tempenv, dsn):
     # Note that the server may still need a password passed via pgpass
     # so it may be that has_password is false but still a password was
     # requested by the server and passed by libpq.
-    info = pq.Conninfo.parse(dsn)
+    info = pq.Conninfo.parse(dsn.encode("utf8"))
     has_password = (
         "PGPASSWORD" in tempenv
         or [i for i in info if i.keyword == b"password"][0].val is not None

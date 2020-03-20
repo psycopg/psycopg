@@ -26,10 +26,10 @@ def dsn(request):
     dsn = request.config.getoption("--test-dsn")
     if not dsn:
         pytest.skip("skipping test as no --test-dsn")
-    return dsn.encode("utf8")
+    return dsn
 
 
 @pytest.fixture
 def pgconn(pq, dsn):
     """Return a PGconn connection open to `--test-dsn`."""
-    return pq.PGconn.connect(dsn)
+    return pq.PGconn.connect(dsn.encode("utf8"))
