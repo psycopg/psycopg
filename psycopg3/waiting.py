@@ -5,6 +5,7 @@ Code concerned with waiting in different contexts (blocking, async, etc).
 # Copyright (C) 2020 The Psycopg Team
 
 
+from enum import Enum
 from select import select
 from asyncio import get_event_loop
 from asyncio.queues import Queue
@@ -12,11 +13,8 @@ from asyncio.queues import Queue
 from . import exceptions as exc
 
 
-WAIT_R = "WAIT_R"
-WAIT_W = "WAIT_W"
-WAIT_RW = "WAIT_RW"
-READY_R = "READY_R"
-READY_W = "READY_W"
+Wait = Enum("Wait", "R W RW")
+Ready = Enum("Ready", "R W")
 
 
 def wait_select(gen):
@@ -32,22 +30,22 @@ def wait_select(gen):
     try:
         while 1:
             fd, s = next(gen)
-            if s == WAIT_R:
+            if s is Wait.R:
                 rf, wf, xf = select([fd], [], [])
                 assert rf
-                gen.send(READY_R)
-            elif s == WAIT_W:
+                gen.send(Ready.R)
+            elif s is Wait.W:
                 rf, wf, xf = select([], [fd], [])
                 assert wf
-                gen.send(READY_W)
-            elif s == WAIT_RW:
+                gen.send(Ready.W)
+            elif s is Wait.RW:
                 rf, wf, xf = select([fd], [fd], [])
                 assert rf or wf
                 assert not (rf and wf)
                 if rf:
-                    gen.send(READY_R)
+                    gen.send(Ready.R)
                 else:
-                    gen.send(READY_W)
+                    gen.send(Ready.W)
             else:
                 raise exc.InternalError("bad poll status: %s")
     except StopIteration as e:
@@ -71,19 +69,19 @@ async def wait_async(gen):
     try:
         while 1:
             fd, s = next(gen)
-            if s == WAIT_R:
-                loop.add_reader(fd, q.put_nowait, READY_R)
+            if s is Wait.R:
+                loop.add_reader(fd, q.put_nowait, Ready.R)
                 ready = await q.get()
                 loop.remove_reader(fd)
                 gen.send(ready)
-            elif s == WAIT_W:
-                loop.add_writer(fd, q.put_nowait, READY_W)
+            elif s is Wait.W:
+                loop.add_writer(fd, q.put_nowait, Ready.W)
                 ready = await q.get()
                 loop.remove_writer(fd)
                 gen.send(ready)
-            elif s == WAIT_RW:
-                loop.add_reader(fd, q.put_nowait, READY_R)
-                loop.add_writer(fd, q.put_nowait, READY_W)
+            elif s is Wait.RW:
+                loop.add_reader(fd, q.put_nowait, Ready.R)
+                loop.add_writer(fd, q.put_nowait, Ready.W)
                 ready = await q.get()
                 loop.remove_reader(fd)
                 loop.remove_writer(fd)

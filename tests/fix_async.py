@@ -7,3 +7,12 @@ import pytest
 def loop():
     """Return the async loop to test coroutines."""
     return asyncio.get_event_loop()
+
+
+@pytest.fixture
+def aconn(loop, dsn):
+    """Return an `AsyncConnection` connected to the ``--test-dsn`` database."""
+    from psycopg3 import AsyncConnection
+
+    conn = loop.run_until_complete(AsyncConnection.connect(dsn))
+    return conn

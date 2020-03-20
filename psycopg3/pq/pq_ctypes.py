@@ -84,8 +84,7 @@ class PGconn:
         impl.PQreset(self.pgconn_ptr)
 
     def reset_start(self):
-        rv = impl.PQresetStart(self.pgconn_ptr)
-        if rv == 0:
+        if not impl.PQresetStart(self.pgconn_ptr):
             raise PQerror("couldn't reset connection")
 
     def reset_poll(self):
@@ -194,7 +193,8 @@ class PGconn:
             raise TypeError(
                 "bytes expected, got %s instead" % type(command).__name__
             )
-        return impl.PQsendQuery(self.pgconn_ptr, command)
+        if not impl.PQsendQuery(self.pgconn_ptr, command):
+            raise PQerror(f"sending query failed: {error_message(self)}")
 
     def exec_params(
         self,

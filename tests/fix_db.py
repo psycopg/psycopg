@@ -33,3 +33,11 @@ def dsn(request):
 def pgconn(pq, dsn):
     """Return a PGconn connection open to `--test-dsn`."""
     return pq.PGconn.connect(dsn.encode("utf8"))
+
+
+@pytest.fixture
+def conn(dsn):
+    """Return a `Connection` connected to the ``--test-dsn`` database."""
+    from psycopg3 import Connection
+
+    return Connection.connect(dsn)
