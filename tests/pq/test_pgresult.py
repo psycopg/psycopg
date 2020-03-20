@@ -123,3 +123,22 @@ def test_nparams_types(pq, pgconn):
     assert res.nparams == 2
     assert res.param_type(0) == 23
     assert res.param_type(1) == 25
+
+
+def test_command_status(pq, pgconn):
+    res = pgconn.exec_(b"select 1")
+    assert res.command_status == b"SELECT 1"
+    res = pgconn.exec_(b"set timezone to utf8")
+    assert res.command_status == b"SET"
+
+
+def test_command_tuples(pq, pgconn):
+    res = pgconn.exec_(b"select * from generate_series(1, 10)")
+    assert res.command_tuples == 10
+    res = pgconn.exec_(b"set timezone to utf8")
+    assert res.command_tuples is None
+
+
+def test_oid_value(pq, pgconn):
+    res = pgconn.exec_(b"select 1")
+    assert res.oid_value == 0

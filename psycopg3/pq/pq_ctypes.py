@@ -446,6 +446,20 @@ class PGresult:
     def param_type(self, param_number):
         return impl.PQparamtype(self.pgresult_ptr, param_number)
 
+    @property
+    def command_status(self):
+        return impl.PQcmdStatus(self.pgresult_ptr)
+
+    @property
+    def command_tuples(self):
+        rv = impl.PQcmdTuples(self.pgresult_ptr)
+        if rv:
+            return int(rv)
+
+    @property
+    def oid_value(self):
+        return impl.PQoidValue(self.pgresult_ptr)
+
 
 ConninfoOption = namedtuple(
     "ConninfoOption", "keyword envvar compiled val label dispatcher dispsize"

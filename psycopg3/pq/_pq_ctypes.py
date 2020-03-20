@@ -314,6 +314,20 @@ PQparamtype.restype = Oid
 
 # PQprint: pretty useless
 
+# 33.3.3. Retrieving Other Result Information
+
+PQcmdStatus = pq.PQcmdStatus
+PQcmdStatus.argtypes = [PGresult_ptr]
+PQcmdStatus.restype = c_char_p
+
+PQcmdTuples = pq.PQcmdTuples
+PQcmdTuples.argtypes = [PGresult_ptr]
+PQcmdTuples.restype = c_char_p
+
+PQoidValue = pq.PQoidValue
+PQoidValue.argtypes = [PGresult_ptr]
+PQoidValue.restype = Oid
+
 
 # 33.4. Asynchronous Command Processing
 
