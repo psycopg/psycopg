@@ -100,6 +100,14 @@ class BaseConnection:
             if res is None:
                 break
             results.append(res)
+            if res.status in (
+                pq.ExecStatus.COPY_IN,
+                pq.ExecStatus.COPY_OUT,
+                pq.ExecStatus.COPY_BOTH,
+            ):
+                # After entering copy mode the libpq will create a phony result
+                # for every request so let's break the endless loop.
+                break
 
         return results
 
