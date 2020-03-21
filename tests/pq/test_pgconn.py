@@ -5,12 +5,12 @@ import pytest
 
 def test_connectdb(pq, dsn):
     conn = pq.PGconn.connect(dsn.encode("utf8"))
-    assert conn.status == pq.ConnStatus.CONNECTION_OK, conn.error_message
+    assert conn.status == pq.ConnStatus.OK, conn.error_message
 
 
 def test_connectdb_error(pq):
     conn = pq.PGconn.connect(b"dbname=psycopg3_test_not_for_real")
-    assert conn.status == pq.ConnStatus.CONNECTION_BAD
+    assert conn.status == pq.ConnStatus.BAD
 
 
 @pytest.mark.parametrize("baddsn", [None, 42])
@@ -23,35 +23,35 @@ def test_connect_async(pq, dsn):
     conn = pq.PGconn.connect_start(dsn.encode("utf8"))
     conn.nonblocking = 1
     while 1:
-        assert conn.status != pq.ConnStatus.CONNECTION_BAD
+        assert conn.status != pq.ConnStatus.BAD
         rv = conn.connect_poll()
-        if rv == pq.PollingStatus.PGRES_POLLING_OK:
+        if rv == pq.PollingStatus.OK:
             break
-        elif rv == pq.PollingStatus.PGRES_POLLING_READING:
+        elif rv == pq.PollingStatus.READING:
             select([conn.socket], [], [])
-        elif rv == pq.PollingStatus.PGRES_POLLING_WRITING:
+        elif rv == pq.PollingStatus.WRITING:
             select([], [conn.socket], [])
         else:
             assert False, rv
 
-    assert conn.status == pq.ConnStatus.CONNECTION_OK
+    assert conn.status == pq.ConnStatus.OK
 
 
 def test_connect_async_bad(pq, dsn):
     conn = pq.PGconn.connect_start(b"dbname=psycopg3_test_not_for_real")
     while 1:
-        assert conn.status != pq.ConnStatus.CONNECTION_BAD
+        assert conn.status != pq.ConnStatus.BAD
         rv = conn.connect_poll()
-        if rv == pq.PollingStatus.PGRES_POLLING_FAILED:
+        if rv == pq.PollingStatus.FAILED:
             break
-        elif rv == pq.PollingStatus.PGRES_POLLING_READING:
+        elif rv == pq.PollingStatus.READING:
             select([conn.socket], [], [])
-        elif rv == pq.PollingStatus.PGRES_POLLING_WRITING:
+        elif rv == pq.PollingStatus.WRITING:
             select([], [conn.socket], [])
         else:
             assert False, rv
 
-    assert conn.status == pq.ConnStatus.CONNECTION_BAD
+    assert conn.status == pq.ConnStatus.BAD
 
 
 def test_info(pq, dsn, pgconn):
@@ -69,35 +69,35 @@ def test_info(pq, dsn, pgconn):
 
 
 def test_reset(pq, pgconn):
-    assert pgconn.status == pq.ConnStatus.CONNECTION_OK
+    assert pgconn.status == pq.ConnStatus.OK
     # TODO: break it
     pgconn.reset()
-    assert pgconn.status == pq.ConnStatus.CONNECTION_OK
+    assert pgconn.status == pq.ConnStatus.OK
 
 
 def test_reset_async(pq, pgconn):
-    assert pgconn.status == pq.ConnStatus.CONNECTION_OK
+    assert pgconn.status == pq.ConnStatus.OK
     # TODO: break it
     pgconn.reset_start()
     while 1:
         rv = pgconn.connect_poll()
-        if rv == pq.PollingStatus.PGRES_POLLING_READING:
+        if rv == pq.PollingStatus.READING:
             select([pgconn.socket], [], [])
-        elif rv == pq.PollingStatus.PGRES_POLLING_WRITING:
+        elif rv == pq.PollingStatus.WRITING:
             select([], [pgconn.socket], [])
         else:
             break
 
-    assert rv == pq.PollingStatus.PGRES_POLLING_OK
-    assert pgconn.status == pq.ConnStatus.CONNECTION_OK
+    assert rv == pq.PollingStatus.OK
+    assert pgconn.status == pq.ConnStatus.OK
 
 
 def test_ping(pq, dsn):
     rv = pq.PGconn.ping(dsn.encode("utf8"))
-    assert rv == pq.Ping.PQPING_OK
+    assert rv == pq.Ping.OK
 
     rv = pq.PGconn.ping(b"port=99999")
-    assert rv == pq.Ping.PQPING_NO_RESPONSE
+    assert rv == pq.Ping.NO_RESPONSE
 
 
 def test_db(pgconn):
@@ -131,10 +131,10 @@ def test_tty(pgconn):
 
 
 def test_transaction_status(pq, pgconn):
-    assert pgconn.transaction_status == pq.TransactionStatus.PQTRANS_IDLE
+    assert pgconn.transaction_status == pq.TransactionStatus.IDLE
     # TODO: test other states
     pgconn.finish()
-    assert pgconn.transaction_status == pq.TransactionStatus.PQTRANS_UNKNOWN
+    assert pgconn.transaction_status == pq.TransactionStatus.UNKNOWN
 
 
 def test_parameter_status(pq, dsn, tempenv):
@@ -146,15 +146,15 @@ def test_parameter_status(pq, dsn, tempenv):
 
 def test_encoding(pq, pgconn):
     res = pgconn.exec_(b"set client_encoding to latin1")
-    assert res.status == pq.ExecStatus.PGRES_COMMAND_OK
+    assert res.status == pq.ExecStatus.COMMAND_OK
     assert pgconn.parameter_status(b"client_encoding") == b"LATIN1"
 
     res = pgconn.exec_(b"set client_encoding to 'utf-8'")
-    assert res.status == pq.ExecStatus.PGRES_COMMAND_OK
+    assert res.status == pq.ExecStatus.COMMAND_OK
     assert pgconn.parameter_status(b"client_encoding") == b"UTF8"
 
     res = pgconn.exec_(b"set client_encoding to wat")
-    assert res.status == pq.ExecStatus.PGRES_FATAL_ERROR
+    assert res.status == pq.ExecStatus.FATAL_ERROR
     assert pgconn.parameter_status(b"client_encoding") == b"UTF8"
 
 
@@ -168,7 +168,7 @@ def test_server_version(pgconn):
 
 def test_error_message(pq, pgconn):
     res = pgconn.exec_(b"wat")
-    assert res.status == pq.ExecStatus.PGRES_FATAL_ERROR
+    assert res.status == pq.ExecStatus.FATAL_ERROR
     msg = pgconn.error_message
     assert b"wat" in msg
 
@@ -214,6 +214,6 @@ def test_ssl_in_use(pgconn):
 
 def test_make_empty_result(pq, pgconn):
     pgconn.exec_(b"wat")
-    res = pgconn.make_empty_result(pq.ExecStatus.PGRES_FATAL_ERROR)
-    assert res.status == pq.ExecStatus.PGRES_FATAL_ERROR
+    res = pgconn.make_empty_result(pq.ExecStatus.FATAL_ERROR)
+    assert res.status == pq.ExecStatus.FATAL_ERROR
     assert b"wat" in res.error_message

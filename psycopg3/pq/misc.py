@@ -21,7 +21,7 @@ def error_message(obj):
             msg = msg.splitlines()[0].split(b":", 1)[-1].strip()
 
     elif isinstance(obj, pq.PGresult):
-        msg = obj.error_field(pq.DiagnosticField.PG_DIAG_MESSAGE_PRIMARY)
+        msg = obj.error_field(pq.DiagnosticField.MESSAGE_PRIMARY)
         if not msg:
             msg = obj.error_message
 

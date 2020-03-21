@@ -6,7 +6,7 @@ from psycopg3 import Connection
 
 def test_connect(pq, dsn):
     conn = Connection.connect(dsn)
-    assert conn.pgconn.status == pq.ConnStatus.CONNECTION_OK
+    assert conn.pgconn.status == pq.ConnStatus.OK
 
 
 def test_connect_bad():
@@ -18,12 +18,10 @@ def test_commit(pq, conn):
     conn.pgconn.exec_(b"drop table if exists foo")
     conn.pgconn.exec_(b"create table foo (id int primary key)")
     conn.pgconn.exec_(b"begin")
-    assert (
-        conn.pgconn.transaction_status == pq.TransactionStatus.PQTRANS_INTRANS
-    )
+    assert conn.pgconn.transaction_status == pq.TransactionStatus.INTRANS
     res = conn.pgconn.exec_(b"insert into foo values (1)")
     conn.commit()
-    assert conn.pgconn.transaction_status == pq.TransactionStatus.PQTRANS_IDLE
+    assert conn.pgconn.transaction_status == pq.TransactionStatus.IDLE
     res = conn.pgconn.exec_(b"select id from foo where id = 1")
     assert res.get_value(0, 0) == b"1"
 
@@ -32,11 +30,9 @@ def test_rollback(pq, conn):
     conn.pgconn.exec_(b"drop table if exists foo")
     conn.pgconn.exec_(b"create table foo (id int primary key)")
     conn.pgconn.exec_(b"begin")
-    assert (
-        conn.pgconn.transaction_status == pq.TransactionStatus.PQTRANS_INTRANS
-    )
+    assert conn.pgconn.transaction_status == pq.TransactionStatus.INTRANS
     res = conn.pgconn.exec_(b"insert into foo values (1)")
     conn.rollback()
-    assert conn.pgconn.transaction_status == pq.TransactionStatus.PQTRANS_IDLE
+    assert conn.pgconn.transaction_status == pq.TransactionStatus.IDLE
     res = conn.pgconn.exec_(b"select id from foo where id = 1")
     assert res.get_value(0, 0) is None

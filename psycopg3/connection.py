@@ -41,20 +41,20 @@ class BaseConnection:
         conn = pq.PGconn.connect_start(conninfo)
         logger.debug("connection started, status %s", conn.status.name)
         while 1:
-            if conn.status == pq.ConnStatus.CONNECTION_BAD:
+            if conn.status == pq.ConnStatus.BAD:
                 raise exc.OperationalError(
                     f"connection is bad: {pq.error_message(conn)}"
                 )
 
             status = conn.connect_poll()
             logger.debug("connection polled, status %s", conn.status.name)
-            if status == pq.PollingStatus.PGRES_POLLING_OK:
+            if status == pq.PollingStatus.OK:
                 break
-            elif status == pq.PollingStatus.PGRES_POLLING_READING:
+            elif status == pq.PollingStatus.READING:
                 yield conn.socket, Wait.R
-            elif status == pq.PollingStatus.PGRES_POLLING_WRITING:
+            elif status == pq.PollingStatus.WRITING:
                 yield conn.socket, Wait.W
-            elif status == pq.PollingStatus.PGRES_POLLING_FAILED:
+            elif status == pq.PollingStatus.FAILED:
                 raise exc.OperationalError(
                     f"connection failed: {pq.error_message(conn)}"
                 )
@@ -129,12 +129,12 @@ class Connection(BaseConnection):
     def _exec_commit_rollback(self, command):
         with self.lock:
             status = self.pgconn.transaction_status
-            if status == pq.TransactionStatus.PQTRANS_IDLE:
+            if status == pq.TransactionStatus.IDLE:
                 return
 
             self.pgconn.send_query(command)
             (pgres,) = wait_select(self._exec_gen(self.pgconn))
-            if pgres.status != pq.ExecStatus.PGRES_COMMAND_OK:
+            if pgres.status != pq.ExecStatus.COMMAND_OK:
                 raise exc.OperationalError(
                     f"error on {command.decode('utf8')}:"
                     f" {pq.error_message(pgres)}"
@@ -165,12 +165,12 @@ class AsyncConnection(BaseConnection):
     async def _exec_commit_rollback(self, command):
         with self.lock:
             status = self.pgconn.transaction_status
-            if status == pq.TransactionStatus.PQTRANS_IDLE:
+            if status == pq.TransactionStatus.IDLE:
                 return
 
             self.pgconn.send_query(command)
             (pgres,) = await wait_async(self._exec_gen(self.pgconn))
-            if pgres.status != pq.ExecStatus.PGRES_COMMAND_OK:
+            if pgres.status != pq.ExecStatus.COMMAND_OK:
                 raise exc.OperationalError(
                     f"error on {command.decode('utf8')}:"
                     f" {pq.error_message(pgres)}"

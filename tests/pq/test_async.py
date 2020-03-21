@@ -40,7 +40,7 @@ def test_send_query(pq, pgconn):
         res = pgconn.get_result()
         if res is None:
             break
-        assert res.status == pq.ExecStatus.PGRES_TUPLES_OK
+        assert res.status == pq.ExecStatus.TUPLES_OK
         results.append(res)
 
     assert len(results) == 2
