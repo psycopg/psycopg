@@ -4,12 +4,14 @@ psycopg3 connection objects
 
 # Copyright (C) 2020 The Psycopg Team
 
+import codecs
 import logging
 import asyncio
 import threading
 
 from . import pq
 from . import exceptions as exc
+from . import cursor
 from .conninfo import make_conninfo
 from .waiting import wait_select, wait_async, Wait, Ready
 
@@ -26,6 +28,28 @@ class BaseConnection:
 
     def __init__(self, pgconn):
         self.pgconn = pgconn
+        self.cursor_factory = None
+        # name of the postgres encoding (in bytes)
+        self._pgenc = None
+
+    def cursor(self, name=None):
+        return self.cursor_factory(self)
+
+    @property
+    def codec(self):
+        # TODO: utf8 fastpath?
+        pgenc = self.pgconn.parameter_status(b"client_encoding")
+        if self._pgenc != pgenc:
+            # for unknown encodings and SQL_ASCII be strict and use ascii
+            pyenc = pq.py_codecs.get(pgenc.decode("ascii"), "ascii")
+            self._codec = codecs.lookup(pyenc)
+        return self._codec
+
+    def encode(self, s):
+        return self.codec.encode(s)[0]
+
+    def decode(self, b):
+        return self.codec.decode(b)[0]
 
     @classmethod
     def _connect_gen(cls, conninfo):
@@ -122,6 +146,7 @@ class Connection(BaseConnection):
     def __init__(self, pgconn):
         super().__init__(pgconn)
         self.lock = threading.Lock()
+        self.cursor_factory = cursor.Cursor
 
     @classmethod
     def connect(cls, conninfo, connection_factory=None, **kwargs):
@@ -168,6 +193,7 @@ class AsyncConnection(BaseConnection):
     def __init__(self, pgconn):
         super().__init__(pgconn)
         self.lock = asyncio.Lock()
+        self.cursor_factory = cursor.AsyncCursor
 
     @classmethod
     async def connect(cls, conninfo, **kwargs):
