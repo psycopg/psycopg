@@ -204,6 +204,33 @@ class PGconn:
         param_formats=None,
         result_format=0,
     ):
+        args = self._query_params_args(
+            command, param_values, param_types, param_formats, result_format
+        )
+        rv = impl.PQexecParams(*args)
+        if not rv:
+            raise MemoryError("couldn't allocate PGresult")
+        return PGresult(rv)
+
+    def send_query_params(
+        self,
+        command,
+        param_values,
+        param_types=None,
+        param_formats=None,
+        result_format=0,
+    ):
+        args = self._query_params_args(
+            command, param_values, param_types, param_formats, result_format
+        )
+        if not impl.PQsendQueryParams(*args):
+            raise PQerror(
+                f"sending query and params failed: {error_message(self)}"
+            )
+
+    def _query_params_args(
+        self, command, param_values, param_types, param_formats, result_format,
+    ):
         if not isinstance(command, bytes):
             raise TypeError(
                 "bytes expected, got %s instead" % type(command).__name__
@@ -238,7 +265,7 @@ class PGconn:
                 )
             aformats = (c_int * nparams)(*param_formats)
 
-        rv = impl.PQexecParams(
+        return (
             self.pgconn_ptr,
             command,
             nparams,
@@ -248,9 +275,6 @@ class PGconn:
             aformats,
             result_format,
         )
-        if not rv:
-            raise MemoryError("couldn't allocate PGresult")
-        return PGresult(rv)
 
     def prepare(self, name, command, param_types=None):
         if not isinstance(name, bytes):
