@@ -1,7 +1,5 @@
 from select import select
 
-from psycopg3.waiting import wait_select
-
 
 def test_send_query(pq, pgconn):
     # This test shows how to process an async query in all its glory
@@ -60,7 +58,7 @@ def test_send_query_compact_test(pq, conn):
         b"/* %s */ select pg_sleep(0.01); select 1 as foo;"
         % (b"x" * 1_000_000)
     )
-    results = wait_select(conn._exec_gen(conn.pgconn))
+    results = conn.wait(conn._exec_gen(conn.pgconn))
 
     assert len(results) == 2
     assert results[0].nfields == 1
@@ -73,6 +71,6 @@ def test_send_query_compact_test(pq, conn):
 
 def test_send_query_params(pq, conn):
     res = conn.pgconn.send_query_params(b"select $1::int + $2", [b"5", b"3"])
-    (res,) = wait_select(conn._exec_gen(conn.pgconn))
+    (res,) = conn.wait(conn._exec_gen(conn.pgconn))
     assert res.status == pq.ExecStatus.TUPLES_OK
     assert res.get_value(0, 0) == b"8"

@@ -117,7 +117,7 @@ class Connection(BaseConnection):
             raise NotImplementedError()
         conninfo = make_conninfo(conninfo, **kwargs)
         gen = cls._connect_gen(conninfo)
-        pgconn = wait_select(gen)
+        pgconn = cls.wait(gen)
         return cls(pgconn)
 
     def commit(self):
@@ -133,12 +133,16 @@ class Connection(BaseConnection):
                 return
 
             self.pgconn.send_query(command)
-            (pgres,) = wait_select(self._exec_gen(self.pgconn))
+            (pgres,) = self.wait(self._exec_gen(self.pgconn))
             if pgres.status != pq.ExecStatus.COMMAND_OK:
                 raise exc.OperationalError(
                     f"error on {command.decode('utf8')}:"
                     f" {pq.error_message(pgres)}"
                 )
+
+    @classmethod
+    def wait(cls, gen):
+        return wait_select(gen)
 
 
 class AsyncConnection(BaseConnection):
@@ -153,7 +157,7 @@ class AsyncConnection(BaseConnection):
     async def connect(cls, conninfo, **kwargs):
         conninfo = make_conninfo(conninfo, **kwargs)
         gen = cls._connect_gen(conninfo)
-        pgconn = await wait_async(gen)
+        pgconn = await cls.wait(gen)
         return cls(pgconn)
 
     async def commit(self):
@@ -169,9 +173,13 @@ class AsyncConnection(BaseConnection):
                 return
 
             self.pgconn.send_query(command)
-            (pgres,) = await wait_async(self._exec_gen(self.pgconn))
+            (pgres,) = await self.wait(self._exec_gen(self.pgconn))
             if pgres.status != pq.ExecStatus.COMMAND_OK:
                 raise exc.OperationalError(
                     f"error on {command.decode('utf8')}:"
                     f" {pq.error_message(pgres)}"
                 )
+
+    @classmethod
+    async def wait(cls, gen):
+        return await wait_async(gen)
