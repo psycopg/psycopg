@@ -7,8 +7,7 @@ Code concerned with waiting in different contexts (blocking, async, etc).
 
 from enum import Enum
 from select import select
-from asyncio import get_event_loop
-from asyncio.queues import Queue
+from asyncio import get_event_loop, Event
 
 from . import exceptions as exc
 
@@ -64,25 +63,33 @@ async def wait_async(gen):
     """
     # Use a queue to block and restart after the fd state changes.
     # Not sure this is the best implementation but it's a start.
-    q = Queue()
+    e = Event()
     loop = get_event_loop()
+    ready = None
+
+    def wakeup(state):
+        nonlocal ready
+        ready = state
+        e.set()
+
     try:
         while 1:
             fd, s = next(gen)
+            e.clear()
             if s is Wait.R:
-                loop.add_reader(fd, q.put_nowait, Ready.R)
-                ready = await q.get()
+                loop.add_reader(fd, wakeup, Ready.R)
+                await e.wait()
                 loop.remove_reader(fd)
                 gen.send(ready)
             elif s is Wait.W:
-                loop.add_writer(fd, q.put_nowait, Ready.W)
-                ready = await q.get()
+                loop.add_writer(fd, wakeup, Ready.W)
+                await e.wait()
                 loop.remove_writer(fd)
                 gen.send(ready)
             elif s is Wait.RW:
-                loop.add_reader(fd, q.put_nowait, Ready.R)
-                loop.add_writer(fd, q.put_nowait, Ready.W)
-                ready = await q.get()
+                loop.add_reader(fd, wakeup, Ready.R)
+                loop.add_writer(fd, wakeup, Ready.W)
+                await e.wait()
                 loop.remove_reader(fd)
                 loop.remove_writer(fd)
                 gen.send(ready)
