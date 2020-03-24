@@ -98,3 +98,8 @@ class NotSupportedError(DatabaseError):
     """
     A method or database API was used which is not supported by the database,
     """
+
+
+def class_for_state(sqlstate):
+    # TODO: stub
+    return DatabaseError
