@@ -15,6 +15,16 @@ def pytest_addoption(parser):
     )
 
 
+def pytest_report_header(config):
+    try:
+        from psycopg3 import pq
+
+        return f"libpq available: {pq.version()}"
+    except Exception:
+        # you will die of something else
+        pass
+
+
 def pytest_configure(config):
     # register libpq marker
     config.addinivalue_line(
