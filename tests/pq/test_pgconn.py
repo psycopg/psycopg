@@ -2,6 +2,8 @@ from select import select
 
 import pytest
 
+import psycopg3
+
 
 def test_connectdb(pq, dsn):
     conn = pq.PGconn.connect(dsn.encode("utf8"))
@@ -120,9 +122,16 @@ def test_host(pgconn):
     assert isinstance(pgconn.host, bytes)
 
 
+@pytest.mark.libpq(">= 12")
 def test_hostaddr(pgconn):
     # not in info
-    assert isinstance(pgconn.hostaddr, bytes)
+    assert isinstance(pgconn.hostaddr, bytes), pgconn.hostaddr
+
+
+@pytest.mark.libpq("< 12")
+def test_hostaddr_missing(pgconn):
+    with pytest.raises(psycopg3.NotSupportedError):
+        pgconn.hostaddr
 
 
 def test_tty(pgconn):
