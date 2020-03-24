@@ -22,6 +22,7 @@ from .misc import error_message
 
 from . import pq_ctypes as pq_module
 
+version = pq_module.version
 PGconn = pq_module.PGconn
 PGresult = pq_module.PGresult
 PQerror = pq_module.PQerror
@@ -39,4 +40,5 @@ __all__ = (
     "PQerror",
     "error_message",
     "py_codecs",
+    "version",
 )

@@ -24,6 +24,10 @@ from . import _pq_ctypes as impl
 from ..exceptions import OperationalError
 
 
+def version():
+    return impl.PQlibVersion()
+
+
 class PQerror(OperationalError):
     pass
 

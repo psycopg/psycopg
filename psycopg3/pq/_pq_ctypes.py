@@ -9,7 +9,17 @@ import ctypes.util
 from ctypes import Structure, POINTER
 from ctypes import c_char, c_char_p, c_int, c_uint, c_void_p
 
+from psycopg3.exceptions import NotSupportedError
+
 pq = ctypes.pydll.LoadLibrary(ctypes.util.find_library("pq"))
+
+# Get the libpq version to define what functions are available.
+
+PQlibVersion = pq.PQlibVersion
+PQlibVersion.argtypes = []
+PQlibVersion.restype = c_int
+
+libpq_version = PQlibVersion()
 
 
 # libpq data types
@@ -121,9 +131,18 @@ PQhost = pq.PQhost
 PQhost.argtypes = [PGconn_ptr]
 PQhost.restype = c_char_p
 
-PQhostaddr = pq.PQhostaddr
-PQhostaddr.argtypes = [PGconn_ptr]
-PQhostaddr.restype = c_char_p
+if libpq_version >= 120000:
+    PQhostaddr = pq.PQhostaddr
+    PQhostaddr.argtypes = [PGconn_ptr]
+    PQhostaddr.restype = c_char_p
+else:
+
+    def PQhostaddr(pgconn):
+        raise NotSupportedError(
+            f"PQhostaddr requires libpq from PostgreSQL 12,"
+            f" {libpq_version} available instead"
+        )
+
 
 PQport = pq.PQport
 PQport.argtypes = [PGconn_ptr]
