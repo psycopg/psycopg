@@ -1,0 +1,80 @@
+# Travis CI configuration for psycopg3
+
+language: python
+
+env:
+  global:
+    - PSYCOPG3_TEST_DSN=dbname=psycopg3_test
+
+matrix:
+  include:
+
+    - env: TOXENV=black
+      python: 3.6
+
+    - env: TOXENV=flake8
+      python: 3.6
+
+    - python: 3.6
+      addons:
+        postgresql: '9.5'
+        apt:
+          packages:
+            - postgresql-client-9.5
+      env:
+        - TOXENV=py36
+        - PGPORT=5432
+        - PGVER=9.5
+
+    - python: 3.6
+      addons:
+        postgresql: '9.6'
+        apt:
+          packages:
+            - postgresql-client-9.6
+      env:
+        - TOXENV=py36
+        - PGPORT=5432
+        - PGVER=9.6
+
+    - python: 3.7
+      addons:
+        postgresql: '10'
+        apt:
+          packages:
+            - postgresql-client-10
+      env:
+        - TOXENV=py37
+        - PGPORT=5432
+        - PGVER=10
+
+    - python: 3.8
+      addons:
+        postgresql: '11'
+        apt:
+          packages:
+            - postgresql-11
+            - postgresql-client-11
+      env:
+        - TOXENV=py38
+        - PGPORT=5433
+        - PGVER=11
+
+    - python: 3.8
+      addons:
+        postgresql: '12'
+        apt:
+          packages:
+            - postgresql-12
+            - postgresql-client-12
+      env:
+        - TOXENV=py38
+        - PGPORT=5433
+        - PGVER=12
+
+install:
+  - pip install tox
+  - test ${TOXENV:0:2} != py || psql -c 'create database psycopg3_test'
+
+script:
+  - tox
