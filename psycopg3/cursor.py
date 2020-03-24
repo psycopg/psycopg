@@ -104,7 +104,7 @@ class Cursor(BaseCursor):
 
 class AsyncCursor(BaseCursor):
     async def execute(self, query, vars=None):
-        with await self.conn.lock:
+        async with self.conn.lock:
             gen = self._execute_send(query, vars)
             results = await self.conn.wait(gen)
             self._execute_results(results)

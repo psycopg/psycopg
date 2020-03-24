@@ -209,7 +209,7 @@ class AsyncConnection(BaseConnection):
         await self._exec_commit_rollback(b"rollback")
 
     async def _exec_commit_rollback(self, command):
-        with await self.lock:
+        async with self.lock:
             status = self.pgconn.transaction_status
             if status == pq.TransactionStatus.IDLE:
                 return
