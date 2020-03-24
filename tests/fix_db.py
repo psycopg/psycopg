@@ -99,7 +99,12 @@ def dsn(request):
 @pytest.fixture
 def pgconn(pq, dsn):
     """Return a PGconn connection open to `--test-dsn`."""
-    return pq.PGconn.connect(dsn.encode("utf8"))
+    conn = pq.PGconn.connect(dsn.encode("utf8"))
+    if conn.status != 0:
+        pytest.fail(
+            f"bad connection: {conn.error_message.decode('utf8', 'replace')}"
+        )
+    return conn
 
 
 @pytest.fixture

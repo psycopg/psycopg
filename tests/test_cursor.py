@@ -1,3 +1,6 @@
+import pytest
+
+
 def test_execute_many(conn):
     cur = conn.cursor()
     rv = cur.execute("select 'foo'; select 'bar'")
@@ -10,6 +13,8 @@ def test_execute_many(conn):
 
 
 def test_execute_sequence(conn):
+    if conn.pgconn.server_version < 100000:
+        pytest.xfail("it doesn't work on pg < 10")
     cur = conn.cursor()
     rv = cur.execute("select %s, %s, %s", [1, "foo", None])
     assert rv is cur

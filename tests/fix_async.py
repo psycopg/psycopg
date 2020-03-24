@@ -10,7 +10,7 @@ def loop():
 
 
 @pytest.fixture
-def aconn(loop, dsn):
+def aconn(loop, dsn, pq):
     """Return an `AsyncConnection` connected to the ``--test-dsn`` database."""
     from psycopg3 import AsyncConnection
 

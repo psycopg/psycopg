@@ -1,3 +1,6 @@
+import pytest
+
+
 def test_execute_many(aconn, loop):
     cur = aconn.cursor()
     rv = loop.run_until_complete(cur.execute("select 'foo'; select 'bar'"))
@@ -10,6 +13,8 @@ def test_execute_many(aconn, loop):
 
 
 def test_execute_sequence(aconn, loop):
+    if aconn.pgconn.server_version < 100000:
+        pytest.xfail("it doesn't work on pg < 10")
     cur = aconn.cursor()
     rv = loop.run_until_complete(
         cur.execute("select %s, %s, %s", [1, "foo", None])
