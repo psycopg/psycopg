@@ -54,7 +54,7 @@ class BaseConnection:
     @classmethod
     def _connect_gen(cls, conninfo):
         """
-        Generator to create a database connection using without blocking.
+        Generator to create a database connection without blocking.
 
         Yield pairs (fileno, `Wait`) whenever an operation would block. The
         generator can be restarted sending the appropriate `Ready` state when

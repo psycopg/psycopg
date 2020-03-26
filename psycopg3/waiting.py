@@ -61,35 +61,35 @@ async def wait_async(gen):
 
     Return what the generator eventually returned.
     """
-    # Use a queue to block and restart after the fd state changes.
+    # Use an event to block and restart after the fd state changes.
     # Not sure this is the best implementation but it's a start.
-    e = Event()
+    ev = Event()
     loop = get_event_loop()
     ready = None
 
     def wakeup(state):
         nonlocal ready
         ready = state
-        e.set()
+        ev.set()
 
     try:
         while 1:
             fd, s = next(gen)
-            e.clear()
+            ev.clear()
             if s is Wait.R:
                 loop.add_reader(fd, wakeup, Ready.R)
-                await e.wait()
+                await ev.wait()
                 loop.remove_reader(fd)
                 gen.send(ready)
             elif s is Wait.W:
                 loop.add_writer(fd, wakeup, Ready.W)
-                await e.wait()
+                await ev.wait()
                 loop.remove_writer(fd)
                 gen.send(ready)
             elif s is Wait.RW:
                 loop.add_reader(fd, wakeup, Ready.R)
                 loop.add_writer(fd, wakeup, Ready.W)
-                await e.wait()
+                await ev.wait()
                 loop.remove_reader(fd)
                 loop.remove_writer(fd)
                 gen.send(ready)

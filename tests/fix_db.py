@@ -100,7 +100,7 @@ def dsn(request):
 def pgconn(pq, dsn):
     """Return a PGconn connection open to `--test-dsn`."""
     conn = pq.PGconn.connect(dsn.encode("utf8"))
-    if conn.status != 0:
+    if conn.status != pq.ConnStatus.OK:
         pytest.fail(
             f"bad connection: {conn.error_message.decode('utf8', 'replace')}"
         )
