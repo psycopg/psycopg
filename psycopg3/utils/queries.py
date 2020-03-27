@@ -68,13 +68,28 @@ def query2pg(query, vars, codec):
     return b"".join(rv), order
 
 
+_re_placeholder = re.compile(
+    rb"""(?x)
+        %                       # a literal %
+        (?:
+            (?:
+                \( ([^)]+) \)   # or a name in (braces)
+                .               # followed by a format
+            )
+            |
+            (?:.)               # or any char, really
+        )
+        """
+)
+
+
 def split_query(query, encoding="ascii"):
     parts = []
     cur = 0
 
     # pairs [(fragment, match)], with the last match None
     m = None
-    for m in re.finditer(rb"%(?:(?:[^(])|(?:\(([^)]+)\).)|(?:.))", query):
+    for m in _re_placeholder.finditer(query):
         pre = query[cur : m.span(0)[0]]
         parts.append([pre, m])
         cur = m.span(0)[1]
