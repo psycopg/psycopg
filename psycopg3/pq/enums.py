@@ -79,3 +79,8 @@ class DiagnosticField(IntEnum):
     SOURCE_FILE = ord("F")
     SOURCE_LINE = ord("L")
     SOURCE_FUNCTION = ord("R")
+
+
+class Format(IntEnum):
+    TEXT = 0
+    BINARY = 1

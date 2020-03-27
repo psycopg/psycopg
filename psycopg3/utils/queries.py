@@ -8,6 +8,7 @@ import re
 from collections.abc import Sequence, Mapping
 
 from .. import exceptions as exc
+from ..pq import Format
 
 
 def query2pg(query, vars, codec):
@@ -149,7 +150,7 @@ def split_query(query, encoding="ascii"):
             part[1] = m.group(1)
 
         # Binary format
-        part[2] = ph[-1:] == b"b"
+        part[2] = Format(ph[-1:] == b"b")
 
         if phtype is None:
             phtype = type(part[1])
