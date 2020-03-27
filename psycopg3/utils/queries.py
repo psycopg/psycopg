@@ -16,8 +16,10 @@ def query2pg(query, vars, codec):
 
     - Convert Python placeholders (``%s``, ``%(name)s``) into Postgres
       format (``$1``, ``$2``)
-    - return ``query`` (bytes), ``order`` (sequence of names used in the
-      query, in the position they appear, in case of named params, else None)
+    - placeholders can be %s or %b (text or binary)
+    - return ``query`` (bytes), ``formats`` (list of formats) ``order``
+      (sequence of names used in the query, in the position they appear, in
+
     """
     if not isinstance(query, bytes):
         # encoding from str already happened
@@ -91,24 +93,25 @@ def split_query(query, encoding="ascii"):
     m = None
     for m in _re_placeholder.finditer(query):
         pre = query[cur : m.span(0)[0]]
-        parts.append([pre, m])
+        parts.append([pre, m, None])
         cur = m.span(0)[1]
     if m is None:
-        parts.append([query, None])
+        parts.append([query, None, None])
     else:
-        parts.append([query[cur:], None])
+        parts.append([query[cur:], None, None])
 
     # drop the "%%", validate
     i = 0
     phtype = None
     while i < len(parts):
-        m = parts[i][1]
+        part = parts[i]
+        m = part[1]
         if m is None:
             break  # last part
         ph = m.group(0)
         if ph == b"%%":
             # unescape '%%' to '%' and merge the parts
-            parts[i + 1][0] = parts[i][0] + b"%" + parts[i + 1][0]
+            parts[i + 1][0] = part[0] + b"%" + parts[i + 1][0]
             del parts[i]
             continue
         if ph == b"%(":
@@ -122,22 +125,25 @@ def split_query(query, encoding="ascii"):
                 "incomplete placeholder: '%'; if you want to use '%' as an"
                 " operator you can double it up, i.e. use '%%'"
             )
-        elif ph[-1:] != b"s":
+        elif ph[-1:] not in b"bs":
             raise exc.ProgrammingError(
-                f"only '%s' and '%(name)s' placeholders allowed, got"
+                f"only '%s' and '%b' placeholders allowed, got"
                 f" {m.group(0).decode(encoding)}"
             )
 
         # Index or name
         if m.group(1) is None:
-            parts[i][1] = i
+            part[1] = i
         else:
-            parts[i][1] = m.group(1)
+            part[1] = m.group(1)
+
+        # Binary format
+        part[2] = ph[-1:] == b"b"
 
         if phtype is None:
-            phtype = type(parts[i][1])
+            phtype = type(part[1])
         else:
-            if phtype is not type(parts[i][1]):  # noqa
+            if phtype is not type(part[1]):  # noqa
                 raise exc.ProgrammingError(
                     "positional and named placeholders cannot be mixed"
                 )

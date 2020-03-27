@@ -8,17 +8,34 @@ from psycopg3.utils.queries import split_query, query2pg, reorder_params
 @pytest.mark.parametrize(
     "input, want",
     [
-        (b"", [[b"", None]]),
-        (b"foo bar", [[b"foo bar", None]]),
-        (b"foo %% bar", [[b"foo % bar", None]]),
-        (b"%s", [[b"", 0], [b"", None]]),
-        (b"%s foo", [[b"", 0], [b" foo", None]]),
-        (b"foo %s", [[b"foo ", 0], [b"", None]]),
-        (b"foo %%%s bar", [[b"foo %", 0], [b" bar", None]]),
-        (b"foo %(name)s bar", [[b"foo ", b"name"], [b" bar", None]]),
+        (b"", [[b"", None, None]]),
+        (b"foo bar", [[b"foo bar", None, None]]),
+        (b"foo %% bar", [[b"foo % bar", None, None]]),
+        (b"%s", [[b"", 0, False], [b"", None, None]]),
+        (b"%s foo", [[b"", 0, False], [b" foo", None, None]]),
+        (b"%b foo", [[b"", 0, True], [b" foo", None, None]]),
+        (b"foo %s", [[b"foo ", 0, False], [b"", None, None]]),
+        (b"foo %%%s bar", [[b"foo %", 0, False], [b" bar", None, None]]),
         (
-            b"foo %s%s bar %s baz",
-            [[b"foo ", 0], [b"", 1], [b" bar ", 2], [b" baz", None]],
+            b"foo %(name)s bar",
+            [[b"foo ", b"name", False], [b" bar", None, None]],
+        ),
+        (
+            b"foo %(name)s %(name)b bar",
+            [
+                [b"foo ", b"name", False],
+                [b" ", b"name", True],
+                [b" bar", None, None],
+            ],
+        ),
+        (
+            b"foo %s%b bar %s baz",
+            [
+                [b"foo ", 0, False],
+                [b"", 1, True],
+                [b" bar ", 2, False],
+                [b" baz", None, None],
+            ],
         ),
     ],
 )
