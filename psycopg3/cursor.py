@@ -6,6 +6,7 @@ psycopg3 cursor objects
 
 from . import exceptions as exc
 from .pq import error_message, DiagnosticField, ExecStatus
+from .adaptation import ValuesAdapter
 from .utils.queries import query2pg, reorder_params
 
 
@@ -13,6 +14,7 @@ class BaseCursor:
     def __init__(self, conn, binary=False):
         self.conn = conn
         self.binary = binary
+        self.adapters = {}
         self._results = []
         self._result = None
         self._iresult = 0
@@ -33,9 +35,10 @@ class BaseCursor:
         if vars:
             if order is not None:
                 vars = reorder_params(vars, order)
-            params = self._adapt_sequence(vars, formats)
+            adapter = ValuesAdapter(self)
+            params, types = adapter.adapt_sequence(vars, formats)
             self.conn.pgconn.send_query_params(
-                query, params, param_formats=formats
+                query, params, param_formats=formats, param_types=types
             )
         else:
             self.conn.pgconn.send_query(query)
@@ -82,14 +85,6 @@ class BaseCursor:
         if self._iresult < len(self._results):
             self._result = self._results[self._iresult]
             return True
-
-    def _adapt_sequence(self, vars, formats):
-        # TODO: stub. Need adaptation layer.
-        codec = self.conn.codec
-        out = [
-            codec.encode(str(v))[0] if v is not None else None for v in vars
-        ]
-        return out
 
 
 class Cursor(BaseCursor):

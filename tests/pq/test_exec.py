@@ -38,9 +38,9 @@ def test_exec_params_types(pq, pgconn):
 
 
 def test_exec_params_nulls(pq, pgconn):
-    if pgconn.server_version < 100000:
-        pytest.xfail("it doesn't work on pg < 10")
-    res = pgconn.exec_params(b"select $1, $2, $3", [b"hi", b"", None])
+    res = pgconn.exec_params(
+        b"select $1::text, $2::text, $3::text", [b"hi", b"", None]
+    )
     assert res.status == pq.ExecStatus.TUPLES_OK
     assert res.get_value(0, 0) == b"hi"
     assert res.get_value(0, 1) == b""

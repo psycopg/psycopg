@@ -29,6 +29,7 @@ class BaseConnection:
     def __init__(self, pgconn):
         self.pgconn = pgconn
         self.cursor_factory = None
+        self.adapters = {}
         # name of the postgres encoding (in bytes)
         self._pgenc = None
 
