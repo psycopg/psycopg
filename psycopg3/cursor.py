@@ -29,11 +29,11 @@ class BaseCursor:
 
         # process %% -> % only if there are paramters, even if empty list
         if vars is not None:
-            query, order = query2pg(query, vars, codec)
+            query, formats, order = query2pg(query, vars, codec)
         if vars:
             if order is not None:
                 vars = reorder_params(vars, order)
-            params, formats = self._adapt_sequence(vars)
+            params = self._adapt_sequence(vars, formats)
             self.conn.pgconn.send_query_params(
                 query, params, param_formats=formats
             )
@@ -83,14 +83,13 @@ class BaseCursor:
             self._result = self._results[self._iresult]
             return True
 
-    def _adapt_sequence(self, vars):
+    def _adapt_sequence(self, vars, formats):
         # TODO: stub. Need adaptation layer.
         codec = self.conn.codec
         out = [
             codec.encode(str(v))[0] if v is not None else None for v in vars
         ]
-        fmt = [0] * len(out)
-        return out, fmt
+        return out
 
 
 class Cursor(BaseCursor):

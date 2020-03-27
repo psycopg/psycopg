@@ -52,22 +52,33 @@ def query2pg(query, vars, codec):
         for part in parts[:-1]:
             name = codec.decode(part[1])[0]
             if name not in seen:
-                part[1] = seen[name] = len(seen)
+                n = len(seen)
+                part[1] = n
+                seen[name] = (n, part[2])
                 order.append(name)
             else:
-                part[1] = seen[name]
+                if seen[name][1] != part[2]:
+                    raise exc.ProgrammingError(
+                        f"placeholder '{name}' cannot have different formats"
+                    )
+                part[1] = seen[name][0]
 
     else:
-        raise TypeError("parameters should be a sequence or a mapping")
+        raise TypeError(
+            f"query parameters should be a sequence or a mapping,"
+            f" got {type(vars).__name__}"
+        )
 
     # Assemble query and parameters
     rv = []
+    formats = []
     for part in parts[:-1]:
         rv.append(part[0])
         rv.append(b"$%d" % (part[1] + 1))
+        formats.append(part[2])
     rv.append(parts[-1][0])
 
-    return b"".join(rv), order
+    return b"".join(rv), formats, order
 
 
 _re_placeholder = re.compile(

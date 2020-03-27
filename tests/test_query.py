@@ -62,41 +62,45 @@ def test_split_query_bad(input):
 
 
 @pytest.mark.parametrize(
-    "query, params, want",
+    "query, params, want, wformats",
     [
-        (b"", [], b""),
-        (b"%%", [], b"%"),
-        (b"select %s", (1,), b"select $1"),
-        (b"%s %% %s", (1, 2), b"$1 % $2"),
+        (b"", [], b"", []),
+        (b"%%", [], b"%", []),
+        (b"select %s", (1,), b"select $1", [False]),
+        (b"%s %% %s", (1, 2), b"$1 % $2", [False, False]),
+        (b"%b %% %s", (1, 2), b"$1 % $2", [True, False]),
     ],
 )
-def test_query2pg_seq(query, params, want):
-    out, order = query2pg(query, params, codecs.lookup("utf-8"))
+def test_query2pg_seq(query, params, want, wformats):
+    out, formats, order = query2pg(query, params, codecs.lookup("utf-8"))
     assert order is None
     assert out == want
+    assert formats == wformats
 
 
 @pytest.mark.parametrize(
-    "query, params, want, worder",
+    "query, params, want, wformats, worder",
     [
-        (b"", {}, b"", []),
-        (b"hello %%", {"a": 1}, b"hello %", []),
+        (b"", {}, b"", [], []),
+        (b"hello %%", {"a": 1}, b"hello %", [], []),
         (
             b"select %(hello)s",
             {"hello": 1, "world": 2},
             b"select $1",
+            [False],
             ["hello"],
         ),
         (
-            b"select %(hi)s %(there)s %(hi)s",
+            b"select %(hi)s %(there)b %(hi)s",
             {"hi": 1, "there": 2},
             b"select $1 $2 $1",
+            [False, True],
             ["hi", "there"],
         ),
     ],
 )
-def test_query2pg_map(query, params, want, worder):
-    out, order = query2pg(query, params, codecs.lookup("utf-8"))
+def test_query2pg_map(query, params, want, wformats, worder):
+    out, formats, order = query2pg(query, params, codecs.lookup("utf-8"))
     assert out == want
     assert order == worder
 
@@ -129,7 +133,8 @@ def test_query2pg_badtype(query, params):
         (b"select %(", {"a": 1}),
         (b"select %(a", {"a": 1}),
         (b"select %(a)", {"a": 1}),
-        (b"select %s %(hi)s", 1),
+        (b"select %s %(hi)s", [1]),
+        (b"select %(hi)s %(hi)b", {"hi": 1}),
     ],
 )
 def test_query2pg_badprog(query, params):
