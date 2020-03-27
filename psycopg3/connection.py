@@ -30,8 +30,9 @@ class BaseConnection:
         self.pgconn = pgconn
         self.cursor_factory = None
         self.adapters = {}
+        self.casters = {}
         # name of the postgres encoding (in bytes)
-        self._pgenc = None
+        self.pgenc = None
 
     def cursor(self, name=None):
         return self.cursor_factory(self)
@@ -40,10 +41,11 @@ class BaseConnection:
     def codec(self):
         # TODO: utf8 fastpath?
         pgenc = self.pgconn.parameter_status(b"client_encoding")
-        if self._pgenc != pgenc:
+        if self.pgenc != pgenc:
             # for unknown encodings and SQL_ASCII be strict and use ascii
             pyenc = pq.py_codecs.get(pgenc.decode("ascii"), "ascii")
             self._codec = codecs.lookup(pyenc)
+            self.pgenc = pgenc
         return self._codec
 
     def encode(self, s):

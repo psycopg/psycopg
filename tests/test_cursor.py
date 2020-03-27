@@ -18,3 +18,14 @@ def test_execute_sequence(conn):
     assert cur._result.get_value(0, 1) == b"foo"
     assert cur._result.get_value(0, 2) is None
     assert cur.nextset() is None
+
+
+def test_fetchone(conn):
+    cur = conn.cursor()
+    cur.execute("select %s, %s, %s", [1, "foo", None])
+    row = cur.fetchone()
+    assert row[0] == 1
+    assert row[1] == "foo"
+    assert row[2] is None
+    row = cur.fetchone()
+    assert row is None

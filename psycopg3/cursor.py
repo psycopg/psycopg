@@ -6,7 +6,7 @@ psycopg3 cursor objects
 
 from . import exceptions as exc
 from .pq import error_message, DiagnosticField, ExecStatus
-from .adaptation import ValuesAdapter
+from .adaptation import ValuesTransformer
 from .utils.queries import query2pg, reorder_params
 
 
@@ -15,15 +15,20 @@ class BaseCursor:
         self.conn = conn
         self.binary = binary
         self.adapters = {}
+        self.casters = {}
+        self._reset()
+
+    def _reset(self):
         self._results = []
         self._result = None
+        self._pos = 0
         self._iresult = 0
+        self._transformer = ValuesTransformer(self)
 
     def _execute_send(self, query, vars):
         # Implement part of execute() before waiting common to sync and async
-        self._results = []
-        self._result = None
-        self._iresult = 0
+        self._reset()
+
         codec = self.conn.codec
 
         if isinstance(query, str):
@@ -35,8 +40,7 @@ class BaseCursor:
         if vars:
             if order is not None:
                 vars = reorder_params(vars, order)
-            adapter = ValuesAdapter(self)
-            params, types = adapter.adapt_sequence(vars, formats)
+            params, types = self._transformer.adapt_sequence(vars, formats)
             self.conn.pgconn.send_query_params(
                 query, params, param_formats=formats, param_types=types
             )
@@ -84,7 +88,22 @@ class BaseCursor:
         self._iresult += 1
         if self._iresult < len(self._results):
             self._result = self._results[self._iresult]
+            self._pos = 0
             return True
+
+    def fetchone(self):
+        rv = self._cast_row(self._pos)
+        if rv is not None:
+            self._pos += 1
+        return rv
+
+    def _cast_row(self, n):
+        if self._result is None:
+            return None
+        if n >= self._result.ntuples:
+            return None
+
+        return tuple(self._transformer.cast_row(self._result, n))
 
 
 class Cursor(BaseCursor):
