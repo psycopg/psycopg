@@ -23,9 +23,23 @@ def test_execute_sequence(conn):
 def test_fetchone(conn):
     cur = conn.cursor()
     cur.execute("select %s, %s, %s", [1, "foo", None])
+    assert cur._result.fformat(0) == 0
+
     row = cur.fetchone()
     assert row[0] == 1
     assert row[1] == "foo"
     assert row[2] is None
+    row = cur.fetchone()
+    assert row is None
+
+
+def test_execute_binary_result(conn):
+    cur = conn.cursor(binary=True)
+    cur.execute("select %s, %s", ["foo", None])
+    assert cur._result.fformat(0) == 1
+
+    row = cur.fetchone()
+    assert row[0] == "foo"
+    assert row[1] is None
     row = cur.fetchone()
     assert row is None

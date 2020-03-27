@@ -34,8 +34,10 @@ class BaseConnection:
         # name of the postgres encoding (in bytes)
         self.pgenc = None
 
-    def cursor(self, name=None):
-        return self.cursor_factory(self)
+    def cursor(self, name=None, binary=False):
+        if name is not None:
+            raise NotImplementedError
+        return self.cursor_factory(self, binary=binary)
 
     @property
     def codec(self):

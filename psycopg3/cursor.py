@@ -42,7 +42,11 @@ class BaseCursor:
                 vars = reorder_params(vars, order)
             params, types = self._transformer.adapt_sequence(vars, formats)
             self.conn.pgconn.send_query_params(
-                query, params, param_formats=formats, param_types=types
+                query,
+                params,
+                param_formats=formats,
+                param_types=types,
+                result_format=int(self.binary),
             )
         else:
             self.conn.pgconn.send_query(query)
