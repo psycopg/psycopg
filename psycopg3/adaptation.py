@@ -5,6 +5,7 @@ Entry point into the adaptation system.
 # Copyright (C) 2020 The Psycopg Team
 
 import codecs
+from functools import partial
 
 from . import exceptions as exc
 from .pq import Format
@@ -26,7 +27,11 @@ class Adapter:
         raise NotImplementedError()
 
     @staticmethod
-    def register(cls, adapter, context=None, format=Format.TEXT):
+    def register(cls, adapter=None, context=None, format=Format.TEXT):
+        if adapter is None:
+            # used as decorator
+            return partial(Adapter.register, cls, format=format)
+
         if not isinstance(cls, type):
             raise TypeError(
                 f"adapters should be registered on classes, got {cls} instead"
@@ -51,10 +56,11 @@ class Adapter:
 
         where = context.adapters if context is not None else Adapter.globals
         where[cls, format] = adapter
+        return adapter
 
     @staticmethod
-    def register_binary(cls, adapter, context=None):
-        Adapter.register(cls, adapter, context, format=Format.BINARY)
+    def register_binary(cls, adapter=None, context=None):
+        return Adapter.register(cls, adapter, context, format=Format.BINARY)
 
 
 class Typecaster:
@@ -68,7 +74,11 @@ class Typecaster:
         raise NotImplementedError()
 
     @staticmethod
-    def register(oid, caster, context=None, format=Format.TEXT):
+    def register(oid, caster=None, context=None, format=Format.TEXT):
+        if caster is None:
+            # used as decorator
+            return partial(Typecaster.register, oid, format=format)
+
         if not isinstance(oid, int):
             raise TypeError(
                 f"typecasters should be registered on oid, got {oid} instead"
@@ -93,42 +103,11 @@ class Typecaster:
 
         where = context.adapters if context is not None else Typecaster.globals
         where[oid, format] = caster
+        return caster
 
     @staticmethod
-    def register_binary(oid, caster, context=None):
-        Typecaster.register(oid, caster, context, format=Format.BINARY)
-
-
-def adapter(oid):
-    def adapter_(obj):
-        Adapter.register(oid, obj)
-        return obj
-
-    return adapter_
-
-
-def binary_adapter(oid):
-    def binary_adapter_(obj):
-        Adapter.register_binary(oid, obj)
-        return obj
-
-    return binary_adapter_
-
-
-def caster(oid):
-    def caster_(obj):
-        Typecaster.register(oid, obj)
-        return obj
-
-    return caster_
-
-
-def binary_caster(oid):
-    def binary_caster_(obj):
-        Typecaster.register_binary(oid, obj)
-        return obj
-
-    return binary_caster_
+    def register_binary(oid, caster=None, context=None):
+        return Typecaster.register(oid, caster, context, format=Format.BINARY)
 
 
 class Transformer:
@@ -278,7 +257,7 @@ class Transformer:
         return Typecaster.globals[INVALID_OID, fmt]
 
 
-@caster(INVALID_OID)
+@Typecaster.register(INVALID_OID)
 class UnknownCaster(Typecaster):
     """
     Fallback object to convert unknown types to Python
@@ -295,6 +274,6 @@ class UnknownCaster(Typecaster):
         return self.decode(data)[0]
 
 
-@binary_caster(INVALID_OID)
+@Typecaster.register_binary(INVALID_OID)
 def cast_unknown(data):
     return data

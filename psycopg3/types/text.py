@@ -6,13 +6,13 @@ Adapters of textual types.
 
 import codecs
 
-from ..adaptation import Adapter, adapter, binary_adapter
-from ..adaptation import Typecaster, caster, binary_caster
+from ..adaptation import Adapter
+from ..adaptation import Typecaster
 from .oids import type_oid
 
 
-@adapter(str)
-@binary_adapter(str)
+@Adapter.register(str)
+@Adapter.register_binary(str)
 class StringAdapter(Adapter):
     def __init__(self, cls, conn):
         super().__init__(cls, conn)
@@ -24,8 +24,8 @@ class StringAdapter(Adapter):
         return self.encode(obj)[0]
 
 
-@caster(type_oid["text"])
-@binary_caster(type_oid["text"])
+@Typecaster.register(type_oid["text"])
+@Typecaster.register_binary(type_oid["text"])
 class StringCaster(Typecaster):
     def __init__(self, oid, conn):
         super().__init__(oid, conn)
