@@ -14,10 +14,6 @@ from .connection import BaseConnection
 
 INVALID_OID = 0
 
-ascii_encode = codecs.lookup("ascii").encode
-ascii_decode = codecs.lookup("ascii").decode
-utf8_codec = codecs.lookup("utf-8")
-
 global_adapters = {}
 global_casters = {}
 
@@ -220,7 +216,7 @@ class Transformer:
             return global_adapters[key]
 
         raise exc.ProgrammingError(
-            f"cannot adapt type {cls.__name__} to format {fmt}"
+            f"cannot adapt type {cls.__name__} to format {Format(fmt).name}"
         )
 
     def cast_row(self, result, n):
@@ -279,48 +275,6 @@ class Typecaster:
         raise NotImplementedError()
 
 
-@adapter(str)
-@binary_adapter(str)
-class StringAdapter(Adapter):
-    def __init__(self, cls, conn):
-        super().__init__(cls, conn)
-        self.encode = (conn.codec if conn is not None else utf8_codec).encode
-
-    def adapt(self, obj):
-        return self.encode(obj)[0]
-
-
-@caster(type_oid["text"])
-@binary_caster(type_oid["text"])
-class StringCaster(Typecaster):
-    def __init__(self, oid, conn):
-        super().__init__(oid, conn)
-        if conn is not None:
-            if conn.pgenc != b"SQL_ASCII":
-                self.decode = conn.codec.decode
-            else:
-                self.decode = None
-        else:
-            self.decode = utf8_codec.decode
-
-    def cast(self, data):
-        if self.decode is not None:
-            return self.decode(data)[0]
-        else:
-            # return bytes for SQL_ASCII db
-            return data
-
-
-@adapter(int)
-def adapt_int(obj):
-    return ascii_encode(str(obj))[0], type_oid["numeric"]
-
-
-@caster(type_oid["numeric"])
-def cast_int(data):
-    return int(ascii_decode(data)[0])
-
-
 @caster(INVALID_OID)
 class UnknownCaster(Typecaster):
     """
@@ -332,7 +286,7 @@ class UnknownCaster(Typecaster):
         if conn is not None:
             self.decode = conn.codec.decode
         else:
-            self.decode = utf8_codec.decode
+            self.decode = codecs.lookup("utf8").decode
 
     def cast(self, data):
         return self.decode(data)[0]

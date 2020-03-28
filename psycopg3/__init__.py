@@ -20,6 +20,11 @@ from .exceptions import (
     NotSupportedError,
 )
 
+# register default adapters
+from .types import numeric  # noqa
+from .types import text  # noqa
+
+
 # DBAPI compliancy
 connect = Connection.connect
 apilevel = "2.0"
