@@ -6,7 +6,6 @@ psycopg3 cursor objects
 
 from . import exceptions as exc
 from .pq import error_message, DiagnosticField, ExecStatus
-from .adaptation import ValuesTransformer
 from .utils.queries import query2pg, reorder_params
 
 
@@ -19,11 +18,13 @@ class BaseCursor:
         self._reset()
 
     def _reset(self):
+        from .adaptation import Transformer
+
         self._results = []
         self._result = None
         self._pos = 0
         self._iresult = 0
-        self._transformer = ValuesTransformer(self)
+        self._transformer = Transformer(self)
 
     def _execute_send(self, query, vars):
         # Implement part of execute() before waiting common to sync and async
