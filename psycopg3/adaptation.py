@@ -9,11 +9,10 @@ import codecs
 from . import exceptions as exc
 from .pq import Format
 from .cursor import BaseCursor
+from .types.oids import type_oid
 from .connection import BaseConnection
 
 INVALID_OID = 0
-TEXT_OID = 25
-NUMERIC_OID = 1700
 
 ascii_encode = codecs.lookup("ascii").encode
 ascii_decode = codecs.lookup("ascii").decode
@@ -179,7 +178,7 @@ class Transformer:
                 oid = data[1]
                 data = data[0]
             else:
-                oid = TEXT_OID
+                oid = type_oid["text"]
 
             out.append(data)
             types.append(oid)
@@ -188,7 +187,7 @@ class Transformer:
 
     def adapt(self, obj, fmt):
         if obj is None:
-            return None, TEXT_OID
+            return None, type_oid["text"]
 
         cls = type(obj)
         func = self.get_adapt_function(cls, fmt)
@@ -291,8 +290,8 @@ class StringAdapter(Adapter):
         return self.encode(obj)[0]
 
 
-@caster(TEXT_OID)
-@binary_caster(TEXT_OID)
+@caster(type_oid["text"])
+@binary_caster(type_oid["text"])
 class StringCaster(Typecaster):
     def __init__(self, oid, conn):
         super().__init__(oid, conn)
@@ -314,10 +313,10 @@ class StringCaster(Typecaster):
 
 @adapter(int)
 def adapt_int(obj):
-    return ascii_encode(str(obj))[0], NUMERIC_OID
+    return ascii_encode(str(obj))[0], type_oid["numeric"]
 
 
-@caster(NUMERIC_OID)
+@caster(type_oid["numeric"])
 def cast_int(data):
     return int(ascii_decode(data)[0])
 
