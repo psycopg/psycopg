@@ -175,7 +175,7 @@ class ValuesTransformer:
             return UnknownCaster()
 
 
-class Transformer:
+class Adapter:
     def get_text_adapter(self, cls, conn):
         raise exc.NotSupportedError(
             f"the type {cls.__name__} doesn't support text adaptation"
@@ -186,6 +186,8 @@ class Transformer:
             f"the type {cls.__name__} doesn't support binary adaptation"
         )
 
+
+class Typecaster:
     def get_text_caster(self, oid, conn):
         raise exc.NotSupportedError(
             f"the PostgreSQL type {oid} doesn't support cast from text"
@@ -205,11 +207,20 @@ class Transformer:
         return codec.decode(value)[0]
 
 
-class StringTransformer(Transformer):
+class StringAdapter(Adapter):
     def get_text_adapter(self, cls, conn):
         codec = conn.codec if conn is not None else utf8_codec
         return partial(self.adapt_str, codec)
 
+    # format is the same in binary and text
+    get_binary_adapter = get_text_adapter
+
+    @staticmethod
+    def adapt_str(codec, value):
+        return codec.encode(value)[0], TEXT_OID
+
+
+class StringCaster(Typecaster):
     def get_text_caster(self, oid, conn):
         if conn is None or conn.pgenc == b"SQL_ASCII":
             # we don't have enough info to decode bytes
@@ -219,37 +230,36 @@ class StringTransformer(Transformer):
         return partial(self.cast_to_str, codec)
 
     # format is the same in binary and text
-    get_binary_adapter = get_text_adapter
     get_binary_caster = get_text_caster
 
-    @staticmethod
-    def adapt_str(codec, value):
-        return codec.encode(value)[0], TEXT_OID
+
+global_adapters[str] = StringAdapter()
+global_casters[TEXT_OID] = StringCaster()
 
 
-global_adapters[str] = global_casters[TEXT_OID] = StringTransformer()
-
-
-class IntTransformer(Transformer):
+class IntAdapter(Adapter):
     def get_text_adapter(self, cls, conn):
         return self.adapt_int
-
-    def get_text_caster(self, oid, conn):
-        return self.cast_int
 
     @staticmethod
     def adapt_int(value):
         return ascii_encode(str(value))[0], NUMERIC_OID
+
+
+class IntCaster(Typecaster):
+    def get_text_caster(self, oid, conn):
+        return self.cast_int
 
     @staticmethod
     def cast_int(value):
         return int(ascii_decode(value)[0])
 
 
-global_casters[NUMERIC_OID] = global_adapters[int] = IntTransformer()
+global_adapters[int] = IntAdapter()
+global_casters[NUMERIC_OID] = IntCaster()
 
 
-class UnknownCaster(Transformer):
+class UnknownCaster(Typecaster):
     """
     Fallback object to convert unknown types to Python
     """
