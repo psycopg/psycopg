@@ -9,12 +9,15 @@ import codecs
 from ..adaptation import Adapter, Typecaster
 from .oids import type_oid
 
+_encode = codecs.lookup("ascii").encode
+_decode = codecs.lookup("ascii").decode
+
 
 @Adapter.register(int)
-def adapt_int(obj, encode=codecs.lookup("ascii").encode):
-    return encode(str(obj))[0], type_oid["numeric"]
+def adapt_int(obj):
+    return _encode(str(obj))[0], type_oid["numeric"]
 
 
 @Typecaster.register(type_oid["numeric"])
-def cast_int(data, decode=codecs.lookup("ascii").decode):
-    return int(decode(data)[0])
+def cast_int(data):
+    return int(_decode(data)[0])
