@@ -7,14 +7,17 @@ Adapters of textual types.
 import codecs
 from typing import Optional, Union
 
-from ..adaptation import Adapter, Typecaster
+from ..adaptation import (
+    Adapter,
+    Typecaster,
+)
 from ..connection import BaseConnection
 from ..utils.typing import EncodeFunc, DecodeFunc
 from .oids import type_oid
 
 
-@Adapter.register(str)
-@Adapter.register_binary(str)
+@Adapter.text(str)
+@Adapter.binary(str)
 class StringAdapter(Adapter):
     def __init__(self, cls: type, conn: BaseConnection):
         super().__init__(cls, conn)
@@ -29,8 +32,8 @@ class StringAdapter(Adapter):
         return self._encode(obj)[0]
 
 
-@Typecaster.register(type_oid["text"])
-@Typecaster.register_binary(type_oid["text"])
+@Typecaster.text(type_oid["text"])
+@Typecaster.binary(type_oid["text"])
 class StringCaster(Typecaster):
 
     decode: Optional[DecodeFunc]

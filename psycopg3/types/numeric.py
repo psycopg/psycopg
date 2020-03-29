@@ -14,11 +14,11 @@ _encode = codecs.lookup("ascii").encode
 _decode = codecs.lookup("ascii").decode
 
 
-@Adapter.register(int)
+@Adapter.text(int)
 def adapt_int(obj: int) -> Tuple[bytes, int]:
     return _encode(str(obj))[0], type_oid["numeric"]
 
 
-@Typecaster.register(type_oid["numeric"])
+@Typecaster.text(type_oid["numeric"])
 def cast_int(data: bytes) -> int:
     return int(_decode(data)[0])
