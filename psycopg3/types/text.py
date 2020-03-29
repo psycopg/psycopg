@@ -12,7 +12,7 @@ from ..adaptation import (
     Typecaster,
 )
 from ..connection import BaseConnection
-from ..utils.typing import EncodeFunc, DecodeFunc
+from ..utils.typing import EncodeFunc, DecodeFunc, Oid
 from .oids import type_oid
 
 
@@ -38,7 +38,7 @@ class StringCaster(Typecaster):
 
     decode: Optional[DecodeFunc]
 
-    def __init__(self, oid: int, conn: BaseConnection):
+    def __init__(self, oid: Oid, conn: BaseConnection):
         super().__init__(oid, conn)
 
         if conn is not None:

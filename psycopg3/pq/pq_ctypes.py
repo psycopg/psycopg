@@ -24,6 +24,7 @@ from .enums import (
 from .misc import error_message, ConninfoOption
 from . import _pq_ctypes as impl
 from ..exceptions import OperationalError
+from ..utils.typing import Oid
 
 
 def version() -> int:
@@ -196,7 +197,7 @@ class PGconn:
         self,
         command: bytes,
         param_values: List[Optional[bytes]],
-        param_types: Optional[List[int]] = None,
+        param_types: Optional[List[Oid]] = None,
         param_formats: Optional[List[Format]] = None,
         result_format: Format = Format.TEXT,
     ) -> "PGresult":
@@ -212,7 +213,7 @@ class PGconn:
         self,
         command: bytes,
         param_values: List[Optional[bytes]],
-        param_types: Optional[List[int]] = None,
+        param_types: Optional[List[Oid]] = None,
         param_formats: Optional[List[Format]] = None,
         result_format: Format = Format.TEXT,
     ) -> None:
@@ -228,7 +229,7 @@ class PGconn:
         self,
         command: bytes,
         param_values: List[Optional[bytes]],
-        param_types: Optional[List[int]] = None,
+        param_types: Optional[List[Oid]] = None,
         param_formats: Optional[List[Format]] = None,
         result_format: Format = Format.TEXT,
     ) -> Any:
@@ -279,7 +280,7 @@ class PGconn:
         self,
         name: bytes,
         command: bytes,
-        param_types: Optional[List[int]] = None,
+        param_types: Optional[List[Oid]] = None,
     ) -> "PGresult":
         if not isinstance(name, bytes):
             raise TypeError(f"'name' must be bytes, got {type(name)} instead")
@@ -442,7 +443,7 @@ class PGresult:
     def fformat(self, column_number: int) -> Format:
         return impl.PQfformat(self.pgresult_ptr, column_number)  # type: ignore
 
-    def ftype(self, column_number: int) -> int:
+    def ftype(self, column_number: int) -> Oid:
         return impl.PQftype(self.pgresult_ptr, column_number)  # type: ignore
 
     def fmod(self, column_number: int) -> int:
@@ -452,8 +453,8 @@ class PGresult:
         return impl.PQfsize(self.pgresult_ptr, column_number)  # type: ignore
 
     @property
-    def binary_tuples(self) -> int:
-        return impl.PQbinaryTuples(self.pgresult_ptr)  # type: ignore
+    def binary_tuples(self) -> Format:
+        return Format(impl.PQbinaryTuples(self.pgresult_ptr))
 
     def get_value(
         self, row_number: int, column_number: int
@@ -474,7 +475,7 @@ class PGresult:
     def nparams(self) -> int:
         return impl.PQnparams(self.pgresult_ptr)  # type: ignore
 
-    def param_type(self, param_number: int) -> int:
+    def param_type(self, param_number: int) -> Oid:
         return impl.PQparamtype(  # type: ignore
             self.pgresult_ptr, param_number
         )

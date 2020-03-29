@@ -23,21 +23,21 @@ from .pq import Format, PGresult
 from .cursor import BaseCursor
 from .types.oids import type_oid, INVALID_OID
 from .connection import BaseConnection
-from .utils.typing import DecodeFunc
+from .utils.typing import DecodeFunc, Oid
 
 
 # Type system
 
 AdaptContext = Union[BaseConnection, BaseCursor]
 
-MaybeOid = Union[Optional[bytes], Tuple[Optional[bytes], int]]
+MaybeOid = Union[Optional[bytes], Tuple[Optional[bytes], Oid]]
 AdapterFunc = Callable[[Any], MaybeOid]
 AdapterType = Union["Adapter", AdapterFunc]
 AdaptersMap = Dict[Tuple[type, Format], AdapterType]
 
 TypecasterFunc = Callable[[bytes], Any]
 TypecasterType = Union["Typecaster", TypecasterFunc]
-TypecastersMap = Dict[Tuple[int, Format], TypecasterType]
+TypecastersMap = Dict[Tuple[Oid, Format], TypecasterType]
 
 
 class Adapter:
@@ -47,7 +47,7 @@ class Adapter:
         self.cls = cls
         self.conn = conn
 
-    def adapt(self, obj: Any) -> Union[bytes, Tuple[bytes, int]]:
+    def adapt(self, obj: Any) -> Union[bytes, Tuple[bytes, Oid]]:
         raise NotImplementedError()
 
     @staticmethod
@@ -111,7 +111,7 @@ class Adapter:
 class Typecaster:
     globals: TypecastersMap = {}
 
-    def __init__(self, oid: int, conn: Optional[BaseConnection]):
+    def __init__(self, oid: Oid, conn: Optional[BaseConnection]):
         self.oid = oid
         self.conn = conn
 
@@ -120,7 +120,7 @@ class Typecaster:
 
     @staticmethod
     def register(
-        oid: int,
+        oid: Oid,
         caster: TypecasterType,
         context: Optional[AdaptContext] = None,
         format: Format = Format.TEXT,
@@ -153,14 +153,14 @@ class Typecaster:
 
     @staticmethod
     def register_binary(
-        oid: int,
+        oid: Oid,
         caster: TypecasterType,
         context: Optional[AdaptContext] = None,
     ) -> TypecasterType:
         return Typecaster.register(oid, caster, context, format=Format.BINARY)
 
     @staticmethod
-    def text(oid: int) -> Callable[[Any], Any]:
+    def text(oid: Oid) -> Callable[[Any], Any]:
         def register_caster_(caster: TypecasterType) -> TypecasterType:
             Typecaster.register(oid, caster)
             return caster
@@ -168,7 +168,7 @@ class Typecaster:
         return register_caster_
 
     @staticmethod
-    def binary(oid: int) -> Callable[[Any], Any]:
+    def binary(oid: Oid) -> Callable[[Any], Any]:
         def register_binary_caster_(caster: TypecasterType) -> TypecasterType:
             Typecaster.register_binary(oid, caster)
             return caster
@@ -235,7 +235,7 @@ class Transformer:
 
     def adapt_sequence(
         self, objs: Sequence[Any], fmts: Sequence[Format]
-    ) -> Tuple[List[Optional[bytes]], List[int]]:
+    ) -> Tuple[List[Optional[bytes]], List[Oid]]:
         out = []
         types = []
 
@@ -299,7 +299,7 @@ class Transformer:
                 v = func(v)
             yield v
 
-    def get_cast_function(self, oid: int, fmt: Format) -> TypecasterFunc:
+    def get_cast_function(self, oid: Oid, fmt: Format) -> TypecasterFunc:
         try:
             return self._cast_funcs[oid, fmt]
         except KeyError:
@@ -311,7 +311,7 @@ class Transformer:
         else:
             return cast(TypecasterFunc, caster)
 
-    def lookup_caster(self, oid: int, fmt: Format) -> TypecasterType:
+    def lookup_caster(self, oid: Oid, fmt: Format) -> TypecasterType:
         key = (oid, fmt)
 
         cur = self.cursor
@@ -334,7 +334,7 @@ class UnknownCaster(Typecaster):
     Fallback object to convert unknown types to Python
     """
 
-    def __init__(self, oid: int, conn: Optional[BaseConnection]):
+    def __init__(self, oid: Oid, conn: Optional[BaseConnection]):
         super().__init__(oid, conn)
         self.decode: DecodeFunc
         if conn is not None:
