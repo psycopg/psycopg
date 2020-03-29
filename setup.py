@@ -8,7 +8,7 @@ psycopg3 -- PostgreSQL database adapter for Python
 
 import re
 import os
-from setuptools import setup
+from setuptools import setup  # type: ignore
 
 # Grab the version without importing the module
 # or we will get import errors on install if prerequisites are still missing
