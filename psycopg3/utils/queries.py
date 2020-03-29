@@ -55,15 +55,15 @@ def query2pg(
                 f"the query has {len(parts) - 1} placeholders but"
                 f" {len(vars)} parameters were passed"
             )
-        if vars and not isinstance(parts[0].index, int):
+        if vars and not isinstance(parts[0].item, int):
             raise TypeError(
                 "named placeholders require a mapping of parameters"
             )
 
         for part in parts[:-1]:
-            assert isinstance(part.index, int)
+            assert isinstance(part.item, int)
             chunks.append(part.pre)
-            chunks.append(b"$%d" % (part.index + 1))
+            chunks.append(b"$%d" % (part.item + 1))
             formats.append(part.format)
 
     elif isinstance(vars, Mapping):
@@ -74,21 +74,21 @@ def query2pg(
         seen: Dict[str, Tuple[bytes, Format]] = {}
         order = []
         for part in parts[:-1]:
-            assert isinstance(part.index, str)
+            assert isinstance(part.item, str)
             formats.append(part.format)
             chunks.append(part.pre)
-            if part.index not in seen:
+            if part.item not in seen:
                 ph = b"$%d" % (len(seen) + 1)
-                seen[part.index] = (ph, part.format)
-                order.append(part.index)
+                seen[part.item] = (ph, part.format)
+                order.append(part.item)
                 chunks.append(ph)
             else:
-                if seen[part.index][1] != part.format:
+                if seen[part.item][1] != part.format:
                     raise exc.ProgrammingError(
-                        f"placeholder '{part.index}' cannot have"
+                        f"placeholder '{part.item}' cannot have"
                         f" different formats"
                     )
-                chunks.append(seen[part.index][0])
+                chunks.append(seen[part.item][0])
 
     else:
         raise TypeError(
@@ -119,8 +119,7 @@ _re_placeholder = re.compile(
 
 class QueryPart(NamedTuple):
     pre: bytes
-    # TODO: mypy bug? https://github.com/python/mypy/issues/8599
-    index: Union[int, str]  # type: ignore
+    item: Union[int, str]
     format: Format
 
 
@@ -177,13 +176,13 @@ def split_query(query: bytes, encoding: str = "ascii") -> List[QueryPart]:
             )
 
         # Index or name
-        index: Union[int, str]
-        index = i if m.group(1) is None else m.group(1).decode(encoding)
+        item: Union[int, str]
+        item = i if m.group(1) is None else m.group(1).decode(encoding)
 
         if phtype is None:
-            phtype = type(index)
+            phtype = type(item)
         else:
-            if phtype is not type(index):  # noqa
+            if phtype is not type(item):  # noqa
                 raise exc.ProgrammingError(
                     "positional and named placeholders cannot be mixed"
                 )
@@ -191,7 +190,7 @@ def split_query(query: bytes, encoding: str = "ascii") -> List[QueryPart]:
         # Binary format
         format = Format(ph[-1:] == b"b")
 
-        rv.append(QueryPart(pre, index, format))
+        rv.append(QueryPart(pre, item, format))
         i += 1
 
     return rv
