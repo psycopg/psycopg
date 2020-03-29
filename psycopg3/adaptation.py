@@ -10,10 +10,8 @@ from functools import partial
 from . import exceptions as exc
 from .pq import Format
 from .cursor import BaseCursor
-from .types.oids import type_oid
+from .types.oids import type_oid, INVALID_OID
 from .connection import BaseConnection
-
-INVALID_OID = 0
 
 
 class Adapter:
