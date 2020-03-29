@@ -8,10 +8,15 @@ import ctypes
 import ctypes.util
 from ctypes import Structure, POINTER
 from ctypes import c_char, c_char_p, c_int, c_uint, c_void_p
+from typing import List, Tuple
 
 from psycopg3.exceptions import NotSupportedError
 
-pq = ctypes.pydll.LoadLibrary(ctypes.util.find_library("pq"))
+libname = ctypes.util.find_library("pq")
+if libname is None:
+    raise ImportError("libpq library not found")
+
+pq = ctypes.pydll.LoadLibrary(libname)
 
 # Get the libpq version to define what functions are available.
 
@@ -29,11 +34,11 @@ Oid = c_uint
 
 
 class PGconn_struct(Structure):
-    _fields_ = []
+    _fields_: List[Tuple[str, type]] = []
 
 
 class PGresult_struct(Structure):
-    _fields_ = []
+    _fields_: List[Tuple[str, type]] = []
 
 
 class PQconninfoOption_struct(Structure):
@@ -131,13 +136,18 @@ PQhost = pq.PQhost
 PQhost.argtypes = [PGconn_ptr]
 PQhost.restype = c_char_p
 
-if libpq_version >= 120000:
-    PQhostaddr = pq.PQhostaddr
-    PQhostaddr.argtypes = [PGconn_ptr]
-    PQhostaddr.restype = c_char_p
-else:
+_PQhostaddr = None
 
-    def PQhostaddr(pgconn):
+if libpq_version >= 120000:
+    _PQhostaddr = pq.PQhostaddr
+    _PQhostaddr.argtypes = [PGconn_ptr]
+    _PQhostaddr.restype = c_char_p
+
+
+def PQhostaddr(pgconn):
+    if _PQhostaddr is not None:
+        return _PQhostaddr(pgconn)
+    else:
         raise NotSupportedError(
             f"PQhostaddr requires libpq from PostgreSQL 12,"
             f" {libpq_version} available instead"

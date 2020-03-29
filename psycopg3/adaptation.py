@@ -5,6 +5,7 @@ Entry point into the adaptation system.
 # Copyright (C) 2020 The Psycopg Team
 
 import codecs
+from typing import Dict, Tuple
 from functools import partial
 
 from . import exceptions as exc
@@ -15,7 +16,7 @@ from .connection import BaseConnection
 
 
 class Adapter:
-    globals = {}
+    globals: Dict[Tuple[type, Format], "Adapter"] = {}  # TODO: incomplete type
 
     def __init__(self, cls, conn):
         self.cls = cls
@@ -62,7 +63,8 @@ class Adapter:
 
 
 class Typecaster:
-    globals = {}
+    # TODO: incomplete type
+    globals: Dict[Tuple[type, Format], "Typecaster"] = {}
 
     def __init__(self, oid, conn):
         self.oid = oid
