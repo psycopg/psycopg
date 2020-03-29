@@ -432,7 +432,7 @@ class PGresult:
     def fname(self, column_number: int) -> int:
         return impl.PQfname(self.pgresult_ptr, column_number)  # type: ignore
 
-    def ftable(self, column_number: int) -> int:
+    def ftable(self, column_number: int) -> Oid:
         return impl.PQftable(self.pgresult_ptr, column_number)  # type: ignore
 
     def ftablecol(self, column_number: int) -> int:
@@ -490,7 +490,7 @@ class PGresult:
         return int(rv) if rv else None
 
     @property
-    def oid_value(self) -> int:
+    def oid_value(self) -> Oid:
         return impl.PQoidValue(self.pgresult_ptr)  # type: ignore
 
 
