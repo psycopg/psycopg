@@ -4,8 +4,19 @@ Various functionalities to make easier to work with the libpq.
 
 # Copyright (C) 2020 The Psycopg Team
 
+from collections import namedtuple
+from typing import TYPE_CHECKING, Union
 
-def error_message(obj):
+if TYPE_CHECKING:
+    from psycopg3.pq import PGconn, PGresult  # noqa
+
+
+ConninfoOption = namedtuple(
+    "ConninfoOption", "keyword envvar compiled val label dispatcher dispsize"
+)
+
+
+def error_message(obj: Union["PGconn", "PGresult"]) -> str:
     """
     Return an error message from a PGconn or PGresult.
 
@@ -13,29 +24,33 @@ def error_message(obj):
     """
     from psycopg3 import pq
 
+    bmsg: bytes
+
     if isinstance(obj, pq.PGconn):
-        msg = obj.error_message
+        bmsg = obj.error_message
 
         # strip severity and whitespaces
-        if msg:
-            msg = msg.splitlines()[0].split(b":", 1)[-1].strip()
+        if bmsg:
+            bmsg = bmsg.splitlines()[0].split(b":", 1)[-1].strip()
 
     elif isinstance(obj, pq.PGresult):
-        msg = obj.error_field(pq.DiagnosticField.MESSAGE_PRIMARY)
-        if not msg:
-            msg = obj.error_message
+        bmsg = obj.error_field(pq.DiagnosticField.MESSAGE_PRIMARY)
+        if not bmsg:
+            bmsg = obj.error_message
 
             # strip severity and whitespaces
-            if msg:
-                msg = msg.splitlines()[0].split(b":", 1)[-1].strip()
+            if bmsg:
+                bmsg = bmsg.splitlines()[0].split(b":", 1)[-1].strip()
 
     else:
         raise TypeError(
             f"PGconn or PGresult expected, got {type(obj).__name__}"
         )
 
-    if msg:
-        msg = msg.decode("utf8", "replace")  # TODO: or in connection encoding?
+    if bmsg:
+        msg = bmsg.decode(
+            "utf8", "replace"
+        )  # TODO: or in connection encoding?
     else:
         msg = "no details available"
 

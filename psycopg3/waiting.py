@@ -7,6 +7,7 @@ Code concerned with waiting in different contexts (blocking, async, etc).
 
 from enum import Enum
 from select import select
+from typing import Generator, Tuple, TypeVar
 from asyncio import get_event_loop, Event
 
 from . import exceptions as exc
@@ -15,8 +16,10 @@ from . import exceptions as exc
 Wait = Enum("Wait", "R W RW")
 Ready = Enum("Ready", "R W")
 
+RV = TypeVar("RV")
 
-def wait_select(gen):
+
+def wait_select(gen: Generator[Tuple[int, Wait], Ready, RV]) -> RV:
     """
     Wait on the behalf of a generator using select().
 
@@ -48,10 +51,11 @@ def wait_select(gen):
             else:
                 raise exc.InternalError("bad poll status: %s")
     except StopIteration as e:
-        return e.args[0]
+        rv: RV = e.args[0]
+        return rv
 
 
-async def wait_async(gen):
+async def wait_async(gen: Generator[Tuple[int, Wait], Ready, RV]) -> RV:
     """
     Coroutine waiting for a generator to complete.
 
@@ -65,9 +69,9 @@ async def wait_async(gen):
     # Not sure this is the best implementation but it's a start.
     ev = Event()
     loop = get_event_loop()
-    ready = None
+    ready = Ready.R
 
-    def wakeup(state):
+    def wakeup(state: Ready) -> None:
         nonlocal ready
         ready = state
         ev.set()
@@ -96,4 +100,5 @@ async def wait_async(gen):
             else:
                 raise exc.InternalError("bad poll status: %s")
     except StopIteration as e:
-        return e.args[0]
+        rv: RV = e.args[0]
+        return rv

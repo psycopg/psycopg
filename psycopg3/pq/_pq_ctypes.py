@@ -144,9 +144,9 @@ if libpq_version >= 120000:
     _PQhostaddr.restype = c_char_p
 
 
-def PQhostaddr(pgconn):
+def PQhostaddr(pgconn: type) -> bytes:
     if _PQhostaddr is not None:
-        return _PQhostaddr(pgconn)
+        return _PQhostaddr(pgconn)  # type: ignore
     else:
         raise NotSupportedError(
             f"PQhostaddr requires libpq from PostgreSQL 12,"

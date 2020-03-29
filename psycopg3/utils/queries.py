@@ -5,13 +5,28 @@ Utility module to manipulate queries
 # Copyright (C) 2020 The Psycopg Team
 
 import re
-from collections.abc import Sequence, Mapping
+from codecs import CodecInfo
+from typing import (
+    Any,
+    Dict,
+    List,
+    Mapping,
+    Match,
+    NamedTuple,
+    Optional,
+    Sequence,
+    Tuple,
+    Union,
+)
 
 from .. import exceptions as exc
 from ..pq import Format
+from .typing import Params
 
 
-def query2pg(query, vars, codec):
+def query2pg(
+    query: bytes, vars: Params, codec: CodecInfo
+) -> Tuple[bytes, List[Format], Optional[List[str]]]:
     """
     Convert Python query and params into something Postgres understands.
 
@@ -30,6 +45,9 @@ def query2pg(query, vars, codec):
         )
 
     parts = split_query(query, codec.name)
+    order: Optional[List[str]] = None
+    chunks: List[bytes] = []
+    formats = []
 
     if isinstance(vars, Sequence) and not isinstance(vars, (bytes, str)):
         if len(vars) != len(parts) - 1:
@@ -37,32 +55,40 @@ def query2pg(query, vars, codec):
                 f"the query has {len(parts) - 1} placeholders but"
                 f" {len(vars)} parameters were passed"
             )
-        if vars and not isinstance(parts[0][1], int):
+        if vars and not isinstance(parts[0].index, int):
             raise TypeError(
                 "named placeholders require a mapping of parameters"
             )
-        order = None
+
+        for part in parts[:-1]:
+            assert isinstance(part.index, int)
+            chunks.append(part.pre)
+            chunks.append(b"$%d" % (part.index + 1))
+            formats.append(part.format)
 
     elif isinstance(vars, Mapping):
-        if vars and len(parts) > 1 and not isinstance(parts[0][1], bytes):
+        if vars and len(parts) > 1 and not isinstance(parts[0][1], str):
             raise TypeError(
                 "positional placeholders (%s) require a sequence of parameters"
             )
-        seen = {}
+        seen: Dict[str, Tuple[bytes, Format]] = {}
         order = []
         for part in parts[:-1]:
-            name = codec.decode(part[1])[0]
-            if name not in seen:
-                n = len(seen)
-                part[1] = n
-                seen[name] = (n, part[2])
-                order.append(name)
+            assert isinstance(part.index, str)
+            formats.append(part.format)
+            chunks.append(part.pre)
+            if part.index not in seen:
+                ph = b"$%d" % (len(seen) + 1)
+                seen[part.index] = (ph, part.format)
+                order.append(part.index)
+                chunks.append(ph)
             else:
-                if seen[name][1] != part[2]:
+                if seen[part.index][1] != part.format:
                     raise exc.ProgrammingError(
-                        f"placeholder '{name}' cannot have different formats"
+                        f"placeholder '{part.index}' cannot have"
+                        f" different formats"
                     )
-                part[1] = seen[name][0]
+                chunks.append(seen[part.index][0])
 
     else:
         raise TypeError(
@@ -70,16 +96,10 @@ def query2pg(query, vars, codec):
             f" got {type(vars).__name__}"
         )
 
-    # Assemble query and parameters
-    rv = []
-    formats = []
-    for part in parts[:-1]:
-        rv.append(part[0])
-        rv.append(b"$%d" % (part[1] + 1))
-        formats.append(part[2])
-    rv.append(parts[-1][0])
+    # last part
+    chunks.append(parts[-1].pre)
 
-    return b"".join(rv), formats, order
+    return b"".join(chunks), formats, order
 
 
 _re_placeholder = re.compile(
@@ -97,35 +117,48 @@ _re_placeholder = re.compile(
 )
 
 
-def split_query(query, encoding="ascii"):
-    parts = []
+class QueryPart(NamedTuple):
+    pre: bytes
+    # TODO: mypy bug? https://github.com/python/mypy/issues/8599
+    index: Union[int, str]  # type: ignore
+    format: Format
+
+
+def split_query(query: bytes, encoding: str = "ascii") -> List[QueryPart]:
+    parts: List[Tuple[bytes, Optional[Match[bytes]]]] = []
     cur = 0
 
-    # pairs [(fragment, match)], with the last match None
+    # pairs [(fragment, match], with the last match None
     m = None
     for m in _re_placeholder.finditer(query):
         pre = query[cur : m.span(0)[0]]
-        parts.append([pre, m, None])
+        parts.append((pre, m))
         cur = m.span(0)[1]
     if m is None:
-        parts.append([query, None, None])
+        parts.append((query, None))
     else:
-        parts.append([query[cur:], None, None])
+        parts.append((query[cur:], None))
+
+    rv = []
 
     # drop the "%%", validate
     i = 0
     phtype = None
     while i < len(parts):
-        part = parts[i]
-        m = part[1]
+        pre, m = parts[i]
         if m is None:
-            break  # last part
+            # last part
+            rv.append(QueryPart(pre, 0, Format.TEXT))
+            break
+
         ph = m.group(0)
         if ph == b"%%":
             # unescape '%%' to '%' and merge the parts
-            parts[i + 1][0] = part[0] + b"%" + parts[i + 1][0]
+            pre1, m1 = parts[i + 1]
+            parts[i + 1] = (pre + b"%" + pre1, m1)
             del parts[i]
             continue
+
         if ph == b"%(":
             raise exc.ProgrammingError(
                 f"incomplete placeholder:"
@@ -144,28 +177,29 @@ def split_query(query, encoding="ascii"):
             )
 
         # Index or name
-        if m.group(1) is None:
-            part[1] = i
-        else:
-            part[1] = m.group(1)
-
-        # Binary format
-        part[2] = Format(ph[-1:] == b"b")
+        index: Union[int, str]
+        index = i if m.group(1) is None else m.group(1).decode(encoding)
 
         if phtype is None:
-            phtype = type(part[1])
+            phtype = type(index)
         else:
-            if phtype is not type(part[1]):  # noqa
+            if phtype is not type(index):  # noqa
                 raise exc.ProgrammingError(
                     "positional and named placeholders cannot be mixed"
                 )
 
+        # Binary format
+        format = Format(ph[-1:] == b"b")
+
+        rv.append(QueryPart(pre, index, format))
         i += 1
 
-    return parts
+    return rv
 
 
-def reorder_params(params, order):
+def reorder_params(
+    params: Mapping[str, Any], order: Sequence[str]
+) -> List[str]:
     """
     Convert a mapping of parameters into an array in a specified order
     """

@@ -19,7 +19,7 @@ from .enums import (
     Format,
 )
 from .encodings import py_codecs
-from .misc import error_message
+from .misc import error_message, ConninfoOption
 
 from . import pq_ctypes as pq_module
 
@@ -41,6 +41,7 @@ __all__ = (
     "Conninfo",
     "PQerror",
     "error_message",
+    "ConninfoOption",
     "py_codecs",
     "version",
 )

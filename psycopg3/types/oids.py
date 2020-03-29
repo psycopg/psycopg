@@ -92,7 +92,7 @@ _oids_table = [
 type_oid = {name: oid for name, oid, _, _ in _oids_table}
 
 
-def self_update():
+def self_update() -> None:
     import subprocess as sp
 
     # queries output should make black happy

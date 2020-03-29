@@ -4,29 +4,43 @@ psycopg3 cursor objects
 
 # Copyright (C) 2020 The Psycopg Team
 
+from typing import Any, List, Mapping, Optional, Sequence, Tuple, TYPE_CHECKING
+
 from . import exceptions as exc
-from .pq import error_message, DiagnosticField, ExecStatus
+from .pq import error_message, DiagnosticField, ExecStatus, PGresult, Format
 from .utils.queries import query2pg, reorder_params
+from .utils.typing import Query, Params
+
+if TYPE_CHECKING:
+    from .connection import (
+        BaseConnection,
+        Connection,
+        AsyncConnection,
+        QueryGen,
+    )
+    from .adaptation import AdaptersMap, TypecastersMap
 
 
 class BaseCursor:
-    def __init__(self, conn, binary=False):
+    def __init__(self, conn: "BaseConnection", binary: bool = False):
         self.conn = conn
         self.binary = binary
-        self.adapters = {}
-        self.casters = {}
+        self.adapters: AdaptersMap = {}
+        self.casters: TypecastersMap = {}
         self._reset()
 
-    def _reset(self):
+    def _reset(self) -> None:
         from .adaptation import Transformer
 
-        self._results = []
-        self._result = None
+        self._results: List[PGresult] = []
+        self._result: Optional[PGresult] = None
         self._pos = 0
         self._iresult = 0
         self._transformer = Transformer(self)
 
-    def _execute_send(self, query, vars):
+    def _execute_send(
+        self, query: Query, vars: Optional[Params]
+    ) -> "QueryGen":
         # Implement part of execute() before waiting common to sync and async
         self._reset()
 
@@ -40,21 +54,23 @@ class BaseCursor:
             query, formats, order = query2pg(query, vars, codec)
         if vars:
             if order is not None:
+                assert isinstance(vars, Mapping)
                 vars = reorder_params(vars, order)
+            assert isinstance(vars, Sequence)
             params, types = self._transformer.adapt_sequence(vars, formats)
             self.conn.pgconn.send_query_params(
                 query,
                 params,
                 param_formats=formats,
                 param_types=types,
-                result_format=int(self.binary),
+                result_format=Format(self.binary),
             )
         else:
             self.conn.pgconn.send_query(query)
 
         return self.conn._exec_gen(self.conn.pgconn)
 
-    def _execute_results(self, results):
+    def _execute_results(self, results: List[PGresult]) -> None:
         # Implement part of execute() after waiting common to sync and async
         if not results:
             raise exc.InternalError("got no result from the query")
@@ -89,20 +105,22 @@ class BaseCursor:
                 f" {', '.join(sorted(s.name for s in sorted(badstats)))}"
             )
 
-    def nextset(self):
+    def nextset(self) -> Optional[bool]:
         self._iresult += 1
         if self._iresult < len(self._results):
             self._result = self._results[self._iresult]
             self._pos = 0
             return True
+        else:
+            return None
 
-    def fetchone(self):
+    def fetchone(self) -> Optional[Sequence[Any]]:
         rv = self._cast_row(self._pos)
         if rv is not None:
             self._pos += 1
         return rv
 
-    def _cast_row(self, n):
+    def _cast_row(self, n: int) -> Optional[Tuple[Any, ...]]:
         if self._result is None:
             return None
         if n >= self._result.ntuples:
@@ -112,7 +130,12 @@ class BaseCursor:
 
 
 class Cursor(BaseCursor):
-    def execute(self, query, vars=None):
+    conn: "Connection"
+
+    def __init__(self, conn: "Connection", binary: bool = False):
+        super().__init__(conn, binary)
+
+    def execute(self, query: Query, vars: Optional[Params] = None) -> "Cursor":
         with self.conn.lock:
             gen = self._execute_send(query, vars)
             results = self.conn.wait(gen)
@@ -121,7 +144,14 @@ class Cursor(BaseCursor):
 
 
 class AsyncCursor(BaseCursor):
-    async def execute(self, query, vars=None):
+    conn: "AsyncConnection"
+
+    def __init__(self, conn: "AsyncConnection", binary: bool = False):
+        super().__init__(conn, binary)
+
+    async def execute(
+        self, query: Query, vars: Optional[Params] = None
+    ) -> "AsyncCursor":
         async with self.conn.lock:
             gen = self._execute_send(query, vars)
             results = await self.conn.wait(gen)

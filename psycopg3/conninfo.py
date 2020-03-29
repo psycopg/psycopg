@@ -1,16 +1,17 @@
 import re
+from typing import Any, Dict, List
 
 from . import pq
 from . import exceptions as exc
 
 
-def make_conninfo(conninfo=None, **kwargs):
+def make_conninfo(conninfo: str = "", **kwargs: Any) -> str:
     """
     Merge a string and keyword params into a single conninfo string.
 
     Raise ProgrammingError if the input don't make a valid conninfo.
     """
-    if conninfo is None and not kwargs:
+    if not conninfo and not kwargs:
         return ""
 
     # If no kwarg is specified don't mung the conninfo but check if it's correct
@@ -37,7 +38,7 @@ def make_conninfo(conninfo=None, **kwargs):
     return conninfo
 
 
-def conninfo_to_dict(conninfo):
+def conninfo_to_dict(conninfo: str) -> Dict[str, str]:
     """
     Convert the *conninfo* string into a dictionary of parameters.
 
@@ -51,7 +52,7 @@ def conninfo_to_dict(conninfo):
     }
 
 
-def _parse_conninfo(conninfo):
+def _parse_conninfo(conninfo: str) -> List[pq.ConninfoOption]:
     """
     Verify that *conninfo* is a valid connection string.
 
@@ -65,9 +66,11 @@ def _parse_conninfo(conninfo):
         raise exc.ProgrammingError(str(e))
 
 
-def _param_escape(
-    s, re_escape=re.compile(r"([\\'])"), re_space=re.compile(r"\s")
-):
+re_escape = re.compile(r"([\\'])")
+re_space = re.compile(r"\s")
+
+
+def _param_escape(s: str) -> str:
     """
     Apply the escaping rule required by PQconnectdb
     """

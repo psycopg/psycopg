@@ -18,6 +18,11 @@ DBAPI-defined Exceptions are defined in the following hierarchy::
 
 # Copyright (C) 2020 The Psycopg Team
 
+from typing import Any, Optional, Sequence, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from psycopg3.pq import PGresult  # noqa
+
 
 class Warning(Exception):
     """
@@ -32,7 +37,9 @@ class Error(Exception):
     Base exception for all the errors psycopg3 will raise.
     """
 
-    def __init__(self, *args, pgresult=None):
+    def __init__(
+        self, *args: Sequence[Any], pgresult: Optional["PGresult"] = None
+    ):
         super().__init__(*args)
         self.pgresult = pgresult
 
@@ -100,6 +107,6 @@ class NotSupportedError(DatabaseError):
     """
 
 
-def class_for_state(sqlstate):
+def class_for_state(sqlstate: bytes) -> type:
     # TODO: stub
     return DatabaseError
