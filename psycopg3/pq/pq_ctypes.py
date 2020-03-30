@@ -9,7 +9,7 @@ implementation.
 # Copyright (C) 2020 The Psycopg Team
 
 from ctypes import string_at
-from ctypes import c_char_p, c_int, pointer
+from ctypes import Array, c_char_p, c_int, pointer
 from typing import Any, List, Optional, Sequence
 
 from .enums import (
@@ -28,7 +28,7 @@ from ..utils.typing import Oid
 
 
 def version() -> int:
-    return impl.PQlibVersion()  # type: ignore
+    return impl.PQlibVersion()
 
 
 class PQerror(OperationalError):
@@ -104,35 +104,35 @@ class PGconn:
 
     @property
     def db(self) -> bytes:
-        return impl.PQdb(self.pgconn_ptr)  # type: ignore
+        return impl.PQdb(self.pgconn_ptr)
 
     @property
     def user(self) -> bytes:
-        return impl.PQuser(self.pgconn_ptr)  # type: ignore
+        return impl.PQuser(self.pgconn_ptr)
 
     @property
     def password(self) -> bytes:
-        return impl.PQpass(self.pgconn_ptr)  # type: ignore
+        return impl.PQpass(self.pgconn_ptr)
 
     @property
     def host(self) -> bytes:
-        return impl.PQhost(self.pgconn_ptr)  # type: ignore
+        return impl.PQhost(self.pgconn_ptr)
 
     @property
     def hostaddr(self) -> bytes:
-        return impl.PQhostaddr(self.pgconn_ptr)  # type: ignore
+        return impl.PQhostaddr(self.pgconn_ptr)
 
     @property
     def port(self) -> bytes:
-        return impl.PQport(self.pgconn_ptr)  # type: ignore
+        return impl.PQport(self.pgconn_ptr)
 
     @property
     def tty(self) -> bytes:
-        return impl.PQtty(self.pgconn_ptr)  # type: ignore
+        return impl.PQtty(self.pgconn_ptr)
 
     @property
     def options(self) -> bytes:
-        return impl.PQoptions(self.pgconn_ptr)  # type: ignore
+        return impl.PQoptions(self.pgconn_ptr)
 
     @property
     def status(self) -> ConnStatus:
@@ -145,27 +145,27 @@ class PGconn:
         return TransactionStatus(rv)
 
     def parameter_status(self, name: bytes) -> bytes:
-        return impl.PQparameterStatus(self.pgconn_ptr, name)  # type: ignore
+        return impl.PQparameterStatus(self.pgconn_ptr, name)
 
     @property
     def protocol_version(self) -> int:
-        return impl.PQprotocolVersion(self.pgconn_ptr)  # type: ignore
+        return impl.PQprotocolVersion(self.pgconn_ptr)
 
     @property
     def server_version(self) -> int:
-        return impl.PQserverVersion(self.pgconn_ptr)  # type: ignore
+        return impl.PQserverVersion(self.pgconn_ptr)
 
     @property
     def error_message(self) -> bytes:
-        return impl.PQerrorMessage(self.pgconn_ptr)  # type: ignore
+        return impl.PQerrorMessage(self.pgconn_ptr)
 
     @property
     def socket(self) -> int:
-        return impl.PQsocket(self.pgconn_ptr)  # type: ignore
+        return impl.PQsocket(self.pgconn_ptr)
 
     @property
     def backend_pid(self) -> int:
-        return impl.PQbackendPID(self.pgconn_ptr)  # type: ignore
+        return impl.PQbackendPID(self.pgconn_ptr)
 
     @property
     def needs_password(self) -> bool:
@@ -237,14 +237,15 @@ class PGconn:
             raise TypeError(f"bytes expected, got {type(command)} instead")
 
         nparams = len(param_values)
+        aparams: Optional[Array[c_char_p]] = None
+        alenghts: Optional[Array[c_int]] = None
         if nparams:
             aparams = (c_char_p * nparams)(*param_values)
             alenghts = (c_int * nparams)(
                 *(len(p) if p is not None else 0 for p in param_values)
             )
-        else:
-            aparams = alenghts = None  # type: ignore
 
+        atypes: Optional[Array[impl.Oid]]
         if param_types is None:
             atypes = None
         else:
@@ -313,13 +314,13 @@ class PGconn:
             raise TypeError(f"'name' must be bytes, got {type(name)} instead")
 
         nparams = len(param_values)
+        aparams: Optional[Array[c_char_p]] = None
+        alenghts: Optional[Array[c_int]] = None
         if nparams:
             aparams = (c_char_p * nparams)(*param_values)
             alenghts = (c_int * nparams)(
                 *(len(p) if p is not None else 0 for p in param_values)
             )
-        else:
-            aparams = alenghts = None  # type: ignore
 
         if param_formats is None:
             aformats = None
@@ -369,11 +370,11 @@ class PGconn:
             raise PQerror(f"consuming input failed: {error_message(self)}")
 
     def is_busy(self) -> int:
-        return impl.PQisBusy(self.pgconn_ptr)  # type: ignore
+        return impl.PQisBusy(self.pgconn_ptr)
 
     @property
     def nonblocking(self) -> int:
-        return impl.PQisnonblocking(self.pgconn_ptr)  # type: ignore
+        return impl.PQisnonblocking(self.pgconn_ptr)
 
     @nonblocking.setter
     def nonblocking(self, arg: int) -> None:
@@ -396,8 +397,8 @@ class PGconn:
 class PGresult:
     __slots__ = ("pgresult_ptr",)
 
-    def __init__(self, pgresult_ptr: type):
-        self.pgresult_ptr: Optional[type] = pgresult_ptr
+    def __init__(self, pgresult_ptr: impl.PGresult_struct):
+        self.pgresult_ptr: Optional[impl.PGresult_struct] = pgresult_ptr
 
     def __del__(self) -> None:
         self.clear()
@@ -414,43 +415,39 @@ class PGresult:
 
     @property
     def error_message(self) -> bytes:
-        return impl.PQresultErrorMessage(self.pgresult_ptr)  # type: ignore
+        return impl.PQresultErrorMessage(self.pgresult_ptr)
 
     def error_field(self, fieldcode: DiagnosticField) -> bytes:
-        return impl.PQresultErrorField(  # type: ignore
-            self.pgresult_ptr, fieldcode
-        )
+        return impl.PQresultErrorField(self.pgresult_ptr, fieldcode)
 
     @property
     def ntuples(self) -> int:
-        return impl.PQntuples(self.pgresult_ptr)  # type: ignore
+        return impl.PQntuples(self.pgresult_ptr)
 
     @property
     def nfields(self) -> int:
-        return impl.PQnfields(self.pgresult_ptr)  # type: ignore
+        return impl.PQnfields(self.pgresult_ptr)
 
-    def fname(self, column_number: int) -> int:
-        return impl.PQfname(self.pgresult_ptr, column_number)  # type: ignore
+    def fname(self, column_number: int) -> bytes:
+        return impl.PQfname(self.pgresult_ptr, column_number)
 
     def ftable(self, column_number: int) -> Oid:
-        return impl.PQftable(self.pgresult_ptr, column_number)  # type: ignore
+        return Oid(impl.PQftable(self.pgresult_ptr, column_number))
 
     def ftablecol(self, column_number: int) -> int:
-        return impl.PQftablecol(  # type: ignore
-            self.pgresult_ptr, column_number
-        )
+        return impl.PQftablecol(self.pgresult_ptr, column_number)
 
     def fformat(self, column_number: int) -> Format:
-        return impl.PQfformat(self.pgresult_ptr, column_number)  # type: ignore
+        return Format(impl.PQfformat(self.pgresult_ptr, column_number))
 
     def ftype(self, column_number: int) -> Oid:
-        return impl.PQftype(self.pgresult_ptr, column_number)  # type: ignore
+        return Oid(impl.PQftype(self.pgresult_ptr, column_number))
 
     def fmod(self, column_number: int) -> int:
-        return impl.PQfmod(self.pgresult_ptr, column_number)  # type: ignore
+        return impl.PQfmod(self.pgresult_ptr, column_number)
 
     def fsize(self, column_number: int) -> int:
-        return impl.PQfsize(self.pgresult_ptr, column_number)  # type: ignore
+        return impl.PQfsize(self.pgresult_ptr, column_number)
 
     @property
     def binary_tuples(self) -> Format:
@@ -473,16 +470,14 @@ class PGresult:
 
     @property
     def nparams(self) -> int:
-        return impl.PQnparams(self.pgresult_ptr)  # type: ignore
+        return impl.PQnparams(self.pgresult_ptr)
 
     def param_type(self, param_number: int) -> Oid:
-        return impl.PQparamtype(  # type: ignore
-            self.pgresult_ptr, param_number
-        )
+        return Oid(impl.PQparamtype(self.pgresult_ptr, param_number))
 
     @property
     def command_status(self) -> bytes:
-        return impl.PQcmdStatus(self.pgresult_ptr)  # type: ignore
+        return impl.PQcmdStatus(self.pgresult_ptr)
 
     @property
     def command_tuples(self) -> Optional[int]:
@@ -491,7 +486,7 @@ class PGresult:
 
     @property
     def oid_value(self) -> Oid:
-        return impl.PQoidValue(self.pgresult_ptr)  # type: ignore
+        return Oid(impl.PQoidValue(self.pgresult_ptr))
 
 
 class Conninfo:
