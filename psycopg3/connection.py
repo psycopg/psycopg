@@ -24,7 +24,7 @@ from . import pq
 from . import exceptions as exc
 from . import cursor
 from .conninfo import make_conninfo
-from .waiting import wait_select, wait_async, Wait, Ready
+from .waiting import wait, wait_async, Wait, Ready
 
 logger = logging.getLogger(__name__)
 
@@ -135,7 +135,7 @@ class BaseConnection:
                 break
 
             ready = yield pgconn.socket, Wait.RW
-            if ready is Ready.R:
+            if ready & Ready.R:
                 pgconn.consume_input()
             continue
 
@@ -211,8 +211,12 @@ class Connection(BaseConnection):
                 )
 
     @classmethod
-    def wait(cls, gen: Generator[Tuple[int, Wait], Ready, RV]) -> RV:
-        return wait_select(gen)
+    def wait(
+        cls,
+        gen: Generator[Tuple[int, Wait], Ready, RV],
+        timeout: Optional[float] = 0.1,
+    ) -> RV:
+        return wait(gen, timeout=timeout)
 
 
 class AsyncConnection(BaseConnection):
