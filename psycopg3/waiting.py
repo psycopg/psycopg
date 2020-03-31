@@ -73,7 +73,7 @@ async def wait_async(gen: Generator[Tuple[int, Wait], Ready, RV]) -> RV:
     # Not sure this is the best implementation but it's a start.
     ev = Event()
     loop = get_event_loop()
-    ready = Ready.R
+    ready: Ready
 
     def wakeup(state: Ready) -> None:
         nonlocal ready
