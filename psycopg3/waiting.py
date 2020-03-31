@@ -84,15 +84,15 @@ async def wait_async(gen: Generator[Tuple[int, Wait], Ready, RV]) -> RV:
         fd, s = next(gen)
         while 1:
             ev.clear()
-            if s is Wait.R:
+            if s == Wait.R:
                 loop.add_reader(fd, wakeup, Ready.R)
                 await ev.wait()
                 loop.remove_reader(fd)
-            elif s is Wait.W:
+            elif s == Wait.W:
                 loop.add_writer(fd, wakeup, Ready.W)
                 await ev.wait()
                 loop.remove_writer(fd)
-            elif s is Wait.RW:
+            elif s == Wait.RW:
                 loop.add_reader(fd, wakeup, Ready.R)
                 loop.add_writer(fd, wakeup, Ready.W)
                 await ev.wait()
