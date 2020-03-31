@@ -8,7 +8,7 @@ psycopg3 -- PostgreSQL database adapter for Python
 
 import re
 import os
-from setuptools import setup  # type: ignore
+from setuptools import setup, find_packages  # type: ignore
 
 # Grab the version without importing the module
 # or we will get import errors on install if prerequisites are still missing
@@ -26,9 +26,13 @@ with open("README.rst") as f:
 
 # TODO: classifiers
 classifiers = """
+Intended Audience :: Developers
 Programming Language :: Python :: 3
+License :: OSI Approved :: GNU Lesser General Public License v3 (LGPLv3)
 Topic :: Database
+Topic :: Database :: Front-Ends
 Topic :: Software Development
+Topic :: Software Development :: Libraries :: Python Modules
 """
 
 setup(
@@ -37,11 +41,16 @@ setup(
     long_description="\n".join(readme.splitlines()[2:]).lstrip(),
     author="Daniele Varrazzo",
     author_email="daniele.varrazzo@gmail.com",
-    url="https://psycopg.org/psycopg3",
-    license="TBD",  # TODO
+    url="https://psycopg.org/psycopg3/",
     python_requires=">=3.6",
-    packages=["psycopg3"],
+    packages=find_packages(exclude=["tests"]),
     classifiers=[x for x in classifiers.split("\n") if x],
     zip_safe=False,
     version=version,
+    project_urls={
+        "Homepage": "https://psycopg.org/",
+        "Code": "https://github.com/psycopg/psycopg3",
+        "Issue Tracker": "https://github.com/psycopg/psycopg3/issues",
+        "Download": "https://pypi.org/project/psycopg3/",
+    },
 )
