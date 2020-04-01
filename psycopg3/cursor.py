@@ -66,7 +66,14 @@ class BaseCursor:
                 result_format=Format(self.binary),
             )
         else:
-            self.conn.pgconn.send_query(query)
+            # if we don't have to, let's use exec_ as it can run more than
+            # one query in one go
+            if self.binary:
+                self.conn.pgconn.send_query_params(
+                    query, (), result_format=Format(self.binary)
+                )
+            else:
+                self.conn.pgconn.send_query(query)
 
         return self.conn._exec_gen(self.conn.pgconn)
 

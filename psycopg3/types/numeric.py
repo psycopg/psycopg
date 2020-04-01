@@ -19,6 +19,9 @@ def adapt_int(obj: int) -> Tuple[bytes, int]:
     return _encode(str(obj))[0], type_oid["numeric"]
 
 
-@Typecaster.text(type_oid["numeric"])
+@Typecaster.text(type_oid["int4"])
+@Typecaster.text(type_oid["int8"])
+@Typecaster.text(type_oid["oid"])
+@Typecaster.text(type_oid["numeric"])  # TODO: wrong: return Decimal
 def cast_int(data: bytes) -> int:
     return int(_decode(data)[0])

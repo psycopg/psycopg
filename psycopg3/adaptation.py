@@ -175,7 +175,7 @@ class Transformer:
     connection: Optional[BaseConnection]
     cursor: Optional[BaseCursor]
 
-    def __init__(self, context: AdaptContext):
+    def __init__(self, context: AdaptContext = None):
         if context is None:
             self.connection = None
             self.cursor = None
@@ -239,7 +239,7 @@ class Transformer:
 
         return out, types
 
-    def adapt(self, obj: None, fmt: Format) -> MaybeOid:
+    def adapt(self, obj: None, fmt: Format = Format.TEXT) -> MaybeOid:
         if obj is None:
             return None, type_oid["text"]
 
@@ -285,6 +285,15 @@ class Transformer:
             if v is not None:
                 v = func(v)
             yield v
+
+    def cast(
+        self, data: Optional[bytes], oid: Oid, fmt: Format = Format.TEXT
+    ) -> Any:
+        if data is not None:
+            f = self.get_cast_function(oid, fmt)
+            return f(data)
+        else:
+            return None
 
     def get_cast_function(self, oid: Oid, fmt: Format) -> TypecasterFunc:
         try:

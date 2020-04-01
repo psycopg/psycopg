@@ -196,9 +196,9 @@ class PGconn:
     def exec_params(
         self,
         command: bytes,
-        param_values: List[Optional[bytes]],
-        param_types: Optional[List[Oid]] = None,
-        param_formats: Optional[List[Format]] = None,
+        param_values: Sequence[Optional[bytes]],
+        param_types: Optional[Sequence[Oid]] = None,
+        param_formats: Optional[Sequence[Format]] = None,
         result_format: Format = Format.TEXT,
     ) -> "PGresult":
         args = self._query_params_args(
@@ -212,9 +212,9 @@ class PGconn:
     def send_query_params(
         self,
         command: bytes,
-        param_values: List[Optional[bytes]],
-        param_types: Optional[List[Oid]] = None,
-        param_formats: Optional[List[Format]] = None,
+        param_values: Sequence[Optional[bytes]],
+        param_types: Optional[Sequence[Oid]] = None,
+        param_formats: Optional[Sequence[Format]] = None,
         result_format: Format = Format.TEXT,
     ) -> None:
         args = self._query_params_args(
@@ -228,9 +228,9 @@ class PGconn:
     def _query_params_args(
         self,
         command: bytes,
-        param_values: List[Optional[bytes]],
-        param_types: Optional[List[Oid]] = None,
-        param_formats: Optional[List[Format]] = None,
+        param_values: Sequence[Optional[bytes]],
+        param_types: Optional[Sequence[Oid]] = None,
+        param_formats: Optional[Sequence[Format]] = None,
         result_format: Format = Format.TEXT,
     ) -> Any:
         if not isinstance(command, bytes):
@@ -281,7 +281,7 @@ class PGconn:
         self,
         name: bytes,
         command: bytes,
-        param_types: Optional[List[Oid]] = None,
+        param_types: Optional[Sequence[Oid]] = None,
     ) -> "PGresult":
         if not isinstance(name, bytes):
             raise TypeError(f"'name' must be bytes, got {type(name)} instead")
@@ -306,8 +306,8 @@ class PGconn:
     def exec_prepared(
         self,
         name: bytes,
-        param_values: List[bytes],
-        param_formats: Optional[List[int]] = None,
+        param_values: Sequence[bytes],
+        param_formats: Optional[Sequence[int]] = None,
         result_format: int = 0,
     ) -> "PGresult":
         if not isinstance(name, bytes):
