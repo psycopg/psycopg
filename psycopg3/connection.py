@@ -8,17 +8,8 @@ import codecs
 import logging
 import asyncio
 import threading
-from typing import (
-    cast,
-    Any,
-    Generator,
-    List,
-    Optional,
-    Tuple,
-    Type,
-    TypeVar,
-    TYPE_CHECKING,
-)
+from typing import Any, Generator, List, Optional, Tuple, Type, TypeVar
+from typing import cast, TYPE_CHECKING
 
 from . import pq
 from . import exceptions as exc

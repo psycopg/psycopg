@@ -5,18 +5,9 @@ Entry point into the adaptation system.
 # Copyright (C) 2020 The Psycopg Team
 
 import codecs
-from typing import (
-    Any,
-    Callable,
-    cast,
-    Dict,
-    Generator,
-    List,
-    Optional,
-    Sequence,
-    Tuple,
-    Union,
-)
+from typing import cast
+from typing import Any, Callable, Dict, Generator, List, Optional, Sequence
+from typing import Tuple, Union
 
 from . import exceptions as exc
 from .pq import Format, PGresult
@@ -28,7 +19,7 @@ from .utils.typing import DecodeFunc, Oid
 
 # Type system
 
-AdaptContext = Union[BaseConnection, BaseCursor]
+AdaptContext = Union[None, BaseConnection, BaseCursor]
 
 MaybeOid = Union[Optional[bytes], Tuple[Optional[bytes], Oid]]
 AdapterFunc = Callable[[Any], MaybeOid]
@@ -54,7 +45,7 @@ class Adapter:
     def register(
         cls: type,
         adapter: AdapterType,
-        context: Optional[AdaptContext] = None,
+        context: AdaptContext = None,
         format: Format = Format.TEXT,
     ) -> AdapterType:
         if not isinstance(cls, type):
@@ -85,9 +76,7 @@ class Adapter:
 
     @staticmethod
     def register_binary(
-        cls: type,
-        adapter: AdapterType,
-        context: Optional[AdaptContext] = None,
+        cls: type, adapter: AdapterType, context: AdaptContext = None,
     ) -> AdapterType:
         return Adapter.register(cls, adapter, context, format=Format.BINARY)
 
@@ -122,7 +111,7 @@ class Typecaster:
     def register(
         oid: Oid,
         caster: TypecasterType,
-        context: Optional[AdaptContext] = None,
+        context: AdaptContext = None,
         format: Format = Format.TEXT,
     ) -> TypecasterType:
         if not isinstance(oid, int):
@@ -153,9 +142,7 @@ class Typecaster:
 
     @staticmethod
     def register_binary(
-        oid: Oid,
-        caster: TypecasterType,
-        context: Optional[AdaptContext] = None,
+        oid: Oid, caster: TypecasterType, context: AdaptContext = None,
     ) -> TypecasterType:
         return Typecaster.register(oid, caster, context, format=Format.BINARY)
 
@@ -188,7 +175,7 @@ class Transformer:
     connection: Optional[BaseConnection]
     cursor: Optional[BaseCursor]
 
-    def __init__(self, context: Optional[AdaptContext]):
+    def __init__(self, context: AdaptContext):
         if context is None:
             self.connection = None
             self.cursor = None

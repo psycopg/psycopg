@@ -6,18 +6,8 @@ Utility module to manipulate queries
 
 import re
 from codecs import CodecInfo
-from typing import (
-    Any,
-    Dict,
-    List,
-    Mapping,
-    Match,
-    NamedTuple,
-    Optional,
-    Sequence,
-    Tuple,
-    Union,
-)
+from typing import Any, Dict, List, Mapping, Match, NamedTuple, Optional
+from typing import Sequence, Tuple, Union
 
 from .. import exceptions as exc
 from ..pq import Format
