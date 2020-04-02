@@ -3,6 +3,10 @@ from math import isnan, isinf, exp
 
 import pytest
 
+from psycopg3.adapt import Typecaster, Format
+from psycopg3.types import type_oid
+from psycopg3.types.numeric import cast_float
+
 
 #
 # Tests with int
@@ -31,9 +35,9 @@ def test_adapt_int(conn, val, expr):
 @pytest.mark.parametrize(
     "val, pgtype, want",
     [
-        ("0", "int", 0),
-        ("1", "int", 1),
-        ("-1", "int", -1),
+        ("0", "integer", 0),
+        ("1", "integer", 1),
+        ("-1", "integer", -1),
         ("0", "int2", 0),
         ("0", "int4", 0),
         ("0", "int8", 0),
@@ -49,18 +53,12 @@ def test_adapt_int(conn, val, expr):
         ("4294967295", "oid", 4294967295),
     ],
 )
-def test_cast_int(conn, val, pgtype, want):
-    cur = conn.cursor()
+@pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
+def test_cast_int(conn, val, pgtype, want, format):
+    cur = conn.cursor(binary=format == Format.BINARY)
     cur.execute("select %%s::%s" % pgtype, (val,))
-    assert cur.pgresult.fformat(0) == 0
-    result = cur.fetchone()[0]
-    assert result == want
-    assert type(result) is type(want)
-
-    # test binary
-    cur.binary = True
-    cur.execute("select %%s::%s" % pgtype, (val,))
-    assert cur.pgresult.fformat(0) == 1
+    assert cur.pgresult.fformat(0) == format
+    assert cur.pgresult.ftype(0) == type_oid[pgtype]
     result = cur.fetchone()[0]
     assert result == want
     assert type(result) is type(want)
@@ -134,9 +132,11 @@ def test_adapt_float_approx(conn, val, expr):
         ("-inf", "float8", -float("inf")),
     ],
 )
-def test_cast_float(conn, val, pgtype, want):
-    cur = conn.cursor()
+@pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
+def test_cast_float(conn, val, pgtype, want, format):
+    cur = conn.cursor(binary=format == Format.BINARY)
     cur.execute("select %%s::%s" % pgtype, (val,))
+    assert cur.pgresult.fformat(0) == format
     result = cur.fetchone()[0]
     assert type(result) is type(want)
     if isnan(want):
@@ -161,9 +161,11 @@ def test_cast_float(conn, val, pgtype, want):
         ("-1.42e40", "float8", -1.42e40),
     ],
 )
-def test_cast_float_approx(conn, expr, pgtype, want):
-    cur = conn.cursor()
+@pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
+def test_cast_float_approx(conn, expr, pgtype, want, format):
+    cur = conn.cursor(binary=format == Format.BINARY)
     cur.execute("select %s::%s" % (expr, pgtype))
+    assert cur.pgresult.fformat(0) == format
     result = cur.fetchone()[0]
     assert result == pytest.approx(want)
 
@@ -206,10 +208,6 @@ def test_roundtrip_numeric(conn, val):
     ],
 )
 def test_numeric_as_float(conn, val):
-    from psycopg3.adapt import Typecaster
-    from psycopg3.types import type_oid
-    from psycopg3.types.numeric import cast_float
-
     cur = conn.cursor()
     Typecaster.register(type_oid["numeric"], cast_float, cur)
 
@@ -228,10 +226,13 @@ def test_numeric_as_float(conn, val):
 #
 
 
+@pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
 @pytest.mark.parametrize("b", [True, False, None])
-def test_roundtrip_bool(conn, b):
-    cur = conn.cursor()
-    cur.execute("select %s", (b,)).fetchone()[0] is b
+def test_roundtrip_bool(conn, b, format):
+    cur = conn.cursor(binary=format == Format.BINARY)
+    result = cur.execute("select %s", (b,)).fetchone()[0]
+    assert cur.pgresult.fformat(0) == format
+    assert result is b
 
 
 @pytest.mark.parametrize("pgtype", [None, "float8", "int8", "numeric"])

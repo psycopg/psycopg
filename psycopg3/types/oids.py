@@ -93,6 +93,11 @@ _oids_table = [
 
 type_oid: Dict[str, Oid] = {name: Oid(oid) for name, oid, _, _ in _oids_table}
 
+# add aliases too
+for r in _oids_table:
+    if r[3] not in type_oid:
+        type_oid[r[3]] = Oid(r[1])
+
 
 def self_update() -> None:
     import subprocess as sp

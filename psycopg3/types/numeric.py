@@ -5,6 +5,7 @@ Adapters of numeric types.
 # Copyright (C) 2020 The Psycopg Team
 
 import codecs
+import struct
 from decimal import Decimal
 from typing import Tuple
 
@@ -14,6 +15,13 @@ from .oids import type_oid
 
 _encode = codecs.lookup("ascii").encode
 _decode = codecs.lookup("ascii").decode
+
+_int2_struct = struct.Struct("!h")
+_int4_struct = struct.Struct("!i")
+_int8_struct = struct.Struct("!q")
+_oid_struct = struct.Struct("!I")
+_float4_struct = struct.Struct("!f")
+_float8_struct = struct.Struct("!d")
 
 
 @Adapter.text(int)
@@ -53,11 +61,47 @@ def cast_int(data: bytes) -> int:
     return int(_decode(data)[0])
 
 
+@Typecaster.binary(type_oid["int2"])
+def cast_binary_int2(data: bytes) -> int:
+    rv: int = _int2_struct.unpack(data)[0]
+    return rv
+
+
+@Typecaster.binary(type_oid["int4"])
+def cast_binary_int4(data: bytes) -> int:
+    rv: int = _int4_struct.unpack(data)[0]
+    return rv
+
+
+@Typecaster.binary(type_oid["int8"])
+def cast_binary_int8(data: bytes) -> int:
+    rv: int = _int8_struct.unpack(data)[0]
+    return rv
+
+
+@Typecaster.binary(type_oid["oid"])
+def cast_binary_oid(data: bytes) -> int:
+    rv: int = _oid_struct.unpack(data)[0]
+    return rv
+
+
 @Typecaster.text(type_oid["float4"])
 @Typecaster.text(type_oid["float8"])
 def cast_float(data: bytes) -> float:
     # it supports bytes directly
     return float(data)
+
+
+@Typecaster.binary(type_oid["float4"])
+def cast_binary_float4(data: bytes) -> float:
+    rv: float = _float4_struct.unpack(data)[0]
+    return rv
+
+
+@Typecaster.binary(type_oid["float8"])
+def cast_binary_float8(data: bytes) -> float:
+    rv: float = _float8_struct.unpack(data)[0]
+    return rv
 
 
 @Typecaster.text(type_oid["numeric"])
@@ -66,8 +110,14 @@ def cast_numeric(data: bytes) -> Decimal:
 
 
 _bool_casts = {b"t": True, b"f": False}
+_bool_binary_casts = {b"\x01": True, b"\x00": False}
 
 
 @Typecaster.text(type_oid["bool"])
 def cast_bool(data: bytes) -> bool:
     return _bool_casts[data]
+
+
+@Typecaster.binary(type_oid["bool"])
+def cast_binary_bool(data: bytes) -> bool:
+    return _bool_binary_casts[data]
