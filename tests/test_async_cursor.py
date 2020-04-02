@@ -3,9 +3,9 @@ def test_execute_many(aconn, loop):
     rv = loop.run_until_complete(cur.execute("select 'foo'; select 'bar'"))
     assert rv is cur
     assert len(cur._results) == 2
-    assert cur._result.get_value(0, 0) == b"foo"
+    assert cur.pgresult.get_value(0, 0) == b"foo"
     assert cur.nextset()
-    assert cur._result.get_value(0, 0) == b"bar"
+    assert cur.pgresult.get_value(0, 0) == b"bar"
     assert cur.nextset() is None
 
 
@@ -16,7 +16,7 @@ def test_execute_sequence(aconn, loop):
     )
     assert rv is cur
     assert len(cur._results) == 1
-    assert cur._result.get_value(0, 0) == b"1"
-    assert cur._result.get_value(0, 1) == b"foo"
-    assert cur._result.get_value(0, 2) is None
+    assert cur.pgresult.get_value(0, 0) == b"1"
+    assert cur.pgresult.get_value(0, 1) == b"foo"
+    assert cur.pgresult.get_value(0, 2) is None
     assert cur.nextset() is None

@@ -33,7 +33,7 @@ class BaseCursor:
         from .adapt import Transformer
 
         self._results: List[PGresult] = []
-        self._result: Optional[PGresult] = None
+        self.pgresult: Optional[PGresult] = None
         self._pos = 0
         self._iresult = 0
         self._transformer = Transformer(self)
@@ -89,7 +89,7 @@ class BaseCursor:
         }
         if not badstats:
             self._results = results
-            self._result = results[0]
+            self.pgresult = results[0]
             return
 
         if results[-1].status == ExecStatus.FATAL_ERROR:
@@ -115,7 +115,7 @@ class BaseCursor:
     def nextset(self) -> Optional[bool]:
         self._iresult += 1
         if self._iresult < len(self._results):
-            self._result = self._results[self._iresult]
+            self.pgresult = self._results[self._iresult]
             self._pos = 0
             return True
         else:
@@ -128,12 +128,12 @@ class BaseCursor:
         return rv
 
     def _cast_row(self, n: int) -> Optional[Tuple[Any, ...]]:
-        if self._result is None:
+        if self.pgresult is None:
             return None
-        if n >= self._result.ntuples:
+        if n >= self.pgresult.ntuples:
             return None
 
-        return tuple(self._transformer.cast_row(self._result, n))
+        return tuple(self._transformer.cast_row(self.pgresult, n))
 
 
 class Cursor(BaseCursor):

@@ -52,6 +52,15 @@ def test_adapt_int(conn, val, expr):
 def test_cast_int(conn, val, pgtype, want):
     cur = conn.cursor()
     cur.execute("select %%s::%s" % pgtype, (val,))
+    assert cur.pgresult.fformat(0) == 0
+    result = cur.fetchone()[0]
+    assert result == want
+    assert type(result) is type(want)
+
+    # test binary
+    cur.binary = True
+    cur.execute("select %%s::%s" % pgtype, (val,))
+    assert cur.pgresult.fformat(0) == 1
     result = cur.fetchone()[0]
     assert result == want
     assert type(result) is type(want)
