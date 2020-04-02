@@ -25,7 +25,10 @@ class StringAdapter(Adapter):
 
         self._encode: EncodeFunc
         if conn is not None:
-            self._encode = conn.codec.encode
+            if conn.encoding != "SQL_ASCII":
+                self._encode = conn.codec.encode
+            else:
+                self._encode = codecs.lookup("utf8").encode
         else:
             self._encode = codecs.lookup("utf8").encode
 
@@ -43,7 +46,7 @@ class StringCaster(Typecaster):
         super().__init__(oid, conn)
 
         if conn is not None:
-            if conn.pgenc != b"SQL_ASCII":
+            if conn.encoding != "SQL_ASCII":
                 self.decode = conn.codec.decode
             else:
                 self.decode = None

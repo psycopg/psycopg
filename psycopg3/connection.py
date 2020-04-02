@@ -67,6 +67,10 @@ class BaseConnection:
     def decode(self, b: bytes) -> str:
         return self.codec.decode(b)[0]
 
+    @property
+    def encoding(self) -> str:
+        return self.pgconn.parameter_status(b"client_encoding").decode("ascii")
+
     @classmethod
     def _connect_gen(cls, conninfo: str) -> ConnectGen:
         """

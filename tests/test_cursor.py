@@ -1,3 +1,6 @@
+import pytest
+
+
 def test_execute_many(conn):
     cur = conn.cursor()
     rv = cur.execute("select 'foo'; select 'bar'")
@@ -43,3 +46,18 @@ def test_execute_binary_result(conn):
     assert row[1] is None
     row = cur.fetchone()
     assert row is None
+
+
+@pytest.mark.parametrize("encoding", ["utf8", "latin9"])
+def test_query_encode(conn, encoding):
+    conn.encoding = encoding
+    cur = conn.cursor()
+    (res,) = cur.execute("select '\u20ac'").fetchone()
+    assert res == "\u20ac"
+
+
+def test_query_badenc(conn):
+    conn.encoding = "latin1"
+    cur = conn.cursor()
+    with pytest.raises(UnicodeEncodeError):
+        cur.execute("select '\u20ac'")
