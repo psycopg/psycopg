@@ -209,6 +209,22 @@ class Connection(BaseConnection):
     ) -> RV:
         return wait(gen, timeout=timeout)
 
+    @property
+    def encoding(self) -> str:
+        return self.pgconn.parameter_status(b"client_encoding").decode("ascii")
+
+    @encoding.setter
+    def encoding(self, value: str) -> None:
+        with self.lock:
+            self.pgconn.send_query_params(
+                b"select set_config('client_encoding', $1, false)",
+                [value.encode("ascii")],
+            )
+            gen = self._exec_gen(self.pgconn)
+            (result,) = self.wait(gen)
+            if result.status != pq.ExecStatus.TUPLES_OK:
+                raise e.error_from_result(result)
+
 
 class AsyncConnection(BaseConnection):
     """
@@ -261,3 +277,25 @@ class AsyncConnection(BaseConnection):
     @classmethod
     async def wait(cls, gen: Generator[Tuple[int, Wait], Ready, RV]) -> RV:
         return await wait_async(gen)
+
+    @property
+    def encoding(self) -> str:
+        return self.pgconn.parameter_status(b"client_encoding").decode("ascii")
+
+    @encoding.setter
+    def encoding(self, value: str) -> None:
+        raise e.NotSupportedError(
+            "you can't set 'encoding' on an async connection."
+            " Use 'await conn.set_encoding()' instead"
+        )
+
+    async def set_encoding(self, value: str) -> None:
+        async with self.lock:
+            self.pgconn.send_query_params(
+                b"select set_config('client_encoding', $1, false)",
+                [value.encode("ascii")],
+            )
+            gen = self._exec_gen(self.pgconn)
+            (result,) = await self.wait(gen)
+            if result.status != pq.ExecStatus.TUPLES_OK:
+                raise e.error_from_result(result)

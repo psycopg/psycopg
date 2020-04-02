@@ -7,7 +7,7 @@ psycopg3 cursor objects
 from typing import Any, List, Mapping, Optional, Sequence, Tuple, TYPE_CHECKING
 
 from . import errors as e
-from .pq import error_message, DiagnosticField, ExecStatus, PGresult, Format
+from .pq import ExecStatus, PGresult, Format
 from .utils.queries import query2pg, reorder_params
 from .utils.typing import Query, Params
 
@@ -93,10 +93,7 @@ class BaseCursor:
             return
 
         if results[-1].status == ExecStatus.FATAL_ERROR:
-            ecls = e.class_for_state(
-                results[-1].error_field(DiagnosticField.SQLSTATE)
-            )
-            raise ecls(error_message(results[-1]))
+            raise e.error_from_result(results[-1])
 
         elif badstats & {
             ExecStatus.COPY_IN,

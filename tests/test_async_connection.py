@@ -36,3 +36,33 @@ def test_rollback(loop, pq, aconn):
     assert aconn.pgconn.transaction_status == pq.TransactionStatus.IDLE
     res = aconn.pgconn.exec_(b"select id from foo where id = 1")
     assert res.get_value(0, 0) is None
+
+
+def test_get_encoding(aconn, loop):
+    cur = aconn.cursor()
+    loop.run_until_complete(cur.execute("show client_encoding"))
+    (enc,) = cur.fetchone()
+    assert enc == aconn.encoding
+
+
+def test_set_encoding_noprop(aconn):
+    newenc = "LATIN1" if aconn.encoding != "LATIN1" else "UTF8"
+    assert aconn.encoding != newenc
+    with pytest.raises(psycopg3.NotSupportedError):
+        aconn.encoding = newenc
+
+
+def test_set_encoding(aconn, loop):
+    newenc = "LATIN1" if aconn.encoding != "LATIN1" else "UTF8"
+    assert aconn.encoding != newenc
+    loop.run_until_complete(aconn.set_encoding(newenc))
+    assert aconn.encoding == newenc
+    cur = aconn.cursor()
+    loop.run_until_complete(cur.execute("show client_encoding"))
+    (enc,) = cur.fetchone()
+    assert enc == newenc
+
+
+def test_set_encoding_bad(aconn, loop):
+    with pytest.raises(psycopg3.DatabaseError):
+        loop.run_until_complete(aconn.set_encoding("WAT"))

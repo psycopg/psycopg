@@ -36,3 +36,22 @@ def test_rollback(pq, conn):
     assert conn.pgconn.transaction_status == pq.TransactionStatus.IDLE
     res = conn.pgconn.exec_(b"select id from foo where id = 1")
     assert res.get_value(0, 0) is None
+
+
+def test_get_encoding(conn):
+    (enc,) = conn.cursor().execute("show client_encoding").fetchone()
+    assert enc == conn.encoding
+
+
+def test_set_encoding(conn):
+    newenc = "LATIN1" if conn.encoding != "LATIN1" else "UTF8"
+    assert conn.encoding != newenc
+    conn.encoding = newenc
+    assert conn.encoding == newenc
+    (enc,) = conn.cursor().execute("show client_encoding").fetchone()
+    assert enc == newenc
+
+
+def test_set_encoding_bad(conn):
+    with pytest.raises(psycopg3.DatabaseError):
+        conn.encoding = "WAT"

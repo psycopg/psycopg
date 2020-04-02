@@ -18,7 +18,7 @@ DBAPI-defined Exceptions are defined in the following hierarchy::
 
 # Copyright (C) 2020 The Psycopg Team
 
-from typing import Any, Optional, Sequence, TYPE_CHECKING
+from typing import Any, Optional, Sequence, Type, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from psycopg3.pq import PGresult  # noqa
@@ -107,6 +107,13 @@ class NotSupportedError(DatabaseError):
     """
 
 
-def class_for_state(sqlstate: bytes) -> type:
+def class_for_state(sqlstate: bytes) -> Type[Error]:
     # TODO: stub
     return DatabaseError
+
+
+def error_from_result(result: "PGresult") -> Error:
+    from psycopg3 import pq
+
+    cls = class_for_state(result.error_field(pq.DiagnosticField.SQLSTATE))
+    return cls(pq.error_message(result))
