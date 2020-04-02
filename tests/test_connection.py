@@ -52,6 +52,12 @@ def test_set_encoding(conn):
     assert enc == newenc
 
 
+def test_set_encoding_unsupported(conn):
+    conn.encoding = "EUC_TW"
+    with pytest.raises(psycopg3.NotSupportedError):
+        conn.cursor().execute("select 1")
+
+
 def test_set_encoding_bad(conn):
     with pytest.raises(psycopg3.DatabaseError):
         conn.encoding = "WAT"

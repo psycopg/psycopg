@@ -41,7 +41,7 @@ class BaseConnection:
         self.adapters: AdaptersMap = {}
         self.casters: TypecastersMap = {}
         # name of the postgres encoding (in bytes)
-        self.pgenc = b""
+        self._pgenc = b""
 
     def cursor(
         self, name: Optional[str] = None, binary: bool = False
@@ -54,11 +54,15 @@ class BaseConnection:
     def codec(self) -> codecs.CodecInfo:
         # TODO: utf8 fastpath?
         pgenc = self.pgconn.parameter_status(b"client_encoding")
-        if self.pgenc != pgenc:
-            # for unknown encodings and SQL_ASCII be strict and use ascii
-            pyenc = pq.py_codecs.get(pgenc.decode("ascii")) or "ascii"
+        if self._pgenc != pgenc:
+            try:
+                pyenc = pq.py_codecs[pgenc.decode("ascii")]
+            except KeyError:
+                raise e.NotSupportedError(
+                    f"encoding {pgenc.decode('ascii')} not available in Python"
+                )
             self._codec = codecs.lookup(pyenc)
-            self.pgenc = pgenc
+            self._pgenc = pgenc
         return self._codec
 
     def encode(self, s: str) -> bytes:

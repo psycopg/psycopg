@@ -33,7 +33,9 @@ py_codecs = {
     # "MULE_INTERNAL": not available in Python
     "SHIFT_JIS_2004": "shift_jis_2004",
     "SJIS": "shift_jis",
-    "SQL_ASCII": None,  # means no encoding, see PostgreSQL docs
+    # this actually means no encoding, see PostgreSQL docs
+    # it is special-cased by the text typecaster.
+    "SQL_ASCII": "ascii",
     "UHC": "cp949",
     "UTF8": "utf-8",
     "WIN1250": "cp1250",
