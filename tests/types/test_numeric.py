@@ -197,7 +197,7 @@ def test_roundtrip_numeric(conn, val):
     ],
 )
 def test_numeric_as_float(conn, val):
-    from psycopg3.adaptation import Typecaster
+    from psycopg3.adapt import Typecaster
     from psycopg3.types import type_oid
     from psycopg3.types.numeric import cast_float
 

@@ -24,7 +24,7 @@ QueryGen = Generator[Tuple[int, Wait], Ready, List[pq.PGresult]]
 RV = TypeVar("RV")
 
 if TYPE_CHECKING:
-    from .adaptation import AdaptersMap, TypecastersMap
+    from .adapt import AdaptersMap, TypecastersMap
 
 
 class BaseConnection:

@@ -7,7 +7,7 @@ Adapters of textual types.
 import codecs
 from typing import Optional, Union
 
-from ..adaptation import (
+from ..adapt import (
     Adapter,
     Typecaster,
 )

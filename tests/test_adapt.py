@@ -1,5 +1,5 @@
 import pytest
-from psycopg3.adaptation import Transformer, Format, Adapter, Typecaster
+from psycopg3.adapt import Transformer, Format, Adapter, Typecaster
 from psycopg3.types.oids import type_oid
 
 

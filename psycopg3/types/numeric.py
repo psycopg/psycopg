@@ -8,7 +8,7 @@ import codecs
 from decimal import Decimal
 from typing import Tuple
 
-from ..adaptation import Adapter, Typecaster
+from ..adapt import Adapter, Typecaster
 from ..utils.typing import Oid
 from .oids import type_oid
 

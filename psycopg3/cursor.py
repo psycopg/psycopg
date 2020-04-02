@@ -18,7 +18,7 @@ if TYPE_CHECKING:
         AsyncConnection,
         QueryGen,
     )
-    from .adaptation import AdaptersMap, TypecastersMap
+    from .adapt import AdaptersMap, TypecastersMap
 
 
 class BaseCursor:
@@ -30,7 +30,7 @@ class BaseCursor:
         self._reset()
 
     def _reset(self) -> None:
-        from .adaptation import Transformer
+        from .adapt import Transformer
 
         self._results: List[PGresult] = []
         self._result: Optional[PGresult] = None
