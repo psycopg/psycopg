@@ -21,8 +21,7 @@ from .errors import (
 )
 
 # register default adapters
-from .types import numeric  # noqa
-from .types import text  # noqa
+from . import types  # noqa
 
 
 # DBAPI compliancy

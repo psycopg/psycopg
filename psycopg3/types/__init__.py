@@ -7,4 +7,7 @@ psycopg3 types package
 
 from .oids import type_oid
 
+# Register default adapters
+from . import numeric, text  # noqa
+
 __all__ = ["type_oid"]
