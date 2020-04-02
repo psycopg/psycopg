@@ -5,7 +5,7 @@ Adapters of textual types.
 # Copyright (C) 2020 The Psycopg Team
 
 import codecs
-from typing import Optional, Union
+from typing import Optional, Tuple, Union
 
 from ..adapt import (
     Adapter,
@@ -30,6 +30,17 @@ class StringAdapter(Adapter):
 
     def adapt(self, obj: str) -> bytes:
         return self._encode(obj)[0]
+
+
+@Adapter.text(bytes)
+class BytesAdapter(Adapter):
+    def adapt(self, obj: bytes) -> Tuple[bytes, Oid]:
+        return self.conn.pgconn.escape_bytea(obj), type_oid["bytea"]
+
+
+@Adapter.binary(bytes)
+def adapt_bytes(b: bytes) -> Tuple[bytes, Oid]:
+    return b, type_oid["bytea"]
 
 
 @Typecaster.text(type_oid["text"])

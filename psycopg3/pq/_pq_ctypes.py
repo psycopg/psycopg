@@ -7,7 +7,7 @@ libpq access using ctypes
 import ctypes
 import ctypes.util
 from ctypes import Structure, POINTER
-from ctypes import c_char, c_char_p, c_int, c_uint, c_void_p
+from ctypes import c_char, c_char_p, c_int, c_size_t, c_ubyte, c_uint, c_void_p
 from typing import List, Tuple
 
 from psycopg3.errors import NotSupportedError
@@ -358,6 +358,22 @@ PQoidValue.argtypes = [PGresult_ptr]
 PQoidValue.restype = Oid
 
 
+# 33.3.4. Escaping Strings for Inclusion in SQL Commands
+
+# TODO: PQescapeLiteral PQescapeIdentifier PQescapeStringConn PQescapeString
+
+PQescapeByteaConn = pq.PQescapeByteaConn
+PQescapeByteaConn.argtypes = [
+    PGconn_ptr,
+    POINTER(c_char),  # actually POINTER(c_ubyte) but this is easier
+    c_size_t,
+    POINTER(c_size_t),
+]
+PQescapeByteaConn.restype = POINTER(c_ubyte)  # same, POINTER(c_ubyte)
+
+# TODO: PQescapeBytea PQunescapeBytea
+
+
 # 33.4. Asynchronous Command Processing
 
 PQsendQuery = pq.PQsendQuery
@@ -425,7 +441,7 @@ def generate_stub() -> None:
             return "None"
         elif t is c_void_p:
             return "Any"
-        elif t is c_int or t is c_uint:
+        elif t is c_int or t is c_uint or t is c_size_t:
             return "int"
         elif t is c_char_p:
             return "bytes"

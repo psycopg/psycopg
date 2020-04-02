@@ -8,9 +8,10 @@ implementation.
 
 # Copyright (C) 2020 The Psycopg Team
 
-from ctypes import string_at
-from ctypes import Array, c_char_p, c_int, pointer
+from ctypes import Array, pointer, string_at
+from ctypes import c_char_p, c_int, c_size_t, c_ulong
 from typing import Any, List, Optional, Sequence
+from typing import cast as t_cast
 
 from .enums import (
     ConnStatus,
@@ -360,6 +361,23 @@ class PGconn:
         if not rv:
             raise MemoryError("couldn't allocate PGresult")
         return PGresult(rv)
+
+    def escape_bytea(self, data: bytes) -> bytes:
+        len_out = c_size_t()
+        out = impl.PQescapeByteaConn(
+            self.pgconn_ptr,
+            data,
+            len(data),
+            pointer(t_cast(c_ulong, len_out)),
+        )
+        if not out:
+            raise MemoryError(
+                f"couldn't allocate {len(data)} bytes for escape_bytea"
+            )
+
+        rv = string_at(out, len_out.value - 1)  # out includes final 0
+        impl.PQfreemem(out)
+        return rv
 
     def get_result(self) -> Optional["PGresult"]:
         rv = impl.PQgetResult(self.pgconn_ptr)

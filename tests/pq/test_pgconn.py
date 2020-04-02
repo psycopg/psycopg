@@ -226,3 +226,19 @@ def test_make_empty_result(pq, pgconn):
     res = pgconn.make_empty_result(pq.ExecStatus.FATAL_ERROR)
     assert res.status == pq.ExecStatus.FATAL_ERROR
     assert b"wat" in res.error_message
+
+
+@pytest.mark.parametrize(
+    "data", [(b"hello\00world"), (b"\00\00\00\00")],
+)
+def test_escape_bytea(pgconn, data):
+    rv = pgconn.escape_bytea(data)
+    exp = br"\x" + b"".join(b"%02x" % c for c in data)
+    assert rv == exp
+
+
+def test_escape_1char(pgconn):
+    for c in range(256):
+        rv = pgconn.escape_bytea(bytes([c]))
+        exp = br"\x%02x" % c
+        assert rv == exp
