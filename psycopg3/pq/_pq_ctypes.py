@@ -10,7 +10,7 @@ from ctypes import Structure, POINTER
 from ctypes import c_char, c_char_p, c_int, c_uint, c_void_p
 from typing import List, Tuple
 
-from psycopg3.exceptions import NotSupportedError
+from psycopg3.errors import NotSupportedError
 
 libname = ctypes.util.find_library("pq")
 if libname is None:

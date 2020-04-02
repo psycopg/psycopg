@@ -2,7 +2,7 @@ import re
 from typing import Any, Dict, List
 
 from . import pq
-from . import exceptions as exc
+from . import errors as e
 
 
 def make_conninfo(conninfo: str = "", **kwargs: Any) -> str:
@@ -62,8 +62,8 @@ def _parse_conninfo(conninfo: str) -> List[pq.ConninfoOption]:
     """
     try:
         return pq.Conninfo.parse(conninfo.encode("utf8"))
-    except pq.PQerror as e:
-        raise exc.ProgrammingError(str(e))
+    except pq.PQerror as ex:
+        raise e.ProgrammingError(str(ex))
 
 
 re_escape = re.compile(r"([\\'])")

@@ -9,7 +9,7 @@ from codecs import CodecInfo
 from typing import Any, Dict, List, Mapping, Match, NamedTuple, Optional
 from typing import Sequence, Tuple, Union
 
-from .. import exceptions as exc
+from .. import errors as e
 from ..pq import Format
 from .typing import Params
 
@@ -41,7 +41,7 @@ def query2pg(
 
     if isinstance(vars, Sequence) and not isinstance(vars, (bytes, str)):
         if len(vars) != len(parts) - 1:
-            raise exc.ProgrammingError(
+            raise e.ProgrammingError(
                 f"the query has {len(parts) - 1} placeholders but"
                 f" {len(vars)} parameters were passed"
             )
@@ -74,7 +74,7 @@ def query2pg(
                 chunks.append(ph)
             else:
                 if seen[part.item][1] != part.format:
-                    raise exc.ProgrammingError(
+                    raise e.ProgrammingError(
                         f"placeholder '{part.item}' cannot have"
                         f" different formats"
                     )
@@ -149,18 +149,18 @@ def split_query(query: bytes, encoding: str = "ascii") -> List[QueryPart]:
             continue
 
         if ph == b"%(":
-            raise exc.ProgrammingError(
+            raise e.ProgrammingError(
                 f"incomplete placeholder:"
                 f" '{query[m.span(0)[0]:].split()[0].decode(encoding)}'"
             )
         elif ph == b"% ":
             # explicit messasge for a typical error
-            raise exc.ProgrammingError(
+            raise e.ProgrammingError(
                 "incomplete placeholder: '%'; if you want to use '%' as an"
                 " operator you can double it up, i.e. use '%%'"
             )
         elif ph[-1:] not in b"bs":
-            raise exc.ProgrammingError(
+            raise e.ProgrammingError(
                 f"only '%s' and '%b' placeholders allowed, got"
                 f" {m.group(0).decode(encoding)}"
             )
@@ -173,7 +173,7 @@ def split_query(query: bytes, encoding: str = "ascii") -> List[QueryPart]:
             phtype = type(item)
         else:
             if phtype is not type(item):  # noqa
-                raise exc.ProgrammingError(
+                raise e.ProgrammingError(
                     "positional and named placeholders cannot be mixed"
                 )
 
@@ -195,7 +195,7 @@ def reorder_params(
     try:
         return [params[item] for item in order]
     except KeyError:
-        raise exc.ProgrammingError(
+        raise e.ProgrammingError(
             f"query parameter missing:"
             f" {', '.join(sorted(i for i in order if i not in params))}"
         )

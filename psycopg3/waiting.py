@@ -10,7 +10,7 @@ from typing import Generator, Optional, Tuple, TypeVar
 from asyncio import get_event_loop, Event
 from selectors import DefaultSelector, EVENT_READ, EVENT_WRITE
 
-from . import exceptions as exc
+from . import errors as e
 
 
 class Wait(IntEnum):
@@ -54,8 +54,8 @@ def wait(
             assert len(ready) == 1
             fd, s = gen.send(ready[0][1])
 
-    except StopIteration as e:
-        rv: RV = e.args[0]
+    except StopIteration as ex:
+        rv: RV = ex.args[0]
         return rv
 
 
@@ -99,9 +99,9 @@ async def wait_async(gen: Generator[Tuple[int, Wait], Ready, RV]) -> RV:
                 loop.remove_reader(fd)
                 loop.remove_writer(fd)
             else:
-                raise exc.InternalError("bad poll status: %s")
+                raise e.InternalError("bad poll status: %s")
             fd, s = gen.send(ready)
 
-    except StopIteration as e:
-        rv: RV = e.args[0]
+    except StopIteration as ex:
+        rv: RV = ex.args[0]
         return rv

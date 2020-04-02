@@ -9,7 +9,7 @@ from typing import cast
 from typing import Any, Callable, Dict, Generator, List, Optional, Sequence
 from typing import Tuple, Union
 
-from . import exceptions as exc
+from . import errors as e
 from .pq import Format, PGresult
 from .cursor import BaseCursor
 from .types.oids import type_oid, INVALID_OID
@@ -273,7 +273,7 @@ class Transformer:
         if key in Adapter.globals:
             return Adapter.globals[key]
 
-        raise exc.ProgrammingError(
+        raise e.ProgrammingError(
             f"cannot adapt type {cls} to format {Format(fmt).name}"
         )
 

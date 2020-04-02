@@ -12,7 +12,7 @@ from typing import Any, Generator, List, Optional, Tuple, Type, TypeVar
 from typing import cast, TYPE_CHECKING
 
 from . import pq
-from . import exceptions as exc
+from . import errors as e
 from . import cursor
 from .conninfo import make_conninfo
 from .waiting import wait, wait_async, Wait, Ready
@@ -80,7 +80,7 @@ class BaseConnection:
         logger.debug("connection started, status %s", conn.status.name)
         while 1:
             if conn.status == pq.ConnStatus.BAD:
-                raise exc.OperationalError(
+                raise e.OperationalError(
                     f"connection is bad: {pq.error_message(conn)}"
                 )
 
@@ -93,11 +93,11 @@ class BaseConnection:
             elif status == pq.PollingStatus.WRITING:
                 yield conn.socket, Wait.W
             elif status == pq.PollingStatus.FAILED:
-                raise exc.OperationalError(
+                raise e.OperationalError(
                     f"connection failed: {pq.error_message(conn)}"
                 )
             else:
-                raise exc.InternalError(f"unexpected poll status: {status}")
+                raise e.InternalError(f"unexpected poll status: {status}")
 
         conn.nonblocking = 1
         return conn
@@ -196,7 +196,7 @@ class Connection(BaseConnection):
             self.pgconn.send_query(command)
             (pgres,) = self.wait(self._exec_gen(self.pgconn))
             if pgres.status != pq.ExecStatus.COMMAND_OK:
-                raise exc.OperationalError(
+                raise e.OperationalError(
                     f"error on {command.decode('utf8')}:"
                     f" {pq.error_message(pgres)}"
                 )
@@ -253,7 +253,7 @@ class AsyncConnection(BaseConnection):
             self.pgconn.send_query(command)
             (pgres,) = await self.wait(self._exec_gen(self.pgconn))
             if pgres.status != pq.ExecStatus.COMMAND_OK:
-                raise exc.OperationalError(
+                raise e.OperationalError(
                     f"error on {command.decode('utf8')}:"
                     f" {pq.error_message(pgres)}"
                 )

@@ -7,7 +7,7 @@ psycopg3 -- PostgreSQL database adapter for Python
 from .consts import VERSION as __version__  # noqa
 from .connection import AsyncConnection, Connection
 
-from .exceptions import (
+from .errors import (
     Warning,
     Error,
     InterfaceError,

@@ -23,7 +23,7 @@ from .enums import (
 )
 from .misc import error_message, ConninfoOption
 from . import _pq_ctypes as impl
-from ..exceptions import OperationalError
+from ..errors import OperationalError
 from ..utils.typing import Oid
 
 

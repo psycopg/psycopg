@@ -6,7 +6,7 @@ psycopg3 cursor objects
 
 from typing import Any, List, Mapping, Optional, Sequence, Tuple, TYPE_CHECKING
 
-from . import exceptions as exc
+from . import errors as e
 from .pq import error_message, DiagnosticField, ExecStatus, PGresult, Format
 from .utils.queries import query2pg, reorder_params
 from .utils.typing import Query, Params
@@ -80,7 +80,7 @@ class BaseCursor:
     def _execute_results(self, results: List[PGresult]) -> None:
         # Implement part of execute() after waiting common to sync and async
         if not results:
-            raise exc.InternalError("got no result from the query")
+            raise e.InternalError("got no result from the query")
 
         badstats = {res.status for res in results} - {
             ExecStatus.TUPLES_OK,
@@ -93,7 +93,7 @@ class BaseCursor:
             return
 
         if results[-1].status == ExecStatus.FATAL_ERROR:
-            ecls = exc.class_for_state(
+            ecls = e.class_for_state(
                 results[-1].error_field(DiagnosticField.SQLSTATE)
             )
             raise ecls(error_message(results[-1]))
@@ -103,11 +103,11 @@ class BaseCursor:
             ExecStatus.COPY_OUT,
             ExecStatus.COPY_BOTH,
         }:
-            raise exc.ProgrammingError(
+            raise e.ProgrammingError(
                 "COPY cannot be used with execute(); use copy() insead"
             )
         else:
-            raise exc.InternalError(
+            raise e.InternalError(
                 f"got unexpected status from query:"
                 f" {', '.join(sorted(s.name for s in sorted(badstats)))}"
             )
