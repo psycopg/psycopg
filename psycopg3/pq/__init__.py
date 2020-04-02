@@ -28,6 +28,7 @@ PGconn = pq_module.PGconn
 PGresult = pq_module.PGresult
 PQerror = pq_module.PQerror
 Conninfo = pq_module.Conninfo
+Escaping = pq_module.Escaping
 
 __all__ = (
     "ConnStatus",

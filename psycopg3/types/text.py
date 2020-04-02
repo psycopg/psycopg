@@ -13,6 +13,7 @@ from ..adapt import (
 )
 from ..connection import BaseConnection
 from ..utils.typing import EncodeFunc, DecodeFunc, Oid
+from ..pq import Escaping
 from .oids import type_oid
 
 
@@ -30,17 +31,6 @@ class StringAdapter(Adapter):
 
     def adapt(self, obj: str) -> bytes:
         return self._encode(obj)[0]
-
-
-@Adapter.text(bytes)
-class BytesAdapter(Adapter):
-    def adapt(self, obj: bytes) -> Tuple[bytes, Oid]:
-        return self.conn.pgconn.escape_bytea(obj), type_oid["bytea"]
-
-
-@Adapter.binary(bytes)
-def adapt_bytes(b: bytes) -> Tuple[bytes, Oid]:
-    return b, type_oid["bytea"]
 
 
 @Typecaster.text(type_oid["text"])
@@ -66,3 +56,28 @@ class StringCaster(Typecaster):
         else:
             # return bytes for SQL_ASCII db
             return data
+
+
+@Adapter.text(bytes)
+class BytesAdapter(Adapter):
+    def __init__(self, cls: type, conn: BaseConnection):
+        super().__init__(cls, conn)
+        self.esc = Escaping(self.conn.pgconn)
+
+    def adapt(self, obj: bytes) -> Tuple[bytes, Oid]:
+        return self.esc.escape_bytea(obj), type_oid["bytea"]
+
+
+@Adapter.binary(bytes)
+def adapt_bytes(b: bytes) -> Tuple[bytes, Oid]:
+    return b, type_oid["bytea"]
+
+
+@Typecaster.text(type_oid["bytea"])
+def cast_bytea(data: bytes) -> bytes:
+    return Escaping.unescape_bytea(data)
+
+
+@Typecaster.binary(type_oid["bytea"])
+def cast_bytea_binary(data: bytes) -> bytes:
+    return data

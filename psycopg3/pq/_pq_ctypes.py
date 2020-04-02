@@ -369,9 +369,16 @@ PQescapeByteaConn.argtypes = [
     c_size_t,
     POINTER(c_size_t),
 ]
-PQescapeByteaConn.restype = POINTER(c_ubyte)  # same, POINTER(c_ubyte)
+PQescapeByteaConn.restype = POINTER(c_ubyte)
 
-# TODO: PQescapeBytea PQunescapeBytea
+# PQescapeBytea: deprecated
+
+PQunescapeBytea = pq.PQunescapeBytea
+PQunescapeBytea.argtypes = [
+    POINTER(c_char),  # actually POINTER(c_ubyte) but this is easier
+    POINTER(c_size_t),
+]
+PQunescapeBytea.restype = POINTER(c_ubyte)
 
 
 # 33.4. Asynchronous Command Processing
@@ -443,7 +450,7 @@ def generate_stub() -> None:
             return "Any"
         elif t is c_int or t is c_uint or t is c_size_t:
             return "int"
-        elif t is c_char_p:
+        elif t is c_char_p or t.__name__ == "LP_c_char":
             return "bytes"
 
         elif t.__name__ in ("LP_PGconn_struct", "LP_PGresult_struct",):
@@ -456,10 +463,11 @@ def generate_stub() -> None:
             return f"Sequence[{t.__name__[3:]}]"
 
         elif t.__name__ in (
-            "LP_c_char",
+            "LP_c_ubyte",
             "LP_c_char_p",
             "LP_c_int",
             "LP_c_uint",
+            "LP_c_ulong",
         ):
             return f"pointer[{t.__name__[3:]}]"
 

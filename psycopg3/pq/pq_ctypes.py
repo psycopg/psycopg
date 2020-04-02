@@ -362,23 +362,6 @@ class PGconn:
             raise MemoryError("couldn't allocate PGresult")
         return PGresult(rv)
 
-    def escape_bytea(self, data: bytes) -> bytes:
-        len_out = c_size_t()
-        out = impl.PQescapeByteaConn(
-            self.pgconn_ptr,
-            data,
-            len(data),
-            pointer(t_cast(c_ulong, len_out)),
-        )
-        if not out:
-            raise MemoryError(
-                f"couldn't allocate {len(data)} bytes for escape_bytea"
-            )
-
-        rv = string_at(out, len_out.value - 1)  # out includes final 0
-        impl.PQfreemem(out)
-        return rv
-
     def get_result(self) -> Optional["PGresult"]:
         rv = impl.PQgetResult(self.pgconn_ptr)
         return PGresult(rv) if rv else None
@@ -551,4 +534,39 @@ class Conninfo:
             d["dispsize"] = opt.dispsize
             rv.append(ConninfoOption(**d))
 
+        return rv
+
+
+class Escaping:
+    def __init__(self, conn: PGconn):
+        self.conn = conn
+
+    def escape_bytea(self, data: bytes) -> bytes:
+        len_out = c_size_t()
+        out = impl.PQescapeByteaConn(
+            self.conn.pgconn_ptr,
+            data,
+            len(data),
+            pointer(t_cast(c_ulong, len_out)),
+        )
+        if not out:
+            raise MemoryError(
+                f"couldn't allocate for escape_bytea of {len(data)} bytes"
+            )
+
+        rv = string_at(out, len_out.value - 1)  # out includes final 0
+        impl.PQfreemem(out)
+        return rv
+
+    @classmethod
+    def unescape_bytea(cls, data: bytes) -> bytes:
+        len_out = c_size_t()
+        out = impl.PQunescapeBytea(data, pointer(t_cast(c_ulong, len_out)))
+        if not out:
+            raise MemoryError(
+                f"couldn't allocate for unescape_bytea of {len(data)} bytes"
+            )
+
+        rv = string_at(out, len_out.value)
+        impl.PQfreemem(out)
         return rv
