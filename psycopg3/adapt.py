@@ -84,19 +84,19 @@ class Adapter:
 
     @staticmethod
     def text(cls: type) -> Callable[[Any], Any]:
-        def register_adapter_(adapter: AdapterType) -> AdapterType:
+        def text_(adapter: AdapterType) -> AdapterType:
             Adapter.register(cls, adapter)
             return adapter
 
-        return register_adapter_
+        return text_
 
     @staticmethod
     def binary(cls: type) -> Callable[[Any], Any]:
-        def register_binary_adapter_(adapter: AdapterType) -> AdapterType:
+        def binary_(adapter: AdapterType) -> AdapterType:
             Adapter.register_binary(cls, adapter)
             return adapter
 
-        return register_binary_adapter_
+        return binary_
 
 
 class Typecaster:
@@ -150,19 +150,19 @@ class Typecaster:
 
     @staticmethod
     def text(oid: int) -> Callable[[Any], Any]:
-        def register_caster_(caster: TypecasterType) -> TypecasterType:
+        def text_(caster: TypecasterType) -> TypecasterType:
             Typecaster.register(oid, caster)
             return caster
 
-        return register_caster_
+        return text_
 
     @staticmethod
     def binary(oid: int) -> Callable[[Any], Any]:
-        def register_binary_caster_(caster: TypecasterType) -> TypecasterType:
+        def binary_(caster: TypecasterType) -> TypecasterType:
             Typecaster.register_binary(oid, caster)
             return caster
 
-        return register_binary_caster_
+        return binary_
 
 
 class Transformer:
