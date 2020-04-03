@@ -5,7 +5,7 @@ Adapters for arrays
 # Copyright (C) 2020 The Psycopg Team
 
 import re
-from typing import Any, Callable, List, Optional, TYPE_CHECKING
+from typing import Any, List, Optional, TYPE_CHECKING
 
 from .. import errors as e
 from ..pq import Format
@@ -155,14 +155,6 @@ class ArrayCaster(TypeCaster):
             {"base_caster": caster},
         )
         return TypeCaster.register(oid, t, context=context, format=format)
-
-    @staticmethod
-    def text(oid: int) -> Callable[[Any], Any]:
-        def text_(caster: TypeCasterType) -> TypeCasterType:
-            ArrayCaster.register(oid, caster, format=Format.TEXT)
-            return caster
-
-        return text_
 
 
 class UnknownArrayCaster(ArrayCasterBase):

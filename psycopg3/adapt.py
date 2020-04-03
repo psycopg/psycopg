@@ -35,23 +35,24 @@ TypeCastersMap = Dict[Tuple[int, Format], TypeCasterType]
 class Adapter:
     globals: AdaptersMap = {}
 
-    def __init__(self, cls: type, conn: Optional[BaseConnection]):
-        self.cls = cls
+    def __init__(self, src: type, conn: Optional[BaseConnection]):
+        self.src = src
         self.conn = conn
 
     def adapt(self, obj: Any) -> Union[bytes, Tuple[bytes, int]]:
         raise NotImplementedError()
 
-    @staticmethod
+    @classmethod
     def register(
-        cls: type,
+        cls,
+        src: type,
         adapter: AdapterType,
         context: AdaptContext = None,
         format: Format = Format.TEXT,
     ) -> AdapterType:
-        if not isinstance(cls, type):
+        if not isinstance(src, type):
             raise TypeError(
-                f"adapters should be registered on classes, got {cls} instead"
+                f"adapters should be registered on classes, got {src} instead"
             )
 
         if context is not None and not isinstance(
@@ -72,27 +73,27 @@ class Adapter:
             )
 
         where = context.adapters if context is not None else Adapter.globals
-        where[cls, format] = adapter
+        where[src, format] = adapter
         return adapter
 
-    @staticmethod
+    @classmethod
     def register_binary(
-        cls: type, adapter: AdapterType, context: AdaptContext = None,
+        cls, src: type, adapter: AdapterType, context: AdaptContext = None,
     ) -> AdapterType:
-        return Adapter.register(cls, adapter, context, format=Format.BINARY)
+        return cls.register(src, adapter, context, format=Format.BINARY)
 
-    @staticmethod
-    def text(cls: type) -> Callable[[AdapterType], AdapterType]:
+    @classmethod
+    def text(cls, src: type) -> Callable[[AdapterType], AdapterType]:
         def text_(adapter: AdapterType) -> AdapterType:
-            Adapter.register(cls, adapter)
+            cls.register(src, adapter)
             return adapter
 
         return text_
 
-    @staticmethod
-    def binary(cls: type) -> Callable[[AdapterType], AdapterType]:
+    @classmethod
+    def binary(cls, src: type) -> Callable[[AdapterType], AdapterType]:
         def binary_(adapter: AdapterType) -> AdapterType:
-            Adapter.register_binary(cls, adapter)
+            cls.register_binary(src, adapter)
             return adapter
 
         return binary_
@@ -108,8 +109,9 @@ class TypeCaster:
     def cast(self, data: bytes) -> Any:
         raise NotImplementedError()
 
-    @staticmethod
+    @classmethod
     def register(
+        cls,
         oid: int,
         caster: TypeCasterType,
         context: AdaptContext = None,
@@ -141,24 +143,24 @@ class TypeCaster:
         where[oid, format] = caster
         return caster
 
-    @staticmethod
+    @classmethod
     def register_binary(
-        oid: int, caster: TypeCasterType, context: AdaptContext = None,
+        cls, oid: int, caster: TypeCasterType, context: AdaptContext = None,
     ) -> TypeCasterType:
-        return TypeCaster.register(oid, caster, context, format=Format.BINARY)
+        return cls.register(oid, caster, context, format=Format.BINARY)
 
-    @staticmethod
-    def text(oid: int) -> Callable[[TypeCasterType], TypeCasterType]:
+    @classmethod
+    def text(cls, oid: int) -> Callable[[TypeCasterType], TypeCasterType]:
         def text_(caster: TypeCasterType) -> TypeCasterType:
-            TypeCaster.register(oid, caster)
+            cls.register(oid, caster)
             return caster
 
         return text_
 
-    @staticmethod
-    def binary(oid: int) -> Callable[[TypeCasterType], TypeCasterType]:
+    @classmethod
+    def binary(cls, oid: int) -> Callable[[TypeCasterType], TypeCasterType]:
         def binary_(caster: TypeCasterType) -> TypeCasterType:
-            TypeCaster.register_binary(oid, caster)
+            cls.register_binary(oid, caster)
             return caster
 
         return binary_
