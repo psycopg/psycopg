@@ -371,7 +371,14 @@ PQescapeByteaConn.argtypes = [
 ]
 PQescapeByteaConn.restype = POINTER(c_ubyte)
 
-# PQescapeBytea: deprecated
+PQescapeBytea = pq.PQescapeBytea
+PQescapeBytea.argtypes = [
+    POINTER(c_char),  # actually POINTER(c_ubyte) but this is easier
+    c_size_t,
+    POINTER(c_size_t),
+]
+PQescapeBytea.restype = POINTER(c_ubyte)
+
 
 PQunescapeBytea = pq.PQunescapeBytea
 PQunescapeBytea.argtypes = [

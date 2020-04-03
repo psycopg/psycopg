@@ -537,17 +537,22 @@ class Conninfo:
 
 
 class Escaping:
-    def __init__(self, conn: PGconn):
+    def __init__(self, conn: Optional[PGconn] = None):
         self.conn = conn
 
     def escape_bytea(self, data: bytes) -> bytes:
         len_out = c_size_t()
-        out = impl.PQescapeByteaConn(
-            self.conn.pgconn_ptr,
-            data,
-            len(data),
-            pointer(t_cast(c_ulong, len_out)),
-        )
+        if self.conn is not None:
+            out = impl.PQescapeByteaConn(
+                self.conn.pgconn_ptr,
+                data,
+                len(data),
+                pointer(t_cast(c_ulong, len_out)),
+            )
+        else:
+            out = impl.PQescapeBytea(
+                data, len(data), pointer(t_cast(c_ulong, len_out)),
+            )
         if not out:
             raise MemoryError(
                 f"couldn't allocate for escape_bytea of {len(data)} bytes"
@@ -557,8 +562,7 @@ class Escaping:
         impl.PQfreemem(out)
         return rv
 
-    @classmethod
-    def unescape_bytea(cls, data: bytes) -> bytes:
+    def unescape_bytea(self, data: bytes) -> bytes:
         len_out = c_size_t()
         out = impl.PQunescapeBytea(data, pointer(t_cast(c_ulong, len_out)))
         if not out:

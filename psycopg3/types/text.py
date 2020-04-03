@@ -70,7 +70,9 @@ class StringCaster(TypeCaster):
 class BytesAdapter(Adapter):
     def __init__(self, cls: type, conn: BaseConnection):
         super().__init__(cls, conn)
-        self.esc = Escaping(self.conn.pgconn)
+        self.esc = Escaping(
+            self.conn.pgconn if self.conn is not None else None
+        )
 
     def adapt(self, obj: bytes) -> Tuple[bytes, int]:
         return self.esc.escape_bytea(obj), BYTEA_OID
@@ -84,7 +86,7 @@ def adapt_bytes(b: bytes) -> Tuple[bytes, int]:
 @TypeCaster.text(builtins["bytea"].oid)
 @ArrayCaster.text(builtins["bytea"].array_oid)
 def cast_bytea(data: bytes) -> bytes:
-    return Escaping.unescape_bytea(data)
+    return Escaping().unescape_bytea(data)
 
 
 @TypeCaster.binary(builtins["bytea"].oid)

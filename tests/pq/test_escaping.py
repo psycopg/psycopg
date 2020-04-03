@@ -10,6 +10,17 @@ def test_escape_bytea(pq, pgconn, data):
     assert rv == exp
 
 
+def test_escape_noconn(pq, pgconn):
+    data = bytes(range(256))
+    esc = pq.Escaping()
+    escdata = esc.escape_bytea(data)
+    res = pgconn.exec_params(
+        b"select '%s'::bytea" % escdata, [], result_format=1
+    )
+    assert res.status == pq.ExecStatus.TUPLES_OK
+    assert res.get_value(0, 0) == data
+
+
 def test_escape_1char(pq, pgconn):
     esc = pq.Escaping(pgconn)
     for c in range(256):
@@ -23,5 +34,5 @@ def test_escape_1char(pq, pgconn):
 )
 def test_unescape_bytea(pq, pgconn, data):
     enc = br"\x" + b"".join(b"%02x" % c for c in data)
-    rv = pq.Escaping.unescape_bytea(enc)
+    rv = pq.Escaping(pgconn).unescape_bytea(enc)
     assert rv == data
