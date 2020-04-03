@@ -1,6 +1,8 @@
 import pytest
 from psycopg3.adapt import Transformer, Format, Adapter, Typecaster
-from psycopg3.types.oids import type_oid
+from psycopg3.types.oids import builtins
+
+TEXT_OID = builtins["text"].oid
 
 
 @pytest.mark.parametrize(
@@ -18,7 +20,7 @@ def test_adapt(data, format, result, type):
     rv = t.adapt(data, format)
     if isinstance(rv, tuple):
         assert rv[0] == result
-        assert rv[1] == type_oid[type]
+        assert rv[1] == builtins[type].oid
     else:
         assert rv == result
 
@@ -60,16 +62,14 @@ def test_adapt_cursor_ctx(conn):
 )
 def test_cast(data, format, type, result):
     t = Transformer()
-    rv = t.cast(data, type_oid[type], format)
+    rv = t.cast(data, builtins[type].oid, format)
     assert rv == result
 
 
 def test_cast_connection_ctx(conn):
-    Typecaster.register(
-        type_oid["text"], lambda b: b.decode("ascii") + "t", conn
-    )
+    Typecaster.register(TEXT_OID, lambda b: b.decode("ascii") + "t", conn)
     Typecaster.register_binary(
-        type_oid["text"], lambda b: b.decode("ascii") + "b", conn
+        TEXT_OID, lambda b: b.decode("ascii") + "b", conn
     )
 
     r = conn.cursor().execute("select 'hello'::text").fetchone()
@@ -79,19 +79,15 @@ def test_cast_connection_ctx(conn):
 
 
 def test_cast_cursor_ctx(conn):
-    Typecaster.register(
-        type_oid["text"], lambda b: b.decode("ascii") + "t", conn
-    )
+    Typecaster.register(TEXT_OID, lambda b: b.decode("ascii") + "t", conn)
     Typecaster.register_binary(
-        type_oid["text"], lambda b: b.decode("ascii") + "b", conn
+        TEXT_OID, lambda b: b.decode("ascii") + "b", conn
     )
 
     cur = conn.cursor()
-    Typecaster.register(
-        type_oid["text"], lambda b: b.decode("ascii") + "tc", cur
-    )
+    Typecaster.register(TEXT_OID, lambda b: b.decode("ascii") + "tc", cur)
     Typecaster.register_binary(
-        type_oid["text"], lambda b: b.decode("ascii") + "bc", cur
+        TEXT_OID, lambda b: b.decode("ascii") + "bc", cur
     )
 
     r = cur.execute("select 'hello'::text").fetchone()

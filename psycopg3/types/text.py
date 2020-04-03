@@ -12,9 +12,12 @@ from ..adapt import (
     Typecaster,
 )
 from ..connection import BaseConnection
-from ..utils.typing import EncodeFunc, DecodeFunc, Oid
+from ..utils.typing import EncodeFunc, DecodeFunc
 from ..pq import Escaping
-from .oids import type_oid
+from .oids import builtins
+
+TEXT_OID = builtins["text"].oid
+BYTEA_OID = builtins["bytea"].oid
 
 
 @Adapter.text(str)
@@ -36,13 +39,13 @@ class StringAdapter(Adapter):
         return self._encode(obj)[0]
 
 
-@Typecaster.text(type_oid["text"])
-@Typecaster.binary(type_oid["text"])
+@Typecaster.text(builtins["text"].oid)
+@Typecaster.binary(builtins["text"].oid)
 class StringCaster(Typecaster):
 
     decode: Optional[DecodeFunc]
 
-    def __init__(self, oid: Oid, conn: BaseConnection):
+    def __init__(self, oid: int, conn: BaseConnection):
         super().__init__(oid, conn)
 
         if conn is not None:
@@ -67,20 +70,20 @@ class BytesAdapter(Adapter):
         super().__init__(cls, conn)
         self.esc = Escaping(self.conn.pgconn)
 
-    def adapt(self, obj: bytes) -> Tuple[bytes, Oid]:
-        return self.esc.escape_bytea(obj), type_oid["bytea"]
+    def adapt(self, obj: bytes) -> Tuple[bytes, int]:
+        return self.esc.escape_bytea(obj), BYTEA_OID
 
 
 @Adapter.binary(bytes)
-def adapt_bytes(b: bytes) -> Tuple[bytes, Oid]:
-    return b, type_oid["bytea"]
+def adapt_bytes(b: bytes) -> Tuple[bytes, int]:
+    return b, BYTEA_OID
 
 
-@Typecaster.text(type_oid["bytea"])
+@Typecaster.text(builtins["bytea"].oid)
 def cast_bytea(data: bytes) -> bytes:
     return Escaping.unescape_bytea(data)
 
 
-@Typecaster.binary(type_oid["bytea"])
+@Typecaster.binary(builtins["bytea"].oid)
 def cast_bytea_binary(data: bytes) -> bytes:
     return data

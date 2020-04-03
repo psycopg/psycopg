@@ -4,7 +4,7 @@ from math import isnan, isinf, exp
 import pytest
 
 from psycopg3.adapt import Typecaster, Format
-from psycopg3.types import type_oid
+from psycopg3.types import builtins
 from psycopg3.types.numeric import cast_float
 
 
@@ -58,7 +58,7 @@ def test_cast_int(conn, val, pgtype, want, format):
     cur = conn.cursor(binary=format == Format.BINARY)
     cur.execute("select %%s::%s" % pgtype, (val,))
     assert cur.pgresult.fformat(0) == format
-    assert cur.pgresult.ftype(0) == type_oid[pgtype]
+    assert cur.pgresult.ftype(0) == builtins[pgtype].oid
     result = cur.fetchone()[0]
     assert result == want
     assert type(result) is type(want)
@@ -209,7 +209,7 @@ def test_roundtrip_numeric(conn, val):
 )
 def test_numeric_as_float(conn, val):
     cur = conn.cursor()
-    Typecaster.register(type_oid["numeric"], cast_float, cur)
+    Typecaster.register(builtins["numeric"].oid, cast_float, cur)
 
     val = Decimal(val)
     cur.execute("select %s", (val,))

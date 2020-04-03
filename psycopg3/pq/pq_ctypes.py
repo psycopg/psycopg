@@ -25,7 +25,6 @@ from .enums import (
 from .misc import error_message, ConninfoOption
 from . import _pq_ctypes as impl
 from ..errors import OperationalError
-from ..utils.typing import Oid
 
 
 def version() -> int:
@@ -198,7 +197,7 @@ class PGconn:
         self,
         command: bytes,
         param_values: Sequence[Optional[bytes]],
-        param_types: Optional[Sequence[Oid]] = None,
+        param_types: Optional[Sequence[int]] = None,
         param_formats: Optional[Sequence[Format]] = None,
         result_format: Format = Format.TEXT,
     ) -> "PGresult":
@@ -214,7 +213,7 @@ class PGconn:
         self,
         command: bytes,
         param_values: Sequence[Optional[bytes]],
-        param_types: Optional[Sequence[Oid]] = None,
+        param_types: Optional[Sequence[int]] = None,
         param_formats: Optional[Sequence[Format]] = None,
         result_format: Format = Format.TEXT,
     ) -> None:
@@ -230,7 +229,7 @@ class PGconn:
         self,
         command: bytes,
         param_values: Sequence[Optional[bytes]],
-        param_types: Optional[Sequence[Oid]] = None,
+        param_types: Optional[Sequence[int]] = None,
         param_formats: Optional[Sequence[Format]] = None,
         result_format: Format = Format.TEXT,
     ) -> Any:
@@ -282,7 +281,7 @@ class PGconn:
         self,
         name: bytes,
         command: bytes,
-        param_types: Optional[Sequence[Oid]] = None,
+        param_types: Optional[Sequence[int]] = None,
     ) -> "PGresult":
         if not isinstance(name, bytes):
             raise TypeError(f"'name' must be bytes, got {type(name)} instead")
@@ -432,8 +431,8 @@ class PGresult:
     def fname(self, column_number: int) -> bytes:
         return impl.PQfname(self.pgresult_ptr, column_number)
 
-    def ftable(self, column_number: int) -> Oid:
-        return Oid(impl.PQftable(self.pgresult_ptr, column_number))
+    def ftable(self, column_number: int) -> int:
+        return impl.PQftable(self.pgresult_ptr, column_number)
 
     def ftablecol(self, column_number: int) -> int:
         return impl.PQftablecol(self.pgresult_ptr, column_number)
@@ -441,8 +440,8 @@ class PGresult:
     def fformat(self, column_number: int) -> Format:
         return Format(impl.PQfformat(self.pgresult_ptr, column_number))
 
-    def ftype(self, column_number: int) -> Oid:
-        return Oid(impl.PQftype(self.pgresult_ptr, column_number))
+    def ftype(self, column_number: int) -> int:
+        return impl.PQftype(self.pgresult_ptr, column_number)
 
     def fmod(self, column_number: int) -> int:
         return impl.PQfmod(self.pgresult_ptr, column_number)
@@ -473,8 +472,8 @@ class PGresult:
     def nparams(self) -> int:
         return impl.PQnparams(self.pgresult_ptr)
 
-    def param_type(self, param_number: int) -> Oid:
-        return Oid(impl.PQparamtype(self.pgresult_ptr, param_number))
+    def param_type(self, param_number: int) -> int:
+        return impl.PQparamtype(self.pgresult_ptr, param_number)
 
     @property
     def command_status(self) -> bytes:
@@ -486,8 +485,8 @@ class PGresult:
         return int(rv) if rv else None
 
     @property
-    def oid_value(self) -> Oid:
-        return Oid(impl.PQoidValue(self.pgresult_ptr))
+    def oid_value(self) -> int:
+        return impl.PQoidValue(self.pgresult_ptr)
 
 
 class Conninfo:
