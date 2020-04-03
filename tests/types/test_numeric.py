@@ -3,7 +3,7 @@ from math import isnan, isinf, exp
 
 import pytest
 
-from psycopg3.adapt import Typecaster, Format
+from psycopg3.adapt import TypeCaster, Format
 from psycopg3.types import builtins
 from psycopg3.types.numeric import cast_float
 
@@ -209,7 +209,7 @@ def test_roundtrip_numeric(conn, val):
 )
 def test_numeric_as_float(conn, val):
     cur = conn.cursor()
-    Typecaster.register(builtins["numeric"].oid, cast_float, cur)
+    TypeCaster.register(builtins["numeric"].oid, cast_float, cur)
 
     val = Decimal(val)
     cur.execute("select %s", (val,))

@@ -9,7 +9,7 @@ from typing import Optional, Tuple, Union
 
 from ..adapt import (
     Adapter,
-    Typecaster,
+    TypeCaster,
 )
 from ..connection import BaseConnection
 from ..utils.typing import EncodeFunc, DecodeFunc
@@ -40,10 +40,10 @@ class StringAdapter(Adapter):
         return self._encode(obj)[0]
 
 
-@Typecaster.text(builtins["text"].oid)
-@Typecaster.binary(builtins["text"].oid)
+@TypeCaster.text(builtins["text"].oid)
+@TypeCaster.binary(builtins["text"].oid)
 @ArrayCaster.text(builtins["text"].array_oid)
-class StringCaster(Typecaster):
+class StringCaster(TypeCaster):
 
     decode: Optional[DecodeFunc]
 
@@ -81,12 +81,12 @@ def adapt_bytes(b: bytes) -> Tuple[bytes, int]:
     return b, BYTEA_OID
 
 
-@Typecaster.text(builtins["bytea"].oid)
+@TypeCaster.text(builtins["bytea"].oid)
 @ArrayCaster.text(builtins["bytea"].array_oid)
 def cast_bytea(data: bytes) -> bytes:
     return Escaping.unescape_bytea(data)
 
 
-@Typecaster.binary(builtins["bytea"].oid)
+@TypeCaster.binary(builtins["bytea"].oid)
 def cast_bytea_binary(data: bytes) -> bytes:
     return data

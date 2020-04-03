@@ -9,8 +9,8 @@ from typing import Any, Callable, List, Optional, cast, TYPE_CHECKING
 
 from .. import errors as e
 from ..pq import Format
-from ..adapt import Adapter, Typecaster, Transformer, UnknownCaster
-from ..adapt import AdaptContext, TypecasterType, TypecasterFunc
+from ..adapt import Adapter, TypeCaster, Transformer, UnknownCaster
+from ..adapt import AdaptContext, TypeCasterType, TypeCasterFunc
 
 if TYPE_CHECKING:
     from ..connection import BaseConnection
@@ -90,19 +90,19 @@ class ListAdapter(Adapter):
         tokens[-1] = b"}"
 
 
-class ArrayCasterBase(Typecaster):
-    base_caster: TypecasterType
+class ArrayCasterBase(TypeCaster):
+    base_caster: TypeCasterType
 
     def __init__(
         self, oid: int, conn: Optional["BaseConnection"],
     ):
         super().__init__(oid, conn)
-        self.caster_func = TypecasterFunc  # type: ignore
+        self.caster_func = TypeCasterFunc  # type: ignore
 
         if isinstance(self.base_caster, type):
             self.caster_func = self.base_caster(oid, conn).cast
         else:
-            self.caster_func = cast(TypecasterFunc, type(self).base_caster)
+            self.caster_func = cast(TypeCasterFunc, type(self).base_caster)
 
     def cast(self, data: bytes) -> List[Any]:
         rv = None
@@ -141,24 +141,24 @@ class ArrayCasterBase(Typecaster):
         return rv
 
 
-class ArrayCaster(Typecaster):
+class ArrayCaster(TypeCaster):
     @staticmethod
     def register(
         oid: int,  # array oid
-        caster: TypecasterType,
+        caster: TypeCasterType,
         context: AdaptContext = None,
         format: Format = Format.TEXT,
-    ) -> TypecasterType:
+    ) -> TypeCasterType:
         t = type(
             caster.__name__ + "_array",  # type: ignore
             (ArrayCasterBase,),
             {"base_caster": caster},
         )
-        return Typecaster.register(oid, t, context=context, format=format)
+        return TypeCaster.register(oid, t, context=context, format=format)
 
     @staticmethod
     def text(oid: int) -> Callable[[Any], Any]:
-        def text_(caster: TypecasterType) -> TypecasterType:
+        def text_(caster: TypeCasterType) -> TypeCasterType:
             ArrayCaster.register(oid, caster, format=Format.TEXT)
             return caster
 

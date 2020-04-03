@@ -28,9 +28,9 @@ AdapterFunc = Callable[[Any], MaybeOid]
 AdapterType = Union["Adapter", AdapterFunc]
 AdaptersMap = Dict[Tuple[type, Format], AdapterType]
 
-TypecasterFunc = Callable[[bytes], Any]
-TypecasterType = Union["Typecaster", TypecasterFunc]
-TypecastersMap = Dict[Tuple[int, Format], TypecasterType]
+TypeCasterFunc = Callable[[bytes], Any]
+TypeCasterType = Union["TypeCaster", TypeCasterFunc]
+TypeCastersMap = Dict[Tuple[int, Format], TypeCasterType]
 
 
 class Adapter:
@@ -99,8 +99,8 @@ class Adapter:
         return binary_
 
 
-class Typecaster:
-    globals: TypecastersMap = {}
+class TypeCaster:
+    globals: TypeCastersMap = {}
 
     def __init__(self, oid: int, conn: Optional[BaseConnection]):
         self.oid = oid
@@ -112,10 +112,10 @@ class Typecaster:
     @staticmethod
     def register(
         oid: int,
-        caster: TypecasterType,
+        caster: TypeCasterType,
         context: AdaptContext = None,
         format: Format = Format.TEXT,
-    ) -> TypecasterType:
+    ) -> TypeCasterType:
         if not isinstance(oid, int):
             raise TypeError(
                 f"typecasters should be registered on oid, got {oid} instead"
@@ -131,35 +131,35 @@ class Typecaster:
 
         if not (
             callable(caster)
-            or (isinstance(caster, type) and issubclass(caster, Typecaster))
+            or (isinstance(caster, type) and issubclass(caster, TypeCaster))
         ):
             raise TypeError(
-                f"adapters should be callable or Typecaster subclasses,"
+                f"adapters should be callable or TypeCaster subclasses,"
                 f" got {caster} instead"
             )
 
-        where = context.casters if context is not None else Typecaster.globals
+        where = context.casters if context is not None else TypeCaster.globals
         where[oid, format] = caster
         return caster
 
     @staticmethod
     def register_binary(
-        oid: int, caster: TypecasterType, context: AdaptContext = None,
-    ) -> TypecasterType:
-        return Typecaster.register(oid, caster, context, format=Format.BINARY)
+        oid: int, caster: TypeCasterType, context: AdaptContext = None,
+    ) -> TypeCasterType:
+        return TypeCaster.register(oid, caster, context, format=Format.BINARY)
 
     @staticmethod
     def text(oid: int) -> Callable[[Any], Any]:
-        def text_(caster: TypecasterType) -> TypecasterType:
-            Typecaster.register(oid, caster)
+        def text_(caster: TypeCasterType) -> TypeCasterType:
+            TypeCaster.register(oid, caster)
             return caster
 
         return text_
 
     @staticmethod
     def binary(oid: int) -> Callable[[Any], Any]:
-        def binary_(caster: TypecasterType) -> TypecasterType:
-            Typecaster.register_binary(oid, caster)
+        def binary_(caster: TypeCasterType) -> TypeCasterType:
+            TypeCaster.register_binary(oid, caster)
             return caster
 
         return binary_
@@ -197,14 +197,14 @@ class Transformer:
         self._adapt_funcs: Dict[Tuple[type, Format], AdapterFunc] = {}
 
         # mapping oid, fmt -> cast function
-        self._cast_funcs: Dict[Tuple[int, Format], TypecasterFunc] = {}
+        self._cast_funcs: Dict[Tuple[int, Format], TypeCasterFunc] = {}
 
         # The result to return values from
         self._result: Optional[PGresult] = None
 
         # sequence of cast function from value to python
         # the length of the result columns
-        self._row_casters: List[TypecasterFunc] = []
+        self._row_casters: List[TypeCasterFunc] = []
 
     @property
     def result(self) -> Optional[PGresult]:
@@ -297,7 +297,7 @@ class Transformer:
         else:
             return None
 
-    def get_cast_function(self, oid: int, fmt: Format) -> TypecasterFunc:
+    def get_cast_function(self, oid: int, fmt: Format) -> TypeCasterFunc:
         try:
             return self._cast_funcs[oid, fmt]
         except KeyError:
@@ -307,9 +307,9 @@ class Transformer:
         if isinstance(caster, type):
             return caster(oid, self.connection).cast
         else:
-            return cast(TypecasterFunc, caster)
+            return cast(TypeCasterFunc, caster)
 
-    def lookup_caster(self, oid: int, fmt: Format) -> TypecasterType:
+    def lookup_caster(self, oid: int, fmt: Format) -> TypeCasterType:
         key = (oid, fmt)
 
         cur = self.cursor
@@ -320,14 +320,14 @@ class Transformer:
         if conn is not None and key in conn.casters:
             return conn.casters[key]
 
-        if key in Typecaster.globals:
-            return Typecaster.globals[key]
+        if key in TypeCaster.globals:
+            return TypeCaster.globals[key]
 
-        return Typecaster.globals[INVALID_OID, fmt]
+        return TypeCaster.globals[INVALID_OID, fmt]
 
 
-@Typecaster.text(INVALID_OID)
-class UnknownCaster(Typecaster):
+@TypeCaster.text(INVALID_OID)
+class UnknownCaster(TypeCaster):
     """
     Fallback object to convert unknown types to Python
     """
@@ -344,6 +344,6 @@ class UnknownCaster(Typecaster):
         return self.decode(data)[0]
 
 
-@Typecaster.binary(INVALID_OID)
+@TypeCaster.binary(INVALID_OID)
 def cast_unknown(data: bytes) -> bytes:
     return data

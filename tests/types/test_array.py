@@ -1,6 +1,6 @@
 import pytest
 from psycopg3.types import builtins
-from psycopg3.adapt import Typecaster, UnknownCaster
+from psycopg3.adapt import TypeCaster, UnknownCaster
 from psycopg3.types.array import UnknownArrayCaster, ArrayCaster
 
 
@@ -72,8 +72,8 @@ def test_cast_list_int(conn, obj, want):
 
 def test_unknown(conn):
     # unknown for real
-    assert builtins["aclitem"].array_oid not in Typecaster.globals
-    Typecaster.register(
+    assert builtins["aclitem"].array_oid not in TypeCaster.globals
+    TypeCaster.register(
         builtins["aclitem"].array_oid, UnknownArrayCaster, context=conn
     )
     cur = conn.cursor()

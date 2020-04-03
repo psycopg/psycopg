@@ -9,7 +9,7 @@ import struct
 from decimal import Decimal
 from typing import Tuple
 
-from ..adapt import Adapter, Typecaster
+from ..adapt import Adapter, TypeCaster
 from .oids import builtins
 from .array import ArrayCaster
 
@@ -56,10 +56,10 @@ def adapt_bool(obj: bool) -> Tuple[bytes, int]:
     return _bool_adapt[obj]
 
 
-@Typecaster.text(builtins["int2"].oid)
-@Typecaster.text(builtins["int4"].oid)
-@Typecaster.text(builtins["int8"].oid)
-@Typecaster.text(builtins["oid"].oid)
+@TypeCaster.text(builtins["int2"].oid)
+@TypeCaster.text(builtins["int4"].oid)
+@TypeCaster.text(builtins["int8"].oid)
+@TypeCaster.text(builtins["oid"].oid)
 @ArrayCaster.text(builtins["int2"].array_oid)
 @ArrayCaster.text(builtins["int4"].array_oid)
 @ArrayCaster.text(builtins["int8"].array_oid)
@@ -68,50 +68,50 @@ def cast_int(data: bytes) -> int:
     return int(_decode(data)[0])
 
 
-@Typecaster.binary(builtins["int2"].oid)
+@TypeCaster.binary(builtins["int2"].oid)
 def cast_binary_int2(data: bytes) -> int:
     rv: int = _int2_struct.unpack(data)[0]
     return rv
 
 
-@Typecaster.binary(builtins["int4"].oid)
+@TypeCaster.binary(builtins["int4"].oid)
 def cast_binary_int4(data: bytes) -> int:
     rv: int = _int4_struct.unpack(data)[0]
     return rv
 
 
-@Typecaster.binary(builtins["int8"].oid)
+@TypeCaster.binary(builtins["int8"].oid)
 def cast_binary_int8(data: bytes) -> int:
     rv: int = _int8_struct.unpack(data)[0]
     return rv
 
 
-@Typecaster.binary(builtins["oid"].oid)
+@TypeCaster.binary(builtins["oid"].oid)
 def cast_binary_oid(data: bytes) -> int:
     rv: int = _oid_struct.unpack(data)[0]
     return rv
 
 
-@Typecaster.text(builtins["float4"].oid)
-@Typecaster.text(builtins["float8"].oid)
+@TypeCaster.text(builtins["float4"].oid)
+@TypeCaster.text(builtins["float8"].oid)
 def cast_float(data: bytes) -> float:
     # it supports bytes directly
     return float(data)
 
 
-@Typecaster.binary(builtins["float4"].oid)
+@TypeCaster.binary(builtins["float4"].oid)
 def cast_binary_float4(data: bytes) -> float:
     rv: float = _float4_struct.unpack(data)[0]
     return rv
 
 
-@Typecaster.binary(builtins["float8"].oid)
+@TypeCaster.binary(builtins["float8"].oid)
 def cast_binary_float8(data: bytes) -> float:
     rv: float = _float8_struct.unpack(data)[0]
     return rv
 
 
-@Typecaster.text(builtins["numeric"].oid)
+@TypeCaster.text(builtins["numeric"].oid)
 def cast_numeric(data: bytes) -> Decimal:
     return Decimal(_decode(data)[0])
 
@@ -120,11 +120,11 @@ _bool_casts = {b"t": True, b"f": False}
 _bool_binary_casts = {b"\x01": True, b"\x00": False}
 
 
-@Typecaster.text(builtins["bool"].oid)
+@TypeCaster.text(builtins["bool"].oid)
 def cast_bool(data: bytes) -> bool:
     return _bool_casts[data]
 
 
-@Typecaster.binary(builtins["bool"].oid)
+@TypeCaster.binary(builtins["bool"].oid)
 def cast_binary_bool(data: bytes) -> bool:
     return _bool_binary_casts[data]

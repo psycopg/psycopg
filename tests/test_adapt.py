@@ -1,5 +1,5 @@
 import pytest
-from psycopg3.adapt import Transformer, Format, Adapter, Typecaster
+from psycopg3.adapt import Transformer, Format, Adapter, TypeCaster
 from psycopg3.types.oids import builtins
 
 TEXT_OID = builtins["text"].oid
@@ -67,8 +67,8 @@ def test_cast(data, format, type, result):
 
 
 def test_cast_connection_ctx(conn):
-    Typecaster.register(TEXT_OID, lambda b: b.decode("ascii") + "t", conn)
-    Typecaster.register_binary(
+    TypeCaster.register(TEXT_OID, lambda b: b.decode("ascii") + "t", conn)
+    TypeCaster.register_binary(
         TEXT_OID, lambda b: b.decode("ascii") + "b", conn
     )
 
@@ -79,14 +79,14 @@ def test_cast_connection_ctx(conn):
 
 
 def test_cast_cursor_ctx(conn):
-    Typecaster.register(TEXT_OID, lambda b: b.decode("ascii") + "t", conn)
-    Typecaster.register_binary(
+    TypeCaster.register(TEXT_OID, lambda b: b.decode("ascii") + "t", conn)
+    TypeCaster.register_binary(
         TEXT_OID, lambda b: b.decode("ascii") + "b", conn
     )
 
     cur = conn.cursor()
-    Typecaster.register(TEXT_OID, lambda b: b.decode("ascii") + "tc", cur)
-    Typecaster.register_binary(
+    TypeCaster.register(TEXT_OID, lambda b: b.decode("ascii") + "tc", cur)
+    TypeCaster.register_binary(
         TEXT_OID, lambda b: b.decode("ascii") + "bc", cur
     )
 

@@ -18,7 +18,7 @@ if TYPE_CHECKING:
         AsyncConnection,
         QueryGen,
     )
-    from .adapt import AdaptersMap, TypecastersMap
+    from .adapt import AdaptersMap, TypeCastersMap
 
 
 class BaseCursor:
@@ -26,7 +26,7 @@ class BaseCursor:
         self.conn = conn
         self.binary = binary
         self.adapters: AdaptersMap = {}
-        self.casters: TypecastersMap = {}
+        self.casters: TypeCastersMap = {}
         self._reset()
 
     def _reset(self) -> None:
