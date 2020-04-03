@@ -11,6 +11,7 @@ from typing import Tuple
 
 from ..adapt import Adapter, Typecaster
 from .oids import builtins
+from .array import ArrayCaster
 
 FLOAT8_OID = builtins["float8"].oid
 NUMERIC_OID = builtins["numeric"].oid
@@ -59,6 +60,10 @@ def adapt_bool(obj: bool) -> Tuple[bytes, int]:
 @Typecaster.text(builtins["int4"].oid)
 @Typecaster.text(builtins["int8"].oid)
 @Typecaster.text(builtins["oid"].oid)
+@ArrayCaster.text(builtins["int2"].array_oid)
+@ArrayCaster.text(builtins["int4"].array_oid)
+@ArrayCaster.text(builtins["int8"].array_oid)
+@ArrayCaster.text(builtins["oid"].array_oid)
 def cast_int(data: bytes) -> int:
     return int(_decode(data)[0])
 

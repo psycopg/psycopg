@@ -8,6 +8,6 @@ psycopg3 types package
 from .oids import builtins
 
 # Register default adapters
-from . import numeric, text  # noqa
+from . import array, numeric, text  # noqa
 
 __all__ = ["builtins"]

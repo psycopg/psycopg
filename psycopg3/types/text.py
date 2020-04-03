@@ -15,6 +15,7 @@ from ..connection import BaseConnection
 from ..utils.typing import EncodeFunc, DecodeFunc
 from ..pq import Escaping
 from .oids import builtins
+from .array import ArrayCaster
 
 TEXT_OID = builtins["text"].oid
 BYTEA_OID = builtins["bytea"].oid
@@ -41,6 +42,7 @@ class StringAdapter(Adapter):
 
 @Typecaster.text(builtins["text"].oid)
 @Typecaster.binary(builtins["text"].oid)
+@ArrayCaster.text(builtins["text"].array_oid)
 class StringCaster(Typecaster):
 
     decode: Optional[DecodeFunc]
@@ -80,6 +82,7 @@ def adapt_bytes(b: bytes) -> Tuple[bytes, int]:
 
 
 @Typecaster.text(builtins["bytea"].oid)
+@ArrayCaster.text(builtins["bytea"].array_oid)
 def cast_bytea(data: bytes) -> bytes:
     return Escaping.unescape_bytea(data)
 
