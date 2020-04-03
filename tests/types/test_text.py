@@ -3,6 +3,8 @@ import pytest
 import psycopg3
 from psycopg3.adapt import Format
 
+eur = "\u20ac"
+
 
 #
 # tests with text
@@ -31,7 +33,6 @@ def test_cast_1char(conn, format):
 @pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
 @pytest.mark.parametrize("encoding", ["utf8", "latin9"])
 def test_adapt_enc(conn, format, encoding):
-    eur = "\u20ac"
     cur = conn.cursor()
     ph = "%s" if format == Format.TEXT else "%b"
 
@@ -42,7 +43,6 @@ def test_adapt_enc(conn, format, encoding):
 
 @pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
 def test_adapt_ascii(conn, format):
-    eur = "\u20ac"
     cur = conn.cursor(binary=format == Format.BINARY)
     ph = "%s" if format == Format.TEXT else "%b"
 
@@ -53,7 +53,6 @@ def test_adapt_ascii(conn, format):
 
 @pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
 def test_adapt_badenc(conn, format):
-    eur = "\u20ac"
     cur = conn.cursor()
     ph = "%s" if format == Format.TEXT else "%b"
 
@@ -65,7 +64,6 @@ def test_adapt_badenc(conn, format):
 @pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
 @pytest.mark.parametrize("encoding", ["utf8", "latin9"])
 def test_cast_enc(conn, format, encoding):
-    eur = "\u20ac"
     cur = conn.cursor(binary=format == Format.BINARY)
 
     conn.encoding = encoding
@@ -75,7 +73,6 @@ def test_cast_enc(conn, format, encoding):
 
 @pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
 def test_cast_badenc(conn, format):
-    eur = "\u20ac"
     cur = conn.cursor(binary=format == Format.BINARY)
 
     conn.encoding = "latin1"
@@ -85,12 +82,27 @@ def test_cast_badenc(conn, format):
 
 @pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
 def test_cast_ascii(conn, format):
-    eur = "\u20ac"
     cur = conn.cursor(binary=format == Format.BINARY)
 
     conn.encoding = "sql_ascii"
     (res,) = cur.execute("select chr(%s::int)", (ord(eur),)).fetchone()
     assert res == eur.encode("utf8")
+
+
+def test_text_array(conn):
+    cur = conn.cursor()
+    a = list(map(chr, range(1, 256))) + [eur]
+    (res,) = cur.execute("select %s::text[]", (a,)).fetchone()
+    assert res == a
+
+
+def test_text_array_ascii(conn):
+    conn.encoding = "sql_ascii"
+    cur = conn.cursor()
+    a = list(map(chr, range(1, 256))) + [eur]
+    exp = [s.encode("utf8") for s in a]
+    (res,) = cur.execute("select %s::text[]", (a,)).fetchone()
+    assert res == exp
 
 
 #
@@ -116,3 +128,10 @@ def test_cast_1byte(conn, format):
         assert cur.fetchone()[0] == bytes([i])
 
     assert cur.pgresult.fformat(0) == format
+
+
+def test_bytea_array(conn):
+    cur = conn.cursor()
+    a = [bytes(range(0, 256))]
+    (res,) = cur.execute("select %s::bytea[]", (a,)).fetchone()
+    assert res == a
