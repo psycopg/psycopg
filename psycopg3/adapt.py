@@ -5,9 +5,8 @@ Entry point into the adaptation system.
 # Copyright (C) 2020 The Psycopg Team
 
 import codecs
-from typing import cast
 from typing import Any, Callable, Dict, Generator, List, Optional, Sequence
-from typing import Tuple, Union
+from typing import Tuple, Type, Union
 
 from . import errors as e
 from .pq import Format, PGresult
@@ -25,18 +24,18 @@ AdaptContext = Union[None, BaseConnection, BaseCursor]
 
 MaybeOid = Union[Optional[bytes], Tuple[Optional[bytes], int]]
 AdapterFunc = Callable[[Any], MaybeOid]
-AdapterType = Union["Adapter", AdapterFunc]
+AdapterType = Union[Type["Adapter"], AdapterFunc]
 AdaptersMap = Dict[Tuple[type, Format], AdapterType]
 
 TypeCasterFunc = Callable[[bytes], Any]
-TypeCasterType = Union["TypeCaster", TypeCasterFunc]
+TypeCasterType = Union[Type["TypeCaster"], TypeCasterFunc]
 TypeCastersMap = Dict[Tuple[int, Format], TypeCasterType]
 
 
 class Adapter:
     globals: AdaptersMap = {}
 
-    def __init__(self, cls: type, conn: BaseConnection):
+    def __init__(self, cls: type, conn: Optional[BaseConnection]):
         self.cls = cls
         self.conn = conn
 
@@ -83,7 +82,7 @@ class Adapter:
         return Adapter.register(cls, adapter, context, format=Format.BINARY)
 
     @staticmethod
-    def text(cls: type) -> Callable[[Any], Any]:
+    def text(cls: type) -> Callable[[AdapterType], AdapterType]:
         def text_(adapter: AdapterType) -> AdapterType:
             Adapter.register(cls, adapter)
             return adapter
@@ -91,7 +90,7 @@ class Adapter:
         return text_
 
     @staticmethod
-    def binary(cls: type) -> Callable[[Any], Any]:
+    def binary(cls: type) -> Callable[[AdapterType], AdapterType]:
         def binary_(adapter: AdapterType) -> AdapterType:
             Adapter.register_binary(cls, adapter)
             return adapter
@@ -149,7 +148,7 @@ class TypeCaster:
         return TypeCaster.register(oid, caster, context, format=Format.BINARY)
 
     @staticmethod
-    def text(oid: int) -> Callable[[Any], Any]:
+    def text(oid: int) -> Callable[[TypeCasterType], TypeCasterType]:
         def text_(caster: TypeCasterType) -> TypeCasterType:
             TypeCaster.register(oid, caster)
             return caster
@@ -157,7 +156,7 @@ class TypeCaster:
         return text_
 
     @staticmethod
-    def binary(oid: int) -> Callable[[Any], Any]:
+    def binary(oid: int) -> Callable[[TypeCasterType], TypeCasterType]:
         def binary_(caster: TypeCasterType) -> TypeCasterType:
             TypeCaster.register_binary(oid, caster)
             return caster
@@ -259,7 +258,7 @@ class Transformer:
         if isinstance(adapter, type):
             return adapter(cls, self.connection).adapt
         else:
-            return cast(AdapterFunc, adapter)
+            return adapter
 
     def lookup_adapter(self, cls: type, fmt: Format) -> AdapterType:
         key = (cls, fmt)
@@ -307,7 +306,7 @@ class Transformer:
         if isinstance(caster, type):
             return caster(oid, self.connection).cast
         else:
-            return cast(TypeCasterFunc, caster)
+            return caster
 
     def lookup_caster(self, oid: int, fmt: Format) -> TypeCasterType:
         key = (oid, fmt)

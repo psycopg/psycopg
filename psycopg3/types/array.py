@@ -5,7 +5,7 @@ Adapters for arrays
 # Copyright (C) 2020 The Psycopg Team
 
 import re
-from typing import Any, Callable, List, Optional, cast, TYPE_CHECKING
+from typing import Any, Callable, List, Optional, TYPE_CHECKING
 
 from .. import errors as e
 from ..pq import Format
@@ -102,7 +102,7 @@ class ArrayCasterBase(TypeCaster):
         if isinstance(self.base_caster, type):
             self.caster_func = self.base_caster(oid, conn).cast
         else:
-            self.caster_func = cast(TypeCasterFunc, type(self).base_caster)
+            self.caster_func = type(self).base_caster
 
     def cast(self, data: bytes) -> List[Any]:
         rv = None
@@ -150,7 +150,7 @@ class ArrayCaster(TypeCaster):
         format: Format = Format.TEXT,
     ) -> TypeCasterType:
         t = type(
-            caster.__name__ + "_array",  # type: ignore
+            caster.__name__ + "_array",
             (ArrayCasterBase,),
             {"base_caster": caster},
         )
