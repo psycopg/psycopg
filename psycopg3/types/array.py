@@ -5,15 +5,12 @@ Adapters for arrays
 # Copyright (C) 2020 The Psycopg Team
 
 import re
-from typing import Any, List, Optional, TYPE_CHECKING
+from typing import Any, List, Optional
 
 from .. import errors as e
 from ..pq import Format
 from ..adapt import Adapter, TypeCaster, Transformer, UnknownCaster
 from ..adapt import AdaptContext, TypeCasterType, TypeCasterFunc
-
-if TYPE_CHECKING:
-    from ..connection import BaseConnection
 
 
 # from https://www.postgresql.org/docs/current/arrays.html#ARRAYS-IO
@@ -59,9 +56,9 @@ def escape_item(item: Optional[bytes]) -> bytes:
 
 @Adapter.text(list)
 class ListAdapter(Adapter):
-    def __init__(self, cls: type, conn: "BaseConnection"):
-        super().__init__(cls, conn)
-        self.tx = Transformer(conn)
+    def __init__(self, cls: type, context: AdaptContext = None):
+        super().__init__(cls, context)
+        self.tx = Transformer(context)
 
     def adapt(self, obj: List[Any]) -> bytes:
         tokens: List[bytes] = []
@@ -93,14 +90,12 @@ class ListAdapter(Adapter):
 class ArrayCasterBase(TypeCaster):
     base_caster: TypeCasterType
 
-    def __init__(
-        self, oid: int, conn: Optional["BaseConnection"],
-    ):
-        super().__init__(oid, conn)
+    def __init__(self, oid: int, context: AdaptContext = None):
+        super().__init__(oid, context)
         self.caster_func = TypeCasterFunc  # type: ignore
 
         if isinstance(self.base_caster, type):
-            self.caster_func = self.base_caster(oid, conn).cast
+            self.caster_func = self.base_caster(oid, context).cast
         else:
             self.caster_func = type(self).base_caster
 

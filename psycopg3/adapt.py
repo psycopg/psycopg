@@ -34,10 +34,13 @@ TypeCastersMap = Dict[Tuple[int, Format], TypeCasterType]
 
 class Adapter:
     globals: AdaptersMap = {}
+    connection: Optional[BaseConnection]
+    cursor: Optional[BaseCursor]
 
-    def __init__(self, src: type, conn: Optional[BaseConnection]):
+    def __init__(self, src: type, context: AdaptContext = None):
         self.src = src
-        self.conn = conn
+        self.context = context
+        self.connection, self.cursor = _solve_context(context)
 
     def adapt(self, obj: Any) -> Union[bytes, Tuple[bytes, int]]:
         raise NotImplementedError()
@@ -101,10 +104,13 @@ class Adapter:
 
 class TypeCaster:
     globals: TypeCastersMap = {}
+    connection: Optional[BaseConnection]
+    cursor: Optional[BaseCursor]
 
-    def __init__(self, oid: int, conn: Optional[BaseConnection]):
+    def __init__(self, oid: int, context: AdaptContext = None):
         self.oid = oid
-        self.conn = conn
+        self.context = context
+        self.connection, self.cursor = _solve_context(context)
 
     def cast(self, data: bytes) -> Any:
         raise NotImplementedError()
@@ -179,20 +185,7 @@ class Transformer:
     cursor: Optional[BaseCursor]
 
     def __init__(self, context: AdaptContext = None):
-        if context is None:
-            self.connection = None
-            self.cursor = None
-        elif isinstance(context, BaseConnection):
-            self.connection = context
-            self.cursor = None
-        elif isinstance(context, BaseCursor):
-            self.connection = context.conn
-            self.cursor = context
-        else:
-            raise TypeError(
-                f"the context should be a connection or cursor,"
-                f" got {type(context)}"
-            )
+        self.connection, self.cursor = _solve_context(context)
 
         # mapping class, fmt -> adaptation function
         self._adapt_funcs: Dict[Tuple[type, Format], AdapterFunc] = {}
@@ -333,11 +326,11 @@ class UnknownCaster(TypeCaster):
     Fallback object to convert unknown types to Python
     """
 
-    def __init__(self, oid: int, conn: Optional[BaseConnection]):
-        super().__init__(oid, conn)
+    def __init__(self, oid: int, context: AdaptContext):
+        super().__init__(oid, context)
         self.decode: DecodeFunc
-        if conn is not None:
-            self.decode = conn.codec.decode
+        if self.connection is not None:
+            self.decode = self.connection.codec.decode
         else:
             self.decode = codecs.lookup("utf8").decode
 
@@ -348,3 +341,19 @@ class UnknownCaster(TypeCaster):
 @TypeCaster.binary(INVALID_OID)
 def cast_unknown(data: bytes) -> bytes:
     return data
+
+
+def _solve_context(
+    context: AdaptContext,
+) -> Tuple[Optional[BaseConnection], Optional[BaseCursor]]:
+    if context is None:
+        return None, None
+    elif isinstance(context, BaseConnection):
+        return context, None
+    elif isinstance(context, BaseCursor):
+        return context.conn, context
+    else:
+        raise TypeError(
+            f"the context should be a connection or cursor,"
+            f" got {type(context)}"
+        )
