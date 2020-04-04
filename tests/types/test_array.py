@@ -1,6 +1,6 @@
 import pytest
 from psycopg3.types import builtins
-from psycopg3.adapt import TypeCaster, UnknownCaster
+from psycopg3.adapt import TypeCaster, UnknownCaster, Format
 from psycopg3.types.array import UnknownArrayCaster, ArrayCaster
 
 
@@ -9,7 +9,10 @@ tests_str = [
     (["foo", "bar", "baz"], "{foo,bar,baz}"),
     (["foo", None, "baz"], "{foo,null,baz}"),
     (["foo", "null", "", "baz"], '{foo,"null","",baz}'),
-    ([["foo", "bar"], ["baz", "qux"]], "{{foo,bar},{baz,qux}}"),
+    (
+        [["foo", "bar"], ["baz", "qux"], ["quux", "quuux"]],
+        "{{foo,bar},{baz,qux},{quux,quuux}}",
+    ),
     (
         [[["fo{o", "ba}r"], ['ba"z', "qu'x"], ["qu ux", " "]]],
         r'{{{"fo{o","ba}r"},{"ba\"z",qu\'x},{"qu ux"," "}}}',
@@ -17,17 +20,20 @@ tests_str = [
 ]
 
 
+@pytest.mark.parametrize("fmt_in", [Format.TEXT, Format.BINARY])
 @pytest.mark.parametrize("obj, want", tests_str)
-def test_adapt_list_str(conn, obj, want):
+def test_adapt_list_str(conn, obj, want, fmt_in):
     cur = conn.cursor()
     cur.execute("select %s::text[] = %s::text[]", (obj, want))
     assert cur.fetchone()[0]
 
 
+@pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
 @pytest.mark.parametrize("want, obj", tests_str)
-def test_cast_list_str(conn, obj, want):
-    cur = conn.cursor()
-    cur.execute("select %s::text[]", (obj,))
+def test_cast_list_str(conn, obj, want, fmt_out):
+    cur = conn.cursor(binary=fmt_out == Format.BINARY)
+    ph = "%s" if format == Format.TEXT else "%b"
+    cur.execute("select %s::text[]" % ph, (obj,))
     assert cur.fetchone()[0] == want
 
 
