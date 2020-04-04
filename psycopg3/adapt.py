@@ -217,12 +217,12 @@ class Transformer:
             rc.append(func)
 
     def adapt_sequence(
-        self, objs: Sequence[Any], fmts: Sequence[Format]
+        self, objs: Sequence[Any], formats: Sequence[Format]
     ) -> Tuple[List[Optional[bytes]], List[int]]:
         out = []
         types = []
 
-        for var, fmt in zip(objs, fmts):
+        for var, fmt in zip(objs, formats):
             data = self.adapt(var, fmt)
             if isinstance(data, tuple):
                 oid = data[1]
@@ -235,28 +235,33 @@ class Transformer:
 
         return out, types
 
-    def adapt(self, obj: None, fmt: Format = Format.TEXT) -> MaybeOid:
+    def adapt(self, obj: None, format: Format = Format.TEXT) -> MaybeOid:
         if obj is None:
             return None, TEXT_OID
 
         src = type(obj)
-        func = self.get_adapt_function(src, fmt)
+        func = self.get_adapt_function(src, format)
         return func(obj)
 
-    def get_adapt_function(self, src: type, fmt: Format) -> AdapterFunc:
+    def get_adapt_function(self, src: type, format: Format) -> AdapterFunc:
+        key = (src, format)
         try:
-            return self._adapt_funcs[src, fmt]
+            return self._adapt_funcs[key]
         except KeyError:
             pass
 
-        adapter = self.lookup_adapter(src, fmt)
+        adapter = self.lookup_adapter(src, format)
+        func: AdapterFunc
         if isinstance(adapter, type):
-            return adapter(src, self.connection).adapt
+            func = adapter(src, self.connection).adapt
         else:
-            return adapter
+            func = adapter
 
-    def lookup_adapter(self, src: type, fmt: Format) -> AdapterType:
-        key = (src, fmt)
+        self._adapt_funcs[key] = func
+        return func
+
+    def lookup_adapter(self, src: type, format: Format) -> AdapterType:
+        key = (src, format)
 
         cur = self.cursor
         if cur is not None and key in cur.adapters:
@@ -270,7 +275,7 @@ class Transformer:
             return Adapter.globals[key]
 
         raise e.ProgrammingError(
-            f"cannot adapt type {src} to format {Format(fmt).name}"
+            f"cannot adapt type {src} to format {Format(format).name}"
         )
 
     def cast_row(self, result: PGresult, n: int) -> Generator[Any, None, None]:
@@ -283,28 +288,33 @@ class Transformer:
             yield v
 
     def cast(
-        self, data: Optional[bytes], oid: int, fmt: Format = Format.TEXT
+        self, data: Optional[bytes], oid: int, format: Format = Format.TEXT
     ) -> Any:
         if data is not None:
-            f = self.get_cast_function(oid, fmt)
+            f = self.get_cast_function(oid, format)
             return f(data)
         else:
             return None
 
-    def get_cast_function(self, oid: int, fmt: Format) -> TypeCasterFunc:
+    def get_cast_function(self, oid: int, format: Format) -> TypeCasterFunc:
+        key = (oid, format)
         try:
-            return self._cast_funcs[oid, fmt]
+            return self._cast_funcs[key]
         except KeyError:
             pass
 
-        caster = self.lookup_caster(oid, fmt)
+        caster = self.lookup_caster(oid, format)
+        func: TypeCasterFunc
         if isinstance(caster, type):
-            return caster(oid, self.connection).cast
+            func = caster(oid, self.connection).cast
         else:
-            return caster
+            func = caster
 
-    def lookup_caster(self, oid: int, fmt: Format) -> TypeCasterType:
-        key = (oid, fmt)
+        self._cast_funcs[key] = func
+        return func
+
+    def lookup_caster(self, oid: int, format: Format) -> TypeCasterType:
+        key = (oid, format)
 
         cur = self.cursor
         if cur is not None and key in cur.casters:
@@ -317,7 +327,7 @@ class Transformer:
         if key in TypeCaster.globals:
             return TypeCaster.globals[key]
 
-        return TypeCaster.globals[INVALID_OID, fmt]
+        return TypeCaster.globals[INVALID_OID, format]
 
 
 @TypeCaster.text(INVALID_OID)
