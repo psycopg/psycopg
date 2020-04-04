@@ -57,8 +57,8 @@ def escape_item(item: Optional[bytes]) -> bytes:
 
 @Adapter.text(list)
 class ListAdapter(Adapter):
-    def __init__(self, cls: type, context: AdaptContext = None):
-        super().__init__(cls, context)
+    def __init__(self, src: type, context: AdaptContext = None):
+        super().__init__(src, context)
         self.tx = Transformer(context)
 
     def adapt(self, obj: List[Any]) -> bytes:

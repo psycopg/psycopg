@@ -239,24 +239,24 @@ class Transformer:
         if obj is None:
             return None, TEXT_OID
 
-        cls = type(obj)
-        func = self.get_adapt_function(cls, fmt)
+        src = type(obj)
+        func = self.get_adapt_function(src, fmt)
         return func(obj)
 
-    def get_adapt_function(self, cls: type, fmt: Format) -> AdapterFunc:
+    def get_adapt_function(self, src: type, fmt: Format) -> AdapterFunc:
         try:
-            return self._adapt_funcs[cls, fmt]
+            return self._adapt_funcs[src, fmt]
         except KeyError:
             pass
 
-        adapter = self.lookup_adapter(cls, fmt)
+        adapter = self.lookup_adapter(src, fmt)
         if isinstance(adapter, type):
-            return adapter(cls, self.connection).adapt
+            return adapter(src, self.connection).adapt
         else:
             return adapter
 
-    def lookup_adapter(self, cls: type, fmt: Format) -> AdapterType:
-        key = (cls, fmt)
+    def lookup_adapter(self, src: type, fmt: Format) -> AdapterType:
+        key = (src, fmt)
 
         cur = self.cursor
         if cur is not None and key in cur.adapters:
@@ -270,7 +270,7 @@ class Transformer:
             return Adapter.globals[key]
 
         raise e.ProgrammingError(
-            f"cannot adapt type {cls} to format {Format(fmt).name}"
+            f"cannot adapt type {src} to format {Format(fmt).name}"
         )
 
     def cast_row(self, result: PGresult, n: int) -> Generator[Any, None, None]:

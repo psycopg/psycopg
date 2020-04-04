@@ -20,8 +20,8 @@ BYTEA_OID = builtins["bytea"].oid
 @Adapter.text(str)
 @Adapter.binary(str)
 class StringAdapter(Adapter):
-    def __init__(self, cls: type, context: AdaptContext):
-        super().__init__(cls, context)
+    def __init__(self, src: type, context: AdaptContext):
+        super().__init__(src, context)
 
         self._encode: EncodeFunc
         if self.connection is not None:
@@ -65,8 +65,8 @@ class StringCaster(TypeCaster):
 
 @Adapter.text(bytes)
 class BytesAdapter(Adapter):
-    def __init__(self, cls: type, context: AdaptContext = None):
-        super().__init__(cls, context)
+    def __init__(self, src: type, context: AdaptContext = None):
+        super().__init__(src, context)
         self.esc = Escaping(
             self.connection.pgconn if self.connection is not None else None
         )
