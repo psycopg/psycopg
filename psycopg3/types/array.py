@@ -92,8 +92,8 @@ class ArrayCasterBase(TypeCaster):
 
     def __init__(self, oid: int, context: AdaptContext = None):
         super().__init__(oid, context)
-        self.caster_func = TypeCasterFunc  # type: ignore
 
+        self.caster_func: TypeCasterFunc
         if isinstance(self.base_caster, type):
             self.caster_func = self.base_caster(oid, context).cast
         else:
