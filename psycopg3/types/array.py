@@ -106,6 +106,12 @@ class ListAdapter(BaseListAdapter):
                     if isinstance(ad, tuple):
                         if oid == 0:
                             oid = ad[1]
+                            got_type = type(item)
+                        elif oid != ad[1]:
+                            raise e.DataError(
+                                f"array contains different types,"
+                                f" at least {got_type} and {type(item)}"
+                            )
                         ad = ad[0]
                     tokens.append(escape_item(ad))
 
@@ -148,6 +154,12 @@ class BinaryListAdapter(BaseListAdapter):
                     if isinstance(ad, tuple):
                         if head[2] == 0:
                             head[2] = ad[1]
+                            got_type = type(item)
+                        elif head[2] != ad[1]:
+                            raise e.DataError(
+                                f"array contains different types,"
+                                f" at least {got_type} and {type(item)}"
+                            )
                         ad = ad[0]
                     if ad is None:
                         head[1] = 1

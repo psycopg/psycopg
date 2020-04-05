@@ -1,6 +1,7 @@
 import pytest
+import psycopg3
 from psycopg3.types import builtins
-from psycopg3.adapt import TypeCaster, UnknownCaster, Format
+from psycopg3.adapt import TypeCaster, UnknownCaster, Format, Transformer
 from psycopg3.types.array import UnknownArrayCaster, ArrayCaster
 
 
@@ -70,6 +71,16 @@ def test_adapt_list_int(conn, obj, want):
     cur = conn.cursor()
     cur.execute("select %s::int[] = %s::int[]", (obj, want))
     assert cur.fetchone()[0]
+
+
+@pytest.mark.parametrize(
+    "input",
+    [[["a"], ["b", "c"]], [["a"], []], [[]], [[["a"]], ["b"]], [True, b"a"]],
+)
+def test_bad_binary_array(input):
+    tx = Transformer()
+    with pytest.raises(psycopg3.DataError):
+        tx.adapt(input, Format.BINARY)
 
 
 @pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
