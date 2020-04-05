@@ -130,10 +130,10 @@ class BinaryListAdapter(BaseListAdapter):
         if not obj:
             return _struct_head.pack(0, 0, TEXT_OID), TEXT_ARRAY_OID
 
-        data: List[bytes] = []
-        head = [0, 0, 0]  # to fill: ndims, hasnull, base_oid
-        dims = []
-        data = []
+        data: List[bytes] = [b"", b""]  # placeholders to avoid a resize
+        dims: List[int] = []
+        hasnull = 0
+        oid = 0
 
         def calc_dims(L: List[Any]) -> None:
             if isinstance(L, self.src):
@@ -145,6 +145,7 @@ class BinaryListAdapter(BaseListAdapter):
         calc_dims(obj)
 
         def adapt_list(L: List[Any], dim: int) -> None:
+            nonlocal oid, hasnull
             if len(L) != dims[dim]:
                 raise e.DataError("nested lists have inconsistent lengths")
 
@@ -152,17 +153,17 @@ class BinaryListAdapter(BaseListAdapter):
                 for item in L:
                     ad = self.tx.adapt(item, Format.BINARY)
                     if isinstance(ad, tuple):
-                        if head[2] == 0:
-                            head[2] = ad[1]
+                        if oid == 0:
+                            oid = ad[1]
                             got_type = type(item)
-                        elif head[2] != ad[1]:
+                        elif oid != ad[1]:
                             raise e.DataError(
                                 f"array contains different types,"
                                 f" at least {got_type} and {type(item)}"
                             )
                         ad = ad[0]
                     if ad is None:
-                        head[1] = 1
+                        hasnull = 1
                         data.append(b"\xff\xff\xff\xff")
                     else:
                         data.append(_struct_len.pack(len(ad)))
@@ -177,16 +178,12 @@ class BinaryListAdapter(BaseListAdapter):
 
         adapt_list(obj, 0)
 
-        head[0] = len(dims)
-        if head[2] == 0:
-            head[2] = TEXT_OID
+        if oid == 0:
+            oid = TEXT_OID
 
-        oid = self._array_oid(head[2])
-
-        bhead = _struct_head.pack(*head) + b"".join(
-            _struct_dim.pack(dim, 1) for dim in dims
-        )
-        return bhead + b"".join(data), oid
+        data[0] = _struct_head.pack(len(dims), hasnull, oid or TEXT_OID)
+        data[1] = b"".join(_struct_dim.pack(dim, 1) for dim in dims)
+        return b"".join(data), self._array_oid(oid)
 
 
 class ArrayCasterBase(TypeCaster):

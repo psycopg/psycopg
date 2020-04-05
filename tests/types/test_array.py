@@ -7,6 +7,8 @@ from psycopg3.types.array import UnknownArrayCaster, ArrayCaster
 
 tests_str = [
     ([], "{}"),
+    ([[[[[["a"]]]]]], "{{{{{{a}}}}}}"),
+    ([[[[[[None]]]]]], "{{{{{{NULL}}}}}}"),
     (["foo", "bar", "baz"], "{foo,bar,baz}"),
     (["foo", None, "baz"], "{foo,null,baz}"),
     (["foo", "null", "", "baz"], '{foo,"null","",baz}'),
@@ -75,7 +77,14 @@ def test_adapt_list_int(conn, obj, want):
 
 @pytest.mark.parametrize(
     "input",
-    [[["a"], ["b", "c"]], [["a"], []], [[]], [[["a"]], ["b"]], [True, b"a"]],
+    [
+        [["a"], ["b", "c"]],
+        [["a"], []],
+        [[]],
+        [[["a"]], ["b"]],
+        # [["a"], [["b"]]],  # todo, but expensive (an isinstance per item)
+        [True, b"a"],
+    ],
 )
 def test_bad_binary_array(input):
     tx = Transformer()
