@@ -124,3 +124,13 @@ def test_array_register(conn):
     cur.execute("select '{postgres=arwdDxt/postgres}'::aclitem[]")
     res = cur.fetchone()[0]
     assert res == ["postgres=arwdDxt/postgres"]
+
+
+@pytest.mark.xfail
+def test_array_mixed_numbers():
+    # TODO: must use the type accommodating the largest/highest precision
+    tx = Transformer()
+    ad = tx.adapt([1, 32767], Format.BINARY)
+    assert ad[1] == builtins["int2"].array_oid
+    ad = tx.adapt([1, 32768], Format.BINARY)
+    assert ad[1] == builtins["int4"].array_oid

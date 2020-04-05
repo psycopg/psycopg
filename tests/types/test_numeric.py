@@ -3,7 +3,7 @@ from math import isnan, isinf, exp
 
 import pytest
 
-from psycopg3.adapt import TypeCaster, Format
+from psycopg3.adapt import TypeCaster, Transformer, Format
 from psycopg3.types import builtins
 from psycopg3.types.numeric import cast_float
 
@@ -30,6 +30,13 @@ def test_adapt_int(conn, val, expr):
     cur = conn.cursor()
     cur.execute("select %s = %%s" % expr, (val,))
     assert cur.fetchone()[0]
+
+
+@pytest.mark.xfail
+def test_adapt_int_binary():
+    # TODO: int binary adaptation (must choose the fitting int2,4,8)
+    tx = Transformer()
+    tx.adapt(1, Format.BINARY)
 
 
 @pytest.mark.parametrize(
@@ -111,6 +118,13 @@ def test_adapt_float_approx(conn, val, expr):
         (val,),
     )
     assert cur.fetchone()[0]
+
+
+@pytest.mark.xfail
+def test_adapt_float_binary():
+    # TODO: float binary adaptation
+    tx = Transformer()
+    tx.adapt(1.0, Format.BINARY)
 
 
 @pytest.mark.parametrize(
@@ -195,6 +209,21 @@ def test_roundtrip_numeric(conn, val):
         assert result.is_nan()
     else:
         assert result == val
+
+
+@pytest.mark.xfail
+def test_adapt_numeric_binary():
+    # TODO: numeric binary adaptation
+    tx = Transformer()
+    tx.adapt(Decimal(1), Format.BINARY)
+
+
+@pytest.mark.xfail
+def test_cast_numeric_binary(conn):
+    # TODO: numeric binary casting
+    cur = conn.cursor(binary=True)
+    res = cur.execute("select 1::numeric").fetchone()[0]
+    assert res == Decimal(1)
 
 
 @pytest.mark.parametrize(
