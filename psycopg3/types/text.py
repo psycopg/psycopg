@@ -87,5 +87,6 @@ def cast_bytea(data: bytes) -> bytes:
 
 
 @TypeCaster.binary(builtins["bytea"].oid)
+@ArrayCaster.binary(builtins["bytea"].array_oid)
 def cast_bytea_binary(data: bytes) -> bytes:
     return data

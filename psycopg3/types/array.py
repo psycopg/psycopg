@@ -6,12 +6,16 @@ Adapters for arrays
 
 import re
 import struct
-from typing import Any, Generator, List, Optional
+from typing import Any, Generator, List, Optional, Tuple
 
 from .. import errors as e
 from ..pq import Format
 from ..adapt import Adapter, TypeCaster, Transformer, UnknownCaster
 from ..adapt import AdaptContext, TypeCasterType, TypeCasterFunc
+from .oids import builtins
+
+TEXT_OID = builtins["text"].oid
+TEXT_ARRAY_OID = builtins["text"].array_oid
 
 
 # from https://www.postgresql.org/docs/current/arrays.html#ARRAYS-IO
@@ -55,37 +59,122 @@ def escape_item(item: Optional[bytes]) -> bytes:
         return b'"' + _re_escape.sub(br"\\\1", item) + b'"'
 
 
-@Adapter.text(list)
-class ListAdapter(Adapter):
+class BaseListAdapter(Adapter):
     def __init__(self, src: type, context: AdaptContext = None):
         super().__init__(src, context)
         self.tx = Transformer(context)
 
-    def adapt(self, obj: List[Any]) -> bytes:
+    def _array_oid(self, base_oid: int) -> int:
+        """
+        Return the oid of the array from the oid of the base item.
+
+        Fall back on text[].
+        TODO: we shouldn't consider builtins only, but other adaptation
+        contexts too
+        """
+        oid = 0
+        if base_oid:
+            info = builtins.get(base_oid)
+            if info is not None:
+                oid = info.array_oid
+
+        return oid or TEXT_ARRAY_OID
+
+
+@Adapter.text(list)
+class ListAdapter(BaseListAdapter):
+    def adapt(self, obj: List[Any]) -> Tuple[bytes, int]:
         tokens: List[bytes] = []
-        self.adapt_list(obj, tokens)
-        return b"".join(tokens)
 
-    def adapt_list(self, obj: List[Any], tokens: List[bytes]) -> None:
+        oid = 0
+
+        def adapt_list(obj: List[Any]) -> None:
+            nonlocal oid
+
+            if not obj:
+                tokens.append(b"{}")
+                return
+
+            tokens.append(b"{")
+            for item in obj:
+                if isinstance(item, list):
+                    adapt_list(item)
+                elif item is None:
+                    tokens.append(b"NULL")
+                else:
+                    ad = self.tx.adapt(item)
+                    if isinstance(ad, tuple):
+                        if oid == 0:
+                            oid = ad[1]
+                        ad = ad[0]
+                    tokens.append(escape_item(ad))
+
+                tokens.append(b",")
+
+            tokens[-1] = b"}"
+
+        adapt_list(obj)
+
+        return b"".join(tokens), self._array_oid(oid)
+
+
+@Adapter.binary(list)
+class BinaryListAdapter(BaseListAdapter):
+    def adapt(self, obj: List[Any]) -> Tuple[bytes, int]:
         if not obj:
-            tokens.append(b"{}")
-            return
+            return _struct_head.pack(0, 0, TEXT_OID), TEXT_ARRAY_OID
 
-        tokens.append(b"{")
-        for item in obj:
-            if isinstance(item, list):
-                self.adapt_list(item, tokens)
-            elif item is None:
-                tokens.append(b"NULL")
+        data: List[bytes] = []
+        head = [0, 0, 0]  # to fill: ndims, hasnull, base_oid
+        dims = []
+        data = []
+
+        def calc_dims(L: List[Any]) -> None:
+            if isinstance(L, self.src):
+                if not L:
+                    raise e.DataError("lists cannot contain empty lists")
+                dims.append(len(L))
+                calc_dims(L[0])
+
+        calc_dims(obj)
+
+        def adapt_list(L: List[Any], dim: int) -> None:
+            if len(L) != dims[dim]:
+                raise e.DataError("nested lists have inconsistent lengths")
+
+            if dim == len(dims) - 1:
+                for item in L:
+                    ad = self.tx.adapt(item, Format.BINARY)
+                    if isinstance(ad, tuple):
+                        if head[2] == 0:
+                            head[2] = ad[1]
+                        ad = ad[0]
+                    if ad is None:
+                        head[1] = 1
+                        data.append(b"\xff\xff\xff\xff")
+                    else:
+                        data.append(_struct_len.pack(len(ad)))
+                        data.append(ad)
             else:
-                ad = self.tx.adapt(item)
-                if isinstance(ad, tuple):
-                    ad = ad[0]
-                tokens.append(escape_item(ad))
+                for item in L:
+                    if not isinstance(item, self.src):
+                        raise e.DataError(
+                            "nested lists have inconsistent depths"
+                        )
+                    adapt_list(item, dim + 1)  # type: ignore
 
-            tokens.append(b",")
+        adapt_list(obj, 0)
 
-        tokens[-1] = b"}"
+        head[0] = len(dims)
+        if head[2] == 0:
+            head[2] = TEXT_OID
+
+        oid = self._array_oid(head[2])
+
+        bhead = _struct_head.pack(*head) + b"".join(
+            _struct_dim.pack(dim, 1) for dim in dims
+        )
+        return bhead + b"".join(data), oid
 
 
 class ArrayCasterBase(TypeCaster):
@@ -141,9 +230,9 @@ class ArrayCasterText(ArrayCasterBase):
         return rv
 
 
-_unpack_head = struct.Struct("!III").unpack_from
-_unpack_dim = struct.Struct("!II").unpack_from
-_unpack_len = struct.Struct("!i").unpack_from
+_struct_head = struct.Struct("!III")
+_struct_dim = struct.Struct("!II")
+_struct_len = struct.Struct("!i")
 
 
 class ArrayCasterBinary(ArrayCasterBase):
@@ -152,18 +241,20 @@ class ArrayCasterBinary(ArrayCasterBase):
         self.tx = Transformer(context)
 
     def cast(self, data: bytes) -> List[Any]:
-        ndims, hasnull, oid = _unpack_head(data[:12])
+        ndims, hasnull, oid = _struct_head.unpack_from(data[:12])
         if not ndims:
             return []
 
         fcast = self.tx.get_cast_function(oid, Format.BINARY)
 
         p = 12 + 8 * ndims
-        dims = [_unpack_dim(data, i)[0] for i in list(range(12, p, 8))]
+        dims = [
+            _struct_dim.unpack_from(data, i)[0] for i in list(range(12, p, 8))
+        ]
 
         def consume(p: int) -> Generator[Any, None, None]:
             while 1:
-                size = _unpack_len(data, p)[0]
+                size = _struct_len.unpack_from(data, p)[0]
                 p += 4
                 if size != -1:
                     yield fcast(data[p : p + size])
