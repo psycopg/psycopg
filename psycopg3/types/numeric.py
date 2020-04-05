@@ -41,7 +41,6 @@ def adapt_float(obj: float) -> Tuple[bytes, int]:
 
 @Adapter.text(Decimal)
 def adapt_decimal(obj: Decimal) -> Tuple[bytes, int]:
-    # Float can't be bigger than this instead
     return _encode(str(obj))[0], NUMERIC_OID
 
 
