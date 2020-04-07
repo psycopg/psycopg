@@ -32,7 +32,7 @@ class BaseCursor:
     def _reset(self) -> None:
         from .adapt import Transformer
 
-        self._transformer = Transformer(self)  # TODO: circular reference
+        self._transformer = Transformer(self)
         self._results: List[PGresult] = []
         self.pgresult: Optional[PGresult] = None
         self._pos = 0
