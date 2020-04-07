@@ -6,11 +6,11 @@ Adapters for arrays
 
 import re
 import struct
-from typing import Any, Generator, List, Tuple
+from typing import Any, Generator, List, Optional, Tuple
 
 from .. import errors as e
-from ..adapt import Format, Adapter, TypeCaster, Transformer, UnknownCaster
-from ..adapt import AdaptContext, TypeCasterType, TypeCasterFunc
+from ..adapt import Format, Adapter, TypeCaster, Transformer
+from ..adapt import AdaptContext
 from .oids import builtins
 
 TEXT_OID = builtins["text"].oid
@@ -20,7 +20,7 @@ TEXT_ARRAY_OID = builtins["text"].array_oid
 class BaseListAdapter(Adapter):
     def __init__(self, src: type, context: AdaptContext = None):
         super().__init__(src, context)
-        self.tx = Transformer(context)
+        self._tx = Transformer(context)
 
     def _array_oid(self, base_oid: int) -> int:
         """
@@ -40,7 +40,7 @@ class BaseListAdapter(Adapter):
 
 
 @Adapter.text(list)
-class ListAdapter(BaseListAdapter):
+class TextListAdapter(BaseListAdapter):
     # from https://www.postgresql.org/docs/current/arrays.html#ARRAYS-IO
     #
     # The array output routine will put double quotes around element values if
@@ -78,7 +78,7 @@ class ListAdapter(BaseListAdapter):
                 elif item is None:
                     tokens.append(b"NULL")
                 else:
-                    ad = self.tx.adapt(item)
+                    ad = self._tx.adapt(item)
                     if isinstance(ad, tuple):
                         if oid == 0:
                             oid = ad[1]
@@ -135,7 +135,7 @@ class BinaryListAdapter(BaseListAdapter):
 
             if dim == len(dims) - 1:
                 for item in L:
-                    ad = self.tx.adapt(item, Format.BINARY)
+                    ad = self._tx.adapt(item, Format.BINARY)
                     if isinstance(ad, tuple):
                         if oid == 0:
                             oid = ad[1]
@@ -171,19 +171,15 @@ class BinaryListAdapter(BaseListAdapter):
 
 
 class ArrayCasterBase(TypeCaster):
-    base_caster: TypeCasterType
+    base_oid: int
 
     def __init__(self, oid: int, context: AdaptContext = None):
         super().__init__(oid, context)
-
-        self.caster_func: TypeCasterFunc
-        if isinstance(self.base_caster, type):
-            self.caster_func = self.base_caster(oid, context).cast
-        else:
-            self.caster_func = type(self).base_caster
+        self._tx = Transformer(context)
 
 
 class ArrayCasterText(ArrayCasterBase):
+
     # Tokenize an array representation into item and brackets
     # TODO: currently recognise only , as delimiter. Should be configured
     _re_parse = re.compile(
@@ -198,6 +194,8 @@ class ArrayCasterText(ArrayCasterBase):
     def cast(self, data: bytes) -> List[Any]:
         rv = None
         stack: List[Any] = []
+        cast = self._tx.get_cast_function(self.base_oid, Format.TEXT)
+
         for m in self._re_parse.finditer(data):
             t = m.group(1)
             if t == b"{":
@@ -226,7 +224,7 @@ class ArrayCasterText(ArrayCasterBase):
                 else:
                     if t.startswith(b'"'):
                         t = self._re_unescape.sub(br"\1", t[1:-1])
-                    v = self.caster_func(t)
+                    v = cast(t)
 
                 stack[-1].append(v)
 
@@ -242,16 +240,12 @@ _struct_len = struct.Struct("!i")
 
 
 class ArrayCasterBinary(ArrayCasterBase):
-    def __init__(self, oid: int, context: AdaptContext = None):
-        super().__init__(oid, context)
-        self.tx = Transformer(context)
-
     def cast(self, data: bytes) -> List[Any]:
         ndims, hasnull, oid = _struct_head.unpack_from(data[:12])
         if not ndims:
             return []
 
-        fcast = self.tx.get_cast_function(oid, Format.BINARY)
+        fcast = self._tx.get_cast_function(oid, Format.BINARY)
 
         p = 12 + 8 * ndims
         dims = [
@@ -280,19 +274,28 @@ class ArrayCasterBinary(ArrayCasterBase):
         return agg(dims)
 
 
-class ArrayCaster(TypeCaster):
-    @staticmethod
-    def register(
-        oid: int,  # array oid
-        caster: TypeCasterType,
-        context: AdaptContext = None,
-        format: Format = Format.TEXT,
-    ) -> TypeCasterType:
-        base = ArrayCasterText if format == Format.TEXT else ArrayCasterBinary
-        name = f"{caster.__name__}_{format.name.lower()}_array"
-        t = type(name, (base,), {"base_caster": caster})
-        return TypeCaster.register(oid, t, context=context, format=format)
+def register_array(
+    array_oid: int,
+    base_oid: int,
+    context: AdaptContext = None,
+    name: Optional[str] = None,
+) -> None:
+    if not name:
+        name = f"oid{base_oid}"
+
+    for format, base in (
+        (Format.TEXT, ArrayCasterText),
+        (Format.BINARY, ArrayCasterBinary),
+    ):
+        tcname = f"{name}_array_{format.name.lower()}"
+        t = type(tcname, (base,), {"base_oid": base_oid})
+        TypeCaster.register(array_oid, t, context=context, format=format)
 
 
-class UnknownArrayCaster(ArrayCasterText):
-    base_caster = UnknownCaster
+# Register associations between array and base oids
+for t in builtins:
+    if t.array_oid and (
+        (t.oid, Format.TEXT) in TypeCaster.globals
+        or (t.oid, Format.BINARY) in TypeCaster.globals
+    ):
+        register_array(t.array_oid, t.oid, name=t.name)

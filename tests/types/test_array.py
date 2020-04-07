@@ -1,8 +1,8 @@
 import pytest
 import psycopg3
 from psycopg3.types import builtins
-from psycopg3.adapt import TypeCaster, UnknownCaster, Format, Transformer
-from psycopg3.types.array import UnknownArrayCaster, ArrayCaster
+from psycopg3.adapt import Format, Transformer
+from psycopg3.types.array import register_array
 
 
 tests_str = [
@@ -100,26 +100,15 @@ def test_cast_list_int(conn, obj, want, fmt_out):
     assert cur.fetchone()[0] == want
 
 
-def test_unknown(conn):
-    # unknown for real
-    assert builtins["aclitem"].array_oid not in TypeCaster.globals
-    TypeCaster.register(
-        builtins["aclitem"].array_oid, UnknownArrayCaster, context=conn
-    )
-    cur = conn.cursor()
-    cur.execute("select '{postgres=arwdDxt/postgres}'::aclitem[]")
-    res = cur.fetchone()[0]
-    assert res == ["postgres=arwdDxt/postgres"]
-
-
 def test_array_register(conn):
+    # unknown for real
     cur = conn.cursor()
     cur.execute("select '{postgres=arwdDxt/postgres}'::aclitem[]")
     res = cur.fetchone()[0]
     assert res == "{postgres=arwdDxt/postgres}"
 
-    ArrayCaster.register(
-        builtins["aclitem"].array_oid, UnknownCaster, context=conn
+    register_array(
+        builtins["aclitem"].array_oid, builtins["aclitem"].oid, context=conn
     )
     cur.execute("select '{postgres=arwdDxt/postgres}'::aclitem[]")
     res = cur.fetchone()[0]

@@ -11,7 +11,6 @@ from ..adapt import Adapter, TypeCaster, AdaptContext
 from ..utils.typing import EncodeFunc, DecodeFunc
 from ..pq import Escaping
 from .oids import builtins
-from .array import ArrayCaster
 
 TEXT_OID = builtins["text"].oid
 BYTEA_OID = builtins["bytea"].oid
@@ -38,8 +37,6 @@ class StringAdapter(Adapter):
 
 @TypeCaster.text(builtins["text"].oid)
 @TypeCaster.binary(builtins["text"].oid)
-@ArrayCaster.text(builtins["text"].array_oid)
-@ArrayCaster.binary(builtins["text"].array_oid)
 class StringCaster(TypeCaster):
 
     decode: Optional[DecodeFunc]
@@ -81,12 +78,10 @@ def adapt_bytes(b: bytes) -> Tuple[bytes, int]:
 
 
 @TypeCaster.text(builtins["bytea"].oid)
-@ArrayCaster.text(builtins["bytea"].array_oid)
 def cast_bytea(data: bytes) -> bytes:
     return Escaping().unescape_bytea(data)
 
 
 @TypeCaster.binary(builtins["bytea"].oid)
-@ArrayCaster.binary(builtins["bytea"].array_oid)
 def cast_bytea_binary(data: bytes) -> bytes:
     return data

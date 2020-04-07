@@ -104,7 +104,6 @@ def test_cast_cursor_ctx(conn):
     assert r == ("hellob",)
 
 
-@pytest.mark.xfail
 @pytest.mark.parametrize(
     "sql, obj",
     [("'{hello}'::text[]", ["helloc"]), ("row('hello'::text)", ("helloc",))],

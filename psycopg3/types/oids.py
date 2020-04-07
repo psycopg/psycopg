@@ -8,7 +8,7 @@ to a Postgres server.
 # Copyright (C) 2020 The Psycopg Team
 
 import re
-from typing import Dict, Optional, NamedTuple, Union
+from typing import Dict, Generator, Optional, NamedTuple, Union
 
 INVALID_OID = 0
 
@@ -21,7 +21,7 @@ class TypeInfo(NamedTuple):
     delimiter: str
 
 
-class TypesInfo:
+class TypesRegistry:
     """
     Container for the information about types in a database.
     """
@@ -37,6 +37,13 @@ class TypesInfo:
         self._by_name[info.name] = info
         if info.alt_name not in self._by_name:
             self._by_name[info.alt_name] = info
+
+    def __iter__(self) -> Generator[TypeInfo, None, None]:
+        seen = set()
+        for t in self._by_oid.values():
+            if t.oid not in seen:
+                seen.add(t.oid)
+                yield t
 
     def __getitem__(self, key: Union[str, int]) -> TypeInfo:
         if isinstance(key, str):
@@ -55,7 +62,7 @@ class TypesInfo:
             return None
 
 
-builtins = TypesInfo()
+builtins = TypesRegistry()
 
 for r in [
     # fmt: off

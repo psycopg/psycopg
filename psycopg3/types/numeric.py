@@ -11,7 +11,6 @@ from typing import Tuple
 
 from ..adapt import Adapter, TypeCaster
 from .oids import builtins
-from .array import ArrayCaster
 
 FLOAT8_OID = builtins["float8"].oid
 NUMERIC_OID = builtins["numeric"].oid
@@ -68,37 +67,29 @@ def adapt_binary_bool(obj: bool) -> Tuple[bytes, int]:
 @TypeCaster.text(builtins["int4"].oid)
 @TypeCaster.text(builtins["int8"].oid)
 @TypeCaster.text(builtins["oid"].oid)
-@ArrayCaster.text(builtins["int2"].array_oid)
-@ArrayCaster.text(builtins["int4"].array_oid)
-@ArrayCaster.text(builtins["int8"].array_oid)
-@ArrayCaster.text(builtins["oid"].array_oid)
 def cast_int(data: bytes) -> int:
     return int(_decode(data)[0])
 
 
 @TypeCaster.binary(builtins["int2"].oid)
-@ArrayCaster.binary(builtins["int2"].array_oid)
 def cast_binary_int2(data: bytes) -> int:
     rv: int = _int2_struct.unpack(data)[0]
     return rv
 
 
 @TypeCaster.binary(builtins["int4"].oid)
-@ArrayCaster.binary(builtins["int4"].array_oid)
 def cast_binary_int4(data: bytes) -> int:
     rv: int = _int4_struct.unpack(data)[0]
     return rv
 
 
 @TypeCaster.binary(builtins["int8"].oid)
-@ArrayCaster.binary(builtins["int8"].array_oid)
 def cast_binary_int8(data: bytes) -> int:
     rv: int = _int8_struct.unpack(data)[0]
     return rv
 
 
 @TypeCaster.binary(builtins["oid"].oid)
-@ArrayCaster.binary(builtins["oid"].array_oid)
 def cast_binary_oid(data: bytes) -> int:
     rv: int = _oid_struct.unpack(data)[0]
     return rv
