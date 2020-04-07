@@ -102,3 +102,19 @@ def test_cast_cursor_ctx(conn):
     cur.binary = True
     r = cur.execute("select 'hello'::text").fetchone()
     assert r == ("hellob",)
+
+
+@pytest.mark.xfail
+@pytest.mark.parametrize(
+    "sql, obj",
+    [("'{hello}'::text[]", ["helloc"]), ("row('hello'::text)", ("helloc",))],
+)
+@pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
+def test_cast_cursor_ctx_nested(conn, sql, obj, fmt_out):
+    cur = conn.cursor(binary=fmt_out == Format.BINARY)
+    TypeCaster.register(
+        TEXT_OID, lambda b: b.decode("ascii") + "c", cur, format=fmt_out
+    )
+    cur.execute(f"select {sql}")
+    res = cur.fetchone()[0]
+    assert res == obj

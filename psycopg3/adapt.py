@@ -260,7 +260,7 @@ class Transformer:
         adapter = self.lookup_adapter(src, format)
         func: AdapterFunc
         if isinstance(adapter, type):
-            func = adapter(src, self.connection).adapt
+            func = adapter(src, self).adapt
         else:
             func = adapter
 
@@ -308,7 +308,7 @@ class Transformer:
         caster = self.lookup_caster(oid, format)
         func: TypeCasterFunc
         if isinstance(caster, type):
-            func = caster(oid, self.connection).cast
+            func = caster(oid, self).cast
         else:
             func = caster
 
