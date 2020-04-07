@@ -287,9 +287,7 @@ class Transformer:
                 v = func(v)
             yield v
 
-    def cast(
-        self, data: Optional[bytes], oid: int, format: Format = Format.TEXT
-    ) -> Any:
+    def cast(self, data: bytes, oid: int, format: Format = Format.TEXT) -> Any:
         if data is not None:
             f = self.get_cast_function(oid, format)
             return f(data)
