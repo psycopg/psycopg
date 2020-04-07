@@ -32,11 +32,24 @@ class BaseCursor:
     def _reset(self) -> None:
         from .adapt import Transformer
 
+        self._transformer = Transformer(self)  # TODO: circular reference
         self._results: List[PGresult] = []
         self.pgresult: Optional[PGresult] = None
         self._pos = 0
         self._iresult = 0
-        self._transformer = Transformer(self)
+
+    @property
+    def pgresult(self) -> Optional[PGresult]:
+        return self._pgresult
+
+    @pgresult.setter
+    def pgresult(self, result: Optional[PGresult]) -> None:
+        self._pgresult = result
+        if result is not None and self._transformer is not None:
+            self._transformer.set_row_types(
+                (result.ftype(i), result.fformat(i))
+                for i in range(result.nfields)
+            )
 
     def _execute_send(
         self, query: Query, vars: Optional[Params]
@@ -125,12 +138,17 @@ class BaseCursor:
         return rv
 
     def _cast_row(self, n: int) -> Optional[Tuple[Any, ...]]:
-        if self.pgresult is None:
+        res = self.pgresult
+        if res is None:
             return None
-        if n >= self.pgresult.ntuples:
+        if n >= res.ntuples:
             return None
 
-        return tuple(self._transformer.cast_row(self.pgresult, n))
+        return tuple(
+            self._transformer.cast_sequence(
+                res.get_value(n, i) for i in range(res.nfields)
+            )
+        )
 
 
 class Cursor(BaseCursor):

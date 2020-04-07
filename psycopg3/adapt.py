@@ -5,11 +5,11 @@ Entry point into the adaptation system.
 # Copyright (C) 2020 The Psycopg Team
 
 import codecs
-from typing import Any, Callable, Dict, Generator, List, Optional, Sequence
+from typing import Any, Callable, Dict, Generator, Iterable, List, Optional
 from typing import Tuple, Type, Union
 
 from . import errors as e
-from .pq import Format, PGresult
+from .pq import Format
 from .cursor import BaseCursor
 from .types.oids import builtins, INVALID_OID
 from .connection import BaseConnection
@@ -193,31 +193,12 @@ class Transformer:
         # mapping oid, fmt -> cast function
         self._cast_funcs: Dict[Tuple[int, Format], TypeCasterFunc] = {}
 
-        # The result to return values from
-        self._result: Optional[PGresult] = None
-
         # sequence of cast function from value to python
         # the length of the result columns
         self._row_casters: List[TypeCasterFunc] = []
 
-    @property
-    def result(self) -> Optional[PGresult]:
-        return self._result
-
-    @result.setter
-    def result(self, result: PGresult) -> None:
-        if self._result is result:
-            return
-
-        rc = self._row_casters = []
-        for c in range(result.nfields):
-            oid = result.ftype(c)
-            fmt = result.fformat(c)
-            func = self.get_cast_function(oid, fmt)
-            rc.append(func)
-
     def adapt_sequence(
-        self, objs: Sequence[Any], formats: Sequence[Format]
+        self, objs: Iterable[Any], formats: Iterable[Format]
     ) -> Tuple[List[Optional[bytes]], List[int]]:
         out = []
         types = []
@@ -278,14 +259,19 @@ class Transformer:
             f"cannot adapt type {src} to format {Format(format).name}"
         )
 
-    def cast_row(self, result: PGresult, n: int) -> Generator[Any, None, None]:
-        self.result = result
+    def set_row_types(self, types: Iterable[Tuple[int, Format]]) -> None:
+        rc = self._row_casters = []
+        for oid, fmt in types:
+            rc.append(self.get_cast_function(oid, fmt))
 
-        for col, func in enumerate(self._row_casters):
-            v = result.get_value(n, col)
-            if v is not None:
-                v = func(v)
-            yield v
+    def cast_sequence(
+        self, record: Iterable[Optional[bytes]]
+    ) -> Generator[Any, None, None]:
+        for val, caster in zip(record, self._row_casters):
+            if val is not None:
+                yield caster(val)
+            else:
+                yield None
 
     def cast(self, data: bytes, oid: int, format: Format = Format.TEXT) -> Any:
         if data is not None:
