@@ -6,8 +6,7 @@ import re
 import struct
 from typing import Any, Generator, Optional, Tuple
 
-from ..pq import Format
-from ..adapt import TypeCaster, Transformer, AdaptContext
+from ..adapt import Format, TypeCaster, Transformer, AdaptContext
 from .oids import builtins
 
 

@@ -9,8 +9,7 @@ import struct
 from typing import Any, Generator, List, Tuple
 
 from .. import errors as e
-from ..pq import Format
-from ..adapt import Adapter, TypeCaster, Transformer, UnknownCaster
+from ..adapt import Format, Adapter, TypeCaster, Transformer, UnknownCaster
 from ..adapt import AdaptContext, TypeCasterType, TypeCasterFunc
 from .oids import builtins
 

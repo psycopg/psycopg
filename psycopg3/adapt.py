@@ -9,7 +9,7 @@ from typing import Any, Callable, Dict, Generator, Iterable, List, Optional
 from typing import Tuple, Type, Union
 
 from . import errors as e
-from .pq import Format
+from . import pq
 from .cursor import BaseCursor
 from .types.oids import builtins, INVALID_OID
 from .connection import BaseConnection
@@ -17,6 +17,8 @@ from .utils.typing import DecodeFunc
 
 TEXT_OID = builtins["text"].oid
 
+# Part of the module interface (just importing it makes mypy unhappy)
+Format = pq.Format
 
 # Type system
 
