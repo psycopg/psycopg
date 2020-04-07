@@ -6,7 +6,7 @@ Adapters for arrays
 
 import re
 import struct
-from typing import Any, Generator, List, Optional, Tuple
+from typing import Any, Generator, List, Tuple
 
 from .. import errors as e
 from ..pq import Format
@@ -16,47 +16,6 @@ from .oids import builtins
 
 TEXT_OID = builtins["text"].oid
 TEXT_ARRAY_OID = builtins["text"].array_oid
-
-
-# from https://www.postgresql.org/docs/current/arrays.html#ARRAYS-IO
-#
-# The array output routine will put double quotes around element values if they
-# are empty strings, contain curly braces, delimiter characters, double quotes,
-# backslashes, or white space, or match the word NULL.
-# TODO: recognise only , as delimiter. Should be configured
-_re_needs_quote = re.compile(
-    br"""(?xi)
-      ^$              # the empty string
-    | ["{},\\\s]      # or a char to escape
-    | ^null$          # or the word NULL
-    """
-)
-
-# Double quotes and backslashes embedded in element values will be
-# backslash-escaped.
-_re_escape = re.compile(br'(["\\])')
-_re_unescape = re.compile(br"\\(.)")
-
-
-# Tokenize an array representation into item and brackets
-# TODO: currently recognise only , as delimiter. Should be configured
-_re_parse = re.compile(
-    br"""(?xi)
-    (     [{}]                        # open or closed bracket
-        | " (?: [^"\\] | \\. )* "     # or a quoted string
-        | [^"{},\\]+                  # or an unquoted non-empty string
-    ) ,?
-    """
-)
-
-
-def escape_item(item: Optional[bytes]) -> bytes:
-    if item is None:
-        return b"NULL"
-    if _re_needs_quote.search(item) is None:
-        return item
-    else:
-        return b'"' + _re_escape.sub(br"\\\1", item) + b'"'
 
 
 class BaseListAdapter(Adapter):
@@ -83,6 +42,24 @@ class BaseListAdapter(Adapter):
 
 @Adapter.text(list)
 class ListAdapter(BaseListAdapter):
+    # from https://www.postgresql.org/docs/current/arrays.html#ARRAYS-IO
+    #
+    # The array output routine will put double quotes around element values if
+    # they are empty strings, contain curly braces, delimiter characters,
+    # double quotes, backslashes, or white space, or match the word NULL.
+    # TODO: recognise only , as delimiter. Should be configured
+    _re_needs_quote = re.compile(
+        br"""(?xi)
+          ^$              # the empty string
+        | ["{},\\\s]      # or a char to escape
+        | ^null$          # or the word NULL
+        """
+    )
+
+    # Double quotes and backslashes embedded in element values will be
+    # backslash-escaped.
+    _re_escape = re.compile(br'(["\\])')
+
     def adapt(self, obj: List[Any]) -> Tuple[bytes, int]:
         tokens: List[bytes] = []
 
@@ -113,7 +90,15 @@ class ListAdapter(BaseListAdapter):
                                 f" at least {got_type} and {type(item)}"
                             )
                         ad = ad[0]
-                    tokens.append(escape_item(ad))
+
+                    if ad is not None:
+                        if self._re_needs_quote.search(ad) is not None:
+                            ad = (
+                                b'"' + self._re_escape.sub(br"\\\1", ad) + b'"'
+                            )
+                        tokens.append(ad)
+                    else:
+                        tokens.append(b"NULL")
 
                 tokens.append(b",")
 
@@ -200,10 +185,21 @@ class ArrayCasterBase(TypeCaster):
 
 
 class ArrayCasterText(ArrayCasterBase):
+    # Tokenize an array representation into item and brackets
+    # TODO: currently recognise only , as delimiter. Should be configured
+    _re_parse = re.compile(
+        br"""(?xi)
+        (     [{}]                        # open or closed bracket
+            | " (?: [^"\\] | \\. )* "     # or a quoted string
+            | [^"{},\\]+                  # or an unquoted non-empty string
+        ) ,?
+        """
+    )
+
     def cast(self, data: bytes) -> List[Any]:
         rv = None
         stack: List[Any] = []
-        for m in _re_parse.finditer(data):
+        for m in self._re_parse.finditer(data):
             t = m.group(1)
             if t == b"{":
                 a: List[Any] = []
@@ -230,13 +226,15 @@ class ArrayCasterText(ArrayCasterBase):
                     v = None
                 else:
                     if t.startswith(b'"'):
-                        t = _re_unescape.sub(br"\1", t[1:-1])
+                        t = self._re_unescape.sub(br"\1", t[1:-1])
                     v = self.caster_func(t)
 
                 stack[-1].append(v)
 
         assert rv is not None
         return rv
+
+    _re_unescape = re.compile(br"\\(.)")
 
 
 _struct_head = struct.Struct("!III")
