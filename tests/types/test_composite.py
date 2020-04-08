@@ -1,8 +1,7 @@
 import pytest
 
-from psycopg3.adapt import Format
-from psycopg3.types import builtins
-from psycopg3.types import composite
+from psycopg3.adapt import Format, TypeCaster
+from psycopg3.types import builtins, composite
 
 
 @pytest.mark.parametrize(
@@ -105,7 +104,7 @@ def test_fetch_info(conn, testcomp):
 def test_cast_composite(conn, testcomp, fmt_out):
     cur = conn.cursor(binary=fmt_out == Format.BINARY)
     info = composite.fetch_info(conn, "testcomp")
-    composite.register(info)
+    composite.register(info, conn)
 
     res = cur.execute("select row('hello', 10, 20)::testcomp").fetchone()[0]
     assert res.foo == "hello"
@@ -130,7 +129,7 @@ def test_cast_composite_factory(conn, testcomp, fmt_out):
         def __init__(self, *args):
             self.foo, self.bar, self.baz = args
 
-    composite.register(info, factory=MyThing)
+    composite.register(info, conn, factory=MyThing)
 
     res = cur.execute("select row('hello', 10, 20)::testcomp").fetchone()[0]
     assert isinstance(res, MyThing)
@@ -143,3 +142,28 @@ def test_cast_composite_factory(conn, testcomp, fmt_out):
     assert len(res) == 1
     assert res[0].baz == 30.0
     assert isinstance(res[0].baz, float)
+
+
+def test_register_scope(conn):
+    info = composite.fetch_info(conn, "testcomp")
+
+    composite.register(info)
+    for fmt in (Format.TEXT, Format.BINARY):
+        for oid in (info.oid, info.array_oid):
+            assert TypeCaster.globals.pop((oid, fmt))
+
+    cur = conn.cursor()
+    composite.register(info, cur)
+    for fmt in (Format.TEXT, Format.BINARY):
+        for oid in (info.oid, info.array_oid):
+            key = oid, fmt
+            assert key not in TypeCaster.globals
+            assert key not in conn.casters
+            assert key in cur.casters
+
+    composite.register(info, conn)
+    for fmt in (Format.TEXT, Format.BINARY):
+        for oid in (info.oid, info.array_oid):
+            key = oid, fmt
+            assert key not in TypeCaster.globals
+            assert key in conn.casters

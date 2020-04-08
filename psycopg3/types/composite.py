@@ -86,7 +86,9 @@ def register(
     )
 
     if info.array_oid:
-        register_array(info.array_oid, info.oid)
+        register_array(
+            info.array_oid, info.oid, context=context, name=info.name
+        )
 
 
 _type_info_query = """\
