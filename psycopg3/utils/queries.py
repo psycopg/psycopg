@@ -65,13 +65,13 @@ def query2pg(
         order = []
         for part in parts[:-1]:
             assert isinstance(part.item, str)
-            formats.append(part.format)
             chunks.append(part.pre)
             if part.item not in seen:
                 ph = b"$%d" % (len(seen) + 1)
                 seen[part.item] = (ph, part.format)
                 order.append(part.item)
                 chunks.append(ph)
+                formats.append(part.format)
             else:
                 if seen[part.item][1] != part.format:
                     raise e.ProgrammingError(

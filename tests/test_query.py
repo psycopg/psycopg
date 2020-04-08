@@ -90,6 +90,7 @@ def test_query2pg_seq(query, params, want, wformats):
 def test_query2pg_map(query, params, want, wformats, worder):
     out, formats, order = query2pg(query, params, codecs.lookup("utf-8"))
     assert out == want
+    assert formats == wformats
     assert order == worder
 
 
