@@ -4,28 +4,42 @@ from psycopg3.adapt import Format, TypeCaster
 from psycopg3.types import builtins, composite
 
 
-@pytest.mark.parametrize(
-    "rec, want",
-    [
-        ("", ()),
-        # Funnily enough there's no way to represent (None,) in Postgres
-        ("null", ()),
-        ("null,null", (None, None)),
-        ("null, ''", (None, "")),
-        (
-            "42,'foo','ba,r','ba''z','qu\"x'",
-            ("42", "foo", "ba,r", "ba'z", 'qu"x'),
-        ),
-        (
-            "'foo''', '''foo', '\"bar', 'bar\"' ",
-            ("foo'", "'foo", '"bar', 'bar"'),
-        ),
-    ],
-)
+tests_str = [
+    ("", ()),
+    # Funnily enough there's no way to represent (None,) in Postgres
+    ("null", ()),
+    ("null,null", (None, None)),
+    ("null, ''", (None, "")),
+    (
+        "42,'foo','ba,r','ba''z','qu\"x'",
+        ("42", "foo", "ba,r", "ba'z", 'qu"x'),
+    ),
+    ("'foo''', '''foo', '\"bar', 'bar\"' ", ("foo'", "'foo", '"bar', 'bar"'),),
+]
+
+
+@pytest.mark.parametrize("rec, want", tests_str)
 def test_cast_record(conn, want, rec):
     cur = conn.cursor()
     res = cur.execute(f"select row({rec})").fetchone()[0]
     assert res == want
+
+
+@pytest.mark.parametrize("rec, obj", tests_str)
+def test_adapt_tuple(conn, rec, obj):
+    cur = conn.cursor()
+    fields = [f"f{i} text" for i in range(len(obj))]
+    cur.execute(
+        f"""
+        drop type if exists tmptype;
+        create type tmptype as ({', '.join(fields)});
+        """
+    )
+    info = composite.fetch_info(conn, "tmptype")
+    composite.register(info, context=conn)
+
+    res = cur.execute("select %s::tmptype", [obj]).fetchone()[0]
+    assert res == obj
 
 
 @pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])

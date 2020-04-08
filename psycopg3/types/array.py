@@ -47,7 +47,7 @@ class TextListAdapter(BaseListAdapter):
     # they are empty strings, contain curly braces, delimiter characters,
     # double quotes, backslashes, or white space, or match the word NULL.
     # TODO: recognise only , as delimiter. Should be configured
-    _re_needs_quote = re.compile(
+    _re_needs_quotes = re.compile(
         br"""(?xi)
           ^$              # the empty string
         | ["{},\\\s]      # or a char to escape
@@ -91,7 +91,7 @@ class TextListAdapter(BaseListAdapter):
                         ad = ad[0]
 
                     if ad is not None:
-                        if self._re_needs_quote.search(ad) is not None:
+                        if self._re_needs_quotes.search(ad) is not None:
                             ad = (
                                 b'"' + self._re_escape.sub(br"\\\1", ad) + b'"'
                             )

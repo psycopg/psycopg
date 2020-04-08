@@ -9,7 +9,7 @@ from typing import Any, Callable, Generator, List, Sequence, Tuple, Union
 from typing import Optional, TYPE_CHECKING
 
 from . import array
-from ..adapt import Format, TypeCaster, Transformer, AdaptContext
+from ..adapt import Format, Adapter, TypeCaster, Transformer, AdaptContext
 from .oids import builtins, TypeInfo
 
 if TYPE_CHECKING:
@@ -46,7 +46,7 @@ class CompositeTypeInfo(TypeInfo):
 
 def fetch_info(conn: "Connection", name: str) -> Optional[CompositeTypeInfo]:
     cur = conn.cursor(binary=True)
-    cur.execute(_type_info_query, (name,))
+    cur.execute(_type_info_query, {"name": name})
     rec = cur.fetchone()
     return CompositeTypeInfo(*rec) if rec is not None else None
 
@@ -55,7 +55,7 @@ async def fetch_info_async(
     conn: "AsyncConnection", name: str
 ) -> Optional[CompositeTypeInfo]:
     cur = conn.cursor(binary=True)
-    await cur.execute(_type_info_query, (name,))
+    await cur.execute(_type_info_query, {"name": name})
     rec = await cur.fetchone()
     return CompositeTypeInfo(*rec) if rec is not None else None
 
@@ -99,23 +99,69 @@ def register(
 
 _type_info_query = """\
 select
-    name, oid, array_oid,
-    array_agg(row(field_name, field_type)) as fields
-from (
-    select
-        typname as name,
-        t.oid as oid,
-        t.typarray as array_oid,
-        a.attname as field_name,
-        a.atttypid as field_type
-    from pg_type t
-    left join pg_attribute a on a.attrelid = t.typrelid
-    where t.typname = %s
-    and a.attnum > 0
-    order by a.attnum
-) x
-group by name, oid, array_oid
+    t.typname as name,
+    t.oid as oid,
+    t.typarray as array_oid,
+    coalesce(a.fields, '{}') as fields
+from pg_type t
+left join (
+    select attrelid, array_agg(field) as fields
+    from (
+        select attrelid, row(attname, atttypid) field
+        from pg_attribute a
+        join pg_type t on t.typrelid = a.attrelid
+        where t.typname = %(name)s
+        and a.attnum > 0
+        and not a.attisdropped
+        order by a.attnum
+    ) x
+    group by attrelid
+) a on a.attrelid = t.typrelid
+where t.typname = %(name)s
 """
+
+
+@Adapter.text(tuple)
+class TextTupleAdapter(Adapter):
+    def __init__(self, src: type, context: AdaptContext = None):
+        super().__init__(src, context)
+        self._tx = Transformer(context)
+
+    def adapt(self, obj: Tuple[Any, ...]) -> Tuple[bytes, int]:
+        if not obj:
+            return b"()", TEXT_OID
+
+        parts = [b"("]
+
+        for item in obj:
+            if item is None:
+                parts.append(b",")
+                continue
+
+            ad = self._tx.adapt(item)
+            if isinstance(ad, tuple):
+                ad = ad[0]
+            if ad is None:
+                parts.append(b",")
+                continue
+
+            if self._re_needs_quotes.search(ad) is not None:
+                ad = b'"' + self._re_escape.sub(br"\1\1", ad) + b'"'
+
+            parts.append(ad)
+            parts.append(b",")
+
+        parts[-1] = b")"
+
+        return b"".join(parts), TEXT_OID
+
+    _re_needs_quotes = re.compile(
+        br"""(?xi)
+          ^$            # the empty string
+        | [",\\\s]      # or a char to escape
+        """
+    )
+    _re_escape = re.compile(br"([\"])")
 
 
 class BaseCompositeCaster(TypeCaster):
