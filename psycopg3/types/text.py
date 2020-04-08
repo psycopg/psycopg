@@ -37,6 +37,8 @@ class StringAdapter(Adapter):
 
 @TypeCaster.text(builtins["text"].oid)
 @TypeCaster.binary(builtins["text"].oid)
+@TypeCaster.text(builtins["varchar"].oid)
+@TypeCaster.binary(builtins["varchar"].oid)
 class StringCaster(TypeCaster):
 
     decode: Optional[DecodeFunc]
@@ -58,6 +60,24 @@ class StringCaster(TypeCaster):
         else:
             # return bytes for SQL_ASCII db
             return data
+
+
+@TypeCaster.text(builtins["name"].oid)
+@TypeCaster.binary(builtins["name"].oid)
+@TypeCaster.text(builtins["bpchar"].oid)
+@TypeCaster.binary(builtins["bpchar"].oid)
+class NameCaster(TypeCaster):
+    def __init__(self, oid: int, context: AdaptContext):
+        super().__init__(oid, context)
+
+        self.decode: DecodeFunc
+        if self.connection is not None:
+            self.decode = self.connection.codec.decode
+        else:
+            self.decode = codecs.lookup("utf8").decode
+
+    def cast(self, data: bytes) -> str:
+        return self.decode(data)[0]
 
 
 @Adapter.text(bytes)
