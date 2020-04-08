@@ -87,7 +87,7 @@ def check_libpq_version(got, want):
         )
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def dsn(request):
     """Return the dsn used to connect to the `--test-dsn` database."""
     dsn = request.config.getoption("--test-dsn")
@@ -110,6 +110,16 @@ def pgconn(pq, dsn):
 @pytest.fixture
 def conn(dsn):
     """Return a `Connection` connected to the ``--test-dsn`` database."""
+    from psycopg3 import Connection
+
+    return Connection.connect(dsn)
+
+
+@pytest.fixture(scope="session")
+def svcconn(dsn):
+    """
+    Return a session `Connection` connected to the ``--test-dsn`` database.
+    """
     from psycopg3 import Connection
 
     return Connection.connect(dsn)

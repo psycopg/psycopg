@@ -292,10 +292,16 @@ def register_array(
         TypeCaster.register(array_oid, t, context=context, format=format)
 
 
-# Register associations between array and base oids
-for t in builtins:
-    if t.array_oid and (
-        (t.oid, Format.TEXT) in TypeCaster.globals
-        or (t.oid, Format.BINARY) in TypeCaster.globals
-    ):
-        register_array(t.array_oid, t.oid, name=t.name)
+def register_all_arrays() -> None:
+    """
+    Associate the array oid of all the types in TypeCaster.globals.
+
+    This function is designed to be called once at import time, after having
+    registered all the base casters.
+    """
+    for t in builtins:
+        if t.array_oid and (
+            (t.oid, Format.TEXT) in TypeCaster.globals
+            or (t.oid, Format.BINARY) in TypeCaster.globals
+        ):
+            register_array(t.array_oid, t.oid, name=t.name)

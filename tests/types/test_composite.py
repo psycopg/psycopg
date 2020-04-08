@@ -1,6 +1,8 @@
 import pytest
 
 from psycopg3.adapt import Format
+from psycopg3.types import builtins
+from psycopg3.types import composite
 
 
 @pytest.mark.parametrize(
@@ -73,3 +75,71 @@ def test_cast_record_binary(conn, want, rec):
     assert res == want
     for o1, o2 in zip(res, want):
         assert type(o1) is type(o2)
+
+
+@pytest.fixture(scope="session")
+def testcomp(svcconn):
+    cur = svcconn.cursor()
+    cur.execute(
+        """
+        drop type if exists testcomp cascade;
+        create type testcomp as (foo text, bar int8, baz float8);
+        """
+    )
+
+
+def test_fetch_info(conn, testcomp):
+    info = composite.fetch_info(conn, "testcomp")
+    assert info.name == "testcomp"
+    assert info.oid > 0
+    assert info.oid != info.array_oid > 0
+    assert len(info.fields) == 3
+    for i, (name, t) in enumerate(
+        [("foo", "text"), ("bar", "int8"), ("baz", "float8")]
+    ):
+        assert info.fields[i].name == name
+        assert info.fields[i].type_oid == builtins[t].oid
+
+
+@pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
+def test_cast_composite(conn, testcomp, fmt_out):
+    cur = conn.cursor(binary=fmt_out == Format.BINARY)
+    info = composite.fetch_info(conn, "testcomp")
+    composite.register(info)
+
+    res = cur.execute("select row('hello', 10, 20)::testcomp").fetchone()[0]
+    assert res.foo == "hello"
+    assert res.bar == 10
+    assert res.baz == 20.0
+    assert isinstance(res.baz, float)
+
+    res = cur.execute(
+        "select array[row('hello', 10, 30)::testcomp]"
+    ).fetchone()[0]
+    assert len(res) == 1
+    assert res[0].baz == 30.0
+    assert isinstance(res[0].baz, float)
+
+
+@pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
+def test_cast_composite_factory(conn, testcomp, fmt_out):
+    cur = conn.cursor(binary=fmt_out == Format.BINARY)
+    info = composite.fetch_info(conn, "testcomp")
+
+    class MyThing:
+        def __init__(self, *args):
+            self.foo, self.bar, self.baz = args
+
+    composite.register(info, factory=MyThing)
+
+    res = cur.execute("select row('hello', 10, 20)::testcomp").fetchone()[0]
+    assert isinstance(res, MyThing)
+    assert res.baz == 20.0
+    assert isinstance(res.baz, float)
+
+    res = cur.execute(
+        "select array[row('hello', 10, 30)::testcomp]"
+    ).fetchone()[0]
+    assert len(res) == 1
+    assert res[0].baz == 30.0
+    assert isinstance(res[0].baz, float)
