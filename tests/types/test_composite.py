@@ -100,6 +100,21 @@ def test_fetch_info(conn, testcomp):
         assert info.fields[i].type_oid == builtins[t].oid
 
 
+def test_fetch_info_async(aconn, loop, testcomp):
+    info = loop.run_until_complete(
+        composite.fetch_info_async(aconn, "testcomp")
+    )
+    assert info.name == "testcomp"
+    assert info.oid > 0
+    assert info.oid != info.array_oid > 0
+    assert len(info.fields) == 3
+    for i, (name, t) in enumerate(
+        [("foo", "text"), ("bar", "int8"), ("baz", "float8")]
+    ):
+        assert info.fields[i].name == name
+        assert info.fields[i].type_oid == builtins[t].oid
+
+
 @pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
 def test_cast_composite(conn, testcomp, fmt_out):
     cur = conn.cursor(binary=fmt_out == Format.BINARY)

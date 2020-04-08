@@ -13,7 +13,7 @@ from ..adapt import Format, TypeCaster, Transformer, AdaptContext
 from .oids import builtins, TypeInfo
 
 if TYPE_CHECKING:
-    from ..connection import Connection
+    from ..connection import Connection, AsyncConnection
 
 
 TEXT_OID = builtins["text"].oid
@@ -48,10 +48,16 @@ def fetch_info(conn: "Connection", name: str) -> Optional[CompositeTypeInfo]:
     cur = conn.cursor(binary=True)
     cur.execute(_type_info_query, (name,))
     rec = cur.fetchone()
-    if rec is not None:
-        return CompositeTypeInfo(*rec)
-    else:
-        return None
+    return CompositeTypeInfo(*rec) if rec is not None else None
+
+
+async def fetch_info_async(
+    conn: "AsyncConnection", name: str
+) -> Optional[CompositeTypeInfo]:
+    cur = conn.cursor(binary=True)
+    await cur.execute(_type_info_query, (name,))
+    rec = await cur.fetchone()
+    return CompositeTypeInfo(*rec) if rec is not None else None
 
 
 def register(
