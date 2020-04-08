@@ -8,9 +8,9 @@ from collections import namedtuple
 from typing import Any, Callable, Generator, List, Sequence, Tuple, Union
 from typing import Optional, TYPE_CHECKING
 
+from . import array
 from ..adapt import Format, TypeCaster, Transformer, AdaptContext
 from .oids import builtins, TypeInfo
-from .array import register_array
 
 if TYPE_CHECKING:
     from ..connection import Connection
@@ -86,7 +86,7 @@ def register(
     )
 
     if info.array_oid:
-        register_array(
+        array.register(
             info.array_oid, info.oid, context=context, name=info.name
         )
 

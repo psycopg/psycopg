@@ -274,7 +274,7 @@ class ArrayCasterBinary(ArrayCasterBase):
         return agg(dims)
 
 
-def register_array(
+def register(
     array_oid: int,
     base_oid: int,
     context: AdaptContext = None,
@@ -287,7 +287,7 @@ def register_array(
         (Format.TEXT, ArrayCasterText),
         (Format.BINARY, ArrayCasterBinary),
     ):
-        tcname = f"{name}_array_{format.name.lower()}"
+        tcname = f"{name.title()}Array{format.name.title()}Caster"
         t = type(tcname, (base,), {"base_oid": base_oid})
         TypeCaster.register(array_oid, t, context=context, format=format)
 
@@ -304,4 +304,4 @@ def register_all_arrays() -> None:
             (t.oid, Format.TEXT) in TypeCaster.globals
             or (t.oid, Format.BINARY) in TypeCaster.globals
         ):
-            register_array(t.array_oid, t.oid, name=t.name)
+            register(t.array_oid, t.oid, name=t.name)

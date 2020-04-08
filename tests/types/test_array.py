@@ -1,8 +1,7 @@
 import pytest
 import psycopg3
-from psycopg3.types import builtins
+from psycopg3.types import builtins, array
 from psycopg3.adapt import Format, Transformer
-from psycopg3.types.array import register_array
 
 
 tests_str = [
@@ -107,7 +106,7 @@ def test_array_register(conn):
     res = cur.fetchone()[0]
     assert res == "{postgres=arwdDxt/postgres}"
 
-    register_array(
+    array.register(
         builtins["aclitem"].array_oid, builtins["aclitem"].oid, context=conn
     )
     cur.execute("select '{postgres=arwdDxt/postgres}'::aclitem[]")
