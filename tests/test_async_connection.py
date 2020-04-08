@@ -41,7 +41,7 @@ def test_rollback(loop, pq, aconn):
 def test_get_encoding(aconn, loop):
     cur = aconn.cursor()
     loop.run_until_complete(cur.execute("show client_encoding"))
-    (enc,) = cur.fetchone()
+    (enc,) = loop.run_until_complete(cur.fetchone())
     assert enc == aconn.encoding
 
 
@@ -59,7 +59,7 @@ def test_set_encoding(aconn, loop):
     assert aconn.encoding == newenc
     cur = aconn.cursor()
     loop.run_until_complete(cur.execute("show client_encoding"))
-    (enc,) = cur.fetchone()
+    (enc,) = loop.run_until_complete(cur.fetchone())
     assert enc == newenc
 
 

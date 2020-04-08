@@ -131,12 +131,6 @@ class BaseCursor:
         else:
             return None
 
-    def fetchone(self) -> Optional[Sequence[Any]]:
-        rv = self._cast_row(self._pos)
-        if rv is not None:
-            self._pos += 1
-        return rv
-
     def _cast_row(self, n: int) -> Optional[Tuple[Any, ...]]:
         res = self.pgresult
         if res is None:
@@ -164,6 +158,12 @@ class Cursor(BaseCursor):
             self._execute_results(results)
         return self
 
+    def fetchone(self) -> Optional[Sequence[Any]]:
+        rv = self._cast_row(self._pos)
+        if rv is not None:
+            self._pos += 1
+        return rv
+
 
 class AsyncCursor(BaseCursor):
     conn: "AsyncConnection"
@@ -179,6 +179,12 @@ class AsyncCursor(BaseCursor):
             results = await self.conn.wait(gen)
             self._execute_results(results)
         return self
+
+    async def fetchone(self) -> Optional[Sequence[Any]]:
+        rv = self._cast_row(self._pos)
+        if rv is not None:
+            self._pos += 1
+        return rv
 
 
 class NamedCursorMixin:
