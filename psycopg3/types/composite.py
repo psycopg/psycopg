@@ -5,7 +5,7 @@ Support for composite types adaptation.
 import re
 import struct
 from collections import namedtuple
-from typing import Any, Callable, Generator, List, Sequence, Tuple, Union
+from typing import Any, Callable, Generator, Sequence, Tuple
 from typing import Optional, TYPE_CHECKING
 
 from . import array
@@ -27,28 +27,26 @@ class FieldInfo:
 
 class CompositeTypeInfo(TypeInfo):
     def __init__(
-        self,
-        name: str,
-        oid: int,
-        array_oid: int,
-        fields: Sequence[Union[FieldInfo, Tuple[str, int]]],
+        self, name: str, oid: int, array_oid: int, fields: Sequence[FieldInfo],
     ):
         super().__init__(name, oid, array_oid)
-        self.fields: List[FieldInfo] = []
-        for f in fields:
-            if isinstance(f, FieldInfo):
-                self.fields.append(f)
-            elif isinstance(f, tuple):
-                self.fields.append(FieldInfo(f[0], f[1]))
-            else:
-                raise TypeError(f"bad field info: {f}")
+        self.fields = list(fields)
+
+    @classmethod
+    def _from_record(cls, rec: Any) -> Optional["CompositeTypeInfo"]:
+        if rec is None:
+            return None
+
+        name, oid, array_oid, fnames, ftypes = rec
+        fields = [FieldInfo(*p) for p in zip(fnames, ftypes)]
+        return CompositeTypeInfo(name, oid, array_oid, fields)
 
 
 def fetch_info(conn: "Connection", name: str) -> Optional[CompositeTypeInfo]:
     cur = conn.cursor(binary=True)
     cur.execute(_type_info_query, {"name": name})
     rec = cur.fetchone()
-    return CompositeTypeInfo(*rec) if rec is not None else None
+    return CompositeTypeInfo._from_record(rec)
 
 
 async def fetch_info_async(
@@ -57,7 +55,7 @@ async def fetch_info_async(
     cur = conn.cursor(binary=True)
     await cur.execute(_type_info_query, {"name": name})
     rec = await cur.fetchone()
-    return CompositeTypeInfo(*rec) if rec is not None else None
+    return CompositeTypeInfo._from_record(rec)
 
 
 def register(
@@ -99,15 +97,17 @@ def register(
 
 _type_info_query = """\
 select
-    t.typname as name,
-    t.oid as oid,
-    t.typarray as array_oid,
-    coalesce(a.fields, '{}') as fields
+    t.typname as name, t.oid as oid, t.typarray as array_oid,
+    coalesce(a.fnames, '{}') as fnames,
+    coalesce(a.ftypes, '{}') as ftypes
 from pg_type t
 left join (
-    select attrelid, array_agg(field) as fields
+    select
+        attrelid,
+        array_agg(attname) as fnames,
+        array_agg(atttypid) as ftypes
     from (
-        select attrelid, row(attname, atttypid) field
+        select a.attrelid, a.attname, a.atttypid
         from pg_attribute a
         join pg_type t on t.typrelid = a.attrelid
         where t.typname = %(name)s
