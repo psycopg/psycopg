@@ -9,7 +9,7 @@ from typing import Any, Callable, Generator, Sequence, Tuple
 from typing import Optional, TYPE_CHECKING
 
 from . import array
-from ..adapt import Format, Adapter, TypeCaster, Transformer, AdaptContext
+from ..adapt import Format, Dumper, Loader, Transformer, AdaptContext
 from .oids import builtins, TypeInfo
 
 if TYPE_CHECKING:
@@ -68,26 +68,24 @@ def register(
             info.name, [f.name for f in info.fields]
         )
 
-    # generate and register a customized text typecaster
-    caster = type(
-        f"{info.name.title()}Caster",
-        (CompositeCaster,),
+    # generate and register a customized text loader
+    loader = type(
+        f"{info.name.title()}Loader",
+        (CompositeLoader,),
         {
             "factory": factory,
             "fields_types": tuple(f.type_oid for f in info.fields),
         },
     )
-    TypeCaster.register(info.oid, caster, context=context, format=Format.TEXT)
+    Loader.register(info.oid, loader, context=context, format=Format.TEXT)
 
-    # generate and register a customized binary typecaster
-    caster = type(
-        f"{info.name.title()}BinaryCaster",
-        (CompositeBinaryCaster,),
+    # generate and register a customized binary loader
+    loader = type(
+        f"Binary{info.name.title()}Loader",
+        (BinaryCompositeLoader,),
         {"factory": factory},
     )
-    TypeCaster.register(
-        info.oid, caster, context=context, format=Format.BINARY
-    )
+    Loader.register(info.oid, loader, context=context, format=Format.BINARY)
 
     if info.array_oid:
         array.register(
@@ -121,13 +119,13 @@ where t.typname = %(name)s
 """
 
 
-@Adapter.text(tuple)
-class TextTupleAdapter(Adapter):
+@Dumper.text(tuple)
+class TextTupleDumper(Dumper):
     def __init__(self, src: type, context: AdaptContext = None):
         super().__init__(src, context)
         self._tx = Transformer(context)
 
-    def adapt(self, obj: Tuple[Any, ...]) -> Tuple[bytes, int]:
+    def dump(self, obj: Tuple[Any, ...]) -> Tuple[bytes, int]:
         if not obj:
             return b"()", TEXT_OID
 
@@ -138,7 +136,7 @@ class TextTupleAdapter(Adapter):
                 parts.append(b",")
                 continue
 
-            ad = self._tx.adapt(item)
+            ad = self._tx.dump(item)
             if isinstance(ad, tuple):
                 ad = ad[0]
             if ad is None:
@@ -164,16 +162,16 @@ class TextTupleAdapter(Adapter):
     _re_escape = re.compile(br"([\"])")
 
 
-class BaseCompositeCaster(TypeCaster):
+class BaseCompositeLoader(Loader):
     def __init__(self, oid: int, context: AdaptContext = None):
         super().__init__(oid, context)
         self._tx = Transformer(context)
 
 
-@TypeCaster.text(builtins["record"].oid)
-class RecordCaster(BaseCompositeCaster):
-    def cast(self, data: bytes) -> Tuple[Any, ...]:
-        cast = self._tx.get_cast_function(TEXT_OID, format=Format.TEXT)
+@Loader.text(builtins["record"].oid)
+class RecordLoader(BaseCompositeLoader):
+    def load(self, data: bytes) -> Tuple[Any, ...]:
+        cast = self._tx.get_load_function(TEXT_OID, format=Format.TEXT)
         return tuple(
             cast(token) if token is not None else None
             for token in self._parse_record(data)
@@ -208,17 +206,17 @@ _struct_len = struct.Struct("!i")
 _struct_oidlen = struct.Struct("!Ii")
 
 
-@TypeCaster.binary(builtins["record"].oid)
-class RecordBinaryCaster(BaseCompositeCaster):
+@Loader.binary(builtins["record"].oid)
+class BinaryRecordLoader(BaseCompositeLoader):
     _types_set = False
 
-    def cast(self, data: bytes) -> Tuple[Any, ...]:
+    def load(self, data: bytes) -> Tuple[Any, ...]:
         if not self._types_set:
             self._config_types(data)
             self._types_set = True
 
         return tuple(
-            self._tx.cast_sequence(
+            self._tx.load_sequence(
                 data[offset : offset + length] if length != -1 else None
                 for _, offset, length in self._walk_record(data)
             )
@@ -243,27 +241,27 @@ class RecordBinaryCaster(BaseCompositeCaster):
         )
 
 
-class CompositeCaster(RecordCaster):
+class CompositeLoader(RecordLoader):
     factory: Callable[..., Any]
     fields_types: Tuple[int, ...]
     _types_set = False
 
-    def cast(self, data: bytes) -> Any:
+    def load(self, data: bytes) -> Any:
         if not self._types_set:
             self._config_types(data)
             self._types_set = True
 
         return type(self).factory(
-            *self._tx.cast_sequence(self._parse_record(data))
+            *self._tx.load_sequence(self._parse_record(data))
         )
 
     def _config_types(self, data: bytes) -> None:
         self._tx.set_row_types((oid, Format.TEXT) for oid in self.fields_types)
 
 
-class CompositeBinaryCaster(RecordBinaryCaster):
+class BinaryCompositeLoader(BinaryRecordLoader):
     factory: Callable[..., Any]
 
-    def cast(self, data: bytes) -> Any:
-        r = super().cast(data)
+    def load(self, data: bytes) -> Any:
+        r = super().load(data)
         return type(self).factory(*r)

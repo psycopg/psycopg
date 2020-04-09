@@ -1,5 +1,5 @@
 """
-Adapters of textual types.
+Adapters for textual types.
 """
 
 # Copyright (C) 2020 The Psycopg Team
@@ -7,7 +7,7 @@ Adapters of textual types.
 import codecs
 from typing import Optional, Tuple, Union
 
-from ..adapt import Adapter, TypeCaster, AdaptContext
+from ..adapt import Dumper, Loader, AdaptContext
 from ..utils.typing import EncodeFunc, DecodeFunc
 from ..pq import Escaping
 from .oids import builtins
@@ -16,9 +16,9 @@ TEXT_OID = builtins["text"].oid
 BYTEA_OID = builtins["bytea"].oid
 
 
-@Adapter.text(str)
-@Adapter.binary(str)
-class StringAdapter(Adapter):
+@Dumper.text(str)
+@Dumper.binary(str)
+class StringDumper(Dumper):
     def __init__(self, src: type, context: AdaptContext):
         super().__init__(src, context)
 
@@ -31,15 +31,15 @@ class StringAdapter(Adapter):
         else:
             self._encode = codecs.lookup("utf8").encode
 
-    def adapt(self, obj: str) -> bytes:
+    def dump(self, obj: str) -> bytes:
         return self._encode(obj)[0]
 
 
-@TypeCaster.text(builtins["text"].oid)
-@TypeCaster.binary(builtins["text"].oid)
-@TypeCaster.text(builtins["varchar"].oid)
-@TypeCaster.binary(builtins["varchar"].oid)
-class StringCaster(TypeCaster):
+@Loader.text(builtins["text"].oid)
+@Loader.binary(builtins["text"].oid)
+@Loader.text(builtins["varchar"].oid)
+@Loader.binary(builtins["varchar"].oid)
+class StringLoader(Loader):
 
     decode: Optional[DecodeFunc]
 
@@ -54,7 +54,7 @@ class StringCaster(TypeCaster):
         else:
             self.decode = codecs.lookup("utf8").decode
 
-    def cast(self, data: bytes) -> Union[bytes, str]:
+    def load(self, data: bytes) -> Union[bytes, str]:
         if self.decode is not None:
             return self.decode(data)[0]
         else:
@@ -62,11 +62,11 @@ class StringCaster(TypeCaster):
             return data
 
 
-@TypeCaster.text(builtins["name"].oid)
-@TypeCaster.binary(builtins["name"].oid)
-@TypeCaster.text(builtins["bpchar"].oid)
-@TypeCaster.binary(builtins["bpchar"].oid)
-class NameCaster(TypeCaster):
+@Loader.text(builtins["name"].oid)
+@Loader.binary(builtins["name"].oid)
+@Loader.text(builtins["bpchar"].oid)
+@Loader.binary(builtins["bpchar"].oid)
+class NameLoader(Loader):
     def __init__(self, oid: int, context: AdaptContext):
         super().__init__(oid, context)
 
@@ -76,32 +76,32 @@ class NameCaster(TypeCaster):
         else:
             self.decode = codecs.lookup("utf8").decode
 
-    def cast(self, data: bytes) -> str:
+    def load(self, data: bytes) -> str:
         return self.decode(data)[0]
 
 
-@Adapter.text(bytes)
-class BytesAdapter(Adapter):
+@Dumper.text(bytes)
+class BytesDumper(Dumper):
     def __init__(self, src: type, context: AdaptContext = None):
         super().__init__(src, context)
         self.esc = Escaping(
             self.connection.pgconn if self.connection is not None else None
         )
 
-    def adapt(self, obj: bytes) -> Tuple[bytes, int]:
+    def dump(self, obj: bytes) -> Tuple[bytes, int]:
         return self.esc.escape_bytea(obj), BYTEA_OID
 
 
-@Adapter.binary(bytes)
-def adapt_bytes(b: bytes) -> Tuple[bytes, int]:
+@Dumper.binary(bytes)
+def dump_bytes(b: bytes) -> Tuple[bytes, int]:
     return b, BYTEA_OID
 
 
-@TypeCaster.text(builtins["bytea"].oid)
-def cast_bytea(data: bytes) -> bytes:
+@Loader.text(builtins["bytea"].oid)
+def load_bytea(data: bytes) -> bytes:
     return Escaping().unescape_bytea(data)
 
 
-@TypeCaster.binary(builtins["bytea"].oid)
-def cast_bytea_binary(data: bytes) -> bytes:
+@Loader.binary(builtins["bytea"].oid)
+def load_bytea_binary(data: bytes) -> bytes:
     return data

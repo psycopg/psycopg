@@ -34,7 +34,7 @@ py_codecs = {
     "SHIFT_JIS_2004": "shift_jis_2004",
     "SJIS": "shift_jis",
     # this actually means no encoding, see PostgreSQL docs
-    # it is special-cased by the text typecaster.
+    # it is special-cased by the text loader.
     "SQL_ASCII": "ascii",
     "UHC": "cp949",
     "UTF8": "utf-8",

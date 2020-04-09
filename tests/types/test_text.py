@@ -12,7 +12,7 @@ eur = "\u20ac"
 
 
 @pytest.mark.parametrize("fmt_in", [Format.TEXT, Format.BINARY])
-def test_adapt_1char(conn, fmt_in):
+def test_dump_1char(conn, fmt_in):
     cur = conn.cursor()
     ph = "%s" if fmt_in == Format.TEXT else "%b"
     for i in range(1, 256):
@@ -22,7 +22,7 @@ def test_adapt_1char(conn, fmt_in):
 
 @pytest.mark.parametrize("typename", ["text", "varchar", "name", "bpchar"])
 @pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
-def test_cast_1char(conn, typename, fmt_out):
+def test_load_1char(conn, typename, fmt_out):
     cur = conn.cursor(binary=fmt_out == Format.BINARY)
     for i in range(1, 256):
         cur.execute(f"select chr(%s::int)::{typename}", (i,))
@@ -34,7 +34,7 @@ def test_cast_1char(conn, typename, fmt_out):
 
 @pytest.mark.parametrize("fmt_in", [Format.TEXT, Format.BINARY])
 @pytest.mark.parametrize("encoding", ["utf8", "latin9"])
-def test_adapt_enc(conn, fmt_in, encoding):
+def test_dump_enc(conn, fmt_in, encoding):
     cur = conn.cursor()
     ph = "%s" if fmt_in == Format.TEXT else "%b"
 
@@ -44,7 +44,7 @@ def test_adapt_enc(conn, fmt_in, encoding):
 
 
 @pytest.mark.parametrize("fmt_in", [Format.TEXT, Format.BINARY])
-def test_adapt_ascii(conn, fmt_in):
+def test_dump_ascii(conn, fmt_in):
     cur = conn.cursor()
     ph = "%s" if fmt_in == Format.TEXT else "%b"
 
@@ -54,7 +54,7 @@ def test_adapt_ascii(conn, fmt_in):
 
 
 @pytest.mark.parametrize("fmt_in", [Format.TEXT, Format.BINARY])
-def test_adapt_badenc(conn, fmt_in):
+def test_dump_badenc(conn, fmt_in):
     cur = conn.cursor()
     ph = "%s" if fmt_in == Format.TEXT else "%b"
 
@@ -66,7 +66,7 @@ def test_adapt_badenc(conn, fmt_in):
 @pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
 @pytest.mark.parametrize("encoding", ["utf8", "latin9"])
 @pytest.mark.parametrize("typename", ["text", "varchar", "name", "bpchar"])
-def test_cast_enc(conn, typename, encoding, fmt_out):
+def test_load_enc(conn, typename, encoding, fmt_out):
     cur = conn.cursor(binary=fmt_out == Format.BINARY)
 
     conn.encoding = encoding
@@ -78,7 +78,7 @@ def test_cast_enc(conn, typename, encoding, fmt_out):
 
 @pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
 @pytest.mark.parametrize("typename", ["text", "varchar", "name", "bpchar"])
-def test_cast_badenc(conn, typename, fmt_out):
+def test_load_badenc(conn, typename, fmt_out):
     cur = conn.cursor(binary=fmt_out == Format.BINARY)
 
     conn.encoding = "latin1"
@@ -88,7 +88,7 @@ def test_cast_badenc(conn, typename, fmt_out):
 
 @pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
 @pytest.mark.parametrize("typename", ["text", "varchar"])
-def test_cast_ascii(conn, typename, fmt_out):
+def test_load_ascii(conn, typename, fmt_out):
     cur = conn.cursor(binary=fmt_out == Format.BINARY)
 
     conn.encoding = "sql_ascii"
@@ -100,7 +100,7 @@ def test_cast_ascii(conn, typename, fmt_out):
 
 @pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
 @pytest.mark.parametrize("typename", ["name", "bpchar"])
-def test_cast_ascii_encanyway(conn, typename, fmt_out):
+def test_load_ascii_encanyway(conn, typename, fmt_out):
     cur = conn.cursor(binary=fmt_out == Format.BINARY)
 
     conn.encoding = "sql_ascii"
@@ -138,7 +138,7 @@ def test_text_array_ascii(conn, fmt_in, fmt_out):
 
 
 @pytest.mark.parametrize("fmt_in", [Format.TEXT, Format.BINARY])
-def test_adapt_1byte(conn, fmt_in):
+def test_dump_1byte(conn, fmt_in):
     cur = conn.cursor()
     ph = "%s" if fmt_in == Format.TEXT else "%b"
     for i in range(0, 256):
@@ -147,7 +147,7 @@ def test_adapt_1byte(conn, fmt_in):
 
 
 @pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
-def test_cast_1byte(conn, fmt_out):
+def test_load_1byte(conn, fmt_out):
     cur = conn.cursor(binary=fmt_out == Format.BINARY)
     for i in range(0, 256):
         cur.execute("select %s::bytea", (fr"\x{i:02x}",))

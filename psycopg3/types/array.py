@@ -9,7 +9,7 @@ import struct
 from typing import Any, Generator, List, Optional, Tuple
 
 from .. import errors as e
-from ..adapt import Format, Adapter, TypeCaster, Transformer
+from ..adapt import Format, Dumper, Loader, Transformer
 from ..adapt import AdaptContext
 from .oids import builtins
 
@@ -17,7 +17,7 @@ TEXT_OID = builtins["text"].oid
 TEXT_ARRAY_OID = builtins["text"].array_oid
 
 
-class BaseListAdapter(Adapter):
+class BaseListDumper(Dumper):
     def __init__(self, src: type, context: AdaptContext = None):
         super().__init__(src, context)
         self._tx = Transformer(context)
@@ -39,8 +39,8 @@ class BaseListAdapter(Adapter):
         return oid or TEXT_ARRAY_OID
 
 
-@Adapter.text(list)
-class TextListAdapter(BaseListAdapter):
+@Dumper.text(list)
+class TextListDumper(BaseListDumper):
     # from https://www.postgresql.org/docs/current/arrays.html#ARRAYS-IO
     #
     # The array output routine will put double quotes around element values if
@@ -59,12 +59,12 @@ class TextListAdapter(BaseListAdapter):
     # backslash-escaped.
     _re_escape = re.compile(br'(["\\])')
 
-    def adapt(self, obj: List[Any]) -> Tuple[bytes, int]:
+    def dump(self, obj: List[Any]) -> Tuple[bytes, int]:
         tokens: List[bytes] = []
 
         oid = 0
 
-        def adapt_list(obj: List[Any]) -> None:
+        def dump_list(obj: List[Any]) -> None:
             nonlocal oid
 
             if not obj:
@@ -74,11 +74,11 @@ class TextListAdapter(BaseListAdapter):
             tokens.append(b"{")
             for item in obj:
                 if isinstance(item, list):
-                    adapt_list(item)
+                    dump_list(item)
                 elif item is None:
                     tokens.append(b"NULL")
                 else:
-                    ad = self._tx.adapt(item)
+                    ad = self._tx.dump(item)
                     if isinstance(ad, tuple):
                         if oid == 0:
                             oid = ad[1]
@@ -103,14 +103,14 @@ class TextListAdapter(BaseListAdapter):
 
             tokens[-1] = b"}"
 
-        adapt_list(obj)
+        dump_list(obj)
 
         return b"".join(tokens), self._array_oid(oid)
 
 
-@Adapter.binary(list)
-class BinaryListAdapter(BaseListAdapter):
-    def adapt(self, obj: List[Any]) -> Tuple[bytes, int]:
+@Dumper.binary(list)
+class BinaryListDumper(BaseListDumper):
+    def dump(self, obj: List[Any]) -> Tuple[bytes, int]:
         if not obj:
             return _struct_head.pack(0, 0, TEXT_OID), TEXT_ARRAY_OID
 
@@ -128,14 +128,14 @@ class BinaryListAdapter(BaseListAdapter):
 
         calc_dims(obj)
 
-        def adapt_list(L: List[Any], dim: int) -> None:
+        def dump_list(L: List[Any], dim: int) -> None:
             nonlocal oid, hasnull
             if len(L) != dims[dim]:
                 raise e.DataError("nested lists have inconsistent lengths")
 
             if dim == len(dims) - 1:
                 for item in L:
-                    ad = self._tx.adapt(item, Format.BINARY)
+                    ad = self._tx.dump(item, Format.BINARY)
                     if isinstance(ad, tuple):
                         if oid == 0:
                             oid = ad[1]
@@ -158,9 +158,9 @@ class BinaryListAdapter(BaseListAdapter):
                         raise e.DataError(
                             "nested lists have inconsistent depths"
                         )
-                    adapt_list(item, dim + 1)  # type: ignore
+                    dump_list(item, dim + 1)  # type: ignore
 
-        adapt_list(obj, 0)
+        dump_list(obj, 0)
 
         if oid == 0:
             oid = TEXT_OID
@@ -170,7 +170,7 @@ class BinaryListAdapter(BaseListAdapter):
         return b"".join(data), self._array_oid(oid)
 
 
-class ArrayCasterBase(TypeCaster):
+class BaseArrayLoader(Loader):
     base_oid: int
 
     def __init__(self, oid: int, context: AdaptContext = None):
@@ -178,7 +178,7 @@ class ArrayCasterBase(TypeCaster):
         self._tx = Transformer(context)
 
 
-class ArrayCasterText(ArrayCasterBase):
+class TextArrayLoader(BaseArrayLoader):
 
     # Tokenize an array representation into item and brackets
     # TODO: currently recognise only , as delimiter. Should be configured
@@ -191,10 +191,10 @@ class ArrayCasterText(ArrayCasterBase):
         """
     )
 
-    def cast(self, data: bytes) -> List[Any]:
+    def load(self, data: bytes) -> List[Any]:
         rv = None
         stack: List[Any] = []
-        cast = self._tx.get_cast_function(self.base_oid, Format.TEXT)
+        cast = self._tx.get_load_function(self.base_oid, Format.TEXT)
 
         for m in self._re_parse.finditer(data):
             t = m.group(1)
@@ -239,13 +239,13 @@ _struct_dim = struct.Struct("!II")
 _struct_len = struct.Struct("!i")
 
 
-class ArrayCasterBinary(ArrayCasterBase):
-    def cast(self, data: bytes) -> List[Any]:
+class BinaryArrayLoader(BaseArrayLoader):
+    def load(self, data: bytes) -> List[Any]:
         ndims, hasnull, oid = _struct_head.unpack_from(data[:12])
         if not ndims:
             return []
 
-        fcast = self._tx.get_cast_function(oid, Format.BINARY)
+        fcast = self._tx.get_load_function(oid, Format.BINARY)
 
         p = 12 + 8 * ndims
         dims = [
@@ -284,24 +284,24 @@ def register(
         name = f"oid{base_oid}"
 
     for format, base in (
-        (Format.TEXT, ArrayCasterText),
-        (Format.BINARY, ArrayCasterBinary),
+        (Format.TEXT, TextArrayLoader),
+        (Format.BINARY, BinaryArrayLoader),
     ):
-        tcname = f"{name.title()}Array{format.name.title()}Caster"
+        tcname = f"{name.title()}Array{format.name.title()}Loader"
         t = type(tcname, (base,), {"base_oid": base_oid})
-        TypeCaster.register(array_oid, t, context=context, format=format)
+        Loader.register(array_oid, t, context=context, format=format)
 
 
 def register_all_arrays() -> None:
     """
-    Associate the array oid of all the types in TypeCaster.globals.
+    Associate the array oid of all the types in Loader.globals.
 
     This function is designed to be called once at import time, after having
-    registered all the base casters.
+    registered all the base loaders.
     """
     for t in builtins:
         if t.array_oid and (
-            (t.oid, Format.TEXT) in TypeCaster.globals
-            or (t.oid, Format.BINARY) in TypeCaster.globals
+            (t.oid, Format.TEXT) in Loader.globals
+            or (t.oid, Format.BINARY) in Loader.globals
         ):
             register(t.array_oid, t.oid, name=t.name)

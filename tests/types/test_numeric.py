@@ -3,9 +3,9 @@ from math import isnan, isinf, exp
 
 import pytest
 
-from psycopg3.adapt import TypeCaster, Transformer, Format
+from psycopg3.adapt import Loader, Transformer, Format
 from psycopg3.types import builtins
-from psycopg3.types.numeric import cast_float
+from psycopg3.types.numeric import load_float
 
 
 #
@@ -25,7 +25,7 @@ from psycopg3.types.numeric import cast_float
         (int(-(2 ** 63)), "'-9223372036854775808'::bigint"),
     ],
 )
-def test_adapt_int(conn, val, expr):
+def test_dump_int(conn, val, expr):
     assert isinstance(val, int)
     cur = conn.cursor()
     cur.execute("select %s = %%s" % expr, (val,))
@@ -33,10 +33,10 @@ def test_adapt_int(conn, val, expr):
 
 
 @pytest.mark.xfail
-def test_adapt_int_binary():
+def test_dump_int_binary():
     # TODO: int binary adaptation (must choose the fitting int2,4,8)
     tx = Transformer()
-    tx.adapt(1, Format.BINARY)
+    tx.dump(1, Format.BINARY)
 
 
 @pytest.mark.parametrize(
@@ -61,7 +61,7 @@ def test_adapt_int_binary():
     ],
 )
 @pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
-def test_cast_int(conn, val, pgtype, want, fmt_out):
+def test_load_int(conn, val, pgtype, want, fmt_out):
     cur = conn.cursor(binary=fmt_out == Format.BINARY)
     cur.execute(f"select %s::{pgtype}", (val,))
     assert cur.pgresult.fformat(0) == fmt_out
@@ -95,7 +95,7 @@ def test_cast_int(conn, val, pgtype, want, fmt_out):
         (float("-inf"), "'-inf'"),
     ],
 )
-def test_adapt_float(conn, val, expr):
+def test_dump_float(conn, val, expr):
     assert isinstance(val, float)
     cur = conn.cursor()
     cur.execute("select %%s = %s::float8" % expr, (val,))
@@ -113,7 +113,7 @@ def test_adapt_float(conn, val, expr):
         (-1e-30, "-1e-30"),
     ],
 )
-def test_adapt_float_approx(conn, val, expr):
+def test_dump_float_approx(conn, val, expr):
     assert isinstance(val, float)
     cur = conn.cursor()
     cur.execute(
@@ -129,10 +129,10 @@ def test_adapt_float_approx(conn, val, expr):
 
 
 @pytest.mark.xfail
-def test_adapt_float_binary():
+def test_dump_float_binary():
     # TODO: float binary adaptation
     tx = Transformer()
-    tx.adapt(1.0, Format.BINARY)
+    tx.dump(1.0, Format.BINARY)
 
 
 @pytest.mark.parametrize(
@@ -155,7 +155,7 @@ def test_adapt_float_binary():
     ],
 )
 @pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
-def test_cast_float(conn, val, pgtype, want, fmt_out):
+def test_load_float(conn, val, pgtype, want, fmt_out):
     cur = conn.cursor(binary=fmt_out == Format.BINARY)
     cur.execute(f"select %s::{pgtype}", (val,))
     assert cur.pgresult.fformat(0) == fmt_out
@@ -196,7 +196,7 @@ def test_cast_float(conn, val, pgtype, want, fmt_out):
     ],
 )
 @pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
-def test_cast_float_approx(conn, expr, pgtype, want, fmt_out):
+def test_load_float_approx(conn, expr, pgtype, want, fmt_out):
     cur = conn.cursor(binary=fmt_out == Format.BINARY)
     cur.execute("select %s::%s" % (expr, pgtype))
     assert cur.pgresult.fformat(0) == fmt_out
@@ -232,14 +232,14 @@ def test_roundtrip_numeric(conn, val):
 
 
 @pytest.mark.xfail
-def test_adapt_numeric_binary():
+def test_dump_numeric_binary():
     # TODO: numeric binary adaptation
     tx = Transformer()
-    tx.adapt(Decimal(1), Format.BINARY)
+    tx.dump(Decimal(1), Format.BINARY)
 
 
 @pytest.mark.xfail
-def test_cast_numeric_binary(conn):
+def test_load_numeric_binary(conn):
     # TODO: numeric binary casting
     cur = conn.cursor(binary=True)
     res = cur.execute("select 1::numeric").fetchone()[0]
@@ -258,7 +258,7 @@ def test_cast_numeric_binary(conn):
 )
 def test_numeric_as_float(conn, val):
     cur = conn.cursor()
-    TypeCaster.register(builtins["numeric"].oid, cast_float, cur)
+    Loader.register(builtins["numeric"].oid, load_float, cur)
 
     val = Decimal(val)
     cur.execute("select %s", (val,))

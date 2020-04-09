@@ -25,17 +25,17 @@ Format = pq.Format
 AdaptContext = Union[None, BaseConnection, BaseCursor, "Transformer"]
 
 MaybeOid = Union[Optional[bytes], Tuple[Optional[bytes], int]]
-AdapterFunc = Callable[[Any], MaybeOid]
-AdapterType = Union[Type["Adapter"], AdapterFunc]
-AdaptersMap = Dict[Tuple[type, Format], AdapterType]
+DumpFunc = Callable[[Any], MaybeOid]
+DumperType = Union[Type["Dumper"], DumpFunc]
+DumpersMap = Dict[Tuple[type, Format], DumperType]
 
-TypeCasterFunc = Callable[[bytes], Any]
-TypeCasterType = Union[Type["TypeCaster"], TypeCasterFunc]
-TypeCastersMap = Dict[Tuple[int, Format], TypeCasterType]
+LoadFunc = Callable[[bytes], Any]
+LoaderType = Union[Type["Loader"], LoadFunc]
+LoadersMap = Dict[Tuple[int, Format], LoaderType]
 
 
-class Adapter:
-    globals: AdaptersMap = {}
+class Dumper:
+    globals: DumpersMap = {}
     connection: Optional[BaseConnection]
 
     def __init__(self, src: type, context: AdaptContext = None):
@@ -43,60 +43,60 @@ class Adapter:
         self.context = context
         self.connection = _connection_from_context(context)
 
-    def adapt(self, obj: Any) -> Union[bytes, Tuple[bytes, int]]:
+    def dump(self, obj: Any) -> Union[bytes, Tuple[bytes, int]]:
         raise NotImplementedError()
 
     @classmethod
     def register(
         cls,
         src: type,
-        adapter: AdapterType,
+        dumper: DumperType,
         context: AdaptContext = None,
         format: Format = Format.TEXT,
-    ) -> AdapterType:
+    ) -> DumperType:
         if not isinstance(src, type):
             raise TypeError(
-                f"adapters should be registered on classes, got {src} instead"
+                f"dumpers should be registered on classes, got {src} instead"
             )
 
         if not (
-            callable(adapter)
-            or (isinstance(adapter, type) and issubclass(adapter, Adapter))
+            callable(dumper)
+            or (isinstance(dumper, type) and issubclass(dumper, Dumper))
         ):
             raise TypeError(
-                f"adapters should be callable or Adapter subclasses,"
-                f" got {adapter} instead"
+                f"dumpers should be callable or Dumper subclasses,"
+                f" got {dumper} instead"
             )
 
-        where = context.adapters if context is not None else Adapter.globals
-        where[src, format] = adapter
-        return adapter
+        where = context.dumpers if context is not None else Dumper.globals
+        where[src, format] = dumper
+        return dumper
 
     @classmethod
     def register_binary(
-        cls, src: type, adapter: AdapterType, context: AdaptContext = None,
-    ) -> AdapterType:
-        return cls.register(src, adapter, context, format=Format.BINARY)
+        cls, src: type, dumper: DumperType, context: AdaptContext = None,
+    ) -> DumperType:
+        return cls.register(src, dumper, context, format=Format.BINARY)
 
     @classmethod
-    def text(cls, src: type) -> Callable[[AdapterType], AdapterType]:
-        def text_(adapter: AdapterType) -> AdapterType:
-            cls.register(src, adapter)
-            return adapter
+    def text(cls, src: type) -> Callable[[DumperType], DumperType]:
+        def text_(dumper: DumperType) -> DumperType:
+            cls.register(src, dumper)
+            return dumper
 
         return text_
 
     @classmethod
-    def binary(cls, src: type) -> Callable[[AdapterType], AdapterType]:
-        def binary_(adapter: AdapterType) -> AdapterType:
-            cls.register_binary(src, adapter)
-            return adapter
+    def binary(cls, src: type) -> Callable[[DumperType], DumperType]:
+        def binary_(dumper: DumperType) -> DumperType:
+            cls.register_binary(src, dumper)
+            return dumper
 
         return binary_
 
 
-class TypeCaster:
-    globals: TypeCastersMap = {}
+class Loader:
+    globals: LoadersMap = {}
     connection: Optional[BaseConnection]
 
     def __init__(self, oid: int, context: AdaptContext = None):
@@ -104,54 +104,54 @@ class TypeCaster:
         self.context = context
         self.connection = _connection_from_context(context)
 
-    def cast(self, data: bytes) -> Any:
+    def load(self, data: bytes) -> Any:
         raise NotImplementedError()
 
     @classmethod
     def register(
         cls,
         oid: int,
-        caster: TypeCasterType,
+        loader: LoaderType,
         context: AdaptContext = None,
         format: Format = Format.TEXT,
-    ) -> TypeCasterType:
+    ) -> LoaderType:
         if not isinstance(oid, int):
             raise TypeError(
-                f"typecasters should be registered on oid, got {oid} instead"
+                f"typeloaders should be registered on oid, got {oid} instead"
             )
 
         if not (
-            callable(caster)
-            or (isinstance(caster, type) and issubclass(caster, TypeCaster))
+            callable(loader)
+            or (isinstance(loader, type) and issubclass(loader, Loader))
         ):
             raise TypeError(
-                f"adapters should be callable or TypeCaster subclasses,"
-                f" got {caster} instead"
+                f"dumpers should be callable or Loader subclasses,"
+                f" got {loader} instead"
             )
 
-        where = context.casters if context is not None else TypeCaster.globals
-        where[oid, format] = caster
-        return caster
+        where = context.loaders if context is not None else Loader.globals
+        where[oid, format] = loader
+        return loader
 
     @classmethod
     def register_binary(
-        cls, oid: int, caster: TypeCasterType, context: AdaptContext = None,
-    ) -> TypeCasterType:
-        return cls.register(oid, caster, context, format=Format.BINARY)
+        cls, oid: int, loader: LoaderType, context: AdaptContext = None,
+    ) -> LoaderType:
+        return cls.register(oid, loader, context, format=Format.BINARY)
 
     @classmethod
-    def text(cls, oid: int) -> Callable[[TypeCasterType], TypeCasterType]:
-        def text_(caster: TypeCasterType) -> TypeCasterType:
-            cls.register(oid, caster)
-            return caster
+    def text(cls, oid: int) -> Callable[[LoaderType], LoaderType]:
+        def text_(loader: LoaderType) -> LoaderType:
+            cls.register(oid, loader)
+            return loader
 
         return text_
 
     @classmethod
-    def binary(cls, oid: int) -> Callable[[TypeCasterType], TypeCasterType]:
-        def binary_(caster: TypeCasterType) -> TypeCasterType:
-            cls.register_binary(oid, caster)
-            return caster
+    def binary(cls, oid: int) -> Callable[[LoaderType], LoaderType]:
+        def binary_(loader: LoaderType) -> LoaderType:
+            cls.register_binary(oid, loader)
+            return loader
 
         return binary_
 
@@ -167,70 +167,70 @@ class Transformer:
 
     def __init__(self, context: AdaptContext = None):
         self.connection: Optional[BaseConnection]
-        self.adapters: AdaptersMap
-        self.casters: TypeCastersMap
-        self._adapters_maps: List[AdaptersMap] = []
-        self._casters_maps: List[TypeCastersMap] = []
+        self.dumpers: DumpersMap
+        self.loaders: LoadersMap
+        self._dumpers_maps: List[DumpersMap] = []
+        self._loaders_maps: List[LoadersMap] = []
         self._setup_context(context)
 
-        # mapping class, fmt -> adaptation function
-        self._adapt_funcs: Dict[Tuple[type, Format], AdapterFunc] = {}
+        # mapping class, fmt -> dump function
+        self._dump_funcs: Dict[Tuple[type, Format], DumpFunc] = {}
 
-        # mapping oid, fmt -> cast function
-        self._cast_funcs: Dict[Tuple[int, Format], TypeCasterFunc] = {}
+        # mapping oid, fmt -> load function
+        self._load_funcs: Dict[Tuple[int, Format], LoadFunc] = {}
 
-        # sequence of cast function from value to python
+        # sequence of load functions from value to python
         # the length of the result columns
-        self._row_casters: List[TypeCasterFunc] = []
+        self._row_loaders: List[LoadFunc] = []
 
     def _setup_context(self, context: AdaptContext) -> None:
         if context is None:
             self.connection = None
-            self.adapters = {}
-            self.casters = {}
-            self._adapters_maps = [self.adapters]
-            self._casters_maps = [self.casters]
+            self.dumpers = {}
+            self.loaders = {}
+            self._dumpers_maps = [self.dumpers]
+            self._loaders_maps = [self.loaders]
 
         elif isinstance(context, Transformer):
             # A transformer created from a transformers: usually it happens
             # for nested types: share the entire state of the parent
             self.connection = context.connection
-            self.adapters = context.adapters
-            self.casters = context.casters
-            self._adapters_maps.extend(context._adapters_maps)
-            self._casters_maps.extend(context._casters_maps)
+            self.dumpers = context.dumpers
+            self.loaders = context.loaders
+            self._dumpers_maps.extend(context._dumpers_maps)
+            self._loaders_maps.extend(context._loaders_maps)
             # the global maps are already in the lists
             return
 
         elif isinstance(context, BaseCursor):
             self.connection = context.conn
-            self.adapters = {}
-            self._adapters_maps.extend(
-                (self.adapters, context.adapters, self.connection.adapters)
+            self.dumpers = {}
+            self._dumpers_maps.extend(
+                (self.dumpers, context.dumpers, self.connection.dumpers)
             )
-            self.casters = {}
-            self._casters_maps.extend(
-                (self.casters, context.casters, self.connection.casters)
+            self.loaders = {}
+            self._loaders_maps.extend(
+                (self.loaders, context.loaders, self.connection.loaders)
             )
 
         elif isinstance(context, BaseConnection):
             self.connection = context
-            self.adapters = {}
-            self._adapters_maps.extend((self.adapters, context.adapters))
-            self.casters = {}
-            self._casters_maps.extend((self.casters, context.casters))
+            self.dumpers = {}
+            self._dumpers_maps.extend((self.dumpers, context.dumpers))
+            self.loaders = {}
+            self._loaders_maps.extend((self.loaders, context.loaders))
 
-        self._adapters_maps.append(Adapter.globals)
-        self._casters_maps.append(TypeCaster.globals)
+        self._dumpers_maps.append(Dumper.globals)
+        self._loaders_maps.append(Loader.globals)
 
-    def adapt_sequence(
+    def dump_sequence(
         self, objs: Iterable[Any], formats: Iterable[Format]
     ) -> Tuple[List[Optional[bytes]], List[int]]:
         out = []
         types = []
 
         for var, fmt in zip(objs, formats):
-            data = self.adapt(var, fmt)
+            data = self.dump(var, fmt)
             if isinstance(data, tuple):
                 oid = data[1]
                 data = data[0]
@@ -242,34 +242,34 @@ class Transformer:
 
         return out, types
 
-    def adapt(self, obj: None, format: Format = Format.TEXT) -> MaybeOid:
+    def dump(self, obj: None, format: Format = Format.TEXT) -> MaybeOid:
         if obj is None:
             return None, TEXT_OID
 
         src = type(obj)
-        func = self.get_adapt_function(src, format)
+        func = self.get_dump_function(src, format)
         return func(obj)
 
-    def get_adapt_function(self, src: type, format: Format) -> AdapterFunc:
+    def get_dump_function(self, src: type, format: Format) -> DumpFunc:
         key = (src, format)
         try:
-            return self._adapt_funcs[key]
+            return self._dump_funcs[key]
         except KeyError:
             pass
 
-        adapter = self.lookup_adapter(src, format)
-        func: AdapterFunc
-        if isinstance(adapter, type):
-            func = adapter(src, self).adapt
+        dumper = self.lookup_dumper(src, format)
+        func: DumpFunc
+        if isinstance(dumper, type):
+            func = dumper(src, self).dump
         else:
-            func = adapter
+            func = dumper
 
-        self._adapt_funcs[key] = func
+        self._dump_funcs[key] = func
         return func
 
-    def lookup_adapter(self, src: type, format: Format) -> AdapterType:
+    def lookup_dumper(self, src: type, format: Format) -> DumperType:
         key = (src, format)
-        for amap in self._adapters_maps:
+        for amap in self._dumpers_maps:
             if key in amap:
                 return amap[key]
 
@@ -278,55 +278,55 @@ class Transformer:
         )
 
     def set_row_types(self, types: Iterable[Tuple[int, Format]]) -> None:
-        rc = self._row_casters = []
+        rc = self._row_loaders = []
         for oid, fmt in types:
-            rc.append(self.get_cast_function(oid, fmt))
+            rc.append(self.get_load_function(oid, fmt))
 
-    def cast_sequence(
+    def load_sequence(
         self, record: Iterable[Optional[bytes]]
     ) -> Generator[Any, None, None]:
-        for val, caster in zip(record, self._row_casters):
+        for val, loader in zip(record, self._row_loaders):
             if val is not None:
-                yield caster(val)
+                yield loader(val)
             else:
                 yield None
 
-    def cast(self, data: bytes, oid: int, format: Format = Format.TEXT) -> Any:
+    def load(self, data: bytes, oid: int, format: Format = Format.TEXT) -> Any:
         if data is not None:
-            f = self.get_cast_function(oid, format)
+            f = self.get_load_function(oid, format)
             return f(data)
         else:
             return None
 
-    def get_cast_function(self, oid: int, format: Format) -> TypeCasterFunc:
+    def get_load_function(self, oid: int, format: Format) -> LoadFunc:
         key = (oid, format)
         try:
-            return self._cast_funcs[key]
+            return self._load_funcs[key]
         except KeyError:
             pass
 
-        caster = self.lookup_caster(oid, format)
-        func: TypeCasterFunc
-        if isinstance(caster, type):
-            func = caster(oid, self).cast
+        loader = self.lookup_loader(oid, format)
+        func: LoadFunc
+        if isinstance(loader, type):
+            func = loader(oid, self).load
         else:
-            func = caster
+            func = loader
 
-        self._cast_funcs[key] = func
+        self._load_funcs[key] = func
         return func
 
-    def lookup_caster(self, oid: int, format: Format) -> TypeCasterType:
+    def lookup_loader(self, oid: int, format: Format) -> LoaderType:
         key = (oid, format)
 
-        for tcmap in self._casters_maps:
+        for tcmap in self._loaders_maps:
             if key in tcmap:
                 return tcmap[key]
 
-        return TypeCaster.globals[INVALID_OID, format]
+        return Loader.globals[INVALID_OID, format]
 
 
-@TypeCaster.text(INVALID_OID)
-class UnknownCaster(TypeCaster):
+@Loader.text(INVALID_OID)
+class UnknownLoader(Loader):
     """
     Fallback object to convert unknown types to Python
     """
@@ -339,12 +339,12 @@ class UnknownCaster(TypeCaster):
         else:
             self.decode = codecs.lookup("utf8").decode
 
-    def cast(self, data: bytes) -> str:
+    def load(self, data: bytes) -> str:
         return self.decode(data)[0]
 
 
-@TypeCaster.binary(INVALID_OID)
-def cast_unknown(data: bytes) -> bytes:
+@Loader.binary(INVALID_OID)
+def load_unknown(data: bytes) -> bytes:
     return data
 
 

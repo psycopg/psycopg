@@ -1,5 +1,5 @@
 import pytest
-from psycopg3.adapt import Transformer, Format, Adapter, TypeCaster
+from psycopg3.adapt import Transformer, Format, Dumper, Loader
 from psycopg3.types.oids import builtins
 
 TEXT_OID = builtins["text"].oid
@@ -15,9 +15,9 @@ TEXT_OID = builtins["text"].oid
         ("hello", Format.BINARY, b"hello", "text"),
     ],
 )
-def test_adapt(data, format, result, type):
+def test_dump(data, format, result, type):
     t = Transformer()
-    rv = t.adapt(data, format)
+    rv = t.dump(data, format)
     if isinstance(rv, tuple):
         assert rv[0] == result
         assert rv[1] == builtins[type].oid
@@ -25,22 +25,22 @@ def test_adapt(data, format, result, type):
         assert rv == result
 
 
-def test_adapt_connection_ctx(conn):
-    Adapter.register(str, lambda s: s.encode("ascii") + b"t", conn)
-    Adapter.register_binary(str, lambda s: s.encode("ascii") + b"b", conn)
+def test_dump_connection_ctx(conn):
+    Dumper.register(str, lambda s: s.encode("ascii") + b"t", conn)
+    Dumper.register_binary(str, lambda s: s.encode("ascii") + b"b", conn)
 
     cur = conn.cursor()
     cur.execute("select %s, %b", ["hello", "world"])
     assert cur.fetchone() == ("hellot", "worldb")
 
 
-def test_adapt_cursor_ctx(conn):
-    Adapter.register(str, lambda s: s.encode("ascii") + b"t", conn)
-    Adapter.register_binary(str, lambda s: s.encode("ascii") + b"b", conn)
+def test_dump_cursor_ctx(conn):
+    Dumper.register(str, lambda s: s.encode("ascii") + b"t", conn)
+    Dumper.register_binary(str, lambda s: s.encode("ascii") + b"b", conn)
 
     cur = conn.cursor()
-    Adapter.register(str, lambda s: s.encode("ascii") + b"tc", cur)
-    Adapter.register_binary(str, lambda s: s.encode("ascii") + b"bc", cur)
+    Dumper.register(str, lambda s: s.encode("ascii") + b"tc", cur)
+    Dumper.register_binary(str, lambda s: s.encode("ascii") + b"bc", cur)
 
     cur.execute("select %s, %b", ["hello", "world"])
     assert cur.fetchone() == ("hellotc", "worldbc")
@@ -62,15 +62,13 @@ def test_adapt_cursor_ctx(conn):
 )
 def test_cast(data, format, type, result):
     t = Transformer()
-    rv = t.cast(data, builtins[type].oid, format)
+    rv = t.load(data, builtins[type].oid, format)
     assert rv == result
 
 
-def test_cast_connection_ctx(conn):
-    TypeCaster.register(TEXT_OID, lambda b: b.decode("ascii") + "t", conn)
-    TypeCaster.register_binary(
-        TEXT_OID, lambda b: b.decode("ascii") + "b", conn
-    )
+def test_load_connection_ctx(conn):
+    Loader.register(TEXT_OID, lambda b: b.decode("ascii") + "t", conn)
+    Loader.register_binary(TEXT_OID, lambda b: b.decode("ascii") + "b", conn)
 
     r = conn.cursor().execute("select 'hello'::text").fetchone()
     assert r == ("hellot",)
@@ -78,17 +76,13 @@ def test_cast_connection_ctx(conn):
     assert r == ("hellob",)
 
 
-def test_cast_cursor_ctx(conn):
-    TypeCaster.register(TEXT_OID, lambda b: b.decode("ascii") + "t", conn)
-    TypeCaster.register_binary(
-        TEXT_OID, lambda b: b.decode("ascii") + "b", conn
-    )
+def test_load_cursor_ctx(conn):
+    Loader.register(TEXT_OID, lambda b: b.decode("ascii") + "t", conn)
+    Loader.register_binary(TEXT_OID, lambda b: b.decode("ascii") + "b", conn)
 
     cur = conn.cursor()
-    TypeCaster.register(TEXT_OID, lambda b: b.decode("ascii") + "tc", cur)
-    TypeCaster.register_binary(
-        TEXT_OID, lambda b: b.decode("ascii") + "bc", cur
-    )
+    Loader.register(TEXT_OID, lambda b: b.decode("ascii") + "tc", cur)
+    Loader.register_binary(TEXT_OID, lambda b: b.decode("ascii") + "bc", cur)
 
     r = cur.execute("select 'hello'::text").fetchone()
     assert r == ("hellotc",)
@@ -109,9 +103,9 @@ def test_cast_cursor_ctx(conn):
     [("'{hello}'::text[]", ["helloc"]), ("row('hello'::text)", ("helloc",))],
 )
 @pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
-def test_cast_cursor_ctx_nested(conn, sql, obj, fmt_out):
+def test_load_cursor_ctx_nested(conn, sql, obj, fmt_out):
     cur = conn.cursor(binary=fmt_out == Format.BINARY)
-    TypeCaster.register(
+    Loader.register(
         TEXT_OID, lambda b: b.decode("ascii") + "c", cur, format=fmt_out
     )
     cur.execute(f"select {sql}")

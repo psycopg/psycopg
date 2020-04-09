@@ -24,7 +24,7 @@ tests_str = [
 
 @pytest.mark.parametrize("fmt_in", [Format.TEXT, Format.BINARY])
 @pytest.mark.parametrize("obj, want", tests_str)
-def test_adapt_list_str(conn, obj, want, fmt_in):
+def test_dump_list_str(conn, obj, want, fmt_in):
     cur = conn.cursor()
     ph = "%s" if fmt_in == Format.TEXT else "%b"
     cur.execute(f"select {ph}::text[] = %s::text[]", (obj, want))
@@ -33,7 +33,7 @@ def test_adapt_list_str(conn, obj, want, fmt_in):
 
 @pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
 @pytest.mark.parametrize("want, obj", tests_str)
-def test_cast_list_str(conn, obj, want, fmt_out):
+def test_load_list_str(conn, obj, want, fmt_out):
     cur = conn.cursor(binary=fmt_out == Format.BINARY)
     cur.execute("select %s::text[]", (obj,))
     assert cur.fetchone()[0] == want
@@ -68,7 +68,7 @@ tests_int = [
 
 
 @pytest.mark.parametrize("obj, want", tests_int)
-def test_adapt_list_int(conn, obj, want):
+def test_dump_list_int(conn, obj, want):
     cur = conn.cursor()
     cur.execute("select %s::int[] = %s::int[]", (obj, want))
     assert cur.fetchone()[0]
@@ -88,12 +88,12 @@ def test_adapt_list_int(conn, obj, want):
 def test_bad_binary_array(input):
     tx = Transformer()
     with pytest.raises(psycopg3.DataError):
-        tx.adapt(input, Format.BINARY)
+        tx.dump(input, Format.BINARY)
 
 
 @pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
 @pytest.mark.parametrize("want, obj", tests_int)
-def test_cast_list_int(conn, obj, want, fmt_out):
+def test_load_list_int(conn, obj, want, fmt_out):
     cur = conn.cursor(binary=fmt_out == Format.BINARY)
     cur.execute("select %s::int[]", (obj,))
     assert cur.fetchone()[0] == want
@@ -118,7 +118,7 @@ def test_array_register(conn):
 def test_array_mixed_numbers():
     # TODO: must use the type accommodating the largest/highest precision
     tx = Transformer()
-    ad = tx.adapt([1, 32767], Format.BINARY)
+    ad = tx.dump([1, 32767], Format.BINARY)
     assert ad[1] == builtins["int2"].array_oid
-    ad = tx.adapt([1, 32768], Format.BINARY)
+    ad = tx.dump([1, 32768], Format.BINARY)
     assert ad[1] == builtins["int4"].array_oid

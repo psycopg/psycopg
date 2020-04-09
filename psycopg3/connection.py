@@ -24,7 +24,7 @@ QueryGen = Generator[Tuple[int, Wait], Ready, List[pq.PGresult]]
 RV = TypeVar("RV")
 
 if TYPE_CHECKING:
-    from .adapt import AdaptersMap, TypeCastersMap
+    from .adapt import DumpersMap, LoadersMap
 
 
 class BaseConnection:
@@ -38,8 +38,8 @@ class BaseConnection:
     def __init__(self, pgconn: pq.PGconn):
         self.pgconn = pgconn
         self.cursor_factory = cursor.BaseCursor
-        self.adapters: AdaptersMap = {}
-        self.casters: TypeCastersMap = {}
+        self.dumpers: DumpersMap = {}
+        self.loaders: LoadersMap = {}
         # name of the postgres encoding (in bytes)
         self._pgenc = b""
 

@@ -1,6 +1,6 @@
 import pytest
 
-from psycopg3.adapt import Format, TypeCaster
+from psycopg3.adapt import Format, Loader
 from psycopg3.types import builtins, composite
 
 
@@ -19,14 +19,14 @@ tests_str = [
 
 
 @pytest.mark.parametrize("rec, want", tests_str)
-def test_cast_record(conn, want, rec):
+def test_load_record(conn, want, rec):
     cur = conn.cursor()
     res = cur.execute(f"select row({rec})").fetchone()[0]
     assert res == want
 
 
 @pytest.mark.parametrize("rec, obj", tests_str)
-def test_adapt_tuple(conn, rec, obj):
+def test_dump_tuple(conn, rec, obj):
     cur = conn.cursor()
     fields = [f"f{i} text" for i in range(len(obj))]
     cur.execute(
@@ -43,7 +43,7 @@ def test_adapt_tuple(conn, rec, obj):
 
 
 @pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
-def test_cast_all_chars(conn, fmt_out):
+def test_load_all_chars(conn, fmt_out):
     cur = conn.cursor(binary=fmt_out == Format.BINARY)
     for i in range(1, 256):
         res = cur.execute("select row(chr(%s::int))", (i,)).fetchone()[0]
@@ -82,7 +82,7 @@ def test_cast_all_chars(conn, fmt_out):
         ),
     ],
 )
-def test_cast_record_binary(conn, want, rec):
+def test_load_record_binary(conn, want, rec):
     cur = conn.cursor(binary=True)
     res = cur.execute(f"select row({rec})").fetchone()[0]
     assert res == want
@@ -130,7 +130,7 @@ def test_fetch_info_async(aconn, loop, testcomp):
 
 
 @pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
-def test_cast_composite(conn, testcomp, fmt_out):
+def test_load_composite(conn, testcomp, fmt_out):
     cur = conn.cursor(binary=fmt_out == Format.BINARY)
     info = composite.fetch_info(conn, "testcomp")
     composite.register(info, conn)
@@ -150,7 +150,7 @@ def test_cast_composite(conn, testcomp, fmt_out):
 
 
 @pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
-def test_cast_composite_factory(conn, testcomp, fmt_out):
+def test_load_composite_factory(conn, testcomp, fmt_out):
     cur = conn.cursor(binary=fmt_out == Format.BINARY)
     info = composite.fetch_info(conn, "testcomp")
 
@@ -179,20 +179,20 @@ def test_register_scope(conn):
     composite.register(info)
     for fmt in (Format.TEXT, Format.BINARY):
         for oid in (info.oid, info.array_oid):
-            assert TypeCaster.globals.pop((oid, fmt))
+            assert Loader.globals.pop((oid, fmt))
 
     cur = conn.cursor()
     composite.register(info, cur)
     for fmt in (Format.TEXT, Format.BINARY):
         for oid in (info.oid, info.array_oid):
             key = oid, fmt
-            assert key not in TypeCaster.globals
-            assert key not in conn.casters
-            assert key in cur.casters
+            assert key not in Loader.globals
+            assert key not in conn.loaders
+            assert key in cur.loaders
 
     composite.register(info, conn)
     for fmt in (Format.TEXT, Format.BINARY):
         for oid in (info.oid, info.array_oid):
             key = oid, fmt
-            assert key not in TypeCaster.globals
-            assert key in conn.casters
+            assert key not in Loader.globals
+            assert key in conn.loaders

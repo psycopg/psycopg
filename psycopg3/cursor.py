@@ -18,15 +18,15 @@ if TYPE_CHECKING:
         AsyncConnection,
         QueryGen,
     )
-    from .adapt import AdaptersMap, TypeCastersMap
+    from .adapt import DumpersMap, LoadersMap
 
 
 class BaseCursor:
     def __init__(self, conn: "BaseConnection", binary: bool = False):
         self.conn = conn
         self.binary = binary
-        self.adapters: AdaptersMap = {}
-        self.casters: TypeCastersMap = {}
+        self.dumpers: DumpersMap = {}
+        self.loaders: LoadersMap = {}
         self._reset()
 
     def _reset(self) -> None:
@@ -70,7 +70,7 @@ class BaseCursor:
                 assert isinstance(vars, Mapping)
                 vars = reorder_params(vars, order)
             assert isinstance(vars, Sequence)
-            params, types = self._transformer.adapt_sequence(vars, formats)
+            params, types = self._transformer.dump_sequence(vars, formats)
             self.conn.pgconn.send_query_params(
                 query,
                 params,
@@ -131,7 +131,7 @@ class BaseCursor:
         else:
             return None
 
-    def _cast_row(self, n: int) -> Optional[Tuple[Any, ...]]:
+    def _load_row(self, n: int) -> Optional[Tuple[Any, ...]]:
         res = self.pgresult
         if res is None:
             return None
@@ -139,7 +139,7 @@ class BaseCursor:
             return None
 
         return tuple(
-            self._transformer.cast_sequence(
+            self._transformer.load_sequence(
                 res.get_value(n, i) for i in range(res.nfields)
             )
         )
@@ -159,7 +159,7 @@ class Cursor(BaseCursor):
         return self
 
     def fetchone(self) -> Optional[Sequence[Any]]:
-        rv = self._cast_row(self._pos)
+        rv = self._load_row(self._pos)
         if rv is not None:
             self._pos += 1
         return rv
@@ -181,7 +181,7 @@ class AsyncCursor(BaseCursor):
         return self
 
     async def fetchone(self) -> Optional[Sequence[Any]]:
-        rv = self._cast_row(self._pos)
+        rv = self._load_row(self._pos)
         if rv is not None:
             self._pos += 1
         return rv
