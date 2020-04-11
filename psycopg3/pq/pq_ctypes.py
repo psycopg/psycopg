@@ -10,7 +10,7 @@ implementation.
 
 from ctypes import Array, pointer, string_at
 from ctypes import c_char_p, c_int, c_size_t, c_ulong
-from typing import Any, List, Optional, Sequence
+from typing import Any, Callable, List, Optional, Sequence
 from typing import cast as t_cast
 
 from .enums import (
@@ -75,6 +75,8 @@ class PGconn:
 
     @property
     def info(self) -> List["ConninfoOption"]:
+        if not self.pgconn_ptr:
+            raise PQerror("the connection is closed")
         opts = impl.PQconninfo(self.pgconn_ptr)
         if not opts:
             raise MemoryError("couldn't allocate connection info")
@@ -104,35 +106,35 @@ class PGconn:
 
     @property
     def db(self) -> bytes:
-        return impl.PQdb(self.pgconn_ptr)
+        return self._call_bytes(impl.PQdb)
 
     @property
     def user(self) -> bytes:
-        return impl.PQuser(self.pgconn_ptr)
+        return self._call_bytes(impl.PQuser)
 
     @property
     def password(self) -> bytes:
-        return impl.PQpass(self.pgconn_ptr)
+        return self._call_bytes(impl.PQpass)
 
     @property
     def host(self) -> bytes:
-        return impl.PQhost(self.pgconn_ptr)
+        return self._call_bytes(impl.PQhost)
 
     @property
     def hostaddr(self) -> bytes:
-        return impl.PQhostaddr(self.pgconn_ptr)
+        return self._call_bytes(impl.PQhostaddr)
 
     @property
     def port(self) -> bytes:
-        return impl.PQport(self.pgconn_ptr)
+        return self._call_bytes(impl.PQport)
 
     @property
     def tty(self) -> bytes:
-        return impl.PQtty(self.pgconn_ptr)
+        return self._call_bytes(impl.PQtty)
 
     @property
     def options(self) -> bytes:
-        return impl.PQoptions(self.pgconn_ptr)
+        return self._call_bytes(impl.PQoptions)
 
     @property
     def status(self) -> ConnStatus:
@@ -145,39 +147,41 @@ class PGconn:
         return TransactionStatus(rv)
 
     def parameter_status(self, name: bytes) -> Optional[bytes]:
+        if not self.pgconn_ptr:
+            raise PQerror("the connection is closed")
         return impl.PQparameterStatus(self.pgconn_ptr, name)
-
-    @property
-    def protocol_version(self) -> int:
-        return impl.PQprotocolVersion(self.pgconn_ptr)
-
-    @property
-    def server_version(self) -> int:
-        return impl.PQserverVersion(self.pgconn_ptr)
 
     @property
     def error_message(self) -> bytes:
         return impl.PQerrorMessage(self.pgconn_ptr)
 
     @property
+    def protocol_version(self) -> int:
+        return self._call_int(impl.PQprotocolVersion)
+
+    @property
+    def server_version(self) -> int:
+        return self._call_int(impl.PQserverVersion)
+
+    @property
     def socket(self) -> int:
-        return impl.PQsocket(self.pgconn_ptr)
+        return self._call_int(impl.PQsocket)
 
     @property
     def backend_pid(self) -> int:
-        return impl.PQbackendPID(self.pgconn_ptr)
+        return self._call_int(impl.PQbackendPID)
 
     @property
     def needs_password(self) -> bool:
-        return bool(impl.PQconnectionNeedsPassword(self.pgconn_ptr))
+        return self._call_bool(impl.PQconnectionNeedsPassword)
 
     @property
     def used_password(self) -> bool:
-        return bool(impl.PQconnectionUsedPassword(self.pgconn_ptr))
+        return self._call_bool(impl.PQconnectionUsedPassword)
 
     @property
     def ssl_in_use(self) -> bool:
-        return bool(impl.PQsslInUse(self.pgconn_ptr))
+        return self._call_bool(impl.PQsslInUse)
 
     def exec_(self, command: bytes) -> "PGresult":
         if not isinstance(command, bytes):
@@ -392,6 +396,34 @@ class PGconn:
         if not rv:
             raise MemoryError("couldn't allocate empty PGresult")
         return PGresult(rv)
+
+    def _call_bytes(
+        self, func: Callable[[impl.PGconn_struct], Optional[bytes]]
+    ) -> bytes:
+        """
+        Call one of the pgconn libpq functions returning a bytes pointer.
+        """
+        if not self.pgconn_ptr:
+            raise PQerror("the connection is closed")
+        rv = func(self.pgconn_ptr)
+        assert rv is not None
+        return rv
+
+    def _call_int(self, func: Callable[[impl.PGconn_struct], int]) -> int:
+        """
+        Call one of the pgconn libpq functions returning an int.
+        """
+        if not self.pgconn_ptr:
+            raise PQerror("the connection is closed")
+        return func(self.pgconn_ptr)
+
+    def _call_bool(self, func: Callable[[impl.PGconn_struct], int]) -> bool:
+        """
+        Call one of the pgconn libpq functions returning a logical value.
+        """
+        if not self.pgconn_ptr:
+            raise PQerror("the connection is closed")
+        return bool(func(self.pgconn_ptr))
 
 
 class PGresult:

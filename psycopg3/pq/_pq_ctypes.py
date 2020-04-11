@@ -458,7 +458,10 @@ def generate_stub() -> None:
         elif t is c_int or t is c_uint or t is c_size_t:
             return "int"
         elif t is c_char_p or t.__name__ == "LP_c_char":
-            return "bytes"
+            if narg is not None:
+                return "bytes"
+            else:
+                return "Optional[bytes]"
 
         elif t.__name__ in ("LP_PGconn_struct", "LP_PGresult_struct",):
             if narg is not None:

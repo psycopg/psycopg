@@ -56,6 +56,14 @@ def test_connect_async_bad(pq, dsn):
     assert conn.status == pq.ConnStatus.BAD
 
 
+def test_finish(pgconn, pq):
+    assert pgconn.status == pq.ConnStatus.OK
+    pgconn.finish()
+    assert pgconn.status == pq.ConnStatus.BAD
+    pgconn.finish()
+    assert pgconn.status == pq.ConnStatus.BAD
+
+
 def test_info(pq, dsn, pgconn):
     info = pgconn.info
     assert len(info) > 20
@@ -69,20 +77,31 @@ def test_info(pq, dsn, pgconn):
     name = [o.val for o in parsed if o.keyword == b"dbname"][0]
     assert dbname.val == name
 
+    pgconn.finish()
+    with pytest.raises(psycopg3.OperationalError):
+        pgconn.info
+
 
 def test_reset(pq, pgconn):
     assert pgconn.status == pq.ConnStatus.OK
-    # TODO: break it
+    pgconn.exec_(b"select pg_terminate_backend(pg_backend_pid())")
+    assert pgconn.status == pq.ConnStatus.BAD
     pgconn.reset()
     assert pgconn.status == pq.ConnStatus.OK
+
+    # doesn't work after finish, but doesn't die either
+    pgconn.finish()
+    pgconn.reset()
+    assert pgconn.status == pq.ConnStatus.BAD
 
 
 def test_reset_async(pq, pgconn):
     assert pgconn.status == pq.ConnStatus.OK
-    # TODO: break it
+    pgconn.exec_(b"select pg_terminate_backend(pg_backend_pid())")
+    assert pgconn.status == pq.ConnStatus.BAD
     pgconn.reset_start()
     while 1:
-        rv = pgconn.connect_poll()
+        rv = pgconn.reset_poll()
         if rv == pq.PollingStatus.READING:
             select([pgconn.socket], [], [])
         elif rv == pq.PollingStatus.WRITING:
@@ -92,6 +111,12 @@ def test_reset_async(pq, pgconn):
 
     assert rv == pq.PollingStatus.OK
     assert pgconn.status == pq.ConnStatus.OK
+
+    pgconn.finish()
+    with pytest.raises(psycopg3.OperationalError):
+        pgconn.reset_start()
+
+    assert pgconn.reset_poll() == 0
 
 
 def test_ping(pq, dsn):
@@ -105,27 +130,42 @@ def test_ping(pq, dsn):
 def test_db(pgconn):
     name = [o.val for o in pgconn.info if o.keyword == b"dbname"][0]
     assert pgconn.db == name
+    pgconn.finish()
+    with pytest.raises(psycopg3.OperationalError):
+        pgconn.db
 
 
 def test_user(pgconn):
     user = [o.val for o in pgconn.info if o.keyword == b"user"][0]
     assert pgconn.user == user
+    pgconn.finish()
+    with pytest.raises(psycopg3.OperationalError):
+        pgconn.user
 
 
 def test_password(pgconn):
     # not in info
     assert isinstance(pgconn.password, bytes)
+    pgconn.finish()
+    with pytest.raises(psycopg3.OperationalError):
+        pgconn.password
 
 
 def test_host(pgconn):
     # might be not in info
     assert isinstance(pgconn.host, bytes)
+    pgconn.finish()
+    with pytest.raises(psycopg3.OperationalError):
+        pgconn.host
 
 
 @pytest.mark.libpq(">= 12")
 def test_hostaddr(pgconn):
     # not in info
     assert isinstance(pgconn.hostaddr, bytes), pgconn.hostaddr
+    pgconn.finish()
+    with pytest.raises(psycopg3.OperationalError):
+        pgconn.hostaddr
 
 
 @pytest.mark.libpq("< 12")
@@ -134,14 +174,30 @@ def test_hostaddr_missing(pgconn):
         pgconn.hostaddr
 
 
+def test_port(pgconn):
+    port = [o.val for o in pgconn.info if o.keyword == b"port"][0]
+    assert pgconn.port == port
+    pgconn.finish()
+    with pytest.raises(psycopg3.OperationalError):
+        pgconn.port
+
+
 def test_tty(pgconn):
     tty = [o.val for o in pgconn.info if o.keyword == b"tty"][0]
     assert pgconn.tty == tty
+    pgconn.finish()
+    with pytest.raises(psycopg3.OperationalError):
+        pgconn.tty
 
 
 def test_transaction_status(pq, pgconn):
     assert pgconn.transaction_status == pq.TransactionStatus.IDLE
-    # TODO: test other states
+    pgconn.exec_(b"begin")
+    assert pgconn.transaction_status == pq.TransactionStatus.INTRANS
+    pgconn.send_query(b"select 1")
+    assert pgconn.transaction_status == pq.TransactionStatus.ACTIVE
+    psycopg3.waiting.wait(psycopg3.Connection._exec_gen(pgconn))
+    assert pgconn.transaction_status == pq.TransactionStatus.INTRANS
     pgconn.finish()
     assert pgconn.transaction_status == pq.TransactionStatus.UNKNOWN
 
@@ -151,6 +207,9 @@ def test_parameter_status(pq, dsn, tempenv):
     pgconn = pq.PGconn.connect(dsn.encode("utf8"))
     assert pgconn.parameter_status(b"application_name") == b"psycopg3 tests"
     assert pgconn.parameter_status(b"wat") is None
+    pgconn.finish()
+    with pytest.raises(psycopg3.OperationalError):
+        pgconn.parameter_status(b"application_name")
 
 
 def test_encoding(pq, pgconn):
@@ -166,29 +225,48 @@ def test_encoding(pq, pgconn):
     assert res.status == pq.ExecStatus.FATAL_ERROR
     assert pgconn.parameter_status(b"client_encoding") == b"UTF8"
 
+    pgconn.finish()
+    with pytest.raises(psycopg3.OperationalError):
+        pgconn.parameter_status(b"client_encoding")
+
 
 def test_protocol_version(pgconn):
     assert pgconn.protocol_version == 3
+    pgconn.finish()
+    with pytest.raises(psycopg3.OperationalError):
+        pgconn.protocol_version
 
 
 def test_server_version(pgconn):
     assert pgconn.server_version >= 90400
+    pgconn.finish()
+    with pytest.raises(psycopg3.OperationalError):
+        pgconn.server_version
 
 
 def test_error_message(pq, pgconn):
+    assert pgconn.error_message == b""
     res = pgconn.exec_(b"wat")
     assert res.status == pq.ExecStatus.FATAL_ERROR
     msg = pgconn.error_message
     assert b"wat" in msg
+    pgconn.finish()
+    assert b"NULL" in pgconn.error_message  # TODO: i10n?
 
 
 def test_backend_pid(pgconn):
     assert 2 <= pgconn.backend_pid <= 65535  # Unless increased in kernel?
+    pgconn.finish()
+    with pytest.raises(psycopg3.OperationalError):
+        pgconn.backend_pid
 
 
 def test_needs_password(pgconn):
     # assume connection worked so an eventually needed password wasn't missing
     assert pgconn.needs_password is False
+    pgconn.finish()
+    with pytest.raises(psycopg3.OperationalError):
+        pgconn.needs_password
 
 
 def test_used_password(pq, pgconn, tempenv, dsn):
@@ -206,6 +284,10 @@ def test_used_password(pq, pgconn, tempenv, dsn):
     if has_password:
         assert pgconn.used_password
 
+    pgconn.finish()
+    with pytest.raises(psycopg3.OperationalError):
+        pgconn.used_password
+
 
 def test_ssl_in_use(pgconn):
     assert isinstance(pgconn.ssl_in_use, bool)
@@ -220,9 +302,18 @@ def test_ssl_in_use(pgconn):
             # but maybe unlikely in the tests environment?
             assert pgconn.ssl_in_use
 
+    pgconn.finish()
+    with pytest.raises(psycopg3.OperationalError):
+        pgconn.ssl_in_use
+
 
 def test_make_empty_result(pq, pgconn):
     pgconn.exec_(b"wat")
     res = pgconn.make_empty_result(pq.ExecStatus.FATAL_ERROR)
     assert res.status == pq.ExecStatus.FATAL_ERROR
     assert b"wat" in res.error_message
+
+    pgconn.finish()
+    res = pgconn.make_empty_result(pq.ExecStatus.FATAL_ERROR)
+    assert res.status == pq.ExecStatus.FATAL_ERROR
+    assert res.error_message == b""
