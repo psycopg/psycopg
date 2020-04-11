@@ -35,6 +35,18 @@ class BaseConnection:
     allow different interfaces (sync/async).
     """
 
+    # DBAPI2 exposed exceptions
+    Warning = e.Warning
+    Error = e.Error
+    InterfaceError = e.InterfaceError
+    DatabaseError = e.DatabaseError
+    DataError = e.DataError
+    OperationalError = e.OperationalError
+    IntegrityError = e.IntegrityError
+    InternalError = e.InternalError
+    ProgrammingError = e.ProgrammingError
+    NotSupportedError = e.NotSupportedError
+
     def __init__(self, pgconn: pq.PGconn):
         self.pgconn = pgconn
         self.cursor_factory = cursor.BaseCursor
@@ -42,6 +54,9 @@ class BaseConnection:
         self.loaders: LoadersMap = {}
         # name of the postgres encoding (in bytes)
         self._pgenc = b""
+
+    def close(self) -> None:
+        self.pgconn.finish()
 
     def cursor(
         self, name: Optional[str] = None, binary: bool = False

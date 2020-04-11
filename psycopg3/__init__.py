@@ -23,6 +23,9 @@ from .errors import (
 # register default adapters
 from . import types  # noqa
 
+from .dbapi20 import BINARY, DATETIME, NUMBER, ROWID, STRING
+from .dbapi20 import Binary, Date, DateFromTicks, Time, TimeFromTicks
+from .dbapi20 import Timestamp, TimestampFromTicks
 
 # DBAPI compliancy
 connect = Connection.connect
@@ -30,18 +33,12 @@ apilevel = "2.0"
 threadsafety = 2
 paramstyle = "pyformat"
 
-__all__ = [
-    "Warning",
-    "Error",
-    "InterfaceError",
-    "DatabaseError",
-    "DataError",
-    "OperationalError",
-    "IntegrityError",
-    "InternalError",
-    "ProgrammingError",
-    "NotSupportedError",
-    "AsyncConnection",
-    "Connection",
-    "connect",
-]
+__all__ = (
+    ["Warning", "Error", "InterfaceError", "DatabaseError", "DataError"]
+    + ["OperationalError", "IntegrityError", "InternalError"]
+    + ["ProgrammingError", "NotSupportedError"]
+    + ["AsyncConnection", "Connection", "connect"]
+    + ["BINARY", "DATETIME", "NUMBER", "ROWID", "STRING"]
+    + ["Binary", "Date", "DateFromTicks", "Time", "TimeFromTicks"]
+    + ["Timestamp", "TimestampFromTicks"]
+)
