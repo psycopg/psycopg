@@ -47,6 +47,10 @@ class BaseConnection:
     ProgrammingError = e.ProgrammingError
     NotSupportedError = e.NotSupportedError
 
+    # Enums useful for the connection
+    ConnStatus = pq.ConnStatus
+    TransactionStatus = pq.TransactionStatus
+
     def __init__(self, pgconn: pq.PGconn):
         self.pgconn = pgconn
         self.cursor_factory = cursor.BaseCursor
@@ -60,7 +64,11 @@ class BaseConnection:
 
     @property
     def closed(self) -> bool:
-        return self.pgconn.status == pq.ConnStatus.BAD
+        return self.status == self.ConnStatus.BAD
+
+    @property
+    def status(self) -> pq.ConnStatus:
+        return self.pgconn.status
 
     def cursor(
         self, name: Optional[str] = None, binary: bool = False
@@ -116,7 +124,7 @@ class BaseConnection:
         conn = pq.PGconn.connect_start(conninfo.encode("utf8"))
         logger.debug("connection started, status %s", conn.status.name)
         while 1:
-            if conn.status == pq.ConnStatus.BAD:
+            if conn.status == cls.ConnStatus.BAD:
                 raise e.OperationalError(
                     f"connection is bad: {pq.error_message(conn)}"
                 )

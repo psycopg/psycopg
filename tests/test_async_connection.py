@@ -4,9 +4,9 @@ import psycopg3
 from psycopg3 import AsyncConnection
 
 
-def test_connect(pq, dsn, loop):
+def test_connect(dsn, loop):
     conn = loop.run_until_complete(AsyncConnection.connect(dsn))
-    assert conn.pgconn.status == pq.ConnStatus.OK
+    assert conn.status == conn.ConnStatus.OK
 
 
 def test_connect_bad(loop):
@@ -14,22 +14,24 @@ def test_connect_bad(loop):
         loop.run_until_complete(AsyncConnection.connect("dbname=nosuchdb"))
 
 
-def test_close(pq, aconn):
+def test_close(aconn):
     assert not aconn.closed
     aconn.close()
     assert aconn.closed
+    assert aconn.status == aconn.ConnStatus.BAD
     aconn.close()
     assert aconn.closed
+    assert aconn.status == aconn.ConnStatus.BAD
 
 
-def test_commit(loop, pq, aconn):
+def test_commit(loop, aconn):
     aconn.pgconn.exec_(b"drop table if exists foo")
     aconn.pgconn.exec_(b"create table foo (id int primary key)")
     aconn.pgconn.exec_(b"begin")
-    assert aconn.pgconn.transaction_status == pq.TransactionStatus.INTRANS
+    assert aconn.pgconn.transaction_status == aconn.TransactionStatus.INTRANS
     res = aconn.pgconn.exec_(b"insert into foo values (1)")
     loop.run_until_complete(aconn.commit())
-    assert aconn.pgconn.transaction_status == pq.TransactionStatus.IDLE
+    assert aconn.pgconn.transaction_status == aconn.TransactionStatus.IDLE
     res = aconn.pgconn.exec_(b"select id from foo where id = 1")
     assert res.get_value(0, 0) == b"1"
 
@@ -38,14 +40,14 @@ def test_commit(loop, pq, aconn):
         loop.run_until_complete(aconn.commit())
 
 
-def test_rollback(loop, pq, aconn):
+def test_rollback(loop, aconn):
     aconn.pgconn.exec_(b"drop table if exists foo")
     aconn.pgconn.exec_(b"create table foo (id int primary key)")
     aconn.pgconn.exec_(b"begin")
-    assert aconn.pgconn.transaction_status == pq.TransactionStatus.INTRANS
+    assert aconn.pgconn.transaction_status == aconn.TransactionStatus.INTRANS
     res = aconn.pgconn.exec_(b"insert into foo values (1)")
     loop.run_until_complete(aconn.rollback())
-    assert aconn.pgconn.transaction_status == pq.TransactionStatus.IDLE
+    assert aconn.pgconn.transaction_status == aconn.TransactionStatus.IDLE
     res = aconn.pgconn.exec_(b"select id from foo where id = 1")
     assert res.get_value(0, 0) is None
 
