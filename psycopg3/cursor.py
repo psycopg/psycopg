@@ -10,13 +10,14 @@ from typing import Any, List, Mapping, Optional, Sequence, Tuple, TYPE_CHECKING
 
 from . import errors as e
 from . import pq
+from . import generators
 from .utils.queries import query2pg, reorder_params
 from .utils.typing import Query, Params
 
 if TYPE_CHECKING:
-    from .connection import BaseConnection, Connection, AsyncConnection
-    from .connection import QueryGen
     from .adapt import DumpersMap, LoadersMap, Transformer
+    from .connection import BaseConnection, Connection, AsyncConnection
+    from .generators import QueryGen
 
 
 class Column(Sequence[Any]):
@@ -186,7 +187,7 @@ class BaseCursor:
             else:
                 self.conn.pgconn.send_query(query)
 
-        return self.conn._exec_gen(self.conn.pgconn)
+        return generators.execute(self.conn.pgconn)
 
     def _execute_results(self, results: List[pq.PGresult]) -> None:
         """

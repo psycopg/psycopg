@@ -55,13 +55,13 @@ def test_send_query(pq, pgconn):
     assert results[1].get_value(0, 0) == b"1"
 
 
-def test_send_query_compact_test(pq, conn):
+def test_send_query_compact_test(pq, pgconn):
     # Like the above test but use psycopg3 facilities for compactness
-    conn.pgconn.send_query(
+    pgconn.send_query(
         b"/* %s */ select pg_sleep(0.01); select 1 as foo;"
         % (b"x" * 1_000_000)
     )
-    results = conn.wait(conn._exec_gen(conn.pgconn))
+    results = psycopg3.waiting.wait(psycopg3.generators.execute(pgconn))
 
     assert len(results) == 2
     assert results[0].nfields == 1
@@ -71,17 +71,17 @@ def test_send_query_compact_test(pq, conn):
     assert results[1].fname(0) == b"foo"
     assert results[1].get_value(0, 0) == b"1"
 
-    conn.pgconn.finish()
+    pgconn.finish()
     with pytest.raises(psycopg3.OperationalError):
-        conn.pgconn.send_query(b"select 1")
+        pgconn.send_query(b"select 1")
 
 
-def test_send_query_params(pq, conn):
-    res = conn.pgconn.send_query_params(b"select $1::int + $2", [b"5", b"3"])
-    (res,) = conn.wait(conn._exec_gen(conn.pgconn))
+def test_send_query_params(pq, pgconn):
+    res = pgconn.send_query_params(b"select $1::int + $2", [b"5", b"3"])
+    (res,) = psycopg3.waiting.wait(psycopg3.generators.execute(pgconn))
     assert res.status == pq.ExecStatus.TUPLES_OK
     assert res.get_value(0, 0) == b"8"
 
-    conn.pgconn.finish()
+    pgconn.finish()
     with pytest.raises(psycopg3.OperationalError):
-        conn.pgconn.send_query_params(b"select $1", [b"1"])
+        pgconn.send_query_params(b"select $1", [b"1"])

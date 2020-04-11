@@ -8,19 +8,18 @@ import codecs
 import logging
 import asyncio
 import threading
-from typing import Any, Generator, List, Optional, Tuple, Type, TypeVar
+from typing import Any, Generator, Optional, Tuple, Type, TypeVar
 from typing import cast, TYPE_CHECKING
 
 from . import pq
 from . import errors as e
 from . import cursor
+from . import generators
 from .conninfo import make_conninfo
 from .waiting import wait, wait_async, Wait, Ready
 
 logger = logging.getLogger(__name__)
 
-ConnectGen = Generator[Tuple[int, Wait], Ready, pq.PGconn]
-QueryGen = Generator[Tuple[int, Wait], Ready, List[pq.PGresult]]
 RV = TypeVar("RV")
 
 if TYPE_CHECKING:
@@ -112,88 +111,6 @@ class BaseConnection:
         else:
             return "UTF8"
 
-    @classmethod
-    def _connect_gen(cls, conninfo: str) -> ConnectGen:
-        """
-        Generator to create a database connection without blocking.
-
-        Yield pairs (fileno, `Wait`) whenever an operation would block. The
-        generator can be restarted sending the appropriate `Ready` state when
-        the file descriptor is ready.
-        """
-        conn = pq.PGconn.connect_start(conninfo.encode("utf8"))
-        logger.debug("connection started, status %s", conn.status.name)
-        while 1:
-            if conn.status == cls.ConnStatus.BAD:
-                raise e.OperationalError(
-                    f"connection is bad: {pq.error_message(conn)}"
-                )
-
-            status = conn.connect_poll()
-            logger.debug("connection polled, status %s", conn.status.name)
-            if status == pq.PollingStatus.OK:
-                break
-            elif status == pq.PollingStatus.READING:
-                yield conn.socket, Wait.R
-            elif status == pq.PollingStatus.WRITING:
-                yield conn.socket, Wait.W
-            elif status == pq.PollingStatus.FAILED:
-                raise e.OperationalError(
-                    f"connection failed: {pq.error_message(conn)}"
-                )
-            else:
-                raise e.InternalError(f"unexpected poll status: {status}")
-
-        conn.nonblocking = 1
-        return conn
-
-    @classmethod
-    def _exec_gen(cls, pgconn: pq.PGconn) -> QueryGen:
-        """
-        Generator returning query results without blocking.
-
-        The query must have already been sent using `pgconn.send_query()` or
-        similar. Flush the query and then return the result using nonblocking
-        functions.
-
-        Yield pairs (fileno, `Wait`) whenever an operation would block. The
-        generator can be restarted sending the appropriate `Ready` state when
-        the file descriptor is ready.
-
-        Return the list of results returned by the database (whether success
-        or error).
-        """
-        results: List[pq.PGresult] = []
-
-        while 1:
-            f = pgconn.flush()
-            if f == 0:
-                break
-
-            ready = yield pgconn.socket, Wait.RW
-            if ready & Ready.R:
-                pgconn.consume_input()
-            continue
-
-        while 1:
-            pgconn.consume_input()
-            if pgconn.is_busy():
-                ready = yield pgconn.socket, Wait.R
-            res = pgconn.get_result()
-            if res is None:
-                break
-            results.append(res)
-            if res.status in (
-                pq.ExecStatus.COPY_IN,
-                pq.ExecStatus.COPY_OUT,
-                pq.ExecStatus.COPY_BOTH,
-            ):
-                # After entering copy mode the libpq will create a phony result
-                # for every request so let's break the endless loop.
-                break
-
-        return results
-
 
 class Connection(BaseConnection):
     """
@@ -216,7 +133,7 @@ class Connection(BaseConnection):
         if connection_factory is not None:
             raise NotImplementedError()
         conninfo = make_conninfo(conninfo, **kwargs)
-        gen = cls._connect_gen(conninfo)
+        gen = generators.connect(conninfo)
         pgconn = cls.wait(gen)
         return cls(pgconn)
 
@@ -239,7 +156,7 @@ class Connection(BaseConnection):
                 return
 
             self.pgconn.send_query(command)
-            (pgres,) = self.wait(self._exec_gen(self.pgconn))
+            (pgres,) = self.wait(generators.execute(self.pgconn))
             if pgres.status != pq.ExecStatus.COMMAND_OK:
                 raise e.OperationalError(
                     f"error on {command.decode('utf8')}:"
@@ -260,7 +177,7 @@ class Connection(BaseConnection):
                 b"select set_config('client_encoding', $1, false)",
                 [value.encode("ascii")],
             )
-            gen = self._exec_gen(self.pgconn)
+            gen = generators.execute(self.pgconn)
             (result,) = self.wait(gen)
             if result.status != pq.ExecStatus.TUPLES_OK:
                 raise e.error_from_result(result)
@@ -284,7 +201,7 @@ class AsyncConnection(BaseConnection):
     @classmethod
     async def connect(cls, conninfo: str, **kwargs: Any) -> "AsyncConnection":
         conninfo = make_conninfo(conninfo, **kwargs)
-        gen = cls._connect_gen(conninfo)
+        gen = generators.connect(conninfo)
         pgconn = await cls.wait(gen)
         return cls(pgconn)
 
@@ -307,7 +224,7 @@ class AsyncConnection(BaseConnection):
                 return
 
             self.pgconn.send_query(command)
-            (pgres,) = await self.wait(self._exec_gen(self.pgconn))
+            (pgres,) = await self.wait(generators.execute(self.pgconn))
             if pgres.status != pq.ExecStatus.COMMAND_OK:
                 raise e.OperationalError(
                     f"error on {command.decode('utf8')}:"
@@ -324,7 +241,7 @@ class AsyncConnection(BaseConnection):
                 b"select set_config('client_encoding', $1, false)",
                 [value.encode("ascii")],
             )
-            gen = self._exec_gen(self.pgconn)
+            gen = generators.execute(self.pgconn)
             (result,) = await self.wait(gen)
             if result.status != pq.ExecStatus.TUPLES_OK:
                 raise e.error_from_result(result)
