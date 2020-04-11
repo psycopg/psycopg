@@ -6,30 +6,33 @@ waiting for the socket to be ready. This module contains the code to execute
 the operations, yielding a polling state whenever there is to wait. The
 functions in the `waiting` module are the ones who wait more or less
 cooperatively for the socket to be ready and make these generators continue.
+
+All these generators yield pairs (fileno, `Wait`) whenever an operation would
+block. The generator can be restarted sending the appropriate `Ready` state
+when the file descriptor is ready.
+
 """
 
 # Copyright (C) 2020 The Psycopg Team
 
 import logging
-from typing import Generator, List, Tuple
+from typing import Generator, List, Tuple, TypeVar
 from .waiting import Wait, Ready
 
 from . import pq
 from . import errors as e
 
-ConnectGen = Generator[Tuple[int, Wait], Ready, pq.PGconn]
-QueryGen = Generator[Tuple[int, Wait], Ready, List[pq.PGresult]]
+# Generic type of a libpq protocol generator.
+RV = TypeVar("RV")
+PQGen = Generator[Tuple[int, Wait], Ready, RV]
 
 logger = logging.getLogger(__name__)
 
 
-def connect(conninfo: str) -> ConnectGen:
+def connect(conninfo: str) -> PQGen[pq.PGconn]:
     """
     Generator to create a database connection without blocking.
 
-    Yield pairs (fileno, `Wait`) whenever an operation would block. The
-    generator can be restarted sending the appropriate `Ready` state when
-    the file descriptor is ready.
     """
     conn = pq.PGconn.connect_start(conninfo.encode("utf8"))
     logger.debug("connection started, status %s", conn.status.name)
@@ -58,23 +61,33 @@ def connect(conninfo: str) -> ConnectGen:
     return conn
 
 
-def execute(pgconn: pq.PGconn) -> QueryGen:
+def execute(pgconn: pq.PGconn) -> PQGen[List[pq.PGresult]]:
     """
-    Generator returning query results without blocking.
+    Generator sending a query and returning results without blocking.
 
     The query must have already been sent using `pgconn.send_query()` or
     similar. Flush the query and then return the result using nonblocking
     functions.
 
-    Yield pairs (fileno, `Wait`) whenever an operation would block. The
-    generator can be restarted sending the appropriate `Ready` state when
-    the file descriptor is ready.
-
     Return the list of results returned by the database (whether success
     or error).
     """
-    results: List[pq.PGresult] = []
+    yield from send(pgconn)
+    rv = yield from fetch(pgconn)
+    return rv
 
+
+def send(pgconn: pq.PGconn) -> PQGen[None]:
+    """
+    Generator to send a query to the server without blocking.
+
+    The query must have already been sent using `pgconn.send_query()` or
+    similar. Flush the query and then return the result using nonblocking
+    functions.
+
+    After this generator has finished you may want to cycle using `fetch()`
+    to retrieve the results available.
+    """
     while 1:
         f = pgconn.flush()
         if f == 0:
@@ -85,19 +98,28 @@ def execute(pgconn: pq.PGconn) -> QueryGen:
             pgconn.consume_input()
         continue
 
+
+def fetch(pgconn: pq.PGconn) -> PQGen[List[pq.PGresult]]:
+    """
+    Generator retrieving results from the database without blocking.
+
+    The query must have already been sent to the server, so pgconn.flush() has
+    already returned 0.
+
+    Return the list of results returned by the database (whether success
+    or error).
+    """
+    S = pq.ExecStatus
+    results: List[pq.PGresult] = []
     while 1:
         pgconn.consume_input()
         if pgconn.is_busy():
-            ready = yield pgconn.socket, Wait.R
+            yield pgconn.socket, Wait.R
         res = pgconn.get_result()
         if res is None:
             break
         results.append(res)
-        if res.status in (
-            pq.ExecStatus.COPY_IN,
-            pq.ExecStatus.COPY_OUT,
-            pq.ExecStatus.COPY_BOTH,
-        ):
+        if res.status in (S.COPY_IN, S.COPY_OUT, S.COPY_BOTH):
             # After entering copy mode the libpq will create a phony result
             # for every request so let's break the endless loop.
             break

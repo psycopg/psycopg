@@ -8,7 +8,7 @@ import codecs
 import logging
 import asyncio
 import threading
-from typing import Any, Generator, Optional, Tuple, Type, TypeVar
+from typing import Any, Optional, Type
 from typing import cast, TYPE_CHECKING
 
 from . import pq
@@ -16,14 +16,13 @@ from . import errors as e
 from . import cursor
 from . import generators
 from .conninfo import make_conninfo
-from .waiting import wait, wait_async, Wait, Ready
+from .waiting import wait, wait_async
 
 logger = logging.getLogger(__name__)
 
-RV = TypeVar("RV")
-
 if TYPE_CHECKING:
     from .adapt import DumpersMap, LoadersMap
+    from .generators import PQGen, RV
 
 
 class BaseConnection:
@@ -164,11 +163,7 @@ class Connection(BaseConnection):
                 )
 
     @classmethod
-    def wait(
-        cls,
-        gen: Generator[Tuple[int, Wait], Ready, RV],
-        timeout: Optional[float] = 0.1,
-    ) -> RV:
+    def wait(cls, gen: "PQGen[RV]", timeout: Optional[float] = 0.1) -> "RV":
         return wait(gen, timeout=timeout)
 
     def set_client_encoding(self, value: str) -> None:
@@ -232,7 +227,7 @@ class AsyncConnection(BaseConnection):
                 )
 
     @classmethod
-    async def wait(cls, gen: Generator[Tuple[int, Wait], Ready, RV]) -> RV:
+    async def wait(cls, gen: "PQGen[RV]") -> "RV":
         return await wait_async(gen)
 
     async def set_client_encoding(self, value: str) -> None:

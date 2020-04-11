@@ -17,7 +17,7 @@ from .utils.typing import Query, Params
 if TYPE_CHECKING:
     from .adapt import DumpersMap, LoadersMap, Transformer
     from .connection import BaseConnection, Connection, AsyncConnection
-    from .generators import QueryGen
+    from .generators import PQGen
 
 
 class Column(Sequence[Any]):
@@ -137,7 +137,7 @@ class BaseCursor:
 
     def _execute_send(
         self, query: Query, vars: Optional[Params]
-    ) -> "QueryGen":
+    ) -> "PQGen[List[pq.PGresult]]":
         """
         Implement part of execute() before waiting common to sync and async
         """

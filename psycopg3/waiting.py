@@ -1,16 +1,23 @@
 """
 Code concerned with waiting in different contexts (blocking, async, etc).
+
+These functions are designed to consume the generators returned by the
+`generators` module function and to return their final value.
+
 """
 
 # Copyright (C) 2020 The Psycopg Team
 
 
 from enum import IntEnum
-from typing import Generator, Optional, Tuple, TypeVar
+from typing import Optional, TYPE_CHECKING
 from asyncio import get_event_loop, Event
 from selectors import DefaultSelector, EVENT_READ, EVENT_WRITE
 
 from . import errors as e
+
+if TYPE_CHECKING:
+    from .generators import PQGen, RV
 
 
 class Wait(IntEnum):
@@ -24,13 +31,7 @@ class Ready(IntEnum):
     W = EVENT_WRITE
 
 
-RV = TypeVar("RV")
-
-
-def wait(
-    gen: Generator[Tuple[int, Wait], Ready, RV],
-    timeout: Optional[float] = None,
-) -> RV:
+def wait(gen: "PQGen[RV]", timeout: Optional[float] = None) -> "RV":
     """
     Wait for a generator using the best option available on the platform.
 
@@ -55,11 +56,11 @@ def wait(
             fd, s = gen.send(ready[0][1])
 
     except StopIteration as ex:
-        rv: RV = ex.args[0]
+        rv: "RV" = ex.args[0]
         return rv
 
 
-async def wait_async(gen: Generator[Tuple[int, Wait], Ready, RV]) -> RV:
+async def wait_async(gen: "PQGen[RV]") -> "RV":
     """
     Coroutine waiting for a generator to complete.
 
@@ -103,5 +104,5 @@ async def wait_async(gen: Generator[Tuple[int, Wait], Ready, RV]) -> RV:
             fd, s = gen.send(ready)
 
     except StopIteration as ex:
-        rv: RV = ex.args[0]
+        rv: "RV" = ex.args[0]
         return rv
