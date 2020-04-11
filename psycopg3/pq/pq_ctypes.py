@@ -194,6 +194,7 @@ class PGconn:
     def send_query(self, command: bytes) -> None:
         if not isinstance(command, bytes):
             raise TypeError(f"bytes expected, got {type(command)} instead")
+        self._ensure_pgconn()
         if not impl.PQsendQuery(self.pgconn_ptr, command):
             raise PQerror(f"sending query failed: {error_message(self)}")
 

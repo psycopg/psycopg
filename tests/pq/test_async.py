@@ -1,4 +1,6 @@
+import pytest
 from select import select
+import psycopg3
 
 
 def test_send_query(pq, pgconn):
@@ -69,9 +71,17 @@ def test_send_query_compact_test(pq, conn):
     assert results[1].fname(0) == b"foo"
     assert results[1].get_value(0, 0) == b"1"
 
+    conn.pgconn.finish()
+    with pytest.raises(psycopg3.OperationalError):
+        conn.pgconn.send_query(b"select 1")
+
 
 def test_send_query_params(pq, conn):
     res = conn.pgconn.send_query_params(b"select $1::int + $2", [b"5", b"3"])
     (res,) = conn.wait(conn._exec_gen(conn.pgconn))
     assert res.status == pq.ExecStatus.TUPLES_OK
     assert res.get_value(0, 0) == b"8"
+
+    conn.pgconn.finish()
+    with pytest.raises(psycopg3.OperationalError):
+        conn.pgconn.send_query_params(b"select $1", [b"1"])
