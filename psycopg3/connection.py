@@ -58,6 +58,10 @@ class BaseConnection:
     def close(self) -> None:
         self.pgconn.finish()
 
+    @property
+    def closed(self) -> bool:
+        return self.pgconn.status == pq.ConnStatus.BAD
+
     def cursor(
         self, name: Optional[str] = None, binary: bool = False
     ) -> cursor.BaseCursor:

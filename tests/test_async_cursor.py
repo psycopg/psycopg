@@ -1,4 +1,21 @@
-def test_execute_many(aconn, loop):
+import pytest
+import psycopg3
+
+
+def test_close(aconn, loop):
+    cur = aconn.cursor()
+    assert not cur.closed
+    cur.close()
+    assert cur.closed
+
+    with pytest.raises(psycopg3.OperationalError):
+        loop.run_until_complete(cur.execute("select 'foo'"))
+
+    cur.close()
+    assert cur.closed
+
+
+def test_execute_many_results(aconn, loop):
     cur = aconn.cursor()
     rv = loop.run_until_complete(cur.execute("select 'foo'; select 'bar'"))
     assert rv is cur

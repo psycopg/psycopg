@@ -1,7 +1,21 @@
 import pytest
+import psycopg3
 
 
-def test_execute_many(conn):
+def test_close(conn):
+    cur = conn.cursor()
+    assert not cur.closed
+    cur.close()
+    assert cur.closed
+
+    with pytest.raises(psycopg3.OperationalError):
+        cur.execute("select 'foo'")
+
+    cur.close()
+    assert cur.closed
+
+
+def test_execute_many_results(conn):
     cur = conn.cursor()
     rv = cur.execute("select 'foo'; select 'bar'")
     assert rv is cur

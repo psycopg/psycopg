@@ -65,6 +65,17 @@ class BaseCursor:
         self.loaders: LoadersMap = {}
         self._reset()
         self.arraysize = 1
+        self._closed = False
+
+    def __del__(self):
+        self.close()
+
+    def close(self) -> None:
+        self._closed = True
+
+    @property
+    def closed(self) -> bool:
+        return self._closed
 
     def _reset(self) -> None:
         from .adapt import Transformer
@@ -114,17 +125,20 @@ class BaseCursor:
     def _execute_send(
         self, query: Query, vars: Optional[Params]
     ) -> "QueryGen":
-        # Implement part of execute() before waiting common to sync and async
+        """
+        Implement part of execute() before waiting common to sync and async
+        """
+        if self.closed:
+            raise e.OperationalError("the cursor is closed")
+
+        if self.conn.closed:
+            raise e.OperationalError("the connection is closed")
+
         if self.conn.pgconn.status != ConnStatus.OK:
-            if self.conn.pgconn.status == ConnStatus.BAD:
-                raise e.InterfaceError(
-                    "cannot execute operations: the connection is closed"
-                )
-            else:
-                raise e.InterfaceError(
-                    f"cannot execute operations: the connection is"
-                    f" in status {self.conn.pgconn.status}"
-                )
+            raise e.InterfaceError(
+                f"cannot execute operations: the connection is"
+                f" in status {self.conn.pgconn.status}"
+            )
 
         self._reset()
 
@@ -162,7 +176,9 @@ class BaseCursor:
         return self.conn._exec_gen(self.conn.pgconn)
 
     def _execute_results(self, results: List[PGresult]) -> None:
-        # Implement part of execute() after waiting common to sync and async
+        """
+        Implement part of execute() after waiting common to sync and async
+        """
         if not results:
             raise e.InternalError("got no result from the query")
 

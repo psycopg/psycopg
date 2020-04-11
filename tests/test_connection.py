@@ -14,6 +14,14 @@ def test_connect_bad():
         Connection.connect("dbname=nosuchdb")
 
 
+def test_close(pq, conn):
+    assert not conn.closed
+    conn.close()
+    assert conn.closed
+    conn.close()
+    assert conn.closed
+
+
 def test_commit(pq, conn):
     conn.pgconn.exec_(b"drop table if exists foo")
     conn.pgconn.exec_(b"create table foo (id int primary key)")
@@ -24,6 +32,10 @@ def test_commit(pq, conn):
     assert conn.pgconn.transaction_status == pq.TransactionStatus.IDLE
     res = conn.pgconn.exec_(b"select id from foo where id = 1")
     assert res.get_value(0, 0) == b"1"
+
+    conn.close()
+    with pytest.raises(psycopg3.OperationalError):
+        conn.commit()
 
 
 def test_rollback(pq, conn):
@@ -36,6 +48,10 @@ def test_rollback(pq, conn):
     assert conn.pgconn.transaction_status == pq.TransactionStatus.IDLE
     res = conn.pgconn.exec_(b"select id from foo where id = 1")
     assert res.get_value(0, 0) is None
+
+    conn.close()
+    with pytest.raises(psycopg3.OperationalError):
+        conn.rollback()
 
 
 def test_get_encoding(conn):
