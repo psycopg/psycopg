@@ -585,6 +585,7 @@ class Escaping:
     def escape_bytea(self, data: bytes) -> bytes:
         len_out = c_size_t()
         if self.conn is not None:
+            self.conn._ensure_pgconn()
             out = impl.PQescapeByteaConn(
                 self.conn.pgconn_ptr,
                 data,
@@ -605,6 +606,11 @@ class Escaping:
         return rv
 
     def unescape_bytea(self, data: bytes) -> bytes:
+        # not needed, but let's keep it symmetric with the escaping:
+        # if a connection is passed in, it must be valid.
+        if self.conn is not None:
+            self.conn._ensure_pgconn()
+
         len_out = c_size_t()
         out = impl.PQunescapeBytea(data, pointer(t_cast(c_ulong, len_out)))
         if not out:
