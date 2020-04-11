@@ -407,8 +407,23 @@ PQsendQueryParams.argtypes = [
 ]
 PQsendQueryParams.restype = c_int
 
-# TODO: PQsendPrepare PQsendQueryPrepared
-#       PQsendDescribePrepared PQsendDescribePortal
+PQsendPrepare = pq.PQsendPrepare
+PQsendPrepare.argtypes = [PGconn_ptr, c_char_p, c_char_p, c_int, POINTER(Oid)]
+PQsendPrepare.restype = c_int
+
+PQsendQueryPrepared = pq.PQsendQueryPrepared
+PQsendQueryPrepared.argtypes = [
+    PGconn_ptr,
+    c_char_p,
+    c_int,
+    POINTER(c_char_p),
+    POINTER(c_int),
+    POINTER(c_int),
+    c_int,
+]
+PQsendQueryPrepared.restype = c_int
+
+# TODO: PQsendDescribePrepared PQsendDescribePortal
 
 PQgetResult = pq.PQgetResult
 PQgetResult.argtypes = [PGconn_ptr]

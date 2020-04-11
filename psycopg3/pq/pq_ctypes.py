@@ -232,6 +232,48 @@ class PGconn:
                 f"sending query and params failed: {error_message(self)}"
             )
 
+    def send_prepare(
+        self,
+        name: bytes,
+        command: bytes,
+        param_types: Optional[Sequence[int]] = None,
+    ) -> None:
+        atypes: Optional[Array[impl.Oid]]
+        if param_types is None:
+            nparams = 0
+            atypes = None
+        else:
+            nparams = len(param_types)
+            atypes = (impl.Oid * nparams)(*param_types)
+
+        self._ensure_pgconn()
+        if not impl.PQsendPrepare(
+            self.pgconn_ptr, name, command, nparams, atypes
+        ):
+            raise PQerror(
+                f"sending query and params failed: {error_message(self)}"
+            )
+
+    def send_query_prepared(
+        self,
+        name: bytes,
+        param_values: Sequence[Optional[bytes]],
+        param_formats: Optional[Sequence[Format]] = None,
+        result_format: Format = Format.TEXT,
+    ) -> None:
+        # repurpose this function with a cheeky replacement of query with name,
+        # drop the param_types from the result
+        args = self._query_params_args(
+            name, param_values, None, param_formats, result_format
+        )
+        args = args[:3] + args[4:]
+
+        self._ensure_pgconn()
+        if not impl.PQsendQueryPrepared(*args):
+            raise PQerror(
+                f"sending prepared query failed: {error_message(self)}"
+            )
+
     def _query_params_args(
         self,
         command: bytes,

@@ -107,6 +107,7 @@ def test_prepare_types(pq, pgconn):
 def test_exec_prepared_binary_in(pq, pgconn):
     val = b"foo\00bar"
     res = pgconn.prepare(b"", b"select length($1::bytea), length($2::bytea)")
+    assert res.status == pq.ExecStatus.COMMAND_OK, res.error_message
 
     res = pgconn.exec_prepared(b"", [val, val], param_formats=[0, 1])
     assert res.status == pq.ExecStatus.TUPLES_OK
