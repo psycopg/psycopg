@@ -203,7 +203,7 @@ class Transformer:
             return
 
         elif isinstance(context, BaseCursor):
-            self.connection = context.conn
+            self.connection = context.connection
             self.dumpers = {}
             self._dumpers_maps.extend(
                 (self.dumpers, context.dumpers, self.connection.dumpers)
@@ -356,7 +356,7 @@ def _connection_from_context(
     elif isinstance(context, BaseConnection):
         return context
     elif isinstance(context, BaseCursor):
-        return context.conn
+        return context.connection
     elif isinstance(context, Transformer):
         return context.connection
     else:
