@@ -34,7 +34,7 @@ def error_message(obj: Union["PGconn", "PGresult"]) -> str:
             bmsg = bmsg.splitlines()[0].split(b":", 1)[-1].strip()
 
     elif isinstance(obj, pq.PGresult):
-        bmsg = obj.error_field(pq.DiagnosticField.MESSAGE_PRIMARY)
+        bmsg = obj.error_field(pq.DiagnosticField.MESSAGE_PRIMARY) or b""
         if not bmsg:
             bmsg = obj.error_message
 

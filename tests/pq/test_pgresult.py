@@ -13,6 +13,8 @@ import pytest
 def test_status(pq, pgconn, command, status):
     res = pgconn.exec_(command)
     assert res.status == getattr(pq.ExecStatus, status)
+    res.clear()
+    assert res.status == pq.ExecStatus.FATAL_ERROR
 
 
 def test_error_message(pgconn):
@@ -20,6 +22,8 @@ def test_error_message(pgconn):
     assert res.error_message == b""
     res = pgconn.exec_(b"select wat")
     assert b"wat" in res.error_message
+    res.clear()
+    assert res.error_message == b""
 
 
 def test_error_field(pq, pgconn):
@@ -27,6 +31,8 @@ def test_error_field(pq, pgconn):
     assert res.error_field(pq.DiagnosticField.SEVERITY) == b"ERROR"
     assert res.error_field(pq.DiagnosticField.SQLSTATE) == b"42703"
     assert b"wat" in res.error_field(pq.DiagnosticField.MESSAGE_PRIMARY)
+    res.clear()
+    assert res.error_field(pq.DiagnosticField.MESSAGE_PRIMARY) is None
 
 
 @pytest.mark.parametrize("n", range(4))
@@ -35,12 +41,16 @@ def test_ntuples(pgconn, n):
         b"select generate_series(1, $1)", [str(n).encode("ascii")]
     )
     assert res.ntuples == n
+    res.clear()
+    assert res.ntuples == 0
 
 
 def test_nfields(pgconn):
+    res = pgconn.exec_(b"select wat")
+    assert res.nfields == 0
     res = pgconn.exec_(b"select 1, 2, 3")
     assert res.nfields == 3
-    res = pgconn.exec_(b"select wat")
+    res.clear()
     assert res.nfields == 0
 
 
@@ -48,6 +58,10 @@ def test_fname(pgconn):
     res = pgconn.exec_(b'select 1 as foo, 2 as "BAR"')
     assert res.fname(0) == b"foo"
     assert res.fname(1) == b"BAR"
+    assert res.fname(2) is None
+    assert res.fname(-1) is None
+    res.clear()
+    assert res.fname(0) is None
 
 
 def test_ftable_and_col(pq, pgconn):
@@ -69,6 +83,9 @@ def test_ftable_and_col(pq, pgconn):
     assert res.ftable(1) == int(res.get_value(0, 3).decode("ascii"))
     assert res.ftablecol(0) == 1
     assert res.ftablecol(1) == 2
+    res.clear()
+    assert res.ftable(0) == 0
+    assert res.ftablecol(0) == 0
 
 
 @pytest.mark.parametrize("fmt", (0, 1))
@@ -77,6 +94,9 @@ def test_fformat(pq, pgconn, fmt):
     assert res.status == pq.ExecStatus.TUPLES_OK, res.error_message
     assert res.fformat(0) == fmt
     assert res.binary_tuples == fmt
+    res.clear()
+    assert res.fformat(0) == 0
+    assert res.binary_tuples == 0
 
 
 def test_ftype(pq, pgconn):
@@ -85,6 +105,8 @@ def test_ftype(pq, pgconn):
     assert res.ftype(0) == 23
     assert res.ftype(1) == 1700
     assert res.ftype(2) == 25
+    res.clear()
+    assert res.ftype(0) == 0
 
 
 def test_fmod(pq, pgconn):
@@ -93,6 +115,8 @@ def test_fmod(pq, pgconn):
     assert res.fmod(0) == -1
     assert res.fmod(1) == 0xA0004
     assert res.fmod(2) == 0xA0006
+    res.clear()
+    assert res.fmod(0) == 0
 
 
 def test_fsize(pq, pgconn):
@@ -101,6 +125,8 @@ def test_fsize(pq, pgconn):
     assert res.fsize(0) == 4
     assert res.fsize(1) == 8
     assert res.fsize(2) == -1
+    res.clear()
+    assert res.fsize(0) == 0
 
 
 def test_get_value(pq, pgconn):
@@ -109,6 +135,8 @@ def test_get_value(pq, pgconn):
     assert res.get_value(0, 0) == b"a"
     assert res.get_value(0, 1) == b""
     assert res.get_value(0, 2) is None
+    res.clear()
+    assert res.get_value(0, 0) is None
 
 
 def test_nparams_types(pq, pgconn):
@@ -122,21 +150,31 @@ def test_nparams_types(pq, pgconn):
     assert res.param_type(0) == 23
     assert res.param_type(1) == 25
 
+    res.clear()
+    assert res.nparams == 0
+    assert res.param_type(0) == 0
+
 
 def test_command_status(pq, pgconn):
     res = pgconn.exec_(b"select 1")
     assert res.command_status == b"SELECT 1"
     res = pgconn.exec_(b"set timezone to utf8")
     assert res.command_status == b"SET"
+    res.clear()
+    assert res.command_status is None
 
 
 def test_command_tuples(pq, pgconn):
+    res = pgconn.exec_(b"set timezone to utf8")
+    assert res.command_tuples is None
     res = pgconn.exec_(b"select * from generate_series(1, 10)")
     assert res.command_tuples == 10
-    res = pgconn.exec_(b"set timezone to utf8")
+    res.clear()
     assert res.command_tuples is None
 
 
 def test_oid_value(pq, pgconn):
     res = pgconn.exec_(b"select 1")
+    assert res.oid_value == 0
+    res.clear()
     assert res.oid_value == 0

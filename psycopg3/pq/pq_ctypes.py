@@ -417,7 +417,7 @@ class PGresult:
     def error_message(self) -> bytes:
         return impl.PQresultErrorMessage(self.pgresult_ptr)
 
-    def error_field(self, fieldcode: DiagnosticField) -> bytes:
+    def error_field(self, fieldcode: DiagnosticField) -> Optional[bytes]:
         return impl.PQresultErrorField(self.pgresult_ptr, fieldcode)
 
     @property
@@ -428,7 +428,7 @@ class PGresult:
     def nfields(self) -> int:
         return impl.PQnfields(self.pgresult_ptr)
 
-    def fname(self, column_number: int) -> bytes:
+    def fname(self, column_number: int) -> Optional[bytes]:
         return impl.PQfname(self.pgresult_ptr, column_number)
 
     def ftable(self, column_number: int) -> int:
@@ -476,7 +476,7 @@ class PGresult:
         return impl.PQparamtype(self.pgresult_ptr, param_number)
 
     @property
-    def command_status(self) -> bytes:
+    def command_status(self) -> Optional[bytes]:
         return impl.PQcmdStatus(self.pgresult_ptr)
 
     @property

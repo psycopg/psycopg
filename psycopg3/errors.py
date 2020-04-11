@@ -115,5 +115,6 @@ def class_for_state(sqlstate: bytes) -> Type[Error]:
 def error_from_result(result: "PGresult") -> Error:
     from psycopg3 import pq
 
-    cls = class_for_state(result.error_field(pq.DiagnosticField.SQLSTATE))
+    state = result.error_field(pq.DiagnosticField.SQLSTATE) or b""
+    cls = class_for_state(state)
     return cls(pq.error_message(result))
