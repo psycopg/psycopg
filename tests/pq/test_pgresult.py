@@ -13,6 +13,13 @@ import pytest
 def test_status(pq, pgconn, command, status):
     res = pgconn.exec_(command)
     assert res.status == getattr(pq.ExecStatus, status)
+
+
+def test_clear(pq, pgconn):
+    res = pgconn.exec_(b"select 1")
+    assert res.status == pq.ExecStatus.TUPLES_OK
+    res.clear()
+    assert res.status == pq.ExecStatus.FATAL_ERROR
     res.clear()
     assert res.status == pq.ExecStatus.FATAL_ERROR
 
