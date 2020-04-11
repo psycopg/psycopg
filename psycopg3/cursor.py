@@ -191,7 +191,7 @@ class BaseCursor:
 
         return generators.execute(self.connection.pgconn)
 
-    def _execute_results(self, results: List[pq.PGresult]) -> None:
+    def _execute_results(self, results: Sequence[pq.PGresult]) -> None:
         """
         Implement part of execute() after waiting common to sync and async
         """
@@ -202,7 +202,7 @@ class BaseCursor:
         statuses = {res.status for res in results}
         badstats = statuses - {S.TUPLES_OK, S.COMMAND_OK, S.EMPTY_QUERY}
         if not badstats:
-            self._results = results
+            self._results = list(results)
             self.pgresult = results[0]
             return
 
@@ -218,6 +218,75 @@ class BaseCursor:
                 f"got unexpected status from query:"
                 f" {', '.join(sorted(s.name for s in sorted(badstats)))}"
             )
+
+    def _send_prepare(
+        self, name: bytes, query: Query, vars: Optional[Params]
+    ) -> "PQGen[List[pq.PGresult]]":
+        """
+        Implement part of execute() before waiting common to sync and async
+        """
+        from .adapt import Transformer
+
+        if self.closed:
+            raise e.OperationalError("the cursor is closed")
+
+        if self.connection.closed:
+            raise e.OperationalError("the connection is closed")
+
+        if self.connection.status != self.connection.ConnStatus.OK:
+            raise e.InterfaceError(
+                f"cannot execute operations: the connection is"
+                f" in status {self.connection.status}"
+            )
+
+        self._reset()
+        self._transformer = Transformer(self)
+
+        codec = self.connection.codec
+
+        if isinstance(query, str):
+            query = codec.encode(query)[0]
+
+        # process %% -> % only if there are paramters, even if empty list
+        if vars is not None:
+            query, formats, order = query2pg(query, vars, codec)
+
+        if order is not None:
+            assert isinstance(vars, Mapping)
+            vars = reorder_params(vars, order)
+        assert isinstance(vars, Sequence)
+        params, types = self._transformer.dump_sequence(vars, formats)
+        self.connection.pgconn.send_prepare(
+            name, query, param_types=types,
+        )
+        self._order = order
+        self._formats = formats
+        return generators.execute(self.connection.pgconn)
+
+    def _send_query_prepared(
+        self, name: bytes, vars: Optional[Params]
+    ) -> "PQGen[List[pq.PGresult]]":
+        if self.connection.closed:
+            raise e.OperationalError("the connection is closed")
+
+        if self.connection.status != self.connection.ConnStatus.OK:
+            raise e.InterfaceError(
+                f"cannot execute operations: the connection is"
+                f" in status {self.connection.status}"
+            )
+
+        if self._order is not None:
+            assert isinstance(vars, Mapping)
+            vars = reorder_params(vars, self._order)
+        assert isinstance(vars, Sequence)
+        params, types = self._transformer.dump_sequence(vars, self._formats)
+        self.connection.pgconn.send_query_prepared(
+            name,
+            params,
+            param_formats=self._formats,
+            result_format=pq.Format(self.binary),
+        )
+        return generators.execute(self.connection.pgconn)
 
     def nextset(self) -> Optional[bool]:
         self._iresult += 1
@@ -264,10 +333,17 @@ class Cursor(BaseCursor):
         self, query: Query, vars_seq: Sequence[Params]
     ) -> "Cursor":
         with self.connection.lock:
-            for vars in vars_seq:
-                gen = self._execute_send(query, vars)
-                results = self.connection.wait(gen)
-                self._execute_results(results)
+            for i, vars in enumerate(vars_seq):
+                if i == 0:
+                    gen = self._send_prepare(b"", query, vars)
+                    (result,) = self.connection.wait(gen)
+                    if result.status == self.ExecStatus.FATAL_ERROR:
+                        raise e.error_from_result(result)
+
+                gen = self._send_query_prepared(b"", vars)
+                (result,) = self.connection.wait(gen)
+                self._execute_results((result,))
+
         return self
 
     def fetchone(self) -> Optional[Sequence[Any]]:

@@ -100,3 +100,64 @@ def test_query_badenc(conn):
     cur = conn.cursor()
     with pytest.raises(UnicodeEncodeError):
         cur.execute("select '\u20ac'")
+
+
+@pytest.fixture(scope="session")
+def _execmany(svcconn):
+    cur = svcconn.cursor()
+    cur.execute(
+        """
+        drop table if exists execmany;
+        create table execmany (id serial primary key, num integer, data text)
+        """
+    )
+
+
+@pytest.fixture(scope="function")
+def execmany(svcconn, _execmany):
+    cur = svcconn.cursor()
+    cur.execute("truncate table execmany")
+
+
+def test_executemany(conn, execmany):
+    cur = conn.cursor()
+    cur.executemany(
+        "insert into execmany(num, data) values (%s, %s)",
+        [(10, "hello"), (20, "world")],
+    )
+    cur.execute("select num, data from execmany order by 1")
+    assert cur.fetchall() == [(10, "hello"), (20, "world")]
+
+
+def test_executemany_name(conn, execmany):
+    cur = conn.cursor()
+    cur.executemany(
+        "insert into execmany(num, data) values (%(num)s, %(data)s)",
+        [{"num": 11, "data": "hello", "x": 1}, {"num": 21, "data": "world"}],
+    )
+    cur.execute("select num, data from execmany order by 1")
+    assert cur.fetchall() == [(11, "hello"), (21, "world")]
+
+
+@pytest.mark.xfail
+def test_executemany_rowcount(conn, execmany):
+    cur = conn.cursor()
+    cur.executemany(
+        "insert into execmany(num, data) values (%s, %s)",
+        [(10, "hello"), (20, "world")],
+    )
+    assert cur.rowcount == 2
+
+
+@pytest.mark.parametrize(
+    "query",
+    [
+        "insert into nosuchtable values (%s, %s)",
+        "copy (select %s, %s) to stdout",
+        "wat (%s, %s)",
+    ],
+)
+def test_executemany_badquery(conn, query):
+    cur = conn.cursor()
+    with pytest.raises(psycopg3.DatabaseError):
+        cur.executemany(query, [(10, "hello"), (20, "world")])
