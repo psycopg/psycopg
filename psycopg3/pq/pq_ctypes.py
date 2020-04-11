@@ -75,8 +75,7 @@ class PGconn:
 
     @property
     def info(self) -> List["ConninfoOption"]:
-        if not self.pgconn_ptr:
-            raise PQerror("the connection is closed")
+        self._ensure_pgconn()
         opts = impl.PQconninfo(self.pgconn_ptr)
         if not opts:
             raise MemoryError("couldn't allocate connection info")
@@ -86,8 +85,7 @@ class PGconn:
             impl.PQconninfoFree(opts)
 
     def reset(self) -> None:
-        if not self.pgconn_ptr:
-            raise PQerror("the connection is no more available")
+        self._ensure_pgconn()
         impl.PQreset(self.pgconn_ptr)
 
     def reset_start(self) -> None:
@@ -149,8 +147,7 @@ class PGconn:
         return TransactionStatus(rv)
 
     def parameter_status(self, name: bytes) -> Optional[bytes]:
-        if not self.pgconn_ptr:
-            raise PQerror("the connection is closed")
+        self._ensure_pgconn()
         return impl.PQparameterStatus(self.pgconn_ptr, name)
 
     @property
@@ -188,6 +185,7 @@ class PGconn:
     def exec_(self, command: bytes) -> "PGresult":
         if not isinstance(command, bytes):
             raise TypeError(f"bytes expected, got {type(command)} instead")
+        self._ensure_pgconn()
         rv = impl.PQexec(self.pgconn_ptr, command)
         if not rv:
             raise MemoryError("couldn't allocate PGresult")
@@ -210,6 +208,7 @@ class PGconn:
         args = self._query_params_args(
             command, param_values, param_types, param_formats, result_format
         )
+        self._ensure_pgconn()
         rv = impl.PQexecParams(*args)
         if not rv:
             raise MemoryError("couldn't allocate PGresult")
@@ -226,6 +225,7 @@ class PGconn:
         args = self._query_params_args(
             command, param_values, param_types, param_formats, result_format
         )
+        self._ensure_pgconn()
         if not impl.PQsendQueryParams(*args):
             raise PQerror(
                 f"sending query and params failed: {error_message(self)}"
@@ -304,6 +304,7 @@ class PGconn:
             nparams = len(param_types)
             atypes = (impl.Oid * nparams)(*param_types)
 
+        self._ensure_pgconn()
         rv = impl.PQprepare(self.pgconn_ptr, name, command, nparams, atypes)
         if not rv:
             raise MemoryError("couldn't allocate PGresult")
@@ -338,6 +339,7 @@ class PGconn:
                 )
             aformats = (c_int * nparams)(*param_formats)
 
+        self._ensure_pgconn()
         rv = impl.PQexecPrepared(
             self.pgconn_ptr,
             name,
@@ -354,6 +356,7 @@ class PGconn:
     def describe_prepared(self, name: bytes) -> "PGresult":
         if not isinstance(name, bytes):
             raise TypeError(f"'name' must be bytes, got {type(name)} instead")
+        self._ensure_pgconn()
         rv = impl.PQdescribePrepared(self.pgconn_ptr, name)
         if not rv:
             raise MemoryError("couldn't allocate PGresult")
@@ -362,6 +365,7 @@ class PGconn:
     def describe_portal(self, name: bytes) -> "PGresult":
         if not isinstance(name, bytes):
             raise TypeError(f"'name' must be bytes, got {type(name)} instead")
+        self._ensure_pgconn()
         rv = impl.PQdescribePortal(self.pgconn_ptr, name)
         if not rv:
             raise MemoryError("couldn't allocate PGresult")
@@ -426,6 +430,10 @@ class PGconn:
         if not self.pgconn_ptr:
             raise PQerror("the connection is closed")
         return bool(func(self.pgconn_ptr))
+
+    def _ensure_pgconn(self) -> None:
+        if not self.pgconn_ptr:
+            raise PQerror("the connection is closed")
 
 
 class PGresult:
