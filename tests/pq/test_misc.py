@@ -13,3 +13,8 @@ def test_error_message(pq, pgconn):
 
     with pytest.raises(TypeError):
         pq.error_message(None)
+
+    res.clear()
+    assert pq.error_message(res) == "no details available"
+    pgconn.finish()
+    assert "NULL" in pq.error_message(pgconn)
