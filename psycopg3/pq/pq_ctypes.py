@@ -144,7 +144,7 @@ class PGconn:
         rv = impl.PQtransactionStatus(self.pgconn_ptr)
         return TransactionStatus(rv)
 
-    def parameter_status(self, name: bytes) -> bytes:
+    def parameter_status(self, name: bytes) -> Optional[bytes]:
         return impl.PQparameterStatus(self.pgconn_ptr, name)
 
     @property

@@ -45,17 +45,10 @@ def test_get_encoding(aconn, loop):
     assert enc == aconn.encoding
 
 
-def test_set_encoding_noprop(aconn):
-    newenc = "LATIN1" if aconn.encoding != "LATIN1" else "UTF8"
-    assert aconn.encoding != newenc
-    with pytest.raises(psycopg3.NotSupportedError):
-        aconn.encoding = newenc
-
-
 def test_set_encoding(aconn, loop):
     newenc = "LATIN1" if aconn.encoding != "LATIN1" else "UTF8"
     assert aconn.encoding != newenc
-    loop.run_until_complete(aconn.set_encoding(newenc))
+    loop.run_until_complete(aconn.set_client_encoding(newenc))
     assert aconn.encoding == newenc
     cur = aconn.cursor()
     loop.run_until_complete(cur.execute("show client_encoding"))
@@ -65,4 +58,4 @@ def test_set_encoding(aconn, loop):
 
 def test_set_encoding_bad(aconn, loop):
     with pytest.raises(psycopg3.DatabaseError):
-        loop.run_until_complete(aconn.set_encoding("WAT"))
+        loop.run_until_complete(aconn.set_client_encoding("WAT"))

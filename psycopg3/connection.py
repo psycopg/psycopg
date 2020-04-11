@@ -53,15 +53,21 @@ class BaseConnection:
     @property
     def codec(self) -> codecs.CodecInfo:
         # TODO: utf8 fastpath?
-        pgenc = self.pgconn.parameter_status(b"client_encoding")
+        pgenc = self.pgconn.parameter_status(b"client_encoding") or b""
         if self._pgenc != pgenc:
-            try:
-                pyenc = pq.py_codecs[pgenc.decode("ascii")]
-            except KeyError:
-                raise e.NotSupportedError(
-                    f"encoding {pgenc.decode('ascii')} not available in Python"
-                )
-            self._codec = codecs.lookup(pyenc)
+            if pgenc:
+                try:
+                    pyenc = pq.py_codecs[pgenc.decode("ascii")]
+                except KeyError:
+                    raise e.NotSupportedError(
+                        f"encoding {pgenc.decode('ascii')} not available in Python"
+                    )
+                self._codec = codecs.lookup(pyenc)
+            else:
+                # fallback for a connection closed whose codec was never asked
+                if not hasattr(self, "_codec"):
+                    self._codec = codecs.lookup("utf8")
+
             self._pgenc = pgenc
         return self._codec
 
@@ -73,7 +79,11 @@ class BaseConnection:
 
     @property
     def encoding(self) -> str:
-        return self.pgconn.parameter_status(b"client_encoding").decode("ascii")
+        rv = self.pgconn.parameter_status(b"client_encoding")
+        if rv is not None:
+            return rv.decode("ascii")
+        else:
+            return "UTF8"
 
     @classmethod
     def _connect_gen(cls, conninfo: str) -> ConnectGen:
@@ -217,12 +227,7 @@ class Connection(BaseConnection):
     ) -> RV:
         return wait(gen, timeout=timeout)
 
-    @property
-    def encoding(self) -> str:
-        return self.pgconn.parameter_status(b"client_encoding").decode("ascii")
-
-    @encoding.setter
-    def encoding(self, value: str) -> None:
+    def set_client_encoding(self, value: str) -> None:
         with self.lock:
             self.pgconn.send_query_params(
                 b"select set_config('client_encoding', $1, false)",
@@ -286,18 +291,7 @@ class AsyncConnection(BaseConnection):
     async def wait(cls, gen: Generator[Tuple[int, Wait], Ready, RV]) -> RV:
         return await wait_async(gen)
 
-    @property
-    def encoding(self) -> str:
-        return self.pgconn.parameter_status(b"client_encoding").decode("ascii")
-
-    @encoding.setter
-    def encoding(self, value: str) -> None:
-        raise e.NotSupportedError(
-            "you can't set 'encoding' on an async connection."
-            " Use 'await conn.set_encoding()' instead"
-        )
-
-    async def set_encoding(self, value: str) -> None:
+    async def set_client_encoding(self, value: str) -> None:
         async with self.lock:
             self.pgconn.send_query_params(
                 b"select set_config('client_encoding', $1, false)",
