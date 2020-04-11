@@ -38,6 +38,10 @@ def test_connect_async(pq, dsn):
 
     assert conn.status == pq.ConnStatus.OK
 
+    conn.finish()
+    with pytest.raises(psycopg3.OperationalError):
+        conn.connect_poll()
+
 
 def test_connect_async_bad(pq, dsn):
     conn = pq.PGconn.connect_start(b"dbname=psycopg3_test_not_for_real")
@@ -89,9 +93,10 @@ def test_reset(pq, pgconn):
     pgconn.reset()
     assert pgconn.status == pq.ConnStatus.OK
 
-    # doesn't work after finish, but doesn't die either
     pgconn.finish()
-    pgconn.reset()
+    with pytest.raises(psycopg3.OperationalError):
+        pgconn.reset()
+
     assert pgconn.status == pq.ConnStatus.BAD
 
 
@@ -116,7 +121,8 @@ def test_reset_async(pq, pgconn):
     with pytest.raises(psycopg3.OperationalError):
         pgconn.reset_start()
 
-    assert pgconn.reset_poll() == 0
+    with pytest.raises(psycopg3.OperationalError):
+        pgconn.reset_poll()
 
 
 def test_ping(pq, dsn):

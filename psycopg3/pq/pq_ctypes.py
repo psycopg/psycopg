@@ -65,7 +65,7 @@ class PGconn:
         return cls(pgconn_ptr)
 
     def connect_poll(self) -> PollingStatus:
-        rv = impl.PQconnectPoll(self.pgconn_ptr)
+        rv = self._call_int(impl.PQconnectPoll)
         return PollingStatus(rv)
 
     def finish(self) -> None:
@@ -86,6 +86,8 @@ class PGconn:
             impl.PQconninfoFree(opts)
 
     def reset(self) -> None:
+        if not self.pgconn_ptr:
+            raise PQerror("the connection is no more available")
         impl.PQreset(self.pgconn_ptr)
 
     def reset_start(self) -> None:
@@ -93,7 +95,7 @@ class PGconn:
             raise PQerror("couldn't reset connection")
 
     def reset_poll(self) -> PollingStatus:
-        rv = impl.PQresetPoll(self.pgconn_ptr)
+        rv = self._call_int(impl.PQresetPoll)
         return PollingStatus(rv)
 
     @classmethod
