@@ -6,18 +6,17 @@ psycopg3 cursor objects
 
 import codecs
 from operator import attrgetter
-from typing import Any, List, Mapping, Optional, Sequence, Tuple, TYPE_CHECKING
+from typing import Any, List, Optional, Sequence, Tuple, TYPE_CHECKING
 
 from . import errors as e
 from . import pq
 from . import generators
-from .utils.queries import query2pg, reorder_params
+from .utils.queries import PostgresQuery
 from .utils.typing import Query, Params
 
 if TYPE_CHECKING:
     from .adapt import DumpersMap, LoadersMap, Transformer
     from .connection import BaseConnection, Connection, AsyncConnection
-    from .generators import PQGen
 
 
 class Column(Sequence[Any]):
@@ -135,12 +134,7 @@ class BaseCursor:
         # no-op
         pass
 
-    def _execute_send(
-        self, query: Query, vars: Optional[Params]
-    ) -> "PQGen[List[pq.PGresult]]":
-        """
-        Implement part of execute() before waiting common to sync and async
-        """
+    def _start_query(self) -> None:
         from .adapt import Transformer
 
         if self.closed:
@@ -158,38 +152,31 @@ class BaseCursor:
         self._reset()
         self._transformer = Transformer(self)
 
-        codec = self.connection.codec
+    def _execute_send(self, query: Query, vars: Optional[Params]) -> None:
+        """
+        Implement part of execute() before waiting common to sync and async
+        """
+        pgq = PostgresQuery(self._transformer)
+        pgq.convert(query, vars)
 
-        if isinstance(query, str):
-            query = codec.encode(query)[0]
-
-        # process %% -> % only if there are paramters, even if empty list
-        if vars is not None:
-            query, formats, order = query2pg(query, vars, codec)
-        if vars:
-            if order is not None:
-                assert isinstance(vars, Mapping)
-                vars = reorder_params(vars, order)
-            assert isinstance(vars, Sequence)
-            params, types = self._transformer.dump_sequence(vars, formats)
+        if pgq.params:
             self.connection.pgconn.send_query_params(
-                query,
-                params,
-                param_formats=formats,
-                param_types=types,
+                pgq.query,
+                pgq.params,
+                param_formats=pgq.formats,
+                param_types=pgq.types,
                 result_format=pq.Format(self.binary),
             )
+
         else:
             # if we don't have to, let's use exec_ as it can run more than
             # one query in one go
             if self.binary:
                 self.connection.pgconn.send_query_params(
-                    query, (), result_format=pq.Format(self.binary)
+                    pgq.query, None, result_format=pq.Format(self.binary)
                 )
             else:
-                self.connection.pgconn.send_query(query)
-
-        return generators.execute(self.connection.pgconn)
+                self.connection.pgconn.send_query(pgq.query)
 
     def _execute_results(self, results: Sequence[pq.PGresult]) -> None:
         """
@@ -221,72 +208,26 @@ class BaseCursor:
 
     def _send_prepare(
         self, name: bytes, query: Query, vars: Optional[Params]
-    ) -> "PQGen[List[pq.PGresult]]":
+    ) -> PostgresQuery:
         """
         Implement part of execute() before waiting common to sync and async
         """
-        from .adapt import Transformer
+        pgq = PostgresQuery(self._transformer)
+        pgq.convert(query, vars)
 
-        if self.closed:
-            raise e.OperationalError("the cursor is closed")
-
-        if self.connection.closed:
-            raise e.OperationalError("the connection is closed")
-
-        if self.connection.status != self.connection.ConnStatus.OK:
-            raise e.InterfaceError(
-                f"cannot execute operations: the connection is"
-                f" in status {self.connection.status}"
-            )
-
-        self._reset()
-        self._transformer = Transformer(self)
-
-        codec = self.connection.codec
-
-        if isinstance(query, str):
-            query = codec.encode(query)[0]
-
-        # process %% -> % only if there are paramters, even if empty list
-        if vars is not None:
-            query, formats, order = query2pg(query, vars, codec)
-
-        if order is not None:
-            assert isinstance(vars, Mapping)
-            vars = reorder_params(vars, order)
-        assert isinstance(vars, Sequence)
-        params, types = self._transformer.dump_sequence(vars, formats)
         self.connection.pgconn.send_prepare(
-            name, query, param_types=types,
+            name, pgq.query, param_types=pgq.types,
         )
-        self._order = order
-        self._formats = formats
-        return generators.execute(self.connection.pgconn)
 
-    def _send_query_prepared(
-        self, name: bytes, vars: Optional[Params]
-    ) -> "PQGen[List[pq.PGresult]]":
-        if self.connection.closed:
-            raise e.OperationalError("the connection is closed")
+        return pgq
 
-        if self.connection.status != self.connection.ConnStatus.OK:
-            raise e.InterfaceError(
-                f"cannot execute operations: the connection is"
-                f" in status {self.connection.status}"
-            )
-
-        if self._order is not None:
-            assert isinstance(vars, Mapping)
-            vars = reorder_params(vars, self._order)
-        assert isinstance(vars, Sequence)
-        params, types = self._transformer.dump_sequence(vars, self._formats)
+    def _send_query_prepared(self, name: bytes, pgq: PostgresQuery) -> None:
         self.connection.pgconn.send_query_prepared(
             name,
-            params,
-            param_formats=self._formats,
+            pgq.params,
+            param_formats=pgq.formats,
             result_format=pq.Format(self.binary),
         )
-        return generators.execute(self.connection.pgconn)
 
     def nextset(self) -> Optional[bool]:
         self._iresult += 1
@@ -324,7 +265,9 @@ class Cursor(BaseCursor):
 
     def execute(self, query: Query, vars: Optional[Params] = None) -> "Cursor":
         with self.connection.lock:
-            gen = self._execute_send(query, vars)
+            self._start_query()
+            self._execute_send(query, vars)
+            gen = generators.execute(self.connection.pgconn)
             results = self.connection.wait(gen)
             self._execute_results(results)
         return self
@@ -333,14 +276,19 @@ class Cursor(BaseCursor):
         self, query: Query, vars_seq: Sequence[Params]
     ) -> "Cursor":
         with self.connection.lock:
+            self._start_query()
             for i, vars in enumerate(vars_seq):
                 if i == 0:
-                    gen = self._send_prepare(b"", query, vars)
+                    pgq = self._send_prepare(b"", query, vars)
+                    gen = generators.execute(self.connection.pgconn)
                     (result,) = self.connection.wait(gen)
                     if result.status == self.ExecStatus.FATAL_ERROR:
                         raise e.error_from_result(result)
+                else:
+                    pgq.dump(vars)
 
-                gen = self._send_query_prepared(b"", vars)
+                self._send_query_prepared(b"", pgq)
+                gen = generators.execute(self.connection.pgconn)
                 (result,) = self.connection.wait(gen)
                 self._execute_results((result,))
 
@@ -388,7 +336,9 @@ class AsyncCursor(BaseCursor):
         self, query: Query, vars: Optional[Params] = None
     ) -> "AsyncCursor":
         async with self.connection.lock:
-            gen = self._execute_send(query, vars)
+            self._start_query()
+            self._execute_send(query, vars)
+            gen = generators.execute(self.connection.pgconn)
             results = await self.connection.wait(gen)
             self._execute_results(results)
         return self

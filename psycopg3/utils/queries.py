@@ -7,11 +7,66 @@ Utility module to manipulate queries
 import re
 from codecs import CodecInfo
 from typing import Any, Dict, List, Mapping, Match, NamedTuple, Optional
-from typing import Sequence, Tuple, Union
+from typing import Sequence, Tuple, Union, TYPE_CHECKING
 
 from .. import errors as e
 from ..pq import Format
-from .typing import Params
+from .typing import Query, Params
+
+if TYPE_CHECKING:
+    from ..adapt import Transformer
+
+
+class PostgresQuery:
+    """
+    Helper to convert a Python query and parameters into Postgres format.
+    """
+
+    def __init__(self, transformer: "Transformer"):
+        self._tx = transformer
+        self.query: bytes = b""
+        self.params: Optional[List[Optional[bytes]]] = None
+        self.types: Optional[List[int]] = None
+        self.formats: Optional[List[Format]] = None
+
+        self._order: Optional[List[str]] = None
+
+    def convert(self, query: Query, vars: Optional[Params]) -> None:
+        """
+        Set up the query and parameters to convert.
+
+        The results of this function can be obtained accessing the object
+        attributes (`query`, `params`, `types`, `formats`).
+        """
+        codec = self._tx.codec
+        if isinstance(query, str):
+            query = codec.encode(query)[0]
+        if vars is not None:
+            self.query, self.formats, self._order = query2pg(
+                query, vars, codec
+            )
+        else:
+            self.query = query
+            self.formats = self._order = None
+
+        self.dump(vars)
+
+    def dump(self, vars: Optional[Params]) -> None:
+        """
+        Process a new set of variables on the same query as before.
+
+        This method updates `params` and `types`.
+        """
+        if vars:
+            if self._order is not None:
+                assert isinstance(vars, Mapping)
+                vars = reorder_params(vars, self._order)
+            assert isinstance(vars, Sequence)
+            self.params, self.types = self._tx.dump_sequence(
+                vars, self.formats or ()
+            )
+        else:
+            self.params = self.types = None
 
 
 def query2pg(

@@ -201,7 +201,7 @@ class PGconn:
     def exec_params(
         self,
         command: bytes,
-        param_values: Sequence[Optional[bytes]],
+        param_values: Optional[Sequence[Optional[bytes]]],
         param_types: Optional[Sequence[int]] = None,
         param_formats: Optional[Sequence[Format]] = None,
         result_format: Format = Format.TEXT,
@@ -218,7 +218,7 @@ class PGconn:
     def send_query_params(
         self,
         command: bytes,
-        param_values: Sequence[Optional[bytes]],
+        param_values: Optional[Sequence[Optional[bytes]]],
         param_types: Optional[Sequence[int]] = None,
         param_formats: Optional[Sequence[Format]] = None,
         result_format: Format = Format.TEXT,
@@ -257,7 +257,7 @@ class PGconn:
     def send_query_prepared(
         self,
         name: bytes,
-        param_values: Sequence[Optional[bytes]],
+        param_values: Optional[Sequence[Optional[bytes]]],
         param_formats: Optional[Sequence[Format]] = None,
         result_format: Format = Format.TEXT,
     ) -> None:
@@ -277,7 +277,7 @@ class PGconn:
     def _query_params_args(
         self,
         command: bytes,
-        param_values: Sequence[Optional[bytes]],
+        param_values: Optional[Sequence[Optional[bytes]]],
         param_types: Optional[Sequence[int]] = None,
         param_formats: Optional[Sequence[Format]] = None,
         result_format: Format = Format.TEXT,
@@ -285,10 +285,10 @@ class PGconn:
         if not isinstance(command, bytes):
             raise TypeError(f"bytes expected, got {type(command)} instead")
 
-        nparams = len(param_values)
+        nparams = len(param_values) if param_values is not None else 0
         aparams: Optional[Array[c_char_p]] = None
         alenghts: Optional[Array[c_int]] = None
-        if nparams:
+        if param_values:
             aparams = (c_char_p * nparams)(*param_values)
             alenghts = (c_int * nparams)(
                 *(len(p) if p is not None else 0 for p in param_values)
@@ -356,17 +356,17 @@ class PGconn:
     def exec_prepared(
         self,
         name: bytes,
-        param_values: Sequence[bytes],
+        param_values: Optional[Sequence[bytes]],
         param_formats: Optional[Sequence[int]] = None,
         result_format: int = 0,
     ) -> "PGresult":
         if not isinstance(name, bytes):
             raise TypeError(f"'name' must be bytes, got {type(name)} instead")
 
-        nparams = len(param_values)
+        nparams = len(param_values) if param_values is not None else 0
         aparams: Optional[Array[c_char_p]] = None
         alenghts: Optional[Array[c_int]] = None
-        if nparams:
+        if param_values:
             aparams = (c_char_p * nparams)(*param_values)
             alenghts = (c_int * nparams)(
                 *(len(p) if p is not None else 0 for p in param_values)

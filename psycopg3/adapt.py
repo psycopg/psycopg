@@ -167,6 +167,7 @@ class Transformer:
 
     def __init__(self, context: AdaptContext = None):
         self.connection: Optional[BaseConnection]
+        self.codec: codecs.CodecInfo
         self.dumpers: DumpersMap
         self.loaders: LoadersMap
         self._dumpers_maps: List[DumpersMap] = []
@@ -186,6 +187,7 @@ class Transformer:
     def _setup_context(self, context: AdaptContext) -> None:
         if context is None:
             self.connection = None
+            self.codec = codecs.lookup("utf8")
             self.dumpers = {}
             self.loaders = {}
             self._dumpers_maps = [self.dumpers]
@@ -195,6 +197,7 @@ class Transformer:
             # A transformer created from a transformers: usually it happens
             # for nested types: share the entire state of the parent
             self.connection = context.connection
+            self.codec = context.codec
             self.dumpers = context.dumpers
             self.loaders = context.loaders
             self._dumpers_maps.extend(context._dumpers_maps)
@@ -204,6 +207,7 @@ class Transformer:
 
         elif isinstance(context, BaseCursor):
             self.connection = context.connection
+            self.codec = context.connection.codec
             self.dumpers = {}
             self._dumpers_maps.extend(
                 (self.dumpers, context.dumpers, self.connection.dumpers)
@@ -215,6 +219,7 @@ class Transformer:
 
         elif isinstance(context, BaseConnection):
             self.connection = context
+            self.codec = context.codec
             self.dumpers = {}
             self._dumpers_maps.extend((self.dumpers, context.dumpers))
             self.loaders = {}
