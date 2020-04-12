@@ -9,6 +9,8 @@ implementation-dependant but all the implementations share the same interface.
 
 # Copyright (C) 2020 The Psycopg Team
 
+from types import ModuleType
+
 from .enums import (
     ConnStatus,
     PollingStatus,
@@ -21,7 +23,17 @@ from .enums import (
 from .encodings import py_codecs
 from .misc import error_message, ConninfoOption
 
-from . import pq_ctypes as pq_module
+
+def import_libpq() -> ModuleType:
+    """
+    Find the best libpw wrapper available.
+    """
+    from . import pq_ctypes
+
+    return pq_ctypes
+
+
+pq_module = import_libpq()
 
 version = pq_module.version
 PGconn = pq_module.PGconn
