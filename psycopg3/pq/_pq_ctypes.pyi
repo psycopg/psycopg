@@ -19,7 +19,7 @@ class PQconninfoOption_struct:
     compiled: bytes
     val: bytes
     label: bytes
-    dispatcher: bytes
+    dispchar: bytes
     dispsize: int
 
 def PQhostaddr(arg1: Optional[PGconn_struct]) -> bytes: ...

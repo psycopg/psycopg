@@ -627,7 +627,7 @@ class Conninfo:
         cls, opts: Sequence[impl.PQconninfoOption_struct]
     ) -> List[ConninfoOption]:
         rv = []
-        skws = "keyword envvar compiled val label dispatcher".split()
+        skws = "keyword envvar compiled val label dispchar".split()
         for opt in opts:
             if not opt.keyword:
                 break

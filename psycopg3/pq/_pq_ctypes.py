@@ -48,7 +48,7 @@ class PQconninfoOption_struct(Structure):
         ("compiled", c_char_p),
         ("val", c_char_p),
         ("label", c_char_p),
-        ("dispatcher", c_char_p),
+        ("dispchar", c_char_p),
         ("dispsize", c_int),
     ]
 

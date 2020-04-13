@@ -10,7 +10,7 @@ def test_defaults(pq, tempenv):
     assert port.compiled == b"5432"
     assert port.val == b"15432"
     assert port.label == b"Database-Port"
-    assert port.dispatcher == b""
+    assert port.dispchar == b""
     assert port.dispsize == 6
 
 

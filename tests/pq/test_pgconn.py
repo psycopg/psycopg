@@ -74,7 +74,7 @@ def test_info(pq, dsn, pgconn):
     dbname = [d for d in info if d.keyword == b"dbname"][0]
     assert dbname.envvar == b"PGDATABASE"
     assert dbname.label == b"Database-Name"
-    assert dbname.dispatcher == b""
+    assert dbname.dispchar == b""
     assert dbname.dispsize == 20
 
     parsed = pq.Conninfo.parse(dsn.encode("utf8"))

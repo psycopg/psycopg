@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 
 
 ConninfoOption = namedtuple(
-    "ConninfoOption", "keyword envvar compiled val label dispatcher dispsize"
+    "ConninfoOption", "keyword envvar compiled val label dispchar dispsize"
 )
 
 
