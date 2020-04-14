@@ -1,8 +1,8 @@
 import pytest
 
 
-def test_defaults(pq, tempenv):
-    tempenv["PGPORT"] = "15432"
+def test_defaults(pq, monkeypatch):
+    monkeypatch.setenv("PGPORT", "15432")
     defs = pq.Conninfo.get_defaults()
     assert len(defs) > 20
     port = [d for d in defs if d.keyword == b"port"][0]

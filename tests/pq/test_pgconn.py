@@ -1,3 +1,4 @@
+import os
 from select import select
 
 import pytest
@@ -208,8 +209,8 @@ def test_transaction_status(pq, pgconn):
     assert pgconn.transaction_status == pq.TransactionStatus.UNKNOWN
 
 
-def test_parameter_status(pq, dsn, tempenv):
-    tempenv["PGAPPNAME"] = "psycopg3 tests"
+def test_parameter_status(pq, dsn, monkeypatch):
+    monkeypatch.setenv("PGAPPNAME", "psycopg3 tests")
     pgconn = pq.PGconn.connect(dsn.encode("utf8"))
     assert pgconn.parameter_status(b"application_name") == b"psycopg3 tests"
     assert pgconn.parameter_status(b"wat") is None
@@ -275,7 +276,7 @@ def test_needs_password(pgconn):
         pgconn.needs_password
 
 
-def test_used_password(pq, pgconn, tempenv, dsn):
+def test_used_password(pq, pgconn, dsn, monkeypatch):
     assert isinstance(pgconn.used_password, bool)
 
     # Assume that if a password was passed then it was needed.
@@ -284,7 +285,7 @@ def test_used_password(pq, pgconn, tempenv, dsn):
     # requested by the server and passed by libpq.
     info = pq.Conninfo.parse(dsn.encode("utf8"))
     has_password = (
-        "PGPASSWORD" in tempenv
+        "PGPASSWORD" in os.environ
         or [i for i in info if i.keyword == b"password"][0].val is not None
     )
     if has_password:
