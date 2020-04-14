@@ -96,11 +96,14 @@ class BaseCursor:
     @pgresult.setter
     def pgresult(self, result: Optional[pq.PGresult]) -> None:
         self._pgresult = result
-        if result is not None and self._transformer is not None:
-            self._transformer.set_row_types(
-                (result.ftype(i), result.fformat(i))
-                for i in range(result.nfields)
-            )
+        if result is not None:
+            self._ntuples = result.ntuples
+            self._nfields = result.nfields
+            if self._transformer is not None:
+                self._transformer.set_row_types(
+                    (result.ftype(i), result.fformat(i))
+                    for i in range(self._nfields)
+                )
 
     @property
     def description(self) -> Optional[List[Column]]:
@@ -231,7 +234,7 @@ class BaseCursor:
         else:
             return None
 
-    def _load_row(self, n: int) -> Optional[Tuple[Any, ...]]:
+    def _check_result(self) -> None:
         res = self.pgresult
         if res is None:
             raise e.ProgrammingError("no result available")
@@ -240,13 +243,13 @@ class BaseCursor:
                 "the last operation didn't produce a result"
             )
 
-        if n >= res.ntuples:
+    def _load_row(self, n: int) -> Optional[Tuple[Any, ...]]:
+        if n >= self._ntuples:
             return None
 
-        return tuple(
-            self._transformer.load_sequence(
-                res.get_value(n, i) for i in range(res.nfields)
-            )
+        get_value = self.pgresult.get_value  # type: ignore
+        return self._transformer.load_sequence(
+            get_value(n, i) for i in range(self._nfields)
         )
 
 
@@ -292,12 +295,14 @@ class Cursor(BaseCursor):
         return self
 
     def fetchone(self) -> Optional[Sequence[Any]]:
+        self._check_result()
         rv = self._load_row(self._pos)
         if rv is not None:
             self._pos += 1
         return rv
 
     def fetchmany(self, size: Optional[int] = None) -> List[Sequence[Any]]:
+        self._check_result()
         if size is None:
             size = self.arraysize
 
@@ -312,6 +317,7 @@ class Cursor(BaseCursor):
         return rv
 
     def fetchall(self) -> List[Sequence[Any]]:
+        self._check_result()
         rv: List[Sequence[Any]] = []
         while 1:
             row = self._load_row(self._pos)
@@ -367,6 +373,7 @@ class AsyncCursor(BaseCursor):
         return self
 
     async def fetchone(self) -> Optional[Sequence[Any]]:
+        self._check_result()
         rv = self._load_row(self._pos)
         if rv is not None:
             self._pos += 1
@@ -375,6 +382,7 @@ class AsyncCursor(BaseCursor):
     async def fetchmany(
         self, size: Optional[int] = None
     ) -> List[Sequence[Any]]:
+        self._check_result()
         if size is None:
             size = self.arraysize
 
@@ -389,6 +397,7 @@ class AsyncCursor(BaseCursor):
         return rv
 
     async def fetchall(self) -> List[Sequence[Any]]:
+        self._check_result()
         rv: List[Sequence[Any]] = []
         while 1:
             row = self._load_row(self._pos)
