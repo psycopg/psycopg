@@ -57,9 +57,6 @@ class BaseConnection:
         # name of the postgres encoding (in bytes)
         self._pgenc = b""
 
-    def close(self) -> None:
-        self.pgconn.finish()
-
     @property
     def closed(self) -> bool:
         return self.status == self.ConnStatus.BAD
@@ -136,6 +133,9 @@ class Connection(BaseConnection):
         pgconn = cls.wait(gen)
         return cls(pgconn)
 
+    def close(self) -> None:
+        self.pgconn.finish()
+
     def cursor(
         self, name: Optional[str] = None, binary: bool = False
     ) -> cursor.Cursor:
@@ -194,11 +194,14 @@ class AsyncConnection(BaseConnection):
         self.cursor_factory = cursor.AsyncCursor
 
     @classmethod
-    async def connect(cls, conninfo: str, **kwargs: Any) -> "AsyncConnection":
+    async def connect(cls, conninfo: str = "", **kwargs: Any) -> "AsyncConnection":
         conninfo = make_conninfo(conninfo, **kwargs)
         gen = generators.connect(conninfo)
         pgconn = await cls.wait(gen)
         return cls(pgconn)
+
+    async def close(self) -> None:
+        self.pgconn.finish()
 
     def cursor(
         self, name: Optional[str] = None, binary: bool = False
