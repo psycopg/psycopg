@@ -344,10 +344,59 @@ class AsyncCursor(BaseCursor):
             self._execute_results(results)
         return self
 
+    async def executemany(
+        self, query: Query, vars_seq: Sequence[Params]
+    ) -> "AsyncCursor":
+        async with self.connection.lock:
+            self._start_query()
+            for i, vars in enumerate(vars_seq):
+                if i == 0:
+                    pgq = self._send_prepare(b"", query, vars)
+                    gen = generators.execute(self.connection.pgconn)
+                    (result,) = await self.connection.wait(gen)
+                    if result.status == self.ExecStatus.FATAL_ERROR:
+                        raise e.error_from_result(result)
+                else:
+                    pgq.dump(vars)
+
+                self._send_query_prepared(b"", pgq)
+                gen = generators.execute(self.connection.pgconn)
+                (result,) = await self.connection.wait(gen)
+                self._execute_results((result,))
+
+        return self
+
     async def fetchone(self) -> Optional[Sequence[Any]]:
         rv = self._load_row(self._pos)
         if rv is not None:
             self._pos += 1
+        return rv
+
+    async def fetchmany(
+        self, size: Optional[int] = None
+    ) -> List[Sequence[Any]]:
+        if size is None:
+            size = self.arraysize
+
+        rv: List[Sequence[Any]] = []
+        while len(rv) < size:
+            row = self._load_row(self._pos)
+            if row is None:
+                break
+            self._pos += 1
+            rv.append(row)
+
+        return rv
+
+    async def fetchall(self) -> List[Sequence[Any]]:
+        rv: List[Sequence[Any]] = []
+        while 1:
+            row = self._load_row(self._pos)
+            if row is None:
+                break
+            self._pos += 1
+            rv.append(row)
+
         return rv
 
 
