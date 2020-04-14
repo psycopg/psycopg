@@ -2,6 +2,7 @@ import pytest
 
 import psycopg3
 from psycopg3 import Connection
+from psycopg3.conninfo import conninfo_to_dict
 
 
 def test_connect(dsn):
@@ -79,3 +80,44 @@ def test_set_encoding_unsupported(conn):
 def test_set_encoding_bad(conn):
     with pytest.raises(psycopg3.DatabaseError):
         conn.set_client_encoding("WAT")
+
+
+@pytest.mark.parametrize(
+    "testdsn, kwargs, want",
+    [
+        ("", {}, ""),
+        ("host=foo user=bar", {}, "host=foo user=bar"),
+        ("host=foo", {"user": "baz"}, "host=foo user=baz"),
+        (
+            "host=foo port=5432",
+            {"host": "qux", "user": "joe"},
+            "host=qux user=joe port=5432",
+        ),
+        ("host=foo", {"user": None}, "host=foo"),
+    ],
+)
+def test_connect_args(monkeypatch, pgconn, testdsn, kwargs, want):
+    the_conninfo = None
+
+    def fake_connect(conninfo):
+        nonlocal the_conninfo
+        the_conninfo = conninfo
+        return pgconn
+        yield
+
+    monkeypatch.setattr(psycopg3.generators, "connect", fake_connect)
+    psycopg3.Connection.connect(testdsn, **kwargs)
+    assert conninfo_to_dict(the_conninfo) == conninfo_to_dict(want)
+
+
+@pytest.mark.parametrize(
+    "args, kwargs", [((), {}), (("", ""), {}), ((), {"nosuchparam": 42})],
+)
+def test_connect_badargs(monkeypatch, pgconn, args, kwargs):
+    def fake_connect(conninfo):
+        return pgconn
+        yield
+
+    monkeypatch.setattr(psycopg3.generators, "connect", fake_connect)
+    with pytest.raises((TypeError, psycopg3.ProgrammingError)):
+        psycopg3.Connection.connect(*args, **kwargs)

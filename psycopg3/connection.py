@@ -124,11 +124,11 @@ class Connection(BaseConnection):
 
     @classmethod
     def connect(
-        cls, conninfo: str, connection_factory: Any = None, **kwargs: Any
+        cls, conninfo: Optional[str] = None, **kwargs: Any,
     ) -> "Connection":
-        if connection_factory is not None:
-            raise NotImplementedError()
-        conninfo = make_conninfo(conninfo, **kwargs)
+        if conninfo is None and not kwargs:
+            raise TypeError("missing conninfo and not parameters specified")
+        conninfo = make_conninfo(conninfo or "", **kwargs)
         gen = generators.connect(conninfo)
         pgconn = cls.wait(gen)
         return cls(pgconn)
@@ -194,8 +194,12 @@ class AsyncConnection(BaseConnection):
         self.cursor_factory = cursor.AsyncCursor
 
     @classmethod
-    async def connect(cls, conninfo: str = "", **kwargs: Any) -> "AsyncConnection":
-        conninfo = make_conninfo(conninfo, **kwargs)
+    async def connect(
+        cls, conninfo: Optional[str] = None, **kwargs: Any
+    ) -> "AsyncConnection":
+        if conninfo is None and not kwargs:
+            raise TypeError("missing conninfo and not parameters specified")
+        conninfo = make_conninfo(conninfo or "", **kwargs)
         gen = generators.connect(conninfo)
         pgconn = await cls.wait(gen)
         return cls(pgconn)
