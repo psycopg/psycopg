@@ -14,12 +14,12 @@ def test_connect_bad(loop):
         loop.run_until_complete(AsyncConnection.connect("dbname=nosuchdb"))
 
 
-def test_close(aconn):
+def test_close(aconn, loop):
     assert not aconn.closed
-    aconn.close()
+    loop.run_until_complete(aconn.close())
     assert aconn.closed
     assert aconn.status == aconn.ConnStatus.BAD
-    aconn.close()
+    loop.run_until_complete(aconn.close())
     assert aconn.closed
     assert aconn.status == aconn.ConnStatus.BAD
 
@@ -35,7 +35,7 @@ def test_commit(loop, aconn):
     res = aconn.pgconn.exec_(b"select id from foo where id = 1")
     assert res.get_value(0, 0) == b"1"
 
-    aconn.close()
+    loop.run_until_complete(aconn.close())
     with pytest.raises(psycopg3.OperationalError):
         loop.run_until_complete(aconn.commit())
 
@@ -51,7 +51,7 @@ def test_rollback(loop, aconn):
     res = aconn.pgconn.exec_(b"select id from foo where id = 1")
     assert res.get_value(0, 0) is None
 
-    aconn.close()
+    loop.run_until_complete(aconn.close())
     with pytest.raises(psycopg3.OperationalError):
         loop.run_until_complete(aconn.rollback())
 

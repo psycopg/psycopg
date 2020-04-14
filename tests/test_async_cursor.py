@@ -5,13 +5,13 @@ import psycopg3
 def test_close(aconn, loop):
     cur = aconn.cursor()
     assert not cur.closed
-    cur.close()
+    loop.run_until_complete(cur.close())
     assert cur.closed
 
     with pytest.raises(psycopg3.OperationalError):
         loop.run_until_complete(cur.execute("select 'foo'"))
 
-    cur.close()
+    loop.run_until_complete(cur.close())
     assert cur.closed
 
 
@@ -22,7 +22,7 @@ def test_status(aconn, loop):
     assert cur.status == cur.ExecStatus.COMMAND_OK
     loop.run_until_complete(cur.execute("select 1"))
     assert cur.status == cur.ExecStatus.TUPLES_OK
-    cur.close()
+    loop.run_until_complete(cur.close())
     assert cur.status is None
 
 
@@ -38,7 +38,7 @@ def test_execute_many_results(aconn, loop):
     assert cur.pgresult.get_value(0, 0) == b"bar"
     assert cur.nextset() is None
 
-    cur.close()
+    loop.run_until_complete(cur.close())
     assert cur.nextset() is None
 
 

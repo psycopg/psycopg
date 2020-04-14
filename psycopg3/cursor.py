@@ -77,13 +77,6 @@ class BaseCursor:
         self._pos = 0
         self._iresult = 0
 
-    def __del__(self) -> None:
-        self.close()
-
-    def close(self) -> None:
-        self._closed = True
-        self._reset()
-
     @property
     def closed(self) -> bool:
         return self._closed
@@ -263,6 +256,10 @@ class Cursor(BaseCursor):
     def __init__(self, connection: "Connection", binary: bool = False):
         super().__init__(connection, binary)
 
+    def close(self) -> None:
+        self._closed = True
+        self._reset()
+
     def execute(self, query: Query, vars: Optional[Params] = None) -> "Cursor":
         with self.connection.lock:
             self._start_query()
@@ -331,6 +328,10 @@ class AsyncCursor(BaseCursor):
 
     def __init__(self, connection: "AsyncConnection", binary: bool = False):
         super().__init__(connection, binary)
+
+    async def close(self) -> None:
+        self._closed = True
+        self._reset()
 
     async def execute(
         self, query: Query, vars: Optional[Params] = None
