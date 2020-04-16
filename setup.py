@@ -8,7 +8,15 @@ psycopg3 -- PostgreSQL database adapter for Python
 
 import re
 import os
-from setuptools import setup, find_packages  # type: ignore
+import subprocess as sp
+from setuptools import setup, find_packages, Extension  # type: ignore
+from distutils.command.build_ext import build_ext  # type: ignore
+from distutils import log
+
+try:
+    from Cython.Build import cythonize  # type: ignore
+except ImportError:
+    cythonize = None
 
 # Grab the version without importing the module
 # or we will get import errors on install if prerequisites are still missing
@@ -35,6 +43,47 @@ Topic :: Software Development
 Topic :: Software Development :: Libraries :: Python Modules
 """
 
+
+class our_build_ext(build_ext):  # type: ignore
+    def finalize_options(self) -> None:
+        self._setup_ext_build()
+        super().finalize_options()
+
+    def run(self) -> None:
+        super().run()
+
+    def _setup_ext_build(self) -> None:
+        try:
+            from Cython.Build import cythonize
+        except ImportError:
+            log.warn(
+                "Cython is not available: the C module will not be built", ()
+            )
+            return
+
+        try:
+            out = sp.run(
+                ["pg_config", f"--includedir"], stdout=sp.PIPE, check=True
+            )
+        except Exception as e:
+            log.warn("cannot build C module: %s", (e,))
+            return
+
+        includedir = out.stdout.strip().decode("utf8")
+
+        ext = Extension(
+            "psycopg3.pq.pq_cython",
+            ["psycopg3/pq/pq_cython.pyx"],
+            libraries=["pq"],
+            include_dirs=[includedir],
+        )
+        self.distribution.ext_modules = cythonize(
+            [ext],
+            language_level=3,
+            # annotate=True,  # enable to get an html view of the C module
+        )
+
+
 setup(
     name="psycopg3",
     description=readme.splitlines()[0],
@@ -45,6 +94,8 @@ setup(
     python_requires=">=3.6",
     packages=find_packages(exclude=["tests"]),
     classifiers=[x for x in classifiers.split("\n") if x],
+    setup_requires=["Cython"],
+    install_requires=["Cython"],
     zip_safe=False,
     version=version,
     project_urls={
@@ -53,4 +104,5 @@ setup(
         "Issue Tracker": "https://github.com/psycopg/psycopg3/issues",
         "Download": "https://pypi.org/project/psycopg3/",
     },
+    cmdclass={"build_ext": our_build_ext},
 )
