@@ -29,6 +29,8 @@ from ..errors import OperationalError
 if TYPE_CHECKING:
     from psycopg3 import pq  # noqa
 
+__impl__ = "ctypes"
+
 
 def version() -> int:
     return impl.PQlibVersion()
