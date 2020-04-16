@@ -248,7 +248,7 @@ class PGconn:
         param_types: Optional[Sequence[int]] = None,
     ) -> None:
         atypes: Optional[Array[impl.Oid]]
-        if param_types is None:
+        if not param_types:
             nparams = 0
             atypes = None
         else:
@@ -321,7 +321,7 @@ class PGconn:
         else:
             if len(param_formats) != nparams:
                 raise ValueError(
-                    "got %d param_values but %d param_types"
+                    "got %d param_values but %d param_formats"
                     % (nparams, len(param_formats))
                 )
             aformats = (c_int * nparams)(*param_formats)
