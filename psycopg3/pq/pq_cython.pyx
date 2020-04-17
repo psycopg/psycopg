@@ -3,6 +3,7 @@ libpq Python wrapper using cython bindings.
 """
 
 # Copyright (C) 2020 The Psycopg Team
+
 from cpython.mem cimport PyMem_Malloc, PyMem_Free
 
 from psycopg3.pq cimport libpq as impl
@@ -72,10 +73,9 @@ cdef class PGconn:
         cdef impl.PQconninfoOption *opts = impl.PQconninfo(self.pgconn_ptr)
         if opts is NULL:
             raise MemoryError("couldn't allocate connection info")
-        try:
-            return _options_from_array(opts)
-        finally:
-            impl.PQconninfoFree(opts)
+        rv = _options_from_array(opts)
+        impl.PQconninfoFree(opts)
+        return rv
 
     def reset(self) -> None:
         self._ensure_pgconn()
@@ -605,16 +605,16 @@ cdef class PGresult:
     def get_value(
         self, row_number: int, column_number: int
     ) -> Optional[bytes]:
-        cdef int length = impl.PQgetlength(
-            self.pgresult_ptr, row_number, column_number
-        )
+        cdef int crow = row_number
+        cdef int ccol = column_number
+        cdef int length = impl.PQgetlength(self.pgresult_ptr, crow, ccol)
         cdef char *v;
         if length:
-            v = impl.PQgetvalue(self.pgresult_ptr, row_number, column_number)
+            v = impl.PQgetvalue(self.pgresult_ptr, crow, ccol)
             # TODO: avoid copy
             return v[:length]
         else:
-            if impl.PQgetisnull(self.pgresult_ptr, row_number, column_number):
+            if impl.PQgetisnull(self.pgresult_ptr, crow, ccol):
                 return None
             else:
                 return b""
@@ -653,16 +653,15 @@ class Conninfo:
         cdef impl.PQconninfoOption *opts = impl.PQconndefaults()
         if opts is NULL :
             raise MemoryError("couldn't allocate connection defaults")
-        try:
-            return _options_from_array(opts)
-        finally:
-            impl.PQconninfoFree(opts)
+        rv = _options_from_array(opts)
+        impl.PQconninfoFree(opts)
+        return rv
 
     @classmethod
     def parse(cls, conninfo: bytes) -> List[ConninfoOption]:
         cdef char *errmsg = NULL
-        cdef impl.PQconninfoOption *rv = impl.PQconninfoParse(conninfo, &errmsg)
-        if rv is NULL:
+        cdef impl.PQconninfoOption *opts = impl.PQconninfoParse(conninfo, &errmsg)
+        if opts is NULL:
             if errmsg is NULL:
                 raise MemoryError("couldn't allocate on conninfo parse")
             else:
@@ -670,10 +669,9 @@ class Conninfo:
                 impl.PQfreemem(errmsg)
                 raise exc
 
-        try:
-            return _options_from_array(rv)
-        finally:
-            impl.PQconninfoFree(rv)
+        rv = _options_from_array(opts)
+        impl.PQconninfoFree(opts)
+        return rv
 
     def __repr__(self):
         return f"<{type(self).__name__} ({self.keyword.decode('ascii')})>"
