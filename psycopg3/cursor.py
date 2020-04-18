@@ -6,7 +6,7 @@ psycopg3 cursor objects
 
 import codecs
 from operator import attrgetter
-from typing import Any, List, Optional, Sequence, Tuple, TYPE_CHECKING
+from typing import Any, List, Optional, Sequence, TYPE_CHECKING
 
 from . import errors as e
 from . import pq
@@ -97,13 +97,8 @@ class BaseCursor:
     def pgresult(self, result: Optional[pq.PGresult]) -> None:
         self._pgresult = result
         if result is not None:
-            self._ntuples = result.ntuples
-            self._nfields = result.nfields
             if self._transformer is not None:
-                self._transformer.set_row_types(
-                    (result.ftype(i), result.fformat(i))
-                    for i in range(self._nfields)
-                )
+                self._transformer.pgresult = result
 
     @property
     def description(self) -> Optional[List[Column]]:
@@ -243,15 +238,6 @@ class BaseCursor:
                 "the last operation didn't produce a result"
             )
 
-    def _load_row(self, n: int) -> Optional[Tuple[Any, ...]]:
-        if n >= self._ntuples:
-            return None
-
-        get_value = self.pgresult.get_value  # type: ignore
-        return self._transformer.load_sequence(
-            get_value(n, i) for i in range(self._nfields)
-        )
-
 
 class Cursor(BaseCursor):
     connection: "Connection"
@@ -296,7 +282,7 @@ class Cursor(BaseCursor):
 
     def fetchone(self) -> Optional[Sequence[Any]]:
         self._check_result()
-        rv = self._load_row(self._pos)
+        rv = self._transformer.load_row(self._pos)
         if rv is not None:
             self._pos += 1
         return rv
@@ -308,7 +294,7 @@ class Cursor(BaseCursor):
 
         rv: List[Sequence[Any]] = []
         while len(rv) < size:
-            row = self._load_row(self._pos)
+            row = self._transformer.load_row(self._pos)
             if row is None:
                 break
             self._pos += 1
@@ -320,7 +306,7 @@ class Cursor(BaseCursor):
         self._check_result()
         rv: List[Sequence[Any]] = []
         while 1:
-            row = self._load_row(self._pos)
+            row = self._transformer.load_row(self._pos)
             if row is None:
                 break
             self._pos += 1
@@ -374,7 +360,7 @@ class AsyncCursor(BaseCursor):
 
     async def fetchone(self) -> Optional[Sequence[Any]]:
         self._check_result()
-        rv = self._load_row(self._pos)
+        rv = self._transformer.load_row(self._pos)
         if rv is not None:
             self._pos += 1
         return rv
@@ -388,7 +374,7 @@ class AsyncCursor(BaseCursor):
 
         rv: List[Sequence[Any]] = []
         while len(rv) < size:
-            row = self._load_row(self._pos)
+            row = self._transformer.load_row(self._pos)
             if row is None:
                 break
             self._pos += 1
@@ -400,7 +386,7 @@ class AsyncCursor(BaseCursor):
         self._check_result()
         rv: List[Sequence[Any]] = []
         while 1:
-            row = self._load_row(self._pos)
+            row = self._transformer.load_row(self._pos)
             if row is None:
                 break
             self._pos += 1

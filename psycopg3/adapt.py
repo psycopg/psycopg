@@ -173,6 +173,7 @@ class Transformer:
         self._dumpers_maps: List[DumpersMap] = []
         self._loaders_maps: List[LoadersMap] = []
         self._setup_context(context)
+        self.pgresult = None
 
         # mapping class, fmt -> dump function
         self._dump_funcs: Dict[Tuple[type, Format], DumpFunc] = {}
@@ -228,6 +229,34 @@ class Transformer:
         self._dumpers_maps.append(Dumper.globals)
         self._loaders_maps.append(Loader.globals)
 
+    @property
+    def pgresult(self) -> Optional[pq.PGresult]:
+        return self._pgresult
+
+    @pgresult.setter
+    def pgresult(self, result: Optional[pq.PGresult]) -> None:
+        self._pgresult = result
+        rc = self._row_loaders = []
+
+        self._ntuples: int
+        self._nfields: int
+        if result is None:
+            self._nfields = self._ntuples = 0
+            return
+
+        nf = self._nfields = result.nfields
+        self._ntuples = result.ntuples
+
+        for i in range(nf):
+            oid = result.ftype(i)
+            fmt = result.fformat(i)
+            rc.append(self.get_load_function(oid, fmt))
+
+    def set_row_types(self, types: Iterable[Tuple[int, Format]]) -> None:
+        rc = self._row_loaders = []
+        for oid, fmt in types:
+            rc.append(self.get_load_function(oid, fmt))
+
     def dump_sequence(
         self, objs: Iterable[Any], formats: Iterable[Format]
     ) -> Tuple[List[Optional[bytes]], List[int]]:
@@ -282,10 +311,23 @@ class Transformer:
             f"cannot adapt type {src.__name__} to format {Format(format).name}"
         )
 
-    def set_row_types(self, types: Iterable[Tuple[int, Format]]) -> None:
-        rc = self._row_loaders = []
-        for oid, fmt in types:
-            rc.append(self.get_load_function(oid, fmt))
+    def load_row(self, row: int) -> Optional[Tuple[Any, ...]]:
+        res = self.pgresult
+        if res is None:
+            return None
+
+        if row >= self._ntuples:
+            return None
+
+        rv: List[Any] = []
+        for col in range(self._nfields):
+            val = res.get_value(row, col)
+            if val is None:
+                rv.append(None)
+            else:
+                rv.append(self._row_loaders[col](val))
+
+        return tuple(rv)
 
     def load_sequence(
         self, record: Iterable[Optional[bytes]]
