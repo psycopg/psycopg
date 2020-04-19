@@ -72,8 +72,8 @@ class our_build_ext(build_ext):  # type: ignore
         includedir = out.stdout.strip().decode("utf8")
 
         ext = Extension(
-            "psycopg3.pq.pq_cython",
-            ["psycopg3/pq/pq_cython.pyx"],
+            "psycopg3._psycopg3",
+            ["psycopg3/_psycopg3.pyx"],
             libraries=["pq"],
             include_dirs=[includedir],
         )

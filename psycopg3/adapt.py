@@ -407,3 +407,9 @@ def _connection_from_context(
         return context.connection
     else:
         raise TypeError(f"can't get a connection from {type(context)}")
+
+
+try:
+    from ._psycopg3 import Transformer  # noqa
+except ImportError:
+    pass

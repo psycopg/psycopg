@@ -9,8 +9,8 @@ from cpython.mem cimport PyMem_Malloc, PyMem_Free
 from psycopg3.pq cimport libpq as impl
 from psycopg3.errors import OperationalError
 
-from .misc import error_message, ConninfoOption, PQerror
-from .enums import (
+from psycopg3.pq.misc import error_message, ConninfoOption, PQerror
+from psycopg3.pq.enums import (
     ConnStatus,
     PollingStatus,
     ExecStatus,
