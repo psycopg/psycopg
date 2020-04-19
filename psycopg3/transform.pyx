@@ -1,6 +1,8 @@
 import codecs
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
+from psycopg3.pq cimport libpq
+
 from psycopg3 import errors as e
 # from psycopg3.pq.enum import Format
 # from psycopg3.types.oids import builtins, INVALID_OID
@@ -113,19 +115,20 @@ cdef class Transformer:
     @pgresult.setter
     def pgresult(self, result: Optional["pq.proto.PGresult"]) -> None:
         self._pgresult = result
-        rc = self._row_loaders = []
 
         if result is None:
             self._nfields = self._ntuples = 0
             return
 
-        nf = self._nfields = result.nfields
-        self._ntuples = result.ntuples
+        cdef libpq.PGresult *res = self._pgresult.pgresult_ptr
+        self._nfields = libpq.PQnfields(res)
+        self._ntuples = libpq.PQntuples(res)
 
-        for i in range(nf):
-            oid = result.ftype(i)
-            fmt = result.fformat(i)
-            rc.append(self.get_load_function(oid, fmt))
+        cdef int i
+        types = [
+            (libpq.PQftype(res, i), libpq.PQfformat(res, i))
+            for i in range(self._nfields)]
+        self.set_row_types(types)
 
     def set_row_types(self, types: Iterable[Tuple[int, Format]]) -> None:
         rc = self._row_loaders = []
