@@ -95,7 +95,7 @@ setup(
     packages=find_packages(exclude=["tests"]),
     classifiers=[x for x in classifiers.split("\n") if x],
     setup_requires=["Cython"],
-    install_requires=["Cython"],
+    install_requires=["Cython", "typing_extensions"],
     zip_safe=False,
     version=version,
     project_urls={

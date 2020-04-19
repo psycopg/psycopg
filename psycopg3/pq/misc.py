@@ -5,10 +5,15 @@ Various functionalities to make easier to work with the libpq.
 # Copyright (C) 2020 The Psycopg Team
 
 from collections import namedtuple
-from typing import TYPE_CHECKING, Union
+from typing import cast, Union
 
-if TYPE_CHECKING:
-    from psycopg3.pq import PGconn, PGresult  # noqa
+from ..errors import OperationalError
+from .enums import DiagnosticField
+from .proto import PGconn, PGresult
+
+
+class PQerror(OperationalError):
+    pass
 
 
 ConninfoOption = namedtuple(
@@ -16,31 +21,32 @@ ConninfoOption = namedtuple(
 )
 
 
-def error_message(obj: Union["PGconn", "PGresult"]) -> str:
+def error_message(obj: Union[PGconn, PGresult]) -> str:
     """
     Return an error message from a PGconn or PGresult.
 
     The return value is a str (unlike pq data which is usually bytes).
     """
-    from psycopg3 import pq
-
     bmsg: bytes
 
-    if isinstance(obj, pq.PGconn):
-        bmsg = obj.error_message
+    if hasattr(obj, "error_field"):
+        obj = cast(PGresult, obj)
 
-        # strip severity and whitespaces
-        if bmsg:
-            bmsg = bmsg.splitlines()[0].split(b":", 1)[-1].strip()
-
-    elif isinstance(obj, pq.PGresult):
-        bmsg = obj.error_field(pq.DiagnosticField.MESSAGE_PRIMARY) or b""
+        bmsg = obj.error_field(DiagnosticField.MESSAGE_PRIMARY) or b""
         if not bmsg:
             bmsg = obj.error_message
 
             # strip severity and whitespaces
             if bmsg:
                 bmsg = bmsg.splitlines()[0].split(b":", 1)[-1].strip()
+
+    elif hasattr(obj, "error_message"):
+        # obj is a PGconn
+        bmsg = obj.error_message
+
+        # strip severity and whitespaces
+        if bmsg:
+            bmsg = bmsg.splitlines()[0].split(b":", 1)[-1].strip()
 
     else:
         raise TypeError(

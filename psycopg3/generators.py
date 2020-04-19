@@ -29,7 +29,7 @@ PQGen = Generator[Tuple[int, Wait], Ready, RV]
 logger = logging.getLogger(__name__)
 
 
-def connect(conninfo: str) -> PQGen[pq.PGconn]:
+def connect(conninfo: str) -> PQGen[pq.proto.PGconn]:
     """
     Generator to create a database connection without blocking.
 
@@ -61,7 +61,7 @@ def connect(conninfo: str) -> PQGen[pq.PGconn]:
     return conn
 
 
-def execute(pgconn: pq.PGconn) -> PQGen[List[pq.PGresult]]:
+def execute(pgconn: pq.proto.PGconn) -> PQGen[List[pq.proto.PGresult]]:
     """
     Generator sending a query and returning results without blocking.
 
@@ -77,7 +77,7 @@ def execute(pgconn: pq.PGconn) -> PQGen[List[pq.PGresult]]:
     return rv
 
 
-def send(pgconn: pq.PGconn) -> PQGen[None]:
+def send(pgconn: pq.proto.PGconn) -> PQGen[None]:
     """
     Generator to send a query to the server without blocking.
 
@@ -99,7 +99,7 @@ def send(pgconn: pq.PGconn) -> PQGen[None]:
         continue
 
 
-def fetch(pgconn: pq.PGconn) -> PQGen[List[pq.PGresult]]:
+def fetch(pgconn: pq.proto.PGconn) -> PQGen[List[pq.proto.PGresult]]:
     """
     Generator retrieving results from the database without blocking.
 
@@ -110,7 +110,7 @@ def fetch(pgconn: pq.PGconn) -> PQGen[List[pq.PGresult]]:
     or error).
     """
     S = pq.ExecStatus
-    results: List[pq.PGresult] = []
+    results: List[pq.proto.PGresult] = []
     while 1:
         pgconn.consume_input()
         if pgconn.is_busy():

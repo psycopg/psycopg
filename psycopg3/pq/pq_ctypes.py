@@ -22,9 +22,8 @@ from .enums import (
     DiagnosticField,
     Format,
 )
-from .misc import error_message, ConninfoOption
+from .misc import error_message, ConninfoOption, PQerror
 from . import _pq_ctypes as impl
-from ..errors import OperationalError
 
 if TYPE_CHECKING:
     from psycopg3 import pq  # noqa
@@ -34,10 +33,6 @@ __impl__ = "ctypes"
 
 def version() -> int:
     return impl.PQlibVersion()
-
-
-class PQerror(OperationalError):
-    pass
 
 
 class PGconn:
@@ -201,10 +196,7 @@ class PGconn:
             raise TypeError(f"bytes expected, got {type(command)} instead")
         self._ensure_pgconn()
         if not impl.PQsendQuery(self.pgconn_ptr, command):
-            raise PQerror(
-                "sending query failed:"
-                f" {error_message(t_cast('pq.PGconn', self))}"
-            )
+            raise PQerror(f"sending query failed: {error_message(self)}")
 
     def exec_params(
         self,
@@ -237,8 +229,7 @@ class PGconn:
         self._ensure_pgconn()
         if not impl.PQsendQueryParams(*args):
             raise PQerror(
-                "sending query and params failed:"
-                f" {error_message(t_cast('pq.PGconn', self))}"
+                f"sending query and params failed: {error_message(self)}"
             )
 
     def send_prepare(
@@ -260,8 +251,7 @@ class PGconn:
             self.pgconn_ptr, name, command, nparams, atypes
         ):
             raise PQerror(
-                "sending query and params failed:"
-                f" {error_message(t_cast('pq.PGconn', self))}"
+                f"sending query and params failed: {error_message(self)}"
             )
 
     def send_query_prepared(
@@ -281,8 +271,7 @@ class PGconn:
         self._ensure_pgconn()
         if not impl.PQsendQueryPrepared(*args):
             raise PQerror(
-                "sending prepared query failed:"
-                f" {error_message(t_cast('pq.PGconn', self))}"
+                f"sending prepared query failed: {error_message(self)}"
             )
 
     def _query_params_args(
@@ -431,10 +420,7 @@ class PGconn:
 
     def consume_input(self) -> None:
         if 1 != impl.PQconsumeInput(self.pgconn_ptr):
-            raise PQerror(
-                "consuming input failed:"
-                f" {error_message(t_cast('pq.PGconn', self))}"
-            )
+            raise PQerror(f"consuming input failed: {error_message(self)}")
 
     def is_busy(self) -> int:
         return impl.PQisBusy(self.pgconn_ptr)
@@ -446,17 +432,12 @@ class PGconn:
     @nonblocking.setter
     def nonblocking(self, arg: int) -> None:
         if 0 > impl.PQsetnonblocking(self.pgconn_ptr, arg):
-            raise PQerror(
-                f"setting nonblocking failed:"
-                f" {error_message(t_cast('pq.PGconn', self))}"
-            )
+            raise PQerror(f"setting nonblocking failed: {error_message(self)}")
 
     def flush(self) -> int:
         rv: int = impl.PQflush(self.pgconn_ptr)
         if rv < 0:
-            raise PQerror(
-                f"flushing failed:{error_message(t_cast('pq.PGconn', self))}"
-            )
+            raise PQerror(f"flushing failed: {error_message(self)}")
         return rv
 
     def make_empty_result(self, exec_status: ExecStatus) -> "PGresult":

@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 
 class Column(Sequence[Any]):
     def __init__(
-        self, pgresult: pq.PGresult, index: int, codec: codecs.CodecInfo
+        self, pgresult: pq.proto.PGresult, index: int, codec: codecs.CodecInfo
     ):
         self._pgresult = pgresult
         self._index = index
@@ -72,7 +72,7 @@ class BaseCursor:
         self._closed = False
 
     def _reset(self) -> None:
-        self._results: List[pq.PGresult] = []
+        self._results: List[pq.proto.PGresult] = []
         self.pgresult = None
         self._pos = 0
         self._iresult = 0
@@ -90,11 +90,11 @@ class BaseCursor:
             return None
 
     @property
-    def pgresult(self) -> Optional[pq.PGresult]:
+    def pgresult(self) -> Optional[pq.proto.PGresult]:
         return self._pgresult
 
     @pgresult.setter
-    def pgresult(self, result: Optional[pq.PGresult]) -> None:
+    def pgresult(self, result: Optional[pq.proto.PGresult]) -> None:
         self._pgresult = result
         if result is not None:
             if self._transformer is not None:
@@ -169,7 +169,7 @@ class BaseCursor:
             else:
                 self.connection.pgconn.send_query(pgq.query)
 
-    def _execute_results(self, results: Sequence[pq.PGresult]) -> None:
+    def _execute_results(self, results: Sequence[pq.proto.PGresult]) -> None:
         """
         Implement part of execute() after waiting common to sync and async
         """

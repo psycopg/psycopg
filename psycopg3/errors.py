@@ -18,10 +18,8 @@ DBAPI-defined Exceptions are defined in the following hierarchy::
 
 # Copyright (C) 2020 The Psycopg Team
 
-from typing import Any, Optional, Sequence, Type, TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from psycopg3.pq import PGresult  # noqa
+from typing import Any, Optional, Sequence, Type
+from psycopg3.pq.proto import PGresult
 
 
 class Warning(Exception):
@@ -38,7 +36,7 @@ class Error(Exception):
     """
 
     def __init__(
-        self, *args: Sequence[Any], pgresult: Optional["PGresult"] = None
+        self, *args: Sequence[Any], pgresult: Optional[PGresult] = None
     ):
         super().__init__(*args)
         self.pgresult = pgresult
@@ -112,7 +110,7 @@ def class_for_state(sqlstate: bytes) -> Type[Error]:
     return DatabaseError
 
 
-def error_from_result(result: "PGresult") -> Error:
+def error_from_result(result: PGresult) -> Error:
     from psycopg3 import pq
 
     state = result.error_field(pq.DiagnosticField.SQLSTATE) or b""

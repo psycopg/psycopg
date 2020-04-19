@@ -49,7 +49,7 @@ class BaseConnection:
     ConnStatus = pq.ConnStatus
     TransactionStatus = pq.TransactionStatus
 
-    def __init__(self, pgconn: pq.PGconn):
+    def __init__(self, pgconn: pq.proto.PGconn):
         self.pgconn = pgconn
         self.cursor_factory = cursor.BaseCursor
         self.dumpers: DumpersMap = {}
@@ -117,7 +117,7 @@ class Connection(BaseConnection):
 
     cursor_factory: Type[cursor.Cursor]
 
-    def __init__(self, pgconn: pq.PGconn):
+    def __init__(self, pgconn: pq.proto.PGconn):
         super().__init__(pgconn)
         self.lock = threading.Lock()
         self.cursor_factory = cursor.Cursor
@@ -188,7 +188,7 @@ class AsyncConnection(BaseConnection):
 
     cursor_factory: Type[cursor.AsyncCursor]
 
-    def __init__(self, pgconn: pq.PGconn):
+    def __init__(self, pgconn: pq.proto.PGconn):
         super().__init__(pgconn)
         self.lock = asyncio.Lock()
         self.cursor_factory = cursor.AsyncCursor

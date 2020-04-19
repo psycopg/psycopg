@@ -9,7 +9,7 @@ from cpython.mem cimport PyMem_Malloc, PyMem_Free
 from psycopg3.pq cimport libpq as impl
 from psycopg3.errors import OperationalError
 
-from .misc import error_message, ConninfoOption
+from .misc import error_message, ConninfoOption, PQerror
 from .enums import (
     ConnStatus,
     PollingStatus,
@@ -22,10 +22,6 @@ from .enums import (
 
 
 __impl__ = 'c'
-
-
-class PQerror(OperationalError):
-    pass
 
 
 def version():
@@ -110,9 +106,9 @@ cdef class PGconn:
     def host(self) -> bytes:
         return self._call_bytes(impl.PQhost)
 
-    # @property
-    # def hostaddr(self) -> bytes:
-    #     return self._call_bytes(impl.PQhostaddr)
+    @property
+    def hostaddr(self) -> bytes:
+        return b'TODO'
 
     @property
     def port(self) -> bytes:

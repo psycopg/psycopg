@@ -11,7 +11,7 @@ implementation-dependant but all the implementations share the same interface.
 
 import os
 import logging
-from types import ModuleType
+from typing import Callable, Type
 
 from .enums import (
     ConnStatus,
@@ -23,20 +23,31 @@ from .enums import (
     Format,
 )
 from .encodings import py_codecs
-from .misc import error_message, ConninfoOption
+from .misc import error_message, ConninfoOption, PQerror
+from . import proto
 
 logger = logging.getLogger(__name__)
 
+__impl__: str
+version: Callable[[], int]
+PGconn: Type[proto.PGconn]
+PGresult: Type[proto.PGresult]
+Conninfo: Type[proto.Conninfo]
+Escaping: Type[proto.Escaping]
 
-def import_libpq() -> ModuleType:
+
+def import_from_libpq() -> None:
     """
-    Find the best libpw wrapper available.
+    Import pq objects implementation from the best libpw wrapper available.
     """
+    global __impl__, version, PGconn, PGresult, Conninfo, Escaping
+
     impl = os.environ.get("PSYCOPG3_IMPL", "").lower()
 
     if not impl or impl == "c":
         try:
-            from . import pq_cython
+            # TODO: extension module not recognised by mypy?
+            from . import pq_cython  # type: ignore
         except Exception as e:
             if not impl:
                 logger.debug(f"C pq wrapper not available: %s", e)
@@ -45,7 +56,13 @@ def import_libpq() -> ModuleType:
                     f"requested pq implementation '{impl}' not available"
                 ) from e
         else:
-            return pq_cython
+            __impl__ = pq_cython.__impl__
+            version = pq_cython.version
+            PGconn = pq_cython.PGconn
+            PGresult = pq_cython.PGresult
+            Conninfo = pq_cython.Conninfo
+            Escaping = pq_cython.Escaping
+            return
 
     if not impl or impl == "ctypes":
         try:
@@ -58,7 +75,13 @@ def import_libpq() -> ModuleType:
                     f"requested pq implementation '{impl}' not available"
                 ) from e
         else:
-            return pq_ctypes
+            __impl__ = pq_ctypes.__impl__
+            version = pq_ctypes.version
+            PGconn = pq_ctypes.PGconn
+            PGresult = pq_ctypes.PGresult
+            Conninfo = pq_ctypes.Conninfo
+            Escaping = pq_ctypes.Escaping
+            return
 
     if impl:
         raise ImportError(f"requested pq impementation '{impl}' unknown")
@@ -66,15 +89,7 @@ def import_libpq() -> ModuleType:
         raise ImportError(f"no pq wrapper available")
 
 
-pq_module = import_libpq()
-
-__impl__ = pq_module.__impl__
-version = pq_module.version
-PGconn = pq_module.PGconn
-PGresult = pq_module.PGresult
-PQerror = pq_module.PQerror
-Conninfo = pq_module.Conninfo
-Escaping = pq_module.Escaping
+import_from_libpq()
 
 __all__ = (
     "ConnStatus",

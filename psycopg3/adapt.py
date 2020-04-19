@@ -230,11 +230,11 @@ class Transformer:
         self._loaders_maps.append(Loader.globals)
 
     @property
-    def pgresult(self) -> Optional[pq.PGresult]:
+    def pgresult(self) -> Optional[pq.proto.PGresult]:
         return self._pgresult
 
     @pgresult.setter
-    def pgresult(self, result: Optional[pq.PGresult]) -> None:
+    def pgresult(self, result: Optional[pq.proto.PGresult]) -> None:
         self._pgresult = result
         rc = self._row_loaders = []
 
