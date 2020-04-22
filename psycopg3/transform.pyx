@@ -252,27 +252,32 @@ cdef class Transformer:
 
         cdef libpq.PGresult *res = self._pgresult.pgresult_ptr
 
-        rv: List[Any] = []
         cdef RowLoader *loader
         cdef int col
         cdef int length
         cdef const char *val
+        rv = cpython.PyTuple_New(self._nfields)
         for col in range(self._nfields):
             length = libpq.PQgetlength(res, crow, col)
             if length == 0:
                 if libpq.PQgetisnull(res, crow, col):
-                    rv.append(None)
+                    cpython.Py_INCREF(None)
+                    cpython.PyTuple_SET_ITEM(rv, col, None)
                     continue
 
             val = libpq.PQgetvalue(res, crow, col)
             loader = self._row_loaders + col
             if loader.cloader is not NULL:
-                rv.append(loader.cloader(val, length, loader.context))
+                pyval = loader.cloader(val, length, loader.context)
             else:
                 # TODO: no copy
-                rv.append((<object>loader.pyloader)(val[:length]))
+                pyval = (<object>loader.pyloader)(val[:length])
 
-        return tuple(rv)
+            cpython.Py_INCREF(pyval)
+            cpython.PyTuple_SET_ITEM(rv, col, pyval)
+
+
+        return rv
 
     def load_sequence(
         self, record: Sequence[Optional[bytes]]
