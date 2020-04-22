@@ -5,7 +5,7 @@ Entry point into the adaptation system.
 # Copyright (C) 2020 The Psycopg Team
 
 import codecs
-from typing import Any, Callable, Dict, Iterable, List, Optional
+from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence
 from typing import Tuple, Type, Union
 
 from . import errors as e
@@ -330,7 +330,7 @@ class Transformer:
         return tuple(rv)
 
     def load_sequence(
-        self, record: Iterable[Optional[bytes]]
+        self, record: Sequence[Optional[bytes]]
     ) -> Tuple[Any, ...]:
         return tuple(
             (self._row_loaders[i](val) if val is not None else None)

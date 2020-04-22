@@ -10,6 +10,19 @@ from psycopg3 import errors as e
 TEXT_OID = 25
 
 
+ctypedef object (*cloader_func)(const char *data, size_t length, void *context)
+
+cdef class RowLoader:
+    cdef object pyloader
+    cdef cloader_func cloader;
+    cdef void *context;
+
+    def __cinit__(self):
+        self.pyloader = None
+        self.cloader = NULL
+        self.context = NULL
+
+
 cdef class Transformer:
     """
     An object that can adapt efficiently between Python and PostgreSQL.
@@ -38,7 +51,7 @@ cdef class Transformer:
 
         # sequence of load functions from value to python
         # the length of the result columns
-        self._row_loaders: List["LoadFunc"] = []
+        self._row_loaders: List[RowLoader] = []
 
         self.pgresult = None
 
@@ -131,9 +144,41 @@ cdef class Transformer:
         self.set_row_types(types)
 
     def set_row_types(self, types: Iterable[Tuple[int, Format]]) -> None:
-        rc = self._row_loaders = []
+        del self._row_loaders[:]
+        cdef list rc = self._row_loaders
+        cdef RowLoader loader
         for oid, fmt in types:
-            rc.append(self.get_load_function(oid, fmt))
+            loader = self._get_loader(oid, fmt)
+            rc.append(loader)
+
+    cdef RowLoader _get_loader(self, Oid oid, int fmt):
+        loader = RowLoader()
+        loader.pyloader = self.get_load_function(oid, fmt)
+        # STUB: special-case a few loaders
+        from psycopg3.types import builtins
+
+        if oid == builtins['int2'].oid and fmt == 0:
+            loader.cloader = load_int_text
+        elif oid == builtins['int2'].oid and fmt == 1:
+            loader.cloader = load_int2_binary
+        elif oid == builtins['int4'].oid and fmt == 1:
+            loader.cloader = load_int4_binary
+        elif oid == builtins['int8'].oid and fmt == 1:
+            loader.cloader = load_int8_binary
+        elif oid == builtins['oid'].oid and fmt == 1:
+            loader.cloader = load_oid_binary
+        elif oid == builtins['bool'].oid and fmt == 1:
+            loader.cloader = load_bool_binary
+        elif oid == builtins['text'].oid:
+            loader.cloader = load_text_binary
+        elif oid == builtins['"char"'].oid:
+            loader.cloader = load_text_binary
+        elif oid == builtins['name'].oid:
+            loader.cloader = load_text_binary
+        elif oid == builtins['unknown'].oid:
+            loader.cloader = load_unknown_binary
+
+        return loader
 
     def dump_sequence(
         self, objs: Iterable[Any], formats: Iterable[Format]
@@ -190,30 +235,52 @@ cdef class Transformer:
         )
 
     def load_row(self, row: int) -> Optional[Tuple[Any, ...]]:
-        res = self.pgresult
-        if res is None:
+        if self._pgresult is None:
             return None
 
-        if row >= self._ntuples:
+        cdef int crow = row
+        if crow >= self._ntuples:
             return None
+
+        cdef libpq.PGresult *res = self._pgresult.pgresult_ptr
 
         rv: List[Any] = []
+        cdef RowLoader loader
+        cdef int col
+        cdef int length
+        cdef const char *val
         for col in range(self._nfields):
-            val = res.get_value(row, col)
-            if val is None:
-                rv.append(None)
+            length = libpq.PQgetlength(res, crow, col)
+            if length == 0:
+                if libpq.PQgetisnull(res, crow, col):
+                    rv.append(None)
+                    continue
+
+            val = libpq.PQgetvalue(res, crow, col)
+            loader = self._row_loaders[col]
+            if loader.cloader is not NULL:
+                rv.append(loader.cloader(val, length, loader.context))
             else:
-                rv.append(self._row_loaders[col](val))
+                # TODO: no copy
+                rv.append(loader.pyloader(val[:length]))
 
         return tuple(rv)
 
     def load_sequence(
-        self, record: Iterable[Optional[bytes]]
+        self, record: Sequence[Optional[bytes]]
     ) -> Tuple[Any, ...]:
-        return tuple(
-            (self._row_loaders[i](val) if val is not None else None)
-            for i, val in enumerate(record)
-        )
+        cdef list rv = []
+        cdef int i
+        cdef RowLoader loader
+        for i in range(len(record)):
+            item = record[i]
+            if item is None:
+                rv.append(None)
+            else:
+                loader = self._row_loaders[i]
+                rv.append(loader.pyloader(item))
+
+        return tuple(rv)
 
     def load(self, data: bytes, oid: int, format: Format = Format.TEXT) -> Any:
         if data is not None:

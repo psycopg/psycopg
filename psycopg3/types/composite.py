@@ -216,8 +216,10 @@ class BinaryRecordLoader(BaseCompositeLoader):
             self._types_set = True
 
         return self._tx.load_sequence(
-            data[offset : offset + length] if length != -1 else None
-            for _, offset, length in self._walk_record(data)
+            tuple(
+                data[offset : offset + length] if length != -1 else None
+                for _, offset, length in self._walk_record(data)
+            )
         )
 
     def _walk_record(
@@ -250,7 +252,7 @@ class CompositeLoader(RecordLoader):
             self._types_set = True
 
         return type(self).factory(
-            *self._tx.load_sequence(self._parse_record(data))
+            *self._tx.load_sequence(tuple(self._parse_record(data)))
         )
 
     def _config_types(self, data: bytes) -> None:
