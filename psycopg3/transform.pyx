@@ -1,3 +1,7 @@
+from libc.string cimport memset
+from cpython.ref cimport PyObject
+from cpython.mem cimport PyMem_Malloc, PyMem_Free
+
 import codecs
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
@@ -12,15 +16,10 @@ TEXT_OID = 25
 
 ctypedef object (*cloader_func)(const char *data, size_t length, void *context)
 
-cdef class RowLoader:
-    cdef object pyloader
-    cdef cloader_func cloader;
-    cdef void *context;
-
-    def __cinit__(self):
-        self.pyloader = None
-        self.cloader = NULL
-        self.context = NULL
+cdef struct RowLoader:
+    PyObject *pyloader  # borrowed
+    cloader_func cloader
+    void *context
 
 
 cdef class Transformer:
@@ -32,11 +31,13 @@ cdef class Transformer:
     state so adapting several values of the same type can use optimisations.
     """
 
-    cdef list _dumpers_maps, _loaders_maps, _row_loaders
+    cdef list _dumpers_maps, _loaders_maps
     cdef dict _dumpers, _loaders, _dump_funcs, _load_funcs
     cdef object _connection, _codec
     cdef PGresult _pgresult
     cdef int _nfields, _ntuples
+    cdef RowLoader *_row_loaders
+    cdef object _pyloaders  # only used to keep a reference
 
     def __cinit__(self, context: "AdaptContext" = None):
         self._dumpers_maps: List["DumpersMap"] = []
@@ -49,11 +50,13 @@ cdef class Transformer:
         # mapping oid, fmt -> load function
         self._load_funcs: Dict[Tuple[int, Format], "LoadFunc"] = {}
 
-        # sequence of load functions from value to python
-        # the length of the result columns
-        self._row_loaders: List[RowLoader] = []
+        self._row_loaders = NULL
+        self._pyloaders = []
 
         self.pgresult = None
+
+    def __dealloc__(self):
+        PyMem_Free(self._row_loaders)
 
     def _setup_context(self, context: "AdaptContext") -> None:
         from psycopg3.adapt import Dumper, Loader
@@ -143,17 +146,24 @@ cdef class Transformer:
             for i in range(self._nfields)]
         self.set_row_types(types)
 
-    def set_row_types(self, types: Iterable[Tuple[int, Format]]) -> None:
-        del self._row_loaders[:]
-        cdef list rc = self._row_loaders
-        cdef RowLoader loader
-        for oid, fmt in types:
-            loader = self._get_loader(oid, fmt)
-            rc.append(loader)
+    def set_row_types(self, types: Sequence[Tuple[int, Format]]) -> None:
+        cdef int ntypes = len(types)
+        PyMem_Free(self._row_loaders)
+        self._row_loaders = <RowLoader *>PyMem_Malloc(ntypes * sizeof(RowLoader))
+        memset(self._row_loaders, 0, ntypes * sizeof(RowLoader))
+        self._pyloaders = [None] * ntypes
 
-    cdef RowLoader _get_loader(self, Oid oid, int fmt):
-        loader = RowLoader()
-        loader.pyloader = self.get_load_function(oid, fmt)
+        cdef int i
+        for i, (oid, fmt) in enumerate(types):
+            loader = self._set_loader(i, oid, fmt)
+
+    cdef void _set_loader(self, int col, Oid oid, int fmt):
+        cdef RowLoader *loader = self._row_loaders + col
+
+        pyloader = self.get_load_function(oid, fmt)
+        self._pyloaders[col] = pyloader
+        loader.pyloader = <PyObject *>pyloader
+
         # STUB: special-case a few loaders
         from psycopg3.types import builtins
 
@@ -177,8 +187,6 @@ cdef class Transformer:
             loader.cloader = load_text_binary
         elif oid == builtins['unknown'].oid:
             loader.cloader = load_unknown_binary
-
-        return loader
 
     def dump_sequence(
         self, objs: Iterable[Any], formats: Iterable[Format]
@@ -245,7 +253,7 @@ cdef class Transformer:
         cdef libpq.PGresult *res = self._pgresult.pgresult_ptr
 
         rv: List[Any] = []
-        cdef RowLoader loader
+        cdef RowLoader *loader
         cdef int col
         cdef int length
         cdef const char *val
@@ -257,12 +265,12 @@ cdef class Transformer:
                     continue
 
             val = libpq.PQgetvalue(res, crow, col)
-            loader = self._row_loaders[col]
+            loader = self._row_loaders + col
             if loader.cloader is not NULL:
                 rv.append(loader.cloader(val, length, loader.context))
             else:
                 # TODO: no copy
-                rv.append(loader.pyloader(val[:length]))
+                rv.append((<object>loader.pyloader)(val[:length]))
 
         return tuple(rv)
 
@@ -271,14 +279,14 @@ cdef class Transformer:
     ) -> Tuple[Any, ...]:
         cdef list rv = []
         cdef int i
-        cdef RowLoader loader
+        cdef RowLoader *loader
         for i in range(len(record)):
             item = record[i]
             if item is None:
                 rv.append(None)
             else:
-                loader = self._row_loaders[i]
-                rv.append(loader.pyloader(item))
+                loader = self._row_loaders + i
+                rv.append((<object>loader.pyloader)(item))
 
         return tuple(rv)
 
