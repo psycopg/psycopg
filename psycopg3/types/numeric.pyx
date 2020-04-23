@@ -1,19 +1,21 @@
-cimport cpython
+from cpython.long cimport (
+    PyLong_FromLong, PyLong_FromLongLong, PyLong_FromUnsignedLong)
+
 
 cdef object load_int_text(const char *data, size_t length, void *context):
     return int(data)
 
 cdef object load_int2_binary(const char *data, size_t length, void *context):
-    return cpython.PyLong_FromLong(unpack_int16(data, 2))
+    return PyLong_FromLong(unpack_int16(data, 2))
 
 cdef object load_int4_binary(const char *data, size_t length, void *context):
-    return cpython.PyLong_FromLong(unpack_int32(data, 4))
+    return PyLong_FromLong(unpack_int32(data, 4))
 
 cdef object load_int8_binary(const char *data, size_t length, void *context):
-    return cpython.PyLong_FromLongLong(unpack_int64(data, 8))
+    return PyLong_FromLongLong(unpack_int64(data, 8))
 
 cdef object load_oid_binary(const char *data, size_t length, void *context):
-    return cpython.PyLong_FromUnsignedLong(unpack_uint32(data, 4))
+    return PyLong_FromUnsignedLong(unpack_uint32(data, 4))
 
 cdef object load_bool_binary(const char *data, size_t length, void *context):
     if data[0]:

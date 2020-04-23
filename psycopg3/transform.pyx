@@ -1,6 +1,8 @@
 from libc.string cimport memset
-from cpython.ref cimport PyObject
+from cpython.object cimport PyObject
+from cpython.ref cimport Py_INCREF
 from cpython.mem cimport PyMem_Malloc, PyMem_Free
+from cpython.tuple cimport PyTuple_New, PyTuple_SET_ITEM
 
 import codecs
 from typing import Any, Dict, Iterable, List, Optional, Tuple
@@ -256,13 +258,13 @@ cdef class Transformer:
         cdef int col
         cdef int length
         cdef const char *val
-        rv = cpython.PyTuple_New(self._nfields)
+        rv = PyTuple_New(self._nfields)
         for col in range(self._nfields):
             length = libpq.PQgetlength(res, crow, col)
             if length == 0:
                 if libpq.PQgetisnull(res, crow, col):
-                    cpython.Py_INCREF(None)
-                    cpython.PyTuple_SET_ITEM(rv, col, None)
+                    Py_INCREF(None)
+                    PyTuple_SET_ITEM(rv, col, None)
                     continue
 
             val = libpq.PQgetvalue(res, crow, col)
@@ -273,8 +275,8 @@ cdef class Transformer:
                 # TODO: no copy
                 pyval = (<object>loader.pyloader)(val[:length])
 
-            cpython.Py_INCREF(pyval)
-            cpython.PyTuple_SET_ITEM(rv, col, pyval)
+            Py_INCREF(pyval)
+            PyTuple_SET_ITEM(rv, col, pyval)
 
 
         return rv
