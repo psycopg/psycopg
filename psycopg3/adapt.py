@@ -409,7 +409,6 @@ def _connection_from_context(
         raise TypeError(f"can't get a connection from {type(context)}")
 
 
-try:
+# Override it with fast object if available
+if pq.__impl__ == "c":
     from ._psycopg3 import Transformer  # noqa
-except ImportError:
-    pass
