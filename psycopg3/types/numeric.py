@@ -59,7 +59,7 @@ def dump_bool(obj: bool) -> Tuple[bytes, int]:
 
 
 @Dumper.binary(bool)
-def dump_binary_bool(obj: bool) -> Tuple[bytes, int]:
+def dump_bool_binary(obj: bool) -> Tuple[bytes, int]:
     return _bool_binary_dump[obj]
 
 
@@ -72,25 +72,25 @@ def load_int(data: bytes) -> int:
 
 
 @Loader.binary(builtins["int2"].oid)
-def load_binary_int2(data: bytes) -> int:
+def load_int2_binary(data: bytes) -> int:
     rv: int = _int2_struct.unpack(data)[0]
     return rv
 
 
 @Loader.binary(builtins["int4"].oid)
-def load_binary_int4(data: bytes) -> int:
+def load_int4_binary(data: bytes) -> int:
     rv: int = _int4_struct.unpack(data)[0]
     return rv
 
 
 @Loader.binary(builtins["int8"].oid)
-def load_binary_int8(data: bytes) -> int:
+def load_int8_binary(data: bytes) -> int:
     rv: int = _int8_struct.unpack(data)[0]
     return rv
 
 
 @Loader.binary(builtins["oid"].oid)
-def load_binary_oid(data: bytes) -> int:
+def load_oid_binary(data: bytes) -> int:
     rv: int = _oid_struct.unpack(data)[0]
     return rv
 
@@ -103,13 +103,13 @@ def load_float(data: bytes) -> float:
 
 
 @Loader.binary(builtins["float4"].oid)
-def load_binary_float4(data: bytes) -> float:
+def load_float4_binary(data: bytes) -> float:
     rv: float = _float4_struct.unpack(data)[0]
     return rv
 
 
 @Loader.binary(builtins["float8"].oid)
-def load_binary_float8(data: bytes) -> float:
+def load_float8_binary(data: bytes) -> float:
     rv: float = _float8_struct.unpack(data)[0]
     return rv
 
@@ -129,5 +129,5 @@ def load_bool(data: bytes) -> bool:
 
 
 @Loader.binary(builtins["bool"].oid)
-def load_binary_bool(data: bytes) -> bool:
+def load_bool_binary(data: bytes) -> bool:
     return _bool_binary_loads[data]
