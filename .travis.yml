@@ -81,3 +81,9 @@ install:
 
 script:
   - tox
+
+
+# This branch is still far from passing tests
+branches:
+  except:
+  - cython

@@ -9,6 +9,7 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 from psycopg3.pq cimport libpq
 from psycopg3.pq.pq_cython cimport PGresult
+from psycopg3.adapt cimport cloader_func
 
 from psycopg3 import errors as e
 from psycopg3.pq.enums import Format
@@ -17,7 +18,6 @@ from psycopg3.pq.enums import Format
 TEXT_OID = 25
 
 
-ctypedef object (*cloader_func)(const char *data, size_t length, void *context)
 
 cdef struct RowLoader:
     PyObject *pyloader  # borrowed
