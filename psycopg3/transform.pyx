@@ -8,9 +8,10 @@ import codecs
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 from psycopg3.pq cimport libpq
+from psycopg3.pq.pq_cython cimport PGresult
 
 from psycopg3 import errors as e
-# from psycopg3.pq.enum import Format
+from psycopg3.pq.enums import Format
 # from psycopg3.types.oids import builtins, INVALID_OID
 
 TEXT_OID = 25
@@ -159,7 +160,7 @@ cdef class Transformer:
         for i, (oid, fmt) in enumerate(types):
             loader = self._set_loader(i, oid, fmt)
 
-    cdef void _set_loader(self, int col, Oid oid, int fmt):
+    cdef void _set_loader(self, int col, libpq.Oid oid, int fmt):
         cdef RowLoader *loader = self._row_loaders + col
 
         pyloader = self.get_load_function(oid, fmt)

@@ -71,14 +71,20 @@ class our_build_ext(build_ext):  # type: ignore
 
         includedir = out.stdout.strip().decode("utf8")
 
-        ext = Extension(
+        pgext = Extension(
             "psycopg3._psycopg3",
             ["psycopg3/_psycopg3.pyx"],
             libraries=["pq"],
             include_dirs=[includedir],
         )
+        pqext = Extension(
+            "psycopg3.pq.pq_cython",
+            ["psycopg3/pq/pq_cython.pyx"],
+            libraries=["pq"],
+            include_dirs=[includedir],
+        )
         self.distribution.ext_modules = cythonize(
-            [ext],
+            [pgext, pqext],
             language_level=3,
             # annotate=True,  # enable to get an html view of the C module
         )

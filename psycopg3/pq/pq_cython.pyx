@@ -7,6 +7,7 @@ libpq Python wrapper using cython bindings.
 from cpython.mem cimport PyMem_Malloc, PyMem_Free
 
 from psycopg3.pq cimport libpq as impl
+from psycopg3.pq.libpq cimport Oid
 from psycopg3.errors import OperationalError
 
 from psycopg3.pq.misc import error_message, ConninfoOption, PQerror
@@ -27,13 +28,8 @@ __impl__ = 'c'
 def version():
     return impl.PQlibVersion()
 
-ctypedef unsigned int Oid;
-ctypedef char *(*conn_bytes_f) (const impl.PGconn *)
-ctypedef int(*conn_int_f) (const impl.PGconn *)
 
 cdef class PGconn:
-    cdef impl.PGconn* pgconn_ptr
-
     @staticmethod
     cdef PGconn _from_ptr(impl.PGconn *ptr):
         cdef PGconn rv = PGconn.__new__(PGconn)
@@ -526,8 +522,6 @@ cdef _options_from_array(impl.PQconninfoOption *opts):
 
 
 cdef class PGresult:
-    cdef impl.PGresult* pgresult_ptr
-
     def __cinit__(self):
         self.pgresult_ptr = NULL
 

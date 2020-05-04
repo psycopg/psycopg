@@ -47,7 +47,7 @@ def import_from_libpq() -> None:
     if not impl or impl == "c":
         try:
             # TODO: extension module not recognised by mypy?
-            from psycopg3 import _psycopg3  # type: ignore
+            from . import pq_cython  # type: ignore
         except Exception as e:
             if not impl:
                 logger.debug(f"C pq wrapper not available: %s", e)
@@ -56,12 +56,12 @@ def import_from_libpq() -> None:
                     f"requested pq implementation '{impl}' not available"
                 ) from e
         else:
-            __impl__ = _psycopg3.__impl__
-            version = _psycopg3.version
-            PGconn = _psycopg3.PGconn
-            PGresult = _psycopg3.PGresult
-            Conninfo = _psycopg3.Conninfo
-            Escaping = _psycopg3.Escaping
+            __impl__ = pq_cython.__impl__
+            version = pq_cython.version
+            PGconn = pq_cython.PGconn
+            PGresult = pq_cython.PGresult
+            Conninfo = pq_cython.Conninfo
+            Escaping = pq_cython.Escaping
             return
 
     if not impl or impl == "ctypes":
