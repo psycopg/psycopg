@@ -1,5 +1,6 @@
 from cpython.bytes cimport PyBytes_FromStringAndSize
 from cpython.unicode cimport PyUnicode_DecodeUTF8
+from psycopg3.pq cimport libpq
 
 
 cdef object load_text(const char *data, size_t length, void *context):
@@ -18,6 +19,24 @@ cdef void *get_context_text(object loader):
         return <void *>loader.decode
     else:
         return NULL
+
+
+cdef object load_bytea_text(const char *data, size_t length, void *context):
+    cdef size_t len_out
+    cdef unsigned char *out = libpq.PQunescapeBytea(
+        <const unsigned char *>data, &len_out)
+    if out is NULL:
+        raise MemoryError(
+            f"couldn't allocate for unescape_bytea of {len(data)} bytes"
+        )
+
+    rv = out[:len_out]
+    libpq.PQfreemem(out)
+    return rv
+
+
+cdef object load_bytea_binary(const char *data, size_t length, void *context):
+    return data[:length]
 
 
 cdef object load_unknown_text(const char *data, size_t length, void *context):

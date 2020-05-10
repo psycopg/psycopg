@@ -98,7 +98,7 @@ def dump_bytes(b: bytes) -> Tuple[bytes, int]:
 
 
 @Loader.text(builtins["bytea"].oid)
-def load_bytea(data: bytes) -> bytes:
+def load_bytea_text(data: bytes) -> bytes:
     return Escaping().unescape_bytea(data)
 
 
