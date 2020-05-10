@@ -157,33 +157,8 @@ cdef class Transformer:
     cdef void _set_loader(self, int col, libpq.Oid oid, int fmt):
         cdef RowLoader *loader = self._row_loaders + col
 
-        pyloader = self.get_load_function(oid, fmt)
-        self._pyloaders[col] = pyloader
-        loader.pyloader = <PyObject *>pyloader
-
-        # STUB: special-case a few loaders
-        from psycopg3.types import builtins
-
-        if oid == builtins['int2'].oid and fmt == 0:
-            loader.cloader = load_int_text
-        elif oid == builtins['int2'].oid and fmt == 1:
-            loader.cloader = load_int2_binary
-        elif oid == builtins['int4'].oid and fmt == 1:
-            loader.cloader = load_int4_binary
-        elif oid == builtins['int8'].oid and fmt == 1:
-            loader.cloader = load_int8_binary
-        elif oid == builtins['oid'].oid and fmt == 1:
-            loader.cloader = load_oid_binary
-        elif oid == builtins['bool'].oid and fmt == 1:
-            loader.cloader = load_bool_binary
-        elif oid == builtins['text'].oid:
-            loader.cloader = load_text_binary
-        elif oid == builtins['"char"'].oid:
-            loader.cloader = load_text_binary
-        elif oid == builtins['name'].oid:
-            loader.cloader = load_text_binary
-        elif oid == builtins['unknown'].oid:
-            loader.cloader = load_unknown_binary
+        pyloader = self._pyloaders[col] = self.get_load_function(oid, fmt)
+        fill_row_loader(loader, pyloader)
 
     def dump_sequence(
         self, objs: Iterable[Any], formats: Iterable[Format]

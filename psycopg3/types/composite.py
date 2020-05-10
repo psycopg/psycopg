@@ -237,7 +237,7 @@ class BinaryRecordLoader(BaseCompositeLoader):
 
     def _config_types(self, data: bytes) -> None:
         self._tx.set_row_types(
-            (oid, Format.BINARY) for oid, _, _ in self._walk_record(data)
+            [(oid, Format.BINARY) for oid, _, _ in self._walk_record(data)]
         )
 
 

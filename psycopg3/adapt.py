@@ -390,7 +390,7 @@ class UnknownLoader(Loader):
 
 
 @Loader.binary(INVALID_OID)
-def load_unknown(data: bytes) -> bytes:
+def load_unknown_binary(data: bytes) -> bytes:
     return data
 
 
