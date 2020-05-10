@@ -36,7 +36,6 @@ cdef void register_c_loader(
 cdef void fill_row_loader(RowLoader *loader, object pyloader):
     loader.pyloader = <PyObject *>pyloader
 
-    print(pyloader)
     cdef CLoader cloader
     cloader = cloaders.get(pyloader)
     if cloader is not None:
@@ -74,8 +73,6 @@ cdef void register_text_c_loaders():
     from psycopg3 import adapt
     from psycopg3.types import text
     register_c_loader(text.StringLoader.load, load_text, get_context_text)
-    register_c_loader(text.NameLoader.load, load_text, get_context_text)
+    register_c_loader(text.UnknownLoader.load, load_text, get_context_text)
     register_c_loader(text.load_bytea_text, load_bytea_text)
     register_c_loader(text.load_bytea_binary, load_bytea_binary)
-    register_c_loader(adapt.UnknownLoader.load, load_unknown_text)
-    register_c_loader(adapt.load_unknown_binary, load_unknown_binary)

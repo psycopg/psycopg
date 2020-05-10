@@ -13,7 +13,6 @@ from . import pq
 from .cursor import BaseCursor
 from .types.oids import builtins, INVALID_OID
 from .connection import BaseConnection
-from .utils.typing import DecodeFunc
 
 TEXT_OID = builtins["text"].oid
 
@@ -369,29 +368,6 @@ class Transformer:
                 return tcmap[key]
 
         return Loader.globals[INVALID_OID, format]
-
-
-@Loader.text(INVALID_OID)
-class UnknownLoader(Loader):
-    """
-    Fallback object to convert unknown types to Python
-    """
-
-    def __init__(self, oid: int, context: AdaptContext):
-        super().__init__(oid, context)
-        self.decode: DecodeFunc
-        if self.connection is not None:
-            self.decode = self.connection.codec.decode
-        else:
-            self.decode = codecs.lookup("utf8").decode
-
-    def load(self, data: bytes) -> str:
-        return self.decode(data)[0]
-
-
-@Loader.binary(INVALID_OID)
-def load_unknown_binary(data: bytes) -> bytes:
-    return data
 
 
 def _connection_from_context(

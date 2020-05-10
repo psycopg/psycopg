@@ -10,7 +10,7 @@ from typing import Optional, Tuple, Union
 from ..adapt import Dumper, Loader, AdaptContext
 from ..utils.typing import EncodeFunc, DecodeFunc
 from ..pq import Escaping
-from .oids import builtins
+from .oids import builtins, INVALID_OID
 
 TEXT_OID = builtins["text"].oid
 BYTEA_OID = builtins["bytea"].oid
@@ -39,6 +39,7 @@ class StringDumper(Dumper):
 @Loader.binary(builtins["text"].oid)
 @Loader.text(builtins["varchar"].oid)
 @Loader.binary(builtins["varchar"].oid)
+@Loader.text(INVALID_OID)
 class StringLoader(Loader):
 
     decode: Optional[DecodeFunc]
@@ -66,7 +67,7 @@ class StringLoader(Loader):
 @Loader.binary(builtins["name"].oid)
 @Loader.text(builtins["bpchar"].oid)
 @Loader.binary(builtins["bpchar"].oid)
-class NameLoader(Loader):
+class UnknownLoader(Loader):
     def __init__(self, oid: int, context: AdaptContext):
         super().__init__(oid, context)
 
@@ -103,5 +104,6 @@ def load_bytea_text(data: bytes) -> bytes:
 
 
 @Loader.binary(builtins["bytea"].oid)
+@Loader.binary(INVALID_OID)
 def load_bytea_binary(data: bytes) -> bytes:
     return data

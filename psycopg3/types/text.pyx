@@ -37,12 +37,3 @@ cdef object load_bytea_text(const char *data, size_t length, void *context):
 
 cdef object load_bytea_binary(const char *data, size_t length, void *context):
     return data[:length]
-
-
-cdef object load_unknown_text(const char *data, size_t length, void *context):
-    # TODO: codec
-    return PyUnicode_DecodeUTF8(data, length, NULL)
-
-
-cdef object load_unknown_binary(const char *data, size_t length, void *context):
-    return PyBytes_FromStringAndSize(data, length)
