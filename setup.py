@@ -9,12 +9,12 @@ psycopg3 -- PostgreSQL database adapter for Python
 import re
 import os
 import subprocess as sp
-from setuptools import setup, find_packages, Extension  # type: ignore
-from distutils.command.build_ext import build_ext  # type: ignore
+from setuptools import setup, find_packages, Extension
+from distutils.command.build_ext import build_ext
 from distutils import log
 
 try:
-    from Cython.Build import cythonize  # type: ignore
+    from Cython.Build import cythonize
 except ImportError:
     cythonize = None
 
@@ -44,7 +44,7 @@ Topic :: Software Development :: Libraries :: Python Modules
 """
 
 
-class our_build_ext(build_ext):  # type: ignore
+class our_build_ext(build_ext):
     def finalize_options(self) -> None:
         self._setup_ext_build()
         super().finalize_options()
@@ -56,9 +56,7 @@ class our_build_ext(build_ext):  # type: ignore
         try:
             from Cython.Build import cythonize
         except ImportError:
-            log.warn(
-                "Cython is not available: the C module will not be built", ()
-            )
+            log.warn("Cython is not available: the C module will not be built")
             return
 
         try:
