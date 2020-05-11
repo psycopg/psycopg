@@ -5,18 +5,37 @@ Protocol objects representing different implementations of the same classes.
 # Copyright (C) 2020 The Psycopg Team
 
 import codecs
-from typing import Any, Iterable, List, Optional, Sequence, Tuple
-from typing import TYPE_CHECKING
+from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional
+from typing import Sequence, Tuple, Type, Union, TYPE_CHECKING
 from typing_extensions import Protocol
 
-from .utils.typing import AdaptContext, DumpFunc, DumpersMap, DumperType
-from .utils.typing import LoadFunc, LoadersMap, LoaderType, MaybeOid
 from . import pq
 
 if TYPE_CHECKING:
     from .connection import BaseConnection  # noqa
+    from .cursor import BaseCursor  # noqa
+    from .adapt import Dumper, Loader  # noqa
 
+# Part of the module interface (just importing it makes mypy unhappy)
 Format = pq.Format
+
+
+EncodeFunc = Callable[[str], Tuple[bytes, int]]
+DecodeFunc = Callable[[bytes], Tuple[str, int]]
+
+Query = Union[str, bytes]
+Params = Union[Sequence[Any], Mapping[str, Any]]
+
+AdaptContext = Union[None, "BaseConnection", "BaseCursor", "Transformer"]
+
+MaybeOid = Union[Optional[bytes], Tuple[Optional[bytes], int]]
+DumpFunc = Callable[[Any], MaybeOid]
+DumperType = Union[Type["Dumper"], DumpFunc]
+DumpersMap = Dict[Tuple[type, Format], DumperType]
+
+LoadFunc = Callable[[bytes], Any]
+LoaderType = Union[Type["Loader"], LoadFunc]
+LoadersMap = Dict[Tuple[int, Format], LoaderType]
 
 
 class Transformer(Protocol):

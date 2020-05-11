@@ -10,8 +10,8 @@ from typing import Optional, TYPE_CHECKING
 
 from . import array
 from ..adapt import Format, Dumper, Loader, Transformer
+from ..proto import AdaptContext
 from .oids import builtins, TypeInfo
-from ..utils.typing import AdaptContext
 
 if TYPE_CHECKING:
     from ..connection import Connection, AsyncConnection

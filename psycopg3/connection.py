@@ -15,9 +15,9 @@ from . import pq
 from . import errors as e
 from . import cursor
 from . import generators
+from . import proto
 from .conninfo import make_conninfo
 from .waiting import wait, wait_async
-from .utils.typing import DumpersMap, LoadersMap
 
 logger = logging.getLogger(__name__)
 
@@ -52,8 +52,8 @@ class BaseConnection:
     def __init__(self, pgconn: pq.proto.PGconn):
         self.pgconn = pgconn
         self.cursor_factory = cursor.BaseCursor
-        self.dumpers: DumpersMap = {}
-        self.loaders: LoadersMap = {}
+        self.dumpers: proto.DumpersMap = {}
+        self.loaders: proto.LoadersMap = {}
         # name of the postgres encoding (in bytes)
         self._pgenc = b""
 

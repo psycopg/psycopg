@@ -10,9 +10,9 @@ information. Will submit a bug.
 import codecs
 from typing import Any, Iterable, List, Optional, Sequence, Tuple
 
+from .proto import AdaptContext, DumpFunc, DumpersMap, DumperType
+from .proto import LoadFunc, LoadersMap, LoaderType, MaybeOid
 from .connection import BaseConnection
-from .utils.typing import AdaptContext, DumpFunc, DumpersMap, DumperType
-from .utils.typing import LoadFunc, LoadersMap, LoaderType, MaybeOid
 from . import pq
 
 Format = pq.Format

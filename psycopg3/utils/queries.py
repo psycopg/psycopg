@@ -11,7 +11,7 @@ from typing import Sequence, Tuple, Union, TYPE_CHECKING
 
 from .. import errors as e
 from ..pq import Format
-from .typing import Query, Params
+from ..proto import Query, Params
 
 if TYPE_CHECKING:
     from ..proto import Transformer

@@ -12,8 +12,8 @@ from . import errors as e
 from . import pq
 from . import generators
 from . import proto
+from .proto import Query, Params, DumpersMap, LoadersMap
 from .utils.queries import PostgresQuery
-from .utils.typing import Query, Params, DumpersMap, LoadersMap
 
 if TYPE_CHECKING:
     from .connection import BaseConnection, Connection, AsyncConnection

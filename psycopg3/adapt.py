@@ -8,10 +8,10 @@ from typing import Any, Callable, Optional, Tuple, Type, Union
 
 from . import pq
 from . import proto
+from .proto import AdaptContext, DumpersMap, DumperType
+from .proto import LoadersMap, LoaderType
 from .cursor import BaseCursor
 from .connection import BaseConnection
-from .utils.typing import AdaptContext, DumpersMap, DumperType
-from .utils.typing import LoadersMap, LoaderType
 
 # Part of the module interface (just importing it makes mypy unhappy)
 Format = pq.Format

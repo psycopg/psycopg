@@ -9,11 +9,11 @@ from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
 from . import errors as e
 from . import pq
+from .proto import AdaptContext, DumpFunc, DumpersMap, DumperType
+from .proto import LoadFunc, LoadersMap, LoaderType, MaybeOid
 from .cursor import BaseCursor
-from .types.oids import builtins, INVALID_OID
 from .connection import BaseConnection
-from .utils.typing import AdaptContext, DumpFunc, DumpersMap, DumperType
-from .utils.typing import LoadFunc, LoadersMap, LoaderType, MaybeOid
+from .types.oids import builtins, INVALID_OID
 
 Format = pq.Format
 TEXT_OID = builtins["text"].oid

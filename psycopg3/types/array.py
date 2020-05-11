@@ -10,8 +10,8 @@ from typing import Any, Generator, List, Optional, Tuple
 
 from .. import errors as e
 from ..adapt import Format, Dumper, Loader, Transformer
+from ..proto import AdaptContext
 from .oids import builtins
-from ..utils.typing import AdaptContext
 
 TEXT_OID = builtins["text"].oid
 TEXT_ARRAY_OID = builtins["text"].array_oid
