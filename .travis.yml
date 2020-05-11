@@ -26,8 +26,9 @@ matrix:
             - postgresql-client-9.5
       env:
         - TOXENV=py36
-        - PGPORT=5432
         - PGVER=9.5
+        - PSYCOPG3_IMPL=c
+        - PGPORT=5432
 
     - python: 3.6
       addons:
@@ -37,8 +38,9 @@ matrix:
             - postgresql-client-9.6
       env:
         - TOXENV=py36
-        - PGPORT=5432
         - PGVER=9.6
+        - PSYCOPG3_IMPL=ctypes
+        - PGPORT=5432
 
     - python: 3.7
       addons:
@@ -48,10 +50,11 @@ matrix:
             - postgresql-client-10
       env:
         - TOXENV=py37
-        - PGPORT=5432
         - PGVER=10
+        - PSYCOPG3_IMPL=c
+        - PGPORT=5432
 
-    - python: 3.8
+    - python: 3.7
       addons:
         postgresql: '11'
         apt:
@@ -59,9 +62,10 @@ matrix:
             - postgresql-11
             - postgresql-client-11
       env:
-        - TOXENV=py38
-        - PGPORT=5433
+        - TOXENV=py37
         - PGVER=11
+        - PSYCOPG3_IMPL=ctypes
+        - PGPORT=5433
 
     - python: 3.8
       addons:
@@ -72,8 +76,22 @@ matrix:
             - postgresql-client-12
       env:
         - TOXENV=py38
-        - PGPORT=5433
         - PGVER=12
+        - PSYCOPG3_IMPL=c
+        - PGPORT=5433
+
+    - python: 3.8
+      addons:
+        postgresql: '12'
+        apt:
+          packages:
+            - postgresql-12
+            - postgresql-client-12
+      env:
+        - TOXENV=py38
+        - PGVER=12
+        - PSYCOPG3_IMPL=ctypes
+        - PGPORT=5433
 
 install:
   - pip install tox
