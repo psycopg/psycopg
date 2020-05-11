@@ -66,7 +66,7 @@ class our_build_ext(build_ext):  # type: ignore
                 ["pg_config", f"--includedir"], stdout=sp.PIPE, check=True
             )
         except Exception as e:
-            log.warn("cannot build C module: %s", (e,))
+            log.warn("cannot build C module: %s", e)
             return
 
         includedir = out.stdout.strip().decode("utf8")
@@ -100,9 +100,10 @@ setup(
     python_requires=">=3.6",
     packages=find_packages(exclude=["tests"]),
     classifiers=[x for x in classifiers.split("\n") if x],
-    setup_requires=["Cython"],
-    install_requires=["Cython", "typing_extensions"],
+    setup_requires=["Cython>=3.0a2"],
+    install_requires=["typing_extensions"],
     zip_safe=False,
+    include_package_data=True,
     version=version,
     project_urls={
         "Homepage": "https://psycopg.org/",

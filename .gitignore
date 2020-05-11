@@ -3,3 +3,4 @@ env
 /.tox
 /.eggs
 /build
+/dist
