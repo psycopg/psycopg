@@ -1,3 +1,9 @@
+"""
+Protocol objects to represent objects exposed by different pq implementations.
+"""
+
+# Copyright (C) 2020 The Psycopg Team
+
 from typing import Any, List, Optional, Sequence, TYPE_CHECKING
 from typing_extensions import Protocol
 

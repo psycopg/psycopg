@@ -5,12 +5,15 @@ Adapters for textual types.
 # Copyright (C) 2020 The Psycopg Team
 
 import codecs
-from typing import Optional, Tuple, Union
+from typing import Optional, Tuple, Union, TYPE_CHECKING
 
-from ..adapt import Dumper, Loader, AdaptContext
+from ..adapt import Dumper, Loader
 from ..utils.typing import EncodeFunc, DecodeFunc
 from ..pq import Escaping
 from .oids import builtins, INVALID_OID
+
+if TYPE_CHECKING:
+    from ..utils.typing import AdaptContext
 
 TEXT_OID = builtins["text"].oid
 BYTEA_OID = builtins["bytea"].oid
@@ -19,7 +22,7 @@ BYTEA_OID = builtins["bytea"].oid
 @Dumper.text(str)
 @Dumper.binary(str)
 class StringDumper(Dumper):
-    def __init__(self, src: type, context: AdaptContext):
+    def __init__(self, src: type, context: "AdaptContext"):
         super().__init__(src, context)
 
         self._encode: EncodeFunc
@@ -44,7 +47,7 @@ class StringLoader(Loader):
 
     decode: Optional[DecodeFunc]
 
-    def __init__(self, oid: int, context: AdaptContext):
+    def __init__(self, oid: int, context: "AdaptContext"):
         super().__init__(oid, context)
 
         if self.connection is not None:
@@ -68,7 +71,7 @@ class StringLoader(Loader):
 @Loader.text(builtins["bpchar"].oid)
 @Loader.binary(builtins["bpchar"].oid)
 class UnknownLoader(Loader):
-    def __init__(self, oid: int, context: AdaptContext):
+    def __init__(self, oid: int, context: "AdaptContext"):
         super().__init__(oid, context)
 
         self.decode: DecodeFunc
@@ -83,7 +86,7 @@ class UnknownLoader(Loader):
 
 @Dumper.text(bytes)
 class BytesDumper(Dumper):
-    def __init__(self, src: type, context: AdaptContext = None):
+    def __init__(self, src: type, context: "AdaptContext" = None):
         super().__init__(src, context)
         self.esc = Escaping(
             self.connection.pgconn if self.connection is not None else None

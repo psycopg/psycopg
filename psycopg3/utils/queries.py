@@ -14,7 +14,7 @@ from ..pq import Format
 from .typing import Query, Params
 
 if TYPE_CHECKING:
-    from ..adapt import Transformer
+    from ..proto import Transformer
 
 
 class PostgresQuery:

@@ -6,6 +6,8 @@ libpq Python wrapper using cython bindings.
 
 from cpython.mem cimport PyMem_Malloc, PyMem_Free
 
+from typing import List, Optional, Sequence
+
 from psycopg3.pq cimport libpq as impl
 from psycopg3.pq.libpq cimport Oid
 from psycopg3.errors import OperationalError

@@ -1,3 +1,5 @@
 env
 /psycopg3.egg-info
 /.tox
+/.eggs
+/build

@@ -9,8 +9,9 @@ from typing import Any, Callable, Generator, Sequence, Tuple
 from typing import Optional, TYPE_CHECKING
 
 from . import array
-from ..adapt import Format, Dumper, Loader, Transformer, AdaptContext
+from ..adapt import Format, Dumper, Loader, Transformer
 from .oids import builtins, TypeInfo
+from ..utils.typing import AdaptContext
 
 if TYPE_CHECKING:
     from ..connection import Connection, AsyncConnection
@@ -256,7 +257,9 @@ class CompositeLoader(RecordLoader):
         )
 
     def _config_types(self, data: bytes) -> None:
-        self._tx.set_row_types((oid, Format.TEXT) for oid in self.fields_types)
+        self._tx.set_row_types(
+            [(oid, Format.TEXT) for oid in self.fields_types]
+        )
 
 
 class BinaryCompositeLoader(BinaryRecordLoader):

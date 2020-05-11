@@ -11,11 +11,11 @@ from typing import Any, List, Optional, Sequence, TYPE_CHECKING
 from . import errors as e
 from . import pq
 from . import generators
+from . import proto
 from .utils.queries import PostgresQuery
-from .utils.typing import Query, Params
+from .utils.typing import Query, Params, DumpersMap, LoadersMap
 
 if TYPE_CHECKING:
-    from .adapt import DumpersMap, LoadersMap, Transformer
     from .connection import BaseConnection, Connection, AsyncConnection
 
 
@@ -60,7 +60,7 @@ class Column(Sequence[Any]):
 class BaseCursor:
     ExecStatus = pq.ExecStatus
 
-    _transformer: "Transformer"
+    _transformer: proto.Transformer
 
     def __init__(self, connection: "BaseConnection", binary: bool = False):
         self.connection = connection

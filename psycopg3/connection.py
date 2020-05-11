@@ -17,11 +17,11 @@ from . import cursor
 from . import generators
 from .conninfo import make_conninfo
 from .waiting import wait, wait_async
+from .utils.typing import DumpersMap, LoadersMap
 
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
-    from .adapt import DumpersMap, LoadersMap
     from .generators import PQGen, RV
 
 
