@@ -177,6 +177,7 @@ def test_hostaddr(pgconn):
         pgconn.hostaddr
 
 
+@pytest.mark.xfail
 @pytest.mark.libpq("< 12")
 def test_hostaddr_missing(pgconn):
     with pytest.raises(psycopg3.NotSupportedError):
