@@ -5,26 +5,41 @@ Cython adapters for textual types.
 # Copyright (C) 2020 The Psycopg Team
 
 from cpython.bytes cimport PyBytes_FromStringAndSize
+from cpython.mem cimport PyMem_Malloc
+from cpython.object cimport PyObject
 from cpython.unicode cimport PyUnicode_DecodeUTF8
 from psycopg3.pq cimport libpq
 
+ctypedef unicode (*decodefunc)(char *s, Py_ssize_t size, char *errors)
+
+cdef struct TextContext:
+    PyObject *pydecoder
+    decodefunc cdecoder
+
 
 cdef object load_text(const char *data, size_t length, void *context):
-    # TODO: optimize
+    cdef TextContext *tcontext = <TextContext *>context
+    if tcontext.cdecoder:
+        return tcontext.cdecoder(<char *>data, length, NULL)
+
     b = PyBytes_FromStringAndSize(data, length)
-    if context is not NULL:
-        codec = <object>context
-        # TODO: check if the refcount is right (but a DECREF here segfaults)
-        return codec(b)[0]
+    decoder = <object>(tcontext.pydecoder)
+    if decoder is not None:
+        # TODO: check if the refcount is right
+        return decoder(b)[0]
     else:
         return b
 
 
 cdef void *get_context_text(object loader):
-    if loader.decode is not None:
-        return <void *>loader.decode
-    else:
-        return NULL
+    cdef TextContext *rv = <TextContext *>PyMem_Malloc(sizeof(TextContext))
+    rv.pydecoder = <PyObject *>loader.decode
+    rv.cdecoder = NULL
+
+    if loader.connection is None or loader.connection.encoding == "UTF8":
+        rv.cdecoder = <decodefunc>PyUnicode_DecodeUTF8
+
+    return rv
 
 
 cdef object load_bytea_text(const char *data, size_t length, void *context):

@@ -47,6 +47,8 @@ cdef class Transformer:
     cdef object _connection, _codec
     cdef PGresult _pgresult
     cdef int _nfields, _ntuples
+
+    cdef int _nloaders
     cdef RowLoader *_row_loaders
     cdef object _pyloaders  # only used to keep a reference
 
@@ -61,12 +63,19 @@ cdef class Transformer:
         # mapping oid, fmt -> load function
         self._load_funcs: Dict[Tuple[int, Format], "LoadFunc"] = {}
 
+        self._nloaders = 0
         self._row_loaders = NULL
         self._pyloaders = []
 
         self.pgresult = None
 
     def __dealloc__(self):
+        self._clear_row_loaders()
+
+    def _clear_row_loaders(self):
+        cdef int i
+        for i in range(self._nloaders):
+            PyMem_Free(self._row_loaders[i].context)
         PyMem_Free(self._row_loaders)
 
     def _setup_context(self, context: "AdaptContext") -> None:
@@ -159,7 +168,7 @@ cdef class Transformer:
 
     def set_row_types(self, types: Sequence[Tuple[int, Format]]) -> None:
         cdef int ntypes = len(types)
-        PyMem_Free(self._row_loaders)
+        self._clear_row_loaders()
         self._row_loaders = <RowLoader *>PyMem_Malloc(ntypes * sizeof(RowLoader))
         memset(self._row_loaders, 0, ntypes * sizeof(RowLoader))
         self._pyloaders = [None] * ntypes
