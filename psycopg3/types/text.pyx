@@ -1,3 +1,9 @@
+"""
+Cython adapters for textual types.
+"""
+
+# Copyright (C) 2020 The Psycopg Team
+
 from cpython.bytes cimport PyBytes_FromStringAndSize
 from cpython.unicode cimport PyUnicode_DecodeUTF8
 from psycopg3.pq cimport libpq

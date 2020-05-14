@@ -1,3 +1,9 @@
+"""
+Cython adapters for numeric types.
+"""
+
+# Copyright (C) 2020 The Psycopg Team
+
 from libc.stdint cimport *
 from psycopg3.types.endian cimport be16toh, be32toh, be64toh
 
