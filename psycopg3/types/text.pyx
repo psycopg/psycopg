@@ -37,3 +37,12 @@ cdef object load_bytea_text(const char *data, size_t length, void *context):
 
 cdef object load_bytea_binary(const char *data, size_t length, void *context):
     return data[:length]
+
+
+cdef void register_text_c_loaders():
+    logger.debug("registering optimised text c loaders")
+    from psycopg3.types import text
+    register_c_loader(text.StringLoader.load, load_text, get_context_text)
+    register_c_loader(text.UnknownLoader.load, load_text, get_context_text)
+    register_c_loader(text.load_bytea_text, load_bytea_text)
+    register_c_loader(text.load_bytea_binary, load_bytea_binary)
