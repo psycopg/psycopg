@@ -4,3 +4,4 @@ env
 /.eggs
 /build
 /dist
+*.pstats
