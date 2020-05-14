@@ -1,5 +1,19 @@
-from psycopg3.adapt cimport cloader_func, get_context_func, RowLoader
+"""
+C implementation of the adaptation system.
 
+This module maps each Python adaptation function to a C adaptation function.
+Notice that C adaptation functions have a different signature because they can
+avoid making a memory copy, however this makes impossible to expose them to
+Python.
+
+This module exposes facilities to map the builtin adapters in python to
+equivalent C implementations.
+
+"""
+
+# Copyright (C) 2020 The Psycopg Team
+
+from psycopg3.adapt cimport cloader_func, get_context_func
 
 import logging
 logger = logging.getLogger("psycopg3.adapt")
@@ -31,21 +45,14 @@ cdef void register_c_loader(
     cloaders[pyloader] = cl
 
 
-cdef void fill_row_loader(RowLoader *loader, object pyloader):
-    loader.pyloader = <PyObject *>pyloader
-
-    cdef CLoader cloader
-    cloader = cloaders.get(pyloader)
-    if cloader is not None:
-        loader.cloader = cloader.cloader
-    else:
-        cloader = cloaders.get(getattr(pyloader, '__func__', None))
-        if cloader is not None and cloader.get_context is not NULL:
-            loader.cloader = cloader.cloader
-            loader.context = cloader.get_context(pyloader.__self__)
-
-
 def register_builtin_c_loaders():
+    """
+    Register all the builtin optimized methods.
+
+    This function is supposed to be called only once, after the Python loaders
+    are registered.
+
+    """
     if cloaders:
         logger.warning("c loaders already registered")
         return

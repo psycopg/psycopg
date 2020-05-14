@@ -1,3 +1,13 @@
+"""
+Helper object to transform values between Python and PostgreSQL
+
+Cython implementation: can access to lower level C features without creating
+too many temporary Python objects and performing less memory copying.
+
+"""
+
+# Copyright (C) 2020 The Psycopg Team
+
 from libc.string cimport memset
 from cpython.object cimport PyObject
 from cpython.ref cimport Py_INCREF
@@ -9,13 +19,18 @@ from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
 from psycopg3.pq cimport libpq
 from psycopg3.pq.pq_cython cimport PGresult
-from psycopg3.adapt cimport RowLoader
 
 from psycopg3 import errors as e
 from psycopg3.pq.enums import Format
 # from psycopg3.types.oids import builtins, INVALID_OID
 
 TEXT_OID = 25
+
+
+cdef struct RowLoader:
+    PyObject *pyloader  # borrowed
+    cloader_func cloader
+    void *context
 
 
 cdef class Transformer:
@@ -154,10 +169,24 @@ cdef class Transformer:
             loader = self._set_loader(i, oid, fmt)
 
     cdef void _set_loader(self, int col, libpq.Oid oid, int fmt):
-        cdef RowLoader *loader = self._row_loaders + col
-
         pyloader = self._pyloaders[col] = self.get_load_function(oid, fmt)
-        fill_row_loader(loader, pyloader)
+
+        cdef RowLoader *loader = self._row_loaders + col
+        loader.pyloader = <PyObject *>pyloader
+
+        cdef CLoader cloader = cloaders.get(pyloader)
+
+        if cloader is not None:
+            # The cloader is a normal Python function
+            loader.cloader = cloader.cloader
+            return
+
+        cloader = cloaders.get(getattr(pyloader, '__func__', None))
+        if cloader is not None and cloader.get_context is not NULL:
+            # The cloader is the load() method of a Loader class
+            # Extract the context from the Loader instance
+            loader.cloader = cloader.cloader
+            loader.context = cloader.get_context(pyloader.__self__)
 
     def dump_sequence(
         self, objs: Iterable[Any], formats: Iterable[Format]
