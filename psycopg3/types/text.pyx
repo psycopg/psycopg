@@ -10,17 +10,16 @@ from cpython.object cimport PyObject
 from cpython.unicode cimport PyUnicode_DecodeUTF8
 from psycopg3.pq cimport libpq
 
-ctypedef unicode (*decodefunc)(char *s, Py_ssize_t size, char *errors)
 
 cdef struct TextContext:
     PyObject *pydecoder
-    decodefunc cdecoder
+    int is_utf8
 
 
 cdef object load_text(const char *data, size_t length, void *context):
     cdef TextContext *tcontext = <TextContext *>context
-    if tcontext.cdecoder:
-        return tcontext.cdecoder(<char *>data, length, NULL)
+    if tcontext.is_utf8:
+        return PyUnicode_DecodeUTF8(<char *>data, length, NULL)
 
     b = PyBytes_FromStringAndSize(data, length)
     decoder = <object>(tcontext.pydecoder)
@@ -34,10 +33,11 @@ cdef object load_text(const char *data, size_t length, void *context):
 cdef void *get_context_text(object loader):
     cdef TextContext *rv = <TextContext *>PyMem_Malloc(sizeof(TextContext))
     rv.pydecoder = <PyObject *>loader.decode
-    rv.cdecoder = NULL
 
     if loader.connection is None or loader.connection.encoding == "UTF8":
-        rv.cdecoder = <decodefunc>PyUnicode_DecodeUTF8
+        rv.is_utf8 = 1
+    else:
+        rv.is_utf8 = 0
 
     return rv
 
