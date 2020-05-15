@@ -22,7 +22,7 @@ from .waiting import wait, wait_async
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
-    from .generators import PQGen, RV
+    from .proto import PQGen, RV
 
 
 class BaseConnection:

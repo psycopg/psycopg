@@ -10,14 +10,12 @@ These functions are designed to consume the generators returned by the
 
 
 from enum import IntEnum
-from typing import Optional, TYPE_CHECKING
+from typing import Optional
 from asyncio import get_event_loop, Event
 from selectors import DefaultSelector, EVENT_READ, EVENT_WRITE
 
 from . import errors as e
-
-if TYPE_CHECKING:
-    from .generators import PQGen, RV
+from .proto import PQGen, RV
 
 
 class Wait(IntEnum):

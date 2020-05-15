@@ -16,15 +16,12 @@ when the file descriptor is ready.
 # Copyright (C) 2020 The Psycopg Team
 
 import logging
-from typing import Generator, List, Tuple, TypeVar
+from typing import List
 from .waiting import Wait, Ready
 
 from . import pq
 from . import errors as e
-
-# Generic type of a libpq protocol generator.
-RV = TypeVar("RV")
-PQGen = Generator[Tuple[int, Wait], Ready, RV]
+from .proto import PQGen
 
 logger = logging.getLogger(__name__)
 

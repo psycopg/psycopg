@@ -5,8 +5,9 @@ Protocol objects representing different implementations of the same classes.
 # Copyright (C) 2020 The Psycopg Team
 
 import codecs
-from typing import Any, Callable, Dict, Iterable, List, Mapping, Optional
-from typing import Sequence, Tuple, Type, Union, TYPE_CHECKING
+from typing import Any, Callable, Dict, Generator, Iterable, List, Mapping
+from typing import Optional, Sequence, Tuple, Type, TypeVar, Union
+from typing import TYPE_CHECKING
 from typing_extensions import Protocol
 
 from . import pq
@@ -15,16 +16,25 @@ if TYPE_CHECKING:
     from .connection import BaseConnection  # noqa
     from .cursor import BaseCursor  # noqa
     from .adapt import Dumper, Loader  # noqa
+    from .waiting import Wait, Ready  # noqa
 
 # Part of the module interface (just importing it makes mypy unhappy)
 Format = pq.Format
-
 
 EncodeFunc = Callable[[str], Tuple[bytes, int]]
 DecodeFunc = Callable[[bytes], Tuple[str, int]]
 
 Query = Union[str, bytes]
 Params = Union[Sequence[Any], Mapping[str, Any]]
+
+
+# Waiting protocol types
+
+RV = TypeVar("RV")
+PQGen = Generator[Tuple[int, "Wait"], "Ready", RV]
+
+
+# Adaptation types
 
 AdaptContext = Union[None, "BaseConnection", "BaseCursor", "Transformer"]
 
