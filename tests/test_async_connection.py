@@ -103,7 +103,7 @@ def test_connect_args(monkeypatch, pgconn, loop, testdsn, kwargs, want):
         return pgconn
         yield
 
-    monkeypatch.setattr(psycopg3.generators, "connect", fake_connect)
+    monkeypatch.setattr(psycopg3.connection, "connect", fake_connect)
     loop.run_until_complete(
         psycopg3.AsyncConnection.connect(testdsn, **kwargs)
     )
@@ -118,7 +118,7 @@ def test_connect_badargs(monkeypatch, pgconn, loop, args, kwargs):
         return pgconn
         yield
 
-    monkeypatch.setattr(psycopg3.generators, "connect", fake_connect)
+    monkeypatch.setattr(psycopg3.connection, "connect", fake_connect)
     with pytest.raises((TypeError, psycopg3.ProgrammingError)):
         loop.run_until_complete(
             psycopg3.AsyncConnection.connect(*args, **kwargs)

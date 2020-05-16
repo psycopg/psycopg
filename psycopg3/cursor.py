@@ -6,17 +6,28 @@ psycopg3 cursor objects
 
 import codecs
 from operator import attrgetter
-from typing import Any, List, Optional, Sequence, TYPE_CHECKING
+from typing import Any, Callable, List, Optional, Sequence, TYPE_CHECKING
 
 from . import errors as e
 from . import pq
-from . import generators
 from . import proto
-from .proto import Query, Params, DumpersMap, LoadersMap
+from .proto import Query, Params, DumpersMap, LoadersMap, PQGen
 from .utils.queries import PostgresQuery
 
 if TYPE_CHECKING:
     from .connection import BaseConnection, Connection, AsyncConnection
+
+execute: Callable[[pq.proto.PGconn], PQGen[List[pq.proto.PGresult]]]
+
+if pq.__impl__ == "c":
+    from . import _psycopg3
+
+    execute = _psycopg3.execute
+
+else:
+    from . import generators
+
+    execute = generators.execute
 
 
 class Column(Sequence[Any]):
@@ -253,7 +264,7 @@ class Cursor(BaseCursor):
         with self.connection.lock:
             self._start_query()
             self._execute_send(query, vars)
-            gen = generators.execute(self.connection.pgconn)
+            gen = execute(self.connection.pgconn)
             results = self.connection.wait(gen)
             self._execute_results(results)
         return self
@@ -266,7 +277,7 @@ class Cursor(BaseCursor):
             for i, vars in enumerate(vars_seq):
                 if i == 0:
                     pgq = self._send_prepare(b"", query, vars)
-                    gen = generators.execute(self.connection.pgconn)
+                    gen = execute(self.connection.pgconn)
                     (result,) = self.connection.wait(gen)
                     if result.status == self.ExecStatus.FATAL_ERROR:
                         raise e.error_from_result(result)
@@ -274,7 +285,7 @@ class Cursor(BaseCursor):
                     pgq.dump(vars)
 
                 self._send_query_prepared(b"", pgq)
-                gen = generators.execute(self.connection.pgconn)
+                gen = execute(self.connection.pgconn)
                 (result,) = self.connection.wait(gen)
                 self._execute_results((result,))
 
@@ -331,7 +342,7 @@ class AsyncCursor(BaseCursor):
         async with self.connection.lock:
             self._start_query()
             self._execute_send(query, vars)
-            gen = generators.execute(self.connection.pgconn)
+            gen = execute(self.connection.pgconn)
             results = await self.connection.wait(gen)
             self._execute_results(results)
         return self
@@ -344,7 +355,7 @@ class AsyncCursor(BaseCursor):
             for i, vars in enumerate(vars_seq):
                 if i == 0:
                     pgq = self._send_prepare(b"", query, vars)
-                    gen = generators.execute(self.connection.pgconn)
+                    gen = execute(self.connection.pgconn)
                     (result,) = await self.connection.wait(gen)
                     if result.status == self.ExecStatus.FATAL_ERROR:
                         raise e.error_from_result(result)
@@ -352,7 +363,7 @@ class AsyncCursor(BaseCursor):
                     pgq.dump(vars)
 
                 self._send_query_prepared(b"", pgq)
-                gen = generators.execute(self.connection.pgconn)
+                gen = execute(self.connection.pgconn)
                 (result,) = await self.connection.wait(gen)
                 self._execute_results((result,))
 

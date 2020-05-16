@@ -8,21 +8,32 @@ import codecs
 import logging
 import asyncio
 import threading
-from typing import Any, Optional, Type
-from typing import cast, TYPE_CHECKING
+from typing import Any, Callable, List, Optional, Type, cast
 
 from . import pq
 from . import errors as e
 from . import cursor
-from . import generators
 from . import proto
 from .conninfo import make_conninfo
 from .waiting import wait, wait_async
 
 logger = logging.getLogger(__name__)
 
-if TYPE_CHECKING:
-    from .proto import PQGen, RV
+
+connect: Callable[[str], proto.PQGen[pq.proto.PGconn]]
+execute: Callable[[pq.proto.PGconn], proto.PQGen[List[pq.proto.PGresult]]]
+
+if pq.__impl__ == "c":
+    from . import _psycopg3
+
+    connect = _psycopg3.connect
+    execute = _psycopg3.execute
+
+else:
+    from . import generators
+
+    connect = generators.connect
+    execute = generators.execute
 
 
 class BaseConnection:
@@ -129,7 +140,7 @@ class Connection(BaseConnection):
         if conninfo is None and not kwargs:
             raise TypeError("missing conninfo and not parameters specified")
         conninfo = make_conninfo(conninfo or "", **kwargs)
-        gen = generators.connect(conninfo)
+        gen = connect(conninfo)
         pgconn = cls.wait(gen)
         return cls(pgconn)
 
@@ -155,7 +166,7 @@ class Connection(BaseConnection):
                 return
 
             self.pgconn.send_query(command)
-            (pgres,) = self.wait(generators.execute(self.pgconn))
+            (pgres,) = self.wait(execute(self.pgconn))
             if pgres.status != pq.ExecStatus.COMMAND_OK:
                 raise e.OperationalError(
                     f"error on {command.decode('utf8')}:"
@@ -163,7 +174,9 @@ class Connection(BaseConnection):
                 )
 
     @classmethod
-    def wait(cls, gen: "PQGen[RV]", timeout: Optional[float] = 0.1) -> "RV":
+    def wait(
+        cls, gen: proto.PQGen[proto.RV], timeout: Optional[float] = 0.1
+    ) -> proto.RV:
         return wait(gen, timeout=timeout)
 
     def set_client_encoding(self, value: str) -> None:
@@ -172,7 +185,7 @@ class Connection(BaseConnection):
                 b"select set_config('client_encoding', $1, false)",
                 [value.encode("ascii")],
             )
-            gen = generators.execute(self.pgconn)
+            gen = execute(self.pgconn)
             (result,) = self.wait(gen)
             if result.status != pq.ExecStatus.TUPLES_OK:
                 raise e.error_from_result(result)
@@ -200,7 +213,7 @@ class AsyncConnection(BaseConnection):
         if conninfo is None and not kwargs:
             raise TypeError("missing conninfo and not parameters specified")
         conninfo = make_conninfo(conninfo or "", **kwargs)
-        gen = generators.connect(conninfo)
+        gen = connect(conninfo)
         pgconn = await cls.wait(gen)
         return cls(pgconn)
 
@@ -226,7 +239,7 @@ class AsyncConnection(BaseConnection):
                 return
 
             self.pgconn.send_query(command)
-            (pgres,) = await self.wait(generators.execute(self.pgconn))
+            (pgres,) = await self.wait(execute(self.pgconn))
             if pgres.status != pq.ExecStatus.COMMAND_OK:
                 raise e.OperationalError(
                     f"error on {command.decode('utf8')}:"
@@ -234,7 +247,7 @@ class AsyncConnection(BaseConnection):
                 )
 
     @classmethod
-    async def wait(cls, gen: "PQGen[RV]") -> "RV":
+    async def wait(cls, gen: proto.PQGen[proto.RV]) -> proto.RV:
         return await wait_async(gen)
 
     async def set_client_encoding(self, value: str) -> None:
@@ -243,7 +256,7 @@ class AsyncConnection(BaseConnection):
                 b"select set_config('client_encoding', $1, false)",
                 [value.encode("ascii")],
             )
-            gen = generators.execute(self.pgconn)
+            gen = execute(self.pgconn)
             (result,) = await self.wait(gen)
             if result.status != pq.ExecStatus.TUPLES_OK:
                 raise e.error_from_result(result)

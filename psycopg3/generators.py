@@ -17,11 +17,11 @@ when the file descriptor is ready.
 
 import logging
 from typing import List
-from .waiting import Wait, Ready
 
 from . import pq
 from . import errors as e
 from .proto import PQGen
+from .waiting import Wait, Ready
 
 logger = logging.getLogger(__name__)
 

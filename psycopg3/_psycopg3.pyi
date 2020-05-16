@@ -11,7 +11,7 @@ import codecs
 from typing import Any, Iterable, List, Optional, Sequence, Tuple
 
 from .proto import AdaptContext, DumpFunc, DumpersMap, DumperType
-from .proto import LoadFunc, LoadersMap, LoaderType, MaybeOid
+from .proto import LoadFunc, LoadersMap, LoaderType, MaybeOid, PQGen
 from .connection import BaseConnection
 from . import pq
 
@@ -49,5 +49,7 @@ class Transformer:
     def lookup_loader(self, oid: int, format: Format) -> LoaderType: ...
 
 def register_builtin_c_loaders() -> None: ...
+def connect(conninfo: str) -> PQGen[pq.proto.PGconn]: ...
+def execute(pgconn: pq.proto.PGconn) -> PQGen[List[pq.proto.PGresult]]: ...
 
 # vim: set syntax=python:

@@ -1,6 +1,7 @@
 import pytest
 from select import select
 import psycopg3
+from psycopg3.generators import execute
 
 
 def test_send_query(pq, pgconn):
@@ -61,7 +62,7 @@ def test_send_query_compact_test(pq, pgconn):
         b"/* %s */ select pg_sleep(0.01); select 1 as foo;"
         % (b"x" * 1_000_000)
     )
-    results = psycopg3.waiting.wait(psycopg3.generators.execute(pgconn))
+    results = psycopg3.waiting.wait(execute(pgconn))
 
     assert len(results) == 2
     assert results[0].nfields == 1
@@ -78,7 +79,7 @@ def test_send_query_compact_test(pq, pgconn):
 
 def test_send_query_params(pq, pgconn):
     pgconn.send_query_params(b"select $1::int + $2", [b"5", b"3"])
-    (res,) = psycopg3.waiting.wait(psycopg3.generators.execute(pgconn))
+    (res,) = psycopg3.waiting.wait(execute(pgconn))
     assert res.status == pq.ExecStatus.TUPLES_OK
     assert res.get_value(0, 0) == b"8"
 
@@ -89,11 +90,11 @@ def test_send_query_params(pq, pgconn):
 
 def test_send_prepare(pq, pgconn):
     pgconn.send_prepare(b"prep", b"select $1::int + $2::int")
-    (res,) = psycopg3.waiting.wait(psycopg3.generators.execute(pgconn))
+    (res,) = psycopg3.waiting.wait(execute(pgconn))
     assert res.status == pq.ExecStatus.COMMAND_OK, res.error_message
 
     pgconn.send_query_prepared(b"prep", [b"3", b"5"])
-    (res,) = psycopg3.waiting.wait(psycopg3.generators.execute(pgconn))
+    (res,) = psycopg3.waiting.wait(execute(pgconn))
     assert res.get_value(0, 0) == b"8"
 
     pgconn.finish()
@@ -105,22 +106,22 @@ def test_send_prepare(pq, pgconn):
 
 def test_send_prepare_types(pq, pgconn):
     pgconn.send_prepare(b"prep", b"select $1 + $2", [23, 23])
-    (res,) = psycopg3.waiting.wait(psycopg3.generators.execute(pgconn))
+    (res,) = psycopg3.waiting.wait(execute(pgconn))
     assert res.status == pq.ExecStatus.COMMAND_OK, res.error_message
 
     pgconn.send_query_prepared(b"prep", [b"3", b"5"])
-    (res,) = psycopg3.waiting.wait(psycopg3.generators.execute(pgconn))
+    (res,) = psycopg3.waiting.wait(execute(pgconn))
     assert res.get_value(0, 0) == b"8"
 
 
 def test_send_prepared_binary_in(pq, pgconn):
     val = b"foo\00bar"
     pgconn.send_prepare(b"", b"select length($1::bytea), length($2::bytea)")
-    (res,) = psycopg3.waiting.wait(psycopg3.generators.execute(pgconn))
+    (res,) = psycopg3.waiting.wait(execute(pgconn))
     assert res.status == pq.ExecStatus.COMMAND_OK, res.error_message
 
     pgconn.send_query_prepared(b"", [val, val], param_formats=[0, 1])
-    (res,) = psycopg3.waiting.wait(psycopg3.generators.execute(pgconn))
+    (res,) = psycopg3.waiting.wait(execute(pgconn))
     assert res.status == pq.ExecStatus.TUPLES_OK
     assert res.get_value(0, 0) == b"3"
     assert res.get_value(0, 1) == b"7"
@@ -135,12 +136,12 @@ def test_send_prepared_binary_in(pq, pgconn):
 def test_send_prepared_binary_out(pq, pgconn, fmt, out):
     val = b"foo\00bar"
     pgconn.send_prepare(b"", b"select $1::bytea")
-    (res,) = psycopg3.waiting.wait(psycopg3.generators.execute(pgconn))
+    (res,) = psycopg3.waiting.wait(execute(pgconn))
     assert res.status == pq.ExecStatus.COMMAND_OK, res.error_message
 
     pgconn.send_query_prepared(
         b"", [val], param_formats=[1], result_format=fmt
     )
-    (res,) = psycopg3.waiting.wait(psycopg3.generators.execute(pgconn))
+    (res,) = psycopg3.waiting.wait(execute(pgconn))
     assert res.status == pq.ExecStatus.TUPLES_OK
     assert res.get_value(0, 0) == out
