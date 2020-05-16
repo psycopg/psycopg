@@ -112,6 +112,7 @@ def fetch(pgconn: pq.proto.PGconn) -> PQGen[List[pq.proto.PGresult]]:
         pgconn.consume_input()
         if pgconn.is_busy():
             yield pgconn.socket, Wait.R
+            continue
         res = pgconn.get_result()
         if res is None:
             break
