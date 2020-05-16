@@ -50,7 +50,7 @@ def import_from_libpq() -> None:
             from . import pq_cython  # type: ignore
         except Exception as e:
             if not impl:
-                logger.debug(f"C pq wrapper not available: %s", e)
+                logger.debug("C pq wrapper not available: %s", e)
             else:
                 raise ImportError(
                     f"requested pq implementation '{impl}' not available"
@@ -69,7 +69,7 @@ def import_from_libpq() -> None:
             from . import pq_ctypes
         except Exception as e:
             if not impl:
-                logger.debug(f"ctypes pq wrapper not available: %s", e)
+                logger.debug("ctypes pq wrapper not available: %s", e)
             else:
                 raise ImportError(
                     f"requested pq implementation '{impl}' not available"
@@ -86,7 +86,7 @@ def import_from_libpq() -> None:
     if impl:
         raise ImportError(f"requested pq impementation '{impl}' unknown")
     else:
-        raise ImportError(f"no pq wrapper available")
+        raise ImportError("no pq wrapper available")
 
 
 import_from_libpq()

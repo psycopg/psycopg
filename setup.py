@@ -61,7 +61,7 @@ class psycopg3_build_ext(build_ext):
 
         try:
             out = sp.run(
-                ["pg_config", f"--includedir"], stdout=sp.PIPE, check=True
+                ["pg_config", "--includedir"], stdout=sp.PIPE, check=True
             )
         except Exception as e:
             log.warn("cannot build C module: %s", e)
