@@ -1,8 +1,8 @@
-import codecs
 import pytest
 
 import psycopg3
-from psycopg3.utils.queries import split_query, query2pg, reorder_params
+from psycopg3.adapt import Transformer
+from psycopg3.utils.queries import PostgresQuery, _split_query
 
 
 @pytest.mark.parametrize(
@@ -28,7 +28,7 @@ from psycopg3.utils.queries import split_query, query2pg, reorder_params
     ],
 )
 def test_split_query(input, want):
-    assert split_query(input) == want
+    assert _split_query(input) == want
 
 
 @pytest.mark.parametrize(
@@ -46,28 +46,30 @@ def test_split_query(input, want):
 )
 def test_split_query_bad(input):
     with pytest.raises(psycopg3.ProgrammingError):
-        split_query(input)
+        _split_query(input)
 
 
 @pytest.mark.parametrize(
-    "query, params, want, wformats",
+    "query, params, want, wformats, wparams",
     [
-        (b"", [], b"", []),
-        (b"%%", [], b"%", []),
-        (b"select %s", (1,), b"select $1", [False]),
-        (b"%s %% %s", (1, 2), b"$1 % $2", [False, False]),
-        (b"%b %% %s", (1, 2), b"$1 % $2", [True, False]),
+        (b"", None, b"", None, None),
+        (b"", [], b"", [], []),
+        (b"%%", [], b"%", [], []),
+        (b"select %s", (1,), b"select $1", [False], [b"1"]),
+        (b"%s %% %s", (1, 2), b"$1 % $2", [False, False], [b"1", b"2"]),
+        (b"%b %% %s", ("a", 2), b"$1 % $2", [True, False], [b"a", b"2"]),
     ],
 )
-def test_query2pg_seq(query, params, want, wformats):
-    out, formats, order = query2pg(query, params, codecs.lookup("utf-8"))
-    assert order is None
-    assert out == want
-    assert formats == wformats
+def test_pg_query_seq(query, params, want, wformats, wparams):
+    pq = PostgresQuery(Transformer())
+    pq.convert(query, params)
+    assert pq.query == want
+    assert pq.formats == wformats
+    assert pq.params == wparams
 
 
 @pytest.mark.parametrize(
-    "query, params, want, wformats, worder",
+    "query, params, want, wformats, wparams",
     [
         (b"", {}, b"", [], []),
         (b"hello %%", {"a": 1}, b"hello %", [], []),
@@ -76,22 +78,23 @@ def test_query2pg_seq(query, params, want, wformats):
             {"hello": 1, "world": 2},
             b"select $1",
             [False],
-            ["hello"],
+            [b"1"],
         ),
         (
             b"select %(hi)s %(there)b %(hi)s",
-            {"hi": 1, "there": 2},
+            {"hi": 1, "there": "a"},
             b"select $1 $2 $1",
             [False, True],
-            ["hi", "there"],
+            [b"1", b"a"],
         ),
     ],
 )
-def test_query2pg_map(query, params, want, wformats, worder):
-    out, formats, order = query2pg(query, params, codecs.lookup("utf-8"))
-    assert out == want
-    assert formats == wformats
-    assert order == worder
+def test_pg_query_map(query, params, want, wformats, wparams):
+    pq = PostgresQuery(Transformer())
+    pq.convert(query, params)
+    assert pq.query == want
+    assert pq.formats == wformats
+    assert pq.params == wparams
 
 
 @pytest.mark.parametrize(
@@ -103,13 +106,12 @@ def test_query2pg_map(query, params, want, wformats, worder):
         (b"select %s", 1),
         (b"select %s", b"a"),
         (b"select %s", set()),
-        ("select", []),
-        ("select", []),
     ],
 )
-def test_query2pg_badtype(query, params):
+def test_pq_query_badtype(query, params):
+    pq = PostgresQuery(Transformer())
     with pytest.raises(TypeError):
-        query2pg(query, params, codecs.lookup("utf-8"))
+        pq.convert(query, params)
 
 
 @pytest.mark.parametrize(
@@ -126,19 +128,7 @@ def test_query2pg_badtype(query, params):
         (b"select %(hi)s %(hi)b", {"hi": 1}),
     ],
 )
-def test_query2pg_badprog(query, params):
+def test_pq_query_badprog(query, params):
+    pq = PostgresQuery(Transformer())
     with pytest.raises(psycopg3.ProgrammingError):
-        query2pg(query, params, codecs.lookup("utf-8"))
-
-
-@pytest.mark.parametrize(
-    "params, order, want",
-    [
-        ({"foo": 1, "bar": 2}, [], []),
-        ({"foo": 1, "bar": 2}, ["foo"], [1]),
-        ({"foo": 1, "bar": 2}, ["bar", "foo"], [2, 1]),
-    ],
-)
-def test_reorder_params(params, order, want):
-    rv = reorder_params(params, order)
-    assert rv == want
+        pq.convert(query, params)
