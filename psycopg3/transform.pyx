@@ -50,7 +50,7 @@ cdef class Transformer:
 
     cdef int _nloaders
     cdef RowLoader *_row_loaders
-    cdef object _pyloaders  # only used to keep a reference
+    cdef list _pyloaders  # only used to keep a reference
 
     def __cinit__(self, context: "AdaptContext" = None):
         self._dumpers_maps: List["DumpersMap"] = []
@@ -77,6 +77,8 @@ cdef class Transformer:
         for i in range(self._nloaders):
             PyMem_Free(self._row_loaders[i].context)
         PyMem_Free(self._row_loaders)
+        self._row_loaders = NULL
+        self._nloaders = 0
 
     def _setup_context(self, context: "AdaptContext") -> None:
         from psycopg3.adapt import Dumper, Loader
@@ -171,17 +173,19 @@ cdef class Transformer:
         self._clear_row_loaders()
         self._row_loaders = <RowLoader *>PyMem_Malloc(ntypes * sizeof(RowLoader))
         memset(self._row_loaders, 0, ntypes * sizeof(RowLoader))
-        self._pyloaders = [None] * ntypes
+        self._nloaders = ntypes
+        self._pyloaders = []
 
         cdef int i
         for i, (oid, fmt) in enumerate(types):
             loader = self._set_loader(i, oid, fmt)
 
     cdef void _set_loader(self, int col, libpq.Oid oid, int fmt):
-        pyloader = self._pyloaders[col] = self.get_load_function(oid, fmt)
+        pyloader = self.get_load_function(oid, fmt)
 
         cdef RowLoader *loader = self._row_loaders + col
         loader.pyloader = <PyObject *>pyloader
+        self._pyloaders.append(pyloader)
 
         cdef CLoader cloader = cloaders.get(pyloader)
 
