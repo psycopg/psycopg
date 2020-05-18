@@ -31,6 +31,7 @@ cdef struct RowLoader:
     PyObject *pyloader  # borrowed
     cloader_func cloader
     void *context
+    int own_context
 
 
 cdef class Transformer:
@@ -72,10 +73,11 @@ cdef class Transformer:
     def __dealloc__(self):
         self._clear_row_loaders()
 
-    def _clear_row_loaders(self):
+    cdef _clear_row_loaders(self):
         cdef int i
         for i in range(self._nloaders):
-            PyMem_Free(self._row_loaders[i].context)
+            if self._row_loaders[i].own_context:
+                PyMem_Free(self._row_loaders[i].context)
         PyMem_Free(self._row_loaders)
         self._row_loaders = NULL
         self._nloaders = 0
@@ -176,9 +178,23 @@ cdef class Transformer:
         self._nloaders = ntypes
         self._pyloaders = []
 
-        cdef int i
-        for i, (oid, fmt) in enumerate(types):
-            loader = self._set_loader(i, oid, fmt)
+        cdef int i = 0, j
+        cdef dict seen = {}
+        for oid_fmt in types:
+            if oid_fmt not in seen:
+                loader = self._set_loader(i, oid_fmt[0], oid_fmt[1])
+                seen[oid_fmt] = i
+            else:
+                self._copy_loader(seen[oid_fmt], i)
+
+            i += 1
+
+    cdef void _copy_loader(self, int col_from, int col_to):
+        # Copy the structure, but we may also copy the pointer to the
+        # context, and we don't want to free() it twice, so mark it as
+        # "not owned"
+        self._row_loaders[col_to] = self._row_loaders[col_from]
+        self._row_loaders[col_to].own_context = 0
 
     cdef void _set_loader(self, int col, libpq.Oid oid, int fmt):
         pyloader = self.get_load_function(oid, fmt)
@@ -200,6 +216,7 @@ cdef class Transformer:
             # Extract the context from the Loader instance
             loader.cloader = cloader.cloader
             loader.context = cloader.get_context(pyloader.__self__)
+            loader.own_context = 1
 
     def dump_sequence(
         self, objs: Iterable[Any], formats: Iterable[Format]
