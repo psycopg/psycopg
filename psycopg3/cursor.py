@@ -304,25 +304,34 @@ class Cursor(BaseCursor):
             size = self.arraysize
 
         rv: List[Sequence[Any]] = []
-        while len(rv) < size:
-            row = self._transformer.load_row(self._pos)
+        pos = self._pos
+        load = self._transformer.load_row
+
+        for _ in range(size):
+            row = load(pos)
             if row is None:
                 break
-            self._pos += 1
+            pos += 1
             rv.append(row)
 
+        self._pos = pos
         return rv
 
     def fetchall(self) -> List[Sequence[Any]]:
         self._check_result()
+
         rv: List[Sequence[Any]] = []
+        pos = self._pos
+        load = self._transformer.load_row
+
         while 1:
-            row = self._transformer.load_row(self._pos)
+            row = load(pos)
             if row is None:
                 break
-            self._pos += 1
+            pos += 1
             rv.append(row)
 
+        self._pos = pos
         return rv
 
 
@@ -383,26 +392,35 @@ class AsyncCursor(BaseCursor):
         if size is None:
             size = self.arraysize
 
+        pos = self._pos
+        load = self._transformer.load_row
         rv: List[Sequence[Any]] = []
-        while len(rv) < size:
-            row = self._transformer.load_row(self._pos)
+
+        for i in range(size):
+            row = load(pos)
             if row is None:
                 break
-            self._pos += 1
+            pos += 1
             rv.append(row)
 
+        self._pos = pos
         return rv
 
     async def fetchall(self) -> List[Sequence[Any]]:
         self._check_result()
+
         rv: List[Sequence[Any]] = []
+        pos = self._pos
+        load = self._transformer.load_row
+
         while 1:
-            row = self._transformer.load_row(self._pos)
+            row = load(pos)
             if row is None:
                 break
-            self._pos += 1
+            pos += 1
             rv.append(row)
 
+        self._pos = pos
         return rv
 
 
