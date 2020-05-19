@@ -1,18 +1,8 @@
-# Environments
-.env
-.venv
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
-
 /psycopg3.egg-info
 /.tox
 /.eggs
 /build
 /dist
 *.pstats
-
-# Byte-compiled / optimized / DLL files
+/.mypy_cache
 __pycache__/
