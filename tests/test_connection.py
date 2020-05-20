@@ -30,7 +30,7 @@ def test_commit(conn):
     conn.pgconn.exec_(b"create table foo (id int primary key)")
     conn.pgconn.exec_(b"begin")
     assert conn.pgconn.transaction_status == conn.TransactionStatus.INTRANS
-    res = conn.pgconn.exec_(b"insert into foo values (1)")
+    conn.pgconn.exec_(b"insert into foo values (1)")
     conn.commit()
     assert conn.pgconn.transaction_status == conn.TransactionStatus.IDLE
     res = conn.pgconn.exec_(b"select id from foo where id = 1")
@@ -46,15 +46,51 @@ def test_rollback(conn):
     conn.pgconn.exec_(b"create table foo (id int primary key)")
     conn.pgconn.exec_(b"begin")
     assert conn.pgconn.transaction_status == conn.TransactionStatus.INTRANS
-    res = conn.pgconn.exec_(b"insert into foo values (1)")
+    conn.pgconn.exec_(b"insert into foo values (1)")
     conn.rollback()
     assert conn.pgconn.transaction_status == conn.TransactionStatus.IDLE
     res = conn.pgconn.exec_(b"select id from foo where id = 1")
-    assert res.get_value(0, 0) is None
+    assert res.ntuples == 0
 
     conn.close()
     with pytest.raises(psycopg3.OperationalError):
         conn.rollback()
+
+
+def test_auto_transaction(conn):
+    conn.pgconn.exec_(b"drop table if exists foo")
+    conn.pgconn.exec_(b"create table foo (id int primary key)")
+
+    cur = conn.cursor()
+    assert conn.pgconn.transaction_status == conn.TransactionStatus.IDLE
+
+    cur.execute("insert into foo values (1)")
+    assert conn.pgconn.transaction_status == conn.TransactionStatus.INTRANS
+
+    conn.commit()
+    assert conn.pgconn.transaction_status == conn.TransactionStatus.IDLE
+    assert cur.execute("select * from foo").fetchone() == (1,)
+    assert conn.pgconn.transaction_status == conn.TransactionStatus.INTRANS
+
+
+def test_auto_transaction_fail(conn):
+    conn.pgconn.exec_(b"drop table if exists foo")
+    conn.pgconn.exec_(b"create table foo (id int primary key)")
+
+    cur = conn.cursor()
+    assert conn.pgconn.transaction_status == conn.TransactionStatus.IDLE
+
+    cur.execute("insert into foo values (1)")
+    assert conn.pgconn.transaction_status == conn.TransactionStatus.INTRANS
+
+    with pytest.raises(psycopg3.DatabaseError):
+        cur.execute("meh")
+    assert conn.pgconn.transaction_status == conn.TransactionStatus.INERROR
+
+    conn.commit()
+    assert conn.pgconn.transaction_status == conn.TransactionStatus.IDLE
+    assert cur.execute("select * from foo").fetchone() is None
+    assert conn.pgconn.transaction_status == conn.TransactionStatus.INTRANS
 
 
 def test_get_encoding(conn):

@@ -30,7 +30,8 @@ def pgconn(pq, dsn):
         pytest.fail(
             f"bad connection: {conn.error_message.decode('utf8', 'replace')}"
         )
-    return conn
+    yield conn
+    conn.finish()
 
 
 @pytest.fixture
@@ -38,7 +39,9 @@ def conn(dsn):
     """Return a `Connection` connected to the ``--test-dsn`` database."""
     from psycopg3 import Connection
 
-    return Connection.connect(dsn)
+    conn = Connection.connect(dsn)
+    yield conn
+    conn.close()
 
 
 @pytest.fixture(scope="session")
@@ -48,4 +51,6 @@ def svcconn(dsn):
     """
     from psycopg3 import Connection
 
-    return Connection.connect(dsn)
+    conn = Connection.connect(dsn)
+    yield conn
+    conn.close()

@@ -15,4 +15,5 @@ def aconn(loop, dsn, pq):
     from psycopg3 import AsyncConnection
 
     conn = loop.run_until_complete(AsyncConnection.connect(dsn))
-    return conn
+    yield conn
+    loop.run_until_complete(conn.close())

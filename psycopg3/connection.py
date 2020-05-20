@@ -14,6 +14,7 @@ from . import pq
 from . import errors as e
 from . import cursor
 from . import proto
+from .pq import TransactionStatus, ExecStatus
 from .conninfo import make_conninfo
 from .waiting import wait, wait_async
 
@@ -153,6 +154,19 @@ class Connection(BaseConnection):
         cur = super().cursor(name, binary)
         return cast(cursor.Cursor, cur)
 
+    def _start_query(self) -> None:
+        # the function is meant to be called by a cursor once the lock is taken
+        status = self.pgconn.transaction_status
+        if status == TransactionStatus.INTRANS:
+            return
+
+        self.pgconn.send_query(b"begin")
+        (pgres,) = self.wait(execute(self.pgconn))
+        if pgres.status != ExecStatus.COMMAND_OK:
+            raise e.OperationalError(
+                f"error on begin: {pq.error_message(pgres)}"
+            )
+
     def commit(self) -> None:
         self._exec_commit_rollback(b"commit")
 
@@ -162,12 +176,12 @@ class Connection(BaseConnection):
     def _exec_commit_rollback(self, command: bytes) -> None:
         with self.lock:
             status = self.pgconn.transaction_status
-            if status == pq.TransactionStatus.IDLE:
+            if status == TransactionStatus.IDLE:
                 return
 
             self.pgconn.send_query(command)
             (pgres,) = self.wait(execute(self.pgconn))
-            if pgres.status != pq.ExecStatus.COMMAND_OK:
+            if pgres.status != ExecStatus.COMMAND_OK:
                 raise e.OperationalError(
                     f"error on {command.decode('utf8')}:"
                     f" {pq.error_message(pgres)}"
@@ -187,7 +201,7 @@ class Connection(BaseConnection):
             )
             gen = execute(self.pgconn)
             (result,) = self.wait(gen)
-            if result.status != pq.ExecStatus.TUPLES_OK:
+            if result.status != ExecStatus.TUPLES_OK:
                 raise e.error_from_result(result)
 
 
@@ -226,6 +240,19 @@ class AsyncConnection(BaseConnection):
         cur = super().cursor(name, binary)
         return cast(cursor.AsyncCursor, cur)
 
+    async def _start_query(self) -> None:
+        # the function is meant to be called by a cursor once the lock is taken
+        status = self.pgconn.transaction_status
+        if status == TransactionStatus.INTRANS:
+            return
+
+        self.pgconn.send_query(b"begin")
+        (pgres,) = await self.wait(execute(self.pgconn))
+        if pgres.status != ExecStatus.COMMAND_OK:
+            raise e.OperationalError(
+                f"error on begin: {pq.error_message(pgres)}"
+            )
+
     async def commit(self) -> None:
         await self._exec_commit_rollback(b"commit")
 
@@ -235,12 +262,12 @@ class AsyncConnection(BaseConnection):
     async def _exec_commit_rollback(self, command: bytes) -> None:
         async with self.lock:
             status = self.pgconn.transaction_status
-            if status == pq.TransactionStatus.IDLE:
+            if status == TransactionStatus.IDLE:
                 return
 
             self.pgconn.send_query(command)
             (pgres,) = await self.wait(execute(self.pgconn))
-            if pgres.status != pq.ExecStatus.COMMAND_OK:
+            if pgres.status != ExecStatus.COMMAND_OK:
                 raise e.OperationalError(
                     f"error on {command.decode('utf8')}:"
                     f" {pq.error_message(pgres)}"
@@ -258,5 +285,5 @@ class AsyncConnection(BaseConnection):
             )
             gen = execute(self.pgconn)
             (result,) = await self.wait(gen)
-            if result.status != pq.ExecStatus.TUPLES_OK:
+            if result.status != ExecStatus.TUPLES_OK:
                 raise e.error_from_result(result)

@@ -30,7 +30,7 @@ def test_commit(loop, aconn):
     aconn.pgconn.exec_(b"create table foo (id int primary key)")
     aconn.pgconn.exec_(b"begin")
     assert aconn.pgconn.transaction_status == aconn.TransactionStatus.INTRANS
-    res = aconn.pgconn.exec_(b"insert into foo values (1)")
+    aconn.pgconn.exec_(b"insert into foo values (1)")
     loop.run_until_complete(aconn.commit())
     assert aconn.pgconn.transaction_status == aconn.TransactionStatus.IDLE
     res = aconn.pgconn.exec_(b"select id from foo where id = 1")
@@ -46,15 +46,53 @@ def test_rollback(loop, aconn):
     aconn.pgconn.exec_(b"create table foo (id int primary key)")
     aconn.pgconn.exec_(b"begin")
     assert aconn.pgconn.transaction_status == aconn.TransactionStatus.INTRANS
-    res = aconn.pgconn.exec_(b"insert into foo values (1)")
+    aconn.pgconn.exec_(b"insert into foo values (1)")
     loop.run_until_complete(aconn.rollback())
     assert aconn.pgconn.transaction_status == aconn.TransactionStatus.IDLE
     res = aconn.pgconn.exec_(b"select id from foo where id = 1")
-    assert res.get_value(0, 0) is None
+    assert res.ntuples == 0
 
     loop.run_until_complete(aconn.close())
     with pytest.raises(psycopg3.OperationalError):
         loop.run_until_complete(aconn.rollback())
+
+
+def test_auto_transaction(loop, aconn):
+    aconn.pgconn.exec_(b"drop table if exists foo")
+    aconn.pgconn.exec_(b"create table foo (id int primary key)")
+
+    cur = aconn.cursor()
+    assert aconn.pgconn.transaction_status == aconn.TransactionStatus.IDLE
+
+    loop.run_until_complete(cur.execute("insert into foo values (1)"))
+    assert aconn.pgconn.transaction_status == aconn.TransactionStatus.INTRANS
+
+    loop.run_until_complete(aconn.commit())
+    assert aconn.pgconn.transaction_status == aconn.TransactionStatus.IDLE
+    loop.run_until_complete(cur.execute("select * from foo"))
+    assert loop.run_until_complete(cur.fetchone()) == (1,)
+    assert aconn.pgconn.transaction_status == aconn.TransactionStatus.INTRANS
+
+
+def test_auto_transaction_fail(loop, aconn):
+    aconn.pgconn.exec_(b"drop table if exists foo")
+    aconn.pgconn.exec_(b"create table foo (id int primary key)")
+
+    cur = aconn.cursor()
+    assert aconn.pgconn.transaction_status == aconn.TransactionStatus.IDLE
+
+    loop.run_until_complete(cur.execute("insert into foo values (1)"))
+    assert aconn.pgconn.transaction_status == aconn.TransactionStatus.INTRANS
+
+    with pytest.raises(psycopg3.DatabaseError):
+        loop.run_until_complete(cur.execute("meh"))
+    assert aconn.pgconn.transaction_status == aconn.TransactionStatus.INERROR
+
+    loop.run_until_complete(aconn.commit())
+    assert aconn.pgconn.transaction_status == aconn.TransactionStatus.IDLE
+    loop.run_until_complete(cur.execute("select * from foo"))
+    assert loop.run_until_complete(cur.fetchone()) is None
+    assert aconn.pgconn.transaction_status == aconn.TransactionStatus.INTRANS
 
 
 def test_get_encoding(aconn, loop):

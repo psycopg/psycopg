@@ -263,6 +263,7 @@ class Cursor(BaseCursor):
     def execute(self, query: Query, vars: Optional[Params] = None) -> "Cursor":
         with self.connection.lock:
             self._start_query()
+            self.connection._start_query()
             self._execute_send(query, vars)
             gen = execute(self.connection.pgconn)
             results = self.connection.wait(gen)
@@ -274,8 +275,10 @@ class Cursor(BaseCursor):
     ) -> "Cursor":
         with self.connection.lock:
             self._start_query()
-            for i, vars in enumerate(vars_seq):
-                if i == 0:
+            self.connection._start_query()
+            first = True
+            for vars in vars_seq:
+                if first:
                     pgq = self._send_prepare(b"", query, vars)
                     gen = execute(self.connection.pgconn)
                     (result,) = self.connection.wait(gen)
@@ -350,6 +353,7 @@ class AsyncCursor(BaseCursor):
     ) -> "AsyncCursor":
         async with self.connection.lock:
             self._start_query()
+            await self.connection._start_query()
             self._execute_send(query, vars)
             gen = execute(self.connection.pgconn)
             results = await self.connection.wait(gen)
@@ -361,8 +365,10 @@ class AsyncCursor(BaseCursor):
     ) -> "AsyncCursor":
         async with self.connection.lock:
             self._start_query()
-            for i, vars in enumerate(vars_seq):
-                if i == 0:
+            await self.connection._start_query()
+            first = True
+            for vars in vars_seq:
+                if first:
                     pgq = self._send_prepare(b"", query, vars)
                     gen = execute(self.connection.pgconn)
                     (result,) = await self.connection.wait(gen)
