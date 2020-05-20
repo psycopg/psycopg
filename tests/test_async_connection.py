@@ -95,6 +95,51 @@ def test_auto_transaction_fail(loop, aconn):
     assert aconn.pgconn.transaction_status == aconn.TransactionStatus.INTRANS
 
 
+def test_autocommit(loop, aconn):
+    assert aconn.autocommit is False
+    aconn.autocommit = True
+    assert aconn.autocommit
+    cur = aconn.cursor()
+    loop.run_until_complete(cur.execute("select 1"))
+    assert loop.run_until_complete(cur.fetchone()) == (1,)
+    assert aconn.pgconn.transaction_status == aconn.TransactionStatus.IDLE
+
+
+def test_autocommit_connect(loop, dsn):
+    aconn = loop.run_until_complete(
+        psycopg3.AsyncConnection.connect(dsn, autocommit=True)
+    )
+    assert aconn.autocommit
+
+
+def test_autocommit_intrans(loop, aconn):
+    cur = aconn.cursor()
+    loop.run_until_complete(cur.execute("select 1"))
+    assert loop.run_until_complete(cur.fetchone()) == (1,)
+    assert aconn.pgconn.transaction_status == aconn.TransactionStatus.INTRANS
+    with pytest.raises(psycopg3.ProgrammingError):
+        aconn.autocommit = True
+    assert not aconn.autocommit
+
+
+def test_autocommit_inerror(loop, aconn):
+    cur = aconn.cursor()
+    with pytest.raises(psycopg3.DatabaseError):
+        loop.run_until_complete(cur.execute("meh"))
+    assert aconn.pgconn.transaction_status == aconn.TransactionStatus.INERROR
+    with pytest.raises(psycopg3.ProgrammingError):
+        aconn.autocommit = True
+    assert not aconn.autocommit
+
+
+def test_autocommit_unknown(loop, aconn):
+    loop.run_until_complete(aconn.close())
+    assert aconn.pgconn.transaction_status == aconn.TransactionStatus.UNKNOWN
+    with pytest.raises(psycopg3.ProgrammingError):
+        aconn.autocommit = True
+    assert not aconn.autocommit
+
+
 def test_get_encoding(aconn, loop):
     cur = aconn.cursor()
     loop.run_until_complete(cur.execute("show client_encoding"))

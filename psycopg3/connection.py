@@ -64,6 +64,7 @@ class BaseConnection:
     def __init__(self, pgconn: pq.proto.PGconn):
         self.pgconn = pgconn
         self.cursor_factory = cursor.BaseCursor
+        self._autocommit = False
         self.dumpers: proto.DumpersMap = {}
         self.loaders: proto.LoadersMap = {}
         # name of the postgres encoding (in bytes)
@@ -76,6 +77,20 @@ class BaseConnection:
     @property
     def status(self) -> pq.ConnStatus:
         return self.pgconn.status
+
+    @property
+    def autocommit(self) -> bool:
+        return self._autocommit
+
+    @autocommit.setter
+    def autocommit(self, value: bool) -> None:
+        status = self.pgconn.transaction_status
+        if status != TransactionStatus.IDLE:
+            raise e.ProgrammingError(
+                "can't change autocommit state: connection in"
+                f" transaction status {TransactionStatus(status).name}"
+            )
+        self._autocommit = value
 
     def cursor(
         self, name: Optional[str] = None, binary: bool = False
@@ -136,14 +151,20 @@ class Connection(BaseConnection):
 
     @classmethod
     def connect(
-        cls, conninfo: Optional[str] = None, **kwargs: Any,
+        cls,
+        conninfo: Optional[str] = None,
+        *,
+        autocommit: bool = False,
+        **kwargs: Any,
     ) -> "Connection":
         if conninfo is None and not kwargs:
             raise TypeError("missing conninfo and not parameters specified")
         conninfo = make_conninfo(conninfo or "", **kwargs)
         gen = connect(conninfo)
         pgconn = cls.wait(gen)
-        return cls(pgconn)
+        conn = cls(pgconn)
+        conn._autocommit = autocommit
+        return conn
 
     def close(self) -> None:
         self.pgconn.finish()
@@ -156,8 +177,10 @@ class Connection(BaseConnection):
 
     def _start_query(self) -> None:
         # the function is meant to be called by a cursor once the lock is taken
-        status = self.pgconn.transaction_status
-        if status == TransactionStatus.INTRANS:
+        if self._autocommit:
+            return
+
+        if self.pgconn.transaction_status == TransactionStatus.INTRANS:
             return
 
         self.pgconn.send_query(b"begin")
@@ -222,14 +245,20 @@ class AsyncConnection(BaseConnection):
 
     @classmethod
     async def connect(
-        cls, conninfo: Optional[str] = None, **kwargs: Any
+        cls,
+        conninfo: Optional[str] = None,
+        *,
+        autocommit: bool = False,
+        **kwargs: Any,
     ) -> "AsyncConnection":
         if conninfo is None and not kwargs:
             raise TypeError("missing conninfo and not parameters specified")
         conninfo = make_conninfo(conninfo or "", **kwargs)
         gen = connect(conninfo)
         pgconn = await cls.wait(gen)
-        return cls(pgconn)
+        conn = cls(pgconn)
+        conn._autocommit = autocommit
+        return conn
 
     async def close(self) -> None:
         self.pgconn.finish()
@@ -242,8 +271,10 @@ class AsyncConnection(BaseConnection):
 
     async def _start_query(self) -> None:
         # the function is meant to be called by a cursor once the lock is taken
-        status = self.pgconn.transaction_status
-        if status == TransactionStatus.INTRANS:
+        if self._autocommit:
+            return
+
+        if self.pgconn.transaction_status == TransactionStatus.INTRANS:
             return
 
         self.pgconn.send_query(b"begin")
