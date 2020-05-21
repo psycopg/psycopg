@@ -6,7 +6,7 @@ libpq access using ctypes
 
 import ctypes
 import ctypes.util
-from ctypes import Structure, POINTER
+from ctypes import Structure, CFUNCTYPE, POINTER
 from ctypes import c_char, c_char_p, c_int, c_size_t, c_ubyte, c_uint, c_void_p
 from typing import List, Tuple
 
@@ -459,6 +459,15 @@ PQfreemem.restype = None
 PQmakeEmptyPGresult = pq.PQmakeEmptyPGresult
 PQmakeEmptyPGresult.argtypes = [PGconn_ptr, c_int]
 PQmakeEmptyPGresult.restype = PGresult_ptr
+
+
+# 33.12. Notice Processing
+
+PQnoticeReceiver = CFUNCTYPE(None, c_void_p, PGresult_ptr)
+
+PQsetNoticeReceiver = pq.PQsetNoticeReceiver
+PQsetNoticeReceiver.argtypes = [PGconn_ptr, PQnoticeReceiver, c_void_p]
+PQsetNoticeReceiver.restype = PQnoticeReceiver
 
 
 def generate_stub() -> None:

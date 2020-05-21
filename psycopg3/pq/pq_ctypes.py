@@ -8,6 +8,9 @@ implementation.
 
 # Copyright (C) 2020 The Psycopg Team
 
+import logging
+from weakref import ref
+
 from ctypes import Array, pointer, string_at
 from ctypes import c_char_p, c_int, c_size_t, c_ulong
 from typing import Any, Callable, List, Optional, Sequence
@@ -30,16 +33,45 @@ if TYPE_CHECKING:
 
 __impl__ = "ctypes"
 
+logger = logging.getLogger("psycopg3")
+
 
 def version() -> int:
     return impl.PQlibVersion()
 
 
 class PGconn:
-    __slots__ = ("pgconn_ptr",)
+    __slots__ = (
+        "pgconn_ptr",
+        "notice_callback",
+        "_notice_receiver",
+        "__weakref__",
+    )
 
     def __init__(self, pgconn_ptr: impl.PGconn_struct):
         self.pgconn_ptr: Optional[impl.PGconn_struct] = pgconn_ptr
+        self.notice_callback: Optional[Callable[..., None]] = None
+
+        w = ref(self)
+
+        @impl.PQnoticeReceiver  # type: ignore
+        def notice_receiver(
+            arg: Any, result_ptr: impl.PGresult_struct
+        ) -> None:
+            pgconn = w()
+            if pgconn is None or pgconn.notice_callback is None:
+                return
+
+            res = PGresult(result_ptr)
+            try:
+                pgconn.notice_callback(res)
+            except Exception as e:
+                logger.exception("error in notice receiver: %s", e)
+
+            res.pgresult_ptr = None  # avoid destroying the pgresult_ptr
+
+        impl.PQsetNoticeReceiver(pgconn_ptr, notice_receiver, None)
+        self._notice_receiver = notice_receiver
 
     def __del__(self) -> None:
         self.finish()

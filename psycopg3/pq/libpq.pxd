@@ -214,3 +214,7 @@ cdef extern from "libpq-fe.h":
     PGresult *PQmakeEmptyPGresult(PGconn *conn, ExecStatusType status)
     int PQlibVersion()
 
+    # 33.12. Notice Processing
+    ctypedef void (*PQnoticeReceiver)(void *arg, const PGresult *res)
+    PQnoticeReceiver PQsetNoticeReceiver(
+        PGconn *conn, PQnoticeReceiver prog, void *arg)

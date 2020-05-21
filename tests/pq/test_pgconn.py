@@ -1,9 +1,11 @@
 import os
+import logging
 from select import select
 
 import pytest
 
 import psycopg3
+import psycopg3.generators
 
 
 def test_connectdb(pq, dsn):
@@ -327,3 +329,62 @@ def test_make_empty_result(pq, pgconn):
     res = pgconn.make_empty_result(pq.ExecStatus.FATAL_ERROR)
     assert res.status == pq.ExecStatus.FATAL_ERROR
     assert res.error_message == b""
+
+
+def test_notice_nohandler(pq, pgconn):
+    res = pgconn.exec_(
+        b"""
+do $$
+begin
+    raise notice 'hello notice';
+end
+$$ language plpgsql
+    """
+    )
+    assert res.status == pq.ExecStatus.COMMAND_OK
+
+
+def test_notice(pq, pgconn):
+    msgs = []
+
+    def callback(res):
+        assert res.status == pq.ExecStatus.NONFATAL_ERROR
+        msgs.append(res.error_field(pq.DiagnosticField.MESSAGE_PRIMARY))
+
+    pgconn.notice_callback = callback
+    res = pgconn.exec_(
+        b"""
+do $$
+begin
+    raise notice 'hello notice';
+end
+$$ language plpgsql
+    """
+    )
+
+    assert res.status == pq.ExecStatus.COMMAND_OK
+    assert msgs and msgs[0] == b"hello notice"
+
+
+def test_notice_error(pq, pgconn, caplog):
+    caplog.set_level(logging.WARNING, logger="psycopg3")
+
+    def callback(res):
+        raise Exception("hello error")
+
+    pgconn.notice_callback = callback
+    res = pgconn.exec_(
+        b"""
+do $$
+begin
+    raise notice 'hello notice';
+end
+$$ language plpgsql
+    """
+    )
+
+    assert res.status == pq.ExecStatus.COMMAND_OK
+    assert len(caplog.records) == 1
+    rec = caplog.records[0]
+    assert rec.levelno == logging.ERROR
+    assert "hello error" in rec.message

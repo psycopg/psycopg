@@ -6,6 +6,7 @@ libpq Python wrapper using cython bindings.
 
 from cpython.mem cimport PyMem_Malloc, PyMem_Free
 
+import logging
 from typing import List, Optional, Sequence
 
 from psycopg3.pq cimport libpq as impl
@@ -26,9 +27,25 @@ from psycopg3.pq.enums import (
 
 __impl__ = 'c'
 
+logger = logging.getLogger('psycopg3')
+
 
 def version():
     return impl.PQlibVersion()
+
+
+cdef void notice_receiver(void *arg, const impl.PGresult *res_ptr):
+    cdef PGconn pgconn = <object>arg
+    if pgconn.notice_callback is None:
+        return
+
+    cdef PGresult res = PGresult._from_ptr(<impl.PGresult *>res_ptr)
+    try:
+        pgconn.notice_callback(res)
+    except Exception as e:
+        logger.exception("error in notice receiver: %s", e)
+
+    res.pgresult_ptr = NULL  # avoid destroying the pgresult_ptr
 
 
 cdef class PGconn:
@@ -36,6 +53,8 @@ cdef class PGconn:
     cdef PGconn _from_ptr(impl.PGconn *ptr):
         cdef PGconn rv = PGconn.__new__(PGconn)
         rv.pgconn_ptr = ptr
+
+        impl.PQsetNoticeReceiver(ptr, notice_receiver, <void *>rv)
         return rv
 
     def __cinit__(self):
@@ -712,4 +731,3 @@ cdef class Escaping:
         rv = out[:len_out]
         impl.PQfreemem(out)
         return rv
-
