@@ -25,10 +25,10 @@ All the available tests and dev support are defined in ``tox.ini``: please
 refer to `tox documentation`__ for its usage. You can run all the tests with::
 
     psql -c 'create database psycopg3_test'
+    export PSYCOPG3_TEST_DSN="dbname=psycopg3_test"
     tox -s
 
-You can use the ``PSYCOPG3_TEST_DSN`` env var to select a different database
-to run the tests. You can install the test dependencies in your virtualenv to
-run the tests faster: please look at the ``tox.ini`` comments for instructions.
+You can also install the test dependencies in your virtualenv to run tests
+faster: please look at the ``tox.ini`` comments for instructions.
 
 .. __: https://tox.readthedocs.io/
