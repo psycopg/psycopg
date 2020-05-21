@@ -120,12 +120,6 @@ class BaseConnection:
             self._pgenc = pgenc
         return self._codec
 
-    def encode(self, s: str) -> bytes:
-        return self.codec.encode(s)[0]
-
-    def decode(self, b: bytes) -> str:
-        return self.codec.decode(b)[0]
-
     @property
     def encoding(self) -> str:
         rv = self.pgconn.parameter_status(b"client_encoding")
