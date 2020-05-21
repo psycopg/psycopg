@@ -9,6 +9,8 @@ import logging
 import asyncio
 import threading
 from typing import Any, Callable, List, Optional, Type, cast
+from weakref import ref, ReferenceType
+from functools import partial
 
 from . import pq
 from . import errors as e
@@ -19,6 +21,7 @@ from .conninfo import make_conninfo
 from .waiting import wait, wait_async
 
 logger = logging.getLogger(__name__)
+package_logger = logging.getLogger("psycopg3")
 
 
 connect: Callable[[str], proto.PQGen[pq.proto.PGconn]]
@@ -35,6 +38,8 @@ else:
 
     connect = generators.connect
     execute = generators.execute
+
+NoticeCallback = Callable[[pq.proto.PGresult], None]
 
 
 class BaseConnection:
@@ -67,8 +72,15 @@ class BaseConnection:
         self._autocommit = False
         self.dumpers: proto.DumpersMap = {}
         self.loaders: proto.LoadersMap = {}
+        self._notice_callbacks: List[NoticeCallback] = []
         # name of the postgres encoding (in bytes)
         self._pgenc = b""
+
+        wself = ref(self)
+
+        pgconn.notice_callback = partial(
+            BaseConnection._notice_callback, wself
+        )
 
     @property
     def closed(self) -> bool:
@@ -127,6 +139,27 @@ class BaseConnection:
             return rv.decode("ascii")
         else:
             return "UTF8"
+
+    def add_notice_callback(self, callback: NoticeCallback) -> None:
+        self._notice_callbacks.append(callback)
+
+    def remove_notice_callback(self, callback: NoticeCallback) -> None:
+        self._notice_callbacks.remove(callback)
+
+    @staticmethod
+    def _notice_callback(
+        wself: "ReferenceType[BaseConnection]", res: pq.proto.PGresult
+    ) -> None:
+        self = wself()
+        if self is None:
+            return
+        for cb in self._notice_callbacks:
+            try:
+                cb(res)
+            except Exception as ex:
+                package_logger.exception(
+                    "error processing notice callback '%s': %s", cb, ex
+                )
 
 
 class Connection(BaseConnection):

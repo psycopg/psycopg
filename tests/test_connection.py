@@ -1,4 +1,5 @@
 import pytest
+import logging
 
 import psycopg3
 from psycopg3 import Connection
@@ -205,3 +206,66 @@ def test_broken_connection(conn):
     with pytest.raises(psycopg3.DatabaseError):
         cur.execute("select pg_terminate_backend(pg_backend_pid())")
     assert conn.closed
+
+
+def test_notice_callbacks(conn, caplog):
+    caplog.set_level(logging.WARNING, logger="psycopg3")
+    messages = []
+    severities = []
+
+    def cb1(res):
+        messages.append(
+            res.error_field(psycopg3.pq.DiagnosticField.MESSAGE_PRIMARY)
+        )
+
+    def cb2(res):
+        raise Exception("hello from cb2")
+
+    def cb3(res):
+        severities.append(
+            res.error_field(psycopg3.pq.DiagnosticField.SEVERITY_NONLOCALIZED)
+        )
+
+    conn.add_notice_callback(cb1)
+    conn.add_notice_callback(cb2)
+    conn.add_notice_callback("the wrong thing")
+    conn.add_notice_callback(cb3)
+
+    cur = conn.cursor()
+    cur.execute(
+        """
+do $$
+begin
+    raise notice 'hello notice';
+end
+$$ language plpgsql
+    """
+    )
+    assert messages == [b"hello notice"]
+    assert severities == [b"NOTICE"]
+
+    assert len(caplog.records) == 2
+    rec = caplog.records[0]
+    assert rec.levelno == logging.ERROR
+    assert "hello from cb2" in rec.message
+    rec = caplog.records[1]
+    assert rec.levelno == logging.ERROR
+    assert "the wrong thing" in rec.message
+
+    conn.remove_notice_callback(cb1)
+    conn.remove_notice_callback("the wrong thing")
+    cur.execute(
+        """
+do $$
+begin
+    raise warning 'hello warning';
+end
+$$ language plpgsql
+    """
+    )
+    assert len(caplog.records) == 3
+    assert messages == [b"hello notice"]
+    assert severities == [b"NOTICE", b"WARNING"]
+
+    with pytest.raises(ValueError):
+        conn.remove_notice_callback(cb1)
