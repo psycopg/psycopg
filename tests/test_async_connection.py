@@ -206,3 +206,12 @@ def test_connect_badargs(monkeypatch, pgconn, loop, args, kwargs):
         loop.run_until_complete(
             psycopg3.AsyncConnection.connect(*args, **kwargs)
         )
+
+
+def test_broken_connection(aconn, loop):
+    cur = aconn.cursor()
+    with pytest.raises(psycopg3.DatabaseError):
+        loop.run_until_complete(
+            cur.execute("select pg_terminate_backend(pg_backend_pid())")
+        )
+    assert aconn.closed

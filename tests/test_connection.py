@@ -198,3 +198,10 @@ def test_connect_badargs(monkeypatch, pgconn, args, kwargs):
     monkeypatch.setattr(psycopg3.connection, "connect", fake_connect)
     with pytest.raises((TypeError, psycopg3.ProgrammingError)):
         psycopg3.Connection.connect(*args, **kwargs)
+
+
+def test_broken_connection(conn):
+    cur = conn.cursor()
+    with pytest.raises(psycopg3.DatabaseError):
+        cur.execute("select pg_terminate_backend(pg_backend_pid())")
+    assert conn.closed
