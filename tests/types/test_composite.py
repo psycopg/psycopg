@@ -115,10 +115,9 @@ def test_fetch_info(conn, testcomp):
         assert info.fields[i].type_oid == builtins[t].oid
 
 
-def test_fetch_info_async(aconn, loop, testcomp):
-    info = loop.run_until_complete(
-        composite.fetch_info_async(aconn, "testcomp")
-    )
+@pytest.mark.asyncio
+async def test_fetch_info_async(aconn, testcomp):
+    info = await composite.fetch_info_async(aconn, "testcomp")
     assert info.name == "testcomp"
     assert info.oid > 0
     assert info.oid != info.array_oid > 0

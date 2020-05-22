@@ -44,6 +44,16 @@ def conn(dsn):
     conn.close()
 
 
+@pytest.fixture
+async def aconn(dsn, pq):
+    """Return an `AsyncConnection` connected to the ``--test-dsn`` database."""
+    from psycopg3 import AsyncConnection
+
+    conn = await AsyncConnection.connect(dsn)
+    yield conn
+    await conn.close()
+
+
 @pytest.fixture(scope="session")
 def svcconn(dsn):
     """
