@@ -12,7 +12,7 @@ def test_error_diag(conn):
     exc = excinfo.value
     diag = exc.diag
     assert diag.sqlstate == "42P01"
-    assert diag.severity_nonlocalized == "ERROR"
+    assert diag.severity == "ERROR"
 
 
 def test_diag_all_attrs(pgconn, pq):
