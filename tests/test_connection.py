@@ -1,5 +1,7 @@
+import gc
 import pytest
 import logging
+import weakref
 
 import psycopg3
 from psycopg3 import Connection
@@ -24,6 +26,15 @@ def test_close(conn):
     conn.close()
     assert conn.closed
     assert conn.status == conn.ConnStatus.BAD
+
+
+def test_weakref(dsn):
+    conn = psycopg3.connect(dsn)
+    w = weakref.ref(conn)
+    conn.close()
+    del conn
+    gc.collect()
+    assert w() is None
 
 
 def test_commit(conn):

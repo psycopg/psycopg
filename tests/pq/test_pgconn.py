@@ -1,5 +1,7 @@
+import gc
 import os
 import logging
+import weakref
 from select import select
 
 import pytest
@@ -69,6 +71,15 @@ def test_finish(pgconn, pq):
     assert pgconn.status == pq.ConnStatus.BAD
     pgconn.finish()
     assert pgconn.status == pq.ConnStatus.BAD
+
+
+def test_weakref(pq, dsn):
+    conn = pq.PGconn.connect(dsn.encode("utf8"))
+    w = weakref.ref(conn)
+    conn.finish()
+    del conn
+    gc.collect()
+    assert w() is None
 
 
 def test_info(pq, dsn, pgconn):

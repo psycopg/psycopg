@@ -1,5 +1,7 @@
+import gc
 import pytest
 import logging
+import weakref
 
 import psycopg3
 from psycopg3 import AsyncConnection
@@ -24,6 +26,15 @@ def test_close(aconn, loop):
     loop.run_until_complete(aconn.close())
     assert aconn.closed
     assert aconn.status == aconn.ConnStatus.BAD
+
+
+def test_weakref(dsn, loop):
+    conn = loop.run_until_complete(psycopg3.AsyncConnection.connect(dsn))
+    w = weakref.ref(conn)
+    loop.run_until_complete(conn.close())
+    del conn
+    gc.collect()
+    assert w() is None
 
 
 def test_commit(loop, aconn):

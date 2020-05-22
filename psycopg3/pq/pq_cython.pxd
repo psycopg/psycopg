@@ -6,6 +6,7 @@ ctypedef int(*conn_int_f) (const impl.PGconn *)
 
 cdef class PGconn:
     cdef impl.PGconn* pgconn_ptr
+    cdef object __weakref__
 
     @staticmethod
     cdef PGconn _from_ptr(impl.PGconn *ptr)

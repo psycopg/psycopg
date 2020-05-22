@@ -1,4 +1,7 @@
+import gc
 import pytest
+import weakref
+
 import psycopg3
 
 
@@ -13,6 +16,15 @@ def test_close(conn):
 
     cur.close()
     assert cur.closed
+
+
+def test_weakref(conn):
+    cur = conn.cursor()
+    w = weakref.ref(cur)
+    cur.close()
+    del cur
+    gc.collect()
+    assert w() is None
 
 
 def test_status(conn):

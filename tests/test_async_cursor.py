@@ -1,4 +1,7 @@
+import gc
 import pytest
+import weakref
+
 import psycopg3
 
 
@@ -13,6 +16,15 @@ def test_close(aconn, loop):
 
     loop.run_until_complete(cur.close())
     assert cur.closed
+
+
+def test_weakref(aconn, loop):
+    cur = aconn.cursor()
+    w = weakref.ref(cur)
+    loop.run_until_complete(cur.close())
+    del cur
+    gc.collect()
+    assert w() is None
 
 
 def test_status(aconn, loop):
