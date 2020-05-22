@@ -20,6 +20,7 @@ DBAPI-defined Exceptions are defined in the following hierarchy::
 
 from typing import Any, Optional, Sequence, Type
 from psycopg3.pq.proto import PGresult
+from psycopg3.pq.enums import DiagnosticField
 
 
 class Warning(Exception):
@@ -36,10 +37,18 @@ class Error(Exception):
     """
 
     def __init__(
-        self, *args: Sequence[Any], pgresult: Optional[PGresult] = None
+        self,
+        *args: Sequence[Any],
+        pgresult: Optional[PGresult] = None,
+        encoding: str = "utf-8"
     ):
         super().__init__(*args)
         self.pgresult = pgresult
+        self._encoding = encoding
+
+    @property
+    def diag(self) -> "Diagnostic":
+        return Diagnostic(self.pgresult, encoding=self._encoding)
 
 
 class InterfaceError(Error):
@@ -105,14 +114,100 @@ class NotSupportedError(DatabaseError):
     """
 
 
+class Diagnostic:
+    def __init__(self, pgresult: Optional[PGresult], encoding: str = "utf-8"):
+        self.pgresult = pgresult
+        self.encoding = encoding
+
+    @property
+    def severity(self) -> Optional[str]:
+        return self._error_message(DiagnosticField.SEVERITY)
+
+    @property
+    def severity_nonlocalized(self) -> Optional[str]:
+        return self._error_message(DiagnosticField.SEVERITY_NONLOCALIZED)
+
+    @property
+    def sqlstate(self) -> Optional[str]:
+        return self._error_message(DiagnosticField.SQLSTATE)
+
+    @property
+    def message_primary(self) -> Optional[str]:
+        return self._error_message(DiagnosticField.MESSAGE_PRIMARY)
+
+    @property
+    def message_detail(self) -> Optional[str]:
+        return self._error_message(DiagnosticField.MESSAGE_DETAIL)
+
+    @property
+    def message_hint(self) -> Optional[str]:
+        return self._error_message(DiagnosticField.MESSAGE_HINT)
+
+    @property
+    def statement_position(self) -> Optional[str]:
+        return self._error_message(DiagnosticField.STATEMENT_POSITION)
+
+    @property
+    def internal_position(self) -> Optional[str]:
+        return self._error_message(DiagnosticField.INTERNAL_POSITION)
+
+    @property
+    def internal_query(self) -> Optional[str]:
+        return self._error_message(DiagnosticField.INTERNAL_QUERY)
+
+    @property
+    def context(self) -> Optional[str]:
+        return self._error_message(DiagnosticField.CONTEXT)
+
+    @property
+    def schema_name(self) -> Optional[str]:
+        return self._error_message(DiagnosticField.SCHEMA_NAME)
+
+    @property
+    def table_name(self) -> Optional[str]:
+        return self._error_message(DiagnosticField.TABLE_NAME)
+
+    @property
+    def column_name(self) -> Optional[str]:
+        return self._error_message(DiagnosticField.COLUMN_NAME)
+
+    @property
+    def datatype_name(self) -> Optional[str]:
+        return self._error_message(DiagnosticField.DATATYPE_NAME)
+
+    @property
+    def constraint_name(self) -> Optional[str]:
+        return self._error_message(DiagnosticField.CONSTRAINT_NAME)
+
+    @property
+    def source_file(self) -> Optional[str]:
+        return self._error_message(DiagnosticField.SOURCE_FILE)
+
+    @property
+    def source_line(self) -> Optional[str]:
+        return self._error_message(DiagnosticField.SOURCE_LINE)
+
+    @property
+    def source_function(self) -> Optional[str]:
+        return self._error_message(DiagnosticField.SOURCE_FUNCTION)
+
+    def _error_message(self, field: DiagnosticField) -> Optional[str]:
+        if self.pgresult is not None:
+            val = self.pgresult.error_field(field)
+            if val is not None:
+                return val.decode(self.encoding, "replace")
+
+        return None
+
+
 def class_for_state(sqlstate: bytes) -> Type[Error]:
     # TODO: stub
     return DatabaseError
 
 
-def error_from_result(result: PGresult) -> Error:
+def error_from_result(result: PGresult, encoding: str = "utf-8") -> Error:
     from psycopg3 import pq
 
-    state = result.error_field(pq.DiagnosticField.SQLSTATE) or b""
+    state = result.error_field(DiagnosticField.SQLSTATE) or b""
     cls = class_for_state(state)
-    return cls(pq.error_message(result))
+    return cls(pq.error_message(result), pgresult=result, encoding=encoding)

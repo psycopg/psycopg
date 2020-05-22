@@ -4,7 +4,6 @@ psycopg3 cursor objects
 
 # Copyright (C) 2020 The Psycopg Team
 
-import codecs
 from operator import attrgetter
 from typing import Any, Callable, List, Optional, Sequence, TYPE_CHECKING
 
@@ -31,12 +30,10 @@ else:
 
 
 class Column(Sequence[Any]):
-    def __init__(
-        self, pgresult: pq.proto.PGresult, index: int, codec: codecs.CodecInfo
-    ):
+    def __init__(self, pgresult: pq.proto.PGresult, index: int, encoding: str):
         self._pgresult = pgresult
         self._index = index
-        self._codec = codec
+        self._encoding = encoding
 
     _attrs = tuple(
         map(
@@ -57,7 +54,7 @@ class Column(Sequence[Any]):
     def name(self) -> str:
         rv = self._pgresult.fname(self._index)
         if rv is not None:
-            return self._codec.decode(rv)[0]
+            return rv.decode(self._encoding)
         else:
             raise e.InterfaceError(
                 f"no name available for column {self._index}"
@@ -117,7 +114,8 @@ class BaseCursor:
         if res is None or res.status != self.ExecStatus.TUPLES_OK:
             return None
         return [
-            Column(res, i, self.connection.codec) for i in range(res.nfields)
+            Column(res, i, self.connection.codec.name)
+            for i in range(res.nfields)
         ]
 
     @property
@@ -196,7 +194,9 @@ class BaseCursor:
             return
 
         if results[-1].status == S.FATAL_ERROR:
-            raise e.error_from_result(results[-1])
+            raise e.error_from_result(
+                results[-1], encoding=self.connection.codec.name
+            )
 
         elif badstats & {S.COPY_IN, S.COPY_OUT, S.COPY_BOTH}:
             raise e.ProgrammingError(
@@ -283,7 +283,9 @@ class Cursor(BaseCursor):
                     gen = execute(self.connection.pgconn)
                     (result,) = self.connection.wait(gen)
                     if result.status == self.ExecStatus.FATAL_ERROR:
-                        raise e.error_from_result(result)
+                        raise e.error_from_result(
+                            result, encoding=self.connection.codec.name
+                        )
                 else:
                     pgq.dump(vars)
 
@@ -373,7 +375,9 @@ class AsyncCursor(BaseCursor):
                     gen = execute(self.connection.pgconn)
                     (result,) = await self.connection.wait(gen)
                     if result.status == self.ExecStatus.FATAL_ERROR:
-                        raise e.error_from_result(result)
+                        raise e.error_from_result(
+                            result, encoding=self.connection.codec.name
+                        )
                 else:
                     pgq.dump(vars)
 

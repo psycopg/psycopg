@@ -39,7 +39,7 @@ else:
     connect = generators.connect
     execute = generators.execute
 
-NoticeCallback = Callable[[pq.proto.PGresult], None]
+NoticeCallback = Callable[[e.Diagnostic], None]
 
 
 class BaseConnection:
@@ -151,11 +151,13 @@ class BaseConnection:
         wself: "ReferenceType[BaseConnection]", res: pq.proto.PGresult
     ) -> None:
         self = wself()
-        if self is None:
+        if self is None or not self._notice_callback:
             return
+
+        diag = e.Diagnostic(res, self.codec.name)
         for cb in self._notice_callbacks:
             try:
-                cb(res)
+                cb(diag)
             except Exception as ex:
                 package_logger.exception(
                     "error processing notice callback '%s': %s", cb, ex

@@ -333,13 +333,7 @@ def test_make_empty_result(pq, pgconn):
 
 def test_notice_nohandler(pq, pgconn):
     res = pgconn.exec_(
-        b"""
-do $$
-begin
-    raise notice 'hello notice';
-end
-$$ language plpgsql
-    """
+        b"do $$begin raise notice 'hello notice'; end$$ language plpgsql"
     )
     assert res.status == pq.ExecStatus.COMMAND_OK
 
@@ -353,13 +347,7 @@ def test_notice(pq, pgconn):
 
     pgconn.notice_callback = callback
     res = pgconn.exec_(
-        b"""
-do $$
-begin
-    raise notice 'hello notice';
-end
-$$ language plpgsql
-    """
+        b"do $$begin raise notice 'hello notice'; end$$ language plpgsql"
     )
 
     assert res.status == pq.ExecStatus.COMMAND_OK
@@ -374,13 +362,7 @@ def test_notice_error(pq, pgconn, caplog):
 
     pgconn.notice_callback = callback
     res = pgconn.exec_(
-        b"""
-do $$
-begin
-    raise notice 'hello notice';
-end
-$$ language plpgsql
-    """
+        b"do $$begin raise notice 'hello notice'; end$$ language plpgsql"
     )
 
     assert res.status == pq.ExecStatus.COMMAND_OK

@@ -223,38 +223,27 @@ def test_notice_callbacks(aconn, loop, caplog):
     messages = []
     severities = []
 
-    def cb1(res):
-        messages.append(
-            res.error_field(psycopg3.pq.DiagnosticField.MESSAGE_PRIMARY)
-        )
+    def cb1(diag):
+        messages.append(diag.message_primary)
 
     def cb2(res):
         raise Exception("hello from cb2")
 
-    def cb3(res):
-        severities.append(
-            res.error_field(psycopg3.pq.DiagnosticField.SEVERITY_NONLOCALIZED)
-        )
-
     aconn.add_notice_callback(cb1)
     aconn.add_notice_callback(cb2)
     aconn.add_notice_callback("the wrong thing")
-    aconn.add_notice_callback(cb3)
+    aconn.add_notice_callback(
+        lambda diag: severities.append(diag.severity_nonlocalized)
+    )
 
     cur = aconn.cursor()
     loop.run_until_complete(
         cur.execute(
-            """
-do $$
-begin
-    raise notice 'hello notice';
-end
-$$ language plpgsql
-    """
+            "do $$begin raise notice 'hello notice'; end$$ language plpgsql"
         )
     )
-    assert messages == [b"hello notice"]
-    assert severities == [b"NOTICE"]
+    assert messages == ["hello notice"]
+    assert severities == ["NOTICE"]
 
     assert len(caplog.records) == 2
     rec = caplog.records[0]
@@ -268,18 +257,12 @@ $$ language plpgsql
     aconn.remove_notice_callback("the wrong thing")
     loop.run_until_complete(
         cur.execute(
-            """
-do $$
-begin
-    raise warning 'hello warning';
-end
-$$ language plpgsql
-    """
+            "do $$begin raise warning 'hello warning'; end$$ language plpgsql"
         )
     )
     assert len(caplog.records) == 3
-    assert messages == [b"hello notice"]
-    assert severities == [b"NOTICE", b"WARNING"]
+    assert messages == ["hello notice"]
+    assert severities == ["NOTICE", "WARNING"]
 
     with pytest.raises(ValueError):
         aconn.remove_notice_callback(cb1)
