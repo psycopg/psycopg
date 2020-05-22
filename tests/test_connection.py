@@ -149,6 +149,39 @@ def test_set_encoding(conn):
     assert enc == newenc
 
 
+@pytest.mark.parametrize(
+    "enc, out, codec",
+    [
+        ("utf8", "UTF8", "utf-8"),
+        ("utf-8", "UTF8", "utf-8"),
+        ("utf_8", "UTF8", "utf-8"),
+        ("eucjp", "EUC_JP", "euc_jp"),
+        ("euc-jp", "EUC_JP", "euc_jp"),
+    ],
+)
+def test_normalize_encoding(conn, enc, out, codec):
+    conn.set_client_encoding(enc)
+    assert conn.encoding == out
+    assert conn.codec.name == codec
+
+
+@pytest.mark.parametrize(
+    "enc, out, codec",
+    [
+        ("utf8", "UTF8", "utf-8"),
+        ("utf-8", "UTF8", "utf-8"),
+        ("utf_8", "UTF8", "utf-8"),
+        ("eucjp", "EUC_JP", "euc_jp"),
+        ("euc-jp", "EUC_JP", "euc_jp"),
+    ],
+)
+def test_encoding_env_var(dsn, monkeypatch, enc, out, codec):
+    monkeypatch.setenv("PGCLIENTENCODING", enc)
+    conn = psycopg3.connect(dsn)
+    assert conn.encoding == out
+    assert conn.codec.name == codec
+
+
 def test_set_encoding_unsupported(conn):
     conn.set_client_encoding("EUC_TW")
     with pytest.raises(psycopg3.NotSupportedError):

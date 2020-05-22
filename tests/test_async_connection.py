@@ -159,6 +159,45 @@ def test_set_encoding(aconn, loop):
     assert enc == newenc
 
 
+@pytest.mark.parametrize(
+    "enc, out, codec",
+    [
+        ("utf8", "UTF8", "utf-8"),
+        ("utf-8", "UTF8", "utf-8"),
+        ("utf_8", "UTF8", "utf-8"),
+        ("eucjp", "EUC_JP", "euc_jp"),
+        ("euc-jp", "EUC_JP", "euc_jp"),
+    ],
+)
+def test_normalize_encoding(aconn, loop, enc, out, codec):
+    loop.run_until_complete(aconn.set_client_encoding(enc))
+    assert aconn.encoding == out
+    assert aconn.codec.name == codec
+
+
+@pytest.mark.parametrize(
+    "enc, out, codec",
+    [
+        ("utf8", "UTF8", "utf-8"),
+        ("utf-8", "UTF8", "utf-8"),
+        ("utf_8", "UTF8", "utf-8"),
+        ("eucjp", "EUC_JP", "euc_jp"),
+        ("euc-jp", "EUC_JP", "euc_jp"),
+    ],
+)
+def test_encoding_env_var(dsn, loop, monkeypatch, enc, out, codec):
+    monkeypatch.setenv("PGCLIENTENCODING", enc)
+    aconn = loop.run_until_complete(psycopg3.AsyncConnection.connect(dsn))
+    assert aconn.encoding == out
+    assert aconn.codec.name == codec
+
+
+def test_set_encoding_unsupported(aconn, loop):
+    loop.run_until_complete(aconn.set_client_encoding("EUC_TW"))
+    with pytest.raises(psycopg3.NotSupportedError):
+        loop.run_until_complete(aconn.cursor().execute("select 1"))
+
+
 def test_set_encoding_bad(aconn, loop):
     with pytest.raises(psycopg3.DatabaseError):
         loop.run_until_complete(aconn.set_client_encoding("WAT"))
