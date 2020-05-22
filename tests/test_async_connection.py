@@ -236,6 +236,7 @@ def test_notice_handlers(aconn, loop, caplog):
         lambda diag: severities.append(diag.severity_nonlocalized)
     )
 
+    aconn.pgconn.exec_(b"set client_min_messages to notice")
     cur = aconn.cursor()
     loop.run_until_complete(
         cur.execute(

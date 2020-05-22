@@ -332,6 +332,7 @@ def test_make_empty_result(pq, pgconn):
 
 
 def test_notice_nohandler(pq, pgconn):
+    pgconn.exec_(b"set client_min_messages to notice")
     res = pgconn.exec_(
         b"do $$begin raise notice 'hello notice'; end$$ language plpgsql"
     )
@@ -345,6 +346,7 @@ def test_notice(pq, pgconn):
         assert res.status == pq.ExecStatus.NONFATAL_ERROR
         msgs.append(res.error_field(pq.DiagnosticField.MESSAGE_PRIMARY))
 
+    pgconn.exec_(b"set client_min_messages to notice")
     pgconn.notice_handler = callback
     res = pgconn.exec_(
         b"do $$begin raise notice 'hello notice'; end$$ language plpgsql"
@@ -360,6 +362,7 @@ def test_notice_error(pq, pgconn, caplog):
     def callback(res):
         raise Exception("hello error")
 
+    pgconn.exec_(b"set client_min_messages to notice")
     pgconn.notice_handler = callback
     res = pgconn.exec_(
         b"do $$begin raise notice 'hello notice'; end$$ language plpgsql"

@@ -226,6 +226,7 @@ def test_notice_handlers(conn, caplog):
         lambda diag: severities.append(diag.severity_nonlocalized)
     )
 
+    conn.pgconn.exec_(b"set client_min_messages to notice")
     cur = conn.cursor()
     cur.execute(
         "do $$begin raise notice 'hello notice'; end$$ language plpgsql"
