@@ -39,7 +39,7 @@ else:
     connect = generators.connect
     execute = generators.execute
 
-NoticeCallback = Callable[[e.Diagnostic], None]
+NoticeHandler = Callable[[e.Diagnostic], None]
 
 
 class BaseConnection:
@@ -72,15 +72,13 @@ class BaseConnection:
         self._autocommit = False
         self.dumpers: proto.DumpersMap = {}
         self.loaders: proto.LoadersMap = {}
-        self._notice_callbacks: List[NoticeCallback] = []
+        self._notice_handlers: List[NoticeHandler] = []
         # name of the postgres encoding (in bytes)
         self._pgenc = b""
 
         wself = ref(self)
 
-        pgconn.notice_callback = partial(
-            BaseConnection._notice_callback, wself
-        )
+        pgconn.notice_handler = partial(BaseConnection._notice_handler, wself)
 
     @property
     def closed(self) -> bool:
@@ -140,22 +138,22 @@ class BaseConnection:
         else:
             return "UTF8"
 
-    def add_notice_callback(self, callback: NoticeCallback) -> None:
-        self._notice_callbacks.append(callback)
+    def add_notice_handler(self, callback: NoticeHandler) -> None:
+        self._notice_handlers.append(callback)
 
-    def remove_notice_callback(self, callback: NoticeCallback) -> None:
-        self._notice_callbacks.remove(callback)
+    def remove_notice_handler(self, callback: NoticeHandler) -> None:
+        self._notice_handlers.remove(callback)
 
     @staticmethod
-    def _notice_callback(
+    def _notice_handler(
         wself: "ReferenceType[BaseConnection]", res: pq.proto.PGresult
     ) -> None:
         self = wself()
-        if self is None or not self._notice_callback:
+        if self is None or not self._notice_handler:
             return
 
         diag = e.Diagnostic(res, self.codec.name)
-        for cb in self._notice_callbacks:
+        for cb in self._notice_handlers:
             try:
                 cb(diag)
             except Exception as ex:

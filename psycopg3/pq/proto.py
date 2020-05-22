@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 
 class PGconn(Protocol):
 
-    notice_callback: Optional[Callable[["PGresult"], None]]
+    notice_handler: Optional[Callable[["PGresult"], None]]
 
     @classmethod
     def connect(cls, conninfo: bytes) -> "PGconn":

@@ -10,7 +10,7 @@ cdef class PGconn:
     @staticmethod
     cdef PGconn _from_ptr(impl.PGconn *ptr)
 
-    cdef public object notice_callback
+    cdef public object notice_handler
 
     cdef int _ensure_pgconn(self) except 0
     cdef char *_call_bytes(self, conn_bytes_f func) except NULL

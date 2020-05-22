@@ -345,7 +345,7 @@ def test_notice(pq, pgconn):
         assert res.status == pq.ExecStatus.NONFATAL_ERROR
         msgs.append(res.error_field(pq.DiagnosticField.MESSAGE_PRIMARY))
 
-    pgconn.notice_callback = callback
+    pgconn.notice_handler = callback
     res = pgconn.exec_(
         b"do $$begin raise notice 'hello notice'; end$$ language plpgsql"
     )
@@ -360,7 +360,7 @@ def test_notice_error(pq, pgconn, caplog):
     def callback(res):
         raise Exception("hello error")
 
-    pgconn.notice_callback = callback
+    pgconn.notice_handler = callback
     res = pgconn.exec_(
         b"do $$begin raise notice 'hello notice'; end$$ language plpgsql"
     )

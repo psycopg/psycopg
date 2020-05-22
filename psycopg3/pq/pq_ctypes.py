@@ -43,14 +43,14 @@ def version() -> int:
 class PGconn:
     __slots__ = (
         "pgconn_ptr",
-        "notice_callback",
+        "notice_handler",
         "_notice_receiver",
         "__weakref__",
     )
 
     def __init__(self, pgconn_ptr: impl.PGconn_struct):
         self.pgconn_ptr: Optional[impl.PGconn_struct] = pgconn_ptr
-        self.notice_callback: Optional[Callable[..., None]] = None
+        self.notice_handler: Optional[Callable[..., None]] = None
 
         w = ref(self)
 
@@ -59,12 +59,12 @@ class PGconn:
             arg: Any, result_ptr: impl.PGresult_struct
         ) -> None:
             pgconn = w()
-            if pgconn is None or pgconn.notice_callback is None:
+            if pgconn is None or pgconn.notice_handler is None:
                 return
 
             res = PGresult(result_ptr)
             try:
-                pgconn.notice_callback(res)
+                pgconn.notice_handler(res)
             except Exception as e:
                 logger.exception("error in notice receiver: %s", e)
 

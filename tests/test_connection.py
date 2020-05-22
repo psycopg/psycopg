@@ -208,7 +208,7 @@ def test_broken_connection(conn):
     assert conn.closed
 
 
-def test_notice_callbacks(conn, caplog):
+def test_notice_handlers(conn, caplog):
     caplog.set_level(logging.WARNING, logger="psycopg3")
     messages = []
     severities = []
@@ -219,10 +219,10 @@ def test_notice_callbacks(conn, caplog):
     def cb2(res):
         raise Exception("hello from cb2")
 
-    conn.add_notice_callback(cb1)
-    conn.add_notice_callback(cb2)
-    conn.add_notice_callback("the wrong thing")
-    conn.add_notice_callback(
+    conn.add_notice_handler(cb1)
+    conn.add_notice_handler(cb2)
+    conn.add_notice_handler("the wrong thing")
+    conn.add_notice_handler(
         lambda diag: severities.append(diag.severity_nonlocalized)
     )
 
@@ -241,8 +241,8 @@ def test_notice_callbacks(conn, caplog):
     assert rec.levelno == logging.ERROR
     assert "the wrong thing" in rec.message
 
-    conn.remove_notice_callback(cb1)
-    conn.remove_notice_callback("the wrong thing")
+    conn.remove_notice_handler(cb1)
+    conn.remove_notice_handler("the wrong thing")
     cur.execute(
         "do $$begin raise warning 'hello warning'; end$$ language plpgsql"
     )
@@ -251,4 +251,4 @@ def test_notice_callbacks(conn, caplog):
     assert severities == ["NOTICE", "WARNING"]
 
     with pytest.raises(ValueError):
-        conn.remove_notice_callback(cb1)
+        conn.remove_notice_handler(cb1)

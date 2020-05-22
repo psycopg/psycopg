@@ -36,12 +36,12 @@ def version():
 
 cdef void notice_receiver(void *arg, const impl.PGresult *res_ptr):
     cdef PGconn pgconn = <object>arg
-    if pgconn.notice_callback is None:
+    if pgconn.notice_handler is None:
         return
 
     cdef PGresult res = PGresult._from_ptr(<impl.PGresult *>res_ptr)
     try:
-        pgconn.notice_callback(res)
+        pgconn.notice_handler(res)
     except Exception as e:
         logger.exception("error in notice receiver: %s", e)
 

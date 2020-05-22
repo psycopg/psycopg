@@ -218,7 +218,7 @@ def test_broken_connection(aconn, loop):
     assert aconn.closed
 
 
-def test_notice_callbacks(aconn, loop, caplog):
+def test_notice_handlers(aconn, loop, caplog):
     caplog.set_level(logging.WARNING, logger="psycopg3")
     messages = []
     severities = []
@@ -229,10 +229,10 @@ def test_notice_callbacks(aconn, loop, caplog):
     def cb2(res):
         raise Exception("hello from cb2")
 
-    aconn.add_notice_callback(cb1)
-    aconn.add_notice_callback(cb2)
-    aconn.add_notice_callback("the wrong thing")
-    aconn.add_notice_callback(
+    aconn.add_notice_handler(cb1)
+    aconn.add_notice_handler(cb2)
+    aconn.add_notice_handler("the wrong thing")
+    aconn.add_notice_handler(
         lambda diag: severities.append(diag.severity_nonlocalized)
     )
 
@@ -253,8 +253,8 @@ def test_notice_callbacks(aconn, loop, caplog):
     assert rec.levelno == logging.ERROR
     assert "the wrong thing" in rec.message
 
-    aconn.remove_notice_callback(cb1)
-    aconn.remove_notice_callback("the wrong thing")
+    aconn.remove_notice_handler(cb1)
+    aconn.remove_notice_handler("the wrong thing")
     loop.run_until_complete(
         cur.execute(
             "do $$begin raise warning 'hello warning'; end$$ language plpgsql"
@@ -265,4 +265,4 @@ def test_notice_callbacks(aconn, loop, caplog):
     assert severities == ["NOTICE", "WARNING"]
 
     with pytest.raises(ValueError):
-        aconn.remove_notice_callback(cb1)
+        aconn.remove_notice_handler(cb1)

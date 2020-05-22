@@ -46,7 +46,7 @@ def test_diag_right_attr(pgconn, pq, monkeypatch):
 @pytest.mark.parametrize("enc", ["utf8", "latin9"])
 def test_diag_encoding(conn, enc):
     msgs = []
-    conn.add_notice_callback(lambda diag: msgs.append(diag.message_primary))
+    conn.add_notice_handler(lambda diag: msgs.append(diag.message_primary))
     conn.set_client_encoding(enc)
     cur = conn.cursor()
     cur.execute(
