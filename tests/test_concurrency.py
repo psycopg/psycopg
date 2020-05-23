@@ -2,10 +2,15 @@
 Tests dealing with concurrency issues.
 """
 
+import os
+import sys
 import time
 import queue
 import pytest
+import shutil
+import tempfile
 import threading
+import subprocess as sp
 
 import psycopg3
 
@@ -54,3 +59,49 @@ def test_commit_concurrency(conn):
     stop = True
 
     assert notices.empty(), "%d notices raised" % notices.qsize()
+
+
+@pytest.mark.slow
+def test_multiprocess_close(dsn):
+    # Check the problem reported in psycopg2#829
+    # Subprocess gcs the copy of the fd after fork so it closes connection.
+    module = f"""\
+import time
+import psycopg3
+
+def thread():
+    conn = psycopg3.connect({repr(dsn)})
+    curs = conn.cursor()
+    for i in range(10):
+        curs.execute("select 1")
+        time.sleep(0.1)
+
+def process():
+    time.sleep(0.2)
+"""
+
+    script = """\
+import time
+import threading
+import multiprocessing
+import mptest
+
+t = threading.Thread(target=mptest.thread, name='mythread')
+t.start()
+time.sleep(0.2)
+multiprocessing.Process(target=mptest.process, name='myprocess').start()
+t.join()
+"""
+
+    dir = tempfile.mkdtemp()
+    try:
+        with open(os.path.join(dir, "mptest.py"), "w") as f:
+            f.write(module)
+        env = dict(os.environ)
+        env["PYTHONPATH"] = dir + os.pathsep + env.get("PYTHONPATH", "")
+        out = sp.check_output(
+            [sys.executable, "-c", script], stderr=sp.STDOUT, env=env
+        ).decode("utf8", "replace")
+        assert out == "", out.strip().splitlines()[-1]
+    finally:
+        shutil.rmtree(dir, ignore_errors=True)

@@ -8,6 +8,7 @@ implementation.
 
 # Copyright (C) 2020 The Psycopg Team
 
+import os
 import logging
 from weakref import ref
 from functools import partial
@@ -62,6 +63,7 @@ class PGconn:
         "pgconn_ptr",
         "notice_handler",
         "_notice_receiver",
+        "_procpid",
         "__weakref__",
     )
 
@@ -74,8 +76,13 @@ class PGconn:
         )
         impl.PQsetNoticeReceiver(pgconn_ptr, self._notice_receiver, None)
 
+        self._procpid = os.getpid()
+
     def __del__(self) -> None:
-        self.finish()
+        # Close the connection only if it was created in this process,
+        # not if this object is being GC'd after fork.
+        if os.getpid() == self._procpid:
+            self.finish()
 
     @classmethod
     def connect(cls, conninfo: bytes) -> "PGconn":

@@ -4,6 +4,7 @@ libpq Python wrapper using cython bindings.
 
 # Copyright (C) 2020 The Psycopg Team
 
+from posix.unistd cimport getpid
 from cpython.mem cimport PyMem_Malloc, PyMem_Free
 
 import logging
@@ -59,9 +60,13 @@ cdef class PGconn:
 
     def __cinit__(self):
         self.pgconn_ptr = NULL
+        self._procpid = getpid()
 
     def __dealloc__(self):
-        self.finish()
+        # Close the connection only if it was created in this process,
+        # not if this object is being GC'd after fork.
+        if self._procpid == getpid():
+            self.finish()
 
     @classmethod
     def connect(cls, conninfo: bytes) -> PGconn:

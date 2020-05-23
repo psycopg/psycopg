@@ -1,3 +1,4 @@
+from posix.fcntl cimport pid_t
 from psycopg3.pq cimport libpq as impl
 
 ctypedef char *(*conn_bytes_f) (const impl.PGconn *)
@@ -7,11 +8,11 @@ ctypedef int(*conn_int_f) (const impl.PGconn *)
 cdef class PGconn:
     cdef impl.PGconn* pgconn_ptr
     cdef object __weakref__
+    cdef public object notice_handler
+    cdef pid_t _procpid
 
     @staticmethod
     cdef PGconn _from_ptr(impl.PGconn *ptr)
-
-    cdef public object notice_handler
 
     cdef int _ensure_pgconn(self) except 0
     cdef char *_call_bytes(self, conn_bytes_f func) except NULL
