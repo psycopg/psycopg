@@ -10,6 +10,7 @@ implementation.
 
 import logging
 from weakref import ref
+from functools import partial
 
 from ctypes import Array, pointer, string_at
 from ctypes import c_char_p, c_int, c_size_t, c_ulong
@@ -40,6 +41,22 @@ def version() -> int:
     return impl.PQlibVersion()
 
 
+def notice_receiver(
+    arg: Any, result_ptr: impl.PGresult_struct, wconn: "ref[PGconn]"
+) -> None:
+    pgconn = wconn()
+    if pgconn is None or pgconn.notice_handler is None:
+        return
+
+    res = PGresult(result_ptr)
+    try:
+        pgconn.notice_handler(res)
+    except Exception as e:
+        logger.exception("error in notice receiver: %s", e)
+
+    res.pgresult_ptr = None  # avoid destroying the pgresult_ptr
+
+
 class PGconn:
     __slots__ = (
         "pgconn_ptr",
@@ -52,26 +69,10 @@ class PGconn:
         self.pgconn_ptr: Optional[impl.PGconn_struct] = pgconn_ptr
         self.notice_handler: Optional[Callable[..., None]] = None
 
-        w = ref(self)
-
-        @impl.PQnoticeReceiver  # type: ignore
-        def notice_receiver(
-            arg: Any, result_ptr: impl.PGresult_struct
-        ) -> None:
-            pgconn = w()
-            if pgconn is None or pgconn.notice_handler is None:
-                return
-
-            res = PGresult(result_ptr)
-            try:
-                pgconn.notice_handler(res)
-            except Exception as e:
-                logger.exception("error in notice receiver: %s", e)
-
-            res.pgresult_ptr = None  # avoid destroying the pgresult_ptr
-
-        impl.PQsetNoticeReceiver(pgconn_ptr, notice_receiver, None)
-        self._notice_receiver = notice_receiver
+        self._notice_receiver = impl.PQnoticeReceiver(  # type: ignore
+            partial(notice_receiver, wconn=ref(self))
+        )
+        impl.PQsetNoticeReceiver(pgconn_ptr, self._notice_receiver, None)
 
     def __del__(self) -> None:
         self.finish()
