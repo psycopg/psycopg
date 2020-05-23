@@ -1,5 +1,6 @@
 import gc
 import os
+import ctypes
 import logging
 import weakref
 from select import select
@@ -80,6 +81,19 @@ def test_weakref(pq, dsn):
     del conn
     gc.collect()
     assert w() is None
+
+
+def test_pgconn_ptr(pgconn, libpq):
+    pgconn.pgconn_ptr is not None
+
+    f = libpq.PQserverVersion
+    f.argtypes = [ctypes.c_void_p]
+    f.restype = ctypes.c_int
+    ver = f(pgconn.pgconn_ptr)
+    assert ver == pgconn.server_version
+
+    pgconn.finish()
+    assert pgconn.pgconn_ptr is None
 
 
 def test_info(pq, dsn, pgconn):

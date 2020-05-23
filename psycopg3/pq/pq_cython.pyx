@@ -81,6 +81,13 @@ cdef class PGconn:
             self.pgconn_ptr = NULL
 
     @property
+    def pgconn_ptr(self) -> Optional[int]:
+        if self.pgconn_ptr:
+            return <long><void *>self.pgconn_ptr
+        else:
+            return None
+
+    @property
     def info(self) -> List["ConninfoOption"]:
         self._ensure_pgconn()
         cdef impl.PQconninfoOption *opts = impl.PQconninfo(self.pgconn_ptr)
@@ -559,6 +566,13 @@ cdef class PGresult:
         if self.pgresult_ptr is not NULL:
             impl.PQclear(self.pgresult_ptr)
             self.pgresult_ptr = NULL
+
+    @property
+    def pgresult_ptr(self) -> Optional[int]:
+        if self.pgresult_ptr:
+            return <long><void *>self.pgresult_ptr
+        else:
+            return None
 
     @property
     def status(self) -> ExecStatus:

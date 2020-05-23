@@ -36,6 +36,15 @@ def pq(request):
     return pq
 
 
+@pytest.fixture
+def libpq():
+    """Return a ctypes wrapper to access the libpq."""
+    import ctypes.util
+
+    libname = ctypes.util.find_library("pq")
+    return ctypes.pydll.LoadLibrary(libname)
+
+
 def check_libpq_version(got, want):
     """
     Verify if the libpq version is a version accepted.

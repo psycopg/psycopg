@@ -1,3 +1,4 @@
+import ctypes
 import pytest
 
 
@@ -22,6 +23,19 @@ def test_clear(pq, pgconn):
     assert res.status == pq.ExecStatus.FATAL_ERROR
     res.clear()
     assert res.status == pq.ExecStatus.FATAL_ERROR
+
+
+def test_pgresult_ptr(pgconn, libpq):
+    res = pgconn.exec_(b"select 1")
+    assert res.pgresult_ptr is not None
+
+    f = libpq.PQcmdStatus
+    f.argtypes = [ctypes.c_void_p]
+    f.restype = ctypes.c_char_p
+    assert f(res.pgresult_ptr) == b"SELECT 1"
+
+    res.clear()
+    assert res.pgresult_ptr is None
 
 
 def test_error_message(pgconn):
