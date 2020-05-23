@@ -1,7 +1,9 @@
 import pytest
 
+from psycopg3 import pq
 
-def test_error_message(pq, pgconn):
+
+def test_error_message(pgconn):
     res = pgconn.exec_(b"wat")
     assert res.status == pq.ExecStatus.FATAL_ERROR
     msg = pq.error_message(pgconn)

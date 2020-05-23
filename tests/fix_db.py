@@ -1,6 +1,7 @@
 import os
-
 import pytest
+
+from psycopg3 import pq
 
 
 def pytest_addoption(parser):
@@ -23,7 +24,7 @@ def dsn(request):
 
 
 @pytest.fixture
-def pgconn(pq, dsn):
+def pgconn(dsn):
     """Return a PGconn connection open to `--test-dsn`."""
     conn = pq.PGconn.connect(dsn.encode("utf8"))
     if conn.status != pq.ConnStatus.OK:
@@ -45,7 +46,7 @@ def conn(dsn):
 
 
 @pytest.fixture
-async def aconn(dsn, pq):
+async def aconn(dsn):
     """Return an `AsyncConnection` connected to the ``--test-dsn`` database."""
     from psycopg3 import AsyncConnection
 

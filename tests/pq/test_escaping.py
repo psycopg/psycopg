@@ -1,12 +1,13 @@
 import pytest
 
 import psycopg3
+from psycopg3 import pq
 
 
 @pytest.mark.parametrize(
     "data", [(b"hello\00world"), (b"\00\00\00\00")],
 )
-def test_escape_bytea(pq, pgconn, data):
+def test_escape_bytea(pgconn, data):
     exp = br"\x" + b"".join(b"%02x" % c for c in data)
     esc = pq.Escaping(pgconn)
     rv = esc.escape_bytea(data)
@@ -17,7 +18,7 @@ def test_escape_bytea(pq, pgconn, data):
         esc.escape_bytea(data)
 
 
-def test_escape_noconn(pq, pgconn):
+def test_escape_noconn(pgconn):
     data = bytes(range(256))
     esc = pq.Escaping()
     escdata = esc.escape_bytea(data)
@@ -28,7 +29,7 @@ def test_escape_noconn(pq, pgconn):
     assert res.get_value(0, 0) == data
 
 
-def test_escape_1char(pq, pgconn):
+def test_escape_1char(pgconn):
     esc = pq.Escaping(pgconn)
     for c in range(256):
         rv = esc.escape_bytea(bytes([c]))
@@ -39,7 +40,7 @@ def test_escape_1char(pq, pgconn):
 @pytest.mark.parametrize(
     "data", [(b"hello\00world"), (b"\00\00\00\00")],
 )
-def test_unescape_bytea(pq, pgconn, data):
+def test_unescape_bytea(pgconn, data):
     enc = br"\x" + b"".join(b"%02x" % c for c in data)
     esc = pq.Escaping(pgconn)
     rv = esc.unescape_bytea(enc)

@@ -1,4 +1,5 @@
 import pytest
+from psycopg3 import pq
 from psycopg3 import errors as e
 
 eur = "\u20ac"
@@ -15,7 +16,7 @@ def test_error_diag(conn):
     assert diag.severity == "ERROR"
 
 
-def test_diag_all_attrs(pgconn, pq):
+def test_diag_all_attrs(pgconn):
     res = pgconn.make_empty_result(pq.ExecStatus.NONFATAL_ERROR)
     diag = e.Diagnostic(res)
     for d in pq.DiagnosticField:
@@ -23,7 +24,7 @@ def test_diag_all_attrs(pgconn, pq):
         assert val is None or isinstance(val, str)
 
 
-def test_diag_right_attr(pgconn, pq, monkeypatch):
+def test_diag_right_attr(pgconn, monkeypatch):
     res = pgconn.make_empty_result(pq.ExecStatus.NONFATAL_ERROR)
     diag = e.Diagnostic(res)
 

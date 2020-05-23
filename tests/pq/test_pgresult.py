@@ -1,6 +1,8 @@
 import ctypes
 import pytest
 
+from psycopg3 import pq
+
 
 @pytest.mark.parametrize(
     "command, status",
@@ -11,12 +13,12 @@ import pytest
         (b"wat", "FATAL_ERROR"),
     ],
 )
-def test_status(pq, pgconn, command, status):
+def test_status(pgconn, command, status):
     res = pgconn.exec_(command)
     assert res.status == getattr(pq.ExecStatus, status)
 
 
-def test_clear(pq, pgconn):
+def test_clear(pgconn):
     res = pgconn.exec_(b"select 1")
     assert res.status == pq.ExecStatus.TUPLES_OK
     res.clear()
@@ -47,7 +49,7 @@ def test_error_message(pgconn):
     assert res.error_message == b""
 
 
-def test_error_field(pq, pgconn):
+def test_error_field(pgconn):
     res = pgconn.exec_(b"select wat")
     assert res.error_field(pq.DiagnosticField.SEVERITY) == b"ERROR"
     assert res.error_field(pq.DiagnosticField.SQLSTATE) == b"42703"
@@ -85,7 +87,7 @@ def test_fname(pgconn):
     assert res.fname(0) is None
 
 
-def test_ftable_and_col(pq, pgconn):
+def test_ftable_and_col(pgconn):
     res = pgconn.exec_(
         b"""
         drop table if exists t1, t2;
@@ -110,7 +112,7 @@ def test_ftable_and_col(pq, pgconn):
 
 
 @pytest.mark.parametrize("fmt", (0, 1))
-def test_fformat(pq, pgconn, fmt):
+def test_fformat(pgconn, fmt):
     res = pgconn.exec_params(b"select 1", [], result_format=fmt)
     assert res.status == pq.ExecStatus.TUPLES_OK, res.error_message
     assert res.fformat(0) == fmt
@@ -120,7 +122,7 @@ def test_fformat(pq, pgconn, fmt):
     assert res.binary_tuples == 0
 
 
-def test_ftype(pq, pgconn):
+def test_ftype(pgconn):
     res = pgconn.exec_(b"select 1::int, 1::numeric, 1::text")
     assert res.status == pq.ExecStatus.TUPLES_OK, res.error_message
     assert res.ftype(0) == 23
@@ -130,7 +132,7 @@ def test_ftype(pq, pgconn):
     assert res.ftype(0) == 0
 
 
-def test_fmod(pq, pgconn):
+def test_fmod(pgconn):
     res = pgconn.exec_(b"select 1::int, 1::numeric(10), 1::numeric(10,2)")
     assert res.status == pq.ExecStatus.TUPLES_OK, res.error_message
     assert res.fmod(0) == -1
@@ -140,7 +142,7 @@ def test_fmod(pq, pgconn):
     assert res.fmod(0) == 0
 
 
-def test_fsize(pq, pgconn):
+def test_fsize(pgconn):
     res = pgconn.exec_(b"select 1::int, 1::bigint, 1::text")
     assert res.status == pq.ExecStatus.TUPLES_OK, res.error_message
     assert res.fsize(0) == 4
@@ -150,7 +152,7 @@ def test_fsize(pq, pgconn):
     assert res.fsize(0) == 0
 
 
-def test_get_value(pq, pgconn):
+def test_get_value(pgconn):
     res = pgconn.exec_(b"select 'a', '', NULL")
     assert res.status == pq.ExecStatus.TUPLES_OK, res.error_message
     assert res.get_value(0, 0) == b"a"
@@ -160,7 +162,7 @@ def test_get_value(pq, pgconn):
     assert res.get_value(0, 0) is None
 
 
-def test_nparams_types(pq, pgconn):
+def test_nparams_types(pgconn):
     res = pgconn.prepare(b"", b"select $1::int, $2::text")
     assert res.status == pq.ExecStatus.COMMAND_OK, res.error_message
 
@@ -176,7 +178,7 @@ def test_nparams_types(pq, pgconn):
     assert res.param_type(0) == 0
 
 
-def test_command_status(pq, pgconn):
+def test_command_status(pgconn):
     res = pgconn.exec_(b"select 1")
     assert res.command_status == b"SELECT 1"
     res = pgconn.exec_(b"set timezone to utf8")
@@ -185,7 +187,7 @@ def test_command_status(pq, pgconn):
     assert res.command_status is None
 
 
-def test_command_tuples(pq, pgconn):
+def test_command_tuples(pgconn):
     res = pgconn.exec_(b"set timezone to utf8")
     assert res.command_tuples is None
     res = pgconn.exec_(b"select * from generate_series(1, 10)")
@@ -194,7 +196,7 @@ def test_command_tuples(pq, pgconn):
     assert res.command_tuples is None
 
 
-def test_oid_value(pq, pgconn):
+def test_oid_value(pgconn):
     res = pgconn.exec_(b"select 1")
     assert res.oid_value == 0
     res.clear()

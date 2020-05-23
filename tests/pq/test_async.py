@@ -1,10 +1,11 @@
 import pytest
 from select import select
 import psycopg3
+from psycopg3 import pq
 from psycopg3.generators import execute
 
 
-def test_send_query(pq, pgconn):
+def test_send_query(pgconn):
     # This test shows how to process an async query in all its glory
     pgconn.nonblocking = 1
 
@@ -56,7 +57,7 @@ def test_send_query(pq, pgconn):
     assert results[1].get_value(0, 0) == b"1"
 
 
-def test_send_query_compact_test(pq, pgconn):
+def test_send_query_compact_test(pgconn):
     # Like the above test but use psycopg3 facilities for compactness
     pgconn.send_query(
         b"/* %s */ select pg_sleep(0.01); select 1 as foo;"
@@ -77,7 +78,7 @@ def test_send_query_compact_test(pq, pgconn):
         pgconn.send_query(b"select 1")
 
 
-def test_send_query_params(pq, pgconn):
+def test_send_query_params(pgconn):
     pgconn.send_query_params(b"select $1::int + $2", [b"5", b"3"])
     (res,) = psycopg3.waiting.wait(execute(pgconn))
     assert res.status == pq.ExecStatus.TUPLES_OK
@@ -88,7 +89,7 @@ def test_send_query_params(pq, pgconn):
         pgconn.send_query_params(b"select $1", [b"1"])
 
 
-def test_send_prepare(pq, pgconn):
+def test_send_prepare(pgconn):
     pgconn.send_prepare(b"prep", b"select $1::int + $2::int")
     (res,) = psycopg3.waiting.wait(execute(pgconn))
     assert res.status == pq.ExecStatus.COMMAND_OK, res.error_message
@@ -104,7 +105,7 @@ def test_send_prepare(pq, pgconn):
         pgconn.send_query_prepared(b"prep", [b"3", b"5"])
 
 
-def test_send_prepare_types(pq, pgconn):
+def test_send_prepare_types(pgconn):
     pgconn.send_prepare(b"prep", b"select $1 + $2", [23, 23])
     (res,) = psycopg3.waiting.wait(execute(pgconn))
     assert res.status == pq.ExecStatus.COMMAND_OK, res.error_message
@@ -114,7 +115,7 @@ def test_send_prepare_types(pq, pgconn):
     assert res.get_value(0, 0) == b"8"
 
 
-def test_send_prepared_binary_in(pq, pgconn):
+def test_send_prepared_binary_in(pgconn):
     val = b"foo\00bar"
     pgconn.send_prepare(b"", b"select length($1::bytea), length($2::bytea)")
     (res,) = psycopg3.waiting.wait(execute(pgconn))
@@ -133,7 +134,7 @@ def test_send_prepared_binary_in(pq, pgconn):
 @pytest.mark.parametrize(
     "fmt, out", [(0, b"\\x666f6f00626172"), (1, b"foo\00bar")]
 )
-def test_send_prepared_binary_out(pq, pgconn, fmt, out):
+def test_send_prepared_binary_out(pgconn, fmt, out):
     val = b"foo\00bar"
     pgconn.send_prepare(b"", b"select $1::bytea")
     (res,) = psycopg3.waiting.wait(execute(pgconn))

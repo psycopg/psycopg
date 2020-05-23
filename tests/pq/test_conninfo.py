@@ -1,7 +1,9 @@
 import pytest
 
+from psycopg3 import pq
 
-def test_defaults(pq, monkeypatch):
+
+def test_defaults(monkeypatch):
     monkeypatch.setenv("PGPORT", "15432")
     defs = pq.Conninfo.get_defaults()
     assert len(defs) > 20
@@ -14,7 +16,7 @@ def test_defaults(pq, monkeypatch):
     assert port.dispsize == 6
 
 
-def test_conninfo_parse(pq):
+def test_conninfo_parse():
     info = pq.Conninfo.parse(
         b"postgresql://host1:123,host2:456/somedb"
         b"?target_session_attrs=any&application_name=myapp"
@@ -26,7 +28,7 @@ def test_conninfo_parse(pq):
     assert info[b"application_name"] == b"myapp"
 
 
-def test_conninfo_parse_bad(pq):
+def test_conninfo_parse_bad():
     with pytest.raises(pq.PQerror) as e:
         pq.Conninfo.parse(b"bad_conninfo=")
         assert "bad_conninfo" in str(e.value)
