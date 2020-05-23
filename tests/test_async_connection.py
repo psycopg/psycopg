@@ -24,6 +24,14 @@ async def test_connect_bad():
         await AsyncConnection.connect("dbname=nosuchdb")
 
 
+async def test_connect_str_subclass(dsn):
+    class MyString(str):
+        pass
+
+    conn = await AsyncConnection.connect(MyString(dsn))
+    assert conn.status == conn.ConnStatus.OK
+
+
 async def test_close(aconn):
     assert not aconn.closed
     await aconn.close()

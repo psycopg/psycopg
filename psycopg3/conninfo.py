@@ -14,10 +14,11 @@ def make_conninfo(conninfo: str = "", **kwargs: Any) -> str:
     if not conninfo and not kwargs:
         return ""
 
-    # If no kwarg is specified don't mung the conninfo but check if it's correct
+    # If no kwarg specified don't mung the conninfo but check if it's correct.
+    # Make sure to return a string, not a subtypep, to avoid making Liskov sad.
     if not kwargs:
         _parse_conninfo(conninfo)
-        return conninfo
+        return str(conninfo)
 
     # Override the conninfo with the parameters
     # Drop the None arguments

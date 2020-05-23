@@ -16,6 +16,14 @@ def test_connect(dsn):
     assert conn.status == conn.ConnStatus.OK
 
 
+def test_connect_str_subclass(dsn):
+    class MyString(str):
+        pass
+
+    conn = Connection.connect(MyString(dsn))
+    assert conn.status == conn.ConnStatus.OK
+
+
 def test_connect_bad():
     with pytest.raises(psycopg3.OperationalError):
         Connection.connect("dbname=nosuchdb")
