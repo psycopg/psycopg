@@ -53,9 +53,18 @@ class PQconninfoOption_struct(Structure):
     ]
 
 
+class PGnotify_struct(Structure):
+    _fields_ = [
+        ("relname", c_char_p),
+        ("be_pid", c_int),
+        ("extra", c_char_p),
+    ]
+
+
 PGconn_ptr = POINTER(PGconn_struct)
 PGresult_ptr = POINTER(PGresult_struct)
 PQconninfoOption_ptr = POINTER(PQconninfoOption_struct)
+PGnotify_ptr = POINTER(PGnotify_struct)
 
 
 # Function definitions as explained in PostgreSQL 12 documentation
@@ -448,6 +457,13 @@ PQisnonblocking.restype = c_int
 PQflush = pq.PQflush
 PQflush.argtypes = [PGconn_ptr]
 PQflush.restype == c_int
+
+
+# 33.8. Asynchronous Notification
+
+PQnotifies = pq.PQnotifies
+PQnotifies.argtypes = [PGconn_ptr]
+PQnotifies.restype = PGnotify_ptr
 
 
 # 33.11. Miscellaneous Functions

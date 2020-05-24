@@ -4,8 +4,7 @@ Various functionalities to make easier to work with the libpq.
 
 # Copyright (C) 2020 The Psycopg Team
 
-from collections import namedtuple
-from typing import cast, Union
+from typing import cast, NamedTuple, Optional, Union
 
 from ..errors import OperationalError
 from .enums import DiagnosticField
@@ -16,9 +15,20 @@ class PQerror(OperationalError):
     pass
 
 
-ConninfoOption = namedtuple(
-    "ConninfoOption", "keyword envvar compiled val label dispchar dispsize"
-)
+class PGnotify(NamedTuple):
+    relname: bytes
+    be_pid: int
+    extra: bytes
+
+
+class ConninfoOption(NamedTuple):
+    keyword: bytes
+    envvar: Optional[bytes]
+    compiled: Optional[bytes]
+    val: Optional[bytes]
+    label: bytes
+    dispchar: bytes
+    dispsize: int
 
 
 def error_message(obj: Union[PGconn, PGresult]) -> str:

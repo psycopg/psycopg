@@ -14,7 +14,7 @@ from psycopg3.pq cimport libpq as impl
 from psycopg3.pq.libpq cimport Oid
 from psycopg3.errors import OperationalError
 
-from psycopg3.pq.misc import error_message, ConninfoOption, PQerror
+from psycopg3.pq.misc import error_message, PGnotify, ConninfoOption, PQerror
 from psycopg3.pq.enums import (
     ConnStatus,
     PollingStatus,
@@ -425,6 +425,15 @@ cdef class PGconn:
                 f"flushing failed:{error_message(self)}"
             )
         return rv
+
+    def notifies(self) -> Optional[PGnotify]:
+        cdef impl.PGnotify *ptr = impl.PQnotifies(self.pgconn_ptr)
+        if ptr:
+            ret = PGnotify(ptr.relname, ptr.be_pid, ptr.extra)
+            impl.PQfreemem(ptr)
+            return ret
+        else:
+            return None
 
     def make_empty_result(self, exec_status: ExecStatus) -> PGresult:
         cdef impl.PGresult *rv = impl.PQmakeEmptyPGresult(

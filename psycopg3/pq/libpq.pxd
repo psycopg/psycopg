@@ -17,6 +17,11 @@ cdef extern from "libpq-fe.h":
     ctypedef struct PGresult:
         pass
 
+    ctypedef struct PGnotify:
+        char   *relname
+        int     be_pid
+        char   *extra
+
     ctypedef struct PQconninfoOption:
         char   *keyword
         char   *envvar
@@ -207,6 +212,9 @@ cdef extern from "libpq-fe.h":
     int PQsetnonblocking(PGconn *conn, int arg)
     int PQisnonblocking(const PGconn *conn)
     int PQflush(PGconn *conn)
+
+    # 33.8. Asynchronous Notification
+    PGnotify *PQnotifies(PGconn *conn)
 
     # 33.11. Miscellaneous Functions
     void PQfreemem(void *ptr)

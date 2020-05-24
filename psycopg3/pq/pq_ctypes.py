@@ -27,7 +27,7 @@ from .enums import (
     DiagnosticField,
     Format,
 )
-from .misc import error_message, ConninfoOption, PQerror
+from .misc import error_message, PGnotify, ConninfoOption, PQerror
 from . import _pq_ctypes as impl
 
 if TYPE_CHECKING:
@@ -479,6 +479,15 @@ class PGconn:
         if rv < 0:
             raise PQerror(f"flushing failed: {error_message(self)}")
         return rv
+
+    def notifies(self) -> Optional["PGnotify"]:
+        ptr = impl.PQnotifies(self.pgconn_ptr)
+        if ptr:
+            c = ptr.contents
+            return PGnotify(c.relname, c.be_pid, c.extra)
+            impl.PQfreemem(ptr)
+        else:
+            return None
 
     def make_empty_result(self, exec_status: ExecStatus) -> "PGresult":
         rv = impl.PQmakeEmptyPGresult(self.pgconn_ptr, exec_status)
