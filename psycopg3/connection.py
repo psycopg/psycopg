@@ -8,7 +8,8 @@ import codecs
 import logging
 import asyncio
 import threading
-from typing import Any, Callable, List, Optional, Type, cast
+from typing import Any, AsyncGenerator, Callable, Generator, List, NamedTuple
+from typing import Optional, Type, cast
 from weakref import ref, ReferenceType
 from functools import partial
 
@@ -19,10 +20,10 @@ from . import proto
 from .pq import TransactionStatus, ExecStatus
 from .conninfo import make_conninfo
 from .waiting import wait, wait_async
+from .generators import notifies
 
 logger = logging.getLogger(__name__)
 package_logger = logging.getLogger("psycopg3")
-
 
 connect: Callable[[str], proto.PQGen[pq.proto.PGconn]]
 execute: Callable[[pq.proto.PGconn], proto.PQGen[List[pq.proto.PGresult]]]
@@ -39,7 +40,15 @@ else:
     connect = generators.connect
     execute = generators.execute
 
+
+class Notify(NamedTuple):
+    channel: str
+    payload: str
+    pid: int
+
+
 NoticeHandler = Callable[[e.Diagnostic], None]
+NotifyHandler = Callable[[Notify], None]
 
 
 class BaseConnection:
@@ -73,12 +82,14 @@ class BaseConnection:
         self.dumpers: proto.DumpersMap = {}
         self.loaders: proto.LoadersMap = {}
         self._notice_handlers: List[NoticeHandler] = []
+        self._notify_handlers: List[NotifyHandler] = []
         # name of the postgres encoding (in bytes)
         self._pgenc = b""
 
         wself = ref(self)
 
         pgconn.notice_handler = partial(BaseConnection._notice_handler, wself)
+        pgconn.notify_handler = partial(BaseConnection._notify_handler, wself)
 
     @property
     def closed(self) -> bool:
@@ -160,6 +171,25 @@ class BaseConnection:
                 package_logger.exception(
                     "error processing notice callback '%s': %s", cb, ex
                 )
+
+    def add_notify_handler(self, callback: NotifyHandler) -> None:
+        self._notify_handlers.append(callback)
+
+    def remove_notify_handler(self, callback: NotifyHandler) -> None:
+        self._notify_handlers.remove(callback)
+
+    @staticmethod
+    def _notify_handler(
+        wself: "ReferenceType[BaseConnection]", pgn: pq.PGnotify
+    ) -> None:
+        self = wself()
+        if self is None or not self._notify_handlers:
+            return
+
+        decode = self.codec.decode
+        n = Notify(decode(pgn.relname)[0], decode(pgn.extra)[0], pgn.be_pid)
+        for cb in self._notify_handlers:
+            cb(n)
 
 
 class Connection(BaseConnection):
@@ -254,6 +284,19 @@ class Connection(BaseConnection):
             if result.status != ExecStatus.TUPLES_OK:
                 raise e.error_from_result(result)
 
+    def notifies(self) -> Generator[Optional[Notify], bool, None]:
+        decode = self.codec.decode
+        while 1:
+            with self.lock:
+                ns = self.wait(notifies(self.pgconn))
+            for pgn in ns:
+                n = Notify(
+                    decode(pgn.relname)[0], decode(pgn.extra)[0], pgn.be_pid
+                )
+                if (yield n):
+                    yield None  # for the send who stopped us
+                    return
+
 
 class AsyncConnection(BaseConnection):
     """
@@ -345,3 +388,16 @@ class AsyncConnection(BaseConnection):
             (result,) = await self.wait(gen)
             if result.status != ExecStatus.TUPLES_OK:
                 raise e.error_from_result(result)
+
+    async def notifies(self) -> AsyncGenerator[Optional[Notify], bool]:
+        decode = self.codec.decode
+        while 1:
+            async with self.lock:
+                ns = await self.wait(notifies(self.pgconn))
+            for pgn in ns:
+                n = Notify(
+                    decode(pgn.relname)[0], decode(pgn.extra)[0], pgn.be_pid
+                )
+                if (yield n):
+                    yield None
+                    return

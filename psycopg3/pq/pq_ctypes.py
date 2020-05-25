@@ -62,6 +62,7 @@ class PGconn:
     __slots__ = (
         "pgconn_ptr",
         "notice_handler",
+        "notify_handler",
         "_notice_receiver",
         "_procpid",
         "__weakref__",
@@ -69,7 +70,10 @@ class PGconn:
 
     def __init__(self, pgconn_ptr: impl.PGconn_struct):
         self.pgconn_ptr: Optional[impl.PGconn_struct] = pgconn_ptr
-        self.notice_handler: Optional[Callable[..., None]] = None
+        self.notice_handler: Optional[
+            Callable[["pq.proto.PGresult"], None]
+        ] = None
+        self.notify_handler: Optional[Callable[[PGnotify], None]] = None
 
         self._notice_receiver = impl.PQnoticeReceiver(  # type: ignore
             partial(notice_receiver, wconn=ref(self))
@@ -480,7 +484,7 @@ class PGconn:
             raise PQerror(f"flushing failed: {error_message(self)}")
         return rv
 
-    def notifies(self) -> Optional["PGnotify"]:
+    def notifies(self) -> Optional[PGnotify]:
         ptr = impl.PQnotifies(self.pgconn_ptr)
         if ptr:
             c = ptr.contents

@@ -9,6 +9,7 @@ cdef class PGconn:
     cdef impl.PGconn* pgconn_ptr
     cdef object __weakref__
     cdef public object notice_handler
+    cdef public object notify_handler
     cdef pid_t _procpid
 
     @staticmethod

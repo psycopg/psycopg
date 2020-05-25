@@ -105,3 +105,40 @@ t.join()
         assert out == "", out.strip().splitlines()[-1]
     finally:
         shutil.rmtree(dir, ignore_errors=True)
+
+
+@pytest.mark.slow
+def test_notifies(conn, dsn):
+    nconn = psycopg3.connect(dsn)
+    npid = nconn.pgconn.backend_pid
+
+    def notifier():
+        time.sleep(0.25)
+        nconn.pgconn.exec_(b"notify foo, '1'")
+        time.sleep(0.25)
+        nconn.pgconn.exec_(b"notify foo, '2'")
+        nconn.close()
+
+    conn.pgconn.exec_(b"listen foo")
+    t0 = time.time()
+    t = threading.Thread(target=notifier)
+    t.start()
+    ns = []
+    gen = conn.notifies()
+    for n in gen:
+        ns.append((n, time.time()))
+        if len(ns) >= 2:
+            gen.send(True)
+    assert len(ns) == 2
+
+    n, t1 = ns[0]
+    assert n.pid == npid
+    assert n.channel == "foo"
+    assert n.payload == "1"
+    assert t1 - t0 == pytest.approx(0.25, abs=0.05)
+
+    n, t1 = ns[1]
+    assert n.pid == npid
+    assert n.channel == "foo"
+    assert n.payload == "2"
+    assert t1 - t0 == pytest.approx(0.5, abs=0.05)

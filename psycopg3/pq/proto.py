@@ -18,12 +18,13 @@ from .enums import (
 )
 
 if TYPE_CHECKING:
-    from .misc import ConninfoOption  # noqa
+    from .misc import PGnotify, ConninfoOption  # noqa
 
 
 class PGconn(Protocol):
 
     notice_handler: Optional[Callable[["PGresult"], None]]
+    notify_handler: Optional[Callable[["PGnotify"], None]]
 
     @classmethod
     def connect(cls, conninfo: bytes) -> "PGconn":
@@ -215,6 +216,9 @@ class PGconn(Protocol):
         ...
 
     def flush(self) -> int:
+        ...
+
+    def notifies(self) -> Optional["PGnotify"]:
         ...
 
     def make_empty_result(self, exec_status: ExecStatus) -> "PGresult":
