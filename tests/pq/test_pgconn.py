@@ -345,6 +345,24 @@ def test_ssl_in_use(pgconn):
         pgconn.ssl_in_use
 
 
+def test_cancel(pgconn):
+    cancel = pgconn.get_cancel()
+    cancel.cancel()
+    cancel.cancel()
+    pgconn.finish()
+    cancel.cancel()
+    with pytest.raises(pq.PQerror):
+        pgconn.get_cancel()
+
+
+def test_cancel_free(pgconn):
+    cancel = pgconn.get_cancel()
+    cancel.free()
+    with pytest.raises(pq.PQerror):
+        cancel.cancel()
+    cancel.free()
+
+
 def test_make_empty_result(pgconn):
     pgconn.exec_(b"wat")
     res = pgconn.make_empty_result(pq.ExecStatus.FATAL_ERROR)

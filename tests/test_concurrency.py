@@ -142,3 +142,32 @@ def test_notifies(conn, dsn):
     assert n.channel == "foo"
     assert n.payload == "2"
     assert t1 - t0 == pytest.approx(0.5, abs=0.05)
+
+
+@pytest.mark.slow
+def test_cancel(conn):
+
+    errors = []
+
+    def canceller():
+        try:
+            time.sleep(0.5)
+            conn.cancel()
+        except Exception as exc:
+            errors.append(exc)
+
+    cur = conn.cursor()
+    t = threading.Thread(target=canceller)
+    t0 = time.time()
+    t.start()
+
+    with pytest.raises(psycopg3.DatabaseError):
+        cur.execute("select pg_sleep(2)")
+
+    t1 = time.time()
+    assert not errors
+    assert 0.0 < t1 - t0 < 1.0
+
+    # still working
+    conn.rollback()
+    assert cur.execute("select 1").fetchone()[0] == 1

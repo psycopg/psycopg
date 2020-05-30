@@ -149,6 +149,10 @@ class BaseConnection:
         else:
             return "UTF8"
 
+    def cancel(self) -> None:
+        c = self.pgconn.get_cancel()
+        c.cancel()
+
     def add_notice_handler(self, callback: NoticeHandler) -> None:
         self._notice_handlers.append(callback)
 

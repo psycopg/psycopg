@@ -61,10 +61,15 @@ class PGnotify_struct(Structure):
     ]
 
 
+class PGcancel_struct(Structure):
+    _fields_: List[Tuple[str, type]] = []
+
+
 PGconn_ptr = POINTER(PGconn_struct)
 PGresult_ptr = POINTER(PGresult_struct)
 PQconninfoOption_ptr = POINTER(PQconninfoOption_struct)
 PGnotify_ptr = POINTER(PGnotify_struct)
+PGcancel_ptr = POINTER(PGcancel_struct)
 
 
 # Function definitions as explained in PostgreSQL 12 documentation
@@ -456,7 +461,23 @@ PQisnonblocking.restype = c_int
 
 PQflush = pq.PQflush
 PQflush.argtypes = [PGconn_ptr]
-PQflush.restype == c_int
+PQflush.restype = c_int
+
+
+# 33.6. Canceling Queries in Progress
+
+PQgetCancel = pq.PQgetCancel
+PQgetCancel.argtypes = [PGconn_ptr]
+PQgetCancel.restype = PGcancel_ptr
+
+PQfreeCancel = pq.PQfreeCancel
+PQfreeCancel.argtypes = [PGcancel_ptr]
+PQfreeCancel.restype = None
+
+PQcancel = pq.PQcancel
+# TODO: raises "wrong type" error
+# PQcancel.argtypes = [PGcancel_ptr, POINTER(c_char), c_int]
+PQcancel.restype = c_int
 
 
 # 33.8. Asynchronous Notification
@@ -503,7 +524,11 @@ def generate_stub() -> None:
             else:
                 return "Optional[bytes]"
 
-        elif t.__name__ in ("LP_PGconn_struct", "LP_PGresult_struct",):
+        elif t.__name__ in (
+            "LP_PGconn_struct",
+            "LP_PGresult_struct",
+            "LP_PGcancel_struct",
+        ):
             if narg is not None:
                 return f"Optional[{t.__name__[3:]}]"
             else:

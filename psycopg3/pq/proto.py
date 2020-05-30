@@ -218,6 +218,9 @@ class PGconn(Protocol):
     def flush(self) -> int:
         ...
 
+    def get_cancel(self) -> "PGcancel":
+        ...
+
     def notifies(self) -> Optional["PGnotify"]:
         ...
 
@@ -295,6 +298,14 @@ class PGresult(Protocol):
 
     @property
     def oid_value(self) -> int:
+        ...
+
+
+class PGcancel(Protocol):
+    def free(self) -> None:
+        ...
+
+    def cancel(self) -> None:
         ...
 
 

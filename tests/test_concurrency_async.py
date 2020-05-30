@@ -91,3 +91,36 @@ async def test_notifies(aconn, dsn):
     assert n.channel == "foo"
     assert n.payload == "2"
     assert t1 - t0 == pytest.approx(0.5, abs=0.05)
+
+
+@pytest.mark.slow
+async def test_cancel(aconn):
+
+    errors = []
+
+    async def canceller():
+        try:
+            await asyncio.sleep(0.5)
+            aconn.cancel()
+        except Exception as exc:
+            errors.append(exc)
+
+    async def worker():
+        cur = aconn.cursor()
+        with pytest.raises(psycopg3.DatabaseError):
+            await cur.execute("select pg_sleep(2)")
+
+    workers = [worker(), canceller()]
+
+    t0 = time.time()
+    await asyncio.wait(workers)
+
+    t1 = time.time()
+    assert not errors
+    assert 0.0 < t1 - t0 < 1.0
+
+    # still working
+    await aconn.rollback()
+    cur = aconn.cursor()
+    await cur.execute("select 1")
+    assert await cur.fetchone() == (1,)

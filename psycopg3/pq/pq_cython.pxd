@@ -25,3 +25,10 @@ cdef class PGresult:
 
     @staticmethod
     cdef PGresult _from_ptr(impl.PGresult *ptr)
+
+
+cdef class PGcancel:
+    cdef impl.PGcancel* pgcancel_ptr
+
+    @staticmethod
+    cdef PGcancel _from_ptr(impl.PGcancel *ptr)

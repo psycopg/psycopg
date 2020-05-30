@@ -426,6 +426,12 @@ cdef class PGconn:
             )
         return rv
 
+    def get_cancel(self) -> PGcancel:
+        cdef impl.PGcancel *ptr = impl.PQgetCancel(self.pgconn_ptr)
+        if not ptr:
+            raise PQerror("couldn't create cancel object")
+        return PGcancel._from_ptr(ptr)
+
     def notifies(self) -> Optional[PGnotify]:
         cdef impl.PGnotify *ptr = impl.PQnotifies(self.pgconn_ptr)
         if ptr:
@@ -684,6 +690,33 @@ cdef class PGresult:
     @property
     def oid_value(self) -> int:
         return impl.PQoidValue(self.pgresult_ptr)
+
+
+cdef class PGcancel:
+    def __cinit__(self):
+        self.pgcancel_ptr = NULL
+
+    @staticmethod
+    cdef PGcancel _from_ptr(impl.PGcancel *ptr):
+        cdef PGcancel rv = PGcancel.__new__(PGcancel)
+        rv.pgcancel_ptr = ptr
+        return rv
+
+    def __dealloc__(self) -> None:
+        self.free()
+
+    def free(self) -> None:
+        if self.pgcancel_ptr is not NULL:
+            impl.PQfreeCancel(self.pgcancel_ptr)
+            self.pgcancel_ptr = NULL
+
+    def cancel(self) -> None:
+        cdef char buf[256]
+        cdef int res = impl.PQcancel(self.pgcancel_ptr, buf, sizeof(buf))
+        if not res:
+            raise PQerror(
+                f"cancel failed: {buf.decode('utf8', 'ignore')}"
+            )
 
 
 class Conninfo:

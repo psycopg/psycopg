@@ -13,7 +13,7 @@ import logging
 from weakref import ref
 from functools import partial
 
-from ctypes import Array, pointer, string_at
+from ctypes import Array, pointer, string_at, create_string_buffer
 from ctypes import c_char_p, c_int, c_size_t, c_ulong
 from typing import Any, Callable, List, Optional, Sequence
 from typing import cast as t_cast, TYPE_CHECKING
@@ -484,6 +484,12 @@ class PGconn:
             raise PQerror(f"flushing failed: {error_message(self)}")
         return rv
 
+    def get_cancel(self) -> "PGcancel":
+        rv = impl.PQgetCancel(self.pgconn_ptr)
+        if not rv:
+            raise PQerror("couldn't create cancel object")
+        return PGcancel(rv)
+
     def notifies(self) -> Optional[PGnotify]:
         ptr = impl.PQnotifies(self.pgconn_ptr)
         if ptr:
@@ -625,6 +631,31 @@ class PGresult:
     @property
     def oid_value(self) -> int:
         return impl.PQoidValue(self.pgresult_ptr)
+
+
+class PGcancel:
+    __slots__ = ("pgcancel_ptr",)
+
+    def __init__(self, pgcancel_ptr: impl.PGcancel_struct):
+        self.pgcancel_ptr: Optional[impl.PGcancel_struct] = pgcancel_ptr
+
+    def __del__(self) -> None:
+        self.free()
+
+    def free(self) -> None:
+        self.pgcancel_ptr, p = None, self.pgcancel_ptr
+        if p is not None:
+            impl.PQfreeCancel(p)
+
+    def cancel(self) -> None:
+        buf = create_string_buffer(256)
+        res = impl.PQcancel(
+            self.pgcancel_ptr, pointer(buf), len(buf)  # type: ignore
+        )
+        if not res:
+            raise PQerror(
+                f"cancel failed: {buf.value.decode('utf8', 'ignore')}"
+            )
 
 
 class Conninfo:
