@@ -73,3 +73,33 @@ def test_error_encoding(conn, enc):
     diag = excinfo.value.diag
     assert f'"{eur}"' in diag.message_primary
     assert diag.sqlstate == "42P01"
+
+
+def test_exception_class(conn):
+    cur = conn.cursor()
+
+    with pytest.raises(e.DatabaseError) as excinfo:
+        cur.execute("select * from nonexist")
+
+    assert isinstance(excinfo.value, e.UndefinedTable)
+    assert isinstance(excinfo.value, conn.ProgrammingError)
+
+
+def test_exception_class_fallback(conn):
+    cur = conn.cursor()
+
+    x = e._sqlcodes.pop("42P01")
+    try:
+        with pytest.raises(e.Error) as excinfo:
+            cur.execute("select * from nonexist")
+    finally:
+        e._sqlcodes["42P01"] = x
+
+    assert type(excinfo.value) is conn.ProgrammingError
+
+
+def test_lookup():
+    assert e.lookup("42P01") is e.UndefinedTable
+
+    with pytest.raises(KeyError):
+        e.lookup("XXXXX")
