@@ -18,7 +18,7 @@ from .enums import (
 )
 
 if TYPE_CHECKING:
-    from .misc import PGnotify, ConninfoOption  # noqa
+    from .misc import PGnotify, ConninfoOption, PGresAttDesc
 
 
 class PGconn(Protocol):
@@ -298,6 +298,9 @@ class PGresult(Protocol):
 
     @property
     def oid_value(self) -> int:
+        ...
+
+    def set_attributes(self, descriptions: List["PGresAttDesc"]) -> None:
         ...
 
 

@@ -27,11 +27,12 @@ from .enums import (
     DiagnosticField,
     Format,
 )
-from .misc import error_message, PGnotify, ConninfoOption, PQerror
+from .misc import PGnotify, ConninfoOption, PQerror, PGresAttDesc
+from .misc import error_message
 from . import _pq_ctypes as impl
 
 if TYPE_CHECKING:
-    from psycopg3 import pq  # noqa
+    from . import proto
 
 __impl__ = "ctypes"
 
@@ -71,7 +72,7 @@ class PGconn:
     def __init__(self, pgconn_ptr: impl.PGconn_struct):
         self.pgconn_ptr: Optional[impl.PGconn_struct] = pgconn_ptr
         self.notice_handler: Optional[
-            Callable[["pq.proto.PGresult"], None]
+            Callable[["proto.PGresult"], None]
         ] = None
         self.notify_handler: Optional[Callable[[PGnotify], None]] = None
 
@@ -631,6 +632,16 @@ class PGresult:
     @property
     def oid_value(self) -> int:
         return impl.PQoidValue(self.pgresult_ptr)
+
+    def set_attributes(self, descriptions: List[PGresAttDesc]) -> None:
+        structs = [
+            impl.PGresAttDesc_struct(*desc)  # type: ignore
+            for desc in descriptions
+        ]
+        array = (impl.PGresAttDesc_struct * len(structs))(*structs)  # type: ignore
+        rv = impl.PQsetResultAttrs(self.pgresult_ptr, len(structs), array)
+        if rv == 0:
+            raise PQerror("PQsetResultAttrs failed")
 
 
 class PGcancel:

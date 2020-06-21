@@ -14,7 +14,8 @@ from psycopg3.pq cimport libpq as impl
 from psycopg3.pq.libpq cimport Oid
 from psycopg3.errors import OperationalError
 
-from psycopg3.pq.misc import error_message, PGnotify, ConninfoOption, PQerror
+from psycopg3.pq.misc import PGnotify, ConninfoOption, PQerror, PGresAttDesc
+from psycopg3.pq.misc import error_message
 from psycopg3.pq.enums import (
     ConnStatus,
     PollingStatus,
@@ -690,6 +691,26 @@ cdef class PGresult:
     @property
     def oid_value(self) -> int:
         return impl.PQoidValue(self.pgresult_ptr)
+
+    def set_attributes(self, descriptions: List[PGresAttDesc]):
+        cdef int num = len(descriptions)
+        cdef impl.PGresAttDesc *attrs = <impl.PGresAttDesc *>PyMem_Malloc(
+            num * sizeof(impl.PGresAttDesc))
+
+        for i in range(num):
+            descr = descriptions[i]
+            attrs[i].name = descr.name
+            attrs[i].tableid = descr.tableid
+            attrs[i].columnid = descr.columnid
+            attrs[i].format = descr.format
+            attrs[i].typid = descr.typid
+            attrs[i].typlen = descr.typlen
+            attrs[i].atttypmod = descr.atttypmod
+
+        cdef int res = impl.PQsetResultAttrs(self.pgresult_ptr, num, attrs);
+        PyMem_Free(attrs)
+        if (res == 0):
+            raise PQerror("PQsetResultAttrs failed")
 
 
 cdef class PGcancel:

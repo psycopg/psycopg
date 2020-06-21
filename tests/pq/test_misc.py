@@ -20,3 +20,43 @@ def test_error_message(pgconn):
     assert pq.error_message(res) == "no details available"
     pgconn.finish()
     assert "NULL" in pq.error_message(pgconn)
+
+
+def test_make_empty_result(pgconn):
+    pgconn.exec_(b"wat")
+    res = pgconn.make_empty_result(pq.ExecStatus.FATAL_ERROR)
+    assert res.status == pq.ExecStatus.FATAL_ERROR
+    assert b"wat" in res.error_message
+
+    pgconn.finish()
+    res = pgconn.make_empty_result(pq.ExecStatus.FATAL_ERROR)
+    assert res.status == pq.ExecStatus.FATAL_ERROR
+    assert res.error_message == b""
+
+
+def test_result_set_attrs(pgconn):
+    res = pgconn.make_empty_result(pq.ExecStatus.COPY_OUT)
+    assert res.status == pq.ExecStatus.COPY_OUT
+
+    attrs = [
+        pq.PGresAttDesc(b"an_int", 0, 0, 0, 23, 0, 0),
+        pq.PGresAttDesc(b"a_num", 0, 0, 0, 1700, 0, 0),
+        pq.PGresAttDesc(b"a_bin_text", 0, 0, 1, 25, 0, 0),
+    ]
+    res.set_attributes(attrs)
+    assert res.nfields == 3
+
+    assert res.fname(0) == b"an_int"
+    assert res.fname(1) == b"a_num"
+    assert res.fname(2) == b"a_bin_text"
+
+    assert res.fformat(0) == 0
+    assert res.fformat(1) == 0
+    assert res.fformat(2) == 1
+
+    assert res.ftype(0) == 23
+    assert res.ftype(1) == 1700
+    assert res.ftype(2) == 25
+
+    with pytest.raises(pq.PQerror):
+        res.set_attributes(attrs)

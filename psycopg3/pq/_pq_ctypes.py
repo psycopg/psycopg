@@ -65,11 +65,24 @@ class PGcancel_struct(Structure):
     _fields_: List[Tuple[str, type]] = []
 
 
+class PGresAttDesc_struct(Structure):
+    _fields_ = [
+        ("name", c_char_p),
+        ("tableid", Oid),
+        ("columnid", c_int),
+        ("format", c_int),
+        ("typid", Oid),
+        ("typlen", c_int),
+        ("atttypmod", c_int),
+    ]
+
+
 PGconn_ptr = POINTER(PGconn_struct)
 PGresult_ptr = POINTER(PGresult_struct)
 PQconninfoOption_ptr = POINTER(PQconninfoOption_struct)
 PGnotify_ptr = POINTER(PGnotify_struct)
 PGcancel_ptr = POINTER(PGcancel_struct)
+PGresAttDesc_ptr = POINTER(PGresAttDesc_struct)
 
 
 # Function definitions as explained in PostgreSQL 12 documentation
@@ -496,6 +509,10 @@ PQfreemem.restype = None
 PQmakeEmptyPGresult = pq.PQmakeEmptyPGresult
 PQmakeEmptyPGresult.argtypes = [PGconn_ptr, c_int]
 PQmakeEmptyPGresult.restype = PGresult_ptr
+
+PQsetResultAttrs = pq.PQsetResultAttrs
+PQsetResultAttrs.argtypes = [PGresult_ptr, c_int, PGresAttDesc_ptr]
+PQsetResultAttrs.restype = c_int
 
 
 # 33.12. Notice Processing

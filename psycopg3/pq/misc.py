@@ -31,6 +31,16 @@ class ConninfoOption(NamedTuple):
     dispsize: int
 
 
+class PGresAttDesc(NamedTuple):
+    name: bytes
+    tableid: int
+    columnid: int
+    format: int
+    typid: int
+    typlen: int
+    atttypmod: int
+
+
 def error_message(obj: Union[PGconn, PGresult]) -> str:
     """
     Return an error message from a PGconn or PGresult.

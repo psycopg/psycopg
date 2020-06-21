@@ -23,7 +23,8 @@ from .enums import (
     Format,
 )
 from .encodings import py_codecs
-from .misc import error_message, ConninfoOption, PQerror, PGnotify
+from .misc import ConninfoOption, PQerror, PGnotify, PGresAttDesc
+from .misc import error_message
 from . import proto
 
 logger = logging.getLogger(__name__)
@@ -102,6 +103,7 @@ __all__ = (
     "PGconn",
     "PGnotify",
     "Conninfo",
+    "PGresAttDesc",
     "PQerror",
     "error_message",
     "ConninfoOption",

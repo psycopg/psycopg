@@ -17,14 +17,6 @@ cdef extern from "libpq-fe.h":
     ctypedef struct PGresult:
         pass
 
-    ctypedef struct PGcancel:
-        pass
-
-    ctypedef struct PGnotify:
-        char   *relname
-        int     be_pid
-        char   *extra
-
     ctypedef struct PQconninfoOption:
         char   *keyword
         char   *envvar
@@ -33,6 +25,23 @@ cdef extern from "libpq-fe.h":
         char   *label
         char   *dispchar
         int     dispsize
+
+    ctypedef struct PGnotify:
+        char   *relname
+        int     be_pid
+        char   *extra
+
+    ctypedef struct PGcancel:
+        pass
+
+    ctypedef struct PGresAttDesc:
+        char   *name
+        Oid     tableid
+        int     columnid
+        int     format
+        Oid     typid
+        int     typlen
+        int     atttypmod
 
     # enums
 
@@ -228,6 +237,7 @@ cdef extern from "libpq-fe.h":
     void PQfreemem(void *ptr)
     void PQconninfoFree(PQconninfoOption *connOptions)
     PGresult *PQmakeEmptyPGresult(PGconn *conn, ExecStatusType status)
+    int PQsetResultAttrs(PGresult *res, int numAttributes, PGresAttDesc *attDescs)
     int PQlibVersion()
 
     # 33.12. Notice Processing

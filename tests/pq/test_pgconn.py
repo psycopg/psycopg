@@ -363,18 +363,6 @@ def test_cancel_free(pgconn):
     cancel.free()
 
 
-def test_make_empty_result(pgconn):
-    pgconn.exec_(b"wat")
-    res = pgconn.make_empty_result(pq.ExecStatus.FATAL_ERROR)
-    assert res.status == pq.ExecStatus.FATAL_ERROR
-    assert b"wat" in res.error_message
-
-    pgconn.finish()
-    res = pgconn.make_empty_result(pq.ExecStatus.FATAL_ERROR)
-    assert res.status == pq.ExecStatus.FATAL_ERROR
-    assert res.error_message == b""
-
-
 def test_notify(pgconn):
     assert pgconn.notifies() is None
 
