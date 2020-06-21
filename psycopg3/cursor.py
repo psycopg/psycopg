@@ -363,7 +363,7 @@ class Cursor(BaseCursor):
         with self.connection.lock:
             self._start_query()
             self.connection._start_query()
-            # Make sure to avoid PQexec to avoid sending a mix of COPY and
+            # Make sure to avoid PQexec to avoid receiving a mix of COPY and
             # other operations.
             self._execute_send(statement, vars, no_pqexec=True)
             gen = execute(self.connection.pgconn)
@@ -371,7 +371,9 @@ class Cursor(BaseCursor):
             tx = self._transformer
 
         self._check_copy_results(results)
-        return Copy(context=tx, result=results[0], format=self.format)
+        return Copy(
+            context=tx, result=results[0], format=results[0].binary_tuples
+        )
 
 
 class AsyncCursor(BaseCursor):
@@ -475,7 +477,7 @@ class AsyncCursor(BaseCursor):
         async with self.connection.lock:
             self._start_query()
             await self.connection._start_query()
-            # Make sure to avoid PQexec to avoid sending a mix of COPY and
+            # Make sure to avoid PQexec to avoid receiving a mix of COPY and
             # other operations.
             self._execute_send(statement, vars, no_pqexec=True)
             gen = execute(self.connection.pgconn)
@@ -483,7 +485,9 @@ class AsyncCursor(BaseCursor):
             tx = self._transformer
 
         self._check_copy_results(results)
-        return AsyncCopy(context=tx, result=results[0], format=self.format)
+        return AsyncCopy(
+            context=tx, result=results[0], format=results[0].binary_tuples
+        )
 
 
 class NamedCursorMixin:

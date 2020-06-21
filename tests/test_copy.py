@@ -1,12 +1,17 @@
 import pytest
 
+from psycopg3 import pq
+from psycopg3.adapt import Format
+from psycopg3.types import builtins
+
+
 sample_records = [(10, 20, "hello"), (40, None, "world")]
 
 sample_values = "values (10::int, 20::int, 'hello'::text), (40, NULL, 'world')"
 
-sample_tabledef = "col1 int primary key, col2 int, date text"
+sample_tabledef = "col1 int primary key, col2 int, data text"
 
-sample_text = b"""
+sample_text = b"""\
 10\t20\thello
 40\t\\N\tworld
 """
@@ -20,93 +25,126 @@ sample_binary = """
 """
 
 
+def set_sample_attributes(res, format):
+    attrs = [
+        pq.PGresAttDesc(b"col1", 0, 0, format, builtins["int4"].oid, 0, 0),
+        pq.PGresAttDesc(b"col2", 0, 0, format, builtins["int4"].oid, 0, 0),
+        pq.PGresAttDesc(b"data", 0, 0, format, builtins["text"].oid, 0, 0),
+    ]
+    res.set_attributes(attrs)
+
+
 @pytest.mark.parametrize(
-    "format, block", [("text", sample_text), ("binary", sample_binary)]
+    "format, buffer",
+    [(Format.TEXT, "sample_text"), (Format.BINARY, "sample_binary")],
 )
-def test_load(format, block):
+def test_load_noinfo(conn, format, buffer):
     from psycopg3.copy import Copy
 
-    copy = Copy(format=format)
-    records = copy.load(block)
+    copy = Copy(context=None, result=None, format=format)
+    records = copy.load(globals()[buffer])
+    assert records == as_bytes(sample_records)
+
+
+@pytest.mark.parametrize(
+    "format, buffer",
+    [(Format.TEXT, "sample_text"), (Format.BINARY, "sample_binary")],
+)
+def test_load(conn, format, buffer):
+    from psycopg3.copy import Copy
+
+    res = conn.pgconn.make_empty_result(pq.ExecStatus.COPY_OUT)
+    set_sample_attributes(res, format)
+
+    copy = Copy(context=None, result=res, format=format)
+    records = copy.load(globals()[buffer])
     assert records == sample_records
 
 
 @pytest.mark.parametrize(
-    "format, block", [("text", sample_text), ("binary", sample_binary)]
+    "format, buffer",
+    [(Format.TEXT, "sample_text"), (Format.BINARY, "sample_binary")],
 )
-def test_dump(format, block):
+def test_dump(conn, format, buffer):
     from psycopg3.copy import Copy
 
-    copy = Copy(format=format)
+    res = conn.pgconn.make_empty_result(pq.ExecStatus.COPY_OUT)
+    set_sample_attributes(res, format)
+
+    copy = Copy(context=None, result=res, format=format)
     assert copy.get_buffer() is None
     for row in sample_records:
         copy.dump(row)
-    assert copy.get_buffer() == block
+    assert copy.get_buffer() == globals()[buffer]
     assert copy.get_buffer() is None
 
 
 @pytest.mark.parametrize(
-    "format, block", [("text", sample_text), ("binary", sample_binary)]
+    "format, buffer",
+    [(Format.TEXT, "sample_text"), (Format.BINARY, "sample_binary")],
 )
-def test_buffers(format, block):
+def test_buffers(format, buffer):
     from psycopg3.copy import Copy
 
     copy = Copy(format=format)
-    assert list(copy.buffers(sample_records)) == [block]
+    assert list(copy.buffers(sample_records)) == [globals()[buffer]]
 
 
 @pytest.mark.parametrize(
-    "format, want", [("text", sample_text), ("binary", sample_binary)]
+    "format, buffer",
+    [(Format.TEXT, "sample_text"), (Format.BINARY, "sample_binary")],
 )
-def test_copy_out_read(conn, format, want):
+def test_copy_out_read(conn, format, buffer):
     cur = conn.cursor()
-    copy = cur.copy(f"copy ({sample_values}) to stdout (format {format})")
-    assert copy.read() == want
+    copy = cur.copy(f"copy ({sample_values}) to stdout (format {format.name})")
+    assert copy.read() == globals()[buffer]
     assert copy.read() is None
     assert copy.read() is None
 
 
-@pytest.mark.parametrize("format", ["text", "binary"])
+@pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
 def test_iter(conn, format):
     cur = conn.cursor()
-    copy = cur.copy(f"copy ({sample_values}) to stdout (format {format})")
+    copy = cur.copy(f"copy ({sample_values}) to stdout (format {format.name})")
     assert list(copy) == sample_records
 
 
 @pytest.mark.parametrize(
-    "format, buffer", [("text", sample_text), ("binary", sample_binary)]
+    "format, buffer",
+    [(Format.TEXT, "sample_text"), (Format.BINARY, "sample_binary")],
 )
 def test_copy_in_buffers(conn, format, buffer):
     cur = conn.cursor()
     ensure_table(cur, sample_tabledef)
-    copy = cur.copy(f"copy copy_in from stdin (format {format})")
-    copy.write(buffer)
+    copy = cur.copy(f"copy copy_in from stdin (format {format.name})")
+    copy.write(globals()[buffer])
     copy.end()
     data = cur.execute("select * from copy_in order by 1").fetchall()
     assert data == sample_records
 
 
 @pytest.mark.parametrize(
-    "format, buffer", [("text", sample_text), ("binary", sample_binary)]
+    "format, buffer",
+    [(Format.TEXT, "sample_text"), (Format.BINARY, "sample_binary")],
 )
 def test_copy_in_buffers_with(conn, format, buffer):
     cur = conn.cursor()
     ensure_table(cur, sample_tabledef)
-    with cur.copy(f"copy copy_in from stdin (format {format})") as copy:
-        copy.write(buffer)
+    with cur.copy(f"copy copy_in from stdin (format {format.name})") as copy:
+        copy.write(globals()[buffer])
 
     data = cur.execute("select * from copy_in order by 1").fetchall()
     assert data == sample_records
 
 
 @pytest.mark.parametrize(
-    "format, buffer", [("text", sample_text), ("binary", sample_binary)]
+    "format", [(Format.TEXT,), (Format.BINARY,)],
 )
-def test_copy_in_records(conn, format, buffer):
+def test_copy_in_records(conn, format):
     cur = conn.cursor()
     ensure_table(cur, sample_tabledef)
 
-    with cur.copy(f"copy copy_in from stdin (format {format})") as copy:
+    with cur.copy(f"copy copy_in from stdin (format {format.name})") as copy:
         for row in sample_records:
             copy.write(row)
 
@@ -117,3 +155,20 @@ def test_copy_in_records(conn, format, buffer):
 def ensure_table(cur, tabledef, name="copy_in"):
     cur.execute(f"drop table if exists {name}")
     cur.execute(f"create table {name} ({tabledef})")
+
+
+def as_bytes(records):
+    out = []
+    for rin in records:
+        rout = []
+        for v in rin:
+            if v is None or isinstance(v, bytes):
+                rout.append(v)
+                continue
+            if not isinstance(v, str):
+                v = str(v)
+            if isinstance(v, str):
+                v = v.encode("utf8")
+            rout.append(v)
+        out.append(tuple(rout))
+    return out
