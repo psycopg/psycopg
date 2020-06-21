@@ -12,6 +12,7 @@ from . import pq
 from . import proto
 from .proto import Query, Params, DumpersMap, LoadersMap, PQGen
 from .utils.queries import PostgresQuery
+from .copy import Copy, AsyncCopy
 
 if TYPE_CHECKING:
     from .connection import BaseConnection, Connection, AsyncConnection
@@ -154,14 +155,16 @@ class BaseCursor:
         self._reset()
         self._transformer = Transformer(self)
 
-    def _execute_send(self, query: Query, vars: Optional[Params]) -> None:
+    def _execute_send(
+        self, query: Query, vars: Optional[Params], no_pqexec: bool = False
+    ) -> None:
         """
         Implement part of execute() before waiting common to sync and async
         """
         pgq = PostgresQuery(self._transformer)
         pgq.convert(query, vars)
 
-        if pgq.params:
+        if pgq.params or no_pqexec or self.format == pq.Format.BINARY:
             self.connection.pgconn.send_query_params(
                 pgq.query,
                 pgq.params,
@@ -169,16 +172,10 @@ class BaseCursor:
                 param_types=pgq.types,
                 result_format=self.format,
             )
-
         else:
             # if we don't have to, let's use exec_ as it can run more than
             # one query in one go
-            if self.format == pq.Format.BINARY:
-                self.connection.pgconn.send_query_params(
-                    pgq.query, None, result_format=self.format
-                )
-            else:
-                self.connection.pgconn.send_query(pgq.query)
+            self.connection.pgconn.send_query(pgq.query)
 
     def _execute_results(self, results: Sequence[pq.proto.PGresult]) -> None:
         """
@@ -249,6 +246,25 @@ class BaseCursor:
         elif res.status != self.ExecStatus.TUPLES_OK:
             raise e.ProgrammingError(
                 "the last operation didn't produce a result"
+            )
+
+    def _check_copy_results(
+        self, results: Sequence[pq.proto.PGresult]
+    ) -> None:
+        """
+        Check that the value returned in a copy() operation is a legit COPY.
+        """
+        if len(results) != 1:
+            raise e.InternalError(
+                f"expected 1 result from copy, got {len(results)} instead"
+            )
+
+        result = results[0]
+        status = result.status
+        if status not in (pq.ExecStatus.COPY_IN, pq.ExecStatus.COPY_OUT):
+            raise e.ProgrammingError(
+                "copy() should be used only with COPY ... TO STDOUT"
+                " or COPY ... FROM STDIN statements"
             )
 
 
@@ -342,6 +358,20 @@ class Cursor(BaseCursor):
 
         self._pos = pos
         return rv
+
+    def copy(self, statement: Query, vars: Optional[Params] = None) -> Copy:
+        with self.connection.lock:
+            self._start_query()
+            self.connection._start_query()
+            # Make sure to avoid PQexec to avoid sending a mix of COPY and
+            # other operations.
+            self._execute_send(statement, vars, no_pqexec=True)
+            gen = execute(self.connection.pgconn)
+            results = self.connection.wait(gen)
+            tx = self._transformer
+
+        self._check_copy_results(results)
+        return Copy(context=tx, result=results[0], format=self.format)
 
 
 class AsyncCursor(BaseCursor):
@@ -438,6 +468,22 @@ class AsyncCursor(BaseCursor):
 
         self._pos = pos
         return rv
+
+    async def copy(
+        self, statement: Query, vars: Optional[Params] = None
+    ) -> AsyncCopy:
+        async with self.connection.lock:
+            self._start_query()
+            await self.connection._start_query()
+            # Make sure to avoid PQexec to avoid sending a mix of COPY and
+            # other operations.
+            self._execute_send(statement, vars, no_pqexec=True)
+            gen = execute(self.connection.pgconn)
+            results = await self.connection.wait(gen)
+            tx = self._transformer
+
+        self._check_copy_results(results)
+        return AsyncCopy(context=tx, result=results[0], format=self.format)
 
 
 class NamedCursorMixin:
