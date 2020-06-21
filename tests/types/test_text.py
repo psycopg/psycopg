@@ -23,7 +23,7 @@ def test_dump_1char(conn, fmt_in):
 @pytest.mark.parametrize("typename", ["text", "varchar", "name", "bpchar"])
 @pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
 def test_load_1char(conn, typename, fmt_out):
-    cur = conn.cursor(binary=fmt_out == Format.BINARY)
+    cur = conn.cursor(format=fmt_out)
     for i in range(1, 256):
         cur.execute(f"select chr(%s::int)::{typename}", (i,))
         res = cur.fetchone()[0]
@@ -67,7 +67,7 @@ def test_dump_badenc(conn, fmt_in):
 @pytest.mark.parametrize("encoding", ["utf8", "latin9"])
 @pytest.mark.parametrize("typename", ["text", "varchar", "name", "bpchar"])
 def test_load_enc(conn, typename, encoding, fmt_out):
-    cur = conn.cursor(binary=fmt_out == Format.BINARY)
+    cur = conn.cursor(format=fmt_out)
 
     conn.set_client_encoding(encoding)
     (res,) = cur.execute(
@@ -79,7 +79,7 @@ def test_load_enc(conn, typename, encoding, fmt_out):
 @pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
 @pytest.mark.parametrize("typename", ["text", "varchar", "name", "bpchar"])
 def test_load_badenc(conn, typename, fmt_out):
-    cur = conn.cursor(binary=fmt_out == Format.BINARY)
+    cur = conn.cursor(format=fmt_out)
 
     conn.set_client_encoding("latin1")
     with pytest.raises(psycopg3.DatabaseError):
@@ -89,7 +89,7 @@ def test_load_badenc(conn, typename, fmt_out):
 @pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
 @pytest.mark.parametrize("typename", ["text", "varchar"])
 def test_load_ascii(conn, typename, fmt_out):
-    cur = conn.cursor(binary=fmt_out == Format.BINARY)
+    cur = conn.cursor(format=fmt_out)
 
     conn.set_client_encoding("sql_ascii")
     (res,) = cur.execute(
@@ -101,7 +101,7 @@ def test_load_ascii(conn, typename, fmt_out):
 @pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
 @pytest.mark.parametrize("typename", ["name", "bpchar"])
 def test_load_ascii_encanyway(conn, typename, fmt_out):
-    cur = conn.cursor(binary=fmt_out == Format.BINARY)
+    cur = conn.cursor(format=fmt_out)
 
     conn.set_client_encoding("sql_ascii")
     (res,) = cur.execute(f"select 'aa'::{typename}").fetchone()
@@ -112,7 +112,7 @@ def test_load_ascii_encanyway(conn, typename, fmt_out):
 @pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
 @pytest.mark.parametrize("typename", ["text", "varchar", "name", "bpchar"])
 def test_text_array(conn, typename, fmt_in, fmt_out):
-    cur = conn.cursor(binary=fmt_out == Format.BINARY)
+    cur = conn.cursor(format=fmt_out)
     ph = "%s" if fmt_in == Format.TEXT else "%b"
     a = list(map(chr, range(1, 256))) + [eur]
 
@@ -124,7 +124,7 @@ def test_text_array(conn, typename, fmt_in, fmt_out):
 @pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
 def test_text_array_ascii(conn, fmt_in, fmt_out):
     conn.set_client_encoding("sql_ascii")
-    cur = conn.cursor(binary=fmt_out == Format.BINARY)
+    cur = conn.cursor(format=fmt_out)
     a = list(map(chr, range(1, 256))) + [eur]
     exp = [s.encode("utf8") for s in a]
     ph = "%s" if fmt_in == Format.TEXT else "%b"
@@ -148,7 +148,7 @@ def test_dump_1byte(conn, fmt_in):
 
 @pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
 def test_load_1byte(conn, fmt_out):
-    cur = conn.cursor(binary=fmt_out == Format.BINARY)
+    cur = conn.cursor(format=fmt_out)
     for i in range(0, 256):
         cur.execute("select %s::bytea", (fr"\x{i:02x}",))
         assert cur.fetchone()[0] == bytes([i])
@@ -159,7 +159,7 @@ def test_load_1byte(conn, fmt_out):
 @pytest.mark.parametrize("fmt_in", [Format.TEXT, Format.BINARY])
 @pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
 def test_bytea_array(conn, fmt_in, fmt_out):
-    cur = conn.cursor(binary=fmt_out == Format.BINARY)
+    cur = conn.cursor(format=fmt_out)
     a = [bytes(range(0, 256))]
     ph = "%s" if fmt_in == Format.TEXT else "%b"
     (res,) = cur.execute(f"select {ph}::bytea[]", (a,)).fetchone()

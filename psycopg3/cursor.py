@@ -70,9 +70,11 @@ class BaseCursor:
 
     _transformer: proto.Transformer
 
-    def __init__(self, connection: "BaseConnection", binary: bool = False):
+    def __init__(
+        self, connection: "BaseConnection", format: pq.Format = pq.Format.TEXT
+    ):
         self.connection = connection
-        self.binary = binary
+        self.format = format
         self.dumpers: DumpersMap = {}
         self.loaders: LoadersMap = {}
         self._reset()
@@ -165,15 +167,15 @@ class BaseCursor:
                 pgq.params,
                 param_formats=pgq.formats,
                 param_types=pgq.types,
-                result_format=pq.Format(self.binary),
+                result_format=self.format,
             )
 
         else:
             # if we don't have to, let's use exec_ as it can run more than
             # one query in one go
-            if self.binary:
+            if self.format == pq.Format.BINARY:
                 self.connection.pgconn.send_query_params(
-                    pgq.query, None, result_format=pq.Format(self.binary)
+                    pgq.query, None, result_format=self.format
                 )
             else:
                 self.connection.pgconn.send_query(pgq.query)
@@ -228,7 +230,7 @@ class BaseCursor:
             name,
             pgq.params,
             param_formats=pgq.formats,
-            result_format=pq.Format(self.binary),
+            result_format=self.format,
         )
 
     def nextset(self) -> Optional[bool]:
@@ -253,8 +255,10 @@ class BaseCursor:
 class Cursor(BaseCursor):
     connection: "Connection"
 
-    def __init__(self, connection: "Connection", binary: bool = False):
-        super().__init__(connection, binary)
+    def __init__(
+        self, connection: "Connection", format: pq.Format = pq.Format.TEXT
+    ):
+        super().__init__(connection, format=format)
 
     def close(self) -> None:
         self._closed = True
@@ -343,8 +347,10 @@ class Cursor(BaseCursor):
 class AsyncCursor(BaseCursor):
     connection: "AsyncConnection"
 
-    def __init__(self, connection: "AsyncConnection", binary: bool = False):
-        super().__init__(connection, binary)
+    def __init__(
+        self, connection: "AsyncConnection", format: pq.Format = pq.Format.TEXT
+    ):
+        super().__init__(connection, format=format)
 
     async def close(self) -> None:
         self._closed = True

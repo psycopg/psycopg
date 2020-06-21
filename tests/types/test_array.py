@@ -34,7 +34,7 @@ def test_dump_list_str(conn, obj, want, fmt_in):
 @pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
 @pytest.mark.parametrize("want, obj", tests_str)
 def test_load_list_str(conn, obj, want, fmt_out):
-    cur = conn.cursor(binary=fmt_out == Format.BINARY)
+    cur = conn.cursor(format=fmt_out)
     cur.execute("select %s::text[]", (obj,))
     assert cur.fetchone()[0] == want
 
@@ -42,7 +42,7 @@ def test_load_list_str(conn, obj, want, fmt_out):
 @pytest.mark.parametrize("fmt_in", [Format.TEXT, Format.BINARY])
 @pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
 def test_all_chars(conn, fmt_in, fmt_out):
-    cur = conn.cursor(binary=fmt_out == Format.BINARY)
+    cur = conn.cursor(format=fmt_out)
     ph = "%s" if fmt_in == Format.TEXT else "%b"
     for i in range(1, 256):
         c = chr(i)
@@ -94,7 +94,7 @@ def test_bad_binary_array(input):
 @pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
 @pytest.mark.parametrize("want, obj", tests_int)
 def test_load_list_int(conn, obj, want, fmt_out):
-    cur = conn.cursor(binary=fmt_out == Format.BINARY)
+    cur = conn.cursor(format=fmt_out)
     cur.execute("select %s::int[]", (obj,))
     assert cur.fetchone()[0] == want
 

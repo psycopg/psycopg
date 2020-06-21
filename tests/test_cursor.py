@@ -88,7 +88,7 @@ def test_fetchone(conn):
 
 
 def test_execute_binary_result(conn):
-    cur = conn.cursor(binary=True)
+    cur = conn.cursor(format=psycopg3.pq.Format.BINARY)
     cur.execute("select %s, %s", ["foo", None])
     assert cur.pgresult.fformat(0) == 1
 

@@ -44,7 +44,7 @@ def test_dump_tuple(conn, rec, obj):
 
 @pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
 def test_load_all_chars(conn, fmt_out):
-    cur = conn.cursor(binary=fmt_out == Format.BINARY)
+    cur = conn.cursor(format=fmt_out)
     for i in range(1, 256):
         res = cur.execute("select row(chr(%s::int))", (i,)).fetchone()[0]
         assert res == (chr(i),)
@@ -83,7 +83,7 @@ def test_load_all_chars(conn, fmt_out):
     ],
 )
 def test_load_record_binary(conn, want, rec):
-    cur = conn.cursor(binary=True)
+    cur = conn.cursor(format=1)
     res = cur.execute(f"select row({rec})").fetchone()[0]
     assert res == want
     for o1, o2 in zip(res, want):
@@ -131,7 +131,7 @@ async def test_fetch_info_async(aconn, testcomp):
 
 @pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
 def test_load_composite(conn, testcomp, fmt_out):
-    cur = conn.cursor(binary=fmt_out == Format.BINARY)
+    cur = conn.cursor(format=fmt_out)
     info = composite.fetch_info(conn, "testcomp")
     composite.register(info, conn)
 
@@ -151,7 +151,7 @@ def test_load_composite(conn, testcomp, fmt_out):
 
 @pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
 def test_load_composite_factory(conn, testcomp, fmt_out):
-    cur = conn.cursor(binary=fmt_out == Format.BINARY)
+    cur = conn.cursor(format=fmt_out)
     info = composite.fetch_info(conn, "testcomp")
 
     class MyThing:

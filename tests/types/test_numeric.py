@@ -62,7 +62,7 @@ def test_dump_int_binary():
 )
 @pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
 def test_load_int(conn, val, pgtype, want, fmt_out):
-    cur = conn.cursor(binary=fmt_out == Format.BINARY)
+    cur = conn.cursor(format=fmt_out)
     cur.execute(f"select %s::{pgtype}", (val,))
     assert cur.pgresult.fformat(0) == fmt_out
     assert cur.pgresult.ftype(0) == builtins[pgtype].oid
@@ -156,7 +156,7 @@ def test_dump_float_binary():
 )
 @pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
 def test_load_float(conn, val, pgtype, want, fmt_out):
-    cur = conn.cursor(binary=fmt_out == Format.BINARY)
+    cur = conn.cursor(format=fmt_out)
     cur.execute(f"select %s::{pgtype}", (val,))
     assert cur.pgresult.fformat(0) == fmt_out
     assert cur.pgresult.ftype(0) == builtins[pgtype].oid
@@ -197,7 +197,7 @@ def test_load_float(conn, val, pgtype, want, fmt_out):
 )
 @pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
 def test_load_float_approx(conn, expr, pgtype, want, fmt_out):
-    cur = conn.cursor(binary=fmt_out == Format.BINARY)
+    cur = conn.cursor(format=fmt_out)
     cur.execute("select %s::%s" % (expr, pgtype))
     assert cur.pgresult.fformat(0) == fmt_out
     result = cur.fetchone()[0]
@@ -241,7 +241,7 @@ def test_dump_numeric_binary():
 @pytest.mark.xfail
 def test_load_numeric_binary(conn):
     # TODO: numeric binary casting
-    cur = conn.cursor(binary=True)
+    cur = conn.cursor(format=1)
     res = cur.execute("select 1::numeric").fetchone()[0]
     assert res == Decimal(1)
 
@@ -289,7 +289,7 @@ def test_numeric_as_float(conn, val):
 @pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
 @pytest.mark.parametrize("b", [True, False, None])
 def test_roundtrip_bool(conn, b, fmt_in, fmt_out):
-    cur = conn.cursor(binary=fmt_out == Format.BINARY)
+    cur = conn.cursor(format=fmt_out)
     ph = "%s" if fmt_in == Format.TEXT else "%b"
     result = cur.execute(f"select {ph}", (b,)).fetchone()[0]
     assert cur.pgresult.fformat(0) == fmt_out

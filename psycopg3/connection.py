@@ -114,11 +114,11 @@ class BaseConnection:
         self._autocommit = value
 
     def cursor(
-        self, name: Optional[str] = None, binary: bool = False
+        self, name: Optional[str] = None, format: pq.Format = pq.Format.TEXT
     ) -> cursor.BaseCursor:
         if name is not None:
             raise NotImplementedError
-        return self.cursor_factory(self, binary=binary)
+        return self.cursor_factory(self, format=format)
 
     @property
     def codec(self) -> codecs.CodecInfo:
@@ -231,9 +231,9 @@ class Connection(BaseConnection):
         self.pgconn.finish()
 
     def cursor(
-        self, name: Optional[str] = None, binary: bool = False
+        self, name: Optional[str] = None, format: pq.Format = pq.Format.TEXT
     ) -> cursor.Cursor:
-        cur = super().cursor(name, binary)
+        cur = super().cursor(name, format=format)
         return cast(cursor.Cursor, cur)
 
     def _start_query(self) -> None:
@@ -338,9 +338,9 @@ class AsyncConnection(BaseConnection):
         self.pgconn.finish()
 
     def cursor(
-        self, name: Optional[str] = None, binary: bool = False
+        self, name: Optional[str] = None, format: pq.Format = pq.Format.TEXT
     ) -> cursor.AsyncCursor:
-        cur = super().cursor(name, binary)
+        cur = super().cursor(name, format=format)
         return cast(cursor.AsyncCursor, cur)
 
     async def _start_query(self) -> None:

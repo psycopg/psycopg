@@ -72,7 +72,7 @@ def test_load_connection_ctx(conn):
 
     r = conn.cursor().execute("select 'hello'::text").fetchone()
     assert r == ("hellot",)
-    r = conn.cursor(binary=True).execute("select 'hello'::text").fetchone()
+    r = conn.cursor(format=1).execute("select 'hello'::text").fetchone()
     assert r == ("hellob",)
 
 
@@ -86,14 +86,14 @@ def test_load_cursor_ctx(conn):
 
     r = cur.execute("select 'hello'::text").fetchone()
     assert r == ("hellotc",)
-    cur.binary = True
+    cur.format = Format.BINARY
     r = cur.execute("select 'hello'::text").fetchone()
     assert r == ("hellobc",)
 
     cur = conn.cursor()
     r = cur.execute("select 'hello'::text").fetchone()
     assert r == ("hellot",)
-    cur.binary = True
+    cur.format = Format.BINARY
     r = cur.execute("select 'hello'::text").fetchone()
     assert r == ("hellob",)
 
@@ -104,7 +104,7 @@ def test_load_cursor_ctx(conn):
 )
 @pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
 def test_load_cursor_ctx_nested(conn, sql, obj, fmt_out):
-    cur = conn.cursor(binary=fmt_out == Format.BINARY)
+    cur = conn.cursor(format=fmt_out)
     Loader.register(
         TEXT_OID, lambda b: b.decode("ascii") + "c", cur, format=fmt_out
     )

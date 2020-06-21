@@ -90,7 +90,7 @@ async def test_fetchone(aconn):
 
 
 async def test_execute_binary_result(aconn):
-    cur = aconn.cursor(binary=True)
+    cur = aconn.cursor(format=psycopg3.pq.Format.BINARY)
     await cur.execute("select %s, %s", ["foo", None])
     assert cur.pgresult.fformat(0) == 1
 
