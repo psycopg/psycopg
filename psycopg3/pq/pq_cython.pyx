@@ -6,6 +6,7 @@ libpq Python wrapper using cython bindings.
 
 from posix.unistd cimport getpid
 from cpython.mem cimport PyMem_Malloc, PyMem_Free
+from cpython.bytes cimport PyBytes_AsString
 
 import logging
 from typing import List, Optional, Sequence
@@ -213,10 +214,7 @@ cdef class PGconn:
     def send_query(self, command: bytes) -> None:
         self._ensure_pgconn()
         if not impl.PQsendQuery(self.pgconn_ptr, command):
-            raise PQerror(
-                "sending query failed:"
-                f" {error_message(self)}"
-            )
+            raise PQerror(f"sending query failed: {error_message(self)}")
 
     def exec_params(
         self,
@@ -269,8 +267,7 @@ cdef class PGconn:
         _clear_query_params(ctypes, cvalues, clengths, cformats)
         if not rv:
             raise PQerror(
-                "sending query and params failed:"
-                f" {error_message(self)}"
+                f"sending query and params failed: {error_message(self)}"
             )
 
     def send_prepare(
@@ -295,8 +292,7 @@ cdef class PGconn:
         PyMem_Free(atypes)
         if not rv:
             raise PQerror(
-                "sending query and params failed:"
-                f" {error_message(self)}"
+                f"sending query and params failed: {error_message(self)}"
             )
 
     def send_query_prepared(
@@ -323,8 +319,7 @@ cdef class PGconn:
         _clear_query_params(ctypes, cvalues, clengths, cformats)
         if not rv:
             raise PQerror(
-                "sending prepared query failed:"
-                f" {error_message(self)}"
+                f"sending prepared query failed: {error_message(self)}"
             )
 
     def prepare(
@@ -399,10 +394,7 @@ cdef class PGconn:
 
     def consume_input(self) -> None:
         if 1 != impl.PQconsumeInput(self.pgconn_ptr):
-            raise PQerror(
-                "consuming input failed:"
-                f" {error_message(self)}"
-            )
+            raise PQerror(f"consuming input failed: {error_message(self)}")
 
     def is_busy(self) -> int:
         return impl.PQisBusy(self.pgconn_ptr)
@@ -414,17 +406,12 @@ cdef class PGconn:
     @nonblocking.setter
     def nonblocking(self, arg: int) -> None:
         if 0 > impl.PQsetnonblocking(self.pgconn_ptr, arg):
-            raise PQerror(
-                f"setting nonblocking failed:"
-                f" {error_message(self)}"
-            )
+            raise PQerror(f"setting nonblocking failed: {error_message(self)}")
 
     def flush(self) -> int:
         cdef int rv = impl.PQflush(self.pgconn_ptr)
         if rv < 0:
-            raise PQerror(
-                f"flushing failed:{error_message(self)}"
-            )
+            raise PQerror(f"flushing failed:{error_message(self)}")
         return rv
 
     def get_cancel(self) -> PGcancel:
@@ -441,6 +428,25 @@ cdef class PGconn:
             return ret
         else:
             return None
+
+    def put_copy_data(self, buffer: bytes) -> int:
+        cdef int rv
+        cdef const char *cbuffer = PyBytes_AsString(buffer)
+        cdef int length = len(buffer)
+        rv = impl.PQputCopyData(self.pgconn_ptr, cbuffer, length)
+        if rv < 0:
+            raise PQerror(f"sending copy data failed: {error_message(self)}")
+        return rv
+
+    def put_copy_end(self, error: Optional[bytes] = None) -> int:
+        cdef int rv
+        cdef const char *cerr = NULL
+        if error is not None:
+            cerr = PyBytes_AsString(error)
+        rv = impl.PQputCopyEnd(self.pgconn_ptr, cerr)
+        if rv < 0:
+            raise PQerror(f"sending copy end failed: {error_message(self)}")
+        return rv
 
     def make_empty_result(self, exec_status: ExecStatus) -> PGresult:
         cdef impl.PGresult *rv = impl.PQmakeEmptyPGresult(

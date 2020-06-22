@@ -233,6 +233,10 @@ cdef extern from "libpq-fe.h":
     # 33.8. Asynchronous Notification
     PGnotify *PQnotifies(PGconn *conn)
 
+    # 33.9. Functions Associated with the COPY Command
+    int PQputCopyData(PGconn *conn, const char *buffer, int nbytes)
+    int PQputCopyEnd(PGconn *conn, const char *errormsg)
+
     # 33.11. Miscellaneous Functions
     void PQfreemem(void *ptr)
     void PQconninfoFree(PQconninfoOption *connOptions)

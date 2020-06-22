@@ -500,6 +500,17 @@ PQnotifies.argtypes = [PGconn_ptr]
 PQnotifies.restype = PGnotify_ptr
 
 
+# 33.9. Functions Associated with the COPY Command
+
+PQputCopyData = pq.PQputCopyData
+PQputCopyData.argtypes = [PGconn_ptr, c_char_p, c_int]
+PQputCopyData.restype = c_int
+
+PQputCopyEnd = pq.PQputCopyEnd
+PQputCopyEnd.argtypes = [PGconn_ptr, c_char_p]
+PQputCopyEnd.restype = c_int
+
+
 # 33.11. Miscellaneous Functions
 
 PQfreemem = pq.PQfreemem

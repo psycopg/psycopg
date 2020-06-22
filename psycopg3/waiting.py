@@ -29,7 +29,7 @@ class Ready(IntEnum):
     W = EVENT_WRITE
 
 
-def wait(gen: "PQGen[RV]", timeout: Optional[float] = None) -> "RV":
+def wait(gen: PQGen[RV], timeout: Optional[float] = None) -> RV:
     """
     Wait for a generator using the best option available on the platform.
 
@@ -54,11 +54,11 @@ def wait(gen: "PQGen[RV]", timeout: Optional[float] = None) -> "RV":
             fd, s = gen.send(ready[0][1])
 
     except StopIteration as ex:
-        rv: "RV" = ex.args[0]
+        rv: RV = ex.args[0] if ex.args else None
         return rv
 
 
-async def wait_async(gen: "PQGen[RV]") -> "RV":
+async def wait_async(gen: PQGen[RV]) -> RV:
     """
     Coroutine waiting for a generator to complete.
 
@@ -102,5 +102,5 @@ async def wait_async(gen: "PQGen[RV]") -> "RV":
             fd, s = gen.send(ready)
 
     except StopIteration as ex:
-        rv: "RV" = ex.args[0]
+        rv: RV = ex.args[0] if ex.args else None
         return rv

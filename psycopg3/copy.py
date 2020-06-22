@@ -5,12 +5,17 @@ psycopg3 copy support
 # Copyright (C) 2020 The Psycopg Team
 
 import re
+from typing import cast, TYPE_CHECKING
 from typing import Any, Deque, Dict, List, Match, Optional, Tuple
 from collections import deque
 
-from .proto import AdaptContext
-from . import errors as e
 from . import pq
+from . import errors as e
+from .proto import AdaptContext
+from .generators import copy_to, copy_end
+
+if TYPE_CHECKING:
+    from .connection import Connection, AsyncConnection
 
 
 class BaseCopy:
@@ -111,8 +116,72 @@ _bsrepl_re = re.compile(rb"\\(.)")
 
 
 class Copy(BaseCopy):
-    pass
+    def __init__(
+        self,
+        context: AdaptContext,
+        result: Optional[pq.proto.PGresult],
+        format: pq.Format = pq.Format.TEXT,
+    ):
+        super().__init__(context=context, result=result, format=format)
+        self._connection: Optional["Connection"] = None
+
+    @property
+    def connection(self) -> "Connection":
+        if self._connection is None:
+            conn = self._transformer.connection
+            if conn is None:
+                raise ValueError("no connection available")
+            self._connection = cast("Connection", conn)
+
+        return self._connection
+
+    def write(self, buffer: bytes) -> None:
+        conn = self.connection
+        conn.wait(copy_to(conn.pgconn, buffer))
+
+    def finish(self, error: Optional[str] = None) -> None:
+        conn = self.connection
+        berr = (
+            conn.codec.encode(error, "replace")[0]
+            if error is not None
+            else None
+        )
+        result = conn.wait(copy_end(conn.pgconn, berr))
+        if result.status != pq.ExecStatus.COMMAND_OK:
+            raise e.error_from_result(
+                result, encoding=self.connection.codec.name
+            )
 
 
 class AsyncCopy(BaseCopy):
-    pass
+    def __init__(
+        self,
+        context: AdaptContext,
+        result: Optional[pq.proto.PGresult],
+        format: pq.Format = pq.Format.TEXT,
+    ):
+        super().__init__(context=context, result=result, format=format)
+        self._connection: Optional["AsyncConnection"] = None
+
+    @property
+    def connection(self) -> "AsyncConnection":
+        if self._connection is None:
+            conn = self._transformer.connection
+            if conn is None:
+                raise ValueError("no connection available")
+            self._connection = cast("AsyncConnection", conn)
+
+        return self._connection
+
+    async def write(self, buffer: bytes) -> None:
+        conn = self.connection
+        await conn.wait(copy_to(conn.pgconn, buffer))
+
+    async def finish(self, error: Optional[str] = None) -> None:
+        conn = self.connection
+        berr = (
+            conn.codec.encode(error, "replace")[0]
+            if error is not None
+            else None
+        )
+        await conn.wait(copy_end(conn.pgconn, berr))

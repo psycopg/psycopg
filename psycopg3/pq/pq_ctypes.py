@@ -500,6 +500,18 @@ class PGconn:
         else:
             return None
 
+    def put_copy_data(self, buffer: bytes) -> int:
+        rv = impl.PQputCopyData(self.pgconn_ptr, buffer, len(buffer))
+        if rv < 0:
+            raise PQerror(f"sending copy data failed: {error_message(self)}")
+        return rv
+
+    def put_copy_end(self, error: Optional[bytes] = None) -> int:
+        rv = impl.PQputCopyEnd(self.pgconn_ptr, error)
+        if rv < 0:
+            raise PQerror(f"sending copy end failed: {error_message(self)}")
+        return rv
+
     def make_empty_result(self, exec_status: ExecStatus) -> "PGresult":
         rv = impl.PQmakeEmptyPGresult(self.pgconn_ptr, exec_status)
         if not rv:

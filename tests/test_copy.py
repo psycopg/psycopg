@@ -23,6 +23,7 @@ sample_binary = """
 0000 0004 0000 0028 ffff ffff 0000 0005
 776f 726c 64ff ff
 """
+sample_binary = bytes.fromhex("".join(sample_binary.split()))
 
 
 def set_sample_attributes(res, format):
@@ -34,6 +35,7 @@ def set_sample_attributes(res, format):
     res.set_attributes(attrs)
 
 
+@pytest.mark.xfail
 @pytest.mark.parametrize(
     "format, buffer",
     [(Format.TEXT, "sample_text"), (Format.BINARY, "sample_binary")],
@@ -46,6 +48,7 @@ def test_load_noinfo(conn, format, buffer):
     assert records == as_bytes(sample_records)
 
 
+@pytest.mark.xfail
 @pytest.mark.parametrize(
     "format, buffer",
     [(Format.TEXT, "sample_text"), (Format.BINARY, "sample_binary")],
@@ -61,6 +64,7 @@ def test_load(conn, format, buffer):
     assert records == sample_records
 
 
+@pytest.mark.xfail
 @pytest.mark.parametrize(
     "format, buffer",
     [(Format.TEXT, "sample_text"), (Format.BINARY, "sample_binary")],
@@ -79,6 +83,7 @@ def test_dump(conn, format, buffer):
     assert copy.get_buffer() is None
 
 
+@pytest.mark.xfail
 @pytest.mark.parametrize(
     "format, buffer",
     [(Format.TEXT, "sample_text"), (Format.BINARY, "sample_binary")],
@@ -90,6 +95,7 @@ def test_buffers(format, buffer):
     assert list(copy.buffers(sample_records)) == [globals()[buffer]]
 
 
+@pytest.mark.xfail
 @pytest.mark.parametrize(
     "format, buffer",
     [(Format.TEXT, "sample_text"), (Format.BINARY, "sample_binary")],
@@ -102,6 +108,7 @@ def test_copy_out_read(conn, format, buffer):
     assert copy.read() is None
 
 
+@pytest.mark.xfail
 @pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
 def test_iter(conn, format):
     cur = conn.cursor()
@@ -118,11 +125,12 @@ def test_copy_in_buffers(conn, format, buffer):
     ensure_table(cur, sample_tabledef)
     copy = cur.copy(f"copy copy_in from stdin (format {format.name})")
     copy.write(globals()[buffer])
-    copy.end()
+    copy.finish()
     data = cur.execute("select * from copy_in order by 1").fetchall()
     assert data == sample_records
 
 
+@pytest.mark.xfail
 @pytest.mark.parametrize(
     "format, buffer",
     [(Format.TEXT, "sample_text"), (Format.BINARY, "sample_binary")],
@@ -137,6 +145,7 @@ def test_copy_in_buffers_with(conn, format, buffer):
     assert data == sample_records
 
 
+@pytest.mark.xfail
 @pytest.mark.parametrize(
     "format", [(Format.TEXT,), (Format.BINARY,)],
 )

@@ -16,7 +16,7 @@ when the file descriptor is ready.
 # Copyright (C) 2020 The Psycopg Team
 
 import logging
-from typing import List
+from typing import List, Optional
 
 from . import pq
 from . import errors as e
@@ -149,3 +149,33 @@ def notifies(pgconn: pq.proto.PGconn) -> PQGen[List[pq.PGnotify]]:
             break
 
     return ns
+
+
+def copy_to(pgconn: pq.proto.PGconn, buffer: bytes) -> PQGen[None]:
+    # Retry enqueuing data until successful
+    while pgconn.put_copy_data(buffer) == 0:
+        yield pgconn.socket, Wait.W
+
+
+def copy_end(
+    pgconn: pq.proto.PGconn, error: Optional[bytes]
+) -> PQGen[pq.proto.PGresult]:
+    # Retry enqueuing end copy message until successful
+    while pgconn.put_copy_end(error) == 0:
+        yield pgconn.socket, Wait.W
+
+    # Repeat until it the message is flushed to the server
+    while 1:
+        yield pgconn.socket, Wait.W
+        f = pgconn.flush()
+        if f == 0:
+            break
+
+    # Retrieve the final result of copy
+    results = yield from fetch(pgconn)
+    if len(results) == 1:
+        return results[0]
+    else:
+        raise e.InternalError(
+            f"1 result expected from copy end, got {len(results)}"
+        )
