@@ -1,6 +1,7 @@
 import pytest
 
 from psycopg3 import pq
+from psycopg3 import errors as e
 from psycopg3.adapt import Format
 from psycopg3.types import builtins
 
@@ -130,7 +131,17 @@ def test_copy_in_buffers(conn, format, buffer):
     assert data == sample_records
 
 
-@pytest.mark.xfail
+def test_copy_in_buffers_pg_error(conn):
+    cur = conn.cursor()
+    ensure_table(cur, sample_tabledef)
+    copy = cur.copy("copy copy_in from stdin (format text)")
+    copy.write(sample_text)
+    copy.write(sample_text)
+    with pytest.raises(e.UniqueViolation):
+        copy.finish()
+    assert conn.pgconn.transaction_status == conn.TransactionStatus.INERROR
+
+
 @pytest.mark.parametrize(
     "format, buffer",
     [(Format.TEXT, "sample_text"), (Format.BINARY, "sample_binary")],
@@ -143,6 +154,29 @@ def test_copy_in_buffers_with(conn, format, buffer):
 
     data = cur.execute("select * from copy_in order by 1").fetchall()
     assert data == sample_records
+
+
+def test_copy_in_buffers_with_pg_error(conn):
+    cur = conn.cursor()
+    ensure_table(cur, sample_tabledef)
+    with pytest.raises(e.UniqueViolation):
+        with cur.copy("copy copy_in from stdin (format text)") as copy:
+            copy.write(sample_text)
+            copy.write(sample_text)
+
+    assert conn.pgconn.transaction_status == conn.TransactionStatus.INERROR
+
+
+def test_copy_in_buffers_with_py_error(conn):
+    cur = conn.cursor()
+    ensure_table(cur, sample_tabledef)
+    with pytest.raises(e.QueryCanceled) as exc:
+        with cur.copy("copy copy_in from stdin (format text)") as copy:
+            copy.write(sample_text)
+            raise Exception("nuttengoggenio")
+
+    assert "nuttengoggenio" in str(exc.value)
+    assert conn.pgconn.transaction_status == conn.TransactionStatus.INERROR
 
 
 @pytest.mark.xfail

@@ -6,7 +6,8 @@ psycopg3 copy support
 
 import re
 from typing import cast, TYPE_CHECKING
-from typing import Any, Deque, Dict, List, Match, Optional, Tuple
+from typing import Any, Deque, Dict, List, Match, Optional, Tuple, Type
+from types import TracebackType
 from collections import deque
 
 from . import pq
@@ -152,6 +153,20 @@ class Copy(BaseCopy):
                 result, encoding=self.connection.codec.name
             )
 
+    def __enter__(self) -> "Copy":
+        return self
+
+    def __exit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc_val: Optional[BaseException],
+        exc_tb: Optional[TracebackType],
+    ) -> None:
+        if exc_val is None:
+            self.finish()
+        else:
+            self.finish(str(exc_val))
+
 
 class AsyncCopy(BaseCopy):
     def __init__(
@@ -184,4 +199,22 @@ class AsyncCopy(BaseCopy):
             if error is not None
             else None
         )
-        await conn.wait(copy_end(conn.pgconn, berr))
+        result = await conn.wait(copy_end(conn.pgconn, berr))
+        if result.status != pq.ExecStatus.COMMAND_OK:
+            raise e.error_from_result(
+                result, encoding=self.connection.codec.name
+            )
+
+    async def __aenter__(self) -> "AsyncCopy":
+        return self
+
+    async def __aexit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc_val: Optional[BaseException],
+        exc_tb: Optional[TracebackType],
+    ) -> None:
+        if exc_val is None:
+            await self.finish()
+        else:
+            await self.finish(str(exc_val))
