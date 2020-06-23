@@ -16,9 +16,16 @@ from .oids import builtins
 _encode = codecs.lookup("ascii").encode
 _decode = codecs.lookup("ascii").decode
 
+_min_datetime = datetime.datetime(year=1, month=1, day=1)
+_middle_datetime = datetime.datetime(year=2000, month=1, day=1)
+_middle_date = datetime.date(year=2000, month=1, day=1)
+
+_date_struct = struct.Struct("!i")
+_time_struct = struct.Struct("!q")
+_datetime_tz_struct = struct.Struct("!2i")
+
 
 @Dumper.text(datetime.date)
-@Dumper.binary(datetime.date)
 def dump_date(obj: datetime.date) -> Tuple[bytes, int]:
     # TODO https://stackoverflow.com/questions/13468126/a-faster-strptime
     # Optimize inspiration from isoformat
@@ -28,7 +35,6 @@ def dump_date(obj: datetime.date) -> Tuple[bytes, int]:
 
 
 @Dumper.text(datetime.time)
-@Dumper.binary(datetime.time)
 def dump_time(obj: datetime.time) -> Tuple[bytes, int]:
     if obj.tzinfo is None:
         return _encode(str(obj))[0], builtins["time"].oid
@@ -37,7 +43,6 @@ def dump_time(obj: datetime.time) -> Tuple[bytes, int]:
 
 
 @Dumper.text(datetime.datetime)
-@Dumper.binary(datetime.datetime)
 def dump_datetime(obj: datetime.datetime) -> Tuple[bytes, int]:
     if obj.tzinfo is None:
         return _encode(str(obj))[0], builtins["timestamp"].oid
@@ -46,23 +51,19 @@ def dump_datetime(obj: datetime.datetime) -> Tuple[bytes, int]:
 
 
 @Dumper.text(datetime.timedelta)
-@Dumper.binary(datetime.timedelta)
 def dump_timedelta(obj: datetime.timedelta) -> Tuple[bytes, int]:
     return _encode(str(obj))[0], builtins["interval"].oid
 
 
 @Loader.text(builtins["date"].oid)
 def load_date(data: bytes) -> datetime.date:
-    # TODO Multiple formats perhaps could do a try-except for loop?
     return datetime.datetime.strptime(_decode(data)[0], "%Y-%m-%d").date()
 
 
 @Loader.binary(builtins["date"].oid)
 def load_date_binary(data: bytes) -> datetime.date:
-    dateADT = struct.unpack("!i", data)[0]  # num days since 2020-01-01
-    return datetime.date(year=2000, month=1, day=1) + datetime.timedelta(
-        days=dateADT
-    )
+    days_since_middle_date = _date_struct.unpack(data)[0]
+    return _middle_date + datetime.timedelta(days=days_since_middle_date)
 
 
 @Loader.text(builtins["time"].oid)
@@ -73,15 +74,15 @@ def load_time(data: bytes) -> datetime.time:
 @Loader.binary(builtins["time"].oid)
 def load_time_binary(data: bytes) -> datetime.time:
     return (
-        datetime.datetime(year=1, month=1, day=1)
-        + datetime.timedelta(microseconds=struct.unpack("!q", data)[0])
+        _min_datetime
+        + datetime.timedelta(microseconds=_time_struct.unpack(data)[0])
     ).time()
 
 
 @Loader.text(builtins["timetz"].oid)
 def load_time_tz(data: bytes) -> datetime.time:
     decoded: str = _decode(data)[0]
-    if decoded[::-1][2] in ("+", "-"):
+    if decoded[-3] in "+-":
         # Python usually expects +HHMM format for TZ
         decoded += "00"
     return datetime.datetime.strptime(decoded, "%H:%M:%S%z").timetz()
@@ -108,15 +109,15 @@ def load_datetime(data: bytes) -> datetime.datetime:
 
 @Loader.binary(builtins["timestamp"].oid)
 def load_datetime_binary(data: bytes) -> datetime.datetime:
-    return datetime.datetime(year=2000, month=1, day=1) + datetime.timedelta(
-        microseconds=struct.unpack("!q", data)[0]
+    return _middle_datetime + datetime.timedelta(
+        microseconds=_time_struct.unpack(data)[0]
     )
 
 
 @Loader.text(builtins["timestamptz"].oid)
 def load_datetime_tz(data: bytes) -> datetime.datetime:
     decoded: str = _decode(data)[0]
-    if decoded[::-1][2] in ("+", "-"):
+    if decoded[-3] in "+-":
         # Python usually expects +HHMM format for TZ
         decoded += "00"
     return datetime.datetime.strptime(decoded, "%Y-%m-%d %H:%M:%S%z")
@@ -124,7 +125,7 @@ def load_datetime_tz(data: bytes) -> datetime.datetime:
 
 @Loader.binary(builtins["timestamptz"].oid)
 def load_datetime_tz_binary(data: bytes) -> datetime.datetime:
-    seconds, timezone = struct.unpack("!i i", data)
+    seconds, timezone = _datetime_tz_struct.unpack(data)
     return datetime.datetime(
         year=2000,
         month=1,

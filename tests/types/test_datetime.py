@@ -179,7 +179,7 @@ _load_datetime_tests = [
 )
 @pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
 def test_load_datetime(conn, val, pgtype, want, fmt_out):
-    cur = conn.cursor(binary=fmt_out == Format.BINARY)
+    cur = conn.cursor(format=fmt_out)
     cur.execute(f"select %s::{pgtype}", (val,))
     assert cur.pgresult.fformat(0) == fmt_out
     assert cur.pgresult.ftype(0) == builtins[pgtype].oid
