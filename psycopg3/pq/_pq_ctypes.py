@@ -510,6 +510,10 @@ PQputCopyEnd = pq.PQputCopyEnd
 PQputCopyEnd.argtypes = [PGconn_ptr, c_char_p]
 PQputCopyEnd.restype = c_int
 
+PQgetCopyData = pq.PQgetCopyData
+PQgetCopyData.argtypes = [PGconn_ptr, POINTER(c_char_p), c_int]
+PQgetCopyData.restype = c_int
+
 
 # 33.11. Miscellaneous Functions
 

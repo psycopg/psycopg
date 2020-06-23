@@ -236,6 +236,7 @@ cdef extern from "libpq-fe.h":
     # 33.9. Functions Associated with the COPY Command
     int PQputCopyData(PGconn *conn, const char *buffer, int nbytes)
     int PQputCopyEnd(PGconn *conn, const char *errormsg)
+    int PQgetCopyData(PGconn *conn, char **buffer, int async)
 
     # 33.11. Miscellaneous Functions
     void PQfreemem(void *ptr)

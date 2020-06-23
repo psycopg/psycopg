@@ -92,8 +92,15 @@ def PQnotifies(
 def PQputCopyEnd(
     arg1: Optional[PGconn_struct], arg2: Optional[bytes]
 ) -> int: ...
+
+# Arg 2 is a pointer, reported as _CArgObject by mypy
+def PQgetCopyData(
+    arg1: Optional[PGconn_struct], arg2: Any, arg3: int
+) -> int: ...
 def PQsetResultAttrs(
-    arg1: Optional[PGresult_struct], arg2: int, arg3: Array[PGresAttDesc_struct]  # type: ignore
+    arg1: Optional[PGresult_struct],
+    arg2: int,
+    arg3: Array[PGresAttDesc_struct],  # type: ignore
 ) -> int: ...
 
 # fmt: off

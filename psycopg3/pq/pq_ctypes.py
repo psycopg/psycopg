@@ -13,9 +13,9 @@ import logging
 from weakref import ref
 from functools import partial
 
-from ctypes import Array, pointer, string_at, create_string_buffer
+from ctypes import Array, pointer, string_at, create_string_buffer, byref
 from ctypes import c_char_p, c_int, c_size_t, c_ulong
-from typing import Any, Callable, List, Optional, Sequence
+from typing import Any, Callable, List, Optional, Sequence, Tuple
 from typing import cast as t_cast, TYPE_CHECKING
 
 from .enums import (
@@ -511,6 +511,19 @@ class PGconn:
         if rv < 0:
             raise PQerror(f"sending copy end failed: {error_message(self)}")
         return rv
+
+    def get_copy_data(self, async_: int) -> Tuple[int, Optional[bytes]]:
+        buffer_ptr = c_char_p()
+        nbytes = impl.PQgetCopyData(self.pgconn_ptr, byref(buffer_ptr), async_)
+        if nbytes == -2:
+            raise PQerror(f"receiving copy data failed: {error_message(self)}")
+        if buffer_ptr:
+            # TODO: do it without copy
+            data = string_at(buffer_ptr, nbytes)
+            impl.PQfreemem(buffer_ptr)
+            return nbytes, data
+        else:
+            return nbytes, None
 
     def make_empty_result(self, exec_status: ExecStatus) -> "PGresult":
         rv = impl.PQmakeEmptyPGresult(self.pgconn_ptr, exec_status)

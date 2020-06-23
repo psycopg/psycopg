@@ -4,7 +4,8 @@ Protocol objects to represent objects exposed by different pq implementations.
 
 # Copyright (C) 2020 The Psycopg Team
 
-from typing import Any, Callable, List, Optional, Sequence, TYPE_CHECKING
+from typing import Any, Callable, List, Optional, Sequence, Tuple
+from typing import TYPE_CHECKING
 from typing_extensions import Protocol
 
 from .enums import (
@@ -228,6 +229,9 @@ class PGconn(Protocol):
         ...
 
     def put_copy_end(self, error: Optional[bytes] = None) -> int:
+        ...
+
+    def get_copy_data(self, async_: int) -> Tuple[int, Optional[bytes]]:
         ...
 
     def make_empty_result(self, exec_status: ExecStatus) -> "PGresult":

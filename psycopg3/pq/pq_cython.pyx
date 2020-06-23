@@ -9,7 +9,7 @@ from cpython.mem cimport PyMem_Malloc, PyMem_Free
 from cpython.bytes cimport PyBytes_AsString
 
 import logging
-from typing import List, Optional, Sequence
+from typing import List, Optional, Sequence, Tuple
 
 from psycopg3.pq cimport libpq as impl
 from psycopg3.pq.libpq cimport Oid
@@ -447,6 +447,20 @@ cdef class PGconn:
         if rv < 0:
             raise PQerror(f"sending copy end failed: {error_message(self)}")
         return rv
+
+    def get_copy_data(self, async_: int) -> Tuple[int, Optional[bytes]]:
+        cdef char *buffer_ptr = NULL
+        cdef int nbytes
+        nbytes = impl.PQgetCopyData(self.pgconn_ptr, &buffer_ptr, async_)
+        if nbytes == -2:
+            raise PQerror(f"receiving copy data failed: {error_message(self)}")
+        if buffer_ptr is not NULL:
+            # TODO: do it without copy
+            data = buffer_ptr[:nbytes]
+            impl.PQfreemem(buffer_ptr)
+            return nbytes, data
+        else:
+            return nbytes, None
 
     def make_empty_result(self, exec_status: ExecStatus) -> PGresult:
         cdef impl.PGresult *rv = impl.PQmakeEmptyPGresult(
