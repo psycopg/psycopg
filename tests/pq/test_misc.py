@@ -22,6 +22,26 @@ def test_error_message(pgconn):
     assert "NULL" in pq.error_message(pgconn)
 
 
+def test_error_message_encoding(pgconn):
+    res = pgconn.exec_(b"set client_encoding to latin9")
+    assert res.status == pq.ExecStatus.COMMAND_OK
+
+    res = pgconn.exec_('select 1 from "foo\u20acbar"'.encode("latin9"))
+    assert res.status == pq.ExecStatus.FATAL_ERROR
+
+    msg = pq.error_message(pgconn)
+    assert "foo\u20acbar" in msg
+
+    msg = pq.error_message(res)
+    assert "foo\ufffdbar" in msg
+
+    msg = pq.error_message(res, encoding="latin9")
+    assert "foo\u20acbar" in msg
+
+    msg = pq.error_message(res, encoding="ascii")
+    assert "foo\ufffdbar" in msg
+
+
 def test_make_empty_result(pgconn):
     pgconn.exec_(b"wat")
     res = pgconn.make_empty_result(pq.ExecStatus.FATAL_ERROR)

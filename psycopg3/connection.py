@@ -248,7 +248,8 @@ class Connection(BaseConnection):
         (pgres,) = self.wait(execute(self.pgconn))
         if pgres.status != ExecStatus.COMMAND_OK:
             raise e.OperationalError(
-                f"error on begin: {pq.error_message(pgres)}"
+                "error on begin:"
+                f" {pq.error_message(pgres, encoding=self.codec.name)}"
             )
 
     def commit(self) -> None:
@@ -268,7 +269,7 @@ class Connection(BaseConnection):
             if pgres.status != ExecStatus.COMMAND_OK:
                 raise e.OperationalError(
                     f"error on {command.decode('utf8')}:"
-                    f" {pq.error_message(pgres)}"
+                    f" {pq.error_message(pgres, encoding=self.codec.name)}"
                 )
 
     @classmethod
@@ -286,7 +287,7 @@ class Connection(BaseConnection):
             gen = execute(self.pgconn)
             (result,) = self.wait(gen)
             if result.status != ExecStatus.TUPLES_OK:
-                raise e.error_from_result(result)
+                raise e.error_from_result(result, encoding=self.codec.name)
 
     def notifies(self) -> Generator[Optional[Notify], bool, None]:
         decode = self.codec.decode
@@ -355,7 +356,8 @@ class AsyncConnection(BaseConnection):
         (pgres,) = await self.wait(execute(self.pgconn))
         if pgres.status != ExecStatus.COMMAND_OK:
             raise e.OperationalError(
-                f"error on begin: {pq.error_message(pgres)}"
+                "error on begin:"
+                f" {pq.error_message(pgres, encoding=self.codec.name)}"
             )
 
     async def commit(self) -> None:
@@ -375,7 +377,7 @@ class AsyncConnection(BaseConnection):
             if pgres.status != ExecStatus.COMMAND_OK:
                 raise e.OperationalError(
                     f"error on {command.decode('utf8')}:"
-                    f" {pq.error_message(pgres)}"
+                    f" {pq.error_message(pgres, encoding=self.codec.name)}"
                 )
 
     @classmethod
@@ -391,7 +393,7 @@ class AsyncConnection(BaseConnection):
             gen = execute(self.pgconn)
             (result,) = await self.wait(gen)
             if result.status != ExecStatus.TUPLES_OK:
-                raise e.error_from_result(result)
+                raise e.error_from_result(result, encoding=self.codec.name)
 
     async def notifies(self) -> AsyncGenerator[Optional[Notify], bool]:
         decode = self.codec.decode

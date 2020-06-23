@@ -209,7 +209,11 @@ def error_from_result(result: PGresult, encoding: str = "utf-8") -> Error:
 
     state = result.error_field(DiagnosticField.SQLSTATE) or b""
     cls = _class_for_state(state.decode("ascii"))
-    return cls(pq.error_message(result), pgresult=result, encoding=encoding)
+    return cls(
+        pq.error_message(result, encoding=encoding),
+        pgresult=result,
+        encoding=encoding,
+    )
 
 
 def _class_for_state(sqlstate: str) -> Type[Error]:
