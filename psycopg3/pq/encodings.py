@@ -4,7 +4,9 @@ Mappings between PostgreSQL and Python encodings.
 
 # Copyright (C) 2020 The Psycopg Team
 
-py_codecs = {
+from typing import Dict, Union
+
+_py_codecs = {
     "BIG5": "big5",
     "EUC_CN": "gb2312",
     "EUC_JIS_2004": "euc_jis_2004",
@@ -50,3 +52,7 @@ py_codecs = {
     "WIN866": "cp866",
     "WIN874": "cp874",
 }
+
+py_codecs: Dict[Union[bytes, str, None], str] = {}
+py_codecs.update((k, v) for k, v in _py_codecs.items())
+py_codecs.update((k.encode("ascii"), v) for k, v in _py_codecs.items())

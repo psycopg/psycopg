@@ -1,27 +1,49 @@
 import pytest
 
+from psycopg3 import pq
 from psycopg3 import errors as e
 from psycopg3.adapt import Format
 
-from .test_copy import sample_text, sample_binary  # noqa
+from .test_copy import sample_text, sample_binary, sample_binary_rows  # noqa
 from .test_copy import sample_values, sample_records, sample_tabledef
 
 pytestmark = pytest.mark.asyncio
 
 
-@pytest.mark.xfail
-@pytest.mark.parametrize(
-    "format, buffer",
-    [(Format.TEXT, "sample_text"), (Format.BINARY, "sample_binary")],
-)
-async def test_copy_out_read(aconn, format, buffer):
+@pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
+async def test_copy_out_read(aconn, format):
     cur = aconn.cursor()
     copy = await cur.copy(
         f"copy ({sample_values}) to stdout (format {format.name})"
     )
-    assert await copy.read() == globals()[buffer]
+
+    if format == pq.Format.TEXT:
+        want = [row + b"\n" for row in sample_text.splitlines()]
+    else:
+        want = sample_binary_rows
+
+    for row in want:
+        got = await copy.read()
+        assert got == row
+
     assert await copy.read() is None
     assert await copy.read() is None
+
+
+@pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
+async def test_copy_out_iter(aconn, format):
+    cur = aconn.cursor()
+    copy = await cur.copy(
+        f"copy ({sample_values}) to stdout (format {format.name})"
+    )
+    if format == pq.Format.TEXT:
+        want = [row + b"\n" for row in sample_text.splitlines()]
+    else:
+        want = sample_binary_rows
+    got = []
+    async for row in copy:
+        got.append(row)
+    assert got == want
 
 
 @pytest.mark.parametrize(

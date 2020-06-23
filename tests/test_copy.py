@@ -18,13 +18,20 @@ sample_text = b"""\
 """
 
 sample_binary = """
-5047 434f 5059 0aff 0d0a 0000 0000 0000
-0000 0000 0300 0000 0400 0000 0a00 0000
-0400 0000 1400 0000 0568 656c 6c6f 0003
-0000 0004 0000 0028 ffff ffff 0000 0005
-776f 726c 64ff ff
+5047 434f 5059 0aff 0d0a 00
+00 0000 0000 0000 00
+00 0300 0000 0400 0000 0a00 0000 0400 0000 1400 0000 0568 656c 6c6f
+
+0003 0000 0004 0000 0028 ffff ffff 0000 0005 776f 726c 64
+
+ff ff
 """
-sample_binary = bytes.fromhex("".join(sample_binary.split()))
+
+sample_binary_rows = [
+    bytes.fromhex("".join(row.split())) for row in sample_binary.split("\n\n")
+]
+
+sample_binary = b"".join(sample_binary_rows)
 
 
 def set_sample_attributes(res, format):
@@ -96,25 +103,33 @@ def test_buffers(format, buffer):
     assert list(copy.buffers(sample_records)) == [globals()[buffer]]
 
 
-@pytest.mark.xfail
-@pytest.mark.parametrize(
-    "format, buffer",
-    [(Format.TEXT, "sample_text"), (Format.BINARY, "sample_binary")],
-)
-def test_copy_out_read(conn, format, buffer):
-    cur = conn.cursor()
-    copy = cur.copy(f"copy ({sample_values}) to stdout (format {format.name})")
-    assert copy.read() == globals()[buffer]
-    assert copy.read() is None
-    assert copy.read() is None
-
-
-@pytest.mark.xfail
 @pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
-def test_iter(conn, format):
+def test_copy_out_read(conn, format):
     cur = conn.cursor()
     copy = cur.copy(f"copy ({sample_values}) to stdout (format {format.name})")
-    assert list(copy) == sample_records
+
+    if format == pq.Format.TEXT:
+        want = [row + b"\n" for row in sample_text.splitlines()]
+    else:
+        want = sample_binary_rows
+
+    for row in want:
+        got = copy.read()
+        assert got == row
+
+    assert copy.read() is None
+    assert copy.read() is None
+
+
+@pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
+def test_copy_out_iter(conn, format):
+    cur = conn.cursor()
+    copy = cur.copy(f"copy ({sample_values}) to stdout (format {format.name})")
+    if format == pq.Format.TEXT:
+        want = [row + b"\n" for row in sample_text.splitlines()]
+    else:
+        want = sample_binary_rows
+    assert list(copy) == want
 
 
 @pytest.mark.parametrize(

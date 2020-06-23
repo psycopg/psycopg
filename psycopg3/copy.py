@@ -5,7 +5,7 @@ psycopg3 copy support
 # Copyright (C) 2020 The Psycopg Team
 
 import re
-from typing import cast, TYPE_CHECKING
+from typing import cast, TYPE_CHECKING, AsyncGenerator, Generator
 from typing import Any, Deque, Dict, List, Match, Optional, Tuple, Type
 from types import TracebackType
 from collections import deque
@@ -13,7 +13,7 @@ from collections import deque
 from . import pq
 from . import errors as e
 from .proto import AdaptContext
-from .generators import copy_to, copy_end
+from .generators import copy_from, copy_to, copy_end
 
 if TYPE_CHECKING:
     from .connection import Connection, AsyncConnection
@@ -136,6 +136,17 @@ class Copy(BaseCopy):
 
         return self._connection
 
+    def read(self) -> Optional[bytes]:
+        if self._finished:
+            return None
+
+        conn = self.connection
+        rv = conn.wait(copy_from(conn.pgconn))
+        if rv is None:
+            self._finished = True
+
+        return rv
+
     def write(self, buffer: bytes) -> None:
         conn = self.connection
         conn.wait(copy_to(conn.pgconn, buffer))
@@ -147,11 +158,8 @@ class Copy(BaseCopy):
             if error is not None
             else None
         )
-        result = conn.wait(copy_end(conn.pgconn, berr))
-        if result.status != pq.ExecStatus.COMMAND_OK:
-            raise e.error_from_result(
-                result, encoding=self.connection.codec.name
-            )
+        conn.wait(copy_end(conn.pgconn, berr))
+        self._finished = True
 
     def __enter__(self) -> "Copy":
         return self
@@ -166,6 +174,13 @@ class Copy(BaseCopy):
             self.finish()
         else:
             self.finish(str(exc_val))
+
+    def __iter__(self) -> Generator[bytes, None, None]:
+        while 1:
+            data = self.read()
+            if data is None:
+                break
+            yield data
 
 
 class AsyncCopy(BaseCopy):
@@ -188,6 +203,17 @@ class AsyncCopy(BaseCopy):
 
         return self._connection
 
+    async def read(self) -> Optional[bytes]:
+        if self._finished:
+            return None
+
+        conn = self.connection
+        rv = await conn.wait(copy_from(conn.pgconn))
+        if rv is None:
+            self._finished = True
+
+        return rv
+
     async def write(self, buffer: bytes) -> None:
         conn = self.connection
         await conn.wait(copy_to(conn.pgconn, buffer))
@@ -199,11 +225,8 @@ class AsyncCopy(BaseCopy):
             if error is not None
             else None
         )
-        result = await conn.wait(copy_end(conn.pgconn, berr))
-        if result.status != pq.ExecStatus.COMMAND_OK:
-            raise e.error_from_result(
-                result, encoding=self.connection.codec.name
-            )
+        await conn.wait(copy_end(conn.pgconn, berr))
+        self._finished = True
 
     async def __aenter__(self) -> "AsyncCopy":
         return self
@@ -218,3 +241,10 @@ class AsyncCopy(BaseCopy):
             await self.finish()
         else:
             await self.finish(str(exc_val))
+
+    async def __aiter__(self) -> AsyncGenerator[bytes, None]:
+        while 1:
+            data = await self.read()
+            if data is None:
+                break
+            yield data

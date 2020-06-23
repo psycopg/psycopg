@@ -151,15 +151,42 @@ def notifies(pgconn: pq.proto.PGconn) -> PQGen[List[pq.PGnotify]]:
     return ns
 
 
+def copy_from(pgconn: pq.proto.PGconn) -> PQGen[Optional[bytes]]:
+    while 1:
+        nbytes, data = pgconn.get_copy_data(1)
+        if nbytes != 0:
+            break
+
+        # would block
+        yield pgconn.socket, Wait.R
+        pgconn.consume_input()
+
+    if nbytes > 0:
+        # some data
+        return data
+
+    # Retrieve the final result of copy
+    results = yield from fetch(pgconn)
+    if len(results) != 1:
+        raise e.InternalError(
+            f"1 result expected from copy end, got {len(results)}"
+        )
+    if results[0].status != pq.ExecStatus.COMMAND_OK:
+        encoding = pq.py_codecs.get(
+            pgconn.parameter_status(b"client_encoding"), "utf8"
+        )
+        raise e.error_from_result(results[0], encoding=encoding)
+
+    return None
+
+
 def copy_to(pgconn: pq.proto.PGconn, buffer: bytes) -> PQGen[None]:
     # Retry enqueuing data until successful
     while pgconn.put_copy_data(buffer) == 0:
         yield pgconn.socket, Wait.W
 
 
-def copy_end(
-    pgconn: pq.proto.PGconn, error: Optional[bytes]
-) -> PQGen[pq.proto.PGresult]:
+def copy_end(pgconn: pq.proto.PGconn, error: Optional[bytes]) -> PQGen[None]:
     # Retry enqueuing end copy message until successful
     while pgconn.put_copy_end(error) == 0:
         yield pgconn.socket, Wait.W
@@ -173,9 +200,12 @@ def copy_end(
 
     # Retrieve the final result of copy
     results = yield from fetch(pgconn)
-    if len(results) == 1:
-        return results[0]
-    else:
+    if len(results) != 1:
         raise e.InternalError(
             f"1 result expected from copy end, got {len(results)}"
         )
+    if results[0].status != pq.ExecStatus.COMMAND_OK:
+        encoding = pq.py_codecs.get(
+            pgconn.parameter_status(b"client_encoding"), "utf8"
+        )
+        raise e.error_from_result(results[0], encoding=encoding)

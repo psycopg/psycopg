@@ -127,7 +127,7 @@ class BaseConnection:
         if self._pgenc != pgenc:
             if pgenc:
                 try:
-                    pyenc = pq.py_codecs[pgenc.decode("ascii")]
+                    pyenc = pq.py_codecs[pgenc]
                 except KeyError:
                     raise e.NotSupportedError(
                         f"encoding {pgenc.decode('ascii')} not available in Python"
