@@ -6,7 +6,7 @@ libpq access using ctypes
 
 import ctypes
 import ctypes.util
-from ctypes import Structure, POINTER
+from ctypes import Structure, CFUNCTYPE, POINTER
 from ctypes import c_char, c_char_p, c_int, c_size_t, c_ubyte, c_uint, c_void_p
 from typing import List, Tuple
 
@@ -53,9 +53,23 @@ class PQconninfoOption_struct(Structure):
     ]
 
 
+class PGnotify_struct(Structure):
+    _fields_ = [
+        ("relname", c_char_p),
+        ("be_pid", c_int),
+        ("extra", c_char_p),
+    ]
+
+
+class PGcancel_struct(Structure):
+    _fields_: List[Tuple[str, type]] = []
+
+
 PGconn_ptr = POINTER(PGconn_struct)
 PGresult_ptr = POINTER(PGresult_struct)
 PQconninfoOption_ptr = POINTER(PQconninfoOption_struct)
+PGnotify_ptr = POINTER(PGnotify_struct)
+PGcancel_ptr = POINTER(PGcancel_struct)
 
 
 # Function definitions as explained in PostgreSQL 12 documentation
@@ -447,7 +461,30 @@ PQisnonblocking.restype = c_int
 
 PQflush = pq.PQflush
 PQflush.argtypes = [PGconn_ptr]
-PQflush.restype == c_int
+PQflush.restype = c_int
+
+
+# 33.6. Canceling Queries in Progress
+
+PQgetCancel = pq.PQgetCancel
+PQgetCancel.argtypes = [PGconn_ptr]
+PQgetCancel.restype = PGcancel_ptr
+
+PQfreeCancel = pq.PQfreeCancel
+PQfreeCancel.argtypes = [PGcancel_ptr]
+PQfreeCancel.restype = None
+
+PQcancel = pq.PQcancel
+# TODO: raises "wrong type" error
+# PQcancel.argtypes = [PGcancel_ptr, POINTER(c_char), c_int]
+PQcancel.restype = c_int
+
+
+# 33.8. Asynchronous Notification
+
+PQnotifies = pq.PQnotifies
+PQnotifies.argtypes = [PGconn_ptr]
+PQnotifies.restype = PGnotify_ptr
 
 
 # 33.11. Miscellaneous Functions
@@ -459,6 +496,15 @@ PQfreemem.restype = None
 PQmakeEmptyPGresult = pq.PQmakeEmptyPGresult
 PQmakeEmptyPGresult.argtypes = [PGconn_ptr, c_int]
 PQmakeEmptyPGresult.restype = PGresult_ptr
+
+
+# 33.12. Notice Processing
+
+PQnoticeReceiver = CFUNCTYPE(None, c_void_p, PGresult_ptr)
+
+PQsetNoticeReceiver = pq.PQsetNoticeReceiver
+PQsetNoticeReceiver.argtypes = [PGconn_ptr, PQnoticeReceiver, c_void_p]
+PQsetNoticeReceiver.restype = PQnoticeReceiver
 
 
 def generate_stub() -> None:
@@ -478,7 +524,11 @@ def generate_stub() -> None:
             else:
                 return "Optional[bytes]"
 
-        elif t.__name__ in ("LP_PGconn_struct", "LP_PGresult_struct",):
+        elif t.__name__ in (
+            "LP_PGconn_struct",
+            "LP_PGresult_struct",
+            "LP_PGcancel_struct",
+        ):
             if narg is not None:
                 return f"Optional[{t.__name__[3:]}]"
             else:

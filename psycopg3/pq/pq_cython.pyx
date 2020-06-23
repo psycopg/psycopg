@@ -4,15 +4,17 @@ libpq Python wrapper using cython bindings.
 
 # Copyright (C) 2020 The Psycopg Team
 
+from posix.unistd cimport getpid
 from cpython.mem cimport PyMem_Malloc, PyMem_Free
 
+import logging
 from typing import List, Optional, Sequence
 
 from psycopg3.pq cimport libpq as impl
 from psycopg3.pq.libpq cimport Oid
 from psycopg3.errors import OperationalError
 
-from psycopg3.pq.misc import error_message, ConninfoOption, PQerror
+from psycopg3.pq.misc import error_message, PGnotify, ConninfoOption, PQerror
 from psycopg3.pq.enums import (
     ConnStatus,
     PollingStatus,
@@ -26,9 +28,25 @@ from psycopg3.pq.enums import (
 
 __impl__ = 'c'
 
+logger = logging.getLogger('psycopg3')
+
 
 def version():
     return impl.PQlibVersion()
+
+
+cdef void notice_receiver(void *arg, const impl.PGresult *res_ptr):
+    cdef PGconn pgconn = <object>arg
+    if pgconn.notice_handler is None:
+        return
+
+    cdef PGresult res = PGresult._from_ptr(<impl.PGresult *>res_ptr)
+    try:
+        pgconn.notice_handler(res)
+    except Exception as e:
+        logger.exception("error in notice receiver: %s", e)
+
+    res.pgresult_ptr = NULL  # avoid destroying the pgresult_ptr
 
 
 cdef class PGconn:
@@ -36,13 +54,19 @@ cdef class PGconn:
     cdef PGconn _from_ptr(impl.PGconn *ptr):
         cdef PGconn rv = PGconn.__new__(PGconn)
         rv.pgconn_ptr = ptr
+
+        impl.PQsetNoticeReceiver(ptr, notice_receiver, <void *>rv)
         return rv
 
     def __cinit__(self):
         self.pgconn_ptr = NULL
+        self._procpid = getpid()
 
     def __dealloc__(self):
-        self.finish()
+        # Close the connection only if it was created in this process,
+        # not if this object is being GC'd after fork.
+        if self._procpid == getpid():
+            self.finish()
 
     @classmethod
     def connect(cls, conninfo: bytes) -> PGconn:
@@ -60,6 +84,13 @@ cdef class PGconn:
         if self.pgconn_ptr is not NULL:
             impl.PQfinish(self.pgconn_ptr)
             self.pgconn_ptr = NULL
+
+    @property
+    def pgconn_ptr(self) -> Optional[int]:
+        if self.pgconn_ptr:
+            return <long><void *>self.pgconn_ptr
+        else:
+            return None
 
     @property
     def info(self) -> List["ConninfoOption"]:
@@ -395,6 +426,21 @@ cdef class PGconn:
             )
         return rv
 
+    def get_cancel(self) -> PGcancel:
+        cdef impl.PGcancel *ptr = impl.PQgetCancel(self.pgconn_ptr)
+        if not ptr:
+            raise PQerror("couldn't create cancel object")
+        return PGcancel._from_ptr(ptr)
+
+    def notifies(self) -> Optional[PGnotify]:
+        cdef impl.PGnotify *ptr = impl.PQnotifies(self.pgconn_ptr)
+        if ptr:
+            ret = PGnotify(ptr.relname, ptr.be_pid, ptr.extra)
+            impl.PQfreemem(ptr)
+            return ret
+        else:
+            return None
+
     def make_empty_result(self, exec_status: ExecStatus) -> PGresult:
         cdef impl.PGresult *rv = impl.PQmakeEmptyPGresult(
             self.pgconn_ptr, exec_status)
@@ -542,6 +588,13 @@ cdef class PGresult:
             self.pgresult_ptr = NULL
 
     @property
+    def pgresult_ptr(self) -> Optional[int]:
+        if self.pgresult_ptr:
+            return <long><void *>self.pgresult_ptr
+        else:
+            return None
+
+    @property
     def status(self) -> ExecStatus:
         cdef int rv = impl.PQresultStatus(self.pgresult_ptr)
         return ExecStatus(rv)
@@ -639,6 +692,33 @@ cdef class PGresult:
         return impl.PQoidValue(self.pgresult_ptr)
 
 
+cdef class PGcancel:
+    def __cinit__(self):
+        self.pgcancel_ptr = NULL
+
+    @staticmethod
+    cdef PGcancel _from_ptr(impl.PGcancel *ptr):
+        cdef PGcancel rv = PGcancel.__new__(PGcancel)
+        rv.pgcancel_ptr = ptr
+        return rv
+
+    def __dealloc__(self) -> None:
+        self.free()
+
+    def free(self) -> None:
+        if self.pgcancel_ptr is not NULL:
+            impl.PQfreeCancel(self.pgcancel_ptr)
+            self.pgcancel_ptr = NULL
+
+    def cancel(self) -> None:
+        cdef char buf[256]
+        cdef int res = impl.PQcancel(self.pgcancel_ptr, buf, sizeof(buf))
+        if not res:
+            raise PQerror(
+                f"cancel failed: {buf.decode('utf8', 'ignore')}"
+            )
+
+
 class Conninfo:
     @classmethod
     def get_defaults(cls) -> List[ConninfoOption]:
@@ -712,4 +792,3 @@ cdef class Escaping:
         rv = out[:len_out]
         impl.PQfreemem(out)
         return rv
-

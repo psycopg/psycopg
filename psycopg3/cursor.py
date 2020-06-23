@@ -4,7 +4,6 @@ psycopg3 cursor objects
 
 # Copyright (C) 2020 The Psycopg Team
 
-import codecs
 from operator import attrgetter
 from typing import Any, Callable, List, Optional, Sequence, TYPE_CHECKING
 
@@ -31,12 +30,10 @@ else:
 
 
 class Column(Sequence[Any]):
-    def __init__(
-        self, pgresult: pq.proto.PGresult, index: int, codec: codecs.CodecInfo
-    ):
+    def __init__(self, pgresult: pq.proto.PGresult, index: int, encoding: str):
         self._pgresult = pgresult
         self._index = index
-        self._codec = codec
+        self._encoding = encoding
 
     _attrs = tuple(
         map(
@@ -57,7 +54,7 @@ class Column(Sequence[Any]):
     def name(self) -> str:
         rv = self._pgresult.fname(self._index)
         if rv is not None:
-            return self._codec.decode(rv)[0]
+            return rv.decode(self._encoding)
         else:
             raise e.InterfaceError(
                 f"no name available for column {self._index}"
@@ -73,9 +70,11 @@ class BaseCursor:
 
     _transformer: proto.Transformer
 
-    def __init__(self, connection: "BaseConnection", binary: bool = False):
+    def __init__(
+        self, connection: "BaseConnection", format: pq.Format = pq.Format.TEXT
+    ):
         self.connection = connection
-        self.binary = binary
+        self.format = format
         self.dumpers: DumpersMap = {}
         self.loaders: LoadersMap = {}
         self._reset()
@@ -117,7 +116,8 @@ class BaseCursor:
         if res is None or res.status != self.ExecStatus.TUPLES_OK:
             return None
         return [
-            Column(res, i, self.connection.codec) for i in range(res.nfields)
+            Column(res, i, self.connection.codec.name)
+            for i in range(res.nfields)
         ]
 
     @property
@@ -167,15 +167,15 @@ class BaseCursor:
                 pgq.params,
                 param_formats=pgq.formats,
                 param_types=pgq.types,
-                result_format=pq.Format(self.binary),
+                result_format=self.format,
             )
 
         else:
             # if we don't have to, let's use exec_ as it can run more than
             # one query in one go
-            if self.binary:
+            if self.format == pq.Format.BINARY:
                 self.connection.pgconn.send_query_params(
-                    pgq.query, None, result_format=pq.Format(self.binary)
+                    pgq.query, None, result_format=self.format
                 )
             else:
                 self.connection.pgconn.send_query(pgq.query)
@@ -196,7 +196,9 @@ class BaseCursor:
             return
 
         if results[-1].status == S.FATAL_ERROR:
-            raise e.error_from_result(results[-1])
+            raise e.error_from_result(
+                results[-1], encoding=self.connection.codec.name
+            )
 
         elif badstats & {S.COPY_IN, S.COPY_OUT, S.COPY_BOTH}:
             raise e.ProgrammingError(
@@ -228,7 +230,7 @@ class BaseCursor:
             name,
             pgq.params,
             param_formats=pgq.formats,
-            result_format=pq.Format(self.binary),
+            result_format=self.format,
         )
 
     def nextset(self) -> Optional[bool]:
@@ -253,8 +255,10 @@ class BaseCursor:
 class Cursor(BaseCursor):
     connection: "Connection"
 
-    def __init__(self, connection: "Connection", binary: bool = False):
-        super().__init__(connection, binary)
+    def __init__(
+        self, connection: "Connection", format: pq.Format = pq.Format.TEXT
+    ):
+        super().__init__(connection, format=format)
 
     def close(self) -> None:
         self._closed = True
@@ -263,6 +267,7 @@ class Cursor(BaseCursor):
     def execute(self, query: Query, vars: Optional[Params] = None) -> "Cursor":
         with self.connection.lock:
             self._start_query()
+            self.connection._start_query()
             self._execute_send(query, vars)
             gen = execute(self.connection.pgconn)
             results = self.connection.wait(gen)
@@ -274,13 +279,17 @@ class Cursor(BaseCursor):
     ) -> "Cursor":
         with self.connection.lock:
             self._start_query()
-            for i, vars in enumerate(vars_seq):
-                if i == 0:
+            self.connection._start_query()
+            first = True
+            for vars in vars_seq:
+                if first:
                     pgq = self._send_prepare(b"", query, vars)
                     gen = execute(self.connection.pgconn)
                     (result,) = self.connection.wait(gen)
                     if result.status == self.ExecStatus.FATAL_ERROR:
-                        raise e.error_from_result(result)
+                        raise e.error_from_result(
+                            result, encoding=self.connection.codec.name
+                        )
                 else:
                     pgq.dump(vars)
 
@@ -338,8 +347,10 @@ class Cursor(BaseCursor):
 class AsyncCursor(BaseCursor):
     connection: "AsyncConnection"
 
-    def __init__(self, connection: "AsyncConnection", binary: bool = False):
-        super().__init__(connection, binary)
+    def __init__(
+        self, connection: "AsyncConnection", format: pq.Format = pq.Format.TEXT
+    ):
+        super().__init__(connection, format=format)
 
     async def close(self) -> None:
         self._closed = True
@@ -350,6 +361,7 @@ class AsyncCursor(BaseCursor):
     ) -> "AsyncCursor":
         async with self.connection.lock:
             self._start_query()
+            await self.connection._start_query()
             self._execute_send(query, vars)
             gen = execute(self.connection.pgconn)
             results = await self.connection.wait(gen)
@@ -361,13 +373,17 @@ class AsyncCursor(BaseCursor):
     ) -> "AsyncCursor":
         async with self.connection.lock:
             self._start_query()
-            for i, vars in enumerate(vars_seq):
-                if i == 0:
+            await self.connection._start_query()
+            first = True
+            for vars in vars_seq:
+                if first:
                     pgq = self._send_prepare(b"", query, vars)
                     gen = execute(self.connection.pgconn)
                     (result,) = await self.connection.wait(gen)
                     if result.status == self.ExecStatus.FATAL_ERROR:
-                        raise e.error_from_result(result)
+                        raise e.error_from_result(
+                            result, encoding=self.connection.codec.name
+                        )
                 else:
                     pgq.dump(vars)
 

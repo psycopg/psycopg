@@ -1,28 +1,34 @@
+import gc
 import os
+import ctypes
+import logging
+import weakref
 from select import select
 
 import pytest
 
 import psycopg3
+from psycopg3 import pq
+import psycopg3.generators
 
 
-def test_connectdb(pq, dsn):
+def test_connectdb(dsn):
     conn = pq.PGconn.connect(dsn.encode("utf8"))
     assert conn.status == pq.ConnStatus.OK, conn.error_message
 
 
-def test_connectdb_error(pq):
+def test_connectdb_error():
     conn = pq.PGconn.connect(b"dbname=psycopg3_test_not_for_real")
     assert conn.status == pq.ConnStatus.BAD
 
 
 @pytest.mark.parametrize("baddsn", [None, 42])
-def test_connectdb_badtype(pq, baddsn):
+def test_connectdb_badtype(baddsn):
     with pytest.raises(TypeError):
         pq.PGconn.connect(baddsn)
 
 
-def test_connect_async(pq, dsn):
+def test_connect_async(dsn):
     conn = pq.PGconn.connect_start(dsn.encode("utf8"))
     conn.nonblocking = 1
     while 1:
@@ -44,7 +50,7 @@ def test_connect_async(pq, dsn):
         conn.connect_poll()
 
 
-def test_connect_async_bad(pq, dsn):
+def test_connect_async_bad(dsn):
     conn = pq.PGconn.connect_start(b"dbname=psycopg3_test_not_for_real")
     while 1:
         assert conn.status != pq.ConnStatus.BAD
@@ -61,7 +67,7 @@ def test_connect_async_bad(pq, dsn):
     assert conn.status == pq.ConnStatus.BAD
 
 
-def test_finish(pgconn, pq):
+def test_finish(pgconn):
     assert pgconn.status == pq.ConnStatus.OK
     pgconn.finish()
     assert pgconn.status == pq.ConnStatus.BAD
@@ -69,7 +75,29 @@ def test_finish(pgconn, pq):
     assert pgconn.status == pq.ConnStatus.BAD
 
 
-def test_info(pq, dsn, pgconn):
+def test_weakref(dsn):
+    conn = pq.PGconn.connect(dsn.encode("utf8"))
+    w = weakref.ref(conn)
+    conn.finish()
+    del conn
+    gc.collect()
+    assert w() is None
+
+
+def test_pgconn_ptr(pgconn, libpq):
+    pgconn.pgconn_ptr is not None
+
+    f = libpq.PQserverVersion
+    f.argtypes = [ctypes.c_void_p]
+    f.restype = ctypes.c_int
+    ver = f(pgconn.pgconn_ptr)
+    assert ver == pgconn.server_version
+
+    pgconn.finish()
+    assert pgconn.pgconn_ptr is None
+
+
+def test_info(dsn, pgconn):
     info = pgconn.info
     assert len(info) > 20
     dbname = [d for d in info if d.keyword == b"dbname"][0]
@@ -87,7 +115,7 @@ def test_info(pq, dsn, pgconn):
         pgconn.info
 
 
-def test_reset(pq, pgconn):
+def test_reset(pgconn):
     assert pgconn.status == pq.ConnStatus.OK
     pgconn.exec_(b"select pg_terminate_backend(pg_backend_pid())")
     assert pgconn.status == pq.ConnStatus.BAD
@@ -101,7 +129,7 @@ def test_reset(pq, pgconn):
     assert pgconn.status == pq.ConnStatus.BAD
 
 
-def test_reset_async(pq, pgconn):
+def test_reset_async(pgconn):
     assert pgconn.status == pq.ConnStatus.OK
     pgconn.exec_(b"select pg_terminate_backend(pg_backend_pid())")
     assert pgconn.status == pq.ConnStatus.BAD
@@ -126,7 +154,7 @@ def test_reset_async(pq, pgconn):
         pgconn.reset_poll()
 
 
-def test_ping(pq, dsn):
+def test_ping(dsn):
     rv = pq.PGconn.ping(dsn.encode("utf8"))
     assert rv == pq.Ping.OK
 
@@ -200,7 +228,7 @@ def test_tty(pgconn):
         pgconn.tty
 
 
-def test_transaction_status(pq, pgconn):
+def test_transaction_status(pgconn):
     assert pgconn.transaction_status == pq.TransactionStatus.IDLE
     pgconn.exec_(b"begin")
     assert pgconn.transaction_status == pq.TransactionStatus.INTRANS
@@ -212,7 +240,7 @@ def test_transaction_status(pq, pgconn):
     assert pgconn.transaction_status == pq.TransactionStatus.UNKNOWN
 
 
-def test_parameter_status(pq, dsn, monkeypatch):
+def test_parameter_status(dsn, monkeypatch):
     monkeypatch.setenv("PGAPPNAME", "psycopg3 tests")
     pgconn = pq.PGconn.connect(dsn.encode("utf8"))
     assert pgconn.parameter_status(b"application_name") == b"psycopg3 tests"
@@ -222,7 +250,7 @@ def test_parameter_status(pq, dsn, monkeypatch):
         pgconn.parameter_status(b"application_name")
 
 
-def test_encoding(pq, pgconn):
+def test_encoding(pgconn):
     res = pgconn.exec_(b"set client_encoding to latin1")
     assert res.status == pq.ExecStatus.COMMAND_OK
     assert pgconn.parameter_status(b"client_encoding") == b"LATIN1"
@@ -254,7 +282,7 @@ def test_server_version(pgconn):
         pgconn.server_version
 
 
-def test_error_message(pq, pgconn):
+def test_error_message(pgconn):
     assert pgconn.error_message == b""
     res = pgconn.exec_(b"wat")
     assert res.status == pq.ExecStatus.FATAL_ERROR
@@ -279,7 +307,7 @@ def test_needs_password(pgconn):
         pgconn.needs_password
 
 
-def test_used_password(pq, pgconn, dsn, monkeypatch):
+def test_used_password(pgconn, dsn, monkeypatch):
     assert isinstance(pgconn.used_password, bool)
 
     # Assume that if a password was passed then it was needed.
@@ -317,7 +345,25 @@ def test_ssl_in_use(pgconn):
         pgconn.ssl_in_use
 
 
-def test_make_empty_result(pq, pgconn):
+def test_cancel(pgconn):
+    cancel = pgconn.get_cancel()
+    cancel.cancel()
+    cancel.cancel()
+    pgconn.finish()
+    cancel.cancel()
+    with pytest.raises(pq.PQerror):
+        pgconn.get_cancel()
+
+
+def test_cancel_free(pgconn):
+    cancel = pgconn.get_cancel()
+    cancel.free()
+    with pytest.raises(pq.PQerror):
+        cancel.cancel()
+    cancel.free()
+
+
+def test_make_empty_result(pgconn):
     pgconn.exec_(b"wat")
     res = pgconn.make_empty_result(pq.ExecStatus.FATAL_ERROR)
     assert res.status == pq.ExecStatus.FATAL_ERROR
@@ -327,3 +373,74 @@ def test_make_empty_result(pq, pgconn):
     res = pgconn.make_empty_result(pq.ExecStatus.FATAL_ERROR)
     assert res.status == pq.ExecStatus.FATAL_ERROR
     assert res.error_message == b""
+
+
+def test_notify(pgconn):
+    assert pgconn.notifies() is None
+
+    pgconn.exec_(b"listen foo")
+    pgconn.exec_(b"listen bar")
+    pgconn.exec_(b"notify foo, '1'")
+    pgconn.exec_(b"notify bar, '2'")
+    pgconn.exec_(b"notify foo, '3'")
+
+    n = pgconn.notifies()
+    assert n.relname == b"foo"
+    assert n.be_pid == pgconn.backend_pid
+    assert n.extra == b"1"
+
+    n = pgconn.notifies()
+    assert n.relname == b"bar"
+    assert n.be_pid == pgconn.backend_pid
+    assert n.extra == b"2"
+
+    n = pgconn.notifies()
+    assert n.relname == b"foo"
+    assert n.be_pid == pgconn.backend_pid
+    assert n.extra == b"3"
+
+    assert pgconn.notifies() is None
+
+
+def test_notice_nohandler(pgconn):
+    pgconn.exec_(b"set client_min_messages to notice")
+    res = pgconn.exec_(
+        b"do $$begin raise notice 'hello notice'; end$$ language plpgsql"
+    )
+    assert res.status == pq.ExecStatus.COMMAND_OK
+
+
+def test_notice(pgconn):
+    msgs = []
+
+    def callback(res):
+        assert res.status == pq.ExecStatus.NONFATAL_ERROR
+        msgs.append(res.error_field(pq.DiagnosticField.MESSAGE_PRIMARY))
+
+    pgconn.exec_(b"set client_min_messages to notice")
+    pgconn.notice_handler = callback
+    res = pgconn.exec_(
+        b"do $$begin raise notice 'hello notice'; end$$ language plpgsql"
+    )
+
+    assert res.status == pq.ExecStatus.COMMAND_OK
+    assert msgs and msgs[0] == b"hello notice"
+
+
+def test_notice_error(pgconn, caplog):
+    caplog.set_level(logging.WARNING, logger="psycopg3")
+
+    def callback(res):
+        raise Exception("hello error")
+
+    pgconn.exec_(b"set client_min_messages to notice")
+    pgconn.notice_handler = callback
+    res = pgconn.exec_(
+        b"do $$begin raise notice 'hello notice'; end$$ language plpgsql"
+    )
+
+    assert res.status == pq.ExecStatus.COMMAND_OK
+    assert len(caplog.records) == 1
+    rec = caplog.records[0]
+    assert rec.levelno == logging.ERROR
+    assert "hello error" in rec.message

@@ -8,7 +8,12 @@ implementation.
 
 # Copyright (C) 2020 The Psycopg Team
 
-from ctypes import Array, pointer, string_at
+import os
+import logging
+from weakref import ref
+from functools import partial
+
+from ctypes import Array, pointer, string_at, create_string_buffer
 from ctypes import c_char_p, c_int, c_size_t, c_ulong
 from typing import Any, Callable, List, Optional, Sequence
 from typing import cast as t_cast, TYPE_CHECKING
@@ -22,7 +27,7 @@ from .enums import (
     DiagnosticField,
     Format,
 )
-from .misc import error_message, ConninfoOption, PQerror
+from .misc import error_message, PGnotify, ConninfoOption, PQerror
 from . import _pq_ctypes as impl
 
 if TYPE_CHECKING:
@@ -30,19 +35,58 @@ if TYPE_CHECKING:
 
 __impl__ = "ctypes"
 
+logger = logging.getLogger("psycopg3")
+
 
 def version() -> int:
     return impl.PQlibVersion()
 
 
+def notice_receiver(
+    arg: Any, result_ptr: impl.PGresult_struct, wconn: "ref[PGconn]"
+) -> None:
+    pgconn = wconn()
+    if pgconn is None or pgconn.notice_handler is None:
+        return
+
+    res = PGresult(result_ptr)
+    try:
+        pgconn.notice_handler(res)
+    except Exception as e:
+        logger.exception("error in notice receiver: %s", e)
+
+    res.pgresult_ptr = None  # avoid destroying the pgresult_ptr
+
+
 class PGconn:
-    __slots__ = ("pgconn_ptr",)
+    __slots__ = (
+        "pgconn_ptr",
+        "notice_handler",
+        "notify_handler",
+        "_notice_receiver",
+        "_procpid",
+        "__weakref__",
+    )
 
     def __init__(self, pgconn_ptr: impl.PGconn_struct):
         self.pgconn_ptr: Optional[impl.PGconn_struct] = pgconn_ptr
+        self.notice_handler: Optional[
+            Callable[["pq.proto.PGresult"], None]
+        ] = None
+        self.notify_handler: Optional[Callable[[PGnotify], None]] = None
+
+        self._notice_receiver = impl.PQnoticeReceiver(  # type: ignore
+            partial(notice_receiver, wconn=ref(self))
+        )
+        impl.PQsetNoticeReceiver(pgconn_ptr, self._notice_receiver, None)
+
+        self._procpid = os.getpid()
 
     def __del__(self) -> None:
-        self.finish()
+        # Close the connection only if it was created in this process,
+        # not if this object is being GC'd after fork.
+        if os.getpid() == self._procpid:
+            self.finish()
 
     @classmethod
     def connect(cls, conninfo: bytes) -> "PGconn":
@@ -440,6 +484,21 @@ class PGconn:
             raise PQerror(f"flushing failed: {error_message(self)}")
         return rv
 
+    def get_cancel(self) -> "PGcancel":
+        rv = impl.PQgetCancel(self.pgconn_ptr)
+        if not rv:
+            raise PQerror("couldn't create cancel object")
+        return PGcancel(rv)
+
+    def notifies(self) -> Optional[PGnotify]:
+        ptr = impl.PQnotifies(self.pgconn_ptr)
+        if ptr:
+            c = ptr.contents
+            return PGnotify(c.relname, c.be_pid, c.extra)
+            impl.PQfreemem(ptr)
+        else:
+            return None
+
     def make_empty_result(self, exec_status: ExecStatus) -> "PGresult":
         rv = impl.PQmakeEmptyPGresult(self.pgconn_ptr, exec_status)
         if not rv:
@@ -572,6 +631,31 @@ class PGresult:
     @property
     def oid_value(self) -> int:
         return impl.PQoidValue(self.pgresult_ptr)
+
+
+class PGcancel:
+    __slots__ = ("pgcancel_ptr",)
+
+    def __init__(self, pgcancel_ptr: impl.PGcancel_struct):
+        self.pgcancel_ptr: Optional[impl.PGcancel_struct] = pgcancel_ptr
+
+    def __del__(self) -> None:
+        self.free()
+
+    def free(self) -> None:
+        self.pgcancel_ptr, p = None, self.pgcancel_ptr
+        if p is not None:
+            impl.PQfreeCancel(p)
+
+    def cancel(self) -> None:
+        buf = create_string_buffer(256)
+        res = impl.PQcancel(
+            self.pgcancel_ptr, pointer(buf), len(buf)  # type: ignore
+        )
+        if not res:
+            raise PQerror(
+                f"cancel failed: {buf.value.decode('utf8', 'ignore')}"
+            )
 
 
 class Conninfo:

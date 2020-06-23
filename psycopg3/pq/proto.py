@@ -4,7 +4,7 @@ Protocol objects to represent objects exposed by different pq implementations.
 
 # Copyright (C) 2020 The Psycopg Team
 
-from typing import Any, List, Optional, Sequence, TYPE_CHECKING
+from typing import Any, Callable, List, Optional, Sequence, TYPE_CHECKING
 from typing_extensions import Protocol
 
 from .enums import (
@@ -18,10 +18,14 @@ from .enums import (
 )
 
 if TYPE_CHECKING:
-    from .misc import ConninfoOption  # noqa
+    from .misc import PGnotify, ConninfoOption  # noqa
 
 
 class PGconn(Protocol):
+
+    notice_handler: Optional[Callable[["PGresult"], None]]
+    notify_handler: Optional[Callable[["PGnotify"], None]]
+
     @classmethod
     def connect(cls, conninfo: bytes) -> "PGconn":
         ...
@@ -214,6 +218,12 @@ class PGconn(Protocol):
     def flush(self) -> int:
         ...
 
+    def get_cancel(self) -> "PGcancel":
+        ...
+
+    def notifies(self) -> Optional["PGnotify"]:
+        ...
+
     def make_empty_result(self, exec_status: ExecStatus) -> "PGresult":
         ...
 
@@ -288,6 +298,14 @@ class PGresult(Protocol):
 
     @property
     def oid_value(self) -> int:
+        ...
+
+
+class PGcancel(Protocol):
+    def free(self) -> None:
+        ...
+
+    def cancel(self) -> None:
         ...
 
 

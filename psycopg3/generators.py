@@ -92,6 +92,8 @@ def send(pgconn: pq.proto.PGconn) -> PQGen[None]:
 
         ready = yield pgconn.socket, Wait.RW
         if ready & Ready.R:
+            # This call may read notifies: they will be saved in the
+            # PGconn buffer and passed to Python later, in `fetch()`.
             pgconn.consume_input()
         continue
 
@@ -113,6 +115,15 @@ def fetch(pgconn: pq.proto.PGconn) -> PQGen[List[pq.proto.PGresult]]:
         if pgconn.is_busy():
             yield pgconn.socket, Wait.R
             continue
+
+        # Consume notifies
+        while 1:
+            n = pgconn.notifies()
+            if n is None:
+                break
+            if pgconn.notify_handler is not None:
+                pgconn.notify_handler(n)
+
         res = pgconn.get_result()
         if res is None:
             break
@@ -123,3 +134,18 @@ def fetch(pgconn: pq.proto.PGconn) -> PQGen[List[pq.proto.PGresult]]:
             break
 
     return results
+
+
+def notifies(pgconn: pq.proto.PGconn) -> PQGen[List[pq.PGnotify]]:
+    yield pgconn.socket, Wait.R
+    pgconn.consume_input()
+
+    ns = []
+    while 1:
+        n = pgconn.notifies()
+        if n is not None:
+            ns.append(n)
+        else:
+            break
+
+    return ns

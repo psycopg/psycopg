@@ -1,6 +1,7 @@
 import os
-
 import pytest
+
+from psycopg3 import pq
 
 
 def pytest_addoption(parser):
@@ -23,14 +24,15 @@ def dsn(request):
 
 
 @pytest.fixture
-def pgconn(pq, dsn):
+def pgconn(dsn):
     """Return a PGconn connection open to `--test-dsn`."""
     conn = pq.PGconn.connect(dsn.encode("utf8"))
     if conn.status != pq.ConnStatus.OK:
         pytest.fail(
             f"bad connection: {conn.error_message.decode('utf8', 'replace')}"
         )
-    return conn
+    yield conn
+    conn.finish()
 
 
 @pytest.fixture
@@ -38,7 +40,19 @@ def conn(dsn):
     """Return a `Connection` connected to the ``--test-dsn`` database."""
     from psycopg3 import Connection
 
-    return Connection.connect(dsn)
+    conn = Connection.connect(dsn)
+    yield conn
+    conn.close()
+
+
+@pytest.fixture
+async def aconn(dsn):
+    """Return an `AsyncConnection` connected to the ``--test-dsn`` database."""
+    from psycopg3 import AsyncConnection
+
+    conn = await AsyncConnection.connect(dsn)
+    yield conn
+    await conn.close()
 
 
 @pytest.fixture(scope="session")
@@ -48,4 +62,6 @@ def svcconn(dsn):
     """
     from psycopg3 import Connection
 
-    return Connection.connect(dsn)
+    conn = Connection.connect(dsn)
+    yield conn
+    conn.close()

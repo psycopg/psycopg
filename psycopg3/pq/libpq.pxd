@@ -17,6 +17,14 @@ cdef extern from "libpq-fe.h":
     ctypedef struct PGresult:
         pass
 
+    ctypedef struct PGcancel:
+        pass
+
+    ctypedef struct PGnotify:
+        char   *relname
+        int     be_pid
+        char   *extra
+
     ctypedef struct PQconninfoOption:
         char   *keyword
         char   *envvar
@@ -208,9 +216,21 @@ cdef extern from "libpq-fe.h":
     int PQisnonblocking(const PGconn *conn)
     int PQflush(PGconn *conn)
 
+    # 33.6. Canceling Queries in Progress
+    PGcancel *PQgetCancel(PGconn *conn)
+    void PQfreeCancel(PGcancel *cancel)
+    int PQcancel(PGcancel *cancel, char *errbuf, int errbufsize)
+
+    # 33.8. Asynchronous Notification
+    PGnotify *PQnotifies(PGconn *conn)
+
     # 33.11. Miscellaneous Functions
     void PQfreemem(void *ptr)
     void PQconninfoFree(PQconninfoOption *connOptions)
     PGresult *PQmakeEmptyPGresult(PGconn *conn, ExecStatusType status)
     int PQlibVersion()
 
+    # 33.12. Notice Processing
+    ctypedef void (*PQnoticeReceiver)(void *arg, const PGresult *res)
+    PQnoticeReceiver PQsetNoticeReceiver(
+        PGconn *conn, PQnoticeReceiver prog, void *arg)

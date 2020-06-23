@@ -69,6 +69,7 @@ def execute(PGconn pgconn) -> PQGen[List[pq.proto.PGresult]]:
     results: List[pq.proto.PGresult] = []
     cdef libpq.PGconn *pgconn_ptr = pgconn.pgconn_ptr
     cdef int status
+    cdef libpq.PGnotify *notify
 
     # Sending the query
     while 1:
@@ -77,6 +78,8 @@ def execute(PGconn pgconn) -> PQGen[List[pq.proto.PGresult]]:
 
         status = yield libpq.PQsocket(pgconn_ptr), WAIT_RW
         if status & READY_R:
+            # This call may read notifies which will be saved in the
+            # PGconn buffer and passed to Python later.
             if 1 != libpq.PQconsumeInput(pgconn_ptr):
                 raise pq.PQerror(
                     f"consuming input failed: {pq.error_message(pgconn)}")
@@ -92,6 +95,20 @@ def execute(PGconn pgconn) -> PQGen[List[pq.proto.PGresult]]:
         if libpq.PQisBusy(pgconn_ptr):
             yield wr
             continue
+
+        # Consume notifies
+        if pgconn.notify_handler:
+            while 1:
+                pynotify = pgconn.notifies()
+                if pynotify is None:
+                    break
+                pgconn.notify_handler(pynotify)
+        else:
+            while 1:
+                notify = libpq.PQnotifies(pgconn_ptr)
+                if notify is NULL:
+                    break
+                libpq.PQfreemem(notify)
 
         res = libpq.PQgetResult(pgconn_ptr)
         if res is NULL:

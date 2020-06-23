@@ -2,18 +2,14 @@ import re
 import operator
 import pytest
 
+from psycopg3 import pq
+
 
 def pytest_report_header(config):
-    try:
-        from psycopg3 import pq
-
-        return [
-            f"libpq available: {pq.version()}",
-            f"libpq wrapper implementation: {pq.__impl__}",
-        ]
-    except Exception:
-        # you will die of something else
-        pass
+    return [
+        f"libpq available: {pq.version()}",
+        f"libpq wrapper implementation: {pq.__impl__}",
+    ]
 
 
 def pytest_configure(config):
@@ -25,15 +21,18 @@ def pytest_configure(config):
     )
 
 
-@pytest.fixture
-def pq(request):
-    """The libpq module wrapper to test."""
-    from psycopg3 import pq
-
-    for m in request.node.iter_markers(name="libpq"):
+def pytest_runtest_setup(item):
+    for m in item.iter_markers(name="libpq"):
         check_libpq_version(pq.version(), m.args)
 
-    return pq
+
+@pytest.fixture
+def libpq():
+    """Return a ctypes wrapper to access the libpq."""
+    import ctypes.util
+
+    libname = ctypes.util.find_library("pq")
+    return ctypes.pydll.LoadLibrary(libname)
 
 
 def check_libpq_version(got, want):

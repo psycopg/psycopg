@@ -3,14 +3,15 @@
 import pytest
 
 import psycopg3
+from psycopg3 import pq
 
 
-def test_exec_none(pq, pgconn):
+def test_exec_none(pgconn):
     with pytest.raises(TypeError):
         pgconn.exec_(None)
 
 
-def test_exec(pq, pgconn):
+def test_exec(pgconn):
     res = pgconn.exec_(b"select 'hel' || 'lo'")
     assert res.get_value(0, 0) == b"hello"
     pgconn.finish()
@@ -18,7 +19,7 @@ def test_exec(pq, pgconn):
         pgconn.exec_(b"select 'hello'")
 
 
-def test_exec_params(pq, pgconn):
+def test_exec_params(pgconn):
     res = pgconn.exec_params(b"select $1::int + $2", [b"5", b"3"])
     assert res.status == pq.ExecStatus.TUPLES_OK
     assert res.get_value(0, 0) == b"8"
@@ -27,13 +28,13 @@ def test_exec_params(pq, pgconn):
         pgconn.exec_params(b"select $1::int + $2", [b"5", b"3"])
 
 
-def test_exec_params_empty(pq, pgconn):
+def test_exec_params_empty(pgconn):
     res = pgconn.exec_params(b"select 8::int", [])
     assert res.status == pq.ExecStatus.TUPLES_OK
     assert res.get_value(0, 0) == b"8"
 
 
-def test_exec_params_types(pq, pgconn):
+def test_exec_params_types(pgconn):
     res = pgconn.exec_params(b"select $1, $2", [b"8", b"8"], [1700, 23])
     assert res.status == pq.ExecStatus.TUPLES_OK
     assert res.get_value(0, 0) == b"8"
@@ -45,7 +46,7 @@ def test_exec_params_types(pq, pgconn):
         pgconn.exec_params(b"select $1, $2", [b"8", b"8"], [1700])
 
 
-def test_exec_params_nulls(pq, pgconn):
+def test_exec_params_nulls(pgconn):
     res = pgconn.exec_params(
         b"select $1::text, $2::text, $3::text", [b"hi", b"", None]
     )
@@ -55,7 +56,7 @@ def test_exec_params_nulls(pq, pgconn):
     assert res.get_value(0, 2) is None
 
 
-def test_exec_params_binary_in(pq, pgconn):
+def test_exec_params_binary_in(pgconn):
     val = b"foo\00bar"
     res = pgconn.exec_params(
         b"select length($1::bytea), length($2::bytea)",
@@ -73,7 +74,7 @@ def test_exec_params_binary_in(pq, pgconn):
 @pytest.mark.parametrize(
     "fmt, out", [(0, b"\\x666f6f00626172"), (1, b"foo\00bar")]
 )
-def test_exec_params_binary_out(pq, pgconn, fmt, out):
+def test_exec_params_binary_out(pgconn, fmt, out):
     val = b"foo\00bar"
     res = pgconn.exec_params(
         b"select $1::bytea", [val], param_formats=[1], result_format=fmt
@@ -82,7 +83,7 @@ def test_exec_params_binary_out(pq, pgconn, fmt, out):
     assert res.get_value(0, 0) == out
 
 
-def test_prepare(pq, pgconn):
+def test_prepare(pgconn):
     res = pgconn.prepare(b"prep", b"select $1::int + $2::int")
     assert res.status == pq.ExecStatus.COMMAND_OK, res.error_message
 
@@ -96,7 +97,7 @@ def test_prepare(pq, pgconn):
         pgconn.exec_prepared(b"prep", [b"3", b"5"])
 
 
-def test_prepare_types(pq, pgconn):
+def test_prepare_types(pgconn):
     res = pgconn.prepare(b"prep", b"select $1 + $2", [23, 23])
     assert res.status == pq.ExecStatus.COMMAND_OK, res.error_message
 
@@ -104,7 +105,7 @@ def test_prepare_types(pq, pgconn):
     assert res.get_value(0, 0) == b"8"
 
 
-def test_exec_prepared_binary_in(pq, pgconn):
+def test_exec_prepared_binary_in(pgconn):
     val = b"foo\00bar"
     res = pgconn.prepare(b"", b"select length($1::bytea), length($2::bytea)")
     assert res.status == pq.ExecStatus.COMMAND_OK, res.error_message
@@ -121,7 +122,7 @@ def test_exec_prepared_binary_in(pq, pgconn):
 @pytest.mark.parametrize(
     "fmt, out", [(0, b"\\x666f6f00626172"), (1, b"foo\00bar")]
 )
-def test_exec_prepared_binary_out(pq, pgconn, fmt, out):
+def test_exec_prepared_binary_out(pgconn, fmt, out):
     val = b"foo\00bar"
     res = pgconn.prepare(b"", b"select $1::bytea")
     assert res.status == pq.ExecStatus.COMMAND_OK, res.error_message
@@ -133,7 +134,7 @@ def test_exec_prepared_binary_out(pq, pgconn, fmt, out):
     assert res.get_value(0, 0) == out
 
 
-def test_describe_portal(pq, pgconn):
+def test_describe_portal(pgconn):
     res = pgconn.exec_(
         b"""
         begin;
