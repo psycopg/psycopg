@@ -11,15 +11,13 @@ from typing import TYPE_CHECKING
 from typing_extensions import Protocol
 
 from . import pq
+from .pq import Format
 
 if TYPE_CHECKING:
-    from .connection import BaseConnection  # noqa
-    from .cursor import BaseCursor  # noqa
-    from .adapt import Dumper, Loader  # noqa
-    from .waiting import Wait, Ready  # noqa
-
-# Part of the module interface (just importing it makes mypy unhappy)
-Format = pq.Format
+    from .connection import BaseConnection
+    from .cursor import BaseCursor
+    from .adapt import Dumper, Loader
+    from .waiting import Wait, Ready
 
 EncodeFunc = Callable[[str], Tuple[bytes, int]]
 DecodeFunc = Callable[[bytes], Tuple[str, int]]
@@ -61,11 +59,11 @@ class Transformer(Protocol):
         ...
 
     @property
-    def pgresult(self) -> Optional["pq.proto.PGresult"]:
+    def pgresult(self) -> Optional[pq.proto.PGresult]:
         ...
 
     @pgresult.setter
-    def pgresult(self, result: Optional["pq.proto.PGresult"]) -> None:
+    def pgresult(self, result: Optional[pq.proto.PGresult]) -> None:
         ...
 
     @property

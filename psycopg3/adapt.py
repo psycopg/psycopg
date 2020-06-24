@@ -8,13 +8,11 @@ from typing import Any, Callable, Optional, Tuple, Type, Union
 
 from . import pq
 from . import proto
+from .pq import Format as Format
 from .proto import AdaptContext, DumpersMap, DumperType
 from .proto import LoadersMap, LoaderType
 from .cursor import BaseCursor
 from .connection import BaseConnection
-
-# Part of the module interface (just importing it makes mypy unhappy)
-Format = pq.Format
 
 
 class Dumper:

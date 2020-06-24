@@ -149,11 +149,11 @@ cdef class Transformer:
         return self._loaders
 
     @property
-    def pgresult(self) -> Optional["pq.proto.PGresult"]:
+    def pgresult(self) -> Optional[PGresult]:
         return self._pgresult
 
     @pgresult.setter
-    def pgresult(self, result: Optional["pq.proto.PGresult"]) -> None:
+    def pgresult(self, result: Optional[PGresult]) -> None:
         self._pgresult = result
 
         if result is None:
