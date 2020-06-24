@@ -89,6 +89,31 @@ async def test_copy_in_buffers_with(aconn, format, buffer):
     assert data == sample_records
 
 
+async def test_copy_in_str(aconn):
+    cur = aconn.cursor()
+    await ensure_table(cur, sample_tabledef)
+    async with (
+        await cur.copy("copy copy_in from stdin (format text)")
+    ) as copy:
+        await copy.write(sample_text.decode("utf8"))
+
+    await cur.execute("select * from copy_in order by 1")
+    data = await cur.fetchall()
+    assert data == sample_records
+
+
+async def test_copy_in_str_binary(aconn):
+    cur = aconn.cursor()
+    await ensure_table(cur, sample_tabledef)
+    with pytest.raises(e.QueryCanceled):
+        async with (
+            await cur.copy("copy copy_in from stdin (format binary)")
+        ) as copy:
+            await copy.write(sample_text.decode("utf8"))
+
+    assert aconn.pgconn.transaction_status == aconn.TransactionStatus.INERROR
+
+
 async def test_copy_in_buffers_with_pg_error(aconn):
     cur = aconn.cursor()
     await ensure_table(cur, sample_tabledef)

@@ -171,6 +171,26 @@ def test_copy_in_buffers_with(conn, format, buffer):
     assert data == sample_records
 
 
+def test_copy_in_str(conn):
+    cur = conn.cursor()
+    ensure_table(cur, sample_tabledef)
+    with cur.copy("copy copy_in from stdin (format text)") as copy:
+        copy.write(sample_text.decode("utf8"))
+
+    data = cur.execute("select * from copy_in order by 1").fetchall()
+    assert data == sample_records
+
+
+def test_copy_in_str_binary(conn):
+    cur = conn.cursor()
+    ensure_table(cur, sample_tabledef)
+    with pytest.raises(e.QueryCanceled):
+        with cur.copy("copy copy_in from stdin (format binary)") as copy:
+            copy.write(sample_text.decode("utf8"))
+
+    assert conn.pgconn.transaction_status == conn.TransactionStatus.INERROR
+
+
 def test_copy_in_buffers_with_pg_error(conn):
     cur = conn.cursor()
     ensure_table(cur, sample_tabledef)
