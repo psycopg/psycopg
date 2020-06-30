@@ -261,10 +261,16 @@ class BaseCursor:
 
         result = results[0]
         status = result.status
-        if status not in (pq.ExecStatus.COPY_IN, pq.ExecStatus.COPY_OUT):
+        if status in (pq.ExecStatus.COPY_IN, pq.ExecStatus.COPY_OUT):
+            return
+        elif status == pq.ExecStatus.FATAL_ERROR:
+            raise e.error_from_result(
+                result, encoding=self.connection.codec.name
+            )
+        else:
             raise e.ProgrammingError(
-                "copy() should be used only with COPY ... TO STDOUT"
-                " or COPY ... FROM STDIN statements"
+                "copy() should be used only with COPY ... TO STDOUT or COPY ..."
+                f" FROM STDIN statements, got {pq.ExecStatus(status).name}"
             )
 
 

@@ -72,6 +72,21 @@ async def test_copy_in_buffers_pg_error(aconn):
     assert aconn.pgconn.transaction_status == aconn.TransactionStatus.INERROR
 
 
+async def test_copy_bad_result(conn):
+    conn.autocommit = True
+
+    cur = conn.cursor()
+
+    with pytest.raises(e.SyntaxError):
+        await cur.copy("wat")
+
+    with pytest.raises(e.ProgrammingError):
+        await cur.copy("select 1")
+
+    with pytest.raises(e.ProgrammingError):
+        await cur.copy("reset timezone")
+
+
 @pytest.mark.parametrize(
     "format, buffer",
     [(Format.TEXT, "sample_text"), (Format.BINARY, "sample_binary")],
