@@ -5,7 +5,7 @@ from psycopg3 import errors as e
 from psycopg3.adapt import Format
 
 from .test_copy import sample_text, sample_binary, sample_binary_rows  # noqa
-from .test_copy import sample_values, sample_records, sample_tabledef
+from .test_copy import eur, sample_values, sample_records, sample_tabledef
 
 pytestmark = pytest.mark.asyncio
 
@@ -154,6 +154,68 @@ async def test_copy_in_buffers_with_py_error(aconn):
 
     assert "nuttengoggenio" in str(exc.value)
     assert aconn.pgconn.transaction_status == aconn.TransactionStatus.INERROR
+
+
+@pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
+async def test_copy_in_records(aconn, format):
+    if format == Format.BINARY:
+        pytest.skip("TODO: implement int binary adapter")
+
+    cur = aconn.cursor()
+    await ensure_table(cur, sample_tabledef)
+
+    async with (
+        await cur.copy(f"copy copy_in from stdin (format {format.name})")
+    ) as copy:
+        for row in sample_records:
+            await copy.write_row(row)
+
+    await cur.execute("select * from copy_in order by 1")
+    data = await cur.fetchall()
+    assert data == sample_records
+
+
+@pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
+async def test_copy_in_records_binary(aconn, format):
+    if format == Format.TEXT:
+        pytest.skip("TODO: remove after implementing int binary adapter")
+
+    cur = aconn.cursor()
+    await ensure_table(cur, "col1 serial primary key, col2 int, data text")
+
+    async with (
+        await cur.copy(
+            f"copy copy_in (col2, data) from stdin (format {format.name})"
+        )
+    ) as copy:
+        for row in sample_records:
+            await copy.write_row((None, row[2]))
+
+    await cur.execute("select * from copy_in order by 1")
+    data = await cur.fetchall()
+    assert data == [(1, None, "hello"), (2, None, "world")]
+
+
+async def test_copy_in_allchars(aconn):
+    cur = aconn.cursor()
+    await ensure_table(cur, sample_tabledef)
+
+    await aconn.set_client_encoding("utf8")
+    async with (
+        await cur.copy("copy copy_in from stdin (format text)")
+    ) as copy:
+        for i in range(1, 256):
+            await copy.write_row((i, None, chr(i)))
+        await copy.write_row((ord(eur), None, eur))
+
+    await cur.execute(
+        """
+select col1 = ascii(data), col2 is null, length(data), count(*)
+from copy_in group by 1, 2, 3
+"""
+    )
+    data = await cur.fetchall()
+    assert data == [(True, True, 1, 256)]
 
 
 async def ensure_table(cur, tabledef, name="copy_in"):

@@ -6,8 +6,9 @@ psycopg3 copy support
 
 import re
 import codecs
+import struct
 from typing import TYPE_CHECKING, AsyncGenerator, Generator
-from typing import Dict, Match, Optional, Type, Union
+from typing import Any, Dict, Match, Optional, Sequence, Type, Union
 from types import TracebackType
 
 from . import pq
@@ -31,8 +32,14 @@ class BaseCopy:
         self._transformer = Transformer(context)
         self.format = format
         self.pgresult = result
+        self._first_row = True
         self._finished = False
         self._codec: Optional[codecs.CodecInfo] = None
+
+        if format == pq.Format.TEXT:
+            self._format_row = self._format_row_text
+        else:
+            self._format_row = self._format_row_binary
 
     @property
     def finished(self) -> bool:
@@ -76,23 +83,69 @@ class BaseCopy:
             self._codec = self.connection.codec
             return self._codec.encode(data)[0]
 
+        else:
+            raise TypeError(f"can't write {type(data).__name__}")
+
+    def format_row(self, row: Sequence[Any]) -> bytes:
+        # TODO: cache this, or pass just a single format
+        formats = [self.format] * len(row)
+        out, _ = self._transformer.dump_sequence(row, formats)
+        return self._format_row(out)
+
+    def _format_row_text(self, row: Sequence[Optional[bytes]],) -> bytes:
+        return (
+            b"\t".join(
+                _bsrepl_re.sub(_bsrepl_sub, item)
+                if item is not None
+                else br"\N"
+                for item in row
+            )
+            + b"\n"
+        )
+
+    def _format_row_binary(
+        self,
+        row: Sequence[Optional[bytes]],
+        __int2_struct: struct.Struct = struct.Struct("!h"),
+        __int4_struct: struct.Struct = struct.Struct("!i"),
+    ) -> bytes:
+        out = []
+        if self._first_row:
+            out.append(
+                # Signature, flags, extra length
+                b"PGCOPY\n\xff\r\n\0"
+                b"\x00\x00\x00\x00"
+                b"\x00\x00\x00\x00"
+            )
+            self._first_row = False
+
+        out.append(__int2_struct.pack(len(row)))
+        for item in row:
+            if item is not None:
+                out.append(__int4_struct.pack(len(item)))
+                out.append(item)
+            else:
+                out.append(b"\xff\xff\xff\xff")
+
+        return b"".join(out)
+
 
 def _bsrepl_sub(
     m: Match[bytes],
     __map: Dict[bytes, bytes] = {
-        b"b": b"\b",
-        b"t": b"\t",
-        b"n": b"\n",
-        b"v": b"\v",
-        b"f": b"\f",
-        b"r": b"\r",
+        b"\b": b"\\b",
+        b"\t": b"\\t",
+        b"\n": b"\\n",
+        b"\v": b"\\v",
+        b"\f": b"\\f",
+        b"\r": b"\\r",
+        b"\\": b"\\\\",
     },
 ) -> bytes:
-    g = m.group(0)
-    return __map.get(g, g)
+    return __map[m.group(0)]
 
 
-_bsrepl_re = re.compile(rb"\\(.)")
+_bsrepl_re = re.compile(b"[\b\t\n\v\f\r\\\\]")
 
 
 class Copy(BaseCopy):
@@ -119,6 +172,10 @@ class Copy(BaseCopy):
         conn = self.connection
         conn.wait(copy_to(conn.pgconn, self._ensure_bytes(buffer)))
 
+    def write_row(self, row: Sequence[Any]) -> None:
+        data = self.format_row(row)
+        self.write(data)
+
     def finish(self, error: Optional[str] = None) -> None:
         conn = self.connection
         berr = (
@@ -139,6 +196,9 @@ class Copy(BaseCopy):
         exc_tb: Optional[TracebackType],
     ) -> None:
         if exc_val is None:
+            if self.format == pq.Format.BINARY and not self._first_row:
+                # send EOF only if we copied binary rows (_first_row is False)
+                self.write(b"\xff\xff")
             self.finish()
         else:
             self.finish(str(exc_val))
@@ -173,6 +233,10 @@ class AsyncCopy(BaseCopy):
         conn = self.connection
         await conn.wait(copy_to(conn.pgconn, self._ensure_bytes(buffer)))
 
+    async def write_row(self, row: Sequence[Any]) -> None:
+        data = self.format_row(row)
+        await self.write(data)
+
     async def finish(self, error: Optional[str] = None) -> None:
         conn = self.connection
         berr = (
@@ -193,6 +257,9 @@ class AsyncCopy(BaseCopy):
         exc_tb: Optional[TracebackType],
     ) -> None:
         if exc_val is None:
+            if self.format == pq.Format.BINARY and not self._first_row:
+                # send EOF only if we copied binary rows (_first_row is False)
+                await self.write(b"\xff\xff")
             await self.finish()
         else:
             await self.finish(str(exc_val))

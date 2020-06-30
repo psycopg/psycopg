@@ -4,6 +4,7 @@ from psycopg3 import pq
 from psycopg3 import errors as e
 from psycopg3.adapt import Format
 
+eur = "\u20ac"
 
 sample_records = [(10, 20, "hello"), (40, None, "world")]
 
@@ -141,20 +142,57 @@ def test_copy_in_buffers_with_py_error(conn):
     assert conn.pgconn.transaction_status == conn.TransactionStatus.INERROR
 
 
-@pytest.mark.xfail
-@pytest.mark.parametrize(
-    "format", [(Format.TEXT,), (Format.BINARY,)],
-)
+@pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
 def test_copy_in_records(conn, format):
+    if format == Format.BINARY:
+        pytest.skip("TODO: implement int binary adapter")
+
     cur = conn.cursor()
     ensure_table(cur, sample_tabledef)
 
     with cur.copy(f"copy copy_in from stdin (format {format.name})") as copy:
         for row in sample_records:
-            copy.write(row)
+            copy.write_row(row)
 
     data = cur.execute("select * from copy_in order by 1").fetchall()
     assert data == sample_records
+
+
+@pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
+def test_copy_in_records_binary(conn, format):
+    if format == Format.TEXT:
+        pytest.skip("TODO: remove after implementing int binary adapter")
+
+    cur = conn.cursor()
+    ensure_table(cur, "col1 serial primary key, col2 int, data text")
+
+    with cur.copy(
+        f"copy copy_in (col2, data) from stdin (format {format.name})"
+    ) as copy:
+        for row in sample_records:
+            copy.write_row((None, row[2]))
+
+    data = cur.execute("select * from copy_in order by 1").fetchall()
+    assert data == [(1, None, "hello"), (2, None, "world")]
+
+
+def test_copy_in_allchars(conn):
+    cur = conn.cursor()
+    ensure_table(cur, sample_tabledef)
+
+    conn.set_client_encoding("utf8")
+    with cur.copy("copy copy_in from stdin (format text)") as copy:
+        for i in range(1, 256):
+            copy.write_row((i, None, chr(i)))
+        copy.write_row((ord(eur), None, eur))
+
+    data = cur.execute(
+        """
+select col1 = ascii(data), col2 is null, length(data), count(*)
+from copy_in group by 1, 2, 3
+"""
+    ).fetchall()
+    assert data == [(True, True, 1, 256)]
 
 
 def ensure_table(cur, tabledef, name="copy_in"):
