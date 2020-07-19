@@ -335,9 +335,7 @@ def test_ssl_in_use(pgconn):
         assert not pgconn.ssl_in_use
     else:
         sslmode = [i.val for i in pgconn.info if i.keyword == b"sslmode"][0]
-        if sslmode not in (b"disable", b"allow"):
-            # 'prefer' may still connect without ssl
-            # but maybe unlikely in the tests environment?
+        if sslmode not in (b"disable", b"allow", b"prefer"):
             assert pgconn.ssl_in_use
 
     pgconn.finish()
