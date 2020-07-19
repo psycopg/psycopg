@@ -1,5 +1,7 @@
 import re
 import operator
+import sys
+
 import pytest
 
 
@@ -38,7 +40,10 @@ def libpq():
 
     try:
         # Not available when testing the binary package
-        libname = ctypes.util.find_library("pq")
+        if sys.platform == "win32":
+            libname = ctypes.util.find_library("libpq.dll")
+        else:
+            libname = ctypes.util.find_library("pq")
         assert libname, "libpq libname not found"
         return ctypes.pydll.LoadLibrary(libname)
     except Exception as e:

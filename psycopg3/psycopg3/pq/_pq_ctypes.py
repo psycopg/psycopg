@@ -6,13 +6,17 @@ libpq access using ctypes
 
 import ctypes
 import ctypes.util
+import sys
 from ctypes import Structure, CFUNCTYPE, POINTER
 from ctypes import c_char, c_char_p, c_int, c_size_t, c_ubyte, c_uint, c_void_p
 from typing import List, Tuple
 
 from psycopg3.errors import NotSupportedError
 
-libname = ctypes.util.find_library("pq")
+if sys.platform == "win32":
+    libname = ctypes.util.find_library("libpq.dll")
+else:
+    libname = ctypes.util.find_library("pq")
 if not libname:
     raise ImportError("libpq library not found")
 
