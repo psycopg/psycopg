@@ -37,7 +37,7 @@ PGcancel: Type[proto.PGcancel]
 
 def import_from_libpq() -> None:
     """
-    Import pq objects implementation from the best libpw wrapper available.
+    Import pq objects implementation from the best libpq wrapper available.
 
     If an implementation is requested try to import only it, otherwise
     try to import the best implementation available.
