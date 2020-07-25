@@ -169,17 +169,17 @@ async def test_get_encoding(aconn):
     cur = aconn.cursor()
     await cur.execute("show client_encoding")
     (enc,) = await cur.fetchone()
-    assert enc == aconn.encoding
+    assert enc == aconn.client_encoding
 
 
 async def test_set_encoding(aconn):
-    newenc = "LATIN1" if aconn.encoding != "LATIN1" else "UTF8"
-    assert aconn.encoding != newenc
+    newenc = "LATIN1" if aconn.client_encoding != "LATIN1" else "UTF8"
+    assert aconn.client_encoding != newenc
     with pytest.raises(AttributeError):
-        aconn.encoding = newenc
-    assert aconn.encoding != newenc
+        aconn.client_encoding = newenc
+    assert aconn.client_encoding != newenc
     await aconn.set_client_encoding(newenc)
-    assert aconn.encoding == newenc
+    assert aconn.client_encoding == newenc
     cur = aconn.cursor()
     await cur.execute("show client_encoding")
     (enc,) = await cur.fetchone()
@@ -198,7 +198,7 @@ async def test_set_encoding(aconn):
 )
 async def test_normalize_encoding(aconn, enc, out, codec):
     await aconn.set_client_encoding(enc)
-    assert aconn.encoding == out
+    assert aconn.client_encoding == out
     assert aconn.codec.name == codec
 
 
@@ -215,7 +215,7 @@ async def test_normalize_encoding(aconn, enc, out, codec):
 async def test_encoding_env_var(dsn, monkeypatch, enc, out, codec):
     monkeypatch.setenv("PGCLIENTENCODING", enc)
     aconn = await psycopg3.AsyncConnection.connect(dsn)
-    assert aconn.encoding == out
+    assert aconn.client_encoding == out
     assert aconn.codec.name == codec
 
 

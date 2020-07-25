@@ -28,7 +28,7 @@ class StringDumper(Dumper):
 
         self._encode: EncodeFunc
         if self.connection is not None:
-            if self.connection.encoding != "SQL_ASCII":
+            if self.connection.client_encoding != "SQL_ASCII":
                 self._encode = self.connection.codec.encode
             else:
                 self._encode = codecs.lookup("utf8").encode
@@ -52,7 +52,7 @@ class StringLoader(Loader):
         super().__init__(oid, context)
 
         if self.connection is not None:
-            if self.connection.encoding != "SQL_ASCII":
+            if self.connection.client_encoding != "SQL_ASCII":
                 self.decode = self.connection.codec.decode
             else:
                 self.decode = None

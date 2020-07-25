@@ -38,7 +38,7 @@ def test_dump_enc(conn, fmt_in, encoding):
     cur = conn.cursor()
     ph = "%s" if fmt_in == Format.TEXT else "%b"
 
-    conn.encoding = encoding
+    conn.client_encoding = encoding
     (res,) = cur.execute(f"select {ph}::bytea", (eur,)).fetchone()
     assert res == eur.encode("utf8")
 
@@ -48,7 +48,7 @@ def test_dump_ascii(conn, fmt_in):
     cur = conn.cursor()
     ph = "%s" if fmt_in == Format.TEXT else "%b"
 
-    conn.encoding = "sql_ascii"
+    conn.client_encoding = "sql_ascii"
     (res,) = cur.execute(f"select ascii({ph})", (eur,)).fetchone()
     assert res == ord(eur)
 
@@ -58,7 +58,7 @@ def test_dump_badenc(conn, fmt_in):
     cur = conn.cursor()
     ph = "%s" if fmt_in == Format.TEXT else "%b"
 
-    conn.encoding = "latin1"
+    conn.client_encoding = "latin1"
     with pytest.raises(UnicodeEncodeError):
         cur.execute(f"select {ph}::bytea", (eur,))
 
@@ -69,7 +69,7 @@ def test_dump_badenc(conn, fmt_in):
 def test_load_enc(conn, typename, encoding, fmt_out):
     cur = conn.cursor(format=fmt_out)
 
-    conn.encoding = encoding
+    conn.client_encoding = encoding
     (res,) = cur.execute(
         f"select chr(%s::int)::{typename}", (ord(eur),)
     ).fetchone()
@@ -81,7 +81,7 @@ def test_load_enc(conn, typename, encoding, fmt_out):
 def test_load_badenc(conn, typename, fmt_out):
     cur = conn.cursor(format=fmt_out)
 
-    conn.encoding = "latin1"
+    conn.client_encoding = "latin1"
     with pytest.raises(psycopg3.DatabaseError):
         cur.execute(f"select chr(%s::int)::{typename}", (ord(eur),))
 
@@ -91,7 +91,7 @@ def test_load_badenc(conn, typename, fmt_out):
 def test_load_ascii(conn, typename, fmt_out):
     cur = conn.cursor(format=fmt_out)
 
-    conn.encoding = "sql_ascii"
+    conn.client_encoding = "sql_ascii"
     (res,) = cur.execute(
         f"select chr(%s::int)::{typename}", (ord(eur),)
     ).fetchone()
@@ -103,7 +103,7 @@ def test_load_ascii(conn, typename, fmt_out):
 def test_load_ascii_encanyway(conn, typename, fmt_out):
     cur = conn.cursor(format=fmt_out)
 
-    conn.encoding = "sql_ascii"
+    conn.client_encoding = "sql_ascii"
     (res,) = cur.execute(f"select 'aa'::{typename}").fetchone()
     assert res == "aa"
 
@@ -123,7 +123,7 @@ def test_text_array(conn, typename, fmt_in, fmt_out):
 @pytest.mark.parametrize("fmt_in", [Format.TEXT, Format.BINARY])
 @pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
 def test_text_array_ascii(conn, fmt_in, fmt_out):
-    conn.encoding = "sql_ascii"
+    conn.client_encoding = "sql_ascii"
     cur = conn.cursor(format=fmt_out)
     a = list(map(chr, range(1, 256))) + [eur]
     exp = [s.encode("utf8") for s in a]

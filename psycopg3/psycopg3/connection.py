@@ -147,15 +147,15 @@ class BaseConnection:
         return self._codec
 
     @property
-    def encoding(self) -> str:
+    def client_encoding(self) -> str:
         rv = self.pgconn.parameter_status(b"client_encoding")
         if rv is not None:
             return rv.decode("ascii")
         else:
             return "UTF8"
 
-    @encoding.setter
-    def encoding(self, value: str) -> None:
+    @client_encoding.setter
+    def client_encoding(self, value: str) -> None:
         self._set_client_encoding(value)
 
     def _set_client_encoding(self, value: str) -> None:
@@ -402,7 +402,7 @@ class AsyncConnection(BaseConnection):
 
     def _set_client_encoding(self, value: str) -> None:
         raise AttributeError(
-            "'encoding' is read-only on async connections:"
+            "'client_encoding' is read-only on async connections:"
             " please use await .set_client_encoding() instead."
         )
 

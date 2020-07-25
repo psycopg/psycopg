@@ -20,9 +20,9 @@ cdef class StringLoader(CLoader):
         self.pydecoder = None
         conn = self.connection
         if conn is not None:
-            if conn.encoding == "UTF8":
+            if conn.client_encoding == "UTF8":
                 self.is_utf8 = 1
-            elif conn.encoding != "SQL_ASCII":
+            elif conn.client_encoding != "SQL_ASCII":
                 self.pydecoder = conn.codec.decode
         else:
             self.pydecoder = codecs.lookup("utf8").decode

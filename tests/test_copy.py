@@ -180,7 +180,7 @@ def test_copy_in_allchars(conn):
     cur = conn.cursor()
     ensure_table(cur, sample_tabledef)
 
-    conn.encoding = "utf8"
+    conn.client_encoding = "utf8"
     with cur.copy("copy copy_in from stdin (format text)") as copy:
         for i in range(1, 256):
             copy.write_row((i, None, chr(i)))
