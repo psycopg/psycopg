@@ -5,13 +5,13 @@ psycopg3 -- PostgreSQL database adapter for Python
 # Copyright (C) 2020 The Psycopg Team
 
 from . import pq
-from .connection import AsyncConnection, Connection, Notify
-from .cursor import AsyncCursor, Cursor, Column
 from .copy import Copy, AsyncCopy
-
+from .cursor import AsyncCursor, Cursor, Column
 from .errors import Warning, Error, InterfaceError, DatabaseError
 from .errors import DataError, OperationalError, IntegrityError
 from .errors import InternalError, ProgrammingError, NotSupportedError
+from .connection import AsyncConnection, Connection, Notify
+from .transaction import Rollback
 
 from .dbapi20 import BINARY, DATETIME, NUMBER, ROWID, STRING
 from .dbapi20 import Binary, Date, DateFromTicks, Time, TimeFromTicks
