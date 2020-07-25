@@ -120,7 +120,11 @@ async def test_auto_transaction_fail(aconn):
 
 async def test_autocommit(aconn):
     assert aconn.autocommit is False
-    aconn.autocommit = True
+    with pytest.raises(TypeError):
+        aconn.autocommit = True
+    assert not aconn.autocommit
+
+    await aconn.set_autocommit(True)
     assert aconn.autocommit
     cur = aconn.cursor()
     await cur.execute("select 1")
@@ -139,7 +143,7 @@ async def test_autocommit_intrans(aconn):
     assert await cur.fetchone() == (1,)
     assert aconn.pgconn.transaction_status == aconn.TransactionStatus.INTRANS
     with pytest.raises(psycopg3.ProgrammingError):
-        aconn.autocommit = True
+        await aconn.set_autocommit(True)
     assert not aconn.autocommit
 
 
@@ -149,7 +153,7 @@ async def test_autocommit_inerror(aconn):
         await cur.execute("meh")
     assert aconn.pgconn.transaction_status == aconn.TransactionStatus.INERROR
     with pytest.raises(psycopg3.ProgrammingError):
-        aconn.autocommit = True
+        await aconn.set_autocommit(True)
     assert not aconn.autocommit
 
 
@@ -157,7 +161,7 @@ async def test_autocommit_unknown(aconn):
     await aconn.close()
     assert aconn.pgconn.transaction_status == aconn.TransactionStatus.UNKNOWN
     with pytest.raises(psycopg3.ProgrammingError):
-        aconn.autocommit = True
+        await aconn.set_autocommit(True)
     assert not aconn.autocommit
 
 
@@ -326,7 +330,7 @@ async def test_notify_handlers(aconn):
     aconn.add_notify_handler(cb1)
     aconn.add_notify_handler(lambda n: nots2.append(n))
 
-    aconn.autocommit = True
+    await aconn.set_autocommit(True)
     cur = aconn.cursor()
     await cur.execute("listen foo")
     await cur.execute("notify foo, 'n1'")

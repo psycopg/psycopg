@@ -105,10 +105,15 @@ class BaseConnection:
 
     @autocommit.setter
     def autocommit(self, value: bool) -> None:
+        self._set_autocommit(value)
+
+    def _set_autocommit(self, value: bool) -> None:
+        # Base implementation, not thread safe
+        # subclasses must call it holding a lock
         status = self.pgconn.transaction_status
         if status != TransactionStatus.IDLE:
             raise e.ProgrammingError(
-                "can't change autocommit state: connection in"
+                "couldn't change autocommit state: connection in"
                 f" transaction status {TransactionStatus(status).name}"
             )
         self._autocommit = value
@@ -302,6 +307,10 @@ class Connection(BaseConnection):
                     yield None  # for the send who stopped us
                     return
 
+    def _set_autocommit(self, value: bool) -> None:
+        with self.lock:
+            super()._set_autocommit(value)
+
 
 class AsyncConnection(BaseConnection):
     """
@@ -407,3 +416,15 @@ class AsyncConnection(BaseConnection):
                 if (yield n):
                     yield None
                     return
+
+    def _set_autocommit(self, value: bool) -> None:
+        raise AttributeError(
+            "autocommit is read-only on async connections:"
+            " please use await connection.set_autocommit() instead."
+            " Note that you can pass an 'autocommit' value to 'connect()'"
+            " if it doesn't need to change during the connection's lifetime."
+        )
+
+    async def set_autocommit(self, value: bool) -> None:
+        async with self.lock:
+            super()._set_autocommit(value)
