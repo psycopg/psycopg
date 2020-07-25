@@ -2,10 +2,13 @@ import re
 import operator
 import pytest
 
-from psycopg3 import pq
-
 
 def pytest_report_header(config):
+    try:
+        from psycopg3 import pq
+    except ImportError:
+        return []
+
     return [
         f"libpq available: {pq.version()}",
         f"libpq wrapper implementation: {pq.__impl__}",
@@ -22,6 +25,8 @@ def pytest_configure(config):
 
 
 def pytest_runtest_setup(item):
+    from psycopg3 import pq
+
     for m in item.iter_markers(name="libpq"):
         check_libpq_version(pq.version(), m.args)
 

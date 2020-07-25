@@ -10,10 +10,10 @@ information. Will submit a bug.
 import codecs
 from typing import Any, Iterable, List, Optional, Sequence, Tuple
 
-from .proto import AdaptContext, DumpFunc, DumpersMap, DumperType
-from .proto import LoadFunc, LoadersMap, LoaderType, MaybeOid, PQGen
-from .connection import BaseConnection
-from . import pq
+from psycopg3.proto import AdaptContext, DumpFunc, DumpersMap, DumperType
+from psycopg3.proto import LoadFunc, LoadersMap, LoaderType, MaybeOid, PQGen
+from psycopg3.connection import BaseConnection
+from psycopg3 import pq
 
 class Transformer:
     def __init__(self, context: AdaptContext = None): ...

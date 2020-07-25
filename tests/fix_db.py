@@ -1,8 +1,6 @@
 import os
 import pytest
 
-from psycopg3 import pq
-
 
 def pytest_addoption(parser):
     parser.addoption(
@@ -26,6 +24,8 @@ def dsn(request):
 @pytest.fixture
 def pgconn(dsn):
     """Return a PGconn connection open to `--test-dsn`."""
+    from psycopg3 import pq
+
     conn = pq.PGconn.connect(dsn.encode("utf8"))
     if conn.status != pq.ConnStatus.OK:
         pytest.fail(

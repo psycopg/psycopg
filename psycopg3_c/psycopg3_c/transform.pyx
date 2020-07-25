@@ -17,12 +17,11 @@ from cpython.tuple cimport PyTuple_New, PyTuple_SET_ITEM
 import codecs
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
-from psycopg3.pq cimport libpq
-from psycopg3.pq.pq_cython cimport PGresult
+from psycopg3_c cimport libpq
+from psycopg3_c.pq_cython cimport PGresult
 
 from psycopg3 import errors as e
 from psycopg3.pq.enums import Format
-# from psycopg3.types.oids import builtins, INVALID_OID
 
 TEXT_OID = 25
 

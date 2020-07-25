@@ -156,7 +156,7 @@ Transformer: Type[proto.Transformer]
 
 # Override it with fast object if available
 if pq.__impl__ == "c":
-    from . import _psycopg3
+    from psycopg3_c import _psycopg3
 
     Transformer = _psycopg3.Transformer
 else:

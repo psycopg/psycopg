@@ -1,0 +1,26 @@
+#!/usr/bin/env python3
+"""
+PostgreSQL database adapter for Python - pure Python package
+"""
+
+# Copyright (C) 2020 The Psycopg Team
+
+import re
+import os
+
+from setuptools import setup
+
+# Move to the directory of setup.py: executing this file from another location
+# (e.g. from the project root) will fail
+here = os.path.abspath(os.path.dirname(__file__))
+if os.path.abspath(os.getcwd()) != here:
+    os.chdir(here)
+
+with open("psycopg3/version.py") as f:
+    data = f.read()
+    m = re.search(r"""(?m)^__version__\s*=\s*['"]([^'"]+)['"]""", data)
+    if m is None:
+        raise Exception(f"cannot find version in {f.name}")
+    version = m.group(1)
+
+setup(version=version)

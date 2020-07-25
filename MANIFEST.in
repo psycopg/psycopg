@@ -1,2 +1,0 @@
-include README.rst LICENSE.txt BACKERS.md tox.ini
-recursive-include psycopg3 *.pyx *.pxd

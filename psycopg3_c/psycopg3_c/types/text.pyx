@@ -8,7 +8,7 @@ from cpython.bytes cimport PyBytes_FromStringAndSize
 from cpython.mem cimport PyMem_Malloc
 from cpython.object cimport PyObject
 from cpython.unicode cimport PyUnicode_DecodeUTF8
-from psycopg3.pq cimport libpq
+from psycopg3_c cimport libpq
 
 
 cdef struct TextContext:

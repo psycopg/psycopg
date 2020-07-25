@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 execute: Callable[[pq.proto.PGconn], PQGen[List[pq.proto.PGresult]]]
 
 if pq.__impl__ == "c":
-    from . import _psycopg3
+    from psycopg3_c import _psycopg3
 
     execute = _psycopg3.execute
 

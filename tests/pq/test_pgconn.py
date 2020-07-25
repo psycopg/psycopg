@@ -194,7 +194,7 @@ def test_host(pgconn):
         pgconn.host
 
 
-# TODO: to implement in psycopg3.pq.pq_cython
+# TODO: to implement in pq_cython
 @pytest.mark.xfail
 @pytest.mark.libpq(">= 12")
 def test_hostaddr(pgconn):

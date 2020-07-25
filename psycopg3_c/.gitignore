@@ -1,0 +1,4 @@
+/.eggs
+/build
+/dist
+/psycopg3_c.egg-info

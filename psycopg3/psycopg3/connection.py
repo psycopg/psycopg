@@ -29,7 +29,7 @@ connect: Callable[[str], proto.PQGen[pq.proto.PGconn]]
 execute: Callable[[pq.proto.PGconn], proto.PQGen[List[pq.proto.PGresult]]]
 
 if pq.__impl__ == "c":
-    from . import _psycopg3
+    from psycopg3_c import _psycopg3
 
     connect = _psycopg3.connect
     execute = _psycopg3.execute

@@ -1,6 +1,6 @@
-/psycopg3.egg-info
-/.tox
-/.eggs
+/*.egg-info/
+.tox
+/.eggs/
 /build
 /dist
 *.pstats

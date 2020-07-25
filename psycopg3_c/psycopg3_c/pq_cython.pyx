@@ -11,9 +11,8 @@ from cpython.bytes cimport PyBytes_AsString
 import logging
 from typing import List, Optional, Sequence, Tuple
 
-from psycopg3.pq cimport libpq as impl
-from psycopg3.pq.libpq cimport Oid
-from psycopg3.errors import OperationalError
+from psycopg3_c cimport libpq as impl
+from psycopg3_c.libpq cimport Oid
 
 from psycopg3.pq.misc import PGnotify, ConninfoOption, PQerror, PGresAttDesc
 from psycopg3.pq.misc import error_message

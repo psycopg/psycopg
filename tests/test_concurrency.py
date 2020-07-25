@@ -99,6 +99,8 @@ t.join()
             f.write(module)
         env = dict(os.environ)
         env["PYTHONPATH"] = dir + os.pathsep + env.get("PYTHONPATH", "")
+        # TODO: debug this. Importing c module fails on travis in this scenario
+        env.pop("PSYCOPG3_IMPL", None)
         out = sp.check_output(
             [sys.executable, "-c", script], stderr=sp.STDOUT, env=env
         ).decode("utf8", "replace")

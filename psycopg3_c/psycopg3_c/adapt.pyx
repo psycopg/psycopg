@@ -13,7 +13,7 @@ equivalent C implementations.
 
 # Copyright (C) 2020 The Psycopg Team
 
-from psycopg3.adapt cimport cloader_func, get_context_func
+from psycopg3_c.adapt cimport cloader_func, get_context_func
 
 import logging
 logger = logging.getLogger("psycopg3.adapt")

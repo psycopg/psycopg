@@ -9,13 +9,19 @@ env:
 matrix:
   include:
 
-    - env: TOXENV=black
+    - env:
+        - TOXENV=black
+        - TOXDIR=.
       python: 3.6
 
-    - env: TOXENV=flake8
+    - env:
+        - TOXENV=flake8
+        - TOXDIR=.
       python: 3.6
 
-    - env: TOXENV=mypy
+    - env:
+        - TOXENV=mypy
+        - TOXDIR=.
       python: 3.6
 
     - python: 3.6
@@ -26,6 +32,7 @@ matrix:
             - postgresql-client-9.5
       env:
         - TOXENV=py36
+        - TOXDIR=psycopg3_c
         - PGVER=9.5
         - PSYCOPG3_IMPL=c
         - PGPORT=5432
@@ -38,6 +45,7 @@ matrix:
             - postgresql-client-9.6
       env:
         - TOXENV=py36
+        - TOXDIR=psycopg3
         - PGVER=9.6
         - PSYCOPG3_IMPL=ctypes
         - PGPORT=5432
@@ -50,6 +58,7 @@ matrix:
             - postgresql-client-10
       env:
         - TOXENV=py37
+        - TOXDIR=psycopg3_c
         - PGVER=10
         - PSYCOPG3_IMPL=c
         - PGPORT=5432
@@ -63,6 +72,7 @@ matrix:
             - postgresql-client-11
       env:
         - TOXENV=py37
+        - TOXDIR=psycopg3
         - PGVER=11
         - PSYCOPG3_IMPL=ctypes
         - PGPORT=5433
@@ -76,6 +86,7 @@ matrix:
             - postgresql-client-12
       env:
         - TOXENV=py38
+        - TOXDIR=psycopg3_c
         - PGVER=12
         - PSYCOPG3_IMPL=c
         - PGPORT=5433
@@ -89,6 +100,7 @@ matrix:
             - postgresql-client-12
       env:
         - TOXENV=py38
+        - TOXDIR=psycopg3
         - PGVER=12
         - PSYCOPG3_IMPL=ctypes
         - PGPORT=5433
@@ -98,4 +110,4 @@ install:
   - test ${TOXENV:0:2} != py || psql -c 'create database psycopg3_test'
 
 script:
-  - tox
+  - tox -c $TOXDIR

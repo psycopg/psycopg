@@ -1,0 +1,6 @@
+[build-system]
+requires = ["setuptools>=49.2.0", "wheel>=0.34.2", "Cython>=3.0a5"]
+build-backend = "setuptools.build_meta"
+
+[tool.black]
+line-length = 79
