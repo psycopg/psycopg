@@ -165,7 +165,7 @@ def test_get_encoding(conn):
 def test_set_encoding(conn):
     newenc = "LATIN1" if conn.encoding != "LATIN1" else "UTF8"
     assert conn.encoding != newenc
-    conn.set_client_encoding(newenc)
+    conn.encoding = newenc
     assert conn.encoding == newenc
     (enc,) = conn.cursor().execute("show client_encoding").fetchone()
     assert enc == newenc
@@ -182,7 +182,7 @@ def test_set_encoding(conn):
     ],
 )
 def test_normalize_encoding(conn, enc, out, codec):
-    conn.set_client_encoding(enc)
+    conn.encoding = enc
     assert conn.encoding == out
     assert conn.codec.name == codec
 
@@ -205,14 +205,14 @@ def test_encoding_env_var(dsn, monkeypatch, enc, out, codec):
 
 
 def test_set_encoding_unsupported(conn):
-    conn.set_client_encoding("EUC_TW")
+    conn.encoding = "EUC_TW"
     with pytest.raises(psycopg3.NotSupportedError):
         conn.cursor().execute("select 1")
 
 
 def test_set_encoding_bad(conn):
     with pytest.raises(psycopg3.DatabaseError):
-        conn.set_client_encoding("WAT")
+        conn.encoding = "WAT"
 
 
 @pytest.mark.parametrize(

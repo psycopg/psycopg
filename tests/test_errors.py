@@ -49,7 +49,7 @@ def test_diag_encoding(conn, enc):
     msgs = []
     conn.pgconn.exec_(b"set client_min_messages to notice")
     conn.add_notice_handler(lambda diag: msgs.append(diag.message_primary))
-    conn.set_client_encoding(enc)
+    conn.encoding = enc
     cur = conn.cursor()
     cur.execute(
         "do $$begin raise notice 'hello %', chr(8364); end$$ language plpgsql"
@@ -59,7 +59,7 @@ def test_diag_encoding(conn, enc):
 
 @pytest.mark.parametrize("enc", ["utf8", "latin9"])
 def test_error_encoding(conn, enc):
-    conn.set_client_encoding(enc)
+    conn.encoding = enc
     cur = conn.cursor()
     with pytest.raises(e.DatabaseError) as excinfo:
         cur.execute(

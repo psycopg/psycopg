@@ -154,6 +154,13 @@ class BaseConnection:
         else:
             return "UTF8"
 
+    @encoding.setter
+    def encoding(self, value: str) -> None:
+        self._set_client_encoding(value)
+
+    def _set_client_encoding(self, value: str) -> None:
+        raise NotImplementedError
+
     def cancel(self) -> None:
         c = self.pgconn.get_cancel()
         c.cancel()
@@ -283,7 +290,7 @@ class Connection(BaseConnection):
     ) -> proto.RV:
         return wait(gen, timeout=timeout)
 
-    def set_client_encoding(self, value: str) -> None:
+    def _set_client_encoding(self, value: str) -> None:
         with self.lock:
             self.pgconn.send_query_params(
                 b"select set_config('client_encoding', $1, false)",
@@ -392,6 +399,12 @@ class AsyncConnection(BaseConnection):
     @classmethod
     async def wait(cls, gen: proto.PQGen[proto.RV]) -> proto.RV:
         return await wait_async(gen)
+
+    def _set_client_encoding(self, value: str) -> None:
+        raise AttributeError(
+            "'encoding' is read-only on async connections:"
+            " please use await .set_client_encoding() instead."
+        )
 
     async def set_client_encoding(self, value: str) -> None:
         async with self.lock:

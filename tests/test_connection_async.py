@@ -120,7 +120,7 @@ async def test_auto_transaction_fail(aconn):
 
 async def test_autocommit(aconn):
     assert aconn.autocommit is False
-    with pytest.raises(TypeError):
+    with pytest.raises(AttributeError):
         aconn.autocommit = True
     assert not aconn.autocommit
 
@@ -174,6 +174,9 @@ async def test_get_encoding(aconn):
 
 async def test_set_encoding(aconn):
     newenc = "LATIN1" if aconn.encoding != "LATIN1" else "UTF8"
+    assert aconn.encoding != newenc
+    with pytest.raises(AttributeError):
+        aconn.encoding = newenc
     assert aconn.encoding != newenc
     await aconn.set_client_encoding(newenc)
     assert aconn.encoding == newenc
