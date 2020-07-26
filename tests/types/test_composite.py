@@ -99,7 +99,6 @@ def testcomp(svcconn):
         create type testcomp as (foo text, bar int8, baz float8);
         """
     )
-    svcconn.commit()
 
 
 def test_fetch_info(conn, testcomp):

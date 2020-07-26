@@ -126,7 +126,6 @@ async def execmany(svcconn):
         create table execmany (id serial primary key, num integer, data text)
         """
     )
-    svcconn.commit()
 
 
 async def test_executemany(aconn, execmany):
