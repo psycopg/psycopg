@@ -62,6 +62,6 @@ def svcconn(dsn):
     """
     from psycopg3 import Connection
 
-    conn = Connection.connect(dsn)
+    conn = Connection.connect(dsn, autocommit=True)
     yield conn
     conn.close()

@@ -126,14 +126,12 @@ async def _execmany(svcconn):
         create table execmany (id serial primary key, num integer, data text)
         """
     )
-    svcconn.commit()
 
 
 @pytest.fixture(scope="function")
 async def execmany(svcconn, _execmany):
     cur = svcconn.cursor()
     cur.execute("truncate table execmany")
-    svcconn.commit()
 
 
 async def test_executemany(aconn, execmany):
