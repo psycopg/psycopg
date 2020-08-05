@@ -14,6 +14,7 @@ from .oids import builtins
 
 FLOAT8_OID = builtins["float8"].oid
 NUMERIC_OID = builtins["numeric"].oid
+BOOL_OID = builtins["bool"].oid
 
 _encode = codecs.lookup("ascii").encode
 _decode = codecs.lookup("ascii").decode
@@ -27,20 +28,27 @@ _float8_struct = struct.Struct("!d")
 
 
 @Dumper.text(int)
-def dump_int(obj: int) -> Tuple[bytes, int]:
-    # We don't know the size of it, so we have to return a type big enough
-    return _encode(str(obj))[0], NUMERIC_OID
+class TextIntDumper(Dumper):
+    def dump(self, obj: int) -> Tuple[bytes, int]:
+        # We don't know the size of it, so we have to return a type big enough
+        return _encode(str(obj))[0], NUMERIC_OID
 
 
 @Dumper.text(float)
-def dump_float(obj: float) -> Tuple[bytes, int]:
-    # Float can't be bigger than this instead
-    return _encode(str(obj))[0], FLOAT8_OID
+class TextFloatDumper(Dumper):
+    def dump(self, obj: float) -> Tuple[bytes, int]:
+        # Float can't be bigger than this instead
+        return _encode(str(obj))[0], FLOAT8_OID
 
 
 @Dumper.text(Decimal)
-def dump_decimal(obj: Decimal) -> Tuple[bytes, int]:
-    return _encode(str(obj))[0], NUMERIC_OID
+class TextDecimalDumper(Dumper):
+    def dump(self, obj: Decimal) -> Tuple[bytes, int]:
+        return _encode(str(obj))[0], NUMERIC_OID
+
+    @property
+    def oid(self) -> int:
+        return NUMERIC_OID
 
 
 _bool_dump = {
@@ -54,13 +62,23 @@ _bool_binary_dump = {
 
 
 @Dumper.text(bool)
-def dump_bool(obj: bool) -> Tuple[bytes, int]:
-    return _bool_dump[obj]
+class TextBoolDumper(Dumper):
+    def dump(self, obj: bool) -> Tuple[bytes, int]:
+        return _bool_dump[obj]
+
+    @property
+    def oid(self) -> int:
+        return BOOL_OID
 
 
 @Dumper.binary(bool)
-def dump_bool_binary(obj: bool) -> Tuple[bytes, int]:
-    return _bool_binary_dump[obj]
+class BinaryBoolDumper(Dumper):
+    def dump(self, obj: bool) -> Tuple[bytes, int]:
+        return _bool_binary_dump[obj]
+
+    @property
+    def oid(self) -> int:
+        return BOOL_OID
 
 
 @Loader.text(builtins["int2"].oid)

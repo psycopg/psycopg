@@ -25,9 +25,19 @@ def test_dump(data, format, result, type):
         assert rv == result
 
 
+def make_dumper(suffix):
+    """Create a test dumper appending a suffix to the bytes representation."""
+
+    class TestDumper(Dumper):
+        def dump(self, s):
+            return (s + suffix).encode("ascii")
+
+    return TestDumper
+
+
 def test_dump_connection_ctx(conn):
-    Dumper.register(str, lambda s: s.encode("ascii") + b"t", conn)
-    Dumper.register_binary(str, lambda s: s.encode("ascii") + b"b", conn)
+    Dumper.register(str, make_dumper("t"), conn)
+    Dumper.register_binary(str, make_dumper("b"), conn)
 
     cur = conn.cursor()
     cur.execute("select %s, %b", ["hello", "world"])
@@ -35,12 +45,12 @@ def test_dump_connection_ctx(conn):
 
 
 def test_dump_cursor_ctx(conn):
-    Dumper.register(str, lambda s: s.encode("ascii") + b"t", conn)
-    Dumper.register_binary(str, lambda s: s.encode("ascii") + b"b", conn)
+    Dumper.register(str, make_dumper("t"), conn)
+    Dumper.register_binary(str, make_dumper("b"), conn)
 
     cur = conn.cursor()
-    Dumper.register(str, lambda s: s.encode("ascii") + b"tc", cur)
-    Dumper.register_binary(str, lambda s: s.encode("ascii") + b"bc", cur)
+    Dumper.register(str, make_dumper("tc"), cur)
+    Dumper.register_binary(str, make_dumper("bc"), cur)
 
     cur.execute("select %s, %b", ["hello", "world"])
     assert cur.fetchone() == ("hellotc", "worldbc")

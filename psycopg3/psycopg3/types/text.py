@@ -95,8 +95,9 @@ class BytesDumper(Dumper):
 
 
 @Dumper.binary(bytes)
-def dump_bytes(b: bytes) -> Tuple[bytes, int]:
-    return b, BYTEA_OID
+class BinaryBytesDumper(Dumper):
+    def dump(self, b: bytes) -> Tuple[bytes, int]:
+        return b, BYTEA_OID
 
 
 @Loader.text(builtins["bytea"].oid)

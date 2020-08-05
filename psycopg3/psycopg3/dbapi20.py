@@ -51,12 +51,13 @@ class Binary:
 
 
 @Dumper.text(Binary)
-def dump_Binary(obj: Binary) -> Tuple[bytes, int]:
-    rv = obj.obj
-    if not isinstance(rv, bytes):
-        rv = bytes(rv)
+class TextBinaryDumper(Dumper):
+    def dump(self, obj: Binary) -> Tuple[bytes, int]:
+        rv = obj.obj
+        if not isinstance(rv, bytes):
+            rv = bytes(rv)
 
-    return rv, builtins["bytea"].oid
+        return rv, builtins["bytea"].oid
 
 
 def Date(year: int, month: int, day: int) -> dt.date:

@@ -40,13 +40,9 @@ class Dumper:
                 f"dumpers should be registered on classes, got {src} instead"
             )
 
-        if not (
-            callable(dumper)
-            or (isinstance(dumper, type) and issubclass(dumper, Dumper))
-        ):
+        if not (isinstance(dumper, type) and issubclass(dumper, Dumper)):
             raise TypeError(
-                f"dumpers should be callable or Dumper subclasses,"
-                f" got {dumper} instead"
+                f"dumpers should be Dumper subclasses, got {dumper} instead"
             )
 
         where = context.dumpers if context is not None else Dumper.globals

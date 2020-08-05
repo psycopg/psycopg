@@ -38,7 +38,7 @@ AdaptContext = Union[None, "BaseConnection", "BaseCursor", "Transformer"]
 
 MaybeOid = Union[Optional[bytes], Tuple[Optional[bytes], int]]
 DumpFunc = Callable[[Any], MaybeOid]
-DumperType = Union[Type["Dumper"], DumpFunc]
+DumperType = Type["Dumper"]
 DumpersMap = Dict[Tuple[type, Format], DumperType]
 
 LoadFunc = Callable[[bytes], Any]

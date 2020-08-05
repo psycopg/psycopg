@@ -252,12 +252,7 @@ cdef class Transformer:
             pass
 
         dumper = self.lookup_dumper(src, format)
-        func: "DumpFunc"
-        if isinstance(dumper, type):
-            func = dumper(src, self).dump
-        else:
-            func = dumper
-
+        func = dumper(src, self).dump
         self._dump_funcs[key] = func
         return func
 
