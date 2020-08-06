@@ -7,7 +7,6 @@ Adapers for numeric types.
 import codecs
 import struct
 from decimal import Decimal
-from typing import Tuple
 
 from ..adapt import Dumper, Loader
 from .oids import builtins
@@ -29,9 +28,9 @@ _float8_struct = struct.Struct("!d")
 
 @Dumper.text(int)
 class TextIntDumper(Dumper):
-    def dump(self, obj: int) -> Tuple[bytes, int]:
+    def dump(self, obj: int) -> bytes:
         # We don't know the size of it, so we have to return a type big enough
-        return _encode(str(obj))[0], NUMERIC_OID
+        return _encode(str(obj))[0]
 
     @property
     def oid(self) -> int:
@@ -40,9 +39,9 @@ class TextIntDumper(Dumper):
 
 @Dumper.text(float)
 class TextFloatDumper(Dumper):
-    def dump(self, obj: float) -> Tuple[bytes, int]:
+    def dump(self, obj: float) -> bytes:
         # Float can't be bigger than this instead
-        return _encode(str(obj))[0], FLOAT8_OID
+        return _encode(str(obj))[0]
 
     @property
     def oid(self) -> int:
@@ -51,28 +50,18 @@ class TextFloatDumper(Dumper):
 
 @Dumper.text(Decimal)
 class TextDecimalDumper(Dumper):
-    def dump(self, obj: Decimal) -> Tuple[bytes, int]:
-        return _encode(str(obj))[0], NUMERIC_OID
+    def dump(self, obj: Decimal) -> bytes:
+        return _encode(str(obj))[0]
 
     @property
     def oid(self) -> int:
         return NUMERIC_OID
 
 
-_bool_dump = {
-    True: (b"t", builtins["bool"].oid),
-    False: (b"f", builtins["bool"].oid),
-}
-_bool_binary_dump = {
-    True: (b"\x01", builtins["bool"].oid),
-    False: (b"\x00", builtins["bool"].oid),
-}
-
-
 @Dumper.text(bool)
 class TextBoolDumper(Dumper):
-    def dump(self, obj: bool) -> Tuple[bytes, int]:
-        return _bool_dump[obj]
+    def dump(self, obj: bool) -> bytes:
+        return b"t" if obj else b"f"
 
     @property
     def oid(self) -> int:
@@ -81,8 +70,8 @@ class TextBoolDumper(Dumper):
 
 @Dumper.binary(bool)
 class BinaryBoolDumper(Dumper):
-    def dump(self, obj: bool) -> Tuple[bytes, int]:
-        return _bool_binary_dump[obj]
+    def dump(self, obj: bool) -> bytes:
+        return b"\x01" if obj else b"\x00"
 
     @property
     def oid(self) -> int:

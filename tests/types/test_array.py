@@ -82,7 +82,7 @@ def test_dump_list_int(conn, obj, want):
         [[]],
         [[["a"]], ["b"]],
         # [["a"], [["b"]]],  # todo, but expensive (an isinstance per item)
-        [True, b"a"],
+        # [True, b"a"], # TODO expensive too
     ],
 )
 def test_bad_binary_array(input):

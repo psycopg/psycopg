@@ -36,8 +36,7 @@ PQGen = Generator[Tuple[int, "Wait"], "Ready", RV]
 
 AdaptContext = Union[None, "BaseConnection", "BaseCursor", "Transformer"]
 
-MaybeOid = Union[Optional[bytes], Tuple[Optional[bytes], int]]
-DumpFunc = Callable[[Any], MaybeOid]
+DumpFunc = Callable[[Any], bytes]
 DumperType = Type["Dumper"]
 DumpersMap = Dict[Tuple[type, Format], DumperType]
 
@@ -85,7 +84,10 @@ class Transformer(Protocol):
     def types_sequence(self) -> List[int]:
         ...
 
-    def dump(self, obj: None, format: Format = Format.TEXT) -> MaybeOid:
+    def dump(self, obj: Any, format: Format = Format.TEXT) -> Optional[bytes]:
+        ...
+
+    def get_dumper(self, obj: Any, format: Format) -> "Dumper":
         ...
 
     def lookup_dumper(self, src: type, format: Format) -> DumperType:

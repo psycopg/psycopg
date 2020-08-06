@@ -5,7 +5,7 @@ Adapters for textual types.
 # Copyright (C) 2020 The Psycopg Team
 
 import codecs
-from typing import Optional, Tuple, Union
+from typing import Optional, Union
 
 from ..adapt import Dumper, Loader
 from ..proto import AdaptContext, EncodeFunc, DecodeFunc
@@ -90,8 +90,8 @@ class BytesDumper(Dumper):
             self.connection.pgconn if self.connection is not None else None
         )
 
-    def dump(self, obj: bytes) -> Tuple[bytes, int]:
-        return self.esc.escape_bytea(obj), BYTEA_OID
+    def dump(self, obj: bytes) -> bytes:
+        return self.esc.escape_bytea(obj)
 
     @property
     def oid(self) -> int:
@@ -100,8 +100,8 @@ class BytesDumper(Dumper):
 
 @Dumper.binary(bytes)
 class BinaryBytesDumper(Dumper):
-    def dump(self, b: bytes) -> Tuple[bytes, int]:
-        return b, BYTEA_OID
+    def dump(self, b: bytes) -> bytes:
+        return b
 
     @property
     def oid(self) -> int:

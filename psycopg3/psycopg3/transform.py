@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 from . import errors as e
 from . import pq
 from .proto import AdaptContext, DumpersMap, DumperType
-from .proto import LoadFunc, LoadersMap, LoaderType, MaybeOid
+from .proto import LoadFunc, LoadersMap, LoaderType
 from .cursor import BaseCursor
 from .connection import BaseConnection
 from .types.oids import builtins, INVALID_OID
@@ -151,12 +151,8 @@ class Transformer:
 
         for var, fmt in zip(objs, formats):
             if var is not None:
-                dumper = self.get_dumper(type(var), fmt)
-                data = dumper.dump(var)
-                if isinstance(data, tuple):
-                    data = data[0]
-
-                out.append(data)
+                dumper = self.get_dumper(var, fmt)
+                out.append(dumper.dump(var))
                 oids.append(dumper.oid)
             else:
                 out.append(None)
@@ -169,22 +165,21 @@ class Transformer:
         return self._oids
 
     # TODO: drop?
-    def dump(self, obj: None, format: Format = Format.TEXT) -> MaybeOid:
+    def dump(self, obj: Any, format: Format = Format.TEXT) -> Optional[bytes]:
         if obj is None:
-            return None, TEXT_OID
+            return None
 
-        dumper = self.get_dumper(type(obj), format)
-        return dumper.dump(obj)
+        return self.get_dumper(obj, format).dump(obj)
 
-    def get_dumper(self, src: type, format: Format) -> "Dumper":
-        key = (src, format)
+    def get_dumper(self, obj: Any, format: Format) -> "Dumper":
+        key = (type(obj), format)
         try:
             return self._dumpers_cache[key]
         except KeyError:
             pass
 
-        dumper_cls = self.lookup_dumper(src, format)
-        self._dumpers_cache[key] = dumper = dumper_cls(src, self)
+        dumper_cls = self.lookup_dumper(*key)
+        self._dumpers_cache[key] = dumper = dumper_cls(key[0], self)
         return dumper
 
     def lookup_dumper(self, src: type, format: Format) -> DumperType:

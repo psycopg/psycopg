@@ -7,10 +7,12 @@ Compatibility objects with DBAPI 2.0
 import time
 import datetime as dt
 from math import floor
-from typing import Any, Sequence, Tuple
+from typing import Any, Sequence
 
 from .types.oids import builtins
 from .adapt import Dumper
+
+BYTEA_OID = builtins["bytea"].oid
 
 
 class DBAPITypeObject:
@@ -52,12 +54,16 @@ class Binary:
 
 @Dumper.text(Binary)
 class TextBinaryDumper(Dumper):
-    def dump(self, obj: Binary) -> Tuple[bytes, int]:
-        rv = obj.obj
-        if not isinstance(rv, bytes):
-            rv = bytes(rv)
+    def dump(self, obj: Binary) -> bytes:
+        wrapped = obj.obj
+        if isinstance(wrapped, bytes):
+            return wrapped
+        else:
+            return bytes(wrapped)
 
-        return rv, builtins["bytea"].oid
+    @property
+    def oid(self) -> int:
+        return BYTEA_OID
 
 
 def Date(year: int, month: int, day: int) -> dt.date:

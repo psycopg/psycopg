@@ -4,7 +4,7 @@ Entry point into the adaptation system.
 
 # Copyright (C) 2020 The Psycopg Team
 
-from typing import Any, Callable, Optional, Tuple, Type, Union
+from typing import Any, Callable, Optional, Type
 
 from . import pq
 from . import proto
@@ -26,7 +26,7 @@ class Dumper:
         self.context = context
         self.connection = _connection_from_context(context)
 
-    def dump(self, obj: Any) -> Union[bytes, Tuple[bytes, int]]:
+    def dump(self, obj: Any) -> bytes:
         raise NotImplementedError()
 
     @property

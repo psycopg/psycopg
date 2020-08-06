@@ -8,8 +8,6 @@ TEXT_OID = builtins["text"].oid
 @pytest.mark.parametrize(
     "data, format, result, type",
     [
-        (None, Format.TEXT, None, "text"),
-        (None, Format.BINARY, None, "text"),
         (1, Format.TEXT, b"1", "numeric"),
         ("hello", Format.TEXT, b"hello", "text"),
         ("hello", Format.BINARY, b"hello", "text"),
@@ -17,12 +15,9 @@ TEXT_OID = builtins["text"].oid
 )
 def test_dump(data, format, result, type):
     t = Transformer()
-    rv = t.dump(data, format)
-    if isinstance(rv, tuple):
-        assert rv[0] == result
-        assert rv[1] == builtins[type].oid
-    else:
-        assert rv == result
+    dumper = t.get_dumper(data, format)
+    assert dumper.dump(data) == result
+    assert dumper.oid == builtins[type].oid
 
 
 def make_dumper(suffix):
