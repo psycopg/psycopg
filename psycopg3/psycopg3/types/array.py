@@ -21,6 +21,7 @@ class BaseListDumper(Dumper):
     def __init__(self, src: type, context: AdaptContext = None):
         super().__init__(src, context)
         self._tx = Transformer(context)
+        self._oid = 0
 
     def _array_oid(self, base_oid: int) -> int:
         """
@@ -62,11 +63,7 @@ class TextListDumper(BaseListDumper):
     def dump(self, obj: List[Any]) -> Tuple[bytes, int]:
         tokens: List[bytes] = []
 
-        oid = 0
-
         def dump_list(obj: List[Any]) -> None:
-            nonlocal oid
-
             if not obj:
                 tokens.append(b"{}")
                 return
@@ -80,10 +77,10 @@ class TextListDumper(BaseListDumper):
                 else:
                     ad = self._tx.dump(item)
                     if isinstance(ad, tuple):
-                        if oid == 0:
-                            oid = ad[1]
+                        if not self._oid:
+                            self._oid = ad[1]
                             got_type = type(item)
-                        elif oid != ad[1]:
+                        elif self._oid != ad[1]:
                             raise e.DataError(
                                 f"array contains different types,"
                                 f" at least {got_type} and {type(item)}"
@@ -105,7 +102,11 @@ class TextListDumper(BaseListDumper):
 
         dump_list(obj)
 
-        return b"".join(tokens), self._array_oid(oid)
+        return b"".join(tokens), self._array_oid(self._oid)
+
+    @property
+    def oid(self) -> int:
+        return self._array_oid(self._oid) if self._oid else TEXT_ARRAY_OID
 
 
 @Dumper.binary(list)
@@ -117,7 +118,6 @@ class BinaryListDumper(BaseListDumper):
         data: List[bytes] = [b"", b""]  # placeholders to avoid a resize
         dims: List[int] = []
         hasnull = 0
-        oid = 0
 
         def calc_dims(L: List[Any]) -> None:
             if isinstance(L, self.src):
@@ -129,7 +129,7 @@ class BinaryListDumper(BaseListDumper):
         calc_dims(obj)
 
         def dump_list(L: List[Any], dim: int) -> None:
-            nonlocal oid, hasnull
+            nonlocal hasnull
             if len(L) != dims[dim]:
                 raise e.DataError("nested lists have inconsistent lengths")
 
@@ -137,10 +137,10 @@ class BinaryListDumper(BaseListDumper):
                 for item in L:
                     ad = self._tx.dump(item, Format.BINARY)
                     if isinstance(ad, tuple):
-                        if oid == 0:
-                            oid = ad[1]
+                        if not self._oid:
+                            self._oid = ad[1]
                             got_type = type(item)
-                        elif oid != ad[1]:
+                        elif self._oid != ad[1]:
                             raise e.DataError(
                                 f"array contains different types,"
                                 f" at least {got_type} and {type(item)}"
@@ -162,12 +162,16 @@ class BinaryListDumper(BaseListDumper):
 
         dump_list(obj, 0)
 
-        if oid == 0:
-            oid = TEXT_OID
+        if not self._oid:
+            self._oid = TEXT_OID
 
-        data[0] = _struct_head.pack(len(dims), hasnull, oid or TEXT_OID)
+        data[0] = _struct_head.pack(len(dims), hasnull, self._oid)
         data[1] = b"".join(_struct_dim.pack(dim, 1) for dim in dims)
-        return b"".join(data), self._array_oid(oid)
+        return b"".join(data), self._array_oid(self._oid)
+
+    @property
+    def oid(self) -> int:
+        return self._array_oid(self._oid) if self._oid else TEXT_ARRAY_OID
 
 
 class BaseArrayLoader(Loader):

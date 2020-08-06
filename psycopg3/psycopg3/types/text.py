@@ -93,11 +93,19 @@ class BytesDumper(Dumper):
     def dump(self, obj: bytes) -> Tuple[bytes, int]:
         return self.esc.escape_bytea(obj), BYTEA_OID
 
+    @property
+    def oid(self) -> int:
+        return BYTEA_OID
+
 
 @Dumper.binary(bytes)
 class BinaryBytesDumper(Dumper):
     def dump(self, b: bytes) -> Tuple[bytes, int]:
         return b, BYTEA_OID
+
+    @property
+    def oid(self) -> int:
+        return BYTEA_OID
 
 
 @Loader.text(builtins["bytea"].oid)

@@ -9,10 +9,12 @@ from typing import Any, Callable, Optional, Tuple, Type, Union
 from . import pq
 from . import proto
 from .pq import Format as Format
-from .proto import AdaptContext, DumpersMap, DumperType
-from .proto import LoadersMap, LoaderType
+from .types import builtins
+from .proto import AdaptContext, DumpersMap, DumperType, LoadersMap, LoaderType
 from .cursor import BaseCursor
 from .connection import BaseConnection
+
+TEXT_OID = builtins["text"].oid
 
 
 class Dumper:
@@ -26,6 +28,10 @@ class Dumper:
 
     def dump(self, obj: Any) -> Union[bytes, Tuple[bytes, int]]:
         raise NotImplementedError()
+
+    @property
+    def oid(self) -> int:
+        return TEXT_OID
 
     @classmethod
     def register(

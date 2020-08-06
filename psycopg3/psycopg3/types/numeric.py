@@ -33,12 +33,20 @@ class TextIntDumper(Dumper):
         # We don't know the size of it, so we have to return a type big enough
         return _encode(str(obj))[0], NUMERIC_OID
 
+    @property
+    def oid(self) -> int:
+        return NUMERIC_OID
+
 
 @Dumper.text(float)
 class TextFloatDumper(Dumper):
     def dump(self, obj: float) -> Tuple[bytes, int]:
         # Float can't be bigger than this instead
         return _encode(str(obj))[0], FLOAT8_OID
+
+    @property
+    def oid(self) -> int:
+        return FLOAT8_OID
 
 
 @Dumper.text(Decimal)
