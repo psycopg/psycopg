@@ -279,11 +279,11 @@ class Connection(BaseConnection):
             return
 
         self.pgconn.send_query(command)
-        (pgres,) = self.wait(execute(self.pgconn))
-        if pgres.status != ExecStatus.COMMAND_OK:
+        results = self.wait(execute(self.pgconn))
+        if results[-1].status != ExecStatus.COMMAND_OK:
             raise e.OperationalError(
                 f"error on {command.decode('utf8')}:"
-                f" {pq.error_message(pgres, encoding=self.codec.name)}"
+                f" {pq.error_message(results[-1], encoding=self.codec.name)}"
             )
 
     @classmethod
