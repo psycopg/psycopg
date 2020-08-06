@@ -60,6 +60,11 @@ cdef object load_bytea_binary(const char *data, size_t length, void *context):
     return data[:length]
 
 
+cdef class BinaryByteaLoader(PyxLoader):
+    cdef object cload(self, const char *data, size_t length):
+        return data[:length]
+
+
 cdef void register_text_c_loaders():
     logger.debug("registering optimised text c loaders")
     from psycopg3.types import text
