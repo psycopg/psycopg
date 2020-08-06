@@ -42,8 +42,8 @@ cdef class Transformer:
     state so adapting several values of the same type can use optimisations.
     """
 
-    cdef list _dumpers_maps, _loaders_maps
-    cdef dict _dumpers, _loaders, _dump_funcs, _load_funcs
+    cdef list _dumpers_maps, _loaders_maps, _oids
+    cdef dict _dumpers, _loaders, _dumpers_cache, _load_funcs
     cdef object _connection, _codec
     cdef PGresult _pgresult
     cdef int _nfields, _ntuples
@@ -57,8 +57,10 @@ cdef class Transformer:
         self._loaders_maps: List["LoadersMap"] = []
         self._setup_context(context)
 
-        # mapping class, fmt -> dump function
-        self._dump_funcs: Dict[Tuple[type, Format], "DumpFunc"] = {}
+        # mapping class, fmt -> Dumper instance
+        self._dumpers_cache: Dict[Tuple[type, Format], "Dumper"] = {}
+
+        self._oids: List[int] = []
 
         # mapping oid, fmt -> load function
         self._load_funcs: Dict[Tuple[int, Format], "LoadFunc"] = {}
@@ -220,41 +222,44 @@ cdef class Transformer:
     def dump_sequence(
         self, objs: Iterable[Any], formats: Iterable[Format]
     ) -> Tuple[List[Optional[bytes]], List[int]]:
-        out = []
-        types = []
+        out: List[Optional[bytes]] = []
+        oids = self._oids = []
 
         for var, fmt in zip(objs, formats):
-            data = self.dump(var, fmt)
-            if isinstance(data, tuple):
-                oid = data[1]
-                data = data[0]
+            if var is not None:
+                dumper = self.get_dumper(type(var), fmt)
+                data = dumper.dump(var)
+                if isinstance(data, tuple):
+                    data = data[0]
+
+                out.append(data)
+                oids.append(dumper.oid)
             else:
-                oid = TEXT_OID
+                out.append(None)
+                oids.append(TEXT_OID)
 
-            out.append(data)
-            types.append(oid)
+        return out, oids
 
-        return out, types
+    def types_sequence(self) -> List[int]:
+        return self._oids
 
     def dump(self, obj: None, format: Format = 0) -> "MaybeOid":
         if obj is None:
             return None, TEXT_OID
 
-        src = type(obj)
-        func = self.get_dump_function(src, format)
-        return func(obj)
+        dumper = self.get_dumper(type(obj), format)
+        return dumper.dump(obj)
 
-    def get_dump_function(self, src: type, format: Format) -> "DumpFunc":
+    def get_dumper(self, src: type, format: Format) -> "Dumper":
         key = (src, format)
         try:
-            return self._dump_funcs[key]
+            return self._dumpers_cache[key]
         except KeyError:
             pass
 
-        dumper = self.lookup_dumper(src, format)
-        func = dumper(src, self).dump
-        self._dump_funcs[key] = func
-        return func
+        dumper_cls = self.lookup_dumper(src, format)
+        self._dumpers_cache[key] = dumper = dumper_cls(src, self)
+        return dumper
 
     def lookup_dumper(self, src: type, format: Format) -> "DumperType":
         key = (src, format)

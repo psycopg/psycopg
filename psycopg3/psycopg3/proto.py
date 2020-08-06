@@ -82,10 +82,10 @@ class Transformer(Protocol):
     ) -> Tuple[List[Optional[bytes]], List[int]]:
         ...
 
-    def dump(self, obj: None, format: Format = Format.TEXT) -> MaybeOid:
+    def types_sequence(self) -> List[int]:
         ...
 
-    def get_dump_function(self, src: type, format: Format) -> DumpFunc:
+    def dump(self, obj: None, format: Format = Format.TEXT) -> MaybeOid:
         ...
 
     def lookup_dumper(self, src: type, format: Format) -> DumperType:

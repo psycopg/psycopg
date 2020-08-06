@@ -6,14 +6,18 @@ Helper object to transform values between Python and PostgreSQL
 
 import codecs
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
+from typing import TYPE_CHECKING
 
 from . import errors as e
 from . import pq
-from .proto import AdaptContext, DumpFunc, DumpersMap, DumperType
+from .proto import AdaptContext, DumpersMap, DumperType
 from .proto import LoadFunc, LoadersMap, LoaderType, MaybeOid
 from .cursor import BaseCursor
 from .connection import BaseConnection
 from .types.oids import builtins, INVALID_OID
+
+if TYPE_CHECKING:
+    from .adapt import Dumper
 
 Format = pq.Format
 TEXT_OID = builtins["text"].oid
@@ -36,8 +40,10 @@ class Transformer:
         self._setup_context(context)
         self.pgresult = None
 
-        # mapping class, fmt -> dump function
-        self._dump_funcs: Dict[Tuple[type, Format], DumpFunc] = {}
+        # mapping class, fmt -> Dumper instance
+        self._dumpers_cache: Dict[Tuple[type, Format], "Dumper"] = {}
+
+        self._oids: List[int] = []
 
         # mapping oid, fmt -> load function
         self._load_funcs: Dict[Tuple[int, Format], LoadFunc] = {}
@@ -136,46 +142,50 @@ class Transformer:
         for oid, fmt in types:
             rc.append(self.get_load_function(oid, fmt))
 
+    # TODO: drop?
     def dump_sequence(
         self, objs: Iterable[Any], formats: Iterable[Format]
     ) -> Tuple[List[Optional[bytes]], List[int]]:
-        out = []
-        types = []
+        out: List[Optional[bytes]] = []
+        oids = self._oids = []
 
         for var, fmt in zip(objs, formats):
-            data = self.dump(var, fmt)
-            if isinstance(data, tuple):
-                oid = data[1]
-                data = data[0]
+            if var is not None:
+                dumper = self.get_dumper(type(var), fmt)
+                data = dumper.dump(var)
+                if isinstance(data, tuple):
+                    data = data[0]
+
+                out.append(data)
+                oids.append(dumper.oid)
             else:
-                oid = TEXT_OID
+                out.append(None)
+                oids.append(TEXT_OID)
 
-            out.append(data)
-            types.append(oid)
+        return out, self._oids
 
-        return out, types
+    # TODO: drop?
+    def types_sequence(self) -> List[int]:
+        return self._oids
 
+    # TODO: drop?
     def dump(self, obj: None, format: Format = Format.TEXT) -> MaybeOid:
         if obj is None:
             return None, TEXT_OID
 
-        src = type(obj)
-        func = self.get_dump_function(src, format)
-        return func(obj)
+        dumper = self.get_dumper(type(obj), format)
+        return dumper.dump(obj)
 
-    def get_dump_function(self, src: type, format: Format) -> DumpFunc:
+    def get_dumper(self, src: type, format: Format) -> "Dumper":
         key = (src, format)
         try:
-            return self._dump_funcs[key]
+            return self._dumpers_cache[key]
         except KeyError:
             pass
 
-        dumper = self.lookup_dumper(src, format)
-        func: DumpFunc
-        func = dumper(src, self).dump
-
-        self._dump_funcs[key] = func
-        return func
+        dumper_cls = self.lookup_dumper(src, format)
+        self._dumpers_cache[key] = dumper = dumper_cls(src, self)
+        return dumper
 
     def lookup_dumper(self, src: type, format: Format) -> DumperType:
         key = (src, format)
