@@ -307,13 +307,7 @@ cdef class Transformer:
             pass
 
         loader = self.lookup_loader(oid, format)
-        func: "LoadFunc"
-        if isinstance(loader, type):
-            func = loader(oid, self).load
-        else:
-            func = loader
-
-        self._load_funcs[key] = func
+        func = self._load_funcs[key] = loader(oid, self).load
         return func
 
     def lookup_loader(self, oid: int, format: Format) -> "LoaderType":

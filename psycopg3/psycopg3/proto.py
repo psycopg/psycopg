@@ -41,7 +41,7 @@ DumperType = Type["Dumper"]
 DumpersMap = Dict[Tuple[type, Format], DumperType]
 
 LoadFunc = Callable[[bytes], Any]
-LoaderType = Union[Type["Loader"], LoadFunc]
+LoaderType = Type["Loader"]
 LoadersMap = Dict[Tuple[int, Format], LoaderType]
 
 

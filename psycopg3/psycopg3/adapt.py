@@ -103,13 +103,9 @@ class Loader:
                 f"typeloaders should be registered on oid, got {oid} instead"
             )
 
-        if not (
-            callable(loader)
-            or (isinstance(loader, type) and issubclass(loader, Loader))
-        ):
+        if not (isinstance(loader, type) and issubclass(loader, Loader)):
             raise TypeError(
-                f"dumpers should be callable or Loader subclasses,"
-                f" got {loader} instead"
+                f"dumpers should be Loader subclasses, got {loader} instead"
             )
 
         where = context.loaders if context is not None else Loader.globals
