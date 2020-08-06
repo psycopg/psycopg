@@ -142,28 +142,6 @@ class Transformer:
         for oid, fmt in types:
             rc.append(self.get_load_function(oid, fmt))
 
-    # TODO: drop?
-    def dump_sequence(
-        self, objs: Iterable[Any], formats: Iterable[Format]
-    ) -> List[Optional[bytes]]:
-        out: List[Optional[bytes]] = []
-        oids = self._oids = []
-
-        for var, fmt in zip(objs, formats):
-            if var is not None:
-                dumper = self.get_dumper(var, fmt)
-                out.append(dumper.dump(var))
-                oids.append(dumper.oid)
-            else:
-                out.append(None)
-                oids.append(TEXT_OID)
-
-        return out
-
-    # TODO: drop?
-    def types_sequence(self) -> List[int]:
-        return self._oids
-
     def get_dumper(self, obj: Any, format: Format) -> "Dumper":
         key = (type(obj), format)
         try:

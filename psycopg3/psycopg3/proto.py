@@ -5,7 +5,7 @@ Protocol objects representing different implementations of the same classes.
 # Copyright (C) 2020 The Psycopg Team
 
 import codecs
-from typing import Any, Callable, Dict, Generator, Iterable, List, Mapping
+from typing import Any, Callable, Dict, Generator, Mapping
 from typing import Optional, Sequence, Tuple, Type, TypeVar, Union
 from typing import TYPE_CHECKING
 from typing_extensions import Protocol
@@ -74,14 +74,6 @@ class Transformer(Protocol):
         ...
 
     def set_row_types(self, types: Sequence[Tuple[int, Format]]) -> None:
-        ...
-
-    def dump_sequence(
-        self, objs: Iterable[Any], formats: Iterable[Format]
-    ) -> List[Optional[bytes]]:
-        ...
-
-    def types_sequence(self) -> List[int]:
         ...
 
     def get_dumper(self, obj: Any, format: Format) -> "Dumper":

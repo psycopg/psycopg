@@ -8,7 +8,7 @@ import re
 import codecs
 import struct
 from typing import TYPE_CHECKING, AsyncGenerator, Generator
-from typing import Any, Dict, Match, Optional, Sequence, Type, Union
+from typing import Any, Dict, List, Match, Optional, Sequence, Type, Union
 from types import TracebackType
 
 from . import pq
@@ -87,12 +87,16 @@ class BaseCopy:
             raise TypeError(f"can't write {type(data).__name__}")
 
     def format_row(self, row: Sequence[Any]) -> bytes:
-        # TODO: cache this, or pass just a single format
-        formats = [self.format] * len(row)
-        out = self._transformer.dump_sequence(row, formats)
+        out: List[Optional[bytes]] = []
+        for item in row:
+            if item is not None:
+                dumper = self._transformer.get_dumper(item, self.format)
+                out.append(dumper.dump(item))
+            else:
+                out.append(None)
         return self._format_row(out)
 
-    def _format_row_text(self, row: Sequence[Optional[bytes]],) -> bytes:
+    def _format_row_text(self, row: Sequence[Optional[bytes]]) -> bytes:
         return (
             b"\t".join(
                 _bsrepl_re.sub(_bsrepl_sub, item)

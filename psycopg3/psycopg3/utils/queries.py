@@ -16,6 +16,8 @@ from ..proto import Query, Params
 if TYPE_CHECKING:
     from ..proto import Transformer
 
+TEXT_OID = 25  # TODO: builtins["text"].oid
+
 
 class QueryPart(NamedTuple):
     pre: bytes
@@ -69,9 +71,28 @@ class PostgresQuery:
             params = _validate_and_reorder_params(
                 self._parts, vars, self._order
             )
-            self.params = self._tx.dump_sequence(params, self.formats or ())
+            self.params = []
+            assert self.formats is not None
+
             if self.types is None:
-                self.types = self._tx.types_sequence()
+                self.types = []
+                for i in range(len(params)):
+                    param = params[i]
+                    if param is not None:
+                        dumper = self._tx.get_dumper(param, self.formats[i])
+                        self.params.append(dumper.dump(param))
+                        self.types.append(dumper.oid)
+                    else:
+                        self.params.append(None)
+                        self.types.append(TEXT_OID)
+            else:
+                for i in range(len(params)):
+                    param = params[i]
+                    if param is not None:
+                        dumper = self._tx.get_dumper(param, self.formats[i])
+                        self.params.append(dumper.dump(param))
+                    else:
+                        self.params.append(None)
         else:
             self.params = self.types = None
 
