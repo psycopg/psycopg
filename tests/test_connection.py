@@ -107,6 +107,9 @@ def test_auto_transaction_fail(conn):
         cur.execute("meh")
     assert conn.pgconn.transaction_status == conn.TransactionStatus.INERROR
 
+    with pytest.raises(psycopg3.errors.InFailedSqlTransaction):
+        cur.execute("select 1")
+
     conn.commit()
     assert conn.pgconn.transaction_status == conn.TransactionStatus.IDLE
     assert cur.execute("select * from foo").fetchone() is None

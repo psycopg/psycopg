@@ -241,7 +241,7 @@ class Connection(BaseConnection):
         if self._autocommit:
             return
 
-        if self.pgconn.transaction_status == TransactionStatus.INTRANS:
+        if self.pgconn.transaction_status != TransactionStatus.IDLE:
             return
 
         self.pgconn.send_query(b"begin")
@@ -349,7 +349,7 @@ class AsyncConnection(BaseConnection):
         if self._autocommit:
             return
 
-        if self.pgconn.transaction_status == TransactionStatus.INTRANS:
+        if self.pgconn.transaction_status != TransactionStatus.IDLE:
             return
 
         self.pgconn.send_query(b"begin")
