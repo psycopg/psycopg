@@ -84,9 +84,6 @@ class Transformer(Protocol):
     def types_sequence(self) -> List[int]:
         ...
 
-    def dump(self, obj: Any, format: Format = Format.TEXT) -> Optional[bytes]:
-        ...
-
     def get_dumper(self, obj: Any, format: Format) -> "Dumper":
         ...
 

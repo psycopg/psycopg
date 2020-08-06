@@ -164,13 +164,6 @@ class Transformer:
     def types_sequence(self) -> List[int]:
         return self._oids
 
-    # TODO: drop?
-    def dump(self, obj: Any, format: Format = Format.TEXT) -> Optional[bytes]:
-        if obj is None:
-            return None
-
-        return self.get_dumper(obj, format).dump(obj)
-
     def get_dumper(self, obj: Any, format: Format) -> "Dumper":
         key = (type(obj), format)
         try:

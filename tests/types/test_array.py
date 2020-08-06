@@ -88,7 +88,7 @@ def test_dump_list_int(conn, obj, want):
 def test_bad_binary_array(input):
     tx = Transformer()
     with pytest.raises(psycopg3.DataError):
-        tx.dump(input, Format.BINARY)
+        tx.get_dumper(input, Format.BINARY).dump(input)
 
 
 @pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
@@ -115,10 +115,12 @@ def test_array_register(conn):
 
 
 @pytest.mark.xfail
-def test_array_mixed_numbers():
+@pytest.mark.parametrize(
+    "array, type", [([1, 32767], "int2"), ([1, 32768], "int4")]
+)
+def test_array_mixed_numbers(array, type):
     # TODO: must use the type accommodating the largest/highest precision
     tx = Transformer()
-    ad = tx.dump([1, 32767], Format.BINARY)
-    assert ad[1] == builtins["int2"].array_oid
-    ad = tx.dump([1, 32768], Format.BINARY)
-    assert ad[1] == builtins["int4"].array_oid
+    dumper = tx.get_dumper(array, Format.BINARY)
+    dumper.dump(array)
+    assert dumper.oid == builtins[type].array_oid
