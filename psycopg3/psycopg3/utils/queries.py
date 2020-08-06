@@ -69,7 +69,7 @@ class PostgresQuery:
             params = _validate_and_reorder_params(
                 self._parts, vars, self._order
             )
-            self.params, _ = self._tx.dump_sequence(params, self.formats or ())
+            self.params = self._tx.dump_sequence(params, self.formats or ())
             if self.types is None:
                 self.types = self._tx.types_sequence()
         else:

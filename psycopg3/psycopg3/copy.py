@@ -89,7 +89,7 @@ class BaseCopy:
     def format_row(self, row: Sequence[Any]) -> bytes:
         # TODO: cache this, or pass just a single format
         formats = [self.format] * len(row)
-        out, _ = self._transformer.dump_sequence(row, formats)
+        out = self._transformer.dump_sequence(row, formats)
         return self._format_row(out)
 
     def _format_row_text(self, row: Sequence[Optional[bytes]],) -> bytes:

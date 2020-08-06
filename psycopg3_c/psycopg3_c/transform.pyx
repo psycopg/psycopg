@@ -221,7 +221,7 @@ cdef class Transformer:
 
     def dump_sequence(
         self, objs: Iterable[Any], formats: Iterable[Format]
-    ) -> Tuple[List[Optional[bytes]], List[int]]:
+    ) -> List[Optional[bytes]]:
         out: List[Optional[bytes]] = []
         oids = self._oids = []
 
@@ -238,7 +238,7 @@ cdef class Transformer:
                 out.append(None)
                 oids.append(TEXT_OID)
 
-        return out, oids
+        return out
 
     def types_sequence(self) -> List[int]:
         return self._oids

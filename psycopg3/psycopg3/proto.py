@@ -79,7 +79,7 @@ class Transformer(Protocol):
 
     def dump_sequence(
         self, objs: Iterable[Any], formats: Iterable[Format]
-    ) -> Tuple[List[Optional[bytes]], List[int]]:
+    ) -> List[Optional[bytes]]:
         ...
 
     def types_sequence(self) -> List[int]:

@@ -145,7 +145,7 @@ class Transformer:
     # TODO: drop?
     def dump_sequence(
         self, objs: Iterable[Any], formats: Iterable[Format]
-    ) -> Tuple[List[Optional[bytes]], List[int]]:
+    ) -> List[Optional[bytes]]:
         out: List[Optional[bytes]] = []
         oids = self._oids = []
 
@@ -162,7 +162,7 @@ class Transformer:
                 out.append(None)
                 oids.append(TEXT_OID)
 
-        return out, self._oids
+        return out
 
     # TODO: drop?
     def types_sequence(self) -> List[int]:
