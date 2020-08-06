@@ -5,12 +5,15 @@ Adapters for textual types.
 # Copyright (C) 2020 The Psycopg Team
 
 import codecs
-from typing import Optional, Union
+from typing import Optional, Union, TYPE_CHECKING
 
 from ..adapt import Dumper, Loader
 from ..proto import AdaptContext, EncodeFunc, DecodeFunc
 from ..pq import Escaping
 from .oids import builtins, INVALID_OID
+
+if TYPE_CHECKING:
+    from ..pq.proto import Escaping as EscapingProto
 
 
 TEXT_OID = builtins["text"].oid
@@ -109,11 +112,20 @@ class BinaryBytesDumper(Dumper):
 
 
 @Loader.text(builtins["bytea"].oid)
-def load_bytea_text(data: bytes) -> bytes:
-    return Escaping().unescape_bytea(data)
+class TextByteaLoader(Loader):
+    _escaping: "EscapingProto"
+
+    def __init__(self, oid: int, context: AdaptContext = None):
+        super().__init__(oid, context)
+        if not hasattr(self.__class__, "_escaping"):
+            self.__class__._escaping = Escaping()
+
+    def load(self, data: bytes) -> bytes:
+        return self._escaping.unescape_bytea(data)
 
 
 @Loader.binary(builtins["bytea"].oid)
 @Loader.binary(INVALID_OID)
-def load_bytea_binary(data: bytes) -> bytes:
-    return data
+class BinaryByteaLoader(Loader):
+    def load(self, data: bytes) -> bytes:
+        return data

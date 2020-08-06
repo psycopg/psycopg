@@ -5,7 +5,7 @@ import pytest
 
 from psycopg3.adapt import Loader, Transformer, Format
 from psycopg3.types import builtins
-from psycopg3.types.numeric import load_float
+from psycopg3.types.numeric import TextFloatLoader
 
 
 #
@@ -261,7 +261,7 @@ def test_load_numeric_binary(conn):
 )
 def test_numeric_as_float(conn, val):
     cur = conn.cursor()
-    Loader.register(builtins["numeric"].oid, load_float, cur)
+    Loader.register(builtins["numeric"].oid, TextFloatLoader, cur)
 
     val = Decimal(val)
     cur.execute("select %s", (val,))
