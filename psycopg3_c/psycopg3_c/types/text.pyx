@@ -67,8 +67,6 @@ cdef class BinaryByteaLoader(PyxLoader):
 
 cdef void register_text_c_loaders():
     logger.debug("registering optimised text c loaders")
-    from psycopg3.types import text
-    register_c_loader(text.StringLoader.load, load_text, get_context_text)
-    register_c_loader(text.UnknownLoader.load, load_text, get_context_text)
-    register_c_loader(text.load_bytea_text, load_bytea_text)
-    register_c_loader(text.load_bytea_binary, load_bytea_binary)
+    from psycopg3.adapt import Loader
+    from psycopg3.types import builtins
+    Loader.register_binary(builtins['bytea'].oid, BinaryByteaLoader)

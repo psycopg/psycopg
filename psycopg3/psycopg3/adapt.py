@@ -46,7 +46,9 @@ class Dumper:
                 f"dumpers should be registered on classes, got {src} instead"
             )
 
-        if not (isinstance(dumper, type) and issubclass(dumper, Dumper)):
+        if not (
+            isinstance(dumper, type) and issubclass(dumper, _dumper_classes)
+        ):
             raise TypeError(
                 f"dumpers should be Dumper subclasses, got {dumper} instead"
             )
@@ -100,12 +102,14 @@ class Loader:
     ) -> LoaderType:
         if not isinstance(oid, int):
             raise TypeError(
-                f"typeloaders should be registered on oid, got {oid} instead"
+                f"loaders should be registered on oid, got {oid} instead"
             )
 
-        if not (isinstance(loader, type) and issubclass(loader, Loader)):
+        if not (
+            isinstance(loader, type) and issubclass(loader, _loader_classes)
+        ):
             raise TypeError(
-                f"dumpers should be Loader subclasses, got {loader} instead"
+                f"loaders should be Loader subclasses, got {loader} instead"
             )
 
         where = context.loaders if context is not None else Loader.globals
@@ -135,6 +139,10 @@ class Loader:
         return binary_
 
 
+_dumper_classes = (Dumper,)
+_loader_classes = (Loader,)
+
+
 def _connection_from_context(
     context: AdaptContext,
 ) -> Optional[BaseConnection]:
@@ -157,6 +165,7 @@ if pq.__impl__ == "c":
     from psycopg3_c import _psycopg3
 
     Transformer = _psycopg3.Transformer
+    _loader_classes = (Loader, _psycopg3.PyxLoader)  # type: ignore
 else:
     from . import transform
 
