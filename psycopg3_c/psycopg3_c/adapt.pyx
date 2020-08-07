@@ -27,17 +27,15 @@ logger = logging.getLogger("psycopg3.adapt")
 # TODO: rename after dropping CLoader below
 cdef class PyxLoader:
     cdef impl.Oid oid
-    cdef impl.PGconn* pgconn_ptr
     cdef object context
+    cdef object connection
 
     def __init__(self, oid: int, context: "AdaptContext" = None):
         from psycopg3.adapt import _connection_from_context
 
         self.oid = oid
         self.context = context
-        connection = _connection_from_context(context)
-        # TODO
-        self.pgconn_ptr = NULL
+        self.connection = _connection_from_context(context)
 
     cdef object cload(self, const char *data, size_t length):
         raise NotImplementedError()
@@ -49,32 +47,6 @@ cdef class PyxLoader:
         return self.cload(data, length)
 
 
-cdef class CLoader:
-    cdef object pyloader
-    cdef cloader_func cloader
-    cdef get_context_func get_context
-
-
-cloaders = {}
-
-cdef void register_c_loader(
-    object pyloader,
-    cloader_func cloader,
-    get_context_func get_context = NULL
-):
-    """
-    Map a python loader to an optimised C version.
-
-    Whenever the python loader would be used the C version may be chosen in
-    preference.
-    """
-    cdef CLoader cl = CLoader()
-    cl.pyloader = pyloader
-    cl.cloader = cloader
-    cl.get_context = get_context
-    cloaders[pyloader] = cl
-
-
 def register_builtin_c_loaders():
     """
     Register all the builtin optimized methods.
@@ -83,10 +55,6 @@ def register_builtin_c_loaders():
     are registered.
 
     """
-    if cloaders:
-        logger.warning("c loaders already registered")
-        return
-
     logger.debug("registering optimised c loaders")
     register_numeric_c_loaders()
     register_text_c_loaders()

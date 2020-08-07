@@ -5,59 +5,52 @@ Cython adapters for textual types.
 # Copyright (C) 2020 The Psycopg Team
 
 from cpython.bytes cimport PyBytes_FromStringAndSize
-from cpython.mem cimport PyMem_Malloc
-from cpython.object cimport PyObject
 from cpython.unicode cimport PyUnicode_DecodeUTF8
 from psycopg3_c cimport libpq
 
 
-cdef struct TextContext:
-    PyObject *pydecoder
-    int is_utf8
+cdef class StringLoader(PyxLoader):
+    cdef int is_utf8
+    cdef object pydecoder
+
+    def __init__(self, oid: int, context: "AdaptContext" = None):
+        super().__init__(oid, context)
+
+        self.is_utf8 = 0
+        self.pydecoder = None
+        conn = self.connection
+        if conn is not None:
+            if conn.encoding == "UTF8":
+                self.is_utf8 = 1
+            elif conn.encoding != "SQL_ASCII":
+                self.pydecoder = conn.codec.decode
+        else:
+            self.pydecoder = codecs.lookup("utf8").decode
+
+    cdef object cload(self, const char *data, size_t length):
+        if self.is_utf8:
+            return PyUnicode_DecodeUTF8(<char *>data, length, NULL)
+
+        b = PyBytes_FromStringAndSize(data, length)
+        if self.pydecoder is not None:
+            return self.pydecoder(b)[0]
+        else:
+            return b
 
 
-cdef object load_text(const char *data, size_t length, void *context):
-    cdef TextContext *tcontext = <TextContext *>context
-    if tcontext.is_utf8:
-        return PyUnicode_DecodeUTF8(<char *>data, length, NULL)
+cdef class TextByteaLoader(PyxLoader):
+    cdef object cload(self, const char *data, size_t length):
+        cdef size_t len_out
+        cdef unsigned char *out = libpq.PQunescapeBytea(
+            <const unsigned char *>data, &len_out)
+        if out is NULL:
+            raise MemoryError(
+                f"couldn't allocate for unescape_bytea of {len(data)} bytes"
+            )
 
-    b = PyBytes_FromStringAndSize(data, length)
-    decoder = <object>(tcontext.pydecoder)
-    if decoder is not None:
-        # TODO: check if the refcount is right
-        return decoder(b)[0]
-    else:
-        return b
-
-
-cdef void *get_context_text(object loader):
-    cdef TextContext *rv = <TextContext *>PyMem_Malloc(sizeof(TextContext))
-    rv.pydecoder = <PyObject *>loader.decode
-
-    if loader.connection is None or loader.connection.encoding == "UTF8":
-        rv.is_utf8 = 1
-    else:
-        rv.is_utf8 = 0
-
-    return rv
-
-
-cdef object load_bytea_text(const char *data, size_t length, void *context):
-    cdef size_t len_out
-    cdef unsigned char *out = libpq.PQunescapeBytea(
-        <const unsigned char *>data, &len_out)
-    if out is NULL:
-        raise MemoryError(
-            f"couldn't allocate for unescape_bytea of {len(data)} bytes"
-        )
-
-    rv = out[:len_out]
-    libpq.PQfreemem(out)
-    return rv
-
-
-cdef object load_bytea_binary(const char *data, size_t length, void *context):
-    return data[:length]
+        rv = out[:len_out]
+        libpq.PQfreemem(out)
+        return rv
 
 
 cdef class BinaryByteaLoader(PyxLoader):
@@ -67,6 +60,15 @@ cdef class BinaryByteaLoader(PyxLoader):
 
 cdef void register_text_c_loaders():
     logger.debug("registering optimised text c loaders")
+
     from psycopg3.adapt import Loader
     from psycopg3.types import builtins
+
+    Loader.register(0, StringLoader)    # INVALID_OID
+    Loader.register(builtins["text"].oid, StringLoader)
+    Loader.register_binary(builtins["text"].oid, StringLoader)
+    Loader.register(builtins["varchar"].oid, StringLoader)
+    Loader.register_binary(builtins["varchar"].oid, StringLoader)
+
+    Loader.register(builtins['bytea'].oid, TextByteaLoader)
     Loader.register_binary(builtins['bytea'].oid, BinaryByteaLoader)

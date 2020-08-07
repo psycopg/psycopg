@@ -8,10 +8,7 @@ too many temporary Python objects and performing less memory copying.
 
 # Copyright (C) 2020 The Psycopg Team
 
-from libc.string cimport memset
-from cpython.object cimport PyObject
 from cpython.ref cimport Py_INCREF
-from cpython.mem cimport PyMem_Malloc, PyMem_Free
 from cpython.tuple cimport PyTuple_New, PyTuple_SET_ITEM
 
 import codecs
