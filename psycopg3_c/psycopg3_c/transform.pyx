@@ -184,19 +184,18 @@ cdef class Transformer:
         except KeyError:
             pass
 
-        dumper_cls = self._lookup_dumper(*key)
-        self._dumpers_cache[key] = dumper = dumper_cls(key[0], self)
-        return dumper
-
-    def _lookup_dumper(self, src: type, format: Format) -> "DumperType":
-        key = (src, format)
         for amap in self._dumpers_maps:
             if key in amap:
-                return amap[key]
+                dumper_cls = amap[key]
+                break
+        else:
+            raise e.ProgrammingError(
+                f"cannot adapt type {type(obj).__name__}"
+                f" to format {Format(format).name}"
+            )
 
-        raise e.ProgrammingError(
-            f"cannot adapt type {src.__name__} to format {Format(format).name}"
-        )
+        self._dumpers_cache[key] = dumper = dumper_cls(key[0], self)
+        return dumper
 
     def load_row(self, row: int) -> Optional[Tuple[Any, ...]]:
         if self._pgresult is None:
@@ -257,17 +256,13 @@ cdef class Transformer:
         except KeyError:
             pass
 
-        loader_cls = self._lookup_loader(*key)
-        self._loaders_cache[key] = loader = loader_cls(key[0], self)
-        return loader
-
-    def _lookup_loader(self, oid: int, format: Format) -> "LoaderType":
-        key = (oid, format)
-
         for tcmap in self._loaders_maps:
             if key in tcmap:
-                return tcmap[key]
+                loader_cls = tcmap[key]
+                break
+        else:
+            from psycopg3.adapt import Loader
+            loader_cls = Loader.globals[0, format]    # INVALID_OID
 
-        from psycopg3.adapt import Loader
-
-        return Loader.globals[0, format]    # INVALID_OID
+        self._loaders_cache[key] = loader = loader_cls(key[0], self)
+        return loader
