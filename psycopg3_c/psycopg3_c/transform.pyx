@@ -250,13 +250,6 @@ cdef class Transformer:
 
         return tuple(rv)
 
-    def load(self, data: bytes, oid: int, format: Format = Format.TEXT) -> Any:
-        if data is not None:
-            f = self.get_load_function(oid, format)
-            return f(data)
-        else:
-            return None
-
     def get_load_function(self, oid: int, format: Format) -> "LoadFunc":
         key = (oid, format)
         try:

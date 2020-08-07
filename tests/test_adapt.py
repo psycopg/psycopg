@@ -48,8 +48,6 @@ def test_dump_cursor_ctx(conn):
 @pytest.mark.parametrize(
     "data, format, type, result",
     [
-        (None, Format.TEXT, "text", None),
-        (None, Format.BINARY, "text", None),
         (b"1", Format.TEXT, "int4", 1),
         (b"hello", Format.TEXT, "text", "hello"),
         (b"hello", Format.BINARY, "text", "hello"),
@@ -57,7 +55,7 @@ def test_dump_cursor_ctx(conn):
 )
 def test_cast(data, format, type, result):
     t = Transformer()
-    rv = t.load(data, builtins[type].oid, format)
+    rv = t.get_loader(builtins[type].oid, format).load(data)
     assert rv == result
 
 

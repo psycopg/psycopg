@@ -90,9 +90,6 @@ class Transformer(Protocol):
     ) -> Tuple[Any, ...]:
         ...
 
-    def load(self, data: bytes, oid: int, format: Format = Format.TEXT) -> Any:
-        ...
-
     def get_load_function(self, oid: int, format: Format) -> LoadFunc:
         ...
 
