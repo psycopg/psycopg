@@ -90,7 +90,7 @@ class Transformer(Protocol):
     ) -> Tuple[Any, ...]:
         ...
 
-    def get_load_function(self, oid: int, format: Format) -> LoadFunc:
+    def get_loader(self, oid: int, format: Format) -> "Loader":
         ...
 
     def lookup_loader(self, oid: int, format: Format) -> LoaderType:

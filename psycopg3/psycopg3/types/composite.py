@@ -168,7 +168,7 @@ class BaseCompositeLoader(Loader):
 @Loader.text(builtins["record"].oid)
 class RecordLoader(BaseCompositeLoader):
     def load(self, data: bytes) -> Tuple[Any, ...]:
-        cast = self._tx.get_load_function(TEXT_OID, format=Format.TEXT)
+        cast = self._tx.get_loader(TEXT_OID, format=Format.TEXT).load
         return tuple(
             cast(token) if token is not None else None
             for token in self._parse_record(data)

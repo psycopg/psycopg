@@ -183,7 +183,7 @@ class TextArrayLoader(BaseArrayLoader):
     def load(self, data: bytes) -> List[Any]:
         rv = None
         stack: List[Any] = []
-        cast = self._tx.get_load_function(self.base_oid, Format.TEXT)
+        cast = self._tx.get_loader(self.base_oid, Format.TEXT).load
 
         for m in self._re_parse.finditer(data):
             t = m.group(1)
@@ -234,7 +234,7 @@ class BinaryArrayLoader(BaseArrayLoader):
         if not ndims:
             return []
 
-        fcast = self._tx.get_load_function(oid, Format.BINARY)
+        fcast = self._tx.get_loader(oid, Format.BINARY).load
 
         p = 12 + 8 * ndims
         dims = [

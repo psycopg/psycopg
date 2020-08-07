@@ -250,17 +250,6 @@ cdef class Transformer:
 
         return tuple(rv)
 
-    def get_load_function(self, oid: int, format: Format) -> "LoadFunc":
-        key = (oid, format)
-        try:
-            return self._load_funcs[key]
-        except KeyError:
-            pass
-
-        loader = self.lookup_loader(oid, format)
-        func = self._load_funcs[key] = loader(oid, self).load
-        return func
-
     def get_loader(self, oid: int, format: Format) -> "Loader":
         key = (oid, format)
         try:

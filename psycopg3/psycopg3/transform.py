@@ -17,7 +17,7 @@ from .connection import BaseConnection
 from .types.oids import builtins, INVALID_OID
 
 if TYPE_CHECKING:
-    from .adapt import Dumper
+    from .adapt import Dumper, Loader
 
 Format = pq.Format
 TEXT_OID = builtins["text"].oid
@@ -42,6 +42,9 @@ class Transformer:
 
         # mapping class, fmt -> Dumper instance
         self._dumpers_cache: Dict[Tuple[type, Format], "Dumper"] = {}
+
+        # mapping oid, fmt -> Loader instance
+        self._loaders_cache: Dict[Tuple[int, Format], "Loader"] = {}
 
         # mapping oid, fmt -> load function
         self._load_funcs: Dict[Tuple[int, Format], LoadFunc] = {}
@@ -125,7 +128,7 @@ class Transformer:
         for i in range(nf):
             oid = result.ftype(i)
             fmt = result.fformat(i)
-            rc.append(self.get_load_function(oid, fmt))
+            rc.append(self.get_loader(oid, fmt).load)
 
     @property
     def dumpers(self) -> DumpersMap:
@@ -138,7 +141,7 @@ class Transformer:
     def set_row_types(self, types: Iterable[Tuple[int, Format]]) -> None:
         rc = self._row_loaders = []
         for oid, fmt in types:
-            rc.append(self.get_load_function(oid, fmt))
+            rc.append(self.get_loader(oid, fmt).load)
 
     def get_dumper(self, obj: Any, format: Format) -> "Dumper":
         key = (type(obj), format)
@@ -187,16 +190,16 @@ class Transformer:
             for i, val in enumerate(record)
         )
 
-    def get_load_function(self, oid: int, format: Format) -> LoadFunc:
+    def get_loader(self, oid: int, format: Format) -> "Loader":
         key = (oid, format)
         try:
-            return self._load_funcs[key]
+            return self._loaders_cache[key]
         except KeyError:
             pass
 
-        loader = self.lookup_loader(oid, format)
-        func = self._load_funcs[key] = loader(oid, self).load
-        return func
+        loader_cls = self.lookup_loader(*key)
+        self._loaders_cache[key] = loader = loader_cls(key[0], self)
+        return loader
 
     def lookup_loader(self, oid: int, format: Format) -> LoaderType:
         key = (oid, format)
