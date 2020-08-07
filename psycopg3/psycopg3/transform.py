@@ -150,11 +150,11 @@ class Transformer:
         except KeyError:
             pass
 
-        dumper_cls = self.lookup_dumper(*key)
+        dumper_cls = self._lookup_dumper(*key)
         self._dumpers_cache[key] = dumper = dumper_cls(key[0], self)
         return dumper
 
-    def lookup_dumper(self, src: type, format: Format) -> DumperType:
+    def _lookup_dumper(self, src: type, format: Format) -> DumperType:
         key = (src, format)
         for amap in self._dumpers_maps:
             if key in amap:
@@ -197,11 +197,11 @@ class Transformer:
         except KeyError:
             pass
 
-        loader_cls = self.lookup_loader(*key)
+        loader_cls = self._lookup_loader(*key)
         self._loaders_cache[key] = loader = loader_cls(key[0], self)
         return loader
 
-    def lookup_loader(self, oid: int, format: Format) -> LoaderType:
+    def _lookup_loader(self, oid: int, format: Format) -> LoaderType:
         key = (oid, format)
 
         for tcmap in self._loaders_maps:
