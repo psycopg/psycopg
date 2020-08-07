@@ -43,8 +43,6 @@ class Transformer:
         # mapping class, fmt -> Dumper instance
         self._dumpers_cache: Dict[Tuple[type, Format], "Dumper"] = {}
 
-        self._oids: List[int] = []
-
         # mapping oid, fmt -> load function
         self._load_funcs: Dict[Tuple[int, Format], LoadFunc] = {}
 

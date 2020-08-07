@@ -42,7 +42,7 @@ cdef class Transformer:
     state so adapting several values of the same type can use optimisations.
     """
 
-    cdef list _dumpers_maps, _loaders_maps, _oids
+    cdef list _dumpers_maps, _loaders_maps
     cdef dict _dumpers, _loaders, _dumpers_cache, _load_funcs
     cdef object _connection, _codec
     cdef PGresult _pgresult
@@ -59,8 +59,6 @@ cdef class Transformer:
 
         # mapping class, fmt -> Dumper instance
         self._dumpers_cache: Dict[Tuple[type, Format], "Dumper"] = {}
-
-        self._oids: List[int] = []
 
         # mapping oid, fmt -> load function
         self._load_funcs: Dict[Tuple[int, Format], "LoadFunc"] = {}
