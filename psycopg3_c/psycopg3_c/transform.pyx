@@ -25,7 +25,7 @@ TEXT_OID = 25
 
 cdef class RowLoader:
     cdef object pyloader
-    cdef PyxLoader pyxloader
+    cdef CLoader cloader
 
 
 cdef class Transformer:
@@ -170,10 +170,10 @@ cdef class Transformer:
         loader = self.get_loader(oid, fmt)
         row_loader.pyloader = loader.load
 
-        if isinstance(loader, PyxLoader):
-            row_loader.pyxloader = loader
+        if isinstance(loader, CLoader):
+            row_loader.cloader = loader
         else:
-            row_loader.pyxloader = None
+            row_loader.cloader = None
 
         return row_loader
 
@@ -223,8 +223,8 @@ cdef class Transformer:
 
             val = libpq.PQgetvalue(res, crow, col)
             loader = self._row_loaders[col]
-            if loader.pyxloader is not None:
-                pyval = loader.pyxloader.cload(val, length)
+            if loader.cloader is not None:
+                pyval = loader.cloader.cload(val, length)
             else:
                 # TODO: no copy
                 pyval = loader.pyloader(val[:length])

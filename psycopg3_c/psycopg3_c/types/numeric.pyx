@@ -12,32 +12,32 @@ from cpython.long cimport (
     PyLong_FromLong, PyLong_FromLongLong, PyLong_FromUnsignedLong)
 
 
-cdef class TextIntLoader(PyxLoader):
+cdef class TextIntLoader(CLoader):
     cdef object cload(self, const char *data, size_t length):
         return int(data)
 
 
-cdef class BinaryInt2Loader(PyxLoader):
+cdef class BinaryInt2Loader(CLoader):
     cdef object cload(self, const char *data, size_t length):
         return PyLong_FromLong(<int16_t>be16toh((<uint16_t *>data)[0]))
 
 
-cdef class BinaryInt4Loader(PyxLoader):
+cdef class BinaryInt4Loader(CLoader):
     cdef object cload(self, const char *data, size_t length):
         return PyLong_FromLong(<int32_t>be32toh((<uint32_t *>data)[0]))
 
 
-cdef class BinaryInt8Loader(PyxLoader):
+cdef class BinaryInt8Loader(CLoader):
     cdef object cload(self, const char *data, size_t length):
         return PyLong_FromLongLong(<int64_t>be64toh((<uint64_t *>data)[0]))
 
 
-cdef class BinaryOidLoader(PyxLoader):
+cdef class BinaryOidLoader(CLoader):
     cdef object cload(self, const char *data, size_t length):
         return PyLong_FromUnsignedLong(be32toh((<uint32_t *>data)[0]))
 
 
-cdef class BinaryBoolLoader(PyxLoader):
+cdef class BinaryBoolLoader(CLoader):
     cdef object cload(self, const char *data, size_t length):
         if data[0]:
             return True

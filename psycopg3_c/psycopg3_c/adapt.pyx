@@ -24,8 +24,7 @@ import logging
 logger = logging.getLogger("psycopg3.adapt")
 
 
-# TODO: rename after dropping CLoader below
-cdef class PyxLoader:
+cdef class CLoader:
     cdef impl.Oid oid
     cdef object context
     cdef object connection

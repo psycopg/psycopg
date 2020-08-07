@@ -9,7 +9,7 @@ from cpython.unicode cimport PyUnicode_DecodeUTF8
 from psycopg3_c cimport libpq
 
 
-cdef class StringLoader(PyxLoader):
+cdef class StringLoader(CLoader):
     cdef int is_utf8
     cdef object pydecoder
 
@@ -38,7 +38,7 @@ cdef class StringLoader(PyxLoader):
             return b
 
 
-cdef class TextByteaLoader(PyxLoader):
+cdef class TextByteaLoader(CLoader):
     cdef object cload(self, const char *data, size_t length):
         cdef size_t len_out
         cdef unsigned char *out = libpq.PQunescapeBytea(
@@ -53,7 +53,7 @@ cdef class TextByteaLoader(PyxLoader):
         return rv
 
 
-cdef class BinaryByteaLoader(PyxLoader):
+cdef class BinaryByteaLoader(CLoader):
     cdef object cload(self, const char *data, size_t length):
         return data[:length]
 

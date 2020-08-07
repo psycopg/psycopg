@@ -165,7 +165,7 @@ if pq.__impl__ == "c":
     from psycopg3_c import _psycopg3
 
     Transformer = _psycopg3.Transformer
-    _loader_classes = (Loader, _psycopg3.PyxLoader)  # type: ignore
+    _loader_classes = (Loader, _psycopg3.CLoader)  # type: ignore
 else:
     from . import transform
 
