@@ -795,6 +795,25 @@ cdef class Escaping:
     def __init__(self, conn: Optional[PGconn] = None):
         self.conn = conn
 
+    def escape_literal(self, data: bytes) -> bytes:
+        cdef char *out
+        cdef bytes rv
+
+        if self.conn is not None:
+            if self.conn.pgconn_ptr is NULL:
+                raise PQerror("the connection is closed")
+            out = impl.PQescapeLiteral(self.conn.pgconn_ptr, data, len(data))
+            if out is NULL:
+                raise PQerror(
+                    f"escape_literal failed: {error_message(self.conn)} bytes"
+                )
+            rv = out
+            impl.PQfreemem(out)
+            return rv
+
+        else:
+            raise PQerror("escape_literal failed: no connection provided")
+
     def escape_bytea(self, data: bytes) -> bytes:
         cdef size_t len_out
         cdef unsigned char *out

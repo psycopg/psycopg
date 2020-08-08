@@ -745,6 +745,21 @@ class Escaping:
     def __init__(self, conn: Optional[PGconn] = None):
         self.conn = conn
 
+    def escape_literal(self, data: bytes) -> bytes:
+        if self.conn is not None:
+            self.conn._ensure_pgconn()
+            out = impl.PQescapeLiteral(self.conn.pgconn_ptr, data, len(data))
+            if not out:
+                raise PQerror(
+                    f"escape_literal failed: {error_message(self.conn)} bytes"
+                )
+            rv = string_at(out)
+            impl.PQfreemem(out)
+            return rv
+
+        else:
+            raise PQerror("escape_literal failed: no connection provided")
+
     def escape_bytea(self, data: bytes) -> bytes:
         len_out = c_size_t()
         if self.conn is not None:

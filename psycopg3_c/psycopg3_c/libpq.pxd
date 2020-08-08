@@ -184,6 +184,7 @@ cdef extern from "libpq-fe.h":
 
     # 33.3.4. Escaping Strings for Inclusion in SQL Commands
     # TODO: PQescapeLiteral PQescapeIdentifier PQescapeStringConn PQescapeString
+    char *PQescapeLiteral(PGconn *conn, const char *str, size_t length);
     unsigned char *PQescapeByteaConn(PGconn *conn,
                                      const unsigned char *src,
                                      size_t from_length,

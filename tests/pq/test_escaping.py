@@ -5,6 +5,42 @@ from psycopg3 import pq
 
 
 @pytest.mark.parametrize(
+    "data, want",
+    [
+        (b"", b"''"),
+        (b"hello", b"'hello'"),
+        (b"foo'bar", b"'foo''bar'"),
+        (b"foo\\bar", b" E'foo\\\\bar'"),
+    ],
+)
+def test_escape_literal(pgconn, data, want):
+    esc = pq.Escaping(pgconn)
+    out = esc.escape_literal(data)
+    assert out == want
+
+
+def test_escape_literal_1char(pgconn):
+    esc = pq.Escaping(pgconn)
+    special = {b"'": b"''''", b"\\": b" E'\\\\'"}
+    for c in range(1, 128):
+        data = bytes([c])
+        rv = esc.escape_literal(data)
+        exp = special.get(data) or b"'%s'" % data
+        assert rv == exp
+
+
+def test_escape_literal_noconn(pgconn):
+    esc = pq.Escaping()
+    with pytest.raises(psycopg3.OperationalError):
+        esc.escape_literal(b"hi")
+
+    esc = pq.Escaping(pgconn)
+    pgconn.finish()
+    with pytest.raises(psycopg3.OperationalError):
+        esc.escape_literal(b"hi")
+
+
+@pytest.mark.parametrize(
     "data", [(b"hello\00world"), (b"\00\00\00\00")],
 )
 def test_escape_bytea(pgconn, data):

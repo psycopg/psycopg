@@ -342,6 +342,9 @@ class Escaping(Protocol):
     def __init__(self, conn: Optional[PGconn] = None):
         ...
 
+    def escape_literal(self, data: bytes) -> bytes:
+        ...
+
     def escape_bytea(self, data: bytes) -> bytes:
         ...
 

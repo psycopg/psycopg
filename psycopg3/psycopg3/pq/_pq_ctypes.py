@@ -387,7 +387,12 @@ PQoidValue.restype = Oid
 
 # 33.3.4. Escaping Strings for Inclusion in SQL Commands
 
-# TODO: PQescapeLiteral PQescapeIdentifier PQescapeStringConn PQescapeString
+# TODO: PQescapeIdentifier PQescapeStringConn
+PQescapeLiteral = pq.PQescapeLiteral
+PQescapeLiteral.argtypes = [PGconn_ptr, c_char_p, c_size_t]
+PQescapeLiteral.restype = POINTER(c_char)
+
+# won't wrap: PQescapeString
 
 PQescapeByteaConn = pq.PQescapeByteaConn
 PQescapeByteaConn.argtypes = [
