@@ -777,6 +777,28 @@ class Escaping:
         else:
             raise PQerror("escape_identifier failed: no connection provided")
 
+    def escape_string(self, data: bytes) -> bytes:
+        if self.conn is not None:
+            self.conn._ensure_pgconn()
+            error = c_int()
+            out = create_string_buffer(len(data) * 2 + 1)
+            impl.PQescapeStringConn(
+                self.conn.pgconn_ptr,
+                pointer(out),  # type: ignore
+                data,
+                len(data),
+                pointer(error),
+            )
+
+            if error:
+                raise PQerror(
+                    f"escape_string failed: {error_message(self.conn)} bytes"
+                )
+            return out.value
+
+        else:
+            raise PQerror("escape_identifier failed: no connection provided")
+
     def escape_bytea(self, data: bytes) -> bytes:
         len_out = c_size_t()
         if self.conn is not None:

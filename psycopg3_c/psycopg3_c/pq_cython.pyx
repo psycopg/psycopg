@@ -805,7 +805,7 @@ cdef class Escaping:
             out = impl.PQescapeLiteral(self.conn.pgconn_ptr, data, len(data))
             if out is NULL:
                 raise PQerror(
-                    f"escape_literal failed: {error_message(self.conn)} bytes"
+                    f"escape_literal failed: {error_message(self.conn)}"
                 )
             rv = out
             impl.PQfreemem(out)
@@ -824,11 +824,34 @@ cdef class Escaping:
             out = impl.PQescapeIdentifier(self.conn.pgconn_ptr, data, len(data))
             if out is NULL:
                 raise PQerror(
-                    f"escape_identifier failed: {error_message(self.conn)} bytes"
+                    f"escape_identifier failed: {error_message(self.conn)}"
                 )
             rv = out
             impl.PQfreemem(out)
             return rv
+
+        else:
+            raise PQerror("escape_identifier failed: no connection provided")
+
+    def escape_string(self, data: bytes) -> bytes:
+        cdef int error
+        cdef size_t len_data = len(data)
+        cdef char *out
+        cdef size_t len_out
+        if self.conn is not None:
+            if self.conn.pgconn_ptr is NULL:
+                raise PQerror("the connection is closed")
+
+            out = <char *>PyMem_Malloc(len_data * 2 + 1)
+            len_out = impl.PQescapeStringConn(
+                self.conn.pgconn_ptr, out, data, len_data, &error
+            )
+
+            if error:
+                raise PQerror(
+                    f"escape_string failed: {error_message(self.conn)}"
+                )
+            return out[:len_out]
 
         else:
             raise PQerror("escape_identifier failed: no connection provided")

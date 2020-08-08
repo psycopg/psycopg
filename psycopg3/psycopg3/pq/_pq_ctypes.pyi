@@ -60,6 +60,13 @@ def PQgetvalue(
     arg1: Optional[PGresult_struct], arg2: int, arg3: int
 ) -> pointer[c_char]: ...
 def PQcmdTuples(arg1: Optional[PGresult_struct]) -> bytes: ...
+def PQescapeStringConn(
+    arg1: Optional[PGconn_struct],
+    arg2: c_char_p,
+    arg3: bytes,
+    arg4: int,
+    arg5: pointer[c_int],
+) -> int: ...
 def PQsendPrepare(
     arg1: Optional[PGconn_struct],
     arg2: bytes,
