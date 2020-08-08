@@ -760,6 +760,23 @@ class Escaping:
         else:
             raise PQerror("escape_literal failed: no connection provided")
 
+    def escape_identifier(self, data: bytes) -> bytes:
+        if self.conn is not None:
+            self.conn._ensure_pgconn()
+            out = impl.PQescapeIdentifier(
+                self.conn.pgconn_ptr, data, len(data)
+            )
+            if not out:
+                raise PQerror(
+                    f"escape_identifier failed: {error_message(self.conn)} bytes"
+                )
+            rv = string_at(out)
+            impl.PQfreemem(out)
+            return rv
+
+        else:
+            raise PQerror("escape_identifier failed: no connection provided")
+
     def escape_bytea(self, data: bytes) -> bytes:
         len_out = c_size_t()
         if self.conn is not None:
