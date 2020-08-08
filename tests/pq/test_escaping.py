@@ -19,7 +19,12 @@ def test_escape_literal(pgconn, data, want):
     assert out == want
 
 
-def test_escape_literal_1char(pgconn):
+@pytest.mark.parametrize("scs", ["on", "off"])
+def test_escape_literal_1char(pgconn, scs):
+    res = pgconn.exec_(
+        f"set standard_conforming_strings to {scs}".encode("ascii")
+    )
+    assert res.status == pq.ExecStatus.COMMAND_OK
     esc = pq.Escaping(pgconn)
     special = {b"'": b"''''", b"\\": b" E'\\\\'"}
     for c in range(1, 128):
@@ -55,7 +60,12 @@ def test_escape_identifier(pgconn, data, want):
     assert out == want
 
 
-def test_escape_identifier_1char(pgconn):
+@pytest.mark.parametrize("scs", ["on", "off"])
+def test_escape_identifier_1char(pgconn, scs):
+    res = pgconn.exec_(
+        f"set standard_conforming_strings to {scs}".encode("ascii")
+    )
+    assert res.status == pq.ExecStatus.COMMAND_OK
     esc = pq.Escaping(pgconn)
     special = {b'"': b'""""', b"\\": b'"\\"'}
     for c in range(1, 128):
@@ -91,9 +101,14 @@ def test_escape_string(pgconn, data, want):
     assert out == want
 
 
-def test_escape_string_1char(pgconn):
+@pytest.mark.parametrize("scs", ["on", "off"])
+def test_escape_string_1char(pgconn, scs):
     esc = pq.Escaping(pgconn)
-    special = {b"'": b"''", b"\\": b"\\"}
+    res = pgconn.exec_(
+        f"set standard_conforming_strings to {scs}".encode("ascii")
+    )
+    assert res.status == pq.ExecStatus.COMMAND_OK
+    special = {b"'": b"''", b"\\": b"\\" if scs == "on" else b"\\\\"}
     for c in range(1, 128):
         data = bytes([c])
         rv = esc.escape_string(data)
@@ -110,6 +125,15 @@ def test_escape_string_noconn(pgconn):
     pgconn.finish()
     with pytest.raises(psycopg3.OperationalError):
         esc.escape_string(b"hi")
+
+
+def test_escape_string_badenc(pgconn):
+    res = pgconn.exec_(b"set client_encoding to 'UTF8'")
+    assert res.status == pq.ExecStatus.COMMAND_OK
+    data = "\u20ac".encode("utf8")[:-1]
+    esc = pq.Escaping(pgconn)
+    with pytest.raises(psycopg3.OperationalError):
+        esc.escape_string(data)
 
 
 @pytest.mark.parametrize(
