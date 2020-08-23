@@ -4,6 +4,7 @@ Adapters for date/time types.
 
 # Copyright (C) 2020 The Psycopg Team
 
+import re
 import codecs
 from datetime import date
 
@@ -37,14 +38,13 @@ class DateLoader(Loader):
     def __init__(self, oid: int, context: AdaptContext):
         super().__init__(oid, context)
 
-        if self.connection:
-            ds = self.connection.pgconn.parameter_status(b"DateStyle")
-            if not ds or ds.startswith(b"ISO"):
-                pass    # Default: YMD
-            elif ds.startswith(b"German"):
-                self.load = self.load_dmy  # type: ignore
-            elif ds.startswith(b"SQL") or ds.startswith(b"Postgres"):
-                self.load = self.load_mdy  # type: ignore
+        ds = self._get_datestyle()
+        if ds == b"ISO":
+            pass  # Default: YMD
+        elif ds == b"German":
+            self.load = self.load_dmy  # type: ignore
+        elif ds == b"SQL" or ds == b"Postgres":
+            self.load = self.load_mdy  # type: ignore
 
     def load_ymd(self, data: bytes) -> date:
         try:
@@ -72,12 +72,37 @@ class DateLoader(Loader):
 
         return self._raise_error(data, exc)
 
+    def _get_datestyle(self) -> bytes:
+        """Return the PostgreSQL output datestyle of the connection."""
+        if self.connection:
+            ds = self.connection.pgconn.parameter_status(b"DateStyle")
+            if ds:
+                return ds.split(b",", 1)[0]
+
+        return b"ISO"
+
     def _raise_error(self, data: bytes, exc: ValueError) -> date:
         # Most likely we received a BC date, which Python doesn't support
         # Otherwise the unexpected value is displayed in the exception.
         if data.endswith(b"BC"):
             raise InterfaceError(
-                "BC date not supported by Python:"
-                f" {data.decode('utf8', 'replace')}")
+                "Python doesn't support BC date:"
+                f" got {data.decode('utf8', 'replace')}"
+            )
+
+        # Find the year from the date. This is not the fast path so we don't
+        # need crazy speed.
+        ds = self._get_datestyle()
+        if ds == b"ISO":
+            year = int(data.split(b"-", 1)[0])
         else:
-            raise exc
+            year = int(re.split(rb"[-/\.]", data)[-1])
+
+        if year > 9999:
+            raise InterfaceError(
+                "Python date doesn't support years after 9999:"
+                f" got {data.decode('utf8', 'replace')}"
+            )
+
+        # We genuinely received something we cannot parse
+        raise exc
