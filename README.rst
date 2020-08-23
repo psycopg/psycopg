@@ -28,23 +28,26 @@ can install it from source using::
 Hacking
 -------
 
-We assume you have built your virtualenv and ``pip`` just works and ``python``
-refers to Python 3. You can set up a dev environment with::
+You can create a local virtualenv and install there the dev and test
+requirements. Feel free to adapt the following recipe if you follow a
+different development pattern::
 
-    python psycopg3/setup.py develop    # for the base Python pacakge
-    python psycopg3_c/setup.py develop  # for the C extension module
+    python -m venv .venv
+    source .venv/bin/activate
+    pip -e/setup.py[dev,test] develop    # for the base Python pacakge
+    pip -e psycopg3_c/setup.py develop   # for the C extension module
 
-All the available tests and dev support are defined in the ``tox.ini`` files
-in this directory and in the package directories: please refer to `tox
-documentation`__ for its usage. You can run all the tests with::
+You can use tox to validate the code::
+
+    tox -p4
+
+and to run the tests::
 
     psql -c 'create database psycopg3_test'
     export PSYCOPG3_TEST_DSN="dbname=psycopg3_test"
     tox -c psycopg3 -s
     tox -c psycopg3_c -s
 
-and validate the code before submission running::
-
-    tox -p4
-
-.. __: https://tox.readthedocs.io/
+Please look at the commands definitions in the ``tox.ini`` files if you want
+to run some of the commands interacively: the dependency should be already in
+your virtualenv.
