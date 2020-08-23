@@ -293,7 +293,7 @@ def test_error_message(pgconn):
 
 
 def test_backend_pid(pgconn):
-    assert 2 <= pgconn.backend_pid <= 65535  # Unless increased in kernel?
+    assert isinstance(pgconn.backend_pid, int)
     pgconn.finish()
     with pytest.raises(psycopg3.OperationalError):
         pgconn.backend_pid
