@@ -5,7 +5,7 @@ import pytest
 
 from psycopg3.adapt import Loader, Transformer, Format
 from psycopg3.types import builtins
-from psycopg3.types.numeric import load_float
+from psycopg3.types.numeric import TextFloatLoader
 
 
 #
@@ -36,7 +36,8 @@ def test_dump_int(conn, val, expr):
 def test_dump_int_binary():
     # TODO: int binary adaptation (must choose the fitting int2,4,8)
     tx = Transformer()
-    tx.dump(1, Format.BINARY)
+    n = 1
+    tx.get_dumper(n, Format.BINARY).dump(n)
 
 
 @pytest.mark.parametrize(
@@ -132,7 +133,8 @@ def test_dump_float_approx(conn, val, expr):
 def test_dump_float_binary():
     # TODO: float binary adaptation
     tx = Transformer()
-    tx.dump(1.0, Format.BINARY)
+    n = 1.0
+    tx.get_dumper(n, Format.BINARY).dump(n)
 
 
 @pytest.mark.parametrize(
@@ -235,7 +237,8 @@ def test_roundtrip_numeric(conn, val):
 def test_dump_numeric_binary():
     # TODO: numeric binary adaptation
     tx = Transformer()
-    tx.dump(Decimal(1), Format.BINARY)
+    n = Decimal(1)
+    tx.get_dumper(n, Format.BINARY).dump(n)
 
 
 @pytest.mark.xfail
@@ -258,7 +261,7 @@ def test_load_numeric_binary(conn):
 )
 def test_numeric_as_float(conn, val):
     cur = conn.cursor()
-    Loader.register(builtins["numeric"].oid, load_float, cur)
+    Loader.register(builtins["numeric"].oid, TextFloatLoader, cur)
 
     val = Decimal(val)
     cur.execute("select %s", (val,))

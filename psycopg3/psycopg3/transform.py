@@ -6,14 +6,18 @@ Helper object to transform values between Python and PostgreSQL
 
 import codecs
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
+from typing import TYPE_CHECKING
 
 from . import errors as e
 from . import pq
-from .proto import AdaptContext, DumpFunc, DumpersMap, DumperType
-from .proto import LoadFunc, LoadersMap, LoaderType, MaybeOid
+from .proto import AdaptContext, DumpersMap
+from .proto import LoadFunc, LoadersMap
 from .cursor import BaseCursor
 from .connection import BaseConnection
 from .types.oids import builtins, INVALID_OID
+
+if TYPE_CHECKING:
+    from .adapt import Dumper, Loader
 
 Format = pq.Format
 TEXT_OID = builtins["text"].oid
@@ -36,8 +40,11 @@ class Transformer:
         self._setup_context(context)
         self.pgresult = None
 
-        # mapping class, fmt -> dump function
-        self._dump_funcs: Dict[Tuple[type, Format], DumpFunc] = {}
+        # mapping class, fmt -> Dumper instance
+        self._dumpers_cache: Dict[Tuple[type, Format], "Dumper"] = {}
+
+        # mapping oid, fmt -> Loader instance
+        self._loaders_cache: Dict[Tuple[int, Format], "Loader"] = {}
 
         # mapping oid, fmt -> load function
         self._load_funcs: Dict[Tuple[int, Format], LoadFunc] = {}
@@ -121,7 +128,7 @@ class Transformer:
         for i in range(nf):
             oid = result.ftype(i)
             fmt = result.fformat(i)
-            rc.append(self.get_load_function(oid, fmt))
+            rc.append(self.get_loader(oid, fmt).load)
 
     @property
     def dumpers(self) -> DumpersMap:
@@ -134,61 +141,27 @@ class Transformer:
     def set_row_types(self, types: Iterable[Tuple[int, Format]]) -> None:
         rc = self._row_loaders = []
         for oid, fmt in types:
-            rc.append(self.get_load_function(oid, fmt))
+            rc.append(self.get_loader(oid, fmt).load)
 
-    def dump_sequence(
-        self, objs: Iterable[Any], formats: Iterable[Format]
-    ) -> Tuple[List[Optional[bytes]], List[int]]:
-        out = []
-        types = []
-
-        for var, fmt in zip(objs, formats):
-            data = self.dump(var, fmt)
-            if isinstance(data, tuple):
-                oid = data[1]
-                data = data[0]
-            else:
-                oid = TEXT_OID
-
-            out.append(data)
-            types.append(oid)
-
-        return out, types
-
-    def dump(self, obj: None, format: Format = Format.TEXT) -> MaybeOid:
-        if obj is None:
-            return None, TEXT_OID
-
-        src = type(obj)
-        func = self.get_dump_function(src, format)
-        return func(obj)
-
-    def get_dump_function(self, src: type, format: Format) -> DumpFunc:
-        key = (src, format)
+    def get_dumper(self, obj: Any, format: Format) -> "Dumper":
+        key = (type(obj), format)
         try:
-            return self._dump_funcs[key]
+            return self._dumpers_cache[key]
         except KeyError:
             pass
 
-        dumper = self.lookup_dumper(src, format)
-        func: DumpFunc
-        if isinstance(dumper, type):
-            func = dumper(src, self).dump
-        else:
-            func = dumper
-
-        self._dump_funcs[key] = func
-        return func
-
-    def lookup_dumper(self, src: type, format: Format) -> DumperType:
-        key = (src, format)
         for amap in self._dumpers_maps:
             if key in amap:
-                return amap[key]
+                dumper_cls = amap[key]
+                break
+        else:
+            raise e.ProgrammingError(
+                f"cannot adapt type {type(obj).__name__}"
+                f" to format {Format(format).name}"
+            )
 
-        raise e.ProgrammingError(
-            f"cannot adapt type {src.__name__} to format {Format(format).name}"
-        )
+        self._dumpers_cache[key] = dumper = dumper_cls(key[0], self)
+        return dumper
 
     def load_row(self, row: int) -> Optional[Tuple[Any, ...]]:
         res = self.pgresult
@@ -216,37 +189,21 @@ class Transformer:
             for i, val in enumerate(record)
         )
 
-    def load(self, data: bytes, oid: int, format: Format = Format.TEXT) -> Any:
-        if data is not None:
-            f = self.get_load_function(oid, format)
-            return f(data)
-        else:
-            return None
-
-    def get_load_function(self, oid: int, format: Format) -> LoadFunc:
+    def get_loader(self, oid: int, format: Format) -> "Loader":
         key = (oid, format)
         try:
-            return self._load_funcs[key]
+            return self._loaders_cache[key]
         except KeyError:
             pass
 
-        loader = self.lookup_loader(oid, format)
-        func: LoadFunc
-        if isinstance(loader, type):
-            func = loader(oid, self).load
-        else:
-            func = loader
-
-        self._load_funcs[key] = func
-        return func
-
-    def lookup_loader(self, oid: int, format: Format) -> LoaderType:
-        key = (oid, format)
-
         for tcmap in self._loaders_maps:
             if key in tcmap:
-                return tcmap[key]
+                loader_cls = tcmap[key]
+                break
+        else:
+            from .adapt import Loader  # noqa
 
-        from .adapt import Loader
+            loader_cls = Loader.globals[INVALID_OID, format]
 
-        return Loader.globals[INVALID_OID, format]
+        self._loaders_cache[key] = loader = loader_cls(key[0], self)
+        return loader

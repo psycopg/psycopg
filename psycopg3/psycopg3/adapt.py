@@ -4,15 +4,17 @@ Entry point into the adaptation system.
 
 # Copyright (C) 2020 The Psycopg Team
 
-from typing import Any, Callable, Optional, Tuple, Type, Union
+from typing import Any, Callable, Optional, Type
 
 from . import pq
 from . import proto
 from .pq import Format as Format
-from .proto import AdaptContext, DumpersMap, DumperType
-from .proto import LoadersMap, LoaderType
+from .types import builtins
+from .proto import AdaptContext, DumpersMap, DumperType, LoadersMap, LoaderType
 from .cursor import BaseCursor
 from .connection import BaseConnection
+
+TEXT_OID = builtins["text"].oid
 
 
 class Dumper:
@@ -24,8 +26,12 @@ class Dumper:
         self.context = context
         self.connection = _connection_from_context(context)
 
-    def dump(self, obj: Any) -> Union[bytes, Tuple[bytes, int]]:
+    def dump(self, obj: Any) -> bytes:
         raise NotImplementedError()
+
+    @property
+    def oid(self) -> int:
+        return TEXT_OID
 
     @classmethod
     def register(
@@ -41,12 +47,10 @@ class Dumper:
             )
 
         if not (
-            callable(dumper)
-            or (isinstance(dumper, type) and issubclass(dumper, Dumper))
+            isinstance(dumper, type) and issubclass(dumper, _dumper_classes)
         ):
             raise TypeError(
-                f"dumpers should be callable or Dumper subclasses,"
-                f" got {dumper} instead"
+                f"dumpers should be Dumper subclasses, got {dumper} instead"
             )
 
         where = context.dumpers if context is not None else Dumper.globals
@@ -98,16 +102,14 @@ class Loader:
     ) -> LoaderType:
         if not isinstance(oid, int):
             raise TypeError(
-                f"typeloaders should be registered on oid, got {oid} instead"
+                f"loaders should be registered on oid, got {oid} instead"
             )
 
         if not (
-            callable(loader)
-            or (isinstance(loader, type) and issubclass(loader, Loader))
+            isinstance(loader, type) and issubclass(loader, _loader_classes)
         ):
             raise TypeError(
-                f"dumpers should be callable or Loader subclasses,"
-                f" got {loader} instead"
+                f"loaders should be Loader subclasses, got {loader} instead"
             )
 
         where = context.loaders if context is not None else Loader.globals
@@ -137,6 +139,10 @@ class Loader:
         return binary_
 
 
+_dumper_classes = (Dumper,)
+_loader_classes = (Loader,)
+
+
 def _connection_from_context(
     context: AdaptContext,
 ) -> Optional[BaseConnection]:
@@ -159,6 +165,7 @@ if pq.__impl__ == "c":
     from psycopg3_c import _psycopg3
 
     Transformer = _psycopg3.Transformer
+    _loader_classes = (Loader, _psycopg3.CLoader)  # type: ignore
 else:
     from . import transform
 

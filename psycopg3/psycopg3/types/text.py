@@ -5,12 +5,15 @@ Adapters for textual types.
 # Copyright (C) 2020 The Psycopg Team
 
 import codecs
-from typing import Optional, Tuple, Union
+from typing import Optional, Union, TYPE_CHECKING
 
 from ..adapt import Dumper, Loader
 from ..proto import AdaptContext, EncodeFunc, DecodeFunc
 from ..pq import Escaping
 from .oids import builtins, INVALID_OID
+
+if TYPE_CHECKING:
+    from ..pq.proto import Escaping as EscapingProto
 
 
 TEXT_OID = builtins["text"].oid
@@ -90,21 +93,39 @@ class BytesDumper(Dumper):
             self.connection.pgconn if self.connection is not None else None
         )
 
-    def dump(self, obj: bytes) -> Tuple[bytes, int]:
-        return self.esc.escape_bytea(obj), BYTEA_OID
+    def dump(self, obj: bytes) -> bytes:
+        return self.esc.escape_bytea(obj)
+
+    @property
+    def oid(self) -> int:
+        return BYTEA_OID
 
 
 @Dumper.binary(bytes)
-def dump_bytes(b: bytes) -> Tuple[bytes, int]:
-    return b, BYTEA_OID
+class BinaryBytesDumper(Dumper):
+    def dump(self, b: bytes) -> bytes:
+        return b
+
+    @property
+    def oid(self) -> int:
+        return BYTEA_OID
 
 
 @Loader.text(builtins["bytea"].oid)
-def load_bytea_text(data: bytes) -> bytes:
-    return Escaping().unescape_bytea(data)
+class TextByteaLoader(Loader):
+    _escaping: "EscapingProto"
+
+    def __init__(self, oid: int, context: AdaptContext = None):
+        super().__init__(oid, context)
+        if not hasattr(self.__class__, "_escaping"):
+            self.__class__._escaping = Escaping()
+
+    def load(self, data: bytes) -> bytes:
+        return self._escaping.unescape_bytea(data)
 
 
 @Loader.binary(builtins["bytea"].oid)
 @Loader.binary(INVALID_OID)
-def load_bytea_binary(data: bytes) -> bytes:
-    return data
+class BinaryByteaLoader(Loader):
+    def load(self, data: bytes) -> bytes:
+        return data

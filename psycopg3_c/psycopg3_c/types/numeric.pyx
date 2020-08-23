@@ -12,39 +12,52 @@ from cpython.long cimport (
     PyLong_FromLong, PyLong_FromLongLong, PyLong_FromUnsignedLong)
 
 
-cdef object load_int_text(const char *data, size_t length, void *context):
-    return int(data)
+cdef class TextIntLoader(CLoader):
+    cdef object cload(self, const char *data, size_t length):
+        return int(data)
 
 
-cdef object load_int2_binary(const char *data, size_t length, void *context):
-    return PyLong_FromLong(<int16_t>be16toh((<uint16_t *>data)[0]))
+cdef class BinaryInt2Loader(CLoader):
+    cdef object cload(self, const char *data, size_t length):
+        return PyLong_FromLong(<int16_t>be16toh((<uint16_t *>data)[0]))
 
 
-cdef object load_int4_binary(const char *data, size_t length, void *context):
-    return PyLong_FromLong(<int32_t>be32toh((<uint32_t *>data)[0]))
+cdef class BinaryInt4Loader(CLoader):
+    cdef object cload(self, const char *data, size_t length):
+        return PyLong_FromLong(<int32_t>be32toh((<uint32_t *>data)[0]))
 
 
-cdef object load_int8_binary(const char *data, size_t length, void *context):
-    return PyLong_FromLongLong(<int64_t>be64toh((<uint64_t *>data)[0]))
+cdef class BinaryInt8Loader(CLoader):
+    cdef object cload(self, const char *data, size_t length):
+        return PyLong_FromLongLong(<int64_t>be64toh((<uint64_t *>data)[0]))
 
 
-cdef object load_oid_binary(const char *data, size_t length, void *context):
-    return PyLong_FromUnsignedLong(be32toh((<uint32_t *>data)[0]))
+cdef class BinaryOidLoader(CLoader):
+    cdef object cload(self, const char *data, size_t length):
+        return PyLong_FromUnsignedLong(be32toh((<uint32_t *>data)[0]))
 
 
-cdef object load_bool_binary(const char *data, size_t length, void *context):
-    if data[0]:
-        return True
-    else:
-        return False
+cdef class BinaryBoolLoader(CLoader):
+    cdef object cload(self, const char *data, size_t length):
+        if data[0]:
+            return True
+        else:
+            return False
 
 
 cdef void register_numeric_c_loaders():
     logger.debug("registering optimised numeric c loaders")
-    from psycopg3.types import numeric
-    register_c_loader(numeric.load_int, load_int_text)
-    register_c_loader(numeric.load_int2_binary, load_int2_binary)
-    register_c_loader(numeric.load_int4_binary, load_int4_binary)
-    register_c_loader(numeric.load_int8_binary, load_int8_binary)
-    register_c_loader(numeric.load_oid_binary, load_oid_binary)
-    register_c_loader(numeric.load_bool_binary, load_bool_binary)
+
+    from psycopg3.adapt import Loader
+    from psycopg3.types import builtins
+
+    Loader.register(builtins["int2"].oid, TextIntLoader)
+    Loader.register(builtins["int4"].oid, TextIntLoader)
+    Loader.register(builtins["int8"].oid, TextIntLoader)
+    Loader.register(builtins["oid"].oid, TextIntLoader)
+
+    Loader.register_binary(builtins["int2"].oid, BinaryInt2Loader)
+    Loader.register_binary(builtins["int4"].oid, BinaryInt4Loader)
+    Loader.register_binary(builtins["int8"].oid, BinaryInt8Loader)
+    Loader.register_binary(builtins["oid"].oid, BinaryOidLoader)
+    Loader.register_binary(builtins["bool"].oid, BinaryBoolLoader)

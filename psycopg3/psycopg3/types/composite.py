@@ -127,9 +127,9 @@ class TextTupleDumper(Dumper):
         super().__init__(src, context)
         self._tx = Transformer(context)
 
-    def dump(self, obj: Tuple[Any, ...]) -> Tuple[bytes, int]:
+    def dump(self, obj: Tuple[Any, ...]) -> bytes:
         if not obj:
-            return b"()", TEXT_OID
+            return b"()"
 
         parts = [b"("]
 
@@ -138,13 +138,8 @@ class TextTupleDumper(Dumper):
                 parts.append(b",")
                 continue
 
-            ad = self._tx.dump(item)
-            if isinstance(ad, tuple):
-                ad = ad[0]
-            if ad is None:
-                parts.append(b",")
-                continue
-
+            dumper = self._tx.get_dumper(item, Format.TEXT)
+            ad = dumper.dump(item)
             if self._re_needs_quotes.search(ad) is not None:
                 ad = b'"' + self._re_escape.sub(br"\1\1", ad) + b'"'
 
@@ -153,7 +148,7 @@ class TextTupleDumper(Dumper):
 
         parts[-1] = b")"
 
-        return b"".join(parts), TEXT_OID
+        return b"".join(parts)
 
     _re_needs_quotes = re.compile(
         br"""(?xi)
@@ -173,7 +168,7 @@ class BaseCompositeLoader(Loader):
 @Loader.text(builtins["record"].oid)
 class RecordLoader(BaseCompositeLoader):
     def load(self, data: bytes) -> Tuple[Any, ...]:
-        cast = self._tx.get_load_function(TEXT_OID, format=Format.TEXT)
+        cast = self._tx.get_loader(TEXT_OID, format=Format.TEXT).load
         return tuple(
             cast(token) if token is not None else None
             for token in self._parse_record(data)

@@ -8,8 +8,6 @@ TEXT_OID = builtins["text"].oid
 @pytest.mark.parametrize(
     "data, format, result, type",
     [
-        (None, Format.TEXT, None, "text"),
-        (None, Format.BINARY, None, "text"),
         (1, Format.TEXT, b"1", "numeric"),
         ("hello", Format.TEXT, b"hello", "text"),
         ("hello", Format.BINARY, b"hello", "text"),
@@ -17,17 +15,14 @@ TEXT_OID = builtins["text"].oid
 )
 def test_dump(data, format, result, type):
     t = Transformer()
-    rv = t.dump(data, format)
-    if isinstance(rv, tuple):
-        assert rv[0] == result
-        assert rv[1] == builtins[type].oid
-    else:
-        assert rv == result
+    dumper = t.get_dumper(data, format)
+    assert dumper.dump(data) == result
+    assert dumper.oid == builtins[type].oid
 
 
 def test_dump_connection_ctx(conn):
-    Dumper.register(str, lambda s: s.encode("ascii") + b"t", conn)
-    Dumper.register_binary(str, lambda s: s.encode("ascii") + b"b", conn)
+    Dumper.register(str, make_dumper("t"), conn)
+    Dumper.register_binary(str, make_dumper("b"), conn)
 
     cur = conn.cursor()
     cur.execute("select %s, %b", ["hello", "world"])
@@ -35,12 +30,12 @@ def test_dump_connection_ctx(conn):
 
 
 def test_dump_cursor_ctx(conn):
-    Dumper.register(str, lambda s: s.encode("ascii") + b"t", conn)
-    Dumper.register_binary(str, lambda s: s.encode("ascii") + b"b", conn)
+    Dumper.register(str, make_dumper("t"), conn)
+    Dumper.register_binary(str, make_dumper("b"), conn)
 
     cur = conn.cursor()
-    Dumper.register(str, lambda s: s.encode("ascii") + b"tc", cur)
-    Dumper.register_binary(str, lambda s: s.encode("ascii") + b"bc", cur)
+    Dumper.register(str, make_dumper("tc"), cur)
+    Dumper.register_binary(str, make_dumper("bc"), cur)
 
     cur.execute("select %s, %b", ["hello", "world"])
     assert cur.fetchone() == ("hellotc", "worldbc")
@@ -53,8 +48,6 @@ def test_dump_cursor_ctx(conn):
 @pytest.mark.parametrize(
     "data, format, type, result",
     [
-        (None, Format.TEXT, "text", None),
-        (None, Format.BINARY, "text", None),
         (b"1", Format.TEXT, "int4", 1),
         (b"hello", Format.TEXT, "text", "hello"),
         (b"hello", Format.BINARY, "text", "hello"),
@@ -62,13 +55,13 @@ def test_dump_cursor_ctx(conn):
 )
 def test_cast(data, format, type, result):
     t = Transformer()
-    rv = t.load(data, builtins[type].oid, format)
+    rv = t.get_loader(builtins[type].oid, format).load(data)
     assert rv == result
 
 
 def test_load_connection_ctx(conn):
-    Loader.register(TEXT_OID, lambda b: b.decode("ascii") + "t", conn)
-    Loader.register_binary(TEXT_OID, lambda b: b.decode("ascii") + "b", conn)
+    Loader.register(TEXT_OID, make_loader("t"), conn)
+    Loader.register_binary(TEXT_OID, make_loader("b"), conn)
 
     r = conn.cursor().execute("select 'hello'::text").fetchone()
     assert r == ("hellot",)
@@ -77,12 +70,12 @@ def test_load_connection_ctx(conn):
 
 
 def test_load_cursor_ctx(conn):
-    Loader.register(TEXT_OID, lambda b: b.decode("ascii") + "t", conn)
-    Loader.register_binary(TEXT_OID, lambda b: b.decode("ascii") + "b", conn)
+    Loader.register(TEXT_OID, make_loader("t"), conn)
+    Loader.register_binary(TEXT_OID, make_loader("b"), conn)
 
     cur = conn.cursor()
-    Loader.register(TEXT_OID, lambda b: b.decode("ascii") + "tc", cur)
-    Loader.register_binary(TEXT_OID, lambda b: b.decode("ascii") + "bc", cur)
+    Loader.register(TEXT_OID, make_loader("tc"), cur)
+    Loader.register_binary(TEXT_OID, make_loader("bc"), cur)
 
     r = cur.execute("select 'hello'::text").fetchone()
     assert r == ("hellotc",)
@@ -105,9 +98,27 @@ def test_load_cursor_ctx(conn):
 @pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
 def test_load_cursor_ctx_nested(conn, sql, obj, fmt_out):
     cur = conn.cursor(format=fmt_out)
-    Loader.register(
-        TEXT_OID, lambda b: b.decode("ascii") + "c", cur, format=fmt_out
-    )
+    Loader.register(TEXT_OID, make_loader("c"), cur, format=fmt_out)
     cur.execute(f"select {sql}")
     res = cur.fetchone()[0]
     assert res == obj
+
+
+def make_dumper(suffix):
+    """Create a test dumper appending a suffix to the bytes representation."""
+
+    class TestDumper(Dumper):
+        def dump(self, s):
+            return (s + suffix).encode("ascii")
+
+    return TestDumper
+
+
+def make_loader(suffix):
+    """Create a test loader appending a suffix to the data returned."""
+
+    class TestLoader(Loader):
+        def load(self, b):
+            return b.decode("ascii") + suffix
+
+    return TestLoader

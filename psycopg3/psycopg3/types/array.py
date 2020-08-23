@@ -6,7 +6,7 @@ Adapters for arrays
 
 import re
 import struct
-from typing import Any, Generator, List, Optional, Tuple
+from typing import Any, Generator, List, Optional
 
 from .. import errors as e
 from ..adapt import Format, Dumper, Loader, Transformer
@@ -21,8 +21,13 @@ class BaseListDumper(Dumper):
     def __init__(self, src: type, context: AdaptContext = None):
         super().__init__(src, context)
         self._tx = Transformer(context)
+        self._array_oid = 0
 
-    def _array_oid(self, base_oid: int) -> int:
+    @property
+    def oid(self) -> int:
+        return self._array_oid or TEXT_ARRAY_OID
+
+    def _get_array_oid(self, base_oid: int) -> int:
         """
         Return the oid of the array from the oid of the base item.
 
@@ -59,10 +64,9 @@ class TextListDumper(BaseListDumper):
     # backslash-escaped.
     _re_escape = re.compile(br'(["\\])')
 
-    def dump(self, obj: List[Any]) -> Tuple[bytes, int]:
+    def dump(self, obj: List[Any]) -> bytes:
         tokens: List[bytes] = []
-
-        oid = 0
+        oid: Optional[int] = None
 
         def dump_list(obj: List[Any]) -> None:
             nonlocal oid
@@ -75,29 +79,16 @@ class TextListDumper(BaseListDumper):
             for item in obj:
                 if isinstance(item, list):
                     dump_list(item)
-                elif item is None:
-                    tokens.append(b"NULL")
+                elif item is not None:
+                    dumper = self._tx.get_dumper(item, Format.TEXT)
+                    ad = dumper.dump(item)
+                    if self._re_needs_quotes.search(ad) is not None:
+                        ad = b'"' + self._re_escape.sub(br"\\\1", ad) + b'"'
+                    tokens.append(ad)
+                    if oid is None:
+                        oid = dumper.oid
                 else:
-                    ad = self._tx.dump(item)
-                    if isinstance(ad, tuple):
-                        if oid == 0:
-                            oid = ad[1]
-                            got_type = type(item)
-                        elif oid != ad[1]:
-                            raise e.DataError(
-                                f"array contains different types,"
-                                f" at least {got_type} and {type(item)}"
-                            )
-                        ad = ad[0]
-
-                    if ad is not None:
-                        if self._re_needs_quotes.search(ad) is not None:
-                            ad = (
-                                b'"' + self._re_escape.sub(br"\\\1", ad) + b'"'
-                            )
-                        tokens.append(ad)
-                    else:
-                        tokens.append(b"NULL")
+                    tokens.append(b"NULL")
 
                 tokens.append(b",")
 
@@ -105,19 +96,22 @@ class TextListDumper(BaseListDumper):
 
         dump_list(obj)
 
-        return b"".join(tokens), self._array_oid(oid)
+        if oid is not None:
+            self._array_oid = self._get_array_oid(oid)
+
+        return b"".join(tokens)
 
 
 @Dumper.binary(list)
 class BinaryListDumper(BaseListDumper):
-    def dump(self, obj: List[Any]) -> Tuple[bytes, int]:
+    def dump(self, obj: List[Any]) -> bytes:
         if not obj:
-            return _struct_head.pack(0, 0, TEXT_OID), TEXT_ARRAY_OID
+            return _struct_head.pack(0, 0, TEXT_OID)
 
         data: List[bytes] = [b"", b""]  # placeholders to avoid a resize
         dims: List[int] = []
         hasnull = 0
-        oid = 0
+        oid: Optional[int] = None
 
         def calc_dims(L: List[Any]) -> None:
             if isinstance(L, self.src):
@@ -135,23 +129,16 @@ class BinaryListDumper(BaseListDumper):
 
             if dim == len(dims) - 1:
                 for item in L:
-                    ad = self._tx.dump(item, Format.BINARY)
-                    if isinstance(ad, tuple):
-                        if oid == 0:
-                            oid = ad[1]
-                            got_type = type(item)
-                        elif oid != ad[1]:
-                            raise e.DataError(
-                                f"array contains different types,"
-                                f" at least {got_type} and {type(item)}"
-                            )
-                        ad = ad[0]
-                    if ad is None:
-                        hasnull = 1
-                        data.append(b"\xff\xff\xff\xff")
-                    else:
+                    if item is not None:
+                        dumper = self._tx.get_dumper(item, Format.BINARY)
+                        ad = dumper.dump(item)
                         data.append(_struct_len.pack(len(ad)))
                         data.append(ad)
+                        if oid is None:
+                            oid = dumper.oid
+                    else:
+                        hasnull = 1
+                        data.append(b"\xff\xff\xff\xff")
             else:
                 for item in L:
                     if not isinstance(item, self.src):
@@ -162,12 +149,14 @@ class BinaryListDumper(BaseListDumper):
 
         dump_list(obj, 0)
 
-        if oid == 0:
+        if oid is None:
             oid = TEXT_OID
 
-        data[0] = _struct_head.pack(len(dims), hasnull, oid or TEXT_OID)
+        self._array_oid = self._get_array_oid(oid)
+
+        data[0] = _struct_head.pack(len(dims), hasnull, oid)
         data[1] = b"".join(_struct_dim.pack(dim, 1) for dim in dims)
-        return b"".join(data), self._array_oid(oid)
+        return b"".join(data)
 
 
 class BaseArrayLoader(Loader):
@@ -194,7 +183,7 @@ class TextArrayLoader(BaseArrayLoader):
     def load(self, data: bytes) -> List[Any]:
         rv = None
         stack: List[Any] = []
-        cast = self._tx.get_load_function(self.base_oid, Format.TEXT)
+        cast = self._tx.get_loader(self.base_oid, Format.TEXT).load
 
         for m in self._re_parse.finditer(data):
             t = m.group(1)
@@ -245,7 +234,7 @@ class BinaryArrayLoader(BaseArrayLoader):
         if not ndims:
             return []
 
-        fcast = self._tx.get_load_function(oid, Format.BINARY)
+        fcast = self._tx.get_loader(oid, Format.BINARY).load
 
         p = 12 + 8 * ndims
         dims = [

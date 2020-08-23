@@ -5,7 +5,7 @@ Protocol objects representing different implementations of the same classes.
 # Copyright (C) 2020 The Psycopg Team
 
 import codecs
-from typing import Any, Callable, Dict, Generator, Iterable, List, Mapping
+from typing import Any, Callable, Dict, Generator, Mapping
 from typing import Optional, Sequence, Tuple, Type, TypeVar, Union
 from typing import TYPE_CHECKING
 from typing_extensions import Protocol
@@ -36,13 +36,12 @@ PQGen = Generator[Tuple[int, "Wait"], "Ready", RV]
 
 AdaptContext = Union[None, "BaseConnection", "BaseCursor", "Transformer"]
 
-MaybeOid = Union[Optional[bytes], Tuple[Optional[bytes], int]]
-DumpFunc = Callable[[Any], MaybeOid]
-DumperType = Union[Type["Dumper"], DumpFunc]
+DumpFunc = Callable[[Any], bytes]
+DumperType = Type["Dumper"]
 DumpersMap = Dict[Tuple[type, Format], DumperType]
 
 LoadFunc = Callable[[bytes], Any]
-LoaderType = Union[Type["Loader"], LoadFunc]
+LoaderType = Type["Loader"]
 LoadersMap = Dict[Tuple[int, Format], LoaderType]
 
 
@@ -77,18 +76,7 @@ class Transformer(Protocol):
     def set_row_types(self, types: Sequence[Tuple[int, Format]]) -> None:
         ...
 
-    def dump_sequence(
-        self, objs: Iterable[Any], formats: Iterable[Format]
-    ) -> Tuple[List[Optional[bytes]], List[int]]:
-        ...
-
-    def dump(self, obj: None, format: Format = Format.TEXT) -> MaybeOid:
-        ...
-
-    def get_dump_function(self, src: type, format: Format) -> DumpFunc:
-        ...
-
-    def lookup_dumper(self, src: type, format: Format) -> DumperType:
+    def get_dumper(self, obj: Any, format: Format) -> "Dumper":
         ...
 
     def load_row(self, row: int) -> Optional[Tuple[Any, ...]]:
@@ -99,11 +87,5 @@ class Transformer(Protocol):
     ) -> Tuple[Any, ...]:
         ...
 
-    def load(self, data: bytes, oid: int, format: Format = Format.TEXT) -> Any:
-        ...
-
-    def get_load_function(self, oid: int, format: Format) -> LoadFunc:
-        ...
-
-    def lookup_loader(self, oid: int, format: Format) -> LoaderType:
+    def get_loader(self, oid: int, format: Format) -> "Loader":
         ...
