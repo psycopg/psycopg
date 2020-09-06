@@ -6,7 +6,7 @@ Adapters for date/time types.
 
 import re
 import codecs
-from datetime import date
+from datetime import date, datetime
 
 from ..adapt import Dumper, Loader
 from ..proto import AdaptContext
@@ -28,6 +28,22 @@ class DateDumper(Dumper):
     @property
     def oid(self) -> int:
         return self.DATE_OID
+
+
+@Dumper.text(datetime)
+class DateTimeDumper(Dumper):
+
+    _encode = codecs.lookup("ascii").encode
+    TIMESTAMPTZ_OID = builtins["timestamptz"].oid
+
+    def dump(self, obj: date) -> bytes:
+        # NOTE: whatever the PostgreSQL DateStyle input format (DMY, MDY, YMD)
+        # the YYYY-MM-DD is always understood correctly.
+        return self._encode(str(obj))[0]
+
+    @property
+    def oid(self) -> int:
+        return self.TIMESTAMPTZ_OID
 
 
 @Loader.text(builtins["date"].oid)
