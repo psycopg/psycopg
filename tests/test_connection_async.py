@@ -252,7 +252,7 @@ async def test_connect_args(monkeypatch, pgconn, testdsn, kwargs, want):
 
 
 @pytest.mark.parametrize(
-    "args, kwargs", [((), {}), (("", ""), {}), ((), {"nosuchparam": 42})],
+    "args, kwargs", [((), {}), (("", ""), {}), ((), {"nosuchparam": 42})]
 )
 async def test_connect_badargs(monkeypatch, pgconn, args, kwargs):
     def fake_connect(conninfo):

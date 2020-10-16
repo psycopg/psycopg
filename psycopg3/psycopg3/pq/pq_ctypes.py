@@ -811,7 +811,7 @@ class Escaping:
             )
         else:
             out = impl.PQescapeBytea(
-                data, len(data), pointer(t_cast(c_ulong, len_out)),
+                data, len(data), pointer(t_cast(c_ulong, len_out))
             )
         if not out:
             raise MemoryError(

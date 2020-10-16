@@ -59,7 +59,7 @@ class Dumper:
 
     @classmethod
     def register_binary(
-        cls, src: type, dumper: DumperType, context: AdaptContext = None,
+        cls, src: type, dumper: DumperType, context: AdaptContext = None
     ) -> DumperType:
         return cls.register(src, dumper, context, format=Format.BINARY)
 
@@ -118,7 +118,7 @@ class Loader:
 
     @classmethod
     def register_binary(
-        cls, oid: int, loader: LoaderType, context: AdaptContext = None,
+        cls, oid: int, loader: LoaderType, context: AdaptContext = None
     ) -> LoaderType:
         return cls.register(oid, loader, context, format=Format.BINARY)
 

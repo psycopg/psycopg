@@ -217,7 +217,7 @@ class BaseCursor:
         pgq.convert(query, vars)
 
         self.connection.pgconn.send_prepare(
-            name, pgq.query, param_types=pgq.types,
+            name, pgq.query, param_types=pgq.types
         )
 
         return pgq

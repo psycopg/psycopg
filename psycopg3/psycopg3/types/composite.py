@@ -29,7 +29,7 @@ class FieldInfo:
 
 class CompositeTypeInfo(TypeInfo):
     def __init__(
-        self, name: str, oid: int, array_oid: int, fields: Sequence[FieldInfo],
+        self, name: str, oid: int, array_oid: int, fields: Sequence[FieldInfo]
     ):
         super().__init__(name, oid, array_oid)
         self.fields = list(fields)

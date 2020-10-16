@@ -14,7 +14,7 @@ tests_str = [
         "42,'foo','ba,r','ba''z','qu\"x'",
         ("42", "foo", "ba,r", "ba'z", 'qu"x'),
     ),
-    ("'foo''', '''foo', '\"bar', 'bar\"' ", ("foo'", "'foo", '"bar', 'bar"'),),
+    ("'foo''', '''foo', '\"bar', 'bar\"' ", ("foo'", "'foo", '"bar', 'bar"')),
 ]
 
 
