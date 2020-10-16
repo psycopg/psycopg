@@ -34,8 +34,8 @@ different development pattern::
 
     python -m venv .venv
     source .venv/bin/activate
-    pip -e/setup.py[dev,test] develop    # for the base Python pacakge
-    pip -e psycopg3_c/setup.py develop   # for the C extension module
+    pip -e psycopg3/setup.py[dev,test] develop    # for the base Python pacakge
+    pip -e psycopg3_c/setup.py develop            # for the C extension module
 
 You can use tox to validate the code::
 
@@ -49,5 +49,5 @@ and to run the tests::
     tox -c psycopg3_c -s
 
 Please look at the commands definitions in the ``tox.ini`` files if you want
-to run some of the commands interacively: the dependency should be already in
-your virtualenv.
+to run some of them interacively: the dependency should be already in your
+virtualenv.
