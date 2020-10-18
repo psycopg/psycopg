@@ -12,27 +12,25 @@ from psycopg3.adapt import Format
 @pytest.mark.parametrize(
     "val, expr",
     [
-        (dt.date.min, "'0001-01-01'::date"),
-        (dt.date(1000, 1, 1), "'1000-01-01'::date"),
-        (dt.date(2000, 1, 1), "'2000-01-01'::date"),
-        (dt.date(2000, 12, 31), "'2000-12-31'::date"),
-        (dt.date(3000, 1, 1), "'3000-01-01'::date"),
-        (dt.date.max, "'9999-12-31'::date"),
+        (dt.date.min, "0001-01-01"),
+        (dt.date(1000, 1, 1), "1000-01-01"),
+        (dt.date(2000, 1, 1), "2000-01-01"),
+        (dt.date(2000, 12, 31), "2000-12-31"),
+        (dt.date(3000, 1, 1), "3000-01-01"),
+        (dt.date.max, "9999-12-31"),
     ],
 )
 def test_dump_date(conn, val, expr):
     cur = conn.cursor()
-    cur.execute("select %s = %%s" % expr, (val,))
+    cur.execute(f"select '{expr}'::date = %s", (val,))
     assert cur.fetchone()[0] is True
 
 
 @pytest.mark.xfail  # TODO: binary dump
-@pytest.mark.parametrize(
-    "val, expr", [(dt.date(2000, 1, 1), "'2000-01-01'::date")]
-)
+@pytest.mark.parametrize("val, expr", [(dt.date(2000, 1, 1), "2000-01-01")])
 def test_dump_date_binary(conn, val, expr):
     cur = conn.cursor()
-    cur.execute("select %s = %%b" % expr, (val,))
+    cur.execute(f"select '{expr}'::date = %b", (val,))
     assert cur.fetchone()[0] is True
 
 
@@ -47,27 +45,25 @@ def test_dump_date_datestyle(conn, datestyle_in):
 @pytest.mark.parametrize(
     "val, expr",
     [
-        (dt.date.min, "'0001-01-01'::date"),
-        (dt.date(1000, 1, 1), "'1000-01-01'::date"),
-        (dt.date(2000, 1, 1), "'2000-01-01'::date"),
-        (dt.date(2000, 12, 31), "'2000-12-31'::date"),
-        (dt.date(3000, 1, 1), "'3000-01-01'::date"),
-        (dt.date.max, "'9999-12-31'::date"),
+        (dt.date.min, "0001-01-01"),
+        (dt.date(1000, 1, 1), "1000-01-01"),
+        (dt.date(2000, 1, 1), "2000-01-01"),
+        (dt.date(2000, 12, 31), "2000-12-31"),
+        (dt.date(3000, 1, 1), "3000-01-01"),
+        (dt.date.max, "9999-12-31"),
     ],
 )
 def test_load_date(conn, val, expr):
     cur = conn.cursor()
-    cur.execute("select %s" % expr)
+    cur.execute(f"select '{expr}'::date")
     assert cur.fetchone()[0] == val
 
 
 @pytest.mark.xfail  # TODO: binary load
-@pytest.mark.parametrize(
-    "val, expr", [(dt.date(2000, 1, 1), "'2000-01-01'::date")]
-)
+@pytest.mark.parametrize("val, expr", [(dt.date(2000, 1, 1), "2000-01-01")])
 def test_load_date_binary(conn, val, expr):
     cur = conn.cursor(format=Format.BINARY)
-    cur.execute("select %s" % expr)
+    cur.execute("select '{expr}'::date" % expr)
     assert cur.fetchone()[0] == val
 
 
@@ -105,21 +101,21 @@ def test_load_date_too_large(conn, datestyle_out):
 @pytest.mark.parametrize(
     "val, expr",
     [
-        (dt.datetime.min, "'0001-01-01 00:00'::timestamp"),
-        (dt.datetime(1000, 1, 1, 0, 0), "'1000-01-01 00:00'::timestamp"),
-        (dt.datetime(2000, 1, 1, 0, 0), "'2000-01-01 00:00'::timestamp"),
+        (dt.datetime.min, "0001-01-01 00:00"),
+        (dt.datetime(1000, 1, 1, 0, 0), "1000-01-01 00:00"),
+        (dt.datetime(2000, 1, 1, 0, 0), "2000-01-01 00:00"),
         (
             dt.datetime(2000, 12, 31, 23, 59, 59, 999999),
-            "'2000-12-31 23:59:59.999999'::timestamp",
+            "2000-12-31 23:59:59.999999",
         ),
-        (dt.datetime(3000, 1, 1, 0, 0), "'3000-01-01 00:00'::timestamp"),
-        (dt.datetime.max, "'9999-12-31 23:59:59.999999'::timestamp"),
+        (dt.datetime(3000, 1, 1, 0, 0), "3000-01-01 00:00"),
+        (dt.datetime.max, "9999-12-31 23:59:59.999999"),
     ],
 )
 def test_dump_datetime(conn, val, expr):
     cur = conn.cursor()
     cur.execute("set timezone to '+02:00'")
-    cur.execute("select %s = %%s" % expr, (val,))
+    cur.execute(f"select '{expr}'::timestamp = %s", (val,))
     assert cur.fetchone()[0] is True
 
 
@@ -149,15 +145,15 @@ def test_dump_datetime_datestyle(conn, datestyle_in):
 @pytest.mark.parametrize(
     "val, expr",
     [
-        ("min", "'0001-01-01'"),
-        ("1000,1,1", "'1000-01-01'"),
-        ("2000,1,1", "'2000-01-01'"),
-        ("2000,1,2,3,4,5,6", "'2000-01-02 03:04:05.000006'"),
-        ("2000,1,2,3,4,5,678", "'2000-01-02 03:04:05.000678'"),
-        ("2000,1,2,3,0,0,456789", "'2000-01-02 03:00:00.456789'"),
-        ("2000,12,31", "'2000-12-31'"),
-        ("3000,1,1", "'3000-01-01'"),
-        ("max", "'9999-12-31 23:59:59.999999'"),
+        ("min", "0001-01-01"),
+        ("1000,1,1", "1000-01-01"),
+        ("2000,1,1", "2000-01-01"),
+        ("2000,1,2,3,4,5,6", "2000-01-02 03:04:05.000006"),
+        ("2000,1,2,3,4,5,678", "2000-01-02 03:04:05.000678"),
+        ("2000,1,2,3,0,0,456789", "2000-01-02 03:00:00.456789"),
+        ("2000,12,31", "2000-12-31"),
+        ("3000,1,1", "3000-01-01"),
+        ("max", "9999-12-31 23:59:59.999999"),
     ],
 )
 @pytest.mark.parametrize("datestyle_out", ["ISO", "Postgres", "SQL", "German"])
@@ -171,7 +167,7 @@ def test_load_datetime(conn, val, expr, datestyle_in, datestyle_out):
         else getattr(dt.datetime, val)
     )
     cur.execute("set timezone to '+02:00'")
-    cur.execute(f"select {expr}::timestamp")
+    cur.execute(f"select '{expr}'::timestamp")
     assert cur.fetchone()[0] == val
 
 
@@ -183,35 +179,35 @@ def test_load_datetime(conn, val, expr, datestyle_in, datestyle_out):
 @pytest.mark.parametrize(
     "val, expr",
     [
-        (dt.datetime.min, "'0001-01-01 00:00'::timestamptz"),
-        (dt.datetime(1000, 1, 1, 0, 0), "'1000-01-01 00:00+2'::timestamptz"),
-        (dt.datetime(2000, 1, 1, 0, 0), "'2000-01-01 00:00+2'::timestamptz"),
+        (dt.datetime.min, "0001-01-01 00:00"),
+        (dt.datetime(1000, 1, 1, 0, 0), "1000-01-01 00:00+2"),
+        (dt.datetime(2000, 1, 1, 0, 0), "2000-01-01 00:00+2"),
         (
             dt.datetime(2000, 12, 31, 23, 59, 59, 999999),
-            "'2000-12-31 23:59:59.999999+2'::timestamptz",
+            "2000-12-31 23:59:59.999999+2",
         ),
-        (dt.datetime(3000, 1, 1, 0, 0), "'3000-01-01 00:00+2'::timestamptz"),
-        (dt.datetime.max, "'9999-12-31 23:59:59.999999'::timestamptz"),
+        (dt.datetime(3000, 1, 1, 0, 0), "3000-01-01 00:00+2"),
+        (dt.datetime.max, "9999-12-31 23:59:59.999999"),
     ],
 )
 def test_dump_datetimetz(conn, val, expr):
     val = val.replace(tzinfo=dt.timezone(dt.timedelta(hours=2)))
     cur = conn.cursor()
     cur.execute("set timezone to '-02:00'")
-    cur.execute("select %s = %%s" % expr, (val,))
+    cur.execute(f"select '{expr}'::timestamptz = %s", (val,))
     assert cur.fetchone()[0] is True
 
 
 @pytest.mark.xfail  # TODO: binary dump
 @pytest.mark.parametrize(
     "val, expr",
-    [(dt.datetime(2000, 1, 1, 0, 0), "'2000-01-01 00:00'::timestamptz")],
+    [(dt.datetime(2000, 1, 1, 0, 0), "2000-01-01 00:00")],
 )
 def test_dump_datetimetz_binary(conn, val, expr):
     val = val.replace(tzinfo=dt.timezone(dt.timedelta(hours=2)))
     cur = conn.cursor()
     cur.execute("set timezone to '-02:00'")
-    cur.execute("select %s = %%b" % expr, (val,))
+    cur.execute(f"select '{expr}'::timestamptz = %b", (val,))
     assert cur.fetchone()[0] is True
 
 
