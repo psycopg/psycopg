@@ -1,13 +1,13 @@
 import datetime as dt
 import pytest
 
-import psycopg3
 from psycopg3.adapt import Format
 
 
 #
 # date tests
 #
+
 
 @pytest.mark.parametrize(
     "val, expr",
@@ -63,7 +63,7 @@ def test_load_date(conn, val, expr):
 
 @pytest.mark.xfail  # TODO: binary load
 @pytest.mark.parametrize(
-    "val, expr", [(dt.date(2000, 1, 1), "'2000-01-01'::date")],
+    "val, expr", [(dt.date(2000, 1, 1), "'2000-01-01'::date")]
 )
 def test_load_date_binary(conn, val, expr):
     cur = conn.cursor(format=Format.BINARY)
@@ -84,7 +84,7 @@ def test_load_date_bc(conn, datestyle_out):
     cur = conn.cursor()
     cur.execute(f"set datestyle = {datestyle_out}, YMD")
     cur.execute("select %s - 1", (dt.date.min,))
-    with pytest.raises(psycopg3.InterfaceError):
+    with pytest.raises(ValueError):
         cur.fetchone()[0]
 
 
@@ -93,13 +93,14 @@ def test_load_date_too_large(conn, datestyle_out):
     cur = conn.cursor()
     cur.execute(f"set datestyle = {datestyle_out}, YMD")
     cur.execute("select %s + 1", (dt.date.max,))
-    with pytest.raises(psycopg3.InterfaceError):
+    with pytest.raises(ValueError):
         cur.fetchone()[0]
 
 
 #
 # datetime tests
 #
+
 
 @pytest.mark.parametrize(
     "val, expr",
@@ -145,9 +146,39 @@ def test_dump_datetime_datestyle(conn, datestyle_in):
     assert cur.fetchone()[0] is True
 
 
+@pytest.mark.parametrize(
+    "val, expr",
+    [
+        ("min", "'0001-01-01'"),
+        ("1000,1,1", "'1000-01-01'"),
+        ("2000,1,1", "'2000-01-01'"),
+        ("2000,1,2,3,4,5,6", "'2000-01-02 03:04:05.000006'"),
+        ("2000,1,2,3,4,5,678", "'2000-01-02 03:04:05.000678'"),
+        ("2000,1,2,3,0,0,456789", "'2000-01-02 03:00:00.456789'"),
+        ("2000,12,31", "'2000-12-31'"),
+        ("3000,1,1", "'3000-01-01'"),
+        ("max", "'9999-12-31 23:59:59.999999'"),
+    ],
+)
+@pytest.mark.parametrize("datestyle_out", ["ISO", "Postgres", "SQL", "German"])
+@pytest.mark.parametrize("datestyle_in", ["DMY", "MDY", "YMD"])
+def test_load_datetime(conn, val, expr, datestyle_in, datestyle_out):
+    cur = conn.cursor()
+    cur.execute(f"set datestyle = {datestyle_out}, {datestyle_in}")
+    val = (
+        dt.datetime(*map(int, val.split(",")))
+        if "," in val
+        else getattr(dt.datetime, val)
+    )
+    cur.execute("set timezone to '+02:00'")
+    cur.execute(f"select {expr}::timestamp")
+    assert cur.fetchone()[0] == val
+
+
 #
 # datetime+tz tests
 #
+
 
 @pytest.mark.parametrize(
     "val, expr",
