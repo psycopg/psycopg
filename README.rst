@@ -34,8 +34,8 @@ different development pattern::
 
     python -m venv .venv
     source .venv/bin/activate
-    pip -e psycopg3/setup.py[dev,test] develop    # for the base Python pacakge
-    pip -e psycopg3_c/setup.py develop            # for the C extension module
+    python psycopg3/setup.py[dev,test] develop    # for the base Python pacakge
+    python psycopg3_c/setup.py develop            # for the C extension module
 
 You can use tox to validate the code::
 
