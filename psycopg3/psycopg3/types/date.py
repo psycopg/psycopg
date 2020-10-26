@@ -10,7 +10,7 @@ from typing import cast
 
 from ..adapt import Dumper, Loader
 from ..proto import AdaptContext
-from ..errors import InterfaceError
+from ..errors import InterfaceError, DataError
 from .oids import builtins
 
 
@@ -103,24 +103,24 @@ class DateLoader(Loader):
         # Most likely we received a BC date, which Python doesn't support
         # Otherwise the unexpected value is displayed in the exception.
         if data.endswith(b"BC"):
-            raise ValueError(
+            raise DataError(
                 "Python doesn't support BC date:"
                 f" got {data.decode('utf8', 'replace')}"
             )
 
-        # Find the year from the date. We check if >= Y10K only in ISO format,
-        # others are too silly to bother being polite.
-        ds = self._get_datestyle()
-        if ds.startswith(b"ISO"):
-            year = int(data.split(b"-", 1)[0])
-            if year > 9999:
-                raise ValueError(
-                    "Python date doesn't support years after 9999:"
-                    f" got {data.decode('utf8', 'replace')}"
-                )
+        if self._get_year_digits(data) > 4:
+            raise DataError(
+                "Python date doesn't support years after 9999:"
+                f" got {data.decode('utf8', 'replace')}"
+            )
 
         # We genuinely received something we cannot parse
         raise exc
+
+    def _get_year_digits(self, data: bytes) -> int:
+        datesep = self._format[2].encode("ascii")
+        parts = data.split(b" ")[0].split(datesep)
+        return max(map(len, parts))
 
 
 @Loader.text(builtins["time"].oid)
@@ -141,7 +141,9 @@ class TimeLoader(Loader):
     def _raise_error(self, data: bytes, exc: ValueError) -> time:
         # Most likely, time 24:00
         if data.startswith(b"24"):
-            raise ValueError("time with hour 24 not supported by Python")
+            raise DataError(
+                f"time not supported by Python: {data.decode('ascii')}"
+            )
 
         # We genuinely received something we cannot parse
         raise exc
@@ -186,6 +188,17 @@ class TimestampLoader(DateLoader):
 
     def _raise_error(self, data: bytes, exc: ValueError) -> datetime:
         return cast(datetime, super()._raise_error(data, exc))
+
+    def _get_year_digits(self, data: bytes) -> int:
+        # Find the year from the date.
+        if not self._get_datestyle().startswith(b"P"):  # Postgres
+            return super()._get_year_digits(data)
+        else:
+            parts = data.split()
+            if len(parts) > 4:
+                return len(parts[4])
+            else:
+                return 0
 
 
 @Loader.text(builtins["timestamptz"].oid)

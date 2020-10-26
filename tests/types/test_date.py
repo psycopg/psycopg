@@ -1,6 +1,7 @@
 import datetime as dt
 import pytest
 
+from psycopg3 import DataError
 from psycopg3.adapt import Format
 
 
@@ -86,7 +87,7 @@ def test_load_date_bc(conn, datestyle_out):
     cur = conn.cursor()
     cur.execute(f"set datestyle = {datestyle_out}, YMD")
     cur.execute("select %s - 1", (dt.date.min,))
-    with pytest.raises(ValueError):
+    with pytest.raises(DataError):
         cur.fetchone()[0]
 
 
@@ -95,7 +96,7 @@ def test_load_date_too_large(conn, datestyle_out):
     cur = conn.cursor()
     cur.execute(f"set datestyle = {datestyle_out}, YMD")
     cur.execute("select %s + 1", (dt.date.max,))
-    with pytest.raises(ValueError):
+    with pytest.raises(DataError):
         cur.fetchone()[0]
 
 
@@ -189,6 +190,24 @@ def test_load_datetime(conn, val, expr, datestyle_in, datestyle_out):
     cur.execute("set timezone to '+02:00'")
     cur.execute(f"select '{expr}'::timestamp")
     assert cur.fetchone()[0] == as_dt(val)
+
+
+@pytest.mark.parametrize("datestyle_out", ["ISO", "Postgres", "SQL", "German"])
+def test_load_datetime_bc(conn, datestyle_out):
+    cur = conn.cursor()
+    cur.execute(f"set datestyle = {datestyle_out}, YMD")
+    cur.execute("select %s - '1s'::interval", (dt.datetime.min,))
+    with pytest.raises(DataError):
+        cur.fetchone()[0]
+
+
+@pytest.mark.parametrize("datestyle_out", ["ISO", "SQL", "Postgres", "German"])
+def test_load_datetime_too_large(conn, datestyle_out):
+    cur = conn.cursor()
+    cur.execute(f"set datestyle = {datestyle_out}, YMD")
+    cur.execute("select %s + '1s'::interval", (dt.datetime.max,))
+    with pytest.raises(DataError):
+        cur.fetchone()[0]
 
 
 #
@@ -330,5 +349,5 @@ def test_load_time_binary(conn, val, expr):
 def test_load_time_24(conn):
     cur = conn.cursor()
     cur.execute("select '24:00'::time")
-    with pytest.raises(ValueError):
+    with pytest.raises(DataError):
         cur.fetchone()[0]
