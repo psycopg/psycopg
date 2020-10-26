@@ -146,3 +146,34 @@ class TimestampLoader(DateLoader):
 
     def _raise_error(self, data: bytes, exc: ValueError) -> datetime:
         return cast(datetime, super()._raise_error(data, exc))
+
+
+@Loader.text(builtins["timestamptz"].oid)
+class TimestamptzLoader(TimestampLoader):
+    def _format_from_context(self) -> str:
+        ds = self._get_datestyle()
+        if ds.startswith(b"I"):  # ISO
+            return "%Y-%m-%d %H:%M:%S.%f%z"
+        elif ds.startswith(b"G"):  # German
+            return "%d.%m.%Y %H:%M:%S.%f %Z"
+        elif ds.startswith(b"S"):  # SQL
+            return (
+                "%d/%m/%Y %H:%M:%S.%f %Z"
+                if ds.endswith(b"DMY")
+                else "%m/%d/%Y %H:%M:%S.%f %Z"
+            )
+        elif ds.startswith(b"P"):  # Postgres
+            return (
+                "%a %d %b %H:%M:%S.%f %Y %Z"
+                if ds.endswith(b"DMY")
+                else "%a %b %d %H:%M:%S.%f %Y %Z"
+            )
+        else:
+            raise InterfaceError(f"unexpected DateStyle: {ds.decode('ascii')}")
+
+    def load(self, data: bytes) -> datetime:
+        # Hack to convert +HH in +HHMM
+        if data[-3:-2] in (b"-", b"+"):
+            data += b"00"
+
+        return super().load(data)

@@ -222,3 +222,64 @@ def test_dump_datetimetz_datestyle(conn, datestyle_in):
         (dt.datetime(1970, 1, 2, 5, 4, 5, 678000, tzinfo=tzinfo),),
     )
     assert cur.fetchone()[0] is True
+
+
+@pytest.mark.parametrize(
+    "val, offset, expr, timezone",
+    [
+        ("2000,1,1", "02:00", "2000-01-01", "-02:00"),
+        ("2000,1,2,3,4,5,6", "02:00", "2000-01-02 03:04:05.000006", "-02:00"),
+        (
+            "2000,1,2,3,4,5,678",
+            "01:00",
+            "2000-01-02 03:04:05.000678",
+            "Europe/Rome",
+        ),
+        (
+            "2000,7,2,3,4,5,678",
+            "02:00",
+            "2000-07-02 03:04:05.000678",
+            "Europe/Rome",
+        ),
+        (
+            "2000,1,2,3,0,0,456789",
+            "02:00",
+            "2000-01-02 03:00:00.456789",
+            "-02:00",
+        ),
+        ("2000,12,31", "02:00", "2000-12-31", "-02:00"),
+        ("1900,1,1", "05:21:10", "1900-01-01", "Asia/Calcutta"),
+    ],
+)
+@pytest.mark.parametrize("datestyle_out", ["ISO"])
+def test_load_datetimetz(conn, val, offset, expr, timezone, datestyle_out):
+    cur = conn.cursor()
+    cur.execute(f"set datestyle = {datestyle_out}, DMY")
+    val = dt.datetime(*map(int, val.split(",")))
+    tzoff = dt.timedelta(
+        **dict(
+            zip(("hours", "minutes", "seconds"), map(int, offset.split(":")))
+        )
+    )
+    val = val.replace(tzinfo=dt.timezone(tzoff))
+    cur.execute(f"set timezone to '{timezone}'")
+    cur.execute(f"select '{expr}'::timestamptz")
+    assert cur.fetchone()[0] == val
+
+
+@pytest.mark.xfail  # parse timezone names
+@pytest.mark.parametrize("val, expr", [("2000,1,1", "2000-01-01")])
+@pytest.mark.parametrize("datestyle_out", ["SQL", "Postgres", "German"])
+@pytest.mark.parametrize("datestyle_in", ["DMY", "MDY", "YMD"])
+def test_load_datetimetz_tzname(conn, val, expr, datestyle_in, datestyle_out):
+    cur = conn.cursor()
+    cur.execute(f"set datestyle = {datestyle_out}, {datestyle_in}")
+    val = (
+        dt.datetime(*map(int, val.split(",")))
+        if "," in val
+        else getattr(dt.datetime, val)
+    )
+    val = val.replace(tzinfo=dt.timezone(dt.timedelta(hours=2)))
+    cur.execute("set timezone to '-02:00'")
+    cur.execute(f"select '{expr}'::timestamptz")
+    assert cur.fetchone()[0] == val
