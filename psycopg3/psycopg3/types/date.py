@@ -5,7 +5,7 @@ Adapters for date/time types.
 # Copyright (C) 2020 The Psycopg Team
 
 import codecs
-from datetime import date, datetime
+from datetime import date, datetime, time
 from typing import cast
 
 from ..adapt import Dumper, Loader
@@ -28,6 +28,20 @@ class DateDumper(Dumper):
     @property
     def oid(self) -> int:
         return self.DATE_OID
+
+
+@Dumper.text(time)
+class TimeDumper(Dumper):
+
+    _encode = codecs.lookup("ascii").encode
+    TIMETZ_OID = builtins["timetz"].oid
+
+    def dump(self, obj: time) -> bytes:
+        return self._encode(str(obj))[0]
+
+    @property
+    def oid(self) -> int:
+        return self.TIMETZ_OID
 
 
 @Dumper.text(datetime)
@@ -53,12 +67,12 @@ class DateLoader(Loader):
 
     def __init__(self, oid: int, context: AdaptContext):
         super().__init__(oid, context)
-        self._date_format = self._format_from_context()
+        self._format = self._format_from_context()
 
     def load(self, data: bytes) -> date:
         try:
             return datetime.strptime(
-                self._decode(data)[0], self._date_format
+                self._decode(data)[0], self._format
             ).date()
         except ValueError as e:
             return self._raise_error(data, e)
@@ -109,15 +123,41 @@ class DateLoader(Loader):
         raise exc
 
 
+@Loader.text(builtins["time"].oid)
+class TimeLoader(Loader):
+
+    _decode = codecs.lookup("ascii").decode
+    _format = "%H:%M:%S.%f"
+    _format_no_micro = _format.replace(".%f", "")
+
+    def load(self, data: bytes) -> time:
+        # check if the data contains microseconds
+        fmt = self._format if b"." in data else self._format_no_micro
+        try:
+            return datetime.strptime(self._decode(data)[0], fmt).time()
+        except ValueError as e:
+            return self._raise_error(data, e)
+
+    def _raise_error(self, data: bytes, exc: ValueError) -> time:
+        # Most likely, time 24:00
+        if data.startswith(b"24"):
+            raise ValueError("time with hour 24 not supported by Python")
+
+        # We genuinely received something we cannot parse
+        raise exc
+
+
 @Loader.text(builtins["timestamp"].oid)
 class TimestampLoader(DateLoader):
     def __init__(self, oid: int, context: AdaptContext):
         super().__init__(oid, context)
-        self._no_micro_format = self._date_format.replace(".%f", "")
+        self._format_no_micro = self._format.replace(".%f", "")
 
     def load(self, data: bytes) -> datetime:
         # check if the data contains microseconds
-        fmt = self._date_format if b"." in data[19:] else self._no_micro_format
+        fmt = (
+            self._format if data.find(b".", 19) >= 0 else self._format_no_micro
+        )
         try:
             return datetime.strptime(self._decode(data)[0], fmt)
         except ValueError as e:
