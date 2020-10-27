@@ -5,7 +5,7 @@ Adapters for date/time types.
 # Copyright (C) 2020 The Psycopg Team
 
 import codecs
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timedelta
 from typing import cast
 
 from ..adapt import Dumper, Loader
@@ -58,6 +58,37 @@ class DateTimeDumper(Dumper):
     @property
     def oid(self) -> int:
         return self.TIMESTAMPTZ_OID
+
+
+@Dumper.text(timedelta)
+class TimeDeltaDumper(Dumper):
+    _encode = codecs.lookup("ascii").encode
+    INTERVAL_OID = builtins["interval"].oid
+
+    def __init__(self, src: type, context: AdaptContext = None):
+        super().__init__(src, context)
+        if self.connection:
+            if (
+                self.connection.pgconn.parameter_status(b"IntervalStyle")
+                == b"sql_standard"
+            ):
+                self.dump = self._dump_sql  # type: ignore[assignment]
+
+    def dump(self, obj: timedelta) -> bytes:
+        return self._encode(str(obj))[0]
+
+    def _dump_sql(self, obj: timedelta) -> bytes:
+        # sql_standard format needs explicit signs
+        # otherwise -1 day 1 sec will mean -1 sec
+        return b"%+d day %+d second %+d microsecond" % (
+            obj.days,
+            obj.seconds,
+            obj.microseconds,
+        )
+
+    @property
+    def oid(self) -> int:
+        return self.INTERVAL_OID
 
 
 @Loader.text(builtins["date"].oid)

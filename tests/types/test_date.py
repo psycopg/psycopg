@@ -393,6 +393,35 @@ def test_load_timetz_24(conn):
 
 
 #
+# Interval
+#
+
+
+@pytest.mark.parametrize(
+    "val, expr",
+    [
+        ("min", "-999999999 days"),
+        ("1d", "1 day"),
+        ("-1d", "-1 day"),
+        ("1s", "1 s"),
+        ("-1s", "-1 s"),
+        ("-1m", "-0.000001 s"),
+        ("1m", "0.000001 s"),
+        ("max", "999999999 days 23:59:59.999999"),
+    ],
+)
+@pytest.mark.parametrize(
+    "intervalstyle",
+    ["sql_standard", "postgres", "postgres_verbose", "iso_8601"],
+)
+def test_dump_interval(conn, val, expr, intervalstyle):
+    cur = conn.cursor()
+    cur.execute(f"set IntervalStyle to '{intervalstyle}'")
+    cur.execute(f"select '{expr}'::interval = %s", (as_td(val),))
+    assert cur.fetchone()[0] is True
+
+
+#
 # Support
 #
 
@@ -444,3 +473,15 @@ def as_tzinfo(s):
         **dict(zip(("hours", "minutes", "seconds"), map(int, s.split(":"))))
     )
     return dt.timezone(tzoff)
+
+
+def as_td(s):
+    if s in ("min", "max"):
+        return getattr(dt.timedelta, s)
+
+    suffixes = {"d": "days", "s": "seconds", "m": "microseconds"}
+    kwargs = {}
+    for part in s.split(","):
+        kwargs[suffixes[part[-1]]] = int(part[:-1])
+
+    return dt.timedelta(**kwargs)
