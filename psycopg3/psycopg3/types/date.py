@@ -184,6 +184,11 @@ class TimeTzLoader(TimeLoader):
 
     def __init__(self, oid: int, context: AdaptContext):
         if sys.version_info < (3, 7):
+            # fun fact: mypy doesn't complain about this on Python 3.8
+            # but it does on Python 3.6. Adding "# type: ignore[assignment]"
+            # will result in Python 3.6 passing but 3.8 complaining of unused
+            # assignment. You cannot win.
+            # https://github.com/python/mypy/issues/9652
             self.load = self._load_py36
 
         super().__init__(oid, context)
@@ -201,7 +206,9 @@ class TimeTzLoader(TimeLoader):
 
         return dt.time().replace(tzinfo=dt.tzinfo)
 
-    def _load_py36(self, data: bytes) -> time:
+    def _load_py36(
+        self, data: bytes, __decode: DecodeFunc = _decode_ascii
+    ) -> time:
         # Drop seconds from timezone for Python 3.6
         # Also, Python 3.6 doesn't support HHMM, only HH:MM
         if data[-6] in (43, 45):  # +-HH:MM -> +-HHMM
@@ -309,7 +316,9 @@ class TimestamptzLoader(TimestampLoader):
 
         return super().load(data)
 
-    def _load_py36(self, data: bytes) -> datetime:
+    def _load_py36(
+        self, data: bytes, __decode: DecodeFunc = _decode_ascii
+    ) -> datetime:
         # Drop seconds from timezone for Python 3.6
         # Also, Python 3.6 doesn't support HHMM, only HH:MM
         tzsep = (43, 45)  # + and - bytes
