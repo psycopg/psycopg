@@ -9,8 +9,9 @@ import codecs
 from typing import Any, Callable, Optional
 
 from .oids import builtins
-from ..adapt import Dumper
+from ..adapt import Dumper, Loader
 from ..proto import EncodeFunc
+from ..errors import DataError
 
 _encode_utf8 = codecs.lookup("utf8").encode
 
@@ -67,3 +68,19 @@ class BinaryJsonBDumper(JsonBDumper):
         self, obj: _JsonWrapper, __encode: EncodeFunc = _encode_utf8
     ) -> bytes:
         return b"\x01" + __encode(obj.dumps())[0]
+
+
+@Loader.text(builtins["json"].oid)
+@Loader.text(builtins["jsonb"].oid)
+@Loader.binary(builtins["json"].oid)
+class JsonLoader(Loader):
+    def load(self, data: bytes) -> Any:
+        return json.loads(data)
+
+
+@Loader.binary(builtins["jsonb"].oid)
+class BinaryJsonBLoader(Loader):
+    def load(self, data: bytes) -> Any:
+        if data and data[0] != 1:
+            raise DataError("unknown jsonb binary format: {data[0]}")
+        return json.loads(data[1:])

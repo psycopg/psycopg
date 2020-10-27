@@ -40,9 +40,13 @@ def test_jsonb_dump(conn, val, fmt_in):
     assert cur.fetchone()[0] is True
 
 
-def my_dumps(obj):
-    obj["baz"] = "qux"
-    return json.dumps(obj)
+@pytest.mark.parametrize("val", samples)
+@pytest.mark.parametrize("jtype", ["json", "jsonb"])
+@pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
+def test_json_load(conn, val, jtype, fmt_out):
+    cur = conn.cursor(format=fmt_out)
+    cur.execute(f"select %s::{jtype}", (val,))
+    assert cur.fetchone()[0] == json.loads(val)
 
 
 @pytest.mark.parametrize("fmt_in", [Format.TEXT, Format.BINARY])
@@ -72,3 +76,8 @@ def test_json_dump_subclass(conn, wrapper, fmt_in):
     cur = conn.cursor()
     cur.execute(f"select {ph}->>'baz' = 'qux'", (MyWrapper(obj),))
     assert cur.fetchone()[0] is True
+
+
+def my_dumps(obj):
+    obj["baz"] = "qux"
+    return json.dumps(obj)
