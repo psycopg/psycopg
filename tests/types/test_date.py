@@ -1,4 +1,6 @@
+import sys
 import datetime as dt
+
 import pytest
 
 from psycopg3 import DataError
@@ -194,6 +196,12 @@ def test_load_datetime_overflow(conn, val, datestyle_out):
     ],
 )
 def test_dump_datetimetz(conn, val, expr):
+    # adjust for Python 3.6 missing seconds in tzinfo
+    if val.count(":") > 1:
+        expr = expr.rsplit(":", 1)[0]
+        val, rest = val.rsplit(":", 1)
+        val += rest[3:]  # skip tz seconds, but include micros
+
     cur = conn.cursor()
     cur.execute("set timezone to '-02:00'")
     cur.execute(f"select '{expr}'::timestamptz = %s", (as_dt(val),))
@@ -523,9 +531,11 @@ def as_tzinfo(s):
     else:
         mul = 1
 
-    tzoff = mul * dt.timedelta(
-        **dict(zip(("hours", "minutes", "seconds"), map(int, s.split(":"))))
-    )
+    if sys.version_info < (3, 7):
+        fields = ("hours", "minutes")
+    else:
+        fields = ("hours", "minutes", "seconds")
+    tzoff = mul * dt.timedelta(**dict(zip(fields, map(int, s.split(":")))))
     return dt.timezone(tzoff)
 
 

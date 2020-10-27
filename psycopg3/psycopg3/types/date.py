@@ -5,6 +5,7 @@ Adapters for date/time types.
 # Copyright (C) 2020 The Psycopg Team
 
 import re
+import sys
 import codecs
 from datetime import date, datetime, time, timedelta
 from typing import cast
@@ -186,9 +187,15 @@ class TimeTzLoader(TimeLoader):
     _format = "%H:%M:%S.%f%z"
     _format_no_micro = _format.replace(".%f", "")
 
+    def __init__(self, oid: int, context: AdaptContext):
+        if sys.version_info < (3, 7):
+            self.load = self._load_py36
+
+        super().__init__(oid, context)
+
     def load(self, data: bytes) -> time:
         # Hack to convert +HH in +HHMM
-        if data[-3:-2] in (b"-", b"+"):
+        if data[-3] in (43, 45):
             data += b"00"
 
         fmt = self._format if b"." in data else self._format_no_micro
@@ -198,6 +205,16 @@ class TimeTzLoader(TimeLoader):
             return self._raise_error(data, e)
 
         return dt.time().replace(tzinfo=dt.tzinfo)
+
+    def _load_py36(self, data: bytes) -> time:
+        # Drop seconds from timezone for Python 3.6
+        # Also, Python 3.6 doesn't support HHMM, only HH:MM
+        if data[-6] in (43, 45):  # +-HH:MM -> +-HHMM
+            data = data[:-3] + data[-2:]
+        elif data[-9] in (43, 45):  # +-HH:MM:SS -> +-HHMM
+            data = data[:-6] + data[-5:-3]
+
+        return TimeTzLoader.load(self, data)
 
 
 @Loader.text(builtins["timestamp"].oid)
@@ -254,6 +271,12 @@ class TimestampLoader(DateLoader):
 
 @Loader.text(builtins["timestamptz"].oid)
 class TimestamptzLoader(TimestampLoader):
+    def __init__(self, oid: int, context: AdaptContext):
+        if sys.version_info < (3, 7):
+            self.load = self._load_py36
+
+        super().__init__(oid, context)
+
     def _format_from_context(self) -> str:
         ds = self._get_datestyle()
         if ds.startswith(b"I"):  # ISO
@@ -282,8 +305,21 @@ class TimestamptzLoader(TimestampLoader):
 
     def load(self, data: bytes) -> datetime:
         # Hack to convert +HH in +HHMM
-        if data[-3:-2] in (b"-", b"+"):
+        if data[-3] in (43, 45):
             data += b"00"
+
+        return super().load(data)
+
+    def _load_py36(self, data: bytes) -> datetime:
+        # Drop seconds from timezone for Python 3.6
+        # Also, Python 3.6 doesn't support HHMM, only HH:MM
+        tzsep = (43, 45)  # + and - bytes
+        if data[-3] in tzsep:  # +HH, -HH
+            data += b"00"
+        elif data[-6] in tzsep:
+            data = data[:-3] + data[-2:]
+        elif data[-9] in tzsep:
+            data = data[:-6] + data[-5:-3]
 
         return super().load(data)
 
