@@ -73,7 +73,7 @@ class TimeDeltaDumper(Dumper):
                 self.connection.pgconn.parameter_status(b"IntervalStyle")
                 == b"sql_standard"
             ):
-                self.dump = self._dump_sql  # type: ignore[assignment]
+                setattr(self, "dump", self._dump_sql)
 
     def dump(
         self, obj: timedelta, __encode: EncodeFunc = _encode_ascii
@@ -184,12 +184,7 @@ class TimeTzLoader(TimeLoader):
 
     def __init__(self, oid: int, context: AdaptContext):
         if sys.version_info < (3, 7):
-            # fun fact: mypy doesn't complain about this on Python 3.8
-            # but it does on Python 3.6. Adding "# type: ignore[assignment]"
-            # will result in Python 3.6 passing but 3.8 complaining of unused
-            # assignment. You cannot win.
-            # https://github.com/python/mypy/issues/9652
-            self.load = self._load_py36
+            setattr(self, "load", self._load_py36)
 
         super().__init__(oid, context)
 
@@ -277,7 +272,7 @@ class TimestampLoader(DateLoader):
 class TimestamptzLoader(TimestampLoader):
     def __init__(self, oid: int, context: AdaptContext):
         if sys.version_info < (3, 7):
-            self.load = self._load_py36
+            setattr(self, "load", self._load_py36)
 
         super().__init__(oid, context)
 
@@ -304,7 +299,7 @@ class TimestamptzLoader(TimestampLoader):
         # else:
         #     raise InterfaceError(f"unexpected DateStyle: {ds.decode('ascii')}")
         else:
-            self.load = self._load_notimpl  # type: ignore[assignment]
+            setattr(self, "load", self._load_notimpl)
             return ""
 
     def load(
@@ -360,7 +355,7 @@ class IntervalLoader(Loader):
         if self.connection:
             ints = self.connection.pgconn.parameter_status(b"IntervalStyle")
             if ints != b"postgres":
-                self.load = self._load_notimpl  # type: ignore[assignment]
+                setattr(self, "load", self._load_notimpl)
 
     def load(self, data: bytes) -> timedelta:
         m = self._re_interval.match(data)
