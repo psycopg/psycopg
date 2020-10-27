@@ -51,9 +51,16 @@ def test_connect_async(dsn):
 
 
 def test_connect_async_bad(dsn):
-    conn = pq.PGconn.connect_start(b"dbname=psycopg3_test_not_for_real")
+    parsed_dsn = {
+        e.keyword: e.val
+        for e in pq.Conninfo.parse(dsn.encode("utf8"))
+        if e.val
+    }
+    parsed_dsn[b"dbname"] = b"psycopg3_test_not_for_real"
+    dsn = b" ".join(b"%s='%s'" % item for item in parsed_dsn.items())
+    conn = pq.PGconn.connect_start(dsn)
     while 1:
-        assert conn.status != pq.ConnStatus.BAD
+        assert conn.status != pq.ConnStatus.BAD, conn.error_message
         rv = conn.connect_poll()
         if rv == pq.PollingStatus.FAILED:
             break
