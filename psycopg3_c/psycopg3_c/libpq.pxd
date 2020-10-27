@@ -183,12 +183,12 @@ cdef extern from "libpq-fe.h":
     Oid PQoidValue(const PGresult *res)
 
     # 33.3.4. Escaping Strings for Inclusion in SQL Commands
-    # TODO: PQescapeStringConn PQescapeString
     char *PQescapeIdentifier(PGconn *conn, const char *str, size_t length)
     char *PQescapeLiteral(PGconn *conn, const char *str, size_t length)
     size_t PQescapeStringConn(PGconn *conn,
                               char *to, const char *from_, size_t length,
                               int *error)
+    size_t PQescapeString(char *to, const char *from_, size_t length)
     unsigned char *PQescapeByteaConn(PGconn *conn,
                                      const unsigned char *src,
                                      size_t from_length,

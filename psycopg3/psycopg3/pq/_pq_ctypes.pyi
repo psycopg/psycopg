@@ -67,6 +67,7 @@ def PQescapeStringConn(
     arg4: int,
     arg5: pointer[c_int],
 ) -> int: ...
+def PQescapeString(arg1: c_char_p, arg2: bytes, arg3: int) -> int: ...
 def PQsendPrepare(
     arg1: Optional[PGconn_struct],
     arg2: bytes,

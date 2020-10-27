@@ -797,7 +797,13 @@ class Escaping:
             return out.value
 
         else:
-            raise PQerror("escape_identifier failed: no connection provided")
+            out = create_string_buffer(len(data) * 2 + 1)
+            impl.PQescapeString(
+                pointer(out),  # type: ignore
+                data,
+                len(data),
+            )
+            return out.value
 
     def escape_bytea(self, data: bytes) -> bytes:
         len_out = c_size_t()

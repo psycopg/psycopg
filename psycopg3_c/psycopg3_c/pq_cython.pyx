@@ -838,6 +838,8 @@ cdef class Escaping:
         cdef size_t len_data = len(data)
         cdef char *out
         cdef size_t len_out
+        cdef bytes rv
+
         if self.conn is not None:
             if self.conn.pgconn_ptr is NULL:
                 raise PQerror("the connection is closed")
@@ -848,13 +850,22 @@ cdef class Escaping:
             )
 
             if error:
+                PyMem_Free(out)
                 raise PQerror(
                     f"escape_string failed: {error_message(self.conn)}"
                 )
-            return out[:len_out]
+
+            rv = out[:len_out]
+            PyMem_Free(out)
+            return rv
 
         else:
-            raise PQerror("escape_identifier failed: no connection provided")
+            out = <char *>PyMem_Malloc(len_data * 2 + 1)
+            len_out = impl.PQescapeString(out, data, len_data)
+            rv = out[:len_out]
+            PyMem_Free(out)
+            return rv
+
 
     def escape_bytea(self, data: bytes) -> bytes:
         cdef size_t len_out

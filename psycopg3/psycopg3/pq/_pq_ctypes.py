@@ -402,7 +402,10 @@ PQescapeStringConn = pq.PQescapeStringConn
 # ]
 PQescapeStringConn.restype = c_size_t
 
-# won't wrap: PQescapeString
+PQescapeString = pq.PQescapeString
+# TODO: raises "wrong type" error
+# PQescapeString.argtypes = [c_char_p, c_char_p, c_size_t]
+PQescapeString.restype = c_size_t
 
 PQescapeByteaConn = pq.PQescapeByteaConn
 PQescapeByteaConn.argtypes = [
