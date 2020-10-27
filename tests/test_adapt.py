@@ -45,6 +45,16 @@ def test_dump_cursor_ctx(conn):
     assert cur.fetchone() == ("hellot", "worldb")
 
 
+@pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
+def test_dump_subclass(conn, fmt_out):
+    class MyString(str):
+        pass
+
+    cur = conn.cursor()
+    cur.execute("select %s, %b", [MyString("hello"), MyString("world")])
+    assert cur.fetchone() == ("hello", "world")
+
+
 @pytest.mark.parametrize(
     "data, format, type, result",
     [
