@@ -20,12 +20,13 @@ FLOAT8_OID = builtins["float8"].oid
 NUMERIC_OID = builtins["numeric"].oid
 BOOL_OID = builtins["bool"].oid
 
+_encode_ascii = codecs.lookup("ascii").encode
+_decode_ascii = codecs.lookup("ascii").decode
+
 
 @Dumper.text(int)
 class TextIntDumper(Dumper):
-    def dump(
-        self, obj: int, __encode: EncodeFunc = codecs.lookup("ascii").encode
-    ) -> bytes:
+    def dump(self, obj: int, __encode: EncodeFunc = _encode_ascii) -> bytes:
         return __encode(str(obj))[0]
 
     @property
@@ -36,9 +37,7 @@ class TextIntDumper(Dumper):
 
 @Dumper.text(float)
 class TextFloatDumper(Dumper):
-    def dump(
-        self, obj: float, __encode: EncodeFunc = codecs.lookup("ascii").encode
-    ) -> bytes:
+    def dump(self, obj: float, __encode: EncodeFunc = _encode_ascii) -> bytes:
         return __encode(str(obj))[0]
 
     @property
@@ -50,9 +49,7 @@ class TextFloatDumper(Dumper):
 @Dumper.text(Decimal)
 class TextDecimalDumper(Dumper):
     def dump(
-        self,
-        obj: Decimal,
-        __encode: EncodeFunc = codecs.lookup("ascii").encode,
+        self, obj: Decimal, __encode: EncodeFunc = _encode_ascii
     ) -> bytes:
         return __encode(str(obj))[0]
 
@@ -86,9 +83,7 @@ class BinaryBoolDumper(Dumper):
 @Loader.text(builtins["int8"].oid)
 @Loader.text(builtins["oid"].oid)
 class TextIntLoader(Loader):
-    def load(
-        self, data: bytes, __decode: DecodeFunc = codecs.lookup("ascii").decode
-    ) -> int:
+    def load(self, data: bytes, __decode: DecodeFunc = _decode_ascii) -> int:
         return int(__decode(data)[0])
 
 
@@ -163,7 +158,7 @@ class BinaryFloat8Loader(Loader):
 @Loader.text(builtins["numeric"].oid)
 class TextNumericLoader(Loader):
     def load(
-        self, data: bytes, __decode: DecodeFunc = codecs.lookup("ascii").decode
+        self, data: bytes, __decode: DecodeFunc = _decode_ascii
     ) -> Decimal:
         return Decimal(__decode(data)[0])
 
