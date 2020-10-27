@@ -51,6 +51,7 @@ class _JsonDumper(Dumper):
 
 
 @Dumper.text(Json)
+@Dumper.binary(Json)
 class JsonDumper(_JsonDumper):
     _oid = JSON_OID
 
@@ -58,3 +59,11 @@ class JsonDumper(_JsonDumper):
 @Dumper.text(JsonB)
 class JsonBDumper(_JsonDumper):
     _oid = JSONB_OID
+
+
+@Dumper.binary(JsonB)
+class BinaryJsonBDumper(JsonBDumper):
+    def dump(
+        self, obj: _JsonWrapper, __encode: EncodeFunc = _encode_utf8
+    ) -> bytes:
+        return b"\x01" + __encode(obj.dumps())[0]
