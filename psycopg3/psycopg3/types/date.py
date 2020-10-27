@@ -4,6 +4,7 @@ Adapters for date/time types.
 
 # Copyright (C) 2020 The Psycopg Team
 
+import re
 import codecs
 from datetime import date, datetime, time, timedelta
 from typing import cast
@@ -257,22 +258,27 @@ class TimestamptzLoader(TimestampLoader):
         ds = self._get_datestyle()
         if ds.startswith(b"I"):  # ISO
             return "%Y-%m-%d %H:%M:%S.%f%z"
-        elif ds.startswith(b"G"):  # German
-            return "%d.%m.%Y %H:%M:%S.%f %Z"
-        elif ds.startswith(b"S"):  # SQL
-            return (
-                "%d/%m/%Y %H:%M:%S.%f %Z"
-                if ds.endswith(b"DMY")
-                else "%m/%d/%Y %H:%M:%S.%f %Z"
-            )
-        elif ds.startswith(b"P"):  # Postgres
-            return (
-                "%a %d %b %H:%M:%S.%f %Y %Z"
-                if ds.endswith(b"DMY")
-                else "%a %b %d %H:%M:%S.%f %Y %Z"
-            )
+
+        # These don't work: the timezone name is not always displayed
+        # elif ds.startswith(b"G"):  # German
+        #     return "%d.%m.%Y %H:%M:%S.%f %Z"
+        # elif ds.startswith(b"S"):  # SQL
+        #     return (
+        #         "%d/%m/%Y %H:%M:%S.%f %Z"
+        #         if ds.endswith(b"DMY")
+        #         else "%m/%d/%Y %H:%M:%S.%f %Z"
+        #     )
+        # elif ds.startswith(b"P"):  # Postgres
+        #     return (
+        #         "%a %d %b %H:%M:%S.%f %Y %Z"
+        #         if ds.endswith(b"DMY")
+        #         else "%a %b %d %H:%M:%S.%f %Y %Z"
+        #     )
+        # else:
+        #     raise InterfaceError(f"unexpected DateStyle: {ds.decode('ascii')}")
         else:
-            raise InterfaceError(f"unexpected DateStyle: {ds.decode('ascii')}")
+            self.load = self._load_notimpl  # type: ignore[assignment]
+            return ""
 
     def load(self, data: bytes) -> datetime:
         # Hack to convert +HH in +HHMM
@@ -280,3 +286,80 @@ class TimestamptzLoader(TimestampLoader):
             data += b"00"
 
         return super().load(data)
+
+    def _load_notimpl(self, data: bytes) -> datetime:
+        raise NotImplementedError(
+            "can't parse datetimetz with DateStyle"
+            f" {self._get_datestyle().decode('ascii')}: {data.decode('ascii')}"
+        )
+
+
+@Loader.text(builtins["interval"].oid)
+class IntervalLoader(Loader):
+
+    _decode = codecs.lookup("ascii").decode
+    _re_interval = re.compile(
+        br"""
+        (?: (?P<years> [-+]?\d+) \s+ years? \s* )?
+        (?: (?P<months> [-+]?\d+) \s+ mons? \s* )?
+        (?: (?P<days> [-+]?\d+) \s+ days? \s* )?
+        (?: (?P<hsign> [-+])?
+            (?P<hours> \d+ )
+          : (?P<minutes> \d+ )
+          : (?P<seconds> \d+ (?:\.\d+)? )
+        )?
+        """,
+        re.VERBOSE,
+    )
+
+    def __init__(self, oid: int, context: AdaptContext):
+        super().__init__(oid, context)
+        if self.connection:
+            ints = self.connection.pgconn.parameter_status(b"IntervalStyle")
+            if ints != b"postgres":
+                self.load = self._load_notimpl  # type: ignore[assignment]
+
+    def load(self, data: bytes) -> timedelta:
+        m = self._re_interval.match(data)
+        if not m:
+            raise ValueError("can't parse interval: {data.decode('ascii')}")
+
+        days = 0
+        seconds = 0.0
+
+        tmp = m.group("years")
+        if tmp:
+            days += 365 * int(tmp)
+
+        tmp = m.group("months")
+        if tmp:
+            days += 30 * int(tmp)
+
+        tmp = m.group("days")
+        if tmp:
+            days += int(tmp)
+
+        if m.group("hours"):
+            seconds = (
+                3600 * int(m.group("hours"))
+                + 60 * int(m.group("minutes"))
+                + float(m.group("seconds"))
+            )
+            if m.group("hsign") == b"-":
+                seconds = -seconds
+
+        try:
+            return timedelta(days=days, seconds=seconds)
+        except OverflowError as e:
+            raise DataError(str(e))
+
+    def _load_notimpl(self, data: bytes) -> timedelta:
+        ints = (
+            self.connection
+            and self.connection.pgconn.parameter_status(b"IntervalStyle")
+            or b"unknown"
+        )
+        raise NotImplementedError(
+            "can't parse interval with IntervalStyle"
+            f" {ints.decode('ascii')}: {data.decode('ascii')}"
+        )

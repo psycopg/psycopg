@@ -28,10 +28,10 @@ def test_dump_date(conn, val, expr):
 
 
 @pytest.mark.xfail  # TODO: binary dump
-@pytest.mark.parametrize("val, expr", [(dt.date(2000, 1, 1), "2000-01-01")])
+@pytest.mark.parametrize("val, expr", [("2000,1,1", "2000-01-01")])
 def test_dump_date_binary(conn, val, expr):
     cur = conn.cursor()
-    cur.execute(f"select '{expr}'::date = %b", (val,))
+    cur.execute(f"select '{expr}'::date = %b", (as_date(val),))
     assert cur.fetchone()[0] is True
 
 
@@ -76,20 +76,14 @@ def test_load_date_datestyle(conn, datestyle_out):
     assert cur.fetchone()[0] == dt.date(2000, 1, 2)
 
 
+@pytest.mark.parametrize("val", ["min", "max"])
 @pytest.mark.parametrize("datestyle_out", ["ISO", "Postgres", "SQL", "German"])
-def test_load_date_bc(conn, datestyle_out):
+def test_load_date_overflow(conn, val, datestyle_out):
     cur = conn.cursor()
     cur.execute(f"set datestyle = {datestyle_out}, YMD")
-    cur.execute("select %s - 1", (dt.date.min,))
-    with pytest.raises(DataError):
-        cur.fetchone()[0]
-
-
-@pytest.mark.parametrize("datestyle_out", ["ISO", "Postgres", "SQL", "German"])
-def test_load_date_too_large(conn, datestyle_out):
-    cur = conn.cursor()
-    cur.execute(f"set datestyle = {datestyle_out}, YMD")
-    cur.execute("select %s + 1", (dt.date.max,))
+    cur.execute(
+        "select %s + %s::int", (as_date(val), -1 if val == "min" else 1)
+    )
     with pytest.raises(DataError):
         cur.fetchone()[0]
 
@@ -164,20 +158,15 @@ def test_load_datetime(conn, val, expr, datestyle_in, datestyle_out):
     assert cur.fetchone()[0] == as_dt(val)
 
 
+@pytest.mark.parametrize("val", ["min", "max"])
 @pytest.mark.parametrize("datestyle_out", ["ISO", "Postgres", "SQL", "German"])
-def test_load_datetime_bc(conn, datestyle_out):
+def test_load_datetime_overflow(conn, val, datestyle_out):
     cur = conn.cursor()
     cur.execute(f"set datestyle = {datestyle_out}, YMD")
-    cur.execute("select %s - '1s'::interval", (dt.datetime.min,))
-    with pytest.raises(DataError):
-        cur.fetchone()[0]
-
-
-@pytest.mark.parametrize("datestyle_out", ["ISO", "SQL", "Postgres", "German"])
-def test_load_datetime_too_large(conn, datestyle_out):
-    cur = conn.cursor()
-    cur.execute(f"set datestyle = {datestyle_out}, YMD")
-    cur.execute("select %s + '1s'::interval", (dt.datetime.max,))
+    cur.execute(
+        "select %s::timestamp + %s * '1s'::interval",
+        (as_dt(val), -1 if val == "min" else 1),
+    )
     with pytest.raises(DataError):
         cur.fetchone()[0]
 
@@ -419,6 +408,71 @@ def test_dump_interval(conn, val, expr, intervalstyle):
     cur.execute(f"set IntervalStyle to '{intervalstyle}'")
     cur.execute(f"select '{expr}'::interval = %s", (as_td(val),))
     assert cur.fetchone()[0] is True
+
+
+@pytest.mark.xfail  # TODO: binary dump
+@pytest.mark.parametrize("val, expr", [("1s", "1s")])
+def test_dump_interval_binary(conn, val, expr):
+    cur = conn.cursor()
+    cur.execute(f"select '{expr}'::interval = %b", (as_td(val),))
+    assert cur.fetchone()[0] is True
+
+
+@pytest.mark.parametrize(
+    "val, expr",
+    [
+        ("1s", "1 sec"),
+        ("-1s", "-1 sec"),
+        ("60s", "1 min"),
+        ("3600s", "1 hour"),
+        ("1s,1000m", "1.001 sec"),
+        ("1s,1m", "1.000001 sec"),
+        ("1d", "1 day"),
+        ("-10d", "-10 day"),
+        ("1d,1s,1m", "1 day 1.000001 sec"),
+        ("-86399s,-999999m", "-23:59:59.999999"),
+        ("-3723s,-400000m", "-1:2:3.4"),
+        ("3723s,400000m", "1:2:3.4"),
+        ("86399s,999999m", "23:59:59.999999"),
+        ("30d", "30 day"),
+        ("365d", "1 year"),
+        ("-365d", "-1 year"),
+        ("-730d", "-2 years"),
+        ("1460d", "4 year"),
+        ("30d", "1 month"),
+        ("-30d", "-1 month"),
+        ("60d", "2 month"),
+        ("-90d", "-3 month"),
+    ],
+)
+def test_load_interval(conn, val, expr):
+    cur = conn.cursor()
+    cur.execute(f"select '{expr}'::interval")
+    assert cur.fetchone()[0] == as_td(val)
+
+
+@pytest.mark.xfail  # weird interval outputs
+@pytest.mark.parametrize("val, expr", [("1d,1s", "1 day 1 sec")])
+@pytest.mark.parametrize(
+    "intervalstyle",
+    ["sql_standard", "postgres_verbose", "iso_8601"],
+)
+def test_load_interval_intervalstyle(conn, val, expr, intervalstyle):
+    cur = conn.cursor()
+    cur.execute(f"set IntervalStyle to '{intervalstyle}'")
+    cur.execute(f"select '{expr}'::interval")
+    assert cur.fetchone()[0] == as_td(val)
+
+
+@pytest.mark.parametrize("val", ["min", "max"])
+def test_load_interval_overflow(conn, val):
+    cur = conn.cursor()
+    cur.execute(
+        "select %s + %s * '1s'::interval",
+        (as_td(val), -1 if val == "min" else 1),
+    )
+    with pytest.raises(DataError):
+        cur.fetchone()[0]
 
 
 #
