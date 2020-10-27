@@ -149,6 +149,25 @@ class TimeLoader(Loader):
         raise exc
 
 
+@Loader.text(builtins["timetz"].oid)
+class TimeTzLoader(TimeLoader):
+    _format = "%H:%M:%S.%f%z"
+    _format_no_micro = _format.replace(".%f", "")
+
+    def load(self, data: bytes) -> time:
+        # Hack to convert +HH in +HHMM
+        if data[-3:-2] in (b"-", b"+"):
+            data += b"00"
+
+        fmt = self._format if b"." in data else self._format_no_micro
+        try:
+            dt = datetime.strptime(self._decode(data)[0], fmt)
+        except ValueError as e:
+            return self._raise_error(data, e)
+
+        return dt.time().replace(tzinfo=dt.tzinfo)
+
+
 @Loader.text(builtins["timestamp"].oid)
 class TimestampLoader(DateLoader):
     def __init__(self, oid: int, context: AdaptContext):
