@@ -12,6 +12,7 @@ from typing import Sequence, Tuple, Union, TYPE_CHECKING
 from .. import errors as e
 from ..pq import Format
 from ..proto import Query, Params
+from ..sql import Composable
 
 if TYPE_CHECKING:
     from ..proto import Transformer
@@ -48,6 +49,9 @@ class PostgresQuery:
         The results of this function can be obtained accessing the object
         attributes (`query`, `params`, `types`, `formats`).
         """
+        if isinstance(query, Composable):
+            query = query.as_string(self._tx)
+
         codec = self._tx.codec
         if vars is not None:
             self.query, self.formats, self._order, self._parts = _query2pg(
@@ -99,7 +103,7 @@ class PostgresQuery:
 
 @lru_cache()
 def _query2pg(
-    query: Query, encoding: str
+    query: Union[bytes, str], encoding: str
 ) -> Tuple[bytes, List[Format], Optional[List[str]], List[QueryPart]]:
     """
     Convert Python query and params into something Postgres understands.

@@ -1,6 +1,6 @@
 import pytest
 
-import psycopg3
+from psycopg3 import DatabaseError, sql
 from psycopg3.adapt import Format
 
 eur = "\u20ac"
@@ -17,7 +17,33 @@ def test_dump_1char(conn, fmt_in):
     ph = "%s" if fmt_in == Format.TEXT else "%b"
     for i in range(1, 256):
         cur.execute(f"select {ph} = chr(%s::int)", (chr(i), i))
-        assert cur.fetchone()[0], chr(i)
+        assert cur.fetchone()[0] is True, chr(i)
+
+
+def test_quote_1char(conn):
+    cur = conn.cursor()
+    query = sql.SQL("select {ch} = chr(%s::int)")
+    for i in range(1, 256):
+        if chr(i) == "%":
+            continue
+        cur.execute(query.format(ch=sql.Literal(chr(i))), (i,))
+        assert cur.fetchone()[0] is True, chr(i)
+
+
+# the only way to make this pass is to reduce %% -> % every time
+# not only when there are query arguments
+# see https://github.com/psycopg/psycopg2/issues/825
+@pytest.mark.xfail
+def test_quote_percent(conn):
+    cur = conn.cursor()
+    cur.execute(sql.SQL("select {ch}").format(ch=sql.Literal("%")))
+    assert cur.fetchone()[0] == "%"
+
+    cur.execute(
+        sql.SQL("select {ch} = chr(%s::int)").format(ch=sql.Literal("%")),
+        (ord("%"),),
+    )
+    assert cur.fetchone()[0] is True
 
 
 @pytest.mark.parametrize("typename", ["text", "varchar", "name", "bpchar"])
@@ -82,7 +108,7 @@ def test_load_badenc(conn, typename, fmt_out):
     cur = conn.cursor(format=fmt_out)
 
     conn.client_encoding = "latin1"
-    with pytest.raises(psycopg3.DatabaseError):
+    with pytest.raises(DatabaseError):
         cur.execute(f"select chr(%s::int)::{typename}", (ord(eur),))
 
 
@@ -143,7 +169,15 @@ def test_dump_1byte(conn, fmt_in):
     ph = "%s" if fmt_in == Format.TEXT else "%b"
     for i in range(0, 256):
         cur.execute(f"select {ph} = %s::bytea", (bytes([i]), fr"\x{i:02x}"))
-        assert cur.fetchone()[0], i
+        assert cur.fetchone()[0] is True, i
+
+
+def test_quote_1byte(conn):
+    cur = conn.cursor()
+    query = sql.SQL("select {ch} = %s::bytea")
+    for i in range(0, 256):
+        cur.execute(query.format(ch=sql.Literal(bytes([i]))), (fr"\x{i:02x}",))
+        assert cur.fetchone()[0] is True, i
 
 
 @pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])

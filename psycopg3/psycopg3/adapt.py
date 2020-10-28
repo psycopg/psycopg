@@ -29,6 +29,16 @@ class Dumper:
     def dump(self, obj: Any) -> bytes:
         raise NotImplementedError()
 
+    def quote(self, obj: Any) -> bytes:
+        value = self.dump(obj)
+
+        if self.connection:
+            esc = pq.Escaping(self.connection.pgconn)
+            return esc.escape_literal(value)
+        else:
+            esc = pq.Escaping()
+            return b"'%s'" % esc.escape_string(value)
+
     @property
     def oid(self) -> int:
         return TEXT_OID

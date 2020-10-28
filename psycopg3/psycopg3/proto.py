@@ -18,11 +18,12 @@ if TYPE_CHECKING:
     from .cursor import BaseCursor
     from .adapt import Dumper, Loader
     from .waiting import Wait, Ready
+    from .sql import Composable
 
 EncodeFunc = Callable[[str], Tuple[bytes, int]]
 DecodeFunc = Callable[[bytes], Tuple[str, int]]
 
-Query = Union[str, bytes]
+Query = Union[str, bytes, "Composable"]
 Params = Union[Sequence[Any], Mapping[str, Any]]
 
 

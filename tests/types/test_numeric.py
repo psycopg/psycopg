@@ -3,6 +3,7 @@ from math import isnan, isinf, exp
 
 import pytest
 
+from psycopg3 import sql
 from psycopg3.adapt import Loader, Transformer, Format
 from psycopg3.types import builtins
 from psycopg3.types.numeric import TextFloatLoader
@@ -28,8 +29,29 @@ from psycopg3.types.numeric import TextFloatLoader
 def test_dump_int(conn, val, expr):
     assert isinstance(val, int)
     cur = conn.cursor()
-    cur.execute("select %s = %%s" % expr, (val,))
-    assert cur.fetchone()[0]
+    cur.execute(f"select {expr} = %s", (val,))
+    assert cur.fetchone()[0] is True
+
+
+@pytest.mark.parametrize(
+    "val, expr",
+    [
+        (0, b"0"),
+        (1, b"1"),
+        (-1, b" -1"),
+        (42, b"42"),
+        (-42, b" -42"),
+        (int(2 ** 63 - 1), b"9223372036854775807"),
+        (int(-(2 ** 63)), b" -9223372036854775808"),
+    ],
+)
+def test_quote_int(conn, val, expr):
+    tx = Transformer()
+    assert tx.get_dumper(val, 0).quote(val) == expr
+
+    cur = conn.cursor()
+    cur.execute(sql.SQL("select {v}, -{v}").format(v=sql.Literal(val)))
+    assert cur.fetchone() == (val, -val)
 
 
 @pytest.mark.xfail
@@ -91,16 +113,46 @@ def test_load_int(conn, val, pgtype, want, fmt_out):
         (0.0, "'0'"),
         (1.0, "'1'"),
         (-1.0, "'-1'"),
-        (float("nan"), "'nan'"),
-        (float("inf"), "'inf'"),
-        (float("-inf"), "'-inf'"),
+        (float("nan"), "'NaN'"),
+        (float("inf"), "'Infinity'"),
+        (float("-inf"), "'-Infinity'"),
     ],
 )
 def test_dump_float(conn, val, expr):
     assert isinstance(val, float)
     cur = conn.cursor()
-    cur.execute("select %%s = %s::float8" % expr, (val,))
-    assert cur.fetchone()[0]
+    cur.execute(f"select %s = {expr}::float8", (val,))
+    assert cur.fetchone()[0] is True
+
+
+@pytest.mark.parametrize(
+    "val, expr",
+    [
+        (0.0, b"0.0"),
+        (1.0, b"1.0"),
+        (10000000000000000.0, b"1e+16"),
+        (1000000.1, b"1000000.1"),
+        (-100000.000001, b" -100000.000001"),
+        (-1.0, b" -1.0"),
+        (float("nan"), b"'NaN'::float8"),
+        (float("inf"), b"'Infinity'::float8"),
+        (float("-inf"), b"'-Infinity'::float8"),
+    ],
+)
+def test_quote_float(conn, val, expr):
+    tx = Transformer()
+    assert tx.get_dumper(val, 0).quote(val) == expr
+
+    cur = conn.cursor()
+    cur.execute(sql.SQL("select {v}, -{v}").format(v=sql.Literal(val)))
+    r = cur.fetchone()
+    if isnan(val):
+        assert isnan(r[0]) and isnan(r[1])
+    else:
+        if isinstance(r[0], Decimal):
+            r = tuple(map(float, r))
+
+        assert r == (val, -val)
 
 
 @pytest.mark.parametrize(
@@ -118,15 +170,14 @@ def test_dump_float_approx(conn, val, expr):
     assert isinstance(val, float)
     cur = conn.cursor()
     cur.execute(
-        "select abs((%s::float8 - %%s) / %s::float8) <= 1e-15" % (expr, expr),
-        (val,),
+        f"select abs(({expr}::float8 - %s) / {expr}::float8) <= 1e-15", (val,)
     )
-    assert cur.fetchone()[0]
+    assert cur.fetchone()[0] is True
+
     cur.execute(
-        "select abs((%s::float4 - %%s) / %s::float4) <= 1e-6" % (expr, expr),
-        (val,),
+        f"select abs(({expr}::float4 - %s) / {expr}::float4) <= 1e-6", (val,)
     )
-    assert cur.fetchone()[0]
+    assert cur.fetchone()[0] is True
 
 
 @pytest.mark.xfail
@@ -233,6 +284,31 @@ def test_roundtrip_numeric(conn, val):
         assert result == val
 
 
+@pytest.mark.parametrize(
+    "val, expr",
+    [
+        ("0", b"0"),
+        ("0.0", b"0.0"),
+        ("0.00000000000000001", b"1E-17"),
+        ("-0.00000000000000001", b" -1E-17"),
+        ("nan", b"'NaN'::numeric"),
+    ],
+)
+def test_quote_numeric(conn, val, expr):
+    val = Decimal(val)
+    tx = Transformer()
+    assert tx.get_dumper(val, 0).quote(val) == expr
+
+    cur = conn.cursor()
+    cur.execute(sql.SQL("select {v}, -{v}").format(v=sql.Literal(val)))
+    r = cur.fetchone()
+
+    if val.is_nan():
+        assert isnan(r[0]) and isnan(r[1])
+    else:
+        assert r == (val, -val)
+
+
 @pytest.mark.xfail
 def test_dump_numeric_binary():
     # TODO: numeric binary adaptation
@@ -305,6 +381,17 @@ def test_roundtrip_bool(conn, b, fmt_in, fmt_out):
     if b is not None:
         assert cur.pgresult.ftype(0) == builtins["bool"].array_oid
     assert result[0] is b
+
+
+@pytest.mark.parametrize("val", [True, False])
+def test_quote_bool(conn, val):
+
+    tx = Transformer()
+    assert tx.get_dumper(val, 0).quote(val) == str(val).lower().encode("ascii")
+
+    cur = conn.cursor()
+    cur.execute(sql.SQL("select {v}").format(v=sql.Literal(val)))
+    assert cur.fetchone()[0] is val
 
 
 @pytest.mark.parametrize("pgtype", [None, "float8", "int8", "numeric"])
