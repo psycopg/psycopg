@@ -4,7 +4,7 @@ Entry point into the adaptation system.
 
 # Copyright (C) 2020 The Psycopg Team
 
-from typing import Any, Callable, Optional, Type
+from typing import Any, Callable, Optional, Tuple, Type
 
 from . import pq
 from . import proto
@@ -139,8 +139,8 @@ class Loader:
         return binary_
 
 
-_dumper_classes = (Dumper,)
-_loader_classes = (Loader,)
+_dumper_classes: Tuple[type, ...] = (Dumper,)
+_loader_classes: Tuple[type, ...] = (Loader,)
 
 
 def _connection_from_context(
@@ -165,8 +165,8 @@ if pq.__impl__ == "c":
     from psycopg3_c import _psycopg3
 
     Transformer = _psycopg3.Transformer
-    _loader_classes = (Loader, _psycopg3.CLoader)  # type: ignore
+    _loader_classes = (Loader, _psycopg3.CLoader)  # type: ignore[attr-defined]
 else:
-    from . import transform
+    from . import _transform
 
-    Transformer = transform.Transformer
+    Transformer = _transform.Transformer
