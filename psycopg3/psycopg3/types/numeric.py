@@ -6,7 +6,7 @@ Adapers for numeric types.
 
 import codecs
 import struct
-from typing import Callable, Dict, Tuple, cast
+from typing import Any, Callable, Dict, Tuple, cast
 from decimal import Decimal
 
 from ..adapt import Dumper, Loader
@@ -18,17 +18,28 @@ UnpackFloat = Callable[[bytes], Tuple[float]]
 
 FLOAT8_OID = builtins["float8"].oid
 NUMERIC_OID = builtins["numeric"].oid
-BOOL_OID = builtins["bool"].oid
 
 _encode_ascii = codecs.lookup("ascii").encode
 _decode_ascii = codecs.lookup("ascii").decode
 
 
-@Dumper.text(int)
-class TextIntDumper(Dumper):
-    def dump(self, obj: int, __encode: EncodeFunc = _encode_ascii) -> bytes:
+class NumberDumper(Dumper):
+    _special: Dict[bytes, bytes] = {}
+
+    def dump(self, obj: Any, __encode: EncodeFunc = _encode_ascii) -> bytes:
         return __encode(str(obj))[0]
 
+    def quote(self, obj: Any) -> bytes:
+        value = self.dump(obj)
+
+        if value in self._special:
+            return self._special[value]
+
+        return b" " + value if value.startswith(b"-") else value
+
+
+@Dumper.text(int)
+class TextIntDumper(NumberDumper):
     @property
     def oid(self) -> int:
         # We don't know the size of it, so we have to return a type big enough
@@ -36,9 +47,12 @@ class TextIntDumper(Dumper):
 
 
 @Dumper.text(float)
-class TextFloatDumper(Dumper):
-    def dump(self, obj: float, __encode: EncodeFunc = _encode_ascii) -> bytes:
-        return __encode(str(obj))[0]
+class TextFloatDumper(NumberDumper):
+    _special = {
+        b"inf": b"'Infinity'::float8",
+        b"-inf": b"'-Infinity'::float8",
+        b"nan": b"'NaN'::float8",
+    }
 
     @property
     def oid(self) -> int:
@@ -47,35 +61,16 @@ class TextFloatDumper(Dumper):
 
 
 @Dumper.text(Decimal)
-class TextDecimalDumper(Dumper):
-    def dump(
-        self, obj: Decimal, __encode: EncodeFunc = _encode_ascii
-    ) -> bytes:
-        return __encode(str(obj))[0]
+class TextDecimalDumper(NumberDumper):
+    _special = {
+        b"Infinity": b"'Infinity'::numeric",
+        b"-Infinity": b"'-Infinity'::numeric",
+        b"NaN": b"'NaN'::numeric",
+    }
 
     @property
     def oid(self) -> int:
         return NUMERIC_OID
-
-
-@Dumper.text(bool)
-class TextBoolDumper(Dumper):
-    def dump(self, obj: bool) -> bytes:
-        return b"t" if obj else b"f"
-
-    @property
-    def oid(self) -> int:
-        return BOOL_OID
-
-
-@Dumper.binary(bool)
-class BinaryBoolDumper(Dumper):
-    def dump(self, obj: bool) -> bytes:
-        return b"\x01" if obj else b"\x00"
-
-    @property
-    def oid(self) -> int:
-        return BOOL_OID
 
 
 @Loader.text(builtins["int2"].oid)
@@ -161,23 +156,3 @@ class TextNumericLoader(Loader):
         self, data: bytes, __decode: DecodeFunc = _decode_ascii
     ) -> Decimal:
         return Decimal(__decode(data)[0])
-
-
-@Loader.text(builtins["bool"].oid)
-class TextBoolLoader(Loader):
-    def load(
-        self,
-        data: bytes,
-        __values: Dict[bytes, bool] = {b"t": True, b"f": False},
-    ) -> bool:
-        return __values[data]
-
-
-@Loader.binary(builtins["bool"].oid)
-class BinaryBoolLoader(Loader):
-    def load(
-        self,
-        data: bytes,
-        __values: Dict[bytes, bool] = {b"\x01": True, b"\x00": False},
-    ) -> bool:
-        return __values[data]

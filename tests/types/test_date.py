@@ -3,7 +3,7 @@ import datetime as dt
 
 import pytest
 
-from psycopg3 import DataError
+from psycopg3 import DataError, sql
 from psycopg3.adapt import Format
 
 
@@ -24,8 +24,14 @@ from psycopg3.adapt import Format
     ],
 )
 def test_dump_date(conn, val, expr):
+    val = as_date(val)
     cur = conn.cursor()
-    cur.execute(f"select '{expr}'::date = %s", (as_date(val),))
+    cur.execute(f"select '{expr}'::date = %s", (val,))
+    assert cur.fetchone()[0] is True
+
+    cur.execute(
+        sql.SQL("select {val}::date = %s").format(val=sql.Literal(val)), (val,)
+    )
     assert cur.fetchone()[0] is True
 
 

@@ -13,7 +13,7 @@ from psycopg3.pq import Format
 
 @pytest.mark.parametrize(
     "obj, quoted",
-    [("hello", "'hello'"), (42, "'42'"), (True, "'t'"), (None, "NULL")],
+    [("hello", "'hello'"), (42, "42"), (True, "true"), (None, "NULL")],
 )
 def test_quote(obj, quoted):
     assert sql.quote(obj) == quoted
@@ -72,13 +72,13 @@ class TestSqlFormat:
     def test_percent_escape(self, conn):
         s = sql.SQL("42 % {0}").format(sql.Literal(7))
         s1 = s.as_string(conn)
-        assert s1 == "42 % '7'"
+        assert s1 == "42 % 7"
 
     def test_braces_escape(self, conn):
         s = sql.SQL("{{{0}}}").format(sql.Literal(7))
-        assert s.as_string(conn) == "{'7'}"
+        assert s.as_string(conn) == "{7}"
         s = sql.SQL("{{1,{0}}}").format(sql.Literal(7))
-        assert s.as_string(conn) == "{1,'7'}"
+        assert s.as_string(conn) == "{1,7}"
 
     def test_compose_badnargs(self):
         with pytest.raises(IndexError):
@@ -250,7 +250,7 @@ class TestLiteral:
     def test_as_str(self, conn):
         assert sql.Literal(None).as_string(conn) == "NULL"
         assert noe(sql.Literal("foo").as_string(conn)) == "'foo'"
-        assert sql.Literal(42).as_string(conn) == "'42'"
+        assert sql.Literal(42).as_string(conn) == "42"
         assert (
             sql.Literal(dt.date(2017, 1, 1)).as_string(conn) == "'2017-01-01'"
         )
@@ -313,7 +313,7 @@ class TestSQL:
             [sql.Identifier("foo"), sql.SQL("bar"), sql.Literal(42)]
         )
         assert isinstance(obj, sql.Composed)
-        assert obj.as_string(conn) == "\"foo\", bar, '42'"
+        assert obj.as_string(conn) == '"foo", bar, 42'
 
         obj = sql.SQL(", ").join(
             sql.Composed(
@@ -321,7 +321,7 @@ class TestSQL:
             )
         )
         assert isinstance(obj, sql.Composed)
-        assert obj.as_string(conn) == "\"foo\", bar, '42'"
+        assert obj.as_string(conn) == '"foo", bar, 42'
 
         obj = sql.SQL(", ").join([])
         assert obj == sql.Composed([])

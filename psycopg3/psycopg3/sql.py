@@ -366,24 +366,13 @@ class Literal(Composable):
     """
 
     def as_string(self, context: AdaptContext) -> str:
-        if self._obj is None:
-            return "NULL"
-
         from .adapt import _connection_from_context, Transformer
 
         conn = _connection_from_context(context)
-        tx = Transformer(conn)
+        tx = context if isinstance(context, Transformer) else Transformer(conn)
         dumper = tx.get_dumper(self._obj, Format.TEXT)
-        value = dumper.dump(self._obj)
-
-        if conn:
-            esc = Escaping(conn.pgconn)
-            quoted = esc.escape_literal(value)
-            return conn.codec.decode(quoted)[0]
-        else:
-            esc = Escaping()
-            quoted = b"'%s'" % esc.escape_string(value)
-            return quoted.decode("utf8")
+        quoted = dumper.quote(self._obj)
+        return conn.codec.decode(quoted)[0] if conn else quoted.decode("utf8")
 
 
 class Placeholder(Composable):

@@ -20,6 +20,22 @@ def test_dump(data, format, result, type):
     assert dumper.oid == builtins[type].oid
 
 
+@pytest.mark.parametrize(
+    "data, result",
+    [
+        (1, b"1"),
+        ("hello", b"'hello'"),
+        ("he'llo", b"'he''llo'"),
+        (True, b"true"),
+        (None, b"NULL"),
+    ],
+)
+def test_quote(data, result):
+    t = Transformer()
+    dumper = t.get_dumper(data, Format.TEXT)
+    assert dumper.quote(data) == result
+
+
 def test_dump_connection_ctx(conn):
     Dumper.register(str, make_dumper("t"), conn)
     Dumper.register_binary(str, make_dumper("b"), conn)
