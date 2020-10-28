@@ -13,7 +13,6 @@ from . import proto
 from .proto import Query, Params, DumpersMap, LoadersMap, PQGen
 from .utils.queries import PostgresQuery
 from .copy import Copy, AsyncCopy
-from .sql import Composable
 
 if TYPE_CHECKING:
     from .connection import BaseConnection, Connection, AsyncConnection
@@ -162,9 +161,6 @@ class BaseCursor:
         """
         Implement part of execute() before waiting common to sync and async
         """
-        if isinstance(query, Composable):
-            query = query.as_string(self)
-
         pgq = PostgresQuery(self._transformer)
         pgq.convert(query, vars)
 
@@ -217,9 +213,6 @@ class BaseCursor:
         """
         Implement part of execute() before waiting common to sync and async
         """
-        if isinstance(query, Composable):
-            query = query.as_string(self)
-
         pgq = PostgresQuery(self._transformer)
         pgq.convert(query, vars)
 

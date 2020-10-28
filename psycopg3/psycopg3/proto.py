@@ -18,6 +18,7 @@ if TYPE_CHECKING:
     from .cursor import BaseCursor
     from .adapt import Dumper, Loader
     from .waiting import Wait, Ready
+    from .sql import Composable
 
 EncodeFunc = Callable[[str], Tuple[bytes, int]]
 DecodeFunc = Callable[[bytes], Tuple[str, int]]
@@ -43,11 +44,6 @@ DumpersMap = Dict[Tuple[type, Format], DumperType]
 LoadFunc = Callable[[bytes], Any]
 LoaderType = Type["Loader"]
 LoadersMap = Dict[Tuple[int, Format], LoaderType]
-
-
-class Composable(Protocol):
-    def as_string(self, context: AdaptContext) -> str:
-        ...
 
 
 class Transformer(Protocol):
