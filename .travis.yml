@@ -12,17 +12,17 @@ matrix:
     - env:
         - TOXENV=black
         - TOXDIR=.
-      python: 3.6
+      python: 3.8
 
     - env:
         - TOXENV=flake8
         - TOXDIR=.
-      python: 3.6
+      python: 3.8
 
     - env:
         - TOXENV=mypy
         - TOXDIR=.
-      python: 3.6
+      python: 3.8
 
     - python: 3.6
       addons:
