@@ -18,6 +18,7 @@ if TYPE_CHECKING:
     from ..proto import Transformer
 
 TEXT_OID = 25  # TODO: builtins["text"].oid
+UNKNOWN_OID = 705  # TODO: builtins["unknown"].oid
 
 
 class QueryPart(NamedTuple):
@@ -88,7 +89,7 @@ class PostgresQuery:
                         self.types.append(dumper.oid)
                     else:
                         self.params.append(None)
-                        self.types.append(TEXT_OID)
+                        self.types.append(UNKNOWN_OID)
             else:
                 for i in range(len(params)):
                     param = params[i]

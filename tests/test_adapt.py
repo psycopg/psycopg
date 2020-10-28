@@ -130,6 +130,23 @@ def test_load_cursor_ctx_nested(conn, sql, obj, fmt_out):
     assert res == obj
 
 
+@pytest.mark.parametrize("fmt_in", [Format.TEXT, Format.BINARY])
+def test_none_type_argument(conn, fmt_in):
+    cur = conn.cursor()
+    cur.execute(
+        """
+        create table test_none_type_argument (
+            id serial primary key, num integer
+        )
+        """
+    )
+    cur.execute(
+        "insert into test_none_type_argument (num) values (%s) returning id",
+        (None,),
+    )
+    assert cur.fetchone()[0]
+
+
 def make_dumper(suffix):
     """Create a test dumper appending a suffix to the bytes representation."""
 
