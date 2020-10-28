@@ -115,4 +115,19 @@ def test_error_pickle(conn):
 
     exc = pickle.loads(pickle.dumps(excinfo.value))
     assert isinstance(exc, e.UndefinedTable)
-    assert exc.pgresult is None
+    assert exc.diag.sqlstate == "42P01"
+
+
+def test_diag_pickle(conn):
+    cur = conn.cursor()
+    with pytest.raises(e.DatabaseError) as excinfo:
+        cur.execute("select 1 from wat")
+
+    diag1 = excinfo.value.diag
+    diag2 = pickle.loads(pickle.dumps(diag1))
+
+    assert isinstance(diag2, type(diag1))
+    for f in pq.DiagnosticField:
+        assert getattr(diag1, f.name.lower()) == getattr(diag2, f.name.lower())
+
+    assert diag2.sqlstate == "42P01"
