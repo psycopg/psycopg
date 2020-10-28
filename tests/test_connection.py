@@ -31,9 +31,15 @@ def test_close(conn):
     conn.close()
     assert conn.closed
     assert conn.status == conn.ConnStatus.BAD
+
+    cur = conn.cursor()
+
     conn.close()
     assert conn.closed
     assert conn.status == conn.ConnStatus.BAD
+
+    with pytest.raises(psycopg3.InterfaceError):
+        cur.execute("select 1")
 
 
 def test_weakref(dsn):

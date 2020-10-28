@@ -34,9 +34,15 @@ async def test_close(aconn):
     await aconn.close()
     assert aconn.closed
     assert aconn.status == aconn.ConnStatus.BAD
+
+    cur = aconn.cursor()
+
     await aconn.close()
     assert aconn.closed
     assert aconn.status == aconn.ConnStatus.BAD
+
+    with pytest.raises(psycopg3.InterfaceError):
+        await cur.execute("select 1")
 
 
 async def test_weakref(dsn):

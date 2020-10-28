@@ -18,7 +18,7 @@ DBAPI-defined Exceptions are defined in the following hierarchy::
 
 # Copyright (C) 2020 The Psycopg Team
 
-from typing import Any, Callable, Dict, Optional, Sequence, Type
+from typing import Any, Callable, Dict, Optional, Sequence, Tuple, Type, Union
 from psycopg3.pq.proto import PGresult
 from psycopg3.pq.enums import DiagnosticField
 
@@ -49,6 +49,13 @@ class Error(Exception):
     @property
     def diag(self) -> "Diagnostic":
         return Diagnostic(self.pgresult, encoding=self._encoding)
+
+    def __reduce__(self) -> Union[str, Tuple[Any, ...]]:
+        res = super().__reduce__()
+        if isinstance(res, tuple) and len(res) >= 3:
+            res[2]['pgresult'] = None
+
+        return res
 
 
 class InterfaceError(Error):

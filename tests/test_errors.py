@@ -1,4 +1,7 @@
+import pickle
+
 import pytest
+
 from psycopg3 import pq
 from psycopg3 import errors as e
 
@@ -103,3 +106,13 @@ def test_lookup():
 
     with pytest.raises(KeyError):
         e.lookup("XXXXX")
+
+
+def test_error_pickle(conn):
+    cur = conn.cursor()
+    with pytest.raises(e.DatabaseError) as excinfo:
+        cur.execute("select 1 from wat")
+
+    exc = pickle.loads(pickle.dumps(excinfo.value))
+    assert isinstance(exc, e.UndefinedTable)
+    assert exc.pgresult is None
