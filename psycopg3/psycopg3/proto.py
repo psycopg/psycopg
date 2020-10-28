@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 EncodeFunc = Callable[[str], Tuple[bytes, int]]
 DecodeFunc = Callable[[bytes], Tuple[str, int]]
 
-Query = Union[str, bytes]
+Query = Union[str, bytes, "Composable"]
 Params = Union[Sequence[Any], Mapping[str, Any]]
 
 
@@ -43,6 +43,11 @@ DumpersMap = Dict[Tuple[type, Format], DumperType]
 LoadFunc = Callable[[bytes], Any]
 LoaderType = Type["Loader"]
 LoadersMap = Dict[Tuple[int, Format], LoaderType]
+
+
+class Composable(Protocol):
+    def as_string(self, context: AdaptContext) -> str:
+        ...
 
 
 class Transformer(Protocol):
