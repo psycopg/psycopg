@@ -109,7 +109,7 @@ class Composed(Composable):
                 )
             wrapped.append(obj)
 
-        super(Composed, self).__init__(wrapped)
+        super().__init__(wrapped)
 
     def as_string(self, context: AdaptContext) -> str:
         rv = []
@@ -181,7 +181,7 @@ class SQL(Composable):
     def __init__(self, obj: str):
         if not isinstance(obj, str):
             raise TypeError("SQL values must be strings")
-        super(SQL, self).__init__(obj)
+        super().__init__(obj)
 
     def as_string(self, context: AdaptContext) -> str:
         return self._obj
@@ -326,7 +326,7 @@ class Identifier(Composable):
             if not isinstance(s, str):
                 raise TypeError("SQL identifier parts must be strings")
 
-        super(Identifier, self).__init__(strings)
+        super().__init__(strings)
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({', '.join(map(repr, self._obj))})"
@@ -413,7 +413,7 @@ class Placeholder(Composable):
         elif name is not None:
             raise TypeError("expected string or None as name, got %r" % name)
 
-        super(Placeholder, self).__init__(name)
+        super().__init__(name)
         self._format = format
 
     def __repr__(self) -> str:
