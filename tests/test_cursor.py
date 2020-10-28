@@ -11,7 +11,7 @@ def test_close(conn):
     cur.close()
     assert cur.closed
 
-    with pytest.raises(psycopg3.OperationalError):
+    with pytest.raises(psycopg3.InterfaceError):
         cur.execute("select 'foo'")
 
     cur.close()

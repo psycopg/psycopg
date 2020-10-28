@@ -13,7 +13,7 @@ async def test_close(aconn):
     await cur.close()
     assert cur.closed
 
-    with pytest.raises(psycopg3.OperationalError):
+    with pytest.raises(psycopg3.InterfaceError):
         await cur.execute("select 'foo'")
 
     await cur.close()

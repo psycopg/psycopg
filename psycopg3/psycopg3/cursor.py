@@ -142,10 +142,10 @@ class BaseCursor:
         from .adapt import Transformer
 
         if self.closed:
-            raise e.OperationalError("the cursor is closed")
+            raise e.InterfaceError("the cursor is closed")
 
         if self.connection.closed:
-            raise e.OperationalError("the connection is closed")
+            raise e.InterfaceError("the connection is closed")
 
         if self.connection.status != self.connection.ConnStatus.OK:
             raise e.InterfaceError(
