@@ -8,7 +8,7 @@ psycopg3 types package
 from .oids import builtins
 
 # Register default adapters
-from . import array, composite, numeric, text  # noqa
+from . import array, json, composite, numeric, text  # noqa
 
 # Register associations with array oids
 array.register_all_arrays()
