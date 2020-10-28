@@ -18,6 +18,13 @@ def test_close(conn):
     assert cur.closed
 
 
+def test_context(conn):
+    with conn.cursor() as cur:
+        assert not cur.closed
+
+    assert cur.closed
+
+
 def test_weakref(conn):
     cur = conn.cursor()
     w = weakref.ref(cur)

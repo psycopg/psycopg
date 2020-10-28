@@ -20,6 +20,13 @@ async def test_close(aconn):
     assert cur.closed
 
 
+async def test_context(aconn):
+    async with aconn.cursor() as cur:
+        assert not cur.closed
+
+    assert cur.closed
+
+
 async def test_weakref(aconn):
     cur = aconn.cursor()
     w = weakref.ref(cur)

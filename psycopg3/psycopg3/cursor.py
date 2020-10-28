@@ -4,8 +4,9 @@ psycopg3 cursor objects
 
 # Copyright (C) 2020 The Psycopg Team
 
+from types import TracebackType
+from typing import Any, Callable, List, Optional, Sequence, Type, TYPE_CHECKING
 from operator import attrgetter
-from typing import Any, Callable, List, Optional, Sequence, TYPE_CHECKING
 
 from . import errors as e
 from . import pq
@@ -282,6 +283,17 @@ class Cursor(BaseCursor):
     ):
         super().__init__(connection, format=format)
 
+    def __enter__(self) -> "Cursor":
+        return self
+
+    def __exit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc_val: Optional[BaseException],
+        exc_tb: Optional[TracebackType],
+    ) -> None:
+        self.close()
+
     def close(self) -> None:
         self._closed = True
         self._reset()
@@ -389,6 +401,17 @@ class AsyncCursor(BaseCursor):
         self, connection: "AsyncConnection", format: pq.Format = pq.Format.TEXT
     ):
         super().__init__(connection, format=format)
+
+    async def __aenter__(self) -> "AsyncCursor":
+        return self
+
+    async def __aexit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc_val: Optional[BaseException],
+        exc_tb: Optional[TracebackType],
+    ) -> None:
+        await self.close()
 
     async def close(self) -> None:
         self._closed = True
