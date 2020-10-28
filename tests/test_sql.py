@@ -10,6 +10,14 @@ import pytest
 from psycopg3 import sql, ProgrammingError
 
 
+@pytest.mark.parametrize(
+    "obj, quoted",
+    [("hello", "'hello'"), (42, "'42'"), (True, "'t'"), (None, "NULL")],
+)
+def test_quote(obj, quoted):
+    assert sql.quote(obj) == quoted
+
+
 class TestSqlFormat:
     def test_pos(self, conn):
         s = sql.SQL("select {} from {}").format(
@@ -234,9 +242,12 @@ class TestLiteral:
         assert isinstance(sql.Literal(42), sql.Literal)
         assert isinstance(sql.Literal(dt.date(2016, 12, 31)), sql.Literal)
 
-    def test_repr(self, conn):
+    def test_repr(self):
         assert repr(sql.Literal("foo")) == "Literal('foo')"
         assert str(sql.Literal("foo")) == "Literal('foo')"
+
+    def test_as_str(self, conn):
+        assert sql.Literal(None).as_string(conn) == "NULL"
         assert noe(sql.Literal("foo").as_string(conn)) == "'foo'"
         assert sql.Literal(42).as_string(conn) == "'42'"
         assert (

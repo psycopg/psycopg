@@ -368,6 +368,9 @@ class Literal(Composable):
     """
 
     def as_string(self, context: AdaptContext) -> str:
+        if self._obj is None:
+            return "NULL"
+
         from .adapt import _connection_from_context, Transformer
 
         conn = _connection_from_context(context)
