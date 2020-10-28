@@ -186,9 +186,7 @@ class SQL(Composable):
     def as_string(self, context: AdaptContext) -> str:
         return self._obj
 
-    def format(
-        self, *args: Composable, **kwargs: Composable
-    ) -> Composed:
+    def format(self, *args: Composable, **kwargs: Composable) -> Composed:
         """
         Merge `Composable` objects into a template.
 
@@ -391,8 +389,9 @@ class Literal(Composable):
 class Placeholder(Composable):
     """A `Composable` representing a placeholder for query parameters.
 
-    If the name is specified, generate a named placeholder (e.g. ``%(name)s``),
-    otherwise generate a positional placeholder (e.g. ``%s``).
+    If the name is specified, generate a named placeholder (e.g. ``%(name)s``,
+    ``%(name)b``), otherwise generate a positional placeholder (e.g. ``%s``,
+    ``%b``).
 
     The object is useful to generate SQL queries with a variable number of
     arguments.
@@ -415,7 +414,9 @@ class Placeholder(Composable):
 
     """
 
-    def __init__(self, name: Optional[str] = None):
+    def __init__(
+        self, name: Optional[str] = None, format: Format = Format.TEXT
+    ):
         if isinstance(name, str):
             if ")" in name:
                 raise ValueError("invalid name: %r" % name)
@@ -424,18 +425,23 @@ class Placeholder(Composable):
             raise TypeError("expected string or None as name, got %r" % name)
 
         super(Placeholder, self).__init__(name)
+        self._format = format
 
     def __repr__(self) -> str:
-        return (
-            f"{self.__class__.__name__}"
-            f"({self._obj if self._obj is not None else ''})"
-        )
+        parts = []
+        if self._obj:
+            parts.append(repr(self._obj))
+        if self._format != Format.TEXT:
+            parts.append(f"format={Format(self._format).name}")
+
+        return f"{self.__class__.__name__}({', '.join(parts)})"
 
     def as_string(self, context: AdaptContext) -> str:
+        code = "s" if self._format == Format.TEXT else "b"
         if self._obj is not None:
-            return "%%(%s)s" % self._obj
+            return f"%({self._obj}){code}"
         else:
-            return "%s"
+            return f"%{code}"
 
 
 # Literals

@@ -8,6 +8,7 @@ import datetime as dt
 import pytest
 
 from psycopg3 import sql, ProgrammingError
+from psycopg3.pq import Format
 
 
 @pytest.mark.parametrize(
@@ -161,7 +162,7 @@ class TestSqlFormat:
         )
 
         cur.execute("select * from test_compose")
-        assert cur.fetchall(), [(10, "a", "b", "c"), (20, "d", "e", "f")]
+        assert cur.fetchall() == [(10, "a", "b", "c"), (20, "d", "e", "f")]
 
     def test_copy(self, conn):
         cur = conn.cursor()
@@ -222,7 +223,7 @@ class TestIdentifier:
 
     def test_as_str(self, conn):
         assert sql.Identifier("foo").as_string(conn) == '"foo"'
-        assert sql.Identifier("foo", "bar").as_string(conn), '"foo"."bar"'
+        assert sql.Identifier("foo", "bar").as_string(conn) == '"foo"."bar"'
         assert (
             sql.Identifier("fo'o", 'ba"r').as_string(conn) == '"fo\'o"."ba""r"'
         )
@@ -354,7 +355,7 @@ class TestComposed:
         obj = sql.Composed([sql.SQL("foo ")])
         obj = obj + sql.Literal("bar")
         assert isinstance(obj, sql.Composed)
-        assert noe(obj.as_string(conn)), "foo 'bar'"
+        assert noe(obj.as_string(conn)) == "foo 'bar'"
 
     def test_sum_inplace(self, conn):
         obj = sql.Composed([sql.SQL("foo ")])
@@ -383,14 +384,24 @@ class TestPlaceholder:
         assert issubclass(sql.Placeholder, sql.Composable)
 
     def test_repr(self, conn):
-        assert str(sql.Placeholder()), "Placeholder()"
-        assert repr(sql.Placeholder()), "Placeholder()"
-        assert sql.Placeholder().as_string(conn), "%s"
+        ph = sql.Placeholder()
+        assert str(ph) == repr(ph) == "Placeholder()"
+        assert ph.as_string(conn) == "%s"
+
+    def test_repr_binary(self, conn):
+        ph = sql.Placeholder(format=Format.BINARY)
+        assert str(ph) == repr(ph) == "Placeholder(format=BINARY)"
+        assert ph.as_string(conn) == "%b"
 
     def test_repr_name(self, conn):
-        assert str(sql.Placeholder("foo")), "Placeholder('foo')"
-        assert repr(sql.Placeholder("foo")), "Placeholder('foo')"
-        assert sql.Placeholder("foo").as_string(conn), "%(foo)s"
+        ph = sql.Placeholder("foo")
+        assert str(ph) == repr(ph) == "Placeholder('foo')"
+        assert ph.as_string(conn) == "%(foo)s"
+
+    def test_repr_name_binary(self, conn):
+        ph = sql.Placeholder("foo", format=Format.BINARY)
+        assert str(ph) == repr(ph) == "Placeholder('foo', format=BINARY)"
+        assert ph.as_string(conn) == "%(foo)b"
 
     def test_bad_name(self):
         with pytest.raises(ValueError):
