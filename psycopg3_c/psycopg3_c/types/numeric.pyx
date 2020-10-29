@@ -51,13 +51,13 @@ cdef void register_numeric_c_loaders():
     from psycopg3.adapt import Loader
     from psycopg3.types import builtins
 
-    Loader.register(builtins["int2"].oid, TextIntLoader)
-    Loader.register(builtins["int4"].oid, TextIntLoader)
-    Loader.register(builtins["int8"].oid, TextIntLoader)
-    Loader.register(builtins["oid"].oid, TextIntLoader)
+    TextIntLoader.register(builtins["int2"].oid)
+    TextIntLoader.register(builtins["int4"].oid)
+    TextIntLoader.register(builtins["int8"].oid)
+    TextIntLoader.register(builtins["oid"].oid)
 
-    Loader.register_binary(builtins["int2"].oid, BinaryInt2Loader)
-    Loader.register_binary(builtins["int4"].oid, BinaryInt4Loader)
-    Loader.register_binary(builtins["int8"].oid, BinaryInt8Loader)
-    Loader.register_binary(builtins["oid"].oid, BinaryOidLoader)
-    Loader.register_binary(builtins["bool"].oid, BinaryBoolLoader)
+    BinaryInt2Loader.register_binary(builtins["int2"].oid)
+    BinaryInt4Loader.register_binary(builtins["int4"].oid)
+    BinaryInt8Loader.register_binary(builtins["int8"].oid)
+    BinaryOidLoader.register_binary(builtins["oid"].oid)
+    BinaryBoolLoader.register_binary(builtins["bool"].oid)

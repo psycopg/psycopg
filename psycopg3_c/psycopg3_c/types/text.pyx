@@ -64,11 +64,11 @@ cdef void register_text_c_loaders():
     from psycopg3.adapt import Loader
     from psycopg3.types import builtins
 
-    Loader.register(0, StringLoader)    # INVALID_OID
-    Loader.register(builtins["text"].oid, StringLoader)
-    Loader.register_binary(builtins["text"].oid, StringLoader)
-    Loader.register(builtins["varchar"].oid, StringLoader)
-    Loader.register_binary(builtins["varchar"].oid, StringLoader)
+    StringLoader.register(0)    # INVALID_OID
+    StringLoader.register(builtins["text"].oid)
+    StringLoader.register_binary(builtins["text"].oid)
+    StringLoader.register(builtins["varchar"].oid)
+    StringLoader.register_binary(builtins["varchar"].oid)
 
-    Loader.register(builtins['bytea'].oid, TextByteaLoader)
-    Loader.register_binary(builtins['bytea'].oid, BinaryByteaLoader)
+    TextByteaLoader.register(builtins['bytea'].oid)
+    BinaryByteaLoader.register_binary(builtins['bytea'].oid)

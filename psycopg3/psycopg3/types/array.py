@@ -6,7 +6,7 @@ Adapters for arrays
 
 import re
 import struct
-from typing import Any, Generator, List, Optional
+from typing import Any, Generator, List, Optional, Type
 
 from .. import errors as e
 from ..adapt import Format, Dumper, Loader, Transformer
@@ -276,9 +276,9 @@ def register(
         (Format.TEXT, TextArrayLoader),
         (Format.BINARY, BinaryArrayLoader),
     ):
-        tcname = f"{name.title()}Array{format.name.title()}Loader"
-        t = type(tcname, (base,), {"base_oid": base_oid})
-        Loader.register(array_oid, t, context=context, format=format)
+        lname = f"{name.title()}Array{format.name.title()}Loader"
+        loader: Type[Loader] = type(lname, (base,), {"base_oid": base_oid})
+        loader.register(array_oid, context=context, format=format)
 
 
 def register_all_arrays() -> None:

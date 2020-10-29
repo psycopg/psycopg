@@ -106,36 +106,25 @@ class Loader:
     def register(
         cls,
         oid: int,
-        loader: LoaderType,
         context: AdaptContext = None,
         format: Format = Format.TEXT,
-    ) -> LoaderType:
+    ) -> None:
         if not isinstance(oid, int):
             raise TypeError(
                 f"loaders should be registered on oid, got {oid} instead"
             )
 
-        if not (
-            isinstance(loader, type) and issubclass(loader, _loader_classes)
-        ):
-            raise TypeError(
-                f"loaders should be Loader subclasses, got {loader} instead"
-            )
-
         where = context.loaders if context is not None else Loader.globals
-        where[oid, format] = loader
-        return loader
+        where[oid, format] = cls
 
     @classmethod
-    def register_binary(
-        cls, oid: int, loader: LoaderType, context: AdaptContext = None
-    ) -> LoaderType:
-        return cls.register(oid, loader, context, format=Format.BINARY)
+    def register_binary(cls, oid: int, context: AdaptContext = None) -> None:
+        cls.register(oid, context, format=Format.BINARY)
 
     @classmethod
     def text(cls, oid: int) -> Callable[[LoaderType], LoaderType]:
         def text_(loader: LoaderType) -> LoaderType:
-            cls.register(oid, loader)
+            loader.register(oid)
             return loader
 
         return text_
@@ -143,7 +132,7 @@ class Loader:
     @classmethod
     def binary(cls, oid: int) -> Callable[[LoaderType], LoaderType]:
         def binary_(loader: LoaderType) -> LoaderType:
-            cls.register_binary(oid, loader)
+            loader.register_binary(oid)
             return loader
 
         return binary_

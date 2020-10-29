@@ -5,7 +5,7 @@ Support for composite types adaptation.
 import re
 import struct
 from collections import namedtuple
-from typing import Any, Callable, Generator, Sequence, Tuple
+from typing import Any, Callable, Generator, Sequence, Tuple, Type
 from typing import Optional, TYPE_CHECKING
 
 from .. import pq
@@ -70,6 +70,8 @@ def register(
             info.name, [f.name for f in info.fields]
         )
 
+    loader: Type[Loader]
+
     # generate and register a customized text loader
     loader = type(
         f"{info.name.title()}Loader",
@@ -79,7 +81,7 @@ def register(
             "fields_types": tuple(f.type_oid for f in info.fields),
         },
     )
-    Loader.register(info.oid, loader, context=context, format=Format.TEXT)
+    loader.register(info.oid, context=context, format=Format.TEXT)
 
     # generate and register a customized binary loader
     loader = type(
@@ -87,7 +89,7 @@ def register(
         (BinaryCompositeLoader,),
         {"factory": factory},
     )
-    Loader.register(info.oid, loader, context=context, format=Format.BINARY)
+    loader.register(info.oid, context=context, format=Format.BINARY)
 
     if info.array_oid:
         array.register(
