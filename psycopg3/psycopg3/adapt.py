@@ -4,7 +4,7 @@ Entry point into the adaptation system.
 
 # Copyright (C) 2020 The Psycopg Team
 
-from typing import Any, Callable, Optional, Tuple, Type
+from typing import Any, Callable, Optional, Type
 
 from . import pq
 from . import proto
@@ -56,12 +56,8 @@ class Dumper:
                 f"dumpers should be registered on classes, got {src} instead"
             )
 
-        if not (
-            isinstance(dumper, type) and issubclass(dumper, _dumper_classes)
-        ):
-            raise TypeError(
-                f"dumpers should be Dumper subclasses, got {dumper} instead"
-            )
+        if not (isinstance(dumper, type)):
+            raise TypeError(f"dumpers should be classes, got {dumper} instead")
 
         where = context.dumpers if context is not None else Dumper.globals
         where[src, format] = dumper
@@ -138,10 +134,6 @@ class Loader:
         return binary_
 
 
-_dumper_classes: Tuple[type, ...] = (Dumper,)
-_loader_classes: Tuple[type, ...] = (Loader,)
-
-
 def _connection_from_context(
     context: AdaptContext,
 ) -> Optional[BaseConnection]:
@@ -164,7 +156,6 @@ if pq.__impl__ == "c":
     from psycopg3_c import _psycopg3
 
     Transformer = _psycopg3.Transformer
-    _loader_classes = (Loader, _psycopg3.CLoader)  # type: ignore[attr-defined]
 else:
     from . import _transform
 
