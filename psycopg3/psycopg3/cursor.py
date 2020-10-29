@@ -88,6 +88,7 @@ class BaseCursor:
         self.pgresult = None
         self._pos = 0
         self._iresult = 0
+        self._rowcount = -1
 
     @property
     def closed(self) -> bool:
@@ -124,11 +125,7 @@ class BaseCursor:
 
     @property
     def rowcount(self) -> int:
-        res = self.pgresult
-        if res is None or res.status != self.ExecStatus.TUPLES_OK:
-            return -1
-        else:
-            return res.ntuples
+        return self._rowcount
 
     def setinputsizes(self, sizes: Sequence[Any]) -> None:
         # no-op
@@ -191,6 +188,13 @@ class BaseCursor:
         if not badstats:
             self._results = list(results)
             self.pgresult = results[0]
+            nrows = self.pgresult.command_tuples
+            if nrows is not None:
+                if self._rowcount < 0:
+                    self._rowcount = nrows
+                else:
+                    self._rowcount += nrows
+
             return
 
         if results[-1].status == S.FATAL_ERROR:
@@ -236,6 +240,8 @@ class BaseCursor:
         if self._iresult < len(self._results):
             self.pgresult = self._results[self._iresult]
             self._pos = 0
+            nrows = self.pgresult.command_tuples
+            self._rowcount = nrows if nrows is not None else -1
             return True
         else:
             return None

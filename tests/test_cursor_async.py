@@ -51,12 +51,13 @@ async def test_execute_many_results(aconn):
     cur = aconn.cursor()
     assert cur.nextset() is None
 
-    rv = await cur.execute("select 'foo'; select 'bar'")
+    rv = await cur.execute("select 'foo'; select generate_series(1,3)")
     assert rv is cur
-    assert len(cur._results) == 2
-    assert cur.pgresult.get_value(0, 0) == b"foo"
+    assert (await cur.fetchall()) == [("foo",)]
+    assert cur.rowcount == 1
     assert cur.nextset()
-    assert cur.pgresult.get_value(0, 0) == b"bar"
+    assert (await cur.fetchall()) == [(1,), (2,), (3,)]
+    assert cur.rowcount == 3
     assert cur.nextset() is None
 
     await cur.close()
@@ -157,7 +158,6 @@ async def test_executemany_name(aconn, execmany):
     assert rv == [(11, "hello"), (21, "world")]
 
 
-@pytest.mark.xfail
 async def test_executemany_rowcount(aconn, execmany):
     cur = aconn.cursor()
     await cur.executemany(
@@ -179,3 +179,23 @@ async def test_executemany_badquery(aconn, query):
     cur = aconn.cursor()
     with pytest.raises(psycopg3.DatabaseError):
         await cur.executemany(query, [(10, "hello"), (20, "world")])
+
+
+async def test_rowcount(aconn):
+    cur = aconn.cursor()
+
+    await cur.execute("select 1 from generate_series(1, 42)")
+    assert cur.rowcount == 42
+
+    await cur.execute(
+        "create table test_rowcount_notuples (id int primary key)"
+    )
+    assert cur.rowcount == -1
+
+    await cur.execute(
+        "insert into test_rowcount_notuples select generate_series(1, 42)"
+    )
+    assert cur.rowcount == 42
+
+    await cur.close()
+    assert cur.rowcount == -1

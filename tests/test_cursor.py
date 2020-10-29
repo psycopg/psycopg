@@ -49,12 +49,12 @@ def test_execute_many_results(conn):
     cur = conn.cursor()
     assert cur.nextset() is None
 
-    rv = cur.execute("select 'foo'; select 'bar'")
+    rv = cur.execute("select 'foo'; select generate_series(1,3)")
     assert rv is cur
-    assert len(cur._results) == 2
-    assert cur.pgresult.get_value(0, 0) == b"foo"
+    assert cur.fetchall() == [("foo",)]
+    assert cur.rowcount == 1
     assert cur.nextset()
-    assert cur.pgresult.get_value(0, 0) == b"bar"
+    assert cur.fetchall() == [(1,), (2,), (3,)]
     assert cur.nextset() is None
 
     cur.close()
@@ -158,7 +158,6 @@ def test_executemany_name(conn, execmany):
     assert cur.fetchall() == [(11, "hello"), (21, "world")]
 
 
-@pytest.mark.xfail
 def test_executemany_rowcount(conn, execmany):
     cur = conn.cursor()
     cur.executemany(
@@ -180,3 +179,20 @@ def test_executemany_badquery(conn, query):
     cur = conn.cursor()
     with pytest.raises(psycopg3.DatabaseError):
         cur.executemany(query, [(10, "hello"), (20, "world")])
+
+
+def test_rowcount(conn):
+    cur = conn.cursor()
+    cur.execute("select 1 from generate_series(1, 42)")
+    assert cur.rowcount == 42
+
+    cur.execute("create table test_rowcount_notuples (id int primary key)")
+    assert cur.rowcount == -1
+
+    cur.execute(
+        "insert into test_rowcount_notuples select generate_series(1, 42)"
+    )
+    assert cur.rowcount == 42
+
+    cur.close()
+    assert cur.rowcount == -1
