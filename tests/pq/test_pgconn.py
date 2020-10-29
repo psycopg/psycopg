@@ -115,7 +115,8 @@ def test_info(dsn, pgconn):
 
     parsed = pq.Conninfo.parse(dsn.encode("utf8"))
     name = [o.val for o in parsed if o.keyword == b"dbname"][0]
-    assert dbname.val == name
+    user = [o.val for o in parsed if o.keyword == b"user"][0]
+    assert dbname.val == (name or user)
 
     pgconn.finish()
     with pytest.raises(psycopg3.OperationalError):
