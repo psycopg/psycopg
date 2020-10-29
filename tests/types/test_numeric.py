@@ -368,6 +368,15 @@ def test_numeric_as_float(conn, val):
 def test_minus_minus(conn, pgtype):
     cur = conn.cursor()
     cast = f"::{pgtype}" if pgtype is not None else ""
-    cur.execute("select -%%s%s" % cast, [-1])
+    cur.execute(f"select -%s{cast}", [-1])
+    result = cur.fetchone()[0]
+    assert result == 1
+
+
+@pytest.mark.parametrize("pgtype", [None, "float8", "int8", "numeric"])
+def test_minus_minus_quote(conn, pgtype):
+    cur = conn.cursor()
+    cast = f"::{pgtype}" if pgtype is not None else ""
+    cur.execute(sql.SQL("select -{}{}").format(sql.Literal(-1), sql.SQL(cast)))
     result = cur.fetchone()[0]
     assert result == 1
