@@ -16,10 +16,6 @@ if TYPE_CHECKING:
     from ..pq.proto import Escaping as EscapingProto
 
 
-TEXT_OID = builtins["text"].oid
-BYTEA_OID = builtins["bytea"].oid
-
-
 @Dumper.text(str)
 @Dumper.binary(str)
 class StringDumper(Dumper):
@@ -87,6 +83,9 @@ class UnknownLoader(Loader):
 
 @Dumper.text(bytes)
 class BytesDumper(Dumper):
+
+    oid = builtins["bytea"].oid
+
     def __init__(self, src: type, context: AdaptContext = None):
         super().__init__(src, context)
         self.esc = Escaping(
@@ -96,19 +95,14 @@ class BytesDumper(Dumper):
     def dump(self, obj: bytes) -> bytes:
         return self.esc.escape_bytea(obj)
 
-    @property
-    def oid(self) -> int:
-        return BYTEA_OID
-
 
 @Dumper.binary(bytes)
 class BytesBinaryDumper(Dumper):
+
+    oid = builtins["bytea"].oid
+
     def dump(self, b: bytes) -> bytes:
         return b
-
-    @property
-    def oid(self) -> int:
-        return BYTEA_OID
 
 
 @Loader.text(builtins["bytea"].oid)

@@ -22,49 +22,38 @@ _decode_ascii = codecs.lookup("ascii").decode
 @Dumper.text(date)
 class DateDumper(Dumper):
 
-    DATE_OID = builtins["date"].oid
+    oid = builtins["date"].oid
 
     def dump(self, obj: date, __encode: EncodeFunc = _encode_ascii) -> bytes:
         # NOTE: whatever the PostgreSQL DateStyle input format (DMY, MDY, YMD)
         # the YYYY-MM-DD is always understood correctly.
         return __encode(str(obj))[0]
-
-    @property
-    def oid(self) -> int:
-        return self.DATE_OID
 
 
 @Dumper.text(time)
 class TimeDumper(Dumper):
 
-    TIMETZ_OID = builtins["timetz"].oid
+    oid = builtins["timetz"].oid
 
     def dump(self, obj: time, __encode: EncodeFunc = _encode_ascii) -> bytes:
         return __encode(str(obj))[0]
-
-    @property
-    def oid(self) -> int:
-        return self.TIMETZ_OID
 
 
 @Dumper.text(datetime)
 class DateTimeDumper(Dumper):
 
-    TIMESTAMPTZ_OID = builtins["timestamptz"].oid
+    oid = builtins["timestamptz"].oid
 
     def dump(self, obj: date, __encode: EncodeFunc = _encode_ascii) -> bytes:
         # NOTE: whatever the PostgreSQL DateStyle input format (DMY, MDY, YMD)
         # the YYYY-MM-DD is always understood correctly.
         return __encode(str(obj))[0]
 
-    @property
-    def oid(self) -> int:
-        return self.TIMESTAMPTZ_OID
-
 
 @Dumper.text(timedelta)
 class TimeDeltaDumper(Dumper):
-    INTERVAL_OID = builtins["interval"].oid
+
+    oid = builtins["interval"].oid
 
     def __init__(self, src: type, context: AdaptContext = None):
         super().__init__(src, context)
@@ -88,10 +77,6 @@ class TimeDeltaDumper(Dumper):
             obj.seconds,
             obj.microseconds,
         )
-
-    @property
-    def oid(self) -> int:
-        return self.INTERVAL_OID
 
 
 @Loader.text(builtins["date"].oid)
