@@ -12,32 +12,32 @@ from cpython.long cimport (
     PyLong_FromLong, PyLong_FromLongLong, PyLong_FromUnsignedLong)
 
 
-cdef class TextIntLoader(CLoader):
+cdef class IntLoader(CLoader):
     cdef object cload(self, const char *data, size_t length):
         return int(data)
 
 
-cdef class BinaryInt2Loader(CLoader):
+cdef class Int2BinaryLoader(CLoader):
     cdef object cload(self, const char *data, size_t length):
         return PyLong_FromLong(<int16_t>be16toh((<uint16_t *>data)[0]))
 
 
-cdef class BinaryInt4Loader(CLoader):
+cdef class Int4BinaryLoader(CLoader):
     cdef object cload(self, const char *data, size_t length):
         return PyLong_FromLong(<int32_t>be32toh((<uint32_t *>data)[0]))
 
 
-cdef class BinaryInt8Loader(CLoader):
+cdef class Int8BinaryLoader(CLoader):
     cdef object cload(self, const char *data, size_t length):
         return PyLong_FromLongLong(<int64_t>be64toh((<uint64_t *>data)[0]))
 
 
-cdef class BinaryOidLoader(CLoader):
+cdef class OidBinaryLoader(CLoader):
     cdef object cload(self, const char *data, size_t length):
         return PyLong_FromUnsignedLong(be32toh((<uint32_t *>data)[0]))
 
 
-cdef class BinaryBoolLoader(CLoader):
+cdef class BoolBinaryLoader(CLoader):
     cdef object cload(self, const char *data, size_t length):
         if data[0]:
             return True
@@ -51,13 +51,13 @@ cdef void register_numeric_c_loaders():
     from psycopg3.adapt import Loader
     from psycopg3.types import builtins
 
-    TextIntLoader.register(builtins["int2"].oid)
-    TextIntLoader.register(builtins["int4"].oid)
-    TextIntLoader.register(builtins["int8"].oid)
-    TextIntLoader.register(builtins["oid"].oid)
+    IntLoader.register(builtins["int2"].oid)
+    IntLoader.register(builtins["int4"].oid)
+    IntLoader.register(builtins["int8"].oid)
+    IntLoader.register(builtins["oid"].oid)
 
-    BinaryInt2Loader.register_binary(builtins["int2"].oid)
-    BinaryInt4Loader.register_binary(builtins["int4"].oid)
-    BinaryInt8Loader.register_binary(builtins["int8"].oid)
-    BinaryOidLoader.register_binary(builtins["oid"].oid)
-    BinaryBoolLoader.register_binary(builtins["bool"].oid)
+    Int2BinaryLoader.register_binary(builtins["int2"].oid)
+    Int4BinaryLoader.register_binary(builtins["int4"].oid)
+    Int8BinaryLoader.register_binary(builtins["int8"].oid)
+    OidBinaryLoader.register_binary(builtins["oid"].oid)
+    BoolBinaryLoader.register_binary(builtins["bool"].oid)

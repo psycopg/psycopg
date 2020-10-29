@@ -44,7 +44,7 @@ class StringDumper(Dumper):
 @Loader.text(builtins["varchar"].oid)
 @Loader.binary(builtins["varchar"].oid)
 @Loader.text(INVALID_OID)
-class StringLoader(Loader):
+class TextLoader(Loader):
 
     decode: Optional[DecodeFunc]
 
@@ -102,7 +102,7 @@ class BytesDumper(Dumper):
 
 
 @Dumper.binary(bytes)
-class BinaryBytesDumper(Dumper):
+class BytesBinaryDumper(Dumper):
     def dump(self, b: bytes) -> bytes:
         return b
 
@@ -112,7 +112,7 @@ class BinaryBytesDumper(Dumper):
 
 
 @Loader.text(builtins["bytea"].oid)
-class TextByteaLoader(Loader):
+class ByteaLoader(Loader):
     _escaping: "EscapingProto"
 
     def __init__(self, oid: int, context: AdaptContext = None):
@@ -126,6 +126,6 @@ class TextByteaLoader(Loader):
 
 @Loader.binary(builtins["bytea"].oid)
 @Loader.binary(INVALID_OID)
-class BinaryByteaLoader(Loader):
+class ByteaBinaryLoader(Loader):
     def load(self, data: bytes) -> bytes:
         return data

@@ -16,9 +16,6 @@ from .oids import builtins
 UnpackInt = Callable[[bytes], Tuple[int]]
 UnpackFloat = Callable[[bytes], Tuple[float]]
 
-FLOAT8_OID = builtins["float8"].oid
-NUMERIC_OID = builtins["numeric"].oid
-
 _encode_ascii = codecs.lookup("ascii").encode
 _decode_ascii = codecs.lookup("ascii").decode
 
@@ -39,51 +36,46 @@ class NumberDumper(Dumper):
 
 
 @Dumper.text(int)
-class TextIntDumper(NumberDumper):
-    @property
-    def oid(self) -> int:
-        # We don't know the size of it, so we have to return a type big enough
-        return NUMERIC_OID
+class IntDumper(NumberDumper):
+    # We don't know the size of it, so we have to return a type big enough
+    oid = builtins["numeric"].oid
 
 
 @Dumper.text(float)
-class TextFloatDumper(NumberDumper):
+class FloatDumper(NumberDumper):
+
+    oid = builtins["float8"].oid
+
     _special = {
         b"inf": b"'Infinity'::float8",
         b"-inf": b"'-Infinity'::float8",
         b"nan": b"'NaN'::float8",
     }
 
-    @property
-    def oid(self) -> int:
-        # Float can't be bigger than this instead
-        return FLOAT8_OID
-
 
 @Dumper.text(Decimal)
-class TextDecimalDumper(NumberDumper):
+class DecimalDumper(NumberDumper):
+
+    oid = builtins["numeric"].oid
+
     _special = {
         b"Infinity": b"'Infinity'::numeric",
         b"-Infinity": b"'-Infinity'::numeric",
         b"NaN": b"'NaN'::numeric",
     }
 
-    @property
-    def oid(self) -> int:
-        return NUMERIC_OID
-
 
 @Loader.text(builtins["int2"].oid)
 @Loader.text(builtins["int4"].oid)
 @Loader.text(builtins["int8"].oid)
 @Loader.text(builtins["oid"].oid)
-class TextIntLoader(Loader):
+class IntLoader(Loader):
     def load(self, data: bytes, __decode: DecodeFunc = _decode_ascii) -> int:
         return int(__decode(data)[0])
 
 
 @Loader.binary(builtins["int2"].oid)
-class BinaryInt2Loader(Loader):
+class Int2BinaryLoader(Loader):
     def load(
         self,
         data: bytes,
@@ -93,7 +85,7 @@ class BinaryInt2Loader(Loader):
 
 
 @Loader.binary(builtins["int4"].oid)
-class BinaryInt4Loader(Loader):
+class Int4BinaryLoader(Loader):
     def load(
         self,
         data: bytes,
@@ -103,7 +95,7 @@ class BinaryInt4Loader(Loader):
 
 
 @Loader.binary(builtins["int8"].oid)
-class BinaryInt8Loader(Loader):
+class Int8BinaryLoader(Loader):
     def load(
         self,
         data: bytes,
@@ -113,7 +105,7 @@ class BinaryInt8Loader(Loader):
 
 
 @Loader.binary(builtins["oid"].oid)
-class BinaryOidLoader(Loader):
+class OidBinaryLoader(Loader):
     def load(
         self,
         data: bytes,
@@ -124,14 +116,14 @@ class BinaryOidLoader(Loader):
 
 @Loader.text(builtins["float4"].oid)
 @Loader.text(builtins["float8"].oid)
-class TextFloatLoader(Loader):
+class FloatLoader(Loader):
     def load(self, data: bytes) -> float:
         # it supports bytes directly
         return float(data)
 
 
 @Loader.binary(builtins["float4"].oid)
-class BinaryFloat4Loader(Loader):
+class Float4BinaryLoader(Loader):
     def load(
         self,
         data: bytes,
@@ -141,7 +133,7 @@ class BinaryFloat4Loader(Loader):
 
 
 @Loader.binary(builtins["float8"].oid)
-class BinaryFloat8Loader(Loader):
+class Float8BinaryLoader(Loader):
     def load(
         self,
         data: bytes,
@@ -151,7 +143,7 @@ class BinaryFloat8Loader(Loader):
 
 
 @Loader.text(builtins["numeric"].oid)
-class TextNumericLoader(Loader):
+class NumericLoader(Loader):
     def load(
         self, data: bytes, __decode: DecodeFunc = _decode_ascii
     ) -> Decimal:

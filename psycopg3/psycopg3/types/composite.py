@@ -85,8 +85,8 @@ def register(
 
     # generate and register a customized binary loader
     loader = type(
-        f"Binary{info.name.title()}Loader",
-        (BinaryCompositeLoader,),
+        f"{info.name.title()}BinaryLoader",
+        (CompositeBinaryLoader,),
         {"factory": factory},
     )
     loader.register(info.oid, context=context, format=Format.BINARY)
@@ -124,7 +124,7 @@ where t.typname = %(name)s
 
 
 @Dumper.text(tuple)
-class TextTupleDumper(Dumper):
+class TupleDumper(Dumper):
     def __init__(self, src: type, context: AdaptContext = None):
         super().__init__(src, context)
         self._tx = Transformer(context)
@@ -206,7 +206,7 @@ _struct_oidlen = struct.Struct("!Ii")
 
 
 @Loader.binary(builtins["record"].oid)
-class BinaryRecordLoader(BaseCompositeLoader):
+class RecordBinaryLoader(BaseCompositeLoader):
     _types_set = False
 
     def load(self, data: bytes) -> Tuple[Any, ...]:
@@ -260,7 +260,7 @@ class CompositeLoader(RecordLoader):
         )
 
 
-class BinaryCompositeLoader(BinaryRecordLoader):
+class CompositeBinaryLoader(RecordBinaryLoader):
     factory: Callable[..., Any]
 
     def load(self, data: bytes) -> Any:

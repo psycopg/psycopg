@@ -45,7 +45,7 @@ class BaseListDumper(Dumper):
 
 
 @Dumper.text(list)
-class TextListDumper(BaseListDumper):
+class ListDumper(BaseListDumper):
     # from https://www.postgresql.org/docs/current/arrays.html#ARRAYS-IO
     #
     # The array output routine will put double quotes around element values if
@@ -103,7 +103,7 @@ class TextListDumper(BaseListDumper):
 
 
 @Dumper.binary(list)
-class BinaryListDumper(BaseListDumper):
+class ListBinaryDumper(BaseListDumper):
     def dump(self, obj: List[Any]) -> bytes:
         if not obj:
             return _struct_head.pack(0, 0, TEXT_OID)
@@ -167,7 +167,7 @@ class BaseArrayLoader(Loader):
         self._tx = Transformer(context)
 
 
-class TextArrayLoader(BaseArrayLoader):
+class ArrayLoader(BaseArrayLoader):
 
     # Tokenize an array representation into item and brackets
     # TODO: currently recognise only , as delimiter. Should be configured
@@ -228,7 +228,7 @@ _struct_dim = struct.Struct("!II")
 _struct_len = struct.Struct("!i")
 
 
-class BinaryArrayLoader(BaseArrayLoader):
+class ArrayBinaryLoader(BaseArrayLoader):
     def load(self, data: bytes) -> List[Any]:
         ndims, hasnull, oid = _struct_head.unpack_from(data[:12])
         if not ndims:
@@ -273,10 +273,10 @@ def register(
         name = f"oid{base_oid}"
 
     for format, base in (
-        (Format.TEXT, TextArrayLoader),
-        (Format.BINARY, BinaryArrayLoader),
+        (Format.TEXT, ArrayLoader),
+        (Format.BINARY, ArrayBinaryLoader),
     ):
-        lname = f"{name.title()}Array{format.name.title()}Loader"
+        lname = f"{name.title()}Array{'Binary' if format else ''}Loader"
         loader: Type[Loader] = type(lname, (base,), {"base_oid": base_oid})
         loader.register(array_oid, context=context, format=format)
 

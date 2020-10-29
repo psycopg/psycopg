@@ -9,7 +9,7 @@ from cpython.unicode cimport PyUnicode_DecodeUTF8
 from psycopg3_c cimport libpq
 
 
-cdef class StringLoader(CLoader):
+cdef class TextLoader(CLoader):
     cdef int is_utf8
     cdef object pydecoder
 
@@ -38,7 +38,7 @@ cdef class StringLoader(CLoader):
             return b
 
 
-cdef class TextByteaLoader(CLoader):
+cdef class ByteaLoader(CLoader):
     cdef object cload(self, const char *data, size_t length):
         cdef size_t len_out
         cdef unsigned char *out = libpq.PQunescapeBytea(
@@ -53,7 +53,7 @@ cdef class TextByteaLoader(CLoader):
         return rv
 
 
-cdef class BinaryByteaLoader(CLoader):
+cdef class ByteaBinaryLoader(CLoader):
     cdef object cload(self, const char *data, size_t length):
         return data[:length]
 
@@ -64,11 +64,11 @@ cdef void register_text_c_loaders():
     from psycopg3.adapt import Loader
     from psycopg3.types import builtins
 
-    StringLoader.register(0)    # INVALID_OID
-    StringLoader.register(builtins["text"].oid)
-    StringLoader.register_binary(builtins["text"].oid)
-    StringLoader.register(builtins["varchar"].oid)
-    StringLoader.register_binary(builtins["varchar"].oid)
+    TextLoader.register(0)    # INVALID_OID
+    TextLoader.register(builtins["text"].oid)
+    TextLoader.register_binary(builtins["text"].oid)
+    TextLoader.register(builtins["varchar"].oid)
+    TextLoader.register_binary(builtins["varchar"].oid)
 
-    TextByteaLoader.register(builtins['bytea'].oid)
-    BinaryByteaLoader.register_binary(builtins['bytea'].oid)
+    ByteaLoader.register(builtins['bytea'].oid)
+    ByteaBinaryLoader.register_binary(builtins['bytea'].oid)

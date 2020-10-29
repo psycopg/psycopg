@@ -12,8 +12,6 @@ from typing import Any, Sequence
 from .types.oids import builtins
 from .adapt import Dumper
 
-BYTEA_OID = builtins["bytea"].oid
-
 
 class DBAPITypeObject:
     def __init__(self, name: str, type_names: Sequence[str]):
@@ -53,17 +51,16 @@ class Binary:
 
 
 @Dumper.text(Binary)
-class TextBinaryDumper(Dumper):
+class BinaryDumper(Dumper):
+
+    oid = builtins["bytea"].oid
+
     def dump(self, obj: Binary) -> bytes:
         wrapped = obj.obj
         if isinstance(wrapped, bytes):
             return wrapped
         else:
             return bytes(wrapped)
-
-    @property
-    def oid(self) -> int:
-        return BYTEA_OID
 
 
 def Date(year: int, month: int, day: int) -> dt.date:

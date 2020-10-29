@@ -13,26 +13,24 @@ BOOL_OID = builtins["bool"].oid
 
 
 @Dumper.text(bool)
-class TextBoolDumper(Dumper):
+class BoolDumper(Dumper):
+
+    oid = BOOL_OID
+
     def dump(self, obj: bool) -> bytes:
         return b"t" if obj else b"f"
 
     def quote(self, obj: bool) -> bytes:
         return b"true" if obj else b"false"
 
-    @property
-    def oid(self) -> int:
-        return BOOL_OID
-
 
 @Dumper.binary(bool)
 class BinaryBoolDumper(Dumper):
+
+    oid = BOOL_OID
+
     def dump(self, obj: bool) -> bytes:
         return b"\x01" if obj else b"\x00"
-
-    @property
-    def oid(self) -> int:
-        return BOOL_OID
 
 
 @Dumper.text(type(None))
@@ -47,7 +45,7 @@ class NoneDumper(Dumper):
 
 
 @Loader.text(builtins["bool"].oid)
-class TextBoolLoader(Loader):
+class BoolLoader(Loader):
     def load(
         self,
         data: bytes,

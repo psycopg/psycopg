@@ -34,36 +34,30 @@ class Json(_JsonWrapper):
     pass
 
 
-class JsonB(_JsonWrapper):
+class Jsonb(_JsonWrapper):
     pass
 
 
 class _JsonDumper(Dumper):
-    _oid: int
-
     def dump(
         self, obj: _JsonWrapper, __encode: EncodeFunc = _encode_utf8
     ) -> bytes:
         return __encode(obj.dumps())[0]
 
-    @property
-    def oid(self) -> int:
-        return self._oid
-
 
 @Dumper.text(Json)
 @Dumper.binary(Json)
 class JsonDumper(_JsonDumper):
-    _oid = JSON_OID
+    oid = JSON_OID
 
 
-@Dumper.text(JsonB)
-class JsonBDumper(_JsonDumper):
-    _oid = JSONB_OID
+@Dumper.text(Jsonb)
+class JsonbDumper(_JsonDumper):
+    oid = JSONB_OID
 
 
-@Dumper.binary(JsonB)
-class BinaryJsonBDumper(JsonBDumper):
+@Dumper.binary(Jsonb)
+class JsonbBinaryDumper(JsonbDumper):
     def dump(
         self, obj: _JsonWrapper, __encode: EncodeFunc = _encode_utf8
     ) -> bytes:
@@ -79,7 +73,7 @@ class JsonLoader(Loader):
 
 
 @Loader.binary(builtins["jsonb"].oid)
-class BinaryJsonBLoader(Loader):
+class JsonbBinaryLoader(Loader):
     def load(self, data: bytes) -> Any:
         if data and data[0] != 1:
             raise DataError("unknown jsonb binary format: {data[0]}")
