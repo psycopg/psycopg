@@ -101,15 +101,12 @@ class Composed(Composable):
     _obj: List[Composable]
 
     def __init__(self, seq: Sequence[Any]):
-        wrapped = []
+        super().__init__(seq)
         for obj in seq:
             if not isinstance(obj, Composable):
                 raise TypeError(
                     f"Composed elements must be Composable, got {obj!r} instead"
                 )
-            wrapped.append(obj)
-
-        super().__init__(wrapped)
 
     def as_string(self, context: AdaptContext) -> str:
         rv = []
@@ -146,7 +143,8 @@ class Composed(Composable):
             joiner = SQL(joiner)
         elif not isinstance(joiner, SQL):
             raise TypeError(
-                "Composed.join() argument must be a string or an SQL"
+                f"Composed.join() argument must be strings or SQL,"
+                f" got {joiner!r} instead"
             )
 
         return joiner.join(self._obj)
@@ -179,9 +177,9 @@ class SQL(Composable):
     _formatter = string.Formatter()
 
     def __init__(self, obj: str):
-        if not isinstance(obj, str):
-            raise TypeError("SQL values must be strings")
         super().__init__(obj)
+        if not isinstance(obj, str):
+            raise TypeError(f"SQL values must be strings, got {obj!r} instead")
 
     def as_string(self, context: AdaptContext) -> str:
         return self._obj
@@ -319,14 +317,17 @@ class Identifier(Composable):
     _obj: Sequence[str]
 
     def __init__(self, *strings: str):
+        # init super() now to make the __repr__ not explode in case of error
+        super().__init__(strings)
+
         if not strings:
             raise TypeError("Identifier cannot be empty")
 
         for s in strings:
             if not isinstance(s, str):
-                raise TypeError("SQL identifier parts must be strings")
-
-        super().__init__(strings)
+                raise TypeError(
+                    f"SQL identifier parts must be strings, got {s!r} instead"
+                )
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({', '.join(map(repr, self._obj))})"
@@ -406,6 +407,7 @@ class Placeholder(Composable):
     def __init__(
         self, name: Optional[str] = None, format: Format = Format.TEXT
     ):
+        super().__init__(name)
         if isinstance(name, str):
             if ")" in name:
                 raise ValueError("invalid name: %r" % name)
@@ -413,7 +415,6 @@ class Placeholder(Composable):
         elif name is not None:
             raise TypeError("expected string or None as name, got %r" % name)
 
-        super().__init__(name)
         self._format = format
 
     def __repr__(self) -> str:
