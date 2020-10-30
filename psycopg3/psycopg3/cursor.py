@@ -39,19 +39,39 @@ class Column(Sequence[Any]):
         self._encoding = encoding
 
     _attrs = tuple(
-        map(
-            attrgetter,
-            """
+        attrgetter(attr)
+        for attr in """
             name type_code display_size internal_size precision scale null_ok
-            """.split(),
-        )
+            """.split()
     )
+
+    def __repr__(self) -> str:
+        return f"<Column {self.name}, type: {self._type_display()}>"
 
     def __len__(self) -> int:
         return 7
 
+    def _type_display(self) -> str:
+        parts = []
+        t = builtins.get(self.type_code)
+        parts.append(t.name if t else str(self.type_code))
+
+        mod1 = self.precision
+        if mod1 is None:
+            mod1 = self.display_size
+        if mod1:
+            parts.append(f"({mod1}")
+            if self.scale:
+                parts.append(f", {self.scale}")
+            parts.append(")")
+
+        return "".join(parts)
+
     def __getitem__(self, index: Any) -> Any:
-        return self._attrs[index](self)
+        if isinstance(index, slice):
+            return tuple(getter(self) for getter in self._attrs[index])
+        else:
+            return self._attrs[index](self)
 
     @property
     def name(self) -> str:
@@ -66,6 +86,56 @@ class Column(Sequence[Any]):
     @property
     def type_code(self) -> int:
         return self._pgresult.ftype(self._index)
+
+    @property
+    def display_size(self) -> Optional[int]:
+        t = builtins.get(self.type_code)
+        if not t:
+            return None
+
+        if t.name in ("varchar", "char"):
+            fmod = self._pgresult.fmod(self._index)
+            if fmod >= 0:
+                return fmod - 4
+
+        return None
+
+    @property
+    def internal_size(self) -> Optional[int]:
+        fsize = self._pgresult.fsize(self._index)
+        return fsize if fsize >= 0 else None
+
+    @property
+    def precision(self) -> Optional[int]:
+        t = builtins.get(self.type_code)
+        if not t:
+            return None
+
+        dttypes = ("time", "timetz", "timestamp", "timestamptz", "interval")
+        if t.name == "numeric":
+            fmod = self._pgresult.fmod(self._index)
+            if fmod >= 0:
+                return fmod >> 16
+
+        elif t.name in dttypes:
+            fmod = self._pgresult.fmod(self._index)
+            if fmod >= 0:
+                return fmod & 0xFFFF
+
+        return None
+
+    @property
+    def scale(self) -> Optional[int]:
+        if self.type_code == builtins["numeric"].oid:
+            fmod = self._pgresult.fmod(self._index) - 4
+            if fmod >= 0:
+                return fmod & 0xFFFF
+
+        return None
+
+    @property
+    def null_ok(self) -> Optional[bool]:
+        return None
 
 
 class BaseCursor:
