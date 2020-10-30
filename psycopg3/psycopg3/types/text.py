@@ -7,10 +7,10 @@ Adapters for textual types.
 import codecs
 from typing import Optional, Union, TYPE_CHECKING
 
+from ..oids import builtins, INVALID_OID
 from ..adapt import Dumper, Loader
 from ..proto import AdaptContext, EncodeFunc, DecodeFunc
 from ..pq import Escaping
-from .oids import builtins, INVALID_OID
 
 if TYPE_CHECKING:
     from ..pq.proto import Escaping as EscapingProto

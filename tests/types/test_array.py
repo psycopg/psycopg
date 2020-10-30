@@ -1,7 +1,8 @@
 import pytest
 import psycopg3
-from psycopg3.types import builtins, array
+from psycopg3.oids import builtins
 from psycopg3.adapt import Format, Transformer
+from psycopg3.types import array
 
 
 tests_str = [

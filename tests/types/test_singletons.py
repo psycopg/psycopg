@@ -1,8 +1,8 @@
 import pytest
 
 from psycopg3 import sql
+from psycopg3.oids import builtins
 from psycopg3.adapt import Transformer, Format
-from psycopg3.types import builtins
 
 
 @pytest.mark.parametrize("fmt_in", [Format.TEXT, Format.BINARY])

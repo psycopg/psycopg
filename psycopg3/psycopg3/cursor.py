@@ -11,9 +11,10 @@ from operator import attrgetter
 from . import errors as e
 from . import pq
 from . import proto
+from .oids import builtins
+from .copy import Copy, AsyncCopy
 from .proto import Query, Params, DumpersMap, LoadersMap, PQGen
 from .utils.queries import PostgresQuery
-from .copy import Copy, AsyncCopy
 
 if TYPE_CHECKING:
     from .connection import BaseConnection, Connection, AsyncConnection

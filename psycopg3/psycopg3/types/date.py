@@ -10,10 +10,10 @@ import codecs
 from datetime import date, datetime, time, timedelta
 from typing import cast
 
+from ..oids import builtins
 from ..adapt import Dumper, Loader
 from ..proto import AdaptContext, EncodeFunc, DecodeFunc
 from ..errors import InterfaceError, DataError
-from .oids import builtins
 
 _encode_ascii = codecs.lookup("ascii").encode
 _decode_ascii = codecs.lookup("ascii").decode

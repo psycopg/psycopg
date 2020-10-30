@@ -9,10 +9,10 @@ from typing import Any, Callable, Generator, Sequence, Tuple, Type
 from typing import Optional, TYPE_CHECKING
 
 from .. import pq
+from ..oids import builtins, TypeInfo
 from ..adapt import Format, Dumper, Loader, Transformer
 from ..proto import AdaptContext
 from . import array
-from .oids import builtins, TypeInfo
 
 if TYPE_CHECKING:
     from ..connection import Connection, AsyncConnection

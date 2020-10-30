@@ -3,6 +3,7 @@ import pytest
 import weakref
 
 import psycopg3
+from psycopg3.oids import builtins
 
 
 def test_close(conn):

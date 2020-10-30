@@ -48,8 +48,8 @@ cdef class BoolBinaryLoader(CLoader):
 cdef void register_numeric_c_loaders():
     logger.debug("registering optimised numeric c loaders")
 
+    from psycopg3.oids import builtins
     from psycopg3.adapt import Loader
-    from psycopg3.types import builtins
 
     IntLoader.register(builtins["int2"].oid)
     IntLoader.register(builtins["int4"].oid)

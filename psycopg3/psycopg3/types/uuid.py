@@ -10,9 +10,9 @@ from uuid import UUID
 
 import codecs
 
+from ..oids import builtins
 from ..adapt import Dumper, Loader
 from ..proto import DecodeFunc, EncodeFunc
-from .oids import builtins
 
 _encode_ascii = codecs.lookup("ascii").encode
 _decode_ascii = codecs.lookup("ascii").decode

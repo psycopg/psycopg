@@ -1,6 +1,6 @@
 import pytest
 from psycopg3.adapt import Transformer, Format, Dumper, Loader
-from psycopg3.types.oids import builtins
+from psycopg3.oids import builtins
 
 TEXT_OID = builtins["text"].oid
 

@@ -9,9 +9,9 @@ import struct
 from typing import Any, Generator, List, Optional, Type
 
 from .. import errors as e
+from ..oids import builtins
 from ..adapt import Format, Dumper, Loader, Transformer
 from ..proto import AdaptContext
-from .oids import builtins
 
 TEXT_OID = builtins["text"].oid
 TEXT_ARRAY_OID = builtins["text"].array_oid

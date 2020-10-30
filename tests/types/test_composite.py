@@ -1,7 +1,8 @@
 import pytest
 
+from psycopg3.oids import builtins
 from psycopg3.adapt import Format, Loader
-from psycopg3.types import builtins, composite
+from psycopg3.types import composite
 
 
 tests_str = [

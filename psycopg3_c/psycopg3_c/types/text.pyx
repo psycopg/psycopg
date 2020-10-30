@@ -61,8 +61,8 @@ cdef class ByteaBinaryLoader(CLoader):
 cdef void register_text_c_loaders():
     logger.debug("registering optimised text c loaders")
 
+    from psycopg3.oids import builtins
     from psycopg3.adapt import Loader
-    from psycopg3.types import builtins
 
     TextLoader.register(0)    # INVALID_OID
     TextLoader.register(builtins["text"].oid)

@@ -9,9 +9,9 @@ import struct
 from typing import Any, Callable, Dict, Tuple, cast
 from decimal import Decimal
 
+from ..oids import builtins
 from ..adapt import Dumper, Loader
 from ..proto import EncodeFunc, DecodeFunc
-from .oids import builtins
 
 UnpackInt = Callable[[bytes], Tuple[int]]
 UnpackFloat = Callable[[bytes], Tuple[float]]

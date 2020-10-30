@@ -8,7 +8,7 @@ import json
 import codecs
 from typing import Any, Callable, Optional
 
-from .oids import builtins
+from ..oids import builtins
 from ..adapt import Dumper, Loader
 from ..proto import EncodeFunc
 from ..errors import DataError

@@ -6,8 +6,8 @@ Adapters for None and boolean.
 
 from typing import Dict
 
+from ..oids import builtins
 from ..adapt import Dumper, Loader
-from .oids import builtins
 
 BOOL_OID = builtins["bool"].oid
 

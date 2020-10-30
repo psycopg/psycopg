@@ -4,8 +4,8 @@ from math import isnan, isinf, exp
 import pytest
 
 from psycopg3 import sql
+from psycopg3.oids import builtins
 from psycopg3.adapt import Transformer, Format
-from psycopg3.types import builtins
 from psycopg3.types.numeric import FloatLoader
 
 

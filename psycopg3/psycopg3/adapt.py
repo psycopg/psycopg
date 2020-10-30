@@ -9,7 +9,7 @@ from typing import Any, Callable, Optional, Type
 from . import pq
 from . import proto
 from .pq import Format as Format
-from .types import builtins
+from .oids import builtins
 from .proto import AdaptContext, DumpersMap, DumperType, LoadersMap, LoaderType
 from .cursor import BaseCursor
 from .connection import BaseConnection

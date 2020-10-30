@@ -9,7 +9,7 @@ import datetime as dt
 from math import floor
 from typing import Any, Sequence
 
-from .types.oids import builtins
+from .oids import builtins
 from .adapt import Dumper
 
 

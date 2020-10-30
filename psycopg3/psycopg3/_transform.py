@@ -10,11 +10,11 @@ from typing import TYPE_CHECKING
 
 from . import errors as e
 from . import pq
+from .oids import builtins, INVALID_OID
 from .proto import AdaptContext, DumpersMap
 from .proto import LoadFunc, LoadersMap
 from .cursor import BaseCursor
 from .connection import BaseConnection
-from .types.oids import builtins, INVALID_OID
 
 if TYPE_CHECKING:
     from .adapt import Dumper, Loader
