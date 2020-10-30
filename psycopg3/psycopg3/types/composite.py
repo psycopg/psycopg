@@ -5,7 +5,7 @@ Support for composite types adaptation.
 import re
 import struct
 from collections import namedtuple
-from typing import Any, Callable, Generator, Sequence, Tuple, Type
+from typing import Any, Callable, Iterator, Sequence, Tuple, Type
 from typing import Optional, TYPE_CHECKING
 
 from .. import pq
@@ -176,9 +176,7 @@ class RecordLoader(BaseCompositeLoader):
             for token in self._parse_record(data)
         )
 
-    def _parse_record(
-        self, data: bytes
-    ) -> Generator[Optional[bytes], None, None]:
+    def _parse_record(self, data: bytes) -> Iterator[Optional[bytes]]:
         if data == b"()":
             return
 
@@ -221,9 +219,7 @@ class RecordBinaryLoader(BaseCompositeLoader):
             )
         )
 
-    def _walk_record(
-        self, data: bytes
-    ) -> Generator[Tuple[int, int, int], None, None]:
+    def _walk_record(self, data: bytes) -> Iterator[Tuple[int, int, int]]:
         """
         Yield a sequence of (oid, offset, length) for the content of the record
         """

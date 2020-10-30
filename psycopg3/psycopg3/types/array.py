@@ -6,7 +6,7 @@ Adapters for arrays
 
 import re
 import struct
-from typing import Any, Generator, List, Optional, Type
+from typing import Any, Iterator, List, Optional, Type
 
 from .. import errors as e
 from ..oids import builtins
@@ -241,7 +241,7 @@ class ArrayBinaryLoader(BaseArrayLoader):
             _struct_dim.unpack_from(data, i)[0] for i in list(range(12, p, 8))
         ]
 
-        def consume(p: int) -> Generator[Any, None, None]:
+        def consume(p: int) -> Iterator[Any]:
             while 1:
                 size = _struct_len.unpack_from(data, p)[0]
                 p += 4

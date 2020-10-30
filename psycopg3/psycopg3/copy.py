@@ -7,7 +7,7 @@ psycopg3 copy support
 import re
 import codecs
 import struct
-from typing import TYPE_CHECKING, AsyncGenerator, Generator
+from typing import TYPE_CHECKING, AsyncIterator, Iterator
 from typing import Any, Dict, List, Match, Optional, Sequence, Type, Union
 from types import TracebackType
 
@@ -207,7 +207,7 @@ class Copy(BaseCopy):
         else:
             self.finish(str(exc_val))
 
-    def __iter__(self) -> Generator[bytes, None, None]:
+    def __iter__(self) -> Iterator[bytes]:
         while 1:
             data = self.read()
             if data is None:
@@ -268,7 +268,7 @@ class AsyncCopy(BaseCopy):
         else:
             await self.finish(str(exc_val))
 
-    async def __aiter__(self) -> AsyncGenerator[bytes, None]:
+    async def __aiter__(self) -> AsyncIterator[bytes]:
         while 1:
             data = await self.read()
             if data is None:

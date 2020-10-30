@@ -8,7 +8,7 @@ to a Postgres server.
 # Copyright (C) 2020 The Psycopg Team
 
 import re
-from typing import Dict, Generator, Optional, Union
+from typing import Dict, Iterator, Optional, Union
 
 INVALID_OID = 0
 
@@ -53,7 +53,7 @@ class TypesRegistry:
             if info.alt_name not in self._by_name:
                 self._by_name[info.alt_name] = info
 
-    def __iter__(self) -> Generator[TypeInfo, None, None]:
+    def __iter__(self) -> Iterator[TypeInfo]:
         seen = set()
         for t in self._by_oid.values():
             if t.oid not in seen:
