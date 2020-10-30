@@ -202,6 +202,27 @@ def test_rowcount(conn):
     assert cur.rowcount == -1
 
 
+def test_iter(conn):
+    cur = conn.cursor()
+    cur.execute("select generate_series(1, 3)")
+    assert list(cur) == [(1,), (2,), (3,)]
+
+
+def test_iter_stop(conn):
+    cur = conn.cursor()
+    cur.execute("select generate_series(1, 3)")
+    for rec in cur:
+        assert rec == (1,)
+        break
+
+    for rec in cur:
+        assert rec == (2,)
+        break
+
+    assert cur.fetchone() == (3,)
+    assert list(cur) == []
+
+
 class TestColumn:
     def test_description_attribs(self, conn):
         curs = conn.cursor()

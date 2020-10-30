@@ -5,7 +5,8 @@ psycopg3 cursor objects
 # Copyright (C) 2020 The Psycopg Team
 
 from types import TracebackType
-from typing import Any, Callable, List, Optional, Sequence, Type, TYPE_CHECKING
+from typing import Any, AsyncIterator, Callable, Iterator, List, Optional
+from typing import Sequence, Type, TYPE_CHECKING
 from operator import attrgetter
 
 from . import errors as e
@@ -438,21 +439,19 @@ class Cursor(BaseCursor):
         return rv
 
     def fetchall(self) -> List[Sequence[Any]]:
+        return list(self)
+
+    def __iter__(self) -> Iterator[Sequence[Any]]:
         self._check_result()
 
-        rv: List[Sequence[Any]] = []
-        pos = self._pos
         load = self._transformer.load_row
 
         while 1:
-            row = load(pos)
+            row = load(self._pos)
             if row is None:
                 break
-            pos += 1
-            rv.append(row)
-
-        self._pos = pos
-        return rv
+            self._pos += 1
+            yield row
 
     def copy(self, statement: Query, vars: Optional[Params] = None) -> Copy:
         with self.connection.lock:
@@ -561,21 +560,23 @@ class AsyncCursor(BaseCursor):
         return rv
 
     async def fetchall(self) -> List[Sequence[Any]]:
+        res = []
+        async for rec in self:
+            res.append(rec)
+
+        return res
+
+    async def __aiter__(self) -> AsyncIterator[Sequence[Any]]:
         self._check_result()
 
-        rv: List[Sequence[Any]] = []
-        pos = self._pos
         load = self._transformer.load_row
 
         while 1:
-            row = load(pos)
+            row = load(self._pos)
             if row is None:
                 break
-            pos += 1
-            rv.append(row)
-
-        self._pos = pos
-        return rv
+            self._pos += 1
+            yield row
 
     async def copy(
         self, statement: Query, vars: Optional[Params] = None

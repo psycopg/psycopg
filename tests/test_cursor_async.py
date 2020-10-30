@@ -202,3 +202,28 @@ async def test_rowcount(aconn):
 
     await cur.close()
     assert cur.rowcount == -1
+
+
+async def test_iter(aconn):
+    cur = aconn.cursor()
+    await cur.execute("select generate_series(1, 3)")
+    res = []
+    async for rec in cur:
+        res.append(rec)
+    assert res == [(1,), (2,), (3,)]
+
+
+async def test_iter_stop(aconn):
+    cur = aconn.cursor()
+    await cur.execute("select generate_series(1, 3)")
+    async for rec in cur:
+        assert rec == (1,)
+        break
+
+    async for rec in cur:
+        assert rec == (2,)
+        break
+
+    assert (await cur.fetchone()) == (3,)
+    async for rec in cur:
+        assert False
