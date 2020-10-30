@@ -5,12 +5,13 @@ psycopg3 cursor objects
 # Copyright (C) 2020 The Psycopg Team
 
 from types import TracebackType
-from typing import Any, AsyncIterator, Callable, Iterator, List, Optional
-from typing import Sequence, Type, TYPE_CHECKING
+from typing import Any, AsyncIterator, Callable, Iterator, List, Mapping
+from typing import Optional, Sequence, Type, TYPE_CHECKING, Union
 from operator import attrgetter
 
 from . import errors as e
 from . import pq
+from . import sql
 from . import proto
 from .oids import builtins
 from .copy import Copy, AsyncCopy
@@ -207,6 +208,17 @@ class BaseCursor:
         # no-op
         pass
 
+    def nextset(self) -> Optional[bool]:
+        self._iresult += 1
+        if self._iresult < len(self._results):
+            self.pgresult = self._results[self._iresult]
+            self._pos = 0
+            nrows = self.pgresult.command_tuples
+            self._rowcount = nrows if nrows is not None else -1
+            return True
+        else:
+            return None
+
     def _start_query(self) -> None:
         from .adapt import Transformer
 
@@ -307,17 +319,6 @@ class BaseCursor:
             result_format=self.format,
         )
 
-    def nextset(self) -> Optional[bool]:
-        self._iresult += 1
-        if self._iresult < len(self._results):
-            self.pgresult = self._results[self._iresult]
-            self._pos = 0
-            nrows = self.pgresult.command_tuples
-            self._rowcount = nrows if nrows is not None else -1
-            return True
-        else:
-            return None
-
     def _check_result(self) -> None:
         res = self.pgresult
         if res is None:
@@ -326,6 +327,36 @@ class BaseCursor:
             raise e.ProgrammingError(
                 "the last operation didn't produce a result"
             )
+
+    def _callproc_sql(
+        self, name: Union[str, sql.Identifier], args: Optional[Params] = None
+    ) -> sql.Composable:
+        qparts: List[sql.Composable] = [
+            sql.SQL("select * from "),
+            name if isinstance(name, sql.Identifier) else sql.Identifier(name),
+            sql.SQL("("),
+        ]
+
+        if isinstance(args, Sequence):
+            for i, item in enumerate(args):
+                if i:
+                    qparts.append(sql.SQL(","))
+                qparts.append(sql.Literal(item))
+        elif isinstance(args, Mapping):
+            for i, (k, v) in enumerate(args.items()):
+                if i:
+                    qparts.append(sql.SQL(","))
+                qparts.extend(
+                    [sql.Identifier(k), sql.SQL(":="), sql.Literal(v)]
+                )
+        elif args:
+            raise TypeError(
+                f"callproc parameters should be a sequence or a mapping,"
+                f" got {type(args).__name__}"
+            )
+
+        qparts.append(sql.SQL(")"))
+        return sql.Composed(qparts)
 
     def _check_copy_results(
         self, results: Sequence[pq.proto.PGresult]
@@ -411,6 +442,12 @@ class Cursor(BaseCursor):
                 self._execute_results((result,))
 
         return self
+
+    def callproc(
+        self, name: Union[str, sql.Identifier], args: Optional[Params] = None
+    ) -> Optional[Params]:
+        self.execute(self._callproc_sql(name, args))
+        return args
 
     def fetchone(self) -> Optional[Sequence[Any]]:
         self._check_result()
@@ -530,6 +567,12 @@ class AsyncCursor(BaseCursor):
                 self._execute_results((result,))
 
         return self
+
+    async def callproc(
+        self, name: Union[str, sql.Identifier], args: Optional[Params] = None
+    ) -> Optional[Params]:
+        await self.execute(self._callproc_sql(name, args))
+        return args
 
     async def fetchone(self) -> Optional[Sequence[Any]]:
         self._check_result()

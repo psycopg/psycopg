@@ -1,8 +1,10 @@
 import gc
 import pytest
 import weakref
+from collections import namedtuple
 
 import psycopg3
+from psycopg3 import sql
 from psycopg3.oids import builtins
 
 
@@ -183,6 +185,83 @@ def test_executemany_badquery(conn, query):
     cur = conn.cursor()
     with pytest.raises(psycopg3.DatabaseError):
         cur.executemany(query, [(10, "hello"), (20, "world")])
+
+
+def test_callproc_args(conn):
+    cur = conn.cursor()
+    cur.execute(
+        """
+        create function testfunc(a int, b text) returns text[] language sql as
+            'select array[$1::text, $2]'
+        """
+    )
+    assert cur.callproc("testfunc", [10, "twenty"]) == [10, "twenty"]
+    assert cur.fetchone() == (["10", "twenty"],)
+
+
+def test_callproc_badparam(conn):
+    cur = conn.cursor()
+    with pytest.raises(TypeError):
+        cur.callproc("lower", 42)
+    with pytest.raises(TypeError):
+        cur.callproc(42, ["lower"])
+
+
+def make_testfunc(conn):
+    # This parameter name tests for injection and quote escaping
+    paramname = """Robert'); drop table "students" --"""
+    procname = "randall"
+
+    # Set up the temporary function
+    stmt = (
+        sql.SQL(
+            """
+        create function {}({} numeric) returns numeric language sql as
+            'select $1 * $1'
+        """
+        )
+        .format(sql.Identifier(procname), sql.Identifier(paramname))
+        .as_string(conn)
+        .encode(conn.codec.name)
+    )
+
+    # execute regardless of sync/async conn
+    conn.pgconn.exec_(stmt)
+
+    return namedtuple("Thang", "name, param")(procname, paramname)
+
+
+def test_callproc_dict(conn):
+
+    testfunc = make_testfunc(conn)
+    cur = conn.cursor()
+
+    cur.callproc(testfunc.name, [2])
+    assert cur.fetchone() == (4,)
+    cur.callproc(testfunc.name, {testfunc.param: 2})
+    assert cur.fetchone() == (4,)
+    cur.callproc(sql.Identifier(testfunc.name), {testfunc.param: 2})
+    assert cur.fetchone() == (4,)
+
+
+@pytest.mark.parametrize(
+    "args, exc",
+    [
+        ({"_p": 2, "foo": "bar"}, psycopg3.ProgrammingError),
+        ({"_p": "two"}, psycopg3.DataError),
+        ({"bj\xc3rn": 2}, psycopg3.ProgrammingError),
+        ({3: 2}, TypeError),
+        ({(): 2}, TypeError),
+    ],
+)
+def test_callproc_dict_bad(conn, args, exc):
+    testfunc = make_testfunc(conn)
+    if "_p" in args:
+        args[testfunc.param] = args.pop("_p")
+
+    cur = conn.cursor()
+    with pytest.raises(exc):
+        cur.callproc(testfunc.name, args)
 
 
 def test_rowcount(conn):
