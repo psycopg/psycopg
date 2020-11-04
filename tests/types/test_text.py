@@ -1,6 +1,7 @@
 import pytest
 
-from psycopg3 import DatabaseError, sql
+import psycopg3
+from psycopg3 import sql
 from psycopg3.adapt import Format
 
 eur = "\u20ac"
@@ -28,6 +29,22 @@ def test_quote_1char(conn):
             continue
         cur.execute(query.format(ch=sql.Literal(chr(i))), (i,))
         assert cur.fetchone()[0] is True, chr(i)
+
+
+@pytest.mark.parametrize("fmt_in", [Format.TEXT, Format.BINARY])
+def test_dump_zero(conn, fmt_in):
+    cur = conn.cursor()
+    ph = "%s" if fmt_in == Format.TEXT else "%b"
+    s = "foo\x00bar"
+    with pytest.raises(psycopg3.DataError):
+        cur.execute(f"select {ph}", (s,))
+
+
+def test_quote_zero(conn):
+    cur = conn.cursor()
+    s = "foo\x00bar"
+    with pytest.raises(psycopg3.DataError):
+        cur.execute(sql.SQL("select {}").format(sql.Literal(s)))
 
 
 # the only way to make this pass is to reduce %% -> % every time
@@ -108,7 +125,7 @@ def test_load_badenc(conn, typename, fmt_out):
     cur = conn.cursor(format=fmt_out)
 
     conn.client_encoding = "latin1"
-    with pytest.raises(DatabaseError):
+    with pytest.raises(psycopg3.DatabaseError):
         cur.execute(f"select chr(%s::int)::{typename}", (ord(eur),))
 
 

@@ -10,15 +10,14 @@ from typing import Optional, Union, TYPE_CHECKING
 from ..oids import builtins, INVALID_OID
 from ..adapt import Dumper, Loader
 from ..proto import AdaptContext, EncodeFunc, DecodeFunc
+from ..errors import DataError
 from ..pq import Escaping
 
 if TYPE_CHECKING:
     from ..pq.proto import Escaping as EscapingProto
 
 
-@Dumper.text(str)
-@Dumper.binary(str)
-class StringDumper(Dumper):
+class _StringDumper(Dumper):
     def __init__(self, src: type, context: AdaptContext):
         super().__init__(src, context)
 
@@ -31,8 +30,22 @@ class StringDumper(Dumper):
         else:
             self._encode = codecs.lookup("utf8").encode
 
+
+@Dumper.binary(str)
+class StringBinaryDumper(_StringDumper):
     def dump(self, obj: str) -> bytes:
         return self._encode(obj)[0]
+
+
+@Dumper.text(str)
+class StringDumper(_StringDumper):
+    def dump(self, obj: str) -> bytes:
+        if "\x00" in obj:
+            raise DataError(
+                "PostgreSQL text fields cannot contain NUL (0x00) bytes"
+            )
+        else:
+            return self._encode(obj)[0]
 
 
 @Loader.text(builtins["text"].oid)
