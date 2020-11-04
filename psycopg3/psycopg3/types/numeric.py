@@ -4,26 +4,22 @@ Adapers for numeric types.
 
 # Copyright (C) 2020 The Psycopg Team
 
-import codecs
 import struct
 from typing import Any, Callable, Dict, Tuple, cast
 from decimal import Decimal
 
 from ..oids import builtins
 from ..adapt import Dumper, Loader
-from ..proto import EncodeFunc, DecodeFunc
+from ..utils.codecs import EncodeFunc, DecodeFunc, encode_ascii, decode_ascii
 
 UnpackInt = Callable[[bytes], Tuple[int]]
 UnpackFloat = Callable[[bytes], Tuple[float]]
-
-_encode_ascii = codecs.lookup("ascii").encode
-_decode_ascii = codecs.lookup("ascii").decode
 
 
 class NumberDumper(Dumper):
     _special: Dict[bytes, bytes] = {}
 
-    def dump(self, obj: Any, __encode: EncodeFunc = _encode_ascii) -> bytes:
+    def dump(self, obj: Any, __encode: EncodeFunc = encode_ascii) -> bytes:
         return __encode(str(obj))[0]
 
     def quote(self, obj: Any) -> bytes:
@@ -70,7 +66,7 @@ class DecimalDumper(NumberDumper):
 @Loader.text(builtins["int8"].oid)
 @Loader.text(builtins["oid"].oid)
 class IntLoader(Loader):
-    def load(self, data: bytes, __decode: DecodeFunc = _decode_ascii) -> int:
+    def load(self, data: bytes, __decode: DecodeFunc = decode_ascii) -> int:
         return int(__decode(data)[0])
 
 
@@ -145,6 +141,6 @@ class Float8BinaryLoader(Loader):
 @Loader.text(builtins["numeric"].oid)
 class NumericLoader(Loader):
     def load(
-        self, data: bytes, __decode: DecodeFunc = _decode_ascii
+        self, data: bytes, __decode: DecodeFunc = decode_ascii
     ) -> Decimal:
         return Decimal(__decode(data)[0])

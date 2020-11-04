@@ -4,14 +4,14 @@ Adapters for textual types.
 
 # Copyright (C) 2020 The Psycopg Team
 
-import codecs
 from typing import Optional, Union, TYPE_CHECKING
 
+from ..pq import Escaping
 from ..oids import builtins, INVALID_OID
 from ..adapt import Dumper, Loader
-from ..proto import AdaptContext, EncodeFunc, DecodeFunc
+from ..proto import AdaptContext
 from ..errors import DataError
-from ..pq import Escaping
+from ..utils.codecs import EncodeFunc, DecodeFunc, encode_utf8, decode_utf8
 
 if TYPE_CHECKING:
     from ..pq.proto import Escaping as EscapingProto
@@ -26,9 +26,9 @@ class _StringDumper(Dumper):
             if self.connection.client_encoding != "SQL_ASCII":
                 self._encode = self.connection.codec.encode
             else:
-                self._encode = codecs.lookup("utf8").encode
+                self._encode = encode_utf8
         else:
-            self._encode = codecs.lookup("utf8").encode
+            self._encode = encode_utf8
 
 
 @Dumper.binary(str)
@@ -66,7 +66,7 @@ class TextLoader(Loader):
             else:
                 self.decode = None
         else:
-            self.decode = codecs.lookup("utf8").decode
+            self.decode = decode_utf8
 
     def load(self, data: bytes) -> Union[bytes, str]:
         if self.decode is not None:
@@ -88,7 +88,7 @@ class UnknownLoader(Loader):
         if self.connection is not None:
             self.decode = self.connection.codec.decode
         else:
-            self.decode = codecs.lookup("utf8").decode
+            self.decode = decode_utf8
 
     def load(self, data: bytes) -> str:
         return self.decode(data)[0]

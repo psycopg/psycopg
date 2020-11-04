@@ -20,9 +20,6 @@ if TYPE_CHECKING:
     from .waiting import Wait, Ready
     from .sql import Composable
 
-EncodeFunc = Callable[[str], Tuple[bytes, int]]
-DecodeFunc = Callable[[bytes], Tuple[str, int]]
-
 Query = Union[str, bytes, "Composable"]
 Params = Union[Sequence[Any], Mapping[str, Any]]
 

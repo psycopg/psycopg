@@ -5,15 +5,12 @@ Adapers for JSON types.
 # Copyright (C) 2020 The Psycopg Team
 
 import json
-import codecs
 from typing import Any, Callable, Optional
 
 from ..oids import builtins
 from ..adapt import Dumper, Loader
-from ..proto import EncodeFunc
 from ..errors import DataError
-
-_encode_utf8 = codecs.lookup("utf8").encode
+from ..utils.codecs import EncodeFunc, encode_utf8
 
 JSON_OID = builtins["json"].oid
 JSONB_OID = builtins["jsonb"].oid
@@ -40,7 +37,7 @@ class Jsonb(_JsonWrapper):
 
 class _JsonDumper(Dumper):
     def dump(
-        self, obj: _JsonWrapper, __encode: EncodeFunc = _encode_utf8
+        self, obj: _JsonWrapper, __encode: EncodeFunc = encode_utf8
     ) -> bytes:
         return __encode(obj.dumps())[0]
 
@@ -59,7 +56,7 @@ class JsonbDumper(_JsonDumper):
 @Dumper.binary(Jsonb)
 class JsonbBinaryDumper(JsonbDumper):
     def dump(
-        self, obj: _JsonWrapper, __encode: EncodeFunc = _encode_utf8
+        self, obj: _JsonWrapper, __encode: EncodeFunc = encode_utf8
     ) -> bytes:
         return b"\x01" + __encode(obj.dumps())[0]
 

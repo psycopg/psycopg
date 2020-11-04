@@ -8,14 +8,9 @@ Adapters for the UUID type.
 # Should implement lazy dumper registration.
 from uuid import UUID
 
-import codecs
-
 from ..oids import builtins
 from ..adapt import Dumper, Loader
-from ..proto import DecodeFunc, EncodeFunc
-
-_encode_ascii = codecs.lookup("ascii").encode
-_decode_ascii = codecs.lookup("ascii").decode
+from ..utils.codecs import EncodeFunc, DecodeFunc, encode_ascii, decode_ascii
 
 
 @Dumper.text(UUID)
@@ -23,7 +18,7 @@ class UUIDDumper(Dumper):
 
     oid = builtins["uuid"].oid
 
-    def dump(self, obj: UUID, __encode: EncodeFunc = _encode_ascii) -> bytes:
+    def dump(self, obj: UUID, __encode: EncodeFunc = encode_ascii) -> bytes:
         return __encode(obj.hex)[0]
 
 
@@ -38,7 +33,7 @@ class UUIDBinaryDumper(Dumper):
 
 @Loader.text(builtins["uuid"].oid)
 class UUIDLoader(Loader):
-    def load(self, data: bytes, __decode: DecodeFunc = _decode_ascii) -> UUID:
+    def load(self, data: bytes, __decode: DecodeFunc = decode_ascii) -> UUID:
         return UUID(__decode(data)[0])
 
 
