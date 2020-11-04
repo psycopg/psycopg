@@ -37,8 +37,8 @@ def test_quote(data, result):
 
 
 def test_dump_connection_ctx(conn):
-    Dumper.register(str, make_dumper("t"), conn)
-    Dumper.register_binary(str, make_dumper("b"), conn)
+    make_dumper("t").register(str, conn)
+    make_dumper("b").register_binary(str, conn)
 
     cur = conn.cursor()
     cur.execute("select %s, %b", ["hello", "world"])
@@ -46,12 +46,12 @@ def test_dump_connection_ctx(conn):
 
 
 def test_dump_cursor_ctx(conn):
-    Dumper.register(str, make_dumper("t"), conn)
-    Dumper.register_binary(str, make_dumper("b"), conn)
+    make_dumper("t").register(str, conn)
+    make_dumper("b").register_binary(str, conn)
 
     cur = conn.cursor()
-    Dumper.register(str, make_dumper("tc"), cur)
-    Dumper.register_binary(str, make_dumper("bc"), cur)
+    make_dumper("tc").register(str, cur)
+    make_dumper("bc").register_binary(str, cur)
 
     cur.execute("select %s, %b", ["hello", "world"])
     assert cur.fetchone() == ("hellotc", "worldbc")

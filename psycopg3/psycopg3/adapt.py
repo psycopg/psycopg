@@ -47,32 +47,25 @@ class Dumper:
     def register(
         cls,
         src: type,
-        dumper: DumperType,
         context: AdaptContext = None,
         format: Format = Format.TEXT,
-    ) -> DumperType:
+    ) -> None:
         if not isinstance(src, type):
             raise TypeError(
                 f"dumpers should be registered on classes, got {src} instead"
             )
 
-        if not (isinstance(dumper, type)):
-            raise TypeError(f"dumpers should be classes, got {dumper} instead")
-
         where = context.dumpers if context is not None else Dumper.globals
-        where[src, format] = dumper
-        return dumper
+        where[src, format] = cls
 
     @classmethod
-    def register_binary(
-        cls, src: type, dumper: DumperType, context: AdaptContext = None
-    ) -> DumperType:
-        return cls.register(src, dumper, context, format=Format.BINARY)
+    def register_binary(cls, src: type, context: AdaptContext = None) -> None:
+        cls.register(src, context, format=Format.BINARY)
 
     @classmethod
     def text(cls, src: type) -> Callable[[DumperType], DumperType]:
         def text_(dumper: DumperType) -> DumperType:
-            cls.register(src, dumper)
+            dumper.register(src)
             return dumper
 
         return text_
@@ -80,7 +73,7 @@ class Dumper:
     @classmethod
     def binary(cls, src: type) -> Callable[[DumperType], DumperType]:
         def binary_(dumper: DumperType) -> DumperType:
-            cls.register_binary(src, dumper)
+            dumper.register_binary(src)
             return dumper
 
         return binary_
