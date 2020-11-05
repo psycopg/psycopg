@@ -41,7 +41,7 @@ class Dumper:
 
     @property
     def oid(self) -> int:
-        return TEXT_OID
+        return 0
 
     @classmethod
     def register(

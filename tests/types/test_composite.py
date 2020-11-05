@@ -57,7 +57,7 @@ def test_load_all_chars(conn, fmt_out):
     assert res == tuple(map(chr, range(1, 256)))
 
     s = "".join(map(chr, range(1, 256)))
-    res = cur.execute("select row(%s)", [s]).fetchone()[0]
+    res = cur.execute("select row(%s::text)", [s]).fetchone()[0]
     assert res == (s,)
 
 

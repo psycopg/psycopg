@@ -22,7 +22,7 @@ class _StringDumper(Dumper):
         super().__init__(src, context)
 
         self._encode: EncodeFunc
-        if self.connection is not None:
+        if self.connection:
             if self.connection.client_encoding != "SQL_ASCII":
                 self._encode = self.connection.codec.encode
             else:

@@ -111,7 +111,7 @@ class ListBinaryDumper(BaseListDumper):
         data: List[bytes] = [b"", b""]  # placeholders to avoid a resize
         dims: List[int] = []
         hasnull = 0
-        oid: Optional[int] = None
+        oid = 0
 
         def calc_dims(L: List[Any]) -> None:
             if isinstance(L, self.src):
@@ -134,7 +134,7 @@ class ListBinaryDumper(BaseListDumper):
                         ad = dumper.dump(item)
                         data.append(_struct_len.pack(len(ad)))
                         data.append(ad)
-                        if oid is None:
+                        if not oid:
                             oid = dumper.oid
                     else:
                         hasnull = 1
@@ -149,7 +149,7 @@ class ListBinaryDumper(BaseListDumper):
 
         dump_list(obj, 0)
 
-        if oid is None:
+        if not oid:
             oid = TEXT_OID
 
         self._array_oid = self._get_array_oid(oid)

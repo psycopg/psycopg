@@ -37,7 +37,7 @@ def test_dump_zero(conn, fmt_in):
     ph = "%s" if fmt_in == Format.TEXT else "%b"
     s = "foo\x00bar"
     with pytest.raises(psycopg3.DataError):
-        cur.execute(f"select {ph}", (s,))
+        cur.execute(f"select {ph}::text", (s,))
 
 
 def test_quote_zero(conn):
@@ -76,22 +76,12 @@ def test_load_1char(conn, typename, fmt_out):
 
 
 @pytest.mark.parametrize("fmt_in", [Format.TEXT, Format.BINARY])
-@pytest.mark.parametrize("encoding", ["utf8", "latin9"])
+@pytest.mark.parametrize("encoding", ["utf8", "latin9", "sql_ascii"])
 def test_dump_enc(conn, fmt_in, encoding):
     cur = conn.cursor()
     ph = "%s" if fmt_in == Format.TEXT else "%b"
 
     conn.client_encoding = encoding
-    (res,) = cur.execute(f"select {ph}::bytea", (eur,)).fetchone()
-    assert res == eur.encode("utf8")
-
-
-@pytest.mark.parametrize("fmt_in", [Format.TEXT, Format.BINARY])
-def test_dump_ascii(conn, fmt_in):
-    cur = conn.cursor()
-    ph = "%s" if fmt_in == Format.TEXT else "%b"
-
-    conn.client_encoding = "sql_ascii"
     (res,) = cur.execute(f"select ascii({ph})", (eur,)).fetchone()
     assert res == ord(eur)
 

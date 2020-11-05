@@ -66,8 +66,7 @@ def test_execute_many_results(conn):
 
 def test_execute_sequence(conn):
     cur = conn.cursor()
-    cast = "::text" if conn.pgconn.server_version < 100000 else ""
-    rv = cur.execute(f"select %s, %s, %s{cast}", [1, "foo", None])
+    rv = cur.execute("select %s::int, %s::text, %s::text", [1, "foo", None])
     assert rv is cur
     assert len(cur._results) == 1
     assert cur.pgresult.get_value(0, 0) == b"1"
@@ -87,8 +86,7 @@ def test_execute_empty_query(conn, query):
 
 def test_fetchone(conn):
     cur = conn.cursor()
-    cast = "::text" if conn.pgconn.server_version < 100000 else ""
-    cur.execute(f"select %s, %s, %s{cast}", [1, "foo", None])
+    cur.execute("select %s::int, %s::text, %s::text", [1, "foo", None])
     assert cur.pgresult.fformat(0) == 0
 
     row = cur.fetchone()
@@ -101,8 +99,7 @@ def test_fetchone(conn):
 
 def test_execute_binary_result(conn):
     cur = conn.cursor(format=psycopg3.pq.Format.BINARY)
-    cast = "::text" if conn.pgconn.server_version < 100000 else ""
-    cur.execute(f"select %s, %s{cast}", ["foo", None])
+    cur.execute("select %s::text, %s::text", ["foo", None])
     assert cur.pgresult.fformat(0) == 1
 
     row = cur.fetchone()

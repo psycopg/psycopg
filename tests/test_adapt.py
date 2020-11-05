@@ -1,4 +1,6 @@
 import pytest
+
+import psycopg3
 from psycopg3.adapt import Transformer, Format, Dumper, Loader
 from psycopg3.oids import builtins
 
@@ -17,7 +19,7 @@ def test_dump(data, format, result, type):
     t = Transformer()
     dumper = t.get_dumper(data, format)
     assert dumper.dump(data) == result
-    assert dumper.oid == builtins[type].oid
+    assert dumper.oid == 0 if type == "text" else builtins[type].oid
 
 
 @pytest.mark.parametrize(
@@ -67,7 +69,9 @@ def test_dump_subclass(conn, fmt_out):
         pass
 
     cur = conn.cursor()
-    cur.execute("select %s, %b", [MyString("hello"), MyString("world")])
+    cur.execute(
+        "select %s::text, %b::text", [MyString("hello"), MyString("world")]
+    )
     assert cur.fetchone() == ("hello", "world")
 
 
@@ -147,10 +151,36 @@ def test_none_type_argument(conn, fmt_in):
     assert cur.fetchone()[0]
 
 
+@pytest.mark.parametrize("fmt_in", [Format.TEXT, Format.BINARY])
+def test_return_untyped(conn, fmt_in):
+    # Analyze and check for changes using strings in untyped/typed contexts
+    cur = conn.cursor()
+    # Currently string are passed as unknown oid to libpq. This is because
+    # unknown is more easily cast by postgres to different types (see jsonb
+    # later). However Postgres < 10 refuses to emit unknown types.
+    if conn.pgconn.server_version > 100000:
+        cur.execute("select %s, %s", ["hello", 10])
+        assert cur.fetchone() == ("hello", 10)
+    else:
+        with pytest.raises(psycopg3.errors.IndeterminateDatatype):
+            cur.execute("select %s, %s", ["hello", 10])
+        conn.rollback()
+        cur.execute("select %s::text, %s", ["hello", 10])
+        assert cur.fetchone() == ("hello", 10)
+
+    # It would be nice if above all postgres version behaved consistently.
+    # However this below shouldn't break either.
+    cur.execute("create table testjson(data jsonb)")
+    cur.execute("insert into testjson (data) values (%s)", ["{}"])
+    assert cur.execute("select data from testjson").fetchone() == ({},)
+
+
 def make_dumper(suffix):
     """Create a test dumper appending a suffix to the bytes representation."""
 
     class TestDumper(Dumper):
+        oid = TEXT_OID
+
         def dump(self, s):
             return (s + suffix).encode("ascii")
 
