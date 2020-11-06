@@ -19,6 +19,12 @@ class TypeInfo:
         self.oid = oid
         self.array_oid = array_oid
 
+    def __repr__(self) -> str:
+        return (
+            f"<{self.__class__.__qualname__}:"
+            f" {self.name} (oid: {self.oid}, array oid: {self.array_oid})>"
+        )
+
 
 class BuiltinTypeInfo(TypeInfo):
     def __init__(
