@@ -10,17 +10,49 @@ from decimal import Decimal
 
 from ..oids import builtins
 from ..adapt import Dumper, Loader
-from ..utils.codecs import EncodeFunc, DecodeFunc, encode_ascii, decode_ascii
+from ..utils.codecs import DecodeFunc, decode_ascii
 
+PackInt = Callable[[int], bytes]
 UnpackInt = Callable[[bytes], Tuple[int]]
 UnpackFloat = Callable[[bytes], Tuple[float]]
+
+_pack_int2 = cast(PackInt, struct.Struct("!h").pack)
+_pack_int4 = cast(PackInt, struct.Struct("!i").pack)
+_pack_uint4 = cast(PackInt, struct.Struct("!I").pack)
+_pack_int8 = cast(PackInt, struct.Struct("!q").pack)
+
+# Wrappers to force numbers to be cast as specific PostgreSQL types
+
+
+class Int2(int):
+    def __new__(cls, arg: int) -> "Int2":
+        rv: Int2 = super().__new__(cls, arg)  # type: ignore[call-arg]
+        return rv
+
+
+class Int4(int):
+    def __new__(cls, arg: int) -> "Int4":
+        rv: Int4 = super().__new__(cls, arg)  # type: ignore[call-arg]
+        return rv
+
+
+class Int8(int):
+    def __new__(cls, arg: int) -> "Int8":
+        rv: Int8 = super().__new__(cls, arg)  # type: ignore[call-arg]
+        return rv
+
+
+class Oid(int):
+    def __new__(cls, arg: int) -> "Oid":
+        rv: Oid = super().__new__(cls, arg)  # type: ignore[call-arg]
+        return rv
 
 
 class NumberDumper(Dumper):
     _special: Dict[bytes, bytes] = {}
 
-    def dump(self, obj: Any, __encode: EncodeFunc = encode_ascii) -> bytes:
-        return __encode(str(obj))[0]
+    def dump(self, obj: Any) -> bytes:
+        return str(obj).encode("utf8")
 
     def quote(self, obj: Any) -> bytes:
         value = self.dump(obj)
@@ -59,6 +91,50 @@ class DecimalDumper(NumberDumper):
         b"-Infinity": b"'-Infinity'::numeric",
         b"NaN": b"'NaN'::numeric",
     }
+
+
+@Dumper.text(Int2)
+class Int2Dumper(NumberDumper):
+    oid = builtins["int2"].oid
+
+
+@Dumper.text(Int4)
+class Int4Dumper(NumberDumper):
+    oid = builtins["int4"].oid
+
+
+@Dumper.text(Int8)
+class Int8Dumper(NumberDumper):
+    oid = builtins["int8"].oid
+
+
+@Dumper.text(Oid)
+class OidDumper(NumberDumper):
+    oid = builtins["oid"].oid
+
+
+@Dumper.binary(Int2)
+class Int2BinaryDumper(Int2Dumper):
+    def dump(self, obj: int) -> bytes:
+        return _pack_int2(obj)
+
+
+@Dumper.binary(Int4)
+class Int4BinaryDumper(Int4Dumper):
+    def dump(self, obj: int) -> bytes:
+        return _pack_int4(obj)
+
+
+@Dumper.binary(Int8)
+class Int8BinaryDumper(Int8Dumper):
+    def dump(self, obj: int) -> bytes:
+        return _pack_int8(obj)
+
+
+@Dumper.binary(Oid)
+class OidBinaryDumper(OidDumper):
+    def dump(self, obj: int) -> bytes:
+        return _pack_uint4(obj)
 
 
 @Loader.text(builtins["int2"].oid)

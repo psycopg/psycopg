@@ -3,6 +3,7 @@ from math import isnan, isinf, exp
 
 import pytest
 
+import psycopg3
 from psycopg3 import sql
 from psycopg3.oids import builtins
 from psycopg3.adapt import Transformer, Format
@@ -20,8 +21,8 @@ from psycopg3.types.numeric import FloatLoader
         (0, "'0'::int"),
         (1, "'1'::int"),
         (-1, "'-1'::int"),
-        (42, "'42'::int"),
-        (-42, "'-42'::int"),
+        (42, "'42'::smallint"),
+        (-42, "'-42'::smallint"),
         (int(2 ** 63 - 1), "'9223372036854775807'::bigint"),
         (int(-(2 ** 63)), "'-9223372036854775808'::bigint"),
     ],
@@ -30,6 +31,33 @@ def test_dump_int(conn, val, expr):
     assert isinstance(val, int)
     cur = conn.cursor()
     cur.execute(f"select {expr} = %s", (val,))
+    assert cur.fetchone()[0] is True
+
+
+@pytest.mark.parametrize(
+    "val, expr",
+    [
+        (0, "'0'::integer"),
+        (1, "'1'::integer"),
+        (-1, "'-1'::integer"),
+        (42, "'42'::smallint"),
+        (-42, "'-42'::smallint"),
+        (int(2 ** 63 - 1), "'9223372036854775807'::bigint"),
+        (int(-(2 ** 63)), "'-9223372036854775808'::bigint"),
+        (0, "'0'::oid"),
+        (4294967295, "'4294967295'::oid"),
+    ],
+)
+@pytest.mark.parametrize("fmt_in", [Format.TEXT, Format.BINARY])
+def test_dump_int_subtypes(conn, val, expr, fmt_in):
+    tname = builtins[expr.rsplit(":", 1)[-1]].name.title()
+    assert tname in "Int2 Int4 Int8 Oid".split()
+    Type = getattr(psycopg3.types.numeric, tname)
+    ph = "%s" if fmt_in == Format.TEXT else "%b"
+    cur = conn.cursor()
+    cur.execute(f"select pg_typeof({expr}) = pg_typeof({ph})", (Type(val),))
+    assert cur.fetchone()[0] is True
+    cur.execute(f"select {expr} = {ph}", (Type(val),))
     assert cur.fetchone()[0] is True
 
 
