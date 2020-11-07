@@ -120,9 +120,9 @@ class BaseConnection:
         self._autocommit = value
 
     def cursor(
-        self, name: Optional[str] = None, format: pq.Format = pq.Format.TEXT
+        self, name: str = "", format: pq.Format = pq.Format.TEXT
     ) -> cursor.BaseCursor:
-        if name is not None:
+        if name:
             raise NotImplementedError
         return self.cursor_factory(self, format=format)
 
@@ -144,10 +144,7 @@ class BaseConnection:
     @property
     def client_encoding(self) -> str:
         rv = self.pgconn.parameter_status(b"client_encoding")
-        if rv is not None:
-            return rv.decode("ascii")
-        else:
-            return "UTF8"
+        return rv.decode("utf-8") if rv else "UTF8"
 
     @client_encoding.setter
     def client_encoding(self, value: str) -> None:
@@ -171,7 +168,7 @@ class BaseConnection:
         wself: "ReferenceType[BaseConnection]", res: pq.proto.PGresult
     ) -> None:
         self = wself()
-        if self is None or not self._notice_handler:
+        if not (self and self._notice_handler):
             return
 
         diag = e.Diagnostic(res, self._pyenc)
@@ -194,7 +191,7 @@ class BaseConnection:
         wself: "ReferenceType[BaseConnection]", pgn: pq.PGnotify
     ) -> None:
         self = wself()
-        if self is None or not self._notify_handlers:
+        if not (self and self._notify_handlers):
             return
 
         n = Notify(
@@ -241,7 +238,7 @@ class Connection(BaseConnection):
         self.pgconn.finish()
 
     def cursor(
-        self, name: Optional[str] = None, format: pq.Format = pq.Format.TEXT
+        self, name: str = "", format: pq.Format = pq.Format.TEXT
     ) -> cursor.Cursor:
         cur = super().cursor(name, format=format)
         return cast(cursor.Cursor, cur)
@@ -356,7 +353,7 @@ class AsyncConnection(BaseConnection):
         self.pgconn.finish()
 
     def cursor(
-        self, name: Optional[str] = None, format: pq.Format = pq.Format.TEXT
+        self, name: str = "", format: pq.Format = pq.Format.TEXT
     ) -> cursor.AsyncCursor:
         cur = super().cursor(name, format=format)
         return cast(cursor.AsyncCursor, cur)

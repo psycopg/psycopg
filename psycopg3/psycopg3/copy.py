@@ -46,11 +46,11 @@ class BaseCopy:
 
     @property
     def connection(self) -> "BaseConnection":
-        if self._connection is not None:
+        if self._connection:
             return self._connection
 
         self._connection = conn = self._transformer.connection
-        if conn is not None:
+        if conn:
             return conn
 
         raise ValueError("no connection available")

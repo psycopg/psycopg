@@ -263,6 +263,10 @@ def test_callproc_dict_bad(conn, args, exc):
 
 def test_rowcount(conn):
     cur = conn.cursor()
+
+    cur.execute("select 1 from generate_series(1, 0)")
+    assert cur.rowcount == 0
+
     cur.execute("select 1 from generate_series(1, 42)")
     assert cur.rowcount == 42
 

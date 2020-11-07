@@ -80,8 +80,7 @@ class PostgresQuery:
 
             if self.types is None:
                 self.types = []
-                for i in range(len(params)):
-                    param = params[i]
+                for i, param in enumerate(params):
                     if param is not None:
                         dumper = self._tx.get_dumper(param, self.formats[i])
                         self.params.append(dumper.dump(param))
@@ -90,8 +89,7 @@ class PostgresQuery:
                         self.params.append(None)
                         self.types.append(UNKNOWN_OID)
             else:
-                for i in range(len(params)):
-                    param = params[i]
+                for i, param in enumerate(params):
                     if param is not None:
                         dumper = self._tx.get_dumper(param, self.formats[i])
                         self.params.append(dumper.dump(param))
@@ -225,10 +223,10 @@ def _split_query(query: bytes, encoding: str = "ascii") -> List[QueryPart]:
         pre = query[cur : m.span(0)[0]]
         parts.append((pre, m))
         cur = m.span(0)[1]
-    if m is None:
-        parts.append((query, None))
-    else:
+    if m:
         parts.append((query[cur:], None))
+    else:
+        parts.append((query, None))
 
     rv = []
 
@@ -269,15 +267,14 @@ def _split_query(query: bytes, encoding: str = "ascii") -> List[QueryPart]:
 
         # Index or name
         item: Union[int, str]
-        item = i if m.group(1) is None else m.group(1).decode(encoding)
+        item = m.group(1).decode(encoding) if m.group(1) else i
 
-        if phtype is None:
+        if not phtype:
             phtype = type(item)
-        else:
-            if phtype is not type(item):  # noqa
-                raise e.ProgrammingError(
-                    "positional and named placeholders cannot be mixed"
-                )
+        elif phtype is not type(item):
+            raise e.ProgrammingError(
+                "positional and named placeholders cannot be mixed"
+            )
 
         # Binary format
         format = Format(ph[-1:] == b"b")

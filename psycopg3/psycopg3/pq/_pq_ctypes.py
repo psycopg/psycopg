@@ -13,7 +13,7 @@ from typing import List, Tuple
 from psycopg3.errors import NotSupportedError
 
 libname = ctypes.util.find_library("pq")
-if libname is None:
+if not libname:
     raise ImportError("libpq library not found")
 
 pq = ctypes.pydll.LoadLibrary(libname)
@@ -172,7 +172,7 @@ if libpq_version >= 120000:
 
 
 def PQhostaddr(pgconn: type) -> bytes:
-    if _PQhostaddr is not None:
+    if _PQhostaddr:
         return _PQhostaddr(pgconn)
     else:
         raise NotSupportedError(

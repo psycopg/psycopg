@@ -404,16 +404,13 @@ class Placeholder(Composable):
 
     """
 
-    def __init__(
-        self, name: Optional[str] = None, format: Format = Format.TEXT
-    ):
+    def __init__(self, name: str = "", format: Format = Format.TEXT):
         super().__init__(name)
-        if isinstance(name, str):
-            if ")" in name:
-                raise ValueError("invalid name: %r" % name)
+        if not isinstance(name, str):
+            raise TypeError(f"expected string as name, got {name!r}")
 
-        elif name is not None:
-            raise TypeError("expected string or None as name, got %r" % name)
+        if ")" in name:
+            raise ValueError(f"invalid name: {name!r}")
 
         self._format = format
 
@@ -428,10 +425,7 @@ class Placeholder(Composable):
 
     def as_string(self, context: AdaptContext) -> str:
         code = "s" if self._format == Format.TEXT else "b"
-        if self._obj is not None:
-            return f"%({self._obj}){code}"
-        else:
-            return f"%{code}"
+        return f"%({self._obj}){code}" if self._obj else f"%{code}"
 
 
 # Literals

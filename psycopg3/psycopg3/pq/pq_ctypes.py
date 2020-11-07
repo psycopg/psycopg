@@ -47,7 +47,7 @@ def notice_receiver(
     arg: Any, result_ptr: impl.PGresult_struct, wconn: "ref[PGconn]"
 ) -> None:
     pgconn = wconn()
-    if pgconn is None or pgconn.notice_handler is None:
+    if not (pgconn and pgconn.notice_handler):
         return
 
     res = PGresult(result_ptr)
@@ -115,7 +115,7 @@ class PGconn:
 
     def finish(self) -> None:
         self.pgconn_ptr, p = None, self.pgconn_ptr
-        if p is not None:
+        if p:
             impl.PQfinish(p)
 
     @property
@@ -330,17 +330,20 @@ class PGconn:
         if not isinstance(command, bytes):
             raise TypeError(f"bytes expected, got {type(command)} instead")
 
-        nparams = len(param_values) if param_values is not None else 0
-        aparams: Optional[Array[c_char_p]] = None
-        alenghts: Optional[Array[c_int]] = None
+        aparams: Optional[Array[c_char_p]]
+        alenghts: Optional[Array[c_int]]
         if param_values:
+            nparams = len(param_values)
             aparams = (c_char_p * nparams)(*param_values)
             alenghts = (c_int * nparams)(
-                *(len(p) if p is not None else 0 for p in param_values)
+                *(len(p) if p else 0 for p in param_values)
             )
+        else:
+            nparams = 0
+            aparams = alenghts = None
 
         atypes: Optional[Array[impl.Oid]]
-        if param_types is None:
+        if not param_types:
             atypes = None
         else:
             if len(param_types) != nparams:
@@ -350,7 +353,7 @@ class PGconn:
                 )
             atypes = (impl.Oid * nparams)(*param_types)
 
-        if param_formats is None:
+        if not param_formats:
             aformats = None
         else:
             if len(param_formats) != nparams:
@@ -385,7 +388,7 @@ class PGconn:
                 f"'command' must be bytes, got {type(command)} instead"
             )
 
-        if param_types is None:
+        if not param_types:
             nparams = 0
             atypes = None
         else:
@@ -408,16 +411,19 @@ class PGconn:
         if not isinstance(name, bytes):
             raise TypeError(f"'name' must be bytes, got {type(name)} instead")
 
-        nparams = len(param_values) if param_values is not None else 0
-        aparams: Optional[Array[c_char_p]] = None
-        alenghts: Optional[Array[c_int]] = None
+        aparams: Optional[Array[c_char_p]]
+        alenghts: Optional[Array[c_int]]
         if param_values:
+            nparams = len(param_values)
             aparams = (c_char_p * nparams)(*param_values)
             alenghts = (c_int * nparams)(
-                *(len(p) if p is not None else 0 for p in param_values)
+                *(len(p) if p else 0 for p in param_values)
             )
+        else:
+            nparams = 0
+            aparams = alenghts = None
 
-        if param_formats is None:
+        if not param_formats:
             aformats = None
         else:
             if len(param_formats) != nparams:
@@ -575,7 +581,7 @@ class PGresult:
 
     def clear(self) -> None:
         self.pgresult_ptr, p = None, self.pgresult_ptr
-        if p is not None:
+        if p:
             impl.PQclear(p)
 
     @property
@@ -680,7 +686,7 @@ class PGcancel:
 
     def free(self) -> None:
         self.pgcancel_ptr, p = None, self.pgcancel_ptr
-        if p is not None:
+        if p:
             impl.PQfreeCancel(p)
 
     def cancel(self) -> None:
@@ -746,7 +752,7 @@ class Escaping:
         self.conn = conn
 
     def escape_literal(self, data: bytes) -> bytes:
-        if self.conn is not None:
+        if self.conn:
             self.conn._ensure_pgconn()
             out = impl.PQescapeLiteral(self.conn.pgconn_ptr, data, len(data))
             if not out:
@@ -761,7 +767,7 @@ class Escaping:
             raise PQerror("escape_literal failed: no connection provided")
 
     def escape_identifier(self, data: bytes) -> bytes:
-        if self.conn is not None:
+        if self.conn:
             self.conn._ensure_pgconn()
             out = impl.PQescapeIdentifier(
                 self.conn.pgconn_ptr, data, len(data)
@@ -778,7 +784,7 @@ class Escaping:
             raise PQerror("escape_identifier failed: no connection provided")
 
     def escape_string(self, data: bytes) -> bytes:
-        if self.conn is not None:
+        if self.conn:
             self.conn._ensure_pgconn()
             error = c_int()
             out = create_string_buffer(len(data) * 2 + 1)
@@ -807,7 +813,7 @@ class Escaping:
 
     def escape_bytea(self, data: bytes) -> bytes:
         len_out = c_size_t()
-        if self.conn is not None:
+        if self.conn:
             self.conn._ensure_pgconn()
             out = impl.PQescapeByteaConn(
                 self.conn.pgconn_ptr,
@@ -831,7 +837,7 @@ class Escaping:
     def unescape_bytea(self, data: bytes) -> bytes:
         # not needed, but let's keep it symmetric with the escaping:
         # if a connection is passed in, it must be valid.
-        if self.conn is not None:
+        if self.conn:
             self.conn._ensure_pgconn()
 
         len_out = c_size_t()

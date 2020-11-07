@@ -53,7 +53,7 @@ class Transformer:
         self._row_loaders: List[LoadFunc] = []
 
     def _setup_context(self, context: AdaptContext) -> None:
-        if context is None:
+        if not context:
             self._connection = None
             self._encoding = "utf-8"
             self._dumpers = {}
@@ -117,7 +117,7 @@ class Transformer:
 
         self._ntuples: int
         self._nfields: int
-        if result is None:
+        if not result:
             self._nfields = self._ntuples = 0
             return
 
@@ -168,7 +168,7 @@ class Transformer:
 
     def load_row(self, row: int) -> Optional[Tuple[Any, ...]]:
         res = self.pgresult
-        if res is None:
+        if not res:
             return None
 
         if row >= self._ntuples:

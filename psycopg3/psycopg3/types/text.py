@@ -55,7 +55,7 @@ class TextLoader(Loader):
     def __init__(self, oid: int, context: AdaptContext):
         super().__init__(oid, context)
 
-        if self.connection is not None:
+        if self.connection:
             if self.connection.client_encoding != "SQL_ASCII":
                 self.encoding = self.connection.pyenc
             else:
@@ -92,7 +92,7 @@ class BytesDumper(Dumper):
     def __init__(self, src: type, context: AdaptContext = None):
         super().__init__(src, context)
         self.esc = Escaping(
-            self.connection.pgconn if self.connection is not None else None
+            self.connection.pgconn if self.connection else None
         )
 
     def dump(self, obj: bytes) -> bytes:

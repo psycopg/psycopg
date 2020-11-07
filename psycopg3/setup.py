@@ -19,7 +19,7 @@ if os.path.abspath(os.getcwd()) != here:
 with open("psycopg3/version.py") as f:
     data = f.read()
     m = re.search(r"""(?m)^__version__\s*=\s*['"]([^'"]+)['"]""", data)
-    if m is None:
+    if not m:
         raise Exception(f"cannot find version in {f.name}")
     version = m.group(1)
 

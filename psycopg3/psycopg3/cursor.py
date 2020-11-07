@@ -78,7 +78,7 @@ class Column(Sequence[Any]):
     @property
     def name(self) -> str:
         rv = self._pgresult.fname(self._index)
-        if rv is not None:
+        if rv:
             return rv.decode(self._encoding)
         else:
             raise e.InterfaceError(
@@ -170,10 +170,7 @@ class BaseCursor:
     @property
     def status(self) -> Optional[pq.ExecStatus]:
         res = self.pgresult
-        if res is not None:
-            return res.status
-        else:
-            return None
+        return res.status if res else None
 
     @property
     def pgresult(self) -> Optional[pq.proto.PGresult]:
@@ -182,14 +179,13 @@ class BaseCursor:
     @pgresult.setter
     def pgresult(self, result: Optional[pq.proto.PGresult]) -> None:
         self._pgresult = result
-        if result is not None:
-            if self._transformer is not None:
-                self._transformer.pgresult = result
+        if result and self._transformer:
+            self._transformer.pgresult = result
 
     @property
     def description(self) -> Optional[List[Column]]:
         res = self.pgresult
-        if res is None or res.status != self.ExecStatus.TUPLES_OK:
+        if not res or res.status != self.ExecStatus.TUPLES_OK:
             return None
         encoding = self.connection.pyenc
         return [Column(res, i, encoding) for i in range(res.nfields)]
@@ -319,7 +315,7 @@ class BaseCursor:
 
     def _check_result(self) -> None:
         res = self.pgresult
-        if res is None:
+        if not res:
             raise e.ProgrammingError("no result available")
         elif res.status != self.ExecStatus.TUPLES_OK:
             raise e.ProgrammingError(
@@ -474,9 +470,9 @@ class Cursor(BaseCursor):
             self._pos += 1
         return rv
 
-    def fetchmany(self, size: Optional[int] = None) -> List[Sequence[Any]]:
+    def fetchmany(self, size: int = 0) -> List[Sequence[Any]]:
         self._check_result()
-        if size is None:
+        if not size:
             size = self.arraysize
 
         rv: List[Sequence[Any]] = []
@@ -602,11 +598,9 @@ class AsyncCursor(BaseCursor):
             self._pos += 1
         return rv
 
-    async def fetchmany(
-        self, size: Optional[int] = None
-    ) -> List[Sequence[Any]]:
+    async def fetchmany(self, size: int = 0) -> List[Sequence[Any]]:
         self._check_result()
-        if size is None:
+        if not size:
             size = self.arraysize
 
         pos = self._pos

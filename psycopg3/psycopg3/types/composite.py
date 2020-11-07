@@ -65,7 +65,7 @@ def register(
     context: AdaptContext = None,
     factory: Optional[Callable[..., Any]] = None,
 ) -> None:
-    if factory is None:
+    if not factory:
         factory = namedtuple(  # type: ignore
             info.name, [f.name for f in info.fields]
         )
@@ -142,7 +142,7 @@ class TupleDumper(Dumper):
 
             dumper = self._tx.get_dumper(item, Format.TEXT)
             ad = dumper.dump(item)
-            if self._re_needs_quotes.search(ad) is not None:
+            if self._re_needs_quotes.search(ad):
                 ad = b'"' + self._re_escape.sub(br"\1\1", ad) + b'"'
 
             parts.append(ad)
@@ -181,7 +181,7 @@ class RecordLoader(BaseCompositeLoader):
             return
 
         for m in self._re_tokenize.finditer(data):
-            if m.group(1) is not None:
+            if m.group(1):
                 yield None
             elif m.group(2) is not None:
                 yield self._re_undouble.sub(br"\1", m.group(2))

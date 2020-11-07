@@ -24,7 +24,7 @@ def make_conninfo(conninfo: str = "", **kwargs: Any) -> str:
     # Drop the None arguments
     kwargs = {k: v for (k, v) in kwargs.items() if v is not None}
 
-    if conninfo is not None:
+    if conninfo:
         tmp = conninfo_to_dict(conninfo)
         tmp.update(kwargs)
         kwargs = tmp

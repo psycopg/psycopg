@@ -38,7 +38,7 @@ class BaseListDumper(Dumper):
         oid = 0
         if base_oid:
             info = builtins.get(base_oid)
-            if info is not None:
+            if info:
                 oid = info.array_oid
 
         return oid or TEXT_ARRAY_OID
@@ -66,7 +66,7 @@ class ListDumper(BaseListDumper):
 
     def dump(self, obj: List[Any]) -> bytes:
         tokens: List[bytes] = []
-        oid: Optional[int] = None
+        oid = 0
 
         def dump_list(obj: List[Any]) -> None:
             nonlocal oid
@@ -82,10 +82,10 @@ class ListDumper(BaseListDumper):
                 elif item is not None:
                     dumper = self._tx.get_dumper(item, Format.TEXT)
                     ad = dumper.dump(item)
-                    if self._re_needs_quotes.search(ad) is not None:
+                    if self._re_needs_quotes.search(ad):
                         ad = b'"' + self._re_escape.sub(br"\\\1", ad) + b'"'
                     tokens.append(ad)
-                    if oid is None:
+                    if not oid:
                         oid = dumper.oid
                 else:
                     tokens.append(b"NULL")
@@ -96,7 +96,7 @@ class ListDumper(BaseListDumper):
 
         dump_list(obj)
 
-        if oid is not None:
+        if oid:
             self._array_oid = self._get_array_oid(oid)
 
         return b"".join(tokens)

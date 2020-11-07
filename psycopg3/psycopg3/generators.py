@@ -121,7 +121,7 @@ def fetch(pgconn: pq.proto.PGconn) -> PQGen[List[pq.proto.PGresult]]:
             n = pgconn.notifies()
             if n is None:
                 break
-            if pgconn.notify_handler is not None:
+            if pgconn.notify_handler:
                 pgconn.notify_handler(n)
 
         res = pgconn.get_result()
@@ -143,7 +143,7 @@ def notifies(pgconn: pq.proto.PGconn) -> PQGen[List[pq.PGnotify]]:
     ns = []
     while 1:
         n = pgconn.notifies()
-        if n is not None:
+        if n:
             ns.append(n)
         else:
             break

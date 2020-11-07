@@ -55,7 +55,7 @@ class Dumper:
                 f"dumpers should be registered on classes, got {src} instead"
             )
 
-        where = context.dumpers if context is not None else Dumper.globals
+        where = context.dumpers if context else Dumper.globals
         where[src, format] = cls
 
     @classmethod
@@ -103,7 +103,7 @@ class Loader:
                 f"loaders should be registered on oid, got {oid} instead"
             )
 
-        where = context.loaders if context is not None else Loader.globals
+        where = context.loaders if context else Loader.globals
         where[oid, format] = cls
 
     @classmethod
@@ -130,7 +130,7 @@ class Loader:
 def _connection_from_context(
     context: AdaptContext,
 ) -> Optional[BaseConnection]:
-    if context is None:
+    if not context:
         return None
     elif isinstance(context, BaseConnection):
         return context
