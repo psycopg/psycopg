@@ -205,7 +205,7 @@ async def test_set_encoding(aconn):
 async def test_normalize_encoding(aconn, enc, out, codec):
     await aconn.set_client_encoding(enc)
     assert aconn.client_encoding == out
-    assert aconn.codec.name == codec
+    assert aconn.pyenc == codec
 
 
 @pytest.mark.parametrize(
@@ -222,7 +222,7 @@ async def test_encoding_env_var(dsn, monkeypatch, enc, out, codec):
     monkeypatch.setenv("PGCLIENTENCODING", enc)
     aconn = await psycopg3.AsyncConnection.connect(dsn)
     assert aconn.client_encoding == out
-    assert aconn.codec.name == codec
+    assert aconn.pyenc == codec
 
 
 async def test_set_encoding_unsupported(aconn):

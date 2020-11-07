@@ -191,10 +191,8 @@ class BaseCursor:
         res = self.pgresult
         if res is None or res.status != self.ExecStatus.TUPLES_OK:
             return None
-        return [
-            Column(res, i, self.connection.codec.name)
-            for i in range(res.nfields)
-        ]
+        encoding = self.connection.pyenc
+        return [Column(res, i, encoding) for i in range(res.nfields)]
 
     @property
     def rowcount(self) -> int:
@@ -283,7 +281,7 @@ class BaseCursor:
 
         if results[-1].status == S.FATAL_ERROR:
             raise e.error_from_result(
-                results[-1], encoding=self.connection.codec.name
+                results[-1], encoding=self.connection.pyenc
             )
 
         elif badstats & {S.COPY_IN, S.COPY_OUT, S.COPY_BOTH}:
@@ -393,9 +391,7 @@ class BaseCursor:
         if status in (pq.ExecStatus.COPY_IN, pq.ExecStatus.COPY_OUT):
             return
         elif status == pq.ExecStatus.FATAL_ERROR:
-            raise e.error_from_result(
-                result, encoding=self.connection.codec.name
-            )
+            raise e.error_from_result(result, encoding=self.connection.pyenc)
         else:
             raise e.ProgrammingError(
                 "copy() should be used only with COPY ... TO STDOUT or COPY ..."
@@ -450,7 +446,7 @@ class Cursor(BaseCursor):
                     (result,) = self.connection.wait(gen)
                     if result.status == self.ExecStatus.FATAL_ERROR:
                         raise e.error_from_result(
-                            result, encoding=self.connection.codec.name
+                            result, encoding=self.connection.pyenc
                         )
                 else:
                     pgq.dump(vars)
@@ -578,7 +574,7 @@ class AsyncCursor(BaseCursor):
                     (result,) = await self.connection.wait(gen)
                     if result.status == self.ExecStatus.FATAL_ERROR:
                         raise e.error_from_result(
-                            result, encoding=self.connection.codec.name
+                            result, encoding=self.connection.pyenc
                         )
                 else:
                     pgq.dump(vars)

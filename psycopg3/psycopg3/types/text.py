@@ -4,14 +4,13 @@ Adapters for textual types.
 
 # Copyright (C) 2020 The Psycopg Team
 
-from typing import Optional, Union, TYPE_CHECKING
+from typing import Union, TYPE_CHECKING
 
 from ..pq import Escaping
 from ..oids import builtins, INVALID_OID
 from ..adapt import Dumper, Loader
 from ..proto import AdaptContext
 from ..errors import DataError
-from ..utils.codecs import EncodeFunc, DecodeFunc, encode_utf8, decode_utf8
 
 if TYPE_CHECKING:
     from ..pq.proto import Escaping as EscapingProto
@@ -21,20 +20,19 @@ class _StringDumper(Dumper):
     def __init__(self, src: type, context: AdaptContext):
         super().__init__(src, context)
 
-        self._encode: EncodeFunc
         if self.connection:
             if self.connection.client_encoding != "SQL_ASCII":
-                self._encode = self.connection.codec.encode
+                self.encoding = self.connection.pyenc
             else:
-                self._encode = encode_utf8
+                self.encoding = "utf-8"
         else:
-            self._encode = encode_utf8
+            self.encoding = "utf-8"
 
 
 @Dumper.binary(str)
 class StringBinaryDumper(_StringDumper):
     def dump(self, obj: str) -> bytes:
-        return self._encode(obj)[0]
+        return obj.encode(self.encoding)
 
 
 @Dumper.text(str)
@@ -45,7 +43,7 @@ class StringDumper(_StringDumper):
                 "PostgreSQL text fields cannot contain NUL (0x00) bytes"
             )
         else:
-            return self._encode(obj)[0]
+            return obj.encode(self.encoding)
 
 
 @Loader.text(builtins["text"].oid)
@@ -54,23 +52,20 @@ class StringDumper(_StringDumper):
 @Loader.binary(builtins["varchar"].oid)
 @Loader.text(INVALID_OID)
 class TextLoader(Loader):
-
-    decode: Optional[DecodeFunc]
-
     def __init__(self, oid: int, context: AdaptContext):
         super().__init__(oid, context)
 
         if self.connection is not None:
             if self.connection.client_encoding != "SQL_ASCII":
-                self.decode = self.connection.codec.decode
+                self.encoding = self.connection.pyenc
             else:
-                self.decode = None
+                self.encoding = ""
         else:
-            self.decode = decode_utf8
+            self.encoding = "utf-8"
 
     def load(self, data: bytes) -> Union[bytes, str]:
-        if self.decode is not None:
-            return self.decode(data)[0]
+        if self.encoding:
+            return data.decode(self.encoding)
         else:
             # return bytes for SQL_ASCII db
             return data
@@ -83,15 +78,10 @@ class TextLoader(Loader):
 class UnknownLoader(Loader):
     def __init__(self, oid: int, context: AdaptContext):
         super().__init__(oid, context)
-
-        self.decode: DecodeFunc
-        if self.connection is not None:
-            self.decode = self.connection.codec.decode
-        else:
-            self.decode = decode_utf8
+        self.encoding = self.connection.pyenc if self.connection else "utf-8"
 
     def load(self, data: bytes) -> str:
-        return self.decode(data)[0]
+        return data.decode(self.encoding)
 
 
 @Dumper.text(bytes)

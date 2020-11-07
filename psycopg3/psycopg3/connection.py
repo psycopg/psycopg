@@ -4,7 +4,6 @@ psycopg3 connection objects
 
 # Copyright (C) 2020 The Psycopg Team
 
-import codecs
 import logging
 import asyncio
 import threading
@@ -83,8 +82,10 @@ class BaseConnection:
         self.loaders: proto.LoadersMap = {}
         self._notice_handlers: List[NoticeHandler] = []
         self._notify_handlers: List[NotifyHandler] = []
-        # name of the postgres encoding (in bytes)
+        # postgres name of the client encoding (in bytes)
         self._pgenc = b""
+        # python name of the client encoding
+        self._pyenc = "utf-8"
 
         wself = ref(self)
 
@@ -126,25 +127,19 @@ class BaseConnection:
         return self.cursor_factory(self, format=format)
 
     @property
-    def codec(self) -> codecs.CodecInfo:
-        # TODO: utf8 fastpath?
+    def pyenc(self) -> str:
         pgenc = self.pgconn.parameter_status(b"client_encoding") or b""
         if self._pgenc != pgenc:
             if pgenc:
                 try:
-                    pyenc = pq.py_codecs[pgenc]
+                    self._pyenc = pq.py_codecs[pgenc]
                 except KeyError:
                     raise e.NotSupportedError(
                         f"encoding {pgenc.decode('ascii')} not available in Python"
                     )
-                self._codec = codecs.lookup(pyenc)
-            else:
-                # fallback for a connection closed whose codec was never asked
-                if not hasattr(self, "_codec"):
-                    self._codec = codecs.lookup("utf8")
 
             self._pgenc = pgenc
-        return self._codec
+        return self._pyenc
 
     @property
     def client_encoding(self) -> str:
@@ -179,7 +174,7 @@ class BaseConnection:
         if self is None or not self._notice_handler:
             return
 
-        diag = e.Diagnostic(res, self.codec.name)
+        diag = e.Diagnostic(res, self._pyenc)
         for cb in self._notice_handlers:
             try:
                 cb(diag)
@@ -202,8 +197,11 @@ class BaseConnection:
         if self is None or not self._notify_handlers:
             return
 
-        decode = self.codec.decode
-        n = Notify(decode(pgn.relname)[0], decode(pgn.extra)[0], pgn.be_pid)
+        n = Notify(
+            pgn.relname.decode(self._pyenc),
+            pgn.extra.decode(self._pyenc),
+            pgn.be_pid,
+        )
         for cb in self._notify_handlers:
             cb(n)
 
@@ -261,7 +259,7 @@ class Connection(BaseConnection):
         if pgres.status != ExecStatus.COMMAND_OK:
             raise e.OperationalError(
                 "error on begin:"
-                f" {pq.error_message(pgres, encoding=self.codec.name)}"
+                f" {pq.error_message(pgres, encoding=self._pyenc)}"
             )
 
     def commit(self) -> None:
@@ -283,7 +281,7 @@ class Connection(BaseConnection):
         if results[-1].status != ExecStatus.COMMAND_OK:
             raise e.OperationalError(
                 f"error on {command.decode('utf8')}:"
-                f" {pq.error_message(results[-1], encoding=self.codec.name)}"
+                f" {pq.error_message(results[-1], encoding=self._pyenc)}"
             )
 
     @classmethod
@@ -301,16 +299,17 @@ class Connection(BaseConnection):
             gen = execute(self.pgconn)
             (result,) = self.wait(gen)
             if result.status != ExecStatus.TUPLES_OK:
-                raise e.error_from_result(result, encoding=self.codec.name)
+                raise e.error_from_result(result, encoding=self._pyenc)
 
     def notifies(self) -> Generator[Optional[Notify], bool, None]:
-        decode = self.codec.decode
         while 1:
             with self.lock:
                 ns = self.wait(notifies(self.pgconn))
             for pgn in ns:
                 n = Notify(
-                    decode(pgn.relname)[0], decode(pgn.extra)[0], pgn.be_pid
+                    pgn.relname.decode(self._pyenc),
+                    pgn.extra.decode(self._pyenc),
+                    pgn.be_pid,
                 )
                 if (yield n):
                     yield None  # for the send who stopped us
@@ -375,7 +374,7 @@ class AsyncConnection(BaseConnection):
         if pgres.status != ExecStatus.COMMAND_OK:
             raise e.OperationalError(
                 "error on begin:"
-                f" {pq.error_message(pgres, encoding=self.codec.name)}"
+                f" {pq.error_message(pgres, encoding=self._pyenc)}"
             )
 
     async def commit(self) -> None:
@@ -397,7 +396,7 @@ class AsyncConnection(BaseConnection):
         if pgres.status != ExecStatus.COMMAND_OK:
             raise e.OperationalError(
                 f"error on {command.decode('utf8')}:"
-                f" {pq.error_message(pgres, encoding=self.codec.name)}"
+                f" {pq.error_message(pgres, encoding=self._pyenc)}"
             )
 
     @classmethod
@@ -419,16 +418,17 @@ class AsyncConnection(BaseConnection):
             gen = execute(self.pgconn)
             (result,) = await self.wait(gen)
             if result.status != ExecStatus.TUPLES_OK:
-                raise e.error_from_result(result, encoding=self.codec.name)
+                raise e.error_from_result(result, encoding=self._pyenc)
 
     async def notifies(self) -> AsyncGenerator[Optional[Notify], bool]:
-        decode = self.codec.decode
         while 1:
             async with self.lock:
                 ns = await self.wait(notifies(self.pgconn))
             for pgn in ns:
                 n = Notify(
-                    decode(pgn.relname)[0], decode(pgn.extra)[0], pgn.be_pid
+                    pgn.relname.decode(self._pyenc),
+                    pgn.extra.decode(self._pyenc),
+                    pgn.be_pid,
                 )
                 if (yield n):
                     yield None

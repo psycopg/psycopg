@@ -219,7 +219,7 @@ def make_testfunc(conn):
         )
         .format(sql.Identifier(procname), sql.Identifier(paramname))
         .as_string(conn)
-        .encode(conn.codec.name)
+        .encode(conn.pyenc)
     )
 
     # execute regardless of sync/async conn

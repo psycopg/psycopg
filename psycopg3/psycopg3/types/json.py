@@ -10,7 +10,6 @@ from typing import Any, Callable, Optional
 from ..oids import builtins
 from ..adapt import Dumper, Loader
 from ..errors import DataError
-from ..utils.codecs import EncodeFunc, encode_utf8
 
 JSON_OID = builtins["json"].oid
 JSONB_OID = builtins["jsonb"].oid
@@ -36,10 +35,8 @@ class Jsonb(_JsonWrapper):
 
 
 class _JsonDumper(Dumper):
-    def dump(
-        self, obj: _JsonWrapper, __encode: EncodeFunc = encode_utf8
-    ) -> bytes:
-        return __encode(obj.dumps())[0]
+    def dump(self, obj: _JsonWrapper) -> bytes:
+        return obj.dumps().encode("utf-8")
 
 
 @Dumper.text(Json)
@@ -55,10 +52,8 @@ class JsonbDumper(_JsonDumper):
 
 @Dumper.binary(Jsonb)
 class JsonbBinaryDumper(JsonbDumper):
-    def dump(
-        self, obj: _JsonWrapper, __encode: EncodeFunc = encode_utf8
-    ) -> bytes:
-        return b"\x01" + __encode(obj.dumps())[0]
+    def dump(self, obj: _JsonWrapper) -> bytes:
+        return b"\x01" + obj.dumps().encode("utf-8")
 
 
 @Loader.text(builtins["json"].oid)

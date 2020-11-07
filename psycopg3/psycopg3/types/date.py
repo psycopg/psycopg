@@ -13,7 +13,6 @@ from ..oids import builtins
 from ..adapt import Dumper, Loader
 from ..proto import AdaptContext
 from ..errors import InterfaceError, DataError
-from ..utils.codecs import EncodeFunc, DecodeFunc, encode_ascii, decode_ascii
 
 
 @Dumper.text(date)
@@ -21,10 +20,10 @@ class DateDumper(Dumper):
 
     oid = builtins["date"].oid
 
-    def dump(self, obj: date, __encode: EncodeFunc = encode_ascii) -> bytes:
+    def dump(self, obj: date) -> bytes:
         # NOTE: whatever the PostgreSQL DateStyle input format (DMY, MDY, YMD)
         # the YYYY-MM-DD is always understood correctly.
-        return __encode(str(obj))[0]
+        return str(obj).encode("utf8")
 
 
 @Dumper.text(time)
@@ -32,8 +31,8 @@ class TimeDumper(Dumper):
 
     oid = builtins["timetz"].oid
 
-    def dump(self, obj: time, __encode: EncodeFunc = encode_ascii) -> bytes:
-        return __encode(str(obj))[0]
+    def dump(self, obj: time) -> bytes:
+        return str(obj).encode("utf8")
 
 
 @Dumper.text(datetime)
@@ -41,10 +40,10 @@ class DateTimeDumper(Dumper):
 
     oid = builtins["timestamptz"].oid
 
-    def dump(self, obj: date, __encode: EncodeFunc = encode_ascii) -> bytes:
+    def dump(self, obj: date) -> bytes:
         # NOTE: whatever the PostgreSQL DateStyle input format (DMY, MDY, YMD)
         # the YYYY-MM-DD is always understood correctly.
-        return __encode(str(obj))[0]
+        return str(obj).encode("utf8")
 
 
 @Dumper.text(timedelta)
@@ -61,10 +60,8 @@ class TimeDeltaDumper(Dumper):
             ):
                 setattr(self, "dump", self._dump_sql)
 
-    def dump(
-        self, obj: timedelta, __encode: EncodeFunc = encode_ascii
-    ) -> bytes:
-        return __encode(str(obj))[0]
+    def dump(self, obj: timedelta) -> bytes:
+        return str(obj).encode("utf8")
 
     def _dump_sql(self, obj: timedelta) -> bytes:
         # sql_standard format needs explicit signs
@@ -82,9 +79,9 @@ class DateLoader(Loader):
         super().__init__(oid, context)
         self._format = self._format_from_context()
 
-    def load(self, data: bytes, __decode: DecodeFunc = decode_ascii) -> date:
+    def load(self, data: bytes) -> date:
         try:
-            return datetime.strptime(__decode(data)[0], self._format).date()
+            return datetime.strptime(data.decode("utf8"), self._format).date()
         except ValueError as e:
             return self._raise_error(data, e)
 
@@ -140,11 +137,11 @@ class TimeLoader(Loader):
     _format = "%H:%M:%S.%f"
     _format_no_micro = _format.replace(".%f", "")
 
-    def load(self, data: bytes, __decode: DecodeFunc = decode_ascii) -> time:
+    def load(self, data: bytes) -> time:
         # check if the data contains microseconds
         fmt = self._format if b"." in data else self._format_no_micro
         try:
-            return datetime.strptime(__decode(data)[0], fmt).time()
+            return datetime.strptime(data.decode("utf8"), fmt).time()
         except ValueError as e:
             return self._raise_error(data, e)
 
@@ -170,22 +167,20 @@ class TimeTzLoader(TimeLoader):
 
         super().__init__(oid, context)
 
-    def load(self, data: bytes, __decode: DecodeFunc = decode_ascii) -> time:
+    def load(self, data: bytes) -> time:
         # Hack to convert +HH in +HHMM
         if data[-3] in (43, 45):
             data += b"00"
 
         fmt = self._format if b"." in data else self._format_no_micro
         try:
-            dt = datetime.strptime(__decode(data)[0], fmt)
+            dt = datetime.strptime(data.decode("utf8"), fmt)
         except ValueError as e:
             return self._raise_error(data, e)
 
         return dt.time().replace(tzinfo=dt.tzinfo)
 
-    def _load_py36(
-        self, data: bytes, __decode: DecodeFunc = decode_ascii
-    ) -> time:
+    def _load_py36(self, data: bytes) -> time:
         # Drop seconds from timezone for Python 3.6
         # Also, Python 3.6 doesn't support HHMM, only HH:MM
         if data[-6] in (43, 45):  # +-HH:MM -> +-HHMM
@@ -202,15 +197,13 @@ class TimestampLoader(DateLoader):
         super().__init__(oid, context)
         self._format_no_micro = self._format.replace(".%f", "")
 
-    def load(
-        self, data: bytes, __decode: DecodeFunc = decode_ascii
-    ) -> datetime:
+    def load(self, data: bytes) -> datetime:
         # check if the data contains microseconds
         fmt = (
             self._format if data.find(b".", 19) >= 0 else self._format_no_micro
         )
         try:
-            return datetime.strptime(__decode(data)[0], fmt)
+            return datetime.strptime(data.decode("utf8"), fmt)
         except ValueError as e:
             return self._raise_error(data, e)
 
@@ -284,18 +277,14 @@ class TimestamptzLoader(TimestampLoader):
             setattr(self, "load", self._load_notimpl)
             return ""
 
-    def load(
-        self, data: bytes, __decode: DecodeFunc = decode_ascii
-    ) -> datetime:
+    def load(self, data: bytes) -> datetime:
         # Hack to convert +HH in +HHMM
         if data[-3] in (43, 45):
             data += b"00"
 
         return super().load(data)
 
-    def _load_py36(
-        self, data: bytes, __decode: DecodeFunc = decode_ascii
-    ) -> datetime:
+    def _load_py36(self, data: bytes) -> datetime:
         # Drop seconds from timezone for Python 3.6
         # Also, Python 3.6 doesn't support HHMM, only HH:MM
         tzsep = (43, 45)  # + and - bytes

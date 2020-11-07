@@ -53,14 +53,13 @@ class PostgresQuery:
         if isinstance(query, Composable):
             query = query.as_string(self._tx)
 
-        codec = self._tx.codec
         if vars is not None:
             self.query, self.formats, self._order, self._parts = _query2pg(
-                query, codec.name
+                query, self._tx.encoding
             )
         else:
             if isinstance(query, str):
-                query = codec.encode(query)[0]
+                query = query.encode(self._tx.encoding)
             self.query = query
             self.formats = self._order = None
 

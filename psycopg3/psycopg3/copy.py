@@ -5,7 +5,6 @@ psycopg3 copy support
 # Copyright (C) 2020 The Psycopg Team
 
 import re
-import codecs
 import struct
 from typing import TYPE_CHECKING, AsyncIterator, Iterator
 from typing import Any, Dict, List, Match, Optional, Sequence, Type, Union
@@ -34,7 +33,7 @@ class BaseCopy:
         self.pgresult = result
         self._first_row = True
         self._finished = False
-        self._codec: Optional[codecs.CodecInfo] = None
+        self._encoding: str = ""
 
         if format == pq.Format.TEXT:
             self._format_row = self._format_row_text
@@ -70,8 +69,8 @@ class BaseCopy:
             return data
 
         elif isinstance(data, str):
-            if self._codec is not None:
-                return self._codec.encode(data)[0]
+            if self._encoding:
+                return data.encode(self._encoding)
 
             if (
                 self.pgresult is None
@@ -80,8 +79,8 @@ class BaseCopy:
                 raise TypeError(
                     "cannot copy str data in binary mode: use bytes instead"
                 )
-            self._codec = self.connection.codec
-            return self._codec.encode(data)[0]
+            self._encoding = self.connection.pyenc
+            return data.encode(self._encoding)
 
         else:
             raise TypeError(f"can't write {type(data).__name__}")
@@ -180,13 +179,9 @@ class Copy(BaseCopy):
         data = self.format_row(row)
         self.write(data)
 
-    def finish(self, error: Optional[str] = None) -> None:
+    def finish(self, error: str = "") -> None:
         conn = self.connection
-        berr = (
-            conn.codec.encode(error, "replace")[0]
-            if error is not None
-            else None
-        )
+        berr = error.encode(conn.pyenc, "replace") if error else None
         conn.wait(copy_end(conn.pgconn, berr))
         self._finished = True
 
@@ -205,7 +200,7 @@ class Copy(BaseCopy):
                 self.write(b"\xff\xff")
             self.finish()
         else:
-            self.finish(str(exc_val))
+            self.finish(str(exc_val) or type(exc_val).__qualname__)
 
     def __iter__(self) -> Iterator[bytes]:
         while 1:
@@ -241,13 +236,9 @@ class AsyncCopy(BaseCopy):
         data = self.format_row(row)
         await self.write(data)
 
-    async def finish(self, error: Optional[str] = None) -> None:
+    async def finish(self, error: str = "") -> None:
         conn = self.connection
-        berr = (
-            conn.codec.encode(error, "replace")[0]
-            if error is not None
-            else None
-        )
+        berr = error.encode(conn.pyenc, "replace") if error else None
         await conn.wait(copy_end(conn.pgconn, berr))
         self._finished = True
 

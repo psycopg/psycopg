@@ -4,7 +4,6 @@ Helper object to transform values between Python and PostgreSQL
 
 # Copyright (C) 2020 The Psycopg Team
 
-import codecs
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 from typing import TYPE_CHECKING
 
@@ -56,7 +55,7 @@ class Transformer:
     def _setup_context(self, context: AdaptContext) -> None:
         if context is None:
             self._connection = None
-            self._codec = codecs.lookup("utf8")
+            self._encoding = "utf-8"
             self._dumpers = {}
             self._loaders = {}
             self._dumpers_maps = [self._dumpers]
@@ -66,7 +65,7 @@ class Transformer:
             # A transformer created from a transformers: usually it happens
             # for nested types: share the entire state of the parent
             self._connection = context.connection
-            self._codec = context.codec
+            self._encoding = context.encoding
             self._dumpers = context.dumpers
             self._loaders = context.loaders
             self._dumpers_maps.extend(context._dumpers_maps)
@@ -76,7 +75,7 @@ class Transformer:
 
         elif isinstance(context, BaseCursor):
             self._connection = context.connection
-            self._codec = context.connection.codec
+            self._encoding = context.connection.pyenc
             self._dumpers = {}
             self._dumpers_maps.extend(
                 (self._dumpers, context.dumpers, context.connection.dumpers)
@@ -88,7 +87,7 @@ class Transformer:
 
         elif isinstance(context, BaseConnection):
             self._connection = context
-            self._codec = context.codec
+            self._encoding = context.pyenc
             self._dumpers = {}
             self._dumpers_maps.extend((self._dumpers, context.dumpers))
             self._loaders = {}
@@ -104,8 +103,8 @@ class Transformer:
         return self._connection
 
     @property
-    def codec(self) -> codecs.CodecInfo:
-        return self._codec
+    def encoding(self) -> str:
+        return self._encoding
 
     @property
     def pgresult(self) -> Optional[pq.proto.PGresult]:

@@ -11,7 +11,6 @@ too many temporary Python objects and performing less memory copying.
 from cpython.ref cimport Py_INCREF
 from cpython.tuple cimport PyTuple_New, PyTuple_SET_ITEM
 
-import codecs
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
 from psycopg3_c cimport libpq
@@ -39,9 +38,10 @@ cdef class Transformer:
 
     cdef list _dumpers_maps, _loaders_maps
     cdef dict _dumpers, _loaders, _dumpers_cache, _loaders_cache, _load_funcs
-    cdef object _connection, _codec
+    cdef object _connection
     cdef PGresult _pgresult
     cdef int _nfields, _ntuples
+    cdef str _encoding
 
     cdef list _row_loaders
 
@@ -70,7 +70,7 @@ cdef class Transformer:
         cdef Transformer ctx
         if context is None:
             self._connection = None
-            self._codec = codecs.lookup("utf8")
+            self._encoding = "utf-8"
             self._dumpers = {}
             self._loaders = {}
             self._dumpers_maps = [self._dumpers]
@@ -81,7 +81,7 @@ cdef class Transformer:
             # for nested types: share the entire state of the parent
             ctx = context
             self._connection = ctx._connection
-            self._codec = ctx._codec
+            self._encoding = ctx.encoding
             self._dumpers = ctx._dumpers
             self._loaders = ctx._loaders
             self._dumpers_maps.extend(ctx._dumpers_maps)
@@ -91,7 +91,7 @@ cdef class Transformer:
 
         elif isinstance(context, BaseCursor):
             self._connection = context.connection
-            self._codec = context.connection.codec
+            self._encoding = context.connection.pyenc
             self._dumpers = {}
             self._dumpers_maps.extend(
                 (self._dumpers, context.dumpers, self.connection.dumpers)
@@ -103,7 +103,7 @@ cdef class Transformer:
 
         elif isinstance(context, BaseConnection):
             self._connection = context
-            self._codec = context.codec
+            self._encoding = context.pyenc
             self._dumpers = {}
             self._dumpers_maps.extend((self._dumpers, context.dumpers))
             self._loaders = {}
@@ -117,8 +117,8 @@ cdef class Transformer:
         return self._connection
 
     @property
-    def codec(self):
-        return self._codec
+    def encoding(self):
+        return self._encoding
 
     @property
     def dumpers(self):

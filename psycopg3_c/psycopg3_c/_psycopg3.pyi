@@ -7,7 +7,6 @@ information. Will submit a bug.
 
 # Copyright (C) 2020 The Psycopg Team
 
-import codecs
 from typing import Any, Iterable, List, Optional, Sequence, Tuple
 
 from psycopg3.adapt import Dumper, Loader
@@ -21,7 +20,7 @@ class Transformer:
     @property
     def connection(self) -> Optional[BaseConnection]: ...
     @property
-    def codec(self) -> codecs.CodecInfo: ...
+    def encoding(self) -> str: ...
     @property
     def dumpers(self) -> DumpersMap: ...
     @property

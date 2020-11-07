@@ -190,7 +190,7 @@ def test_set_encoding(conn):
 def test_normalize_encoding(conn, enc, out, codec):
     conn.client_encoding = enc
     assert conn.client_encoding == out
-    assert conn.codec.name == codec
+    assert conn.pyenc == codec
 
 
 @pytest.mark.parametrize(
@@ -207,7 +207,7 @@ def test_encoding_env_var(dsn, monkeypatch, enc, out, codec):
     monkeypatch.setenv("PGCLIENTENCODING", enc)
     conn = psycopg3.connect(dsn)
     assert conn.client_encoding == out
-    assert conn.codec.name == codec
+    assert conn.pyenc == codec
 
 
 def test_set_encoding_unsupported(conn):

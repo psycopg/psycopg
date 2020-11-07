@@ -4,7 +4,6 @@ Protocol objects representing different implementations of the same classes.
 
 # Copyright (C) 2020 The Psycopg Team
 
-import codecs
 from typing import Any, Callable, Dict, Generator, Mapping
 from typing import Optional, Sequence, Tuple, Type, TypeVar, Union
 from typing import TYPE_CHECKING
@@ -52,7 +51,7 @@ class Transformer(Protocol):
         ...
 
     @property
-    def codec(self) -> codecs.CodecInfo:
+    def encoding(self) -> str:
         ...
 
     @property

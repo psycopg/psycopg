@@ -10,16 +10,22 @@ from decimal import Decimal
 
 from ..oids import builtins
 from ..adapt import Dumper, Loader
-from ..utils.codecs import DecodeFunc, decode_ascii
 
-PackInt = Callable[[int], bytes]
-UnpackInt = Callable[[bytes], Tuple[int]]
-UnpackFloat = Callable[[bytes], Tuple[float]]
+_PackInt = Callable[[int], bytes]
+_UnpackInt = Callable[[bytes], Tuple[int]]
+_UnpackFloat = Callable[[bytes], Tuple[float]]
 
-_pack_int2 = cast(PackInt, struct.Struct("!h").pack)
-_pack_int4 = cast(PackInt, struct.Struct("!i").pack)
-_pack_uint4 = cast(PackInt, struct.Struct("!I").pack)
-_pack_int8 = cast(PackInt, struct.Struct("!q").pack)
+_pack_int2 = cast(_PackInt, struct.Struct("!h").pack)
+_pack_int4 = cast(_PackInt, struct.Struct("!i").pack)
+_pack_uint4 = cast(_PackInt, struct.Struct("!I").pack)
+_pack_int8 = cast(_PackInt, struct.Struct("!q").pack)
+_unpack_int2 = cast(_UnpackInt, struct.Struct("!h").unpack)
+_unpack_int4 = cast(_UnpackInt, struct.Struct("!i").unpack)
+_unpack_uint4 = cast(_UnpackInt, struct.Struct("!I").unpack)
+_unpack_int8 = cast(_UnpackInt, struct.Struct("!q").unpack)
+_unpack_float4 = cast(_UnpackFloat, struct.Struct("!f").unpack)
+_unpack_float8 = cast(_UnpackFloat, struct.Struct("!d").unpack)
+
 
 # Wrappers to force numbers to be cast as specific PostgreSQL types
 
@@ -142,48 +148,32 @@ class OidBinaryDumper(OidDumper):
 @Loader.text(builtins["int8"].oid)
 @Loader.text(builtins["oid"].oid)
 class IntLoader(Loader):
-    def load(self, data: bytes, __decode: DecodeFunc = decode_ascii) -> int:
-        return int(__decode(data)[0])
+    def load(self, data: bytes) -> int:
+        return int(data.decode("utf8"))
 
 
 @Loader.binary(builtins["int2"].oid)
 class Int2BinaryLoader(Loader):
-    def load(
-        self,
-        data: bytes,
-        __unpack: UnpackInt = cast(UnpackInt, struct.Struct("!h").unpack),
-    ) -> int:
-        return __unpack(data)[0]
+    def load(self, data: bytes) -> int:
+        return _unpack_int2(data)[0]
 
 
 @Loader.binary(builtins["int4"].oid)
 class Int4BinaryLoader(Loader):
-    def load(
-        self,
-        data: bytes,
-        __unpack: UnpackInt = cast(UnpackInt, struct.Struct("!i").unpack),
-    ) -> int:
-        return __unpack(data)[0]
+    def load(self, data: bytes) -> int:
+        return _unpack_int4(data)[0]
 
 
 @Loader.binary(builtins["int8"].oid)
 class Int8BinaryLoader(Loader):
-    def load(
-        self,
-        data: bytes,
-        __unpack: UnpackInt = cast(UnpackInt, struct.Struct("!q").unpack),
-    ) -> int:
-        return __unpack(data)[0]
+    def load(self, data: bytes) -> int:
+        return _unpack_int8(data)[0]
 
 
 @Loader.binary(builtins["oid"].oid)
 class OidBinaryLoader(Loader):
-    def load(
-        self,
-        data: bytes,
-        __unpack: UnpackInt = cast(UnpackInt, struct.Struct("!I").unpack),
-    ) -> int:
-        return __unpack(data)[0]
+    def load(self, data: bytes) -> int:
+        return _unpack_uint4(data)[0]
 
 
 @Loader.text(builtins["float4"].oid)
@@ -196,27 +186,17 @@ class FloatLoader(Loader):
 
 @Loader.binary(builtins["float4"].oid)
 class Float4BinaryLoader(Loader):
-    def load(
-        self,
-        data: bytes,
-        __unpack: UnpackInt = cast(UnpackInt, struct.Struct("!f").unpack),
-    ) -> int:
-        return __unpack(data)[0]
+    def load(self, data: bytes) -> float:
+        return _unpack_float4(data)[0]
 
 
 @Loader.binary(builtins["float8"].oid)
 class Float8BinaryLoader(Loader):
-    def load(
-        self,
-        data: bytes,
-        __unpack: UnpackInt = cast(UnpackInt, struct.Struct("!d").unpack),
-    ) -> int:
-        return __unpack(data)[0]
+    def load(self, data: bytes) -> float:
+        return _unpack_float8(data)[0]
 
 
 @Loader.text(builtins["numeric"].oid)
 class NumericLoader(Loader):
-    def load(
-        self, data: bytes, __decode: DecodeFunc = decode_ascii
-    ) -> Decimal:
-        return Decimal(__decode(data)[0])
+    def load(self, data: bytes) -> Decimal:
+        return Decimal(data.decode("utf8"))

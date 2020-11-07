@@ -4,38 +4,39 @@ Cython adapters for textual types.
 
 # Copyright (C) 2020 The Psycopg Team
 
-from cpython.bytes cimport PyBytes_FromStringAndSize
-from cpython.unicode cimport PyUnicode_DecodeUTF8
+from cpython.unicode cimport PyUnicode_Decode, PyUnicode_DecodeUTF8
 from psycopg3_c cimport libpq
 
 
 cdef class TextLoader(CLoader):
     cdef int is_utf8
-    cdef object pydecoder
+    cdef char *encoding
+    cdef bytes _bytes_encoding  # needed to keep `encoding` alive
 
     def __init__(self, oid: int, context: "AdaptContext" = None):
         super().__init__(oid, context)
 
         self.is_utf8 = 0
-        self.pydecoder = None
+        self.encoding = NULL
+
         conn = self.connection
         if conn is not None:
             if conn.client_encoding == "UTF8":
                 self.is_utf8 = 1
             elif conn.client_encoding != "SQL_ASCII":
-                self.pydecoder = conn.codec.decode
+                self._bytes_encoding = conn.pyenc.encode("utf-8")
+                self.encoding = self._bytes_encoding
         else:
-            self.pydecoder = codecs.lookup("utf8").decode
+            self.encoding = "utf-8"
 
     cdef object cload(self, const char *data, size_t length):
         if self.is_utf8:
             return PyUnicode_DecodeUTF8(<char *>data, length, NULL)
 
-        b = PyBytes_FromStringAndSize(data, length)
-        if self.pydecoder is not None:
-            return self.pydecoder(b)[0]
+        if self.encoding:
+            return PyUnicode_Decode(<char *>data, length, self.encoding, NULL)
         else:
-            return b
+            return data[:length]
 
 
 cdef class ByteaLoader(CLoader):
