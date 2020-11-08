@@ -12,7 +12,7 @@ pytestmark = pytest.mark.asyncio
 
 @pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
 async def test_copy_out_read(aconn, format):
-    cur = aconn.cursor()
+    cur = await aconn.cursor()
     copy = await cur.copy(
         f"copy ({sample_values}) to stdout (format {format.name})"
     )
@@ -32,7 +32,7 @@ async def test_copy_out_read(aconn, format):
 
 @pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
 async def test_copy_out_iter(aconn, format):
-    cur = aconn.cursor()
+    cur = await aconn.cursor()
     copy = await cur.copy(
         f"copy ({sample_values}) to stdout (format {format.name})"
     )
@@ -51,7 +51,7 @@ async def test_copy_out_iter(aconn, format):
     [(Format.TEXT, "sample_text"), (Format.BINARY, "sample_binary")],
 )
 async def test_copy_in_buffers(aconn, format, buffer):
-    cur = aconn.cursor()
+    cur = await aconn.cursor()
     await ensure_table(cur, sample_tabledef)
     copy = await cur.copy(f"copy copy_in from stdin (format {format.name})")
     await copy.write(globals()[buffer])
@@ -62,7 +62,7 @@ async def test_copy_in_buffers(aconn, format, buffer):
 
 
 async def test_copy_in_buffers_pg_error(aconn):
-    cur = aconn.cursor()
+    cur = await aconn.cursor()
     await ensure_table(cur, sample_tabledef)
     copy = await cur.copy("copy copy_in from stdin (format text)")
     await copy.write(sample_text)
@@ -72,10 +72,10 @@ async def test_copy_in_buffers_pg_error(aconn):
     assert aconn.pgconn.transaction_status == aconn.TransactionStatus.INERROR
 
 
-async def test_copy_bad_result(conn):
-    conn.autocommit = True
+async def test_copy_bad_result(aconn):
+    await aconn.set_autocommit(True)
 
-    cur = conn.cursor()
+    cur = await aconn.cursor()
 
     with pytest.raises(e.SyntaxError):
         await cur.copy("wat")
@@ -92,7 +92,7 @@ async def test_copy_bad_result(conn):
     [(Format.TEXT, "sample_text"), (Format.BINARY, "sample_binary")],
 )
 async def test_copy_in_buffers_with(aconn, format, buffer):
-    cur = aconn.cursor()
+    cur = await aconn.cursor()
     await ensure_table(cur, sample_tabledef)
     async with (
         await cur.copy(f"copy copy_in from stdin (format {format.name})")
@@ -105,7 +105,7 @@ async def test_copy_in_buffers_with(aconn, format, buffer):
 
 
 async def test_copy_in_str(aconn):
-    cur = aconn.cursor()
+    cur = await aconn.cursor()
     await ensure_table(cur, sample_tabledef)
     async with (
         await cur.copy("copy copy_in from stdin (format text)")
@@ -118,7 +118,7 @@ async def test_copy_in_str(aconn):
 
 
 async def test_copy_in_str_binary(aconn):
-    cur = aconn.cursor()
+    cur = await aconn.cursor()
     await ensure_table(cur, sample_tabledef)
     with pytest.raises(e.QueryCanceled):
         async with (
@@ -130,7 +130,7 @@ async def test_copy_in_str_binary(aconn):
 
 
 async def test_copy_in_buffers_with_pg_error(aconn):
-    cur = aconn.cursor()
+    cur = await aconn.cursor()
     await ensure_table(cur, sample_tabledef)
     with pytest.raises(e.UniqueViolation):
         async with (
@@ -143,7 +143,7 @@ async def test_copy_in_buffers_with_pg_error(aconn):
 
 
 async def test_copy_in_buffers_with_py_error(aconn):
-    cur = aconn.cursor()
+    cur = await aconn.cursor()
     await ensure_table(cur, sample_tabledef)
     with pytest.raises(e.QueryCanceled) as exc:
         async with (
@@ -161,7 +161,7 @@ async def test_copy_in_records(aconn, format):
     if format == Format.BINARY:
         pytest.skip("TODO: implement int binary adapter")
 
-    cur = aconn.cursor()
+    cur = await aconn.cursor()
     await ensure_table(cur, sample_tabledef)
 
     async with (
@@ -180,7 +180,7 @@ async def test_copy_in_records_binary(aconn, format):
     if format == Format.TEXT:
         pytest.skip("TODO: remove after implementing int binary adapter")
 
-    cur = aconn.cursor()
+    cur = await aconn.cursor()
     await ensure_table(cur, "col1 serial primary key, col2 int, data text")
 
     async with (
@@ -197,7 +197,7 @@ async def test_copy_in_records_binary(aconn, format):
 
 
 async def test_copy_in_allchars(aconn):
-    cur = aconn.cursor()
+    cur = await aconn.cursor()
     await ensure_table(cur, sample_tabledef)
 
     await aconn.set_client_encoding("utf8")

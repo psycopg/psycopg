@@ -11,7 +11,7 @@ pytestmark = pytest.mark.asyncio
 
 
 async def test_close(aconn):
-    cur = aconn.cursor()
+    cur = await aconn.cursor()
     assert not cur.closed
     await cur.close()
     assert cur.closed
@@ -24,14 +24,14 @@ async def test_close(aconn):
 
 
 async def test_context(aconn):
-    async with aconn.cursor() as cur:
+    async with (await aconn.cursor()) as cur:
         assert not cur.closed
 
     assert cur.closed
 
 
 async def test_weakref(aconn):
-    cur = aconn.cursor()
+    cur = await aconn.cursor()
     w = weakref.ref(cur)
     await cur.close()
     del cur
@@ -40,7 +40,7 @@ async def test_weakref(aconn):
 
 
 async def test_status(aconn):
-    cur = aconn.cursor()
+    cur = await aconn.cursor()
     assert cur.status is None
     await cur.execute("reset all")
     assert cur.status == cur.ExecStatus.COMMAND_OK
@@ -51,7 +51,7 @@ async def test_status(aconn):
 
 
 async def test_execute_many_results(aconn):
-    cur = aconn.cursor()
+    cur = await aconn.cursor()
     assert cur.nextset() is None
 
     rv = await cur.execute("select 'foo'; select generate_series(1,3)")
@@ -68,7 +68,7 @@ async def test_execute_many_results(aconn):
 
 
 async def test_execute_sequence(aconn):
-    cur = aconn.cursor()
+    cur = await aconn.cursor()
     rv = await cur.execute(
         "select %s::int, %s::text, %s::text", [1, "foo", None]
     )
@@ -82,7 +82,7 @@ async def test_execute_sequence(aconn):
 
 @pytest.mark.parametrize("query", ["", " ", ";"])
 async def test_execute_empty_query(aconn, query):
-    cur = aconn.cursor()
+    cur = await aconn.cursor()
     await cur.execute(query)
     assert cur.status == cur.ExecStatus.EMPTY_QUERY
     with pytest.raises(psycopg3.ProgrammingError):
@@ -90,7 +90,7 @@ async def test_execute_empty_query(aconn, query):
 
 
 async def test_fetchone(aconn):
-    cur = aconn.cursor()
+    cur = await aconn.cursor()
     await cur.execute("select %s::int, %s::text, %s::text", [1, "foo", None])
     assert cur.pgresult.fformat(0) == 0
 
@@ -103,7 +103,7 @@ async def test_fetchone(aconn):
 
 
 async def test_execute_binary_result(aconn):
-    cur = aconn.cursor(format=psycopg3.pq.Format.BINARY)
+    cur = await aconn.cursor(format=psycopg3.pq.Format.BINARY)
     await cur.execute("select %s::text, %s::text", ["foo", None])
     assert cur.pgresult.fformat(0) == 1
 
@@ -117,7 +117,7 @@ async def test_execute_binary_result(aconn):
 @pytest.mark.parametrize("encoding", ["utf8", "latin9"])
 async def test_query_encode(aconn, encoding):
     await aconn.set_client_encoding(encoding)
-    cur = aconn.cursor()
+    cur = await aconn.cursor()
     await cur.execute("select '\u20ac'")
     (res,) = await cur.fetchone()
     assert res == "\u20ac"
@@ -125,7 +125,7 @@ async def test_query_encode(aconn, encoding):
 
 async def test_query_badenc(aconn):
     await aconn.set_client_encoding("latin1")
-    cur = aconn.cursor()
+    cur = await aconn.cursor()
     with pytest.raises(UnicodeEncodeError):
         await cur.execute("select '\u20ac'")
 
@@ -142,7 +142,7 @@ async def execmany(svcconn):
 
 
 async def test_executemany(aconn, execmany):
-    cur = aconn.cursor()
+    cur = await aconn.cursor()
     await cur.executemany(
         "insert into execmany(num, data) values (%s, %s)",
         [(10, "hello"), (20, "world")],
@@ -153,7 +153,7 @@ async def test_executemany(aconn, execmany):
 
 
 async def test_executemany_name(aconn, execmany):
-    cur = aconn.cursor()
+    cur = await aconn.cursor()
     await cur.executemany(
         "insert into execmany(num, data) values (%(num)s, %(data)s)",
         [{"num": 11, "data": "hello", "x": 1}, {"num": 21, "data": "world"}],
@@ -164,7 +164,7 @@ async def test_executemany_name(aconn, execmany):
 
 
 async def test_executemany_rowcount(aconn, execmany):
-    cur = aconn.cursor()
+    cur = await aconn.cursor()
     await cur.executemany(
         "insert into execmany(num, data) values (%s, %s)",
         [(10, "hello"), (20, "world")],
@@ -181,13 +181,13 @@ async def test_executemany_rowcount(aconn, execmany):
     ],
 )
 async def test_executemany_badquery(aconn, query):
-    cur = aconn.cursor()
+    cur = await aconn.cursor()
     with pytest.raises(psycopg3.DatabaseError):
         await cur.executemany(query, [(10, "hello"), (20, "world")])
 
 
 async def test_callproc_args(aconn):
-    cur = aconn.cursor()
+    cur = await aconn.cursor()
     await cur.execute(
         """
         create function testfunc(a int, b text) returns text[] language sql as
@@ -199,7 +199,7 @@ async def test_callproc_args(aconn):
 
 
 async def test_callproc_badparam(aconn):
-    cur = aconn.cursor()
+    cur = await aconn.cursor()
     with pytest.raises(TypeError):
         await cur.callproc("lower", 42)
     with pytest.raises(TypeError):
@@ -209,7 +209,7 @@ async def test_callproc_badparam(aconn):
 async def test_callproc_dict(aconn):
     testfunc = make_testfunc(aconn)
 
-    cur = aconn.cursor()
+    cur = await aconn.cursor()
 
     await cur.callproc(testfunc.name, [2])
     assert (await cur.fetchone()) == (4,)
@@ -234,13 +234,13 @@ async def test_callproc_dict_bad(aconn, args, exc):
     if "_p" in args:
         args[testfunc.param] = args.pop("_p")
 
-    cur = aconn.cursor()
+    cur = await aconn.cursor()
     with pytest.raises(exc):
         await cur.callproc(testfunc.name, args)
 
 
 async def test_rowcount(aconn):
-    cur = aconn.cursor()
+    cur = await aconn.cursor()
 
     await cur.execute("select 1 from generate_series(1, 42)")
     assert cur.rowcount == 42
@@ -260,7 +260,7 @@ async def test_rowcount(aconn):
 
 
 async def test_iter(aconn):
-    cur = aconn.cursor()
+    cur = await aconn.cursor()
     await cur.execute("select generate_series(1, 3)")
     res = []
     async for rec in cur:
@@ -269,7 +269,7 @@ async def test_iter(aconn):
 
 
 async def test_iter_stop(aconn):
-    cur = aconn.cursor()
+    cur = await aconn.cursor()
     await cur.execute("select generate_series(1, 3)")
     async for rec in cur:
         assert rec == (1,)

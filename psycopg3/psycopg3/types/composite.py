@@ -54,7 +54,7 @@ def fetch_info(conn: "Connection", name: str) -> Optional[CompositeTypeInfo]:
 async def fetch_info_async(
     conn: "AsyncConnection", name: str
 ) -> Optional[CompositeTypeInfo]:
-    cur = conn.cursor(format=pq.Format.BINARY)
+    cur = await conn.cursor(format=pq.Format.BINARY)
     await cur.execute(_type_info_query, {"name": name})
     rec = await cur.fetchone()
     return CompositeTypeInfo._from_record(rec)

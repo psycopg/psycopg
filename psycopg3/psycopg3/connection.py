@@ -119,7 +119,7 @@ class BaseConnection:
             )
         self._autocommit = value
 
-    def cursor(
+    def _cursor(
         self, name: str = "", format: pq.Format = pq.Format.TEXT
     ) -> cursor.BaseCursor:
         if name:
@@ -240,7 +240,7 @@ class Connection(BaseConnection):
     def cursor(
         self, name: str = "", format: pq.Format = pq.Format.TEXT
     ) -> cursor.Cursor:
-        cur = super().cursor(name, format=format)
+        cur = self._cursor(name, format=format)
         return cast(cursor.Cursor, cur)
 
     def _start_query(self) -> None:
@@ -352,10 +352,10 @@ class AsyncConnection(BaseConnection):
     async def close(self) -> None:
         self.pgconn.finish()
 
-    def cursor(
+    async def cursor(
         self, name: str = "", format: pq.Format = pq.Format.TEXT
     ) -> cursor.AsyncCursor:
-        cur = super().cursor(name, format=format)
+        cur = self._cursor(name, format=format)
         return cast(cursor.AsyncCursor, cur)
 
     async def _start_query(self) -> None:
