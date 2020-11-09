@@ -697,6 +697,11 @@ class DuplicateJsonObjectKeyValue(DataError):
     pass
 
 
+@sqlcode("22031")
+class InvalidArgumentForSqlJsonDatetimeFunction(DataError):
+    pass
+
+
 @sqlcode("22032")
 class InvalidJsonText(DataError):
     pass
