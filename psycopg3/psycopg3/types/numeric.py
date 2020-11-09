@@ -149,7 +149,8 @@ class OidBinaryDumper(OidDumper):
 @Loader.text(builtins["oid"].oid)
 class IntLoader(Loader):
     def load(self, data: bytes) -> int:
-        return int(data.decode("utf8"))
+        # it supports bytes directly
+        return int(data)
 
 
 @Loader.binary(builtins["int2"].oid)
