@@ -98,12 +98,6 @@ class TestSqlFormat:
         with pytest.raises(KeyError):
             sql.SQL("select {x};").format(10)
 
-    def test_must_be_composable(self):
-        with pytest.raises(TypeError):
-            sql.SQL("select {0};").format("foo")
-        with pytest.raises(TypeError):
-            sql.SQL("select {0};").format(10)
-
     def test_no_modifiers(self):
         with pytest.raises(ValueError):
             sql.SQL("select {a!r};").format(a=10)
@@ -117,6 +111,12 @@ class TestSqlFormat:
         s = sql.SQL("select {0};").format(sql.Literal(Foo()))
         with pytest.raises(ProgrammingError):
             s.as_string(conn)
+
+    def test_auto_literal(self, conn):
+        s = sql.SQL("select {}, {}, {}").format(
+            "he'lo", 10, dt.date(2020, 1, 1)
+        )
+        assert s.as_string(conn) == "select 'he''lo', 10, '2020-01-01'"
 
     def test_execute(self, conn):
         cur = conn.cursor()
@@ -350,6 +350,12 @@ class TestComposed:
         obj = obj.join(", ")
         assert isinstance(obj, sql.Composed)
         assert noe(obj.as_string(conn)) == "'foo', \"b'ar\""
+
+    def test_auto_literal(self, conn):
+        obj = sql.Composed(["fo'o", dt.date(2020, 1, 1)])
+        obj = obj.join(", ")
+        assert isinstance(obj, sql.Composed)
+        assert noe(obj.as_string(conn)) == "'fo''o', '2020-01-01'"
 
     def test_sum(self, conn):
         obj = sql.Composed([sql.SQL("foo ")])
