@@ -7,8 +7,6 @@ import sys
 import time
 import queue
 import pytest
-import shutil
-import tempfile
 import threading
 import subprocess as sp
 
@@ -62,7 +60,7 @@ def test_commit_concurrency(conn):
 
 
 @pytest.mark.slow
-def test_multiprocess_close(dsn):
+def test_multiprocess_close(dsn, tmpdir):
     # Check the problem reported in psycopg2#829
     # Subprocess gcs the copy of the fd after fork so it closes connection.
     module = f"""\
@@ -70,7 +68,7 @@ import time
 import psycopg3
 
 def thread():
-    conn = psycopg3.connect({repr(dsn)})
+    conn = psycopg3.connect({dsn!r})
     curs = conn.cursor()
     for i in range(10):
         curs.execute("select 1")
@@ -93,20 +91,16 @@ multiprocessing.Process(target=mptest.process, name='myprocess').start()
 t.join()
 """
 
-    dir = tempfile.mkdtemp()
-    try:
-        with open(os.path.join(dir, "mptest.py"), "w") as f:
-            f.write(module)
-        env = dict(os.environ)
-        env["PYTHONPATH"] = dir + os.pathsep + env.get("PYTHONPATH", "")
-        # TODO: debug this. Importing c module fails on travis in this scenario
-        env.pop("PSYCOPG3_IMPL", None)
-        out = sp.check_output(
-            [sys.executable, "-c", script], stderr=sp.STDOUT, env=env
-        ).decode("utf8", "replace")
-        assert out == "", out.strip().splitlines()[-1]
-    finally:
-        shutil.rmtree(dir, ignore_errors=True)
+    with (tmpdir / "mptest.py").open("w") as f:
+        f.write(module)
+    env = dict(os.environ)
+    env["PYTHONPATH"] = tmpdir + os.pathsep + env.get("PYTHONPATH", "")
+    # TODO: debug this. Importing c module fails on travis in this scenario
+    env.pop("PSYCOPG3_IMPL", None)
+    out = sp.check_output(
+        [sys.executable, "-c", script], stderr=sp.STDOUT, env=env
+    ).decode("utf8", "replace")
+    assert out == "", out.strip().splitlines()[-1]
 
 
 @pytest.mark.slow
