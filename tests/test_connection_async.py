@@ -5,6 +5,7 @@ import weakref
 
 import psycopg3
 from psycopg3 import AsyncConnection
+from psycopg3.errors import UndefinedTable
 from psycopg3.conninfo import conninfo_to_dict
 
 pytestmark = pytest.mark.asyncio
@@ -43,6 +44,39 @@ async def test_close(aconn):
 
     with pytest.raises(psycopg3.InterfaceError):
         await cur.execute("select 1")
+
+
+async def test_context_commit(aconn, dsn):
+    async with aconn:
+        async with await aconn.cursor() as cur:
+            await cur.execute("drop table if exists textctx")
+            await cur.execute("create table textctx ()")
+
+    assert aconn.closed
+
+    async with await psycopg3.AsyncConnection.connect(dsn) as aconn:
+        async with await aconn.cursor() as cur:
+            await cur.execute("select * from textctx")
+            assert await cur.fetchall() == []
+
+
+async def test_context_rollback(aconn, dsn):
+    async with await aconn.cursor() as cur:
+        await cur.execute("drop table if exists textctx")
+    await aconn.commit()
+
+    with pytest.raises(ZeroDivisionError):
+        async with aconn:
+            async with await aconn.cursor() as cur:
+                await cur.execute("create table textctx ()")
+                1 / 0
+
+    assert aconn.closed
+
+    async with await psycopg3.AsyncConnection.connect(dsn) as aconn:
+        async with await aconn.cursor() as cur:
+            with pytest.raises(UndefinedTable):
+                await cur.execute("select * from textctx")
 
 
 async def test_weakref(dsn):

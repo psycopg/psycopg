@@ -7,6 +7,7 @@ psycopg3 connection objects
 import logging
 import asyncio
 import threading
+from types import TracebackType
 from typing import Any, AsyncGenerator, Callable, Generator, List, NamedTuple
 from typing import Optional, Type, cast
 from weakref import ref, ReferenceType
@@ -234,6 +235,22 @@ class Connection(BaseConnection):
         conn._autocommit = autocommit
         return conn
 
+    def __enter__(self) -> "Connection":
+        return self
+
+    def __exit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc_val: Optional[BaseException],
+        exc_tb: Optional[TracebackType],
+    ) -> None:
+        if exc_type:
+            self.rollback()
+        else:
+            self.commit()
+
+        self.close()
+
     def close(self) -> None:
         self.pgconn.finish()
 
@@ -348,6 +365,22 @@ class AsyncConnection(BaseConnection):
         conn = cls(pgconn)
         conn._autocommit = autocommit
         return conn
+
+    async def __aenter__(self) -> "AsyncConnection":
+        return self
+
+    async def __aexit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc_val: Optional[BaseException],
+        exc_tb: Optional[TracebackType],
+    ) -> None:
+        if exc_type:
+            await self.rollback()
+        else:
+            await self.commit()
+
+        await self.close()
 
     async def close(self) -> None:
         self.pgconn.finish()

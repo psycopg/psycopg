@@ -5,6 +5,7 @@ import weakref
 
 import psycopg3
 from psycopg3 import Connection
+from psycopg3.errors import UndefinedTable
 from psycopg3.conninfo import conninfo_to_dict
 
 
@@ -40,6 +41,39 @@ def test_close(conn):
 
     with pytest.raises(psycopg3.InterfaceError):
         cur.execute("select 1")
+
+
+def test_context_commit(conn, dsn):
+    with conn:
+        with conn.cursor() as cur:
+            cur.execute("drop table if exists textctx")
+            cur.execute("create table textctx ()")
+
+    assert conn.closed
+
+    with psycopg3.connect(dsn) as conn:
+        with conn.cursor() as cur:
+            cur.execute("select * from textctx")
+            assert cur.fetchall() == []
+
+
+def test_context_rollback(conn, dsn):
+    with conn.cursor() as cur:
+        cur.execute("drop table if exists textctx")
+    conn.commit()
+
+    with pytest.raises(ZeroDivisionError):
+        with conn:
+            with conn.cursor() as cur:
+                cur.execute("create table textctx ()")
+                1 / 0
+
+    assert conn.closed
+
+    with psycopg3.connect(dsn) as conn:
+        with conn.cursor() as cur:
+            with pytest.raises(UndefinedTable):
+                cur.execute("select * from textctx")
 
 
 def test_weakref(dsn):
