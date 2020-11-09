@@ -51,7 +51,7 @@ def check_libpq_version(got, want):
     and skips the test if the requested version doesn't match what's loaded.
 
     """
-    # convert 90603 to (9, 6, 3), 120003 to (12, 0, 3)
+    # convert 90603 to (9, 6, 3), 120003 to (12, 3)
     got, got_fix = divmod(got, 100)
     got_maj, got_min = divmod(got, 100)
     if got_maj >= 10:
@@ -69,7 +69,7 @@ def check_libpq_version(got, want):
     if m is None:
         pytest.fail(f"bad libpq spec: {want}")
 
-    # convert "9.6" into (9, 6, 0), "10.3" into (10, 0, 3)
+    # convert "9.6" into (9, 6, 0), "10.3" into (10, 3)
     want_maj = int(m.group(2))
     want_min = int(m.group(3) or "0")
     want_fix = int(m.group(4) or "0")
