@@ -4,7 +4,7 @@ Entry point into the adaptation system.
 
 # Copyright (C) 2020 The Psycopg Team
 
-from typing import Any, Callable, Optional, Type
+from typing import Any, Callable, Optional, Type, Union
 
 from . import pq
 from . import proto
@@ -46,11 +46,11 @@ class Dumper:
     @classmethod
     def register(
         cls,
-        src: type,
+        src: Union[type, str],
         context: AdaptContext = None,
         format: Format = Format.TEXT,
     ) -> None:
-        if not isinstance(src, type):
+        if not isinstance(src, (str, type)):
             raise TypeError(
                 f"dumpers should be registered on classes, got {src} instead"
             )
@@ -59,11 +59,13 @@ class Dumper:
         where[src, format] = cls
 
     @classmethod
-    def register_binary(cls, src: type, context: AdaptContext = None) -> None:
+    def register_binary(
+        cls, src: Union[type, str], context: AdaptContext = None
+    ) -> None:
         cls.register(src, context, format=Format.BINARY)
 
     @classmethod
-    def text(cls, src: type) -> Callable[[DumperType], DumperType]:
+    def text(cls, src: Union[type, str]) -> Callable[[DumperType], DumperType]:
         def text_(dumper: DumperType) -> DumperType:
             dumper.register(src)
             return dumper
@@ -71,7 +73,9 @@ class Dumper:
         return text_
 
     @classmethod
-    def binary(cls, src: type) -> Callable[[DumperType], DumperType]:
+    def binary(
+        cls, src: Union[type, str]
+    ) -> Callable[[DumperType], DumperType]:
         def binary_(dumper: DumperType) -> DumperType:
             dumper.register_binary(src)
             return dumper

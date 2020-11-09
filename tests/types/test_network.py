@@ -1,4 +1,7 @@
+import os
+import sys
 import ipaddress
+import subprocess as sp
 
 import pytest
 
@@ -87,3 +90,28 @@ def test_cidr_load(conn, fmt_out, val):
 def binary_check(fmt):
     if fmt == Format.BINARY:
         pytest.xfail("inet binary not implemented")
+
+
+def test_lazy_load(dsn):
+    script = f"""\
+import sys
+import psycopg3
+
+# In 3.6 it seems already loaded (at least on Travis).
+if sys.version_info >= (3, 7):
+    assert 'ipaddress' not in sys.modules
+
+conn = psycopg3.connect({dsn!r})
+with conn.cursor() as cur:
+    cur.execute("select '127.0.0.1'::inet")
+    cur.fetchone()
+
+conn.close()
+assert 'ipaddress' in sys.modules
+"""
+
+    # TODO: debug this. Importing c module fails on travis in this scenario
+    env = dict(os.environ)
+    env.pop("PSYCOPG3_IMPL", None)
+
+    sp.check_call([sys.executable, "-s", "-c", script], env=env)

@@ -4,30 +4,29 @@ Adapters for network types.
 
 # Copyright (C) 2020 The Psycopg Team
 
-# TODO: consiter lazy dumper registration.
-import ipaddress
-from ipaddress import IPv4Address, IPv4Interface, IPv4Network
-from ipaddress import IPv6Address, IPv6Interface, IPv6Network
-
-from typing import cast, Callable, Union
+from typing import Callable, Union, TYPE_CHECKING
 
 from ..oids import builtins
 from ..adapt import Dumper, Loader
+from ..proto import AdaptContext
 
-Address = Union[IPv4Address, IPv6Address]
-Interface = Union[IPv4Interface, IPv6Interface]
-Network = Union[IPv4Network, IPv6Network]
+if TYPE_CHECKING:
+    import ipaddress
 
-# in typeshed these types are commented out
-ip_address = cast(Callable[[str], Address], ipaddress.ip_address)
-ip_interface = cast(Callable[[str], Interface], ipaddress.ip_interface)
-ip_network = cast(Callable[[str], Network], ipaddress.ip_network)
+Address = Union["ipaddress.IPv4Address", "ipaddress.IPv6Address"]
+Interface = Union["ipaddress.IPv4Interface", "ipaddress.IPv6Interface"]
+Network = Union["ipaddress.IPv4Network", "ipaddress.IPv6Network"]
+
+# These functions will be imported lazily
+ip_address: Callable[[str], Address]
+ip_interface: Callable[[str], Interface]
+ip_network: Callable[[str], Network]
 
 
-@Dumper.text(IPv4Address)
-@Dumper.text(IPv6Address)
-@Dumper.text(IPv4Interface)
-@Dumper.text(IPv6Interface)
+@Dumper.text("ipaddress.IPv4Address")
+@Dumper.text("ipaddress.IPv6Address")
+@Dumper.text("ipaddress.IPv4Interface")
+@Dumper.text("ipaddress.IPv6Interface")
 class InterfaceDumper(Dumper):
 
     oid = builtins["inet"].oid
@@ -36,8 +35,8 @@ class InterfaceDumper(Dumper):
         return str(obj).encode("utf8")
 
 
-@Dumper.text(IPv4Network)
-@Dumper.text(IPv6Network)
+@Dumper.text("ipaddress.IPv4Network")
+@Dumper.text("ipaddress.IPv6Network")
 class NetworkDumper(Dumper):
 
     oid = builtins["cidr"].oid
@@ -46,8 +45,15 @@ class NetworkDumper(Dumper):
         return str(obj).encode("utf8")
 
 
+class _LazyIpaddress(Loader):
+    def __init__(self, oid: int, context: AdaptContext = None):
+        super().__init__(oid, context)
+        global ip_address, ip_interface, ip_network
+        from ipaddress import ip_address, ip_interface, ip_network
+
+
 @Loader.text(builtins["inet"].oid)
-class InetLoader(Loader):
+class InetLoader(_LazyIpaddress):
     def load(self, data: bytes) -> Union[Address, Interface]:
         if b"/" in data:
             return ip_interface(data.decode("utf8"))
@@ -56,6 +62,6 @@ class InetLoader(Loader):
 
 
 @Loader.text(builtins["cidr"].oid)
-class CidrLoader(Loader):
+class CidrLoader(_LazyIpaddress):
     def load(self, data: bytes) -> Network:
         return ip_network(data.decode("utf8"))

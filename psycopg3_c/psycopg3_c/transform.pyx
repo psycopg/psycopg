@@ -192,9 +192,25 @@ cdef class Transformer:
         for dmap in self._dumpers_maps:
             for scls in cls.__mro__:
                 key = (scls, format)
-                if key in dmap:
-                    self._dumpers_cache[key] = dumper = dmap[key](scls, self)
-                    return dumper
+                dumper_class = dmap.get(key)
+                if not dumper_class:
+                    continue
+
+                self._dumpers_cache[key] = dumper = dumper_class(scls, self)
+                return dumper
+
+        # If the adapter is not found, look for its name as a string
+        for dmap in self._dumpers_maps:
+            for scls in cls.__mro__:
+                fqn = f"{cls.__module__}.{scls.__qualname__}"
+                dumper_class = dmap.get((fqn, format))
+                if dumper_class is None:
+                    continue
+
+                key = (scls, format)
+                dmap[key] = dumper_class
+                self._dumpers_cache[key] = dumper = dumper_class(scls, self)
+                return dumper
 
         raise e.ProgrammingError(
             f"cannot adapt type {type(obj).__name__}"

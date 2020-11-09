@@ -4,36 +4,46 @@ Adapters for the UUID type.
 
 # Copyright (C) 2020 The Psycopg Team
 
-# TODO: importing uuid is slow. Don't import it at module level.
-# Should implement lazy dumper registration.
-from uuid import UUID
+from typing import Callable, TYPE_CHECKING
 
 from ..oids import builtins
 from ..adapt import Dumper, Loader
+from ..proto import AdaptContext
+
+if TYPE_CHECKING:
+    import uuid
+
+# Importing the uuid module is slow, so import it only on request.
+UUID: Callable[..., "uuid.UUID"]
 
 
-@Dumper.text(UUID)
+@Dumper.text("uuid.UUID")
 class UUIDDumper(Dumper):
 
     oid = builtins["uuid"].oid
 
-    def dump(self, obj: UUID) -> bytes:
+    def dump(self, obj: "uuid.UUID") -> bytes:
         return obj.hex.encode("utf8")
 
 
-@Dumper.binary(UUID)
+@Dumper.binary("uuid.UUID")
 class UUIDBinaryDumper(UUIDDumper):
-    def dump(self, obj: UUID) -> bytes:
+    def dump(self, obj: "uuid.UUID") -> bytes:
         return obj.bytes
 
 
 @Loader.text(builtins["uuid"].oid)
 class UUIDLoader(Loader):
-    def load(self, data: bytes) -> UUID:
+    def __init__(self, oid: int, context: AdaptContext = None):
+        super().__init__(oid, context)
+        global UUID
+        from uuid import UUID
+
+    def load(self, data: bytes) -> "uuid.UUID":
         return UUID(data.decode("utf8"))
 
 
 @Loader.binary(builtins["uuid"].oid)
-class UUIDBinaryLoader(Loader):
-    def load(self, data: bytes) -> UUID:
+class UUIDBinaryLoader(UUIDLoader):
+    def load(self, data: bytes) -> "uuid.UUID":
         return UUID(bytes=data)

@@ -35,7 +35,7 @@ AdaptContext = Union[None, "BaseConnection", "BaseCursor", "Transformer"]
 
 DumpFunc = Callable[[Any], bytes]
 DumperType = Type["Dumper"]
-DumpersMap = Dict[Tuple[type, Format], DumperType]
+DumpersMap = Dict[Tuple[Union[type, str], Format], DumperType]
 
 LoadFunc = Callable[[bytes], Any]
 LoaderType = Type["Loader"]
