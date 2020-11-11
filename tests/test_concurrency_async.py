@@ -56,23 +56,26 @@ async def test_concurrent_execution(dsn):
 
 @pytest.mark.slow
 async def test_notifies(aconn, dsn):
-    nconn = await psycopg3.AsyncConnection.connect(dsn)
+    nconn = await psycopg3.AsyncConnection.connect(dsn, autocommit=True)
     npid = nconn.pgconn.backend_pid
 
     async def notifier():
+        cur = await nconn.cursor()
         await asyncio.sleep(0.25)
-        nconn.pgconn.exec_(b"notify foo, '1'")
+        await cur.execute("notify foo, '1'")
         await asyncio.sleep(0.25)
-        nconn.pgconn.exec_(b"notify foo, '2'")
+        await cur.execute("notify foo, '2'")
         await nconn.close()
 
     async def receiver():
-        aconn.pgconn.exec_(b"listen foo")
+        await aconn.set_autocommit(True)
+        cur = await aconn.cursor()
+        await cur.execute("listen foo")
         gen = aconn.notifies()
         async for n in gen:
             ns.append((n, time.time()))
             if len(ns) >= 2:
-                gen.send(True)
+                gen.close()
 
     ns = []
     t0 = time.time()

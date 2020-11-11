@@ -105,29 +105,33 @@ t.join()
 
 @pytest.mark.slow
 def test_notifies(conn, dsn):
-    nconn = psycopg3.connect(dsn)
+    nconn = psycopg3.connect(dsn, autocommit=True)
     npid = nconn.pgconn.backend_pid
 
     def notifier():
         time.sleep(0.25)
-        nconn.pgconn.exec_(b"notify foo, '1'")
+        nconn.cursor().execute("notify foo, '1'")
         time.sleep(0.25)
-        nconn.pgconn.exec_(b"notify foo, '2'")
-        nconn.close()
+        nconn.cursor().execute("notify foo, '2'")
 
-    conn.pgconn.exec_(b"listen foo")
+    conn.autocommit = True
+    conn.cursor().execute("listen foo")
+
     t0 = time.time()
     t = threading.Thread(target=notifier)
     t.start()
+
     ns = []
     gen = conn.notifies()
     for n in gen:
         ns.append((n, time.time()))
         if len(ns) >= 2:
-            gen.send(True)
+            gen.close()
+
     assert len(ns) == 2
 
     n, t1 = ns[0]
+    assert isinstance(n, psycopg3.Notify)
     assert n.pid == npid
     assert n.channel == "foo"
     assert n.payload == "1"

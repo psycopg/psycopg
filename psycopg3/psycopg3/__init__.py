@@ -5,7 +5,7 @@ psycopg3 -- PostgreSQL database adapter for Python
 # Copyright (C) 2020 The Psycopg Team
 
 from . import pq
-from .connection import AsyncConnection, Connection
+from .connection import AsyncConnection, Connection, Notify
 
 from .errors import (
     Warning,
@@ -47,7 +47,7 @@ __all__ = (
     ["Warning", "Error", "InterfaceError", "DatabaseError", "DataError"]
     + ["OperationalError", "IntegrityError", "InternalError"]
     + ["ProgrammingError", "NotSupportedError"]
-    + ["AsyncConnection", "Connection", "connect"]
+    + ["AsyncConnection", "Connection", "Notify"]
     + ["BINARY", "DATETIME", "NUMBER", "ROWID", "STRING"]
     + ["Binary", "Date", "DateFromTicks", "Time", "TimeFromTicks"]
     + ["Timestamp", "TimestampFromTicks"]

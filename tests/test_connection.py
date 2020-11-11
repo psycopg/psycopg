@@ -4,7 +4,7 @@ import logging
 import weakref
 
 import psycopg3
-from psycopg3 import Connection
+from psycopg3 import Connection, Notify
 from psycopg3.errors import UndefinedTable
 from psycopg3.conninfo import conninfo_to_dict
 
@@ -384,6 +384,7 @@ def test_notify_handlers(conn):
     assert len(nots1) == 1
     assert len(nots2) == 2
     n = nots2[1]
+    assert isinstance(n, Notify)
     assert n.channel == "foo"
     assert n.payload == "n2"
     assert n.pid == conn.pgconn.backend_pid

@@ -8,7 +8,7 @@ import logging
 import asyncio
 import threading
 from types import TracebackType
-from typing import Any, AsyncGenerator, Callable, Generator, List, NamedTuple
+from typing import Any, AsyncIterator, Callable, Iterator, List, NamedTuple
 from typing import Optional, Type, cast
 from weakref import ref, ReferenceType
 from functools import partial
@@ -315,7 +315,8 @@ class Connection(BaseConnection):
             if result.status != ExecStatus.TUPLES_OK:
                 raise e.error_from_result(result, encoding=self._pyenc)
 
-    def notifies(self) -> Generator[Optional[Notify], bool, None]:
+    def notifies(self) -> Iterator[Notify]:
+        """Generate a stream of `Notify`"""
         while 1:
             with self.lock:
                 ns = self.wait(notifies(self.pgconn))
@@ -325,9 +326,7 @@ class Connection(BaseConnection):
                     pgn.extra.decode(self._pyenc),
                     pgn.be_pid,
                 )
-                if (yield n):
-                    yield None  # for the send who stopped us
-                    return
+                yield n
 
     def _set_autocommit(self, value: bool) -> None:
         with self.lock:
@@ -445,7 +444,7 @@ class AsyncConnection(BaseConnection):
             if result.status != ExecStatus.TUPLES_OK:
                 raise e.error_from_result(result, encoding=self._pyenc)
 
-    async def notifies(self) -> AsyncGenerator[Optional[Notify], bool]:
+    async def notifies(self) -> AsyncIterator[Notify]:
         while 1:
             async with self.lock:
                 ns = await self.wait(notifies(self.pgconn))
@@ -455,9 +454,7 @@ class AsyncConnection(BaseConnection):
                     pgn.extra.decode(self._pyenc),
                     pgn.be_pid,
                 )
-                if (yield n):
-                    yield None
-                    return
+                yield n
 
     def _set_autocommit(self, value: bool) -> None:
         raise AttributeError(
