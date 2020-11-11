@@ -1,3 +1,6 @@
+.. currentmodule:: psycopg3
+
+
 .. index::
     pair: Example; Usage
 
@@ -65,6 +68,36 @@ Note that the `cursor.execute()` method returns the cursor itself, so the
         print(record)
 
 
+The main entry points of `!psycopg3` are:
+
+- The function `connect()` creates a new database session and
+  returns a new `connection` instance. `AsyncConnection.connect()`
+  creates an `asyncio` connection instead.
+
+- The `~Connection` class encapsulates a database session. It allows to:
+
+  - create new `~Cursor` instances using the `~Connection.cursor()` method to
+    execute database commands and queries,
+
+  - terminate transactions using the methods `~Connection.commit()` or
+    `~Connection.rollback()`.
+
+- The class `~Cursor` allows interaction with the database:
+
+  - send commands to the database using methods such as `~Cursor.execute()`
+    and `~Cursor.executemany()`,
+
+  - retrieve data from the database :ref:`by iteration <cursor-iterable>` or
+    using methods such as `~Cursor.fetchone()`, `~Cursor.fetchmany()`,
+    `~Cursor.fetchall()`.
+
+
+
+.. index:: with
+
+``with`` connections and cursors
+--------------------------------
+
 The connections and cursors act as context managers, so you can run:
 
 .. code:: python
@@ -83,44 +116,6 @@ The connections and cursors act as context managers, so you can run:
     # and the connection closed
 
 
-If you are working in an `asyncio` project you can use a very similar pattern:
-
-.. code:: python
-
-    async with await psycopg3.AsyncConnection.connect(
-            "dbname=test user=postgres") as aconn:
-        async with await aconn.cursor() as acur:
-            await acur.execute(
-                "INSERT INTO test (num, data) VALUES (%s, %s)",
-                (100, "abc'def"))
-            await acur.execute("SELECT * FROM test")
-            await acur.fetchone()
-            # will return (1, 100, "abc'def")
-
-
-The main entry points of Psycopg are:
-
-- The function `~psycopg3.connect()` creates a new database session and
-  returns a new `connection` instance. `psycopg3.AsyncConnection.connect()`
-  creates an asyncio connection instead.
-
-- The `connection` class encapsulates a database session. It allows to:
-
-  - create new `cursor` instances using the `~connection.cursor()` method to
-    execute database commands and queries,
-
-  - terminate transactions using the methods `~connection.commit()` or
-    `~connection.rollback()`.
-
-- The class `cursor` allows interaction with the database:
-
-  - send commands to the database using methods such as `~cursor.execute()`
-    and `~cursor.executemany()`,
-
-  - retrieve data from the database :ref:`by iteration <cursor-iterable>` or
-    using methods such as `~cursor.fetchone()`, `~cursor.fetchmany()`,
-    `~cursor.fetchall()`.
-
 
 .. index::
     pair: Query; Parameters
@@ -133,12 +128,43 @@ Passing parameters to SQL queries
 TODO: lift from psycopg2 docs
 
 
+
 .. _transactions:
 
 Transaction management
 ----------------------
 
 TODO:
+
+
+
+.. index:: async
+
+Async operations
+================
+
+psycopg3 `~Connection` and `~Cursor` have counterparts `~AsyncConnection` and
+`~AsyncCursor` supporting an `asyncio` interface.
+
+The design of the asynchronous objects is pretty much the same of the sync
+ones: in order to use them you will only have to scatter the ``async`` keyword
+here and there.
+
+
+.. code:: python
+
+    async with await psycopg3.AsyncConnection.connect(
+            "dbname=test user=postgres") as aconn:
+        async with await aconn.cursor() as acur:
+            await acur.execute(
+                "INSERT INTO test (num, data) VALUES (%s, %s)",
+                (100, "abc'def"))
+            await acur.execute("SELECT * FROM test")
+            await acur.fetchone()
+            # will return (1, 100, "abc'def")
+            async for record in acur:
+                print(record)
+
 
 
 .. index::
@@ -162,14 +188,14 @@ of communication.
 .. _NOTIFY: https://www.postgresql.org/docs/current/static/sql-notify.html
 
 Because of the way sessions interact with notifications (see |NOTIFY|_
-documentation), you should keep the connection in `~connection.autocommit`
+documentation), you should keep the connection in `~Connection.autocommit`
 mode if you wish to receive or send notifications in a timely manner.
 
-Notifications are received as instances of `~psycopg3.Notify`. If you are
-reserving a connection only to receive notifications, the simplest way is to
-consume the `~psycopg3.Connection.notifies` generator. The generator can be
-stopped using ``close()``. The following example will print notifications and
-stop when one containing the ``stop`` message is received.
+Notifications are received as instances of `Notify`. If you are reserving a
+connection only to receive notifications, the simplest way is to consume the
+`Connection.notifies` generator. The generator can be stopped using
+``close()``. The following example will print notifications and stop when one
+containing the ``stop`` message is received.
 
 .. code:: python
 
@@ -201,9 +227,9 @@ You may get output from the Python process such as::
     Notify(channel='mychan', payload='stop', pid=961823)
     there, I stopped
 
-Alternatively, you can use `~psycopg3.Connection.add_notify_handler()` to
-register a callback function, which will be invoked whenever a notification is
-received, during the normal query processing; you will be then able to use the
+Alternatively, you can use `~Connection.add_notify_handler()` to register a
+callback function, which will be invoked whenever a notification is received,
+during the normal query processing; you will be then able to use the
 connection normally. Please note that in this case notifications will not be
 received immediately, but only during a connection operation, such as a query.
 

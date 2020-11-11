@@ -1,6 +1,8 @@
 The ``Connection`` classes
 ==========================
 
+.. currentmodule:: psycopg3
+
 The `Connection` and `AsyncConnection` classes are the main wrappers for a
 PostgreSQL database session. You can imagine them similar to a :program:`psql`
 session.
@@ -10,7 +12,7 @@ usually handles a transaction automatically: other sessions will not be able
 to see the changes until you have committed them, more or less explicitly.
 Take a look to :ref:`transactions` for the details.
 
-.. autoclass:: psycopg3.Connection
+.. autoclass:: Connection
 
     This class implements a DBAPI-compliant interface. It is what you want to
     use if you write a "classic", blocking program (eventually using threads or
@@ -21,39 +23,51 @@ Take a look to :ref:`transactions` for the details.
     transaction will be committed (or rolled back, in case of exception) and
     the connection will be closed.
 
+    .. rubric:: Methods you will need every day
+
     .. automethod:: connect
 
-    Connection parameters can be passed either as a `conninfo string`__ (a
-    ``postgresql://`` url or a list of ``key=value pairs``) or as keywords.
-    Keyword parameters override the ones specified in the connection string.
+        Connection parameters can be passed either as a `conninfo string`__ (a
+        ``postgresql://`` url or a list of ``key=value pairs``) or as keywords.
+        Keyword parameters override the ones specified in the connection string.
 
-    .. __: https://www.postgresql.org/docs/current/libpq-connect.html
-        #LIBPQ-CONNSTRING
+        .. __: https://www.postgresql.org/docs/current/libpq-connect.html
+            #LIBPQ-CONNSTRING
 
-    This method is also aliased as `psycopg3.connect()`.
+        This method is also aliased as `psycopg3.connect()`.
 
-    .. seealso::
+        .. seealso::
 
-        - the list of `the accepted connection parameters`__
-        - the `environment varialbes`__ affecting connection
+            - the list of `the accepted connection parameters`__
+            - the `environment varialbes`__ affecting connection
 
-        .. __: https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-PARAMKEYWORDS
-        .. __: https://www.postgresql.org/docs/current/libpq-envars.html
-
-    .. rubric:: Methods you will need every day
+            .. __: https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-PARAMKEYWORDS
+            .. __: https://www.postgresql.org/docs/current/libpq-envars.html
 
     .. automethod:: cursor
     .. automethod:: commit
     .. automethod:: rollback
+
+    .. autoattribute:: autocommit
+
+        The property is writable for sync connections, read-only for async
+        ones: you can call `~AsyncConnection.set_autocommit()` on those.
+
+    For details see :ref:`transactions`.
+
     .. automethod:: close
 
-    .. rubric:: Checking the connection state
+    .. rubric:: Checking and configuring the connection state
 
     .. autoproperty:: closed
     .. autoproperty:: client_encoding
 
         The property is writable for sync connections, read-only for async
         ones: you can call `~AsyncConnection.set_client_encoding()` on those.
+
+    .. attribute:: info
+
+        TODO
 
     .. rubric:: Methods you will need if you do something cool
 
@@ -68,7 +82,8 @@ Take a look to :ref:`transactions` for the details.
 
     See :ref:`async-notify` for details.
 
-.. autoclass:: psycopg3.AsyncConnection
+
+.. autoclass:: AsyncConnection
 
     This class implements a DBAPI-inspired interface, with all the blocking
     methods implemented as coroutines. Unless specified otherwise,
@@ -84,6 +99,7 @@ Take a look to :ref:`transactions` for the details.
     .. automethod:: rollback
     .. automethod:: notifies
     .. automethod:: set_client_encoding
+    .. automethod:: set_autocommit
 
 
-.. autoclass:: psycopg3.Notify
+.. autoclass:: Notify

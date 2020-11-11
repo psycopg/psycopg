@@ -103,6 +103,7 @@ class BaseConnection:
 
     @property
     def autocommit(self) -> bool:
+        """The autocommit state of the connection."""
         return self._autocommit
 
     @autocommit.setter
@@ -309,7 +310,9 @@ class Connection(BaseConnection):
                 )
 
     def notifies(self) -> Iterator[Notify]:
-        """Generate a stream of `Notify`"""
+        """
+        Yield `Notify` objects as soon as they are received from the database.
+        """
         while 1:
             with self.lock:
                 ns = self.wait(notifies(self.pgconn))
@@ -455,5 +458,6 @@ class AsyncConnection(BaseConnection):
         )
 
     async def set_autocommit(self, value: bool) -> None:
+        """Async version of the `autocommit` setter."""
         async with self.lock:
             super()._set_autocommit(value)
