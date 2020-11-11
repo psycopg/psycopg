@@ -22,6 +22,7 @@ from . import pq
 from . import errors as e
 from .proto import PQGen
 from .waiting import Wait, Ready
+from .encodings import py_codecs
 
 logger = logging.getLogger(__name__)
 
@@ -172,8 +173,8 @@ def copy_from(pgconn: pq.proto.PGconn) -> PQGen[Optional[bytes]]:
             f"1 result expected from copy end, got {len(results)}"
         )
     if results[0].status != pq.ExecStatus.COMMAND_OK:
-        encoding = pq.py_codecs.get(
-            pgconn.parameter_status(b"client_encoding"), "utf8"
+        encoding = py_codecs.get(
+            pgconn.parameter_status(b"client_encoding") or "", "utf-8"
         )
         raise e.error_from_result(results[0], encoding=encoding)
 
@@ -205,7 +206,7 @@ def copy_end(pgconn: pq.proto.PGconn, error: Optional[bytes]) -> PQGen[None]:
             f"1 result expected from copy end, got {len(results)}"
         )
     if results[0].status != pq.ExecStatus.COMMAND_OK:
-        encoding = pq.py_codecs.get(
-            pgconn.parameter_status(b"client_encoding"), "utf8"
+        encoding = py_codecs.get(
+            pgconn.parameter_status(b"client_encoding") or "", "utf-8"
         )
         raise e.error_from_result(results[0], encoding=encoding)

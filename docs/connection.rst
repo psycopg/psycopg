@@ -46,7 +46,14 @@ Take a look to :ref:`transactions` for the details.
     .. automethod:: commit
     .. automethod:: rollback
     .. automethod:: close
+
+    .. rubric:: Checking the connection state
+
     .. autoproperty:: closed
+    .. autoproperty:: client_encoding
+
+        The property is writable for sync connections, read-only for async
+        ones: you can call `~AsyncConnection.set_client_encoding()` on those.
 
     .. rubric:: Methods you will need if you do something cool
 
@@ -76,6 +83,7 @@ Take a look to :ref:`transactions` for the details.
     .. automethod:: commit
     .. automethod:: rollback
     .. automethod:: notifies
+    .. automethod:: set_client_encoding
 
 
 .. autoclass:: psycopg3.Notify

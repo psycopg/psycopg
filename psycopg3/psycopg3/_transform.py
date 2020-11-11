@@ -75,7 +75,7 @@ class Transformer:
 
         elif isinstance(context, BaseCursor):
             self._connection = context.connection
-            self._encoding = context.connection.pyenc
+            self._encoding = context.connection.client_encoding
             self._dumpers = {}
             self._dumpers_maps.extend(
                 (self._dumpers, context.dumpers, context.connection.dumpers)
@@ -87,7 +87,7 @@ class Transformer:
 
         elif isinstance(context, BaseConnection):
             self._connection = context
-            self._encoding = context.pyenc
+            self._encoding = context.client_encoding
             self._dumpers = {}
             self._dumpers_maps.extend((self._dumpers, context.dumpers))
             self._loaders = {}

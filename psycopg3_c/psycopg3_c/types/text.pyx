@@ -17,23 +17,21 @@ cdef class TextLoader(CLoader):
         super().__init__(oid, context)
 
         self.is_utf8 = 0
-        self.encoding = NULL
+        self.encoding = "utf-8"
 
         conn = self.connection
-        if conn is not None:
-            if conn.client_encoding == "UTF8":
+        if conn:
+            self._bytes_encoding = conn.client_encoding.encode("utf-8")
+            self.encoding = self._bytes_encoding
+            if self._bytes_encoding == b"utf-8":
                 self.is_utf8 = 1
-            elif conn.client_encoding != "SQL_ASCII":
-                self._bytes_encoding = conn.pyenc.encode("utf-8")
-                self.encoding = self._bytes_encoding
-        else:
-            self.encoding = "utf-8"
+            elif self._bytes_encoding == b"ascii":
+                self.encoding = NULL
 
     cdef object cload(self, const char *data, size_t length):
         if self.is_utf8:
             return PyUnicode_DecodeUTF8(<char *>data, length, NULL)
-
-        if self.encoding:
+        elif self.encoding:
             return PyUnicode_Decode(<char *>data, length, self.encoding, NULL)
         else:
             return data[:length]

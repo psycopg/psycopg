@@ -5,6 +5,7 @@ import weakref
 
 import psycopg3
 from psycopg3 import Connection, Notify
+from psycopg3 import encodings
 from psycopg3.errors import UndefinedTable
 from psycopg3.conninfo import conninfo_to_dict
 
@@ -199,16 +200,16 @@ def test_autocommit_unknown(conn):
 
 def test_get_encoding(conn):
     (enc,) = conn.cursor().execute("show client_encoding").fetchone()
-    assert enc == conn.client_encoding
+    assert conn.client_encoding == encodings.pg2py(enc)
 
 
 def test_set_encoding(conn):
-    newenc = "LATIN1" if conn.client_encoding != "LATIN1" else "UTF8"
+    newenc = "iso8859-1" if conn.client_encoding != "iso8859-1" else "utf-8"
     assert conn.client_encoding != newenc
     conn.client_encoding = newenc
     assert conn.client_encoding == newenc
     (enc,) = conn.cursor().execute("show client_encoding").fetchone()
-    assert enc == newenc
+    assert encodings.pg2py(enc) == newenc
 
 
 @pytest.mark.parametrize(
@@ -223,8 +224,10 @@ def test_set_encoding(conn):
 )
 def test_normalize_encoding(conn, enc, out, codec):
     conn.client_encoding = enc
-    assert conn.client_encoding == out
-    assert conn.pyenc == codec
+    assert (
+        conn.pgconn.parameter_status(b"client_encoding").decode("utf-8") == out
+    )
+    assert conn.client_encoding == codec
 
 
 @pytest.mark.parametrize(
@@ -240,18 +243,21 @@ def test_normalize_encoding(conn, enc, out, codec):
 def test_encoding_env_var(dsn, monkeypatch, enc, out, codec):
     monkeypatch.setenv("PGCLIENTENCODING", enc)
     conn = psycopg3.connect(dsn)
-    assert conn.client_encoding == out
-    assert conn.pyenc == codec
+    assert (
+        conn.pgconn.parameter_status(b"client_encoding").decode("utf-8") == out
+    )
+    assert conn.client_encoding == codec
 
 
 def test_set_encoding_unsupported(conn):
-    conn.client_encoding = "EUC_TW"
+    cur = conn.cursor()
+    cur.execute("set client_encoding to EUC_TW")
     with pytest.raises(psycopg3.NotSupportedError):
-        conn.cursor().execute("select 1")
+        cur.execute("select 'x'")
 
 
 def test_set_encoding_bad(conn):
-    with pytest.raises(psycopg3.DatabaseError):
+    with pytest.raises(LookupError):
         conn.client_encoding = "WAT"
 
 

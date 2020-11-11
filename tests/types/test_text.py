@@ -76,7 +76,7 @@ def test_load_1char(conn, typename, fmt_out):
 
 
 @pytest.mark.parametrize("fmt_in", [Format.TEXT, Format.BINARY])
-@pytest.mark.parametrize("encoding", ["utf8", "latin9", "sql_ascii"])
+@pytest.mark.parametrize("encoding", ["utf8", "latin9", "ascii"])
 def test_dump_enc(conn, fmt_in, encoding):
     cur = conn.cursor()
     ph = "%s" if fmt_in == Format.TEXT else "%b"
@@ -124,7 +124,7 @@ def test_load_badenc(conn, typename, fmt_out):
 def test_load_ascii(conn, typename, fmt_out):
     cur = conn.cursor(format=fmt_out)
 
-    conn.client_encoding = "sql_ascii"
+    conn.client_encoding = "ascii"
     (res,) = cur.execute(
         f"select chr(%s::int)::{typename}", (ord(eur),)
     ).fetchone()
@@ -136,7 +136,7 @@ def test_load_ascii(conn, typename, fmt_out):
 def test_load_ascii_encanyway(conn, typename, fmt_out):
     cur = conn.cursor(format=fmt_out)
 
-    conn.client_encoding = "sql_ascii"
+    conn.client_encoding = "ascii"
     (res,) = cur.execute(f"select 'aa'::{typename}").fetchone()
     assert res == "aa"
 
@@ -156,7 +156,7 @@ def test_text_array(conn, typename, fmt_in, fmt_out):
 @pytest.mark.parametrize("fmt_in", [Format.TEXT, Format.BINARY])
 @pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
 def test_text_array_ascii(conn, fmt_in, fmt_out):
-    conn.client_encoding = "sql_ascii"
+    conn.client_encoding = "ascii"
     cur = conn.cursor(format=fmt_out)
     a = list(map(chr, range(1, 256))) + [eur]
     exp = [s.encode("utf8") for s in a]

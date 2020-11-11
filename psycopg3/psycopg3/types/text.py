@@ -20,13 +20,11 @@ class _StringDumper(Dumper):
     def __init__(self, src: type, context: AdaptContext):
         super().__init__(src, context)
 
+        self.encoding = "utf-8"
         if self.connection:
-            if self.connection.client_encoding != "SQL_ASCII":
-                self.encoding = self.connection.pyenc
-            else:
-                self.encoding = "utf-8"
-        else:
-            self.encoding = "utf-8"
+            enc = self.connection.client_encoding
+            if enc != "ascii":
+                self.encoding = enc
 
 
 @Dumper.binary(str)
@@ -56,8 +54,9 @@ class TextLoader(Loader):
         super().__init__(oid, context)
 
         if self.connection:
-            if self.connection.client_encoding != "SQL_ASCII":
-                self.encoding = self.connection.pyenc
+            enc = self.connection.client_encoding
+            if enc != "ascii":
+                self.encoding = enc
             else:
                 self.encoding = ""
         else:
@@ -78,7 +77,9 @@ class TextLoader(Loader):
 class UnknownLoader(Loader):
     def __init__(self, oid: int, context: AdaptContext):
         super().__init__(oid, context)
-        self.encoding = self.connection.pyenc if self.connection else "utf-8"
+        self.encoding = (
+            self.connection.client_encoding if self.connection else "utf-8"
+        )
 
     def load(self, data: bytes) -> str:
         return data.decode(self.encoding)

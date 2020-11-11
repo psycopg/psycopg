@@ -79,7 +79,7 @@ class BaseCopy:
                 raise TypeError(
                     "cannot copy str data in binary mode: use bytes instead"
                 )
-            self._encoding = self.connection.pyenc
+            self._encoding = self.connection.client_encoding
             return data.encode(self._encoding)
 
         else:
@@ -181,7 +181,7 @@ class Copy(BaseCopy):
 
     def finish(self, error: str = "") -> None:
         conn = self.connection
-        berr = error.encode(conn.pyenc, "replace") if error else None
+        berr = error.encode(conn.client_encoding, "replace") if error else None
         conn.wait(copy_end(conn.pgconn, berr))
         self._finished = True
 
@@ -238,7 +238,7 @@ class AsyncCopy(BaseCopy):
 
     async def finish(self, error: str = "") -> None:
         conn = self.connection
-        berr = error.encode(conn.pyenc, "replace") if error else None
+        berr = error.encode(conn.client_encoding, "replace") if error else None
         await conn.wait(copy_end(conn.pgconn, berr))
         self._finished = True
 

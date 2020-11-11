@@ -342,7 +342,7 @@ class Identifier(Composable):
             raise ValueError(f"no connection in the context: {context}")
 
         esc = Escaping(conn.pgconn)
-        enc = conn.pyenc
+        enc = conn.client_encoding
         escs = [esc.escape_identifier(s.encode(enc)) for s in self._obj]
         return b".".join(escs).decode(enc)
 
@@ -375,7 +375,7 @@ class Literal(Composable):
         tx = context if isinstance(context, Transformer) else Transformer(conn)
         dumper = tx.get_dumper(self._obj, Format.TEXT)
         quoted = dumper.quote(self._obj)
-        return quoted.decode(conn.pyenc if conn else "utf-8")
+        return quoted.decode(conn.client_encoding if conn else "utf-8")
 
 
 class Placeholder(Composable):

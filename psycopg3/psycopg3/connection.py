@@ -14,12 +14,13 @@ from weakref import ref, ReferenceType
 from functools import partial
 
 from . import pq
-from . import errors as e
-from . import cursor
 from . import proto
+from . import cursor
+from . import errors as e
+from . import encodings
 from .pq import TransactionStatus, ExecStatus
-from .conninfo import make_conninfo
 from .waiting import wait, wait_async
+from .conninfo import make_conninfo
 from .generators import notifies
 
 logger = logging.getLogger(__name__)
@@ -85,10 +86,6 @@ class BaseConnection:
         self.loaders: proto.LoadersMap = {}
         self._notice_handlers: List[NoticeHandler] = []
         self._notify_handlers: List[NotifyHandler] = []
-        # postgres name of the client encoding (in bytes)
-        self._pgenc = b""
-        # python name of the client encoding
-        self._pyenc = "utf-8"
 
         wself = ref(self)
 
@@ -131,30 +128,16 @@ class BaseConnection:
         return self.cursor_factory(self, format=format)
 
     @property
-    def pyenc(self) -> str:
-        pgenc = self.pgconn.parameter_status(b"client_encoding") or b""
-        if self._pgenc != pgenc:
-            if pgenc:
-                try:
-                    self._pyenc = pq.py_codecs[pgenc]
-                except KeyError:
-                    raise e.NotSupportedError(
-                        f"encoding {pgenc.decode('ascii')} not available in Python"
-                    )
-
-            self._pgenc = pgenc
-        return self._pyenc
-
-    @property
     def client_encoding(self) -> str:
-        rv = self.pgconn.parameter_status(b"client_encoding")
-        return rv.decode("utf-8") if rv else "UTF8"
+        """The Python codec name of the connection's client encoding."""
+        pgenc = self.pgconn.parameter_status(b"client_encoding") or b"UTF8"
+        return encodings.pg2py(pgenc)
 
     @client_encoding.setter
-    def client_encoding(self, value: str) -> None:
-        self._set_client_encoding(value)
+    def client_encoding(self, name: str) -> None:
+        self._set_client_encoding(name)
 
-    def _set_client_encoding(self, value: str) -> None:
+    def _set_client_encoding(self, name: str) -> None:
         raise NotImplementedError
 
     def cancel(self) -> None:
@@ -175,7 +158,7 @@ class BaseConnection:
         if not (self and self._notice_handler):
             return
 
-        diag = e.Diagnostic(res, self._pyenc)
+        diag = e.Diagnostic(res, self.client_encoding)
         for cb in self._notice_handlers:
             try:
                 cb(diag)
@@ -204,11 +187,8 @@ class BaseConnection:
         if not (self and self._notify_handlers):
             return
 
-        n = Notify(
-            pgn.relname.decode(self._pyenc),
-            pgn.extra.decode(self._pyenc),
-            pgn.be_pid,
-        )
+        enc = self.client_encoding
+        n = Notify(pgn.relname.decode(enc), pgn.extra.decode(enc), pgn.be_pid)
         for cb in self._notify_handlers:
             cb(n)
 
@@ -282,7 +262,7 @@ class Connection(BaseConnection):
         if pgres.status != ExecStatus.COMMAND_OK:
             raise e.OperationalError(
                 "error on begin:"
-                f" {pq.error_message(pgres, encoding=self._pyenc)}"
+                f" {pq.error_message(pgres, encoding=self.client_encoding)}"
             )
 
     def commit(self) -> None:
@@ -306,7 +286,7 @@ class Connection(BaseConnection):
         if results[-1].status != ExecStatus.COMMAND_OK:
             raise e.OperationalError(
                 f"error on {command.decode('utf8')}:"
-                f" {pq.error_message(results[-1], encoding=self._pyenc)}"
+                f" {pq.error_message(results[-1], encoding=self.client_encoding)}"
             )
 
     @classmethod
@@ -315,27 +295,28 @@ class Connection(BaseConnection):
     ) -> proto.RV:
         return wait(gen, timeout=timeout)
 
-    def _set_client_encoding(self, value: str) -> None:
+    def _set_client_encoding(self, name: str) -> None:
         with self.lock:
             self.pgconn.send_query_params(
                 b"select set_config('client_encoding', $1, false)",
-                [value.encode("ascii")],
+                [encodings.py2pg(name)],
             )
             gen = execute(self.pgconn)
             (result,) = self.wait(gen)
             if result.status != ExecStatus.TUPLES_OK:
-                raise e.error_from_result(result, encoding=self._pyenc)
+                raise e.error_from_result(
+                    result, encoding=self.client_encoding
+                )
 
     def notifies(self) -> Iterator[Notify]:
         """Generate a stream of `Notify`"""
         while 1:
             with self.lock:
                 ns = self.wait(notifies(self.pgconn))
+            enc = self.client_encoding
             for pgn in ns:
                 n = Notify(
-                    pgn.relname.decode(self._pyenc),
-                    pgn.extra.decode(self._pyenc),
-                    pgn.be_pid,
+                    pgn.relname.decode(enc), pgn.extra.decode(enc), pgn.be_pid
                 )
                 yield n
 
@@ -405,7 +386,7 @@ class AsyncConnection(BaseConnection):
         if pgres.status != ExecStatus.COMMAND_OK:
             raise e.OperationalError(
                 "error on begin:"
-                f" {pq.error_message(pgres, encoding=self._pyenc)}"
+                f" {pq.error_message(pgres, encoding=self.client_encoding)}"
             )
 
     async def commit(self) -> None:
@@ -427,39 +408,41 @@ class AsyncConnection(BaseConnection):
         if pgres.status != ExecStatus.COMMAND_OK:
             raise e.OperationalError(
                 f"error on {command.decode('utf8')}:"
-                f" {pq.error_message(pgres, encoding=self._pyenc)}"
+                f" {pq.error_message(pgres, encoding=self.client_encoding)}"
             )
 
     @classmethod
     async def wait(cls, gen: proto.PQGen[proto.RV]) -> proto.RV:
         return await wait_async(gen)
 
-    def _set_client_encoding(self, value: str) -> None:
+    def _set_client_encoding(self, name: str) -> None:
         raise AttributeError(
             "'client_encoding' is read-only on async connections:"
             " please use await .set_client_encoding() instead."
         )
 
-    async def set_client_encoding(self, value: str) -> None:
+    async def set_client_encoding(self, name: str) -> None:
+        """Async version of the `client_encoding` setter."""
         async with self.lock:
             self.pgconn.send_query_params(
                 b"select set_config('client_encoding', $1, false)",
-                [value.encode("ascii")],
+                [name.encode("utf-8")],
             )
             gen = execute(self.pgconn)
             (result,) = await self.wait(gen)
             if result.status != ExecStatus.TUPLES_OK:
-                raise e.error_from_result(result, encoding=self._pyenc)
+                raise e.error_from_result(
+                    result, encoding=self.client_encoding
+                )
 
     async def notifies(self) -> AsyncIterator[Notify]:
         while 1:
             async with self.lock:
                 ns = await self.wait(notifies(self.pgconn))
+            enc = self.client_encoding
             for pgn in ns:
                 n = Notify(
-                    pgn.relname.decode(self._pyenc),
-                    pgn.extra.decode(self._pyenc),
-                    pgn.be_pid,
+                    pgn.relname.decode(enc), pgn.extra.decode(enc), pgn.be_pid
                 )
                 yield n
 

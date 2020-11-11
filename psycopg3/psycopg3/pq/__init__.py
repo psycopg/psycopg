@@ -22,7 +22,6 @@ from .enums import (
     DiagnosticField,
     Format,
 )
-from .encodings import py_codecs
 from .misc import ConninfoOption, PQerror, PGnotify, PGresAttDesc
 from .misc import error_message
 from . import proto
@@ -107,6 +106,5 @@ __all__ = (
     "PQerror",
     "error_message",
     "ConninfoOption",
-    "py_codecs",
     "version",
 )

@@ -4,6 +4,7 @@ import logging
 import weakref
 
 import psycopg3
+from psycopg3 import encodings
 from psycopg3 import AsyncConnection
 from psycopg3.errors import UndefinedTable
 from psycopg3.conninfo import conninfo_to_dict
@@ -209,11 +210,11 @@ async def test_get_encoding(aconn):
     cur = await aconn.cursor()
     await cur.execute("show client_encoding")
     (enc,) = await cur.fetchone()
-    assert enc == aconn.client_encoding
+    assert aconn.client_encoding == encodings.pg2py(enc)
 
 
 async def test_set_encoding(aconn):
-    newenc = "LATIN1" if aconn.client_encoding != "LATIN1" else "UTF8"
+    newenc = "iso8859-1" if aconn.client_encoding != "iso8859-1" else "utf-8"
     assert aconn.client_encoding != newenc
     with pytest.raises(AttributeError):
         aconn.client_encoding = newenc
@@ -223,7 +224,7 @@ async def test_set_encoding(aconn):
     cur = await aconn.cursor()
     await cur.execute("show client_encoding")
     (enc,) = await cur.fetchone()
-    assert enc == newenc
+    assert encodings.pg2py(enc) == newenc
 
 
 @pytest.mark.parametrize(
@@ -234,12 +235,16 @@ async def test_set_encoding(aconn):
         ("utf_8", "UTF8", "utf-8"),
         ("eucjp", "EUC_JP", "euc_jp"),
         ("euc-jp", "EUC_JP", "euc_jp"),
+        ("latin9", "LATIN9", "iso8859-15"),
     ],
 )
 async def test_normalize_encoding(aconn, enc, out, codec):
     await aconn.set_client_encoding(enc)
-    assert aconn.client_encoding == out
-    assert aconn.pyenc == codec
+    assert (
+        aconn.pgconn.parameter_status(b"client_encoding").decode("utf-8")
+        == out
+    )
+    assert aconn.client_encoding == codec
 
 
 @pytest.mark.parametrize(
@@ -255,8 +260,11 @@ async def test_normalize_encoding(aconn, enc, out, codec):
 async def test_encoding_env_var(dsn, monkeypatch, enc, out, codec):
     monkeypatch.setenv("PGCLIENTENCODING", enc)
     aconn = await psycopg3.AsyncConnection.connect(dsn)
-    assert aconn.client_encoding == out
-    assert aconn.pyenc == codec
+    assert (
+        aconn.pgconn.parameter_status(b"client_encoding").decode("utf-8")
+        == out
+    )
+    assert aconn.client_encoding == codec
 
 
 async def test_set_encoding_unsupported(aconn):

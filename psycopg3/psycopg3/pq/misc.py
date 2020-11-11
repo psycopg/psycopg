@@ -9,7 +9,6 @@ from typing import cast, NamedTuple, Optional, Union
 from ..errors import OperationalError
 from .enums import DiagnosticField, ConnStatus
 from .proto import PGconn, PGresult
-from .encodings import py_codecs
 
 
 class PQerror(OperationalError):
@@ -66,11 +65,13 @@ def error_message(obj: Union[PGconn, PGresult], encoding: str = "utf8") -> str:
                 bmsg = bmsg.splitlines()[0].split(b":", 1)[-1].strip()
 
     elif hasattr(obj, "error_message"):
+        from psycopg3.encodings import py_codecs
+
         # obj is a PGconn
         obj = cast(PGconn, obj)
         if obj.status == ConnStatus.OK:
             encoding = py_codecs.get(
-                obj.parameter_status(b"client_encoding"), "utf8"
+                obj.parameter_status(b"client_encoding") or "", "utf-8"
             )
         bmsg = obj.error_message
 
