@@ -42,6 +42,8 @@ else:
 
 
 class Notify(NamedTuple):
+    """An asynchronous notification received from the database."""
+
     channel: str
     payload: str
     pid: int
@@ -95,6 +97,7 @@ class BaseConnection:
 
     @property
     def closed(self) -> bool:
+        """`true` if the connection is closed."""
         return self.status == self.ConnStatus.BAD
 
     @property
@@ -182,9 +185,15 @@ class BaseConnection:
                 )
 
     def add_notify_handler(self, callback: NotifyHandler) -> None:
+        """
+        Register a callable to be invoked whenever a notification is received.
+        """
         self._notify_handlers.append(callback)
 
     def remove_notify_handler(self, callback: NotifyHandler) -> None:
+        """
+        Unregister a notification callable previously registered.
+        """
         self._notify_handlers.remove(callback)
 
     @staticmethod
@@ -206,9 +215,7 @@ class BaseConnection:
 
 class Connection(BaseConnection):
     """
-    Wrap a connection to the database.
-
-    This class implements a DBAPI-compliant interface.
+    Wrapper for a connection to the database.
     """
 
     cursor_factory: Type[cursor.Cursor]
@@ -252,11 +259,13 @@ class Connection(BaseConnection):
         self.close()
 
     def close(self) -> None:
+        """Close the database connection."""
         self.pgconn.finish()
 
     def cursor(
         self, name: str = "", format: pq.Format = pq.Format.TEXT
     ) -> cursor.Cursor:
+        """Return a new cursor to send commands and query the connection."""
         cur = self._cursor(name, format=format)
         return cast(cursor.Cursor, cur)
 
@@ -277,10 +286,12 @@ class Connection(BaseConnection):
             )
 
     def commit(self) -> None:
+        """Commit any pending transaction to the database."""
         with self.lock:
             self._exec_commit_rollback(b"commit")
 
     def rollback(self) -> None:
+        """Roll back to the start of any pending transaction."""
         with self.lock:
             self._exec_commit_rollback(b"rollback")
 
@@ -335,10 +346,7 @@ class Connection(BaseConnection):
 
 class AsyncConnection(BaseConnection):
     """
-    Wrap an asynchronous connection to the database.
-
-    This class implements a DBAPI-inspired interface, with all the blocking
-    methods implemented as coroutines.
+    Asynchronous wrapper for a connection to the database.
     """
 
     cursor_factory: Type[cursor.AsyncCursor]
@@ -352,7 +360,6 @@ class AsyncConnection(BaseConnection):
     async def connect(
         cls, conninfo: str = "", *, autocommit: bool = False, **kwargs: Any
     ) -> "AsyncConnection":
-        """`asyncio` version of `~Connection.connect()`."""
         conninfo = make_conninfo(conninfo, **kwargs)
         gen = connect(conninfo)
         pgconn = await cls.wait(gen)
