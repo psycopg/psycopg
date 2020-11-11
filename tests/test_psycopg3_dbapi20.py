@@ -105,20 +105,21 @@ def test_time_from_ticks(ticks, want):
 
 
 @pytest.mark.parametrize(
-    "testdsn, kwargs, want",
+    "args, kwargs, want",
     [
-        ("", {}, ""),
-        ("host=foo user=bar", {}, "host=foo user=bar"),
-        ("host=foo", {"user": "baz"}, "host=foo user=baz"),
+        ((), {}, ""),
+        (("",), {}, ""),
+        (("host=foo user=bar",), {}, "host=foo user=bar"),
+        (("host=foo",), {"user": "baz"}, "host=foo user=baz"),
         (
-            "host=foo port=5432",
+            ("host=foo port=5432",),
             {"host": "qux", "user": "joe"},
             "host=qux user=joe port=5432",
         ),
-        ("host=foo", {"user": None}, "host=foo"),
+        (("host=foo",), {"user": None}, "host=foo"),
     ],
 )
-def test_connect_args(monkeypatch, pgconn, testdsn, kwargs, want):
+def test_connect_args(monkeypatch, pgconn, args, kwargs, want):
     the_conninfo = None
 
     def fake_connect(conninfo):
@@ -128,12 +129,17 @@ def test_connect_args(monkeypatch, pgconn, testdsn, kwargs, want):
         yield
 
     monkeypatch.setattr(psycopg3.connection, "connect", fake_connect)
-    psycopg3.connect(testdsn, **kwargs)
+    psycopg3.connect(*args, **kwargs)
     assert conninfo_to_dict(the_conninfo) == conninfo_to_dict(want)
 
 
 @pytest.mark.parametrize(
-    "args, kwargs", [((), {}), (("", ""), {}), ((), {"nosuchparam": 42})]
+    "args, kwargs",
+    [
+        (("host=foo", "host=bar"), {}),
+        (("", ""), {}),
+        ((), {"nosuchparam": 42}),
+    ],
 )
 def test_connect_badargs(monkeypatch, pgconn, args, kwargs):
     def fake_connect(conninfo):

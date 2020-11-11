@@ -220,15 +220,15 @@ class Connection(BaseConnection):
 
     @classmethod
     def connect(
-        cls,
-        conninfo: Optional[str] = None,
-        *,
-        autocommit: bool = False,
-        **kwargs: Any,
+        cls, conninfo: str = "", *, autocommit: bool = False, **kwargs: Any
     ) -> "Connection":
-        if conninfo is None and not kwargs:
-            raise TypeError("missing conninfo and not parameters specified")
-        conninfo = make_conninfo(conninfo or "", **kwargs)
+        """
+        Connect to a database server and return a new `Connection` instance.
+
+        TODO: connection_timeout to be implemented.
+        """
+
+        conninfo = make_conninfo(conninfo, **kwargs)
         gen = connect(conninfo)
         pgconn = cls.wait(gen)
         conn = cls(pgconn)
@@ -351,15 +351,10 @@ class AsyncConnection(BaseConnection):
 
     @classmethod
     async def connect(
-        cls,
-        conninfo: Optional[str] = None,
-        *,
-        autocommit: bool = False,
-        **kwargs: Any,
+        cls, conninfo: str = "", *, autocommit: bool = False, **kwargs: Any
     ) -> "AsyncConnection":
-        if conninfo is None and not kwargs:
-            raise TypeError("missing conninfo and not parameters specified")
-        conninfo = make_conninfo(conninfo or "", **kwargs)
+        """`asyncio` version of `~Connection.connect()`."""
+        conninfo = make_conninfo(conninfo, **kwargs)
         gen = connect(conninfo)
         pgconn = await cls.wait(gen)
         conn = cls(pgconn)
