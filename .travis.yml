@@ -104,6 +104,7 @@ matrix:
         - PGVER=12
         - PSYCOPG3_IMPL=ctypes
         - PGPORT=5433
+        - BUILD_DOCS=1
 
 install:
   - pip install tox
@@ -111,3 +112,10 @@ install:
 
 script:
   - tox -c $TOXDIR
+
+deploy:
+  - provider: script
+    script: bash scripts/travis_update_docs.sh
+    on:
+      branch: master
+      condition: "$BUILD_DOCS = 1"
