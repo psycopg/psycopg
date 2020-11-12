@@ -6,25 +6,21 @@ psycopg3 -- PostgreSQL database adapter for Python
 
 from . import pq
 from .connection import AsyncConnection, Connection, Notify
+from .cursor import AsyncCursor, Cursor, Column
+from .copy import Copy, AsyncCopy
 
-from .errors import (
-    Warning,
-    Error,
-    InterfaceError,
-    DatabaseError,
-    DataError,
-    OperationalError,
-    IntegrityError,
-    InternalError,
-    ProgrammingError,
-    NotSupportedError,
-)
+from .errors import Warning, Error, InterfaceError, DatabaseError
+from .errors import DataError, OperationalError, IntegrityError
+from .errors import InternalError, ProgrammingError, NotSupportedError
 
 from .dbapi20 import BINARY, DATETIME, NUMBER, ROWID, STRING
 from .dbapi20 import Binary, Date, DateFromTicks, Time, TimeFromTicks
 from .dbapi20 import Timestamp, TimestampFromTicks
 
-from .version import __version__  # noqa
+from .version import __version__
+
+# register default adapters
+from . import types
 
 # DBAPI compliancy
 connect = Connection.connect
@@ -33,22 +29,8 @@ threadsafety = 2
 paramstyle = "pyformat"
 
 
-# register default adapters
-from . import types  # noqa
-
 # Override adapters with fast version if available
 if pq.__impl__ == "c":
-    from psycopg3_c._psycopg3 import register_builtin_c_loaders
+    from psycopg3_c import _psycopg3
 
-    register_builtin_c_loaders()
-
-
-__all__ = (
-    ["Warning", "Error", "InterfaceError", "DatabaseError", "DataError"]
-    + ["OperationalError", "IntegrityError", "InternalError"]
-    + ["ProgrammingError", "NotSupportedError"]
-    + ["AsyncConnection", "Connection", "Notify"]
-    + ["BINARY", "DATETIME", "NUMBER", "ROWID", "STRING"]
-    + ["Binary", "Date", "DateFromTicks", "Time", "TimeFromTicks"]
-    + ["Timestamp", "TimestampFromTicks"]
-)
+    _psycopg3.register_builtin_c_loaders()
