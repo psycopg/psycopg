@@ -69,7 +69,7 @@ Take a look to :ref:`transactions` for the details.
 
         TODO
 
-    .. rubric:: Methods you will need if you do something cool
+    .. rubric:: Methods you can use to do something cool
 
     .. automethod:: notifies
 
@@ -81,6 +81,12 @@ Take a look to :ref:`transactions` for the details.
     .. automethod:: remove_notify_handler
 
     See :ref:`async-notify` for details.
+
+    .. automethod:: cancel
+    .. automethod:: add_notice_handler
+    .. automethod:: remove_notice_handler
+
+    TODO: document `Diagnostic`
 
 
 .. autoclass:: AsyncConnection
@@ -103,3 +109,4 @@ Take a look to :ref:`transactions` for the details.
 
 
 .. autoclass:: Notify
+    :members: channel, payload, pid

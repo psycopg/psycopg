@@ -46,8 +46,13 @@ class Notify(NamedTuple):
     """An asynchronous notification received from the database."""
 
     channel: str
+    """The name of the channel on which the notification was received."""
+
     payload: str
+    """The message attached to the notification."""
+
     pid: int
+    """The PID of the backend process which sent the notification."""
 
 
 NoticeHandler = Callable[[e.Diagnostic], None]
@@ -138,13 +143,20 @@ class BaseConnection:
         raise NotImplementedError
 
     def cancel(self) -> None:
+        """Cancel the current operation on the connection."""
         c = self.pgconn.get_cancel()
         c.cancel()
 
     def add_notice_handler(self, callback: NoticeHandler) -> None:
+        """
+        Register a callable to be invoked when a notice message is received.
+        """
         self._notice_handlers.append(callback)
 
     def remove_notice_handler(self, callback: NoticeHandler) -> None:
+        """
+        Unregister a notice message callable previously registered.
+        """
         self._notice_handlers.remove(callback)
 
     @staticmethod
