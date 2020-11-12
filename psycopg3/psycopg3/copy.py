@@ -20,16 +20,11 @@ if TYPE_CHECKING:
 
 
 class BaseCopy(Generic[ConnectionType]):
-    def __init__(
-        self,
-        connection: ConnectionType,
-        transformer: Transformer,
-        result: "PGresult",
-    ):
+    def __init__(self, connection: ConnectionType, transformer: Transformer):
         self.connection = connection
-        self._transformer = transformer
-        self.pgresult = result
-        self.format = result.binary_tuples
+        self.transformer = transformer
+
+        self.format = self.pgresult.binary_tuples
         self._first_row = True
         self._finished = False
         self._encoding: str = ""
@@ -44,13 +39,10 @@ class BaseCopy(Generic[ConnectionType]):
         return self._finished
 
     @property
-    def pgresult(self) -> Optional["PGresult"]:
-        return self._pgresult
-
-    @pgresult.setter
-    def pgresult(self, result: Optional["PGresult"]) -> None:
-        self._pgresult = result
-        self._transformer.pgresult = result
+    def pgresult(self) -> "PGresult":
+        pgresult = self.transformer.pgresult
+        assert pgresult, "The Transformer doesn't have a PGresult set"
+        return pgresult
 
     def _ensure_bytes(self, data: Union[bytes, str]) -> bytes:
         if isinstance(data, bytes):
@@ -77,7 +69,7 @@ class BaseCopy(Generic[ConnectionType]):
         out: List[Optional[bytes]] = []
         for item in row:
             if item is not None:
-                dumper = self._transformer.get_dumper(item, self.format)
+                dumper = self.transformer.get_dumper(item, self.format)
                 out.append(dumper.dump(item))
             else:
                 out.append(None)

@@ -565,13 +565,10 @@ class Cursor(BaseCursor["Connection"]):
             self._execute_send(statement, vars, no_pqexec=True)
             gen = execute(self.connection.pgconn)
             results = self.connection.wait(gen)
+            self._check_copy_results(results)
+            self.pgresult = results[0]  # will set it on the transformer too
 
-        self._check_copy_results(results)
-        return Copy(
-            connection=self.connection,
-            transformer=self._transformer,
-            result=results[0],
-        )
+        return Copy(connection=self.connection, transformer=self._transformer)
 
 
 class AsyncCursor(BaseCursor["AsyncConnection"]):
@@ -696,12 +693,12 @@ class AsyncCursor(BaseCursor["AsyncConnection"]):
             self._execute_send(statement, vars, no_pqexec=True)
             gen = execute(self.connection.pgconn)
             results = await self.connection.wait(gen)
+            self._check_copy_results(results)
+            self.pgresult = results[0]  # will set it on the transformer too
 
-        self._check_copy_results(results)
         return AsyncCopy(
             connection=self.connection,
             transformer=self._transformer,
-            result=results[0],
         )
 
 
