@@ -23,6 +23,7 @@ the COPY support.
     usage
     from_pg2
     connection
+    cursor
 
 
 Indices and tables

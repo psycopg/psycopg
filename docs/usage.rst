@@ -134,8 +134,19 @@ TODO: lift from psycopg2 docs
 Transaction management
 ----------------------
 
-TODO:
+TODO
 
+
+
+.. index::
+    pair: COPY; SQL command
+
+.. _copy:
+
+Using COPY TO and COPY FROM
+---------------------------
+
+TODO
 
 
 .. index:: async

@@ -1,5 +1,5 @@
-The ``Connection`` classes
-==========================
+Connection classes
+==================
 
 .. currentmodule:: psycopg3
 
@@ -12,12 +12,18 @@ usually handles a transaction automatically: other sessions will not be able
 to see the changes until you have committed them, more or less explicitly.
 Take a look to :ref:`transactions` for the details.
 
+
+The `!Connection` class
+-----------------------
+
 .. autoclass:: Connection
 
-    This class implements a DBAPI-compliant interface. It is what you want to
-    use if you write a "classic", blocking program (eventually using threads or
-    Eventlet/gevent for concurrency. If your program uses `asyncio` you might
-    want to use `AsyncConnection` instead.
+    This class implements a `DBAPI-compliant interface`__. It is what you want
+    to use if you write a "classic", blocking program (eventually using
+    threads or Eventlet/gevent for concurrency. If your program uses `asyncio`
+    you might want to use `AsyncConnection` instead.
+
+    .. __: https://www.python.org/dev/peps/pep-0249/#connection-objects
 
     Connections behave as context managers: on block exit, the current
     transaction will be committed (or rolled back, in case of exception) and
@@ -89,13 +95,16 @@ Take a look to :ref:`transactions` for the details.
     TODO: document `Diagnostic`
 
 
+The `!AsyncConnection` class
+----------------------------
+
 .. autoclass:: AsyncConnection
 
     This class implements a DBAPI-inspired interface, with all the blocking
     methods implemented as coroutines. Unless specified otherwise,
     non-blocking methods are shared with the `Connection` class.
 
-    The following methods have the same behaviour of the matching `~Connection`
+    The following methods have the same behaviour of the matching `!Connection`
     methods, but have an `async` interface.
 
     .. automethod:: connect
@@ -107,6 +116,9 @@ Take a look to :ref:`transactions` for the details.
     .. automethod:: set_client_encoding
     .. automethod:: set_autocommit
 
+
+Connection support objects
+--------------------------
 
 .. autoclass:: Notify
     :members: channel, payload, pid

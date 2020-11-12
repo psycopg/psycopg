@@ -84,7 +84,7 @@ class BaseConnection:
     TransactionStatus = pq.TransactionStatus
 
     def __init__(self, pgconn: pq.proto.PGconn):
-        self.pgconn = pgconn
+        self.pgconn = pgconn  # TODO: document this
         self.cursor_factory = cursor.BaseCursor
         self._autocommit = False
         self.dumpers: proto.DumpersMap = {}
@@ -99,7 +99,7 @@ class BaseConnection:
 
     @property
     def closed(self) -> bool:
-        """`true` if the connection is closed."""
+        """`True` if the connection is closed."""
         return self.pgconn.status == self.ConnStatus.BAD
 
     @property
@@ -254,7 +254,9 @@ class Connection(BaseConnection):
     def cursor(
         self, name: str = "", format: pq.Format = pq.Format.TEXT
     ) -> cursor.Cursor:
-        """Return a new cursor to send commands and query the connection."""
+        """
+        Return a new `Cursor` to send commands and queries to the connection.
+        """
         cur = self._cursor(name, format=format)
         return cast(cursor.Cursor, cur)
 
@@ -381,6 +383,9 @@ class AsyncConnection(BaseConnection):
     async def cursor(
         self, name: str = "", format: pq.Format = pq.Format.TEXT
     ) -> cursor.AsyncCursor:
+        """
+        Return a new `AsyncCursor` to send commands and queries to the connection.
+        """
         cur = self._cursor(name, format=format)
         return cast(cursor.AsyncCursor, cur)
 

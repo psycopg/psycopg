@@ -77,6 +77,7 @@ class Column(Sequence[Any]):
 
     @property
     def name(self) -> str:
+        """The name of the column."""
         rv = self._pgresult.fname(self._index)
         if rv:
             return rv.decode(self._encoding)
@@ -87,10 +88,12 @@ class Column(Sequence[Any]):
 
     @property
     def type_code(self) -> int:
+        """The numeric OID of the column."""
         return self._pgresult.ftype(self._index)
 
     @property
     def display_size(self) -> Optional[int]:
+        """The field size, for :sql:`varchar(n)`, None otherwise."""
         t = builtins.get(self.type_code)
         if not t:
             return None
@@ -104,11 +107,13 @@ class Column(Sequence[Any]):
 
     @property
     def internal_size(self) -> Optional[int]:
+        """The interal field size for fixed-size types, None otherwise."""
         fsize = self._pgresult.fsize(self._index)
         return fsize if fsize >= 0 else None
 
     @property
     def precision(self) -> Optional[int]:
+        """The number of digits for fixed precision types."""
         t = builtins.get(self.type_code)
         if not t:
             return None
@@ -128,6 +133,10 @@ class Column(Sequence[Any]):
 
     @property
     def scale(self) -> Optional[int]:
+        """The number of digits after the decimal point if available.
+
+        TODO: probably better than precision for datetime objects? review.
+        """
         if self.type_code == builtins["numeric"].oid:
             fmod = self._pgresult.fmod(self._index) - 4
             if fmod >= 0:
@@ -137,6 +146,7 @@ class Column(Sequence[Any]):
 
     @property
     def null_ok(self) -> Optional[bool]:
+        """Always `None`"""
         return None
 
 
@@ -165,15 +175,18 @@ class BaseCursor:
 
     @property
     def closed(self) -> bool:
+        """`True` if the cursor is closed."""
         return self._closed
 
     @property
     def status(self) -> Optional[pq.ExecStatus]:
+        # TODO: do we want this?
         res = self.pgresult
         return res.status if res else None
 
     @property
     def pgresult(self) -> Optional[pq.proto.PGresult]:
+        """The `~psycopg3.pq.PGresult` exposed by the cursor."""
         return self._pgresult
 
     @pgresult.setter
@@ -184,6 +197,11 @@ class BaseCursor:
 
     @property
     def description(self) -> Optional[List[Column]]:
+        """
+        A list of `Column` object describing the current resultset.
+
+        `None` if the current resulset didn't return tuples.
+        """
         res = self.pgresult
         if not res or res.status != self.ExecStatus.TUPLES_OK:
             return None
@@ -192,6 +210,7 @@ class BaseCursor:
 
     @property
     def rowcount(self) -> int:
+        """Number of records affected by the precedent operation."""
         return self._rowcount
 
     def setinputsizes(self, sizes: Sequence[Any]) -> None:
@@ -203,6 +222,9 @@ class BaseCursor:
         pass
 
     def nextset(self) -> Optional[bool]:
+        """
+        Move to the next result set if `execute()` returned more than one.
+        """
         self._iresult += 1
         if self._iresult < len(self._results):
             self.pgresult = self._results[self._iresult]
@@ -417,10 +439,16 @@ class Cursor(BaseCursor):
         self.close()
 
     def close(self) -> None:
+        """
+        Close the current cursor and free associated resources.
+        """
         self._closed = True
         self._reset()
 
     def execute(self, query: Query, vars: Optional[Params] = None) -> "Cursor":
+        """
+        Execute a query or command to the database.
+        """
         with self.connection.lock:
             self._start_query()
             self.connection._start_query()
@@ -433,6 +461,9 @@ class Cursor(BaseCursor):
     def executemany(
         self, query: Query, vars_seq: Sequence[Params]
     ) -> "Cursor":
+        """
+        Execute the same command with a sequence of input data.
+        """
         with self.connection.lock:
             self._start_query()
             self.connection._start_query()
@@ -462,10 +493,16 @@ class Cursor(BaseCursor):
         args: Optional[Params] = None,
         kwargs: Optional[Mapping[str, Any]] = None,
     ) -> Optional[Params]:
+        """
+        Call a stored procedure to the database.
+        """
         self.execute(self._callproc_sql(name, args))
         return args
 
     def fetchone(self) -> Optional[Sequence[Any]]:
+        """
+        Return the next record from the current recordset, `None` if not available.
+        """
         self._check_result()
         rv = self._transformer.load_row(self._pos)
         if rv is not None:
@@ -473,6 +510,11 @@ class Cursor(BaseCursor):
         return rv
 
     def fetchmany(self, size: int = 0) -> List[Sequence[Any]]:
+        """
+        Return the next *size* records from the current recordset.
+
+        *size* default to `!self.arraysize` if not specified.
+        """
         self._check_result()
         if not size:
             size = self.arraysize
@@ -492,6 +534,9 @@ class Cursor(BaseCursor):
         return rv
 
     def fetchall(self) -> List[Sequence[Any]]:
+        """
+        Return all the remaining records from the current recordset.
+        """
         return list(self)
 
     def __iter__(self) -> Iterator[Sequence[Any]]:
@@ -507,6 +552,9 @@ class Cursor(BaseCursor):
             yield row
 
     def copy(self, statement: Query, vars: Optional[Params] = None) -> Copy:
+        """
+        Initiate a :sql:`COPY` operation and return a `Copy` object to manage it.
+        """
         with self.connection.lock:
             self._start_query()
             self.connection._start_query()
@@ -641,6 +689,9 @@ class AsyncCursor(BaseCursor):
     async def copy(
         self, statement: Query, vars: Optional[Params] = None
     ) -> AsyncCopy:
+        """
+        Initiate a :sql:`COPY` operation and return an `AsyncCopy` object.
+        """
         async with self.connection.lock:
             self._start_query()
             await self.connection._start_query()
