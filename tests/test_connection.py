@@ -1,7 +1,10 @@
 import gc
+import time
+import socket
 import pytest
 import logging
 import weakref
+from threading import Thread
 
 import psycopg3
 from psycopg3 import Connection, Notify
@@ -28,6 +31,27 @@ def test_connect_str_subclass(dsn):
 def test_connect_bad():
     with pytest.raises(psycopg3.OperationalError):
         Connection.connect("dbname=nosuchdb")
+
+
+@pytest.mark.slow
+@pytest.mark.xfail
+def test_connect_timeout():
+    s = socket.socket(socket.AF_INET)
+    s.bind(("", 0))
+    port = s.getsockname()[1]
+    s.listen(0)
+
+    def closer():
+        time.sleep(1.5)
+        s.close()
+
+    Thread(target=closer).start()
+
+    t0 = time.time()
+    with pytest.raises(psycopg3.DatabaseError):
+        Connection.connect(host="localhost", port=port, connect_timeout=1)
+    elapsed = time.time() - t0
+    assert elapsed == pytest.approx(1.0, abs=0.05)
 
 
 def test_close(conn):

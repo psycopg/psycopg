@@ -1,5 +1,8 @@
 import gc
+import time
+import socket
 import pytest
+import asyncio
 import logging
 import weakref
 
@@ -18,7 +21,6 @@ async def test_connect(dsn):
     assert conn.pgconn.status == conn.ConnStatus.OK
 
 
-@pytest.mark.asyncio
 async def test_connect_bad():
     with pytest.raises(psycopg3.OperationalError):
         await AsyncConnection.connect("dbname=nosuchdb")
@@ -31,6 +33,32 @@ async def test_connect_str_subclass(dsn):
     conn = await AsyncConnection.connect(MyString(dsn))
     assert not conn.closed
     assert conn.pgconn.status == conn.ConnStatus.OK
+
+
+@pytest.mark.slow
+@pytest.mark.xfail
+async def test_connect_timeout():
+    s = socket.socket(socket.AF_INET)
+    s.bind(("", 0))
+    port = s.getsockname()[1]
+    s.listen(0)
+
+    async def closer():
+        await asyncio.sleep(1.5)
+        s.close()
+
+    async def connect():
+        t0 = time.time()
+        with pytest.raises(psycopg3.DatabaseError):
+            await AsyncConnection.connect(
+                host="localhost", port=port, connect_timeout=1
+            )
+        nonlocal elapsed
+        elapsed = time.time() - t0
+
+    elapsed = 0
+    await asyncio.wait([closer(), connect()])
+    assert elapsed == pytest.approx(1.0, abs=0.05)
 
 
 async def test_close(aconn):
