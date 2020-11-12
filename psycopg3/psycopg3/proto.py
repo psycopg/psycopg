@@ -21,6 +21,7 @@ if TYPE_CHECKING:
 
 Query = Union[str, bytes, "Composable"]
 Params = Union[Sequence[Any], Mapping[str, Any]]
+ConnectionType = TypeVar("ConnectionType", bound="BaseConnection")
 
 
 # Waiting protocol types

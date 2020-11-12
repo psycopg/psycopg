@@ -4,7 +4,7 @@ types stub for ctypes functions
 
 # Copyright (C) 2020 The Psycopg Team
 
-from typing import Any, Callable, Optional, Sequence, NewType
+from typing import Any, Callable, Optional, Sequence
 from ctypes import Array, pointer
 from ctypes import c_char, c_char_p, c_int, c_ubyte, c_uint, c_ulong
 

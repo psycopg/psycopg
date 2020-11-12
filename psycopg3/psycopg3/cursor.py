@@ -5,23 +5,32 @@ psycopg3 cursor objects
 # Copyright (C) 2020 The Psycopg Team
 
 from types import TracebackType
-from typing import Any, AsyncIterator, Callable, Iterator, List, Mapping
+from typing import (
+    Any,
+    AsyncIterator,
+    Callable,
+    Generic,
+    Iterator,
+    List,
+    Mapping,
+)
 from typing import Optional, Sequence, Type, TYPE_CHECKING, Union
 from operator import attrgetter
 
 from . import errors as e
 from . import pq
 from . import sql
-from . import proto
 from .oids import builtins
 from .copy import Copy, AsyncCopy
-from .proto import Query, Params, DumpersMap, LoadersMap, PQGen
+from .proto import ConnectionType, Query, Params, DumpersMap, LoadersMap, PQGen
 from .utils.queries import PostgresQuery
 
 if TYPE_CHECKING:
-    from .connection import BaseConnection, Connection, AsyncConnection
+    from .proto import Transformer
+    from .pq.proto import PGconn, PGresult
+    from .connection import Connection, AsyncConnection  # noqa: F401
 
-execute: Callable[[pq.proto.PGconn], PQGen[List[pq.proto.PGresult]]]
+execute: Callable[["PGconn"], PQGen[List["PGresult"]]]
 
 if pq.__impl__ == "c":
     from psycopg3_c import _psycopg3
@@ -35,7 +44,7 @@ else:
 
 
 class Column(Sequence[Any]):
-    def __init__(self, pgresult: pq.proto.PGresult, index: int, encoding: str):
+    def __init__(self, pgresult: "PGresult", index: int, encoding: str):
         self._pgresult = pgresult
         self._index = index
         self._encoding = encoding
@@ -150,13 +159,15 @@ class Column(Sequence[Any]):
         return None
 
 
-class BaseCursor:
+class BaseCursor(Generic[ConnectionType]):
     ExecStatus = pq.ExecStatus
 
-    _transformer: proto.Transformer
+    _transformer: "Transformer"
 
     def __init__(
-        self, connection: "BaseConnection", format: pq.Format = pq.Format.TEXT
+        self,
+        connection: ConnectionType,
+        format: pq.Format = pq.Format.TEXT,
     ):
         self.connection = connection
         self.format = format
@@ -167,7 +178,7 @@ class BaseCursor:
         self._closed = False
 
     def _reset(self) -> None:
-        self._results: List[pq.proto.PGresult] = []
+        self._results: List["PGresult"] = []
         self.pgresult = None
         self._pos = 0
         self._iresult = 0
@@ -185,12 +196,12 @@ class BaseCursor:
         return res.status if res else None
 
     @property
-    def pgresult(self) -> Optional[pq.proto.PGresult]:
+    def pgresult(self) -> Optional["PGresult"]:
         """The `~psycopg3.pq.PGresult` exposed by the cursor."""
         return self._pgresult
 
     @pgresult.setter
-    def pgresult(self, result: Optional[pq.proto.PGresult]) -> None:
+    def pgresult(self, result: Optional["PGresult"]) -> None:
         self._pgresult = result
         if result and self._transformer:
             self._transformer.pgresult = result
@@ -236,7 +247,7 @@ class BaseCursor:
             return None
 
     def _start_query(self) -> None:
-        from .adapt import Transformer
+        from . import adapt
 
         if self.closed:
             raise e.InterfaceError("the cursor is closed")
@@ -251,7 +262,7 @@ class BaseCursor:
             )
 
         self._reset()
-        self._transformer = Transformer(self)
+        self._transformer = adapt.Transformer(self)
 
     def _execute_send(
         self, query: Query, vars: Optional[Params], no_pqexec: bool = False
@@ -275,7 +286,7 @@ class BaseCursor:
             # one query in one go
             self.connection.pgconn.send_query(pgq.query)
 
-    def _execute_results(self, results: Sequence[pq.proto.PGresult]) -> None:
+    def _execute_results(self, results: Sequence["PGresult"]) -> None:
         """
         Implement part of execute() after waiting common to sync and async
         """
@@ -393,9 +404,7 @@ class BaseCursor:
         qparts.append(sql.SQL(")"))
         return sql.Composed(qparts)
 
-    def _check_copy_results(
-        self, results: Sequence[pq.proto.PGresult]
-    ) -> None:
+    def _check_copy_results(self, results: Sequence["PGresult"]) -> None:
         """
         Check that the value returned in a copy() operation is a legit COPY.
         """
@@ -419,14 +428,7 @@ class BaseCursor:
             )
 
 
-class Cursor(BaseCursor):
-    connection: "Connection"
-
-    def __init__(
-        self, connection: "Connection", format: pq.Format = pq.Format.TEXT
-    ):
-        super().__init__(connection, format=format)
-
+class Cursor(BaseCursor["Connection"]):
     def __enter__(self) -> "Cursor":
         return self
 
@@ -563,22 +565,16 @@ class Cursor(BaseCursor):
             self._execute_send(statement, vars, no_pqexec=True)
             gen = execute(self.connection.pgconn)
             results = self.connection.wait(gen)
-            tx = self._transformer
 
         self._check_copy_results(results)
         return Copy(
-            context=tx, result=results[0], format=results[0].binary_tuples
+            connection=self.connection,
+            transformer=self._transformer,
+            result=results[0],
         )
 
 
-class AsyncCursor(BaseCursor):
-    connection: "AsyncConnection"
-
-    def __init__(
-        self, connection: "AsyncConnection", format: pq.Format = pq.Format.TEXT
-    ):
-        super().__init__(connection, format=format)
-
+class AsyncCursor(BaseCursor["AsyncConnection"]):
     async def __aenter__(self) -> "AsyncCursor":
         return self
 
@@ -700,11 +696,12 @@ class AsyncCursor(BaseCursor):
             self._execute_send(statement, vars, no_pqexec=True)
             gen = execute(self.connection.pgconn)
             results = await self.connection.wait(gen)
-            tx = self._transformer
 
         self._check_copy_results(results)
         return AsyncCopy(
-            context=tx, result=results[0], format=results[0].binary_tuples
+            connection=self.connection,
+            transformer=self._transformer,
+            result=results[0],
         )
 
 

@@ -6,36 +6,35 @@ psycopg3 copy support
 
 import re
 import struct
-from typing import TYPE_CHECKING, AsyncIterator, Iterator
+from typing import TYPE_CHECKING, AsyncIterator, Iterator, Generic
 from typing import Any, Dict, List, Match, Optional, Sequence, Type, Union
 from types import TracebackType
 
-from . import pq
-from .proto import AdaptContext
+from .pq import Format
+from .proto import ConnectionType, Transformer
 from .generators import copy_from, copy_to, copy_end
 
 if TYPE_CHECKING:
-    from .connection import BaseConnection, Connection, AsyncConnection
+    from .pq.proto import PGresult
+    from .connection import Connection, AsyncConnection  # noqa: F401
 
 
-class BaseCopy:
+class BaseCopy(Generic[ConnectionType]):
     def __init__(
         self,
-        context: AdaptContext,
-        result: Optional[pq.proto.PGresult],
-        format: pq.Format = pq.Format.TEXT,
+        connection: ConnectionType,
+        transformer: Transformer,
+        result: "PGresult",
     ):
-        from .adapt import Transformer
-
-        self._connection: Optional["BaseConnection"] = None
-        self._transformer = Transformer(context)
-        self.format = format
+        self.connection = connection
+        self._transformer = transformer
         self.pgresult = result
+        self.format = result.binary_tuples
         self._first_row = True
         self._finished = False
         self._encoding: str = ""
 
-        if format == pq.Format.TEXT:
+        if self.format == Format.TEXT:
             self._format_row = self._format_row_text
         else:
             self._format_row = self._format_row_binary
@@ -45,22 +44,11 @@ class BaseCopy:
         return self._finished
 
     @property
-    def connection(self) -> "BaseConnection":
-        if self._connection:
-            return self._connection
-
-        self._connection = conn = self._transformer.connection
-        if conn:
-            return conn
-
-        raise ValueError("no connection available")
-
-    @property
-    def pgresult(self) -> Optional[pq.proto.PGresult]:
+    def pgresult(self) -> Optional["PGresult"]:
         return self._pgresult
 
     @pgresult.setter
-    def pgresult(self, result: Optional[pq.proto.PGresult]) -> None:
+    def pgresult(self, result: Optional["PGresult"]) -> None:
         self._pgresult = result
         self._transformer.pgresult = result
 
@@ -74,7 +62,7 @@ class BaseCopy:
 
             if (
                 self.pgresult is None
-                or self.pgresult.binary_tuples == pq.Format.BINARY
+                or self.pgresult.binary_tuples == Format.BINARY
             ):
                 raise TypeError(
                     "cannot copy str data in binary mode: use bytes instead"
@@ -151,15 +139,7 @@ def _bsrepl_sub(
 _bsrepl_re = re.compile(b"[\b\t\n\v\f\r\\\\]")
 
 
-class Copy(BaseCopy):
-    _connection: Optional["Connection"]
-
-    @property
-    def connection(self) -> "Connection":
-        # TODO: mypy error: "Callable[[BaseCopy], BaseConnection]" has no
-        # attribute "fget"
-        return BaseCopy.connection.fget(self)  # type: ignore
-
+class Copy(BaseCopy["Connection"]):
     def read(self) -> Optional[bytes]:
         if self._finished:
             return None
@@ -195,7 +175,7 @@ class Copy(BaseCopy):
         exc_tb: Optional[TracebackType],
     ) -> None:
         if exc_val is None:
-            if self.format == pq.Format.BINARY and not self._first_row:
+            if self.format == Format.BINARY and not self._first_row:
                 # send EOF only if we copied binary rows (_first_row is False)
                 self.write(b"\xff\xff")
             self.finish()
@@ -210,13 +190,7 @@ class Copy(BaseCopy):
             yield data
 
 
-class AsyncCopy(BaseCopy):
-    _connection: Optional["AsyncConnection"]
-
-    @property
-    def connection(self) -> "AsyncConnection":
-        return BaseCopy.connection.fget(self)  # type: ignore
-
+class AsyncCopy(BaseCopy["AsyncConnection"]):
     async def read(self) -> Optional[bytes]:
         if self._finished:
             return None
@@ -252,7 +226,7 @@ class AsyncCopy(BaseCopy):
         exc_tb: Optional[TracebackType],
     ) -> None:
         if exc_val is None:
-            if self.format == pq.Format.BINARY and not self._first_row:
+            if self.format == Format.BINARY and not self._first_row:
                 # send EOF only if we copied binary rows (_first_row is False)
                 await self.write(b"\xff\xff")
             await self.finish()

@@ -9,16 +9,16 @@ import asyncio
 import threading
 from types import TracebackType
 from typing import Any, AsyncIterator, Callable, Iterator, List, NamedTuple
-from typing import Optional, Type, cast
+from typing import Optional, Type, TYPE_CHECKING, Union
 from weakref import ref, ReferenceType
 from functools import partial
 
 from . import pq
-from . import proto
 from . import cursor
 from . import errors as e
 from . import encodings
 from .pq import TransactionStatus, ExecStatus
+from .proto import DumpersMap, LoadersMap, PQGen, RV
 from .waiting import wait, wait_async
 from .conninfo import make_conninfo
 from .generators import notifies
@@ -26,8 +26,12 @@ from .generators import notifies
 logger = logging.getLogger(__name__)
 package_logger = logging.getLogger("psycopg3")
 
-connect: Callable[[str], proto.PQGen[pq.proto.PGconn]]
-execute: Callable[[pq.proto.PGconn], proto.PQGen[List[pq.proto.PGresult]]]
+connect: Callable[[str], PQGen["PGconn"]]
+execute: Callable[["PGconn"], PQGen[List["PGresult"]]]
+
+if TYPE_CHECKING:
+    from .pq.proto import PGconn, PGresult
+    from .cursor import Cursor, AsyncCursor
 
 if pq.__impl__ == "c":
     from psycopg3_c import _psycopg3
@@ -83,12 +87,13 @@ class BaseConnection:
     ConnStatus = pq.ConnStatus
     TransactionStatus = pq.TransactionStatus
 
-    def __init__(self, pgconn: pq.proto.PGconn):
+    cursor_factory: Union[Type["Cursor"], Type["AsyncCursor"]]
+
+    def __init__(self, pgconn: "PGconn"):
         self.pgconn = pgconn  # TODO: document this
-        self.cursor_factory = cursor.BaseCursor
         self._autocommit = False
-        self.dumpers: proto.DumpersMap = {}
-        self.loaders: proto.LoadersMap = {}
+        self.dumpers: DumpersMap = {}
+        self.loaders: LoadersMap = {}
         self._notice_handlers: List[NoticeHandler] = []
         self._notify_handlers: List[NotifyHandler] = []
 
@@ -122,13 +127,6 @@ class BaseConnection:
             )
         self._autocommit = value
 
-    def _cursor(
-        self, name: str = "", format: pq.Format = pq.Format.TEXT
-    ) -> cursor.BaseCursor:
-        if name:
-            raise NotImplementedError
-        return self.cursor_factory(self, format=format)
-
     @property
     def client_encoding(self) -> str:
         """The Python codec name of the connection's client encoding."""
@@ -161,7 +159,7 @@ class BaseConnection:
 
     @staticmethod
     def _notice_handler(
-        wself: "ReferenceType[BaseConnection]", res: pq.proto.PGresult
+        wself: "ReferenceType[BaseConnection]", res: "PGresult"
     ) -> None:
         self = wself()
         if not (self and self._notice_handler):
@@ -209,7 +207,7 @@ class Connection(BaseConnection):
 
     cursor_factory: Type[cursor.Cursor]
 
-    def __init__(self, pgconn: pq.proto.PGconn):
+    def __init__(self, pgconn: "PGconn"):
         super().__init__(pgconn)
         self.lock = threading.Lock()
         self.cursor_factory = cursor.Cursor
@@ -257,8 +255,10 @@ class Connection(BaseConnection):
         """
         Return a new `Cursor` to send commands and queries to the connection.
         """
-        cur = self._cursor(name, format=format)
-        return cast(cursor.Cursor, cur)
+        if name:
+            raise NotImplementedError
+
+        return self.cursor_factory(self, format=format)
 
     def _start_query(self) -> None:
         # the function is meant to be called by a cursor once the lock is taken
@@ -301,9 +301,7 @@ class Connection(BaseConnection):
             )
 
     @classmethod
-    def wait(
-        cls, gen: proto.PQGen[proto.RV], timeout: Optional[float] = 0.1
-    ) -> proto.RV:
+    def wait(cls, gen: PQGen[RV], timeout: Optional[float] = 0.1) -> RV:
         return wait(gen, timeout=timeout)
 
     def _set_client_encoding(self, name: str) -> None:
@@ -345,7 +343,7 @@ class AsyncConnection(BaseConnection):
 
     cursor_factory: Type[cursor.AsyncCursor]
 
-    def __init__(self, pgconn: pq.proto.PGconn):
+    def __init__(self, pgconn: "PGconn"):
         super().__init__(pgconn)
         self.lock = asyncio.Lock()
         self.cursor_factory = cursor.AsyncCursor
@@ -386,8 +384,10 @@ class AsyncConnection(BaseConnection):
         """
         Return a new `AsyncCursor` to send commands and queries to the connection.
         """
-        cur = self._cursor(name, format=format)
-        return cast(cursor.AsyncCursor, cur)
+        if name:
+            raise NotImplementedError
+
+        return self.cursor_factory(self, format=format)
 
     async def _start_query(self) -> None:
         # the function is meant to be called by a cursor once the lock is taken
@@ -428,7 +428,7 @@ class AsyncConnection(BaseConnection):
             )
 
     @classmethod
-    async def wait(cls, gen: proto.PQGen[proto.RV]) -> proto.RV:
+    async def wait(cls, gen: PQGen[RV]) -> RV:
         return await wait_async(gen)
 
     def _set_client_encoding(self, name: str) -> None:

@@ -4,7 +4,7 @@ Entry point into the adaptation system.
 
 # Copyright (C) 2020 The Psycopg Team
 
-from typing import Any, Callable, Optional, Type, Union
+from typing import Any, cast, Callable, Optional, Type, Union
 
 from . import pq
 from . import proto
@@ -139,7 +139,7 @@ def _connection_from_context(
     elif isinstance(context, BaseConnection):
         return context
     elif isinstance(context, BaseCursor):
-        return context.connection
+        return cast(BaseConnection, context.connection)
     elif isinstance(context, Transformer):
         return context.connection
     else:
