@@ -14,7 +14,8 @@ pytestmark = pytest.mark.asyncio
 
 async def test_connect(dsn):
     conn = await AsyncConnection.connect(dsn)
-    assert conn.status == conn.ConnStatus.OK
+    assert not conn.closed
+    assert conn.pgconn.status == conn.ConnStatus.OK
 
 
 @pytest.mark.asyncio
@@ -28,20 +29,21 @@ async def test_connect_str_subclass(dsn):
         pass
 
     conn = await AsyncConnection.connect(MyString(dsn))
-    assert conn.status == conn.ConnStatus.OK
+    assert not conn.closed
+    assert conn.pgconn.status == conn.ConnStatus.OK
 
 
 async def test_close(aconn):
     assert not aconn.closed
     await aconn.close()
     assert aconn.closed
-    assert aconn.status == aconn.ConnStatus.BAD
+    assert aconn.pgconn.status == aconn.ConnStatus.BAD
 
     cur = await aconn.cursor()
 
     await aconn.close()
     assert aconn.closed
-    assert aconn.status == aconn.ConnStatus.BAD
+    assert aconn.pgconn.status == aconn.ConnStatus.BAD
 
     with pytest.raises(psycopg3.InterfaceError):
         await cur.execute("select 1")

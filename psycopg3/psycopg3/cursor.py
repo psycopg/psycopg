@@ -222,10 +222,10 @@ class BaseCursor:
         if self.connection.closed:
             raise e.InterfaceError("the connection is closed")
 
-        if self.connection.status != self.connection.ConnStatus.OK:
+        if self.connection.pgconn.status != self.connection.ConnStatus.OK:
             raise e.InterfaceError(
                 f"cannot execute operations: the connection is"
-                f" in status {self.connection.status}"
+                f" in status {self.connection.pgconn.status}"
             )
 
         self._reset()

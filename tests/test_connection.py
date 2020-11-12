@@ -12,7 +12,8 @@ from psycopg3.conninfo import conninfo_to_dict
 
 def test_connect(dsn):
     conn = Connection.connect(dsn)
-    assert conn.status == conn.ConnStatus.OK
+    assert not conn.closed
+    assert conn.pgconn.status == conn.ConnStatus.OK
 
 
 def test_connect_str_subclass(dsn):
@@ -20,7 +21,8 @@ def test_connect_str_subclass(dsn):
         pass
 
     conn = Connection.connect(MyString(dsn))
-    assert conn.status == conn.ConnStatus.OK
+    assert not conn.closed
+    assert conn.pgconn.status == conn.ConnStatus.OK
 
 
 def test_connect_bad():
@@ -32,13 +34,13 @@ def test_close(conn):
     assert not conn.closed
     conn.close()
     assert conn.closed
-    assert conn.status == conn.ConnStatus.BAD
+    assert conn.pgconn.status == conn.ConnStatus.BAD
 
     cur = conn.cursor()
 
     conn.close()
     assert conn.closed
-    assert conn.status == conn.ConnStatus.BAD
+    assert conn.pgconn.status == conn.ConnStatus.BAD
 
     with pytest.raises(psycopg3.InterfaceError):
         cur.execute("select 1")

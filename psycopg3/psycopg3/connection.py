@@ -95,11 +95,7 @@ class BaseConnection:
     @property
     def closed(self) -> bool:
         """`true` if the connection is closed."""
-        return self.status == self.ConnStatus.BAD
-
-    @property
-    def status(self) -> pq.ConnStatus:
-        return self.pgconn.status
+        return self.pgconn.status == self.ConnStatus.BAD
 
     @property
     def autocommit(self) -> bool:
