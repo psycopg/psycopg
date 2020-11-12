@@ -15,10 +15,12 @@ help:
 
 .PHONY: help env Makefile
 
-env: requirements.txt
-	virtualenv -p $(PYTHON) env
-	./env/bin/pip install -e ../psycopg3
-	./env/bin/pip install -r requirements.txt
+env: .venv
+
+.venv: requirements.txt
+	virtualenv -p $(PYTHON) .venv
+	./.venv/bin/pip install -e ../psycopg3
+	./.venv/bin/pip install -r requirements.txt
 
 # Catch-all target: route all unknown targets to Sphinx using the new
 # "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).
