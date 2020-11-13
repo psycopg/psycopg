@@ -132,7 +132,13 @@ _bsrepl_re = re.compile(b"[\b\t\n\v\f\r\\\\]")
 
 
 class Copy(BaseCopy["Connection"]):
+    """Manage a :sql:`COPY` operation."""
+
     def read(self) -> Optional[bytes]:
+        """Read a row after a :sql:`COPY TO` operation.
+
+        Return `None` when the data is finished.
+        """
         if self._finished:
             return None
 
@@ -144,14 +150,17 @@ class Copy(BaseCopy["Connection"]):
         return rv
 
     def write(self, buffer: Union[str, bytes]) -> None:
+        """Write a block of data after a :sql:`COPY FROM` operation."""
         conn = self.connection
         conn.wait(copy_to(conn.pgconn, self._ensure_bytes(buffer)))
 
     def write_row(self, row: Sequence[Any]) -> None:
+        """Write a record after a :sql:`COPY FROM` operation."""
         data = self.format_row(row)
         self.write(data)
 
     def finish(self, error: str = "") -> None:
+        """Terminate a :sql:`COPY FROM` operation."""
         conn = self.connection
         berr = error.encode(conn.client_encoding, "replace") if error else None
         conn.wait(copy_end(conn.pgconn, berr))
@@ -170,13 +179,15 @@ class Copy(BaseCopy["Connection"]):
         if self.pgresult.status == ExecStatus.COPY_OUT:
             return
 
-        if exc_val is None:
+        if not exc_type:
             if self.format == Format.BINARY and not self._first_row:
                 # send EOF only if we copied binary rows (_first_row is False)
                 self.write(b"\xff\xff")
             self.finish()
         else:
-            self.finish(str(exc_val) or type(exc_val).__qualname__)
+            self.finish(
+                f"error from Python: {exc_type.__qualname__} - {exc_val}"
+            )
 
     def __iter__(self) -> Iterator[bytes]:
         while 1:
@@ -187,6 +198,8 @@ class Copy(BaseCopy["Connection"]):
 
 
 class AsyncCopy(BaseCopy["AsyncConnection"]):
+    """Manage an asynchronous :sql:`COPY` operation."""
+
     async def read(self) -> Optional[bytes]:
         if self._finished:
             return None
@@ -225,13 +238,15 @@ class AsyncCopy(BaseCopy["AsyncConnection"]):
         if self.pgresult.status == ExecStatus.COPY_OUT:
             return
 
-        if exc_val is None:
+        if not exc_type:
             if self.format == Format.BINARY and not self._first_row:
                 # send EOF only if we copied binary rows (_first_row is False)
                 await self.write(b"\xff\xff")
             await self.finish()
         else:
-            await self.finish(str(exc_val))
+            await self.finish(
+                f"error from Python: {exc_type.__qualname__} - {exc_val}"
+            )
 
     async def __aiter__(self) -> AsyncIterator[bytes]:
         while 1:

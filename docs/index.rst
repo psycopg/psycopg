@@ -21,9 +21,10 @@ the COPY support.
 
     install
     usage
-    from_pg2
+    adaptation
     connection
     cursor
+    from_pg2
 
 
 Indices and tables

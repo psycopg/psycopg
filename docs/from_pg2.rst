@@ -34,6 +34,17 @@ PostgreSQL will also reject the execution of several queries at once
 you should use distinct `execute()` calls; otherwise you may consider merging
 the query client-side, using `psycopg3.sql` module.
 
+Certain commands cannot be used with server-side binding, for instance
+:sql:`SET` or :sql:`NOTIFY`::
+
+    >>> cur.execute("SET timezone TO %s", ["utc"])
+    ...
+    psycopg3.errors.SyntaxError: syntax error at or near "$1"
+
+Sometimes PostgreSQL offers an alternative (e.g. :sql:`SELECT set_config()`,
+:sql:`SELECT pg_notify()`). If no alternative exist you can use `psycopg3.sql`
+to compose the query client-side.
+
 
 Different adaptation system
 ---------------------------
@@ -43,7 +54,7 @@ server-side parameters adaptation, but also to consider performance,
 flexibility, ease of customization.
 
 Builtin data types should work as expected; if you have wrapped a custom data
-type you should check the `<ref> Adaptation` topic.
+type you should check the :ref:`Adaptation` topic.
 
 
 Other differences

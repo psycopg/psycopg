@@ -128,13 +128,35 @@ Cursor support objects
 
 .. autoclass:: Copy
 
+    The object is normally returned by `Cursor.copy()`. It can be used as a
+    context manager (useful to load data into a database using :sql:`COPY FROM`)
+    and can be iterated (useful to read data after a :sql:`COPY TO`).
+
+    See :ref:`copy` for details.
+
     .. automethod:: read
+
+        Alternatively, you can iterate on the `Copy` object to read its data
+        row by row.
+
     .. automethod:: write
     .. automethod:: write_row
+
+        The data in the tuple will be converted as configured on the cursor;
+        see :ref:`adaptation` for details.
+
     .. automethod:: finish
+
+        If an *error* is specified, the :sql:`COPY` operation is cancelled.
+
+        The method is called automatically at the end of a `!with` block.
 
 
 .. autoclass:: AsyncCopy
+
+    The object is normally returned by `AsyncCursor.copy()`. Its methods are
+    the same of the `Copy` object but offering an `asyncio` interface
+    (`await`, `async for`, `async with`).
 
     .. automethod:: read
     .. automethod:: write
