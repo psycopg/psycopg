@@ -115,7 +115,7 @@ script:
 
 deploy:
   - provider: script
-    script: bash scripts/travis_update_docs.sh
+    script: bash tools/travis_update_docs.sh
     on:
       branch: master
       condition: "$BUILD_DOCS = 1"

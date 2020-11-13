@@ -211,7 +211,7 @@ class BaseCursor(Generic[ConnectionType]):
         """
         A list of `Column` object describing the current resultset.
 
-        `None` if the current resulset didn't return tuples.
+        `!None` if the current resultset didn't return tuples.
         """
         res = self.pgresult
         if not res or res.status != self.ExecStatus.TUPLES_OK:
@@ -235,6 +235,9 @@ class BaseCursor(Generic[ConnectionType]):
     def nextset(self) -> Optional[bool]:
         """
         Move to the next result set if `execute()` returned more than one.
+
+        Return `!True` if a new result is available, which will be the one
+        methods `!fetch*()` will operate on.
         """
         self._iresult += 1
         if self._iresult < len(self._results):
