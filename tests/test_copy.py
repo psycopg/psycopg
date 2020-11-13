@@ -45,6 +45,23 @@ def test_copy_out_iter(conn, format):
     assert list(copy) == want
 
 
+@pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
+def test_copy_out_context(conn, format):
+    cur = conn.cursor()
+    out = []
+    with cur.copy(
+        f"copy ({sample_values}) to stdout (format {format.name})"
+    ) as copy:
+        for row in copy:
+            out.append(row)
+
+    if format == pq.Format.TEXT:
+        want = [row + b"\n" for row in sample_text.splitlines()]
+    else:
+        want = sample_binary_rows
+    assert out == want
+
+
 @pytest.mark.parametrize(
     "format, buffer",
     [(Format.TEXT, "sample_text"), (Format.BINARY, "sample_binary")],

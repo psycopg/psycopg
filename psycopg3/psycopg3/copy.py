@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, AsyncIterator, Iterator, Generic
 from typing import Any, Dict, List, Match, Optional, Sequence, Type, Union
 from types import TracebackType
 
-from .pq import Format
+from .pq import Format, ExecStatus
 from .proto import ConnectionType, Transformer
 from .generators import copy_from, copy_to, copy_end
 
@@ -166,6 +166,10 @@ class Copy(BaseCopy["Connection"]):
         exc_val: Optional[BaseException],
         exc_tb: Optional[TracebackType],
     ) -> None:
+        # no-op in COPY TO
+        if self.pgresult.status == ExecStatus.COPY_OUT:
+            return
+
         if exc_val is None:
             if self.format == Format.BINARY and not self._first_row:
                 # send EOF only if we copied binary rows (_first_row is False)
@@ -217,6 +221,10 @@ class AsyncCopy(BaseCopy["AsyncConnection"]):
         exc_val: Optional[BaseException],
         exc_tb: Optional[TracebackType],
     ) -> None:
+        # no-op in COPY TO
+        if self.pgresult.status == ExecStatus.COPY_OUT:
+            return
+
         if exc_val is None:
             if self.format == Format.BINARY and not self._first_row:
                 # send EOF only if we copied binary rows (_first_row is False)
