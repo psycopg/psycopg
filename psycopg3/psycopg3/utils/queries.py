@@ -75,26 +75,18 @@ class PostgresQuery:
             params = _validate_and_reorder_params(
                 self._parts, vars, self._order
             )
-            self.params = []
             assert self.formats is not None
-
-            if self.types is None:
-                self.types = []
-                for i, param in enumerate(params):
-                    if param is not None:
-                        dumper = self._tx.get_dumper(param, self.formats[i])
-                        self.params.append(dumper.dump(param))
-                        self.types.append(dumper.oid)
-                    else:
-                        self.params.append(None)
-                        self.types.append(UNKNOWN_OID)
-            else:
-                for i, param in enumerate(params):
-                    if param is not None:
-                        dumper = self._tx.get_dumper(param, self.formats[i])
-                        self.params.append(dumper.dump(param))
-                    else:
-                        self.params.append(None)
+            ps = self.params = []
+            ts = self.types = []
+            for i in range(len(params)):
+                param = params[i]
+                if param is not None:
+                    dumper = self._tx.get_dumper(param, self.formats[i])
+                    ps.append(dumper.dump(param))
+                    ts.append(dumper.oid)
+                else:
+                    ps.append(None)
+                    ts.append(UNKNOWN_OID)
         else:
             self.params = self.types = None
 
