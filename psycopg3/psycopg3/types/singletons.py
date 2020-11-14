@@ -4,8 +4,6 @@ Adapters for None and boolean.
 
 # Copyright (C) 2020 The Psycopg Team
 
-from typing import Dict
-
 from ..oids import builtins
 from ..adapt import Dumper, Loader
 
@@ -25,7 +23,7 @@ class BoolDumper(Dumper):
 
 
 @Dumper.binary(bool)
-class BinaryBoolDumper(Dumper):
+class BoolBinaryDumper(Dumper):
 
     oid = BOOL_OID
 
@@ -46,19 +44,11 @@ class NoneDumper(Dumper):
 
 @Loader.text(builtins["bool"].oid)
 class BoolLoader(Loader):
-    def load(
-        self,
-        data: bytes,
-        __values: Dict[bytes, bool] = {b"t": True, b"f": False},
-    ) -> bool:
-        return __values[data]
+    def load(self, data: bytes) -> bool:
+        return data == b"t"
 
 
 @Loader.binary(builtins["bool"].oid)
-class BinaryBoolLoader(Loader):
-    def load(
-        self,
-        data: bytes,
-        __values: Dict[bytes, bool] = {b"\x01": True, b"\x00": False},
-    ) -> bool:
-        return __values[data]
+class BoolBinaryLoader(Loader):
+    def load(self, data: bytes) -> bool:
+        return data != b"\x00"
