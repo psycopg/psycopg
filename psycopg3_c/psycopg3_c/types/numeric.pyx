@@ -9,7 +9,11 @@ from psycopg3_c.endian cimport be16toh, be32toh, be64toh
 
 from cpython.long cimport PyLong_FromString, PyLong_FromLong
 from cpython.long cimport PyLong_FromLongLong, PyLong_FromUnsignedLong
-from cpython.float cimport PyFloat_FromString, PyFloat_FromDouble
+from cpython.float cimport PyFloat_FromDouble
+
+# work around https://github.com/cython/cython/issues/3909
+cdef extern from "Python.h":
+    object PyFloat_FromString(object)
 
 
 cdef class IntLoader(CLoader):
@@ -39,10 +43,8 @@ cdef class OidBinaryLoader(CLoader):
 
 cdef class FloatLoader(CLoader):
     cdef object cload(self, const char *data, size_t length):
-        # TODO: change after https://github.com/cython/cython/issues/3909 fixed
-        # cdef bytes b = data
-        # return PyFloat_FromString(b)
-        return float(data)
+        cdef bytes b = data
+        return PyFloat_FromString(b)
 
 
 cdef class Float4BinaryLoader(CLoader):
