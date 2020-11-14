@@ -11,14 +11,15 @@ from typing import Sequence, Tuple, Union, TYPE_CHECKING
 
 from .. import errors as e
 from ..pq import Format
-from ..proto import Query, Params
 from ..sql import Composable
+from ..oids import builtins
+from ..proto import Query, Params
 
 if TYPE_CHECKING:
     from ..proto import Transformer
 
-TEXT_OID = 25  # TODO: builtins["text"].oid
-UNKNOWN_OID = 705  # TODO: builtins["unknown"].oid
+TEXT_OID = builtins["text"].oid
+UNKNOWN_OID = builtins["unknown"].oid
 
 
 class QueryPart(NamedTuple):
