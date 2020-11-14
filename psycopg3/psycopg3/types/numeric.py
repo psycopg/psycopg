@@ -12,6 +12,7 @@ from ..oids import builtins
 from ..adapt import Dumper, Loader
 
 _PackInt = Callable[[int], bytes]
+_PackFloat = Callable[[float], bytes]
 _UnpackInt = Callable[[bytes], Tuple[int]]
 _UnpackFloat = Callable[[bytes], Tuple[float]]
 
@@ -19,6 +20,7 @@ _pack_int2 = cast(_PackInt, struct.Struct("!h").pack)
 _pack_int4 = cast(_PackInt, struct.Struct("!i").pack)
 _pack_uint4 = cast(_PackInt, struct.Struct("!I").pack)
 _pack_int8 = cast(_PackInt, struct.Struct("!q").pack)
+_pack_float8 = cast(_PackFloat, struct.Struct("!d").pack)
 _unpack_int2 = cast(_UnpackInt, struct.Struct("!h").unpack)
 _unpack_int4 = cast(_UnpackInt, struct.Struct("!i").unpack)
 _unpack_uint4 = cast(_UnpackInt, struct.Struct("!I").unpack)
@@ -66,18 +68,22 @@ class NumberDumper(Dumper):
         if value in self._special:
             return self._special[value]
 
-        return b" " + value if value.startswith(b"-") else value
+        return value if obj >= 0 else b" " + value
 
 
 @Dumper.text(int)
 class IntDumper(NumberDumper):
-    # We don't know the size of it, so we have to return a type big enough
-    oid = builtins["numeric"].oid
+    oid = builtins["int8"].oid
+
+
+@Dumper.binary(int)
+class IntBinaryDumper(IntDumper):
+    def dump(self, obj: int) -> bytes:
+        return _pack_int8(obj)
 
 
 @Dumper.text(float)
 class FloatDumper(NumberDumper):
-
     oid = builtins["float8"].oid
 
     _special = {
@@ -87,9 +93,14 @@ class FloatDumper(NumberDumper):
     }
 
 
+@Dumper.binary(float)
+class FloatBinaryDumper(NumberDumper):
+    def dump(self, obj: float) -> bytes:
+        return _pack_float8(obj)
+
+
 @Dumper.text(Decimal)
 class DecimalDumper(NumberDumper):
-
     oid = builtins["numeric"].oid
 
     _special = {

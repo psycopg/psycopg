@@ -27,10 +27,12 @@ from psycopg3.types.numeric import FloatLoader
         (int(-(2 ** 63)), "'-9223372036854775808'::bigint"),
     ],
 )
-def test_dump_int(conn, val, expr):
+@pytest.mark.parametrize("fmt_in", [Format.TEXT, Format.BINARY])
+def test_dump_int(conn, val, expr, fmt_in):
+    ph = "%s" if fmt_in == Format.TEXT else "%b"
     assert isinstance(val, int)
     cur = conn.cursor()
-    cur.execute(f"select {expr} = %s", (val,))
+    cur.execute(f"select {expr} = {ph}", (val,))
     assert cur.fetchone()[0] is True
 
 
@@ -80,14 +82,6 @@ def test_quote_int(conn, val, expr):
     cur = conn.cursor()
     cur.execute(sql.SQL("select {v}, -{v}").format(v=sql.Literal(val)))
     assert cur.fetchone() == (val, -val)
-
-
-@pytest.mark.xfail
-def test_dump_int_binary():
-    # TODO: int binary adaptation (must choose the fitting int2,4,8)
-    tx = Transformer()
-    n = 1
-    tx.get_dumper(n, Format.BINARY).dump(n)
 
 
 @pytest.mark.parametrize(
@@ -146,10 +140,12 @@ def test_load_int(conn, val, pgtype, want, fmt_out):
         (float("-inf"), "'-Infinity'"),
     ],
 )
-def test_dump_float(conn, val, expr):
+@pytest.mark.parametrize("fmt_in", [Format.TEXT, Format.BINARY])
+def test_dump_float(conn, val, expr, fmt_in):
+    ph = "%s" if fmt_in == Format.TEXT else "%b"
     assert isinstance(val, float)
     cur = conn.cursor()
-    cur.execute(f"select %s = {expr}::float8", (val,))
+    cur.execute(f"select {ph} = {expr}::float8", (val,))
     assert cur.fetchone()[0] is True
 
 
@@ -206,14 +202,6 @@ def test_dump_float_approx(conn, val, expr):
         f"select abs(({expr}::float4 - %s) / {expr}::float4) <= 1e-6", (val,)
     )
     assert cur.fetchone()[0] is True
-
-
-@pytest.mark.xfail
-def test_dump_float_binary():
-    # TODO: float binary adaptation
-    tx = Transformer()
-    n = 1.0
-    tx.get_dumper(n, Format.BINARY).dump(n)
 
 
 @pytest.mark.parametrize(
