@@ -206,7 +206,18 @@ produce `!bytes`:
             f.write(data)
 
 Asynchronous operations are supported using the same patterns on an
-`AsyncConnection`.
+`AsyncConnection`. For instance, if `!f` is an object supporting an
+asynchronous `!read()` method and returning :sql:`COPY` data, a fully-async
+copy operation could be:
+
+.. code:: python
+
+    async with (await cursor.copy("COPY data FROM STDIN")) as copy:
+        data = await f.read()
+        if not data:
+            break
+
+        await copy.write(data)
 
 Binary data can be produced and consumed using :sql:`FORMAT BINARY` in the
 :sql:`COPY` command: see :ref:`binary-data` for details and limitations.

@@ -71,4 +71,7 @@ html_static_path = ["_static"]
 # The reST default role (used for this markup: `text`) to use for all documents.
 default_role = "obj"
 
-intersphinx_mapping = {"py": ("https://docs.python.org/3", None)}
+intersphinx_mapping = {
+    "py": ("https://docs.python.org/3", None),
+    "pg2": ("https://www.psycopg.org/docs/", None),
+}

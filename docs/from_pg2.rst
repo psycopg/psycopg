@@ -57,6 +57,21 @@ Builtin data types should work as expected; if you have wrapped a custom data
 type you should check the :ref:`Adaptation` topic.
 
 
+Copy is no more file-based
+--------------------------
+
+`psycopg2` exposes :ref:`a few copy methods <pg2:copy>` to interact with
+PostgreSQL :sql:`COPY`. The interface doesn't make easy to load
+dynamically-generated data to the database.
+
+There is now a single `~psycopg3.Cursor.copy()` method, which is similar to
+`~cursor.copy_expert()`, which accepts parameters like `!execute()` and
+returns an object to read/write data, block-wise or record-wise. The different
+usage pattern also enables :sql:`COPY` to be used in async interactions.
+
+See :ref:`copy` for the details.
+
+
 Other differences
 -----------------
 
