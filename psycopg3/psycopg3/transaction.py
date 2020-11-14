@@ -46,7 +46,9 @@ class Transaction:
         if savepoint_name is not None:
             if len(savepoint_name) == 0:
                 raise ValueError("savepoint_name must be a non-empty string")
-            self._savepoint_name = connection.codec.encode(savepoint_name)[0]
+            self._savepoint_name = savepoint_name.encode(
+                connection.client_encoding
+            )
         self.force_rollback = force_rollback
 
         self._outer_transaction: Optional[bool] = None
@@ -59,7 +61,7 @@ class Transaction:
     def savepoint_name(self) -> Optional[str]:
         if self._savepoint_name is None:
             return None
-        return self._conn.codec.decode(self._savepoint_name)[0]
+        return self._savepoint_name.decode(self._conn.client_encoding)
 
     def __enter__(self) -> "Transaction":
         with self._conn.lock:
