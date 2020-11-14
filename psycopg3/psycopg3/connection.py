@@ -18,7 +18,8 @@ from . import cursor
 from . import errors as e
 from . import encodings
 from .pq import TransactionStatus, ExecStatus
-from .proto import DumpersMap, LoadersMap, PQGen, RV
+from .sql import Composable
+from .proto import DumpersMap, LoadersMap, PQGen, RV, Query
 from .waiting import wait, wait_async
 from .conninfo import make_conninfo
 from .generators import notifies
@@ -99,7 +100,7 @@ class BaseConnection:
         self._notify_handlers: List[NotifyHandler] = []
 
         # stack of savepoint names managed by active Transaction() blocks
-        self._savepoints: Optional[List[bytes]] = None
+        self._savepoints: Optional[List[str]] = None
         # (None when there no active Transaction blocks; [] when there is only
         # one Transaction block, with a top-level transaction and no savepoint)
 
@@ -310,8 +311,14 @@ class Connection(BaseConnection):
                 return
             self._exec_command(b"rollback")
 
-    def _exec_command(self, command: bytes) -> None:
+    def _exec_command(self, command: Query) -> None:
         # Caller must hold self.lock
+
+        if isinstance(command, str):
+            command = command.encode(self.client_encoding)
+        elif isinstance(command, Composable):
+            command = command.as_string(self).encode(self.client_encoding)
+
         logger.debug(f"{self}: {command!r}")
         self.pgconn.send_query(command)
         results = self.wait(execute(self.pgconn))

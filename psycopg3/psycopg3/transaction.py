@@ -6,11 +6,12 @@ Transaction context managers returned by Connection.transaction()
 
 import logging
 
-from psycopg3.errors import ProgrammingError
 from types import TracebackType
 from typing import Optional, Type, TYPE_CHECKING
 
+from . import sql
 from .pq import TransactionStatus
+from psycopg3.errors import ProgrammingError
 
 if TYPE_CHECKING:
     from .connection import Connection
@@ -42,13 +43,11 @@ class Transaction:
         force_rollback: bool,
     ):
         self._conn = connection
-        self._savepoint_name: Optional[bytes] = None
+        self._savepoint_name: Optional[str] = None
         if savepoint_name is not None:
-            if len(savepoint_name) == 0:
+            if not savepoint_name:
                 raise ValueError("savepoint_name must be a non-empty string")
-            self._savepoint_name = savepoint_name.encode(
-                connection.client_encoding
-            )
+            self._savepoint_name = savepoint_name
         self.force_rollback = force_rollback
 
         self._outer_transaction: Optional[bool] = None
@@ -59,9 +58,7 @@ class Transaction:
 
     @property
     def savepoint_name(self) -> Optional[str]:
-        if self._savepoint_name is None:
-            return None
-        return self._savepoint_name.decode(self._conn.client_encoding)
+        return self._savepoint_name
 
     def __enter__(self) -> "Transaction":
         with self._conn.lock:
@@ -75,12 +72,16 @@ class Transaction:
                     self._conn._savepoints = []
                 self._outer_transaction = False
                 if self._savepoint_name is None:
-                    self._savepoint_name = b"s%i" % (
-                        len(self._conn._savepoints) + 1
+                    self._savepoint_name = (
+                        f"s{len(self._conn._savepoints) + 1}"
                     )
 
             if self._savepoint_name is not None:
-                self._conn._exec_command(b"savepoint " + self._savepoint_name)
+                self._conn._exec_command(
+                    sql.SQL("savepoint {}").format(
+                        sql.Identifier(self._savepoint_name)
+                    )
+                )
                 self._conn._savepoints.append(self._savepoint_name)
         return self
 
@@ -106,7 +107,9 @@ class Transaction:
                     if actual != self._savepoint_name:
                         raise out_of_order_err
                     self._conn._exec_command(
-                        b"release savepoint " + self._savepoint_name
+                        sql.SQL("release savepoint {}").format(
+                            sql.Identifier(self._savepoint_name)
+                        )
                     )
                 if self._outer_transaction:
                     if self._conn._savepoints is None:
@@ -130,8 +133,9 @@ class Transaction:
                     if actual != self._savepoint_name:
                         raise out_of_order_err
                     self._conn._exec_command(
-                        b"rollback to savepoint " + self._savepoint_name + b";"
-                        b"release savepoint " + self._savepoint_name
+                        sql.SQL(
+                            "rollback to savepoint {n}; release savepoint {n}"
+                        ).format(n=sql.Identifier(self._savepoint_name))
                     )
                 if self._outer_transaction:
                     if self._conn._savepoints is None:

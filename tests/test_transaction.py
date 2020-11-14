@@ -3,7 +3,8 @@ from contextlib import contextmanager
 
 import pytest
 
-from psycopg3 import OperationalError, ProgrammingError, Rollback
+from psycopg3 import ProgrammingError, Rollback
+from psycopg3.sql import Composable
 
 
 @pytest.fixture(autouse=True)
@@ -41,6 +42,11 @@ def assert_commands_issued(conn, *commands):
     real_exec_command = conn._exec_command
 
     def _exec_command(command):
+        if isinstance(command, bytes):
+            command = command.decode(conn.client_encoding)
+        elif isinstance(command, Composable):
+            command = command.as_string(conn)
+
         commands_actual.append(command)
         real_exec_command(command)
 
@@ -49,8 +55,8 @@ def assert_commands_issued(conn, *commands):
         yield
     finally:
         conn._exec_command = real_exec_command
-    commands_expected = [cmd.encode("ascii") for cmd in commands]
-    assert commands_actual == commands_expected
+
+    assert commands_actual == list(commands)
 
 
 class ExpectedException(Exception):
@@ -329,7 +335,6 @@ def test_named_savepoint_empty_string_invalid(conn):
         conn.transaction(savepoint_name="")
 
 
-@pytest.mark.xfail(raises=OperationalError, reason="TODO: Escape sp names")
 def test_named_savepoint_escapes_savepoint_name(conn):
     with conn.transaction("s-1"):
         pass
@@ -357,28 +362,28 @@ def test_named_savepoints_successful_exit(conn):
 
     # Case 2
     tx = conn.transaction(savepoint_name="foo")
-    with assert_commands_issued(conn, "begin", "savepoint foo"):
+    with assert_commands_issued(conn, "begin", 'savepoint "foo"'):
         tx.__enter__()
     assert tx.savepoint_name == "foo"
-    with assert_commands_issued(conn, "release savepoint foo", "commit"):
+    with assert_commands_issued(conn, 'release savepoint "foo"', "commit"):
         tx.__exit__(None, None, None)
 
     # Case 3 (with savepoint name provided)
     with conn.transaction():
         tx = conn.transaction(savepoint_name="bar")
-        with assert_commands_issued(conn, "savepoint bar"):
+        with assert_commands_issued(conn, 'savepoint "bar"'):
             tx.__enter__()
         assert tx.savepoint_name == "bar"
-        with assert_commands_issued(conn, "release savepoint bar"):
+        with assert_commands_issued(conn, 'release savepoint "bar"'):
             tx.__exit__(None, None, None)
 
     # Case 3 (with savepoint name auto-generated)
     with conn.transaction():
         tx = conn.transaction()
-        with assert_commands_issued(conn, "savepoint s1"):
+        with assert_commands_issued(conn, 'savepoint "s1"'):
             tx.__enter__()
         assert tx.savepoint_name == "s1"
-        with assert_commands_issued(conn, "release savepoint s1"):
+        with assert_commands_issued(conn, 'release savepoint "s1"'):
             tx.__exit__(None, None, None)
 
 
@@ -398,33 +403,35 @@ def test_named_savepoints_exception_exit(conn):
 
     # Case 2
     tx = conn.transaction(savepoint_name="foo")
-    with assert_commands_issued(conn, "begin", "savepoint foo"):
+    with assert_commands_issued(conn, "begin", 'savepoint "foo"'):
         tx.__enter__()
     assert tx.savepoint_name == "foo"
     with assert_commands_issued(
-        conn, "rollback to savepoint foo;release savepoint foo", "rollback"
+        conn,
+        'rollback to savepoint "foo"; release savepoint "foo"',
+        "rollback",
     ):
         tx.__exit__(*some_exc_info())
 
     # Case 3 (with savepoint name provided)
     with conn.transaction():
         tx = conn.transaction(savepoint_name="bar")
-        with assert_commands_issued(conn, "savepoint bar"):
+        with assert_commands_issued(conn, 'savepoint "bar"'):
             tx.__enter__()
         assert tx.savepoint_name == "bar"
         with assert_commands_issued(
-            conn, "rollback to savepoint bar;release savepoint bar"
+            conn, 'rollback to savepoint "bar"; release savepoint "bar"'
         ):
             tx.__exit__(*some_exc_info())
 
     # Case 3 (with savepoint name auto-generated)
     with conn.transaction():
         tx = conn.transaction()
-        with assert_commands_issued(conn, "savepoint s1"):
+        with assert_commands_issued(conn, 'savepoint "s1"'):
             tx.__enter__()
         assert tx.savepoint_name == "s1"
         with assert_commands_issued(
-            conn, "rollback to savepoint s1;release savepoint s1"
+            conn, 'rollback to savepoint "s1"; release savepoint "s1"'
         ):
             tx.__exit__(*some_exc_info())
 
