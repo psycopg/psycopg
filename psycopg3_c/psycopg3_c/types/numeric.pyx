@@ -7,14 +7,14 @@ Cython adapters for numeric types.
 from libc.stdint cimport *
 from psycopg3_c.endian cimport be16toh, be32toh, be64toh
 
-from cpython.long cimport (
-    PyLong_FromLong, PyLong_FromLongLong, PyLong_FromUnsignedLong)
-from cpython.float cimport PyFloat_FromDouble
+from cpython.long cimport PyLong_FromString, PyLong_FromLong
+from cpython.long cimport PyLong_FromLongLong, PyLong_FromUnsignedLong
+from cpython.float cimport PyFloat_FromString, PyFloat_FromDouble
 
 
 cdef class IntLoader(CLoader):
     cdef object cload(self, const char *data, size_t length):
-        return int(data)
+        return PyLong_FromString(data, NULL, 10)
 
 
 cdef class Int2BinaryLoader(CLoader):
@@ -39,6 +39,9 @@ cdef class OidBinaryLoader(CLoader):
 
 cdef class FloatLoader(CLoader):
     cdef object cload(self, const char *data, size_t length):
+        # TODO: change after https://github.com/cython/cython/issues/3909 fixed
+        # cdef bytes b = data
+        # return PyFloat_FromString(b)
         return float(data)
 
 
