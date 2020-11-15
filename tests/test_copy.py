@@ -3,10 +3,11 @@ import pytest
 from psycopg3 import pq
 from psycopg3 import errors as e
 from psycopg3.adapt import Format
+from psycopg3.types.numeric import Int4
 
 eur = "\u20ac"
 
-sample_records = [(10, 20, "hello"), (40, None, "world")]
+sample_records = [(Int4(10), Int4(20), "hello"), (Int4(40), None, "world")]
 
 sample_values = "values (10::int, 20::int, 'hello'::text), (40, NULL, 'world')"
 
@@ -169,9 +170,6 @@ def test_copy_in_buffers_with_py_error(conn):
 
 @pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
 def test_copy_in_records(conn, format):
-    if format == Format.BINARY:
-        pytest.skip("TODO: implement int binary adapter")
-
     cur = conn.cursor()
     ensure_table(cur, sample_tabledef)
 
@@ -185,9 +183,6 @@ def test_copy_in_records(conn, format):
 
 @pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
 def test_copy_in_records_binary(conn, format):
-    if format == Format.TEXT:
-        pytest.skip("TODO: remove after implementing int binary adapter")
-
     cur = conn.cursor()
     ensure_table(cur, "col1 serial primary key, col2 int, data text")
 

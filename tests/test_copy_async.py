@@ -139,9 +139,6 @@ async def test_copy_in_buffers_with_py_error(aconn):
 
 @pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
 async def test_copy_in_records(aconn, format):
-    if format == Format.BINARY:
-        pytest.skip("TODO: implement int binary adapter")
-
     cur = await aconn.cursor()
     await ensure_table(cur, sample_tabledef)
 
@@ -158,9 +155,6 @@ async def test_copy_in_records(aconn, format):
 
 @pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
 async def test_copy_in_records_binary(aconn, format):
-    if format == Format.TEXT:
-        pytest.skip("TODO: remove after implementing int binary adapter")
-
     cur = await aconn.cursor()
     await ensure_table(cur, "col1 serial primary key, col2 int, data text")
 
