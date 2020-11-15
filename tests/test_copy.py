@@ -111,20 +111,6 @@ def test_copy_bad_result(conn):
             pass
 
 
-@pytest.mark.parametrize(
-    "format, buffer",
-    [(Format.TEXT, "sample_text"), (Format.BINARY, "sample_binary")],
-)
-def test_copy_in_buffers_with(conn, format, buffer):
-    cur = conn.cursor()
-    ensure_table(cur, sample_tabledef)
-    with cur.copy(f"copy copy_in from stdin (format {format.name})") as copy:
-        copy.write(globals()[buffer])
-
-    data = cur.execute("select * from copy_in order by 1").fetchall()
-    assert data == sample_records
-
-
 def test_copy_in_str(conn):
     cur = conn.cursor()
     ensure_table(cur, sample_tabledef)
