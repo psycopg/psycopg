@@ -4,11 +4,12 @@ psycopg3 cursor objects
 
 # Copyright (C) 2020 The Psycopg Team
 
+import sys
 from types import TracebackType
 from typing import Any, AsyncIterator, Callable, Generic, Iterator, List
 from typing import Mapping, Optional, Sequence, Type, TYPE_CHECKING, Union
 from operator import attrgetter
-from contextlib import asynccontextmanager, contextmanager
+from contextlib import contextmanager
 
 from . import errors as e
 from . import pq
@@ -17,6 +18,11 @@ from .oids import builtins
 from .copy import Copy, AsyncCopy
 from .proto import ConnectionType, Query, Params, DumpersMap, LoadersMap, PQGen
 from .utils.queries import PostgresQuery
+
+if sys.version_info >= (3, 7):
+    from contextlib import asynccontextmanager
+else:
+    from .utils.context import asynccontextmanager
 
 if TYPE_CHECKING:
     from .proto import Transformer
