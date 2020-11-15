@@ -39,8 +39,8 @@ class Transaction:
     def __init__(
         self,
         connection: "Connection",
-        savepoint_name: Optional[str],
-        force_rollback: bool,
+        savepoint_name: Optional[str] = None,
+        force_rollback: bool = False,
     ):
         self._conn = connection
         self._savepoint_name: Optional[str] = None

@@ -12,6 +12,7 @@ from typing import Any, AsyncIterator, Callable, Iterator, List, NamedTuple
 from typing import Optional, Type, TYPE_CHECKING, Union
 from weakref import ref, ReferenceType
 from functools import partial
+from contextlib import contextmanager
 
 from . import pq
 from . import cursor
@@ -328,12 +329,15 @@ class Connection(BaseConnection):
                 f" {pq.error_message(results[-1], encoding=self.client_encoding)}"
             )
 
+    @contextmanager
     def transaction(
         self,
         savepoint_name: Optional[str] = None,
         force_rollback: bool = False,
-    ) -> Transaction:
-        return Transaction(self, savepoint_name, force_rollback)
+    ) -> Iterator[Transaction]:
+        tx = Transaction(self, savepoint_name, force_rollback)
+        with tx:
+            yield tx
 
     @classmethod
     def wait(cls, gen: PQGen[RV], timeout: Optional[float] = 0.1) -> RV:
