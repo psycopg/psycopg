@@ -145,12 +145,6 @@ Cursor support objects
         The data in the tuple will be converted as configured on the cursor;
         see :ref:`adaptation` for details.
 
-    .. automethod:: finish
-
-        If an *error* is specified, the :sql:`COPY` operation is cancelled.
-
-        The method is called automatically at the end of a `!with` block.
-
 
 .. autoclass:: AsyncCopy
 
@@ -161,4 +155,3 @@ Cursor support objects
     .. automethod:: read
     .. automethod:: write
     .. automethod:: write_row
-    .. automethod:: finish

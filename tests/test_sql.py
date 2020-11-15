@@ -182,12 +182,12 @@ class TestSqlFormat:
             copy.write_row((10, "a", "b", "c"))
             copy.write_row((20, "d", "e", "f"))
 
-        copy = cur.copy(
+        with cur.copy(
             sql.SQL("copy (select {f} from {t} order by id) to stdout").format(
                 t=sql.Identifier("test_compose"), f=sql.Identifier("ba'z")
             )
-        )
-        assert list(copy) == [b"c\n", b"f\n"]
+        ) as copy:
+            assert list(copy) == [b"c\n", b"f\n"]
 
 
 class TestIdentifier:

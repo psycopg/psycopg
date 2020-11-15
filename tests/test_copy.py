@@ -35,31 +35,37 @@ sample_binary = b"".join(sample_binary_rows)
 
 
 @pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
-def test_copy_out_iter(conn, format):
-    cur = conn.cursor()
-    copy = cur.copy(f"copy ({sample_values}) to stdout (format {format.name})")
+def test_copy_out_read(conn, format):
     if format == pq.Format.TEXT:
         want = [row + b"\n" for row in sample_text.splitlines()]
     else:
         want = sample_binary_rows
-    assert list(copy) == want
 
-
-@pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
-def test_copy_out_context(conn, format):
     cur = conn.cursor()
-    out = []
     with cur.copy(
         f"copy ({sample_values}) to stdout (format {format.name})"
     ) as copy:
-        for row in copy:
-            out.append(row)
+        for row in want:
+            got = copy.read()
+            assert got == row
 
+        assert copy.read() is None
+        assert copy.read() is None
+
+    assert copy.read() is None
+
+
+@pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
+def test_copy_out_iter(conn, format):
     if format == pq.Format.TEXT:
         want = [row + b"\n" for row in sample_text.splitlines()]
     else:
         want = sample_binary_rows
-    assert out == want
+    cur = conn.cursor()
+    with cur.copy(
+        f"copy ({sample_values}) to stdout (format {format.name})"
+    ) as copy:
+        assert list(copy) == want
 
 
 @pytest.mark.parametrize(
@@ -69,9 +75,9 @@ def test_copy_out_context(conn, format):
 def test_copy_in_buffers(conn, format, buffer):
     cur = conn.cursor()
     ensure_table(cur, sample_tabledef)
-    copy = cur.copy(f"copy copy_in from stdin (format {format.name})")
-    copy.write(globals()[buffer])
-    copy.finish()
+    with cur.copy(f"copy copy_in from stdin (format {format.name})") as copy:
+        copy.write(globals()[buffer])
+
     data = cur.execute("select * from copy_in order by 1").fetchall()
     assert data == sample_records
 
@@ -79,11 +85,10 @@ def test_copy_in_buffers(conn, format, buffer):
 def test_copy_in_buffers_pg_error(conn):
     cur = conn.cursor()
     ensure_table(cur, sample_tabledef)
-    copy = cur.copy("copy copy_in from stdin (format text)")
-    copy.write(sample_text)
-    copy.write(sample_text)
     with pytest.raises(e.UniqueViolation):
-        copy.finish()
+        with cur.copy("copy copy_in from stdin (format text)") as copy:
+            copy.write(sample_text)
+            copy.write(sample_text)
     assert conn.pgconn.transaction_status == conn.TransactionStatus.INERROR
 
 
@@ -93,13 +98,16 @@ def test_copy_bad_result(conn):
     cur = conn.cursor()
 
     with pytest.raises(e.SyntaxError):
-        cur.copy("wat")
+        with cur.copy("wat"):
+            pass
 
     with pytest.raises(e.ProgrammingError):
-        cur.copy("select 1")
+        with cur.copy("select 1"):
+            pass
 
     with pytest.raises(e.ProgrammingError):
-        cur.copy("reset timezone")
+        with cur.copy("reset timezone"):
+            pass
 
 
 @pytest.mark.parametrize(
