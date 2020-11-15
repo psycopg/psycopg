@@ -4,8 +4,9 @@ psycopg3 connection objects
 
 # Copyright (C) 2020 The Psycopg Team
 
-import logging
+import sys
 import asyncio
+import logging
 import threading
 from types import TracebackType
 from typing import Any, AsyncIterator, Callable, Iterator, List, NamedTuple
@@ -13,6 +14,11 @@ from typing import Optional, Type, TYPE_CHECKING, Union
 from weakref import ref, ReferenceType
 from functools import partial
 from contextlib import contextmanager
+
+if sys.version_info >= (3, 7):
+    from contextlib import asynccontextmanager
+else:
+    from .utils.context import asynccontextmanager
 
 from . import pq
 from . import cursor
@@ -24,7 +30,7 @@ from .proto import DumpersMap, LoadersMap, PQGen, RV, Query
 from .waiting import wait, wait_async
 from .conninfo import make_conninfo
 from .generators import notifies
-from .transaction import Transaction
+from .transaction import Transaction, AsyncTransaction
 
 logger = logging.getLogger(__name__)
 package_logger = logging.getLogger("psycopg3")
@@ -335,7 +341,7 @@ class Connection(BaseConnection):
         savepoint_name: Optional[str] = None,
         force_rollback: bool = False,
     ) -> Iterator[Transaction]:
-        with Transaction(self, savepoint_name or "", force_rollback) as tx:
+        with Transaction(self, savepoint_name, force_rollback) as tx:
             yield tx
 
     @classmethod
@@ -435,35 +441,57 @@ class AsyncConnection(BaseConnection):
         if self.pgconn.transaction_status != TransactionStatus.IDLE:
             return
 
-        self.pgconn.send_query(b"begin")
-        (pgres,) = await self.wait(execute(self.pgconn))
-        if pgres.status != ExecStatus.COMMAND_OK:
-            raise e.OperationalError(
-                "error on begin:"
-                f" {pq.error_message(pgres, encoding=self.client_encoding)}"
-            )
+        await self._exec_command(b"begin")
 
     async def commit(self) -> None:
         async with self.lock:
             if self.pgconn.transaction_status == TransactionStatus.IDLE:
                 return
-            await self._exec(b"commit")
+            if self._savepoints is not None:
+                raise e.ProgrammingError(
+                    "Explicit commit() forbidden within a Transaction "
+                    "context. (Transaction will be automatically committed "
+                    "on successful exit from context.)"
+                )
+            await self._exec_command(b"commit")
 
     async def rollback(self) -> None:
         async with self.lock:
             if self.pgconn.transaction_status == TransactionStatus.IDLE:
                 return
-            await self._exec(b"rollback")
+            if self._savepoints is not None:
+                raise e.ProgrammingError(
+                    "Explicit rollback() forbidden within a Transaction "
+                    "context. (Either raise Transaction.Rollback() or allow "
+                    "an exception to propagate out of the context.)"
+                )
+            await self._exec_command(b"rollback")
 
-    async def _exec(self, command: bytes) -> None:
+    async def _exec_command(self, command: Query) -> None:
         # Caller must hold self.lock
+
+        if isinstance(command, str):
+            command = command.encode(self.client_encoding)
+        elif isinstance(command, Composable):
+            command = command.as_string(self).encode(self.client_encoding)
+
         self.pgconn.send_query(command)
-        (pgres,) = await self.wait(execute(self.pgconn))
-        if pgres.status != ExecStatus.COMMAND_OK:
+        results = await self.wait(execute(self.pgconn))
+        if results[-1].status != ExecStatus.COMMAND_OK:
             raise e.OperationalError(
                 f"error on {command.decode('utf8')}:"
-                f" {pq.error_message(pgres, encoding=self.client_encoding)}"
+                f" {pq.error_message(results[-1], encoding=self.client_encoding)}"
             )
+
+    @asynccontextmanager
+    async def transaction(
+        self,
+        savepoint_name: Optional[str] = None,
+        force_rollback: bool = False,
+    ) -> AsyncIterator[AsyncTransaction]:
+        tx = AsyncTransaction(self, savepoint_name, force_rollback)
+        async with tx:
+            yield tx
 
     @classmethod
     async def wait(cls, gen: PQGen[RV]) -> RV:

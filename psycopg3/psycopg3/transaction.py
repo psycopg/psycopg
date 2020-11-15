@@ -7,14 +7,15 @@ Transaction context managers returned by Connection.transaction()
 import logging
 
 from types import TracebackType
-from typing import Optional, Type, TYPE_CHECKING
+from typing import Generic, Optional, Type, Union, TYPE_CHECKING
 
 from . import sql
 from .pq import TransactionStatus
-from psycopg3.errors import ProgrammingError
+from .proto import ConnectionType
+from .errors import ProgrammingError
 
 if TYPE_CHECKING:
-    from .connection import Connection
+    from .connection import Connection, AsyncConnection  # noqa: F401
 
 _log = logging.getLogger(__name__)
 
@@ -28,34 +29,59 @@ class Rollback(Exception):
     enclosing transactions contexts up to and including the one specified.
     """
 
-    def __init__(self, transaction: Optional["Transaction"] = None):
+    def __init__(
+        self,
+        transaction: Union["Transaction", "AsyncTransaction", None] = None,
+    ):
         self.transaction = transaction
 
     def __repr__(self) -> str:
         return f"{self.__class__.__qualname__}({self.transaction!r})"
 
 
-class Transaction:
+class BaseTransaction(Generic[ConnectionType]):
     def __init__(
         self,
-        connection: "Connection",
-        savepoint_name: str = "",
+        connection: ConnectionType,
+        savepoint_name: Optional[str] = None,
         force_rollback: bool = False,
     ):
         self._conn = connection
-        self._savepoint_name = savepoint_name
+        self._savepoint_name = savepoint_name or ""
         self.force_rollback = force_rollback
 
         self._outer_transaction: Optional[bool] = None
 
     @property
-    def connection(self) -> "Connection":
+    def connection(self) -> ConnectionType:
         return self._conn
 
     @property
     def savepoint_name(self) -> str:
         return self._savepoint_name
 
+    def __repr__(self) -> str:
+        args = [f"connection={self.connection}"]
+        if not self.savepoint_name:
+            args.append(f"savepoint_name={self.savepoint_name!r}")
+        if self.force_rollback:
+            args.append("force_rollback=True")
+        return f"{self.__class__.__qualname__}({', '.join(args)})"
+
+    _out_of_order_err = ProgrammingError(
+        "Out-of-order Transaction context exits. Are you "
+        "calling __exit__() manually and getting it wrong?"
+    )
+
+    def _pop_savepoint(self) -> None:
+        if self._conn._savepoints is None:
+            raise self._out_of_order_err
+        actual = self._conn._savepoints.pop()
+        if actual != self._savepoint_name:
+            raise self._out_of_order_err
+
+
+class Transaction(BaseTransaction["Connection"]):
     def __enter__(self) -> "Transaction":
         with self._conn.lock:
             if self._conn.pgconn.transaction_status == TransactionStatus.IDLE:
@@ -87,69 +113,137 @@ class Transaction:
         exc_val: Optional[BaseException],
         exc_tb: Optional[TracebackType],
     ) -> bool:
-        out_of_order_err = ProgrammingError(
-            "Out-of-order Transaction context exits. Are you "
-            "calling __exit__() manually and getting it wrong?"
-        )
         if self._outer_transaction is None:
-            raise out_of_order_err
+            raise self._out_of_order_err
         with self._conn.lock:
-            if exc_type is None and not self.force_rollback:
-                # Commit changes made in the transaction context
-                if self._savepoint_name:
-                    if self._conn._savepoints is None:
-                        raise out_of_order_err
-                    actual = self._conn._savepoints.pop()
-                    if actual != self._savepoint_name:
-                        raise out_of_order_err
-                    self._conn._exec_command(
-                        sql.SQL("release savepoint {}").format(
-                            sql.Identifier(self._savepoint_name)
-                        )
-                    )
-                if self._outer_transaction:
-                    if self._conn._savepoints is None:
-                        raise out_of_order_err
-                    if len(self._conn._savepoints) != 0:
-                        raise out_of_order_err
-                    self._conn._exec_command(b"commit")
-                    self._conn._savepoints = None
+            if not exc_val and not self.force_rollback:
+                return self._commit()
             else:
-                # Rollback changes made in the transaction context
-                if isinstance(exc_val, Rollback):
-                    _log.debug(
-                        f"{self._conn}: Explicit rollback from: ",
-                        exc_info=True,
-                    )
+                return self._rollback(exc_val)
 
-                if self._savepoint_name:
-                    if self._conn._savepoints is None:
-                        raise out_of_order_err
-                    actual = self._conn._savepoints.pop()
-                    if actual != self._savepoint_name:
-                        raise out_of_order_err
-                    self._conn._exec_command(
-                        sql.SQL(
-                            "rollback to savepoint {n}; release savepoint {n}"
-                        ).format(n=sql.Identifier(self._savepoint_name))
-                    )
-                if self._outer_transaction:
-                    if self._conn._savepoints is None:
-                        raise out_of_order_err
-                    if len(self._conn._savepoints) != 0:
-                        raise out_of_order_err
-                    self._conn._exec_command(b"rollback")
-                    self._conn._savepoints = None
+    def _commit(self) -> bool:
+        """Commit changes made in the transaction context."""
+        if self._savepoint_name:
+            self._pop_savepoint()
+            self._conn._exec_command(
+                sql.SQL("release savepoint {}").format(
+                    sql.Identifier(self._savepoint_name)
+                )
+            )
+        if self._outer_transaction:
+            if self._conn._savepoints is None or self._conn._savepoints:
+                raise self._out_of_order_err
+            self._conn._exec_command(b"commit")
+            self._conn._savepoints = None
 
-                if isinstance(exc_val, Rollback):
-                    if exc_val.transaction in (self, None):
-                        return True  # Swallow the exception
+        return False  # discarded
+
+    def _rollback(self, exc_val: Optional[BaseException]) -> bool:
+        # Rollback changes made in the transaction context
+        if isinstance(exc_val, Rollback):
+            _log.debug(
+                f"{self._conn}: Explicit rollback from: ", exc_info=True
+            )
+
+        if self._savepoint_name:
+            self._pop_savepoint()
+            self._conn._exec_command(
+                sql.SQL(
+                    "rollback to savepoint {n}; release savepoint {n}"
+                ).format(n=sql.Identifier(self._savepoint_name))
+            )
+        if self._outer_transaction:
+            if self._conn._savepoints is None or self._conn._savepoints:
+                raise self._out_of_order_err
+            self._conn._exec_command(b"rollback")
+            self._conn._savepoints = None
+
+        if isinstance(exc_val, Rollback):
+            if exc_val.transaction in (self, None):
+                return True  # Swallow the exception
+
         return False
 
-    def __repr__(self) -> str:
-        args = [f"connection={self.connection}"]
-        if not self.savepoint_name:
-            args.append(f"savepoint_name={self.savepoint_name!r}")
-        if self.force_rollback:
-            args.append("force_rollback=True")
-        return f"{self.__class__.__qualname__}({', '.join(args)})"
+
+class AsyncTransaction(BaseTransaction["AsyncConnection"]):
+    async def __aenter__(self) -> "AsyncTransaction":
+        async with self._conn.lock:
+            if self._conn.pgconn.transaction_status == TransactionStatus.IDLE:
+                assert self._conn._savepoints is None, self._conn._savepoints
+                self._conn._savepoints = []
+                self._outer_transaction = True
+                await self._conn._exec_command(b"begin")
+            else:
+                if self._conn._savepoints is None:
+                    self._conn._savepoints = []
+                self._outer_transaction = False
+                if not self._savepoint_name:
+                    self._savepoint_name = (
+                        f"s{len(self._conn._savepoints) + 1}"
+                    )
+
+            if self._savepoint_name:
+                await self._conn._exec_command(
+                    sql.SQL("savepoint {}").format(
+                        sql.Identifier(self._savepoint_name)
+                    )
+                )
+                self._conn._savepoints.append(self._savepoint_name)
+        return self
+
+    async def __aexit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc_val: Optional[BaseException],
+        exc_tb: Optional[TracebackType],
+    ) -> bool:
+        if self._outer_transaction is None:
+            raise self._out_of_order_err
+        async with self._conn.lock:
+            if not exc_val and not self.force_rollback:
+                return await self._commit()
+            else:
+                return await self._rollback(exc_val)
+
+    async def _commit(self) -> bool:
+        """Commit changes made in the transaction context."""
+        if self._savepoint_name:
+            self._pop_savepoint()
+            await self._conn._exec_command(
+                sql.SQL("release savepoint {}").format(
+                    sql.Identifier(self._savepoint_name)
+                )
+            )
+        if self._outer_transaction:
+            if self._conn._savepoints is None or self._conn._savepoints:
+                raise self._out_of_order_err
+            await self._conn._exec_command(b"commit")
+            self._conn._savepoints = None
+
+        return False  # discarded
+
+    async def _rollback(self, exc_val: Optional[BaseException]) -> bool:
+        # Rollback changes made in the transaction context
+        if isinstance(exc_val, Rollback):
+            _log.debug(
+                f"{self._conn}: Explicit rollback from: ", exc_info=True
+            )
+
+        if self._savepoint_name:
+            self._pop_savepoint()
+            await self._conn._exec_command(
+                sql.SQL(
+                    "rollback to savepoint {n}; release savepoint {n}"
+                ).format(n=sql.Identifier(self._savepoint_name))
+            )
+        if self._outer_transaction:
+            if self._conn._savepoints is None or self._conn._savepoints:
+                raise self._out_of_order_err
+            await self._conn._exec_command(b"rollback")
+            self._conn._savepoints = None
+
+        if isinstance(exc_val, Rollback):
+            if exc_val.transaction in (self, None):
+                return True  # Swallow the exception
+
+        return False
