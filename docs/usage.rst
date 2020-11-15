@@ -202,8 +202,9 @@ produce `!bytes`:
 .. code:: python
 
     with open("data.out", "wb") as f:
-        for data in cursor.copy("COPY table_name TO STDOUT") as copy:
-            f.write(data)
+        with cursor.copy("COPY table_name TO STDOUT") as copy:
+            for data in copy:
+                f.write(data)
 
 Asynchronous operations are supported using the same patterns on an
 `AsyncConnection`. For instance, if `!f` is an object supporting an
@@ -212,7 +213,7 @@ copy operation could be:
 
 .. code:: python
 
-    async with (await cursor.copy("COPY data FROM STDIN")) as copy:
+    async with cursor.copy("COPY data FROM STDIN") as copy:
         data = await f.read()
         if not data:
             break

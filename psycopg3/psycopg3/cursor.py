@@ -5,17 +5,10 @@ psycopg3 cursor objects
 # Copyright (C) 2020 The Psycopg Team
 
 from types import TracebackType
-from typing import (
-    Any,
-    AsyncIterator,
-    Callable,
-    Generic,
-    Iterator,
-    List,
-    Mapping,
-)
-from typing import Optional, Sequence, Type, TYPE_CHECKING, Union
+from typing import Any, AsyncIterator, Callable, Generic, Iterator, List
+from typing import Mapping, Optional, Sequence, Type, TYPE_CHECKING, Union
 from operator import attrgetter
+from contextlib import asynccontextmanager, contextmanager
 
 from . import errors as e
 from . import pq
@@ -556,10 +549,19 @@ class Cursor(BaseCursor["Connection"]):
             self._pos += 1
             yield row
 
-    def copy(self, statement: Query, vars: Optional[Params] = None) -> Copy:
+    @contextmanager
+    def copy(
+        self, statement: Query, vars: Optional[Params] = None
+    ) -> Iterator[Copy]:
         """
         Initiate a :sql:`COPY` operation and return a `Copy` object to manage it.
         """
+        with self._start_copy(statement, vars) as copy:
+            yield copy
+
+    def _start_copy(
+        self, statement: Query, vars: Optional[Params] = None
+    ) -> Copy:
         with self.connection.lock:
             self._start_query()
             self.connection._start_query()
@@ -682,12 +684,20 @@ class AsyncCursor(BaseCursor["AsyncConnection"]):
             self._pos += 1
             yield row
 
+    @asynccontextmanager
     async def copy(
         self, statement: Query, vars: Optional[Params] = None
-    ) -> AsyncCopy:
+    ) -> AsyncIterator[AsyncCopy]:
         """
         Initiate a :sql:`COPY` operation and return an `AsyncCopy` object.
         """
+        copy = await self._start_copy(statement, vars)
+        async with copy:
+            yield copy
+
+    async def _start_copy(
+        self, statement: Query, vars: Optional[Params] = None
+    ) -> AsyncCopy:
         async with self.connection.lock:
             self._start_query()
             await self.connection._start_query()
