@@ -39,15 +39,11 @@ class Transaction:
     def __init__(
         self,
         connection: "Connection",
-        savepoint_name: Optional[str] = None,
+        savepoint_name: str = "",
         force_rollback: bool = False,
     ):
         self._conn = connection
-        self._savepoint_name: Optional[str] = None
-        if savepoint_name is not None:
-            if not savepoint_name:
-                raise ValueError("savepoint_name must be a non-empty string")
-            self._savepoint_name = savepoint_name
+        self._savepoint_name = savepoint_name
         self.force_rollback = force_rollback
 
         self._outer_transaction: Optional[bool] = None
@@ -57,7 +53,7 @@ class Transaction:
         return self._conn
 
     @property
-    def savepoint_name(self) -> Optional[str]:
+    def savepoint_name(self) -> str:
         return self._savepoint_name
 
     def __enter__(self) -> "Transaction":
@@ -71,12 +67,12 @@ class Transaction:
                 if self._conn._savepoints is None:
                     self._conn._savepoints = []
                 self._outer_transaction = False
-                if self._savepoint_name is None:
+                if not self._savepoint_name:
                     self._savepoint_name = (
                         f"s{len(self._conn._savepoints) + 1}"
                     )
 
-            if self._savepoint_name is not None:
+            if self._savepoint_name:
                 self._conn._exec_command(
                     sql.SQL("savepoint {}").format(
                         sql.Identifier(self._savepoint_name)
@@ -152,7 +148,7 @@ class Transaction:
 
     def __repr__(self) -> str:
         args = [f"connection={self.connection}"]
-        if self.savepoint_name is not None:
+        if not self.savepoint_name:
             args.append(f"savepoint_name={self.savepoint_name!r}")
         if self.force_rollback:
             args.append("force_rollback=True")

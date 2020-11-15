@@ -327,16 +327,6 @@ def test_nested_three_levels_successful_exit(conn, svcconn):
     assert_rows(svcconn, {"one", "two", "three"})
 
 
-def test_named_savepoint_empty_string_invalid(conn):
-    """
-    Raise validate savepoint_name up-front (rather than later constructing an
-    invalid SQL command and having that fail with an OperationalError).
-    """
-    with pytest.raises(ValueError):
-        with conn.transaction(savepoint_name=""):
-            pass
-
-
 def test_named_savepoint_escapes_savepoint_name(conn):
     with conn.transaction("s-1"):
         pass
@@ -359,7 +349,7 @@ def test_named_savepoints_successful_exit(conn):
     tx = Transaction(conn)
     with assert_commands_issued(conn, "begin"):
         tx.__enter__()
-    assert tx.savepoint_name is None
+    assert not tx.savepoint_name
     with assert_commands_issued(conn, "commit"):
         tx.__exit__(None, None, None)
 
@@ -400,7 +390,7 @@ def test_named_savepoints_exception_exit(conn):
     tx = Transaction(conn)
     with assert_commands_issued(conn, "begin"):
         tx.__enter__()
-    assert tx.savepoint_name is None
+    assert not tx.savepoint_name
     with assert_commands_issued(conn, "rollback"):
         tx.__exit__(*some_exc_info())
 

@@ -335,8 +335,7 @@ class Connection(BaseConnection):
         savepoint_name: Optional[str] = None,
         force_rollback: bool = False,
     ) -> Iterator[Transaction]:
-        tx = Transaction(self, savepoint_name, force_rollback)
-        with tx:
+        with Transaction(self, savepoint_name or "", force_rollback) as tx:
             yield tx
 
     @classmethod
