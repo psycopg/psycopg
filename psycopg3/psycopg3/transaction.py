@@ -49,8 +49,9 @@ class BaseTransaction(Generic[ConnectionType]):
         self._conn = connection
         self._savepoint_name = savepoint_name or ""
         self.force_rollback = force_rollback
-
-        self._outer_transaction: Optional[bool] = None
+        self._outer_transaction = (
+            connection.pgconn.transaction_status == TransactionStatus.IDLE
+        )
 
     @property
     def connection(self) -> ConnectionType:
@@ -89,15 +90,13 @@ class BaseTransaction(Generic[ConnectionType]):
 class Transaction(BaseTransaction["Connection"]):
     def __enter__(self) -> "Transaction":
         with self._conn.lock:
-            if self._conn.pgconn.transaction_status == TransactionStatus.IDLE:
+            if self._outer_transaction:
                 assert self._conn._savepoints is None, self._conn._savepoints
                 self._conn._savepoints = []
-                self._outer_transaction = True
                 self._conn._exec_command(b"begin")
             else:
                 if self._conn._savepoints is None:
                     self._conn._savepoints = []
-                self._outer_transaction = False
                 if not self._savepoint_name:
                     self._savepoint_name = (
                         f"s{len(self._conn._savepoints) + 1}"
@@ -118,8 +117,6 @@ class Transaction(BaseTransaction["Connection"]):
         exc_val: Optional[BaseException],
         exc_tb: Optional[TracebackType],
     ) -> bool:
-        if self._outer_transaction is None:
-            raise self._out_of_order_err
         with self._conn.lock:
             if not exc_val and not self.force_rollback:
                 return self._commit()
@@ -167,15 +164,13 @@ class Transaction(BaseTransaction["Connection"]):
 class AsyncTransaction(BaseTransaction["AsyncConnection"]):
     async def __aenter__(self) -> "AsyncTransaction":
         async with self._conn.lock:
-            if self._conn.pgconn.transaction_status == TransactionStatus.IDLE:
+            if self._outer_transaction:
                 assert self._conn._savepoints is None, self._conn._savepoints
                 self._conn._savepoints = []
-                self._outer_transaction = True
                 await self._conn._exec_command(b"begin")
             else:
                 if self._conn._savepoints is None:
                     self._conn._savepoints = []
-                self._outer_transaction = False
                 if not self._savepoint_name:
                     self._savepoint_name = (
                         f"s{len(self._conn._savepoints) + 1}"
@@ -196,8 +191,6 @@ class AsyncTransaction(BaseTransaction["AsyncConnection"]):
         exc_val: Optional[BaseException],
         exc_tb: Optional[TracebackType],
     ) -> bool:
-        if self._outer_transaction is None:
-            raise self._out_of_order_err
         async with self._conn.lock:
             if not exc_val and not self.force_rollback:
                 return await self._commit()

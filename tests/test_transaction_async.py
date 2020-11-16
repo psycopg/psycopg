@@ -586,23 +586,6 @@ async def test_explicit_rollback_of_enclosing_tx_outer_tx_unaffected(
 
 @pytest.mark.parametrize("exc_info", [(None, None, None), some_exc_info()])
 @pytest.mark.parametrize("name", [None, "s1"])
-async def test_manual_enter_and_exit_out_of_order_exit_asserts(
-    aconn, name, exc_info
-):
-    """
-    When user is calling __enter__() and __exit__() manually for some reason,
-    provide a helpful error message if they call __exit__() in the wrong order
-    for nested transactions.
-    """
-    tx1, tx2 = AsyncTransaction(aconn, name), AsyncTransaction(aconn)
-    await tx1.__aenter__()
-    await tx2.__aenter__()
-    with pytest.raises(ProgrammingError, match="Out-of-order"):
-        await tx1.__aexit__(*exc_info)
-
-
-@pytest.mark.parametrize("exc_info", [(None, None, None), some_exc_info()])
-@pytest.mark.parametrize("name", [None, "s1"])
 async def test_manual_exit_without_enter_asserts(aconn, name, exc_info):
     """
     When user is calling __enter__() and __exit__() manually for some reason,
