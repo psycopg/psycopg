@@ -106,10 +106,10 @@ class BaseConnection:
         self._notice_handlers: List[NoticeHandler] = []
         self._notify_handlers: List[NotifyHandler] = []
 
-        # stack of savepoint names managed by active Transaction() blocks
-        self._savepoints: Optional[List[str]] = None
-        # (None when there no active Transaction blocks; [] when there is only
-        # one Transaction block, with a top-level transaction and no savepoint)
+        # Stack of savepoint names managed by current transaction blocks.
+        # the first item is "" in case the outermost Transaction must manage
+        # only a begin/commit and not a savepoint.
+        self._savepoints: List[str] = []
 
         wself = ref(self)
 
@@ -135,7 +135,7 @@ class BaseConnection:
         # subclasses must call it holding a lock
         status = self.pgconn.transaction_status
         if status != TransactionStatus.IDLE:
-            if self._savepoints is not None:
+            if self._savepoints:
                 raise e.ProgrammingError(
                     "couldn't change autocommit state: "
                     "connection.transaction() context in progress"
@@ -295,7 +295,7 @@ class Connection(BaseConnection):
     def commit(self) -> None:
         """Commit any pending transaction to the database."""
         with self.lock:
-            if self._savepoints is not None:
+            if self._savepoints:
                 raise e.ProgrammingError(
                     "Explicit commit() forbidden within a Transaction "
                     "context. (Transaction will be automatically committed "
@@ -308,7 +308,7 @@ class Connection(BaseConnection):
     def rollback(self) -> None:
         """Roll back to the start of any pending transaction."""
         with self.lock:
-            if self._savepoints is not None:
+            if self._savepoints:
                 raise e.ProgrammingError(
                     "Explicit rollback() forbidden within a Transaction "
                     "context. (Either raise Transaction.Rollback() or allow "
@@ -447,7 +447,7 @@ class AsyncConnection(BaseConnection):
         async with self.lock:
             if self.pgconn.transaction_status == TransactionStatus.IDLE:
                 return
-            if self._savepoints is not None:
+            if self._savepoints:
                 raise e.ProgrammingError(
                     "Explicit commit() forbidden within a Transaction "
                     "context. (Transaction will be automatically committed "
@@ -459,7 +459,7 @@ class AsyncConnection(BaseConnection):
         async with self.lock:
             if self.pgconn.transaction_status == TransactionStatus.IDLE:
                 return
-            if self._savepoints is not None:
+            if self._savepoints:
                 raise e.ProgrammingError(
                     "Explicit rollback() forbidden within a Transaction "
                     "context. (Either raise Transaction.Rollback() or allow "

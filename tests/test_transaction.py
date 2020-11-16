@@ -135,6 +135,21 @@ def test_rollback_on_exception_exit(conn):
     assert not inserted(conn)
 
 
+def test_interaction_dbapi_transaction(conn):
+    insert_row(conn, "foo")
+
+    with conn.transaction():
+        insert_row(conn, "bar")
+        raise Rollback
+
+    with conn.transaction():
+        insert_row(conn, "baz")
+
+    assert in_transaction(conn)
+    conn.commit()
+    assert inserted(conn) == {"foo", "baz"}
+
+
 def test_prohibits_use_of_commit_rollback_autocommit(conn):
     """
     Within a Transaction block, it is forbidden to touch commit, rollback,
@@ -365,6 +380,20 @@ def test_named_savepoints_successful_exit(conn, commands):
     tx.__exit__(None, None, None)
     assert commands.pop() == "commit"
 
+    # Case 1 (with a transaction already started)
+    conn.cursor().execute("select 1")
+    assert commands.pop() == "begin"
+    tx = Transaction(conn)
+    tx.__enter__()
+    assert commands.pop() == 'savepoint "s1"'
+    assert tx.savepoint_name == "s1"
+    tx.__exit__(None, None, None)
+    assert commands.pop() == 'release savepoint "s1"'
+    assert not commands
+    conn.rollback()
+    assert commands.pop() == "rollback"
+    assert not commands
+
     # Case 2
     tx = Transaction(conn, savepoint_name="foo")
     tx.__enter__()
@@ -390,10 +419,10 @@ def test_named_savepoints_successful_exit(conn, commands):
         assert commands.pop() == "begin"
         tx = Transaction(conn)
         tx.__enter__()
-        assert commands.pop() == 'savepoint "s1"'
-        assert tx.savepoint_name == "s1"
+        assert commands.pop() == 'savepoint "s2"'
+        assert tx.savepoint_name == "s2"
         tx.__exit__(None, None, None)
-        assert commands.pop() == 'release savepoint "s1"'
+        assert commands.pop() == 'release savepoint "s2"'
         assert not commands
     assert commands.pop() == "commit"
 
@@ -442,12 +471,12 @@ def test_named_savepoints_exception_exit(conn, commands):
         assert commands.pop() == "begin"
         tx = Transaction(conn)
         tx.__enter__()
-        assert commands.pop() == 'savepoint "s1"'
-        assert tx.savepoint_name == "s1"
+        assert commands.pop() == 'savepoint "s2"'
+        assert tx.savepoint_name == "s2"
         tx.__exit__(*some_exc_info())
         assert (
             commands.pop()
-            == 'rollback to savepoint "s1"; release savepoint "s1"'
+            == 'rollback to savepoint "s2"; release savepoint "s2"'
         )
         assert not commands
     assert commands.pop() == "commit"
@@ -608,30 +637,3 @@ def test_explicit_rollback_of_enclosing_tx_outer_tx_unaffected(conn, svcconn):
         assert not inserted(svcconn)  # Not yet committed
     # Changes committed
     assert inserted(svcconn) == {"outer-before", "outer-after"}
-
-
-@pytest.mark.parametrize("exc_info", [(None, None, None), some_exc_info()])
-@pytest.mark.parametrize("name", [None, "s1"])
-def test_manual_exit_without_enter_asserts(conn, name, exc_info):
-    """
-    When user is calling __enter__() and __exit__() manually for some reason,
-    provide a helpful error message if they call __exit__() without first
-    having called __enter__()
-    """
-    tx = Transaction(conn, name)
-    with pytest.raises(ProgrammingError, match="Out-of-order"):
-        tx.__exit__(*exc_info)
-
-
-@pytest.mark.parametrize("exc_info", [(None, None, None), some_exc_info()])
-@pytest.mark.parametrize("name", [None, "s1"])
-def test_manual_exit_twice_asserts(conn, name, exc_info):
-    """
-    When user is calling __enter__() and __exit__() manually for some reason,
-    provide a helpful error message if they accidentally call __exit__() twice.
-    """
-    tx = Transaction(conn, name)
-    tx.__enter__()
-    tx.__exit__(*exc_info)
-    with pytest.raises(ProgrammingError, match="Out-of-order"):
-        tx.__exit__(*exc_info)

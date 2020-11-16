@@ -97,6 +97,21 @@ async def test_rollback_on_exception_exit(aconn):
     assert not await inserted(aconn)
 
 
+async def test_interaction_dbapi_transaction(aconn):
+    await insert_row(aconn, "foo")
+
+    async with aconn.transaction():
+        await insert_row(aconn, "bar")
+        raise Rollback
+
+    async with aconn.transaction():
+        await insert_row(aconn, "baz")
+
+    assert in_transaction(aconn)
+    await aconn.commit()
+    assert await inserted(aconn) == {"foo", "baz"}
+
+
 async def test_prohibits_use_of_commit_rollback_autocommit(aconn):
     """
     Within a Transaction block, it is forbidden to touch commit, rollback,
@@ -334,6 +349,20 @@ async def test_named_savepoints_successful_exit(aconn, commands):
     await tx.__aexit__(None, None, None)
     assert commands.pop() == "commit"
 
+    # Case 1 (with a transaction already started)
+    await (await aconn.cursor()).execute("select 1")
+    assert commands.pop() == "begin"
+    tx = AsyncTransaction(aconn)
+    await tx.__aenter__()
+    assert commands.pop() == 'savepoint "s1"'
+    assert tx.savepoint_name == "s1"
+    await tx.__aexit__(None, None, None)
+    assert commands.pop() == 'release savepoint "s1"'
+    assert not commands
+    await aconn.rollback()
+    assert commands.pop() == "rollback"
+    assert not commands
+
     # Case 2
     tx = AsyncTransaction(aconn, savepoint_name="foo")
     await tx.__aenter__()
@@ -359,10 +388,10 @@ async def test_named_savepoints_successful_exit(aconn, commands):
         assert commands.pop() == "begin"
         tx = AsyncTransaction(aconn)
         await tx.__aenter__()
-        assert commands.pop() == 'savepoint "s1"'
-        assert tx.savepoint_name == "s1"
+        assert commands.pop() == 'savepoint "s2"'
+        assert tx.savepoint_name == "s2"
         await tx.__aexit__(None, None, None)
-        assert commands.pop() == 'release savepoint "s1"'
+        assert commands.pop() == 'release savepoint "s2"'
         assert not commands
     assert commands.pop() == "commit"
 
@@ -411,12 +440,12 @@ async def test_named_savepoints_exception_exit(aconn, commands):
         assert commands.pop() == "begin"
         tx = AsyncTransaction(aconn)
         await tx.__aenter__()
-        assert commands.pop() == 'savepoint "s1"'
-        assert tx.savepoint_name == "s1"
+        assert commands.pop() == 'savepoint "s2"'
+        assert tx.savepoint_name == "s2"
         await tx.__aexit__(*some_exc_info())
         assert (
             commands.pop()
-            == 'rollback to savepoint "s1"; release savepoint "s1"'
+            == 'rollback to savepoint "s2"; release savepoint "s2"'
         )
         assert not commands
     assert commands.pop() == "commit"
@@ -579,30 +608,3 @@ async def test_explicit_rollback_of_enclosing_tx_outer_tx_unaffected(
         assert not inserted(svcconn)  # Not yet committed
     # Changes committed
     assert inserted(svcconn) == {"outer-before", "outer-after"}
-
-
-@pytest.mark.parametrize("exc_info", [(None, None, None), some_exc_info()])
-@pytest.mark.parametrize("name", [None, "s1"])
-async def test_manual_exit_without_enter_asserts(aconn, name, exc_info):
-    """
-    When user is calling __enter__() and __exit__() manually for some reason,
-    provide a helpful error message if they call __exit__() without first
-    having called __enter__()
-    """
-    tx = AsyncTransaction(aconn, name)
-    with pytest.raises(ProgrammingError, match="Out-of-order"):
-        await tx.__aexit__(*exc_info)
-
-
-@pytest.mark.parametrize("exc_info", [(None, None, None), some_exc_info()])
-@pytest.mark.parametrize("name", [None, "s1"])
-async def test_manual_exit_twice_asserts(aconn, name, exc_info):
-    """
-    When user is calling __enter__() and __exit__() manually for some reason,
-    provide a helpful error message if they accidentally call __exit__() twice.
-    """
-    tx = AsyncTransaction(aconn, name)
-    await tx.__aenter__()
-    await tx.__aexit__(*exc_info)
-    with pytest.raises(ProgrammingError, match="Out-of-order"):
-        await tx.__aexit__(*exc_info)

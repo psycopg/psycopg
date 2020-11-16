@@ -12,7 +12,6 @@ from typing import Generic, List, Optional, Type, Union, TYPE_CHECKING
 from . import sql
 from .pq import TransactionStatus
 from .proto import ConnectionType
-from .errors import ProgrammingError
 
 if TYPE_CHECKING:
     from .connection import Connection, AsyncConnection  # noqa: F401
@@ -47,18 +46,28 @@ class BaseTransaction(Generic[ConnectionType]):
         force_rollback: bool = False,
     ):
         self._conn = connection
-        self._savepoint_name = savepoint_name or ""
         self.force_rollback = force_rollback
-        self._outer_transaction = (
-            connection.pgconn.transaction_status == TransactionStatus.IDLE
-        )
+        self._yolo = True
+
+        if connection.pgconn.transaction_status == TransactionStatus.IDLE:
+            # outer transaction: if no name it's only a begin, else
+            # there will be an additional savepoint
+            self._outer_transaction = True
+            assert not connection._savepoints
+            self._savepoint_name = savepoint_name or ""
+        else:
+            # inner transaction: it always has a name
+            self._outer_transaction = False
+            self._savepoint_name = (
+                savepoint_name or f"s{len(self._conn._savepoints) + 1}"
+            )
 
     @property
     def connection(self) -> ConnectionType:
         return self._conn
 
     @property
-    def savepoint_name(self) -> str:
+    def savepoint_name(self) -> Optional[str]:
         return self._savepoint_name
 
     def __repr__(self) -> str:
@@ -69,23 +78,14 @@ class BaseTransaction(Generic[ConnectionType]):
             args.append("force_rollback=True")
         return f"{self.__class__.__qualname__}({', '.join(args)})"
 
-    _out_of_order_err = ProgrammingError(
-        "Out-of-order Transaction context exits. Are you "
-        "calling __exit__() manually and getting it wrong?"
-    )
-
     def _enter_commands(self) -> List[str]:
-        commands = []
+        assert self._yolo
+        self._yolo = False
 
+        commands = []
         if self._outer_transaction:
-            assert self._conn._savepoints is None, self._conn._savepoints
-            self._conn._savepoints = []
+            assert not self._conn._savepoints, self._conn._savepoints
             commands.append("begin")
-        else:
-            if self._conn._savepoints is None:
-                self._conn._savepoints = []
-            if not self._savepoint_name:
-                self._savepoint_name = f"s{len(self._conn._savepoints) + 1}"
 
         if self._savepoint_name:
             commands.append(
@@ -93,51 +93,45 @@ class BaseTransaction(Generic[ConnectionType]):
                 .format(sql.Identifier(self._savepoint_name))
                 .as_string(self._conn)
             )
-            self._conn._savepoints.append(self._savepoint_name)
 
+        self._conn._savepoints.append(self._savepoint_name)
         return commands
 
     def _commit_commands(self) -> List[str]:
-        commands = []
+        assert self._conn._savepoints[-1] == self._savepoint_name
+        self._conn._savepoints.pop()
 
-        self._pop_savepoint()
+        commands = []
         if self._savepoint_name and not self._outer_transaction:
             commands.append(
                 sql.SQL("release savepoint {}")
                 .format(sql.Identifier(self._savepoint_name))
                 .as_string(self._conn)
             )
+
         if self._outer_transaction:
+            assert not self._conn._savepoints
             commands.append("commit")
 
         return commands
 
     def _rollback_commands(self) -> List[str]:
-        commands = []
+        assert self._conn._savepoints[-1] == self._savepoint_name
+        self._conn._savepoints.pop()
 
-        self._pop_savepoint()
+        commands = []
         if self._savepoint_name and not self._outer_transaction:
             commands.append(
                 sql.SQL("rollback to savepoint {n}; release savepoint {n}")
                 .format(n=sql.Identifier(self._savepoint_name))
                 .as_string(self._conn)
             )
+
         if self._outer_transaction:
+            assert not self._conn._savepoints
             commands.append("rollback")
 
         return commands
-
-    def _pop_savepoint(self) -> None:
-        if self._savepoint_name:
-            if self._conn._savepoints is None:
-                raise self._out_of_order_err
-            actual = self._conn._savepoints.pop()
-            if actual != self._savepoint_name:
-                raise self._out_of_order_err
-        if self._outer_transaction:
-            if self._conn._savepoints is None or self._conn._savepoints:
-                raise self._out_of_order_err
-            self._conn._savepoints = None
 
 
 class Transaction(BaseTransaction["Connection"]):
