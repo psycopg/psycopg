@@ -368,11 +368,9 @@ def test_named_savepoints_successful_exit(conn, commands):
     # Case 2
     tx = Transaction(conn, savepoint_name="foo")
     tx.__enter__()
-    assert commands.pop() == "begin"
-    assert commands.pop() == 'savepoint "foo"'
+    assert commands.pop() == 'begin; savepoint "foo"'
     assert tx.savepoint_name == "foo"
     tx.__exit__(None, None, None)
-    assert commands.pop() == 'release savepoint "foo"'
     assert commands.pop() == "commit"
 
     # Case 3 (with savepoint name provided)
@@ -384,6 +382,7 @@ def test_named_savepoints_successful_exit(conn, commands):
         assert tx.savepoint_name == "bar"
         tx.__exit__(None, None, None)
         assert commands.pop() == 'release savepoint "bar"'
+        assert not commands
     assert commands.pop() == "commit"
 
     # Case 3 (with savepoint name auto-generated)
@@ -395,6 +394,7 @@ def test_named_savepoints_successful_exit(conn, commands):
         assert tx.savepoint_name == "s1"
         tx.__exit__(None, None, None)
         assert commands.pop() == 'release savepoint "s1"'
+        assert not commands
     assert commands.pop() == "commit"
 
     assert not commands
@@ -417,14 +417,9 @@ def test_named_savepoints_exception_exit(conn, commands):
     # Case 2
     tx = Transaction(conn, savepoint_name="foo")
     tx.__enter__()
-    assert commands.pop() == "begin"
-    assert commands.pop() == 'savepoint "foo"'
+    assert commands.pop() == 'begin; savepoint "foo"'
     assert tx.savepoint_name == "foo"
     tx.__exit__(*some_exc_info())
-    assert (
-        commands.pop()
-        == 'rollback to savepoint "foo"; release savepoint "foo"'
-    )
     assert commands.pop() == "rollback"
 
     # Case 3 (with savepoint name provided)
@@ -439,6 +434,7 @@ def test_named_savepoints_exception_exit(conn, commands):
             commands.pop()
             == 'rollback to savepoint "bar"; release savepoint "bar"'
         )
+        assert not commands
     assert commands.pop() == "commit"
 
     # Case 3 (with savepoint name auto-generated)
@@ -453,6 +449,7 @@ def test_named_savepoints_exception_exit(conn, commands):
             commands.pop()
             == 'rollback to savepoint "s1"; release savepoint "s1"'
         )
+        assert not commands
     assert commands.pop() == "commit"
 
     assert not commands

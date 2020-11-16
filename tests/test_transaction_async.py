@@ -337,11 +337,9 @@ async def test_named_savepoints_successful_exit(aconn, commands):
     # Case 2
     tx = AsyncTransaction(aconn, savepoint_name="foo")
     await tx.__aenter__()
-    assert commands.pop() == "begin"
-    assert commands.pop() == 'savepoint "foo"'
+    assert commands.pop() == 'begin; savepoint "foo"'
     assert tx.savepoint_name == "foo"
     await tx.__aexit__(None, None, None)
-    assert commands.pop() == 'release savepoint "foo"'
     assert commands.pop() == "commit"
 
     # Case 3 (with savepoint name provided)
@@ -353,6 +351,7 @@ async def test_named_savepoints_successful_exit(aconn, commands):
         assert tx.savepoint_name == "bar"
         await tx.__aexit__(None, None, None)
         assert commands.pop() == 'release savepoint "bar"'
+        assert not commands
     assert commands.pop() == "commit"
 
     # Case 3 (with savepoint name auto-generated)
@@ -364,6 +363,7 @@ async def test_named_savepoints_successful_exit(aconn, commands):
         assert tx.savepoint_name == "s1"
         await tx.__aexit__(None, None, None)
         assert commands.pop() == 'release savepoint "s1"'
+        assert not commands
     assert commands.pop() == "commit"
 
     assert not commands
@@ -386,14 +386,9 @@ async def test_named_savepoints_exception_exit(aconn, commands):
     # Case 2
     tx = AsyncTransaction(aconn, savepoint_name="foo")
     await tx.__aenter__()
-    assert commands.pop() == "begin"
-    assert commands.pop() == 'savepoint "foo"'
+    assert commands.pop() == 'begin; savepoint "foo"'
     assert tx.savepoint_name == "foo"
     await tx.__aexit__(*some_exc_info())
-    assert (
-        commands.pop()
-        == 'rollback to savepoint "foo"; release savepoint "foo"'
-    )
     assert commands.pop() == "rollback"
 
     # Case 3 (with savepoint name provided)
@@ -408,6 +403,7 @@ async def test_named_savepoints_exception_exit(aconn, commands):
             commands.pop()
             == 'rollback to savepoint "bar"; release savepoint "bar"'
         )
+        assert not commands
     assert commands.pop() == "commit"
 
     # Case 3 (with savepoint name auto-generated)
@@ -422,6 +418,7 @@ async def test_named_savepoints_exception_exit(aconn, commands):
             commands.pop()
             == 'rollback to savepoint "s1"; release savepoint "s1"'
         )
+        assert not commands
     assert commands.pop() == "commit"
 
     assert not commands

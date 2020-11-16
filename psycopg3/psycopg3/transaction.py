@@ -11,7 +11,7 @@ from typing import Generic, List, Optional, Type, Union, TYPE_CHECKING
 
 from . import sql
 from .pq import TransactionStatus
-from .proto import ConnectionType, Query
+from .proto import ConnectionType
 from .errors import ProgrammingError
 
 if TYPE_CHECKING:
@@ -74,13 +74,13 @@ class BaseTransaction(Generic[ConnectionType]):
         "calling __exit__() manually and getting it wrong?"
     )
 
-    def _enter_commands(self) -> List[Query]:
-        commands: List[Query] = []
+    def _enter_commands(self) -> List[str]:
+        commands = []
 
         if self._outer_transaction:
             assert self._conn._savepoints is None, self._conn._savepoints
             self._conn._savepoints = []
-            commands.append(b"begin")
+            commands.append("begin")
         else:
             if self._conn._savepoints is None:
                 self._conn._savepoints = []
@@ -89,41 +89,41 @@ class BaseTransaction(Generic[ConnectionType]):
 
         if self._savepoint_name:
             commands.append(
-                sql.SQL("savepoint {}").format(
-                    sql.Identifier(self._savepoint_name)
-                )
+                sql.SQL("savepoint {}")
+                .format(sql.Identifier(self._savepoint_name))
+                .as_string(self._conn)
             )
             self._conn._savepoints.append(self._savepoint_name)
 
         return commands
 
-    def _commit_commands(self) -> List[Query]:
-        commands: List[Query] = []
+    def _commit_commands(self) -> List[str]:
+        commands = []
 
         self._pop_savepoint()
-        if self._savepoint_name:
+        if self._savepoint_name and not self._outer_transaction:
             commands.append(
-                sql.SQL("release savepoint {}").format(
-                    sql.Identifier(self._savepoint_name)
-                )
+                sql.SQL("release savepoint {}")
+                .format(sql.Identifier(self._savepoint_name))
+                .as_string(self._conn)
             )
         if self._outer_transaction:
-            commands.append(b"commit")
+            commands.append("commit")
 
         return commands
 
-    def _rollback_commands(self) -> List[Query]:
-        commands: List[Query] = []
+    def _rollback_commands(self) -> List[str]:
+        commands = []
 
         self._pop_savepoint()
-        if self._savepoint_name:
+        if self._savepoint_name and not self._outer_transaction:
             commands.append(
-                sql.SQL(
-                    "rollback to savepoint {n}; release savepoint {n}"
-                ).format(n=sql.Identifier(self._savepoint_name))
+                sql.SQL("rollback to savepoint {n}; release savepoint {n}")
+                .format(n=sql.Identifier(self._savepoint_name))
+                .as_string(self._conn)
             )
         if self._outer_transaction:
-            commands.append(b"rollback")
+            commands.append("rollback")
 
         return commands
 
@@ -178,9 +178,8 @@ class Transaction(BaseTransaction["Connection"]):
 
         return False
 
-    def _execute(self, commands: List[Query]) -> None:
-        for command in commands:
-            self._conn._exec_command(command)
+    def _execute(self, commands: List[str]) -> None:
+        self._conn._exec_command("; ".join(commands))
 
 
 class AsyncTransaction(BaseTransaction["AsyncConnection"]):
@@ -222,6 +221,5 @@ class AsyncTransaction(BaseTransaction["AsyncConnection"]):
 
         return False
 
-    async def _execute(self, commands: List[Query]) -> None:
-        for command in commands:
-            await self._conn._exec_command(command)
+    async def _execute(self, commands: List[str]) -> None:
+        await self._conn._exec_command("; ".join(commands))
