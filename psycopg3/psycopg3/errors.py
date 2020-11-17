@@ -266,6 +266,7 @@ def get_base_exception(sqlstate: str) -> Type[Error]:
 
 
 _base_exc_map = {
+    "08": OperationalError,  # Connection Exception
     "0A": NotSupportedError,  # Feature Not Supported
     "20": ProgrammingError,  # Case Not Foud
     "21": ProgrammingError,  # Cardinality Violation
@@ -343,37 +344,37 @@ class SqlStatementNotYetComplete(DatabaseError):
 
 
 @sqlcode("08000")
-class ConnectionException(DatabaseError):
+class ConnectionException(OperationalError):
     pass
 
 
 @sqlcode("08001")
-class SqlclientUnableToEstablishSqlconnection(DatabaseError):
+class SqlclientUnableToEstablishSqlconnection(OperationalError):
     pass
 
 
 @sqlcode("08003")
-class ConnectionDoesNotExist(DatabaseError):
+class ConnectionDoesNotExist(OperationalError):
     pass
 
 
 @sqlcode("08004")
-class SqlserverRejectedEstablishmentOfSqlconnection(DatabaseError):
+class SqlserverRejectedEstablishmentOfSqlconnection(OperationalError):
     pass
 
 
 @sqlcode("08006")
-class ConnectionFailure(DatabaseError):
+class ConnectionFailure(OperationalError):
     pass
 
 
 @sqlcode("08007")
-class TransactionResolutionUnknown(DatabaseError):
+class TransactionResolutionUnknown(OperationalError):
     pass
 
 
 @sqlcode("08P01")
-class ProtocolViolation(DatabaseError):
+class ProtocolViolation(OperationalError):
     pass
 
 
