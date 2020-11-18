@@ -4,24 +4,33 @@ psycopg3 connection objects
 
 # Copyright (C) 2020 The Psycopg Team
 
-import logging
+import sys
 import asyncio
+import logging
 import threading
 from types import TracebackType
 from typing import Any, AsyncIterator, Callable, Iterator, List, NamedTuple
 from typing import Optional, Type, TYPE_CHECKING, Union
 from weakref import ref, ReferenceType
 from functools import partial
+from contextlib import contextmanager
+
+if sys.version_info >= (3, 7):
+    from contextlib import asynccontextmanager
+else:
+    from .utils.context import asynccontextmanager
 
 from . import pq
 from . import cursor
 from . import errors as e
 from . import encodings
 from .pq import TransactionStatus, ExecStatus
-from .proto import DumpersMap, LoadersMap, PQGen, RV
+from .sql import Composable
+from .proto import DumpersMap, LoadersMap, PQGen, RV, Query
 from .waiting import wait, wait_async
 from .conninfo import make_conninfo
 from .generators import notifies
+from .transaction import Transaction, AsyncTransaction
 
 logger = logging.getLogger(__name__)
 package_logger = logging.getLogger("psycopg3")
@@ -97,6 +106,11 @@ class BaseConnection:
         self._notice_handlers: List[NoticeHandler] = []
         self._notify_handlers: List[NotifyHandler] = []
 
+        # Stack of savepoint names managed by current transaction blocks.
+        # the first item is "" in case the outermost Transaction must manage
+        # only a begin/commit and not a savepoint.
+        self._savepoints: List[str] = []
+
         wself = ref(self)
 
         pgconn.notice_handler = partial(BaseConnection._notice_handler, wself)
@@ -121,10 +135,18 @@ class BaseConnection:
         # subclasses must call it holding a lock
         status = self.pgconn.transaction_status
         if status != TransactionStatus.IDLE:
-            raise e.ProgrammingError(
-                "couldn't change autocommit state: connection in"
-                f" transaction status {TransactionStatus(status).name}"
-            )
+            if self._savepoints:
+                raise e.ProgrammingError(
+                    "couldn't change autocommit state: "
+                    "connection.transaction() context in progress"
+                )
+            else:
+                raise e.ProgrammingError(
+                    "couldn't change autocommit state: "
+                    "connection in transaction status "
+                    f"{TransactionStatus(status).name}"
+                )
+
         self._autocommit = value
 
     @property
@@ -268,30 +290,43 @@ class Connection(BaseConnection):
         if self.pgconn.transaction_status != TransactionStatus.IDLE:
             return
 
-        self.pgconn.send_query(b"begin")
-        (pgres,) = self.wait(execute(self.pgconn))
-        if pgres.status != ExecStatus.COMMAND_OK:
-            raise e.OperationalError(
-                "error on begin:"
-                f" {pq.error_message(pgres, encoding=self.client_encoding)}"
-            )
+        self._exec_command(b"begin")
 
     def commit(self) -> None:
         """Commit any pending transaction to the database."""
         with self.lock:
-            self._exec_commit_rollback(b"commit")
+            if self._savepoints:
+                raise e.ProgrammingError(
+                    "Explicit commit() forbidden within a Transaction "
+                    "context. (Transaction will be automatically committed "
+                    "on successful exit from context.)"
+                )
+            if self.pgconn.transaction_status == TransactionStatus.IDLE:
+                return
+            self._exec_command(b"commit")
 
     def rollback(self) -> None:
         """Roll back to the start of any pending transaction."""
         with self.lock:
-            self._exec_commit_rollback(b"rollback")
+            if self._savepoints:
+                raise e.ProgrammingError(
+                    "Explicit rollback() forbidden within a Transaction "
+                    "context. (Either raise Transaction.Rollback() or allow "
+                    "an exception to propagate out of the context.)"
+                )
+            if self.pgconn.transaction_status == TransactionStatus.IDLE:
+                return
+            self._exec_command(b"rollback")
 
-    def _exec_commit_rollback(self, command: bytes) -> None:
+    def _exec_command(self, command: Query) -> None:
         # Caller must hold self.lock
-        status = self.pgconn.transaction_status
-        if status == TransactionStatus.IDLE:
-            return
 
+        if isinstance(command, str):
+            command = command.encode(self.client_encoding)
+        elif isinstance(command, Composable):
+            command = command.as_string(self).encode(self.client_encoding)
+
+        logger.debug(f"{self}: {command!r}")
         self.pgconn.send_query(command)
         results = self.wait(execute(self.pgconn))
         if results[-1].status != ExecStatus.COMMAND_OK:
@@ -299,6 +334,23 @@ class Connection(BaseConnection):
                 f"error on {command.decode('utf8')}:"
                 f" {pq.error_message(results[-1], encoding=self.client_encoding)}"
             )
+
+    @contextmanager
+    def transaction(
+        self,
+        savepoint_name: Optional[str] = None,
+        force_rollback: bool = False,
+    ) -> Iterator[Transaction]:
+        """
+        Start a context block with a new transaction or nested transaction.
+
+        :param savepoint_name: Name of the savepoint used to manage a nested
+            transaction. If `!None`, one will be chosen automatically.
+        :param force_rollback: Roll back the transaction at the end of the
+            block even if there were no error (e.g. to try a no-op process).
+        """
+        with Transaction(self, savepoint_name, force_rollback) as tx:
+            yield tx
 
     @classmethod
     def wait(cls, gen: PQGen[RV], timeout: Optional[float] = 0.1) -> RV:
@@ -397,35 +449,60 @@ class AsyncConnection(BaseConnection):
         if self.pgconn.transaction_status != TransactionStatus.IDLE:
             return
 
-        self.pgconn.send_query(b"begin")
-        (pgres,) = await self.wait(execute(self.pgconn))
-        if pgres.status != ExecStatus.COMMAND_OK:
-            raise e.OperationalError(
-                "error on begin:"
-                f" {pq.error_message(pgres, encoding=self.client_encoding)}"
-            )
+        await self._exec_command(b"begin")
 
     async def commit(self) -> None:
         async with self.lock:
-            await self._exec_commit_rollback(b"commit")
+            if self.pgconn.transaction_status == TransactionStatus.IDLE:
+                return
+            if self._savepoints:
+                raise e.ProgrammingError(
+                    "Explicit commit() forbidden within a Transaction "
+                    "context. (Transaction will be automatically committed "
+                    "on successful exit from context.)"
+                )
+            await self._exec_command(b"commit")
 
     async def rollback(self) -> None:
         async with self.lock:
-            await self._exec_commit_rollback(b"rollback")
+            if self.pgconn.transaction_status == TransactionStatus.IDLE:
+                return
+            if self._savepoints:
+                raise e.ProgrammingError(
+                    "Explicit rollback() forbidden within a Transaction "
+                    "context. (Either raise Transaction.Rollback() or allow "
+                    "an exception to propagate out of the context.)"
+                )
+            await self._exec_command(b"rollback")
 
-    async def _exec_commit_rollback(self, command: bytes) -> None:
+    async def _exec_command(self, command: Query) -> None:
         # Caller must hold self.lock
-        status = self.pgconn.transaction_status
-        if status == TransactionStatus.IDLE:
-            return
+
+        if isinstance(command, str):
+            command = command.encode(self.client_encoding)
+        elif isinstance(command, Composable):
+            command = command.as_string(self).encode(self.client_encoding)
 
         self.pgconn.send_query(command)
-        (pgres,) = await self.wait(execute(self.pgconn))
-        if pgres.status != ExecStatus.COMMAND_OK:
+        results = await self.wait(execute(self.pgconn))
+        if results[-1].status != ExecStatus.COMMAND_OK:
             raise e.OperationalError(
                 f"error on {command.decode('utf8')}:"
-                f" {pq.error_message(pgres, encoding=self.client_encoding)}"
+                f" {pq.error_message(results[-1], encoding=self.client_encoding)}"
             )
+
+    @asynccontextmanager
+    async def transaction(
+        self,
+        savepoint_name: Optional[str] = None,
+        force_rollback: bool = False,
+    ) -> AsyncIterator[AsyncTransaction]:
+        """
+        Start a context block with a new transaction or nested transaction.
+        """
+        tx = AsyncTransaction(self, savepoint_name, force_rollback)
+        async with tx:
+            yield tx
 
     @classmethod
     async def wait(cls, gen: PQGen[RV]) -> RV:
@@ -438,7 +515,7 @@ class AsyncConnection(BaseConnection):
         )
 
     async def set_client_encoding(self, name: str) -> None:
-        """Async version of the `client_encoding` setter."""
+        """Async version of the `~Connection.client_encoding` setter."""
         async with self.lock:
             self.pgconn.send_query_params(
                 b"select set_config('client_encoding', $1, false)",
@@ -471,6 +548,6 @@ class AsyncConnection(BaseConnection):
         )
 
     async def set_autocommit(self, value: bool) -> None:
-        """Async version of the `autocommit` setter."""
+        """Async version of the `~Connection.autocommit` setter."""
         async with self.lock:
             super()._set_autocommit(value)
