@@ -59,7 +59,7 @@ class BaseTransaction(Generic[ConnectionType]):
             # inner transaction: it always has a name
             self._outer_transaction = False
             self._savepoint_name = (
-                savepoint_name or f"s{len(self._conn._savepoints) + 1}"
+                savepoint_name or f"_pg3_{len(self._conn._savepoints) + 1}"
             )
 
     @property
@@ -106,7 +106,7 @@ class BaseTransaction(Generic[ConnectionType]):
         commands = []
         if self._savepoint_name and not self._outer_transaction:
             commands.append(
-                sql.SQL("release savepoint {}")
+                sql.SQL("release {}")
                 .format(sql.Identifier(self._savepoint_name))
                 .as_string(self._conn)
             )
@@ -124,7 +124,7 @@ class BaseTransaction(Generic[ConnectionType]):
         commands = []
         if self._savepoint_name and not self._outer_transaction:
             commands.append(
-                sql.SQL("rollback to savepoint {n}; release savepoint {n}")
+                sql.SQL("rollback to {n}; release {n}")
                 .format(n=sql.Identifier(self._savepoint_name))
                 .as_string(self._conn)
             )
