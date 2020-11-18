@@ -29,8 +29,6 @@ The `!Connection` class
     transaction will be committed (or rolled back, in case of exception) and
     the connection will be closed.
 
-    .. rubric:: Methods you will need every day
-
     .. automethod:: connect
 
         Connection parameters can be passed either as a `conninfo string`__ (a
@@ -50,26 +48,41 @@ The `!Connection` class
             .. __: https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-PARAMKEYWORDS
             .. __: https://www.postgresql.org/docs/current/libpq-envars.html
 
+    .. automethod:: close
     .. automethod:: cursor
-    .. automethod:: commit
-    .. automethod:: rollback
 
-    .. autoattribute:: autocommit
 
-        The property is writable for sync connections, read-only for async
-        ones: you can call `~AsyncConnection.set_autocommit()` on those.
+    .. rubric:: Transaction management methods
 
     For details see :ref:`transactions`.
 
-    .. automethod:: close
+    .. automethod:: commit()
+    .. automethod:: rollback()
+    .. automethod:: transaction(savepoint_name: Optional[str] = None, force_rollback: bool = False) -> Transaction
+
+        It must be called as ``with conn.transaction() as tx: ...``
+
+        Inside a transaction block it will not be possible to call `commit()`
+        or `rollback()`.
+
+    .. autoattribute:: autocommit
+        :annotation: bool
+
+        The property is writable for sync connections, read-only for async
+        ones: you should call `!await` `~AsyncConnection.set_autocommit`\
+        :samp:`({value})` instead.
 
     .. rubric:: Checking and configuring the connection state
 
-    .. autoproperty:: closed
-    .. autoproperty:: client_encoding
+    .. autoattribute:: closed
+        :annotation: bool
+
+    .. autoattribute:: client_encoding
+        :annotation: str
 
         The property is writable for sync connections, read-only for async
-        ones: you can call `~AsyncConnection.set_client_encoding()` on those.
+        ones: you should call `!await` `~AsyncConnection.set_client_encoding`\
+        :samp:`({value})` instead.
 
     .. attribute:: info
 
@@ -112,6 +125,11 @@ The `!AsyncConnection` class
     .. automethod:: cursor
     .. automethod:: commit
     .. automethod:: rollback
+
+    .. automethod:: transaction(savepoint_name: Optional[str] = None, force_rollback: bool = False) -> AsyncTransaction
+
+        It must be called as ``async with conn.transaction() as tx: ...``.
+
     .. automethod:: notifies
     .. automethod:: set_client_encoding
     .. automethod:: set_autocommit
@@ -122,3 +140,11 @@ Connection support objects
 
 .. autoclass:: Notify
     :members: channel, payload, pid
+
+.. autoclass:: Transaction(connection: Connection, savepoint_name: Optional[str] = None, force_rollback: bool = False)
+
+    .. autoproperty:: savepoint_name
+    .. autoattribute:: connection
+        :annotation: Connection
+
+.. autoclass:: AsyncTransaction(connection: AsyncConnection, savepoint_name: Optional[str] = None, force_rollback: bool = False)

@@ -341,6 +341,14 @@ class Connection(BaseConnection):
         savepoint_name: Optional[str] = None,
         force_rollback: bool = False,
     ) -> Iterator[Transaction]:
+        """
+        Start a context block with a new transaction or nested transaction.
+
+        :param savepoint_name: Name of the savepoint used to manage a nested
+            transaction. If `!None`, one will be chosen automatically.
+        :param force_rollback: Roll back the transaction at the end of the
+            block even if there were no error (e.g. to try a no-op process).
+        """
         with Transaction(self, savepoint_name, force_rollback) as tx:
             yield tx
 
@@ -489,6 +497,9 @@ class AsyncConnection(BaseConnection):
         savepoint_name: Optional[str] = None,
         force_rollback: bool = False,
     ) -> AsyncIterator[AsyncTransaction]:
+        """
+        Start a context block with a new transaction or nested transaction.
+        """
         tx = AsyncTransaction(self, savepoint_name, force_rollback)
         async with tx:
             yield tx
@@ -504,7 +515,7 @@ class AsyncConnection(BaseConnection):
         )
 
     async def set_client_encoding(self, name: str) -> None:
-        """Async version of the `client_encoding` setter."""
+        """Async version of the `~Connection.client_encoding` setter."""
         async with self.lock:
             self.pgconn.send_query_params(
                 b"select set_config('client_encoding', $1, false)",
@@ -537,6 +548,6 @@ class AsyncConnection(BaseConnection):
         )
 
     async def set_autocommit(self, value: bool) -> None:
-        """Async version of the `autocommit` setter."""
+        """Async version of the `~Connection.autocommit` setter."""
         async with self.lock:
             super()._set_autocommit(value)

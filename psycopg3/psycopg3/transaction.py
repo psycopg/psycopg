@@ -64,10 +64,12 @@ class BaseTransaction(Generic[ConnectionType]):
 
     @property
     def connection(self) -> ConnectionType:
+        """The connection the object is managing."""
         return self._conn
 
     @property
     def savepoint_name(self) -> Optional[str]:
+        """The name of the savepoint; `None` if handling the main transaction."""
         return self._savepoint_name
 
     def __repr__(self) -> str:
@@ -135,6 +137,10 @@ class BaseTransaction(Generic[ConnectionType]):
 
 
 class Transaction(BaseTransaction["Connection"]):
+    """
+    Returned by `Connection.transaction()` to handle a transaction block.
+    """
+
     def __enter__(self) -> "Transaction":
         with self._conn.lock:
             self._execute(self._enter_commands())
@@ -177,6 +183,10 @@ class Transaction(BaseTransaction["Connection"]):
 
 
 class AsyncTransaction(BaseTransaction["AsyncConnection"]):
+    """
+    Returned by `AsyncConnection.transaction()` to handle a transaction block.
+    """
+
     async def __aenter__(self) -> "AsyncTransaction":
         async with self._conn.lock:
             await self._execute(self._enter_commands())
