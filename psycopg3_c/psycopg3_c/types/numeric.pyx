@@ -13,7 +13,8 @@ from cpython.float cimport PyFloat_FromDouble
 
 # work around https://github.com/cython/cython/issues/3909
 cdef extern from "Python.h":
-    object PyFloat_FromString(object)
+    double PyOS_string_to_double(
+        const char *s, char **endptr, object overflow_exception) except? -1.0
 
 
 cdef class IntLoader(CLoader):
@@ -43,9 +44,8 @@ cdef class OidBinaryLoader(CLoader):
 
 cdef class FloatLoader(CLoader):
     cdef object cload(self, const char *data, size_t length):
-        cdef bytes b = data
-        return PyFloat_FromString(b)
-
+        cdef double d = PyOS_string_to_double(data, NULL, NULL)
+        return PyFloat_FromDouble(d)
 
 cdef class Float4BinaryLoader(CLoader):
     cdef object cload(self, const char *data, size_t length):
