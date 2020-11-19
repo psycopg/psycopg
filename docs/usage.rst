@@ -127,7 +127,7 @@ it in two steps instead, as in
     aconn = await psycopg3.AsyncConnection.connect():
     async with aconn:
         cur = await aconn.cursor()
-        async with as cur:
+        async with cur:
             await cur.execute(...)
 
 which can be condensed as:
