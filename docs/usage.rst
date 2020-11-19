@@ -298,9 +298,9 @@ Using `!psycopg3` you can do three things:
 - reading data from the database block-by-block, with data emitted by a
   :sql:`COPY TO` statement.
 
-The missing quadrant, copying data from database row-by-row, is not covered by
-COPY because that's pretty much normal querying, and :sql:`COPY TO` doesn't
-offer enough metadata to decode the data to Python objects.
+The missing quadrant, copying data from the database row-by-row, is not
+covered by COPY because that's pretty much normal querying, and :sql:`COPY TO`
+doesn't offer enough metadata to decode the data to Python objects.
 
 The first option is the most powerful, because it allows to load data into the
 database from any Python iterable (a list of tuple, or any iterable of
@@ -335,17 +335,14 @@ produce `!bytes`:
 
 Asynchronous operations are supported using the same patterns on an
 `AsyncConnection`. For instance, if `!f` is an object supporting an
-asynchronous `!read()` method and returning :sql:`COPY` data, a fully-async
-copy operation could be:
+asynchronous `!read()` method returning :sql:`COPY` data, a fully-async copy
+operation could be:
 
 .. code:: python
 
     async with cursor.copy("COPY data FROM STDIN") as copy:
-        data = await f.read()
-        if not data:
-            break
-
-        await copy.write(data)
+        while data := await f.read()
+            await copy.write(data)
 
 Binary data can be produced and consumed using :sql:`FORMAT BINARY` in the
 :sql:`COPY` command: see :ref:`binary-data` for details and limitations.
