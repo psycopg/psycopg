@@ -163,7 +163,7 @@ a `~rollback()` is called.
     If a database operation fails with an error message such as
     *InFailedSqlTransaction: current transaction is aborted, commands ignored
     until end of transaction block*, it means that **a previous operation
-    failed** and the database session is in a state on error. You need to call
+    failed** and the database session is in a state of error. You need to call
     `!rollback()` if you want to keep on using the same connection.
 
 The manual commit requirement can be suspended using `~Connection.autocommit`,
@@ -206,6 +206,21 @@ accounts unbalanced:
         move_money(conn, account2, +100)
 
     # The transaction is now committed
+
+But because the bank is, like, *extremely secure*, they also verify that no
+account goes negative:
+
+.. code:: python
+
+    def move_money(conn, account, amount):
+        new_balance = add_to_balance(conn, account, amount)
+        if new_balance < 0:
+            raise ValueError("account balance cannot go negative")
+
+In case this function raises an exception, be it the `!ValueError` in the
+example or any other exception expected or not, the transaction will be rolled
+back, and the exception will propagate out of the `with` block, further down
+the call stack.
 
 Transaction blocks can also be nested (internal transaction blocks are
 implemented using SAVEPOINT__): an exception raised inside an inner block
