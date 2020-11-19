@@ -32,7 +32,12 @@ The `!Cursor` class
     terminate a transaction or a session though.
 
     .. automethod:: close
-    .. autoproperty:: closed
+
+        .. note:: you can use :ref:`with conn.cursor(): ...<with-statement>`
+            to close the cursor automatically when the block is exited.
+
+    .. autoattribute:: closed
+        :annotation: bool
 
     .. rubric:: Methods to send commands
 
@@ -99,6 +104,11 @@ The `!AsyncCursor` class
     methods, but have an `async` interface.
 
     .. automethod:: close
+
+        .. note:: you can use `!async with` to close the cursor
+            automatically when the block is exited, but be careful about
+            the async quirkness: see :ref:`with-statement` for details.
+
     .. automethod:: execute
     .. automethod:: executemany
     .. automethod:: copy

@@ -49,7 +49,17 @@ The `!Connection` class
             .. __: https://www.postgresql.org/docs/current/libpq-envars.html
 
     .. automethod:: close
+
+        .. note:: you can use :ref:`with connect(): ...<with-statement>` to
+            close the connection automatically when the block is exited.
+
+    .. autoattribute:: closed
+        :annotation: bool
+
     .. automethod:: cursor
+
+        .. note:: you can use :ref:`with conn.cursor(): ...<with-statement>`
+            to close the cursor automatically when the block is exited.
 
 
     .. rubric:: Transaction management methods
@@ -73,9 +83,6 @@ The `!Connection` class
         :samp:`({value})` instead.
 
     .. rubric:: Checking and configuring the connection state
-
-    .. autoattribute:: closed
-        :annotation: bool
 
     .. autoattribute:: client_encoding
         :annotation: str
@@ -122,7 +129,17 @@ The `!AsyncConnection` class
 
     .. automethod:: connect
     .. automethod:: close
+
+        .. note:: you can use `!async with` to close the connection
+            automatically when the block is exited, but be careful about
+            the async quirkness: see :ref:`with-statement` for details.
+
     .. automethod:: cursor
+
+        .. note:: you can use `!async with` to close the cursor
+            automatically when the block is exited, but be careful about
+            the async quirkness: see :ref:`with-statement` for details.
+
     .. automethod:: commit
     .. automethod:: rollback
 

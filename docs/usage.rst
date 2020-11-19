@@ -94,10 +94,12 @@ The main entry points of `!psycopg3` are:
 
 .. index:: with
 
+.. _with-statement:
+
 ``with`` connections and cursors
 --------------------------------
 
-The connections and cursors act as context managers, so you can run:
+Connections and cursors act as context managers, so you can run:
 
 .. code:: python
 
@@ -114,6 +116,29 @@ The connections and cursors act as context managers, so you can run:
     # the transaction is committed on successful exit of the context
     # and the connection closed
 
+For asynchronous connections and cursor it's *almost* what you'd expect, but
+not quite. Please note that `!connect()` and `!cursor()` *don't return a
+context*: they are both factory methods which return *an object which can be
+used as a context*. So you cannot use ``async with connect()``: you have to do
+it in two steps instead, as in
+
+.. code:: python
+
+    aconn = await psycopg3.AsyncConnection.connect():
+    async with aconn:
+        cur = await aconn.cursor()
+        async with as cur:
+            await cur.execute(...)
+
+which can be condensed as:
+
+.. code:: python
+
+    async with (await psycopg3.AsyncConnection.connect()) as aconn:
+        async with (await aconn.cursor()) as cur:
+            await cur.execute(...)
+
+...but no less than that: you still need to do the double async thing.
 
 
 .. index::
