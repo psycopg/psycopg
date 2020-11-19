@@ -141,6 +141,8 @@ Connection support objects
 .. autoclass:: Notify
     :members: channel, payload, pid
 
+.. rubric:: Objects involved in :ref:`transactions`
+
 .. autoclass:: Transaction(connection: Connection, savepoint_name: Optional[str] = None, force_rollback: bool = False)
 
     .. autoproperty:: savepoint_name
@@ -148,3 +150,5 @@ Connection support objects
         :annotation: Connection
 
 .. autoclass:: AsyncTransaction(connection: AsyncConnection, savepoint_name: Optional[str] = None, force_rollback: bool = False)
+
+.. autoexception:: Rollback

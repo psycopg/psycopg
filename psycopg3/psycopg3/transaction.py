@@ -21,7 +21,7 @@ _log = logging.getLogger(__name__)
 
 class Rollback(Exception):
     """
-    Exit the current Transaction context immediately and rollback any changes
+    Exit the current `Transaction` context immediately and rollback any changes
     made within this context.
 
     If a transaction context is specified in the constructor, rollback

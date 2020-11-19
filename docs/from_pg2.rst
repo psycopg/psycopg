@@ -85,6 +85,8 @@ files.
 What's new in psycopg3
 ======================
 
+TODO: to be completed
+
 - `asyncio` support.
 - Several data types are adapted out-of-the-box: uuid, network, range, bytea,
   array of any supported type are dealt with automatically.

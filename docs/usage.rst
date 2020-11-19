@@ -129,7 +129,7 @@ TODO: lift from psycopg2 docs
 
 
 .. index::
-    pair: Query; Parameters
+    pair: Binary; Parameters
 
 .. _binary-data:
 
@@ -208,11 +208,13 @@ accounts unbalanced:
     # The transaction is now committed
 
 Transaction blocks can also be nested (internal transaction blocks are
-implemented using :sql:`SAVEPOINT`): an exception raised inside an inner block
-has a chance of being handled and not fail completely outer operations. The
-following is an example where a series of operation interact with the
-database. Operations are allowed to fail, and we want to store the number of
-operations successfully processed too.
+implemented using SAVEPOINT__): an exception raised inside an inner block
+has a chance of being handled and not completely fail outer operations. The
+following is an example where a series of operations interact with the
+database: operations are allowed to fail, plus we also want to store the
+number of operations successfully processed.
+
+.. __: https://www.postgresql.org/docs/current/sql-savepoint.html
 
 .. code:: python
 
@@ -232,10 +234,29 @@ operations successfully processed too.
 If `!unreliable_operation()` causes an error, including an operation causing a
 database error, all its changes will be reverted. The exception bubbles up
 outside the block: in the example it is intercepted by the `!try` so that the
-loop can complete. The outermost loop is unaffected (unless other errors
+loop can complete. The outermost block is unaffected (unless other errors
 happen there).
 
-.. TODO: Document Rollback or remove it
+You can also write code to explicitly roll back any currently active
+transaction block, by raising the `Rollback` exception. The exception "jumps"
+to the end of a transaction block, rolling back its transaction but allowing
+the program execution to continue from there. By default the exception rolls
+back the innermost transaction block, but any current block can be specified
+as the target. In the following example, an hypothetical `!CancelCommand`
+may stop the processing and cancel any operation previously performed,
+but not entirely committed yet.
+
+.. code:: python
+
+    with conn.transaction() as outer_tx:
+        for command in commands():
+            with conn.transaction() as inner_tx:
+                if isinstance(command, CancelCommand):
+                    raise psycopg3.Rollback(outer_tx)
+            process_command(command)
+
+    # If `Rollback` is raised, it would propagate only up to this block,
+    # and the program would continue from here with no exception.
 
 
 .. index::
