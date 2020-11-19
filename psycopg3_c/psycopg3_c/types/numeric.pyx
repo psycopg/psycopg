@@ -44,7 +44,7 @@ cdef class OidBinaryLoader(CLoader):
 
 cdef class FloatLoader(CLoader):
     cdef object cload(self, const char *data, size_t length):
-        cdef double d = PyOS_string_to_double(data, NULL, NULL)
+        cdef double d = PyOS_string_to_double(data, NULL, OverflowError)
         return PyFloat_FromDouble(d)
 
 cdef class Float4BinaryLoader(CLoader):
