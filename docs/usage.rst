@@ -248,11 +248,13 @@ but not entirely committed yet.
 
 .. code:: python
 
+    from psycopg3 import Rollback
+
     with conn.transaction() as outer_tx:
         for command in commands():
             with conn.transaction() as inner_tx:
                 if isinstance(command, CancelCommand):
-                    raise psycopg3.Rollback(outer_tx)
+                    raise Rollback(outer_tx)
             process_command(command)
 
     # If `Rollback` is raised, it would propagate only up to this block,

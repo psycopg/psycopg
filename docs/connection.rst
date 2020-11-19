@@ -152,3 +152,15 @@ Connection support objects
 .. autoclass:: AsyncTransaction(connection: AsyncConnection, savepoint_name: Optional[str] = None, force_rollback: bool = False)
 
 .. autoexception:: Rollback
+
+    It can be used as
+
+    - ``raise Rollback``: roll back the operation that happened in the current
+      transaction block and continue the program after the block.
+
+    - ``raise Rollback()``: same effect as above
+
+    - :samp:`raise Rollback({tx})`: roll back any operation that happened in
+      the `Transaction` *tx* (returned by a statement such as :samp:`with
+      conn.transaction() as {tx}:` and all the blocks nested within. The
+      program will continue after the *tx* block.
