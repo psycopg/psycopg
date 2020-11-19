@@ -46,21 +46,9 @@ class BaseTransaction(Generic[ConnectionType]):
         force_rollback: bool = False,
     ):
         self._conn = connection
+        self._savepoint_name = savepoint_name or ""
         self.force_rollback = force_rollback
         self._yolo = True
-
-        if connection.pgconn.transaction_status == TransactionStatus.IDLE:
-            # outer transaction: if no name it's only a begin, else
-            # there will be an additional savepoint
-            self._outer_transaction = True
-            assert not connection._savepoints
-            self._savepoint_name = savepoint_name or ""
-        else:
-            # inner transaction: it always has a name
-            self._outer_transaction = False
-            self._savepoint_name = (
-                savepoint_name or f"_pg3_{len(self._conn._savepoints) + 1}"
-            )
 
     @property
     def connection(self) -> ConnectionType:
@@ -70,6 +58,8 @@ class BaseTransaction(Generic[ConnectionType]):
     @property
     def savepoint_name(self) -> Optional[str]:
         """The name of the savepoint; `None` if handling the main transaction."""
+        # Yes, it may change on __enter__. No, I don't care, because the
+        # un-entered state is outside the public interface.
         return self._savepoint_name
 
     def __repr__(self) -> str:
@@ -83,6 +73,20 @@ class BaseTransaction(Generic[ConnectionType]):
     def _enter_commands(self) -> List[str]:
         assert self._yolo
         self._yolo = False
+
+        self._outer_transaction = (
+            self._conn.pgconn.transaction_status == TransactionStatus.IDLE
+        )
+        if self._outer_transaction:
+            # outer transaction: if no name it's only a begin, else
+            # there will be an additional savepoint
+            assert not self._conn._savepoints
+        else:
+            # inner transaction: it always has a name
+            if not self._savepoint_name:
+                self._savepoint_name = (
+                    f"_pg3_{len(self._conn._savepoints) + 1}"
+                )
 
         commands = []
         if self._outer_transaction:
