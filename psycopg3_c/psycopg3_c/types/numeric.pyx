@@ -47,6 +47,7 @@ cdef class FloatLoader(CLoader):
         cdef double d = PyOS_string_to_double(data, NULL, OverflowError)
         return PyFloat_FromDouble(d)
 
+
 cdef class Float4BinaryLoader(CLoader):
     cdef object cload(self, const char *data, size_t length):
         cdef uint32_t asint = be32toh((<uint32_t *>data)[0])
@@ -65,12 +66,13 @@ cdef class Float8BinaryLoader(CLoader):
 
 cdef class BoolLoader(CLoader):
     cdef object cload(self, const char *data, size_t length):
-        return data[0] == b't'
+        # this creates better C than `return data[0] == b't'`
+        return True if data[0] == b't' else False
 
 
 cdef class BoolBinaryLoader(CLoader):
     cdef object cload(self, const char *data, size_t length):
-        return data[0] != b'\x00'
+        return True if data[0] else False
 
 
 cdef void register_numeric_c_loaders():
