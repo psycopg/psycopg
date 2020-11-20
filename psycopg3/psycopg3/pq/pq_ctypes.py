@@ -518,7 +518,7 @@ class PGconn:
             raise PQerror(f"sending copy end failed: {error_message(self)}")
         return rv
 
-    def get_copy_data(self, async_: int) -> Tuple[int, Optional[bytes]]:
+    def get_copy_data(self, async_: int) -> Tuple[int, bytes]:
         buffer_ptr = c_char_p()
         nbytes = impl.PQgetCopyData(self.pgconn_ptr, byref(buffer_ptr), async_)
         if nbytes == -2:
@@ -529,7 +529,7 @@ class PGconn:
             impl.PQfreemem(buffer_ptr)
             return nbytes, data
         else:
-            return nbytes, None
+            return nbytes, b""
 
     def make_empty_result(self, exec_status: ExecStatus) -> "PGresult":
         rv = impl.PQmakeEmptyPGresult(self.pgconn_ptr, exec_status)

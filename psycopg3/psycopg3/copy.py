@@ -11,18 +11,20 @@ from typing import Any, Dict, List, Match, Optional, Sequence, Type, Union
 from types import TracebackType
 
 from .pq import Format, ExecStatus
-from .proto import ConnectionType, Transformer
+from .proto import ConnectionType
 from .generators import copy_from, copy_to, copy_end
 
 if TYPE_CHECKING:
     from .pq.proto import PGresult
+    from .cursor import BaseCursor  # noqa: F401
     from .connection import Connection, AsyncConnection  # noqa: F401
 
 
 class BaseCopy(Generic[ConnectionType]):
-    def __init__(self, connection: ConnectionType, transformer: Transformer):
-        self.connection = connection
-        self.transformer = transformer
+    def __init__(self, cursor: "BaseCursor[ConnectionType]"):
+        self.cursor = cursor
+        self.connection = cursor.connection
+        self.transformer = cursor._transformer
 
         assert (
             self.transformer.pgresult
@@ -125,20 +127,24 @@ _bsrepl_re = re.compile(b"[\b\t\n\v\f\r\\\\]")
 class Copy(BaseCopy["Connection"]):
     """Manage a :sql:`COPY` operation."""
 
-    def read(self) -> Optional[bytes]:
+    def read(self) -> bytes:
         """Read a row after a :sql:`COPY TO` operation.
 
-        Return `None` when the data is finished.
+        Return an empty bytes string when the data is finished.
         """
         if self._finished:
-            return None
+            return b""
 
         conn = self.connection
-        rv = conn.wait(copy_from(conn.pgconn))
-        if rv is None:
-            self._finished = True
+        res = conn.wait(copy_from(conn.pgconn))
+        if isinstance(res, bytes):
+            return res
 
-        return rv
+        # res is the final PGresult
+        self._finished = True
+        nrows = res.command_tuples
+        self.cursor._rowcount = nrows if nrows is not None else -1
+        return b""
 
     def write(self, buffer: Union[str, bytes]) -> None:
         """Write a block of data after a :sql:`COPY FROM` operation."""
@@ -154,10 +160,13 @@ class Copy(BaseCopy["Connection"]):
         """Terminate a :sql:`COPY FROM` operation."""
         conn = self.connection
         berr = error.encode(conn.client_encoding, "replace") if error else None
-        conn.wait(copy_end(conn.pgconn, berr))
+        res = conn.wait(copy_end(conn.pgconn, berr))
+        nrows = res.command_tuples
+        self.cursor._rowcount = nrows if nrows is not None else -1
         self._finished = True
 
     def __enter__(self) -> "Copy":
+        assert not self._finished
         return self
 
     def __exit__(
@@ -183,7 +192,7 @@ class Copy(BaseCopy["Connection"]):
     def __iter__(self) -> Iterator[bytes]:
         while True:
             data = self.read()
-            if data is None:
+            if not data:
                 break
             yield data
 
@@ -191,16 +200,20 @@ class Copy(BaseCopy["Connection"]):
 class AsyncCopy(BaseCopy["AsyncConnection"]):
     """Manage an asynchronous :sql:`COPY` operation."""
 
-    async def read(self) -> Optional[bytes]:
+    async def read(self) -> bytes:
         if self._finished:
-            return None
+            return b""
 
         conn = self.connection
-        rv = await conn.wait(copy_from(conn.pgconn))
-        if rv is None:
-            self._finished = True
+        res = await conn.wait(copy_from(conn.pgconn))
+        if isinstance(res, bytes):
+            return res
 
-        return rv
+        # res is the final PGresult
+        self._finished = True
+        nrows = res.command_tuples
+        self.cursor._rowcount = nrows if nrows is not None else -1
+        return b""
 
     async def write(self, buffer: Union[str, bytes]) -> None:
         conn = self.connection
@@ -213,10 +226,13 @@ class AsyncCopy(BaseCopy["AsyncConnection"]):
     async def _finish(self, error: str = "") -> None:
         conn = self.connection
         berr = error.encode(conn.client_encoding, "replace") if error else None
-        await conn.wait(copy_end(conn.pgconn, berr))
+        res = await conn.wait(copy_end(conn.pgconn, berr))
+        nrows = res.command_tuples
+        self.cursor._rowcount = nrows if nrows is not None else -1
         self._finished = True
 
     async def __aenter__(self) -> "AsyncCopy":
+        assert not self._finished
         return self
 
     async def __aexit__(
@@ -242,6 +258,6 @@ class AsyncCopy(BaseCopy["AsyncConnection"]):
     async def __aiter__(self) -> AsyncIterator[bytes]:
         while True:
             data = await self.read()
-            if data is None:
+            if not data:
                 break
             yield data

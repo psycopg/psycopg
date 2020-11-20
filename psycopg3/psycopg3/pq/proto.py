@@ -231,7 +231,7 @@ class PGconn(Protocol):
     def put_copy_end(self, error: Optional[bytes] = None) -> int:
         ...
 
-    def get_copy_data(self, async_: int) -> Tuple[int, Optional[bytes]]:
+    def get_copy_data(self, async_: int) -> Tuple[int, bytes]:
         ...
 
     def make_empty_result(self, exec_status: ExecStatus) -> "PGresult":

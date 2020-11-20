@@ -16,18 +16,19 @@ when the file descriptor is ready.
 # Copyright (C) 2020 The Psycopg Team
 
 import logging
-from typing import List, Optional
+from typing import List, Optional, Union
 
 from . import pq
 from . import errors as e
 from .proto import PQGen
 from .waiting import Wait, Ready
 from .encodings import py_codecs
+from .pq.proto import PGconn, PGresult
 
 logger = logging.getLogger(__name__)
 
 
-def connect(conninfo: str) -> PQGen[pq.proto.PGconn]:
+def connect(conninfo: str) -> PQGen[PGconn]:
     """
     Generator to create a database connection without blocking.
 
@@ -59,7 +60,7 @@ def connect(conninfo: str) -> PQGen[pq.proto.PGconn]:
     return conn
 
 
-def execute(pgconn: pq.proto.PGconn) -> PQGen[List[pq.proto.PGresult]]:
+def execute(pgconn: PGconn) -> PQGen[List[PGresult]]:
     """
     Generator sending a query and returning results without blocking.
 
@@ -75,7 +76,7 @@ def execute(pgconn: pq.proto.PGconn) -> PQGen[List[pq.proto.PGresult]]:
     return rv
 
 
-def send(pgconn: pq.proto.PGconn) -> PQGen[None]:
+def send(pgconn: PGconn) -> PQGen[None]:
     """
     Generator to send a query to the server without blocking.
 
@@ -99,7 +100,7 @@ def send(pgconn: pq.proto.PGconn) -> PQGen[None]:
         continue
 
 
-def fetch(pgconn: pq.proto.PGconn) -> PQGen[List[pq.proto.PGresult]]:
+def fetch(pgconn: PGconn) -> PQGen[List[PGresult]]:
     """
     Generator retrieving results from the database without blocking.
 
@@ -110,7 +111,7 @@ def fetch(pgconn: pq.proto.PGconn) -> PQGen[List[pq.proto.PGresult]]:
     or error).
     """
     S = pq.ExecStatus
-    results: List[pq.proto.PGresult] = []
+    results: List[PGresult] = []
     while 1:
         pgconn.consume_input()
         if pgconn.is_busy():
@@ -137,7 +138,7 @@ def fetch(pgconn: pq.proto.PGconn) -> PQGen[List[pq.proto.PGresult]]:
     return results
 
 
-def notifies(pgconn: pq.proto.PGconn) -> PQGen[List[pq.PGnotify]]:
+def notifies(pgconn: PGconn) -> PQGen[List[pq.PGnotify]]:
     yield pgconn.socket, Wait.R
     pgconn.consume_input()
 
@@ -152,7 +153,7 @@ def notifies(pgconn: pq.proto.PGconn) -> PQGen[List[pq.PGnotify]]:
     return ns
 
 
-def copy_from(pgconn: pq.proto.PGconn) -> PQGen[Optional[bytes]]:
+def copy_from(pgconn: PGconn) -> PQGen[Union[bytes, PGresult]]:
     while 1:
         nbytes, data = pgconn.get_copy_data(1)
         if nbytes != 0:
@@ -167,27 +168,23 @@ def copy_from(pgconn: pq.proto.PGconn) -> PQGen[Optional[bytes]]:
         return data
 
     # Retrieve the final result of copy
-    results = yield from fetch(pgconn)
-    if len(results) != 1:
-        raise e.InternalError(
-            f"1 result expected from copy end, got {len(results)}"
-        )
-    if results[0].status != pq.ExecStatus.COMMAND_OK:
+    (result,) = yield from fetch(pgconn)
+    if result.status != pq.ExecStatus.COMMAND_OK:
         encoding = py_codecs.get(
             pgconn.parameter_status(b"client_encoding") or "", "utf-8"
         )
-        raise e.error_from_result(results[0], encoding=encoding)
+        raise e.error_from_result(result, encoding=encoding)
 
-    return None
+    return result
 
 
-def copy_to(pgconn: pq.proto.PGconn, buffer: bytes) -> PQGen[None]:
+def copy_to(pgconn: PGconn, buffer: bytes) -> PQGen[None]:
     # Retry enqueuing data until successful
     while pgconn.put_copy_data(buffer) == 0:
         yield pgconn.socket, Wait.W
 
 
-def copy_end(pgconn: pq.proto.PGconn, error: Optional[bytes]) -> PQGen[None]:
+def copy_end(pgconn: PGconn, error: Optional[bytes]) -> PQGen[PGresult]:
     # Retry enqueuing end copy message until successful
     while pgconn.put_copy_end(error) == 0:
         yield pgconn.socket, Wait.W
@@ -200,13 +197,11 @@ def copy_end(pgconn: pq.proto.PGconn, error: Optional[bytes]) -> PQGen[None]:
             break
 
     # Retrieve the final result of copy
-    results = yield from fetch(pgconn)
-    if len(results) != 1:
-        raise e.InternalError(
-            f"1 result expected from copy end, got {len(results)}"
-        )
-    if results[0].status != pq.ExecStatus.COMMAND_OK:
+    (result,) = yield from fetch(pgconn)
+    if result.status != pq.ExecStatus.COMMAND_OK:
         encoding = py_codecs.get(
             pgconn.parameter_status(b"client_encoding") or "", "utf-8"
         )
-        raise e.error_from_result(results[0], encoding=encoding)
+        raise e.error_from_result(result, encoding=encoding)
+
+    return result

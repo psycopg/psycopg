@@ -160,7 +160,7 @@ def test_copy_out_read(pgconn, format):
         assert nbytes == len(data)
         assert data == row
 
-    assert pgconn.get_copy_data(0) == (-1, None)
+    assert pgconn.get_copy_data(0) == (-1, b"")
 
     res = pgconn.get_result()
     assert res.status == pq.ExecStatus.COMMAND_OK, res.error_message

@@ -1,3 +1,8 @@
+import string
+import hashlib
+from io import BytesIO, StringIO
+from itertools import cycle
+
 import pytest
 
 from psycopg3 import pq
@@ -25,10 +30,10 @@ async def test_copy_out_read(aconn, format):
             got = await copy.read()
             assert got == row
 
-        assert await copy.read() is None
-        assert await copy.read() is None
+        assert await copy.read() == b""
+        assert await copy.read() == b""
 
-    assert await copy.read() is None
+    assert await copy.read() == b""
 
 
 @pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
@@ -189,6 +194,144 @@ from copy_in group by 1, 2, 3
     assert data == [(True, True, 1, 256)]
 
 
+@pytest.mark.slow
+async def test_copy_from_to(aconn):
+    # Roundtrip from file to database to file blockwise
+    gen = DataGenerator(aconn, nrecs=1024, srec=10 * 1024)
+    await gen.ensure_table()
+    cur = await aconn.cursor()
+    async with cur.copy("copy copy_in from stdin") as copy:
+        for block in gen.blocks():
+            await copy.write(block)
+
+    await gen.assert_data()
+
+    f = StringIO()
+    async with cur.copy("copy copy_in to stdout") as copy:
+        async for block in copy:
+            f.write(block.decode("utf8"))
+
+    f.seek(0)
+    assert gen.sha(f) == gen.sha(gen.file())
+
+
+@pytest.mark.slow
+async def test_copy_from_to_bytes(aconn):
+    # Roundtrip from file to database to file blockwise
+    gen = DataGenerator(aconn, nrecs=1024, srec=10 * 1024)
+    await gen.ensure_table()
+    cur = await aconn.cursor()
+    async with cur.copy("copy copy_in from stdin") as copy:
+        for block in gen.blocks():
+            await copy.write(block.encode("utf8"))
+
+    await gen.assert_data()
+
+    f = BytesIO()
+    async with cur.copy("copy copy_in to stdout") as copy:
+        async for block in copy:
+            f.write(block)
+
+    f.seek(0)
+    assert gen.sha(f) == gen.sha(gen.file())
+
+
+@pytest.mark.slow
+async def test_copy_from_insane_size(aconn):
+    # Trying to trigger a "would block" error
+    gen = DataGenerator(
+        aconn, nrecs=4 * 1024, srec=10 * 1024, block_size=20 * 1024 * 1024
+    )
+    await gen.ensure_table()
+    cur = await aconn.cursor()
+    async with cur.copy("copy copy_in from stdin") as copy:
+        for block in gen.blocks():
+            await copy.write(block)
+
+    await gen.assert_data()
+
+
+async def test_copy_rowcount(aconn):
+    gen = DataGenerator(aconn, nrecs=3, srec=10)
+    await gen.ensure_table()
+
+    cur = await aconn.cursor()
+    async with cur.copy("copy copy_in from stdin") as copy:
+        for block in gen.blocks():
+            await copy.write(block)
+    assert cur.rowcount == 3
+
+    gen = DataGenerator(aconn, nrecs=2, srec=10, offset=3)
+    async with cur.copy("copy copy_in from stdin") as copy:
+        for rec in gen.records():
+            await copy.write_row(rec)
+    assert cur.rowcount == 2
+
+    async with cur.copy("copy copy_in to stdout") as copy:
+        async for block in copy:
+            pass
+    assert cur.rowcount == 5
+
+    with pytest.raises(e.BadCopyFileFormat):
+        async with cur.copy("copy copy_in (id) from stdin") as copy:
+            for rec in gen.records():
+                await copy.write_row(rec)
+    assert cur.rowcount == -1
+
+
 async def ensure_table(cur, tabledef, name="copy_in"):
     await cur.execute(f"drop table if exists {name}")
     await cur.execute(f"create table {name} ({tabledef})")
+
+
+class DataGenerator:
+    def __init__(self, conn, nrecs, srec, offset=0, block_size=8192):
+        self.conn = conn
+        self.nrecs = nrecs
+        self.srec = srec
+        self.offset = offset
+        self.block_size = block_size
+
+    async def ensure_table(self):
+        cur = await self.conn.cursor()
+        await ensure_table(cur, "id integer primary key, data text")
+
+    def records(self):
+        for i, c in zip(range(self.nrecs), cycle(string.ascii_letters)):
+            s = c * self.srec
+            yield (i + self.offset, s)
+
+    def file(self):
+        f = StringIO()
+        for i, s in self.records():
+            f.write("%s\t%s\n" % (i, s))
+
+        f.seek(0)
+        return f
+
+    def blocks(self):
+        f = self.file()
+        while True:
+            block = f.read(self.block_size)
+            if not block:
+                break
+            yield block
+
+    async def assert_data(self):
+        cur = await self.conn.cursor()
+        await cur.execute("select id, data from copy_in order by id")
+        for record in self.records():
+            assert record == await cur.fetchone()
+
+        assert await cur.fetchone() is None
+
+    def sha(self, f):
+        m = hashlib.sha256()
+        while 1:
+            block = f.read()
+            if not block:
+                break
+            if isinstance(block, str):
+                block = block.encode("utf8")
+            m.update(block)
+        return m.hexdigest()

@@ -162,6 +162,7 @@ class BaseCursor(Generic[ConnectionType]):
     ExecStatus = pq.ExecStatus
 
     _transformer: "Transformer"
+    _rowcount: int
 
     def __init__(
         self,
@@ -579,7 +580,7 @@ class Cursor(BaseCursor["Connection"]):
             self._check_copy_results(results)
             self.pgresult = results[0]  # will set it on the transformer too
 
-        return Copy(connection=self.connection, transformer=self._transformer)
+        return Copy(self)
 
 
 class AsyncCursor(BaseCursor["AsyncConnection"]):
@@ -715,10 +716,7 @@ class AsyncCursor(BaseCursor["AsyncConnection"]):
             self._check_copy_results(results)
             self.pgresult = results[0]  # will set it on the transformer too
 
-        return AsyncCopy(
-            connection=self.connection,
-            transformer=self._transformer,
-        )
+        return AsyncCopy(self)
 
 
 class NamedCursorMixin:
