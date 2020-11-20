@@ -89,6 +89,16 @@ async def test_execute_empty_query(aconn, query):
         await cur.fetchone()
 
 
+@pytest.mark.parametrize(
+    "query", ["copy testcopy from stdin", "copy testcopy to stdout"]
+)
+async def test_execute_copy(aconn, query):
+    cur = await aconn.cursor()
+    await cur.execute("create table testcopy (id int)")
+    with pytest.raises(psycopg3.ProgrammingError):
+        await cur.execute(query)
+
+
 async def test_fetchone(aconn):
     cur = await aconn.cursor()
     await cur.execute("select %s::int, %s::text, %s::text", [1, "foo", None])
