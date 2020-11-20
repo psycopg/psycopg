@@ -5,7 +5,7 @@ Cursor classes
 
 The `Cursor` and `AsyncCursor` classes are the main objects to send commands
 to a PostgreSQL database session. They are normally created by the
-`~Connection.cursor()` method.
+connection's `~Connection.cursor()` method.
 
 A `Connection` can create several cursors, but only one at time can perform
 operations, so they are not the best way to achieve parallelism (you may want
@@ -17,7 +17,7 @@ uncommitted data.
 The `!Cursor` class
 -------------------
 
-.. autoclass:: Cursor
+.. autoclass:: Cursor()
 
     This class implements `DBAPI-compliant interface`__. It is what the
     classic `Connection.cursor()` method returns. `AsyncConnection.cursor()`
@@ -60,6 +60,8 @@ The `!Cursor` class
 
     .. automethod:: copy
 
+        It must be called as ``with cur.copy() as copy: ...``
+
         See :ref:`copy` for information about :sql:`COPY`.
 
     .. automethod:: callproc
@@ -76,8 +78,8 @@ The `!Cursor` class
     an exception if used with operations that don't return result, such as an
     :sql:`INSERT` with no :sql:`RETURNING` or an :sql:`ALTER TABLE`.
 
-    Cursors are iterable objects, so just using ``for var in cursor`` syntax
-    will iterate on the records in the current recordset.
+    .. note:: cursors are iterable objects, so just using ``for record in
+        cursor`` syntax will iterate on the records in the current recordset.
 
     .. automethod:: fetchone
     .. automethod:: fetchmany
@@ -94,37 +96,45 @@ The `!Cursor` class
 The `!AsyncCursor` class
 ------------------------
 
-.. autoclass:: AsyncCursor
+.. autoclass:: AsyncCursor()
 
     This class implements a DBAPI-inspired interface, with all the blocking
     methods implemented as coroutines. Unless specified otherwise,
     non-blocking methods are shared with the `Cursor` class.
 
     The following methods have the same behaviour of the matching `!Cursor`
-    methods, but have an `async` interface.
+    methods, but should be called using the `await` keyword.
 
     .. automethod:: close
 
-        .. note:: you can use `!async with` to close the cursor
+        .. note:: you can use ``async with`` to close the cursor
             automatically when the block is exited, but be careful about
             the async quirkness: see :ref:`with-statement` for details.
 
     .. automethod:: execute
     .. automethod:: executemany
     .. automethod:: copy
+
+        It must be called as ``async with cur.copy() as copy: ...``
+
     .. automethod:: callproc
     .. automethod:: fetchone
     .. automethod:: fetchmany
     .. automethod:: fetchall
 
+    .. note:: you can also use ``async for record in cursor`` to iterate on
+        the async cursor results.
+
 
 Cursor support objects
 ----------------------
 
-.. autoclass:: Column
+.. autoclass:: Column()
 
     An object describing a column of data from a database result, `as described
-    by the DBAPI`__, so it can also be unpacked as a 7-items tuple
+    by the DBAPI`__, so it can also be unpacked as a 7-items tuple.
+
+    The object is returned by `Cursor.description`.
 
     .. __: https://www.python.org/dev/peps/pep-0249/#description
 
@@ -136,18 +146,16 @@ Cursor support objects
     .. autoproperty:: scale
 
 
-.. autoclass:: Copy
+.. autoclass:: Copy()
 
-    The object is normally returned by `Cursor.copy()`. It can be used as a
-    context manager (useful to load data into a database using :sql:`COPY FROM`)
-    and can be iterated (useful to read data after a :sql:`COPY TO`).
+    The object is normally returned by ``with`` `Cursor.copy()`.
 
     See :ref:`copy` for details.
 
     .. automethod:: read
 
-        Alternatively, you can iterate on the `Copy` object to read its data
-        row by row.
+        Instead of using `!read()` you can even iterate on the object to read
+        its data row by row, using ``for row in copy: ...``.
 
     .. automethod:: write
     .. automethod:: write_row
@@ -156,12 +164,16 @@ Cursor support objects
         see :ref:`adaptation` for details.
 
 
-.. autoclass:: AsyncCopy
+.. autoclass:: AsyncCopy()
 
-    The object is normally returned by `AsyncCursor.copy()`. Its methods are
+    The object is normally returned by ``async with`` `AsyncCursor.copy()`. Its methods are
     the same of the `Copy` object but offering an `asyncio` interface
     (`await`, `async for`, `async with`).
 
     .. automethod:: read
+
+        Instead of using `!read()` you can even iterate on the object to read
+        its data row by row, using ``async for row in copy: ...``.
+
     .. automethod:: write
     .. automethod:: write_row

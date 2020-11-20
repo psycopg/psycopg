@@ -128,7 +128,7 @@ class Copy(BaseCopy["Connection"]):
     """Manage a :sql:`COPY` operation."""
 
     def read(self) -> bytes:
-        """Read a row after a :sql:`COPY TO` operation.
+        """Read a row of data after a :sql:`COPY TO` operation.
 
         Return an empty bytes string when the data is finished.
         """
@@ -147,7 +147,11 @@ class Copy(BaseCopy["Connection"]):
         return b""
 
     def write(self, buffer: Union[str, bytes]) -> None:
-        """Write a block of data after a :sql:`COPY FROM` operation."""
+        """Write a block of data after a :sql:`COPY FROM` operation.
+
+        If the COPY is in binary format *buffer* must be `!bytes`. In text mode
+        it can be either `!bytes` or `!str`.
+        """
         conn = self.connection
         conn.wait(copy_to(conn.pgconn, self._ensure_bytes(buffer)))
 

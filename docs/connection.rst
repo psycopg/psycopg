@@ -16,7 +16,7 @@ Take a look to :ref:`transactions` for the details.
 The `!Connection` class
 -----------------------
 
-.. autoclass:: Connection
+.. autoclass:: Connection()
 
     This class implements a `DBAPI-compliant interface`__. It is what you want
     to use if you write a "classic", blocking program (eventually using
@@ -79,7 +79,7 @@ The `!Connection` class
         :annotation: bool
 
         The property is writable for sync connections, read-only for async
-        ones: you should call `!await` `~AsyncConnection.set_autocommit`\
+        ones: you should call ``await`` `~AsyncConnection.set_autocommit`\
         :samp:`({value})` instead.
 
     .. rubric:: Checking and configuring the connection state
@@ -88,7 +88,7 @@ The `!Connection` class
         :annotation: str
 
         The property is writable for sync connections, read-only for async
-        ones: you should call `!await` `~AsyncConnection.set_client_encoding`\
+        ones: you should call ``await`` `~AsyncConnection.set_client_encoding`\
         :samp:`({value})` instead.
 
     .. attribute:: info
@@ -118,25 +118,25 @@ The `!Connection` class
 The `!AsyncConnection` class
 ----------------------------
 
-.. autoclass:: AsyncConnection
+.. autoclass:: AsyncConnection()
 
     This class implements a DBAPI-inspired interface, with all the blocking
     methods implemented as coroutines. Unless specified otherwise,
     non-blocking methods are shared with the `Connection` class.
 
     The following methods have the same behaviour of the matching `!Connection`
-    methods, but have an `async` interface.
+    methods, but should be called using the `await` keyword.
 
     .. automethod:: connect
     .. automethod:: close
 
-        .. note:: you can use `!async with` to close the connection
+        .. note:: you can use ``async with`` to close the connection
             automatically when the block is exited, but be careful about
             the async quirkness: see :ref:`with-statement` for details.
 
     .. automethod:: cursor
 
-        .. note:: you can use `!async with` to close the cursor
+        .. note:: you can use ``async with`` to close the cursor
             automatically when the block is exited, but be careful about
             the async quirkness: see :ref:`with-statement` for details.
 
@@ -155,18 +155,21 @@ The `!AsyncConnection` class
 Connection support objects
 --------------------------
 
-.. autoclass:: Notify
+.. autoclass:: Notify()
     :members: channel, payload, pid
+
+    The objet is usually returned by `Connection.notifies()`.
+
 
 .. rubric:: Objects involved in :ref:`transactions`
 
-.. autoclass:: Transaction(connection: Connection, savepoint_name: Optional[str] = None, force_rollback: bool = False)
+.. autoclass:: Transaction()
 
     .. autoproperty:: savepoint_name
     .. autoattribute:: connection
         :annotation: Connection
 
-.. autoclass:: AsyncTransaction(connection: AsyncConnection, savepoint_name: Optional[str] = None, force_rollback: bool = False)
+.. autoclass:: AsyncTransaction()
 
 .. autoexception:: Rollback
 

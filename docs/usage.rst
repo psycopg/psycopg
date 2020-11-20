@@ -201,7 +201,7 @@ transaction, such as :sql:`CREATE DATABASE`, :sql:`VACUUM`, :sql:`CALL` on
 
 .. warning::
 
-    By default even a simple :sql:`SELECT` will start a transaction: in
+    by default even a simple :sql:`SELECT` will start a transaction: in
     long-running programs, if no further action is taken, the session will
     remain *idle in transaction*, an undesirable condition for several
     reasons (locks are held by the session, tables bloat...). For long lived
@@ -215,7 +215,7 @@ Transaction blocks
 ------------------
 
 A more transparent way to make sure that transactions are finalised at the
-right time is to use `!with` `Connection.transaction()` to create a
+right time is to use ``with`` `Connection.transaction()` to create a
 transaction block. When the block is entered a transaction is started; when
 leaving the block the transaction is committed, or it is rolled back if an
 exception is raised inside the block.
@@ -273,7 +273,7 @@ number of operations successfully processed.
 
 If `!unreliable_operation()` causes an error, including an operation causing a
 database error, all its changes will be reverted. The exception bubbles up
-outside the block: in the example it is intercepted by the `!try` so that the
+outside the block: in the example it is intercepted by the ``try`` so that the
 loop can complete. The outermost block is unaffected (unless other errors
 happen there).
 
@@ -332,7 +332,7 @@ database from any Python iterable (a list of tuple, or any iterable of
 sequences): the Python values are adapted as they would be in normal querying.
 To perform such operation use a :sql:`COPY [table] FROM STDIN` with
 `Cursor.copy()` and use `~Copy.write_row()` on the resulting object in a
-`!with` block. On exiting the block the operation will be concluded:
+``with`` block. On exiting the block the operation will be concluded:
 
 .. code:: python
 
