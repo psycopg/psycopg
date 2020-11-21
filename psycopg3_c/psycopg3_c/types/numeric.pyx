@@ -5,16 +5,48 @@ Cython adapters for numeric types.
 # Copyright (C) 2020 The Psycopg Team
 
 from libc.stdint cimport *
-from psycopg3_c.endian cimport be16toh, be32toh, be64toh
+from psycopg3_c.endian cimport be16toh, be32toh, be64toh, htobe64
 
-from cpython.long cimport PyLong_FromString, PyLong_FromLong
+from cpython.long cimport PyLong_FromString, PyLong_FromLong, PyLong_AsLongLong
 from cpython.long cimport PyLong_FromLongLong, PyLong_FromUnsignedLong
 from cpython.float cimport PyFloat_FromDouble
 
-# work around https://github.com/cython/cython/issues/3909
 cdef extern from "Python.h":
+    # work around https://github.com/cython/cython/issues/3909
     double PyOS_string_to_double(
         const char *s, char **endptr, object overflow_exception) except? -1.0
+
+    int PyOS_snprintf(char *str, size_t size, const char *format, ...)
+
+
+cdef class IntDumper(CDumper):
+    oid = 20  # TODO: int8 oid
+
+    def dump(self, obj: Any) -> bytes:
+        cdef char buf[22]
+        cdef long long val = PyLong_AsLongLong(obj)
+        cdef int written = PyOS_snprintf(buf, sizeof(buf), "%lld", val)
+        return buf[:written]
+
+    def quote(self, obj: Any) -> bytes:
+        cdef char buf[23]
+        cdef long long val = PyLong_AsLongLong(obj)
+        cdef int written
+        if val >= 0:
+            written = PyOS_snprintf(buf, sizeof(buf), "%lld", val)
+        else:
+            written = PyOS_snprintf(buf, sizeof(buf), " %lld", val)
+
+        return buf[:written]
+
+
+cdef class IntBinaryDumper(IntDumper):
+    def dump(self, obj: Any) -> bytes:
+        cdef long long val = PyLong_AsLongLong(obj)
+        cdef uint64_t *ptvar = <uint64_t *>(&val)
+        cdef int64_t beval = htobe64(ptvar[0])
+        cdef char *buf = <char *>&beval
+        return buf[:sizeof(beval)]
 
 
 cdef class IntLoader(CLoader):
@@ -79,7 +111,9 @@ cdef void register_numeric_c_adapters():
     logger.debug("registering optimised numeric c adapters")
 
     from psycopg3.oids import builtins
-    from psycopg3.adapt import Loader
+
+    IntDumper.register(int)
+    IntBinaryDumper.register_binary(int)
 
     IntLoader.register(builtins["int2"].oid)
     IntLoader.register(builtins["int4"].oid)

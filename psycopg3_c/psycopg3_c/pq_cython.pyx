@@ -790,8 +790,6 @@ class Conninfo:
 
 
 cdef class Escaping:
-    cdef PGconn conn
-
     def __init__(self, conn: Optional[PGconn] = None):
         self.conn = conn
 
