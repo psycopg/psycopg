@@ -75,8 +75,8 @@ cdef class BoolBinaryLoader(CLoader):
         return True if data[0] else False
 
 
-cdef void register_numeric_c_loaders():
-    logger.debug("registering optimised numeric c loaders")
+cdef void register_numeric_c_adapters():
+    logger.debug("registering optimised numeric c adapters")
 
     from psycopg3.oids import builtins
     from psycopg3.adapt import Loader

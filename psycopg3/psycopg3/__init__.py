@@ -33,4 +33,4 @@ paramstyle = "pyformat"
 if pq.__impl__ == "c":
     from psycopg3_c import _psycopg3
 
-    _psycopg3.register_builtin_c_loaders()
+    _psycopg3.register_builtin_c_adapters()

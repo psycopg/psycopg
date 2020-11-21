@@ -71,14 +71,14 @@ cdef class CLoader:
         cls.register(oid, context, format=Format.BINARY)
 
 
-def register_builtin_c_loaders():
+def register_builtin_c_adapters():
     """
-    Register all the builtin optimized methods.
+    Register all the builtin optimized adpaters.
 
-    This function is supposed to be called only once, after the Python loaders
+    This function is supposed to be called only once, after the Python adapters
     are registered.
 
     """
-    logger.debug("registering optimised c loaders")
-    register_numeric_c_loaders()
-    register_text_c_loaders()
+    logger.debug("registering optimised c adapters")
+    register_numeric_c_adapters()
+    register_text_c_adapters()

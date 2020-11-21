@@ -57,8 +57,8 @@ cdef class ByteaBinaryLoader(CLoader):
         return data[:length]
 
 
-cdef void register_text_c_loaders():
-    logger.debug("registering optimised text c loaders")
+cdef void register_text_c_adapters():
+    logger.debug("registering optimised text c adapters")
 
     from psycopg3.oids import builtins
     from psycopg3.adapt import Loader
