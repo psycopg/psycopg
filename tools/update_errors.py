@@ -1,5 +1,6 @@
 #!/usr/bin/env python
-"""Generate per-sqlstate errors from PostgreSQL source code.
+"""
+Generate per-sqlstate errors from PostgreSQL source code.
 
 The script can be run at a new PostgreSQL release to refresh the module.
 """
@@ -15,7 +16,7 @@ import subprocess as sp
 from urllib.request import urlopen
 from collections import defaultdict
 
-from psycopg3.errors import get_base_exception
+from psycopg3.errors import get_base_exception  # type: ignore
 
 logger = logging.getLogger()
 logging.basicConfig(

@@ -5,7 +5,7 @@ Cython adapters for textual types.
 # Copyright (C) 2020 The Psycopg Team
 
 from cpython.unicode cimport PyUnicode_Decode, PyUnicode_DecodeUTF8
-from psycopg3_c cimport libpq
+from psycopg3_c cimport libpq, oids
 
 
 cdef class TextLoader(CLoader):
@@ -60,14 +60,11 @@ cdef class ByteaBinaryLoader(CLoader):
 cdef void register_text_c_adapters():
     logger.debug("registering optimised text c adapters")
 
-    from psycopg3.oids import builtins
-    from psycopg3.adapt import Loader
+    TextLoader.register(oids.INVALID_OID)
+    TextLoader.register(oids.TEXT_OID)
+    TextLoader.register_binary(oids.TEXT_OID)
+    TextLoader.register(oids.VARCHAR_OID)
+    TextLoader.register_binary(oids.VARCHAR_OID)
 
-    TextLoader.register(0)    # INVALID_OID
-    TextLoader.register(builtins["text"].oid)
-    TextLoader.register_binary(builtins["text"].oid)
-    TextLoader.register(builtins["varchar"].oid)
-    TextLoader.register_binary(builtins["varchar"].oid)
-
-    ByteaLoader.register(builtins['bytea'].oid)
-    ByteaBinaryLoader.register_binary(builtins['bytea'].oid)
+    ByteaLoader.register(oids.BYTEA_OID)
+    ByteaBinaryLoader.register_binary(oids.BYTEA_OID)

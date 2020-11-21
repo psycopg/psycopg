@@ -4,8 +4,11 @@ Cython adapters for boolean.
 
 # Copyright (C) 2020 The Psycopg Team
 
+from psycopg3_c cimport oids
+
+
 cdef class BoolDumper(CDumper):
-    oid = 16  # TODO: bool oid
+    oid = oids.BOOL_OID
 
     def dump(self, obj: bool) -> bytes:
         # Fast paths, just a pointer comparison
@@ -49,10 +52,8 @@ cdef class BoolBinaryLoader(CLoader):
 cdef void register_singletons_c_adapters():
     logger.debug("registering optimised singletons c adapters")
 
-    from psycopg3.oids import builtins
-
     BoolDumper.register(bool)
     BoolBinaryDumper.register_binary(bool)
 
-    BoolLoader.register(builtins["bool"].oid)
-    BoolBinaryLoader.register_binary(builtins["bool"].oid)
+    BoolLoader.register(oids.BOOL_OID)
+    BoolBinaryLoader.register_binary(oids.BOOL_OID)

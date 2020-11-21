@@ -5,11 +5,12 @@ Cython adapters for numeric types.
 # Copyright (C) 2020 The Psycopg Team
 
 from libc.stdint cimport *
-from psycopg3_c.endian cimport be16toh, be32toh, be64toh, htobe64
-
 from cpython.long cimport PyLong_FromString, PyLong_FromLong, PyLong_AsLongLong
 from cpython.long cimport PyLong_FromLongLong, PyLong_FromUnsignedLong
 from cpython.float cimport PyFloat_FromDouble
+
+from psycopg3_c cimport oids
+from psycopg3_c.endian cimport be16toh, be32toh, be64toh, htobe64
 
 cdef extern from "Python.h":
     # work around https://github.com/cython/cython/issues/3909
@@ -20,7 +21,7 @@ cdef extern from "Python.h":
 
 
 cdef class IntDumper(CDumper):
-    oid = 20  # TODO: int8 oid
+    oid = oids.INT8_OID
 
     def dump(self, obj: Any) -> bytes:
         cdef char buf[22]
@@ -99,21 +100,19 @@ cdef class Float8BinaryLoader(CLoader):
 cdef void register_numeric_c_adapters():
     logger.debug("registering optimised numeric c adapters")
 
-    from psycopg3.oids import builtins
-
     IntDumper.register(int)
     IntBinaryDumper.register_binary(int)
 
-    IntLoader.register(builtins["int2"].oid)
-    IntLoader.register(builtins["int4"].oid)
-    IntLoader.register(builtins["int8"].oid)
-    IntLoader.register(builtins["oid"].oid)
-    FloatLoader.register(builtins["float4"].oid)
-    FloatLoader.register(builtins["float8"].oid)
+    IntLoader.register(oids.INT2_OID)
+    IntLoader.register(oids.INT4_OID)
+    IntLoader.register(oids.INT8_OID)
+    IntLoader.register(oids.OID_OID)
+    FloatLoader.register(oids.FLOAT4_OID)
+    FloatLoader.register(oids.FLOAT8_OID)
 
-    Int2BinaryLoader.register_binary(builtins["int2"].oid)
-    Int4BinaryLoader.register_binary(builtins["int4"].oid)
-    Int8BinaryLoader.register_binary(builtins["int8"].oid)
-    OidBinaryLoader.register_binary(builtins["oid"].oid)
-    Float4BinaryLoader.register_binary(builtins["float4"].oid)
-    Float8BinaryLoader.register_binary(builtins["float8"].oid)
+    Int2BinaryLoader.register_binary(oids.INT2_OID)
+    Int4BinaryLoader.register_binary(oids.INT4_OID)
+    Int8BinaryLoader.register_binary(oids.INT8_OID)
+    OidBinaryLoader.register_binary(oids.OID_OID)
+    Float4BinaryLoader.register_binary(oids.FLOAT4_OID)
+    Float8BinaryLoader.register_binary(oids.FLOAT8_OID)

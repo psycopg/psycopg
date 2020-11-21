@@ -13,13 +13,11 @@ from cpython.tuple cimport PyTuple_New, PyTuple_SET_ITEM
 
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
-from psycopg3_c cimport libpq
+from psycopg3_c cimport libpq, oids
 from psycopg3_c.pq_cython cimport PGresult
 
 from psycopg3 import errors as e
 from psycopg3.pq.enums import Format
-
-TEXT_OID = 25
 
 
 cdef class RowLoader:
@@ -282,7 +280,7 @@ cdef class Transformer:
                 break
         else:
             from psycopg3.adapt import Loader
-            loader_cls = Loader.globals[0, format]    # INVALID_OID
+            loader_cls = Loader.globals[oids.INVALID_OID, format]
 
         self._loaders_cache[key] = loader = loader_cls(key[0], self)
         return loader
