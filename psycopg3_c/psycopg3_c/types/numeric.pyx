@@ -23,13 +23,13 @@ cdef extern from "Python.h":
 cdef class IntDumper(CDumper):
     oid = oids.INT8_OID
 
-    def dump(self, obj: Any) -> bytes:
+    def dump(self, obj) -> bytes:
         cdef char buf[22]
         cdef long long val = PyLong_AsLongLong(obj)
         cdef int written = PyOS_snprintf(buf, sizeof(buf), "%lld", val)
         return buf[:written]
 
-    def quote(self, obj: Any) -> bytes:
+    def quote(self, obj) -> bytes:
         cdef char buf[23]
         cdef long long val = PyLong_AsLongLong(obj)
         cdef int written
@@ -42,7 +42,7 @@ cdef class IntDumper(CDumper):
 
 
 cdef class IntBinaryDumper(IntDumper):
-    def dump(self, obj: Any) -> bytes:
+    def dump(self, obj) -> bytes:
         cdef long long val = PyLong_AsLongLong(obj)
         cdef uint64_t *ptvar = <uint64_t *>(&val)
         cdef int64_t beval = htobe64(ptvar[0])

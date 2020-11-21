@@ -30,6 +30,7 @@ class _StringDumper(Dumper):
 @Dumper.binary(str)
 class StringBinaryDumper(_StringDumper):
     def dump(self, obj: str) -> bytes:
+        # the server will raise DataError subclass if the string contains 0x00
         return obj.encode(self.encoding)
 
 

@@ -10,7 +10,7 @@ from psycopg3_c cimport oids
 cdef class BoolDumper(CDumper):
     oid = oids.BOOL_OID
 
-    def dump(self, obj: bool) -> bytes:
+    def dump(self, obj) -> bytes:
         # Fast paths, just a pointer comparison
         if obj is True:
             return b"t"
@@ -29,7 +29,7 @@ cdef class BoolDumper(CDumper):
 
 
 cdef class BoolBinaryDumper(BoolDumper):
-    def dump(self, obj: bool) -> bytes:
+    def dump(self, obj) -> bytes:
         if obj is True:
             return b"\x01"
         elif obj is False:

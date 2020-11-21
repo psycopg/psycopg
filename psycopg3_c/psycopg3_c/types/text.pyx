@@ -4,8 +4,65 @@ Cython adapters for textual types.
 
 # Copyright (C) 2020 The Psycopg Team
 
+from cpython.bytes cimport PyBytes_AsString, PyBytes_AsStringAndSize
 from cpython.unicode cimport PyUnicode_Decode, PyUnicode_DecodeUTF8
+from cpython.unicode cimport PyUnicode_AsUTF8String, PyUnicode_AsEncodedString
+
 from psycopg3_c cimport libpq, oids
+
+
+cdef class _StringDumper(CDumper):
+    cdef int is_utf8
+    cdef char *encoding
+    cdef bytes _bytes_encoding  # needed to keep `encoding` alive
+
+    def __init__(self, src: type, context: AdaptContext):
+        super().__init__(src, context)
+
+        self.is_utf8 = 0
+        self.encoding = "utf-8"
+
+        conn = self._connection
+        if conn:
+            self._bytes_encoding = conn.client_encoding.encode("utf-8")
+            self.encoding = PyBytes_AsString(self._bytes_encoding)
+            if (
+                self._bytes_encoding == b"utf-8"
+                or self._bytes_encoding == b"ascii"
+            ):
+                self.is_utf8 = 1
+
+
+cdef class StringBinaryDumper(_StringDumper):
+    def dump(self, obj) -> bytes:
+        # the server will raise DataError subclass if the string contains 0x00
+        if self.is_utf8:
+            return PyUnicode_AsUTF8String(obj)
+        else:
+            return PyUnicode_AsEncodedString(obj, self.encoding, NULL)
+
+
+cdef class StringDumper(_StringDumper):
+    def dump(self, obj) -> bytes:
+        cdef bytes rv
+        cdef char *buf
+
+        if self.is_utf8:
+            rv = PyUnicode_AsUTF8String(obj)
+        else:
+            rv = PyUnicode_AsEncodedString(obj, self.encoding, NULL)
+
+        try:
+            # the function raises ValueError if the bytes contains 0x00
+            PyBytes_AsStringAndSize(rv, &buf, NULL)
+        except ValueError:
+            from psycopg3 import DataError
+
+            raise DataError(
+                "PostgreSQL text fields cannot contain NUL (0x00) bytes"
+            )
+
+        return rv
 
 
 cdef class TextLoader(CLoader):
@@ -19,10 +76,10 @@ cdef class TextLoader(CLoader):
         self.is_utf8 = 0
         self.encoding = "utf-8"
 
-        conn = self.connection
+        conn = self._connection
         if conn:
             self._bytes_encoding = conn.client_encoding.encode("utf-8")
-            self.encoding = self._bytes_encoding
+            self.encoding = PyBytes_AsString(self._bytes_encoding)
             if self._bytes_encoding == b"utf-8":
                 self.is_utf8 = 1
             elif self._bytes_encoding == b"ascii":
@@ -59,6 +116,9 @@ cdef class ByteaBinaryLoader(CLoader):
 
 cdef void register_text_c_adapters():
     logger.debug("registering optimised text c adapters")
+
+    StringDumper.register(str)
+    StringBinaryDumper.register_binary(str)
 
     TextLoader.register(oids.INVALID_OID)
     TextLoader.register(oids.TEXT_OID)
