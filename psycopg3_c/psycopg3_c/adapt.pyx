@@ -28,14 +28,26 @@ logger = logging.getLogger("psycopg3.adapt")
 
 
 cdef class CDumper:
-    cdef object src
-    cdef object context
-    cdef object connection
+    cdef object _src
+    cdef object _context
+    cdef object _connection
 
     def __init__(self, src: type, context: AdaptContext = None):
-        self.src = src
-        self.context = context
-        self.connection = _connection_from_context(context)
+        self._src = src
+        self._context = context
+        self._connection = _connection_from_context(context)
+
+    @property
+    def src(self) -> type:
+        return self._src
+
+    @property
+    def context(self) -> AdaptContext:
+        return self._context
+
+    @property
+    def connection(self):
+        return self._connection
 
     def dump(self, obj: Any) -> bytes:
         raise NotImplementedError()
@@ -83,14 +95,26 @@ cdef class CDumper:
 
 
 cdef class CLoader:
-    cdef impl.Oid oid
-    cdef object context
-    cdef object connection
+    cdef impl.Oid _oid
+    cdef object _context
+    cdef object _connection
 
     def __init__(self, oid: int, context: "AdaptContext" = None):
-        self.oid = oid
-        self.context = context
-        self.connection = _connection_from_context(context)
+        self._oid = oid
+        self._context = context
+        self._connection = _connection_from_context(context)
+
+    @property
+    def oid(self) -> int:
+        return self._oid
+
+    @property
+    def context(self) -> AdaptContext:
+        return self._context
+
+    @property
+    def connection(self):
+        return self._connection
 
     cdef object cload(self, const char *data, size_t length):
         raise NotImplementedError()
