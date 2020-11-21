@@ -96,17 +96,6 @@ cdef class Float8BinaryLoader(CLoader):
         return PyFloat_FromDouble((<double *>swp)[0])
 
 
-cdef class BoolLoader(CLoader):
-    cdef object cload(self, const char *data, size_t length):
-        # this creates better C than `return data[0] == b't'`
-        return True if data[0] == b't' else False
-
-
-cdef class BoolBinaryLoader(CLoader):
-    cdef object cload(self, const char *data, size_t length):
-        return True if data[0] else False
-
-
 cdef void register_numeric_c_adapters():
     logger.debug("registering optimised numeric c adapters")
 
@@ -121,7 +110,6 @@ cdef void register_numeric_c_adapters():
     IntLoader.register(builtins["oid"].oid)
     FloatLoader.register(builtins["float4"].oid)
     FloatLoader.register(builtins["float8"].oid)
-    BoolLoader.register(builtins["bool"].oid)
 
     Int2BinaryLoader.register_binary(builtins["int2"].oid)
     Int4BinaryLoader.register_binary(builtins["int4"].oid)
@@ -129,4 +117,3 @@ cdef void register_numeric_c_adapters():
     OidBinaryLoader.register_binary(builtins["oid"].oid)
     Float4BinaryLoader.register_binary(builtins["float4"].oid)
     Float8BinaryLoader.register_binary(builtins["float8"].oid)
-    BoolBinaryLoader.register_binary(builtins["bool"].oid)

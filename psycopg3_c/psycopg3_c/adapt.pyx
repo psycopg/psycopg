@@ -140,4 +140,5 @@ def register_builtin_c_adapters():
     """
     logger.debug("registering optimised c adapters")
     register_numeric_c_adapters()
+    register_singletons_c_adapters()
     register_text_c_adapters()
