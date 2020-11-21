@@ -156,12 +156,13 @@ class Transformer:
         # able to adapt its subtypes, otherwise Liskov is sad.
         for dmap in self._dumpers_maps:
             for scls in cls.__mro__:
-                key = (scls, format)
-                dumper_class = dmap.get(key)
+                dumper_class = dmap.get((scls, format))
                 if not dumper_class:
                     continue
 
-                self._dumpers_cache[key] = dumper = dumper_class(scls, self)
+                self._dumpers_cache[cls, format] = dumper = dumper_class(
+                    cls, self
+                )
                 return dumper
 
         # If the adapter is not found, look for its name as a string
@@ -172,9 +173,9 @@ class Transformer:
                 if dumper_class is None:
                     continue
 
-                key = (scls, format)
+                key = (cls, format)
                 dmap[key] = dumper_class
-                self._dumpers_cache[key] = dumper = dumper_class(scls, self)
+                self._dumpers_cache[key] = dumper = dumper_class(cls, self)
                 return dumper
 
         raise e.ProgrammingError(
