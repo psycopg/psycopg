@@ -34,7 +34,7 @@ from . import _pq_ctypes as impl
 if TYPE_CHECKING:
     from . import proto
 
-__impl__ = "ctypes"
+__impl__ = "python"
 
 logger = logging.getLogger("psycopg3")
 

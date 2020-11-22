@@ -47,7 +47,7 @@ matrix:
         - TOXENV=py36
         - TOXDIR=psycopg3
         - PGVER=9.6
-        - PSYCOPG3_IMPL=ctypes
+        - PSYCOPG3_IMPL=python
         - PGPORT=5432
 
     - python: 3.7
@@ -74,7 +74,7 @@ matrix:
         - TOXENV=py37
         - TOXDIR=psycopg3
         - PGVER=11
-        - PSYCOPG3_IMPL=ctypes
+        - PSYCOPG3_IMPL=python
         - PGPORT=5433
 
     - python: 3.8
@@ -102,7 +102,7 @@ matrix:
         - TOXENV=py38
         - TOXDIR=psycopg3
         - PGVER=12
-        - PSYCOPG3_IMPL=ctypes
+        - PSYCOPG3_IMPL=python
         - PGPORT=5433
         - BUILD_DOCS=1
 

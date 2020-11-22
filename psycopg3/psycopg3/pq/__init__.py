@@ -64,12 +64,12 @@ def import_from_libpq() -> None:
             Escaping = pq_cython.Escaping
             return
 
-    if not impl or impl == "ctypes":
+    if not impl or impl == "python":
         try:
             from . import pq_ctypes
         except Exception as e:
             if not impl:
-                logger.debug("ctypes pq wrapper not available: %s", e)
+                logger.debug("python pq wrapper not available: %s", e)
             else:
                 raise ImportError(
                     f"requested pq implementation '{impl}' not available"
