@@ -23,7 +23,14 @@ with open("psycopg3/version.py") as f:
     version = m.group(1)
 
 extras_require = {
-    "c": [f"psycopg3-c == {version}"],
+    # Install the C extension module (requires dev tools)
+    "c": [
+        f"psycopg3-c == {version}",
+    ],
+    # Install the stand-alone C extension module
+    "binary": [
+        f"psycopg3-binary == {version}",
+    ],
     "test": [
         "pytest >= 6, < 6.1",
         "pytest-asyncio >= 0.14.0, < 0.15",

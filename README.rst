@@ -49,5 +49,5 @@ and to run the tests::
     tox -c psycopg3_c -s
 
 Please look at the commands definitions in the ``tox.ini`` files if you want
-to run some of them interacively: the dependency should be already in your
+to run some of them interactively: the dependency should be already in your
 virtualenv.

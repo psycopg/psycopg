@@ -36,8 +36,18 @@ def libpq():
     """Return a ctypes wrapper to access the libpq."""
     import ctypes.util
 
-    libname = ctypes.util.find_library("pq")
-    return ctypes.pydll.LoadLibrary(libname)
+    try:
+        # Not available when testing the binary package
+        libname = ctypes.util.find_library("pq")
+        assert libname, "libpq libname not found"
+        return ctypes.pydll.LoadLibrary(libname)
+    except Exception as e:
+        from psycopg3 import pq
+
+        if pq.__impl__ == "binary":
+            pytest.skip(f"can't load libpq for testing: {e}")
+        else:
+            raise
 
 
 def check_libpq_version(got, want):

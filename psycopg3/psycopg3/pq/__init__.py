@@ -39,15 +39,21 @@ Escaping: Type[proto.Escaping]
 def import_from_libpq() -> None:
     """
     Import pq objects implementation from the best libpw wrapper available.
+
+    If an implementation is requested try to import only it, otherwise
+    try to import the best implementation available.
     """
+    # import these names into the module on success as side effect
     global __impl__, version, PGconn, PGresult, Conninfo, Escaping
 
     impl = os.environ.get("PSYCOPG3_IMPL", "").lower()
+    module = None
 
+    # The best implementation: fast but requires the system libpq installed
     if not impl or impl == "c":
         try:
             # TODO: extension module not recognised by mypy?
-            from psycopg3_c import pq_cython  # type: ignore
+            from psycopg3_c import pq_cython as module  # type: ignore
         except Exception as e:
             if not impl:
                 logger.debug("C pq wrapper not available: %s", e)
@@ -55,18 +61,23 @@ def import_from_libpq() -> None:
                 raise ImportError(
                     f"requested pq implementation '{impl}' not available"
                 ) from e
-        else:
-            __impl__ = pq_cython.__impl__
-            version = pq_cython.version
-            PGconn = pq_cython.PGconn
-            PGresult = pq_cython.PGresult
-            Conninfo = pq_cython.Conninfo
-            Escaping = pq_cython.Escaping
-            return
 
-    if not impl or impl == "python":
+    # Second best implementation: fast and stand-alone
+    if not module and (not impl or impl == "binary"):
         try:
-            from . import pq_ctypes
+            from psycopg3_binary import pq_cython as module  # type: ignore
+        except Exception as e:
+            if not impl:
+                logger.debug("C pq wrapper not available: %s", e)
+            else:
+                raise ImportError(
+                    f"requested pq implementation '{impl}' not available"
+                ) from e
+
+    # Pure Python implementation, slow and requires the system libpq installed.
+    if not module and (not impl or impl == "python"):
+        try:
+            from . import pq_ctypes as module  # type: ignore[no-redef]
         except Exception as e:
             if not impl:
                 logger.debug("python pq wrapper not available: %s", e)
@@ -74,16 +85,15 @@ def import_from_libpq() -> None:
                 raise ImportError(
                     f"requested pq implementation '{impl}' not available"
                 ) from e
-        else:
-            __impl__ = pq_ctypes.__impl__
-            version = pq_ctypes.version
-            PGconn = pq_ctypes.PGconn
-            PGresult = pq_ctypes.PGresult
-            Conninfo = pq_ctypes.Conninfo
-            Escaping = pq_ctypes.Escaping
-            return
 
-    if impl:
+    if module:
+        __impl__ = module.__impl__
+        version = module.version
+        PGconn = module.PGconn
+        PGresult = module.PGresult
+        Conninfo = module.Conninfo
+        Escaping = module.Escaping
+    elif impl:
         raise ImportError(f"requested pq impementation '{impl}' unknown")
     else:
         raise ImportError("no pq wrapper available")

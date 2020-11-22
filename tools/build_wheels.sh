@@ -41,10 +41,19 @@ export PATH="/usr/pgsql-13/bin/:$PATH"
 # Using --global-option="-L/usr/pgsql-13/lib/" disables wheels, so no-go.
 cp -avr /usr/pgsql-13/lib/* /usr/lib/
 
+# Patch a copy of the c package to name it -binary
+cp -r /psycopg3/psycopg3_c /psycopg3_binary
+mv /psycopg3_binary/{psycopg3_c,psycopg3_binary}/
+sed -i 's/psycopg3-c/psycopg3-binary/' /psycopg3_binary/setup.cfg
+sed -i "s/__impl__[[:space:]]*=.*/__impl__ = 'binary'/" \
+    /psycopg3_binary/psycopg3_binary/pq_cython.pyx
+find /psycopg3_binary/ -name \*.pyx -or -name \*.pxd -or -name \*.py \
+    | xargs sed -i 's/\bpsycopg3_c\b/psycopg3_binary/'
+
 # Compile wheels
 for PYBIN in /opt/python/*/bin; do
     if [[ $PYBIN =~ "cp35" ]]; then continue; fi
-    "${PYBIN}/pip" wheel /psycopg3/psycopg3_c/ --no-deps -w /tmpwheels/
+    "${PYBIN}/pip" wheel /psycopg3_binary/ --no-deps -w /tmpwheels/
 done
 
 # Bundle external shared libraries into the wheels
@@ -63,6 +72,6 @@ rm -v /usr/pgsql-13/lib/libpq.*
 # Install packages and test
 for PYBIN in /opt/python/*/bin/; do
     if [[ $PYBIN =~ "cp35" ]]; then continue; fi
-    "${PYBIN}/pip" install psycopg3[c,test]==$version -f /psycopg3/wheels
-    PSYCOPG3_IMPL=c "${PYBIN}/pytest" /psycopg3/tests -m "not slow"
+    "${PYBIN}/pip" install psycopg3[binary,test]==$version -f /psycopg3/wheels
+    PSYCOPG3_IMPL=binary "${PYBIN}/pytest" /psycopg3/tests -m "not slow"
 done
