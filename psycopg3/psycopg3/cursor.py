@@ -154,7 +154,7 @@ class Column(Sequence[Any]):
 
     @property
     def null_ok(self) -> Optional[bool]:
-        """Always `None`"""
+        """Always `!None`"""
         return None
 
 
@@ -509,7 +509,9 @@ class Cursor(BaseCursor["Connection"]):
 
     def fetchone(self) -> Optional[Sequence[Any]]:
         """
-        Return the next record from the current recordset, `None` if not available.
+        Return the next record from the current recordset.
+
+        Return `!None` the recordset is finished.
         """
         self._check_result()
         rv = self._transformer.load_row(self._pos)
@@ -564,7 +566,7 @@ class Cursor(BaseCursor["Connection"]):
         self, statement: Query, vars: Optional[Params] = None
     ) -> Iterator[Copy]:
         """
-        Initiate a :sql:`COPY` operation and return a `Copy` object to manage it.
+        Initiate a :sql:`COPY` operation and return an object to manage it.
         """
         with self._start_copy(statement, vars) as copy:
             yield copy
@@ -698,9 +700,6 @@ class AsyncCursor(BaseCursor["AsyncConnection"]):
     async def copy(
         self, statement: Query, vars: Optional[Params] = None
     ) -> AsyncIterator[AsyncCopy]:
-        """
-        Initiate a :sql:`COPY` operation and return an `AsyncCopy` object.
-        """
         copy = await self._start_copy(statement, vars)
         async with copy:
             yield copy

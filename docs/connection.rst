@@ -70,7 +70,7 @@ The `!Connection` class
     .. automethod:: rollback()
     .. automethod:: transaction(savepoint_name: Optional[str] = None, force_rollback: bool = False) -> Transaction
 
-        It must be called as ``with conn.transaction() as tx: ...``
+        .. note:: it must be called as ``with conn.transaction() as tx: ...``
 
         Inside a transaction block it will not be possible to call `commit()`
         or `rollback()`.
@@ -147,7 +147,7 @@ The `!AsyncConnection` class
 
     .. automethod:: transaction(savepoint_name: Optional[str] = None, force_rollback: bool = False) -> AsyncTransaction
 
-        It must be called as ``async with conn.transaction() as tx: ...``.
+        .. note:: it must be called as ``async with conn.transaction() as tx: ...``.
 
     .. automethod:: notifies
     .. automethod:: set_client_encoding
@@ -160,7 +160,7 @@ Connection support objects
 .. autoclass:: Notify()
     :members: channel, payload, pid
 
-    The objet is usually returned by `Connection.notifies()`.
+    The object is usually returned by `Connection.notifies()`.
 
 
 .. rubric:: Objects involved in :ref:`transactions`

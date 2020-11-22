@@ -57,7 +57,9 @@ class BaseTransaction(Generic[ConnectionType]):
 
     @property
     def savepoint_name(self) -> Optional[str]:
-        """The name of the savepoint; `None` if handling the main transaction."""
+        """
+        The name of the savepoint; `!None` if handling the main transaction.
+        """
         # Yes, it may change on __enter__. No, I don't care, because the
         # un-entered state is outside the public interface.
         return self._savepoint_name

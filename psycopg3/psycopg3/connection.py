@@ -39,8 +39,8 @@ connect: Callable[[str], PQGen["PGconn"]]
 execute: Callable[["PGconn"], PQGen[List["PGresult"]]]
 
 if TYPE_CHECKING:
+    import psycopg3
     from .pq.proto import PGconn, PGresult
-    from .cursor import Cursor, AsyncCursor
 
 if pq.__impl__ == "c":
     from psycopg3_c import _psycopg3
@@ -69,7 +69,7 @@ class Notify(NamedTuple):
 
 
 NoticeHandler = Callable[[e.Diagnostic], None]
-NotifyHandler = Callable[[Notify], None]
+NotifyHandler = Callable[["psycopg3.Notify"], None]
 
 
 class BaseConnection:
@@ -96,7 +96,9 @@ class BaseConnection:
     ConnStatus = pq.ConnStatus
     TransactionStatus = pq.TransactionStatus
 
-    cursor_factory: Union[Type["Cursor"], Type["AsyncCursor"]]
+    cursor_factory: Union[
+        Type["psycopg3.Cursor"], Type["psycopg3.AsyncCursor"]
+    ]
 
     def __init__(self, pgconn: "PGconn"):
         self.pgconn = pgconn  # TODO: document this
@@ -227,7 +229,7 @@ class Connection(BaseConnection):
     Wrapper for a connection to the database.
     """
 
-    cursor_factory: Type[cursor.Cursor]
+    cursor_factory: Type["psycopg3.Cursor"]
 
     def __init__(self, pgconn: "PGconn"):
         super().__init__(pgconn)
@@ -273,7 +275,7 @@ class Connection(BaseConnection):
 
     def cursor(
         self, name: str = "", format: pq.Format = pq.Format.TEXT
-    ) -> cursor.Cursor:
+    ) -> "psycopg3.Cursor":
         """
         Return a new `Cursor` to send commands and queries to the connection.
         """
@@ -369,7 +371,7 @@ class Connection(BaseConnection):
                     result, encoding=self.client_encoding
                 )
 
-    def notifies(self) -> Iterator[Notify]:
+    def notifies(self) -> Iterator["psycopg3.Notify"]:
         """
         Yield `Notify` objects as soon as they are received from the database.
         """
@@ -393,7 +395,7 @@ class AsyncConnection(BaseConnection):
     Asynchronous wrapper for a connection to the database.
     """
 
-    cursor_factory: Type[cursor.AsyncCursor]
+    cursor_factory: Type["psycopg3.AsyncCursor"]
 
     def __init__(self, pgconn: "PGconn"):
         super().__init__(pgconn)
@@ -432,7 +434,7 @@ class AsyncConnection(BaseConnection):
 
     async def cursor(
         self, name: str = "", format: pq.Format = pq.Format.TEXT
-    ) -> cursor.AsyncCursor:
+    ) -> "psycopg3.AsyncCursor":
         """
         Return a new `AsyncCursor` to send commands and queries to the connection.
         """
@@ -528,7 +530,7 @@ class AsyncConnection(BaseConnection):
                     result, encoding=self.client_encoding
                 )
 
-    async def notifies(self) -> AsyncIterator[Notify]:
+    async def notifies(self) -> AsyncIterator["psycopg3.Notify"]:
         while 1:
             async with self.lock:
                 ns = await self.wait(notifies(self.pgconn))

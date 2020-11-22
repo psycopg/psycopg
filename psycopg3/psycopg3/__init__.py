@@ -34,3 +34,21 @@ if pq.__impl__ == "c":
     from psycopg3_c import _psycopg3
 
     _psycopg3.register_builtin_c_loaders()
+
+
+# Note: defining the exported methods helps both Sphynx in documenting that
+# this is the canonical place to obtain them and should be used by MyPy too,
+# so that function signatures are consistent with the documentation.
+__all__ = [
+    "AsyncConnection",
+    "AsyncCopy",
+    "AsyncCursor",
+    "AsyncTransaction",
+    "Column",
+    "Connection",
+    "Copy",
+    "Cursor",
+    "Notify",
+    "Rollback",
+    "Transaction",
+]

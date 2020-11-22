@@ -31,6 +31,11 @@ The `!Cursor` class
     further operation will not be possible. Closing a cursor will not
     terminate a transaction or a session though.
 
+    .. attribute:: connection
+        :type: Connection
+
+        The connection this cursor is using.
+
     .. automethod:: close
 
         .. note:: you can use :ref:`with conn.cursor(): ...<with-statement>`
@@ -41,15 +46,25 @@ The `!Cursor` class
 
     .. rubric:: Methods to send commands
 
-    .. automethod:: execute
+    .. automethod:: execute(query: Query, vars: Optional[Args]=None) -> Cursor
+
+        :param query: The query to execute
+        :type query: `!str`, `!bytes`, or `sql.Composable`
+        :param vars: The parameters to pass to the query, if any
+        :type vars: Mapping, Sequence
 
         Return the cursor itself, so that it will be possible to chain a fetch
-        operation after the call
+        operation after the call.
 
         See :ref:`query-parameters` for all the details about executing
         queries.
 
-    .. automethod:: executemany
+    .. automethod:: executemany(query: Query, vars_seq: Sequence[Args]) -> Cursor
+
+        :param query: The query to execute
+        :type query: `!str`, `!bytes`, or `sql.Composable`
+        :param vars_seq: The parameters to pass to the query
+        :type vars_seq: Sequence of Mapping or Sequence
 
         This is more efficient than performing separate queries, but in case of
         several :sql:`INSERT` (and with some SQL creativity for massive
@@ -58,18 +73,16 @@ The `!Cursor` class
         See :ref:`query-parameters` for all the details about executing
         queries.
 
-    .. automethod:: copy
+    .. automethod:: copy(statement: Query, vars: Optional[Args]=None) -> Copy
 
-        It must be called as ``with cur.copy() as copy: ...``
+        :param statement: The copy operation to execute
+        :type statement: `!str`, `!bytes`, or `sql.Composable`
+        :param args: The parameters to pass to the query, if any
+        :type args: Mapping, Sequence
+
+        .. note:: it must be called as ``with cur.copy() as copy: ...``
 
         See :ref:`copy` for information about :sql:`COPY`.
-
-    .. automethod:: callproc
-
-        This method exists for DBAPI compatibility but it's not much different
-        than calling `execute()` on a :sql:`SELECT myproc(%s, %s, ...)`, which
-        will give you more flexibility in passing arguments and retrieving
-        results. Don't bother...
 
     .. rubric:: Methods to retrieve results
 
@@ -89,8 +102,15 @@ The `!Cursor` class
 
     .. rubric:: Information about the data
 
-    .. autoproperty:: description
-    .. autoproperty:: rowcount
+    .. attribute:: description
+        :type: Optional[List[Column]]
+
+        A list of objects describing each column of the current queryset.
+
+        `!None` if the last operation didn't return a queryset.
+
+    .. autoattribute:: rowcount
+        :annotation: int
 
 
 The `!AsyncCursor` class
@@ -105,19 +125,21 @@ The `!AsyncCursor` class
     The following methods have the same behaviour of the matching `!Cursor`
     methods, but should be called using the `await` keyword.
 
+    .. attribute:: connection
+        :type: AsyncConnection
+
     .. automethod:: close
 
         .. note:: you can use ``async with`` to close the cursor
             automatically when the block is exited, but be careful about
             the async quirkness: see :ref:`with-statement` for details.
 
-    .. automethod:: execute
-    .. automethod:: executemany
-    .. automethod:: copy
+    .. automethod:: execute(query: Query, vars: Optional[Args]=None) -> AsyncCursor
+    .. automethod:: executemany(query: Query, vars_seq: Sequence[Args]) -> AsyncCursor
+    .. automethod:: copy(statement: Query, vars: Optional[Args]=None) -> AsyncCopy
 
-        It must be called as ``async with cur.copy() as copy: ...``
+        .. note:: it must be called as ``async with cur.copy() as copy: ...``
 
-    .. automethod:: callproc
     .. automethod:: fetchone
     .. automethod:: fetchmany
     .. automethod:: fetchall
