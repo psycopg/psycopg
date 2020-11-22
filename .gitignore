@@ -3,7 +3,6 @@
 /.eggs/
 /build
 /dist
-/wheels
 *.pstats
 /.mypy_cache
 __pycache__/

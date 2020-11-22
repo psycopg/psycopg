@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Script to build binary psycopg3-c package.
-# Built packages will be available in the `wheels` directory.
+# Built packages will be available in the `dist` directory.
 
 # Copyright (C) 2020 The Psycopg Team
 
@@ -26,7 +26,7 @@ function repair_wheel {
     if ! auditwheel show "$wheel"; then
         echo "Skipping non-platform wheel $wheel"
     else
-        auditwheel repair "$wheel" --plat "$PLAT" -w /psycopg3/wheels/
+        auditwheel repair "$wheel" --plat "$PLAT" -w /psycopg3/dist/
     fi
 }
 
@@ -63,15 +63,17 @@ done
 
 # Create a sdist package with the basic psycopg3 package in order to install
 # psycopg3[binary] with packages from a single dir.
-"${PYBIN}/python" /psycopg3/psycopg3/setup.py sdist --dist-dir /psycopg3/wheels/
+# While you are there, build the sdist for psycopg3-c too.
+"/opt/python/cp38-cp38/bin/python" /psycopg3/psycopg3/setup.py sdist --dist-dir /psycopg3/dist/
+"/opt/python/cp38-cp38/bin/python" /psycopg3/psycopg3_c/setup.py sdist --dist-dir /psycopg3/dist/
 
-# Delete the libpq to make sure the package is independent
+# Delete the libpq to make sure the package is independent.
 rm -v /usr/lib/libpq.*
 rm -v /usr/pgsql-13/lib/libpq.*
 
 # Install packages and test
 for PYBIN in /opt/python/*/bin/; do
     if [[ $PYBIN =~ "cp35" ]]; then continue; fi
-    "${PYBIN}/pip" install psycopg3[binary,test]==$version -f /psycopg3/wheels
+    "${PYBIN}/pip" install psycopg3[binary,test]==$version -f /psycopg3/dist
     PSYCOPG3_IMPL=binary "${PYBIN}/pytest" /psycopg3/tests -m "not slow"
 done
