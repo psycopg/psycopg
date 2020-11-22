@@ -39,6 +39,7 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.intersphinx",
     "sql_role",
+    "pg3_docs",
 ]
 
 # Add any paths that contain templates here, relative to this directory.
