@@ -24,6 +24,7 @@ the COPY support.
     adaptation
     connection
     cursor
+    sql
     from_pg2
 
 

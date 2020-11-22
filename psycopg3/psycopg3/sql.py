@@ -31,9 +31,9 @@ class Composable(object):
     """
     Abstract base class for objects that can be used to compose an SQL string.
 
-    `!Composable` objects can be passed directly to `~cursor.execute()`,
-    `~cursor.executemany()`, `~cursor.copy_expert()` in place of the query
-    string.
+    `!Composable` objects can be passed directly to
+    `~psycopg3.Cursor.execute()`, `~psycopg3.Cursor.executemany()`,
+    `~psycopg3.Cursor.copy()` in place of the query string.
 
     `!Composable` objects can be joined using the ``+`` operator: the result
     will be a `Composed` instance containing the objects joined. The operator
@@ -55,9 +55,10 @@ class Composable(object):
         :param context: the context to evaluate the string into.
         :type context: `connection` or `cursor`
 
-        The method is automatically invoked by `~cursor.execute()`,
-        `~cursor.executemany()`, `~cursor.copy_expert()` if a `!Composable` is
-        passed instead of the query string.
+        The method is automatically invoked by `~psycopg3.Cursor.execute()`,
+        `~psycopg3.Cursor.executemany()`, `~psycopg3.Cursor.copy()` if a
+        `!Composable` is passed instead of the query string.
+
         """
         raise NotImplementedError
 
@@ -202,7 +203,7 @@ class SQL(Composable):
 
         If a `!Composable` objects is passed to the template it will be merged
         according to its `as_string()` method. If any other Python object is
-        passed, it will be wrapped in a `Literal` object and so escacaped
+        passed, it will be wrapped in a `Literal` object and so escaped
         according to SQL rules.
 
         Example::
