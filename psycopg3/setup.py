@@ -7,7 +7,6 @@ PostgreSQL database adapter for Python - pure Python package
 
 import re
 import os
-
 from setuptools import setup
 
 # Move to the directory of setup.py: executing this file from another location
@@ -23,4 +22,18 @@ with open("psycopg3/version.py") as f:
         raise Exception(f"cannot find version in {f.name}")
     version = m.group(1)
 
-setup(version=version)
+extras_require = {
+    "c": [f"psycopg3-c == {version}"],
+    "test": [
+        "pytest >= 6, < 6.1",
+        "pytest-asyncio >= 0.14.0, < 0.15",
+    ],
+    "dev": [
+        "tox",
+        "black",
+        "flake8 >= 3.8, < 3.9",
+        "mypy >= 0.790",
+    ],
+}
+
+setup(version=version, extras_require=extras_require)

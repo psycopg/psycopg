@@ -5,7 +5,6 @@ PostgreSQL database adapter for Python - optimisation package
 
 # Copyright (C) 2020 The Psycopg Team
 
-
 import os
 import re
 import subprocess as sp
@@ -84,8 +83,6 @@ pqext = Extension(
 
 setup(
     version=version,
-    # TODO: might use a range
-    install_requires=[f"psycopg3=={version}"],
     ext_modules=[pgext, pqext],
     cmdclass={"build_ext": psycopg3_build_ext},
 )

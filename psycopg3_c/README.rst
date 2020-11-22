@@ -3,9 +3,9 @@ PostgreSQL database adapter for Python - optimisation package
 
 This distribution contains the optional optimization package ``psycopg3_c``.
 
-Installation::
+You shouldn't install this package directly: use instead ::
 
-    pip install psycopg3-c
+    pip install psycopg3[c]
 
 Installing this distribution requires the ``libpq-dev`` package and other
 packages normally used to build Python C extensions. If you cannot meet these
