@@ -7,13 +7,12 @@ psycopg3 cursor objects
 import sys
 from types import TracebackType
 from typing import Any, AsyncIterator, Callable, Generic, Iterator, List
-from typing import Mapping, Optional, Sequence, Type, TYPE_CHECKING, Union
+from typing import Optional, Sequence, Type, TYPE_CHECKING
 from operator import attrgetter
 from contextlib import contextmanager
 
 from . import errors as e
 from . import pq
-from . import sql
 from .oids import builtins
 from .copy import Copy, AsyncCopy
 from .proto import ConnectionType, Query, Params, DumpersMap, LoadersMap, PQGen
@@ -361,55 +360,6 @@ class BaseCursor(Generic[ConnectionType]):
                 "the last operation didn't produce a result"
             )
 
-    def _callproc_sql(
-        self,
-        name: Union[str, sql.Identifier],
-        args: Optional[Params] = None,
-        kwargs: Optional[Mapping[str, Any]] = None,
-    ) -> sql.Composable:
-        if args and not isinstance(args, (Sequence, Mapping)):
-            raise TypeError(
-                f"callproc args should be a sequence or a mapping,"
-                f" got {type(args).__name__}"
-            )
-        if isinstance(args, Mapping) and kwargs:
-            raise TypeError(
-                "callproc supports only one args sequence and one kwargs mapping"
-            )
-
-        if not kwargs and isinstance(args, Mapping):
-            kwargs = args
-            args = None
-
-        if kwargs and not isinstance(kwargs, Mapping):
-            raise TypeError(
-                f"callproc kwargs should be a mapping,"
-                f" got {type(kwargs).__name__}"
-            )
-
-        qparts: List[sql.Composable] = [
-            sql.SQL("select * from "),
-            name if isinstance(name, sql.Identifier) else sql.Identifier(name),
-            sql.SQL("("),
-        ]
-
-        if args:
-            for i, item in enumerate(args):
-                if i:
-                    qparts.append(sql.SQL(","))
-                qparts.append(sql.Literal(item))
-
-        if kwargs:
-            for i, (k, v) in enumerate(kwargs.items()):
-                if i:
-                    qparts.append(sql.SQL(","))
-                qparts.extend(
-                    [sql.Identifier(k), sql.SQL(":="), sql.Literal(v)]
-                )
-
-        qparts.append(sql.SQL(")"))
-        return sql.Composed(qparts)
-
     def _check_copy_results(self, results: Sequence["PGresult"]) -> None:
         """
         Check that the value returned in a copy() operation is a legit COPY.
@@ -494,18 +444,6 @@ class Cursor(BaseCursor["Connection"]):
                 self._execute_results((result,))
 
         return self
-
-    def callproc(
-        self,
-        name: Union[str, sql.Identifier],
-        args: Optional[Params] = None,
-        kwargs: Optional[Mapping[str, Any]] = None,
-    ) -> Optional[Params]:
-        """
-        Call a stored procedure to the database.
-        """
-        self.execute(self._callproc_sql(name, args))
-        return args
 
     def fetchone(self) -> Optional[Sequence[Any]]:
         """
@@ -641,15 +579,6 @@ class AsyncCursor(BaseCursor["AsyncConnection"]):
                 self._execute_results((result,))
 
         return self
-
-    async def callproc(
-        self,
-        name: Union[str, sql.Identifier],
-        args: Optional[Params] = None,
-        kwargs: Optional[Mapping[str, Any]] = None,
-    ) -> Optional[Params]:
-        await self.execute(self._callproc_sql(name, args, kwargs))
-        return args
 
     async def fetchone(self) -> Optional[Sequence[Any]]:
         self._check_result()

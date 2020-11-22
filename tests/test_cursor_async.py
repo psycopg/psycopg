@@ -3,9 +3,6 @@ import pytest
 import weakref
 
 import psycopg3
-from psycopg3 import sql
-
-from .test_cursor import make_testfunc
 
 pytestmark = pytest.mark.asyncio
 
@@ -194,59 +191,6 @@ async def test_executemany_badquery(aconn, query):
     cur = await aconn.cursor()
     with pytest.raises(psycopg3.DatabaseError):
         await cur.executemany(query, [(10, "hello"), (20, "world")])
-
-
-async def test_callproc_args(aconn):
-    cur = await aconn.cursor()
-    await cur.execute(
-        """
-        create function testfunc(a int, b text) returns text[] language sql as
-            'select array[$1::text, $2]'
-        """
-    )
-    assert (await cur.callproc("testfunc", [10, "twenty"])) == [10, "twenty"]
-    assert (await cur.fetchone()) == (["10", "twenty"],)
-
-
-async def test_callproc_badparam(aconn):
-    cur = await aconn.cursor()
-    with pytest.raises(TypeError):
-        await cur.callproc("lower", 42)
-    with pytest.raises(TypeError):
-        await cur.callproc(42, ["lower"])
-
-
-async def test_callproc_dict(aconn):
-    testfunc = make_testfunc(aconn)
-
-    cur = await aconn.cursor()
-
-    await cur.callproc(testfunc.name, [2])
-    assert (await cur.fetchone()) == (4,)
-    await cur.callproc(testfunc.name, {testfunc.param: 2})
-    assert await (cur.fetchone()) == (4,)
-    await cur.callproc(sql.Identifier(testfunc.name), {testfunc.param: 2})
-    assert await (cur.fetchone()) == (4,)
-
-
-@pytest.mark.parametrize(
-    "args, exc",
-    [
-        ({"_p": 2, "foo": "bar"}, psycopg3.ProgrammingError),
-        ({"_p": "two"}, psycopg3.DataError),
-        ({"bj\xc3rn": 2}, psycopg3.ProgrammingError),
-        ({3: 2}, TypeError),
-        ({(): 2}, TypeError),
-    ],
-)
-async def test_callproc_dict_bad(aconn, args, exc):
-    testfunc = make_testfunc(aconn)
-    if "_p" in args:
-        args[testfunc.param] = args.pop("_p")
-
-    cur = await aconn.cursor()
-    with pytest.raises(exc):
-        await cur.callproc(testfunc.name, args)
 
 
 async def test_rowcount(aconn):

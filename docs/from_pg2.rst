@@ -75,11 +75,17 @@ See :ref:`copy` for the details.
 Other differences
 -----------------
 
-When the connection is used as context manager, at the end of the context the
-connection will be closed. In psycopg2 only the transaction is closed, so a
-connection can be used in several contexts, but the behaviour is surprising
-for people used to several other Python classes wrapping resources, such as
-files.
+- When the connection is used as context manager, at the end of the context
+  the connection will be closed. In psycopg2 only the transaction is closed,
+  so a connection can be used in several contexts, but the behaviour is
+  surprising for people used to several other Python classes wrapping
+  resources, such as files.
+
+- `cursor.callproc()` is not implemented. The method has a simplistic
+  semantic which doesn't account for PostgreSQL positional parameters,
+  procedures, set-returning functions. Use a normal
+  `~psycopg3.Cursor.execute()` with :sql:`SELECT function_name(...)` or
+  :sql:`CALL procedure_name(...)` instead.
 
 
 What's new in psycopg3
