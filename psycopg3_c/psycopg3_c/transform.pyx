@@ -13,13 +13,11 @@ from cpython.tuple cimport PyTuple_New, PyTuple_SET_ITEM
 
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
-from psycopg3_c cimport libpq
+from psycopg3_c cimport libpq, oids
 from psycopg3_c.pq_cython cimport PGresult
 
 from psycopg3 import errors as e
 from psycopg3.pq.enums import Format
-
-TEXT_OID = 25
 
 
 cdef class RowLoader:
@@ -191,12 +189,11 @@ cdef class Transformer:
         # able to adapt its subtypes, otherwise Liskov is sad.
         for dmap in self._dumpers_maps:
             for scls in cls.__mro__:
-                key = (scls, format)
-                dumper_class = dmap.get(key)
+                dumper_class = dmap.get((scls, format))
                 if not dumper_class:
                     continue
 
-                self._dumpers_cache[key] = dumper = dumper_class(scls, self)
+                self._dumpers_cache[cls, format] = dumper = dumper_class(cls, self)
                 return dumper
 
         # If the adapter is not found, look for its name as a string
@@ -207,9 +204,9 @@ cdef class Transformer:
                 if dumper_class is None:
                     continue
 
-                key = (scls, format)
+                key = (cls, format)
                 dmap[key] = dumper_class
-                self._dumpers_cache[key] = dumper = dumper_class(scls, self)
+                self._dumpers_cache[key] = dumper = dumper_class(cls, self)
                 return dumper
 
         raise e.ProgrammingError(
@@ -282,7 +279,7 @@ cdef class Transformer:
                 break
         else:
             from psycopg3.adapt import Loader
-            loader_cls = Loader.globals[0, format]    # INVALID_OID
+            loader_cls = Loader.globals[oids.INVALID_OID, format]
 
         self._loaders_cache[key] = loader = loader_cls(key[0], self)
         return loader

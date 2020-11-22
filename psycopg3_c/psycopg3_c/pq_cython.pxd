@@ -32,3 +32,7 @@ cdef class PGcancel:
 
     @staticmethod
     cdef PGcancel _from_ptr(impl.PGcancel *ptr)
+
+
+cdef class Escaping:
+    cdef PGconn conn

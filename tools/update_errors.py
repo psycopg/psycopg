@@ -1,5 +1,6 @@
 #!/usr/bin/env python
-"""Generate per-sqlstate errors from PostgreSQL source code.
+"""
+Generate per-sqlstate errors from PostgreSQL source code.
 
 The script can be run at a new PostgreSQL release to refresh the module.
 """

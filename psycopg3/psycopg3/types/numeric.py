@@ -57,10 +57,16 @@ class Oid(int):
 
 
 class NumberDumper(Dumper):
-    _special: Dict[bytes, bytes] = {}
-
     def dump(self, obj: Any) -> bytes:
         return str(obj).encode("utf8")
+
+    def quote(self, obj: Any) -> bytes:
+        value = self.dump(obj)
+        return value if obj >= 0 else b" " + value
+
+
+class SpecialValuesDumper(NumberDumper):
+    _special: Dict[bytes, bytes] = {}
 
     def quote(self, obj: Any) -> bytes:
         value = self.dump(obj)
@@ -83,7 +89,7 @@ class IntBinaryDumper(IntDumper):
 
 
 @Dumper.text(float)
-class FloatDumper(NumberDumper):
+class FloatDumper(SpecialValuesDumper):
     oid = builtins["float8"].oid
 
     _special = {
@@ -100,7 +106,7 @@ class FloatBinaryDumper(NumberDumper):
 
 
 @Dumper.text(Decimal)
-class DecimalDumper(NumberDumper):
+class DecimalDumper(SpecialValuesDumper):
     oid = builtins["numeric"].oid
 
     _special = {

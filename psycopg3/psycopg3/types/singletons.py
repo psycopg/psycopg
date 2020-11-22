@@ -7,13 +7,11 @@ Adapters for None and boolean.
 from ..oids import builtins
 from ..adapt import Dumper, Loader
 
-BOOL_OID = builtins["bool"].oid
-
 
 @Dumper.text(bool)
 class BoolDumper(Dumper):
 
-    oid = BOOL_OID
+    oid = builtins["bool"].oid
 
     def dump(self, obj: bool) -> bytes:
         return b"t" if obj else b"f"
@@ -25,7 +23,7 @@ class BoolDumper(Dumper):
 @Dumper.binary(bool)
 class BoolBinaryDumper(Dumper):
 
-    oid = BOOL_OID
+    oid = builtins["bool"].oid
 
     def dump(self, obj: bool) -> bytes:
         return b"\x01" if obj else b"\x00"
