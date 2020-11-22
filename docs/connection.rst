@@ -110,9 +110,11 @@ The `!Connection` class
 
     .. automethod:: cancel
     .. automethod:: add_notice_handler
-    .. automethod:: remove_notice_handler
 
-    TODO: document `Diagnostic`
+        The argument of the callback is a `~psycopg3.errors.Diagnostic` object
+        containing all the details about the notice.
+
+    .. automethod:: remove_notice_handler
 
 
 The `!AsyncConnection` class

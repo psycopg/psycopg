@@ -28,7 +28,7 @@ class Warning(Exception):
     """
     Exception raised for important warnings.
 
-    For example data truncations while inserting, etc.
+    Defined for DBAPI compatibility, but never raised by ``psycopg3``.
     """
 
 
@@ -38,6 +38,11 @@ ErrorInfo = Union[None, PGresult, Dict[int, Optional[bytes]]]
 class Error(Exception):
     """
     Base exception for all the errors psycopg3 will raise.
+
+    Exception that is the base class of all other error exceptions. You can
+    use this to catch all errors with one single `!except` statement.
+
+    This exception is guaranteed to be picklable.
     """
 
     def __init__(
@@ -52,6 +57,9 @@ class Error(Exception):
 
     @property
     def diag(self) -> "Diagnostic":
+        """
+        A `Diagnostic` object to inspect details of the errors from the database.
+        """
         return Diagnostic(self._info, encoding=self._encoding)
 
     def __reduce__(self) -> Union[str, Tuple[Any, ...]]:
@@ -82,13 +90,13 @@ class InterfaceError(Error):
 
 class DatabaseError(Error):
     """
-    An error related to the database.
+    Exception raised for errors that are related to the database.
     """
 
 
 class DataError(DatabaseError):
     """
-    An error caused by  problems with the processed data.
+    An error caused by problems with the processed data.
 
     Examples may be division by zero, numeric value out of range, etc.
     """
@@ -138,6 +146,8 @@ class NotSupportedError(DatabaseError):
 
 
 class Diagnostic:
+    """Details from a database error report."""
+
     def __init__(self, info: ErrorInfo, encoding: str = "utf-8"):
         self._info = info
         self._encoding = encoding
@@ -235,6 +245,10 @@ class Diagnostic:
 
 
 def lookup(sqlstate: str) -> Type[Error]:
+    """Lookup an error code and return its exception class.
+
+    Raise `!KeyError` if the code is not found.
+    """
     return _sqlcodes[sqlstate]
 
 

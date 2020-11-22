@@ -2,3 +2,8 @@
   background: #ffc;
   border: 1px solid #dda;
 }
+
+/* more compact errors table */
+#sqlstate-exceptions table p {
+  margin: 0;
+}
