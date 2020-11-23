@@ -73,12 +73,10 @@ The `!Cursor` class
         See :ref:`query-parameters` for all the details about executing
         queries.
 
-    .. automethod:: copy(statement: Query, vars: Optional[Args]=None) -> Copy
+    .. automethod:: copy(statement: Query) -> Copy
 
         :param statement: The copy operation to execute
         :type statement: `!str`, `!bytes`, or `sql.Composable`
-        :param args: The parameters to pass to the query, if any
-        :type args: Mapping, Sequence
 
         .. note:: it must be called as ``with cur.copy() as copy: ...``
 
@@ -136,7 +134,7 @@ The `!AsyncCursor` class
 
     .. automethod:: execute(query: Query, vars: Optional[Args]=None) -> AsyncCursor
     .. automethod:: executemany(query: Query, vars_seq: Sequence[Args]) -> AsyncCursor
-    .. automethod:: copy(statement: Query, vars: Optional[Args]=None) -> AsyncCopy
+    .. automethod:: copy(statement: Query) -> AsyncCopy
 
         .. note:: it must be called as ``async with cur.copy() as copy: ...``
 
