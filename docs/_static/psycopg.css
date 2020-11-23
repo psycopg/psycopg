@@ -7,3 +7,8 @@
 #sqlstate-exceptions table p {
   margin: 0;
 }
+
+/* less space between enum values */
+dl.attribute {
+  margin-bottom: 1rem;
+}

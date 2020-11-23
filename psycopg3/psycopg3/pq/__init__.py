@@ -29,11 +29,17 @@ from . import proto
 logger = logging.getLogger(__name__)
 
 __impl__: str
+"""The currently loaded implementation of the `!psycopg3.pq` package.
+
+Possible values include ``python``, ``c``, ``binary``.
+"""
+
 version: Callable[[], int]
 PGconn: Type[proto.PGconn]
 PGresult: Type[proto.PGresult]
 Conninfo: Type[proto.Conninfo]
 Escaping: Type[proto.Escaping]
+PGcancel: Type[proto.PGcancel]
 
 
 def import_from_libpq() -> None:
@@ -44,7 +50,7 @@ def import_from_libpq() -> None:
     try to import the best implementation available.
     """
     # import these names into the module on success as side effect
-    global __impl__, version, PGconn, PGresult, Conninfo, Escaping
+    global __impl__, version, PGconn, PGresult, Conninfo, Escaping, PGcancel
 
     impl = os.environ.get("PSYCOPG3_IMPL", "").lower()
     module = None
@@ -93,6 +99,7 @@ def import_from_libpq() -> None:
         PGresult = module.PGresult
         Conninfo = module.Conninfo
         Escaping = module.Escaping
+        PGcancel = module.PGcancel
     elif impl:
         raise ImportError(f"requested pq impementation '{impl}' unknown")
     else:

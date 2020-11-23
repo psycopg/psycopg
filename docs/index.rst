@@ -26,6 +26,7 @@ the COPY support.
     cursor
     sql
     errors
+    pq
     from_pg2
 
 

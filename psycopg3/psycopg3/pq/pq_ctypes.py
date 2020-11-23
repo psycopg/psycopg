@@ -40,6 +40,7 @@ logger = logging.getLogger("psycopg3")
 
 
 def version() -> int:
+    """Return the version number of the libpq currently loaded."""
     return impl.PQlibVersion()
 
 
@@ -60,6 +61,10 @@ def notice_receiver(
 
 
 class PGconn:
+    """
+    Python representation of a libpq connection.
+    """
+
     __slots__ = (
         "pgconn_ptr",
         "notice_handler",
@@ -492,6 +497,11 @@ class PGconn:
         return rv
 
     def get_cancel(self) -> "PGcancel":
+        """
+        Create an object with the information needed to cancel a command.
+
+        See :pq:`PQgetCancel` for details.
+        """
         rv = impl.PQgetCancel(self.pgconn_ptr)
         if not rv:
             raise PQerror("couldn't create cancel object")
@@ -571,6 +581,10 @@ class PGconn:
 
 
 class PGresult:
+    """
+    Python representation of a libpq result.
+    """
+
     __slots__ = ("pgresult_ptr",)
 
     def __init__(self, pgresult_ptr: impl.PGresult_struct):
@@ -676,6 +690,12 @@ class PGresult:
 
 
 class PGcancel:
+    """
+    Token to cancel the current operation on a connection.
+
+    Created by `PGconn.get_cancel()`.
+    """
+
     __slots__ = ("pgcancel_ptr",)
 
     def __init__(self, pgcancel_ptr: impl.PGcancel_struct):
@@ -685,11 +705,22 @@ class PGcancel:
         self.free()
 
     def free(self) -> None:
+        """
+        Free the data structure created by PQgetCancel.
+
+        Automatically invoked by `!__del__()`.
+
+        See :pq:`PQfreeCancel` for details.
+        """
         self.pgcancel_ptr, p = None, self.pgcancel_ptr
         if p:
             impl.PQfreeCancel(p)
 
     def cancel(self) -> None:
+        """Requests that the server abandon processing of the current command.
+
+        See :pq:`PQcancel()` for details.
+        """
         buf = create_string_buffer(256)
         res = impl.PQcancel(
             self.pgcancel_ptr, pointer(buf), len(buf)  # type: ignore
@@ -701,6 +732,10 @@ class PGcancel:
 
 
 class Conninfo:
+    """
+    Utility object to manipulate connection strings.
+    """
+
     @classmethod
     def get_defaults(cls) -> List[ConninfoOption]:
         opts = impl.PQconndefaults()
@@ -748,6 +783,10 @@ class Conninfo:
 
 
 class Escaping:
+    """
+    Utility object to escape strings for SQL interpolation.
+    """
+
     def __init__(self, conn: Optional[PGconn] = None):
         self.conn = conn
 

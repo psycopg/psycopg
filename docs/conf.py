@@ -40,6 +40,7 @@ extensions = [
     "sphinx.ext.intersphinx",
     "sql_role",
     "pg3_docs",
+    "libpq_docs",
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -76,3 +77,8 @@ intersphinx_mapping = {
     "py": ("https://docs.python.org/3", None),
     "pg2": ("https://www.psycopg.org/docs/", None),
 }
+
+autodoc_member_order = "bysource"
+
+# PostgreSQL docs version to link libpq functions to
+libpq_docs_version = "13"
