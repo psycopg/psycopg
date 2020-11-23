@@ -485,9 +485,9 @@ class Cursor(BaseCursor["Connection"]):
         if not size:
             size = self.arraysize
 
-        rv: List[Sequence[Any]] = []
         pos = self._pos
         load = self._transformer.load_row
+        rv: List[Sequence[Any]] = []
 
         for _ in range(size):
             row = load(pos)
@@ -610,7 +610,7 @@ class AsyncCursor(BaseCursor["AsyncConnection"]):
         load = self._transformer.load_row
         rv: List[Sequence[Any]] = []
 
-        for i in range(size):
+        for _ in range(size):
             row = load(pos)
             if row is None:
                 break

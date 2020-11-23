@@ -328,7 +328,6 @@ class Connection(BaseConnection):
         elif isinstance(command, Composable):
             command = command.as_string(self).encode(self.client_encoding)
 
-        logger.debug(f"{self}: {command!r}")
         self.pgconn.send_query(command)
         results = self.wait(execute(self.pgconn))
         if results[-1].status != ExecStatus.COMMAND_OK:
@@ -455,26 +454,26 @@ class AsyncConnection(BaseConnection):
 
     async def commit(self) -> None:
         async with self.lock:
-            if self.pgconn.transaction_status == TransactionStatus.IDLE:
-                return
             if self._savepoints:
                 raise e.ProgrammingError(
                     "Explicit commit() forbidden within a Transaction "
                     "context. (Transaction will be automatically committed "
                     "on successful exit from context.)"
                 )
+            if self.pgconn.transaction_status == TransactionStatus.IDLE:
+                return
             await self._exec_command(b"commit")
 
     async def rollback(self) -> None:
         async with self.lock:
-            if self.pgconn.transaction_status == TransactionStatus.IDLE:
-                return
             if self._savepoints:
                 raise e.ProgrammingError(
                     "Explicit rollback() forbidden within a Transaction "
                     "context. (Either raise Rollback() or allow "
                     "an exception to propagate out of the context.)"
                 )
+            if self.pgconn.transaction_status == TransactionStatus.IDLE:
+                return
             await self._exec_command(b"rollback")
 
     async def _exec_command(self, command: Query) -> None:
@@ -521,7 +520,7 @@ class AsyncConnection(BaseConnection):
         async with self.lock:
             self.pgconn.send_query_params(
                 b"select set_config('client_encoding', $1, false)",
-                [name.encode("utf-8")],
+                [encodings.py2pg(name)],
             )
             gen = execute(self.pgconn)
             (result,) = await self.wait(gen)
