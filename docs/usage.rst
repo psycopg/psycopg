@@ -147,9 +147,239 @@ which can be condensed as:
 .. _query-parameters:
 
 Passing parameters to SQL queries
----------------------------------
+=================================
 
-TODO: lift from psycopg2 docs
+``psycopg3`` converts Python variables to SQL values using their types: the
+Python type determines the function used to convert the object into a string
+representation suitable for PostgreSQL.  Many standard Python types are
+`adapted out of the box`__ to the correct SQL representation.
+
+.. __: python-types-adaptation_
+
+Passing parameters to an SQL statement happens in functions such as
+`Cursor.execute()` by using ``%s`` placeholders in the SQL statement, and
+passing a sequence of values as the second argument of the function. For
+example the Python function call::
+
+    >>> cur.execute("""
+    ...     INSERT INTO some_table (an_int, a_date, a_string)
+    ...     VALUES (%s, %s, %s);
+    ...     """,
+    ...     (10, datetime.date(2020, 11, 18), "O'Reilly"))
+
+is roughly equivalent to the SQL command:
+
+.. code-block:: sql
+
+    INSERT INTO some_table (an_int, a_date, a_string)
+    VALUES (10, '2020-11-18', 'O''Reilly');
+
+Note that the parameters will not be really merged to the query: query and the
+parameters are sent to the server separately: see :ref:`server-side-binding`
+for details.
+
+Named arguments are supported too using :samp:`%({name})s` placeholders in the
+query and specifying the values into a mapping.  Using named arguments allows
+to specify the values in any order and to repeat the same value in several
+places in the query::
+
+    >>> cur.execute("""
+    ...     INSERT INTO some_table (an_int, a_date, another_date, a_string)
+    ...     VALUES (%(int)s, %(date)s, %(date)s, %(str)s);
+    ...     """,
+    ...     {'int': 10, 'str': "O'Reilly", 'date': datetime.date(2020, 11, 18)})
+
+Using characters ``%``, ``(``, ``)`` in the argument names is not supported.
+
+When parameters are used, in order to include a literal ``%`` in the query you
+can use the ``%%`` string::
+
+    >>> cur.execute("SELECT (%s % 2) = 0 AS even", (10,))       # WRONG
+    >>> cur.execute("SELECT (%s %% 2) = 0 AS even", (10,))      # correct
+
+While the mechanism resembles regular Python strings manipulation, there are a
+few subtle differences you should care about when passing parameters to a
+query.
+
+- The Python string operator ``%`` *must not be used*: the `~cursor.execute()`
+  method accepts a tuple or dictionary of values as second parameter.
+  |sql-warn|__:
+
+  .. |sql-warn| replace:: **Never** use ``%`` or ``+`` to merge values
+      into queries
+
+  .. __: sql-injection_
+
+    >>> cur.execute("INSERT INTO numbers VALUES (%s, %s)" % (10, 20)) # WRONG
+    >>> cur.execute("INSERT INTO numbers VALUES (%s, %s)", (10, 20))  # correct
+
+- For positional variables binding, *the second argument must always be a
+  sequence*, even if it contains a single variable (remember that Python
+  requires a comma to create a single element tuple)::
+
+    >>> cur.execute("INSERT INTO foo VALUES (%s)", "bar")    # WRONG
+    >>> cur.execute("INSERT INTO foo VALUES (%s)", ("bar"))  # WRONG
+    >>> cur.execute("INSERT INTO foo VALUES (%s)", ("bar",)) # correct
+    >>> cur.execute("INSERT INTO foo VALUES (%s)", ["bar"])  # correct
+
+- The placeholder *must not be quoted*. Psycopg will add quotes where needed::
+
+    >>> cur.execute("INSERT INTO numbers VALUES ('%s')", (10,)) # WRONG
+    >>> cur.execute("INSERT INTO numbers VALUES (%s)", (10,))   # correct
+
+- The variables placeholder *must always be a* ``%s``, even if a different
+  placeholder (such as a ``%d`` for integers or ``%f`` for floats) may look
+  more appropriate. Another placeholder used is ``%b``, to :ref:`adapt the
+  object to binary type <binary-data>`::
+
+    >>> cur.execute("INSERT INTO numbers VALUES (%d)", (10,))   # WRONG
+    >>> cur.execute("INSERT INTO numbers VALUES (%s)", (10,))   # correct
+
+- Only query values should be bound via this method: it shouldn't be used to
+  merge table or field names to the query. If you need to generate dynamically
+  SQL queries (for instance choosing dynamically a table name) you can use the
+  facilities provided by the `psycopg3.sql` module::
+
+    >>> cur.execute("INSERT INTO %s VALUES (%s)", ('numbers', 10))  # WRONG
+    >>> cur.execute(                                                # correct
+    ...     SQL("INSERT INTO {} VALUES (%s)").format(Identifier('numbers')),
+    ...     (10,))
+
+
+.. index:: Security, SQL injection
+
+.. _sql-injection:
+
+The problem with the query parameters
+-------------------------------------
+
+The SQL representation of many data types is often different from their Python
+string representation. The typical example is with single quotes in strings:
+in SQL single quotes are used as string literal delimiters, so the ones
+appearing inside the string itself must be escaped, whereas in Python single
+quotes can be left unescaped if the string is delimited by double quotes.
+
+Because of the difference, sometime subtle, between the data types
+representations, a naïve approach to query strings composition, such as using
+Python strings concatenation, is a recipe for *terrible* problems::
+
+    >>> SQL = "INSERT INTO authors (name) VALUES ('%s')" # NEVER DO THIS
+    >>> data = ("O'Reilly", )
+    >>> cur.execute(SQL % data) # THIS WILL FAIL MISERABLY
+    SyntaxError: syntax error at or near "Reilly"
+
+If the variables containing the data to send to the database come from an
+untrusted source (such as a form published on a web site) an attacker could
+easily craft a malformed string, either gaining access to unauthorized data or
+performing destructive operations on the database. This form of attack is
+called `SQL injection`_ and is known to be one of the most widespread forms of
+attack to database servers. Before continuing, please print `this page`__ as a
+memo and hang it onto your desk.
+
+.. _SQL injection: https://en.wikipedia.org/wiki/SQL_injection
+.. __: https://xkcd.com/327/
+
+Psycopg can `automatically convert Python objects to SQL values`__: using this
+feature your code will be more robust and reliable. We must stress this point:
+
+.. __: python-types-adaptation_
+
+.. warning::
+
+    - Don't merge manually values to a query: hackers from a foreign country
+      will break into your computer and steal not only your disks, but also
+      your cds, leaving you only with the three most embarrassing records you
+      ever bought. On tape.
+
+    - If you use the ``%`` operator to merge values to a query, con artists
+      will seduce your cat, who will run away taking your credit card
+      and your sunglasses with them.
+
+    - If you use ``+`` to merge a textual value to a string, bad guys in
+      balaclava will find their way to your fridge, drink all your beer, and
+      leave your toilet sit up and your toilet paper in the wrong orientation.
+
+    - You don't want to merge manually values to a query: :ref:`use the
+      provided methods <query-parameters>` instead.
+
+The correct way to pass variables in a SQL command is using the second
+argument of the `Cursor.execute()` method::
+
+    >>> SQL = "INSERT INTO authors (name) VALUES (%s)"  # Note: no quotes
+    >>> data = ("O'Reilly", )
+    >>> cur.execute(SQL, data)  # Note: no % operator
+
+
+.. index::
+    single: Adaptation
+    pair: Objects; Adaptation
+    single: Data types; Adaptation
+
+.. _python-types-adaptation:
+
+Adaptation of Python values to SQL types
+----------------------------------------
+
+Many standard Python types are adapted into SQL and returned as Python
+objects when a query is executed.
+
+The following table shows the default mapping between Python and PostgreSQL
+types:
+
+TODO: complete table
+
+.. only:: html
+
+  .. table::
+    :class: data-types
+
+    +--------------------+-------------------------+--------------------------+
+    | Python             | PostgreSQL              | See also                 |
+    +====================+=========================+==========================+
+    | `!bool`            | :sql:`bool`             | :ref:`adapt-bool`        |
+    +--------------------+-------------------------+--------------------------+
+    | `!float`           | | :sql:`real`           | :ref:`adapt-numbers`     |
+    |                    | | :sql:`double`         |                          |
+    +--------------------+-------------------------+                          |
+    | | `!int`           | | :sql:`smallint`       |                          |
+    | |                  | | :sql:`integer`        |                          |
+    |                    | | :sql:`bigint`         |                          |
+    +--------------------+-------------------------+                          |
+    | `~decimal.Decimal` | :sql:`numeric`          |                          |
+    +--------------------+-------------------------+--------------------------+
+    | | `!str`           | | :sql:`varchar`        | :ref:`adapt-string`      |
+    | |                  | | :sql:`text`           |                          |
+    +--------------------+-------------------------+--------------------------+
+    | | `bytes`          | :sql:`bytea`            | :ref:`adapt-binary`      |
+    +--------------------+-------------------------+--------------------------+
+    | `!date`            | :sql:`date`             | :ref:`adapt-date`        |
+    +--------------------+-------------------------+                          |
+    | `!time`            | | :sql:`time`           |                          |
+    |                    | | :sql:`timetz`         |                          |
+    +--------------------+-------------------------+                          |
+    | `!datetime`        | | :sql:`timestamp`      |                          |
+    |                    | | :sql:`timestamptz`    |                          |
+    +--------------------+-------------------------+                          |
+    | `!timedelta`       | :sql:`interval`         |                          |
+    +--------------------+-------------------------+--------------------------+
+    | `!list`            | :sql:`ARRAY`            | :ref:`adapt-list`        |
+    +--------------------+-------------------------+--------------------------+
+    | | `!tuple`         | Composite types         |:ref:`adapt-composite`    |
+    | | `!namedtuple`    |                         |                          |
+    +--------------------+-------------------------+--------------------------+
+    | `!dict`            | :sql:`hstore`           | :ref:`adapt-hstore`      |
+    +--------------------+-------------------------+--------------------------+
+    | Psycopg's `!Range` | :sql:`range`            | :ref:`adapt-range`       |
+    +--------------------+-------------------------+--------------------------+
+    | Anything\ |tm|     | :sql:`json`             | :ref:`adapt-json`        |
+    +--------------------+-------------------------+--------------------------+
+    | `~uuid.UUID`       | :sql:`uuid`             | :ref:`adapt-uuid`        |
+    +--------------------+-------------------------+--------------------------+
+    | `ipaddress`        | | :sql:`inet`           | :ref:`adapt-network`     |
+    | objects            | | :sql:`cidr`           |                          |
+    +--------------------+-------------------------+--------------------------+
+
+.. |tm| unicode:: U+2122
 
 
 

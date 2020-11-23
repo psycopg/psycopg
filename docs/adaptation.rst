@@ -1,10 +1,9 @@
+.. currentmodule:: psycopg3.adapt
+
 .. _adaptation:
 
-.. module:: psycopg3.adapt
-
-
-``psycopg3.adapt`` -- Data adaptation configuration
-===================================================
+Data adaptation configuration
+=============================
 
 The adaptation system is at the core of psycopg3 and allows to customise the
 way Python objects are converted to PostgreSQL when a query is performed and

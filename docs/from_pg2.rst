@@ -9,6 +9,8 @@ tries to behave as close as possible to `!psycopg2`. There are however a few
 differences to be aware of.
 
 
+.. _server-side-binding:
+
 Server-side binding
 -------------------
 
@@ -45,6 +47,11 @@ Sometimes PostgreSQL offers an alternative (e.g. :sql:`SELECT set_config()`,
 :sql:`SELECT pg_notify()`). If no alternative exist you can use `psycopg3.sql`
 to compose the query client-side.
 
+You cannot use :sql:`IN %s` and pass a tuple, because `IN ()` is an SQL
+construct. You must use :sql:`= any(%s)` and pass a list. Note that this also
+works for an empty list, whereas an empty tuple would have resulted in an
+error.
+
 
 Different adaptation system
 ---------------------------
@@ -54,7 +61,7 @@ server-side parameters adaptation, but also to consider performance,
 flexibility, ease of customization.
 
 Builtin data types should work as expected; if you have wrapped a custom data
-type you should check the :ref:`Adaptation` topic.
+type you should check the :ref:`adaptation` topic.
 
 
 Copy is no more file-based
