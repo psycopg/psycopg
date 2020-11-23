@@ -28,7 +28,7 @@ class Transformer:
 
     The life cycle of the object is the query, so it is assumed that stuff like
     the server version or connection encoding will not change. It can have its
-    state so adapting several values of the same type can use optimisations.
+    state so adapting several values of the same type can be optimised.
     """
 
     def __init__(self, context: AdaptContext = None):

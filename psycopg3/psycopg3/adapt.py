@@ -18,6 +18,10 @@ TEXT_OID = builtins["text"].oid
 
 
 class Dumper:
+    """
+    Convert Python object of the type *src* to PostgreSQL representation.
+    """
+
     globals: DumpersMap = {}
     connection: Optional[BaseConnection]
 
@@ -27,9 +31,11 @@ class Dumper:
         self.connection = _connection_from_context(context)
 
     def dump(self, obj: Any) -> bytes:
+        """Convert the object *obj* to PostgreSQL representation."""
         raise NotImplementedError()
 
     def quote(self, obj: Any) -> bytes:
+        """Convert the object *obj* to escaped representation."""
         value = self.dump(obj)
 
         if self.connection:
@@ -41,6 +47,7 @@ class Dumper:
 
     @property
     def oid(self) -> int:
+        """The oid to pass to the server, if known."""
         return 0
 
     @classmethod
@@ -50,6 +57,9 @@ class Dumper:
         context: AdaptContext = None,
         format: Format = Format.TEXT,
     ) -> None:
+        """
+        Configure *context* to use this dumper to convert object of type *src*.
+        """
         if not isinstance(src, (str, type)):
             raise TypeError(
                 f"dumpers should be registered on classes, got {src} instead"
@@ -62,6 +72,9 @@ class Dumper:
     def register_binary(
         cls, src: Union[type, str], context: AdaptContext = None
     ) -> None:
+        """
+        Configure *context* to use this dumper for binary format conversion.
+        """
         cls.register(src, context, format=Format.BINARY)
 
     @classmethod
@@ -84,6 +97,10 @@ class Dumper:
 
 
 class Loader:
+    """
+    Convert PostgreSQL objects with OID *oid* to Python objects.
+    """
+
     globals: LoadersMap = {}
     connection: Optional[BaseConnection]
 
@@ -93,6 +110,7 @@ class Loader:
         self.connection = _connection_from_context(context)
 
     def load(self, data: bytes) -> Any:
+        """Convert a PostgreSQL value to a Python object."""
         raise NotImplementedError()
 
     @classmethod
@@ -102,6 +120,9 @@ class Loader:
         context: AdaptContext = None,
         format: Format = Format.TEXT,
     ) -> None:
+        """
+        Configure *context* to use this loader to convert values with OID *oid*.
+        """
         if not isinstance(oid, int):
             raise TypeError(
                 f"loaders should be registered on oid, got {oid} instead"
@@ -112,6 +133,9 @@ class Loader:
 
     @classmethod
     def register_binary(cls, oid: int, context: AdaptContext = None) -> None:
+        """
+        Configure *context* to use this loader to convert binary values.
+        """
         cls.register(oid, context, format=Format.BINARY)
 
     @classmethod

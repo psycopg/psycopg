@@ -21,9 +21,9 @@ the COPY support.
 
     install
     usage
-    adaptation
     connection
     cursor
+    adaptation
     sql
     errors
     pq
