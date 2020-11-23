@@ -313,7 +313,7 @@ class Connection(BaseConnection):
             if self._savepoints:
                 raise e.ProgrammingError(
                     "Explicit rollback() forbidden within a Transaction "
-                    "context. (Either raise Transaction.Rollback() or allow "
+                    "context. (Either raise Rollback() or allow "
                     "an exception to propagate out of the context.)"
                 )
             if self.pgconn.transaction_status == TransactionStatus.IDLE:
@@ -472,7 +472,7 @@ class AsyncConnection(BaseConnection):
             if self._savepoints:
                 raise e.ProgrammingError(
                     "Explicit rollback() forbidden within a Transaction "
-                    "context. (Either raise Transaction.Rollback() or allow "
+                    "context. (Either raise Rollback() or allow "
                     "an exception to propagate out of the context.)"
                 )
             await self._exec_command(b"rollback")
