@@ -239,8 +239,8 @@ def test_query_params_execute(conn):
     assert cur.query is None
     assert cur.params is None
 
-    cur.execute("select %s, %s", [1, None])
-    assert cur.query == b"select $1, $2"
+    cur.execute("select %s, %s::text", [1, None])
+    assert cur.query == b"select $1, $2::text"
     assert cur.params == [b"1", None]
 
     cur.execute("select 1")

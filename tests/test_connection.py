@@ -7,8 +7,8 @@ import weakref
 from threading import Thread
 
 import psycopg3
-from psycopg3 import Connection, Notify
 from psycopg3 import encodings
+from psycopg3 import Connection, Notify
 from psycopg3.errors import UndefinedTable
 from psycopg3.conninfo import conninfo_to_dict
 
@@ -246,6 +246,7 @@ def test_set_encoding(conn):
         ("utf_8", "UTF8", "utf-8"),
         ("eucjp", "EUC_JP", "euc_jp"),
         ("euc-jp", "EUC_JP", "euc_jp"),
+        ("latin9", "LATIN9", "iso8859-15"),
     ],
 )
 def test_normalize_encoding(conn, enc, out, codec):

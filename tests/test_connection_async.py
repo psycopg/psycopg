@@ -8,7 +8,7 @@ import weakref
 
 import psycopg3
 from psycopg3 import encodings
-from psycopg3 import AsyncConnection
+from psycopg3 import AsyncConnection, Notify
 from psycopg3.errors import UndefinedTable
 from psycopg3.conninfo import conninfo_to_dict
 
@@ -298,14 +298,14 @@ async def test_encoding_env_var(dsn, monkeypatch, enc, out, codec):
 
 
 async def test_set_encoding_unsupported(aconn):
-    await aconn.set_client_encoding("EUC_TW")
     cur = await aconn.cursor()
+    await cur.execute("set client_encoding to EUC_TW")
     with pytest.raises(psycopg3.NotSupportedError):
-        await cur.execute("select 1")
+        await cur.execute("select 'x'")
 
 
 async def test_set_encoding_bad(aconn):
-    with pytest.raises(psycopg3.DatabaseError):
+    with pytest.raises(LookupError):
         await aconn.set_client_encoding("WAT")
 
 
@@ -438,6 +438,7 @@ async def test_notify_handlers(aconn):
     assert len(nots1) == 1
     assert len(nots2) == 2
     n = nots2[1]
+    assert isinstance(n, Notify)
     assert n.channel == "foo"
     assert n.payload == "n2"
     assert n.pid == aconn.pgconn.backend_pid

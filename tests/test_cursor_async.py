@@ -227,8 +227,8 @@ async def test_query_params_execute(aconn):
     assert cur.query is None
     assert cur.params is None
 
-    await cur.execute("select %s, %s", [1, None])
-    assert cur.query == b"select $1, $2"
+    await cur.execute("select %s, %s::text", [1, None])
+    assert cur.query == b"select $1, $2::text"
     assert cur.params == [b"1", None]
 
     await cur.execute("select 1")
