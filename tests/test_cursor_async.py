@@ -222,6 +222,39 @@ async def test_iter(aconn):
     assert res == [(1,), (2,), (3,)]
 
 
+async def test_query_params_execute(aconn):
+    cur = await aconn.cursor()
+    assert cur.query is None
+    assert cur.params is None
+
+    await cur.execute("select %s, %s", [1, None])
+    assert cur.query == b"select $1, $2"
+    assert cur.params == [b"1", None]
+
+    await cur.execute("select 1")
+    assert cur.query == b"select 1"
+    assert cur.params is None
+
+    with pytest.raises(psycopg3.DataError):
+        await cur.execute("select %s::int", ["wat"])
+
+    assert cur.query == b"select $1::int"
+    assert cur.params == [b"wat"]
+
+
+async def test_query_params_executemany(aconn):
+    cur = await aconn.cursor()
+
+    await cur.executemany("select %s, %s", [[1, 2], [3, 4]])
+    assert cur.query == b"select $1, $2"
+    assert cur.params == [b"3", b"4"]
+
+    with pytest.raises(psycopg3.DataError):
+        await cur.executemany("select %s::int", [[1], ["x"], [2]])
+    assert cur.query == b"select $1::int"
+    assert cur.params == [b"x"]
+
+
 async def test_iter_stop(aconn):
     cur = await aconn.cursor()
     await cur.execute("select generate_series(1, 3)")

@@ -291,6 +291,14 @@ def test_copy_rowcount(conn):
     assert cur.rowcount == -1
 
 
+def test_copy_query(conn):
+    cur = conn.cursor()
+    with cur.copy("copy (select 1) to stdout") as copy:
+        assert cur.query == b"copy (select 1) to stdout"
+        assert cur.params is None
+        list(copy)
+
+
 def ensure_table(cur, tabledef, name="copy_in"):
     cur.execute(f"drop table if exists {name}")
     cur.execute(f"create table {name} ({tabledef})")

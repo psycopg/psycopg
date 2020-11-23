@@ -182,6 +182,8 @@ class BaseCursor(Generic[ConnectionType]):
         self._pos = 0
         self._iresult = 0
         self._rowcount = -1
+        self._query: Optional[bytes] = None
+        self._params: Optional[List[Optional[bytes]]] = None
 
     @property
     def connection(self) -> ConnectionType:
@@ -198,6 +200,16 @@ class BaseCursor(Generic[ConnectionType]):
         # TODO: do we want this?
         res = self.pgresult
         return res.status if res else None
+
+    @property
+    def query(self) -> Optional[bytes]:
+        """The last query sent to the server, if available."""
+        return self._query
+
+    @property
+    def params(self) -> Optional[List[Optional[bytes]]]:
+        """The last set of parameters sent to the server, if available."""
+        return self._params
 
     @property
     def pgresult(self) -> Optional["PGresult"]:
@@ -281,6 +293,8 @@ class BaseCursor(Generic[ConnectionType]):
         pgq.convert(query, vars)
 
         if pgq.params or no_pqexec or self.format == pq.Format.BINARY:
+            self._query = pgq.query
+            self._params = pgq.params
             self._conn.pgconn.send_query_params(
                 pgq.query,
                 pgq.params,
@@ -291,6 +305,8 @@ class BaseCursor(Generic[ConnectionType]):
         else:
             # if we don't have to, let's use exec_ as it can run more than
             # one query in one go
+            self._query = pgq.query
+            self._params = None
             self._conn.pgconn.send_query(pgq.query)
 
     def _execute_results(self, results: Sequence["PGresult"]) -> None:
@@ -339,11 +355,13 @@ class BaseCursor(Generic[ConnectionType]):
         pgq = PostgresQuery(self._transformer)
         pgq.convert(query, vars)
 
+        self._query = pgq.query
         self._conn.pgconn.send_prepare(name, pgq.query, param_types=pgq.types)
 
         return pgq
 
     def _send_query_prepared(self, name: bytes, pgq: PostgresQuery) -> None:
+        self._params = pgq.params
         self._conn.pgconn.send_query_prepared(
             name,
             pgq.params,

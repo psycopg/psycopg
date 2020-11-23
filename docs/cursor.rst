@@ -110,6 +110,18 @@ The `!Cursor` class
     .. autoattribute:: rowcount
         :annotation: int
 
+    .. autoattribute:: query
+        :annotation: Optional[bytes]
+
+        The query will be in PostgreSQL format (with ``$1``, ``$2``...
+        parameters), the parameters will *not* be merged to the query: see
+        `params`.
+
+    .. autoattribute:: params
+        :annotation: Optional[List[Optional[bytes]]]
+
+        The parameters are adapted to PostgreSQL format.
+
 
 The `!AsyncCursor` class
 ------------------------

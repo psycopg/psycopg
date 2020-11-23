@@ -234,6 +234,39 @@ def test_iter_stop(conn):
     assert list(cur) == []
 
 
+def test_query_params_execute(conn):
+    cur = conn.cursor()
+    assert cur.query is None
+    assert cur.params is None
+
+    cur.execute("select %s, %s", [1, None])
+    assert cur.query == b"select $1, $2"
+    assert cur.params == [b"1", None]
+
+    cur.execute("select 1")
+    assert cur.query == b"select 1"
+    assert cur.params is None
+
+    with pytest.raises(psycopg3.DataError):
+        cur.execute("select %s::int", ["wat"])
+
+    assert cur.query == b"select $1::int"
+    assert cur.params == [b"wat"]
+
+
+def test_query_params_executemany(conn):
+    cur = conn.cursor()
+
+    cur.executemany("select %s, %s", [[1, 2], [3, 4]])
+    assert cur.query == b"select $1, $2"
+    assert cur.params == [b"3", b"4"]
+
+    with pytest.raises(psycopg3.DataError):
+        cur.executemany("select %s::int", [[1], ["x"], [2]])
+    assert cur.query == b"select $1::int"
+    assert cur.params == [b"x"]
+
+
 class TestColumn:
     def test_description_attribs(self, conn):
         curs = conn.cursor()
