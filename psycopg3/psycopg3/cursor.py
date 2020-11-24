@@ -16,7 +16,7 @@ from . import pq
 from .oids import builtins
 from .copy import Copy, AsyncCopy
 from .proto import ConnectionType, Query, Params, DumpersMap, LoadersMap, PQGen
-from .utils.queries import PostgresQuery
+from ._queries import PostgresQuery
 
 if sys.version_info >= (3, 7):
     from contextlib import asynccontextmanager

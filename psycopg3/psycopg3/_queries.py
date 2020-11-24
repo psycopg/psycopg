@@ -9,17 +9,13 @@ from functools import lru_cache
 from typing import Any, Dict, List, Mapping, Match, NamedTuple, Optional
 from typing import Sequence, Tuple, Union, TYPE_CHECKING
 
-from .. import errors as e
-from ..pq import Format
-from ..sql import Composable
-from ..oids import builtins
-from ..proto import Query, Params
+from . import errors as e
+from .pq import Format
+from .sql import Composable
+from .proto import Query, Params
 
 if TYPE_CHECKING:
-    from ..proto import Transformer
-
-TEXT_OID = builtins["text"].oid
-UNKNOWN_OID = builtins["unknown"].oid
+    from .proto import Transformer
 
 
 class QueryPart(NamedTuple):
@@ -87,7 +83,7 @@ class PostgresQuery:
                     ts.append(dumper.oid)
                 else:
                     ps.append(None)
-                    ts.append(UNKNOWN_OID)
+                    ts.append(0)
         else:
             self.params = self.types = None
 

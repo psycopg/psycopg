@@ -2,7 +2,7 @@ import pytest
 
 import psycopg3
 from psycopg3.adapt import Transformer
-from psycopg3.utils.queries import PostgresQuery, _split_query
+from psycopg3._queries import PostgresQuery, _split_query
 
 
 @pytest.mark.parametrize(
