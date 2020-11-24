@@ -46,12 +46,12 @@ The `!Cursor` class
 
     .. rubric:: Methods to send commands
 
-    .. automethod:: execute(query: Query, vars: Optional[Args]=None) -> Cursor
+    .. automethod:: execute(query: Query, params: Optional[Args]=None) -> Cursor
 
         :param query: The query to execute
         :type query: `!str`, `!bytes`, or `sql.Composable`
-        :param vars: The parameters to pass to the query, if any
-        :type vars: Mapping, Sequence
+        :param params: The parameters to pass to the query, if any
+        :type params: Sequence or Mapping
 
         Return the cursor itself, so that it will be possible to chain a fetch
         operation after the call.
@@ -59,12 +59,12 @@ The `!Cursor` class
         See :ref:`query-parameters` for all the details about executing
         queries.
 
-    .. automethod:: executemany(query: Query, vars_seq: Sequence[Args]) -> Cursor
+    .. automethod:: executemany(query: Query, params_seq: Sequence[Args])
 
         :param query: The query to execute
         :type query: `!str`, `!bytes`, or `sql.Composable`
-        :param vars_seq: The parameters to pass to the query
-        :type vars_seq: Sequence of Mapping or Sequence
+        :param params_seq: The parameters to pass to the query
+        :type params_seq: Sequence of Sequences or Mappings
 
         This is more efficient than performing separate queries, but in case of
         several :sql:`INSERT` (and with some SQL creativity for massive
@@ -144,8 +144,8 @@ The `!AsyncCursor` class
             automatically when the block is exited, but be careful about
             the async quirkness: see :ref:`with-statement` for details.
 
-    .. automethod:: execute(query: Query, vars: Optional[Args]=None) -> AsyncCursor
-    .. automethod:: executemany(query: Query, vars_seq: Sequence[Args]) -> AsyncCursor
+    .. automethod:: execute(query: Query, params: Optional[Args]=None) -> AsyncCursor
+    .. automethod:: executemany(query: Query, params_seq: Sequence[Args])
     .. automethod:: copy(statement: Query) -> AsyncCopy
 
         .. note:: it must be called as ``async with cur.copy() as copy: ...``

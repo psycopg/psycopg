@@ -284,13 +284,13 @@ class BaseCursor(Generic[ConnectionType]):
         self._transformer = adapt.Transformer(self)
 
     def _execute_send(
-        self, query: Query, vars: Optional[Params], no_pqexec: bool = False
+        self, query: Query, params: Optional[Params], no_pqexec: bool = False
     ) -> None:
         """
         Implement part of execute() before waiting common to sync and async
         """
         pgq = PostgresQuery(self._transformer)
-        pgq.convert(query, vars)
+        pgq.convert(query, params)
 
         if pgq.params or no_pqexec or self.format == pq.Format.BINARY:
             self._query = pgq.query
@@ -347,13 +347,13 @@ class BaseCursor(Generic[ConnectionType]):
             )
 
     def _send_prepare(
-        self, name: bytes, query: Query, vars: Optional[Params]
+        self, name: bytes, query: Query, params: Optional[Params]
     ) -> PostgresQuery:
         """
         Implement part of execute() before waiting common to sync and async
         """
         pgq = PostgresQuery(self._transformer)
-        pgq.convert(query, vars)
+        pgq.convert(query, params)
 
         self._query = pgq.query
         self._conn.pgconn.send_prepare(name, pgq.query, param_types=pgq.types)
@@ -421,22 +421,22 @@ class Cursor(BaseCursor["Connection"]):
         self._closed = True
         self._reset()
 
-    def execute(self, query: Query, vars: Optional[Params] = None) -> "Cursor":
+    def execute(
+        self, query: Query, params: Optional[Params] = None
+    ) -> "Cursor":
         """
         Execute a query or command to the database.
         """
         with self._conn.lock:
             self._start_query()
             self._conn._start_query()
-            self._execute_send(query, vars)
+            self._execute_send(query, params)
             gen = execute(self._conn.pgconn)
             results = self._conn.wait(gen)
             self._execute_results(results)
         return self
 
-    def executemany(
-        self, query: Query, vars_seq: Sequence[Params]
-    ) -> "Cursor":
+    def executemany(self, query: Query, params_seq: Sequence[Params]) -> None:
         """
         Execute the same command with a sequence of input data.
         """
@@ -444,9 +444,9 @@ class Cursor(BaseCursor["Connection"]):
             self._start_query()
             self._conn._start_query()
             first = True
-            for vars in vars_seq:
+            for params in params_seq:
                 if first:
-                    pgq = self._send_prepare(b"", query, vars)
+                    pgq = self._send_prepare(b"", query, params)
                     gen = execute(self._conn.pgconn)
                     (result,) = self._conn.wait(gen)
                     if result.status == self.ExecStatus.FATAL_ERROR:
@@ -454,14 +454,12 @@ class Cursor(BaseCursor["Connection"]):
                             result, encoding=self._conn.client_encoding
                         )
                 else:
-                    pgq.dump(vars)
+                    pgq.dump(params)
 
                 self._send_query_prepared(b"", pgq)
                 gen = execute(self._conn.pgconn)
                 (result,) = self._conn.wait(gen)
                 self._execute_results((result,))
-
-        return self
 
     def fetchone(self) -> Optional[Sequence[Any]]:
         """
@@ -557,27 +555,27 @@ class AsyncCursor(BaseCursor["AsyncConnection"]):
         self._reset()
 
     async def execute(
-        self, query: Query, vars: Optional[Params] = None
+        self, query: Query, params: Optional[Params] = None
     ) -> "AsyncCursor":
         async with self._conn.lock:
             self._start_query()
             await self._conn._start_query()
-            self._execute_send(query, vars)
+            self._execute_send(query, params)
             gen = execute(self._conn.pgconn)
             results = await self._conn.wait(gen)
             self._execute_results(results)
         return self
 
     async def executemany(
-        self, query: Query, vars_seq: Sequence[Params]
-    ) -> "AsyncCursor":
+        self, query: Query, params_seq: Sequence[Params]
+    ) -> None:
         async with self._conn.lock:
             self._start_query()
             await self._conn._start_query()
             first = True
-            for vars in vars_seq:
+            for params in params_seq:
                 if first:
-                    pgq = self._send_prepare(b"", query, vars)
+                    pgq = self._send_prepare(b"", query, params)
                     gen = execute(self._conn.pgconn)
                     (result,) = await self._conn.wait(gen)
                     if result.status == self.ExecStatus.FATAL_ERROR:
@@ -585,14 +583,12 @@ class AsyncCursor(BaseCursor["AsyncConnection"]):
                             result, encoding=self._conn.client_encoding
                         )
                 else:
-                    pgq.dump(vars)
+                    pgq.dump(params)
 
                 self._send_query_prepared(b"", pgq)
                 gen = execute(self._conn.pgconn)
                 (result,) = await self._conn.wait(gen)
                 self._execute_results((result,))
-
-        return self
 
     async def fetchone(self) -> Optional[Sequence[Any]]:
         self._check_result()
