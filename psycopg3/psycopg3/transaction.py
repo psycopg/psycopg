@@ -75,8 +75,10 @@ class BaseTransaction(Generic[ConnectionType]):
         return f"{self.__class__.__qualname__}({', '.join(args)})"
 
     def _enter_commands(self) -> List[str]:
-        assert self._yolo
-        self._yolo = False
+        if not self._yolo:
+            raise TypeError("transaction blocks cannot be use more than once")
+        else:
+            self._yolo = False
 
         self._outer_transaction = (
             self._conn.pgconn.transaction_status == TransactionStatus.IDLE

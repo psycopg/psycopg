@@ -50,6 +50,15 @@ async def test_exposes_savepoint_name(aconn):
             tx.savepoint_name = "bar"
 
 
+async def test_cant_reenter(aconn):
+    async with aconn.transaction() as tx:
+        pass
+
+    with pytest.raises(TypeError):
+        async with tx:
+            pass
+
+
 async def test_begins_on_enter(aconn):
     """Transaction does not begin until __enter__() is called."""
     tx = aconn.transaction()

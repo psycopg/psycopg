@@ -106,6 +106,15 @@ def test_exposes_savepoint_name(conn):
             tx.savepoint_name = "bar"
 
 
+def test_cant_reenter(conn):
+    with conn.transaction() as tx:
+        pass
+
+    with pytest.raises(TypeError):
+        with tx:
+            pass
+
+
 def test_begins_on_enter(conn):
     """Transaction does not begin until __enter__() is called."""
     tx = conn.transaction()
