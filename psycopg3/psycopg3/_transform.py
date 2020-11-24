@@ -8,7 +8,7 @@ from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 from typing import TYPE_CHECKING
 
 from . import errors as e
-from . import pq
+from .pq import Format
 from .oids import builtins, INVALID_OID
 from .proto import AdaptContext, DumpersMap
 from .proto import LoadFunc, LoadersMap
@@ -16,9 +16,9 @@ from .cursor import BaseCursor
 from .connection import BaseConnection
 
 if TYPE_CHECKING:
+    from .pq.proto import PGresult
     from .adapt import Dumper, Loader
 
-Format = pq.Format
 TEXT_OID = builtins["text"].oid
 
 
@@ -37,7 +37,7 @@ class Transformer:
         self._dumpers_maps: List[DumpersMap] = []
         self._loaders_maps: List[LoadersMap] = []
         self._setup_context(context)
-        self.pgresult = None
+        self._pgresult: Optional["PGresult"] = None
 
         # mapping class, fmt -> Dumper instance
         self._dumpers_cache: Dict[Tuple[type, Format], "Dumper"] = {}
@@ -107,11 +107,11 @@ class Transformer:
         return self._encoding
 
     @property
-    def pgresult(self) -> Optional[pq.proto.PGresult]:
+    def pgresult(self) -> Optional["PGresult"]:
         return self._pgresult
 
     @pgresult.setter
-    def pgresult(self, result: Optional[pq.proto.PGresult]) -> None:
+    def pgresult(self, result: Optional["PGresult"]) -> None:
         self._pgresult = result
         rc = self._row_loaders = []
 
@@ -184,7 +184,7 @@ class Transformer:
         )
 
     def load_row(self, row: int) -> Optional[Tuple[Any, ...]]:
-        res = self.pgresult
+        res = self._pgresult
         if not res:
             return None
 

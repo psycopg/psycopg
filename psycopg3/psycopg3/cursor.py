@@ -13,6 +13,7 @@ from contextlib import contextmanager
 
 from . import errors as e
 from . import pq
+from .pq import ConnStatus, ExecStatus, Format
 from .oids import builtins
 from .copy import Copy, AsyncCopy
 from .proto import ConnectionType, Query, Params, DumpersMap, LoadersMap, PQGen
@@ -166,7 +167,7 @@ class BaseCursor(Generic[ConnectionType]):
     def __init__(
         self,
         connection: ConnectionType,
-        format: pq.Format = pq.Format.TEXT,
+        format: Format = Format.TEXT,
     ):
         self._conn = connection
         self.format = format
@@ -225,12 +226,12 @@ class BaseCursor(Generic[ConnectionType]):
     @property
     def description(self) -> Optional[List[Column]]:
         """
-        A list of `Column` object describing the current resultset.
+        A list of `Column` objects describing the current resultset.
 
         `!None` if the current resultset didn't return tuples.
         """
         res = self.pgresult
-        if not res or res.status != self.ExecStatus.TUPLES_OK:
+        if not res or res.status != ExecStatus.TUPLES_OK:
             return None
         encoding = self._conn.client_encoding
         return [Column(res, i, encoding) for i in range(res.nfields)]
@@ -274,7 +275,7 @@ class BaseCursor(Generic[ConnectionType]):
         if self._conn.closed:
             raise e.InterfaceError("the connection is closed")
 
-        if self._conn.pgconn.status != pq.ConnStatus.OK:
+        if self._conn.pgconn.status != ConnStatus.OK:
             raise e.InterfaceError(
                 f"cannot execute operations: the connection is"
                 f" in status {self._conn.pgconn.status}"
@@ -292,7 +293,7 @@ class BaseCursor(Generic[ConnectionType]):
         pgq = PostgresQuery(self._transformer)
         pgq.convert(query, params)
 
-        if pgq.params or no_pqexec or self.format == pq.Format.BINARY:
+        if pgq.params or no_pqexec or self.format == Format.BINARY:
             self._query = pgq.query
             self._params = pgq.params
             self._conn.pgconn.send_query_params(
@@ -309,6 +310,17 @@ class BaseCursor(Generic[ConnectionType]):
             self._params = None
             self._conn.pgconn.send_query(pgq.query)
 
+    _status_ok = {
+        ExecStatus.TUPLES_OK,
+        ExecStatus.COMMAND_OK,
+        ExecStatus.EMPTY_QUERY,
+    }
+    _status_copy = {
+        ExecStatus.COPY_IN,
+        ExecStatus.COPY_OUT,
+        ExecStatus.COPY_BOTH,
+    }
+
     def _execute_results(self, results: Sequence["PGresult"]) -> None:
         """
         Implement part of execute() after waiting common to sync and async
@@ -316,9 +328,8 @@ class BaseCursor(Generic[ConnectionType]):
         if not results:
             raise e.InternalError("got no result from the query")
 
-        S = self.ExecStatus
         statuses = {res.status for res in results}
-        badstats = statuses - {S.TUPLES_OK, S.COMMAND_OK, S.EMPTY_QUERY}
+        badstats = statuses - self._status_ok
         if not badstats:
             self._results = list(results)
             self.pgresult = results[0]
@@ -331,12 +342,11 @@ class BaseCursor(Generic[ConnectionType]):
 
             return
 
-        if results[-1].status == S.FATAL_ERROR:
+        if results[-1].status == ExecStatus.FATAL_ERROR:
             raise e.error_from_result(
                 results[-1], encoding=self._conn.client_encoding
             )
-
-        elif badstats & {S.COPY_IN, S.COPY_OUT, S.COPY_BOTH}:
+        elif badstats & self._status_copy:
             raise e.ProgrammingError(
                 "COPY cannot be used with execute(); use copy() insead"
             )
@@ -373,7 +383,7 @@ class BaseCursor(Generic[ConnectionType]):
         res = self.pgresult
         if not res:
             raise e.ProgrammingError("no result available")
-        elif res.status != self.ExecStatus.TUPLES_OK:
+        elif res.status != ExecStatus.TUPLES_OK:
             raise e.ProgrammingError(
                 "the last operation didn't produce a result"
             )
@@ -389,16 +399,16 @@ class BaseCursor(Generic[ConnectionType]):
 
         result = results[0]
         status = result.status
-        if status in (pq.ExecStatus.COPY_IN, pq.ExecStatus.COPY_OUT):
+        if status in (ExecStatus.COPY_IN, ExecStatus.COPY_OUT):
             return
-        elif status == pq.ExecStatus.FATAL_ERROR:
+        elif status == ExecStatus.FATAL_ERROR:
             raise e.error_from_result(
                 result, encoding=self._conn.client_encoding
             )
         else:
             raise e.ProgrammingError(
                 "copy() should be used only with COPY ... TO STDOUT or COPY ..."
-                f" FROM STDIN statements, got {pq.ExecStatus(status).name}"
+                f" FROM STDIN statements, got {ExecStatus(status).name}"
             )
 
 
@@ -449,7 +459,7 @@ class Cursor(BaseCursor["Connection"]):
                     pgq = self._send_prepare(b"", query, params)
                     gen = execute(self._conn.pgconn)
                     (result,) = self._conn.wait(gen)
-                    if result.status == self.ExecStatus.FATAL_ERROR:
+                    if result.status == ExecStatus.FATAL_ERROR:
                         raise e.error_from_result(
                             result, encoding=self._conn.client_encoding
                         )
@@ -578,7 +588,7 @@ class AsyncCursor(BaseCursor["AsyncConnection"]):
                     pgq = self._send_prepare(b"", query, params)
                     gen = execute(self._conn.pgconn)
                     (result,) = await self._conn.wait(gen)
-                    if result.status == self.ExecStatus.FATAL_ERROR:
+                    if result.status == ExecStatus.FATAL_ERROR:
                         raise e.error_from_result(
                             result, encoding=self._conn.client_encoding
                         )

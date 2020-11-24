@@ -20,6 +20,7 @@ from typing import List, Optional, Union
 
 from . import pq
 from . import errors as e
+from .pq import ConnStatus, PollingStatus, ExecStatus
 from .proto import PQGen
 from .waiting import Wait, Ready
 from .encodings import py_codecs
@@ -36,20 +37,20 @@ def connect(conninfo: str) -> PQGen[PGconn]:
     conn = pq.PGconn.connect_start(conninfo.encode("utf8"))
     logger.debug("connection started, status %s", conn.status.name)
     while 1:
-        if conn.status == pq.ConnStatus.BAD:
+        if conn.status == ConnStatus.BAD:
             raise e.OperationalError(
                 f"connection is bad: {pq.error_message(conn)}"
             )
 
         status = conn.connect_poll()
         logger.debug("connection polled, status %s", conn.status.name)
-        if status == pq.PollingStatus.OK:
+        if status == PollingStatus.OK:
             break
-        elif status == pq.PollingStatus.READING:
+        elif status == PollingStatus.READING:
             yield conn.socket, Wait.R
-        elif status == pq.PollingStatus.WRITING:
+        elif status == PollingStatus.WRITING:
             yield conn.socket, Wait.W
-        elif status == pq.PollingStatus.FAILED:
+        elif status == PollingStatus.FAILED:
             raise e.OperationalError(
                 f"connection failed: {pq.error_message(conn)}"
             )
@@ -110,7 +111,6 @@ def fetch(pgconn: PGconn) -> PQGen[List[PGresult]]:
     Return the list of results returned by the database (whether success
     or error).
     """
-    S = pq.ExecStatus
     results: List[PGresult] = []
     while 1:
         pgconn.consume_input()
@@ -130,12 +130,19 @@ def fetch(pgconn: PGconn) -> PQGen[List[PGresult]]:
         if res is None:
             break
         results.append(res)
-        if res.status in (S.COPY_IN, S.COPY_OUT, S.COPY_BOTH):
+        if res.status in _copy_statuses:
             # After entering copy mode the libpq will create a phony result
             # for every request so let's break the endless loop.
             break
 
     return results
+
+
+_copy_statuses = (
+    ExecStatus.COPY_IN,
+    ExecStatus.COPY_OUT,
+    ExecStatus.COPY_BOTH,
+)
 
 
 def notifies(pgconn: PGconn) -> PQGen[List[pq.PGnotify]]:
@@ -169,7 +176,7 @@ def copy_from(pgconn: PGconn) -> PQGen[Union[bytes, PGresult]]:
 
     # Retrieve the final result of copy
     (result,) = yield from fetch(pgconn)
-    if result.status != pq.ExecStatus.COMMAND_OK:
+    if result.status != ExecStatus.COMMAND_OK:
         encoding = py_codecs.get(
             pgconn.parameter_status(b"client_encoding") or "", "utf-8"
         )
@@ -198,7 +205,7 @@ def copy_end(pgconn: PGconn, error: Optional[bytes]) -> PQGen[PGresult]:
 
     # Retrieve the final result of copy
     (result,) = yield from fetch(pgconn)
-    if result.status != pq.ExecStatus.COMMAND_OK:
+    if result.status != ExecStatus.COMMAND_OK:
         encoding = py_codecs.get(
             pgconn.parameter_status(b"client_encoding") or "", "utf-8"
         )

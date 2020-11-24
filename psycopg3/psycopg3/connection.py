@@ -24,7 +24,7 @@ from . import pq
 from . import cursor
 from . import errors as e
 from . import encodings
-from .pq import TransactionStatus, ExecStatus
+from .pq import TransactionStatus, ExecStatus, Format
 from .sql import Composable
 from .proto import DumpersMap, LoadersMap, PQGen, RV, Query
 from .waiting import wait, wait_async
@@ -274,7 +274,7 @@ class Connection(BaseConnection):
         self.pgconn.finish()
 
     def cursor(
-        self, name: str = "", format: pq.Format = pq.Format.TEXT
+        self, name: str = "", format: Format = Format.TEXT
     ) -> "psycopg3.Cursor":
         """
         Return a new `Cursor` to send commands and queries to the connection.
@@ -432,7 +432,7 @@ class AsyncConnection(BaseConnection):
         self.pgconn.finish()
 
     async def cursor(
-        self, name: str = "", format: pq.Format = pq.Format.TEXT
+        self, name: str = "", format: Format = Format.TEXT
     ) -> "psycopg3.AsyncCursor":
         """
         Return a new `AsyncCursor` to send commands and queries to the connection.

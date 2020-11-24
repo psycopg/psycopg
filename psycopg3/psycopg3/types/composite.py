@@ -8,7 +8,6 @@ from collections import namedtuple
 from typing import Any, Callable, Iterator, Sequence, Tuple, Type
 from typing import Optional, TYPE_CHECKING
 
-from .. import pq
 from ..oids import builtins, TypeInfo
 from ..adapt import Format, Dumper, Loader, Transformer
 from ..proto import AdaptContext
@@ -45,7 +44,7 @@ class CompositeTypeInfo(TypeInfo):
 
 
 def fetch_info(conn: "Connection", name: str) -> Optional[CompositeTypeInfo]:
-    cur = conn.cursor(format=pq.Format.BINARY)
+    cur = conn.cursor(format=Format.BINARY)
     cur.execute(_type_info_query, {"name": name})
     rec = cur.fetchone()
     return CompositeTypeInfo._from_record(rec)
@@ -54,7 +53,7 @@ def fetch_info(conn: "Connection", name: str) -> Optional[CompositeTypeInfo]:
 async def fetch_info_async(
     conn: "AsyncConnection", name: str
 ) -> Optional[CompositeTypeInfo]:
-    cur = await conn.cursor(format=pq.Format.BINARY)
+    cur = await conn.cursor(format=Format.BINARY)
     await cur.execute(_type_info_query, {"name": name})
     rec = await cur.fetchone()
     return CompositeTypeInfo._from_record(rec)
