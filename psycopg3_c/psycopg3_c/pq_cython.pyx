@@ -16,7 +16,7 @@ from psycopg3_c.libpq cimport Oid
 
 from psycopg3.pq.misc import PGnotify, ConninfoOption, PQerror, PGresAttDesc
 from psycopg3.pq.misc import error_message
-from psycopg3.pq.enums import (
+from psycopg3.pq import (
     ConnStatus,
     PollingStatus,
     ExecStatus,

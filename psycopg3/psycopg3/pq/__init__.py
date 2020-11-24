@@ -13,17 +13,10 @@ import os
 import logging
 from typing import Callable, Type
 
-from .enums import (
-    ConnStatus,
-    PollingStatus,
-    ExecStatus,
-    TransactionStatus,
-    Ping,
-    DiagnosticField,
-    Format,
-)
 from .misc import ConninfoOption, PQerror, PGnotify, PGresAttDesc
 from .misc import error_message
+from ._enums import ConnStatus, DiagnosticField, ExecStatus, Format
+from ._enums import Ping, PollingStatus, TransactionStatus
 from . import proto
 
 logger = logging.getLogger(__name__)

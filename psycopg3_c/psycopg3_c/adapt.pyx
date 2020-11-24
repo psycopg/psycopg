@@ -21,7 +21,7 @@ from psycopg3_c cimport libpq as impl
 from psycopg3_c.adapt cimport cloader_func, get_context_func
 from psycopg3_c.pq_cython cimport Escaping
 
-from psycopg3.pq.enums import Format
+from psycopg3.pq import Format
 
 import logging
 logger = logging.getLogger("psycopg3.adapt")

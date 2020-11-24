@@ -7,7 +7,7 @@ Various functionalities to make easier to work with the libpq.
 from typing import cast, NamedTuple, Optional, Union
 
 from ..errors import OperationalError
-from .enums import DiagnosticField, ConnStatus
+from ._enums import DiagnosticField, ConnStatus
 from .proto import PGconn, PGresult
 
 

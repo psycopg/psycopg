@@ -8,15 +8,8 @@ from typing import Any, Callable, List, Optional, Sequence, Tuple
 from typing import TYPE_CHECKING
 from typing_extensions import Protocol
 
-from .enums import (
-    ConnStatus,
-    PollingStatus,
-    ExecStatus,
-    TransactionStatus,
-    Ping,
-    DiagnosticField,
-    Format,
-)
+from ._enums import ConnStatus, DiagnosticField, ExecStatus, Format
+from ._enums import Ping, PollingStatus, TransactionStatus
 
 if TYPE_CHECKING:
     from .misc import PGnotify, ConninfoOption, PGresAttDesc

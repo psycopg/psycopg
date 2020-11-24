@@ -6,13 +6,9 @@ SQL composition utility module
 
 import string
 from typing import Any, Iterator, List, Optional, Sequence, Union
-from typing import TYPE_CHECKING
 
 from .pq import Escaping, Format
 from .proto import AdaptContext
-
-if TYPE_CHECKING:
-    import psycopg3
 
 
 def quote(obj: Any, context: AdaptContext = None) -> str:
@@ -411,9 +407,7 @@ class Placeholder(Composable):
 
     """
 
-    def __init__(
-        self, name: str = "", format: "psycopg3.pq.Format" = Format.TEXT
-    ):
+    def __init__(self, name: str = "", format: Format = Format.TEXT):
         super().__init__(name)
         if not isinstance(name, str):
             raise TypeError(f"expected string as name, got {name!r}")

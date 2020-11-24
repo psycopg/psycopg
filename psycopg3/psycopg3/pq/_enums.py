@@ -12,6 +12,8 @@ class ConnStatus(IntEnum):
     Current status of the connection.
     """
 
+    __module__ = "psycopg3.pq"
+
     OK = 0
     """The connection is in a working state."""
     BAD = auto()
@@ -37,6 +39,8 @@ class PollingStatus(IntEnum):
     If ``READING`` or ``WRITING`` you may select before polling again.
     """
 
+    __module__ = "psycopg3.pq"
+
     FAILED = 0
     """Connection attempt failed."""
     READING = auto()
@@ -53,6 +57,8 @@ class ExecStatus(IntEnum):
     """
     The status of a command.
     """
+
+    __module__ = "psycopg3.pq"
 
     EMPTY_QUERY = 0
     """The string sent to the server was empty."""
@@ -102,6 +108,8 @@ class TransactionStatus(IntEnum):
     The transaction status of a connection.
     """
 
+    __module__ = "psycopg3.pq"
+
     IDLE = 0
     """Connection ready, no transaction active."""
 
@@ -120,6 +128,8 @@ class TransactionStatus(IntEnum):
 
 class Ping(IntEnum):
     """Response from a ping attempt."""
+
+    __module__ = "psycopg3.pq"
 
     OK = 0
     """
@@ -147,6 +157,8 @@ class DiagnosticField(IntEnum):
     Fields in an error report.
     """
 
+    __module__ = "psycopg3.pq"
+
     # from postgres_ext.h
     SEVERITY = ord("S")
     SEVERITY_NONLOCALIZED = ord("V")
@@ -172,6 +184,8 @@ class Format(IntEnum):
     """
     The format of a query argument or return value.
     """
+
+    __module__ = "psycopg3.pq"
 
     TEXT = 0
     """Text parameter."""

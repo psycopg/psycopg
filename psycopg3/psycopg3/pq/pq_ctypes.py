@@ -18,18 +18,11 @@ from ctypes import c_char_p, c_int, c_size_t, c_ulong
 from typing import Any, Callable, List, Optional, Sequence, Tuple
 from typing import cast as t_cast, TYPE_CHECKING
 
-from .enums import (
-    ConnStatus,
-    PollingStatus,
-    ExecStatus,
-    TransactionStatus,
-    Ping,
-    DiagnosticField,
-    Format,
-)
+from . import _pq_ctypes as impl
 from .misc import PGnotify, ConninfoOption, PQerror, PGresAttDesc
 from .misc import error_message
-from . import _pq_ctypes as impl
+from ._enums import ConnStatus, DiagnosticField, ExecStatus, Format
+from ._enums import Ping, PollingStatus, TransactionStatus
 
 if TYPE_CHECKING:
     from . import proto
