@@ -90,6 +90,25 @@ def test_basic(conn):
     assert not in_transaction(conn)
 
 
+def test_not_reusable(conn):
+    tx = conn.transaction()
+    tx.__enter__()
+    tx.__exit__(None, None, None)
+    with pytest.raises(AttributeError):
+        tx.__enter__()
+
+
+def test_as_decorator(conn):
+    assert not in_transaction(conn)
+
+    @conn.transaction(savepoint_name="foo")
+    def f():
+        assert in_transaction(conn)
+
+    f()
+    assert not in_transaction(conn)
+
+
 def test_exposes_associated_connection(conn):
     """Transaction exposes its connection as a read-only property."""
     with conn.transaction() as tx:
