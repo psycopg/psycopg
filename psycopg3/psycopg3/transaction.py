@@ -76,7 +76,7 @@ class BaseTransaction(Generic[ConnectionType]):
 
     def _enter_commands(self) -> List[str]:
         if not self._yolo:
-            raise TypeError("transaction blocks cannot be use more than once")
+            raise TypeError("transaction blocks can be used only once")
         else:
             self._yolo = False
 

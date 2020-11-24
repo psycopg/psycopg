@@ -172,7 +172,8 @@ class Copy(BaseCopy["Connection"]):
         self._finished = True
 
     def __enter__(self) -> "Copy":
-        assert not self._finished
+        if self._finished:
+            raise TypeError("copy blocks can be used only once")
         return self
 
     def __exit__(
@@ -240,7 +241,8 @@ class AsyncCopy(BaseCopy["AsyncConnection"]):
         self._finished = True
 
     async def __aenter__(self) -> "AsyncCopy":
-        assert not self._finished
+        if self._finished:
+            raise TypeError("copy blocks can be used only once")
         return self
 
     async def __aexit__(

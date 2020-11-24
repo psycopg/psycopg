@@ -299,6 +299,16 @@ def test_copy_query(conn):
         list(copy)
 
 
+def test_cant_reenter(conn):
+    cur = conn.cursor()
+    with cur.copy("copy (select 1) to stdout") as copy:
+        list(copy)
+
+    with pytest.raises(TypeError):
+        with copy:
+            list(copy)
+
+
 def ensure_table(cur, tabledef, name="copy_in"):
     cur.execute(f"drop table if exists {name}")
     cur.execute(f"create table {name} ({tabledef})")

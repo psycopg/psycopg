@@ -288,6 +288,18 @@ async def test_copy_query(aconn):
             pass
 
 
+async def test_cant_reenter(aconn):
+    cur = await aconn.cursor()
+    async with cur.copy("copy (select 1) to stdout") as copy:
+        async for record in copy:
+            pass
+
+    with pytest.raises(TypeError):
+        async with copy:
+            async for record in copy:
+                pass
+
+
 async def ensure_table(cur, tabledef, name="copy_in"):
     await cur.execute(f"drop table if exists {name}")
     await cur.execute(f"create table {name} ({tabledef})")
