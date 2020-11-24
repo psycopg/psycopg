@@ -18,13 +18,10 @@ This module exposes objects to represent and examine database errors.
     callback functions registered with
     `~psycopg3.Connection.add_notice_handler()`.
 
-    All the information available from the `PQresultErrorField()`__ function
+    All the information available from the :pq:`PQresultErrorField()` function
     are exposed as attributes by the object. For instance the `!severity`
     attribute returns the `!PG_DIAG_SEVERITY` code. Please refer to the
     PostgreSQL documentation for the meaning of all the attributes.
-
-    .. __: https://www.postgresql.org/docs/current/static/libpq-exec.html
-        #LIBPQ-PQRESULTERRORFIELD
 
     The attributes available are:
 

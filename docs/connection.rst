@@ -43,7 +43,7 @@ The `!Connection` class
         .. seealso::
 
             - the list of `the accepted connection parameters`__
-            - the `environment varialbes`__ affecting connection
+            - the `environment variables`__ affecting connection
 
             .. __: https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-PARAMKEYWORDS
             .. __: https://www.postgresql.org/docs/current/libpq-envars.html
