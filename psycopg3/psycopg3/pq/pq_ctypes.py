@@ -58,6 +58,7 @@ class PGconn:
     Python representation of a libpq connection.
     """
 
+    __module__ = "psycopg3.pq"
     __slots__ = (
         "pgconn_ptr",
         "notice_handler",
@@ -578,6 +579,7 @@ class PGresult:
     Python representation of a libpq result.
     """
 
+    __module__ = "psycopg3.pq"
     __slots__ = ("pgresult_ptr",)
 
     def __init__(self, pgresult_ptr: impl.PGresult_struct):
@@ -689,6 +691,7 @@ class PGcancel:
     Created by `PGconn.get_cancel()`.
     """
 
+    __module__ = "psycopg3.pq"
     __slots__ = ("pgcancel_ptr",)
 
     def __init__(self, pgcancel_ptr: impl.PGcancel_struct):
@@ -728,6 +731,8 @@ class Conninfo:
     """
     Utility object to manipulate connection strings.
     """
+
+    __module__ = "psycopg3.pq"
 
     @classmethod
     def get_defaults(cls) -> List[ConninfoOption]:
@@ -779,6 +784,8 @@ class Escaping:
     """
     Utility object to escape strings for SQL interpolation.
     """
+
+    __module__ = "psycopg3.pq"
 
     def __init__(self, conn: Optional[PGconn] = None):
         self.conn = conn

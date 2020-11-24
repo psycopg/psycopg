@@ -15,8 +15,6 @@ def before_process_signature(app, obj, bound_method):
         # Drop "return: None" from the function signatures
         if ann["return"] is None:
             del ann["return"]
-        elif ann["return"] == "PGcancel":
-            ann["return"] = "psycopg3.pq.PGcancel"
 
 
 def process_signature(

@@ -127,6 +127,8 @@ _bsrepl_re = re.compile(b"[\b\t\n\v\f\r\\\\]")
 class Copy(BaseCopy["Connection"]):
     """Manage a :sql:`COPY` operation."""
 
+    __module__ = "psycopg3"
+
     def read(self) -> bytes:
         """Read a row of data after a :sql:`COPY TO` operation.
 
@@ -203,6 +205,8 @@ class Copy(BaseCopy["Connection"]):
 
 class AsyncCopy(BaseCopy["AsyncConnection"]):
     """Manage an asynchronous :sql:`COPY` operation."""
+
+    __module__ = "psycopg3"
 
     async def read(self) -> bytes:
         if self._finished:

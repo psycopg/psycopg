@@ -28,6 +28,8 @@ class Rollback(Exception):
     enclosing transactions contexts up to and including the one specified.
     """
 
+    __module__ = "psycopg3"
+
     def __init__(
         self,
         transaction: Union["Transaction", "AsyncTransaction", None] = None,
@@ -147,6 +149,8 @@ class Transaction(BaseTransaction["Connection"]):
     Returned by `Connection.transaction()` to handle a transaction block.
     """
 
+    __module__ = "psycopg3"
+
     def __enter__(self) -> "Transaction":
         with self._conn.lock:
             self._execute(self._enter_commands())
@@ -192,6 +196,8 @@ class AsyncTransaction(BaseTransaction["AsyncConnection"]):
     """
     Returned by `AsyncConnection.transaction()` to handle a transaction block.
     """
+
+    __module__ = "psycopg3"
 
     async def __aenter__(self) -> "AsyncTransaction":
         async with self._conn.lock:

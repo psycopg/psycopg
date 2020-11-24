@@ -31,6 +31,8 @@ class Transformer:
     state so adapting several values of the same type can be optimised.
     """
 
+    __module__ = "psycopg3.adapt"
+
     def __init__(self, context: AdaptContext = None):
         self._dumpers: DumpersMap
         self._loaders: LoadersMap

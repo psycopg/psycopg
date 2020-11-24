@@ -43,6 +43,9 @@ else:
 
 
 class Column(Sequence[Any]):
+
+    __module__ = "psycopg3"
+
     def __init__(self, pgresult: "PGresult", index: int, encoding: str):
         self._pgresult = pgresult
         self._index = index
@@ -413,6 +416,8 @@ class BaseCursor(Generic[ConnectionType]):
 
 
 class Cursor(BaseCursor["Connection"]):
+    __module__ = "psycopg3"
+
     def __enter__(self) -> "Cursor":
         return self
 
@@ -549,6 +554,8 @@ class Cursor(BaseCursor["Connection"]):
 
 
 class AsyncCursor(BaseCursor["AsyncConnection"]):
+    __module__ = "psycopg3"
+
     async def __aenter__(self) -> "AsyncCursor":
         return self
 
