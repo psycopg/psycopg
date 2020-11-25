@@ -1,20 +1,6 @@
-.hint {
-  background: #ffc;
-  border: 1px solid #dda;
-}
-
-/* more compact errors table */
-#sqlstate-exceptions table p {
-  margin: 0;
-}
-
-/* more compact data types table */
-table.data-types p,
-table.data-types div.line-block {
-  margin: 0;
-}
-
-/* less space between enum values */
-dl.attribute {
-  margin-bottom: 1rem;
+/* style rubric in furo
+ * TODO: remove after https://github.com/pradyunsg/furo/issues/33 fixed */
+p.rubric {
+  font-size: 1.2rem;
+  font-weight: bold;
 }

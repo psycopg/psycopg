@@ -17,9 +17,8 @@
 import sys
 from pathlib import Path
 
-from better import better_theme_path  # type: ignore
-
-sys.path.append(str(Path(__file__).parent / "lib"))
+docs_dir = Path(__file__).parent
+sys.path.append(str(docs_dir / "lib"))
 
 
 # -- Project information -----------------------------------------------------
@@ -54,15 +53,31 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", ".venv"]
 
 # -- Options for HTML output -------------------------------------------------
 
+# The announcement may be in the website but not shipped with the docs
+ann_file = docs_dir / "../../templates/docs3-announcement.html"
+if ann_file.exists():
+    with ann_file.open() as f:
+        announcement = f.read()
+else:
+    announcement = ""
+
+html_css_files = ["psycopg.css"]
+
+# The name of the Pygments (syntax highlighting) style to use.
+pygments_style = "friendly"
+
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-#
-html_theme = "better"
-html_theme_path = [better_theme_path]
+html_theme = "furo"
 html_show_sphinx = False
 html_theme_options = {
-    "linktotheme": False,
-    "cssfiles": ["_static/psycopg.css"],
+    "announcement": announcement,
+    "sidebar_hide_name": False,
+    "light_logo": "psycopg-100.png",
+    "dark_logo": "psycopg-100.png",
+    "light_css_variables": {
+        "admonition-font-size": "1rem",
+    },
 }
 
 # Add any paths that contain custom static files (such as style sheets) here,
