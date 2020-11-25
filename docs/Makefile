@@ -18,7 +18,7 @@ help:
 env: .venv
 
 .venv: requirements.txt
-	virtualenv -p $(PYTHON) .venv
+	$(PYTHON) -m venv .venv
 	./.venv/bin/pip install -e ../psycopg3
 	./.venv/bin/pip install -r requirements.txt
 

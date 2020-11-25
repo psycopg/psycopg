@@ -17,8 +17,6 @@
 import sys
 from pathlib import Path
 
-from better import better_theme_path  # type: ignore
-
 sys.path.append(str(Path(__file__).parent / "lib"))
 
 
@@ -54,15 +52,24 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", ".venv"]
 
 # -- Options for HTML output -------------------------------------------------
 
+# The name of the Pygments (syntax highlighting) style to use.
+pygments_style = "friendly"
+
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = "better"
-html_theme_path = [better_theme_path]
+html_theme = "furo"
 html_show_sphinx = False
 html_theme_options = {
-    "linktotheme": False,
-    "cssfiles": ["_static/psycopg.css"],
+    "announcement": """
+        <a style=\"text-decoration: none; color: white;\" 
+           href=\"https://github.com/sponsors/dvarrazzo\">
+           <img height="24px" width="24px" src=\"_static/psycopg-48.png\"/> Sponsor psycopg3 on GitHub
+        </a>
+    """,
+    "sidebar_hide_name": True,
+    "light_logo": "psycopg-100.png",
+    "dark_logo": "psycopg-100.png",
 }
 
 # Add any paths that contain custom static files (such as style sheets) here,
