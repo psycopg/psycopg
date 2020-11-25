@@ -52,6 +52,8 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", ".venv"]
 
 # -- Options for HTML output -------------------------------------------------
 
+html_css_files = ["psycopg.css"]
+
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = "friendly"
 
@@ -62,14 +64,18 @@ html_theme = "furo"
 html_show_sphinx = False
 html_theme_options = {
     "announcement": """
-        <a style=\"text-decoration: none; color: white;\" 
+        <a style=\"text-decoration: none; color: white;\"
            href=\"https://github.com/sponsors/dvarrazzo\">
-           <img height="24px" width="24px" src=\"_static/psycopg-48.png\"/> Sponsor psycopg3 on GitHub
+           <img height="24px" width="24px" src=\"_static/psycopg-48.png\"/>
+            Sponsor psycopg3 on GitHub
         </a>
     """,
-    "sidebar_hide_name": True,
+    "sidebar_hide_name": False,
     "light_logo": "psycopg-100.png",
     "dark_logo": "psycopg-100.png",
+    "light_css_variables": {
+        "admonition-font-size": "1rem",
+    },
 }
 
 # Add any paths that contain custom static files (such as style sheets) here,
