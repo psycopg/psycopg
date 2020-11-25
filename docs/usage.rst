@@ -431,7 +431,7 @@ transaction, such as :sql:`CREATE DATABASE`, :sql:`VACUUM`, :sql:`CALL` on
 
 .. warning::
 
-    by default even a simple :sql:`SELECT` will start a transaction: in
+    By default even a simple :sql:`SELECT` will start a transaction: in
     long-running programs, if no further action is taken, the session will
     remain *idle in transaction*, an undesirable condition for several
     reasons (locks are held by the session, tables bloat...). For long lived

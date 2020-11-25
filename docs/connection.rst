@@ -50,7 +50,7 @@ The `!Connection` class
 
     .. automethod:: close
 
-        .. note:: you can use :ref:`with connect(): ...<with-statement>` to
+        .. note:: You can use :ref:`with connect(): ...<with-statement>` to
             close the connection automatically when the block is exited.
 
     .. autoattribute:: closed
@@ -58,7 +58,7 @@ The `!Connection` class
 
     .. automethod:: cursor
 
-        .. note:: you can use :ref:`with conn.cursor(): ...<with-statement>`
+        .. note:: You can use :ref:`with conn.cursor(): ...<with-statement>`
             to close the cursor automatically when the block is exited.
 
 
@@ -70,7 +70,7 @@ The `!Connection` class
     .. automethod:: rollback()
     .. automethod:: transaction(savepoint_name: Optional[str] = None, force_rollback: bool = False) -> Transaction
 
-        .. note:: it must be called as ``with conn.transaction() as tx: ...``
+        .. note:: It must be called as ``with conn.transaction() as tx: ...``
 
         Inside a transaction block it will not be possible to call `commit()`
         or `rollback()`.
@@ -132,13 +132,13 @@ The `!AsyncConnection` class
     .. automethod:: connect
     .. automethod:: close
 
-        .. note:: you can use ``async with`` to close the connection
+        .. note:: You can use ``async with`` to close the connection
             automatically when the block is exited, but be careful about
             the async quirkness: see :ref:`with-statement` for details.
 
     .. automethod:: cursor
 
-        .. note:: you can use ``async with`` to close the cursor
+        .. note:: You can use ``async with`` to close the cursor
             automatically when the block is exited, but be careful about
             the async quirkness: see :ref:`with-statement` for details.
 
@@ -147,7 +147,7 @@ The `!AsyncConnection` class
 
     .. automethod:: transaction(savepoint_name: Optional[str] = None, force_rollback: bool = False) -> AsyncTransaction
 
-        .. note:: it must be called as ``async with conn.transaction() as tx: ...``.
+        .. note:: It must be called as ``async with conn.transaction() as tx: ...``.
 
     .. automethod:: notifies
     .. automethod:: set_client_encoding
