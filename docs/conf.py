@@ -17,7 +17,8 @@
 import sys
 from pathlib import Path
 
-sys.path.append(str(Path(__file__).parent / "lib"))
+docs_dir = Path(__file__).parent
+sys.path.append(str(docs_dir / "lib"))
 
 
 # -- Project information -----------------------------------------------------
@@ -52,6 +53,14 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", ".venv"]
 
 # -- Options for HTML output -------------------------------------------------
 
+# The announcement may be in the website but not shipped with the docs
+ann_file = docs_dir / "../../templates/docs3-announcement.html"
+if ann_file.exists():
+    with ann_file.open() as f:
+        announcement = f.read()
+else:
+    announcement = ""
+
 html_css_files = ["psycopg.css"]
 
 # The name of the Pygments (syntax highlighting) style to use.
@@ -59,17 +68,10 @@ pygments_style = "friendly"
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-#
 html_theme = "furo"
 html_show_sphinx = False
 html_theme_options = {
-    "announcement": """
-        <a style=\"text-decoration: none; color: white;\"
-           href=\"https://github.com/sponsors/dvarrazzo\">
-           <img height="24px" width="24px" src=\"_static/psycopg-48.png\"/>
-            Sponsor psycopg3 on GitHub
-        </a>
-    """,
+    "announcement": announcement,
     "sidebar_hide_name": False,
     "light_logo": "psycopg-100.png",
     "dark_logo": "psycopg-100.png",
