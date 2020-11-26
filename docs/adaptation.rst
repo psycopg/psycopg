@@ -25,11 +25,16 @@ The `Loader` is the base object to perform the opposite operation: to read a
 `!bytes` string from PostgreSQL and create a Python object.
 
 `!Dumper` and `!Loader` are abstract classes: concrete classes must implement
-the `~Dumper.dump()` and `~Loader.load()` method. `!psycopg3` provides
+the `~Dumper.dump()` and `~Loader.load()` methods. `!psycopg3` provides
 implementation for several builtin Python and PostgreSQL types.
 
+.. admonition:: TODO
 
-.. rubric:: Dumpers and loaders configuration
+    Document the builtin adapters, where are they?
+
+
+Dumpers and loaders configuration
+---------------------------------
 
 Dumpers and loaders can be registered on different scopes: globally, per
 `~psycopg3.Connection`, per `~psycopg3.Cursor`, so that adaptation rules can
@@ -42,8 +47,14 @@ according to how they are registered (e.g. with `~Dumper.register()` or
 `~Dumper.register_binary()`). For most types the format is different so there
 will have to be two different classes.
 
+.. admonition:: TODO
 
-.. rubric:: Dumpers and loaders life cycle
+    - Example: infinity date customisation
+    - Example: numeric to float
+
+
+Dumpers and loaders life cycle
+------------------------------
 
 Registering dumpers and loaders will instruct `!psycopg3` to use them
 in the queries to follow, in the context where they have been registered.
@@ -77,6 +88,10 @@ value will be returned as a string (or bytes string for binary types).
 
 Objects involved in types adaptation
 ------------------------------------
+
+.. admonition:: TODO
+
+    move to API section
 
 .. autoclass:: Dumper(src, context=None)
 

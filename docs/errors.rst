@@ -1,5 +1,5 @@
-`psycopg3.errors` -- package exceptions
-=======================================
+`errors` -- package exceptions
+==============================
 
 .. index::
     single: Error; Class
@@ -116,7 +116,7 @@ the documentation`__, converted to CamelCase: e.g. the error 22012,
 There is a handful of exception, required for disambiguate clashes: please
 refer to the table below for all the classes defined.
 
-.. __: https://www.postgresql.org/docs/current/static/errcodes-appendix.html#ERRCODES-TABLE
+.. __: https://www.postgresql.org/docs/current/errcodes-appendix.html#ERRCODES-TABLE
 
 Every exception class is a subclass of one of the :ref:`standard DB-API
 exception <dbapi-exceptions>` and expose the `~Error` interface.

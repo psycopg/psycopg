@@ -293,7 +293,7 @@ class Identifier(Composable):
     fields. PostgreSQL identifiers follow `different rules`__ than SQL string
     literals for escaping (e.g. they use double quotes instead of single).
 
-    .. __: https://www.postgresql.org/docs/current/static/sql-syntax-lexical.html# \
+    .. __: https://www.postgresql.org/docs/current/sql-syntax-lexical.html# \
         SQL-SYNTAX-IDENTIFIERS
 
     Example::
@@ -357,7 +357,7 @@ class Literal(Composable):
     include a literal value in the query you can use this object.
 
     The string returned by `!as_string()` follows the normal :ref:`adaptation
-    rules <python-types-adaptation>` for Python objects.
+    rules <types-adaptation>` for Python objects.
 
     Example::
 

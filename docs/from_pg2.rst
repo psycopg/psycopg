@@ -1,8 +1,8 @@
 .. index::
     pair: psycopg2; Differences
 
-Differences from psycopg2
-=========================
+Differences from ``psycopg2``
+=============================
 
 `!psycopg3` uses the common DBAPI structure of many other database adapter and
 tries to behave as close as possible to `!psycopg2`. There are however a few
@@ -53,6 +53,19 @@ works for an empty list, whereas an empty tuple would have resulted in an
 error.
 
 
+.. _diff-numbers:
+
+``int`` is stricter
+-------------------
+
+Operations involving numbers may fail if the number is passed to a function or
+operator and PostgreSQL expects a :sql:`integer` and not a :sql:`bigint`.
+Examples may be :sql:`date + int`, :sql:`jsonb -> int`. In this case you
+should use an :sql:`::int` cast or the `psycopg3.types.Int4` wrapper.
+
+
+.. _diff-adapt:
+
 Different adaptation system
 ---------------------------
 
@@ -63,6 +76,8 @@ flexibility, ease of customization.
 Builtin data types should work as expected; if you have wrapped a custom data
 type you should check the :ref:`adaptation` topic.
 
+
+.. _diff-copy:
 
 Copy is no more file-based
 --------------------------
@@ -79,26 +94,36 @@ usage pattern also enables :sql:`COPY` to be used in async interactions.
 See :ref:`copy` for the details.
 
 
-Other differences
------------------
+.. _diff-with:
 
-- When the connection is used as context manager, at the end of the context
-  the connection will be closed. In psycopg2 only the transaction is closed,
-  so a connection can be used in several contexts, but the behaviour is
-  surprising for people used to several other Python classes wrapping
-  resources, such as files.
+``with`` connection
+-------------------
 
-- `cursor.callproc()` is not implemented. The method has a simplistic
-  semantic which doesn't account for PostgreSQL positional parameters,
-  procedures, set-returning functions. Use a normal
-  `~psycopg3.Cursor.execute()` with :sql:`SELECT function_name(...)` or
-  :sql:`CALL procedure_name(...)` instead.
+When the connection is used as context manager, at the end of the context
+the connection will be closed. In psycopg2 only the transaction is closed,
+so a connection can be used in several contexts, but the behaviour is
+surprising for people used to several other Python classes wrapping
+resources, such as files.
+
+
+.. _diff-callproc:
+
+``callproc()`` is gone
+----------------------
+
+`cursor.callproc()` is not implemented. The method has a simplistic
+semantic which doesn't account for PostgreSQL positional parameters,
+procedures, set-returning functions. Use a normal
+`~psycopg3.Cursor.execute()` with :sql:`SELECT function_name(...)` or
+:sql:`CALL procedure_name(...)` instead.
 
 
 What's new in psycopg3
-======================
+----------------------
 
-TODO: to be completed
+.. admonition:: TODO
+
+    to be completed
 
 - `asyncio` support.
 - Several data types are adapted out-of-the-box: uuid, network, range, bytea,

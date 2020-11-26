@@ -1,7 +1,7 @@
+.. currentmodule:: psycopg3
+
 Cursor classes
 ==============
-
-.. currentmodule:: psycopg3
 
 The `Cursor` and `AsyncCursor` classes are the main objects to send commands
 to a PostgreSQL database session. They are normally created by the
@@ -38,7 +38,7 @@ The `!Cursor` class
 
     .. automethod:: close
 
-        .. note:: you can use :ref:`with conn.cursor(): ...<with-statement>`
+        .. note:: you can use :ref:`with conn.cursor(): ...<usage>`
             to close the cursor automatically when the block is exited.
 
     .. autoattribute:: closed
@@ -142,7 +142,7 @@ The `!AsyncCursor` class
 
         .. note:: you can use ``async with`` to close the cursor
             automatically when the block is exited, but be careful about
-            the async quirkness: see :ref:`with-statement` for details.
+            the async quirkness: see :ref:`async-with` for details.
 
     .. automethod:: execute(query: Query, params: Optional[Args]=None) -> AsyncCursor
     .. automethod:: executemany(query: Query, params_seq: Sequence[Args])

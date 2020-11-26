@@ -16,17 +16,12 @@ the COPY support.
 .. __: https://www.python.org/dev/peps/pep-0249/
 
 .. toctree::
-    :maxdepth: 2
+    :maxdepth: 1
     :caption: Contents:
 
-    install
-    usage
-    connection
-    cursor
-    adaptation
-    sql
-    errors
-    pq
+    basic/index
+    advanced/index
+    api/index
     from_pg2
 
 

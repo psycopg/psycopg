@@ -64,7 +64,10 @@ else:
 html_css_files = ["psycopg.css"]
 
 # The name of the Pygments (syntax highlighting) style to use.
-pygments_style = "default"
+# Some that I've check don't suck:
+# default lovelace tango algol_nu
+# list: from pygments.styles import STYLE_MAP; print(sorted(STYLE_MAP.keys()))
+pygments_style = "tango"
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.

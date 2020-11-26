@@ -1,7 +1,7 @@
+.. currentmodule:: psycopg3
+
 Connection classes
 ==================
-
-.. currentmodule:: psycopg3
 
 The `Connection` and `AsyncConnection` classes are the main wrappers for a
 PostgreSQL database session. You can imagine them similar to a :program:`psql`
@@ -50,7 +50,7 @@ The `!Connection` class
 
     .. automethod:: close
 
-        .. note:: You can use :ref:`with connect(): ...<with-statement>` to
+        .. note:: You can use :ref:`with connect(): ...<usage>` to
             close the connection automatically when the block is exited.
 
     .. autoattribute:: closed
@@ -58,7 +58,7 @@ The `!Connection` class
 
     .. automethod:: cursor
 
-        .. note:: You can use :ref:`with conn.cursor(): ...<with-statement>`
+        .. note:: You can use :ref:`with conn.cursor(): ...<usage>`
             to close the cursor automatically when the block is exited.
 
 
@@ -134,13 +134,13 @@ The `!AsyncConnection` class
 
         .. note:: You can use ``async with`` to close the connection
             automatically when the block is exited, but be careful about
-            the async quirkness: see :ref:`with-statement` for details.
+            the async quirkness: see :ref:`async-with` for details.
 
     .. automethod:: cursor
 
         .. note:: You can use ``async with`` to close the cursor
             automatically when the block is exited, but be careful about
-            the async quirkness: see :ref:`with-statement` for details.
+            the async quirkness: see :ref:`async-with` for details.
 
     .. automethod:: commit
     .. automethod:: rollback

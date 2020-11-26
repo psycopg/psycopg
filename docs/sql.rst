@@ -1,5 +1,5 @@
-`psycopg3.sql` -- SQL string composition
-========================================
+`sql` -- SQL string composition
+===============================
 
 .. index::
     double: Binding; Client-Side

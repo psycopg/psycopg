@@ -35,6 +35,10 @@ some though:
 Proper installation
 -------------------
 
+.. admonition:: TODO
+
+    "proper" is scary... bettern name?
+
 Proper install means obtaining a performing and maintainable library. The
 library will include a performing C module and will be bound to the system
 libpq, so that system upgrade of libraries will upgrade the library used by
@@ -76,3 +80,13 @@ need::
 
 If you are not able to fulfill this requirement please follow the `quick
 install`_.
+
+
+
+``psycopg3`` and the ``libpq``
+------------------------------
+
+.. admonition:: TODO
+
+    describe the relations between psycopg and the libpq and the binding
+    choices
