@@ -43,11 +43,12 @@ class PGresAttDesc(NamedTuple):
 
 def error_message(obj: Union[PGconn, PGresult], encoding: str = "utf8") -> str:
     """
-    Return an error message from a PGconn or PGresult.
+    Return an error message from a `PGconn` or `PGresult`.
 
-    The return value is a str (unlike pq data which is usually bytes): use
-    the connection encoding if available, otherwise the *encoding* parameter
-    as a fallback for decoding. Don't raise exception on decode errors.
+    The return value is a `!str` (unlike pq data which is usually `!bytes`):
+    use the connection encoding if available, otherwise the *encoding*
+    parameter as a fallback for decoding. Don't raise exceptions on decoding
+    errors.
 
     """
     bmsg: bytes

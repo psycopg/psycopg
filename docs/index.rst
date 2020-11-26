@@ -7,17 +7,23 @@ programming language.
 
 `!psycopg3` presents a familiar interface for everyone who has used
 `!psycopg2` or any other `DB API 2.0`__ database adapter, but allows to use
-more modern PostgreSQL and Python features, such as `asyncio` support,
-server-side parameters binding, binary communication, a better integration of
-the COPY support.
+more modern PostgreSQL and Python features, such as:
+
+- :ref:`asynchronous support <async>`
+- :ref:`server-side parameters binding <server-side-binding>`
+- :ref:`binary communication <binary-data>`
+- :ref:`a great integration of the COPY support <copy>`
+- :ref:`direct access to the libpq functionalities <psycopg3.pq>`
 
 .. _Python: https://www.python.org/
 .. _PostgreSQL: https://www.postgresql.org/
 .. __: https://www.python.org/dev/peps/pep-0249/
 
+Documentation
+=============
+
 .. toctree::
     :maxdepth: 1
-    :caption: Contents:
 
     basic/index
     advanced/index

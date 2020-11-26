@@ -1,3 +1,5 @@
+.. _psycopg3.pq:
+
 `pq` -- Libpq wrapper module
 ============================
 
@@ -73,10 +75,12 @@ Module content
 .. autofunction:: error_message
 
 
-Objects
--------
+Objects wrapping libpq structures and functions
+-----------------------------------------------
 
-TODO: finish documentation
+.. admonition:: TODO
+
+    finish documentation
 
 .. autoclass:: PGconn()
     :members:

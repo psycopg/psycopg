@@ -2,6 +2,8 @@
 
 .. index:: asyncio
 
+.. _async:
+
 Async operations
 ================
 

@@ -13,7 +13,10 @@ PYTHON        ?= python3
 help:
 	@$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O) || true
 
-.PHONY: help env Makefile
+serve:
+	PSYCOPG3_IMPL=python sphinx-autobuild . _build/html/
+
+.PHONY: help serve env Makefile
 
 env: .venv
 
