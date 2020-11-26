@@ -94,7 +94,7 @@ t.join()
     with (tmpdir / "mptest.py").open("w") as f:
         f.write(module)
     env = dict(os.environ)
-    env["PYTHONPATH"] = tmpdir + os.pathsep + env.get("PYTHONPATH", "")
+    env["PYTHONPATH"] = str(tmpdir + os.pathsep + env.get("PYTHONPATH", ""))
     # TODO: debug this. Importing c module fails on travis in this scenario
     env.pop("PSYCOPG3_IMPL", None)
     out = sp.check_output(

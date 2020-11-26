@@ -1,4 +1,5 @@
 import gc
+import sys
 import time
 import socket
 import pytest
@@ -35,9 +36,10 @@ def test_connect_bad():
 
 @pytest.mark.slow
 @pytest.mark.xfail
+@pytest.mark.skipif(sys.platform == "win32", reason="connect() hangs on Win32")
 def test_connect_timeout():
     s = socket.socket(socket.AF_INET)
-    s.bind(("", 0))
+    s.bind(("localhost", 0))
     port = s.getsockname()[1]
     s.listen(0)
 
