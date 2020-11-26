@@ -83,7 +83,7 @@ relate to each other:
 
 - Using these objects as context managers (i.e. using ``with``) will make sure
   to close them and free their resources at the end of the block (notice that
-  `this is different from psycopg2`.
+  :ref:`this is different from psycopg2 <diff-with>`).
 
 
 .. seealso::
