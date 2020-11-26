@@ -64,7 +64,7 @@ else:
 html_css_files = ["psycopg.css"]
 
 # The name of the Pygments (syntax highlighting) style to use.
-pygments_style = "friendly"
+pygments_style = "default"
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
