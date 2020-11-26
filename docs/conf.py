@@ -76,8 +76,8 @@ html_show_sphinx = False
 html_theme_options = {
     "announcement": announcement,
     "sidebar_hide_name": False,
-    "light_logo": "psycopg-100.png",
-    "dark_logo": "psycopg-100.png",
+    "light_logo": "psycopg.svg",
+    "dark_logo": "psycopg.svg",
     "light_css_variables": {
         "admonition-font-size": "1rem",
     },
