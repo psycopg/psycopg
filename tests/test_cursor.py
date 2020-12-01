@@ -180,6 +180,15 @@ def test_executemany_rowcount(conn, execmany):
     assert cur.rowcount == 2
 
 
+def test_executemany_returning_rowcount(conn, execmany):
+    cur = conn.cursor()
+    cur.executemany(
+        "insert into execmany(num, data) values (%s, %s) returning num",
+        [(10, "hello"), (20, "world")],
+    )
+    assert cur.rowcount == 2
+
+
 @pytest.mark.parametrize(
     "query",
     [
