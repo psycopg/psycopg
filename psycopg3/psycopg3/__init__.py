@@ -6,10 +6,11 @@ psycopg3 -- PostgreSQL database adapter for Python
 
 from . import pq
 from .copy import Copy, AsyncCopy
-from .cursor import AsyncCursor, Cursor, Column
+from .cursor import AsyncCursor, Cursor
 from .errors import Warning, Error, InterfaceError, DatabaseError
 from .errors import DataError, OperationalError, IntegrityError
 from .errors import InternalError, ProgrammingError, NotSupportedError
+from ._column import Column
 from .connection import AsyncConnection, Connection, Notify
 from .transaction import Rollback, Transaction, AsyncTransaction
 

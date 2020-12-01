@@ -10,7 +10,7 @@ import logging
 import threading
 from types import TracebackType
 from typing import Any, AsyncIterator, Callable, Iterator, List, NamedTuple
-from typing import Optional, Type, TYPE_CHECKING, Union
+from typing import Optional, Type, TYPE_CHECKING
 from weakref import ref, ReferenceType
 from functools import partial
 from contextlib import contextmanager
@@ -39,7 +39,7 @@ connect: Callable[[str], PQGen["PGconn"]]
 execute: Callable[["PGconn"], PQGen[List["PGresult"]]]
 
 if TYPE_CHECKING:
-    from .cursor import AsyncCursor, Cursor
+    from .cursor import AsyncCursor, BaseCursor, Cursor
     from .pq.proto import PGconn, PGresult
 
 if pq.__impl__ == "c":
@@ -98,7 +98,7 @@ class BaseConnection:
     ConnStatus = pq.ConnStatus
     TransactionStatus = pq.TransactionStatus
 
-    cursor_factory: Union[Type["Cursor"], Type["AsyncCursor"]]
+    cursor_factory: Type["BaseCursor[Any]"]
 
     def __init__(self, pgconn: "PGconn"):
         self.pgconn = pgconn  # TODO: document this

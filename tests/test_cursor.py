@@ -1,6 +1,8 @@
 import gc
-import pytest
+import pickle
 import weakref
+
+import pytest
 
 import psycopg3
 from psycopg3.oids import builtins
@@ -343,3 +345,17 @@ class TestColumn:
         assert col.scale == scale
         assert col.display_size == dsize
         assert col.internal_size == isize
+
+    def test_pickle(self, conn):
+        curs = conn.cursor()
+        curs.execute(
+            """select
+            3.14::decimal(10,2) as pi,
+            'hello'::text as hi,
+            '2010-02-18'::date as now
+            """
+        )
+        description = curs.description
+        pickled = pickle.dumps(description, pickle.HIGHEST_PROTOCOL)
+        unpickled = pickle.loads(pickled)
+        assert [tuple(d) for d in description] == [tuple(d) for d in unpickled]
