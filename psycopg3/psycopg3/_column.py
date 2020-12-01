@@ -1,3 +1,9 @@
+"""
+The Column object in Cursor.description
+"""
+
+# Copyright (C) 2020 The Psycopg Team
+
 from typing import Any, NamedTuple, Optional, Sequence, TYPE_CHECKING
 from operator import attrgetter
 

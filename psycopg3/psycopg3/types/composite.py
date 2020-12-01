@@ -2,6 +2,8 @@
 Support for composite types adaptation.
 """
 
+# Copyright (C) 2020 The Psycopg Team
+
 import re
 import struct
 from collections import namedtuple

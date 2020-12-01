@@ -1,3 +1,9 @@
+"""
+Functions to manipulate conninfo strings
+"""
+
+# Copyright (C) 2020 The Psycopg Team
+
 import re
 from typing import Any, Dict, List
 
@@ -15,7 +21,7 @@ def make_conninfo(conninfo: str = "", **kwargs: Any) -> str:
         return ""
 
     # If no kwarg specified don't mung the conninfo but check if it's correct.
-    # Make sure to return a string, not a subtypep, to avoid making Liskov sad.
+    # Make sure to return a string, not a subtype, to avoid making Liskov sad.
     if not kwargs:
         _parse_conninfo(conninfo)
         return str(conninfo)
