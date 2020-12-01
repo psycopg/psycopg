@@ -102,6 +102,12 @@ Objects involved in types adaptation
 
 .. autoclass:: Dumper(src, context=None)
 
+    This is an abstract base class: subclasses *must* implement the `dump()`
+    method. They *may* implement `oid` (as attribute or property) in order to
+    override the oid type oid; if not PostgreSQL will try to infer the type
+    from the context, but this may fail in some contexts and may require a
+    cast.
+
     :param src: The type that will be managed by this dumper.
     :type src: type
     :param context: The context where the transformation is performed. If not
@@ -133,6 +139,10 @@ Objects involved in types adaptation
     .. autoattribute:: oid
         :annotation: int
 
+        .. admonition:: todo
+
+            Document how to find type OIDs in a database.
+
     .. automethod:: register(src, context=None, format=Format.TEXT)
 
         You should call this method on the `Dumper` subclass you create,
@@ -153,6 +163,9 @@ Objects involved in types adaptation
 
 
 .. autoclass:: Loader(oid, context=None)
+
+    This is an abstract base class: subclasses *must* implement the `load()`
+    method.
 
     :param oid: The type that will be managed by this dumper.
     :type oid: int

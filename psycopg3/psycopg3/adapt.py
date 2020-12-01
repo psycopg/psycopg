@@ -4,6 +4,7 @@ Entry point into the adaptation system.
 
 # Copyright (C) 2020 The Psycopg Team
 
+from abc import ABC, abstractmethod
 from typing import Any, cast, Callable, Optional, Type, Union
 
 from . import pq
@@ -17,7 +18,7 @@ from .connection import BaseConnection
 TEXT_OID = builtins["text"].oid
 
 
-class Dumper:
+class Dumper(ABC):
     """
     Convert Python object of the type *src* to PostgreSQL representation.
     """
@@ -30,9 +31,10 @@ class Dumper:
         self.context = context
         self.connection = _connection_from_context(context)
 
+    @abstractmethod
     def dump(self, obj: Any) -> bytes:
         """Convert the object *obj* to PostgreSQL representation."""
-        raise NotImplementedError()
+        ...
 
     def quote(self, obj: Any) -> bytes:
         """Convert the object *obj* to escaped representation."""
@@ -87,7 +89,7 @@ class Dumper:
         return binary_
 
 
-class Loader:
+class Loader(ABC):
     """
     Convert PostgreSQL objects with OID *oid* to Python objects.
     """
@@ -100,9 +102,10 @@ class Loader:
         self.context = context
         self.connection = _connection_from_context(context)
 
+    @abstractmethod
     def load(self, data: bytes) -> Any:
         """Convert a PostgreSQL value to a Python object."""
-        raise NotImplementedError()
+        ...
 
     @classmethod
     def register(

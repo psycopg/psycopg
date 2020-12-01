@@ -36,6 +36,9 @@ class NoneDumper(Dumper):
     quote(), so it can be used in sql composition.
     """
 
+    def dump(self, obj: None) -> bytes:
+        raise NotImplementedError("NULL is passed to Postgres in other ways")
+
     def quote(self, obj: None) -> bytes:
         return b"NULL"
 
