@@ -9,6 +9,7 @@ programming language.
 `!psycopg2` or any other `DB API 2.0`__ database adapter, but allows to use
 more modern PostgreSQL and Python features, such as:
 
+- Strict Strong Typing
 - :ref:`asynchronous support <async>`
 - :ref:`server-side parameters binding <server-side-binding>`
 - :ref:`binary communication <binary-data>`

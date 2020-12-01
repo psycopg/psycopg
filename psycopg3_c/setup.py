@@ -85,4 +85,9 @@ setup(
     version=version,
     ext_modules=[pgext, pqext],
     cmdclass={"build_ext": psycopg3_build_ext},
+    # For some reason pacakge_data doesn't work in setup.cfg
+    package_data={
+        "psycopg3_c": ["py.typed"],
+        "": ["*.pyx", "*.pxd", "*.pyi"],
+    },
 )
