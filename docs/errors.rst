@@ -52,12 +52,14 @@ This module exposes objects to represent and examine database errors.
 
 
 .. index::
-    single: Exceptions; DB API
+    single: Exceptions; DB-API
 
-DBAPI exceptions
-----------------
+.. _dbapi-exceptions:
 
-In compliance with the DB API, all the exceptions raised by ``psycopg3``
+DB-API exceptions
+-----------------
+
+In compliance with the DB-API, all the exceptions raised by ``psycopg3``
 derive from the following classes:
 
 .. parsed-literal::
@@ -90,12 +92,15 @@ These classes are also exposed by the ``psycopg3`` module.
 .. index::
     single: Exceptions; PostgreSQL
 
+.. _sqlstate-exceptions:
+
 SQLSTATE exceptions
 -------------------
 
 Errors coming from a database server (as opposite as ones generated
 client-side, such as connection failed) usually have a 5-letters error code
-called SQLSTATE (available in the ``diag.sqlstate`` attribute).
+called SQLSTATE (available in the `~Diagnostic.sqlstate` attribute of
+`Error.diag`).
 
 ``psycopg3`` exposes a different class for each SQLSTATE value, allowing to
 write idiomatic error handling code according to specific conditions happening
@@ -119,7 +124,7 @@ refer to the table below for all the classes defined.
 .. __: https://www.postgresql.org/docs/current/errcodes-appendix.html#ERRCODES-TABLE
 
 Every exception class is a subclass of one of the :ref:`standard DB-API
-exception <dbapi-exceptions>` and expose the `~Error` interface.
+exception <dbapi-exceptions>` and expose the `Error` interface.
 
 
 .. autofunction:: lookup

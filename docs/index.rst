@@ -6,7 +6,7 @@ Psycopg 3 -- PostgreSQL database adapter for Python
 programming language.
 
 `!psycopg3` presents a familiar interface for everyone who has used
-`!psycopg2` or any other `DB API 2.0`__ database adapter, but allows to use
+`!psycopg2` or any other `DB-API 2.0`__ database adapter, but allows to use
 more modern PostgreSQL and Python features, such as:
 
 - Strict Strong Typing

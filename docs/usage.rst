@@ -4,7 +4,7 @@ Basic module usage
 ==================
 
 The basic Psycopg usage is common to all the database adapters implementing
-the `DB API`__ protocol. Other database adapters, such as the builtin
+the `DB-API`__ protocol. Other database adapters, such as the builtin
 `sqlite3` or `psycopg2`, have roughly the same pattern of interaction.
 
 
