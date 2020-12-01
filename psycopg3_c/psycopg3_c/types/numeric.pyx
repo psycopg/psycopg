@@ -101,7 +101,7 @@ cdef void register_numeric_c_adapters():
     logger.debug("registering optimised numeric c adapters")
 
     IntDumper.register(int)
-    IntBinaryDumper.register_binary(int)
+    IntBinaryDumper.register(int, format=Format.BINARY)
 
     IntLoader.register(oids.INT2_OID)
     IntLoader.register(oids.INT4_OID)
@@ -110,9 +110,9 @@ cdef void register_numeric_c_adapters():
     FloatLoader.register(oids.FLOAT4_OID)
     FloatLoader.register(oids.FLOAT8_OID)
 
-    Int2BinaryLoader.register_binary(oids.INT2_OID)
-    Int4BinaryLoader.register_binary(oids.INT4_OID)
-    Int8BinaryLoader.register_binary(oids.INT8_OID)
-    OidBinaryLoader.register_binary(oids.OID_OID)
-    Float4BinaryLoader.register_binary(oids.FLOAT4_OID)
-    Float8BinaryLoader.register_binary(oids.FLOAT8_OID)
+    Int2BinaryLoader.register(oids.INT2_OID, format=Format.BINARY)
+    Int4BinaryLoader.register(oids.INT4_OID, format=Format.BINARY)
+    Int8BinaryLoader.register(oids.INT8_OID, format=Format.BINARY)
+    OidBinaryLoader.register(oids.OID_OID, format=Format.BINARY)
+    Float4BinaryLoader.register(oids.FLOAT4_OID, format=Format.BINARY)
+    Float8BinaryLoader.register(oids.FLOAT8_OID, format=Format.BINARY)

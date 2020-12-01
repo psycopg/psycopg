@@ -39,13 +39,20 @@ Dumpers and loaders configuration
 Dumpers and loaders can be registered on different scopes: globally, per
 `~psycopg3.Connection`, per `~psycopg3.Cursor`, so that adaptation rules can
 be customised for specific needs within the same application: in order to do
-so you can use the *context* parameter of `~Dumper.register()` and similar
-methods.
+so you can use the *context* parameter of `Dumper.register()` and
+`Loader.register()`.
 
-Dumpers and loaders might need to handle data in text and binary format,
-according to how they are registered (e.g. with `~Dumper.register()` or
-`~Dumper.register_binary()`). For most types the format is different so there
-will have to be two different classes.
+.. note::
+
+    `!register()` is a class method on the base class, so if you
+    subclass `!Dumper` or `!Loader` you should call the ``.register()`` on the
+    class you created.
+
+If the data type has also a distinct binary format which you may want to use
+from psycopg (as documented in :ref:`binary-data`) you may want to implement
+binary loaders and dumpers, whose only difference from text dumper is that
+they must be registered using ``format=Format.BINARY`` in `Dumper.register()`
+and `Loader.register()`.
 
 .. admonition:: TODO
 
@@ -109,10 +116,15 @@ Objects involved in types adaptation
 
     .. automethod:: quote
 
-        By default will return the `dump()` value quoted and sanitised, so
-        that the result can be used to build a SQL string. For instance, the
-        method will be used by `~psycopg3.sql.Literal` to convert a value
-        client-side.
+        By default return the `dump()` value quoted and sanitised, so
+        that the result can be used to build a SQL string. This works well
+        for most types and you won't likely have to implement this method in a
+        subclass.
+
+        .. tip::
+
+            This method will be used by `~psycopg3.sql.Literal` to convert a
+            value client-side.
 
         This method only makes sense for text dumpers; the result of calling
         it on a binary dumper is undefined. It might scratch your car, or burn
@@ -121,25 +133,23 @@ Objects involved in types adaptation
     .. autoattribute:: oid
         :annotation: int
 
-    .. automethod:: register(src, context=None)
+    .. automethod:: register(src, context=None, format=Format.TEXT)
+
+        You should call this method on the `Dumper` subclass you create,
+        passing the Python type you want to dump as *src*.
 
         :param src: The type to manage.
         :type src: `!type` or `!str`
         :param context: Where the dumper should be used. If `!None` the dumper
             will be used globally.
         :type context: `~psycopg3.Connection`, `~psycopg3.Cursor`, or `Transformer`
+        :param format: Register the dumper for text or binary adaptation
+        :type format: `~psycopg3.pq.Format`
 
         If *src* is specified as string it will be lazy-loaded, so that it
         will be possible to register it without importing it before. In this
         case it should be the fully qualified name of the object (e.g.
         ``"uuid.UUID"``).
-
-    .. automethod:: register_binary(src, context=None)
-
-        In order to convert a value in binary you can use a ``%b`` placeholder
-        in the query instead of ``%s``.
-
-        Parameters as the same as in `register()`.
 
 
 .. autoclass:: Loader(oid, context=None)
@@ -153,17 +163,18 @@ Objects involved in types adaptation
 
     .. automethod:: load
 
-    .. automethod:: register(oid, context=None)
+    .. automethod:: register(oid, context=None, format=Format.TEXT)
+
+        You should call this method on the `Loader` subclass you create,
+        passing the OID of the type you want to load as *oid* parameter.
 
         :param oid: The PostgreSQL OID to manage.
         :type oid: `!int`
         :param context: Where the loader should be used. If `!None` the loader
             will be used globally.
         :type context: `~psycopg3.Connection`, `~psycopg3.Cursor`, or `Transformer`
-
-    .. automethod:: register_binary(oid, context=None)
-
-        Parameters as the same as in `register()`.
+        :param format: Register the loader for text or binary adaptation
+        :type format: `~psycopg3.pq.Format`
 
 
 .. autoclass:: Transformer(context=None)

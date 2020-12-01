@@ -87,12 +87,6 @@ cdef class CDumper:
         where = context.dumpers if context else Dumper.globals
         where[src, format] = cls
 
-    @classmethod
-    def register_binary(
-        cls, src: Union[type, str], context: AdaptContext = None
-    ) -> None:
-        cls.register(src, context, format=Format.BINARY)
-
 
 cdef class CLoader:
     cdef impl.Oid _oid
@@ -141,12 +135,6 @@ cdef class CLoader:
 
         where = context.loaders if context else Loader.globals
         where[oid, format] = cls
-
-    @classmethod
-    def register_binary(
-        cls, oid: int, context: AdaptContext = None
-    ) -> None:
-        cls.register(oid, context, format=Format.BINARY)
 
 
 cdef _connection_from_context(object context):

@@ -69,15 +69,6 @@ class Dumper:
         where[src, format] = cls
 
     @classmethod
-    def register_binary(
-        cls, src: Union[type, str], context: AdaptContext = None
-    ) -> None:
-        """
-        Configure *context* to use this dumper for binary format conversion.
-        """
-        cls.register(src, context, format=Format.BINARY)
-
-    @classmethod
     def text(cls, src: Union[type, str]) -> Callable[[DumperType], DumperType]:
         def text_(dumper: DumperType) -> DumperType:
             dumper.register(src)
@@ -90,7 +81,7 @@ class Dumper:
         cls, src: Union[type, str]
     ) -> Callable[[DumperType], DumperType]:
         def binary_(dumper: DumperType) -> DumperType:
-            dumper.register_binary(src)
+            dumper.register(src, format=Format.BINARY)
             return dumper
 
         return binary_
@@ -132,13 +123,6 @@ class Loader:
         where[oid, format] = cls
 
     @classmethod
-    def register_binary(cls, oid: int, context: AdaptContext = None) -> None:
-        """
-        Configure *context* to use this loader to convert binary values.
-        """
-        cls.register(oid, context, format=Format.BINARY)
-
-    @classmethod
     def text(cls, oid: int) -> Callable[[LoaderType], LoaderType]:
         def text_(loader: LoaderType) -> LoaderType:
             loader.register(oid)
@@ -149,7 +133,7 @@ class Loader:
     @classmethod
     def binary(cls, oid: int) -> Callable[[LoaderType], LoaderType]:
         def binary_(loader: LoaderType) -> LoaderType:
-            loader.register_binary(oid)
+            loader.register(oid, format=Format.BINARY)
             return loader
 
         return binary_

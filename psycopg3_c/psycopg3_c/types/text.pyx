@@ -118,13 +118,13 @@ cdef void register_text_c_adapters():
     logger.debug("registering optimised text c adapters")
 
     StringDumper.register(str)
-    StringBinaryDumper.register_binary(str)
+    StringBinaryDumper.register(str, format=Format.BINARY)
 
     TextLoader.register(oids.INVALID_OID)
     TextLoader.register(oids.TEXT_OID)
-    TextLoader.register_binary(oids.TEXT_OID)
+    TextLoader.register(oids.TEXT_OID, format=Format.BINARY)
     TextLoader.register(oids.VARCHAR_OID)
-    TextLoader.register_binary(oids.VARCHAR_OID)
+    TextLoader.register(oids.VARCHAR_OID, format=Format.BINARY)
 
     ByteaLoader.register(oids.BYTEA_OID)
-    ByteaBinaryLoader.register_binary(oids.BYTEA_OID)
+    ByteaBinaryLoader.register(oids.BYTEA_OID, format=Format.BINARY)

@@ -4,6 +4,7 @@ Cython adapters for boolean.
 
 # Copyright (C) 2020 The Psycopg Team
 
+from psycopg3.pq import Format
 from psycopg3_c cimport oids
 
 
@@ -53,7 +54,7 @@ cdef void register_singletons_c_adapters():
     logger.debug("registering optimised singletons c adapters")
 
     BoolDumper.register(bool)
-    BoolBinaryDumper.register_binary(bool)
+    BoolBinaryDumper.register(bool, format=Format.BINARY)
 
     BoolLoader.register(oids.BOOL_OID)
-    BoolBinaryLoader.register_binary(oids.BOOL_OID)
+    BoolBinaryLoader.register(oids.BOOL_OID, format=Format.BINARY)
