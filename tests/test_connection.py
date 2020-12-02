@@ -423,6 +423,7 @@ def test_notify_handlers(conn):
     assert n.channel == "foo"
     assert n.payload == "n2"
     assert n.pid == conn.pgconn.backend_pid
+    assert hash(n)
 
     with pytest.raises(ValueError):
         conn.remove_notify_handler(cb1)
