@@ -10,7 +10,7 @@ import logging
 import threading
 from types import TracebackType
 from typing import Any, AsyncIterator, Callable, Iterator, List, NamedTuple
-from typing import Optional, Type, TYPE_CHECKING
+from typing import Optional, Type, TYPE_CHECKING, Union
 from weakref import ref, ReferenceType
 from functools import partial
 from contextlib import contextmanager
@@ -26,7 +26,7 @@ from . import errors as e
 from . import encodings
 from .pq import TransactionStatus, ExecStatus, Format
 from .sql import Composable
-from .proto import DumpersMap, LoadersMap, PQGen, RV, Query
+from .proto import DumpersMap, LoadersMap, PQGen, PQGenConn, RV, Query
 from .waiting import wait, wait_async
 from .conninfo import make_conninfo
 from .generators import notifies
@@ -35,7 +35,7 @@ from .transaction import Transaction, AsyncTransaction
 logger = logging.getLogger(__name__)
 package_logger = logging.getLogger("psycopg3")
 
-connect: Callable[[str], PQGen["PGconn"]]
+connect: Callable[[str], PQGenConn["PGconn"]]
 execute: Callable[["PGconn"], PQGen[List["PGresult"]]]
 
 if TYPE_CHECKING:
@@ -359,7 +359,11 @@ class Connection(BaseConnection):
             yield tx
 
     @classmethod
-    def wait(cls, gen: PQGen[RV], timeout: Optional[float] = 0.1) -> RV:
+    def wait(
+        cls,
+        gen: Union[PQGen[RV], PQGenConn[RV]],
+        timeout: Optional[float] = 0.1,
+    ) -> RV:
         return wait(gen, timeout=timeout)
 
     def _set_client_encoding(self, name: str) -> None:
@@ -518,7 +522,7 @@ class AsyncConnection(BaseConnection):
             yield tx
 
     @classmethod
-    async def wait(cls, gen: PQGen[RV]) -> RV:
+    async def wait(cls, gen: Union[PQGen[RV], PQGenConn[RV]]) -> RV:
         return await wait_async(gen)
 
     def _set_client_encoding(self, name: str) -> None:

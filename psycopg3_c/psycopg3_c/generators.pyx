@@ -19,7 +19,7 @@ cdef object WAIT_R = Wait.R
 cdef object WAIT_RW = Wait.RW
 cdef int READY_R = Ready.R
 
-def connect(conninfo: str) -> PQGen[pq.proto.PGconn]:
+def connect(conninfo: str) -> PQGenConn[pq.proto.PGconn]:
     """
     Generator to create a database connection without blocking.
 
@@ -71,12 +71,16 @@ def execute(PGconn pgconn) -> PQGen[List[pq.proto.PGresult]]:
     cdef int status
     cdef libpq.PGnotify *notify
 
+    # Start the generator by sending the connection fd, which won't change
+    # during the query process.
+    yield libpq.PQsocket(pgconn_ptr)
+
     # Sending the query
     while 1:
         if libpq.PQflush(pgconn_ptr) == 0:
             break
 
-        status = yield libpq.PQsocket(pgconn_ptr), WAIT_RW
+        status = yield WAIT_RW
         if status & READY_R:
             # This call may read notifies which will be saved in the
             # PGconn buffer and passed to Python later.
@@ -85,15 +89,13 @@ def execute(PGconn pgconn) -> PQGen[List[pq.proto.PGresult]]:
                     f"consuming input failed: {pq.error_message(pgconn)}")
         continue
 
-    wr = (libpq.PQsocket(pgconn_ptr), WAIT_R)
-
     # Fetching the result
     while 1:
         if 1 != libpq.PQconsumeInput(pgconn_ptr):
             raise pq.PQerror(
                 f"consuming input failed: {pq.error_message(pgconn)}")
         if libpq.PQisBusy(pgconn_ptr):
-            yield wr
+            yield WAIT_R
             continue
 
         # Consume notifies

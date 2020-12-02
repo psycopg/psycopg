@@ -27,7 +27,18 @@ ConnectionType = TypeVar("ConnectionType", bound="BaseConnection")
 # Waiting protocol types
 
 RV = TypeVar("RV")
-PQGen = Generator[Tuple[int, "Wait"], "Ready", RV]
+PQGenConn = Generator[Tuple[int, "Wait"], "Ready", RV]
+"""Generator for processes where the connection file number can change.
+
+This can happen in connection and reset, but not in normal querying.
+"""
+
+PQGen = Generator[Union[int, "Wait"], "Ready", RV]
+"""Generator for processes where the connection file number won't change.
+
+The first item generated is the file descriptor; following items are be the
+Wait states.
+"""
 
 
 # Adaptation types

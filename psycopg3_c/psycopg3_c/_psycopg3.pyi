@@ -11,7 +11,7 @@ from typing import Any, Iterable, List, Optional, Sequence, Tuple
 
 from psycopg3.adapt import Dumper, Loader
 from psycopg3.proto import AdaptContext, DumpFunc, DumpersMap, DumperType
-from psycopg3.proto import LoadFunc, LoadersMap, LoaderType, PQGen
+from psycopg3.proto import LoadFunc, LoadersMap, LoaderType, PQGen, PQGenConn
 from psycopg3.connection import BaseConnection
 from psycopg3 import pq
 
@@ -40,7 +40,7 @@ class Transformer:
     def get_loader(self, oid: int, format: pq.Format) -> Loader: ...
 
 def register_builtin_c_adapters() -> None: ...
-def connect(conninfo: str) -> PQGen[pq.proto.PGconn]: ...
+def connect(conninfo: str) -> PQGenConn[pq.proto.PGconn]: ...
 def execute(pgconn: pq.proto.PGconn) -> PQGen[List[pq.proto.PGresult]]: ...
 
 # vim: set syntax=python:

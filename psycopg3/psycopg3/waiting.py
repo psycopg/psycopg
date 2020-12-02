@@ -10,12 +10,12 @@ These functions are designed to consume the generators returned by the
 
 
 from enum import IntEnum
-from typing import Optional
+from typing import Optional, Union
 from asyncio import get_event_loop, Event
 from selectors import DefaultSelector, EVENT_READ, EVENT_WRITE
 
 from . import errors as e
-from .proto import PQGen, RV
+from .proto import PQGen, PQGenConn, RV
 
 
 class Wait(IntEnum):
@@ -29,7 +29,9 @@ class Ready(IntEnum):
     W = EVENT_WRITE
 
 
-def wait(gen: PQGen[RV], timeout: Optional[float] = None) -> RV:
+def wait(
+    gen: Union[PQGen[RV], PQGenConn[RV]], timeout: Optional[float] = None
+) -> RV:
     """
     Wait for a generator using the best option available on the platform.
 
@@ -40,25 +42,43 @@ def wait(gen: PQGen[RV], timeout: Optional[float] = None) -> RV:
     :type timeout: float
     :return: whatever *gen* returns on completion.
     """
+    fd: int
+    s: Wait
     sel = DefaultSelector()
     try:
-        fd, s = next(gen)
-        while 1:
-            sel.register(fd, s)
-            ready = None
-            while not ready:
-                ready = sel.select(timeout=timeout)
-            sel.unregister(fd)
+        # Use the first generated item to tell if it's a PQgen or PQgenConn.
+        # Note: mypy gets confused by the behaviour of this generator.
+        item = next(gen)
+        if isinstance(item, tuple):
+            fd, s = item
+            while 1:
+                sel.register(fd, s)
+                ready = None
+                while not ready:
+                    ready = sel.select(timeout=timeout)
+                sel.unregister(fd)
 
-            assert len(ready) == 1
-            fd, s = gen.send(ready[0][1])
+                assert len(ready) == 1
+                fd, s = gen.send(ready[0][1])
+        else:
+            fd = item  # type: ignore[assignment]
+            s = next(gen)  # type: ignore[assignment]
+            while 1:
+                sel.register(fd, s)
+                ready = None
+                while not ready:
+                    ready = sel.select(timeout=timeout)
+                sel.unregister(fd)
+
+                assert len(ready) == 1
+                s = gen.send(ready[0][1])  # type: ignore[arg-type,assignment]
 
     except StopIteration as ex:
         rv: RV = ex.args[0] if ex.args else None
         return rv
 
 
-async def wait_async(gen: PQGen[RV]) -> RV:
+async def wait_async(gen: Union[PQGen[RV], PQGenConn[RV]]) -> RV:
     """
     Coroutine waiting for a generator to complete.
 
@@ -73,6 +93,8 @@ async def wait_async(gen: PQGen[RV]) -> RV:
     ev = Event()
     loop = get_event_loop()
     ready: Ready
+    fd: int
+    s: Wait
 
     def wakeup(state: Ready) -> None:
         nonlocal ready
@@ -80,26 +102,52 @@ async def wait_async(gen: PQGen[RV]) -> RV:
         ev.set()
 
     try:
-        fd, s = next(gen)
-        while 1:
-            ev.clear()
-            if s == Wait.R:
-                loop.add_reader(fd, wakeup, Ready.R)
-                await ev.wait()
-                loop.remove_reader(fd)
-            elif s == Wait.W:
-                loop.add_writer(fd, wakeup, Ready.W)
-                await ev.wait()
-                loop.remove_writer(fd)
-            elif s == Wait.RW:
-                loop.add_reader(fd, wakeup, Ready.R)
-                loop.add_writer(fd, wakeup, Ready.W)
-                await ev.wait()
-                loop.remove_reader(fd)
-                loop.remove_writer(fd)
-            else:
-                raise e.InternalError("bad poll status: %s")
-            fd, s = gen.send(ready)
+        # Use the first generated item to tell if it's a PQgen or PQgenConn.
+        # Note: mypy gets confused by the behaviour of this generator.
+        item = next(gen)
+        if isinstance(item, tuple):
+            fd, s = item
+            while 1:
+                ev.clear()
+                if s == Wait.R:
+                    loop.add_reader(fd, wakeup, Ready.R)
+                    await ev.wait()
+                    loop.remove_reader(fd)
+                elif s == Wait.W:
+                    loop.add_writer(fd, wakeup, Ready.W)
+                    await ev.wait()
+                    loop.remove_writer(fd)
+                elif s == Wait.RW:
+                    loop.add_reader(fd, wakeup, Ready.R)
+                    loop.add_writer(fd, wakeup, Ready.W)
+                    await ev.wait()
+                    loop.remove_reader(fd)
+                    loop.remove_writer(fd)
+                else:
+                    raise e.InternalError("bad poll status: %s")
+                fd, s = gen.send(ready)  # type: ignore[misc]
+        else:
+            fd = item  # type: ignore[assignment]
+            s = next(gen)  # type: ignore[assignment]
+            while 1:
+                ev.clear()
+                if s == Wait.R:
+                    loop.add_reader(fd, wakeup, Ready.R)
+                    await ev.wait()
+                    loop.remove_reader(fd)
+                elif s == Wait.W:
+                    loop.add_writer(fd, wakeup, Ready.W)
+                    await ev.wait()
+                    loop.remove_writer(fd)
+                elif s == Wait.RW:
+                    loop.add_reader(fd, wakeup, Ready.R)
+                    loop.add_writer(fd, wakeup, Ready.W)
+                    await ev.wait()
+                    loop.remove_reader(fd)
+                    loop.remove_writer(fd)
+                else:
+                    raise e.InternalError("bad poll status: %s")
+                s = gen.send(ready)  # type: ignore[arg-type,assignment]
 
     except StopIteration as ex:
         rv: RV = ex.args[0] if ex.args else None

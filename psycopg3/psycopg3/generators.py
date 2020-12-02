@@ -21,7 +21,7 @@ from typing import List, Optional, Union
 from . import pq
 from . import errors as e
 from .pq import ConnStatus, PollingStatus, ExecStatus
-from .proto import PQGen
+from .proto import PQGen, PQGenConn
 from .waiting import Wait, Ready
 from .encodings import py_codecs
 from .pq.proto import PGconn, PGresult
@@ -29,7 +29,7 @@ from .pq.proto import PGconn, PGresult
 logger = logging.getLogger(__name__)
 
 
-def connect(conninfo: str) -> PQGen[PGconn]:
+def connect(conninfo: str) -> PQGenConn[PGconn]:
     """
     Generator to create a database connection without blocking.
 
@@ -73,7 +73,7 @@ def execute(pgconn: PGconn) -> PQGen[List[PGresult]]:
     or error).
     """
     yield from send(pgconn)
-    rv = yield from fetch(pgconn)
+    rv = yield from _fetch(pgconn)
     return rv
 
 
@@ -85,23 +85,24 @@ def send(pgconn: PGconn) -> PQGen[None]:
     similar. Flush the query and then return the result using nonblocking
     functions.
 
-    After this generator has finished you may want to cycle using `fetch()`
+    After this generator has finished you may want to cycle using `_fetch()`
     to retrieve the results available.
     """
+    yield pgconn.socket
     while 1:
         f = pgconn.flush()
         if f == 0:
             break
 
-        ready = yield pgconn.socket, Wait.RW
+        ready = yield Wait.RW
         if ready & Ready.R:
             # This call may read notifies: they will be saved in the
-            # PGconn buffer and passed to Python later, in `fetch()`.
+            # PGconn buffer and passed to Python later, in `_fetch()`.
             pgconn.consume_input()
         continue
 
 
-def fetch(pgconn: PGconn) -> PQGen[List[PGresult]]:
+def _fetch(pgconn: PGconn) -> PQGen[List[PGresult]]:
     """
     Generator retrieving results from the database without blocking.
 
@@ -110,12 +111,15 @@ def fetch(pgconn: PGconn) -> PQGen[List[PGresult]]:
 
     Return the list of results returned by the database (whether success
     or error).
+
+    Note that this generator doesn't yield the socket number, which must have
+    been already sent in the sending part of the cycle.
     """
     results: List[PGresult] = []
     while 1:
         pgconn.consume_input()
         if pgconn.is_busy():
-            yield pgconn.socket, Wait.R
+            yield Wait.R
             continue
 
         # Consume notifies
@@ -146,7 +150,8 @@ _copy_statuses = (
 
 
 def notifies(pgconn: PGconn) -> PQGen[List[pq.PGnotify]]:
-    yield pgconn.socket, Wait.R
+    yield pgconn.socket
+    yield Wait.R
     pgconn.consume_input()
 
     ns = []
@@ -161,13 +166,14 @@ def notifies(pgconn: PGconn) -> PQGen[List[pq.PGnotify]]:
 
 
 def copy_from(pgconn: PGconn) -> PQGen[Union[bytes, PGresult]]:
+    yield pgconn.socket
     while 1:
         nbytes, data = pgconn.get_copy_data(1)
         if nbytes != 0:
             break
 
         # would block
-        yield pgconn.socket, Wait.R
+        yield Wait.R
         pgconn.consume_input()
 
     if nbytes > 0:
@@ -175,7 +181,7 @@ def copy_from(pgconn: PGconn) -> PQGen[Union[bytes, PGresult]]:
         return data
 
     # Retrieve the final result of copy
-    (result,) = yield from fetch(pgconn)
+    (result,) = yield from _fetch(pgconn)
     if result.status != ExecStatus.COMMAND_OK:
         encoding = py_codecs.get(
             pgconn.parameter_status(b"client_encoding") or "", "utf-8"
@@ -186,25 +192,27 @@ def copy_from(pgconn: PGconn) -> PQGen[Union[bytes, PGresult]]:
 
 
 def copy_to(pgconn: PGconn, buffer: bytes) -> PQGen[None]:
+    yield pgconn.socket
     # Retry enqueuing data until successful
     while pgconn.put_copy_data(buffer) == 0:
-        yield pgconn.socket, Wait.W
+        yield Wait.W
 
 
 def copy_end(pgconn: PGconn, error: Optional[bytes]) -> PQGen[PGresult]:
+    yield pgconn.socket
     # Retry enqueuing end copy message until successful
     while pgconn.put_copy_end(error) == 0:
-        yield pgconn.socket, Wait.W
+        yield Wait.W
 
     # Repeat until it the message is flushed to the server
     while 1:
-        yield pgconn.socket, Wait.W
+        yield Wait.W
         f = pgconn.flush()
         if f == 0:
             break
 
     # Retrieve the final result of copy
-    (result,) = yield from fetch(pgconn)
+    (result,) = yield from _fetch(pgconn)
     if result.status != ExecStatus.COMMAND_OK:
         encoding = py_codecs.get(
             pgconn.parameter_status(b"client_encoding") or "", "utf-8"
