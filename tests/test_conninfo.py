@@ -21,6 +21,7 @@ class MyString(str):
         ("user=bar", {"dbname": "foo bar"}, "dbname='foo bar' user=bar"),
         ("", {"dbname": "foo"}, "dbname=foo"),
         ("", {"dbname": "foo", "user": None}, "dbname=foo"),
+        ("", {"dbname": "foo", "port": 15432}, "dbname=foo port=15432"),
         ("", {"dbname": "a'b"}, r"dbname='a\'b'"),
         (f"dbname={snowman}", {}, f"dbname={snowman}"),
         ("", {"dbname": snowman}, f"dbname={snowman}"),
