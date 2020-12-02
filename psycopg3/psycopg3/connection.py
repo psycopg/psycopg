@@ -329,12 +329,17 @@ class Connection(BaseConnection):
             command = command.as_string(self).encode(self.client_encoding)
 
         self.pgconn.send_query(command)
-        results = self.wait(execute(self.pgconn))
-        if results[-1].status != ExecStatus.COMMAND_OK:
-            raise e.OperationalError(
-                f"error on {command.decode('utf8')}:"
-                f" {pq.error_message(results[-1], encoding=self.client_encoding)}"
-            )
+        result = self.wait(execute(self.pgconn))[-1]
+        if result.status != ExecStatus.COMMAND_OK:
+            if result.status == ExecStatus.FATAL_ERROR:
+                raise e.error_from_result(
+                    result, encoding=self.client_encoding
+                )
+            else:
+                raise e.InterfaceError(
+                    f"unexpected result {ExecStatus(result.status).name}"
+                    f" from command {command.decode('utf8')!r}"
+                )
 
     @contextmanager
     def transaction(
@@ -487,12 +492,17 @@ class AsyncConnection(BaseConnection):
             command = command.as_string(self).encode(self.client_encoding)
 
         self.pgconn.send_query(command)
-        results = await self.wait(execute(self.pgconn))
-        if results[-1].status != ExecStatus.COMMAND_OK:
-            raise e.OperationalError(
-                f"error on {command.decode('utf8')}:"
-                f" {pq.error_message(results[-1], encoding=self.client_encoding)}"
-            )
+        result = (await self.wait(execute(self.pgconn)))[-1]
+        if result.status != ExecStatus.COMMAND_OK:
+            if result.status == ExecStatus.FATAL_ERROR:
+                raise e.error_from_result(
+                    result, encoding=self.client_encoding
+                )
+            else:
+                raise e.InterfaceError(
+                    f"unexpected result {ExecStatus(result.status).name}"
+                    f" from command {command.decode('utf8')!r}"
+                )
 
     @asynccontextmanager
     async def transaction(
