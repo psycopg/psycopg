@@ -82,12 +82,12 @@ type you should check the :ref:`adaptation` topic.
 Copy is no more file-based
 --------------------------
 
-`psycopg2` exposes :ref:`a few copy methods <pg2:copy>` to interact with
+`!psycopg2` exposes :ref:`a few copy methods <pg2:copy>` to interact with
 PostgreSQL :sql:`COPY`. The interface doesn't make easy to load
 dynamically-generated data to the database.
 
 There is now a single `~psycopg3.Cursor.copy()` method, which is similar to
-`~cursor.copy_expert()`, which accepts parameters like `!execute()` and
+`!psycopg2` `!copy_expert()` in accepting a free-form :sql:`COPY` command and
 returns an object to read/write data, block-wise or record-wise. The different
 usage pattern also enables :sql:`COPY` to be used in async interactions.
 
@@ -100,7 +100,7 @@ See :ref:`copy` for the details.
 -------------------
 
 When the connection is used as context manager, at the end of the context
-the connection will be closed. In psycopg2 only the transaction is closed,
+the connection will be closed. In `!psycopg2` only the transaction is closed,
 so a connection can be used in several contexts, but the behaviour is
 surprising for people used to several other Python classes wrapping
 resources, such as files.
