@@ -49,7 +49,7 @@ def test_diag_right_attr(pgconn, monkeypatch):
     assert len(checked) == len(pq.DiagnosticField)
 
 
-def test_diag_attrs_9_6(conn):
+def test_diag_attr_values(conn):
     cur = conn.cursor()
     cur.execute(
         """
@@ -64,7 +64,8 @@ def test_diag_attrs_9_6(conn):
     assert diag.schema_name[:7] == "pg_temp"
     assert diag.table_name == "test_exc"
     assert diag.constraint_name == "chk_eq1"
-    assert diag.severity_nonlocalized == "ERROR"
+    if conn.pgconn.server_version >= 90600:
+        assert diag.severity_nonlocalized == "ERROR"
 
 
 @pytest.mark.parametrize("enc", ["utf8", "latin9"])
