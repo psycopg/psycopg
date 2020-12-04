@@ -5,11 +5,11 @@ Print the tag to represent an user.
 
 Hint: to reprocess the list of users you can use:
 
-    grep "github.com.*100" BACKERS.md \
+    grep 'github.com.*"100"' BACKERS.md \
         | sed 's|\(.*github.com/\)\([^"]\+\)\(.*\)|\2|' \
         | xargs ./tools/add_backer.py --big
 
-    grep "github.com.*60" BACKERS.md \
+    grep 'github.com.*"60"' BACKERS.md \
         | sed 's|\(.*github.com/\)\([^"]\+\)\(.*\)|\2|' \
         | xargs ./tools/add_backer.py
 """
@@ -21,8 +21,8 @@ import requests
 
 logger = logging.getLogger()
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s %(levelname)s %(message)s')
+    level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s"
+)
 
 
 def main():
