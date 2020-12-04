@@ -8,3 +8,4 @@
 __pycache__/
 /docs/_build/
 /docs/.venv/
+*.html
