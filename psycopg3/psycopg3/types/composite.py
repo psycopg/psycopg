@@ -180,16 +180,22 @@ class BaseCompositeLoader(Loader):
 @Loader.text(builtins["record"].oid)
 class RecordLoader(BaseCompositeLoader):
     def load(self, data: bytes) -> Tuple[Any, ...]:
+        if data == b"()":
+            return ()
+
         cast = self._tx.get_loader(TEXT_OID, format=Format.TEXT).load
         return tuple(
             cast(token) if token is not None else None
-            for token in self._parse_record(data)
+            for token in self._parse_record(data[1:-1])
         )
 
     def _parse_record(self, data: bytes) -> Iterator[Optional[bytes]]:
-        if data == b"()":
-            return
+        """
+        Split a non-empty representation of a composite type into components.
 
+        Terminators shouldn't be used in *data* (so that both record and range
+        representations can be parsed).
+        """
         for m in self._re_tokenize.finditer(data):
             if m.group(1):
                 yield None
@@ -198,11 +204,16 @@ class RecordLoader(BaseCompositeLoader):
             else:
                 yield m.group(3)
 
+        # If the final group ended in `,` there is a final NULL in the record
+        # that the regexp couldn't parse.
+        if m and m.group().endswith(b","):
+            yield None
+
     _re_tokenize = re.compile(
         br"""(?x)
-          \(? ([,)])                        # an empty token, representing NULL
-        | \(? " ((?: [^"] | "")*) " [,)]    # or a quoted string
-        | \(? ([^",)]+) [,)]                # or an unquoted string
+          (,)                       # an empty token, representing NULL
+        | " ((?: [^"] | "")*) " ,?  # or a quoted string
+        | ([^",)]+) ,?              # or an unquoted string
         """
     )
 
@@ -256,8 +267,11 @@ class CompositeLoader(RecordLoader):
             self._config_types(data)
             self._types_set = True
 
+        if data == b"()":
+            return type(self).factory()
+
         return type(self).factory(
-            *self._tx.load_sequence(tuple(self._parse_record(data)))
+            *self._tx.load_sequence(tuple(self._parse_record(data[1:-1])))
         )
 
     def _config_types(self, data: bytes) -> None:
