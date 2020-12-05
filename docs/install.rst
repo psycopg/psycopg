@@ -3,6 +3,26 @@
 Installation
 ============
 
+Installing the development state
+--------------------------------
+
+``psycopg3`` packages have not been released yet, but you can try it out
+already by installing it `from the GitHub project`__:
+
+.. code:: bash
+
+    $ pip install git+https://github.com/psycopg/psycopg3.git#subdirectory=psycopg3
+    $ python3
+    >>> import psycopg3
+
+.. __: https://github.com/psycopg/psycopg3
+
+
+.. _binary-install:
+
+Binary installation
+-------------------
+
 .. warning::
 
     `!psycopg3` is still in a development phase: packages haven't been
@@ -16,10 +36,8 @@ Installation
     The following is how it will be *supposed* to work, once it is released...
 
 
-Quick install
--------------
-
-The quickest way to start developing with psycopg3 is to run::
+The quickest way to start developing with psycopg3 is to install the binary
+packages by running::
 
     pip install psycopg3[binary]
 
@@ -29,22 +47,33 @@ The above package should work in most situations. It **will not work** in
 some though:
 
 - the ``binary`` package doesn't work on Alpine Linux;
-- the ``binary`` package is not advised in production.
+- you have a newly released Python or Mac Os X version for which binary
+  packages are not ready yet.
+
+In these case you should proceed to a :ref:`local installation
+<local-installation>` or a :ref:`pure Python installation
+<pure-python-installation>`.
+
+.. seealso::
+
+    Did ``psycopg3`` install ok? Great! You can now move on to the :ref:`basic
+    module usage <module-usage>` to learn how it works.
+
+    You can come back here if you the above method didn't work and you need a
+    way to install ``psycopg3`` past the basic one.
 
 
-Proper installation
--------------------
+.. _local-installation:
 
-.. admonition:: TODO
+Local installation
+------------------
 
-    "proper" is scary... bettern name?
+A "Local installation" means obtaining a performing and maintainable library.
+The library will include a performing C module and will be bound to the system
+libraries (``libpq``, ``libssl``...) so that system upgrade of libraries will
+upgrade the libraries used by ``psycopg3`` too.
 
-Proper install means obtaining a performing and maintainable library. The
-library will include a performing C module and will be bound to the system
-libpq, so that system upgrade of libraries will upgrade the library used by
-``psycopg3``.
-
-In order to perform a "proper" installation you need some prerequisites:
+In order to perform a local installation you need some prerequisites:
 
 - a C compiler,
 - Python development headers (e.g. the python3-dev package).
@@ -53,12 +82,14 @@ In order to perform a "proper" installation you need some prerequisites:
 
 You **must be able** to troubleshoot an extension build, for instance you must
 be able to read your compiler's error message. If you are not, please don't
-try this and follow the `quick install`_ instead.
+try this and follow the `binary installation`_ instead.
 
 If your build prerequisites are in place you can run::
 
     pip install psycopg3[c]
 
+
+.. _pure-python-installation:
 
 Pure Python installation
 ------------------------
@@ -78,8 +109,8 @@ need::
 
     sudo apt-get install libpq5
 
-If you are not able to fulfill this requirement please follow the `quick
-install`_.
+If you are not able to fulfill this requirement please follow the `binary
+installation`_.
 
 
 

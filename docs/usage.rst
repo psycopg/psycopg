@@ -1,5 +1,7 @@
 .. currentmodule:: psycopg3
 
+.. _module-usage:
+
 Basic module usage
 ==================
 
