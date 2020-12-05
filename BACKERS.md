@@ -20,4 +20,4 @@ Thank you very much for supporting the project!
 <a href="https://github.com/asqui"><img src="https://avatars3.githubusercontent.com/u/174182?v=4" title="Daniel Fortunov" width="60" height="60" style="border-radius: 50%"></a>
 <a href="https://github.com/iqbalabd"><img src="https://avatars2.githubusercontent.com/u/14254614?v=4" title="Iqbal Abdullah" width="60" height="60" style="border-radius: 50%"></a>
 <a href="https://github.com/c-rindi"><img src="https://avatars2.githubusercontent.com/u/7826876?v=4" title="C~+" width="60" height="60" style="border-radius: 50%"></a>
-<a href="https://github.com/bernhardreiter"><img src="https://avatars2.githubusercontent.com/u/8190008?v=4" title="Bernhard E. Reiter" width="60" height="60" style="border-radius: 50%"></a>
+<a href="https://github.com/Intevation"><img src="https://avatars2.githubusercontent.com/u/2050405?v=4" title="Intevation" width="60" height="60" style="border-radius: 50%"></a>
