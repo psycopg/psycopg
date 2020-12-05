@@ -1,5 +1,6 @@
 import pytest
 
+from psycopg3.sql import Identifier
 from psycopg3.oids import builtins
 from psycopg3.adapt import Format, Loader
 from psycopg3.types import composite
@@ -96,35 +97,78 @@ def testcomp(svcconn):
     cur = svcconn.cursor()
     cur.execute(
         """
+        create schema if not exists testschema;
+
         drop type if exists testcomp cascade;
+        drop type if exists testschema.testcomp cascade;
+
         create type testcomp as (foo text, bar int8, baz float8);
+        create type testschema.testcomp as (foo text, bar int8, qux bool);
         """
     )
 
 
-def test_fetch_info(conn, testcomp):
-    info = composite.fetch_info(conn, "testcomp")
+@pytest.mark.parametrize(
+    "name, fields",
+    [
+        (
+            "testcomp",
+            [("foo", "text"), ("bar", "int8"), ("baz", "float8")],
+        ),
+        (
+            "testschema.testcomp",
+            [("foo", "text"), ("bar", "int8"), ("qux", "bool")],
+        ),
+        (
+            Identifier("testcomp"),
+            [("foo", "text"), ("bar", "int8"), ("baz", "float8")],
+        ),
+        (
+            Identifier("testschema", "testcomp"),
+            [("foo", "text"), ("bar", "int8"), ("qux", "bool")],
+        ),
+    ],
+)
+def test_fetch_info(conn, testcomp, name, fields):
+    info = composite.fetch_info(conn, name)
     assert info.name == "testcomp"
     assert info.oid > 0
     assert info.oid != info.array_oid > 0
     assert len(info.fields) == 3
-    for i, (name, t) in enumerate(
-        [("foo", "text"), ("bar", "int8"), ("baz", "float8")]
-    ):
+    for i, (name, t) in enumerate(fields):
         assert info.fields[i].name == name
         assert info.fields[i].type_oid == builtins[t].oid
 
 
+@pytest.mark.parametrize(
+    "name, fields",
+    [
+        (
+            "testcomp",
+            [("foo", "text"), ("bar", "int8"), ("baz", "float8")],
+        ),
+        (
+            "testschema.testcomp",
+            [("foo", "text"), ("bar", "int8"), ("qux", "bool")],
+        ),
+        (
+            Identifier("testcomp"),
+            [("foo", "text"), ("bar", "int8"), ("baz", "float8")],
+        ),
+        (
+            Identifier("testschema", "testcomp"),
+            [("foo", "text"), ("bar", "int8"), ("qux", "bool")],
+        ),
+    ],
+)
 @pytest.mark.asyncio
-async def test_fetch_info_async(aconn, testcomp):
-    info = await composite.fetch_info_async(aconn, "testcomp")
+async def test_fetch_info_async(aconn, testcomp, name, fields):
+    info = await composite.fetch_info_async(aconn, name)
     assert info.name == "testcomp"
     assert info.oid > 0
     assert info.oid != info.array_oid > 0
     assert len(info.fields) == 3
-    for i, (name, t) in enumerate(
-        [("foo", "text"), ("bar", "int8"), ("baz", "float8")]
-    ):
+    for i, (name, t) in enumerate(fields):
         assert info.fields[i].name == name
         assert info.fields[i].type_oid == builtins[t].oid
 

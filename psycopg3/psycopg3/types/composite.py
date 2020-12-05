@@ -7,9 +7,11 @@ Support for composite types adaptation.
 import re
 import struct
 from collections import namedtuple
-from typing import Any, Callable, Iterator, Sequence, Tuple, Type
+from typing import Any, Callable, Iterator, List, Sequence, Tuple, Type, Union
 from typing import Optional, TYPE_CHECKING
 
+from .. import sql
+from .. import errors as e
 from ..oids import builtins, TypeInfo
 from ..adapt import Format, Dumper, Loader, Transformer
 from ..proto import AdaptContext
@@ -36,29 +38,39 @@ class CompositeTypeInfo(TypeInfo):
         self.fields = list(fields)
 
     @classmethod
-    def _from_record(cls, rec: Any) -> Optional["CompositeTypeInfo"]:
-        if rec is None:
+    def _from_records(cls, recs: List[Any]) -> Optional["CompositeTypeInfo"]:
+        if not recs:
             return None
+        if len(recs) > 1:
+            raise e.ProgrammingError(
+                f"found {len(recs)} different types named {recs[0][0]}"
+            )
 
-        name, oid, array_oid, fnames, ftypes = rec
+        name, oid, array_oid, fnames, ftypes = recs[0]
         fields = [FieldInfo(*p) for p in zip(fnames, ftypes)]
         return CompositeTypeInfo(name, oid, array_oid, fields)
 
 
-def fetch_info(conn: "Connection", name: str) -> Optional[CompositeTypeInfo]:
+def fetch_info(
+    conn: "Connection", name: Union[str, sql.Identifier]
+) -> Optional[CompositeTypeInfo]:
+    if isinstance(name, sql.Composable):
+        name = name.as_string(conn)
     cur = conn.cursor(format=Format.BINARY)
     cur.execute(_type_info_query, {"name": name})
-    rec = cur.fetchone()
-    return CompositeTypeInfo._from_record(rec)
+    recs = cur.fetchall()
+    return CompositeTypeInfo._from_records(recs)
 
 
 async def fetch_info_async(
-    conn: "AsyncConnection", name: str
+    conn: "AsyncConnection", name: Union[str, sql.Identifier]
 ) -> Optional[CompositeTypeInfo]:
+    if isinstance(name, sql.Composable):
+        name = name.as_string(conn)
     cur = await conn.cursor(format=Format.BINARY)
     await cur.execute(_type_info_query, {"name": name})
-    rec = await cur.fetchone()
-    return CompositeTypeInfo._from_record(rec)
+    recs = await cur.fetchall()
+    return CompositeTypeInfo._from_records(recs)
 
 
 def register(
@@ -113,14 +125,14 @@ left join (
         select a.attrelid, a.attname, a.atttypid
         from pg_attribute a
         join pg_type t on t.typrelid = a.attrelid
-        where t.typname = %(name)s
+        where t.oid = %(name)s::regtype
         and a.attnum > 0
         and not a.attisdropped
         order by a.attnum
     ) x
     group by attrelid
 ) a on a.attrelid = t.typrelid
-where t.typname = %(name)s
+where t.oid = %(name)s::regtype
 """
 
 
