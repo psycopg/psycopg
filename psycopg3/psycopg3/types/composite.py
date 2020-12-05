@@ -155,7 +155,9 @@ class TupleDumper(Dumper):
 
             dumper = self._tx.get_dumper(item, Format.TEXT)
             ad = dumper.dump(item)
-            if self._re_needs_quotes.search(ad):
+            if not ad:
+                ad = b'""'
+            elif self._re_needs_quotes.search(ad):
                 ad = b'"' + self._re_escape.sub(br"\1\1", ad) + b'"'
 
             parts.append(ad)
@@ -165,13 +167,8 @@ class TupleDumper(Dumper):
 
         return b"".join(parts)
 
-    _re_needs_quotes = re.compile(
-        br"""(?xi)
-          ^$            # the empty string
-        | [",\\\s]      # or a char to escape
-        """
-    )
-    _re_escape = re.compile(br"([\"])")
+    _re_needs_quotes = re.compile(br'[",\\\s()]')
+    _re_escape = re.compile(br"([\\\"])")
 
 
 class BaseCompositeLoader(Loader):

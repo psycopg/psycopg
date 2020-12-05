@@ -173,6 +173,20 @@ async def test_fetch_info_async(aconn, testcomp, name, fields):
         assert info.fields[i].type_oid == builtins[t].oid
 
 
+@pytest.mark.parametrize("fmt_in", [Format.TEXT, Format.BINARY])
+def test_dump_composite_all_chars(conn, fmt_in, testcomp):
+    if fmt_in == Format.BINARY:
+        pytest.xfail("binary composite dumper not implemented")
+    ph = "%s" if fmt_in == Format.TEXT else "%b"
+    cur = conn.cursor()
+    for i in range(1, 256):
+        (res,) = cur.execute(
+            f"select row(chr(%s::int), 1, 1.0)::testcomp = {ph}::testcomp",
+            (i, (chr(i), 1, 1.0)),
+        ).fetchone()
+        assert res is True
+
+
 @pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
 def test_load_composite(conn, testcomp, fmt_out):
     cur = conn.cursor(format=fmt_out)
