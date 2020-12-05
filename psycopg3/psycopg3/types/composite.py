@@ -136,21 +136,22 @@ where t.oid = %(name)s::regtype
 """
 
 
-@Dumper.text(tuple)
-class TupleDumper(Dumper):
+class SequenceDumper(Dumper):
     def __init__(self, src: type, context: AdaptContext = None):
         super().__init__(src, context)
         self._tx = Transformer(context)
 
-    def dump(self, obj: Tuple[Any, ...]) -> bytes:
+    def _dump_sequence(
+        self, obj: Sequence[Any], start: bytes, end: bytes, sep: bytes
+    ) -> bytes:
         if not obj:
             return b"()"
 
-        parts = [b"("]
+        parts = [start]
 
         for item in obj:
             if item is None:
-                parts.append(b",")
+                parts.append(sep)
                 continue
 
             dumper = self._tx.get_dumper(item, Format.TEXT)
@@ -161,9 +162,9 @@ class TupleDumper(Dumper):
                 ad = b'"' + self._re_escape.sub(br"\1\1", ad) + b'"'
 
             parts.append(ad)
-            parts.append(b",")
+            parts.append(sep)
 
-        parts[-1] = b")"
+        parts[-1] = end
 
         return b"".join(parts)
 
@@ -171,23 +172,16 @@ class TupleDumper(Dumper):
     _re_escape = re.compile(br"([\\\"])")
 
 
+@Dumper.text(tuple)
+class TupleDumper(SequenceDumper):
+    def dump(self, obj: Tuple[Any, ...]) -> bytes:
+        return self._dump_sequence(obj, b"(", b")", b",")
+
+
 class BaseCompositeLoader(Loader):
     def __init__(self, oid: int, context: AdaptContext = None):
         super().__init__(oid, context)
         self._tx = Transformer(context)
-
-
-@Loader.text(builtins["record"].oid)
-class RecordLoader(BaseCompositeLoader):
-    def load(self, data: bytes) -> Tuple[Any, ...]:
-        if data == b"()":
-            return ()
-
-        cast = self._tx.get_loader(TEXT_OID, format=Format.TEXT).load
-        return tuple(
-            cast(token) if token is not None else None
-            for token in self._parse_record(data[1:-1])
-        )
 
     def _parse_record(self, data: bytes) -> Iterator[Optional[bytes]]:
         """
@@ -218,6 +212,19 @@ class RecordLoader(BaseCompositeLoader):
     )
 
     _re_undouble = re.compile(br'(["\\])\1')
+
+
+@Loader.text(builtins["record"].oid)
+class RecordLoader(BaseCompositeLoader):
+    def load(self, data: bytes) -> Tuple[Any, ...]:
+        if data == b"()":
+            return ()
+
+        cast = self._tx.get_loader(TEXT_OID, format=Format.TEXT).load
+        return tuple(
+            cast(token) if token is not None else None
+            for token in self._parse_record(data[1:-1])
+        )
 
 
 _struct_len = struct.Struct("!i")
