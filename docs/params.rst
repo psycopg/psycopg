@@ -92,14 +92,14 @@ query.
     cur.execute("INSERT INTO foo VALUES (%s)", ("bar",)) # correct
     cur.execute("INSERT INTO foo VALUES (%s)", ["bar"])  # correct
 
-- The placeholder *must not be quoted*. Psycopg will add quotes where needed::
+- The placeholder *must not be quoted*::
 
-    cur.execute("INSERT INTO numbers VALUES ('%s')", (10,)) # WRONG
-    cur.execute("INSERT INTO numbers VALUES (%s)", (10,))   # correct
+    cur.execute("INSERT INTO numbers VALUES ('%s')", ("Hello",)) # WRONG
+    cur.execute("INSERT INTO numbers VALUES (%s)", ("Hello",))   # correct
 
 - The variables placeholder *must always be a* ``%s``, even if a different
   placeholder (such as a ``%d`` for integers or ``%f`` for floats) may look
-  more appropriate for tye type. Another placeholder you can use is ``%b``, to
+  more appropriate for the type. Another placeholder you can use is ``%b``, to
   :ref:`adapt the object to binary type <binary-data>`::
 
     cur.execute("INSERT INTO numbers VALUES (%d)", (10,))   # WRONG
