@@ -3,7 +3,7 @@ import pytest
 from psycopg3.sql import Identifier
 from psycopg3.oids import builtins
 from psycopg3.adapt import Format, Loader
-from psycopg3.types import composite
+from psycopg3.types.composite import CompositeInfo
 
 
 tests_str = [
@@ -37,8 +37,8 @@ def test_dump_tuple(conn, rec, obj):
         create type tmptype as ({', '.join(fields)});
         """
     )
-    info = composite.fetch_info(conn, "tmptype")
-    composite.register(info, context=conn)
+    info = CompositeInfo.fetch(conn, "tmptype")
+    info.register(context=conn)
 
     res = cur.execute("select %s::tmptype", [obj]).fetchone()[0]
     assert res == obj
@@ -108,29 +108,29 @@ def testcomp(svcconn):
     )
 
 
-@pytest.mark.parametrize(
-    "name, fields",
-    [
-        (
-            "testcomp",
-            [("foo", "text"), ("bar", "int8"), ("baz", "float8")],
-        ),
-        (
-            "testschema.testcomp",
-            [("foo", "text"), ("bar", "int8"), ("qux", "bool")],
-        ),
-        (
-            Identifier("testcomp"),
-            [("foo", "text"), ("bar", "int8"), ("baz", "float8")],
-        ),
-        (
-            Identifier("testschema", "testcomp"),
-            [("foo", "text"), ("bar", "int8"), ("qux", "bool")],
-        ),
-    ],
-)
+fetch_cases = [
+    (
+        "testcomp",
+        [("foo", "text"), ("bar", "int8"), ("baz", "float8")],
+    ),
+    (
+        "testschema.testcomp",
+        [("foo", "text"), ("bar", "int8"), ("qux", "bool")],
+    ),
+    (
+        Identifier("testcomp"),
+        [("foo", "text"), ("bar", "int8"), ("baz", "float8")],
+    ),
+    (
+        Identifier("testschema", "testcomp"),
+        [("foo", "text"), ("bar", "int8"), ("qux", "bool")],
+    ),
+]
+
+
+@pytest.mark.parametrize("name, fields", fetch_cases)
 def test_fetch_info(conn, testcomp, name, fields):
-    info = composite.fetch_info(conn, name)
+    info = CompositeInfo.fetch(conn, name)
     assert info.name == "testcomp"
     assert info.oid > 0
     assert info.oid != info.array_oid > 0
@@ -140,30 +140,10 @@ def test_fetch_info(conn, testcomp, name, fields):
         assert info.fields[i].type_oid == builtins[t].oid
 
 
-@pytest.mark.parametrize(
-    "name, fields",
-    [
-        (
-            "testcomp",
-            [("foo", "text"), ("bar", "int8"), ("baz", "float8")],
-        ),
-        (
-            "testschema.testcomp",
-            [("foo", "text"), ("bar", "int8"), ("qux", "bool")],
-        ),
-        (
-            Identifier("testcomp"),
-            [("foo", "text"), ("bar", "int8"), ("baz", "float8")],
-        ),
-        (
-            Identifier("testschema", "testcomp"),
-            [("foo", "text"), ("bar", "int8"), ("qux", "bool")],
-        ),
-    ],
-)
 @pytest.mark.asyncio
+@pytest.mark.parametrize("name, fields", fetch_cases)
 async def test_fetch_info_async(aconn, testcomp, name, fields):
-    info = await composite.fetch_info_async(aconn, name)
+    info = await CompositeInfo.fetch_async(aconn, name)
     assert info.name == "testcomp"
     assert info.oid > 0
     assert info.oid != info.array_oid > 0
@@ -190,8 +170,8 @@ def test_dump_composite_all_chars(conn, fmt_in, testcomp):
 @pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
 def test_load_composite(conn, testcomp, fmt_out):
     cur = conn.cursor(format=fmt_out)
-    info = composite.fetch_info(conn, "testcomp")
-    composite.register(info, conn)
+    info = CompositeInfo.fetch(conn, "testcomp")
+    info.register(conn)
 
     res = cur.execute("select row('hello', 10, 20)::testcomp").fetchone()[0]
     assert res.foo == "hello"
@@ -210,13 +190,13 @@ def test_load_composite(conn, testcomp, fmt_out):
 @pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
 def test_load_composite_factory(conn, testcomp, fmt_out):
     cur = conn.cursor(format=fmt_out)
-    info = composite.fetch_info(conn, "testcomp")
+    info = CompositeInfo.fetch(conn, "testcomp")
 
     class MyThing:
         def __init__(self, *args):
             self.foo, self.bar, self.baz = args
 
-    composite.register(info, conn, factory=MyThing)
+    info.register(conn, factory=MyThing)
 
     res = cur.execute("select row('hello', 10, 20)::testcomp").fetchone()[0]
     assert isinstance(res, MyThing)
@@ -232,15 +212,14 @@ def test_load_composite_factory(conn, testcomp, fmt_out):
 
 
 def test_register_scope(conn):
-    info = composite.fetch_info(conn, "testcomp")
-
-    composite.register(info)
+    info = CompositeInfo.fetch(conn, "testcomp")
+    info.register()
     for fmt in (Format.TEXT, Format.BINARY):
         for oid in (info.oid, info.array_oid):
             assert Loader.globals.pop((oid, fmt))
 
     cur = conn.cursor()
-    composite.register(info, cur)
+    info.register(cur)
     for fmt in (Format.TEXT, Format.BINARY):
         for oid in (info.oid, info.array_oid):
             key = oid, fmt
@@ -248,7 +227,7 @@ def test_register_scope(conn):
             assert key not in conn.loaders
             assert key in cur.loaders
 
-    composite.register(info, conn)
+    info.register(conn)
     for fmt in (Format.TEXT, Format.BINARY):
         for oid in (info.oid, info.array_oid):
             key = oid, fmt
