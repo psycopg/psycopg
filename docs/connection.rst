@@ -61,6 +61,15 @@ The `!Connection` class
         .. note:: You can use :ref:`with conn.cursor(): ...<usage>`
             to close the cursor automatically when the block is exited.
 
+    .. automethod:: execute(query: Query, params: Optional[Args]=None) -> Cursor
+
+        :param query: The query to execute
+        :type query: `!str`, `!bytes`, or `sql.Composable`
+        :param params: The parameters to pass to the query, if any
+        :type params: Sequence or Mapping
+
+        The cursor is what returned calling `cursor()` without parameters. See
+        :ref:`query-parameters` for all the details about executing queries.
 
     .. rubric:: Transaction management methods
 
@@ -142,6 +151,7 @@ The `!AsyncConnection` class
             automatically when the block is exited, but be careful about
             the async quirkness: see :ref:`async-with` for details.
 
+    .. automethod:: execute(query: Query, params: Optional[Args]=None) -> AsyncCursor
     .. automethod:: commit
     .. automethod:: rollback
 

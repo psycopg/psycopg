@@ -445,3 +445,14 @@ async def test_notify_handlers(aconn):
 
     with pytest.raises(ValueError):
         aconn.remove_notify_handler(cb1)
+
+
+async def test_execute(aconn):
+    cur = await aconn.execute("select %s, %s", [10, 20])
+    assert await cur.fetchone() == (10, 20)
+
+    cur = await aconn.execute("select %(a)s, %(b)s", {"a": 11, "b": 21})
+    assert await cur.fetchone() == (11, 21)
+
+    cur = await aconn.execute("select 12, 22")
+    assert await cur.fetchone() == (12, 22)

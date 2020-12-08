@@ -427,3 +427,14 @@ def test_notify_handlers(conn):
 
     with pytest.raises(ValueError):
         conn.remove_notify_handler(cb1)
+
+
+def test_execute(conn):
+    cur = conn.execute("select %s, %s", [10, 20])
+    assert cur.fetchone() == (10, 20)
+
+    cur = conn.execute("select %(a)s, %(b)s", {"a": 11, "b": 21})
+    assert cur.fetchone() == (11, 21)
+
+    cur = conn.execute("select 12, 22")
+    assert cur.fetchone() == (12, 22)

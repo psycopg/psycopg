@@ -26,7 +26,7 @@ from . import errors as e
 from . import encodings
 from .pq import TransactionStatus, ExecStatus, Format
 from .sql import Composable
-from .proto import DumpersMap, LoadersMap, PQGen, PQGenConn, RV, Query
+from .proto import DumpersMap, LoadersMap, PQGen, PQGenConn, RV, Query, Params
 from .waiting import wait, wait_async
 from .conninfo import make_conninfo
 from .generators import notifies
@@ -294,6 +294,13 @@ class Connection(BaseConnection):
 
         self._exec_command(b"begin")
 
+    def execute(
+        self, query: Query, params: Optional[Params] = None
+    ) -> "Cursor":
+        """Execute a query and return a cursor to read its results."""
+        cur = self.cursor()
+        return cur.execute(query, params)
+
     def commit(self) -> None:
         """Commit any pending transaction to the database."""
         with self.lock:
@@ -462,6 +469,12 @@ class AsyncConnection(BaseConnection):
             return
 
         await self._exec_command(b"begin")
+
+    async def execute(
+        self, query: Query, params: Optional[Params] = None
+    ) -> "AsyncCursor":
+        cur = await self.cursor()
+        return await cur.execute(query, params)
 
     async def commit(self) -> None:
         async with self.lock:
