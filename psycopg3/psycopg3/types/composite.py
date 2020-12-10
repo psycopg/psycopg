@@ -7,8 +7,8 @@ Support for composite types adaptation.
 import re
 import struct
 from collections import namedtuple
-from typing import Any, Callable, Iterator, List, Sequence, Tuple, Type, Union
-from typing import Optional, TYPE_CHECKING
+from typing import Any, Callable, Iterator, List, NamedTuple, Optional
+from typing import Sequence, Tuple, Type, Union, TYPE_CHECKING
 
 from .. import sql
 from .. import errors as e
@@ -24,21 +24,91 @@ if TYPE_CHECKING:
 TEXT_OID = builtins["text"].oid
 
 
-class FieldInfo:
-    def __init__(self, name: str, type_oid: int):
-        self.name = name
-        self.type_oid = type_oid
+class CompositeInfo(TypeInfo):
+    """Manage information about a composite type.
 
+    The class allows to:
 
-class CompositeTypeInfo(TypeInfo):
+    - read information about a composite type using `fetch()` and `fetch_async()`
+    - configure a composite type adaptation using `register()`
+    """
+
     def __init__(
-        self, name: str, oid: int, array_oid: int, fields: Sequence[FieldInfo]
+        self,
+        name: str,
+        oid: int,
+        array_oid: int,
+        fields: Sequence["CompositeInfo.FieldInfo"],
     ):
         super().__init__(name, oid, array_oid)
         self.fields = list(fields)
 
+    class FieldInfo(NamedTuple):
+        """Information about a single field in a composite type."""
+
+        name: str
+        type_oid: int
+
     @classmethod
-    def _from_records(cls, recs: List[Any]) -> Optional["CompositeTypeInfo"]:
+    def fetch(
+        cls, conn: "Connection", name: Union[str, sql.Identifier]
+    ) -> Optional["CompositeInfo"]:
+        if isinstance(name, sql.Composable):
+            name = name.as_string(conn)
+        cur = conn.cursor(format=Format.BINARY)
+        cur.execute(cls._info_query, {"name": name})
+        recs = cur.fetchall()
+        return cls._from_records(recs)
+
+    @classmethod
+    async def fetch_async(
+        cls, conn: "AsyncConnection", name: Union[str, sql.Identifier]
+    ) -> Optional["CompositeInfo"]:
+        if isinstance(name, sql.Composable):
+            name = name.as_string(conn)
+        cur = await conn.cursor(format=Format.BINARY)
+        await cur.execute(cls._info_query, {"name": name})
+        recs = await cur.fetchall()
+        return cls._from_records(recs)
+
+    def register(
+        self,
+        context: AdaptContext = None,
+        factory: Optional[Callable[..., Any]] = None,
+    ) -> None:
+        if not factory:
+            factory = namedtuple(  # type: ignore
+                self.name, [f.name for f in self.fields]
+            )
+
+        loader: Type[Loader]
+
+        # generate and register a customized text loader
+        loader = type(
+            f"{self.name.title()}Loader",
+            (CompositeLoader,),
+            {
+                "factory": factory,
+                "fields_types": tuple(f.type_oid for f in self.fields),
+            },
+        )
+        loader.register(self.oid, context=context, format=Format.TEXT)
+
+        # generate and register a customized binary loader
+        loader = type(
+            f"{self.name.title()}BinaryLoader",
+            (CompositeBinaryLoader,),
+            {"factory": factory},
+        )
+        loader.register(self.oid, context=context, format=Format.BINARY)
+
+        if self.array_oid:
+            array.register(
+                self.array_oid, self.oid, context=context, name=self.name
+            )
+
+    @classmethod
+    def _from_records(cls, recs: List[Any]) -> Optional["CompositeInfo"]:
         if not recs:
             return None
         if len(recs) > 1:
@@ -47,70 +117,10 @@ class CompositeTypeInfo(TypeInfo):
             )
 
         name, oid, array_oid, fnames, ftypes = recs[0]
-        fields = [FieldInfo(*p) for p in zip(fnames, ftypes)]
-        return CompositeTypeInfo(name, oid, array_oid, fields)
+        fields = [cls.FieldInfo(*p) for p in zip(fnames, ftypes)]
+        return cls(name, oid, array_oid, fields)
 
-
-def fetch_info(
-    conn: "Connection", name: Union[str, sql.Identifier]
-) -> Optional[CompositeTypeInfo]:
-    if isinstance(name, sql.Composable):
-        name = name.as_string(conn)
-    cur = conn.cursor(format=Format.BINARY)
-    cur.execute(_type_info_query, {"name": name})
-    recs = cur.fetchall()
-    return CompositeTypeInfo._from_records(recs)
-
-
-async def fetch_info_async(
-    conn: "AsyncConnection", name: Union[str, sql.Identifier]
-) -> Optional[CompositeTypeInfo]:
-    if isinstance(name, sql.Composable):
-        name = name.as_string(conn)
-    cur = await conn.cursor(format=Format.BINARY)
-    await cur.execute(_type_info_query, {"name": name})
-    recs = await cur.fetchall()
-    return CompositeTypeInfo._from_records(recs)
-
-
-def register(
-    info: CompositeTypeInfo,
-    context: AdaptContext = None,
-    factory: Optional[Callable[..., Any]] = None,
-) -> None:
-    if not factory:
-        factory = namedtuple(  # type: ignore
-            info.name, [f.name for f in info.fields]
-        )
-
-    loader: Type[Loader]
-
-    # generate and register a customized text loader
-    loader = type(
-        f"{info.name.title()}Loader",
-        (CompositeLoader,),
-        {
-            "factory": factory,
-            "fields_types": tuple(f.type_oid for f in info.fields),
-        },
-    )
-    loader.register(info.oid, context=context, format=Format.TEXT)
-
-    # generate and register a customized binary loader
-    loader = type(
-        f"{info.name.title()}BinaryLoader",
-        (CompositeBinaryLoader,),
-        {"factory": factory},
-    )
-    loader.register(info.oid, context=context, format=Format.BINARY)
-
-    if info.array_oid:
-        array.register(
-            info.array_oid, info.oid, context=context, name=info.name
-        )
-
-
-_type_info_query = """\
+    _info_query = """\
 select
     t.typname as name, t.oid as oid, t.typarray as array_oid,
     coalesce(a.fnames, '{}') as fnames,
@@ -136,21 +146,22 @@ where t.oid = %(name)s::regtype
 """
 
 
-@Dumper.text(tuple)
-class TupleDumper(Dumper):
+class SequenceDumper(Dumper):
     def __init__(self, src: type, context: AdaptContext = None):
         super().__init__(src, context)
         self._tx = Transformer(context)
 
-    def dump(self, obj: Tuple[Any, ...]) -> bytes:
+    def _dump_sequence(
+        self, obj: Sequence[Any], start: bytes, end: bytes, sep: bytes
+    ) -> bytes:
         if not obj:
             return b"()"
 
-        parts = [b"("]
+        parts = [start]
 
         for item in obj:
             if item is None:
-                parts.append(b",")
+                parts.append(sep)
                 continue
 
             dumper = self._tx.get_dumper(item, Format.TEXT)
@@ -161,9 +172,9 @@ class TupleDumper(Dumper):
                 ad = b'"' + self._re_escape.sub(br"\1\1", ad) + b'"'
 
             parts.append(ad)
-            parts.append(b",")
+            parts.append(sep)
 
-        parts[-1] = b")"
+        parts[-1] = end
 
         return b"".join(parts)
 
@@ -171,23 +182,16 @@ class TupleDumper(Dumper):
     _re_escape = re.compile(br"([\\\"])")
 
 
+@Dumper.text(tuple)
+class TupleDumper(SequenceDumper):
+    def dump(self, obj: Tuple[Any, ...]) -> bytes:
+        return self._dump_sequence(obj, b"(", b")", b",")
+
+
 class BaseCompositeLoader(Loader):
     def __init__(self, oid: int, context: AdaptContext = None):
         super().__init__(oid, context)
         self._tx = Transformer(context)
-
-
-@Loader.text(builtins["record"].oid)
-class RecordLoader(BaseCompositeLoader):
-    def load(self, data: bytes) -> Tuple[Any, ...]:
-        if data == b"()":
-            return ()
-
-        cast = self._tx.get_loader(TEXT_OID, format=Format.TEXT).load
-        return tuple(
-            cast(token) if token is not None else None
-            for token in self._parse_record(data[1:-1])
-        )
 
     def _parse_record(self, data: bytes) -> Iterator[Optional[bytes]]:
         """
@@ -218,6 +222,19 @@ class RecordLoader(BaseCompositeLoader):
     )
 
     _re_undouble = re.compile(br'(["\\])\1')
+
+
+@Loader.text(builtins["record"].oid)
+class RecordLoader(BaseCompositeLoader):
+    def load(self, data: bytes) -> Tuple[Any, ...]:
+        if data == b"()":
+            return ()
+
+        cast = self._tx.get_loader(TEXT_OID, format=Format.TEXT).load
+        return tuple(
+            cast(token) if token is not None else None
+            for token in self._parse_record(data[1:-1])
+        )
 
 
 _struct_len = struct.Struct("!i")

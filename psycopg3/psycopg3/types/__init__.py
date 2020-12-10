@@ -9,7 +9,7 @@ from ..oids import builtins
 
 # Register default adapters
 from . import array, composite, date, json, network, numeric  # noqa
-from . import singletons, text, uuid  # noqa
+from . import range, singletons, text, uuid  # noqa
 
 # Register associations with array oids
 array.register_all_arrays()
