@@ -340,7 +340,7 @@ class NumericRangeLoader(RangeLoader[Decimal]):
 
 @Loader.text(builtins["daterange"].oid)
 class DateRangeLoader(RangeLoader[date]):
-    subtype_oid = builtins["numeric"].oid
+    subtype_oid = builtins["date"].oid
     cls = DateRange
 
 
