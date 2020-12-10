@@ -1,10 +1,11 @@
 ---
 # You can find our sponsors at https://www.psycopg.org/sponsors/ Thank you!
 
-- username: gporcari
+- username: genropy
+  by: gporcari
   tier: top
-  avatar: https://avatars2.githubusercontent.com/u/601732?v=4
-  name: Giovanni Porcari
+  avatar: https://avatars1.githubusercontent.com/u/7373189?v=4
+  name: genropy
 
 - username: svennek
   tier: top
