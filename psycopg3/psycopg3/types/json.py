@@ -11,9 +11,6 @@ from ..oids import builtins
 from ..adapt import Dumper, Loader
 from ..errors import DataError
 
-JSON_OID = builtins["json"].oid
-JSONB_OID = builtins["jsonb"].oid
-
 JsonDumpsFunction = Callable[[Any], str]
 
 
@@ -42,12 +39,12 @@ class _JsonDumper(Dumper):
 @Dumper.text(Json)
 @Dumper.binary(Json)
 class JsonDumper(_JsonDumper):
-    oid = JSON_OID
+    oid = builtins["json"].oid
 
 
 @Dumper.text(Jsonb)
 class JsonbDumper(_JsonDumper):
-    oid = JSONB_OID
+    oid = builtins["jsonb"].oid
 
 
 @Dumper.binary(Jsonb)
