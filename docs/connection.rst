@@ -100,6 +100,31 @@ The `!Connection` class
         ones: you should call ``await`` `~AsyncConnection.set_client_encoding`\
         :samp:`({value})` instead.
 
+        The value returned is always normalized to the Python codec
+        `~codecs.CodecInfo.name`::
+
+            conn.client_encoding = 'latin9'
+            conn.client_encoding
+            'iso8859-15'
+
+        and it reflects the current connection property, even if it is set
+        outside Python::
+
+            conn.execute("SET client_encoding TO LATIN1")
+            conn.client_encoding
+            'iso8859-1'
+
+        A few PostgreSQL encodings are not available in Python and cannot be
+        selected (currently ``EUC_TW``, ``MULE_INTERNAL``). The PostgreSQL
+        ``SQL_ASCII`` encoding has the special meaning of "no encoding": see
+        :ref:`adapt-string` for details.
+
+        .. seealso::
+
+            The `PostgreSQL supported encodings`__.
+
+            .. __: https://www.postgresql.org/docs/current/multibyte.html
+
     .. attribute:: info
 
         TODO

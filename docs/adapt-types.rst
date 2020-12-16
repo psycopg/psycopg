@@ -1,3 +1,5 @@
+.. currentmodule:: psycopg3
+
 .. index::
     single: Adaptation
     pair: Objects; Adaptation
@@ -37,8 +39,10 @@ TODO: complete table
     +--------------------+-------------------------+--------------------------+
     | | `!str`           | | :sql:`varchar`        | :ref:`adapt-string`      |
     | |                  | | :sql:`text`           |                          |
-    +--------------------+-------------------------+                          |
-    | | `!bytes`         | :sql:`bytea`            |                          |
+    +--------------------+-------------------------+--------------------------+
+    | | `bytes`          | :sql:`bytea`            | :ref:`adapt-binary`      |
+    | | `bytearray`      |                         |                          |
+    | | `memoryview`     |                         |                          |
     +--------------------+-------------------------+--------------------------+
     | `!date`            | :sql:`date`             | :ref:`adapt-date`        |
     +--------------------+-------------------------+                          |
@@ -145,7 +149,106 @@ promoted to the larger Python counterpart.
       <https://www.varrazzo.com/blog/2020/11/07/psycopg3-adaptation/>`__
 
 
+.. index::
+    pair: Strings; Adaptation
+    single: Unicode; Adaptation
+    pair: Encoding; SQL_ASCII
+
 .. _adapt-string:
+
+Strings adaptation
+------------------
+
+Python `str` is converted to PostgreSQL string syntax, and PostgreSQL types
+such as :sql:`text` and :sql:`varchar` are converted back to Python `!str`:
+
+.. code:: python
+
+    conn = psycopg3.connect()
+    conn.execute(
+        "insert into strtest (id, data) values (%s, %s)",
+        (1, "Crème Brûlée at 4.99€"))
+    conn.execute("select data from strtest where id = 1").fetchone()[0]
+    'Crème Brûlée at 4.99€'
+
+PostgreSQL databases `have an encoding`__, and `the session has an encoding`__
+too, exposed in the `Connection.client_encoding` attribute. If your database
+and connection are in UTF-8 encoding you will likely have no problem,
+otherwise you will have to make sure that your application only deals with the
+non-ASCII chars that the database can handle; failing to do so may result in
+encoding/decoding errors:
+
+.. __: https://www.postgresql.org/docs/current/sql-createdatabase.html
+.. __: https://www.postgresql.org/docs/current/multibyte.html
+
+.. code:: python
+
+    # The encoding is set at connection time according to the db configuration
+    conn.client_encoding
+    'utf-8'
+
+    # The Latin-9 encoding can manage some European accented letters
+    # and the Euro symbol
+    conn.client_encoding = 'latin9'
+    conn.execute("select data from strtest where id = 1").fetchone()[0]
+    'Crème Brûlée at 4.99€'
+
+    # The Latin-1 encoding doesn't have a representation for the Euro symbol
+    conn.client_encoding = 'latin1'
+    conn.execute("select data from strtest where id = 1").fetchone()[0]
+    # Traceback (most recent call last)
+    # ...
+    # UntranslatableCharacter: character with byte sequence 0xe2 0x82 0xac
+    # in encoding "UTF8" has no equivalent in encoding "LATIN1"
+
+In rare cases you may have strings with unexpected encodings in the database.
+Using the ``SQL_ASCII`` client encoding (or setting
+`~Connection.client_encoding` ``= "ascii"``) will disable decoding of the data
+coming from the database, which will be returned as `bytes`:
+
+.. code:: python
+
+    conn.client_encoding = "ascii"
+    conn.execute("select data from strtest where id = 1").fetchone()[0]
+    b'Cr\xc3\xa8me Br\xc3\xbbl\xc3\xa9e at 4.99\xe2\x82\xac'
+
+Alternatively you can cast the unknown encoding data to :sql:`bytea` to
+retrieve it as bytes, leaving other strings unaltered: see :ref:`adapt-binary`
+
+Note that PostgreSQL text cannot contain the ``0x00`` byte. If you need to
+store Python strings that may contain binary zeros you should use a
+:sql:`bytea` field.
+
+
+.. index::
+    single: bytea; Adaptation
+    single: bytes; Adaptation
+    single: bytearray; Adaptation
+    single: memoryview; Adaptation
+    single: Binary string
+
+.. _adapt-binary:
+
+Binary adaptation
+-----------------
+
+Python types representing binary objects (`bytes`, `bytearray`, `memoryview`)
+are converted by default to :sql:`bytea` fields. By default data received is
+returned as `!bytes`.
+
+.. admonition:: todo
+
+    Make sure bytearry/memoryview work and are compsable with
+    arrays/composite
+
+If you are storing large binary data in bytea fields (such as binary documents
+or images) you should probably use the binary format to pass and return
+values, otherwise binary data will undergo `ASCII escaping`__, taking some CPU
+time and more bandwidth. See :ref:`binary-data` for details.
+
+.. __: https://www.postgresql.org/docs/current/datatype-binary.html
+
+
 .. _adapt-date:
 .. _adapt-list:
 .. _adapt-composite:
