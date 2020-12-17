@@ -10,6 +10,8 @@ from cpython.mem cimport PyMem_Malloc, PyMem_Free
 from cpython.bytes cimport PyBytes_AsString, PyBytes_AsStringAndSize
 from cpython.buffer cimport PyObject_CheckBuffer, PyBUF_SIMPLE
 from cpython.buffer cimport PyObject_GetBuffer, PyBuffer_Release
+from cpython.bytearray cimport PyByteArray_FromStringAndSize, PyByteArray_Resize
+from cpython.bytearray cimport PyByteArray_AS_STRING
 
 import logging
 from typing import List, Optional, Sequence, Tuple
@@ -823,58 +825,55 @@ cdef class Escaping:
 
         return memoryview(PQBuffer._from_buffer(<unsigned char *>out, strlen(out)))
 
-    # TODO: return PQBuffer
-    def escape_identifier(self, data: bytes) -> bytes:
+    def escape_identifier(self, data: "Buffer") -> memoryview:
         cdef char *out
-        cdef bytes rv
+        cdef char *ptr
+        cdef Py_ssize_t length
 
-        if self.conn is not None:
-            if self.conn.pgconn_ptr is NULL:
-                raise PQerror("the connection is closed")
-            out = impl.PQescapeIdentifier(self.conn.pgconn_ptr, data, len(data))
-            if out is NULL:
-                raise PQerror(
-                    f"escape_identifier failed: {error_message(self.conn)}"
-                )
-            rv = out
-            impl.PQfreemem(out)
-            return rv
+        _buffer_as_string_and_size(data, &ptr, &length)
 
-        else:
+        if self.conn is None:
             raise PQerror("escape_identifier failed: no connection provided")
+        if self.conn.pgconn_ptr is NULL:
+            raise PQerror("the connection is closed")
 
-    def escape_string(self, data: bytes) -> bytes:
-        cdef int error
-        cdef size_t len_data = len(data)
-        cdef char *out
-        cdef size_t len_out
-        cdef bytes rv
-
-        if self.conn is not None:
-            if self.conn.pgconn_ptr is NULL:
-                raise PQerror("the connection is closed")
-
-            out = <char *>PyMem_Malloc(len_data * 2 + 1)
-            len_out = impl.PQescapeStringConn(
-                self.conn.pgconn_ptr, out, data, len_data, &error
+        out = impl.PQescapeIdentifier(self.conn.pgconn_ptr, ptr, length)
+        if out is NULL:
+            raise PQerror(
+                f"escape_identifier failed: {error_message(self.conn)}"
             )
 
+        return memoryview(PQBuffer._from_buffer(<unsigned char *>out, strlen(out)))
+
+    def escape_string(self, data: "Buffer") -> memoryview:
+        cdef int error
+        cdef size_t len_out
+        cdef char *ptr
+        cdef Py_ssize_t length
+        cdef bytearray rv
+
+        _buffer_as_string_and_size(data, &ptr, &length)
+
+        rv = PyByteArray_FromStringAndSize("", 0)
+        PyByteArray_Resize(rv, length * 2 + 1)
+
+        if self.conn is not None:
+            if self.conn.pgconn_ptr is NULL:
+                raise PQerror("the connection is closed")
+
+            len_out = impl.PQescapeStringConn(
+                self.conn.pgconn_ptr, PyByteArray_AS_STRING(rv),
+                ptr, length, &error
+            )
             if error:
-                PyMem_Free(out)
                 raise PQerror(
                     f"escape_string failed: {error_message(self.conn)}"
                 )
 
-            rv = out[:len_out]
-            PyMem_Free(out)
-            return rv
-
         else:
-            out = <char *>PyMem_Malloc(len_data * 2 + 1)
-            len_out = impl.PQescapeString(out, data, len_data)
-            rv = out[:len_out]
-            PyMem_Free(out)
-            return rv
+            len_out = impl.PQescapeString(PyByteArray_AS_STRING(rv), ptr, length)
+
+        return memoryview(rv)
 
     def escape_bytea(self, data: "Buffer") -> memoryview:
         cdef size_t len_out

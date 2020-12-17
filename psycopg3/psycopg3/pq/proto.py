@@ -341,10 +341,10 @@ class Escaping(Protocol):
     def escape_literal(self, data: Buffer) -> memoryview:
         ...
 
-    def escape_identifier(self, data: bytes) -> bytes:
+    def escape_identifier(self, data: Buffer) -> memoryview:
         ...
 
-    def escape_string(self, data: bytes) -> bytes:
+    def escape_string(self, data: Buffer) -> memoryview:
         ...
 
     def escape_bytea(self, data: Buffer) -> memoryview:

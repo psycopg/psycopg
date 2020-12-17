@@ -800,41 +800,43 @@ class Escaping:
         self.conn = conn
 
     def escape_literal(self, data: "proto.Buffer") -> memoryview:
-        if self.conn:
-            self.conn._ensure_pgconn()
-            # TODO: might be done without copy (however C does that)
-            if not isinstance(data, bytes):
-                data = bytes(data)
-            out = impl.PQescapeLiteral(self.conn.pgconn_ptr, data, len(data))
-            if not out:
-                raise PQerror(
-                    f"escape_literal failed: {error_message(self.conn)} bytes"
-                )
-            rv = string_at(out)
-            impl.PQfreemem(out)
-            return memoryview(rv)
-
-        else:
+        if not self.conn:
             raise PQerror("escape_literal failed: no connection provided")
 
-    def escape_identifier(self, data: bytes) -> bytes:
-        if self.conn:
-            self.conn._ensure_pgconn()
-            out = impl.PQescapeIdentifier(
-                self.conn.pgconn_ptr, data, len(data)
+        self.conn._ensure_pgconn()
+        # TODO: might be done without copy (however C does that)
+        if not isinstance(data, bytes):
+            data = bytes(data)
+        out = impl.PQescapeLiteral(self.conn.pgconn_ptr, data, len(data))
+        if not out:
+            raise PQerror(
+                f"escape_literal failed: {error_message(self.conn)} bytes"
             )
-            if not out:
-                raise PQerror(
-                    f"escape_identifier failed: {error_message(self.conn)} bytes"
-                )
-            rv = string_at(out)
-            impl.PQfreemem(out)
-            return rv
+        rv = string_at(out)
+        impl.PQfreemem(out)
+        return memoryview(rv)
 
-        else:
+    def escape_identifier(self, data: "proto.Buffer") -> memoryview:
+        if not self.conn:
             raise PQerror("escape_identifier failed: no connection provided")
 
-    def escape_string(self, data: bytes) -> bytes:
+        self.conn._ensure_pgconn()
+
+        if not isinstance(data, bytes):
+            data = bytes(data)
+        out = impl.PQescapeIdentifier(self.conn.pgconn_ptr, data, len(data))
+        if not out:
+            raise PQerror(
+                f"escape_identifier failed: {error_message(self.conn)} bytes"
+            )
+        rv = string_at(out)
+        impl.PQfreemem(out)
+        return memoryview(rv)
+
+    def escape_string(self, data: "proto.Buffer") -> memoryview:
+        if not isinstance(data, bytes):
+            data = bytes(data)
+
         if self.conn:
             self.conn._ensure_pgconn()
             error = c_int()
@@ -851,7 +853,6 @@ class Escaping:
                 raise PQerror(
                     f"escape_string failed: {error_message(self.conn)} bytes"
                 )
-            return out.value
 
         else:
             out = create_string_buffer(len(data) * 2 + 1)
@@ -860,7 +861,8 @@ class Escaping:
                 data,
                 len(data),
             )
-            return out.value
+
+        return memoryview(out.value)
 
     def escape_bytea(self, data: "proto.Buffer") -> memoryview:
         len_out = c_size_t()
