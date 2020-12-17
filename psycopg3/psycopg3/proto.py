@@ -53,6 +53,9 @@ LoadFunc = Callable[[bytes], Any]
 LoaderType = Type["Loader"]
 LoadersMap = Dict[Tuple[int, Format], LoaderType]
 
+# TODO: Loader, Dumper should probably become protocols
+# as there are both C and a Python implementation
+
 
 class Transformer(Protocol):
     def __init__(self, context: AdaptContext = None):

@@ -962,7 +962,9 @@ cdef class PQBuffer:
         pass
 
 
-cdef int _buffer_as_string_and_size(data: "Buffer", char **ptr, Py_ssize_t *length) except -1:
+cdef int _buffer_as_string_and_size(
+    data: "Buffer", char **ptr, Py_ssize_t *length
+) except -1:
     cdef Py_buffer buf
 
     if isinstance(data, bytes):

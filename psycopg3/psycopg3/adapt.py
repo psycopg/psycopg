@@ -36,6 +36,8 @@ class Dumper(ABC):
         """Convert the object *obj* to PostgreSQL representation."""
         ...
 
+    # TODO: the protocol signature should probably return a Buffer like object
+    # (the C implementation may return bytearray)
     def quote(self, obj: Any) -> bytes:
         """Convert the object *obj* to escaped representation."""
         value = self.dump(obj)
