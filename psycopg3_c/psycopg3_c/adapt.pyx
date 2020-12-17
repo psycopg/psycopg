@@ -75,7 +75,7 @@ cdef class CDumper:
 
         else:
             esc = Escaping()
-            tmp = esc.escape_string(value)
+            tmp = bytes(esc.escape_string(value))
             return b"'%s'" % tmp
 
     @property

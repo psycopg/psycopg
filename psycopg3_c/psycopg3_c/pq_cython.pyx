@@ -873,6 +873,8 @@ cdef class Escaping:
         else:
             len_out = impl.PQescapeString(PyByteArray_AS_STRING(rv), ptr, length)
 
+        # shrink back or the length will be reported different
+        PyByteArray_Resize(rv, len_out)
         return memoryview(rv)
 
     def escape_bytea(self, data: "Buffer") -> memoryview:
