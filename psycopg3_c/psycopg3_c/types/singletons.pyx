@@ -9,7 +9,8 @@ from psycopg3_c cimport oids
 
 
 cdef class BoolDumper(CDumper):
-    oid = oids.BOOL_OID
+    def __cinit__(self):
+        self._oid = oids.BOOL_OID
 
     def dump(self, obj) -> bytes:
         # Fast paths, just a pointer comparison

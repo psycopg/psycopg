@@ -36,6 +36,7 @@ cdef class CDumper:
     cdef object _context
     cdef object _connection
     cdef PGconn _pgconn
+    cdef impl.Oid _oid
 
     def __init__(self, src: type, context: AdaptContext = None):
         self._src = src
@@ -95,7 +96,9 @@ cdef class CDumper:
 
     @property
     def oid(self) -> int:
-        return 0
+        # Implicitly initialised to zero
+        # Subclasses may implement __cinit__ to set a per-class value
+        return self._oid
 
     @classmethod
     def register(

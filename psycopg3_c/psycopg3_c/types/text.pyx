@@ -98,13 +98,12 @@ cdef class TextLoader(CLoader):
 cdef class BytesDumper(CDumper):
     cdef Escaping esc
 
+    def __cinit__(self):
+        self._oid = oids.BYTEA_OID
+
     def __init__(self, src: type, context: AdaptContext):
         super().__init__(src, context)
         self.esc = Escaping(self._pgconn)
-
-    @property
-    def oid(self) -> int:
-        return oids.BYTEA_OID
 
     def dump(self, obj) -> memoryview:
         return self.esc.escape_bytea(obj)
