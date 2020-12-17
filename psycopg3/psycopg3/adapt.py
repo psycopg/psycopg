@@ -29,7 +29,7 @@ class Dumper(ABC):
     def __init__(self, src: type, context: AdaptContext = None):
         self.src = src
         self.context = context
-        self.connection = _connection_from_context(context)
+        self.connection = connection_from_context(context)
 
     @abstractmethod
     def dump(self, obj: Any) -> bytes:
@@ -100,7 +100,7 @@ class Loader(ABC):
     def __init__(self, oid: int, context: AdaptContext = None):
         self.oid = oid
         self.context = context
-        self.connection = _connection_from_context(context)
+        self.connection = connection_from_context(context)
 
     @abstractmethod
     def load(self, data: bytes) -> Any:
@@ -142,7 +142,7 @@ class Loader(ABC):
         return binary_
 
 
-def _connection_from_context(
+def connection_from_context(
     context: AdaptContext,
 ) -> Optional[BaseConnection]:
     if not context:

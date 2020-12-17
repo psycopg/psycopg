@@ -4,6 +4,7 @@ libpq Python wrapper using cython bindings.
 
 # Copyright (C) 2020 The Psycopg Team
 
+from libc.string cimport strlen
 from posix.unistd cimport getpid
 from cpython.mem cimport PyMem_Malloc, PyMem_Free
 from cpython.bytes cimport PyBytes_AsString, PyBytes_AsStringAndSize
@@ -534,7 +535,6 @@ cdef (int, Oid *, char * const*, int *, int *) _query_params_args(
     cdef int *alenghts = NULL
     cdef char *ptr
     cdef Py_ssize_t length
-    cdef Py_buffer buf
 
     if nparams:
         aparams = <char **>PyMem_Malloc(nparams * sizeof(char *))
@@ -544,17 +544,12 @@ cdef (int, Oid *, char * const*, int *, int *) _query_params_args(
             if obj is None:
                 aparams[i] = NULL
                 alenghts[i] = 0
-            elif isinstance(obj, bytes):
-                PyBytes_AsStringAndSize(obj, &ptr, &length)
+            else:
+                # TODO: it is a leak if this fails (but it should only fail
+                # on internal error, e.g. if obj is not a buffer)
+                _buffer_as_string_and_size(obj, &ptr, &length)
                 aparams[i] = ptr
                 alenghts[i] = length
-            elif PyObject_CheckBuffer(obj):
-                PyObject_GetBuffer(obj, &buf, PyBUF_SIMPLE)
-                aparams[i] = <char *>buf.buf
-                alenghts[i] = buf.len
-                PyBuffer_Release(&buf)
-            else:
-                raise TypeError(f"bytes or buffer expected, got {type(obj)}")
 
     cdef Oid *atypes = NULL
     if param_types is not None:
@@ -803,30 +798,32 @@ class Conninfo:
     def __repr__(self):
         return f"<{type(self).__name__} ({self.keyword.decode('ascii')})>"
 
-
 cdef class Escaping:
     def __init__(self, conn: Optional[PGconn] = None):
         self.conn = conn
 
-    def escape_literal(self, data: bytes) -> bytes:
+    def escape_literal(self, data: "Buffer") -> memoryview:
         cdef char *out
         cdef bytes rv
+        cdef char *ptr
+        cdef Py_ssize_t length
 
-        if self.conn is not None:
-            if self.conn.pgconn_ptr is NULL:
-                raise PQerror("the connection is closed")
-            out = impl.PQescapeLiteral(self.conn.pgconn_ptr, data, len(data))
-            if out is NULL:
-                raise PQerror(
-                    f"escape_literal failed: {error_message(self.conn)}"
-                )
-            rv = out
-            impl.PQfreemem(out)
-            return rv
-
-        else:
+        if self.conn is None:
             raise PQerror("escape_literal failed: no connection provided")
+        if self.conn.pgconn_ptr is NULL:
+            raise PQerror("the connection is closed")
 
+        _buffer_as_string_and_size(data, &ptr, &length)
+
+        out = impl.PQescapeLiteral(self.conn.pgconn_ptr, ptr, length)
+        if out is NULL:
+            raise PQerror(
+                f"escape_literal failed: {error_message(self.conn)}"
+            )
+
+        return memoryview(PQBuffer._from_buffer(<unsigned char *>out, strlen(out)))
+
+    # TODO: return PQBuffer
     def escape_identifier(self, data: bytes) -> bytes:
         cdef char *out
         cdef bytes rv
@@ -879,28 +876,33 @@ cdef class Escaping:
             PyMem_Free(out)
             return rv
 
-
-    def escape_bytea(self, data: bytes) -> bytes:
+    def escape_bytea(self, data: "Buffer") -> memoryview:
         cdef size_t len_out
         cdef unsigned char *out
+        cdef char *ptr
+        cdef Py_ssize_t length
+
+        if self.conn is not None and self.conn.pgconn_ptr is NULL:
+            raise PQerror("the connection is closed")
+
+        _buffer_as_string_and_size(data, &ptr, &length)
+
         if self.conn is not None:
-            if self.conn.pgconn_ptr is NULL:
-                raise PQerror("the connection is closed")
             out = impl.PQescapeByteaConn(
-                self.conn.pgconn_ptr, data, len(data), &len_out)
+                self.conn.pgconn_ptr, <unsigned char *>ptr, length, &len_out)
         else:
-            out = impl.PQescapeBytea(data, len(data), &len_out)
+            out = impl.PQescapeBytea(<unsigned char *>ptr, length, &len_out)
+
         if out is NULL:
             raise MemoryError(
                 f"couldn't allocate for escape_bytea of {len(data)} bytes"
             )
 
-        # TODO: without copy?
-        rv = out[:len_out - 1]  # out includes final 0
-        impl.PQfreemem(out)
-        return rv
+        return memoryview(
+            PQBuffer._from_buffer(out, len_out - 1)  # out includes final 0
+        )
 
-    def unescape_bytea(self, data: bytes) -> bytes:
+    def unescape_bytea(self, data: bytes) -> memoryview:
         # not needed, but let's keep it symmetric with the escaping:
         # if a connection is passed in, it must be valid.
         if self.conn is not None:
@@ -914,6 +916,60 @@ cdef class Escaping:
                 f"couldn't allocate for unescape_bytea of {len(data)} bytes"
             )
 
-        rv = out[:len_out]
-        impl.PQfreemem(out)
+        return memoryview(PQBuffer._from_buffer(out, len_out))
+
+
+cdef class PQBuffer:
+    """
+    Wrap a chunk of memory allocated by the libpq and expose it as memoryview.
+    """
+    @staticmethod
+    cdef PQBuffer _from_buffer(unsigned char *buf, Py_ssize_t len):
+        cdef PQBuffer rv = PQBuffer.__new__(PQBuffer)
+        rv.buf = buf
+        rv.len = len
         return rv
+
+    def __cinit__(self):
+        self.buf = NULL
+        self.len = 0
+
+    def __dealloc__(self):
+        if self.buf:
+            impl.PQfreemem(self.buf)
+
+    def __repr__(self):
+        return (
+            f"{self.__class__.__module__}.{self.__class__.__qualname__}"
+            f"({bytes(self)})"
+        )
+
+    def __getbuffer__(self, Py_buffer *buffer, int flags):
+        buffer.buf = self.buf
+        buffer.obj = self
+        buffer.len = self.len
+        buffer.itemsize = sizeof(unsigned char)
+        buffer.readonly = 1
+        buffer.ndim = 1
+        buffer.format = NULL  # unsigned char
+        buffer.shape = &self.len
+        buffer.strides = NULL
+        buffer.suboffsets = NULL
+        buffer.internal = NULL
+
+    def __releasebuffer__(self, Py_buffer *buffer):
+        pass
+
+
+cdef int _buffer_as_string_and_size(data: "Buffer", char **ptr, Py_ssize_t *length) except -1:
+    cdef Py_buffer buf
+
+    if isinstance(data, bytes):
+        PyBytes_AsStringAndSize(data, ptr, length)
+    elif PyObject_CheckBuffer(data):
+        PyObject_GetBuffer(data, &buf, PyBUF_SIMPLE)
+        ptr[0] = <char *>buf.buf
+        length[0] = buf.len
+        PyBuffer_Release(&buf)
+    else:
+        raise TypeError(f"bytes or buffer expected, got {type(data)}")

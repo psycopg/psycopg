@@ -36,3 +36,11 @@ cdef class PGcancel:
 
 cdef class Escaping:
     cdef PGconn conn
+
+
+cdef class PQBuffer:
+    cdef unsigned char *buf
+    cdef Py_ssize_t len
+
+    @staticmethod
+    cdef PQBuffer _from_buffer(unsigned char *buf, Py_ssize_t len)

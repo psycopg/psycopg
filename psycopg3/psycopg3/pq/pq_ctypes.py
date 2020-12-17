@@ -799,9 +799,12 @@ class Escaping:
     def __init__(self, conn: Optional[PGconn] = None):
         self.conn = conn
 
-    def escape_literal(self, data: bytes) -> bytes:
+    def escape_literal(self, data: "proto.Buffer") -> memoryview:
         if self.conn:
             self.conn._ensure_pgconn()
+            # TODO: might be done without copy (however C does that)
+            if not isinstance(data, bytes):
+                data = bytes(data)
             out = impl.PQescapeLiteral(self.conn.pgconn_ptr, data, len(data))
             if not out:
                 raise PQerror(
@@ -809,7 +812,7 @@ class Escaping:
                 )
             rv = string_at(out)
             impl.PQfreemem(out)
-            return rv
+            return memoryview(rv)
 
         else:
             raise PQerror("escape_literal failed: no connection provided")
@@ -859,8 +862,13 @@ class Escaping:
             )
             return out.value
 
-    def escape_bytea(self, data: bytes) -> bytes:
+    def escape_bytea(self, data: "proto.Buffer") -> memoryview:
         len_out = c_size_t()
+        # TODO: might be able to do without a copy but it's a mess.
+        # the C library does it better anyway, so maybe not worth optimising
+        # https://mail.python.org/pipermail/python-dev/2012-September/121780.html
+        if not isinstance(data, bytes):
+            data = bytes(data)
         if self.conn:
             self.conn._ensure_pgconn()
             out = impl.PQescapeByteaConn(
@@ -880,9 +888,9 @@ class Escaping:
 
         rv = string_at(out, len_out.value - 1)  # out includes final 0
         impl.PQfreemem(out)
-        return rv
+        return memoryview(rv)
 
-    def unescape_bytea(self, data: bytes) -> bytes:
+    def unescape_bytea(self, data: bytes) -> memoryview:
         # not needed, but let's keep it symmetric with the escaping:
         # if a connection is passed in, it must be valid.
         if self.conn:
@@ -897,4 +905,4 @@ class Escaping:
 
         rv = string_at(out, len_out.value)
         impl.PQfreemem(out)
-        return rv
+        return memoryview(rv)

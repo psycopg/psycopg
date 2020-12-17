@@ -9,6 +9,7 @@ from cpython.unicode cimport PyUnicode_Decode, PyUnicode_DecodeUTF8
 from cpython.unicode cimport PyUnicode_AsUTF8String, PyUnicode_AsEncodedString
 
 from psycopg3_c cimport libpq, oids
+from psycopg3_c.pq_cython cimport Escaping
 
 
 cdef class _StringDumper(CDumper):
@@ -94,6 +95,26 @@ cdef class TextLoader(CLoader):
             return data[:length]
 
 
+cdef class BytesDumper(CDumper):
+    cdef Escaping esc
+
+    def __init__(self, src: type, context: AdaptContext):
+        super().__init__(src, context)
+        self.esc = Escaping(self._pgconn)
+
+    @property
+    def oid(self) -> int:
+        return oids.BYTEA_OID
+
+    def dump(self, obj) -> memoryview:
+        return self.esc.escape_bytea(obj)
+
+
+cdef class BytesBinaryDumper(BytesDumper):
+    def dump(self, obj):
+        return obj
+
+
 cdef class ByteaLoader(CLoader):
     cdef object cload(self, const char *data, size_t length):
         cdef size_t len_out
@@ -125,6 +146,13 @@ cdef void register_text_c_adapters():
     TextLoader.register(oids.TEXT_OID, format=Format.BINARY)
     TextLoader.register(oids.VARCHAR_OID)
     TextLoader.register(oids.VARCHAR_OID, format=Format.BINARY)
+
+    BytesDumper.register(bytes)
+    BytesDumper.register(bytearray)
+    BytesDumper.register(memoryview)
+    BytesBinaryDumper.register(bytes, format=Format.BINARY)
+    BytesBinaryDumper.register(bytearray, format=Format.BINARY)
+    BytesBinaryDumper.register(memoryview, format=Format.BINARY)
 
     ByteaLoader.register(oids.BYTEA_OID)
     ByteaBinaryLoader.register(oids.BYTEA_OID, format=Format.BINARY)

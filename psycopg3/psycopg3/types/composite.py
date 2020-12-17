@@ -169,7 +169,7 @@ class SequenceDumper(Dumper):
             if not ad:
                 ad = b'""'
             elif self._re_needs_quotes.search(ad):
-                ad = b'"' + self._re_escape.sub(br"\1\1", ad) + b'"'
+                ad = b'"' + self._re_esc.sub(br"\1\1", ad) + b'"'
 
             parts.append(ad)
             parts.append(sep)
@@ -179,7 +179,7 @@ class SequenceDumper(Dumper):
         return b"".join(parts)
 
     _re_needs_quotes = re.compile(br'[",\\\s()]')
-    _re_escape = re.compile(br"([\\\"])")
+    _re_esc = re.compile(br"([\\\"])")
 
 
 @Dumper.text(tuple)

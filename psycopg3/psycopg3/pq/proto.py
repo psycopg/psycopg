@@ -4,7 +4,7 @@ Protocol objects to represent objects exposed by different pq implementations.
 
 # Copyright (C) 2020 The Psycopg Team
 
-from typing import Any, Callable, List, Optional, Sequence, Tuple
+from typing import Any, Callable, List, Optional, Sequence, Tuple, Union
 from typing import TYPE_CHECKING
 from typing_extensions import Protocol
 
@@ -13,6 +13,9 @@ from ._enums import Ping, PollingStatus, TransactionStatus
 
 if TYPE_CHECKING:
     from .misc import PGnotify, ConninfoOption, PGresAttDesc
+
+# An object implementing the buffer protocol (ish)
+Buffer = Union[bytes, bytearray, memoryview]
 
 
 class PGconn(Protocol):
@@ -335,7 +338,7 @@ class Escaping(Protocol):
     def __init__(self, conn: Optional[PGconn] = None):
         ...
 
-    def escape_literal(self, data: bytes) -> bytes:
+    def escape_literal(self, data: Buffer) -> memoryview:
         ...
 
     def escape_identifier(self, data: bytes) -> bytes:
@@ -344,8 +347,8 @@ class Escaping(Protocol):
     def escape_string(self, data: bytes) -> bytes:
         ...
 
-    def escape_bytea(self, data: bytes) -> bytes:
+    def escape_bytea(self, data: Buffer) -> memoryview:
         ...
 
-    def unescape_bytea(self, data: bytes) -> bytes:
+    def unescape_bytea(self, data: bytes) -> memoryview:
         ...

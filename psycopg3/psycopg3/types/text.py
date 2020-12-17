@@ -86,7 +86,10 @@ class UnknownLoader(Loader):
         return data.decode(self.encoding)
 
 
-class _BinaryDumper(Dumper):
+@Dumper.text(bytes)
+@Dumper.text(bytearray)
+@Dumper.text(memoryview)
+class BytesDumper(Dumper):
     oid = builtins["bytea"].oid
 
     def __init__(self, src: type, context: AdaptContext = None):
@@ -95,23 +98,10 @@ class _BinaryDumper(Dumper):
             self.connection.pgconn if self.connection else None
         )
 
-
-@Dumper.text(bytes)
-class BytesDumper(_BinaryDumper):
-    def dump(self, obj: bytes) -> bytes:
+    def dump(self, obj: bytes) -> memoryview:
+        # TODO: mypy doesn't complain, but this function has the wrong signature
+        # probably dump return value should be extended to Buffer
         return self.esc.escape_bytea(obj)
-
-
-@Dumper.text(bytearray)
-class BytearrayDumper(_BinaryDumper):
-    def dump(self, obj: bytearray) -> bytes:
-        return self.esc.escape_bytea(bytes(obj))
-
-
-@Dumper.text(memoryview)
-class MemoryviewDumper(_BinaryDumper):
-    def dump(self, obj: memoryview) -> bytes:
-        return self.esc.escape_bytea(bytes(obj))
 
 
 @Dumper.binary(bytes)
@@ -124,6 +114,7 @@ class BytesBinaryDumper(Dumper):
     def dump(
         self, obj: Union[bytes, bytearray, memoryview]
     ) -> Union[bytes, bytearray, memoryview]:
+        # TODO: mypy doesn't complain, but this function has the wrong signature
         return obj
 
 

@@ -6,9 +6,13 @@ SQL composition utility module
 
 import string
 from typing import Any, Iterator, List, Optional, Sequence, Union
+from typing import TYPE_CHECKING
 
 from .pq import Escaping, Format
 from .proto import AdaptContext
+
+if TYPE_CHECKING:
+    from .connection import BaseConnection
 
 
 def quote(obj: Any, context: AdaptContext = None) -> str:
@@ -24,7 +28,11 @@ def quote(obj: Any, context: AdaptContext = None) -> str:
     rules used, otherwise only global rules are used.
 
     """
-    return Literal(obj).as_string(context)
+    from .adapt import connection_from_context
+
+    conn = connection_from_context(context)
+    enc = conn.client_encoding if conn else "utf-8"
+    return Literal(obj).as_bytes(context).decode(enc)
 
 
 class Composable(object):
@@ -48,11 +56,11 @@ class Composable(object):
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self._obj!r})"
 
-    def as_string(self, context: AdaptContext) -> str:
+    def as_bytes(self, context: AdaptContext) -> bytes:
         """
-        Return the string value of the object.
+        Return the value of the object as bytes.
 
-        :param context: the context to evaluate the string into.
+        :param context: the context to evaluate the object into.
         :type context: `connection` or `cursor`
 
         The method is automatically invoked by `~psycopg3.Cursor.execute()`,
@@ -60,7 +68,19 @@ class Composable(object):
         `!Composable` is passed instead of the query string.
 
         """
+        # TODO: add tests and docs for as_bytes
         raise NotImplementedError
+
+    def as_string(self, context: AdaptContext) -> str:
+        """
+        Return the value of the object as string.
+
+        :param context: the context to evaluate the string into.
+        :type context: `connection` or `cursor`
+
+        """
+        conn = _connection_from_context(context)
+        return self.as_bytes(context).decode(conn.client_encoding)
 
     def __add__(self, other: "Composable") -> "Composed":
         if isinstance(other, Composed):
@@ -108,11 +128,8 @@ class Composed(Composable):
         ]
         super().__init__(seq)
 
-    def as_string(self, context: AdaptContext) -> str:
-        rv = []
-        for obj in self._obj:
-            rv.append(obj.as_string(context))
-        return "".join(rv)
+    def as_bytes(self, context: AdaptContext) -> bytes:
+        return b"".join(obj.as_bytes(context) for obj in self._obj)
 
     def __iter__(self) -> Iterator[Composable]:
         return iter(self._obj)
@@ -183,6 +200,10 @@ class SQL(Composable):
 
     def as_string(self, context: AdaptContext) -> str:
         return self._obj
+
+    def as_bytes(self, context: AdaptContext) -> bytes:
+        conn = _connection_from_context(context)
+        return self._obj.encode(conn.client_encoding)
 
     def format(self, *args: Any, **kwargs: Any) -> Composed:
         """
@@ -335,17 +356,12 @@ class Identifier(Composable):
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({', '.join(map(repr, self._obj))})"
 
-    def as_string(self, context: AdaptContext) -> str:
-        from .adapt import _connection_from_context
-
+    def as_bytes(self, context: AdaptContext) -> bytes:
         conn = _connection_from_context(context)
-        if not conn:
-            raise ValueError(f"no connection in the context: {context}")
-
         esc = Escaping(conn.pgconn)
         enc = conn.client_encoding
         escs = [esc.escape_identifier(s.encode(enc)) for s in self._obj]
-        return b".".join(escs).decode(enc)
+        return b".".join(escs)
 
 
 class Literal(Composable):
@@ -369,14 +385,12 @@ class Literal(Composable):
 
     """
 
-    def as_string(self, context: AdaptContext) -> str:
-        from .adapt import _connection_from_context, Transformer
+    def as_bytes(self, context: AdaptContext) -> bytes:
+        from .adapt import Transformer
 
-        conn = _connection_from_context(context)
-        tx = context if isinstance(context, Transformer) else Transformer(conn)
+        tx = context if isinstance(context, Transformer) else Transformer()
         dumper = tx.get_dumper(self._obj, Format.TEXT)
-        quoted = dumper.quote(self._obj)
-        return quoted.decode(conn.client_encoding if conn else "utf-8")
+        return dumper.quote(self._obj)
 
 
 class Placeholder(Composable):
@@ -430,7 +444,21 @@ class Placeholder(Composable):
         code = "s" if self._format == Format.TEXT else "b"
         return f"%({self._obj}){code}" if self._obj else f"%{code}"
 
+    def as_bytes(self, context: AdaptContext) -> bytes:
+        conn = _connection_from_context(context)
+        return self.as_string(context).encode(conn.client_encoding)
+
 
 # Literals
 NULL = SQL("NULL")
 DEFAULT = SQL("DEFAULT")
+
+
+def _connection_from_context(context: AdaptContext) -> "BaseConnection":
+    from .adapt import connection_from_context
+
+    conn = connection_from_context(context)
+    if not conn:
+        raise ValueError(f"no connection in the context: {context}")
+
+    return conn

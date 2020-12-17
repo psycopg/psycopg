@@ -62,7 +62,7 @@ class ListDumper(BaseListDumper):
 
     # Double quotes and backslashes embedded in element values will be
     # backslash-escaped.
-    _re_escape = re.compile(br'(["\\])')
+    _re_esc = re.compile(br'(["\\])')
 
     def dump(self, obj: List[Any]) -> bytes:
         tokens: List[bytes] = []
@@ -83,7 +83,9 @@ class ListDumper(BaseListDumper):
                     dumper = self._tx.get_dumper(item, Format.TEXT)
                     ad = dumper.dump(item)
                     if self._re_needs_quotes.search(ad):
-                        ad = b'"' + self._re_escape.sub(br"\\\1", ad) + b'"'
+                        ad = (
+                            b'"' + self._re_esc.sub(br"\\\1", bytes(ad)) + b'"'
+                        )
                     tokens.append(ad)
                     if not oid:
                         oid = dumper.oid

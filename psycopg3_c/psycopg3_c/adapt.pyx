@@ -31,11 +31,15 @@ cdef class CDumper:
     cdef object _src
     cdef object _context
     cdef object _connection
+    cdef PGconn _pgconn
 
     def __init__(self, src: type, context: AdaptContext = None):
         self._src = src
         self._context = context
         self._connection = _connection_from_context(context)
+        self._pgconn = (
+            self._connection.pgconn if self._connection is not None else None
+        )
 
     @property
     def src(self) -> type:
@@ -54,13 +58,20 @@ cdef class CDumper:
 
     def quote(self, obj: Any) -> bytes:
         # TODO: can be optimized
-        cdef bytes value = self.dump(obj)
+        cdef object ovalue = self.dump(obj)
+
+        cdef bytes value
+        if isinstance(ovalue, bytes):
+            value = ovalue
+        else:
+            value = bytes(ovalue)
+
         cdef bytes tmp
         cdef Escaping esc
 
         if self.connection:
-            esc = Escaping(self.connection.pgconn)
-            return esc.escape_literal(value)
+            esc = Escaping(self._pgconn)
+            return bytes(esc.escape_literal(value))
 
         else:
             esc = Escaping()
@@ -138,8 +149,8 @@ cdef class CLoader:
 
 
 cdef _connection_from_context(object context):
-    from psycopg3.adapt import _connection_from_context
-    return _connection_from_context(context)
+    from psycopg3.adapt import connection_from_context
+    return connection_from_context(context)
 
 
 def register_builtin_c_adapters():
