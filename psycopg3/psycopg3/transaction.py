@@ -74,7 +74,7 @@ class BaseTransaction(Generic[ConnectionType]):
             args.append("force_rollback=True")
         return f"{self.__class__.__qualname__}({', '.join(args)})"
 
-    def _enter_commands(self) -> List[str]:
+    def _enter_commands(self) -> List[bytes]:
         if not self._yolo:
             raise TypeError("transaction blocks can be used only once")
         else:
@@ -97,19 +97,19 @@ class BaseTransaction(Generic[ConnectionType]):
         commands = []
         if self._outer_transaction:
             assert not self._conn._savepoints, self._conn._savepoints
-            commands.append("begin")
+            commands.append(b"begin")
 
         if self._savepoint_name:
             commands.append(
                 sql.SQL("savepoint {}")
                 .format(sql.Identifier(self._savepoint_name))
-                .as_string(self._conn)
+                .as_bytes(self._conn)
             )
 
         self._conn._savepoints.append(self._savepoint_name)
         return commands
 
-    def _commit_commands(self) -> List[str]:
+    def _commit_commands(self) -> List[bytes]:
         assert self._conn._savepoints[-1] == self._savepoint_name
         self._conn._savepoints.pop()
 
@@ -118,16 +118,16 @@ class BaseTransaction(Generic[ConnectionType]):
             commands.append(
                 sql.SQL("release {}")
                 .format(sql.Identifier(self._savepoint_name))
-                .as_string(self._conn)
+                .as_bytes(self._conn)
             )
 
         if self._outer_transaction:
             assert not self._conn._savepoints
-            commands.append("commit")
+            commands.append(b"commit")
 
         return commands
 
-    def _rollback_commands(self) -> List[str]:
+    def _rollback_commands(self) -> List[bytes]:
         assert self._conn._savepoints[-1] == self._savepoint_name
         self._conn._savepoints.pop()
 
@@ -136,12 +136,12 @@ class BaseTransaction(Generic[ConnectionType]):
             commands.append(
                 sql.SQL("rollback to {n}; release {n}")
                 .format(n=sql.Identifier(self._savepoint_name))
-                .as_string(self._conn)
+                .as_bytes(self._conn)
             )
 
         if self._outer_transaction:
             assert not self._conn._savepoints
-            commands.append("rollback")
+            commands.append(b"rollback")
 
         return commands
 
@@ -190,8 +190,8 @@ class Transaction(BaseTransaction["Connection"]):
 
         return False
 
-    def _execute(self, commands: List[str]) -> None:
-        self._conn._exec_command("; ".join(commands))
+    def _execute(self, commands: List[bytes]) -> None:
+        self._conn._exec_command(b"; ".join(commands))
 
 
 class AsyncTransaction(BaseTransaction["AsyncConnection"]):
@@ -239,5 +239,5 @@ class AsyncTransaction(BaseTransaction["AsyncConnection"]):
 
         return False
 
-    async def _execute(self, commands: List[str]) -> None:
-        await self._conn._exec_command("; ".join(commands))
+    async def _execute(self, commands: List[bytes]) -> None:
+        await self._conn._exec_command(b"; ".join(commands))

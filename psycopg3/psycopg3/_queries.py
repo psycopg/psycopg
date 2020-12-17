@@ -48,7 +48,7 @@ class PostgresQuery:
         attributes (`query`, `params`, `types`, `formats`).
         """
         if isinstance(query, Composable):
-            query = query.as_string(self._tx)
+            query = query.as_bytes(self._tx)
 
         if vars is not None:
             self.query, self.formats, self._order, self._parts = _query2pg(
