@@ -333,7 +333,16 @@ class PGconn:
         alenghts: Optional[Array[c_int]]
         if param_values:
             nparams = len(param_values)
-            aparams = (c_char_p * nparams)(*param_values)
+            aparams = (c_char_p * nparams)(
+                *(
+                    # convert bytearray/memoryview to bytes
+                    # TODO: avoid copy, at least in the C implementation.
+                    b
+                    if b is None or isinstance(b, bytes)
+                    else bytes(b)  # type: ignore[arg-type]
+                    for b in param_values
+                )
+            )
             alenghts = (c_int * nparams)(
                 *(len(p) if p else 0 for p in param_values)
             )

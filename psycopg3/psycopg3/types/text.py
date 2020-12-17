@@ -86,9 +86,7 @@ class UnknownLoader(Loader):
         return data.decode(self.encoding)
 
 
-@Dumper.text(bytes)
-class BytesDumper(Dumper):
-
+class _BinaryDumper(Dumper):
     oid = builtins["bytea"].oid
 
     def __init__(self, src: type, context: AdaptContext = None):
@@ -97,17 +95,36 @@ class BytesDumper(Dumper):
             self.connection.pgconn if self.connection else None
         )
 
+
+@Dumper.text(bytes)
+class BytesDumper(_BinaryDumper):
     def dump(self, obj: bytes) -> bytes:
         return self.esc.escape_bytea(obj)
 
 
+@Dumper.text(bytearray)
+class BytearrayDumper(_BinaryDumper):
+    def dump(self, obj: bytearray) -> bytes:
+        return self.esc.escape_bytea(bytes(obj))
+
+
+@Dumper.text(memoryview)
+class MemoryviewDumper(_BinaryDumper):
+    def dump(self, obj: memoryview) -> bytes:
+        return self.esc.escape_bytea(bytes(obj))
+
+
 @Dumper.binary(bytes)
+@Dumper.binary(bytearray)
+@Dumper.binary(memoryview)
 class BytesBinaryDumper(Dumper):
 
     oid = builtins["bytea"].oid
 
-    def dump(self, b: bytes) -> bytes:
-        return b
+    def dump(
+        self, obj: Union[bytes, bytearray, memoryview]
+    ) -> Union[bytes, bytearray, memoryview]:
+        return obj
 
 
 @Loader.text(builtins["bytea"].oid)

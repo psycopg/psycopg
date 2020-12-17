@@ -171,11 +171,13 @@ def test_text_array_ascii(conn, fmt_in, fmt_out):
 
 
 @pytest.mark.parametrize("fmt_in", [Format.TEXT, Format.BINARY])
-def test_dump_1byte(conn, fmt_in):
+@pytest.mark.parametrize("pytype", [bytes, bytearray, memoryview])
+def test_dump_1byte(conn, fmt_in, pytype):
     cur = conn.cursor()
     ph = "%s" if fmt_in == Format.TEXT else "%b"
     for i in range(0, 256):
-        cur.execute(f"select {ph} = %s::bytea", (bytes([i]), fr"\x{i:02x}"))
+        obj = pytype(bytes([i]))
+        cur.execute(f"select {ph} = %s::bytea", (obj, fr"\x{i:02x}"))
         assert cur.fetchone()[0] is True, i
 
 

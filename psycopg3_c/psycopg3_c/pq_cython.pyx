@@ -6,7 +6,9 @@ libpq Python wrapper using cython bindings.
 
 from posix.unistd cimport getpid
 from cpython.mem cimport PyMem_Malloc, PyMem_Free
-from cpython.bytes cimport PyBytes_AsString
+from cpython.bytes cimport PyBytes_AsString, PyBytes_AsStringAndSize
+from cpython.buffer cimport PyObject_CheckBuffer, PyBUF_SIMPLE
+from cpython.buffer cimport PyObject_GetBuffer, PyBuffer_Release
 
 import logging
 from typing import List, Optional, Sequence, Tuple
@@ -510,9 +512,9 @@ cdef PGconn _connect_start(const char *conninfo):
 
 
 cdef (int, Oid *, char * const*, int *, int *) _query_params_args(
-    param_values: Optional[Sequence[Optional[bytes]]],
-    param_types: Optional[Sequence[int]],
-    param_formats: Optional[Sequence[Format]],
+    list param_values: Optional[Sequence[Optional[bytes]]],
+    list param_types: Optional[Sequence[int]],
+    list param_formats: Optional[Sequence[Format]],
 ) except *:
     cdef int i
 
@@ -530,16 +532,29 @@ cdef (int, Oid *, char * const*, int *, int *) _query_params_args(
 
     cdef char **aparams = NULL
     cdef int *alenghts = NULL
+    cdef char *ptr
+    cdef Py_ssize_t length
+    cdef Py_buffer buf
+
     if nparams:
         aparams = <char **>PyMem_Malloc(nparams * sizeof(char *))
         alenghts = <int *>PyMem_Malloc(nparams * sizeof(int))
         for i in range(nparams):
-            if param_values[i] is not None:
-                aparams[i] = param_values[i]
-                alenghts[i] = len(param_values[i])
-            else:
+            obj = param_values[i]
+            if obj is None:
                 aparams[i] = NULL
                 alenghts[i] = 0
+            elif isinstance(obj, bytes):
+                PyBytes_AsStringAndSize(obj, &ptr, &length)
+                aparams[i] = ptr
+                alenghts[i] = length
+            elif PyObject_CheckBuffer(obj):
+                PyObject_GetBuffer(obj, &buf, PyBUF_SIMPLE)
+                aparams[i] = <char *>buf.buf
+                alenghts[i] = buf.len
+                PyBuffer_Release(&buf)
+            else:
+                raise TypeError(f"bytes or buffer expected, got {type(obj)}")
 
     cdef Oid *atypes = NULL
     if param_types is not None:
