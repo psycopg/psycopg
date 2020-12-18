@@ -28,11 +28,19 @@ def get_user_data(data):
     """
     Get the data to save from the request data
     """
-    return {
+    out = {
         "username": data["login"],
         "avatar": data["avatar_url"],
         "name": data["name"],
     }
+    if data["blog"]:
+        website = data["blog"]
+        if not website.startswith("http"):
+            website = "http://" + website
+
+        out["website"] = website
+
+    return out
 
 
 def add_entry(opt, filedata, username):
