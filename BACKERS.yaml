@@ -1,6 +1,17 @@
 ---
 # You can find our sponsors at https://www.psycopg.org/sponsors/ Thank you!
 
+- username: postgrespro
+  tier: top
+  avatar: https://avatars0.githubusercontent.com/u/12005770?v=4
+  name: Postgres Professional
+
+- username: commandprompt
+  by: jdatcmd
+  tier: top
+  avatar: https://avatars1.githubusercontent.com/u/339156?v=4
+  name: Command Prompt, Inc.
+
 - username: genropy
   by: gporcari
   tier: top
@@ -17,12 +28,6 @@
   tier: top
   avatar: https://avatars2.githubusercontent.com/u/20042742?v=4
   name: Phenopolis
-
-- username: commandprompt
-  by: jdatcmd
-  tier: top
-  avatar: https://avatars1.githubusercontent.com/u/339156?v=4
-  name: Command Prompt, Inc.
 
 - username: mailupinc
   avatar: https://avatars1.githubusercontent.com/u/72260631?v=4
