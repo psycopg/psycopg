@@ -1,5 +1,5 @@
 from posix.fcntl cimport pid_t
-from psycopg3_c cimport libpq as impl
+from psycopg3_c.pq cimport libpq as impl
 
 ctypedef char *(*conn_bytes_f) (const impl.PGconn *)
 ctypedef int(*conn_int_f) (const impl.PGconn *)

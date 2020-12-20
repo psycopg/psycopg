@@ -16,8 +16,8 @@ from cpython.bytearray cimport PyByteArray_AS_STRING
 import logging
 from typing import List, Optional, Sequence, Tuple
 
-from psycopg3_c cimport libpq as impl
-from psycopg3_c.libpq cimport Oid
+from psycopg3_c.pq cimport libpq as impl
+from psycopg3_c.pq.libpq cimport Oid
 
 from psycopg3.pq.misc import PGnotify, ConninfoOption, PQerror, PGresAttDesc
 from psycopg3.pq.misc import error_message
