@@ -4,11 +4,9 @@ psycopg3_c.pq_cython.Escaping object implementation.
 
 # Copyright (C) 2020 The Psycopg Team
 
-from psycopg3_c.pq_cython cimport PGconn
-
 
 cdef class Escaping:
-    def __init__(self, conn: Optional[PGconn] = None):
+    def __init__(self, PGconn conn = None):
         self.conn = conn
 
     def escape_literal(self, data: "Buffer") -> memoryview:
