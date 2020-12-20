@@ -32,31 +32,20 @@ logger = logging.getLogger("psycopg3.adapt")
 
 
 cdef class CDumper:
-    cdef object _src
-    cdef object _context
-    cdef object _connection
+    cdef object src
+    cdef public object context
+    cdef public object connection
+    cdef public impl.Oid oid
     cdef PGconn _pgconn
-    cdef impl.Oid _oid
 
     def __init__(self, src: type, context: AdaptContext = None):
-        self._src = src
-        self._context = context
-        self._connection = _connection_from_context(context)
+        self.src = src
+        self.context = context
+        self.connection = _connection_from_context(context)
         self._pgconn = (
-            self._connection.pgconn if self._connection is not None else None
+            self.connection.pgconn if self.connection is not None else None
         )
-
-    @property
-    def src(self) -> type:
-        return self._src
-
-    @property
-    def context(self) -> AdaptContext:
-        return self._context
-
-    @property
-    def connection(self):
-        return self._connection
+        # oid is implicitly set to 0, subclasses may override it
 
     def dump(self, obj: Any) -> bytes:
         raise NotImplementedError()
@@ -94,12 +83,6 @@ cdef class CDumper:
 
         return rv
 
-    @property
-    def oid(self) -> int:
-        # Implicitly initialised to zero
-        # Subclasses may implement __cinit__ to set a per-class value
-        return self._oid
-
     @classmethod
     def register(
         cls,
@@ -118,26 +101,14 @@ cdef class CDumper:
 
 
 cdef class CLoader:
-    cdef impl.Oid _oid
-    cdef object _context
-    cdef object _connection
+    cdef public impl.Oid oid
+    cdef public object context
+    cdef public object connection
 
     def __init__(self, oid: int, context: "AdaptContext" = None):
-        self._oid = oid
-        self._context = context
-        self._connection = _connection_from_context(context)
-
-    @property
-    def oid(self) -> int:
-        return self._oid
-
-    @property
-    def context(self) -> AdaptContext:
-        return self._context
-
-    @property
-    def connection(self):
-        return self._connection
+        self.oid = oid
+        self.context = context
+        self.connection = _connection_from_context(context)
 
     cdef object cload(self, const char *data, size_t length):
         raise NotImplementedError()

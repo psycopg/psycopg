@@ -23,8 +23,8 @@ cdef class _StringDumper(CDumper):
         self.is_utf8 = 0
         self.encoding = "utf-8"
 
-        conn = self._connection
-        if conn:
+        conn = self.connection
+        if conn is not None:
             self._bytes_encoding = conn.client_encoding.encode("utf-8")
             self.encoding = PyBytes_AsString(self._bytes_encoding)
             if (
@@ -77,8 +77,8 @@ cdef class TextLoader(CLoader):
         self.is_utf8 = 0
         self.encoding = "utf-8"
 
-        conn = self._connection
-        if conn:
+        conn = self.connection
+        if conn is not None:
             self._bytes_encoding = conn.client_encoding.encode("utf-8")
             self.encoding = PyBytes_AsString(self._bytes_encoding)
             if self._bytes_encoding == b"utf-8":
@@ -99,7 +99,7 @@ cdef class BytesDumper(CDumper):
     cdef Escaping esc
 
     def __cinit__(self):
-        self._oid = oids.BYTEA_OID
+        self.oid = oids.BYTEA_OID
 
     def __init__(self, src: type, context: AdaptContext):
         super().__init__(src, context)

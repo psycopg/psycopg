@@ -34,12 +34,13 @@ cdef class Transformer:
     state so adapting several values of the same type can use optimisations.
     """
 
+    cdef readonly dict dumpers, loaders
+    cdef readonly object connection
+    cdef readonly str encoding
     cdef list _dumpers_maps, _loaders_maps
-    cdef dict _dumpers, _loaders, _dumpers_cache, _loaders_cache, _load_funcs
-    cdef object _connection
+    cdef dict _dumpers_cache, _loaders_cache, _load_funcs
     cdef PGresult _pgresult
     cdef int _nfields, _ntuples
-    cdef str _encoding
 
     cdef list _row_loaders
 
@@ -67,64 +68,48 @@ cdef class Transformer:
 
         cdef Transformer ctx
         if context is None:
-            self._connection = None
-            self._encoding = "utf-8"
-            self._dumpers = {}
-            self._loaders = {}
-            self._dumpers_maps = [self._dumpers]
-            self._loaders_maps = [self._loaders]
+            self.connection = None
+            self.encoding = "utf-8"
+            self.dumpers = {}
+            self.loaders = {}
+            self._dumpers_maps = [self.dumpers]
+            self._loaders_maps = [self.loaders]
 
         elif isinstance(context, Transformer):
             # A transformer created from a transformers: usually it happens
             # for nested types: share the entire state of the parent
             ctx = context
-            self._connection = ctx._connection
-            self._encoding = ctx.encoding
-            self._dumpers = ctx._dumpers
-            self._loaders = ctx._loaders
+            self.connection = ctx.connection
+            self.encoding = ctx.encoding
+            self.dumpers = ctx.dumpers
+            self.loaders = ctx.loaders
             self._dumpers_maps.extend(ctx._dumpers_maps)
             self._loaders_maps.extend(ctx._loaders_maps)
             # the global maps are already in the lists
             return
 
         elif isinstance(context, BaseCursor):
-            self._connection = context.connection
-            self._encoding = context.connection.client_encoding
-            self._dumpers = {}
+            self.connection = context.connection
+            self.encoding = context.connection.client_encoding
+            self.dumpers = {}
             self._dumpers_maps.extend(
-                (self._dumpers, context.dumpers, self.connection.dumpers)
+                (self.dumpers, context.dumpers, self.connection.dumpers)
             )
-            self._loaders = {}
+            self.loaders = {}
             self._loaders_maps.extend(
-                (self._loaders, context.loaders, self.connection.loaders)
+                (self.loaders, context.loaders, self.connection.loaders)
             )
 
         elif isinstance(context, BaseConnection):
-            self._connection = context
-            self._encoding = context.client_encoding
-            self._dumpers = {}
-            self._dumpers_maps.extend((self._dumpers, context.dumpers))
-            self._loaders = {}
-            self._loaders_maps.extend((self._loaders, context.loaders))
+            self.connection = context
+            self.encoding = context.client_encoding
+            self.dumpers = {}
+            self._dumpers_maps.extend((self.dumpers, context.dumpers))
+            self.loaders = {}
+            self._loaders_maps.extend((self.loaders, context.loaders))
 
         self._dumpers_maps.append(Dumper.globals)
         self._loaders_maps.append(Loader.globals)
-
-    @property
-    def connection(self):
-        return self._connection
-
-    @property
-    def encoding(self):
-        return self._encoding
-
-    @property
-    def dumpers(self):
-        return self._dumpers
-
-    @property
-    def loaders(self):
-        return self._loaders
 
     @property
     def pgresult(self) -> Optional[PGresult]:

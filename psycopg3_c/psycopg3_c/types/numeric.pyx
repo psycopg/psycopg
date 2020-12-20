@@ -23,7 +23,7 @@ cdef extern from "Python.h":
 cdef class IntDumper(CDumper):
 
     def __cinit__(self):
-        self._oid = oids.INT8_OID
+        self.oid = oids.INT8_OID
 
     def __init__(self, src: type, context: AdaptContext = None):
         super().__init__(src, context)
