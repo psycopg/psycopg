@@ -41,7 +41,7 @@ def version():
     return impl.PQlibVersion()
 
 
-cdef void notice_receiver(void *arg, const impl.PGresult *res_ptr):
+cdef void notice_receiver(void *arg, const impl.PGresult *res_ptr) with gil:
     cdef PGconn pgconn = <object>arg
     if pgconn.notice_handler is None:
         return
@@ -401,7 +401,10 @@ cdef class PGconn:
             raise PQerror(f"consuming input failed: {error_message(self)}")
 
     def is_busy(self) -> int:
-        return impl.PQisBusy(self.pgconn_ptr)
+        cdef int rv
+        with nogil:
+            rv = impl.PQisBusy(self.pgconn_ptr)
+        return rv
 
     @property
     def nonblocking(self) -> int:
@@ -425,7 +428,10 @@ cdef class PGconn:
         return PGcancel._from_ptr(ptr)
 
     def notifies(self) -> Optional[PGnotify]:
-        cdef impl.PGnotify *ptr = impl.PQnotifies(self.pgconn_ptr)
+        cdef impl.PGnotify *ptr
+        with nogil:
+            ptr = impl.PQnotifies(self.pgconn_ptr)
+
         if ptr:
             ret = PGnotify(ptr.relname, ptr.be_pid, ptr.extra)
             impl.PQfreemem(ptr)

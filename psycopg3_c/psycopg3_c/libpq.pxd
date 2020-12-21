@@ -224,8 +224,8 @@ cdef extern from "libpq-fe.h":
     int PQsendDescribePrepared(PGconn *conn, const char *stmtName)
     int PQsendDescribePortal(PGconn *conn, const char *portalName)
     PGresult *PQgetResult(PGconn *conn)
-    int PQconsumeInput(PGconn *conn)
-    int PQisBusy(PGconn *conn)
+    int PQconsumeInput(PGconn *conn) nogil
+    int PQisBusy(PGconn *conn) nogil
     int PQsetnonblocking(PGconn *conn, int arg)
     int PQisnonblocking(const PGconn *conn)
     int PQflush(PGconn *conn)
@@ -236,7 +236,7 @@ cdef extern from "libpq-fe.h":
     int PQcancel(PGcancel *cancel, char *errbuf, int errbufsize)
 
     # 33.8. Asynchronous Notification
-    PGnotify *PQnotifies(PGconn *conn)
+    PGnotify *PQnotifies(PGconn *conn) nogil
 
     # 33.9. Functions Associated with the COPY Command
     int PQputCopyData(PGconn *conn, const char *buffer, int nbytes)
@@ -244,7 +244,7 @@ cdef extern from "libpq-fe.h":
     int PQgetCopyData(PGconn *conn, char **buffer, int async)
 
     # 33.11. Miscellaneous Functions
-    void PQfreemem(void *ptr)
+    void PQfreemem(void *ptr) nogil
     void PQconninfoFree(PQconninfoOption *connOptions)
     PGresult *PQmakeEmptyPGresult(PGconn *conn, ExecStatusType status)
     int PQsetResultAttrs(PGresult *res, int numAttributes, PGresAttDesc *attDescs)

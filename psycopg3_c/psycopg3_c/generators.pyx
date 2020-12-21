@@ -70,6 +70,8 @@ def execute(PGconn pgconn) -> PQGen[List[pq.proto.PGresult]]:
     cdef libpq.PGconn *pgconn_ptr = pgconn.pgconn_ptr
     cdef int status
     cdef libpq.PGnotify *notify
+    cdef libpq.PGresult *pgres
+    cdef int cires, ibres
 
     # Start the generator by sending the connection fd, which won't change
     # during the query process.
@@ -82,19 +84,26 @@ def execute(PGconn pgconn) -> PQGen[List[pq.proto.PGresult]]:
 
         status = yield WAIT_RW
         if status & READY_R:
-            # This call may read notifies which will be saved in the
-            # PGconn buffer and passed to Python later.
-            if 1 != libpq.PQconsumeInput(pgconn_ptr):
+            with nogil:
+                # This call may read notifies which will be saved in the
+                # PGconn buffer and passed to Python later.
+                cires = libpq.PQconsumeInput(pgconn_ptr)
+            if 1 != cires:
                 raise pq.PQerror(
                     f"consuming input failed: {pq.error_message(pgconn)}")
         continue
 
     # Fetching the result
     while 1:
-        if 1 != libpq.PQconsumeInput(pgconn_ptr):
+        with nogil:
+            cires = libpq.PQconsumeInput(pgconn_ptr)
+            if cires == 1:
+                ibres = libpq.PQisBusy(pgconn_ptr)
+
+        if 1 != cires:
             raise pq.PQerror(
                 f"consuming input failed: {pq.error_message(pgconn)}")
-        if libpq.PQisBusy(pgconn_ptr):
+        if ibres:
             yield WAIT_R
             continue
 
@@ -112,12 +121,12 @@ def execute(PGconn pgconn) -> PQGen[List[pq.proto.PGresult]]:
                     break
                 libpq.PQfreemem(notify)
 
-        res = libpq.PQgetResult(pgconn_ptr)
-        if res is NULL:
+        pgres = libpq.PQgetResult(pgconn_ptr)
+        if pgres is NULL:
             break
-        results.append(PGresult._from_ptr(res))
+        results.append(PGresult._from_ptr(pgres))
 
-        status = libpq.PQresultStatus(res)
+        status = libpq.PQresultStatus(pgres)
         if status in (libpq.PGRES_COPY_IN, libpq.PGRES_COPY_OUT, libpq.PGRES_COPY_BOTH):
             # After entering copy mode the libpq will create a phony result
             # for every request so let's break the endless loop.
