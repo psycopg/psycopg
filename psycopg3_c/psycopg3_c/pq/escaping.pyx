@@ -26,7 +26,7 @@ cdef class Escaping:
 
         _buffer_as_string_and_size(data, &ptr, &length)
 
-        out = impl.PQescapeLiteral(self.conn.pgconn_ptr, ptr, length)
+        out = libpq.PQescapeLiteral(self.conn.pgconn_ptr, ptr, length)
         if out is NULL:
             raise PQerror(
                 f"escape_literal failed: {error_message(self.conn)}"
@@ -46,7 +46,7 @@ cdef class Escaping:
         if self.conn.pgconn_ptr is NULL:
             raise PQerror("the connection is closed")
 
-        out = impl.PQescapeIdentifier(self.conn.pgconn_ptr, ptr, length)
+        out = libpq.PQescapeIdentifier(self.conn.pgconn_ptr, ptr, length)
         if out is NULL:
             raise PQerror(
                 f"escape_identifier failed: {error_message(self.conn)}"
@@ -70,7 +70,7 @@ cdef class Escaping:
             if self.conn.pgconn_ptr is NULL:
                 raise PQerror("the connection is closed")
 
-            len_out = impl.PQescapeStringConn(
+            len_out = libpq.PQescapeStringConn(
                 self.conn.pgconn_ptr, PyByteArray_AS_STRING(rv),
                 ptr, length, &error
             )
@@ -80,7 +80,7 @@ cdef class Escaping:
                 )
 
         else:
-            len_out = impl.PQescapeString(PyByteArray_AS_STRING(rv), ptr, length)
+            len_out = libpq.PQescapeString(PyByteArray_AS_STRING(rv), ptr, length)
 
         # shrink back or the length will be reported different
         PyByteArray_Resize(rv, len_out)
@@ -98,10 +98,10 @@ cdef class Escaping:
         _buffer_as_string_and_size(data, &ptr, &length)
 
         if self.conn is not None:
-            out = impl.PQescapeByteaConn(
+            out = libpq.PQescapeByteaConn(
                 self.conn.pgconn_ptr, <unsigned char *>ptr, length, &len_out)
         else:
-            out = impl.PQescapeBytea(<unsigned char *>ptr, length, &len_out)
+            out = libpq.PQescapeBytea(<unsigned char *>ptr, length, &len_out)
 
         if out is NULL:
             raise MemoryError(
@@ -120,7 +120,7 @@ cdef class Escaping:
                 raise PQerror("the connection is closed")
 
         cdef size_t len_out
-        cdef unsigned char *out = impl.PQunescapeBytea(data, &len_out)
+        cdef unsigned char *out = libpq.PQunescapeBytea(data, &len_out)
         if out is NULL:
             raise MemoryError(
                 f"couldn't allocate for unescape_bytea of {len(data)} bytes"

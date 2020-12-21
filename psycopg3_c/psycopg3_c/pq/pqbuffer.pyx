@@ -26,7 +26,7 @@ cdef class PQBuffer:
 
     def __dealloc__(self):
         if self.buf:
-            impl.PQfreemem(self.buf)
+            libpq.PQfreemem(self.buf)
 
     def __repr__(self):
         return (

@@ -18,11 +18,11 @@ logger = logging.getLogger('psycopg3')
 
 cdef class PGconn:
     @staticmethod
-    cdef PGconn _from_ptr(impl.PGconn *ptr):
+    cdef PGconn _from_ptr(libpq.PGconn *ptr):
         cdef PGconn rv = PGconn.__new__(PGconn)
         rv.pgconn_ptr = ptr
 
-        impl.PQsetNoticeReceiver(ptr, notice_receiver, <void *>rv)
+        libpq.PQsetNoticeReceiver(ptr, notice_receiver, <void *>rv)
         return rv
 
     def __cinit__(self):
@@ -37,7 +37,7 @@ cdef class PGconn:
 
     @classmethod
     def connect(cls, const char *conninfo) -> PGconn:
-        cdef impl.PGconn* pgconn = impl.PQconnectdb(conninfo)
+        cdef libpq.PGconn* pgconn = libpq.PQconnectdb(conninfo)
         if not pgconn:
             raise MemoryError("couldn't allocate PGconn")
 
@@ -45,19 +45,19 @@ cdef class PGconn:
 
     @classmethod
     def connect_start(cls, const char *conninfo) -> PGconn:
-        cdef impl.PGconn* pgconn = impl.PQconnectStart(conninfo)
+        cdef libpq.PGconn* pgconn = libpq.PQconnectStart(conninfo)
         if not pgconn:
             raise MemoryError("couldn't allocate PGconn")
 
         return PGconn._from_ptr(pgconn)
 
     def connect_poll(self) -> PollingStatus:
-        cdef int rv = self._call_int(<conn_int_f>impl.PQconnectPoll)
+        cdef int rv = self._call_int(<conn_int_f>libpq.PQconnectPoll)
         return PollingStatus(rv)
 
     def finish(self) -> None:
         if self.pgconn_ptr is not NULL:
-            impl.PQfinish(self.pgconn_ptr)
+            libpq.PQfinish(self.pgconn_ptr)
             self.pgconn_ptr = NULL
 
     @property
@@ -70,45 +70,45 @@ cdef class PGconn:
     @property
     def info(self) -> List["ConninfoOption"]:
         self._ensure_pgconn()
-        cdef impl.PQconninfoOption *opts = impl.PQconninfo(self.pgconn_ptr)
+        cdef libpq.PQconninfoOption *opts = libpq.PQconninfo(self.pgconn_ptr)
         if opts is NULL:
             raise MemoryError("couldn't allocate connection info")
         rv = _options_from_array(opts)
-        impl.PQconninfoFree(opts)
+        libpq.PQconninfoFree(opts)
         return rv
 
     def reset(self) -> None:
         self._ensure_pgconn()
-        impl.PQreset(self.pgconn_ptr)
+        libpq.PQreset(self.pgconn_ptr)
 
     def reset_start(self) -> None:
-        if not impl.PQresetStart(self.pgconn_ptr):
+        if not libpq.PQresetStart(self.pgconn_ptr):
             raise PQerror("couldn't reset connection")
 
     def reset_poll(self) -> PollingStatus:
-        cdef int rv = self._call_int(<conn_int_f>impl.PQresetPoll)
+        cdef int rv = self._call_int(<conn_int_f>libpq.PQresetPoll)
         return PollingStatus(rv)
 
     @classmethod
     def ping(self, const char *conninfo) -> Ping:
-        cdef int rv = impl.PQping(conninfo)
+        cdef int rv = libpq.PQping(conninfo)
         return Ping(rv)
 
     @property
     def db(self) -> bytes:
-        return self._call_bytes(impl.PQdb)
+        return self._call_bytes(libpq.PQdb)
 
     @property
     def user(self) -> bytes:
-        return self._call_bytes(impl.PQuser)
+        return self._call_bytes(libpq.PQuser)
 
     @property
     def password(self) -> bytes:
-        return self._call_bytes(impl.PQpass)
+        return self._call_bytes(libpq.PQpass)
 
     @property
     def host(self) -> bytes:
-        return self._call_bytes(impl.PQhost)
+        return self._call_bytes(libpq.PQhost)
 
     @property
     def hostaddr(self) -> bytes:
@@ -116,29 +116,29 @@ cdef class PGconn:
 
     @property
     def port(self) -> bytes:
-        return self._call_bytes(impl.PQport)
+        return self._call_bytes(libpq.PQport)
 
     @property
     def tty(self) -> bytes:
-        return self._call_bytes(impl.PQtty)
+        return self._call_bytes(libpq.PQtty)
 
     @property
     def options(self) -> bytes:
-        return self._call_bytes(impl.PQoptions)
+        return self._call_bytes(libpq.PQoptions)
 
     @property
     def status(self) -> ConnStatus:
-        cdef int rv = impl.PQstatus(self.pgconn_ptr)
+        cdef int rv = libpq.PQstatus(self.pgconn_ptr)
         return ConnStatus(rv)
 
     @property
     def transaction_status(self) -> TransactionStatus:
-        cdef int rv = impl.PQtransactionStatus(self.pgconn_ptr)
+        cdef int rv = libpq.PQtransactionStatus(self.pgconn_ptr)
         return TransactionStatus(rv)
 
     def parameter_status(self, name: bytes) -> Optional[bytes]:
         self._ensure_pgconn()
-        cdef const char *rv = impl.PQparameterStatus(self.pgconn_ptr, name)
+        cdef const char *rv = libpq.PQparameterStatus(self.pgconn_ptr, name)
         if rv is not NULL:
             return rv
         else:
@@ -146,39 +146,39 @@ cdef class PGconn:
 
     @property
     def error_message(self) -> bytes:
-        return impl.PQerrorMessage(self.pgconn_ptr)
+        return libpq.PQerrorMessage(self.pgconn_ptr)
 
     @property
     def protocol_version(self) -> int:
-        return self._call_int(impl.PQprotocolVersion)
+        return self._call_int(libpq.PQprotocolVersion)
 
     @property
     def server_version(self) -> int:
-        return self._call_int(impl.PQserverVersion)
+        return self._call_int(libpq.PQserverVersion)
 
     @property
     def socket(self) -> int:
-        return self._call_int(impl.PQsocket)
+        return self._call_int(libpq.PQsocket)
 
     @property
     def backend_pid(self) -> int:
-        return self._call_int(impl.PQbackendPID)
+        return self._call_int(libpq.PQbackendPID)
 
     @property
     def needs_password(self) -> bool:
-        return bool(self._call_int(impl.PQconnectionNeedsPassword))
+        return bool(self._call_int(libpq.PQconnectionNeedsPassword))
 
     @property
     def used_password(self) -> bool:
-        return bool(self._call_int(impl.PQconnectionUsedPassword))
+        return bool(self._call_int(libpq.PQconnectionUsedPassword))
 
     @property
     def ssl_in_use(self) -> bool:
-        return bool(self._call_int(<conn_int_f>impl.PQsslInUse))
+        return bool(self._call_int(<conn_int_f>libpq.PQsslInUse))
 
     def exec_(self, command: bytes) -> PGresult:
         self._ensure_pgconn()
-        cdef impl.PGresult *pgresult = impl.PQexec(self.pgconn_ptr, command)
+        cdef libpq.PGresult *pgresult = libpq.PQexec(self.pgconn_ptr, command)
         if pgresult is NULL:
             raise MemoryError("couldn't allocate PGresult")
 
@@ -186,7 +186,7 @@ cdef class PGconn:
 
     def send_query(self, command: bytes) -> None:
         self._ensure_pgconn()
-        if not impl.PQsendQuery(self.pgconn_ptr, command):
+        if not libpq.PQsendQuery(self.pgconn_ptr, command):
             raise PQerror(f"sending query failed: {error_message(self)}")
 
     def exec_params(
@@ -207,7 +207,7 @@ cdef class PGconn:
         cnparams, ctypes, cvalues, clengths, cformats = _query_params_args(
             param_values, param_types, param_formats)
 
-        cdef impl.PGresult *pgresult = impl.PQexecParams(
+        cdef libpq.PGresult *pgresult = libpq.PQexecParams(
             self.pgconn_ptr, command, cnparams, ctypes,
             <const char *const *>cvalues, clengths, cformats, result_format)
         _clear_query_params(ctypes, cvalues, clengths, cformats)
@@ -233,7 +233,7 @@ cdef class PGconn:
         cnparams, ctypes, cvalues, clengths, cformats = _query_params_args(
             param_values, param_types, param_formats)
 
-        cdef int rv = impl.PQsendQueryParams(
+        cdef int rv = libpq.PQsendQueryParams(
             self.pgconn_ptr, command, cnparams, ctypes,
             <const char *const *>cvalues,
             clengths, cformats, result_format)
@@ -259,7 +259,7 @@ cdef class PGconn:
             for i in range(nparams):
                 atypes[i] = param_types[i]
 
-        cdef int rv = impl.PQsendPrepare(
+        cdef int rv = libpq.PQsendPrepare(
             self.pgconn_ptr, name, command, nparams, atypes
         )
         PyMem_Free(atypes)
@@ -285,7 +285,7 @@ cdef class PGconn:
         cnparams, ctypes, cvalues, clengths, cformats = _query_params_args(
             param_values, None, param_formats)
 
-        cdef int rv = impl.PQsendQueryPrepared(
+        cdef int rv = libpq.PQsendQueryPrepared(
             self.pgconn_ptr, name, cnparams,
             <const char *const *>cvalues,
             clengths, cformats, result_format)
@@ -311,7 +311,7 @@ cdef class PGconn:
             for i in range(nparams):
                 atypes[i] = param_types[i]
 
-        cdef impl.PGresult *rv = impl.PQprepare(
+        cdef libpq.PGresult *rv = libpq.PQprepare(
             self.pgconn_ptr, name, command, nparams, atypes)
         PyMem_Free(atypes)
         if rv is NULL:
@@ -335,7 +335,7 @@ cdef class PGconn:
         cnparams, ctypes, cvalues, clengths, cformats = _query_params_args(
             param_values, None, param_formats)
 
-        cdef impl.PGresult *rv = impl.PQexecPrepared(
+        cdef libpq.PGresult *rv = libpq.PQexecPrepared(
             self.pgconn_ptr, name, cnparams,
             <const char *const *>cvalues,
             clengths, cformats, result_format)
@@ -347,62 +347,62 @@ cdef class PGconn:
 
     def describe_prepared(self, name: bytes) -> PGresult:
         self._ensure_pgconn()
-        cdef impl.PGresult *rv = impl.PQdescribePrepared(self.pgconn_ptr, name)
+        cdef libpq.PGresult *rv = libpq.PQdescribePrepared(self.pgconn_ptr, name)
         if rv is NULL:
             raise MemoryError("couldn't allocate PGresult")
         return PGresult._from_ptr(rv)
 
     def describe_portal(self, name: bytes) -> PGresult:
         self._ensure_pgconn()
-        cdef impl.PGresult *rv = impl.PQdescribePortal(self.pgconn_ptr, name)
+        cdef libpq.PGresult *rv = libpq.PQdescribePortal(self.pgconn_ptr, name)
         if rv is NULL:
             raise MemoryError("couldn't allocate PGresult")
         return PGresult._from_ptr(rv)
 
     def get_result(self) -> Optional["PGresult"]:
-        cdef impl.PGresult *pgresult = impl.PQgetResult(self.pgconn_ptr)
+        cdef libpq.PGresult *pgresult = libpq.PQgetResult(self.pgconn_ptr)
         if pgresult is NULL:
             return None
         return PGresult._from_ptr(pgresult)
 
     def consume_input(self) -> None:
-        if 1 != impl.PQconsumeInput(self.pgconn_ptr):
+        if 1 != libpq.PQconsumeInput(self.pgconn_ptr):
             raise PQerror(f"consuming input failed: {error_message(self)}")
 
     def is_busy(self) -> int:
         cdef int rv
         with nogil:
-            rv = impl.PQisBusy(self.pgconn_ptr)
+            rv = libpq.PQisBusy(self.pgconn_ptr)
         return rv
 
     @property
     def nonblocking(self) -> int:
-        return impl.PQisnonblocking(self.pgconn_ptr)
+        return libpq.PQisnonblocking(self.pgconn_ptr)
 
     @nonblocking.setter
     def nonblocking(self, arg: int) -> None:
-        if 0 > impl.PQsetnonblocking(self.pgconn_ptr, arg):
+        if 0 > libpq.PQsetnonblocking(self.pgconn_ptr, arg):
             raise PQerror(f"setting nonblocking failed: {error_message(self)}")
 
     def flush(self) -> int:
-        cdef int rv = impl.PQflush(self.pgconn_ptr)
+        cdef int rv = libpq.PQflush(self.pgconn_ptr)
         if rv < 0:
             raise PQerror(f"flushing failed:{error_message(self)}")
         return rv
 
     def get_cancel(self) -> PGcancel:
-        cdef impl.PGcancel *ptr = impl.PQgetCancel(self.pgconn_ptr)
+        cdef libpq.PGcancel *ptr = libpq.PQgetCancel(self.pgconn_ptr)
         if not ptr:
             raise PQerror("couldn't create cancel object")
         return PGcancel._from_ptr(ptr)
 
     def notifies(self) -> Optional[PGnotify]:
-        cdef impl.PGnotify *ptr
+        cdef libpq.PGnotify *ptr
         with nogil:
-            ptr = impl.PQnotifies(self.pgconn_ptr)
+            ptr = libpq.PQnotifies(self.pgconn_ptr)
         if ptr:
             ret = PGnotify(ptr.relname, ptr.be_pid, ptr.extra)
-            impl.PQfreemem(ptr)
+            libpq.PQfreemem(ptr)
             return ret
         else:
             return None
@@ -411,7 +411,7 @@ cdef class PGconn:
         cdef int rv
         cdef const char *cbuffer = PyBytes_AsString(buffer)
         cdef int length = len(buffer)
-        rv = impl.PQputCopyData(self.pgconn_ptr, cbuffer, length)
+        rv = libpq.PQputCopyData(self.pgconn_ptr, cbuffer, length)
         if rv < 0:
             raise PQerror(f"sending copy data failed: {error_message(self)}")
         return rv
@@ -421,7 +421,7 @@ cdef class PGconn:
         cdef const char *cerr = NULL
         if error is not None:
             cerr = PyBytes_AsString(error)
-        rv = impl.PQputCopyEnd(self.pgconn_ptr, cerr)
+        rv = libpq.PQputCopyEnd(self.pgconn_ptr, cerr)
         if rv < 0:
             raise PQerror(f"sending copy end failed: {error_message(self)}")
         return rv
@@ -429,19 +429,19 @@ cdef class PGconn:
     def get_copy_data(self, async_: int) -> Tuple[int, bytes]:
         cdef char *buffer_ptr = NULL
         cdef int nbytes
-        nbytes = impl.PQgetCopyData(self.pgconn_ptr, &buffer_ptr, async_)
+        nbytes = libpq.PQgetCopyData(self.pgconn_ptr, &buffer_ptr, async_)
         if nbytes == -2:
             raise PQerror(f"receiving copy data failed: {error_message(self)}")
         if buffer_ptr is not NULL:
             # TODO: do it without copy
             data = buffer_ptr[:nbytes]
-            impl.PQfreemem(buffer_ptr)
+            libpq.PQfreemem(buffer_ptr)
             return nbytes, data
         else:
             return nbytes, b""
 
     def make_empty_result(self, exec_status: ExecStatus) -> PGresult:
-        cdef impl.PGresult *rv = impl.PQmakeEmptyPGresult(
+        cdef libpq.PGresult *rv = libpq.PQmakeEmptyPGresult(
             self.pgconn_ptr, exec_status)
         if not rv:
             raise MemoryError("couldn't allocate empty PGresult")
@@ -472,12 +472,12 @@ cdef class PGconn:
         return func(self.pgconn_ptr)
 
 
-cdef void notice_receiver(void *arg, const impl.PGresult *res_ptr) with gil:
+cdef void notice_receiver(void *arg, const libpq.PGresult *res_ptr) with gil:
     cdef PGconn pgconn = <object>arg
     if pgconn.notice_handler is None:
         return
 
-    cdef PGresult res = PGresult._from_ptr(<impl.PGresult *>res_ptr)
+    cdef PGresult res = PGresult._from_ptr(<libpq.PGresult *>res_ptr)
     try:
         pgconn.notice_handler(res)
     except Exception as e:

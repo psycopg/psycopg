@@ -1,19 +1,19 @@
 from posix.fcntl cimport pid_t
-from psycopg3_c.pq cimport libpq as impl
+from psycopg3_c.pq cimport libpq
 
-ctypedef char *(*conn_bytes_f) (const impl.PGconn *)
-ctypedef int(*conn_int_f) (const impl.PGconn *)
+ctypedef char *(*conn_bytes_f) (const libpq.PGconn *)
+ctypedef int(*conn_int_f) (const libpq.PGconn *)
 
 
 cdef class PGconn:
-    cdef impl.PGconn* pgconn_ptr
+    cdef libpq.PGconn* pgconn_ptr
     cdef object __weakref__
     cdef public object notice_handler
     cdef public object notify_handler
     cdef pid_t _procpid
 
     @staticmethod
-    cdef PGconn _from_ptr(impl.PGconn *ptr)
+    cdef PGconn _from_ptr(libpq.PGconn *ptr)
 
     cdef int _ensure_pgconn(self) except 0
     cdef char *_call_bytes(self, conn_bytes_f func) except NULL
@@ -21,17 +21,17 @@ cdef class PGconn:
 
 
 cdef class PGresult:
-    cdef impl.PGresult* pgresult_ptr
+    cdef libpq.PGresult* pgresult_ptr
 
     @staticmethod
-    cdef PGresult _from_ptr(impl.PGresult *ptr)
+    cdef PGresult _from_ptr(libpq.PGresult *ptr)
 
 
 cdef class PGcancel:
-    cdef impl.PGcancel* pgcancel_ptr
+    cdef libpq.PGcancel* pgcancel_ptr
 
     @staticmethod
-    cdef PGcancel _from_ptr(impl.PGcancel *ptr)
+    cdef PGcancel _from_ptr(libpq.PGcancel *ptr)
 
 
 cdef class Escaping:

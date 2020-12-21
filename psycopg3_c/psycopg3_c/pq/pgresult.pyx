@@ -14,7 +14,7 @@ cdef class PGresult:
         self.pgresult_ptr = NULL
 
     @staticmethod
-    cdef PGresult _from_ptr(impl.PGresult *ptr):
+    cdef PGresult _from_ptr(libpq.PGresult *ptr):
         cdef PGresult rv = PGresult.__new__(PGresult)
         rv.pgresult_ptr = ptr
         return rv
@@ -24,7 +24,7 @@ cdef class PGresult:
 
     def clear(self) -> None:
         if self.pgresult_ptr is not NULL:
-            impl.PQclear(self.pgresult_ptr)
+            libpq.PQclear(self.pgresult_ptr)
             self.pgresult_ptr = NULL
 
     @property
@@ -36,15 +36,15 @@ cdef class PGresult:
 
     @property
     def status(self) -> ExecStatus:
-        cdef int rv = impl.PQresultStatus(self.pgresult_ptr)
+        cdef int rv = libpq.PQresultStatus(self.pgresult_ptr)
         return ExecStatus(rv)
 
     @property
     def error_message(self) -> bytes:
-        return impl.PQresultErrorMessage(self.pgresult_ptr)
+        return libpq.PQresultErrorMessage(self.pgresult_ptr)
 
     def error_field(self, fieldcode: DiagnosticField) -> Optional[bytes]:
-        cdef char * rv = impl.PQresultErrorField(self.pgresult_ptr, fieldcode)
+        cdef char * rv = libpq.PQresultErrorField(self.pgresult_ptr, fieldcode)
         if rv is not NULL:
             return rv
         else:
@@ -52,68 +52,68 @@ cdef class PGresult:
 
     @property
     def ntuples(self) -> int:
-        return impl.PQntuples(self.pgresult_ptr)
+        return libpq.PQntuples(self.pgresult_ptr)
 
     @property
     def nfields(self) -> int:
-        return impl.PQnfields(self.pgresult_ptr)
+        return libpq.PQnfields(self.pgresult_ptr)
 
     def fname(self, column_number: int) -> Optional[bytes]:
-        cdef char *rv = impl.PQfname(self.pgresult_ptr, column_number)
+        cdef char *rv = libpq.PQfname(self.pgresult_ptr, column_number)
         if rv is not NULL:
             return rv
         else:
             return None
 
     def ftable(self, column_number: int) -> int:
-        return impl.PQftable(self.pgresult_ptr, column_number)
+        return libpq.PQftable(self.pgresult_ptr, column_number)
 
     def ftablecol(self, column_number: int) -> int:
-        return impl.PQftablecol(self.pgresult_ptr, column_number)
+        return libpq.PQftablecol(self.pgresult_ptr, column_number)
 
     def fformat(self, column_number: int) -> Format:
-        return Format(impl.PQfformat(self.pgresult_ptr, column_number))
+        return Format(libpq.PQfformat(self.pgresult_ptr, column_number))
 
     def ftype(self, column_number: int) -> int:
-        return impl.PQftype(self.pgresult_ptr, column_number)
+        return libpq.PQftype(self.pgresult_ptr, column_number)
 
     def fmod(self, column_number: int) -> int:
-        return impl.PQfmod(self.pgresult_ptr, column_number)
+        return libpq.PQfmod(self.pgresult_ptr, column_number)
 
     def fsize(self, column_number: int) -> int:
-        return impl.PQfsize(self.pgresult_ptr, column_number)
+        return libpq.PQfsize(self.pgresult_ptr, column_number)
 
     @property
     def binary_tuples(self) -> Format:
-        return Format(impl.PQbinaryTuples(self.pgresult_ptr))
+        return Format(libpq.PQbinaryTuples(self.pgresult_ptr))
 
     def get_value(
         self, row_number: int, column_number: int
     ) -> Optional[bytes]:
         cdef int crow = row_number
         cdef int ccol = column_number
-        cdef int length = impl.PQgetlength(self.pgresult_ptr, crow, ccol)
+        cdef int length = libpq.PQgetlength(self.pgresult_ptr, crow, ccol)
         cdef char *v;
         if length:
-            v = impl.PQgetvalue(self.pgresult_ptr, crow, ccol)
+            v = libpq.PQgetvalue(self.pgresult_ptr, crow, ccol)
             # TODO: avoid copy
             return v[:length]
         else:
-            if impl.PQgetisnull(self.pgresult_ptr, crow, ccol):
+            if libpq.PQgetisnull(self.pgresult_ptr, crow, ccol):
                 return None
             else:
                 return b""
 
     @property
     def nparams(self) -> int:
-        return impl.PQnparams(self.pgresult_ptr)
+        return libpq.PQnparams(self.pgresult_ptr)
 
     def param_type(self, param_number: int) -> int:
-        return impl.PQparamtype(self.pgresult_ptr, param_number)
+        return libpq.PQparamtype(self.pgresult_ptr, param_number)
 
     @property
     def command_status(self) -> Optional[bytes]:
-        cdef char *rv = impl.PQcmdStatus(self.pgresult_ptr)
+        cdef char *rv = libpq.PQcmdStatus(self.pgresult_ptr)
         if rv is not NULL:
             return rv
         else:
@@ -121,7 +121,7 @@ cdef class PGresult:
 
     @property
     def command_tuples(self) -> Optional[int]:
-        cdef char *rv = impl.PQcmdTuples(self.pgresult_ptr)
+        cdef char *rv = libpq.PQcmdTuples(self.pgresult_ptr)
         if rv is NULL:
             return None
         cdef bytes brv = rv
@@ -129,12 +129,12 @@ cdef class PGresult:
 
     @property
     def oid_value(self) -> int:
-        return impl.PQoidValue(self.pgresult_ptr)
+        return libpq.PQoidValue(self.pgresult_ptr)
 
     def set_attributes(self, descriptions: List[PGresAttDesc]):
         cdef int num = len(descriptions)
-        cdef impl.PGresAttDesc *attrs = <impl.PGresAttDesc *>PyMem_Malloc(
-            num * sizeof(impl.PGresAttDesc))
+        cdef libpq.PGresAttDesc *attrs = <libpq.PGresAttDesc *>PyMem_Malloc(
+            num * sizeof(libpq.PGresAttDesc))
 
         for i in range(num):
             descr = descriptions[i]
@@ -146,7 +146,7 @@ cdef class PGresult:
             attrs[i].typlen = descr.typlen
             attrs[i].atttypmod = descr.atttypmod
 
-        cdef int res = impl.PQsetResultAttrs(self.pgresult_ptr, num, attrs);
+        cdef int res = libpq.PQsetResultAttrs(self.pgresult_ptr, num, attrs);
         PyMem_Free(attrs)
         if (res == 0):
             raise PQerror("PQsetResultAttrs failed")
