@@ -60,6 +60,9 @@ class psycopg3_build_ext(build_ext):
             self.distribution.ext_modules = cythonize(
                 self.distribution.ext_modules,
                 language_level=3,
+                compiler_directives={
+                    "always_allow_keywords": False,
+                },
                 annotate=False,  # enable to get an html view of the C module
             )
         else:
