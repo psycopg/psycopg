@@ -4,6 +4,10 @@ psycopg3_c.pq_cython.Escaping object implementation.
 
 # Copyright (C) 2020 The Psycopg Team
 
+from libc.string cimport strlen
+from cpython.bytearray cimport PyByteArray_FromStringAndSize, PyByteArray_Resize
+from cpython.bytearray cimport PyByteArray_AS_STRING
+
 
 cdef class Escaping:
     def __init__(self, PGconn conn = None):

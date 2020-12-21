@@ -4,6 +4,17 @@ psycopg3_c.pq_cython.PGconn object implementation.
 
 # Copyright (C) 2020 The Psycopg Team
 
+from posix.unistd cimport getpid
+from cpython.mem cimport PyMem_Malloc, PyMem_Free
+from cpython.bytes cimport PyBytes_AsString
+
+import logging
+
+from psycopg3_c.pq.libpq cimport Oid
+from psycopg3.pq.misc import PGnotify
+
+logger = logging.getLogger('psycopg3')
+
 
 cdef class PGconn:
     @staticmethod
@@ -544,27 +555,3 @@ cdef void _clear_query_params(
     PyMem_Free(<char **>cvalues)
     PyMem_Free(clenghts)
     PyMem_Free(cformats)
-
-
-cdef _options_from_array(impl.PQconninfoOption *opts):
-    rv = []
-    cdef int i = 0
-    cdef impl.PQconninfoOption* opt
-    while 1:
-        opt = opts + i
-        if opt.keyword is NULL:
-            break
-        rv.append(
-            ConninfoOption(
-                keyword=opt.keyword,
-                envvar=opt.envvar if opt.envvar is not NULL else None,
-                compiled=opt.compiled if opt.compiled is not NULL else None,
-                val=opt.val if opt.val is not NULL else None,
-                label=opt.label if opt.label is not NULL else None,
-                dispchar=opt.dispchar if opt.dispchar is not NULL else None,
-                dispsize=opt.dispsize,
-            )
-        )
-        i += 1
-
-    return rv

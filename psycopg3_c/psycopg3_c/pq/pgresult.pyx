@@ -4,6 +4,10 @@ psycopg3_c.pq_cython.PGresult object implementation.
 
 # Copyright (C) 2020 The Psycopg Team
 
+from cpython.mem cimport PyMem_Malloc, PyMem_Free
+
+from psycopg3.pq.misc import PGresAttDesc
+
 
 cdef class PGresult:
     def __cinit__(self):

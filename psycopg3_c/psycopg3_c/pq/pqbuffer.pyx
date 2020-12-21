@@ -4,6 +4,10 @@ PQbuffer object implementation.
 
 # Copyright (C) 2020 The Psycopg Team
 
+from cpython.bytes cimport PyBytes_AsStringAndSize
+from cpython.buffer cimport PyObject_CheckBuffer, PyBUF_SIMPLE
+from cpython.buffer cimport PyObject_GetBuffer, PyBuffer_Release
+
 
 cdef class PQBuffer:
     """
