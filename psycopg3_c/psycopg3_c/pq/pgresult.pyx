@@ -93,7 +93,7 @@ cdef class PGresult:
         cdef int crow = row_number
         cdef int ccol = column_number
         cdef int length = libpq.PQgetlength(self.pgresult_ptr, crow, ccol)
-        cdef char *v;
+        cdef char *v
         if length:
             v = libpq.PQgetvalue(self.pgresult_ptr, crow, ccol)
             # TODO: avoid copy
@@ -146,7 +146,7 @@ cdef class PGresult:
             attrs[i].typlen = descr.typlen
             attrs[i].atttypmod = descr.atttypmod
 
-        cdef int res = libpq.PQsetResultAttrs(self.pgresult_ptr, num, attrs);
+        cdef int res = libpq.PQsetResultAttrs(self.pgresult_ptr, num, attrs)
         PyMem_Free(attrs)
         if (res == 0):
             raise PQerror("PQsetResultAttrs failed")

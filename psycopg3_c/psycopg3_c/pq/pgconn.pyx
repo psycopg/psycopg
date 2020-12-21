@@ -202,7 +202,7 @@ cdef class PGconn:
         cdef int cnparams
         cdef Oid *ctypes
         cdef char *const *cvalues
-        cdef int *clenghts
+        cdef int *clengths
         cdef int *cformats
         cnparams, ctypes, cvalues, clengths, cformats = _query_params_args(
             param_values, param_types, param_formats)
@@ -228,7 +228,7 @@ cdef class PGconn:
         cdef int cnparams
         cdef Oid *ctypes
         cdef char *const *cvalues
-        cdef int *clenghts
+        cdef int *clengths
         cdef int *cformats
         cnparams, ctypes, cvalues, clengths, cformats = _query_params_args(
             param_values, param_types, param_formats)
@@ -280,7 +280,7 @@ cdef class PGconn:
         cdef int cnparams
         cdef Oid *ctypes
         cdef char *const *cvalues
-        cdef int *clenghts
+        cdef int *clengths
         cdef int *cformats
         cnparams, ctypes, cvalues, clengths, cformats = _query_params_args(
             param_values, None, param_formats)
@@ -330,7 +330,7 @@ cdef class PGconn:
         cdef int cnparams
         cdef Oid *ctypes
         cdef char *const *cvalues
-        cdef int *clenghts
+        cdef int *clengths
         cdef int *cformats
         cnparams, ctypes, cvalues, clengths, cformats = _query_params_args(
             param_values, None, param_formats)
@@ -549,9 +549,9 @@ cdef (int, Oid *, char * const*, int *, int *) _query_params_args(
 
 
 cdef void _clear_query_params(
-    Oid *ctypes, char *const *cvalues, int *clenghts, int *cformats
+    Oid *ctypes, char *const *cvalues, int *clenghst, int *cformats
 ):
     PyMem_Free(ctypes)
     PyMem_Free(<char **>cvalues)
-    PyMem_Free(clenghts)
+    PyMem_Free(clenghst)
     PyMem_Free(cformats)
