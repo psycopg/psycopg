@@ -10,7 +10,7 @@ import logging
 import threading
 from types import TracebackType
 from typing import Any, AsyncIterator, Callable, Iterator, List, NamedTuple
-from typing import Optional, Type, TYPE_CHECKING, Union
+from typing import Optional, Type, TYPE_CHECKING, TypeVar
 from weakref import ref, ReferenceType
 from functools import partial
 from contextlib import contextmanager
@@ -23,11 +23,11 @@ else:
 from . import pq
 from . import cursor
 from . import errors as e
+from . import waiting
 from . import encodings
 from .pq import TransactionStatus, ExecStatus, Format
 from .sql import Composable
 from .proto import DumpersMap, LoadersMap, PQGen, PQGenConn, RV, Query, Params
-from .waiting import wait, wait_async
 from .conninfo import make_conninfo
 from .generators import notifies
 from .transaction import Transaction, AsyncTransaction
@@ -72,6 +72,8 @@ Notify.__module__ = "psycopg3"
 
 NoticeHandler = Callable[[e.Diagnostic], None]
 NotifyHandler = Callable[[Notify], None]
+
+C = TypeVar("C", bound="BaseConnection")
 
 
 class BaseConnection:
@@ -164,6 +166,15 @@ class BaseConnection:
     def _set_client_encoding(self, name: str) -> None:
         raise NotImplementedError
 
+    def _set_client_encoding_gen(self, name: str) -> PQGen[None]:
+        self.pgconn.send_query_params(
+            b"select set_config('client_encoding', $1, false)",
+            [encodings.py2pg(name)],
+        )
+        (result,) = yield from execute(self.pgconn)
+        if result.status != ExecStatus.TUPLES_OK:
+            raise e.error_from_result(result, encoding=self.client_encoding)
+
     def cancel(self) -> None:
         """Cancel the current operation on the connection."""
         c = self.pgconn.get_cancel()
@@ -223,6 +234,100 @@ class BaseConnection:
         for cb in self._notify_handlers:
             cb(n)
 
+    # Generators to perform high-level operations on the connection
+    #
+    # These operations are expressed in terms of non-blocking generators
+    # and the task of waiting when needed (when the generators yield) is left
+    # to the connections subclass, which might wait either in blocking mode
+    # or through asyncio.
+    #
+    # All these generators assume exclusive acces to the connection: subclasses
+    # should have a lock and hold it before calling and consuming them.
+
+    @classmethod
+    def _connect_gen(
+        cls: Type[C],
+        conninfo: str = "",
+        *,
+        autocommit: bool = False,
+        **kwargs: Any,
+    ) -> PQGenConn[C]:
+        """Generator to connect to the database and create a new instance."""
+        conninfo = make_conninfo(conninfo, **kwargs)
+        pgconn = yield from connect(conninfo)
+        conn = cls(pgconn)
+        conn._autocommit = autocommit
+        return conn
+
+    def _exec_command(self, command: Query) -> PQGen[None]:
+        """
+        Generator to send a command and receive the result to the backend.
+
+        Only used to implement internal commands such as commit, returning
+        no result. The cursor can do more complex stuff.
+        """
+        if self.pgconn.status != self.ConnStatus.OK:
+            if self.pgconn.status == self.ConnStatus.BAD:
+                raise e.OperationalError("the connection is closed")
+            raise e.InterfaceError(
+                f"cannot execute operations: the connection is"
+                f" in status {self.pgconn.status}"
+            )
+
+        if isinstance(command, str):
+            command = command.encode(self.client_encoding)
+        elif isinstance(command, Composable):
+            command = command.as_bytes(self)
+
+        self.pgconn.send_query(command)
+        result = (yield from execute(self.pgconn))[-1]
+        if result.status != ExecStatus.COMMAND_OK:
+            if result.status == ExecStatus.FATAL_ERROR:
+                raise e.error_from_result(
+                    result, encoding=self.client_encoding
+                )
+            else:
+                raise e.InterfaceError(
+                    f"unexpected result {ExecStatus(result.status).name}"
+                    f" from command {command.decode('utf8')!r}"
+                )
+
+    def _start_query(self) -> PQGen[None]:
+        """Generator to start a transaction if necessary."""
+        if self._autocommit:
+            return
+
+        if self.pgconn.transaction_status != TransactionStatus.IDLE:
+            return
+
+        yield from self._exec_command(b"begin")
+
+    def _commit_gen(self) -> PQGen[None]:
+        """Generator implementing `Connection.commit()`."""
+        if self._savepoints:
+            raise e.ProgrammingError(
+                "Explicit commit() forbidden within a Transaction "
+                "context. (Transaction will be automatically committed "
+                "on successful exit from context.)"
+            )
+        if self.pgconn.transaction_status == TransactionStatus.IDLE:
+            return
+
+        yield from self._exec_command(b"commit")
+
+    def _rollback_gen(self) -> PQGen[None]:
+        """Generator implementing `Connection.rollback()`."""
+        if self._savepoints:
+            raise e.ProgrammingError(
+                "Explicit rollback() forbidden within a Transaction "
+                "context. (Either raise Rollback() or allow "
+                "an exception to propagate out of the context.)"
+            )
+        if self.pgconn.transaction_status == TransactionStatus.IDLE:
+            return
+
+        yield from self._exec_command(b"rollback")
+
 
 class Connection(BaseConnection):
     """
@@ -247,13 +352,9 @@ class Connection(BaseConnection):
 
         TODO: connection_timeout to be implemented.
         """
-
-        conninfo = make_conninfo(conninfo, **kwargs)
-        gen = connect(conninfo)
-        pgconn = cls.wait(gen)
-        conn = cls(pgconn)
-        conn._autocommit = autocommit
-        return conn
+        return cls._wait_conn(
+            cls._connect_gen(conninfo, autocommit=autocommit, **kwargs)
+        )
 
     def __enter__(self) -> "Connection":
         return self
@@ -284,16 +385,6 @@ class Connection(BaseConnection):
 
         return self.cursor_factory(self, format=format)
 
-    def _start_query(self) -> None:
-        # the function is meant to be called by a cursor once the lock is taken
-        if self._autocommit:
-            return
-
-        if self.pgconn.transaction_status != TransactionStatus.IDLE:
-            return
-
-        self._exec_command(b"begin")
-
     def execute(
         self, query: Query, params: Optional[Params] = None
     ) -> "Cursor":
@@ -304,49 +395,12 @@ class Connection(BaseConnection):
     def commit(self) -> None:
         """Commit any pending transaction to the database."""
         with self.lock:
-            if self._savepoints:
-                raise e.ProgrammingError(
-                    "Explicit commit() forbidden within a Transaction "
-                    "context. (Transaction will be automatically committed "
-                    "on successful exit from context.)"
-                )
-            if self.pgconn.transaction_status == TransactionStatus.IDLE:
-                return
-            self._exec_command(b"commit")
+            self.wait(self._commit_gen())
 
     def rollback(self) -> None:
         """Roll back to the start of any pending transaction."""
         with self.lock:
-            if self._savepoints:
-                raise e.ProgrammingError(
-                    "Explicit rollback() forbidden within a Transaction "
-                    "context. (Either raise Rollback() or allow "
-                    "an exception to propagate out of the context.)"
-                )
-            if self.pgconn.transaction_status == TransactionStatus.IDLE:
-                return
-            self._exec_command(b"rollback")
-
-    def _exec_command(self, command: Query) -> None:
-        # Caller must hold self.lock
-
-        if isinstance(command, str):
-            command = command.encode(self.client_encoding)
-        elif isinstance(command, Composable):
-            command = command.as_string(self).encode(self.client_encoding)
-
-        self.pgconn.send_query(command)
-        result = self.wait(execute(self.pgconn))[-1]
-        if result.status != ExecStatus.COMMAND_OK:
-            if result.status == ExecStatus.FATAL_ERROR:
-                raise e.error_from_result(
-                    result, encoding=self.client_encoding
-                )
-            else:
-                raise e.InterfaceError(
-                    f"unexpected result {ExecStatus(result.status).name}"
-                    f" from command {command.decode('utf8')!r}"
-                )
+            self.wait(self._rollback_gen())
 
     @contextmanager
     def transaction(
@@ -365,27 +419,6 @@ class Connection(BaseConnection):
         with Transaction(self, savepoint_name, force_rollback) as tx:
             yield tx
 
-    @classmethod
-    def wait(
-        cls,
-        gen: Union[PQGen[RV], PQGenConn[RV]],
-        timeout: Optional[float] = 0.1,
-    ) -> RV:
-        return wait(gen, timeout=timeout)
-
-    def _set_client_encoding(self, name: str) -> None:
-        with self.lock:
-            self.pgconn.send_query_params(
-                b"select set_config('client_encoding', $1, false)",
-                [encodings.py2pg(name)],
-            )
-            gen = execute(self.pgconn)
-            (result,) = self.wait(gen)
-            if result.status != ExecStatus.TUPLES_OK:
-                raise e.error_from_result(
-                    result, encoding=self.client_encoding
-                )
-
     def notifies(self) -> Iterator[Notify]:
         """
         Yield `Notify` objects as soon as they are received from the database.
@@ -400,9 +433,29 @@ class Connection(BaseConnection):
                 )
                 yield n
 
+    def wait(self, gen: PQGen[RV], timeout: Optional[float] = 0.1) -> RV:
+        """
+        Consume a generator operating on the connection.
+
+        The function must be used on generators that don't change connection
+        fd (i.e. not on connect and reset).
+        """
+        return waiting.wait(gen, self.pgconn.socket, timeout=timeout)
+
+    @classmethod
+    def _wait_conn(
+        cls, gen: PQGenConn[RV], timeout: Optional[float] = 0.1
+    ) -> RV:
+        """Consume a connection generator."""
+        return waiting.wait_conn(gen, timeout=timeout)
+
     def _set_autocommit(self, value: bool) -> None:
         with self.lock:
             super()._set_autocommit(value)
+
+    def _set_client_encoding(self, name: str) -> None:
+        with self.lock:
+            self.wait(self._set_client_encoding_gen(name))
 
 
 class AsyncConnection(BaseConnection):
@@ -423,12 +476,9 @@ class AsyncConnection(BaseConnection):
     async def connect(
         cls, conninfo: str = "", *, autocommit: bool = False, **kwargs: Any
     ) -> "AsyncConnection":
-        conninfo = make_conninfo(conninfo, **kwargs)
-        gen = connect(conninfo)
-        pgconn = await cls.wait(gen)
-        conn = cls(pgconn)
-        conn._autocommit = autocommit
-        return conn
+        return await cls._wait_conn(
+            cls._connect_gen(conninfo, autocommit=autocommit, **kwargs)
+        )
 
     async def __aenter__(self) -> "AsyncConnection":
         return self
@@ -460,16 +510,6 @@ class AsyncConnection(BaseConnection):
 
         return self.cursor_factory(self, format=format)
 
-    async def _start_query(self) -> None:
-        # the function is meant to be called by a cursor once the lock is taken
-        if self._autocommit:
-            return
-
-        if self.pgconn.transaction_status != TransactionStatus.IDLE:
-            return
-
-        await self._exec_command(b"begin")
-
     async def execute(
         self, query: Query, params: Optional[Params] = None
     ) -> "AsyncCursor":
@@ -478,48 +518,11 @@ class AsyncConnection(BaseConnection):
 
     async def commit(self) -> None:
         async with self.lock:
-            if self._savepoints:
-                raise e.ProgrammingError(
-                    "Explicit commit() forbidden within a Transaction "
-                    "context. (Transaction will be automatically committed "
-                    "on successful exit from context.)"
-                )
-            if self.pgconn.transaction_status == TransactionStatus.IDLE:
-                return
-            await self._exec_command(b"commit")
+            await self.wait(self._commit_gen())
 
     async def rollback(self) -> None:
         async with self.lock:
-            if self._savepoints:
-                raise e.ProgrammingError(
-                    "Explicit rollback() forbidden within a Transaction "
-                    "context. (Either raise Rollback() or allow "
-                    "an exception to propagate out of the context.)"
-                )
-            if self.pgconn.transaction_status == TransactionStatus.IDLE:
-                return
-            await self._exec_command(b"rollback")
-
-    async def _exec_command(self, command: Query) -> None:
-        # Caller must hold self.lock
-
-        if isinstance(command, str):
-            command = command.encode(self.client_encoding)
-        elif isinstance(command, Composable):
-            command = command.as_string(self).encode(self.client_encoding)
-
-        self.pgconn.send_query(command)
-        result = (await self.wait(execute(self.pgconn)))[-1]
-        if result.status != ExecStatus.COMMAND_OK:
-            if result.status == ExecStatus.FATAL_ERROR:
-                raise e.error_from_result(
-                    result, encoding=self.client_encoding
-                )
-            else:
-                raise e.InterfaceError(
-                    f"unexpected result {ExecStatus(result.status).name}"
-                    f" from command {command.decode('utf8')!r}"
-                )
+            await self.wait(self._rollback_gen())
 
     @asynccontextmanager
     async def transaction(
@@ -534,30 +537,6 @@ class AsyncConnection(BaseConnection):
         async with tx:
             yield tx
 
-    @classmethod
-    async def wait(cls, gen: Union[PQGen[RV], PQGenConn[RV]]) -> RV:
-        return await wait_async(gen)
-
-    def _set_client_encoding(self, name: str) -> None:
-        raise AttributeError(
-            "'client_encoding' is read-only on async connections:"
-            " please use await .set_client_encoding() instead."
-        )
-
-    async def set_client_encoding(self, name: str) -> None:
-        """Async version of the `~Connection.client_encoding` setter."""
-        async with self.lock:
-            self.pgconn.send_query_params(
-                b"select set_config('client_encoding', $1, false)",
-                [encodings.py2pg(name)],
-            )
-            gen = execute(self.pgconn)
-            (result,) = await self.wait(gen)
-            if result.status != ExecStatus.TUPLES_OK:
-                raise e.error_from_result(
-                    result, encoding=self.client_encoding
-                )
-
     async def notifies(self) -> AsyncIterator[Notify]:
         while 1:
             async with self.lock:
@@ -568,6 +547,24 @@ class AsyncConnection(BaseConnection):
                     pgn.relname.decode(enc), pgn.extra.decode(enc), pgn.be_pid
                 )
                 yield n
+
+    async def wait(self, gen: PQGen[RV]) -> RV:
+        return await waiting.wait_async(gen, self.pgconn.socket)
+
+    @classmethod
+    async def _wait_conn(cls, gen: PQGenConn[RV]) -> RV:
+        return await waiting.wait_async_conn(gen)
+
+    def _set_client_encoding(self, name: str) -> None:
+        raise AttributeError(
+            "'client_encoding' is read-only on async connections:"
+            " please use await .set_client_encoding() instead."
+        )
+
+    async def set_client_encoding(self, name: str) -> None:
+        """Async version of the `~Connection.client_encoding` setter."""
+        async with self.lock:
+            await self.wait(self._set_client_encoding_gen(name))
 
     def _set_autocommit(self, value: bool) -> None:
         raise AttributeError(

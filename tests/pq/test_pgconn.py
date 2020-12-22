@@ -242,7 +242,7 @@ def test_transaction_status(pgconn):
     assert pgconn.transaction_status == pq.TransactionStatus.INTRANS
     pgconn.send_query(b"select 1")
     assert pgconn.transaction_status == pq.TransactionStatus.ACTIVE
-    psycopg3.waiting.wait(psycopg3.generators.execute(pgconn))
+    psycopg3.waiting.wait(psycopg3.generators.execute(pgconn), pgconn.socket)
     assert pgconn.transaction_status == pq.TransactionStatus.INTRANS
     pgconn.finish()
     assert pgconn.transaction_status == pq.TransactionStatus.UNKNOWN

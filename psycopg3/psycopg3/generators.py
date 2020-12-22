@@ -88,7 +88,6 @@ def send(pgconn: PGconn) -> PQGen[None]:
     After this generator has finished you may want to cycle using `_fetch()`
     to retrieve the results available.
     """
-    yield pgconn.socket
     while 1:
         f = pgconn.flush()
         if f == 0:
@@ -150,7 +149,6 @@ _copy_statuses = (
 
 
 def notifies(pgconn: PGconn) -> PQGen[List[pq.PGnotify]]:
-    yield pgconn.socket
     yield Wait.R
     pgconn.consume_input()
 
@@ -166,7 +164,6 @@ def notifies(pgconn: PGconn) -> PQGen[List[pq.PGnotify]]:
 
 
 def copy_from(pgconn: PGconn) -> PQGen[Union[bytes, PGresult]]:
-    yield pgconn.socket
     while 1:
         nbytes, data = pgconn.get_copy_data(1)
         if nbytes != 0:
@@ -192,14 +189,12 @@ def copy_from(pgconn: PGconn) -> PQGen[Union[bytes, PGresult]]:
 
 
 def copy_to(pgconn: PGconn, buffer: bytes) -> PQGen[None]:
-    yield pgconn.socket
     # Retry enqueuing data until successful
     while pgconn.put_copy_data(buffer) == 0:
         yield Wait.W
 
 
 def copy_end(pgconn: PGconn, error: Optional[bytes]) -> PQGen[PGresult]:
-    yield pgconn.socket
     # Retry enqueuing end copy message until successful
     while pgconn.put_copy_end(error) == 0:
         yield Wait.W

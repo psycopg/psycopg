@@ -54,7 +54,12 @@ class ListPopAll(list):
 
 @pytest.fixture
 def commands(conn, monkeypatch):
-    """The queue of commands issued internally by the test connection."""
+    """The list of commands issued internally by the test connection."""
+    yield patch_exec(conn, monkeypatch)
+
+
+def patch_exec(conn, monkeypatch):
+    """Helper to implement the commands fixture both sync and async."""
     _orig_exec_command = conn._exec_command
     L = ListPopAll()
 
@@ -63,10 +68,10 @@ def commands(conn, monkeypatch):
             command = command.decode(conn.client_encoding)
 
         L.insert(0, command)
-        _orig_exec_command(command)
+        return _orig_exec_command(command)
 
     monkeypatch.setattr(conn, "_exec_command", _exec_command)
-    yield L
+    return L
 
 
 def in_transaction(conn):

@@ -12,7 +12,7 @@ from contextlib import contextmanager
 
 from . import errors as e
 from . import pq
-from .pq import ConnStatus, ExecStatus, Format
+from .pq import ExecStatus, Format
 from .copy import Copy, AsyncCopy
 from .proto import ConnectionType, Query, Params, DumpersMap, LoadersMap, PQGen
 from ._column import Column
@@ -148,29 +148,76 @@ class BaseCursor(Generic[ConnectionType]):
         else:
             return None
 
-    def _start_query(self) -> None:
+    #
+    # Generators for the high level operations on the cursor
+    #
+    # Like for sync/async connections, these are implemented as generators
+    # so that different concurrency strategies (threads,asyncio) can use their
+    # own way of waiting (or better, `connection.wait()`).
+    #
+
+    def _execute_gen(
+        self, query: Query, params: Optional[Params] = None
+    ) -> PQGen[None]:
+        """Generator implementing `Cursor.execute()`."""
+        yield from self._start_query()
+        self._execute_send(query, params)
+        results = yield from execute(self._conn.pgconn)
+        self._execute_results(results)
+
+    def _executemany_gen(
+        self, query: Query, params_seq: Sequence[Params]
+    ) -> PQGen[None]:
+        """Generator implementing `Cursor.executemany()`."""
+        yield from self._start_query()
+        first = True
+        for params in params_seq:
+            if first:
+                pgq = self._send_prepare(b"", query, params)
+                (result,) = yield from execute(self._conn.pgconn)
+                if result.status == ExecStatus.FATAL_ERROR:
+                    raise e.error_from_result(
+                        result, encoding=self._conn.client_encoding
+                    )
+            else:
+                pgq.dump(params)
+
+            self._send_query_prepared(b"", pgq)
+            (result,) = yield from execute(self._conn.pgconn)
+            self._execute_results((result,))
+
+    def _start_query(self) -> PQGen[None]:
+        """Generator to start the processing of a query.
+
+        It is implemented as generator because it may send additional queries,
+        such as `begin`.
+        """
         from . import adapt
 
         if self.closed:
             raise e.InterfaceError("the cursor is closed")
 
-        if self._conn.closed:
-            raise e.InterfaceError("the connection is closed")
-
-        if self._conn.pgconn.status != ConnStatus.OK:
-            raise e.InterfaceError(
-                f"cannot execute operations: the connection is"
-                f" in status {self._conn.pgconn.status}"
-            )
-
         self._reset()
         self._transformer = adapt.Transformer(self)
+        yield from self._conn._start_query()
+
+    def _start_copy_gen(self, statement: Query) -> PQGen[None]:
+        """Generator implementing sending a command for `Cursor.copy()."""
+        yield from self._start_query()
+        # Make sure to avoid PQexec to avoid receiving a mix of COPY and
+        # other operations.
+        self._execute_send(statement, None, no_pqexec=True)
+        (result,) = yield from execute(self._conn.pgconn)
+        self._check_copy_result(result)
+        self.pgresult = result  # will set it on the transformer too
 
     def _execute_send(
         self, query: Query, params: Optional[Params], no_pqexec: bool = False
     ) -> None:
         """
-        Implement part of execute() before waiting common to sync and async
+        Implement part of execute() before waiting common to sync and async.
+
+        This is not a generator, but a normal, non-blocking function.
         """
         pgq = PostgresQuery(self._transformer)
         pgq.convert(query, params)
@@ -206,6 +253,8 @@ class BaseCursor(Generic[ConnectionType]):
     def _execute_results(self, results: Sequence["PGresult"]) -> None:
         """
         Implement part of execute() after waiting common to sync and async
+
+        This is not a generator, but a normal, non-blocking function.
         """
         if not results:
             raise e.InternalError("got no result from the query")
@@ -241,9 +290,6 @@ class BaseCursor(Generic[ConnectionType]):
     def _send_prepare(
         self, name: bytes, query: Query, params: Optional[Params]
     ) -> PostgresQuery:
-        """
-        Implement part of execute() before waiting common to sync and async
-        """
         pgq = PostgresQuery(self._transformer)
         pgq.convert(query, params)
 
@@ -270,16 +316,10 @@ class BaseCursor(Generic[ConnectionType]):
                 "the last operation didn't produce a result"
             )
 
-    def _check_copy_results(self, results: Sequence["PGresult"]) -> None:
+    def _check_copy_result(self, result: "PGresult") -> None:
         """
         Check that the value returned in a copy() operation is a legit COPY.
         """
-        if len(results) != 1:
-            raise e.InternalError(
-                f"expected 1 result from copy, got {len(results)} instead"
-            )
-
-        result = results[0]
         status = result.status
         if status in (ExecStatus.COPY_IN, ExecStatus.COPY_OUT):
             return
@@ -322,12 +362,7 @@ class Cursor(BaseCursor["Connection"]):
         Execute a query or command to the database.
         """
         with self._conn.lock:
-            self._start_query()
-            self._conn._start_query()
-            self._execute_send(query, params)
-            gen = execute(self._conn.pgconn)
-            results = self._conn.wait(gen)
-            self._execute_results(results)
+            self._conn.wait(self._execute_gen(query, params))
         return self
 
     def executemany(self, query: Query, params_seq: Sequence[Params]) -> None:
@@ -335,25 +370,7 @@ class Cursor(BaseCursor["Connection"]):
         Execute the same command with a sequence of input data.
         """
         with self._conn.lock:
-            self._start_query()
-            self._conn._start_query()
-            first = True
-            for params in params_seq:
-                if first:
-                    pgq = self._send_prepare(b"", query, params)
-                    gen = execute(self._conn.pgconn)
-                    (result,) = self._conn.wait(gen)
-                    if result.status == ExecStatus.FATAL_ERROR:
-                        raise e.error_from_result(
-                            result, encoding=self._conn.client_encoding
-                        )
-                else:
-                    pgq.dump(params)
-
-                self._send_query_prepared(b"", pgq)
-                gen = execute(self._conn.pgconn)
-                (result,) = self._conn.wait(gen)
-                self._execute_results((result,))
+            self._conn.wait(self._executemany_gen(query, params_seq))
 
     def fetchone(self) -> Optional[Sequence[Any]]:
         """
@@ -414,22 +431,11 @@ class Cursor(BaseCursor["Connection"]):
         """
         Initiate a :sql:`COPY` operation and return an object to manage it.
         """
-        with self._start_copy(statement) as copy:
-            yield copy
-
-    def _start_copy(self, statement: Query) -> Copy:
         with self._conn.lock:
-            self._start_query()
-            self._conn._start_query()
-            # Make sure to avoid PQexec to avoid receiving a mix of COPY and
-            # other operations.
-            self._execute_send(statement, None, no_pqexec=True)
-            gen = execute(self._conn.pgconn)
-            results = self._conn.wait(gen)
-            self._check_copy_results(results)
-            self.pgresult = results[0]  # will set it on the transformer too
+            self._conn.wait(self._start_copy_gen(statement))
 
-        return Copy(self)
+        with Copy(self) as copy:
+            yield copy
 
 
 class AsyncCursor(BaseCursor["AsyncConnection"]):
@@ -454,37 +460,14 @@ class AsyncCursor(BaseCursor["AsyncConnection"]):
         self, query: Query, params: Optional[Params] = None
     ) -> "AsyncCursor":
         async with self._conn.lock:
-            self._start_query()
-            await self._conn._start_query()
-            self._execute_send(query, params)
-            gen = execute(self._conn.pgconn)
-            results = await self._conn.wait(gen)
-            self._execute_results(results)
+            await self._conn.wait(self._execute_gen(query, params))
         return self
 
     async def executemany(
         self, query: Query, params_seq: Sequence[Params]
     ) -> None:
         async with self._conn.lock:
-            self._start_query()
-            await self._conn._start_query()
-            first = True
-            for params in params_seq:
-                if first:
-                    pgq = self._send_prepare(b"", query, params)
-                    gen = execute(self._conn.pgconn)
-                    (result,) = await self._conn.wait(gen)
-                    if result.status == ExecStatus.FATAL_ERROR:
-                        raise e.error_from_result(
-                            result, encoding=self._conn.client_encoding
-                        )
-                else:
-                    pgq.dump(params)
-
-                self._send_query_prepared(b"", pgq)
-                gen = execute(self._conn.pgconn)
-                (result,) = await self._conn.wait(gen)
-                self._execute_results((result,))
+            await self._conn.wait(self._executemany_gen(query, params_seq))
 
     async def fetchone(self) -> Optional[Sequence[Any]]:
         self._check_result()
@@ -533,23 +516,11 @@ class AsyncCursor(BaseCursor["AsyncConnection"]):
 
     @asynccontextmanager
     async def copy(self, statement: Query) -> AsyncIterator[AsyncCopy]:
-        copy = await self._start_copy(statement)
-        async with copy:
-            yield copy
-
-    async def _start_copy(self, statement: Query) -> AsyncCopy:
         async with self._conn.lock:
-            self._start_query()
-            await self._conn._start_query()
-            # Make sure to avoid PQexec to avoid receiving a mix of COPY and
-            # other operations.
-            self._execute_send(statement, None, no_pqexec=True)
-            gen = execute(self._conn.pgconn)
-            results = await self._conn.wait(gen)
-            self._check_copy_results(results)
-            self.pgresult = results[0]  # will set it on the transformer too
+            await self._conn.wait(self._start_copy_gen(statement))
 
-        return AsyncCopy(self)
+        async with AsyncCopy(self) as copy:
+            yield copy
 
 
 class NamedCursorMixin:

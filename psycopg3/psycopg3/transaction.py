@@ -7,11 +7,11 @@ Transaction context managers returned by Connection.transaction()
 import logging
 
 from types import TracebackType
-from typing import Generic, List, Optional, Type, Union, TYPE_CHECKING
+from typing import Generic, Optional, Type, Union, TYPE_CHECKING
 
 from . import sql
 from .pq import TransactionStatus
-from .proto import ConnectionType
+from .proto import ConnectionType, PQGen
 
 if TYPE_CHECKING:
     from .connection import Connection, AsyncConnection  # noqa: F401
@@ -74,7 +74,7 @@ class BaseTransaction(Generic[ConnectionType]):
             args.append("force_rollback=True")
         return f"{self.__class__.__qualname__}({', '.join(args)})"
 
-    def _enter_commands(self) -> List[bytes]:
+    def _enter_gen(self) -> PQGen[None]:
         if not self._yolo:
             raise TypeError("transaction blocks can be used only once")
         else:
@@ -107,9 +107,21 @@ class BaseTransaction(Generic[ConnectionType]):
             )
 
         self._conn._savepoints.append(self._savepoint_name)
-        return commands
+        return self._conn._exec_command(b"; ".join(commands))
 
-    def _commit_commands(self) -> List[bytes]:
+    def _exit_gen(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc_val: Optional[BaseException],
+        exc_tb: Optional[TracebackType],
+    ) -> PQGen[bool]:
+        if not exc_val and not self.force_rollback:
+            yield from self._commit_gen()
+            return False
+        else:
+            return (yield from self._rollback_gen(exc_val))
+
+    def _commit_gen(self) -> PQGen[None]:
         assert self._conn._savepoints[-1] == self._savepoint_name
         self._conn._savepoints.pop()
 
@@ -125,9 +137,14 @@ class BaseTransaction(Generic[ConnectionType]):
             assert not self._conn._savepoints
             commands.append(b"commit")
 
-        return commands
+        return self._conn._exec_command(b"; ".join(commands))
 
-    def _rollback_commands(self) -> List[bytes]:
+    def _rollback_gen(self, exc_val: Optional[BaseException]) -> PQGen[bool]:
+        if isinstance(exc_val, Rollback):
+            _log.debug(
+                f"{self._conn}: Explicit rollback from: ", exc_info=True
+            )
+
         assert self._conn._savepoints[-1] == self._savepoint_name
         self._conn._savepoints.pop()
 
@@ -143,7 +160,13 @@ class BaseTransaction(Generic[ConnectionType]):
             assert not self._conn._savepoints
             commands.append(b"rollback")
 
-        return commands
+        yield from self._conn._exec_command(b"; ".join(commands))
+
+        if isinstance(exc_val, Rollback):
+            if not exc_val.transaction or exc_val.transaction is self:
+                return True  # Swallow the exception
+
+        return False
 
 
 class Transaction(BaseTransaction["Connection"]):
@@ -155,7 +178,7 @@ class Transaction(BaseTransaction["Connection"]):
 
     def __enter__(self) -> "Transaction":
         with self._conn.lock:
-            self._execute(self._enter_commands())
+            self._conn.wait(self._enter_gen())
         return self
 
     def __exit__(
@@ -165,33 +188,7 @@ class Transaction(BaseTransaction["Connection"]):
         exc_tb: Optional[TracebackType],
     ) -> bool:
         with self._conn.lock:
-            if not exc_val and not self.force_rollback:
-                self._commit()
-                return False
-            else:
-                return self._rollback(exc_val)
-
-    def _commit(self) -> None:
-        """Commit changes made in the transaction context."""
-        self._execute(self._commit_commands())
-
-    def _rollback(self, exc_val: Optional[BaseException]) -> bool:
-        # Rollback changes made in the transaction context
-        if isinstance(exc_val, Rollback):
-            _log.debug(
-                f"{self._conn}: Explicit rollback from: ", exc_info=True
-            )
-
-        self._execute(self._rollback_commands())
-
-        if isinstance(exc_val, Rollback):
-            if exc_val.transaction in (self, None):
-                return True  # Swallow the exception
-
-        return False
-
-    def _execute(self, commands: List[bytes]) -> None:
-        self._conn._exec_command(b"; ".join(commands))
+            return self._conn.wait(self._exit_gen(exc_type, exc_val, exc_tb))
 
 
 class AsyncTransaction(BaseTransaction["AsyncConnection"]):
@@ -203,8 +200,7 @@ class AsyncTransaction(BaseTransaction["AsyncConnection"]):
 
     async def __aenter__(self) -> "AsyncTransaction":
         async with self._conn.lock:
-            await self._execute(self._enter_commands())
-
+            await self._conn.wait(self._enter_gen())
         return self
 
     async def __aexit__(
@@ -214,30 +210,6 @@ class AsyncTransaction(BaseTransaction["AsyncConnection"]):
         exc_tb: Optional[TracebackType],
     ) -> bool:
         async with self._conn.lock:
-            if not exc_val and not self.force_rollback:
-                await self._commit()
-                return False
-            else:
-                return await self._rollback(exc_val)
-
-    async def _commit(self) -> None:
-        """Commit changes made in the transaction context."""
-        await self._execute(self._commit_commands())
-
-    async def _rollback(self, exc_val: Optional[BaseException]) -> bool:
-        # Rollback changes made in the transaction context
-        if isinstance(exc_val, Rollback):
-            _log.debug(
-                f"{self._conn}: Explicit rollback from: ", exc_info=True
+            return await self._conn.wait(
+                self._exit_gen(exc_type, exc_val, exc_tb)
             )
-
-        await self._execute(self._rollback_commands())
-
-        if isinstance(exc_val, Rollback):
-            if exc_val.transaction in (self, None):
-                return True  # Swallow the exception
-
-        return False
-
-    async def _execute(self, commands: List[bytes]) -> None:
-        await self._conn._exec_command(b"; ".join(commands))

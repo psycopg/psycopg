@@ -73,7 +73,7 @@ async def test_close(aconn):
     assert aconn.closed
     assert aconn.pgconn.status == aconn.ConnStatus.BAD
 
-    with pytest.raises(psycopg3.InterfaceError):
+    with pytest.raises(psycopg3.OperationalError):
         await cur.execute("select 1")
 
 

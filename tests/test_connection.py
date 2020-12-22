@@ -68,7 +68,7 @@ def test_close(conn):
     assert conn.closed
     assert conn.pgconn.status == conn.ConnStatus.BAD
 
-    with pytest.raises(psycopg3.InterfaceError):
+    with pytest.raises(psycopg3.OperationalError):
         cur.execute("select 1")
 
 

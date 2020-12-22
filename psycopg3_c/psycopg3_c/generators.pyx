@@ -73,10 +73,6 @@ def execute(PGconn pgconn) -> PQGen[List[pq.proto.PGresult]]:
     cdef libpq.PGresult *pgres
     cdef int cires, ibres
 
-    # Start the generator by sending the connection fd, which won't change
-    # during the query process.
-    yield libpq.PQsocket(pgconn_ptr)
-
     # Sending the query
     while 1:
         if libpq.PQflush(pgconn_ptr) == 0:
