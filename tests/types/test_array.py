@@ -101,18 +101,32 @@ def test_load_list_int(conn, obj, want, fmt_out):
 
 
 def test_array_register(conn):
-    # unknown for real
     cur = conn.cursor()
-    cur.execute("select '{postgres=arwdDxt/postgres}'::aclitem[]")
-    res = cur.fetchone()[0]
-    assert res == "{postgres=arwdDxt/postgres}"
+    cur.execute("create table mytype (data text)")
+    cur.execute("""select '(foo)'::mytype, '{"(foo)"}'::mytype[]""")
+    res = cur.fetchone()
+    assert res[0] == "(foo)"
+    assert res[1] == "{(foo)}"
 
     array.register(
-        builtins["aclitem"].array_oid, builtins["aclitem"].oid, context=conn
+        cur.description[1].type_code, cur.description[0].type_code, context=cur
     )
-    cur.execute("select '{postgres=arwdDxt/postgres}'::aclitem[]")
-    res = cur.fetchone()[0]
-    assert res == ["postgres=arwdDxt/postgres"]
+    cur.execute("""select '(foo)'::mytype, '{"(foo)"}'::mytype[]""")
+    res = cur.fetchone()
+    assert res[0] == "(foo)"
+    assert res[1] == ["(foo)"]
+
+
+def test_array_of_unknown_builtin(conn):
+    # we cannot load this type, but we understand it is an array
+    val = "postgres=arwdDxt/postgres"
+    cur = conn.cursor()
+    cur.execute(f"select '{val}'::aclitem, array['{val}']::aclitem[]")
+    res = cur.fetchone()
+    assert cur.description[0].type_code == builtins["aclitem"].oid
+    assert res[0] == val
+    assert cur.description[1].type_code == builtins["aclitem"].array_oid
+    assert res[1] == [val]
 
 
 @pytest.mark.xfail

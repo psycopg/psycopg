@@ -291,8 +291,6 @@ def register_all_arrays() -> None:
     registered all the base loaders.
     """
     for t in builtins:
-        if t.array_oid and (
-            (t.oid, Format.TEXT) in Loader.globals
-            or (t.oid, Format.BINARY) in Loader.globals
-        ):
+        # TODO: handle different delimiters (box)
+        if t.array_oid and getattr(t, "delimiter", None) == ",":
             register(t.array_oid, t.oid, name=t.name)

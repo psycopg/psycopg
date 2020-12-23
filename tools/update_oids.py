@@ -26,7 +26,7 @@ select format(
         typname, oid, typarray, oid::regtype, typdelim)
     from pg_type
     where oid < 10000
-    and typname !~ all('{^(_|pg_|reg),_handler$}')
+    and typname !~ all('{^(_|pg_),_handler$}')
     order by typname
 """
 
@@ -35,7 +35,7 @@ cython_oids_sql = """
 select format('%s_OID = %s', upper(typname), oid)
     from pg_type
     where oid < 10000
-    and typname !~ all('{^(_|pg_|reg),_handler$}')
+    and typname !~ all('{^(_|pg_),_handler$}')
     order by typname
 """
 
