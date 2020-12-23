@@ -10,10 +10,11 @@ import logging
 import threading
 from types import TracebackType
 from typing import Any, AsyncIterator, Callable, Iterator, List, NamedTuple
-from typing import Optional, Type, TYPE_CHECKING, TypeVar
+from typing import Optional, Tuple, Type, TYPE_CHECKING, TypeVar, Union
 from weakref import ref, ReferenceType
 from functools import partial
 from contextlib import contextmanager
+from collections import OrderedDict
 
 if sys.version_info >= (3, 7):
     from contextlib import asynccontextmanager
@@ -70,10 +71,9 @@ class Notify(NamedTuple):
 
 Notify.__module__ = "psycopg3"
 
+C = TypeVar("C", bound="BaseConnection")
 NoticeHandler = Callable[[e.Diagnostic], None]
 NotifyHandler = Callable[[Notify], None]
-
-C = TypeVar("C", bound="BaseConnection")
 
 
 class BaseConnection:
@@ -102,6 +102,20 @@ class BaseConnection:
 
     cursor_factory: Type["BaseCursor[Any]"]
 
+    prepare_threshold: Optional[int] = 5
+    """
+    Number of times a query is executed before it is prepared.
+
+    `!None` to disable preparing queries automatically.
+    """
+
+    prepared_max = 100
+    """
+    Maximum number of prepared statements on the connection.
+
+    If more are prepared, the least used are deallocated.
+    """
+
     def __init__(self, pgconn: "PGconn"):
         self.pgconn = pgconn  # TODO: document this
         self._autocommit = False
@@ -114,6 +128,15 @@ class BaseConnection:
         # the first item is "" in case the outermost Transaction must manage
         # only a begin/commit and not a savepoint.
         self._savepoints: List[str] = []
+
+        # Number of times each query was seen in order to prepare it.
+        # Map (query, types) -> name or number of times seen
+        self._prepared_statements: OrderedDict[
+            Tuple[bytes, Tuple[int, ...]], Union[int, bytes]
+        ] = OrderedDict()
+
+        # Counter to generate prepared statements names
+        self._prepared_idx = 0
 
         wself = ref(self)
 
@@ -386,11 +409,14 @@ class Connection(BaseConnection):
         return self.cursor_factory(self, format=format)
 
     def execute(
-        self, query: Query, params: Optional[Params] = None
+        self,
+        query: Query,
+        params: Optional[Params] = None,
+        prepare: Optional[bool] = None,
     ) -> "Cursor":
         """Execute a query and return a cursor to read its results."""
         cur = self.cursor()
-        return cur.execute(query, params)
+        return cur.execute(query, params, prepare=prepare)
 
     def commit(self) -> None:
         """Commit any pending transaction to the database."""
@@ -511,10 +537,13 @@ class AsyncConnection(BaseConnection):
         return self.cursor_factory(self, format=format)
 
     async def execute(
-        self, query: Query, params: Optional[Params] = None
+        self,
+        query: Query,
+        params: Optional[Params] = None,
+        prepare: Optional[bool] = None,
     ) -> "AsyncCursor":
         cur = await self.cursor()
-        return await cur.execute(query, params)
+        return await cur.execute(query, params, prepare=prepare)
 
     async def commit(self) -> None:
         async with self.lock:

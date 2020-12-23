@@ -5,9 +5,9 @@ Utility module to manipulate queries
 # Copyright (C) 2020 The Psycopg Team
 
 import re
-from functools import lru_cache
 from typing import Any, Dict, List, Mapping, Match, NamedTuple, Optional
 from typing import Sequence, Tuple, Union, TYPE_CHECKING
+from functools import lru_cache
 
 from . import errors as e
 from .pq import Format
@@ -30,12 +30,13 @@ class PostgresQuery:
     """
 
     _parts: List[QueryPart]
+    _query = b""
 
     def __init__(self, transformer: "Transformer"):
         self._tx = transformer
-        self.query: bytes = b""
         self.params: Optional[List[Optional[bytes]]] = None
-        self.types: Optional[List[int]] = None
+        # these are tuples so they can be used as keys e.g. in prepared stmts
+        self.types: Tuple[int, ...] = ()
         self.formats: Optional[List[Format]] = None
 
         self._order: Optional[List[str]] = None
@@ -74,7 +75,7 @@ class PostgresQuery:
             )
             assert self.formats is not None
             ps = self.params = []
-            ts = self.types = []
+            ts = []
             for i in range(len(params)):
                 param = params[i]
                 if param is not None:
@@ -84,8 +85,10 @@ class PostgresQuery:
                 else:
                     ps.append(None)
                     ts.append(0)
+            self.types = tuple(ts)
         else:
-            self.params = self.types = None
+            self.params = None
+            self.types = ()
 
 
 @lru_cache()

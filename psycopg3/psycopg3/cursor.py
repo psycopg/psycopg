@@ -5,9 +5,10 @@ psycopg3 cursor objects
 # Copyright (C) 2020 The Psycopg Team
 
 import sys
+from enum import IntEnum, auto
 from types import TracebackType
 from typing import Any, AsyncIterator, Callable, Generic, Iterator, List
-from typing import Optional, Sequence, Type, TYPE_CHECKING
+from typing import Optional, Sequence, Tuple, Type, TYPE_CHECKING, Union
 from contextlib import contextmanager
 
 from . import errors as e
@@ -39,6 +40,12 @@ else:
     from . import generators
 
     execute = generators.execute
+
+
+class Prepare(IntEnum):
+    NO = auto()
+    YES = auto()
+    SHOULD = auto()
 
 
 class BaseCursor(Generic[ConnectionType]):
@@ -157,13 +164,120 @@ class BaseCursor(Generic[ConnectionType]):
     #
 
     def _execute_gen(
-        self, query: Query, params: Optional[Params] = None
+        self,
+        query: Query,
+        params: Optional[Params] = None,
+        prepare: Optional[bool] = None,
     ) -> PQGen[None]:
         """Generator implementing `Cursor.execute()`."""
         yield from self._start_query()
-        self._execute_send(query, params)
+        pgq = self._convert_query(query, params)
+
+        # Check if the query is prepared or needs preparing
+        prep, name = self._get_prepared(pgq, prepare)
+        if prep is Prepare.YES:
+            # The query is already prepared
+            self._send_query_prepared(name, pgq)
+
+        elif prep is Prepare.NO:
+            # The query must be executed without preparing
+            self._execute_send(pgq)
+
+        else:
+            # The query must be prepared and executed
+            self._send_prepare(name, pgq)
+            (result,) = yield from execute(self._conn.pgconn)
+            if result.status == ExecStatus.FATAL_ERROR:
+                raise e.error_from_result(
+                    result, encoding=self._conn.client_encoding
+                )
+            self._send_query_prepared(name, pgq)
+
+        # run the query
         results = yield from execute(self._conn.pgconn)
+
+        # Update the prepare state of the query
+        if prepare is not False:
+            yield from self._maintain_prepared(pgq, results, prep, name)
+
         self._execute_results(results)
+
+    def _get_prepared(
+        self, query: PostgresQuery, prepare: Optional[bool] = None
+    ) -> Tuple[Prepare, bytes]:
+        """
+        Check if a query is prepared, tell back whether to prepare it.
+        """
+        conn = self._conn
+        if prepare is False or conn.prepare_threshold is None:
+            # The user doesn't want this query to be prepared
+            return Prepare.NO, b""
+
+        key = (query.query, query.types)
+        value: Union[bytes, int] = conn._prepared_statements.get(key, 0)
+        if isinstance(value, bytes):
+            # The query was already prepared in this session
+            return Prepare.YES, value
+
+        if value >= conn.prepare_threshold or prepare:
+            # The query has been executed enough times and needs to be prepared
+            name = f"_pg3_{conn._prepared_idx}".encode("utf-8")
+            conn._prepared_idx += 1
+            return Prepare.SHOULD, name
+        else:
+            # The query is not to be prepared yet
+            return Prepare.NO, b""
+
+    def _maintain_prepared(
+        self,
+        query: PostgresQuery,
+        results: Sequence["PGresult"],
+        prep: Prepare,
+        name: bytes,
+    ) -> PQGen[None]:
+        """Maintain the cache of he prepared statements."""
+        # don't do anything if prepared statements are disabled
+        if self._conn.prepare_threshold is None:
+            return
+
+        cache = self._conn._prepared_statements
+        key = (query.query, query.types)
+
+        # If we know the query already the cache size won't change
+        # So just update the count and record as last used
+        if key in cache:
+            if isinstance(cache[key], int):
+                if prep is Prepare.SHOULD:
+                    cache[key] = name
+                else:
+                    cache[key] += 1  # type: ignore  # operator
+            cache.move_to_end(key)
+            return
+
+        # The query is not in cache. Let's see if we must add it
+        if len(results) != 1:
+            # We cannot prepare a multiple statement
+            return
+
+        result = results[0]
+        if (
+            result.status != ExecStatus.TUPLES_OK
+            and result.status != ExecStatus.COMMAND_OK
+        ):
+            # We don't prepare failed queries or other weird results
+            return
+
+        # Ok, we got to the conclusion that this query is genuinely to prepare
+        cache[key] = name if prep is Prepare.SHOULD else 1
+
+        # Evict an old value from the cache; if it was prepared, deallocate it
+        # Do it only once: if the cache was resized, deallocate gradually
+        if len(cache) <= self._conn.prepared_max:
+            return
+
+        old_val = cache.popitem(last=False)[1]
+        if isinstance(old_val, bytes):
+            yield from self._conn._exec_command(b"DEALLOCATE " + old_val)
 
     def _executemany_gen(
         self, query: Query, params_seq: Sequence[Params]
@@ -173,7 +287,8 @@ class BaseCursor(Generic[ConnectionType]):
         first = True
         for params in params_seq:
             if first:
-                pgq = self._send_prepare(b"", query, params)
+                pgq = self._convert_query(query, params)
+                self._send_prepare(b"", pgq)
                 (result,) = yield from execute(self._conn.pgconn)
                 if result.status == ExecStatus.FATAL_ERROR:
                     raise e.error_from_result(
@@ -204,40 +319,46 @@ class BaseCursor(Generic[ConnectionType]):
     def _start_copy_gen(self, statement: Query) -> PQGen[None]:
         """Generator implementing sending a command for `Cursor.copy()."""
         yield from self._start_query()
+        query = self._convert_query(statement)
+
         # Make sure to avoid PQexec to avoid receiving a mix of COPY and
         # other operations.
-        self._execute_send(statement, None, no_pqexec=True)
+        self._execute_send(query, no_pqexec=True)
         (result,) = yield from execute(self._conn.pgconn)
         self._check_copy_result(result)
         self.pgresult = result  # will set it on the transformer too
 
     def _execute_send(
-        self, query: Query, params: Optional[Params], no_pqexec: bool = False
+        self, query: PostgresQuery, no_pqexec: bool = False
     ) -> None:
         """
         Implement part of execute() before waiting common to sync and async.
 
-        This is not a generator, but a normal, non-blocking function.
+        This is not a generator, but a normal non-blocking function.
         """
-        pgq = PostgresQuery(self._transformer)
-        pgq.convert(query, params)
-
-        if pgq.params or no_pqexec or self.format == Format.BINARY:
-            self._query = pgq.query
-            self._params = pgq.params
+        if query.params or no_pqexec or self.format == Format.BINARY:
+            self._query = query.query
+            self._params = query.params
             self._conn.pgconn.send_query_params(
-                pgq.query,
-                pgq.params,
-                param_formats=pgq.formats,
-                param_types=pgq.types,
+                query.query,
+                query.params,
+                param_formats=query.formats,
+                param_types=query.types,
                 result_format=self.format,
             )
         else:
             # if we don't have to, let's use exec_ as it can run more than
             # one query in one go
-            self._query = pgq.query
+            self._query = query.query
             self._params = None
-            self._conn.pgconn.send_query(pgq.query)
+            self._conn.pgconn.send_query(query.query)
+
+    def _convert_query(
+        self, query: Query, params: Optional[Params] = None
+    ) -> PostgresQuery:
+        pgq = PostgresQuery(self._transformer)
+        pgq.convert(query, params)
+        return pgq
 
     _status_ok = {
         ExecStatus.TUPLES_OK,
@@ -254,7 +375,7 @@ class BaseCursor(Generic[ConnectionType]):
         """
         Implement part of execute() after waiting common to sync and async
 
-        This is not a generator, but a normal, non-blocking function.
+        This is not a generator, but a normal non-blocking function.
         """
         if not results:
             raise e.InternalError("got no result from the query")
@@ -287,16 +408,11 @@ class BaseCursor(Generic[ConnectionType]):
                 f" {', '.join(sorted(s.name for s in sorted(badstats)))}"
             )
 
-    def _send_prepare(
-        self, name: bytes, query: Query, params: Optional[Params]
-    ) -> PostgresQuery:
-        pgq = PostgresQuery(self._transformer)
-        pgq.convert(query, params)
-
-        self._query = pgq.query
-        self._conn.pgconn.send_prepare(name, pgq.query, param_types=pgq.types)
-
-        return pgq
+    def _send_prepare(self, name: bytes, query: PostgresQuery) -> None:
+        self._query = query.query
+        self._conn.pgconn.send_prepare(
+            name, query.query, param_types=query.types
+        )
 
     def _send_query_prepared(self, name: bytes, pgq: PostgresQuery) -> None:
         self._params = pgq.params
@@ -356,13 +472,16 @@ class Cursor(BaseCursor["Connection"]):
         self._reset()
 
     def execute(
-        self, query: Query, params: Optional[Params] = None
+        self,
+        query: Query,
+        params: Optional[Params] = None,
+        prepare: Optional[bool] = None,
     ) -> "Cursor":
         """
         Execute a query or command to the database.
         """
         with self._conn.lock:
-            self._conn.wait(self._execute_gen(query, params))
+            self._conn.wait(self._execute_gen(query, params, prepare=prepare))
         return self
 
     def executemany(self, query: Query, params_seq: Sequence[Params]) -> None:
@@ -457,10 +576,15 @@ class AsyncCursor(BaseCursor["AsyncConnection"]):
         self._reset()
 
     async def execute(
-        self, query: Query, params: Optional[Params] = None
+        self,
+        query: Query,
+        params: Optional[Params] = None,
+        prepare: Optional[bool] = None,
     ) -> "AsyncCursor":
         async with self._conn.lock:
-            await self._conn.wait(self._execute_gen(query, params))
+            await self._conn.wait(
+                self._execute_gen(query, params, prepare=prepare)
+            )
         return self
 
     async def executemany(
