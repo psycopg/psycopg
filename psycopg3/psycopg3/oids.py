@@ -6,8 +6,6 @@ Maps of builtin types and names
 
 from typing import Dict, Iterator, Optional, Union
 
-INVALID_OID = 0
-
 
 class TypeInfo:
     def __init__(self, name: str, oid: int, array_oid: int):
@@ -177,3 +175,9 @@ for r in [
     # fmt: on
 ]:
     builtins.add(BuiltinTypeInfo(*r))
+
+
+# A few oids used a bit everywhere
+INVALID_OID = 0
+TEXT_OID = builtins["text"].oid
+TEXT_ARRAY_OID = builtins["text"].array_oid

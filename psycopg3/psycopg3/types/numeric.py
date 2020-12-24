@@ -79,7 +79,7 @@ class SpecialValuesDumper(NumberDumper):
 
 @Dumper.text(int)
 class IntDumper(NumberDumper):
-    oid = builtins["int8"].oid
+    _oid = builtins["int8"].oid
 
 
 @Dumper.binary(int)
@@ -90,7 +90,7 @@ class IntBinaryDumper(IntDumper):
 
 @Dumper.text(float)
 class FloatDumper(SpecialValuesDumper):
-    oid = builtins["float8"].oid
+    _oid = builtins["float8"].oid
 
     _special = {
         b"inf": b"'Infinity'::float8",
@@ -101,13 +101,15 @@ class FloatDumper(SpecialValuesDumper):
 
 @Dumper.binary(float)
 class FloatBinaryDumper(NumberDumper):
+    _oid = builtins["float8"].oid
+
     def dump(self, obj: float) -> bytes:
         return _pack_float8(obj)
 
 
 @Dumper.text(Decimal)
 class DecimalDumper(SpecialValuesDumper):
-    oid = builtins["numeric"].oid
+    _oid = builtins["numeric"].oid
 
     _special = {
         b"Infinity": b"'Infinity'::numeric",
@@ -118,22 +120,22 @@ class DecimalDumper(SpecialValuesDumper):
 
 @Dumper.text(Int2)
 class Int2Dumper(NumberDumper):
-    oid = builtins["int2"].oid
+    _oid = builtins["int2"].oid
 
 
 @Dumper.text(Int4)
 class Int4Dumper(NumberDumper):
-    oid = builtins["int4"].oid
+    _oid = builtins["int4"].oid
 
 
 @Dumper.text(Int8)
 class Int8Dumper(NumberDumper):
-    oid = builtins["int8"].oid
+    _oid = builtins["int8"].oid
 
 
 @Dumper.text(Oid)
 class OidDumper(NumberDumper):
-    oid = builtins["oid"].oid
+    _oid = builtins["oid"].oid
 
 
 @Dumper.binary(Int2)

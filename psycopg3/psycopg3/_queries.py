@@ -12,6 +12,7 @@ from functools import lru_cache
 from . import errors as e
 from .pq import Format
 from .sql import Composable
+from .oids import TEXT_OID, INVALID_OID
 from .proto import Query, Params
 
 if TYPE_CHECKING:
@@ -31,6 +32,7 @@ class PostgresQuery:
 
     _parts: List[QueryPart]
     _query = b""
+    _unknown_oid = INVALID_OID
 
     def __init__(self, transformer: "Transformer"):
         self._tx = transformer
@@ -40,6 +42,11 @@ class PostgresQuery:
         self.formats: Optional[List[Format]] = None
 
         self._order: Optional[List[str]] = None
+        if (
+            self._tx.connection
+            and self._tx.connection.pgconn.server_version < 100000
+        ):
+            self._unknown_oid = TEXT_OID
 
     def convert(self, query: Query, vars: Optional[Params]) -> None:
         """
@@ -84,7 +91,7 @@ class PostgresQuery:
                     ts.append(dumper.oid)
                 else:
                     ps.append(None)
-                    ts.append(0)
+                    ts.append(self._unknown_oid)
             self.types = tuple(ts)
         else:
             self.params = None

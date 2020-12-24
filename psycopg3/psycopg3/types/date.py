@@ -18,7 +18,7 @@ from ..errors import InterfaceError, DataError
 @Dumper.text(date)
 class DateDumper(Dumper):
 
-    oid = builtins["date"].oid
+    _oid = builtins["date"].oid
 
     def dump(self, obj: date) -> bytes:
         # NOTE: whatever the PostgreSQL DateStyle input format (DMY, MDY, YMD)
@@ -29,7 +29,7 @@ class DateDumper(Dumper):
 @Dumper.text(time)
 class TimeDumper(Dumper):
 
-    oid = builtins["timetz"].oid
+    _oid = builtins["timetz"].oid
 
     def dump(self, obj: time) -> bytes:
         return str(obj).encode("utf8")
@@ -38,7 +38,7 @@ class TimeDumper(Dumper):
 @Dumper.text(datetime)
 class DateTimeDumper(Dumper):
 
-    oid = builtins["timestamptz"].oid
+    _oid = builtins["timestamptz"].oid
 
     def dump(self, obj: date) -> bytes:
         # NOTE: whatever the PostgreSQL DateStyle input format (DMY, MDY, YMD)
@@ -49,7 +49,7 @@ class DateTimeDumper(Dumper):
 @Dumper.text(timedelta)
 class TimeDeltaDumper(Dumper):
 
-    oid = builtins["interval"].oid
+    _oid = builtins["interval"].oid
 
     def __init__(self, src: type, context: AdaptContext = None):
         super().__init__(src, context)

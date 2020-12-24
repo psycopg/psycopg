@@ -20,7 +20,7 @@ UUID: Callable[..., "uuid.UUID"]
 @Dumper.text("uuid.UUID")
 class UUIDDumper(Dumper):
 
-    oid = builtins["uuid"].oid
+    _oid = builtins["uuid"].oid
 
     def dump(self, obj: "uuid.UUID") -> bytes:
         return obj.hex.encode("utf8")

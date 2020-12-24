@@ -12,16 +12,13 @@ from typing import Sequence, Tuple, Type, Union, TYPE_CHECKING
 
 from .. import sql
 from .. import errors as e
-from ..oids import builtins, TypeInfo
+from ..oids import builtins, TypeInfo, TEXT_OID
 from ..adapt import Format, Dumper, Loader, Transformer
 from ..proto import AdaptContext
 from . import array
 
 if TYPE_CHECKING:
     from ..connection import Connection, AsyncConnection
-
-
-TEXT_OID = builtins["text"].oid
 
 
 class CompositeInfo(TypeInfo):
@@ -184,6 +181,10 @@ class SequenceDumper(Dumper):
 
 @Dumper.text(tuple)
 class TupleDumper(SequenceDumper):
+
+    # Should be this, but it doesn't work
+    # _oid = builtins["record"].oid
+
     def dump(self, obj: Tuple[Any, ...]) -> bytes:
         return self._dump_sequence(obj, b"(", b")", b",")
 

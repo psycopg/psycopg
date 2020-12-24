@@ -9,23 +9,18 @@ import struct
 from typing import Any, Iterator, List, Optional, Type
 
 from .. import errors as e
-from ..oids import builtins
+from ..oids import builtins, TEXT_OID, TEXT_ARRAY_OID
 from ..adapt import Format, Dumper, Loader, Transformer
 from ..proto import AdaptContext
 
-TEXT_OID = builtins["text"].oid
-TEXT_ARRAY_OID = builtins["text"].array_oid
-
 
 class BaseListDumper(Dumper):
+
+    _oid = TEXT_ARRAY_OID
+
     def __init__(self, src: type, context: AdaptContext = None):
         super().__init__(src, context)
         self._tx = Transformer(context)
-        self._array_oid = 0
-
-    @property
-    def oid(self) -> int:
-        return self._array_oid or TEXT_ARRAY_OID
 
     def _get_array_oid(self, base_oid: int) -> int:
         """
@@ -99,7 +94,7 @@ class ListDumper(BaseListDumper):
         dump_list(obj)
 
         if oid:
-            self._array_oid = self._get_array_oid(oid)
+            self.oid = self._get_array_oid(oid)
 
         return b"".join(tokens)
 
@@ -154,7 +149,7 @@ class ListBinaryDumper(BaseListDumper):
         if not oid:
             oid = TEXT_OID
 
-        self._array_oid = self._get_array_oid(oid)
+        self.oid = self._get_array_oid(oid)
 
         data[0] = _struct_head.pack(len(dims), hasnull, oid)
         data[1] = b"".join(_struct_dim.pack(dim, 1) for dim in dims)

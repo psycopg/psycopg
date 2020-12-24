@@ -10,12 +10,10 @@ from typing import Any, cast, Callable, Optional, Type, Union
 from . import pq
 from . import proto
 from .pq import Format as Format
-from .oids import builtins
+from .oids import TEXT_OID
 from .proto import AdaptContext, DumpersMap, DumperType, LoadersMap, LoaderType
 from .cursor import BaseCursor
 from .connection import BaseConnection
-
-TEXT_OID = builtins["text"].oid
 
 
 class Dumper(ABC):
@@ -26,10 +24,24 @@ class Dumper(ABC):
     globals: DumpersMap = {}
     connection: Optional[BaseConnection]
 
+    # A class-wide oid, which will be used by default by instances unless
+    # the subclass overrides it in init.
+    _oid: int = 0
+
     def __init__(self, src: type, context: AdaptContext = None):
         self.src = src
         self.context = context
         self.connection = connection_from_context(context)
+        self.oid = self._oid
+        """The oid to pass to the server, if known."""
+
+        # Postgres 9.6 doesn't deal well with unknown oids
+        if (
+            not self.oid
+            and self.connection
+            and self.connection.pgconn.server_version < 100000
+        ):
+            self.oid = TEXT_OID
 
     @abstractmethod
     def dump(self, obj: Any) -> bytes:
@@ -48,11 +60,6 @@ class Dumper(ABC):
         else:
             esc = pq.Escaping()
             return b"'%s'" % esc.escape_string(value)
-
-    @property
-    def oid(self) -> int:
-        """The oid to pass to the server, if known."""
-        return 0
 
     @classmethod
     def register(

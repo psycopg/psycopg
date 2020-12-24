@@ -289,32 +289,32 @@ class DateTimeTZRange(Range[datetime]):
 
 @Dumper.text(Int4Range)
 class Int4RangeDumper(RangeDumper):
-    oid = builtins["int4range"].oid
+    _oid = builtins["int4range"].oid
 
 
 @Dumper.text(Int8Range)
 class Int8RangeDumper(RangeDumper):
-    oid = builtins["int8range"].oid
+    _oid = builtins["int8range"].oid
 
 
 @Dumper.text(DecimalRange)
 class NumRangeDumper(RangeDumper):
-    oid = builtins["numrange"].oid
+    _oid = builtins["numrange"].oid
 
 
 @Dumper.text(DateRange)
 class DateRangeDumper(RangeDumper):
-    oid = builtins["daterange"].oid
+    _oid = builtins["daterange"].oid
 
 
 @Dumper.text(DateTimeRange)
 class TimestampRangeDumper(RangeDumper):
-    oid = builtins["tsrange"].oid
+    _oid = builtins["tsrange"].oid
 
 
 @Dumper.text(DateTimeTZRange)
 class TimestampTZRangeDumper(RangeDumper):
-    oid = builtins["tstzrange"].oid
+    _oid = builtins["tstzrange"].oid
 
 
 # Loaders for builtin range types
@@ -407,7 +407,7 @@ class RangeInfo(TypeInfo):
 
         # generate and register a customized text dumper
         dumper: Type[Dumper] = type(
-            f"{self.name.title()}Dumper", (RangeDumper,), {"oid": self.oid}
+            f"{self.name.title()}Dumper", (RangeDumper,), {"_oid": self.oid}
         )
         dumper.register(range_class, context=context, format=Format.TEXT)
 

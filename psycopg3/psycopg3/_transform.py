@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 
 from . import errors as e
 from .pq import Format
-from .oids import builtins, INVALID_OID
+from .oids import INVALID_OID
 from .proto import AdaptContext, DumpersMap
 from .proto import LoadFunc, LoadersMap
 from .cursor import BaseCursor
@@ -18,8 +18,6 @@ from .connection import BaseConnection
 if TYPE_CHECKING:
     from .pq.proto import PGresult
     from .adapt import Dumper, Loader
-
-TEXT_OID = builtins["text"].oid
 
 
 class Transformer:
