@@ -36,7 +36,6 @@ extras_require = {
         "pytest-asyncio >= 0.14.0, < 0.15",
     ],
     "dev": [
-        "tox",
         "black",
         "flake8 >= 3.8, < 3.9",
         "mypy >= 0.790",
