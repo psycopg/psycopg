@@ -288,6 +288,7 @@ class BaseCursor(Generic[ConnectionType]):
         for params in params_seq:
             if first:
                 pgq = self._convert_query(query, params)
+                # TODO: prepare more statements if the types tuples change
                 self._send_prepare(b"", pgq)
                 (result,) = yield from execute(self._conn.pgconn)
                 if result.status == ExecStatus.FATAL_ERROR:
