@@ -61,15 +61,23 @@ The `!Connection` class
         .. note:: You can use :ref:`with conn.cursor(): ...<usage>`
             to close the cursor automatically when the block is exited.
 
-    .. automethod:: execute(query: Query, params: Optional[Args]=None) -> Cursor
+    .. automethod:: execute(query, params=None, prepare=None) -> Cursor
 
-        :param query: The query to execute
+        :param query: The query to execute.
         :type query: `!str`, `!bytes`, or `sql.Composable`
-        :param params: The parameters to pass to the query, if any
+        :param params: The parameters to pass to the query, if any.
         :type params: Sequence or Mapping
+        :param prepare: Force (`!True`) or disallow (`!False`) preparation of
+            the query. By default (`!None`) prepare automatically. See
+            :ref:`prepared-statements`.
+        :type prepare: `!bool`
 
-        The cursor is what returned calling `cursor()` without parameters. See
-        :ref:`query-parameters` for all the details about executing queries.
+        The cursor is what returned calling `cursor()` without parameters. The
+        parameters are passed to its `~Cursor.execute()` and the cursor is
+        returned.
+
+        See :ref:`query-parameters` for all the details about executing
+        queries.
 
     .. rubric:: Transaction management methods
 
@@ -125,9 +133,31 @@ The `!Connection` class
 
             .. __: https://www.postgresql.org/docs/current/multibyte.html
 
+
     .. attribute:: info
 
         TODO
+
+
+    .. autoattribute:: prepare_threshold
+
+        Number of times a query is executed before it is prepared.
+
+        If it is set to 0, every query is prepared the first time is executed.
+        If it is set to `!None`, prepared statements are disabled on the
+        connection.
+
+        See :ref:`prepared-statements` for details.
+
+
+    .. autoattribute:: prepared_max
+
+        Maximum number of prepared statements on the connection.
+
+        If more queries need to be prepared, old ones are deallocated__.
+
+        .. __: https://www.postgresql.org/docs/current/sql-deallocate.html
+
 
     .. rubric:: Methods you can use to do something cool
 
@@ -176,7 +206,7 @@ The `!AsyncConnection` class
             automatically when the block is exited, but be careful about
             the async quirkness: see :ref:`async-with` for details.
 
-    .. automethod:: execute(query: Query, params: Optional[Args]=None) -> AsyncCursor
+    .. automethod:: execute(query, params=None, prepare=None) -> AsyncCursor
     .. automethod:: commit
     .. automethod:: rollback
 

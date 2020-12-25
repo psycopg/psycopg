@@ -102,19 +102,11 @@ class BaseConnection:
 
     cursor_factory: Type["BaseCursor[Any]"]
 
+    # Number of times a query is executed before it is prepared.
     prepare_threshold: Optional[int] = 5
-    """
-    Number of times a query is executed before it is prepared.
 
-    `!None` to disable preparing queries automatically.
-    """
-
+    # Maximum number of prepared statements on the connection.
     prepared_max = 100
-    """
-    Maximum number of prepared statements on the connection.
-
-    If more are prepared, the least used are deallocated.
-    """
 
     def __init__(self, pgconn: "PGconn"):
         self.pgconn = pgconn  # TODO: document this

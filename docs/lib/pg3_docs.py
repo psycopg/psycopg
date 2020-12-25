@@ -72,16 +72,23 @@ def monkeypatch_autodoc():
     """
     Patch autodoc in order to use information found by `recover_defined_module`.
     """
-    from sphinx.ext.autodoc import Documenter
+    from sphinx.ext.autodoc import Documenter, AttributeDocumenter
 
-    orig_get_real_modname = Documenter.get_real_modname
+    orig_doc_get_real_modname = Documenter.get_real_modname
+    orig_attr_get_real_modname = AttributeDocumenter.get_real_modname
 
-    def fixed_get_real_modname(self):
+    def fixed_doc_get_real_modname(self):
         if self.object in recovered_classes:
             return recovered_classes[self.object]
-        return orig_get_real_modname(self)
+        return orig_doc_get_real_modname(self)
 
-    Documenter.get_real_modname = fixed_get_real_modname
+    def fixed_attr_get_real_modname(self):
+        if self.parent in recovered_classes:
+            return recovered_classes[self.parent]
+        return orig_attr_get_real_modname(self)
+
+    Documenter.get_real_modname = fixed_doc_get_real_modname
+    AttributeDocumenter.get_real_modname = fixed_attr_get_real_modname
 
 
 def walk_modules(d):
