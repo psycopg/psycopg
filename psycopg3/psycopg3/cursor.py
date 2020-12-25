@@ -198,7 +198,9 @@ class BaseCursor(Generic[ConnectionType]):
 
         # Update the prepare state of the query
         if prepare is not False:
-            yield from self._maintain_prepared(pgq, results, prep, name)
+            cmd = self._maintain_prepared(pgq, results, prep, name)
+            if cmd:
+                yield from self._conn._exec_command(cmd)
 
         self._execute_results(results)
 
@@ -234,11 +236,11 @@ class BaseCursor(Generic[ConnectionType]):
         results: Sequence["PGresult"],
         prep: Prepare,
         name: bytes,
-    ) -> PQGen[None]:
+    ) -> Optional[bytes]:
         """Maintain the cache of he prepared statements."""
         # don't do anything if prepared statements are disabled
         if self._conn.prepare_threshold is None:
-            return
+            return None
 
         cache = self._conn._prepared_statements
         key = (query.query, query.types)
@@ -252,12 +254,12 @@ class BaseCursor(Generic[ConnectionType]):
                 else:
                     cache[key] += 1  # type: ignore  # operator
             cache.move_to_end(key)
-            return
+            return None
 
         # The query is not in cache. Let's see if we must add it
         if len(results) != 1:
             # We cannot prepare a multiple statement
-            return
+            return None
 
         result = results[0]
         if (
@@ -265,7 +267,7 @@ class BaseCursor(Generic[ConnectionType]):
             and result.status != ExecStatus.COMMAND_OK
         ):
             # We don't prepare failed queries or other weird results
-            return
+            return None
 
         # Ok, we got to the conclusion that this query is genuinely to prepare
         cache[key] = name if prep is Prepare.SHOULD else 1
@@ -273,11 +275,13 @@ class BaseCursor(Generic[ConnectionType]):
         # Evict an old value from the cache; if it was prepared, deallocate it
         # Do it only once: if the cache was resized, deallocate gradually
         if len(cache) <= self._conn.prepared_max:
-            return
+            return None
 
         old_val = cache.popitem(last=False)[1]
         if isinstance(old_val, bytes):
-            yield from self._conn._exec_command(b"DEALLOCATE " + old_val)
+            return b"DEALLOCATE " + old_val
+        else:
+            return None
 
     def _executemany_gen(
         self, query: Query, params_seq: Sequence[Params]
