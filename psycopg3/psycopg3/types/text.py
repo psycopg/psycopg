@@ -48,11 +48,15 @@ class StringDumper(_StringDumper):
             return obj.encode(self._encoding)
 
 
-@Loader.text(builtins["text"].oid)
-@Loader.binary(builtins["text"].oid)
-@Loader.text(builtins["varchar"].oid)
-@Loader.binary(builtins["varchar"].oid)
 @Loader.text(INVALID_OID)
+@Loader.text(builtins["bpchar"].oid)
+@Loader.text(builtins["name"].oid)
+@Loader.text(builtins["text"].oid)
+@Loader.text(builtins["varchar"].oid)
+@Loader.binary(builtins["bpchar"].oid)
+@Loader.binary(builtins["name"].oid)
+@Loader.binary(builtins["text"].oid)
+@Loader.binary(builtins["varchar"].oid)
 class TextLoader(Loader):
 
     _encoding = "utf-8"
@@ -70,24 +74,6 @@ class TextLoader(Loader):
         else:
             # return bytes for SQL_ASCII db
             return data
-
-
-@Loader.text(builtins["name"].oid)
-@Loader.binary(builtins["name"].oid)
-@Loader.text(builtins["bpchar"].oid)
-@Loader.binary(builtins["bpchar"].oid)
-class UnknownLoader(Loader):
-
-    _encoding = "utf-8"
-
-    def __init__(self, oid: int, context: AdaptContext):
-        super().__init__(oid, context)
-        conn = self.connection
-        if conn:
-            self._encoding = conn.client_encoding
-
-    def load(self, data: bytes) -> str:
-        return data.decode(self._encoding)
 
 
 @Dumper.text(bytes)

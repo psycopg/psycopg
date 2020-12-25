@@ -142,6 +142,10 @@ cdef void register_text_c_adapters():
     StringBinaryDumper.register(str, format=Format.BINARY)
 
     TextLoader.register(oids.INVALID_OID)
+    TextLoader.register(oids.BPCHAR_OID)
+    TextLoader.register(oids.BPCHAR_OID, format=Format.BINARY)
+    TextLoader.register(oids.NAME_OID)
+    TextLoader.register(oids.NAME_OID, format=Format.BINARY)
     TextLoader.register(oids.TEXT_OID)
     TextLoader.register(oids.TEXT_OID, format=Format.BINARY)
     TextLoader.register(oids.VARCHAR_OID)
@@ -156,3 +160,4 @@ cdef void register_text_c_adapters():
 
     ByteaLoader.register(oids.BYTEA_OID)
     ByteaBinaryLoader.register(oids.BYTEA_OID, format=Format.BINARY)
+    ByteaBinaryLoader.register(oids.INVALID_OID, format=Format.BINARY)

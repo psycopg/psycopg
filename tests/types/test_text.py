@@ -120,7 +120,7 @@ def test_load_badenc(conn, typename, fmt_out):
 
 
 @pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
-@pytest.mark.parametrize("typename", ["text", "varchar"])
+@pytest.mark.parametrize("typename", ["text", "varchar", "name", "bpchar"])
 def test_load_ascii(conn, typename, fmt_out):
     cur = conn.cursor(format=fmt_out)
 
@@ -129,16 +129,6 @@ def test_load_ascii(conn, typename, fmt_out):
         f"select chr(%s::int)::{typename}", (ord(eur),)
     ).fetchone()
     assert res == eur.encode("utf8")
-
-
-@pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
-@pytest.mark.parametrize("typename", ["name", "bpchar"])
-def test_load_ascii_encanyway(conn, typename, fmt_out):
-    cur = conn.cursor(format=fmt_out)
-
-    conn.client_encoding = "ascii"
-    (res,) = cur.execute(f"select 'aa'::{typename}").fetchone()
-    assert res == "aa"
 
 
 @pytest.mark.parametrize("fmt_in", [Format.TEXT, Format.BINARY])
