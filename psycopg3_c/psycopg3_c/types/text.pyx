@@ -8,7 +8,8 @@ from cpython.bytes cimport PyBytes_AsString, PyBytes_AsStringAndSize
 from cpython.unicode cimport PyUnicode_Decode, PyUnicode_DecodeUTF8
 from cpython.unicode cimport PyUnicode_AsUTF8String, PyUnicode_AsEncodedString
 
-from psycopg3_c cimport libpq, oids
+from psycopg3_c cimport oids
+from psycopg3_c.pq cimport libpq
 from psycopg3_c.pq_cython cimport Escaping
 
 

@@ -20,7 +20,7 @@ from cpython.bytearray cimport PyByteArray_FromStringAndSize, PyByteArray_Resize
 from cpython.bytearray cimport PyByteArray_AS_STRING
 
 from psycopg3_c cimport oids
-from psycopg3_c cimport libpq as impl
+from psycopg3_c.pq cimport libpq
 from psycopg3_c.adapt cimport cloader_func, get_context_func
 from psycopg3_c.pq_cython cimport Escaping, _buffer_as_string_and_size
 
@@ -36,7 +36,7 @@ cdef class CDumper:
     cdef object src
     cdef public object context
     cdef public object connection
-    cdef public impl.Oid oid
+    cdef public libpq.Oid oid
     cdef PGconn _pgconn
 
     def __init__(self, src: type, context: AdaptContext = None):
@@ -77,7 +77,7 @@ cdef class CDumper:
             if self._pgconn.pgconn_ptr == NULL:
                 raise e.OperationalError("the connection is closed")
 
-            len_out = impl.PQescapeStringConn(
+            len_out = libpq.PQescapeStringConn(
                 self._pgconn.pgconn_ptr, ptr_out + 1, ptr, length, &error
             )
             if error:
@@ -85,7 +85,7 @@ cdef class CDumper:
                     f"escape_string failed: {error_message(self.connection)}"
                 )
         else:
-            len_out = impl.PQescapeString(ptr_out + 1, ptr, length)
+            len_out = libpq.PQescapeString(ptr_out + 1, ptr, length)
 
         ptr_out[0] = b'\''
         ptr_out[len_out + 1] = b'\''
@@ -111,7 +111,7 @@ cdef class CDumper:
 
 
 cdef class CLoader:
-    cdef public impl.Oid oid
+    cdef public libpq.Oid oid
     cdef public object context
     cdef public object connection
 
