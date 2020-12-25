@@ -91,6 +91,9 @@ setup(
     # For some reason pacakge_data doesn't work in setup.cfg
     package_data={
         "psycopg3_c": ["py.typed"],
-        "": ["*.pyx", "*.pxd", "*.pyi"],
+        # NOTE: do not include .pyx files: they shoudn't be in the sdist
+        # package, so that build is only performed from the .c files (which are
+        # distributed instead).
+        "": ["*.pxd", "*.pyi"],
     },
 )
