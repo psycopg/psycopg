@@ -5,10 +5,9 @@ psycopg3 cursor objects
 # Copyright (C) 2020 The Psycopg Team
 
 import sys
-from enum import IntEnum, auto
 from types import TracebackType
 from typing import Any, AsyncIterator, Callable, Generic, Iterator, List
-from typing import Optional, Sequence, Tuple, Type, TYPE_CHECKING, Union
+from typing import Optional, Sequence, Type, TYPE_CHECKING
 from contextlib import contextmanager
 
 from . import errors as e
@@ -18,6 +17,7 @@ from .copy import Copy, AsyncCopy
 from .proto import ConnectionType, Query, Params, DumpersMap, LoadersMap, PQGen
 from ._column import Column
 from ._queries import PostgresQuery
+from ._preparing import Prepare
 
 if sys.version_info >= (3, 7):
     from contextlib import asynccontextmanager
@@ -40,12 +40,6 @@ else:
     from . import generators
 
     execute = generators.execute
-
-
-class Prepare(IntEnum):
-    NO = auto()
-    YES = auto()
-    SHOULD = auto()
 
 
 class BaseCursor(Generic[ConnectionType]):
@@ -174,7 +168,7 @@ class BaseCursor(Generic[ConnectionType]):
         pgq = self._convert_query(query, params)
 
         # Check if the query is prepared or needs preparing
-        prep, name = self._get_prepared(pgq, prepare)
+        prep, name = self._conn._prepared.get(pgq, prepare)
         if prep is Prepare.YES:
             # The query is already prepared
             self._send_query_prepared(name, pgq)
@@ -198,90 +192,11 @@ class BaseCursor(Generic[ConnectionType]):
 
         # Update the prepare state of the query
         if prepare is not False:
-            cmd = self._maintain_prepared(pgq, results, prep, name)
+            cmd = self._conn._prepared.maintain(pgq, results, prep, name)
             if cmd:
                 yield from self._conn._exec_command(cmd)
 
         self._execute_results(results)
-
-    def _get_prepared(
-        self, query: PostgresQuery, prepare: Optional[bool] = None
-    ) -> Tuple[Prepare, bytes]:
-        """
-        Check if a query is prepared, tell back whether to prepare it.
-        """
-        conn = self._conn
-        if prepare is False or conn.prepare_threshold is None:
-            # The user doesn't want this query to be prepared
-            return Prepare.NO, b""
-
-        key = (query.query, query.types)
-        value: Union[bytes, int] = conn._prepared_statements.get(key, 0)
-        if isinstance(value, bytes):
-            # The query was already prepared in this session
-            return Prepare.YES, value
-
-        if value >= conn.prepare_threshold or prepare:
-            # The query has been executed enough times and needs to be prepared
-            name = f"_pg3_{conn._prepared_idx}".encode("utf-8")
-            conn._prepared_idx += 1
-            return Prepare.SHOULD, name
-        else:
-            # The query is not to be prepared yet
-            return Prepare.NO, b""
-
-    def _maintain_prepared(
-        self,
-        query: PostgresQuery,
-        results: Sequence["PGresult"],
-        prep: Prepare,
-        name: bytes,
-    ) -> Optional[bytes]:
-        """Maintain the cache of he prepared statements."""
-        # don't do anything if prepared statements are disabled
-        if self._conn.prepare_threshold is None:
-            return None
-
-        cache = self._conn._prepared_statements
-        key = (query.query, query.types)
-
-        # If we know the query already the cache size won't change
-        # So just update the count and record as last used
-        if key in cache:
-            if isinstance(cache[key], int):
-                if prep is Prepare.SHOULD:
-                    cache[key] = name
-                else:
-                    cache[key] += 1  # type: ignore  # operator
-            cache.move_to_end(key)
-            return None
-
-        # The query is not in cache. Let's see if we must add it
-        if len(results) != 1:
-            # We cannot prepare a multiple statement
-            return None
-
-        result = results[0]
-        if (
-            result.status != ExecStatus.TUPLES_OK
-            and result.status != ExecStatus.COMMAND_OK
-        ):
-            # We don't prepare failed queries or other weird results
-            return None
-
-        # Ok, we got to the conclusion that this query is genuinely to prepare
-        cache[key] = name if prep is Prepare.SHOULD else 1
-
-        # Evict an old value from the cache; if it was prepared, deallocate it
-        # Do it only once: if the cache was resized, deallocate gradually
-        if len(cache) <= self._conn.prepared_max:
-            return None
-
-        old_val = cache.popitem(last=False)[1]
-        if isinstance(old_val, bytes):
-            return b"DEALLOCATE " + old_val
-        else:
-            return None
 
     def _executemany_gen(
         self, query: Query, params_seq: Sequence[Params]

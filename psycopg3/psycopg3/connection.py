@@ -10,11 +10,10 @@ import logging
 import threading
 from types import TracebackType
 from typing import Any, AsyncIterator, Callable, Iterator, List, NamedTuple
-from typing import Optional, Tuple, Type, TYPE_CHECKING, TypeVar, Union
+from typing import Optional, Type, TYPE_CHECKING, TypeVar
 from weakref import ref, ReferenceType
 from functools import partial
 from contextlib import contextmanager
-from collections import OrderedDict
 
 if sys.version_info >= (3, 7):
     from contextlib import asynccontextmanager
@@ -32,6 +31,7 @@ from .proto import DumpersMap, LoadersMap, PQGen, PQGenConn, RV, Query, Params
 from .conninfo import make_conninfo
 from .generators import notifies
 from .transaction import Transaction, AsyncTransaction
+from ._preparing import PrepareManager
 
 logger = logging.getLogger(__name__)
 package_logger = logging.getLogger("psycopg3")
@@ -102,12 +102,6 @@ class BaseConnection:
 
     cursor_factory: Type["BaseCursor[Any]"]
 
-    # Number of times a query is executed before it is prepared.
-    prepare_threshold: Optional[int] = 5
-
-    # Maximum number of prepared statements on the connection.
-    prepared_max = 100
-
     def __init__(self, pgconn: "PGconn"):
         self.pgconn = pgconn  # TODO: document this
         self._autocommit = False
@@ -121,14 +115,7 @@ class BaseConnection:
         # only a begin/commit and not a savepoint.
         self._savepoints: List[str] = []
 
-        # Number of times each query was seen in order to prepare it.
-        # Map (query, types) -> name or number of times seen
-        self._prepared_statements: OrderedDict[
-            Tuple[bytes, Tuple[int, ...]], Union[int, bytes]
-        ] = OrderedDict()
-
-        # Counter to generate prepared statements names
-        self._prepared_idx = 0
+        self._prepared = PrepareManager()
 
         wself = ref(self)
 
@@ -248,6 +235,37 @@ class BaseConnection:
         n = Notify(pgn.relname.decode(enc), pgn.extra.decode(enc), pgn.be_pid)
         for cb in self._notify_handlers:
             cb(n)
+
+    @property
+    def prepare_threshold(self) -> Optional[int]:
+        """
+        Number of times a query is executed before it is prepared.
+
+        - If it is set to 0, every query is prepared the first time is
+          executed.
+        - If it is set to `!None`, prepared statements are disabled on the
+          connection.
+
+        Default value: 5
+        """
+        return self._prepared.prepare_threshold
+
+    @prepare_threshold.setter
+    def prepare_threshold(self, value: Optional[int]) -> None:
+        self._prepared.prepare_threshold = value
+
+    @property
+    def prepared_max(self) -> int:
+        """
+        Maximum number of prepared statements on the connection.
+
+        Default value: 100
+        """
+        return self._prepared.prepared_max
+
+    @prepared_max.setter
+    def prepared_max(self, value: int) -> None:
+        self._prepared.prepared_max = value
 
     # Generators to perform high-level operations on the connection
     #

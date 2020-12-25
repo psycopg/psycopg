@@ -140,19 +140,13 @@ The `!Connection` class
 
 
     .. autoattribute:: prepare_threshold
-
-        Number of times a query is executed before it is prepared.
-
-        If it is set to 0, every query is prepared the first time is executed.
-        If it is set to `!None`, prepared statements are disabled on the
-        connection.
+        :annotation: Optional[int]
 
         See :ref:`prepared-statements` for details.
 
 
     .. autoattribute:: prepared_max
-
-        Maximum number of prepared statements on the connection.
+        :annotation: int
 
         If more queries need to be prepared, old ones are deallocated__.
 

@@ -77,7 +77,7 @@ def test_prepare_disable(conn):
         res.append(cur.fetchone()[0])
 
     assert res == [0] * 10
-    assert not conn._prepared_statements
+    assert not conn._prepared._prepared
 
 
 def test_no_prepare_multi(conn):
@@ -140,10 +140,10 @@ def test_evict_lru(conn):
         conn.execute("select 'a'")
         conn.execute(f"select {i}")
 
-    assert len(conn._prepared_statements) == 5
-    assert conn._prepared_statements[b"select 'a'", ()] == b"_pg3_0"
+    assert len(conn._prepared._prepared) == 5
+    assert conn._prepared._prepared[b"select 'a'", ()] == b"_pg3_0"
     for i in [9, 8, 7, 6]:
-        assert conn._prepared_statements[f"select {i}".encode("utf8"), ()] == 1
+        assert conn._prepared._prepared[f"select {i}".encode("utf8"), ()] == 1
 
     cur = conn.execute("select statement from pg_prepared_statements")
     assert cur.fetchall() == [("select 'a'",)]
@@ -156,9 +156,9 @@ def test_evict_lru_deallocate(conn):
         conn.execute("select 'a'")
         conn.execute(f"select {i}")
 
-    assert len(conn._prepared_statements) == 5
+    assert len(conn._prepared._prepared) == 5
     for i in [9, 8, 7, 6, "'a'"]:
-        assert conn._prepared_statements[
+        assert conn._prepared._prepared[
             f"select {i}".encode("utf8"), ()
         ].startswith(b"_pg3_")
 
