@@ -46,12 +46,15 @@ The `!Cursor` class
 
     .. rubric:: Methods to send commands
 
-    .. automethod:: execute(query: Query, params: Optional[Args]=None) -> Cursor
+    .. automethod:: execute(query, params=None, prepare=None) -> Cursor
 
-        :param query: The query to execute
+        :param query: The query to execute.
         :type query: `!str`, `!bytes`, or `sql.Composable`
-        :param params: The parameters to pass to the query, if any
+        :param params: The parameters to pass to the query, if any.
         :type params: Sequence or Mapping
+        :param prepare: Force (`!True`) or disallow (`!False`) preparation of
+            the query. By default (`!None`) prepare automatically. See
+            :ref:`prepared-statements`.
 
         Return the cursor itself, so that it will be possible to chain a fetch
         operation after the call.
@@ -144,7 +147,7 @@ The `!AsyncCursor` class
             automatically when the block is exited, but be careful about
             the async quirkness: see :ref:`async-with` for details.
 
-    .. automethod:: execute(query: Query, params: Optional[Args]=None) -> AsyncCursor
+    .. automethod:: execute(query, params=None, prepare=None) -> AsyncCursor
     .. automethod:: executemany(query: Query, params_seq: Sequence[Args])
     .. automethod:: copy(statement: Query) -> AsyncCopy
 

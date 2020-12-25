@@ -6,5 +6,6 @@ Advanced topics
     :caption: Contents:
 
     ../adaptation
+    ../prepared
     ../copy
     ../async

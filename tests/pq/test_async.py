@@ -5,6 +5,10 @@ from psycopg3 import pq
 from psycopg3.generators import execute
 
 
+def execute_wait(pgconn):
+    return psycopg3.waiting.wait(execute(pgconn), pgconn.socket)
+
+
 def test_send_query(pgconn):
     # This test shows how to process an async query in all its glory
     pgconn.nonblocking = 1
@@ -63,7 +67,7 @@ def test_send_query_compact_test(pgconn):
         b"/* %s */ select pg_sleep(0.01); select 1 as foo;"
         % (b"x" * 1_000_000)
     )
-    results = psycopg3.waiting.wait(execute(pgconn))
+    results = execute_wait(pgconn)
 
     assert len(results) == 2
     assert results[0].nfields == 1
@@ -80,7 +84,7 @@ def test_send_query_compact_test(pgconn):
 
 def test_send_query_params(pgconn):
     pgconn.send_query_params(b"select $1::int + $2", [b"5", b"3"])
-    (res,) = psycopg3.waiting.wait(execute(pgconn))
+    (res,) = execute_wait(pgconn)
     assert res.status == pq.ExecStatus.TUPLES_OK
     assert res.get_value(0, 0) == b"8"
 
@@ -91,11 +95,11 @@ def test_send_query_params(pgconn):
 
 def test_send_prepare(pgconn):
     pgconn.send_prepare(b"prep", b"select $1::int + $2::int")
-    (res,) = psycopg3.waiting.wait(execute(pgconn))
+    (res,) = execute_wait(pgconn)
     assert res.status == pq.ExecStatus.COMMAND_OK, res.error_message
 
     pgconn.send_query_prepared(b"prep", [b"3", b"5"])
-    (res,) = psycopg3.waiting.wait(execute(pgconn))
+    (res,) = execute_wait(pgconn)
     assert res.get_value(0, 0) == b"8"
 
     pgconn.finish()
@@ -107,22 +111,22 @@ def test_send_prepare(pgconn):
 
 def test_send_prepare_types(pgconn):
     pgconn.send_prepare(b"prep", b"select $1 + $2", [23, 23])
-    (res,) = psycopg3.waiting.wait(execute(pgconn))
+    (res,) = execute_wait(pgconn)
     assert res.status == pq.ExecStatus.COMMAND_OK, res.error_message
 
     pgconn.send_query_prepared(b"prep", [b"3", b"5"])
-    (res,) = psycopg3.waiting.wait(execute(pgconn))
+    (res,) = execute_wait(pgconn)
     assert res.get_value(0, 0) == b"8"
 
 
 def test_send_prepared_binary_in(pgconn):
     val = b"foo\00bar"
     pgconn.send_prepare(b"", b"select length($1::bytea), length($2::bytea)")
-    (res,) = psycopg3.waiting.wait(execute(pgconn))
+    (res,) = execute_wait(pgconn)
     assert res.status == pq.ExecStatus.COMMAND_OK, res.error_message
 
     pgconn.send_query_prepared(b"", [val, val], param_formats=[0, 1])
-    (res,) = psycopg3.waiting.wait(execute(pgconn))
+    (res,) = execute_wait(pgconn)
     assert res.status == pq.ExecStatus.TUPLES_OK
     assert res.get_value(0, 0) == b"3"
     assert res.get_value(0, 1) == b"7"
@@ -137,12 +141,12 @@ def test_send_prepared_binary_in(pgconn):
 def test_send_prepared_binary_out(pgconn, fmt, out):
     val = b"foo\00bar"
     pgconn.send_prepare(b"", b"select $1::bytea")
-    (res,) = psycopg3.waiting.wait(execute(pgconn))
+    (res,) = execute_wait(pgconn)
     assert res.status == pq.ExecStatus.COMMAND_OK, res.error_message
 
     pgconn.send_query_prepared(
         b"", [val], param_formats=[1], result_format=fmt
     )
-    (res,) = psycopg3.waiting.wait(execute(pgconn))
+    (res,) = execute_wait(pgconn)
     assert res.status == pq.ExecStatus.TUPLES_OK
     assert res.get_value(0, 0) == out

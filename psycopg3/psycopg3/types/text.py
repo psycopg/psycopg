@@ -17,21 +17,24 @@ if TYPE_CHECKING:
 
 
 class _StringDumper(Dumper):
+
+    _encoding = "utf-8"
+
     def __init__(self, src: type, context: AdaptContext):
         super().__init__(src, context)
 
-        self.encoding = "utf-8"
-        if self.connection:
-            enc = self.connection.client_encoding
+        conn = self.connection
+        if conn:
+            enc = conn.client_encoding
             if enc != "ascii":
-                self.encoding = enc
+                self._encoding = enc
 
 
 @Dumper.binary(str)
 class StringBinaryDumper(_StringDumper):
     def dump(self, obj: str) -> bytes:
         # the server will raise DataError subclass if the string contains 0x00
-        return obj.encode(self.encoding)
+        return obj.encode(self._encoding)
 
 
 @Dumper.text(str)
@@ -42,7 +45,7 @@ class StringDumper(_StringDumper):
                 "PostgreSQL text fields cannot contain NUL (0x00) bytes"
             )
         else:
-            return obj.encode(self.encoding)
+            return obj.encode(self._encoding)
 
 
 @Loader.text(builtins["text"].oid)
@@ -51,21 +54,19 @@ class StringDumper(_StringDumper):
 @Loader.binary(builtins["varchar"].oid)
 @Loader.text(INVALID_OID)
 class TextLoader(Loader):
+
+    _encoding = "utf-8"
+
     def __init__(self, oid: int, context: AdaptContext):
         super().__init__(oid, context)
-
-        if self.connection:
-            enc = self.connection.client_encoding
-            if enc != "ascii":
-                self.encoding = enc
-            else:
-                self.encoding = ""
-        else:
-            self.encoding = "utf-8"
+        conn = self.connection
+        if conn:
+            enc = conn.client_encoding
+            self._encoding = enc if enc != "ascii" else ""
 
     def load(self, data: bytes) -> Union[bytes, str]:
-        if self.encoding:
-            return data.decode(self.encoding)
+        if self._encoding:
+            return data.decode(self._encoding)
         else:
             # return bytes for SQL_ASCII db
             return data
@@ -76,32 +77,36 @@ class TextLoader(Loader):
 @Loader.text(builtins["bpchar"].oid)
 @Loader.binary(builtins["bpchar"].oid)
 class UnknownLoader(Loader):
+
+    _encoding = "utf-8"
+
     def __init__(self, oid: int, context: AdaptContext):
         super().__init__(oid, context)
-        self.encoding = (
-            self.connection.client_encoding if self.connection else "utf-8"
-        )
+        conn = self.connection
+        if conn:
+            self._encoding = conn.client_encoding
 
     def load(self, data: bytes) -> str:
-        return data.decode(self.encoding)
+        return data.decode(self._encoding)
 
 
 @Dumper.text(bytes)
 @Dumper.text(bytearray)
 @Dumper.text(memoryview)
 class BytesDumper(Dumper):
-    oid = builtins["bytea"].oid
+
+    _oid = builtins["bytea"].oid
 
     def __init__(self, src: type, context: AdaptContext = None):
         super().__init__(src, context)
-        self.esc = Escaping(
+        self._esc = Escaping(
             self.connection.pgconn if self.connection else None
         )
 
     def dump(self, obj: bytes) -> memoryview:
         # TODO: mypy doesn't complain, but this function has the wrong signature
         # probably dump return value should be extended to Buffer
-        return self.esc.escape_bytea(obj)
+        return self._esc.escape_bytea(obj)
 
 
 @Dumper.binary(bytes)
@@ -109,7 +114,7 @@ class BytesDumper(Dumper):
 @Dumper.binary(memoryview)
 class BytesBinaryDumper(Dumper):
 
-    oid = builtins["bytea"].oid
+    _oid = builtins["bytea"].oid
 
     def dump(
         self, obj: Union[bytes, bytearray, memoryview]

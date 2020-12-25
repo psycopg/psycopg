@@ -19,6 +19,7 @@ from cpython.bytes cimport PyBytes_AsStringAndSize
 from cpython.bytearray cimport PyByteArray_FromStringAndSize, PyByteArray_Resize
 from cpython.bytearray cimport PyByteArray_AS_STRING
 
+from psycopg3_c cimport oids
 from psycopg3_c cimport libpq as impl
 from psycopg3_c.adapt cimport cloader_func, get_context_func
 from psycopg3_c.pq_cython cimport Escaping, _buffer_as_string_and_size
@@ -45,7 +46,16 @@ cdef class CDumper:
         self._pgconn = (
             self.connection.pgconn if self.connection is not None else None
         )
-        # oid is implicitly set to 0, subclasses may override it
+
+        # default oid is implicitly set to 0, subclasses may override it
+        # PG 9.6 goes a bit bonker sending unknown oids, so use text instead
+        # (this does cause side effect, and requres casts more often than >= 10)
+        if (
+            self.oid == 0
+            and self._pgconn is not None
+            and self._pgconn.server_version < 100000
+        ):
+            self.oid = oids.TEXT_OID
 
     def dump(self, obj: Any) -> bytes:
         raise NotImplementedError()

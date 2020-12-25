@@ -1,10 +1,7 @@
 import pytest
 
-import psycopg3
 from psycopg3.adapt import Transformer, Format, Dumper, Loader
-from psycopg3.oids import builtins
-
-TEXT_OID = builtins["text"].oid
+from psycopg3.oids import builtins, TEXT_OID
 
 
 @pytest.mark.parametrize(
@@ -137,15 +134,10 @@ def test_load_cursor_ctx_nested(conn, sql, obj, fmt_out):
 @pytest.mark.parametrize("fmt_in", [Format.TEXT, Format.BINARY])
 def test_none_type_argument(conn, fmt_in):
     cur = conn.cursor()
+    cur.execute("create table none_args (id serial primary key, num integer)")
+    cast = "" if conn.pgconn.server_version >= 100000 else "::int"
     cur.execute(
-        """
-        create table test_none_type_argument (
-            id serial primary key, num integer
-        )
-        """
-    )
-    cur.execute(
-        "insert into test_none_type_argument (num) values (%s) returning id",
+        f"insert into none_args (num) values (%s{cast}) returning id",
         (None,),
     )
     assert cur.fetchone()[0]
@@ -158,20 +150,26 @@ def test_return_untyped(conn, fmt_in):
     # Currently string are passed as unknown oid to libpq. This is because
     # unknown is more easily cast by postgres to different types (see jsonb
     # later). However Postgres < 10 refuses to emit unknown types.
-    if conn.pgconn.server_version > 100000:
+    if conn.pgconn.server_version >= 100000:
         cur.execute("select %s, %s", ["hello", 10])
         assert cur.fetchone() == ("hello", 10)
     else:
-        with pytest.raises(psycopg3.errors.IndeterminateDatatype):
-            cur.execute("select %s, %s", ["hello", 10])
-        conn.rollback()
-        cur.execute("select %s::text, %s", ["hello", 10])
+        # We used to tolerate an error on roundtrip for unknown on pg < 10
+        # however after introducing prepared statements the error happens
+        # in every context, so now we cannot just use unknown oid on PG < 10
+        # with pytest.raises(psycopg3.errors.IndeterminateDatatype):
+        #     cur.execute("select %s, %s", ["hello", 10])
+        # conn.rollback()
+        # cur.execute("select %s::text, %s", ["hello", 10])
+        cur.execute("select %s, %s", ["hello", 10])
         assert cur.fetchone() == ("hello", 10)
 
     # It would be nice if above all postgres version behaved consistently.
     # However this below shouldn't break either.
+    # (unfortunately it does: a cast is required for pre 10 versions)
+    cast = "" if conn.pgconn.server_version >= 100000 else "::jsonb"
     cur.execute("create table testjson(data jsonb)")
-    cur.execute("insert into testjson (data) values (%s)", ["{}"])
+    cur.execute(f"insert into testjson (data) values (%s{cast})", ["{}"])
     assert cur.execute("select data from testjson").fetchone() == ({},)
 
 

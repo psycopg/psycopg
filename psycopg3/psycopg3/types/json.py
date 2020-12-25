@@ -39,12 +39,12 @@ class _JsonDumper(Dumper):
 @Dumper.text(Json)
 @Dumper.binary(Json)
 class JsonDumper(_JsonDumper):
-    oid = builtins["json"].oid
+    _oid = builtins["json"].oid
 
 
 @Dumper.text(Jsonb)
 class JsonbDumper(_JsonDumper):
-    oid = builtins["jsonb"].oid
+    _oid = builtins["jsonb"].oid
 
 
 @Dumper.binary(Jsonb)

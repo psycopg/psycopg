@@ -3,27 +3,16 @@ import pytest
 from psycopg3 import ProgrammingError, Rollback
 
 from .test_transaction import in_transaction, insert_row, inserted
-from .test_transaction import ExpectedException, ListPopAll
+from .test_transaction import ExpectedException, patch_exec
 from .test_transaction import create_test_table  # noqa  # autouse fixture
 
 pytestmark = pytest.mark.asyncio
 
 
 @pytest.fixture
-async def commands(aconn, monkeypatch):
-    """The queue of commands issued internally by the test connection."""
-    _orig_exec_command = aconn._exec_command
-    L = ListPopAll()
-
-    async def _exec_command(command):
-        if isinstance(command, bytes):
-            command = command.decode(aconn.client_encoding)
-
-        L.insert(0, command)
-        await _orig_exec_command(command)
-
-    monkeypatch.setattr(aconn, "_exec_command", _exec_command)
-    yield L
+def commands(aconn, monkeypatch):
+    """The list of commands issued internally by the test connection."""
+    yield patch_exec(aconn, monkeypatch)
 
 
 async def test_basic(aconn):

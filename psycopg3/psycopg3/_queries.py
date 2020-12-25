@@ -5,13 +5,14 @@ Utility module to manipulate queries
 # Copyright (C) 2020 The Psycopg Team
 
 import re
-from functools import lru_cache
 from typing import Any, Dict, List, Mapping, Match, NamedTuple, Optional
 from typing import Sequence, Tuple, Union, TYPE_CHECKING
+from functools import lru_cache
 
 from . import errors as e
 from .pq import Format
 from .sql import Composable
+from .oids import TEXT_OID, INVALID_OID
 from .proto import Query, Params
 
 if TYPE_CHECKING:
@@ -29,16 +30,23 @@ class PostgresQuery:
     Helper to convert a Python query and parameters into Postgres format.
     """
 
+    _unknown_oid = INVALID_OID
+
     _parts: List[QueryPart]
+    _query = b""
+    params: Optional[List[Optional[bytes]]] = None
+    # these are tuples so they can be used as keys e.g. in prepared stmts
+    types: Tuple[int, ...] = ()
+    formats: Optional[List[Format]] = None
+    _order: Optional[List[str]] = None
 
     def __init__(self, transformer: "Transformer"):
         self._tx = transformer
-        self.query: bytes = b""
-        self.params: Optional[List[Optional[bytes]]] = None
-        self.types: Optional[List[int]] = None
-        self.formats: Optional[List[Format]] = None
-
-        self._order: Optional[List[str]] = None
+        if (
+            self._tx.connection
+            and self._tx.connection.pgconn.server_version < 100000
+        ):
+            self._unknown_oid = TEXT_OID
 
     def convert(self, query: Query, vars: Optional[Params]) -> None:
         """
@@ -74,7 +82,7 @@ class PostgresQuery:
             )
             assert self.formats is not None
             ps = self.params = []
-            ts = self.types = []
+            ts = []
             for i in range(len(params)):
                 param = params[i]
                 if param is not None:
@@ -83,9 +91,11 @@ class PostgresQuery:
                     ts.append(dumper.oid)
                 else:
                     ps.append(None)
-                    ts.append(0)
+                    ts.append(self._unknown_oid)
+            self.types = tuple(ts)
         else:
-            self.params = self.types = None
+            self.params = None
+            self.types = ()
 
 
 @lru_cache()

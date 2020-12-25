@@ -29,7 +29,7 @@ ip_network: Callable[[str], Network]
 @Dumper.text("ipaddress.IPv6Interface")
 class InterfaceDumper(Dumper):
 
-    oid = builtins["inet"].oid
+    _oid = builtins["inet"].oid
 
     def dump(self, obj: Interface) -> bytes:
         return str(obj).encode("utf8")
@@ -39,7 +39,7 @@ class InterfaceDumper(Dumper):
 @Dumper.text("ipaddress.IPv6Network")
 class NetworkDumper(Dumper):
 
-    oid = builtins["cidr"].oid
+    _oid = builtins["cidr"].oid
 
     def dump(self, obj: Network) -> bytes:
         return str(obj).encode("utf8")

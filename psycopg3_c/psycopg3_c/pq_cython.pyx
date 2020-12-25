@@ -522,16 +522,24 @@ cdef PGconn _connect_start(const char *conninfo):
 
 cdef (int, Oid *, char * const*, int *, int *) _query_params_args(
     list param_values: Optional[Sequence[Optional[bytes]]],
-    list param_types: Optional[Sequence[int]],
+    param_types: Optional[Sequence[int]],
     list param_formats: Optional[Sequence[Format]],
 ) except *:
     cdef int i
 
+    # the PostgresQuery convers the param_types to tuple, so this operation
+    # is most often no-op
+    cdef tuple tparam_types
+    if param_types is not None and not isinstance(param_types, tuple):
+        tparam_types = tuple(param_types)
+    else:
+        tparam_types = param_types
+
     cdef int nparams = len(param_values) if param_values else 0
-    if param_types is not None and len(param_types) != nparams:
+    if tparam_types is not None and len(tparam_types) != nparams:
         raise ValueError(
             "got %d param_values but %d param_types"
-            % (nparams, len(param_types))
+            % (nparams, len(tparam_types))
         )
     if param_formats is not None and len(param_formats) != nparams:
         raise ValueError(
@@ -560,10 +568,10 @@ cdef (int, Oid *, char * const*, int *, int *) _query_params_args(
                 alenghts[i] = length
 
     cdef Oid *atypes = NULL
-    if param_types is not None:
+    if tparam_types:
         atypes = <Oid *>PyMem_Malloc(nparams * sizeof(Oid))
         for i in range(nparams):
-            atypes[i] = param_types[i]
+            atypes[i] = tparam_types[i]
 
     cdef int *aformats = NULL
     if param_formats is not None:

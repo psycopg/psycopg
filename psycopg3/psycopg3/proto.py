@@ -33,7 +33,7 @@ PQGenConn = Generator[Tuple[int, "Wait"], "Ready", RV]
 This can happen in connection and reset, but not in normal querying.
 """
 
-PQGen = Generator[Union[int, "Wait"], "Ready", RV]
+PQGen = Generator["Wait", "Ready", RV]
 """Generator for processes where the connection file number won't change.
 
 The first item generated is the file descriptor; following items are be the

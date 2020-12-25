@@ -6,8 +6,6 @@ Maps of builtin types and names
 
 from typing import Dict, Iterator, Optional, Union
 
-INVALID_OID = 0
-
 
 class TypeInfo:
     def __init__(self, name: str, oid: int, array_oid: int):
@@ -142,6 +140,17 @@ for r in [
     ('polygon', 604, 1027, 'polygon', ','),
     ('record', 2249, 2287, 'record', ','),
     ('refcursor', 1790, 2201, 'refcursor', ','),
+    ('regclass', 2205, 2210, 'regclass', ','),
+    ('regcollation', 4191, 4192, 'regcollation', ','),
+    ('regconfig', 3734, 3735, 'regconfig', ','),
+    ('regdictionary', 3769, 3770, 'regdictionary', ','),
+    ('regnamespace', 4089, 4090, 'regnamespace', ','),
+    ('regoper', 2203, 2208, 'regoper', ','),
+    ('regoperator', 2204, 2209, 'regoperator', ','),
+    ('regproc', 24, 1008, 'regproc', ','),
+    ('regprocedure', 2202, 2207, 'regprocedure', ','),
+    ('regrole', 4096, 4097, 'regrole', ','),
+    ('regtype', 2206, 2211, 'regtype', ','),
     ('text', 25, 1009, 'text', ','),
     ('tid', 27, 1010, 'tid', ','),
     ('time', 1083, 1183, 'time without time zone', ','),
@@ -166,3 +175,9 @@ for r in [
     # fmt: on
 ]:
     builtins.add(BuiltinTypeInfo(*r))
+
+
+# A few oids used a bit everywhere
+INVALID_OID = 0
+TEXT_OID = builtins["text"].oid
+TEXT_ARRAY_OID = builtins["text"].array_oid
