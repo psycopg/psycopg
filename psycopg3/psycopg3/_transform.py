@@ -191,13 +191,11 @@ class Transformer:
         if row >= self._ntuples:
             return None
 
-        rv: List[Any] = []
+        rv: List[Any] = [None] * self._nfields
         for col in range(self._nfields):
             val = res.get_value(row, col)
-            if val is None:
-                rv.append(None)
-            else:
-                rv.append(self._row_loaders[col](val))
+            if val is not None:
+                rv[col] = self._row_loaders[col](val)
 
         return tuple(rv)
 

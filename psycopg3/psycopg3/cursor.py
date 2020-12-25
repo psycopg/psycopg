@@ -514,25 +514,31 @@ class Cursor(BaseCursor["Connection"]):
         if not size:
             size = self.arraysize
 
-        pos = self._pos
+        assert self.pgresult
         load = self._transformer.load_row
-        rv: List[Sequence[Any]] = []
+        rv: List[Any] = [None] * (min(size, self.pgresult.ntuples - self._pos))
 
-        for _ in range(size):
-            row = load(pos)
-            if row is None:
-                break
-            pos += 1
-            rv.append(row)
+        for i in range(len(rv)):
+            rv[i] = load(i + self._pos)
 
-        self._pos = pos
+        self._pos += len(rv)
         return rv
 
     def fetchall(self) -> List[Sequence[Any]]:
         """
         Return all the remaining records from the current recordset.
         """
-        return list(self)
+        self._check_result()
+
+        assert self.pgresult
+        load = self._transformer.load_row
+
+        rv: List[Any] = [None] * (self.pgresult.ntuples - self._pos)
+        for i in range(len(rv)):
+            rv[i] = load(i + self._pos)
+
+        self._pos += len(rv)
+        return rv
 
     def __iter__(self) -> Iterator[Sequence[Any]]:
         self._check_result()
@@ -606,26 +612,28 @@ class AsyncCursor(BaseCursor["AsyncConnection"]):
         if not size:
             size = self.arraysize
 
-        pos = self._pos
+        assert self.pgresult
         load = self._transformer.load_row
-        rv: List[Sequence[Any]] = []
+        rv: List[Any] = [None] * (min(size, self.pgresult.ntuples - self._pos))
 
-        for _ in range(size):
-            row = load(pos)
-            if row is None:
-                break
-            pos += 1
-            rv.append(row)
+        for i in range(len(rv)):
+            rv[i] = load(i + self._pos)
 
-        self._pos = pos
+        self._pos += len(rv)
         return rv
 
     async def fetchall(self) -> List[Sequence[Any]]:
-        res = []
-        async for rec in self:
-            res.append(rec)
+        self._check_result()
 
-        return res
+        assert self.pgresult
+        load = self._transformer.load_row
+
+        rv: List[Any] = [None] * (self.pgresult.ntuples - self._pos)
+        for i in range(len(rv)):
+            rv[i] = load(i + self._pos)
+
+        self._pos += len(rv)
+        return rv
 
     async def __aiter__(self) -> AsyncIterator[Sequence[Any]]:
         self._check_result()
