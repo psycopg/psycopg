@@ -45,9 +45,6 @@ class Transformer:
         # mapping oid, fmt -> Loader instance
         self._loaders_cache: Dict[Tuple[int, Format], "Loader"] = {}
 
-        # mapping oid, fmt -> load function
-        self._load_funcs: Dict[Tuple[int, Format], LoadFunc] = {}
-
         # sequence of load functions from value to python
         # the length of the result columns
         self._row_loaders: List[LoadFunc] = []

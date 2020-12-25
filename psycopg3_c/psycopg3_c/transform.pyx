@@ -39,7 +39,7 @@ cdef class Transformer:
     cdef readonly object connection
     cdef readonly str encoding
     cdef list _dumpers_maps, _loaders_maps
-    cdef dict _dumpers_cache, _loaders_cache, _load_funcs
+    cdef dict _dumpers_cache, _loaders_cache
     cdef PGresult _pgresult
     cdef int _nfields, _ntuples
 
@@ -55,9 +55,6 @@ cdef class Transformer:
 
         # mapping oid, fmt -> Loader instance
         self._loaders_cache: Dict[Tuple[int, Format], "Loader"] = {}
-
-        # mapping oid, fmt -> load function
-        self._load_funcs: Dict[Tuple[int, Format], "LoadFunc"] = {}
 
         self.pgresult = None
         self._row_loaders = []
