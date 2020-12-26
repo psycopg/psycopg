@@ -128,7 +128,7 @@ cdef extern from "libpq-fe.h":
     # TODO: PQsslAttribute, PQsslAttributeNames, PQsslStruct, PQgetssl
 
     # 33.3. Command Execution Functions
-    PGresult *PQexec(PGconn *conn, const char *command)
+    PGresult *PQexec(PGconn *conn, const char *command) nogil
     PGresult *PQexecParams(PGconn *conn,
                            const char *command,
                            int nParams,
@@ -136,19 +136,19 @@ cdef extern from "libpq-fe.h":
                            const char * const *paramValues,
                            const int *paramLengths,
                            const int *paramFormats,
-                           int resultFormat)
+                           int resultFormat) nogil
     PGresult *PQprepare(PGconn *conn,
                         const char *stmtName,
                         const char *query,
                         int nParams,
-                        const Oid *paramTypes)
+                        const Oid *paramTypes) nogil
     PGresult *PQexecPrepared(PGconn *conn,
                              const char *stmtName,
                              int nParams,
                              const char * const *paramValues,
                              const int *paramLengths,
                              const int *paramFormats,
-                             int resultFormat)
+                             int resultFormat) nogil
     PGresult *PQdescribePrepared(PGconn *conn, const char *stmtName)
     PGresult *PQdescribePortal(PGconn *conn, const char *portalName)
     ExecStatusType PQresultStatus(const PGresult *res)
@@ -200,7 +200,7 @@ cdef extern from "libpq-fe.h":
 
 
     # 33.4. Asynchronous Command Processing
-    int PQsendQuery(PGconn *conn, const char *command)
+    int PQsendQuery(PGconn *conn, const char *command) nogil
     int PQsendQueryParams(PGconn *conn,
                           const char *command,
                           int nParams,
@@ -208,19 +208,19 @@ cdef extern from "libpq-fe.h":
                           const char * const *paramValues,
                           const int *paramLengths,
                           const int *paramFormats,
-                          int resultFormat)
+                          int resultFormat) nogil
     int PQsendPrepare(PGconn *conn,
                       const char *stmtName,
                       const char *query,
                       int nParams,
-                      const Oid *paramTypes)
+                      const Oid *paramTypes) nogil
     int PQsendQueryPrepared(PGconn *conn,
                             const char *stmtName,
                             int nParams,
                             const char * const *paramValues,
                             const int *paramLengths,
                             const int *paramFormats,
-                            int resultFormat)
+                            int resultFormat) nogil
     int PQsendDescribePrepared(PGconn *conn, const char *stmtName)
     int PQsendDescribePortal(PGconn *conn, const char *portalName)
     PGresult *PQgetResult(PGconn *conn)
