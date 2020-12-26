@@ -86,7 +86,7 @@ class CompositeInfo(TypeInfo):
             (CompositeLoader,),
             {
                 "factory": factory,
-                "fields_types": tuple(f.type_oid for f in self.fields),
+                "fields_types": [f.type_oid for f in self.fields],
             },
         )
         loader.register(self.oid, context=context, format=Format.TEXT)
@@ -270,14 +270,13 @@ class RecordBinaryLoader(BaseCompositeLoader):
             i += (8 + length) if length > 0 else 8
 
     def _config_types(self, data: bytes) -> None:
-        self._tx.set_row_types(
-            [(oid, Format.BINARY) for oid, _, _ in self._walk_record(data)]
-        )
+        oids = [r[0] for r in self._walk_record(data)]
+        self._tx.set_row_types(oids, [Format.BINARY] * len(oids))
 
 
 class CompositeLoader(RecordLoader):
     factory: Callable[..., Any]
-    fields_types: Tuple[int, ...]
+    fields_types: List[int]
     _types_set = False
 
     def load(self, data: bytes) -> Any:
@@ -294,7 +293,7 @@ class CompositeLoader(RecordLoader):
 
     def _config_types(self, data: bytes) -> None:
         self._tx.set_row_types(
-            [(oid, Format.TEXT) for oid in self.fields_types]
+            self.fields_types, [Format.TEXT] * len(self.fields_types)
         )
 
 

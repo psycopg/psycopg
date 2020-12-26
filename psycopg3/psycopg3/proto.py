@@ -90,7 +90,9 @@ class Transformer(Protocol):
     def pgresult(self, result: Optional[pq.proto.PGresult]) -> None:
         ...
 
-    def set_row_types(self, types: Sequence[Tuple[int, Format]]) -> None:
+    def set_row_types(
+        self, types: Sequence[int], formats: Sequence[Format]
+    ) -> None:
         ...
 
     def get_dumper(self, obj: Any, format: Format) -> "Dumper":

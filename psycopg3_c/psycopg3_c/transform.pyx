@@ -53,7 +53,9 @@ cdef class Transformer:
 
     cdef readonly object connection
     cdef readonly object adapters
-    cdef dict _dumpers_cache, _loaders_cache
+    cdef dict _dumpers_cache
+    cdef dict _text_loaders
+    cdef dict _binary_loaders
     cdef PGresult _pgresult
     cdef int _nfields, _ntuples
     cdef list _row_loaders
@@ -70,8 +72,9 @@ cdef class Transformer:
         # mapping class, fmt -> Dumper instance
         self._dumpers_cache: Dict[Tuple[type, Format], "Dumper"] = {}
 
-        # mapping oid, fmt -> Loader instance
-        self._loaders_cache: Dict[Tuple[int, Format], "Loader"] = {}
+        # mapping oid -> Loader instance (text, binary)
+        self._text_loaders = {}
+        self._binary_loaders = {}
 
         self.pgresult = None
         self._row_loaders = []
@@ -93,29 +96,44 @@ cdef class Transformer:
         self._ntuples = libpq.PQntuples(res)
 
         cdef int i
-        types = [
-            (libpq.PQftype(res, i), libpq.PQfformat(res, i))
-            for i in range(self._nfields)]
-        self.set_row_types(types)
+        cdef list types = [None] * self._nfields
+        cdef list formats = [None] * self._nfields
+        for i in range(self._nfields):
+            types[i] = libpq.PQftype(res, i)
+            formats[i] = libpq.PQfformat(res, i)
+        self.set_row_types(types, formats)
 
-    def set_row_types(self, types: Sequence[Tuple[int, Format]]) -> None:
-        del self._row_loaders[:]
+    def set_row_types(self, types: Sequence[int], formats: Sequence[Format]) -> None:
+        self._c_set_row_types(types, formats)
 
-        cdef int i = 0
-        cdef dict seen = {}
-        for oid_fmt in types:
-            if oid_fmt not in seen:
-                self._row_loaders.append(
-                    self._get_row_loader(oid_fmt[0], oid_fmt[1]))
-                seen[oid_fmt] = i
+    cdef void _c_set_row_types(self, list types, list formats):
+        cdef dict text_loaders = {}
+        cdef dict binary_loaders = {}
+        cdef list loaders = [None] * len(types)
+        cdef libpq.Oid oid
+        cdef int fmt
+        cdef int i
+        for i in range(len(types)):
+            oid = types[i]
+            fmt = formats[i]
+            if fmt == 0:
+                if oid in text_loaders:
+                    loaders[i] = text_loaders[oid]
+                else:
+                    loaders[i] = text_loaders[oid] \
+                        = self._get_row_loader(oid, fmt)
             else:
-                self._row_loaders.append(self._row_loaders[seen[oid_fmt]])
+                if oid in binary_loaders:
+                    loaders[i] = binary_loaders[oid]
+                else:
+                    loaders[i] = binary_loaders[oid] \
+                        = self._get_row_loader(oid, fmt)
 
-            i += 1
+        self._row_loaders = loaders
 
     cdef RowLoader _get_row_loader(self, libpq.Oid oid, int fmt):
         cdef RowLoader row_loader = RowLoader()
-        loader = self.get_loader(oid, fmt)
+        loader = self._c_get_loader(oid, fmt)
         row_loader.pyloader = loader.load
 
         if isinstance(loader, CLoader):
@@ -206,31 +224,39 @@ cdef class Transformer:
 
         return rv
 
-    def load_sequence(
-        self, record: Sequence[Optional[bytes]]
-    ) -> Tuple[Any, ...]:
-        cdef list rv = []
-        cdef int i
+    def load_sequence(self, record: Sequence[Optional[bytes]]) -> Tuple[Any, ...]:
+        cdef int length = len(record)
+        rv = PyTuple_New(length)
         cdef RowLoader loader
-        for i in range(len(record)):
+
+        cdef int i
+        for i in range(length):
             item = record[i]
             if item is None:
-                rv.append(None)
+                pyval = None
             else:
                 loader = self._row_loaders[i]
-                rv.append(loader.pyloader(item))
+                pyval = loader.pyloader(item)
+            Py_INCREF(pyval)
+            PyTuple_SET_ITEM(rv, i, pyval)
 
-        return tuple(rv)
+        return rv
 
     def get_loader(self, oid: int, format: Format) -> "Loader":
-        key = (oid, format)
-        try:
-            return self._loaders_cache[key]
-        except KeyError:
-            pass
+        return self._c_get_loader(oid, format)
 
-        loader_cls = self.adapters._loaders.get(key)
+    cdef object _c_get_loader(self, libpq.Oid oid, int format):
+        cdef dict cache
+        if format == 0:
+            cache = self._text_loaders
+        else:
+            cache = self._binary_loaders
+
+        if oid in cache:
+            return cache[oid]
+
+        loader_cls = self.adapters._loaders.get((oid, format))
         if loader_cls is None:
             loader_cls = self.adapters._loaders[oids.INVALID_OID, format]
-        loader = self._loaders_cache[key] = loader_cls(oid, self)
+        loader = cache[oid] = loader_cls(oid, self)
         return loader

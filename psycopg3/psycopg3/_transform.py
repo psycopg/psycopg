@@ -4,7 +4,7 @@ Helper object to transform values between Python and PostgreSQL
 
 # Copyright (C) 2020 The Psycopg Team
 
-from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 from typing import TYPE_CHECKING
 
 from . import errors as e
@@ -84,10 +84,14 @@ class Transformer(AdaptContext):
             fmt = result.fformat(i)
             rc.append(self.get_loader(oid, fmt).load)
 
-    def set_row_types(self, types: Iterable[Tuple[int, Format]]) -> None:
-        rc = self._row_loaders = []
-        for oid, fmt in types:
-            rc.append(self.get_loader(oid, fmt).load)
+    def set_row_types(
+        self, types: Sequence[int], formats: Sequence[Format]
+    ) -> None:
+        rc: List[LoadFunc] = [None] * len(types)  # type: ignore[list-item]
+        for i in range(len(rc)):
+            rc[i] = self.get_loader(types[i], formats[i]).load
+
+        self._row_loaders = rc
 
     def get_dumper(self, obj: Any, format: Format) -> "Dumper":
         # Fast path: return a Dumper class already instantiated from the same type
