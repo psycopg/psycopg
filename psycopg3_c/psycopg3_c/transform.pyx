@@ -180,6 +180,58 @@ cdef class Transformer:
             f" to format {Format(format).name}"
         )
 
+    def load_rows(self, row0: int, row1: int) -> Sequence[Tuple[Any, ...]]:
+        if self._pgresult is None:
+            raise e.InterfaceError("result not set")
+
+        cdef int crow0 = row0
+        cdef int crow1 = row1
+        if not (0 <= row0 <= self._ntuples and 0 <= row1 <= self._ntuples):
+            raise e.InterfaceError(
+                f"rows must be included between 0 and {self._ntuples}"
+            )
+
+        cdef libpq.PGresult *res = self._pgresult.pgresult_ptr
+        # cheeky access to the internal PGresult structure
+        cdef pg_result_int *ires = <pg_result_int*>res
+
+        cdef RowLoader loader
+        cdef int row
+        cdef int col
+        cdef int length
+        cdef PGresAttValue *attval
+        cdef const char *val
+        cdef tuple record
+        cdef list records = [None] * (row1 - row0)
+
+        for row in range(row0, row1):
+            record = PyTuple_New(self._nfields)
+            for col in range(self._nfields):
+                attval = &(ires.tuples[row][col])
+                length = attval.len
+                if length == -1:  # NULL_LEN
+                    Py_INCREF(None)
+                    PyTuple_SET_ITEM(record, col, None)
+                    continue
+
+                # TODO: the is some visible python churn around this lookup.
+                # replace with a C array of borrowed references pointing to
+                # the cloader.cload function pointer
+                loader = self._row_loaders[col]
+                val = attval.value
+                if loader.cloader is not None:
+                    pyval = loader.cloader.cload(val, length)
+                else:
+                    # TODO: no copy
+                    pyval = loader.pyloader(val[:length])
+
+                Py_INCREF(pyval)
+                PyTuple_SET_ITEM(record, col, pyval)
+
+            records[row - row0] = record
+
+        return records
+
     def load_row(self, row: int) -> Optional[Tuple[Any, ...]]:
         if self._pgresult is None:
             return None
@@ -189,23 +241,23 @@ cdef class Transformer:
             return None
 
         cdef libpq.PGresult *res = self._pgresult.pgresult_ptr
+        # cheeky access to the internal PGresult structure
+        cdef pg_result_int *ires = <pg_result_int*>res
 
         cdef RowLoader loader
         cdef int col
         cdef int length
-        cdef const char *val
-
-        # cheeky access to the internal PGresult structure
-        cdef pg_result_int *ires = <pg_result_int*>res
         cdef PGresAttValue *attval
+        cdef const char *val
+        cdef tuple record
 
-        rv = PyTuple_New(self._nfields)
+        record = PyTuple_New(self._nfields)
         for col in range(self._nfields):
             attval = &(ires.tuples[crow][col])
             length = attval.len
             if length == -1:  # NULL_LEN
                 Py_INCREF(None)
-                PyTuple_SET_ITEM(rv, col, None)
+                PyTuple_SET_ITEM(record, col, None)
                 continue
 
             # TODO: the is some visible python churn around this lookup.
@@ -220,9 +272,9 @@ cdef class Transformer:
                 pyval = loader.pyloader(val[:length])
 
             Py_INCREF(pyval)
-            PyTuple_SET_ITEM(rv, col, pyval)
+            PyTuple_SET_ITEM(record, col, pyval)
 
-        return rv
+        return record
 
     def load_sequence(self, record: Sequence[Optional[bytes]]) -> Tuple[Any, ...]:
         cdef int length = len(record)

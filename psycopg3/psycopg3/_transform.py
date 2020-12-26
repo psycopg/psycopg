@@ -130,6 +130,28 @@ class Transformer(AdaptContext):
             f" to format {Format(format).name}"
         )
 
+    def load_rows(self, row0: int, row1: int) -> Sequence[Tuple[Any, ...]]:
+        res = self._pgresult
+        if not res:
+            raise e.InterfaceError("result not set")
+
+        if not (0 <= row0 <= self._ntuples and 0 <= row1 <= self._ntuples):
+            raise e.InterfaceError(
+                f"rows must be included between 0 and {self._ntuples}"
+            )
+
+        records: List[Tuple[Any, ...]]
+        records = [None] * (row1 - row0)  # type: ignore[list-item]
+        for row in range(row0, row1):
+            record: List[Any] = [None] * self._nfields
+            for col in range(self._nfields):
+                val = res.get_value(row, col)
+                if val is not None:
+                    record[col] = self._row_loaders[col](val)
+            records[row - row0] = tuple(record)
+
+        return records
+
     def load_row(self, row: int) -> Optional[Tuple[Any, ...]]:
         res = self._pgresult
         if not res:
@@ -138,13 +160,13 @@ class Transformer(AdaptContext):
         if not 0 <= row < self._ntuples:
             return None
 
-        rv: List[Any] = [None] * self._nfields
+        record: List[Any] = [None] * self._nfields
         for col in range(self._nfields):
             val = res.get_value(row, col)
             if val is not None:
-                rv[col] = self._row_loaders[col](val)
+                record[col] = self._row_loaders[col](val)
 
-        return tuple(rv)
+        return tuple(record)
 
     def load_sequence(
         self, record: Sequence[Optional[bytes]]
