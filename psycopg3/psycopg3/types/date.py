@@ -7,7 +7,7 @@ Adapters for date/time types.
 import re
 import sys
 from datetime import date, datetime, time, timedelta
-from typing import cast
+from typing import cast, Optional
 
 from ..oids import builtins
 from ..adapt import Dumper, Loader
@@ -51,7 +51,7 @@ class TimeDeltaDumper(Dumper):
 
     _oid = builtins["interval"].oid
 
-    def __init__(self, src: type, context: AdaptContext = None):
+    def __init__(self, src: type, context: Optional[AdaptContext] = None):
         super().__init__(src, context)
         if self.connection:
             if (
@@ -75,7 +75,7 @@ class TimeDeltaDumper(Dumper):
 
 @Loader.text(builtins["date"].oid)
 class DateLoader(Loader):
-    def __init__(self, oid: int, context: AdaptContext):
+    def __init__(self, oid: int, context: Optional[AdaptContext] = None):
         super().__init__(oid, context)
         self._format = self._format_from_context()
 
@@ -161,7 +161,7 @@ class TimeTzLoader(TimeLoader):
     _format = "%H:%M:%S.%f%z"
     _format_no_micro = _format.replace(".%f", "")
 
-    def __init__(self, oid: int, context: AdaptContext):
+    def __init__(self, oid: int, context: Optional[AdaptContext] = None):
         if sys.version_info < (3, 7):
             setattr(self, "load", self._load_py36)
 
@@ -193,7 +193,7 @@ class TimeTzLoader(TimeLoader):
 
 @Loader.text(builtins["timestamp"].oid)
 class TimestampLoader(DateLoader):
-    def __init__(self, oid: int, context: AdaptContext):
+    def __init__(self, oid: int, context: Optional[AdaptContext] = None):
         super().__init__(oid, context)
         self._format_no_micro = self._format.replace(".%f", "")
 
@@ -245,7 +245,7 @@ class TimestampLoader(DateLoader):
 
 @Loader.text(builtins["timestamptz"].oid)
 class TimestamptzLoader(TimestampLoader):
-    def __init__(self, oid: int, context: AdaptContext):
+    def __init__(self, oid: int, context: Optional[AdaptContext] = None):
         if sys.version_info < (3, 7):
             setattr(self, "load", self._load_py36)
 
@@ -321,7 +321,7 @@ class IntervalLoader(Loader):
         re.VERBOSE,
     )
 
-    def __init__(self, oid: int, context: AdaptContext):
+    def __init__(self, oid: int, context: Optional[AdaptContext] = None):
         super().__init__(oid, context)
         if self.connection:
             ints = self.connection.pgconn.parameter_status(b"IntervalStyle")

@@ -4,7 +4,7 @@ Adapters for textual types.
 
 # Copyright (C) 2020 The Psycopg Team
 
-from typing import Union, TYPE_CHECKING
+from typing import Optional, Union, TYPE_CHECKING
 
 from ..pq import Escaping
 from ..oids import builtins, INVALID_OID
@@ -20,7 +20,7 @@ class _StringDumper(Dumper):
 
     _encoding = "utf-8"
 
-    def __init__(self, src: type, context: AdaptContext):
+    def __init__(self, src: type, context: Optional[AdaptContext] = None):
         super().__init__(src, context)
 
         conn = self.connection
@@ -61,7 +61,7 @@ class TextLoader(Loader):
 
     _encoding = "utf-8"
 
-    def __init__(self, oid: int, context: AdaptContext):
+    def __init__(self, oid: int, context: Optional[AdaptContext] = None):
         super().__init__(oid, context)
         conn = self.connection
         if conn:
@@ -83,7 +83,7 @@ class BytesDumper(Dumper):
 
     _oid = builtins["bytea"].oid
 
-    def __init__(self, src: type, context: AdaptContext = None):
+    def __init__(self, src: type, context: Optional[AdaptContext] = None):
         super().__init__(src, context)
         self._esc = Escaping(
             self.connection.pgconn if self.connection else None
@@ -113,7 +113,7 @@ class BytesBinaryDumper(Dumper):
 class ByteaLoader(Loader):
     _escaping: "EscapingProto"
 
-    def __init__(self, oid: int, context: AdaptContext = None):
+    def __init__(self, oid: int, context: Optional[AdaptContext] = None):
         super().__init__(oid, context)
         if not hasattr(self.__class__, "_escaping"):
             self.__class__._escaping = Escaping()

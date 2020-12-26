@@ -34,6 +34,7 @@ class PostgresQuery:
 
     _parts: List[QueryPart]
     _query = b""
+    _encoding: str = "utf-8"
     params: Optional[List[Optional[bytes]]] = None
     # these are tuples so they can be used as keys e.g. in prepared stmts
     types: Tuple[int, ...] = ()
@@ -42,11 +43,11 @@ class PostgresQuery:
 
     def __init__(self, transformer: "Transformer"):
         self._tx = transformer
-        if (
-            self._tx.connection
-            and self._tx.connection.pgconn.server_version < 100000
-        ):
-            self._unknown_oid = TEXT_OID
+        conn = transformer.connection
+        if conn:
+            self._encoding = conn.client_encoding
+            if conn.pgconn.server_version < 100000:
+                self._unknown_oid = TEXT_OID
 
     def convert(self, query: Query, vars: Optional[Params]) -> None:
         """
@@ -60,11 +61,11 @@ class PostgresQuery:
 
         if vars is not None:
             self.query, self.formats, self._order, self._parts = _query2pg(
-                query, self._tx.encoding
+                query, self._encoding
             )
         else:
             if isinstance(query, str):
-                query = query.encode(self._tx.encoding)
+                query = query.encode(self._encoding)
             self.query = query
             self.formats = self._order = None
 
@@ -81,17 +82,15 @@ class PostgresQuery:
                 self._parts, vars, self._order
             )
             assert self.formats is not None
-            ps = self.params = []
-            ts = []
+            ps: List[Optional[bytes]] = [None] * len(params)
+            ts = [self._unknown_oid] * len(params)
             for i in range(len(params)):
                 param = params[i]
                 if param is not None:
                     dumper = self._tx.get_dumper(param, self.formats[i])
-                    ps.append(dumper.dump(param))
-                    ts.append(dumper.oid)
-                else:
-                    ps.append(None)
-                    ts.append(self._unknown_oid)
+                    ps[i] = dumper.dump(param)
+                    ts[i] = dumper.oid
+            self.params = ps
             self.types = tuple(ts)
         else:
             self.params = None

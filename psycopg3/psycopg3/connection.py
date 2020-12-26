@@ -10,7 +10,7 @@ import logging
 import threading
 from types import TracebackType
 from typing import Any, AsyncIterator, Callable, Iterator, List, NamedTuple
-from typing import Optional, Type, TYPE_CHECKING, TypeVar
+from typing import Optional, Type, TYPE_CHECKING
 from weakref import ref, ReferenceType
 from functools import partial
 from contextlib import contextmanager
@@ -21,13 +21,15 @@ else:
     from .utils.context import asynccontextmanager
 
 from . import pq
+from . import adapt
 from . import cursor
 from . import errors as e
 from . import waiting
 from . import encodings
 from .pq import TransactionStatus, ExecStatus, Format
 from .sql import Composable
-from .proto import DumpersMap, LoadersMap, PQGen, PQGenConn, RV, Query, Params
+from .proto import PQGen, PQGenConn, RV, Query, Params, AdaptContext
+from .proto import ConnectionType
 from .conninfo import make_conninfo
 from .generators import notifies
 from .transaction import Transaction, AsyncTransaction
@@ -71,12 +73,11 @@ class Notify(NamedTuple):
 
 Notify.__module__ = "psycopg3"
 
-C = TypeVar("C", bound="BaseConnection")
 NoticeHandler = Callable[[e.Diagnostic], None]
 NotifyHandler = Callable[[Notify], None]
 
 
-class BaseConnection:
+class BaseConnection(AdaptContext):
     """
     Base class for different types of connections.
 
@@ -105,8 +106,7 @@ class BaseConnection:
     def __init__(self, pgconn: "PGconn"):
         self.pgconn = pgconn  # TODO: document this
         self._autocommit = False
-        self.dumpers: DumpersMap = {}
-        self.loaders: LoadersMap = {}
+        self._adapters = adapt.AdaptersMap(adapt.global_adapters)
         self._notice_handlers: List[NoticeHandler] = []
         self._notify_handlers: List[NotifyHandler] = []
 
@@ -115,7 +115,7 @@ class BaseConnection:
         # only a begin/commit and not a savepoint.
         self._savepoints: List[str] = []
 
-        self._prepared = PrepareManager()
+        self._prepared: PrepareManager = PrepareManager()
 
         wself = ref(self)
 
@@ -176,6 +176,15 @@ class BaseConnection:
         (result,) = yield from execute(self.pgconn)
         if result.status != ExecStatus.TUPLES_OK:
             raise e.error_from_result(result, encoding=self.client_encoding)
+
+    @property
+    def adapters(self) -> adapt.AdaptersMap:
+        return self._adapters
+
+    @property
+    def connection(self) -> "BaseConnection":
+        # implement the AdaptContext protocol
+        return self
 
     def cancel(self) -> None:
         """Cancel the current operation on the connection."""
@@ -279,12 +288,12 @@ class BaseConnection:
 
     @classmethod
     def _connect_gen(
-        cls: Type[C],
+        cls: Type[ConnectionType],
         conninfo: str = "",
         *,
         autocommit: bool = False,
         **kwargs: Any,
-    ) -> PQGenConn[C]:
+    ) -> PQGenConn[ConnectionType]:
         """Generator to connect to the database and create a new instance."""
         conninfo = make_conninfo(conninfo, **kwargs)
         pgconn = yield from connect(conninfo)

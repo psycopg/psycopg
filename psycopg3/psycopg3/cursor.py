@@ -10,11 +10,13 @@ from typing import Any, AsyncIterator, Callable, Generic, Iterator, List
 from typing import Optional, Sequence, Type, TYPE_CHECKING
 from contextlib import contextmanager
 
-from . import errors as e
 from . import pq
+from . import adapt
+from . import errors as e
+
 from .pq import ExecStatus, Format
 from .copy import Copy, AsyncCopy
-from .proto import ConnectionType, Query, Params, DumpersMap, LoadersMap, PQGen
+from .proto import ConnectionType, Query, Params, PQGen
 from ._column import Column
 from ._queries import PostgresQuery
 from ._preparing import Prepare
@@ -55,8 +57,7 @@ class BaseCursor(Generic[ConnectionType]):
     ):
         self._conn = connection
         self.format = format
-        self.dumpers: DumpersMap = {}
-        self.loaders: LoadersMap = {}
+        self._adapters = adapt.AdaptersMap(connection.adapters)
         self._reset()
         self.arraysize = 1
         self._closed = False
@@ -74,6 +75,10 @@ class BaseCursor(Generic[ConnectionType]):
     def connection(self) -> ConnectionType:
         """The connection this cursor is using."""
         return self._conn
+
+    @property
+    def adapters(self) -> adapt.AdaptersMap:
+        return self._adapters
 
     @property
     def closed(self) -> bool:
@@ -227,8 +232,6 @@ class BaseCursor(Generic[ConnectionType]):
         It is implemented as generator because it may send additional queries,
         such as `begin`.
         """
-        from . import adapt
-
         if self.closed:
             raise e.InterfaceError("the cursor is closed")
 

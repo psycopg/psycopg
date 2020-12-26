@@ -2,7 +2,7 @@ import pytest
 
 from psycopg3.sql import Identifier
 from psycopg3.oids import builtins
-from psycopg3.adapt import Format, Loader
+from psycopg3.adapt import Format, global_adapters
 from psycopg3.types.composite import CompositeInfo
 
 
@@ -40,7 +40,7 @@ def test_dump_tuple(conn, rec, obj):
     info = CompositeInfo.fetch(conn, "tmptype")
     info.register(context=conn)
 
-    res = cur.execute("select %s::tmptype", [obj]).fetchone()[0]
+    res = conn.execute("select %s::tmptype", [obj]).fetchone()[0]
     assert res == obj
 
 
@@ -169,10 +169,10 @@ def test_dump_composite_all_chars(conn, fmt_in, testcomp):
 
 @pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
 def test_load_composite(conn, testcomp, fmt_out):
-    cur = conn.cursor(format=fmt_out)
     info = CompositeInfo.fetch(conn, "testcomp")
     info.register(conn)
 
+    cur = conn.cursor(format=fmt_out)
     res = cur.execute("select row('hello', 10, 20)::testcomp").fetchone()[0]
     assert res.foo == "hello"
     assert res.bar == 10
@@ -189,7 +189,6 @@ def test_load_composite(conn, testcomp, fmt_out):
 
 @pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
 def test_load_composite_factory(conn, testcomp, fmt_out):
-    cur = conn.cursor(format=fmt_out)
     info = CompositeInfo.fetch(conn, "testcomp")
 
     class MyThing:
@@ -198,6 +197,7 @@ def test_load_composite_factory(conn, testcomp, fmt_out):
 
     info.register(conn, factory=MyThing)
 
+    cur = conn.cursor(format=fmt_out)
     res = cur.execute("select row('hello', 10, 20)::testcomp").fetchone()[0]
     assert isinstance(res, MyThing)
     assert res.baz == 20.0
@@ -216,20 +216,20 @@ def test_register_scope(conn):
     info.register()
     for fmt in (Format.TEXT, Format.BINARY):
         for oid in (info.oid, info.array_oid):
-            assert Loader.globals.pop((oid, fmt))
+            assert global_adapters._loaders.pop((oid, fmt))
 
     cur = conn.cursor()
     info.register(cur)
     for fmt in (Format.TEXT, Format.BINARY):
         for oid in (info.oid, info.array_oid):
             key = oid, fmt
-            assert key not in Loader.globals
-            assert key not in conn.loaders
-            assert key in cur.loaders
+            assert key not in global_adapters._loaders
+            assert key not in conn.adapters._loaders
+            assert key in cur.adapters._loaders
 
     info.register(conn)
     for fmt in (Format.TEXT, Format.BINARY):
         for oid in (info.oid, info.array_oid):
             key = oid, fmt
-            assert key not in Loader.globals
-            assert key in conn.loaders
+            assert key not in global_adapters._loaders
+            assert key in conn.adapters._loaders

@@ -14,8 +14,7 @@ from .pq import Format
 
 if TYPE_CHECKING:
     from .connection import BaseConnection
-    from .cursor import BaseCursor
-    from .adapt import Dumper, Loader
+    from .adapt import Dumper, Loader, AdaptersMap
     from .waiting import Wait, Ready
     from .sql import Composable
 
@@ -43,8 +42,6 @@ Wait states.
 
 # Adaptation types
 
-AdaptContext = Union[None, "BaseConnection", "BaseCursor", "Transformer"]
-
 DumpFunc = Callable[[Any], bytes]
 DumperType = Type["Dumper"]
 DumpersMap = Dict[Tuple[Union[type, str], Format], DumperType]
@@ -57,8 +54,24 @@ LoadersMap = Dict[Tuple[int, Format], LoaderType]
 # as there are both C and a Python implementation
 
 
+class AdaptContext(Protocol):
+    """
+    A context describing how types are adapted.
+
+    Example of AdaptContext are connections, cursors, transformers.
+    """
+
+    @property
+    def adapters(self) -> "AdaptersMap":
+        ...
+
+    @property
+    def connection(self) -> Optional["BaseConnection"]:
+        ...
+
+
 class Transformer(Protocol):
-    def __init__(self, context: AdaptContext = None):
+    def __init__(self, context: Optional[AdaptContext] = None):
         ...
 
     @property
@@ -66,7 +79,7 @@ class Transformer(Protocol):
         ...
 
     @property
-    def encoding(self) -> str:
+    def adapters(self) -> "AdaptersMap":
         ...
 
     @property
@@ -75,14 +88,6 @@ class Transformer(Protocol):
 
     @pgresult.setter
     def pgresult(self, result: Optional[pq.proto.PGresult]) -> None:
-        ...
-
-    @property
-    def dumpers(self) -> DumpersMap:
-        ...
-
-    @property
-    def loaders(self) -> LoadersMap:
         ...
 
     def set_row_types(self, types: Sequence[Tuple[int, Format]]) -> None:

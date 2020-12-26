@@ -399,7 +399,7 @@ class RangeInfo(TypeInfo):
 
     def register(
         self,
-        context: AdaptContext = None,
+        context: Optional[AdaptContext] = None,
         range_class: Optional[Type[Range[Any]]] = None,
     ) -> None:
         if not range_class:

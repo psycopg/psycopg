@@ -34,15 +34,13 @@ logger = logging.getLogger("psycopg3.adapt")
 
 cdef class CDumper:
     cdef object src
-    cdef public object context
-    cdef public object connection
     cdef public libpq.Oid oid
+    cdef readonly object connection
     cdef PGconn _pgconn
 
-    def __init__(self, src: type, context: AdaptContext = None):
+    def __init__(self, src: type, context: Optional["AdaptContext"] = None):
         self.src = src
-        self.context = context
-        self.connection = _connection_from_context(context)
+        self.connection = context.connection if context is not None else None
         self._pgconn = (
             self.connection.pgconn if self.connection is not None else None
         )
@@ -82,7 +80,7 @@ cdef class CDumper:
             )
             if error:
                 raise e.OperationalError(
-                    f"escape_string failed: {error_message(self.connection)}"
+                    f"escape_string failed: {error_message(self._pgconn)}"
                 )
         else:
             len_out = libpq.PQescapeString(ptr_out + 1, ptr, length)
@@ -97,28 +95,24 @@ cdef class CDumper:
     def register(
         cls,
         src: Union[type, str],
-        context: AdaptContext = None,
+        context: Optional[AdaptContext] = None,
         format: Format = Format.TEXT,
     ) -> None:
-        if not isinstance(src, (str, type)):
-            raise TypeError(
-                f"dumpers should be registered on classes, got {src} instead"
-            )
-        from psycopg3.adapt import Dumper
+        if context is not None:
+            adapters = context.adapters
+        else:
+            from psycopg3.adapt import global_adapters as adapters
 
-        where = context.dumpers if context else Dumper.globals
-        where[src, format] = cls
+        adapters.register_dumper(src, cls, format=format)
 
 
 cdef class CLoader:
     cdef public libpq.Oid oid
-    cdef public object context
-    cdef public object connection
+    cdef public connection
 
-    def __init__(self, oid: int, context: "AdaptContext" = None):
+    def __init__(self, oid: int, context: Optional["AdaptContext"] = None):
         self.oid = oid
-        self.context = context
-        self.connection = _connection_from_context(context)
+        self.connection = context.connection if context is not None else None
 
     cdef object cload(self, const char *data, size_t length):
         raise NotImplementedError()
@@ -133,23 +127,15 @@ cdef class CLoader:
     def register(
         cls,
         oid: int,
-        context: "AdaptContext" = None,
+        context: Optional["AdaptContext"] = None,
         format: Format = Format.TEXT,
     ) -> None:
-        if not isinstance(oid, int):
-            raise TypeError(
-                f"loaders should be registered on oid, got {oid} instead"
-            )
+        if context is not None:
+            adapters = context.adapters
+        else:
+            from psycopg3.adapt import global_adapters as adapters
 
-        from psycopg3.adapt import Loader
-
-        where = context.loaders if context else Loader.globals
-        where[oid, format] = cls
-
-
-cdef _connection_from_context(object context):
-    from psycopg3.adapt import connection_from_context
-    return connection_from_context(context)
+        adapters.register_loader(oid, cls, format=format)
 
 
 def register_builtin_c_adapters():

@@ -4,7 +4,7 @@ Adapters for network types.
 
 # Copyright (C) 2020 The Psycopg Team
 
-from typing import Callable, Union, TYPE_CHECKING
+from typing import Callable, Optional, Union, TYPE_CHECKING
 
 from ..oids import builtins
 from ..adapt import Dumper, Loader
@@ -46,7 +46,7 @@ class NetworkDumper(Dumper):
 
 
 class _LazyIpaddress(Loader):
-    def __init__(self, oid: int, context: AdaptContext = None):
+    def __init__(self, oid: int, context: Optional[AdaptContext] = None):
         super().__init__(oid, context)
         global ip_address, ip_interface, ip_network
         from ipaddress import ip_address, ip_interface, ip_network

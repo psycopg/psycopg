@@ -18,7 +18,7 @@ class BaseListDumper(Dumper):
 
     _oid = TEXT_ARRAY_OID
 
-    def __init__(self, src: type, context: AdaptContext = None):
+    def __init__(self, src: type, context: Optional[AdaptContext] = None):
         super().__init__(src, context)
         self._tx = Transformer(context)
 
@@ -159,7 +159,7 @@ class ListBinaryDumper(BaseListDumper):
 class BaseArrayLoader(Loader):
     base_oid: int
 
-    def __init__(self, oid: int, context: AdaptContext = None):
+    def __init__(self, oid: int, context: Optional[AdaptContext] = None):
         super().__init__(oid, context)
         self._tx = Transformer(context)
 
@@ -263,7 +263,7 @@ class ArrayBinaryLoader(BaseArrayLoader):
 def register(
     array_oid: int,
     base_oid: int,
-    context: AdaptContext = None,
+    context: Optional[AdaptContext] = None,
     name: Optional[str] = None,
 ) -> None:
     if not name:

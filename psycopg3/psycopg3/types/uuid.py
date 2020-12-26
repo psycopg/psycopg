@@ -4,7 +4,7 @@ Adapters for the UUID type.
 
 # Copyright (C) 2020 The Psycopg Team
 
-from typing import Callable, TYPE_CHECKING
+from typing import Callable, Optional, TYPE_CHECKING
 
 from ..oids import builtins
 from ..adapt import Dumper, Loader
@@ -34,7 +34,7 @@ class UUIDBinaryDumper(UUIDDumper):
 
 @Loader.text(builtins["uuid"].oid)
 class UUIDLoader(Loader):
-    def __init__(self, oid: int, context: AdaptContext = None):
+    def __init__(self, oid: int, context: Optional[AdaptContext] = None):
         super().__init__(oid, context)
         global UUID
         from uuid import UUID

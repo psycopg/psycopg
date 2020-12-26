@@ -35,20 +35,21 @@ cdef class Transformer:
     state so adapting several values of the same type can use optimisations.
     """
 
-    cdef readonly dict dumpers, loaders
     cdef readonly object connection
-    cdef readonly str encoding
-    cdef list _dumpers_maps, _loaders_maps
+    cdef readonly object adapters
     cdef dict _dumpers_cache, _loaders_cache
     cdef PGresult _pgresult
     cdef int _nfields, _ntuples
-
     cdef list _row_loaders
 
-    def __cinit__(self, context: "AdaptContext" = None):
-        self._dumpers_maps: List["DumpersMap"] = []
-        self._loaders_maps: List["LoadersMap"] = []
-        self._setup_context(context)
+    def __cinit__(self, context: Optional["AdaptContext"] = None):
+        if context is not None:
+            self.adapters = context.adapters
+            self.connection = context.connection
+        else:
+            from psycopg3.adapt import global_adapters
+            self.adapters = global_adapters
+            self.connection = None
 
         # mapping class, fmt -> Dumper instance
         self._dumpers_cache: Dict[Tuple[type, Format], "Dumper"] = {}
@@ -58,56 +59,6 @@ cdef class Transformer:
 
         self.pgresult = None
         self._row_loaders = []
-
-    def _setup_context(self, context: "AdaptContext") -> None:
-        from psycopg3.adapt import Dumper, Loader
-        from psycopg3.cursor import BaseCursor
-        from psycopg3.connection import BaseConnection
-
-        cdef Transformer ctx
-        if context is None:
-            self.connection = None
-            self.encoding = "utf-8"
-            self.dumpers = {}
-            self.loaders = {}
-            self._dumpers_maps = [self.dumpers]
-            self._loaders_maps = [self.loaders]
-
-        elif isinstance(context, Transformer):
-            # A transformer created from a transformers: usually it happens
-            # for nested types: share the entire state of the parent
-            ctx = context
-            self.connection = ctx.connection
-            self.encoding = ctx.encoding
-            self.dumpers = ctx.dumpers
-            self.loaders = ctx.loaders
-            self._dumpers_maps.extend(ctx._dumpers_maps)
-            self._loaders_maps.extend(ctx._loaders_maps)
-            # the global maps are already in the lists
-            return
-
-        elif isinstance(context, BaseCursor):
-            self.connection = context.connection
-            self.encoding = context.connection.client_encoding
-            self.dumpers = {}
-            self._dumpers_maps.extend(
-                (self.dumpers, context.dumpers, self.connection.dumpers)
-            )
-            self.loaders = {}
-            self._loaders_maps.extend(
-                (self.loaders, context.loaders, self.connection.loaders)
-            )
-
-        elif isinstance(context, BaseConnection):
-            self.connection = context
-            self.encoding = context.client_encoding
-            self.dumpers = {}
-            self._dumpers_maps.extend((self.dumpers, context.dumpers))
-            self.loaders = {}
-            self._loaders_maps.extend((self.loaders, context.loaders))
-
-        self._dumpers_maps.append(Dumper.globals)
-        self._loaders_maps.append(Loader.globals)
 
     @property
     def pgresult(self) -> Optional[PGresult]:
@@ -170,27 +121,25 @@ cdef class Transformer:
         # in contexts from the most specific to the most generic.
         # Also look for superclasses: if you can adapt a type you should be
         # able to adapt its subtypes, otherwise Liskov is sad.
-        for dmap in self._dumpers_maps:
-            for scls in cls.__mro__:
-                dumper_class = dmap.get((scls, format))
-                if not dumper_class:
-                    continue
+        cdef dict dmap = self.adapters._dumpers
+        for scls in cls.__mro__:
+            dumper_class = dmap.get((scls, format))
+            if not dumper_class:
+                continue
 
-                self._dumpers_cache[cls, format] = dumper = dumper_class(cls, self)
-                return dumper
+            self._dumpers_cache[cls, format] = dumper = dumper_class(cls, self)
+            return dumper
 
         # If the adapter is not found, look for its name as a string
-        for dmap in self._dumpers_maps:
-            for scls in cls.__mro__:
-                fqn = f"{cls.__module__}.{scls.__qualname__}"
-                dumper_class = dmap.get((fqn, format))
-                if dumper_class is None:
-                    continue
+        for scls in cls.__mro__:
+            fqn = f"{cls.__module__}.{scls.__qualname__}"
+            dumper_class = dmap.get((fqn, format))
+            if dumper_class is None:
+                continue
 
-                key = (cls, format)
-                dmap[key] = dumper_class
-                self._dumpers_cache[key] = dumper = dumper_class(cls, self)
-                return dumper
+            dmap[cls, format] = dumper_class
+            self._dumpers_cache[cls, format] = dumper = dumper_class(cls, self)
+            return dumper
 
         raise e.ProgrammingError(
             f"cannot adapt type {type(obj).__name__}"
@@ -256,13 +205,8 @@ cdef class Transformer:
         except KeyError:
             pass
 
-        for tcmap in self._loaders_maps:
-            if key in tcmap:
-                loader_cls = tcmap[key]
-                break
-        else:
-            from psycopg3.adapt import Loader
-            loader_cls = Loader.globals[oids.INVALID_OID, format]
-
-        self._loaders_cache[key] = loader = loader_cls(key[0], self)
+        loader_cls = self.adapters._loaders.get(key)
+        if loader_cls is None:
+            loader_cls = self.adapters._loaders[oids.INVALID_OID, format]
+        loader = self._loaders_cache[key] = loader_cls(oid, self)
         return loader

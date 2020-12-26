@@ -18,7 +18,7 @@ cdef class _StringDumper(CDumper):
     cdef char *encoding
     cdef bytes _bytes_encoding  # needed to keep `encoding` alive
 
-    def __init__(self, src: type, context: AdaptContext):
+    def __init__(self, src: type, context: Optional[AdaptContext]):
         super().__init__(src, context)
 
         self.is_utf8 = 0
@@ -72,7 +72,7 @@ cdef class TextLoader(CLoader):
     cdef char *encoding
     cdef bytes _bytes_encoding  # needed to keep `encoding` alive
 
-    def __init__(self, oid: int, context: "AdaptContext" = None):
+    def __init__(self, oid: int, context: Optional[AdaptContext] = None):
         super().__init__(oid, context)
 
         self.is_utf8 = 0
@@ -102,7 +102,7 @@ cdef class BytesDumper(CDumper):
     def __cinit__(self):
         self.oid = oids.BYTEA_OID
 
-    def __init__(self, src: type, context: AdaptContext):
+    def __init__(self, src: type, context: Optional[AdaptContext] = None):
         super().__init__(src, context)
         self.esc = Escaping(self._pgconn)
 
