@@ -131,7 +131,7 @@ class Transformer(AdaptContext):
         if not res:
             return None
 
-        if row >= self._ntuples:
+        if not 0 <= row < self._ntuples:
             return None
 
         rv: List[Any] = [None] * self._nfields

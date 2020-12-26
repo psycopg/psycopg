@@ -151,7 +151,7 @@ cdef class Transformer:
             return None
 
         cdef int crow = row
-        if crow >= self._ntuples:
+        if not 0 <= crow < self._ntuples:
             return None
 
         cdef libpq.PGresult *res = self._pgresult.pgresult_ptr
@@ -170,6 +170,9 @@ cdef class Transformer:
                     continue
 
             val = libpq.PQgetvalue(res, crow, col)
+            # TODO: the is some visible python churn around this lookup.
+            # replace with a C array of borrowed references pointing to
+            # the cloader.cload function pointer
             loader = self._row_loaders[col]
             if loader.cloader is not None:
                 pyval = loader.cloader.cload(val, length)
