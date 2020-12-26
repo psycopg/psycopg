@@ -21,6 +21,22 @@ from psycopg3 import errors as e
 from psycopg3.pq import Format
 
 
+# internal structure: you are not supposed to know this. But it's worth some
+# 10% of the innermost loop, so I'm willing to ask for forgiveness later...
+
+ctypedef struct PGresAttValue:
+    int     len
+    char    *value
+
+ctypedef struct pg_result_int:
+    # NOTE: it would be advised that we don't know this structure's content
+    int ntups
+    int numAttributes
+    libpq.PGresAttDesc *attDescs
+    PGresAttValue **tuples
+    # ...more members, which we ignore
+
+
 cdef class RowLoader:
     cdef object pyloader
     cdef CLoader cloader
@@ -160,20 +176,25 @@ cdef class Transformer:
         cdef int col
         cdef int length
         cdef const char *val
+
+        # cheeky access to the internal PGresult structure
+        cdef pg_result_int *ires = <pg_result_int*>res
+        cdef PGresAttValue *attval
+
         rv = PyTuple_New(self._nfields)
         for col in range(self._nfields):
-            length = libpq.PQgetlength(res, crow, col)
-            if length == 0:
-                if libpq.PQgetisnull(res, crow, col):
-                    Py_INCREF(None)
-                    PyTuple_SET_ITEM(rv, col, None)
-                    continue
+            attval = &(ires.tuples[crow][col])
+            length = attval.len
+            if length == -1:  # NULL_LEN
+                Py_INCREF(None)
+                PyTuple_SET_ITEM(rv, col, None)
+                continue
 
-            val = libpq.PQgetvalue(res, crow, col)
             # TODO: the is some visible python churn around this lookup.
             # replace with a C array of borrowed references pointing to
             # the cloader.cload function pointer
             loader = self._row_loaders[col]
+            val = attval.value
             if loader.cloader is not None:
                 pyval = loader.cloader.cload(val, length)
             else:
