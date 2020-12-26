@@ -15,10 +15,6 @@ cdef class PGconn:
     @staticmethod
     cdef PGconn _from_ptr(libpq.PGconn *ptr)
 
-    cdef int _ensure_pgconn(self) except 0
-    cdef char *_call_bytes(self, conn_bytes_f func) except NULL
-    cdef int _call_int(self, conn_int_f func) except -1
-
 
 cdef class PGresult:
     cdef libpq.PGresult* pgresult_ptr

@@ -57,7 +57,7 @@ cdef class PGconn:
         return PGconn._from_ptr(pgconn)
 
     def connect_poll(self) -> PollingStatus:
-        cdef int rv = self._call_int(<conn_int_f>libpq.PQconnectPoll)
+        cdef int rv = _call_int(self, <conn_int_f>libpq.PQconnectPoll)
         return PollingStatus(rv)
 
     def finish(self) -> None:
@@ -74,7 +74,7 @@ cdef class PGconn:
 
     @property
     def info(self) -> List["ConninfoOption"]:
-        self._ensure_pgconn()
+        _ensure_pgconn(self)
         cdef libpq.PQconninfoOption *opts = libpq.PQconninfo(self.pgconn_ptr)
         if opts is NULL:
             raise MemoryError("couldn't allocate connection info")
@@ -83,7 +83,7 @@ cdef class PGconn:
         return rv
 
     def reset(self) -> None:
-        self._ensure_pgconn()
+        _ensure_pgconn(self)
         libpq.PQreset(self.pgconn_ptr)
 
     def reset_start(self) -> None:
@@ -91,7 +91,7 @@ cdef class PGconn:
             raise PQerror("couldn't reset connection")
 
     def reset_poll(self) -> PollingStatus:
-        cdef int rv = self._call_int(<conn_int_f>libpq.PQresetPoll)
+        cdef int rv = _call_int(self, <conn_int_f>libpq.PQresetPoll)
         return PollingStatus(rv)
 
     @classmethod
@@ -101,19 +101,19 @@ cdef class PGconn:
 
     @property
     def db(self) -> bytes:
-        return self._call_bytes(libpq.PQdb)
+        return _call_bytes(self, libpq.PQdb)
 
     @property
     def user(self) -> bytes:
-        return self._call_bytes(libpq.PQuser)
+        return _call_bytes(self, libpq.PQuser)
 
     @property
     def password(self) -> bytes:
-        return self._call_bytes(libpq.PQpass)
+        return _call_bytes(self, libpq.PQpass)
 
     @property
     def host(self) -> bytes:
-        return self._call_bytes(libpq.PQhost)
+        return _call_bytes(self, libpq.PQhost)
 
     @property
     def hostaddr(self) -> bytes:
@@ -121,15 +121,15 @@ cdef class PGconn:
 
     @property
     def port(self) -> bytes:
-        return self._call_bytes(libpq.PQport)
+        return _call_bytes(self, libpq.PQport)
 
     @property
     def tty(self) -> bytes:
-        return self._call_bytes(libpq.PQtty)
+        return _call_bytes(self, libpq.PQtty)
 
     @property
     def options(self) -> bytes:
-        return self._call_bytes(libpq.PQoptions)
+        return _call_bytes(self, libpq.PQoptions)
 
     @property
     def status(self) -> ConnStatus:
@@ -142,7 +142,7 @@ cdef class PGconn:
         return TransactionStatus(rv)
 
     def parameter_status(self, name: bytes) -> Optional[bytes]:
-        self._ensure_pgconn()
+        _ensure_pgconn(self)
         cdef const char *rv = libpq.PQparameterStatus(self.pgconn_ptr, name)
         if rv is not NULL:
             return rv
@@ -155,34 +155,34 @@ cdef class PGconn:
 
     @property
     def protocol_version(self) -> int:
-        return self._call_int(libpq.PQprotocolVersion)
+        return _call_int(self, libpq.PQprotocolVersion)
 
     @property
     def server_version(self) -> int:
-        return self._call_int(libpq.PQserverVersion)
+        return _call_int(self, libpq.PQserverVersion)
 
     @property
     def socket(self) -> int:
-        return self._call_int(libpq.PQsocket)
+        return _call_int(self, libpq.PQsocket)
 
     @property
     def backend_pid(self) -> int:
-        return self._call_int(libpq.PQbackendPID)
+        return _call_int(self, libpq.PQbackendPID)
 
     @property
     def needs_password(self) -> bool:
-        return bool(self._call_int(libpq.PQconnectionNeedsPassword))
+        return bool(_call_int(self, libpq.PQconnectionNeedsPassword))
 
     @property
     def used_password(self) -> bool:
-        return bool(self._call_int(libpq.PQconnectionUsedPassword))
+        return bool(_call_int(self, libpq.PQconnectionUsedPassword))
 
     @property
     def ssl_in_use(self) -> bool:
-        return bool(self._call_int(<conn_int_f>libpq.PQsslInUse))
+        return bool(_call_int(self, <conn_int_f>libpq.PQsslInUse))
 
     def exec_(self, command: bytes) -> PGresult:
-        self._ensure_pgconn()
+        _ensure_pgconn(self)
         cdef const char *ccommand = command
         cdef libpq.PGresult *pgresult
         with nogil:
@@ -193,7 +193,7 @@ cdef class PGconn:
         return PGresult._from_ptr(pgresult)
 
     def send_query(self, command: bytes) -> None:
-        self._ensure_pgconn()
+        _ensure_pgconn(self)
         cdef const char *ccommand = command
         cdef int rv
         with nogil:
@@ -209,7 +209,7 @@ cdef class PGconn:
         param_formats: Optional[Sequence[Format]] = None,
         result_format: Format = Format.TEXT,
     ) -> PGresult:
-        self._ensure_pgconn()
+        _ensure_pgconn(self)
 
         cdef int cnparams
         cdef Oid *ctypes
@@ -239,7 +239,7 @@ cdef class PGconn:
         param_formats: Optional[Sequence[Format]] = None,
         result_format: Format = Format.TEXT,
     ) -> None:
-        self._ensure_pgconn()
+        _ensure_pgconn(self)
 
         cdef int cnparams
         cdef Oid *ctypes
@@ -268,7 +268,7 @@ cdef class PGconn:
         command: bytes,
         param_types: Optional[Sequence[int]] = None,
     ) -> None:
-        self._ensure_pgconn()
+        _ensure_pgconn(self)
 
         cdef int i
         cdef int nparams = len(param_types) if param_types else 0
@@ -298,7 +298,7 @@ cdef class PGconn:
         param_formats: Optional[Sequence[Format]] = None,
         result_format: Format = Format.TEXT,
     ) -> None:
-        self._ensure_pgconn()
+        _ensure_pgconn(self)
 
         cdef int cnparams
         cdef Oid *ctypes
@@ -327,7 +327,7 @@ cdef class PGconn:
         command: bytes,
         param_types: Optional[Sequence[int]] = None,
     ) -> PGresult:
-        self._ensure_pgconn()
+        _ensure_pgconn(self)
 
         cdef int i
         cdef int nparams = len(param_types) if param_types else 0
@@ -355,7 +355,7 @@ cdef class PGconn:
         param_formats: Optional[Sequence[int]] = None,
         result_format: int = 0,
     ) -> PGresult:
-        self._ensure_pgconn()
+        _ensure_pgconn(self)
 
         cdef int cnparams
         cdef Oid *ctypes
@@ -380,14 +380,14 @@ cdef class PGconn:
         return PGresult._from_ptr(rv)
 
     def describe_prepared(self, name: bytes) -> PGresult:
-        self._ensure_pgconn()
+        _ensure_pgconn(self)
         cdef libpq.PGresult *rv = libpq.PQdescribePrepared(self.pgconn_ptr, name)
         if rv is NULL:
             raise MemoryError("couldn't allocate PGresult")
         return PGresult._from_ptr(rv)
 
     def describe_portal(self, name: bytes) -> PGresult:
-        self._ensure_pgconn()
+        _ensure_pgconn(self)
         cdef libpq.PGresult *rv = libpq.PQdescribePortal(self.pgconn_ptr, name)
         if rv is NULL:
             raise MemoryError("couldn't allocate PGresult")
@@ -481,29 +481,32 @@ cdef class PGconn:
             raise MemoryError("couldn't allocate empty PGresult")
         return PGresult._from_ptr(rv)
 
-    cdef int _ensure_pgconn(self) except 0:
-        if self.pgconn_ptr is not NULL:
-            return 1
 
-        raise PQerror("the connection is closed")
+cdef int _ensure_pgconn(PGconn pgconn) except 0:
+    if pgconn.pgconn_ptr is not NULL:
+        return 1
 
-    cdef char *_call_bytes(self, conn_bytes_f func) except NULL:
-        """
-        Call one of the pgconn libpq functions returning a bytes pointer.
-        """
-        if not self._ensure_pgconn():
-            return NULL
-        cdef char *rv = func(self.pgconn_ptr)
-        assert rv is not NULL
-        return rv
+    raise PQerror("the connection is closed")
 
-    cdef int _call_int(self, conn_int_f func) except -1:
-        """
-        Call one of the pgconn libpq functions returning an int.
-        """
-        if not self._ensure_pgconn():
-            return -1
-        return func(self.pgconn_ptr)
+
+cdef char *_call_bytes(PGconn pgconn, conn_bytes_f func) except NULL:
+    """
+    Call one of the pgconn libpq functions returning a bytes pointer.
+    """
+    if not _ensure_pgconn(pgconn):
+        return NULL
+    cdef char *rv = func(pgconn.pgconn_ptr)
+    assert rv is not NULL
+    return rv
+
+
+cdef int _call_int(PGconn pgconn, conn_int_f func) except -1:
+    """
+    Call one of the pgconn libpq functions returning an int.
+    """
+    if not _ensure_pgconn(pgconn):
+        return -1
+    return func(pgconn.pgconn_ptr)
 
 
 cdef void notice_receiver(void *arg, const libpq.PGresult *res_ptr) with gil:
