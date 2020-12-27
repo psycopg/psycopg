@@ -112,7 +112,7 @@ cdef class Escaping:
             PQBuffer._from_buffer(out, len_out - 1)  # out includes final 0
         )
 
-    def unescape_bytea(self, data: bytes) -> memoryview:
+    def unescape_bytea(self, const unsigned char *data) -> memoryview:
         # not needed, but let's keep it symmetric with the escaping:
         # if a connection is passed in, it must be valid.
         if self.conn is not None:
