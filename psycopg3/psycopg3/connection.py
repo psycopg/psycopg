@@ -7,6 +7,7 @@ psycopg3 connection objects
 import sys
 import asyncio
 import logging
+import warnings
 import threading
 from types import TracebackType
 from typing import Any, AsyncIterator, Callable, Iterator, List, NamedTuple
@@ -121,6 +122,22 @@ class BaseConnection(AdaptContext):
 
         pgconn.notice_handler = partial(BaseConnection._notice_handler, wself)
         pgconn.notify_handler = partial(BaseConnection._notify_handler, wself)
+
+    def __del__(self) -> None:
+        status = self.pgconn.transaction_status
+        if status == TransactionStatus.UNKNOWN:
+            return
+
+        elif status == TransactionStatus.INTRANS:
+            msg = (
+                f"connection {self} was deleted with an open transaction,"
+                " changes discarded by the server"
+            )
+        else:
+            status = TransactionStatus(status)  # in case we got an int
+            msg = f"connection {self} was deleted open in status {status.name}"
+
+        warnings.warn(msg, ResourceWarning)
 
     @property
     def closed(self) -> bool:

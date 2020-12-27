@@ -77,6 +77,35 @@ async def test_close(aconn):
         await cur.execute("select 1")
 
 
+async def test_connection_warn_close(dsn, recwarn):
+    conn = await AsyncConnection.connect(dsn)
+    await conn.close()
+    del conn
+    assert not recwarn
+
+    conn = await AsyncConnection.connect(dsn)
+    del conn
+    assert "IDLE" in str(recwarn.pop(ResourceWarning).message)
+
+    conn = await AsyncConnection.connect(dsn)
+    await conn.execute("select 1")
+    del conn
+    assert "discarded" in str(recwarn.pop(ResourceWarning).message)
+
+    conn = await AsyncConnection.connect(dsn)
+    try:
+        await conn.execute("select wat")
+    except Exception:
+        pass
+    del conn
+    assert "INERROR" in str(recwarn.pop(ResourceWarning).message)
+
+    async with await AsyncConnection.connect(dsn) as conn:
+        pass
+    del conn
+    assert not recwarn
+
+
 async def test_context_commit(aconn, dsn):
     async with aconn:
         async with await aconn.cursor() as cur:

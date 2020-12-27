@@ -72,6 +72,35 @@ def test_close(conn):
         cur.execute("select 1")
 
 
+def test_connection_warn_close(dsn, recwarn):
+    conn = Connection.connect(dsn)
+    conn.close()
+    del conn
+    assert not recwarn
+
+    conn = Connection.connect(dsn)
+    del conn
+    assert "IDLE" in str(recwarn.pop(ResourceWarning).message)
+
+    conn = Connection.connect(dsn)
+    conn.execute("select 1")
+    del conn
+    assert "discarded" in str(recwarn.pop(ResourceWarning).message)
+
+    conn = Connection.connect(dsn)
+    try:
+        conn.execute("select wat")
+    except Exception:
+        pass
+    del conn
+    assert "INERROR" in str(recwarn.pop(ResourceWarning).message)
+
+    with Connection.connect(dsn) as conn:
+        pass
+    del conn
+    assert not recwarn
+
+
 def test_context_commit(conn, dsn):
     with conn:
         with conn.cursor() as cur:
