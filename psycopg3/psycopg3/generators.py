@@ -35,7 +35,6 @@ def connect(conninfo: str) -> PQGenConn[PGconn]:
 
     """
     conn = pq.PGconn.connect_start(conninfo.encode("utf8"))
-    logger.debug("connection started, status %s", conn.status.name)
     while 1:
         if conn.status == ConnStatus.BAD:
             raise e.OperationalError(
@@ -43,7 +42,6 @@ def connect(conninfo: str) -> PQGenConn[PGconn]:
             )
 
         status = conn.connect_poll()
-        logger.debug("connection polled, status %s", conn.status.name)
         if status == PollingStatus.OK:
             break
         elif status == PollingStatus.READING:

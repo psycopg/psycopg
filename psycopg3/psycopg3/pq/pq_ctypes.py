@@ -21,8 +21,7 @@ from typing import cast as t_cast, TYPE_CHECKING
 from . import _pq_ctypes as impl
 from .misc import PGnotify, ConninfoOption, PQerror, PGresAttDesc
 from .misc import error_message, connection_summary
-from ._enums import ConnStatus, DiagnosticField, ExecStatus, Format
-from ._enums import Ping, PollingStatus, TransactionStatus
+from ._enums import Format
 
 if TYPE_CHECKING:
     from . import proto
@@ -113,9 +112,8 @@ class PGconn:
             raise MemoryError("couldn't allocate PGconn")
         return cls(pgconn_ptr)
 
-    def connect_poll(self) -> PollingStatus:
-        rv = self._call_int(impl.PQconnectPoll)
-        return PollingStatus(rv)
+    def connect_poll(self) -> int:
+        return self._call_int(impl.PQconnectPoll)
 
     def finish(self) -> None:
         self.pgconn_ptr, p = None, self.pgconn_ptr
@@ -141,17 +139,15 @@ class PGconn:
         if not impl.PQresetStart(self.pgconn_ptr):
             raise PQerror("couldn't reset connection")
 
-    def reset_poll(self) -> PollingStatus:
-        rv = self._call_int(impl.PQresetPoll)
-        return PollingStatus(rv)
+    def reset_poll(self) -> int:
+        return self._call_int(impl.PQresetPoll)
 
     @classmethod
-    def ping(self, conninfo: bytes) -> Ping:
+    def ping(self, conninfo: bytes) -> int:
         if not isinstance(conninfo, bytes):
             raise TypeError(f"bytes expected, got {type(conninfo)} instead")
 
-        rv = impl.PQping(conninfo)
-        return Ping(rv)
+        return impl.PQping(conninfo)
 
     @property
     def db(self) -> bytes:
@@ -186,14 +182,12 @@ class PGconn:
         return self._call_bytes(impl.PQoptions)
 
     @property
-    def status(self) -> ConnStatus:
-        rv = impl.PQstatus(self.pgconn_ptr)
-        return ConnStatus(rv)
+    def status(self) -> int:
+        return impl.PQstatus(self.pgconn_ptr)
 
     @property
-    def transaction_status(self) -> TransactionStatus:
-        rv = impl.PQtransactionStatus(self.pgconn_ptr)
-        return TransactionStatus(rv)
+    def transaction_status(self) -> int:
+        return impl.PQtransactionStatus(self.pgconn_ptr)
 
     def parameter_status(self, name: bytes) -> Optional[bytes]:
         self._ensure_pgconn()
@@ -252,8 +246,8 @@ class PGconn:
         command: bytes,
         param_values: Optional[Sequence[Optional[bytes]]],
         param_types: Optional[Sequence[int]] = None,
-        param_formats: Optional[Sequence[Format]] = None,
-        result_format: Format = Format.TEXT,
+        param_formats: Optional[Sequence[int]] = None,
+        result_format: int = Format.TEXT,
     ) -> "PGresult":
         args = self._query_params_args(
             command, param_values, param_types, param_formats, result_format
@@ -269,8 +263,8 @@ class PGconn:
         command: bytes,
         param_values: Optional[Sequence[Optional[bytes]]],
         param_types: Optional[Sequence[int]] = None,
-        param_formats: Optional[Sequence[Format]] = None,
-        result_format: Format = Format.TEXT,
+        param_formats: Optional[Sequence[int]] = None,
+        result_format: int = Format.TEXT,
     ) -> None:
         args = self._query_params_args(
             command, param_values, param_types, param_formats, result_format
@@ -307,8 +301,8 @@ class PGconn:
         self,
         name: bytes,
         param_values: Optional[Sequence[Optional[bytes]]],
-        param_formats: Optional[Sequence[Format]] = None,
-        result_format: Format = Format.TEXT,
+        param_formats: Optional[Sequence[int]] = None,
+        result_format: int = Format.TEXT,
     ) -> None:
         # repurpose this function with a cheeky replacement of query with name,
         # drop the param_types from the result
@@ -328,8 +322,8 @@ class PGconn:
         command: bytes,
         param_values: Optional[Sequence[Optional[bytes]]],
         param_types: Optional[Sequence[int]] = None,
-        param_formats: Optional[Sequence[Format]] = None,
-        result_format: Format = Format.TEXT,
+        param_formats: Optional[Sequence[int]] = None,
+        result_format: int = Format.TEXT,
     ) -> Any:
         if not isinstance(command, bytes):
             raise TypeError(f"bytes expected, got {type(command)} instead")
@@ -549,7 +543,7 @@ class PGconn:
         else:
             return nbytes, b""
 
-    def make_empty_result(self, exec_status: ExecStatus) -> "PGresult":
+    def make_empty_result(self, exec_status: int) -> "PGresult":
         rv = impl.PQmakeEmptyPGresult(self.pgconn_ptr, exec_status)
         if not rv:
             raise MemoryError("couldn't allocate empty PGresult")
@@ -608,15 +602,14 @@ class PGresult:
             impl.PQclear(p)
 
     @property
-    def status(self) -> ExecStatus:
-        rv = impl.PQresultStatus(self.pgresult_ptr)
-        return ExecStatus(rv)
+    def status(self) -> int:
+        return impl.PQresultStatus(self.pgresult_ptr)
 
     @property
     def error_message(self) -> bytes:
         return impl.PQresultErrorMessage(self.pgresult_ptr)
 
-    def error_field(self, fieldcode: DiagnosticField) -> Optional[bytes]:
+    def error_field(self, fieldcode: int) -> Optional[bytes]:
         return impl.PQresultErrorField(self.pgresult_ptr, fieldcode)
 
     @property
@@ -636,8 +629,8 @@ class PGresult:
     def ftablecol(self, column_number: int) -> int:
         return impl.PQftablecol(self.pgresult_ptr, column_number)
 
-    def fformat(self, column_number: int) -> Format:
-        return Format(impl.PQfformat(self.pgresult_ptr, column_number))
+    def fformat(self, column_number: int) -> int:
+        return impl.PQfformat(self.pgresult_ptr, column_number)
 
     def ftype(self, column_number: int) -> int:
         return impl.PQftype(self.pgresult_ptr, column_number)
@@ -649,8 +642,8 @@ class PGresult:
         return impl.PQfsize(self.pgresult_ptr, column_number)
 
     @property
-    def binary_tuples(self) -> Format:
-        return Format(impl.PQbinaryTuples(self.pgresult_ptr))
+    def binary_tuples(self) -> int:
+        return impl.PQbinaryTuples(self.pgresult_ptr)
 
     def get_value(
         self, row_number: int, column_number: int

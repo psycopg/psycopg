@@ -35,15 +35,14 @@ cdef class PGresult:
             return None
 
     @property
-    def status(self) -> ExecStatus:
-        cdef int rv = libpq.PQresultStatus(self.pgresult_ptr)
-        return ExecStatus(rv)
+    def status(self) -> int:
+        return libpq.PQresultStatus(self.pgresult_ptr)
 
     @property
     def error_message(self) -> bytes:
         return libpq.PQresultErrorMessage(self.pgresult_ptr)
 
-    def error_field(self, fieldcode: DiagnosticField) -> Optional[bytes]:
+    def error_field(self, int fieldcode) -> Optional[bytes]:
         cdef char * rv = libpq.PQresultErrorField(self.pgresult_ptr, fieldcode)
         if rv is not NULL:
             return rv

@@ -82,7 +82,7 @@ class Transformer(AdaptContext):
         for i in range(nf):
             oid = result.ftype(i)
             fmt = result.fformat(i)
-            rc.append(self.get_loader(oid, fmt).load)
+            rc.append(self.get_loader(oid, fmt).load)  # type: ignore
 
     def set_row_types(
         self, types: Sequence[int], formats: Sequence[Format]

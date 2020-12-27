@@ -132,7 +132,7 @@ class BaseConnection(AdaptContext):
         if status == TransactionStatus.UNKNOWN:
             return
 
-        status = TransactionStatus(status)  # in case we got an int
+        status = TransactionStatus(status)
         warnings.warn(
             f"connection {self} was deleted while still open."
             f" Please use 'with' or '.close()' to close the connection",

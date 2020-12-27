@@ -55,9 +55,8 @@ cdef class PGconn:
 
         return PGconn._from_ptr(pgconn)
 
-    def connect_poll(self) -> PollingStatus:
-        cdef int rv = _call_int(self, <conn_int_f>libpq.PQconnectPoll)
-        return PollingStatus(rv)
+    def connect_poll(self) -> int:
+        return _call_int(self, <conn_int_f>libpq.PQconnectPoll)
 
     def finish(self) -> None:
         if self.pgconn_ptr is not NULL:
@@ -89,14 +88,12 @@ cdef class PGconn:
         if not libpq.PQresetStart(self.pgconn_ptr):
             raise PQerror("couldn't reset connection")
 
-    def reset_poll(self) -> PollingStatus:
-        cdef int rv = _call_int(self, <conn_int_f>libpq.PQresetPoll)
-        return PollingStatus(rv)
+    def reset_poll(self) -> int:
+        return _call_int(self, <conn_int_f>libpq.PQresetPoll)
 
     @classmethod
-    def ping(self, const char *conninfo) -> Ping:
-        cdef int rv = libpq.PQping(conninfo)
-        return Ping(rv)
+    def ping(self, const char *conninfo) -> int:
+        return libpq.PQping(conninfo)
 
     @property
     def db(self) -> bytes:
@@ -136,9 +133,8 @@ cdef class PGconn:
         return ConnStatus(rv)
 
     @property
-    def transaction_status(self) -> TransactionStatus:
-        cdef int rv = libpq.PQtransactionStatus(self.pgconn_ptr)
-        return TransactionStatus(rv)
+    def transaction_status(self) -> int:
+        return libpq.PQtransactionStatus(self.pgconn_ptr)
 
     def parameter_status(self, name: bytes) -> Optional[bytes]:
         _ensure_pgconn(self)
@@ -205,8 +201,8 @@ cdef class PGconn:
         command: bytes,
         param_values: Optional[Sequence[Optional[bytes]]],
         param_types: Optional[Sequence[int]] = None,
-        param_formats: Optional[Sequence[Format]] = None,
-        result_format: Format = Format.TEXT,
+        param_formats: Optional[Sequence[int]] = None,
+        result_format: int = Format.TEXT,
     ) -> PGresult:
         _ensure_pgconn(self)
 
@@ -235,8 +231,8 @@ cdef class PGconn:
         command: bytes,
         param_values: Optional[Sequence[Optional[bytes]]],
         param_types: Optional[Sequence[int]] = None,
-        param_formats: Optional[Sequence[Format]] = None,
-        result_format: Format = Format.TEXT,
+        param_formats: Optional[Sequence[int]] = None,
+        result_format: int = Format.TEXT,
     ) -> None:
         _ensure_pgconn(self)
 
@@ -294,8 +290,8 @@ cdef class PGconn:
         self,
         name: bytes,
         param_values: Optional[Sequence[Optional[bytes]]],
-        param_formats: Optional[Sequence[Format]] = None,
-        result_format: Format = Format.TEXT,
+        param_formats: Optional[Sequence[int]] = None,
+        result_format: int = Format.TEXT,
     ) -> None:
         _ensure_pgconn(self)
 
@@ -473,7 +469,7 @@ cdef class PGconn:
         else:
             return nbytes, b""
 
-    def make_empty_result(self, exec_status: ExecStatus) -> PGresult:
+    def make_empty_result(self, exec_status: int) -> PGresult:
         cdef libpq.PGresult *rv = libpq.PQmakeEmptyPGresult(
             self.pgconn_ptr, exec_status)
         if not rv:
@@ -525,7 +521,7 @@ cdef void notice_receiver(void *arg, const libpq.PGresult *res_ptr) with gil:
 cdef (int, libpq.Oid *, char * const*, int *, int *) _query_params_args(
     list param_values: Optional[Sequence[Optional[bytes]]],
     param_types: Optional[Sequence[int]],
-    list param_formats: Optional[Sequence[Format]],
+    list param_formats: Optional[Sequence[int]],
 ) except *:
     cdef int i
 

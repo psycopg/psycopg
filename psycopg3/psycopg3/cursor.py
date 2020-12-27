@@ -95,7 +95,7 @@ class BaseCursor(Generic[ConnectionType]):
     def status(self) -> Optional[pq.ExecStatus]:
         # TODO: do we want this?
         res = self.pgresult
-        return res.status if res else None
+        return pq.ExecStatus(res.status) if res else None
 
     @property
     def query(self) -> Optional[bytes]:
@@ -289,16 +289,16 @@ class BaseCursor(Generic[ConnectionType]):
         pgq.convert(query, params)
         return pgq
 
-    _status_ok = {
+    _status_ok = (
         ExecStatus.TUPLES_OK,
         ExecStatus.COMMAND_OK,
         ExecStatus.EMPTY_QUERY,
-    }
-    _status_copy = {
+    )
+    _status_copy = (
         ExecStatus.COPY_IN,
         ExecStatus.COPY_OUT,
         ExecStatus.COPY_BOTH,
-    }
+    )
 
     def _execute_results(self, results: Sequence["PGresult"]) -> None:
         """
@@ -309,32 +309,36 @@ class BaseCursor(Generic[ConnectionType]):
         if not results:
             raise e.InternalError("got no result from the query")
 
+        for res in results:
+            if res.status not in self._status_ok:
+                return self._raise_from_results(results)
+
+        self._results = list(results)
+        self.pgresult = results[0]
+        nrows = self.pgresult.command_tuples
+        if nrows is not None:
+            if self._rowcount < 0:
+                self._rowcount = nrows
+            else:
+                self._rowcount += nrows
+
+        return
+
+    def _raise_from_results(self, results: Sequence["PGresult"]) -> None:
         statuses = {res.status for res in results}
-        badstats = statuses - self._status_ok
-        if not badstats:
-            self._results = list(results)
-            self.pgresult = results[0]
-            nrows = self.pgresult.command_tuples
-            if nrows is not None:
-                if self._rowcount < 0:
-                    self._rowcount = nrows
-                else:
-                    self._rowcount += nrows
-
-            return
-
+        badstats = statuses.difference(self._status_ok)
         if results[-1].status == ExecStatus.FATAL_ERROR:
             raise e.error_from_result(
                 results[-1], encoding=self._conn.client_encoding
             )
-        elif badstats & self._status_copy:
+        elif statuses.intersection(self._status_copy):
             raise e.ProgrammingError(
                 "COPY cannot be used with execute(); use copy() insead"
             )
         else:
             raise e.InternalError(
                 f"got unexpected status from query:"
-                f" {', '.join(sorted(s.name for s in sorted(badstats)))}"
+                f" {', '.join(sorted(ExecStatus(s).name for s in badstats))}"
             )
 
     def _send_prepare(self, name: bytes, query: PostgresQuery) -> None:
