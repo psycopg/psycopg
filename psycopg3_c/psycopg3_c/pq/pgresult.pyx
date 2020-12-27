@@ -1,5 +1,5 @@
 """
-psycopg3_c.pq_cython.PGresult object implementation.
+psycopg3_c.pq.PGresult object implementation.
 """
 
 # Copyright (C) 2020 The Psycopg Team

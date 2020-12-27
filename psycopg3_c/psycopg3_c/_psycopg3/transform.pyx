@@ -16,10 +16,6 @@ from cpython.object cimport PyObject, PyObject_CallFunctionObjArgs
 
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
-from psycopg3_c cimport oids
-from psycopg3_c.pq cimport libpq
-from psycopg3_c.pq_cython cimport PGresult
-
 from psycopg3 import errors as e
 from psycopg3.pq import Format
 
@@ -59,7 +55,7 @@ cdef class Transformer:
     cdef dict _dumpers_cache
     cdef dict _text_loaders
     cdef dict _binary_loaders
-    cdef PGresult _pgresult
+    cdef pq.PGresult _pgresult
     cdef int _nfields, _ntuples
     cdef list _row_loaders
 

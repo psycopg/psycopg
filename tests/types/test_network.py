@@ -1,4 +1,3 @@
-import os
 import sys
 import ipaddress
 import subprocess as sp
@@ -92,6 +91,7 @@ def binary_check(fmt):
         pytest.xfail("inet binary not implemented")
 
 
+@pytest.mark.subprocess
 def test_lazy_load(dsn):
     script = f"""\
 import sys
@@ -110,8 +110,4 @@ conn.close()
 assert 'ipaddress' in sys.modules
 """
 
-    # TODO: debug this. Importing c module fails on travis in this scenario
-    env = dict(os.environ)
-    env.pop("PSYCOPG3_IMPL", None)
-
-    sp.check_call([sys.executable, "-s", "-c", script], env=env)
+    sp.check_call([sys.executable, "-s", "-c", script])

@@ -60,6 +60,7 @@ def test_commit_concurrency(conn):
 
 
 @pytest.mark.slow
+@pytest.mark.subprocess
 def test_multiprocess_close(dsn, tmpdir):
     # Check the problem reported in psycopg2#829
     # Subprocess gcs the copy of the fd after fork so it closes connection.
@@ -95,8 +96,6 @@ t.join()
         f.write(module)
     env = dict(os.environ)
     env["PYTHONPATH"] = str(tmpdir + os.pathsep + env.get("PYTHONPATH", ""))
-    # TODO: debug this. Importing c module fails on travis in this scenario
-    env.pop("PSYCOPG3_IMPL", None)
     out = sp.check_output(
         [sys.executable, "-c", script], stderr=sp.STDOUT, env=env
     ).decode("utf8", "replace")

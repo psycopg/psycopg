@@ -9,8 +9,7 @@ from cpython.long cimport PyLong_FromString, PyLong_FromLong, PyLong_AsLongLong
 from cpython.long cimport PyLong_FromLongLong, PyLong_FromUnsignedLong
 from cpython.float cimport PyFloat_FromDouble
 
-from psycopg3_c cimport oids
-from psycopg3_c.endian cimport be16toh, be32toh, be64toh, htobe64
+from endian cimport be16toh, be32toh, be64toh, htobe64
 
 cdef extern from "Python.h":
     # work around https://github.com/cython/cython/issues/3909

@@ -1,5 +1,5 @@
 """
-psycopg3_c.pq_cython.Escaping object implementation.
+psycopg3_c.pq.Escaping object implementation.
 """
 
 # Copyright (C) 2020 The Psycopg Team

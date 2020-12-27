@@ -5,10 +5,12 @@ Update the maps of builtin types and names.
 You can update this file by executing it, using the PG* env var to connect
 """
 
-import os
 import re
 import subprocess as sp
 from typing import List
+from pathlib import Path
+
+ROOT = Path(__file__).parent.parent
 
 
 version_sql = """
@@ -42,18 +44,18 @@ select format('%s_OID = %s', upper(typname), oid)
 
 def update_python_oids() -> None:
     queries = [version_sql, py_oids_sql]
-    fn = os.path.dirname(__file__) + "/../psycopg3/psycopg3/oids.py"
+    fn = ROOT / "psycopg3/psycopg3/oids.py"
     update_file(fn, queries)
 
 
 def update_cython_oids() -> None:
     queries = [version_sql, cython_oids_sql]
-    fn = os.path.dirname(__file__) + "/../psycopg3_c/psycopg3_c/oids.pxd"
+    fn = ROOT / "psycopg3_c/psycopg3_c/_psycopg3/oids.pxd"
     update_file(fn, queries)
 
 
-def update_file(fn: str, queries: List[str]) -> None:
-    with open(fn, "rb") as f:
+def update_file(fn: Path, queries: List[str]) -> None:
+    with fn.open("rb") as f:
         lines = f.read().splitlines()
 
     new = []
@@ -71,7 +73,7 @@ def update_file(fn: str, queries: List[str]) -> None:
     ]
     lines[istart + 1 : iend] = new
 
-    with open(fn, "wb") as f:
+    with fn.open("wb") as f:
         f.write(b"\n".join(lines))
         f.write(b"\n")
 

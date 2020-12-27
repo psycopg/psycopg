@@ -1,5 +1,5 @@
 """
-psycopg3_c.pq_cython.Conninfo object implementation.
+psycopg3_c.pq.Conninfo object implementation.
 """
 
 # Copyright (C) 2020 The Psycopg Team

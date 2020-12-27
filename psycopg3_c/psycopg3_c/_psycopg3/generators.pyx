@@ -8,23 +8,21 @@ import logging
 from typing import List
 
 from psycopg3 import errors as e
+from psycopg3.pq import proto, error_message, PQerror
 from psycopg3.proto import PQGen
 from psycopg3.waiting import Wait, Ready
-from psycopg3 import pq
-from psycopg3_c.pq cimport libpq
-from psycopg3_c.pq_cython cimport PGconn, PGresult
 
 cdef object WAIT_W = Wait.W
 cdef object WAIT_R = Wait.R
 cdef object WAIT_RW = Wait.RW
 cdef int READY_R = Ready.R
 
-def connect(conninfo: str) -> PQGenConn[pq.proto.PGconn]:
+def connect(conninfo: str) -> PQGenConn[proto.PGconn]:
     """
     Generator to create a database connection without blocking.
 
     """
-    cdef PGconn conn = PGconn.connect_start(conninfo.encode("utf8"))
+    cdef pq.PGconn conn = pq.PGconn.connect_start(conninfo.encode("utf8"))
     logger.debug("connection started, status %s", conn.status.name)
     cdef libpq.PGconn *pgconn_ptr = conn.pgconn_ptr
     cdef int conn_status = libpq.PQstatus(pgconn_ptr)
@@ -33,7 +31,7 @@ def connect(conninfo: str) -> PQGenConn[pq.proto.PGconn]:
     while 1:
         if conn_status == libpq.CONNECTION_BAD:
             raise e.OperationalError(
-                f"connection is bad: {pq.error_message(conn)}"
+                f"connection is bad: {error_message(conn)}"
             )
 
         poll_status = libpq.PQconnectPoll(pgconn_ptr)
@@ -46,7 +44,7 @@ def connect(conninfo: str) -> PQGenConn[pq.proto.PGconn]:
             yield (libpq.PQsocket(pgconn_ptr), WAIT_W)
         elif poll_status == libpq.PGRES_POLLING_FAILED:
             raise e.OperationalError(
-                f"connection failed: {pq.error_message(conn)}"
+                f"connection failed: {error_message(conn)}"
             )
         else:
             raise e.InternalError(f"unexpected poll status: {poll_status}")
@@ -55,7 +53,7 @@ def connect(conninfo: str) -> PQGenConn[pq.proto.PGconn]:
     return conn
 
 
-def execute(PGconn pgconn) -> PQGen[List[pq.proto.PGresult]]:
+def execute(pq.PGconn pgconn) -> PQGen[List[proto.PGresult]]:
     """
     Generator sending a query and returning results without blocking.
 
@@ -66,7 +64,7 @@ def execute(PGconn pgconn) -> PQGen[List[pq.proto.PGresult]]:
     Return the list of results returned by the database (whether success
     or error).
     """
-    results: List[pq.proto.PGresult] = []
+    results: List[proto.PGresult] = []
     cdef libpq.PGconn *pgconn_ptr = pgconn.pgconn_ptr
     cdef int status
     cdef libpq.PGnotify *notify
@@ -85,8 +83,8 @@ def execute(PGconn pgconn) -> PQGen[List[pq.proto.PGresult]]:
                 # PGconn buffer and passed to Python later.
                 cires = libpq.PQconsumeInput(pgconn_ptr)
             if 1 != cires:
-                raise pq.PQerror(
-                    f"consuming input failed: {pq.error_message(pgconn)}")
+                raise PQerror(
+                    f"consuming input failed: {error_message(pgconn)}")
         continue
 
     # Fetching the result
@@ -97,8 +95,8 @@ def execute(PGconn pgconn) -> PQGen[List[pq.proto.PGresult]]:
                 ibres = libpq.PQisBusy(pgconn_ptr)
 
         if 1 != cires:
-            raise pq.PQerror(
-                f"consuming input failed: {pq.error_message(pgconn)}")
+            raise PQerror(
+                f"consuming input failed: {error_message(pgconn)}")
         if ibres:
             yield WAIT_R
             continue
@@ -120,7 +118,7 @@ def execute(PGconn pgconn) -> PQGen[List[pq.proto.PGresult]]:
         pgres = libpq.PQgetResult(pgconn_ptr)
         if pgres is NULL:
             break
-        results.append(PGresult._from_ptr(pgres))
+        results.append(pq.PGresult._from_ptr(pgres))
 
         status = libpq.PQresultStatus(pgres)
         if status in (libpq.PGRES_COPY_IN, libpq.PGRES_COPY_OUT, libpq.PGRES_COPY_BOTH):

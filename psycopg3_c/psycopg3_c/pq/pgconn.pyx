@@ -1,5 +1,5 @@
 """
-psycopg3_c.pq_cython.PGconn object implementation.
+psycopg3_c.pq.PGconn object implementation.
 """
 
 # Copyright (C) 2020 The Psycopg Team
@@ -10,7 +10,6 @@ from cpython.bytes cimport PyBytes_AsString
 
 import logging
 
-from psycopg3_c.pq.libpq cimport Oid
 from psycopg3.pq.misc import PGnotify, connection_summary
 
 logger = logging.getLogger('psycopg3')
@@ -212,7 +211,7 @@ cdef class PGconn:
         _ensure_pgconn(self)
 
         cdef int cnparams
-        cdef Oid *ctypes
+        cdef libpq.Oid *ctypes
         cdef char *const *cvalues
         cdef int *clengths
         cdef int *cformats
@@ -242,7 +241,7 @@ cdef class PGconn:
         _ensure_pgconn(self)
 
         cdef int cnparams
-        cdef Oid *ctypes
+        cdef libpq.Oid *ctypes
         cdef char *const *cvalues
         cdef int *clengths
         cdef int *cformats
@@ -272,9 +271,9 @@ cdef class PGconn:
 
         cdef int i
         cdef int nparams = len(param_types) if param_types else 0
-        cdef Oid *atypes = NULL
+        cdef libpq.Oid *atypes = NULL
         if nparams:
-            atypes = <Oid *>PyMem_Malloc(nparams * sizeof(Oid))
+            atypes = <libpq.Oid *>PyMem_Malloc(nparams * sizeof(libpq.Oid))
             for i in range(nparams):
                 atypes[i] = param_types[i]
 
@@ -301,7 +300,7 @@ cdef class PGconn:
         _ensure_pgconn(self)
 
         cdef int cnparams
-        cdef Oid *ctypes
+        cdef libpq.Oid *ctypes
         cdef char *const *cvalues
         cdef int *clengths
         cdef int *cformats
@@ -331,9 +330,9 @@ cdef class PGconn:
 
         cdef int i
         cdef int nparams = len(param_types) if param_types else 0
-        cdef Oid *atypes = NULL
+        cdef libpq.Oid *atypes = NULL
         if nparams:
-            atypes = <Oid *>PyMem_Malloc(nparams * sizeof(Oid))
+            atypes = <libpq.Oid *>PyMem_Malloc(nparams * sizeof(libpq.Oid))
             for i in range(nparams):
                 atypes[i] = param_types[i]
 
@@ -358,7 +357,7 @@ cdef class PGconn:
         _ensure_pgconn(self)
 
         cdef int cnparams
-        cdef Oid *ctypes
+        cdef libpq.Oid *ctypes
         cdef char *const *cvalues
         cdef int *clengths
         cdef int *cformats
@@ -523,7 +522,7 @@ cdef void notice_receiver(void *arg, const libpq.PGresult *res_ptr) with gil:
     res.pgresult_ptr = NULL  # avoid destroying the pgresult_ptr
 
 
-cdef (int, Oid *, char * const*, int *, int *) _query_params_args(
+cdef (int, libpq.Oid *, char * const*, int *, int *) _query_params_args(
     list param_values: Optional[Sequence[Optional[bytes]]],
     param_types: Optional[Sequence[int]],
     list param_formats: Optional[Sequence[Format]],
@@ -570,9 +569,9 @@ cdef (int, Oid *, char * const*, int *, int *) _query_params_args(
                 aparams[i] = ptr
                 alenghts[i] = length
 
-    cdef Oid *atypes = NULL
+    cdef libpq.Oid *atypes = NULL
     if tparam_types:
-        atypes = <Oid *>PyMem_Malloc(nparams * sizeof(Oid))
+        atypes = <libpq.Oid *>PyMem_Malloc(nparams * sizeof(libpq.Oid))
         for i in range(nparams):
             atypes[i] = tparam_types[i]
 
@@ -586,7 +585,7 @@ cdef (int, Oid *, char * const*, int *, int *) _query_params_args(
 
 
 cdef void _clear_query_params(
-    Oid *ctypes, char *const *cvalues, int *clenghst, int *cformats
+    libpq.Oid *ctypes, char *const *cvalues, int *clenghst, int *cformats
 ):
     PyMem_Free(ctypes)
     PyMem_Free(<char **>cvalues)

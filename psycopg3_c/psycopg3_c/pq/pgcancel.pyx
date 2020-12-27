@@ -1,5 +1,5 @@
 """
-psycopg3_c.pq_cython.PGcancel object implementation.
+psycopg3_c.pq.PGcancel object implementation.
 """
 
 # Copyright (C) 2020 The Psycopg Team

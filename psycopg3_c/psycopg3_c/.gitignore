@@ -1,4 +1,4 @@
 /*.so
 _psycopg3.c
-pq_cython.c
+pq.c
 *.html

@@ -19,10 +19,7 @@ from cpython.bytes cimport PyBytes_AsStringAndSize
 from cpython.bytearray cimport PyByteArray_FromStringAndSize, PyByteArray_Resize
 from cpython.bytearray cimport PyByteArray_AS_STRING
 
-from psycopg3_c cimport oids
-from psycopg3_c.pq cimport libpq
-from psycopg3_c.adapt cimport cloader_func, get_context_func
-from psycopg3_c.pq_cython cimport Escaping, _buffer_as_string_and_size
+from psycopg3_c.pq cimport _buffer_as_string_and_size
 
 from psycopg3 import errors as e
 from psycopg3.pq import Format
@@ -36,7 +33,7 @@ cdef class CDumper:
     cdef object src
     cdef public libpq.Oid oid
     cdef readonly object connection
-    cdef PGconn _pgconn
+    cdef pq.PGconn _pgconn
 
     def __init__(self, src: type, context: Optional["AdaptContext"] = None):
         self.src = src

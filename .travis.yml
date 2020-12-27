@@ -36,6 +36,9 @@ matrix:
         - PGVER=9.5
         - PSYCOPG3_IMPL=c
         - PGPORT=5432
+          # skip tests failing on importing psycopg3_c.pq on subprocess
+          # they only fail on Travis, work ok locally under tox too.
+        - PYTEST_ADDOPTS="-m 'not subprocess'"
 
     - python: 3.6
       addons:
@@ -62,6 +65,7 @@ matrix:
         - PGVER=10
         - PSYCOPG3_IMPL=c
         - PGPORT=5432
+        - PYTEST_ADDOPTS="-m 'not subprocess'"
 
     - python: 3.7
       addons:
@@ -90,6 +94,7 @@ matrix:
         - PGVER=12
         - PSYCOPG3_IMPL=c
         - PGPORT=5433
+        - PYTEST_ADDOPTS="-m 'not subprocess'"
 
     - python: 3.8
       addons:

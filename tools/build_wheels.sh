@@ -46,7 +46,7 @@ cp -r /psycopg3/psycopg3_c /psycopg3_binary
 mv /psycopg3_binary/{psycopg3_c,psycopg3_binary}/
 sed -i 's/psycopg3-c/psycopg3-binary/' /psycopg3_binary/setup.cfg
 sed -i "s/__impl__[[:space:]]*=.*/__impl__ = 'binary'/" \
-    /psycopg3_binary/psycopg3_binary/pq_cython.pyx
+    /psycopg3_binary/psycopg3_binary/pq.pyx
 find /psycopg3_binary/ -name \*.pyx -or -name \*.pxd -or -name \*.py \
     | xargs sed -i 's/\bpsycopg3_c\b/psycopg3_binary/'
 

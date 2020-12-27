@@ -55,7 +55,10 @@ class psycopg3_build_ext(build_ext):
 
         if cythonize is not None:
             for ext in self.distribution.ext_modules:
-                ext.sources[0] = os.path.splitext(ext.sources[0])[0] + ".pyx"
+                for i in range(len(ext.sources)):
+                    base, fext = os.path.splitext(ext.sources[i])
+                    if fext == ".c":
+                        ext.sources[i] = base + ".pyx"
 
             self.distribution.ext_modules = cythonize(
                 self.distribution.ext_modules,
@@ -78,8 +81,8 @@ pgext = Extension(
 )
 
 pqext = Extension(
-    "psycopg3_c.pq_cython",
-    ["psycopg3_c/pq_cython.c"],
+    "psycopg3_c.pq",
+    ["psycopg3_c/pq.c"],
     libraries=["pq"],
     include_dirs=[],
 )

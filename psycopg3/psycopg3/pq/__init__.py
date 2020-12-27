@@ -52,7 +52,7 @@ def import_from_libpq() -> None:
     if not impl or impl == "c":
         try:
             # TODO: extension module not recognised by mypy?
-            from psycopg3_c import pq_cython as module  # type: ignore
+            from psycopg3_c import pq as module  # type: ignore
         except Exception as e:
             if not impl:
                 logger.debug("C pq wrapper not available: %s", e)
@@ -64,7 +64,7 @@ def import_from_libpq() -> None:
     # Second best implementation: fast and stand-alone
     if not module and (not impl or impl == "binary"):
         try:
-            from psycopg3_binary import pq_cython as module  # type: ignore
+            from psycopg3_binary import pq as module  # type: ignore
         except Exception as e:
             if not impl:
                 logger.debug("C pq wrapper not available: %s", e)

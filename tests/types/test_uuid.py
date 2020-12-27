@@ -1,4 +1,3 @@
-import os
 import sys
 from uuid import UUID
 import subprocess as sp
@@ -25,6 +24,7 @@ def test_uuid_load(conn, fmt_out):
     assert cur.fetchone()[0] == UUID(val)
 
 
+@pytest.mark.subprocess
 def test_lazy_load(dsn):
     script = f"""\
 import sys
@@ -41,8 +41,4 @@ conn.close()
 assert 'uuid' in sys.modules
 """
 
-    # TODO: debug this. Importing c module fails on travis in this scenario
-    env = dict(os.environ)
-    env.pop("PSYCOPG3_IMPL", None)
-
-    sp.check_call([sys.executable, "-c", script], env=env)
+    sp.check_call([sys.executable, "-c", script])
