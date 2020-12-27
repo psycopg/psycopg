@@ -164,7 +164,7 @@ cdef class Transformer:
             return <object>ptr
 
         # We haven't seen this type in this query yet. Look for an adapter
-        # in contexts from the most specific to the most generic.
+        # in the current context (which was grown from more generic ones).
         # Also look for superclasses: if you can adapt a type you should be
         # able to adapt its subtypes, otherwise Liskov is sad.
         cdef dict dmap = self.adapters._dumpers
