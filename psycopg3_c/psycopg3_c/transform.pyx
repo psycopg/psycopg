@@ -9,8 +9,9 @@ too many temporary Python objects and performing less memory copying.
 # Copyright (C) 2020 The Psycopg Team
 
 from cpython.ref cimport Py_INCREF
-from cpython.tuple cimport PyTuple_New, PyTuple_SET_ITEM
+from cpython.dict cimport PyDict_GetItem
 from cpython.list cimport PyList_New, PyList_GET_ITEM, PyList_SET_ITEM
+from cpython.tuple cimport PyTuple_New, PyTuple_SET_ITEM
 from cpython.object cimport PyObject, PyObject_CallFunctionObjArgs
 
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
@@ -157,10 +158,10 @@ cdef class Transformer:
     def get_dumper(self, obj: Any, format: Format) -> "Dumper":
         # Fast path: return a Dumper class already instantiated from the same type
         cls = type(obj)
-        try:
-            return self._dumpers_cache[cls, format]
-        except KeyError:
-            pass
+        key = (cls, format)
+        cdef PyObject *ptr = PyDict_GetItem(self._dumpers_cache, key)
+        if ptr != NULL:
+            return <object>ptr
 
         # We haven't seen this type in this query yet. Look for an adapter
         # in contexts from the most specific to the most generic.
@@ -172,7 +173,7 @@ cdef class Transformer:
             if not dumper_class:
                 continue
 
-            self._dumpers_cache[cls, format] = dumper = dumper_class(cls, self)
+            self._dumpers_cache[key] = dumper = dumper_class(cls, self)
             return dumper
 
         # If the adapter is not found, look for its name as a string
@@ -182,8 +183,8 @@ cdef class Transformer:
             if dumper_class is None:
                 continue
 
-            dmap[cls, format] = dumper_class
-            self._dumpers_cache[cls, format] = dumper = dumper_class(cls, self)
+            dmap[key] = dumper_class
+            self._dumpers_cache[key] = dumper = dumper_class(cls, self)
             return dumper
 
         raise e.ProgrammingError(
