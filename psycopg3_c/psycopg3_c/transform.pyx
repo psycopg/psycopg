@@ -98,12 +98,19 @@ cdef class Transformer:
         self._ntuples = libpq.PQntuples(res)
 
         cdef int i
-        cdef list types = [None] * self._nfields
-        cdef list formats = [None] * self._nfields
+        cdef object tmp
+        cdef list types = PyList_New(self._nfields)
+        cdef list formats = PyList_New(self._nfields)
         for i in range(self._nfields):
-            types[i] = libpq.PQftype(res, i)
-            formats[i] = libpq.PQfformat(res, i)
-        self.set_row_types(types, formats)
+            tmp = libpq.PQftype(res, i)
+            Py_INCREF(tmp)
+            PyList_SET_ITEM(types, i, tmp)
+
+            tmp = libpq.PQfformat(res, i)
+            Py_INCREF(tmp)
+            PyList_SET_ITEM(formats, i, tmp)
+
+        self._c_set_row_types(types, formats)
 
     def set_row_types(self, types: Sequence[int], formats: Sequence[Format]) -> None:
         self._c_set_row_types(types, formats)
@@ -111,7 +118,8 @@ cdef class Transformer:
     cdef void _c_set_row_types(self, list types, list formats):
         cdef dict text_loaders = {}
         cdef dict binary_loaders = {}
-        cdef list loaders = [None] * len(types)
+        cdef list loaders = PyList_New(len(types))
+        cdef object loader
         cdef libpq.Oid oid
         cdef int fmt
         cdef int i
@@ -120,16 +128,17 @@ cdef class Transformer:
             fmt = formats[i]
             if fmt == 0:
                 if oid in text_loaders:
-                    loaders[i] = text_loaders[oid]
+                    loader = text_loaders[oid]
                 else:
-                    loaders[i] = text_loaders[oid] \
-                        = self._get_row_loader(oid, fmt)
+                    loader = text_loaders[oid] = self._get_row_loader(oid, fmt)
             else:
                 if oid in binary_loaders:
-                    loaders[i] = binary_loaders[oid]
+                    loader = binary_loaders[oid]
                 else:
-                    loaders[i] = binary_loaders[oid] \
-                        = self._get_row_loader(oid, fmt)
+                    loader = binary_loaders[oid] = self._get_row_loader(oid, fmt)
+
+            Py_INCREF(loader)
+            PyList_SET_ITEM(loaders, i, loader)
 
         self._row_loaders = loaders
 
