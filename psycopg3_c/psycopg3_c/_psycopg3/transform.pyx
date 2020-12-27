@@ -188,13 +188,11 @@ cdef class Transformer:
             f" to format {Format(format).name}"
         )
 
-    def load_rows(self, row0: int, row1: int) -> Sequence[Tuple[Any, ...]]:
+    def load_rows(self, int row0, int row1) -> Sequence[Tuple[Any, ...]]:
         if self._pgresult is None:
             raise e.InterfaceError("result not set")
 
-        cdef int crow0 = row0
-        cdef int crow1 = row1
-        if not (0 <= crow0 <= self._ntuples and 0 <= crow1 <= self._ntuples):
+        if not (0 <= row0 <= self._ntuples and 0 <= row1 <= self._ntuples):
             raise e.InterfaceError(
                 f"rows must be included between 0 and {self._ntuples}"
             )
@@ -209,11 +207,11 @@ cdef class Transformer:
         cdef const char *val
         cdef object record  # not 'tuple' as it would check on assignment
 
-        cdef object records = PyList_New(crow1 - crow0)
-        for row in range(crow0, crow1):
+        cdef object records = PyList_New(row1 - row0)
+        for row in range(row0, row1):
             record = PyTuple_New(self._nfields)
             Py_INCREF(record)
-            PyList_SET_ITEM(records, row - crow0, record)
+            PyList_SET_ITEM(records, row - row0, record)
 
         cdef RowLoader loader
         cdef CLoader cloader
@@ -227,8 +225,8 @@ cdef class Transformer:
             if loader.cloader is not None:
                 cloader = loader.cloader
 
-                for row in range(crow0, crow1):
-                    brecord = PyList_GET_ITEM(records, row - crow0)
+                for row in range(row0, row1):
+                    brecord = PyList_GET_ITEM(records, row - row0)
                     attval = &(ires.tuples[row][col])
                     if attval.len == -1:  # NULL_LEN
                         Py_INCREF(None)
@@ -242,8 +240,8 @@ cdef class Transformer:
             else:
                 pyloader = loader.pyloader
 
-                for row in range(crow0, crow1):
-                    brecord = PyList_GET_ITEM(records, row - crow0)
+                for row in range(row0, row1):
+                    brecord = PyList_GET_ITEM(records, row - row0)
                     attval = &(ires.tuples[row][col])
                     if attval.len == -1:  # NULL_LEN
                         Py_INCREF(None)
@@ -259,12 +257,11 @@ cdef class Transformer:
 
         return records
 
-    def load_row(self, row: int) -> Optional[Tuple[Any, ...]]:
+    def load_row(self, int row) -> Optional[Tuple[Any, ...]]:
         if self._pgresult is None:
             return None
 
-        cdef int crow = row
-        if not 0 <= crow < self._ntuples:
+        if not 0 <= row < self._ntuples:
             return None
 
         cdef libpq.PGresult *res = self._pgresult.pgresult_ptr
@@ -279,7 +276,7 @@ cdef class Transformer:
 
         record = PyTuple_New(self._nfields)
         for col in range(self._nfields):
-            attval = &(ires.tuples[crow][col])
+            attval = &(ires.tuples[row][col])
             if attval.len == -1:  # NULL_LEN
                 Py_INCREF(None)
                 PyTuple_SET_ITEM(record, col, None)
@@ -326,16 +323,19 @@ cdef class Transformer:
 
     cdef object _c_get_loader(self, libpq.Oid oid, int format):
         cdef dict cache
+        cdef object pyoid = oid
+
         if format == 0:
             cache = self._text_loaders
         else:
             cache = self._binary_loaders
 
-        if oid in cache:
-            return cache[oid]
+        cdef PyObject *ptr = PyDict_GetItem(cache, pyoid)
+        if ptr != NULL:
+            return <object>ptr
 
-        loader_cls = self.adapters._loaders.get((oid, format))
+        loader_cls = self.adapters._loaders.get((pyoid, format))
         if loader_cls is None:
             loader_cls = self.adapters._loaders[oids.INVALID_OID, format]
-        loader = cache[oid] = loader_cls(oid, self)
+        loader = cache[pyoid] = loader_cls(pyoid, self)
         return loader

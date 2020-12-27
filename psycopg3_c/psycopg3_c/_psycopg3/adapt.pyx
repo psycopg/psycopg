@@ -35,7 +35,7 @@ cdef class CDumper:
     cdef readonly object connection
     cdef pq.PGconn _pgconn
 
-    def __init__(self, src: type, context: Optional["AdaptContext"] = None):
+    def __init__(self, src: type, context: Optional[AdaptContext] = None):
         self.src = src
         self.connection = context.connection if context is not None else None
         self._pgconn = (
@@ -93,7 +93,7 @@ cdef class CDumper:
         cls,
         src: Union[type, str],
         context: Optional[AdaptContext] = None,
-        format: Format = Format.TEXT,
+        int format = Format.TEXT,
     ) -> None:
         if context is not None:
             adapters = context.adapters
@@ -107,7 +107,7 @@ cdef class CLoader:
     cdef public libpq.Oid oid
     cdef public connection
 
-    def __init__(self, oid: int, context: Optional["AdaptContext"] = None):
+    def __init__(self, int oid, context: Optional[AdaptContext] = None):
         self.oid = oid
         self.connection = context.connection if context is not None else None
 
@@ -123,9 +123,9 @@ cdef class CLoader:
     @classmethod
     def register(
         cls,
-        oid: int,
+        int oid,
         context: Optional["AdaptContext"] = None,
-        format: Format = Format.TEXT,
+        int format = Format.TEXT,
     ) -> None:
         if context is not None:
             adapters = context.adapters

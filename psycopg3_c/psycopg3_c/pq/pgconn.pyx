@@ -6,7 +6,7 @@ psycopg3_c.pq.PGconn object implementation.
 
 from posix.unistd cimport getpid
 from cpython.mem cimport PyMem_Malloc, PyMem_Free
-from cpython.bytes cimport PyBytes_AsString
+from cpython.bytes cimport PyBytes_AsString, PyBytes_AsStringAndSize
 
 import logging
 
@@ -202,7 +202,7 @@ cdef class PGconn:
         param_values: Optional[Sequence[Optional[bytes]]],
         param_types: Optional[Sequence[int]] = None,
         param_formats: Optional[Sequence[int]] = None,
-        result_format: int = Format.TEXT,
+        int result_format = Format.TEXT,
     ) -> PGresult:
         _ensure_pgconn(self)
 
@@ -212,7 +212,6 @@ cdef class PGconn:
         cdef int *clengths
         cdef int *cformats
         cdef const char *ccommand = command
-        cdef int cresformat = result_format
         cnparams, ctypes, cvalues, clengths, cformats = _query_params_args(
             param_values, param_types, param_formats)
 
@@ -220,7 +219,7 @@ cdef class PGconn:
         with nogil:
             pgresult = libpq.PQexecParams(
                 self.pgconn_ptr, ccommand, cnparams, ctypes,
-                <const char *const *>cvalues, clengths, cformats, cresformat)
+                <const char *const *>cvalues, clengths, cformats, result_format)
         _clear_query_params(ctypes, cvalues, clengths, cformats)
         if pgresult is NULL:
             raise MemoryError("couldn't allocate PGresult")
@@ -232,7 +231,7 @@ cdef class PGconn:
         param_values: Optional[Sequence[Optional[bytes]]],
         param_types: Optional[Sequence[int]] = None,
         param_formats: Optional[Sequence[int]] = None,
-        result_format: int = Format.TEXT,
+        int result_format = Format.TEXT,
     ) -> None:
         _ensure_pgconn(self)
 
@@ -242,7 +241,6 @@ cdef class PGconn:
         cdef int *clengths
         cdef int *cformats
         cdef const char *ccommand = command
-        cdef int cresformat = result_format
         cnparams, ctypes, cvalues, clengths, cformats = _query_params_args(
             param_values, param_types, param_formats)
 
@@ -250,7 +248,7 @@ cdef class PGconn:
         with nogil:
             rv = libpq.PQsendQueryParams(
                 self.pgconn_ptr, ccommand, cnparams, ctypes,
-                <const char *const *>cvalues, clengths, cformats, cresformat)
+                <const char *const *>cvalues, clengths, cformats, result_format)
         _clear_query_params(ctypes, cvalues, clengths, cformats)
         if not rv:
             raise PQerror(
@@ -291,7 +289,7 @@ cdef class PGconn:
         name: bytes,
         param_values: Optional[Sequence[Optional[bytes]]],
         param_formats: Optional[Sequence[int]] = None,
-        result_format: int = Format.TEXT,
+        int result_format = Format.TEXT,
     ) -> None:
         _ensure_pgconn(self)
 
@@ -301,7 +299,6 @@ cdef class PGconn:
         cdef int *clengths
         cdef int *cformats
         cdef const char *cname = name
-        cdef int cresformat = result_format
         cnparams, ctypes, cvalues, clengths, cformats = _query_params_args(
             param_values, None, param_formats)
 
@@ -309,7 +306,7 @@ cdef class PGconn:
         with nogil:
             rv = libpq.PQsendQueryPrepared(
                 self.pgconn_ptr, cname, cnparams, <const char *const *>cvalues,
-                clengths, cformats, cresformat)
+                clengths, cformats, result_format)
         _clear_query_params(ctypes, cvalues, clengths, cformats)
         if not rv:
             raise PQerror(
@@ -345,10 +342,10 @@ cdef class PGconn:
 
     def exec_prepared(
         self,
-        name: bytes,
+        bytes name,
         param_values: Optional[Sequence[bytes]],
         param_formats: Optional[Sequence[int]] = None,
-        result_format: int = 0,
+        int result_format = Format.TEXT,
     ) -> PGresult:
         _ensure_pgconn(self)
 
@@ -361,13 +358,12 @@ cdef class PGconn:
             param_values, None, param_formats)
 
         cdef const char *cname = name
-        cdef int cresformat = result_format
         cdef libpq.PGresult *rv
         with nogil:
             rv = libpq.PQexecPrepared(
                 self.pgconn_ptr, cname, cnparams,
                 <const char *const *>cvalues,
-                clengths, cformats, cresformat)
+                clengths, cformats, result_format)
 
         _clear_query_params(ctypes, cvalues, clengths, cformats)
         if rv is NULL:
@@ -409,7 +405,7 @@ cdef class PGconn:
         return libpq.PQisnonblocking(self.pgconn_ptr)
 
     @nonblocking.setter
-    def nonblocking(self, arg: int) -> None:
+    def nonblocking(self, int arg) -> None:
         if 0 > libpq.PQsetnonblocking(self.pgconn_ptr, arg):
             raise PQerror(f"setting nonblocking failed: {error_message(self)}")
 
@@ -438,8 +434,10 @@ cdef class PGconn:
 
     def put_copy_data(self, buffer: bytes) -> int:
         cdef int rv
-        cdef const char *cbuffer = PyBytes_AsString(buffer)
-        cdef int length = len(buffer)
+        cdef char *cbuffer
+        cdef Py_ssize_t length
+
+        PyBytes_AsStringAndSize(buffer, &cbuffer, &length)
         rv = libpq.PQputCopyData(self.pgconn_ptr, cbuffer, length)
         if rv < 0:
             raise PQerror(f"sending copy data failed: {error_message(self)}")
@@ -455,7 +453,7 @@ cdef class PGconn:
             raise PQerror(f"sending copy end failed: {error_message(self)}")
         return rv
 
-    def get_copy_data(self, async_: int) -> Tuple[int, bytes]:
+    def get_copy_data(self, int async_) -> Tuple[int, bytes]:
         cdef char *buffer_ptr = NULL
         cdef int nbytes
         nbytes = libpq.PQgetCopyData(self.pgconn_ptr, &buffer_ptr, async_)
@@ -469,9 +467,9 @@ cdef class PGconn:
         else:
             return nbytes, b""
 
-    def make_empty_result(self, exec_status: int) -> PGresult:
+    def make_empty_result(self, int exec_status) -> PGresult:
         cdef libpq.PGresult *rv = libpq.PQmakeEmptyPGresult(
-            self.pgconn_ptr, exec_status)
+            self.pgconn_ptr, <libpq.ExecStatusType>exec_status)
         if not rv:
             raise MemoryError("couldn't allocate empty PGresult")
         return PGresult._from_ptr(rv)

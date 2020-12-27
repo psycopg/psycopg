@@ -57,38 +57,36 @@ cdef class PGresult:
     def nfields(self) -> int:
         return libpq.PQnfields(self.pgresult_ptr)
 
-    def fname(self, column_number: int) -> Optional[bytes]:
+    def fname(self, int column_number) -> Optional[bytes]:
         cdef char *rv = libpq.PQfname(self.pgresult_ptr, column_number)
         if rv is not NULL:
             return rv
         else:
             return None
 
-    def ftable(self, column_number: int) -> int:
+    def ftable(self, int column_number) -> int:
         return libpq.PQftable(self.pgresult_ptr, column_number)
 
-    def ftablecol(self, column_number: int) -> int:
+    def ftablecol(self, int column_number) -> int:
         return libpq.PQftablecol(self.pgresult_ptr, column_number)
 
-    def fformat(self, column_number: int) -> Format:
+    def fformat(self, int column_number) -> Format:
         return Format(libpq.PQfformat(self.pgresult_ptr, column_number))
 
-    def ftype(self, column_number: int) -> int:
+    def ftype(self, int column_number) -> int:
         return libpq.PQftype(self.pgresult_ptr, column_number)
 
-    def fmod(self, column_number: int) -> int:
+    def fmod(self, int column_number) -> int:
         return libpq.PQfmod(self.pgresult_ptr, column_number)
 
-    def fsize(self, column_number: int) -> int:
+    def fsize(self, int column_number) -> int:
         return libpq.PQfsize(self.pgresult_ptr, column_number)
 
     @property
     def binary_tuples(self) -> Format:
         return Format(libpq.PQbinaryTuples(self.pgresult_ptr))
 
-    def get_value(
-        self, row_number: int, column_number: int
-    ) -> Optional[bytes]:
+    def get_value(self, int row_number, int column_number) -> Optional[bytes]:
         cdef int crow = row_number
         cdef int ccol = column_number
         cdef int length = libpq.PQgetlength(self.pgresult_ptr, crow, ccol)
@@ -107,7 +105,7 @@ cdef class PGresult:
     def nparams(self) -> int:
         return libpq.PQnparams(self.pgresult_ptr)
 
-    def param_type(self, param_number: int) -> int:
+    def param_type(self, int param_number) -> int:
         return libpq.PQparamtype(self.pgresult_ptr, param_number)
 
     @property
