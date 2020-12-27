@@ -10,6 +10,8 @@ too many temporary Python objects and performing less memory copying.
 
 from cpython.ref cimport Py_INCREF
 from cpython.tuple cimport PyTuple_New, PyTuple_SET_ITEM
+from cpython.list cimport PyList_New, PyList_GET_ITEM, PyList_SET_ITEM
+from cpython.object cimport PyObject, PyObject_CallFunctionObjArgs
 
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
@@ -186,7 +188,7 @@ cdef class Transformer:
 
         cdef int crow0 = row0
         cdef int crow1 = row1
-        if not (0 <= row0 <= self._ntuples and 0 <= row1 <= self._ntuples):
+        if not (0 <= crow0 <= self._ntuples and 0 <= crow1 <= self._ntuples):
             raise e.InterfaceError(
                 f"rows must be included between 0 and {self._ntuples}"
             )
@@ -195,40 +197,59 @@ cdef class Transformer:
         # cheeky access to the internal PGresult structure
         cdef pg_result_int *ires = <pg_result_int*>res
 
-        cdef RowLoader loader
         cdef int row
         cdef int col
-        cdef int length
         cdef PGresAttValue *attval
         cdef const char *val
-        cdef tuple record
-        cdef list records = [None] * (row1 - row0)
+        cdef object record  # not 'tuple' as it would check on assignment
 
-        for row in range(row0, row1):
+        cdef object records = PyList_New(crow1 - crow0)
+        for row in range(crow0, crow1):
             record = PyTuple_New(self._nfields)
-            for col in range(self._nfields):
-                attval = &(ires.tuples[row][col])
-                length = attval.len
-                if length == -1:  # NULL_LEN
-                    Py_INCREF(None)
-                    PyTuple_SET_ITEM(record, col, None)
-                    continue
+            Py_INCREF(record)
+            PyList_SET_ITEM(records, row - crow0, record)
 
-                # TODO: the is some visible python churn around this lookup.
-                # replace with a C array of borrowed references pointing to
-                # the cloader.cload function pointer
-                loader = self._row_loaders[col]
-                val = attval.value
-                if loader.cloader is not None:
-                    pyval = loader.cloader.cload(val, length)
-                else:
+        cdef RowLoader loader
+        cdef CLoader cloader
+        cdef object pyloader
+        cdef PyObject *brecord  # borrowed
+        for col in range(self._nfields):
+            # TODO: the is some visible python churn around this lookup.
+            # replace with a C array of borrowed references pointing to
+            # the cloader.cload function pointer
+            loader = self._row_loaders[col]
+            if loader.cloader is not None:
+                cloader = loader.cloader
+
+                for row in range(crow0, crow1):
+                    brecord = PyList_GET_ITEM(records, row - crow0)
+                    attval = &(ires.tuples[row][col])
+                    if attval.len == -1:  # NULL_LEN
+                        Py_INCREF(None)
+                        PyTuple_SET_ITEM(<object>brecord, col, None)
+                        continue
+
+                    pyval = loader.cloader.cload(attval.value, attval.len)
+                    Py_INCREF(pyval)
+                    PyTuple_SET_ITEM(<object>brecord, col, pyval)
+
+            else:
+                pyloader = loader.pyloader
+
+                for row in range(crow0, crow1):
+                    brecord = PyList_GET_ITEM(records, row - crow0)
+                    attval = &(ires.tuples[row][col])
+                    if attval.len == -1:  # NULL_LEN
+                        Py_INCREF(None)
+                        PyTuple_SET_ITEM(<object>brecord, col, None)
+                        continue
+
                     # TODO: no copy
-                    pyval = loader.pyloader(val[:length])
-
-                Py_INCREF(pyval)
-                PyTuple_SET_ITEM(record, col, pyval)
-
-            records[row - row0] = record
+                    b = attval.value[:attval.len]
+                    pyval = PyObject_CallFunctionObjArgs(
+                        pyloader, <PyObject *>b, NULL)
+                    Py_INCREF(pyval)
+                    PyTuple_SET_ITEM(<object>brecord, col, pyval)
 
         return records
 
@@ -246,16 +267,14 @@ cdef class Transformer:
 
         cdef RowLoader loader
         cdef int col
-        cdef int length
         cdef PGresAttValue *attval
         cdef const char *val
-        cdef tuple record
+        cdef object record  # not 'tuple' as it would check on assignment
 
         record = PyTuple_New(self._nfields)
         for col in range(self._nfields):
             attval = &(ires.tuples[crow][col])
-            length = attval.len
-            if length == -1:  # NULL_LEN
+            if attval.len == -1:  # NULL_LEN
                 Py_INCREF(None)
                 PyTuple_SET_ITEM(record, col, None)
                 continue
@@ -266,10 +285,12 @@ cdef class Transformer:
             loader = self._row_loaders[col]
             val = attval.value
             if loader.cloader is not None:
-                pyval = loader.cloader.cload(val, length)
+                pyval = loader.cloader.cload(val, attval.len)
             else:
                 # TODO: no copy
-                pyval = loader.pyloader(val[:length])
+                b = val[:attval.len]
+                pyval = PyObject_CallFunctionObjArgs(
+                    loader.pyloader, <PyObject *>b, NULL)
 
             Py_INCREF(pyval)
             PyTuple_SET_ITEM(record, col, pyval)
