@@ -20,7 +20,7 @@ from typing import cast as t_cast, TYPE_CHECKING
 
 from . import _pq_ctypes as impl
 from .misc import PGnotify, ConninfoOption, PQerror, PGresAttDesc
-from .misc import error_message
+from .misc import error_message, connection_summary
 from ._enums import ConnStatus, DiagnosticField, ExecStatus, Format
 from ._enums import Ping, PollingStatus, TransactionStatus
 
@@ -87,6 +87,11 @@ class PGconn:
         # not if this object is being GC'd after fork.
         if os.getpid() == self._procpid:
             self.finish()
+
+    def __repr__(self) -> str:
+        cls = f"{self.__class__.__module__}.{self.__class__.__qualname__}"
+        info = connection_summary(self)
+        return f"<{cls} {info} at 0x{id(self):x}>"
 
     @classmethod
     def connect(cls, conninfo: bytes) -> "PGconn":

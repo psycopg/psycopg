@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, AsyncIterator, Iterator, Generic
 from typing import Any, Dict, List, Match, Optional, Sequence, Type, Union
 from types import TracebackType
 
+from . import pq
 from .pq import Format, ExecStatus
 from .proto import ConnectionType
 from .generators import copy_from, copy_to, copy_end
@@ -40,6 +41,11 @@ class BaseCopy(Generic[ConnectionType]):
             self._format_copy_row = self._format_row_text
         else:
             self._format_copy_row = self._format_row_binary
+
+    def __repr__(self) -> str:
+        cls = f"{self.__class__.__module__}.{self.__class__.__qualname__}"
+        info = pq.misc.connection_summary(self.connection.pgconn)
+        return f"<{cls} {info} at 0x{id(self):x}>"
 
     def _format_row(self, row: Sequence[Any]) -> bytes:
         """Convert a Python sequence to the data to send for copy"""

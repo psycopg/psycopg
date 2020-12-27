@@ -90,7 +90,7 @@ async def test_connection_warn_close(dsn, recwarn):
     conn = await AsyncConnection.connect(dsn)
     await conn.execute("select 1")
     del conn
-    assert "discarded" in str(recwarn.pop(ResourceWarning).message)
+    assert "INTRANS" in str(recwarn.pop(ResourceWarning).message)
 
     conn = await AsyncConnection.connect(dsn)
     try:
@@ -485,3 +485,9 @@ async def test_execute(aconn):
 
     cur = await aconn.execute("select 12, 22")
     assert await cur.fetchone() == (12, 22)
+
+
+async def test_str(aconn):
+    assert "[IDLE]" in str(aconn)
+    await aconn.close()
+    assert "[BAD]" in str(aconn)

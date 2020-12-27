@@ -300,6 +300,16 @@ async def test_cant_reenter(aconn):
                 pass
 
 
+async def test_str(aconn):
+    cur = await aconn.cursor()
+    async with cur.copy("copy (select 1) to stdout") as copy:
+        assert "[ACTIVE]" in str(copy)
+        async for record in copy:
+            pass
+
+    assert "[INTRANS]" in str(copy)
+
+
 async def ensure_table(cur, tabledef, name="copy_in"):
     await cur.execute(f"drop table if exists {name}")
     await cur.execute(f"create table {name} ({tabledef})")

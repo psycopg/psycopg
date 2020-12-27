@@ -438,3 +438,13 @@ def test_notice_error(pgconn, caplog):
     rec = caplog.records[0]
     assert rec.levelno == logging.ERROR
     assert "hello error" in rec.message
+
+
+def test_str(pgconn, dsn):
+    assert "[IDLE]" in str(pgconn)
+    pgconn.finish()
+    assert "[BAD]" in str(pgconn)
+
+    pgconn2 = pq.PGconn.connect_start(dsn.encode("utf8"))
+    assert "[" in str(pgconn2)
+    assert "[IDLE]" not in str(pgconn2)

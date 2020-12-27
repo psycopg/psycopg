@@ -625,3 +625,16 @@ def test_explicit_rollback_of_enclosing_tx_outer_tx_unaffected(conn, svcconn):
         assert not inserted(svcconn)  # Not yet committed
     # Changes committed
     assert inserted(svcconn) == {"outer-before", "outer-after"}
+
+
+def test_str(conn):
+    with conn.transaction() as tx:
+        assert "[INTRANS]" in str(tx)
+        assert "(active)" in str(tx)
+        assert "'" not in str(tx)
+        with conn.transaction("wat") as tx2:
+            assert "[INTRANS]" in str(tx2)
+            assert "'wat'" in str(tx2)
+
+    assert "[IDLE]" in str(tx)
+    assert "(terminated)" in str(tx)

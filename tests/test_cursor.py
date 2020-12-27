@@ -368,3 +368,12 @@ class TestColumn:
         pickled = pickle.dumps(description, pickle.HIGHEST_PROTOCOL)
         unpickled = pickle.loads(pickled)
         assert [tuple(d) for d in description] == [tuple(d) for d in unpickled]
+
+
+def test_str(conn):
+    cur = conn.cursor()
+    assert "[IDLE]" in str(cur)
+    assert "(closed)" not in str(cur)
+    cur.close()
+    assert "(closed)" in str(cur)
+    assert "[IDLE]" in str(cur)

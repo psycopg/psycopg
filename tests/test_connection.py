@@ -85,7 +85,7 @@ def test_connection_warn_close(dsn, recwarn):
     conn = Connection.connect(dsn)
     conn.execute("select 1")
     del conn
-    assert "discarded" in str(recwarn.pop(ResourceWarning).message)
+    assert "INTRANS" in str(recwarn.pop(ResourceWarning).message)
 
     conn = Connection.connect(dsn)
     try:
@@ -467,3 +467,9 @@ def test_execute(conn):
 
     cur = conn.execute("select 12, 22")
     assert cur.fetchone() == (12, 22)
+
+
+def test_str(conn):
+    assert "[IDLE]" in str(conn)
+    conn.close()
+    assert "[BAD]" in str(conn)

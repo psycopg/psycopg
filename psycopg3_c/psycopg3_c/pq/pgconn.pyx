@@ -11,7 +11,7 @@ from cpython.bytes cimport PyBytes_AsString
 import logging
 
 from psycopg3_c.pq.libpq cimport Oid
-from psycopg3.pq.misc import PGnotify
+from psycopg3.pq.misc import PGnotify, connection_summary
 
 logger = logging.getLogger('psycopg3')
 
@@ -34,6 +34,11 @@ cdef class PGconn:
         # not if this object is being GC'd after fork.
         if self._procpid == getpid():
             self.finish()
+
+    def __repr__(self) -> str:
+        cls = f"{self.__class__.__module__}.{self.__class__.__qualname__}"
+        info = connection_summary(self)
+        return f"<{cls} {info} at 0x{id(self):x}>"
 
     @classmethod
     def connect(cls, const char *conninfo) -> PGconn:

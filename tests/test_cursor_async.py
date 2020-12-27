@@ -278,3 +278,12 @@ async def test_iter_stop(aconn):
     assert (await cur.fetchone()) == (3,)
     async for rec in cur:
         assert False
+
+
+async def test_str(aconn):
+    cur = await aconn.cursor()
+    assert "[IDLE]" in str(cur)
+    assert "(closed)" not in str(cur)
+    await cur.close()
+    assert "(closed)" in str(cur)
+    assert "[IDLE]" in str(cur)

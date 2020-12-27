@@ -7,7 +7,7 @@ Various functionalities to make easier to work with the libpq.
 from typing import cast, NamedTuple, Optional, Union
 
 from ..errors import OperationalError
-from ._enums import DiagnosticField, ConnStatus
+from ._enums import DiagnosticField, ConnStatus, TransactionStatus
 from .proto import PGconn, PGresult
 
 
@@ -91,3 +91,29 @@ def error_message(obj: Union[PGconn, PGresult], encoding: str = "utf8") -> str:
         msg = "no details available"
 
     return msg
+
+
+def connection_summary(pgconn: PGconn) -> str:
+    """
+    Return summary information on a connection.
+
+    Useful for __repr__
+    """
+    parts = []
+    if pgconn.status == ConnStatus.OK:
+
+        status = TransactionStatus(pgconn.transaction_status).name
+        if not pgconn.host.startswith(b"/"):
+            parts.append(("host", pgconn.host.decode("utf-8")))
+        if pgconn.port != b"5432":
+            parts.append(("port", pgconn.port.decode("utf-8")))
+        if pgconn.user != pgconn.db:
+            parts.append(("user", pgconn.user.decode("utf-8")))
+        parts.append(("database", pgconn.db.decode("utf-8")))
+    else:
+        status = ConnStatus(pgconn.status).name
+
+    sparts = " ".join("%s=%s" % part for part in parts)
+    if sparts:
+        sparts = f" ({sparts})"
+    return f"[{status}]{sparts}"

@@ -71,6 +71,12 @@ class BaseCursor(Generic[ConnectionType]):
         self._query: Optional[bytes] = None
         self._params: Optional[List[Optional[bytes]]] = None
 
+    def __repr__(self) -> str:
+        cls = f"{self.__class__.__module__}.{self.__class__.__qualname__}"
+        info = pq.misc.connection_summary(self._conn.pgconn)
+        status = " (closed)" if self._closed else ""
+        return f"<{cls}{status} {info} at 0x{id(self):x}>"
+
     @property
     def connection(self) -> ConnectionType:
         """The connection this cursor is using."""

@@ -27,7 +27,7 @@ from . import cursor
 from . import errors as e
 from . import waiting
 from . import encodings
-from .pq import TransactionStatus, ExecStatus, Format
+from .pq import ConnStatus, ExecStatus, TransactionStatus, Format
 from .sql import Composable
 from .proto import PQGen, PQGenConn, RV, Query, Params, AdaptContext
 from .proto import ConnectionType
@@ -128,21 +128,22 @@ class BaseConnection(AdaptContext):
         if status == TransactionStatus.UNKNOWN:
             return
 
-        elif status == TransactionStatus.INTRANS:
-            msg = (
-                f"connection {self} was deleted with an open transaction,"
-                " changes discarded by the server"
-            )
-        else:
-            status = TransactionStatus(status)  # in case we got an int
-            msg = f"connection {self} was deleted open in status {status.name}"
+        status = TransactionStatus(status)  # in case we got an int
+        warnings.warn(
+            f"connection {self} was deleted while still open."
+            f" Please use 'with' or '.close()' to close the connection",
+            ResourceWarning,
+        )
 
-        warnings.warn(msg, ResourceWarning)
+    def __repr__(self) -> str:
+        cls = f"{self.__class__.__module__}.{self.__class__.__qualname__}"
+        info = pq.misc.connection_summary(self.pgconn)
+        return f"<{cls} {info} at 0x{id(self):x}>"
 
     @property
     def closed(self) -> bool:
         """`True` if the connection is closed."""
-        return self.pgconn.status == self.ConnStatus.BAD
+        return self.pgconn.status == ConnStatus.BAD
 
     @property
     def autocommit(self) -> bool:
@@ -325,8 +326,8 @@ class BaseConnection(AdaptContext):
         Only used to implement internal commands such as commit, returning
         no result. The cursor can do more complex stuff.
         """
-        if self.pgconn.status != self.ConnStatus.OK:
-            if self.pgconn.status == self.ConnStatus.BAD:
+        if self.pgconn.status != ConnStatus.OK:
+            if self.pgconn.status == ConnStatus.BAD:
                 raise e.OperationalError("the connection is closed")
             raise e.InterfaceError(
                 f"cannot execute operations: the connection is"

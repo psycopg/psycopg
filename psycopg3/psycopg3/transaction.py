@@ -9,6 +9,7 @@ import logging
 from types import TracebackType
 from typing import Generic, Optional, Type, Union, TYPE_CHECKING
 
+from . import pq
 from . import sql
 from .pq import TransactionStatus
 from .proto import ConnectionType, PQGen
@@ -50,7 +51,7 @@ class BaseTransaction(Generic[ConnectionType]):
         self._conn = connection
         self._savepoint_name = savepoint_name or ""
         self.force_rollback = force_rollback
-        self._yolo = True
+        self._entered = self._exited = False
 
     @property
     def connection(self) -> ConnectionType:
@@ -67,18 +68,22 @@ class BaseTransaction(Generic[ConnectionType]):
         return self._savepoint_name
 
     def __repr__(self) -> str:
-        args = [f"connection={self.connection}"]
-        if not self.savepoint_name:
-            args.append(f"savepoint_name={self.savepoint_name!r}")
-        if self.force_rollback:
-            args.append("force_rollback=True")
-        return f"{self.__class__.__qualname__}({', '.join(args)})"
+        cls = f"{self.__class__.__module__}.{self.__class__.__qualname__}"
+        info = pq.misc.connection_summary(self._conn.pgconn)
+        if not self._entered:
+            status = "inactive"
+        elif not self._exited:
+            status = "active"
+        else:
+            status = "terminated"
+
+        sp = f"{self.savepoint_name!r} " if self.savepoint_name else ""
+        return f"<{cls} {sp}({status}) {info} at 0x{id(self):x}>"
 
     def _enter_gen(self) -> PQGen[None]:
-        if not self._yolo:
+        if self._entered:
             raise TypeError("transaction blocks can be used only once")
-        else:
-            self._yolo = False
+        self._entered = True
 
         self._outer_transaction = (
             self._conn.pgconn.transaction_status == TransactionStatus.IDLE
@@ -124,6 +129,7 @@ class BaseTransaction(Generic[ConnectionType]):
     def _commit_gen(self) -> PQGen[None]:
         assert self._conn._savepoints[-1] == self._savepoint_name
         self._conn._savepoints.pop()
+        self._exited = True
 
         commands = []
         if self._savepoint_name and not self._outer_transaction:

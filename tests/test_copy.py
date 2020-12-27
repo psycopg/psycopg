@@ -309,6 +309,15 @@ def test_cant_reenter(conn):
             list(copy)
 
 
+def test_str(conn):
+    cur = conn.cursor()
+    with cur.copy("copy (select 1) to stdout") as copy:
+        assert "[ACTIVE]" in str(copy)
+        list(copy)
+
+    assert "[INTRANS]" in str(copy)
+
+
 def ensure_table(cur, tabledef, name="copy_in"):
     cur.execute(f"drop table if exists {name}")
     cur.execute(f"create table {name} ({tabledef})")
