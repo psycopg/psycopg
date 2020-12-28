@@ -124,6 +124,10 @@ class BaseConnection(AdaptContext):
         pgconn.notify_handler = partial(BaseConnection._notify_handler, wself)
 
     def __del__(self) -> None:
+        # If fails on connection we might not have this attribute yet
+        if not hasattr(self, "pgconn"):
+            return
+
         status = self.pgconn.transaction_status
         if status == TransactionStatus.UNKNOWN:
             return
