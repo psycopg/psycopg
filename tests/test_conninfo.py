@@ -2,7 +2,7 @@ import pytest
 
 import psycopg3
 from psycopg3 import ProgrammingError
-from psycopg3.conninfo import make_conninfo, conninfo_to_dict
+from psycopg3.conninfo import make_conninfo, conninfo_to_dict, ConnectionInfo
 
 snowman = "\u2603"
 
@@ -120,7 +120,7 @@ class TestConnectionInfo:
         dsn = conninfo_to_dict(dsn)
         dsn.pop("application_name", None)
 
-        monkeypatch.delenv("PGAPPNAME")
+        monkeypatch.delenv("PGAPPNAME", raising=False)
         with psycopg3.connect(**dsn) as conn:
             assert "application_name" not in conn.info.get_parameters()
 
@@ -139,3 +139,11 @@ class TestConnectionInfo:
         assert conn.info.transaction_status.name == "IDLE"
         conn.close()
         assert conn.info.transaction_status.name == "UNKNOWN"
+
+    def test_no_password(self, dsn):
+        dsn2 = make_conninfo(dsn, password="the-pass-word")
+        pgconn = psycopg3.pq.PGconn.connect_start(dsn2.encode("utf8"))
+        info = ConnectionInfo(pgconn)
+        assert info.password == "the-pass-word"
+        assert "password" not in info.get_parameters()
+        assert info.get_parameters()["dbname"] == info.dbname
