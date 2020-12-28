@@ -15,6 +15,7 @@ cdef class PGconn:
     @staticmethod
     cdef PGconn _from_ptr(libpq.PGconn *ptr)
 
+    cpdef object notifies(self)
 
 cdef class PGresult:
     cdef libpq.PGresult* pgresult_ptr

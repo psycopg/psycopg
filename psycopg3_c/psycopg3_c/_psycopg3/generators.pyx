@@ -4,6 +4,8 @@ C implementation of generators for the communication protocols with the libpq
 
 # Copyright (C) 2020 The Psycopg Team
 
+from cpython.object cimport PyObject_CallFunctionObjArgs
+
 import logging
 from typing import List
 
@@ -64,7 +66,7 @@ def execute(pq.PGconn pgconn) -> PQGen[List[proto.PGresult]]:
     Return the list of results returned by the database (whether success
     or error).
     """
-    results: List[proto.PGresult] = []
+    cdef list results = []
     cdef libpq.PGconn *pgconn_ptr = pgconn.pgconn_ptr
     cdef int status
     cdef libpq.PGnotify *notify
@@ -87,6 +89,8 @@ def execute(pq.PGconn pgconn) -> PQGen[List[proto.PGresult]]:
                     f"consuming input failed: {error_message(pgconn)}")
         continue
 
+    cdef object notify_handler = pgconn.notify_handler
+
     # Fetching the result
     while 1:
         with nogil:
@@ -102,12 +106,14 @@ def execute(pq.PGconn pgconn) -> PQGen[List[proto.PGresult]]:
             continue
 
         # Consume notifies
-        if pgconn.notify_handler:
+        if notify_handler is not None:
             while 1:
                 pynotify = pgconn.notifies()
                 if pynotify is None:
                     break
-                pgconn.notify_handler(pynotify)
+                PyObject_CallFunctionObjArgs(
+                    notify_handler, <PyObject *>pynotify, NULL
+                )
         else:
             while 1:
                 notify = libpq.PQnotifies(pgconn_ptr)

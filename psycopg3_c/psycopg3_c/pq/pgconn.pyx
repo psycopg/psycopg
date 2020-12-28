@@ -411,7 +411,7 @@ cdef class PGconn:
             raise PQerror("couldn't create cancel object")
         return PGcancel._from_ptr(ptr)
 
-    def notifies(self) -> Optional[PGnotify]:
+    cpdef object notifies(self):
         cdef libpq.PGnotify *ptr
         with nogil:
             ptr = libpq.PQnotifies(self.pgconn_ptr)
