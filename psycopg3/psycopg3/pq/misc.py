@@ -12,7 +12,7 @@ from .proto import PGconn, PGresult
 
 
 class PQerror(OperationalError):
-    pass
+    __module__ = "psycopg3.pq"
 
 
 class PGnotify(NamedTuple):
