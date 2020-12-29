@@ -9,6 +9,8 @@ These functions are designed to consume the generators returned by the
 # Copyright (C) 2020 The Psycopg Team
 
 
+import select
+import selectors
 from enum import IntEnum
 from typing import Optional
 from asyncio import get_event_loop, Event
@@ -190,3 +192,55 @@ async def wait_async_conn(gen: PQGenConn[RV]) -> RV:
     except StopIteration as ex:
         rv: RV = ex.args[0] if ex.args else None
         return rv
+
+
+poll_evmasks = {
+    Wait.R: select.EPOLLONESHOT | select.EPOLLIN,
+    Wait.W: select.EPOLLONESHOT | select.EPOLLOUT,
+    Wait.RW: select.EPOLLONESHOT | select.EPOLLIN | select.EPOLLOUT,
+}
+
+
+def wait_epoll(
+    gen: PQGen[RV], fileno: int, timeout: Optional[float] = None
+) -> RV:
+    """
+    Wait for a generator using epoll where supported.
+
+    Parameters are like for `wait()`. If it is detected that the best selector
+    strategy is `epoll` then this function will be used instead of `wait`.
+
+    See also: https://linux.die.net/man/2/epoll_ctl
+    """
+    epoll = select.epoll()
+    if timeout is None or timeout < 0:
+        timeout = 0
+    else:
+        timeout = int(timeout * 1000.0)
+    try:
+        s = next(gen)
+        evmask = poll_evmasks[s]
+        epoll.register(fileno, evmask)
+        while 1:
+            fileevs = None
+            while not fileevs:
+                fileevs = epoll.poll(timeout)
+            ev = fileevs[0][1]
+            if ev & ~select.EPOLLOUT:
+                s = Ready.R
+            else:
+                s = Ready.W
+            s = gen.send(s)
+            evmask = poll_evmasks[s]
+            epoll.modify(fileno, evmask)
+
+    except StopIteration as ex:
+        rv: RV = ex.args[0] if ex.args else None
+        return rv
+
+
+if (
+    selectors.DefaultSelector  # type: ignore[comparison-overlap]
+    is selectors.EpollSelector
+):
+    wait = wait_epoll  # noqa: F811
