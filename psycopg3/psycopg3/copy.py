@@ -32,7 +32,7 @@ class BaseCopy(Generic[ConnectionType]):
         ), "The Transformer doesn't have a PGresult set"
         self._pgresult: "PGresult" = self.transformer.pgresult
 
-        self.format = self._pgresult.binary_tuples
+        self.format = Format(self._pgresult.binary_tuples)
         self._encoding = self.connection.client_encoding
         self._first_row = True
         self._finished = False

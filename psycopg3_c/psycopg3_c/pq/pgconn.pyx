@@ -6,7 +6,7 @@ psycopg3_c.pq.PGconn object implementation.
 
 from posix.unistd cimport getpid
 from cpython.mem cimport PyMem_Malloc, PyMem_Free
-from cpython.bytes cimport PyBytes_AsString
+from cpython.bytes cimport PyBytes_AsString, PyBytes_AsStringAndSize
 
 import logging
 
@@ -55,9 +55,8 @@ cdef class PGconn:
 
         return PGconn._from_ptr(pgconn)
 
-    def connect_poll(self) -> PollingStatus:
-        cdef int rv = _call_int(self, <conn_int_f>libpq.PQconnectPoll)
-        return PollingStatus(rv)
+    def connect_poll(self) -> int:
+        return _call_int(self, <conn_int_f>libpq.PQconnectPoll)
 
     def finish(self) -> None:
         if self.pgconn_ptr is not NULL:
@@ -89,14 +88,12 @@ cdef class PGconn:
         if not libpq.PQresetStart(self.pgconn_ptr):
             raise PQerror("couldn't reset connection")
 
-    def reset_poll(self) -> PollingStatus:
-        cdef int rv = _call_int(self, <conn_int_f>libpq.PQresetPoll)
-        return PollingStatus(rv)
+    def reset_poll(self) -> int:
+        return _call_int(self, <conn_int_f>libpq.PQresetPoll)
 
     @classmethod
-    def ping(self, const char *conninfo) -> Ping:
-        cdef int rv = libpq.PQping(conninfo)
-        return Ping(rv)
+    def ping(self, const char *conninfo) -> int:
+        return libpq.PQping(conninfo)
 
     @property
     def db(self) -> bytes:
@@ -136,11 +133,10 @@ cdef class PGconn:
         return ConnStatus(rv)
 
     @property
-    def transaction_status(self) -> TransactionStatus:
-        cdef int rv = libpq.PQtransactionStatus(self.pgconn_ptr)
-        return TransactionStatus(rv)
+    def transaction_status(self) -> int:
+        return libpq.PQtransactionStatus(self.pgconn_ptr)
 
-    def parameter_status(self, name: bytes) -> Optional[bytes]:
+    def parameter_status(self, const char *name) -> Optional[bytes]:
         _ensure_pgconn(self)
         cdef const char *rv = libpq.PQparameterStatus(self.pgconn_ptr, name)
         if rv is not NULL:
@@ -180,33 +176,31 @@ cdef class PGconn:
     def ssl_in_use(self) -> bool:
         return bool(_call_int(self, <conn_int_f>libpq.PQsslInUse))
 
-    def exec_(self, command: bytes) -> PGresult:
+    def exec_(self, const char *command) -> PGresult:
         _ensure_pgconn(self)
-        cdef const char *ccommand = command
         cdef libpq.PGresult *pgresult
         with nogil:
-            pgresult = libpq.PQexec(self.pgconn_ptr, ccommand)
+            pgresult = libpq.PQexec(self.pgconn_ptr, command)
         if pgresult is NULL:
             raise MemoryError("couldn't allocate PGresult")
 
         return PGresult._from_ptr(pgresult)
 
-    def send_query(self, command: bytes) -> None:
+    def send_query(self, const char *command) -> None:
         _ensure_pgconn(self)
-        cdef const char *ccommand = command
         cdef int rv
         with nogil:
-            rv = libpq.PQsendQuery(self.pgconn_ptr, ccommand)
+            rv = libpq.PQsendQuery(self.pgconn_ptr, command)
         if not rv:
             raise PQerror(f"sending query failed: {error_message(self)}")
 
     def exec_params(
         self,
-        command: bytes,
+        const char *command,
         param_values: Optional[Sequence[Optional[bytes]]],
         param_types: Optional[Sequence[int]] = None,
-        param_formats: Optional[Sequence[Format]] = None,
-        result_format: Format = Format.TEXT,
+        param_formats: Optional[Sequence[int]] = None,
+        int result_format = Format.TEXT,
     ) -> PGresult:
         _ensure_pgconn(self)
 
@@ -215,16 +209,14 @@ cdef class PGconn:
         cdef char *const *cvalues
         cdef int *clengths
         cdef int *cformats
-        cdef const char *ccommand = command
-        cdef int cresformat = result_format
         cnparams, ctypes, cvalues, clengths, cformats = _query_params_args(
             param_values, param_types, param_formats)
 
         cdef libpq.PGresult *pgresult
         with nogil:
             pgresult = libpq.PQexecParams(
-                self.pgconn_ptr, ccommand, cnparams, ctypes,
-                <const char *const *>cvalues, clengths, cformats, cresformat)
+                self.pgconn_ptr, command, cnparams, ctypes,
+                <const char *const *>cvalues, clengths, cformats, result_format)
         _clear_query_params(ctypes, cvalues, clengths, cformats)
         if pgresult is NULL:
             raise MemoryError("couldn't allocate PGresult")
@@ -232,11 +224,11 @@ cdef class PGconn:
 
     def send_query_params(
         self,
-        command: bytes,
+        const char *command,
         param_values: Optional[Sequence[Optional[bytes]]],
         param_types: Optional[Sequence[int]] = None,
-        param_formats: Optional[Sequence[Format]] = None,
-        result_format: Format = Format.TEXT,
+        param_formats: Optional[Sequence[int]] = None,
+        int result_format = Format.TEXT,
     ) -> None:
         _ensure_pgconn(self)
 
@@ -245,16 +237,14 @@ cdef class PGconn:
         cdef char *const *cvalues
         cdef int *clengths
         cdef int *cformats
-        cdef const char *ccommand = command
-        cdef int cresformat = result_format
         cnparams, ctypes, cvalues, clengths, cformats = _query_params_args(
             param_values, param_types, param_formats)
 
         cdef int rv
         with nogil:
             rv = libpq.PQsendQueryParams(
-                self.pgconn_ptr, ccommand, cnparams, ctypes,
-                <const char *const *>cvalues, clengths, cformats, cresformat)
+                self.pgconn_ptr, command, cnparams, ctypes,
+                <const char *const *>cvalues, clengths, cformats, result_format)
         _clear_query_params(ctypes, cvalues, clengths, cformats)
         if not rv:
             raise PQerror(
@@ -263,8 +253,8 @@ cdef class PGconn:
 
     def send_prepare(
         self,
-        name: bytes,
-        command: bytes,
+        const char *name,
+        const char *command,
         param_types: Optional[Sequence[int]] = None,
     ) -> None:
         _ensure_pgconn(self)
@@ -278,11 +268,9 @@ cdef class PGconn:
                 atypes[i] = param_types[i]
 
         cdef int rv
-        cdef const char *cname = name
-        cdef const char *ccommand = command
         with nogil:
             rv = libpq.PQsendPrepare(
-                self.pgconn_ptr, cname, ccommand, nparams, atypes
+                self.pgconn_ptr, name, command, nparams, atypes
             )
         PyMem_Free(atypes)
         if not rv:
@@ -292,10 +280,10 @@ cdef class PGconn:
 
     def send_query_prepared(
         self,
-        name: bytes,
+        const char *name,
         param_values: Optional[Sequence[Optional[bytes]]],
-        param_formats: Optional[Sequence[Format]] = None,
-        result_format: Format = Format.TEXT,
+        param_formats: Optional[Sequence[int]] = None,
+        int result_format = Format.TEXT,
     ) -> None:
         _ensure_pgconn(self)
 
@@ -304,16 +292,14 @@ cdef class PGconn:
         cdef char *const *cvalues
         cdef int *clengths
         cdef int *cformats
-        cdef const char *cname = name
-        cdef int cresformat = result_format
         cnparams, ctypes, cvalues, clengths, cformats = _query_params_args(
             param_values, None, param_formats)
 
         cdef int rv
         with nogil:
             rv = libpq.PQsendQueryPrepared(
-                self.pgconn_ptr, cname, cnparams, <const char *const *>cvalues,
-                clengths, cformats, cresformat)
+                self.pgconn_ptr, name, cnparams, <const char *const *>cvalues,
+                clengths, cformats, result_format)
         _clear_query_params(ctypes, cvalues, clengths, cformats)
         if not rv:
             raise PQerror(
@@ -322,8 +308,8 @@ cdef class PGconn:
 
     def prepare(
         self,
-        name: bytes,
-        command: bytes,
+        const char *name,
+        const char *command,
         param_types: Optional[Sequence[int]] = None,
     ) -> PGresult:
         _ensure_pgconn(self)
@@ -336,12 +322,10 @@ cdef class PGconn:
             for i in range(nparams):
                 atypes[i] = param_types[i]
 
-        cdef const char *cname = name
-        cdef const char *ccommand = command
         cdef libpq.PGresult *rv
         with nogil:
             rv = libpq.PQprepare(
-                self.pgconn_ptr, cname, ccommand, nparams, atypes)
+                self.pgconn_ptr, name, command, nparams, atypes)
         PyMem_Free(atypes)
         if rv is NULL:
             raise MemoryError("couldn't allocate PGresult")
@@ -349,10 +333,10 @@ cdef class PGconn:
 
     def exec_prepared(
         self,
-        name: bytes,
+        const char *name,
         param_values: Optional[Sequence[bytes]],
         param_formats: Optional[Sequence[int]] = None,
-        result_format: int = 0,
+        int result_format = Format.TEXT,
     ) -> PGresult:
         _ensure_pgconn(self)
 
@@ -364,28 +348,26 @@ cdef class PGconn:
         cnparams, ctypes, cvalues, clengths, cformats = _query_params_args(
             param_values, None, param_formats)
 
-        cdef const char *cname = name
-        cdef int cresformat = result_format
         cdef libpq.PGresult *rv
         with nogil:
             rv = libpq.PQexecPrepared(
-                self.pgconn_ptr, cname, cnparams,
+                self.pgconn_ptr, name, cnparams,
                 <const char *const *>cvalues,
-                clengths, cformats, cresformat)
+                clengths, cformats, result_format)
 
         _clear_query_params(ctypes, cvalues, clengths, cformats)
         if rv is NULL:
             raise MemoryError("couldn't allocate PGresult")
         return PGresult._from_ptr(rv)
 
-    def describe_prepared(self, name: bytes) -> PGresult:
+    def describe_prepared(self, const char *name) -> PGresult:
         _ensure_pgconn(self)
         cdef libpq.PGresult *rv = libpq.PQdescribePrepared(self.pgconn_ptr, name)
         if rv is NULL:
             raise MemoryError("couldn't allocate PGresult")
         return PGresult._from_ptr(rv)
 
-    def describe_portal(self, name: bytes) -> PGresult:
+    def describe_portal(self, const char *name) -> PGresult:
         _ensure_pgconn(self)
         cdef libpq.PGresult *rv = libpq.PQdescribePortal(self.pgconn_ptr, name)
         if rv is NULL:
@@ -413,14 +395,16 @@ cdef class PGconn:
         return libpq.PQisnonblocking(self.pgconn_ptr)
 
     @nonblocking.setter
-    def nonblocking(self, arg: int) -> None:
+    def nonblocking(self, int arg) -> None:
         if 0 > libpq.PQsetnonblocking(self.pgconn_ptr, arg):
             raise PQerror(f"setting nonblocking failed: {error_message(self)}")
 
     def flush(self) -> int:
+        if self.pgconn_ptr == NULL:
+            raise PQerror(f"flushing failed: the connection is closed")
         cdef int rv = libpq.PQflush(self.pgconn_ptr)
         if rv < 0:
-            raise PQerror(f"flushing failed:{error_message(self)}")
+            raise PQerror(f"flushing failed: {error_message(self)}")
         return rv
 
     def get_cancel(self) -> PGcancel:
@@ -429,7 +413,7 @@ cdef class PGconn:
             raise PQerror("couldn't create cancel object")
         return PGcancel._from_ptr(ptr)
 
-    def notifies(self) -> Optional[PGnotify]:
+    cpdef object notifies(self):
         cdef libpq.PGnotify *ptr
         with nogil:
             ptr = libpq.PQnotifies(self.pgconn_ptr)
@@ -442,8 +426,10 @@ cdef class PGconn:
 
     def put_copy_data(self, buffer: bytes) -> int:
         cdef int rv
-        cdef const char *cbuffer = PyBytes_AsString(buffer)
-        cdef int length = len(buffer)
+        cdef char *cbuffer
+        cdef Py_ssize_t length
+
+        PyBytes_AsStringAndSize(buffer, &cbuffer, &length)
         rv = libpq.PQputCopyData(self.pgconn_ptr, cbuffer, length)
         if rv < 0:
             raise PQerror(f"sending copy data failed: {error_message(self)}")
@@ -459,7 +445,7 @@ cdef class PGconn:
             raise PQerror(f"sending copy end failed: {error_message(self)}")
         return rv
 
-    def get_copy_data(self, async_: int) -> Tuple[int, bytes]:
+    def get_copy_data(self, int async_) -> Tuple[int, bytes]:
         cdef char *buffer_ptr = NULL
         cdef int nbytes
         nbytes = libpq.PQgetCopyData(self.pgconn_ptr, &buffer_ptr, async_)
@@ -473,9 +459,9 @@ cdef class PGconn:
         else:
             return nbytes, b""
 
-    def make_empty_result(self, exec_status: ExecStatus) -> PGresult:
+    def make_empty_result(self, int exec_status) -> PGresult:
         cdef libpq.PGresult *rv = libpq.PQmakeEmptyPGresult(
-            self.pgconn_ptr, exec_status)
+            self.pgconn_ptr, <libpq.ExecStatusType>exec_status)
         if not rv:
             raise MemoryError("couldn't allocate empty PGresult")
         return PGresult._from_ptr(rv)
@@ -525,7 +511,7 @@ cdef void notice_receiver(void *arg, const libpq.PGresult *res_ptr) with gil:
 cdef (int, libpq.Oid *, char * const*, int *, int *) _query_params_args(
     list param_values: Optional[Sequence[Optional[bytes]]],
     param_types: Optional[Sequence[int]],
-    list param_formats: Optional[Sequence[Format]],
+    list param_formats: Optional[Sequence[int]],
 ) except *:
     cdef int i
 

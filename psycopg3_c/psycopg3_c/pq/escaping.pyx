@@ -7,6 +7,7 @@ psycopg3_c.pq.Escaping object implementation.
 from libc.string cimport strlen
 from cpython.bytearray cimport PyByteArray_FromStringAndSize, PyByteArray_Resize
 from cpython.bytearray cimport PyByteArray_AS_STRING
+from cpython.memoryview cimport PyMemoryView_FromObject
 
 
 cdef class Escaping:
@@ -32,7 +33,9 @@ cdef class Escaping:
                 f"escape_literal failed: {error_message(self.conn)}"
             )
 
-        return memoryview(PQBuffer._from_buffer(<unsigned char *>out, strlen(out)))
+        return PyMemoryView_FromObject(
+            PQBuffer._from_buffer(<unsigned char *>out, strlen(out))
+        )
 
     def escape_identifier(self, data: "Buffer") -> memoryview:
         cdef char *out
@@ -52,7 +55,9 @@ cdef class Escaping:
                 f"escape_identifier failed: {error_message(self.conn)}"
             )
 
-        return memoryview(PQBuffer._from_buffer(<unsigned char *>out, strlen(out)))
+        return PyMemoryView_FromObject(
+            PQBuffer._from_buffer(<unsigned char *>out, strlen(out))
+        )
 
     def escape_string(self, data: "Buffer") -> memoryview:
         cdef int error
@@ -84,7 +89,7 @@ cdef class Escaping:
 
         # shrink back or the length will be reported different
         PyByteArray_Resize(rv, len_out)
-        return memoryview(rv)
+        return PyMemoryView_FromObject(rv)
 
     def escape_bytea(self, data: "Buffer") -> memoryview:
         cdef size_t len_out
@@ -108,11 +113,11 @@ cdef class Escaping:
                 f"couldn't allocate for escape_bytea of {len(data)} bytes"
             )
 
-        return memoryview(
+        return PyMemoryView_FromObject(
             PQBuffer._from_buffer(out, len_out - 1)  # out includes final 0
         )
 
-    def unescape_bytea(self, data: bytes) -> memoryview:
+    def unescape_bytea(self, const unsigned char *data) -> memoryview:
         # not needed, but let's keep it symmetric with the escaping:
         # if a connection is passed in, it must be valid.
         if self.conn is not None:
@@ -126,4 +131,4 @@ cdef class Escaping:
                 f"couldn't allocate for unescape_bytea of {len(data)} bytes"
             )
 
-        return memoryview(PQBuffer._from_buffer(out, len_out))
+        return PyMemoryView_FromObject(PQBuffer._from_buffer(out, len_out))

@@ -8,8 +8,7 @@ from typing import Any, Callable, List, Optional, Sequence, Tuple, Union
 from typing import TYPE_CHECKING
 from typing_extensions import Protocol
 
-from ._enums import ConnStatus, DiagnosticField, ExecStatus, Format
-from ._enums import Ping, PollingStatus, TransactionStatus
+from ._enums import Format
 
 if TYPE_CHECKING:
     from .misc import PGnotify, ConninfoOption, PGresAttDesc
@@ -31,7 +30,7 @@ class PGconn(Protocol):
     def connect_start(cls, conninfo: bytes) -> "PGconn":
         ...
 
-    def connect_poll(self) -> PollingStatus:
+    def connect_poll(self) -> int:
         ...
 
     def finish(self) -> None:
@@ -47,11 +46,11 @@ class PGconn(Protocol):
     def reset_start(self) -> None:
         ...
 
-    def reset_poll(self) -> PollingStatus:
+    def reset_poll(self) -> int:
         ...
 
     @classmethod
-    def ping(self, conninfo: bytes) -> Ping:
+    def ping(self, conninfo: bytes) -> int:
         ...
 
     @property
@@ -87,11 +86,11 @@ class PGconn(Protocol):
         ...
 
     @property
-    def status(self) -> ConnStatus:
+    def status(self) -> int:
         ...
 
     @property
-    def transaction_status(self) -> TransactionStatus:
+    def transaction_status(self) -> int:
         ...
 
     def parameter_status(self, name: bytes) -> Optional[bytes]:
@@ -140,8 +139,8 @@ class PGconn(Protocol):
         command: bytes,
         param_values: Optional[Sequence[Optional[bytes]]],
         param_types: Optional[Sequence[int]] = None,
-        param_formats: Optional[Sequence[Format]] = None,
-        result_format: Format = Format.TEXT,
+        param_formats: Optional[Sequence[int]] = None,
+        result_format: int = Format.TEXT,
     ) -> "PGresult":
         ...
 
@@ -150,8 +149,8 @@ class PGconn(Protocol):
         command: bytes,
         param_values: Optional[Sequence[Optional[bytes]]],
         param_types: Optional[Sequence[int]] = None,
-        param_formats: Optional[Sequence[Format]] = None,
-        result_format: Format = Format.TEXT,
+        param_formats: Optional[Sequence[int]] = None,
+        result_format: int = Format.TEXT,
     ) -> None:
         ...
 
@@ -167,8 +166,8 @@ class PGconn(Protocol):
         self,
         name: bytes,
         param_values: Optional[Sequence[Optional[bytes]]],
-        param_formats: Optional[Sequence[Format]] = None,
-        result_format: Format = Format.TEXT,
+        param_formats: Optional[Sequence[int]] = None,
+        result_format: int = Format.TEXT,
     ) -> None:
         ...
 
@@ -230,7 +229,7 @@ class PGconn(Protocol):
     def get_copy_data(self, async_: int) -> Tuple[int, bytes]:
         ...
 
-    def make_empty_result(self, exec_status: ExecStatus) -> "PGresult":
+    def make_empty_result(self, exec_status: int) -> "PGresult":
         ...
 
 
@@ -239,14 +238,14 @@ class PGresult(Protocol):
         ...
 
     @property
-    def status(self) -> ExecStatus:
+    def status(self) -> int:
         ...
 
     @property
     def error_message(self) -> bytes:
         ...
 
-    def error_field(self, fieldcode: DiagnosticField) -> Optional[bytes]:
+    def error_field(self, fieldcode: int) -> Optional[bytes]:
         ...
 
     @property
@@ -266,7 +265,7 @@ class PGresult(Protocol):
     def ftablecol(self, column_number: int) -> int:
         ...
 
-    def fformat(self, column_number: int) -> Format:
+    def fformat(self, column_number: int) -> int:
         ...
 
     def ftype(self, column_number: int) -> int:
@@ -279,7 +278,7 @@ class PGresult(Protocol):
         ...
 
     @property
-    def binary_tuples(self) -> Format:
+    def binary_tuples(self) -> int:
         ...
 
     def get_value(

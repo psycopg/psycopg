@@ -26,6 +26,7 @@ ConnectionType = TypeVar("ConnectionType", bound="BaseConnection")
 # Waiting protocol types
 
 RV = TypeVar("RV")
+
 PQGenConn = Generator[Tuple[int, "Wait"], "Ready", RV]
 """Generator for processes where the connection file number can change.
 

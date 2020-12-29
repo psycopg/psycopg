@@ -132,7 +132,7 @@ class BaseConnection(AdaptContext):
         if status == TransactionStatus.UNKNOWN:
             return
 
-        status = TransactionStatus(status)  # in case we got an int
+        status = TransactionStatus(status)
         warnings.warn(
             f"connection {self} was deleted while still open."
             f" Please use 'with' or '.close()' to close the connection",
@@ -623,7 +623,7 @@ class AsyncConnection(BaseConnection):
 
     @classmethod
     async def _wait_conn(cls, gen: PQGenConn[RV]) -> RV:
-        return await waiting.wait_async_conn(gen)
+        return await waiting.wait_conn_async(gen)
 
     def _set_client_encoding(self, name: str) -> None:
         raise AttributeError(

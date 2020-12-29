@@ -18,7 +18,7 @@ class Conninfo:
         return rv
 
     @classmethod
-    def parse(cls, conninfo: bytes) -> List[ConninfoOption]:
+    def parse(cls, const char *conninfo) -> List[ConninfoOption]:
         cdef char *errmsg = NULL
         cdef libpq.PQconninfoOption *opts = libpq.PQconninfoParse(conninfo, &errmsg)
         if opts is NULL:
