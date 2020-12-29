@@ -400,9 +400,11 @@ cdef class PGconn:
             raise PQerror(f"setting nonblocking failed: {error_message(self)}")
 
     def flush(self) -> int:
+        if self.pgconn_ptr == NULL:
+            raise PQerror(f"flushing failed: the connection is closed")
         cdef int rv = libpq.PQflush(self.pgconn_ptr)
         if rv < 0:
-            raise PQerror(f"flushing failed:{error_message(self)}")
+            raise PQerror(f"flushing failed: {error_message(self)}")
         return rv
 
     def get_cancel(self) -> PGcancel:

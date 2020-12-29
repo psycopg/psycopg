@@ -31,7 +31,9 @@ class Ready(IntEnum):
     W = EVENT_WRITE
 
 
-def wait(gen: PQGen[RV], fileno: int, timeout: Optional[float] = None) -> RV:
+def wait_selector(
+    gen: PQGen[RV], fileno: int, timeout: Optional[float] = None
+) -> RV:
     """
     Wait for a generator using the best strategy available.
 
@@ -142,7 +144,7 @@ async def wait_async(gen: PQGen[RV], fileno: int) -> RV:
         return rv
 
 
-async def wait_async_conn(gen: PQGenConn[RV]) -> RV:
+async def wait_conn_async(gen: PQGenConn[RV]) -> RV:
     """
     Coroutine waiting for a connection generator to complete.
 
@@ -243,4 +245,6 @@ if (
     selectors.DefaultSelector  # type: ignore[comparison-overlap]
     is selectors.EpollSelector
 ):
-    wait = wait_epoll  # noqa: F811
+    wait = wait_epoll
+else:
+    wait = wait_selector

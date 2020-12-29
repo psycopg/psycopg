@@ -493,6 +493,8 @@ class PGconn:
             raise PQerror(f"setting nonblocking failed: {error_message(self)}")
 
     def flush(self) -> int:
+        if not self.pgconn_ptr:
+            raise PQerror("flushing failed: the connection is closed")
         rv: int = impl.PQflush(self.pgconn_ptr)
         if rv < 0:
             raise PQerror(f"flushing failed: {error_message(self)}")
