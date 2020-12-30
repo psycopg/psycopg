@@ -70,8 +70,8 @@ cdef class PGresult:
     def ftablecol(self, int column_number) -> int:
         return libpq.PQftablecol(self.pgresult_ptr, column_number)
 
-    def fformat(self, int column_number) -> Format:
-        return Format(libpq.PQfformat(self.pgresult_ptr, column_number))
+    def fformat(self, int column_number) -> int:
+        return libpq.PQfformat(self.pgresult_ptr, column_number)
 
     def ftype(self, int column_number) -> int:
         return libpq.PQftype(self.pgresult_ptr, column_number)
@@ -83,8 +83,8 @@ cdef class PGresult:
         return libpq.PQfsize(self.pgresult_ptr, column_number)
 
     @property
-    def binary_tuples(self) -> Format:
-        return Format(libpq.PQbinaryTuples(self.pgresult_ptr))
+    def binary_tuples(self) -> int:
+        return libpq.PQbinaryTuples(self.pgresult_ptr)
 
     def get_value(self, int row_number, int column_number) -> Optional[bytes]:
         cdef int crow = row_number
