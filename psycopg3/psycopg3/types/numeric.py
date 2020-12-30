@@ -34,26 +34,22 @@ _unpack_float8 = cast(_UnpackFloat, struct.Struct("!d").unpack)
 
 class Int2(int):
     def __new__(cls, arg: int) -> "Int2":
-        rv: Int2 = super().__new__(cls, arg)  # type: ignore[call-arg]
-        return rv
+        return super().__new__(cls, arg)  # type: ignore
 
 
 class Int4(int):
     def __new__(cls, arg: int) -> "Int4":
-        rv: Int4 = super().__new__(cls, arg)  # type: ignore[call-arg]
-        return rv
+        return super().__new__(cls, arg)  # type: ignore
 
 
 class Int8(int):
     def __new__(cls, arg: int) -> "Int8":
-        rv: Int8 = super().__new__(cls, arg)  # type: ignore[call-arg]
-        return rv
+        return super().__new__(cls, arg)  # type: ignore
 
 
 class Oid(int):
     def __new__(cls, arg: int) -> "Oid":
-        rv: Oid = super().__new__(cls, arg)  # type: ignore[call-arg]
-        return rv
+        return super().__new__(cls, arg)  # type: ignore
 
 
 class NumberDumper(Dumper):
