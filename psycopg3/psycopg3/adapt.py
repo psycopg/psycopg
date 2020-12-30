@@ -22,6 +22,7 @@ class Dumper(ABC):
     Convert Python object of the type *src* to PostgreSQL representation.
     """
 
+    format: Format
     connection: Optional["BaseConnection"] = None
 
     # A class-wide oid, which will be used by default by instances unless
@@ -98,6 +99,7 @@ class Loader(ABC):
     Convert PostgreSQL objects with OID *oid* to Python objects.
     """
 
+    format: Format
     connection: Optional["BaseConnection"]
 
     def __init__(self, oid: int, context: Optional[AdaptContext] = None):

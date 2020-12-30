@@ -7,7 +7,7 @@ Adapters for network types.
 from typing import Callable, Optional, Union, TYPE_CHECKING
 
 from ..oids import builtins
-from ..adapt import Dumper, Loader
+from ..adapt import Dumper, Loader, Format
 from ..proto import AdaptContext
 
 if TYPE_CHECKING:
@@ -29,6 +29,7 @@ ip_network: Callable[[str], Network]
 @Dumper.text("ipaddress.IPv6Interface")
 class InterfaceDumper(Dumper):
 
+    format = Format.TEXT
     _oid = builtins["inet"].oid
 
     def dump(self, obj: Interface) -> bytes:
@@ -39,6 +40,7 @@ class InterfaceDumper(Dumper):
 @Dumper.text("ipaddress.IPv6Network")
 class NetworkDumper(Dumper):
 
+    format = Format.TEXT
     _oid = builtins["cidr"].oid
 
     def dump(self, obj: Network) -> bytes:
@@ -54,6 +56,9 @@ class _LazyIpaddress(Loader):
 
 @Loader.text(builtins["inet"].oid)
 class InetLoader(_LazyIpaddress):
+
+    format = Format.TEXT
+
     def load(self, data: bytes) -> Union[Address, Interface]:
         if b"/" in data:
             return ip_interface(data.decode("utf8"))
@@ -63,5 +68,8 @@ class InetLoader(_LazyIpaddress):
 
 @Loader.text(builtins["cidr"].oid)
 class CidrLoader(_LazyIpaddress):
+
+    format = Format.TEXT
+
     def load(self, data: bytes) -> Network:
         return ip_network(data.decode("utf8"))

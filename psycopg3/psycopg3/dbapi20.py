@@ -10,7 +10,7 @@ from math import floor
 from typing import Any, Sequence
 
 from .oids import builtins
-from .adapt import Dumper
+from .adapt import Dumper, Format
 
 
 class DBAPITypeObject:
@@ -53,6 +53,7 @@ class Binary:
 @Dumper.text(Binary)
 class BinaryDumper(Dumper):
 
+    format = Format.TEXT
     oid = builtins["bytea"].oid
 
     def dump(self, obj: Binary) -> bytes:

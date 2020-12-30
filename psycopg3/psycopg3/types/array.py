@@ -47,6 +47,9 @@ class ListDumper(BaseListDumper):
     # they are empty strings, contain curly braces, delimiter characters,
     # double quotes, backslashes, or white space, or match the word NULL.
     # TODO: recognise only , as delimiter. Should be configured
+
+    format = Format.TEXT
+
     _re_needs_quotes = re.compile(
         br"""(?xi)
           ^$              # the empty string
@@ -101,6 +104,9 @@ class ListDumper(BaseListDumper):
 
 @Dumper.binary(list)
 class ListBinaryDumper(BaseListDumper):
+
+    format = Format.BINARY
+
     def dump(self, obj: List[Any]) -> bytes:
         if not obj:
             return _struct_head.pack(0, 0, TEXT_OID)
@@ -166,6 +172,8 @@ class BaseArrayLoader(Loader):
 
 class ArrayLoader(BaseArrayLoader):
 
+    format = Format.TEXT
+
     # Tokenize an array representation into item and brackets
     # TODO: currently recognise only , as delimiter. Should be configured
     _re_parse = re.compile(
@@ -226,6 +234,9 @@ _struct_len = struct.Struct("!i")
 
 
 class ArrayBinaryLoader(BaseArrayLoader):
+
+    format = Format.BINARY
+
     def load(self, data: bytes) -> List[Any]:
         ndims, hasnull, oid = _struct_head.unpack_from(data[:12])
         if not ndims:

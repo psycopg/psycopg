@@ -9,7 +9,7 @@ from typing import Any, Callable, Dict, Tuple, cast
 from decimal import Decimal
 
 from ..oids import builtins
-from ..adapt import Dumper, Loader
+from ..adapt import Dumper, Loader, Format
 
 _PackInt = Callable[[int], bytes]
 _PackFloat = Callable[[float], bytes]
@@ -57,6 +57,9 @@ class Oid(int):
 
 
 class NumberDumper(Dumper):
+
+    format = Format.TEXT
+
     def dump(self, obj: Any) -> bytes:
         return str(obj).encode("utf8")
 
@@ -66,6 +69,7 @@ class NumberDumper(Dumper):
 
 
 class SpecialValuesDumper(NumberDumper):
+
     _special: Dict[bytes, bytes] = {}
 
     def quote(self, obj: Any) -> bytes:
@@ -84,12 +88,17 @@ class IntDumper(NumberDumper):
 
 @Dumper.binary(int)
 class IntBinaryDumper(IntDumper):
+
+    format = Format.BINARY
+
     def dump(self, obj: int) -> bytes:
         return _pack_int8(obj)
 
 
 @Dumper.text(float)
 class FloatDumper(SpecialValuesDumper):
+
+    format = Format.TEXT
     _oid = builtins["float8"].oid
 
     _special = {
@@ -100,7 +109,9 @@ class FloatDumper(SpecialValuesDumper):
 
 
 @Dumper.binary(float)
-class FloatBinaryDumper(NumberDumper):
+class FloatBinaryDumper(Dumper):
+
+    format = Format.BINARY
     _oid = builtins["float8"].oid
 
     def dump(self, obj: float) -> bytes:
@@ -140,24 +151,36 @@ class OidDumper(NumberDumper):
 
 @Dumper.binary(Int2)
 class Int2BinaryDumper(Int2Dumper):
+
+    format = Format.BINARY
+
     def dump(self, obj: int) -> bytes:
         return _pack_int2(obj)
 
 
 @Dumper.binary(Int4)
 class Int4BinaryDumper(Int4Dumper):
+
+    format = Format.BINARY
+
     def dump(self, obj: int) -> bytes:
         return _pack_int4(obj)
 
 
 @Dumper.binary(Int8)
 class Int8BinaryDumper(Int8Dumper):
+
+    format = Format.BINARY
+
     def dump(self, obj: int) -> bytes:
         return _pack_int8(obj)
 
 
 @Dumper.binary(Oid)
 class OidBinaryDumper(OidDumper):
+
+    format = Format.BINARY
+
     def dump(self, obj: int) -> bytes:
         return _pack_uint4(obj)
 
@@ -167,6 +190,9 @@ class OidBinaryDumper(OidDumper):
 @Loader.text(builtins["int8"].oid)
 @Loader.text(builtins["oid"].oid)
 class IntLoader(Loader):
+
+    format = Format.TEXT
+
     def load(self, data: bytes) -> int:
         # it supports bytes directly
         return int(data)
@@ -174,24 +200,36 @@ class IntLoader(Loader):
 
 @Loader.binary(builtins["int2"].oid)
 class Int2BinaryLoader(Loader):
+
+    format = Format.BINARY
+
     def load(self, data: bytes) -> int:
         return _unpack_int2(data)[0]
 
 
 @Loader.binary(builtins["int4"].oid)
 class Int4BinaryLoader(Loader):
+
+    format = Format.BINARY
+
     def load(self, data: bytes) -> int:
         return _unpack_int4(data)[0]
 
 
 @Loader.binary(builtins["int8"].oid)
 class Int8BinaryLoader(Loader):
+
+    format = Format.BINARY
+
     def load(self, data: bytes) -> int:
         return _unpack_int8(data)[0]
 
 
 @Loader.binary(builtins["oid"].oid)
 class OidBinaryLoader(Loader):
+
+    format = Format.BINARY
+
     def load(self, data: bytes) -> int:
         return _unpack_uint4(data)[0]
 
@@ -199,6 +237,9 @@ class OidBinaryLoader(Loader):
 @Loader.text(builtins["float4"].oid)
 @Loader.text(builtins["float8"].oid)
 class FloatLoader(Loader):
+
+    format = Format.TEXT
+
     def load(self, data: bytes) -> float:
         # it supports bytes directly
         return float(data)
@@ -206,17 +247,26 @@ class FloatLoader(Loader):
 
 @Loader.binary(builtins["float4"].oid)
 class Float4BinaryLoader(Loader):
+
+    format = Format.BINARY
+
     def load(self, data: bytes) -> float:
         return _unpack_float4(data)[0]
 
 
 @Loader.binary(builtins["float8"].oid)
 class Float8BinaryLoader(Loader):
+
+    format = Format.BINARY
+
     def load(self, data: bytes) -> float:
         return _unpack_float8(data)[0]
 
 
 @Loader.text(builtins["numeric"].oid)
 class NumericLoader(Loader):
+
+    format = Format.TEXT
+
     def load(self, data: bytes) -> Decimal:
         return Decimal(data.decode("utf8"))

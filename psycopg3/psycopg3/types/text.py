@@ -8,7 +8,7 @@ from typing import Optional, Union, TYPE_CHECKING
 
 from ..pq import Escaping
 from ..oids import builtins, INVALID_OID
-from ..adapt import Dumper, Loader
+from ..adapt import Dumper, Loader, Format
 from ..proto import AdaptContext
 from ..errors import DataError
 
@@ -32,6 +32,9 @@ class _StringDumper(Dumper):
 
 @Dumper.binary(str)
 class StringBinaryDumper(_StringDumper):
+
+    format = Format.BINARY
+
     def dump(self, obj: str) -> bytes:
         # the server will raise DataError subclass if the string contains 0x00
         return obj.encode(self._encoding)
@@ -39,6 +42,9 @@ class StringBinaryDumper(_StringDumper):
 
 @Dumper.text(str)
 class StringDumper(_StringDumper):
+
+    format = Format.TEXT
+
     def dump(self, obj: str) -> bytes:
         if "\x00" in obj:
             raise DataError(
@@ -53,12 +59,9 @@ class StringDumper(_StringDumper):
 @Loader.text(builtins["name"].oid)
 @Loader.text(builtins["text"].oid)
 @Loader.text(builtins["varchar"].oid)
-@Loader.binary(builtins["bpchar"].oid)
-@Loader.binary(builtins["name"].oid)
-@Loader.binary(builtins["text"].oid)
-@Loader.binary(builtins["varchar"].oid)
 class TextLoader(Loader):
 
+    format = Format.TEXT
     _encoding = "utf-8"
 
     def __init__(self, oid: int, context: Optional[AdaptContext] = None):
@@ -76,11 +79,21 @@ class TextLoader(Loader):
             return data
 
 
+@Loader.binary(builtins["bpchar"].oid)
+@Loader.binary(builtins["name"].oid)
+@Loader.binary(builtins["text"].oid)
+@Loader.binary(builtins["varchar"].oid)
+class TextBinaryLoader(TextLoader):
+
+    format = Format.BINARY
+
+
 @Dumper.text(bytes)
 @Dumper.text(bytearray)
 @Dumper.text(memoryview)
 class BytesDumper(Dumper):
 
+    format = Format.TEXT
     _oid = builtins["bytea"].oid
 
     def __init__(self, src: type, context: Optional[AdaptContext] = None):
@@ -100,6 +113,7 @@ class BytesDumper(Dumper):
 @Dumper.binary(memoryview)
 class BytesBinaryDumper(Dumper):
 
+    format = Format.BINARY
     _oid = builtins["bytea"].oid
 
     def dump(
@@ -111,6 +125,8 @@ class BytesBinaryDumper(Dumper):
 
 @Loader.text(builtins["bytea"].oid)
 class ByteaLoader(Loader):
+
+    format = Format.TEXT
     _escaping: "EscapingProto"
 
     def __init__(self, oid: int, context: Optional[AdaptContext] = None):
@@ -125,5 +141,8 @@ class ByteaLoader(Loader):
 @Loader.binary(builtins["bytea"].oid)
 @Loader.binary(INVALID_OID)
 class ByteaBinaryLoader(Loader):
+
+    format = Format.BINARY
+
     def load(self, data: bytes) -> bytes:
         return data

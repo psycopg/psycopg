@@ -37,7 +37,7 @@ def test_quote(data, result):
 
 def test_dump_connection_ctx(conn):
     make_dumper("t").register(str, conn)
-    make_dumper("b").register(str, conn, format=Format.BINARY)
+    make_bin_dumper("b").register(str, conn, format=Format.BINARY)
 
     cur = conn.cursor()
     cur.execute("select %s, %b", ["hello", "world"])
@@ -46,11 +46,11 @@ def test_dump_connection_ctx(conn):
 
 def test_dump_cursor_ctx(conn):
     make_dumper("t").register(str, conn)
-    make_dumper("b").register(str, conn, format=Format.BINARY)
+    make_bin_dumper("b").register(str, conn, format=Format.BINARY)
 
     cur = conn.cursor()
     make_dumper("tc").register(str, cur)
-    make_dumper("bc").register(str, cur, format=Format.BINARY)
+    make_bin_dumper("bc").register(str, cur, format=Format.BINARY)
 
     cur.execute("select %s, %b", ["hello", "world"])
     assert cur.fetchone() == ("hellotc", "worldbc")
@@ -88,7 +88,7 @@ def test_cast(data, format, type, result):
 
 def test_load_connection_ctx(conn):
     make_loader("t").register(TEXT_OID, conn)
-    make_loader("b").register(TEXT_OID, conn, format=Format.BINARY)
+    make_bin_loader("b").register(TEXT_OID, conn, format=Format.BINARY)
 
     r = conn.cursor().execute("select 'hello'::text").fetchone()
     assert r == ("hellot",)
@@ -98,11 +98,11 @@ def test_load_connection_ctx(conn):
 
 def test_load_cursor_ctx(conn):
     make_loader("t").register(TEXT_OID, conn)
-    make_loader("b").register(TEXT_OID, conn, format=Format.BINARY)
+    make_bin_loader("b").register(TEXT_OID, conn, format=Format.BINARY)
 
     cur = conn.cursor()
     make_loader("tc").register(TEXT_OID, cur)
-    make_loader("bc").register(TEXT_OID, cur, format=Format.BINARY)
+    make_bin_loader("bc").register(TEXT_OID, cur, format=Format.BINARY)
 
     r = cur.execute("select 'hello'::text").fetchone()
     assert r == ("hellotc",)
@@ -125,7 +125,11 @@ def test_load_cursor_ctx(conn):
 @pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
 def test_load_cursor_ctx_nested(conn, sql, obj, fmt_out):
     cur = conn.cursor(format=fmt_out)
-    make_loader("c").register(TEXT_OID, cur, format=fmt_out)
+    if format == Format.TEXT:
+        make_loader("c").register(TEXT_OID, cur, format=fmt_out)
+    else:
+        make_bin_loader("c").register(TEXT_OID, cur, format=fmt_out)
+
     cur.execute(f"select {sql}")
     res = cur.fetchone()[0]
     assert res == obj
@@ -178,6 +182,7 @@ def make_dumper(suffix):
 
     class TestDumper(Dumper):
         oid = TEXT_OID
+        format = Format.TEXT
 
         def dump(self, s):
             return (s + suffix).encode("ascii")
@@ -185,11 +190,25 @@ def make_dumper(suffix):
     return TestDumper
 
 
+def make_bin_dumper(suffix):
+    cls = make_dumper(suffix)
+    cls.format = Format.BINARY
+    return cls
+
+
 def make_loader(suffix):
     """Create a test loader appending a suffix to the data returned."""
 
     class TestLoader(Loader):
+        format = Format.TEXT
+
         def load(self, b):
             return b.decode("ascii") + suffix
 
     return TestLoader
+
+
+def make_bin_loader(suffix):
+    cls = make_loader(suffix)
+    cls.format = Format.BINARY
+    return cls

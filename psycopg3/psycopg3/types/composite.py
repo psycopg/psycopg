@@ -144,6 +144,9 @@ where t.oid = %(name)s::regtype
 
 
 class SequenceDumper(Dumper):
+
+    format = Format.TEXT
+
     def __init__(self, src: type, context: Optional[AdaptContext] = None):
         super().__init__(src, context)
         self._tx = Transformer(context)
@@ -190,6 +193,9 @@ class TupleDumper(SequenceDumper):
 
 
 class BaseCompositeLoader(Loader):
+
+    format = Format.TEXT
+
     def __init__(self, oid: int, context: Optional[AdaptContext] = None):
         super().__init__(oid, context)
         self._tx = Transformer(context)
@@ -243,8 +249,14 @@ _struct_oidlen = struct.Struct("!Ii")
 
 
 @Loader.binary(builtins["record"].oid)
-class RecordBinaryLoader(BaseCompositeLoader):
+class RecordBinaryLoader(Loader):
+
+    format = Format.BINARY
     _types_set = False
+
+    def __init__(self, oid: int, context: Optional[AdaptContext] = None):
+        super().__init__(oid, context)
+        self._tx = Transformer(context)
 
     def load(self, data: bytes) -> Tuple[Any, ...]:
         if not self._types_set:
@@ -275,6 +287,8 @@ class RecordBinaryLoader(BaseCompositeLoader):
 
 
 class CompositeLoader(RecordLoader):
+
+    format = Format.TEXT
     factory: Callable[..., Any]
     fields_types: List[int]
     _types_set = False
@@ -298,6 +312,8 @@ class CompositeLoader(RecordLoader):
 
 
 class CompositeBinaryLoader(RecordBinaryLoader):
+
+    format = Format.BINARY
     factory: Callable[..., Any]
 
     def load(self, data: bytes) -> Any:
