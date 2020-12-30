@@ -30,19 +30,25 @@ class PostgresQuery:
     Helper to convert a Python query and parameters into Postgres format.
     """
 
-    _unknown_oid = INVALID_OID
-
-    _parts: List[QueryPart]
-    _query = b""
-    _encoding: str = "utf-8"
-    params: Optional[List[Optional[bytes]]] = None
-    # these are tuples so they can be used as keys e.g. in prepared stmts
-    types: Tuple[int, ...] = ()
-    formats: Optional[List[Format]] = None
-    _order: Optional[List[str]] = None
+    __slots__ = """
+        params types formats
+        _tx _unknown_oid _parts query _encoding _order
+        """.split()
 
     def __init__(self, transformer: "Transformer"):
         self._tx = transformer
+
+        self.params: Optional[List[Optional[bytes]]] = None
+        # these are tuples so they can be used as keys e.g. in prepared stmts
+        self.types: Tuple[int, ...] = ()
+        self.formats: Optional[List[Format]] = None
+
+        self._unknown_oid = INVALID_OID
+        self._parts: List[QueryPart]
+        self.query = b""
+        self._encoding = "utf-8"
+        self._order: Optional[List[str]] = None
+
         conn = transformer.connection
         if conn:
             self._encoding = conn.client_encoding
