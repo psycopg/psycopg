@@ -119,6 +119,29 @@ async def test_copy_in_str_binary(aconn):
     assert aconn.pgconn.transaction_status == aconn.TransactionStatus.INERROR
 
 
+@pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
+async def test_copy_in_empty(aconn, format):
+    cur = await aconn.cursor()
+    await ensure_table(cur, sample_tabledef)
+    async with cur.copy(f"copy copy_in from stdin (format {format.name})"):
+        pass
+
+    assert cur.rowcount == 0
+    assert aconn.pgconn.transaction_status == aconn.TransactionStatus.INTRANS
+
+
+@pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
+async def test_copy_in_error_empty(aconn, format):
+    cur = await aconn.cursor()
+    await ensure_table(cur, sample_tabledef)
+    with pytest.raises(e.QueryCanceled) as exc:
+        async with cur.copy(f"copy copy_in from stdin (format {format.name})"):
+            raise Exception("mannaggiamiseria")
+
+    assert "mannaggiamiseria" in str(exc.value)
+    assert aconn.pgconn.transaction_status == aconn.TransactionStatus.INERROR
+
+
 async def test_copy_in_buffers_with_pg_error(aconn):
     cur = await aconn.cursor()
     await ensure_table(cur, sample_tabledef)

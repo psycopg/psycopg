@@ -34,7 +34,8 @@ class BaseCopy(Generic[ConnectionType]):
 
         self.format = Format(self._pgresult.binary_tuples)
         self._encoding = self.connection.client_encoding
-        self._first_row = True
+        self._signature_sent = False
+        self._row_mode = False  # true if the user is using send_row()
         self._finished = False
 
         if self.format == Format.TEXT:
@@ -66,6 +67,11 @@ class BaseCopy(Generic[ConnectionType]):
 
     def _write_gen(self, buffer: Union[str, bytes]) -> PQGen[None]:
         conn = self.connection
+        # if write() was called, assume the header was sent together with the
+        # first block of data (either because we added it to the first row
+        # or, if the user is copying blocks, assume the blocks contain
+        # the header).
+        self._signature_sent = True
         yield from copy_to(conn.pgconn, self._ensure_bytes(buffer))
 
     def _finish_gen(self, error: str = "") -> PQGen[None]:
@@ -85,15 +91,29 @@ class BaseCopy(Generic[ConnectionType]):
         if self._pgresult.status == ExecStatus.COPY_OUT:
             return
 
-        if not exc_type:
-            if self.format == Format.BINARY and not self._first_row:
-                # send EOF only if we copied binary rows (_first_row is False)
-                yield from self._write_gen(b"\xff\xff")
-            yield from self._finish_gen()
-        else:
+        # In case of error in Python let's quit it here
+        if exc_type:
             yield from self._finish_gen(
                 f"error from Python: {exc_type.__qualname__} - {exc_val}"
             )
+            return
+
+        if self.format == Format.BINARY:
+            # If we have sent no data we need to send the signature
+            # and the trailer
+            if not self._signature_sent:
+                yield from self._write_gen(self._binary_signature)
+                yield from self._write_gen(self._binary_trailer)
+            elif self._row_mode:
+                # if we have sent data already, we have sent the signature too
+                # (either with the first row, or we assume that in block mode
+                # the signature is included).
+                # Write the trailer only if we are sending rows (with the
+                # assumption that who is copying binary data is sending the
+                # whole format).
+                yield from self._write_gen(self._binary_trailer)
+
+        yield from self._finish_gen()
 
     # Support methods
 
@@ -106,6 +126,7 @@ class BaseCopy(Generic[ConnectionType]):
                 out.append(dumper.dump(item))
             else:
                 out.append(None)
+
         return self._format_copy_row(out)
 
     def _format_row_text(self, row: Sequence[Optional[bytes]]) -> bytes:
@@ -128,14 +149,13 @@ class BaseCopy(Generic[ConnectionType]):
     ) -> bytes:
         """Convert a row of adapted data to the data to send for binary copy"""
         out = []
-        if self._first_row:
-            out.append(
-                # Signature, flags, extra length
-                b"PGCOPY\n\xff\r\n\0"
-                b"\x00\x00\x00\x00"
-                b"\x00\x00\x00\x00"
-            )
-            self._first_row = False
+        if not self._signature_sent:
+            out.append(self._binary_signature)
+            self._signature_sent = True
+
+            # Note down that we are writing in row mode: it means we will have
+            # to take care of the end-of-copy marker too
+            self._row_mode = True
 
         out.append(__int2_struct.pack(len(row)))
         for item in row:
@@ -143,9 +163,18 @@ class BaseCopy(Generic[ConnectionType]):
                 out.append(__int4_struct.pack(len(item)))
                 out.append(item)
             else:
-                out.append(b"\xff\xff\xff\xff")
+                out.append(self._binary_null)
 
         return b"".join(out)
+
+    _binary_signature = (
+        # Signature, flags, extra length
+        b"PGCOPY\n\xff\r\n\0"
+        b"\x00\x00\x00\x00"
+        b"\x00\x00\x00\x00"
+    )
+    _binary_trailer = b"\xff\xff"
+    _binary_null = b"\xff\xff\xff\xff"
 
     def _ensure_bytes(self, data: Union[bytes, str]) -> bytes:
         if isinstance(data, bytes):
