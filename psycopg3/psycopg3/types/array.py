@@ -39,7 +39,7 @@ class BaseListDumper(Dumper):
         return oid or TEXT_ARRAY_OID
 
 
-@Dumper.text(list)
+@Dumper.builtin(list)
 class ListDumper(BaseListDumper):
     # from https://www.postgresql.org/docs/current/arrays.html#ARRAYS-IO
     #
@@ -102,7 +102,7 @@ class ListDumper(BaseListDumper):
         return b"".join(tokens)
 
 
-@Dumper.binary(list)
+@Dumper.builtin(list)
 class ListBinaryDumper(BaseListDumper):
 
     format = Format.BINARY

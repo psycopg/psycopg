@@ -10,7 +10,7 @@ from typing import Any, Callable, Optional, Type, TYPE_CHECKING, Union
 from . import pq
 from . import proto
 from .pq import Format as Format
-from .oids import TEXT_OID
+from .oids import builtins, TEXT_OID
 from .proto import DumpersMap, DumperType, LoadersMap, LoaderType, AdaptContext
 
 if TYPE_CHECKING:
@@ -73,24 +73,19 @@ class Dumper(ABC):
         adapters.register_dumper(src, cls)
 
     @classmethod
-    def text(cls, src: Union[type, str]) -> Callable[[DumperType], DumperType]:
-        def text_(dumper: DumperType) -> DumperType:
-            assert dumper.format == Format.TEXT
-            dumper.register(src)
-            return dumper
-
-        return text_
-
-    @classmethod
-    def binary(
-        cls, src: Union[type, str]
+    def builtin(
+        cls, *types: Union[type, str]
     ) -> Callable[[DumperType], DumperType]:
-        def binary_(dumper: DumperType) -> DumperType:
-            assert dumper.format == Format.BINARY
-            dumper.register(src)
+        """
+        Decorator to mark a dumper class as default for a builtin type.
+        """
+
+        def builtin_(dumper: DumperType) -> DumperType:
+            for src in types:
+                dumper.register(src)
             return dumper
 
-        return binary_
+        return builtin_
 
 
 class Loader(ABC):
@@ -121,22 +116,21 @@ class Loader(ABC):
         adapters.register_loader(oid, cls)
 
     @classmethod
-    def text(cls, oid: int) -> Callable[[LoaderType], LoaderType]:
-        def text_(loader: LoaderType) -> LoaderType:
-            assert loader.format == Format.TEXT
-            loader.register(oid)
+    def builtin(
+        cls, *types: Union[int, str]
+    ) -> Callable[[LoaderType], LoaderType]:
+        """
+        Decorator to mark a loader class as default for a builtin type.
+        """
+
+        def builtin_(loader: LoaderType) -> LoaderType:
+            for src in types:
+                if isinstance(src, str):
+                    src = builtins[src].oid
+                loader.register(src)
             return loader
 
-        return text_
-
-    @classmethod
-    def binary(cls, oid: int) -> Callable[[LoaderType], LoaderType]:
-        def binary_(loader: LoaderType) -> LoaderType:
-            assert loader.format == Format.BINARY
-            loader.register(oid)
-            return loader
-
-        return binary_
+        return builtin_
 
 
 class AdaptersMap:

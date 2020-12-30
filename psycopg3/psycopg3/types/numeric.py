@@ -77,12 +77,12 @@ class SpecialValuesDumper(NumberDumper):
         return value if obj >= 0 else b" " + value
 
 
-@Dumper.text(int)
+@Dumper.builtin(int)
 class IntDumper(NumberDumper):
     _oid = builtins["int8"].oid
 
 
-@Dumper.binary(int)
+@Dumper.builtin(int)
 class IntBinaryDumper(IntDumper):
 
     format = Format.BINARY
@@ -91,7 +91,7 @@ class IntBinaryDumper(IntDumper):
         return _pack_int8(obj)
 
 
-@Dumper.text(float)
+@Dumper.builtin(float)
 class FloatDumper(SpecialValuesDumper):
 
     format = Format.TEXT
@@ -104,7 +104,7 @@ class FloatDumper(SpecialValuesDumper):
     }
 
 
-@Dumper.binary(float)
+@Dumper.builtin(float)
 class FloatBinaryDumper(Dumper):
 
     format = Format.BINARY
@@ -114,7 +114,7 @@ class FloatBinaryDumper(Dumper):
         return _pack_float8(obj)
 
 
-@Dumper.text(Decimal)
+@Dumper.builtin(Decimal)
 class DecimalDumper(SpecialValuesDumper):
 
     _oid = builtins["numeric"].oid
@@ -126,27 +126,27 @@ class DecimalDumper(SpecialValuesDumper):
     }
 
 
-@Dumper.text(Int2)
+@Dumper.builtin(Int2)
 class Int2Dumper(NumberDumper):
     _oid = builtins["int2"].oid
 
 
-@Dumper.text(Int4)
+@Dumper.builtin(Int4)
 class Int4Dumper(NumberDumper):
     _oid = builtins["int4"].oid
 
 
-@Dumper.text(Int8)
+@Dumper.builtin(Int8)
 class Int8Dumper(NumberDumper):
     _oid = builtins["int8"].oid
 
 
-@Dumper.text(Oid)
+@Dumper.builtin(Oid)
 class OidDumper(NumberDumper):
     _oid = builtins["oid"].oid
 
 
-@Dumper.binary(Int2)
+@Dumper.builtin(Int2)
 class Int2BinaryDumper(Int2Dumper):
 
     format = Format.BINARY
@@ -155,7 +155,7 @@ class Int2BinaryDumper(Int2Dumper):
         return _pack_int2(obj)
 
 
-@Dumper.binary(Int4)
+@Dumper.builtin(Int4)
 class Int4BinaryDumper(Int4Dumper):
 
     format = Format.BINARY
@@ -164,7 +164,7 @@ class Int4BinaryDumper(Int4Dumper):
         return _pack_int4(obj)
 
 
-@Dumper.binary(Int8)
+@Dumper.builtin(Int8)
 class Int8BinaryDumper(Int8Dumper):
 
     format = Format.BINARY
@@ -173,7 +173,7 @@ class Int8BinaryDumper(Int8Dumper):
         return _pack_int8(obj)
 
 
-@Dumper.binary(Oid)
+@Dumper.builtin(Oid)
 class OidBinaryDumper(OidDumper):
 
     format = Format.BINARY
@@ -182,10 +182,7 @@ class OidBinaryDumper(OidDumper):
         return _pack_uint4(obj)
 
 
-@Loader.text(builtins["int2"].oid)
-@Loader.text(builtins["int4"].oid)
-@Loader.text(builtins["int8"].oid)
-@Loader.text(builtins["oid"].oid)
+@Loader.builtin("int2", "int4", "int8", "oid")
 class IntLoader(Loader):
 
     format = Format.TEXT
@@ -195,7 +192,7 @@ class IntLoader(Loader):
         return int(data)
 
 
-@Loader.binary(builtins["int2"].oid)
+@Loader.builtin("int2")
 class Int2BinaryLoader(Loader):
 
     format = Format.BINARY
@@ -204,7 +201,7 @@ class Int2BinaryLoader(Loader):
         return _unpack_int2(data)[0]
 
 
-@Loader.binary(builtins["int4"].oid)
+@Loader.builtin("int4")
 class Int4BinaryLoader(Loader):
 
     format = Format.BINARY
@@ -213,7 +210,7 @@ class Int4BinaryLoader(Loader):
         return _unpack_int4(data)[0]
 
 
-@Loader.binary(builtins["int8"].oid)
+@Loader.builtin("int8")
 class Int8BinaryLoader(Loader):
 
     format = Format.BINARY
@@ -222,7 +219,7 @@ class Int8BinaryLoader(Loader):
         return _unpack_int8(data)[0]
 
 
-@Loader.binary(builtins["oid"].oid)
+@Loader.builtin("oid")
 class OidBinaryLoader(Loader):
 
     format = Format.BINARY
@@ -231,8 +228,7 @@ class OidBinaryLoader(Loader):
         return _unpack_uint4(data)[0]
 
 
-@Loader.text(builtins["float4"].oid)
-@Loader.text(builtins["float8"].oid)
+@Loader.builtin("float4", "float8")
 class FloatLoader(Loader):
 
     format = Format.TEXT
@@ -242,7 +238,7 @@ class FloatLoader(Loader):
         return float(data)
 
 
-@Loader.binary(builtins["float4"].oid)
+@Loader.builtin("float4")
 class Float4BinaryLoader(Loader):
 
     format = Format.BINARY
@@ -251,7 +247,7 @@ class Float4BinaryLoader(Loader):
         return _unpack_float4(data)[0]
 
 
-@Loader.binary(builtins["float8"].oid)
+@Loader.builtin("float8")
 class Float8BinaryLoader(Loader):
 
     format = Format.BINARY
@@ -260,7 +256,7 @@ class Float8BinaryLoader(Loader):
         return _unpack_float8(data)[0]
 
 
-@Loader.text(builtins["numeric"].oid)
+@Loader.builtin("numeric")
 class NumericLoader(Loader):
 
     format = Format.TEXT

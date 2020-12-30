@@ -15,7 +15,7 @@ from ..proto import AdaptContext
 from ..errors import InterfaceError, DataError
 
 
-@Dumper.text(date)
+@Dumper.builtin(date)
 class DateDumper(Dumper):
 
     format = Format.TEXT
@@ -27,7 +27,7 @@ class DateDumper(Dumper):
         return str(obj).encode("utf8")
 
 
-@Dumper.text(time)
+@Dumper.builtin(time)
 class TimeDumper(Dumper):
 
     format = Format.TEXT
@@ -37,7 +37,7 @@ class TimeDumper(Dumper):
         return str(obj).encode("utf8")
 
 
-@Dumper.text(datetime)
+@Dumper.builtin(datetime)
 class DateTimeDumper(Dumper):
 
     format = Format.TEXT
@@ -49,7 +49,7 @@ class DateTimeDumper(Dumper):
         return str(obj).encode("utf8")
 
 
-@Dumper.text(timedelta)
+@Dumper.builtin(timedelta)
 class TimeDeltaDumper(Dumper):
 
     format = Format.TEXT
@@ -77,7 +77,7 @@ class TimeDeltaDumper(Dumper):
         )
 
 
-@Loader.text(builtins["date"].oid)
+@Loader.builtin("date")
 class DateLoader(Loader):
 
     format = Format.TEXT
@@ -138,7 +138,7 @@ class DateLoader(Loader):
         return max(map(len, parts))
 
 
-@Loader.text(builtins["time"].oid)
+@Loader.builtin("time")
 class TimeLoader(Loader):
 
     format = Format.TEXT
@@ -164,7 +164,7 @@ class TimeLoader(Loader):
         raise exc
 
 
-@Loader.text(builtins["timetz"].oid)
+@Loader.builtin("timetz")
 class TimeTzLoader(TimeLoader):
 
     format = Format.TEXT
@@ -201,7 +201,7 @@ class TimeTzLoader(TimeLoader):
         return TimeTzLoader.load(self, data)
 
 
-@Loader.text(builtins["timestamp"].oid)
+@Loader.builtin("timestamp")
 class TimestampLoader(DateLoader):
 
     format = Format.TEXT
@@ -256,7 +256,7 @@ class TimestampLoader(DateLoader):
                 return 0
 
 
-@Loader.text(builtins["timestamptz"].oid)
+@Loader.builtin("timestamptz")
 class TimestamptzLoader(TimestampLoader):
 
     format = Format.TEXT
@@ -320,7 +320,7 @@ class TimestamptzLoader(TimestampLoader):
         )
 
 
-@Loader.text(builtins["interval"].oid)
+@Loader.builtin("interval")
 class IntervalLoader(Loader):
 
     format = Format.TEXT

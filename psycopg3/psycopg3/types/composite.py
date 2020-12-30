@@ -12,7 +12,7 @@ from typing import Sequence, Tuple, Type, Union, TYPE_CHECKING
 
 from .. import sql
 from .. import errors as e
-from ..oids import builtins, TypeInfo, TEXT_OID
+from ..oids import TypeInfo, TEXT_OID
 from ..adapt import Format, Dumper, Loader, Transformer
 from ..proto import AdaptContext
 from . import array
@@ -182,7 +182,7 @@ class SequenceDumper(Dumper):
     _re_esc = re.compile(br"([\\\"])")
 
 
-@Dumper.text(tuple)
+@Dumper.builtin(tuple)
 class TupleDumper(SequenceDumper):
 
     # Should be this, but it doesn't work
@@ -231,7 +231,7 @@ class BaseCompositeLoader(Loader):
     _re_undouble = re.compile(br'(["\\])\1')
 
 
-@Loader.text(builtins["record"].oid)
+@Loader.builtin("record")
 class RecordLoader(BaseCompositeLoader):
     def load(self, data: bytes) -> Tuple[Any, ...]:
         if data == b"()":
@@ -248,7 +248,7 @@ _struct_len = struct.Struct("!i")
 _struct_oidlen = struct.Struct("!Ii")
 
 
-@Loader.binary(builtins["record"].oid)
+@Loader.builtin("record")
 class RecordBinaryLoader(Loader):
 
     format = Format.BINARY

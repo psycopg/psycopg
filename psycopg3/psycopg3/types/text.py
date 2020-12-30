@@ -30,7 +30,7 @@ class _StringDumper(Dumper):
                 self._encoding = enc
 
 
-@Dumper.binary(str)
+@Dumper.builtin(str)
 class StringBinaryDumper(_StringDumper):
 
     format = Format.BINARY
@@ -40,7 +40,7 @@ class StringBinaryDumper(_StringDumper):
         return obj.encode(self._encoding)
 
 
-@Dumper.text(str)
+@Dumper.builtin(str)
 class StringDumper(_StringDumper):
 
     format = Format.TEXT
@@ -54,11 +54,7 @@ class StringDumper(_StringDumper):
             return obj.encode(self._encoding)
 
 
-@Loader.text(INVALID_OID)
-@Loader.text(builtins["bpchar"].oid)
-@Loader.text(builtins["name"].oid)
-@Loader.text(builtins["text"].oid)
-@Loader.text(builtins["varchar"].oid)
+@Loader.builtin(INVALID_OID, "bpchar", "name", "text", "varchar")
 class TextLoader(Loader):
 
     format = Format.TEXT
@@ -79,18 +75,13 @@ class TextLoader(Loader):
             return data
 
 
-@Loader.binary(builtins["bpchar"].oid)
-@Loader.binary(builtins["name"].oid)
-@Loader.binary(builtins["text"].oid)
-@Loader.binary(builtins["varchar"].oid)
+@Loader.builtin("bpchar", "name", "text", "varchar")
 class TextBinaryLoader(TextLoader):
 
     format = Format.BINARY
 
 
-@Dumper.text(bytes)
-@Dumper.text(bytearray)
-@Dumper.text(memoryview)
+@Dumper.builtin(bytes, bytearray, memoryview)
 class BytesDumper(Dumper):
 
     format = Format.TEXT
@@ -108,9 +99,7 @@ class BytesDumper(Dumper):
         return self._esc.escape_bytea(obj)
 
 
-@Dumper.binary(bytes)
-@Dumper.binary(bytearray)
-@Dumper.binary(memoryview)
+@Dumper.builtin(bytes, bytearray, memoryview)
 class BytesBinaryDumper(Dumper):
 
     format = Format.BINARY
@@ -123,7 +112,7 @@ class BytesBinaryDumper(Dumper):
         return obj
 
 
-@Loader.text(builtins["bytea"].oid)
+@Loader.builtin("bytea")
 class ByteaLoader(Loader):
 
     format = Format.TEXT
@@ -138,8 +127,7 @@ class ByteaLoader(Loader):
         return self._escaping.unescape_bytea(data)
 
 
-@Loader.binary(builtins["bytea"].oid)
-@Loader.binary(INVALID_OID)
+@Loader.builtin("bytea", INVALID_OID)
 class ByteaBinaryLoader(Loader):
 
     format = Format.BINARY

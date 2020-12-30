@@ -8,7 +8,7 @@ from ..oids import builtins
 from ..adapt import Dumper, Loader, Format
 
 
-@Dumper.text(bool)
+@Dumper.builtin(bool)
 class BoolDumper(Dumper):
 
     format = Format.TEXT
@@ -21,7 +21,7 @@ class BoolDumper(Dumper):
         return b"true" if obj else b"false"
 
 
-@Dumper.binary(bool)
+@Dumper.builtin(bool)
 class BoolBinaryDumper(Dumper):
 
     format = Format.BINARY
@@ -31,7 +31,7 @@ class BoolBinaryDumper(Dumper):
         return b"\x01" if obj else b"\x00"
 
 
-@Dumper.text(type(None))
+@Dumper.builtin(type(None))
 class NoneDumper(Dumper):
     """
     Not a complete dumper as it doesn't implement dump(), but it implements
@@ -47,7 +47,7 @@ class NoneDumper(Dumper):
         return b"NULL"
 
 
-@Loader.text(builtins["bool"].oid)
+@Loader.builtin("bool")
 class BoolLoader(Loader):
 
     format = Format.TEXT
@@ -56,7 +56,7 @@ class BoolLoader(Loader):
         return data == b"t"
 
 
-@Loader.binary(builtins["bool"].oid)
+@Loader.builtin("bool")
 class BoolBinaryLoader(Loader):
 
     format = Format.BINARY

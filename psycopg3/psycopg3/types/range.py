@@ -287,32 +287,32 @@ class DateTimeTZRange(Range[datetime]):
 # Dumpers for builtin range types
 
 
-@Dumper.text(Int4Range)
+@Dumper.builtin(Int4Range)
 class Int4RangeDumper(RangeDumper):
     _oid = builtins["int4range"].oid
 
 
-@Dumper.text(Int8Range)
+@Dumper.builtin(Int8Range)
 class Int8RangeDumper(RangeDumper):
     _oid = builtins["int8range"].oid
 
 
-@Dumper.text(DecimalRange)
+@Dumper.builtin(DecimalRange)
 class NumRangeDumper(RangeDumper):
     _oid = builtins["numrange"].oid
 
 
-@Dumper.text(DateRange)
+@Dumper.builtin(DateRange)
 class DateRangeDumper(RangeDumper):
     _oid = builtins["daterange"].oid
 
 
-@Dumper.text(DateTimeRange)
+@Dumper.builtin(DateTimeRange)
 class TimestampRangeDumper(RangeDumper):
     _oid = builtins["tsrange"].oid
 
 
-@Dumper.text(DateTimeTZRange)
+@Dumper.builtin(DateTimeTZRange)
 class TimestampTZRangeDumper(RangeDumper):
     _oid = builtins["tstzrange"].oid
 
@@ -320,37 +320,37 @@ class TimestampTZRangeDumper(RangeDumper):
 # Loaders for builtin range types
 
 
-@Loader.text(builtins["int4range"].oid)
+@Loader.builtin("int4range")
 class Int4RangeLoader(RangeLoader[int]):
     subtype_oid = builtins["int4"].oid
     cls = Int4Range
 
 
-@Loader.text(builtins["int8range"].oid)
+@Loader.builtin("int8range")
 class Int8RangeLoader(RangeLoader[int]):
     subtype_oid = builtins["int8"].oid
     cls = Int8Range
 
 
-@Loader.text(builtins["numrange"].oid)
+@Loader.builtin("numrange")
 class NumericRangeLoader(RangeLoader[Decimal]):
     subtype_oid = builtins["numeric"].oid
     cls = DecimalRange
 
 
-@Loader.text(builtins["daterange"].oid)
+@Loader.builtin("daterange")
 class DateRangeLoader(RangeLoader[date]):
     subtype_oid = builtins["date"].oid
     cls = DateRange
 
 
-@Loader.text(builtins["tsrange"].oid)
+@Loader.builtin("tsrange")
 class TimestampRangeLoader(RangeLoader[datetime]):
     subtype_oid = builtins["timestamp"].oid
     cls = DateTimeRange
 
 
-@Loader.text(builtins["tstzrange"].oid)
+@Loader.builtin("tstzrange")
 class TimestampTZRangeLoader(RangeLoader[datetime]):
     subtype_oid = builtins["timestamptz"].oid
     cls = DateTimeTZRange

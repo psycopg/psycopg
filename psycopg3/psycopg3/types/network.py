@@ -24,10 +24,12 @@ ip_interface: Callable[[str], Interface]
 ip_network: Callable[[str], Network]
 
 
-@Dumper.text("ipaddress.IPv4Address")
-@Dumper.text("ipaddress.IPv6Address")
-@Dumper.text("ipaddress.IPv4Interface")
-@Dumper.text("ipaddress.IPv6Interface")
+@Dumper.builtin(
+    "ipaddress.IPv4Address",
+    "ipaddress.IPv6Address",
+    "ipaddress.IPv4Interface",
+    "ipaddress.IPv6Interface",
+)
 class InterfaceDumper(Dumper):
 
     format = Format.TEXT
@@ -37,8 +39,7 @@ class InterfaceDumper(Dumper):
         return str(obj).encode("utf8")
 
 
-@Dumper.text("ipaddress.IPv4Network")
-@Dumper.text("ipaddress.IPv6Network")
+@Dumper.builtin("ipaddress.IPv4Network", "ipaddress.IPv6Network")
 class NetworkDumper(Dumper):
 
     format = Format.TEXT
@@ -58,7 +59,7 @@ class _LazyIpaddress(Loader):
             imported = True
 
 
-@Loader.text(builtins["inet"].oid)
+@Loader.builtin("inet")
 class InetLoader(_LazyIpaddress):
 
     format = Format.TEXT
@@ -70,7 +71,7 @@ class InetLoader(_LazyIpaddress):
             return ip_address(data.decode("utf8"))
 
 
-@Loader.text(builtins["cidr"].oid)
+@Loader.builtin("cidr")
 class CidrLoader(_LazyIpaddress):
 
     format = Format.TEXT
