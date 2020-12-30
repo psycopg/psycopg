@@ -21,6 +21,8 @@ cdef extern from "Python.h":
 
 cdef class IntDumper(CDumper):
 
+    format = Format.TEXT
+
     def __cinit__(self):
         self.oid = oids.INT8_OID
 
@@ -46,6 +48,9 @@ cdef class IntDumper(CDumper):
 
 
 cdef class IntBinaryDumper(IntDumper):
+
+    format = Format.BINARY
+
     def dump(self, obj) -> bytes:
         cdef long long val = PyLong_AsLongLong(obj)
         cdef uint64_t *ptvar = <uint64_t *>(&val)
@@ -55,37 +60,58 @@ cdef class IntBinaryDumper(IntDumper):
 
 
 cdef class IntLoader(CLoader):
+
+    format = Format.TEXT
+
     cdef object cload(self, const char *data, size_t length):
         return PyLong_FromString(data, NULL, 10)
 
 
 cdef class Int2BinaryLoader(CLoader):
+
+    format = Format.BINARY
+
     cdef object cload(self, const char *data, size_t length):
         return PyLong_FromLong(<int16_t>be16toh((<uint16_t *>data)[0]))
 
 
 cdef class Int4BinaryLoader(CLoader):
+
+    format = Format.BINARY
+
     cdef object cload(self, const char *data, size_t length):
         return PyLong_FromLong(<int32_t>be32toh((<uint32_t *>data)[0]))
 
 
 cdef class Int8BinaryLoader(CLoader):
+
+    format = Format.BINARY
+
     cdef object cload(self, const char *data, size_t length):
         return PyLong_FromLongLong(<int64_t>be64toh((<uint64_t *>data)[0]))
 
 
 cdef class OidBinaryLoader(CLoader):
+
+    format = Format.BINARY
+
     cdef object cload(self, const char *data, size_t length):
         return PyLong_FromUnsignedLong(be32toh((<uint32_t *>data)[0]))
 
 
 cdef class FloatLoader(CLoader):
+
+    format = Format.TEXT
+
     cdef object cload(self, const char *data, size_t length):
         cdef double d = PyOS_string_to_double(data, NULL, OverflowError)
         return PyFloat_FromDouble(d)
 
 
 cdef class Float4BinaryLoader(CLoader):
+
+    format = Format.BINARY
+
     cdef object cload(self, const char *data, size_t length):
         cdef uint32_t asint = be32toh((<uint32_t *>data)[0])
         # avoid warning:
@@ -95,6 +121,9 @@ cdef class Float4BinaryLoader(CLoader):
 
 
 cdef class Float8BinaryLoader(CLoader):
+
+    format = Format.BINARY
+
     cdef object cload(self, const char *data, size_t length):
         cdef uint64_t asint = be64toh((<uint64_t *>data)[0])
         cdef char *swp = <char *>&asint
@@ -105,7 +134,7 @@ cdef void register_numeric_c_adapters():
     logger.debug("registering optimised numeric c adapters")
 
     IntDumper.register(int)
-    IntBinaryDumper.register(int, format=Format.BINARY)
+    IntBinaryDumper.register(int)
 
     IntLoader.register(oids.INT2_OID)
     IntLoader.register(oids.INT4_OID)
@@ -114,9 +143,9 @@ cdef void register_numeric_c_adapters():
     FloatLoader.register(oids.FLOAT4_OID)
     FloatLoader.register(oids.FLOAT8_OID)
 
-    Int2BinaryLoader.register(oids.INT2_OID, format=Format.BINARY)
-    Int4BinaryLoader.register(oids.INT4_OID, format=Format.BINARY)
-    Int8BinaryLoader.register(oids.INT8_OID, format=Format.BINARY)
-    OidBinaryLoader.register(oids.OID_OID, format=Format.BINARY)
-    Float4BinaryLoader.register(oids.FLOAT4_OID, format=Format.BINARY)
-    Float8BinaryLoader.register(oids.FLOAT8_OID, format=Format.BINARY)
+    Int2BinaryLoader.register(oids.INT2_OID)
+    Int4BinaryLoader.register(oids.INT4_OID)
+    Int8BinaryLoader.register(oids.INT8_OID)
+    OidBinaryLoader.register(oids.OID_OID)
+    Float4BinaryLoader.register(oids.FLOAT4_OID)
+    Float8BinaryLoader.register(oids.FLOAT8_OID)

@@ -100,7 +100,7 @@ cdef class CDumper:
         else:
             from psycopg3.adapt import global_adapters as adapters
 
-        adapters.register_dumper(src, cls, format=format)
+        adapters.register_dumper(src, cls)
 
 
 cdef class CLoader:
@@ -132,7 +132,7 @@ cdef class CLoader:
         else:
             from psycopg3.adapt import global_adapters as adapters
 
-        adapters.register_loader(oid, cls, format=format)
+        adapters.register_loader(oid, cls)
 
 
 def register_builtin_c_adapters():

@@ -34,6 +34,9 @@ cdef class _StringDumper(CDumper):
 
 
 cdef class StringBinaryDumper(_StringDumper):
+
+    format = Format.BINARY
+
     def dump(self, obj) -> bytes:
         # the server will raise DataError subclass if the string contains 0x00
         if self.is_utf8:
@@ -43,6 +46,9 @@ cdef class StringBinaryDumper(_StringDumper):
 
 
 cdef class StringDumper(_StringDumper):
+
+    format = Format.TEXT
+
     def dump(self, obj) -> bytes:
         cdef bytes rv
         cdef char *buf
@@ -66,6 +72,9 @@ cdef class StringDumper(_StringDumper):
 
 
 cdef class TextLoader(CLoader):
+
+    format = Format.TEXT
+
     cdef int is_utf8
     cdef char *encoding
     cdef bytes _bytes_encoding  # needed to keep `encoding` alive
@@ -94,7 +103,14 @@ cdef class TextLoader(CLoader):
             return data[:length]
 
 
+cdef class TextBinaryLoader(TextLoader):
+    format = Format.BINARY
+
+
 cdef class BytesDumper(CDumper):
+
+    format = Format.TEXT
+
     cdef Escaping esc
 
     def __cinit__(self):
@@ -109,11 +125,17 @@ cdef class BytesDumper(CDumper):
 
 
 cdef class BytesBinaryDumper(BytesDumper):
+
+    format = Format.BINARY
+
     def dump(self, obj):
         return obj
 
 
 cdef class ByteaLoader(CLoader):
+
+    format = Format.TEXT
+
     cdef object cload(self, const char *data, size_t length):
         cdef size_t len_out
         cdef unsigned char *out = libpq.PQunescapeBytea(
@@ -129,6 +151,9 @@ cdef class ByteaLoader(CLoader):
 
 
 cdef class ByteaBinaryLoader(CLoader):
+
+    format = Format.BINARY
+
     cdef object cload(self, const char *data, size_t length):
         return data[:length]
 
@@ -137,25 +162,25 @@ cdef void register_text_c_adapters():
     logger.debug("registering optimised text c adapters")
 
     StringDumper.register(str)
-    StringBinaryDumper.register(str, format=Format.BINARY)
+    StringBinaryDumper.register(str)
 
     TextLoader.register(oids.INVALID_OID)
     TextLoader.register(oids.BPCHAR_OID)
-    TextLoader.register(oids.BPCHAR_OID, format=Format.BINARY)
     TextLoader.register(oids.NAME_OID)
-    TextLoader.register(oids.NAME_OID, format=Format.BINARY)
     TextLoader.register(oids.TEXT_OID)
-    TextLoader.register(oids.TEXT_OID, format=Format.BINARY)
     TextLoader.register(oids.VARCHAR_OID)
-    TextLoader.register(oids.VARCHAR_OID, format=Format.BINARY)
+    TextBinaryLoader.register(oids.BPCHAR_OID)
+    TextBinaryLoader.register(oids.NAME_OID)
+    TextBinaryLoader.register(oids.TEXT_OID)
+    TextBinaryLoader.register(oids.VARCHAR_OID)
 
     BytesDumper.register(bytes)
     BytesDumper.register(bytearray)
     BytesDumper.register(memoryview)
-    BytesBinaryDumper.register(bytes, format=Format.BINARY)
-    BytesBinaryDumper.register(bytearray, format=Format.BINARY)
-    BytesBinaryDumper.register(memoryview, format=Format.BINARY)
+    BytesBinaryDumper.register(bytes)
+    BytesBinaryDumper.register(bytearray)
+    BytesBinaryDumper.register(memoryview)
 
     ByteaLoader.register(oids.BYTEA_OID)
-    ByteaBinaryLoader.register(oids.BYTEA_OID, format=Format.BINARY)
-    ByteaBinaryLoader.register(oids.INVALID_OID, format=Format.BINARY)
+    ByteaBinaryLoader.register(oids.BYTEA_OID)
+    ByteaBinaryLoader.register(oids.INVALID_OID)
