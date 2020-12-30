@@ -89,7 +89,7 @@ class CompositeInfo(TypeInfo):
                 "fields_types": [f.type_oid for f in self.fields],
             },
         )
-        loader.register(self.oid, context=context, format=Format.TEXT)
+        loader.register(self.oid, context=context)
 
         # generate and register a customized binary loader
         loader = type(
@@ -97,7 +97,7 @@ class CompositeInfo(TypeInfo):
             (CompositeBinaryLoader,),
             {"factory": factory},
         )
-        loader.register(self.oid, context=context, format=Format.BINARY)
+        loader.register(self.oid, context=context)
 
         if self.array_oid:
             array.register(

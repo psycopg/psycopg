@@ -37,7 +37,7 @@ def test_quote(data, result):
 
 def test_dump_connection_ctx(conn):
     make_dumper("t").register(str, conn)
-    make_bin_dumper("b").register(str, conn, format=Format.BINARY)
+    make_bin_dumper("b").register(str, conn)
 
     cur = conn.cursor()
     cur.execute("select %s, %b", ["hello", "world"])
@@ -46,11 +46,11 @@ def test_dump_connection_ctx(conn):
 
 def test_dump_cursor_ctx(conn):
     make_dumper("t").register(str, conn)
-    make_bin_dumper("b").register(str, conn, format=Format.BINARY)
+    make_bin_dumper("b").register(str, conn)
 
     cur = conn.cursor()
     make_dumper("tc").register(str, cur)
-    make_bin_dumper("bc").register(str, cur, format=Format.BINARY)
+    make_bin_dumper("bc").register(str, cur)
 
     cur.execute("select %s, %b", ["hello", "world"])
     assert cur.fetchone() == ("hellotc", "worldbc")
@@ -88,7 +88,7 @@ def test_cast(data, format, type, result):
 
 def test_load_connection_ctx(conn):
     make_loader("t").register(TEXT_OID, conn)
-    make_bin_loader("b").register(TEXT_OID, conn, format=Format.BINARY)
+    make_bin_loader("b").register(TEXT_OID, conn)
 
     r = conn.cursor().execute("select 'hello'::text").fetchone()
     assert r == ("hellot",)
@@ -98,11 +98,11 @@ def test_load_connection_ctx(conn):
 
 def test_load_cursor_ctx(conn):
     make_loader("t").register(TEXT_OID, conn)
-    make_bin_loader("b").register(TEXT_OID, conn, format=Format.BINARY)
+    make_bin_loader("b").register(TEXT_OID, conn)
 
     cur = conn.cursor()
     make_loader("tc").register(TEXT_OID, cur)
-    make_bin_loader("bc").register(TEXT_OID, cur, format=Format.BINARY)
+    make_bin_loader("bc").register(TEXT_OID, cur)
 
     r = cur.execute("select 'hello'::text").fetchone()
     assert r == ("hellotc",)
@@ -125,10 +125,10 @@ def test_load_cursor_ctx(conn):
 @pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
 def test_load_cursor_ctx_nested(conn, sql, obj, fmt_out):
     cur = conn.cursor(format=fmt_out)
-    if format == Format.TEXT:
-        make_loader("c").register(TEXT_OID, cur, format=fmt_out)
+    if fmt_out == Format.TEXT:
+        make_loader("c").register(TEXT_OID, cur)
     else:
-        make_bin_loader("c").register(TEXT_OID, cur, format=fmt_out)
+        make_bin_loader("c").register(TEXT_OID, cur)
 
     cur.execute(f"select {sql}")
     res = cur.fetchone()[0]

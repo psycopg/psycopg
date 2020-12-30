@@ -409,7 +409,7 @@ class RangeInfo(TypeInfo):
         dumper: Type[Dumper] = type(
             f"{self.name.title()}Dumper", (RangeDumper,), {"_oid": self.oid}
         )
-        dumper.register(range_class, context=context, format=Format.TEXT)
+        dumper.register(range_class, context=context)
 
         # generate and register a customized text loader
         loader: Type[Loader] = type(
@@ -417,7 +417,7 @@ class RangeInfo(TypeInfo):
             (RangeLoader,),
             {"cls": range_class, "subtype_oid": self.subtype_oid},
         )
-        loader.register(self.oid, context=context, format=Format.TEXT)
+        loader.register(self.oid, context=context)
 
         if self.array_oid:
             array.register(

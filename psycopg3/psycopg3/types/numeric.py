@@ -120,6 +120,7 @@ class FloatBinaryDumper(Dumper):
 
 @Dumper.text(Decimal)
 class DecimalDumper(SpecialValuesDumper):
+
     _oid = builtins["numeric"].oid
 
     _special = {

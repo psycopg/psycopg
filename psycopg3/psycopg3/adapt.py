@@ -64,20 +64,18 @@ class Dumper(ABC):
 
     @classmethod
     def register(
-        cls,
-        src: Union[type, str],
-        context: Optional[AdaptContext] = None,
-        format: Format = Format.TEXT,
+        cls, src: Union[type, str], context: Optional[AdaptContext] = None
     ) -> None:
         """
         Configure *context* to use this dumper to convert object of type *src*.
         """
         adapters = context.adapters if context else global_adapters
-        adapters.register_dumper(src, cls, format=format)
+        adapters.register_dumper(src, cls)
 
     @classmethod
     def text(cls, src: Union[type, str]) -> Callable[[DumperType], DumperType]:
         def text_(dumper: DumperType) -> DumperType:
+            assert dumper.format == Format.TEXT
             dumper.register(src)
             return dumper
 
@@ -88,7 +86,8 @@ class Dumper(ABC):
         cls, src: Union[type, str]
     ) -> Callable[[DumperType], DumperType]:
         def binary_(dumper: DumperType) -> DumperType:
-            dumper.register(src, format=Format.BINARY)
+            assert dumper.format == Format.BINARY
+            dumper.register(src)
             return dumper
 
         return binary_
@@ -113,20 +112,18 @@ class Loader(ABC):
 
     @classmethod
     def register(
-        cls,
-        oid: int,
-        context: Optional[AdaptContext] = None,
-        format: Format = Format.TEXT,
+        cls, oid: int, context: Optional[AdaptContext] = None
     ) -> None:
         """
         Configure *context* to use this loader to convert values with OID *oid*.
         """
         adapters = context.adapters if context else global_adapters
-        adapters.register_loader(oid, cls, format=format)
+        adapters.register_loader(oid, cls)
 
     @classmethod
     def text(cls, oid: int) -> Callable[[LoaderType], LoaderType]:
         def text_(loader: LoaderType) -> LoaderType:
+            assert loader.format == Format.TEXT
             loader.register(oid)
             return loader
 
@@ -135,7 +132,8 @@ class Loader(ABC):
     @classmethod
     def binary(cls, oid: int) -> Callable[[LoaderType], LoaderType]:
         def binary_(loader: LoaderType) -> LoaderType:
-            loader.register(oid, format=Format.BINARY)
+            assert loader.format == Format.BINARY
+            loader.register(oid)
             return loader
 
         return binary_
@@ -167,10 +165,7 @@ class AdaptersMap:
             self._own_loaders = True
 
     def register_dumper(
-        self,
-        src: Union[type, str],
-        dumper: Type[Dumper],
-        format: Format = Format.TEXT,
+        self, src: Union[type, str], dumper: Type[Dumper]
     ) -> None:
         """
         Configure the context to use *dumper* to convert object of type *src*.
@@ -184,11 +179,9 @@ class AdaptersMap:
             self._dumpers = self._dumpers.copy()
             self._own_dumpers = True
 
-        self._dumpers[src, format] = dumper
+        self._dumpers[src, dumper.format] = dumper
 
-    def register_loader(
-        self, oid: int, loader: Type[Loader], format: Format = Format.TEXT
-    ) -> None:
+    def register_loader(self, oid: int, loader: Type[Loader]) -> None:
         """
         Configure the context to use *loader* to convert data of oid *oid*.
         """
@@ -201,7 +194,7 @@ class AdaptersMap:
             self._loaders = self._loaders.copy()
             self._own_loaders = True
 
-        self._loaders[oid, format] = loader
+        self._loaders[oid, loader.format] = loader
 
 
 global_adapters = AdaptersMap()

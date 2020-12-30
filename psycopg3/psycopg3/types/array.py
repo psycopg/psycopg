@@ -280,13 +280,10 @@ def register(
     if not name:
         name = f"oid{base_oid}"
 
-    for format, base in (
-        (Format.TEXT, ArrayLoader),
-        (Format.BINARY, ArrayBinaryLoader),
-    ):
+    for base in (ArrayLoader, ArrayBinaryLoader):
         lname = f"{name.title()}Array{'Binary' if format else ''}Loader"
         loader: Type[Loader] = type(lname, (base,), {"base_oid": base_oid})
-        loader.register(array_oid, context=context, format=format)
+        loader.register(array_oid, context=context)
 
 
 def register_all_arrays() -> None:
