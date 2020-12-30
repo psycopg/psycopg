@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     import uuid
 
 # Importing the uuid module is slow, so import it only on request.
+imported = False
 UUID: Callable[..., "uuid.UUID"]
 
 
@@ -43,8 +44,11 @@ class UUIDLoader(Loader):
 
     def __init__(self, oid: int, context: Optional[AdaptContext] = None):
         super().__init__(oid, context)
-        global UUID
-        from uuid import UUID
+        global imported, UUID
+        if not imported:
+            from uuid import UUID
+
+            imported = True
 
     def load(self, data: bytes) -> "uuid.UUID":
         return UUID(data.decode("utf8"))

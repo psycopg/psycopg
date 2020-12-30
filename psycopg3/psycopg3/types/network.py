@@ -18,6 +18,7 @@ Interface = Union["ipaddress.IPv4Interface", "ipaddress.IPv6Interface"]
 Network = Union["ipaddress.IPv4Network", "ipaddress.IPv6Network"]
 
 # These functions will be imported lazily
+imported = False
 ip_address: Callable[[str], Address]
 ip_interface: Callable[[str], Interface]
 ip_network: Callable[[str], Network]
@@ -50,8 +51,11 @@ class NetworkDumper(Dumper):
 class _LazyIpaddress(Loader):
     def __init__(self, oid: int, context: Optional[AdaptContext] = None):
         super().__init__(oid, context)
-        global ip_address, ip_interface, ip_network
-        from ipaddress import ip_address, ip_interface, ip_network
+        global imported, ip_address, ip_interface, ip_network
+        if not imported:
+            from ipaddress import ip_address, ip_interface, ip_network
+
+            imported = True
 
 
 @Loader.text(builtins["inet"].oid)
