@@ -164,7 +164,23 @@ def _validate_and_reorder_params(
     """
     Verify the compatibility between a query and a set of params.
     """
-    if isinstance(vars, Sequence) and not isinstance(vars, (bytes, str)):
+    # Try concrete types, then abstract types
+    t = type(vars)
+    if t is list or t is tuple:
+        sequence = True
+    elif t is dict:
+        sequence = False
+    elif isinstance(vars, Sequence) and not isinstance(vars, (bytes, str)):
+        sequence = True
+    elif isinstance(vars, Mapping):
+        sequence = False
+    else:
+        raise TypeError(
+            f"query parameters should be a sequence or a mapping,"
+            f" got {type(vars).__name__}"
+        )
+
+    if sequence:
         if len(vars) != len(parts) - 1:
             raise e.ProgrammingError(
                 f"the query has {len(parts) - 1} placeholders but"
@@ -174,26 +190,22 @@ def _validate_and_reorder_params(
             raise TypeError(
                 "named placeholders require a mapping of parameters"
             )
-        return vars
+        return vars  # type: ignore[return-value]
 
-    elif isinstance(vars, Mapping):
+    else:
         if vars and len(parts) > 1 and not isinstance(parts[0][1], str):
             raise TypeError(
                 "positional placeholders (%s) require a sequence of parameters"
             )
         try:
-            return [vars[item] for item in order or ()]
+            return [
+                vars[item] for item in order or ()  # type: ignore[call-overload]
+            ]
         except KeyError:
             raise e.ProgrammingError(
                 f"query parameter missing:"
                 f" {', '.join(sorted(i for i in order or () if i not in vars))}"
             )
-
-    else:
-        raise TypeError(
-            f"query parameters should be a sequence or a mapping,"
-            f" got {type(vars).__name__}"
-        )
 
 
 _re_placeholder = re.compile(
