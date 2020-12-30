@@ -45,10 +45,14 @@ else:
 
 
 class BaseCursor(Generic[ConnectionType]):
+    __slots__ = """
+        _conn format _adapters arraysize _closed _results _pgresult _pos
+        _iresult _rowcount _query _params _transformer
+        __weakref__
+        """.split()
     ExecStatus = pq.ExecStatus
 
     _transformer: "Transformer"
-    _rowcount: int
 
     def __init__(
         self,
@@ -58,13 +62,13 @@ class BaseCursor(Generic[ConnectionType]):
         self._conn = connection
         self.format = format
         self._adapters = adapt.AdaptersMap(connection.adapters)
-        self._reset()
         self.arraysize = 1
         self._closed = False
+        self._reset()
 
     def _reset(self) -> None:
         self._results: List["PGresult"] = []
-        self.pgresult = None
+        self._pgresult: Optional["PGresult"] = None
         self._pos = 0
         self._iresult = 0
         self._rowcount = -1
@@ -385,6 +389,7 @@ class BaseCursor(Generic[ConnectionType]):
 
 class Cursor(BaseCursor["Connection"]):
     __module__ = "psycopg3"
+    __slots__ = ()
 
     def __enter__(self) -> "Cursor":
         return self
@@ -489,6 +494,7 @@ class Cursor(BaseCursor["Connection"]):
 
 class AsyncCursor(BaseCursor["AsyncConnection"]):
     __module__ = "psycopg3"
+    __slots__ = ()
 
     async def __aenter__(self) -> "AsyncCursor":
         return self
