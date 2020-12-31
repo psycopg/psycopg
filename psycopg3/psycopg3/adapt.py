@@ -5,13 +5,13 @@ Entry point into the adaptation system.
 # Copyright (C) 2020 The Psycopg Team
 
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Optional, Type, TYPE_CHECKING, Union
-
+from typing import Any, Dict, Callable, List, Optional, Type, Union
+from typing import TYPE_CHECKING
 from . import pq
 from . import proto
 from .pq import Format as Format
 from .oids import builtins, TEXT_OID
-from .proto import DumpersMap, DumperType, LoadersMap, LoaderType, AdaptContext
+from .proto import AdaptContext
 
 if TYPE_CHECKING:
     from .connection import BaseConnection
@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
 class Dumper(ABC):
     """
-    Convert Python object of the type *src* to PostgreSQL representation.
+    Convert Python object of the type *cls* to PostgreSQL representation.
     """
 
     format: Format
@@ -29,8 +29,8 @@ class Dumper(ABC):
     # the subclass overrides it in init.
     _oid: int = 0
 
-    def __init__(self, src: type, context: Optional[AdaptContext] = None):
-        self.src = src
+    def __init__(self, cls: type, context: Optional[AdaptContext] = None):
+        self.cls = cls
         self.connection = context.connection if context else None
 
         self.oid = self._oid
@@ -64,25 +64,25 @@ class Dumper(ABC):
 
     @classmethod
     def register(
-        cls, src: Union[type, str], context: Optional[AdaptContext] = None
+        this_cls, cls: Union[type, str], context: Optional[AdaptContext] = None
     ) -> None:
         """
-        Configure *context* to use this dumper to convert object of type *src*.
+        Configure *context* to use this dumper to convert object of type *cls*.
         """
         adapters = context.adapters if context else global_adapters
-        adapters.register_dumper(src, cls)
+        adapters.register_dumper(cls, this_cls)
 
     @classmethod
     def builtin(
         cls, *types: Union[type, str]
-    ) -> Callable[[DumperType], DumperType]:
+    ) -> Callable[[Type["Dumper"]], Type["Dumper"]]:
         """
         Decorator to mark a dumper class as default for a builtin type.
         """
 
-        def builtin_(dumper: DumperType) -> DumperType:
-            for src in types:
-                dumper.register(src)
+        def builtin_(dumper: Type["Dumper"]) -> Type["Dumper"]:
+            for cls in types:
+                dumper.register(cls)
             return dumper
 
         return builtin_
@@ -118,16 +118,16 @@ class Loader(ABC):
     @classmethod
     def builtin(
         cls, *types: Union[int, str]
-    ) -> Callable[[LoaderType], LoaderType]:
+    ) -> Callable[[Type["Loader"]], Type["Loader"]]:
         """
         Decorator to mark a loader class as default for a builtin type.
         """
 
-        def builtin_(loader: LoaderType) -> LoaderType:
-            for src in types:
-                if isinstance(src, str):
-                    src = builtins[src].oid
-                loader.register(src)
+        def builtin_(loader: Type["Loader"]) -> Type["Loader"]:
+            for cls in types:
+                if isinstance(cls, str):
+                    cls = builtins[cls].oid
+                loader.register(cls)
             return loader
 
         return builtin_
@@ -143,37 +143,38 @@ class AdaptersMap:
     is cheap: a copy is made only on customisation.
     """
 
-    _dumpers: DumpersMap
-    _loaders: LoadersMap
+    _dumpers: List[Dict[Union[type, str], Type["Dumper"]]]
+    _loaders: List[Dict[int, Type["Loader"]]]
 
     def __init__(self, extend: Optional["AdaptersMap"] = None):
         if extend:
-            self._dumpers = extend._dumpers
-            self._own_dumpers = False
-            self._loaders = extend._loaders
-            self._own_loaders = False
+            self._dumpers = extend._dumpers[:]
+            self._own_dumpers = [False, False]
+            self._loaders = extend._loaders[:]
+            self._own_loaders = [False, False]
         else:
-            self._dumpers = {}
-            self._own_dumpers = True
-            self._loaders = {}
-            self._own_loaders = True
+            self._dumpers = [{}, {}]
+            self._own_dumpers = [True, True]
+            self._loaders = [{}, {}]
+            self._own_loaders = [True, True]
 
     def register_dumper(
-        self, src: Union[type, str], dumper: Type[Dumper]
+        self, cls: Union[type, str], dumper: Type[Dumper]
     ) -> None:
         """
-        Configure the context to use *dumper* to convert object of type *src*.
+        Configure the context to use *dumper* to convert object of type *cls*.
         """
-        if not isinstance(src, (str, type)):
+        if not isinstance(cls, (str, type)):
             raise TypeError(
-                f"dumpers should be registered on classes, got {src} instead"
+                f"dumpers should be registered on classes, got {cls} instead"
             )
 
-        if not self._own_dumpers:
-            self._dumpers = self._dumpers.copy()
-            self._own_dumpers = True
+        fmt = dumper.format
+        if not self._own_dumpers[fmt]:
+            self._dumpers[fmt] = self._dumpers[fmt].copy()
+            self._own_dumpers[fmt] = True
 
-        self._dumpers[src, dumper.format] = dumper
+        self._dumpers[fmt][cls] = dumper
 
     def register_loader(self, oid: int, loader: Type[Loader]) -> None:
         """
@@ -184,11 +185,43 @@ class AdaptersMap:
                 f"loaders should be registered on oid, got {oid} instead"
             )
 
-        if not self._own_loaders:
-            self._loaders = self._loaders.copy()
-            self._own_loaders = True
+        fmt = loader.format
+        if not self._own_loaders[fmt]:
+            self._loaders[fmt] = self._loaders[fmt].copy()
+            self._own_loaders[fmt] = True
 
-        self._loaders[oid, loader.format] = loader
+        self._loaders[fmt][oid] = loader
+
+    def get_dumper(self, cls: type, format: Format) -> Optional[Type[Dumper]]:
+        """
+        Return the dumper class for the given type and format.
+
+        Return None if not found.
+        """
+        dumpers = self._dumpers[format]
+
+        # Look for the right class, including looking at superclasses
+        for scls in cls.__mro__:
+            if scls in dumpers:
+                return dumpers[scls]
+
+        # If the adapter is not found, look for its name as a string
+        for scls in cls.__mro__:
+            fqn = scls.__module__ + "." + scls.__qualname__
+            if fqn in dumpers:
+                # Replace the class name with the class itself
+                d = dumpers[scls] = dumpers.pop(fqn)
+                return d
+
+        return None
+
+    def get_loader(self, oid: int, format: Format) -> Optional[Type[Loader]]:
+        """
+        Return the loader class for the given oid and format.
+
+        Return None if not found.
+        """
+        return self._loaders[format].get(oid)
 
 
 global_adapters = AdaptersMap()

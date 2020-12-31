@@ -4,8 +4,8 @@ Protocol objects representing different implementations of the same classes.
 
 # Copyright (C) 2020 The Psycopg Team
 
-from typing import Any, Callable, Dict, Generator, Mapping
-from typing import Optional, Sequence, Tuple, Type, TypeVar, Union
+from typing import Any, Callable, Generator, Mapping
+from typing import Optional, Sequence, Tuple, TypeVar, Union
 from typing import TYPE_CHECKING
 from typing_extensions import Protocol
 
@@ -44,12 +44,7 @@ Wait states.
 # Adaptation types
 
 DumpFunc = Callable[[Any], bytes]
-DumperType = Type["Dumper"]
-DumpersMap = Dict[Tuple[Union[type, str], Format], DumperType]
-
 LoadFunc = Callable[[bytes], Any]
-LoaderType = Type["Loader"]
-LoadersMap = Dict[Tuple[int, Format], LoaderType]
 
 # TODO: Loader, Dumper should probably become protocols
 # as there are both C and a Python implementation

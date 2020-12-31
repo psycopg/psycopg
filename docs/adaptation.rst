@@ -42,17 +42,15 @@ be customised for specific needs within the same application: in order to do
 so you can use the *context* parameter of `Dumper.register()` and
 `Loader.register()`.
 
+When a `!Connection` is created, it inherits the global adapters
+configuration; when a `!Cursor` is created it inherits its `!Connection`
+configuration.
+
 .. note::
 
     `!register()` is a class method on the base class, so if you
     subclass `!Dumper` or `!Loader` you should call the ``.register()`` on the
     class you created.
-
-If the data type has also a distinct binary format which you may want to use
-from psycopg (as documented in :ref:`binary-data`) you may want to implement
-binary loaders and dumpers, whose only difference from text dumper is that
-they must be registered using ``format=Format.BINARY`` in `Dumper.register()`
-and `Loader.register()`.
 
 .. admonition:: TODO
 
@@ -66,19 +64,22 @@ Dumpers and loaders life cycle
 Registering dumpers and loaders will instruct `!psycopg3` to use them
 in the queries to follow, in the context where they have been registered.
 
-When a query is performed, a `Transformer` object will be used to instantiate
-dumpers and loaders as requested and to dispatch the values to convert
-to the right instance:
+When a query is performed on a `!Cursor`, a `Transformer` object is created
+as a local context to manage conversions during the query, instantiating the
+required dumpers and loaders and dispatching the values to convert to the
+right instance.
 
-- The `!Trasformer` will look up the most specific adapter: one registered on
-  the `~psycopg3.Cursor` if available, then one registered on the
-  `~psycopg3.Connection`, finally a global one.
+- The `!Trasformer` copies the adapters configuration from the `!Cursor`, thus
+  inheriting all the changes made to the global configuration, the current
+  `!Connection`, the `!Cursor`.
 
-- For every Python type passed as query argument there will be a `!Dumper`
-  instantiated. All the objects of the same type will use the same loader.
+- For every Python type passed as query argument, the `!Transformer` will
+  instantiate a `!Dumper`. All the objects of the same type will be converted
+  by the same dumper.
 
-- For every OID returned by a query there will be a `!Loader` instantiated.
-  All the values with the same OID will be converted by the same loader.
+- For every OID returned by the query, the `!Transformer` will instantiate a
+  `!Loader`. All the values with the same OID will be converted by the same
+  loader.
 
 - Recursive types (e.g. Python lists, PostgreSQL arrays and composite types)
   will use the same adaptation rules.
@@ -100,10 +101,16 @@ Objects involved in types adaptation
 
     move to API section
 
+
+.. autoclass:: Format
+    :members:
+
+
 .. autoclass:: Dumper(src, context=None)
 
     This is an abstract base class: subclasses *must* implement the `dump()`
-    method. They *may* implement `oid` (as attribute or property) in order to
+    method and specify the `format`.
+    They *may* implement `oid` (as attribute or property) in order to
     override the oid type oid; if not PostgreSQL will try to infer the type
     from the context, but this may fail in some contexts and may require a
     cast.
@@ -114,6 +121,13 @@ Objects involved in types adaptation
         specified the conversion might be inaccurate, for instance it will not
         be possible to know the connection encoding or the server date format.
     :type context: `~psycopg3.Connection`, `~psycopg3.Cursor`, or `Transformer`
+
+    .. attribute:: format
+        :type: Format
+
+        The format this class dumps, `~Format.TEXT` or `~Format.BINARY`.
+        This is a class attribute.
+
 
     .. automethod:: dump
 
@@ -143,7 +157,7 @@ Objects involved in types adaptation
 
             Document how to find type OIDs in a database.
 
-    .. automethod:: register(src, context=None, format=Format.TEXT)
+    .. automethod:: register(src, context=None)
 
         You should call this method on the `Dumper` subclass you create,
         passing the Python type you want to dump as *src*.
@@ -153,8 +167,6 @@ Objects involved in types adaptation
         :param context: Where the dumper should be used. If `!None` the dumper
             will be used globally.
         :type context: `~psycopg3.Connection`, `~psycopg3.Cursor`, or `Transformer`
-        :param format: Register the dumper for text or binary adaptation
-        :type format: `~psycopg3.pq.Format`
 
         If *src* is specified as string it will be lazy-loaded, so that it
         will be possible to register it without importing it before. In this
@@ -165,7 +177,7 @@ Objects involved in types adaptation
 .. autoclass:: Loader(oid, context=None)
 
     This is an abstract base class: subclasses *must* implement the `load()`
-    method.
+    method and specify a `format`.
 
     :param oid: The type that will be managed by this dumper.
     :type oid: int
@@ -174,9 +186,15 @@ Objects involved in types adaptation
         be possible to know the connection encoding or the server date format.
     :type context: `~psycopg3.Connection`, `~psycopg3.Cursor`, or `Transformer`
 
+    .. attribute:: format
+        :type: Format
+
+        The format this class can load, `~Format.TEXT` or `~Format.BINARY`.
+        This is a class attribute.
+
     .. automethod:: load
 
-    .. automethod:: register(oid, context=None, format=Format.TEXT)
+    .. automethod:: register(oid, context=None)
 
         You should call this method on the `Loader` subclass you create,
         passing the OID of the type you want to load as *oid* parameter.
@@ -186,8 +204,6 @@ Objects involved in types adaptation
         :param context: Where the loader should be used. If `!None` the loader
             will be used globally.
         :type context: `~psycopg3.Connection`, `~psycopg3.Cursor`, or `Transformer`
-        :param format: Register the loader for text or binary adaptation
-        :type format: `~psycopg3.pq.Format`
 
 
 .. autoclass:: Transformer(context=None)

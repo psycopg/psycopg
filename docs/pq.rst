@@ -116,10 +116,6 @@ Enumerations
     .. seealso:: :pq:`PQtransactionStatus` for a description of these states.
 
 
-.. autoclass:: Format
-    :members:
-
-
 .. autoclass:: ExecStatus
     :members:
 

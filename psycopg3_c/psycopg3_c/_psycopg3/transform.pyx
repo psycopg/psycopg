@@ -52,10 +52,8 @@ cdef class Transformer:
 
     cdef readonly object connection
     cdef readonly object adapters
-    # TODO: the dumpers should have the same tweaking of the loaders
-    cdef dict _adapters_loaders
-    cdef dict _adapters_dumpers
-    cdef dict _dumpers_cache
+    cdef dict _text_dumpers
+    cdef dict _binary_dumpers
     cdef dict _text_loaders
     cdef dict _binary_loaders
     cdef pq.PGresult _pgresult
@@ -71,11 +69,9 @@ cdef class Transformer:
             self.adapters = global_adapters
             self.connection = None
 
-        self._adapters_loaders = self.adapters._loaders
-        self._adapters_dumpers = self.adapters._dumpers
-
-        # mapping class, fmt -> Dumper instance
-        self._dumpers_cache: Dict[Tuple[type, Format], "Dumper"] = {}
+        # mapping class -> Dumper instance (text, binary)
+        self._text_dumpers = {}
+        self._binary_dumpers = {}
 
         # mapping oid -> Loader instance (text, binary)
         self._text_loaders = {}
@@ -166,39 +162,23 @@ cdef class Transformer:
 
     def get_dumper(self, obj: Any, format: Format) -> "Dumper":
         # Fast path: return a Dumper class already instantiated from the same type
+        cdef dict cache
+        cdef PyObject *ptr
+
         cls = type(obj)
-        key = (cls, format)
-        cdef PyObject *ptr = PyDict_GetItem(self._dumpers_cache, key)
+        cache = self._binary_dumpers if format else self._text_dumpers
+        ptr = PyDict_GetItem(cache, cls)
         if ptr != NULL:
             return <object>ptr
 
-        # We haven't seen this type in this query yet. Look for an adapter
-        # in the current context (which was grown from more generic ones).
-        # Also look for superclasses: if you can adapt a type you should be
-        # able to adapt its subtypes, otherwise Liskov is sad.
-        cdef dict dmap = self.adapters._dumpers
-        for scls in cls.__mro__:
-            dumper_class = dmap.get((scls, format))
-            if not dumper_class:
-                continue
-
-            self._dumpers_cache[key] = dumper = dumper_class(cls, self)
-            return dumper
-
-        # If the adapter is not found, look for its name as a string
-        for scls in cls.__mro__:
-            fqn = f"{cls.__module__}.{scls.__qualname__}"
-            dumper_class = dmap.get((fqn, format))
-            if dumper_class is None:
-                continue
-
-            dmap[key] = dumper_class
-            self._dumpers_cache[key] = dumper = dumper_class(cls, self)
-            return dumper
+        dumper_class = self.adapters.get_dumper(cls, format)
+        if dumper_class:
+            d = dumper_class(cls, self)
+            cache[cls] = d
+            return d
 
         raise e.ProgrammingError(
-            f"cannot adapt type {type(obj).__name__}"
-            f" to format {Format(format).name}"
+            f"cannot adapt type {cls.__name__} to format {Format(format).name}"
         )
 
     def load_rows(self, int row0, int row1) -> Sequence[Tuple[Any, ...]]:
@@ -338,25 +318,17 @@ cdef class Transformer:
         cdef dict cache
         cdef PyObject *ptr
 
-        if format == 0:
-            cache = self._text_loaders
-        else:
-            cache = self._binary_loaders
-
+        cache = self._binary_loaders if format else self._text_loaders
         ptr = PyDict_GetItem(cache, oid)
         if ptr != NULL:
             return <object>ptr
 
-        key = (oid, format)
-        ptr = PyDict_GetItem(self._adapters_loaders, (oid, format))
-        if ptr != NULL:
-            loader_cls = <object>ptr
-        else:
-            ptr = PyDict_GetItem(
-                self.adapters._loaders, (oids.INVALID_OID, format))
-            if ptr == NULL:
-                raise e.InterfaceError(f"unknown oid loader not found")
-            loader_cls = <object>ptr
+        loader_cls = self.adapters.get_loader(oid, format)
+        if not loader_cls:
+            loader_cls = self.adapters.get_loader(oids.INVALID_OID, format)
+            if not loader_cls:
+                raise e.InterfaceError("unknown oid loader not found")
+
         loader = loader_cls(oid, self)
         PyDict_SetItem(cache, oid, loader)
         return loader

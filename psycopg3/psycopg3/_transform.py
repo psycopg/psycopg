@@ -44,10 +44,12 @@ class Transformer(AdaptContext):
             self._connection = None
 
         # mapping class, fmt -> Dumper instance
-        self._dumpers_cache: Dict[Tuple[type, Format], "Dumper"] = {}
+        self._dumpers_cache: Tuple[Dict[type, "Dumper"], Dict[type, "Dumper"]]
+        self._dumpers_cache = ({}, {})
 
         # mapping oid, fmt -> Loader instance
-        self._loaders_cache: Dict[Tuple[int, Format], "Loader"] = {}
+        self._loaders_cache: Tuple[Dict[int, "Loader"], Dict[int, "Loader"]]
+        self._loaders_cache = ({}, {})
 
         # sequence of load functions from value to python
         # the length of the result columns
@@ -97,37 +99,17 @@ class Transformer(AdaptContext):
         # Fast path: return a Dumper class already instantiated from the same type
         cls = type(obj)
         try:
-            return self._dumpers_cache[cls, format]
+            return self._dumpers_cache[format][cls]
         except KeyError:
             pass
 
-        # We haven't seen this type in this query yet. Look for an adapter
-        # in the current context (which was grown from more generic ones).
-        # Also look for superclasses: if you can adapt a type you should be
-        # able to adapt its subtypes, otherwise Liskov is sad.
-        dmap = self._adapters._dumpers
-        for scls in cls.__mro__:
-            dumper_class = dmap.get((scls, format))
-            if not dumper_class:
-                continue
-
-            dumper = self._dumpers_cache[cls, format] = dumper_class(cls, self)
-            return dumper
-
-        # If the adapter is not found, look for its name as a string
-        for scls in cls.__mro__:
-            fqn = f"{cls.__module__}.{scls.__qualname__}"
-            dumper_class = dmap.get((fqn, format))
-            if dumper_class is None:
-                continue
-
-            dmap[cls, format] = dumper_class
-            dumper = self._dumpers_cache[cls, format] = dumper_class(cls, self)
-            return dumper
+        dumper_class = self._adapters.get_dumper(cls, format)
+        if dumper_class:
+            d = self._dumpers_cache[format][cls] = dumper_class(cls, self)
+            return d
 
         raise e.ProgrammingError(
-            f"cannot adapt type {type(obj).__name__}"
-            f" to format {Format(format).name}"
+            f"cannot adapt type {cls.__name__} to format {Format(format).name}"
         )
 
     def load_rows(self, row0: int, row1: int) -> Sequence[Tuple[Any, ...]]:
@@ -177,14 +159,15 @@ class Transformer(AdaptContext):
         )
 
     def get_loader(self, oid: int, format: Format) -> "Loader":
-        key = (oid, format)
         try:
-            return self._loaders_cache[key]
+            return self._loaders_cache[format][oid]
         except KeyError:
             pass
 
-        loader_cls = self._adapters._loaders.get(key)
+        loader_cls = self._adapters.get_loader(oid, format)
         if not loader_cls:
-            loader_cls = self._adapters._loaders[INVALID_OID, format]
-        loader = self._loaders_cache[key] = loader_cls(oid, self)
+            loader_cls = self._adapters.get_loader(INVALID_OID, format)
+            if not loader_cls:
+                raise e.InterfaceError("unknown oid loader not found")
+        loader = self._loaders_cache[format][oid] = loader_cls(oid, self)
         return loader

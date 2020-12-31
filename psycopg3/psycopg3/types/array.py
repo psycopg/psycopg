@@ -18,8 +18,8 @@ class BaseListDumper(Dumper):
 
     _oid = TEXT_ARRAY_OID
 
-    def __init__(self, src: type, context: Optional[AdaptContext] = None):
-        super().__init__(src, context)
+    def __init__(self, cls: type, context: Optional[AdaptContext] = None):
+        super().__init__(cls, context)
         self._tx = Transformer(context)
 
     def _get_array_oid(self, base_oid: int) -> int:
@@ -117,7 +117,7 @@ class ListBinaryDumper(BaseListDumper):
         oid = 0
 
         def calc_dims(L: List[Any]) -> None:
-            if isinstance(L, self.src):
+            if isinstance(L, self.cls):
                 if not L:
                     raise e.DataError("lists cannot contain empty lists")
                 dims.append(len(L))
@@ -144,7 +144,7 @@ class ListBinaryDumper(BaseListDumper):
                         data.append(b"\xff\xff\xff\xff")
             else:
                 for item in L:
-                    if not isinstance(item, self.src):
+                    if not isinstance(item, self.cls):
                         raise e.DataError(
                             "nested lists have inconsistent depths"
                         )

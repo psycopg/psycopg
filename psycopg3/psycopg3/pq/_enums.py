@@ -182,10 +182,10 @@ class DiagnosticField(IntEnum):
 
 class Format(IntEnum):
     """
-    The format of a query argument or return value.
+    Enum representing the format of a query argument or return value.
     """
 
-    __module__ = "psycopg3.pq"
+    __module__ = "psycopg3.adapt"
 
     TEXT = 0
     """Text parameter."""

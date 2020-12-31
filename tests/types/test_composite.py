@@ -211,25 +211,23 @@ def test_load_composite_factory(conn, testcomp, fmt_out):
     assert isinstance(res[0].baz, float)
 
 
-def test_register_scope(conn):
+def test_register_scope(conn, testcomp):
     info = CompositeInfo.fetch(conn, "testcomp")
     info.register()
     for fmt in (Format.TEXT, Format.BINARY):
         for oid in (info.oid, info.array_oid):
-            assert global_adapters._loaders.pop((oid, fmt))
+            assert global_adapters._loaders[fmt].pop(oid)
 
     cur = conn.cursor()
     info.register(cur)
     for fmt in (Format.TEXT, Format.BINARY):
         for oid in (info.oid, info.array_oid):
-            key = oid, fmt
-            assert key not in global_adapters._loaders
-            assert key not in conn.adapters._loaders
-            assert key in cur.adapters._loaders
+            assert oid not in global_adapters._loaders[fmt]
+            assert oid not in conn.adapters._loaders[fmt]
+            assert oid in cur.adapters._loaders[fmt]
 
     info.register(conn)
     for fmt in (Format.TEXT, Format.BINARY):
         for oid in (info.oid, info.array_oid):
-            key = oid, fmt
-            assert key not in global_adapters._loaders
-            assert key in conn.adapters._loaders
+            assert oid not in global_adapters._loaders[fmt]
+            assert oid in conn.adapters._loaders[fmt]
