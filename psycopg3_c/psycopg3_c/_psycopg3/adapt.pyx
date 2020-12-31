@@ -30,13 +30,13 @@ logger = logging.getLogger("psycopg3.adapt")
 
 
 cdef class CDumper:
-    cdef object src
+    cdef object cls
     cdef public libpq.Oid oid
     cdef readonly object connection
     cdef pq.PGconn _pgconn
 
-    def __init__(self, src: type, context: Optional[AdaptContext] = None):
-        self.src = src
+    def __init__(self, cls: type, context: Optional[AdaptContext] = None):
+        self.cls = cls
         self.connection = context.connection if context is not None else None
         self._pgconn = (
             self.connection.pgconn if self.connection is not None else None
@@ -91,7 +91,7 @@ cdef class CDumper:
     @classmethod
     def register(
         cls,
-        src: Union[type, str],
+        cls: Union[type, str],
         context: Optional[AdaptContext] = None,
         int format = Format.TEXT,
     ) -> None:
@@ -100,7 +100,7 @@ cdef class CDumper:
         else:
             from psycopg3.adapt import global_adapters as adapters
 
-        adapters.register_dumper(src, cls)
+        adapters.register_dumper(cls, cls)
 
 
 cdef class CLoader:

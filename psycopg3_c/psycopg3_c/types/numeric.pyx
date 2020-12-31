@@ -26,8 +26,8 @@ cdef class IntDumper(CDumper):
     def __cinit__(self):
         self.oid = oids.INT8_OID
 
-    def __init__(self, src: type, context: Optional[AdaptContext] = None):
-        super().__init__(src, context)
+    def __init__(self, cls: type, context: Optional[AdaptContext] = None):
+        super().__init__(cls, context)
 
     def dump(self, obj) -> bytes:
         cdef char buf[22]

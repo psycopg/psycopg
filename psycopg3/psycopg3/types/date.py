@@ -55,8 +55,8 @@ class TimeDeltaDumper(Dumper):
     format = Format.TEXT
     _oid = builtins["interval"].oid
 
-    def __init__(self, src: type, context: Optional[AdaptContext] = None):
-        super().__init__(src, context)
+    def __init__(self, cls: type, context: Optional[AdaptContext] = None):
+        super().__init__(cls, context)
         if self.connection:
             if (
                 self.connection.pgconn.parameter_status(b"IntervalStyle")

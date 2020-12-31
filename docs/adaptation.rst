@@ -106,7 +106,7 @@ Objects involved in types adaptation
     :members:
 
 
-.. autoclass:: Dumper(src, context=None)
+.. autoclass:: Dumper(cls, context=None)
 
     This is an abstract base class: subclasses *must* implement the `dump()`
     method and specify the `format`.
@@ -115,8 +115,8 @@ Objects involved in types adaptation
     from the context, but this may fail in some contexts and may require a
     cast.
 
-    :param src: The type that will be managed by this dumper.
-    :type src: type
+    :param cls: The type that will be managed by this dumper.
+    :type cls: type
     :param context: The context where the transformation is performed. If not
         specified the conversion might be inaccurate, for instance it will not
         be possible to know the connection encoding or the server date format.
@@ -157,18 +157,18 @@ Objects involved in types adaptation
 
             Document how to find type OIDs in a database.
 
-    .. automethod:: register(src, context=None)
+    .. automethod:: register(cls, context=None)
 
         You should call this method on the `Dumper` subclass you create,
-        passing the Python type you want to dump as *src*.
+        passing the Python type you want to dump as *cls*.
 
-        :param src: The type to manage.
-        :type src: `!type` or `!str`
+        :param cls: The type to manage.
+        :type cls: `!type` or `!str`
         :param context: Where the dumper should be used. If `!None` the dumper
             will be used globally.
         :type context: `~psycopg3.Connection`, `~psycopg3.Cursor`, or `Transformer`
 
-        If *src* is specified as string it will be lazy-loaded, so that it
+        If *cls* is specified as string it will be lazy-loaded, so that it
         will be possible to register it without importing it before. In this
         case it should be the fully qualified name of the object (e.g.
         ``"uuid.UUID"``).

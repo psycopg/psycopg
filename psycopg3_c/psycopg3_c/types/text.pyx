@@ -16,8 +16,8 @@ cdef class _StringDumper(CDumper):
     cdef char *encoding
     cdef bytes _bytes_encoding  # needed to keep `encoding` alive
 
-    def __init__(self, src: type, context: Optional[AdaptContext]):
-        super().__init__(src, context)
+    def __init__(self, cls: type, context: Optional[AdaptContext]):
+        super().__init__(cls, context)
 
         self.is_utf8 = 0
         self.encoding = "utf-8"
@@ -116,8 +116,8 @@ cdef class BytesDumper(CDumper):
     def __cinit__(self):
         self.oid = oids.BYTEA_OID
 
-    def __init__(self, src: type, context: Optional[AdaptContext] = None):
-        super().__init__(src, context)
+    def __init__(self, cls: type, context: Optional[AdaptContext] = None):
+        super().__init__(cls, context)
         self.esc = Escaping(self._pgconn)
 
     def dump(self, obj) -> memoryview:

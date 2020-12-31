@@ -20,8 +20,8 @@ class _StringDumper(Dumper):
 
     _encoding = "utf-8"
 
-    def __init__(self, src: type, context: Optional[AdaptContext] = None):
-        super().__init__(src, context)
+    def __init__(self, cls: type, context: Optional[AdaptContext] = None):
+        super().__init__(cls, context)
 
         conn = self.connection
         if conn:
@@ -87,8 +87,8 @@ class BytesDumper(Dumper):
     format = Format.TEXT
     _oid = builtins["bytea"].oid
 
-    def __init__(self, src: type, context: Optional[AdaptContext] = None):
-        super().__init__(src, context)
+    def __init__(self, cls: type, context: Optional[AdaptContext] = None):
+        super().__init__(cls, context)
         self._esc = Escaping(
             self.connection.pgconn if self.connection else None
         )

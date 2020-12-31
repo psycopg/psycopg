@@ -147,8 +147,8 @@ class SequenceDumper(Dumper):
 
     format = Format.TEXT
 
-    def __init__(self, src: type, context: Optional[AdaptContext] = None):
-        super().__init__(src, context)
+    def __init__(self, cls: type, context: Optional[AdaptContext] = None):
+        super().__init__(cls, context)
         self._tx = Transformer(context)
 
     def _dump_sequence(
