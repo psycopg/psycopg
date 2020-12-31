@@ -5,6 +5,7 @@ Cython adapters for numeric types.
 # Copyright (C) 2020 The Psycopg Team
 
 from libc.stdint cimport *
+from libc.string cimport memcpy
 from cpython.long cimport PyLong_FromString, PyLong_FromLong, PyLong_AsLongLong
 from cpython.long cimport PyLong_FromLongLong, PyLong_FromUnsignedLong
 from cpython.float cimport PyFloat_FromDouble
@@ -26,37 +27,39 @@ cdef class IntDumper(CDumper):
     def __cinit__(self):
         self.oid = oids.INT8_OID
 
-    def __init__(self, cls: type, context: Optional[AdaptContext] = None):
-        super().__init__(cls, context)
-
-    def dump(self, obj) -> bytes:
-        cdef char buf[22]
+    cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
+        cdef int size = 22  # max int as string
+        cdef char *buf = CDumper.ensure_size(rv, offset, size)
         cdef long long val = PyLong_AsLongLong(obj)
-        cdef int written = PyOS_snprintf(buf, sizeof(buf), "%lld", val)
-        return buf[:written]
+        cdef int written = PyOS_snprintf(buf, size, "%lld", val)
+        PyByteArray_Resize(rv, offset + written)
+        return written
 
-    def quote(self, obj) -> bytes:
-        cdef char buf[23]
-        cdef long long val = PyLong_AsLongLong(obj)
-        cdef int written
-        if val >= 0:
-            written = PyOS_snprintf(buf, sizeof(buf), "%lld", val)
+    def quote(self, obj) -> bytearray:
+        rv = PyByteArray_FromStringAndSize("", 0)
+        PyByteArray_Resize(rv, 23)
+
+        if obj >= 0:
+            self.cdump(obj, rv, 0)
         else:
-            written = PyOS_snprintf(buf, sizeof(buf), " %lld", val)
+            rv[0] = b' '
+            self.cdump(obj, rv, 1)
 
-        return buf[:written]
+        return rv
 
 
 cdef class IntBinaryDumper(IntDumper):
 
     format = Format.BINARY
 
-    def dump(self, obj) -> bytes:
+    cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
+        cdef char *buf = CDumper.ensure_size(rv, offset, sizeof(int64_t))
         cdef long long val = PyLong_AsLongLong(obj)
+        # swap bytes if needed
         cdef uint64_t *ptvar = <uint64_t *>(&val)
         cdef int64_t beval = htobe64(ptvar[0])
-        cdef char *buf = <char *>&beval
-        return buf[:sizeof(beval)]
+        memcpy(buf, <void *>&beval, sizeof(int64_t))
+        return sizeof(int64_t)
 
 
 cdef class IntLoader(CLoader):

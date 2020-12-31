@@ -4,11 +4,20 @@ Cython adapters for textual types.
 
 # Copyright (C) 2020 The Psycopg Team
 
+from libc.string cimport memcpy, memchr
 from cpython.bytes cimport PyBytes_AsString, PyBytes_AsStringAndSize
-from cpython.unicode cimport PyUnicode_Decode, PyUnicode_DecodeUTF8
-from cpython.unicode cimport PyUnicode_AsUTF8String, PyUnicode_AsEncodedString
+from cpython.unicode cimport (
+    PyUnicode_AsEncodedString,
+    PyUnicode_AsUTF8String,
+    PyUnicode_CheckExact,
+    PyUnicode_Decode,
+    PyUnicode_DecodeUTF8,
+)
 
-from psycopg3_c.pq cimport Escaping
+from psycopg3_c.pq cimport libpq, Escaping, _buffer_as_string_and_size
+
+cdef extern from "Python.h":
+    const char *PyUnicode_AsUTF8AndSize(unicode obj, Py_ssize_t *size)
 
 
 cdef class _StringDumper(CDumper):
@@ -16,7 +25,7 @@ cdef class _StringDumper(CDumper):
     cdef char *encoding
     cdef bytes _bytes_encoding  # needed to keep `encoding` alive
 
-    def __init__(self, cls: type, context: Optional[AdaptContext]):
+    def __init__(self, cls: type, context: Optional[AdaptContext] = None):
         super().__init__(cls, context)
 
         self.is_utf8 = 0
@@ -37,38 +46,46 @@ cdef class StringBinaryDumper(_StringDumper):
 
     format = Format.BINARY
 
-    def dump(self, obj) -> bytes:
+    cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
         # the server will raise DataError subclass if the string contains 0x00
+        cdef Py_ssize_t size;
+        cdef const char *src
+
         if self.is_utf8:
-            return PyUnicode_AsUTF8String(obj)
+            # Probably the fastest path, but doesn't work with subclasses
+            if PyUnicode_CheckExact(obj):
+                src = PyUnicode_AsUTF8AndSize(obj, &size)
+                if src == NULL:
+                    # re-encode using a function raising an exception.
+                    # TODO: is there a better way?
+                    PyUnicode_AsUTF8String(obj)
+            else:
+                b = PyUnicode_AsUTF8String(obj)
+                PyBytes_AsStringAndSize(b, <char **>&src, &size)
         else:
-            return PyUnicode_AsEncodedString(obj, self.encoding, NULL)
+            b = PyUnicode_AsEncodedString(obj, self.encoding, NULL)
+            PyBytes_AsStringAndSize(b, <char **>&src, &size)
+
+        cdef char *buf = CDumper.ensure_size(rv, offset, size)
+        memcpy(buf, src, size)
+        return size
 
 
-cdef class StringDumper(_StringDumper):
+cdef class StringDumper(StringBinaryDumper):
 
     format = Format.TEXT
 
-    def dump(self, obj) -> bytes:
-        cdef bytes rv
-        cdef char *buf
+    cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
+        cdef Py_ssize_t size = StringBinaryDumper.cdump(self, obj, rv, offset)
 
-        if self.is_utf8:
-            rv = PyUnicode_AsUTF8String(obj)
-        else:
-            rv = PyUnicode_AsEncodedString(obj, self.encoding, NULL)
-
-        try:
-            # the function raises ValueError if the bytes contains 0x00
-            PyBytes_AsStringAndSize(rv, &buf, NULL)
-        except ValueError:
+        # Like the binary dump, but check for 0, or the string will be truncated
+        cdef const char *buf = PyByteArray_AS_STRING(rv)
+        if NULL != memchr(buf + offset, 0x00, size):
             from psycopg3 import DataError
-
             raise DataError(
                 "PostgreSQL text fields cannot contain NUL (0x00) bytes"
             )
-
-        return rv
+        return size
 
 
 cdef class TextLoader(CLoader):
@@ -111,25 +128,51 @@ cdef class BytesDumper(CDumper):
 
     format = Format.TEXT
 
-    cdef Escaping esc
+    def __cinit__(self):
+        self.oid = oids.BYTEA_OID
+
+    cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
+
+        cdef size_t len_out
+        cdef unsigned char *out
+        cdef char *ptr
+        cdef Py_ssize_t length
+
+        _buffer_as_string_and_size(obj, &ptr, &length)
+
+        if self._pgconn is not None and self._pgconn.pgconn_ptr != NULL:
+            out = libpq.PQescapeByteaConn(
+                self._pgconn.pgconn_ptr, <unsigned char *>ptr, length, &len_out)
+        else:
+            out = libpq.PQescapeBytea(<unsigned char *>ptr, length, &len_out)
+
+        if out is NULL:
+            raise MemoryError(
+                f"couldn't allocate for escape_bytea of {length} bytes"
+            )
+
+        len_out -= 1  # out includes final 0
+        cdef char *buf = CDumper.ensure_size(rv, offset, len_out)
+        memcpy(buf, out, len_out)
+        libpq.PQfreemem(out)
+        return len_out
+
+
+cdef class BytesBinaryDumper(CDumper):
+
+    format = Format.BINARY
 
     def __cinit__(self):
         self.oid = oids.BYTEA_OID
 
-    def __init__(self, cls: type, context: Optional[AdaptContext] = None):
-        super().__init__(cls, context)
-        self.esc = Escaping(self._pgconn)
+    cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
+        cdef char *src
+        cdef Py_ssize_t size;
+        _buffer_as_string_and_size(obj, &src, &size)
 
-    def dump(self, obj) -> memoryview:
-        return self.esc.escape_bytea(obj)
-
-
-cdef class BytesBinaryDumper(BytesDumper):
-
-    format = Format.BINARY
-
-    def dump(self, obj):
-        return obj
+        cdef char *buf = CDumper.ensure_size(rv, offset, size)
+        memcpy(buf, src, size)
+        return  size
 
 
 cdef class ByteaLoader(CLoader):

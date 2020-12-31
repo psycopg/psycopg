@@ -17,7 +17,7 @@ from typing import Any
 
 from cpython.bytes cimport PyBytes_AsStringAndSize
 from cpython.bytearray cimport PyByteArray_FromStringAndSize, PyByteArray_Resize
-from cpython.bytearray cimport PyByteArray_AS_STRING
+from cpython.bytearray cimport PyByteArray_GET_SIZE, PyByteArray_AS_STRING
 
 from psycopg3_c.pq cimport _buffer_as_string_and_size
 
@@ -52,8 +52,29 @@ cdef class CDumper:
         ):
             self.oid = oids.TEXT_OID
 
-    def dump(self, obj: Any) -> bytes:
+    cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
+        """Store the Postgres representation *obj* into *rv* at *offset*
+
+        Return the number of bytes written to rv or -1 on Python exception.
+
+        Subclasses must implement this method. The `dump()` implementation
+        transforms the result of this method to a bytearray so that it can be
+        returned to Python.
+
+        The function interface allows C code to use this method automatically
+        to create larger buffers, e.g. for copy, composite objects, etc.
+
+        Implementation note: as you will alway need to make sure that rv
+        has enough space to include what you want to dump, `ensure_size()`
+        might probably come handy.
+        """
         raise NotImplementedError()
+
+    def dump(self, obj: Any) -> bytearray:
+        """Return the Postgres representation of *obj* as Python array of bytes"""
+        cdef rv = PyByteArray_FromStringAndSize("", 0)
+        self.cdump(obj, rv, 0)
+        return rv
 
     def quote(self, obj: Any) -> bytearray:
         cdef char *ptr
@@ -90,7 +111,7 @@ cdef class CDumper:
 
     @classmethod
     def register(
-        cls,
+        this_cls,
         cls: Union[type, str],
         context: Optional[AdaptContext] = None,
         int format = Format.TEXT,
@@ -100,7 +121,22 @@ cdef class CDumper:
         else:
             from psycopg3.adapt import global_adapters as adapters
 
-        adapters.register_dumper(cls, cls)
+        adapters.register_dumper(cls, this_cls)
+
+    @staticmethod
+    cdef char *ensure_size(bytearray ba, Py_ssize_t offset, Py_ssize_t size) except NULL:
+        """
+        Grow *ba*, if necessary, to contains at least *size* bytes after *offset*
+
+        Return the pointer in the bytearray at *offset*, i.e. the place where
+        you want to write *size* bytes.
+        """
+        cdef Py_ssize_t curr_size = PyByteArray_GET_SIZE(ba)
+        cdef Py_ssize_t new_size = offset + size
+        if curr_size < new_size:
+            PyByteArray_Resize(ba, new_size)
+
+        return PyByteArray_AS_STRING(ba) + offset
 
 
 cdef class CLoader:

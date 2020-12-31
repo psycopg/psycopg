@@ -14,14 +14,23 @@ cdef class BoolDumper(CDumper):
     def __cinit__(self):
         self.oid = oids.BOOL_OID
 
-    def dump(self, obj) -> bytes:
+    cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
+        CDumper.ensure_size(rv, offset, 1)
+
         # Fast paths, just a pointer comparison
+        cdef char val
         if obj is True:
-            return b"t"
+            val = b"t"
         elif obj is False:
-            return b"f"
+            val = b"f"
+        elif obj:
+            val = b"t"
         else:
-            return b"t" if obj else b"f"
+            val = b"f"
+
+        cdef char *buf = PyByteArray_AS_STRING(rv)
+        buf[offset] = val
+        return 1
 
     def quote(self, obj: bool) -> bytes:
         if obj is True:
@@ -36,13 +45,23 @@ cdef class BoolBinaryDumper(BoolDumper):
 
     format = Format.BINARY
 
-    def dump(self, obj) -> bytes:
+    cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
+        CDumper.ensure_size(rv, offset, 1)
+
+        # Fast paths, just a pointer comparison
+        cdef char val
         if obj is True:
-            return b"\x01"
+            val = b"\x01"
         elif obj is False:
-            return b"\x00"
+            val = b"\x00"
+        elif obj:
+            val = b"\x01"
         else:
-            return b"\x01" if obj else b"\x00"
+            val = b"\x00"
+
+        cdef char *buf = PyByteArray_AS_STRING(rv)
+        buf[offset] = val
+        return 1
 
 
 cdef class BoolLoader(CLoader):
