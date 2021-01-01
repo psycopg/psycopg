@@ -5,19 +5,23 @@ Cython adapters for numeric types.
 # Copyright (C) 2020 The Psycopg Team
 
 from libc.stdint cimport *
-from libc.string cimport memcpy
+from libc.string cimport memcpy, strlen
+from cpython.mem cimport PyMem_Free
 from cpython.long cimport PyLong_FromString, PyLong_FromLong, PyLong_AsLongLong
 from cpython.long cimport PyLong_FromLongLong, PyLong_FromUnsignedLong
-from cpython.float cimport PyFloat_FromDouble
+from cpython.float cimport PyFloat_FromDouble, PyFloat_AsDouble
 
 from psycopg3_c._psycopg3.endian cimport be16toh, be32toh, be64toh, htobe64
 
 cdef extern from "Python.h":
     # work around https://github.com/cython/cython/issues/3909
     double PyOS_string_to_double(
-        const char *s, char **endptr, object overflow_exception) except? -1.0
-
+        const char *s, char **endptr, PyObject *overflow_exception) except? -1.0
+    char *PyOS_double_to_string(
+        double val, char format_code, int precision, int flags, int *ptype
+    ) except NULL
     int PyOS_snprintf(char *str, size_t size, const char *format, ...)
+    int Py_DTSF_ADD_DOT_0
 
 
 cdef class IntDumper(CDumper):
@@ -32,19 +36,20 @@ cdef class IntDumper(CDumper):
         cdef char *buf = CDumper.ensure_size(rv, offset, size)
         cdef long long val = PyLong_AsLongLong(obj)
         cdef int written = PyOS_snprintf(buf, size, "%lld", val)
-        PyByteArray_Resize(rv, offset + written)
         return written
 
     def quote(self, obj) -> bytearray:
+        cdef Py_ssize_t length
+
         rv = PyByteArray_FromStringAndSize("", 0)
-        PyByteArray_Resize(rv, 23)
-
         if obj >= 0:
-            self.cdump(obj, rv, 0)
+            length = self.cdump(obj, rv, 0)
         else:
+            PyByteArray_Resize(rv, 23)
             rv[0] = b' '
-            self.cdump(obj, rv, 1)
+            length = 1 + self.cdump(obj, rv, 1)
 
+        PyByteArray_Resize(rv, length)
         return rv
 
 
@@ -102,12 +107,61 @@ cdef class OidBinaryLoader(CLoader):
         return PyLong_FromUnsignedLong(be32toh((<uint32_t *>data)[0]))
 
 
+cdef class FloatDumper(CDumper):
+
+    format = Format.TEXT
+
+    def __cinit__(self):
+        self.oid = oids.FLOAT8_OID
+
+    cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
+        cdef double d = PyFloat_AsDouble(obj)
+        cdef char *out = PyOS_double_to_string(
+            d, b'r', 0, Py_DTSF_ADD_DOT_0, NULL)
+        cdef Py_ssize_t length = strlen(out)
+        cdef char *tgt = CDumper.ensure_size(rv, offset, length)
+        memcpy(tgt, out, length)
+        PyMem_Free(out)
+        return length
+
+    def quote(self, obj) -> bytes:
+        value = bytes(self.dump(obj))
+        cdef PyObject *ptr = PyDict_GetItem(_special_float, value)
+        if ptr != NULL:
+            return <object>ptr
+
+        return value if obj >= 0 else b" " + value
+
+cdef dict _special_float = {
+    b"inf": b"'Infinity'::float8",
+    b"-inf": b"'-Infinity'::float8",
+    b"nan": b"'NaN'::float8",
+}
+
+
+cdef class FloatBinaryDumper(CDumper):
+
+    format = Format.BINARY
+
+    def __cinit__(self):
+        self.oid = oids.FLOAT8_OID
+
+    cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
+        cdef double d = PyFloat_AsDouble(obj)
+        cdef uint64_t *intptr = <uint64_t *>&d
+        cdef uint64_t swp = htobe64(intptr[0])
+        cdef char *tgt = CDumper.ensure_size(rv, offset, sizeof(swp))
+        memcpy(tgt, <void *>&swp, sizeof(swp))
+        return sizeof(swp)
+
+
 cdef class FloatLoader(CLoader):
 
     format = Format.TEXT
 
     cdef object cload(self, const char *data, size_t length):
-        cdef double d = PyOS_string_to_double(data, NULL, OverflowError)
+        cdef double d = PyOS_string_to_double(
+            data, NULL, <PyObject *>OverflowError)
         return PyFloat_FromDouble(d)
 
 
@@ -143,12 +197,15 @@ cdef void register_numeric_c_adapters():
     IntLoader.register(oids.INT4_OID)
     IntLoader.register(oids.INT8_OID)
     IntLoader.register(oids.OID_OID)
-    FloatLoader.register(oids.FLOAT4_OID)
-    FloatLoader.register(oids.FLOAT8_OID)
-
     Int2BinaryLoader.register(oids.INT2_OID)
     Int4BinaryLoader.register(oids.INT4_OID)
     Int8BinaryLoader.register(oids.INT8_OID)
     OidBinaryLoader.register(oids.OID_OID)
+
+    FloatDumper.register(float)
+    FloatBinaryDumper.register(float)
+
+    FloatLoader.register(oids.FLOAT4_OID)
+    FloatLoader.register(oids.FLOAT8_OID)
     Float4BinaryLoader.register(oids.FLOAT4_OID)
     Float8BinaryLoader.register(oids.FLOAT8_OID)

@@ -73,7 +73,8 @@ cdef class CDumper:
     def dump(self, obj: Any) -> bytearray:
         """Return the Postgres representation of *obj* as Python array of bytes"""
         cdef rv = PyByteArray_FromStringAndSize("", 0)
-        self.cdump(obj, rv, 0)
+        cdef Py_ssize_t length = self.cdump(obj, rv, 0)
+        PyByteArray_Resize(rv, length)
         return rv
 
     def quote(self, obj: Any) -> bytearray:
