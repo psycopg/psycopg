@@ -424,12 +424,12 @@ cdef class PGconn:
         else:
             return None
 
-    def put_copy_data(self, buffer: bytes) -> int:
+    def put_copy_data(self, buffer) -> int:
         cdef int rv
         cdef char *cbuffer
         cdef Py_ssize_t length
 
-        PyBytes_AsStringAndSize(buffer, &cbuffer, &length)
+        _buffer_as_string_and_size(buffer, &cbuffer, &length)
         rv = libpq.PQputCopyData(self.pgconn_ptr, cbuffer, length)
         if rv < 0:
             raise PQerror(f"sending copy data failed: {error_message(self)}")

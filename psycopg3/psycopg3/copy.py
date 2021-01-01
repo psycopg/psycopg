@@ -6,19 +6,21 @@ psycopg3 copy support
 
 import re
 import struct
-from typing import TYPE_CHECKING, AsyncIterator, Iterator, Generic
+from typing import TYPE_CHECKING, AsyncIterator, Callable, Iterator, Generic
 from typing import Any, Dict, List, Match, Optional, Sequence, Type, Union
 from types import TracebackType
 
 from . import pq
 from .pq import Format, ExecStatus
-from .proto import ConnectionType, PQGen
+from .proto import ConnectionType, PQGen, Transformer
 from .generators import copy_from, copy_to, copy_end
 
 if TYPE_CHECKING:
     from .pq.proto import PGresult
     from .cursor import BaseCursor  # noqa: F401
     from .connection import Connection, AsyncConnection  # noqa: F401
+
+FormatFunc = Callable[[Sequence[Any], Transformer], Union[bytes, bytearray]]
 
 
 class BaseCopy(Generic[ConnectionType]):
@@ -39,10 +41,11 @@ class BaseCopy(Generic[ConnectionType]):
         self._row_mode = False  # true if the user is using send_row()
         self._finished = False
 
+        self._format_row: FormatFunc
         if self.format == Format.TEXT:
-            self._format_copy_row = format_row_text
+            self._format_row = format_row_text
         else:
-            self._format_copy_row = format_row_binary
+            self._format_row = format_row_binary
 
     def __repr__(self) -> str:
         cls = f"{self.__class__.__module__}.{self.__class__.__qualname__}"
@@ -76,7 +79,7 @@ class BaseCopy(Generic[ConnectionType]):
         # to take care of the end-of-copy marker too
         self._row_mode = True
 
-        data = self._format_row(row)
+        data = self._format_row(row, self.transformer)
         if self.format == Format.BINARY and not self._signature_sent:
             yield from copy_to(self._pgconn, _binary_signature)
             self._signature_sent = True
@@ -128,18 +131,6 @@ class BaseCopy(Generic[ConnectionType]):
         yield from self._finish_gen()
 
     # Support methods
-
-    def _format_row(self, row: Sequence[Any]) -> bytes:
-        """Convert a Python sequence to the data to send for copy"""
-        out: List[Optional[bytes]] = []
-        for item in row:
-            if item is not None:
-                dumper = self.transformer.get_dumper(item, self.format)
-                out.append(dumper.dump(item))
-            else:
-                out.append(None)
-
-        return self._format_copy_row(out)
 
     def _ensure_bytes(self, data: Union[bytes, str]) -> bytes:
         if isinstance(data, bytes):
@@ -245,34 +236,45 @@ class AsyncCopy(BaseCopy["AsyncConnection"]):
             yield data
 
 
-def format_row_text(row: Sequence[Optional[bytes]]) -> bytes:
-    """Convert a row of adapted data to the data to send for text copy"""
-    return (
-        b"\t".join(
-            _bsrepl_re.sub(_bsrepl_sub, item) if item is not None else br"\N"
-            for item in row
-        )
-        + b"\n"
-    )
+def format_row_text(row: Sequence[Any], tx: "Transformer") -> bytes:
+    """Convert a row of objects to the data to send for copy"""
+    if not row:
+        return b"\n"
 
-
-def format_row_binary(
-    row: Sequence[Optional[bytes]],
-    __int2_struct: struct.Struct = struct.Struct("!h"),
-    __int4_struct: struct.Struct = struct.Struct("!i"),
-) -> bytes:
-    """Convert a row of adapted data to the data to send for binary copy"""
-    out = []
-    out.append(__int2_struct.pack(len(row)))
+    out: List[bytes] = []
     for item in row:
         if item is not None:
-            out.append(__int4_struct.pack(len(item)))
-            out.append(item)
+            dumper = tx.get_dumper(item, Format.TEXT)
+            b = dumper.dump(item)
+            out.append(_bsrepl_re.sub(_bsrepl_sub, b))
+        else:
+            out.append(br"\N")
+
+    out[-1] += b"\n"
+    return b"\t".join(out)
+
+
+def _format_row_binary(row: Sequence[Any], tx: "Transformer") -> bytes:
+    """Convert a row of objects to the data to send for binary copy"""
+    if not row:
+        return b"\x00\x00"  # zero columns
+
+    out = []
+    out.append(_pack_int2(len(row)))
+    for item in row:
+        if item is not None:
+            dumper = tx.get_dumper(item, Format.BINARY)
+            b = dumper.dump(item)
+            out.append(_pack_int4(len(b)))
+            out.append(b)
         else:
             out.append(_binary_null)
 
     return b"".join(out)
 
+
+_pack_int2 = struct.Struct("!h").pack
+_pack_int4 = struct.Struct("!i").pack
 
 _binary_signature = (
     # Signature, flags, extra length
@@ -300,3 +302,16 @@ def _bsrepl_sub(
 
 
 _bsrepl_re = re.compile(b"[\b\t\n\v\f\r\\\\]")
+
+
+# Override it with fast object if available
+
+format_row_binary: FormatFunc
+
+if pq.__impl__ == "c":
+    from psycopg3_c import _psycopg3
+
+    format_row_binary = _psycopg3.format_row_binary
+
+else:
+    format_row_binary = _format_row_binary

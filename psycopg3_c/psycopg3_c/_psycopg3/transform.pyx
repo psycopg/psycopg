@@ -17,7 +17,6 @@ from cpython.object cimport PyObject, PyObject_CallFunctionObjArgs
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
 from psycopg3 import errors as e
-from psycopg3.pq import Format
 
 
 # internal structure: you are not supposed to know this. But it's worth some
