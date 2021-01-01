@@ -11,7 +11,8 @@ from cpython.long cimport PyLong_FromString, PyLong_FromLong, PyLong_AsLongLong
 from cpython.long cimport PyLong_FromLongLong, PyLong_FromUnsignedLong
 from cpython.float cimport PyFloat_FromDouble, PyFloat_AsDouble
 
-from psycopg3_c._psycopg3.endian cimport be16toh, be32toh, be64toh, htobe64
+from psycopg3_c._psycopg3.endian cimport (
+    be16toh, be32toh, be64toh, htobe32, htobe64)
 
 cdef extern from "Python.h":
     # work around https://github.com/cython/cython/issues/3909
@@ -53,9 +54,29 @@ cdef class IntDumper(CDumper):
         return rv
 
 
-cdef class IntBinaryDumper(IntDumper):
+cdef class Int4BinaryDumper(CDumper):
 
     format = Format.BINARY
+
+    def __cinit__(self):
+        self.oid = oids.INT4_OID
+
+    cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
+        cdef char *buf = CDumper.ensure_size(rv, offset, sizeof(int32_t))
+        cdef long long val = PyLong_AsLongLong(obj)
+        # swap bytes if needed
+        cdef uint32_t *ptvar = <uint32_t *>(&val)
+        cdef int32_t beval = htobe32(ptvar[0])
+        memcpy(buf, <void *>&beval, sizeof(int32_t))
+        return sizeof(int32_t)
+
+
+cdef class Int8BinaryDumper(CDumper):
+
+    format = Format.BINARY
+
+    def __cinit__(self):
+        self.oid = oids.INT8_OID
 
     cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
         cdef char *buf = CDumper.ensure_size(rv, offset, sizeof(int64_t))
@@ -191,7 +212,7 @@ cdef void register_numeric_c_adapters():
     logger.debug("registering optimised numeric c adapters")
 
     IntDumper.register(int)
-    IntBinaryDumper.register(int)
+    Int8BinaryDumper.register(int)
 
     IntLoader.register(oids.INT2_OID)
     IntLoader.register(oids.INT4_OID)

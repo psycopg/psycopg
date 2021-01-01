@@ -82,15 +82,6 @@ class IntDumper(NumberDumper):
     _oid = builtins["int8"].oid
 
 
-@Dumper.builtin(int)
-class IntBinaryDumper(IntDumper):
-
-    format = Format.BINARY
-
-    def dump(self, obj: int) -> bytes:
-        return _pack_int8(obj)
-
-
 @Dumper.builtin(float)
 class FloatDumper(SpecialValuesDumper):
 
@@ -164,7 +155,7 @@ class Int4BinaryDumper(Int4Dumper):
         return _pack_int4(obj)
 
 
-@Dumper.builtin(Int8)
+@Dumper.builtin(int, Int8)
 class Int8BinaryDumper(Int8Dumper):
 
     format = Format.BINARY
