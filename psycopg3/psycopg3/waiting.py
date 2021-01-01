@@ -48,9 +48,9 @@ def wait_selector(
     Consume *gen*, scheduling `fileno` for completion when it is reported to
     block. Once ready again send the ready state back to *gen*.
     """
-    sel = DefaultSelector()
     try:
         s = next(gen)
+        sel = DefaultSelector()
         while 1:
             sel.register(fileno, s)
             ready = None
@@ -78,9 +78,9 @@ def wait_conn(gen: PQGenConn[RV], timeout: Optional[float] = None) -> RV:
     Behave like in `wait()`, but take the fileno to wait from the generator
     itself, which might change during processing.
     """
-    sel = DefaultSelector()
     try:
         fileno, s = next(gen)
+        sel = DefaultSelector()
         while 1:
             sel.register(fileno, s)
             ready = None
@@ -214,13 +214,14 @@ def wait_epoll(
 
     See also: https://linux.die.net/man/2/epoll_ctl
     """
-    epoll = select.epoll()
     if timeout is None or timeout < 0:
         timeout = 0
     else:
         timeout = int(timeout * 1000.0)
+
     try:
         s = next(gen)
+        epoll = select.epoll()
         evmask = poll_evmasks[s]
         epoll.register(fileno, evmask)
         while 1:
