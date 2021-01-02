@@ -45,11 +45,15 @@ else:
 
 
 class BaseCursor(Generic[ConnectionType]):
-    __slots__ = """
-        _conn format _adapters arraysize _closed _results _pgresult _pos
-        _iresult _rowcount _query _params _transformer
-        __weakref__
-        """.split()
+    # Slots with __weakref__ and generic bases don't work on Py 3.6
+    # https://bugs.python.org/issue41451
+    if sys.version_info >= (3, 7):
+        __slots__ = """
+            _conn format _adapters arraysize _closed _results _pgresult _pos
+            _iresult _rowcount _query _params _transformer
+            __weakref__
+            """.split()
+
     ExecStatus = pq.ExecStatus
 
     _transformer: "Transformer"
