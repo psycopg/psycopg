@@ -50,7 +50,6 @@ class Binary:
         self.obj = obj
 
 
-@Dumper.builtin(Binary)
 class BinaryDumper(Dumper):
 
     format = Format.TEXT

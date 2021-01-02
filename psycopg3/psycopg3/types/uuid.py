@@ -18,7 +18,6 @@ imported = False
 UUID: Callable[..., "uuid.UUID"]
 
 
-@Dumper.builtin("uuid.UUID")
 class UUIDDumper(Dumper):
 
     format = Format.TEXT
@@ -28,7 +27,6 @@ class UUIDDumper(Dumper):
         return obj.hex.encode("utf8")
 
 
-@Dumper.builtin("uuid.UUID")
 class UUIDBinaryDumper(UUIDDumper):
 
     format = Format.BINARY
@@ -37,7 +35,6 @@ class UUIDBinaryDumper(UUIDDumper):
         return obj.bytes
 
 
-@Loader.builtin("uuid")
 class UUIDLoader(Loader):
 
     format = Format.TEXT
@@ -54,7 +51,6 @@ class UUIDLoader(Loader):
         return UUID(data.decode("utf8"))
 
 
-@Loader.builtin("uuid")
 class UUIDBinaryLoader(UUIDLoader):
 
     format = Format.BINARY

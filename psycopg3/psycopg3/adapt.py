@@ -5,7 +5,7 @@ Entry point into the adaptation system.
 # Copyright (C) 2020 The Psycopg Team
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Callable, List, Optional, Type, Union
+from typing import Any, Dict, List, Optional, Type, Union
 from typing import TYPE_CHECKING
 from . import pq
 from . import proto
@@ -72,21 +72,6 @@ class Dumper(ABC):
         adapters = context.adapters if context else global_adapters
         adapters.register_dumper(cls, this_cls)
 
-    @classmethod
-    def builtin(
-        cls, *types: Union[type, str]
-    ) -> Callable[[Type["Dumper"]], Type["Dumper"]]:
-        """
-        Decorator to mark a dumper class as default for a builtin type.
-        """
-
-        def builtin_(dumper: Type["Dumper"]) -> Type["Dumper"]:
-            for cls in types:
-                dumper.register(cls)
-            return dumper
-
-        return builtin_
-
 
 class Loader(ABC):
     """
@@ -107,33 +92,18 @@ class Loader(ABC):
 
     @classmethod
     def register(
-        cls, oid: int, context: Optional[AdaptContext] = None
+        cls, oid: Union[int, str], context: Optional[AdaptContext] = None
     ) -> None:
         """
         Configure *context* to use this loader to convert values with OID *oid*.
         """
+        if isinstance(oid, str):
+            oid = builtins[oid].oid
         adapters = context.adapters if context else global_adapters
         adapters.register_loader(oid, cls)
 
-    @classmethod
-    def builtin(
-        cls, *types: Union[int, str]
-    ) -> Callable[[Type["Loader"]], Type["Loader"]]:
-        """
-        Decorator to mark a loader class as default for a builtin type.
-        """
 
-        def builtin_(loader: Type["Loader"]) -> Type["Loader"]:
-            for cls in types:
-                if isinstance(cls, str):
-                    cls = builtins[cls].oid
-                loader.register(cls)
-            return loader
-
-        return builtin_
-
-
-class AdaptersMap:
+class AdaptersMap(AdaptContext):
     """
     Map oids to Loaders and types to Dumpers.
 
@@ -157,6 +127,15 @@ class AdaptersMap:
             self._own_dumpers = [True, True]
             self._loaders = [{}, {}]
             self._own_loaders = [True, True]
+
+    # implement the AdaptContext protocol too
+    @property
+    def adapters(self) -> "AdaptersMap":
+        return self
+
+    @property
+    def connection(self) -> Optional["BaseConnection"]:
+        return None
 
     def register_dumper(
         self, cls: Union[type, str], dumper: Type[Dumper]
@@ -205,8 +184,7 @@ class AdaptersMap:
             if scls in dumpers:
                 return dumpers[scls]
 
-        # If the adapter is not found, look for its name as a string
-        for scls in cls.__mro__:
+            # If the adapter is not found, look for its name as a string
             fqn = scls.__module__ + "." + scls.__qualname__
             if fqn in dumpers:
                 # Replace the class name with the class itself

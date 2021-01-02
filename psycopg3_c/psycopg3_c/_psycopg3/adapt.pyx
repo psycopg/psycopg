@@ -160,10 +160,14 @@ cdef class CLoader:
     @classmethod
     def register(
         cls,
-        int oid,
+        oid: Union[int, str],
         context: Optional["AdaptContext"] = None,
         int format = Format.TEXT,
     ) -> None:
+        if isinstance(oid, str):
+            from psycopg3.oids import builtins
+            oid = builtins[oid].oid
+
         if context is not None:
             adapters = context.adapters
         else:

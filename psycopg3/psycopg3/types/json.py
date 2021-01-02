@@ -39,27 +39,23 @@ class _JsonDumper(Dumper):
         return obj.dumps().encode("utf-8")
 
 
-@Dumper.builtin(Json)
 class JsonDumper(_JsonDumper):
 
     format = Format.TEXT
     _oid = builtins["json"].oid
 
 
-@Dumper.builtin(Json)
 class JsonBinaryDumper(JsonDumper):
 
     format = Format.BINARY
 
 
-@Dumper.builtin(Jsonb)
 class JsonbDumper(_JsonDumper):
 
     format = Format.TEXT
     _oid = builtins["jsonb"].oid
 
 
-@Dumper.builtin(Jsonb)
 class JsonbBinaryDumper(JsonbDumper):
 
     format = Format.BINARY
@@ -68,7 +64,6 @@ class JsonbBinaryDumper(JsonbDumper):
         return b"\x01" + obj.dumps().encode("utf-8")
 
 
-@Loader.builtin("json", "jsonb")
 class JsonLoader(Loader):
 
     format = Format.TEXT
@@ -77,13 +72,11 @@ class JsonLoader(Loader):
         return json.loads(data)
 
 
-@Loader.builtin("json")
 class JsonBinaryLoader(JsonLoader):
 
     format = Format.BINARY
 
 
-@Loader.builtin("jsonb")
 class JsonbBinaryLoader(Loader):
 
     format = Format.BINARY

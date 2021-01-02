@@ -182,7 +182,6 @@ class SequenceDumper(Dumper):
     _re_esc = re.compile(br"([\\\"])")
 
 
-@Dumper.builtin(tuple)
 class TupleDumper(SequenceDumper):
 
     # Should be this, but it doesn't work
@@ -231,7 +230,6 @@ class BaseCompositeLoader(Loader):
     _re_undouble = re.compile(br'(["\\])\1')
 
 
-@Loader.builtin("record")
 class RecordLoader(BaseCompositeLoader):
     def load(self, data: bytes) -> Tuple[Any, ...]:
         if data == b"()":
@@ -248,7 +246,6 @@ _struct_len = struct.Struct("!i")
 _struct_oidlen = struct.Struct("!Ii")
 
 
-@Loader.builtin("record")
 class RecordBinaryLoader(Loader):
 
     format = Format.BINARY

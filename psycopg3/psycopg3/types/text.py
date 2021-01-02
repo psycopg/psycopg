@@ -7,7 +7,7 @@ Adapters for textual types.
 from typing import Optional, Union, TYPE_CHECKING
 
 from ..pq import Escaping
-from ..oids import builtins, INVALID_OID
+from ..oids import builtins
 from ..adapt import Dumper, Loader, Format
 from ..proto import AdaptContext
 from ..errors import DataError
@@ -30,7 +30,6 @@ class _StringDumper(Dumper):
                 self._encoding = enc
 
 
-@Dumper.builtin(str)
 class StringBinaryDumper(_StringDumper):
 
     format = Format.BINARY
@@ -40,7 +39,6 @@ class StringBinaryDumper(_StringDumper):
         return obj.encode(self._encoding)
 
 
-@Dumper.builtin(str)
 class StringDumper(_StringDumper):
 
     format = Format.TEXT
@@ -54,7 +52,6 @@ class StringDumper(_StringDumper):
             return obj.encode(self._encoding)
 
 
-@Loader.builtin(INVALID_OID, "bpchar", "name", "text", "varchar")
 class TextLoader(Loader):
 
     format = Format.TEXT
@@ -75,13 +72,11 @@ class TextLoader(Loader):
             return data
 
 
-@Loader.builtin("bpchar", "name", "text", "varchar")
 class TextBinaryLoader(TextLoader):
 
     format = Format.BINARY
 
 
-@Dumper.builtin(bytes, bytearray, memoryview)
 class BytesDumper(Dumper):
 
     format = Format.TEXT
@@ -99,7 +94,6 @@ class BytesDumper(Dumper):
         return self._esc.escape_bytea(obj)
 
 
-@Dumper.builtin(bytes, bytearray, memoryview)
 class BytesBinaryDumper(Dumper):
 
     format = Format.BINARY
@@ -112,7 +106,6 @@ class BytesBinaryDumper(Dumper):
         return obj
 
 
-@Loader.builtin("bytea")
 class ByteaLoader(Loader):
 
     format = Format.TEXT
@@ -127,7 +120,6 @@ class ByteaLoader(Loader):
         return self._escaping.unescape_bytea(data)
 
 
-@Loader.builtin("bytea", INVALID_OID)
 class ByteaBinaryLoader(Loader):
 
     format = Format.BINARY
