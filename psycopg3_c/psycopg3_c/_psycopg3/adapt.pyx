@@ -15,6 +15,7 @@ equivalent C implementations.
 
 from typing import Any
 
+cimport cython
 from cpython.bytes cimport PyBytes_AsStringAndSize
 from cpython.bytearray cimport PyByteArray_FromStringAndSize, PyByteArray_Resize
 from cpython.bytearray cimport PyByteArray_GET_SIZE, PyByteArray_AS_STRING
@@ -29,6 +30,7 @@ import logging
 logger = logging.getLogger("psycopg3.adapt")
 
 
+@cython.freelist(8)
 cdef class CDumper:
     cdef object cls
     cdef public libpq.Oid oid
@@ -140,9 +142,10 @@ cdef class CDumper:
         return PyByteArray_AS_STRING(ba) + offset
 
 
+@cython.freelist(8)
 cdef class CLoader:
     cdef public libpq.Oid oid
-    cdef public connection
+    cdef readonly connection
 
     def __init__(self, int oid, context: Optional[AdaptContext] = None):
         self.oid = oid
@@ -174,17 +177,3 @@ cdef class CLoader:
             from psycopg3.adapt import global_adapters as adapters
 
         adapters.register_loader(oid, cls)
-
-
-def register_builtin_c_adapters():
-    """
-    Register all the builtin optimized adpaters.
-
-    This function is supposed to be called only once, after the Python adapters
-    are registered.
-
-    """
-    logger.debug("registering optimised c adapters")
-    register_numeric_c_adapters()
-    register_singletons_c_adapters()
-    register_text_c_adapters()

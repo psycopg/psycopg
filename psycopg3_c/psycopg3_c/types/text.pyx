@@ -4,6 +4,8 @@ Cython adapters for textual types.
 
 # Copyright (C) 2020 The Psycopg Team
 
+cimport cython
+
 from libc.string cimport memcpy, memchr
 from cpython.bytes cimport PyBytes_AsString, PyBytes_AsStringAndSize
 from cpython.unicode cimport (
@@ -41,11 +43,6 @@ cdef class _StringDumper(CDumper):
             ):
                 self.is_utf8 = 1
 
-
-cdef class StringBinaryDumper(_StringDumper):
-
-    format = Format.BINARY
-
     cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
         # the server will raise DataError subclass if the string contains 0x00
         cdef Py_ssize_t size;
@@ -71,7 +68,14 @@ cdef class StringBinaryDumper(_StringDumper):
         return size
 
 
-cdef class StringDumper(StringBinaryDumper):
+@cython.final
+cdef class StringBinaryDumper(_StringDumper):
+
+    format = Format.BINARY
+
+
+@cython.final
+cdef class StringDumper(_StringDumper):
 
     format = Format.TEXT
 
@@ -88,7 +92,7 @@ cdef class StringDumper(StringBinaryDumper):
         return size
 
 
-cdef class TextLoader(CLoader):
+cdef class _TextLoader(CLoader):
 
     format = Format.TEXT
 
@@ -119,11 +123,19 @@ cdef class TextLoader(CLoader):
         else:
             return data[:length]
 
+@cython.final
+cdef class TextLoader(_TextLoader):
 
-cdef class TextBinaryLoader(TextLoader):
+    format = Format.TEXT
+
+
+@cython.final
+cdef class TextBinaryLoader(_TextLoader):
+
     format = Format.BINARY
 
 
+@cython.final
 cdef class BytesDumper(CDumper):
 
     format = Format.TEXT
@@ -158,6 +170,7 @@ cdef class BytesDumper(CDumper):
         return len_out
 
 
+@cython.final
 cdef class BytesBinaryDumper(CDumper):
 
     format = Format.BINARY
@@ -175,6 +188,7 @@ cdef class BytesBinaryDumper(CDumper):
         return  size
 
 
+@cython.final
 cdef class ByteaLoader(CLoader):
 
     format = Format.TEXT
@@ -193,37 +207,10 @@ cdef class ByteaLoader(CLoader):
         return rv
 
 
+@cython.final
 cdef class ByteaBinaryLoader(CLoader):
 
     format = Format.BINARY
 
     cdef object cload(self, const char *data, size_t length):
         return data[:length]
-
-
-cdef void register_text_c_adapters():
-    logger.debug("registering optimised text c adapters")
-
-    StringDumper.register(str)
-    StringBinaryDumper.register(str)
-
-    TextLoader.register(oids.INVALID_OID)
-    TextLoader.register(oids.BPCHAR_OID)
-    TextLoader.register(oids.NAME_OID)
-    TextLoader.register(oids.TEXT_OID)
-    TextLoader.register(oids.VARCHAR_OID)
-    TextBinaryLoader.register(oids.BPCHAR_OID)
-    TextBinaryLoader.register(oids.NAME_OID)
-    TextBinaryLoader.register(oids.TEXT_OID)
-    TextBinaryLoader.register(oids.VARCHAR_OID)
-
-    BytesDumper.register(bytes)
-    BytesDumper.register(bytearray)
-    BytesDumper.register(memoryview)
-    BytesBinaryDumper.register(bytes)
-    BytesBinaryDumper.register(bytearray)
-    BytesBinaryDumper.register(memoryview)
-
-    ByteaLoader.register(oids.BYTEA_OID)
-    ByteaBinaryLoader.register(oids.BYTEA_OID)
-    ByteaBinaryLoader.register(oids.INVALID_OID)

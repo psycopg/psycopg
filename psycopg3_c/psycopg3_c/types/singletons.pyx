@@ -4,9 +4,12 @@ Cython adapters for boolean.
 
 # Copyright (C) 2020 The Psycopg Team
 
+cimport cython
+
 from psycopg3.pq import Format
 
 
+@cython.final
 cdef class BoolDumper(CDumper):
 
     format = Format.TEXT
@@ -41,9 +44,13 @@ cdef class BoolDumper(CDumper):
             return b"true" if obj else b"false"
 
 
-cdef class BoolBinaryDumper(BoolDumper):
+@cython.final
+cdef class BoolBinaryDumper(CDumper):
 
     format = Format.BINARY
+
+    def __cinit__(self):
+        self.oid = oids.BOOL_OID
 
     cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
         CDumper.ensure_size(rv, offset, 1)
@@ -64,6 +71,7 @@ cdef class BoolBinaryDumper(BoolDumper):
         return 1
 
 
+@cython.final
 cdef class BoolLoader(CLoader):
 
     format = Format.TEXT
@@ -73,19 +81,10 @@ cdef class BoolLoader(CLoader):
         return True if data[0] == b't' else False
 
 
+@cython.final
 cdef class BoolBinaryLoader(CLoader):
 
     format = Format.BINARY
 
     cdef object cload(self, const char *data, size_t length):
         return True if data[0] else False
-
-
-cdef void register_singletons_c_adapters():
-    logger.debug("registering optimised singletons c adapters")
-
-    BoolDumper.register(bool)
-    BoolBinaryDumper.register(bool)
-
-    BoolLoader.register(oids.BOOL_OID)
-    BoolBinaryLoader.register(oids.BOOL_OID)

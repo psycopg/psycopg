@@ -5,8 +5,8 @@ Entry point into the adaptation system.
 # Copyright (C) 2020 The Psycopg Team
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional, Type, Union
-from typing import TYPE_CHECKING
+from typing import Any, Dict, List, Optional, Type, TypeVar, Union
+from typing import cast, TYPE_CHECKING
 from . import pq
 from . import proto
 from .pq import Format as Format
@@ -16,6 +16,8 @@ from .proto import AdaptContext
 if TYPE_CHECKING:
     from .connection import BaseConnection
 
+RV = TypeVar("RV")
+
 
 class Dumper(ABC):
     """
@@ -23,7 +25,6 @@ class Dumper(ABC):
     """
 
     format: Format
-    connection: Optional["BaseConnection"] = None
 
     # A class-wide oid, which will be used by default by instances unless
     # the subclass overrides it in init.
@@ -31,7 +32,9 @@ class Dumper(ABC):
 
     def __init__(self, cls: type, context: Optional[AdaptContext] = None):
         self.cls = cls
-        self.connection = context.connection if context else None
+        self.connection: Optional["BaseConnection"] = (
+            context.connection if context else None
+        )
 
         self.oid = self._oid
         """The oid to pass to the server, if known."""
@@ -79,11 +82,12 @@ class Loader(ABC):
     """
 
     format: Format
-    connection: Optional["BaseConnection"]
 
     def __init__(self, oid: int, context: Optional[AdaptContext] = None):
         self.oid = oid
-        self.connection = context.connection if context else None
+        self.connection: Optional["BaseConnection"] = (
+            context.connection if context else None
+        )
 
     @abstractmethod
     def load(self, data: bytes) -> Any:
@@ -115,6 +119,9 @@ class AdaptersMap(AdaptContext):
 
     _dumpers: List[Dict[Union[type, str], Type["Dumper"]]]
     _loaders: List[Dict[int, Type["Loader"]]]
+
+    # Record if a dumper or loader has an optimised version.
+    _optimised: Dict[type, type] = {}
 
     def __init__(self, extend: Optional["AdaptersMap"] = None):
         if extend:
@@ -148,6 +155,7 @@ class AdaptersMap(AdaptContext):
                 f"dumpers should be registered on classes, got {cls} instead"
             )
 
+        dumper = self._get_optimised(dumper)
         fmt = dumper.format
         if not self._own_dumpers[fmt]:
             self._dumpers[fmt] = self._dumpers[fmt].copy()
@@ -164,6 +172,7 @@ class AdaptersMap(AdaptContext):
                 f"loaders should be registered on oid, got {oid} instead"
             )
 
+        loader = self._get_optimised(loader)
         fmt = loader.format
         if not self._own_loaders[fmt]:
             self._loaders[fmt] = self._loaders[fmt].copy()
@@ -200,6 +209,32 @@ class AdaptersMap(AdaptContext):
         Return None if not found.
         """
         return self._loaders[format].get(oid)
+
+    @classmethod
+    def _get_optimised(self, cls: Type[RV]) -> Type[RV]:
+        """Return the optimised version of a Dumper or Loader class.
+
+        Return the input class itself if there is no optimised version.
+        """
+        try:
+            return self._optimised[cls]
+        except KeyError:
+            pass
+
+        # Check if the class comes from psycopg3.types and there is a class
+        # with the same name in psycopg3_c._psycopg3.
+        if pq.__impl__ == "c":
+            from psycopg3 import types
+            from psycopg3_c import _psycopg3
+
+            if cls.__module__.startswith(types.__name__):
+                new = cast(Type[RV], getattr(_psycopg3, cls.__name__, None))
+                if new:
+                    self._optimised[cls] = new
+                    return new
+
+        self._optimised[cls] = cls
+        return cls
 
 
 global_adapters = AdaptersMap()

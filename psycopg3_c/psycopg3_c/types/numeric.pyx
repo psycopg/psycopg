@@ -4,6 +4,8 @@ Cython adapters for numeric types.
 
 # Copyright (C) 2020 The Psycopg Team
 
+cimport cython
+
 from libc.stdint cimport *
 from libc.string cimport memcpy, strlen
 from cpython.mem cimport PyMem_Free
@@ -25,6 +27,7 @@ cdef extern from "Python.h":
     int Py_DTSF_ADD_DOT_0
 
 
+# @cython.final  # TODO? causes compile warnings
 cdef class IntDumper(CDumper):
 
     format = Format.TEXT
@@ -54,6 +57,7 @@ cdef class IntDumper(CDumper):
         return rv
 
 
+@cython.final
 cdef class Int4BinaryDumper(CDumper):
 
     format = Format.BINARY
@@ -71,6 +75,7 @@ cdef class Int4BinaryDumper(CDumper):
         return sizeof(int32_t)
 
 
+@cython.final
 cdef class Int8BinaryDumper(CDumper):
 
     format = Format.BINARY
@@ -88,6 +93,7 @@ cdef class Int8BinaryDumper(CDumper):
         return sizeof(int64_t)
 
 
+@cython.final
 cdef class IntLoader(CLoader):
 
     format = Format.TEXT
@@ -96,6 +102,7 @@ cdef class IntLoader(CLoader):
         return PyLong_FromString(data, NULL, 10)
 
 
+@cython.final
 cdef class Int2BinaryLoader(CLoader):
 
     format = Format.BINARY
@@ -104,6 +111,7 @@ cdef class Int2BinaryLoader(CLoader):
         return PyLong_FromLong(<int16_t>be16toh((<uint16_t *>data)[0]))
 
 
+@cython.final
 cdef class Int4BinaryLoader(CLoader):
 
     format = Format.BINARY
@@ -112,6 +120,7 @@ cdef class Int4BinaryLoader(CLoader):
         return PyLong_FromLong(<int32_t>be32toh((<uint32_t *>data)[0]))
 
 
+@cython.final
 cdef class Int8BinaryLoader(CLoader):
 
     format = Format.BINARY
@@ -120,6 +129,7 @@ cdef class Int8BinaryLoader(CLoader):
         return PyLong_FromLongLong(<int64_t>be64toh((<uint64_t *>data)[0]))
 
 
+@cython.final
 cdef class OidBinaryLoader(CLoader):
 
     format = Format.BINARY
@@ -128,6 +138,7 @@ cdef class OidBinaryLoader(CLoader):
         return PyLong_FromUnsignedLong(be32toh((<uint32_t *>data)[0]))
 
 
+@cython.final
 cdef class FloatDumper(CDumper):
 
     format = Format.TEXT
@@ -160,6 +171,7 @@ cdef dict _special_float = {
 }
 
 
+@cython.final
 cdef class FloatBinaryDumper(CDumper):
 
     format = Format.BINARY
@@ -176,6 +188,7 @@ cdef class FloatBinaryDumper(CDumper):
         return sizeof(swp)
 
 
+@cython.final
 cdef class FloatLoader(CLoader):
 
     format = Format.TEXT
@@ -186,6 +199,7 @@ cdef class FloatLoader(CLoader):
         return PyFloat_FromDouble(d)
 
 
+@cython.final
 cdef class Float4BinaryLoader(CLoader):
 
     format = Format.BINARY
@@ -198,6 +212,7 @@ cdef class Float4BinaryLoader(CLoader):
         return PyFloat_FromDouble((<float *>swp)[0])
 
 
+@cython.final
 cdef class Float8BinaryLoader(CLoader):
 
     format = Format.BINARY
@@ -206,27 +221,3 @@ cdef class Float8BinaryLoader(CLoader):
         cdef uint64_t asint = be64toh((<uint64_t *>data)[0])
         cdef char *swp = <char *>&asint
         return PyFloat_FromDouble((<double *>swp)[0])
-
-
-cdef void register_numeric_c_adapters():
-    logger.debug("registering optimised numeric c adapters")
-
-    IntDumper.register(int)
-    Int8BinaryDumper.register(int)
-
-    IntLoader.register(oids.INT2_OID)
-    IntLoader.register(oids.INT4_OID)
-    IntLoader.register(oids.INT8_OID)
-    IntLoader.register(oids.OID_OID)
-    Int2BinaryLoader.register(oids.INT2_OID)
-    Int4BinaryLoader.register(oids.INT4_OID)
-    Int8BinaryLoader.register(oids.INT8_OID)
-    OidBinaryLoader.register(oids.OID_OID)
-
-    FloatDumper.register(float)
-    FloatBinaryDumper.register(float)
-
-    FloatLoader.register(oids.FLOAT4_OID)
-    FloatLoader.register(oids.FLOAT8_OID)
-    Float4BinaryLoader.register(oids.FLOAT4_OID)
-    Float8BinaryLoader.register(oids.FLOAT8_OID)

@@ -72,6 +72,30 @@ def test_dump_subclass(conn, fmt_out):
     assert cur.fetchone() == ("hello", "world")
 
 
+def test_subclass_dumper(conn):
+    # This might be a C fast object: make sure that the Python code is called
+    from psycopg3.types import StringDumper
+
+    class MyStringDumper(StringDumper):
+        def dump(self, obj):
+            return (obj * 2).encode("utf-8")
+
+    MyStringDumper.register(str, conn)
+    assert conn.execute("select %s", ["hello"]).fetchone()[0] == "hellohello"
+
+
+def test_subclass_loader(conn):
+    # This might be a C fast object: make sure that the Python code is called
+    from psycopg3.types import TextLoader
+
+    class MyTextLoader(TextLoader):
+        def load(self, data):
+            return (data * 2).decode("utf-8")
+
+    MyTextLoader.register("text", conn)
+    assert conn.execute("select 'hello'::text").fetchone()[0] == "hellohello"
+
+
 @pytest.mark.parametrize(
     "data, format, type, result",
     [

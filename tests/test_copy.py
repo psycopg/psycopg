@@ -16,7 +16,7 @@ sample_records = [(Int4(10), Int4(20), "hello"), (Int4(40), None, "world")]
 
 sample_values = "values (10::int, 20::int, 'hello'::text), (40, NULL, 'world')"
 
-sample_tabledef = "col1 int primary key, col2 int, data text"
+sample_tabledef = "col1 serial primary key, col2 int, data text"
 
 sample_text = b"""\
 10\t20\thello
@@ -145,6 +145,31 @@ def test_copy_in_empty(conn, format):
 
     assert conn.pgconn.transaction_status == conn.TransactionStatus.INTRANS
     assert cur.rowcount == 0
+
+
+@pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
+def test_subclass_adapter(conn, format):
+    if format == Format.TEXT:
+        from psycopg3.types import StringDumper as BaseDumper
+    else:
+        from psycopg3.types import StringBinaryDumper as BaseDumper
+
+    class MyStringDumper(BaseDumper):
+        def dump(self, obj):
+            return super().dump(obj) * 2
+
+    MyStringDumper.register(str, conn)
+
+    cur = conn.cursor()
+    ensure_table(cur, sample_tabledef)
+
+    with cur.copy(
+        f"copy copy_in (data) from stdin (format {format.name})"
+    ) as copy:
+        copy.write_row(("hello",))
+
+    rec = cur.execute("select data from copy_in").fetchone()
+    assert rec[0] == "hellohello"
 
 
 @pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])

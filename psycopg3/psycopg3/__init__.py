@@ -33,13 +33,6 @@ paramstyle = "pyformat"
 BinaryDumper.register(Binary, global_adapters)  # dbapi20
 
 
-# Override adapters with fast version if available
-if pq.__impl__ == "c":
-    from psycopg3_c import _psycopg3
-
-    _psycopg3.register_builtin_c_adapters()
-
-
 # Note: defining the exported methods helps both Sphynx in documenting that
 # this is the canonical place to obtain them and should be used by MyPy too,
 # so that function signatures are consistent with the documentation.
