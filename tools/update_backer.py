@@ -6,7 +6,7 @@ import sys
 import logging
 import requests
 from pathlib import Path
-from ruamel.yaml import YAML
+from ruamel.yaml import YAML  # pip install ruamel.yaml
 
 logger = logging.getLogger()
 logging.basicConfig(

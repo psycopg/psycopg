@@ -14,6 +14,7 @@
   name: Command Prompt, Inc.
   website: https://www.commandprompt.com
 
+
 - username: genropy
   by: gporcari
   tier: mid
@@ -35,10 +36,17 @@
   website: http://www.phenopolis.co.uk
 
 - username: mailupinc
+  tier: mid
   avatar: https://avatars1.githubusercontent.com/u/72260631?v=4
   name: BEE
-  tier: mid
   website: https://beefree.io
+
+- username: MaterializeInc
+  tier: mid
+  avatar: https://avatars1.githubusercontent.com/u/47674186?v=4
+  name: Materialize, Inc.
+  website: http://materialize.io
+
 
 - username: taifu
   avatar: https://avatars1.githubusercontent.com/u/115712?v=4
