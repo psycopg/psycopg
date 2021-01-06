@@ -6,9 +6,10 @@ psycopg3 copy support
 
 import re
 import struct
-from typing import TYPE_CHECKING, AsyncIterator, Callable, Iterator, Generic
-from typing import Any, Dict, List, Match, Optional, Sequence, Type, Union
 from types import TracebackType
+from typing import TYPE_CHECKING, AsyncIterator, Iterator, Generic
+from typing import Any, Dict, Match, Optional, Sequence, Type, Union
+from typing_extensions import Protocol
 
 from . import pq
 from .pq import Format, ExecStatus
@@ -20,7 +21,17 @@ if TYPE_CHECKING:
     from .cursor import BaseCursor  # noqa: F401
     from .connection import Connection, AsyncConnection  # noqa: F401
 
-FormatFunc = Callable[[Sequence[Any], Transformer], Union[bytes, bytearray]]
+
+class FormatFunc(Protocol):
+    """The type of a function to format copy data to a bytearray."""
+
+    def __call__(
+        self,
+        row: Sequence[Any],
+        tx: Transformer,
+        out: Optional[bytearray] = None,
+    ) -> bytearray:
+        ...
 
 
 class BaseCopy(Generic[ConnectionType]):
@@ -39,6 +50,8 @@ class BaseCopy(Generic[ConnectionType]):
         self._encoding = self.connection.client_encoding
         self._signature_sent = False
         self._row_mode = False  # true if the user is using send_row()
+        self._write_buffer = bytearray()
+        self._write_buffer_size = 32 * 1024
         self._finished = False
 
         self._format_row: FormatFunc
@@ -79,20 +92,25 @@ class BaseCopy(Generic[ConnectionType]):
         # to take care of the end-of-copy marker too
         self._row_mode = True
 
-        data = self._format_row(row, self.transformer)
         if self.format == Format.BINARY and not self._signature_sent:
-            yield from copy_to(self._pgconn, _binary_signature)
+            self._write_buffer += _binary_signature
             self._signature_sent = True
 
-        yield from copy_to(self._pgconn, data)
+        self._format_row(row, self.transformer, self._write_buffer)
+        if len(self._write_buffer) > self._write_buffer_size:
+            yield from copy_to(self._pgconn, self._write_buffer)
+            self._write_buffer.clear()
 
     def _finish_gen(self, error: str = "") -> PQGen[None]:
-        berr = (
-            error.encode(self.connection.client_encoding, "replace")
-            if error
-            else None
-        )
-        res = yield from copy_end(self._pgconn, berr)
+        if error:
+            berr = error.encode(self.connection.client_encoding, "replace")
+            res = yield from copy_end(self._pgconn, berr)
+        else:
+            if self._write_buffer:
+                yield from copy_to(self._pgconn, self._write_buffer)
+                self._write_buffer.clear()
+            res = yield from copy_end(self._pgconn, None)
+
         nrows = res.command_tuples
         self.cursor._rowcount = nrows if nrows is not None else -1
         self._finished = True
@@ -117,8 +135,8 @@ class BaseCopy(Generic[ConnectionType]):
             # If we have sent no data we need to send the signature
             # and the trailer
             if not self._signature_sent:
-                yield from copy_to(self._pgconn, _binary_signature)
-                yield from copy_to(self._pgconn, _binary_trailer)
+                self._write_buffer += _binary_signature
+                self._write_buffer += _binary_trailer
             elif self._row_mode:
                 # if we have sent data already, we have sent the signature too
                 # (either with the first row, or we assume that in block mode
@@ -126,7 +144,7 @@ class BaseCopy(Generic[ConnectionType]):
                 # Write the trailer only if we are sending rows (with the
                 # assumption that who is copying binary data is sending the
                 # whole format).
-                yield from copy_to(self._pgconn, _binary_trailer)
+                self._write_buffer += _binary_trailer
 
         yield from self._finish_gen()
 
@@ -236,41 +254,48 @@ class AsyncCopy(BaseCopy["AsyncConnection"]):
             yield data
 
 
-def format_row_text(row: Sequence[Any], tx: "Transformer") -> bytes:
-    """Convert a row of objects to the data to send for copy"""
-    if not row:
-        return b"\n"
+def format_row_text(
+    row: Sequence[Any], tx: Transformer, out: Optional[bytearray] = None
+) -> bytearray:
+    """Convert a row of objects to the data to send for copy."""
+    if out is None:
+        out = bytearray()
 
-    out: List[bytes] = []
+    if not row:
+        out += b"\n"
+        return out
+
     for item in row:
         if item is not None:
             dumper = tx.get_dumper(item, Format.TEXT)
             b = dumper.dump(item)
-            out.append(_bsrepl_re.sub(_bsrepl_sub, b))
+            out += _bsrepl_re.sub(_bsrepl_sub, b)
         else:
-            out.append(br"\N")
+            out += br"\N"
+        out += b"\t"
 
-    out[-1] += b"\n"
-    return b"\t".join(out)
+    out[-1:] = b"\n"
+    return out
 
 
-def _format_row_binary(row: Sequence[Any], tx: "Transformer") -> bytes:
-    """Convert a row of objects to the data to send for binary copy"""
-    if not row:
-        return b"\x00\x00"  # zero columns
+def _format_row_binary(
+    row: Sequence[Any], tx: Transformer, out: Optional[bytearray] = None
+) -> bytearray:
+    """Convert a row of objects to the data to send for binary copy."""
+    if out is None:
+        out = bytearray()
 
-    out = []
-    out.append(_pack_int2(len(row)))
+    out += _pack_int2(len(row))
     for item in row:
         if item is not None:
             dumper = tx.get_dumper(item, Format.BINARY)
             b = dumper.dump(item)
-            out.append(_pack_int4(len(b)))
-            out.append(b)
+            out += _pack_int4(len(b))
+            out += b
         else:
-            out.append(_binary_null)
+            out += _binary_null
 
-    return b"".join(out)
+    return out
 
 
 _pack_int2 = struct.Struct("!h").pack

@@ -521,6 +521,9 @@ class PGconn:
             return None
 
     def put_copy_data(self, buffer: bytes) -> int:
+        # TODO: should be done without copy
+        if not isinstance(buffer, bytes):
+            buffer = bytes(buffer)
         rv = impl.PQputCopyData(self.pgconn_ptr, buffer, len(buffer))
         if rv < 0:
             raise PQerror(f"sending copy data failed: {error_message(self)}")
