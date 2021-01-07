@@ -27,6 +27,16 @@ cdef extern from "Python.h":
     int Py_DTSF_ADD_DOT_0
 
 
+# defined in numutils.c
+cdef extern from *:
+    """
+#define MAXINT8LEN 20
+int pg_lltoa(int64_t value, char *a);
+    """
+    int MAXINT8LEN
+    int pg_lltoa(int64_t value, char *a)
+
+
 # @cython.final  # TODO? causes compile warnings
 cdef class IntDumper(CDumper):
 
@@ -36,10 +46,9 @@ cdef class IntDumper(CDumper):
         self.oid = oids.INT8_OID
 
     cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
-        cdef int size = 22  # max int as string
-        cdef char *buf = CDumper.ensure_size(rv, offset, size)
+        cdef char *buf = CDumper.ensure_size(rv, offset, MAXINT8LEN + 1)
         cdef long long val = PyLong_AsLongLong(obj)
-        cdef int written = PyOS_snprintf(buf, size, "%lld", val)
+        cdef int written = pg_lltoa(val, buf)
         return written
 
     def quote(self, obj) -> bytearray:

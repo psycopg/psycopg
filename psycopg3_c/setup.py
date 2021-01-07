@@ -57,7 +57,7 @@ class psycopg3_build_ext(build_ext):
             for ext in self.distribution.ext_modules:
                 for i in range(len(ext.sources)):
                     base, fext = os.path.splitext(ext.sources[i])
-                    if fext == ".c":
+                    if fext == ".c" and os.path.exists(base + ".pyx"):
                         ext.sources[i] = base + ".pyx"
 
             self.distribution.ext_modules = cythonize(
@@ -75,7 +75,10 @@ class psycopg3_build_ext(build_ext):
 # Some details missing, to be finished by psycopg3_build_ext.finalize_options
 pgext = Extension(
     "psycopg3_c._psycopg3",
-    ["psycopg3_c/_psycopg3.c"],
+    [
+        "psycopg3_c/_psycopg3.c",
+        "psycopg3_c/types/numutils.c",
+    ],
     libraries=["pq"],
     include_dirs=[],
 )
