@@ -34,15 +34,12 @@ logger = logging.getLogger("psycopg3.adapt")
 cdef class CDumper:
     cdef object cls
     cdef public libpq.Oid oid
-    cdef readonly object connection
     cdef pq.PGconn _pgconn
 
     def __init__(self, cls: type, context: Optional[AdaptContext] = None):
         self.cls = cls
-        self.connection = context.connection if context is not None else None
-        self._pgconn = (
-            self.connection.pgconn if self.connection is not None else None
-        )
+        conn = context.connection if context is not None else None
+        self._pgconn = conn.pgconn if conn is not None else None
 
         # default oid is implicitly set to 0, subclasses may override it
         # PG 9.6 goes a bit bonker sending unknown oids, so use text instead
@@ -145,11 +142,12 @@ cdef class CDumper:
 @cython.freelist(8)
 cdef class CLoader:
     cdef public libpq.Oid oid
-    cdef readonly connection
+    cdef pq.PGconn _pgconn
 
     def __init__(self, int oid, context: Optional[AdaptContext] = None):
         self.oid = oid
-        self.connection = context.connection if context is not None else None
+        conn = context.connection if context is not None else None
+        self._pgconn = conn.pgconn if conn is not None else None
 
     cdef object cload(self, const char *data, size_t length):
         raise NotImplementedError()

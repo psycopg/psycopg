@@ -17,6 +17,7 @@ from cpython.unicode cimport (
 )
 
 from psycopg3_c.pq cimport libpq, Escaping, _buffer_as_string_and_size
+from psycopg3.encodings import pg2py
 
 cdef extern from "Python.h":
     const char *PyUnicode_AsUTF8AndSize(unicode obj, Py_ssize_t *size)
@@ -32,16 +33,18 @@ cdef class _StringDumper(CDumper):
 
         self.is_utf8 = 0
         self.encoding = "utf-8"
+        cdef const char *pgenc
 
-        conn = self.connection
-        if conn is not None:
-            self._bytes_encoding = conn.client_encoding.encode("utf-8")
-            self.encoding = PyBytes_AsString(self._bytes_encoding)
-            if (
-                self._bytes_encoding == b"utf-8"
-                or self._bytes_encoding == b"ascii"
-            ):
+        if self._pgconn is not None:
+            pgenc = libpq.PQparameterStatus(self._pgconn.pgconn_ptr, b"client_encoding")
+            if pgenc == NULL or pgenc == b"UTF8":
+                self._bytes_encoding = b"utf-8"
                 self.is_utf8 = 1
+            else:
+                self._bytes_encoding = pg2py(pgenc).encode("utf-8")
+                if self._bytes_encoding == b"ascii":
+                    self.is_utf8 = 1
+            self.encoding = PyBytes_AsString(self._bytes_encoding)
 
     cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
         # the server will raise DataError subclass if the string contains 0x00
@@ -105,15 +108,20 @@ cdef class _TextLoader(CLoader):
 
         self.is_utf8 = 0
         self.encoding = "utf-8"
+        cdef const char *pgenc
 
-        conn = self.connection
-        if conn is not None:
-            self._bytes_encoding = conn.client_encoding.encode("utf-8")
-            self.encoding = PyBytes_AsString(self._bytes_encoding)
-            if self._bytes_encoding == b"utf-8":
+        if self._pgconn is not None:
+            pgenc = libpq.PQparameterStatus(self._pgconn.pgconn_ptr, b"client_encoding")
+            if pgenc == NULL or pgenc == b"UTF8":
+                self._bytes_encoding = b"utf-8"
                 self.is_utf8 = 1
-            elif self._bytes_encoding == b"ascii":
+            else:
+                self._bytes_encoding = pg2py(pgenc).encode("utf-8")
+
+            if pgenc == b"SQL_ASCII":
                 self.encoding = NULL
+            else:
+                self.encoding = PyBytes_AsString(self._bytes_encoding)
 
     cdef object cload(self, const char *data, size_t length):
         if self.is_utf8:

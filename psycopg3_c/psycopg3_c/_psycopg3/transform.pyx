@@ -85,6 +85,9 @@ cdef class Transformer:
 
     @pgresult.setter
     def pgresult(self, result: Optional[PGresult]) -> None:
+        self.set_pgresult(result)
+
+    cdef void set_pgresult(self, pq.PGresult result):
         self._pgresult = result
 
         if result is None:
