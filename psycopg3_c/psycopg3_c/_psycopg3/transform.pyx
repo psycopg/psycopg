@@ -159,7 +159,7 @@ cdef class Transformer:
 
         return row_loader
 
-    def get_dumper(self, obj: Any, format: Format) -> "Dumper":
+    cpdef object get_dumper(self, object obj, object format):
         # Fast path: return a Dumper class already instantiated from the same type
         cdef dict cache
         cdef PyObject *ptr
