@@ -254,7 +254,7 @@ class AsyncCopy(BaseCopy["AsyncConnection"]):
             yield data
 
 
-def format_row_text(
+def _format_row_text(
     row: Sequence[Any], tx: Transformer, out: Optional[bytearray] = None
 ) -> bytearray:
     """Convert a row of objects to the data to send for copy."""
@@ -336,7 +336,9 @@ format_row_binary: FormatFunc
 if pq.__impl__ == "c":
     from psycopg3_c import _psycopg3
 
+    format_row_text = _psycopg3.format_row_text
     format_row_binary = _psycopg3.format_row_binary
 
 else:
+    format_row_text = _format_row_text
     format_row_binary = _format_row_binary
