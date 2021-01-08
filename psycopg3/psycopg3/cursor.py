@@ -233,6 +233,7 @@ class BaseCursor(Generic[ConnectionType]):
                     raise e.error_from_result(
                         result, encoding=self._conn.client_encoding
                     )
+                first = False
             else:
                 pgq.dump(params)
 
