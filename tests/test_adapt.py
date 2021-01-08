@@ -1,5 +1,6 @@
 import pytest
 
+import psycopg3
 from psycopg3.adapt import Transformer, Format, Dumper, Loader
 from psycopg3.oids import builtins, TEXT_OID
 
@@ -199,6 +200,54 @@ def test_return_untyped(conn, fmt_in):
     cur.execute("create table testjson(data jsonb)")
     cur.execute(f"insert into testjson (data) values (%s{cast})", ["{}"])
     assert cur.execute("select data from testjson").fetchone() == ({},)
+
+
+def test_optimised_adapters():
+    if psycopg3.pq.__impl__ == "python":
+        pytest.skip("test C module only")
+
+    from psycopg3_c import _psycopg3
+
+    # All the optimised adapters available
+    c_adapters = {}
+    for n in dir(_psycopg3):
+        if n.startswith("_") or n in ("CDumper", "CLoader"):
+            continue
+        obj = getattr(_psycopg3, n)
+        if not isinstance(obj, type):
+            continue
+        if not issubclass(obj, (_psycopg3.CDumper, _psycopg3.CLoader)):
+            continue
+        c_adapters[n] = obj
+
+    # All the registered adapters
+    reg_adapters = set()
+    adapters = (
+        psycopg3.global_adapters._dumpers + psycopg3.global_adapters._loaders
+    )
+    assert len(adapters) == 4
+    for m in adapters:
+        reg_adapters |= set(m.values())
+
+    # Check that the registered adapters are the optimised one
+    n = 0
+    for cls in reg_adapters:
+        if cls.__name__ in c_adapters:
+            assert cls is c_adapters[cls.__name__]
+            n += 1
+
+    assert n >= 10
+
+    # Check that every optimised adapter is the optimised version of a Py one
+    for n in dir(psycopg3.types):
+        obj = getattr(psycopg3.types, n)
+        if not isinstance(obj, type):
+            continue
+        if not issubclass(obj, (Dumper, Loader)):
+            continue
+        c_adapters.pop(obj.__name__, None)
+
+    assert not c_adapters
 
 
 def make_dumper(suffix):
