@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 
 from . import errors as e
 from .pq import Format
-from .oids import INVALID_OID
+from .oids import INVALID_OID, TEXT_OID
 from .proto import LoadFunc, AdaptContext
 
 if TYPE_CHECKING:
@@ -32,11 +32,16 @@ class Transformer(AdaptContext):
     _pgresult: Optional["PGresult"] = None
 
     def __init__(self, context: Optional[AdaptContext] = None):
+        self._unknown_oid = INVALID_OID
+
         # WARNING: don't store context, or you'll create a loop with the Cursor
         if context:
             self._adapters = context.adapters
-            self._connection = context.connection
+            conn = self._connection = context.connection
 
+            # PG 9.6 gives an error if an unknown oid is emitted as column
+            if conn and conn.pgconn.server_version < 100000:
+                self._unknown_oid = TEXT_OID
         else:
             from .adapt import global_adapters
 
@@ -94,6 +99,20 @@ class Transformer(AdaptContext):
             rc[i] = self.get_loader(types[i], formats[i]).load
 
         self._row_loaders = rc
+
+    def dump_sequence(
+        self, params: Sequence[Any], formats: Sequence[Format]
+    ) -> Tuple[List[Any], Tuple[int, ...]]:
+        ps: List[Optional[bytes]] = [None] * len(params)
+        ts = [self._unknown_oid] * len(params)
+        for i in range(len(params)):
+            param = params[i]
+            if param is not None:
+                dumper = self.get_dumper(param, formats[i])
+                ps[i] = dumper.dump(param)
+                ts[i] = dumper.oid
+
+        return ps, tuple(ts)
 
     def get_dumper(self, obj: Any, format: Format) -> "Dumper":
         # Fast path: return a Dumper class already instantiated from the same type

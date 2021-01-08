@@ -58,11 +58,17 @@ cdef class Transformer:
     cdef pq.PGresult _pgresult
     cdef int _nfields, _ntuples
     cdef list _row_loaders
+    cdef int _unknown_oid
 
     def __cinit__(self, context: Optional["AdaptContext"] = None):
+        self._unknown_oid = oids.INVALID_OID
         if context is not None:
             self.adapters = context.adapters
             self.connection = context.connection
+
+            # PG 9.6 gives an error if an unknown oid is emitted as column
+            if self.connection and self.connection.pgconn.server_version < 100000:
+                self._unknown_oid = oids.TEXT_OID
         else:
             from psycopg3.adapt import global_adapters
             self.adapters = global_adapters
@@ -182,6 +188,39 @@ cdef class Transformer:
         raise e.ProgrammingError(
             f"cannot adapt type {cls.__name__} to format {Format(format).name}"
         )
+
+    cpdef dump_sequence(self, object params, object formats):
+        # Verify that they are not none and that PyList_GET_ITEM won't blow up
+        cdef int nparams = len(params)
+        cdef list ps = PyList_New(nparams)
+        cdef tuple ts = PyTuple_New(nparams)
+        cdef object dumped, oid
+        cdef Py_ssize_t size
+
+        cdef int i
+        for i in range(nparams):
+            param = params[i]
+            if param is not None:
+                format = formats[i]
+                dumper = self.get_dumper(param, format)
+                if isinstance(dumper, CDumper):
+                    dumped = PyByteArray_FromStringAndSize("", 0)
+                    size = (<CDumper>dumper).cdump(param, <bytearray>dumped, 0)
+                    PyByteArray_Resize(dumped, size)
+                    oid = (<CDumper>dumper).oid
+                else:
+                    dumped = dumper.dump(param)
+                    oid = dumper.oid
+            else:
+                dumped = None
+                oid = self._unknown_oid
+
+            Py_INCREF(dumped)
+            PyList_SET_ITEM(ps, i, dumped)
+            Py_INCREF(oid)
+            PyTuple_SET_ITEM(ts, i, oid)
+
+        return ps, ts
 
     def load_rows(self, int row0, int row1) -> Sequence[Tuple[Any, ...]]:
         if self._pgresult is None:

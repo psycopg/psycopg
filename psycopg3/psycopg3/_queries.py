@@ -12,7 +12,6 @@ from functools import lru_cache
 from . import errors as e
 from .pq import Format
 from .sql import Composable
-from .oids import TEXT_OID, INVALID_OID
 from .proto import Query, Params
 
 if TYPE_CHECKING:
@@ -43,7 +42,6 @@ class PostgresQuery:
         self.types: Tuple[int, ...] = ()
         self.formats: Optional[List[Format]] = None
 
-        self._unknown_oid = INVALID_OID
         self._parts: List[QueryPart]
         self.query = b""
         self._encoding = "utf-8"
@@ -52,8 +50,6 @@ class PostgresQuery:
         conn = transformer.connection
         if conn:
             self._encoding = conn.client_encoding
-            if conn.pgconn.server_version < 100000:
-                self._unknown_oid = TEXT_OID
 
     def convert(self, query: Query, vars: Optional[Params]) -> None:
         """
@@ -88,16 +84,9 @@ class PostgresQuery:
                 self._parts, vars, self._order
             )
             assert self.formats is not None
-            ps: List[Optional[bytes]] = [None] * len(params)
-            ts = [self._unknown_oid] * len(params)
-            for i in range(len(params)):
-                param = params[i]
-                if param is not None:
-                    dumper = self._tx.get_dumper(param, self.formats[i])
-                    ps[i] = dumper.dump(param)
-                    ts[i] = dumper.oid
-            self.params = ps
-            self.types = tuple(ts)
+            self.params, self.types = self._tx.dump_sequence(
+                params, self.formats
+            )
         else:
             self.params = None
             self.types = ()
