@@ -105,7 +105,7 @@ class CompositeInfo(TypeInfo):
             )
 
     @classmethod
-    def _from_records(cls, recs: List[Any]) -> Optional["CompositeInfo"]:
+    def _from_records(cls, recs: Sequence[Any]) -> Optional["CompositeInfo"]:
         if not recs:
             return None
         if len(recs) > 1:

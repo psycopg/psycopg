@@ -446,7 +446,7 @@ class Cursor(BaseCursor["Connection"]):
             self._pos += 1
         return record
 
-    def fetchmany(self, size: int = 0) -> List[Sequence[Any]]:
+    def fetchmany(self, size: int = 0) -> Sequence[Sequence[Any]]:
         """
         Return the next *size* records from the current recordset.
 
@@ -461,9 +461,9 @@ class Cursor(BaseCursor["Connection"]):
             self._pos, min(self._pos + size, self.pgresult.ntuples)
         )
         self._pos += len(records)
-        return records  # type: ignore[return-value]
+        return records
 
-    def fetchall(self) -> List[Sequence[Any]]:
+    def fetchall(self) -> Sequence[Sequence[Any]]:
         """
         Return all the remaining records from the current recordset.
         """
@@ -471,7 +471,7 @@ class Cursor(BaseCursor["Connection"]):
         assert self.pgresult
         records = self._transformer.load_rows(self._pos, self.pgresult.ntuples)
         self._pos += self.pgresult.ntuples
-        return records  # type: ignore[return-value]
+        return records
 
     def __iter__(self) -> Iterator[Sequence[Any]]:
         self._check_result()
@@ -541,7 +541,7 @@ class AsyncCursor(BaseCursor["AsyncConnection"]):
             self._pos += 1
         return rv
 
-    async def fetchmany(self, size: int = 0) -> List[Sequence[Any]]:
+    async def fetchmany(self, size: int = 0) -> Sequence[Sequence[Any]]:
         self._check_result()
         assert self.pgresult
 
@@ -551,14 +551,14 @@ class AsyncCursor(BaseCursor["AsyncConnection"]):
             self._pos, min(self._pos + size, self.pgresult.ntuples)
         )
         self._pos += len(records)
-        return records  # type: ignore[return-value]
+        return records
 
-    async def fetchall(self) -> List[Sequence[Any]]:
+    async def fetchall(self) -> Sequence[Sequence[Any]]:
         self._check_result()
         assert self.pgresult
         records = self._transformer.load_rows(self._pos, self.pgresult.ntuples)
         self._pos += self.pgresult.ntuples
-        return records  # type: ignore[return-value]
+        return records
 
     async def __aiter__(self) -> AsyncIterator[Sequence[Any]]:
         self._check_result()

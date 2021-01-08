@@ -131,7 +131,7 @@ class Transformer(AdaptContext):
             f"cannot adapt type {cls.__name__} to format {Format(format).name}"
         )
 
-    def load_rows(self, row0: int, row1: int) -> Sequence[Tuple[Any, ...]]:
+    def load_rows(self, row0: int, row1: int) -> List[Tuple[Any, ...]]:
         res = self._pgresult
         if not res:
             raise e.InterfaceError("result not set")

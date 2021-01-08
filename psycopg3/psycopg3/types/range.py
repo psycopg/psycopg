@@ -5,7 +5,7 @@ Support for range types adaptation.
 # Copyright (C) 2020 The Psycopg Team
 
 import re
-from typing import Any, Dict, Generic, List, Optional, TypeVar, Type, Union
+from typing import Any, Dict, Generic, Optional, Sequence, TypeVar, Type, Union
 from typing import cast, TYPE_CHECKING
 from decimal import Decimal
 from datetime import date, datetime
@@ -413,7 +413,7 @@ class RangeInfo(TypeInfo):
             )
 
     @classmethod
-    def _from_records(cls, recs: List[Any]) -> Optional["RangeInfo"]:
+    def _from_records(cls, recs: Sequence[Any]) -> Optional["RangeInfo"]:
         if not recs:
             return None
         if len(recs) > 1:

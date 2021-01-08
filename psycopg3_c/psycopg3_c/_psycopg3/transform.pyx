@@ -222,7 +222,7 @@ cdef class Transformer:
 
         return ps, ts
 
-    def load_rows(self, int row0, int row1) -> Sequence[Tuple[Any, ...]]:
+    def load_rows(self, int row0, int row1) -> List[Tuple[Any, ...]]:
         if self._pgresult is None:
             raise e.InterfaceError("result not set")
 

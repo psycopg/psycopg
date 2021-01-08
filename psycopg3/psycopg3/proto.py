@@ -99,7 +99,7 @@ class Transformer(Protocol):
     def get_dumper(self, obj: Any, format: Format) -> "Dumper":
         ...
 
-    def load_rows(self, row0: int, row1: int) -> Sequence[Tuple[Any, ...]]:
+    def load_rows(self, row0: int, row1: int) -> List[Tuple[Any, ...]]:
         ...
 
     def load_row(self, row: int) -> Optional[Tuple[Any, ...]]:
