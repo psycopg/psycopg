@@ -42,11 +42,12 @@ def format_row_binary(
     cdef uint32_t besize
     cdef char *buf
     cdef int i
+    fmt = FORMAT_BINARY
 
     for i in range(rowlen):
         item = row[i]
         if item is not None:
-            dumper = tx.get_dumper(item, FORMAT_BINARY)
+            dumper = tx.get_dumper(item, fmt)
             if isinstance(dumper, CDumper):
                 # A cdumper can resize if necessary and copy in place
                 size = (<CDumper>dumper).cdump(item, out, pos + sizeof(besize))
@@ -56,7 +57,7 @@ def format_row_binary(
                 memcpy(target + pos, <void *>&besize, sizeof(besize))
             else:
                 # A Python dumper, gotta call it and extract its juices
-                b = dumper.dump(item)
+                b = PyObject_CallFunctionObjArgs(dumper.dump, <PyObject *>item, NULL)
                 _buffer_as_string_and_size(b, &buf, &size)
                 target = CDumper.ensure_size(out, pos, size + sizeof(besize))
                 besize = htobe32(size)
@@ -98,6 +99,7 @@ def format_row_text(
     cdef unsigned char *target
     cdef int nesc = 0
     cdef int with_tab
+    fmt = FORMAT_TEXT
 
     for i in range(rowlen):
         # Include the tab before the data, so it gets included in the resizes
@@ -115,14 +117,14 @@ def format_row_text(
                 pos += 2
             continue
 
-        dumper = tx.get_dumper(item, FORMAT_TEXT)
+        dumper = tx.get_dumper(item, fmt)
         if isinstance(dumper, CDumper):
             # A cdumper can resize if necessary and copy in place
             size = (<CDumper>dumper).cdump(item, out, pos + with_tab)
             target = <unsigned char *>PyByteArray_AS_STRING(out) + pos
         else:
             # A Python dumper, gotta call it and extract its juices
-            b = dumper.dump(item)
+            b = PyObject_CallFunctionObjArgs(dumper.dump, <PyObject *>item, NULL)
             _buffer_as_string_and_size(b, &buf, &size)
             target = <unsigned char *>CDumper.ensure_size(out, pos, size + with_tab)
             memcpy(target + with_tab, buf, size)
