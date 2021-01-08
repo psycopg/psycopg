@@ -130,33 +130,27 @@ cdef class Transformer:
         cdef dict binary_loaders = {}
 
         # these are used more as Python object than C
-        cdef object oid
-        cdef object fmt
+        cdef PyObject *oid
+        cdef PyObject *fmt
         cdef PyObject *ptr
+        cdef PyObject *cache
         for i in range(ntypes):
-            oid = <object>PyList_GET_ITEM(types, i)
-            fmt = <object>PyList_GET_ITEM(formats, i)
-            if fmt == 0:
-                ptr = PyDict_GetItem(text_loaders, oid)
-                if ptr != NULL:
-                    loader = <object>ptr
-                else:
-                    loader = self._get_row_loader(oid, fmt)
-                    PyDict_SetItem(text_loaders, oid, loader)
+            oid = PyList_GET_ITEM(types, i)
+            fmt = PyList_GET_ITEM(formats, i)
+            cache = <PyObject *>(binary_loaders if <object>fmt else text_loaders)
+            ptr = PyDict_GetItem(<object>cache, <object>oid)
+            if ptr != NULL:
+                loader = <object>ptr
             else:
-                ptr = PyDict_GetItem(binary_loaders, oid)
-                if ptr != NULL:
-                    loader = <object>ptr
-                else:
-                    loader = self._get_row_loader(oid, fmt)
-                    PyDict_SetItem(binary_loaders, oid, loader)
+                loader = self._get_row_loader(oid, fmt)
+                PyDict_SetItem(<object>cache, <object>oid, loader)
 
             Py_INCREF(loader)
             PyList_SET_ITEM(loaders, i, loader)
 
         self._row_loaders = loaders
 
-    cdef RowLoader _get_row_loader(self, object oid, object fmt):
+    cdef RowLoader _get_row_loader(self, PyObject *oid, PyObject *fmt):
         cdef RowLoader row_loader = RowLoader()
         loader = self._c_get_loader(oid, fmt)
         row_loader.pyloader = loader.load
@@ -179,10 +173,12 @@ cdef class Transformer:
         if ptr != NULL:
             return <object>ptr
 
-        dumper_class = self.adapters.get_dumper(cls, format)
-        if dumper_class:
-            d = dumper_class(cls, self)
-            cache[cls] = d
+        dumper_class = PyObject_CallFunctionObjArgs(
+            self.adapters.get_dumper, <PyObject *>cls, <PyObject *>format, NULL)
+        if dumper_class is not None:
+            d = PyObject_CallFunctionObjArgs(
+                dumper_class, <PyObject *>cls, <PyObject *>self, NULL)
+            PyDict_SetItem(cache, cls, d)
             return d
 
         raise e.ProgrammingError(
@@ -346,23 +342,25 @@ cdef class Transformer:
         return rv
 
     def get_loader(self, oid: int, format: Format) -> "Loader":
-        return self._c_get_loader(oid, format)
+        return self._c_get_loader(<PyObject *>oid, <PyObject *>format)
 
-    cdef object _c_get_loader(self, object oid, object format):
-        cdef dict cache
+    cdef object _c_get_loader(self, PyObject *oid, PyObject *fmt):
         cdef PyObject *ptr
+        cdef PyObject *cache
 
-        cache = self._binary_loaders if format else self._text_loaders
-        ptr = PyDict_GetItem(cache, oid)
+        cache = <PyObject *>(
+            self._binary_loaders if <object>fmt == 0 else self._text_loaders)
+        ptr = PyDict_GetItem(<object>cache, <object>oid)
         if ptr != NULL:
             return <object>ptr
 
-        loader_cls = self.adapters.get_loader(oid, format)
-        if not loader_cls:
-            loader_cls = self.adapters.get_loader(oids.INVALID_OID, format)
-            if not loader_cls:
+        loader_cls = self.adapters.get_loader(<object>oid, <object>fmt)
+        if loader_cls is None:
+            loader_cls = self.adapters.get_loader(oids.INVALID_OID, <object>fmt)
+            if loader_cls is None:
                 raise e.InterfaceError("unknown oid loader not found")
 
-        loader = loader_cls(oid, self)
-        PyDict_SetItem(cache, oid, loader)
+        loader = PyObject_CallFunctionObjArgs(
+            loader_cls, oid, <PyObject *>self, NULL)
+        PyDict_SetItem(<object>cache, <object>oid, loader)
         return loader
