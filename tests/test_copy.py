@@ -6,7 +6,9 @@ from itertools import cycle
 import pytest
 
 from psycopg3 import pq
+from psycopg3 import sql
 from psycopg3 import errors as e
+from psycopg3.oids import builtins
 from psycopg3.adapt import Format
 from psycopg3.types.numeric import Int4
 
@@ -72,6 +74,107 @@ def test_copy_out_iter(conn, format):
         f"copy ({sample_values}) to stdout (format {format.name})"
     ) as copy:
         assert list(copy) == want
+
+
+@pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
+def test_read_rows(conn, format):
+    cur = conn.cursor()
+    with cur.copy(
+        f"copy ({sample_values}) to stdout (format {format.name})"
+    ) as copy:
+        # TODO: should be passed by name
+        # big refactoring to be had, to have builtins not global and merged
+        # to adaptation context I guess...
+        copy.set_types(
+            [builtins["int4"].oid, builtins["int4"].oid, builtins["text"].oid]
+        )
+        rows = []
+        while 1:
+            row = copy.read_row()
+            if not row:
+                break
+            rows.append(row)
+    assert rows == sample_records
+
+
+@pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
+def test_rows(conn, format):
+    cur = conn.cursor()
+    with cur.copy(
+        f"copy ({sample_values}) to stdout (format {format.name})"
+    ) as copy:
+        copy.set_types(
+            [builtins["int4"].oid, builtins["int4"].oid, builtins["text"].oid]
+        )
+        rows = list(copy.rows())
+    assert rows == sample_records
+
+
+@pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
+def test_copy_out_allchars(conn, format):
+    cur = conn.cursor()
+    chars = list(map(chr, range(1, 256))) + [eur]
+    conn.client_encoding = "utf8"
+    rows = []
+    query = sql.SQL(
+        "copy (select unnest({}::text[])) to stdout (format {})"
+    ).format(chars, sql.SQL(format.name))
+    with cur.copy(query) as copy:
+        copy.set_types([builtins["text"].oid])
+        while 1:
+            row = copy.read_row()
+            if not row:
+                break
+            assert len(row) == 1
+            rows.append(row[0])
+
+    assert rows == chars
+
+
+@pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
+def test_read_row_notypes(conn, format):
+    cur = conn.cursor()
+    with cur.copy(
+        f"copy ({sample_values}) to stdout (format {format.name})"
+    ) as copy:
+        rows = []
+        while 1:
+            row = copy.read_row()
+            if not row:
+                break
+            rows.append(row)
+
+    ref = [
+        tuple(py_to_raw(i, format) for i in record)
+        for record in sample_records
+    ]
+    assert rows == ref
+
+
+@pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
+def test_rows_notypes(conn, format):
+    cur = conn.cursor()
+    with cur.copy(
+        f"copy ({sample_values}) to stdout (format {format.name})"
+    ) as copy:
+        rows = list(copy.rows())
+    ref = [
+        tuple(py_to_raw(i, format) for i in record)
+        for record in sample_records
+    ]
+    assert rows == ref
+
+
+@pytest.mark.parametrize("err", [-1, 1])
+@pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
+def test_copy_out_badntypes(conn, format, err):
+    cur = conn.cursor()
+    with cur.copy(
+        f"copy ({sample_values}) to stdout (format {format.name})"
+    ) as copy:
+        copy.set_types([0] * (len(sample_records[0]) + err))
+        with pytest.raises(e.ProgrammingError):
+            copy.read_row()
 
 
 @pytest.mark.parametrize(
@@ -364,6 +467,19 @@ def test_str(conn):
         list(copy)
 
     assert "[INTRANS]" in str(copy)
+
+
+def py_to_raw(item, fmt):
+    """Convert from Python type to the expected result from the db"""
+    if fmt == Format.TEXT:
+        if isinstance(item, int):
+            return str(item)
+    else:
+        if isinstance(item, int):
+            return bytes([0, 0, 0, item])
+        elif isinstance(item, str):
+            return item.encode("utf8")
+    return item
 
 
 def ensure_table(cur, tabledef, name="copy_in"):

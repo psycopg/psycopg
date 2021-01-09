@@ -10,7 +10,8 @@ too many temporary Python objects and performing less memory copying.
 
 from cpython.ref cimport Py_INCREF
 from cpython.dict cimport PyDict_GetItem, PyDict_SetItem
-from cpython.list cimport PyList_New, PyList_GET_ITEM, PyList_SET_ITEM
+from cpython.list cimport (
+    PyList_New, PyList_GET_ITEM, PyList_SET_ITEM, PyList_GET_SIZE)
 from cpython.tuple cimport PyTuple_New, PyTuple_SET_ITEM
 from cpython.object cimport PyObject, PyObject_CallFunctionObjArgs
 
@@ -324,22 +325,38 @@ cdef class Transformer:
         return record
 
     def load_sequence(self, record: Sequence[Optional[bytes]]) -> Tuple[Any, ...]:
-        cdef int length = len(record)
-        rv = PyTuple_New(length)
-        cdef RowLoader loader
+        cdef int nfields = len(record)
+        out = PyTuple_New(nfields)
+        cdef PyObject *loader  # borrowed RowLoader
+        cdef int col
+        cdef char *ptr
+        cdef Py_ssize_t size
 
-        cdef int i
-        for i in range(length):
-            item = record[i]
+        row_loaders = self._row_loaders  # avoid an incref/decref per item
+        if PyList_GET_SIZE(row_loaders) != nfields:
+            raise e.ProgrammingError(
+                f"cannot load sequence of {nfields} items:"
+                f" {len(self._row_loaders)} loaders registered")
+
+        for col in range(nfields):
+            item = record[col]
             if item is None:
-                pyval = None
-            else:
-                loader = self._row_loaders[i]
-                pyval = loader.pyloader(item)
-            Py_INCREF(pyval)
-            PyTuple_SET_ITEM(rv, i, pyval)
+                Py_INCREF(None)
+                PyTuple_SET_ITEM(out, col, None)
+                continue
 
-        return rv
+            loader = PyList_GET_ITEM(row_loaders, col)
+            if (<RowLoader>loader).cloader is not None:
+                _buffer_as_string_and_size(item, &ptr, &size)
+                pyval = (<RowLoader>loader).cloader.cload(ptr, size)
+            else:
+                pyval = PyObject_CallFunctionObjArgs(
+                    (<RowLoader>loader).pyloader, <PyObject *>item, NULL)
+
+            Py_INCREF(pyval)
+            PyTuple_SET_ITEM(out, col, pyval)
+
+        return out
 
     def get_loader(self, oid: int, format: Format) -> "Loader":
         return self._c_get_loader(<PyObject *>oid, <PyObject *>format)

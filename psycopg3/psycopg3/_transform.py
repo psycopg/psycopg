@@ -172,6 +172,12 @@ class Transformer(AdaptContext):
     def load_sequence(
         self, record: Sequence[Optional[bytes]]
     ) -> Tuple[Any, ...]:
+        if len(self._row_loaders) != len(record):
+            raise e.ProgrammingError(
+                f"cannot load sequence of {len(record)} items:"
+                f" {len(self._row_loaders)} loaders registered"
+            )
+
         return tuple(
             (self._row_loaders[i](val) if val is not None else None)
             for i, val in enumerate(record)

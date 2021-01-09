@@ -187,28 +187,37 @@ Cursor support objects
 
     See :ref:`copy` for details.
 
-    .. automethod:: read
-
-        Instead of using `!read()` you can even iterate on the object to read
-        its data row by row, using ``for row in copy: ...``.
-
-    .. automethod:: write
     .. automethod:: write_row
 
         The data in the tuple will be converted as configured on the cursor;
         see :ref:`adaptation` for details.
 
+    .. automethod:: write
+    .. automethod:: read
+
+        Instead of using `!read()` you can even iterate on the object to read
+        its data row by row, using ``for row in copy: ...``.
+
+    .. automethod:: rows
+    .. automethod:: read_row
+    .. automethod:: set_types
+
 
 .. autoclass:: AsyncCopy()
 
-    The object is normally returned by ``async with`` `AsyncCursor.copy()`. Its methods are
-    the same of the `Copy` object but offering an `asyncio` interface
-    (`await`, `async for`, `async with`).
+    The object is normally returned by ``async with`` `AsyncCursor.copy()`.
+    Its methods are similar to the ones of the `Copy` object but offering an
+    `asyncio` interface (`await`, `async for`, `async with`).
 
+    .. automethod:: write_row
+    .. automethod:: write
     .. automethod:: read
 
         Instead of using `!read()` you can even iterate on the object to read
         its data row by row, using ``async for row in copy: ...``.
 
-    .. automethod:: write
-    .. automethod:: write_row
+    .. automethod:: rows
+
+        Use it as `async for record in copy.rows():` ...
+
+    .. automethod:: read_row

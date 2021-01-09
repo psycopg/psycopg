@@ -6,11 +6,14 @@ from itertools import cycle
 import pytest
 
 from psycopg3 import pq
+from psycopg3 import sql
 from psycopg3 import errors as e
+from psycopg3.oids import builtins
 from psycopg3.adapt import Format
 
 from .test_copy import sample_text, sample_binary, sample_binary_rows  # noqa
 from .test_copy import eur, sample_values, sample_records, sample_tabledef
+from .test_copy import py_to_raw
 
 pytestmark = pytest.mark.asyncio
 
@@ -51,6 +54,111 @@ async def test_copy_out_iter(aconn, format):
         async for row in copy:
             got.append(row)
     assert got == want
+
+
+@pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
+async def test_read_rows(aconn, format):
+    cur = await aconn.cursor()
+    async with cur.copy(
+        f"copy ({sample_values}) to stdout (format {format.name})"
+    ) as copy:
+        # TODO: should be passed by name
+        # big refactoring to be had, to have builtins not global and merged
+        # to adaptation context I guess...
+        copy.set_types(
+            [builtins["int4"].oid, builtins["int4"].oid, builtins["text"].oid]
+        )
+        rows = []
+        while 1:
+            row = await copy.read_row()
+            if not row:
+                break
+            rows.append(row)
+    assert rows == sample_records
+
+
+@pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
+async def test_rows(aconn, format):
+    cur = await aconn.cursor()
+    async with cur.copy(
+        f"copy ({sample_values}) to stdout (format {format.name})"
+    ) as copy:
+        copy.set_types(
+            [builtins["int4"].oid, builtins["int4"].oid, builtins["text"].oid]
+        )
+        rows = []
+        async for row in copy.rows():
+            rows.append(row)
+    assert rows == sample_records
+
+
+@pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
+async def test_copy_out_allchars(aconn, format):
+    cur = await aconn.cursor()
+    chars = list(map(chr, range(1, 256))) + [eur]
+    await aconn.set_client_encoding("utf8")
+    rows = []
+    query = sql.SQL(
+        "copy (select unnest({}::text[])) to stdout (format {})"
+    ).format(chars, sql.SQL(format.name))
+    async with cur.copy(query) as copy:
+        copy.set_types([builtins["text"].oid])
+        while 1:
+            row = await copy.read_row()
+            if not row:
+                break
+            assert len(row) == 1
+            rows.append(row[0])
+
+    assert rows == chars
+
+
+@pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
+async def test_read_row_notypes(aconn, format):
+    cur = await aconn.cursor()
+    async with cur.copy(
+        f"copy ({sample_values}) to stdout (format {format.name})"
+    ) as copy:
+        rows = []
+        while 1:
+            row = await copy.read_row()
+            if not row:
+                break
+            rows.append(row)
+
+    ref = [
+        tuple(py_to_raw(i, format) for i in record)
+        for record in sample_records
+    ]
+    assert rows == ref
+
+
+@pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
+async def test_rows_notypes(aconn, format):
+    cur = await aconn.cursor()
+    async with cur.copy(
+        f"copy ({sample_values}) to stdout (format {format.name})"
+    ) as copy:
+        rows = []
+        async for row in copy.rows():
+            rows.append(row)
+    ref = [
+        tuple(py_to_raw(i, format) for i in record)
+        for record in sample_records
+    ]
+    assert rows == ref
+
+
+@pytest.mark.parametrize("err", [-1, 1])
+@pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
+async def test_copy_out_badntypes(aconn, format, err):
+    cur = await aconn.cursor()
+    async with cur.copy(
+        f"copy ({sample_values}) to stdout (format {format.name})"
+    ) as copy:
+        copy.set_types([0] * (len(sample_records[0]) + err))
+        with pytest.raises(e.ProgrammingError):
+            await copy.read_row()
 
 
 @pytest.mark.parametrize(

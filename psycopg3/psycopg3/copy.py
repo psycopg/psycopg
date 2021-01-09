@@ -7,8 +7,8 @@ psycopg3 copy support
 import re
 import struct
 from types import TracebackType
-from typing import TYPE_CHECKING, AsyncIterator, Iterator, Generic
-from typing import Any, Dict, Match, Optional, Sequence, Type, Union
+from typing import TYPE_CHECKING, AsyncIterator, Iterator, Generic, Union
+from typing import Any, Dict, List, Match, Optional, Sequence, Type, Tuple
 from typing_extensions import Protocol
 
 from . import pq
@@ -57,13 +57,24 @@ class BaseCopy(Generic[ConnectionType]):
         self._format_row: FormatFunc
         if self.format == Format.TEXT:
             self._format_row = format_row_text
+            self._parse_row = parse_row_text
         else:
             self._format_row = format_row_binary
+            self._parse_row = parse_row_binary
 
     def __repr__(self) -> str:
         cls = f"{self.__class__.__module__}.{self.__class__.__qualname__}"
         info = pq.misc.connection_summary(self._pgconn)
         return f"<{cls} {info} at 0x{id(self):x}>"
+
+    def set_types(self, types: Sequence[int]) -> None:
+        """
+        Set the types expected out of a :sql:`COPY TO` operation.
+
+        Without setting the types, the data from :sql:`COPY TO` will be
+        returned as unparsed strings or bytes.
+        """
+        self.transformer.set_row_types(types, [self.format] * len(types))
 
     # High level copy protocol generators (state change of the Copy object)
 
@@ -80,6 +91,19 @@ class BaseCopy(Generic[ConnectionType]):
         nrows = res.command_tuples
         self.cursor._rowcount = nrows if nrows is not None else -1
         return b""
+
+    def _read_row_gen(self) -> PQGen[Optional[Tuple[Any, ...]]]:
+        data = yield from self._read_gen()
+        if not data:
+            return None
+        if self.format == Format.BINARY:
+            if not self._signature_sent:
+                assert data.startswith(_binary_signature)
+                self._signature_sent = True
+                data = data[len(_binary_signature) :]
+            elif data == _binary_trailer:
+                return None
+        return self._parse_row(data, self.transformer)
 
     def _write_gen(self, buffer: Union[str, bytes]) -> PQGen[None]:
         # if write() was called, assume the header was sent together with the
@@ -175,22 +199,48 @@ class Copy(BaseCopy["Connection"]):
     __module__ = "psycopg3"
 
     def read(self) -> bytes:
-        """Read a row of data after a :sql:`COPY TO` operation.
+        """
+        Read an unparsed row from a table after a :sql:`COPY TO` operation.
 
         Return an empty bytes string when the data is finished.
         """
         return self.connection.wait(self._read_gen())
 
-    def write(self, buffer: Union[str, bytes]) -> None:
-        """Write a block of data after a :sql:`COPY FROM` operation.
+    def rows(self) -> Iterator[Tuple[Any, ...]]:
+        """
+        Iterate on the result of a :sql:`COPY TO` operation record by record.
 
-        If the COPY is in binary format *buffer* must be `!bytes`. In text mode
-        it can be either `!bytes` or `!str`.
+        Note that the records returned will be tuples of of unparsed strings or
+        bytes, unless data types are specified using `set_types()`.
+        """
+        while True:
+            record = self.read_row()
+            if record is None:
+                break
+            yield record
+
+    def read_row(self) -> Optional[Tuple[Any, ...]]:
+        """
+        Read a parsed row of data from a table after a :sql:`COPY TO` operation.
+
+        Return `!None` when the data is finished.
+
+        Note that the records returned will be tuples of unparsed strings or
+        bytes, unless data types are specified using `set_types()`.
+        """
+        return self.connection.wait(self._read_row_gen())
+
+    def write(self, buffer: Union[str, bytes]) -> None:
+        """
+        Write a block of data to a table after a :sql:`COPY FROM` operation.
+
+        If the :sql:`COPY` is in binary format *buffer* must be `!bytes`. In
+        text mode it can be either `!bytes` or `!str`.
         """
         self.connection.wait(self._write_gen(buffer))
 
     def write_row(self, row: Sequence[Any]) -> None:
-        """Write a record after a :sql:`COPY FROM` operation."""
+        """Write a record to a table after a :sql:`COPY FROM` operation."""
         self.connection.wait(self._write_row_gen(row))
 
     def _finish(self, error: str = "") -> None:
@@ -224,6 +274,16 @@ class AsyncCopy(BaseCopy["AsyncConnection"]):
 
     async def read(self) -> bytes:
         return await self.connection.wait(self._read_gen())
+
+    async def rows(self) -> AsyncIterator[Tuple[Any, ...]]:
+        while True:
+            record = await self.read_row()
+            if record is None:
+                break
+            yield record
+
+    async def read_row(self) -> Optional[Tuple[Any, ...]]:
+        return await self.connection.wait(self._read_row_gen())
 
     async def write(self, buffer: Union[str, bytes]) -> None:
         await self.connection.wait(self._write_gen(buffer))
@@ -269,7 +329,7 @@ def _format_row_text(
         if item is not None:
             dumper = tx.get_dumper(item, Format.TEXT)
             b = dumper.dump(item)
-            out += _bsrepl_re.sub(_bsrepl_sub, b)
+            out += _dump_re.sub(_dump_sub, b)
         else:
             out += br"\N"
         out += b"\t"
@@ -298,8 +358,33 @@ def _format_row_binary(
     return out
 
 
+def parse_row_text(data: bytes, tx: Transformer) -> Tuple[Any, ...]:
+    fields = data.split(b"\t")
+    fields[-1] = fields[-1][:-1]  # drop \n
+    row = [None if f == b"\\N" else _load_re.sub(_load_sub, f) for f in fields]
+    return tx.load_sequence(row)
+
+
+def parse_row_binary(data: bytes, tx: Transformer) -> Tuple[Any, ...]:
+    row: List[Optional[bytes]] = []
+    nfields = _unpack_int2(data, 0)[0]
+    pos = 2
+    for i in range(nfields):
+        length = _unpack_int4(data, pos)[0]
+        pos += 4
+        if length >= 0:
+            row.append(data[pos : pos + length])
+            pos += length
+        else:
+            row.append(None)
+
+    return tx.load_sequence(row)
+
+
 _pack_int2 = struct.Struct("!h").pack
 _pack_int4 = struct.Struct("!i").pack
+_unpack_int2 = struct.Struct("!h").unpack_from
+_unpack_int4 = struct.Struct("!i").unpack_from
 
 _binary_signature = (
     # Signature, flags, extra length
@@ -310,23 +395,32 @@ _binary_signature = (
 _binary_trailer = b"\xff\xff"
 _binary_null = b"\xff\xff\xff\xff"
 
+_dump_re = re.compile(b"[\b\t\n\v\f\r\\\\]")
+_dump_repl = {
+    b"\b": b"\\b",
+    b"\t": b"\\t",
+    b"\n": b"\\n",
+    b"\v": b"\\v",
+    b"\f": b"\\f",
+    b"\r": b"\\r",
+    b"\\": b"\\\\",
+}
 
-def _bsrepl_sub(
-    m: Match[bytes],
-    __map: Dict[bytes, bytes] = {
-        b"\b": b"\\b",
-        b"\t": b"\\t",
-        b"\n": b"\\n",
-        b"\v": b"\\v",
-        b"\f": b"\\f",
-        b"\r": b"\\r",
-        b"\\": b"\\\\",
-    },
+
+def _dump_sub(
+    m: Match[bytes], __map: Dict[bytes, bytes] = _dump_repl
 ) -> bytes:
     return __map[m.group(0)]
 
 
-_bsrepl_re = re.compile(b"[\b\t\n\v\f\r\\\\]")
+_load_re = re.compile(b"\\\\[btnvfr\\\\]")
+_load_repl = {v: k for k, v in _dump_repl.items()}
+
+
+def _load_sub(
+    m: Match[bytes], __map: Dict[bytes, bytes] = _load_repl
+) -> bytes:
+    return __map[m.group(0)]
 
 
 # Override it with fast object if available
