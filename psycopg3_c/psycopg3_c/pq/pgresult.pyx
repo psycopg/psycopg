@@ -7,6 +7,7 @@ psycopg3_c.pq.PGresult object implementation.
 from cpython.mem cimport PyMem_Malloc, PyMem_Free
 
 from psycopg3.pq.misc import PGresAttDesc
+from psycopg3.pq._enums import ExecStatus
 
 
 cdef class PGresult:
@@ -21,6 +22,11 @@ cdef class PGresult:
 
     def __dealloc__(self) -> None:
         self.clear()
+
+    def __repr__(self) -> str:
+        cls = f"{self.__class__.__module__}.{self.__class__.__qualname__}"
+        status = ExecStatus(self.status)
+        return f"<{cls} [{status.name}] at 0x{id(self):x}>"
 
     def clear(self) -> None:
         if self.pgresult_ptr is not NULL:

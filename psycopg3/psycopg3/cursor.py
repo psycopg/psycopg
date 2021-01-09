@@ -82,8 +82,13 @@ class BaseCursor(Generic[ConnectionType]):
     def __repr__(self) -> str:
         cls = f"{self.__class__.__module__}.{self.__class__.__qualname__}"
         info = pq.misc.connection_summary(self._conn.pgconn)
-        status = " (closed)" if self._closed else ""
-        return f"<{cls}{status} {info} at 0x{id(self):x}>"
+        if self._closed:
+            status = "closed"
+        elif not self._pgresult:
+            status = "no result"
+        else:
+            status = pq.ExecStatus(self._pgresult.status).name
+        return f"<{cls} [{status}] {info} at 0x{id(self):x}>"
 
     @property
     def connection(self) -> ConnectionType:

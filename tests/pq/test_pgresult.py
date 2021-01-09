@@ -16,6 +16,7 @@ from psycopg3 import pq
 def test_status(pgconn, command, status):
     res = pgconn.exec_(command)
     assert res.status == getattr(pq.ExecStatus, status)
+    assert status in repr(res)
 
 
 def test_clear(pgconn):

@@ -21,7 +21,7 @@ from typing import cast as t_cast, TYPE_CHECKING
 from . import _pq_ctypes as impl
 from .misc import PGnotify, ConninfoOption, PQerror, PGresAttDesc
 from .misc import error_message, connection_summary
-from ._enums import Format
+from ._enums import Format, ExecStatus
 
 if TYPE_CHECKING:
     from . import proto
@@ -600,6 +600,11 @@ class PGresult:
 
     def __del__(self) -> None:
         self.clear()
+
+    def __repr__(self) -> str:
+        cls = f"{self.__class__.__module__}.{self.__class__.__qualname__}"
+        status = ExecStatus(self.status)
+        return f"<{cls} [{status.name}] at 0x{id(self):x}>"
 
     def clear(self) -> None:
         self.pgresult_ptr, p = None, self.pgresult_ptr
