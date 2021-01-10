@@ -17,6 +17,8 @@ from cpython.unicode cimport (
 )
 
 from psycopg3_c.pq cimport libpq, Escaping, _buffer_as_string_and_size
+
+from psycopg3 import errors as e
 from psycopg3.encodings import pg2py
 
 cdef extern from "Python.h":
@@ -88,8 +90,7 @@ cdef class StringDumper(_StringDumper):
         # Like the binary dump, but check for 0, or the string will be truncated
         cdef const char *buf = PyByteArray_AS_STRING(rv)
         if NULL != memchr(buf + offset, 0x00, size):
-            from psycopg3 import DataError
-            raise DataError(
+            raise e.DataError(
                 "PostgreSQL text fields cannot contain NUL (0x00) bytes"
             )
         return size
