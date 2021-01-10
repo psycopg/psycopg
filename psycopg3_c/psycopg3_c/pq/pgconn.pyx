@@ -7,10 +7,12 @@ psycopg3_c.pq.PGconn object implementation.
 from posix.unistd cimport getpid
 from cpython.mem cimport PyMem_Malloc, PyMem_Free
 from cpython.bytes cimport PyBytes_AsString, PyBytes_AsStringAndSize
+from cpython.memoryview cimport PyMemoryView_FromObject
 
 import logging
 
 from psycopg3.pq.misc import PGnotify, connection_summary
+from psycopg3_c.pq cimport PQBuffer
 
 logger = logging.getLogger('psycopg3')
 
@@ -445,19 +447,18 @@ cdef class PGconn:
             raise PQerror(f"sending copy end failed: {error_message(self)}")
         return rv
 
-    def get_copy_data(self, int async_) -> Tuple[int, bytes]:
+    def get_copy_data(self, int async_) -> Tuple[int, memoryview]:
         cdef char *buffer_ptr = NULL
         cdef int nbytes
         nbytes = libpq.PQgetCopyData(self.pgconn_ptr, &buffer_ptr, async_)
         if nbytes == -2:
             raise PQerror(f"receiving copy data failed: {error_message(self)}")
         if buffer_ptr is not NULL:
-            # TODO: do it without copy
-            data = buffer_ptr[:nbytes]
-            libpq.PQfreemem(buffer_ptr)
+            data = PyMemoryView_FromObject(
+                PQBuffer._from_buffer(<unsigned char *>buffer_ptr, nbytes))
             return nbytes, data
         else:
-            return nbytes, b""
+            return nbytes, b""  # won't parse it, doesn't really be memoryview
 
     def make_empty_result(self, int exec_status) -> PGresult:
         cdef libpq.PGresult *rv = libpq.PQmakeEmptyPGresult(

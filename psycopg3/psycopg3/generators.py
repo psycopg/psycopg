@@ -161,7 +161,7 @@ def notifies(pgconn: PGconn) -> PQGen[List[pq.PGnotify]]:
     return ns
 
 
-def copy_from(pgconn: PGconn) -> PQGen[Union[bytes, PGresult]]:
+def copy_from(pgconn: PGconn) -> PQGen[Union[memoryview, PGresult]]:
     while 1:
         nbytes, data = pgconn.get_copy_data(1)
         if nbytes != 0:

@@ -108,7 +108,19 @@ cdef class IntLoader(CLoader):
     format = Format.TEXT
 
     cdef object cload(self, const char *data, size_t length):
-        return PyLong_FromString(data, NULL, 10)
+        # if the number ends with a 0 we don't need a copy
+        if data[length] == b'\0':
+            return PyLong_FromString(data, NULL, 10)
+
+        # Otherwise we have to copy it aside
+        if length > MAXINT8LEN:
+            raise ValueError("string too big for an int")
+
+        cdef char[21] buf   # MAXINT8LEN + 1
+        memcpy(buf, data, length)
+        buf[length] = 0
+        return PyLong_FromString(buf, NULL, 10)
+
 
 
 @cython.final

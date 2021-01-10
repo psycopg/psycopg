@@ -12,6 +12,7 @@ from typing import Any, Dict, List, Match, Optional, Sequence, Type, Tuple
 from typing_extensions import Protocol
 
 from . import pq
+from . import errors as e
 from .pq import Format, ExecStatus
 from .proto import ConnectionType, PQGen, Transformer
 from .generators import copy_from, copy_to, copy_end
@@ -22,7 +23,7 @@ if TYPE_CHECKING:
     from .connection import Connection, AsyncConnection  # noqa: F401
 
 
-class FormatFunc(Protocol):
+class CopyFormatFunc(Protocol):
     """The type of a function to format copy data to a bytearray."""
 
     def __call__(
@@ -31,6 +32,11 @@ class FormatFunc(Protocol):
         tx: Transformer,
         out: Optional[bytearray] = None,
     ) -> bytearray:
+        ...
+
+
+class CopyParseFunc(Protocol):
+    def __call__(self, data: bytes, tx: Transformer) -> Tuple[Any, ...]:
         ...
 
 
@@ -54,7 +60,8 @@ class BaseCopy(Generic[ConnectionType]):
         self._write_buffer_size = 32 * 1024
         self._finished = False
 
-        self._format_row: FormatFunc
+        self._format_row: CopyFormatFunc
+        self._parse_row: CopyParseFunc
         if self.format == Format.TEXT:
             self._format_row = format_row_text
             self._parse_row = parse_row_text
@@ -83,7 +90,7 @@ class BaseCopy(Generic[ConnectionType]):
             return b""
 
         res = yield from copy_from(self._pgconn)
-        if isinstance(res, bytes):
+        if isinstance(res, memoryview):
             return res
 
         # res is the final PGresult
@@ -98,7 +105,10 @@ class BaseCopy(Generic[ConnectionType]):
             return None
         if self.format == Format.BINARY:
             if not self._signature_sent:
-                assert data.startswith(_binary_signature)
+                if data[: len(_binary_signature)] != _binary_signature:
+                    raise e.DataError(
+                        "binary copy doesn't start with the expected signature"
+                    )
                 self._signature_sent = True
                 data = data[len(_binary_signature) :]
             elif data == _binary_trailer:
@@ -358,7 +368,9 @@ def _format_row_binary(
     return out
 
 
-def parse_row_text(data: bytes, tx: Transformer) -> Tuple[Any, ...]:
+def _parse_row_text(data: bytes, tx: Transformer) -> Tuple[Any, ...]:
+    if not isinstance(data, bytes):
+        data = bytes(data)
     fields = data.split(b"\t")
     fields[-1] = fields[-1][:-1]  # drop \n
     row = [None if f == b"\\N" else _load_re.sub(_load_sub, f) for f in fields]
@@ -425,14 +437,17 @@ def _load_sub(
 
 # Override it with fast object if available
 
-format_row_binary: FormatFunc
+format_row_binary: CopyFormatFunc
+parse_row_text: CopyParseFunc
 
 if pq.__impl__ == "c":
     from psycopg3_c import _psycopg3
 
     format_row_text = _psycopg3.format_row_text
     format_row_binary = _psycopg3.format_row_binary
+    parse_row_text = _psycopg3.parse_row_text
 
 else:
     format_row_text = _format_row_text
     format_row_binary = _format_row_binary
+    parse_row_text = _parse_row_text

@@ -50,5 +50,6 @@ def format_row_text(
 def format_row_binary(
     row: Sequence[Any], tx: proto.Transformer, out: Optional[bytearray] = None
 ) -> bytearray: ...
+def parse_row_text(data: bytes, tx: proto.Transformer) -> Tuple[Any, ...]: ...
 
 # vim: set syntax=python:

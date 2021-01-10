@@ -66,7 +66,10 @@ class TextLoader(Loader):
 
     def load(self, data: bytes) -> Union[bytes, str]:
         if self._encoding:
-            return data.decode(self._encoding)
+            if isinstance(data, memoryview):
+                return bytes(data).decode(self._encoding)
+            else:
+                return data.decode(self._encoding)
         else:
             # return bytes for SQL_ASCII db
             return data
