@@ -11,8 +11,10 @@ from cpython.bytearray cimport PyByteArray_FromStringAndSize, PyByteArray_Resize
 from cpython.bytearray cimport PyByteArray_AS_STRING, PyByteArray_GET_SIZE
 from cpython.memoryview cimport PyMemoryView_FromObject
 
-from psycopg3_c._psycopg3.endian cimport htobe16, htobe32
+from psycopg3_c._psycopg3 cimport endian
 from psycopg3_c.pq cimport ViewBuffer
+
+from psycopg3 import errors as e
 
 cdef int32_t _binary_null = -1
 
@@ -22,7 +24,7 @@ def format_row_binary(
 ) -> bytearray:
     """Convert a row of adapted data to the data to send for binary copy"""
     cdef Py_ssize_t rowlen = len(row)
-    cdef uint16_t berowlen = htobe16(rowlen)
+    cdef uint16_t berowlen = endian.htobe16(rowlen)
 
     cdef Py_ssize_t pos  # offset in 'out' where to write
     if out is None:
@@ -54,7 +56,7 @@ def format_row_binary(
                 # A cdumper can resize if necessary and copy in place
                 size = (<CDumper>dumper).cdump(item, out, pos + sizeof(besize))
                 # Also add the size of the item, before the item
-                besize = htobe32(size)
+                besize = endian.htobe32(size)
                 target = PyByteArray_AS_STRING(out)  # might have been moved by cdump
                 memcpy(target + pos, <void *>&besize, sizeof(besize))
             else:
@@ -62,7 +64,7 @@ def format_row_binary(
                 b = PyObject_CallFunctionObjArgs(dumper.dump, <PyObject *>item, NULL)
                 _buffer_as_string_and_size(b, &buf, &size)
                 target = CDumper.ensure_size(out, pos, size + sizeof(besize))
-                besize = htobe32(size)
+                besize = endian.htobe32(size)
                 memcpy(target, <void *>&besize, sizeof(besize))
                 memcpy(target + sizeof(besize), buf, size)
 
@@ -164,6 +166,40 @@ def format_row_text(
     return out
 
 
+def parse_row_binary(data, tx: Transformer) -> Tuple[Any, ...]:
+    cdef unsigned char *ptr
+    cdef Py_ssize_t bufsize
+    _buffer_as_string_and_size(data, <char **>&ptr, &bufsize)
+    cdef unsigned char *bufend = ptr + bufsize
+
+    cdef uint16_t benfields = (<uint16_t *>ptr)[0]
+    cdef int nfields = endian.be16toh(benfields)
+    ptr += sizeof(benfields)
+    cdef list row = PyList_New(nfields)
+
+    cdef int col
+    cdef int32_t belength
+    cdef Py_ssize_t length
+
+    for col in range(nfields):
+        memcpy(&belength, ptr, sizeof(belength))
+        ptr += sizeof(belength)
+        if belength == _binary_null:
+            field = None
+        else:
+            length = endian.be32toh(belength)
+            if ptr + length > bufend:
+                raise e.DataError("bad copy data: length exceeding data")
+            field = PyMemoryView_FromObject(
+                ViewBuffer._from_buffer(ptr, length))
+            ptr += length
+
+        Py_INCREF(field)
+        PyList_SET_ITEM(row, col, field)
+
+    return tx.load_sequence(row)
+
+
 def parse_row_text(data, tx: Transformer) -> Tuple[Any, ...]:
     cdef unsigned char *fstart
     cdef Py_ssize_t size
@@ -177,8 +213,9 @@ def parse_row_text(data, tx: Transformer) -> Tuple[Any, ...]:
     cdef unsigned char *rowend = fstart + size
     cdef unsigned char *src
     cdef unsigned char *tgt
-    cdef int col = 0
+    cdef int col
     cdef int num_bs
+
     for col in range(nfields):
         fend = fstart
         num_bs = 0
@@ -192,12 +229,12 @@ def parse_row_text(data, tx: Transformer) -> Tuple[Any, ...]:
 
         # Check if we stopped for the right reason
         if fend >= rowend:
-            raise ValueError("bad copy format, field delimiter not found")
+            raise e.DataError("bad copy data: field delimiter not found")
         elif fend[0] == b'\t' and col == nfields - 1:
-            raise ValueError("bad copy format, got a tab at the end of the row")
+            raise e.DataError("bad copy data: got a tab at the end of the row")
         elif fend[0] == b'\n' and col != nfields - 1:
-            raise ValueError(
-                "bad copy format, got a newline before the end of the row")
+            raise e.DataError(
+                "bad copy format: got a newline before the end of the row")
 
         # Is this a NULL?
         if fend - fstart == 2 and fstart[0] == b'\\' and fstart[1] == b'N':

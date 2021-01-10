@@ -337,10 +337,10 @@ async def test_copy_from_to(aconn):
 
     await gen.assert_data()
 
-    f = StringIO()
+    f = BytesIO()
     async with cur.copy("copy copy_in to stdout") as copy:
         async for block in copy:
-            f.write(block.decode("utf8"))
+            f.write(block)
 
     f.seek(0)
     assert gen.sha(f) == gen.sha(gen.file())

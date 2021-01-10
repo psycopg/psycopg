@@ -195,10 +195,13 @@ Cursor support objects
     .. automethod:: write
     .. automethod:: read
 
-        Instead of using `!read()` you can even iterate on the object to read
-        its data row by row, using ``for row in copy: ...``.
+        Instead of using `!read()` you can iterate on the `!Copy` object to
+        read its data row by row, using ``for row in copy: ...``.
 
     .. automethod:: rows
+
+        Equivalent of iterating on `read_row()` until it returns `!None`
+
     .. automethod:: read_row
     .. automethod:: set_types
 
@@ -213,8 +216,8 @@ Cursor support objects
     .. automethod:: write
     .. automethod:: read
 
-        Instead of using `!read()` you can even iterate on the object to read
-        its data row by row, using ``async for row in copy: ...``.
+        Instead of using `!read()` you can iterate on the `!AsyncCopy` object
+        to read its data row by row, using ``async for row in copy: ...``.
 
     .. automethod:: rows
 

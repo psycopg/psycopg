@@ -9,7 +9,6 @@ import struct
 from types import TracebackType
 from typing import TYPE_CHECKING, AsyncIterator, Iterator, Generic, Union
 from typing import Any, Dict, List, Match, Optional, Sequence, Type, Tuple
-from typing_extensions import Protocol
 
 from . import pq
 from . import errors as e
@@ -21,23 +20,6 @@ if TYPE_CHECKING:
     from .pq.proto import PGresult
     from .cursor import BaseCursor  # noqa: F401
     from .connection import Connection, AsyncConnection  # noqa: F401
-
-
-class CopyFormatFunc(Protocol):
-    """The type of a function to format copy data to a bytearray."""
-
-    def __call__(
-        self,
-        row: Sequence[Any],
-        tx: Transformer,
-        out: Optional[bytearray] = None,
-    ) -> bytearray:
-        ...
-
-
-class CopyParseFunc(Protocol):
-    def __call__(self, data: bytes, tx: Transformer) -> Tuple[Any, ...]:
-        ...
 
 
 class BaseCopy(Generic[ConnectionType]):
@@ -60,8 +42,6 @@ class BaseCopy(Generic[ConnectionType]):
         self._write_buffer_size = 32 * 1024
         self._finished = False
 
-        self._format_row: CopyFormatFunc
-        self._parse_row: CopyParseFunc
         if self.format == Format.TEXT:
             self._format_row = format_row_text
             self._parse_row = parse_row_text
@@ -85,9 +65,9 @@ class BaseCopy(Generic[ConnectionType]):
 
     # High level copy protocol generators (state change of the Copy object)
 
-    def _read_gen(self) -> PQGen[bytes]:
+    def _read_gen(self) -> PQGen[memoryview]:
         if self._finished:
-            return b""
+            return memoryview(b"")
 
         res = yield from copy_from(self._pgconn)
         if isinstance(res, memoryview):
@@ -97,7 +77,7 @@ class BaseCopy(Generic[ConnectionType]):
         self._finished = True
         nrows = res.command_tuples
         self.cursor._rowcount = nrows if nrows is not None else -1
-        return b""
+        return memoryview(b"")
 
     def _read_row_gen(self) -> PQGen[Optional[Tuple[Any, ...]]]:
         data = yield from self._read_gen()
@@ -208,11 +188,11 @@ class Copy(BaseCopy["Connection"]):
 
     __module__ = "psycopg3"
 
-    def read(self) -> bytes:
+    def read(self) -> memoryview:
         """
-        Read an unparsed row from a table after a :sql:`COPY TO` operation.
+        Read an unparsed row after a :sql:`COPY TO` operation.
 
-        Return an empty bytes string when the data is finished.
+        Return an empty string when the data is finished.
         """
         return self.connection.wait(self._read_gen())
 
@@ -269,7 +249,7 @@ class Copy(BaseCopy["Connection"]):
     ) -> None:
         self.connection.wait(self._exit_gen(exc_type, exc_val))
 
-    def __iter__(self) -> Iterator[bytes]:
+    def __iter__(self) -> Iterator[memoryview]:
         while True:
             data = self.read()
             if not data:
@@ -282,7 +262,7 @@ class AsyncCopy(BaseCopy["AsyncConnection"]):
 
     __module__ = "psycopg3"
 
-    async def read(self) -> bytes:
+    async def read(self) -> memoryview:
         return await self.connection.wait(self._read_gen())
 
     async def rows(self) -> AsyncIterator[Tuple[Any, ...]]:
@@ -316,7 +296,7 @@ class AsyncCopy(BaseCopy["AsyncConnection"]):
     ) -> None:
         await self.connection.wait(self._exit_gen(exc_type, exc_val))
 
-    async def __aiter__(self) -> AsyncIterator[bytes]:
+    async def __aiter__(self) -> AsyncIterator[memoryview]:
         while True:
             data = await self.read()
             if not data:
@@ -377,7 +357,7 @@ def _parse_row_text(data: bytes, tx: Transformer) -> Tuple[Any, ...]:
     return tx.load_sequence(row)
 
 
-def parse_row_binary(data: bytes, tx: Transformer) -> Tuple[Any, ...]:
+def _parse_row_binary(data: bytes, tx: Transformer) -> Tuple[Any, ...]:
     row: List[Optional[bytes]] = []
     nfields = _unpack_int2(data, 0)[0]
     pos = 2
@@ -435,19 +415,17 @@ def _load_sub(
     return __map[m.group(0)]
 
 
-# Override it with fast object if available
-
-format_row_binary: CopyFormatFunc
-parse_row_text: CopyParseFunc
-
+# Override functions with fast versions if available
 if pq.__impl__ == "c":
     from psycopg3_c import _psycopg3
 
     format_row_text = _psycopg3.format_row_text
     format_row_binary = _psycopg3.format_row_binary
     parse_row_text = _psycopg3.parse_row_text
+    parse_row_binary = _psycopg3.parse_row_binary
 
 else:
     format_row_text = _format_row_text
     format_row_binary = _format_row_binary
     parse_row_text = _parse_row_text
+    parse_row_binary = _parse_row_binary
