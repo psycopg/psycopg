@@ -34,6 +34,7 @@ extras_require = {
     "test": [
         "pytest >= 6, < 6.1",
         "pytest-asyncio >= 0.14.0, < 0.15",
+        "pytest-randomly >= 3.5, < 3.6",
     ],
     "dev": [
         "black",

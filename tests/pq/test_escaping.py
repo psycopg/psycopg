@@ -122,13 +122,17 @@ def test_escape_string_1char(pgconn, scs):
         (b"", b""),
         (b"hello", b"hello"),
         (b"foo'bar", b"foo''bar"),
-        (b"foo\\bar", b"foo\\\\bar"),
+        # This libpq function behaves unpredictably when not passed a conn
+        (b"foo\\bar", (b"foo\\\\bar", b"foo\\bar")),
     ],
 )
 def test_escape_string_noconn(data, want):
     esc = pq.Escaping()
     out = esc.escape_string(data)
-    assert out == want
+    if isinstance(want, bytes):
+        assert out == want
+    else:
+        assert out in want
 
 
 def test_escape_string_badconn(pgconn):
