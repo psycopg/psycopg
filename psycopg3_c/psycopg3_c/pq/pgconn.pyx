@@ -130,9 +130,8 @@ cdef class PGconn:
         return _call_bytes(self, libpq.PQoptions)
 
     @property
-    def status(self) -> ConnStatus:
-        cdef int rv = libpq.PQstatus(self.pgconn_ptr)
-        return ConnStatus(rv)
+    def status(self) -> int:
+        return libpq.PQstatus(self.pgconn_ptr)
 
     @property
     def transaction_status(self) -> int:

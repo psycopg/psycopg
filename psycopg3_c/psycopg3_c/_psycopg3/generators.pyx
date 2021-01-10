@@ -25,7 +25,7 @@ def connect(conninfo: str) -> PQGenConn[proto.PGconn]:
 
     """
     cdef pq.PGconn conn = pq.PGconn.connect_start(conninfo.encode("utf8"))
-    logger.debug("connection started, status %s", conn.status.name)
+    logger.debug("connection started, status %s", conn.status)
     cdef libpq.PGconn *pgconn_ptr = conn.pgconn_ptr
     cdef int conn_status = libpq.PQstatus(pgconn_ptr)
     cdef int poll_status
@@ -37,7 +37,7 @@ def connect(conninfo: str) -> PQGenConn[proto.PGconn]:
             )
 
         poll_status = libpq.PQconnectPoll(pgconn_ptr)
-        logger.debug("connection polled, status %s", conn.status.name)
+        logger.debug("connection polled, status %s", conn.status)
         if poll_status == libpq.PGRES_POLLING_OK:
             break
         elif poll_status == libpq.PGRES_POLLING_READING:
