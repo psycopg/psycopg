@@ -152,11 +152,11 @@ cdef class CLoader:
     cdef object cload(self, const char *data, size_t length):
         raise NotImplementedError()
 
-    def load(self, data: bytes) -> Any:
-        cdef char *buffer
+    def load(self, object data) -> Any:
+        cdef char *ptr
         cdef Py_ssize_t length
-        PyBytes_AsStringAndSize(data, &buffer, &length)
-        return self.cload(data, length)
+        _buffer_as_string_and_size(data, &ptr, &length)
+        return self.cload(ptr, length)
 
     @classmethod
     def register(

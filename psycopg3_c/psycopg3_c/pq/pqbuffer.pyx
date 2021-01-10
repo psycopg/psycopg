@@ -4,20 +4,22 @@ PQbuffer object implementation.
 
 # Copyright (C) 2020 The Psycopg Team
 
+cimport cython
 from cpython.bytes cimport PyBytes_AsStringAndSize
 from cpython.buffer cimport PyObject_CheckBuffer, PyBUF_SIMPLE
 from cpython.buffer cimport PyObject_GetBuffer, PyBuffer_Release
 
 
+@cython.freelist(32)
 cdef class PQBuffer:
     """
     Wrap a chunk of memory allocated by the libpq and expose it as memoryview.
     """
     @staticmethod
-    cdef PQBuffer _from_buffer(unsigned char *buf, Py_ssize_t len):
+    cdef PQBuffer _from_buffer(unsigned char *buf, Py_ssize_t length):
         cdef PQBuffer rv = PQBuffer.__new__(PQBuffer)
         rv.buf = buf
-        rv.len = len
+        rv.len = length
         return rv
 
     def __cinit__(self):
@@ -51,15 +53,19 @@ cdef class PQBuffer:
         pass
 
 
+@cython.freelist(32)
 cdef class ViewBuffer:
     """
-    Wrap a chunk of memory for view only.
+    Wrap a chunk of memory owned by a different object.
     """
     @staticmethod
-    cdef ViewBuffer _from_buffer(unsigned char *buf, Py_ssize_t len):
+    cdef ViewBuffer _from_buffer(
+        object obj, unsigned char *buf, Py_ssize_t length
+    ):
         cdef ViewBuffer rv = ViewBuffer.__new__(ViewBuffer)
+        rv.obj = obj
         rv.buf = buf
-        rv.len = len
+        rv.len = length
         return rv
 
     def __cinit__(self):

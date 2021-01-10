@@ -24,8 +24,8 @@ from psycopg3 import errors as e
 # 10% of the innermost loop, so I'm willing to ask for forgiveness later...
 
 ctypedef struct PGresAttValue:
-    int     len
-    char    *value
+    int len
+    char *value
 
 ctypedef struct pg_result_int:
     # NOTE: it would be advised that we don't know this structure's content
@@ -235,7 +235,6 @@ cdef class Transformer:
         cdef int row
         cdef int col
         cdef PGresAttValue *attval
-        cdef const char *val
         cdef object record  # not 'tuple' as it would check on assignment
 
         cdef object records = PyList_New(row1 - row0)
@@ -255,12 +254,11 @@ cdef class Transformer:
                     brecord = PyList_GET_ITEM(records, row - row0)
                     attval = &(ires.tuples[row][col])
                     if attval.len == -1:  # NULL_LEN
-                        Py_INCREF(None)
-                        PyTuple_SET_ITEM(<object>brecord, col, None)
-                        continue
+                        pyval = None
+                    else:
+                        pyval = (<RowLoader>loader).cloader.cload(
+                            attval.value, attval.len)
 
-                    pyval = (<RowLoader>loader).cloader.cload(
-                        attval.value, attval.len)
                     Py_INCREF(pyval)
                     PyTuple_SET_ITEM(<object>brecord, col, pyval)
 
@@ -269,14 +267,13 @@ cdef class Transformer:
                     brecord = PyList_GET_ITEM(records, row - row0)
                     attval = &(ires.tuples[row][col])
                     if attval.len == -1:  # NULL_LEN
-                        Py_INCREF(None)
-                        PyTuple_SET_ITEM(<object>brecord, col, None)
-                        continue
+                        pyval = None
+                    else:
+                        # TODO: no copy
+                        b = attval.value[:attval.len]
+                        pyval = PyObject_CallFunctionObjArgs(
+                            (<RowLoader>loader).pyloader, <PyObject *>b, NULL)
 
-                    # TODO: no copy
-                    b = attval.value[:attval.len]
-                    pyval = PyObject_CallFunctionObjArgs(
-                        (<RowLoader>loader).pyloader, <PyObject *>b, NULL)
                     Py_INCREF(pyval)
                     PyTuple_SET_ITEM(<object>brecord, col, pyval)
 
@@ -296,7 +293,6 @@ cdef class Transformer:
         cdef PyObject *loader  # borrowed RowLoader
         cdef int col
         cdef PGresAttValue *attval
-        cdef const char *val
         cdef object record  # not 'tuple' as it would check on assignment
 
         record = PyTuple_New(self._nfields)
@@ -305,19 +301,17 @@ cdef class Transformer:
         for col in range(self._nfields):
             attval = &(ires.tuples[row][col])
             if attval.len == -1:  # NULL_LEN
-                Py_INCREF(None)
-                PyTuple_SET_ITEM(record, col, None)
-                continue
-
-            val = attval.value
-            loader = PyList_GET_ITEM(row_loaders, col)
-            if (<RowLoader>loader).cloader is not None:
-                pyval = (<RowLoader>loader).cloader.cload(val, attval.len)
+                pyval = None
             else:
-                # TODO: no copy
-                b = val[:attval.len]
-                pyval = PyObject_CallFunctionObjArgs(
-                    (<RowLoader>loader).pyloader, <PyObject *>b, NULL)
+                loader = PyList_GET_ITEM(row_loaders, col)
+                if (<RowLoader>loader).cloader is not None:
+                    pyval = (<RowLoader>loader).cloader.cload(
+                        attval.value, attval.len)
+                else:
+                    # TODO: no copy
+                    b = attval.value[:attval.len]
+                    pyval = PyObject_CallFunctionObjArgs(
+                        (<RowLoader>loader).pyloader, <PyObject *>b, NULL)
 
             Py_INCREF(pyval)
             PyTuple_SET_ITEM(record, col, pyval)

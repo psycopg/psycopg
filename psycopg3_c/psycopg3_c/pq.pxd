@@ -17,6 +17,7 @@ cdef class PGconn:
 
     cpdef object notifies(self)
 
+
 cdef class PGresult:
     cdef libpq.PGresult* pgresult_ptr
 
@@ -40,15 +41,17 @@ cdef class PQBuffer:
     cdef Py_ssize_t len
 
     @staticmethod
-    cdef PQBuffer _from_buffer(unsigned char *buf, Py_ssize_t len)
+    cdef PQBuffer _from_buffer(unsigned char *buf, Py_ssize_t length)
 
 
 cdef class ViewBuffer:
     cdef unsigned char *buf
     cdef Py_ssize_t len
+    cdef object obj
 
     @staticmethod
-    cdef ViewBuffer _from_buffer(unsigned char *buf, Py_ssize_t len)
+    cdef ViewBuffer _from_buffer(
+        object obj, unsigned char *buf, Py_ssize_t length)
 
 
 cdef int _buffer_as_string_and_size(

@@ -191,7 +191,7 @@ def parse_row_binary(data, tx: Transformer) -> Tuple[Any, ...]:
             if ptr + length > bufend:
                 raise e.DataError("bad copy data: length exceeding data")
             field = PyMemoryView_FromObject(
-                ViewBuffer._from_buffer(ptr, length))
+                ViewBuffer._from_buffer(data, ptr, length))
             ptr += length
 
         Py_INCREF(field)
@@ -244,7 +244,7 @@ def parse_row_text(data, tx: Transformer) -> Tuple[Any, ...]:
         elif num_bs == 0:
             # Nothing to unescape: we don't need a copy
             field = PyMemoryView_FromObject(
-                ViewBuffer._from_buffer(fstart, fend - fstart))
+                ViewBuffer._from_buffer(data, fstart, fend - fstart))
 
         # This is a field containing backslashes
         else:
