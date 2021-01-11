@@ -226,8 +226,8 @@ class ArrayLoader(BaseArrayLoader):
     _re_unescape = re.compile(br"\\(.)")
 
 
-_struct_head = struct.Struct("!III")
-_struct_dim = struct.Struct("!II")
+_struct_head = struct.Struct("!III")  # ndims, hasnull, elem oid
+_struct_dim = struct.Struct("!II")  # dim, lower bound
 _struct_len = struct.Struct("!i")
 
 
