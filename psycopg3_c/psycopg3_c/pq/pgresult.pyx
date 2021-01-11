@@ -4,12 +4,14 @@ psycopg3_c.pq.PGresult object implementation.
 
 # Copyright (C) 2020 The Psycopg Team
 
+cimport cython
 from cpython.mem cimport PyMem_Malloc, PyMem_Free
 
 from psycopg3.pq.misc import PGresAttDesc
 from psycopg3.pq._enums import ExecStatus
 
 
+@cython.freelist(8)
 cdef class PGresult:
     def __cinit__(self):
         self.pgresult_ptr = NULL
