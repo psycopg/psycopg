@@ -9,9 +9,11 @@ too many temporary Python objects and performing less memory copying.
 # Copyright (C) 2020 The Psycopg Team
 
 from cpython.ref cimport Py_INCREF
+from cpython.set cimport PySet_Add, PySet_Contains
 from cpython.dict cimport PyDict_GetItem, PyDict_SetItem
 from cpython.list cimport (
-    PyList_New, PyList_GET_ITEM, PyList_SET_ITEM, PyList_GET_SIZE)
+    PyList_New, PyList_CheckExact,
+    PyList_GET_ITEM, PyList_SET_ITEM, PyList_GET_SIZE)
 from cpython.tuple cimport PyTuple_New, PyTuple_SET_ITEM
 from cpython.object cimport PyObject, PyObject_CallFunctionObjArgs
 
@@ -169,22 +171,35 @@ cdef class Transformer:
         cdef PyObject *ptr
 
         cls = type(obj)
+        if cls is not list:
+            key = cls
+        else:
+            subobj = self._find_list_element(obj, set())
+            if subobj is None:
+                subobj = ""
+            key = (cls, type(subobj))
+
         cache = self._binary_dumpers if format else self._text_dumpers
-        ptr = PyDict_GetItem(cache, cls)
+        ptr = PyDict_GetItem(cache, key)
         if ptr != NULL:
             return <object>ptr
 
-        dumper_class = PyObject_CallFunctionObjArgs(
+        dcls = PyObject_CallFunctionObjArgs(
             self.adapters.get_dumper, <PyObject *>cls, <PyObject *>format, NULL)
-        if dumper_class is not None:
-            d = PyObject_CallFunctionObjArgs(
-                dumper_class, <PyObject *>cls, <PyObject *>self, NULL)
-            PyDict_SetItem(cache, cls, d)
-            return d
+        if dcls is None:
+            raise e.ProgrammingError(
+                f"cannot adapt type {cls.__name__}"
+                f" to format {Format(format).name}"
+            )
 
-        raise e.ProgrammingError(
-            f"cannot adapt type {cls.__name__} to format {Format(format).name}"
-        )
+        d = PyObject_CallFunctionObjArgs(
+            dcls, <PyObject *>cls, <PyObject *>self, NULL)
+        if cls is list:
+            sub_dumper = self.get_dumper(subobj, format)
+            d.set_sub_dumper(sub_dumper)
+
+        PyDict_SetItem(cache, key, d)
+        return d
 
     cpdef dump_sequence(self, object params, object formats):
         # Verify that they are not none and that PyList_GET_ITEM won't blow up
@@ -375,3 +390,26 @@ cdef class Transformer:
             loader_cls, oid, <PyObject *>self, NULL)
         PyDict_SetItem(<object>cache, <object>oid, loader)
         return loader
+
+    cdef object _find_list_element(self, object L, set seen):
+        """
+        Find the first non-null element of an eventually nested list
+        """
+        cdef object list_id = <long><PyObject *>L
+        if PySet_Contains(seen, list_id):
+            raise e.DataError("cannot dump a recursive list")
+
+        PySet_Add(seen, list_id)
+
+        cdef int i
+        cdef PyObject *it
+        for i in range(PyList_GET_SIZE(L)):
+            it = PyList_GET_ITEM(L, i)
+            if PyList_CheckExact(<object>it):
+                subit = self._find_list_element(<object>it, seen)
+                if subit is not None:
+                    return subit
+            elif <object>it is not None:
+                return <object>it
+
+        return None

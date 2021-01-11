@@ -20,7 +20,13 @@ class BaseListDumper(Dumper):
 
     def __init__(self, cls: type, context: Optional[AdaptContext] = None):
         super().__init__(cls, context)
-        self._tx = Transformer(context)
+        tx = Transformer(context)
+        self.set_sub_dumper(tx.get_dumper("", self.format))
+
+    def set_sub_dumper(self, dumper: Dumper) -> None:
+        self.sub_dumper = dumper
+        self.oid = self._get_array_oid(dumper.oid)
+        self.sub_oid = dumper.oid or TEXT_OID
 
     def _get_array_oid(self, base_oid: int) -> int:
         """
@@ -40,15 +46,15 @@ class BaseListDumper(Dumper):
 
 
 class ListDumper(BaseListDumper):
+
+    format = Format.TEXT
+
     # from https://www.postgresql.org/docs/current/arrays.html#ARRAYS-IO
     #
     # The array output routine will put double quotes around element values if
     # they are empty strings, contain curly braces, delimiter characters,
     # double quotes, backslashes, or white space, or match the word NULL.
     # TODO: recognise only , as delimiter. Should be configured
-
-    format = Format.TEXT
-
     _re_needs_quotes = re.compile(
         br"""(?xi)
           ^$              # the empty string
@@ -63,11 +69,8 @@ class ListDumper(BaseListDumper):
 
     def dump(self, obj: List[Any]) -> bytes:
         tokens: List[bytes] = []
-        oid = 0
 
         def dump_list(obj: List[Any]) -> None:
-            nonlocal oid
-
             if not obj:
                 tokens.append(b"{}")
                 return
@@ -77,15 +80,12 @@ class ListDumper(BaseListDumper):
                 if isinstance(item, list):
                     dump_list(item)
                 elif item is not None:
-                    dumper = self._tx.get_dumper(item, Format.TEXT)
-                    ad = dumper.dump(item)
+                    ad = self.sub_dumper.dump(item)
                     if self._re_needs_quotes.search(ad):
                         ad = (
                             b'"' + self._re_esc.sub(br"\\\1", bytes(ad)) + b'"'
                         )
                     tokens.append(ad)
-                    if not oid:
-                        oid = dumper.oid
                 else:
                     tokens.append(b"NULL")
 
@@ -94,9 +94,6 @@ class ListDumper(BaseListDumper):
             tokens[-1] = b"}"
 
         dump_list(obj)
-
-        if oid:
-            self.oid = self._get_array_oid(oid)
 
         return b"".join(tokens)
 
@@ -112,7 +109,6 @@ class ListBinaryDumper(BaseListDumper):
         data: List[bytes] = [b"", b""]  # placeholders to avoid a resize
         dims: List[int] = []
         hasnull = 0
-        oid = 0
 
         def calc_dims(L: List[Any]) -> None:
             if isinstance(L, self.cls):
@@ -124,19 +120,16 @@ class ListBinaryDumper(BaseListDumper):
         calc_dims(obj)
 
         def dump_list(L: List[Any], dim: int) -> None:
-            nonlocal oid, hasnull
+            nonlocal hasnull
             if len(L) != dims[dim]:
                 raise e.DataError("nested lists have inconsistent lengths")
 
             if dim == len(dims) - 1:
                 for item in L:
                     if item is not None:
-                        dumper = self._tx.get_dumper(item, Format.BINARY)
-                        ad = dumper.dump(item)
+                        ad = self.sub_dumper.dump(item)
                         data.append(_struct_len.pack(len(ad)))
                         data.append(ad)
-                        if not oid:
-                            oid = dumper.oid
                     else:
                         hasnull = 1
                         data.append(b"\xff\xff\xff\xff")
@@ -150,12 +143,7 @@ class ListBinaryDumper(BaseListDumper):
 
         dump_list(obj, 0)
 
-        if not oid:
-            oid = TEXT_OID
-
-        self.oid = self._get_array_oid(oid)
-
-        data[0] = _struct_head.pack(len(dims), hasnull, oid)
+        data[0] = _struct_head.pack(len(dims), hasnull, self.sub_oid)
         data[1] = b"".join(_struct_dim.pack(dim, 1) for dim in dims)
         return b"".join(data)
 

@@ -160,6 +160,29 @@ def test_load_cursor_ctx_nested(conn, sql, obj, fmt_out):
     assert res == obj
 
 
+@pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
+def test_array_dumper(fmt_out):
+    t = Transformer()
+    dint = t.get_dumper([0], fmt_out)
+    assert dint.oid == builtins["int8"].array_oid
+    assert dint.sub_oid == builtins["int8"].oid
+
+    dstr = t.get_dumper([""], fmt_out)
+    assert dstr.oid == builtins["text"].array_oid
+    assert dstr.sub_oid == builtins["text"].oid
+    assert dstr is not dint
+
+    assert t.get_dumper([1], fmt_out) is dint
+    assert t.get_dumper([], fmt_out) is dstr
+    assert t.get_dumper([None, [1]], fmt_out) is dint
+    assert t.get_dumper([None, [None]], fmt_out) is dstr
+
+    L = []
+    L.append(L)
+    with pytest.raises(psycopg3.DataError):
+        assert t.get_dumper(L, fmt_out)
+
+
 @pytest.mark.parametrize("fmt_in", [Format.TEXT, Format.BINARY])
 def test_none_type_argument(conn, fmt_in):
     cur = conn.cursor()

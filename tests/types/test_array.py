@@ -141,8 +141,7 @@ def test_array_mixed_numbers(array, type):
     assert dumper.oid == builtins[type].array_oid
 
 
-@pytest.mark.xfail
-@pytest.mark.parametrize("fmt_in", [Format.BINARY])  # TODO: add Format.TEXT
+@pytest.mark.parametrize("fmt_in", [Format.TEXT, Format.BINARY])
 def test_empty_list_mix(conn, fmt_in):
     ph = "%s" if fmt_in == Format.TEXT else "%b"
     objs = list(range(3))

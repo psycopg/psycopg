@@ -4,8 +4,8 @@ Helper object to transform values between Python and PostgreSQL
 
 # Copyright (C) 2020 The Psycopg Team
 
-from typing import Any, Dict, List, Optional, Sequence, Tuple
-from typing import TYPE_CHECKING
+from typing import Any, Dict, List, Optional, Sequence, Set, Tuple, Union
+from typing import cast, TYPE_CHECKING
 
 from . import errors as e
 from .pq import Format
@@ -16,6 +16,13 @@ if TYPE_CHECKING:
     from .pq.proto import PGresult
     from .adapt import Dumper, Loader, AdaptersMap
     from .connection import BaseConnection
+    from .types.array import BaseListDumper
+
+DumperKey = Union[type, Tuple[type, type]]
+DumperCache = Dict[DumperKey, "Dumper"]
+
+LoaderKey = int
+LoaderCache = Dict[LoaderKey, "Loader"]
 
 
 class Transformer(AdaptContext):
@@ -49,12 +56,10 @@ class Transformer(AdaptContext):
             self._connection = None
 
         # mapping class, fmt -> Dumper instance
-        self._dumpers_cache: Tuple[Dict[type, "Dumper"], Dict[type, "Dumper"]]
-        self._dumpers_cache = ({}, {})
+        self._dumpers_cache: Tuple[DumperCache, DumperCache] = ({}, {})
 
         # mapping oid, fmt -> Loader instance
-        self._loaders_cache: Tuple[Dict[int, "Loader"], Dict[int, "Loader"]]
-        self._loaders_cache = ({}, {})
+        self._loaders_cache: Tuple[LoaderCache, LoaderCache] = ({}, {})
 
         # sequence of load functions from value to python
         # the length of the result columns
@@ -117,19 +122,33 @@ class Transformer(AdaptContext):
     def get_dumper(self, obj: Any, format: Format) -> "Dumper":
         # Fast path: return a Dumper class already instantiated from the same type
         cls = type(obj)
+        if cls is not list:
+            key: DumperKey = cls
+        else:
+            # TODO: Can be probably generalised to handle other recursive types
+            subobj = self._find_list_element(obj)
+            if subobj is None:
+                subobj = ""
+            key = (cls, type(subobj))
+
         try:
-            return self._dumpers_cache[format][cls]
+            return self._dumpers_cache[format][key]
         except KeyError:
             pass
 
-        dumper_class = self._adapters.get_dumper(cls, format)
-        if dumper_class:
-            d = self._dumpers_cache[format][cls] = dumper_class(cls, self)
-            return d
+        dcls = self._adapters.get_dumper(cls, format)
+        if not dcls:
+            raise e.ProgrammingError(
+                f"cannot adapt type {cls.__name__}"
+                f" to format {Format(format).name}"
+            )
 
-        raise e.ProgrammingError(
-            f"cannot adapt type {cls.__name__} to format {Format(format).name}"
-        )
+        d = self._dumpers_cache[format][key] = dcls(cls, self)
+        if cls is list:
+            sub_dumper = self.get_dumper(subobj, format)
+            cast("BaseListDumper", d).set_sub_dumper(sub_dumper)
+
+        return d
 
     def load_rows(self, row0: int, row1: int) -> List[Tuple[Any, ...]]:
         res = self._pgresult
@@ -196,3 +215,26 @@ class Transformer(AdaptContext):
                 raise e.InterfaceError("unknown oid loader not found")
         loader = self._loaders_cache[format][oid] = loader_cls(oid, self)
         return loader
+
+    def _find_list_element(
+        self, L: List[Any], seen: Optional[Set[int]] = None
+    ) -> Any:
+        """
+        Find the first non-null element of an eventually nested list
+        """
+        if not seen:
+            seen = set()
+        if id(L) in seen:
+            raise e.DataError("cannot dump a recursive list")
+
+        seen.add(id(L))
+
+        for it in L:
+            if type(it) is list:
+                subit = self._find_list_element(it, seen)
+                if subit is not None:
+                    return subit
+            elif it is not None:
+                return it
+
+        return None
