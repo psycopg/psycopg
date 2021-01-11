@@ -15,20 +15,28 @@ JsonDumpsFunction = Callable[[Any], str]
 
 
 class _JsonWrapper:
+    __slots__ = ("obj", "_dumps")
+
     def __init__(self, obj: Any, dumps: Optional[JsonDumpsFunction] = None):
         self.obj = obj
         self._dumps: JsonDumpsFunction = dumps or json.dumps
+
+    def __repr__(self) -> str:
+        sobj = repr(self.obj)
+        if len(sobj) > 40:
+            sobj = f"{sobj[:35]} ... ({len(sobj)} chars)"
+        return f"{self.__class__.__name__}({sobj})"
 
     def dumps(self) -> str:
         return self._dumps(self.obj)
 
 
 class Json(_JsonWrapper):
-    pass
+    __slots__ = ()
 
 
 class Jsonb(_JsonWrapper):
-    pass
+    __slots__ = ()
 
 
 class _JsonDumper(Dumper):
