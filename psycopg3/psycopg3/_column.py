@@ -67,6 +67,9 @@ class Column(Sequence[Any]):
                 parts.append(f", {self.scale}")
             parts.append(")")
 
+        if t and self.type_code == t.array_oid:
+            parts.append("[]")
+
         return "".join(parts)
 
     def __getitem__(self, index: Any) -> Any:
