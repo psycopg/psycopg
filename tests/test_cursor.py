@@ -6,6 +6,7 @@ import pytest
 
 import psycopg3
 from psycopg3.oids import builtins
+from psycopg3.adapt import Format
 
 
 def test_close(conn):
@@ -392,3 +393,33 @@ def test_str(conn):
     cur.close()
     assert "[closed]" in str(cur)
     assert "[INTRANS]" in str(cur)
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize("fmt", [Format.TEXT, Format.BINARY])
+def test_leak_fetchall(dsn, faker, fmt):
+    if fmt == Format.TEXT:
+        pytest.xfail("faker to extend to all text dumpers")
+
+    faker.format = fmt
+    faker.choose_schema()
+    faker.make_records(100)
+
+    n = []
+    for i in range(3):
+        with psycopg3.connect(dsn) as conn:
+            with conn.cursor(format=fmt) as cur:
+                cur.execute(faker.drop_stmt)
+                cur.execute(faker.create_stmt)
+                cur.executemany(faker.insert_stmt, faker.records)
+                cur.execute(faker.select_stmt)
+                for got, want in zip(cur.fetchall(), faker.records):
+                    faker.assert_record(got, want)
+        del cur, conn
+        gc.collect()
+        gc.collect()
+        n.append(len(gc.get_objects()))
+
+    assert (
+        n[0] == n[1] == n[2]
+    ), f"objects leaked: {n[1] - n[0]}, {n[2] - n[1]}"
