@@ -56,11 +56,15 @@ def test_copy_out_read(conn, format):
         for row in want:
             got = copy.read()
             assert got == row
+            assert (
+                conn.pgconn.transaction_status == conn.TransactionStatus.ACTIVE
+            )
 
         assert copy.read() == b""
         assert copy.read() == b""
 
     assert copy.read() == b""
+    assert conn.pgconn.transaction_status == conn.TransactionStatus.INTRANS
 
 
 @pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
@@ -74,6 +78,8 @@ def test_copy_out_iter(conn, format):
         f"copy ({sample_values}) to stdout (format {format.name})"
     ) as copy:
         assert list(copy) == want
+
+    assert conn.pgconn.transaction_status == conn.TransactionStatus.INTRANS
 
 
 @pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
@@ -94,7 +100,9 @@ def test_read_rows(conn, format):
             if not row:
                 break
             rows.append(row)
+
     assert rows == sample_records
+    assert conn.pgconn.transaction_status == conn.TransactionStatus.INTRANS
 
 
 @pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
@@ -107,7 +115,9 @@ def test_rows(conn, format):
             [builtins["int4"].oid, builtins["int4"].oid, builtins["text"].oid]
         )
         rows = list(copy.rows())
+
     assert rows == sample_records
+    assert conn.pgconn.transaction_status == conn.TransactionStatus.INTRANS
 
 
 @pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])

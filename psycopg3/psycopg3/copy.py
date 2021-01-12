@@ -83,6 +83,7 @@ class BaseCopy(Generic[ConnectionType]):
         data = yield from self._read_gen()
         if not data:
             return None
+
         if self.format == Format.BINARY:
             if not self._signature_sent:
                 if data[: len(_binary_signature)] != _binary_signature:
@@ -91,8 +92,12 @@ class BaseCopy(Generic[ConnectionType]):
                     )
                 self._signature_sent = True
                 data = data[len(_binary_signature) :]
+
             elif data == _binary_trailer:
+                yield from self._read_gen()
+                self._finished = True
                 return None
+
         return self._parse_row(data, self.transformer)
 
     def _write_gen(self, buffer: Union[str, bytes]) -> PQGen[None]:

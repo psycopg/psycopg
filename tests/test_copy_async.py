@@ -32,11 +32,16 @@ async def test_copy_out_read(aconn, format):
         for row in want:
             got = await copy.read()
             assert got == row
+            assert (
+                aconn.pgconn.transaction_status
+                == aconn.TransactionStatus.ACTIVE
+            )
 
         assert await copy.read() == b""
         assert await copy.read() == b""
 
     assert await copy.read() == b""
+    assert aconn.pgconn.transaction_status == aconn.TransactionStatus.INTRANS
 
 
 @pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
@@ -53,7 +58,9 @@ async def test_copy_out_iter(aconn, format):
     ) as copy:
         async for row in copy:
             got.append(row)
+
     assert got == want
+    assert aconn.pgconn.transaction_status == aconn.TransactionStatus.INTRANS
 
 
 @pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
@@ -74,7 +81,9 @@ async def test_read_rows(aconn, format):
             if not row:
                 break
             rows.append(row)
+
     assert rows == sample_records
+    assert aconn.pgconn.transaction_status == aconn.TransactionStatus.INTRANS
 
 
 @pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
@@ -89,7 +98,9 @@ async def test_rows(aconn, format):
         rows = []
         async for row in copy.rows():
             rows.append(row)
+
     assert rows == sample_records
+    assert aconn.pgconn.transaction_status == aconn.TransactionStatus.INTRANS
 
 
 @pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
