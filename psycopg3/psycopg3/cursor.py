@@ -50,7 +50,7 @@ class BaseCursor(Generic[ConnectionType]):
     if sys.version_info >= (3, 7):
         __slots__ = """
             _conn format _adapters arraysize _closed _results _pgresult _pos
-            _iresult _rowcount _query _params _transformer
+            _iresult _rowcount _pgq _transformer
             __weakref__
             """.split()
 
@@ -76,8 +76,7 @@ class BaseCursor(Generic[ConnectionType]):
         self._pos = 0
         self._iresult = 0
         self._rowcount = -1
-        self._query: Optional[bytes] = None
-        self._params: Optional[List[Optional[bytes]]] = None
+        self._pgq: Optional[PostgresQuery] = None
 
     def __repr__(self) -> str:
         cls = f"{self.__class__.__module__}.{self.__class__.__qualname__}"
@@ -113,12 +112,12 @@ class BaseCursor(Generic[ConnectionType]):
     @property
     def query(self) -> Optional[bytes]:
         """The last query sent to the server, if available."""
-        return self._query
+        return self._pgq.query if self._pgq else None
 
     @property
     def params(self) -> Optional[List[Optional[bytes]]]:
         """The last set of parameters sent to the server, if available."""
-        return self._params
+        return self._pgq.params if self._pgq else None
 
     @property
     def pgresult(self) -> Optional["PGresult"]:
@@ -231,6 +230,7 @@ class BaseCursor(Generic[ConnectionType]):
         for params in params_seq:
             if first:
                 pgq = self._convert_query(query, params)
+                self._pgq = pgq
                 # TODO: prepare more statements if the types tuples change
                 self._send_prepare(b"", pgq)
                 (result,) = yield from execute(self._conn.pgconn)
@@ -279,9 +279,8 @@ class BaseCursor(Generic[ConnectionType]):
 
         This is not a generator, but a normal non-blocking function.
         """
+        self._pgq = query
         if query.params or no_pqexec or self.format == Format.BINARY:
-            self._query = query.query
-            self._params = query.params
             self._conn.pgconn.send_query_params(
                 query.query,
                 query.params,
@@ -292,8 +291,6 @@ class BaseCursor(Generic[ConnectionType]):
         else:
             # if we don't have to, let's use exec_ as it can run more than
             # one query in one go
-            self._query = query.query
-            self._params = None
             self._conn.pgconn.send_query(query.query)
 
     def _convert_query(
@@ -356,13 +353,11 @@ class BaseCursor(Generic[ConnectionType]):
             )
 
     def _send_prepare(self, name: bytes, query: PostgresQuery) -> None:
-        self._query = query.query
         self._conn.pgconn.send_prepare(
             name, query.query, param_types=query.types
         )
 
     def _send_query_prepared(self, name: bytes, pgq: PostgresQuery) -> None:
-        self._params = pgq.params
         self._conn.pgconn.send_query_prepared(
             name,
             pgq.params,
@@ -417,7 +412,11 @@ class Cursor(BaseCursor["Connection"]):
         Close the current cursor and free associated resources.
         """
         self._closed = True
+        # however keep the query available, which can be useful for debugging
+        # in case of errors
+        pgq = self._pgq
         self._reset()
+        self._pgq = pgq
 
     def execute(
         self,
