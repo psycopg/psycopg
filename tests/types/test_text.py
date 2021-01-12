@@ -96,6 +96,16 @@ def test_dump_badenc(conn, fmt_in):
         cur.execute(f"select {ph}::bytea", (eur,))
 
 
+@pytest.mark.parametrize("fmt_in", [Format.TEXT, Format.BINARY])
+def test_dump_utf8_badenc(conn, fmt_in):
+    cur = conn.cursor()
+    ph = "%s" if fmt_in == Format.TEXT else "%b"
+
+    conn.client_encoding = "utf-8"
+    with pytest.raises(UnicodeEncodeError):
+        cur.execute(f"select {ph}", ("\uddf8",))
+
+
 @pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
 @pytest.mark.parametrize("encoding", ["utf8", "latin9"])
 @pytest.mark.parametrize("typename", ["text", "varchar", "name", "bpchar"])

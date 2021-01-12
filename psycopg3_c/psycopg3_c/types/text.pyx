@@ -22,7 +22,7 @@ from psycopg3 import errors as e
 from psycopg3.encodings import pg2py
 
 cdef extern from "Python.h":
-    const char *PyUnicode_AsUTF8AndSize(unicode obj, Py_ssize_t *size)
+    const char *PyUnicode_AsUTF8AndSize(unicode obj, Py_ssize_t *size) except NULL
 
 
 cdef class _StringDumper(CDumper):
@@ -57,10 +57,6 @@ cdef class _StringDumper(CDumper):
             # Probably the fastest path, but doesn't work with subclasses
             if PyUnicode_CheckExact(obj):
                 src = PyUnicode_AsUTF8AndSize(obj, &size)
-                if src == NULL:
-                    # re-encode using a function raising an exception.
-                    # TODO: is there a better way?
-                    PyUnicode_AsUTF8String(obj)
             else:
                 b = PyUnicode_AsUTF8String(obj)
                 PyBytes_AsStringAndSize(b, <char **>&src, &size)
