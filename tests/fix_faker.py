@@ -106,12 +106,12 @@ class Faker:
             fields, self.table_name
         )
 
-    def choose_schema(self, types=None, nfields=20):
+    def choose_schema(self, types=None, ncols=20):
         if not types:
             types = self.get_supported_types()
 
         types_list = sorted(types, key=lambda cls: cls.__name__)
-        schema = [choice(types_list) for i in range(nfields)]
+        schema = [choice(types_list) for i in range(ncols)]
         for i, cls in enumerate(schema):
             # choose the type of the array
             if cls is list:
@@ -121,9 +121,7 @@ class Faker:
                         break
                 schema[i] = [scls]
             elif cls is tuple:
-                schema[i] = tuple(
-                    self.choose_schema(types=types, nfields=nfields)
-                )
+                schema[i] = tuple(self.choose_schema(types=types, ncols=ncols))
 
         return schema
 
