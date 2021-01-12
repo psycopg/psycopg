@@ -15,9 +15,6 @@ from ..proto import AdaptContext
 
 
 class BaseListDumper(Dumper):
-
-    _oid = TEXT_ARRAY_OID
-
     def __init__(self, cls: type, context: Optional[AdaptContext] = None):
         super().__init__(cls, context)
         tx = Transformer(context)
@@ -104,7 +101,7 @@ class ListBinaryDumper(BaseListDumper):
 
     def dump(self, obj: List[Any]) -> bytes:
         if not obj:
-            return _struct_head.pack(0, 0, TEXT_OID)
+            return _struct_head.pack(0, 0, self.sub_oid)
 
         data: List[bytes] = [b"", b""]  # placeholders to avoid a resize
         dims: List[int] = []

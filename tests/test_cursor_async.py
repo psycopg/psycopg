@@ -202,8 +202,18 @@ async def test_executemany_badquery(aconn, query):
         await cur.executemany(query, [(10, "hello"), (20, "world")])
 
 
+async def test_executemany_null_first(aconn):
+    cur = await aconn.cursor()
+    await cur.executemany("select %s, %s", [[1, None], [3, 4]])
+    with pytest.raises(TypeError):
+        await cur.executemany("select %s, %s", [[1, ""], [3, 4]])
+
+
 async def test_rowcount(aconn):
     cur = await aconn.cursor()
+
+    await cur.execute("select 1 from generate_series(1, 0)")
+    assert cur.rowcount == 0
 
     await cur.execute("select 1 from generate_series(1, 42)")
     assert cur.rowcount == 42
@@ -229,6 +239,22 @@ async def test_iter(aconn):
     async for rec in cur:
         res.append(rec)
     assert res == [(1,), (2,), (3,)]
+
+
+async def test_iter_stop(aconn):
+    cur = await aconn.cursor()
+    await cur.execute("select generate_series(1, 3)")
+    async for rec in cur:
+        assert rec == (1,)
+        break
+
+    async for rec in cur:
+        assert rec == (2,)
+        break
+
+    assert (await cur.fetchone()) == (3,)
+    async for rec in cur:
+        assert False
 
 
 async def test_query_params_execute(aconn):
@@ -258,26 +284,12 @@ async def test_query_params_executemany(aconn):
     assert cur.query == b"select $1, $2"
     assert cur.params == [b"3", b"4"]
 
-    with pytest.raises(psycopg3.DataError):
+    with pytest.raises((psycopg3.DataError, TypeError)):
         await cur.executemany("select %s::int", [[1], ["x"], [2]])
     assert cur.query == b"select $1::int"
-    assert cur.params == [b"x"]
-
-
-async def test_iter_stop(aconn):
-    cur = await aconn.cursor()
-    await cur.execute("select generate_series(1, 3)")
-    async for rec in cur:
-        assert rec == (1,)
-        break
-
-    async for rec in cur:
-        assert rec == (2,)
-        break
-
-    assert (await cur.fetchone()) == (3,)
-    async for rec in cur:
-        assert False
+    # TODO: cannot really check this: after introduced row_dumpers, this
+    # fails dumping, not query passing.
+    # assert cur.params == [b"x"]
 
 
 async def test_str(aconn):

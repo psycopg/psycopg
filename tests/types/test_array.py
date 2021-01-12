@@ -148,4 +148,60 @@ def test_empty_list_mix(conn, fmt_in):
     # pro tip: don't get confused with the types
     f1, f2 = conn.execute(f"select {ph}, {ph}", (objs, [])).fetchone()
     assert f1 == objs
+    if f2 == "{}":
+        pytest.xfail("text empty arrays don't roundtrip well")
     assert f2 == []
+
+
+def test_empty_list_text(conn):
+    cur = conn.cursor()
+    cur.execute("create table test (id serial primary key, data date[])")
+    with conn.transaction():
+        try:
+            cur.execute("insert into test (data) values (%s)", ([],))
+        except psycopg3.errors.DatatypeMismatch:
+            if conn.pgconn.server_version < 100000:
+                pytest.xfail("on PG 9.6 empty arrays are passed as text")
+            else:
+                raise
+    cur.execute("select data from test")
+    assert cur.fetchone() == ([],)
+
+    # test untyped list in a filter
+    cur.execute("select data from test where id = any(%s)", ([1],))
+    assert cur.fetchone()
+    cur.execute("select data from test where id = any(%s)", ([],))
+    assert not cur.fetchone()
+
+
+def test_empty_list_binary(conn):
+    cur = conn.cursor()
+    cur.execute("create table test (id serial primary key, data date[])")
+    with pytest.raises(psycopg3.errors.DatatypeMismatch):
+        with conn.transaction():
+            cur.execute("insert into test (data) values (%b)", ([],))
+    cur.execute("insert into test (data) values (%b::date[])", ([],))
+
+    cur.execute("select data from test")
+    assert cur.fetchone() == ([],)
+
+    # test untyped list in a filter
+    cur.execute("select data from test where id = any(%b)", ([1],))
+    assert cur.fetchone()
+    with pytest.raises(psycopg3.errors.UndefinedFunction):
+        with conn.transaction():
+            cur.execute("select data from test where id = any(%b)", ([],))
+    cur.execute("select data from test where id = any(%b::int[])", ([],))
+    assert not cur.fetchone()
+
+
+@pytest.mark.parametrize("fmt_in", [Format.TEXT, Format.BINARY])
+def test_empty_list_after_choice(conn, fmt_in):
+    ph = "%s" if fmt_in == Format.TEXT else "%b"
+    cur = conn.cursor()
+    cur.execute("create table test (id serial primary key, data float[])")
+    cur.executemany(
+        f"insert into test (data) values ({ph})", [([1.0],), ([],)]
+    )
+    cur.execute("select data from test order by id")
+    assert cur.fetchall() == [([1.0],), ([],)]

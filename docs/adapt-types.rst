@@ -264,3 +264,6 @@ TODO adaptation
 .. admonition:: TODO
 
     Document the other types
+
+    Document that empty array don't roundtrip in text mode and require
+    a cast in binary to be used in any context.

@@ -203,6 +203,13 @@ def test_executemany_badquery(conn, query):
         cur.executemany(query, [(10, "hello"), (20, "world")])
 
 
+def test_executemany_null_first(conn):
+    cur = conn.cursor()
+    cur.executemany("select %s, %s", [[1, None], [3, 4]])
+    with pytest.raises(TypeError):
+        cur.executemany("select %s, %s", [[1, ""], [3, 4]])
+
+
 def test_rowcount(conn):
     cur = conn.cursor()
 
@@ -272,10 +279,12 @@ def test_query_params_executemany(conn):
     assert cur.query == b"select $1, $2"
     assert cur.params == [b"3", b"4"]
 
-    with pytest.raises(psycopg3.DataError):
+    with pytest.raises((psycopg3.DataError, TypeError)):
         cur.executemany("select %s::int", [[1], ["x"], [2]])
     assert cur.query == b"select $1::int"
-    assert cur.params == [b"x"]
+    # TODO: cannot really check this: after introduced row_dumpers, this
+    # fails dumping, not query passing.
+    # assert cur.params == [b"x"]
 
 
 class TestColumn:

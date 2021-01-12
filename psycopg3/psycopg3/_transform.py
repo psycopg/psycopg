@@ -61,6 +61,8 @@ class Transformer(AdaptContext):
         # mapping oid, fmt -> Loader instance
         self._loaders_cache: Tuple[LoaderCache, LoaderCache] = ({}, {})
 
+        self._row_dumpers: List[Optional["Dumper"]] = []
+
         # sequence of load functions from value to python
         # the length of the result columns
         self._row_loaders: List[LoadFunc] = []
@@ -110,10 +112,17 @@ class Transformer(AdaptContext):
     ) -> Tuple[List[Any], Tuple[int, ...]]:
         ps: List[Optional[bytes]] = [None] * len(params)
         ts = [self._unknown_oid] * len(params)
+
+        dumpers = self._row_dumpers
+        if not dumpers:
+            dumpers = self._row_dumpers = [None] * len(params)
+
         for i in range(len(params)):
             param = params[i]
             if param is not None:
-                dumper = self.get_dumper(param, formats[i])
+                dumper = dumpers[i]
+                if not dumper:
+                    dumper = dumpers[i] = self.get_dumper(param, formats[i])
                 ps[i] = dumper.dump(param)
                 ts[i] = dumper.oid
 
@@ -127,8 +136,6 @@ class Transformer(AdaptContext):
         else:
             # TODO: Can be probably generalised to handle other recursive types
             subobj = self._find_list_element(obj)
-            if subobj is None:
-                subobj = ""
             key = (cls, type(subobj))
 
         try:
@@ -143,11 +150,22 @@ class Transformer(AdaptContext):
                 f" to format {Format(format).name}"
             )
 
-        d = self._dumpers_cache[format][key] = dcls(cls, self)
+        d = dcls(cls, self)
         if cls is list:
-            sub_dumper = self.get_dumper(subobj, format)
-            cast("BaseListDumper", d).set_sub_dumper(sub_dumper)
+            if subobj is not None:
+                sub_dumper = self.get_dumper(subobj, format)
+                cast("BaseListDumper", d).set_sub_dumper(sub_dumper)
+            elif format == Format.TEXT:
+                # Special case dumping an empty list (or containing no None
+                # element). In text mode we cast them as unknown, so that
+                # postgres can cast them automatically to something useful.
+                # In binary we cannot do it, it doesn't seem there is a
+                # representation for unknown array, so let's dump it as text[].
+                # This means that placeholders receiving a binary array should
+                # be almost always cast to the target type.
+                d.oid = self._unknown_oid
 
+        self._dumpers_cache[format][key] = d
         return d
 
     def load_rows(self, row0: int, row1: int) -> List[Tuple[Any, ...]]:

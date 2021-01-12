@@ -8,6 +8,7 @@ too many temporary Python objects and performing less memory copying.
 
 # Copyright (C) 2020 The Psycopg Team
 
+cimport cython
 from cpython.ref cimport Py_INCREF
 from cpython.set cimport PySet_Add, PySet_Contains
 from cpython.dict cimport PyDict_GetItem, PyDict_SetItem
@@ -38,9 +39,17 @@ ctypedef struct pg_result_int:
     # ...more members, which we ignore
 
 
+@cython.freelist(16)
 cdef class RowLoader:
-    cdef object pyloader
+    cdef object loadfunc
     cdef CLoader cloader
+
+
+@cython.freelist(16)
+cdef class RowDumper:
+    cdef object dumpfunc
+    cdef object oid
+    cdef CDumper cdumper
 
 
 cdef class Transformer:
@@ -60,6 +69,7 @@ cdef class Transformer:
     cdef dict _binary_loaders
     cdef pq.PGresult _pgresult
     cdef int _nfields, _ntuples
+    cdef list _row_dumpers
     cdef list _row_loaders
     cdef int _unknown_oid
 
@@ -86,6 +96,7 @@ cdef class Transformer:
         self._binary_loaders = {}
 
         self.pgresult = None
+        self._row_dumpers = None
         self._row_loaders = []
 
     @property
@@ -156,7 +167,7 @@ cdef class Transformer:
     cdef RowLoader _get_row_loader(self, PyObject *oid, PyObject *fmt):
         cdef RowLoader row_loader = RowLoader()
         loader = self._c_get_loader(oid, fmt)
-        row_loader.pyloader = loader.load
+        row_loader.loadfunc = loader.load
 
         if isinstance(loader, CLoader):
             row_loader.cloader = loader
@@ -175,8 +186,6 @@ cdef class Transformer:
             key = cls
         else:
             subobj = self._find_list_element(obj, set())
-            if subobj is None:
-                subobj = ""
             key = (cls, type(subobj))
 
         cache = self._binary_dumpers if format else self._text_dumpers
@@ -189,14 +198,23 @@ cdef class Transformer:
         if dcls is None:
             raise e.ProgrammingError(
                 f"cannot adapt type {cls.__name__}"
-                f" to format {Format(format).name}"
-            )
+                f" to format {Format(format).name}")
 
         d = PyObject_CallFunctionObjArgs(
             dcls, <PyObject *>cls, <PyObject *>self, NULL)
         if cls is list:
-            sub_dumper = self.get_dumper(subobj, format)
-            d.set_sub_dumper(sub_dumper)
+            if subobj is not None:
+                sub_dumper = self.get_dumper(subobj, format)
+                d.set_sub_dumper(sub_dumper)
+            elif format == FORMAT_TEXT:
+                # Special case dumping an empty list (or containing no None
+                # element). In text mode we cast them as unknown, so that
+                # postgres can cast them automatically to something useful.
+                # In binary we cannot do it, it doesn't seem there is a
+                # representation for unknown array, so let's dump it as text[].
+                # This means that placeholders receiving a binary array should
+                # be almost always cast to the target type.
+                d.oid = self._unknown_oid
 
         PyDict_SetItem(cache, key, d)
         return d
@@ -208,21 +226,35 @@ cdef class Transformer:
         cdef tuple ts = PyTuple_New(nparams)
         cdef object dumped, oid
         cdef Py_ssize_t size
+        cdef PyObject *dumper_ptr  # borrowed pointer to row dumper
+
+        if self._row_dumpers is None:
+            self._row_dumpers = PyList_New(nparams)
+
+        dumpers = self._row_dumpers
 
         cdef int i
         for i in range(nparams):
             param = params[i]
             if param is not None:
-                format = formats[i]
-                dumper = self.get_dumper(param, format)
-                if isinstance(dumper, CDumper):
+                dumper_ptr = PyList_GET_ITEM(dumpers, i)
+                if dumper_ptr == NULL:
+                    format = formats[i]
+                    tmp_dumper = self._get_row_dumper(param, format)
+                    Py_INCREF(tmp_dumper)
+                    PyList_SET_ITEM(dumpers, i, tmp_dumper)
+                    dumper_ptr = <PyObject *>tmp_dumper
+
+                oid = (<RowDumper>dumper_ptr).oid
+                if (<RowDumper>dumper_ptr).cdumper is not None:
                     dumped = PyByteArray_FromStringAndSize("", 0)
-                    size = (<CDumper>dumper).cdump(param, <bytearray>dumped, 0)
+                    size = (<RowDumper>dumper_ptr).cdumper.cdump(
+                        param, <bytearray>dumped, 0)
                     PyByteArray_Resize(dumped, size)
-                    oid = (<CDumper>dumper).oid
                 else:
-                    dumped = dumper.dump(param)
-                    oid = dumper.oid
+                    dumped = PyObject_CallFunctionObjArgs(
+                        (<RowDumper>dumper_ptr).dumpfunc,
+                        <PyObject *>param, NULL)
             else:
                 dumped = None
                 oid = self._unknown_oid
@@ -233,6 +265,20 @@ cdef class Transformer:
             PyTuple_SET_ITEM(ts, i, oid)
 
         return ps, ts
+
+    cdef RowDumper _get_row_dumper(self, object param, object fmt):
+        cdef RowDumper row_dumper = RowDumper()
+
+        dumper = self.get_dumper(param, fmt)
+        row_dumper.dumpfunc = dumper.dump
+        row_dumper.oid = dumper.oid
+
+        if isinstance(dumper, CDumper):
+            row_dumper.cdumper = <CDumper>dumper
+        else:
+            row_dumper.cdumper = None
+
+        return row_dumper
 
     def load_rows(self, int row0, int row1) -> List[Tuple[Any, ...]]:
         if self._pgresult is None:
@@ -287,7 +333,7 @@ cdef class Transformer:
                         # TODO: no copy
                         b = attval.value[:attval.len]
                         pyval = PyObject_CallFunctionObjArgs(
-                            (<RowLoader>loader).pyloader, <PyObject *>b, NULL)
+                            (<RowLoader>loader).loadfunc, <PyObject *>b, NULL)
 
                     Py_INCREF(pyval)
                     PyTuple_SET_ITEM(<object>brecord, col, pyval)
@@ -326,7 +372,7 @@ cdef class Transformer:
                     # TODO: no copy
                     b = attval.value[:attval.len]
                     pyval = PyObject_CallFunctionObjArgs(
-                        (<RowLoader>loader).pyloader, <PyObject *>b, NULL)
+                        (<RowLoader>loader).loadfunc, <PyObject *>b, NULL)
 
             Py_INCREF(pyval)
             PyTuple_SET_ITEM(record, col, pyval)
@@ -360,7 +406,7 @@ cdef class Transformer:
                 pyval = (<RowLoader>loader).cloader.cload(ptr, size)
             else:
                 pyval = PyObject_CallFunctionObjArgs(
-                    (<RowLoader>loader).pyloader, <PyObject *>item, NULL)
+                    (<RowLoader>loader).loadfunc, <PyObject *>item, NULL)
 
             Py_INCREF(pyval)
             PyTuple_SET_ITEM(out, col, pyval)

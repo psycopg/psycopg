@@ -7,7 +7,7 @@ from psycopg3.adapt import Transformer, Format
 
 @pytest.mark.parametrize("fmt_in", [Format.TEXT, Format.BINARY])
 @pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
-@pytest.mark.parametrize("b", [True, False, None])
+@pytest.mark.parametrize("b", [True, False])
 def test_roundtrip_bool(conn, b, fmt_in, fmt_out):
     cur = conn.cursor(format=fmt_out)
     ph = "%s" if fmt_in == Format.TEXT else "%b"
