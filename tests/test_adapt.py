@@ -161,8 +161,8 @@ def test_load_cursor_ctx_nested(conn, sql, obj, fmt_out):
 
 
 @pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
-def test_array_dumper(fmt_out):
-    t = Transformer()
+def test_array_dumper(conn, fmt_out):
+    t = Transformer(conn)
     dint = t.get_dumper([0], fmt_out)
     assert dint.oid == builtins["int8"].array_oid
     assert dint.sub_oid == builtins["int8"].oid
@@ -173,9 +173,18 @@ def test_array_dumper(fmt_out):
     assert dstr is not dint
 
     assert t.get_dumper([1], fmt_out) is dint
-    assert t.get_dumper([], fmt_out) is dstr
     assert t.get_dumper([None, [1]], fmt_out) is dint
-    assert t.get_dumper([None, [None]], fmt_out) is dstr
+
+    dempty = t.get_dumper([], fmt_out)
+    assert t.get_dumper([None, [None]], fmt_out) is dempty
+    if fmt_out == Format.TEXT:
+        if conn.pgconn.server_version >= 100000:
+            assert dempty.oid == 0
+        else:
+            assert dempty.oid == builtins["text"].oid
+    else:
+        assert dempty.oid == builtins["text"].array_oid
+        assert dempty.sub_oid == builtins["text"].oid
 
     L = []
     L.append(L)

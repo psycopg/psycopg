@@ -20,7 +20,7 @@ else:
 if not libname:
     raise ImportError("libpq library not found")
 
-pq = ctypes.pydll.LoadLibrary(libname)
+pq = ctypes.cdll.LoadLibrary(libname)
 
 # Get the libpq version to define what functions are available.
 
