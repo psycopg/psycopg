@@ -197,3 +197,4 @@ Binary parameters and results
 
     - pass parameters in binary with ``%b``
     - return parameters in binary with `!cursor(format=BINARY)`
+    - cannot pass multiple statements in binary
