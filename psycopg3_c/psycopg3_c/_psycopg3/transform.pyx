@@ -257,7 +257,7 @@ cdef class Transformer:
                         <PyObject *>param, NULL)
             else:
                 dumped = None
-                oid = self._unknown_oid
+                oid = oids.INVALID_OID
 
             Py_INCREF(dumped)
             PyList_SET_ITEM(ps, i, dumped)

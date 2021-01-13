@@ -111,7 +111,7 @@ class Transformer(AdaptContext):
         self, params: Sequence[Any], formats: Sequence[Format]
     ) -> Tuple[List[Any], Tuple[int, ...]]:
         ps: List[Optional[bytes]] = [None] * len(params)
-        ts = [self._unknown_oid] * len(params)
+        ts = [INVALID_OID] * len(params)
 
         dumpers = self._row_dumpers
         if not dumpers:

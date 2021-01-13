@@ -196,10 +196,8 @@ def test_array_dumper(conn, fmt_out):
 def test_none_type_argument(conn, fmt_in):
     cur = conn.cursor()
     cur.execute("create table none_args (id serial primary key, num integer)")
-    cast = "" if conn.pgconn.server_version >= 100000 else "::int"
     cur.execute(
-        f"insert into none_args (num) values (%s{cast}) returning id",
-        (None,),
+        "insert into none_args (num) values (%s) returning id", (None,)
     )
     assert cur.fetchone()[0]
 
