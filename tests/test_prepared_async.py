@@ -196,17 +196,10 @@ async def test_different_types(aconn):
 async def test_untyped_json(aconn):
     aconn.prepare_threshold = 1
     await aconn.execute("create table testjson(data jsonb)")
-    if aconn.pgconn.server_version >= 100000:
-        cast, t = "", "jsonb"
-    else:
-        cast, t = "::jsonb", "text"
-
     for i in range(2):
-        await aconn.execute(
-            f"insert into testjson (data) values (%s{cast})", ["{}"]
-        )
+        await aconn.execute("insert into testjson (data) values (%s)", ["{}"])
 
     cur = await aconn.execute(
         "select parameter_types from pg_prepared_statements"
     )
-    assert await cur.fetchall() == [([t],)]
+    assert await cur.fetchall() == [(["jsonb"],)]

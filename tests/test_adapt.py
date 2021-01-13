@@ -178,10 +178,7 @@ def test_array_dumper(conn, fmt_out):
     dempty = t.get_dumper([], fmt_out)
     assert t.get_dumper([None, [None]], fmt_out) is dempty
     if fmt_out == Format.TEXT:
-        if conn.pgconn.server_version >= 100000:
-            assert dempty.oid == 0
-        else:
-            assert dempty.oid == builtins["text"].oid
+        assert dempty.oid == 0
     else:
         assert dempty.oid == builtins["text"].array_oid
         assert dempty.sub_oid == builtins["text"].oid
@@ -208,27 +205,12 @@ def test_return_untyped(conn, fmt_in):
     cur = conn.cursor()
     # Currently string are passed as unknown oid to libpq. This is because
     # unknown is more easily cast by postgres to different types (see jsonb
-    # later). However Postgres < 10 refuses to emit unknown types.
-    if conn.pgconn.server_version >= 100000:
-        cur.execute("select %s, %s", ["hello", 10])
-        assert cur.fetchone() == ("hello", 10)
-    else:
-        # We used to tolerate an error on roundtrip for unknown on pg < 10
-        # however after introducing prepared statements the error happens
-        # in every context, so now we cannot just use unknown oid on PG < 10
-        # with pytest.raises(psycopg3.errors.IndeterminateDatatype):
-        #     cur.execute("select %s, %s", ["hello", 10])
-        # conn.rollback()
-        # cur.execute("select %s::text, %s", ["hello", 10])
-        cur.execute("select %s, %s", ["hello", 10])
-        assert cur.fetchone() == ("hello", 10)
+    # later).
+    cur.execute("select %s, %s", ["hello", 10])
+    assert cur.fetchone() == ("hello", 10)
 
-    # It would be nice if above all postgres version behaved consistently.
-    # However this below shouldn't break either.
-    # (unfortunately it does: a cast is required for pre 10 versions)
-    cast = "" if conn.pgconn.server_version >= 100000 else "::jsonb"
     cur.execute("create table testjson(data jsonb)")
-    cur.execute(f"insert into testjson (data) values (%s{cast})", ["{}"])
+    cur.execute("insert into testjson (data) values (%s)", ["{}"])
     assert cur.execute("select data from testjson").fetchone() == ({},)
 
 

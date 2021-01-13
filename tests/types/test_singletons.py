@@ -11,8 +11,7 @@ from psycopg3.adapt import Transformer, Format
 def test_roundtrip_bool(conn, b, fmt_in, fmt_out):
     cur = conn.cursor(format=fmt_out)
     ph = "%s" if fmt_in == Format.TEXT else "%b"
-    cast = "" if conn.pgconn.server_version > 100000 else "::bool"
-    result = cur.execute(f"select {ph}{cast}", (b,)).fetchone()[0]
+    result = cur.execute(f"select {ph}", (b,)).fetchone()[0]
     assert cur.pgresult.fformat(0) == fmt_out
     if b is not None:
         assert cur.pgresult.ftype(0) == builtins["bool"].oid

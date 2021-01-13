@@ -9,7 +9,7 @@ from typing import cast, TYPE_CHECKING
 
 from . import errors as e
 from .pq import Format
-from .oids import INVALID_OID, TEXT_OID
+from .oids import INVALID_OID
 from .proto import LoadFunc, AdaptContext
 
 if TYPE_CHECKING:
@@ -39,16 +39,11 @@ class Transformer(AdaptContext):
     _pgresult: Optional["PGresult"] = None
 
     def __init__(self, context: Optional[AdaptContext] = None):
-        self._unknown_oid = INVALID_OID
 
         # WARNING: don't store context, or you'll create a loop with the Cursor
         if context:
             self._adapters = context.adapters
-            conn = self._connection = context.connection
-
-            # PG 9.6 gives an error if an unknown oid is emitted as column
-            if conn and conn.pgconn.server_version < 100000:
-                self._unknown_oid = TEXT_OID
+            self._connection = context.connection
         else:
             from .adapt import global_adapters
 
@@ -163,7 +158,7 @@ class Transformer(AdaptContext):
                 # representation for unknown array, so let's dump it as text[].
                 # This means that placeholders receiving a binary array should
                 # be almost always cast to the target type.
-                d.oid = self._unknown_oid
+                d.oid = INVALID_OID
 
         self._dumpers_cache[format][key] = d
         return d

@@ -109,7 +109,7 @@ def test_fetchone(conn):
 
 
 def test_execute_binary_result(conn):
-    cur = conn.cursor(format=psycopg3.pq.Format.BINARY)
+    cur = conn.cursor(format=Format.BINARY)
     cur.execute("select %s::text, %s::text", ["foo", None])
     assert cur.pgresult.fformat(0) == 1
 
@@ -204,11 +204,23 @@ def test_executemany_badquery(conn, query):
         cur.executemany(query, [(10, "hello"), (20, "world")])
 
 
-def test_executemany_null_first(conn):
+@pytest.mark.parametrize("fmt", [Format.TEXT, Format.BINARY])
+def test_executemany_null_first(conn, fmt):
+    ph = "%s" if fmt == Format.TEXT else "%b"
     cur = conn.cursor()
-    cur.executemany("select %s, %s", [[1, None], [3, 4]])
-    with pytest.raises(TypeError):
-        cur.executemany("select %s, %s", [[1, ""], [3, 4]])
+    cur.execute("create table testmany (a bigint, b bigint)")
+    cur.executemany(
+        f"insert into testmany values ({ph}, {ph})", [[1, None], [3, 4]]
+    )
+    with pytest.raises(
+        (
+            psycopg3.errors.InvalidTextRepresentation,
+            psycopg3.errors.ProtocolViolation,
+        )
+    ):
+        cur.executemany(
+            f"insert into testmany values ({ph}, {ph})", [[1, ""], [3, 4]]
+        )
 
 
 def test_rowcount(conn):

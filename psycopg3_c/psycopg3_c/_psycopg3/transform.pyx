@@ -71,17 +71,11 @@ cdef class Transformer:
     cdef int _nfields, _ntuples
     cdef list _row_dumpers
     cdef list _row_loaders
-    cdef int _unknown_oid
 
     def __cinit__(self, context: Optional["AdaptContext"] = None):
-        self._unknown_oid = oids.INVALID_OID
         if context is not None:
             self.adapters = context.adapters
             self.connection = context.connection
-
-            # PG 9.6 gives an error if an unknown oid is emitted as column
-            if self.connection and self.connection.pgconn.server_version < 100000:
-                self._unknown_oid = oids.TEXT_OID
         else:
             from psycopg3.adapt import global_adapters
             self.adapters = global_adapters
@@ -214,7 +208,7 @@ cdef class Transformer:
                 # representation for unknown array, so let's dump it as text[].
                 # This means that placeholders receiving a binary array should
                 # be almost always cast to the target type.
-                d.oid = self._unknown_oid
+                d.oid = oids.INVALID_OID
 
         PyDict_SetItem(cache, key, d)
         return d

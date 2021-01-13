@@ -41,16 +41,6 @@ cdef class CDumper:
         conn = context.connection if context is not None else None
         self._pgconn = conn.pgconn if conn is not None else None
 
-        # default oid is implicitly set to 0, subclasses may override it
-        # PG 9.6 goes a bit bonker sending unknown oids, so use text instead
-        # (this does cause side effect, and requres casts more often than >= 10)
-        if (
-            self.oid == 0
-            and self._pgconn is not None
-            and self._pgconn.server_version < 100000
-        ):
-            self.oid = oids.TEXT_OID
-
     cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
         """Store the Postgres representation *obj* into *rv* at *offset*
 

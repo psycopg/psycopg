@@ -186,13 +186,9 @@ def test_different_types(conn):
 def test_untyped_json(conn):
     conn.prepare_threshold = 1
     conn.execute("create table testjson(data jsonb)")
-    if conn.pgconn.server_version >= 100000:
-        cast, t = "", "jsonb"
-    else:
-        cast, t = "::jsonb", "text"
 
     for i in range(2):
-        conn.execute(f"insert into testjson (data) values (%s{cast})", ["{}"])
+        conn.execute("insert into testjson (data) values (%s)", ["{}"])
 
     cur = conn.execute("select parameter_types from pg_prepared_statements")
-    assert cur.fetchall() == [([t],)]
+    assert cur.fetchall() == [(["jsonb"],)]

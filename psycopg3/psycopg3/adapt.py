@@ -10,7 +10,7 @@ from typing import cast, TYPE_CHECKING
 from . import pq
 from . import proto
 from .pq import Format as Format
-from .oids import builtins, TEXT_OID
+from .oids import builtins
 from .proto import AdaptContext
 
 if TYPE_CHECKING:
@@ -38,14 +38,6 @@ class Dumper(ABC):
 
         self.oid = self._oid
         """The oid to pass to the server, if known."""
-
-        # Postgres 9.6 doesn't deal well with unknown oids
-        if (
-            not self.oid
-            and self.connection
-            and self.connection.pgconn.server_version < 100000
-        ):
-            self.oid = TEXT_OID
 
     @abstractmethod
     def dump(self, obj: Any) -> bytes:

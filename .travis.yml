@@ -26,14 +26,14 @@ matrix:
 
     - python: 3.6
       addons:
-        postgresql: '9.5'
+        postgresql: '10'
         apt:
           packages:
-            - postgresql-client-9.5
+            - postgresql-client-10
       env:
         - TOXENV=py36
         - TOXDIR=psycopg3_c
-        - PGVER=9.5
+        - PGVER=10
         - PSYCOPG3_IMPL=c
         - PGPORT=5432
           # skip tests failing on importing psycopg3_c.pq on subprocess
@@ -42,30 +42,17 @@ matrix:
 
     - python: 3.6
       addons:
-        postgresql: '9.6'
+        postgresql: '11'
         apt:
           packages:
-            - postgresql-client-9.6
+            - postgresql-11
+            - postgresql-client-11
       env:
         - TOXENV=py36
         - TOXDIR=psycopg3
-        - PGVER=9.6
+        - PGVER=11
         - PSYCOPG3_IMPL=python
-        - PGPORT=5432
-
-    - python: 3.7
-      addons:
-        postgresql: '10'
-        apt:
-          packages:
-            - postgresql-client-10
-      env:
-        - TOXENV=py37
-        - TOXDIR=psycopg3_c
-        - PGVER=10
-        - PSYCOPG3_IMPL=c
-        - PGPORT=5432
-        - PYTEST_ADDOPTS="-m 'not subprocess'"
+        - PGPORT=5433
 
     - python: 3.7
       addons:
@@ -74,6 +61,21 @@ matrix:
           packages:
             - postgresql-11
             - postgresql-client-11
+      env:
+        - TOXENV=py37
+        - TOXDIR=psycopg3_c
+        - PGVER=11
+        - PSYCOPG3_IMPL=c
+        - PGPORT=5433
+        - PYTEST_ADDOPTS="-m 'not subprocess'"
+
+    - python: 3.7
+      addons:
+        postgresql: '12'
+        apt:
+          packages:
+            - postgresql-12
+            - postgresql-client-12
       env:
         - TOXENV=py37
         - TOXDIR=psycopg3

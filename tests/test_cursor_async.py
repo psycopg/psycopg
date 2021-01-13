@@ -3,6 +3,7 @@ import pytest
 import weakref
 
 import psycopg3
+from psycopg3.adapt import Format
 
 pytestmark = pytest.mark.asyncio
 
@@ -110,7 +111,7 @@ async def test_fetchone(aconn):
 
 
 async def test_execute_binary_result(aconn):
-    cur = await aconn.cursor(format=psycopg3.pq.Format.BINARY)
+    cur = await aconn.cursor(format=Format.BINARY)
     await cur.execute("select %s::text, %s::text", ["foo", None])
     assert cur.pgresult.fformat(0) == 1
 
@@ -202,11 +203,23 @@ async def test_executemany_badquery(aconn, query):
         await cur.executemany(query, [(10, "hello"), (20, "world")])
 
 
-async def test_executemany_null_first(aconn):
+@pytest.mark.parametrize("fmt", [Format.TEXT, Format.BINARY])
+async def test_executemany_null_first(aconn, fmt):
+    ph = "%s" if fmt == Format.TEXT else "%b"
     cur = await aconn.cursor()
-    await cur.executemany("select %s, %s", [[1, None], [3, 4]])
-    with pytest.raises(TypeError):
-        await cur.executemany("select %s, %s", [[1, ""], [3, 4]])
+    await cur.execute("create table testmany (a bigint, b bigint)")
+    await cur.executemany(
+        f"insert into testmany values ({ph}, {ph})", [[1, None], [3, 4]]
+    )
+    with pytest.raises(
+        (
+            psycopg3.errors.InvalidTextRepresentation,
+            psycopg3.errors.ProtocolViolation,
+        )
+    ):
+        await cur.executemany(
+            f"insert into testmany values ({ph}, {ph})", [[1, ""], [3, 4]]
+        )
 
 
 async def test_rowcount(aconn):

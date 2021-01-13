@@ -146,10 +146,11 @@ def test_empty_list_mix(conn, fmt_in):
     ph = "%s" if fmt_in == Format.TEXT else "%b"
     objs = list(range(3))
     # pro tip: don't get confused with the types
-    f1, f2 = conn.execute(f"select {ph}, {ph}", (objs, [])).fetchone()
+    conn.execute("create table testarrays (col1 bigint[], col2 bigint[])")
+    f1, f2 = conn.execute(
+        f"insert into testarrays values ({ph}, {ph}) returning *", (objs, [])
+    ).fetchone()
     assert f1 == objs
-    if f2 == "{}":
-        pytest.xfail("text empty arrays don't roundtrip well")
     assert f2 == []
 
 
@@ -157,13 +158,7 @@ def test_empty_list_text(conn):
     cur = conn.cursor()
     cur.execute("create table test (id serial primary key, data date[])")
     with conn.transaction():
-        try:
-            cur.execute("insert into test (data) values (%s)", ([],))
-        except psycopg3.errors.DatatypeMismatch:
-            if conn.pgconn.server_version < 100000:
-                pytest.xfail("on PG 9.6 empty arrays are passed as text")
-            else:
-                raise
+        cur.execute("insert into test (data) values (%s)", ([],))
     cur.execute("select data from test")
     assert cur.fetchone() == ([],)
 
