@@ -147,9 +147,23 @@ def test_empty_list_mix(conn, fmt_in):
     objs = list(range(3))
     # pro tip: don't get confused with the types
     conn.execute("create table testarrays (col1 bigint[], col2 bigint[])")
-    f1, f2 = conn.execute(
-        f"insert into testarrays values ({ph}, {ph}) returning *", (objs, [])
-    ).fetchone()
+    if fmt_in == Format.TEXT:
+        f1, f2 = conn.execute(
+            f"insert into testarrays values ({ph}, {ph}) returning *",
+            (objs, []),
+        ).fetchone()
+    else:
+        # TODO: fix passing empty lists in binary format
+        try:
+            f1, f2 = conn.execute(
+                f"insert into testarrays values ({ph}, {ph}) returning *",
+                (objs, []),
+            ).fetchone()
+        except psycopg3.errors.DatatypeMismatch:
+            pytest.xfail("empty lists in binary format not supported")
+        else:
+            assert False, "you fixed the thing, now fix the test!"
+
     assert f1 == objs
     assert f2 == []
 

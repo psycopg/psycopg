@@ -202,15 +202,20 @@ def test_host(pgconn):
         pgconn.host
 
 
-# TODO: to implement in psycopg3_c.pq
-@pytest.mark.xfail
 @pytest.mark.libpq(">= 12")
 def test_hostaddr(pgconn):
     # not in info
     assert isinstance(pgconn.hostaddr, bytes), pgconn.hostaddr
     pgconn.finish()
-    with pytest.raises(psycopg3.OperationalError):
-        pgconn.hostaddr
+    if psycopg3.pq.__impl__ == "python":
+        with pytest.raises(psycopg3.OperationalError):
+            pgconn.hostaddr
+
+    else:
+        if pgconn.hostaddr == b"TODO":
+            pytest.xfail("implement hostaddr in psycopg3_c.pq")
+        else:
+            assert False, "you did it! not fix the test"
 
 
 @pytest.mark.xfail
