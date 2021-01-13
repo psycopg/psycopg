@@ -258,7 +258,7 @@ cdef class Transformer:
             Py_INCREF(oid)
             PyTuple_SET_ITEM(ts, i, oid)
 
-        return ps, ts
+        return ps, ts, formats
 
     cdef RowDumper _get_row_dumper(self, object param, object fmt):
         cdef RowDumper row_dumper = RowDumper()

@@ -93,7 +93,7 @@ class Transformer(Protocol):
 
     def dump_sequence(
         self, params: Sequence[Any], formats: Sequence[Format]
-    ) -> Tuple[List[Any], Tuple[int, ...]]:
+    ) -> Tuple[List[Any], Tuple[int, ...], Sequence[Format]]:
         ...
 
     def get_dumper(self, obj: Any, format: Format) -> "Dumper":

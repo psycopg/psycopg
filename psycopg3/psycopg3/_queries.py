@@ -31,7 +31,7 @@ class PostgresQuery:
 
     __slots__ = """
         params types formats
-        _tx _unknown_oid _parts query _encoding _order
+        _tx _want_formats _parts query _encoding _order
         """.split()
 
     def __init__(self, transformer: "Transformer"):
@@ -40,7 +40,10 @@ class PostgresQuery:
         self.params: Optional[List[Optional[bytes]]] = None
         # these are tuples so they can be used as keys e.g. in prepared stmts
         self.types: Tuple[int, ...] = ()
-        self.formats: Optional[List[Format]] = None
+
+        # The format requested by the user and the ones to really pass Postgres
+        self._want_formats: Optional[List[Format]] = None
+        self.formats: Optional[Sequence[Format]] = None
 
         self._parts: List[QueryPart]
         self.query = b""
@@ -62,20 +65,23 @@ class PostgresQuery:
             query = query.as_bytes(self._tx)
 
         if vars is not None:
-            self.query, self.formats, self._order, self._parts = _query2pg(
-                query, self._encoding
-            )
+            (
+                self.query,
+                self._want_formats,
+                self._order,
+                self._parts,
+            ) = _query2pg(query, self._encoding)
         else:
             if isinstance(query, str):
                 query = query.encode(self._encoding)
             self.query = query
-            self.formats = self._order = None
+            self._want_formats = self._order = None
 
         self.dump(vars)
 
     def dump(self, vars: Optional[Params]) -> None:
         """
-        Process a new set of variables on the same query as before.
+        Process a new set of variables on the query processed by `convert()`.
 
         This method updates `params` and `types`.
         """
@@ -83,13 +89,14 @@ class PostgresQuery:
             params = _validate_and_reorder_params(
                 self._parts, vars, self._order
             )
-            assert self.formats is not None
-            self.params, self.types = self._tx.dump_sequence(
-                params, self.formats
+            assert self._want_formats is not None
+            self.params, self.types, self.formats = self._tx.dump_sequence(
+                params, self._want_formats
             )
         else:
             self.params = None
             self.types = ()
+            self.formats = None
 
 
 @lru_cache()

@@ -104,7 +104,7 @@ class Transformer(AdaptContext):
 
     def dump_sequence(
         self, params: Sequence[Any], formats: Sequence[Format]
-    ) -> Tuple[List[Any], Tuple[int, ...]]:
+    ) -> Tuple[List[Any], Tuple[int, ...], Sequence[Format]]:
         ps: List[Optional[bytes]] = [None] * len(params)
         ts = [INVALID_OID] * len(params)
 
@@ -121,7 +121,7 @@ class Transformer(AdaptContext):
                 ps[i] = dumper.dump(param)
                 ts[i] = dumper.oid
 
-        return ps, tuple(ts)
+        return ps, tuple(ts), formats
 
     def get_dumper(self, obj: Any, format: Format) -> "Dumper":
         # Fast path: return a Dumper class already instantiated from the same type
