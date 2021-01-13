@@ -4,55 +4,59 @@ import subprocess as sp
 
 import pytest
 
+from psycopg3 import pq
 from psycopg3.adapt import Format
 
 
-@pytest.mark.parametrize("fmt_in", [Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
 @pytest.mark.parametrize("val", ["192.168.0.1", "2001:db8::"])
 def test_address_dump(conn, fmt_in, val):
     binary_check(fmt_in)
-    ph = "%s" if fmt_in == Format.TEXT else "%b"
     cur = conn.cursor()
-    cur.execute(f"select {ph} = %s::inet", (ipaddress.ip_address(val), val))
+    cur.execute(
+        f"select %{fmt_in} = %s::inet", (ipaddress.ip_address(val), val)
+    )
     assert cur.fetchone()[0] is True
     cur.execute(
-        f"select {ph} = array[null, %s]::inet[]",
+        f"select %{fmt_in} = array[null, %s]::inet[]",
         ([None, ipaddress.ip_interface(val)], val),
     )
     assert cur.fetchone()[0] is True
 
 
-@pytest.mark.parametrize("fmt_in", [Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
 @pytest.mark.parametrize("val", ["127.0.0.1/24", "::ffff:102:300/128"])
 def test_interface_dump(conn, fmt_in, val):
     binary_check(fmt_in)
-    ph = "%s" if fmt_in == Format.TEXT else "%b"
     cur = conn.cursor()
-    cur.execute(f"select {ph} = %s::inet", (ipaddress.ip_interface(val), val))
+    cur.execute(
+        f"select %{fmt_in} = %s::inet", (ipaddress.ip_interface(val), val)
+    )
     assert cur.fetchone()[0] is True
     cur.execute(
-        f"select {ph} = array[null, %s]::inet[]",
+        f"select %{fmt_in} = array[null, %s]::inet[]",
         ([None, ipaddress.ip_interface(val)], val),
     )
     assert cur.fetchone()[0] is True
 
 
-@pytest.mark.parametrize("fmt_in", [Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
 @pytest.mark.parametrize("val", ["127.0.0.0/24", "::ffff:102:300/128"])
 def test_network_dump(conn, fmt_in, val):
     binary_check(fmt_in)
-    ph = "%s" if fmt_in == Format.TEXT else "%b"
     cur = conn.cursor()
-    cur.execute(f"select {ph} = %s::cidr", (ipaddress.ip_network(val), val))
+    cur.execute(
+        f"select %{fmt_in} = %s::cidr", (ipaddress.ip_network(val), val)
+    )
     assert cur.fetchone()[0] is True
     cur.execute(
-        f"select {ph} = array[NULL, %s]::cidr[]",
+        f"select %{fmt_in} = array[NULL, %s]::cidr[]",
         ([None, ipaddress.ip_network(val)], val),
     )
     assert cur.fetchone()[0] is True
 
 
-@pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
 @pytest.mark.parametrize("val", ["127.0.0.1/32", "::ffff:102:300/128"])
 def test_inet_load_address(conn, fmt_out, val):
     binary_check(fmt_out)
@@ -64,7 +68,7 @@ def test_inet_load_address(conn, fmt_out, val):
     assert cur.fetchone()[0] == [None, addr]
 
 
-@pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
 @pytest.mark.parametrize("val", ["127.0.0.1/24", "::ffff:102:300/127"])
 def test_inet_load_network(conn, fmt_out, val):
     binary_check(fmt_out)
@@ -75,7 +79,7 @@ def test_inet_load_network(conn, fmt_out, val):
     assert cur.fetchone()[0] == [None, ipaddress.ip_interface(val)]
 
 
-@pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
 @pytest.mark.parametrize("val", ["127.0.0.0/24", "::ffff:102:300/128"])
 def test_cidr_load(conn, fmt_out, val):
     binary_check(fmt_out)
@@ -87,7 +91,7 @@ def test_cidr_load(conn, fmt_out, val):
 
 
 def binary_check(fmt):
-    if fmt == Format.BINARY:
+    if fmt == Format.BINARY or fmt == pq.Format.BINARY:
         pytest.xfail("inet binary not implemented")
 
 

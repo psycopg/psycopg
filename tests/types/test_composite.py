@@ -1,5 +1,6 @@
 import pytest
 
+from psycopg3 import pq
 from psycopg3.sql import Identifier
 from psycopg3.oids import builtins
 from psycopg3.adapt import Format, global_adapters
@@ -44,7 +45,7 @@ def test_dump_tuple(conn, rec, obj):
     assert res == obj
 
 
-@pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
 def test_load_all_chars(conn, fmt_out):
     cur = conn.cursor(format=fmt_out)
     for i in range(1, 256):
@@ -153,21 +154,20 @@ async def test_fetch_info_async(aconn, testcomp, name, fields):
         assert info.fields[i].type_oid == builtins[t].oid
 
 
-@pytest.mark.parametrize("fmt_in", [Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
 def test_dump_composite_all_chars(conn, fmt_in, testcomp):
     if fmt_in == Format.BINARY:
         pytest.xfail("binary composite dumper not implemented")
-    ph = "%s" if fmt_in == Format.TEXT else "%b"
     cur = conn.cursor()
     for i in range(1, 256):
         (res,) = cur.execute(
-            f"select row(chr(%s::int), 1, 1.0)::testcomp = {ph}::testcomp",
+            f"select row(chr(%s::int), 1, 1.0)::testcomp = %{fmt_in}::testcomp",
             (i, (chr(i), 1, 1.0)),
         ).fetchone()
         assert res is True
 
 
-@pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
 def test_load_composite(conn, testcomp, fmt_out):
     info = CompositeInfo.fetch(conn, "testcomp")
     info.register(conn)
@@ -187,7 +187,7 @@ def test_load_composite(conn, testcomp, fmt_out):
     assert isinstance(res[0].baz, float)
 
 
-@pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
 def test_load_composite_factory(conn, testcomp, fmt_out):
     info = CompositeInfo.fetch(conn, "testcomp")
 
@@ -214,20 +214,20 @@ def test_load_composite_factory(conn, testcomp, fmt_out):
 def test_register_scope(conn, testcomp):
     info = CompositeInfo.fetch(conn, "testcomp")
     info.register()
-    for fmt in (Format.TEXT, Format.BINARY):
+    for fmt in (pq.Format.TEXT, pq.Format.BINARY):
         for oid in (info.oid, info.array_oid):
             assert global_adapters._loaders[fmt].pop(oid)
 
     cur = conn.cursor()
     info.register(cur)
-    for fmt in (Format.TEXT, Format.BINARY):
+    for fmt in (pq.Format.TEXT, pq.Format.BINARY):
         for oid in (info.oid, info.array_oid):
             assert oid not in global_adapters._loaders[fmt]
             assert oid not in conn.adapters._loaders[fmt]
             assert oid in cur.adapters._loaders[fmt]
 
     info.register(conn)
-    for fmt in (Format.TEXT, Format.BINARY):
+    for fmt in (pq.Format.TEXT, pq.Format.BINARY):
         for oid in (info.oid, info.array_oid):
             assert oid not in global_adapters._loaders[fmt]
             assert oid in conn.adapters._loaders[fmt]

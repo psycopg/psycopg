@@ -1,6 +1,7 @@
 import pytest
 
 import psycopg3
+from psycopg3 import pq
 from psycopg3.adapt import Transformer, Format, Dumper, Loader
 from psycopg3.oids import builtins, TEXT_OID
 
@@ -8,7 +9,7 @@ from psycopg3.oids import builtins, TEXT_OID
 @pytest.mark.parametrize(
     "data, format, result, type",
     [
-        (1, Format.TEXT, b"1", "numeric"),
+        (1, Format.TEXT, b"1", "int8"),
         ("hello", Format.TEXT, b"hello", "text"),
         ("hello", Format.BINARY, b"hello", "text"),
     ],
@@ -17,7 +18,10 @@ def test_dump(data, format, result, type):
     t = Transformer()
     dumper = t.get_dumper(data, format)
     assert dumper.dump(data) == result
-    assert dumper.oid == 0 if type == "text" else builtins[type].oid
+    if type == "text" and format != Format.BINARY:
+        assert dumper.oid == 0
+    else:
+        assert dumper.oid == builtins[type].oid
 
 
 @pytest.mark.parametrize(
@@ -37,12 +41,16 @@ def test_quote(data, result):
 
 
 def test_dump_connection_ctx(conn):
-    make_dumper("t").register(str, conn)
-    make_bin_dumper("b").register(str, conn)
+    make_dumper("t").register(MyStr, conn)
+    make_bin_dumper("b").register(MyStr, conn)
 
     cur = conn.cursor()
-    cur.execute("select %s, %b", ["hello", "world"])
-    assert cur.fetchone() == ("hellot", "worldb")
+    cur.execute("select %s", [MyStr("hello")])
+    assert cur.fetchone() == ("hellob",)
+    cur.execute("select %t", [MyStr("hello")])
+    assert cur.fetchone() == ("hellot",)
+    cur.execute("select %b", [MyStr("hello")])
+    assert cur.fetchone() == ("hellob",)
 
 
 def test_dump_cursor_ctx(conn):
@@ -53,12 +61,20 @@ def test_dump_cursor_ctx(conn):
     make_dumper("tc").register(str, cur)
     make_bin_dumper("bc").register(str, cur)
 
-    cur.execute("select %s, %b", ["hello", "world"])
-    assert cur.fetchone() == ("hellotc", "worldbc")
+    cur.execute("select %s", [MyStr("hello")])
+    assert cur.fetchone() == ("hellobc",)
+    cur.execute("select %t", [MyStr("hello")])
+    assert cur.fetchone() == ("hellotc",)
+    cur.execute("select %b", [MyStr("hello")])
+    assert cur.fetchone() == ("hellobc",)
 
     cur = conn.cursor()
-    cur.execute("select %s, %b", ["hello", "world"])
-    assert cur.fetchone() == ("hellot", "worldb")
+    cur.execute("select %s", [MyStr("hello")])
+    assert cur.fetchone() == ("hellob",)
+    cur.execute("select %t", [MyStr("hello")])
+    assert cur.fetchone() == ("hellot",)
+    cur.execute("select %b", [MyStr("hello")])
+    assert cur.fetchone() == ("hellob",)
 
 
 @pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
@@ -82,7 +98,7 @@ def test_subclass_dumper(conn):
             return (obj * 2).encode("utf-8")
 
     MyStringDumper.register(str, conn)
-    assert conn.execute("select %s", ["hello"]).fetchone()[0] == "hellohello"
+    assert conn.execute("select %t", ["hello"]).fetchone()[0] == "hellohello"
 
 
 def test_subclass_loader(conn):
@@ -100,9 +116,9 @@ def test_subclass_loader(conn):
 @pytest.mark.parametrize(
     "data, format, type, result",
     [
-        (b"1", Format.TEXT, "int4", 1),
-        (b"hello", Format.TEXT, "text", "hello"),
-        (b"hello", Format.BINARY, "text", "hello"),
+        (b"1", pq.Format.TEXT, "int4", 1),
+        (b"hello", pq.Format.TEXT, "text", "hello"),
+        (b"hello", pq.Format.BINARY, "text", "hello"),
     ],
 )
 def test_cast(data, format, type, result):
@@ -131,14 +147,14 @@ def test_load_cursor_ctx(conn):
 
     r = cur.execute("select 'hello'::text").fetchone()
     assert r == ("hellotc",)
-    cur.format = Format.BINARY
+    cur.format = pq.Format.BINARY
     r = cur.execute("select 'hello'::text").fetchone()
     assert r == ("hellobc",)
 
     cur = conn.cursor()
     r = cur.execute("select 'hello'::text").fetchone()
     assert r == ("hellot",)
-    cur.format = Format.BINARY
+    cur.format = pq.Format.BINARY
     r = cur.execute("select 'hello'::text").fetchone()
     assert r == ("hellob",)
 
@@ -147,10 +163,10 @@ def test_load_cursor_ctx(conn):
     "sql, obj",
     [("'{hello}'::text[]", ["helloc"]), ("row('hello'::text)", ("helloc",))],
 )
-@pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
 def test_load_cursor_ctx_nested(conn, sql, obj, fmt_out):
     cur = conn.cursor(format=fmt_out)
-    if fmt_out == Format.TEXT:
+    if fmt_out == pq.Format.TEXT:
         make_loader("c").register(TEXT_OID, cur)
     else:
         make_bin_loader("c").register(TEXT_OID, cur)
@@ -160,33 +176,46 @@ def test_load_cursor_ctx_nested(conn, sql, obj, fmt_out):
     assert res == obj
 
 
-@pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
 def test_array_dumper(conn, fmt_out):
     t = Transformer(conn)
-    dint = t.get_dumper([0], fmt_out)
+    fmt_in = Format.from_pq(fmt_out)
+    dint = t.get_dumper([0], fmt_in)
     assert dint.oid == builtins["int8"].array_oid
     assert dint.sub_oid == builtins["int8"].oid
 
-    dstr = t.get_dumper([""], fmt_out)
-    assert dstr.oid == builtins["text"].array_oid
+    dstr = t.get_dumper([""], fmt_in)
+    assert dstr.oid == (
+        builtins["text"].array_oid if fmt_in == Format.BINARY else 0
+    )
     assert dstr.sub_oid == builtins["text"].oid
     assert dstr is not dint
 
-    assert t.get_dumper([1], fmt_out) is dint
-    assert t.get_dumper([None, [1]], fmt_out) is dint
+    assert t.get_dumper([1], fmt_in) is dint
+    assert t.get_dumper([None, [1]], fmt_in) is dint
 
-    dempty = t.get_dumper([], fmt_out)
-    assert t.get_dumper([None, [None]], fmt_out) is dempty
-    if fmt_out == Format.TEXT:
-        assert dempty.oid == 0
-    else:
-        assert dempty.oid == builtins["text"].array_oid
-        assert dempty.sub_oid == builtins["text"].oid
+    dempty = t.get_dumper([], fmt_in)
+    assert t.get_dumper([None, [None]], fmt_in) is dempty
+    assert dempty.oid == 0
+    assert dempty.dump([]) == b"{}"
 
     L = []
     L.append(L)
     with pytest.raises(psycopg3.DataError):
         assert t.get_dumper(L, fmt_out)
+
+
+def test_string_connection_ctx(conn):
+    make_dumper("t").register(str, conn)
+    make_bin_dumper("b").register(str, conn)
+
+    cur = conn.cursor()
+    cur.execute("select %s", ["hello"])
+    assert cur.fetchone() == ("hellot",)  # str prefers text
+    cur.execute("select %t", ["hello"])
+    assert cur.fetchone() == ("hellot",)
+    cur.execute("select %b", ["hello"])
+    assert cur.fetchone() == ("hellob",)
 
 
 @pytest.mark.parametrize("fmt_in", [Format.TEXT, Format.BINARY])
@@ -262,12 +291,16 @@ def test_optimised_adapters():
     assert not c_adapters
 
 
+class MyStr(str):
+    pass
+
+
 def make_dumper(suffix):
     """Create a test dumper appending a suffix to the bytes representation."""
 
     class TestDumper(Dumper):
         oid = TEXT_OID
-        format = Format.TEXT
+        format = pq.Format.TEXT
 
         def dump(self, s):
             return (s + suffix).encode("ascii")
@@ -277,7 +310,7 @@ def make_dumper(suffix):
 
 def make_bin_dumper(suffix):
     cls = make_dumper(suffix)
-    cls.format = Format.BINARY
+    cls.format = pq.Format.BINARY
     return cls
 
 
@@ -285,7 +318,7 @@ def make_loader(suffix):
     """Create a test loader appending a suffix to the data returned."""
 
     class TestLoader(Loader):
-        format = Format.TEXT
+        format = pq.Format.TEXT
 
         def load(self, b):
             return b.decode("ascii") + suffix
@@ -295,5 +328,5 @@ def make_loader(suffix):
 
 def make_bin_loader(suffix):
     cls = make_loader(suffix)
-    cls.format = Format.BINARY
+    cls.format = pq.Format.BINARY
     return cls

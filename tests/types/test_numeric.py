@@ -4,6 +4,7 @@ from math import isnan, isinf, exp
 import pytest
 
 import psycopg3
+from psycopg3 import pq
 from psycopg3 import sql
 from psycopg3.oids import builtins
 from psycopg3.adapt import Transformer, Format
@@ -29,10 +30,9 @@ from psycopg3.types.numeric import FloatLoader
 )
 @pytest.mark.parametrize("fmt_in", [Format.TEXT, Format.BINARY])
 def test_dump_int(conn, val, expr, fmt_in):
-    ph = "%s" if fmt_in == Format.TEXT else "%b"
     assert isinstance(val, int)
     cur = conn.cursor()
-    cur.execute(f"select {expr} = {ph}", (val,))
+    cur.execute(f"select {expr} = %{fmt_in}", (val,))
     assert cur.fetchone()[0] is True
 
 
@@ -55,11 +55,12 @@ def test_dump_int_subtypes(conn, val, expr, fmt_in):
     tname = builtins[expr.rsplit(":", 1)[-1]].name.title()
     assert tname in "Int2 Int4 Int8 Oid".split()
     Type = getattr(psycopg3.types.numeric, tname)
-    ph = "%s" if fmt_in == Format.TEXT else "%b"
     cur = conn.cursor()
-    cur.execute(f"select pg_typeof({expr}) = pg_typeof({ph})", (Type(val),))
+    cur.execute(
+        f"select pg_typeof({expr}) = pg_typeof(%{fmt_in})", (Type(val),)
+    )
     assert cur.fetchone()[0] is True
-    cur.execute(f"select {expr} = {ph}", (Type(val),))
+    cur.execute(f"select {expr} = %{fmt_in}", (Type(val),))
     assert cur.fetchone()[0] is True
 
 
@@ -77,7 +78,7 @@ def test_dump_int_subtypes(conn, val, expr, fmt_in):
 )
 def test_quote_int(conn, val, expr):
     tx = Transformer()
-    assert tx.get_dumper(val, 0).quote(val) == expr
+    assert tx.get_dumper(val, Format.TEXT).quote(val) == expr
 
     cur = conn.cursor()
     cur.execute(sql.SQL("select {v}, -{v}").format(v=sql.Literal(val)))
@@ -105,7 +106,7 @@ def test_quote_int(conn, val, expr):
         ("4294967295", "oid", 4294967295),
     ],
 )
-@pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
 def test_load_int(conn, val, pgtype, want, fmt_out):
     cur = conn.cursor(format=fmt_out)
     cur.execute(f"select %s::{pgtype}", (val,))
@@ -142,10 +143,9 @@ def test_load_int(conn, val, pgtype, want, fmt_out):
 )
 @pytest.mark.parametrize("fmt_in", [Format.TEXT, Format.BINARY])
 def test_dump_float(conn, val, expr, fmt_in):
-    ph = "%s" if fmt_in == Format.TEXT else "%b"
     assert isinstance(val, float)
     cur = conn.cursor()
-    cur.execute(f"select {ph} = {expr}::float8", (val,))
+    cur.execute(f"select %{fmt_in} = {expr}::float8", (val,))
     assert cur.fetchone()[0] is True
 
 
@@ -165,7 +165,7 @@ def test_dump_float(conn, val, expr, fmt_in):
 )
 def test_quote_float(conn, val, expr):
     tx = Transformer()
-    assert tx.get_dumper(val, 0).quote(val) == expr
+    assert tx.get_dumper(val, Format.TEXT).quote(val) == expr
 
     cur = conn.cursor()
     cur.execute(sql.SQL("select {v}, -{v}").format(v=sql.Literal(val)))
@@ -223,7 +223,7 @@ def test_dump_float_approx(conn, val, expr):
         ("-inf", "float8", -float("inf")),
     ],
 )
-@pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
 def test_load_float(conn, val, pgtype, want, fmt_out):
     cur = conn.cursor(format=fmt_out)
     cur.execute(f"select %s::{pgtype}", (val,))
@@ -264,7 +264,7 @@ def test_load_float(conn, val, pgtype, want, fmt_out):
         ("-1.42e40", "float8", -1.42e40),
     ],
 )
-@pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
 def test_load_float_approx(conn, expr, pgtype, want, fmt_out):
     cur = conn.cursor(format=fmt_out)
     cur.execute("select %s::%s" % (expr, pgtype))
@@ -313,7 +313,7 @@ def test_roundtrip_numeric(conn, val):
 def test_quote_numeric(conn, val, expr):
     val = Decimal(val)
     tx = Transformer()
-    assert tx.get_dumper(val, 0).quote(val) == expr
+    assert tx.get_dumper(val, Format.TEXT).quote(val) == expr
 
     cur = conn.cursor()
     cur.execute(sql.SQL("select {v}, -{v}").format(v=sql.Literal(val)))

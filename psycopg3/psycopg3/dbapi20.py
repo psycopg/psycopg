@@ -9,8 +9,9 @@ import datetime as dt
 from math import floor
 from typing import Any, Sequence
 
+from .pq import Format
 from .oids import builtins
-from .adapt import Dumper, Format
+from .adapt import Dumper
 
 
 class DBAPITypeObject:

@@ -46,7 +46,7 @@ def format_row_binary(
     cdef uint32_t besize
     cdef char *buf
     cdef int i
-    fmt = FORMAT_BINARY
+    fmt = PG_BINARY
 
     for i in range(rowlen):
         item = row[i]
@@ -103,7 +103,7 @@ def format_row_text(
     cdef unsigned char *target
     cdef int nesc = 0
     cdef int with_tab
-    fmt = FORMAT_TEXT
+    fmt = PG_TEXT
 
     for i in range(rowlen):
         # Include the tab before the data, so it gets included in the resizes

@@ -7,9 +7,10 @@ Entry point into the adaptation system.
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional, Type, TypeVar, Union
 from typing import cast, TYPE_CHECKING
+
 from . import pq
 from . import proto
-from .pq import Format as Format
+from ._enums import Format as Format
 from .oids import builtins
 from .proto import AdaptContext
 
@@ -24,7 +25,7 @@ class Dumper(ABC):
     Convert Python object of the type *cls* to PostgreSQL representation.
     """
 
-    format: Format
+    format: pq.Format
 
     # A class-wide oid, which will be used by default by instances unless
     # the subclass overrides it in init.
@@ -73,7 +74,7 @@ class Loader(ABC):
     Convert PostgreSQL objects with OID *oid* to Python objects.
     """
 
-    format: Format
+    format: pq.Format
 
     def __init__(self, oid: int, context: Optional[AdaptContext] = None):
         self.oid = oid
@@ -178,23 +179,38 @@ class AdaptersMap(AdaptContext):
 
         Return None if not found.
         """
-        dumpers = self._dumpers[format]
+        # TODO: auto selection
+        if format == Format.AUTO:
+            dmaps = [
+                self._dumpers[pq.Format.BINARY],
+                self._dumpers[pq.Format.TEXT],
+            ]
+        elif format == Format.BINARY:
+            dmaps = [self._dumpers[pq.Format.BINARY]]
+        elif format == Format.TEXT:
+            dmaps = [self._dumpers[pq.Format.TEXT]]
+        else:
+            raise ValueError(f"bad dumper format: {format}")
 
         # Look for the right class, including looking at superclasses
         for scls in cls.__mro__:
-            if scls in dumpers:
-                return dumpers[scls]
+            for dmap in dmaps:
+                if scls in dmap:
+                    return dmap[scls]
 
             # If the adapter is not found, look for its name as a string
             fqn = scls.__module__ + "." + scls.__qualname__
-            if fqn in dumpers:
-                # Replace the class name with the class itself
-                d = dumpers[scls] = dumpers.pop(fqn)
-                return d
+            for dmap in dmaps:
+                if fqn in dmap:
+                    # Replace the class name with the class itself
+                    d = dmap[scls] = dmap.pop(fqn)
+                    return d
 
         return None
 
-    def get_loader(self, oid: int, format: Format) -> Optional[Type[Loader]]:
+    def get_loader(
+        self, oid: int, format: pq.Format
+    ) -> Optional[Type[Loader]]:
         """
         Return the loader class for the given oid and format.
 

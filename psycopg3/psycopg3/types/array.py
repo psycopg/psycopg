@@ -8,9 +8,11 @@ import re
 import struct
 from typing import Any, Iterator, List, Optional, Type
 
+from .. import pq
+from .._enums import Format
 from .. import errors as e
-from ..oids import builtins, TEXT_OID, TEXT_ARRAY_OID
-from ..adapt import Format, Dumper, Loader, Transformer
+from ..oids import builtins, TEXT_OID, TEXT_ARRAY_OID, INVALID_OID
+from ..adapt import Dumper, Loader, Transformer
 from ..proto import AdaptContext
 
 
@@ -18,12 +20,20 @@ class BaseListDumper(Dumper):
     def __init__(self, cls: type, context: Optional[AdaptContext] = None):
         super().__init__(cls, context)
         tx = Transformer(context)
-        self.set_sub_dumper(tx.get_dumper("", self.format))
+        fmt = Format.from_pq(self.format)
+        self.set_sub_dumper(tx.get_dumper("", fmt))
 
     def set_sub_dumper(self, dumper: Dumper) -> None:
         self.sub_dumper = dumper
-        self.oid = self._get_array_oid(dumper.oid)
-        self.sub_oid = dumper.oid or TEXT_OID
+        # We consider an array of unknowns as unknown, so we can dump empty
+        # lists or lists containing only None elements. However Postgres won't
+        # take unknown for element oid (in binary; in text it doesn't matter)
+        if dumper.oid != INVALID_OID:
+            self.oid = self._get_array_oid(dumper.oid)
+            self.sub_oid = dumper.oid
+        else:
+            self.oid = INVALID_OID
+            self.sub_oid = TEXT_OID
 
     def _get_array_oid(self, base_oid: int) -> int:
         """
@@ -44,7 +54,7 @@ class BaseListDumper(Dumper):
 
 class ListDumper(BaseListDumper):
 
-    format = Format.TEXT
+    format = pq.Format.TEXT
 
     # from https://www.postgresql.org/docs/current/arrays.html#ARRAYS-IO
     #
@@ -97,7 +107,7 @@ class ListDumper(BaseListDumper):
 
 class ListBinaryDumper(BaseListDumper):
 
-    format = Format.BINARY
+    format = pq.Format.BINARY
 
     def dump(self, obj: List[Any]) -> bytes:
         if not obj:
@@ -155,7 +165,7 @@ class BaseArrayLoader(Loader):
 
 class ArrayLoader(BaseArrayLoader):
 
-    format = Format.TEXT
+    format = pq.Format.TEXT
 
     # Tokenize an array representation into item and brackets
     # TODO: currently recognise only , as delimiter. Should be configured
@@ -171,7 +181,7 @@ class ArrayLoader(BaseArrayLoader):
     def load(self, data: bytes) -> List[Any]:
         rv = None
         stack: List[Any] = []
-        cast = self._tx.get_loader(self.base_oid, Format.TEXT).load
+        cast = self._tx.get_loader(self.base_oid, self.format).load
 
         for m in self._re_parse.finditer(data):
             t = m.group(1)
@@ -218,14 +228,14 @@ _struct_len = struct.Struct("!i")
 
 class ArrayBinaryLoader(BaseArrayLoader):
 
-    format = Format.BINARY
+    format = pq.Format.BINARY
 
     def load(self, data: bytes) -> List[Any]:
         ndims, hasnull, oid = _struct_head.unpack_from(data[:12])
         if not ndims:
             return []
 
-        fcast = self._tx.get_loader(oid, Format.BINARY).load
+        fcast = self._tx.get_loader(oid, self.format).load
 
         p = 12 + 8 * ndims
         dims = [
@@ -264,7 +274,8 @@ def register(
         name = f"oid{base_oid}"
 
     for base in (ArrayLoader, ArrayBinaryLoader):
-        lname = f"{name.title()}Array{'Binary' if format else ''}Loader"
+        fmt = "Binary" if base.format == pq.Format.BINARY else ""
+        lname = f"{name.title()}Array{fmt}Loader"
         loader: Type[Loader] = type(lname, (base,), {"base_oid": base_oid})
         loader.register(array_oid, context=context)
 

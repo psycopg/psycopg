@@ -10,6 +10,7 @@ from collections import namedtuple
 from typing import Any, Callable, Iterator, List, NamedTuple, Optional
 from typing import Sequence, Tuple, Type, Union, TYPE_CHECKING
 
+from .. import pq
 from .. import sql
 from .. import errors as e
 from ..oids import TypeInfo, TEXT_OID
@@ -52,7 +53,7 @@ class CompositeInfo(TypeInfo):
     ) -> Optional["CompositeInfo"]:
         if isinstance(name, sql.Composable):
             name = name.as_string(conn)
-        cur = conn.cursor(format=Format.BINARY)
+        cur = conn.cursor()
         cur.execute(cls._info_query, {"name": name})
         recs = cur.fetchall()
         return cls._from_records(recs)
@@ -63,7 +64,7 @@ class CompositeInfo(TypeInfo):
     ) -> Optional["CompositeInfo"]:
         if isinstance(name, sql.Composable):
             name = name.as_string(conn)
-        cur = await conn.cursor(format=Format.BINARY)
+        cur = await conn.cursor()
         await cur.execute(cls._info_query, {"name": name})
         recs = await cur.fetchall()
         return cls._from_records(recs)
@@ -145,7 +146,7 @@ where t.oid = %(name)s::regtype
 
 class SequenceDumper(Dumper):
 
-    format = Format.TEXT
+    format = pq.Format.TEXT
 
     def __init__(self, cls: type, context: Optional[AdaptContext] = None):
         super().__init__(cls, context)
@@ -164,7 +165,7 @@ class SequenceDumper(Dumper):
                 parts.append(sep)
                 continue
 
-            dumper = self._tx.get_dumper(item, Format.TEXT)
+            dumper = self._tx.get_dumper(item, Format.from_pq(self.format))
             ad = dumper.dump(item)
             if not ad:
                 ad = b'""'
@@ -193,7 +194,7 @@ class TupleDumper(SequenceDumper):
 
 class BaseCompositeLoader(Loader):
 
-    format = Format.TEXT
+    format = pq.Format.TEXT
 
     def __init__(self, oid: int, context: Optional[AdaptContext] = None):
         super().__init__(oid, context)
@@ -235,7 +236,7 @@ class RecordLoader(BaseCompositeLoader):
         if data == b"()":
             return ()
 
-        cast = self._tx.get_loader(TEXT_OID, format=Format.TEXT).load
+        cast = self._tx.get_loader(TEXT_OID, self.format).load
         return tuple(
             cast(token) if token is not None else None
             for token in self._parse_record(data[1:-1])
@@ -248,7 +249,7 @@ _struct_oidlen = struct.Struct("!Ii")
 
 class RecordBinaryLoader(Loader):
 
-    format = Format.BINARY
+    format = pq.Format.BINARY
     _types_set = False
 
     def __init__(self, oid: int, context: Optional[AdaptContext] = None):
@@ -280,12 +281,12 @@ class RecordBinaryLoader(Loader):
 
     def _config_types(self, data: bytes) -> None:
         oids = [r[0] for r in self._walk_record(data)]
-        self._tx.set_row_types(oids, [Format.BINARY] * len(oids))
+        self._tx.set_row_types(oids, [pq.Format.BINARY] * len(oids))
 
 
 class CompositeLoader(RecordLoader):
 
-    format = Format.TEXT
+    format = pq.Format.TEXT
     factory: Callable[..., Any]
     fields_types: List[int]
     _types_set = False
@@ -304,13 +305,13 @@ class CompositeLoader(RecordLoader):
 
     def _config_types(self, data: bytes) -> None:
         self._tx.set_row_types(
-            self.fields_types, [Format.TEXT] * len(self.fields_types)
+            self.fields_types, [pq.Format.TEXT] * len(self.fields_types)
         )
 
 
 class CompositeBinaryLoader(RecordBinaryLoader):
 
-    format = Format.BINARY
+    format = pq.Format.BINARY
     factory: Callable[..., Any]
 
     def load(self, data: bytes) -> Any:

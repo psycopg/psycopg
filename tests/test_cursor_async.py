@@ -3,6 +3,7 @@ import pytest
 import weakref
 
 import psycopg3
+from psycopg3 import pq
 from psycopg3.adapt import Format
 
 pytestmark = pytest.mark.asyncio
@@ -111,7 +112,7 @@ async def test_fetchone(aconn):
 
 
 async def test_execute_binary_result(aconn):
-    cur = await aconn.cursor(format=Format.BINARY)
+    cur = await aconn.cursor(format=pq.Format.BINARY)
     await cur.execute("select %s::text, %s::text", ["foo", None])
     assert cur.pgresult.fformat(0) == 1
 
@@ -203,22 +204,18 @@ async def test_executemany_badquery(aconn, query):
         await cur.executemany(query, [(10, "hello"), (20, "world")])
 
 
-@pytest.mark.parametrize("fmt", [Format.TEXT, Format.BINARY])
-async def test_executemany_null_first(aconn, fmt):
-    ph = "%s" if fmt == Format.TEXT else "%b"
+@pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
+async def test_executemany_null_first(aconn, fmt_in):
     cur = await aconn.cursor()
     await cur.execute("create table testmany (a bigint, b bigint)")
     await cur.executemany(
-        f"insert into testmany values ({ph}, {ph})", [[1, None], [3, 4]]
+        f"insert into testmany values (%{fmt_in}, %{fmt_in})",
+        [[1, None], [3, 4]],
     )
-    with pytest.raises(
-        (
-            psycopg3.errors.InvalidTextRepresentation,
-            psycopg3.errors.ProtocolViolation,
-        )
-    ):
+    with pytest.raises((psycopg3.DataError, psycopg3.ProgrammingError)):
         await cur.executemany(
-            f"insert into testmany values ({ph}, {ph})", [[1, ""], [3, 4]]
+            f"insert into testmany values (%{fmt_in}, %{fmt_in})",
+            [[1, ""], [3, 4]],
         )
 
 
@@ -275,7 +272,7 @@ async def test_query_params_execute(aconn):
     assert cur.query is None
     assert cur.params is None
 
-    await cur.execute("select %s, %s::text", [1, None])
+    await cur.execute("select %t, %s::text", [1, None])
     assert cur.query == b"select $1, $2::text"
     assert cur.params == [b"1", None]
 
@@ -284,7 +281,7 @@ async def test_query_params_execute(aconn):
     assert cur.params is None
 
     with pytest.raises(psycopg3.DataError):
-        await cur.execute("select %s::int", ["wat"])
+        await cur.execute("select %t::int", ["wat"])
 
     assert cur.query == b"select $1::int"
     assert cur.params == [b"wat"]
@@ -293,12 +290,12 @@ async def test_query_params_execute(aconn):
 async def test_query_params_executemany(aconn):
     cur = await aconn.cursor()
 
-    await cur.executemany("select %s, %s", [[1, 2], [3, 4]])
+    await cur.executemany("select %t, %t", [[1, 2], [3, 4]])
     assert cur.query == b"select $1, $2"
     assert cur.params == [b"3", b"4"]
 
     with pytest.raises((psycopg3.DataError, TypeError)):
-        await cur.executemany("select %s::int", [[1], ["x"], [2]])
+        await cur.executemany("select %t::int", [[1], ["x"], [2]])
     assert cur.query == b"select $1::int"
     # TODO: cannot really check this: after introduced row_dumpers, this
     # fails dumping, not query passing.

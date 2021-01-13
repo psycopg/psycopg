@@ -9,8 +9,9 @@ import sys
 from datetime import date, datetime, time, timedelta
 from typing import cast, Optional
 
+from ..pq import Format
 from ..oids import builtins
-from ..adapt import Dumper, Loader, Format
+from ..adapt import Dumper, Loader
 from ..proto import AdaptContext
 from ..errors import InterfaceError, DataError
 

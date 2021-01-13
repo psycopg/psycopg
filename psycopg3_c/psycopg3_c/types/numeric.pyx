@@ -40,7 +40,7 @@ int pg_lltoa(int64_t value, char *a);
 # @cython.final  # TODO? causes compile warnings
 cdef class IntDumper(CDumper):
 
-    format = Format.TEXT
+    format = PQ_TEXT
 
     def __cinit__(self):
         self.oid = oids.INT8_OID
@@ -69,7 +69,7 @@ cdef class IntDumper(CDumper):
 @cython.final
 cdef class Int4BinaryDumper(CDumper):
 
-    format = Format.BINARY
+    format = PQ_BINARY
 
     def __cinit__(self):
         self.oid = oids.INT4_OID
@@ -87,7 +87,7 @@ cdef class Int4BinaryDumper(CDumper):
 @cython.final
 cdef class Int8BinaryDumper(CDumper):
 
-    format = Format.BINARY
+    format = PQ_BINARY
 
     def __cinit__(self):
         self.oid = oids.INT8_OID
@@ -105,7 +105,7 @@ cdef class Int8BinaryDumper(CDumper):
 @cython.final
 cdef class IntLoader(CLoader):
 
-    format = Format.TEXT
+    format = PQ_TEXT
 
     cdef object cload(self, const char *data, size_t length):
         # if the number ends with a 0 we don't need a copy
@@ -126,7 +126,7 @@ cdef class IntLoader(CLoader):
 @cython.final
 cdef class Int2BinaryLoader(CLoader):
 
-    format = Format.BINARY
+    format = PQ_BINARY
 
     cdef object cload(self, const char *data, size_t length):
         return PyLong_FromLong(<int16_t>be16toh((<uint16_t *>data)[0]))
@@ -135,7 +135,7 @@ cdef class Int2BinaryLoader(CLoader):
 @cython.final
 cdef class Int4BinaryLoader(CLoader):
 
-    format = Format.BINARY
+    format = PQ_BINARY
 
     cdef object cload(self, const char *data, size_t length):
         return PyLong_FromLong(<int32_t>be32toh((<uint32_t *>data)[0]))
@@ -144,7 +144,7 @@ cdef class Int4BinaryLoader(CLoader):
 @cython.final
 cdef class Int8BinaryLoader(CLoader):
 
-    format = Format.BINARY
+    format = PQ_BINARY
 
     cdef object cload(self, const char *data, size_t length):
         return PyLong_FromLongLong(<int64_t>be64toh((<uint64_t *>data)[0]))
@@ -153,7 +153,7 @@ cdef class Int8BinaryLoader(CLoader):
 @cython.final
 cdef class OidBinaryLoader(CLoader):
 
-    format = Format.BINARY
+    format = PQ_BINARY
 
     cdef object cload(self, const char *data, size_t length):
         return PyLong_FromUnsignedLong(be32toh((<uint32_t *>data)[0]))
@@ -162,7 +162,7 @@ cdef class OidBinaryLoader(CLoader):
 @cython.final
 cdef class FloatDumper(CDumper):
 
-    format = Format.TEXT
+    format = PQ_TEXT
 
     def __cinit__(self):
         self.oid = oids.FLOAT8_OID
@@ -195,7 +195,7 @@ cdef dict _special_float = {
 @cython.final
 cdef class FloatBinaryDumper(CDumper):
 
-    format = Format.BINARY
+    format = PQ_BINARY
 
     def __cinit__(self):
         self.oid = oids.FLOAT8_OID
@@ -212,7 +212,7 @@ cdef class FloatBinaryDumper(CDumper):
 @cython.final
 cdef class FloatLoader(CLoader):
 
-    format = Format.TEXT
+    format = PQ_TEXT
 
     cdef object cload(self, const char *data, size_t length):
         cdef double d = PyOS_string_to_double(
@@ -223,7 +223,7 @@ cdef class FloatLoader(CLoader):
 @cython.final
 cdef class Float4BinaryLoader(CLoader):
 
-    format = Format.BINARY
+    format = PQ_BINARY
 
     cdef object cload(self, const char *data, size_t length):
         cdef uint32_t asint = be32toh((<uint32_t *>data)[0])
@@ -236,7 +236,7 @@ cdef class Float4BinaryLoader(CLoader):
 @cython.final
 cdef class Float8BinaryLoader(CLoader):
 
-    format = Format.BINARY
+    format = PQ_BINARY
 
     cdef object cload(self, const char *data, size_t length):
         cdef uint64_t asint = be64toh((<uint64_t *>data)[0])

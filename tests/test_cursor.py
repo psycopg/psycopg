@@ -5,6 +5,7 @@ import weakref
 import pytest
 
 import psycopg3
+from psycopg3 import pq
 from psycopg3.oids import builtins
 from psycopg3.adapt import Format
 
@@ -109,7 +110,7 @@ def test_fetchone(conn):
 
 
 def test_execute_binary_result(conn):
-    cur = conn.cursor(format=Format.BINARY)
+    cur = conn.cursor(format=pq.Format.BINARY)
     cur.execute("select %s::text, %s::text", ["foo", None])
     assert cur.pgresult.fformat(0) == 1
 
@@ -204,22 +205,18 @@ def test_executemany_badquery(conn, query):
         cur.executemany(query, [(10, "hello"), (20, "world")])
 
 
-@pytest.mark.parametrize("fmt", [Format.TEXT, Format.BINARY])
-def test_executemany_null_first(conn, fmt):
-    ph = "%s" if fmt == Format.TEXT else "%b"
+@pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
+def test_executemany_null_first(conn, fmt_in):
     cur = conn.cursor()
     cur.execute("create table testmany (a bigint, b bigint)")
     cur.executemany(
-        f"insert into testmany values ({ph}, {ph})", [[1, None], [3, 4]]
+        f"insert into testmany values (%{fmt_in}, %{fmt_in})",
+        [[1, None], [3, 4]],
     )
-    with pytest.raises(
-        (
-            psycopg3.errors.InvalidTextRepresentation,
-            psycopg3.errors.ProtocolViolation,
-        )
-    ):
+    with pytest.raises((psycopg3.DataError, psycopg3.ProgrammingError)):
         cur.executemany(
-            f"insert into testmany values ({ph}, {ph})", [[1, ""], [3, 4]]
+            f"insert into testmany values (%{fmt_in}, %{fmt_in})",
+            [[1, ""], [3, 4]],
         )
 
 
@@ -270,7 +267,7 @@ def test_query_params_execute(conn):
     assert cur.query is None
     assert cur.params is None
 
-    cur.execute("select %s, %s::text", [1, None])
+    cur.execute("select %t, %s::text", [1, None])
     assert cur.query == b"select $1, $2::text"
     assert cur.params == [b"1", None]
 
@@ -279,7 +276,7 @@ def test_query_params_execute(conn):
     assert cur.params is None
 
     with pytest.raises(psycopg3.DataError):
-        cur.execute("select %s::int", ["wat"])
+        cur.execute("select %t::int", ["wat"])
 
     assert cur.query == b"select $1::int"
     assert cur.params == [b"wat"]
@@ -288,12 +285,12 @@ def test_query_params_execute(conn):
 def test_query_params_executemany(conn):
     cur = conn.cursor()
 
-    cur.executemany("select %s, %s", [[1, 2], [3, 4]])
+    cur.executemany("select %t, %t", [[1, 2], [3, 4]])
     assert cur.query == b"select $1, $2"
     assert cur.params == [b"3", b"4"]
 
     with pytest.raises((psycopg3.DataError, TypeError)):
-        cur.executemany("select %s::int", [[1], ["x"], [2]])
+        cur.executemany("select %t::int", [[1], ["x"], [2]])
     assert cur.query == b"select $1::int"
     # TODO: cannot really check this: after introduced row_dumpers, this
     # fails dumping, not query passing.
@@ -408,9 +405,9 @@ def test_str(conn):
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize("fmt", [Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("fmt", [Format.AUTO, Format.TEXT, Format.BINARY])
 def test_leak_fetchall(dsn, faker, fmt):
-    if fmt == Format.TEXT:
+    if fmt != Format.BINARY:
         pytest.xfail("faker to extend to all text dumpers")
 
     faker.format = fmt
@@ -420,7 +417,7 @@ def test_leak_fetchall(dsn, faker, fmt):
     n = []
     for i in range(3):
         with psycopg3.connect(dsn) as conn:
-            with conn.cursor(format=fmt) as cur:
+            with conn.cursor(format=Format.as_pq(fmt)) as cur:
                 cur.execute(faker.drop_stmt)
                 cur.execute(faker.create_stmt)
                 cur.executemany(faker.insert_stmt, faker.records)

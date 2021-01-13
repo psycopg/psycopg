@@ -6,8 +6,9 @@ Adapters for the UUID type.
 
 from typing import Callable, Optional, TYPE_CHECKING
 
+from ..pq import Format
 from ..oids import builtins
-from ..adapt import Dumper, Loader, Format
+from ..adapt import Dumper, Loader
 from ..proto import AdaptContext
 
 if TYPE_CHECKING:

@@ -8,8 +8,8 @@ import pytest
 from psycopg3 import pq
 from psycopg3 import sql
 from psycopg3 import errors as e
+from psycopg3.pq import Format
 from psycopg3.oids import builtins
-from psycopg3.adapt import Format
 from psycopg3.types.numeric import Int4
 
 eur = "\u20ac"

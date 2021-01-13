@@ -72,13 +72,16 @@ cdef class _StringDumper(CDumper):
 @cython.final
 cdef class StringBinaryDumper(_StringDumper):
 
-    format = Format.BINARY
+    format = PQ_BINARY
+
+    def __cinit__(self):
+        self.oid = oids.TEXT_OID
 
 
 @cython.final
 cdef class StringDumper(_StringDumper):
 
-    format = Format.TEXT
+    format = PQ_TEXT
 
     cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
         cdef Py_ssize_t size = StringBinaryDumper.cdump(self, obj, rv, offset)
@@ -94,7 +97,7 @@ cdef class StringDumper(_StringDumper):
 
 cdef class _TextLoader(CLoader):
 
-    format = Format.TEXT
+    format = PQ_TEXT
 
     cdef int is_utf8
     cdef char *encoding
@@ -131,19 +134,19 @@ cdef class _TextLoader(CLoader):
 @cython.final
 cdef class TextLoader(_TextLoader):
 
-    format = Format.TEXT
+    format = PQ_TEXT
 
 
 @cython.final
 cdef class TextBinaryLoader(_TextLoader):
 
-    format = Format.BINARY
+    format = PQ_BINARY
 
 
 @cython.final
 cdef class BytesDumper(CDumper):
 
-    format = Format.TEXT
+    format = PQ_TEXT
 
     def __cinit__(self):
         self.oid = oids.BYTEA_OID
@@ -178,7 +181,7 @@ cdef class BytesDumper(CDumper):
 @cython.final
 cdef class BytesBinaryDumper(CDumper):
 
-    format = Format.BINARY
+    format = PQ_BINARY
 
     def __cinit__(self):
         self.oid = oids.BYTEA_OID
@@ -196,7 +199,7 @@ cdef class BytesBinaryDumper(CDumper):
 @cython.final
 cdef class ByteaLoader(CLoader):
 
-    format = Format.TEXT
+    format = PQ_TEXT
 
     cdef object cload(self, const char *data, size_t length):
         cdef size_t len_out
@@ -215,7 +218,7 @@ cdef class ByteaLoader(CLoader):
 @cython.final
 cdef class ByteaBinaryLoader(CLoader):
 
-    format = Format.BINARY
+    format = PQ_BINARY
 
     cdef object cload(self, const char *data, size_t length):
         return data[:length]

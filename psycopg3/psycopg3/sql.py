@@ -8,8 +8,8 @@ import codecs
 import string
 from typing import Any, Iterator, List, Optional, Sequence, Union
 
-from .pq import Escaping, Format
-from .adapt import Transformer
+from .pq import Escaping
+from .adapt import Transformer, Format
 from .proto import AdaptContext
 
 
@@ -425,7 +425,7 @@ class Placeholder(Composable):
 
     """
 
-    def __init__(self, name: str = "", format: Format = Format.TEXT):
+    def __init__(self, name: str = "", format: Format = Format.AUTO):
         super().__init__(name)
         if not isinstance(name, str):
             raise TypeError(f"expected string as name, got {name!r}")
@@ -439,13 +439,13 @@ class Placeholder(Composable):
         parts = []
         if self._obj:
             parts.append(repr(self._obj))
-        if self._format != Format.TEXT:
+        if self._format != Format.AUTO:
             parts.append(f"format={Format(self._format).name}")
 
         return f"{self.__class__.__name__}({', '.join(parts)})"
 
     def as_string(self, context: Optional[AdaptContext]) -> str:
-        code = "s" if self._format == Format.TEXT else "b"
+        code = self._format
         return f"%({self._obj}){code}" if self._obj else f"%{code}"
 
     def as_bytes(self, context: Optional[AdaptContext]) -> bytes:

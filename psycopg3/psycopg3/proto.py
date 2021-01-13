@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 from typing_extensions import Protocol
 
 from . import pq
-from .pq import Format
+from ._enums import Format
 
 if TYPE_CHECKING:
     from .connection import BaseConnection
@@ -87,13 +87,13 @@ class Transformer(Protocol):
         ...
 
     def set_row_types(
-        self, types: Sequence[int], formats: Sequence[Format]
+        self, types: Sequence[int], formats: Sequence[pq.Format]
     ) -> None:
         ...
 
     def dump_sequence(
         self, params: Sequence[Any], formats: Sequence[Format]
-    ) -> Tuple[List[Any], Tuple[int, ...], Sequence[Format]]:
+    ) -> Tuple[List[Any], Tuple[int, ...], Sequence[pq.Format]]:
         ...
 
     def get_dumper(self, obj: Any, format: Format) -> "Dumper":
@@ -110,5 +110,5 @@ class Transformer(Protocol):
     ) -> Tuple[Any, ...]:
         ...
 
-    def get_loader(self, oid: int, format: Format) -> "Loader":
+    def get_loader(self, oid: int, format: pq.Format) -> "Loader":
         ...

@@ -9,10 +9,11 @@ from typing import Any, Dict, List, Mapping, Match, NamedTuple, Optional
 from typing import Sequence, Tuple, Union, TYPE_CHECKING
 from functools import lru_cache
 
+from . import pq
 from . import errors as e
-from .pq import Format
 from .sql import Composable
 from .proto import Query, Params
+from ._enums import Format
 
 if TYPE_CHECKING:
     from .proto import Transformer
@@ -43,7 +44,7 @@ class PostgresQuery:
 
         # The format requested by the user and the ones to really pass Postgres
         self._want_formats: Optional[List[Format]] = None
-        self.formats: Optional[Sequence[Format]] = None
+        self.formats: Optional[Sequence[pq.Format]] = None
 
         self._parts: List[QueryPart]
         self.query = b""
@@ -249,7 +250,7 @@ def _split_query(query: bytes, encoding: str = "ascii") -> List[QueryPart]:
         pre, m = parts[i]
         if m is None:
             # last part
-            rv.append(QueryPart(pre, 0, Format.TEXT))
+            rv.append(QueryPart(pre, 0, Format.AUTO))
             break
 
         ph = m.group(0)
@@ -271,9 +272,9 @@ def _split_query(query: bytes, encoding: str = "ascii") -> List[QueryPart]:
                 "incomplete placeholder: '%'; if you want to use '%' as an"
                 " operator you can double it up, i.e. use '%%'"
             )
-        elif ph[-1:] not in b"bs":
+        elif ph[-1:] not in b"sbt":
             raise e.ProgrammingError(
-                f"only '%s' and '%b' placeholders allowed, got"
+                f"only '%s', '%b', '%t' placeholders allowed, got"
                 f" {m.group(0).decode(encoding)}"
             )
 
@@ -288,10 +289,15 @@ def _split_query(query: bytes, encoding: str = "ascii") -> List[QueryPart]:
                 "positional and named placeholders cannot be mixed"
             )
 
-        # Binary format
-        format = Format(ph[-1:] == b"b")
-
+        format = _ph_to_fmt[ph[-1:]]
         rv.append(QueryPart(pre, item, format))
         i += 1
 
     return rv
+
+
+_ph_to_fmt = {
+    b"s": Format.AUTO,
+    b"t": Format.TEXT,
+    b"b": Format.BINARY,
+}

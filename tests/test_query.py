@@ -1,29 +1,45 @@
 import pytest
 
 import psycopg3
-from psycopg3.adapt import Transformer
+from psycopg3 import pq
+from psycopg3.adapt import Transformer, Format
 from psycopg3._queries import PostgresQuery, _split_query
 
 
 @pytest.mark.parametrize(
     "input, want",
     [
-        (b"", [(b"", 0, 0)]),
-        (b"foo bar", [(b"foo bar", 0, 0)]),
-        (b"foo %% bar", [(b"foo % bar", 0, 0)]),
-        (b"%s", [(b"", 0, 0), (b"", 0, 0)]),
-        (b"%s foo", [(b"", 0, 0), (b" foo", 0, 0)]),
-        (b"%b foo", [(b"", 0, 1), (b" foo", 0, 0)]),
-        (b"foo %s", [(b"foo ", 0, 0), (b"", 0, 0)]),
-        (b"foo %%%s bar", [(b"foo %", 0, 0), (b" bar", 0, 0)]),
-        (b"foo %(name)s bar", [(b"foo ", "name", 0), (b" bar", 0, 0)]),
+        (b"", [(b"", 0, Format.AUTO)]),
+        (b"foo bar", [(b"foo bar", 0, Format.AUTO)]),
+        (b"foo %% bar", [(b"foo % bar", 0, Format.AUTO)]),
+        (b"%s", [(b"", 0, Format.AUTO), (b"", 0, Format.AUTO)]),
+        (b"%s foo", [(b"", 0, Format.AUTO), (b" foo", 0, Format.AUTO)]),
+        (b"%b foo", [(b"", 0, Format.BINARY), (b" foo", 0, Format.AUTO)]),
+        (b"foo %s", [(b"foo ", 0, Format.AUTO), (b"", 0, Format.AUTO)]),
+        (
+            b"foo %%%s bar",
+            [(b"foo %", 0, Format.AUTO), (b" bar", 0, Format.AUTO)],
+        ),
+        (
+            b"foo %(name)s bar",
+            [(b"foo ", "name", Format.AUTO), (b" bar", 0, Format.AUTO)],
+        ),
         (
             b"foo %(name)s %(name)b bar",
-            [(b"foo ", "name", 0), (b" ", "name", 1), (b" bar", 0, 0)],
+            [
+                (b"foo ", "name", Format.AUTO),
+                (b" ", "name", Format.BINARY),
+                (b" bar", 0, Format.AUTO),
+            ],
         ),
         (
             b"foo %s%b bar %s baz",
-            [(b"foo ", 0, 0), (b"", 1, 1), (b" bar ", 2, 0), (b" baz", 0, 0)],
+            [
+                (b"foo ", 0, Format.AUTO),
+                (b"", 1, Format.BINARY),
+                (b" bar ", 2, Format.AUTO),
+                (b" baz", 0, Format.AUTO),
+            ],
         ),
     ],
 )
@@ -55,9 +71,21 @@ def test_split_query_bad(input):
         (b"", None, b"", None, None),
         (b"", [], b"", [], []),
         (b"%%", [], b"%", [], []),
-        (b"select %s", (1,), b"select $1", [False], [b"1"]),
-        (b"%s %% %s", (1, 2), b"$1 % $2", [False, False], [b"1", b"2"]),
-        (b"%b %% %s", ("a", 2), b"$1 % $2", [True, False], [b"a", b"2"]),
+        (b"select %t", (1,), b"select $1", [pq.Format.TEXT], [b"1"]),
+        (
+            b"%t %% %t",
+            (1, 2),
+            b"$1 % $2",
+            [pq.Format.TEXT, pq.Format.TEXT],
+            [b"1", b"2"],
+        ),
+        (
+            b"%t %% %t",
+            ("a", 2),
+            b"$1 % $2",
+            [pq.Format.TEXT, pq.Format.TEXT],
+            [b"a", b"2"],
+        ),
     ],
 )
 def test_pg_query_seq(query, params, want, wformats, wparams):
@@ -74,18 +102,18 @@ def test_pg_query_seq(query, params, want, wformats, wparams):
         (b"", {}, b"", [], []),
         (b"hello %%", {"a": 1}, b"hello %", [], []),
         (
-            b"select %(hello)s",
+            b"select %(hello)t",
             {"hello": 1, "world": 2},
             b"select $1",
-            [False],
+            [pq.Format.TEXT],
             [b"1"],
         ),
         (
-            b"select %(hi)s %(there)b %(hi)s",
-            {"hi": 1, "there": "a"},
+            b"select %(hi)s %(there)s %(hi)s",
+            {"hi": 0, "there": "a"},
             b"select $1 $2 $1",
-            [False, True],
-            [b"1", b"a"],
+            [pq.Format.BINARY, pq.Format.TEXT],
+            [b"\x00" * 8, b"a"],
         ),
     ],
 )

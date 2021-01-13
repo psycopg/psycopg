@@ -2,8 +2,9 @@ import json
 
 import pytest
 
-import psycopg3.types.json
-from psycopg3.types.json import Json, Jsonb
+import psycopg3.types
+from psycopg3 import pq
+from psycopg3.types import Json, Jsonb
 from psycopg3.adapt import Format
 
 samples = [
@@ -19,54 +20,50 @@ samples = [
 
 
 @pytest.mark.parametrize("val", samples)
-@pytest.mark.parametrize("fmt_in", [Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
 def test_json_dump(conn, val, fmt_in):
-    ph = "%s" if fmt_in == Format.TEXT else "%b"
     obj = json.loads(val)
     cur = conn.cursor()
-    cur.execute(f"select pg_typeof({ph}) = 'json'::regtype", (Json(obj),))
+    cur.execute(f"select pg_typeof(%{fmt_in}) = 'json'::regtype", (Json(obj),))
     assert cur.fetchone()[0] is True
-    cur.execute(f"select {ph}::text = %s::json::text", (Json(obj), val))
+    cur.execute(f"select %{fmt_in}::text = %s::json::text", (Json(obj), val))
     assert cur.fetchone()[0] is True
 
 
-@pytest.mark.parametrize("fmt_in", [Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
 @pytest.mark.parametrize("val", samples)
 def test_jsonb_dump(conn, val, fmt_in):
-    ph = "%s" if fmt_in == Format.TEXT else "%b"
     obj = json.loads(val)
     cur = conn.cursor()
-    cur.execute(f"select {ph} = %s::jsonb", (Jsonb(obj), val))
+    cur.execute(f"select %{fmt_in} = %s::jsonb", (Jsonb(obj), val))
     assert cur.fetchone()[0] is True
 
 
 @pytest.mark.parametrize("val", samples)
 @pytest.mark.parametrize("jtype", ["json", "jsonb"])
-@pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
 def test_json_load(conn, val, jtype, fmt_out):
     cur = conn.cursor(format=fmt_out)
     cur.execute(f"select %s::{jtype}", (val,))
     assert cur.fetchone()[0] == json.loads(val)
 
 
-@pytest.mark.parametrize("fmt_in", [Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
 @pytest.mark.parametrize("wrapper", ["Json", "Jsonb"])
 def test_json_dump_customise(conn, wrapper, fmt_in):
-    ph = "%s" if fmt_in == Format.TEXT else "%b"
-    wrapper = getattr(psycopg3.types.json, wrapper)
+    wrapper = getattr(psycopg3.types, wrapper)
     obj = {"foo": "bar"}
     cur = conn.cursor()
     cur.execute(
-        f"select {ph}->>'baz' = 'qux'", (wrapper(obj, dumps=my_dumps),)
+        f"select %{fmt_in}->>'baz' = 'qux'", (wrapper(obj, dumps=my_dumps),)
     )
     assert cur.fetchone()[0] is True
 
 
-@pytest.mark.parametrize("fmt_in", [Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
 @pytest.mark.parametrize("wrapper", ["Json", "Jsonb"])
 def test_json_dump_subclass(conn, wrapper, fmt_in):
-    ph = "%s" if fmt_in == Format.TEXT else "%b"
-    wrapper = getattr(psycopg3.types.json, wrapper)
+    wrapper = getattr(psycopg3.types, wrapper)
 
     class MyWrapper(wrapper):
         def dumps(self):
@@ -74,7 +71,7 @@ def test_json_dump_subclass(conn, wrapper, fmt_in):
 
     obj = {"foo": "bar"}
     cur = conn.cursor()
-    cur.execute(f"select {ph}->>'baz' = 'qux'", (MyWrapper(obj),))
+    cur.execute(f"select %{fmt_in}->>'baz' = 'qux'", (MyWrapper(obj),))
     assert cur.fetchone()[0] is True
 
 

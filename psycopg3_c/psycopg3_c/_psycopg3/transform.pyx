@@ -15,13 +15,15 @@ from cpython.dict cimport PyDict_GetItem, PyDict_SetItem
 from cpython.list cimport (
     PyList_New, PyList_CheckExact,
     PyList_GET_ITEM, PyList_SET_ITEM, PyList_GET_SIZE)
+from cpython.bytes cimport PyBytes_AS_STRING
 from cpython.tuple cimport PyTuple_New, PyTuple_SET_ITEM
 from cpython.object cimport PyObject, PyObject_CallFunctionObjArgs
 
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
 from psycopg3 import errors as e
-
+from psycopg3._enums import Format as Pg3Format
+from psycopg3.pq import Format as PqFormat
 
 # internal structure: you are not supposed to know this. But it's worth some
 # 10% of the innermost loop, so I'm willing to ask for forgiveness later...
@@ -49,6 +51,7 @@ cdef class RowLoader:
 cdef class RowDumper:
     cdef object dumpfunc
     cdef object oid
+    cdef object format
     cdef CDumper cdumper
 
 
@@ -63,6 +66,7 @@ cdef class Transformer:
 
     cdef readonly object connection
     cdef readonly object adapters
+    cdef dict _auto_dumpers
     cdef dict _text_dumpers
     cdef dict _binary_dumpers
     cdef dict _text_loaders
@@ -81,9 +85,10 @@ cdef class Transformer:
             self.adapters = global_adapters
             self.connection = None
 
-        # mapping class -> Dumper instance (text, binary)
-        self._text_dumpers = {}
-        self._binary_dumpers = {}
+        # mapping class -> Dumper instance (auto, text, binary)
+        self._auto_dumpers = None
+        self._text_dumpers = None
+        self._binary_dumpers = None
 
         # mapping oid -> Loader instance (text, binary)
         self._text_loaders = {}
@@ -172,7 +177,7 @@ cdef class Transformer:
 
     cpdef object get_dumper(self, object obj, object format):
         # Fast path: return a Dumper class already instantiated from the same type
-        cdef dict cache
+        cdef PyObject *cache
         cdef PyObject *ptr
 
         cls = type(obj)
@@ -182,35 +187,58 @@ cdef class Transformer:
             subobj = self._find_list_element(obj, set())
             key = (cls, type(subobj))
 
-        cache = self._binary_dumpers if format else self._text_dumpers
-        ptr = PyDict_GetItem(cache, key)
+        bfmt = PyUnicode_AsUTF8String(format)
+        cdef char cfmt = PyBytes_AS_STRING(bfmt)[0]
+        if cfmt == b's':
+            if self._auto_dumpers is None:
+                self._auto_dumpers = {}
+            cache = <PyObject *>self._auto_dumpers
+        elif cfmt == b'b':
+            if self._binary_dumpers is None:
+                self._binary_dumpers = {}
+            cache = <PyObject *>self._binary_dumpers
+        elif cfmt == b't':
+            if self._text_dumpers is None:
+                self._text_dumpers = {}
+            cache = <PyObject *>self._text_dumpers
+        else:
+            raise ValueError(
+                f"format should be a psycopg3.adapt.Format, not {format}")
+
+        ptr = PyDict_GetItem(<object>cache, key)
         if ptr != NULL:
             return <object>ptr
+
+        # When dumping a string with %s we may refer to any type actually,
+        # but the user surely passed a text format
+        if cls is str and cfmt == b's':
+            format = PG_TEXT
+
+        sub_dumper = None
+        if cls is list:
+            # It's not possible to declare an empty unknown array, so force text
+            if subobj is None:
+                format = PG_TEXT
+
+            # If we are dumping a list it's the sub-object which should dictate
+            # what format to use.
+            else:
+                sub_dumper = self.get_dumper(subobj, format)
+                format = Pg3Format.from_pq(sub_dumper.format)
 
         dcls = PyObject_CallFunctionObjArgs(
             self.adapters.get_dumper, <PyObject *>cls, <PyObject *>format, NULL)
         if dcls is None:
             raise e.ProgrammingError(
                 f"cannot adapt type {cls.__name__}"
-                f" to format {Format(format).name}")
+                f" to format {Pg3Format(format).name}")
 
         d = PyObject_CallFunctionObjArgs(
             dcls, <PyObject *>cls, <PyObject *>self, NULL)
-        if cls is list:
-            if subobj is not None:
-                sub_dumper = self.get_dumper(subobj, format)
-                d.set_sub_dumper(sub_dumper)
-            elif format == FORMAT_TEXT:
-                # Special case dumping an empty list (or containing no None
-                # element). In text mode we cast them as unknown, so that
-                # postgres can cast them automatically to something useful.
-                # In binary we cannot do it, it doesn't seem there is a
-                # representation for unknown array, so let's dump it as text[].
-                # This means that placeholders receiving a binary array should
-                # be almost always cast to the target type.
-                d.oid = oids.INVALID_OID
+        if sub_dumper is not None:
+            d.set_sub_dumper(sub_dumper)
 
-        PyDict_SetItem(cache, key, d)
+        PyDict_SetItem(<object>cache, key, d)
         return d
 
     cpdef dump_sequence(self, object params, object formats):
@@ -218,6 +246,7 @@ cdef class Transformer:
         cdef int nparams = len(params)
         cdef list ps = PyList_New(nparams)
         cdef tuple ts = PyTuple_New(nparams)
+        cdef list fs = PyList_New(nparams)
         cdef object dumped, oid
         cdef Py_ssize_t size
         cdef PyObject *dumper_ptr  # borrowed pointer to row dumper
@@ -240,6 +269,7 @@ cdef class Transformer:
                     dumper_ptr = <PyObject *>tmp_dumper
 
                 oid = (<RowDumper>dumper_ptr).oid
+                dfmt = (<RowDumper>dumper_ptr).format
                 if (<RowDumper>dumper_ptr).cdumper is not None:
                     dumped = PyByteArray_FromStringAndSize("", 0)
                     size = (<RowDumper>dumper_ptr).cdumper.cdump(
@@ -252,13 +282,16 @@ cdef class Transformer:
             else:
                 dumped = None
                 oid = oids.INVALID_OID
+                dfmt = PQ_TEXT
 
             Py_INCREF(dumped)
             PyList_SET_ITEM(ps, i, dumped)
             Py_INCREF(oid)
             PyTuple_SET_ITEM(ts, i, oid)
+            Py_INCREF(dfmt)
+            PyList_SET_ITEM(fs, i, dfmt)
 
-        return ps, ts, formats
+        return ps, ts, fs
 
     cdef RowDumper _get_row_dumper(self, object param, object fmt):
         cdef RowDumper row_dumper = RowDumper()
@@ -266,6 +299,7 @@ cdef class Transformer:
         dumper = self.get_dumper(param, fmt)
         row_dumper.dumpfunc = dumper.dump
         row_dumper.oid = dumper.oid
+        row_dumper.format = dumper.format
 
         if isinstance(dumper, CDumper):
             row_dumper.cdumper = <CDumper>dumper
@@ -407,7 +441,7 @@ cdef class Transformer:
 
         return out
 
-    def get_loader(self, oid: int, format: Format) -> "Loader":
+    def get_loader(self, oid: int, format: pq.Format) -> "Loader":
         return self._c_get_loader(<PyObject *>oid, <PyObject *>format)
 
     cdef object _c_get_loader(self, PyObject *oid, PyObject *fmt):

@@ -123,7 +123,7 @@ Objects involved in types adaptation
     :type context: `~psycopg3.Connection`, `~psycopg3.Cursor`, or `Transformer`
 
     .. attribute:: format
-        :type: Format
+        :type: pq.Format
 
         The format this class dumps, `~Format.TEXT` or `~Format.BINARY`.
         This is a class attribute.

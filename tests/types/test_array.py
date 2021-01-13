@@ -1,5 +1,6 @@
 import pytest
 import psycopg3
+from psycopg3 import pq
 from psycopg3.oids import builtins
 from psycopg3.adapt import Format, Transformer
 from psycopg3.types import array
@@ -22,17 +23,18 @@ tests_str = [
     ),
 ]
 
+fmts_in = [Format.AUTO, Format.TEXT, Format.BINARY]
 
-@pytest.mark.parametrize("fmt_in", [Format.TEXT, Format.BINARY])
+
+@pytest.mark.parametrize("fmt_in", fmts_in)
 @pytest.mark.parametrize("obj, want", tests_str)
 def test_dump_list_str(conn, obj, want, fmt_in):
     cur = conn.cursor()
-    ph = "%s" if fmt_in == Format.TEXT else "%b"
-    cur.execute(f"select {ph}::text[] = %s::text[]", (obj, want))
+    cur.execute(f"select %{fmt_in}::text[] = %s::text[]", (obj, want))
     assert cur.fetchone()[0]
 
 
-@pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
 @pytest.mark.parametrize("want, obj", tests_str)
 def test_load_list_str(conn, obj, want, fmt_out):
     cur = conn.cursor(format=fmt_out)
@@ -40,23 +42,22 @@ def test_load_list_str(conn, obj, want, fmt_out):
     assert cur.fetchone()[0] == want
 
 
-@pytest.mark.parametrize("fmt_in", [Format.TEXT, Format.BINARY])
-@pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("fmt_in", fmts_in)
+@pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
 def test_all_chars(conn, fmt_in, fmt_out):
     cur = conn.cursor(format=fmt_out)
-    ph = "%s" if fmt_in == Format.TEXT else "%b"
     for i in range(1, 256):
         c = chr(i)
-        cur.execute(f"select {ph}::text[]", ([c],))
+        cur.execute(f"select %{fmt_in}::text[]", ([c],))
         assert cur.fetchone()[0] == [c]
 
     a = list(map(chr, range(1, 256)))
     a.append("\u20ac")
-    cur.execute(f"select {ph}::text[]", (a,))
+    cur.execute(f"select %{fmt_in}::text[]", (a,))
     assert cur.fetchone()[0] == a
 
     a = "".join(a)
-    cur.execute(f"select {ph}::text[]", ([a],))
+    cur.execute(f"select %{fmt_in}::text[]", ([a],))
     assert cur.fetchone()[0] == [a]
 
 
@@ -80,7 +81,6 @@ def test_dump_list_int(conn, obj, want):
     [
         [["a"], ["b", "c"]],
         [["a"], []],
-        [[]],
         [[["a"]], ["b"]],
         # [["a"], [["b"]]],  # todo, but expensive (an isinstance per item)
         # [True, b"a"], # TODO expensive too
@@ -92,7 +92,7 @@ def test_bad_binary_array(input):
         tx.get_dumper(input, Format.BINARY).dump(input)
 
 
-@pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
 @pytest.mark.parametrize("want, obj", tests_int)
 def test_load_list_int(conn, obj, want, fmt_out):
     cur = conn.cursor(format=fmt_out)
@@ -141,76 +141,41 @@ def test_array_mixed_numbers(array, type):
     assert dumper.oid == builtins[type].array_oid
 
 
-@pytest.mark.parametrize("fmt_in", [Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("fmt_in", fmts_in)
 def test_empty_list_mix(conn, fmt_in):
-    ph = "%s" if fmt_in == Format.TEXT else "%b"
     objs = list(range(3))
-    # pro tip: don't get confused with the types
     conn.execute("create table testarrays (col1 bigint[], col2 bigint[])")
-    if fmt_in == Format.TEXT:
-        f1, f2 = conn.execute(
-            f"insert into testarrays values ({ph}, {ph}) returning *",
-            (objs, []),
-        ).fetchone()
-    else:
-        # TODO: fix passing empty lists in binary format
-        try:
-            f1, f2 = conn.execute(
-                f"insert into testarrays values ({ph}, {ph}) returning *",
-                (objs, []),
-            ).fetchone()
-        except psycopg3.errors.DatatypeMismatch:
-            pytest.xfail("empty lists in binary format not supported")
-        else:
-            assert False, "you fixed the thing, now fix the test!"
-
+    # pro tip: don't get confused with the types
+    f1, f2 = conn.execute(
+        f"insert into testarrays values (%{fmt_in}, %{fmt_in}) returning *",
+        (objs, []),
+    ).fetchone()
     assert f1 == objs
     assert f2 == []
 
 
-def test_empty_list_text(conn):
+@pytest.mark.parametrize("fmt_in", fmts_in)
+def test_empty_list(conn, fmt_in):
     cur = conn.cursor()
     cur.execute("create table test (id serial primary key, data date[])")
     with conn.transaction():
-        cur.execute("insert into test (data) values (%s)", ([],))
+        cur.execute(f"insert into test (data) values (%{fmt_in})", ([],))
     cur.execute("select data from test")
     assert cur.fetchone() == ([],)
 
     # test untyped list in a filter
-    cur.execute("select data from test where id = any(%s)", ([1],))
+    cur.execute(f"select data from test where id = any(%{fmt_in})", ([1],))
     assert cur.fetchone()
-    cur.execute("select data from test where id = any(%s)", ([],))
+    cur.execute(f"select data from test where id = any(%{fmt_in})", ([],))
     assert not cur.fetchone()
 
 
-def test_empty_list_binary(conn):
-    cur = conn.cursor()
-    cur.execute("create table test (id serial primary key, data date[])")
-    with pytest.raises(psycopg3.errors.DatatypeMismatch):
-        with conn.transaction():
-            cur.execute("insert into test (data) values (%b)", ([],))
-    cur.execute("insert into test (data) values (%b::date[])", ([],))
-
-    cur.execute("select data from test")
-    assert cur.fetchone() == ([],)
-
-    # test untyped list in a filter
-    cur.execute("select data from test where id = any(%b)", ([1],))
-    assert cur.fetchone()
-    with pytest.raises(psycopg3.errors.UndefinedFunction):
-        with conn.transaction():
-            cur.execute("select data from test where id = any(%b)", ([],))
-    cur.execute("select data from test where id = any(%b::int[])", ([],))
-    assert not cur.fetchone()
-
-
-@pytest.mark.parametrize("fmt_in", [Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("fmt_in", fmts_in)
 def test_empty_list_after_choice(conn, fmt_in):
-    ph = "%s" if fmt_in == Format.TEXT else "%b"
     cur = conn.cursor()
     cur.execute("create table test (id serial primary key, data float[])")
     cur.executemany(
-        f"insert into test (data) values ({ph})", [([1.0],), ([],)]
+        f"insert into test (data) values (%{fmt_in})", [([1.0],), ([],)]
     )
     cur.execute("select data from test order by id")
     assert cur.fetchall() == [([1.0],), ([],)]

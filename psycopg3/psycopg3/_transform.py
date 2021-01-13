@@ -5,12 +5,14 @@ Helper object to transform values between Python and PostgreSQL
 # Copyright (C) 2020 The Psycopg Team
 
 from typing import Any, Dict, List, Optional, Sequence, Set, Tuple, Union
-from typing import cast, TYPE_CHECKING
+from typing import cast, DefaultDict, TYPE_CHECKING
+from collections import defaultdict
 
+from . import pq
 from . import errors as e
-from .pq import Format
 from .oids import INVALID_OID
 from .proto import LoadFunc, AdaptContext
+from ._enums import Format
 
 if TYPE_CHECKING:
     from .pq.proto import PGresult
@@ -51,7 +53,9 @@ class Transformer(AdaptContext):
             self._connection = None
 
         # mapping class, fmt -> Dumper instance
-        self._dumpers_cache: Tuple[DumperCache, DumperCache] = ({}, {})
+        self._dumpers_cache: DefaultDict[Format, DumperCache] = defaultdict(
+            dict
+        )
 
         # mapping oid, fmt -> Loader instance
         self._loaders_cache: Tuple[LoaderCache, LoaderCache] = ({}, {})
@@ -94,7 +98,7 @@ class Transformer(AdaptContext):
             rc.append(self.get_loader(oid, fmt).load)  # type: ignore
 
     def set_row_types(
-        self, types: Sequence[int], formats: Sequence[Format]
+        self, types: Sequence[int], formats: Sequence[pq.Format]
     ) -> None:
         rc: List[LoadFunc] = [None] * len(types)  # type: ignore[list-item]
         for i in range(len(rc)):
@@ -104,9 +108,10 @@ class Transformer(AdaptContext):
 
     def dump_sequence(
         self, params: Sequence[Any], formats: Sequence[Format]
-    ) -> Tuple[List[Any], Tuple[int, ...], Sequence[Format]]:
+    ) -> Tuple[List[Any], Tuple[int, ...], Sequence[pq.Format]]:
         ps: List[Optional[bytes]] = [None] * len(params)
         ts = [INVALID_OID] * len(params)
+        fs: List[pq.Format] = [pq.Format.TEXT] * len(params)
 
         dumpers = self._row_dumpers
         if not dumpers:
@@ -120,8 +125,9 @@ class Transformer(AdaptContext):
                     dumper = dumpers[i] = self.get_dumper(param, formats[i])
                 ps[i] = dumper.dump(param)
                 ts[i] = dumper.oid
+                fs[i] = dumper.format
 
-        return ps, tuple(ts), formats
+        return ps, tuple(ts), fs
 
     def get_dumper(self, obj: Any, format: Format) -> "Dumper":
         # Fast path: return a Dumper class already instantiated from the same type
@@ -133,10 +139,28 @@ class Transformer(AdaptContext):
             subobj = self._find_list_element(obj)
             key = (cls, type(subobj))
 
+        cache = self._dumpers_cache[format]
         try:
-            return self._dumpers_cache[format][key]
+            return cache[key]
         except KeyError:
             pass
+
+        # When dumping a string with %s we may refer to any type actually,
+        # but the user surely passed a text format
+        if cls is str and format == Format.AUTO:
+            format = Format.TEXT
+
+        sub_dumper = None
+        if cls is list:
+            # It's not possible to declare an empty unknown array, so force text
+            if subobj is None:
+                format = Format.TEXT
+
+            # If we are dumping a list it's the sub-object which should dictate
+            # what format to use.
+            else:
+                sub_dumper = self.get_dumper(subobj, format)
+                format = Format.from_pq(sub_dumper.format)
 
         dcls = self._adapters.get_dumper(cls, format)
         if not dcls:
@@ -146,21 +170,10 @@ class Transformer(AdaptContext):
             )
 
         d = dcls(cls, self)
-        if cls is list:
-            if subobj is not None:
-                sub_dumper = self.get_dumper(subobj, format)
-                cast("BaseListDumper", d).set_sub_dumper(sub_dumper)
-            elif format == Format.TEXT:
-                # Special case dumping an empty list (or containing no None
-                # element). In text mode we cast them as unknown, so that
-                # postgres can cast them automatically to something useful.
-                # In binary we cannot do it, it doesn't seem there is a
-                # representation for unknown array, so let's dump it as text[].
-                # This means that placeholders receiving a binary array should
-                # be almost always cast to the target type.
-                d.oid = INVALID_OID
+        if sub_dumper:
+            cast("BaseListDumper", d).set_sub_dumper(sub_dumper)
 
-        self._dumpers_cache[format][key] = d
+        cache[key] = d
         return d
 
     def load_rows(self, row0: int, row1: int) -> List[Tuple[Any, ...]]:
@@ -215,7 +228,7 @@ class Transformer(AdaptContext):
             for i, val in enumerate(record)
         )
 
-    def get_loader(self, oid: int, format: Format) -> "Loader":
+    def get_loader(self, oid: int, format: pq.Format) -> "Loader":
         try:
             return self._loaders_cache[format][oid]
         except KeyError:

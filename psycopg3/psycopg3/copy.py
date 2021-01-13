@@ -12,7 +12,8 @@ from typing import Any, Dict, List, Match, Optional, Sequence, Type, Tuple
 
 from . import pq
 from . import errors as e
-from .pq import Format, ExecStatus
+from .pq import ExecStatus
+from .adapt import Format
 from .proto import ConnectionType, PQGen, Transformer
 from .generators import copy_from, copy_to, copy_end
 
@@ -20,6 +21,9 @@ if TYPE_CHECKING:
     from .pq.proto import PGresult
     from .cursor import BaseCursor  # noqa: F401
     from .connection import Connection, AsyncConnection  # noqa: F401
+
+TEXT = pq.Format.TEXT
+BINARY = pq.Format.BINARY
 
 
 class BaseCopy(Generic[ConnectionType]):
@@ -34,7 +38,7 @@ class BaseCopy(Generic[ConnectionType]):
         ), "The Transformer doesn't have a PGresult set"
         self._pgresult: "PGresult" = self.transformer.pgresult
 
-        self.format = Format(self._pgresult.binary_tuples)
+        self.format = pq.Format(self._pgresult.binary_tuples)
         self._encoding = self.connection.client_encoding
         self._signature_sent = False
         self._row_mode = False  # true if the user is using send_row()
@@ -42,7 +46,7 @@ class BaseCopy(Generic[ConnectionType]):
         self._write_buffer_size = 32 * 1024
         self._finished = False
 
-        if self.format == Format.TEXT:
+        if self.format == TEXT:
             self._format_row = format_row_text
             self._parse_row = parse_row_text
         else:
@@ -84,7 +88,7 @@ class BaseCopy(Generic[ConnectionType]):
         if not data:
             return None
 
-        if self.format == Format.BINARY:
+        if self.format == BINARY:
             if not self._signature_sent:
                 if data[: len(_binary_signature)] != _binary_signature:
                     raise e.DataError(
@@ -111,7 +115,7 @@ class BaseCopy(Generic[ConnectionType]):
         # to take care of the end-of-copy marker too
         self._row_mode = True
 
-        if self.format == Format.BINARY and not self._signature_sent:
+        if self.format == BINARY and not self._signature_sent:
             self._write_buffer += _binary_signature
             self._signature_sent = True
 
@@ -150,7 +154,7 @@ class BaseCopy(Generic[ConnectionType]):
             )
             return
 
-        if self.format == Format.BINARY:
+        if self.format == BINARY:
             # If we have sent no data we need to send the signature
             # and the trailer
             if not self._signature_sent:
@@ -174,7 +178,7 @@ class BaseCopy(Generic[ConnectionType]):
             return data
 
         elif isinstance(data, str):
-            if self._pgresult.binary_tuples == Format.BINARY:
+            if self._pgresult.binary_tuples == BINARY:
                 raise TypeError(
                     "cannot copy str data in binary mode: use bytes instead"
                 )

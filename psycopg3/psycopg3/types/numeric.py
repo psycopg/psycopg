@@ -8,8 +8,9 @@ import struct
 from typing import Any, Callable, Dict, Tuple, cast
 from decimal import Decimal
 
+from ..pq import Format
 from ..oids import builtins
-from ..adapt import Dumper, Loader, Format
+from ..adapt import Dumper, Loader
 
 _PackInt = Callable[[int], bytes]
 _PackFloat = Callable[[float], bytes]

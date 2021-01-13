@@ -6,13 +6,11 @@ Cython adapters for boolean.
 
 cimport cython
 
-from psycopg3.pq import Format
-
 
 @cython.final
 cdef class BoolDumper(CDumper):
 
-    format = Format.TEXT
+    format = PQ_TEXT
 
     def __cinit__(self):
         self.oid = oids.BOOL_OID
@@ -47,7 +45,7 @@ cdef class BoolDumper(CDumper):
 @cython.final
 cdef class BoolBinaryDumper(CDumper):
 
-    format = Format.BINARY
+    format = PQ_BINARY
 
     def __cinit__(self):
         self.oid = oids.BOOL_OID
@@ -74,7 +72,7 @@ cdef class BoolBinaryDumper(CDumper):
 @cython.final
 cdef class BoolLoader(CLoader):
 
-    format = Format.TEXT
+    format = PQ_TEXT
 
     cdef object cload(self, const char *data, size_t length):
         # this creates better C than `return data[0] == b't'`
@@ -84,7 +82,7 @@ cdef class BoolLoader(CLoader):
 @cython.final
 cdef class BoolBinaryLoader(CLoader):
 
-    format = Format.BINARY
+    format = PQ_BINARY
 
     cdef object cload(self, const char *data, size_t length):
         return True if data[0] else False

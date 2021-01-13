@@ -29,7 +29,7 @@ class Faker:
 
     def __init__(self, connection):
         self.conn = connection
-        self.format = Format.TEXT
+        self.format = Format.AUTO
         self.records = []
 
         self._schema = None
@@ -147,7 +147,7 @@ class Faker:
             m(spec, g, w)
 
     def get_supported_types(self):
-        dumpers = self.conn.adapters._dumpers[self.format]
+        dumpers = self.conn.adapters._dumpers[Format.as_pq(self.format)]
         rv = set()
         for cls in dumpers.keys():
             if isinstance(cls, str):

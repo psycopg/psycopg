@@ -4,8 +4,9 @@ Adapters for None and boolean.
 
 # Copyright (C) 2020 The Psycopg Team
 
+from ..pq import Format
 from ..oids import builtins
-from ..adapt import Dumper, Loader, Format
+from ..adapt import Dumper, Loader
 
 
 class BoolDumper(Dumper):

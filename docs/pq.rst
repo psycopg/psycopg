@@ -122,6 +122,10 @@ Enumerations
     .. seealso:: :pq:`PQresultStatus` for a description of these states.
 
 
+.. autoclass:: Format
+    :members:
+
+
 .. autoclass:: DiagnosticField
 
     Available attributes:

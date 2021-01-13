@@ -183,9 +183,12 @@ class DiagnosticField(IntEnum):
 class Format(IntEnum):
     """
     Enum representing the format of a query argument or return value.
+
+    These values are only the ones managed by the libpq. `~psycopg3` may also
+    support automatically-chosen values: see `psycopg3.adapt.Format`.
     """
 
-    __module__ = "psycopg3.adapt"
+    __module__ = "psycopg3.pq"
 
     TEXT = 0
     """Text parameter."""

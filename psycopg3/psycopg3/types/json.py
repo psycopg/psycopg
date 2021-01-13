@@ -7,8 +7,9 @@ Adapers for JSON types.
 import json
 from typing import Any, Callable, Optional
 
+from ..pq import Format
 from ..oids import builtins
-from ..adapt import Dumper, Loader, Format
+from ..adapt import Dumper, Loader
 from ..errors import DataError
 
 JsonDumpsFunction = Callable[[Any], str]

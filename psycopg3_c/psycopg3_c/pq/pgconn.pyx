@@ -11,6 +11,7 @@ from cpython.memoryview cimport PyMemoryView_FromObject
 
 import logging
 
+from psycopg3.pq import Format as PqFormat
 from psycopg3.pq.misc import PGnotify, connection_summary
 from psycopg3_c.pq cimport PQBuffer
 
@@ -201,7 +202,7 @@ cdef class PGconn:
         param_values: Optional[Sequence[Optional[bytes]]],
         param_types: Optional[Sequence[int]] = None,
         param_formats: Optional[Sequence[int]] = None,
-        int result_format = Format.TEXT,
+        int result_format = PqFormat.TEXT,
     ) -> PGresult:
         _ensure_pgconn(self)
 
@@ -229,7 +230,7 @@ cdef class PGconn:
         param_values: Optional[Sequence[Optional[bytes]]],
         param_types: Optional[Sequence[int]] = None,
         param_formats: Optional[Sequence[int]] = None,
-        int result_format = Format.TEXT,
+        int result_format = PqFormat.TEXT,
     ) -> None:
         _ensure_pgconn(self)
 
@@ -284,7 +285,7 @@ cdef class PGconn:
         const char *name,
         param_values: Optional[Sequence[Optional[bytes]]],
         param_formats: Optional[Sequence[int]] = None,
-        int result_format = Format.TEXT,
+        int result_format = PqFormat.TEXT,
     ) -> None:
         _ensure_pgconn(self)
 
@@ -337,7 +338,7 @@ cdef class PGconn:
         const char *name,
         param_values: Optional[Sequence[bytes]],
         param_formats: Optional[Sequence[int]] = None,
-        int result_format = Format.TEXT,
+        int result_format = PqFormat.TEXT,
     ) -> PGresult:
         _ensure_pgconn(self)
 

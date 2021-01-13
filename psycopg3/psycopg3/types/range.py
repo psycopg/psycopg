@@ -12,8 +12,9 @@ from datetime import date, datetime
 
 from .. import sql
 from .. import errors as e
+from ..pq import Format
 from ..oids import builtins, TypeInfo
-from ..adapt import Format, Dumper, Loader
+from ..adapt import Dumper, Loader
 from ..proto import AdaptContext
 
 from . import array

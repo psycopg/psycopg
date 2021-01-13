@@ -8,8 +8,8 @@ import pytest
 from psycopg3 import pq
 from psycopg3 import sql
 from psycopg3 import errors as e
+from psycopg3.pq import Format
 from psycopg3.oids import builtins
-from psycopg3.adapt import Format
 
 from .test_copy import sample_text, sample_binary, sample_binary_rows  # noqa
 from .test_copy import eur, sample_values, sample_records, sample_tabledef

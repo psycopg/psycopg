@@ -6,9 +6,9 @@ Adapters for textual types.
 
 from typing import Optional, Union, TYPE_CHECKING
 
-from ..pq import Escaping
+from ..pq import Format, Escaping
 from ..oids import builtins
-from ..adapt import Dumper, Loader, Format
+from ..adapt import Dumper, Loader
 from ..proto import AdaptContext
 from ..errors import DataError
 
@@ -33,6 +33,7 @@ class _StringDumper(Dumper):
 class StringBinaryDumper(_StringDumper):
 
     format = Format.BINARY
+    _oid = builtins["text"].oid
 
     def dump(self, obj: str) -> bytes:
         # the server will raise DataError subclass if the string contains 0x00

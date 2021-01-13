@@ -23,7 +23,6 @@ from cpython.bytearray cimport PyByteArray_GET_SIZE, PyByteArray_AS_STRING
 from psycopg3_c.pq cimport _buffer_as_string_and_size
 
 from psycopg3 import errors as e
-from psycopg3.pq import Format
 from psycopg3.pq.misc import error_message
 
 import logging
@@ -104,7 +103,7 @@ cdef class CDumper:
         this_cls,
         cls: Union[type, str],
         context: Optional[AdaptContext] = None,
-        int format = Format.TEXT,
+        int format = PQ_TEXT,
     ) -> None:
         if context is not None:
             adapters = context.adapters
@@ -153,7 +152,7 @@ cdef class CLoader:
         cls,
         oid: Union[int, str],
         context: Optional["AdaptContext"] = None,
-        int format = Format.TEXT,
+        int format = PQ_TEXT,
     ) -> None:
         if isinstance(oid, str):
             from psycopg3.oids import builtins
