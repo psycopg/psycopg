@@ -43,8 +43,9 @@ ctypedef struct pg_result_int:
 
 @cython.freelist(16)
 cdef class RowLoader:
-    cdef object loadfunc
     cdef CLoader cloader
+    cdef object pyloader
+    cdef object loadfunc
 
 
 @cython.freelist(16)
@@ -130,42 +131,21 @@ cdef class Transformer:
 
     cdef void _c_set_row_types(self, int ntypes, list types, list formats):
         cdef list loaders = PyList_New(ntypes)
-        cdef object loader
-        cdef dict text_loaders = {}
-        cdef dict binary_loaders = {}
 
         # these are used more as Python object than C
         cdef PyObject *oid
         cdef PyObject *fmt
         cdef PyObject *ptr
         cdef PyObject *cache
+        cdef PyObject *row_loader
         for i in range(ntypes):
             oid = PyList_GET_ITEM(types, i)
             fmt = PyList_GET_ITEM(formats, i)
-            cache = <PyObject *>(binary_loaders if <object>fmt else text_loaders)
-            ptr = PyDict_GetItem(<object>cache, <object>oid)
-            if ptr != NULL:
-                loader = <object>ptr
-            else:
-                loader = self._get_row_loader(oid, fmt)
-                PyDict_SetItem(<object>cache, <object>oid, loader)
-
-            Py_INCREF(loader)
-            PyList_SET_ITEM(loaders, i, loader)
+            row_loader = self._c_get_loader(oid, fmt)
+            Py_INCREF(<object>row_loader)
+            PyList_SET_ITEM(loaders, i, <object>row_loader)
 
         self._row_loaders = loaders
-
-    cdef RowLoader _get_row_loader(self, PyObject *oid, PyObject *fmt):
-        cdef RowLoader row_loader = RowLoader()
-        loader = self._c_get_loader(oid, fmt)
-        row_loader.loadfunc = loader.load
-
-        if isinstance(loader, CLoader):
-            row_loader.cloader = loader
-        else:
-            row_loader.cloader = None
-
-        return row_loader
 
     cpdef object get_dumper(self, object obj, object format):
         # Fast path: return a Dumper class already instantiated from the same type
@@ -434,9 +414,18 @@ cdef class Transformer:
         return out
 
     def get_loader(self, oid: int, format: pq.Format) -> "Loader":
-        return self._c_get_loader(<PyObject *>oid, <PyObject *>format)
+        cdef PyObject *row_loader = self._c_get_loader(
+            <PyObject *>oid, <PyObject *>format)
+        if (<RowLoader>row_loader).cloader is not None:
+            return (<RowLoader>row_loader).cloader
+        else:
+            return (<RowLoader>row_loader).pyloader
 
-    cdef object _c_get_loader(self, PyObject *oid, PyObject *fmt):
+
+    cdef PyObject *_c_get_loader(self, PyObject *oid, PyObject *fmt) except NULL:
+        """
+        Return a borrowed reference to the RowLoader instance for given oid/fmt
+        """
         cdef PyObject *ptr
         cdef PyObject *cache
 
@@ -454,7 +443,7 @@ cdef class Transformer:
 
         ptr = PyDict_GetItem(<object>cache, <object>oid)
         if ptr != NULL:
-            return <object>ptr
+            return ptr
 
         loader_cls = self.adapters.get_loader(<object>oid, <object>fmt)
         if loader_cls is None:
@@ -464,8 +453,16 @@ cdef class Transformer:
 
         loader = PyObject_CallFunctionObjArgs(
             loader_cls, oid, <PyObject *>self, NULL)
-        PyDict_SetItem(<object>cache, <object>oid, loader)
-        return loader
+
+        cdef RowLoader row_loader = RowLoader()
+        row_loader.loadfunc = loader.load
+        if isinstance(loader, CLoader):
+            row_loader.cloader = loader
+        else:
+            row_loader.pyloader = loader
+
+        PyDict_SetItem(<object>cache, <object>oid, row_loader)
+        return <PyObject *>row_loader
 
     cdef object _find_list_element(self, object L, set seen):
         """
