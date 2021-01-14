@@ -85,6 +85,19 @@ The `!Cursor` class
 
         See :ref:`copy` for information about :sql:`COPY`.
 
+    .. attribute:: format
+
+        The format of the data returned by the queries. It can be selected
+        initially e.g. specifying `Connection.cursor`\ ``(binary=True)`` and
+        changed during the cursor's lifetime.
+
+        :type: pq.Format
+
+        .. admonition:: TODO
+
+            Add `execute`\ ``(binary=True)`` too?
+
+
     .. rubric:: Methods to retrieve results
 
     Fetch methods are only available if the last operation produced results,
