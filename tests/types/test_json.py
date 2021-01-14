@@ -43,7 +43,7 @@ def test_jsonb_dump(conn, val, fmt_in):
 @pytest.mark.parametrize("jtype", ["json", "jsonb"])
 @pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
 def test_json_load(conn, val, jtype, fmt_out):
-    cur = conn.cursor(format=fmt_out)
+    cur = conn.cursor(binary=fmt_out)
     cur.execute(f"select %s::{jtype}", (val,))
     assert cur.fetchone()[0] == json.loads(val)
 

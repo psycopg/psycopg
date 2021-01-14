@@ -10,7 +10,7 @@ from psycopg3.adapt import Transformer, Format
 @pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
 @pytest.mark.parametrize("b", [True, False])
 def test_roundtrip_bool(conn, b, fmt_in, fmt_out):
-    cur = conn.cursor(format=fmt_out)
+    cur = conn.cursor(binary=fmt_out)
     result = cur.execute(f"select %{fmt_in}", (b,)).fetchone()[0]
     assert cur.pgresult.fformat(0) == fmt_out
     if b is not None:

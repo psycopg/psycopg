@@ -5,7 +5,6 @@ import weakref
 import pytest
 
 import psycopg3
-from psycopg3 import pq
 from psycopg3.oids import builtins
 from psycopg3.adapt import Format
 
@@ -110,7 +109,7 @@ def test_fetchone(conn):
 
 
 def test_execute_binary_result(conn):
-    cur = conn.cursor(format=pq.Format.BINARY)
+    cur = conn.cursor(binary=True)
     cur.execute("select %s::text, %s::text", ["foo", None])
     assert cur.pgresult.fformat(0) == 1
 
@@ -418,7 +417,7 @@ def test_leak(dsn, faker, fmt, fetch):
     n = []
     for i in range(3):
         with psycopg3.connect(dsn) as conn:
-            with conn.cursor(format=Format.as_pq(fmt)) as cur:
+            with conn.cursor(binary=Format.as_pq(fmt)) as cur:
                 cur.execute(faker.drop_stmt)
                 cur.execute(faker.create_stmt)
                 cur.executemany(faker.insert_stmt, faker.records)

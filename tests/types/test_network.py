@@ -60,7 +60,7 @@ def test_network_dump(conn, fmt_in, val):
 @pytest.mark.parametrize("val", ["127.0.0.1/32", "::ffff:102:300/128"])
 def test_inet_load_address(conn, fmt_out, val):
     binary_check(fmt_out)
-    cur = conn.cursor(format=fmt_out)
+    cur = conn.cursor(binary=fmt_out)
     cur.execute("select %s::inet", (val,))
     addr = ipaddress.ip_address(val.split("/", 1)[0])
     assert cur.fetchone()[0] == addr
@@ -72,7 +72,7 @@ def test_inet_load_address(conn, fmt_out, val):
 @pytest.mark.parametrize("val", ["127.0.0.1/24", "::ffff:102:300/127"])
 def test_inet_load_network(conn, fmt_out, val):
     binary_check(fmt_out)
-    cur = conn.cursor(format=fmt_out)
+    cur = conn.cursor(binary=fmt_out)
     cur.execute("select %s::inet", (val,))
     assert cur.fetchone()[0] == ipaddress.ip_interface(val)
     cur.execute("select array[null, %s::inet]", (val,))
@@ -83,7 +83,7 @@ def test_inet_load_network(conn, fmt_out, val):
 @pytest.mark.parametrize("val", ["127.0.0.0/24", "::ffff:102:300/128"])
 def test_cidr_load(conn, fmt_out, val):
     binary_check(fmt_out)
-    cur = conn.cursor(format=fmt_out)
+    cur = conn.cursor(binary=fmt_out)
     cur.execute("select %s::cidr", (val,))
     assert cur.fetchone()[0] == ipaddress.ip_network(val)
     cur.execute("select array[null, %s::cidr]", (val,))

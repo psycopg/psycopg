@@ -131,9 +131,9 @@ def test_load_connection_ctx(conn):
     make_loader("t").register(TEXT_OID, conn)
     make_bin_loader("b").register(TEXT_OID, conn)
 
-    r = conn.cursor().execute("select 'hello'::text").fetchone()
+    r = conn.cursor(binary=False).execute("select 'hello'::text").fetchone()
     assert r == ("hellot",)
-    r = conn.cursor(format=1).execute("select 'hello'::text").fetchone()
+    r = conn.cursor(binary=True).execute("select 'hello'::text").fetchone()
     assert r == ("hellob",)
 
 
@@ -165,7 +165,7 @@ def test_load_cursor_ctx(conn):
 )
 @pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
 def test_load_cursor_ctx_nested(conn, sql, obj, fmt_out):
-    cur = conn.cursor(format=fmt_out)
+    cur = conn.cursor(binary=fmt_out == pq.Format.BINARY)
     if fmt_out == pq.Format.TEXT:
         make_loader("c").register(TEXT_OID, cur)
     else:

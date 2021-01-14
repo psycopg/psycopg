@@ -18,7 +18,7 @@ def test_uuid_dump(conn, fmt_in):
 
 @pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
 def test_uuid_load(conn, fmt_out):
-    cur = conn.cursor(format=fmt_out)
+    cur = conn.cursor(binary=fmt_out)
     val = "12345678123456781234567812345679"
     cur.execute("select %s::uuid", (val,))
     assert cur.fetchone()[0] == UUID(val)

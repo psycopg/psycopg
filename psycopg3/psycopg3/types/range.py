@@ -370,7 +370,7 @@ class RangeInfo(TypeInfo):
     ) -> Optional["RangeInfo"]:
         if isinstance(name, sql.Composable):
             name = name.as_string(conn)
-        cur = conn.cursor(format=Format.BINARY)
+        cur = conn.cursor(binary=True)
         cur.execute(cls._info_query, {"name": name})
         recs = cur.fetchall()
         return cls._from_records(recs)
@@ -381,7 +381,7 @@ class RangeInfo(TypeInfo):
     ) -> Optional["RangeInfo"]:
         if isinstance(name, sql.Composable):
             name = name.as_string(conn)
-        cur = await conn.cursor(format=Format.BINARY)
+        cur = await conn.cursor(binary=True)
         await cur.execute(cls._info_query, {"name": name})
         recs = await cur.fetchall()
         return cls._from_records(recs)

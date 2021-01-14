@@ -440,13 +440,14 @@ class Connection(BaseConnection):
         """Close the database connection."""
         self.pgconn.finish()
 
-    def cursor(self, name: str = "", format: Format = Format.TEXT) -> "Cursor":
+    def cursor(self, name: str = "", binary: bool = False) -> "Cursor":
         """
         Return a new `Cursor` to send commands and queries to the connection.
         """
         if name:
             raise NotImplementedError
 
+        format = Format.BINARY if binary else Format.TEXT
         return self.cursor_factory(self, format=format)
 
     def execute(
@@ -567,7 +568,7 @@ class AsyncConnection(BaseConnection):
         self.pgconn.finish()
 
     async def cursor(
-        self, name: str = "", format: Format = Format.TEXT
+        self, name: str = "", binary: bool = False
     ) -> "AsyncCursor":
         """
         Return a new `AsyncCursor` to send commands and queries to the connection.
@@ -575,6 +576,7 @@ class AsyncConnection(BaseConnection):
         if name:
             raise NotImplementedError
 
+        format = Format.BINARY if binary else Format.TEXT
         return self.cursor_factory(self, format=format)
 
     async def execute(

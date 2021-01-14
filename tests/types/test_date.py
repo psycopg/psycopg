@@ -71,7 +71,7 @@ def test_load_date(conn, val, expr):
 @pytest.mark.xfail  # TODO: binary load
 @pytest.mark.parametrize("val, expr", [("2000,1,1", "2000-01-01")])
 def test_load_date_binary(conn, val, expr):
-    cur = conn.cursor(format=Format.BINARY)
+    cur = conn.cursor(binary=Format.BINARY)
     cur.execute(f"select '{expr}'::date")
     assert cur.fetchone()[0] == as_date(val)
 
@@ -317,7 +317,7 @@ def test_load_time(conn, val, expr):
 @pytest.mark.xfail  # TODO: binary load
 @pytest.mark.parametrize("val, expr", [("0,0", "00:00")])
 def test_load_time_binary(conn, val, expr):
-    cur = conn.cursor(format=Format.BINARY)
+    cur = conn.cursor(binary=Format.BINARY)
     cur.execute(f"select '{expr}'::time")
     assert cur.fetchone()[0] == as_time(val)
 
@@ -382,7 +382,7 @@ def test_load_timetz(conn, val, timezone, expr):
 @pytest.mark.xfail  # TODO: binary load
 @pytest.mark.parametrize("val, expr, timezone", [("0,0~2", "00:00", "-02:00")])
 def test_load_timetz_binary(conn, val, expr, timezone):
-    cur = conn.cursor(format=Format.BINARY)
+    cur = conn.cursor(binary=Format.BINARY)
     cur.execute(f"set timezone to '{timezone}'")
     cur.execute(f"select '{expr}'::time")
     assert cur.fetchone()[0] == as_time(val)

@@ -196,5 +196,5 @@ Binary parameters and results
 .. admonition:: TODO
 
     - pass parameters in binary with ``%b``
-    - return parameters in binary with `!cursor(format=BINARY)`
+    - return parameters in binary with `!cursor(binary=True)`
     - cannot pass multiple statements in binary

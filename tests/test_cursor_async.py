@@ -3,7 +3,6 @@ import pytest
 import weakref
 
 import psycopg3
-from psycopg3 import pq
 from psycopg3.adapt import Format
 
 pytestmark = pytest.mark.asyncio
@@ -112,7 +111,7 @@ async def test_fetchone(aconn):
 
 
 async def test_execute_binary_result(aconn):
-    cur = await aconn.cursor(format=pq.Format.BINARY)
+    cur = await aconn.cursor(binary=True)
     await cur.execute("select %s::text, %s::text", ["foo", None])
     assert cur.pgresult.fformat(0) == 1
 
