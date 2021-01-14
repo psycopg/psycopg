@@ -66,11 +66,16 @@ cdef class Transformer:
 
     cdef readonly object connection
     cdef readonly object adapters
+
+    # mapping class -> Dumper instance (auto, text, binary)
     cdef dict _auto_dumpers
     cdef dict _text_dumpers
     cdef dict _binary_dumpers
+
+    # mapping oid -> Loader instance (text, binary)
     cdef dict _text_loaders
     cdef dict _binary_loaders
+
     cdef pq.PGresult _pgresult
     cdef int _nfields, _ntuples
     cdef list _row_dumpers
@@ -84,19 +89,6 @@ cdef class Transformer:
             from psycopg3.adapt import global_adapters
             self.adapters = global_adapters
             self.connection = None
-
-        # mapping class -> Dumper instance (auto, text, binary)
-        self._auto_dumpers = None
-        self._text_dumpers = None
-        self._binary_dumpers = None
-
-        # mapping oid -> Loader instance (text, binary)
-        self._text_loaders = {}
-        self._binary_loaders = {}
-
-        self.pgresult = None
-        self._row_dumpers = None
-        self._row_loaders = []
 
     @property
     def pgresult(self) -> Optional[PGresult]:
@@ -448,8 +440,18 @@ cdef class Transformer:
         cdef PyObject *ptr
         cdef PyObject *cache
 
-        cache = <PyObject *>(
-            self._binary_loaders if <object>fmt == 0 else self._text_loaders)
+        if <object>fmt == PQ_TEXT:
+            if self._text_loaders is None:
+                self._text_loaders = {}
+            cache = <PyObject *>self._text_loaders
+        elif <object>fmt == PQ_BINARY:
+            if self._binary_loaders is None:
+                self._binary_loaders = {}
+            cache = <PyObject *>self._binary_loaders
+        else:
+            raise ValueError(
+                f"format should be a psycopg3.pq.Format, not {format}")
+
         ptr = PyDict_GetItem(<object>cache, <object>oid)
         if ptr != NULL:
             return <object>ptr
