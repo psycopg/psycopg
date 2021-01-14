@@ -294,7 +294,7 @@ class Faker:
 
         rv = []
         while len(rv) < length:
-            c = randrange(1, 128) if random() < 0.5 else randrange(0x110000)
+            c = randrange(1, 128) if random() < 0.5 else randrange(1, 0x110000)
             if not (0xD800 <= c <= 0xDBFF or 0xDC00 <= c <= 0xDFFF):
                 rv.append(c)
 
