@@ -50,7 +50,7 @@ class BaseCursor(Generic[ConnectionType]):
     if sys.version_info >= (3, 7):
         __slots__ = """
             _conn format _adapters arraysize _closed _results _pgresult _pos
-            _iresult _rowcount _pgq _transformer
+            _iresult _rowcount _pgq _transformer _last_query
             __weakref__
             """.split()
 
@@ -68,6 +68,7 @@ class BaseCursor(Generic[ConnectionType]):
         self._adapters = adapt.AdaptersMap(connection.adapters)
         self.arraysize = 1
         self._closed = False
+        self._last_query: Optional[Query] = None
         self._reset()
 
     def _reset(self) -> None:
@@ -187,7 +188,7 @@ class BaseCursor(Generic[ConnectionType]):
         prepare: Optional[bool] = None,
     ) -> PQGen[None]:
         """Generator implementing `Cursor.execute()`."""
-        yield from self._start_query()
+        yield from self._start_query(query)
         pgq = self._convert_query(query, params)
 
         # Check if the query is prepared or needs preparing
@@ -220,12 +221,13 @@ class BaseCursor(Generic[ConnectionType]):
                 yield from self._conn._exec_command(cmd)
 
         self._execute_results(results)
+        self._last_query = query
 
     def _executemany_gen(
         self, query: Query, params_seq: Sequence[Params]
     ) -> PQGen[None]:
         """Generator implementing `Cursor.executemany()`."""
-        yield from self._start_query()
+        yield from self._start_query(query)
         first = True
         for params in params_seq:
             if first:
@@ -246,7 +248,9 @@ class BaseCursor(Generic[ConnectionType]):
             (result,) = yield from execute(self._conn.pgconn)
             self._execute_results((result,))
 
-    def _start_query(self) -> PQGen[None]:
+        self._last_query = query
+
+    def _start_query(self, query: Optional[Query] = None) -> PQGen[None]:
         """Generator to start the processing of a query.
 
         It is implemented as generator because it may send additional queries,
@@ -256,7 +260,9 @@ class BaseCursor(Generic[ConnectionType]):
             raise e.InterfaceError("the cursor is closed")
 
         self._reset()
-        self._transformer = adapt.Transformer(self)
+        if not self._last_query or (self._last_query is not query):
+            self._last_query = None
+            self._transformer = adapt.Transformer(self)
         yield from self._conn._start_query()
 
     def _start_copy_gen(self, statement: Query) -> PQGen[None]:

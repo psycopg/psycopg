@@ -356,7 +356,7 @@ def test_numeric_as_float(conn, val):
     FloatLoader.register(builtins["numeric"].oid, cur)
 
     val = Decimal(val)
-    cur.execute("select %s", (val,))
+    cur.execute("select %s as val", (val,))
     result = cur.fetchone()[0]
     assert isinstance(result, float)
     if val.is_nan():
@@ -365,7 +365,7 @@ def test_numeric_as_float(conn, val):
         assert result == pytest.approx(float(val))
 
     # the customization works with arrays too
-    cur.execute("select %s", ([val],))
+    cur.execute("select %s as arr", ([val],))
     result = cur.fetchone()[0]
     assert isinstance(result, list)
     assert isinstance(result[0], float)
