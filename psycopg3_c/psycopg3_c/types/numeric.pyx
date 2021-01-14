@@ -30,12 +30,11 @@ cdef extern from "Python.h":
 # defined in numutils.c
 cdef extern from *:
     """
-#define MAXINT8LEN 20
 int pg_lltoa(int64_t value, char *a);
     """
-    int MAXINT8LEN
     int pg_lltoa(int64_t value, char *a)
 
+DEF MAXINT8LEN = 20
 
 # @cython.final  # TODO? causes compile warnings
 cdef class IntDumper(CDumper):
@@ -116,7 +115,7 @@ cdef class IntLoader(CLoader):
         if length > MAXINT8LEN:
             raise ValueError("string too big for an int")
 
-        cdef char[21] buf   # MAXINT8LEN + 1
+        cdef char[MAXINT8LEN + 1] buf
         memcpy(buf, data, length)
         buf[length] = 0
         return PyLong_FromString(buf, NULL, 10)
