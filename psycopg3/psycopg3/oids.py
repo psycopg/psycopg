@@ -62,6 +62,8 @@ class TypesRegistry:
 
     def __getitem__(self, key: Union[str, int]) -> TypeInfo:
         if isinstance(key, str):
+            if key.endswith("[]"):
+                key = key[:-2]
             return self._by_name[key]
         elif isinstance(key, int):
             return self._by_oid[key]
@@ -75,6 +77,13 @@ class TypesRegistry:
             return self[key]
         except KeyError:
             return None
+
+    def get_oid(self, name: str) -> int:
+        t = self[name]
+        if name.endswith("[]"):
+            return t.array_oid
+        else:
+            return t.oid
 
 
 builtins = TypesRegistry()

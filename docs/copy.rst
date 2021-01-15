@@ -99,19 +99,17 @@ you have to specify them yourselves.
 
 .. code:: python
 
-    from psycopg3.oids import builtins
-
     with cur.copy("COPY (VALUES (10::int, current_date)) TO STDOUT") as copy:
-        copy.set_types([builtins["int4"].oid, builtins["date"].oid])
+        copy.set_types(["int4", "date"])
         for row in copy.rows():
             print(row)  # (10, datetime.date(2046, 12, 24))
 
 .. admonition:: TODO
 
-    Document the `!builtins` register... but more likely do something
-    better such as allowing to pass type names, unifying `TypeRegistry` and
-    `AdaptContext`, none of which I have documented, so you haven't seen
-    anything... 👀
+    Currently only builtin names are recognised; custom types must be
+    specified by numeric oid. This wll change after the `TypeRegistry` and
+    `AdaptContext` get integrated, none of which I have documented, so you
+    haven't seen anything... 👀
 
 
 Copying block-by-block

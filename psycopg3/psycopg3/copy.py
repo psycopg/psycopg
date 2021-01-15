@@ -17,6 +17,7 @@ from typing import Any, Dict, List, Match, Optional, Sequence, Type, Tuple
 from . import pq
 from . import errors as e
 from .pq import ExecStatus
+from .oids import builtins
 from .adapt import Format
 from .proto import ConnectionType, PQGen, Transformer
 from .generators import copy_from, copy_to, copy_end
@@ -78,15 +79,29 @@ class BaseCopy(Generic[ConnectionType]):
         if self._finished:
             raise TypeError("copy blocks can be used only once")
 
-    def set_types(self, types: Sequence[int]) -> None:
+    def set_types(self, types: Sequence[Union[int, str]]) -> None:
         """
         Set the types expected out of a :sql:`COPY TO` operation.
 
         Without setting the types, the data from :sql:`COPY TO` will be
         returned as unparsed strings or bytes.
+
+        The types must be specified as a sequence of oid or PostgreSQL type
+        names (e.g. ``int4``, ``timestamptz[]``).
+
+        .. admonition:: TODO
+
+            Only builtin names are supprted for the moment. In order to specify
+            custom data types you must use their oid.
+
         """
+        # TODO: should allow names of non-builtin types
+        # Must put a types map on the context.
+        oids = [
+            t if isinstance(t, int) else builtins.get_oid(t) for t in types
+        ]
         self.formatter.transformer.set_row_types(
-            types, [self.formatter.format] * len(types)
+            oids, [self.formatter.format] * len(types)
         )
 
     # High level copy protocol generators (state change of the Copy object)

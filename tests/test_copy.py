@@ -83,25 +83,22 @@ def test_copy_out_iter(conn, format):
 
 
 @pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
-def test_read_rows(conn, format):
+@pytest.mark.parametrize("typetype", ["names", "oids"])
+def test_read_rows(conn, format, typetype):
     cur = conn.cursor()
     with cur.copy(
-        f"copy ({sample_values}) to stdout (format {format.name})"
+        f"""copy (
+            select 10::int4, 'hello'::text, '{{0.0,1.0}}'::float8[]
+        ) to stdout (format {format.name})"""
     ) as copy:
-        # TODO: should be passed by name
-        # big refactoring to be had, to have builtins not global and merged
-        # to adaptation context I guess...
-        copy.set_types(
-            [builtins["int4"].oid, builtins["int4"].oid, builtins["text"].oid]
-        )
-        rows = []
-        while 1:
-            row = copy.read_row()
-            if not row:
-                break
-            rows.append(row)
+        types = ["int4", "text", "float8[]"]
+        if typetype == "oids":
+            types = [builtins.get_oid(t) for t in types]
+        copy.set_types(types)
+        row = copy.read_row()
+        assert copy.read_row() is None
 
-    assert rows == sample_records
+    assert row == (10, "hello", [0.0, 1.0])
     assert conn.pgconn.transaction_status == conn.TransactionStatus.INTRANS
 
 
