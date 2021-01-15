@@ -134,6 +134,19 @@ def test_context_rollback(conn, dsn):
                 cur.execute("select * from textctx")
 
 
+def test_context_rollback_no_clobber(conn, dsn, recwarn):
+    with pytest.raises(ZeroDivisionError):
+        with psycopg3.connect(dsn) as conn2:
+            conn2.execute("select 1")
+            conn.execute(
+                "select pg_terminate_backend(%s::int)",
+                [conn2.pgconn.backend_pid],
+            )
+            1 / 0
+
+    assert "rolling back" in str(recwarn.pop(RuntimeWarning).message)
+
+
 def test_weakref(dsn):
     conn = psycopg3.connect(dsn)
     w = weakref.ref(conn)
