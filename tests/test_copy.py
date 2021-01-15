@@ -479,6 +479,23 @@ def test_str(conn):
     assert "[INTRANS]" in str(copy)
 
 
+@pytest.mark.parametrize(
+    "format, buffer",
+    [(Format.TEXT, "sample_text"), (Format.BINARY, "sample_binary")],
+)
+def test_worker_life(conn, format, buffer):
+    cur = conn.cursor()
+    ensure_table(cur, sample_tabledef)
+    with cur.copy(f"copy copy_in from stdin (format {format.name})") as copy:
+        assert not copy._worker
+        copy.write(globals()[buffer])
+        assert copy._worker
+
+    assert not copy._worker
+    data = cur.execute("select * from copy_in order by 1").fetchall()
+    assert data == sample_records
+
+
 def py_to_raw(item, fmt):
     """Convert from Python type to the expected result from the db"""
     if fmt == Format.TEXT:

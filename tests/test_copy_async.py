@@ -452,6 +452,26 @@ async def test_str(aconn):
     assert "[INTRANS]" in str(copy)
 
 
+@pytest.mark.parametrize(
+    "format, buffer",
+    [(Format.TEXT, "sample_text"), (Format.BINARY, "sample_binary")],
+)
+async def test_worker_life(aconn, format, buffer):
+    cur = await aconn.cursor()
+    await ensure_table(cur, sample_tabledef)
+    async with cur.copy(
+        f"copy copy_in from stdin (format {format.name})"
+    ) as copy:
+        assert not copy._worker
+        await copy.write(globals()[buffer])
+        assert copy._worker
+
+    assert not copy._worker
+    await cur.execute("select * from copy_in order by 1")
+    data = await cur.fetchall()
+    assert data == sample_records
+
+
 async def ensure_table(cur, tabledef, name="copy_in"):
     await cur.execute(f"drop table if exists {name}")
     await cur.execute(f"create table {name} ({tabledef})")
