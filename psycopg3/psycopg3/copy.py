@@ -129,6 +129,22 @@ class BaseCopy(Generic[ConnectionType]):
             berr = error.encode(self.connection.client_encoding, "replace")
             res = yield from copy_end(self._pgconn, berr)
         else:
+            if self.format == BINARY:
+                # If we have sent no data we need to send the signature
+                # and the trailer
+                if not self._signature_sent:
+                    self._write_buffer += _binary_signature
+                    self._write_buffer += _binary_trailer
+                elif self._row_mode:
+
+                    # if we have sent data already, we have sent the signature
+                    # too (either with the first row, or we assume that in
+                    # block mode the signature is included).
+                    # Write the trailer only if we are sending rows (with the
+                    # assumption that who is copying binary data is sending the
+                    # whole format).
+                    self._write_buffer += _binary_trailer
+
             if self._write_buffer:
                 yield from copy_to(self._pgconn, self._write_buffer)
                 self._write_buffer.clear()
@@ -152,24 +168,8 @@ class BaseCopy(Generic[ConnectionType]):
             yield from self._finish_gen(
                 f"error from Python: {exc_type.__qualname__} - {exc_val}"
             )
-            return
-
-        if self.format == BINARY:
-            # If we have sent no data we need to send the signature
-            # and the trailer
-            if not self._signature_sent:
-                self._write_buffer += _binary_signature
-                self._write_buffer += _binary_trailer
-            elif self._row_mode:
-                # if we have sent data already, we have sent the signature too
-                # (either with the first row, or we assume that in block mode
-                # the signature is included).
-                # Write the trailer only if we are sending rows (with the
-                # assumption that who is copying binary data is sending the
-                # whole format).
-                self._write_buffer += _binary_trailer
-
-        yield from self._finish_gen()
+        else:
+            yield from self._finish_gen()
 
     # Support methods
 
