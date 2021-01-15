@@ -147,11 +147,11 @@ cdef class Transformer:
         self._row_loaders = loaders
 
     def get_dumper(self, obj, format) -> "Dumper":
-        cdef PyObject *row_dumper = self._c_get_dumper(
+        cdef PyObject *row_dumper = self.get_row_dumper(
             <PyObject *>obj, <PyObject *>format)
         return (<RowDumper>row_dumper).pydumper
 
-    cdef PyObject *_c_get_dumper(self, PyObject *obj, PyObject *fmt) except NULL:
+    cdef PyObject *get_row_dumper(self, PyObject *obj, PyObject *fmt) except NULL:
         """
         Return a borrowed reference to the RowDumper for the given obj/fmt.
         """
@@ -202,7 +202,7 @@ cdef class Transformer:
             # If we are dumping a list it's the sub-object which should dictate
             # what format to use.
             else:
-                sub_dumper = self._c_get_dumper(<PyObject *>subobj, fmt)
+                sub_dumper = self.get_row_dumper(<PyObject *>subobj, fmt)
                 tmp = Pg3Format.from_pq((<RowDumper>sub_dumper).format)
                 fmt = <PyObject *>tmp
 
@@ -252,7 +252,7 @@ cdef class Transformer:
                 dumper_ptr = PyList_GET_ITEM(dumpers, i)
                 if dumper_ptr == NULL:
                     format = formats[i]
-                    dumper_ptr = self._c_get_dumper(
+                    dumper_ptr = self.get_row_dumper(
                         <PyObject *>param, <PyObject *>format)
                     Py_INCREF(<object>dumper_ptr)
                     PyList_SET_ITEM(dumpers, i, <object>dumper_ptr)

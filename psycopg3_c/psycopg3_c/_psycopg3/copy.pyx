@@ -46,22 +46,25 @@ def format_row_binary(
     cdef uint32_t besize
     cdef char *buf
     cdef int i
-    fmt = PG_BINARY
+    cdef PyObject *fmt = <PyObject *>PG_BINARY
+    cdef PyObject *row_dumper
 
     for i in range(rowlen):
         item = row[i]
         if item is not None:
-            dumper = tx.get_dumper(item, fmt)
-            if isinstance(dumper, CDumper):
+            row_dumper = tx.get_row_dumper(<PyObject *>item, fmt)
+            if (<RowDumper>row_dumper).cdumper is not None:
                 # A cdumper can resize if necessary and copy in place
-                size = (<CDumper>dumper).cdump(item, out, pos + sizeof(besize))
+                size = (<RowDumper>row_dumper).cdumper.cdump(
+                    item, out, pos + sizeof(besize))
                 # Also add the size of the item, before the item
                 besize = endian.htobe32(size)
                 target = PyByteArray_AS_STRING(out)  # might have been moved by cdump
                 memcpy(target + pos, <void *>&besize, sizeof(besize))
             else:
                 # A Python dumper, gotta call it and extract its juices
-                b = PyObject_CallFunctionObjArgs(dumper.dump, <PyObject *>item, NULL)
+                b = PyObject_CallFunctionObjArgs(
+                    (<RowDumper>row_dumper).dumpfunc, <PyObject *>item, NULL)
                 _buffer_as_string_and_size(b, &buf, &size)
                 target = CDumper.ensure_size(out, pos, size + sizeof(besize))
                 besize = endian.htobe32(size)
@@ -103,7 +106,8 @@ def format_row_text(
     cdef unsigned char *target
     cdef int nesc = 0
     cdef int with_tab
-    fmt = PG_TEXT
+    cdef PyObject *fmt = <PyObject *>PG_TEXT
+    cdef PyObject *row_dumper
 
     for i in range(rowlen):
         # Include the tab before the data, so it gets included in the resizes
@@ -121,14 +125,16 @@ def format_row_text(
                 pos += 2
             continue
 
-        dumper = tx.get_dumper(item, fmt)
-        if isinstance(dumper, CDumper):
+        row_dumper = tx.get_row_dumper(<PyObject *>item, fmt)
+        if (<RowDumper>row_dumper).cdumper is not None:
             # A cdumper can resize if necessary and copy in place
-            size = (<CDumper>dumper).cdump(item, out, pos + with_tab)
+            size = (<RowDumper>row_dumper).cdumper.cdump(
+                item, out, pos + with_tab)
             target = <unsigned char *>PyByteArray_AS_STRING(out) + pos
         else:
             # A Python dumper, gotta call it and extract its juices
-            b = PyObject_CallFunctionObjArgs(dumper.dump, <PyObject *>item, NULL)
+            b = PyObject_CallFunctionObjArgs(
+                (<RowDumper>row_dumper).dumpfunc, <PyObject *>item, NULL)
             _buffer_as_string_and_size(b, &buf, &size)
             target = <unsigned char *>CDumper.ensure_size(out, pos, size + with_tab)
             memcpy(target + with_tab, buf, size)
