@@ -1,3 +1,4 @@
+import gc
 import string
 import hashlib
 from io import BytesIO, StringIO
@@ -5,11 +6,13 @@ from itertools import cycle
 
 import pytest
 
+import psycopg3
 from psycopg3 import pq
 from psycopg3 import sql
 from psycopg3 import errors as e
 from psycopg3.pq import Format
 from psycopg3.oids import builtins
+from psycopg3.adapt import Format as PgFormat
 
 from .test_copy import sample_text, sample_binary, sample_binary_rows  # noqa
 from .test_copy import eur, sample_values, sample_records, sample_tabledef
@@ -470,6 +473,69 @@ async def test_worker_life(aconn, format, buffer):
     await cur.execute("select * from copy_in order by 1")
     data = await cur.fetchall()
     assert data == sample_records
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize("fmt", [Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("method", ["read", "iter", "row", "rows"])
+async def test_copy_to_leaks(dsn, faker, fmt, method):
+    if fmt != Format.BINARY:
+        pytest.xfail("faker to extend to all text dumpers")
+
+    faker.format = PgFormat.from_pq(fmt)
+    faker.choose_schema(ncols=20)
+    faker.make_records(20)
+
+    n = []
+    for i in range(3):
+        async with await psycopg3.AsyncConnection.connect(dsn) as conn:
+            async with await conn.cursor(binary=fmt) as cur:
+                await cur.execute(faker.drop_stmt)
+                await cur.execute(faker.create_stmt)
+                await cur.executemany(faker.insert_stmt, faker.records)
+
+                stmt = sql.SQL(
+                    "copy (select {} from {} order by id) to stdout (format {})"
+                ).format(
+                    sql.SQL(", ").join(faker.fields_names),
+                    faker.table_name,
+                    sql.SQL(fmt.name),
+                )
+
+                async with cur.copy(stmt) as copy:
+                    types = [
+                        t.as_string(conn).replace('"', "")
+                        for t in faker.types_names
+                    ]
+                    copy.set_types(types)
+
+                    if method == "read":
+                        while 1:
+                            tmp = await copy.read()
+                            if not tmp:
+                                break
+                    elif method == "iter":
+                        async for x in copy:
+                            pass
+                    elif method == "row":
+                        while 1:
+                            tmp = await copy.read_row()
+                            if tmp is None:
+                                break
+                    elif method == "rows":
+                        async for x in copy.rows():
+                            pass
+
+                    tmp = None
+
+        del cur, conn
+        gc.collect()
+        gc.collect()
+        n.append(len(gc.get_objects()))
+
+    assert (
+        n[0] == n[1] == n[2]
+    ), f"objects leaked: {n[1] - n[0]}, {n[2] - n[1]}"
 
 
 async def ensure_table(cur, tabledef, name="copy_in"):
