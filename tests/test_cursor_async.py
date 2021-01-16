@@ -314,3 +314,51 @@ async def test_str(aconn):
     await cur.close()
     assert "[closed]" in str(cur)
     assert "[INTRANS]" in str(cur)
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize("fmt", [Format.AUTO, Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("fetch", ["one", "many", "all", "iter"])
+async def test_leak(dsn, faker, fmt, fetch):
+    if fmt != Format.BINARY:
+        pytest.xfail("faker to extend to all text dumpers")
+
+    faker.format = fmt
+    faker.choose_schema(ncols=5)
+    faker.make_records(10)
+
+    n = []
+    for i in range(3):
+        async with await psycopg3.AsyncConnection.connect(dsn) as conn:
+            async with await conn.cursor(binary=Format.as_pq(fmt)) as cur:
+                await cur.execute(faker.drop_stmt)
+                await cur.execute(faker.create_stmt)
+                await cur.executemany(faker.insert_stmt, faker.records)
+                await cur.execute(faker.select_stmt)
+
+                if fetch == "one":
+                    while 1:
+                        tmp = await cur.fetchone()
+                        if tmp is None:
+                            break
+                elif fetch == "many":
+                    while 1:
+                        tmp = await cur.fetchmany(3)
+                        if not tmp:
+                            break
+                elif fetch == "all":
+                    await cur.fetchall()
+                elif fetch == "iter":
+                    async for rec in cur:
+                        pass
+
+                tmp = None
+
+        del cur, conn
+        gc.collect()
+        gc.collect()
+        n.append(len(gc.get_objects()))
+
+    assert (
+        n[0] == n[1] == n[2]
+    ), f"objects leaked: {n[1] - n[0]}, {n[2] - n[1]}"

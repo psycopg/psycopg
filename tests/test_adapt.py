@@ -291,6 +291,27 @@ def test_optimised_adapters():
     assert not c_adapters
 
 
+@pytest.mark.slow
+@pytest.mark.parametrize("fmt", [Format.AUTO, Format.TEXT, Format.BINARY])
+def test_random(conn, faker, fmt):
+    if fmt != Format.BINARY:
+        pytest.xfail("faker to extend to all text dumpers")
+
+    faker.format = fmt
+    faker.choose_schema(ncols=20)
+    faker.make_records(50)
+
+    with conn.cursor(binary=Format.as_pq(fmt)) as cur:
+        cur.execute(faker.drop_stmt)
+        cur.execute(faker.create_stmt)
+        cur.executemany(faker.insert_stmt, faker.records)
+        cur.execute(faker.select_stmt)
+        recs = cur.fetchall()
+
+    for got, want in zip(recs, faker.records):
+        faker.assert_record(got, want)
+
+
 class MyStr(str):
     pass
 

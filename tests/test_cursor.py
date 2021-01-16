@@ -423,29 +423,23 @@ def test_leak(dsn, faker, fmt, fetch):
                 cur.executemany(faker.insert_stmt, faker.records)
                 cur.execute(faker.select_stmt)
 
-                recs = []
                 if fetch == "one":
                     while 1:
                         tmp = cur.fetchone()
                         if tmp is None:
                             break
-                        recs.append(tmp)
                 elif fetch == "many":
                     while 1:
                         tmp = cur.fetchmany(3)
                         if not tmp:
                             break
-                        recs.extend(tmp)
                 elif fetch == "all":
-                    recs.extend(cur.fetchall())
+                    cur.fetchall()
                 elif fetch == "iter":
                     for rec in cur:
-                        recs.append(rec)
+                        pass
 
-                for got, want in zip(recs, faker.records):
-                    faker.assert_record(got, want)
-
-                recs = tmp = None
+                tmp = None
 
         del cur, conn
         gc.collect()
