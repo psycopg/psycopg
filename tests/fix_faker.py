@@ -29,13 +29,23 @@ class Faker:
 
     def __init__(self, connection):
         self.conn = connection
-        self.format = Format.AUTO
+        self._format = Format.BINARY
         self.records = []
 
         self._schema = None
         self._types_names = None
         self._makers = {}
         self.table_name = sql.Identifier("fake_table")
+
+    @property
+    def format(self):
+        return self._format
+
+    @format.setter
+    def format(self, format):
+        if format != Format.BINARY:
+            pytest.xfail("faker to extend to all text dumpers")
+        self._format = format
 
     @property
     def schema(self):

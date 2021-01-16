@@ -479,9 +479,6 @@ async def test_worker_life(aconn, format, buffer):
 @pytest.mark.parametrize("fmt", [Format.TEXT, Format.BINARY])
 @pytest.mark.parametrize("method", ["read", "iter", "row", "rows"])
 async def test_copy_to_leaks(dsn, faker, fmt, method):
-    if fmt != Format.BINARY:
-        pytest.xfail("faker to extend to all text dumpers")
-
     faker.format = PgFormat.from_pq(fmt)
     faker.choose_schema(ncols=20)
     faker.make_records(20)
@@ -527,6 +524,47 @@ async def test_copy_to_leaks(dsn, faker, fmt, method):
                             pass
 
                     tmp = None
+
+        del cur, conn
+        gc.collect()
+        gc.collect()
+        n.append(len(gc.get_objects()))
+
+    assert (
+        n[0] == n[1] == n[2]
+    ), f"objects leaked: {n[1] - n[0]}, {n[2] - n[1]}"
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize("fmt", [Format.TEXT, Format.BINARY])
+async def test_copy_from_leaks(dsn, faker, fmt):
+    faker.format = PgFormat.from_pq(fmt)
+    faker.choose_schema(ncols=20)
+    faker.make_records(20)
+
+    n = []
+    for i in range(3):
+        async with await psycopg3.AsyncConnection.connect(dsn) as conn:
+            async with await conn.cursor(binary=fmt) as cur:
+                await cur.execute(faker.drop_stmt)
+                await cur.execute(faker.create_stmt)
+
+                stmt = sql.SQL("copy {} ({}) from stdin (format {})").format(
+                    faker.table_name,
+                    sql.SQL(", ").join(faker.fields_names),
+                    sql.SQL(fmt.name),
+                )
+                async with cur.copy(stmt) as copy:
+                    for row in faker.records:
+                        await copy.write_row(row)
+
+                await cur.execute(faker.select_stmt)
+                recs = await cur.fetchall()
+
+                for got, want in zip(recs, faker.records):
+                    faker.assert_record(got, want)
+
+                del recs
 
         del cur, conn
         gc.collect()

@@ -407,9 +407,6 @@ def test_str(conn):
 @pytest.mark.parametrize("fmt", [Format.AUTO, Format.TEXT, Format.BINARY])
 @pytest.mark.parametrize("fetch", ["one", "many", "all", "iter"])
 def test_leak(dsn, faker, fmt, fetch):
-    if fmt != Format.BINARY:
-        pytest.xfail("faker to extend to all text dumpers")
-
     faker.format = fmt
     faker.choose_schema(ncols=5)
     faker.make_records(10)

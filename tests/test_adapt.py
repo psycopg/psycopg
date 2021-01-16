@@ -294,9 +294,6 @@ def test_optimised_adapters():
 @pytest.mark.slow
 @pytest.mark.parametrize("fmt", [Format.AUTO, Format.TEXT, Format.BINARY])
 def test_random(conn, faker, fmt):
-    if fmt != Format.BINARY:
-        pytest.xfail("faker to extend to all text dumpers")
-
     faker.format = fmt
     faker.choose_schema(ncols=20)
     faker.make_records(50)
