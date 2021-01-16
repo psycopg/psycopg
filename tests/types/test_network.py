@@ -5,6 +5,7 @@ import subprocess as sp
 import pytest
 
 from psycopg3 import pq
+from psycopg3 import sql
 from psycopg3.adapt import Format
 
 
@@ -60,34 +61,69 @@ def test_network_dump(conn, fmt_in, val):
 @pytest.mark.parametrize("val", ["127.0.0.1/32", "::ffff:102:300/128"])
 def test_inet_load_address(conn, fmt_out, val):
     binary_check(fmt_out)
-    cur = conn.cursor(binary=fmt_out)
-    cur.execute("select %s::inet", (val,))
     addr = ipaddress.ip_address(val.split("/", 1)[0])
+    cur = conn.cursor(binary=fmt_out)
+
+    cur.execute("select %s::inet", (val,))
     assert cur.fetchone()[0] == addr
+
     cur.execute("select array[null, %s::inet]", (val,))
     assert cur.fetchone()[0] == [None, addr]
+
+    stmt = sql.SQL("copy (select {}::inet) to stdout (format {})").format(
+        val, sql.SQL(fmt_out.name)
+    )
+    with cur.copy(stmt) as copy:
+        copy.set_types(["inet"])
+        (got,) = copy.read_row()
+
+    assert got == addr
 
 
 @pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
 @pytest.mark.parametrize("val", ["127.0.0.1/24", "::ffff:102:300/127"])
 def test_inet_load_network(conn, fmt_out, val):
     binary_check(fmt_out)
+    pyval = ipaddress.ip_interface(val)
     cur = conn.cursor(binary=fmt_out)
+
     cur.execute("select %s::inet", (val,))
-    assert cur.fetchone()[0] == ipaddress.ip_interface(val)
+    assert cur.fetchone()[0] == pyval
+
     cur.execute("select array[null, %s::inet]", (val,))
-    assert cur.fetchone()[0] == [None, ipaddress.ip_interface(val)]
+    assert cur.fetchone()[0] == [None, pyval]
+
+    stmt = sql.SQL("copy (select {}::inet) to stdout (format {})").format(
+        val, sql.SQL(fmt_out.name)
+    )
+    with cur.copy(stmt) as copy:
+        copy.set_types(["inet"])
+        (got,) = copy.read_row()
+
+    assert got == pyval
 
 
 @pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
 @pytest.mark.parametrize("val", ["127.0.0.0/24", "::ffff:102:300/128"])
 def test_cidr_load(conn, fmt_out, val):
     binary_check(fmt_out)
+    pyval = ipaddress.ip_network(val)
     cur = conn.cursor(binary=fmt_out)
+
     cur.execute("select %s::cidr", (val,))
-    assert cur.fetchone()[0] == ipaddress.ip_network(val)
+    assert cur.fetchone()[0] == pyval
+
     cur.execute("select array[null, %s::cidr]", (val,))
-    assert cur.fetchone()[0] == [None, ipaddress.ip_network(val)]
+    assert cur.fetchone()[0] == [None, pyval]
+
+    stmt = sql.SQL("copy (select {}::cidr) to stdout (format {})").format(
+        val, sql.SQL(fmt_out.name)
+    )
+    with cur.copy(stmt) as copy:
+        copy.set_types(["cidr"])
+        (got,) = copy.read_row()
+
+    assert got == pyval
 
 
 def binary_check(fmt):

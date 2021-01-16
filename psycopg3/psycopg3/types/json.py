@@ -9,7 +9,7 @@ from typing import Any, Callable, Optional
 
 from ..pq import Format
 from ..oids import builtins
-from ..adapt import Dumper, Loader
+from ..adapt import Buffer, Dumper, Loader
 from ..errors import DataError
 
 JsonDumpsFunction = Callable[[Any], str]
@@ -77,7 +77,10 @@ class JsonLoader(Loader):
 
     format = Format.TEXT
 
-    def load(self, data: bytes) -> Any:
+    def load(self, data: Buffer) -> Any:
+        # Json crashes on memoryview
+        if isinstance(data, memoryview):
+            data = bytes(data)
         return json.loads(data)
 
 
@@ -90,7 +93,10 @@ class JsonbBinaryLoader(Loader):
 
     format = Format.BINARY
 
-    def load(self, data: bytes) -> Any:
+    def load(self, data: Buffer) -> Any:
         if data and data[0] != 1:
             raise DataError("unknown jsonb binary format: {data[0]}")
-        return json.loads(data[1:])
+        data = data[1:]
+        if isinstance(data, memoryview):
+            data = bytes(data)
+        return json.loads(data)

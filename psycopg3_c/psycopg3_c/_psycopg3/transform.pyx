@@ -332,8 +332,10 @@ cdef class Transformer:
                     if attval.len == -1:  # NULL_LEN
                         pyval = None
                     else:
-                        # TODO: no copy
-                        b = attval.value[:attval.len]
+                        b = PyMemoryView_FromObject(
+                            ViewBuffer._from_buffer(
+                                self._pgresult,
+                                <unsigned char *>attval.value, attval.len))
                         pyval = PyObject_CallFunctionObjArgs(
                             (<RowLoader>loader).loadfunc, <PyObject *>b, NULL)
 
@@ -371,8 +373,10 @@ cdef class Transformer:
                     pyval = (<RowLoader>loader).cloader.cload(
                         attval.value, attval.len)
                 else:
-                    # TODO: no copy
-                    b = attval.value[:attval.len]
+                    b = PyMemoryView_FromObject(
+                        ViewBuffer._from_buffer(
+                            self._pgresult,
+                            <unsigned char *>attval.value, attval.len))
                     pyval = PyObject_CallFunctionObjArgs(
                         (<RowLoader>loader).loadfunc, <PyObject *>b, NULL)
 

@@ -14,7 +14,7 @@ from .. import sql
 from .. import errors as e
 from ..pq import Format
 from ..oids import builtins, TypeInfo
-from ..adapt import Dumper, Loader
+from ..adapt import Buffer, Dumper, Loader
 from ..proto import AdaptContext
 
 from . import array
@@ -245,17 +245,20 @@ class RangeLoader(BaseCompositeLoader, Generic[T]):
     subtype_oid: int
     cls: Type[Range[T]]
 
-    def load(self, data: bytes) -> Range[T]:
+    def load(self, data: Buffer) -> Range[T]:
         if data == b"empty":
             return self.cls(empty=True)
 
         cast = self._tx.get_loader(self.subtype_oid, format=Format.TEXT).load
-        bounds = (data[:1] + data[-1:]).decode("utf-8")
+        bounds = _int2parens[data[0]] + _int2parens[data[-1]]
         min, max = (
             cast(token) if token is not None else None
             for token in self._parse_record(data[1:-1])
         )
         return self.cls(min, max, bounds)
+
+
+_int2parens = {ord(c): c for c in "[]()"}
 
 
 # Python wrappers for builtin range types

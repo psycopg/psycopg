@@ -18,6 +18,9 @@ if TYPE_CHECKING:
     from .waiting import Wait, Ready
     from .sql import Composable
 
+# An object implementing the buffer protocol
+Buffer = Union[bytes, bytearray, memoryview]
+
 Query = Union[str, bytes, "Composable"]
 Params = Union[Sequence[Any], Mapping[str, Any]]
 ConnectionType = TypeVar("ConnectionType", bound="BaseConnection")

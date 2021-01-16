@@ -8,7 +8,7 @@ from typing import Callable, Optional, Union, TYPE_CHECKING
 
 from ..pq import Format
 from ..oids import builtins
-from ..adapt import Dumper, Loader
+from ..adapt import Buffer, Dumper, Loader
 from ..proto import AdaptContext
 
 if TYPE_CHECKING:
@@ -57,7 +57,10 @@ class InetLoader(_LazyIpaddress):
 
     format = Format.TEXT
 
-    def load(self, data: bytes) -> Union[Address, Interface]:
+    def load(self, data: Buffer) -> Union[Address, Interface]:
+        if isinstance(data, memoryview):
+            data = bytes(data)
+
         if b"/" in data:
             return ip_interface(data.decode("utf8"))
         else:
@@ -68,5 +71,8 @@ class CidrLoader(_LazyIpaddress):
 
     format = Format.TEXT
 
-    def load(self, data: bytes) -> Network:
+    def load(self, data: Buffer) -> Network:
+        if isinstance(data, memoryview):
+            data = bytes(data)
+
         return ip_network(data.decode("utf8"))

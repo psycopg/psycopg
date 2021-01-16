@@ -11,7 +11,7 @@ from typing import cast, Optional
 
 from ..pq import Format
 from ..oids import builtins
-from ..adapt import Dumper, Loader
+from ..adapt import Buffer, Dumper, Loader
 from ..proto import AdaptContext
 from ..errors import InterfaceError, DataError
 
@@ -82,7 +82,9 @@ class DateLoader(Loader):
         super().__init__(oid, context)
         self._format = self._format_from_context()
 
-    def load(self, data: bytes) -> date:
+    def load(self, data: Buffer) -> date:
+        if isinstance(data, memoryview):
+            data = bytes(data)
         try:
             return datetime.strptime(data.decode("utf8"), self._format).date()
         except ValueError as e:
@@ -140,8 +142,10 @@ class TimeLoader(Loader):
     _format = "%H:%M:%S.%f"
     _format_no_micro = _format.replace(".%f", "")
 
-    def load(self, data: bytes) -> time:
+    def load(self, data: Buffer) -> time:
         # check if the data contains microseconds
+        if isinstance(data, memoryview):
+            data = bytes(data)
         fmt = self._format if b"." in data else self._format_no_micro
         try:
             return datetime.strptime(data.decode("utf8"), fmt).time()
@@ -171,7 +175,10 @@ class TimeTzLoader(TimeLoader):
 
         super().__init__(oid, context)
 
-    def load(self, data: bytes) -> time:
+    def load(self, data: Buffer) -> time:
+        if isinstance(data, memoryview):
+            data = bytes(data)
+
         # Hack to convert +HH in +HHMM
         if data[-3] in (43, 45):
             data += b"00"
@@ -184,7 +191,9 @@ class TimeTzLoader(TimeLoader):
 
         return dt.time().replace(tzinfo=dt.tzinfo)
 
-    def _load_py36(self, data: bytes) -> time:
+    def _load_py36(self, data: Buffer) -> time:
+        if isinstance(data, memoryview):
+            data = bytes(data)
         # Drop seconds from timezone for Python 3.6
         # Also, Python 3.6 doesn't support HHMM, only HH:MM
         if data[-6] in (43, 45):  # +-HH:MM -> +-HHMM
@@ -203,7 +212,10 @@ class TimestampLoader(DateLoader):
         super().__init__(oid, context)
         self._format_no_micro = self._format.replace(".%f", "")
 
-    def load(self, data: bytes) -> datetime:
+    def load(self, data: Buffer) -> datetime:
+        if isinstance(data, memoryview):
+            data = bytes(data)
+
         # check if the data contains microseconds
         fmt = (
             self._format if data.find(b".", 19) >= 0 else self._format_no_micro
@@ -285,14 +297,19 @@ class TimestamptzLoader(TimestampLoader):
             setattr(self, "load", self._load_notimpl)
             return ""
 
-    def load(self, data: bytes) -> datetime:
+    def load(self, data: Buffer) -> datetime:
+        if isinstance(data, memoryview):
+            data = bytes(data)
+
         # Hack to convert +HH in +HHMM
         if data[-3] in (43, 45):
             data += b"00"
 
         return super().load(data)
 
-    def _load_py36(self, data: bytes) -> datetime:
+    def _load_py36(self, data: Buffer) -> datetime:
+        if isinstance(data, memoryview):
+            data = bytes(data)
         # Drop seconds from timezone for Python 3.6
         # Also, Python 3.6 doesn't support HHMM, only HH:MM
         tzsep = (43, 45)  # + and - bytes
@@ -305,7 +322,9 @@ class TimestamptzLoader(TimestampLoader):
 
         return super().load(data)
 
-    def _load_notimpl(self, data: bytes) -> datetime:
+    def _load_notimpl(self, data: Buffer) -> datetime:
+        if isinstance(data, memoryview):
+            data = bytes(data)
         raise NotImplementedError(
             "can't parse datetimetz with DateStyle"
             f" {self._get_datestyle().decode('ascii')}: {data.decode('ascii')}"
@@ -337,7 +356,7 @@ class IntervalLoader(Loader):
             if ints != b"postgres":
                 setattr(self, "load", self._load_notimpl)
 
-    def load(self, data: bytes) -> timedelta:
+    def load(self, data: Buffer) -> timedelta:
         m = self._re_interval.match(data)
         if not m:
             raise ValueError("can't parse interval: {data.decode('ascii')}")
@@ -371,7 +390,9 @@ class IntervalLoader(Loader):
         except OverflowError as e:
             raise DataError(str(e))
 
-    def _load_notimpl(self, data: bytes) -> timedelta:
+    def _load_notimpl(self, data: Buffer) -> timedelta:
+        if isinstance(data, memoryview):
+            data = bytes(data)
         ints = (
             self.connection
             and self.connection.pgconn.parameter_status(b"IntervalStyle")

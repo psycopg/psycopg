@@ -8,7 +8,7 @@ from typing import Optional, Union, TYPE_CHECKING
 
 from ..pq import Format, Escaping
 from ..oids import builtins
-from ..adapt import Dumper, Loader
+from ..adapt import Buffer, Dumper, Loader
 from ..proto import AdaptContext
 from ..errors import DataError
 
@@ -65,7 +65,7 @@ class TextLoader(Loader):
             enc = conn.client_encoding
             self._encoding = enc if enc != "ascii" else ""
 
-    def load(self, data: bytes) -> Union[bytes, str]:
+    def load(self, data: Buffer) -> Union[bytes, str]:
         if self._encoding:
             if isinstance(data, memoryview):
                 return bytes(data).decode(self._encoding)
@@ -120,7 +120,7 @@ class ByteaLoader(Loader):
         if not hasattr(self.__class__, "_escaping"):
             self.__class__._escaping = Escaping()
 
-    def load(self, data: bytes) -> bytes:
+    def load(self, data: Buffer) -> bytes:
         return self._escaping.unescape_bytea(data)
 
 
@@ -128,5 +128,5 @@ class ByteaBinaryLoader(Loader):
 
     format = Format.BINARY
 
-    def load(self, data: bytes) -> bytes:
+    def load(self, data: Buffer) -> bytes:
         return data

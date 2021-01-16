@@ -5,6 +5,7 @@ import subprocess as sp
 import pytest
 
 from psycopg3 import pq
+from psycopg3 import sql
 from psycopg3.adapt import Format
 
 
@@ -22,6 +23,15 @@ def test_uuid_load(conn, fmt_out):
     val = "12345678123456781234567812345679"
     cur.execute("select %s::uuid", (val,))
     assert cur.fetchone()[0] == UUID(val)
+
+    stmt = sql.SQL("copy (select {}::uuid) to stdout (format {})").format(
+        val, sql.SQL(fmt_out.name)
+    )
+    with cur.copy(stmt) as copy:
+        copy.set_types(["uuid"])
+        (res,) = copy.read_row()
+
+    assert res == UUID(val)
 
 
 @pytest.mark.subprocess

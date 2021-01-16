@@ -6,7 +6,7 @@ Adapters for None and boolean.
 
 from ..pq import Format
 from ..oids import builtins
-from ..adapt import Dumper, Loader
+from ..adapt import Buffer, Dumper, Loader
 
 
 class BoolDumper(Dumper):
@@ -49,7 +49,7 @@ class BoolLoader(Loader):
 
     format = Format.TEXT
 
-    def load(self, data: bytes) -> bool:
+    def load(self, data: Buffer) -> bool:
         return data == b"t"
 
 
@@ -57,5 +57,5 @@ class BoolBinaryLoader(Loader):
 
     format = Format.BINARY
 
-    def load(self, data: bytes) -> bool:
+    def load(self, data: Buffer) -> bool:
         return data != b"\x00"

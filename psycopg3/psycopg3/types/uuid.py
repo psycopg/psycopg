@@ -8,7 +8,7 @@ from typing import Callable, Optional, TYPE_CHECKING
 
 from ..pq import Format
 from ..oids import builtins
-from ..adapt import Dumper, Loader
+from ..adapt import Buffer, Dumper, Loader
 from ..proto import AdaptContext
 
 if TYPE_CHECKING:
@@ -48,7 +48,9 @@ class UUIDLoader(Loader):
 
             imported = True
 
-    def load(self, data: bytes) -> "uuid.UUID":
+    def load(self, data: Buffer) -> "uuid.UUID":
+        if isinstance(data, memoryview):
+            data = bytes(data)
         return UUID(data.decode("utf8"))
 
 
@@ -56,5 +58,7 @@ class UUIDBinaryLoader(UUIDLoader):
 
     format = Format.BINARY
 
-    def load(self, data: bytes) -> "uuid.UUID":
+    def load(self, data: Buffer) -> "uuid.UUID":
+        if isinstance(data, memoryview):
+            data = bytes(data)
         return UUID(bytes=data)

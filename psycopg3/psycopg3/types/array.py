@@ -12,7 +12,7 @@ from .. import pq
 from .._enums import Format
 from .. import errors as e
 from ..oids import builtins, TEXT_OID, TEXT_ARRAY_OID, INVALID_OID
-from ..adapt import Dumper, Loader, Transformer
+from ..adapt import Buffer, Dumper, Loader, Transformer
 from ..proto import AdaptContext
 
 
@@ -178,7 +178,7 @@ class ArrayLoader(BaseArrayLoader):
         """
     )
 
-    def load(self, data: bytes) -> List[Any]:
+    def load(self, data: Buffer) -> List[Any]:
         rv = None
         stack: List[Any] = []
         cast = self._tx.get_loader(self.base_oid, self.format).load
@@ -230,7 +230,7 @@ class ArrayBinaryLoader(BaseArrayLoader):
 
     format = pq.Format.BINARY
 
-    def load(self, data: bytes) -> List[Any]:
+    def load(self, data: Buffer) -> List[Any]:
         ndims, hasnull, oid = _struct_head.unpack_from(data[:12])
         if not ndims:
             return []

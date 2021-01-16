@@ -114,15 +114,33 @@ def test_load_enc(conn, typename, encoding, fmt_out):
     ).fetchone()
     assert res == eur
 
+    stmt = sql.SQL("copy (select chr({}::int)) to stdout (format {})").format(
+        ord(eur), sql.SQL(fmt_out.name)
+    )
+    with cur.copy(stmt) as copy:
+        copy.set_types([typename])
+        (res,) = copy.read_row()
+
+    assert res == eur
+
 
 @pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
 @pytest.mark.parametrize("typename", ["text", "varchar", "name", "bpchar"])
 def test_load_badenc(conn, typename, fmt_out):
+    conn.autocommit = True
     cur = conn.cursor(binary=fmt_out)
 
     conn.client_encoding = "latin1"
-    with pytest.raises(psycopg3.DatabaseError):
+    with pytest.raises(psycopg3.DataError):
         cur.execute(f"select chr(%s::int)::{typename}", (ord(eur),))
+
+    stmt = sql.SQL("copy (select chr({}::int)) to stdout (format {})").format(
+        ord(eur), sql.SQL(fmt_out.name)
+    )
+    with cur.copy(stmt) as copy:
+        copy.set_types([typename])
+        with pytest.raises(psycopg3.DataError):
+            copy.read_row()
 
 
 @pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
@@ -131,9 +149,16 @@ def test_load_ascii(conn, typename, fmt_out):
     cur = conn.cursor(binary=fmt_out)
 
     conn.client_encoding = "ascii"
-    (res,) = cur.execute(
-        f"select chr(%s::int)::{typename}", (ord(eur),)
-    ).fetchone()
+    cur.execute(f"select chr(%s::int)::{typename}", (ord(eur),))
+    assert cur.fetchone()[0] == eur.encode("utf8")
+
+    stmt = sql.SQL("copy (select chr({}::int)) to stdout (format {})").format(
+        ord(eur), sql.SQL(fmt_out.name)
+    )
+    with cur.copy(stmt) as copy:
+        copy.set_types([typename])
+        (res,) = copy.read_row()
+
     assert res == eur.encode("utf8")
 
 

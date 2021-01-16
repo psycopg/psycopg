@@ -10,7 +10,7 @@ from decimal import Decimal
 
 from ..pq import Format
 from ..oids import builtins
-from ..adapt import Dumper, Loader
+from ..adapt import Buffer, Dumper, Loader
 
 _PackInt = Callable[[int], bytes]
 _PackFloat = Callable[[float], bytes]
@@ -166,7 +166,7 @@ class IntLoader(Loader):
 
     format = Format.TEXT
 
-    def load(self, data: bytes) -> int:
+    def load(self, data: Buffer) -> int:
         # it supports bytes directly
         return int(data)
 
@@ -175,7 +175,7 @@ class Int2BinaryLoader(Loader):
 
     format = Format.BINARY
 
-    def load(self, data: bytes) -> int:
+    def load(self, data: Buffer) -> int:
         return _unpack_int2(data)[0]
 
 
@@ -183,7 +183,7 @@ class Int4BinaryLoader(Loader):
 
     format = Format.BINARY
 
-    def load(self, data: bytes) -> int:
+    def load(self, data: Buffer) -> int:
         return _unpack_int4(data)[0]
 
 
@@ -191,7 +191,7 @@ class Int8BinaryLoader(Loader):
 
     format = Format.BINARY
 
-    def load(self, data: bytes) -> int:
+    def load(self, data: Buffer) -> int:
         return _unpack_int8(data)[0]
 
 
@@ -199,7 +199,7 @@ class OidBinaryLoader(Loader):
 
     format = Format.BINARY
 
-    def load(self, data: bytes) -> int:
+    def load(self, data: Buffer) -> int:
         return _unpack_uint4(data)[0]
 
 
@@ -207,7 +207,7 @@ class FloatLoader(Loader):
 
     format = Format.TEXT
 
-    def load(self, data: bytes) -> float:
+    def load(self, data: Buffer) -> float:
         # it supports bytes directly
         return float(data)
 
@@ -216,7 +216,7 @@ class Float4BinaryLoader(Loader):
 
     format = Format.BINARY
 
-    def load(self, data: bytes) -> float:
+    def load(self, data: Buffer) -> float:
         return _unpack_float4(data)[0]
 
 
@@ -224,7 +224,7 @@ class Float8BinaryLoader(Loader):
 
     format = Format.BINARY
 
-    def load(self, data: bytes) -> float:
+    def load(self, data: Buffer) -> float:
         return _unpack_float8(data)[0]
 
 
@@ -232,5 +232,7 @@ class NumericLoader(Loader):
 
     format = Format.TEXT
 
-    def load(self, data: bytes) -> Decimal:
+    def load(self, data: Buffer) -> Decimal:
+        if isinstance(data, memoryview):
+            data = bytes(data)
         return Decimal(data.decode("utf8"))

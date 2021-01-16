@@ -12,7 +12,7 @@ from . import pq
 from . import proto
 from ._enums import Format as Format
 from .oids import builtins
-from .proto import AdaptContext
+from .proto import AdaptContext, Buffer as Buffer
 
 if TYPE_CHECKING:
     from .connection import BaseConnection
@@ -41,13 +41,11 @@ class Dumper(ABC):
         """The oid to pass to the server, if known."""
 
     @abstractmethod
-    def dump(self, obj: Any) -> bytes:
+    def dump(self, obj: Any) -> Buffer:
         """Convert the object *obj* to PostgreSQL representation."""
         ...
 
-    # TODO: the protocol signature should probably return a Buffer like object
-    # (the C implementation may return bytearray)
-    def quote(self, obj: Any) -> bytes:
+    def quote(self, obj: Any) -> Buffer:
         """Convert the object *obj* to escaped representation."""
         value = self.dump(obj)
 
@@ -83,7 +81,7 @@ class Loader(ABC):
         )
 
     @abstractmethod
-    def load(self, data: bytes) -> Any:
+    def load(self, data: Buffer) -> Any:
         """Convert a PostgreSQL value to a Python object."""
         ...
 
@@ -179,7 +177,6 @@ class AdaptersMap(AdaptContext):
 
         Return None if not found.
         """
-        # TODO: auto selection
         if format == Format.AUTO:
             dmaps = [
                 self._dumpers[pq.Format.BINARY],

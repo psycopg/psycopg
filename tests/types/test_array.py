@@ -1,6 +1,7 @@
 import pytest
 import psycopg3
 from psycopg3 import pq
+from psycopg3 import sql
 from psycopg3.oids import builtins
 from psycopg3.adapt import Format, Transformer
 from psycopg3.types import array
@@ -98,6 +99,15 @@ def test_load_list_int(conn, obj, want, fmt_out):
     cur = conn.cursor(binary=fmt_out)
     cur.execute("select %s::int[]", (obj,))
     assert cur.fetchone()[0] == want
+
+    stmt = sql.SQL("copy (select {}::int[]) to stdout (format {})").format(
+        obj, sql.SQL(fmt_out.name)
+    )
+    with cur.copy(stmt) as copy:
+        copy.set_types(["int4[]"])
+        (got,) = copy.read_row()
+
+    assert got == want
 
 
 def test_array_register(conn):

@@ -14,7 +14,7 @@ from .. import pq
 from .. import sql
 from .. import errors as e
 from ..oids import TypeInfo, TEXT_OID
-from ..adapt import Format, Dumper, Loader, Transformer
+from ..adapt import Buffer, Format, Dumper, Loader, Transformer
 from ..proto import AdaptContext
 from . import array
 
@@ -232,7 +232,7 @@ class BaseCompositeLoader(Loader):
 
 
 class RecordLoader(BaseCompositeLoader):
-    def load(self, data: bytes) -> Tuple[Any, ...]:
+    def load(self, data: Buffer) -> Tuple[Any, ...]:
         if data == b"()":
             return ()
 
@@ -256,7 +256,7 @@ class RecordBinaryLoader(Loader):
         super().__init__(oid, context)
         self._tx = Transformer(context)
 
-    def load(self, data: bytes) -> Tuple[Any, ...]:
+    def load(self, data: Buffer) -> Tuple[Any, ...]:
         if not self._types_set:
             self._config_types(data)
             self._types_set = True
@@ -291,7 +291,7 @@ class CompositeLoader(RecordLoader):
     fields_types: List[int]
     _types_set = False
 
-    def load(self, data: bytes) -> Any:
+    def load(self, data: Buffer) -> Any:
         if not self._types_set:
             self._config_types(data)
             self._types_set = True
@@ -314,6 +314,6 @@ class CompositeBinaryLoader(RecordBinaryLoader):
     format = pq.Format.BINARY
     factory: Callable[..., Any]
 
-    def load(self, data: bytes) -> Any:
+    def load(self, data: Buffer) -> Any:
         r = super().load(data)
         return type(self).factory(*r)

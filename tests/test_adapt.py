@@ -107,7 +107,7 @@ def test_subclass_loader(conn):
 
     class MyTextLoader(TextLoader):
         def load(self, data):
-            return (data * 2).decode("utf-8")
+            return (bytes(data) * 2).decode("utf-8")
 
     MyTextLoader.register("text", conn)
     assert conn.execute("select 'hello'::text").fetchone()[0] == "hellohello"
@@ -321,7 +321,7 @@ def make_loader(suffix):
         format = pq.Format.TEXT
 
         def load(self, b):
-            return b.decode("ascii") + suffix
+            return bytes(b).decode("ascii") + suffix
 
     return TestLoader
 

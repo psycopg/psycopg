@@ -4,6 +4,7 @@ import pytest
 
 import psycopg3.types
 from psycopg3 import pq
+from psycopg3 import sql
 from psycopg3.types import Json, Jsonb
 from psycopg3.adapt import Format
 
@@ -46,6 +47,21 @@ def test_json_load(conn, val, jtype, fmt_out):
     cur = conn.cursor(binary=fmt_out)
     cur.execute(f"select %s::{jtype}", (val,))
     assert cur.fetchone()[0] == json.loads(val)
+
+
+@pytest.mark.parametrize("val", samples)
+@pytest.mark.parametrize("jtype", ["json", "jsonb"])
+@pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
+def test_json_load_copy(conn, val, jtype, fmt_out):
+    cur = conn.cursor()
+    stmt = sql.SQL("copy (select {}::{}) to stdout (format {})").format(
+        val, sql.Identifier(jtype), sql.SQL(fmt_out.name)
+    )
+    with cur.copy(stmt) as copy:
+        copy.set_types([jtype])
+        (got,) = copy.read_row()
+
+    assert got == json.loads(val)
 
 
 @pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
