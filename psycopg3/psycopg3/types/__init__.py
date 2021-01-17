@@ -2,7 +2,7 @@
 psycopg3 types package
 """
 
-# Copyright (C) 2020 The Psycopg Team
+# Copyright (C) 2020-2021 The Psycopg Team
 
 from ..oids import builtins, INVALID_OID
 from ..proto import AdaptContext

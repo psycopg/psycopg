@@ -2,7 +2,7 @@
 psycopg3_c.pq.PGresult object implementation.
 """
 
-# Copyright (C) 2020 The Psycopg Team
+# Copyright (C) 2020-2021 The Psycopg Team
 
 cimport cython
 from cpython.mem cimport PyMem_Malloc, PyMem_Free

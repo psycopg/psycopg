@@ -2,7 +2,7 @@
 Compatibility objects with DBAPI 2.0
 """
 
-# Copyright (C) 2020 The Psycopg Team
+# Copyright (C) 2020-2021 The Psycopg Team
 
 import time
 import datetime as dt

@@ -5,7 +5,7 @@ The module contains optimized C code used in preference to Python code
 if a compiler is available.
 """
 
-# Copyright (C) 2020 The Psycopg Team
+# Copyright (C) 2020-2021 The Psycopg Team
 
 from psycopg3_c cimport pq
 from psycopg3_c.pq cimport libpq

@@ -16,7 +16,7 @@ DBAPI-defined Exceptions are defined in the following hierarchy::
           |__NotSupportedError
 """
 
-# Copyright (C) 2020 The Psycopg Team
+# Copyright (C) 2020-2021 The Psycopg Team
 
 from typing import Any, Callable, Dict, Optional, Sequence, Tuple, Type, Union
 from typing import cast

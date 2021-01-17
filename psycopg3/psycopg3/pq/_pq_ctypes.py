@@ -2,7 +2,7 @@
 libpq access using ctypes
 """
 
-# Copyright (C) 2020 The Psycopg Team
+# Copyright (C) 2020-2021 The Psycopg Team
 
 import ctypes
 import ctypes.util

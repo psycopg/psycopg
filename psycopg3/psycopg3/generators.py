@@ -13,7 +13,7 @@ when the file descriptor is ready.
 
 """
 
-# Copyright (C) 2020 The Psycopg Team
+# Copyright (C) 2020-2021 The Psycopg Team
 
 import logging
 from typing import List, Optional, Union

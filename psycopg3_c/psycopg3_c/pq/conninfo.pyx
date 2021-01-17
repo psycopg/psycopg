@@ -2,7 +2,7 @@
 psycopg3_c.pq.Conninfo object implementation.
 """
 
-# Copyright (C) 2020 The Psycopg Team
+# Copyright (C) 2020-2021 The Psycopg Team
 
 from psycopg3.pq.misc import ConninfoOption
 

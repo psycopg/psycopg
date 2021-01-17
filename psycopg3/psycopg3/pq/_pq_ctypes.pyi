@@ -2,7 +2,7 @@
 types stub for ctypes functions
 """
 
-# Copyright (C) 2020 The Psycopg Team
+# Copyright (C) 2020-2021 The Psycopg Team
 
 from typing import Any, Callable, Optional, Sequence
 from ctypes import Array, pointer

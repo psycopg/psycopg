@@ -6,7 +6,7 @@ too many temporary Python objects and performing less memory copying.
 
 """
 
-# Copyright (C) 2020 The Psycopg Team
+# Copyright (C) 2020-2021 The Psycopg Team
 
 cimport cython
 from cpython.ref cimport Py_INCREF

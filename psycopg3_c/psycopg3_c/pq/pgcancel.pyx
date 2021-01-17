@@ -2,7 +2,7 @@
 psycopg3_c.pq.PGcancel object implementation.
 """
 
-# Copyright (C) 2020 The Psycopg Team
+# Copyright (C) 2020-2021 The Psycopg Team
 
 
 cdef class PGcancel:

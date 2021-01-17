@@ -2,7 +2,7 @@
 Functions to manipulate conninfo strings
 """
 
-# Copyright (C) 2020 The Psycopg Team
+# Copyright (C) 2020-2021 The Psycopg Team
 
 import re
 from typing import Any, Dict, List

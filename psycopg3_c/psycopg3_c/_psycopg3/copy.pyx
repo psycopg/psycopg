@@ -3,7 +3,7 @@ C optimised functions for the copy system.
 
 """
 
-# Copyright (C) 2020 The Psycopg Team
+# Copyright (C) 2020-2021 The Psycopg Team
 
 from libc.string cimport memcpy
 from libc.stdint cimport uint16_t, uint32_t, int32_t

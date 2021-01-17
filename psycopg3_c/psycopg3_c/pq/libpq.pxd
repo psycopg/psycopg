@@ -2,7 +2,7 @@
 Libpq header definition for the cython psycopg3.pq implementation.
 """
 
-# Copyright (C) 2020 The Psycopg Team
+# Copyright (C) 2020-2021 The Psycopg Team
 
 cdef extern from "libpq-fe.h":
     int PQlibVersion()

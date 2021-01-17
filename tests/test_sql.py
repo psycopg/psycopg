@@ -1,6 +1,6 @@
 # test_sql.py - tests for the psycopg2.sql module
 
-# Copyright (C) 2020 The Psycopg Team
+# Copyright (C) 2020-2021 The Psycopg Team
 
 import re
 import datetime as dt

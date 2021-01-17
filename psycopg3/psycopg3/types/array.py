@@ -2,7 +2,7 @@
 Adapters for arrays
 """
 
-# Copyright (C) 2020 The Psycopg Team
+# Copyright (C) 2020-2021 The Psycopg Team
 
 import re
 import struct

@@ -2,7 +2,7 @@
 Mappings between PostgreSQL and Python encodings.
 """
 
-# Copyright (C) 2020 The Psycopg Team
+# Copyright (C) 2020-2021 The Psycopg Team
 
 import codecs
 from typing import Dict, Union

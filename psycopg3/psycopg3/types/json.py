@@ -2,7 +2,7 @@
 Adapers for JSON types.
 """
 
-# Copyright (C) 2020 The Psycopg Team
+# Copyright (C) 2020-2021 The Psycopg Team
 
 import json
 from typing import Any, Callable, Optional

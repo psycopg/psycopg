@@ -14,4 +14,4 @@ Please read `the project readme`__ for more details.
 
 .. __: https://github.com/psycopg/psycopg3#readme
 
-Copyright (C) 2020 The Psycopg Team
+Copyright (C) 2020-2021 The Psycopg Team

@@ -2,7 +2,7 @@
 Adapers for numeric types.
 """
 
-# Copyright (C) 2020 The Psycopg Team
+# Copyright (C) 2020-2021 The Psycopg Team
 
 import struct
 from typing import Any, Callable, Dict, Tuple, cast

@@ -3,7 +3,7 @@
 # Script to build binary psycopg3-c package.
 # Built packages will be available in the `dist` directory.
 
-# Copyright (C) 2020 The Psycopg Team
+# Copyright (C) 2020-2021 The Psycopg Team
 
 set -euo pipefail
 set -x

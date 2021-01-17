@@ -6,7 +6,7 @@ These functions are designed to consume the generators returned by the
 
 """
 
-# Copyright (C) 2020 The Psycopg Team
+# Copyright (C) 2020-2021 The Psycopg Team
 
 
 import select

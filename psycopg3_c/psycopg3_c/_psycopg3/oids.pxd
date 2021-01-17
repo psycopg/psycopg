@@ -2,7 +2,7 @@
 Constants to refer to OIDS in C
 """
 
-# Copyright (C) 2020 The Psycopg Team
+# Copyright (C) 2020-2021 The Psycopg Team
 
 # Use tools/update_oids.py to update this data.
 

@@ -7,7 +7,7 @@ The real implementation (the binding to the C library) is
 implementation-dependant but all the implementations share the same interface.
 """
 
-# Copyright (C) 2020 The Psycopg Team
+# Copyright (C) 2020-2021 The Psycopg Team
 
 import os
 import logging

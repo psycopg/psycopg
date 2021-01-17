@@ -40,4 +40,4 @@ client library as ``psycopg3_binary``. In order to use it please install::
     pip install psycopg3[binary]
 
 
-Copyright (C) 2020 The Psycopg Team
+Copyright (C) 2020-2021 The Psycopg Team

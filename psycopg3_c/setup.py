@@ -3,7 +3,7 @@
 PostgreSQL database adapter for Python - optimisation package
 """
 
-# Copyright (C) 2020 The Psycopg Team
+# Copyright (C) 2020-2021 The Psycopg Team
 
 import os
 import re

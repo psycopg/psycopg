@@ -2,7 +2,7 @@
 Helper object to transform values between Python and PostgreSQL
 """
 
-# Copyright (C) 2020 The Psycopg Team
+# Copyright (C) 2020-2021 The Psycopg Team
 
 from typing import Any, Dict, List, Optional, Sequence, Set, Tuple, Union
 from typing import cast, DefaultDict, TYPE_CHECKING
