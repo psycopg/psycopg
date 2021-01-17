@@ -50,13 +50,13 @@ class BaseCursor(Generic[ConnectionType]):
     if sys.version_info >= (3, 7):
         __slots__ = """
             _conn format _adapters arraysize _closed _results _pgresult _pos
-            _iresult _rowcount _pgq _transformer _last_query
+            _iresult _rowcount _pgq _tx _last_query
             __weakref__
             """.split()
 
     ExecStatus = pq.ExecStatus
 
-    _transformer: "Transformer"
+    _tx: "Transformer"
 
     def __init__(
         self,
@@ -128,8 +128,8 @@ class BaseCursor(Generic[ConnectionType]):
     @pgresult.setter
     def pgresult(self, result: Optional["PGresult"]) -> None:
         self._pgresult = result
-        if result and self._transformer:
-            self._transformer.pgresult = result
+        if result and self._tx:
+            self._tx.pgresult = result
 
     @property
     def description(self) -> Optional[List[Column]]:
@@ -262,7 +262,7 @@ class BaseCursor(Generic[ConnectionType]):
         self._reset()
         if not self._last_query or (self._last_query is not query):
             self._last_query = None
-            self._transformer = adapt.Transformer(self)
+            self._tx = adapt.Transformer(self)
         yield from self._conn._start_query()
 
     def _start_copy_gen(self, statement: Query) -> PQGen[None]:
@@ -302,7 +302,7 @@ class BaseCursor(Generic[ConnectionType]):
     def _convert_query(
         self, query: Query, params: Optional[Params] = None
     ) -> PostgresQuery:
-        pgq = PostgresQuery(self._transformer)
+        pgq = PostgresQuery(self._tx)
         pgq.convert(query, params)
         return pgq
 
@@ -451,7 +451,7 @@ class Cursor(BaseCursor["Connection"]):
         Return `!None` the recordset is finished.
         """
         self._check_result()
-        record = self._transformer.load_row(self._pos)
+        record = self._tx.load_row(self._pos)
         if record is not None:
             self._pos += 1
         return record
@@ -467,7 +467,7 @@ class Cursor(BaseCursor["Connection"]):
 
         if not size:
             size = self.arraysize
-        records = self._transformer.load_rows(
+        records = self._tx.load_rows(
             self._pos, min(self._pos + size, self.pgresult.ntuples)
         )
         self._pos += len(records)
@@ -479,14 +479,14 @@ class Cursor(BaseCursor["Connection"]):
         """
         self._check_result()
         assert self.pgresult
-        records = self._transformer.load_rows(self._pos, self.pgresult.ntuples)
+        records = self._tx.load_rows(self._pos, self.pgresult.ntuples)
         self._pos += self.pgresult.ntuples
         return records
 
     def __iter__(self) -> Iterator[Sequence[Any]]:
         self._check_result()
 
-        load = self._transformer.load_row
+        load = self._tx.load_row
 
         while 1:
             row = load(self._pos)
@@ -546,7 +546,7 @@ class AsyncCursor(BaseCursor["AsyncConnection"]):
 
     async def fetchone(self) -> Optional[Sequence[Any]]:
         self._check_result()
-        rv = self._transformer.load_row(self._pos)
+        rv = self._tx.load_row(self._pos)
         if rv is not None:
             self._pos += 1
         return rv
@@ -557,7 +557,7 @@ class AsyncCursor(BaseCursor["AsyncConnection"]):
 
         if not size:
             size = self.arraysize
-        records = self._transformer.load_rows(
+        records = self._tx.load_rows(
             self._pos, min(self._pos + size, self.pgresult.ntuples)
         )
         self._pos += len(records)
@@ -566,14 +566,14 @@ class AsyncCursor(BaseCursor["AsyncConnection"]):
     async def fetchall(self) -> Sequence[Sequence[Any]]:
         self._check_result()
         assert self.pgresult
-        records = self._transformer.load_rows(self._pos, self.pgresult.ntuples)
+        records = self._tx.load_rows(self._pos, self.pgresult.ntuples)
         self._pos += self.pgresult.ntuples
         return records
 
     async def __aiter__(self) -> AsyncIterator[Sequence[Any]]:
         self._check_result()
 
-        load = self._transformer.load_row
+        load = self._tx.load_row
 
         while 1:
             row = load(self._pos)

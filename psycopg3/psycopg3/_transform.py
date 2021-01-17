@@ -45,12 +45,12 @@ class Transformer(AdaptContext):
         # WARNING: don't store context, or you'll create a loop with the Cursor
         if context:
             self._adapters = context.adapters
-            self._connection = context.connection
+            self._conn = context.connection
         else:
             from .adapt import global_adapters
 
             self._adapters = global_adapters
-            self._connection = None
+            self._conn = None
 
         # mapping class, fmt -> Dumper instance
         self._dumpers_cache: DefaultDict[Format, DumperCache] = defaultdict(
@@ -68,7 +68,7 @@ class Transformer(AdaptContext):
 
     @property
     def connection(self) -> Optional["BaseConnection"]:
-        return self._connection
+        return self._conn
 
     @property
     def adapters(self) -> "AdaptersMap":

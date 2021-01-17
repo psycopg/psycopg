@@ -57,7 +57,7 @@ class BaseCopy(Generic[ConnectionType]):
         self.connection = cursor.connection
         self._pgconn = self.connection.pgconn
 
-        tx = cursor._transformer
+        tx = cursor._tx
         assert tx.pgresult, "The Transformer doesn't have a PGresult set"
         self._pgresult: "PGresult" = tx.pgresult
 
