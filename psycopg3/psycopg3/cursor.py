@@ -190,7 +190,30 @@ class BaseCursor(Generic[ConnectionType]):
         """Generator implementing `Cursor.execute()`."""
         yield from self._start_query(query)
         pgq = self._convert_query(query, params)
+        yield from self._maybe_prepare_gen(pgq, prepare)
+        self._last_query = query
 
+    def _executemany_gen(
+        self, query: Query, params_seq: Sequence[Params]
+    ) -> PQGen[None]:
+        """Generator implementing `Cursor.executemany()`."""
+        yield from self._start_query(query)
+        first = True
+        for params in params_seq:
+            if first:
+                pgq = self._convert_query(query, params)
+                self._pgq = pgq
+                first = False
+            else:
+                pgq.dump(params)
+
+            yield from self._maybe_prepare_gen(pgq, True)
+
+        self._last_query = query
+
+    def _maybe_prepare_gen(
+        self, pgq: PostgresQuery, prepare: Optional[bool]
+    ) -> PQGen[None]:
         # Check if the query is prepared or needs preparing
         prep, name = self._conn._prepared.get(pgq, prepare)
         if prep is Prepare.YES:
@@ -221,34 +244,6 @@ class BaseCursor(Generic[ConnectionType]):
                 yield from self._conn._exec_command(cmd)
 
         self._execute_results(results)
-        self._last_query = query
-
-    def _executemany_gen(
-        self, query: Query, params_seq: Sequence[Params]
-    ) -> PQGen[None]:
-        """Generator implementing `Cursor.executemany()`."""
-        yield from self._start_query(query)
-        first = True
-        for params in params_seq:
-            if first:
-                pgq = self._convert_query(query, params)
-                self._pgq = pgq
-                # TODO: prepare more statements if the types tuples change
-                self._send_prepare(b"", pgq)
-                (result,) = yield from execute(self._conn.pgconn)
-                if result.status == ExecStatus.FATAL_ERROR:
-                    raise e.error_from_result(
-                        result, encoding=self._conn.client_encoding
-                    )
-                first = False
-            else:
-                pgq.dump(params)
-
-            self._send_query_prepared(b"", pgq)
-            (result,) = yield from execute(self._conn.pgconn)
-            self._execute_results((result,))
-
-        self._last_query = query
 
     def _start_query(self, query: Optional[Query] = None) -> PQGen[None]:
         """Generator to start the processing of a query.
