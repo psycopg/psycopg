@@ -1,3 +1,5 @@
+import datetime as dt
+
 import pytest
 
 import psycopg3
@@ -228,7 +230,7 @@ def test_none_type_argument(conn, fmt_in):
     assert cur.fetchone()[0]
 
 
-@pytest.mark.parametrize("fmt_in", [Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
 def test_return_untyped(conn, fmt_in):
     # Analyze and check for changes using strings in untyped/typed contexts
     cur = conn.cursor()
@@ -241,6 +243,16 @@ def test_return_untyped(conn, fmt_in):
     cur.execute("create table testjson(data jsonb)")
     cur.execute("insert into testjson (data) values (%s)", ["{}"])
     assert cur.execute("select data from testjson").fetchone() == ({},)
+
+
+@pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
+def test_no_cast_needed(conn, fmt_in):
+    # Verify that there is no need of cast in certain common scenario
+    cur = conn.execute("select '2021-01-01'::date + %s", [3])
+    assert cur.fetchone()[0] == dt.date(2021, 1, 4)
+
+    cur = conn.execute("select '[10, 20, 30]'::jsonb -> %s", [1])
+    assert cur.fetchone()[0] == 20
 
 
 def test_optimised_adapters():
