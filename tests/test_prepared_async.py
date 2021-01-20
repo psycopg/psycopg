@@ -139,7 +139,7 @@ async def test_params_types(aconn):
         "select parameter_types from pg_prepared_statements"
     )
     (rec,) = await cur.fetchall()
-    assert rec[0] == ["date", "bigint", "numeric"]
+    assert rec[0] == ["date", "smallint", "numeric"]
 
 
 async def test_evict_lru(aconn):
@@ -190,7 +190,7 @@ async def test_different_types(aconn):
         "select parameter_types from pg_prepared_statements order by prepare_time",
         prepare=False,
     )
-    assert await cur.fetchall() == [(["text"],), (["date"],), (["bigint"],)]
+    assert await cur.fetchall() == [(["text"],), (["date"],), (["smallint"],)]
 
 
 async def test_untyped_json(aconn):

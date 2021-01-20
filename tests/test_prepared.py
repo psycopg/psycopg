@@ -131,7 +131,7 @@ def test_params_types(conn):
     )
     cur = conn.execute("select parameter_types from pg_prepared_statements")
     (rec,) = cur.fetchall()
-    assert rec[0] == ["date", "bigint", "numeric"]
+    assert rec[0] == ["date", "smallint", "numeric"]
 
 
 def test_evict_lru(conn):
@@ -180,7 +180,7 @@ def test_different_types(conn):
         "select parameter_types from pg_prepared_statements order by prepare_time",
         prepare=False,
     )
-    assert cur.fetchall() == [(["text"],), (["date"],), (["bigint"],)]
+    assert cur.fetchall() == [(["text"],), (["date"],), (["smallint"],)]
 
 
 def test_untyped_json(conn):

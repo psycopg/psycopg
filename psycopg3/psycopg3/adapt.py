@@ -5,11 +5,12 @@ Entry point into the adaptation system.
 # Copyright (C) 2020-2021 The Psycopg Team
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional, Type, TypeVar, Union
-from typing import cast, TYPE_CHECKING
+from typing import Any, Dict, List, Optional, Type, Tuple, Union
+from typing import cast, TYPE_CHECKING, TypeVar
 
 from . import pq
 from . import proto
+from . import errors as e
 from ._enums import Format as Format
 from .oids import builtins
 from .proto import AdaptContext, Buffer as Buffer
@@ -55,6 +56,37 @@ class Dumper(ABC):
         else:
             esc = pq.Escaping()
             return b"'%s'" % esc.escape_string(value)
+
+    def get_key(
+        self, obj: Any, format: Format
+    ) -> Union[type, Tuple[type, ...]]:
+        """Return an alternative key to upgrade the dumper to represent *obj*
+
+        Normally the type of the object is all it takes to define how to dump
+        the object to the database. In a few cases this is not enough. Example
+
+        - Python int could be several Postgres types: int2, int4, int8, numeric
+        - Python lists should be dumped according to the type they contain
+          to convert them to e.g. array of strings, array of ints (which?...)
+
+        In these cases a Dumper can implement `get_key()` and return a new
+        class, or sequence of classes, that can be used to indentify the same
+        dumper again.
+
+        If a Dumper implements `get_key()` it should also implmement
+        `upgrade()`.
+        """
+        return self.cls
+
+    def upgrade(self, obj: Any, format: Format) -> "Dumper":
+        """Return a new dumper to manage *obj*.
+
+        Once `Transformer.get_dumper()` has been notified that this Dumper
+        class cannot handle *obj* itself it will invoke `upgrade()`, which
+        should return a new `Dumper` instance, and will be reused for every
+        objects for which `get_key()` returns the same result.
+        """
+        return self
 
     @classmethod
     def register(
@@ -171,17 +203,22 @@ class AdaptersMap(AdaptContext):
 
         self._loaders[fmt][oid] = loader
 
-    def get_dumper(self, cls: type, format: Format) -> Optional[Type[Dumper]]:
+    def get_dumper(self, cls: type, format: Format) -> Type[Dumper]:
         """
         Return the dumper class for the given type and format.
 
-        Return None if not found.
+        Raise ProgrammingError if a class is not available.
         """
         if format == Format.AUTO:
-            dmaps = [
-                self._dumpers[pq.Format.BINARY],
-                self._dumpers[pq.Format.TEXT],
-            ]
+            # When dumping a string with %s we may refer to any type actually,
+            # but the user surely passed a text format
+            if cls is str:
+                dmaps = [self._dumpers[pq.Format.TEXT]]
+            else:
+                dmaps = [
+                    self._dumpers[pq.Format.BINARY],
+                    self._dumpers[pq.Format.TEXT],
+                ]
         elif format == Format.BINARY:
             dmaps = [self._dumpers[pq.Format.BINARY]]
         elif format == Format.TEXT:
@@ -203,7 +240,10 @@ class AdaptersMap(AdaptContext):
                     d = dmap[scls] = dmap.pop(fqn)
                     return d
 
-        return None
+        raise e.ProgrammingError(
+            f"cannot adapt type {cls.__name__}"
+            f" to format {Format(format).name}"
+        )
 
     def get_loader(
         self, oid: int, format: pq.Format

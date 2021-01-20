@@ -12,7 +12,7 @@ from . import array, composite
 from . import range
 
 # Wrapper objects
-from .numeric import Int2, Int4, Int8, Oid
+from .numeric import Int2, Int4, Int8, IntNumeric, Oid
 from .json import Json, Jsonb
 from .range import Range, Int4Range, Int8Range, DecimalRange
 from .range import DateRange, DateTimeRange, DateTimeTZRange
@@ -34,16 +34,19 @@ from .text import (
 )
 from .numeric import (
     IntDumper,
+    IntBinaryDumper,
     FloatDumper,
     FloatBinaryDumper,
     DecimalDumper,
     Int2Dumper,
     Int4Dumper,
     Int8Dumper,
+    IntNumericDumper,
     OidDumper,
     Int2BinaryDumper,
     Int4BinaryDumper,
     Int8BinaryDumper,
+    IntNumericBinaryDumper,
     OidBinaryDumper,
     IntLoader,
     Int2BinaryLoader,
@@ -148,17 +151,19 @@ def register_default_globals(ctx: AdaptContext) -> None:
     ByteaBinaryLoader.register("bytea", ctx)
 
     IntDumper.register(int, ctx)
+    IntBinaryDumper.register(int, ctx)
     FloatDumper.register(float, ctx)
-    Int8BinaryDumper.register(int, ctx)
     FloatBinaryDumper.register(float, ctx)
     DecimalDumper.register("decimal.Decimal", ctx)
     Int2Dumper.register(Int2, ctx)
     Int4Dumper.register(Int4, ctx)
     Int8Dumper.register(Int8, ctx)
+    IntNumericDumper.register(IntNumeric, ctx)
     OidDumper.register(Oid, ctx)
     Int2BinaryDumper.register(Int2, ctx)
     Int4BinaryDumper.register(Int4, ctx)
     Int8BinaryDumper.register(Int8, ctx)
+    IntNumericBinaryDumper.register(IntNumeric, ctx)
     OidBinaryDumper.register(Oid, ctx)
     IntLoader.register("int2", ctx)
     IntLoader.register("int4", ctx)

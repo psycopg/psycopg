@@ -139,12 +139,10 @@ def test_array_of_unknown_builtin(conn):
     assert res[1] == [val]
 
 
-@pytest.mark.xfail
 @pytest.mark.parametrize(
     "array, type", [([1, 32767], "int2"), ([1, 32768], "int4")]
 )
 def test_array_mixed_numbers(array, type):
-    # TODO: must use the type accommodating the largest/highest precision
     tx = Transformer()
     dumper = tx.get_dumper(array, Format.BINARY)
     dumper.dump(array)

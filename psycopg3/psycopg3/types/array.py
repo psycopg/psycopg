@@ -6,34 +6,85 @@ Adapters for arrays
 
 import re
 import struct
-from typing import Any, Iterator, List, Optional, Type
+from typing import Any, Iterator, List, Optional, Set, Tuple, Type
 
 from .. import pq
-from .._enums import Format
 from .. import errors as e
 from ..oids import builtins, TEXT_OID, TEXT_ARRAY_OID, INVALID_OID
 from ..adapt import Buffer, Dumper, Loader, Transformer
+from ..adapt import Format as Pg3Format
 from ..proto import AdaptContext
 
 
 class BaseListDumper(Dumper):
     def __init__(self, cls: type, context: Optional[AdaptContext] = None):
         super().__init__(cls, context)
-        tx = Transformer(context)
-        fmt = Format.from_pq(self.format)
-        self.set_sub_dumper(tx.get_dumper("", fmt))
+        self._tx = Transformer(context)
+        fmt = Pg3Format.from_pq(self.format)
+        self.sub_dumper = self._tx.get_dumper("", fmt)
+        self.sub_oid = TEXT_OID
 
-    def set_sub_dumper(self, dumper: Dumper) -> None:
-        self.sub_dumper = dumper
+    def get_key(self, obj: List[Any], format: Pg3Format) -> Tuple[type, ...]:
+        item = self._find_list_element(obj)
+        if item is not None:
+            sd = self._tx.get_dumper(item, format)
+            return (self.cls, sd.cls)
+        else:
+            return (self.cls,)
+
+    def upgrade(self, obj: List[Any], format: Pg3Format) -> "BaseListDumper":
+        item = self._find_list_element(obj)
+        if item is None:
+            return ListDumper(self.cls, self._tx)
+
+        sd = self._tx.get_dumper(item, format)
+        dcls = ListDumper if sd.format == pq.Format.TEXT else ListBinaryDumper
+        dumper = dcls(self.cls, self._tx)
+        dumper.sub_dumper = sd
+
         # We consider an array of unknowns as unknown, so we can dump empty
         # lists or lists containing only None elements. However Postgres won't
         # take unknown for element oid (in binary; in text it doesn't matter)
-        if dumper.oid != INVALID_OID:
-            self.oid = self._get_array_oid(dumper.oid)
-            self.sub_oid = dumper.oid
+        if sd.oid != INVALID_OID:
+            dumper.oid = self._get_array_oid(sd.oid)
+            dumper.sub_oid = sd.oid
         else:
-            self.oid = INVALID_OID
-            self.sub_oid = TEXT_OID
+            dumper.oid = INVALID_OID
+            dumper.sub_oid = TEXT_OID
+
+        return dumper
+
+    def _find_list_element(self, L: List[Any]) -> Any:
+        """
+        Find the first non-null element of an eventually nested list
+        """
+        it = self._flatiter(L, set())
+        try:
+            item = next(it)
+        except StopIteration:
+            return None
+
+        if not isinstance(item, int):
+            return item
+
+        imax = max((i if i >= 0 else -i - 1 for i in it), default=0)
+        imax = max(item if item >= 0 else -item, imax)
+        return imax
+
+    def _flatiter(self, L: List[Any], seen: Set[int]) -> Any:
+        if id(L) in seen:
+            raise e.DataError("cannot dump a recursive list")
+
+        seen.add(id(L))
+
+        for item in L:
+            if type(item) is list:
+                for subit in self._flatiter(item, seen):
+                    yield subit
+            elif item is not None:
+                yield item
+
+        return None
 
     def _get_array_oid(self, base_oid: int) -> int:
         """

@@ -5,12 +5,14 @@ Adapers for numeric types.
 # Copyright (C) 2020-2021 The Psycopg Team
 
 import struct
-from typing import Any, Callable, Dict, Tuple, cast
+from typing import Any, Callable, Dict, Optional, Tuple, cast
 from decimal import Decimal
 
+from .. import proto
 from ..pq import Format
 from ..oids import builtins
-from ..adapt import Buffer, Dumper, Loader
+from ..adapt import Buffer, Dumper, Loader, Transformer
+from ..adapt import Format as Pg3Format
 
 _PackInt = Callable[[int], bytes]
 _PackFloat = Callable[[float], bytes]
@@ -48,9 +50,67 @@ class Int8(int):
         return super().__new__(cls, arg)  # type: ignore
 
 
+class IntNumeric(int):
+    def __new__(cls, arg: int) -> "IntNumeric":
+        return super().__new__(cls, arg)  # type: ignore
+
+
 class Oid(int):
     def __new__(cls, arg: int) -> "Oid":
         return super().__new__(cls, arg)  # type: ignore
+
+
+class IntDumper(Dumper):
+
+    format = Format.TEXT
+
+    def __init__(
+        self, cls: type, context: Optional[proto.AdaptContext] = None
+    ):
+        super().__init__(cls, context)
+        self._tx = Transformer(context)
+
+    def dump(self, obj: Any) -> bytes:
+        raise TypeError(
+            "dispatcher to find the int subclass: not supposed to be called"
+        )
+
+    def get_key(cls, obj: int, format: Pg3Format) -> type:
+        if -(2 ** 31) <= obj < 2 ** 31:
+            if -(2 ** 15) <= obj < 2 ** 15:
+                return Int2
+            else:
+                return Int4
+        else:
+            if -(2 ** 63) <= obj < 2 ** 63:
+                return Int8
+            else:
+                return IntNumeric
+
+    def upgrade(self, obj: int, format: Pg3Format) -> Dumper:
+        sample: Any
+        if -(2 ** 31) <= obj < 2 ** 31:
+            if -(2 ** 15) <= obj < 2 ** 15:
+                sample = INT2_SAMPLE
+            else:
+                sample = INT4_SAMPLE
+        else:
+            if -(2 ** 63) <= obj < 2 ** 63:
+                sample = INT8_SAMPLE
+            else:
+                sample = INTNUMERIC_SAMPLE
+
+        return self._tx.get_dumper(sample, format)
+
+
+class IntBinaryDumper(IntDumper):
+    format = Format.BINARY
+
+
+INT2_SAMPLE = Int2(0)
+INT4_SAMPLE = Int4(0)
+INT8_SAMPLE = Int8(0)
+INTNUMERIC_SAMPLE = IntNumeric(0)
 
 
 class NumberDumper(Dumper):
@@ -76,10 +136,6 @@ class SpecialValuesDumper(NumberDumper):
             return self._special[value]
 
         return value if obj >= 0 else b" " + value
-
-
-class IntDumper(NumberDumper):
-    _oid = builtins["int8"].oid
 
 
 class FloatDumper(SpecialValuesDumper):
@@ -126,6 +182,10 @@ class Int8Dumper(NumberDumper):
     _oid = builtins["int8"].oid
 
 
+class IntNumericDumper(NumberDumper):
+    _oid = builtins["numeric"].oid
+
+
 class OidDumper(NumberDumper):
     _oid = builtins["oid"].oid
 
@@ -152,6 +212,14 @@ class Int8BinaryDumper(Int8Dumper):
 
     def dump(self, obj: int) -> bytes:
         return _pack_int8(obj)
+
+
+class IntNumericBinaryDumper(IntNumericDumper):
+
+    format = Format.BINARY
+
+    def dump(self, obj: int) -> bytes:
+        raise NotImplementedError
 
 
 class OidBinaryDumper(OidDumper):

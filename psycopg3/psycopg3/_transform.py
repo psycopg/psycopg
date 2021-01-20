@@ -4,8 +4,8 @@ Helper object to transform values between Python and PostgreSQL
 
 # Copyright (C) 2020-2021 The Psycopg Team
 
-from typing import Any, Dict, List, Optional, Sequence, Set, Tuple, Union
-from typing import cast, DefaultDict, TYPE_CHECKING
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
+from typing import DefaultDict, TYPE_CHECKING
 from collections import defaultdict
 
 from . import pq
@@ -18,9 +18,8 @@ if TYPE_CHECKING:
     from .pq.proto import PGresult
     from .adapt import Dumper, Loader, AdaptersMap
     from .connection import BaseConnection
-    from .types.array import BaseListDumper
 
-DumperKey = Union[type, Tuple[type, type]]
+DumperKey = Union[type, Tuple[type, ...]]
 DumperCache = Dict[DumperKey, "Dumper"]
 
 LoaderKey = int
@@ -130,51 +129,33 @@ class Transformer(AdaptContext):
         return ps, tuple(ts), fs
 
     def get_dumper(self, obj: Any, format: Format) -> "Dumper":
-        # Fast path: return a Dumper class already instantiated from the same type
-        cls = type(obj)
-        if cls is not list:
-            key: DumperKey = cls
-        else:
-            # TODO: Can be probably generalised to handle other recursive types
-            subobj = self._find_list_element(obj)
-            key = (cls, type(subobj))
+        """
+        Return a Dumper instance to dump *obj*.
+        """
+        # Normally, the type of the object dictates how to dump it
+        key = type(obj)
 
+        # Reuse an existing Dumper class for objects of the same type
         cache = self._dumpers_cache[format]
         try:
-            return cache[key]
+            dumper = cache[key]
         except KeyError:
-            pass
+            # If it's the first time we see this type, look for a dumper
+            # configured for it.
+            dcls = self.adapters.get_dumper(key, format)
+            cache[key] = dumper = dcls(key, self)
 
-        # When dumping a string with %s we may refer to any type actually,
-        # but the user surely passed a text format
-        if cls is str and format == Format.AUTO:
-            format = Format.TEXT
+        # Check if the dumper requires an upgrade to handle this specific value
+        key1 = dumper.get_key(obj, format)
+        if key1 is key:
+            return dumper
 
-        sub_dumper = None
-        if cls is list:
-            # It's not possible to declare an empty unknown array, so force text
-            if subobj is None:
-                format = Format.TEXT
-
-            # If we are dumping a list it's the sub-object which should dictate
-            # what format to use.
-            else:
-                sub_dumper = self.get_dumper(subobj, format)
-                format = Format.from_pq(sub_dumper.format)
-
-        dcls = self._adapters.get_dumper(cls, format)
-        if not dcls:
-            raise e.ProgrammingError(
-                f"cannot adapt type {cls.__name__}"
-                f" to format {Format(format).name}"
-            )
-
-        d = dcls(cls, self)
-        if sub_dumper:
-            cast("BaseListDumper", d).set_sub_dumper(sub_dumper)
-
-        cache[key] = d
-        return d
+        # If it doesn't ask the dumper to create its own upgraded version
+        try:
+            return cache[key1]
+        except KeyError:
+            dumper = cache[key1] = dumper.upgrade(obj, format)
+            return dumper
 
     def load_rows(self, row0: int, row1: int) -> List[Tuple[Any, ...]]:
         res = self._pgresult
@@ -241,26 +222,3 @@ class Transformer(AdaptContext):
                 raise e.InterfaceError("unknown oid loader not found")
         loader = self._loaders_cache[format][oid] = loader_cls(oid, self)
         return loader
-
-    def _find_list_element(
-        self, L: List[Any], seen: Optional[Set[int]] = None
-    ) -> Any:
-        """
-        Find the first non-null element of an eventually nested list
-        """
-        if not seen:
-            seen = set()
-        if id(L) in seen:
-            raise e.DataError("cannot dump a recursive list")
-
-        seen.add(id(L))
-
-        for it in L:
-            if type(it) is list:
-                subit = self._find_list_element(it, seen)
-                if subit is not None:
-                    return subit
-            elif it is not None:
-                return it
-
-        return None

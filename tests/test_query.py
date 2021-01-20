@@ -113,7 +113,7 @@ def test_pg_query_seq(query, params, want, wformats, wparams):
             {"hi": 0, "there": "a"},
             b"select $1 $2 $1",
             [pq.Format.BINARY, pq.Format.TEXT],
-            [b"\x00" * 8, b"a"],
+            [b"\x00" * 2, b"a"],
         ),
     ],
 )

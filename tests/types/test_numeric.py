@@ -3,7 +3,6 @@ from math import isnan, isinf, exp
 
 import pytest
 
-import psycopg3
 from psycopg3 import pq
 from psycopg3 import sql
 from psycopg3.oids import builtins
@@ -39,28 +38,33 @@ def test_dump_int(conn, val, expr, fmt_in):
 @pytest.mark.parametrize(
     "val, expr",
     [
-        (0, "'0'::integer"),
-        (1, "'1'::integer"),
-        (-1, "'-1'::integer"),
+        (0, "'0'::smallint"),
+        (1, "'1'::smallint"),
+        (-1, "'-1'::smallint"),
         (42, "'42'::smallint"),
         (-42, "'-42'::smallint"),
-        (int(2 ** 63 - 1), "'9223372036854775807'::bigint"),
-        (int(-(2 ** 63)), "'-9223372036854775808'::bigint"),
-        (0, "'0'::oid"),
-        (4294967295, "'4294967295'::oid"),
+        (int(2 ** 15 - 1), f"'{2 ** 15 - 1}'::smallint"),
+        (int(-(2 ** 15)), f"'{-2 ** 15}'::smallint"),
+        (int(2 ** 15), f"'{2 ** 15}'::integer"),
+        (int(-(2 ** 15) - 1), f"'{-2 ** 15 - 1}'::integer"),
+        (int(2 ** 31 - 1), f"'{2 ** 31 - 1}'::integer"),
+        (int(-(2 ** 31)), f"'{-2 ** 31}'::integer"),
+        (int(2 ** 31), f"'{2 ** 31}'::bigint"),
+        (int(-(2 ** 31) - 1), f"'{-2 ** 31 - 1}'::bigint"),
+        (int(2 ** 63 - 1), f"'{2 ** 63 - 1}'::bigint"),
+        (int(-(2 ** 63)), f"'{-2 ** 63}'::bigint"),
+        (int(2 ** 63), f"'{2 ** 63}'::numeric"),
+        (int(-(2 ** 63) - 1), f"'{-2 ** 63 - 1}'::numeric"),
     ],
 )
-@pytest.mark.parametrize("fmt_in", [Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
 def test_dump_int_subtypes(conn, val, expr, fmt_in):
-    tname = builtins[expr.rsplit(":", 1)[-1]].name.title()
-    assert tname in "Int2 Int4 Int8 Oid".split()
-    Type = getattr(psycopg3.types.numeric, tname)
+    if fmt_in in (Format.AUTO, Format.BINARY) and "numeric" in expr:
+        pytest.xfail("binary numeric not implemented")
     cur = conn.cursor()
-    cur.execute(
-        f"select pg_typeof({expr}) = pg_typeof(%{fmt_in})", (Type(val),)
-    )
+    cur.execute(f"select pg_typeof({expr}) = pg_typeof(%{fmt_in})", (val,))
     assert cur.fetchone()[0] is True
-    cur.execute(f"select {expr} = %{fmt_in}", (Type(val),))
+    cur.execute(f"select {expr} = %{fmt_in}", (val,))
     assert cur.fetchone()[0] is True
 
 

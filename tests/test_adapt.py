@@ -9,7 +9,7 @@ from psycopg3.oids import builtins, TEXT_OID
 @pytest.mark.parametrize(
     "data, format, result, type",
     [
-        (1, Format.TEXT, b"1", "int8"),
+        (1, Format.TEXT, b"1", "int2"),
         ("hello", Format.TEXT, b"hello", "text"),
         ("hello", Format.BINARY, b"hello", "text"),
     ],
@@ -181,8 +181,8 @@ def test_array_dumper(conn, fmt_out):
     t = Transformer(conn)
     fmt_in = Format.from_pq(fmt_out)
     dint = t.get_dumper([0], fmt_in)
-    assert dint.oid == builtins["int8"].array_oid
-    assert dint.sub_oid == builtins["int8"].oid
+    assert dint.oid == builtins["int2"].array_oid
+    assert dint.sub_oid == builtins["int2"].oid
 
     dstr = t.get_dumper([""], fmt_in)
     assert dstr.oid == (
@@ -202,7 +202,7 @@ def test_array_dumper(conn, fmt_out):
     L = []
     L.append(L)
     with pytest.raises(psycopg3.DataError):
-        assert t.get_dumper(L, fmt_out)
+        assert t.get_dumper(L, fmt_in)
 
 
 def test_string_connection_ctx(conn):
