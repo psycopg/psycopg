@@ -46,7 +46,6 @@ from .numeric import (
     Int2BinaryDumper,
     Int4BinaryDumper,
     Int8BinaryDumper,
-    IntNumericBinaryDumper,
     OidBinaryDumper,
     IntLoader,
     Int2BinaryLoader,
@@ -163,7 +162,6 @@ def register_default_globals(ctx: AdaptContext) -> None:
     Int2BinaryDumper.register(Int2, ctx)
     Int4BinaryDumper.register(Int4, ctx)
     Int8BinaryDumper.register(Int8, ctx)
-    IntNumericBinaryDumper.register(IntNumeric, ctx)
     OidBinaryDumper.register(Oid, ctx)
     IntLoader.register("int2", ctx)
     IntLoader.register("int4", ctx)

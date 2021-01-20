@@ -5,13 +5,12 @@ Adapers for numeric types.
 # Copyright (C) 2020-2021 The Psycopg Team
 
 import struct
-from typing import Any, Callable, Dict, Optional, Tuple, cast
+from typing import Any, Callable, Dict, Tuple, cast
 from decimal import Decimal
 
-from .. import proto
 from ..pq import Format
 from ..oids import builtins
-from ..adapt import Buffer, Dumper, Loader, Transformer
+from ..adapt import Buffer, Dumper, Loader
 from ..adapt import Format as Pg3Format
 
 _PackInt = Callable[[int], bytes]
@@ -58,59 +57,6 @@ class IntNumeric(int):
 class Oid(int):
     def __new__(cls, arg: int) -> "Oid":
         return super().__new__(cls, arg)  # type: ignore
-
-
-class IntDumper(Dumper):
-
-    format = Format.TEXT
-
-    def __init__(
-        self, cls: type, context: Optional[proto.AdaptContext] = None
-    ):
-        super().__init__(cls, context)
-        self._tx = Transformer(context)
-
-    def dump(self, obj: Any) -> bytes:
-        raise TypeError(
-            "dispatcher to find the int subclass: not supposed to be called"
-        )
-
-    def get_key(cls, obj: int, format: Pg3Format) -> type:
-        if -(2 ** 31) <= obj < 2 ** 31:
-            if -(2 ** 15) <= obj < 2 ** 15:
-                return Int2
-            else:
-                return Int4
-        else:
-            if -(2 ** 63) <= obj < 2 ** 63:
-                return Int8
-            else:
-                return IntNumeric
-
-    def upgrade(self, obj: int, format: Pg3Format) -> Dumper:
-        sample: Any
-        if -(2 ** 31) <= obj < 2 ** 31:
-            if -(2 ** 15) <= obj < 2 ** 15:
-                sample = INT2_SAMPLE
-            else:
-                sample = INT4_SAMPLE
-        else:
-            if -(2 ** 63) <= obj < 2 ** 63:
-                sample = INT8_SAMPLE
-            else:
-                sample = INTNUMERIC_SAMPLE
-
-        return self._tx.get_dumper(sample, format)
-
-
-class IntBinaryDumper(IntDumper):
-    format = Format.BINARY
-
-
-INT2_SAMPLE = Int2(0)
-INT4_SAMPLE = Int4(0)
-INT8_SAMPLE = Int8(0)
-INTNUMERIC_SAMPLE = IntNumeric(0)
 
 
 class NumberDumper(Dumper):
@@ -190,6 +136,45 @@ class OidDumper(NumberDumper):
     _oid = builtins["oid"].oid
 
 
+class IntDumper(Dumper):
+
+    format = Format.TEXT
+
+    def dump(self, obj: Any) -> bytes:
+        raise TypeError(
+            "dispatcher to find the int subclass: not supposed to be called"
+        )
+
+    def get_key(cls, obj: int, format: Pg3Format) -> type:
+        if -(2 ** 31) <= obj < 2 ** 31:
+            if -(2 ** 15) <= obj < 2 ** 15:
+                return Int2
+            else:
+                return Int4
+        else:
+            if -(2 ** 63) <= obj < 2 ** 63:
+                return Int8
+            else:
+                return IntNumeric
+
+    _int2_dumper = Int2Dumper(Int2)
+    _int4_dumper = Int4Dumper(Int4)
+    _int8_dumper = Int8Dumper(Int8)
+    _int_numeric_dumper = IntNumericDumper(IntNumeric)
+
+    def upgrade(self, obj: int, format: Pg3Format) -> Dumper:
+        if -(2 ** 31) <= obj < 2 ** 31:
+            if -(2 ** 15) <= obj < 2 ** 15:
+                return self._int2_dumper
+            else:
+                return self._int4_dumper
+        else:
+            if -(2 ** 63) <= obj < 2 ** 63:
+                return self._int8_dumper
+            else:
+                return self._int_numeric_dumper
+
+
 class Int2BinaryDumper(Int2Dumper):
 
     format = Format.BINARY
@@ -219,7 +204,7 @@ class IntNumericBinaryDumper(IntNumericDumper):
     format = Format.BINARY
 
     def dump(self, obj: int) -> bytes:
-        raise NotImplementedError
+        raise NotImplementedError("binary decimal dump not implemented yet")
 
 
 class OidBinaryDumper(OidDumper):
@@ -228,6 +213,16 @@ class OidBinaryDumper(OidDumper):
 
     def dump(self, obj: int) -> bytes:
         return _pack_uint4(obj)
+
+
+class IntBinaryDumper(IntDumper):
+
+    format = Format.BINARY
+
+    _int2_dumper = Int2BinaryDumper(Int2)
+    _int4_dumper = Int4BinaryDumper(Int4)
+    _int8_dumper = Int8BinaryDumper(Int8)
+    _int_numeric_dumper = IntNumericBinaryDumper(IntNumeric)
 
 
 class IntLoader(Loader):
