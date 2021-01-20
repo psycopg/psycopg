@@ -12,6 +12,7 @@ from ..pq import Format
 from ..oids import builtins
 from ..adapt import Buffer, Dumper, Loader
 from ..adapt import Format as Pg3Format
+from ..wrappers.numeric import Int2, Int4, Int8, IntNumeric
 
 _PackInt = Callable[[int], bytes]
 _PackFloat = Callable[[float], bytes]
@@ -32,31 +33,6 @@ _unpack_float8 = cast(_UnpackFloat, struct.Struct("!d").unpack)
 
 
 # Wrappers to force numbers to be cast as specific PostgreSQL types
-
-
-class Int2(int):
-    def __new__(cls, arg: int) -> "Int2":
-        return super().__new__(cls, arg)  # type: ignore
-
-
-class Int4(int):
-    def __new__(cls, arg: int) -> "Int4":
-        return super().__new__(cls, arg)  # type: ignore
-
-
-class Int8(int):
-    def __new__(cls, arg: int) -> "Int8":
-        return super().__new__(cls, arg)  # type: ignore
-
-
-class IntNumeric(int):
-    def __new__(cls, arg: int) -> "IntNumeric":
-        return super().__new__(cls, arg)  # type: ignore
-
-
-class Oid(int):
-    def __new__(cls, arg: int) -> "Oid":
-        return super().__new__(cls, arg)  # type: ignore
 
 
 class NumberDumper(Dumper):
@@ -142,20 +118,12 @@ class IntDumper(Dumper):
 
     def dump(self, obj: Any) -> bytes:
         raise TypeError(
-            "dispatcher to find the int subclass: not supposed to be called"
+            f"{type(self).__name__} is a dispatcher to other dumpers:"
+            " dump() is not supposed to be called"
         )
 
-    def get_key(cls, obj: int, format: Pg3Format) -> type:
-        if -(2 ** 31) <= obj < 2 ** 31:
-            if -(2 ** 15) <= obj < 2 ** 15:
-                return Int2
-            else:
-                return Int4
-        else:
-            if -(2 ** 63) <= obj < 2 ** 63:
-                return Int8
-            else:
-                return IntNumeric
+    def get_key(self, obj: int, format: Pg3Format) -> type:
+        return self.upgrade(obj, format).cls
 
     _int2_dumper = Int2Dumper(Int2)
     _int4_dumper = Int4Dumper(Int4)

@@ -31,7 +31,7 @@ logger = logging.getLogger("psycopg3.adapt")
 
 @cython.freelist(8)
 cdef class CDumper:
-    cdef object cls
+    cdef readonly object cls
     cdef public libpq.Oid oid
     cdef pq.PGconn _pgconn
 
@@ -97,6 +97,12 @@ cdef class CDumper:
         PyByteArray_Resize(rv, len_out + 2)
 
         return rv
+
+    cdef object get_key(self, object obj, object format):
+        return self.cls
+
+    cdef object upgrade(self, object obj, object format):
+        return self
 
     @classmethod
     def register(

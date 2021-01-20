@@ -150,7 +150,7 @@ class Transformer(AdaptContext):
         if key1 is key:
             return dumper
 
-        # If it doesn't ask the dumper to create its own upgraded version
+        # If it does, ask the dumper to create its own upgraded version
         try:
             return cache[key1]
         except KeyError:

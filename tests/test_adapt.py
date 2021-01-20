@@ -300,6 +300,9 @@ def test_optimised_adapters():
             continue
         c_adapters.pop(obj.__name__, None)
 
+    # TODO: This dumper is not registered yet as not implemented
+    del c_adapters["IntNumericBinaryDumper"]
+
     assert not c_adapters
 
 

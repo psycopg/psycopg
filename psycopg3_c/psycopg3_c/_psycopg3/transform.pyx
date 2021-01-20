@@ -158,14 +158,13 @@ cdef class Transformer:
         # Fast path: return a Dumper class already instantiated from the same type
         cdef PyObject *cache
         cdef PyObject *ptr
+        cdef PyObject *ptr1
+        cdef RowDumper row_dumper
 
-        cls = type(<object>obj)
-        if cls is not list:
-            key = cls
-        else:
-            subobj = _find_list_element(obj, set())
-            key = (cls, type(subobj))
+        # Normally, the type of the object dictates how to dump it
+        key = type(<object>obj)
 
+        # Establish where would the dumper be cached
         bfmt = PyUnicode_AsUTF8String(<object>fmt)
         cdef char cfmt = PyBytes_AS_STRING(bfmt)[0]
         if cfmt == b's':
@@ -184,50 +183,40 @@ cdef class Transformer:
             raise ValueError(
                 f"format should be a psycopg3.adapt.Format, not {<object>fmt}")
 
+        # Reuse an existing Dumper class for objects of the same type
         ptr = PyDict_GetItem(<object>cache, key)
-        if ptr != NULL:
+        if ptr == NULL:
+            dcls = PyObject_CallFunctionObjArgs(
+                self.adapters.get_dumper, <PyObject *>key, fmt, NULL)
+            dumper = PyObject_CallFunctionObjArgs(
+                dcls, <PyObject *>key, <PyObject *>self, NULL)
+
+            row_dumper = _as_row_dumper(dumper)
+            PyDict_SetItem(<object>cache, key, row_dumper)
+            ptr = <PyObject *>row_dumper
+
+        # Check if the dumper requires an upgrade to handle this specific value
+        if (<RowDumper>ptr).cdumper is not None:
+            key1 = (<RowDumper>ptr).cdumper.get_key(<object>obj, <object>fmt)
+        else:
+            key1 = PyObject_CallFunctionObjArgs(
+                (<RowDumper>ptr).pydumper.get_key, obj, fmt, NULL)
+        if key1 is key:
             return ptr
 
-        # When dumping a string with %s we may refer to any type actually,
-        # but the user surely passed a text format
-        if cls is str and cfmt == b's':
-            fmt = <PyObject *>PG_TEXT
+        # If it does, ask the dumper to create its own upgraded version
+        ptr1 = PyDict_GetItem(<object>cache, key1)
+        if ptr1 != NULL:
+            return ptr1
 
-        cdef PyObject *sub_dumper = NULL
-        if cls is list:
-            # It's not possible to declare an empty unknown array, so force text
-            if subobj is None:
-                fmt = <PyObject *>PG_TEXT
+        if (<RowDumper>ptr).cdumper is not None:
+            dumper = (<RowDumper>ptr).cdumper.upgrade(<object>obj, <object>fmt)
+        else:
+            dumper = PyObject_CallFunctionObjArgs(
+                (<RowDumper>ptr).pydumper.upgrade, obj, fmt, NULL)
 
-            # If we are dumping a list it's the sub-object which should dictate
-            # what format to use.
-            else:
-                sub_dumper = self.get_row_dumper(<PyObject *>subobj, fmt)
-                tmp = Pg3Format.from_pq((<RowDumper>sub_dumper).format)
-                fmt = <PyObject *>tmp
-
-        dcls = PyObject_CallFunctionObjArgs(
-            self.adapters.get_dumper, <PyObject *>cls, fmt, NULL)
-        if dcls is None:
-            raise e.ProgrammingError(
-                f"cannot adapt type {cls.__name__}"
-                f" to format {Pg3Format(<object>fmt).name}")
-
-        dumper = PyObject_CallFunctionObjArgs(
-            dcls, <PyObject *>cls, <PyObject *>self, NULL)
-        if sub_dumper != NULL:
-            dumper.set_sub_dumper((<RowDumper>sub_dumper).pydumper)
-
-        cdef RowDumper row_dumper = RowDumper()
-
-        row_dumper.pydumper = dumper
-        row_dumper.dumpfunc = dumper.dump
-        row_dumper.oid = dumper.oid
-        row_dumper.format = dumper.format
-        if isinstance(dumper, CDumper):
-            row_dumper.cdumper = <CDumper>dumper
-
-        PyDict_SetItem(<object>cache, key, row_dumper)
+        row_dumper = _as_row_dumper(dumper)
+        PyDict_SetItem(<object>cache, key1, row_dumper)
         return <PyObject *>row_dumper
 
     cpdef dump_sequence(self, object params, object formats):
@@ -467,25 +456,15 @@ cdef class Transformer:
         return <PyObject *>row_loader
 
 
-cdef object _find_list_element(PyObject *L, object seen):
-    """
-    Find the first non-null element of an eventually nested list
-    """
-    cdef object list_id = <long><PyObject *>L
-    if PySet_Contains(seen, list_id):
-        raise e.DataError("cannot dump a recursive list")
+cdef object _as_row_dumper(object dumper):
+    cdef RowDumper row_dumper = RowDumper()
 
-    PySet_Add(seen, list_id)
+    row_dumper.pydumper = dumper
+    row_dumper.dumpfunc = dumper.dump
+    row_dumper.oid = dumper.oid
+    row_dumper.format = dumper.format
 
-    cdef int i
-    cdef PyObject *it
-    for i in range(PyList_GET_SIZE(<object>L)):
-        it = PyList_GET_ITEM(<object>L, i)
-        if PyList_CheckExact(<object>it):
-            subit = _find_list_element(it, seen)
-            if subit is not None:
-                return subit
-        elif <object>it is not None:
-            return <object>it
+    if isinstance(dumper, CDumper):
+        row_dumper.cdumper = <CDumper>dumper
 
-    return None
+    return row_dumper

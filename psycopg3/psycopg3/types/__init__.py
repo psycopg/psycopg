@@ -12,7 +12,7 @@ from . import array, composite
 from . import range
 
 # Wrapper objects
-from .numeric import Int2, Int4, Int8, IntNumeric, Oid
+from ..wrappers.numeric import Int2, Int4, Int8, IntNumeric, Oid
 from .json import Json, Jsonb
 from .range import Range, Int4Range, Int8Range, DecimalRange
 from .range import DateRange, DateTimeRange, DateTimeTZRange
