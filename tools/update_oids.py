@@ -46,6 +46,7 @@ def update_python_oids() -> None:
     queries = [version_sql, py_oids_sql]
     fn = ROOT / "psycopg3/psycopg3/oids.py"
     update_file(fn, queries)
+    sp.check_call(["black", "-q", fn])
 
 
 def update_cython_oids() -> None:
