@@ -184,13 +184,16 @@ def test_array_dumper(conn, fmt_out):
     fmt_in = Format.from_pq(fmt_out)
     dint = t.get_dumper([0], fmt_in)
     assert dint.oid == builtins["int2"].array_oid
-    assert dint.sub_oid == builtins["int2"].oid
+    assert dint.sub_dumper.oid == builtins["int2"].oid
 
     dstr = t.get_dumper([""], fmt_in)
-    assert dstr.oid == (
-        builtins["text"].array_oid if fmt_in == Format.BINARY else 0
-    )
-    assert dstr.sub_oid == builtins["text"].oid
+    if fmt_in == Format.BINARY:
+        assert dstr.oid == builtins["text"].array_oid
+        assert dstr.sub_dumper.oid == builtins["text"].oid
+    else:
+        assert dstr.oid == 0
+        assert dstr.sub_dumper.oid == 0
+
     assert dstr is not dint
 
     assert t.get_dumper([1], fmt_in) is dint

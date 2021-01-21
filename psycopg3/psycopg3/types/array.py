@@ -20,9 +20,7 @@ class BaseListDumper(Dumper):
     def __init__(self, cls: type, context: Optional[AdaptContext] = None):
         super().__init__(cls, context)
         self._tx = Transformer(context)
-        fmt = Pg3Format.from_pq(self.format)
-        self.sub_dumper = self._tx.get_dumper("", fmt)
-        self.sub_oid = TEXT_OID
+        self.sub_dumper: Optional[Dumper] = None
 
     def get_key(self, obj: List[Any], format: Pg3Format) -> Tuple[type, ...]:
         item = self._find_list_element(obj)
@@ -35,6 +33,7 @@ class BaseListDumper(Dumper):
     def upgrade(self, obj: List[Any], format: Pg3Format) -> "BaseListDumper":
         item = self._find_list_element(obj)
         if item is None:
+            # Empty lists can only be dumped as text if the type is unknown.
             return ListDumper(self.cls, self._tx)
 
         sd = self._tx.get_dumper(item, format)
@@ -43,14 +42,11 @@ class BaseListDumper(Dumper):
         dumper.sub_dumper = sd
 
         # We consider an array of unknowns as unknown, so we can dump empty
-        # lists or lists containing only None elements. However Postgres won't
-        # take unknown for element oid (in binary; in text it doesn't matter)
+        # lists or lists containing only None elements.
         if sd.oid != INVALID_OID:
             dumper.oid = self._get_array_oid(sd.oid)
-            dumper.sub_oid = sd.oid
         else:
             dumper.oid = INVALID_OID
-            dumper.sub_oid = TEXT_OID
 
         return dumper
 
@@ -138,7 +134,8 @@ class ListDumper(BaseListDumper):
                 if isinstance(item, list):
                     dump_list(item)
                 elif item is not None:
-                    ad = self.sub_dumper.dump(item)
+                    # If we get here, the sub_dumper must have been set
+                    ad = self.sub_dumper.dump(item)  # type: ignore[union-attr]
                     if self._re_needs_quotes.search(ad):
                         ad = (
                             b'"' + self._re_esc.sub(br"\\\1", bytes(ad)) + b'"'
@@ -161,8 +158,11 @@ class ListBinaryDumper(BaseListDumper):
     format = pq.Format.BINARY
 
     def dump(self, obj: List[Any]) -> bytes:
+        # Postgres won't take unknown for element oid: fall back on text
+        sub_oid = self.sub_dumper and self.sub_dumper.oid or TEXT_OID
+
         if not obj:
-            return _struct_head.pack(0, 0, self.sub_oid)
+            return _struct_head.pack(0, 0, sub_oid)
 
         data: List[bytes] = [b"", b""]  # placeholders to avoid a resize
         dims: List[int] = []
@@ -185,7 +185,8 @@ class ListBinaryDumper(BaseListDumper):
             if dim == len(dims) - 1:
                 for item in L:
                     if item is not None:
-                        ad = self.sub_dumper.dump(item)
+                        # If we get here, the sub_dumper must have been set
+                        ad = self.sub_dumper.dump(item)  # type: ignore[union-attr]
                         data.append(_struct_len.pack(len(ad)))
                         data.append(ad)
                     else:
@@ -201,7 +202,7 @@ class ListBinaryDumper(BaseListDumper):
 
         dump_list(obj, 0)
 
-        data[0] = _struct_head.pack(len(dims), hasnull, self.sub_oid)
+        data[0] = _struct_head.pack(len(dims), hasnull, sub_oid)
         data[1] = b"".join(_struct_dim.pack(dim, 1) for dim in dims)
         return b"".join(data)
 
