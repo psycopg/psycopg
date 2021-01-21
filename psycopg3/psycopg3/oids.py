@@ -61,6 +61,13 @@ class TypesRegistry:
                 yield t
 
     def __getitem__(self, key: Union[str, int]) -> TypeInfo:
+        """
+        Return info about a type, specified by name or oid
+
+        The type name or oid may refer to the array too.
+
+        Raise KeyError if not found.
+        """
         if isinstance(key, str):
             if key.endswith("[]"):
                 key = key[:-2]
@@ -73,12 +80,26 @@ class TypesRegistry:
             )
 
     def get(self, key: Union[str, int]) -> Optional[TypeInfo]:
+        """
+        Return info about a type, specified by name or oid
+
+        The type name or oid may refer to the array too.
+
+        Return None if not found.
+        """
         try:
             return self[key]
         except KeyError:
             return None
 
     def get_oid(self, name: str) -> int:
+        """
+        Return the oid of a PostgreSQL type by name.
+
+        Return the array oid if the type ends with "[]"
+
+        Raise KeyError if the name is unknown.
+        """
         t = self[name]
         if name.endswith("[]"):
             return t.array_oid
