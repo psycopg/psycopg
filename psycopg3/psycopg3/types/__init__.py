@@ -14,8 +14,7 @@ from . import range
 # Wrapper objects
 from ..wrappers.numeric import Int2, Int4, Int8, IntNumeric, Oid
 from .json import Json, Jsonb
-from .range import Range, Int4Range, Int8Range, DecimalRange
-from .range import DateRange, DateTimeRange, DateTimeTZRange
+from .range import Range
 
 # Supper objects
 from .range import RangeInfo
@@ -99,12 +98,6 @@ from .network import (
 )
 from .range import (
     RangeDumper,
-    Int4RangeDumper,
-    Int8RangeDumper,
-    NumRangeDumper,
-    DateRangeDumper,
-    TimestampRangeDumper,
-    TimestampTZRangeDumper,
     RangeLoader,
     Int4RangeLoader,
     Int8RangeLoader,
@@ -217,12 +210,7 @@ def register_default_globals(ctx: AdaptContext) -> None:
     InetLoader.register("inet", ctx)
     CidrLoader.register("cidr", ctx)
 
-    Int4RangeDumper.register(Int4Range, ctx)
-    Int8RangeDumper.register(Int8Range, ctx)
-    NumRangeDumper.register(DecimalRange, ctx)
-    DateRangeDumper.register(DateRange, ctx)
-    TimestampRangeDumper.register(DateTimeRange, ctx)
-    TimestampTZRangeDumper.register(DateTimeTZRange, ctx)
+    RangeDumper.register(Range, ctx)
     Int4RangeLoader.register("int4range", ctx)
     Int8RangeLoader.register("int8range", ctx)
     NumericRangeLoader.register("numrange", ctx)

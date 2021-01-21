@@ -10,14 +10,6 @@ from psycopg3.types import range as mrange
 from psycopg3.types.range import Range
 
 
-type2cls = {
-    "int4range": mrange.Int4Range,
-    "int8range": mrange.Int8Range,
-    "numrange": mrange.DecimalRange,
-    "daterange": mrange.DateRange,
-    "tsrange": mrange.DateTimeRange,
-    "tstzrange": mrange.DateTimeTZRange,
-}
 type2sub = {
     "int4range": "int4",
     "int8range": "int8",
@@ -58,7 +50,7 @@ samples = [
     "int4range int8range numrange daterange tsrange tstzrange".split(),
 )
 def test_dump_builtin_empty(conn, pgtype):
-    r = type2cls[pgtype](empty=True)
+    r = Range(empty=True)
     cur = conn.execute(f"select 'empty'::{pgtype} = %s", (r,))
     assert cur.fetchone()[0] is True
 
@@ -68,8 +60,8 @@ def test_dump_builtin_empty(conn, pgtype):
     "int4range int8range numrange daterange tsrange tstzrange".split(),
 )
 def test_dump_builtin_array(conn, pgtype):
-    r1 = type2cls[pgtype](empty=True)
-    r2 = type2cls[pgtype](bounds="()")
+    r1 = Range(empty=True)
+    r2 = Range(bounds="()")
     cur = conn.execute(
         f"select array['empty'::{pgtype}, '(,)'::{pgtype}] = %s",
         ([r1, r2],),
@@ -79,10 +71,10 @@ def test_dump_builtin_array(conn, pgtype):
 
 @pytest.mark.parametrize("pgtype, min, max, bounds", samples)
 def test_dump_builtin_range(conn, pgtype, min, max, bounds):
-    r = type2cls[pgtype](min, max, bounds)
+    r = Range(min, max, bounds)
     sub = type2sub[pgtype]
     cur = conn.execute(
-        f"select {pgtype}(%s::{sub}, %s::{sub}, %s) = %s",
+        f"select {pgtype}(%s::{sub}, %s::{sub}, %s) = %s::{pgtype}",
         (min, max, bounds, r),
     )
     assert cur.fetchone()[0] is True
@@ -93,9 +85,9 @@ def test_dump_builtin_range(conn, pgtype, min, max, bounds):
     "int4range int8range numrange daterange tsrange tstzrange".split(),
 )
 def test_load_builtin_empty(conn, pgtype):
-    r = type2cls[pgtype](empty=True)
+    r = Range(empty=True)
     (got,) = conn.execute(f"select 'empty'::{pgtype}").fetchone()
-    assert type(got) is type2cls[pgtype]
+    assert type(got) is Range
     assert got == r
     assert not got
     assert got.isempty
@@ -106,9 +98,9 @@ def test_load_builtin_empty(conn, pgtype):
     "int4range int8range numrange daterange tsrange tstzrange".split(),
 )
 def test_load_builtin_inf(conn, pgtype):
-    r = type2cls[pgtype](bounds="()")
+    r = Range(bounds="()")
     (got,) = conn.execute(f"select '(,)'::{pgtype}").fetchone()
-    assert type(got) is type2cls[pgtype]
+    assert type(got) is Range
     assert got == r
     assert got
     assert not got.isempty
@@ -121,8 +113,8 @@ def test_load_builtin_inf(conn, pgtype):
     "int4range int8range numrange daterange tsrange tstzrange".split(),
 )
 def test_load_builtin_array(conn, pgtype):
-    r1 = type2cls[pgtype](empty=True)
-    r2 = type2cls[pgtype](bounds="()")
+    r1 = Range(empty=True)
+    r2 = Range(bounds="()")
     (got,) = conn.execute(
         f"select array['empty'::{pgtype}, '(,)'::{pgtype}]"
     ).fetchone()
@@ -131,7 +123,7 @@ def test_load_builtin_array(conn, pgtype):
 
 @pytest.mark.parametrize("pgtype, min, max, bounds", samples)
 def test_load_builtin_range(conn, pgtype, min, max, bounds):
-    r = type2cls[pgtype](min, max, bounds)
+    r = Range(min, max, bounds)
     sub = type2sub[pgtype]
     cur = conn.execute(
         f"select {pgtype}(%s::{sub}, %s::{sub}, %s)", (min, max, bounds)
@@ -172,7 +164,7 @@ def test_fetch_info(conn, testrange, name, subtype):
     assert info.name == "testrange"
     assert info.oid > 0
     assert info.oid != info.array_oid > 0
-    assert info.subtype_oid == builtins[subtype].oid
+    assert info.range_subtype == builtins[subtype].oid
 
 
 def test_fetch_info_not_found(conn):
@@ -187,7 +179,7 @@ async def test_fetch_info_async(aconn, testrange, name, subtype):
     assert info.name == "testrange"
     assert info.oid > 0
     assert info.oid != info.array_oid > 0
-    assert info.subtype_oid == builtins[subtype].oid
+    assert info.range_subtype == builtins[subtype].oid
 
 
 @pytest.mark.asyncio
@@ -197,28 +189,22 @@ async def test_fetch_info_not_found_async(aconn):
 
 
 def test_dump_custom_empty(conn, testrange):
-    class StrRange(mrange.Range):
-        pass
-
     info = mrange.RangeInfo.fetch(conn, "testrange")
-    info.register(conn, range_class=StrRange)
+    info.register(conn)
 
-    r = StrRange(empty=True)
+    r = Range(empty=True)
     cur = conn.execute("select 'empty'::testrange = %s", (r,))
     assert cur.fetchone()[0] is True
 
 
 def test_dump_quoting(conn, testrange):
-    class StrRange(mrange.Range):
-        pass
-
     info = mrange.RangeInfo.fetch(conn, "testrange")
-    info.register(conn, range_class=StrRange)
+    info.register(conn)
     cur = conn.cursor()
     for i in range(1, 254):
         cur.execute(
             "select ascii(lower(%(r)s)) = %(low)s and ascii(upper(%(r)s)) = %(up)s",
-            {"r": StrRange(chr(i), chr(i + 1)), "low": i, "up": i + 1},
+            {"r": Range(chr(i), chr(i + 1)), "low": i, "up": i + 1},
         )
         assert cur.fetchone()[0] is True
 
@@ -400,16 +386,6 @@ class TestRangeObject:
     def test_eq_wrong_type(self):
         assert Range(10, 20) != ()
 
-    def test_eq_subclass(self):
-        class IntRange(mrange.DecimalRange):
-            pass
-
-        class PositiveIntRange(IntRange):
-            pass
-
-        assert Range(10, 20) == IntRange(10, 20)
-        assert PositiveIntRange(10, 20) == IntRange(10, 20)
-
     # as the postgres docs describe for the server-side stuff,
     # ordering is rather arbitrary, but will remain stable
     # and consistent.
@@ -481,13 +457,7 @@ class TestRangeObject:
     def test_str(self):
         """
         Range types should have a short and readable ``str`` implementation.
-
-        Using ``repr`` for all string conversions can be very unreadable for
-        longer types like ``DateTimeTZRange``.
         """
-
-        # Using the "u" prefix to make sure we have the proper return types in
-        # Python2
         expected = [
             "(0, 4)",
             "[0, 4]",
@@ -511,7 +481,7 @@ class TestRangeObject:
         string conversion.
         """
         tz = dt.timezone(dt.timedelta(hours=-5))
-        r = mrange.DateTimeTZRange(
+        r = mrange.Range(
             dt.datetime(2010, 1, 1, tzinfo=tz),
             dt.datetime(2011, 1, 1, tzinfo=tz),
         )

@@ -24,9 +24,10 @@ $$,
 
 py_oids_sql = """
 select format(
-        '(%L, %s, %s, %L, %L),',
-        typname, oid, typarray, oid::regtype, typdelim)
-    from pg_type
+        '(%L, %s, %s, %s, %L, %L),',
+        typname, oid, typarray, coalesce(rngsubtype, 0), oid::regtype, typdelim)
+    from pg_type t
+    left join pg_range r on t.oid = rngtypid
     where oid < 10000
     and typname !~ all('{^(_|pg_),_handler$}')
     order by typname

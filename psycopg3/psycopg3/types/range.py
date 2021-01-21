@@ -6,7 +6,7 @@ Support for range types adaptation.
 
 import re
 from typing import Any, Dict, Generic, Optional, Sequence, TypeVar, Type, Union
-from typing import cast, TYPE_CHECKING
+from typing import cast, Tuple, TYPE_CHECKING
 from decimal import Decimal
 from datetime import date, datetime
 
@@ -14,7 +14,7 @@ from .. import sql
 from .. import errors as e
 from ..pq import Format
 from ..oids import builtins, TypeInfo
-from ..adapt import Buffer, Dumper, Loader
+from ..adapt import Buffer, Dumper, Loader, Format as Pg3Format
 from ..proto import AdaptContext
 
 from . import array
@@ -217,10 +217,16 @@ class Range(Generic[T]):
 
 class RangeDumper(SequenceDumper):
     """
-    Generic dumper for a range.
+    Dumper for range types.
 
-    Subclasses shoud specify the type oid.
+    The dumper can upgrade to one specific for a different range type.
     """
+
+    format = Format.TEXT
+
+    def __init__(self, cls: type, context: Optional[AdaptContext] = None):
+        super().__init__(cls, context)
+        self.sub_dumper: Optional[Dumper] = None
 
     def dump(self, obj: Range[Any]) -> bytes:
         if not obj:
@@ -235,6 +241,66 @@ class RangeDumper(SequenceDumper):
 
     _re_needs_quotes = re.compile(br'[",\\\s()\[\]]')
 
+    def get_key(self, obj: Range[Any], format: Pg3Format) -> Tuple[type, ...]:
+        item = self._get_item(obj)
+        if item is not None:
+            # TODO: binary range support
+            sd = self._tx.get_dumper(item, Pg3Format.TEXT)
+            return (self.cls, sd.cls)
+        else:
+            return (self.cls,)
+
+    def upgrade(self, obj: Range[Any], format: Pg3Format) -> "RangeDumper":
+        item = self._get_item(obj)
+        if item is None:
+            return RangeDumper(self.cls)
+
+        # TODO: binary range support
+        sd = self._tx.get_dumper(item, Pg3Format.TEXT)
+        dumper = type(self)(self.cls, self._tx)
+        dumper.sub_dumper = sd
+        dumper.oid = self._get_range_oid(sd.oid)
+        return dumper
+
+    def _get_item(self, obj: Range[Any]) -> Any:
+        """
+        Return a member representative of the range
+
+        If the range is numeric return the bigger number in absolute value, to
+        decide the best type to use. Otherwise return any non-null in the
+        range. Return None for an empty range.
+        """
+        lo, up = obj._lower, obj._upper
+        if lo is None:
+            rv = up
+        elif up is None:
+            rv = lo
+        else:
+            if isinstance(lo, int):
+                rv = up if abs(up) > abs(lo) else lo
+            else:
+                rv = up
+
+        # Upgrade int2 -> int4 as there's no int2range
+        if isinstance(rv, int) and -(2 ** 15) <= rv < 2 ** 15:
+            rv = 2 ** 15
+        return rv
+
+    def _get_range_oid(self, sub_oid: int) -> int:
+        """
+        Return the oid of the range from the oid of its elements.
+
+        Raise InterfaceError if not found.
+
+        TODO: we shouldn't consider builtins only, but other adaptation
+        contexts too
+        """
+        info = builtins.get_range(sub_oid)
+        if info:
+            return info.oid
+        else:
+            raise e.InterfaceError(f"range for type {sub_oid} unknown")
+
 
 class RangeLoader(BaseCompositeLoader, Generic[T]):
     """Generic loader for a range.
@@ -243,11 +309,10 @@ class RangeLoader(BaseCompositeLoader, Generic[T]):
     """
 
     subtype_oid: int
-    cls: Type[Range[T]]
 
     def load(self, data: Buffer) -> Range[T]:
         if data == b"empty":
-            return self.cls(empty=True)
+            return Range(empty=True)
 
         cast = self._tx.get_loader(self.subtype_oid, format=Format.TEXT).load
         bounds = _int2parens[data[0]] + _int2parens[data[-1]]
@@ -255,64 +320,10 @@ class RangeLoader(BaseCompositeLoader, Generic[T]):
             cast(token) if token is not None else None
             for token in self._parse_record(data[1:-1])
         )
-        return self.cls(min, max, bounds)
+        return Range(min, max, bounds)
 
 
 _int2parens = {ord(c): c for c in "[]()"}
-
-
-# Python wrappers for builtin range types
-
-
-class Int4Range(Range[int]):
-    pass
-
-
-class Int8Range(Range[int]):
-    pass
-
-
-class DecimalRange(Range[Decimal]):
-    pass
-
-
-class DateRange(Range[date]):
-    pass
-
-
-class DateTimeRange(Range[datetime]):
-    pass
-
-
-class DateTimeTZRange(Range[datetime]):
-    pass
-
-
-# Dumpers for builtin range types
-
-
-class Int4RangeDumper(RangeDumper):
-    _oid = builtins["int4range"].oid
-
-
-class Int8RangeDumper(RangeDumper):
-    _oid = builtins["int8range"].oid
-
-
-class NumRangeDumper(RangeDumper):
-    _oid = builtins["numrange"].oid
-
-
-class DateRangeDumper(RangeDumper):
-    _oid = builtins["daterange"].oid
-
-
-class TimestampRangeDumper(RangeDumper):
-    _oid = builtins["tsrange"].oid
-
-
-class TimestampTZRangeDumper(RangeDumper):
-    _oid = builtins["tstzrange"].oid
 
 
 # Loaders for builtin range types
@@ -320,32 +331,26 @@ class TimestampTZRangeDumper(RangeDumper):
 
 class Int4RangeLoader(RangeLoader[int]):
     subtype_oid = builtins["int4"].oid
-    cls = Int4Range
 
 
 class Int8RangeLoader(RangeLoader[int]):
     subtype_oid = builtins["int8"].oid
-    cls = Int8Range
 
 
 class NumericRangeLoader(RangeLoader[Decimal]):
     subtype_oid = builtins["numeric"].oid
-    cls = DecimalRange
 
 
 class DateRangeLoader(RangeLoader[date]):
     subtype_oid = builtins["date"].oid
-    cls = DateRange
 
 
 class TimestampRangeLoader(RangeLoader[datetime]):
     subtype_oid = builtins["timestamp"].oid
-    cls = DateTimeRange
 
 
 class TimestampTZRangeLoader(RangeLoader[datetime]):
     subtype_oid = builtins["timestamptz"].oid
-    cls = DateTimeTZRange
 
 
 class RangeInfo(TypeInfo):
@@ -356,16 +361,6 @@ class RangeInfo(TypeInfo):
     - read information about a range type using `fetch()` and `fetch_async()`
     - configure a composite type adaptation using `register()`
     """
-
-    def __init__(
-        self,
-        name: str,
-        oid: int,
-        array_oid: int,
-        subtype_oid: int,
-    ):
-        super().__init__(name, oid, array_oid)
-        self.subtype_oid = subtype_oid
 
     @classmethod
     def fetch(
@@ -392,22 +387,15 @@ class RangeInfo(TypeInfo):
     def register(
         self,
         context: Optional[AdaptContext] = None,
-        range_class: Optional[Type[Range[Any]]] = None,
     ) -> None:
-        if not range_class:
-            range_class = type(self.name.title(), (Range,), {})
-
-        # generate and register a customized text dumper
-        dumper: Type[Dumper] = type(
-            f"{self.name.title()}Dumper", (RangeDumper,), {"_oid": self.oid}
-        )
-        dumper.register(range_class, context=context)
+        # A new dumper is not required. However TODO we will need to register
+        # the dumper in the adapters type registry, when we have one.
 
         # generate and register a customized text loader
         loader: Type[Loader] = type(
             f"{self.name.title()}Loader",
             (RangeLoader,),
-            {"cls": range_class, "subtype_oid": self.subtype_oid},
+            {"subtype_oid": self.range_subtype},
         )
         loader.register(self.oid, context=context)
 
@@ -430,7 +418,7 @@ class RangeInfo(TypeInfo):
 
     _info_query = """\
 select t.typname as name, t.oid as oid, t.typarray as array_oid,
-    r.rngsubtype as subtype_oid
+    r.rngsubtype as range_subtype
 from pg_type t
 join pg_range r on t.oid = r.rngtypid
 where t.oid = %(name)s::regtype
