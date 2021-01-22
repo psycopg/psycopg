@@ -179,14 +179,19 @@ The `!AsyncCursor` class
     .. automethod:: executemany(query: Query, params_seq: Sequence[Args])
     .. automethod:: copy(statement: Query) -> AsyncCopy
 
-        .. note:: it must be called as ``async with cur.copy() as copy: ...``
+        .. note:: It must be called as ``async with cur.copy() as copy: ...``
+
+    .. automethod:: stream(query, params=None) -> AsyncIterable[Sequence[Any]]
+
+        .. note:: It must be called as ``async for record in cur.stream(query):
+            ...``
 
     .. automethod:: fetchone
     .. automethod:: fetchmany
     .. automethod:: fetchall
 
-    .. note:: you can also use ``async for record in cursor`` to iterate on
-        the async cursor results.
+    .. note:: You can also use ``async for record in cursor: ...`` to iterate
+        on the async cursor results.
 
 
 Cursor support objects
