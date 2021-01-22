@@ -39,7 +39,7 @@ extras_require = {
     "dev": [
         "black",
         "flake8 >= 3.8, < 3.9",
-        "mypy >= 0.790",
+        "mypy >= 0.800",
     ],
 }
 
