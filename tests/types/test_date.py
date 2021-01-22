@@ -270,6 +270,29 @@ def test_load_datetimetz_tzname(conn, val, expr, datestyle_in, datestyle_out):
     assert cur.fetchone()[0] == as_dt(val)
 
 
+@pytest.mark.parametrize(
+    "val, type",
+    [
+        ("2000,1,2,3,4,5,6", "timestamp"),
+        ("2000,1,2,3,4,5,6~0", "timestamptz"),
+        ("2000,1,2,3,4,5,6~2", "timestamptz"),
+    ],
+)
+@pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
+def test_dump_datetime_tz_or_not_tz(conn, val, type, fmt_in):
+    if fmt_in == Format.BINARY:
+        pytest.xfail("binary datetime not implemented")
+    val = as_dt(val)
+    cur = conn.cursor()
+    cur.execute(
+        f"select pg_typeof(%{fmt_in}) = %s::regtype, %{fmt_in}",
+        [val, type, val],
+    )
+    rec = cur.fetchone()
+    assert rec[0] is True, type
+    assert rec[1] == val
+
+
 #
 # time tests
 #
@@ -393,6 +416,29 @@ def test_load_timetz_24(conn):
     cur.execute("select '24:00'::timetz")
     with pytest.raises(DataError):
         cur.fetchone()[0]
+
+
+@pytest.mark.parametrize(
+    "val, type",
+    [
+        ("3,4,5,6", "time"),
+        ("3,4,5,6~0", "timetz"),
+        ("3,4,5,6~2", "timetz"),
+    ],
+)
+@pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
+def test_dump_time_tz_or_not_tz(conn, val, type, fmt_in):
+    if fmt_in == Format.BINARY:
+        pytest.xfail("binary time not implemented")
+    val = as_time(val)
+    cur = conn.cursor()
+    cur.execute(
+        f"select pg_typeof(%{fmt_in}) = %s::regtype, %{fmt_in}",
+        [val, type, val],
+    )
+    rec = cur.fetchone()
+    assert rec[0] is True, type
+    assert rec[1] == val
 
 
 #

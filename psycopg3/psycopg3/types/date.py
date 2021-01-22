@@ -7,11 +7,11 @@ Adapters for date/time types.
 import re
 import sys
 from datetime import date, datetime, time, timedelta
-from typing import cast, Optional
+from typing import cast, Optional, Tuple, Union
 
 from ..pq import Format
 from ..oids import builtins
-from ..adapt import Buffer, Dumper, Loader
+from ..adapt import Buffer, Dumper, Loader, Format as Pg3Format
 from ..proto import AdaptContext
 from ..errors import InterfaceError, DataError
 
@@ -30,21 +30,66 @@ class DateDumper(Dumper):
 class TimeDumper(Dumper):
 
     format = Format.TEXT
-    _oid = builtins["timetz"].oid
+
+    # Can change to timetz type if the object dumped is naive
+    _oid = builtins["time"].oid
 
     def dump(self, obj: time) -> bytes:
         return str(obj).encode("utf8")
 
+    def get_key(
+        self, obj: time, format: Pg3Format
+    ) -> Union[type, Tuple[type]]:
+        # Use (cls,) to report the need to upgrade  to a dumper for timetz (the
+        # Frankenstein of the data types).
+        if not obj.tzinfo:
+            return self.cls
+        else:
+            return (self.cls,)
 
-class DateTimeDumper(Dumper):
+    def upgrade(self, obj: time, format: Pg3Format) -> "Dumper":
+        if not obj.tzinfo:
+            return self
+        else:
+            return TimeTzDumper(self.cls)
+
+
+class TimeTzDumper(TimeDumper):
+
+    _oid = builtins["timetz"].oid
+
+
+class DateTimeTzDumper(Dumper):
 
     format = Format.TEXT
+
+    # Can change to timestamp type if the object dumped is naive
     _oid = builtins["timestamptz"].oid
 
-    def dump(self, obj: date) -> bytes:
+    def dump(self, obj: datetime) -> bytes:
         # NOTE: whatever the PostgreSQL DateStyle input format (DMY, MDY, YMD)
         # the YYYY-MM-DD is always understood correctly.
         return str(obj).encode("utf8")
+
+    def get_key(
+        self, obj: datetime, format: Pg3Format
+    ) -> Union[type, Tuple[type]]:
+        # Use (cls,) to report the need to upgrade (downgrade, actually) to a
+        # dumper for naive timestamp.
+        if obj.tzinfo:
+            return self.cls
+        else:
+            return (self.cls,)
+
+    def upgrade(self, obj: datetime, format: Pg3Format) -> "Dumper":
+        if obj.tzinfo:
+            return self
+        else:
+            return DateTimeDumper(self.cls)
+
+
+class DateTimeDumper(DateTimeTzDumper):
+    _oid = builtins["timestamp"].oid
 
 
 class TimeDeltaDumper(Dumper):

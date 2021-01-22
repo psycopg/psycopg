@@ -66,6 +66,8 @@ from .singletons import (
 from .date import (
     DateDumper,
     TimeDumper,
+    TimeTzDumper,
+    DateTimeTzDumper,
     DateTimeDumper,
     TimeDeltaDumper,
     DateLoader,
@@ -178,7 +180,7 @@ def register_default_globals(ctx: AdaptContext) -> None:
 
     DateDumper.register("datetime.date", ctx)
     TimeDumper.register("datetime.time", ctx)
-    DateTimeDumper.register("datetime.datetime", ctx)
+    DateTimeTzDumper.register("datetime.datetime", ctx)
     TimeDeltaDumper.register("datetime.timedelta", ctx)
     DateLoader.register("date", ctx)
     TimeLoader.register("time", ctx)
