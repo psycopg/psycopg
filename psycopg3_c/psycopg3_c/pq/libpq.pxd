@@ -230,6 +230,9 @@ cdef extern from "libpq-fe.h":
     int PQisnonblocking(const PGconn *conn)
     int PQflush(PGconn *conn)
 
+    # 33.5. Retrieving Query Results Row-by-Row
+    int PQsetSingleRowMode(PGconn *conn)
+
     # 33.6. Canceling Queries in Progress
     PGcancel *PQgetCancel(PGconn *conn)
     void PQfreeCancel(PGcancel *cancel)

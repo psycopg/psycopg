@@ -500,6 +500,10 @@ class PGconn:
             raise PQerror(f"flushing failed: {error_message(self)}")
         return rv
 
+    def set_single_row_mode(self) -> None:
+        if not impl.PQsetSingleRowMode(self.pgconn_ptr):
+            raise PQerror("setting single row mode failed")
+
     def get_cancel(self) -> "PGcancel":
         """
         Create an object with the information needed to cancel a command.

@@ -7,12 +7,13 @@ psycopg3 cursor objects
 import sys
 from types import TracebackType
 from typing import Any, AsyncIterator, Callable, Generic, Iterator, List
-from typing import Optional, Sequence, Type, TYPE_CHECKING
+from typing import Optional, NoReturn, Sequence, Type, TYPE_CHECKING
 from contextlib import contextmanager
 
 from . import pq
 from . import adapt
 from . import errors as e
+from . import generators
 
 from .pq import ExecStatus, Format
 from .copy import Copy, AsyncCopy
@@ -39,8 +40,6 @@ if pq.__impl__ == "c":
     execute = _psycopg3.execute
 
 else:
-    from . import generators
-
     execute = generators.execute
 
 
@@ -245,6 +244,44 @@ class BaseCursor(Generic[ConnectionType]):
 
         self._execute_results(results)
 
+    def _stream_send_gen(
+        self, query: Query, params: Optional[Params] = None
+    ) -> PQGen[None]:
+        """Generator to send the query for `Cursor.stream()`."""
+        yield from self._start_query(query)
+        pgq = self._convert_query(query, params)
+        self._execute_send(pgq, no_pqexec=True)
+        self._conn.pgconn.set_single_row_mode()
+        self._last_query = query
+
+    def _stream_fetchone_gen(self) -> PQGen[Optional["PGresult"]]:
+        yield from generators.send(self._conn.pgconn)
+        res = yield from generators.fetch(self._conn.pgconn)
+        if res is None:
+            return None
+
+        elif res.status == ExecStatus.SINGLE_TUPLE:
+            self.pgresult = res  # will set it on the transformer too
+            # TODO: the transformer may do excessive work here: create a
+            # path that doesn't clear the loaders every time.
+            return res
+
+        elif res.status in (ExecStatus.TUPLES_OK, ExecStatus.COMMAND_OK):
+            # End of single row results
+            status = res.status
+            while res:
+                res = yield from generators.fetch(self._conn.pgconn)
+            if status != ExecStatus.TUPLES_OK:
+                raise e.ProgrammingError(
+                    "the operation in stream() didn't produce a result"
+                )
+            return None
+
+        else:
+            # Errors, unexpected values
+            self._raise_from_results([res])
+            return None  # TODO: shouldn't be needed
+
     def _start_query(self, query: Optional[Query] = None) -> PQGen[None]:
         """Generator to start the processing of a query.
 
@@ -323,7 +360,7 @@ class BaseCursor(Generic[ConnectionType]):
 
         for res in results:
             if res.status not in self._status_ok:
-                return self._raise_from_results(results)
+                self._raise_from_results(results)
 
         self._results = list(results)
         self.pgresult = results[0]
@@ -336,7 +373,7 @@ class BaseCursor(Generic[ConnectionType]):
 
         return
 
-    def _raise_from_results(self, results: Sequence["PGresult"]) -> None:
+    def _raise_from_results(self, results: Sequence["PGresult"]) -> NoReturn:
         statuses = {res.status for res in results}
         badstats = statuses.difference(self._status_ok)
         if results[-1].status == ExecStatus.FATAL_ERROR:
@@ -345,7 +382,7 @@ class BaseCursor(Generic[ConnectionType]):
             )
         elif statuses.intersection(self._status_copy):
             raise e.ProgrammingError(
-                "COPY cannot be used with execute(); use copy() insead"
+                "COPY cannot be used with this method; use copy() insead"
             )
         else:
             raise e.InternalError(
@@ -438,6 +475,19 @@ class Cursor(BaseCursor["Connection"]):
         """
         with self._conn.lock:
             self._conn.wait(self._executemany_gen(query, params_seq))
+
+    def stream(
+        self, query: Query, params: Optional[Params] = None
+    ) -> Iterator[Sequence[Any]]:
+        """
+        Iterate row-by-row on a result from the database.
+        """
+        with self._conn.lock:
+            self._conn.wait(self._stream_send_gen(query, params))
+            while self._conn.wait(self._stream_fetchone_gen()):
+                rec = self._tx.load_row(0)
+                assert rec is not None
+                yield rec
 
     def fetchone(self) -> Optional[Sequence[Any]]:
         """
@@ -538,6 +588,16 @@ class AsyncCursor(BaseCursor["AsyncConnection"]):
     ) -> None:
         async with self._conn.lock:
             await self._conn.wait(self._executemany_gen(query, params_seq))
+
+    async def stream(
+        self, query: Query, params: Optional[Params] = None
+    ) -> AsyncIterator[Sequence[Any]]:
+        async with self._conn.lock:
+            await self._conn.wait(self._stream_send_gen(query, params))
+            while await self._conn.wait(self._stream_fetchone_gen()):
+                rec = self._tx.load_row(0)
+                assert rec is not None
+                yield rec
 
     async def fetchone(self) -> Optional[Sequence[Any]]:
         self._check_result()

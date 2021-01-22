@@ -82,6 +82,28 @@ def test_send_query_compact_test(pgconn):
         pgconn.send_query(b"select 1")
 
 
+def test_single_row_mode(pgconn):
+    pgconn.send_query(b"select generate_series(1,2)")
+    pgconn.set_single_row_mode()
+
+    results = execute_wait(pgconn)
+    assert len(results) == 3
+
+    res = results[0]
+    assert res.status == pq.ExecStatus.SINGLE_TUPLE
+    assert res.ntuples == 1
+    assert res.get_value(0, 0) == b"1"
+
+    res = results[1]
+    assert res.status == pq.ExecStatus.SINGLE_TUPLE
+    assert res.ntuples == 1
+    assert res.get_value(0, 0) == b"2"
+
+    res = results[2]
+    assert res.status == pq.ExecStatus.TUPLES_OK
+    assert res.ntuples == 0
+
+
 def test_send_query_params(pgconn):
     pgconn.send_query_params(b"select $1::int + $2", [b"5", b"3"])
     (res,) = execute_wait(pgconn)

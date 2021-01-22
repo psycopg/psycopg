@@ -1,10 +1,12 @@
 import gc
 import pickle
 import weakref
+import datetime as dt
 
 import pytest
 
 import psycopg3
+from psycopg3 import sql
 from psycopg3.oids import builtins
 from psycopg3.adapt import Format
 
@@ -294,6 +296,46 @@ def test_query_params_executemany(conn):
     # TODO: cannot really check this: after introduced row_dumpers, this
     # fails dumping, not query passing.
     # assert cur.params == [b"x"]
+
+
+def test_stream(conn):
+    cur = conn.cursor()
+    recs = []
+    for rec in cur.stream(
+        "select i, '2021-01-01'::date + i from generate_series(1, %s) as i",
+        [2],
+    ):
+        recs.append(rec)
+
+    assert recs == [(1, dt.date(2021, 1, 2)), (2, dt.date(2021, 1, 3))]
+
+
+def test_stream_sql(conn):
+    cur = conn.cursor()
+    recs = list(
+        cur.stream(
+            sql.SQL(
+                "select i, '2021-01-01'::date + i from generate_series(1, {}) as i"
+            ).format(2)
+        )
+    )
+
+    assert recs == [(1, dt.date(2021, 1, 2)), (2, dt.date(2021, 1, 3))]
+
+
+@pytest.mark.parametrize(
+    "query",
+    [
+        "create table test_stream_badq ()",
+        "copy (select 1) to stdout",
+        "wat?",
+    ],
+)
+def test_stream_badquery(conn, query):
+    cur = conn.cursor()
+    with pytest.raises(psycopg3.ProgrammingError):
+        for rec in cur.stream(query):
+            pass
 
 
 class TestColumn:

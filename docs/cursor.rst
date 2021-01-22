@@ -85,6 +85,21 @@ The `!Cursor` class
 
         See :ref:`copy` for information about :sql:`COPY`.
 
+    .. automethod:: stream(query, params=None) -> Iterable[Sequence[Any]]
+
+        This command is similar to execute + iter; however it supports endless
+        data streams. The feature is not available in PostgreSQL, but some
+        implementations exist: Materialize `TAIL`__ and CockroachDB
+        `CHANGEFEED`__ for instance.
+
+        The feature, and the API supporting it, are still experimental.
+        Beware... 👀
+
+        .. __: https://materialize.com/docs/sql/tail/#main
+        .. __: https://www.cockroachlabs.com/docs/stable/changefeed-for.html
+
+        The parameters are the same of `execute()`.
+
     .. attribute:: format
 
         The format of the data returned by the queries. It can be selected

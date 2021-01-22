@@ -71,7 +71,7 @@ def execute(pgconn: PGconn) -> PQGen[List[PGresult]]:
     or error).
     """
     yield from send(pgconn)
-    rv = yield from _fetch(pgconn)
+    rv = yield from fetch_many(pgconn)
     return rv
 
 
@@ -83,7 +83,7 @@ def send(pgconn: PGconn) -> PQGen[None]:
     similar. Flush the query and then return the result using nonblocking
     functions.
 
-    After this generator has finished you may want to cycle using `_fetch()`
+    After this generator has finished you may want to cycle using `fetch()`
     to retrieve the results available.
     """
     while 1:
@@ -94,12 +94,12 @@ def send(pgconn: PGconn) -> PQGen[None]:
         ready = yield Wait.RW
         if ready & Ready.R:
             # This call may read notifies: they will be saved in the
-            # PGconn buffer and passed to Python later, in `_fetch()`.
+            # PGconn buffer and passed to Python later, in `fetch()`.
             pgconn.consume_input()
         continue
 
 
-def _fetch(pgconn: PGconn) -> PQGen[List[PGresult]]:
+def fetch_many(pgconn: PGconn) -> PQGen[List[PGresult]]:
     """
     Generator retrieving results from the database without blocking.
 
@@ -108,28 +108,13 @@ def _fetch(pgconn: PGconn) -> PQGen[List[PGresult]]:
 
     Return the list of results returned by the database (whether success
     or error).
-
-    Note that this generator doesn't yield the socket number, which must have
-    been already sent in the sending part of the cycle.
     """
     results: List[PGresult] = []
     while 1:
-        pgconn.consume_input()
-        if pgconn.is_busy():
-            yield Wait.R
-            continue
-
-        # Consume notifies
-        while 1:
-            n = pgconn.notifies()
-            if n is None:
-                break
-            if pgconn.notify_handler:
-                pgconn.notify_handler(n)
-
-        res = pgconn.get_result()
-        if res is None:
+        res = yield from fetch(pgconn)
+        if not res:
             break
+
         results.append(res)
         if res.status in _copy_statuses:
             # After entering copy mode the libpq will create a phony result
@@ -137,6 +122,32 @@ def _fetch(pgconn: PGconn) -> PQGen[List[PGresult]]:
             break
 
     return results
+
+
+def fetch(pgconn: PGconn) -> PQGen[Optional[PGresult]]:
+    """
+    Generator retrieving a single result from the database without blocking.
+
+    The query must have already been sent to the server, so pgconn.flush() has
+    already returned 0.
+
+    Return a result from the database (whether success or error).
+    """
+    while 1:
+        pgconn.consume_input()
+        if not pgconn.is_busy():
+            break
+        yield Wait.R
+
+    # Consume notifies
+    while 1:
+        n = pgconn.notifies()
+        if not n:
+            break
+        if pgconn.notify_handler:
+            pgconn.notify_handler(n)
+
+    return pgconn.get_result()
 
 
 _copy_statuses = (
@@ -176,7 +187,7 @@ def copy_from(pgconn: PGconn) -> PQGen[Union[memoryview, PGresult]]:
         return data
 
     # Retrieve the final result of copy
-    (result,) = yield from _fetch(pgconn)
+    (result,) = yield from fetch_many(pgconn)
     if result.status != ExecStatus.COMMAND_OK:
         encoding = py_codecs.get(
             pgconn.parameter_status(b"client_encoding") or "", "utf-8"
@@ -205,7 +216,7 @@ def copy_end(pgconn: PGconn, error: Optional[bytes]) -> PQGen[PGresult]:
             break
 
     # Retrieve the final result of copy
-    (result,) = yield from _fetch(pgconn)
+    (result,) = yield from fetch_many(pgconn)
     if result.status != ExecStatus.COMMAND_OK:
         encoding = py_codecs.get(
             pgconn.parameter_status(b"client_encoding") or "", "utf-8"

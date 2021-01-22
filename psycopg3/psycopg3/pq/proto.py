@@ -214,6 +214,9 @@ class PGconn(Protocol):
     def flush(self) -> int:
         ...
 
+    def set_single_row_mode(self) -> None:
+        ...
+
     def get_cancel(self) -> "PGcancel":
         ...
 

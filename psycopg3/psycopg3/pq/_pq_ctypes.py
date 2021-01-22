@@ -499,6 +499,12 @@ PQflush.argtypes = [PGconn_ptr]
 PQflush.restype = c_int
 
 
+# 33.5. Retrieving Query Results Row-by-Row
+PQsetSingleRowMode = pq.PQsetSingleRowMode
+PQsetSingleRowMode.argtypes = [PGconn_ptr]
+PQsetSingleRowMode.restype = c_int
+
+
 # 33.6. Canceling Queries in Progress
 
 PQgetCancel = pq.PQgetCancel

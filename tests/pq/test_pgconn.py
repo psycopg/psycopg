@@ -356,6 +356,14 @@ def test_ssl_in_use(pgconn):
         pgconn.ssl_in_use
 
 
+def test_set_single_row_mode(pgconn):
+    with pytest.raises(pq.PQerror):
+        pgconn.set_single_row_mode()
+
+    pgconn.send_query(b"select 1")
+    pgconn.set_single_row_mode()
+
+
 def test_cancel(pgconn):
     cancel = pgconn.get_cancel()
     cancel.cancel()

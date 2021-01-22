@@ -1,8 +1,10 @@
 import gc
 import pytest
 import weakref
+import datetime as dt
 
 import psycopg3
+from psycopg3 import sql
 from psycopg3.adapt import Format
 
 pytestmark = pytest.mark.asyncio
@@ -299,6 +301,46 @@ async def test_query_params_executemany(aconn):
     # TODO: cannot really check this: after introduced row_dumpers, this
     # fails dumping, not query passing.
     # assert cur.params == [b"x"]
+
+
+async def test_stream(aconn):
+    cur = await aconn.cursor()
+    recs = []
+    async for rec in cur.stream(
+        "select i, '2021-01-01'::date + i from generate_series(1, %s) as i",
+        [2],
+    ):
+        recs.append(rec)
+
+    assert recs == [(1, dt.date(2021, 1, 2)), (2, dt.date(2021, 1, 3))]
+
+
+async def test_stream_sql(aconn):
+    cur = await aconn.cursor()
+    recs = []
+    async for rec in cur.stream(
+        sql.SQL(
+            "select i, '2021-01-01'::date + i from generate_series(1, {}) as i"
+        ).format(2)
+    ):
+        recs.append(rec)
+
+    assert recs == [(1, dt.date(2021, 1, 2)), (2, dt.date(2021, 1, 3))]
+
+
+@pytest.mark.parametrize(
+    "query",
+    [
+        "create table test_stream_badq ()",
+        "copy (select 1) to stdout",
+        "wat?",
+    ],
+)
+async def test_stream_badquery(aconn, query):
+    cur = await aconn.cursor()
+    with pytest.raises(psycopg3.ProgrammingError):
+        async for rec in cur.stream(query):
+            pass
 
 
 async def test_str(aconn):

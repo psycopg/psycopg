@@ -409,6 +409,10 @@ cdef class PGconn:
             raise PQerror(f"flushing failed: {error_message(self)}")
         return rv
 
+    def set_single_row_mode(self) -> None:
+        if not libpq.PQsetSingleRowMode(self.pgconn_ptr):
+            raise PQerror("setting single row mode failed")
+
     def get_cancel(self) -> PGcancel:
         cdef libpq.PGcancel *ptr = libpq.PQgetCancel(self.pgconn_ptr)
         if not ptr:
