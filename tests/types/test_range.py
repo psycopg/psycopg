@@ -202,8 +202,14 @@ def test_dump_quoting(conn, testrange):
     info.register(conn)
     cur = conn.cursor()
     for i in range(1, 254):
+        # TODO: when types registry is merged to adaptation context and we
+        # are able to establish "the type of the range whose element is text",
+        # this should work without ::testrange cast.
         cur.execute(
-            "select ascii(lower(%(r)s)) = %(low)s and ascii(upper(%(r)s)) = %(up)s",
+            """
+            select ascii(lower(%(r)s::testrange)) = %(low)s
+                and ascii(upper(%(r)s::testrange)) = %(up)s
+            """,
             {"r": Range(chr(i), chr(i + 1)), "low": i, "up": i + 1},
         )
         assert cur.fetchone()[0] is True
