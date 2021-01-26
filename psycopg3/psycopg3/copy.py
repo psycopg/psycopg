@@ -389,7 +389,7 @@ class Formatter(ABC):
     def __init__(self, transformer: Transformer):
         self.transformer = transformer
         self._write_buffer = bytearray()
-        self._row_mode = False  # true if the user is using send_row()
+        self._row_mode = False  # true if the user is using write_row()
 
     @abstractmethod
     def parse_row(self, data: bytes) -> Optional[Tuple[Any, ...]]:
