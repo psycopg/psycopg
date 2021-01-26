@@ -15,6 +15,25 @@
   website: https://www.commandprompt.com
 
 
+- username: yougov
+  tier: mid
+  avatar: https://avatars.githubusercontent.com/u/378494?v=4
+  name: YouGov
+  website: https://www.yougov.com
+
+- username: phenopolis
+  by: pontikos
+  tier: mid
+  avatar: https://avatars2.githubusercontent.com/u/20042742?v=4
+  name: Phenopolis
+  website: http://www.phenopolis.co.uk
+
+- username: MaterializeInc
+  tier: mid
+  avatar: https://avatars1.githubusercontent.com/u/47674186?v=4
+  name: Materialize, Inc.
+  website: http://materialize.io
+
 - username: genropy
   by: gporcari
   tier: mid
@@ -28,25 +47,11 @@
   name: Svenne Krap
   website: http://www.svenne.dk
 
-- username: phenopolis
-  by: pontikos
-  tier: mid
-  avatar: https://avatars2.githubusercontent.com/u/20042742?v=4
-  name: Phenopolis
-  website: http://www.phenopolis.co.uk
-
 - username: mailupinc
   tier: mid
   avatar: https://avatars1.githubusercontent.com/u/72260631?v=4
   name: BEE
   website: https://beefree.io
-
-- username: MaterializeInc
-  tier: mid
-  avatar: https://avatars1.githubusercontent.com/u/47674186?v=4
-  name: Materialize, Inc.
-  website: http://materialize.io
-
 
 - username: taifu
   avatar: https://avatars1.githubusercontent.com/u/115712?v=4
