@@ -43,4 +43,9 @@ extras_require = {
     ],
 }
 
-setup(version=version, extras_require=extras_require)
+setup(
+    version=version,
+    extras_require=extras_require,
+    # TODO: doesn't work in setup.cfg
+    package_data={"psycopg3": ["py.typed"]},
+)
