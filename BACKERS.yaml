@@ -3,14 +3,14 @@
 
 - username: postgrespro
   tier: top
-  avatar: https://avatars0.githubusercontent.com/u/12005770?v=4
+  avatar: https://avatars.githubusercontent.com/u/12005770?v=4
   name: Postgres Professional
   website: https://postgrespro.com/
 
 - username: commandprompt
   by: jdatcmd
   tier: top
-  avatar: https://avatars1.githubusercontent.com/u/339156?v=4
+  avatar: https://avatars.githubusercontent.com/u/339156?v=4
   name: Command Prompt, Inc.
   website: https://www.commandprompt.com
 
@@ -24,73 +24,88 @@
 - username: phenopolis
   by: pontikos
   tier: mid
-  avatar: https://avatars2.githubusercontent.com/u/20042742?v=4
+  avatar: https://avatars.githubusercontent.com/u/20042742?v=4
   name: Phenopolis
   website: http://www.phenopolis.co.uk
 
 - username: MaterializeInc
   tier: mid
-  avatar: https://avatars1.githubusercontent.com/u/47674186?v=4
+  avatar: https://avatars.githubusercontent.com/u/47674186?v=4
   name: Materialize, Inc.
-  website: http://materialize.io
+  website: http://materialize.com
 
 - username: genropy
   by: gporcari
   tier: mid
-  avatar: https://avatars1.githubusercontent.com/u/7373189?v=4
+  avatar: https://avatars.githubusercontent.com/u/7373189?v=4
   name: genropy
   website: http://www.genropy.org
 
 - username: svennek
   tier: mid
-  avatar: https://avatars3.githubusercontent.com/u/37837?v=4
+  avatar: https://avatars.githubusercontent.com/u/37837?v=4
   name: Svenne Krap
   website: http://www.svenne.dk
 
 - username: mailupinc
   tier: mid
-  avatar: https://avatars1.githubusercontent.com/u/72260631?v=4
+  avatar: https://avatars.githubusercontent.com/u/72260631?v=4
   name: BEE
   website: https://beefree.io
 
+
 - username: taifu
-  avatar: https://avatars1.githubusercontent.com/u/115712?v=4
+  avatar: https://avatars.githubusercontent.com/u/115712?v=4
   name: Marco Beri
   website: http:/beri.it
 
 - username: la-mar
-  avatar: https://avatars0.githubusercontent.com/u/16618300?v=4
+  avatar: https://avatars.githubusercontent.com/u/16618300?v=4
   name: Brock Friedrich
 
 - username: xarg
-  avatar: https://avatars2.githubusercontent.com/u/94721?v=4
+  avatar: https://avatars.githubusercontent.com/u/94721?v=4
   name: Alex Plugaru
   website: https://plugaru.org
 
 - username: rafmagns-skepa-dreag
-  avatar: https://avatars0.githubusercontent.com/u/7447491?v=4
+  avatar: https://avatars.githubusercontent.com/u/7447491?v=4
   name: Richard H
 
 - username: rustprooflabs
-  avatar: https://avatars0.githubusercontent.com/u/3085224?v=4
+  avatar: https://avatars.githubusercontent.com/u/3085224?v=4
   name: Ryan Lambert
   website: https://www.rustprooflabs.com
 
 - username: asqui
-  avatar: https://avatars3.githubusercontent.com/u/174182?v=4
+  avatar: https://avatars.githubusercontent.com/u/174182?v=4
   name: Daniel Fortunov
 
 - username: iqbalabd
-  avatar: https://avatars2.githubusercontent.com/u/14254614?v=4
+  avatar: https://avatars.githubusercontent.com/u/14254614?v=4
   name: Iqbal Abdullah
   website: https://info.xoxzo.com/
 
+- username: healthchecks
+  avatar: https://avatars.githubusercontent.com/u/13053880?v=4
+  name: Healthchecks
+  website: https://healthchecks.io
+
 - username: c-rindi
-  avatar: https://avatars2.githubusercontent.com/u/7826876?v=4
+  avatar: https://avatars.githubusercontent.com/u/7826876?v=4
   name: C~+
 
 - username: Intevation
   by: bernhardreiter
-  avatar: https://avatars2.githubusercontent.com/u/2050405?v=4
+  avatar: https://avatars.githubusercontent.com/u/2050405?v=4
   name: Intevation
   website: https://www.intevation.org/
+
+- username: abegerho
+  avatar: https://avatars.githubusercontent.com/u/5734243?v=4
+  name: Abhishek Begerhotta
+
+- username: ferpection
+  avatar: https://avatars.githubusercontent.com/u/6997008?v=4
+  name: Ferpection
+  website: https://ferpection.com
