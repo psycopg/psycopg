@@ -260,12 +260,15 @@ class RangeDumper(SequenceDumper):
         sd = self._tx.get_dumper(item, Pg3Format.TEXT)
         dumper = type(self)(self.cls, self._tx)
         dumper.sub_dumper = sd
-        if not isinstance(item, int):
-            dumper.oid = self._get_range_oid(sd.oid)
-        else:
+        if isinstance(item, int):
             # postgres won't cast int4range -> int8range so we must use
             # text format and unknown oid here
             dumper.oid = INVALID_OID
+        elif isinstance(item, str) and sd.oid == INVALID_OID:
+            # Work around the normal mapping where text is dumped as unknown
+            dumper.oid = self._get_range_oid(self._types["text"].oid)
+        else:
+            dumper.oid = self._get_range_oid(sd.oid)
         return dumper
 
     def _get_item(self, obj: Range[Any]) -> Any:
@@ -280,9 +283,6 @@ class RangeDumper(SequenceDumper):
         Return the oid of the range from the oid of its elements.
 
         Raise InterfaceError if not found.
-
-        TODO: we shouldn't consider builtins only, but other adaptation
-        contexts too
         """
         info = self._types.get_range(sub_oid)
         return info.oid if info else INVALID_OID
@@ -374,8 +374,9 @@ class RangeInfo(TypeInfo):
         self,
         context: Optional[AdaptContext] = None,
     ) -> None:
-        # A new dumper is not required. However TODO we will need to register
-        # the dumper in the adapters type registry, when we have one.
+
+        if context:
+            context.adapters.types.add(self)
 
         # generate and register a customized text loader
         loader: Type[Loader] = type(
