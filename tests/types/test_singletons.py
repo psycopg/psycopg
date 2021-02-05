@@ -2,7 +2,7 @@ import pytest
 
 from psycopg3 import pq
 from psycopg3 import sql
-from psycopg3.oids import builtins
+from psycopg3.oids import postgres_types as builtins
 from psycopg3.adapt import Transformer, Format
 
 

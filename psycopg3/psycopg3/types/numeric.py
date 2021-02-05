@@ -9,7 +9,7 @@ from typing import Any, Callable, Dict, Tuple, cast
 from decimal import Decimal
 
 from ..pq import Format
-from ..oids import builtins
+from ..oids import postgres_types as builtins
 from ..adapt import Buffer, Dumper, Loader
 from ..adapt import Format as Pg3Format
 from ..wrappers.numeric import Int2, Int4, Int8, IntNumeric

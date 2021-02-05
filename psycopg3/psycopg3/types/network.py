@@ -7,7 +7,7 @@ Adapters for network types.
 from typing import Callable, Optional, Union, TYPE_CHECKING
 
 from ..pq import Format
-from ..oids import builtins
+from ..oids import postgres_types as builtins
 from ..adapt import Buffer, Dumper, Loader
 from ..proto import AdaptContext
 

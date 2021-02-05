@@ -12,7 +12,7 @@ from . import pq
 from . import proto
 from . import errors as e
 from ._enums import Format as Format
-from .oids import builtins
+from .oids import TypesRegistry, postgres_types
 from .proto import AdaptContext, Buffer as Buffer
 
 if TYPE_CHECKING:
@@ -124,8 +124,6 @@ class Loader(ABC):
         """
         Configure *context* to use this loader to convert values with OID *oid*.
         """
-        if isinstance(oid, str):
-            oid = builtins[oid].oid
         adapters = context.adapters if context else global_adapters
         adapters.register_loader(oid, cls)
 
@@ -142,21 +140,28 @@ class AdaptersMap(AdaptContext):
 
     _dumpers: List[Dict[Union[type, str], Type["Dumper"]]]
     _loaders: List[Dict[int, Type["Loader"]]]
+    types: TypesRegistry
 
     # Record if a dumper or loader has an optimised version.
     _optimised: Dict[type, type] = {}
 
-    def __init__(self, extend: Optional["AdaptersMap"] = None):
-        if extend:
-            self._dumpers = extend._dumpers[:]
+    def __init__(
+        self,
+        template: Optional["AdaptersMap"] = None,
+        types: Optional[TypesRegistry] = None,
+    ):
+        if template:
+            self._dumpers = template._dumpers[:]
             self._own_dumpers = [False, False]
-            self._loaders = extend._loaders[:]
+            self._loaders = template._loaders[:]
             self._own_loaders = [False, False]
+            self.types = TypesRegistry(template.types)
         else:
             self._dumpers = [{}, {}]
             self._own_dumpers = [True, True]
             self._loaders = [{}, {}]
             self._own_loaders = [True, True]
+            self.types = types or TypesRegistry()
 
     # implement the AdaptContext protocol too
     @property
@@ -186,10 +191,14 @@ class AdaptersMap(AdaptContext):
 
         self._dumpers[fmt][cls] = dumper
 
-    def register_loader(self, oid: int, loader: Type[Loader]) -> None:
+    def register_loader(
+        self, oid: Union[int, str], loader: Type[Loader]
+    ) -> None:
         """
         Configure the context to use *loader* to convert data of oid *oid*.
         """
+        if isinstance(oid, str):
+            oid = self.types[oid].oid
         if not isinstance(oid, int):
             raise TypeError(
                 f"loaders should be registered on oid, got {oid} instead"
@@ -282,7 +291,7 @@ class AdaptersMap(AdaptContext):
         return cls
 
 
-global_adapters = AdaptersMap()
+global_adapters = AdaptersMap(types=postgres_types)
 
 
 Transformer: Type[proto.Transformer]

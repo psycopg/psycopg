@@ -8,7 +8,6 @@ from typing import Any, NamedTuple, Optional, Sequence, TYPE_CHECKING
 from operator import attrgetter
 
 from . import errors as e
-from .oids import builtins
 
 if TYPE_CHECKING:
     from .cursor import BaseCursor
@@ -39,6 +38,7 @@ class Column(Sequence[Any]):
             fmod=res.fmod(index),
             fsize=res.fsize(index),
         )
+        self._type = cursor.adapters.types.get(self._data.ftype)
 
     _attrs = tuple(
         attrgetter(attr)
@@ -55,8 +55,7 @@ class Column(Sequence[Any]):
 
     def _type_display(self) -> str:
         parts = []
-        t = builtins.get(self.type_code)
-        parts.append(t.name if t else str(self.type_code))
+        parts.append(self._type.name if self._type else str(self.type_code))
 
         mod1 = self.precision
         if mod1 is None:
@@ -67,7 +66,7 @@ class Column(Sequence[Any]):
                 parts.append(f", {self.scale}")
             parts.append(")")
 
-        if t and self.type_code == t.array_oid:
+        if self._type and self.type_code == self._type.array_oid:
             parts.append("[]")
 
         return "".join(parts)
@@ -91,11 +90,10 @@ class Column(Sequence[Any]):
     @property
     def display_size(self) -> Optional[int]:
         """The field size, for :sql:`varchar(n)`, None otherwise."""
-        t = builtins.get(self.type_code)
-        if not t:
+        if not self._type:
             return None
 
-        if t.name in ("varchar", "char"):
+        if self._type.name in ("varchar", "char"):
             fmod = self._data.fmod
             if fmod >= 0:
                 return fmod - 4
@@ -111,17 +109,16 @@ class Column(Sequence[Any]):
     @property
     def precision(self) -> Optional[int]:
         """The number of digits for fixed precision types."""
-        t = builtins.get(self.type_code)
-        if not t:
+        if not self._type:
             return None
 
         dttypes = ("time", "timetz", "timestamp", "timestamptz", "interval")
-        if t.name == "numeric":
+        if self._type.name == "numeric":
             fmod = self._data.fmod
             if fmod >= 0:
                 return fmod >> 16
 
-        elif t.name in dttypes:
+        elif self._type.name in dttypes:
             fmod = self._data.fmod
             if fmod >= 0:
                 return fmod & 0xFFFF
@@ -134,7 +131,7 @@ class Column(Sequence[Any]):
 
         TODO: probably better than precision for datetime objects? review.
         """
-        if self.type_code == builtins["numeric"].oid:
+        if self._type and self._type.name == "numeric":
             fmod = self._data.fmod - 4
             if fmod >= 0:
                 return fmod & 0xFFFF

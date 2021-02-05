@@ -7,7 +7,7 @@ Adapters for the UUID type.
 from typing import Callable, Optional, TYPE_CHECKING
 
 from ..pq import Format
-from ..oids import builtins
+from ..oids import postgres_types as builtins
 from ..adapt import Buffer, Dumper, Loader
 from ..proto import AdaptContext
 

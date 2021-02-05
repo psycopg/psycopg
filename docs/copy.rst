@@ -104,13 +104,6 @@ you have to specify them yourselves.
         for row in copy.rows():
             print(row)  # (10, datetime.date(2046, 12, 24))
 
-.. admonition:: TODO
-
-    Currently only builtin names are recognised; custom types must be
-    specified by numeric oid. This wll change after the `TypeRegistry` and
-    `AdaptContext` get integrated, none of which I have documented, so you
-    haven't seen anything... 👀
-
 
 Copying block-by-block
 ----------------------

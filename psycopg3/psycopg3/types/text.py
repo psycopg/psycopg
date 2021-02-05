@@ -7,7 +7,7 @@ Adapters for textual types.
 from typing import Optional, Union, TYPE_CHECKING
 
 from ..pq import Format, Escaping
-from ..oids import builtins
+from ..oids import postgres_types as builtins
 from ..adapt import Buffer, Dumper, Loader
 from ..proto import AdaptContext
 from ..errors import DataError

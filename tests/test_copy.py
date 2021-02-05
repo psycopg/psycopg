@@ -11,7 +11,6 @@ from psycopg3 import pq
 from psycopg3 import sql
 from psycopg3 import errors as e
 from psycopg3.pq import Format
-from psycopg3.oids import builtins
 from psycopg3.adapt import Format as PgFormat
 from psycopg3.types.numeric import Int4
 
@@ -94,10 +93,7 @@ def test_read_rows(conn, format, typetype):
             select 10::int4, 'hello'::text, '{{0.0,1.0}}'::float8[]
         ) to stdout (format {format.name})"""
     ) as copy:
-        types = ["int4", "text", "float8[]"]
-        if typetype == "oids":
-            types = [builtins.get_oid(t) for t in types]
-        copy.set_types(types)
+        copy.set_types(["int4", "text", "float8[]"])
         row = copy.read_row()
         assert copy.read_row() is None
 
@@ -111,9 +107,7 @@ def test_rows(conn, format):
     with cur.copy(
         f"copy ({sample_values}) to stdout (format {format.name})"
     ) as copy:
-        copy.set_types(
-            [builtins["int4"].oid, builtins["int4"].oid, builtins["text"].oid]
-        )
+        copy.set_types(["int4", "int4", "text"])
         rows = list(copy.rows())
 
     assert rows == sample_records
@@ -130,7 +124,7 @@ def test_copy_out_allchars(conn, format):
         "copy (select unnest({}::text[])) to stdout (format {})"
     ).format(chars, sql.SQL(format.name))
     with cur.copy(query) as copy:
-        copy.set_types([builtins["text"].oid])
+        copy.set_types(["text"])
         while 1:
             row = copy.read_row()
             if not row:

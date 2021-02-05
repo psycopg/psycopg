@@ -17,7 +17,6 @@ from typing import Any, Dict, List, Match, Optional, Sequence, Type, Tuple
 from . import pq
 from . import errors as e
 from .pq import ExecStatus
-from .oids import builtins
 from .adapt import Format
 from .proto import ConnectionType, PQGen, Transformer
 from .generators import copy_from, copy_to, copy_end
@@ -95,10 +94,9 @@ class BaseCopy(Generic[ConnectionType]):
             custom data types you must use their oid.
 
         """
-        # TODO: should allow names of non-builtin types
-        # Must put a types map on the context.
+        registry = self.cursor.adapters.types
         oids = [
-            t if isinstance(t, int) else builtins.get_oid(t) for t in types
+            t if isinstance(t, int) else registry.get_oid(t) for t in types
         ]
         self.formatter.transformer.set_row_types(
             oids, [self.formatter.format] * len(types)

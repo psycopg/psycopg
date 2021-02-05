@@ -160,10 +160,6 @@ cdef class CLoader:
         context: Optional["AdaptContext"] = None,
         int format = PQ_TEXT,
     ) -> None:
-        if isinstance(oid, str):
-            from psycopg3.oids import builtins
-            oid = builtins[oid].oid
-
         if context is not None:
             adapters = context.adapters
         else:

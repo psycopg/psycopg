@@ -5,7 +5,7 @@ import pytest
 import psycopg3
 from psycopg3 import pq
 from psycopg3.adapt import Transformer, Format, Dumper, Loader
-from psycopg3.oids import builtins, TEXT_OID
+from psycopg3.oids import postgres_types as builtins, TEXT_OID
 
 
 @pytest.mark.parametrize(

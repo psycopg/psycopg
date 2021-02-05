@@ -10,7 +10,7 @@ from datetime import date, datetime, time, timedelta
 from typing import cast, Optional, Tuple, Union
 
 from ..pq import Format
-from ..oids import builtins
+from ..oids import postgres_types as builtins
 from ..adapt import Buffer, Dumper, Loader, Format as Pg3Format
 from ..proto import AdaptContext
 from ..errors import InterfaceError, DataError

@@ -5,7 +5,6 @@ from decimal import Decimal
 import pytest
 
 from psycopg3.sql import Identifier
-from psycopg3.oids import builtins
 from psycopg3.types import range as mrange
 from psycopg3.types.range import Range
 
@@ -164,7 +163,7 @@ def test_fetch_info(conn, testrange, name, subtype):
     assert info.name == "testrange"
     assert info.oid > 0
     assert info.oid != info.array_oid > 0
-    assert info.range_subtype == builtins[subtype].oid
+    assert info.range_subtype == conn.adapters.types[subtype].oid
 
 
 def test_fetch_info_not_found(conn):
@@ -179,7 +178,7 @@ async def test_fetch_info_async(aconn, testrange, name, subtype):
     assert info.name == "testrange"
     assert info.oid > 0
     assert info.oid != info.array_oid > 0
-    assert info.range_subtype == builtins[subtype].oid
+    assert info.range_subtype == aconn.adapters.types[subtype].oid
 
 
 @pytest.mark.asyncio

@@ -5,7 +5,6 @@ import pytest
 
 from psycopg3 import pq
 from psycopg3 import sql
-from psycopg3.oids import builtins
 from psycopg3.adapt import Transformer, Format
 from psycopg3.types.numeric import FloatLoader
 
@@ -115,7 +114,7 @@ def test_load_int(conn, val, pgtype, want, fmt_out):
     cur = conn.cursor(binary=fmt_out)
     cur.execute(f"select %s::{pgtype}", (val,))
     assert cur.pgresult.fformat(0) == fmt_out
-    assert cur.pgresult.ftype(0) == builtins[pgtype].oid
+    assert cur.pgresult.ftype(0) == conn.adapters.types[pgtype].oid
     result = cur.fetchone()[0]
     assert result == want
     assert type(result) is type(want)
@@ -123,7 +122,7 @@ def test_load_int(conn, val, pgtype, want, fmt_out):
     # arrays work too
     cur.execute(f"select array[%s::{pgtype}]", (val,))
     assert cur.pgresult.fformat(0) == fmt_out
-    assert cur.pgresult.ftype(0) == builtins[pgtype].array_oid
+    assert cur.pgresult.ftype(0) == conn.adapters.types[pgtype].array_oid
     result = cur.fetchone()[0]
     assert result == [want]
     assert type(result[0]) is type(want)
@@ -232,7 +231,7 @@ def test_load_float(conn, val, pgtype, want, fmt_out):
     cur = conn.cursor(binary=fmt_out)
     cur.execute(f"select %s::{pgtype}", (val,))
     assert cur.pgresult.fformat(0) == fmt_out
-    assert cur.pgresult.ftype(0) == builtins[pgtype].oid
+    assert cur.pgresult.ftype(0) == conn.adapters.types[pgtype].oid
     result = cur.fetchone()[0]
 
     def check(result, want):
@@ -249,7 +248,7 @@ def test_load_float(conn, val, pgtype, want, fmt_out):
 
     cur.execute(f"select array[%s::{pgtype}]", (val,))
     assert cur.pgresult.fformat(0) == fmt_out
-    assert cur.pgresult.ftype(0) == builtins[pgtype].array_oid
+    assert cur.pgresult.ftype(0) == conn.adapters.types[pgtype].array_oid
     result = cur.fetchone()[0]
     assert isinstance(result, list)
     check(result[0], want)
@@ -357,7 +356,7 @@ def test_load_numeric_binary(conn):
 )
 def test_numeric_as_float(conn, val):
     cur = conn.cursor()
-    FloatLoader.register(builtins["numeric"].oid, cur)
+    FloatLoader.register(conn.adapters.types["numeric"].oid, cur)
 
     val = Decimal(val)
     cur.execute("select %s as val", (val,))

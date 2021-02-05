@@ -10,7 +10,7 @@ from typing import Any, Iterator, List, Optional, Set, Tuple, Type
 
 from .. import pq
 from .. import errors as e
-from ..oids import builtins, TEXT_OID, TEXT_ARRAY_OID, INVALID_OID
+from ..oids import postgres_types, TEXT_OID, TEXT_ARRAY_OID, INVALID_OID
 from ..adapt import Buffer, Dumper, Loader, Transformer
 from ..adapt import Format as Pg3Format
 from ..proto import AdaptContext
@@ -21,6 +21,7 @@ class BaseListDumper(Dumper):
         super().__init__(cls, context)
         self._tx = Transformer(context)
         self.sub_dumper: Optional[Dumper] = None
+        self._types = context.adapters.types if context else postgres_types
 
     def get_key(self, obj: List[Any], format: Pg3Format) -> Tuple[type, ...]:
         item = self._find_list_element(obj)
@@ -87,12 +88,10 @@ class BaseListDumper(Dumper):
         Return the oid of the array from the oid of the base item.
 
         Fall back on text[].
-        TODO: we shouldn't consider builtins only, but other adaptation
-        contexts too
         """
         oid = 0
         if base_oid:
-            info = builtins.get(base_oid)
+            info = self._types.get(base_oid)
             if info:
                 oid = info.array_oid
 
@@ -332,14 +331,14 @@ def register(
         loader.register(array_oid, context=context)
 
 
-def register_all_arrays() -> None:
+def register_all_arrays(ctx: AdaptContext) -> None:
     """
     Associate the array oid of all the types in Loader.globals.
 
     This function is designed to be called once at import time, after having
     registered all the base loaders.
     """
-    for t in builtins:
+    for t in ctx.adapters.types:
         # TODO: handle different delimiters (box)
         if t.array_oid and getattr(t, "delimiter", None) == ",":
             register(t.array_oid, t.oid, name=t.name)

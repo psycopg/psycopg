@@ -8,7 +8,6 @@ import pytest
 
 import psycopg3
 from psycopg3 import sql
-from psycopg3.oids import builtins
 from psycopg3.adapt import Format
 
 
@@ -70,10 +69,11 @@ class Faker:
         record = self.make_record(nulls=0)
         tx = psycopg3.adapt.Transformer(self.conn)
         types = []
+        registry = self.conn.adapters.types
         for value in record:
             dumper = tx.get_dumper(value, self.format)
             dumper.dump(value)  # load the oid if it's dynamic (e.g. array)
-            info = builtins.get(dumper.oid) or builtins.get("text")
+            info = registry.get(dumper.oid) or registry.get("text")
             if dumper.oid == info.array_oid:
                 types.append(sql.SQL("{}[]").format(sql.Identifier(info.name)))
             else:

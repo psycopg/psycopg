@@ -13,7 +13,7 @@ from datetime import date, datetime
 from .. import sql
 from .. import errors as e
 from ..pq import Format
-from ..oids import builtins, TypeInfo, INVALID_OID
+from ..oids import postgres_types as builtins, TypeInfo, INVALID_OID
 from ..adapt import Buffer, Dumper, Loader, Format as Pg3Format
 from ..proto import AdaptContext
 
@@ -227,6 +227,7 @@ class RangeDumper(SequenceDumper):
     def __init__(self, cls: type, context: Optional[AdaptContext] = None):
         super().__init__(cls, context)
         self.sub_dumper: Optional[Dumper] = None
+        self._types = context.adapters.types if context else builtins
 
     def dump(self, obj: Range[Any]) -> bytes:
         if not obj:
@@ -283,7 +284,7 @@ class RangeDumper(SequenceDumper):
         TODO: we shouldn't consider builtins only, but other adaptation
         contexts too
         """
-        info = builtins.get_range(sub_oid)
+        info = self._types.get_range(sub_oid)
         return info.oid if info else INVALID_OID
 
 

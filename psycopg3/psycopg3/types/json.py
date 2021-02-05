@@ -8,7 +8,7 @@ import json
 from typing import Any, Callable, Optional
 
 from ..pq import Format
-from ..oids import builtins
+from ..oids import postgres_types as builtins
 from ..adapt import Buffer, Dumper, Loader
 from ..errors import DataError
 

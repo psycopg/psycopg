@@ -10,7 +10,7 @@ from math import floor
 from typing import Any, Sequence
 
 from .pq import Format
-from .oids import builtins
+from .oids import postgres_types as builtins
 from .adapt import Dumper
 
 

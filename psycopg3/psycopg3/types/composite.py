@@ -186,7 +186,7 @@ class SequenceDumper(Dumper):
 class TupleDumper(SequenceDumper):
 
     # Should be this, but it doesn't work
-    # _oid = builtins["record"].oid
+    # _oid = postgres_types["record"].oid
 
     def dump(self, obj: Tuple[Any, ...]) -> bytes:
         return self._dump_sequence(obj, b"(", b")", b",")

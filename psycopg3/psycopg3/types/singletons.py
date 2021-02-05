@@ -5,7 +5,7 @@ Adapters for None and boolean.
 # Copyright (C) 2020-2021 The Psycopg Team
 
 from ..pq import Format
-from ..oids import builtins
+from ..oids import postgres_types as builtins
 from ..adapt import Buffer, Dumper, Loader
 
 

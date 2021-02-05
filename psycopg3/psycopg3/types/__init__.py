@@ -4,7 +4,7 @@ psycopg3 types package
 
 # Copyright (C) 2020-2021 The Psycopg Team
 
-from ..oids import builtins, INVALID_OID
+from ..oids import INVALID_OID
 from ..proto import AdaptContext
 
 # Register default adapters
@@ -227,4 +227,4 @@ def register_default_globals(ctx: AdaptContext) -> None:
     RecordLoader.register("record", ctx)
     RecordBinaryLoader.register("record", ctx)
 
-    array.register_all_arrays()
+    array.register_all_arrays(ctx)
