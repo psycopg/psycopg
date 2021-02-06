@@ -5,23 +5,17 @@ Support for range types adaptation.
 # Copyright (C) 2020-2021 The Psycopg Team
 
 import re
-from typing import Any, Dict, Generic, Optional, Sequence, TypeVar, Type, Union
-from typing import cast, Tuple, TYPE_CHECKING
+from typing import cast, Any, Dict, Generic, Optional, Tuple, TypeVar, Type
 from decimal import Decimal
 from datetime import date, datetime
 
-from .. import sql
-from .. import errors as e
 from ..pq import Format
-from ..oids import postgres_types as builtins, TypeInfo, INVALID_OID
-from ..adapt import Buffer, Dumper, Loader, Format as Pg3Format
+from ..oids import postgres_types as builtins, INVALID_OID
+from ..adapt import Buffer, Dumper, Format as Pg3Format
 from ..proto import AdaptContext
+from ..typeinfo import RangeInfo
 
-from . import array
 from .composite import SequenceDumper, BaseCompositeLoader
-
-if TYPE_CHECKING:
-    from ..connection import Connection, AsyncConnection
 
 T = TypeVar("T")
 
@@ -312,6 +306,18 @@ class RangeLoader(BaseCompositeLoader, Generic[T]):
 _int2parens = {ord(c): c for c in "[]()"}
 
 
+def register_adapters(
+    info: RangeInfo, context: Optional["AdaptContext"]
+) -> None:
+    # generate and register a customized text loader
+    loader: Type[RangeLoader[Any]] = type(
+        f"{info.name.title()}Loader",
+        (RangeLoader,),
+        {"subtype_oid": info.subtype_oid},
+    )
+    loader.register(info.oid, context=context)
+
+
 # Loaders for builtin range types
 
 
@@ -337,76 +343,3 @@ class TimestampRangeLoader(RangeLoader[datetime]):
 
 class TimestampTZRangeLoader(RangeLoader[datetime]):
     subtype_oid = builtins["timestamptz"].oid
-
-
-class RangeInfo(TypeInfo):
-    """Manage information about a range type.
-
-    The class allows to:
-
-    - read information about a range type using `fetch()` and `fetch_async()`
-    - configure a composite type adaptation using `register()`
-    """
-
-    @classmethod
-    def fetch(
-        cls, conn: "Connection", name: Union[str, sql.Identifier]
-    ) -> Optional["RangeInfo"]:
-        if isinstance(name, sql.Composable):
-            name = name.as_string(conn)
-        cur = conn.cursor(binary=True)
-        cur.execute(cls._info_query, {"name": name})
-        recs = cur.fetchall()
-        return cls._from_records(recs)
-
-    @classmethod
-    async def fetch_async(
-        cls, conn: "AsyncConnection", name: Union[str, sql.Identifier]
-    ) -> Optional["RangeInfo"]:
-        if isinstance(name, sql.Composable):
-            name = name.as_string(conn)
-        cur = await conn.cursor(binary=True)
-        await cur.execute(cls._info_query, {"name": name})
-        recs = await cur.fetchall()
-        return cls._from_records(recs)
-
-    def register(
-        self,
-        context: Optional[AdaptContext] = None,
-    ) -> None:
-
-        if context:
-            context.adapters.types.add(self)
-
-        # generate and register a customized text loader
-        loader: Type[Loader] = type(
-            f"{self.name.title()}Loader",
-            (RangeLoader,),
-            {"subtype_oid": self.range_subtype},
-        )
-        loader.register(self.oid, context=context)
-
-        if self.array_oid:
-            array.register(
-                self.array_oid, self.oid, context=context, name=self.name
-            )
-
-    @classmethod
-    def _from_records(cls, recs: Sequence[Any]) -> Optional["RangeInfo"]:
-        if not recs:
-            return None
-        if len(recs) > 1:
-            raise e.ProgrammingError(
-                f"found {len(recs)} different ranges named {recs[0][0]}"
-            )
-
-        name, oid, array_oid, subtype = recs[0]
-        return cls(name, oid, array_oid, subtype)
-
-    _info_query = """\
-select t.typname as name, t.oid as oid, t.typarray as array_oid,
-    r.rngsubtype as range_subtype
-from pg_type t
-join pg_range r on t.oid = r.rngtypid
-where t.oid = %(name)s::regtype
-"""

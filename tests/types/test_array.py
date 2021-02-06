@@ -4,7 +4,7 @@ from psycopg3 import pq
 from psycopg3 import sql
 from psycopg3.oids import postgres_types as builtins
 from psycopg3.adapt import Format, Transformer
-from psycopg3.types import array
+from psycopg3.types import TypeInfo
 
 
 tests_str = [
@@ -118,9 +118,9 @@ def test_array_register(conn):
     assert res[0] == "(foo)"
     assert res[1] == "{(foo)}"
 
-    array.register(
-        cur.description[1].type_code, cur.description[0].type_code, context=cur
-    )
+    info = TypeInfo.fetch(conn, "mytype")
+    info.register(cur)
+
     cur.execute("""select '(foo)'::mytype, '{"(foo)"}'::mytype[] -- 2""")
     res = cur.fetchone()
     assert res[0] == "(foo)"

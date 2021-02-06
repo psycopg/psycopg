@@ -22,29 +22,57 @@ $$,
     where name = 'server_version_num'
 """
 
-py_oids_sql = """
-select format(
-        '(%L, %s, %s, %s, %L, %L),',
-        typname, oid, typarray, coalesce(rngsubtype, 0), oid::regtype, typdelim)
-    from pg_type t
-    left join pg_range r on t.oid = rngtypid
-    where oid < 10000
-    and typname !~ all('{^(_|pg_),_handler$}')
-    order by typname
+# Note: "record" is a pseudotype but still a useful one to have.
+py_types_sql = """
+select
+    'TypeInfo('
+    || array_to_string(array_remove(array[
+        format('%L', typname),
+        oid::text,
+        typarray::text,
+        case when oid::regtype::text != typname
+            then format('alt_name=%L', oid::regtype)
+        end,
+        case when typdelim != ','
+            then format('delimiter=%L', typdelim)
+        end
+    ], null), ',')
+    || '),'
+from pg_type t
+where
+    oid < 10000
+    and (typtype = 'b' or typname = 'record')
+    and typname !~ '^(_|pg_)'
+order by typname
 """
 
+py_ranges_sql = """
+select
+    format('RangeInfo(%L, %s, %s, subtype_oid=%s),',
+        typname, oid, typarray, rngsubtype)
+from
+    pg_type t
+    join pg_range r on t.oid = rngtypid
+where
+    oid < 10000
+    and typtype = 'r'
+    and typname !~ '^(_|pg_)'
+order by typname
+"""
 
 cython_oids_sql = """
 select format('%s_OID = %s', upper(typname), oid)
-    from pg_type
-    where oid < 10000
-    and typname !~ all('{^(_|pg_),_handler$}')
-    order by typname
+from pg_type
+where
+    oid < 10000
+    and (typtype = any('{b,r}') or typname = 'record')
+    and typname !~ '^(_|pg_)'
+order by typname
 """
 
 
 def update_python_oids() -> None:
-    queries = [version_sql, py_oids_sql]
+    queries = [version_sql, py_types_sql, py_ranges_sql]
     fn = ROOT / "psycopg3/psycopg3/oids.py"
     update_file(fn, queries)
     sp.check_call(["black", "-q", fn])

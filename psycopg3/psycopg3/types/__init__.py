@@ -8,17 +8,15 @@ from ..oids import INVALID_OID
 from ..proto import AdaptContext
 
 # Register default adapters
-from . import array, composite
-from . import range
+from . import array, composite, range
 
 # Wrapper objects
 from ..wrappers.numeric import Int2, Int4, Int8, IntNumeric, Oid
 from .json import Json, Jsonb
 from .range import Range
 
-# Supper objects
-from .range import RangeInfo
-from .composite import CompositeInfo
+# Database types descriptors
+from ..typeinfo import TypeInfo, RangeInfo, CompositeInfo
 
 # Adapter objects
 from .text import (

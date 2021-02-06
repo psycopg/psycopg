@@ -12,8 +12,9 @@ from . import pq
 from . import proto
 from . import errors as e
 from ._enums import Format as Format
-from .oids import TypesRegistry, postgres_types
+from .oids import postgres_types
 from .proto import AdaptContext, Buffer as Buffer
+from .typeinfo import TypesRegistry
 
 if TYPE_CHECKING:
     from .connection import BaseConnection

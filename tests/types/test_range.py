@@ -5,8 +5,7 @@ from decimal import Decimal
 import pytest
 
 from psycopg3.sql import Identifier
-from psycopg3.types import range as mrange
-from psycopg3.types.range import Range
+from psycopg3.types import Range, RangeInfo
 
 
 type2sub = {
@@ -159,36 +158,36 @@ fetch_cases = [
 
 @pytest.mark.parametrize("name, subtype", fetch_cases)
 def test_fetch_info(conn, testrange, name, subtype):
-    info = mrange.RangeInfo.fetch(conn, name)
+    info = RangeInfo.fetch(conn, name)
     assert info.name == "testrange"
     assert info.oid > 0
     assert info.oid != info.array_oid > 0
-    assert info.range_subtype == conn.adapters.types[subtype].oid
+    assert info.subtype_oid == conn.adapters.types[subtype].oid
 
 
 def test_fetch_info_not_found(conn):
     with pytest.raises(conn.ProgrammingError):
-        mrange.RangeInfo.fetch(conn, "nosuchrange")
+        RangeInfo.fetch(conn, "nosuchrange")
 
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("name, subtype", fetch_cases)
 async def test_fetch_info_async(aconn, testrange, name, subtype):
-    info = await mrange.RangeInfo.fetch_async(aconn, name)
+    info = await RangeInfo.fetch_async(aconn, name)
     assert info.name == "testrange"
     assert info.oid > 0
     assert info.oid != info.array_oid > 0
-    assert info.range_subtype == aconn.adapters.types[subtype].oid
+    assert info.subtype_oid == aconn.adapters.types[subtype].oid
 
 
 @pytest.mark.asyncio
 async def test_fetch_info_not_found_async(aconn):
     with pytest.raises(aconn.ProgrammingError):
-        await mrange.RangeInfo.fetch_async(aconn, "nosuchrange")
+        await RangeInfo.fetch_async(aconn, "nosuchrange")
 
 
 def test_dump_custom_empty(conn, testrange):
-    info = mrange.RangeInfo.fetch(conn, "testrange")
+    info = RangeInfo.fetch(conn, "testrange")
     info.register(conn)
 
     r = Range(empty=True)
@@ -197,7 +196,7 @@ def test_dump_custom_empty(conn, testrange):
 
 
 def test_dump_quoting(conn, testrange):
-    info = mrange.RangeInfo.fetch(conn, "testrange")
+    info = RangeInfo.fetch(conn, "testrange")
     info.register(conn)
     cur = conn.cursor()
     for i in range(1, 254):
@@ -212,16 +211,16 @@ def test_dump_quoting(conn, testrange):
 
 
 def test_load_custom_empty(conn, testrange):
-    info = mrange.RangeInfo.fetch(conn, "testrange")
+    info = RangeInfo.fetch(conn, "testrange")
     info.register(conn)
 
     (got,) = conn.execute("select 'empty'::testrange").fetchone()
-    assert isinstance(got, mrange.Range)
+    assert isinstance(got, Range)
     assert got.isempty
 
 
 def test_load_quoting(conn, testrange):
-    info = mrange.RangeInfo.fetch(conn, "testrange")
+    info = RangeInfo.fetch(conn, "testrange")
     info.register(conn)
     cur = conn.cursor()
     for i in range(1, 254):
@@ -230,7 +229,7 @@ def test_load_quoting(conn, testrange):
             {"low": i, "up": i + 1},
         )
         got = cur.fetchone()[0]
-        assert isinstance(got, mrange.Range)
+        assert isinstance(got, Range)
         assert ord(got.lower) == i
         assert ord(got.upper) == i + 1
 
@@ -483,7 +482,7 @@ class TestRangeObject:
         string conversion.
         """
         tz = dt.timezone(dt.timedelta(hours=-5))
-        r = mrange.Range(
+        r = Range(
             dt.datetime(2010, 1, 1, tzinfo=tz),
             dt.datetime(2011, 1, 1, tzinfo=tz),
         )

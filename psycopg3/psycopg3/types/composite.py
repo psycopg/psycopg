@@ -7,141 +7,14 @@ Support for composite types adaptation.
 import re
 import struct
 from collections import namedtuple
-from typing import Any, Callable, Iterator, List, NamedTuple, Optional
-from typing import Sequence, Tuple, Type, Union, TYPE_CHECKING
+from typing import Any, Callable, Iterator, List, Optional
+from typing import Sequence, Tuple, Type
 
 from .. import pq
-from .. import sql
-from .. import errors as e
-from ..oids import TypeInfo, TEXT_OID
+from ..oids import TEXT_OID
 from ..adapt import Buffer, Format, Dumper, Loader, Transformer
 from ..proto import AdaptContext
-from . import array
-
-if TYPE_CHECKING:
-    from ..connection import Connection, AsyncConnection
-
-
-class CompositeInfo(TypeInfo):
-    """Manage information about a composite type.
-
-    The class allows to:
-
-    - read information about a composite type using `fetch()` and `fetch_async()`
-    - configure a composite type adaptation using `register()`
-    """
-
-    def __init__(
-        self,
-        name: str,
-        oid: int,
-        array_oid: int,
-        fields: Sequence["CompositeInfo.FieldInfo"],
-    ):
-        super().__init__(name, oid, array_oid)
-        self.fields = list(fields)
-
-    class FieldInfo(NamedTuple):
-        """Information about a single field in a composite type."""
-
-        name: str
-        type_oid: int
-
-    @classmethod
-    def fetch(
-        cls, conn: "Connection", name: Union[str, sql.Identifier]
-    ) -> Optional["CompositeInfo"]:
-        if isinstance(name, sql.Composable):
-            name = name.as_string(conn)
-        cur = conn.cursor()
-        cur.execute(cls._info_query, {"name": name})
-        recs = cur.fetchall()
-        return cls._from_records(recs)
-
-    @classmethod
-    async def fetch_async(
-        cls, conn: "AsyncConnection", name: Union[str, sql.Identifier]
-    ) -> Optional["CompositeInfo"]:
-        if isinstance(name, sql.Composable):
-            name = name.as_string(conn)
-        cur = await conn.cursor()
-        await cur.execute(cls._info_query, {"name": name})
-        recs = await cur.fetchall()
-        return cls._from_records(recs)
-
-    def register(
-        self,
-        context: Optional[AdaptContext] = None,
-        factory: Optional[Callable[..., Any]] = None,
-    ) -> None:
-        if not factory:
-            factory = namedtuple(  # type: ignore
-                self.name, [f.name for f in self.fields]
-            )
-
-        loader: Type[Loader]
-
-        # generate and register a customized text loader
-        loader = type(
-            f"{self.name.title()}Loader",
-            (CompositeLoader,),
-            {
-                "factory": factory,
-                "fields_types": [f.type_oid for f in self.fields],
-            },
-        )
-        loader.register(self.oid, context=context)
-
-        # generate and register a customized binary loader
-        loader = type(
-            f"{self.name.title()}BinaryLoader",
-            (CompositeBinaryLoader,),
-            {"factory": factory},
-        )
-        loader.register(self.oid, context=context)
-
-        if self.array_oid:
-            array.register(
-                self.array_oid, self.oid, context=context, name=self.name
-            )
-
-    @classmethod
-    def _from_records(cls, recs: Sequence[Any]) -> Optional["CompositeInfo"]:
-        if not recs:
-            return None
-        if len(recs) > 1:
-            raise e.ProgrammingError(
-                f"found {len(recs)} different types named {recs[0][0]}"
-            )
-
-        name, oid, array_oid, fnames, ftypes = recs[0]
-        fields = [cls.FieldInfo(*p) for p in zip(fnames, ftypes)]
-        return cls(name, oid, array_oid, fields)
-
-    _info_query = """\
-select
-    t.typname as name, t.oid as oid, t.typarray as array_oid,
-    coalesce(a.fnames, '{}') as fnames,
-    coalesce(a.ftypes, '{}') as ftypes
-from pg_type t
-left join (
-    select
-        attrelid,
-        array_agg(attname) as fnames,
-        array_agg(atttypid) as ftypes
-    from (
-        select a.attrelid, a.attname, a.atttypid
-        from pg_attribute a
-        join pg_type t on t.typrelid = a.attrelid
-        where t.oid = %(name)s::regtype
-        and a.attnum > 0
-        and not a.attisdropped
-        order by a.attnum
-    ) x
-    group by attrelid
-) a on a.attrelid = t.typrelid
-where t.oid = %(name)s::regtype
-"""
+from ..typeinfo import CompositeInfo
 
 
 class SequenceDumper(Dumper):
@@ -317,3 +190,31 @@ class CompositeBinaryLoader(RecordBinaryLoader):
     def load(self, data: Buffer) -> Any:
         r = super().load(data)
         return type(self).factory(*r)
+
+
+def register_adapters(
+    info: CompositeInfo,
+    context: Optional["AdaptContext"],
+    factory: Optional[Callable[..., Any]] = None,
+) -> None:
+    if not factory:
+        factory = namedtuple(info.name, info.field_names)  # type: ignore
+
+    # generate and register a customized text loader
+    loader: Type[BaseCompositeLoader] = type(
+        f"{info.name.title()}Loader",
+        (CompositeLoader,),
+        {
+            "factory": factory,
+            "fields_types": info.field_types,
+        },
+    )
+    loader.register(info.oid, context=context)
+
+    # generate and register a customized binary loader
+    loader = type(
+        f"{info.name.title()}BinaryLoader",
+        (CompositeBinaryLoader,),
+        {"factory": factory},
+    )
+    loader.register(info.oid, context=context)

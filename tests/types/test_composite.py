@@ -4,7 +4,7 @@ from psycopg3 import pq
 from psycopg3.sql import Identifier
 from psycopg3.oids import postgres_types as builtins
 from psycopg3.adapt import Format, global_adapters
-from psycopg3.types.composite import CompositeInfo
+from psycopg3.types import CompositeInfo
 
 
 tests_str = [
@@ -135,10 +135,11 @@ def test_fetch_info(conn, testcomp, name, fields):
     assert info.name == "testcomp"
     assert info.oid > 0
     assert info.oid != info.array_oid > 0
-    assert len(info.fields) == 3
+    assert len(info.field_names) == 3
+    assert len(info.field_types) == 3
     for i, (name, t) in enumerate(fields):
-        assert info.fields[i].name == name
-        assert info.fields[i].type_oid == builtins[t].oid
+        assert info.field_names[i] == name
+        assert info.field_types[i] == builtins[t].oid
 
 
 @pytest.mark.asyncio
@@ -148,10 +149,11 @@ async def test_fetch_info_async(aconn, testcomp, name, fields):
     assert info.name == "testcomp"
     assert info.oid > 0
     assert info.oid != info.array_oid > 0
-    assert len(info.fields) == 3
+    assert len(info.field_names) == 3
+    assert len(info.field_types) == 3
     for i, (name, t) in enumerate(fields):
-        assert info.fields[i].name == name
-        assert info.fields[i].type_oid == builtins[t].oid
+        assert info.field_names[i] == name
+        assert info.field_types[i] == builtins[t].oid
 
 
 @pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])

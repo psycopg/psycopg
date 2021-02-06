@@ -14,6 +14,7 @@ from ..oids import postgres_types, TEXT_OID, TEXT_ARRAY_OID, INVALID_OID
 from ..adapt import Buffer, Dumper, Loader, Transformer
 from ..adapt import Format as Pg3Format
 from ..proto import AdaptContext
+from ..typeinfo import TypeInfo
 
 
 class BaseListDumper(Dumper):
@@ -315,20 +316,15 @@ class ArrayBinaryLoader(BaseArrayLoader):
         return agg(dims)
 
 
-def register(
-    array_oid: int,
-    base_oid: int,
-    context: Optional[AdaptContext] = None,
-    name: Optional[str] = None,
+def register_adapters(
+    info: TypeInfo, context: Optional["AdaptContext"]
 ) -> None:
-    if not name:
-        name = f"oid{base_oid}"
-
     for base in (ArrayLoader, ArrayBinaryLoader):
-        fmt = "Binary" if base.format == pq.Format.BINARY else ""
-        lname = f"{name.title()}Array{fmt}Loader"
-        loader: Type[Loader] = type(lname, (base,), {"base_oid": base_oid})
-        loader.register(array_oid, context=context)
+        lname = f"{info.name.title()}{base.__name__}"
+        loader: Type[BaseArrayLoader] = type(
+            lname, (base,), {"base_oid": info.oid}
+        )
+        loader.register(info.array_oid, context=context)
 
 
 def register_all_arrays(ctx: AdaptContext) -> None:
@@ -341,4 +337,4 @@ def register_all_arrays(ctx: AdaptContext) -> None:
     for t in ctx.adapters.types:
         # TODO: handle different delimiters (box)
         if t.array_oid and getattr(t, "delimiter", None) == ",":
-            register(t.array_oid, t.oid, name=t.name)
+            t.register(ctx)
