@@ -13,7 +13,7 @@ from ..pq import Format
 from ..oids import postgres_types as builtins, INVALID_OID
 from ..adapt import Buffer, Dumper, Format as Pg3Format
 from ..proto import AdaptContext
-from ..typeinfo import RangeInfo
+from .._typeinfo import RangeInfo
 
 from .composite import SequenceDumper, BaseCompositeLoader
 

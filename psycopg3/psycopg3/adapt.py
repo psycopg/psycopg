@@ -14,7 +14,7 @@ from . import errors as e
 from ._enums import Format as Format
 from .oids import postgres_types
 from .proto import AdaptContext, Buffer as Buffer
-from .typeinfo import TypesRegistry
+from ._typeinfo import TypesRegistry
 
 if TYPE_CHECKING:
     from .connection import BaseConnection

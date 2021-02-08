@@ -4,7 +4,7 @@ Maps of builtin types and names
 
 # Copyright (C) 2020-2021 The Psycopg Team
 
-from .typeinfo import TypeInfo, RangeInfo, TypesRegistry
+from ._typeinfo import TypeInfo, RangeInfo, TypesRegistry
 
 # Global objects with PostgreSQL builtins and globally registered user types.
 postgres_types = TypesRegistry()

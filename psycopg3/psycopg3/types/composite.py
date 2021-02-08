@@ -14,7 +14,7 @@ from .. import pq
 from ..oids import TEXT_OID
 from ..adapt import Buffer, Format, Dumper, Loader, Transformer
 from ..proto import AdaptContext
-from ..typeinfo import CompositeInfo
+from .._typeinfo import CompositeInfo
 
 
 class SequenceDumper(Dumper):

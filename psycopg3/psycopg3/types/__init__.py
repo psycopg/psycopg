@@ -16,7 +16,7 @@ from .json import Json, Jsonb
 from .range import Range
 
 # Database types descriptors
-from ..typeinfo import TypeInfo, RangeInfo, CompositeInfo
+from .._typeinfo import TypeInfo, RangeInfo, CompositeInfo
 
 # Adapter objects
 from .text import (

@@ -30,6 +30,8 @@ class TypeInfo:
     - configure a composite type adaptation using `register()`
     """
 
+    __module__ = "psycopg3.types"
+
     def __init__(
         self,
         name: str,
@@ -54,6 +56,15 @@ class TypeInfo:
     def fetch(
         cls: Type[T], conn: "Connection", name: Union[str, "Identifier"]
     ) -> Optional[T]:
+        """
+        Query a system catalog to read information about a type.
+
+        :param conn: the connection to query
+        :param name: the name of the type to query. It can include a schema
+            name.
+        :return: a `!TypeInfo` object populated with the type information,
+            `!None` if not found.
+        """
         from .sql import Composable
 
         if isinstance(name, Composable):
@@ -68,6 +79,11 @@ class TypeInfo:
     async def fetch_async(
         cls: Type[T], conn: "AsyncConnection", name: Union[str, "Identifier"]
     ) -> Optional[T]:
+        """
+        Query a system catalog to read information about a type.
+
+        Similar to `fetch()` but can use an asynchronous connection.
+        """
         from .sql import Composable
 
         if isinstance(name, Composable):
@@ -98,7 +114,9 @@ class TypeInfo:
         self,
         context: Optional["AdaptContext"] = None,
     ) -> None:
-
+        """
+        Register the type information, globally or in the specified *context*.
+        """
         if context:
             types = context.adapters.types
         else:
@@ -126,6 +144,8 @@ order by t.oid
 class RangeInfo(TypeInfo):
     """Manage information about a range type."""
 
+    __module__ = "psycopg3.types"
+
     def __init__(self, name: str, oid: int, array_oid: int, subtype_oid: int):
         super().__init__(name, oid, array_oid)
         self.subtype_oid = subtype_oid
@@ -151,6 +171,8 @@ where t.oid = %(name)s::regtype
 
 class CompositeInfo(TypeInfo):
     """Manage information about a composite type."""
+
+    __module__ = "psycopg3.types"
 
     def __init__(
         self,

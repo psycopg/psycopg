@@ -14,7 +14,7 @@ from ..oids import postgres_types, TEXT_OID, TEXT_ARRAY_OID, INVALID_OID
 from ..adapt import Buffer, Dumper, Loader, Transformer
 from ..adapt import Format as Pg3Format
 from ..proto import AdaptContext
-from ..typeinfo import TypeInfo
+from .._typeinfo import TypeInfo
 
 
 class BaseListDumper(Dumper):
