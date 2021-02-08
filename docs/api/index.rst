@@ -9,4 +9,5 @@
     ../cursor
     ../sql
     ../errors
+    ../types
     ../pq

@@ -16,21 +16,26 @@ returned.
     described in this page is useful if you intend to *customise* the
     adaptation rules.
 
-The `Dumper` is the base object to perform conversion from a Python object to
-a `!bytes` string understood by PostgreSQL. The string returned *shouldn't be
-quoted*: the value will be passed to the database using functions such as
-:pq:`PQexecParams()` so quoting and quotes escaping is not necessary.
+- The `~psycopg3.types.TypeInfo` object allows to query type information from
+  a database, which can be used by the adapters: for instance to make them
+  able to decode arrays of base types or composite types.
 
-The `Loader` is the base object to perform the opposite operation: to read a
-`!bytes` string from PostgreSQL and create a Python object.
+- The `Dumper` is the base object to perform conversion from a Python object
+  to a `!bytes` string understood by PostgreSQL. The string returned
+  *shouldn't be quoted*: the value will be passed to the database using
+  functions such as :pq:`PQexecParams()` so quoting and quotes escaping is not
+  necessary.
+
+- The `Loader` is the base object to perform the opposite operation: to read a
+  `!bytes` string from PostgreSQL and create a Python object.
 
 `!Dumper` and `!Loader` are abstract classes: concrete classes must implement
 the `~Dumper.dump()` and `~Loader.load()` methods. `!psycopg3` provides
 implementation for several builtin Python and PostgreSQL types.
 
-.. admonition:: TODO
-
-    Document the builtin adapters, where are they?
+Psycopg provides adapters for several builtin types, which can be used as the
+base to build more complex ones: they all live in the `psycopg3.types`
+package.
 
 
 Dumpers and loaders configuration
@@ -74,8 +79,11 @@ right instance.
   `!Connection`, the `!Cursor`.
 
 - For every Python type passed as query argument, the `!Transformer` will
-  instantiate a `!Dumper`. All the objects of the same type will be converted
-  by the same dumper.
+  instantiate a `!Dumper`. Usually all the objects of the same type will be
+  converted by the same dumper; certain dumpers may be used in more than one
+  instance, because the same Python type maps to more than one PostgreSQL type
+  (for instance, a Python `int` might be better dumped as a PostgreSQL
+  :sql:`integer`, :sql:`bigint`, :sql:`smallint` according to its value).
 
 - For every OID returned by the query, the `!Transformer` will instantiate a
   `!Loader`. All the values with the same OID will be converted by the same

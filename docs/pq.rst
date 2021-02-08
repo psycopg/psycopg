@@ -1,6 +1,6 @@
 .. _psycopg3.pq:
 
-`pq` -- Libpq wrapper module
+`pq` -- libpq wrapper module
 ============================
 
 .. index::
