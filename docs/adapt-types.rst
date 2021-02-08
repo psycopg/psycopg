@@ -249,12 +249,65 @@ time and more bandwidth. See :ref:`binary-data` for details.
 .. __: https://www.postgresql.org/docs/current/datatype-binary.html
 
 
+.. _adapt-json:
+
+JSON adaptation
+---------------
+
+`!psycopg3` can map between Python objects and PostgreSQL `json/jsonb
+types`__, allowing to customise the load and dump function used.
+
+.. __: https://www.postgresql.org/docs/current/datatype-json.html
+
+Because several Python objects could be considered JSON (dicts, lists,
+scalars, even date/time if using a dumps function customised to use them),
+`!psycopg3` requires you to wrap what you want to dump as JSON into a wrapper:
+either `psycogp3.types.Json` or `~psycopg3.types.Jsonb`.
+
+.. code:: python
+
+    from psycopg3.types import Jsonb
+
+    thing = {"foo": ["bar", 42]}
+    conn.execute("insert into mytable values (%s)", [Jsonb(thing)])
+
+By default `!psycopg3` uses the standard library `json.dumps()`__ and
+`json.loads()`__ functions to serialize and de-serialize Python objects to
+JSON. If you want to customise globally how serialization happens, for
+instance changing serialization parameters or using a different JSON library,
+you can specify your own functions using the `psycopg3.types.set_json_dumps()`
+and `~psycopg3.types.set_json_loads()` functions.
+
+..
+    weird: intersphinx doesn't work
+
+.. __: https://docs.python.org/3/library/json.html#json.dumps
+.. __: https://docs.python.org/3/library/json.html#json.loads
+
+.. code:: python
+
+    from functools import partial
+    from psycopg3.types import Jsonb, set_json_dumps, set_json_loads
+    import ujson
+
+    # Use a faster dump function
+    set_json_dumps(ujson.dumps)
+
+    # Return floating point values as Decimal
+    set_json_loads(partial(json.loads, parse_float=Decimal))
+
+    conn.execute("select %s", [Jsonb({"value": 123.45})]).fetchone()[0]
+    # {'value': Decimal('123.45')}
+
+If you need a more precise customisation, such as per-connection instead of
+global, you can subclass and register the JSON adapters in the right context:
+see :ref:`json-adapters`.
+
 .. _adapt-date:
 .. _adapt-list:
 .. _adapt-composite:
 .. _adapt-hstore:
 .. _adapt-range:
-.. _adapt-json:
 .. _adapt-uuid:
 .. _adapt-network:
 
@@ -264,6 +317,3 @@ TODO adaptation
 .. admonition:: TODO
 
     Document the other types
-
-    Document that empty array don't roundtrip in text mode and require
-    a cast in binary to be used in any context.

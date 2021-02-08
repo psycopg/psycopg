@@ -105,3 +105,54 @@ Objects wrappers
     - Int2, Int4, Int8, ...
     - Json, Jsonb
     - Range
+
+
+.. _json-adapters:
+
+JSON adapters
+-------------
+
+.. autoclass:: Json
+.. autoclass:: Jsonb
+
+Wrappers to signal to convert *obj* to a json or jsonb PostgreSQL value.
+
+Any object supported by the underlying `!dumps()` function can be wrapped.
+
+
+.. autofunction:: set_json_dumps
+.. autofunction:: set_json_loads
+
+.. autoclass:: JsonDumper
+
+    .. automethod:: get_dumps
+
+.. autoclass:: JsonBinaryDumper
+.. autoclass:: JsonbDumper
+.. autoclass:: JsonbBinaryDumper
+
+`~psycopg3.adapt.Dumper` subclasses using the function provided by
+`set_json_dumps()` function to serialize the Python object wrapped by
+`Json`/`Jsonb`.
+
+If you need to specify different `!dumps()` functions in different contexts
+you can subclass one/some of these functions to override the
+`~JsonDumper.get_dumps()` method and `~psycopg3.adapt.Dumper.register()` them
+on the right connection or cursor.
+
+.. autoclass:: JsonLoader
+
+    .. automethod:: get_loads
+
+.. autoclass:: JsonBinaryLoader
+.. autoclass:: JsonbLoader
+.. autoclass:: JsonbBinaryLoader
+
+`~psycopg3.adapt.Loader` subclasses using the function provided by
+`set_json_loads()` function to de-serialize :sql:`json`/:sql:`jsonb`
+PostgreSQL values to Python objects.
+
+If you need to specify different `!loads()` functions in different contexts
+you can subclass one/some of these functions to override the
+`~JsonLoader.get_loads()` method and `~psycopg3.adapt.Loader.register()` them
+on the right connection or cursor.

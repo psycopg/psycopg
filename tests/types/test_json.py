@@ -1,4 +1,5 @@
 import json
+from copy import deepcopy
 
 import pytest
 
@@ -7,6 +8,7 @@ from psycopg3 import pq
 from psycopg3 import sql
 from psycopg3.types import Json, Jsonb
 from psycopg3.adapt import Format
+from psycopg3.types import set_json_dumps, set_json_loads
 
 samples = [
     "null",
@@ -70,27 +72,78 @@ def test_json_dump_customise(conn, wrapper, fmt_in):
     wrapper = getattr(psycopg3.types, wrapper)
     obj = {"foo": "bar"}
     cur = conn.cursor()
-    cur.execute(
-        f"select %{fmt_in}->>'baz' = 'qux'", (wrapper(obj, dumps=my_dumps),)
-    )
-    assert cur.fetchone()[0] is True
+
+    set_json_dumps(my_dumps)
+    try:
+        cur.execute(f"select %{fmt_in}->>'baz' = 'qux'", (wrapper(obj),))
+        assert cur.fetchone()[0] is True
+    finally:
+        set_json_dumps(json.dumps)
 
 
 @pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
 @pytest.mark.parametrize("wrapper", ["Json", "Jsonb"])
 def test_json_dump_subclass(conn, wrapper, fmt_in):
+    JDumper = getattr(
+        psycopg3.types,
+        f"{wrapper}{'Binary' if fmt_in != Format.TEXT else ''}Dumper",
+    )
     wrapper = getattr(psycopg3.types, wrapper)
 
-    class MyWrapper(wrapper):
-        def dumps(self):
-            return my_dumps(self.obj)
+    class MyJsonDumper(JDumper):
+        def get_dumps(self):
+            return my_dumps
 
     obj = {"foo": "bar"}
     cur = conn.cursor()
-    cur.execute(f"select %{fmt_in}->>'baz' = 'qux'", (MyWrapper(obj),))
+    MyJsonDumper.register(wrapper, context=cur)
+    cur.execute(f"select %{fmt_in}->>'baz' = 'qux'", (wrapper(obj),))
     assert cur.fetchone()[0] is True
 
 
+@pytest.mark.parametrize("binary", [True, False])
+@pytest.mark.parametrize("pgtype", ["json", "jsonb"])
+def test_json_load_customise(conn, binary, pgtype):
+    obj = {"foo": "bar"}
+    cur = conn.cursor(binary=binary)
+
+    set_json_loads(my_loads)
+    try:
+        cur.execute(f"""select '{{"foo": "bar"}}'::{pgtype}""")
+        obj = cur.fetchone()[0]
+        assert obj["foo"] == "bar"
+        assert obj["answer"] == 42
+    finally:
+        set_json_loads(json.loads)
+
+
+@pytest.mark.parametrize("binary", [True, False])
+@pytest.mark.parametrize("pgtype", ["json", "jsonb"])
+def test_json_load_subclass(conn, binary, pgtype):
+    JLoader = getattr(
+        psycopg3.types,
+        f"{pgtype.title()}{'Binary' if binary else ''}Loader",
+    )
+
+    class MyJsonLoader(JLoader):
+        def get_loads(self):
+            return my_loads
+
+    cur = conn.cursor(binary=binary)
+    MyJsonLoader.register(cur.adapters.types[pgtype].oid, context=cur)
+    cur.execute(f"""select '{{"foo": "bar"}}'::{pgtype}""")
+    obj = cur.fetchone()[0]
+    assert obj["foo"] == "bar"
+    assert obj["answer"] == 42
+
+
 def my_dumps(obj):
+    obj = deepcopy(obj)
     obj["baz"] = "qux"
     return json.dumps(obj)
+
+
+def my_loads(data):
+    obj = json.loads(data)
+    obj["answer"] = 42
+    return obj

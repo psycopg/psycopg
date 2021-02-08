@@ -18,6 +18,9 @@ from .range import Range
 # Database types descriptors
 from .._typeinfo import TypeInfo, RangeInfo, CompositeInfo
 
+# Json global registrations
+from .json import set_json_dumps, set_json_loads
+
 # Adapter objects
 from .text import (
     StringDumper,
@@ -82,6 +85,7 @@ from .json import (
     JsonbBinaryDumper,
     JsonLoader,
     JsonBinaryLoader,
+    JsonbLoader,
     JsonbBinaryLoader,
 )
 from .uuid import (
@@ -192,7 +196,7 @@ def register_default_globals(ctx: AdaptContext) -> None:
     JsonbDumper.register(Jsonb, ctx)
     JsonbBinaryDumper.register(Jsonb, ctx)
     JsonLoader.register("json", ctx)
-    JsonLoader.register("jsonb", ctx)
+    JsonbLoader.register("jsonb", ctx)
     JsonBinaryLoader.register("json", ctx)
     JsonbBinaryLoader.register("jsonb", ctx)
 
