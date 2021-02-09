@@ -21,6 +21,11 @@ if TYPE_CHECKING:
 
 class NamedCursorHelper(Generic[ConnectionType]):
     __slots__ = ("name", "_wcur")
+    """Helper object for common NamedCursor code.
+
+    TODO: this should be a mixin, but couldn't find a way to work it
+    correctly with the generic.
+    """
 
     def __init__(
         self,
@@ -53,6 +58,11 @@ class NamedCursorHelper(Generic[ConnectionType]):
         )
         results = yield from execute(cur._conn.pgconn)
         cur._execute_results(results)
+
+    def _close_gen(self) -> PQGen[None]:
+        cur = self._cur
+        query = sql.SQL("close {}").format(sql.Identifier(self.name))
+        yield from cur._conn._exec_command(query)
 
     def _make_declare_statement(
         self, query: Query, scrollable: bool, hold: bool
@@ -114,7 +124,8 @@ class NamedCursor(BaseCursor["Connection"]):
         """
         Close the current cursor and free associated resources.
         """
-        # TODO close the cursor for real
+        with self._conn.lock:
+            self._conn.wait(self._helper._close_gen())
         self._close()
 
     def execute(
@@ -177,7 +188,8 @@ class AsyncNamedCursor(BaseCursor["AsyncConnection"]):
         """
         Close the current cursor and free associated resources.
         """
-        # TODO close the cursor for real
+        async with self._conn.lock:
+            await self._conn.wait(self._helper._close_gen())
         self._close()
 
     async def execute(
