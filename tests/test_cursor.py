@@ -242,6 +242,29 @@ def test_rowcount(conn):
     assert cur.rowcount == -1
 
 
+def test_rownumber(conn):
+    cur = conn.cursor()
+    assert cur.rownumber is None
+
+    cur.execute("select 1 from generate_series(1, 42)")
+    assert cur.rownumber == 0
+
+    cur.fetchone()
+    assert cur.rownumber == 1
+    cur.fetchone()
+    assert cur.rownumber == 2
+    cur.fetchmany(10)
+    assert cur.rownumber == 12
+    rns = []
+    for i in cur:
+        rns.append(cur.rownumber)
+        if len(rns) >= 3:
+            break
+    assert rns == [13, 14, 15]
+    assert len(cur.fetchall()) == 42 - rns[-1]
+    assert cur.rownumber == 42
+
+
 def test_iter(conn):
     cur = conn.cursor()
     cur.execute("select generate_series(1, 3)")

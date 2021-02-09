@@ -243,6 +243,29 @@ async def test_rowcount(aconn):
     assert cur.rowcount == -1
 
 
+async def test_rownumber(aconn):
+    cur = await aconn.cursor()
+    assert cur.rownumber is None
+
+    await cur.execute("select 1 from generate_series(1, 42)")
+    assert cur.rownumber == 0
+
+    await cur.fetchone()
+    assert cur.rownumber == 1
+    await cur.fetchone()
+    assert cur.rownumber == 2
+    await cur.fetchmany(10)
+    assert cur.rownumber == 12
+    rns = []
+    async for i in cur:
+        rns.append(cur.rownumber)
+        if len(rns) >= 3:
+            break
+    assert rns == [13, 14, 15]
+    assert len(await cur.fetchall()) == 42 - rns[-1]
+    assert cur.rownumber == 42
+
+
 async def test_iter(aconn):
     cur = await aconn.cursor()
     await cur.execute("select generate_series(1, 3)")

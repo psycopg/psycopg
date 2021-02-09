@@ -146,6 +146,14 @@ class BaseCursor(Generic[ConnectionType]):
         """Number of records affected by the precedent operation."""
         return self._rowcount
 
+    @property
+    def rownumber(self) -> Optional[int]:
+        """Index of the next row to fetch in the current result.
+
+        `!None` if there is no result to fetch.
+        """
+        return self._pos if self._pgresult else None
+
     def setinputsizes(self, sizes: Sequence[Any]) -> None:
         # no-op
         pass
@@ -531,7 +539,7 @@ class Cursor(BaseCursor["Connection"]):
         self._check_result()
         assert self.pgresult
         records = self._tx.load_rows(self._pos, self.pgresult.ntuples)
-        self._pos += self.pgresult.ntuples
+        self._pos = self.pgresult.ntuples
         return records
 
     def __iter__(self) -> Iterator[Sequence[Any]]:
@@ -628,7 +636,7 @@ class AsyncCursor(BaseCursor["AsyncConnection"]):
         self._check_result()
         assert self.pgresult
         records = self._tx.load_rows(self._pos, self.pgresult.ntuples)
-        self._pos += self.pgresult.ntuples
+        self._pos = self.pgresult.ntuples
         return records
 
     async def __aiter__(self) -> AsyncIterator[Sequence[Any]]:

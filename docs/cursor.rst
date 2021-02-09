@@ -141,6 +141,9 @@ The `!Cursor` class
     .. autoattribute:: rowcount
         :annotation: int
 
+    .. autoattribute:: rownumber
+        :annotation: int
+
     .. autoattribute:: query
         :annotation: Optional[bytes]
 
