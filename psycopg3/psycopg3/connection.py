@@ -29,8 +29,8 @@ from . import waiting
 from . import encodings
 from .pq import ConnStatus, ExecStatus, TransactionStatus, Format
 from .sql import Composable
-from .proto import PQGen, PQGenConn, RV, Query, Params, AdaptContext
-from .proto import ConnectionType
+from .proto import PQGen, PQGenConn, RV, RowFactory, Query, Params
+from .proto import AdaptContext, ConnectionType
 from .conninfo import make_conninfo
 from .generators import notifies
 from .transaction import Transaction, AsyncTransaction
@@ -448,7 +448,12 @@ class Connection(BaseConnection):
         """Close the database connection."""
         self.pgconn.finish()
 
-    def cursor(self, name: str = "", binary: bool = False) -> "Cursor":
+    def cursor(
+        self,
+        name: str = "",
+        binary: bool = False,
+        row_factory: RowFactory = cursor.default_row_factory,
+    ) -> "Cursor":
         """
         Return a new `Cursor` to send commands and queries to the connection.
         """
@@ -456,7 +461,7 @@ class Connection(BaseConnection):
             raise NotImplementedError
 
         format = Format.BINARY if binary else Format.TEXT
-        return self.cursor_factory(self, format=format)
+        return self.cursor_factory(self, row_factory, format=format)
 
     def execute(
         self,
@@ -584,7 +589,10 @@ class AsyncConnection(BaseConnection):
         self.pgconn.finish()
 
     async def cursor(
-        self, name: str = "", binary: bool = False
+        self,
+        name: str = "",
+        binary: bool = False,
+        row_factory: RowFactory = cursor.default_row_factory,
     ) -> "AsyncCursor":
         """
         Return a new `AsyncCursor` to send commands and queries to the connection.
@@ -593,7 +601,7 @@ class AsyncConnection(BaseConnection):
             raise NotImplementedError
 
         format = Format.BINARY if binary else Format.TEXT
-        return self.cursor_factory(self, format=format)
+        return self.cursor_factory(self, row_factory, format=format)
 
     async def execute(
         self,

@@ -263,6 +263,16 @@ def test_iter_stop(conn):
     assert list(cur) == []
 
 
+def test_row_factory(conn):
+    def my_row_factory(cur):
+        return lambda values: [-v for v in values]
+
+    cur = conn.cursor(row_factory=my_row_factory)
+    cur.execute("select generate_series(1, 3)")
+    r = cur.fetchall()
+    assert r == [[-1], [-2], [-3]]
+
+
 def test_query_params_execute(conn):
     cur = conn.cursor()
     assert cur.query is None

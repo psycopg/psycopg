@@ -14,6 +14,7 @@ from ._enums import Format
 
 if TYPE_CHECKING:
     from .connection import BaseConnection
+    from .cursor import BaseCursor
     from .adapt import Dumper, Loader, AdaptersMap
     from .waiting import Wait, Ready
     from .sql import Composable
@@ -114,4 +115,19 @@ class Transformer(Protocol):
         ...
 
     def get_loader(self, oid: int, format: pq.Format) -> "Loader":
+        ...
+
+
+# Row factories
+
+Row = TypeVar("Row")
+
+
+class RowMaker(Protocol):
+    def __call__(self, __values: Sequence[Any]) -> Row:
+        ...
+
+
+class RowFactory(Protocol):
+    def __call__(self, __cursor: "BaseCursor[ConnectionType]") -> RowMaker:
         ...

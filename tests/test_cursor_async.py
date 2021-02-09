@@ -268,6 +268,25 @@ async def test_iter_stop(aconn):
         assert False
 
 
+async def test_row_factory(aconn):
+    def my_row_factory(cursor):
+        assert cursor.description is not None
+        titles = [c.name for c in cursor.description]
+
+        def mkrow(values):
+            return [
+                f"{value.upper()}{title}"
+                for title, value in zip(titles, values)
+            ]
+
+        return mkrow
+
+    cur = await aconn.cursor(row_factory=my_row_factory)
+    await cur.execute("select 'foo' as bar")
+    (r,) = await cur.fetchone()
+    assert r == "FOObar"
+
+
 async def test_query_params_execute(aconn):
     cur = await aconn.cursor()
     assert cur.query is None
