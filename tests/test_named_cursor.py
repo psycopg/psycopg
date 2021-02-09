@@ -38,3 +38,77 @@ def test_warn_close(conn, recwarn):
     cur.execute("select generate_series(1, 10) as bar")
     del cur
     assert ".close()" in str(recwarn.pop(ResourceWarning).message)
+
+
+def test_fetchone(conn):
+    with conn.cursor("foo") as cur:
+        cur.execute("select generate_series(1, %s) as bar", (2,))
+        assert cur.fetchone() == (1,)
+        assert cur.fetchone() == (2,)
+        assert cur.fetchone() is None
+
+
+def test_fetchmany(conn):
+    with conn.cursor("foo") as cur:
+        cur.execute("select generate_series(1, %s) as bar", (5,))
+        assert cur.fetchmany(3) == [(1,), (2,), (3,)]
+        assert cur.fetchone() == (4,)
+        assert cur.fetchmany(3) == [(5,)]
+        assert cur.fetchmany(3) == []
+
+
+def test_fetchall(conn):
+    with conn.cursor("foo") as cur:
+        cur.execute("select generate_series(1, %s) as bar", (3,))
+        assert cur.fetchall() == [(1,), (2,), (3,)]
+        assert cur.fetchall() == []
+
+    with conn.cursor("foo") as cur:
+        cur.execute("select generate_series(1, %s) as bar", (3,))
+        assert cur.fetchone() == (1,)
+        assert cur.fetchall() == [(2,), (3,)]
+        assert cur.fetchall() == []
+
+
+def test_rownumber(conn):
+    cur = conn.cursor("foo")
+    assert cur.rownumber is None
+
+    cur.execute("select 1 from generate_series(1, 42)")
+    assert cur.rownumber == 0
+
+    cur.fetchone()
+    assert cur.rownumber == 1
+    cur.fetchone()
+    assert cur.rownumber == 2
+    cur.fetchmany(10)
+    assert cur.rownumber == 12
+    cur.fetchall()
+    assert cur.rownumber == 42
+
+
+def test_iter(conn):
+    with conn.cursor("foo") as cur:
+        cur.execute("select generate_series(1, %s) as bar", (3,))
+        recs = list(cur)
+    assert recs == [(1,), (2,), (3,)]
+
+    with conn.cursor("foo") as cur:
+        cur.execute("select generate_series(1, %s) as bar", (3,))
+        assert cur.fetchone() == (1,)
+        recs = list(cur)
+    assert recs == [(2,), (3,)]
+
+
+def test_itersize(conn, commands):
+    with conn.cursor("foo") as cur:
+        assert cur.itersize == 100
+        cur.itersize = 2
+        cur.execute("select generate_series(1, %s) as bar", (3,))
+        commands.popall()  # flush begin and other noise
+
+        list(cur)
+        cmds = commands.popall()
+        assert len(cmds) == 2
+        for cmd in cmds:
+            assert ("fetch forward 2") in cmd.lower()

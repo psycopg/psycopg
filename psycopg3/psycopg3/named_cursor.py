@@ -7,7 +7,8 @@ psycopg3 named cursor objects (server-side cursors)
 import weakref
 import warnings
 from types import TracebackType
-from typing import Any, Generic, Optional, Type, TYPE_CHECKING
+from typing import Any, AsyncIterator, Generic, List, Iterator, Optional
+from typing import Sequence, Type, Tuple, TYPE_CHECKING
 
 from . import sql
 from .pq import Format
@@ -17,6 +18,8 @@ from .proto import ConnectionType, Query, Params, PQGen
 if TYPE_CHECKING:
     from .connection import BaseConnection  # noqa: F401
     from .connection import Connection, AsyncConnection  # noqa: F401
+
+DEFAULT_ITERSIZE = 100
 
 
 class NamedCursorHelper(Generic[ConnectionType]):
@@ -46,23 +49,42 @@ class NamedCursorHelper(Generic[ConnectionType]):
     ) -> PQGen[None]:
         """Generator implementing `NamedCursor.execute()`."""
         cur = self._cur
+        conn = cur._conn
         yield from cur._start_query(query)
         pgq = cur._convert_query(query, params)
         cur._execute_send(pgq)
-        results = yield from execute(cur._conn.pgconn)
+        results = yield from execute(conn.pgconn)
         cur._execute_results(results)
 
         # The above result is an COMMAND_OK. Get the cursor result shape
-        cur._conn.pgconn.send_describe_portal(
-            self.name.encode(cur._conn.client_encoding)
+        conn.pgconn.send_describe_portal(
+            self.name.encode(conn.client_encoding)
         )
-        results = yield from execute(cur._conn.pgconn)
+        results = yield from execute(conn.pgconn)
         cur._execute_results(results)
 
     def _close_gen(self) -> PQGen[None]:
         cur = self._cur
         query = sql.SQL("close {}").format(sql.Identifier(self.name))
         yield from cur._conn._exec_command(query)
+
+    def _fetch_gen(self, num: Optional[int]) -> PQGen[List[Tuple[Any, ...]]]:
+        if num is not None:
+            howmuch: sql.Composable = sql.Literal(num)
+        else:
+            howmuch = sql.SQL("all")
+
+        cur = self._cur
+        query = sql.SQL("fetch forward {} from {}").format(
+            howmuch, sql.Identifier(self.name)
+        )
+        res = yield from cur._conn._exec_command(query)
+
+        # TODO: loaders don't need to be refreshed
+        cur.pgresult = res
+        nrows = res.ntuples
+        cur._pos += nrows
+        return cur._tx.load_rows(0, nrows)
 
     def _make_declare_statement(
         self, query: Query, scrollable: bool, hold: bool
@@ -85,7 +107,7 @@ class NamedCursorHelper(Generic[ConnectionType]):
 
 class NamedCursor(BaseCursor["Connection"]):
     __module__ = "psycopg3"
-    __slots__ = ("_helper",)
+    __slots__ = ("_helper", "itersize")
 
     def __init__(
         self,
@@ -96,6 +118,7 @@ class NamedCursor(BaseCursor["Connection"]):
     ):
         super().__init__(connection, format=format)
         self._helper = NamedCursorHelper(name, self)
+        self.itersize = DEFAULT_ITERSIZE
 
     def __del__(self) -> None:
         if not self._closed:
@@ -146,10 +169,36 @@ class NamedCursor(BaseCursor["Connection"]):
             self._conn.wait(self._helper._declare_gen(query, params))
         return self
 
+    def fetchone(self) -> Optional[Sequence[Any]]:
+        with self._conn.lock:
+            recs = self._conn.wait(self._helper._fetch_gen(1))
+        return recs[0] if recs else None
+
+    def fetchmany(self, size: int = 0) -> Sequence[Sequence[Any]]:
+        if not size:
+            size = self.arraysize
+        with self._conn.lock:
+            recs = self._conn.wait(self._helper._fetch_gen(size))
+        return recs
+
+    def fetchall(self) -> Sequence[Sequence[Any]]:
+        with self._conn.lock:
+            recs = self._conn.wait(self._helper._fetch_gen(None))
+        return recs
+
+    def __iter__(self) -> Iterator[Sequence[Any]]:
+        while True:
+            with self._conn.lock:
+                recs = self._conn.wait(self._helper._fetch_gen(self.itersize))
+            for rec in recs:
+                yield rec
+            if len(recs) < self.itersize:
+                break
+
 
 class AsyncNamedCursor(BaseCursor["AsyncConnection"]):
     __module__ = "psycopg3"
-    __slots__ = ("_helper",)
+    __slots__ = ("_helper", "itersize")
 
     def __init__(
         self,
@@ -160,6 +209,7 @@ class AsyncNamedCursor(BaseCursor["AsyncConnection"]):
     ):
         super().__init__(connection, format=format)
         self._helper = NamedCursorHelper(name, self)
+        self.itersize = DEFAULT_ITERSIZE
 
     def __del__(self) -> None:
         if not self._closed:
@@ -209,3 +259,31 @@ class AsyncNamedCursor(BaseCursor["AsyncConnection"]):
         async with self._conn.lock:
             await self._conn.wait(self._helper._declare_gen(query, params))
         return self
+
+    async def fetchone(self) -> Optional[Sequence[Any]]:
+        async with self._conn.lock:
+            recs = await self._conn.wait(self._helper._fetch_gen(1))
+        return recs[0] if recs else None
+
+    async def fetchmany(self, size: int = 0) -> Sequence[Sequence[Any]]:
+        if not size:
+            size = self.arraysize
+        async with self._conn.lock:
+            recs = await self._conn.wait(self._helper._fetch_gen(size))
+        return recs
+
+    async def fetchall(self) -> Sequence[Sequence[Any]]:
+        async with self._conn.lock:
+            recs = await self._conn.wait(self._helper._fetch_gen(None))
+        return recs
+
+    async def __aiter__(self) -> AsyncIterator[Sequence[Any]]:
+        while True:
+            async with self._conn.lock:
+                recs = await self._conn.wait(
+                    self._helper._fetch_gen(self.itersize)
+                )
+            for rec in recs:
+                yield rec
+            if len(recs) < self.itersize:
+                break

@@ -321,12 +321,12 @@ class BaseConnection(AdaptContext):
         conn._autocommit = autocommit
         return conn
 
-    def _exec_command(self, command: Query) -> PQGen[None]:
+    def _exec_command(self, command: Query) -> PQGen["PGresult"]:
         """
         Generator to send a command and receive the result to the backend.
 
-        Only used to implement internal commands such as commit, returning
-        no result. The cursor can do more complex stuff.
+        Only used to implement internal commands such as "commit", with eventual
+        arguments bound client-side. The cursor can do more complex stuff.
         """
         if self.pgconn.status != ConnStatus.OK:
             if self.pgconn.status == ConnStatus.BAD:
@@ -343,7 +343,7 @@ class BaseConnection(AdaptContext):
 
         self.pgconn.send_query(command)
         result = (yield from execute(self.pgconn))[-1]
-        if result.status != ExecStatus.COMMAND_OK:
+        if result.status not in (ExecStatus.COMMAND_OK, ExecStatus.TUPLES_OK):
             if result.status == ExecStatus.FATAL_ERROR:
                 raise e.error_from_result(
                     result, encoding=self.client_encoding
@@ -353,6 +353,7 @@ class BaseConnection(AdaptContext):
                     f"unexpected result {ExecStatus(result.status).name}"
                     f" from command {command.decode('utf8')!r}"
                 )
+        return result
 
     def _start_query(self) -> PQGen[None]:
         """Generator to start a transaction if necessary."""
