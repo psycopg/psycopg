@@ -11,7 +11,7 @@ import warnings
 import threading
 from types import TracebackType
 from typing import Any, AsyncIterator, Callable, Iterator, List, NamedTuple
-from typing import Optional, Type, TYPE_CHECKING
+from typing import Optional, overload, Type, Union, TYPE_CHECKING
 from weakref import ref, ReferenceType
 from functools import partial
 from contextlib import contextmanager
@@ -23,7 +23,6 @@ else:
 
 from . import pq
 from . import adapt
-from . import cursor
 from . import errors as e
 from . import waiting
 from . import encodings
@@ -31,9 +30,11 @@ from .pq import ConnStatus, ExecStatus, TransactionStatus, Format
 from .sql import Composable
 from .proto import PQGen, PQGenConn, RV, Query, Params, AdaptContext
 from .proto import ConnectionType
+from .cursor import Cursor, AsyncCursor
 from .conninfo import make_conninfo
 from .generators import notifies
 from .transaction import Transaction, AsyncTransaction
+from .named_cursor import NamedCursor, AsyncNamedCursor
 from ._preparing import PrepareManager
 
 logger = logging.getLogger(__name__)
@@ -43,7 +44,6 @@ connect: Callable[[str], PQGenConn["PGconn"]]
 execute: Callable[["PGconn"], PQGen[List["PGresult"]]]
 
 if TYPE_CHECKING:
-    from .cursor import AsyncCursor, BaseCursor, Cursor
     from .pq.proto import PGconn, PGresult
 
 if pq.__impl__ == "c":
@@ -101,8 +101,6 @@ class BaseConnection(AdaptContext):
     # Enums useful for the connection
     ConnStatus = pq.ConnStatus
     TransactionStatus = pq.TransactionStatus
-
-    cursor_factory: Type["BaseCursor[Any]"]
 
     def __init__(self, pgconn: "PGconn"):
         self.pgconn = pgconn  # TODO: document this
@@ -400,12 +398,9 @@ class Connection(BaseConnection):
 
     __module__ = "psycopg3"
 
-    cursor_factory: Type["Cursor"]
-
     def __init__(self, pgconn: "PGconn"):
         super().__init__(pgconn)
         self.lock = threading.Lock()
-        self.cursor_factory = cursor.Cursor
 
     @classmethod
     def connect(
@@ -448,22 +443,32 @@ class Connection(BaseConnection):
         """Close the database connection."""
         self.pgconn.finish()
 
-    def cursor(self, name: str = "", binary: bool = False) -> "Cursor":
+    @overload
+    def cursor(self, *, binary: bool = False) -> Cursor:
+        ...
+
+    @overload
+    def cursor(self, name: str, *, binary: bool = False) -> NamedCursor:
+        ...
+
+    def cursor(
+        self, name: str = "", *, binary: bool = False
+    ) -> Union[Cursor, NamedCursor]:
         """
         Return a new `Cursor` to send commands and queries to the connection.
         """
-        if name:
-            raise NotImplementedError
-
         format = Format.BINARY if binary else Format.TEXT
-        return self.cursor_factory(self, format=format)
+        if name:
+            return NamedCursor(self, name=name, format=format)
+        else:
+            return Cursor(self, format=format)
 
     def execute(
         self,
         query: Query,
         params: Optional[Params] = None,
         prepare: Optional[bool] = None,
-    ) -> "Cursor":
+    ) -> Cursor:
         """Execute a query and return a cursor to read its results."""
         cur = self.cursor()
         return cur.execute(query, params, prepare=prepare)
@@ -541,12 +546,9 @@ class AsyncConnection(BaseConnection):
 
     __module__ = "psycopg3"
 
-    cursor_factory: Type["AsyncCursor"]
-
     def __init__(self, pgconn: "PGconn"):
         super().__init__(pgconn)
         self.lock = asyncio.Lock()
-        self.cursor_factory = cursor.AsyncCursor
 
     @classmethod
     async def connect(
@@ -583,24 +585,34 @@ class AsyncConnection(BaseConnection):
     async def close(self) -> None:
         self.pgconn.finish()
 
+    @overload
+    async def cursor(self, *, binary: bool = False) -> AsyncCursor:
+        ...
+
+    @overload
     async def cursor(
-        self, name: str = "", binary: bool = False
-    ) -> "AsyncCursor":
+        self, name: str, *, binary: bool = False
+    ) -> AsyncNamedCursor:
+        ...
+
+    async def cursor(
+        self, name: str = "", *, binary: bool = False
+    ) -> Union[AsyncCursor, AsyncNamedCursor]:
         """
         Return a new `AsyncCursor` to send commands and queries to the connection.
         """
-        if name:
-            raise NotImplementedError
-
         format = Format.BINARY if binary else Format.TEXT
-        return self.cursor_factory(self, format=format)
+        if name:
+            return AsyncNamedCursor(self, name=name, format=format)
+        else:
+            return AsyncCursor(self, format=format)
 
     async def execute(
         self,
         query: Query,
         params: Optional[Params] = None,
         prepare: Optional[bool] = None,
-    ) -> "AsyncCursor":
+    ) -> AsyncCursor:
         cur = await self.cursor()
         return await cur.execute(query, params, prepare=prepare)
 

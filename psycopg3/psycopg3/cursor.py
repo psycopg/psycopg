@@ -30,6 +30,7 @@ else:
 if TYPE_CHECKING:
     from .proto import Transformer
     from .pq.proto import PGconn, PGresult
+    from .connection import BaseConnection  # noqa: F401
     from .connection import Connection, AsyncConnection  # noqa: F401
 
 execute: Callable[["PGconn"], PQGen[List["PGresult"]]]
@@ -58,9 +59,7 @@ class BaseCursor(Generic[ConnectionType]):
     _tx: "Transformer"
 
     def __init__(
-        self,
-        connection: ConnectionType,
-        format: Format = Format.TEXT,
+        self, connection: ConnectionType, *, format: Format = Format.TEXT
     ):
         self._conn = connection
         self.format = format
@@ -138,7 +137,7 @@ class BaseCursor(Generic[ConnectionType]):
         `!None` if the current resultset didn't return tuples.
         """
         res = self.pgresult
-        if not res or res.status != ExecStatus.TUPLES_OK:
+        if not (res and res.nfields):
             return None
         return [Column(self, i) for i in range(res.nfields)]
 
@@ -184,12 +183,14 @@ class BaseCursor(Generic[ConnectionType]):
         self,
         query: Query,
         params: Optional[Params] = None,
+        *,
         prepare: Optional[bool] = None,
     ) -> PQGen[None]:
         """Generator implementing `Cursor.execute()`."""
         yield from self._start_query(query)
         pgq = self._convert_query(query, params)
-        yield from self._maybe_prepare_gen(pgq, prepare)
+        results = yield from self._maybe_prepare_gen(pgq, prepare)
+        self._execute_results(results)
         self._last_query = query
 
     def _executemany_gen(
@@ -206,13 +207,14 @@ class BaseCursor(Generic[ConnectionType]):
             else:
                 pgq.dump(params)
 
-            yield from self._maybe_prepare_gen(pgq, True)
+            results = yield from self._maybe_prepare_gen(pgq, True)
+            self._execute_results(results)
 
         self._last_query = query
 
     def _maybe_prepare_gen(
         self, pgq: PostgresQuery, prepare: Optional[bool]
-    ) -> PQGen[None]:
+    ) -> PQGen[Sequence["PGresult"]]:
         # Check if the query is prepared or needs preparing
         prep, name = self._conn._prepared.get(pgq, prepare)
         if prep is Prepare.YES:
@@ -242,7 +244,7 @@ class BaseCursor(Generic[ConnectionType]):
             if cmd:
                 yield from self._conn._exec_command(cmd)
 
-        self._execute_results(results)
+        return results
 
     def _stream_send_gen(
         self, query: Query, params: Optional[Params] = None
@@ -429,6 +431,14 @@ class BaseCursor(Generic[ConnectionType]):
                 f" FROM STDIN statements, got {ExecStatus(status).name}"
             )
 
+    def _close(self) -> None:
+        self._closed = True
+        # however keep the query available, which can be useful for debugging
+        # in case of errors
+        pgq = self._pgq
+        self._reset()
+        self._pgq = pgq
+
 
 class Cursor(BaseCursor["Connection"]):
     __module__ = "psycopg3"
@@ -449,17 +459,13 @@ class Cursor(BaseCursor["Connection"]):
         """
         Close the current cursor and free associated resources.
         """
-        self._closed = True
-        # however keep the query available, which can be useful for debugging
-        # in case of errors
-        pgq = self._pgq
-        self._reset()
-        self._pgq = pgq
+        self._close()
 
     def execute(
         self,
         query: Query,
         params: Optional[Params] = None,
+        *,
         prepare: Optional[bool] = None,
     ) -> "Cursor":
         """
@@ -568,13 +574,13 @@ class AsyncCursor(BaseCursor["AsyncConnection"]):
         await self.close()
 
     async def close(self) -> None:
-        self._closed = True
-        self._reset()
+        self._close()
 
     async def execute(
         self,
         query: Query,
         params: Optional[Params] = None,
+        *,
         prepare: Optional[bool] = None,
     ) -> "AsyncCursor":
         async with self._conn.lock:
@@ -644,15 +650,3 @@ class AsyncCursor(BaseCursor["AsyncConnection"]):
 
         async with AsyncCopy(self) as copy:
             yield copy
-
-
-class NamedCursorMixin:
-    pass
-
-
-class NamedCursor(NamedCursorMixin, Cursor):
-    pass
-
-
-class AsyncNamedCursor(NamedCursorMixin, AsyncCursor):
-    pass
