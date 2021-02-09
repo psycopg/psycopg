@@ -262,7 +262,7 @@ types`__, allowing to customise the load and dump function used.
 Because several Python objects could be considered JSON (dicts, lists,
 scalars, even date/time if using a dumps function customised to use them),
 `!psycopg3` requires you to wrap what you want to dump as JSON into a wrapper:
-either `psycogp3.types.Json` or `~psycopg3.types.Jsonb`.
+either `psycopg3.types.Json` or `~psycopg3.types.Jsonb`.
 
 .. code:: python
 
