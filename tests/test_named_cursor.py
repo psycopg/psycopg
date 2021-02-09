@@ -1,3 +1,10 @@
+def test_funny_name(conn):
+    cur = conn.cursor("1-2-3")
+    cur.execute("select generate_series(1, 3) as bar")
+    assert cur.fetchall() == [(1,), (2,), (3,)]
+    assert cur.name == "1-2-3"
+
+
 def test_description(conn):
     cur = conn.cursor("foo")
     assert cur.name == "foo"
@@ -98,6 +105,13 @@ def test_iter(conn):
         assert cur.fetchone() == (1,)
         recs = list(cur)
     assert recs == [(2,), (3,)]
+
+
+def test_iter_rownumber(conn):
+    with conn.cursor("foo") as cur:
+        cur.execute("select generate_series(1, %s) as bar", (3,))
+        for row in cur:
+            assert cur.rownumber == row[0]
 
 
 def test_itersize(conn, commands):

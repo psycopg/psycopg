@@ -82,9 +82,7 @@ class NamedCursorHelper(Generic[ConnectionType]):
 
         # TODO: loaders don't need to be refreshed
         cur.pgresult = res
-        nrows = res.ntuples
-        cur._pos += nrows
-        return cur._tx.load_rows(0, nrows)
+        return cur._tx.load_rows(0, res.ntuples)
 
     def _make_declare_statement(
         self, query: Query, scrollable: bool, hold: bool
@@ -172,18 +170,24 @@ class NamedCursor(BaseCursor["Connection"]):
     def fetchone(self) -> Optional[Sequence[Any]]:
         with self._conn.lock:
             recs = self._conn.wait(self._helper._fetch_gen(1))
-        return recs[0] if recs else None
+        if recs:
+            self._pos += 1
+            return recs[0]
+        else:
+            return None
 
     def fetchmany(self, size: int = 0) -> Sequence[Sequence[Any]]:
         if not size:
             size = self.arraysize
         with self._conn.lock:
             recs = self._conn.wait(self._helper._fetch_gen(size))
+        self._pos += len(recs)
         return recs
 
     def fetchall(self) -> Sequence[Sequence[Any]]:
         with self._conn.lock:
             recs = self._conn.wait(self._helper._fetch_gen(None))
+        self._pos += len(recs)
         return recs
 
     def __iter__(self) -> Iterator[Sequence[Any]]:
@@ -191,6 +195,7 @@ class NamedCursor(BaseCursor["Connection"]):
             with self._conn.lock:
                 recs = self._conn.wait(self._helper._fetch_gen(self.itersize))
             for rec in recs:
+                self._pos += 1
                 yield rec
             if len(recs) < self.itersize:
                 break
@@ -263,18 +268,24 @@ class AsyncNamedCursor(BaseCursor["AsyncConnection"]):
     async def fetchone(self) -> Optional[Sequence[Any]]:
         async with self._conn.lock:
             recs = await self._conn.wait(self._helper._fetch_gen(1))
-        return recs[0] if recs else None
+        if recs:
+            self._pos += 1
+            return recs[0]
+        else:
+            return None
 
     async def fetchmany(self, size: int = 0) -> Sequence[Sequence[Any]]:
         if not size:
             size = self.arraysize
         async with self._conn.lock:
             recs = await self._conn.wait(self._helper._fetch_gen(size))
+        self._pos += len(recs)
         return recs
 
     async def fetchall(self) -> Sequence[Sequence[Any]]:
         async with self._conn.lock:
             recs = await self._conn.wait(self._helper._fetch_gen(None))
+        self._pos += len(recs)
         return recs
 
     async def __aiter__(self) -> AsyncIterator[Sequence[Any]]:
@@ -284,6 +295,7 @@ class AsyncNamedCursor(BaseCursor["AsyncConnection"]):
                     self._helper._fetch_gen(self.itersize)
                 )
             for rec in recs:
+                self._pos += 1
                 yield rec
             if len(recs) < self.itersize:
                 break

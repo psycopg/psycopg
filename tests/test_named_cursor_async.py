@@ -3,6 +3,13 @@ import pytest
 pytestmark = pytest.mark.asyncio
 
 
+async def test_funny_name(aconn):
+    cur = await aconn.cursor("1-2-3")
+    await cur.execute("select generate_series(1, 3) as bar")
+    assert await cur.fetchall() == [(1,), (2,), (3,)]
+    assert cur.name == "1-2-3"
+
+
 async def test_description(aconn):
     cur = await aconn.cursor("foo")
     assert cur.name == "foo"
@@ -107,6 +114,13 @@ async def test_iter(aconn):
         async for rec in cur:
             recs.append(rec)
     assert recs == [(2,), (3,)]
+
+
+async def test_iter_rownumber(aconn):
+    async with await aconn.cursor("foo") as cur:
+        await cur.execute("select generate_series(1, %s) as bar", (3,))
+        async for row in cur:
+            assert cur.rownumber == row[0]
 
 
 async def test_itersize(aconn, acommands):
