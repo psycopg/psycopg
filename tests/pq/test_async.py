@@ -172,3 +172,40 @@ def test_send_prepared_binary_out(pgconn, fmt, out):
     (res,) = execute_wait(pgconn)
     assert res.status == pq.ExecStatus.TUPLES_OK
     assert res.get_value(0, 0) == out
+
+
+def test_send_describe_prepared(pgconn):
+    pgconn.send_prepare(b"prep", b"select $1::int + $2::int as fld")
+    (res,) = execute_wait(pgconn)
+    assert res.status == pq.ExecStatus.COMMAND_OK, res.error_message
+
+    pgconn.send_describe_prepared(b"prep")
+    (res,) = execute_wait(pgconn)
+    assert res.nfields == 1
+    assert res.ntuples == 0
+    assert res.fname(0) == b"fld"
+    assert res.ftype(0) == 23
+
+    pgconn.finish()
+    with pytest.raises(psycopg3.OperationalError):
+        pgconn.send_describe_prepared(b"prep")
+
+
+def test_send_describe_portal(pgconn):
+    res = pgconn.exec_(
+        b"""
+        begin;
+        declare cur cursor for select * from generate_series(1,10) foo;
+        """
+    )
+    assert res.status == pq.ExecStatus.COMMAND_OK, res.error_message
+
+    pgconn.send_describe_portal(b"cur")
+    (res,) = execute_wait(pgconn)
+    assert res.status == pq.ExecStatus.COMMAND_OK, res.error_message
+    assert res.nfields == 1
+    assert res.fname(0) == b"foo"
+
+    pgconn.finish()
+    with pytest.raises(psycopg3.OperationalError):
+        pgconn.send_describe_portal(b"cur")

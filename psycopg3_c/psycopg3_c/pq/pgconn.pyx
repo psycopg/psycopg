@@ -369,12 +369,28 @@ cdef class PGconn:
             raise MemoryError("couldn't allocate PGresult")
         return PGresult._from_ptr(rv)
 
+    def send_describe_prepared(self, const char *name) -> None:
+        _ensure_pgconn(self)
+        cdef int rv = libpq.PQsendDescribePrepared(self.pgconn_ptr, name)
+        if not rv:
+            raise PQerror(
+                f"sending describe prepared failed: {error_message(self)}"
+            )
+
     def describe_portal(self, const char *name) -> PGresult:
         _ensure_pgconn(self)
         cdef libpq.PGresult *rv = libpq.PQdescribePortal(self.pgconn_ptr, name)
         if rv is NULL:
             raise MemoryError("couldn't allocate PGresult")
         return PGresult._from_ptr(rv)
+
+    def send_describe_portal(self, const char *name) -> None:
+        _ensure_pgconn(self)
+        cdef int rv = libpq.PQsendDescribePortal(self.pgconn_ptr, name)
+        if not rv:
+            raise PQerror(
+                f"sending describe prepared failed: {error_message(self)}"
+            )
 
     def get_result(self) -> Optional["PGresult"]:
         cdef libpq.PGresult *pgresult = libpq.PQgetResult(self.pgconn_ptr)

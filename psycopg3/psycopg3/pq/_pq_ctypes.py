@@ -472,7 +472,13 @@ PQsendQueryPrepared.argtypes = [
 ]
 PQsendQueryPrepared.restype = c_int
 
-# TODO: PQsendDescribePrepared PQsendDescribePortal
+PQsendDescribePrepared = pq.PQsendDescribePrepared
+PQsendDescribePrepared.argtypes = [PGconn_ptr, c_char_p]
+PQsendDescribePrepared.restype = c_int
+
+PQsendDescribePortal = pq.PQsendDescribePortal
+PQsendDescribePortal.argtypes = [PGconn_ptr, c_char_p]
+PQsendDescribePortal.restype = c_int
 
 PQgetResult = pq.PQgetResult
 PQgetResult.argtypes = [PGconn_ptr]
