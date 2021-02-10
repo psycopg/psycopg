@@ -201,7 +201,7 @@ def test_diag_from_commit(conn):
 
 @pytest.mark.asyncio
 async def test_diag_from_commit_async(aconn):
-    cur = await aconn.cursor()
+    cur = aconn.cursor()
     await cur.execute(
         """
         create temp table test_deferred (

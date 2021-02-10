@@ -11,7 +11,7 @@ pytestmark = pytest.mark.asyncio
 
 
 async def test_close(aconn):
-    cur = await aconn.cursor()
+    cur = aconn.cursor()
     assert not cur.closed
     await cur.close()
     assert cur.closed
@@ -24,14 +24,14 @@ async def test_close(aconn):
 
 
 async def test_context(aconn):
-    async with (await aconn.cursor()) as cur:
+    async with aconn.cursor() as cur:
         assert not cur.closed
 
     assert cur.closed
 
 
 async def test_weakref(aconn):
-    cur = await aconn.cursor()
+    cur = aconn.cursor()
     w = weakref.ref(cur)
     await cur.close()
     del cur
@@ -40,7 +40,7 @@ async def test_weakref(aconn):
 
 
 async def test_status(aconn):
-    cur = await aconn.cursor()
+    cur = aconn.cursor()
     assert cur.status is None
     await cur.execute("reset all")
     assert cur.status == cur.ExecStatus.COMMAND_OK
@@ -51,7 +51,7 @@ async def test_status(aconn):
 
 
 async def test_execute_many_results(aconn):
-    cur = await aconn.cursor()
+    cur = aconn.cursor()
     assert cur.nextset() is None
 
     rv = await cur.execute("select 'foo'; select generate_series(1,3)")
@@ -68,7 +68,7 @@ async def test_execute_many_results(aconn):
 
 
 async def test_execute_sequence(aconn):
-    cur = await aconn.cursor()
+    cur = aconn.cursor()
     rv = await cur.execute(
         "select %s::int, %s::text, %s::text", [1, "foo", None]
     )
@@ -82,7 +82,7 @@ async def test_execute_sequence(aconn):
 
 @pytest.mark.parametrize("query", ["", " ", ";"])
 async def test_execute_empty_query(aconn, query):
-    cur = await aconn.cursor()
+    cur = aconn.cursor()
     await cur.execute(query)
     assert cur.status == cur.ExecStatus.EMPTY_QUERY
     with pytest.raises(psycopg3.ProgrammingError):
@@ -93,14 +93,14 @@ async def test_execute_empty_query(aconn, query):
     "query", ["copy testcopy from stdin", "copy testcopy to stdout"]
 )
 async def test_execute_copy(aconn, query):
-    cur = await aconn.cursor()
+    cur = aconn.cursor()
     await cur.execute("create table testcopy (id int)")
     with pytest.raises(psycopg3.ProgrammingError):
         await cur.execute(query)
 
 
 async def test_fetchone(aconn):
-    cur = await aconn.cursor()
+    cur = aconn.cursor()
     await cur.execute("select %s::int, %s::text, %s::text", [1, "foo", None])
     assert cur.pgresult.fformat(0) == 0
 
@@ -113,7 +113,7 @@ async def test_fetchone(aconn):
 
 
 async def test_execute_binary_result(aconn):
-    cur = await aconn.cursor(binary=True)
+    cur = aconn.cursor(binary=True)
     await cur.execute("select %s::text, %s::text", ["foo", None])
     assert cur.pgresult.fformat(0) == 1
 
@@ -127,7 +127,7 @@ async def test_execute_binary_result(aconn):
 @pytest.mark.parametrize("encoding", ["utf8", "latin9"])
 async def test_query_encode(aconn, encoding):
     await aconn.set_client_encoding(encoding)
-    cur = await aconn.cursor()
+    cur = aconn.cursor()
     await cur.execute("select '\u20ac'")
     (res,) = await cur.fetchone()
     assert res == "\u20ac"
@@ -135,7 +135,7 @@ async def test_query_encode(aconn, encoding):
 
 async def test_query_badenc(aconn):
     await aconn.set_client_encoding("latin1")
-    cur = await aconn.cursor()
+    cur = aconn.cursor()
     with pytest.raises(UnicodeEncodeError):
         await cur.execute("select '\u20ac'")
 
@@ -152,7 +152,7 @@ async def execmany(svcconn):
 
 
 async def test_executemany(aconn, execmany):
-    cur = await aconn.cursor()
+    cur = aconn.cursor()
     await cur.executemany(
         "insert into execmany(num, data) values (%s, %s)",
         [(10, "hello"), (20, "world")],
@@ -163,7 +163,7 @@ async def test_executemany(aconn, execmany):
 
 
 async def test_executemany_name(aconn, execmany):
-    cur = await aconn.cursor()
+    cur = aconn.cursor()
     await cur.executemany(
         "insert into execmany(num, data) values (%(num)s, %(data)s)",
         [{"num": 11, "data": "hello", "x": 1}, {"num": 21, "data": "world"}],
@@ -174,7 +174,7 @@ async def test_executemany_name(aconn, execmany):
 
 
 async def test_executemany_rowcount(aconn, execmany):
-    cur = await aconn.cursor()
+    cur = aconn.cursor()
     await cur.executemany(
         "insert into execmany(num, data) values (%s, %s)",
         [(10, "hello"), (20, "world")],
@@ -183,7 +183,7 @@ async def test_executemany_rowcount(aconn, execmany):
 
 
 async def test_executemany_returning_rowcount(aconn, execmany):
-    cur = await aconn.cursor()
+    cur = aconn.cursor()
     await cur.executemany(
         "insert into execmany(num, data) values (%s, %s) returning num",
         [(10, "hello"), (20, "world")],
@@ -200,14 +200,14 @@ async def test_executemany_returning_rowcount(aconn, execmany):
     ],
 )
 async def test_executemany_badquery(aconn, query):
-    cur = await aconn.cursor()
+    cur = aconn.cursor()
     with pytest.raises(psycopg3.DatabaseError):
         await cur.executemany(query, [(10, "hello"), (20, "world")])
 
 
 @pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
 async def test_executemany_null_first(aconn, fmt_in):
-    cur = await aconn.cursor()
+    cur = aconn.cursor()
     await cur.execute("create table testmany (a bigint, b bigint)")
     await cur.executemany(
         f"insert into testmany values (%{fmt_in}, %{fmt_in})",
@@ -221,7 +221,7 @@ async def test_executemany_null_first(aconn, fmt_in):
 
 
 async def test_rowcount(aconn):
-    cur = await aconn.cursor()
+    cur = aconn.cursor()
 
     await cur.execute("select 1 from generate_series(1, 0)")
     assert cur.rowcount == 0
@@ -244,7 +244,7 @@ async def test_rowcount(aconn):
 
 
 async def test_rownumber(aconn):
-    cur = await aconn.cursor()
+    cur = aconn.cursor()
     assert cur.rownumber is None
 
     await cur.execute("select 1 from generate_series(1, 42)")
@@ -267,7 +267,7 @@ async def test_rownumber(aconn):
 
 
 async def test_iter(aconn):
-    cur = await aconn.cursor()
+    cur = aconn.cursor()
     await cur.execute("select generate_series(1, 3)")
     res = []
     async for rec in cur:
@@ -276,7 +276,7 @@ async def test_iter(aconn):
 
 
 async def test_iter_stop(aconn):
-    cur = await aconn.cursor()
+    cur = aconn.cursor()
     await cur.execute("select generate_series(1, 3)")
     async for rec in cur:
         assert rec == (1,)
@@ -292,7 +292,7 @@ async def test_iter_stop(aconn):
 
 
 async def test_scroll(aconn):
-    cur = await aconn.cursor()
+    cur = aconn.cursor()
     with pytest.raises(psycopg3.ProgrammingError):
         await cur.scroll(0)
 
@@ -334,7 +334,7 @@ async def test_scroll(aconn):
 
 
 async def test_query_params_execute(aconn):
-    cur = await aconn.cursor()
+    cur = aconn.cursor()
     assert cur.query is None
     assert cur.params is None
 
@@ -354,7 +354,7 @@ async def test_query_params_execute(aconn):
 
 
 async def test_query_params_executemany(aconn):
-    cur = await aconn.cursor()
+    cur = aconn.cursor()
 
     await cur.executemany("select %t, %t", [[1, 2], [3, 4]])
     assert cur.query == b"select $1, $2"
@@ -369,7 +369,7 @@ async def test_query_params_executemany(aconn):
 
 
 async def test_stream(aconn):
-    cur = await aconn.cursor()
+    cur = aconn.cursor()
     recs = []
     async for rec in cur.stream(
         "select i, '2021-01-01'::date + i from generate_series(1, %s) as i",
@@ -381,7 +381,7 @@ async def test_stream(aconn):
 
 
 async def test_stream_sql(aconn):
-    cur = await aconn.cursor()
+    cur = aconn.cursor()
     recs = []
     async for rec in cur.stream(
         sql.SQL(
@@ -402,14 +402,14 @@ async def test_stream_sql(aconn):
     ],
 )
 async def test_stream_badquery(aconn, query):
-    cur = await aconn.cursor()
+    cur = aconn.cursor()
     with pytest.raises(psycopg3.ProgrammingError):
         async for rec in cur.stream(query):
             pass
 
 
 async def test_str(aconn):
-    cur = await aconn.cursor()
+    cur = aconn.cursor()
     assert "[IDLE]" in str(cur)
     assert "[closed]" not in str(cur)
     assert "[no result]" in str(cur)
@@ -434,7 +434,7 @@ async def test_leak(dsn, faker, fmt, fetch):
     n = []
     for i in range(3):
         async with await psycopg3.AsyncConnection.connect(dsn) as conn:
-            async with await conn.cursor(binary=Format.as_pq(fmt)) as cur:
+            async with conn.cursor(binary=Format.as_pq(fmt)) as cur:
                 await cur.execute(faker.drop_stmt)
                 await cur.execute(faker.create_stmt)
                 await cur.executemany(faker.insert_stmt, faker.records)

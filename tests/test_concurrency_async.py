@@ -27,7 +27,7 @@ async def test_commit_concurrency(aconn):
 
     async def runner():
         nonlocal stop
-        cur = await aconn.cursor()
+        cur = aconn.cursor()
         for i in range(1000):
             await cur.execute("select %s;", (i,))
             await aconn.commit()
@@ -43,7 +43,7 @@ async def test_commit_concurrency(aconn):
 async def test_concurrent_execution(dsn):
     async def worker():
         cnn = await psycopg3.AsyncConnection.connect(dsn)
-        cur = await cnn.cursor()
+        cur = cnn.cursor()
         await cur.execute("select pg_sleep(0.5)")
         await cur.close()
         await cnn.close()
@@ -60,7 +60,7 @@ async def test_notifies(aconn, dsn):
     npid = nconn.pgconn.backend_pid
 
     async def notifier():
-        cur = await nconn.cursor()
+        cur = nconn.cursor()
         await asyncio.sleep(0.25)
         await cur.execute("notify foo, '1'")
         await asyncio.sleep(0.25)
@@ -69,7 +69,7 @@ async def test_notifies(aconn, dsn):
 
     async def receiver():
         await aconn.set_autocommit(True)
-        cur = await aconn.cursor()
+        cur = aconn.cursor()
         await cur.execute("listen foo")
         gen = aconn.notifies()
         async for n in gen:
@@ -109,7 +109,7 @@ async def test_cancel(aconn):
             errors.append(exc)
 
     async def worker():
-        cur = await aconn.cursor()
+        cur = aconn.cursor()
         with pytest.raises(psycopg3.DatabaseError):
             await cur.execute("select pg_sleep(2)")
 
@@ -124,6 +124,6 @@ async def test_cancel(aconn):
 
     # still working
     await aconn.rollback()
-    cur = await aconn.cursor()
+    cur = aconn.cursor()
     await cur.execute("select 1")
     assert await cur.fetchone() == (1,)

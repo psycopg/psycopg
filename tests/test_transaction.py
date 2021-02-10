@@ -20,7 +20,7 @@ def insert_row(conn, value):
     else:
 
         async def f():
-            cur = await conn.cursor()
+            cur = conn.cursor()
             await cur.execute(sql, (value,))
 
         return f()
@@ -35,7 +35,7 @@ def inserted(conn):
     else:
 
         async def f():
-            cur = await conn.cursor()
+            cur = conn.cursor()
             await cur.execute(sql)
             rows = await cur.fetchall()
             return set(v for (v,) in rows)

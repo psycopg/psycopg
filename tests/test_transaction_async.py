@@ -324,7 +324,7 @@ async def test_named_savepoints_successful_exit(aconn, acommands):
     assert commands.popall() == ["commit"]
 
     # Case 1 (with a transaction already started)
-    await (await aconn.cursor()).execute("select 1")
+    await aconn.cursor().execute("select 1")
     assert commands.popall() == ["begin"]
     async with aconn.transaction() as tx:
         assert commands.popall() == ['savepoint "_pg3_1"']

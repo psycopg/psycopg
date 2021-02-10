@@ -587,16 +587,14 @@ class AsyncConnection(BaseConnection):
         self.pgconn.finish()
 
     @overload
-    async def cursor(self, *, binary: bool = False) -> AsyncCursor:
+    def cursor(self, *, binary: bool = False) -> AsyncCursor:
         ...
 
     @overload
-    async def cursor(
-        self, name: str, *, binary: bool = False
-    ) -> AsyncNamedCursor:
+    def cursor(self, name: str, *, binary: bool = False) -> AsyncNamedCursor:
         ...
 
-    async def cursor(
+    def cursor(
         self, name: str = "", *, binary: bool = False
     ) -> Union[AsyncCursor, AsyncNamedCursor]:
         """
@@ -614,7 +612,7 @@ class AsyncConnection(BaseConnection):
         params: Optional[Params] = None,
         prepare: Optional[bool] = None,
     ) -> AsyncCursor:
-        cur = await self.cursor()
+        cur = self.cursor()
         return await cur.execute(query, params, prepare=prepare)
 
     async def commit(self) -> None:
