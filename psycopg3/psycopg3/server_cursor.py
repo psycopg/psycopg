@@ -1,5 +1,5 @@
 """
-psycopg3 named cursor objects (server-side cursors)
+psycopg3 server-side cursor objects.
 """
 
 # Copyright (C) 2020-2021 The Psycopg Team
@@ -22,9 +22,9 @@ if TYPE_CHECKING:
 DEFAULT_ITERSIZE = 100
 
 
-class NamedCursorHelper(Generic[ConnectionType]):
+class ServerCursorHelper(Generic[ConnectionType]):
     __slots__ = ("name", "described")
-    """Helper object for common NamedCursor code.
+    """Helper object for common ServerCursor code.
 
     TODO: this should be a mixin, but couldn't find a way to work it
     correctly with the generic.
@@ -40,7 +40,7 @@ class NamedCursorHelper(Generic[ConnectionType]):
         query: Query,
         params: Optional[Params] = None,
     ) -> PQGen[None]:
-        """Generator implementing `NamedCursor.execute()`."""
+        """Generator implementing `ServerCursor.execute()`."""
         conn = cur._conn
         yield from cur._start_query(query)
         pgq = cur._convert_query(query, params)
@@ -132,7 +132,7 @@ class NamedCursorHelper(Generic[ConnectionType]):
         )
 
 
-class NamedCursor(BaseCursor["Connection"]):
+class ServerCursor(BaseCursor["Connection"]):
     __module__ = "psycopg3"
     __slots__ = ("_helper", "itersize")
 
@@ -144,18 +144,20 @@ class NamedCursor(BaseCursor["Connection"]):
         format: Format = Format.TEXT,
     ):
         super().__init__(connection, format=format)
-        self._helper: NamedCursorHelper["Connection"] = NamedCursorHelper(name)
+        self._helper: ServerCursorHelper["Connection"] = ServerCursorHelper(
+            name
+        )
         self.itersize = DEFAULT_ITERSIZE
 
     def __del__(self) -> None:
         if not self._closed:
             warnings.warn(
-                f"named cursor {self} was deleted while still open."
+                f"the server-side cursor {self} was deleted while still open."
                 f" Please use 'with' or '.close()' to close the cursor properly",
                 ResourceWarning,
             )
 
-    def __enter__(self) -> "NamedCursor":
+    def __enter__(self) -> "ServerCursor":
         return self
 
     def __exit__(
@@ -185,7 +187,7 @@ class NamedCursor(BaseCursor["Connection"]):
         *,
         scrollable: bool = True,
         hold: bool = False,
-    ) -> "NamedCursor":
+    ) -> "ServerCursor":
         """
         Execute a query or command to the database.
         """
@@ -197,7 +199,9 @@ class NamedCursor(BaseCursor["Connection"]):
         return self
 
     def executemany(self, query: Query, params_seq: Sequence[Params]) -> None:
-        raise e.NotSupportedError("executemany not supported on named cursors")
+        raise e.NotSupportedError(
+            "executemany not supported on server-side cursors"
+        )
 
     def fetchone(self) -> Optional[Sequence[Any]]:
         with self._conn.lock:
@@ -244,7 +248,7 @@ class NamedCursor(BaseCursor["Connection"]):
             self._pos = value
 
 
-class AsyncNamedCursor(BaseCursor["AsyncConnection"]):
+class AsyncServerCursor(BaseCursor["AsyncConnection"]):
     __module__ = "psycopg3"
     __slots__ = ("_helper", "itersize")
 
@@ -256,19 +260,19 @@ class AsyncNamedCursor(BaseCursor["AsyncConnection"]):
         format: Format = Format.TEXT,
     ):
         super().__init__(connection, format=format)
-        self._helper: NamedCursorHelper["AsyncConnection"]
-        self._helper = NamedCursorHelper(name)
+        self._helper: ServerCursorHelper["AsyncConnection"]
+        self._helper = ServerCursorHelper(name)
         self.itersize = DEFAULT_ITERSIZE
 
     def __del__(self) -> None:
         if not self._closed:
             warnings.warn(
-                f"named cursor {self} was deleted while still open."
+                f"the server-side cursor {self} was deleted while still open."
                 f" Please use 'with' or '.close()' to close the cursor properly",
                 ResourceWarning,
             )
 
-    async def __aenter__(self) -> "AsyncNamedCursor":
+    async def __aenter__(self) -> "AsyncServerCursor":
         return self
 
     async def __aexit__(
@@ -298,7 +302,7 @@ class AsyncNamedCursor(BaseCursor["AsyncConnection"]):
         *,
         scrollable: bool = True,
         hold: bool = False,
-    ) -> "AsyncNamedCursor":
+    ) -> "AsyncServerCursor":
         """
         Execute a query or command to the database.
         """
@@ -314,7 +318,9 @@ class AsyncNamedCursor(BaseCursor["AsyncConnection"]):
     async def executemany(
         self, query: Query, params_seq: Sequence[Params]
     ) -> None:
-        raise e.NotSupportedError("executemany not supported on named cursors")
+        raise e.NotSupportedError(
+            "executemany not supported on server-side cursors"
+        )
 
     async def fetchone(self) -> Optional[Sequence[Any]]:
         async with self._conn.lock:

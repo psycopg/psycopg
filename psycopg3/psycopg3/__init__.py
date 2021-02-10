@@ -15,6 +15,7 @@ from .errors import InternalError, ProgrammingError, NotSupportedError
 from ._column import Column
 from .connection import AsyncConnection, Connection, Notify
 from .transaction import Rollback, Transaction, AsyncTransaction
+from .server_cursor import AsyncServerCursor, ServerCursor
 
 from .dbapi20 import BINARY, DATETIME, NUMBER, ROWID, STRING, BinaryDumper
 from .dbapi20 import Binary, Date, DateFromTicks, Time, TimeFromTicks
@@ -40,6 +41,7 @@ __all__ = [
     "AsyncConnection",
     "AsyncCopy",
     "AsyncCursor",
+    "AsyncServerCursor",
     "AsyncTransaction",
     "Column",
     "Connection",
@@ -47,5 +49,6 @@ __all__ = [
     "Cursor",
     "Notify",
     "Rollback",
+    "ServerCursor",
     "Transaction",
 ]

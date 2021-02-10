@@ -34,7 +34,7 @@ from .cursor import Cursor, AsyncCursor
 from .conninfo import make_conninfo
 from .generators import notifies
 from .transaction import Transaction, AsyncTransaction
-from .named_cursor import NamedCursor, AsyncNamedCursor
+from .server_cursor import ServerCursor, AsyncServerCursor
 from ._preparing import PrepareManager
 
 logger = logging.getLogger(__name__)
@@ -449,18 +449,18 @@ class Connection(BaseConnection):
         ...
 
     @overload
-    def cursor(self, name: str, *, binary: bool = False) -> NamedCursor:
+    def cursor(self, name: str, *, binary: bool = False) -> ServerCursor:
         ...
 
     def cursor(
         self, name: str = "", *, binary: bool = False
-    ) -> Union[Cursor, NamedCursor]:
+    ) -> Union[Cursor, ServerCursor]:
         """
         Return a new `Cursor` to send commands and queries to the connection.
         """
         format = Format.BINARY if binary else Format.TEXT
         if name:
-            return NamedCursor(self, name=name, format=format)
+            return ServerCursor(self, name=name, format=format)
         else:
             return Cursor(self, format=format)
 
@@ -591,18 +591,18 @@ class AsyncConnection(BaseConnection):
         ...
 
     @overload
-    def cursor(self, name: str, *, binary: bool = False) -> AsyncNamedCursor:
+    def cursor(self, name: str, *, binary: bool = False) -> AsyncServerCursor:
         ...
 
     def cursor(
         self, name: str = "", *, binary: bool = False
-    ) -> Union[AsyncCursor, AsyncNamedCursor]:
+    ) -> Union[AsyncCursor, AsyncServerCursor]:
         """
         Return a new `AsyncCursor` to send commands and queries to the connection.
         """
         format = Format.BINARY if binary else Format.TEXT
         if name:
-            return AsyncNamedCursor(self, name=name, format=format)
+            return AsyncServerCursor(self, name=name, format=format)
         else:
             return AsyncCursor(self, format=format)
 
