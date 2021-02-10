@@ -148,3 +148,21 @@ def test_scroll(conn):
 
     with pytest.raises(ValueError):
         cur.scroll(9, mode="wat")
+
+
+def test_scrollable(conn):
+    curs = conn.cursor("foo")
+    curs.execute("select generate_series(0, 5)")
+    curs.scroll(5)
+    for i in range(4, -1, -1):
+        curs.scroll(-1)
+        assert i == curs.fetchone()[0]
+        curs.scroll(-1)
+
+
+def test_non_scrollable(conn):
+    curs = conn.cursor("foo")
+    curs.execute("select generate_series(0, 5)", scrollable=False)
+    curs.scroll(5)
+    with pytest.raises(conn.OperationalError):
+        curs.scroll(-1)

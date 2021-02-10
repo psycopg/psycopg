@@ -155,3 +155,21 @@ async def test_scroll(aconn):
 
     with pytest.raises(ValueError):
         await cur.scroll(9, mode="wat")
+
+
+async def test_scrollable(aconn):
+    curs = await aconn.cursor("foo")
+    await curs.execute("select generate_series(0, 5)")
+    await curs.scroll(5)
+    for i in range(4, -1, -1):
+        await curs.scroll(-1)
+        assert i == (await curs.fetchone())[0]
+        await curs.scroll(-1)
+
+
+async def test_non_scrollable(aconn):
+    curs = await aconn.cursor("foo")
+    await curs.execute("select generate_series(0, 5)", scrollable=False)
+    await curs.scroll(5)
+    with pytest.raises(aconn.OperationalError):
+        await curs.scroll(-1)
