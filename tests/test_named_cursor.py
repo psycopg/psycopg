@@ -1,11 +1,18 @@
 import pytest
 
+from psycopg3.pq import Format
+
 
 def test_funny_name(conn):
     cur = conn.cursor("1-2-3")
     cur.execute("select generate_series(1, 3) as bar")
     assert cur.fetchall() == [(1,), (2,), (3,)]
     assert cur.name == "1-2-3"
+
+
+def test_connection(conn):
+    cur = conn.cursor("foo")
+    assert cur.connection is conn
 
 
 def test_description(conn):
@@ -16,6 +23,24 @@ def test_description(conn):
     assert cur.description[0].name == "bar"
     assert cur.description[0].type_code == cur.adapters.types["int4"].oid
     assert cur.pgresult.ntuples == 0
+
+
+def test_format(conn):
+    cur = conn.cursor("foo")
+    assert cur.format == Format.TEXT
+
+    cur = conn.cursor("foo", binary=True)
+    assert cur.format == Format.BINARY
+
+
+def test_query_params(conn):
+    with conn.cursor("foo") as cur:
+        assert cur.query is None
+        assert cur.params is None
+        cur.execute("select generate_series(1, %s) as bar", (3,))
+        assert b"declare" in cur.query.lower()
+        assert b"(1, $1)" in cur.query.lower()
+        assert cur.params == [bytes([0, 3])]  # 3 as binary int2
 
 
 def test_close(conn, recwarn):
@@ -56,6 +81,12 @@ def test_warn_close(conn, recwarn):
     assert ".close()" in str(recwarn.pop(ResourceWarning).message)
 
 
+def test_executemany(conn):
+    cur = conn.cursor("foo")
+    with pytest.raises(conn.NotSupportedError):
+        cur.executemany("select %s", [(1,), (2,)])
+
+
 def test_fetchone(conn):
     with conn.cursor("foo") as cur:
         cur.execute("select generate_series(1, %s) as bar", (2,))
@@ -84,6 +115,12 @@ def test_fetchall(conn):
         assert cur.fetchone() == (1,)
         assert cur.fetchall() == [(2,), (3,)]
         assert cur.fetchall() == []
+
+
+def test_nextset(conn):
+    with conn.cursor("foo") as cur:
+        cur.execute("select generate_series(1, %s) as bar", (3,))
+        assert not cur.nextset()
 
 
 def test_rownumber(conn):

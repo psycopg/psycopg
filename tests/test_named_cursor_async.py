@@ -1,5 +1,7 @@
 import pytest
 
+from psycopg3.pq import Format
+
 pytestmark = pytest.mark.asyncio
 
 
@@ -10,6 +12,11 @@ async def test_funny_name(aconn):
     assert cur.name == "1-2-3"
 
 
+async def test_connection(aconn):
+    cur = aconn.cursor("foo")
+    assert cur.connection is aconn
+
+
 async def test_description(aconn):
     cur = aconn.cursor("foo")
     assert cur.name == "foo"
@@ -18,6 +25,24 @@ async def test_description(aconn):
     assert cur.description[0].name == "bar"
     assert cur.description[0].type_code == cur.adapters.types["int4"].oid
     assert cur.pgresult.ntuples == 0
+
+
+async def test_format(aconn):
+    cur = aconn.cursor("foo")
+    assert cur.format == Format.TEXT
+
+    cur = aconn.cursor("foo", binary=True)
+    assert cur.format == Format.BINARY
+
+
+async def test_query_params(aconn):
+    async with aconn.cursor("foo") as cur:
+        assert cur.query is None
+        assert cur.params is None
+        await cur.execute("select generate_series(1, %s) as bar", (3,))
+        assert b"declare" in cur.query.lower()
+        assert b"(1, $1)" in cur.query.lower()
+        assert cur.params == [bytes([0, 3])]  # 3 as binary int2
 
 
 async def test_close(aconn, recwarn):
@@ -58,6 +83,12 @@ async def test_warn_close(aconn, recwarn):
     assert ".close()" in str(recwarn.pop(ResourceWarning).message)
 
 
+async def test_executemany(aconn):
+    cur = aconn.cursor("foo")
+    with pytest.raises(aconn.NotSupportedError):
+        await cur.executemany("select %s", [(1,), (2,)])
+
+
 async def test_fetchone(aconn):
     async with aconn.cursor("foo") as cur:
         await cur.execute("select generate_series(1, %s) as bar", (2,))
@@ -86,6 +117,12 @@ async def test_fetchall(aconn):
         assert await cur.fetchone() == (1,)
         assert await cur.fetchall() == [(2,), (3,)]
         assert await cur.fetchall() == []
+
+
+async def test_nextset(aconn):
+    async with aconn.cursor("foo") as cur:
+        await cur.execute("select generate_series(1, %s) as bar", (3,))
+        assert not cur.nextset()
 
 
 async def test_rownumber(aconn):
@@ -192,3 +229,14 @@ async def test_steal_cursor(aconn):
     assert await cur2.fetchone() == (1,)
     assert await cur2.fetchmany(3) == [(2,), (3,), (4,)]
     assert await cur2.fetchall() == [(5,), (6,)]
+
+
+async def test_stolen_cursor_close(aconn):
+    cur1 = aconn.cursor()
+    await cur1.execute("declare test cursor for select generate_series(1, 6)")
+    cur2 = aconn.cursor("test")
+    await cur2.close()
+
+    await cur1.execute("declare test cursor for select generate_series(1, 6)")
+    cur2 = aconn.cursor("test")
+    await cur2.close()

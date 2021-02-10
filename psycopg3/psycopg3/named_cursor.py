@@ -10,6 +10,7 @@ from typing import Any, AsyncIterator, Generic, List, Iterator, Optional
 from typing import Sequence, Type, Tuple, TYPE_CHECKING
 
 from . import sql
+from . import errors as e
 from .pq import Format
 from .cursor import BaseCursor, execute
 from .proto import ConnectionType, Query, Params, PQGen
@@ -195,6 +196,9 @@ class NamedCursor(BaseCursor["Connection"]):
             self._conn.wait(self._helper._declare_gen(self, query, params))
         return self
 
+    def executemany(self, query: Query, params_seq: Sequence[Params]) -> None:
+        raise e.NotSupportedError("executemany not supported on named cursors")
+
     def fetchone(self) -> Optional[Sequence[Any]]:
         with self._conn.lock:
             recs = self._conn.wait(self._helper._fetch_gen(self, 1))
@@ -306,6 +310,11 @@ class AsyncNamedCursor(BaseCursor["AsyncConnection"]):
                 self._helper._declare_gen(self, query, params)
             )
         return self
+
+    async def executemany(
+        self, query: Query, params_seq: Sequence[Params]
+    ) -> None:
+        raise e.NotSupportedError("executemany not supported on named cursors")
 
     async def fetchone(self) -> Optional[Sequence[Any]]:
         async with self._conn.lock:
