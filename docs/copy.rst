@@ -23,7 +23,7 @@ resulting `Copy` object in a ``with`` block:
     with cursor.copy("COPY table_name (col1, col2) FROM STDIN") as copy:
         # pass data to the 'copy' object using write()/write_row()
 
-You can compose a dynamically a COPY statement by using objects from the
+You can compose a COPY statement dynamically by using objects from the
 `psycopg3.sql` module:
 
 .. code:: python
