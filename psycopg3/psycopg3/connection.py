@@ -452,7 +452,7 @@ class Connection(BaseConnection):
         self,
         name: str = "",
         binary: bool = False,
-        row_factory: RowFactory = cursor.default_row_factory,
+        row_factory: Optional[RowFactory] = None,
     ) -> "Cursor":
         """
         Return a new `Cursor` to send commands and queries to the connection.
@@ -461,7 +461,9 @@ class Connection(BaseConnection):
             raise NotImplementedError
 
         format = Format.BINARY if binary else Format.TEXT
-        return self.cursor_factory(self, row_factory, format=format)
+        return self.cursor_factory(
+            self, format=format, row_factory=row_factory
+        )
 
     def execute(
         self,
@@ -592,7 +594,7 @@ class AsyncConnection(BaseConnection):
         self,
         name: str = "",
         binary: bool = False,
-        row_factory: RowFactory = cursor.default_row_factory,
+        row_factory: Optional[RowFactory] = None,
     ) -> "AsyncCursor":
         """
         Return a new `AsyncCursor` to send commands and queries to the connection.
@@ -601,7 +603,9 @@ class AsyncConnection(BaseConnection):
             raise NotImplementedError
 
         format = Format.BINARY if binary else Format.TEXT
-        return self.cursor_factory(self, row_factory, format=format)
+        return self.cursor_factory(
+            self, format=format, row_factory=row_factory
+        )
 
     async def execute(
         self,
