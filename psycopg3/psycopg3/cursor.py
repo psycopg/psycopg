@@ -460,6 +460,7 @@ class Cursor(BaseCursor["Connection"]):
         self,
         query: Query,
         params: Optional[Params] = None,
+        *,
         prepare: Optional[bool] = None,
     ) -> "Cursor":
         """
@@ -575,6 +576,7 @@ class AsyncCursor(BaseCursor["AsyncConnection"]):
         self,
         query: Query,
         params: Optional[Params] = None,
+        *,
         prepare: Optional[bool] = None,
     ) -> "AsyncCursor":
         async with self._conn.lock:

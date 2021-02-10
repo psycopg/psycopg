@@ -462,6 +462,7 @@ class Connection(BaseConnection):
         self,
         query: Query,
         params: Optional[Params] = None,
+        *,
         prepare: Optional[bool] = None,
     ) -> "Cursor":
         """Execute a query and return a cursor to read its results."""
@@ -599,6 +600,7 @@ class AsyncConnection(BaseConnection):
         self,
         query: Query,
         params: Optional[Params] = None,
+        *,
         prepare: Optional[bool] = None,
     ) -> "AsyncCursor":
         cur = await self.cursor()
