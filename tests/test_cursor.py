@@ -286,6 +286,48 @@ def test_iter_stop(conn):
     assert list(cur) == []
 
 
+def test_scroll(conn):
+    cur = conn.cursor()
+    with pytest.raises(psycopg3.ProgrammingError):
+        cur.scroll(0)
+
+    cur.execute("select generate_series(0,9)")
+    cur.scroll(2)
+    assert cur.fetchone() == (2,)
+    cur.scroll(2)
+    assert cur.fetchone() == (5,)
+    cur.scroll(2, mode="relative")
+    assert cur.fetchone() == (8,)
+    cur.scroll(-1)
+    assert cur.fetchone() == (8,)
+    cur.scroll(-2)
+    assert cur.fetchone() == (7,)
+    cur.scroll(2, mode="absolute")
+    assert cur.fetchone() == (2,)
+
+    # on the boundary
+    cur.scroll(0, mode="absolute")
+    assert cur.fetchone() == (0,)
+    with pytest.raises(IndexError):
+        cur.scroll(-1, mode="absolute")
+
+    cur.scroll(0, mode="absolute")
+    with pytest.raises(IndexError):
+        cur.scroll(-1)
+
+    cur.scroll(9, mode="absolute")
+    assert cur.fetchone() == (9,)
+    with pytest.raises(IndexError):
+        cur.scroll(10, mode="absolute")
+
+    cur.scroll(9, mode="absolute")
+    with pytest.raises(IndexError):
+        cur.scroll(1)
+
+    with pytest.raises(ValueError):
+        cur.scroll(1, "wat")
+
+
 def test_query_params_execute(conn):
     cur = conn.cursor()
     assert cur.query is None

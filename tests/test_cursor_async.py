@@ -291,6 +291,48 @@ async def test_iter_stop(aconn):
         assert False
 
 
+async def test_scroll(aconn):
+    cur = await aconn.cursor()
+    with pytest.raises(psycopg3.ProgrammingError):
+        await cur.scroll(0)
+
+    await cur.execute("select generate_series(0,9)")
+    await cur.scroll(2)
+    assert await cur.fetchone() == (2,)
+    await cur.scroll(2)
+    assert await cur.fetchone() == (5,)
+    await cur.scroll(2, mode="relative")
+    assert await cur.fetchone() == (8,)
+    await cur.scroll(-1)
+    assert await cur.fetchone() == (8,)
+    await cur.scroll(-2)
+    assert await cur.fetchone() == (7,)
+    await cur.scroll(2, mode="absolute")
+    assert await cur.fetchone() == (2,)
+
+    # on the boundary
+    await cur.scroll(0, mode="absolute")
+    assert await cur.fetchone() == (0,)
+    with pytest.raises(IndexError):
+        await cur.scroll(-1, mode="absolute")
+
+    await cur.scroll(0, mode="absolute")
+    with pytest.raises(IndexError):
+        await cur.scroll(-1)
+
+    await cur.scroll(9, mode="absolute")
+    assert await cur.fetchone() == (9,)
+    with pytest.raises(IndexError):
+        await cur.scroll(10, mode="absolute")
+
+    await cur.scroll(9, mode="absolute")
+    with pytest.raises(IndexError):
+        await cur.scroll(1)
+
+    with pytest.raises(ValueError):
+        await cur.scroll(1, "wat")
+
+
 async def test_query_params_execute(aconn):
     cur = await aconn.cursor()
     assert cur.query is None

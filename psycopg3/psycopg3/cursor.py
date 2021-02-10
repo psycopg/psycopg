@@ -439,6 +439,21 @@ class BaseCursor(Generic[ConnectionType]):
                 f" FROM STDIN statements, got {ExecStatus(status).name}"
             )
 
+    def _scroll(self, value: int, mode: str) -> None:
+        self._check_result()
+        assert self.pgresult
+        if mode == "relative":
+            newpos = self._pos + value
+        elif mode == "absolute":
+            newpos = value
+        else:
+            raise ValueError(
+                f"bad mode: {mode}. It should be 'relative' or 'absolute'"
+            )
+        if not 0 <= newpos < self.pgresult.ntuples:
+            raise IndexError("position out of bound")
+        self._pos = newpos
+
     def _close(self) -> None:
         self._closed = True
         # however keep the query available, which can be useful for debugging
@@ -554,6 +569,9 @@ class Cursor(BaseCursor["Connection"]):
             self._pos += 1
             yield row
 
+    def scroll(self, value: int, mode: str = "relative") -> None:
+        self._scroll(value, mode)
+
     @contextmanager
     def copy(self, statement: Query) -> Iterator[Copy]:
         """
@@ -650,6 +668,9 @@ class AsyncCursor(BaseCursor["AsyncConnection"]):
                 break
             self._pos += 1
             yield row
+
+    async def scroll(self, value: int, mode: str = "relative") -> None:
+        self._scroll(value, mode)
 
     @asynccontextmanager
     async def copy(self, statement: Query) -> AsyncIterator[AsyncCopy]:
