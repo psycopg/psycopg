@@ -1,5 +1,6 @@
 import pytest
 
+from psycopg3 import errors as e
 from psycopg3.pq import Format
 
 pytestmark = pytest.mark.asyncio
@@ -82,6 +83,12 @@ async def test_context(aconn, recwarn):
     assert not recwarn
 
 
+async def test_close_no_clobber(aconn):
+    with pytest.raises(e.DivisionByZero):
+        async with aconn.cursor("foo") as cur:
+            await cur.execute("select 1 / %s", (0,))
+
+
 async def test_warn_close(aconn, recwarn):
     cur = aconn.cursor("foo")
     await cur.execute("select generate_series(1, 10) as bar")
@@ -91,7 +98,7 @@ async def test_warn_close(aconn, recwarn):
 
 async def test_executemany(aconn):
     cur = aconn.cursor("foo")
-    with pytest.raises(aconn.NotSupportedError):
+    with pytest.raises(e.NotSupportedError):
         await cur.executemany("select %s", [(1,), (2,)])
 
 
@@ -189,7 +196,7 @@ async def test_itersize(aconn, acommands):
 
 async def test_scroll(aconn):
     cur = aconn.cursor("tmp")
-    with pytest.raises(aconn.ProgrammingError):
+    with pytest.raises(e.ProgrammingError):
         await cur.scroll(0)
 
     await cur.execute("select generate_series(0,9)")
@@ -220,7 +227,7 @@ async def test_non_scrollable(aconn):
     curs = aconn.cursor("foo")
     await curs.execute("select generate_series(0, 5)", scrollable=False)
     await curs.scroll(5)
-    with pytest.raises(aconn.OperationalError):
+    with pytest.raises(e.OperationalError):
         await curs.scroll(-1)
 
 

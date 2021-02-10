@@ -72,6 +72,13 @@ class ServerCursorHelper(Generic[ConnectionType]):
         self.described = True
 
     def _close_gen(self, cur: BaseCursor[ConnectionType]) -> PQGen[None]:
+        # if the connection is not in a sane state, don't even try
+        if cur._conn.pgconn.transaction_status not in (
+            pq.TransactionStatus.IDLE,
+            pq.TransactionStatus.INTRANS,
+        ):
+            return
+
         # if we didn't declare the cursor ourselves we still have to close it
         # but we must make sure it exists.
         if not self.described:

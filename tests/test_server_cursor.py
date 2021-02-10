@@ -1,5 +1,6 @@
 import pytest
 
+from psycopg3 import errors as e
 from psycopg3.pq import Format
 
 
@@ -80,6 +81,12 @@ def test_context(conn, recwarn):
     assert not recwarn
 
 
+def test_close_no_clobber(conn):
+    with pytest.raises(e.DivisionByZero):
+        with conn.cursor("foo") as cur:
+            cur.execute("select 1 / %s", (0,))
+
+
 def test_warn_close(conn, recwarn):
     cur = conn.cursor("foo")
     cur.execute("select generate_series(1, 10) as bar")
@@ -89,7 +96,7 @@ def test_warn_close(conn, recwarn):
 
 def test_executemany(conn):
     cur = conn.cursor("foo")
-    with pytest.raises(conn.NotSupportedError):
+    with pytest.raises(e.NotSupportedError):
         cur.executemany("select %s", [(1,), (2,)])
 
 
@@ -182,7 +189,7 @@ def test_itersize(conn, commands):
 
 def test_scroll(conn):
     cur = conn.cursor("tmp")
-    with pytest.raises(conn.ProgrammingError):
+    with pytest.raises(e.ProgrammingError):
         cur.scroll(0)
 
     cur.execute("select generate_series(0,9)")
@@ -213,7 +220,7 @@ def test_non_scrollable(conn):
     curs = conn.cursor("foo")
     curs.execute("select generate_series(0, 5)", scrollable=False)
     curs.scroll(5)
-    with pytest.raises(conn.OperationalError):
+    with pytest.raises(e.OperationalError):
         curs.scroll(-1)
 
 
