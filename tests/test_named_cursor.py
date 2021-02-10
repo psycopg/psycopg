@@ -166,3 +166,16 @@ def test_non_scrollable(conn):
     curs.scroll(5)
     with pytest.raises(conn.OperationalError):
         curs.scroll(-1)
+
+
+def test_steal_cursor(conn):
+    cur1 = conn.cursor()
+    cur1.execute(
+        "declare test cursor without hold for select generate_series(1, 6)"
+    )
+
+    cur2 = conn.cursor("test")
+    # can call fetch without execute
+    assert cur2.fetchone() == (1,)
+    assert cur2.fetchmany(3) == [(2,), (3,), (4,)]
+    assert cur2.fetchall() == [(5,), (6,)]

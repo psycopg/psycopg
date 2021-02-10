@@ -173,3 +173,16 @@ async def test_non_scrollable(aconn):
     await curs.scroll(5)
     with pytest.raises(aconn.OperationalError):
         await curs.scroll(-1)
+
+
+async def test_steal_cursor(aconn):
+    cur1 = await aconn.cursor()
+    await cur1.execute(
+        "declare test cursor without hold for select generate_series(1, 6)"
+    )
+
+    cur2 = await aconn.cursor("test")
+    # can call fetch without execute
+    assert await cur2.fetchone() == (1,)
+    assert await cur2.fetchmany(3) == [(2,), (3,), (4,)]
+    assert await cur2.fetchall() == [(5,), (6,)]
