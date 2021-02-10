@@ -53,6 +53,12 @@ class ServerCursorHelper(Generic[ConnectionType]):
     ) -> PQGen[None]:
         """Generator implementing `ServerCursor.execute()`."""
         conn = cur._conn
+
+        # If the cursor is being reused, the previous one must be closed.
+        if self.described:
+            yield from self._close_gen(cur)
+            self.described = False
+
         yield from cur._start_query(query)
         pgq = cur._convert_query(query, params)
         cur._execute_send(pgq)

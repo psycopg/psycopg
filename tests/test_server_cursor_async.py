@@ -96,6 +96,20 @@ async def test_warn_close(aconn, recwarn):
     assert ".close()" in str(recwarn.pop(ResourceWarning).message)
 
 
+async def test_execute_reuse(aconn):
+    async with aconn.cursor("foo") as cur:
+        await cur.execute("select generate_series(1, %s) as foo", (3,))
+        assert await cur.fetchone() == (1,)
+
+        await cur.execute(
+            "select %s::text as bar, %s::text as baz", ("hello", "world")
+        )
+        assert await cur.fetchone() == ("hello", "world")
+        assert cur.description[0].name == "bar"
+        assert cur.description[0].type_code == cur.adapters.types["text"].oid
+        assert cur.description[1].name == "baz"
+
+
 async def test_executemany(aconn):
     cur = aconn.cursor("foo")
     with pytest.raises(e.NotSupportedError):

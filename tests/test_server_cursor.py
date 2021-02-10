@@ -94,6 +94,20 @@ def test_warn_close(conn, recwarn):
     assert ".close()" in str(recwarn.pop(ResourceWarning).message)
 
 
+def test_execute_reuse(conn):
+    with conn.cursor("foo") as cur:
+        cur.execute("select generate_series(1, %s) as foo", (3,))
+        assert cur.fetchone() == (1,)
+
+        cur.execute(
+            "select %s::text as bar, %s::text as baz", ("hello", "world")
+        )
+        assert cur.fetchone() == ("hello", "world")
+        assert cur.description[0].name == "bar"
+        assert cur.description[0].type_code == cur.adapters.types["text"].oid
+        assert cur.description[1].name == "baz"
+
+
 def test_executemany(conn):
     cur = conn.cursor("foo")
     with pytest.raises(e.NotSupportedError):
