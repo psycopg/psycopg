@@ -136,3 +136,22 @@ async def test_itersize(aconn, acommands):
         assert len(cmds) == 2
         for cmd in cmds:
             assert ("fetch forward 2") in cmd.lower()
+
+
+async def test_scroll(aconn):
+    cur = await aconn.cursor("tmp")
+    with pytest.raises(aconn.ProgrammingError):
+        await cur.scroll(0)
+
+    await cur.execute("select generate_series(0,9)")
+    await cur.scroll(2)
+    assert await cur.fetchone() == (2,)
+    await cur.scroll(2)
+    assert await cur.fetchone() == (5,)
+    await cur.scroll(2, mode="relative")
+    assert await cur.fetchone() == (8,)
+    await cur.scroll(9, mode="absolute")
+    assert await cur.fetchone() == (9,)
+
+    with pytest.raises(ValueError):
+        await cur.scroll(9, mode="wat")

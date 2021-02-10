@@ -84,6 +84,19 @@ class NamedCursorHelper(Generic[ConnectionType]):
         cur.pgresult = res
         return cur._tx.load_rows(0, res.ntuples)
 
+    def _scroll_gen(self, value: int, mode: str) -> PQGen[None]:
+        if mode not in ("relative", "absolute"):
+            raise ValueError(
+                f"bad mode: {mode}. It should be 'relative' or 'absolute'"
+            )
+        query = sql.SQL("move{} {} from {}").format(
+            sql.SQL(" absolute" if mode == "absolute" else ""),
+            sql.Literal(value),
+            sql.Identifier(self.name),
+        )
+        cur = self._cur
+        yield from cur._conn._exec_command(query)
+
     def _make_declare_statement(
         self, query: Query, scrollable: bool, hold: bool
     ) -> sql.Composable:
@@ -200,6 +213,15 @@ class NamedCursor(BaseCursor["Connection"]):
             if len(recs) < self.itersize:
                 break
 
+    def scroll(self, value: int, mode: str = "relative") -> None:
+        with self._conn.lock:
+            self._conn.wait(self._helper._scroll_gen(value, mode))
+        # Postgres doesn't have a reliable way to report a cursor out of bound
+        if mode == "relative":
+            self._pos += value
+        else:
+            self._pos = value
+
 
 class AsyncNamedCursor(BaseCursor["AsyncConnection"]):
     __module__ = "psycopg3"
@@ -299,3 +321,7 @@ class AsyncNamedCursor(BaseCursor["AsyncConnection"]):
                 yield rec
             if len(recs) < self.itersize:
                 break
+
+    async def scroll(self, value: int, mode: str = "relative") -> None:
+        async with self._conn.lock:
+            await self._conn.wait(self._helper._scroll_gen(value, mode))

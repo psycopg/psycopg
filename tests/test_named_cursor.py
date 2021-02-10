@@ -1,3 +1,6 @@
+import pytest
+
+
 def test_funny_name(conn):
     cur = conn.cursor("1-2-3")
     cur.execute("select generate_series(1, 3) as bar")
@@ -126,3 +129,22 @@ def test_itersize(conn, commands):
         assert len(cmds) == 2
         for cmd in cmds:
             assert ("fetch forward 2") in cmd.lower()
+
+
+def test_scroll(conn):
+    cur = conn.cursor("tmp")
+    with pytest.raises(conn.ProgrammingError):
+        cur.scroll(0)
+
+    cur.execute("select generate_series(0,9)")
+    cur.scroll(2)
+    assert cur.fetchone() == (2,)
+    cur.scroll(2)
+    assert cur.fetchone() == (5,)
+    cur.scroll(2, mode="relative")
+    assert cur.fetchone() == (8,)
+    cur.scroll(9, mode="absolute")
+    assert cur.fetchone() == (9,)
+
+    with pytest.raises(ValueError):
+        cur.scroll(9, mode="wat")
