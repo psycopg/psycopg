@@ -60,6 +60,16 @@ class NamedCursorHelper(Generic[ConnectionType]):
         self.described = True
 
     def _close_gen(self, cur: BaseCursor[ConnectionType]) -> PQGen[None]:
+        # if we didn't declare the cursor ourselves we still have to close it
+        # but we must make sure it exists.
+        if not self.described:
+            query = sql.SQL(
+                "select 1 from pg_catalog.pg_cursors where name = {}"
+            ).format(sql.Literal(self.name))
+            res = yield from cur._conn._exec_command(query)
+            if res.ntuples == 0:
+                return
+
         query = sql.SQL("close {}").format(sql.Identifier(self.name))
         yield from cur._conn._exec_command(query)
 

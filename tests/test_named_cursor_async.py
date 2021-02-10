@@ -33,6 +33,12 @@ async def test_close(aconn, recwarn):
     assert not recwarn
 
 
+async def test_close_noop(aconn, recwarn):
+    cur = await aconn.cursor("foo")
+    await cur.close()
+    assert not recwarn
+
+
 async def test_context(aconn, recwarn):
     async with await aconn.cursor("foo") as cur:
         await cur.execute("select generate_series(1, 10) as bar")

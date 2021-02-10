@@ -31,6 +31,12 @@ def test_close(conn, recwarn):
     assert not recwarn
 
 
+def test_close_noop(conn, recwarn):
+    cur = conn.cursor("foo")
+    cur.close()
+    assert not recwarn
+
+
 def test_context(conn, recwarn):
     with conn.cursor("foo") as cur:
         cur.execute("select generate_series(1, 10) as bar")
@@ -170,12 +176,21 @@ def test_non_scrollable(conn):
 
 def test_steal_cursor(conn):
     cur1 = conn.cursor()
-    cur1.execute(
-        "declare test cursor without hold for select generate_series(1, 6)"
-    )
+    cur1.execute("declare test cursor for select generate_series(1, 6)")
 
     cur2 = conn.cursor("test")
     # can call fetch without execute
     assert cur2.fetchone() == (1,)
     assert cur2.fetchmany(3) == [(2,), (3,), (4,)]
     assert cur2.fetchall() == [(5,), (6,)]
+
+
+def test_stolen_cursor_close(conn):
+    cur1 = conn.cursor()
+    cur1.execute("declare test cursor for select generate_series(1, 6)")
+    cur2 = conn.cursor("test")
+    cur2.close()
+
+    cur1.execute("declare test cursor for select generate_series(1, 6)")
+    cur2 = conn.cursor("test")
+    cur2.close()
