@@ -193,7 +193,7 @@ class Copy(BaseCopy["Connection"]):
         """
         Iterate on the result of a :sql:`COPY TO` operation record by record.
 
-        Note that the records returned will be tuples of of unparsed strings or
+        Note that the records returned will be tuples of unparsed strings or
         bytes, unless data types are specified using `set_types()`.
         """
         while True:
