@@ -127,7 +127,9 @@ The `!Cursor` class
     .. automethod:: fetchmany
     .. automethod:: fetchall
     .. automethod:: nextset
+    .. automethod:: scroll
     .. autoattribute:: pgresult
+
 
     .. rubric:: Information about the data
 
@@ -192,6 +194,7 @@ The `!AsyncCursor` class
     .. automethod:: fetchone
     .. automethod:: fetchmany
     .. automethod:: fetchall
+    .. automethod:: scroll
 
     .. note:: You can also use ``async for record in cursor: ...`` to iterate
         on the async cursor results.

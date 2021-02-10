@@ -570,6 +570,16 @@ class Cursor(BaseCursor["Connection"]):
             yield row
 
     def scroll(self, value: int, mode: str = "relative") -> None:
+        """
+        Move the cursor in the result set to a new position according to mode.
+
+        If *mode* is ``relative`` (default), value is taken as offset to the
+        current position in the result set, if set to ``absolute``, *value*
+        states an absolute target position.
+
+        Raise `!IndexError` in case a scroll operation would leave the result
+        set. In this case the position will not change.
+        """
         self._scroll(value, mode)
 
     @contextmanager
