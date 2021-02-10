@@ -176,9 +176,8 @@ The `!AsyncCursor` class
 
     .. automethod:: close
 
-        .. note:: you can use ``async with`` to close the cursor
-            automatically when the block is exited, but be careful about
-            the async quirkness: see :ref:`async-with` for details.
+        .. note:: You can use ``async with conn.cursor(): ...`` to close the
+            cursor automatically when the block is exited.
 
     .. automethod:: execute(query, params=None, prepare=None) -> AsyncCursor
     .. automethod:: executemany(query: Query, params_seq: Sequence[Args])
