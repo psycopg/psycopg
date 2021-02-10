@@ -10,6 +10,12 @@ def test_funny_name(conn):
     assert cur.name == "1-2-3"
 
 
+def test_repr(conn):
+    cur = conn.cursor("my-name")
+    assert "ServerCursor" in repr(cur)
+    assert "my-name" in repr(cur)
+
+
 def test_connection(conn):
     cur = conn.cursor("foo")
     assert cur.connection is conn

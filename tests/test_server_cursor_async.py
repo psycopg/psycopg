@@ -12,6 +12,12 @@ async def test_funny_name(aconn):
     assert cur.name == "1-2-3"
 
 
+async def test_repr(aconn):
+    cur = aconn.cursor("my-name")
+    assert "AsyncServerCursor" in repr(cur)
+    assert "my-name" in repr(cur)
+
+
 async def test_connection(aconn):
     cur = aconn.cursor("foo")
     assert cur.connection is aconn

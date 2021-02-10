@@ -9,9 +9,9 @@ from types import TracebackType
 from typing import Any, AsyncIterator, Generic, List, Iterator, Optional
 from typing import Sequence, Type, Tuple, TYPE_CHECKING
 
+from . import pq
 from . import sql
 from . import errors as e
-from .pq import Format
 from .cursor import BaseCursor, execute
 from .proto import ConnectionType, Query, Params, PQGen
 
@@ -33,6 +33,17 @@ class ServerCursorHelper(Generic[ConnectionType]):
     def __init__(self, name: str):
         self.name = name
         self.described = False
+
+    def _repr(self, cur: BaseCursor[ConnectionType]) -> str:
+        cls = f"{cur.__class__.__module__}.{cur.__class__.__qualname__}"
+        info = pq.misc.connection_summary(cur._conn.pgconn)
+        if cur._closed:
+            status = "closed"
+        elif not cur._pgresult:
+            status = "no result"
+        else:
+            status = pq.ExecStatus(cur._pgresult.status).name
+        return f"<{cls} {self.name!r} [{status}] {info} at 0x{id(cur):x}>"
 
     def _declare_gen(
         self,
@@ -141,7 +152,7 @@ class ServerCursor(BaseCursor["Connection"]):
         connection: "Connection",
         name: str,
         *,
-        format: Format = Format.TEXT,
+        format: pq.Format = pq.Format.TEXT,
     ):
         super().__init__(connection, format=format)
         self._helper: ServerCursorHelper["Connection"] = ServerCursorHelper(
@@ -156,6 +167,9 @@ class ServerCursor(BaseCursor["Connection"]):
                 f" Please use 'with' or '.close()' to close the cursor properly",
                 ResourceWarning,
             )
+
+    def __repr__(self) -> str:
+        return self._helper._repr(self)
 
     def __enter__(self) -> "ServerCursor":
         return self
@@ -257,7 +271,7 @@ class AsyncServerCursor(BaseCursor["AsyncConnection"]):
         connection: "AsyncConnection",
         name: str,
         *,
-        format: Format = Format.TEXT,
+        format: pq.Format = pq.Format.TEXT,
     ):
         super().__init__(connection, format=format)
         self._helper: ServerCursorHelper["AsyncConnection"]
@@ -271,6 +285,9 @@ class AsyncServerCursor(BaseCursor["AsyncConnection"]):
                 f" Please use 'with' or '.close()' to close the cursor properly",
                 ResourceWarning,
             )
+
+    def __repr__(self) -> str:
+        return self._helper._repr(self)
 
     async def __aenter__(self) -> "AsyncServerCursor":
         return self
