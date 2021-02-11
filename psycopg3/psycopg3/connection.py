@@ -456,7 +456,7 @@ class Connection(BaseConnection):
         self, name: str = "", *, binary: bool = False
     ) -> Union[Cursor, ServerCursor]:
         """
-        Return a new `Cursor` to send commands and queries to the connection.
+        Return a new cursor to send commands and queries to the connection.
         """
         format = Format.BINARY if binary else Format.TEXT
         if name:

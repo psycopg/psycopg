@@ -197,6 +197,7 @@ class ServerCursor(BaseCursor["Connection"]):
 
     @property
     def name(self) -> str:
+        """The name of the cursor."""
         return self._helper.name
 
     def close(self) -> None:
@@ -216,7 +217,7 @@ class ServerCursor(BaseCursor["Connection"]):
         hold: bool = False,
     ) -> "ServerCursor":
         """
-        Execute a query or command to the database.
+        Open a cursor to execute a query to the database.
         """
         query = self._helper._make_declare_statement(
             self, query, scrollable=scrollable, hold=hold
@@ -226,6 +227,7 @@ class ServerCursor(BaseCursor["Connection"]):
         return self
 
     def executemany(self, query: Query, params_seq: Sequence[Params]) -> None:
+        """Method not implemented for server-side cursors."""
         raise e.NotSupportedError(
             "executemany not supported on server-side cursors"
         )
@@ -318,9 +320,6 @@ class AsyncServerCursor(BaseCursor["AsyncConnection"]):
         return self._helper.name
 
     async def close(self) -> None:
-        """
-        Close the current cursor and free associated resources.
-        """
         async with self._conn.lock:
             await self._conn.wait(self._helper._close_gen(self))
         self._close()
@@ -333,9 +332,6 @@ class AsyncServerCursor(BaseCursor["AsyncConnection"]):
         scrollable: bool = True,
         hold: bool = False,
     ) -> "AsyncServerCursor":
-        """
-        Execute a query or command to the database.
-        """
         query = self._helper._make_declare_statement(
             self, query, scrollable=scrollable, hold=hold
         )

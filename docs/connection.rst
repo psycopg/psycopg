@@ -58,6 +58,10 @@ The `!Connection` class
 
     .. automethod:: cursor
 
+        Calling the method without a *name* creates a client-side cursor,
+        specifying a *name* crates a server-side cursor. See
+        :ref:`cursor-types` for the details.
+
         .. note:: You can use :ref:`with conn.cursor(): ...<usage>`
             to close the cursor automatically when the block is exited.
 
