@@ -138,22 +138,28 @@ class ServerCursorHelper(Generic[ConnectionType]):
         self,
         cur: BaseCursor[ConnectionType],
         query: Query,
-        scrollable: bool,
+        scrollable: Optional[bool],
         hold: bool,
     ) -> sql.Composable:
+
         if isinstance(query, bytes):
             query = query.decode(cur._conn.client_encoding)
         if not isinstance(query, sql.Composable):
             query = sql.SQL(query)
 
-        return sql.SQL(
-            "declare {name} {scroll} cursor{hold} for {query}"
-        ).format(
-            name=sql.Identifier(self.name),
-            scroll=sql.SQL("scroll" if scrollable else "no scroll"),
-            hold=sql.SQL(" with hold" if hold else ""),
-            query=query,
-        )
+        parts = [
+            sql.SQL("declare"),
+            sql.Identifier(self.name),
+        ]
+        if scrollable is not None:
+            parts.append(sql.SQL("scroll" if scrollable else "no scroll"))
+        parts.append(sql.SQL("cursor"))
+        if hold:
+            parts.append(sql.SQL("with hold"))
+        parts.append(sql.SQL("for"))
+        parts.append(query)
+
+        return sql.SQL(" ").join(parts)
 
 
 class ServerCursor(BaseCursor["Connection"]):
@@ -213,7 +219,7 @@ class ServerCursor(BaseCursor["Connection"]):
         query: Query,
         params: Optional[Params] = None,
         *,
-        scrollable: bool = True,
+        scrollable: Optional[bool] = None,
         hold: bool = False,
     ) -> "ServerCursor":
         """
@@ -329,7 +335,7 @@ class AsyncServerCursor(BaseCursor["AsyncConnection"]):
         query: Query,
         params: Optional[Params] = None,
         *,
-        scrollable: bool = True,
+        scrollable: Optional[bool] = None,
         hold: bool = False,
     ) -> "AsyncServerCursor":
         query = self._helper._make_declare_statement(

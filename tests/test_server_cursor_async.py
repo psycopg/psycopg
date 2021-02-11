@@ -213,7 +213,7 @@ async def test_scroll(aconn):
     with pytest.raises(e.ProgrammingError):
         await cur.scroll(0)
 
-    await cur.execute("select generate_series(0,9)")
+    await cur.execute("select generate_series(0,9)", scrollable=True)
     await cur.scroll(2)
     assert await cur.fetchone() == (2,)
     await cur.scroll(2)
@@ -229,7 +229,7 @@ async def test_scroll(aconn):
 
 async def test_scrollable(aconn):
     curs = aconn.cursor("foo")
-    await curs.execute("select generate_series(0, 5)")
+    await curs.execute("select generate_series(0, 5)", scrollable=True)
     await curs.scroll(5)
     for i in range(4, -1, -1):
         await curs.scroll(-1)

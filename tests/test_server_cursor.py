@@ -206,7 +206,7 @@ def test_scroll(conn):
     with pytest.raises(e.ProgrammingError):
         cur.scroll(0)
 
-    cur.execute("select generate_series(0,9)")
+    cur.execute("select generate_series(0,9)", scrollable=True)
     cur.scroll(2)
     assert cur.fetchone() == (2,)
     cur.scroll(2)
@@ -222,7 +222,7 @@ def test_scroll(conn):
 
 def test_scrollable(conn):
     curs = conn.cursor("foo")
-    curs.execute("select generate_series(0, 5)")
+    curs.execute("select generate_series(0, 5)", scrollable=True)
     curs.scroll(5)
     for i in range(4, -1, -1):
         curs.scroll(-1)
