@@ -270,10 +270,9 @@ async def test_iter_stop(aconn):
 
 async def test_row_factory(aconn):
     def my_row_factory(cursor):
-        assert cursor.description is not None
-        titles = [c.name for c in cursor.description]
-
         def mkrow(values):
+            assert cursor.description is not None
+            titles = [c.name for c in cursor.description]
             return [
                 f"{value.upper()}{title}"
                 for title, value in zip(titles, values)
@@ -285,6 +284,12 @@ async def test_row_factory(aconn):
     await cur.execute("select 'foo' as bar")
     (r,) = await cur.fetchone()
     assert r == "FOObar"
+
+    await cur.execute("select 'x' as x; select 'y' as y, 'z' as z")
+    assert await cur.fetchall() == [["Xx"]]
+    assert cur.nextset()
+    assert await cur.fetchall() == [["Yy", "Zz"]]
+    assert cur.nextset() is None
 
 
 async def test_query_params_execute(aconn):

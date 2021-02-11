@@ -272,6 +272,12 @@ def test_row_factory(conn):
     r = cur.fetchall()
     assert r == [[-1], [-2], [-3]]
 
+    cur.execute("select 42; select generate_series(1,3)")
+    assert cur.fetchall() == [[-42]]
+    assert cur.nextset()
+    assert cur.fetchall() == [[-1], [-2], [-3]]
+    assert cur.nextset() is None
+
 
 def test_query_params_execute(conn):
     cur = conn.cursor()
