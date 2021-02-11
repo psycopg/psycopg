@@ -499,6 +499,9 @@ async def test_execute(aconn):
     cur = await aconn.execute("select 12, 22")
     assert await cur.fetchone() == (12, 22)
 
+    cur = await aconn.execute("select 1, 2, 1, 2", row_factory=lambda cur: set)
+    assert await cur.fetchone() == {1, 2}
+
 
 async def test_str(aconn):
     assert "[IDLE]" in str(aconn)

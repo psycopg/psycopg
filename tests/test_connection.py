@@ -481,6 +481,9 @@ def test_execute(conn):
     cur = conn.execute("select 12, 22")
     assert cur.fetchone() == (12, 22)
 
+    cur = conn.execute("select 1, 2, 1, 2", row_factory=lambda cur: set)
+    assert cur.fetchone() == {1, 2}
+
 
 def test_str(conn):
     assert "[IDLE]" in str(conn)
