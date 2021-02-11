@@ -242,6 +242,29 @@ def test_rowcount(conn):
     assert cur.rowcount == -1
 
 
+def test_rownumber(conn):
+    cur = conn.cursor()
+    assert cur.rownumber is None
+
+    cur.execute("select 1 from generate_series(1, 42)")
+    assert cur.rownumber == 0
+
+    cur.fetchone()
+    assert cur.rownumber == 1
+    cur.fetchone()
+    assert cur.rownumber == 2
+    cur.fetchmany(10)
+    assert cur.rownumber == 12
+    rns = []
+    for i in cur:
+        rns.append(cur.rownumber)
+        if len(rns) >= 3:
+            break
+    assert rns == [13, 14, 15]
+    assert len(cur.fetchall()) == 42 - rns[-1]
+    assert cur.rownumber == 42
+
+
 def test_iter(conn):
     cur = conn.cursor()
     cur.execute("select generate_series(1, 3)")
@@ -261,6 +284,48 @@ def test_iter_stop(conn):
 
     assert cur.fetchone() == (3,)
     assert list(cur) == []
+
+
+def test_scroll(conn):
+    cur = conn.cursor()
+    with pytest.raises(psycopg3.ProgrammingError):
+        cur.scroll(0)
+
+    cur.execute("select generate_series(0,9)")
+    cur.scroll(2)
+    assert cur.fetchone() == (2,)
+    cur.scroll(2)
+    assert cur.fetchone() == (5,)
+    cur.scroll(2, mode="relative")
+    assert cur.fetchone() == (8,)
+    cur.scroll(-1)
+    assert cur.fetchone() == (8,)
+    cur.scroll(-2)
+    assert cur.fetchone() == (7,)
+    cur.scroll(2, mode="absolute")
+    assert cur.fetchone() == (2,)
+
+    # on the boundary
+    cur.scroll(0, mode="absolute")
+    assert cur.fetchone() == (0,)
+    with pytest.raises(IndexError):
+        cur.scroll(-1, mode="absolute")
+
+    cur.scroll(0, mode="absolute")
+    with pytest.raises(IndexError):
+        cur.scroll(-1)
+
+    cur.scroll(9, mode="absolute")
+    assert cur.fetchone() == (9,)
+    with pytest.raises(IndexError):
+        cur.scroll(10, mode="absolute")
+
+    cur.scroll(9, mode="absolute")
+    with pytest.raises(IndexError):
+        cur.scroll(1)
+
+    with pytest.raises(ValueError):
+        cur.scroll(1, "wat")
 
 
 def test_query_params_execute(conn):

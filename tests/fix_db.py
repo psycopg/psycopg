@@ -65,3 +65,45 @@ def svcconn(dsn):
     conn = Connection.connect(dsn, autocommit=True)
     yield conn
     conn.close()
+
+
+@pytest.fixture
+def commands(conn, monkeypatch):
+    """The list of commands issued internally by the test connection."""
+    yield patch_exec(conn, monkeypatch)
+
+
+@pytest.fixture
+def acommands(aconn, monkeypatch):
+    """The list of commands issued internally by the test async connection."""
+    yield patch_exec(aconn, monkeypatch)
+
+
+def patch_exec(conn, monkeypatch):
+    """Helper to implement the commands fixture both sync and async."""
+    from psycopg3 import sql
+
+    _orig_exec_command = conn._exec_command
+    L = ListPopAll()
+
+    def _exec_command(command):
+        cmdcopy = command
+        if isinstance(cmdcopy, bytes):
+            cmdcopy = cmdcopy.decode(conn.client_encoding)
+        elif isinstance(cmdcopy, sql.Composable):
+            cmdcopy = cmdcopy.as_string(conn)
+
+        L.insert(0, cmdcopy)
+        return _orig_exec_command(command)
+
+    monkeypatch.setattr(conn, "_exec_command", _exec_command)
+    return L
+
+
+class ListPopAll(list):
+    """A list, with a popall() method."""
+
+    def popall(self):
+        out = self[:]
+        del self[:]
+        return out

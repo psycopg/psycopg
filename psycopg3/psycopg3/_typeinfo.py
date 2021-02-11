@@ -88,7 +88,7 @@ class TypeInfo:
 
         if isinstance(name, Composable):
             name = name.as_string(conn)
-        cur = await conn.cursor(binary=True)
+        cur = conn.cursor(binary=True)
         await cur.execute(cls._info_query, {"name": name})
         recs = await cur.fetchall()
         fields = [d[0] for d in cur.description or ()]

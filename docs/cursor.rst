@@ -7,6 +7,10 @@ The `Cursor` and `AsyncCursor` classes are the main objects to send commands
 to a PostgreSQL database session. They are normally created by the
 connection's `~Connection.cursor()` method.
 
+Using the *name* parameter on `!cursor()` will create a `ServerCursor` or
+`AsyncServerCursor`, which can be used to retrieve partial results from a
+database.
+
 A `Connection` can create several cursors, but only one at time can perform
 operations, so they are not the best way to achieve parallelism (you may want
 to operate with several connections instead). All the cursors on the same
@@ -19,13 +23,13 @@ The `!Cursor` class
 
 .. autoclass:: Cursor()
 
-    This class implements `DBAPI-compliant interface`__. It is what the
+    This class implements a `DBAPI-compliant interface`__. It is what the
     classic `Connection.cursor()` method returns. `AsyncConnection.cursor()`
     will create instead `AsyncCursor` objects, which have the same set of
     method but expose an `asyncio` interface and require ``async`` and
     ``await`` keywords to operate.
 
-    .. __: https://www.python.org/dev/peps/pep-0249/#cursor-objects
+    .. __: dbapi-cursor_
 
     Cursors behave as context managers: on block exit they are closed and
     further operation will not be possible. Closing a cursor will not
@@ -46,7 +50,7 @@ The `!Cursor` class
 
     .. rubric:: Methods to send commands
 
-    .. automethod:: execute(query, params=None, prepare=None) -> Cursor
+    .. automethod:: execute(query, params=None, *, prepare=None) -> Cursor
 
         :param query: The query to execute.
         :type query: `!str`, `!bytes`, or `sql.Composable`
@@ -127,7 +131,9 @@ The `!Cursor` class
     .. automethod:: fetchmany
     .. automethod:: fetchall
     .. automethod:: nextset
+    .. automethod:: scroll
     .. autoattribute:: pgresult
+
 
     .. rubric:: Information about the data
 
@@ -141,6 +147,9 @@ The `!Cursor` class
     .. autoattribute:: rowcount
         :annotation: int
 
+    .. autoattribute:: rownumber
+        :annotation: int
+
     .. autoattribute:: query
         :annotation: Optional[bytes]
 
@@ -152,6 +161,97 @@ The `!Cursor` class
         :annotation: Optional[List[Optional[bytes]]]
 
         The parameters are adapted to PostgreSQL format.
+
+
+The `!ServerCursor` class
+--------------------------
+
+.. autoclass:: ServerCursor()
+
+    This class also implements a `DBAPI-compliant interface`__. It is created
+    by `Connection.cursor()` specifying the *name* parameter. Using this
+    object results in the creation of an equivalent PostgreSQL cursor in the
+    server. DBAPI-extension methods (such as `~Cursor.copy()` or
+    `~Cursor.stream()`) are not implemented on this object: use a normal
+    `Cursor` instead.
+
+    .. __: dbapi-cursor_
+
+    Most attribute and methods behave exactly like in `Cursor`, here are
+    documented the differences:
+
+    .. autoattribute:: name
+        :annotation: str
+
+    .. automethod:: close
+
+        .. warning:: Closing a server-side cursor is more important than
+            closing a client-side one because it also releases the resources
+            on the server, which otherwise might remain allocated until the
+            end of the session (memory, locks). Using the `with conn.cursor():
+            ...` pattern is especially useful so that the cursor is closed at
+            the end of the block.
+
+    .. automethod:: execute(query, params=None, *, scrollable=None, hold=False) -> ServerCursor
+
+        :param query: The query to execute.
+        :type query: `!str`, `!bytes`, or `sql.Composable`
+        :param params: The parameters to pass to the query, if any.
+        :type params: Sequence or Mapping
+        :param scrollable: if `!True` make the cursor scrollable, if `!False`
+                           not. if `!None` leave the choice to the server.
+        :type scrollable: `!Optional[bool]`
+        :param hold: if `!True` allow the cursor to be used after the
+                     transaction cretaing it has committed.
+        :type hold: `!bool`
+
+        Create a server cursor with given `name` and the *query* in argument.
+        If using :sql:`DECLARE` is not appropriate you can avoid to use
+        `!execute()`, crete the cursor in other ways, and use directly the
+        `!fetch*()` methods instead. See :ref:`cursor-steal` for an example.
+
+        Using `!execute()` more than once will close the previous cursor and
+        open a new one with the same name.
+
+        .. seealso:: The PostgreSQL DECLARE_ statement documetation describe
+            in details all the parameters.
+
+        .. _DECLARE: https://www.postgresql.org/docs/current/sql-declare.html
+
+    .. automethod:: executemany(query: Query, params_seq: Sequence[Args])
+
+    .. automethod:: fetchone
+    .. automethod:: fetchmany
+    .. automethod:: fetchall
+
+        These methods use the FETCH_ SQL statement to retrieve some of the
+        records from the cursor's current position.
+
+        .. _FETCH: https://www.postgresql.org/docs/current/sql-fetch.html
+
+        .. note:: You can also iterate on the cursor to read its result one at
+            time with `for record in cur: ...`. In this case, the records are
+            not fetched one at time from the server but they are retrieved in
+            batches of `itersize` to reduce the number of server roundtrips.
+
+    .. autoattribute:: itersize
+        :annotation: int
+
+        Number of records to fetch at time when iterating on the cursor. The
+        default is 100.
+
+    .. automethod:: scroll
+
+        These method uses the MOVE_ SQL statement to move the current position
+        in the server-side cursor, which will affect following `!fetch*()`
+        operations. If you need to scroll backwards you should probably
+        use `scrollable=True` in `execute()`.
+
+        Note that PostgreSQL doesn't provide a reliable way to report when a
+        cursor moves out of bound, so the method might not raise `!IndexError`
+        when it happens, but it might rather stop at the cursor boundary.
+
+        .. _MOVE: https://www.postgresql.org/docs/current/sql-fetch.html
 
 
 The `!AsyncCursor` class
@@ -171,11 +271,10 @@ The `!AsyncCursor` class
 
     .. automethod:: close
 
-        .. note:: you can use ``async with`` to close the cursor
-            automatically when the block is exited, but be careful about
-            the async quirkness: see :ref:`async-with` for details.
+        .. note:: You can use ``async with conn.cursor(): ...`` to close the
+            cursor automatically when the block is exited.
 
-    .. automethod:: execute(query, params=None, prepare=None) -> AsyncCursor
+    .. automethod:: execute(query, params=None, *, prepare=None) -> AsyncCursor
     .. automethod:: executemany(query: Query, params_seq: Sequence[Args])
     .. automethod:: copy(statement: Query) -> AsyncCopy
 
@@ -189,13 +288,43 @@ The `!AsyncCursor` class
     .. automethod:: fetchone
     .. automethod:: fetchmany
     .. automethod:: fetchall
+    .. automethod:: scroll
 
     .. note:: You can also use ``async for record in cursor: ...`` to iterate
         on the async cursor results.
 
 
-Cursor support objects
-----------------------
+The `!AsyncServerCursor` class
+------------------------------
+
+.. autoclass:: AsyncServerCursor()
+
+    This class implements a DBAPI-inspired interface as the `AsyncCursor`
+    does, but wraps a server-side cursor like the `ServerCursor` class. It is
+    created by `AsyncConnection.cursor()` specifying the *name* parameter.
+
+    The following are the methods exposing a different (async) interface from
+    the `ServerCursor` counterpart, but sharing the same semantics.
+
+    .. automethod:: close
+
+        .. note:: You can close the cursor automatically using :samp:`async
+            with conn.cursor({name}): ...`
+
+    .. automethod:: execute(query, params=None, *, scrollable=None, hold=False) -> AsyncServerCursor
+    .. automethod:: executemany(query: Query, params_seq: Sequence[Args])
+    .. automethod:: fetchone
+    .. automethod:: fetchmany
+    .. automethod:: fetchall
+
+        .. note:: You can also iterate on the cursor using `async for record
+            in cur: ...`.
+
+    .. automethod:: scroll
+
+
+The description `Column` object
+-------------------------------
 
 .. autoclass:: Column()
 
@@ -213,6 +342,9 @@ Cursor support objects
     .. autoproperty:: precision
     .. autoproperty:: scale
 
+
+COPY-related objects
+--------------------
 
 .. autoclass:: Copy()
 
@@ -257,3 +389,6 @@ Cursor support objects
         Use it as `async for record in copy.rows():` ...
 
     .. automethod:: read_row
+
+
+.. _dbapi-cursor: https://www.python.org/dev/peps/pep-0249/#cursor-objects

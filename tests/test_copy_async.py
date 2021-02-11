@@ -27,7 +27,7 @@ async def test_copy_out_read(aconn, format):
     else:
         want = sample_binary_rows
 
-    cur = await aconn.cursor()
+    cur = aconn.cursor()
     async with cur.copy(
         f"copy ({sample_values}) to stdout (format {format.name})"
     ) as copy:
@@ -53,7 +53,7 @@ async def test_copy_out_iter(aconn, format):
     else:
         want = sample_binary_rows
 
-    cur = await aconn.cursor()
+    cur = aconn.cursor()
     got = []
     async with cur.copy(
         f"copy ({sample_values}) to stdout (format {format.name})"
@@ -67,7 +67,7 @@ async def test_copy_out_iter(aconn, format):
 
 @pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
 async def test_read_rows(aconn, format):
-    cur = await aconn.cursor()
+    cur = aconn.cursor()
     async with cur.copy(
         f"copy ({sample_values}) to stdout (format {format.name})"
     ) as copy:
@@ -85,7 +85,7 @@ async def test_read_rows(aconn, format):
 
 @pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
 async def test_rows(aconn, format):
-    cur = await aconn.cursor()
+    cur = aconn.cursor()
     async with cur.copy(
         f"copy ({sample_values}) to stdout (format {format.name})"
     ) as copy:
@@ -100,7 +100,7 @@ async def test_rows(aconn, format):
 
 @pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
 async def test_copy_out_allchars(aconn, format):
-    cur = await aconn.cursor()
+    cur = aconn.cursor()
     chars = list(map(chr, range(1, 256))) + [eur]
     await aconn.set_client_encoding("utf8")
     rows = []
@@ -121,7 +121,7 @@ async def test_copy_out_allchars(aconn, format):
 
 @pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
 async def test_read_row_notypes(aconn, format):
-    cur = await aconn.cursor()
+    cur = aconn.cursor()
     async with cur.copy(
         f"copy ({sample_values}) to stdout (format {format.name})"
     ) as copy:
@@ -141,7 +141,7 @@ async def test_read_row_notypes(aconn, format):
 
 @pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
 async def test_rows_notypes(aconn, format):
-    cur = await aconn.cursor()
+    cur = aconn.cursor()
     async with cur.copy(
         f"copy ({sample_values}) to stdout (format {format.name})"
     ) as copy:
@@ -158,7 +158,7 @@ async def test_rows_notypes(aconn, format):
 @pytest.mark.parametrize("err", [-1, 1])
 @pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
 async def test_copy_out_badntypes(aconn, format, err):
-    cur = await aconn.cursor()
+    cur = aconn.cursor()
     async with cur.copy(
         f"copy ({sample_values}) to stdout (format {format.name})"
     ) as copy:
@@ -172,7 +172,7 @@ async def test_copy_out_badntypes(aconn, format, err):
     [(Format.TEXT, "sample_text"), (Format.BINARY, "sample_binary")],
 )
 async def test_copy_in_buffers(aconn, format, buffer):
-    cur = await aconn.cursor()
+    cur = aconn.cursor()
     await ensure_table(cur, sample_tabledef)
     async with cur.copy(
         f"copy copy_in from stdin (format {format.name})"
@@ -185,7 +185,7 @@ async def test_copy_in_buffers(aconn, format, buffer):
 
 
 async def test_copy_in_buffers_pg_error(aconn):
-    cur = await aconn.cursor()
+    cur = aconn.cursor()
     await ensure_table(cur, sample_tabledef)
     with pytest.raises(e.UniqueViolation):
         async with cur.copy("copy copy_in from stdin (format text)") as copy:
@@ -197,7 +197,7 @@ async def test_copy_in_buffers_pg_error(aconn):
 async def test_copy_bad_result(aconn):
     await aconn.set_autocommit(True)
 
-    cur = await aconn.cursor()
+    cur = aconn.cursor()
 
     with pytest.raises(e.SyntaxError):
         async with cur.copy("wat"):
@@ -213,7 +213,7 @@ async def test_copy_bad_result(aconn):
 
 
 async def test_copy_in_str(aconn):
-    cur = await aconn.cursor()
+    cur = aconn.cursor()
     await ensure_table(cur, sample_tabledef)
     async with cur.copy("copy copy_in from stdin (format text)") as copy:
         await copy.write(sample_text.decode("utf8"))
@@ -224,7 +224,7 @@ async def test_copy_in_str(aconn):
 
 
 async def test_copy_in_str_binary(aconn):
-    cur = await aconn.cursor()
+    cur = aconn.cursor()
     await ensure_table(cur, sample_tabledef)
     with pytest.raises(e.QueryCanceled):
         async with cur.copy("copy copy_in from stdin (format binary)") as copy:
@@ -235,7 +235,7 @@ async def test_copy_in_str_binary(aconn):
 
 @pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
 async def test_copy_in_empty(aconn, format):
-    cur = await aconn.cursor()
+    cur = aconn.cursor()
     await ensure_table(cur, sample_tabledef)
     async with cur.copy(f"copy copy_in from stdin (format {format.name})"):
         pass
@@ -246,7 +246,7 @@ async def test_copy_in_empty(aconn, format):
 
 @pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
 async def test_copy_in_error_empty(aconn, format):
-    cur = await aconn.cursor()
+    cur = aconn.cursor()
     await ensure_table(cur, sample_tabledef)
     with pytest.raises(e.QueryCanceled) as exc:
         async with cur.copy(f"copy copy_in from stdin (format {format.name})"):
@@ -257,7 +257,7 @@ async def test_copy_in_error_empty(aconn, format):
 
 
 async def test_copy_in_buffers_with_pg_error(aconn):
-    cur = await aconn.cursor()
+    cur = aconn.cursor()
     await ensure_table(cur, sample_tabledef)
     with pytest.raises(e.UniqueViolation):
         async with cur.copy("copy copy_in from stdin (format text)") as copy:
@@ -268,7 +268,7 @@ async def test_copy_in_buffers_with_pg_error(aconn):
 
 
 async def test_copy_in_buffers_with_py_error(aconn):
-    cur = await aconn.cursor()
+    cur = aconn.cursor()
     await ensure_table(cur, sample_tabledef)
     with pytest.raises(e.QueryCanceled) as exc:
         async with cur.copy("copy copy_in from stdin (format text)") as copy:
@@ -281,7 +281,7 @@ async def test_copy_in_buffers_with_py_error(aconn):
 
 @pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
 async def test_copy_in_records(aconn, format):
-    cur = await aconn.cursor()
+    cur = aconn.cursor()
     await ensure_table(cur, sample_tabledef)
 
     async with cur.copy(
@@ -297,7 +297,7 @@ async def test_copy_in_records(aconn, format):
 
 @pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
 async def test_copy_in_records_binary(aconn, format):
-    cur = await aconn.cursor()
+    cur = aconn.cursor()
     await ensure_table(cur, "col1 serial primary key, col2 int, data text")
 
     async with cur.copy(
@@ -312,7 +312,7 @@ async def test_copy_in_records_binary(aconn, format):
 
 
 async def test_copy_in_allchars(aconn):
-    cur = await aconn.cursor()
+    cur = aconn.cursor()
     await ensure_table(cur, sample_tabledef)
 
     await aconn.set_client_encoding("utf8")
@@ -336,7 +336,7 @@ async def test_copy_from_to(aconn):
     # Roundtrip from file to database to file blockwise
     gen = DataGenerator(aconn, nrecs=1024, srec=10 * 1024)
     await gen.ensure_table()
-    cur = await aconn.cursor()
+    cur = aconn.cursor()
     async with cur.copy("copy copy_in from stdin") as copy:
         for block in gen.blocks():
             await copy.write(block)
@@ -357,7 +357,7 @@ async def test_copy_from_to_bytes(aconn):
     # Roundtrip from file to database to file blockwise
     gen = DataGenerator(aconn, nrecs=1024, srec=10 * 1024)
     await gen.ensure_table()
-    cur = await aconn.cursor()
+    cur = aconn.cursor()
     async with cur.copy("copy copy_in from stdin") as copy:
         for block in gen.blocks():
             await copy.write(block.encode("utf8"))
@@ -380,7 +380,7 @@ async def test_copy_from_insane_size(aconn):
         aconn, nrecs=4 * 1024, srec=10 * 1024, block_size=20 * 1024 * 1024
     )
     await gen.ensure_table()
-    cur = await aconn.cursor()
+    cur = aconn.cursor()
     async with cur.copy("copy copy_in from stdin") as copy:
         for block in gen.blocks():
             await copy.write(block)
@@ -392,7 +392,7 @@ async def test_copy_rowcount(aconn):
     gen = DataGenerator(aconn, nrecs=3, srec=10)
     await gen.ensure_table()
 
-    cur = await aconn.cursor()
+    cur = aconn.cursor()
     async with cur.copy("copy copy_in from stdin") as copy:
         for block in gen.blocks():
             await copy.write(block)
@@ -417,7 +417,7 @@ async def test_copy_rowcount(aconn):
 
 
 async def test_copy_query(aconn):
-    cur = await aconn.cursor()
+    cur = aconn.cursor()
     async with cur.copy("copy (select 1) to stdout") as copy:
         assert cur.query == b"copy (select 1) to stdout"
         assert cur.params is None
@@ -426,7 +426,7 @@ async def test_copy_query(aconn):
 
 
 async def test_cant_reenter(aconn):
-    cur = await aconn.cursor()
+    cur = aconn.cursor()
     async with cur.copy("copy (select 1) to stdout") as copy:
         async for record in copy:
             pass
@@ -438,7 +438,7 @@ async def test_cant_reenter(aconn):
 
 
 async def test_str(aconn):
-    cur = await aconn.cursor()
+    cur = aconn.cursor()
     async with cur.copy("copy (select 1) to stdout") as copy:
         assert "[ACTIVE]" in str(copy)
         async for record in copy:
@@ -452,7 +452,7 @@ async def test_str(aconn):
     [(Format.TEXT, "sample_text"), (Format.BINARY, "sample_binary")],
 )
 async def test_worker_life(aconn, format, buffer):
-    cur = await aconn.cursor()
+    cur = aconn.cursor()
     await ensure_table(cur, sample_tabledef)
     async with cur.copy(
         f"copy copy_in from stdin (format {format.name})"
@@ -478,7 +478,7 @@ async def test_copy_to_leaks(dsn, faker, fmt, method):
     n = []
     for i in range(3):
         async with await psycopg3.AsyncConnection.connect(dsn) as conn:
-            async with await conn.cursor(binary=fmt) as cur:
+            async with conn.cursor(binary=fmt) as cur:
                 await cur.execute(faker.drop_stmt)
                 await cur.execute(faker.create_stmt)
                 await cur.executemany(faker.insert_stmt, faker.records)
@@ -537,7 +537,7 @@ async def test_copy_from_leaks(dsn, faker, fmt):
     n = []
     for i in range(3):
         async with await psycopg3.AsyncConnection.connect(dsn) as conn:
-            async with await conn.cursor(binary=fmt) as cur:
+            async with conn.cursor(binary=fmt) as cur:
                 await cur.execute(faker.drop_stmt)
                 await cur.execute(faker.create_stmt)
 
@@ -582,7 +582,7 @@ class DataGenerator:
         self.block_size = block_size
 
     async def ensure_table(self):
-        cur = await self.conn.cursor()
+        cur = self.conn.cursor()
         await ensure_table(cur, "id integer primary key, data text")
 
     def records(self):
@@ -607,7 +607,7 @@ class DataGenerator:
             yield block
 
     async def assert_data(self):
-        cur = await self.conn.cursor()
+        cur = self.conn.cursor()
         await cur.execute("select id, data from copy_in order by id")
         for record in self.records():
             assert record == await cur.fetchone()

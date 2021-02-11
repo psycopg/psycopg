@@ -58,6 +58,10 @@ The `!Connection` class
 
     .. automethod:: cursor
 
+        Calling the method without a *name* creates a client-side cursor,
+        specifying a *name* crates a server-side cursor. See
+        :ref:`cursor-types` for the details.
+
         .. note:: You can use :ref:`with conn.cursor(): ...<usage>`
             to close the cursor automatically when the block is exited.
 
@@ -196,9 +200,8 @@ The `!AsyncConnection` class
 
     .. automethod:: cursor
 
-        .. note:: You can use ``async with`` to close the cursor
-            automatically when the block is exited, but be careful about
-            the async quirkness: see :ref:`async-with` for details.
+        .. note:: You can use ``async with conn.cursor() as cur: ...`` to
+            close the cursor automatically when the block is exited.
 
     .. automethod:: execute(query, params=None, prepare=None) -> AsyncCursor
     .. automethod:: commit

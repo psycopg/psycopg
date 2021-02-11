@@ -191,7 +191,13 @@ class PGconn(Protocol):
     def describe_prepared(self, name: bytes) -> "PGresult":
         ...
 
+    def send_describe_prepared(self, name: bytes) -> None:
+        ...
+
     def describe_portal(self, name: bytes) -> "PGresult":
+        ...
+
+    def send_describe_portal(self, name: bytes) -> None:
         ...
 
     def get_result(self) -> Optional["PGresult"]:
