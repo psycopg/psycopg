@@ -20,7 +20,7 @@ def insert_row(conn, value):
     else:
 
         async def f():
-            cur = await conn.cursor()
+            cur = conn.cursor()
             await cur.execute(sql, (value,))
 
         return f()
@@ -35,43 +35,12 @@ def inserted(conn):
     else:
 
         async def f():
-            cur = await conn.cursor()
+            cur = conn.cursor()
             await cur.execute(sql)
             rows = await cur.fetchall()
             return set(v for (v,) in rows)
 
         return f()
-
-
-class ListPopAll(list):
-    """A list, with a popall() method."""
-
-    def popall(self):
-        out = self[:]
-        del self[:]
-        return out
-
-
-@pytest.fixture
-def commands(conn, monkeypatch):
-    """The list of commands issued internally by the test connection."""
-    yield patch_exec(conn, monkeypatch)
-
-
-def patch_exec(conn, monkeypatch):
-    """Helper to implement the commands fixture both sync and async."""
-    _orig_exec_command = conn._exec_command
-    L = ListPopAll()
-
-    def _exec_command(command):
-        if isinstance(command, bytes):
-            command = command.decode(conn.client_encoding)
-
-        L.insert(0, command)
-        return _orig_exec_command(command)
-
-    monkeypatch.setattr(conn, "_exec_command", _exec_command)
-    return L
 
 
 def in_transaction(conn):

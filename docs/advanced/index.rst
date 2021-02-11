@@ -9,3 +9,4 @@ Advanced topics
     ../prepared
     ../copy
     ../async
+    ../cursors

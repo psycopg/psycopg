@@ -23,7 +23,7 @@ async def test_connection_attributes(aconn, monkeypatch):
 
 
 async def test_dont_prepare(aconn):
-    cur = await aconn.cursor()
+    cur = aconn.cursor()
     for i in range(10):
         await cur.execute("select %s::int", [i], prepare=False)
 
@@ -32,14 +32,14 @@ async def test_dont_prepare(aconn):
 
 
 async def test_do_prepare(aconn):
-    cur = await aconn.cursor()
+    cur = aconn.cursor()
     await cur.execute("select %s::int", [10], prepare=True)
     await cur.execute("select count(*) from pg_prepared_statements")
     assert await cur.fetchone() == (1,)
 
 
 async def test_auto_prepare(aconn):
-    cur = await aconn.cursor()
+    cur = aconn.cursor()
     res = []
     for i in range(10):
         await cur.execute("select count(*) from pg_prepared_statements")

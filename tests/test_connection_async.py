@@ -67,7 +67,7 @@ async def test_close(aconn):
     assert aconn.closed
     assert aconn.pgconn.status == aconn.ConnStatus.BAD
 
-    cur = await aconn.cursor()
+    cur = aconn.cursor()
 
     await aconn.close()
     assert aconn.closed
@@ -108,33 +108,33 @@ async def test_connection_warn_close(dsn, recwarn):
 
 async def test_context_commit(aconn, dsn):
     async with aconn:
-        async with await aconn.cursor() as cur:
+        async with aconn.cursor() as cur:
             await cur.execute("drop table if exists textctx")
             await cur.execute("create table textctx ()")
 
     assert aconn.closed
 
     async with await psycopg3.AsyncConnection.connect(dsn) as aconn:
-        async with await aconn.cursor() as cur:
+        async with aconn.cursor() as cur:
             await cur.execute("select * from textctx")
             assert await cur.fetchall() == []
 
 
 async def test_context_rollback(aconn, dsn):
-    async with await aconn.cursor() as cur:
+    async with aconn.cursor() as cur:
         await cur.execute("drop table if exists textctx")
     await aconn.commit()
 
     with pytest.raises(ZeroDivisionError):
         async with aconn:
-            async with await aconn.cursor() as cur:
+            async with aconn.cursor() as cur:
                 await cur.execute("create table textctx ()")
                 1 / 0
 
     assert aconn.closed
 
     async with await psycopg3.AsyncConnection.connect(dsn) as aconn:
-        async with await aconn.cursor() as cur:
+        async with aconn.cursor() as cur:
             with pytest.raises(UndefinedTable):
                 await cur.execute("select * from textctx")
 
@@ -197,7 +197,7 @@ async def test_auto_transaction(aconn):
     aconn.pgconn.exec_(b"drop table if exists foo")
     aconn.pgconn.exec_(b"create table foo (id int primary key)")
 
-    cur = await aconn.cursor()
+    cur = aconn.cursor()
     assert aconn.pgconn.transaction_status == aconn.TransactionStatus.IDLE
 
     await cur.execute("insert into foo values (1)")
@@ -214,7 +214,7 @@ async def test_auto_transaction_fail(aconn):
     aconn.pgconn.exec_(b"drop table if exists foo")
     aconn.pgconn.exec_(b"create table foo (id int primary key)")
 
-    cur = await aconn.cursor()
+    cur = aconn.cursor()
     assert aconn.pgconn.transaction_status == aconn.TransactionStatus.IDLE
 
     await cur.execute("insert into foo values (1)")
@@ -239,7 +239,7 @@ async def test_autocommit(aconn):
 
     await aconn.set_autocommit(True)
     assert aconn.autocommit
-    cur = await aconn.cursor()
+    cur = aconn.cursor()
     await cur.execute("select 1")
     assert await cur.fetchone() == (1,)
     assert aconn.pgconn.transaction_status == aconn.TransactionStatus.IDLE
@@ -251,7 +251,7 @@ async def test_autocommit_connect(dsn):
 
 
 async def test_autocommit_intrans(aconn):
-    cur = await aconn.cursor()
+    cur = aconn.cursor()
     await cur.execute("select 1")
     assert await cur.fetchone() == (1,)
     assert aconn.pgconn.transaction_status == aconn.TransactionStatus.INTRANS
@@ -261,7 +261,7 @@ async def test_autocommit_intrans(aconn):
 
 
 async def test_autocommit_inerror(aconn):
-    cur = await aconn.cursor()
+    cur = aconn.cursor()
     with pytest.raises(psycopg3.DatabaseError):
         await cur.execute("meh")
     assert aconn.pgconn.transaction_status == aconn.TransactionStatus.INERROR
@@ -279,7 +279,7 @@ async def test_autocommit_unknown(aconn):
 
 
 async def test_get_encoding(aconn):
-    cur = await aconn.cursor()
+    cur = aconn.cursor()
     await cur.execute("show client_encoding")
     (enc,) = await cur.fetchone()
     assert aconn.client_encoding == encodings.pg2py(enc)
@@ -293,7 +293,7 @@ async def test_set_encoding(aconn):
     assert aconn.client_encoding != newenc
     await aconn.set_client_encoding(newenc)
     assert aconn.client_encoding == newenc
-    cur = await aconn.cursor()
+    cur = aconn.cursor()
     await cur.execute("show client_encoding")
     (enc,) = await cur.fetchone()
     assert encodings.pg2py(enc) == newenc
@@ -340,7 +340,7 @@ async def test_encoding_env_var(dsn, monkeypatch, enc, out, codec):
 
 
 async def test_set_encoding_unsupported(aconn):
-    cur = await aconn.cursor()
+    cur = aconn.cursor()
     await cur.execute("set client_encoding to EUC_TW")
     with pytest.raises(psycopg3.NotSupportedError):
         await cur.execute("select 'x'")
@@ -399,7 +399,7 @@ async def test_connect_badargs(monkeypatch, pgconn, args, kwargs):
 
 
 async def test_broken_connection(aconn):
-    cur = await aconn.cursor()
+    cur = aconn.cursor()
     with pytest.raises(psycopg3.DatabaseError):
         await cur.execute("select pg_terminate_backend(pg_backend_pid())")
     assert aconn.closed
@@ -422,7 +422,7 @@ async def test_notice_handlers(aconn, caplog):
     aconn.add_notice_handler(lambda diag: severities.append(diag.severity))
 
     aconn.pgconn.exec_(b"set client_min_messages to notice")
-    cur = await aconn.cursor()
+    cur = aconn.cursor()
     await cur.execute(
         "do $$begin raise notice 'hello notice'; end$$ language plpgsql"
     )
@@ -461,7 +461,7 @@ async def test_notify_handlers(aconn):
     aconn.add_notify_handler(lambda n: nots2.append(n))
 
     await aconn.set_autocommit(True)
-    cur = await aconn.cursor()
+    cur = aconn.cursor()
     await cur.execute("listen foo")
     await cur.execute("notify foo, 'n1'")
 

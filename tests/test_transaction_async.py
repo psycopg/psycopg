@@ -3,16 +3,10 @@ import pytest
 from psycopg3 import ProgrammingError, Rollback
 
 from .test_transaction import in_transaction, insert_row, inserted
-from .test_transaction import ExpectedException, patch_exec
+from .test_transaction import ExpectedException
 from .test_transaction import create_test_table  # noqa  # autouse fixture
 
 pytestmark = pytest.mark.asyncio
-
-
-@pytest.fixture
-def commands(aconn, monkeypatch):
-    """The list of commands issued internally by the test connection."""
-    yield patch_exec(aconn, monkeypatch)
 
 
 async def test_basic(aconn):
@@ -310,7 +304,7 @@ async def test_named_savepoint_escapes_savepoint_name(aconn):
         pass
 
 
-async def test_named_savepoints_successful_exit(aconn, commands):
+async def test_named_savepoints_successful_exit(aconn, acommands):
     """
     Entering a transaction context will do one of these these things:
     1. Begin an outer transaction (if one isn't already in progress)
@@ -320,6 +314,8 @@ async def test_named_savepoints_successful_exit(aconn, commands):
 
     ...and exiting the context successfully will "commit" the same.
     """
+    commands = acommands
+
     # Case 1
     # Using Transaction explicitly becase conn.transaction() enters the contetx
     async with aconn.transaction() as tx:
@@ -328,7 +324,7 @@ async def test_named_savepoints_successful_exit(aconn, commands):
     assert commands.popall() == ["commit"]
 
     # Case 1 (with a transaction already started)
-    await (await aconn.cursor()).execute("select 1")
+    await aconn.cursor().execute("select 1")
     assert commands.popall() == ["begin"]
     async with aconn.transaction() as tx:
         assert commands.popall() == ['savepoint "_pg3_1"']
@@ -363,12 +359,14 @@ async def test_named_savepoints_successful_exit(aconn, commands):
     assert commands.popall() == ["commit"]
 
 
-async def test_named_savepoints_exception_exit(aconn, commands):
+async def test_named_savepoints_exception_exit(aconn, acommands):
     """
     Same as the previous test but checks that when exiting the context with an
     exception, whatever transaction and/or savepoint was started on enter will
     be rolled-back as appropriate.
     """
+    commands = acommands
+
     # Case 1
     with pytest.raises(ExpectedException):
         async with aconn.transaction() as tx:

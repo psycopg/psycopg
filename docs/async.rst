@@ -18,7 +18,7 @@ here and there.
 
     async with await psycopg3.AsyncConnection.connect(
             "dbname=test user=postgres") as aconn:
-        async with await aconn.cursor() as acur:
+        async with aconn.cursor() as acur:
             await acur.execute(
                 "INSERT INTO test (num, data) VALUES (%s, %s)",
                 (100, "abc'def"))
@@ -33,8 +33,8 @@ here and there.
 
 .. _async-with:
 
-``with`` async connections and cursors
---------------------------------------
+``with`` async connections
+--------------------------
 
 As seen in :ref:`the basic usage <usage>`, connections and cursors can act as
 context managers, so you can run:
@@ -47,7 +47,7 @@ context managers, so you can run:
         # the cursor is closed upon leaving the context
     # the transaction is committed, the connection closed
 
-For asynchronous connections and cursor it's *almost* what you'd expect, but
+For asynchronous connections it's *almost* what you'd expect, but
 not quite. Please note that `~Connection.connect()` and `~Connection.cursor()`
 *don't return a context*: they are both factory methods which return *an
 object which can be used as a context*. That's because there are several use
@@ -61,8 +61,7 @@ two steps instead, as in
 
     aconn = await psycopg3.AsyncConnection.connect():
     async with aconn:
-        cur = await aconn.cursor()
-        async with cur:
+        async with aconn.cursor() as cur:
             await cur.execute(...)
 
 which can be condensed as:
@@ -70,10 +69,14 @@ which can be condensed as:
 .. code:: python
 
     async with await psycopg3.AsyncConnection.connect() as aconn:
-        async with await aconn.cursor() as cur:
+        async with aconn.cursor() as cur:
             await cur.execute(...)
 
 ...but no less than that: you still need to do the double async thing.
+
+The `AsyncConnection.cursor()` function is not marked as `!async` (it never
+performs I/O), so you don't need an `!await` on it and you can use the normal
+`async with` context manager.
 
 
 

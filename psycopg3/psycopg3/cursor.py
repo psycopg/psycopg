@@ -31,6 +31,7 @@ else:
 if TYPE_CHECKING:
     from .proto import Transformer
     from .pq.proto import PGconn, PGresult
+    from .connection import BaseConnection  # noqa: F401
     from .connection import Connection, AsyncConnection  # noqa: F401
 
 execute: Callable[["PGconn"], PQGen[List["PGresult"]]]
@@ -61,6 +62,7 @@ class BaseCursor(Generic[ConnectionType]):
     def __init__(
         self,
         connection: ConnectionType,
+        *,
         format: Format = Format.TEXT,
         row_factory: Optional[RowFactory] = None,
     ):
@@ -141,7 +143,7 @@ class BaseCursor(Generic[ConnectionType]):
         `!None` if the current resultset didn't return tuples.
         """
         res = self.pgresult
-        if not res or res.status != ExecStatus.TUPLES_OK:
+        if not (res and res.nfields):
             return None
         return [Column(self, i) for i in range(res.nfields)]
 
@@ -149,6 +151,14 @@ class BaseCursor(Generic[ConnectionType]):
     def rowcount(self) -> int:
         """Number of records affected by the precedent operation."""
         return self._rowcount
+
+    @property
+    def rownumber(self) -> Optional[int]:
+        """Index of the next row to fetch in the current result.
+
+        `!None` if there is no result to fetch.
+        """
+        return self._pos if self._pgresult else None
 
     def setinputsizes(self, sizes: Sequence[Any]) -> None:
         # no-op
@@ -187,12 +197,14 @@ class BaseCursor(Generic[ConnectionType]):
         self,
         query: Query,
         params: Optional[Params] = None,
+        *,
         prepare: Optional[bool] = None,
     ) -> PQGen[None]:
         """Generator implementing `Cursor.execute()`."""
         yield from self._start_query(query)
         pgq = self._convert_query(query, params)
-        yield from self._maybe_prepare_gen(pgq, prepare)
+        results = yield from self._maybe_prepare_gen(pgq, prepare)
+        self._execute_results(results)
         self._last_query = query
 
     def _executemany_gen(
@@ -209,13 +221,14 @@ class BaseCursor(Generic[ConnectionType]):
             else:
                 pgq.dump(params)
 
-            yield from self._maybe_prepare_gen(pgq, True)
+            results = yield from self._maybe_prepare_gen(pgq, True)
+            self._execute_results(results)
 
         self._last_query = query
 
     def _maybe_prepare_gen(
         self, pgq: PostgresQuery, prepare: Optional[bool]
-    ) -> PQGen[None]:
+    ) -> PQGen[Sequence["PGresult"]]:
         # Check if the query is prepared or needs preparing
         prep, name = self._conn._prepared.get(pgq, prepare)
         if prep is Prepare.YES:
@@ -245,7 +258,7 @@ class BaseCursor(Generic[ConnectionType]):
             if cmd:
                 yield from self._conn._exec_command(cmd)
 
-        self._execute_results(results)
+        return results
 
     def _stream_send_gen(
         self, query: Query, params: Optional[Params] = None
@@ -436,6 +449,29 @@ class BaseCursor(Generic[ConnectionType]):
                 f" FROM STDIN statements, got {ExecStatus(status).name}"
             )
 
+    def _scroll(self, value: int, mode: str) -> None:
+        self._check_result()
+        assert self.pgresult
+        if mode == "relative":
+            newpos = self._pos + value
+        elif mode == "absolute":
+            newpos = value
+        else:
+            raise ValueError(
+                f"bad mode: {mode}. It should be 'relative' or 'absolute'"
+            )
+        if not 0 <= newpos < self.pgresult.ntuples:
+            raise IndexError("position out of bound")
+        self._pos = newpos
+
+    def _close(self) -> None:
+        self._closed = True
+        # however keep the query available, which can be useful for debugging
+        # in case of errors
+        pgq = self._pgq
+        self._reset()
+        self._pgq = pgq
+
 
 class Cursor(BaseCursor["Connection"]):
     __module__ = "psycopg3"
@@ -456,17 +492,13 @@ class Cursor(BaseCursor["Connection"]):
         """
         Close the current cursor and free associated resources.
         """
-        self._closed = True
-        # however keep the query available, which can be useful for debugging
-        # in case of errors
-        pgq = self._pgq
-        self._reset()
-        self._pgq = pgq
+        self._close()
 
     def execute(
         self,
         query: Query,
         params: Optional[Params] = None,
+        *,
         prepare: Optional[bool] = None,
     ) -> "Cursor":
         """
@@ -532,7 +564,7 @@ class Cursor(BaseCursor["Connection"]):
         self._check_result()
         assert self.pgresult
         records = self._tx.load_rows(self._pos, self.pgresult.ntuples)
-        self._pos += self.pgresult.ntuples
+        self._pos = self.pgresult.ntuples
         return records
 
     def __iter__(self) -> Iterator[Row]:
@@ -546,6 +578,19 @@ class Cursor(BaseCursor["Connection"]):
                 break
             self._pos += 1
             yield row
+
+    def scroll(self, value: int, mode: str = "relative") -> None:
+        """
+        Move the cursor in the result set to a new position according to mode.
+
+        If *mode* is ``relative`` (default), value is taken as offset to the
+        current position in the result set, if set to ``absolute``, *value*
+        states an absolute target position.
+
+        Raise `!IndexError` in case a scroll operation would leave the result
+        set. In this case the position will not change.
+        """
+        self._scroll(value, mode)
 
     @contextmanager
     def copy(self, statement: Query) -> Iterator[Copy]:
@@ -575,13 +620,13 @@ class AsyncCursor(BaseCursor["AsyncConnection"]):
         await self.close()
 
     async def close(self) -> None:
-        self._closed = True
-        self._reset()
+        self._close()
 
     async def execute(
         self,
         query: Query,
         params: Optional[Params] = None,
+        *,
         prepare: Optional[bool] = None,
     ) -> "AsyncCursor":
         async with self._conn.lock:
@@ -629,7 +674,7 @@ class AsyncCursor(BaseCursor["AsyncConnection"]):
         self._check_result()
         assert self.pgresult
         records = self._tx.load_rows(self._pos, self.pgresult.ntuples)
-        self._pos += self.pgresult.ntuples
+        self._pos = self.pgresult.ntuples
         return records
 
     async def __aiter__(self) -> AsyncIterator[Row]:
@@ -644,6 +689,9 @@ class AsyncCursor(BaseCursor["AsyncConnection"]):
             self._pos += 1
             yield row
 
+    async def scroll(self, value: int, mode: str = "relative") -> None:
+        self._scroll(value, mode)
+
     @asynccontextmanager
     async def copy(self, statement: Query) -> AsyncIterator[AsyncCopy]:
         async with self._conn.lock:
@@ -651,15 +699,3 @@ class AsyncCursor(BaseCursor["AsyncConnection"]):
 
         async with AsyncCopy(self) as copy:
             yield copy
-
-
-class NamedCursorMixin:
-    pass
-
-
-class NamedCursor(NamedCursorMixin, Cursor):
-    pass
-
-
-class AsyncNamedCursor(NamedCursorMixin, AsyncCursor):
-    pass

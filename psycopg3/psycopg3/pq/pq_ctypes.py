@@ -463,6 +463,15 @@ class PGconn:
             raise MemoryError("couldn't allocate PGresult")
         return PGresult(rv)
 
+    def send_describe_prepared(self, name: bytes) -> None:
+        if not isinstance(name, bytes):
+            raise TypeError(f"bytes expected, got {type(name)} instead")
+        self._ensure_pgconn()
+        if not impl.PQsendDescribePrepared(self.pgconn_ptr, name):
+            raise PQerror(
+                f"sending describe prepared failed: {error_message(self)}"
+            )
+
     def describe_portal(self, name: bytes) -> "PGresult":
         if not isinstance(name, bytes):
             raise TypeError(f"'name' must be bytes, got {type(name)} instead")
@@ -471,6 +480,15 @@ class PGconn:
         if not rv:
             raise MemoryError("couldn't allocate PGresult")
         return PGresult(rv)
+
+    def send_describe_portal(self, name: bytes) -> None:
+        if not isinstance(name, bytes):
+            raise TypeError(f"bytes expected, got {type(name)} instead")
+        self._ensure_pgconn()
+        if not impl.PQsendDescribePortal(self.pgconn_ptr, name):
+            raise PQerror(
+                f"sending describe portal failed: {error_message(self)}"
+            )
 
     def get_result(self) -> Optional["PGresult"]:
         rv = impl.PQgetResult(self.pgconn_ptr)
