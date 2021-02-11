@@ -69,9 +69,9 @@ class TypeInfo:
 
         if isinstance(name, Composable):
             name = name.as_string(conn)
-        cur = conn.cursor(binary=True)
+        cur = conn.cursor(binary=True, row_factory=None)
         cur.execute(cls._info_query, {"name": name})
-        recs = cur.fetchall()
+        recs: Sequence[Sequence[Any]] = cur.fetchall()
         fields = [d[0] for d in cur.description or ()]
         return cls._fetch(name, fields, recs)
 
@@ -88,9 +88,9 @@ class TypeInfo:
 
         if isinstance(name, Composable):
             name = name.as_string(conn)
-        cur = await conn.cursor(binary=True)
+        cur = await conn.cursor(binary=True, row_factory=None)
         await cur.execute(cls._info_query, {"name": name})
-        recs = await cur.fetchall()
+        recs: Sequence[Sequence[Any]] = await cur.fetchall()
         fields = [d[0] for d in cur.description or ()]
         return cls._fetch(name, fields, recs)
 
