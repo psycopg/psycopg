@@ -13,7 +13,7 @@ from . import pq
 from . import sql
 from . import errors as e
 from .cursor import BaseCursor, execute
-from .proto import ConnectionType, Query, Params, PQGen, RowFactory
+from .proto import ConnectionType, Query, Params, PQGen, Row, RowFactory
 
 if TYPE_CHECKING:
     from .connection import BaseConnection  # noqa: F401
@@ -239,7 +239,7 @@ class ServerCursor(BaseCursor["Connection"]):
             "executemany not supported on server-side cursors"
         )
 
-    def fetchone(self) -> Optional[Sequence[Any]]:
+    def fetchone(self) -> Optional[Row]:
         with self._conn.lock:
             recs = self._conn.wait(self._helper._fetch_gen(self, 1))
         if recs:
@@ -248,7 +248,7 @@ class ServerCursor(BaseCursor["Connection"]):
         else:
             return None
 
-    def fetchmany(self, size: int = 0) -> Sequence[Sequence[Any]]:
+    def fetchmany(self, size: int = 0) -> Sequence[Row]:
         if not size:
             size = self.arraysize
         with self._conn.lock:
@@ -256,13 +256,13 @@ class ServerCursor(BaseCursor["Connection"]):
         self._pos += len(recs)
         return recs
 
-    def fetchall(self) -> Sequence[Sequence[Any]]:
+    def fetchall(self) -> Sequence[Row]:
         with self._conn.lock:
             recs = self._conn.wait(self._helper._fetch_gen(self, None))
         self._pos += len(recs)
         return recs
 
-    def __iter__(self) -> Iterator[Sequence[Any]]:
+    def __iter__(self) -> Iterator[Row]:
         while True:
             with self._conn.lock:
                 recs = self._conn.wait(
@@ -356,7 +356,7 @@ class AsyncServerCursor(BaseCursor["AsyncConnection"]):
             "executemany not supported on server-side cursors"
         )
 
-    async def fetchone(self) -> Optional[Sequence[Any]]:
+    async def fetchone(self) -> Optional[Row]:
         async with self._conn.lock:
             recs = await self._conn.wait(self._helper._fetch_gen(self, 1))
         if recs:
@@ -365,7 +365,7 @@ class AsyncServerCursor(BaseCursor["AsyncConnection"]):
         else:
             return None
 
-    async def fetchmany(self, size: int = 0) -> Sequence[Sequence[Any]]:
+    async def fetchmany(self, size: int = 0) -> Sequence[Row]:
         if not size:
             size = self.arraysize
         async with self._conn.lock:
@@ -373,13 +373,13 @@ class AsyncServerCursor(BaseCursor["AsyncConnection"]):
         self._pos += len(recs)
         return recs
 
-    async def fetchall(self) -> Sequence[Sequence[Any]]:
+    async def fetchall(self) -> Sequence[Row]:
         async with self._conn.lock:
             recs = await self._conn.wait(self._helper._fetch_gen(self, None))
         self._pos += len(recs)
         return recs
 
-    async def __aiter__(self) -> AsyncIterator[Sequence[Any]]:
+    async def __aiter__(self) -> AsyncIterator[Row]:
         while True:
             async with self._conn.lock:
                 recs = await self._conn.wait(
