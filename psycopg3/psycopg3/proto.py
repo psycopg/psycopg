@@ -120,7 +120,7 @@ class Transformer(Protocol):
 
 # Row factories
 
-Row = TypeVar("Row")
+Row = TypeVar("Row", Tuple[Any, ...], Any)
 
 
 class RowMaker(Protocol):
