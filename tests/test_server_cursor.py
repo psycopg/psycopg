@@ -150,6 +150,16 @@ def test_nextset(conn):
         assert not cur.nextset()
 
 
+def test_row_factory(conn):
+    def my_row_factory(cur):
+        return lambda values: [-v for v in values]
+
+    cur = conn.cursor("foo", row_factory=my_row_factory)
+    cur.execute("select generate_series(1, 3)")
+    r = cur.fetchall()
+    assert r == [[-1], [-2], [-3]]
+
+
 def test_rownumber(conn):
     cur = conn.cursor("foo")
     assert cur.rownumber is None

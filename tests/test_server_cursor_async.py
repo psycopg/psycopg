@@ -152,6 +152,16 @@ async def test_nextset(aconn):
         assert not cur.nextset()
 
 
+async def test_row_factory(aconn):
+    def my_row_factory(cur):
+        return lambda values: [-v for v in values]
+
+    cur = aconn.cursor("foo", row_factory=my_row_factory)
+    await cur.execute("select generate_series(1, 3)")
+    r = await cur.fetchall()
+    assert r == [[-1], [-2], [-3]]
+
+
 async def test_rownumber(aconn):
     cur = aconn.cursor("foo")
     assert cur.rownumber is None
