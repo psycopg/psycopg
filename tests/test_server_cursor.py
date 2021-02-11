@@ -238,6 +238,24 @@ def test_non_scrollable(conn):
         curs.scroll(-1)
 
 
+@pytest.mark.parametrize("kwargs", [{}, {"hold": False}])
+def test_no_hold(conn, kwargs):
+    with pytest.raises(e.InvalidCursorName):
+        with conn.cursor("foo") as curs:
+            curs.execute("select generate_series(0, 2)", **kwargs)
+            assert curs.fetchone() == (0,)
+            conn.commit()
+            curs.fetchone()
+
+
+def test_hold(conn):
+    with conn.cursor("foo") as curs:
+        curs.execute("select generate_series(0, 5)", hold=True)
+        assert curs.fetchone() == (0,)
+        conn.commit()
+        assert curs.fetchone() == (1,)
+
+
 def test_steal_cursor(conn):
     cur1 = conn.cursor()
     cur1.execute("declare test cursor for select generate_series(1, 6)")

@@ -245,6 +245,24 @@ async def test_non_scrollable(aconn):
         await curs.scroll(-1)
 
 
+@pytest.mark.parametrize("kwargs", [{}, {"hold": False}])
+async def test_no_hold(aconn, kwargs):
+    with pytest.raises(e.InvalidCursorName):
+        async with aconn.cursor("foo") as curs:
+            await curs.execute("select generate_series(0, 2)", **kwargs)
+            assert await curs.fetchone() == (0,)
+            await aconn.commit()
+            await curs.fetchone()
+
+
+async def test_hold(aconn):
+    async with aconn.cursor("foo") as curs:
+        await curs.execute("select generate_series(0, 5)", hold=True)
+        assert await curs.fetchone() == (0,)
+        await aconn.commit()
+        assert await curs.fetchone() == (1,)
+
+
 async def test_steal_cursor(aconn):
     cur1 = aconn.cursor()
     await cur1.execute(
