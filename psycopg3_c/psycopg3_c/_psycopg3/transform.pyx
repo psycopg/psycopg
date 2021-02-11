@@ -24,6 +24,7 @@ from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 from psycopg3 import errors as e
 from psycopg3._enums import Format as Pg3Format
 from psycopg3.pq import Format as PqFormat
+from psycopg3.proto import Row, RowMaker
 
 # internal structure: you are not supposed to know this. But it's worth some
 # 10% of the innermost loop, so I'm willing to ask for forgiveness later...
@@ -82,6 +83,7 @@ cdef class Transformer:
     cdef int _nfields, _ntuples
     cdef list _row_dumpers
     cdef list _row_loaders
+    cdef object _make_row
 
     def __cinit__(self, context: Optional["AdaptContext"] = None):
         if context is not None:
@@ -91,6 +93,14 @@ cdef class Transformer:
             from psycopg3.adapt import global_adapters
             self.adapters = global_adapters
             self.connection = None
+
+    @property
+    def make_row(self) -> Optional[RowMaker]:
+        return self._make_row
+
+    @make_row.setter
+    def make_row(self, row_maker: RowMaker) -> None:
+        self._make_row = row_maker
 
     @property
     def pgresult(self) -> Optional[PGresult]:
@@ -271,7 +281,7 @@ cdef class Transformer:
 
         return ps, ts, fs
 
-    def load_rows(self, int row0, int row1) -> List[Tuple[Any, ...]]:
+    def load_rows(self, int row0, int row1) -> List[Row]:
         if self._pgresult is None:
             raise e.InterfaceError("result not set")
 
@@ -331,9 +341,11 @@ cdef class Transformer:
                     Py_INCREF(pyval)
                     PyTuple_SET_ITEM(<object>brecord, col, pyval)
 
+        if self.make_row:
+            return list(map(self.make_row, records))
         return records
 
-    def load_row(self, int row) -> Optional[Tuple[Any, ...]]:
+    def load_row(self, int row) -> Optional[Row]:
         if self._pgresult is None:
             return None
 
@@ -372,6 +384,8 @@ cdef class Transformer:
             Py_INCREF(pyval)
             PyTuple_SET_ITEM(record, col, pyval)
 
+        if self.make_row:
+            return self.make_row(record)
         return record
 
     cpdef object load_sequence(self, record: Sequence[Optional[bytes]]):

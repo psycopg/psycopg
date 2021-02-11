@@ -45,6 +45,21 @@ Wait states.
 """
 
 
+# Row factories
+
+Row = TypeVar("Row", Tuple[Any, ...], Any)
+
+
+class RowMaker(Protocol):
+    def __call__(self, __values: Sequence[Any]) -> Row:
+        ...
+
+
+class RowFactory(Protocol):
+    def __call__(self, __cursor: "BaseCursor[ConnectionType]") -> RowMaker:
+        ...
+
+
 # Adaptation types
 
 DumpFunc = Callable[[Any], bytes]
@@ -71,6 +86,8 @@ class AdaptContext(Protocol):
 
 
 class Transformer(Protocol):
+    make_row: Optional[RowMaker] = None
+
     def __init__(self, context: Optional[AdaptContext] = None):
         ...
 
@@ -103,10 +120,10 @@ class Transformer(Protocol):
     def get_dumper(self, obj: Any, format: Format) -> "Dumper":
         ...
 
-    def load_rows(self, row0: int, row1: int) -> List[Tuple[Any, ...]]:
+    def load_rows(self, row0: int, row1: int) -> List[Row]:
         ...
 
-    def load_row(self, row: int) -> Optional[Tuple[Any, ...]]:
+    def load_row(self, row: int) -> Optional[Row]:
         ...
 
     def load_sequence(
@@ -115,19 +132,4 @@ class Transformer(Protocol):
         ...
 
     def get_loader(self, oid: int, format: pq.Format) -> "Loader":
-        ...
-
-
-# Row factories
-
-Row = TypeVar("Row", Tuple[Any, ...], Any)
-
-
-class RowMaker(Protocol):
-    def __call__(self, __values: Sequence[Any]) -> Row:
-        ...
-
-
-class RowFactory(Protocol):
-    def __call__(self, __cursor: "BaseCursor[ConnectionType]") -> RowMaker:
         ...

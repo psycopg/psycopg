@@ -18,7 +18,7 @@ from . import generators
 from .pq import ExecStatus, Format
 from .copy import Copy, AsyncCopy
 from .proto import ConnectionType, Query, Params, PQGen
-from .proto import Row, RowFactory, RowMaker
+from .proto import Row, RowFactory
 from ._column import Column
 from ._queries import PostgresQuery
 from ._preparing import Prepare
@@ -50,7 +50,7 @@ class BaseCursor(Generic[ConnectionType]):
     if sys.version_info >= (3, 7):
         __slots__ = """
             _conn format _adapters arraysize _closed _results _pgresult _pos
-            _iresult _rowcount _pgq _tx _last_query _row_factory _make_row
+            _iresult _rowcount _pgq _tx _last_query _row_factory
             __weakref__
             """.split()
 
@@ -76,7 +76,6 @@ class BaseCursor(Generic[ConnectionType]):
     def _reset(self) -> None:
         self._results: List["PGresult"] = []
         self._pgresult: Optional["PGresult"] = None
-        self._make_row: Optional[RowMaker] = None
         self._pos = 0
         self._iresult = 0
         self._rowcount = -1
@@ -266,7 +265,7 @@ class BaseCursor(Generic[ConnectionType]):
 
         elif res.status == ExecStatus.SINGLE_TUPLE:
             if self._row_factory:
-                self._make_row = self._row_factory(self)
+                self._tx.make_row = self._row_factory(self)
             self.pgresult = res  # will set it on the transformer too
             # TODO: the transformer may do excessive work here: create a
             # path that doesn't clear the loaders every time.
@@ -371,7 +370,7 @@ class BaseCursor(Generic[ConnectionType]):
         self._results = list(results)
         self.pgresult = results[0]
         if self._row_factory:
-            self._make_row = self._row_factory(self)
+            self._tx.make_row = self._row_factory(self)
         nrows = self.pgresult.command_tuples
         if nrows is not None:
             if self._rowcount < 0:
@@ -495,7 +494,7 @@ class Cursor(BaseCursor["Connection"]):
             while self._conn.wait(self._stream_fetchone_gen()):
                 rec = self._tx.load_row(0)
                 assert rec is not None
-                yield self._make_row(rec) if self._make_row else rec
+                yield rec
 
     def fetchone(self) -> Optional[Row]:
         """
@@ -507,8 +506,7 @@ class Cursor(BaseCursor["Connection"]):
         record = self._tx.load_row(self._pos)
         if record is not None:
             self._pos += 1
-            return self._make_row(record) if self._make_row else record
-        return record
+        return record  # type: ignore[no-any-return]
 
     def fetchmany(self, size: int = 0) -> Sequence[Row]:
         """
@@ -525,8 +523,6 @@ class Cursor(BaseCursor["Connection"]):
             self._pos, min(self._pos + size, self.pgresult.ntuples)
         )
         self._pos += len(records)
-        if self._make_row:
-            return list(map(self._make_row, records))
         return records
 
     def fetchall(self) -> Sequence[Row]:
@@ -537,8 +533,6 @@ class Cursor(BaseCursor["Connection"]):
         assert self.pgresult
         records = self._tx.load_rows(self._pos, self.pgresult.ntuples)
         self._pos += self.pgresult.ntuples
-        if self._make_row:
-            return list(map(self._make_row, records))
         return records
 
     def __iter__(self) -> Iterator[Row]:
@@ -551,7 +545,7 @@ class Cursor(BaseCursor["Connection"]):
             if row is None:
                 break
             self._pos += 1
-            yield self._make_row(row) if self._make_row else row
+            yield row
 
     @contextmanager
     def copy(self, statement: Query) -> Iterator[Copy]:
@@ -610,15 +604,14 @@ class AsyncCursor(BaseCursor["AsyncConnection"]):
             while await self._conn.wait(self._stream_fetchone_gen()):
                 rec = self._tx.load_row(0)
                 assert rec is not None
-                yield self._make_row(rec) if self._make_row else rec
+                yield rec
 
     async def fetchone(self) -> Optional[Row]:
         self._check_result()
         rv = self._tx.load_row(self._pos)
         if rv is not None:
             self._pos += 1
-            return self._make_row(rv) if self._make_row else rv
-        return rv
+        return rv  # type: ignore[no-any-return]
 
     async def fetchmany(self, size: int = 0) -> List[Row]:
         self._check_result()
@@ -630,8 +623,6 @@ class AsyncCursor(BaseCursor["AsyncConnection"]):
             self._pos, min(self._pos + size, self.pgresult.ntuples)
         )
         self._pos += len(records)
-        if self._make_row:
-            return list(map(self._make_row, records))
         return records
 
     async def fetchall(self) -> List[Row]:
@@ -639,8 +630,6 @@ class AsyncCursor(BaseCursor["AsyncConnection"]):
         assert self.pgresult
         records = self._tx.load_rows(self._pos, self.pgresult.ntuples)
         self._pos += self.pgresult.ntuples
-        if self._make_row:
-            return list(map(self._make_row, records))
         return records
 
     async def __aiter__(self) -> AsyncIterator[Row]:
@@ -653,7 +642,7 @@ class AsyncCursor(BaseCursor["AsyncConnection"]):
             if row is None:
                 break
             self._pos += 1
-            yield self._make_row(row) if self._make_row else row
+            yield row
 
     @asynccontextmanager
     async def copy(self, statement: Query) -> AsyncIterator[AsyncCopy]:
