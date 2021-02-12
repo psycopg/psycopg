@@ -131,7 +131,7 @@ class LibpqReader:
         return self.app.config.libpq_docs_version
 
 
-@lru_cache
+@lru_cache()
 def get_reader():
     return LibpqReader()
 
