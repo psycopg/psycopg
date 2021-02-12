@@ -78,6 +78,9 @@ NoticeHandler = Callable[[e.Diagnostic], None]
 NotifyHandler = Callable[[Notify], None]
 
 
+_null_row_factory: RowFactory = object()  # type: ignore[assignment]
+
+
 class BaseConnection(AdaptContext):
     """
     Base class for different types of connections.
@@ -101,6 +104,8 @@ class BaseConnection(AdaptContext):
     # Enums useful for the connection
     ConnStatus = pq.ConnStatus
     TransactionStatus = pq.TransactionStatus
+
+    row_factory: Optional[RowFactory] = None
 
     def __init__(self, pgconn: "PGconn"):
         self.pgconn = pgconn  # TODO: document this
@@ -312,6 +317,7 @@ class BaseConnection(AdaptContext):
         conninfo: str = "",
         *,
         autocommit: bool = False,
+        row_factory: Optional[RowFactory] = None,
         **kwargs: Any,
     ) -> PQGenConn[ConnectionType]:
         """Generator to connect to the database and create a new instance."""
@@ -319,6 +325,7 @@ class BaseConnection(AdaptContext):
         pgconn = yield from connect(conninfo)
         conn = cls(pgconn)
         conn._autocommit = autocommit
+        conn.row_factory = row_factory
         return conn
 
     def _exec_command(self, command: Query) -> PQGen["PGresult"]:
@@ -405,7 +412,12 @@ class Connection(BaseConnection):
 
     @classmethod
     def connect(
-        cls, conninfo: str = "", *, autocommit: bool = False, **kwargs: Any
+        cls,
+        conninfo: str = "",
+        *,
+        autocommit: bool = False,
+        row_factory: Optional[RowFactory] = None,
+        **kwargs: Any,
     ) -> "Connection":
         """
         Connect to a database server and return a new `Connection` instance.
@@ -413,7 +425,12 @@ class Connection(BaseConnection):
         TODO: connection_timeout to be implemented.
         """
         return cls._wait_conn(
-            cls._connect_gen(conninfo, autocommit=autocommit, **kwargs)
+            cls._connect_gen(
+                conninfo,
+                autocommit=autocommit,
+                row_factory=row_factory,
+                **kwargs,
+            )
         )
 
     def __enter__(self) -> "Connection":
@@ -465,12 +482,14 @@ class Connection(BaseConnection):
         name: str = "",
         *,
         binary: bool = False,
-        row_factory: Optional[RowFactory] = None,
+        row_factory: Optional[RowFactory] = _null_row_factory,
     ) -> Union[Cursor, ServerCursor]:
         """
         Return a new cursor to send commands and queries to the connection.
         """
         format = Format.BINARY if binary else Format.TEXT
+        if row_factory is _null_row_factory:
+            row_factory = self.row_factory
         if name:
             return ServerCursor(
                 self, name=name, format=format, row_factory=row_factory
@@ -484,9 +503,11 @@ class Connection(BaseConnection):
         params: Optional[Params] = None,
         *,
         prepare: Optional[bool] = None,
-        row_factory: Optional[RowFactory] = None,
+        row_factory: Optional[RowFactory] = _null_row_factory,
     ) -> Cursor:
         """Execute a query and return a cursor to read its results."""
+        if row_factory is _null_row_factory:
+            row_factory = self.row_factory
         cur = self.cursor(row_factory=row_factory)
         return cur.execute(query, params, prepare=prepare)
 
@@ -569,10 +590,20 @@ class AsyncConnection(BaseConnection):
 
     @classmethod
     async def connect(
-        cls, conninfo: str = "", *, autocommit: bool = False, **kwargs: Any
+        cls,
+        conninfo: str = "",
+        *,
+        autocommit: bool = False,
+        row_factory: Optional[RowFactory] = None,
+        **kwargs: Any,
     ) -> "AsyncConnection":
         return await cls._wait_conn(
-            cls._connect_gen(conninfo, autocommit=autocommit, **kwargs)
+            cls._connect_gen(
+                conninfo,
+                autocommit=autocommit,
+                row_factory=row_factory,
+                **kwargs,
+            )
         )
 
     async def __aenter__(self) -> "AsyncConnection":
@@ -623,12 +654,14 @@ class AsyncConnection(BaseConnection):
         name: str = "",
         *,
         binary: bool = False,
-        row_factory: Optional[RowFactory] = None,
+        row_factory: Optional[RowFactory] = _null_row_factory,
     ) -> Union[AsyncCursor, AsyncServerCursor]:
         """
         Return a new `AsyncCursor` to send commands and queries to the connection.
         """
         format = Format.BINARY if binary else Format.TEXT
+        if row_factory is _null_row_factory:
+            row_factory = self.row_factory
         if name:
             return AsyncServerCursor(
                 self, name=name, format=format, row_factory=row_factory
@@ -642,8 +675,10 @@ class AsyncConnection(BaseConnection):
         params: Optional[Params] = None,
         *,
         prepare: Optional[bool] = None,
-        row_factory: Optional[RowFactory] = None,
+        row_factory: Optional[RowFactory] = _null_row_factory,
     ) -> AsyncCursor:
+        if row_factory is _null_row_factory:
+            row_factory = self.row_factory
         cur = self.cursor(row_factory=row_factory)
         return await cur.execute(query, params, prepare=prepare)
 

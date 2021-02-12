@@ -12,6 +12,7 @@ from psycopg3 import encodings
 from psycopg3 import Connection, Notify
 from psycopg3.errors import UndefinedTable
 from psycopg3.conninfo import conninfo_to_dict
+from .test_cursor import my_row_factory
 
 
 def test_connect(dsn):
@@ -483,6 +484,29 @@ def test_execute(conn):
 
     cur = conn.execute("select 1, 2, 1, 2", row_factory=lambda cur: set)
     assert cur.fetchone() == {1, 2}
+
+
+def test_row_factory(dsn):
+    conn = Connection.connect(dsn, row_factory=my_row_factory)
+    assert conn.row_factory
+
+    cur = conn.execute("select 'a' as ve")
+    assert cur.fetchone() == ["Ave"]
+
+    cur = conn.execute("select 'a' as ve", row_factory=None)
+    assert cur.fetchone() == ("a",)
+
+    with conn.cursor(row_factory=lambda c: set) as cur:
+        cur.execute("select 1, 1, 2")
+        assert cur.fetchall() == [{1, 2}]
+
+    with conn.cursor(row_factory=None) as cur:
+        cur.execute("select 1, 1, 2")
+        assert cur.fetchall() == [(1, 1, 2)]
+
+    conn.row_factory = None
+    cur = conn.execute("select 'vale'")
+    assert cur.fetchone() == ("vale",)
 
 
 def test_str(conn):
