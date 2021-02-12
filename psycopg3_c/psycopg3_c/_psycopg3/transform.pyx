@@ -99,7 +99,7 @@ cdef class Transformer:
         return self._make_row
 
     @make_row.setter
-    def make_row(self, row_maker: RowMaker) -> None:
+    def make_row(self, row_maker: Optional[RowMaker]) -> None:
         self._make_row = row_maker
 
     @property
