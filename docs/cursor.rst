@@ -202,7 +202,7 @@ The `!ServerCursor` class
                            not. if `!None` leave the choice to the server.
         :type scrollable: `!Optional[bool]`
         :param hold: if `!True` allow the cursor to be used after the
-                     transaction cretaing it has committed.
+                     transaction creating it has committed.
         :type hold: `!bool`
 
         Create a server cursor with given `name` and the *query* in argument.
@@ -242,7 +242,7 @@ The `!ServerCursor` class
 
     .. automethod:: scroll
 
-        These method uses the MOVE_ SQL statement to move the current position
+        This method uses the MOVE_ SQL statement to move the current position
         in the server-side cursor, which will affect following `!fetch*()`
         operations. If you need to scroll backwards you should probably
         use `scrollable=True` in `execute()`.
