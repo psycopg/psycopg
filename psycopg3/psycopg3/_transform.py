@@ -77,31 +77,35 @@ class Transformer(AdaptContext):
     def pgresult(self) -> Optional["PGresult"]:
         return self._pgresult
 
-    @pgresult.setter
-    def pgresult(self, result: Optional["PGresult"]) -> None:
+    def set_pgresult(
+        self, result: Optional["PGresult"], set_loaders: bool = True
+    ) -> None:
         self._pgresult = result
-        rc = self._row_loaders = []
 
         self._ntuples: int
         self._nfields: int
         if not result:
             self._nfields = self._ntuples = 0
+            if set_loaders:
+                self._row_loaders = []
             return
 
         nf = self._nfields = result.nfields
         self._ntuples = result.ntuples
 
-        for i in range(nf):
-            oid = result.ftype(i)
-            fmt = result.fformat(i)
-            rc.append(self.get_loader(oid, fmt).load)  # type: ignore
+        if set_loaders:
+            rc = self._row_loaders = []
+            for i in range(nf):
+                oid = result.ftype(i)
+                fmt = result.fformat(i)
+                rc.append(self.get_loader(oid, fmt).load)  # type: ignore
 
     def set_row_types(
         self, types: Sequence[int], formats: Sequence[pq.Format]
     ) -> None:
-        rc: List[LoadFunc] = [None] * len(types)  # type: ignore[list-item]
-        for i in range(len(rc)):
-            rc[i] = self.get_loader(types[i], formats[i]).load
+        rc: List[LoadFunc] = []
+        for i in range(len(types)):
+            rc.append(self.get_loader(types[i], formats[i]).load)
 
         self._row_loaders = rc
 

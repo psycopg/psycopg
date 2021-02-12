@@ -127,7 +127,7 @@ class BaseCursor(Generic[ConnectionType]):
     def pgresult(self, result: Optional["PGresult"]) -> None:
         self._pgresult = result
         if result and self._tx:
-            self._tx.pgresult = result
+            self._tx.set_pgresult(result)
 
     @property
     def description(self) -> Optional[List[Column]]:
