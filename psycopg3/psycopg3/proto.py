@@ -103,8 +103,9 @@ class Transformer(Protocol):
     def pgresult(self) -> Optional[pq.proto.PGresult]:
         ...
 
-    @pgresult.setter
-    def pgresult(self, result: Optional[pq.proto.PGresult]) -> None:
+    def set_pgresult(
+        self, result: Optional[pq.proto.PGresult], set_loaders: bool = True
+    ) -> None:
         ...
 
     def set_row_types(

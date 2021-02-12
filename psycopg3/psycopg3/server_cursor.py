@@ -116,8 +116,8 @@ class ServerCursorHelper(Generic[ConnectionType]):
         )
         res = yield from cur._conn._exec_command(query)
 
-        # TODO: loaders don't need to be refreshed
         cur.pgresult = res
+        cur._tx.set_pgresult(res, set_loaders=False)
         return cur._tx.load_rows(0, res.ntuples)
 
     def _scroll_gen(
