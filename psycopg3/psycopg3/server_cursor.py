@@ -61,7 +61,7 @@ class ServerCursorHelper(Generic[ConnectionType]):
 
         yield from cur._start_query(query)
         pgq = cur._convert_query(query, params)
-        cur._execute_send(pgq)
+        cur._execute_send(pgq, no_pqexec=True)
         results = yield from execute(conn.pgconn)
         cur._execute_results(results)
 

@@ -110,6 +110,15 @@ async def test_execute_reuse(aconn):
         assert cur.description[1].name == "baz"
 
 
+@pytest.mark.parametrize(
+    "stmt", ["", "wat", "create table ssc ()", "select 1; select 2"]
+)
+async def test_execute_error(aconn, stmt):
+    cur = aconn.cursor("foo")
+    with pytest.raises(e.ProgrammingError):
+        await cur.execute(stmt)
+
+
 async def test_executemany(aconn):
     cur = aconn.cursor("foo")
     with pytest.raises(e.NotSupportedError):

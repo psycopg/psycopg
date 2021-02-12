@@ -108,6 +108,15 @@ def test_execute_reuse(conn):
         assert cur.description[1].name == "baz"
 
 
+@pytest.mark.parametrize(
+    "stmt", ["", "wat", "create table ssc ()", "select 1; select 2"]
+)
+def test_execute_error(conn, stmt):
+    cur = conn.cursor("foo")
+    with pytest.raises(e.ProgrammingError):
+        cur.execute(stmt)
+
+
 def test_executemany(conn):
     cur = conn.cursor("foo")
     with pytest.raises(e.NotSupportedError):
