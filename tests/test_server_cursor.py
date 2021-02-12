@@ -151,13 +151,23 @@ def test_nextset(conn):
 
 
 def test_row_factory(conn):
+    n = 0
+
     def my_row_factory(cur):
-        return lambda values: [-v for v in values]
+        nonlocal n
+        n += 1
+        return lambda values: [n] + [-v for v in values]
 
     cur = conn.cursor("foo", row_factory=my_row_factory)
-    cur.execute("select generate_series(1, 3)")
-    r = cur.fetchall()
-    assert r == [[-1], [-2], [-3]]
+    cur.execute("select generate_series(1, 3)", scrollable=True)
+    rows = cur.fetchall()
+    cur.scroll(0, "absolute")
+    while 1:
+        row = cur.fetchone()
+        if not row:
+            break
+        rows.append(row)
+    assert rows == [[1, -1], [1, -2], [1, -3]] * 2
 
 
 def test_rownumber(conn):

@@ -61,11 +61,12 @@ class ServerCursorHelper(Generic[ConnectionType]):
 
         yield from cur._start_query(query)
         pgq = cur._convert_query(query, params)
-        cur._execute_send(pgq)
+        cur._execute_send(pgq, no_pqexec=True)
         results = yield from execute(conn.pgconn)
-        cur._execute_results(results)
+        if results[-1].status != pq.ExecStatus.COMMAND_OK:
+            cur._raise_from_results(results)
 
-        # The above result is an COMMAND_OK. Get the cursor result shape
+        # The above result only returned COMMAND_OK. Get the cursor shape
         yield from self._describe_gen(cur)
 
     def _describe_gen(self, cur: BaseCursor[ConnectionType]) -> PQGen[None]:

@@ -153,13 +153,23 @@ async def test_nextset(aconn):
 
 
 async def test_row_factory(aconn):
+    n = 0
+
     def my_row_factory(cur):
-        return lambda values: [-v for v in values]
+        nonlocal n
+        n += 1
+        return lambda values: [n] + [-v for v in values]
 
     cur = aconn.cursor("foo", row_factory=my_row_factory)
-    await cur.execute("select generate_series(1, 3)")
-    r = await cur.fetchall()
-    assert r == [[-1], [-2], [-3]]
+    await cur.execute("select generate_series(1, 3)", scrollable=True)
+    rows = await cur.fetchall()
+    await cur.scroll(0, "absolute")
+    while 1:
+        row = await cur.fetchone()
+        if not row:
+            break
+        rows.append(row)
+    assert rows == [[1, -1], [1, -2], [1, -3]] * 2
 
 
 async def test_rownumber(aconn):
