@@ -177,6 +177,8 @@ class BaseCursor(Generic[ConnectionType]):
         if self._iresult < len(self._results):
             self.pgresult = self._results[self._iresult]
             self._tx.set_pgresult(self._results[self._iresult])
+            if self._row_factory:
+                self._tx.make_row = self._row_factory(self)
             self._pos = 0
             nrows = self.pgresult.command_tuples
             self._rowcount = nrows if nrows is not None else -1

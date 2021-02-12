@@ -6,6 +6,7 @@ import datetime as dt
 import psycopg3
 from psycopg3 import sql
 from psycopg3.adapt import Format
+from .test_cursor import my_row_factory
 
 pytestmark = pytest.mark.asyncio
 
@@ -292,17 +293,6 @@ async def test_iter_stop(aconn):
 
 
 async def test_row_factory(aconn):
-    def my_row_factory(cursor):
-        def mkrow(values):
-            assert cursor.description is not None
-            titles = [c.name for c in cursor.description]
-            return [
-                f"{value.upper()}{title}"
-                for title, value in zip(titles, values)
-            ]
-
-        return mkrow
-
     cur = aconn.cursor(row_factory=my_row_factory)
     await cur.execute("select 'foo' as bar")
     (r,) = await cur.fetchone()

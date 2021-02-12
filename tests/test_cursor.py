@@ -287,18 +287,15 @@ def test_iter_stop(conn):
 
 
 def test_row_factory(conn):
-    def my_row_factory(cur):
-        return lambda values: [-v for v in values]
-
     cur = conn.cursor(row_factory=my_row_factory)
-    cur.execute("select generate_series(1, 3)")
-    r = cur.fetchall()
-    assert r == [[-1], [-2], [-3]]
+    cur.execute("select 'foo' as bar")
+    (r,) = cur.fetchone()
+    assert r == "FOObar"
 
-    cur.execute("select 42; select generate_series(1,3)")
-    assert cur.fetchall() == [[-42]]
+    cur.execute("select 'x' as x; select 'y' as y, 'z' as z")
+    assert cur.fetchall() == [["Xx"]]
     assert cur.nextset()
-    assert cur.fetchall() == [[-1], [-2], [-3]]
+    assert cur.fetchall() == [["Yy", "Zz"]]
     assert cur.nextset() is None
 
 
@@ -569,3 +566,15 @@ def test_leak(dsn, faker, fmt, fetch):
     assert (
         n[0] == n[1] == n[2]
     ), f"objects leaked: {n[1] - n[0]}, {n[2] - n[1]}"
+
+
+def my_row_factory(cursor):
+    assert cursor.description is not None
+    titles = [c.name for c in cursor.description]
+
+    def mkrow(values):
+        return [
+            f"{value.upper()}{title}" for title, value in zip(titles, values)
+        ]
+
+    return mkrow
