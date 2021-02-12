@@ -96,15 +96,13 @@ cdef class Transformer:
     def pgresult(self) -> Optional[PGresult]:
         return self._pgresult
 
-    @pgresult.setter
-    def pgresult(self, result: Optional[PGresult]) -> None:
-        self.set_pgresult(result)
-
-    cdef void set_pgresult(self, pq.PGresult result):
+    cpdef void set_pgresult(self, pq.PGresult result, object set_loaders = True):
         self._pgresult = result
 
         if result is None:
             self._nfields = self._ntuples = 0
+            if set_loaders:
+                self._row_loaders = []
             return
 
         cdef libpq.PGresult *res = self._pgresult.pgresult_ptr
@@ -113,18 +111,21 @@ cdef class Transformer:
 
         cdef int i
         cdef object tmp
-        cdef list types = PyList_New(self._nfields)
-        cdef list formats = PyList_New(self._nfields)
-        for i in range(self._nfields):
-            tmp = libpq.PQftype(res, i)
-            Py_INCREF(tmp)
-            PyList_SET_ITEM(types, i, tmp)
+        cdef list types
+        cdef list formats
+        if set_loaders:
+            types = PyList_New(self._nfields)
+            formats = PyList_New(self._nfields)
+            for i in range(self._nfields):
+                tmp = libpq.PQftype(res, i)
+                Py_INCREF(tmp)
+                PyList_SET_ITEM(types, i, tmp)
 
-            tmp = libpq.PQfformat(res, i)
-            Py_INCREF(tmp)
-            PyList_SET_ITEM(formats, i, tmp)
+                tmp = libpq.PQfformat(res, i)
+                Py_INCREF(tmp)
+                PyList_SET_ITEM(formats, i, tmp)
 
-        self._c_set_row_types(self._nfields, types, formats)
+            self._c_set_row_types(self._nfields, types, formats)
 
     def set_row_types(self,
             types: Sequence[int], formats: Sequence[Format]) -> None:
