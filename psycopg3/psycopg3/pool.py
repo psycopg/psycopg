@@ -37,7 +37,7 @@ class ConnectionPool:
         maxconn: Optional[int] = None,
         name: Optional[str] = None,
         timeout_sec: float = 30.0,
-        nworkers: int = 1,
+        num_workers: int = 1,
     ):
         if maxconn is None:
             maxconn = minconn
@@ -58,7 +58,7 @@ class ConnectionPool:
         self.minconn = minconn
         self.maxconn = maxconn
         self.timeout_sec = timeout_sec
-        self.nworkers = nworkers
+        self.num_workers = num_workers
 
         self._nconns = 0  # currently in the pool, out, being prepared
         self._pool: List[Connection] = []
@@ -67,7 +67,7 @@ class ConnectionPool:
 
         self._wqueue: "Queue[MaintenanceTask]" = Queue()
         self._workers: List[threading.Thread] = []
-        for i in range(nworkers):
+        for i in range(num_workers):
             t = threading.Thread(target=self.worker, args=(self._wqueue,))
             t.daemon = True
             t.start()
