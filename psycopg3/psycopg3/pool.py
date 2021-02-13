@@ -121,9 +121,10 @@ class ConnectionPool:
         return conn
 
     def putconn(self, conn: Connection) -> None:
-        if conn._pool is not self:
-            if conn._pool:
-                msg = f"it comes from pool {conn._pool.name!r}"
+        pool = getattr(conn, "_pool", None)
+        if pool is not self:
+            if pool:
+                msg = f"it comes from pool {pool.name!r}"
             else:
                 msg = "it doesn't come from any pool"
             raise ValueError(
@@ -136,6 +137,7 @@ class ConnectionPool:
     def _return_connection(self, conn: Connection) -> None:
         # Remove the pool reference from the connection before returning it
         # to the state, to avoid to create a reference loop.
+        # Also disable the warning for open connection in conn.__del__
         conn._pool = None
 
         self._reset_transaction_status(conn)
@@ -219,6 +221,10 @@ class ConnectionPool:
             if isinstance(task, StopWorker):
                 return
 
+            # delete reference loops which may keep the pool alive
+            del task.pool
+            del task
+
     def _connect(self) -> Connection:
         """Return a connection configured for the pool."""
         conn = Connection.connect(self.conninfo, **self.kwargs)
@@ -260,7 +266,9 @@ class MaintenanceTask:
         logger.debug("task running: %s", self)
 
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}({self.pool.name})"
+        return (
+            f"<{self.__class__.__name__} {self.pool.name!r} at 0x{id(self):x}>"
+        )
 
 
 class StopWorker(MaintenanceTask):
@@ -293,7 +301,7 @@ class AddConnection(MaintenanceTask):
         super().__call__()
 
         conn = self.pool._connect()
-        conn._pool = self.pool  # make it acceptable
+        conn._pool = self.pool  # make it accepted by the pool
         self.pool.putconn(conn)
 
 

@@ -1,5 +1,6 @@
 import logging
-from time import time
+import weakref
+from time import time, sleep
 from threading import Thread
 
 import pytest
@@ -266,3 +267,17 @@ def test_putconn_wrong_pool(dsn):
     conn = p1.getconn()
     with pytest.raises(ValueError):
         p2.putconn(conn)
+
+
+def test_del_no_warning(dsn, recwarn):
+    p = pool.ConnectionPool(minconn=2)
+    with p.connection() as conn:
+        conn.execute("select 1")
+
+    while len(p._pool) < p.minconn:
+        sleep(0.01)
+
+    ref = weakref.ref(p)
+    del p
+    assert not ref()
+    assert not recwarn

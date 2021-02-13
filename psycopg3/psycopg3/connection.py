@@ -125,18 +125,23 @@ class BaseConnection(AdaptContext):
         pgconn.notice_handler = partial(BaseConnection._notice_handler, wself)
         pgconn.notify_handler = partial(BaseConnection._notify_handler, wself)
 
-        self._pool: Optional["ConnectionPool"] = None
+        # Attribute is only set if the connection is from a pool so we can tell
+        # apart a connection in the pool too (when _pool = None)
+        self._pool: Optional["ConnectionPool"]
 
     def __del__(self) -> None:
         # If fails on connection we might not have this attribute yet
         if not hasattr(self, "pgconn"):
             return
 
-        status = self.pgconn.transaction_status
-        if status == TransactionStatus.UNKNOWN:
+        # Connection correctly closed
+        if self.closed:
             return
 
-        status = TransactionStatus(status)
+        # Connection in a pool so terminating with the program is normal
+        if hasattr(self, "_pool"):
+            return
+
         warnings.warn(
             f"connection {self} was deleted while still open."
             f" Please use 'with' or '.close()' to close the connection",
@@ -466,7 +471,7 @@ class Connection(BaseConnection):
             self.commit()
 
         # Close the connection only if it doesn't belong to a pool.
-        if not self._pool:
+        if not getattr(self, "_pool", None):
             self.close()
 
     def close(self) -> None:
