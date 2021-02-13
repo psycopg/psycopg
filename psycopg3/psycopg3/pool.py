@@ -148,13 +148,17 @@ class ConnectionPool:
         # Critical section: if there is a client waiting give it the connection
         # otherwise put it back into the pool.
         with self._lock:
+            pos: Optional[WaitingClient] = None
             if self._waiting:
-                # Give the connection to the client and notify it
+                # Extract the first client from the queue
                 pos = self._waiting.popleft()
-                pos.set(conn)
             else:
-                # No client waiting for a connection: put it back into the queue
+                # No client waiting for a connection: put it back into the pool
                 self._pool.append(conn)
+
+        # If we found a client in queue, give it the connection and notify it
+        if pos:
+            pos.set(conn)
 
     def _reset_transaction_status(self, conn: Connection) -> None:
         """
