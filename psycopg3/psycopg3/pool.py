@@ -76,6 +76,12 @@ class ConnectionPool:
         # Run a task to create the connections immediately
         self.add_task(TopUpConnections(self))
 
+    def __repr__(self) -> str:
+        return (
+            f"<{self.__class__.__module__}.{self.__class__.__name__}"
+            f" {self.name!r} at 0x{id(self):x}>"
+        )
+
     @contextmanager
     def connection(
         self, timeout_sec: Optional[float] = None
