@@ -1,8 +1,11 @@
+import logging
 from time import time
 from threading import Thread
 
 import pytest
 
+import psycopg3
+from psycopg3.pq import TransactionStatus
 from psycopg3 import pool
 
 
@@ -133,3 +136,122 @@ def test_queue_timeout_override(dsn):
     assert len(errors) == 1
     for e in errors:
         assert 0.1 < e[1] < 0.15
+
+
+def test_broken_reconnect(dsn, caplog):
+    caplog.set_level(logging.WARNING, logger="psycopg3.pool")
+    p = pool.ConnectionPool(dsn, minconn=1)
+    with pytest.raises(psycopg3.OperationalError):
+        with p.connection() as conn:
+            with conn.execute("select pg_backend_pid()") as cur:
+                (pid1,) = cur.fetchone()
+            conn.close()
+
+    with p.connection() as conn2:
+        with conn2.execute("select pg_backend_pid()") as cur:
+            (pid2,) = cur.fetchone()
+
+    assert pid1 != pid2
+
+
+def test_intrans_rollback(dsn, caplog):
+    caplog.set_level(logging.WARNING, logger="psycopg3.pool")
+    p = pool.ConnectionPool(dsn, minconn=1)
+    conn = p.getconn()
+    pid = conn.pgconn.backend_pid
+    conn.execute("create table test_intrans_rollback ()")
+    assert conn.pgconn.transaction_status == TransactionStatus.INTRANS
+    p.putconn(conn)
+
+    with p.connection() as conn2:
+        assert conn2.pgconn.backend_pid == pid
+        assert conn2.pgconn.transaction_status == TransactionStatus.IDLE
+        assert not conn.execute(
+            "select 1 from pg_class where relname = 'test_intrans_rollback'"
+        ).fetchone()
+
+    assert len(caplog.records) == 1
+    assert "INTRANS" in caplog.records[0].message
+
+
+def test_inerror_rollback(dsn, caplog):
+    caplog.set_level(logging.WARNING, logger="psycopg3.pool")
+    p = pool.ConnectionPool(dsn, minconn=1)
+    conn = p.getconn()
+    pid = conn.pgconn.backend_pid
+    with pytest.raises(psycopg3.ProgrammingError):
+        conn.execute("wat")
+    assert conn.pgconn.transaction_status == TransactionStatus.INERROR
+    p.putconn(conn)
+
+    with p.connection() as conn2:
+        assert conn2.pgconn.backend_pid == pid
+        assert conn2.pgconn.transaction_status == TransactionStatus.IDLE
+
+    assert len(caplog.records) == 1
+    assert "INERROR" in caplog.records[0].message
+
+
+def test_active_close(dsn, caplog):
+    caplog.set_level(logging.WARNING, logger="psycopg3.pool")
+    p = pool.ConnectionPool(dsn, minconn=1)
+    conn = p.getconn()
+    pid = conn.pgconn.backend_pid
+    cur = conn.cursor()
+    with cur.copy("copy (select * from generate_series(1, 10)) to stdout"):
+        pass
+    assert conn.pgconn.transaction_status == TransactionStatus.ACTIVE
+    p.putconn(conn)
+
+    with p.connection() as conn2:
+        assert conn2.pgconn.backend_pid != pid
+        assert conn2.pgconn.transaction_status == TransactionStatus.IDLE
+
+    assert len(caplog.records) == 2
+    assert "ACTIVE" in caplog.records[0].message
+    assert "BAD" in caplog.records[1].message
+
+
+def test_fail_rollback_close(dsn, caplog, monkeypatch):
+    caplog.set_level(logging.WARNING, logger="psycopg3.pool")
+    p = pool.ConnectionPool(dsn, minconn=1)
+    conn = p.getconn()
+
+    # Make the rollback fail
+    orig_rollback = conn.rollback
+
+    def bad_rollback():
+        conn.pgconn.finish()
+        orig_rollback()
+
+    monkeypatch.setattr(conn, "rollback", bad_rollback)
+
+    pid = conn.pgconn.backend_pid
+    with pytest.raises(psycopg3.ProgrammingError):
+        conn.execute("wat")
+    assert conn.pgconn.transaction_status == TransactionStatus.INERROR
+    p.putconn(conn)
+
+    with p.connection() as conn2:
+        assert conn2.pgconn.backend_pid != pid
+        assert conn2.pgconn.transaction_status == TransactionStatus.IDLE
+
+    assert len(caplog.records) == 3
+    assert "INERROR" in caplog.records[0].message
+    assert "OperationalError" in caplog.records[1].message
+    assert "BAD" in caplog.records[2].message
+
+
+def test_putconn_no_pool(dsn):
+    p = pool.ConnectionPool(dsn, minconn=1)
+    conn = psycopg3.connect(dsn)
+    with pytest.raises(ValueError):
+        p.putconn(conn)
+
+
+def test_putconn_wrong_pool(dsn):
+    p1 = pool.ConnectionPool(dsn, minconn=1)
+    p2 = pool.ConnectionPool(dsn, minconn=1)
+    conn = p1.getconn()
+    with pytest.raises(ValueError):
+        p2.putconn(conn)

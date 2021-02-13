@@ -13,6 +13,7 @@ from contextlib import contextmanager
 from collections import deque
 
 from . import errors as e
+from .pq import TransactionStatus
 from .connection import Connection
 
 WORKER_TIMEOUT = 60.0
@@ -120,18 +121,29 @@ class ConnectionPool:
         return conn
 
     def putconn(self, conn: Connection) -> None:
-        # TODO: this should happen in a maintenance thread
-        # TODO: add check for broken connections
-
         if conn._pool is not self:
             if conn._pool:
-                raise ValueError(f"the connection belongs to {conn._pool}")
+                msg = f"it comes from pool {conn._pool.name!r}"
             else:
-                raise ValueError("the connection doesn't belong to a pool")
+                msg = "it doesn't come from any pool"
+            raise ValueError(
+                f"can't return connection to pool {self.name!r}, {msg}: {conn}"
+            )
 
+        # Use a worker to perform eventual maintenance work in a separate thread
+        self.add_task(ReturnConnection(self, conn))
+
+    def _return_connection(self, conn: Connection) -> None:
         # Remove the pool reference from the connection before returning it
         # to the state, to avoid to create a reference loop.
         conn._pool = None
+
+        self._reset_transaction_status(conn)
+        if conn.pgconn.transaction_status == TransactionStatus.UNKNOWN:
+            # Connection no more in working state: create a new one.
+            logger.warning("discarding closed connection: %s", conn)
+            self.add_task(AddConnection(self))
+            return
 
         # Critical section: if there is a client waiting give it the connection
         # otherwise put it back into the pool.
@@ -143,6 +155,33 @@ class ConnectionPool:
             else:
                 # No client waiting for a connection: put it back into the queue
                 self._pool.append(conn)
+
+    def _reset_transaction_status(self, conn: Connection) -> None:
+        """
+        Bring a connection to IDLE state or close it.
+        """
+        status = conn.pgconn.transaction_status
+        if status == TransactionStatus.IDLE:
+            return
+
+        if status in (TransactionStatus.INTRANS, TransactionStatus.INERROR):
+            # Connection returned with an active transaction
+            logger.warning("rolling back returned connection: %s", conn)
+            try:
+                conn.rollback()
+            except Exception as e:
+                logger.warning(
+                    "rollback failed: %s: %s. Discarding connection %s",
+                    e.__class__.__name__,
+                    e,
+                    conn,
+                )
+                conn.close()
+
+        elif status == TransactionStatus.ACTIVE:
+            # Connection returned during an operation. Bad... just close it.
+            logger.warning("closing returned connection: %s", conn)
+            conn.close()
 
     def add_task(self, task: "MaintenanceTask") -> None:
         """Add a task to the queue of tasts to perform."""
@@ -252,3 +291,13 @@ class AddConnection(MaintenanceTask):
         conn = self.pool._connect()
         conn._pool = self.pool  # make it acceptable
         self.pool.putconn(conn)
+
+
+class ReturnConnection(MaintenanceTask):
+    def __init__(self, pool: ConnectionPool, conn: Connection):
+        super().__init__(pool)
+        self.conn = conn
+
+    def __call__(self) -> None:
+        super().__call__()
+        self.pool._return_connection(self.conn)
