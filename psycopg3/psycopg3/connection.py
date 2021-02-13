@@ -46,6 +46,7 @@ execute: Callable[["PGconn"], PQGen[List["PGresult"]]]
 
 if TYPE_CHECKING:
     from .pq.proto import PGconn, PGresult
+    from .pool import ConnectionPool
 
 if pq.__impl__ == "c":
     from psycopg3_c import _psycopg3
@@ -123,6 +124,8 @@ class BaseConnection(AdaptContext):
 
         pgconn.notice_handler = partial(BaseConnection._notice_handler, wself)
         pgconn.notify_handler = partial(BaseConnection._notify_handler, wself)
+
+        self._pool: Optional["ConnectionPool"] = None
 
     def __del__(self) -> None:
         # If fails on connection we might not have this attribute yet
@@ -462,7 +465,9 @@ class Connection(BaseConnection):
         else:
             self.commit()
 
-        self.close()
+        # Close the connection only if it doesn't belong to a pool.
+        if not self._pool:
+            self.close()
 
     def close(self) -> None:
         """Close the database connection."""
