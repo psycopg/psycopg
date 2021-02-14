@@ -281,3 +281,58 @@ def test_del_no_warning(dsn, recwarn):
     del p
     assert not ref()
     assert not recwarn
+
+
+def test_closed_getconn(dsn):
+    p = pool.ConnectionPool(dsn, minconn=1)
+    assert not p.closed
+    with p.connection():
+        pass
+
+    p.close()
+    assert p.closed
+
+    with pytest.raises(pool.PoolClosed):
+        with p.connection():
+            pass
+
+
+def test_closed_putconn(dsn):
+    p = pool.ConnectionPool(dsn, minconn=1)
+
+    with p.connection() as conn:
+        pass
+    assert not conn.closed
+
+    with p.connection() as conn:
+        p.close()
+    assert conn.closed
+
+
+@pytest.mark.slow
+def test_closed_queue(dsn):
+    p = pool.ConnectionPool(dsn, minconn=1)
+    success = []
+
+    def w1():
+        with p.connection() as conn:
+            assert (
+                conn.execute("select 1 from pg_sleep(0.2)").fetchone()[0] == 1
+            )
+        success.append("w1")
+
+    def w2():
+        with pytest.raises(pool.PoolClosed):
+            with p.connection():
+                pass
+        success.append("w2")
+
+    t1 = Thread(target=w1)
+    t2 = Thread(target=w2)
+    t1.start()
+    sleep(0.1)
+    t2.start()
+    p.close()
+    t1.join()
+    t2.join()
+    assert len(success) == 2
