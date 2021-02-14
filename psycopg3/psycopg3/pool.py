@@ -291,11 +291,11 @@ class ConnectionPool:
                 logger.warning(
                     "task run %s failed: %s: %s", task, e.__class__.__name__, e
                 )
-            if isinstance(task, StopWorker):
-                return
 
             # delete reference loops which may keep the pool alive
             del task.pool
+            if isinstance(task, StopWorker):
+                return
             del task
 
     def _connect(self) -> Connection:
