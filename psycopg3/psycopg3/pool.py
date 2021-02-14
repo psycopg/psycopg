@@ -92,6 +92,17 @@ class ConnectionPool:
     def connection(
         self, timeout_sec: Optional[float] = None
     ) -> Iterator[Connection]:
+        """Context manager to obtain a connection from the pool.
+
+        Returned the connection immediately if available, otherwise wait up to
+        *timeout_sec* or `self.timeout_sec` and throw `PoolTimeout` if a
+        connection is available in time.
+
+        Upon context exit, return the connection to the pool. Apply the normal
+        connection context behaviour (commit/rollback the transaction in case
+        of success/error). If the connection is no more in working state
+        replace it with a new one.
+        """
         conn = self.getconn(timeout_sec=timeout_sec)
         try:
             with conn:
@@ -100,6 +111,15 @@ class ConnectionPool:
             self.putconn(conn)
 
     def getconn(self, timeout_sec: Optional[float] = None) -> Connection:
+        """Obtain a contection from the pool.
+
+        You should preferrably use `connection()`. Use this function only if
+        it is not possible to use the connection as context manager.
+
+        After using this function you *must* call a corresponding `putconn()`:
+        failing to do so will deplete the pool. A depleted pool is a sad pool:
+        you don't want a depleted pool.
+        """
         # Critical section: decide here if there's a connection ready
         # or if the client needs to wait.
         with self._lock:
@@ -129,6 +149,11 @@ class ConnectionPool:
         return conn
 
     def putconn(self, conn: Connection) -> None:
+        """Return a connection to the loving hands of its pool.
+
+        Use this function only paired with a `getconn()`. You don't need to use
+        it if you use the much more comfortable `connection()` context manager.
+        """
         # Quick check to discard the wrong connection
         pool = getattr(conn, "_pool", None)
         if pool is not self:
@@ -207,10 +232,16 @@ class ConnectionPool:
 
     @property
     def closed(self) -> bool:
+        """`!True` if the pool is closed."""
         return self._closed
 
     def close(self) -> None:
-        """Close the pool connections and make it unavailable to new clients."""
+        """Close the pool and make it unavailable to new clients.
+
+        All the waiting and future client will fail to acquire a connection
+        with a `PoolClosed` exception. Currently used connections will not be
+        closed until returned to the pool.
+        """
         with self._lock:
             self._closed = True
 
@@ -268,7 +299,7 @@ class ConnectionPool:
             del task
 
     def _connect(self) -> Connection:
-        """Return a connection configured for the pool."""
+        """Return a new connection configured for the pool."""
         conn = Connection.connect(self.conninfo, **self.kwargs)
         self.configure(conn)
         conn._pool = self
@@ -303,7 +334,7 @@ class WaitingClient:
         self.event.set()
 
     def fail(self, error: Exception) -> None:
-        """Signal the client waiting that, alas, they won't have a connection."""
+        """Signal the client that, alas, they won't have a connection today."""
         self.error = error
         self.event.set()
 
@@ -323,10 +354,12 @@ class MaintenanceTask:
 
 
 class StopWorker(MaintenanceTask):
-    pass
+    """Signal the maintenance thread to terminate."""
 
 
 class TopUpConnections(MaintenanceTask):
+    """Increase the number of connections in the pool to the desired number."""
+
     def __call__(self) -> None:
         super().__call__()
 
@@ -348,15 +381,19 @@ class TopUpConnections(MaintenanceTask):
 
 
 class AddConnection(MaintenanceTask):
+    """Add a new connection into to the pool."""
+
     def __call__(self) -> None:
         super().__call__()
 
         conn = self.pool._connect()
-        conn._pool = self.pool  # make it accepted by the pool
+        conn._pool = self.pool  # make it accepted by putconn
         self.pool.putconn(conn)
 
 
 class ReturnConnection(MaintenanceTask):
+    """Clean up and return a connection to the pool."""
+
     def __init__(self, pool: ConnectionPool, conn: Connection):
         super().__init__(pool)
         self.conn = conn
