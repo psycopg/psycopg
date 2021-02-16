@@ -196,13 +196,6 @@ async def wait_conn_async(gen: PQGenConn[RV]) -> RV:
         return rv
 
 
-poll_evmasks = {
-    Wait.R: select.EPOLLONESHOT | select.EPOLLIN,
-    Wait.W: select.EPOLLONESHOT | select.EPOLLOUT,
-    Wait.RW: select.EPOLLONESHOT | select.EPOLLIN | select.EPOLLOUT,
-}
-
-
 def wait_epoll(
     gen: PQGen[RV], fileno: int, timeout: Optional[float] = None
 ) -> RV:
@@ -247,5 +240,12 @@ if (
     is selectors.EpollSelector
 ):
     wait = wait_epoll
+
+    poll_evmasks = {
+        Wait.R: select.EPOLLONESHOT | select.EPOLLIN,
+        Wait.W: select.EPOLLONESHOT | select.EPOLLOUT,
+        Wait.RW: select.EPOLLONESHOT | select.EPOLLIN | select.EPOLLOUT,
+    }
+
 else:
     wait = wait_selector
