@@ -235,10 +235,7 @@ def wait_epoll(
         return rv
 
 
-if (
-    selectors.DefaultSelector  # type: ignore[comparison-overlap]
-    is selectors.EpollSelector
-):
+if selectors.DefaultSelector is getattr(selectors, "EpollSelector", None):
     wait = wait_epoll
 
     poll_evmasks = {
