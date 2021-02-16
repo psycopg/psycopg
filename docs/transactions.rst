@@ -137,7 +137,7 @@ but not entirely committed yet.
             with conn.transaction() as inner_tx:
                 if isinstance(command, CancelCommand):
                     raise Rollback(outer_tx)
-            process_command(command)
+                process_command(command)
 
     # If `Rollback` is raised, it would propagate only up to this block,
     # and the program would continue from here with no exception.
