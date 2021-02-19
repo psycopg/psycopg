@@ -130,11 +130,17 @@ class ConnectionPool:
             pos: Optional[WaitingClient] = None
             if self._pool:
                 # Take a connection ready out of the pool
-                conn = self._pool.pop(-1)
+                conn = self._pool.pop(-1)[0]
             else:
                 # No connection available: put the client in the waiting queue
                 pos = WaitingClient()
                 self._waiting.append(pos)
+
+                # If there is space for the pool to grow, let's do it
+                if self._nconns < self.maxconn:
+                    logger.debug("growing pool %s", self.name)
+                    self._nconns += 1
+                    self.add_task(AddConnection(self))
 
         # If we are in the waiting queue, wait to be assigned a connection
         # (outside the critical section, so only the waiting client is locked)
