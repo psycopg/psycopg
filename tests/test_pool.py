@@ -51,6 +51,18 @@ def test_connection_not_lost(dsn):
 
 
 @pytest.mark.slow
+def test_concurrent_filling(dsn, monkeypatch):
+    delay_connection(monkeypatch, 0.1)
+    t0 = time()
+    p = pool.ConnectionPool(dsn, minconn=5, num_workers=2)
+    wait_pool_full(p)
+    times = [item[1] - t0 for item in p._pool]
+    want_times = [0.1, 0.1, 0.2, 0.2, 0.3]
+    for got, want in zip(times, want_times):
+        assert got == pytest.approx(want, 0.1), times
+
+
+@pytest.mark.slow
 def test_queue(dsn):
     p = pool.ConnectionPool(dsn, minconn=2)
     results = []
@@ -73,9 +85,11 @@ def test_queue(dsn):
     for t in ts:
         t.join()
 
-    assert len([r for r in results if 0.2 < r[1] < 0.35]) == 2
-    assert len([r for r in results if 0.4 < r[1] < 0.55]) == 2
-    assert len([r for r in results if 0.5 < r[1] < 0.75]) == 2
+    times = [item[1] for item in results]
+    want_times = [0.2, 0.2, 0.4, 0.4, 0.6, 0.6]
+    for got, want in zip(times, want_times):
+        assert got == pytest.approx(want, 0.15), times
+
     assert len(set(r[2] for r in results)) == 2
 
 
@@ -360,26 +374,26 @@ def test_grow(dsn, monkeypatch):
     for t in ts:
         t.join()
 
-    deltas = [0.2, 0.2, 0.3, 0.3, 0.4, 0.4]
-    for (_, got), want in zip(results, deltas):
-        assert got == pytest.approx(want, 0.1)
+    want_times = [0.2, 0.2, 0.3, 0.3, 0.4, 0.4]
+    times = [item[1] for item in results]
+    for got, want in zip(times, want_times):
+        assert got == pytest.approx(want, 0.15), times
 
 
 def delay_connection(monkeypatch, sec):
     """
     Return a _connect_gen function delayed by the amount of seconds
     """
-    connect_gen_orig = psycopg3.Connection._connect_gen
+    connect_orig = psycopg3.Connection.connect
 
-    def connect_gen_delayed(*args, **kwargs):
-        psycopg3.pool.logger.debug("delaying connection")
-        sleep(sec)
-        rv = yield from connect_gen_orig(*args, **kwargs)
+    def connect_delay(*args, **kwargs):
+        t0 = time()
+        rv = connect_orig(*args, **kwargs)
+        t1 = time()
+        sleep(sec - (t1 - t0))
         return rv
 
-    monkeypatch.setattr(
-        psycopg3.Connection, "_connect_gen", connect_gen_delayed
-    )
+    monkeypatch.setattr(psycopg3.Connection, "connect", connect_delay)
 
 
 def wait_pool_full(pool):
