@@ -30,6 +30,12 @@ def test_minconn_maxconn(dsn):
         pool.ConnectionPool(dsn, minconn=4, maxconn=2)
 
 
+def test_kwargs(dsn):
+    p = pool.ConnectionPool(dsn, kwargs={"autocommit": True}, minconn=1)
+    with p.connection() as conn:
+        assert conn.autocommit
+
+
 def test_its_really_a_pool(dsn):
     p = pool.ConnectionPool(dsn, minconn=2)
     with p.connection() as conn:
