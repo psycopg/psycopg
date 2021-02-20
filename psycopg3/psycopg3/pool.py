@@ -45,7 +45,7 @@ class ConnectionPool:
         name: Optional[str] = None,
         timeout_sec: float = 30.0,
         max_idle_sec: float = 10 * 60.0,
-        num_workers: int = 1,
+        num_workers: int = 3,
     ):
         if maxconn is None:
             maxconn = minconn

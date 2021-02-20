@@ -10,10 +10,15 @@ from psycopg3 import pool
 from psycopg3.pq import TransactionStatus
 
 
-def test_minconn_maxconn(dsn):
+def test_defaults(dsn):
     p = pool.ConnectionPool(dsn)
     assert p.minconn == p.maxconn == 4
+    assert p.timeout_sec == 30
+    assert p.max_idle_sec == 600
+    assert p.num_workers == 3
 
+
+def test_minconn_maxconn(dsn):
     p = pool.ConnectionPool(dsn, minconn=2)
     assert p.minconn == p.maxconn == 2
 
@@ -388,11 +393,6 @@ def test_grow(dsn, monkeypatch):
     times = [item[1] for item in results]
     for got, want in zip(times, want_times):
         assert got == pytest.approx(want, 0.15), times
-
-
-def test_default_max_idle_sec(dsn):
-    p = pool.ConnectionPool(dsn)
-    assert p.max_idle_sec == 600
 
 
 @pytest.mark.slow
