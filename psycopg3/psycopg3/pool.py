@@ -44,6 +44,7 @@ class ConnectionPool:
         maxconn: Optional[int] = None,
         name: Optional[str] = None,
         timeout_sec: float = 30.0,
+        max_idle_sec: float = 10 * 60.0,
         num_workers: int = 1,
     ):
         if maxconn is None:
@@ -69,10 +70,11 @@ class ConnectionPool:
         self.minconn = minconn
         self.maxconn = maxconn
         self.timeout_sec = timeout_sec
+        self.max_idle_sec = max_idle_sec
         self.num_workers = num_workers
 
-        self._nconns = 0  # currently in the pool, out, being prepared
-        self._pool: List[Tuple[Connection, float]] = []
+        self._nconns = minconn  # currently in the pool, out, being prepared
+        self._pool: Deque[Tuple[Connection, float]] = deque()
         self._waiting: Deque["WaitingClient"] = deque()
         self._lock = threading.Lock()
         self._closed = False
@@ -85,8 +87,17 @@ class ConnectionPool:
             t.start()
             self._workers.append(t)
 
-        # Run a task to create the connections immediately
-        self.add_task(TopUpConnections(self))
+        # Populate the pool with initial minconn connections
+        event = threading.Event()
+        for i in range(self._nconns):
+            self.add_task(AddInitialConnection(self, event))
+
+        # Wait for the pool to be full or throw an error
+        if not event.wait(timeout=timeout_sec):
+            self.close()  # stop all the threads
+            raise PoolTimeout(
+                f"pool initialization incomplete after {timeout_sec} sec"
+            )
 
     def __repr__(self) -> str:
         return (
@@ -136,7 +147,7 @@ class ConnectionPool:
             pos: Optional[WaitingClient] = None
             if self._pool:
                 # Take a connection ready out of the pool
-                conn = self._pool.pop(-1)[0]
+                conn = self._pool.pop()[0]
             else:
                 # No connection available: put the client in the waiting queue
                 pos = WaitingClient()
@@ -209,20 +220,40 @@ class ConnectionPool:
             self.add_task(AddConnection(self))
             return
 
+        pos: Optional[WaitingClient] = None
+        to_close: Optional[Connection] = None
+
         # Critical section: if there is a client waiting give it the connection
         # otherwise put it back into the pool.
         with self._lock:
-            pos: Optional[WaitingClient] = None
             if self._waiting:
                 # Extract the first client from the queue
                 pos = self._waiting.popleft()
             else:
+                now = time.time()
+
                 # No client waiting for a connection: put it back into the pool
-                self._pool.append((conn, time.time()))
+                self._pool.append((conn, now))
+
+                # Also check if it's time to shrink the pool
+                if (
+                    self._nconns > self.minconn
+                    and now - self._pool[0][1] > self.max_idle_sec
+                ):
+                    to_close, t0 = self._pool.popleft()
+                    logger.debug(
+                        "shrinking pool %r after connection unused for %s sec",
+                        self.name,
+                        now - t0,
+                    )
+                    self._nconns -= 1
 
         # If we found a client in queue, give it the connection and notify it
         if pos:
             pos.set(conn)
+
+        if to_close:
+            to_close.close()
 
     def _reset_transaction_status(self, conn: Connection) -> None:
         """
@@ -276,7 +307,7 @@ class ConnectionPool:
 
         # Close the connections still in the pool
         while self._pool:
-            conn = self._pool.pop(-1)[0]
+            conn = self._pool.pop()[0]
             conn.close()
 
         # Stop the worker threads
@@ -388,33 +419,28 @@ class StopWorker(MaintenanceTask):
         pass
 
 
-class TopUpConnections(MaintenanceTask):
-    """Increase the number of connections in the pool to the desired number."""
-
-    def _run(self) -> None:
-        with self.pool._lock:
-            # Check if there are new connections to create. If there are
-            # update the number of connections managed immediately and in
-            # the same critical section to avoid finding more than owed
-            nconns = self.pool._nconns
-            if nconns < self.pool.minconn:
-                newconns = self.pool.minconn - nconns
-                self.pool._nconns += newconns
-            else:
-                return
-
-        # enqueue connection creations command so that might be picked in
-        # parallel if possible
-        for i in range(newconns):
-            self.pool.add_task(AddConnection(self.pool))
-
-
 class AddConnection(MaintenanceTask):
     """Add a new connection into to the pool."""
 
     def _run(self) -> None:
         conn = self.pool._connect()
         self.pool._add_to_pool(conn)
+
+
+class AddInitialConnection(AddConnection):
+    """Add a new connection into to the pool.
+
+    If the desired number of connections is reached notify the event.
+    """
+
+    def __init__(self, pool: ConnectionPool, event: threading.Event):
+        super().__init__(pool)
+        self.event = event
+
+    def _run(self) -> None:
+        super()._run()
+        if len(self.pool._pool) >= self.pool._nconns:
+            self.event.set()
 
 
 class ReturnConnection(MaintenanceTask):

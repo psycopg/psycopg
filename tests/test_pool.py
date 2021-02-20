@@ -55,11 +55,22 @@ def test_concurrent_filling(dsn, monkeypatch):
     delay_connection(monkeypatch, 0.1)
     t0 = time()
     p = pool.ConnectionPool(dsn, minconn=5, num_workers=2)
-    wait_pool_full(p)
     times = [item[1] - t0 for item in p._pool]
     want_times = [0.1, 0.1, 0.2, 0.2, 0.3]
     for got, want in zip(times, want_times):
         assert got == pytest.approx(want, 0.1), times
+
+
+@pytest.mark.slow
+def test_init_timeout(dsn, monkeypatch):
+    delay_connection(monkeypatch, 0.1)
+    with pytest.raises(pool.PoolTimeout):
+        pool.ConnectionPool(dsn, minconn=4, num_workers=1, timeout_sec=0.3)
+
+    p = pool.ConnectionPool(dsn, minconn=4, num_workers=1, timeout_sec=0.5)
+    p.close()
+    p = pool.ConnectionPool(dsn, minconn=4, num_workers=2, timeout_sec=0.3)
+    p.close()
 
 
 @pytest.mark.slow
@@ -354,7 +365,6 @@ def test_closed_queue(dsn):
 @pytest.mark.slow
 def test_grow(dsn, monkeypatch):
     p = pool.ConnectionPool(dsn, minconn=2, maxconn=4, num_workers=3)
-    wait_pool_full(p)
     delay_connection(monkeypatch, 0.1)
     ts = []
     results = []
@@ -380,6 +390,46 @@ def test_grow(dsn, monkeypatch):
         assert got == pytest.approx(want, 0.15), times
 
 
+def test_default_max_idle_sec(dsn):
+    p = pool.ConnectionPool(dsn)
+    assert p.max_idle_sec == 600
+
+
+@pytest.mark.slow
+def test_shrink(dsn, monkeypatch):
+    p = pool.ConnectionPool(
+        dsn, minconn=2, maxconn=4, num_workers=3, max_idle_sec=0.2
+    )
+    assert p.max_idle_sec == 0.2
+
+    def worker(n):
+        with p.connection() as conn:
+            conn.execute("select 1 from pg_sleep(0.2)")
+
+    ts = []
+    for i in range(4):
+        t = Thread(target=worker, args=(i,))
+        t.start()
+        ts.append(t)
+
+    for t in ts:
+        t.join()
+
+    wait_pool_full(p)
+    assert len(p._pool) == 4
+
+    t0 = time()
+    t = None
+    while time() < t0 + 0.4:
+        with p.connection():
+            sleep(0.01)
+            if p._nconns < 4:
+                t = time() - t0
+                break
+
+    assert t == pytest.approx(0.2, 0.1)
+
+
 def delay_connection(monkeypatch, sec):
     """
     Return a _connect_gen function delayed by the amount of seconds
@@ -397,5 +447,5 @@ def delay_connection(monkeypatch, sec):
 
 
 def wait_pool_full(pool):
-    while len(pool._pool) < pool.minconn:
+    while len(pool._pool) < pool._nconns:
         sleep(0.01)
