@@ -11,18 +11,18 @@ from psycopg3.pq import TransactionStatus
 
 
 def test_minconn_maxconn(dsn):
-    p = pool.ConnectionPool(dsn, num_workers=0)
+    p = pool.ConnectionPool(dsn)
     assert p.minconn == p.maxconn == 4
 
-    p = pool.ConnectionPool(dsn, minconn=2, num_workers=0)
+    p = pool.ConnectionPool(dsn, minconn=2)
     assert p.minconn == p.maxconn == 2
 
-    p = pool.ConnectionPool(dsn, minconn=2, maxconn=4, num_workers=0)
+    p = pool.ConnectionPool(dsn, minconn=2, maxconn=4)
     assert p.minconn == 2
     assert p.maxconn == 4
 
     with pytest.raises(ValueError):
-        pool.ConnectionPool(dsn, minconn=4, maxconn=2, num_workers=0)
+        pool.ConnectionPool(dsn, minconn=4, maxconn=2)
 
 
 def test_its_really_a_pool(dsn):

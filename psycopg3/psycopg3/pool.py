@@ -56,6 +56,10 @@ class ConnectionPool:
             self.__class__._num_pool += 1
             name = f"pool-{self._num_pool}"
 
+        if num_workers < 1:
+            # TODO: allow num_workers to be 0 - sync pool?
+            raise ValueError("num_workers must be at least 1")
+
         self.conninfo = conninfo
         self.kwargs: Dict[str, Any] = kwargs or {}
         self._configure: Callable[[Connection], None]
