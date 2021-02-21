@@ -45,8 +45,8 @@ class ConnectionPool:
         minconn: int = 4,
         maxconn: Optional[int] = None,
         name: Optional[str] = None,
-        timeout_sec: float = 30.0,
-        max_idle_sec: float = 10 * 60.0,
+        timeout: float = 30.0,
+        max_idle: float = 10 * 60.0,
         reconnect_timeout: float = 5 * 60.0,
         reconnect_failed: Optional[Callable[["ConnectionPool"], None]] = None,
         num_workers: int = 3,
@@ -75,9 +75,9 @@ class ConnectionPool:
         self.name = name
         self.minconn = minconn
         self.maxconn = maxconn
-        self.timeout_sec = timeout_sec
+        self.timeout = timeout
         self.reconnect_timeout = reconnect_timeout
-        self.max_idle_sec = max_idle_sec
+        self.max_idle = max_idle
         self.num_workers = num_workers
 
         self._nconns = minconn  # currently in the pool, out, being prepared
@@ -105,10 +105,10 @@ class ConnectionPool:
             self.add_task(AddInitialConnection(self, event))
 
         # Wait for the pool to be full or throw an error
-        if not event.wait(timeout=timeout_sec):
+        if not event.wait(timeout=timeout):
             self.close()  # stop all the threads
             raise PoolTimeout(
-                f"pool initialization incomplete after {timeout_sec} sec"
+                f"pool initialization incomplete after {timeout} sec"
             )
 
     def __repr__(self) -> str:
@@ -119,12 +119,12 @@ class ConnectionPool:
 
     @contextmanager
     def connection(
-        self, timeout_sec: Optional[float] = None
+        self, timeout: Optional[float] = None
     ) -> Iterator[Connection]:
         """Context manager to obtain a connection from the pool.
 
         Returned the connection immediately if available, otherwise wait up to
-        *timeout_sec* or `self.timeout_sec` and throw `PoolTimeout` if a
+        *timeout* or `self.timeout` and throw `PoolTimeout` if a
         connection is available in time.
 
         Upon context exit, return the connection to the pool. Apply the normal
@@ -132,14 +132,14 @@ class ConnectionPool:
         of success/error). If the connection is no more in working state
         replace it with a new one.
         """
-        conn = self.getconn(timeout_sec=timeout_sec)
+        conn = self.getconn(timeout=timeout)
         try:
             with conn:
                 yield conn
         finally:
             self.putconn(conn)
 
-    def getconn(self, timeout_sec: Optional[float] = None) -> Connection:
+    def getconn(self, timeout: Optional[float] = None) -> Connection:
         """Obtain a contection from the pool.
 
         You should preferrably use `connection()`. Use this function only if
@@ -174,9 +174,9 @@ class ConnectionPool:
         # If we are in the waiting queue, wait to be assigned a connection
         # (outside the critical section, so only the waiting client is locked)
         if pos:
-            if timeout_sec is None:
-                timeout_sec = self.timeout_sec
-            conn = pos.wait(timeout=timeout_sec)
+            if timeout is None:
+                timeout = self.timeout
+            conn = pos.wait(timeout=timeout)
 
         # Tell the connection it belongs to a pool to avoid closing on __exit__
         # Note that this property shouldn't be set while the connection is in
@@ -250,7 +250,7 @@ class ConnectionPool:
                 # Also check if it's time to shrink the pool
                 if (
                     self._nconns > self.minconn
-                    and now - self._pool[0][1] > self.max_idle_sec
+                    and now - self._pool[0][1] > self.max_idle
                 ):
                     to_close, t0 = self._pool.popleft()
                     logger.debug(

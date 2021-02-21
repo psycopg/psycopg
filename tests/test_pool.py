@@ -13,8 +13,8 @@ from psycopg3.pq import TransactionStatus
 def test_defaults(dsn):
     p = pool.ConnectionPool(dsn)
     assert p.minconn == p.maxconn == 4
-    assert p.timeout_sec == 30
-    assert p.max_idle_sec == 600
+    assert p.timeout == 30
+    assert p.max_idle == 600
     assert p.num_workers == 3
 
 
@@ -76,11 +76,11 @@ def test_concurrent_filling(dsn, monkeypatch):
 def test_init_timeout(dsn, monkeypatch):
     delay_connection(monkeypatch, 0.1)
     with pytest.raises(pool.PoolTimeout):
-        pool.ConnectionPool(dsn, minconn=4, num_workers=1, timeout_sec=0.3)
+        pool.ConnectionPool(dsn, minconn=4, num_workers=1, timeout=0.3)
 
-    p = pool.ConnectionPool(dsn, minconn=4, num_workers=1, timeout_sec=0.5)
+    p = pool.ConnectionPool(dsn, minconn=4, num_workers=1, timeout=0.5)
     p.close()
-    p = pool.ConnectionPool(dsn, minconn=4, num_workers=2, timeout_sec=0.3)
+    p = pool.ConnectionPool(dsn, minconn=4, num_workers=2, timeout=0.3)
     p.close()
 
 
@@ -117,7 +117,7 @@ def test_queue(dsn):
 
 @pytest.mark.slow
 def test_queue_timeout(dsn):
-    p = pool.ConnectionPool(dsn, minconn=2, timeout_sec=0.1)
+    p = pool.ConnectionPool(dsn, minconn=2, timeout=0.1)
     results = []
     errors = []
 
@@ -152,7 +152,7 @@ def test_queue_timeout(dsn):
 
 @pytest.mark.slow
 def test_queue_timeout_override(dsn):
-    p = pool.ConnectionPool(dsn, minconn=2, timeout_sec=0.1)
+    p = pool.ConnectionPool(dsn, minconn=2, timeout=0.1)
     results = []
     errors = []
 
@@ -160,7 +160,7 @@ def test_queue_timeout_override(dsn):
         t0 = time()
         timeout = 0.25 if n == 3 else None
         try:
-            with p.connection(timeout_sec=timeout) as conn:
+            with p.connection(timeout=timeout) as conn:
                 (pid,) = conn.execute(
                     "select pg_backend_pid() from pg_sleep(0.2)"
                 ).fetchone()
@@ -404,9 +404,9 @@ def test_grow(dsn, monkeypatch):
 @pytest.mark.slow
 def test_shrink(dsn, monkeypatch):
     p = pool.ConnectionPool(
-        dsn, minconn=2, maxconn=4, num_workers=3, max_idle_sec=0.2
+        dsn, minconn=2, maxconn=4, num_workers=3, max_idle=0.2
     )
-    assert p.max_idle_sec == 0.2
+    assert p.max_idle == 0.2
 
     def worker(n):
         with p.connection() as conn:
@@ -446,7 +446,7 @@ def test_reconnect(proxy, caplog, monkeypatch):
     monkeypatch.setattr(pool.AddConnection, "DELAY_JITTER", 0.0)
 
     proxy.start()
-    p = pool.ConnectionPool(proxy.client_dsn, minconn=1, timeout_sec=2)
+    p = pool.ConnectionPool(proxy.client_dsn, minconn=1, timeout=2)
     proxy.stop()
 
     with pytest.raises(psycopg3.OperationalError):
@@ -486,7 +486,7 @@ def test_reconnect_failure(proxy):
         proxy.client_dsn,
         name="this-one",
         minconn=1,
-        timeout_sec=2,
+        timeout=2,
         reconnect_timeout=1.0,
         reconnect_failed=failed,
     )
