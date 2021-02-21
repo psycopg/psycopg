@@ -9,3 +9,6 @@ line-length = 79
 testpaths=[
     "tests",
 ]
+# Note: On Travis they these options seem to leak objects
+# log_format = "%(asctime)s.%(msecs)03d %(levelname)-8s %(name)s:%(filename)s:%(lineno)d %(message)s"
+# log_level = "DEBUG"

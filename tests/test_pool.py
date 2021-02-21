@@ -128,7 +128,7 @@ def test_queue(dsn):
     times = [item[1] for item in results]
     want_times = [0.2, 0.2, 0.4, 0.4, 0.6, 0.6]
     for got, want in zip(times, want_times):
-        assert got == pytest.approx(want, 0.15), times
+        assert got == pytest.approx(want, 0.2), times
 
     assert len(set(r[2] for r in results)) == 2
 
@@ -438,7 +438,7 @@ def test_grow(dsn, monkeypatch):
     want_times = [0.2, 0.2, 0.3, 0.3, 0.4, 0.4]
     times = [item[1] for item in results]
     for got, want in zip(times, want_times):
-        assert got == pytest.approx(want, 0.15), times
+        assert got == pytest.approx(want, 0.2), times
 
 
 @pytest.mark.slow
