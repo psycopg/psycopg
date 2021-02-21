@@ -308,6 +308,18 @@ def test_fail_rollback_close(dsn, caplog, monkeypatch):
     assert "BAD" in caplog.records[2].message
 
 
+def test_close_no_threads(dsn):
+    p = pool.ConnectionPool(dsn)
+    assert p._sched_runner.is_alive()
+    for t in p._workers:
+        assert t.is_alive()
+
+    p.close()
+    assert not p._sched_runner.is_alive()
+    for t in p._workers:
+        assert not t.is_alive()
+
+
 def test_putconn_no_pool(dsn):
     p = pool.ConnectionPool(dsn, minconn=1)
     conn = psycopg3.connect(dsn)
@@ -324,7 +336,7 @@ def test_putconn_wrong_pool(dsn):
 
 
 def test_del_no_warning(dsn, recwarn):
-    p = pool.ConnectionPool(minconn=2)
+    p = pool.ConnectionPool(dsn, minconn=2)
     with p.connection() as conn:
         conn.execute("select 1")
 
@@ -334,6 +346,16 @@ def test_del_no_warning(dsn, recwarn):
     del p
     assert not ref()
     assert not recwarn
+
+
+@pytest.mark.slow
+def test_del_stop_threads(dsn):
+    p = pool.ConnectionPool(dsn)
+    ts = [p._sched_runner] + p._workers
+    del p
+    sleep(0.2)
+    for t in ts:
+        assert not t.is_alive()
 
 
 def test_closed_getconn(dsn):
