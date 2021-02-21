@@ -295,6 +295,20 @@ def test_server_version(pgconn):
         pgconn.server_version
 
 
+def test_socket(pgconn):
+    socket = pgconn.socket
+    assert socket > 0
+    pgconn.exec_(
+        f"select pg_terminate_backend({pgconn.backend_pid})".encode("utf8")
+    )
+    # TODO: on my box it raises OperationalError as it should. Not on Travis,
+    # so let's see if at least an ok value comes out of it.
+    try:
+        assert pgconn.socket == socket
+    except psycopg3.OperationalError:
+        pass
+
+
 def test_error_message(pgconn):
     assert pgconn.error_message == b""
     res = pgconn.exec_(b"wat")

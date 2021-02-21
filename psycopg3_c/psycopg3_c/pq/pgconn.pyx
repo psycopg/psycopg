@@ -160,7 +160,10 @@ cdef class PGconn:
 
     @property
     def socket(self) -> int:
-        return _call_int(self, libpq.PQsocket)
+        rv = _call_int(self, libpq.PQsocket)
+        if rv == -1:
+            raise PQerror("the connection is lost")
+        return rv
 
     @property
     def backend_pid(self) -> int:
@@ -506,12 +509,12 @@ cdef char *_call_bytes(PGconn pgconn, conn_bytes_f func) except NULL:
     return rv
 
 
-cdef int _call_int(PGconn pgconn, conn_int_f func) except -1:
+cdef int _call_int(PGconn pgconn, conn_int_f func) except -2:
     """
     Call one of the pgconn libpq functions returning an int.
     """
     if not _ensure_pgconn(pgconn):
-        return -1
+        return -2
     return func(pgconn.pgconn_ptr)
 
 

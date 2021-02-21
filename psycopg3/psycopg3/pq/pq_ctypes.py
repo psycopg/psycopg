@@ -207,7 +207,10 @@ class PGconn:
 
     @property
     def socket(self) -> int:
-        return self._call_int(impl.PQsocket)
+        rv = self._call_int(impl.PQsocket)
+        if rv == -1:
+            raise e.OperationalError("the connection is lost")
+        return rv
 
     @property
     def backend_pid(self) -> int:
