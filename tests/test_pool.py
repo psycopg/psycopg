@@ -73,15 +73,33 @@ def test_concurrent_filling(dsn, monkeypatch):
 
 
 @pytest.mark.slow
-def test_init_timeout(dsn, monkeypatch):
+def test_setup_timeout(dsn, monkeypatch):
     delay_connection(monkeypatch, 0.1)
     with pytest.raises(pool.PoolTimeout):
-        pool.ConnectionPool(dsn, minconn=4, num_workers=1, timeout=0.3)
+        pool.ConnectionPool(dsn, minconn=4, num_workers=1, setup_timeout=0.3)
 
-    p = pool.ConnectionPool(dsn, minconn=4, num_workers=1, timeout=0.5)
+    p = pool.ConnectionPool(dsn, minconn=4, num_workers=1, setup_timeout=0.5)
     p.close()
-    p = pool.ConnectionPool(dsn, minconn=4, num_workers=2, timeout=0.3)
+    p = pool.ConnectionPool(dsn, minconn=4, num_workers=2, setup_timeout=0.3)
     p.close()
+
+
+@pytest.mark.slow
+def test_setup_no_timeout(dsn, proxy):
+    with pytest.raises(pool.PoolTimeout):
+        pool.ConnectionPool(
+            proxy.client_dsn, minconn=1, num_workers=1, setup_timeout=0.2
+        )
+
+    p = pool.ConnectionPool(
+        proxy.client_dsn, minconn=1, num_workers=1, setup_timeout=0
+    )
+    sleep(0.5)
+    assert not p._pool
+    proxy.start()
+
+    with p.connection() as conn:
+        conn.execute("select 1")
 
 
 @pytest.mark.slow
@@ -446,7 +464,7 @@ def test_reconnect(proxy, caplog, monkeypatch):
     monkeypatch.setattr(pool.AddConnection, "DELAY_JITTER", 0.0)
 
     proxy.start()
-    p = pool.ConnectionPool(proxy.client_dsn, minconn=1, timeout=2)
+    p = pool.ConnectionPool(proxy.client_dsn, minconn=1, setup_timeout=2.0)
     proxy.stop()
 
     with pytest.raises(psycopg3.OperationalError):
@@ -486,7 +504,7 @@ def test_reconnect_failure(proxy):
         proxy.client_dsn,
         name="this-one",
         minconn=1,
-        timeout=2,
+        setup_timeout=2.0,
         reconnect_timeout=1.0,
         reconnect_failed=failed,
     )

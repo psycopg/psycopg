@@ -46,6 +46,7 @@ class ConnectionPool:
         maxconn: Optional[int] = None,
         name: Optional[str] = None,
         timeout: float = 30.0,
+        setup_timeout: float = 30.0,
         max_idle: float = 10 * 60.0,
         reconnect_timeout: float = 5 * 60.0,
         reconnect_failed: Optional[Callable[["ConnectionPool"], None]] = None,
@@ -100,16 +101,21 @@ class ConnectionPool:
         self._sched_runner.start()
 
         # Populate the pool with initial minconn connections
-        event = threading.Event()
-        for i in range(self._nconns):
-            self.add_task(AddInitialConnection(self, event))
+        # Block if setup_timeout is > 0, otherwise fill the pool in background
+        if setup_timeout > 0:
+            event = threading.Event()
+            for i in range(self._nconns):
+                self.add_task(AddInitialConnection(self, event))
 
-        # Wait for the pool to be full or throw an error
-        if not event.wait(timeout=timeout):
-            self.close()  # stop all the threads
-            raise PoolTimeout(
-                f"pool initialization incomplete after {timeout} sec"
-            )
+            # Wait for the pool to be full or throw an error
+            if not event.wait(timeout=setup_timeout):
+                self.close()  # stop all the threads
+                raise PoolTimeout(
+                    f"pool initialization incomplete after {setup_timeout} sec"
+                )
+        else:
+            for i in range(self._nconns):
+                self.add_task(AddConnection(self))
 
     def __repr__(self) -> str:
         return (
