@@ -85,7 +85,6 @@ class ConnectionPool:
         self._pool: Deque[Tuple[Connection, float]] = deque()
         self._waiting: Deque["WaitingClient"] = deque()
         self._lock = threading.RLock()
-        self._closed = False
         self.sched = Scheduler()
 
         self._wqueue: "Queue[MaintenanceTask]" = Queue()
@@ -93,12 +92,19 @@ class ConnectionPool:
         for i in range(num_workers):
             t = threading.Thread(target=self.worker, args=(self._wqueue,))
             t.daemon = True
-            t.start()
             self._workers.append(t)
 
         self._sched_runner = threading.Thread(target=self.sched.run)
         self._sched_runner.daemon = True
+
+        # _close should be the last property to be set in the state
+        # to avoid warning on __del__ in case __init__ fails.
+        self._closed = False
+
+        # The object state is complete. Start the worker threads
         self._sched_runner.start()
+        for t in self._workers:
+            t.start()
 
         # Populate the pool with initial minconn connections
         # Block if setup_timeout is > 0, otherwise fill the pool in background
@@ -124,7 +130,10 @@ class ConnectionPool:
         )
 
     def __del__(self) -> None:
-        self.close()
+        # If the '_closed' property is not set we probably failed in __init__.
+        # Don't try anything complicated as probably it won't work.
+        if hasattr(self, "_closed"):
+            self.close()
 
     @contextmanager
     def connection(
