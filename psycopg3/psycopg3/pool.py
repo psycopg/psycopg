@@ -123,6 +123,9 @@ class ConnectionPool:
             f" {self.name!r} at 0x{id(self):x}>"
         )
 
+    def __del__(self) -> None:
+        self.close()
+
     @contextmanager
     def connection(
         self, timeout: Optional[float] = None
@@ -312,6 +315,9 @@ class ConnectionPool:
         with a `PoolClosed` exception. Currently used connections will not be
         closed until returned to the pool.
         """
+        if self._closed:
+            return
+
         with self._lock:
             self._closed = True
 
