@@ -1,6 +1,6 @@
 import logging
 import weakref
-from time import time, sleep
+from time import monotonic, sleep, time
 from threading import Thread
 
 import pytest
@@ -64,7 +64,7 @@ def test_connection_not_lost(dsn):
 @pytest.mark.slow
 def test_concurrent_filling(dsn, monkeypatch):
     delay_connection(monkeypatch, 0.1)
-    t0 = time()
+    t0 = monotonic()
     p = pool.ConnectionPool(dsn, minconn=5, num_workers=2)
     times = [item[1] - t0 for item in p._pool]
     want_times = [0.1, 0.1, 0.2, 0.2, 0.3]
@@ -434,6 +434,80 @@ def test_shrink(dsn, monkeypatch):
                 break
 
     assert t == pytest.approx(0.2, 0.1)
+
+
+@pytest.mark.slow
+def test_reconnect(proxy, caplog, monkeypatch):
+    caplog.set_level(logging.WARNING, logger="psycopg3.pool")
+
+    assert pool.AddConnection.INITIAL_DELAY == 1.0
+    assert pool.AddConnection.DELAY_JITTER == 0.1
+    monkeypatch.setattr(pool.AddConnection, "INITIAL_DELAY", 0.1)
+    monkeypatch.setattr(pool.AddConnection, "DELAY_JITTER", 0.0)
+
+    proxy.start()
+    p = pool.ConnectionPool(proxy.client_dsn, minconn=1, timeout_sec=2)
+    proxy.stop()
+
+    with pytest.raises(psycopg3.OperationalError):
+        with p.connection() as conn:
+            conn.execute("select 1")
+
+    sleep(1.0)
+    proxy.start()
+    wait_pool_full(p)
+
+    with p.connection() as conn:
+        conn.execute("select 1")
+
+    assert "BAD" in caplog.messages[0]
+    times = [rec.created for rec in caplog.records]
+    assert times[1] - times[0] < 0.05
+    deltas = [times[i + 1] - times[i] for i in range(1, len(times) - 1)]
+    assert len(deltas) == 3
+    want = 0.1
+    for delta in deltas:
+        assert delta == pytest.approx(want, 0.05), deltas
+        want *= 2
+
+
+@pytest.mark.slow
+def test_reconnect_failure(proxy):
+    proxy.start()
+
+    t1 = None
+
+    def failed(pool):
+        assert pool.name == "this-one"
+        nonlocal t1
+        t1 = time()
+
+    p = pool.ConnectionPool(
+        proxy.client_dsn,
+        name="this-one",
+        minconn=1,
+        timeout_sec=2,
+        reconnect_timeout=1.0,
+        reconnect_failed=failed,
+    )
+    proxy.stop()
+
+    with pytest.raises(psycopg3.OperationalError):
+        with p.connection() as conn:
+            conn.execute("select 1")
+
+    t0 = time()
+    sleep(1.5)
+    assert t1
+    assert t1 - t0 == pytest.approx(1.0, 0.1)
+    assert p._nconns == 0
+
+    proxy.start()
+    t0 = time()
+    with p.connection() as conn:
+        conn.execute("select 1")
+    t1 = time()
+    assert t1 - t0 < 0.2
 
 
 def delay_connection(monkeypatch, sec):

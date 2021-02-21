@@ -17,6 +17,7 @@ from collections import deque
 
 from . import errors as e
 from .pq import TransactionStatus
+from ._sched import Scheduler
 from .connection import Connection
 
 WORKER_TIMEOUT = 60.0
@@ -46,6 +47,8 @@ class ConnectionPool:
         name: Optional[str] = None,
         timeout_sec: float = 30.0,
         max_idle_sec: float = 10 * 60.0,
+        reconnect_timeout: float = 5 * 60.0,
+        reconnect_failed: Optional[Callable[["ConnectionPool"], None]] = None,
         num_workers: int = 3,
     ):
         if maxconn is None:
@@ -67,18 +70,22 @@ class ConnectionPool:
         self.kwargs: Dict[str, Any] = kwargs or {}
         self._configure: Callable[[Connection], None]
         self._configure = configure or (lambda conn: None)
+        self._reconnect_failed: Callable[["ConnectionPool"], None]
+        self._reconnect_failed = reconnect_failed or (lambda pool: None)
         self.name = name
         self.minconn = minconn
         self.maxconn = maxconn
         self.timeout_sec = timeout_sec
+        self.reconnect_timeout = reconnect_timeout
         self.max_idle_sec = max_idle_sec
         self.num_workers = num_workers
 
         self._nconns = minconn  # currently in the pool, out, being prepared
         self._pool: Deque[Tuple[Connection, float]] = deque()
         self._waiting: Deque["WaitingClient"] = deque()
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._closed = False
+        self.sched = Scheduler()
 
         self._wqueue: "Queue[MaintenanceTask]" = Queue()
         self._workers: List[threading.Thread] = []
@@ -87,6 +94,10 @@ class ConnectionPool:
             t.daemon = True
             t.start()
             self._workers.append(t)
+
+        self._sched_runner = threading.Thread(target=self.sched.run)
+        self._sched_runner.daemon = True
+        self._sched_runner.start()
 
         # Populate the pool with initial minconn connections
         event = threading.Event()
@@ -231,7 +242,7 @@ class ConnectionPool:
                 # Extract the first client from the queue
                 pos = self._waiting.popleft()
             else:
-                now = time.time()
+                now = time.monotonic()
 
                 # No client waiting for a connection: put it back into the pool
                 self._pool.append((conn, now))
@@ -301,6 +312,9 @@ class ConnectionPool:
         # Now that the flag _closed is set, getconn will fail immediately,
         # putconn will just close the returned connection.
 
+        # Stop the scheduler
+        self.sched.enter(0, None)
+
         # Signal to eventual clients in the queue that business is closed.
         while self._waiting:
             pos = self._waiting.popleft()
@@ -358,6 +372,12 @@ class ConnectionPool:
     def configure(self, conn: Connection) -> None:
         """Configure a connection after creation."""
         self._configure(conn)
+
+    def reconnect_failed(self) -> None:
+        """
+        Called when reconnection failed for longer than `reconnect_timeout`.
+        """
+        self._reconnect_failed(self)
 
 
 class WaitingClient:
@@ -422,15 +442,7 @@ class StopWorker(MaintenanceTask):
         pass
 
 
-class AddConnection(MaintenanceTask):
-    """Add a new connection into to the pool."""
-
-    def _run(self, pool: ConnectionPool) -> None:
-        conn = pool._connect()
-        pool._add_to_pool(conn)
-
-
-class AddInitialConnection(AddConnection):
+class AddInitialConnection(MaintenanceTask):
     """Add a new connection into to the pool.
 
     If the desired number of connections is reached notify the event.
@@ -441,9 +453,74 @@ class AddInitialConnection(AddConnection):
         self.event = event
 
     def _run(self, pool: ConnectionPool) -> None:
-        super()._run(pool)
+        conn = pool._connect()
+        pool._add_to_pool(conn)
         if len(pool._pool) >= pool._nconns:
             self.event.set()
+
+
+class AddConnection(MaintenanceTask):
+    INITIAL_DELAY = 1.0
+    DELAY_JITTER = 0.1
+    DELAY_BACKOFF = 2.0
+
+    def __init__(self, pool: ConnectionPool):
+        super().__init__(pool)
+        self.delay = 0.0
+        self.give_up_at = 0.0
+
+    def _run(self, pool: ConnectionPool) -> None:
+        try:
+            conn = pool._connect()
+        except Exception as e:
+            logger.warning(f"error reconnecting in {pool.name!r}: {e}")
+            self._handle_error(pool)
+        else:
+            pool._add_to_pool(conn)
+
+    def _handle_error(self, pool: ConnectionPool) -> None:
+        """Called after a connection failure.
+
+        Calculate the new time for a new reconnection attempt and schedule a
+        retry in the future. If too many attempts were performed, give up, by
+        decreasing the pool connection number and calling
+        `pool.reconnect_failed()`.
+        """
+        now = time.monotonic()
+        if self.give_up_at and now >= self.give_up_at:
+            logger.warning(
+                "reconnection attempt in pool %r failed after %s sec",
+                pool.name,
+                pool.reconnect_timeout,
+            )
+            with pool._lock:
+                pool._nconns -= 1
+            pool.reconnect_failed()
+            return
+
+        # Calculate how long to wait for a new connection attempt
+        if self.delay == 0.0:
+            self.give_up_at = now + pool.reconnect_timeout
+            # +/- 10% of the initial delay
+            jitter = self.INITIAL_DELAY * (
+                (2.0 * self.DELAY_JITTER * random.random()) - self.DELAY_JITTER
+            )
+            self.delay = self.INITIAL_DELAY + jitter
+        else:
+            self.delay *= self.DELAY_BACKOFF
+
+        # Schedule a run of self.retry() some time in the future
+        if now + self.delay < self.give_up_at:
+            pool.sched.enter(self.delay, self.retry)
+        else:
+            pool.sched.enterabs(self.give_up_at, self.retry)
+
+    def retry(self) -> None:
+        pool = self.pool()
+        if not pool:
+            return
+
+        pool.add_task(self)
 
 
 class ReturnConnection(MaintenanceTask):

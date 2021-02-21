@@ -32,6 +32,7 @@ extras_require = {
         f"psycopg3-binary == {version}",
     ],
     "test": [
+        "pproxy >= 2.7, < 2.8",
         "pytest >= 6, < 6.1",
         "pytest-asyncio >= 0.14.0, < 0.15",
         "pytest-randomly >= 3.5, < 3.6",
