@@ -332,6 +332,12 @@ class ConnectionPool:
         with self._lock:
             self._closed = True
 
+            # Take waiting client and pool connections out of the state
+            waiting = list(self._waiting)
+            self._waiting.clear()
+            pool = list(self._pool)
+            self._pool.clear()
+
         # Now that the flag _closed is set, getconn will fail immediately,
         # putconn will just close the returned connection.
 
@@ -343,13 +349,11 @@ class ConnectionPool:
             self.run_task(StopWorker(self))
 
         # Signal to eventual clients in the queue that business is closed.
-        while self._waiting:
-            pos = self._waiting.popleft()
+        for pos in waiting:
             pos.fail(PoolClosed(f"the pool {self.name!r} is closed"))
 
         # Close the connections still in the pool
-        while self._pool:
-            conn = self._pool.pop()[0]
+        for conn, _ in pool:
             conn.close()
 
         # Wait for the worker threads to terminate
