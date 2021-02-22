@@ -169,6 +169,35 @@ def test_queue_timeout(dsn):
 
 
 @pytest.mark.slow
+def test_dead_client(dsn):
+    p = pool.ConnectionPool(dsn, minconn=2)
+
+    results = []
+
+    def worker(i, timeout):
+        try:
+            with p.connection(timeout=timeout) as conn:
+                conn.execute("select pg_sleep(0.3)")
+                results.append(i)
+        except pool.PoolTimeout:
+            if timeout > 0.2:
+                raise
+
+    ts = []
+    for i, timeout in enumerate([0.4, 0.4, 0.1, 0.4, 0.4]):
+        t = Thread(target=worker, args=(i, timeout))
+        t.start()
+        ts.append(t)
+
+    for t in ts:
+        t.join()
+
+    sleep(0.2)
+    assert set(results) == set([0, 1, 3, 4])
+    assert len(p._pool) == 2  # no connection was lost
+
+
+@pytest.mark.slow
 def test_queue_timeout_override(dsn):
     p = pool.ConnectionPool(dsn, minconn=2, timeout=0.1)
     results = []
