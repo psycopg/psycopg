@@ -1,7 +1,8 @@
 import logging
 import weakref
-from time import monotonic, sleep, time
+from time import sleep, time
 from threading import Thread
+from collections import Counter
 
 import pytest
 
@@ -64,10 +65,20 @@ def test_connection_not_lost(dsn):
 @pytest.mark.slow
 def test_concurrent_filling(dsn, monkeypatch):
     delay_connection(monkeypatch, 0.1)
-    t0 = monotonic()
-    p = pool.ConnectionPool(dsn, minconn=5, num_workers=2)
-    times = [item[1] - t0 for item in p._pool]
+    t0 = time()
+    times = []
+
+    add_to_pool_orig = pool.ConnectionPool._add_to_pool
+
+    def _add_to_pool_time(self, conn):
+        times.append(time() - t0)
+        add_to_pool_orig(self, conn)
+
+    monkeypatch.setattr(pool.ConnectionPool, "_add_to_pool", _add_to_pool_time)
+
+    pool.ConnectionPool(dsn, minconn=5, num_workers=2)
     want_times = [0.1, 0.1, 0.2, 0.2, 0.3]
+    assert len(times) == len(want_times)
     for got, want in zip(times, want_times):
         assert got == pytest.approx(want, 0.1), times
 
@@ -472,14 +483,24 @@ def test_grow(dsn, monkeypatch):
 
 @pytest.mark.slow
 def test_shrink(dsn, monkeypatch):
-    p = pool.ConnectionPool(
-        dsn, minconn=2, maxconn=4, num_workers=3, max_idle=0.2
-    )
+
+    orig_run = pool.ShrinkPool._run
+    results = []
+
+    def run_hacked(self, pool):
+        n0 = pool._nconns
+        orig_run(self, pool)
+        n1 = pool._nconns
+        results.append((n0, n1))
+
+    monkeypatch.setattr(pool.ShrinkPool, "_run", run_hacked)
+
+    p = pool.ConnectionPool(dsn, minconn=2, maxconn=4, max_idle=0.2)
     assert p.max_idle == 0.2
 
     def worker(n):
         with p.connection() as conn:
-            conn.execute("select 1 from pg_sleep(0.2)")
+            conn.execute("select pg_sleep(0.1)")
 
     ts = []
     for i in range(4):
@@ -490,19 +511,8 @@ def test_shrink(dsn, monkeypatch):
     for t in ts:
         t.join()
 
-    wait_pool_full(p)
-    assert len(p._pool) == 4
-
-    t0 = time()
-    t = None
-    while time() < t0 + 0.4:
-        with p.connection():
-            sleep(0.01)
-            if p._nconns < 4:
-                t = time() - t0
-                break
-
-    assert t == pytest.approx(0.2, 0.1)
+    sleep(1)
+    assert results == [(4, 4), (4, 3), (3, 2), (2, 2), (2, 2)]
 
 
 @pytest.mark.slow
@@ -577,6 +587,19 @@ def test_reconnect_failure(proxy):
         conn.execute("select 1")
     t1 = time()
     assert t1 - t0 < 0.2
+
+
+@pytest.mark.slow
+def test_uniform_use(dsn):
+    p = pool.ConnectionPool(dsn, minconn=4)
+    counts = Counter()
+    for i in range(8):
+        with p.connection() as conn:
+            sleep(0.1)
+            counts[id(conn)] += 1
+
+    assert len(counts) == 4
+    assert set(counts.values()) == set([2])
 
 
 def delay_connection(monkeypatch, sec):
