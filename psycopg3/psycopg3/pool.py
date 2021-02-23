@@ -97,12 +97,14 @@ class ConnectionPool:
         self._wqueue: "Queue[MaintenanceTask]" = Queue()
         self._workers: List[threading.Thread] = []
         for i in range(num_workers):
-            t = threading.Thread(target=self.worker, args=(self._wqueue,))
-            t.daemon = True
+            t = threading.Thread(
+                target=self.worker, args=(self._wqueue,), daemon=True
+            )
             self._workers.append(t)
 
-        self._sched_runner = threading.Thread(target=self._sched.run)
-        self._sched_runner.daemon = True
+        self._sched_runner = threading.Thread(
+            target=self._sched.run, daemon=True
+        )
 
         # _close should be the last property to be set in the state
         # to avoid warning on __del__ in case __init__ fails.
