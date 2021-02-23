@@ -11,3 +11,34 @@ def test_dict_row(conn):
     assert cur.nextset()
     assert cur.fetchall() == [{"number": 1}]
     assert not cur.nextset()
+
+
+def test_namedtuple_row(conn):
+    cur = conn.cursor(row_factory=rows.namedtuple_row)
+    cur.execute("select 'bob' as name, 3 as id")
+    (person1,) = cur.fetchall()
+    assert f"{person1.name} {person1.id}" == "bob 3"
+
+    ci1 = rows._make_nt.cache_info()
+    assert ci1.hits == 0 and ci1.misses == 1
+
+    cur.execute("select 'alice' as name, 1 as id")
+    (person2,) = cur.fetchall()
+    assert type(person2) is type(person1)
+
+    ci2 = rows._make_nt.cache_info()
+    assert ci2.hits == 1 and ci2.misses == 1
+
+    cur.execute("select 'foo', 1 as id")
+    (r0,) = cur.fetchall()
+    assert r0.f_column_ == "foo"
+    assert r0.id == 1
+
+    cur.execute("select 'a' as letter; select 1 as number")
+    (r1,) = cur.fetchall()
+    assert r1.letter == "a"
+    assert cur.nextset()
+    (r2,) = cur.fetchall()
+    assert r2.number == 1
+    assert not cur.nextset()
+    assert type(r1) is not type(r2)

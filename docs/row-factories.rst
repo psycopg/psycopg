@@ -58,3 +58,4 @@ Module `psycopg3.rows` contains available row factories:
 .. currentmodule:: psycopg3.rows
 
 .. autofunction:: dict_row
+.. autofunction:: namedtuple_row
