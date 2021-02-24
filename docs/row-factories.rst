@@ -18,19 +18,19 @@ This can be implemented as a class, for instance:
 
    class DictRowFactory:
        def __init__(self, cursor):
-           self.cursor = cursor
+           self.fields = [c.name for c in cursor.description]
 
        def __call__(self, values):
-           fields = (c.name for c in self.cursor.description)
-           return dict(zip(fields, values))
+           return dict(zip(self.fields, values))
 
 or as a plain function:
 
 .. code:: python
 
    def dict_row_factory(cursor):
+       fields = [c.name for c in cursor.description]
+
        def make_row(values):
-           fields = (c.name for c in cursor.description)
            return dict(zip(fields, values))
 
        return make_row
