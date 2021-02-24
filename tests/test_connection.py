@@ -482,9 +482,6 @@ def test_execute(conn):
     cur = conn.execute("select 12, 22")
     assert cur.fetchone() == (12, 22)
 
-    cur = conn.execute("select 1, 2, 1, 2", row_factory=lambda cur: set)
-    assert cur.fetchone() == {1, 2}
-
 
 def test_row_factory(dsn):
     conn = Connection.connect(dsn, row_factory=my_row_factory)
@@ -492,9 +489,6 @@ def test_row_factory(dsn):
 
     cur = conn.execute("select 'a' as ve")
     assert cur.fetchone() == ["Ave"]
-
-    cur = conn.execute("select 'a' as ve", row_factory=None)
-    assert cur.fetchone() == ("a",)
 
     with conn.cursor(row_factory=lambda c: set) as cur:
         cur.execute("select 1, 1, 2")

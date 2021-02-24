@@ -36,8 +36,8 @@ or as a plain function:
        return make_row
 
 These can then be used by specifying a `row_factory` argument in
-`Connection.connect()`, `Connection.cursor()`, `Cursor.execute()` and
-`Connection.execute()` or by writting to `Connection.row_factory` attribute.
+`Connection.connect()`, `Connection.cursor()`, or by writing to
+`Connection.row_factory` attribute.
 
 .. code:: python
 

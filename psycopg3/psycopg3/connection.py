@@ -503,12 +503,9 @@ class Connection(BaseConnection):
         params: Optional[Params] = None,
         *,
         prepare: Optional[bool] = None,
-        row_factory: Optional[RowFactory] = _null_row_factory,
     ) -> Cursor:
         """Execute a query and return a cursor to read its results."""
-        if row_factory is _null_row_factory:
-            row_factory = self.row_factory
-        cur = self.cursor(row_factory=row_factory)
+        cur = self.cursor()
         return cur.execute(query, params, prepare=prepare)
 
     def commit(self) -> None:
@@ -675,11 +672,8 @@ class AsyncConnection(BaseConnection):
         params: Optional[Params] = None,
         *,
         prepare: Optional[bool] = None,
-        row_factory: Optional[RowFactory] = _null_row_factory,
     ) -> AsyncCursor:
-        if row_factory is _null_row_factory:
-            row_factory = self.row_factory
-        cur = self.cursor(row_factory=row_factory)
+        cur = self.cursor()
         return await cur.execute(query, params, prepare=prepare)
 
     async def commit(self) -> None:

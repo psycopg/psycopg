@@ -65,7 +65,7 @@ The `!Connection` class
         .. note:: You can use :ref:`with conn.cursor(): ...<usage>`
             to close the cursor automatically when the block is exited.
 
-    .. automethod:: execute(query, params=None, prepare=None, row_factory=None) -> Cursor
+    .. automethod:: execute(query, params=None, prepare=None) -> Cursor
 
         :param query: The query to execute.
         :type query: `!str`, `!bytes`, or `sql.Composable`
@@ -74,9 +74,6 @@ The `!Connection` class
         :param prepare: Force (`!True`) or disallow (`!False`) preparation of
             the query. By default (`!None`) prepare automatically. See
             :ref:`prepared-statements`.
-        :param row_factory: Optional row factory to form result's row. See
-            :ref:`row-factories` for details.
-        :type row_factory: `Callable[[Cursor], Callable[[Sequence[Any]], Any]]`
 
         The cursor is what returned calling `cursor()` without parameters. The
         parameters are passed to its `~Cursor.execute()` and the cursor is
@@ -211,7 +208,7 @@ The `!AsyncConnection` class
         .. note:: You can use ``async with conn.cursor() as cur: ...`` to
             close the cursor automatically when the block is exited.
 
-    .. automethod:: execute(query, params=None, prepare=None, row_factory=None) -> AsyncCursor
+    .. automethod:: execute(query, params=None, prepare=None) -> AsyncCursor
     .. automethod:: commit
     .. automethod:: rollback
 

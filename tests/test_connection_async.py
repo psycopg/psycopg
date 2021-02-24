@@ -500,9 +500,6 @@ async def test_execute(aconn):
     cur = await aconn.execute("select 12, 22")
     assert await cur.fetchone() == (12, 22)
 
-    cur = await aconn.execute("select 1, 2, 1, 2", row_factory=lambda cur: set)
-    assert await cur.fetchone() == {1, 2}
-
 
 async def test_row_factory(dsn):
     conn = await AsyncConnection.connect(dsn, row_factory=my_row_factory)
@@ -510,9 +507,6 @@ async def test_row_factory(dsn):
 
     cur = await conn.execute("select 'a' as ve")
     assert await cur.fetchone() == ["Ave"]
-
-    cur = await conn.execute("select 'a' as ve", row_factory=None)
-    assert await cur.fetchone() == ("a",)
 
     async with conn.cursor(row_factory=lambda c: set) as cur:
         await cur.execute("select 1, 1, 2")
