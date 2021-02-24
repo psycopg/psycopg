@@ -1,6 +1,16 @@
 from psycopg3 import rows
 
 
+def test_tuple_row(conn):
+    conn.row_factory = rows.dict_row
+    assert conn.execute("select 1 as a").fetchone() == {"a": 1}
+    cur = conn.cursor(row_factory=rows.tuple_row)
+    row = cur.execute("select 1 as a").fetchone()
+    assert row == (1,)
+    assert type(row) is tuple
+    assert cur._tx.make_row is tuple
+
+
 def test_dict_row(conn):
     cur = conn.cursor(row_factory=rows.dict_row)
     cur.execute("select 'bob' as name, 3 as id")
