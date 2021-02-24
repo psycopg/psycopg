@@ -8,12 +8,12 @@ from . import pq
 from . import types
 from .copy import Copy, AsyncCopy
 from .adapt import global_adapters
-from .cursor import AsyncCursor, Cursor
+from .cursor import AsyncCursor, Cursor, BaseCursor
 from .errors import Warning, Error, InterfaceError, DatabaseError
 from .errors import DataError, OperationalError, IntegrityError
 from .errors import InternalError, ProgrammingError, NotSupportedError
 from ._column import Column
-from .connection import AsyncConnection, Connection, Notify
+from .connection import BaseConnection, AsyncConnection, Connection, Notify
 from .transaction import Rollback, Transaction, AsyncTransaction
 from .server_cursor import AsyncServerCursor, ServerCursor
 
@@ -38,11 +38,14 @@ BinaryDumper.register(Binary, global_adapters)  # dbapi20
 # this is the canonical place to obtain them and should be used by MyPy too,
 # so that function signatures are consistent with the documentation.
 __all__ = [
+    "__version__",
     "AsyncConnection",
     "AsyncCopy",
     "AsyncCursor",
     "AsyncServerCursor",
     "AsyncTransaction",
+    "BaseConnection",
+    "BaseCursor",
     "Column",
     "Connection",
     "Copy",
@@ -51,4 +54,19 @@ __all__ = [
     "Rollback",
     "ServerCursor",
     "Transaction",
+    # DBAPI exports
+    "connect",
+    "apilevel",
+    "threadsafety",
+    "paramstyle",
+    "Warning",
+    "Error",
+    "InterfaceError",
+    "DatabaseError",
+    "DataError",
+    "OperationalError",
+    "IntegrityError",
+    "InternalError",
+    "ProgrammingError",
+    "NotSupportedError",
 ]
