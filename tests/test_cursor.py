@@ -8,6 +8,7 @@ import pytest
 import psycopg3
 from psycopg3 import sql
 from psycopg3.oids import postgres_types as builtins
+from psycopg3.rows import dict_row
 from psycopg3.adapt import Format
 
 
@@ -296,7 +297,10 @@ def test_row_factory(conn):
     assert cur.fetchall() == [["Xx"]]
     assert cur.nextset()
     assert cur.fetchall() == [["Yy", "Zz"]]
-    assert cur.nextset() is None
+
+    cur.scroll(-1)
+    cur.row_factory = dict_row
+    assert cur.fetchone() == {"y": "y", "z": "z"}
 
 
 def test_scroll(conn):

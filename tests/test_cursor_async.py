@@ -5,6 +5,7 @@ import datetime as dt
 
 import psycopg3
 from psycopg3 import sql
+from psycopg3.rows import dict_row
 from psycopg3.adapt import Format
 from .test_cursor import my_row_factory
 
@@ -302,7 +303,10 @@ async def test_row_factory(aconn):
     assert await cur.fetchall() == [["Xx"]]
     assert cur.nextset()
     assert await cur.fetchall() == [["Yy", "Zz"]]
-    assert cur.nextset() is None
+
+    await cur.scroll(-1)
+    cur.row_factory = dict_row
+    assert await cur.fetchone() == {"y": "y", "z": "z"}
 
 
 async def test_scroll(aconn):

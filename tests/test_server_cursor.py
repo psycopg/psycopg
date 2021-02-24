@@ -2,6 +2,7 @@ import pytest
 
 from psycopg3 import errors as e
 from psycopg3.pq import Format
+from psycopg3.rows import dict_row
 
 
 def test_funny_name(conn):
@@ -159,7 +160,7 @@ def test_row_factory(conn):
         return lambda values: [n] + [-v for v in values]
 
     cur = conn.cursor("foo", row_factory=my_row_factory)
-    cur.execute("select generate_series(1, 3)", scrollable=True)
+    cur.execute("select generate_series(1, 3) as x", scrollable=True)
     rows = cur.fetchall()
     cur.scroll(0, "absolute")
     while 1:
@@ -168,6 +169,10 @@ def test_row_factory(conn):
             break
         rows.append(row)
     assert rows == [[1, -1], [1, -2], [1, -3]] * 2
+
+    cur.scroll(0, "absolute")
+    cur.row_factory = dict_row
+    assert cur.fetchone() == {"x": 1}
 
 
 def test_rownumber(conn):

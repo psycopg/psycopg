@@ -1,6 +1,7 @@
 import pytest
 
 from psycopg3 import errors as e
+from psycopg3.rows import dict_row
 from psycopg3.pq import Format
 
 pytestmark = pytest.mark.asyncio
@@ -161,7 +162,7 @@ async def test_row_factory(aconn):
         return lambda values: [n] + [-v for v in values]
 
     cur = aconn.cursor("foo", row_factory=my_row_factory)
-    await cur.execute("select generate_series(1, 3)", scrollable=True)
+    await cur.execute("select generate_series(1, 3) as x", scrollable=True)
     rows = await cur.fetchall()
     await cur.scroll(0, "absolute")
     while 1:
@@ -170,6 +171,10 @@ async def test_row_factory(aconn):
             break
         rows.append(row)
     assert rows == [[1, -1], [1, -2], [1, -3]] * 2
+
+    await cur.scroll(0, "absolute")
+    cur.row_factory = dict_row
+    assert await cur.fetchone() == {"x": 1}
 
 
 async def test_rownumber(aconn):

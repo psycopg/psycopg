@@ -51,7 +51,7 @@ class BaseCursor(Generic[ConnectionType]):
     # https://bugs.python.org/issue41451
     if sys.version_info >= (3, 7):
         __slots__ = """
-            _conn format _adapters arraysize _closed _results _pgresult _pos
+            _conn format _adapters arraysize _closed _results pgresult _pos
             _iresult _rowcount _pgq _tx _last_query _row_factory
             __weakref__
             """.split()
@@ -78,7 +78,8 @@ class BaseCursor(Generic[ConnectionType]):
 
     def _reset(self) -> None:
         self._results: List["PGresult"] = []
-        self._pgresult: Optional["PGresult"] = None
+        self.pgresult: Optional["PGresult"] = None
+        """The `~psycopg3.pq.PGresult` exposed by the cursor."""
         self._pos = 0
         self._iresult = 0
         self._rowcount = -1
@@ -89,10 +90,10 @@ class BaseCursor(Generic[ConnectionType]):
         info = pq.misc.connection_summary(self._conn.pgconn)
         if self._closed:
             status = "closed"
-        elif not self._pgresult:
-            status = "no result"
+        elif self.pgresult:
+            status = pq.ExecStatus(self.pgresult.status).name
         else:
-            status = pq.ExecStatus(self._pgresult.status).name
+            status = "no result"
         return f"<{cls} [{status}] {info} at 0x{id(self):x}>"
 
     @property
@@ -126,15 +127,6 @@ class BaseCursor(Generic[ConnectionType]):
         return self._pgq.params if self._pgq else None
 
     @property
-    def pgresult(self) -> Optional["PGresult"]:
-        """The `~psycopg3.pq.PGresult` exposed by the cursor."""
-        return self._pgresult
-
-    @pgresult.setter
-    def pgresult(self, result: Optional["PGresult"]) -> None:
-        self._pgresult = result
-
-    @property
     def description(self) -> Optional[List[Column]]:
         """
         A list of `Column` objects describing the current resultset.
@@ -157,7 +149,7 @@ class BaseCursor(Generic[ConnectionType]):
 
         `!None` if there is no result to fetch.
         """
-        return self._pos if self._pgresult else None
+        return self._pos if self.pgresult else None
 
     def setinputsizes(self, sizes: Sequence[Any]) -> None:
         # no-op
@@ -185,6 +177,16 @@ class BaseCursor(Generic[ConnectionType]):
             return True
         else:
             return None
+
+    @property
+    def row_factory(self) -> RowFactory:
+        return self._row_factory
+
+    @row_factory.setter
+    def row_factory(self, row_factory: RowFactory) -> None:
+        self._row_factory = row_factory
+        if self.pgresult:
+            self._tx.make_row = row_factory(self)
 
     #
     # Generators for the high level operations on the cursor

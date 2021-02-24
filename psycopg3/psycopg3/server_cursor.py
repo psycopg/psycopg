@@ -40,10 +40,10 @@ class ServerCursorHelper(Generic[ConnectionType]):
         info = pq.misc.connection_summary(cur._conn.pgconn)
         if cur._closed:
             status = "closed"
-        elif not cur._pgresult:
+        elif not cur.pgresult:
             status = "no result"
         else:
-            status = pq.ExecStatus(cur._pgresult.status).name
+            status = pq.ExecStatus(cur.pgresult.status).name
         return f"<{cls} {self.name!r} [{status}] {info} at 0x{id(cur):x}>"
 
     def _declare_gen(
