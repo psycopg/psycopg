@@ -79,7 +79,6 @@ class BaseCursor(Generic[ConnectionType]):
     def _reset(self) -> None:
         self._results: List["PGresult"] = []
         self.pgresult: Optional["PGresult"] = None
-        """The `~psycopg3.pq.PGresult` exposed by the cursor."""
         self._pos = 0
         self._iresult = 0
         self._rowcount = -1

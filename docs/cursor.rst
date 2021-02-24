@@ -132,7 +132,11 @@ The `!Cursor` class
     .. automethod:: fetchall
     .. automethod:: nextset
     .. automethod:: scroll
-    .. autoattribute:: pgresult
+    .. attribute:: pgresult
+        :type: Optional[psycopg3.pq.PGresult]
+
+        The result returned by the last query and currently exposed by the
+        cursor, if available, else `!None`.
 
 
     .. rubric:: Information about the data
