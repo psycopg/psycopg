@@ -38,7 +38,7 @@ class Transformer(AdaptContext):
     __module__ = "psycopg3.adapt"
     _adapters: "AdaptersMap"
     _pgresult: Optional["PGresult"] = None
-    make_row: Optional[RowMaker] = None
+    make_row: RowMaker = tuple
 
     def __init__(self, context: Optional[AdaptContext] = None):
 
@@ -172,19 +172,14 @@ class Transformer(AdaptContext):
                 f"rows must be included between 0 and {self._ntuples}"
             )
 
-        records: List[Row]
-        records = [None] * (row1 - row0)  # type: ignore[list-item]
-        if self.make_row:
-            mkrow = self.make_row
-        else:
-            mkrow = tuple
+        records: List[Row] = []
         for row in range(row0, row1):
             record: List[Any] = [None] * self._nfields
             for col in range(self._nfields):
                 val = res.get_value(row, col)
                 if val is not None:
                     record[col] = self._row_loaders[col](val)
-            records[row - row0] = mkrow(record)
+            records.append(self.make_row(record))
 
         return records
 
@@ -202,7 +197,7 @@ class Transformer(AdaptContext):
             if val is not None:
                 record[col] = self._row_loaders[col](val)
 
-        return self.make_row(record) if self.make_row else tuple(record)
+        return self.make_row(record)  # type: ignore[no-any-return]
 
     def load_sequence(
         self, record: Sequence[Optional[bytes]]

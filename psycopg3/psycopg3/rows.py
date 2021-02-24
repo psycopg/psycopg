@@ -7,7 +7,7 @@ psycopg3 row factories
 import functools
 import re
 from collections import namedtuple
-from typing import Any, Callable, Dict, Sequence, Type, NamedTuple
+from typing import Any, Callable, Dict, NamedTuple, Sequence, Tuple, Type
 from typing import TYPE_CHECKING
 
 from . import errors as e
@@ -16,14 +16,16 @@ if TYPE_CHECKING:
     from .cursor import BaseCursor
 
 
-def tuple_row(cursor: "BaseCursor[Any]") -> None:
+def tuple_row(
+    cursor: "BaseCursor[Any]",
+) -> Callable[[Sequence[Any]], Tuple[Any, ...]]:
     """Row factory to represent rows as simple tuples.
 
     This is the default factory.
     """
-    # Implementation detail: just return None instead of a callable because
-    # the Transformer knows how to use this value.
-    return None
+    # Implementation detail: make sure this is the tuple type itself, not an
+    # equivalent function, because the C code fast-paths on it.
+    return tuple
 
 
 def dict_row(

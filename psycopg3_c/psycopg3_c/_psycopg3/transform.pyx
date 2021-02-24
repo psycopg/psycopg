@@ -83,7 +83,7 @@ cdef class Transformer:
     cdef int _nfields, _ntuples
     cdef list _row_dumpers
     cdef list _row_loaders
-    cdef object _make_row
+    cdef public object make_row
 
     def __cinit__(self, context: Optional["AdaptContext"] = None):
         if context is not None:
@@ -93,14 +93,6 @@ cdef class Transformer:
             from psycopg3.adapt import global_adapters
             self.adapters = global_adapters
             self.connection = None
-
-    @property
-    def make_row(self) -> Optional[RowMaker]:
-        return self._make_row
-
-    @make_row.setter
-    def make_row(self, row_maker: Optional[RowMaker]) -> None:
-        self._make_row = row_maker
 
     @property
     def pgresult(self) -> Optional[PGresult]:
@@ -342,8 +334,10 @@ cdef class Transformer:
                     Py_INCREF(pyval)
                     PyTuple_SET_ITEM(<object>brecord, col, pyval)
 
-        if self.make_row:
-            return list(map(self.make_row, records))
+        cdef object make_row = self.make_row
+        if make_row is not tuple:
+            for i in range(len(records)):
+                records[i] = make_row(records[i])
         return records
 
     def load_row(self, int row) -> Optional[Row]:
@@ -385,8 +379,9 @@ cdef class Transformer:
             Py_INCREF(pyval)
             PyTuple_SET_ITEM(record, col, pyval)
 
-        if self.make_row:
-            return self.make_row(record)
+        cdef object make_row = self.make_row
+        if make_row is not tuple:
+            record = make_row(record)
         return record
 
     cpdef object load_sequence(self, record: Sequence[Optional[bytes]]):

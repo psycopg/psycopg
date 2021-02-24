@@ -56,7 +56,7 @@ class RowMaker(Protocol):
 
 
 class RowFactory(Protocol):
-    def __call__(self, __cursor: "BaseCursor[Any]") -> Optional[RowMaker]:
+    def __call__(self, __cursor: "BaseCursor[Any]") -> RowMaker:
         ...
 
 
@@ -86,10 +86,10 @@ class AdaptContext(Protocol):
 
 
 class Transformer(Protocol):
-    make_row: Optional[RowMaker] = None
-
     def __init__(self, context: Optional[AdaptContext] = None):
         ...
+
+    make_row: RowMaker
 
     @property
     def connection(self) -> Optional["BaseConnection"]:
