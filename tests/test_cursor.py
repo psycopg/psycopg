@@ -404,6 +404,14 @@ def test_stream_sql(conn):
     assert recs == [(1, dt.date(2021, 1, 2)), (2, dt.date(2021, 1, 3))]
 
 
+def test_stream_row_factory(conn):
+    cur = conn.cursor(row_factory=rows.dict_row)
+    it = iter(cur.stream("select generate_series(1,2) as a"))
+    assert next(it)["a"] == 1
+    cur.row_factory = rows.namedtuple_row
+    assert next(it).a == 2
+
+
 @pytest.mark.parametrize(
     "query",
     [

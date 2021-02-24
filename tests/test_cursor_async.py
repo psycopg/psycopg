@@ -410,6 +410,14 @@ async def test_stream_sql(aconn):
     assert recs == [(1, dt.date(2021, 1, 2)), (2, dt.date(2021, 1, 3))]
 
 
+async def test_stream_row_factory(aconn):
+    cur = aconn.cursor(row_factory=rows.dict_row)
+    ait = cur.stream("select generate_series(1,2) as a")
+    assert (await ait.__anext__())["a"] == 1
+    cur.row_factory = rows.namedtuple_row
+    assert (await ait.__anext__()).a == 2
+
+
 @pytest.mark.parametrize(
     "query",
     [
