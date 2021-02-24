@@ -4,8 +4,7 @@ import weakref
 import datetime as dt
 
 import psycopg3
-from psycopg3 import sql
-from psycopg3.rows import dict_row
+from psycopg3 import sql, rows
 from psycopg3.adapt import Format
 from .test_cursor import my_row_factory
 
@@ -305,7 +304,7 @@ async def test_row_factory(aconn):
     assert await cur.fetchall() == [["Yy", "Zz"]]
 
     await cur.scroll(-1)
-    cur.row_factory = dict_row
+    cur.row_factory = rows.dict_row
     assert await cur.fetchone() == {"y": "y", "z": "z"}
 
 
@@ -444,15 +443,21 @@ async def test_str(aconn):
 @pytest.mark.slow
 @pytest.mark.parametrize("fmt", [Format.AUTO, Format.TEXT, Format.BINARY])
 @pytest.mark.parametrize("fetch", ["one", "many", "all", "iter"])
-async def test_leak(dsn, faker, fmt, fetch):
+@pytest.mark.parametrize(
+    "row_factory", ["tuple_row", "dict_row", "namedtuple_row"]
+)
+async def test_leak(dsn, faker, fmt, fetch, row_factory):
     faker.format = fmt
     faker.choose_schema(ncols=5)
     faker.make_records(10)
+    row_factory = getattr(rows, row_factory)
 
     n = []
     for i in range(3):
         async with await psycopg3.AsyncConnection.connect(dsn) as conn:
-            async with conn.cursor(binary=Format.as_pq(fmt)) as cur:
+            async with conn.cursor(
+                binary=Format.as_pq(fmt), row_factory=row_factory
+            ) as cur:
                 await cur.execute(faker.drop_stmt)
                 await cur.execute(faker.create_stmt)
                 await cur.executemany(faker.insert_stmt, faker.records)

@@ -9,7 +9,7 @@ too many temporary Python objects and performing less memory copying.
 # Copyright (C) 2020-2021 The Psycopg Team
 
 cimport cython
-from cpython.ref cimport Py_INCREF
+from cpython.ref cimport Py_INCREF, Py_DECREF
 from cpython.set cimport PySet_Add, PySet_Contains
 from cpython.dict cimport PyDict_GetItem, PyDict_SetItem
 from cpython.list cimport (
@@ -336,8 +336,13 @@ cdef class Transformer:
 
         cdef object make_row = self.make_row
         if make_row is not tuple:
-            for i in range(len(records)):
-                records[i] = make_row(records[i])
+            for i in range(row1 - row0):
+                brecord = PyList_GET_ITEM(records, i)
+                record = PyObject_CallFunctionObjArgs(
+                    make_row, <PyObject *>brecord, NULL)
+                Py_INCREF(record)
+                PyList_SET_ITEM(records, i, record)
+                Py_DECREF(<object>brecord)
         return records
 
     def load_row(self, int row) -> Optional[Row]:
@@ -381,7 +386,8 @@ cdef class Transformer:
 
         cdef object make_row = self.make_row
         if make_row is not tuple:
-            record = make_row(record)
+            record = PyObject_CallFunctionObjArgs(
+                make_row, <PyObject *>record, NULL)
         return record
 
     cpdef object load_sequence(self, record: Sequence[Optional[bytes]]):

@@ -6,9 +6,8 @@ import datetime as dt
 import pytest
 
 import psycopg3
-from psycopg3 import sql
+from psycopg3 import sql, rows
 from psycopg3.oids import postgres_types as builtins
-from psycopg3.rows import dict_row
 from psycopg3.adapt import Format
 
 
@@ -299,7 +298,7 @@ def test_row_factory(conn):
     assert cur.fetchall() == [["Yy", "Zz"]]
 
     cur.scroll(-1)
-    cur.row_factory = dict_row
+    cur.row_factory = rows.dict_row
     assert cur.fetchone() == {"y": "y", "z": "z"}
 
 
@@ -530,15 +529,21 @@ def test_str(conn):
 @pytest.mark.slow
 @pytest.mark.parametrize("fmt", [Format.AUTO, Format.TEXT, Format.BINARY])
 @pytest.mark.parametrize("fetch", ["one", "many", "all", "iter"])
-def test_leak(dsn, faker, fmt, fetch):
+@pytest.mark.parametrize(
+    "row_factory", ["tuple_row", "dict_row", "namedtuple_row"]
+)
+def test_leak(dsn, faker, fmt, fetch, row_factory):
     faker.format = fmt
     faker.choose_schema(ncols=5)
     faker.make_records(10)
+    row_factory = getattr(rows, row_factory)
 
     n = []
     for i in range(3):
         with psycopg3.connect(dsn) as conn:
-            with conn.cursor(binary=Format.as_pq(fmt)) as cur:
+            with conn.cursor(
+                binary=Format.as_pq(fmt), row_factory=row_factory
+            ) as cur:
                 cur.execute(faker.drop_stmt)
                 cur.execute(faker.create_stmt)
                 cur.executemany(faker.insert_stmt, faker.records)
