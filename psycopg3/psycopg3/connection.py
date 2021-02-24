@@ -28,6 +28,7 @@ from . import waiting
 from . import encodings
 from .pq import ConnStatus, ExecStatus, TransactionStatus, Format
 from .sql import Composable
+from .rows import tuple_row
 from .proto import PQGen, PQGenConn, RV, RowFactory, Query, Params
 from .proto import AdaptContext, ConnectionType
 from .cursor import Cursor, AsyncCursor
@@ -78,9 +79,6 @@ NoticeHandler = Callable[[e.Diagnostic], None]
 NotifyHandler = Callable[[Notify], None]
 
 
-_null_row_factory: RowFactory = object()  # type: ignore[assignment]
-
-
 class BaseConnection(AdaptContext):
     """
     Base class for different types of connections.
@@ -105,7 +103,7 @@ class BaseConnection(AdaptContext):
     ConnStatus = pq.ConnStatus
     TransactionStatus = pq.TransactionStatus
 
-    row_factory: Optional[RowFactory] = None
+    row_factory: RowFactory = tuple_row
 
     def __init__(self, pgconn: "PGconn"):
         self.pgconn = pgconn  # TODO: document this
@@ -317,7 +315,7 @@ class BaseConnection(AdaptContext):
         conninfo: str = "",
         *,
         autocommit: bool = False,
-        row_factory: Optional[RowFactory] = None,
+        row_factory: RowFactory,
         **kwargs: Any,
     ) -> PQGenConn[ConnectionType]:
         """Generator to connect to the database and create a new instance."""
@@ -416,7 +414,7 @@ class Connection(BaseConnection):
         conninfo: str = "",
         *,
         autocommit: bool = False,
-        row_factory: Optional[RowFactory] = None,
+        row_factory: RowFactory = tuple_row,
         **kwargs: Any,
     ) -> "Connection":
         """
@@ -482,13 +480,13 @@ class Connection(BaseConnection):
         name: str = "",
         *,
         binary: bool = False,
-        row_factory: Optional[RowFactory] = _null_row_factory,
+        row_factory: Optional[RowFactory] = None,
     ) -> Union[Cursor, ServerCursor]:
         """
         Return a new cursor to send commands and queries to the connection.
         """
         format = Format.BINARY if binary else Format.TEXT
-        if row_factory is _null_row_factory:
+        if not row_factory:
             row_factory = self.row_factory
         if name:
             return ServerCursor(
@@ -591,7 +589,7 @@ class AsyncConnection(BaseConnection):
         conninfo: str = "",
         *,
         autocommit: bool = False,
-        row_factory: Optional[RowFactory] = None,
+        row_factory: RowFactory = tuple_row,
         **kwargs: Any,
     ) -> "AsyncConnection":
         return await cls._wait_conn(
@@ -651,13 +649,13 @@ class AsyncConnection(BaseConnection):
         name: str = "",
         *,
         binary: bool = False,
-        row_factory: Optional[RowFactory] = _null_row_factory,
+        row_factory: Optional[RowFactory] = None,
     ) -> Union[AsyncCursor, AsyncServerCursor]:
         """
         Return a new `AsyncCursor` to send commands and queries to the connection.
         """
         format = Format.BINARY if binary else Format.TEXT
-        if row_factory is _null_row_factory:
+        if not row_factory:
             row_factory = self.row_factory
         if name:
             return AsyncServerCursor(

@@ -10,6 +10,7 @@ from threading import Thread
 import psycopg3
 from psycopg3 import encodings
 from psycopg3 import Connection, Notify
+from psycopg3.rows import tuple_row
 from psycopg3.errors import UndefinedTable
 from psycopg3.conninfo import conninfo_to_dict
 from .test_cursor import my_row_factory
@@ -484,8 +485,11 @@ def test_execute(conn):
 
 
 def test_row_factory(dsn):
+    conn = Connection.connect(dsn)
+    assert conn.row_factory is tuple_row
+
     conn = Connection.connect(dsn, row_factory=my_row_factory)
-    assert conn.row_factory
+    assert conn.row_factory is my_row_factory
 
     cur = conn.execute("select 'a' as ve")
     assert cur.fetchone() == ["Ave"]
@@ -494,11 +498,11 @@ def test_row_factory(dsn):
         cur.execute("select 1, 1, 2")
         assert cur.fetchall() == [{1, 2}]
 
-    with conn.cursor(row_factory=None) as cur:
+    with conn.cursor(row_factory=tuple_row) as cur:
         cur.execute("select 1, 1, 2")
         assert cur.fetchall() == [(1, 1, 2)]
 
-    conn.row_factory = None
+    conn.row_factory = tuple_row
     cur = conn.execute("select 'vale'")
     assert cur.fetchone() == ("vale",)
 

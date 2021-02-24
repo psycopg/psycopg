@@ -56,7 +56,9 @@ class RowMaker(Protocol):
 
 
 class RowFactory(Protocol):
-    def __call__(self, __cursor: "BaseCursor[ConnectionType]") -> RowMaker:
+    def __call__(
+        self, __cursor: "BaseCursor[ConnectionType]"
+    ) -> Optional[RowMaker]:
         ...
 
 

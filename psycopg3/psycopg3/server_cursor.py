@@ -12,6 +12,7 @@ from typing import Sequence, Type, Tuple, TYPE_CHECKING
 from . import pq
 from . import sql
 from . import errors as e
+from .rows import tuple_row
 from .cursor import BaseCursor, execute
 from .proto import ConnectionType, Query, Params, PQGen, Row, RowFactory
 
@@ -173,12 +174,11 @@ class ServerCursor(BaseCursor["Connection"]):
         name: str,
         *,
         format: pq.Format = pq.Format.TEXT,
-        row_factory: Optional[RowFactory] = None,
+        row_factory: RowFactory = tuple_row,
     ):
         super().__init__(connection, format=format, row_factory=row_factory)
-        self._helper: ServerCursorHelper["Connection"] = ServerCursorHelper(
-            name
-        )
+        self._helper: ServerCursorHelper["Connection"]
+        self._helper = ServerCursorHelper(name)
         self.itersize = DEFAULT_ITERSIZE
 
     def __del__(self) -> None:
@@ -295,7 +295,7 @@ class AsyncServerCursor(BaseCursor["AsyncConnection"]):
         name: str,
         *,
         format: pq.Format = pq.Format.TEXT,
-        row_factory: Optional[RowFactory] = None,
+        row_factory: RowFactory = tuple_row,
     ):
         super().__init__(connection, format=format, row_factory=row_factory)
         self._helper: ServerCursorHelper["AsyncConnection"]

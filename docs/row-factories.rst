@@ -53,9 +53,10 @@ passing another value at `Connection.cursor()`.
 Available row factories
 -----------------------
 
-Module `psycopg3.rows` contains available row factories:
+The module `psycopg3.rows` provides the implementation for a few row factories:
 
 .. currentmodule:: psycopg3.rows
 
+.. autofunction:: tuple_row
 .. autofunction:: dict_row
 .. autofunction:: namedtuple_row

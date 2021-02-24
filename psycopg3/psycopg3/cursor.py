@@ -17,6 +17,7 @@ from . import generators
 
 from .pq import ExecStatus, Format
 from .copy import Copy, AsyncCopy
+from .rows import tuple_row
 from .proto import ConnectionType, Query, Params, PQGen
 from .proto import Row, RowFactory
 from ._column import Column
@@ -64,7 +65,7 @@ class BaseCursor(Generic[ConnectionType]):
         connection: ConnectionType,
         *,
         format: Format = Format.TEXT,
-        row_factory: Optional[RowFactory] = None,
+        row_factory: RowFactory = tuple_row,
     ):
         self._conn = connection
         self.format = format
@@ -177,8 +178,7 @@ class BaseCursor(Generic[ConnectionType]):
         if self._iresult < len(self._results):
             self.pgresult = self._results[self._iresult]
             self._tx.set_pgresult(self._results[self._iresult])
-            if self._row_factory:
-                self._tx.make_row = self._row_factory(self)
+            self._tx.make_row = self._row_factory(self)
             self._pos = 0
             nrows = self.pgresult.command_tuples
             self._rowcount = nrows if nrows is not None else -1
@@ -280,7 +280,7 @@ class BaseCursor(Generic[ConnectionType]):
         elif res.status == ExecStatus.SINGLE_TUPLE:
             self.pgresult = res
             self._tx.set_pgresult(res, set_loaders=first)
-            if first and self._row_factory:
+            if first:
                 self._tx.make_row = self._row_factory(self)
             return res
 
@@ -384,8 +384,7 @@ class BaseCursor(Generic[ConnectionType]):
         self._results = list(results)
         self.pgresult = results[0]
         self._tx.set_pgresult(results[0])
-        if self._row_factory:
-            self._tx.make_row = self._row_factory(self)
+        self._tx.make_row = self._row_factory(self)
         nrows = self.pgresult.command_tuples
         if nrows is not None:
             if self._rowcount < 0:
