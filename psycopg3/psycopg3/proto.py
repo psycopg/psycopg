@@ -51,14 +51,12 @@ Row = TypeVar("Row", Tuple[Any, ...], Any)
 
 
 class RowMaker(Protocol):
-    def __call__(self, __values: Sequence[Any]) -> Row:
+    def __call__(self, __values: Sequence[Any]) -> Any:
         ...
 
 
 class RowFactory(Protocol):
-    def __call__(
-        self, __cursor: "BaseCursor[ConnectionType]"
-    ) -> Optional[RowMaker]:
+    def __call__(self, __cursor: "BaseCursor[Any]") -> Optional[RowMaker]:
         ...
 
 
