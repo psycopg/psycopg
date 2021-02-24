@@ -9,7 +9,7 @@ too many temporary Python objects and performing less memory copying.
 # Copyright (C) 2020-2021 The Psycopg Team
 
 cimport cython
-from cpython.ref cimport Py_INCREF
+from cpython.ref cimport Py_INCREF, Py_DECREF
 from cpython.set cimport PySet_Add, PySet_Contains
 from cpython.dict cimport PyDict_GetItem, PyDict_SetItem
 from cpython.list cimport (
@@ -24,6 +24,7 @@ from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 from psycopg3 import errors as e
 from psycopg3._enums import Format as Pg3Format
 from psycopg3.pq import Format as PqFormat
+from psycopg3.proto import Row, RowMaker
 
 # internal structure: you are not supposed to know this. But it's worth some
 # 10% of the innermost loop, so I'm willing to ask for forgiveness later...
@@ -82,6 +83,7 @@ cdef class Transformer:
     cdef int _nfields, _ntuples
     cdef list _row_dumpers
     cdef list _row_loaders
+    cdef public object make_row
 
     def __cinit__(self, context: Optional["AdaptContext"] = None):
         if context is not None:
@@ -272,7 +274,7 @@ cdef class Transformer:
 
         return ps, ts, fs
 
-    def load_rows(self, int row0, int row1) -> List[Tuple[Any, ...]]:
+    def load_rows(self, int row0, int row1) -> List[Row]:
         if self._pgresult is None:
             raise e.InterfaceError("result not set")
 
@@ -332,9 +334,18 @@ cdef class Transformer:
                     Py_INCREF(pyval)
                     PyTuple_SET_ITEM(<object>brecord, col, pyval)
 
+        cdef object make_row = self.make_row
+        if make_row is not tuple:
+            for i in range(row1 - row0):
+                brecord = PyList_GET_ITEM(records, i)
+                record = PyObject_CallFunctionObjArgs(
+                    make_row, <PyObject *>brecord, NULL)
+                Py_INCREF(record)
+                PyList_SET_ITEM(records, i, record)
+                Py_DECREF(<object>brecord)
         return records
 
-    def load_row(self, int row) -> Optional[Tuple[Any, ...]]:
+    def load_row(self, int row) -> Optional[Row]:
         if self._pgresult is None:
             return None
 
@@ -373,6 +384,10 @@ cdef class Transformer:
             Py_INCREF(pyval)
             PyTuple_SET_ITEM(record, col, pyval)
 
+        cdef object make_row = self.make_row
+        if make_row is not tuple:
+            record = PyObject_CallFunctionObjArgs(
+                make_row, <PyObject *>record, NULL)
         return record
 
     cpdef object load_sequence(self, record: Sequence[Optional[bytes]]):

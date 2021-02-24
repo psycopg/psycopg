@@ -11,7 +11,7 @@ from collections import defaultdict
 from . import pq
 from . import errors as e
 from .oids import INVALID_OID
-from .proto import LoadFunc, AdaptContext
+from .proto import LoadFunc, AdaptContext, Row, RowMaker
 from ._enums import Format
 
 if TYPE_CHECKING:
@@ -38,6 +38,7 @@ class Transformer(AdaptContext):
     __module__ = "psycopg3.adapt"
     _adapters: "AdaptersMap"
     _pgresult: Optional["PGresult"] = None
+    make_row: RowMaker = tuple
 
     def __init__(self, context: Optional[AdaptContext] = None):
 
@@ -161,7 +162,7 @@ class Transformer(AdaptContext):
             dumper = cache[key1] = dumper.upgrade(obj, format)
             return dumper
 
-    def load_rows(self, row0: int, row1: int) -> List[Tuple[Any, ...]]:
+    def load_rows(self, row0: int, row1: int) -> List[Row]:
         res = self._pgresult
         if not res:
             raise e.InterfaceError("result not set")
@@ -171,19 +172,18 @@ class Transformer(AdaptContext):
                 f"rows must be included between 0 and {self._ntuples}"
             )
 
-        records: List[Tuple[Any, ...]]
-        records = [None] * (row1 - row0)  # type: ignore[list-item]
+        records: List[Row] = []
         for row in range(row0, row1):
             record: List[Any] = [None] * self._nfields
             for col in range(self._nfields):
                 val = res.get_value(row, col)
                 if val is not None:
                     record[col] = self._row_loaders[col](val)
-            records[row - row0] = tuple(record)
+            records.append(self.make_row(record))
 
         return records
 
-    def load_row(self, row: int) -> Optional[Tuple[Any, ...]]:
+    def load_row(self, row: int) -> Optional[Row]:
         res = self._pgresult
         if not res:
             return None
@@ -197,7 +197,7 @@ class Transformer(AdaptContext):
             if val is not None:
                 record[col] = self._row_loaders[col](val)
 
-        return tuple(record)
+        return self.make_row(record)  # type: ignore[no-any-return]
 
     def load_sequence(
         self, record: Sequence[Optional[bytes]]

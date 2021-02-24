@@ -28,8 +28,9 @@ from . import waiting
 from . import encodings
 from .pq import ConnStatus, ExecStatus, TransactionStatus, Format
 from .sql import Composable
-from .proto import PQGen, PQGenConn, RV, Query, Params, AdaptContext
-from .proto import ConnectionType
+from .rows import tuple_row
+from .proto import PQGen, PQGenConn, RV, RowFactory, Query, Params
+from .proto import AdaptContext, ConnectionType
 from .cursor import Cursor, AsyncCursor
 from .conninfo import make_conninfo
 from .generators import notifies
@@ -101,6 +102,8 @@ class BaseConnection(AdaptContext):
     # Enums useful for the connection
     ConnStatus = pq.ConnStatus
     TransactionStatus = pq.TransactionStatus
+
+    row_factory: RowFactory = tuple_row
 
     def __init__(self, pgconn: "PGconn"):
         self.pgconn = pgconn  # TODO: document this
@@ -312,6 +315,7 @@ class BaseConnection(AdaptContext):
         conninfo: str = "",
         *,
         autocommit: bool = False,
+        row_factory: RowFactory,
         **kwargs: Any,
     ) -> PQGenConn[ConnectionType]:
         """Generator to connect to the database and create a new instance."""
@@ -319,6 +323,7 @@ class BaseConnection(AdaptContext):
         pgconn = yield from connect(conninfo)
         conn = cls(pgconn)
         conn._autocommit = autocommit
+        conn.row_factory = row_factory
         return conn
 
     def _exec_command(self, command: Query) -> PQGen["PGresult"]:
@@ -405,7 +410,12 @@ class Connection(BaseConnection):
 
     @classmethod
     def connect(
-        cls, conninfo: str = "", *, autocommit: bool = False, **kwargs: Any
+        cls,
+        conninfo: str = "",
+        *,
+        autocommit: bool = False,
+        row_factory: RowFactory = tuple_row,
+        **kwargs: Any,
     ) -> "Connection":
         """
         Connect to a database server and return a new `Connection` instance.
@@ -413,7 +423,12 @@ class Connection(BaseConnection):
         TODO: connection_timeout to be implemented.
         """
         return cls._wait_conn(
-            cls._connect_gen(conninfo, autocommit=autocommit, **kwargs)
+            cls._connect_gen(
+                conninfo,
+                autocommit=autocommit,
+                row_factory=row_factory,
+                **kwargs,
+            )
         )
 
     def __enter__(self) -> "Connection":
@@ -445,24 +460,40 @@ class Connection(BaseConnection):
         self.pgconn.finish()
 
     @overload
-    def cursor(self, *, binary: bool = False) -> Cursor:
+    def cursor(
+        self, *, binary: bool = False, row_factory: Optional[RowFactory] = None
+    ) -> Cursor:
         ...
 
     @overload
-    def cursor(self, name: str, *, binary: bool = False) -> ServerCursor:
+    def cursor(
+        self,
+        name: str,
+        *,
+        binary: bool = False,
+        row_factory: Optional[RowFactory] = None,
+    ) -> ServerCursor:
         ...
 
     def cursor(
-        self, name: str = "", *, binary: bool = False
+        self,
+        name: str = "",
+        *,
+        binary: bool = False,
+        row_factory: Optional[RowFactory] = None,
     ) -> Union[Cursor, ServerCursor]:
         """
         Return a new cursor to send commands and queries to the connection.
         """
         format = Format.BINARY if binary else Format.TEXT
+        if not row_factory:
+            row_factory = self.row_factory
         if name:
-            return ServerCursor(self, name=name, format=format)
+            return ServerCursor(
+                self, name=name, format=format, row_factory=row_factory
+            )
         else:
-            return Cursor(self, format=format)
+            return Cursor(self, format=format, row_factory=row_factory)
 
     def execute(
         self,
@@ -554,10 +585,20 @@ class AsyncConnection(BaseConnection):
 
     @classmethod
     async def connect(
-        cls, conninfo: str = "", *, autocommit: bool = False, **kwargs: Any
+        cls,
+        conninfo: str = "",
+        *,
+        autocommit: bool = False,
+        row_factory: RowFactory = tuple_row,
+        **kwargs: Any,
     ) -> "AsyncConnection":
         return await cls._wait_conn(
-            cls._connect_gen(conninfo, autocommit=autocommit, **kwargs)
+            cls._connect_gen(
+                conninfo,
+                autocommit=autocommit,
+                row_factory=row_factory,
+                **kwargs,
+            )
         )
 
     async def __aenter__(self) -> "AsyncConnection":
@@ -588,24 +629,40 @@ class AsyncConnection(BaseConnection):
         self.pgconn.finish()
 
     @overload
-    def cursor(self, *, binary: bool = False) -> AsyncCursor:
+    def cursor(
+        self, *, binary: bool = False, row_factory: Optional[RowFactory] = None
+    ) -> AsyncCursor:
         ...
 
     @overload
-    def cursor(self, name: str, *, binary: bool = False) -> AsyncServerCursor:
+    def cursor(
+        self,
+        name: str,
+        *,
+        binary: bool = False,
+        row_factory: Optional[RowFactory] = None,
+    ) -> AsyncServerCursor:
         ...
 
     def cursor(
-        self, name: str = "", *, binary: bool = False
+        self,
+        name: str = "",
+        *,
+        binary: bool = False,
+        row_factory: Optional[RowFactory] = None,
     ) -> Union[AsyncCursor, AsyncServerCursor]:
         """
         Return a new `AsyncCursor` to send commands and queries to the connection.
         """
         format = Format.BINARY if binary else Format.TEXT
+        if not row_factory:
+            row_factory = self.row_factory
         if name:
-            return AsyncServerCursor(self, name=name, format=format)
+            return AsyncServerCursor(
+                self, name=name, format=format, row_factory=row_factory
+            )
         else:
-            return AsyncCursor(self, format=format)
+            return AsyncCursor(self, format=format, row_factory=row_factory)
 
     async def execute(
         self,

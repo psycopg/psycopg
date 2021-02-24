@@ -31,9 +31,17 @@ The `!Connection` class
 
     .. automethod:: connect
 
-        Connection parameters can be passed either as a `conninfo string`__ (a
-        ``postgresql://`` url or a list of ``key=value pairs``) or as keywords.
-        Keyword parameters override the ones specified in the connection string.
+        :param conninfo: The `connection string`__ (a ``postgresql://`` url or
+                         a list of ``key=value pairs``) to specify where and
+                         how to connect.
+        :param kwargs: Further parameters specifying the connection string.
+                       They override the ones specified in *conninfo*.
+        :param autocommit: If `!True` don't start transactions automatically.
+                           See `transactions` for details.
+        :param row_factory: The row factory specifying what type of records
+                            to create fetching data (default:
+                            `~psycopg3.rows.tuple_row()`). See
+                            :ref:`row-factories` for details.
 
         .. __: https://www.postgresql.org/docs/current/libpq-connect.html
             #LIBPQ-CONNSTRING
@@ -56,11 +64,21 @@ The `!Connection` class
     .. autoattribute:: closed
         :annotation: bool
 
-    .. automethod:: cursor
 
-        Calling the method without a *name* creates a client-side cursor,
-        specifying a *name* creates a server-side cursor. See
-        :ref:`cursor-types` for the details.
+    .. method:: cursor(*, binary: bool = False, row_factory: Optional[RowFactory] = None) -> Cursor
+    .. method:: cursor(name: str, *, binary: bool = False, row_factory: Optional[RowFactory] = None) -> ServerCursor
+        :noindex:
+
+        Return a new cursor to send commands and queries to the connection.
+
+        :param name: If not specified create a client-side cursor, if
+                     specified create a server-side cursor. See
+                     :ref:`cursor-types` for details.
+        :param binary: If `!True` return binary values from the database. All
+                       the types returned by the query must have a binary
+                       loader. See :ref:`binary-data` for details.
+        :param row_factory: If specified override the `row_factory` set on the
+                            connection. See :ref:`row-factories` for details.
 
         .. note:: You can use :ref:`with conn.cursor(): ...<usage>`
             to close the cursor automatically when the block is exited.
@@ -74,7 +92,6 @@ The `!Connection` class
         :param prepare: Force (`!True`) or disallow (`!False`) preparation of
             the query. By default (`!None`) prepare automatically. See
             :ref:`prepared-statements`.
-        :type prepare: `!bool`
 
         The cursor is what returned calling `cursor()` without parameters. The
         parameters are passed to its `~Cursor.execute()` and the cursor is
@@ -82,6 +99,12 @@ The `!Connection` class
 
         See :ref:`query-parameters` for all the details about executing
         queries.
+
+    .. autoattribute:: row_factory
+        :annotation: RowFactory
+
+        Writable attribute to control how result rows are formed.
+        See :ref:`row-factories` for details.
 
     .. rubric:: Transaction management methods
 
@@ -198,7 +221,9 @@ The `!AsyncConnection` class
             automatically when the block is exited, but be careful about
             the async quirkness: see :ref:`async-with` for details.
 
-    .. automethod:: cursor
+    .. method:: cursor(*, binary: bool = False, row_factory: Optional[RowFactory] = None) -> AsyncCursor
+    .. method:: cursor(name: str, *, binary: bool = False, row_factory: Optional[RowFactory] = None) -> AsyncServerCursor
+        :noindex:
 
         .. note:: You can use ``async with conn.cursor() as cur: ...`` to
             close the cursor automatically when the block is exited.

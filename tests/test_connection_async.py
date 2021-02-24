@@ -9,8 +9,10 @@ import weakref
 import psycopg3
 from psycopg3 import encodings
 from psycopg3 import AsyncConnection, Notify
+from psycopg3.rows import tuple_row
 from psycopg3.errors import UndefinedTable
 from psycopg3.conninfo import conninfo_to_dict
+from .test_cursor import my_row_factory
 
 pytestmark = pytest.mark.asyncio
 
@@ -498,6 +500,29 @@ async def test_execute(aconn):
 
     cur = await aconn.execute("select 12, 22")
     assert await cur.fetchone() == (12, 22)
+
+
+async def test_row_factory(dsn):
+    conn = await AsyncConnection.connect(dsn)
+    assert conn.row_factory is tuple_row
+
+    conn = await AsyncConnection.connect(dsn, row_factory=my_row_factory)
+    assert conn.row_factory is my_row_factory
+
+    cur = await conn.execute("select 'a' as ve")
+    assert await cur.fetchone() == ["Ave"]
+
+    async with conn.cursor(row_factory=lambda c: set) as cur:
+        await cur.execute("select 1, 1, 2")
+        assert await cur.fetchall() == [{1, 2}]
+
+    async with conn.cursor(row_factory=tuple_row) as cur:
+        await cur.execute("select 1, 1, 2")
+        assert await cur.fetchall() == [(1, 1, 2)]
+
+    conn.row_factory = tuple_row
+    cur = await conn.execute("select 'vale'")
+    assert await cur.fetchone() == ("vale",)
 
 
 async def test_str(aconn):

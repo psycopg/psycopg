@@ -5,6 +5,7 @@ Advanced topics
     :maxdepth: 1
     :caption: Contents:
 
+    ../row-factories
     ../adaptation
     ../prepared
     ../copy

@@ -6,7 +6,7 @@ import datetime as dt
 import pytest
 
 import psycopg3
-from psycopg3 import sql
+from psycopg3 import sql, rows
 from psycopg3.oids import postgres_types as builtins
 from psycopg3.adapt import Format
 
@@ -286,6 +286,22 @@ def test_iter_stop(conn):
     assert list(cur) == []
 
 
+def test_row_factory(conn):
+    cur = conn.cursor(row_factory=my_row_factory)
+    cur.execute("select 'foo' as bar")
+    (r,) = cur.fetchone()
+    assert r == "FOObar"
+
+    cur.execute("select 'x' as x; select 'y' as y, 'z' as z")
+    assert cur.fetchall() == [["Xx"]]
+    assert cur.nextset()
+    assert cur.fetchall() == [["Yy", "Zz"]]
+
+    cur.scroll(-1)
+    cur.row_factory = rows.dict_row
+    assert cur.fetchone() == {"y": "y", "z": "z"}
+
+
 def test_scroll(conn):
     cur = conn.cursor()
     with pytest.raises(psycopg3.ProgrammingError):
@@ -386,6 +402,14 @@ def test_stream_sql(conn):
     )
 
     assert recs == [(1, dt.date(2021, 1, 2)), (2, dt.date(2021, 1, 3))]
+
+
+def test_stream_row_factory(conn):
+    cur = conn.cursor(row_factory=rows.dict_row)
+    it = iter(cur.stream("select generate_series(1,2) as a"))
+    assert next(it)["a"] == 1
+    cur.row_factory = rows.namedtuple_row
+    assert next(it).a == 2
 
 
 @pytest.mark.parametrize(
@@ -513,15 +537,21 @@ def test_str(conn):
 @pytest.mark.slow
 @pytest.mark.parametrize("fmt", [Format.AUTO, Format.TEXT, Format.BINARY])
 @pytest.mark.parametrize("fetch", ["one", "many", "all", "iter"])
-def test_leak(dsn, faker, fmt, fetch):
+@pytest.mark.parametrize(
+    "row_factory", ["tuple_row", "dict_row", "namedtuple_row"]
+)
+def test_leak(dsn, faker, fmt, fetch, row_factory):
     faker.format = fmt
     faker.choose_schema(ncols=5)
     faker.make_records(10)
+    row_factory = getattr(rows, row_factory)
 
     n = []
     for i in range(3):
         with psycopg3.connect(dsn) as conn:
-            with conn.cursor(binary=Format.as_pq(fmt)) as cur:
+            with conn.cursor(
+                binary=Format.as_pq(fmt), row_factory=row_factory
+            ) as cur:
                 cur.execute(faker.drop_stmt)
                 cur.execute(faker.create_stmt)
                 cur.executemany(faker.insert_stmt, faker.records)
@@ -553,3 +583,15 @@ def test_leak(dsn, faker, fmt, fetch):
     assert (
         n[0] == n[1] == n[2]
     ), f"objects leaked: {n[1] - n[0]}, {n[2] - n[1]}"
+
+
+def my_row_factory(cursor):
+    assert cursor.description is not None
+    titles = [c.name for c in cursor.description]
+
+    def mkrow(values):
+        return [
+            f"{value.upper()}{title}" for title, value in zip(titles, values)
+        ]
+
+    return mkrow

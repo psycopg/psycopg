@@ -2,6 +2,7 @@ import pytest
 
 from psycopg3 import errors as e
 from psycopg3.pq import Format
+from psycopg3.rows import dict_row
 
 
 def test_funny_name(conn):
@@ -157,6 +158,30 @@ def test_nextset(conn):
     with conn.cursor("foo") as cur:
         cur.execute("select generate_series(1, %s) as bar", (3,))
         assert not cur.nextset()
+
+
+def test_row_factory(conn):
+    n = 0
+
+    def my_row_factory(cur):
+        nonlocal n
+        n += 1
+        return lambda values: [n] + [-v for v in values]
+
+    cur = conn.cursor("foo", row_factory=my_row_factory)
+    cur.execute("select generate_series(1, 3) as x", scrollable=True)
+    rows = cur.fetchall()
+    cur.scroll(0, "absolute")
+    while 1:
+        row = cur.fetchone()
+        if not row:
+            break
+        rows.append(row)
+    assert rows == [[1, -1], [1, -2], [1, -3]] * 2
+
+    cur.scroll(0, "absolute")
+    cur.row_factory = dict_row
+    assert cur.fetchone() == {"x": 1}
 
 
 def test_rownumber(conn):

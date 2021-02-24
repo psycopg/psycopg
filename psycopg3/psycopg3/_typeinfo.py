@@ -11,6 +11,7 @@ from typing import Any, Callable, Dict, Iterator, Optional
 from typing import Sequence, Type, TypeVar, Union, TYPE_CHECKING
 
 from . import errors as e
+from .rows import dict_row
 from .proto import AdaptContext
 
 if TYPE_CHECKING:
@@ -69,11 +70,10 @@ class TypeInfo:
 
         if isinstance(name, Composable):
             name = name.as_string(conn)
-        cur = conn.cursor(binary=True)
+        cur = conn.cursor(binary=True, row_factory=dict_row)
         cur.execute(cls._info_query, {"name": name})
-        recs = cur.fetchall()
-        fields = [d[0] for d in cur.description or ()]
-        return cls._fetch(name, fields, recs)
+        recs: Sequence[Dict[str, Any]] = cur.fetchall()
+        return cls._fetch(name, recs)
 
     @classmethod
     async def fetch_async(
@@ -88,21 +88,20 @@ class TypeInfo:
 
         if isinstance(name, Composable):
             name = name.as_string(conn)
-        cur = conn.cursor(binary=True)
+
+        cur = conn.cursor(binary=True, row_factory=dict_row)
         await cur.execute(cls._info_query, {"name": name})
-        recs = await cur.fetchall()
-        fields = [d[0] for d in cur.description or ()]
-        return cls._fetch(name, fields, recs)
+        recs: Sequence[Dict[str, Any]] = await cur.fetchall()
+        return cls._fetch(name, recs)
 
     @classmethod
     def _fetch(
         cls: Type[T],
         name: str,
-        fields: Sequence[str],
-        recs: Sequence[Sequence[Any]],
+        recs: Sequence[Dict[str, Any]],
     ) -> Optional[T]:
         if len(recs) == 1:
-            return cls(**dict(zip(fields, recs[0])))
+            return cls(**recs[0])
         elif not recs:
             return None
         else:

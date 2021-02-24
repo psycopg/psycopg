@@ -14,6 +14,7 @@ from ._enums import Format
 
 if TYPE_CHECKING:
     from .connection import BaseConnection
+    from .cursor import BaseCursor
     from .adapt import Dumper, Loader, AdaptersMap
     from .waiting import Wait, Ready
     from .sql import Composable
@@ -42,6 +43,21 @@ PQGen = Generator["Wait", "Ready", RV]
 The first item generated is the file descriptor; following items are be the
 Wait states.
 """
+
+
+# Row factories
+
+Row = TypeVar("Row", Tuple[Any, ...], Any)
+
+
+class RowMaker(Protocol):
+    def __call__(self, __values: Sequence[Any]) -> Any:
+        ...
+
+
+class RowFactory(Protocol):
+    def __call__(self, __cursor: "BaseCursor[Any]") -> RowMaker:
+        ...
 
 
 # Adaptation types
@@ -73,6 +89,8 @@ class Transformer(Protocol):
     def __init__(self, context: Optional[AdaptContext] = None):
         ...
 
+    make_row: RowMaker
+
     @property
     def connection(self) -> Optional["BaseConnection"]:
         ...
@@ -103,10 +121,10 @@ class Transformer(Protocol):
     def get_dumper(self, obj: Any, format: Format) -> "Dumper":
         ...
 
-    def load_rows(self, row0: int, row1: int) -> List[Tuple[Any, ...]]:
+    def load_rows(self, row0: int, row1: int) -> List[Row]:
         ...
 
-    def load_row(self, row: int) -> Optional[Tuple[Any, ...]]:
+    def load_row(self, row: int) -> Optional[Row]:
         ...
 
     def load_sequence(

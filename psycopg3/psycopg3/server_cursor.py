@@ -12,8 +12,9 @@ from typing import Sequence, Type, Tuple, TYPE_CHECKING
 from . import pq
 from . import sql
 from . import errors as e
+from .rows import tuple_row
 from .cursor import BaseCursor, execute
-from .proto import ConnectionType, Query, Params, PQGen
+from .proto import ConnectionType, Query, Params, PQGen, Row, RowFactory
 
 if TYPE_CHECKING:
     from .connection import BaseConnection  # noqa: F401
@@ -39,10 +40,10 @@ class ServerCursorHelper(Generic[ConnectionType]):
         info = pq.misc.connection_summary(cur._conn.pgconn)
         if cur._closed:
             status = "closed"
-        elif not cur._pgresult:
+        elif not cur.pgresult:
             status = "no result"
         else:
-            status = pq.ExecStatus(cur._pgresult.status).name
+            status = pq.ExecStatus(cur.pgresult.status).name
         return f"<{cls} {self.name!r} [{status}] {info} at 0x{id(cur):x}>"
 
     def _declare_gen(
@@ -63,9 +64,10 @@ class ServerCursorHelper(Generic[ConnectionType]):
         pgq = cur._convert_query(query, params)
         cur._execute_send(pgq, no_pqexec=True)
         results = yield from execute(conn.pgconn)
-        cur._execute_results(results)
+        if results[-1].status != pq.ExecStatus.COMMAND_OK:
+            cur._raise_from_results(results)
 
-        # The above result is an COMMAND_OK. Get the cursor result shape
+        # The above result only returned COMMAND_OK. Get the cursor shape
         yield from self._describe_gen(cur)
 
     def _describe_gen(self, cur: BaseCursor[ConnectionType]) -> PQGen[None]:
@@ -172,11 +174,11 @@ class ServerCursor(BaseCursor["Connection"]):
         name: str,
         *,
         format: pq.Format = pq.Format.TEXT,
+        row_factory: RowFactory = tuple_row,
     ):
-        super().__init__(connection, format=format)
-        self._helper: ServerCursorHelper["Connection"] = ServerCursorHelper(
-            name
-        )
+        super().__init__(connection, format=format, row_factory=row_factory)
+        self._helper: ServerCursorHelper["Connection"]
+        self._helper = ServerCursorHelper(name)
         self.itersize = DEFAULT_ITERSIZE
 
     def __del__(self) -> None:
@@ -238,7 +240,7 @@ class ServerCursor(BaseCursor["Connection"]):
             "executemany not supported on server-side cursors"
         )
 
-    def fetchone(self) -> Optional[Sequence[Any]]:
+    def fetchone(self) -> Optional[Row]:
         with self._conn.lock:
             recs = self._conn.wait(self._helper._fetch_gen(self, 1))
         if recs:
@@ -247,7 +249,7 @@ class ServerCursor(BaseCursor["Connection"]):
         else:
             return None
 
-    def fetchmany(self, size: int = 0) -> Sequence[Sequence[Any]]:
+    def fetchmany(self, size: int = 0) -> Sequence[Row]:
         if not size:
             size = self.arraysize
         with self._conn.lock:
@@ -255,13 +257,13 @@ class ServerCursor(BaseCursor["Connection"]):
         self._pos += len(recs)
         return recs
 
-    def fetchall(self) -> Sequence[Sequence[Any]]:
+    def fetchall(self) -> Sequence[Row]:
         with self._conn.lock:
             recs = self._conn.wait(self._helper._fetch_gen(self, None))
         self._pos += len(recs)
         return recs
 
-    def __iter__(self) -> Iterator[Sequence[Any]]:
+    def __iter__(self) -> Iterator[Row]:
         while True:
             with self._conn.lock:
                 recs = self._conn.wait(
@@ -293,8 +295,9 @@ class AsyncServerCursor(BaseCursor["AsyncConnection"]):
         name: str,
         *,
         format: pq.Format = pq.Format.TEXT,
+        row_factory: RowFactory = tuple_row,
     ):
-        super().__init__(connection, format=format)
+        super().__init__(connection, format=format, row_factory=row_factory)
         self._helper: ServerCursorHelper["AsyncConnection"]
         self._helper = ServerCursorHelper(name)
         self.itersize = DEFAULT_ITERSIZE
@@ -354,7 +357,7 @@ class AsyncServerCursor(BaseCursor["AsyncConnection"]):
             "executemany not supported on server-side cursors"
         )
 
-    async def fetchone(self) -> Optional[Sequence[Any]]:
+    async def fetchone(self) -> Optional[Row]:
         async with self._conn.lock:
             recs = await self._conn.wait(self._helper._fetch_gen(self, 1))
         if recs:
@@ -363,7 +366,7 @@ class AsyncServerCursor(BaseCursor["AsyncConnection"]):
         else:
             return None
 
-    async def fetchmany(self, size: int = 0) -> Sequence[Sequence[Any]]:
+    async def fetchmany(self, size: int = 0) -> Sequence[Row]:
         if not size:
             size = self.arraysize
         async with self._conn.lock:
@@ -371,13 +374,13 @@ class AsyncServerCursor(BaseCursor["AsyncConnection"]):
         self._pos += len(recs)
         return recs
 
-    async def fetchall(self) -> Sequence[Sequence[Any]]:
+    async def fetchall(self) -> Sequence[Row]:
         async with self._conn.lock:
             recs = await self._conn.wait(self._helper._fetch_gen(self, None))
         self._pos += len(recs)
         return recs
 
-    async def __aiter__(self) -> AsyncIterator[Sequence[Any]]:
+    async def __aiter__(self) -> AsyncIterator[Row]:
         while True:
             async with self._conn.lock:
                 recs = await self._conn.wait(

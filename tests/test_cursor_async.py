@@ -4,8 +4,9 @@ import weakref
 import datetime as dt
 
 import psycopg3
-from psycopg3 import sql
+from psycopg3 import sql, rows
 from psycopg3.adapt import Format
+from .test_cursor import my_row_factory
 
 pytestmark = pytest.mark.asyncio
 
@@ -291,6 +292,22 @@ async def test_iter_stop(aconn):
         assert False
 
 
+async def test_row_factory(aconn):
+    cur = aconn.cursor(row_factory=my_row_factory)
+    await cur.execute("select 'foo' as bar")
+    (r,) = await cur.fetchone()
+    assert r == "FOObar"
+
+    await cur.execute("select 'x' as x; select 'y' as y, 'z' as z")
+    assert await cur.fetchall() == [["Xx"]]
+    assert cur.nextset()
+    assert await cur.fetchall() == [["Yy", "Zz"]]
+
+    await cur.scroll(-1)
+    cur.row_factory = rows.dict_row
+    assert await cur.fetchone() == {"y": "y", "z": "z"}
+
+
 async def test_scroll(aconn):
     cur = aconn.cursor()
     with pytest.raises(psycopg3.ProgrammingError):
@@ -393,6 +410,14 @@ async def test_stream_sql(aconn):
     assert recs == [(1, dt.date(2021, 1, 2)), (2, dt.date(2021, 1, 3))]
 
 
+async def test_stream_row_factory(aconn):
+    cur = aconn.cursor(row_factory=rows.dict_row)
+    ait = cur.stream("select generate_series(1,2) as a")
+    assert (await ait.__anext__())["a"] == 1
+    cur.row_factory = rows.namedtuple_row
+    assert (await ait.__anext__()).a == 2
+
+
 @pytest.mark.parametrize(
     "query",
     [
@@ -426,15 +451,21 @@ async def test_str(aconn):
 @pytest.mark.slow
 @pytest.mark.parametrize("fmt", [Format.AUTO, Format.TEXT, Format.BINARY])
 @pytest.mark.parametrize("fetch", ["one", "many", "all", "iter"])
-async def test_leak(dsn, faker, fmt, fetch):
+@pytest.mark.parametrize(
+    "row_factory", ["tuple_row", "dict_row", "namedtuple_row"]
+)
+async def test_leak(dsn, faker, fmt, fetch, row_factory):
     faker.format = fmt
     faker.choose_schema(ncols=5)
     faker.make_records(10)
+    row_factory = getattr(rows, row_factory)
 
     n = []
     for i in range(3):
         async with await psycopg3.AsyncConnection.connect(dsn) as conn:
-            async with conn.cursor(binary=Format.as_pq(fmt)) as cur:
+            async with conn.cursor(
+                binary=Format.as_pq(fmt), row_factory=row_factory
+            ) as cur:
                 await cur.execute(faker.drop_stmt)
                 await cur.execute(faker.create_stmt)
                 await cur.executemany(faker.insert_stmt, faker.records)

@@ -17,7 +17,9 @@ from . import generators
 
 from .pq import ExecStatus, Format
 from .copy import Copy, AsyncCopy
+from .rows import tuple_row
 from .proto import ConnectionType, Query, Params, PQGen
+from .proto import Row, RowFactory
 from ._column import Column
 from ._queries import PostgresQuery
 from ._preparing import Prepare
@@ -49,8 +51,8 @@ class BaseCursor(Generic[ConnectionType]):
     # https://bugs.python.org/issue41451
     if sys.version_info >= (3, 7):
         __slots__ = """
-            _conn format _adapters arraysize _closed _results _pgresult _pos
-            _iresult _rowcount _pgq _tx _last_query
+            _conn format _adapters arraysize _closed _results pgresult _pos
+            _iresult _rowcount _pgq _tx _last_query _row_factory
             __weakref__
             """.split()
 
@@ -59,11 +61,16 @@ class BaseCursor(Generic[ConnectionType]):
     _tx: "Transformer"
 
     def __init__(
-        self, connection: ConnectionType, *, format: Format = Format.TEXT
+        self,
+        connection: ConnectionType,
+        *,
+        format: Format = Format.TEXT,
+        row_factory: RowFactory = tuple_row,
     ):
         self._conn = connection
         self.format = format
         self._adapters = adapt.AdaptersMap(connection.adapters)
+        self._row_factory = row_factory
         self.arraysize = 1
         self._closed = False
         self._last_query: Optional[Query] = None
@@ -71,7 +78,8 @@ class BaseCursor(Generic[ConnectionType]):
 
     def _reset(self) -> None:
         self._results: List["PGresult"] = []
-        self._pgresult: Optional["PGresult"] = None
+        self.pgresult: Optional["PGresult"] = None
+        """The `~psycopg3.pq.PGresult` exposed by the cursor."""
         self._pos = 0
         self._iresult = 0
         self._rowcount = -1
@@ -82,10 +90,10 @@ class BaseCursor(Generic[ConnectionType]):
         info = pq.misc.connection_summary(self._conn.pgconn)
         if self._closed:
             status = "closed"
-        elif not self._pgresult:
-            status = "no result"
+        elif self.pgresult:
+            status = pq.ExecStatus(self.pgresult.status).name
         else:
-            status = pq.ExecStatus(self._pgresult.status).name
+            status = "no result"
         return f"<{cls} [{status}] {info} at 0x{id(self):x}>"
 
     @property
@@ -119,15 +127,6 @@ class BaseCursor(Generic[ConnectionType]):
         return self._pgq.params if self._pgq else None
 
     @property
-    def pgresult(self) -> Optional["PGresult"]:
-        """The `~psycopg3.pq.PGresult` exposed by the cursor."""
-        return self._pgresult
-
-    @pgresult.setter
-    def pgresult(self, result: Optional["PGresult"]) -> None:
-        self._pgresult = result
-
-    @property
     def description(self) -> Optional[List[Column]]:
         """
         A list of `Column` objects describing the current resultset.
@@ -150,7 +149,7 @@ class BaseCursor(Generic[ConnectionType]):
 
         `!None` if there is no result to fetch.
         """
-        return self._pos if self._pgresult else None
+        return self._pos if self.pgresult else None
 
     def setinputsizes(self, sizes: Sequence[Any]) -> None:
         # no-op
@@ -171,12 +170,23 @@ class BaseCursor(Generic[ConnectionType]):
         if self._iresult < len(self._results):
             self.pgresult = self._results[self._iresult]
             self._tx.set_pgresult(self._results[self._iresult])
+            self._tx.make_row = self._row_factory(self)
             self._pos = 0
             nrows = self.pgresult.command_tuples
             self._rowcount = nrows if nrows is not None else -1
             return True
         else:
             return None
+
+    @property
+    def row_factory(self) -> RowFactory:
+        return self._row_factory
+
+    @row_factory.setter
+    def row_factory(self, row_factory: RowFactory) -> None:
+        self._row_factory = row_factory
+        if self.pgresult:
+            self._tx.make_row = row_factory(self)
 
     #
     # Generators for the high level operations on the cursor
@@ -272,6 +282,8 @@ class BaseCursor(Generic[ConnectionType]):
         elif res.status == ExecStatus.SINGLE_TUPLE:
             self.pgresult = res
             self._tx.set_pgresult(res, set_loaders=first)
+            if first:
+                self._tx.make_row = self._row_factory(self)
             return res
 
         elif res.status in (ExecStatus.TUPLES_OK, ExecStatus.COMMAND_OK):
@@ -374,6 +386,7 @@ class BaseCursor(Generic[ConnectionType]):
         self._results = list(results)
         self.pgresult = results[0]
         self._tx.set_pgresult(results[0])
+        self._tx.make_row = self._row_factory(self)
         nrows = self.pgresult.command_tuples
         if nrows is not None:
             if self._rowcount < 0:
@@ -507,7 +520,7 @@ class Cursor(BaseCursor["Connection"]):
 
     def stream(
         self, query: Query, params: Optional[Params] = None
-    ) -> Iterator[Sequence[Any]]:
+    ) -> Iterator[Row]:
         """
         Iterate row-by-row on a result from the database.
         """
@@ -520,7 +533,7 @@ class Cursor(BaseCursor["Connection"]):
                 yield rec
                 first = False
 
-    def fetchone(self) -> Optional[Sequence[Any]]:
+    def fetchone(self) -> Optional[Row]:
         """
         Return the next record from the current recordset.
 
@@ -530,9 +543,9 @@ class Cursor(BaseCursor["Connection"]):
         record = self._tx.load_row(self._pos)
         if record is not None:
             self._pos += 1
-        return record
+        return record  # type: ignore[no-any-return]
 
-    def fetchmany(self, size: int = 0) -> Sequence[Sequence[Any]]:
+    def fetchmany(self, size: int = 0) -> Sequence[Row]:
         """
         Return the next *size* records from the current recordset.
 
@@ -549,7 +562,7 @@ class Cursor(BaseCursor["Connection"]):
         self._pos += len(records)
         return records
 
-    def fetchall(self) -> Sequence[Sequence[Any]]:
+    def fetchall(self) -> Sequence[Row]:
         """
         Return all the remaining records from the current recordset.
         """
@@ -559,7 +572,7 @@ class Cursor(BaseCursor["Connection"]):
         self._pos = self.pgresult.ntuples
         return records
 
-    def __iter__(self) -> Iterator[Sequence[Any]]:
+    def __iter__(self) -> Iterator[Row]:
         self._check_result()
 
         load = self._tx.load_row
@@ -635,7 +648,7 @@ class AsyncCursor(BaseCursor["AsyncConnection"]):
 
     async def stream(
         self, query: Query, params: Optional[Params] = None
-    ) -> AsyncIterator[Sequence[Any]]:
+    ) -> AsyncIterator[Row]:
         async with self._conn.lock:
             await self._conn.wait(self._stream_send_gen(query, params))
             first = True
@@ -645,14 +658,14 @@ class AsyncCursor(BaseCursor["AsyncConnection"]):
                 yield rec
                 first = False
 
-    async def fetchone(self) -> Optional[Sequence[Any]]:
+    async def fetchone(self) -> Optional[Row]:
         self._check_result()
         rv = self._tx.load_row(self._pos)
         if rv is not None:
             self._pos += 1
-        return rv
+        return rv  # type: ignore[no-any-return]
 
-    async def fetchmany(self, size: int = 0) -> Sequence[Sequence[Any]]:
+    async def fetchmany(self, size: int = 0) -> List[Row]:
         self._check_result()
         assert self.pgresult
 
@@ -664,14 +677,14 @@ class AsyncCursor(BaseCursor["AsyncConnection"]):
         self._pos += len(records)
         return records
 
-    async def fetchall(self) -> Sequence[Sequence[Any]]:
+    async def fetchall(self) -> List[Row]:
         self._check_result()
         assert self.pgresult
         records = self._tx.load_rows(self._pos, self.pgresult.ntuples)
         self._pos = self.pgresult.ntuples
         return records
 
-    async def __aiter__(self) -> AsyncIterator[Sequence[Any]]:
+    async def __aiter__(self) -> AsyncIterator[Row]:
         self._check_result()
 
         load = self._tx.load_row
