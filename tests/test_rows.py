@@ -14,6 +14,7 @@ def test_dict_row(conn):
 
 
 def test_namedtuple_row(conn):
+    rows._make_nt.cache_clear()
     cur = conn.cursor(row_factory=rows.namedtuple_row)
     cur.execute("select 'bob' as name, 3 as id")
     (person1,) = cur.fetchall()
