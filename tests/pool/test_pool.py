@@ -68,13 +68,15 @@ def test_concurrent_filling(dsn, monkeypatch):
     t0 = time()
     times = []
 
-    add_to_pool_orig = pool.ConnectionPool._add_to_pool
+    add_orig = pool.ConnectionPool._add_initial_connection
 
-    def _add_to_pool_time(self, conn):
+    def add_time(self, event):
+        add_orig(self, event)
         times.append(time() - t0)
-        add_to_pool_orig(self, conn)
 
-    monkeypatch.setattr(pool.ConnectionPool, "_add_to_pool", _add_to_pool_time)
+    monkeypatch.setattr(
+        pool.ConnectionPool, "_add_initial_connection", add_time
+    )
 
     pool.ConnectionPool(dsn, minconn=5, num_workers=2)
     want_times = [0.1, 0.1, 0.2, 0.2, 0.3]
@@ -519,10 +521,10 @@ def test_shrink(dsn, monkeypatch):
 def test_reconnect(proxy, caplog, monkeypatch):
     caplog.set_level(logging.WARNING, logger="psycopg3.pool")
 
-    assert pool.pool.AddConnection.INITIAL_DELAY == 1.0
-    assert pool.pool.AddConnection.DELAY_JITTER == 0.1
-    monkeypatch.setattr(pool.pool.AddConnection, "INITIAL_DELAY", 0.1)
-    monkeypatch.setattr(pool.pool.AddConnection, "DELAY_JITTER", 0.0)
+    assert pool.pool.ConnectionAttempt.INITIAL_DELAY == 1.0
+    assert pool.pool.ConnectionAttempt.DELAY_JITTER == 0.1
+    monkeypatch.setattr(pool.pool.ConnectionAttempt, "INITIAL_DELAY", 0.1)
+    monkeypatch.setattr(pool.pool.ConnectionAttempt, "DELAY_JITTER", 0.0)
 
     proxy.start()
     p = pool.ConnectionPool(proxy.client_dsn, minconn=1, setup_timeout=2.0)
