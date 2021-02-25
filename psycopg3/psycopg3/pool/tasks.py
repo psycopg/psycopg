@@ -6,21 +6,22 @@ Maintenance tasks for the connection pools.
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Optional, TYPE_CHECKING
+from typing import Any, Generic, Optional, TYPE_CHECKING
 from weakref import ref
 
+from ..proto import ConnectionType
+
 if TYPE_CHECKING:
-    from .base import ConnectionAttempt
-    from .pool import ConnectionPool
+    from .base import BasePool, ConnectionAttempt
     from ..connection import Connection
 
 logger = logging.getLogger(__name__)
 
 
-class MaintenanceTask(ABC):
+class MaintenanceTask(ABC, Generic[ConnectionType]):
     """A task to run asynchronously to maintain the pool state."""
 
-    def __init__(self, pool: "ConnectionPool"):
+    def __init__(self, pool: "BasePool[Any]"):
         self.pool = ref(pool)
         logger.debug("task created: %s", self)
 
@@ -57,51 +58,66 @@ class MaintenanceTask(ABC):
         pool.run_task(self)
 
     @abstractmethod
-    def _run(self, pool: "ConnectionPool") -> None:
+    def _run(self, pool: "BasePool[Any]") -> None:
         ...
 
 
-class StopWorker(MaintenanceTask):
+class StopWorker(MaintenanceTask[ConnectionType]):
     """Signal the maintenance thread to terminate."""
 
-    def _run(self, pool: "ConnectionPool") -> None:
+    def _run(self, pool: "BasePool[Any]") -> None:
         pass
 
 
-class AddConnection(MaintenanceTask):
+class AddConnection(MaintenanceTask[ConnectionType]):
     def __init__(
         self,
-        pool: "ConnectionPool",
+        pool: "BasePool[Any]",
         attempt: Optional["ConnectionAttempt"] = None,
     ):
         super().__init__(pool)
         self.attempt = attempt
 
-    def _run(self, pool: "ConnectionPool") -> None:
-        pool._add_connection(self.attempt)
+    def _run(self, pool: "BasePool[Any]") -> None:
+        from . import ConnectionPool
+
+        if isinstance(pool, ConnectionPool):
+            pool._add_connection(self.attempt)
+        else:
+            assert False
 
 
-class ReturnConnection(MaintenanceTask):
+class ReturnConnection(MaintenanceTask[ConnectionType]):
     """Clean up and return a connection to the pool."""
 
-    def __init__(self, pool: "ConnectionPool", conn: "Connection"):
+    def __init__(self, pool: "BasePool[Any]", conn: "Connection"):
         super().__init__(pool)
         self.conn = conn
 
-    def _run(self, pool: "ConnectionPool") -> None:
-        pool._return_connection(self.conn)
+    def _run(self, pool: "BasePool[Any]") -> None:
+        from . import ConnectionPool
+
+        if isinstance(pool, ConnectionPool):
+            pool._return_connection(self.conn)
+        else:
+            assert False
 
 
-class ShrinkPool(MaintenanceTask):
+class ShrinkPool(MaintenanceTask[ConnectionType]):
     """If the pool can shrink, remove one connection.
 
     Re-schedule periodically and also reset the minimum number of connections
     in the pool.
     """
 
-    def _run(self, pool: "ConnectionPool") -> None:
+    def _run(self, pool: "BasePool[Any]") -> None:
         # Reschedule the task now so that in case of any error we don't lose
         # the periodic run.
         pool.schedule_task(self, pool.max_idle)
 
-        pool._shrink_if_possible()
+        from . import ConnectionPool
+
+        if isinstance(pool, ConnectionPool):
+            pool._shrink_pool()
+        else:
+            assert False

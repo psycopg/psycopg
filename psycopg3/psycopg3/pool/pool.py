@@ -5,11 +5,9 @@ psycopg3 synchronous connection pool
 # Copyright (C) 2021 The Psycopg Team
 
 import time
-import random
 import logging
 import threading
-from queue import Queue, Empty
-from typing import Any, Callable, Deque, Dict, Iterator, List, Optional
+from typing import Any, Deque, Iterator, Optional
 from contextlib import contextmanager
 from collections import deque
 
@@ -17,119 +15,21 @@ from ..pq import TransactionStatus
 from ..connection import Connection
 
 from . import tasks
-from .base import ConnectionAttempt
-from .sched import Scheduler
+from .base import ConnectionAttempt, BasePool
 from .errors import PoolClosed, PoolTimeout
 
 logger = logging.getLogger(__name__)
 
-WORKER_TIMEOUT = 60.0
 
-
-class ConnectionPool:
-
-    _num_pool = 0
-
-    def __init__(
-        self,
-        conninfo: str = "",
-        kwargs: Optional[Dict[str, Any]] = None,
-        configure: Optional[Callable[[Connection], None]] = None,
-        minconn: int = 4,
-        maxconn: Optional[int] = None,
-        name: Optional[str] = None,
-        timeout: float = 30.0,
-        max_idle: float = 10 * 60.0,
-        reconnect_timeout: float = 5 * 60.0,
-        reconnect_failed: Optional[Callable[["ConnectionPool"], None]] = None,
-        num_workers: int = 3,
-    ):
-        if maxconn is None:
-            maxconn = minconn
-        if maxconn < minconn:
-            raise ValueError(
-                f"can't create {self.__class__.__name__}"
-                f" with maxconn={maxconn} < minconn={minconn}"
-            )
-        if not name:
-            self.__class__._num_pool += 1
-            name = f"pool-{self._num_pool}"
-
-        if num_workers < 1:
-            # TODO: allow num_workers to be 0 - sync pool?
-            raise ValueError("num_workers must be at least 1")
-
-        self.conninfo = conninfo
-        self.kwargs: Dict[str, Any] = kwargs or {}
-        self._configure: Callable[[Connection], None]
-        self._configure = configure or (lambda conn: None)
-        self._reconnect_failed: Callable[["ConnectionPool"], None]
-        self._reconnect_failed = reconnect_failed or (lambda pool: None)
-        self.name = name
-        self.minconn = minconn
-        self.maxconn = maxconn
-        self.timeout = timeout
-        self.reconnect_timeout = reconnect_timeout
-        self.max_idle = max_idle
-        self.num_workers = num_workers
-
-        self._nconns = minconn  # currently in the pool, out, being prepared
-        self._pool: Deque[Connection] = deque()
-        self._waiting: Deque["WaitingClient"] = deque()
+class ConnectionPool(BasePool[Connection]):
+    def __init__(self, conninfo: str = "", **kwargs: Any):
         self._lock = threading.RLock()
-        self._sched = Scheduler()
-
-        # Min number of connections in the pool in a max_idle unit of time.
-        # It is reset periodically by the ShrinkPool scheduled task.
-        # It is used to shrink back the pool if maxcon > minconn and extra
-        # connections have been acquired, if we notice that in the last
-        # max_idle interval they weren't all used.
-        self._nconns_min = minconn
+        self._waiting: Deque["WaitingClient"] = deque()
 
         # to notify that the pool is full
         self._pool_full_event: Optional[threading.Event] = None
 
-        self._tasks: "Queue[tasks.MaintenanceTask]" = Queue()
-        self._workers: List[threading.Thread] = []
-        for i in range(num_workers):
-            t = threading.Thread(
-                target=self.worker, args=(self._tasks,), daemon=True
-            )
-            self._workers.append(t)
-
-        self._sched_runner = threading.Thread(
-            target=self._sched.run, daemon=True
-        )
-
-        # _close should be the last property to be set in the state
-        # to avoid warning on __del__ in case __init__ fails.
-        self._closed = False
-
-        # The object state is complete. Start the worker threads
-        self._sched_runner.start()
-        for t in self._workers:
-            t.start()
-
-        # Populate the pool with initial minconn connections in background
-        for i in range(self._nconns):
-            self.run_task(tasks.AddConnection(self))
-
-        # Schedule a task to shrink the pool if connections over minconn have
-        # remained unused. However if the pool cannot't grow don't bother.
-        if maxconn > minconn:
-            self.schedule_task(tasks.ShrinkPool(self), self.max_idle)
-
-    def __repr__(self) -> str:
-        return (
-            f"<{self.__class__.__module__}.{self.__class__.__name__}"
-            f" {self.name!r} at 0x{id(self):x}>"
-        )
-
-    def __del__(self) -> None:
-        # If the '_closed' property is not set we probably failed in __init__.
-        # Don't try anything complicated as probably it won't work.
-        if hasattr(self, "_closed"):
-            self.close(timeout=0)
+        super().__init__(conninfo, **kwargs)
 
     def wait_ready(self, timeout: float = 30.0) -> None:
         """
@@ -253,11 +153,6 @@ class ConnectionPool:
         # Use a worker to perform eventual maintenance work in a separate thread
         self.run_task(tasks.ReturnConnection(self, conn))
 
-    @property
-    def closed(self) -> bool:
-        """`!True` if the pool is closed."""
-        return self._closed
-
     def close(self, timeout: float = 1.0) -> None:
         """Close the pool and make it unavailable to new clients.
 
@@ -310,43 +205,6 @@ class ConnectionPool:
                         self.name,
                         timeout,
                     )
-
-    def run_task(self, task: tasks.MaintenanceTask) -> None:
-        """Run a maintenance task in a worker thread."""
-        self._tasks.put(task)
-
-    def schedule_task(self, task: tasks.MaintenanceTask, delay: float) -> None:
-        """Run a maintenance task in a worker thread in the future."""
-        self._sched.enter(delay, task.tick)
-
-    @classmethod
-    def worker(cls, q: "Queue[tasks.MaintenanceTask]") -> None:
-        """Runner to execute pending maintenance task.
-
-        The function is designed to run as a separate thread.
-
-        Block on the queue *q*, run a task received. Finish running if a
-        StopWorker is received.
-        """
-        # Don't make all the workers time out at the same moment
-        timeout = WORKER_TIMEOUT * (0.9 + 0.1 * random.random())
-        while True:
-            # Use a timeout to make the wait unterruptable
-            try:
-                task = q.get(timeout=timeout)
-            except Empty:
-                continue
-
-            # Run the task. Make sure don't die in the attempt.
-            try:
-                task.run()
-            except Exception as e:
-                logger.warning(
-                    "task run %s failed: %s: %s", task, e.__class__.__name__, e
-                )
-
-            if isinstance(task, tasks.StopWorker):
-                return
 
     def configure(self, conn: Connection) -> None:
         """Configure a connection after creation."""
@@ -474,7 +332,7 @@ class ConnectionPool:
             logger.warning("closing returned connection: %s", conn)
             conn.close()
 
-    def _shrink_if_possible(self) -> None:
+    def _shrink_pool(self) -> None:
         to_close: Optional[Connection] = None
 
         with self._lock:
