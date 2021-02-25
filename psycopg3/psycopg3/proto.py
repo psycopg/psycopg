@@ -47,7 +47,7 @@ Wait states.
 
 # Row factories
 
-Row = TypeVar("Row", Tuple[Any, ...], Any)
+Row = TypeVar("Row")
 
 
 class RowMaker(Protocol):

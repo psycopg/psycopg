@@ -242,10 +242,10 @@ class ServerCursor(BaseCursor["Connection"]):
 
     def fetchone(self) -> Optional[Row]:
         with self._conn.lock:
-            recs = self._conn.wait(self._helper._fetch_gen(self, 1))
+            recs: List[Row] = self._conn.wait(self._helper._fetch_gen(self, 1))
         if recs:
             self._pos += 1
-            return recs[0]  # type: ignore[no-any-return]
+            return recs[0]
         else:
             return None
 
@@ -253,20 +253,24 @@ class ServerCursor(BaseCursor["Connection"]):
         if not size:
             size = self.arraysize
         with self._conn.lock:
-            recs = self._conn.wait(self._helper._fetch_gen(self, size))
+            recs: List[Row] = self._conn.wait(
+                self._helper._fetch_gen(self, size)
+            )
         self._pos += len(recs)
         return recs
 
     def fetchall(self) -> Sequence[Row]:
         with self._conn.lock:
-            recs = self._conn.wait(self._helper._fetch_gen(self, None))
+            recs: List[Row] = self._conn.wait(
+                self._helper._fetch_gen(self, None)
+            )
         self._pos += len(recs)
         return recs
 
     def __iter__(self) -> Iterator[Row]:
         while True:
             with self._conn.lock:
-                recs = self._conn.wait(
+                recs: List[Row] = self._conn.wait(
                     self._helper._fetch_gen(self, self.itersize)
                 )
             for rec in recs:
@@ -359,10 +363,12 @@ class AsyncServerCursor(BaseCursor["AsyncConnection"]):
 
     async def fetchone(self) -> Optional[Row]:
         async with self._conn.lock:
-            recs = await self._conn.wait(self._helper._fetch_gen(self, 1))
+            recs: List[Row] = await self._conn.wait(
+                self._helper._fetch_gen(self, 1)
+            )
         if recs:
             self._pos += 1
-            return recs[0]  # type: ignore[no-any-return]
+            return recs[0]
         else:
             return None
 
@@ -370,20 +376,24 @@ class AsyncServerCursor(BaseCursor["AsyncConnection"]):
         if not size:
             size = self.arraysize
         async with self._conn.lock:
-            recs = await self._conn.wait(self._helper._fetch_gen(self, size))
+            recs: List[Row] = await self._conn.wait(
+                self._helper._fetch_gen(self, size)
+            )
         self._pos += len(recs)
         return recs
 
     async def fetchall(self) -> Sequence[Row]:
         async with self._conn.lock:
-            recs = await self._conn.wait(self._helper._fetch_gen(self, None))
+            recs: List[Row] = await self._conn.wait(
+                self._helper._fetch_gen(self, None)
+            )
         self._pos += len(recs)
         return recs
 
     async def __aiter__(self) -> AsyncIterator[Row]:
         while True:
             async with self._conn.lock:
-                recs = await self._conn.wait(
+                recs: List[Row] = await self._conn.wait(
                     self._helper._fetch_gen(self, self.itersize)
                 )
             for rec in recs:

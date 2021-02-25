@@ -546,7 +546,7 @@ class Cursor(BaseCursor["Connection"]):
         record = self._tx.load_row(self._pos)
         if record is not None:
             self._pos += 1
-        return record  # type: ignore[no-any-return]
+        return record
 
     def fetchmany(self, size: int = 0) -> List[Row]:
         """
@@ -561,7 +561,7 @@ class Cursor(BaseCursor["Connection"]):
 
         if not size:
             size = self.arraysize
-        records = self._tx.load_rows(
+        records: List[Row] = self._tx.load_rows(
             self._pos, min(self._pos + size, self.pgresult.ntuples)
         )
         self._pos += len(records)
@@ -575,7 +575,9 @@ class Cursor(BaseCursor["Connection"]):
         """
         self._check_result()
         assert self.pgresult
-        records = self._tx.load_rows(self._pos, self.pgresult.ntuples)
+        records: List[Row] = self._tx.load_rows(
+            self._pos, self.pgresult.ntuples
+        )
         self._pos = self.pgresult.ntuples
         return records
 
@@ -675,7 +677,7 @@ class AsyncCursor(BaseCursor["AsyncConnection"]):
         rv = self._tx.load_row(self._pos)
         if rv is not None:
             self._pos += 1
-        return rv  # type: ignore[no-any-return]
+        return rv
 
     async def fetchmany(self, size: int = 0) -> List[Row]:
         self._check_result()
@@ -683,7 +685,7 @@ class AsyncCursor(BaseCursor["AsyncConnection"]):
 
         if not size:
             size = self.arraysize
-        records = self._tx.load_rows(
+        records: List[Row] = self._tx.load_rows(
             self._pos, min(self._pos + size, self.pgresult.ntuples)
         )
         self._pos += len(records)
@@ -692,7 +694,9 @@ class AsyncCursor(BaseCursor["AsyncConnection"]):
     async def fetchall(self) -> List[Row]:
         self._check_result()
         assert self.pgresult
-        records = self._tx.load_rows(self._pos, self.pgresult.ntuples)
+        records: List[Row] = self._tx.load_rows(
+            self._pos, self.pgresult.ntuples
+        )
         self._pos = self.pgresult.ntuples
         return records
 
