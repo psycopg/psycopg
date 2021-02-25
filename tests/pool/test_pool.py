@@ -486,7 +486,9 @@ def test_grow(dsn, monkeypatch):
 @pytest.mark.slow
 def test_shrink(dsn, monkeypatch):
 
-    orig_run = pool.pool.ShrinkPool._run
+    from psycopg3.pool.tasks import ShrinkPool
+
+    orig_run = ShrinkPool._run
     results = []
 
     def run_hacked(self, pool):
@@ -495,7 +497,7 @@ def test_shrink(dsn, monkeypatch):
         n1 = pool._nconns
         results.append((n0, n1))
 
-    monkeypatch.setattr(pool.pool.ShrinkPool, "_run", run_hacked)
+    monkeypatch.setattr(ShrinkPool, "_run", run_hacked)
 
     p = pool.ConnectionPool(dsn, minconn=2, maxconn=4, max_idle=0.2)
     assert p.max_idle == 0.2
