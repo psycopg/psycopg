@@ -39,7 +39,6 @@ class ConnectionPool:
         maxconn: Optional[int] = None,
         name: Optional[str] = None,
         timeout: float = 30.0,
-        setup_timeout: float = 30.0,
         max_idle: float = 10 * 60.0,
         reconnect_timeout: float = 5 * 60.0,
         reconnect_failed: Optional[Callable[["ConnectionPool"], None]] = None,
@@ -87,6 +86,9 @@ class ConnectionPool:
         # max_idle interval they weren't all used.
         self._nconns_min = minconn
 
+        # to notify that the pool is full
+        self._pool_full_event: Optional[threading.Event] = None
+
         self._tasks: "Queue[tasks.MaintenanceTask]" = Queue()
         self._workers: List[threading.Thread] = []
         for i in range(num_workers):
@@ -108,22 +110,9 @@ class ConnectionPool:
         for t in self._workers:
             t.start()
 
-        # Populate the pool with initial minconn connections
-        # Block if setup_timeout is > 0, otherwise fill the pool in background
-        if setup_timeout > 0:
-            event = threading.Event()
-            for i in range(self._nconns):
-                self.run_task(tasks.AddInitialConnection(self, event))
-
-            # Wait for the pool to be full or throw an error
-            if not event.wait(timeout=setup_timeout):
-                self.close()  # stop all the threads
-                raise PoolTimeout(
-                    f"pool initialization incomplete after {setup_timeout} sec"
-                )
-        else:
-            for i in range(self._nconns):
-                self.run_task(tasks.AddConnection(self))
+        # Populate the pool with initial minconn connections in background
+        for i in range(self._nconns):
+            self.run_task(tasks.AddConnection(self))
 
         # Schedule a task to shrink the pool if connections over minconn have
         # remained unused. However if the pool cannot't grow don't bother.
@@ -141,6 +130,27 @@ class ConnectionPool:
         # Don't try anything complicated as probably it won't work.
         if hasattr(self, "_closed"):
             self.close(timeout=0)
+
+    def wait_ready(self, timeout: float = 30.0) -> None:
+        """
+        Wait for the pool to be full after init.
+
+        Raise `PoolTimeout` if not ready within *timeout* sec.
+        """
+        with self._lock:
+            assert not self._pool_full_event
+            if len(self._pool) >= self._nconns:
+                return
+            self._pool_full_event = threading.Event()
+
+        if not self._pool_full_event.wait(timeout):
+            self.close()  # stop all the threads
+            raise PoolTimeout(
+                f"pool initialization incomplete after {timeout} sec"
+            )
+
+        with self._lock:
+            self._pool_full_event = None
 
     @contextmanager
     def connection(
@@ -355,24 +365,6 @@ class ConnectionPool:
         conn._pool = self
         return conn
 
-    def _add_initial_connection(self, event: threading.Event) -> None:
-        """Create a new connection at the beginning of the pool life.
-
-        Trigger *event* if all the connections necessary have been added.
-        """
-        conn = self._connect()
-        conn._pool = None  # avoid a reference loop
-
-        with self._lock:
-            assert (
-                not self._waiting
-            ), "clients waiting in a pool being initialised"
-            self._pool.append(conn)
-            trigger_event = len(self._pool) >= self._nconns
-
-        if trigger_event:
-            event.set()
-
     def _add_connection(self, attempt: Optional[ConnectionAttempt]) -> None:
         """Try to connect and add the connection to the pool.
 
@@ -449,6 +441,11 @@ class ConnectionPool:
             else:
                 # No client waiting for a connection: put it back into the pool
                 self._pool.append(conn)
+
+                # If we have been asked to wait for pool init, notify the
+                # waiter if the pool is full.
+                if self._pool_full_event and len(self._pool) >= self._nconns:
+                    self._pool_full_event.set()
 
     def _reset_connection(self, conn: Connection) -> None:
         """

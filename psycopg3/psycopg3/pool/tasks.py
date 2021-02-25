@@ -5,7 +5,6 @@ Maintenance tasks for the connection pools.
 # Copyright (C) 2021 The Psycopg Team
 
 import logging
-import threading
 from abc import ABC, abstractmethod
 from typing import Optional, TYPE_CHECKING
 from weakref import ref
@@ -67,20 +66,6 @@ class StopWorker(MaintenanceTask):
 
     def _run(self, pool: "ConnectionPool") -> None:
         pass
-
-
-class AddInitialConnection(MaintenanceTask):
-    """Add a new connection into to the pool.
-
-    If the desired number of connections is reached notify the event.
-    """
-
-    def __init__(self, pool: "ConnectionPool", event: threading.Event):
-        super().__init__(pool)
-        self.event = event
-
-    def _run(self, pool: "ConnectionPool") -> None:
-        pool._add_initial_connection(self.event)
 
 
 class AddConnection(MaintenanceTask):

@@ -68,17 +68,16 @@ def test_concurrent_filling(dsn, monkeypatch):
     t0 = time()
     times = []
 
-    add_orig = pool.ConnectionPool._add_initial_connection
+    add_orig = pool.ConnectionPool._add_to_pool
 
-    def add_time(self, event):
-        add_orig(self, event)
+    def add_time(self, conn):
         times.append(time() - t0)
+        add_orig(self, conn)
 
-    monkeypatch.setattr(
-        pool.ConnectionPool, "_add_initial_connection", add_time
-    )
+    monkeypatch.setattr(pool.ConnectionPool, "_add_to_pool", add_time)
 
-    pool.ConnectionPool(dsn, minconn=5, num_workers=2)
+    p = pool.ConnectionPool(dsn, minconn=5, num_workers=2)
+    p.wait_ready(5.0)
     want_times = [0.1, 0.1, 0.2, 0.2, 0.3]
     assert len(times) == len(want_times)
     for got, want in zip(times, want_times):
@@ -86,27 +85,28 @@ def test_concurrent_filling(dsn, monkeypatch):
 
 
 @pytest.mark.slow
-def test_setup_timeout(dsn, monkeypatch):
+def test_wait_ready(dsn, monkeypatch):
     delay_connection(monkeypatch, 0.1)
     with pytest.raises(pool.PoolTimeout):
-        pool.ConnectionPool(dsn, minconn=4, num_workers=1, setup_timeout=0.3)
+        p = pool.ConnectionPool(dsn, minconn=4, num_workers=1)
+        p.wait_ready(0.3)
 
-    p = pool.ConnectionPool(dsn, minconn=4, num_workers=1, setup_timeout=0.5)
+    p = pool.ConnectionPool(dsn, minconn=4, num_workers=1)
+    p.wait_ready(0.5)
     p.close()
-    p = pool.ConnectionPool(dsn, minconn=4, num_workers=2, setup_timeout=0.3)
+    p = pool.ConnectionPool(dsn, minconn=4, num_workers=2)
+    p.wait_ready(0.3)
+    p.wait_ready(0.0001)  # idempotent
     p.close()
 
 
 @pytest.mark.slow
 def test_setup_no_timeout(dsn, proxy):
     with pytest.raises(pool.PoolTimeout):
-        pool.ConnectionPool(
-            proxy.client_dsn, minconn=1, num_workers=1, setup_timeout=0.2
-        )
+        p = pool.ConnectionPool(proxy.client_dsn, minconn=1, num_workers=1)
+        p.wait_ready(0.2)
 
-    p = pool.ConnectionPool(
-        proxy.client_dsn, minconn=1, num_workers=1, setup_timeout=0
-    )
+    p = pool.ConnectionPool(proxy.client_dsn, minconn=1, num_workers=1)
     sleep(0.5)
     assert not p._pool
     proxy.start()
@@ -382,8 +382,7 @@ def test_del_no_warning(dsn, recwarn):
     with p.connection() as conn:
         conn.execute("select 1")
 
-    wait_pool_full(p)
-
+    p.wait_ready()
     ref = weakref.ref(p)
     del p
     assert not ref()
@@ -458,6 +457,7 @@ def test_closed_queue(dsn):
 @pytest.mark.slow
 def test_grow(dsn, monkeypatch):
     p = pool.ConnectionPool(dsn, minconn=2, maxconn=4, num_workers=3)
+    p.wait_ready(5.0)
     delay_connection(monkeypatch, 0.1)
     ts = []
     results = []
@@ -500,6 +500,7 @@ def test_shrink(dsn, monkeypatch):
     monkeypatch.setattr(ShrinkPool, "_run", run_hacked)
 
     p = pool.ConnectionPool(dsn, minconn=2, maxconn=4, max_idle=0.2)
+    p.wait_ready(5.0)
     assert p.max_idle == 0.2
 
     def worker(n):
@@ -529,7 +530,8 @@ def test_reconnect(proxy, caplog, monkeypatch):
     monkeypatch.setattr(pool.pool.ConnectionAttempt, "DELAY_JITTER", 0.0)
 
     proxy.start()
-    p = pool.ConnectionPool(proxy.client_dsn, minconn=1, setup_timeout=2.0)
+    p = pool.ConnectionPool(proxy.client_dsn, minconn=1)
+    p.wait_ready(2.0)
     proxy.stop()
 
     with pytest.raises(psycopg3.OperationalError):
@@ -538,7 +540,7 @@ def test_reconnect(proxy, caplog, monkeypatch):
 
     sleep(1.0)
     proxy.start()
-    wait_pool_full(p)
+    p.wait_ready()
 
     with p.connection() as conn:
         conn.execute("select 1")
@@ -569,10 +571,10 @@ def test_reconnect_failure(proxy):
         proxy.client_dsn,
         name="this-one",
         minconn=1,
-        setup_timeout=2.0,
         reconnect_timeout=1.0,
         reconnect_failed=failed,
     )
+    p.wait_ready(2.0)
     proxy.stop()
 
     with pytest.raises(psycopg3.OperationalError):
@@ -620,8 +622,3 @@ def delay_connection(monkeypatch, sec):
         return rv
 
     monkeypatch.setattr(psycopg3.Connection, "connect", connect_delay)
-
-
-def wait_pool_full(pool):
-    while len(pool._pool) < pool._nconns:
-        sleep(0.01)
