@@ -484,7 +484,7 @@ def test_grow(dsn, monkeypatch):
 @pytest.mark.slow
 def test_shrink(dsn, monkeypatch):
 
-    orig_run = pool.ShrinkPool._run
+    orig_run = pool.pool.ShrinkPool._run
     results = []
 
     def run_hacked(self, pool):
@@ -493,7 +493,7 @@ def test_shrink(dsn, monkeypatch):
         n1 = pool._nconns
         results.append((n0, n1))
 
-    monkeypatch.setattr(pool.ShrinkPool, "_run", run_hacked)
+    monkeypatch.setattr(pool.pool.ShrinkPool, "_run", run_hacked)
 
     p = pool.ConnectionPool(dsn, minconn=2, maxconn=4, max_idle=0.2)
     assert p.max_idle == 0.2
@@ -519,10 +519,10 @@ def test_shrink(dsn, monkeypatch):
 def test_reconnect(proxy, caplog, monkeypatch):
     caplog.set_level(logging.WARNING, logger="psycopg3.pool")
 
-    assert pool.AddConnection.INITIAL_DELAY == 1.0
-    assert pool.AddConnection.DELAY_JITTER == 0.1
-    monkeypatch.setattr(pool.AddConnection, "INITIAL_DELAY", 0.1)
-    monkeypatch.setattr(pool.AddConnection, "DELAY_JITTER", 0.0)
+    assert pool.pool.AddConnection.INITIAL_DELAY == 1.0
+    assert pool.pool.AddConnection.DELAY_JITTER == 0.1
+    monkeypatch.setattr(pool.pool.AddConnection, "INITIAL_DELAY", 0.1)
+    monkeypatch.setattr(pool.pool.AddConnection, "DELAY_JITTER", 0.0)
 
     proxy.start()
     p = pool.ConnectionPool(proxy.client_dsn, minconn=1, setup_timeout=2.0)

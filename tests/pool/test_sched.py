@@ -5,7 +5,7 @@ from threading import Thread
 
 import pytest
 
-from psycopg3._sched import Scheduler
+from psycopg3.pool.sched import Scheduler
 
 
 @pytest.mark.slow

@@ -1,5 +1,5 @@
 """
-psycopg3 connection pool
+psycopg3 synchronous connection pool
 """
 
 # Copyright (C) 2021 The Psycopg Team
@@ -15,14 +15,15 @@ from weakref import ref
 from contextlib import contextmanager
 from collections import deque
 
-from . import errors as e
-from .pq import TransactionStatus
-from ._sched import Scheduler
-from .connection import Connection
+from .. import errors as e
+from ..pq import TransactionStatus
+from ..connection import Connection
 
-WORKER_TIMEOUT = 60.0
+from .sched import Scheduler
 
 logger = logging.getLogger(__name__)
+
+WORKER_TIMEOUT = 60.0
 
 
 class PoolTimeout(e.OperationalError):

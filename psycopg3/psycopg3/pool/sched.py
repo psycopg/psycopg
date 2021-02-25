@@ -18,7 +18,7 @@ from time import monotonic
 from heapq import heappush, heappop
 from typing import Any, Callable, List, Optional, NamedTuple
 
-logger = logging.getLogger("psycopg3.sched")
+logger = logging.getLogger(__name__)
 
 
 class Task(NamedTuple):
