@@ -12,6 +12,7 @@ Tasks are called "Task", not "Event", here, because we actually make use of
 
 # Copyright (C) 2021 The Psycopg Team
 
+import asyncio
 import logging
 import threading
 from time import monotonic
@@ -107,3 +108,77 @@ class Scheduler:
             else:
                 # Block for the expected timeout or until a new task scheduled
                 self._event.wait(timeout=delay)
+
+
+class AsyncScheduler:
+    def __init__(self) -> None:
+        """Initialize a new instance, passing the time and delay functions."""
+        self._queue: List[Task] = []
+        self._lock = asyncio.Lock()
+        self._event = asyncio.Event()
+
+    EMPTY_QUEUE_TIMEOUT = 600.0
+
+    async def enter(
+        self, delay: float, action: Optional[Callable[[], Any]]
+    ) -> Task:
+        """Enter a new task in the queue delayed in the future.
+
+        Schedule a `!None` to stop the execution.
+        """
+        time = monotonic() + delay
+        return await self.enterabs(time, action)
+
+    async def enterabs(
+        self, time: float, action: Optional[Callable[[], Any]]
+    ) -> Task:
+        """Enter a new task in the queue at an absolute time.
+
+        Schedule a `!None` to stop the execution.
+        """
+        task = Task(time, action)
+        async with self._lock:
+            heappush(self._queue, task)
+            first = self._queue[0] is task
+
+        if first:
+            self._event.set()
+
+        return task
+
+    async def run(self) -> None:
+        """Execute the events scheduled."""
+        q = self._queue
+        while True:
+            async with self._lock:
+                now = monotonic()
+                task = q[0] if q else None
+                if task:
+                    if task.time <= now:
+                        heappop(q)
+                    else:
+                        delay = task.time - now
+                        task = None
+                else:
+                    delay = self.EMPTY_QUEUE_TIMEOUT
+                self._event.clear()
+
+            if task:
+                # logger.info("task %s action %s", task, task.action)
+                if not task.action:
+                    break
+                try:
+                    await task.action()
+                except Exception as e:
+                    logger.warning(
+                        "scheduled task run %s failed: %s: %s",
+                        task.action,
+                        e.__class__.__name__,
+                        e,
+                    )
+            else:
+                # Block for the expected timeout or until a new task scheduled
+                try:
+                    await asyncio.wait_for(self._event.wait(), delay)
+                except asyncio.TimeoutError:
+                    pass

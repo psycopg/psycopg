@@ -32,8 +32,7 @@ def test_sched():
 @pytest.mark.slow
 def test_sched_thread():
     s = Scheduler()
-    t = Thread(target=s.run)
-    t.daemon = True
+    t = Thread(target=s.run, daemon=True)
     t.start()
 
     results = []
@@ -62,8 +61,7 @@ def test_sched_thread():
 def test_sched_error(caplog):
     caplog.set_level(logging.WARNING, logger="psycopg3")
     s = Scheduler()
-    t = Thread(target=s.run)
-    t.daemon = True
+    t = Thread(target=s.run, daemon=True)
     t.start()
 
     results = []
