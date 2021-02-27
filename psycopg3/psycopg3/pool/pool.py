@@ -7,7 +7,8 @@ psycopg3 synchronous connection pool
 import logging
 import threading
 from time import monotonic
-from typing import Any, Callable, Deque, Iterator, Optional
+from types import TracebackType
+from typing import Any, Callable, Deque, Iterator, Optional, Type
 from contextlib import contextmanager
 from collections import deque
 
@@ -214,6 +215,17 @@ class ConnectionPool(BasePool[Connection]):
                         self.name,
                         timeout,
                     )
+
+    def __enter__(self) -> "ConnectionPool":
+        return self
+
+    def __exit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc_val: Optional[BaseException],
+        exc_tb: Optional[TracebackType],
+    ) -> None:
+        self.close()
 
     def resize(self, minconn: int, maxconn: Optional[int] = None) -> None:
         if maxconn is None:

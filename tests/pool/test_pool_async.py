@@ -67,6 +67,12 @@ async def test_its_really_a_pool(dsn):
     await p.close()
 
 
+async def test_context(dsn):
+    async with pool.AsyncConnectionPool(dsn, minconn=1) as p:
+        assert not p.closed
+    assert p.closed
+
+
 async def test_connection_not_lost(dsn):
     p = pool.AsyncConnectionPool(dsn, minconn=1)
     with pytest.raises(ZeroDivisionError):

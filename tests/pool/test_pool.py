@@ -62,6 +62,12 @@ def test_connection_not_lost(dsn):
         assert conn2.pgconn.backend_pid == pid
 
 
+def test_context(dsn):
+    with pool.ConnectionPool(dsn, minconn=1) as p:
+        assert not p.closed
+    assert p.closed
+
+
 @pytest.mark.slow
 def test_concurrent_filling(dsn, monkeypatch):
     delay_connection(monkeypatch, 0.1)

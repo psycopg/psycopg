@@ -8,7 +8,9 @@ import sys
 import asyncio
 import logging
 from time import monotonic
-from typing import Any, Awaitable, Callable, Deque, AsyncIterator, Optional
+from types import TracebackType
+from typing import Any, AsyncIterator, Awaitable, Callable, Deque
+from typing import Optional, Type
 from collections import deque
 
 from ..pq import TransactionStatus
@@ -232,6 +234,17 @@ class AsyncConnectionPool(BasePool[AsyncConnection]):
                         self.name,
                         timeout,
                     )
+
+    async def __aenter__(self) -> "AsyncConnectionPool":
+        return self
+
+    async def __aexit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc_val: Optional[BaseException],
+        exc_tb: Optional[TracebackType],
+    ) -> None:
+        await self.close()
 
     async def resize(
         self, minconn: int, maxconn: Optional[int] = None
