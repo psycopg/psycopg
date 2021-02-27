@@ -524,10 +524,10 @@ def test_shrink(dsn, monkeypatch):
 def test_reconnect(proxy, caplog, monkeypatch):
     caplog.set_level(logging.WARNING, logger="psycopg3.pool")
 
-    assert pool.pool.ConnectionAttempt.INITIAL_DELAY == 1.0
-    assert pool.pool.ConnectionAttempt.DELAY_JITTER == 0.1
-    monkeypatch.setattr(pool.pool.ConnectionAttempt, "INITIAL_DELAY", 0.1)
-    monkeypatch.setattr(pool.pool.ConnectionAttempt, "DELAY_JITTER", 0.0)
+    assert pool.base.ConnectionAttempt.INITIAL_DELAY == 1.0
+    assert pool.base.ConnectionAttempt.DELAY_JITTER == 0.1
+    monkeypatch.setattr(pool.base.ConnectionAttempt, "INITIAL_DELAY", 0.1)
+    monkeypatch.setattr(pool.base.ConnectionAttempt, "DELAY_JITTER", 0.0)
 
     proxy.start()
     p = pool.ConnectionPool(proxy.client_dsn, minconn=1)

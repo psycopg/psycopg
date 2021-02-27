@@ -4,16 +4,24 @@ Maintenance tasks for the connection pools.
 
 # Copyright (C) 2021 The Psycopg Team
 
+import asyncio
 import logging
+import threading
 from abc import ABC, abstractmethod
-from typing import Any, Generic, Optional, TYPE_CHECKING
+from typing import Any, cast, Generic, Optional, Type, TYPE_CHECKING
 from weakref import ref
 
 from ..proto import ConnectionType
+from .. import Connection, AsyncConnection
 
 if TYPE_CHECKING:
+    from .pool import ConnectionPool
+    from .async_pool import AsyncConnectionPool
     from .base import BasePool, ConnectionAttempt
-    from ..connection import Connection
+else:
+    # Injected at pool.py and async_pool.py import
+    ConnectionPool: "Type[BasePool[Connection]]"
+    AsyncConnectionPool: "Type[BasePool[AsyncConnection]]"
 
 logger = logging.getLogger(__name__)
 
@@ -21,9 +29,16 @@ logger = logging.getLogger(__name__)
 class MaintenanceTask(ABC, Generic[ConnectionType]):
     """A task to run asynchronously to maintain the pool state."""
 
+    TIMEOUT = 10.0
+
     def __init__(self, pool: "BasePool[Any]"):
+        if isinstance(pool, AsyncConnectionPool):
+            self.event = threading.Event()
+
         self.pool = ref(pool)
-        logger.debug("task created: %s", self)
+        logger.debug(
+            "task created in %s: %s", threading.current_thread().name, self
+        )
 
     def __repr__(self) -> str:
         pool = self.pool()
@@ -41,8 +56,20 @@ class MaintenanceTask(ABC, Generic[ConnectionType]):
             # Pool is no more working. Quietly discard the operation.
             return
 
-        logger.debug("task running: %s", self)
-        self._run(pool)
+        logger.debug(
+            "task running in %s: %s", threading.current_thread().name, self
+        )
+        if isinstance(pool, ConnectionPool):
+            self._run(pool)
+        elif isinstance(pool, AsyncConnectionPool):
+            self.event.clear()
+            asyncio.run_coroutine_threadsafe(self._run_async(pool), pool.loop)
+            if not self.event.wait(self.TIMEOUT):
+                logger.warning(
+                    "event %s didn't terminate after %s sec", self.TIMEOUT
+                )
+        else:
+            logger.error("%s run got %s instead of a pool", self, pool)
 
     def tick(self) -> None:
         """Run the scheduled task
@@ -58,15 +85,22 @@ class MaintenanceTask(ABC, Generic[ConnectionType]):
         pool.run_task(self)
 
     @abstractmethod
-    def _run(self, pool: "BasePool[Any]") -> None:
+    def _run(self, pool: "ConnectionPool") -> None:
         ...
+
+    @abstractmethod
+    async def _run_async(self, pool: "AsyncConnectionPool") -> None:
+        self.event.set()
 
 
 class StopWorker(MaintenanceTask[ConnectionType]):
     """Signal the maintenance thread to terminate."""
 
-    def _run(self, pool: "BasePool[Any]") -> None:
+    def _run(self, pool: "ConnectionPool") -> None:
         pass
+
+    async def _run_async(self, pool: "AsyncConnectionPool") -> None:
+        await super()._run_async(pool)
 
 
 class AddConnection(MaintenanceTask[ConnectionType]):
@@ -78,29 +112,30 @@ class AddConnection(MaintenanceTask[ConnectionType]):
         super().__init__(pool)
         self.attempt = attempt
 
-    def _run(self, pool: "BasePool[Any]") -> None:
-        from . import ConnectionPool
+    def _run(self, pool: "ConnectionPool") -> None:
+        pool._add_connection(self.attempt)
 
-        if isinstance(pool, ConnectionPool):
-            pool._add_connection(self.attempt)
-        else:
-            assert False
+    async def _run_async(self, pool: "AsyncConnectionPool") -> None:
+        logger.debug("run async 1")
+        await pool._add_connection(self.attempt)
+        logger.debug("run async 2")
+        await super()._run_async(pool)
+        logger.debug("run async 3")
 
 
 class ReturnConnection(MaintenanceTask[ConnectionType]):
     """Clean up and return a connection to the pool."""
 
-    def __init__(self, pool: "BasePool[Any]", conn: "Connection"):
+    def __init__(self, pool: "BasePool[Any]", conn: "ConnectionType"):
         super().__init__(pool)
         self.conn = conn
 
-    def _run(self, pool: "BasePool[Any]") -> None:
-        from . import ConnectionPool
+    def _run(self, pool: "ConnectionPool") -> None:
+        pool._return_connection(cast(Connection, self.conn))
 
-        if isinstance(pool, ConnectionPool):
-            pool._return_connection(self.conn)
-        else:
-            assert False
+    async def _run_async(self, pool: "AsyncConnectionPool") -> None:
+        await pool._return_connection(cast(AsyncConnection, self.conn))
+        await super()._run_async(pool)
 
 
 class ShrinkPool(MaintenanceTask[ConnectionType]):
@@ -110,14 +145,13 @@ class ShrinkPool(MaintenanceTask[ConnectionType]):
     in the pool.
     """
 
-    def _run(self, pool: "BasePool[Any]") -> None:
+    def _run(self, pool: "ConnectionPool") -> None:
         # Reschedule the task now so that in case of any error we don't lose
         # the periodic run.
         pool.schedule_task(self, pool.max_idle)
+        pool._shrink_pool()
 
-        from . import ConnectionPool
-
-        if isinstance(pool, ConnectionPool):
-            pool._shrink_pool()
-        else:
-            assert False
+    async def _run_async(self, pool: "AsyncConnectionPool") -> None:
+        pool.schedule_task(self, pool.max_idle)
+        await pool._shrink_pool()
+        await super()._run_async(pool)

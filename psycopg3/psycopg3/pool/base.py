@@ -31,7 +31,6 @@ class BasePool(Generic[ConnectionType]):
         conninfo: str = "",
         *,
         kwargs: Optional[Dict[str, Any]] = None,
-        configure: Optional[Callable[[ConnectionType], None]] = None,
         minconn: int = 4,
         maxconn: Optional[int] = None,
         name: Optional[str] = None,
@@ -52,15 +51,13 @@ class BasePool(Generic[ConnectionType]):
             )
         if not name:
             num = BasePool._num_pool = BasePool._num_pool + 1
-            name = f"pool-{num - 1}"
+            name = f"pool-{num}"
 
         if num_workers < 1:
             raise ValueError("num_workers must be at least 1")
 
         self.conninfo = conninfo
         self.kwargs: Dict[str, Any] = kwargs or {}
-        self._configure: Callable[[ConnectionType], None]
-        self._configure = configure or (lambda conn: None)
         self._reconnect_failed: Callable[["BasePool[ConnectionType]"], None]
         self._reconnect_failed = reconnect_failed or (lambda pool: None)
         self.name = name
@@ -86,12 +83,15 @@ class BasePool(Generic[ConnectionType]):
         self._workers: List[threading.Thread] = []
         for i in range(num_workers):
             t = threading.Thread(
-                target=self.worker, args=(self._tasks,), daemon=True
+                target=self.worker,
+                args=(self._tasks,),
+                name=f"{self.name}-worker-{i}",
+                daemon=True,
             )
             self._workers.append(t)
 
         self._sched_runner = threading.Thread(
-            target=self._sched.run, daemon=True
+            target=self._sched.run, name=f"{self.name}-scheduler", daemon=True
         )
 
         # _close should be the last property to be set in the state
@@ -145,7 +145,7 @@ class BasePool(Generic[ConnectionType]):
         self._tasks.put_nowait(task)
 
     def schedule_task(
-        self, task: tasks.MaintenanceTask[ConnectionType], delay: float
+        self, task: tasks.MaintenanceTask[Any], delay: float
     ) -> None:
         """Run a maintenance task in a worker thread in the future."""
         self._sched.enter(delay, task.tick)
@@ -162,7 +162,7 @@ class BasePool(Generic[ConnectionType]):
         # Don't make all the workers time out at the same moment
         timeout = WORKER_TIMEOUT * (0.9 + 0.1 * random.random())
         while True:
-            # Use a timeout to make the wait unterruptable
+            # Use a timeout to make the wait interruptable
             try:
                 task = q.get(timeout=timeout)
             except Empty:
@@ -177,6 +177,10 @@ class BasePool(Generic[ConnectionType]):
                 )
 
             if isinstance(task, tasks.StopWorker):
+                logger.debug(
+                    "terminating working thread %s",
+                    threading.current_thread().name,
+                )
                 return
 
 

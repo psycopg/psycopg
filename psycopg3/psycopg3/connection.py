@@ -46,7 +46,7 @@ execute: Callable[["PGconn"], PQGen[List["PGresult"]]]
 
 if TYPE_CHECKING:
     from .pq.proto import PGconn, PGresult
-    from .pool import ConnectionPool
+    from .pool.base import BasePool
 
 if pq.__impl__ == "c":
     from psycopg3_c import _psycopg3
@@ -127,7 +127,7 @@ class BaseConnection(AdaptContext):
 
         # Attribute is only set if the connection is from a pool so we can tell
         # apart a connection in the pool too (when _pool = None)
-        self._pool: Optional["ConnectionPool"]
+        self._pool: Optional["BasePool[Any]"]
 
     def __del__(self) -> None:
         # If fails on connection we might not have this attribute yet
@@ -644,7 +644,9 @@ class AsyncConnection(BaseConnection):
         else:
             await self.commit()
 
-        await self.close()
+        # Close the connection only if it doesn't belong to a pool.
+        if not getattr(self, "_pool", None):
+            await self.close()
 
     async def close(self) -> None:
         self.pgconn.finish()
