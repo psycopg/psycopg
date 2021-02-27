@@ -423,6 +423,7 @@ async def test_del_no_warning(dsn, recwarn):
     await p.wait_ready()
     ref = weakref.ref(p)
     del p
+    await asyncio.sleep(0.1)  # TODO: I wish it wasn't needed
     assert not ref()
     assert not recwarn
 
@@ -432,7 +433,7 @@ async def test_del_stop_threads(dsn):
     p = pool.AsyncConnectionPool(dsn)
     ts = [p._sched_runner] + p._workers
     del p
-    await asyncio.sleep(0.2)
+    await asyncio.sleep(0.1)
     for t in ts:
         assert not t.is_alive()
 

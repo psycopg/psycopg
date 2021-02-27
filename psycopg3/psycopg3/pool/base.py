@@ -168,6 +168,13 @@ class BasePool(Generic[ConnectionType]):
             except Empty:
                 continue
 
+            if isinstance(task, tasks.StopWorker):
+                logger.debug(
+                    "terminating working thread %s",
+                    threading.current_thread().name,
+                )
+                return
+
             # Run the task. Make sure don't die in the attempt.
             try:
                 task.run()
@@ -175,13 +182,6 @@ class BasePool(Generic[ConnectionType]):
                 logger.warning(
                     "task run %s failed: %s: %s", task, e.__class__.__name__, e
                 )
-
-            if isinstance(task, tasks.StopWorker):
-                logger.debug(
-                    "terminating working thread %s",
-                    threading.current_thread().name,
-                )
-                return
 
 
 class ConnectionAttempt:

@@ -24,7 +24,7 @@ if sys.version_info >= (3, 7):
     get_running_loop = asyncio.get_running_loop
 
 else:
-    from .utils.context import asynccontextmanager
+    from ..utils.context import asynccontextmanager
 
     get_running_loop = asyncio.get_event_loop
 
