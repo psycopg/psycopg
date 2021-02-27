@@ -111,7 +111,7 @@ class ConnectionPool(BasePool[Connection]):
                 self._waiting.append(pos)
 
                 # If there is space for the pool to grow, let's do it
-                if self._nconns < self.maxconn:
+                if self._nconns < self._maxconn:
                     self._nconns += 1
                     logger.info(
                         "growing pool %r to %s", self.name, self._nconns
@@ -214,6 +214,25 @@ class ConnectionPool(BasePool[Connection]):
                         self.name,
                         timeout,
                     )
+
+    def resize(self, minconn: int, maxconn: Optional[int] = None) -> None:
+        if maxconn is None:
+            maxconn = minconn
+        if maxconn < minconn:
+            raise ValueError("maxconn must be greater or equal than minconn")
+
+        ngrow = max(0, minconn - self._minconn)
+
+        logger.info(
+            "resizing %r to minconn=%s maxconn=%s", self.name, minconn, maxconn
+        )
+        with self._lock:
+            self._minconn = minconn
+            self._maxconn = maxconn
+            self._nconns += ngrow
+
+        for i in range(ngrow):
+            self.run_task(tasks.AddConnection(self))
 
     def configure(self, conn: Connection) -> None:
         """Configure a connection after creation."""
@@ -349,7 +368,7 @@ class ConnectionPool(BasePool[Connection]):
             self._nconns_min = len(self._pool)
 
             # If the pool can shrink and connections were unused, drop one
-            if self._nconns > self.minconn and nconns_min > 0:
+            if self._nconns > self._minconn and nconns_min > 0:
                 to_close = self._pool.popleft()
                 self._nconns -= 1
 

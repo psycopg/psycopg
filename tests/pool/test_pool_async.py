@@ -641,6 +641,46 @@ async def test_uniform_use(dsn):
     assert set(counts.values()) == set([2])
 
 
+@pytest.mark.slow
+async def test_resize(dsn):
+    p = pool.AsyncConnectionPool(dsn, minconn=2, max_idle=0.2)
+    size = []
+
+    async def sampler():
+        await asyncio.sleep(0.05)  # ensure sampling happens after shrink check
+        while True:
+            await asyncio.sleep(0.2)
+            if p.closed:
+                break
+            size.append(len(p._pool))
+
+    async def client(t):
+        async with p.connection() as conn:
+            await conn.execute("select pg_sleep(%s)", [t])
+
+    s = create_task(sampler())
+
+    await asyncio.sleep(0.3)
+
+    c = create_task(client(0.4))
+
+    await asyncio.sleep(0.2)
+    await p.resize(4)
+    assert p.minconn == 4
+    assert p.maxconn == 4
+
+    await asyncio.sleep(0.4)
+    await p.resize(2)
+    assert p.minconn == 2
+    assert p.maxconn == 2
+
+    await asyncio.sleep(0.6)
+    await p.close()
+    await asyncio.gather(s, c)
+
+    assert size == [2, 1, 3, 4, 3, 2, 2]
+
+
 def delay_connection(monkeypatch, sec):
     """
     Return a _connect_gen function delayed by the amount of seconds

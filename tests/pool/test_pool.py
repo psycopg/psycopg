@@ -608,6 +608,48 @@ def test_uniform_use(dsn):
     assert set(counts.values()) == set([2])
 
 
+@pytest.mark.slow
+def test_resize(dsn):
+    p = pool.ConnectionPool(dsn, minconn=2, max_idle=0.2)
+    size = []
+
+    def sampler():
+        sleep(0.05)  # ensure sampling happens after shrink check
+        while True:
+            sleep(0.2)
+            if p.closed:
+                break
+            size.append(len(p._pool))
+
+    def client(t):
+        with p.connection() as conn:
+            conn.execute("select pg_sleep(%s)", [t])
+
+    s = Thread(target=sampler)
+    s.start()
+
+    sleep(0.3)
+
+    c = Thread(target=client, args=(0.4,))
+    c.start()
+
+    sleep(0.2)
+    p.resize(4)
+    assert p.minconn == 4
+    assert p.maxconn == 4
+
+    sleep(0.4)
+    p.resize(2)
+    assert p.minconn == 2
+    assert p.maxconn == 2
+
+    sleep(0.6)
+    p.close()
+    s.join()
+
+    assert size == [2, 1, 3, 4, 3, 2, 2]
+
+
 def delay_connection(monkeypatch, sec):
     """
     Return a _connect_gen function delayed by the amount of seconds

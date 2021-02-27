@@ -45,10 +45,7 @@ class BasePool(Generic[ConnectionType]):
         if maxconn is None:
             maxconn = minconn
         if maxconn < minconn:
-            raise ValueError(
-                f"can't create {self.__class__.__name__}"
-                f" with maxconn={maxconn} < minconn={minconn}"
-            )
+            raise ValueError("maxconn must be greater or equal than minconn")
         if not name:
             num = BasePool._num_pool = BasePool._num_pool + 1
             name = f"pool-{num}"
@@ -61,8 +58,8 @@ class BasePool(Generic[ConnectionType]):
         self._reconnect_failed: Callable[["BasePool[ConnectionType]"], None]
         self._reconnect_failed = reconnect_failed or (lambda pool: None)
         self.name = name
-        self.minconn = minconn
-        self.maxconn = maxconn
+        self._minconn = minconn
+        self._maxconn = maxconn
         self.timeout = timeout
         self.reconnect_timeout = reconnect_timeout
         self.max_idle = max_idle
@@ -108,9 +105,8 @@ class BasePool(Generic[ConnectionType]):
             self.run_task(tasks.AddConnection(self))
 
         # Schedule a task to shrink the pool if connections over minconn have
-        # remained unused. However if the pool can't grow don't bother.
-        if maxconn > minconn:
-            self.schedule_task(tasks.ShrinkPool(self), self.max_idle)
+        # remained unused.
+        self.schedule_task(tasks.ShrinkPool(self), self.max_idle)
 
     def __repr__(self) -> str:
         return (
@@ -134,6 +130,14 @@ class BasePool(Generic[ConnectionType]):
         # Stop the worker threads
         for i in range(len(self._workers)):
             self.run_task(tasks.StopWorker(self))
+
+    @property
+    def minconn(self) -> int:
+        return self._minconn
+
+    @property
+    def maxconn(self) -> int:
+        return self._maxconn
 
     @property
     def closed(self) -> bool:
