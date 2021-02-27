@@ -4,11 +4,11 @@ psycopg3 synchronous connection pool
 
 # Copyright (C) 2021 The Psycopg Team
 
+import sys
 import asyncio
 import logging
 from time import monotonic
 from typing import Any, Awaitable, Callable, Deque, AsyncIterator, Optional
-from contextlib import asynccontextmanager
 from collections import deque
 
 from ..pq import TransactionStatus
@@ -17,6 +17,16 @@ from ..connection import AsyncConnection
 from . import tasks
 from .base import ConnectionAttempt, BasePool
 from .errors import PoolClosed, PoolTimeout
+
+if sys.version_info >= (3, 7):
+    from contextlib import asynccontextmanager
+
+    get_running_loop = asyncio.get_running_loop
+
+else:
+    from .utils.context import asynccontextmanager
+
+    get_running_loop = asyncio.get_event_loop
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +48,7 @@ class AsyncConnectionPool(BasePool[AsyncConnection]):
         # to notify that the pool is full
         self._pool_full_event: Optional[asyncio.Event] = None
 
-        self.loop = asyncio.get_event_loop()
+        self.loop = get_running_loop()
 
         super().__init__(conninfo, **kwargs)
 
@@ -210,7 +220,7 @@ class AsyncConnectionPool(BasePool[AsyncConnection]):
 
         # Wait for the worker threads to terminate
         if timeout > 0:
-            loop = asyncio.get_running_loop()
+            loop = get_running_loop()
             for t in [self._sched_runner] + self._workers:
                 if not t.is_alive():
                     continue
