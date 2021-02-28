@@ -164,3 +164,68 @@ received immediately, but only during a connection operation, such as a query.
     print(conn.cursor().execute("select 1").fetchone())
     # got this: Notify(channel='mychan', payload='hey', pid=961823)
     # (1,)
+
+
+Detecting disconnections
+------------------------
+
+Sometimes it is useful to detect immediately when the connection with the
+database is lost. One brutal way to do so is to poll a connection in a loop
+running an endless stream of :sql:`SELECT 1`... *Don't* do so: polling is *so*
+out of fashion. Besides, it is inefficient (unless what you really want is a
+client-server generator of ones), it generates useless traffic and will only
+detect a disconnection with an average delay of half the polling time.
+
+A more efficient and timely way to detect a server disconnection is to get a
+notification from the OS that the connection has something to say: only then
+you can test the connection. You can dedicate a thread (or an asyncio task) to
+wait on a connection: such thread will perform no activity until awaken by the
+OS.
+
+In a normal (non asyncio) program you can use the `selectors` module. Because
+the `!Connection` implements a `~Connection.fileno()` method you can just
+register it as a file-like object. You can run such code in a dedicated thread
+(and using a dedicated connection) if the rest of the program happens to have
+something else to do too.
+
+.. code:: python
+
+    import selectors
+
+    sel = selectors.DefaultSelector()
+    sel.register(conn, selectors.EVENT_READ)
+    while True:
+        if not sel.select(timeout=60.0):
+            continue  # No FD activity detected in one minute
+
+        # Activity detected. Is the connection still ok?
+        try:
+            conn.execute("select 1")
+        except psycopg3.OperationalError:
+            # You were disconnected: do something useful such as panicking
+            logger.error("we lost our database!")
+            sys.exit(1)
+
+In an `asyncio` program you can dedicate a `~asyncio.Task` instead and do
+something similar using `~asyncio.loop.add_reader`:
+
+.. code:: python
+
+    import asyncio
+
+    ev = asyncio.Event()
+    loop = asyncio.get_event_loop()
+    loop.add_reader(conn.fileno(), ev.set)
+
+    while True:
+        try:
+            await asyncio.wait_for(ev.wait(), 60.0)
+        except asyncio.TimeoutError:
+            continue  # No FD activity detected in one minute
+
+        # Activity detected. Is the connection still ok?
+        try:
+            await conn.execute("select 1")
+        except psycopg3.OperationalError:
+            # Guess what happened
+            ...
