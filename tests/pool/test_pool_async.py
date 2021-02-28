@@ -668,6 +668,15 @@ async def test_resize(dsn):
     assert size == [2, 1, 3, 4, 3, 2, 2]
 
 
+def test_jitter():
+    rnds = [
+        pool.AsyncConnectionPool._jitter(30, -0.1, +0.2) for i in range(100)
+    ]
+    rnds.sort()
+    assert 27 <= min(rnds) <= 28
+    assert 35 < max(rnds) < 36
+
+
 def delay_connection(monkeypatch, sec):
     """
     Return a _connect_gen function delayed by the amount of seconds

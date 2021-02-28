@@ -4,10 +4,10 @@ psycopg3 connection pool base class and functionalities.
 
 # Copyright (C) 2021 The Psycopg Team
 
-import random
 import logging
 import threading
 from queue import Queue, Empty
+from random import random
 from typing import Any, Callable, Deque, Dict, Generic, List, Optional
 from collections import deque
 
@@ -164,7 +164,7 @@ class BasePool(Generic[ConnectionType]):
         StopWorker is received.
         """
         # Don't make all the workers time out at the same moment
-        timeout = WORKER_TIMEOUT * (0.9 + 0.1 * random.random())
+        timeout = cls._jitter(WORKER_TIMEOUT, -0.1, 0.1)
         while True:
             # Use a timeout to make the wait interruptable
             try:
@@ -187,6 +187,13 @@ class BasePool(Generic[ConnectionType]):
                     "task run %s failed: %s: %s", task, e.__class__.__name__, e
                 )
 
+    @classmethod
+    def _jitter(cls, value: float, min_pc: float, max_pc: float) -> float:
+        """
+        Add a random value to *value* between *min_pc* and *max_pc* percent.
+        """
+        return value * (1.0 + ((max_pc - min_pc) * random()) + min_pc)
+
 
 class ConnectionAttempt:
     """Keep the state of a connection attempt."""
@@ -204,11 +211,9 @@ class ConnectionAttempt:
         """Calculate how long to wait for a new connection attempt"""
         if self.delay == 0.0:
             self.give_up_at = now + self.reconnect_timeout
-            # +/- 10% of the initial delay
-            jitter = self.INITIAL_DELAY * (
-                (2.0 * self.DELAY_JITTER * random.random()) - self.DELAY_JITTER
+            self.delay = BasePool._jitter(
+                self.INITIAL_DELAY, -self.DELAY_JITTER, self.DELAY_JITTER
             )
-            self.delay = self.INITIAL_DELAY + jitter
         else:
             self.delay *= self.DELAY_BACKOFF
 
