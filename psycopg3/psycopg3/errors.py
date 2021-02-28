@@ -31,6 +31,8 @@ class Warning(Exception):
     Defined for DBAPI compatibility, but never raised by ``psycopg3``.
     """
 
+    __module__ = "psycopg3"
+
 
 ErrorInfo = Union[None, PGresult, Dict[int, Optional[bytes]]]
 
@@ -44,6 +46,8 @@ class Error(Exception):
 
     This exception is guaranteed to be picklable.
     """
+
+    __module__ = "psycopg3"
 
     def __init__(
         self,
@@ -87,11 +91,15 @@ class InterfaceError(Error):
     An error related to the database interface rather than the database itself.
     """
 
+    __module__ = "psycopg3"
+
 
 class DatabaseError(Error):
     """
     Exception raised for errors that are related to the database.
     """
+
+    __module__ = "psycopg3"
 
 
 class DataError(DatabaseError):
@@ -100,6 +108,8 @@ class DataError(DatabaseError):
 
     Examples may be division by zero, numeric value out of range, etc.
     """
+
+    __module__ = "psycopg3"
 
 
 class OperationalError(DatabaseError):
@@ -112,6 +122,8 @@ class OperationalError(DatabaseError):
     during processing, etc.
     """
 
+    __module__ = "psycopg3"
+
 
 class IntegrityError(DatabaseError):
     """
@@ -119,6 +131,8 @@ class IntegrityError(DatabaseError):
 
     An example may be a foreign key check failed.
     """
+
+    __module__ = "psycopg3"
 
 
 class InternalError(DatabaseError):
@@ -129,6 +143,8 @@ class InternalError(DatabaseError):
     of sync, etc.
     """
 
+    __module__ = "psycopg3"
+
 
 class ProgrammingError(DatabaseError):
     """
@@ -138,11 +154,15 @@ class ProgrammingError(DatabaseError):
     statement, wrong number of parameters specified, etc.
     """
 
+    __module__ = "psycopg3"
+
 
 class NotSupportedError(DatabaseError):
     """
     A method or database API was used which is not supported by the database,
     """
+
+    __module__ = "psycopg3"
 
 
 class Diagnostic:
