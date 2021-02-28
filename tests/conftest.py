@@ -1,3 +1,7 @@
+import inspect
+
+import pytest
+
 pytest_plugins = (
     "tests.fix_db",
     "tests.fix_pq",
@@ -16,3 +20,18 @@ def pytest_configure(config):
     config.addinivalue_line(
         "markers", "subprocess: the test import psycopg3 after subprocess"
     )
+
+
+@pytest.fixture
+def retries(request):
+    """Retry a block in a test a few times before giving up."""
+    import tenacity
+
+    if inspect.iscoroutinefunction(request.function):
+        return tenacity.AsyncRetrying(
+            reraise=True, stop=tenacity.stop_after_attempt(3)
+        )
+    else:
+        return tenacity.Retrying(
+            reraise=True, stop=tenacity.stop_after_attempt(3)
+        )
