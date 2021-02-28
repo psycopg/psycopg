@@ -51,35 +51,44 @@ def test_query_params(conn):
         assert cur.params == [bytes([0, 3])]  # 3 as binary int2
 
 
-def test_close(conn, recwarn):
-    cur = conn.cursor("foo")
-    cur.execute("select generate_series(1, 10) as bar")
-    cur.close()
-    assert cur.closed
+def test_close(conn, recwarn, retries):
+    for retry in retries:
+        with retry:
+            recwarn.clear()
+            cur = conn.cursor("foo")
+            cur.execute("select generate_series(1, 10) as bar")
+            cur.close()
+            assert cur.closed
 
-    assert not conn.execute(
-        "select * from pg_cursors where name = 'foo'"
-    ).fetchone()
-    del cur
-    assert not recwarn
-
-
-def test_close_noop(conn, recwarn):
-    cur = conn.cursor("foo")
-    cur.close()
-    assert not recwarn
+            assert not conn.execute(
+                "select * from pg_cursors where name = 'foo'"
+            ).fetchone()
+            del cur
+            assert not recwarn, [str(w.message) for w in recwarn.list]
 
 
-def test_context(conn, recwarn):
-    with conn.cursor("foo") as cur:
-        cur.execute("select generate_series(1, 10) as bar")
+def test_close_noop(conn, recwarn, retries):
+    for retry in retries:
+        with retry:
+            recwarn.clear()
+            cur = conn.cursor("foo")
+            cur.close()
+            assert not recwarn, [str(w.message) for w in recwarn.list]
 
-    assert cur.closed
-    assert not conn.execute(
-        "select * from pg_cursors where name = 'foo'"
-    ).fetchone()
-    del cur
-    assert not recwarn
+
+def test_context(conn, recwarn, retries):
+    for retry in retries:
+        with retry:
+            recwarn.clear()
+            with conn.cursor("foo") as cur:
+                cur.execute("select generate_series(1, 10) as bar")
+
+            assert cur.closed
+            assert not conn.execute(
+                "select * from pg_cursors where name = 'foo'"
+            ).fetchone()
+            del cur
+            assert not recwarn, [str(w.message) for w in recwarn.list]
 
 
 def test_close_no_clobber(conn):
@@ -88,11 +97,14 @@ def test_close_no_clobber(conn):
             cur.execute("select 1 / %s", (0,))
 
 
-def test_warn_close(conn, recwarn):
-    cur = conn.cursor("foo")
-    cur.execute("select generate_series(1, 10) as bar")
-    del cur
-    assert ".close()" in str(recwarn.pop(ResourceWarning).message)
+def test_warn_close(conn, recwarn, retries):
+    for retry in retries:
+        with retry:
+            recwarn.clear()
+            cur = conn.cursor("foo")
+            cur.execute("select generate_series(1, 10) as bar")
+            del cur
+            assert ".close()" in str(recwarn.pop(ResourceWarning).message)
 
 
 def test_execute_reuse(conn):
