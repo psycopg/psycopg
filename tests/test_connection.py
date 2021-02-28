@@ -511,3 +511,10 @@ def test_str(conn):
     assert "[IDLE]" in str(conn)
     conn.close()
     assert "[BAD]" in str(conn)
+
+
+def test_fileno(conn):
+    assert conn.fileno() == conn.pgconn.socket
+    conn.close()
+    with pytest.raises(psycopg3.OperationalError):
+        conn.fileno()

@@ -166,6 +166,8 @@ The `!Connection` class
         TODO
 
 
+    .. automethod:: fileno
+
     .. autoattribute:: prepare_threshold
         :annotation: Optional[int]
 

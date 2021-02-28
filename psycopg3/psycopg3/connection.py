@@ -209,6 +209,18 @@ class BaseConnection(AdaptContext):
         # implement the AdaptContext protocol
         return self
 
+    def fileno(self) -> int:
+        """Return the file descriptor of the connection.
+
+        This function allows to use the connection as file-like object in
+        functions waiting for readiness, such as the ones defined in the
+        `selectors` module.
+        """
+        try:
+            return self.pgconn.socket
+        except pq.PQerror as exc:
+            raise e.OperationalError(str(exc))
+
     def cancel(self) -> None:
         """Cancel the current operation on the connection."""
         c = self.pgconn.get_cancel()

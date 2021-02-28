@@ -529,3 +529,10 @@ async def test_str(aconn):
     assert "[IDLE]" in str(aconn)
     await aconn.close()
     assert "[BAD]" in str(aconn)
+
+
+async def test_fileno(aconn):
+    assert aconn.fileno() == aconn.pgconn.socket
+    await aconn.close()
+    with pytest.raises(psycopg3.OperationalError):
+        aconn.fileno()

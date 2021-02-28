@@ -127,3 +127,26 @@ async def test_cancel(aconn):
     cur = aconn.cursor()
     await cur.execute("select 1")
     assert await cur.fetchone() == (1,)
+
+
+@pytest.mark.slow
+async def test_identify_closure(aconn, dsn):
+    conn2 = await psycopg3.AsyncConnection.connect(dsn)
+
+    async def closer():
+        await asyncio.sleep(0.3)
+        await conn2.execute(
+            "select pg_terminate_backend(%s)", [aconn.pgconn.backend_pid]
+        )
+
+    t0 = time.time()
+    ev = asyncio.Event()
+    loop = asyncio.get_event_loop()
+    loop.add_reader(aconn.fileno(), ev.set)
+    asyncio.ensure_future(closer())
+
+    await asyncio.wait_for(ev.wait(), 1.0)
+    with pytest.raises(psycopg3.OperationalError):
+        await aconn.execute("select 1")
+    t1 = time.time()
+    assert 0.3 < t1 - t0 < 0.5
