@@ -6,13 +6,8 @@ Various functionalities to make easier to work with the libpq.
 
 from typing import cast, NamedTuple, Optional, Union
 
-from ..errors import OperationalError
 from ._enums import DiagnosticField, ConnStatus, TransactionStatus
 from .proto import PGconn, PGresult
-
-
-class PQerror(OperationalError):
-    __module__ = "psycopg3.pq"
 
 
 class PGnotify(NamedTuple):

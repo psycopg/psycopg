@@ -69,7 +69,7 @@ def _parse_conninfo(conninfo: str) -> List[pq.ConninfoOption]:
     """
     try:
         return pq.Conninfo.parse(conninfo.encode("utf8"))
-    except pq.PQerror as ex:
+    except e.OperationalError as ex:
         raise e.ProgrammingError(str(ex))
 
 

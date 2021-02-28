@@ -216,10 +216,7 @@ class BaseConnection(AdaptContext):
         functions waiting for readiness, such as the ones defined in the
         `selectors` module.
         """
-        try:
-            return self.pgconn.socket
-        except pq.PQerror as exc:
-            raise e.OperationalError(str(exc))
+        return self.pgconn.socket
 
     def cancel(self) -> None:
         """Cancel the current operation on the connection."""

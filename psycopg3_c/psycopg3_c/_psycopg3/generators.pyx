@@ -10,7 +10,7 @@ import logging
 from typing import List
 
 from psycopg3 import errors as e
-from psycopg3.pq import proto, error_message, PQerror
+from psycopg3.pq import proto, error_message
 from psycopg3.proto import PQGen
 from psycopg3.waiting import Wait, Ready
 
@@ -85,7 +85,7 @@ def execute(pq.PGconn pgconn) -> PQGen[List[proto.PGresult]]:
                 # PGconn buffer and passed to Python later.
                 cires = libpq.PQconsumeInput(pgconn_ptr)
             if 1 != cires:
-                raise PQerror(
+                raise e.OperationalError(
                     f"consuming input failed: {error_message(pgconn)}")
         continue
 
@@ -99,7 +99,7 @@ def execute(pq.PGconn pgconn) -> PQGen[List[proto.PGresult]]:
                 ibres = libpq.PQisBusy(pgconn_ptr)
 
         if 1 != cires:
-            raise PQerror(
+            raise e.OperationalError(
                 f"consuming input failed: {error_message(pgconn)}")
         if ibres:
             yield WAIT_R

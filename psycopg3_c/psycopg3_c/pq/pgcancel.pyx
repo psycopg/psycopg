@@ -27,6 +27,6 @@ cdef class PGcancel:
         cdef char buf[256]
         cdef int res = libpq.PQcancel(self.pgcancel_ptr, buf, sizeof(buf))
         if not res:
-            raise PQerror(
+            raise e.OperationalError(
                 f"cancel failed: {buf.decode('utf8', 'ignore')}"
             )

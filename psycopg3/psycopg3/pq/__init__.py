@@ -13,7 +13,7 @@ import os
 import logging
 from typing import Callable, List, Type
 
-from .misc import ConninfoOption, PQerror, PGnotify, PGresAttDesc
+from .misc import ConninfoOption, PGnotify, PGresAttDesc
 from .misc import error_message
 from ._enums import ConnStatus, DiagnosticField, ExecStatus, Format
 from ._enums import Ping, PollingStatus, TransactionStatus
@@ -114,7 +114,6 @@ __all__ = (
     "PGnotify",
     "Conninfo",
     "PGresAttDesc",
-    "PQerror",
     "error_message",
     "ConninfoOption",
     "version",

@@ -154,4 +154,4 @@ cdef class PGresult:
         cdef int res = libpq.PQsetResultAttrs(self.pgresult_ptr, num, attrs)
         PyMem_Free(attrs)
         if (res == 0):
-            raise PQerror("PQsetResultAttrs failed")
+            raise e.OperationalError("PQsetResultAttrs failed")

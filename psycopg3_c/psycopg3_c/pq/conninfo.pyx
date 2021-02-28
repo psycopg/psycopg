@@ -25,7 +25,7 @@ class Conninfo:
             if errmsg is NULL:
                 raise MemoryError("couldn't allocate on conninfo parse")
             else:
-                exc = PQerror(errmsg.decode("utf8", "replace"))
+                exc = e.OperationalError(errmsg.decode("utf8", "replace"))
                 libpq.PQfreemem(errmsg)
                 raise exc
 

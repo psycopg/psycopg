@@ -89,7 +89,7 @@ cdef class PGconn:
 
     def reset_start(self) -> None:
         if not libpq.PQresetStart(self.pgconn_ptr):
-            raise PQerror("couldn't reset connection")
+            raise e.OperationalError("couldn't reset connection")
 
     def reset_poll(self) -> int:
         return _call_int(self, <conn_int_f>libpq.PQresetPoll)
@@ -162,7 +162,7 @@ cdef class PGconn:
     def socket(self) -> int:
         rv = _call_int(self, libpq.PQsocket)
         if rv == -1:
-            raise PQerror("the connection is lost")
+            raise e.OperationalError("the connection is lost")
         return rv
 
     @property
@@ -197,7 +197,7 @@ cdef class PGconn:
         with nogil:
             rv = libpq.PQsendQuery(self.pgconn_ptr, command)
         if not rv:
-            raise PQerror(f"sending query failed: {error_message(self)}")
+            raise e.OperationalError(f"sending query failed: {error_message(self)}")
 
     def exec_params(
         self,
@@ -252,7 +252,7 @@ cdef class PGconn:
                 <const char *const *>cvalues, clengths, cformats, result_format)
         _clear_query_params(ctypes, cvalues, clengths, cformats)
         if not rv:
-            raise PQerror(
+            raise e.OperationalError(
                 f"sending query and params failed: {error_message(self)}"
             )
 
@@ -279,7 +279,7 @@ cdef class PGconn:
             )
         PyMem_Free(atypes)
         if not rv:
-            raise PQerror(
+            raise e.OperationalError(
                 f"sending query and params failed: {error_message(self)}"
             )
 
@@ -307,7 +307,7 @@ cdef class PGconn:
                 clengths, cformats, result_format)
         _clear_query_params(ctypes, cvalues, clengths, cformats)
         if not rv:
-            raise PQerror(
+            raise e.OperationalError(
                 f"sending prepared query failed: {error_message(self)}"
             )
 
@@ -376,7 +376,7 @@ cdef class PGconn:
         _ensure_pgconn(self)
         cdef int rv = libpq.PQsendDescribePrepared(self.pgconn_ptr, name)
         if not rv:
-            raise PQerror(
+            raise e.OperationalError(
                 f"sending describe prepared failed: {error_message(self)}"
             )
 
@@ -391,7 +391,7 @@ cdef class PGconn:
         _ensure_pgconn(self)
         cdef int rv = libpq.PQsendDescribePortal(self.pgconn_ptr, name)
         if not rv:
-            raise PQerror(
+            raise e.OperationalError(
                 f"sending describe prepared failed: {error_message(self)}"
             )
 
@@ -403,7 +403,7 @@ cdef class PGconn:
 
     def consume_input(self) -> None:
         if 1 != libpq.PQconsumeInput(self.pgconn_ptr):
-            raise PQerror(f"consuming input failed: {error_message(self)}")
+            raise e.OperationalError(f"consuming input failed: {error_message(self)}")
 
     def is_busy(self) -> int:
         cdef int rv
@@ -418,24 +418,24 @@ cdef class PGconn:
     @nonblocking.setter
     def nonblocking(self, int arg) -> None:
         if 0 > libpq.PQsetnonblocking(self.pgconn_ptr, arg):
-            raise PQerror(f"setting nonblocking failed: {error_message(self)}")
+            raise e.OperationalError(f"setting nonblocking failed: {error_message(self)}")
 
     def flush(self) -> int:
         if self.pgconn_ptr == NULL:
-            raise PQerror(f"flushing failed: the connection is closed")
+            raise e.OperationalError(f"flushing failed: the connection is closed")
         cdef int rv = libpq.PQflush(self.pgconn_ptr)
         if rv < 0:
-            raise PQerror(f"flushing failed: {error_message(self)}")
+            raise e.OperationalError(f"flushing failed: {error_message(self)}")
         return rv
 
     def set_single_row_mode(self) -> None:
         if not libpq.PQsetSingleRowMode(self.pgconn_ptr):
-            raise PQerror("setting single row mode failed")
+            raise e.OperationalError("setting single row mode failed")
 
     def get_cancel(self) -> PGcancel:
         cdef libpq.PGcancel *ptr = libpq.PQgetCancel(self.pgconn_ptr)
         if not ptr:
-            raise PQerror("couldn't create cancel object")
+            raise e.OperationalError("couldn't create cancel object")
         return PGcancel._from_ptr(ptr)
 
     cpdef object notifies(self):
@@ -457,7 +457,7 @@ cdef class PGconn:
         _buffer_as_string_and_size(buffer, &cbuffer, &length)
         rv = libpq.PQputCopyData(self.pgconn_ptr, cbuffer, length)
         if rv < 0:
-            raise PQerror(f"sending copy data failed: {error_message(self)}")
+            raise e.OperationalError(f"sending copy data failed: {error_message(self)}")
         return rv
 
     def put_copy_end(self, error: Optional[bytes] = None) -> int:
@@ -467,7 +467,7 @@ cdef class PGconn:
             cerr = PyBytes_AsString(error)
         rv = libpq.PQputCopyEnd(self.pgconn_ptr, cerr)
         if rv < 0:
-            raise PQerror(f"sending copy end failed: {error_message(self)}")
+            raise e.OperationalError(f"sending copy end failed: {error_message(self)}")
         return rv
 
     def get_copy_data(self, int async_) -> Tuple[int, memoryview]:
@@ -475,7 +475,7 @@ cdef class PGconn:
         cdef int nbytes
         nbytes = libpq.PQgetCopyData(self.pgconn_ptr, &buffer_ptr, async_)
         if nbytes == -2:
-            raise PQerror(f"receiving copy data failed: {error_message(self)}")
+            raise e.OperationalError(f"receiving copy data failed: {error_message(self)}")
         if buffer_ptr is not NULL:
             data = PyMemoryView_FromObject(
                 PQBuffer._from_buffer(<unsigned char *>buffer_ptr, nbytes))
@@ -495,7 +495,7 @@ cdef int _ensure_pgconn(PGconn pgconn) except 0:
     if pgconn.pgconn_ptr is not NULL:
         return 1
 
-    raise PQerror("the connection is closed")
+    raise e.OperationalError("the connection is closed")
 
 
 cdef char *_call_bytes(PGconn pgconn, conn_bytes_f func) except NULL:

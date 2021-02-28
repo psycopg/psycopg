@@ -371,7 +371,7 @@ def test_ssl_in_use(pgconn):
 
 
 def test_set_single_row_mode(pgconn):
-    with pytest.raises(pq.PQerror):
+    with pytest.raises(psycopg3.OperationalError):
         pgconn.set_single_row_mode()
 
     pgconn.send_query(b"select 1")
@@ -384,14 +384,14 @@ def test_cancel(pgconn):
     cancel.cancel()
     pgconn.finish()
     cancel.cancel()
-    with pytest.raises(pq.PQerror):
+    with pytest.raises(psycopg3.OperationalError):
         pgconn.get_cancel()
 
 
 def test_cancel_free(pgconn):
     cancel = pgconn.get_cancel()
     cancel.free()
-    with pytest.raises(pq.PQerror):
+    with pytest.raises(psycopg3.OperationalError):
         cancel.cancel()
     cancel.free()
 

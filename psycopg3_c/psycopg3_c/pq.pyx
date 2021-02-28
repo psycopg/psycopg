@@ -6,8 +6,9 @@ libpq Python wrapper using cython bindings.
 
 from psycopg3_c.pq cimport libpq
 
+from psycopg3 import errors as e
 from psycopg3.pq import Format
-from psycopg3.pq.misc import PQerror, error_message
+from psycopg3.pq.misc import error_message
 
 __impl__ = 'c'
 

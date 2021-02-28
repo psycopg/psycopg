@@ -1,5 +1,6 @@
 import pytest
 
+import psycopg3
 from psycopg3 import pq
 
 
@@ -29,6 +30,6 @@ def test_conninfo_parse():
 
 
 def test_conninfo_parse_bad():
-    with pytest.raises(pq.PQerror) as e:
+    with pytest.raises(psycopg3.OperationalError) as e:
         pq.Conninfo.parse(b"bad_conninfo=")
         assert "bad_conninfo" in str(e.value)

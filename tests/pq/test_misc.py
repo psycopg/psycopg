@@ -1,5 +1,6 @@
 import pytest
 
+import psycopg3
 from psycopg3 import pq
 
 
@@ -78,5 +79,5 @@ def test_result_set_attrs(pgconn):
     assert res.ftype(1) == 1700
     assert res.ftype(2) == 25
 
-    with pytest.raises(pq.PQerror):
+    with pytest.raises(psycopg3.OperationalError):
         res.set_attributes(attrs)
