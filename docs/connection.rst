@@ -64,6 +64,9 @@ The `!Connection` class
     .. autoattribute:: closed
         :annotation: bool
 
+    .. autoattribute:: broken
+        :annotation: bool
+
 
     .. method:: cursor(*, binary: bool = False, row_factory: Optional[RowFactory] = None) -> Cursor
     .. method:: cursor(name: str, *, binary: bool = False, row_factory: Optional[RowFactory] = None) -> ServerCursor

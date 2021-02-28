@@ -65,8 +65,10 @@ async def test_connect_timeout():
 
 async def test_close(aconn):
     assert not aconn.closed
+    assert not aconn.broken
     await aconn.close()
     assert aconn.closed
+    assert not aconn.broken
     assert aconn.pgconn.status == aconn.ConnStatus.BAD
 
     cur = aconn.cursor()
@@ -77,6 +79,18 @@ async def test_close(aconn):
 
     with pytest.raises(psycopg3.OperationalError):
         await cur.execute("select 1")
+
+
+async def test_broken(aconn):
+    with pytest.raises(psycopg3.OperationalError):
+        await aconn.execute(
+            "select pg_terminate_backend(%s)", [aconn.pgconn.backend_pid]
+        )
+    assert aconn.closed
+    assert aconn.broken
+    await aconn.close()
+    assert aconn.closed
+    assert aconn.broken
 
 
 async def test_connection_warn_close(dsn, recwarn):
@@ -115,6 +129,7 @@ async def test_context_commit(aconn, dsn):
             await cur.execute("create table textctx ()")
 
     assert aconn.closed
+    assert not aconn.broken
 
     async with await psycopg3.AsyncConnection.connect(dsn) as aconn:
         async with aconn.cursor() as cur:
@@ -134,6 +149,7 @@ async def test_context_rollback(aconn, dsn):
                 1 / 0
 
     assert aconn.closed
+    assert not aconn.broken
 
     async with await psycopg3.AsyncConnection.connect(dsn) as aconn:
         async with aconn.cursor() as cur:

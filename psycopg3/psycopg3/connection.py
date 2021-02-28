@@ -118,10 +118,10 @@ class BaseConnection(AdaptContext):
         # only a begin/commit and not a savepoint.
         self._savepoints: List[str] = []
 
+        self._closed = False  # closed by an explicit close()
         self._prepared: PrepareManager = PrepareManager()
 
         wself = ref(self)
-
         pgconn.notice_handler = partial(BaseConnection._notice_handler, wself)
         pgconn.notify_handler = partial(BaseConnection._notify_handler, wself)
 
@@ -158,8 +158,18 @@ class BaseConnection(AdaptContext):
 
     @property
     def closed(self) -> bool:
-        """`True` if the connection is closed."""
+        """`!True` if the connection is closed."""
         return self.pgconn.status == ConnStatus.BAD
+
+    @property
+    def broken(self) -> bool:
+        """
+        `!True` if the connection was interrupted.
+
+        A broken connection is always `closed`, but wasn't closed in a clean
+        way, such as using `close()` or a ``with`` block.
+        """
+        return self.pgconn.status == ConnStatus.BAD and not self._closed
 
     @property
     def autocommit(self) -> bool:
@@ -480,6 +490,9 @@ class Connection(BaseConnection):
 
     def close(self) -> None:
         """Close the database connection."""
+        if self.closed:
+            return
+        self._closed = True
         self.pgconn.finish()
 
     @overload
@@ -652,6 +665,9 @@ class AsyncConnection(BaseConnection):
             await self.close()
 
     async def close(self) -> None:
+        if self.closed:
+            return
+        self._closed = True
         self.pgconn.finish()
 
     @overload

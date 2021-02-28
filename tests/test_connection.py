@@ -60,8 +60,10 @@ def test_connect_timeout():
 
 def test_close(conn):
     assert not conn.closed
+    assert not conn.broken
     conn.close()
     assert conn.closed
+    assert not conn.broken
     assert conn.pgconn.status == conn.ConnStatus.BAD
 
     cur = conn.cursor()
@@ -72,6 +74,18 @@ def test_close(conn):
 
     with pytest.raises(psycopg3.OperationalError):
         cur.execute("select 1")
+
+
+def test_broken(conn):
+    with pytest.raises(psycopg3.OperationalError):
+        conn.execute(
+            "select pg_terminate_backend(%s)", [conn.pgconn.backend_pid]
+        )
+    assert conn.closed
+    assert conn.broken
+    conn.close()
+    assert conn.closed
+    assert conn.broken
 
 
 def test_connection_warn_close(dsn, recwarn):
@@ -110,6 +124,7 @@ def test_context_commit(conn, dsn):
             cur.execute("create table textctx ()")
 
     assert conn.closed
+    assert not conn.broken
 
     with psycopg3.connect(dsn) as conn:
         with conn.cursor() as cur:
@@ -129,6 +144,7 @@ def test_context_rollback(conn, dsn):
                 1 / 0
 
     assert conn.closed
+    assert not conn.broken
 
     with psycopg3.connect(dsn) as conn:
         with conn.cursor() as cur:
