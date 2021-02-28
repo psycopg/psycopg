@@ -283,6 +283,10 @@ class AsyncConnectionPool(BasePool[AsyncConnection]):
         conn = await AsyncConnection.connect(self.conninfo, **self.kwargs)
         await self.configure(conn)
         conn._pool = self
+        # Set an expiry date, with some randomness to avoid mass reconnection
+        conn._expire_at = monotonic() + self._jitter(
+            self.max_lifetime, -0.05, 0.0
+        )
         return conn
 
     async def _add_connection(
@@ -329,10 +333,18 @@ class AsyncConnectionPool(BasePool[AsyncConnection]):
         await self._reset_connection(conn)
         if conn.pgconn.transaction_status == TransactionStatus.UNKNOWN:
             # Connection no more in working state: create a new one.
-            logger.warning("discarding closed connection: %s", conn)
             self.run_task(tasks.AddConnection(self))
-        else:
-            await self._add_to_pool(conn)
+            logger.warning("discarding closed connection: %s", conn)
+            return
+
+        # Check if the connection is past its best before date
+        if conn._expire_at <= monotonic():
+            self.run_task(tasks.AddConnection(self))
+            logger.info("discarding expired connection")
+            await conn.close()
+            return
+
+        await self._add_to_pool(conn)
 
     async def _add_to_pool(self, conn: AsyncConnection) -> None:
         """

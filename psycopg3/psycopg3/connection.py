@@ -129,6 +129,9 @@ class BaseConnection(AdaptContext):
         # apart a connection in the pool too (when _pool = None)
         self._pool: Optional["BasePool[Any]"]
 
+        # Time after which the connection should be closed
+        self._expire_at: float
+
     def __del__(self) -> None:
         # If fails on connection we might not have this attribute yet
         if not hasattr(self, "pgconn"):

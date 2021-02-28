@@ -35,6 +35,7 @@ class BasePool(Generic[ConnectionType]):
         maxconn: Optional[int] = None,
         name: Optional[str] = None,
         timeout: float = 30.0,
+        max_lifetime: float = 60 * 60.0,
         max_idle: float = 10 * 60.0,
         reconnect_timeout: float = 5 * 60.0,
         reconnect_failed: Optional[
@@ -62,6 +63,7 @@ class BasePool(Generic[ConnectionType]):
         self._maxconn = maxconn
         self.timeout = timeout
         self.reconnect_timeout = reconnect_timeout
+        self.max_lifetime = max_lifetime
         self.max_idle = max_idle
         self.num_workers = num_workers
 

@@ -15,7 +15,8 @@ def test_defaults(dsn):
     with pool.ConnectionPool(dsn) as p:
         assert p.minconn == p.maxconn == 4
         assert p.timeout == 30
-        assert p.max_idle == 600
+        assert p.max_idle == 10 * 60
+        assert p.max_lifetime == 60 * 60
         assert p.num_workers == 3
 
 
@@ -641,6 +642,19 @@ def test_jitter():
     rnds.sort()
     assert 27 <= min(rnds) <= 28
     assert 35 < max(rnds) < 36
+
+
+@pytest.mark.slow
+def test_max_lifetime(dsn):
+    with pool.ConnectionPool(dsn, minconn=1, max_lifetime=0.2) as p:
+        sleep(0.1)
+        pids = []
+        for i in range(5):
+            with p.connection() as conn:
+                pids.append(conn.pgconn.backend_pid)
+            sleep(0.2)
+
+    assert pids[0] == pids[1] != pids[2] == pids[3] != pids[4], pids
 
 
 def delay_connection(monkeypatch, sec):
