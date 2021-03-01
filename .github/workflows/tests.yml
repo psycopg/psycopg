@@ -26,7 +26,7 @@ jobs:
             toxenv: py38
 
     env:
-      PSYCOPG3_TEST_DSN: host=postgresql dbname=psycopg3_test
+      PSYCOPG3_TEST_DSN: host=postgresql password=password dbname=psycopg3_test
       PSYCOPG3_IMPL: python
 
     services:
@@ -34,6 +34,15 @@ jobs:
         image: postgres:${{ matrix.postgres }}
         env:
           POSTGRES_DB: psycopg3_test
+          POSTGRES_PASSWORD: password
+        ports:
+          - 5432:5432
+        # Set health checks to wait until postgres has started
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     steps:
     - uses: actions/checkout@v2
@@ -66,7 +75,7 @@ jobs:
             toxenv: py38
 
     env:
-      PSYCOPG3_TEST_DSN: host=postgresql dbname=psycopg3_test
+      PSYCOPG3_TEST_DSN: host=postgresql password=password dbname=psycopg3_test
       PSYCOPG3_IMPL: c
       # skip tests failing on importing psycopg3_c.pq on subprocess
       # they only fail on Travis, work ok locally under tox too.
@@ -77,6 +86,15 @@ jobs:
         image: postgres:${{ matrix.postgres }}
         env:
           POSTGRES_DB: psycopg3_test
+          POSTGRES_PASSWORD: password
+        ports:
+          - 5432:5432
+        # Set health checks to wait until postgres has started
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     steps:
     - uses: actions/checkout@v2
