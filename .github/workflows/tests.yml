@@ -7,54 +7,27 @@ on:
     branches: [ master ]
 
 jobs:
-  tests:
-    name: Tests
+  python:
+    name: Python implementation
     runs-on: ubuntu-20.04
 
     strategy:
       fail-fast: false
       matrix:
         include:
-          - postgres: 10
-            python: 3.6
-            toxenv: py36
-            toxdir: psycopg3_c
-            implementation: c
-            # skip tests failing on importing psycopg3_c.pq on subprocess
-            # they only fail on Travis, work ok locally under tox too.
-            pytest_addopts: "-m 'not subprocess'"
           - postgres: 11
             python: 3.6
             toxenv: py36
-            toxdir: psycopg3
-            implementation: python
-          - postgres: 11
-            python: 3.7
-            toxenv: py37
-            toxdir: psycopg3_c
-            implementation: c
-            pytest_addopts: "-m 'not subprocess'"
           - postgres: 12
             python: 3.7
             toxenv: py37
-            toxdir: psycopg3
-            implementation: python
           - postgres: 12
             python: 3.8
             toxenv: py38
-            toxdir: psycopg3_c
-            implementation: c
-            pytest_addopts: "-m 'not subprocess'"
-          - postgres: 12
-            python: 3.8
-            toxenv: py38
-            toxdir: psycopg3
-            implementation: python
 
     env:
       PSYCOPG3_TEST_DSN: host=postgresql dbname=psycopg3_test
-      PSYCOPG3_IMPL: ${{ matrix.implementation }}
-      PYTEST_ADDOPTS: ${{ matrix.pytest_addopts }}
+      PSYCOPG3_IMPL: python
 
     services:
       postgresql:
@@ -72,4 +45,47 @@ jobs:
     - name: install tox
       run: pip install tox
     - name: run tests
-      run: tox -c ${{ matrix.toxdir }} -e ${{ matrix.toxenv }}
+      run: tox -c psycopg3 -e ${{ matrix.toxenv }}
+
+  c:
+    name: C implementation
+    runs-on: ubuntu-20.04
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - postgres: 10
+            python: 3.6
+            toxenv: py36
+          - postgres: 11
+            python: 3.7
+            toxenv: py37
+          - postgres: 12
+            python: 3.8
+            toxenv: py38
+
+    env:
+      PSYCOPG3_TEST_DSN: host=postgresql dbname=psycopg3_test
+      PSYCOPG3_IMPL: c
+      # skip tests failing on importing psycopg3_c.pq on subprocess
+      # they only fail on Travis, work ok locally under tox too.
+      PYTEST_ADDOPTS: "-m 'not subprocess'"
+
+    services:
+      postgresql:
+        image: postgres:${{ matrix.postgres }}
+        env:
+          POSTGRES_DB: psycopg3_test
+
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python }}
+    - name: install postgresql client
+      run: sudo apt install postgresql-client-${{ matrix.postgres }}
+    - name: install tox
+      run: pip install tox
+    - name: run tests
+      run: tox -c psycopg3_c -e ${{ matrix.toxenv }}
