@@ -28,14 +28,16 @@ jobs:
             toxenv: py38
 
     env:
-      PSYCOPG3_TEST_DSN: host=127.0.0.1 user=postgres password=password dbname=psycopg3_test
       PSYCOPG3_IMPL: python
+      PGHOST: 127.0.0.1
+      PGUSER: postgres
+      PGPASSWORD: password
+      PSYCOPG3_TEST_DSN: "dbname=postgres"
 
     services:
       postgresql:
         image: postgres:${{ matrix.postgres }}
         env:
-          POSTGRES_DB: psycopg3_test
           POSTGRES_PASSWORD: password
         ports:
           - 5432:5432
@@ -75,8 +77,11 @@ jobs:
             toxenv: py38
 
     env:
-      PSYCOPG3_TEST_DSN: host=127.0.0.1 user=postgres password=password dbname=psycopg3_test
       PSYCOPG3_IMPL: c
+      PGHOST: 127.0.0.1
+      PGUSER: postgres
+      PGPASSWORD: password
+      PSYCOPG3_TEST_DSN: "dbname=postgres"
       # skip tests failing on importing psycopg3_c.pq on subprocess
       # they only fail on Travis, work ok locally under tox too.
       PYTEST_ADDOPTS: "-m 'not subprocess'"
@@ -85,7 +90,6 @@ jobs:
       postgresql:
         image: postgres:${{ matrix.postgres }}
         env:
-          POSTGRES_DB: psycopg3_test
           POSTGRES_PASSWORD: password
         ports:
           - 5432:5432
