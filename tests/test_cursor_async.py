@@ -464,7 +464,7 @@ async def test_leak(dsn, faker, fmt, fetch, row_factory):
     for i in range(3):
         async with await psycopg3.AsyncConnection.connect(dsn) as conn:
             async with conn.cursor(
-                binary=Format.as_pq(fmt), row_factory=row_factory
+                binary=True, row_factory=row_factory
             ) as cur:
                 await cur.execute(faker.drop_stmt)
                 await cur.execute(faker.create_stmt)
