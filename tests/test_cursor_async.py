@@ -2,6 +2,7 @@ import gc
 import pytest
 import weakref
 import datetime as dt
+from typing import List
 
 import psycopg
 from psycopg import pq, sql, rows
@@ -345,8 +346,9 @@ async def test_rownumber(aconn):
     assert cur.rownumber == 2
     await cur.fetchmany(10)
     assert cur.rownumber == 12
-    rns = []
+    rns: List[int] = []
     async for i in cur:
+        assert cur.rownumber
         rns.append(cur.rownumber)
         if len(rns) >= 3:
             break
@@ -472,6 +474,7 @@ async def test_query_params_execute(aconn):
     assert cur._query is None
 
     await cur.execute("select %t, %s::text", [1, None])
+    assert cur._query is not None
     assert cur._query.query == b"select $1, $2::text"
     assert cur._query.params == [b"1", None]
 
