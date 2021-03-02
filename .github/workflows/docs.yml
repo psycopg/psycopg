@@ -10,5 +10,5 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - name: build docs
+    - name: Trigger docs build
       run: TRAVIS_BRANCH=master ./tools/travis_update_docs.sh

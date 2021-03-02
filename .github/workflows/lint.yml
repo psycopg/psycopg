@@ -11,11 +11,11 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - uses: actions/setup-python@v2
-    - name: install tox
+    - name: Install tox
       run: pip install tox
-    - name: run black
-      run: tox -e black .
-    - name: run flake8
-      run: tox -e flake8 .
-    - name: run mypy
-      run: tox -e mypy .
+    - name: Run black
+      run: tox -e black
+    - name: Run flake8
+      run: tox -e flake8
+    - name: Run mypy
+      run: tox -e mypy
