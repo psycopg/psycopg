@@ -31,6 +31,7 @@ files = [
     "tests/test_prepared*.py",
     "tests/test_psycopg_dbapi20.py",
     "tests/test_sql.py",
+    "tests/test_*cursor*.py",
     "tests/types",
 ]
 warn_unused_ignores = true
