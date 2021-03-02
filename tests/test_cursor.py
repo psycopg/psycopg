@@ -549,9 +549,7 @@ def test_leak(dsn, faker, fmt, fetch, row_factory):
     n = []
     for i in range(3):
         with psycopg3.connect(dsn) as conn:
-            with conn.cursor(
-                binary=Format.as_pq(fmt), row_factory=row_factory
-            ) as cur:
+            with conn.cursor(binary=True, row_factory=row_factory) as cur:
                 cur.execute(faker.drop_stmt)
                 cur.execute(faker.create_stmt)
                 cur.executemany(faker.insert_stmt, faker.records)
