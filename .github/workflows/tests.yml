@@ -13,12 +13,14 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - postgres: 11
-            python: 3.6
-          - postgres: 12
-            python: 3.7
-          - postgres: 12
-            python: 3.8
+          - python: 3.6
+            postgres: 10
+          - python: 3.7
+            postgres: 11
+          - python: 3.8
+            postgres: 12
+          - python: 3.9
+            postgres: 13
 
     env:
       PSYCOPG3_IMPL: python
@@ -59,12 +61,14 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - postgres: 10
-            python: 3.6
-          - postgres: 11
-            python: 3.7
-          - postgres: 12
-            python: 3.8
+          - python: 3.6
+            postgres: 13
+          - python: 3.7
+            postgres: 12
+          - python: 3.8
+            postgres: 11
+          - python: 3.9
+            postgres: 10
 
     env:
       PSYCOPG3_IMPL: c
