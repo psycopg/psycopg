@@ -19,11 +19,11 @@ def test_defaults(monkeypatch):
 
 @pytest.mark.libpq(">= 10")
 def test_conninfo_parse():
-    info = pq.Conninfo.parse(
+    infos = pq.Conninfo.parse(
         b"postgresql://host1:123,host2:456/somedb"
         b"?target_session_attrs=any&application_name=myapp"
     )
-    info = {i.keyword: i.val for i in info if i.val is not None}
+    info = {i.keyword: i.val for i in infos if i.val is not None}
     assert info[b"host"] == b"host1,host2"
     assert info[b"port"] == b"123,456"
     assert info[b"dbname"] == b"somedb"
