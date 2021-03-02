@@ -2,7 +2,9 @@ name: Tests
 
 on:
   push:
-    branches: [ master ]
+    branches:
+      - master
+      - ci-gh-actions
   pull_request:
     branches: [ master ]
 
@@ -26,7 +28,7 @@ jobs:
             toxenv: py38
 
     env:
-      PSYCOPG3_TEST_DSN: host=postgresql password=password dbname=psycopg3_test
+      PSYCOPG3_TEST_DSN: host=127.0.0.1 user=postgres password=password dbname=psycopg3_test
       PSYCOPG3_IMPL: python
 
     services:
@@ -49,8 +51,6 @@ jobs:
     - uses: actions/setup-python@v2
       with:
         python-version: ${{ matrix.python }}
-    - name: install postgresql client
-      run: sudo apt install postgresql-client-${{ matrix.postgres }}
     - name: install tox
       run: pip install tox
     - name: run tests
@@ -75,7 +75,7 @@ jobs:
             toxenv: py38
 
     env:
-      PSYCOPG3_TEST_DSN: host=postgresql password=password dbname=psycopg3_test
+      PSYCOPG3_TEST_DSN: host=127.0.0.1 user=postgres password=password dbname=psycopg3_test
       PSYCOPG3_IMPL: c
       # skip tests failing on importing psycopg3_c.pq on subprocess
       # they only fail on Travis, work ok locally under tox too.
@@ -101,8 +101,6 @@ jobs:
     - uses: actions/setup-python@v2
       with:
         python-version: ${{ matrix.python }}
-    - name: install postgresql client
-      run: sudo apt install postgresql-client-${{ matrix.postgres }}
     - name: install tox
       run: pip install tox
     - name: run tests
