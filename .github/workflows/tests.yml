@@ -53,7 +53,7 @@ jobs:
     - name: install tox
       run: pip install tox
     - name: run tests
-      run: tox -c psycopg3 -e ${{ matrix.python }}
+      run: tox -c psycopg3 -e ${{ matrix.python }} -- --color yes
 
   c:
     name: C implementation
@@ -102,4 +102,4 @@ jobs:
     - name: install tox
       run: pip install tox
     - name: run tests
-      run: tox -c psycopg3_c -e ${{ matrix.python }}
+      run: tox -c psycopg3_c -e ${{ matrix.python }} -- --color yes
