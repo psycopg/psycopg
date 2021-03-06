@@ -1,0 +1,15 @@
+name: Build documentation
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  docs:
+    runs-on: ubuntu-20.04
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Trigger docs build
+        run: TRAVIS_BRANCH=master ./tools/travis_update_docs.sh

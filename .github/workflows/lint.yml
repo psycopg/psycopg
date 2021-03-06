@@ -1,0 +1,21 @@
+name: Lint
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  lint:
+    runs-on: ubuntu-20.04
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+      - name: Install tox
+        run: pip install tox
+      - name: Run black
+        run: tox -e black
+      - name: Run flake8
+        run: tox -e flake8
+      - name: Run mypy
+        run: tox -e mypy
