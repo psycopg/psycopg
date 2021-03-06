@@ -12,4 +12,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Trigger docs build
-        run: TRAVIS_BRANCH=master ./tools/travis_update_docs.sh
+        run: ./tools/travis_update_docs.sh
+        env:
+          TRAVIS_BRANCH: master
+          TRAVIS_TOKEN: ${{ secrets.TRAVIS_TOKEN }}
