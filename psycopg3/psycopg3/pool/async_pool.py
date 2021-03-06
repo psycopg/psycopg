@@ -4,7 +4,6 @@ psycopg3 synchronous connection pool
 
 # Copyright (C) 2021 The Psycopg Team
 
-import sys
 import asyncio
 import logging
 from time import monotonic
@@ -15,20 +14,11 @@ from collections import deque
 
 from ..pq import TransactionStatus
 from ..connection import AsyncConnection
+from ..utils.compat import asynccontextmanager, get_running_loop
 
 from . import tasks
 from .base import ConnectionAttempt, BasePool
 from .errors import PoolClosed, PoolTimeout
-
-if sys.version_info >= (3, 7):
-    from contextlib import asynccontextmanager
-
-    get_running_loop = asyncio.get_running_loop
-
-else:
-    from ..utils.context import asynccontextmanager
-
-    get_running_loop = asyncio.get_event_loop
 
 logger = logging.getLogger(__name__)
 

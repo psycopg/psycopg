@@ -4,7 +4,6 @@ psycopg3 connection objects
 
 # Copyright (C) 2020-2021 The Psycopg Team
 
-import sys
 import asyncio
 import logging
 import warnings
@@ -15,11 +14,6 @@ from typing import Optional, overload, Type, Union, TYPE_CHECKING
 from weakref import ref, ReferenceType
 from functools import partial
 from contextlib import contextmanager
-
-if sys.version_info >= (3, 7):
-    from contextlib import asynccontextmanager
-else:
-    from .utils.context import asynccontextmanager
 
 from . import pq
 from . import adapt
@@ -34,9 +28,10 @@ from .proto import AdaptContext, ConnectionType
 from .cursor import Cursor, AsyncCursor
 from .conninfo import make_conninfo
 from .generators import notifies
-from .transaction import Transaction, AsyncTransaction
-from .server_cursor import ServerCursor, AsyncServerCursor
 from ._preparing import PrepareManager
+from .transaction import Transaction, AsyncTransaction
+from .utils.compat import asynccontextmanager
+from .server_cursor import ServerCursor, AsyncServerCursor
 
 logger = logging.getLogger(__name__)
 package_logger = logging.getLogger("psycopg3")

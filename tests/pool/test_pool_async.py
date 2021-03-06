@@ -1,4 +1,3 @@
-import sys
 import asyncio
 import logging
 import weakref
@@ -10,12 +9,7 @@ import pytest
 import psycopg3
 from psycopg3 import pool
 from psycopg3.pq import TransactionStatus
-
-create_task = (
-    asyncio.create_task
-    if sys.version_info >= (3, 7)
-    else asyncio.ensure_future
-)
+from psycopg3.utils.compat import create_task
 
 pytestmark = pytest.mark.asyncio
 
