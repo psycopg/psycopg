@@ -9,7 +9,7 @@ pytestmark = pytest.mark.asyncio
 
 
 @pytest.mark.slow
-@pytest.mark.skip  # TODO: sometimes this test hangs?
+@pytest.mark.skip
 async def test_commit_concurrency(aconn):
     # Check the condition reported in psycopg2#103
     # Because of bad status check, we commit even when a commit is already on
@@ -24,6 +24,7 @@ async def test_commit_concurrency(aconn):
         nonlocal stop
         while not stop:
             await aconn.commit()
+            await asyncio.sleep(0)  # Allow the other worker to work
 
     async def runner():
         nonlocal stop
