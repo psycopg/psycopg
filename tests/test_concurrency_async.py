@@ -35,7 +35,7 @@ async def test_commit_concurrency(aconn):
         # Stop the committer thread
         stop = True
 
-    await asyncio.wait([committer(), runner()])
+    await asyncio.gather(committer(), runner())
     assert notices.empty(), "%d notices raised" % notices.qsize()
 
 
@@ -50,7 +50,7 @@ async def test_concurrent_execution(dsn):
 
     workers = [worker(), worker()]
     t0 = time.time()
-    await asyncio.wait(workers)
+    await asyncio.gather(*workers)
     assert time.time() - t0 < 0.8, "something broken in concurrency"
 
 
@@ -75,12 +75,12 @@ async def test_notifies(aconn, dsn):
         async for n in gen:
             ns.append((n, time.time()))
             if len(ns) >= 2:
-                gen.close()
+                await gen.aclose()
 
     ns = []
     t0 = time.time()
     workers = [notifier(), receiver()]
-    await asyncio.wait(workers)
+    await asyncio.gather(*workers)
     assert len(ns) == 2
 
     n, t1 = ns[0]
@@ -116,7 +116,7 @@ async def test_cancel(aconn):
     workers = [worker(), canceller()]
 
     t0 = time.time()
-    await asyncio.wait(workers)
+    await asyncio.gather(*workers)
 
     t1 = time.time()
     assert not errors

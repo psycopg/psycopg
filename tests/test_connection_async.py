@@ -59,7 +59,7 @@ async def test_connect_timeout():
         elapsed = time.time() - t0
 
     elapsed = 0
-    await asyncio.wait([closer(), connect()])
+    await asyncio.gather(closer(), connect())
     assert elapsed == pytest.approx(1.0, abs=0.05)
 
 
