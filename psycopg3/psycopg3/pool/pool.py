@@ -246,6 +246,26 @@ class ConnectionPool(BasePool[Connection]):
         for i in range(ngrow):
             self.run_task(tasks.AddConnection(self))
 
+    def check(self) -> None:
+        """Verify the state of the connections currently in the pool.
+
+        Test each connection: if it works return it to the pool, otherwise
+        dispose of it and create a new one.
+        """
+        with self._lock:
+            conns = list(self._pool)
+            self._pool.clear()
+
+        while conns:
+            conn = conns.pop()
+            try:
+                conn.execute("select 1")
+            except Exception:
+                logger.warning("discarding broken connection: %s", conn)
+                self.run_task(tasks.AddConnection(self))
+            else:
+                self._add_to_pool(conn)
+
     def configure(self, conn: Connection) -> None:
         """Configure a connection after creation."""
         self._configure(conn)
