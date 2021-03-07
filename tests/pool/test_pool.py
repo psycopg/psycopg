@@ -480,7 +480,7 @@ def test_grow(dsn, monkeypatch, retries):
 @pytest.mark.slow
 def test_shrink(dsn, monkeypatch):
 
-    from psycopg3.pool.tasks import ShrinkPool
+    from psycopg3.pool.pool import ShrinkPool
 
     results = []
 

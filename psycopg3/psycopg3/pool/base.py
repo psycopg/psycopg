@@ -5,20 +5,13 @@ psycopg3 connection pool base class and functionalities.
 # Copyright (C) 2021 The Psycopg Team
 
 import logging
-import threading
-from queue import Queue, Empty
 from random import random
-from typing import Any, Callable, Deque, Dict, Generic, List, Optional
+from typing import Any, Callable, Deque, Dict, Generic, Optional
 from collections import deque
 
 from ..proto import ConnectionType
 
-from . import tasks
-from .sched import Scheduler
-
 logger = logging.getLogger(__name__)
-
-WORKER_TIMEOUT = 60.0
 
 
 class BasePool(Generic[ConnectionType]):
@@ -69,7 +62,6 @@ class BasePool(Generic[ConnectionType]):
 
         self._nconns = minconn  # currently in the pool, out, being prepared
         self._pool: Deque[ConnectionType] = deque()
-        self._sched = Scheduler()
 
         # Min number of connections in the pool in a max_idle unit of time.
         # It is reset periodically by the ShrinkPool scheduled task.
@@ -78,60 +70,15 @@ class BasePool(Generic[ConnectionType]):
         # max_idle interval they weren't all used.
         self._nconns_min = minconn
 
-        self._tasks: "Queue[tasks.MaintenanceTask[ConnectionType]]" = Queue()
-        self._workers: List[threading.Thread] = []
-        for i in range(num_workers):
-            t = threading.Thread(
-                target=self.worker,
-                args=(self._tasks,),
-                name=f"{self.name}-worker-{i}",
-                daemon=True,
-            )
-            self._workers.append(t)
-
-        self._sched_runner = threading.Thread(
-            target=self._sched.run, name=f"{self.name}-scheduler", daemon=True
-        )
-
         # _close should be the last property to be set in the state
         # to avoid warning on __del__ in case __init__ fails.
         self._closed = False
-
-        # The object state is complete. Start the worker threads
-        self._sched_runner.start()
-        for t in self._workers:
-            t.start()
-
-        # populate the pool with initial minconn connections in background
-        for i in range(self._nconns):
-            self.run_task(tasks.AddConnection(self))
-
-        # Schedule a task to shrink the pool if connections over minconn have
-        # remained unused.
-        self.schedule_task(tasks.ShrinkPool(self), self.max_idle)
 
     def __repr__(self) -> str:
         return (
             f"<{self.__class__.__module__}.{self.__class__.__name__}"
             f" {self.name!r} at 0x{id(self):x}>"
         )
-
-    def __del__(self) -> None:
-        # If the '_closed' property is not set we probably failed in __init__.
-        # Don't try anything complicated as probably it won't work.
-        if getattr(self, "_closed", True):
-            return
-
-        # Things we can try to do on a best-effort basis while the world
-        # is crumbling (a-la Eternal Sunshine of the Spotless Mind)
-        # At worse we put an item in a queue that is being deleted.
-
-        # Stop the scheduler
-        self._sched.enter(0, None)
-
-        # Stop the worker threads
-        for i in range(len(self._workers)):
-            self.run_task(tasks.StopWorker(self))
 
     @property
     def minconn(self) -> int:
@@ -145,49 +92,6 @@ class BasePool(Generic[ConnectionType]):
     def closed(self) -> bool:
         """`!True` if the pool is closed."""
         return self._closed
-
-    def run_task(self, task: tasks.MaintenanceTask[ConnectionType]) -> None:
-        """Run a maintenance task in a worker thread."""
-        self._tasks.put_nowait(task)
-
-    def schedule_task(
-        self, task: tasks.MaintenanceTask[Any], delay: float
-    ) -> None:
-        """Run a maintenance task in a worker thread in the future."""
-        self._sched.enter(delay, task.tick)
-
-    @classmethod
-    def worker(cls, q: "Queue[tasks.MaintenanceTask[ConnectionType]]") -> None:
-        """Runner to execute pending maintenance task.
-
-        The function is designed to run as a separate thread.
-
-        Block on the queue *q*, run a task received. Finish running if a
-        StopWorker is received.
-        """
-        # Don't make all the workers time out at the same moment
-        timeout = cls._jitter(WORKER_TIMEOUT, -0.1, 0.1)
-        while True:
-            # Use a timeout to make the wait interruptable
-            try:
-                task = q.get(timeout=timeout)
-            except Empty:
-                continue
-
-            if isinstance(task, tasks.StopWorker):
-                logger.debug(
-                    "terminating working thread %s",
-                    threading.current_thread().name,
-                )
-                return
-
-            # Run the task. Make sure don't die in the attempt.
-            try:
-                task.run()
-            except Exception as e:
-                logger.warning(
-                    "task run %s failed: %s: %s", task, e.__class__.__name__, e
-                )
 
     @classmethod
     def _jitter(cls, value: float, min_pc: float, max_pc: float) -> float:

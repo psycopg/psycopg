@@ -369,16 +369,16 @@ async def test_fail_rollback_close(dsn, caplog, monkeypatch):
     assert "BAD" in recs[2].message
 
 
-async def test_close_no_threads(dsn):
+async def test_close_no_tasks(dsn):
     p = pool.AsyncConnectionPool(dsn)
-    assert p._sched_runner.is_alive()
+    assert not p._sched_runner.done()
     for t in p._workers:
-        assert t.is_alive()
+        assert not t.done()
 
     await p.close()
-    assert not p._sched_runner.is_alive()
+    assert p._sched_runner.done()
     for t in p._workers:
-        assert not t.is_alive()
+        assert t.done()
 
 
 async def test_putconn_no_pool(dsn):
@@ -407,16 +407,6 @@ async def test_del_no_warning(dsn, recwarn):
     await asyncio.sleep(0.1)  # TODO: I wish it wasn't needed
     assert not ref()
     assert not recwarn
-
-
-@pytest.mark.slow
-async def test_del_stop_threads(dsn):
-    p = pool.AsyncConnectionPool(dsn)
-    ts = [p._sched_runner] + p._workers
-    del p
-    await asyncio.sleep(0.1)
-    for t in ts:
-        assert not t.is_alive()
 
 
 async def test_closed_getconn(dsn):
@@ -502,18 +492,18 @@ async def test_grow(dsn, monkeypatch, retries):
 @pytest.mark.slow
 async def test_shrink(dsn, monkeypatch):
 
-    from psycopg3.pool.tasks import ShrinkPool
+    from psycopg3.pool.async_pool import ShrinkPool
 
     results = []
 
-    async def run_async_hacked(self, pool):
+    async def run_hacked(self, pool):
         n0 = pool._nconns
         await orig_run(self, pool)
         n1 = pool._nconns
         results.append((n0, n1))
 
-    orig_run = ShrinkPool._run_async
-    monkeypatch.setattr(ShrinkPool, "_run_async", run_async_hacked)
+    orig_run = ShrinkPool._run
+    monkeypatch.setattr(ShrinkPool, "_run", run_hacked)
 
     async def worker(n):
         async with p.connection() as conn:
