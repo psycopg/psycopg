@@ -24,9 +24,9 @@ def test_sched():
     s.run()
     assert len(results) == 2
     assert results[0][0] == 1
-    assert results[0][1] - t0 == pytest.approx(0.1, 0.01)
+    assert results[0][1] - t0 == pytest.approx(0.1, 0.1)
     assert results[1][0] == 2
-    assert results[1][1] - t0 == pytest.approx(0.2, 0.01)
+    assert results[1][1] - t0 == pytest.approx(0.2, 0.1)
 
 
 @pytest.mark.slow
@@ -48,13 +48,13 @@ def test_sched_thread():
 
     t.join()
     t1 = time()
-    assert t1 - t0 == pytest.approx(0.3, 0.01)
+    assert t1 - t0 == pytest.approx(0.3, 0.1)
 
     assert len(results) == 2
     assert results[0][0] == 1
-    assert results[0][1] - t0 == pytest.approx(0.1, 0.01)
+    assert results[0][1] - t0 == pytest.approx(0.1, 0.1)
     assert results[1][0] == 2
-    assert results[1][1] - t0 == pytest.approx(0.2, 0.01)
+    assert results[1][1] - t0 == pytest.approx(0.2, 0.1)
 
 
 @pytest.mark.slow
@@ -80,13 +80,13 @@ def test_sched_error(caplog):
 
     t.join()
     t1 = time()
-    assert t1 - t0 == pytest.approx(0.4, 0.01)
+    assert t1 - t0 == pytest.approx(0.4, 0.1)
 
     assert len(results) == 2
     assert results[0][0] == 1
-    assert results[0][1] - t0 == pytest.approx(0.1, 0.01)
+    assert results[0][1] - t0 == pytest.approx(0.1, 0.1)
     assert results[1][0] == 2
-    assert results[1][1] - t0 == pytest.approx(0.3, 0.01)
+    assert results[1][1] - t0 == pytest.approx(0.3, 0.1)
 
     assert len(caplog.records) == 1
     assert "ZeroDivisionError" in caplog.records[0].message
@@ -116,7 +116,7 @@ def test_empty_queue_timeout():
     t.join()
     times.append(time() - t0)
     for got, want in zip(times, [0.2, 0.4, 0.5, 1.0]):
-        assert got == pytest.approx(want, 0.01)
+        assert got == pytest.approx(want, 0.1)
 
 
 @pytest.mark.slow
@@ -145,4 +145,4 @@ def test_first_task_rescheduling():
     t.join()
     times.append(time() - t0)
     for got, want in zip(times, [0.1, 0.2, 0.4, 0.6, 0.6]):
-        assert got == pytest.approx(want, 0.01)
+        assert got == pytest.approx(want, 0.1)
