@@ -82,6 +82,11 @@
   name: Ryan Lambert
   website: https://www.rustprooflabs.com
 
+- username: logilab
+  avatar: https://avatars.githubusercontent.com/u/446566?v=4
+  name: Logilab
+  website: http://www.logilab.org
+
 - username: asqui
   avatar: https://avatars.githubusercontent.com/u/174182?v=4
   name: Daniel Fortunov
