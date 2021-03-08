@@ -722,6 +722,27 @@ async def test_max_lifetime(dsn):
     assert pids[0] == pids[1] != pids[4], pids
 
 
+async def test_check(dsn, caplog):
+    caplog.set_level(logging.WARNING, logger="psycopg3.pool")
+    async with pool.AsyncConnectionPool(dsn, minconn=4) as p:
+        await p.wait_ready(1.0)
+        async with p.connection() as conn:
+            pid = conn.pgconn.backend_pid
+
+        await p.wait_ready(1.0)
+        pids = set(conn.pgconn.backend_pid for conn in p._pool)
+        assert pid in pids
+        await conn.close()
+
+        assert len(caplog.records) == 0
+        await p.check()
+        assert len(caplog.records) == 1
+        await p.wait_ready(1.0)
+        pids2 = set(conn.pgconn.backend_pid for conn in p._pool)
+        assert len(pids & pids2) == 3
+        assert pid not in pids2
+
+
 def delay_connection(monkeypatch, sec):
     """
     Return a _connect_gen function delayed by the amount of seconds

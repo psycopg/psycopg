@@ -319,6 +319,26 @@ class AsyncConnectionPool(BasePool[AsyncConnection]):
         for i in range(ngrow):
             self.run_task(AddConnection(self))
 
+    async def check(self) -> None:
+        """Verify the state of the connections currently in the pool.
+
+        Test each connection: if it works return it to the pool, otherwise
+        dispose of it and create a new one.
+        """
+        async with self._lock:
+            conns = list(self._pool)
+            self._pool.clear()
+
+        while conns:
+            conn = conns.pop()
+            try:
+                await conn.execute("select 1")
+            except Exception:
+                logger.warning("discarding broken connection: %s", conn)
+                self.run_task(AddConnection(self))
+            else:
+                await self._add_to_pool(conn)
+
     async def configure(self, conn: AsyncConnection) -> None:
         """Configure a connection after creation."""
         if self._configure:
