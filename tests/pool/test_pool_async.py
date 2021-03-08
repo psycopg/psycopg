@@ -201,6 +201,76 @@ async def test_configure_broken(dsn, caplog):
     assert "WAT" in caplog.records[0].message
 
 
+async def test_reset(dsn):
+    resets = 0
+
+    async def setup(conn):
+        async with conn.transaction():
+            await conn.execute("set timezone to '+1:00'")
+
+    async def reset(conn):
+        nonlocal resets
+        resets += 1
+        async with conn.transaction():
+            await conn.execute("set timezone to utc")
+
+    async with pool.AsyncConnectionPool(minconn=1, reset=reset) as p:
+        async with p.connection() as conn:
+            assert resets == 0
+            await conn.execute("set timezone to '+2:00'")
+
+        await p.wait()
+        assert resets == 1
+
+        async with p.connection() as conn:
+            cur = await conn.execute("show timezone")
+            assert (await cur.fetchone()) == ("UTC",)
+
+        await p.wait()
+        assert resets == 2
+
+
+async def test_reset_badstate(dsn, caplog):
+    caplog.set_level(logging.WARNING, logger="psycopg3.pool")
+
+    async def reset(conn):
+        await conn.execute("reset all")
+
+    async with pool.AsyncConnectionPool(minconn=1, reset=reset) as p:
+        async with p.connection() as conn:
+            await conn.execute("select 1")
+            pid1 = conn.pgconn.backend_pid
+
+        async with p.connection() as conn:
+            await conn.execute("select 1")
+            pid2 = conn.pgconn.backend_pid
+
+    assert pid1 != pid2
+    assert caplog.records
+    assert "INTRANS" in caplog.records[0].message
+
+
+async def test_reset_broken(dsn, caplog):
+    caplog.set_level(logging.WARNING, logger="psycopg3.pool")
+
+    async def reset(conn):
+        async with conn.transaction():
+            await conn.execute("WAT")
+
+    async with pool.AsyncConnectionPool(minconn=1, reset=reset) as p:
+        async with p.connection() as conn:
+            await conn.execute("select 1")
+            pid1 = conn.pgconn.backend_pid
+
+        async with p.connection() as conn:
+            await conn.execute("select 1")
+            pid2 = conn.pgconn.backend_pid
+
+    assert pid1 != pid2
+    assert caplog.records
+    assert "WAT" in caplog.records[0].message
+
+
 @pytest.mark.slow
 async def test_queue(dsn, retries):
     async def worker(n):

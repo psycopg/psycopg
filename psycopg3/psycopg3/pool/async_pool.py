@@ -34,6 +34,7 @@ class AsyncConnectionPool(BasePool[AsyncConnection]):
         configure: Optional[
             Callable[[AsyncConnection], Awaitable[None]]
         ] = None,
+        reset: Optional[Callable[[AsyncConnection], Awaitable[None]]] = None,
         **kwargs: Any,
     ):
         # https://bugs.python.org/issue42600
@@ -43,6 +44,7 @@ class AsyncConnectionPool(BasePool[AsyncConnection]):
             )
 
         self._configure = configure
+        self._reset = reset
 
         self._lock = asyncio.Lock()
         self._waiting: Deque["AsyncClient"] = deque()
@@ -467,9 +469,9 @@ class AsyncConnectionPool(BasePool[AsyncConnection]):
         """
         status = conn.pgconn.transaction_status
         if status == TransactionStatus.IDLE:
-            return
+            pass
 
-        if status in (TransactionStatus.INTRANS, TransactionStatus.INERROR):
+        elif status in (TransactionStatus.INTRANS, TransactionStatus.INERROR):
             # Connection returned with an active transaction
             logger.warning("rolling back returned connection: %s", conn)
             try:
@@ -487,6 +489,20 @@ class AsyncConnectionPool(BasePool[AsyncConnection]):
             # Connection returned during an operation. Bad... just close it.
             logger.warning("closing returned connection: %s", conn)
             await conn.close()
+
+        if not conn.closed and self._reset:
+            try:
+                await self._reset(conn)
+                status = conn.pgconn.transaction_status
+                if status != TransactionStatus.IDLE:
+                    nstatus = TransactionStatus(status).name
+                    raise e.ProgrammingError(
+                        f"connection left in status {nstatus} by reset function"
+                        f" {self._reset}: discarded"
+                    )
+            except Exception as ex:
+                logger.warning(f"error resetting connection: {ex}")
+                await conn.close()
 
     async def _shrink_pool(self) -> None:
         to_close: Optional[AsyncConnection] = None

@@ -185,6 +185,76 @@ def test_configure_broken(dsn, caplog):
     assert "WAT" in caplog.records[0].message
 
 
+def test_reset(dsn):
+    resets = 0
+
+    def setup(conn):
+        with conn.transaction():
+            conn.execute("set timezone to '+1:00'")
+
+    def reset(conn):
+        nonlocal resets
+        resets += 1
+        with conn.transaction():
+            conn.execute("set timezone to utc")
+
+    with pool.ConnectionPool(minconn=1, reset=reset) as p:
+        with p.connection() as conn:
+            assert resets == 0
+            conn.execute("set timezone to '+2:00'")
+
+        p.wait()
+        assert resets == 1
+
+        with p.connection() as conn:
+            with conn.execute("show timezone") as cur:
+                assert cur.fetchone() == ("UTC",)
+
+        p.wait()
+        assert resets == 2
+
+
+def test_reset_badstate(dsn, caplog):
+    caplog.set_level(logging.WARNING, logger="psycopg3.pool")
+
+    def reset(conn):
+        conn.execute("reset all")
+
+    with pool.ConnectionPool(minconn=1, reset=reset) as p:
+        with p.connection() as conn:
+            conn.execute("select 1")
+            pid1 = conn.pgconn.backend_pid
+
+        with p.connection() as conn:
+            conn.execute("select 1")
+            pid2 = conn.pgconn.backend_pid
+
+    assert pid1 != pid2
+    assert caplog.records
+    assert "INTRANS" in caplog.records[0].message
+
+
+def test_reset_broken(dsn, caplog):
+    caplog.set_level(logging.WARNING, logger="psycopg3.pool")
+
+    def reset(conn):
+        with conn.transaction():
+            conn.execute("WAT")
+
+    with pool.ConnectionPool(minconn=1, reset=reset) as p:
+        with p.connection() as conn:
+            conn.execute("select 1")
+            pid1 = conn.pgconn.backend_pid
+
+        with p.connection() as conn:
+            conn.execute("select 1")
+            pid2 = conn.pgconn.backend_pid
+
+    assert pid1 != pid2
+    assert caplog.records
+    assert "WAT" in caplog.records[0].message
+
+
 @pytest.mark.slow
 def test_queue(dsn, retries):
     def worker(n):

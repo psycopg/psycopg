@@ -31,9 +31,11 @@ class ConnectionPool(BasePool[Connection]):
         self,
         conninfo: str = "",
         configure: Optional[Callable[[Connection], None]] = None,
+        reset: Optional[Callable[[Connection], None]] = None,
         **kwargs: Any,
     ):
         self._configure = configure
+        self._reset = reset
 
         self._lock = threading.RLock()
         self._waiting: Deque["WaitingClient"] = deque()
@@ -502,6 +504,20 @@ class ConnectionPool(BasePool[Connection]):
             # Connection returned during an operation. Bad... just close it.
             logger.warning("closing returned connection: %s", conn)
             conn.close()
+
+        if not conn.closed and self._reset:
+            try:
+                self._reset(conn)
+                status = conn.pgconn.transaction_status
+                if status != TransactionStatus.IDLE:
+                    nstatus = TransactionStatus(status).name
+                    raise e.ProgrammingError(
+                        f"connection left in status {nstatus} by reset function"
+                        f" {self._reset}: discarded"
+                    )
+            except Exception as ex:
+                logger.warning(f"error resetting connection: {ex}")
+                conn.close()
 
     def _shrink_pool(self) -> None:
         to_close: Optional[Connection] = None
