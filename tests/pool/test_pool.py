@@ -1,3 +1,4 @@
+import sys
 import logging
 import weakref
 from time import sleep, time
@@ -678,6 +679,16 @@ def test_check(dsn, caplog):
         pids2 = set(conn.pgconn.backend_pid for conn in p._pool)
         assert len(pids & pids2) == 3
         assert pid not in pids2
+
+
+@pytest.mark.skipif(
+    sys.version_info >= (3, 7), reason="async pool supported from Python 3.7"
+)
+def test_async_pool_not_supported(dsn):
+    # note: this test is here because the all the ones in test_pool_async are
+    # skipped on Py 3.6
+    with pytest.raises(psycopg3.NotSupportedError):
+        pool.AsyncConnectionPool(dsn)
 
 
 def delay_connection(monkeypatch, sec):

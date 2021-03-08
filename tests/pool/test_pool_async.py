@@ -1,3 +1,4 @@
+import sys
 import asyncio
 import logging
 import weakref
@@ -11,7 +12,13 @@ from psycopg3 import pool
 from psycopg3.pq import TransactionStatus
 from psycopg3.utils.compat import create_task
 
-pytestmark = pytest.mark.asyncio
+pytestmark = [
+    pytest.mark.asyncio,
+    pytest.mark.skipif(
+        sys.version_info < (3, 7),
+        reason="async pool not supported before Python 3.7",
+    ),
+]
 
 
 async def test_defaults(dsn):

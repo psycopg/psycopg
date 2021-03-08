@@ -4,6 +4,7 @@ psycopg3 synchronous connection pool
 
 # Copyright (C) 2021 The Psycopg Team
 
+import sys
 import asyncio
 import logging
 from abc import ABC, abstractmethod
@@ -14,6 +15,7 @@ from typing import List, Optional, Type
 from weakref import ref
 from collections import deque
 
+from .. import errors as e
 from ..pq import TransactionStatus
 from ..connection import AsyncConnection
 from ..utils.compat import asynccontextmanager, create_task
@@ -34,6 +36,12 @@ class AsyncConnectionPool(BasePool[AsyncConnection]):
         ] = None,
         **kwargs: Any,
     ):
+        # https://bugs.python.org/issue42600
+        if sys.version_info < (3, 7):
+            raise e.NotSupportedError(
+                "async pool not supported before Python 3.7"
+            )
+
         self._configure = configure
 
         self._lock = asyncio.Lock()
