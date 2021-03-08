@@ -99,7 +99,7 @@ async def test_concurrent_filling(dsn, monkeypatch, retries):
             async with pool.AsyncConnectionPool(
                 dsn, minconn=5, num_workers=2
             ) as p:
-                await p.wait_ready(1.0)
+                await p.wait(1.0)
                 want_times = [0.1, 0.1, 0.2, 0.2, 0.3]
                 assert len(times) == len(want_times)
                 for got, want in zip(times, want_times):
@@ -113,14 +113,14 @@ async def test_wait_ready(dsn, monkeypatch):
         async with pool.AsyncConnectionPool(
             dsn, minconn=4, num_workers=1
         ) as p:
-            await p.wait_ready(0.3)
+            await p.wait(0.3)
 
     async with pool.AsyncConnectionPool(dsn, minconn=4, num_workers=1) as p:
-        await p.wait_ready(0.5)
+        await p.wait(0.5)
 
     async with pool.AsyncConnectionPool(dsn, minconn=4, num_workers=2) as p:
-        await p.wait_ready(0.3)
-        await p.wait_ready(0.0001)  # idempotent
+        await p.wait(0.3)
+        await p.wait(0.0001)  # idempotent
 
 
 @pytest.mark.slow
@@ -129,7 +129,7 @@ async def test_setup_no_timeout(dsn, proxy):
         async with pool.AsyncConnectionPool(
             proxy.client_dsn, minconn=1, num_workers=1
         ) as p:
-            await p.wait_ready(0.2)
+            await p.wait(0.2)
 
     async with pool.AsyncConnectionPool(
         proxy.client_dsn, minconn=1, num_workers=1
@@ -177,7 +177,7 @@ async def test_configure_broken(dsn, caplog):
 
     async with pool.AsyncConnectionPool(minconn=1, configure=configure) as p:
         with pytest.raises(pool.PoolTimeout):
-            await p.wait_ready(timeout=0.5)
+            await p.wait(timeout=0.5)
 
     assert caplog.records
     assert "WAT" in caplog.records[0].message
@@ -509,7 +509,7 @@ async def test_grow(dsn, monkeypatch, retries):
             async with pool.AsyncConnectionPool(
                 dsn, minconn=2, maxconn=4, num_workers=3
             ) as p:
-                await p.wait_ready(1.0)
+                await p.wait(1.0)
                 ts = []
                 results = []
 
@@ -545,7 +545,7 @@ async def test_shrink(dsn, monkeypatch):
     async with pool.AsyncConnectionPool(
         dsn, minconn=2, maxconn=4, max_idle=0.2
     ) as p:
-        await p.wait_ready(5.0)
+        await p.wait(5.0)
         assert p.max_idle == 0.2
 
         ts = [create_task(worker(i)) for i in range(4)]
@@ -565,7 +565,7 @@ async def test_reconnect(proxy, caplog, monkeypatch):
 
     proxy.start()
     async with pool.AsyncConnectionPool(proxy.client_dsn, minconn=1) as p:
-        await p.wait_ready(2.0)
+        await p.wait(2.0)
         proxy.stop()
 
         with pytest.raises(psycopg3.OperationalError):
@@ -574,7 +574,7 @@ async def test_reconnect(proxy, caplog, monkeypatch):
 
         await asyncio.sleep(1.0)
         proxy.start()
-        await p.wait_ready()
+        await p.wait()
 
         async with p.connection() as conn:
             await conn.execute("select 1")
@@ -613,7 +613,7 @@ async def test_reconnect_failure(proxy):
         reconnect_timeout=1.0,
         reconnect_failed=failed,
     ) as p:
-        await p.wait_ready(2.0)
+        await p.wait(2.0)
         proxy.stop()
 
         with pytest.raises(psycopg3.OperationalError):
@@ -711,11 +711,11 @@ async def test_max_lifetime(dsn):
 async def test_check(dsn, caplog):
     caplog.set_level(logging.WARNING, logger="psycopg3.pool")
     async with pool.AsyncConnectionPool(dsn, minconn=4) as p:
-        await p.wait_ready(1.0)
+        await p.wait(1.0)
         async with p.connection() as conn:
             pid = conn.pgconn.backend_pid
 
-        await p.wait_ready(1.0)
+        await p.wait(1.0)
         pids = set(conn.pgconn.backend_pid for conn in p._pool)
         assert pid in pids
         await conn.close()
@@ -723,7 +723,7 @@ async def test_check(dsn, caplog):
         assert len(caplog.records) == 0
         await p.check()
         assert len(caplog.records) == 1
-        await p.wait_ready(1.0)
+        await p.wait(1.0)
         pids2 = set(conn.pgconn.backend_pid for conn in p._pool)
         assert len(pids & pids2) == 3
         assert pid not in pids2

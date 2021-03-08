@@ -108,7 +108,7 @@ class AsyncConnectionPool(BasePool[AsyncConnection]):
                     "task run %s failed: %s: %s", task, e.__class__.__name__, e
                 )
 
-    async def wait_ready(self, timeout: float = 30.0) -> None:
+    async def wait(self, timeout: float = 30.0) -> None:
         """
         Wait for the pool to be full after init.
 
@@ -129,6 +129,7 @@ class AsyncConnectionPool(BasePool[AsyncConnection]):
             )
 
         async with self._lock:
+            assert self._pool_full_event
             self._pool_full_event = None
 
     @asynccontextmanager

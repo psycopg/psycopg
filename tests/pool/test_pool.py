@@ -87,7 +87,7 @@ def test_concurrent_filling(dsn, monkeypatch, retries):
             t0 = time()
 
             with pool.ConnectionPool(dsn, minconn=5, num_workers=2) as p:
-                p.wait_ready(1.0)
+                p.wait(1.0)
                 want_times = [0.1, 0.1, 0.2, 0.2, 0.3]
                 assert len(times) == len(want_times)
                 for got, want in zip(times, want_times):
@@ -99,14 +99,14 @@ def test_wait_ready(dsn, monkeypatch):
     delay_connection(monkeypatch, 0.1)
     with pytest.raises(pool.PoolTimeout):
         with pool.ConnectionPool(dsn, minconn=4, num_workers=1) as p:
-            p.wait_ready(0.3)
+            p.wait(0.3)
 
     with pool.ConnectionPool(dsn, minconn=4, num_workers=1) as p:
-        p.wait_ready(0.5)
+        p.wait(0.5)
 
     with pool.ConnectionPool(dsn, minconn=4, num_workers=2) as p:
-        p.wait_ready(0.3)
-        p.wait_ready(0.0001)  # idempotent
+        p.wait(0.3)
+        p.wait(0.0001)  # idempotent
 
 
 @pytest.mark.slow
@@ -115,7 +115,7 @@ def test_setup_no_timeout(dsn, proxy):
         with pool.ConnectionPool(
             proxy.client_dsn, minconn=1, num_workers=1
         ) as p:
-            p.wait_ready(0.2)
+            p.wait(0.2)
 
     with pool.ConnectionPool(proxy.client_dsn, minconn=1, num_workers=1) as p:
         sleep(0.5)
@@ -161,7 +161,7 @@ def test_configure_broken(dsn, caplog):
 
     with pool.ConnectionPool(minconn=1, configure=configure) as p:
         with pytest.raises(pool.PoolTimeout):
-            p.wait_ready(timeout=0.5)
+            p.wait(timeout=0.5)
 
     assert caplog.records
     assert "WAT" in caplog.records[0].message
@@ -417,7 +417,7 @@ def test_del_no_warning(dsn, recwarn):
     with p.connection() as conn:
         conn.execute("select 1")
 
-    p.wait_ready()
+    p.wait()
     ref = weakref.ref(p)
     del p
     assert not ref()
@@ -505,7 +505,7 @@ def test_grow(dsn, monkeypatch, retries):
             with pool.ConnectionPool(
                 dsn, minconn=2, maxconn=4, num_workers=3
             ) as p:
-                p.wait_ready(1.0)
+                p.wait(1.0)
                 results = []
 
                 ts = [Thread(target=worker, args=(i,)) for i in range(6)]
@@ -539,7 +539,7 @@ def test_shrink(dsn, monkeypatch):
             conn.execute("select pg_sleep(0.1)")
 
     with pool.ConnectionPool(dsn, minconn=2, maxconn=4, max_idle=0.2) as p:
-        p.wait_ready(5.0)
+        p.wait(5.0)
         assert p.max_idle == 0.2
 
         ts = [Thread(target=worker, args=(i,)) for i in range(4)]
@@ -561,7 +561,7 @@ def test_reconnect(proxy, caplog, monkeypatch):
 
     proxy.start()
     with pool.ConnectionPool(proxy.client_dsn, minconn=1) as p:
-        p.wait_ready(2.0)
+        p.wait(2.0)
         proxy.stop()
 
         with pytest.raises(psycopg3.OperationalError):
@@ -570,7 +570,7 @@ def test_reconnect(proxy, caplog, monkeypatch):
 
         sleep(1.0)
         proxy.start()
-        p.wait_ready()
+        p.wait()
 
         with p.connection() as conn:
             conn.execute("select 1")
@@ -604,7 +604,7 @@ def test_reconnect_failure(proxy):
         reconnect_timeout=1.0,
         reconnect_failed=failed,
     ) as p:
-        p.wait_ready(2.0)
+        p.wait(2.0)
         proxy.stop()
 
         with pytest.raises(psycopg3.OperationalError):
@@ -701,11 +701,11 @@ def test_max_lifetime(dsn):
 def test_check(dsn, caplog):
     caplog.set_level(logging.WARNING, logger="psycopg3.pool")
     with pool.ConnectionPool(dsn, minconn=4) as p:
-        p.wait_ready(1.0)
+        p.wait(1.0)
         with p.connection() as conn:
             pid = conn.pgconn.backend_pid
 
-        p.wait_ready(1.0)
+        p.wait(1.0)
         pids = set(conn.pgconn.backend_pid for conn in p._pool)
         assert pid in pids
         conn.close()
@@ -713,7 +713,7 @@ def test_check(dsn, caplog):
         assert len(caplog.records) == 0
         p.check()
         assert len(caplog.records) == 1
-        p.wait_ready(1.0)
+        p.wait(1.0)
         pids2 = set(conn.pgconn.backend_pid for conn in p._pool)
         assert len(pids & pids2) == 3
         assert pid not in pids2

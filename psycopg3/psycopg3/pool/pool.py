@@ -89,7 +89,7 @@ class ConnectionPool(BasePool[Connection]):
         for i in range(len(self._workers)):
             self.run_task(StopWorker(self))
 
-    def wait_ready(self, timeout: float = 30.0) -> None:
+    def wait(self, timeout: float = 30.0) -> None:
         """
         Wait for the pool to be full after init.
 
@@ -108,6 +108,7 @@ class ConnectionPool(BasePool[Connection]):
             )
 
         with self._lock:
+            assert self._pool_full_event
             self._pool_full_event = None
 
     @contextmanager
