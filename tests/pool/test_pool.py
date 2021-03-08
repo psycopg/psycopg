@@ -132,9 +132,11 @@ def test_configure(dsn):
     def configure(conn):
         nonlocal inits
         inits += 1
-        conn.execute("set default_transaction_read_only to on")
+        with conn.transaction():
+            conn.execute("set default_transaction_read_only to on")
 
     with pool.ConnectionPool(minconn=1, configure=configure) as p:
+        p.wait(timeout=1.0)
         with p.connection() as conn:
             assert inits == 1
             res = conn.execute("show default_transaction_read_only")
@@ -153,11 +155,27 @@ def test_configure(dsn):
 
 
 @pytest.mark.slow
+def test_configure_badstate(dsn, caplog):
+    caplog.set_level(logging.WARNING, logger="psycopg3.pool")
+
+    def configure(conn):
+        conn.execute("select 1")
+
+    with pool.ConnectionPool(minconn=1, configure=configure) as p:
+        with pytest.raises(pool.PoolTimeout):
+            p.wait(timeout=0.5)
+
+    assert caplog.records
+    assert "INTRANS" in caplog.records[0].message
+
+
+@pytest.mark.slow
 def test_configure_broken(dsn, caplog):
     caplog.set_level(logging.WARNING, logger="psycopg3.pool")
 
     def configure(conn):
-        conn.execute("WAT")
+        with conn.transaction():
+            conn.execute("WAT")
 
     with pool.ConnectionPool(minconn=1, configure=configure) as p:
         with pytest.raises(pool.PoolTimeout):

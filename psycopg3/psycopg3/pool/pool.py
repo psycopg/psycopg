@@ -15,6 +15,7 @@ from weakref import ref
 from contextlib import contextmanager
 from collections import deque
 
+from .. import errors as e
 from ..pq import TransactionStatus
 from ..connection import Connection
 
@@ -32,8 +33,7 @@ class ConnectionPool(BasePool[Connection]):
         configure: Optional[Callable[[Connection], None]] = None,
         **kwargs: Any,
     ):
-        self._configure: Callable[[Connection], None]
-        self._configure = configure or (lambda conn: None)
+        self._configure = configure
 
         self._lock = threading.RLock()
         self._waiting: Deque["WaitingClient"] = deque()
@@ -316,10 +316,6 @@ class ConnectionPool(BasePool[Connection]):
             else:
                 self._add_to_pool(conn)
 
-    def configure(self, conn: Connection) -> None:
-        """Configure a connection after creation."""
-        self._configure(conn)
-
     def reconnect_failed(self) -> None:
         """
         Called when reconnection failed for longer than `reconnect_timeout`.
@@ -364,16 +360,29 @@ class ConnectionPool(BasePool[Connection]):
             # Run the task. Make sure don't die in the attempt.
             try:
                 task.run()
-            except Exception as e:
+            except Exception as ex:
                 logger.warning(
-                    "task run %s failed: %s: %s", task, e.__class__.__name__, e
+                    "task run %s failed: %s: %s",
+                    task,
+                    ex.__class__.__name__,
+                    ex,
                 )
 
     def _connect(self) -> Connection:
         """Return a new connection configured for the pool."""
         conn = Connection.connect(self.conninfo, **self.kwargs)
-        self.configure(conn)
         conn._pool = self
+
+        if self._configure:
+            self._configure(conn)
+            status = conn.pgconn.transaction_status
+            if status != TransactionStatus.IDLE:
+                nstatus = TransactionStatus(status).name
+                raise e.ProgrammingError(
+                    f"connection left in status {nstatus} by configure function"
+                    f" {self._configure}: discarded"
+                )
+
         # Set an expiry date, with some randomness to avoid mass reconnection
         conn._expire_at = monotonic() + self._jitter(
             self.max_lifetime, -0.05, 0.0
@@ -396,8 +405,8 @@ class ConnectionPool(BasePool[Connection]):
 
         try:
             conn = self._connect()
-        except Exception as e:
-            logger.warning(f"error connecting in {self.name!r}: {e}")
+        except Exception as ex:
+            logger.warning(f"error connecting in {self.name!r}: {ex}")
             if attempt.time_to_give_up(now):
                 logger.warning(
                     "reconnection attempt in pool %r failed after %s sec",
@@ -473,18 +482,18 @@ class ConnectionPool(BasePool[Connection]):
         """
         status = conn.pgconn.transaction_status
         if status == TransactionStatus.IDLE:
-            return
+            pass
 
-        if status in (TransactionStatus.INTRANS, TransactionStatus.INERROR):
+        elif status in (TransactionStatus.INTRANS, TransactionStatus.INERROR):
             # Connection returned with an active transaction
             logger.warning("rolling back returned connection: %s", conn)
             try:
                 conn.rollback()
-            except Exception as e:
+            except Exception as ex:
                 logger.warning(
                     "rollback failed: %s: %s. Discarding connection %s",
-                    e.__class__.__name__,
-                    e,
+                    ex.__class__.__name__,
+                    ex,
                     conn,
                 )
                 conn.close()
