@@ -126,6 +126,47 @@ def test_setup_no_timeout(dsn, proxy):
             conn.execute("select 1")
 
 
+def test_configure(dsn):
+    inits = 0
+
+    def configure(conn):
+        nonlocal inits
+        inits += 1
+        conn.execute("set default_transaction_read_only to on")
+
+    with pool.ConnectionPool(minconn=1, configure=configure) as p:
+        with p.connection() as conn:
+            assert inits == 1
+            res = conn.execute("show default_transaction_read_only")
+            assert res.fetchone()[0] == "on"
+
+        with p.connection() as conn:
+            assert inits == 1
+            res = conn.execute("show default_transaction_read_only")
+            assert res.fetchone()[0] == "on"
+            conn.close()
+
+        with p.connection() as conn:
+            assert inits == 2
+            res = conn.execute("show default_transaction_read_only")
+            assert res.fetchone()[0] == "on"
+
+
+@pytest.mark.slow
+def test_configure_broken(dsn, caplog):
+    caplog.set_level(logging.WARNING, logger="psycopg3.pool")
+
+    def configure(conn):
+        conn.execute("WAT")
+
+    with pool.ConnectionPool(minconn=1, configure=configure) as p:
+        with pytest.raises(pool.PoolTimeout):
+            p.wait_ready(timeout=0.5)
+
+    assert caplog.records
+    assert "WAT" in caplog.records[0].message
+
+
 @pytest.mark.slow
 def test_queue(dsn, retries):
     def worker(n):

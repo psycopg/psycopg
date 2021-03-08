@@ -143,6 +143,47 @@ async def test_setup_no_timeout(dsn, proxy):
             await conn.execute("select 1")
 
 
+async def test_configure(dsn):
+    inits = 0
+
+    async def configure(conn):
+        nonlocal inits
+        inits += 1
+        await conn.execute("set default_transaction_read_only to on")
+
+    async with pool.AsyncConnectionPool(minconn=1, configure=configure) as p:
+        async with p.connection() as conn:
+            assert inits == 1
+            res = await conn.execute("show default_transaction_read_only")
+            assert (await res.fetchone())[0] == "on"
+
+        async with p.connection() as conn:
+            assert inits == 1
+            res = await conn.execute("show default_transaction_read_only")
+            assert (await res.fetchone())[0] == "on"
+            await conn.close()
+
+        async with p.connection() as conn:
+            assert inits == 2
+            res = await conn.execute("show default_transaction_read_only")
+            assert (await res.fetchone())[0] == "on"
+
+
+@pytest.mark.slow
+async def test_configure_broken(dsn, caplog):
+    caplog.set_level(logging.WARNING, logger="psycopg3.pool")
+
+    async def configure(conn):
+        await conn.execute("WAT")
+
+    async with pool.AsyncConnectionPool(minconn=1, configure=configure) as p:
+        with pytest.raises(pool.PoolTimeout):
+            await p.wait_ready(timeout=0.5)
+
+    assert caplog.records
+    assert "WAT" in caplog.records[0].message
+
+
 @pytest.mark.slow
 async def test_queue(dsn, retries):
     async def worker(n):
