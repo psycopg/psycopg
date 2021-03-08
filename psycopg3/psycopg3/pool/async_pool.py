@@ -212,11 +212,10 @@ class AsyncConnectionPool(BasePool[AsyncConnection]):
 
         # Wait for the worker threads to terminate
         if timeout > 0:
-            loop = get_running_loop()
             for t in [self._sched_runner] + self._workers:
                 if not t.is_alive():
                     continue
-                await loop.run_in_executor(None, lambda: t.join(timeout))
+                await self.loop.run_in_executor(None, lambda: t.join(timeout))
                 if t.is_alive():
                     logger.warning(
                         "couldn't stop thread %s in pool %r within %s seconds",
