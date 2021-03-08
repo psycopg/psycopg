@@ -1,7 +1,6 @@
 import sys
 import asyncio
 import logging
-import weakref
 from time import time
 from collections import Counter
 
@@ -441,19 +440,6 @@ async def test_putconn_wrong_pool(dsn):
             conn = await p1.getconn()
             with pytest.raises(ValueError):
                 await p2.putconn(conn)
-
-
-async def test_del_no_warning(dsn, recwarn):
-    p = pool.AsyncConnectionPool(dsn, minconn=2)
-    async with p.connection() as conn:
-        await conn.execute("select 1")
-
-    await p.wait_ready()
-    ref = weakref.ref(p)
-    del p
-    await asyncio.sleep(0.1)  # TODO: I wish it wasn't needed
-    assert not ref()
-    assert not recwarn
 
 
 async def test_closed_getconn(dsn):
