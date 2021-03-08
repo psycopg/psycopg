@@ -257,11 +257,10 @@ async def test_queue_timeout_override(dsn):
 
 async def test_broken_reconnect(dsn):
     async with pool.AsyncConnectionPool(dsn, minconn=1) as p:
-        with pytest.raises(psycopg3.OperationalError):
-            async with p.connection() as conn:
-                cur = await conn.execute("select pg_backend_pid()")
-                (pid1,) = await cur.fetchone()
-                await conn.close()
+        async with p.connection() as conn:
+            cur = await conn.execute("select pg_backend_pid()")
+            (pid1,) = await cur.fetchone()
+            await conn.close()
 
         async with p.connection() as conn2:
             cur = await conn2.execute("select pg_backend_pid()")

@@ -152,6 +152,12 @@ def test_context_rollback(conn, dsn):
                 cur.execute("select * from textctx")
 
 
+def test_context_close(conn):
+    with conn:
+        conn.execute("select 1")
+        conn.close()
+
+
 def test_context_rollback_no_clobber(conn, dsn, recwarn):
     with pytest.raises(ZeroDivisionError):
         with psycopg3.connect(dsn) as conn2:

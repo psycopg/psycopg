@@ -465,17 +465,19 @@ class Connection(BaseConnection):
         exc_val: Optional[BaseException],
         exc_tb: Optional[TracebackType],
     ) -> None:
+        if self.closed:
+            return
+
         if exc_type:
             # try to rollback, but if there are problems (connection in a bad
             # state) just warn without clobbering the exception bubbling up.
-            if not self.closed:
-                try:
-                    self.rollback()
-                except Exception as exc2:
-                    warnings.warn(
-                        f"error rolling back the transaction on {self}: {exc2}",
-                        RuntimeWarning,
-                    )
+            try:
+                self.rollback()
+            except Exception as exc2:
+                warnings.warn(
+                    f"error rolling back the transaction on {self}: {exc2}",
+                    RuntimeWarning,
+                )
         else:
             self.commit()
 
@@ -641,17 +643,19 @@ class AsyncConnection(BaseConnection):
         exc_val: Optional[BaseException],
         exc_tb: Optional[TracebackType],
     ) -> None:
+        if self.closed:
+            return
+
         if exc_type:
             # try to rollback, but if there are problems (connection in a bad
             # state) just warn without clobbering the exception bubbling up.
-            if not self.closed:
-                try:
-                    await self.rollback()
-                except Exception as exc2:
-                    warnings.warn(
-                        f"error rolling back the transaction on {self}: {exc2}",
-                        RuntimeWarning,
-                    )
+            try:
+                await self.rollback()
+            except Exception as exc2:
+                warnings.warn(
+                    f"error rolling back the transaction on {self}: {exc2}",
+                    RuntimeWarning,
+                )
         else:
             await self.commit()
 

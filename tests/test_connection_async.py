@@ -157,6 +157,12 @@ async def test_context_rollback(aconn, dsn):
                 await cur.execute("select * from textctx")
 
 
+async def test_context_close(aconn):
+    async with aconn:
+        await aconn.execute("select 1")
+        await aconn.close()
+
+
 async def test_context_rollback_no_clobber(conn, dsn, recwarn):
     with pytest.raises(ZeroDivisionError):
         async with await psycopg3.AsyncConnection.connect(dsn) as conn2:
