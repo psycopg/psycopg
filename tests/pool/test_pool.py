@@ -686,18 +686,16 @@ def test_jitter():
 
 
 @pytest.mark.slow
-def test_max_lifetime(dsn, retries):
-    for retry in retries:
-        with retry:
-            with pool.ConnectionPool(dsn, minconn=1, max_lifetime=0.2) as p:
-                sleep(0.1)
-                pids = []
-                for i in range(5):
-                    with p.connection() as conn:
-                        pids.append(conn.pgconn.backend_pid)
-                    sleep(0.2)
+def test_max_lifetime(dsn):
+    with pool.ConnectionPool(dsn, minconn=1, max_lifetime=0.2) as p:
+        sleep(0.1)
+        pids = []
+        for i in range(5):
+            with p.connection() as conn:
+                pids.append(conn.pgconn.backend_pid)
+            sleep(0.2)
 
-            assert pids[0] == pids[1] != pids[2] == pids[3] != pids[4], pids
+    assert pids[0] == pids[1] != pids[4], pids
 
 
 def test_check(dsn, caplog):
