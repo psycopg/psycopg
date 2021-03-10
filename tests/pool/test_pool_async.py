@@ -828,6 +828,98 @@ async def test_check(dsn, caplog):
         assert pid not in pids2
 
 
+@pytest.mark.slow
+async def test_stats_measures(dsn):
+    async def worker(n):
+        async with p.connection() as conn:
+            await conn.execute("select pg_sleep(0.2)")
+
+    async with pool.AsyncConnectionPool(dsn, minconn=2, maxconn=4) as p:
+        await p.wait(2.0)
+
+        stats = p.get_stats()
+        assert stats["pool_min"] == 2
+        assert stats["pool_max"] == 4
+        assert stats["pool_size"] == 2
+        assert stats["pool_available"] == 2
+        assert stats["queue_length"] == 0
+
+        ts = [create_task(worker(i)) for i in range(3)]
+        await asyncio.sleep(0.1)
+        stats = p.get_stats()
+        await asyncio.gather(*ts)
+        assert stats["pool_min"] == 2
+        assert stats["pool_max"] == 4
+        assert stats["pool_size"] == 3
+        assert stats["pool_available"] == 0
+        assert stats["queue_length"] == 0
+
+        await p.wait(2.0)
+        ts = [create_task(worker(i)) for i in range(7)]
+        await asyncio.sleep(0.1)
+        stats = p.get_stats()
+        await asyncio.gather(*ts)
+        assert stats["pool_min"] == 2
+        assert stats["pool_max"] == 4
+        assert stats["pool_size"] == 4
+        assert stats["pool_available"] == 0
+        assert stats["queue_length"] == 3
+
+
+@pytest.mark.slow
+async def test_stats_usage(dsn):
+    async def worker(n):
+        try:
+            async with p.connection(timeout=0.3) as conn:
+                await conn.execute("select pg_sleep(0.2)")
+        except pool.PoolTimeout:
+            pass
+
+    async with pool.AsyncConnectionPool(dsn, minconn=3) as p:
+        await p.wait(2.0)
+
+        ts = [create_task(worker(i)) for i in range(7)]
+        await asyncio.gather(*ts)
+        stats = p.get_stats()
+        assert stats["requests_num"] == 7
+        assert stats["requests_queued"] == 4
+        assert 850 <= stats["requests_wait_ms"] <= 950
+        assert stats["requests_timeouts"] == 1
+        assert 1150 <= stats["usage_ms"] <= 1250
+        assert stats.get("returns_bad", 0) == 0
+
+        async with p.connection() as conn:
+            await conn.close()
+        await p.wait()
+        stats = p.pop_stats()
+        assert stats["requests_num"] == 8
+        assert stats["returns_bad"] == 1
+        async with p.connection():
+            pass
+        assert p.get_stats()["requests_num"] == 1
+
+
+@pytest.mark.slow
+async def test_stats_connect(dsn, proxy, monkeypatch):
+    proxy.start()
+    delay_connection(monkeypatch, 0.2)
+    async with pool.AsyncConnectionPool(proxy.client_dsn, minconn=3) as p:
+        await p.wait()
+        stats = p.get_stats()
+        assert stats["connections_num"] == 3
+        assert stats.get("connections_errors", 0) == 0
+        assert stats.get("connections_lost", 0) == 0
+        assert 600 <= stats["connections_ms"] < 1200
+
+        proxy.stop()
+        await p.check()
+        await asyncio.sleep(0.1)
+        stats = p.get_stats()
+        assert stats["connections_num"] > 3
+        assert stats["connections_errors"] > 0
+        assert stats["connections_lost"] == 3
+
+
 def delay_connection(monkeypatch, sec):
     """
     Return a _connect_gen function delayed by the amount of seconds

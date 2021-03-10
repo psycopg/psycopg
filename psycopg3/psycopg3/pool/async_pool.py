@@ -11,7 +11,7 @@ from abc import ABC, abstractmethod
 from time import monotonic
 from types import TracebackType
 from typing import Any, AsyncIterator, Awaitable, Callable, Deque
-from typing import List, Optional, Type
+from typing import Dict, List, Optional, Type
 from weakref import ref
 from collections import deque
 
@@ -79,43 +79,6 @@ class AsyncConnectionPool(BasePool[AsyncConnection]):
         # remained unused.
         self.run_task(Schedule(self, ShrinkPool(self), self.max_idle))
 
-    def run_task(self, task: "MaintenanceTask") -> None:
-        """Run a maintenance task in a worker thread."""
-        self._tasks.put_nowait(task)
-
-    async def schedule_task(
-        self, task: "MaintenanceTask", delay: float
-    ) -> None:
-        """Run a maintenance task in a worker thread in the future."""
-        await self._sched.enter(delay, task.tick)
-
-    @classmethod
-    async def worker(cls, q: "asyncio.Queue[MaintenanceTask]") -> None:
-        """Runner to execute pending maintenance task.
-
-        The function is designed to run as a separate thread.
-
-        Block on the queue *q*, run a task received. Finish running if a
-        StopWorker is received.
-        """
-        while True:
-            task = await q.get()
-
-            if isinstance(task, StopWorker):
-                logger.debug("terminating working task")
-                return
-
-            # Run the task. Make sure don't die in the attempt.
-            try:
-                await task.run()
-            except Exception as ex:
-                logger.warning(
-                    "task run %s failed: %s: %s",
-                    task,
-                    ex.__class__.__name__,
-                    ex,
-                )
-
     async def wait(self, timeout: float = 30.0) -> None:
         """
         Wait for the pool to be full after init.
@@ -156,10 +119,13 @@ class AsyncConnectionPool(BasePool[AsyncConnection]):
         replace it with a new one.
         """
         conn = await self.getconn(timeout=timeout)
+        t0 = monotonic()
         try:
             async with conn:
                 yield conn
         finally:
+            t1 = monotonic()
+            self._stats[self._USAGE_MS] += int(1000.0 * (t1 - t0))
             await self.putconn(conn)
 
     async def getconn(
@@ -175,6 +141,7 @@ class AsyncConnectionPool(BasePool[AsyncConnection]):
         you don't want a depleted pool.
         """
         logger.info("connection requested to %r", self.name)
+        self._stats[self._REQUESTS_NUM] += 1
         # Critical section: decide here if there's a connection ready
         # or if the client needs to wait.
         async with self._lock:
@@ -189,8 +156,10 @@ class AsyncConnectionPool(BasePool[AsyncConnection]):
                     self._nconns_min = len(self._pool)
             else:
                 # No connection available: put the client in the waiting queue
+                t0 = monotonic()
                 pos = AsyncClient()
                 self._waiting.append(pos)
+                self._stats[self._REQUESTS_QUEUED] += 1
 
                 # If there is space for the pool to grow, let's do it
                 if self._nconns < self._maxconn:
@@ -205,7 +174,14 @@ class AsyncConnectionPool(BasePool[AsyncConnection]):
         if pos:
             if timeout is None:
                 timeout = self.timeout
-            conn = await pos.wait(timeout=timeout)
+            try:
+                conn = await pos.wait(timeout=timeout)
+            except Exception:
+                self._stats[self._REQUESTS_TIMEOUTS] += 1
+                raise
+            finally:
+                t1 = monotonic()
+                self._stats[self._REQUESTS_WAIT_MS] += int(1000.0 * (t1 - t0))
 
         # Tell the connection it belongs to a pool to avoid closing on __exit__
         # Note that this property shouldn't be set while the connection is in
@@ -343,6 +319,7 @@ class AsyncConnectionPool(BasePool[AsyncConnection]):
             try:
                 await conn.execute("select 1")
             except Exception:
+                self._stats[self._CONNECTIONS_LOST] += 1
                 logger.warning("discarding broken connection: %s", conn)
                 self.run_task(AddConnection(self))
             else:
@@ -354,11 +331,58 @@ class AsyncConnectionPool(BasePool[AsyncConnection]):
         """
         self._reconnect_failed(self)
 
+    def run_task(self, task: "MaintenanceTask") -> None:
+        """Run a maintenance task in a worker thread."""
+        self._tasks.put_nowait(task)
+
+    async def schedule_task(
+        self, task: "MaintenanceTask", delay: float
+    ) -> None:
+        """Run a maintenance task in a worker thread in the future."""
+        await self._sched.enter(delay, task.tick)
+
+    @classmethod
+    async def worker(cls, q: "asyncio.Queue[MaintenanceTask]") -> None:
+        """Runner to execute pending maintenance task.
+
+        The function is designed to run as a separate thread.
+
+        Block on the queue *q*, run a task received. Finish running if a
+        StopWorker is received.
+        """
+        while True:
+            task = await q.get()
+
+            if isinstance(task, StopWorker):
+                logger.debug("terminating working task")
+                return
+
+            # Run the task. Make sure don't die in the attempt.
+            try:
+                await task.run()
+            except Exception as ex:
+                logger.warning(
+                    "task run %s failed: %s: %s",
+                    task,
+                    ex.__class__.__name__,
+                    ex,
+                )
+
     async def _connect(self) -> AsyncConnection:
         """Return a new connection configured for the pool."""
-        conn = await self.connection_class.connect(
-            self.conninfo, **self.kwargs
-        )
+        self._stats[self._CONNECTIONS_NUM] += 1
+        t0 = monotonic()
+        try:
+            conn = await self.connection_class.connect(
+                self.conninfo, **self.kwargs
+            )
+        except Exception:
+            self._stats[self._CONNECTIONS_ERRORS] += 1
+            raise
+        else:
+            t1 = monotonic()
+            self._stats[self._CONNECTIONS_MS] += int(1000.0 * (t1 - t0))
+
         conn._pool = self
 
         if self._configure:
@@ -420,6 +444,7 @@ class AsyncConnectionPool(BasePool[AsyncConnection]):
         """
         await self._reset_connection(conn)
         if conn.pgconn.transaction_status == TransactionStatus.UNKNOWN:
+            self._stats[self._RETURNS_BAD] += 1
             # Connection no more in working state: create a new one.
             self.run_task(AddConnection(self))
             logger.warning("discarding closed connection: %s", conn)
@@ -532,6 +557,11 @@ class AsyncConnectionPool(BasePool[AsyncConnection]):
                 self.max_idle,
             )
             await to_close.close()
+
+    def _get_measures(self) -> Dict[str, int]:
+        rv = super()._get_measures()
+        rv[self._QUEUE_LENGTH] = len(self._waiting)
+        return rv
 
 
 class AsyncClient:
