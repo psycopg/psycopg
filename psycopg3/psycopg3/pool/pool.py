@@ -31,10 +31,12 @@ class ConnectionPool(BasePool[Connection]):
         self,
         conninfo: str = "",
         *,
+        connection_class: Type[Connection] = Connection,
         configure: Optional[Callable[[Connection], None]] = None,
         reset: Optional[Callable[[Connection], None]] = None,
         **kwargs: Any,
     ):
+        self.connection_class = connection_class
         self._configure = configure
         self._reset = reset
 
@@ -390,7 +392,7 @@ class ConnectionPool(BasePool[Connection]):
         self._stats[self._CONNECTIONS_NUM] += 1
         t0 = monotonic()
         try:
-            conn = Connection.connect(self.conninfo, **self.kwargs)
+            conn = self.connection_class.connect(self.conninfo, **self.kwargs)
         except Exception:
             self._stats[self._CONNECTIONS_ERRORS] += 1
             raise

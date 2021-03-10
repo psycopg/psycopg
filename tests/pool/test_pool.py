@@ -33,6 +33,15 @@ def test_minconn_maxconn(dsn):
         pool.ConnectionPool(dsn, minconn=4, maxconn=2)
 
 
+def test_connection_class(dsn):
+    class MyConn(psycopg3.Connection):
+        pass
+
+    with pool.ConnectionPool(dsn, connection_class=MyConn, minconn=1) as p:
+        with p.connection() as conn:
+            assert isinstance(conn, MyConn)
+
+
 def test_kwargs(dsn):
     with pool.ConnectionPool(dsn, kwargs={"autocommit": True}, minconn=1) as p:
         with p.connection() as conn:

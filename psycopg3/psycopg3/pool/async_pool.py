@@ -32,6 +32,7 @@ class AsyncConnectionPool(BasePool[AsyncConnection]):
         self,
         conninfo: str = "",
         *,
+        connection_class: Type[AsyncConnection] = AsyncConnection,
         configure: Optional[
             Callable[[AsyncConnection], Awaitable[None]]
         ] = None,
@@ -44,6 +45,7 @@ class AsyncConnectionPool(BasePool[AsyncConnection]):
                 "async pool not supported before Python 3.7"
             )
 
+        self.connection_class = connection_class
         self._configure = configure
         self._reset = reset
 
@@ -354,7 +356,9 @@ class AsyncConnectionPool(BasePool[AsyncConnection]):
 
     async def _connect(self) -> AsyncConnection:
         """Return a new connection configured for the pool."""
-        conn = await AsyncConnection.connect(self.conninfo, **self.kwargs)
+        conn = await self.connection_class.connect(
+            self.conninfo, **self.kwargs
+        )
         conn._pool = self
 
         if self._configure:

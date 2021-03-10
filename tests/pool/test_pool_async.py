@@ -41,6 +41,17 @@ async def test_minconn_maxconn(dsn):
         pool.AsyncConnectionPool(dsn, minconn=4, maxconn=2)
 
 
+async def test_connection_class(dsn):
+    class MyConn(psycopg3.AsyncConnection):
+        pass
+
+    async with pool.AsyncConnectionPool(
+        dsn, connection_class=MyConn, minconn=1
+    ) as p:
+        async with p.connection() as conn:
+            assert isinstance(conn, MyConn)
+
+
 async def test_kwargs(dsn):
     async with pool.AsyncConnectionPool(
         dsn, kwargs={"autocommit": True}, minconn=1
