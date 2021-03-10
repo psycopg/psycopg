@@ -31,6 +31,7 @@ class AsyncConnectionPool(BasePool[AsyncConnection]):
     def __init__(
         self,
         conninfo: str = "",
+        *,
         configure: Optional[
             Callable[[AsyncConnection], Awaitable[None]]
         ] = None,

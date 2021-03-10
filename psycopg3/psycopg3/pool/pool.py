@@ -30,6 +30,7 @@ class ConnectionPool(BasePool[Connection]):
     def __init__(
         self,
         conninfo: str = "",
+        *,
         configure: Optional[Callable[[Connection], None]] = None,
         reset: Optional[Callable[[Connection], None]] = None,
         **kwargs: Any,
