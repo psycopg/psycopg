@@ -7,9 +7,14 @@ psycopg3 connection pool base class and functionalities.
 import logging
 from random import random
 from typing import Any, Callable, Deque, Dict, Generic, Optional
-from collections import deque
+from typing import TYPE_CHECKING
+from collections import Counter, deque
 
 from ..proto import ConnectionType
+
+if TYPE_CHECKING:
+    from typing import Counter as TCounter
+
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +23,23 @@ class BasePool(Generic[ConnectionType]):
 
     # Used to generate pool names
     _num_pool = 0
+
+    # Stats keys
+    _POOL_MIN = "pool_min"
+    _POOL_MAX = "pool_max"
+    _POOL_SIZE = "pool_size"
+    _POOL_AVAILABLE = "pool_available"
+    _QUEUE_LENGTH = "queue_length"
+    _USAGE_MS = "usage_ms"
+    _REQUESTS_NUM = "requests_num"
+    _REQUESTS_QUEUED = "requests_queued"
+    _REQUESTS_WAIT_MS = "requests_wait_ms"
+    _REQUESTS_TIMEOUTS = "requests_timeouts"
+    _RETURNS_BAD = "returns_bad"
+    _CONNECTIONS_NUM = "connections_num"
+    _CONNECTIONS_MS = "connections_ms"
+    _CONNECTIONS_ERRORS = "connections_errors"
+    _CONNECTIONS_LOST = "connections_lost"
 
     def __init__(
         self,
@@ -62,6 +84,7 @@ class BasePool(Generic[ConnectionType]):
 
         self._nconns = minconn  # currently in the pool, out, being prepared
         self._pool: Deque[ConnectionType] = deque()
+        self._stats: "TCounter[str]" = Counter()
 
         # Min number of connections in the pool in a max_idle unit of time.
         # It is reset periodically by the ShrinkPool scheduled task.
@@ -92,6 +115,36 @@ class BasePool(Generic[ConnectionType]):
     def closed(self) -> bool:
         """`!True` if the pool is closed."""
         return self._closed
+
+    def get_stats(self) -> Dict[str, int]:
+        """
+        Return current stats about the pool usage.
+        """
+        rv = dict(self._stats)
+        rv.update(self._get_measures())
+        return rv
+
+    def pop_stats(self) -> Dict[str, int]:
+        """
+        Return current stats about the pool usage.
+
+        After the call, all the counters are reset to zero.
+        """
+        stats, self._stats = self._stats, Counter()
+        rv = dict(stats)
+        rv.update(self._get_measures())
+        return rv
+
+    def _get_measures(self) -> Dict[str, int]:
+        """
+        Return immediate measures of the pool (not counters).
+        """
+        return {
+            self._POOL_MIN: self._minconn,
+            self._POOL_MAX: self._maxconn,
+            self._POOL_SIZE: self._nconns,
+            self._POOL_AVAILABLE: len(self._pool),
+        }
 
     @classmethod
     def _jitter(cls, value: float, min_pc: float, max_pc: float) -> float:

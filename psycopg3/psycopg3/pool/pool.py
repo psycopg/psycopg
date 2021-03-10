@@ -10,7 +10,7 @@ from abc import ABC, abstractmethod
 from time import monotonic
 from queue import Queue, Empty
 from types import TracebackType
-from typing import Any, Callable, Deque, Iterator, List, Optional, Type
+from typing import Any, Callable, Deque, Dict, Iterator, List, Optional, Type
 from weakref import ref
 from contextlib import contextmanager
 from collections import deque
@@ -129,10 +129,13 @@ class ConnectionPool(BasePool[Connection]):
         replace it with a new one.
         """
         conn = self.getconn(timeout=timeout)
+        t0 = monotonic()
         try:
             with conn:
                 yield conn
         finally:
+            t1 = monotonic()
+            self._stats[self._USAGE_MS] += int(1000.0 * (t1 - t0))
             self.putconn(conn)
 
     def getconn(self, timeout: Optional[float] = None) -> Connection:
@@ -146,6 +149,7 @@ class ConnectionPool(BasePool[Connection]):
         you don't want a depleted pool.
         """
         logger.info("connection requested to %r", self.name)
+        self._stats[self._REQUESTS_NUM] += 1
         # Critical section: decide here if there's a connection ready
         # or if the client needs to wait.
         with self._lock:
@@ -160,8 +164,10 @@ class ConnectionPool(BasePool[Connection]):
                     self._nconns_min = len(self._pool)
             else:
                 # No connection available: put the client in the waiting queue
+                t0 = monotonic()
                 pos = WaitingClient()
                 self._waiting.append(pos)
+                self._stats[self._REQUESTS_QUEUED] += 1
 
                 # If there is space for the pool to grow, let's do it
                 if self._nconns < self._maxconn:
@@ -176,7 +182,14 @@ class ConnectionPool(BasePool[Connection]):
         if pos:
             if timeout is None:
                 timeout = self.timeout
-            conn = pos.wait(timeout=timeout)
+            try:
+                conn = pos.wait(timeout=timeout)
+            except Exception:
+                self._stats[self._REQUESTS_TIMEOUTS] += 1
+                raise
+            finally:
+                t1 = monotonic()
+                self._stats[self._REQUESTS_WAIT_MS] += int(1000.0 * (t1 - t0))
 
         # Tell the connection it belongs to a pool to avoid closing on __exit__
         # Note that this property shouldn't be set while the connection is in
@@ -313,6 +326,7 @@ class ConnectionPool(BasePool[Connection]):
             try:
                 conn.execute("select 1")
             except Exception:
+                self._stats[self._CONNECTIONS_LOST] += 1
                 logger.warning("discarding broken connection: %s", conn)
                 self.run_task(AddConnection(self))
             else:
@@ -372,7 +386,17 @@ class ConnectionPool(BasePool[Connection]):
 
     def _connect(self) -> Connection:
         """Return a new connection configured for the pool."""
-        conn = Connection.connect(self.conninfo, **self.kwargs)
+        self._stats[self._CONNECTIONS_NUM] += 1
+        t0 = monotonic()
+        try:
+            conn = Connection.connect(self.conninfo, **self.kwargs)
+        except Exception:
+            self._stats[self._CONNECTIONS_ERRORS] += 1
+            raise
+        else:
+            t1 = monotonic()
+            self._stats[self._CONNECTIONS_MS] += int(1000.0 * (t1 - t0))
+
         conn._pool = self
 
         if self._configure:
@@ -430,6 +454,7 @@ class ConnectionPool(BasePool[Connection]):
         """
         self._reset_connection(conn)
         if conn.pgconn.transaction_status == TransactionStatus.UNKNOWN:
+            self._stats[self._RETURNS_BAD] += 1
             # Connection no more in working state: create a new one.
             self.run_task(AddConnection(self))
             logger.warning("discarding closed connection: %s", conn)
@@ -542,6 +567,11 @@ class ConnectionPool(BasePool[Connection]):
                 self.max_idle,
             )
             to_close.close()
+
+    def _get_measures(self) -> Dict[str, int]:
+        rv = super()._get_measures()
+        rv[self._QUEUE_LENGTH] = len(self._waiting)
+        return rv
 
 
 class WaitingClient:
