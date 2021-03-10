@@ -546,6 +546,7 @@ class AsyncConnectionPool(BasePool[AsyncConnection]):
             if self._nconns > self._minconn and nconns_min > 0:
                 to_close = self._pool.popleft()
                 self._nconns -= 1
+                self._nconns_min -= 1
 
         if to_close:
             logger.info(
