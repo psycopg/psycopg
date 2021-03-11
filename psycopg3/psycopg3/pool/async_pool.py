@@ -217,7 +217,10 @@ class AsyncConnectionPool(BasePool[AsyncConnection]):
             return
 
         # Use a worker to perform eventual maintenance work in a separate thread
-        self.run_task(ReturnConnection(self, conn))
+        if self._reset:
+            self.run_task(ReturnConnection(self, conn))
+        else:
+            await self._return_connection(conn)
 
     async def close(self, timeout: float = 5.0) -> None:
         """Close the pool and make it unavailable to new clients.
