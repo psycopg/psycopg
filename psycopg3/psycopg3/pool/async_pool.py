@@ -91,6 +91,7 @@ class AsyncConnectionPool(BasePool[AsyncConnection]):
                 return
             self._pool_full_event = asyncio.Event()
 
+        logger.info("waiting for pool %r initialization", self.name)
         try:
             await asyncio.wait_for(self._pool_full_event.wait(), timeout)
         except asyncio.TimeoutError:
@@ -102,6 +103,8 @@ class AsyncConnectionPool(BasePool[AsyncConnection]):
         async with self._lock:
             assert self._pool_full_event
             self._pool_full_event = None
+
+        logger.info("pool %r is ready to use", self.name)
 
     @asynccontextmanager
     async def connection(

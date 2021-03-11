@@ -106,6 +106,7 @@ class ConnectionPool(BasePool[Connection]):
                 return
             self._pool_full_event = threading.Event()
 
+        logger.info("waiting for pool %r initialization", self.name)
         if not self._pool_full_event.wait(timeout):
             self.close()  # stop all the threads
             raise PoolTimeout(
@@ -115,6 +116,8 @@ class ConnectionPool(BasePool[Connection]):
         with self._lock:
             assert self._pool_full_event
             self._pool_full_event = None
+
+        logger.info("pool %r is ready to use", self.name)
 
     @contextmanager
     def connection(
