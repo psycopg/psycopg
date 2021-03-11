@@ -93,6 +93,12 @@ class BasePool(Generic[ConnectionType]):
         # max_idle interval they weren't all used.
         self._nconns_min = minconn
 
+        # Flag to allow the pool to grow only one connection at time. In case
+        # of spike, if threads are allowed to grow in parallel and connection
+        # time is slow, there won't be any thread available to return the
+        # connections to the pool.
+        self._growing = False
+
         # _close should be the last property to be set in the state
         # to avoid warning on __del__ in case __init__ fails.
         self._closed = False

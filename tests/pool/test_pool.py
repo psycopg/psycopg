@@ -609,7 +609,7 @@ def test_grow(dsn, monkeypatch, retries):
                 [t.start() for t in ts]
                 [t.join() for t in ts]
 
-            want_times = [0.2, 0.2, 0.3, 0.3, 0.4, 0.4]
+            want_times = [0.2, 0.2, 0.3, 0.4, 0.4, 0.4]
             times = [item[1] for item in results]
             for got, want in zip(times, want_times):
                 assert got == pytest.approx(want, 0.1), times
@@ -919,6 +919,27 @@ def test_stats_connect(dsn, proxy, monkeypatch):
         assert stats["connections_num"] > 3
         assert stats["connections_errors"] > 0
         assert stats["connections_lost"] == 3
+
+
+@pytest.mark.slow
+def test_spike(dsn, monkeypatch):
+    # Inspired to https://github.com/brettwooldridge/HikariCP/blob/dev/
+    # documents/Welcome-To-The-Jungle.md
+    delay_connection(monkeypatch, 0.15)
+
+    def worker():
+        with p.connection():
+            sleep(0.002)
+
+    with pool.ConnectionPool(dsn, minconn=5, maxconn=10) as p:
+        p.wait()
+
+        ts = [Thread(target=worker) for i in range(50)]
+        [t.start() for t in ts]
+        [t.join() for t in ts]
+        p.wait()
+
+        assert len(p._pool) < 7
 
 
 def delay_connection(monkeypatch, sec):

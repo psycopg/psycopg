@@ -176,12 +176,15 @@ class ConnectionPool(BasePool[Connection]):
                 self._stats[self._REQUESTS_QUEUED] += 1
 
                 # If there is space for the pool to grow, let's do it
-                if self._nconns < self._maxconn:
+                # Allow only one thread at time to grow the pool (or returning
+                # connections might be starved).
+                if self._nconns < self._maxconn and not self._growing:
                     self._nconns += 1
                     logger.info(
                         "growing pool %r to %s", self.name, self._nconns
                     )
-                    self.run_task(AddConnection(self))
+                    self._growing = True
+                    self.run_task(AddConnection(self, growing=True))
 
         # If we are in the waiting queue, wait to be assigned a connection
         # (outside the critical section, so only the waiting client is locked)
@@ -424,7 +427,9 @@ class ConnectionPool(BasePool[Connection]):
         )
         return conn
 
-    def _add_connection(self, attempt: Optional[ConnectionAttempt]) -> None:
+    def _add_connection(
+        self, attempt: Optional[ConnectionAttempt], growing: bool = False
+    ) -> None:
         """Try to connect and add the connection to the pool.
 
         If failed, reschedule a new attempt in the future for a few times, then
@@ -453,9 +458,24 @@ class ConnectionPool(BasePool[Connection]):
                 self.reconnect_failed()
             else:
                 attempt.update_delay(now)
-                self.schedule_task(AddConnection(self, attempt), attempt.delay)
-        else:
-            self._add_to_pool(conn)
+                self.schedule_task(
+                    AddConnection(self, attempt, growing=growing),
+                    attempt.delay,
+                )
+            return
+
+        logger.info("adding new connection to the pool")
+        self._add_to_pool(conn)
+        if growing:
+            with self._lock:
+                if self._nconns < self._maxconn and self._waiting:
+                    self._nconns += 1
+                    logger.info(
+                        "growing pool %r to %s", self.name, self._nconns
+                    )
+                    self.run_task(AddConnection(self, growing=True))
+                else:
+                    self._growing = False
 
     def _return_connection(self, conn: Connection) -> None:
         """
@@ -707,12 +727,14 @@ class AddConnection(MaintenanceTask):
         self,
         pool: "ConnectionPool",
         attempt: Optional["ConnectionAttempt"] = None,
+        growing: bool = False,
     ):
         super().__init__(pool)
         self.attempt = attempt
+        self.growing = growing
 
     def _run(self, pool: "ConnectionPool") -> None:
-        pool._add_connection(self.attempt)
+        pool._add_connection(self.attempt, growing=self.growing)
 
 
 class ReturnConnection(MaintenanceTask):
