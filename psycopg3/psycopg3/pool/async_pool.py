@@ -134,6 +134,7 @@ class AsyncConnectionPool(BasePool[AsyncConnection]):
                     self._nconns_min = len(self._pool)
             else:
                 if self.max_waiting and len(self._waiting) >= self.max_waiting:
+                    self._stats[self._REQUESTS_ERRORS] += 1
                     raise TooManyRequests(
                         f"the pool {self.name!r} has aleady"
                         f" {len(self._waiting)} requests waiting"
@@ -163,7 +164,7 @@ class AsyncConnectionPool(BasePool[AsyncConnection]):
             try:
                 conn = await pos.wait(timeout=timeout)
             except Exception:
-                self._stats[self._REQUESTS_TIMEOUTS] += 1
+                self._stats[self._REQUESTS_ERRORS] += 1
                 raise
             finally:
                 t1 = monotonic()

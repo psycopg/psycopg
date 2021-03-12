@@ -33,7 +33,7 @@ class BasePool(Generic[ConnectionType]):
     _REQUESTS_NUM = "requests_num"
     _REQUESTS_QUEUED = "requests_queued"
     _REQUESTS_WAIT_MS = "requests_wait_ms"
-    _REQUESTS_TIMEOUTS = "requests_timeouts"
+    _REQUESTS_ERRORS = "requests_errors"
     _USAGE_MS = "usage_ms"
     _RETURNS_BAD = "returns_bad"
     _CONNECTIONS_NUM = "connections_num"

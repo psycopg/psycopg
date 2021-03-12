@@ -323,6 +323,7 @@ def test_queue_size(dsn):
     assert isinstance(errors[0], pool.TooManyRequests)
     assert p.name in str(errors[0])
     assert str(p.max_waiting) in str(errors[0])
+    assert p.get_stats()["requests_errors"] == 1
 
 
 @pytest.mark.slow
@@ -919,7 +920,7 @@ def test_stats_usage(dsn):
         assert stats["requests_num"] == 7
         assert stats["requests_queued"] == 4
         assert 850 <= stats["requests_wait_ms"] <= 950
-        assert stats["requests_timeouts"] == 1
+        assert stats["requests_errors"] == 1
         assert 1150 <= stats["usage_ms"] <= 1250
         assert stats.get("returns_bad", 0) == 0
 

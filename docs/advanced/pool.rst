@@ -221,7 +221,8 @@ Metric                  Meaning
  ``requests_queued``    Number of requests queued because a connection wasn't
                         immediately available in the pool
  ``requests_wait_ms``   Total time in the queue for the clients waiting
- ``requests_timeouts``  Number of waiting clients whose request timed out
+ ``requests_errors``    Number of connection requests resulting in an error
+                        (timeouts, queue full...)
  ``returns_bad``        Number of connections returned to the pool in a bad
                         state
  ``connections_num``    Number of connection attempts made by the pool to the
