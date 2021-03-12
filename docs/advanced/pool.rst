@@ -27,7 +27,7 @@ however, and not the necessary one; in particular the connection pool acts as
 a context manager and can be closed automatically at the end of its ``with``
 block::
 
-    with my_pool as ConnectionPool(conninfo, **kwargs):
+    with ConnectionPool(conninfo, **kwargs) as my_pool:
         run_app(my_pool)
 
     # the pool is now closed
