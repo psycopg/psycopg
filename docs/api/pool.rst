@@ -29,7 +29,10 @@ The `!ConnectionPool` class
 .. autoclass:: ConnectionPool(conninfo, *, **arguments)
 
    This class implements a connection pool serving `~psycopg2.Connection`
-   instances (or subclasses).
+   instances (or subclasses). The constructor has *alot* of arguments, but
+   only *conninfo* and *min_size* are the fundamental ones, all the other
+   arguments have meaningful defaults and can probably be tweaked later, if
+   required.
 
    :param conninfo: The connection string. See
                     `~psycopg3.Connection.connect()` for details.
@@ -38,22 +41,26 @@ The `!ConnectionPool` class
    :param min_size: The minimum number of connection the pool will hold. The
                    pool will actively try to create new connections if some
                    are lost (closed, broken) and will try to never go below
-                   *min_size*. Default: 4
-   :type min_size: `!int`
+                   *min_size*
+   :type min_size: `!int`, default: 4
 
    :param max_size: The maximum number of connections the pool will hold. If
                    `!None`, or equal to *min_size*, the pool will not grow or
-                   shrink. If larger than *min_size* the pool can grow if more
-                   than *min_size* connections are requested at the same time
-                   and will shrink back after the extra connections have been
-                   unused for more than *max_idle* seconds. Default: `!None`.
-   :type max_size: `Optional[int]`
+                   shrink. If larger than *min_size*, the pool can grow if
+                   more than *min_size* connections are requested at the same
+                   time and will shrink back after the extra connections have
+                   been unused for more than *max_idle* seconds.
+   :type max_size: `!int`, default: `!None`
 
    :param kwargs: Extra arguments to pass to `!connect()`. Note that this is
                   *one dict argument* of the pool constructor, which is
                   expanded as `connect()` keyword parameters.
 
    :type kwargs: `!dict`
+
+   :param connection_class: The class of the connections to serve. It should
+                            be a `!Connection` subclass.
+   :type connection_class: `!type`, default: `~psycopg3.Connection`
 
    :param configure: A callback to configure a connection after creation.
                      Useful, for instance, to configure its adapters. If the
@@ -69,50 +76,44 @@ The `!ConnectionPool` class
                  *idle* state, otherwise it is discarded.
    :type reset: `Callable[[Connection], None]`
 
-   :param connection_class: The class of the connections to serve. Default:
-                            `~psycopg3.Connection`. It should be a
-                            `!Connection` subclass.
-   :type connection_class: ``Type[Connection]``
-
    :param name: An optional name to give to the pool, useful, for instance, to
-                identify it in the logs if more than one pool is used. If
-                `!None` (default) pick a sequential name such as ``pool-1``,
-                ``pool-2`` etc.
+                identify it in the logs if more than one pool is used. if not
+                specified pick a sequential name such as ``pool-1``,
+                ``pool-2``, etc.
    :type name: `!str`
 
    :param timeout: The default maximum time in seconts that a client can wait
                    to receive a connection from the pool (using `connection()`
                    or `getconn()`). Note that these methods allow to override
-                   the *timeout* default. Default: 30 seconds.
-   :type timeout: `!float`
+                   the *timeout* default.
+   :type timeout: `!float`, default: 30 seconds
 
    :param max_waiting: Maximum number of requests that can be queued to the
-                       pool. Adding more requests will fail, raising
-                       `TooManyRequests`. Specifying 0 (the default) means to
-                       upper bound.
-   :type max_waiting: `!int`
+                       pool. Requesting will fail, raising `TooManyRequests`.
+                       0 means no queue limit.
+   :type max_waiting: `!int`, default: 0
 
    :param max_lifetime: The maximum lifetime of a connection in the pool, in
                         seconds. Connections used for longer get closed and
                         replaced by a new one. The amount is reduced by a
-                        random 10% to avoid mass eviction. Default: one hour.
-   :type max_lifetime: `!float`
+                        random 10% to avoid mass eviction.
+   :type max_lifetime: `!float`, default: 1 hour
 
-   :param max_idle: Maximum time a connection can be unused in the pool before
-                    being closed, and the pool shrunk. This only happens to
-                    connections more than *min_size*, if *max_size* allowed the
-                    pool to grow. Default: 10 minutes.
-   :type max_idle: `!float`
+   :param max_idle: Maximum time, in seconds, that a connection can stay unused
+                    in the pool before being closed, and the pool shrunk. This
+                    only happens to connections more than *min_size*, if
+                    *max_size* allowed the pool to grow.
+   :type max_idle: `!float`, default: 10 minutes
 
-   :param reconnect_timeout: Maximum time in seconds the pool will try to
+   :param reconnect_timeout: Maximum time, in seconds, the pool will try to
                              create a connection. If a connection attempt
                              fails, the pool will try to reconnect a few
                              times, using an exponential backoff and some
                              random factor to avoid mass attempts. If repeated
-                             attempt fails, after *reconnect_timeout* second
-                             the attempt is aborted and the *reconnect_failed*
-                             callback invoked. Default: 5 minutes.
-   :type reconnect_timeout: `!float`
+                             attempts fail, after *reconnect_timeout* second
+                             the connection attempt is aborted and the
+                             *reconnect_failed* callback invoked.
+   :type reconnect_timeout: `!float`, default: 5 minutes
                              
    :param reconnect_failed: Callback invoked if an attempt to create a new
                             connection fails for more than *reconnect_timeout*
@@ -126,8 +127,8 @@ The `!ConnectionPool` class
    :param num_workers: Number of background worker threads used to maintain the
                        pool state. Background workers are used for example to
                        create new connections and to clean up connections when
-                       they are returned to the pool. Default: 3.
-   :type num_workers: `!int`
+                       they are returned to the pool.
+   :type num_workers: `!int`, default: 3
 
    .. automethod:: wait
    .. automethod:: connection
@@ -204,17 +205,16 @@ listed here.
 
    All the other parameters are the same.
 
+   :param connection_class: The class of the connections to serve. It should
+                            be an `!AsyncConnection` subclass.
+   :type connection_class: `!type`, default: `~psycopg3.AsyncConnection`
+
    :param configure: A callback to configure a connection after creation.
    :type configure: `async Callable[[AsyncConnection], None]`
 
    :param reset: A callback to reset a function after it has been returned to
                  the pool.
    :type reset: `async Callable[[AsyncConnection], None]`
-
-   :param connection_class: The class of the connections to serve. Default:
-                            `~psycopg3.AsyncConnection`. It should be an
-                            `!AsyncConnection` subclass.
-   :type connection_class: ``Type[AsyncConnection]``
 
    .. automethod:: wait
    .. automethod:: connection
