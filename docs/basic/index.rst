@@ -6,16 +6,8 @@ Getting started with ``psycopg3``
     :maxdepth: 1
     :caption: Contents:
 
-    ../install
-    ../usage
-    ../params
-    ../adapt-types
-    ../transactions
-
-
-Indices and tables
-------------------
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+    install
+    usage
+    params
+    adapt
+    transactions

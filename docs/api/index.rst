@@ -5,10 +5,10 @@
     :maxdepth: 1
     :caption: Contents:
 
-    ../connection
-    ../cursor
-    ../sql
-    ../errors
-    ../pool
-    ../types
-    ../pq
+    connections
+    cursors
+    sql
+    errors
+    pool
+    types
+    pq
