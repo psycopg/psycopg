@@ -4,6 +4,7 @@ import asyncio
 from asyncio.queues import Queue
 
 import psycopg3
+from psycopg3.utils.compat import create_task
 
 pytestmark = pytest.mark.asyncio
 
@@ -144,7 +145,7 @@ async def test_identify_closure(aconn, dsn):
     ev = asyncio.Event()
     loop = asyncio.get_event_loop()
     loop.add_reader(aconn.fileno(), ev.set)
-    asyncio.ensure_future(closer())
+    create_task(closer())
 
     await asyncio.wait_for(ev.wait(), 1.0)
     with pytest.raises(psycopg3.OperationalError):

@@ -166,6 +166,10 @@ received immediately, but only during a connection operation, such as a query.
     # (1,)
 
 
+.. index:: disconnections
+
+.. _disconnections:
+
 Detecting disconnections
 ------------------------
 

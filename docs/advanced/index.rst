@@ -5,9 +5,10 @@ Advanced topics
     :maxdepth: 1
     :caption: Contents:
 
-    ../row-factories
-    ../adaptation
-    ../prepared
-    ../copy
-    ../async
-    ../cursors
+    async
+    copy
+    cursors
+    rows
+    pool
+    adapt
+    prepare

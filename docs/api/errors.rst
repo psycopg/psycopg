@@ -4,13 +4,16 @@
 .. index::
     single: Error; Class
 
-.. module:: psycopg3.errors
+.. module:: psycopg3
 
 This module exposes objects to represent and examine database errors.
 
 .. autoexception:: Error()
 
     .. autoattribute:: diag
+
+
+.. module:: psycopg3.errors
 
 .. autoclass:: Diagnostic()
 
@@ -51,6 +54,8 @@ This module exposes objects to represent and examine database errors.
         server versions.
 
 
+.. currentmodule:: psycopg3
+
 .. index::
     single: Exceptions; DB-API
 
@@ -76,7 +81,8 @@ derive from the following classes:
             \|__ `ProgrammingError`
             \|__ `NotSupportedError`
 
-These classes are also exposed by the ``psycopg3`` module.
+These classes are also exposed both by the `!psycopg3` and the
+`!psycopg3.errors` module.
 
 .. autoexception:: Warning()
 .. autoexception:: InterfaceError()
@@ -88,6 +94,8 @@ These classes are also exposed by the ``psycopg3`` module.
 .. autoexception:: ProgrammingError()
 .. autoexception:: NotSupportedError()
 
+
+.. currentmodule:: psycopg3.errors
 
 .. index::
     single: Exceptions; PostgreSQL

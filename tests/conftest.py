@@ -5,6 +5,7 @@ import pytest
 pytest_plugins = (
     "tests.fix_db",
     "tests.fix_pq",
+    "tests.fix_proxy",
     "tests.fix_faker",
 )
 

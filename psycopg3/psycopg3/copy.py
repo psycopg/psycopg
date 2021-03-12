@@ -20,6 +20,7 @@ from .pq import ExecStatus
 from .adapt import Format
 from .proto import ConnectionType, PQGen, Transformer
 from .generators import copy_from, copy_to, copy_end
+from .utils.compat import create_task
 
 if TYPE_CHECKING:
     from .pq.proto import PGresult
@@ -359,8 +360,7 @@ class AsyncCopy(BaseCopy["AsyncConnection"]):
             return
 
         if not self._worker:
-            # TODO: can be asyncio.create_task once Python 3.6 is dropped
-            self._worker = asyncio.ensure_future(self.worker())
+            self._worker = create_task(self.worker())
 
         await self._queue.put(data)
 

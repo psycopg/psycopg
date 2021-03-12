@@ -23,11 +23,7 @@ from .proto import Row, RowFactory
 from ._column import Column
 from ._queries import PostgresQuery
 from ._preparing import Prepare
-
-if sys.version_info >= (3, 7):
-    from contextlib import asynccontextmanager
-else:
-    from .utils.context import asynccontextmanager
+from .utils.compat import asynccontextmanager
 
 if TYPE_CHECKING:
     from .proto import Transformer

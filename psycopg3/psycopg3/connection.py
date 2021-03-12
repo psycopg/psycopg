@@ -4,7 +4,6 @@ psycopg3 connection objects
 
 # Copyright (C) 2020-2021 The Psycopg Team
 
-import sys
 import asyncio
 import logging
 import warnings
@@ -15,11 +14,6 @@ from typing import Optional, overload, Type, Union, TYPE_CHECKING
 from weakref import ref, ReferenceType
 from functools import partial
 from contextlib import contextmanager
-
-if sys.version_info >= (3, 7):
-    from contextlib import asynccontextmanager
-else:
-    from .utils.context import asynccontextmanager
 
 from . import pq
 from . import adapt
@@ -34,9 +28,10 @@ from .proto import AdaptContext, ConnectionType
 from .cursor import Cursor, AsyncCursor
 from .conninfo import make_conninfo
 from .generators import notifies
-from .transaction import Transaction, AsyncTransaction
-from .server_cursor import ServerCursor, AsyncServerCursor
 from ._preparing import PrepareManager
+from .transaction import Transaction, AsyncTransaction
+from .utils.compat import asynccontextmanager
+from .server_cursor import ServerCursor, AsyncServerCursor
 
 logger = logging.getLogger(__name__)
 package_logger = logging.getLogger("psycopg3")
@@ -46,6 +41,7 @@ execute: Callable[["PGconn"], PQGen[List["PGresult"]]]
 
 if TYPE_CHECKING:
     from .pq.proto import PGconn, PGresult
+    from .pool.base import BasePool
 
 if pq.__impl__ == "c":
     from psycopg3_c import _psycopg3
@@ -117,23 +113,33 @@ class BaseConnection(AdaptContext):
         # only a begin/commit and not a savepoint.
         self._savepoints: List[str] = []
 
+        self._closed = False  # closed by an explicit close()
         self._prepared: PrepareManager = PrepareManager()
 
         wself = ref(self)
-
         pgconn.notice_handler = partial(BaseConnection._notice_handler, wself)
         pgconn.notify_handler = partial(BaseConnection._notify_handler, wself)
+
+        # Attribute is only set if the connection is from a pool so we can tell
+        # apart a connection in the pool too (when _pool = None)
+        self._pool: Optional["BasePool[Any]"]
+
+        # Time after which the connection should be closed
+        self._expire_at: float
 
     def __del__(self) -> None:
         # If fails on connection we might not have this attribute yet
         if not hasattr(self, "pgconn"):
             return
 
-        status = self.pgconn.transaction_status
-        if status == TransactionStatus.UNKNOWN:
+        # Connection correctly closed
+        if self.closed:
             return
 
-        status = TransactionStatus(status)
+        # Connection in a pool so terminating with the program is normal
+        if hasattr(self, "_pool"):
+            return
+
         warnings.warn(
             f"connection {self} was deleted while still open."
             f" Please use 'with' or '.close()' to close the connection",
@@ -147,8 +153,18 @@ class BaseConnection(AdaptContext):
 
     @property
     def closed(self) -> bool:
-        """`True` if the connection is closed."""
+        """`!True` if the connection is closed."""
         return self.pgconn.status == ConnStatus.BAD
+
+    @property
+    def broken(self) -> bool:
+        """
+        `!True` if the connection was interrupted.
+
+        A broken connection is always `closed`, but wasn't closed in a clean
+        way, such as using `close()` or a ``with`` block.
+        """
+        return self.pgconn.status == ConnStatus.BAD and not self._closed
 
     @property
     def autocommit(self) -> bool:
@@ -449,6 +465,9 @@ class Connection(BaseConnection):
         exc_val: Optional[BaseException],
         exc_tb: Optional[TracebackType],
     ) -> None:
+        if self.closed:
+            return
+
         if exc_type:
             # try to rollback, but if there are problems (connection in a bad
             # state) just warn without clobbering the exception bubbling up.
@@ -462,10 +481,15 @@ class Connection(BaseConnection):
         else:
             self.commit()
 
-        self.close()
+        # Close the connection only if it doesn't belong to a pool.
+        if not getattr(self, "_pool", None):
+            self.close()
 
     def close(self) -> None:
         """Close the database connection."""
+        if self.closed:
+            return
+        self._closed = True
         self.pgconn.finish()
 
     @overload
@@ -619,6 +643,9 @@ class AsyncConnection(BaseConnection):
         exc_val: Optional[BaseException],
         exc_tb: Optional[TracebackType],
     ) -> None:
+        if self.closed:
+            return
+
         if exc_type:
             # try to rollback, but if there are problems (connection in a bad
             # state) just warn without clobbering the exception bubbling up.
@@ -632,9 +659,14 @@ class AsyncConnection(BaseConnection):
         else:
             await self.commit()
 
-        await self.close()
+        # Close the connection only if it doesn't belong to a pool.
+        if not getattr(self, "_pool", None):
+            await self.close()
 
     async def close(self) -> None:
+        if self.closed:
+            return
+        self._closed = True
         self.pgconn.finish()
 
     @overload
