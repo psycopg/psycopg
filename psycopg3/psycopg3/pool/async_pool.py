@@ -545,7 +545,7 @@ class AsyncConnectionPool(BasePool[AsyncConnection]):
 
     def _get_measures(self) -> Dict[str, int]:
         rv = super()._get_measures()
-        rv[self._QUEUE_LENGTH] = len(self._waiting)
+        rv[self._REQUESTS_WAITING] = len(self._waiting)
         return rv
 
 

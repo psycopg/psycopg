@@ -874,7 +874,7 @@ def test_stats_measures(dsn):
         assert stats["pool_max"] == 4
         assert stats["pool_size"] == 2
         assert stats["pool_available"] == 2
-        assert stats["queue_length"] == 0
+        assert stats["requests_waiting"] == 0
 
         ts = [Thread(target=worker, args=(i,)) for i in range(3)]
         [t.start() for t in ts]
@@ -885,7 +885,7 @@ def test_stats_measures(dsn):
         assert stats["pool_max"] == 4
         assert stats["pool_size"] == 3
         assert stats["pool_available"] == 0
-        assert stats["queue_length"] == 0
+        assert stats["requests_waiting"] == 0
 
         p.wait(2.0)
         ts = [Thread(target=worker, args=(i,)) for i in range(7)]
@@ -897,7 +897,7 @@ def test_stats_measures(dsn):
         assert stats["pool_max"] == 4
         assert stats["pool_size"] == 4
         assert stats["pool_available"] == 0
-        assert stats["queue_length"] == 3
+        assert stats["requests_waiting"] == 3
 
 
 @pytest.mark.slow

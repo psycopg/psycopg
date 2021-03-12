@@ -874,7 +874,7 @@ async def test_stats_measures(dsn):
         assert stats["pool_max"] == 4
         assert stats["pool_size"] == 2
         assert stats["pool_available"] == 2
-        assert stats["queue_length"] == 0
+        assert stats["requests_waiting"] == 0
 
         ts = [create_task(worker(i)) for i in range(3)]
         await asyncio.sleep(0.1)
@@ -884,7 +884,7 @@ async def test_stats_measures(dsn):
         assert stats["pool_max"] == 4
         assert stats["pool_size"] == 3
         assert stats["pool_available"] == 0
-        assert stats["queue_length"] == 0
+        assert stats["requests_waiting"] == 0
 
         await p.wait(2.0)
         ts = [create_task(worker(i)) for i in range(7)]
@@ -895,7 +895,7 @@ async def test_stats_measures(dsn):
         assert stats["pool_max"] == 4
         assert stats["pool_size"] == 4
         assert stats["pool_available"] == 0
-        assert stats["queue_length"] == 3
+        assert stats["requests_waiting"] == 3
 
 
 @pytest.mark.slow

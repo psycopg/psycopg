@@ -214,8 +214,8 @@ Metric                  Meaning
  ``pool_size``          Current number of connections in the pool, given,
                         being prepared
  ``pool_available``     Number of connections currently idle in the pool
- ``queue_length``       Number of client in the queue waiting for a
-                        connection
+ ``requests_waiting``   Number of requests currently waiting in a queue to
+                        receive a connection
  ``usage_ms``           Total usage time of the connections outside the pool
  ``requests_num``       Number of connections requested to the pool
  ``requests_queued``    Number of requests queued because a connection wasn't
