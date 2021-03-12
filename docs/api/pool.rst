@@ -86,6 +86,12 @@ The `!ConnectionPool` class
                    the *timeout* default. Default: 30 seconds.
    :type timeout: `!float`
 
+   :param max_waiting: Maximum number of requests that can be queued to the
+                       pool. Adding more requests will fail, raising
+                       `TooManyRequests`. Specifying 0 (the default) means to
+                       upper bound.
+   :type max_waiting: `!int`
+
    :param max_lifetime: The maximum lifetime of a connection in the pool, in
                         seconds. Connections used for longer get closed and
                         replaced by a new one. The amount is reduced by a
@@ -175,6 +181,10 @@ The `!ConnectionPool` class
    Subclass of `~psycopg3.OperationalError`
 
 .. autoclass:: PoolClosed()
+
+   Subclass of `~psycopg3.OperationalError`
+
+.. autoclass:: TooManyRequests()
 
    Subclass of `~psycopg3.OperationalError`
 

@@ -310,6 +310,38 @@ async def test_queue(dsn, retries):
 
 
 @pytest.mark.slow
+async def test_queue_size(dsn):
+    async def worker(t, ev=None):
+        try:
+            async with p.connection():
+                if ev:
+                    ev.set()
+                await asyncio.sleep(t)
+        except pool.TooManyRequests as e:
+            errors.append(e)
+        else:
+            success.append(True)
+
+    errors = []
+    success = []
+
+    async with pool.AsyncConnectionPool(dsn, minconn=1, max_waiting=3) as p:
+        await p.wait()
+        ev = asyncio.Event()
+        create_task(worker(0.3, ev))
+        await ev.wait()
+
+        ts = [create_task(worker(0.1)) for i in range(4)]
+        await asyncio.gather(*ts)
+
+    assert len(success) == 4
+    assert len(errors) == 1
+    assert isinstance(errors[0], pool.TooManyRequests)
+    assert p.name in str(errors[0])
+    assert str(p.max_waiting) in str(errors[0])
+
+
+@pytest.mark.slow
 async def test_queue_timeout(dsn):
     async def worker(n):
         t0 = time()

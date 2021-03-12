@@ -22,7 +22,7 @@ from ..utils.compat import asynccontextmanager, create_task
 
 from .base import ConnectionAttempt, BasePool
 from .sched import AsyncScheduler
-from .errors import PoolClosed, PoolTimeout
+from .errors import PoolClosed, PoolTimeout, TooManyRequests
 
 logger = logging.getLogger(__name__)
 
@@ -118,7 +118,7 @@ class AsyncConnectionPool(BasePool[AsyncConnection]):
     async def getconn(
         self, timeout: Optional[float] = None
     ) -> AsyncConnection:
-        logger.info("connection requested to %r", self.name)
+        logger.info("connection requested from %r", self.name)
         self._stats[self._REQUESTS_NUM] += 1
         # Critical section: decide here if there's a connection ready
         # or if the client needs to wait.
@@ -133,6 +133,12 @@ class AsyncConnectionPool(BasePool[AsyncConnection]):
                 if len(self._pool) < self._nconns_min:
                     self._nconns_min = len(self._pool)
             else:
+                if self.max_waiting and len(self._waiting) >= self.max_waiting:
+                    raise TooManyRequests(
+                        f"the pool {self.name!r} has aleady"
+                        f" {len(self._waiting)} requests waiting"
+                    )
+
                 # No connection available: put the client in the waiting queue
                 t0 = monotonic()
                 pos = AsyncClient()

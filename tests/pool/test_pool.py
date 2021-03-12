@@ -2,7 +2,7 @@ import sys
 import logging
 import weakref
 from time import sleep, time
-from threading import Thread
+from threading import Thread, Event
 from collections import Counter
 
 import pytest
@@ -289,6 +289,40 @@ def test_queue(dsn, retries):
                 assert got == pytest.approx(want, 0.1), times
 
             assert len(set(r[2] for r in results)) == 2, results
+
+
+@pytest.mark.slow
+def test_queue_size(dsn):
+    def worker(t, ev=None):
+        try:
+            with p.connection():
+                if ev:
+                    ev.set()
+                sleep(t)
+        except pool.TooManyRequests as e:
+            errors.append(e)
+        else:
+            success.append(True)
+
+    errors = []
+    success = []
+
+    with pool.ConnectionPool(dsn, minconn=1, max_waiting=3) as p:
+        p.wait()
+        ev = Event()
+        t = Thread(target=worker, args=(0.3, ev))
+        t.start()
+        ev.wait()
+
+        ts = [Thread(target=worker, args=(0.1,)) for i in range(4)]
+        [t.start() for t in ts]
+        [t.join() for t in ts]
+
+    assert len(success) == 4
+    assert len(errors) == 1
+    assert isinstance(errors[0], pool.TooManyRequests)
+    assert p.name in str(errors[0])
+    assert str(p.max_waiting) in str(errors[0])
 
 
 @pytest.mark.slow

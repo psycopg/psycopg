@@ -17,3 +17,9 @@ class PoolTimeout(e.OperationalError):
     """The pool couldn't provide a connection in acceptable time."""
 
     __module__ = "psycopg3.pool"
+
+
+class TooManyRequests(e.OperationalError):
+    """Too many requests in the queue waiting for a connection from the pool."""
+
+    __module__ = "psycopg3.pool"

@@ -21,7 +21,7 @@ from ..connection import Connection
 
 from .base import ConnectionAttempt, BasePool
 from .sched import Scheduler
-from .errors import PoolClosed, PoolTimeout
+from .errors import PoolClosed, PoolTimeout, TooManyRequests
 
 logger = logging.getLogger(__name__)
 
@@ -132,8 +132,8 @@ class ConnectionPool(BasePool[Connection]):
         """Context manager to obtain a connection from the pool.
 
         Returned the connection immediately if available, otherwise wait up to
-        *timeout* or `self.timeout` and throw `PoolTimeout` if a connection is
-        not available in time.
+        *timeout* or `self.timeout` seconds and throw `PoolTimeout` if a
+        connection is not available in time.
 
         Upon context exit, return the connection to the pool. Apply the normal
         :ref:`connection context behaviour <with-connection>` (commit/rollback
@@ -161,7 +161,7 @@ class ConnectionPool(BasePool[Connection]):
         failing to do so will deplete the pool. A depleted pool is a sad pool:
         you don't want a depleted pool.
         """
-        logger.info("connection requested to %r", self.name)
+        logger.info("connection requested from %r", self.name)
         self._stats[self._REQUESTS_NUM] += 1
         # Critical section: decide here if there's a connection ready
         # or if the client needs to wait.
@@ -176,6 +176,12 @@ class ConnectionPool(BasePool[Connection]):
                 if len(self._pool) < self._nconns_min:
                     self._nconns_min = len(self._pool)
             else:
+                if self.max_waiting and len(self._waiting) >= self.max_waiting:
+                    raise TooManyRequests(
+                        f"the pool {self.name!r} has aleady"
+                        f" {len(self._waiting)} requests waiting"
+                    )
+
                 # No connection available: put the client in the waiting queue
                 t0 = monotonic()
                 pos = WaitingClient()
