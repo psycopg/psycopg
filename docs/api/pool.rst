@@ -35,19 +35,19 @@ The `!ConnectionPool` class
                     `~psycopg3.Connection.connect()` for details.
    :type conninfo: `!str`
 
-   :param minconn: The minimum number of connection the pool will hold. The
+   :param min_size: The minimum number of connection the pool will hold. The
                    pool will actively try to create new connections if some
                    are lost (closed, broken) and will try to never go below
-                   *minconn*. Default: 4
-   :type minconn: `!int`
+                   *min_size*. Default: 4
+   :type min_size: `!int`
 
-   :param maxconn: The maximum number of connections the pool will hold. If
-                   `!None`, or equal to *minconn*, the pool will not grow or
-                   shrink. If larger than *minconn* the pool can grow if more
-                   than *minconn* connections are requested at the same time
+   :param max_size: The maximum number of connections the pool will hold. If
+                   `!None`, or equal to *min_size*, the pool will not grow or
+                   shrink. If larger than *min_size* the pool can grow if more
+                   than *min_size* connections are requested at the same time
                    and will shrink back after the extra connections have been
                    unused for more than *max_idle* seconds. Default: `!None`.
-   :type maxconn: `Optional[int]`
+   :type max_size: `Optional[int]`
 
    :param kwargs: Extra arguments to pass to `!connect()`. Note that this is
                   *one dict argument* of the pool constructor, which is
@@ -100,7 +100,7 @@ The `!ConnectionPool` class
 
    :param max_idle: Maximum time a connection can be unused in the pool before
                     being closed, and the pool shrunk. This only happens to
-                    connections more than *minconn*, if *maxconn* allowed the
+                    connections more than *min_size*, if *max_size* allowed the
                     pool to grow. Default: 10 minutes.
    :type max_idle: `!float`
 
@@ -120,7 +120,7 @@ The `!ConnectionPool` class
                             terminate the program (executing `sys.exit()`).
                             By default don't do anything: restart a new
                             connection attempt (if the number of connection
-                            fell below *minconn*).
+                            fell below *min_size*).
    :type reconnect_failed: ``Callable[[ConnectionPool], None]``
 
    :param num_workers: Number of background worker threads used to maintain the
@@ -157,8 +157,8 @@ The `!ConnectionPool` class
       The name of the pool set on creation, or automatically generated if not
       set.
 
-   .. autoproperty:: minconn
-   .. autoproperty:: maxconn
+   .. autoproperty:: min_size
+   .. autoproperty:: max_size
 
       The current minimum and maximum size of the pool. Use `resize()` to
       change them at runtime.

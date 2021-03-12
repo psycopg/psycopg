@@ -14,42 +14,44 @@ from psycopg3.pq import TransactionStatus
 
 def test_defaults(dsn):
     with pool.ConnectionPool(dsn) as p:
-        assert p.minconn == p.maxconn == 4
+        assert p.min_size == p.max_size == 4
         assert p.timeout == 30
         assert p.max_idle == 10 * 60
         assert p.max_lifetime == 60 * 60
         assert p.num_workers == 3
 
 
-def test_minconn_maxconn(dsn):
-    with pool.ConnectionPool(dsn, minconn=2) as p:
-        assert p.minconn == p.maxconn == 2
+def test_min_size_max_size(dsn):
+    with pool.ConnectionPool(dsn, min_size=2) as p:
+        assert p.min_size == p.max_size == 2
 
-    with pool.ConnectionPool(dsn, minconn=2, maxconn=4) as p:
-        assert p.minconn == 2
-        assert p.maxconn == 4
+    with pool.ConnectionPool(dsn, min_size=2, max_size=4) as p:
+        assert p.min_size == 2
+        assert p.max_size == 4
 
     with pytest.raises(ValueError):
-        pool.ConnectionPool(dsn, minconn=4, maxconn=2)
+        pool.ConnectionPool(dsn, min_size=4, max_size=2)
 
 
 def test_connection_class(dsn):
     class MyConn(psycopg3.Connection):
         pass
 
-    with pool.ConnectionPool(dsn, connection_class=MyConn, minconn=1) as p:
+    with pool.ConnectionPool(dsn, connection_class=MyConn, min_size=1) as p:
         with p.connection() as conn:
             assert isinstance(conn, MyConn)
 
 
 def test_kwargs(dsn):
-    with pool.ConnectionPool(dsn, kwargs={"autocommit": True}, minconn=1) as p:
+    with pool.ConnectionPool(
+        dsn, kwargs={"autocommit": True}, min_size=1
+    ) as p:
         with p.connection() as conn:
             assert conn.autocommit
 
 
 def test_its_really_a_pool(dsn):
-    with pool.ConnectionPool(dsn, minconn=2) as p:
+    with pool.ConnectionPool(dsn, min_size=2) as p:
         with p.connection() as conn:
             with conn.execute("select pg_backend_pid()") as cur:
                 (pid1,) = cur.fetchone()
@@ -63,13 +65,13 @@ def test_its_really_a_pool(dsn):
 
 
 def test_context(dsn):
-    with pool.ConnectionPool(dsn, minconn=1) as p:
+    with pool.ConnectionPool(dsn, min_size=1) as p:
         assert not p.closed
     assert p.closed
 
 
 def test_connection_not_lost(dsn):
-    with pool.ConnectionPool(dsn, minconn=1) as p:
+    with pool.ConnectionPool(dsn, min_size=1) as p:
         with pytest.raises(ZeroDivisionError):
             with p.connection() as conn:
                 pid = conn.pgconn.backend_pid
@@ -95,7 +97,7 @@ def test_concurrent_filling(dsn, monkeypatch, retries):
             times = []
             t0 = time()
 
-            with pool.ConnectionPool(dsn, minconn=5, num_workers=2) as p:
+            with pool.ConnectionPool(dsn, min_size=5, num_workers=2) as p:
                 p.wait(1.0)
                 want_times = [0.1, 0.1, 0.2, 0.2, 0.3]
                 assert len(times) == len(want_times)
@@ -107,13 +109,13 @@ def test_concurrent_filling(dsn, monkeypatch, retries):
 def test_wait_ready(dsn, monkeypatch):
     delay_connection(monkeypatch, 0.1)
     with pytest.raises(pool.PoolTimeout):
-        with pool.ConnectionPool(dsn, minconn=4, num_workers=1) as p:
+        with pool.ConnectionPool(dsn, min_size=4, num_workers=1) as p:
             p.wait(0.3)
 
-    with pool.ConnectionPool(dsn, minconn=4, num_workers=1) as p:
+    with pool.ConnectionPool(dsn, min_size=4, num_workers=1) as p:
         p.wait(0.5)
 
-    with pool.ConnectionPool(dsn, minconn=4, num_workers=2) as p:
+    with pool.ConnectionPool(dsn, min_size=4, num_workers=2) as p:
         p.wait(0.3)
         p.wait(0.0001)  # idempotent
 
@@ -122,11 +124,11 @@ def test_wait_ready(dsn, monkeypatch):
 def test_setup_no_timeout(dsn, proxy):
     with pytest.raises(pool.PoolTimeout):
         with pool.ConnectionPool(
-            proxy.client_dsn, minconn=1, num_workers=1
+            proxy.client_dsn, min_size=1, num_workers=1
         ) as p:
             p.wait(0.2)
 
-    with pool.ConnectionPool(proxy.client_dsn, minconn=1, num_workers=1) as p:
+    with pool.ConnectionPool(proxy.client_dsn, min_size=1, num_workers=1) as p:
         sleep(0.5)
         assert not p._pool
         proxy.start()
@@ -144,7 +146,7 @@ def test_configure(dsn):
         with conn.transaction():
             conn.execute("set default_transaction_read_only to on")
 
-    with pool.ConnectionPool(minconn=1, configure=configure) as p:
+    with pool.ConnectionPool(min_size=1, configure=configure) as p:
         p.wait(timeout=1.0)
         with p.connection() as conn:
             assert inits == 1
@@ -170,7 +172,7 @@ def test_configure_badstate(dsn, caplog):
     def configure(conn):
         conn.execute("select 1")
 
-    with pool.ConnectionPool(minconn=1, configure=configure) as p:
+    with pool.ConnectionPool(min_size=1, configure=configure) as p:
         with pytest.raises(pool.PoolTimeout):
             p.wait(timeout=0.5)
 
@@ -186,7 +188,7 @@ def test_configure_broken(dsn, caplog):
         with conn.transaction():
             conn.execute("WAT")
 
-    with pool.ConnectionPool(minconn=1, configure=configure) as p:
+    with pool.ConnectionPool(min_size=1, configure=configure) as p:
         with pytest.raises(pool.PoolTimeout):
             p.wait(timeout=0.5)
 
@@ -207,7 +209,7 @@ def test_reset(dsn):
         with conn.transaction():
             conn.execute("set timezone to utc")
 
-    with pool.ConnectionPool(minconn=1, reset=reset) as p:
+    with pool.ConnectionPool(min_size=1, reset=reset) as p:
         with p.connection() as conn:
             assert resets == 0
             conn.execute("set timezone to '+2:00'")
@@ -229,7 +231,7 @@ def test_reset_badstate(dsn, caplog):
     def reset(conn):
         conn.execute("reset all")
 
-    with pool.ConnectionPool(minconn=1, reset=reset) as p:
+    with pool.ConnectionPool(min_size=1, reset=reset) as p:
         with p.connection() as conn:
             conn.execute("select 1")
             pid1 = conn.pgconn.backend_pid
@@ -250,7 +252,7 @@ def test_reset_broken(dsn, caplog):
         with conn.transaction():
             conn.execute("WAT")
 
-    with pool.ConnectionPool(minconn=1, reset=reset) as p:
+    with pool.ConnectionPool(min_size=1, reset=reset) as p:
         with p.connection() as conn:
             conn.execute("select 1")
             pid1 = conn.pgconn.backend_pid
@@ -278,7 +280,7 @@ def test_queue(dsn, retries):
     for retry in retries:
         with retry:
             results = []
-            with pool.ConnectionPool(dsn, minconn=2) as p:
+            with pool.ConnectionPool(dsn, min_size=2) as p:
                 ts = [Thread(target=worker, args=(i,)) for i in range(6)]
                 [t.start() for t in ts]
                 [t.join() for t in ts]
@@ -307,7 +309,7 @@ def test_queue_size(dsn):
     errors = []
     success = []
 
-    with pool.ConnectionPool(dsn, minconn=1, max_waiting=3) as p:
+    with pool.ConnectionPool(dsn, min_size=1, max_waiting=3) as p:
         p.wait()
         ev = Event()
         t = Thread(target=worker, args=(0.3, ev))
@@ -345,7 +347,7 @@ def test_queue_timeout(dsn):
     results = []
     errors = []
 
-    with pool.ConnectionPool(dsn, minconn=2, timeout=0.1) as p:
+    with pool.ConnectionPool(dsn, min_size=2, timeout=0.1) as p:
         ts = [Thread(target=worker, args=(i,)) for i in range(4)]
         [t.start() for t in ts]
         [t.join() for t in ts]
@@ -369,7 +371,7 @@ def test_dead_client(dsn):
 
     results = []
 
-    with pool.ConnectionPool(dsn, minconn=2) as p:
+    with pool.ConnectionPool(dsn, min_size=2) as p:
         ts = [
             Thread(target=worker, args=(i, timeout))
             for i, timeout in enumerate([0.4, 0.4, 0.1, 0.4, 0.4])
@@ -401,7 +403,7 @@ def test_queue_timeout_override(dsn):
     results = []
     errors = []
 
-    with pool.ConnectionPool(dsn, minconn=2, timeout=0.1) as p:
+    with pool.ConnectionPool(dsn, min_size=2, timeout=0.1) as p:
         ts = [Thread(target=worker, args=(i,)) for i in range(4)]
         [t.start() for t in ts]
         [t.join() for t in ts]
@@ -413,7 +415,7 @@ def test_queue_timeout_override(dsn):
 
 
 def test_broken_reconnect(dsn):
-    with pool.ConnectionPool(dsn, minconn=1) as p:
+    with pool.ConnectionPool(dsn, min_size=1) as p:
         with p.connection() as conn:
             with conn.execute("select pg_backend_pid()") as cur:
                 (pid1,) = cur.fetchone()
@@ -429,7 +431,7 @@ def test_broken_reconnect(dsn):
 def test_intrans_rollback(dsn, caplog):
     caplog.set_level(logging.WARNING, logger="psycopg3.pool")
 
-    with pool.ConnectionPool(dsn, minconn=1) as p:
+    with pool.ConnectionPool(dsn, min_size=1) as p:
         conn = p.getconn()
         pid = conn.pgconn.backend_pid
         conn.execute("create table test_intrans_rollback ()")
@@ -450,7 +452,7 @@ def test_intrans_rollback(dsn, caplog):
 def test_inerror_rollback(dsn, caplog):
     caplog.set_level(logging.WARNING, logger="psycopg3.pool")
 
-    with pool.ConnectionPool(dsn, minconn=1) as p:
+    with pool.ConnectionPool(dsn, min_size=1) as p:
         conn = p.getconn()
         pid = conn.pgconn.backend_pid
         with pytest.raises(psycopg3.ProgrammingError):
@@ -469,7 +471,7 @@ def test_inerror_rollback(dsn, caplog):
 def test_active_close(dsn, caplog):
     caplog.set_level(logging.WARNING, logger="psycopg3.pool")
 
-    with pool.ConnectionPool(dsn, minconn=1) as p:
+    with pool.ConnectionPool(dsn, min_size=1) as p:
         conn = p.getconn()
         pid = conn.pgconn.backend_pid
         cur = conn.cursor()
@@ -490,7 +492,7 @@ def test_active_close(dsn, caplog):
 def test_fail_rollback_close(dsn, caplog, monkeypatch):
     caplog.set_level(logging.WARNING, logger="psycopg3.pool")
 
-    with pool.ConnectionPool(dsn, minconn=1) as p:
+    with pool.ConnectionPool(dsn, min_size=1) as p:
         conn = p.getconn()
 
         def bad_rollback():
@@ -530,22 +532,22 @@ def test_close_no_threads(dsn):
 
 
 def test_putconn_no_pool(dsn):
-    with pool.ConnectionPool(dsn, minconn=1) as p:
+    with pool.ConnectionPool(dsn, min_size=1) as p:
         conn = psycopg3.connect(dsn)
         with pytest.raises(ValueError):
             p.putconn(conn)
 
 
 def test_putconn_wrong_pool(dsn):
-    with pool.ConnectionPool(dsn, minconn=1) as p1:
-        with pool.ConnectionPool(dsn, minconn=1) as p2:
+    with pool.ConnectionPool(dsn, min_size=1) as p1:
+        with pool.ConnectionPool(dsn, min_size=1) as p2:
             conn = p1.getconn()
             with pytest.raises(ValueError):
                 p2.putconn(conn)
 
 
 def test_del_no_warning(dsn, recwarn):
-    p = pool.ConnectionPool(dsn, minconn=2)
+    p = pool.ConnectionPool(dsn, min_size=2)
     with p.connection() as conn:
         conn.execute("select 1")
 
@@ -567,7 +569,7 @@ def test_del_stop_threads(dsn):
 
 
 def test_closed_getconn(dsn):
-    p = pool.ConnectionPool(dsn, minconn=1)
+    p = pool.ConnectionPool(dsn, min_size=1)
     assert not p.closed
     with p.connection():
         pass
@@ -581,7 +583,7 @@ def test_closed_getconn(dsn):
 
 
 def test_closed_putconn(dsn):
-    p = pool.ConnectionPool(dsn, minconn=1)
+    p = pool.ConnectionPool(dsn, min_size=1)
 
     with p.connection() as conn:
         pass
@@ -594,7 +596,7 @@ def test_closed_putconn(dsn):
 
 @pytest.mark.slow
 def test_closed_queue(dsn):
-    p = pool.ConnectionPool(dsn, minconn=1)
+    p = pool.ConnectionPool(dsn, min_size=1)
     success = []
 
     def w1():
@@ -635,7 +637,7 @@ def test_grow(dsn, monkeypatch, retries):
     for retry in retries:
         with retry:
             with pool.ConnectionPool(
-                dsn, minconn=2, maxconn=4, num_workers=3
+                dsn, min_size=2, max_size=4, num_workers=3
             ) as p:
                 p.wait(1.0)
                 results = []
@@ -670,7 +672,7 @@ def test_shrink(dsn, monkeypatch):
         with p.connection() as conn:
             conn.execute("select pg_sleep(0.1)")
 
-    with pool.ConnectionPool(dsn, minconn=2, maxconn=4, max_idle=0.2) as p:
+    with pool.ConnectionPool(dsn, min_size=2, max_size=4, max_idle=0.2) as p:
         p.wait(5.0)
         assert p.max_idle == 0.2
 
@@ -692,7 +694,7 @@ def test_reconnect(proxy, caplog, monkeypatch):
     monkeypatch.setattr(pool.base.ConnectionAttempt, "DELAY_JITTER", 0.0)
 
     proxy.start()
-    with pool.ConnectionPool(proxy.client_dsn, minconn=1) as p:
+    with pool.ConnectionPool(proxy.client_dsn, min_size=1) as p:
         p.wait(2.0)
         proxy.stop()
 
@@ -732,7 +734,7 @@ def test_reconnect_failure(proxy):
     with pool.ConnectionPool(
         proxy.client_dsn,
         name="this-one",
-        minconn=1,
+        min_size=1,
         reconnect_timeout=1.0,
         reconnect_failed=failed,
     ) as p:
@@ -759,7 +761,7 @@ def test_reconnect_failure(proxy):
 
 @pytest.mark.slow
 def test_uniform_use(dsn):
-    with pool.ConnectionPool(dsn, minconn=4) as p:
+    with pool.ConnectionPool(dsn, min_size=4) as p:
         counts = Counter()
         for i in range(8):
             with p.connection() as conn:
@@ -786,7 +788,7 @@ def test_resize(dsn):
 
     size = []
 
-    with pool.ConnectionPool(dsn, minconn=2, max_idle=0.2) as p:
+    with pool.ConnectionPool(dsn, min_size=2, max_idle=0.2) as p:
         s = Thread(target=sampler)
         s.start()
 
@@ -796,13 +798,13 @@ def test_resize(dsn):
 
         sleep(0.2)
         p.resize(4)
-        assert p.minconn == 4
-        assert p.maxconn == 4
+        assert p.min_size == 4
+        assert p.max_size == 4
 
         sleep(0.4)
         p.resize(2)
-        assert p.minconn == 2
-        assert p.maxconn == 2
+        assert p.min_size == 2
+        assert p.max_size == 2
 
         sleep(0.6)
 
@@ -819,7 +821,7 @@ def test_jitter():
 
 @pytest.mark.slow
 def test_max_lifetime(dsn):
-    with pool.ConnectionPool(dsn, minconn=1, max_lifetime=0.2) as p:
+    with pool.ConnectionPool(dsn, min_size=1, max_lifetime=0.2) as p:
         sleep(0.1)
         pids = []
         for i in range(5):
@@ -832,7 +834,7 @@ def test_max_lifetime(dsn):
 
 def test_check(dsn, caplog):
     caplog.set_level(logging.WARNING, logger="psycopg3.pool")
-    with pool.ConnectionPool(dsn, minconn=4) as p:
+    with pool.ConnectionPool(dsn, min_size=4) as p:
         p.wait(1.0)
         with p.connection() as conn:
             pid = conn.pgconn.backend_pid
@@ -867,7 +869,7 @@ def test_stats_measures(dsn):
         with p.connection() as conn:
             conn.execute("select pg_sleep(0.2)")
 
-    with pool.ConnectionPool(dsn, minconn=2, maxconn=4) as p:
+    with pool.ConnectionPool(dsn, min_size=2, max_size=4) as p:
         p.wait(2.0)
 
         stats = p.get_stats()
@@ -910,7 +912,7 @@ def test_stats_usage(dsn):
         except pool.PoolTimeout:
             pass
 
-    with pool.ConnectionPool(dsn, minconn=3) as p:
+    with pool.ConnectionPool(dsn, min_size=3) as p:
         p.wait(2.0)
 
         ts = [Thread(target=worker, args=(i,)) for i in range(7)]
@@ -939,7 +941,7 @@ def test_stats_usage(dsn):
 def test_stats_connect(dsn, proxy, monkeypatch):
     proxy.start()
     delay_connection(monkeypatch, 0.2)
-    with pool.ConnectionPool(proxy.client_dsn, minconn=3) as p:
+    with pool.ConnectionPool(proxy.client_dsn, min_size=3) as p:
         p.wait()
         stats = p.get_stats()
         assert stats["connections_num"] == 3
@@ -966,7 +968,7 @@ def test_spike(dsn, monkeypatch):
         with p.connection():
             sleep(0.002)
 
-    with pool.ConnectionPool(dsn, minconn=5, maxconn=10) as p:
+    with pool.ConnectionPool(dsn, min_size=5, max_size=10) as p:
         p.wait()
 
         ts = [Thread(target=worker) for i in range(50)]

@@ -22,23 +22,23 @@ pytestmark = [
 
 async def test_defaults(dsn):
     async with pool.AsyncConnectionPool(dsn) as p:
-        assert p.minconn == p.maxconn == 4
+        assert p.min_size == p.max_size == 4
         assert p.timeout == 30
         assert p.max_idle == 10 * 60
         assert p.max_lifetime == 60 * 60
         assert p.num_workers == 3
 
 
-async def test_minconn_maxconn(dsn):
-    async with pool.AsyncConnectionPool(dsn, minconn=2) as p:
-        assert p.minconn == p.maxconn == 2
+async def test_min_size_max_size(dsn):
+    async with pool.AsyncConnectionPool(dsn, min_size=2) as p:
+        assert p.min_size == p.max_size == 2
 
-    async with pool.AsyncConnectionPool(dsn, minconn=2, maxconn=4) as p:
-        assert p.minconn == 2
-        assert p.maxconn == 4
+    async with pool.AsyncConnectionPool(dsn, min_size=2, max_size=4) as p:
+        assert p.min_size == 2
+        assert p.max_size == 4
 
     with pytest.raises(ValueError):
-        pool.AsyncConnectionPool(dsn, minconn=4, maxconn=2)
+        pool.AsyncConnectionPool(dsn, min_size=4, max_size=2)
 
 
 async def test_connection_class(dsn):
@@ -46,7 +46,7 @@ async def test_connection_class(dsn):
         pass
 
     async with pool.AsyncConnectionPool(
-        dsn, connection_class=MyConn, minconn=1
+        dsn, connection_class=MyConn, min_size=1
     ) as p:
         async with p.connection() as conn:
             assert isinstance(conn, MyConn)
@@ -54,14 +54,14 @@ async def test_connection_class(dsn):
 
 async def test_kwargs(dsn):
     async with pool.AsyncConnectionPool(
-        dsn, kwargs={"autocommit": True}, minconn=1
+        dsn, kwargs={"autocommit": True}, min_size=1
     ) as p:
         async with p.connection() as conn:
             assert conn.autocommit
 
 
 async def test_its_really_a_pool(dsn):
-    async with pool.AsyncConnectionPool(dsn, minconn=2) as p:
+    async with pool.AsyncConnectionPool(dsn, min_size=2) as p:
         async with p.connection() as conn:
             cur = await conn.execute("select pg_backend_pid()")
             (pid1,) = await cur.fetchone()
@@ -75,13 +75,13 @@ async def test_its_really_a_pool(dsn):
 
 
 async def test_context(dsn):
-    async with pool.AsyncConnectionPool(dsn, minconn=1) as p:
+    async with pool.AsyncConnectionPool(dsn, min_size=1) as p:
         assert not p.closed
     assert p.closed
 
 
 async def test_connection_not_lost(dsn):
-    async with pool.AsyncConnectionPool(dsn, minconn=1) as p:
+    async with pool.AsyncConnectionPool(dsn, min_size=1) as p:
         with pytest.raises(ZeroDivisionError):
             async with p.connection() as conn:
                 pid = conn.pgconn.backend_pid
@@ -108,7 +108,7 @@ async def test_concurrent_filling(dsn, monkeypatch, retries):
             t0 = time()
 
             async with pool.AsyncConnectionPool(
-                dsn, minconn=5, num_workers=2
+                dsn, min_size=5, num_workers=2
             ) as p:
                 await p.wait(1.0)
                 want_times = [0.1, 0.1, 0.2, 0.2, 0.3]
@@ -122,14 +122,14 @@ async def test_wait_ready(dsn, monkeypatch):
     delay_connection(monkeypatch, 0.1)
     with pytest.raises(pool.PoolTimeout):
         async with pool.AsyncConnectionPool(
-            dsn, minconn=4, num_workers=1
+            dsn, min_size=4, num_workers=1
         ) as p:
             await p.wait(0.3)
 
-    async with pool.AsyncConnectionPool(dsn, minconn=4, num_workers=1) as p:
+    async with pool.AsyncConnectionPool(dsn, min_size=4, num_workers=1) as p:
         await p.wait(0.5)
 
-    async with pool.AsyncConnectionPool(dsn, minconn=4, num_workers=2) as p:
+    async with pool.AsyncConnectionPool(dsn, min_size=4, num_workers=2) as p:
         await p.wait(0.3)
         await p.wait(0.0001)  # idempotent
 
@@ -138,12 +138,12 @@ async def test_wait_ready(dsn, monkeypatch):
 async def test_setup_no_timeout(dsn, proxy):
     with pytest.raises(pool.PoolTimeout):
         async with pool.AsyncConnectionPool(
-            proxy.client_dsn, minconn=1, num_workers=1
+            proxy.client_dsn, min_size=1, num_workers=1
         ) as p:
             await p.wait(0.2)
 
     async with pool.AsyncConnectionPool(
-        proxy.client_dsn, minconn=1, num_workers=1
+        proxy.client_dsn, min_size=1, num_workers=1
     ) as p:
         await asyncio.sleep(0.5)
         assert not p._pool
@@ -162,7 +162,7 @@ async def test_configure(dsn):
         async with conn.transaction():
             await conn.execute("set default_transaction_read_only to on")
 
-    async with pool.AsyncConnectionPool(minconn=1, configure=configure) as p:
+    async with pool.AsyncConnectionPool(min_size=1, configure=configure) as p:
         await p.wait(timeout=1.0)
         async with p.connection() as conn:
             assert inits == 1
@@ -188,7 +188,7 @@ async def test_configure_badstate(dsn, caplog):
     async def configure(conn):
         await conn.execute("select 1")
 
-    async with pool.AsyncConnectionPool(minconn=1, configure=configure) as p:
+    async with pool.AsyncConnectionPool(min_size=1, configure=configure) as p:
         with pytest.raises(pool.PoolTimeout):
             await p.wait(timeout=0.5)
 
@@ -204,7 +204,7 @@ async def test_configure_broken(dsn, caplog):
         async with conn.transaction():
             await conn.execute("WAT")
 
-    async with pool.AsyncConnectionPool(minconn=1, configure=configure) as p:
+    async with pool.AsyncConnectionPool(min_size=1, configure=configure) as p:
         with pytest.raises(pool.PoolTimeout):
             await p.wait(timeout=0.5)
 
@@ -225,7 +225,7 @@ async def test_reset(dsn):
         async with conn.transaction():
             await conn.execute("set timezone to utc")
 
-    async with pool.AsyncConnectionPool(minconn=1, reset=reset) as p:
+    async with pool.AsyncConnectionPool(min_size=1, reset=reset) as p:
         async with p.connection() as conn:
             assert resets == 0
             await conn.execute("set timezone to '+2:00'")
@@ -247,7 +247,7 @@ async def test_reset_badstate(dsn, caplog):
     async def reset(conn):
         await conn.execute("reset all")
 
-    async with pool.AsyncConnectionPool(minconn=1, reset=reset) as p:
+    async with pool.AsyncConnectionPool(min_size=1, reset=reset) as p:
         async with p.connection() as conn:
             await conn.execute("select 1")
             pid1 = conn.pgconn.backend_pid
@@ -268,7 +268,7 @@ async def test_reset_broken(dsn, caplog):
         async with conn.transaction():
             await conn.execute("WAT")
 
-    async with pool.AsyncConnectionPool(minconn=1, reset=reset) as p:
+    async with pool.AsyncConnectionPool(min_size=1, reset=reset) as p:
         async with p.connection() as conn:
             await conn.execute("select 1")
             pid1 = conn.pgconn.backend_pid
@@ -297,7 +297,7 @@ async def test_queue(dsn, retries):
     async for retry in retries:
         with retry:
             results = []
-            async with pool.AsyncConnectionPool(dsn, minconn=2) as p:
+            async with pool.AsyncConnectionPool(dsn, min_size=2) as p:
                 ts = [create_task(worker(i)) for i in range(6)]
                 await asyncio.gather(*ts)
 
@@ -325,7 +325,7 @@ async def test_queue_size(dsn):
     errors = []
     success = []
 
-    async with pool.AsyncConnectionPool(dsn, minconn=1, max_waiting=3) as p:
+    async with pool.AsyncConnectionPool(dsn, min_size=1, max_waiting=3) as p:
         await p.wait()
         ev = asyncio.Event()
         create_task(worker(0.3, ev))
@@ -362,7 +362,7 @@ async def test_queue_timeout(dsn):
     results = []
     errors = []
 
-    async with pool.AsyncConnectionPool(dsn, minconn=2, timeout=0.1) as p:
+    async with pool.AsyncConnectionPool(dsn, min_size=2, timeout=0.1) as p:
         ts = [create_task(worker(i)) for i in range(4)]
         await asyncio.gather(*ts)
 
@@ -383,7 +383,7 @@ async def test_dead_client(dsn):
             if timeout > 0.2:
                 raise
 
-    async with pool.AsyncConnectionPool(dsn, minconn=2) as p:
+    async with pool.AsyncConnectionPool(dsn, min_size=2) as p:
         results = []
         ts = [
             create_task(worker(i, timeout))
@@ -417,7 +417,7 @@ async def test_queue_timeout_override(dsn):
     results = []
     errors = []
 
-    async with pool.AsyncConnectionPool(dsn, minconn=2, timeout=0.1) as p:
+    async with pool.AsyncConnectionPool(dsn, min_size=2, timeout=0.1) as p:
         ts = [create_task(worker(i)) for i in range(4)]
         await asyncio.gather(*ts)
 
@@ -428,7 +428,7 @@ async def test_queue_timeout_override(dsn):
 
 
 async def test_broken_reconnect(dsn):
-    async with pool.AsyncConnectionPool(dsn, minconn=1) as p:
+    async with pool.AsyncConnectionPool(dsn, min_size=1) as p:
         async with p.connection() as conn:
             cur = await conn.execute("select pg_backend_pid()")
             (pid1,) = await cur.fetchone()
@@ -442,7 +442,7 @@ async def test_broken_reconnect(dsn):
 
 
 async def test_intrans_rollback(dsn, caplog):
-    async with pool.AsyncConnectionPool(dsn, minconn=1) as p:
+    async with pool.AsyncConnectionPool(dsn, min_size=1) as p:
         conn = await p.getconn()
         pid = conn.pgconn.backend_pid
         await conn.execute("create table test_intrans_rollback ()")
@@ -467,7 +467,7 @@ async def test_intrans_rollback(dsn, caplog):
 
 
 async def test_inerror_rollback(dsn, caplog):
-    async with pool.AsyncConnectionPool(dsn, minconn=1) as p:
+    async with pool.AsyncConnectionPool(dsn, min_size=1) as p:
         conn = await p.getconn()
         pid = conn.pgconn.backend_pid
         with pytest.raises(psycopg3.ProgrammingError):
@@ -489,7 +489,7 @@ async def test_inerror_rollback(dsn, caplog):
 
 
 async def test_active_close(dsn, caplog):
-    async with pool.AsyncConnectionPool(dsn, minconn=1) as p:
+    async with pool.AsyncConnectionPool(dsn, min_size=1) as p:
         conn = await p.getconn()
         pid = conn.pgconn.backend_pid
         cur = conn.cursor()
@@ -515,7 +515,7 @@ async def test_active_close(dsn, caplog):
 
 
 async def test_fail_rollback_close(dsn, caplog, monkeypatch):
-    async with pool.AsyncConnectionPool(dsn, minconn=1) as p:
+    async with pool.AsyncConnectionPool(dsn, min_size=1) as p:
         conn = await p.getconn()
 
         async def bad_rollback():
@@ -560,22 +560,22 @@ async def test_close_no_tasks(dsn):
 
 
 async def test_putconn_no_pool(dsn):
-    async with pool.AsyncConnectionPool(dsn, minconn=1) as p:
+    async with pool.AsyncConnectionPool(dsn, min_size=1) as p:
         conn = psycopg3.connect(dsn)
         with pytest.raises(ValueError):
             await p.putconn(conn)
 
 
 async def test_putconn_wrong_pool(dsn):
-    async with pool.AsyncConnectionPool(dsn, minconn=1) as p1:
-        async with pool.AsyncConnectionPool(dsn, minconn=1) as p2:
+    async with pool.AsyncConnectionPool(dsn, min_size=1) as p1:
+        async with pool.AsyncConnectionPool(dsn, min_size=1) as p2:
             conn = await p1.getconn()
             with pytest.raises(ValueError):
                 await p2.putconn(conn)
 
 
 async def test_closed_getconn(dsn):
-    p = pool.AsyncConnectionPool(dsn, minconn=1)
+    p = pool.AsyncConnectionPool(dsn, min_size=1)
     assert not p.closed
     async with p.connection():
         pass
@@ -589,7 +589,7 @@ async def test_closed_getconn(dsn):
 
 
 async def test_closed_putconn(dsn):
-    p = pool.AsyncConnectionPool(dsn, minconn=1)
+    p = pool.AsyncConnectionPool(dsn, min_size=1)
 
     async with p.connection() as conn:
         pass
@@ -602,7 +602,7 @@ async def test_closed_putconn(dsn):
 
 @pytest.mark.slow
 async def test_closed_queue(dsn):
-    p = pool.AsyncConnectionPool(dsn, minconn=1)
+    p = pool.AsyncConnectionPool(dsn, min_size=1)
     success = []
 
     async def w1():
@@ -639,7 +639,7 @@ async def test_grow(dsn, monkeypatch, retries):
     async for retry in retries:
         with retry:
             async with pool.AsyncConnectionPool(
-                dsn, minconn=2, maxconn=4, num_workers=3
+                dsn, min_size=2, max_size=4, num_workers=3
             ) as p:
                 await p.wait(1.0)
                 ts = []
@@ -675,7 +675,7 @@ async def test_shrink(dsn, monkeypatch):
             await conn.execute("select pg_sleep(0.1)")
 
     async with pool.AsyncConnectionPool(
-        dsn, minconn=2, maxconn=4, max_idle=0.2
+        dsn, min_size=2, max_size=4, max_idle=0.2
     ) as p:
         await p.wait(5.0)
         assert p.max_idle == 0.2
@@ -696,7 +696,7 @@ async def test_reconnect(proxy, caplog, monkeypatch):
     monkeypatch.setattr(pool.base.ConnectionAttempt, "DELAY_JITTER", 0.0)
 
     proxy.start()
-    async with pool.AsyncConnectionPool(proxy.client_dsn, minconn=1) as p:
+    async with pool.AsyncConnectionPool(proxy.client_dsn, min_size=1) as p:
         await p.wait(2.0)
         proxy.stop()
 
@@ -741,7 +741,7 @@ async def test_reconnect_failure(proxy):
     async with pool.AsyncConnectionPool(
         proxy.client_dsn,
         name="this-one",
-        minconn=1,
+        min_size=1,
         reconnect_timeout=1.0,
         reconnect_failed=failed,
     ) as p:
@@ -768,7 +768,7 @@ async def test_reconnect_failure(proxy):
 
 @pytest.mark.slow
 async def test_uniform_use(dsn):
-    async with pool.AsyncConnectionPool(dsn, minconn=4) as p:
+    async with pool.AsyncConnectionPool(dsn, min_size=4) as p:
         counts = Counter()
         for i in range(8):
             async with p.connection() as conn:
@@ -795,7 +795,7 @@ async def test_resize(dsn):
 
     size = []
 
-    async with pool.AsyncConnectionPool(dsn, minconn=2, max_idle=0.2) as p:
+    async with pool.AsyncConnectionPool(dsn, min_size=2, max_idle=0.2) as p:
         s = create_task(sampler())
 
         await asyncio.sleep(0.3)
@@ -804,13 +804,13 @@ async def test_resize(dsn):
 
         await asyncio.sleep(0.2)
         await p.resize(4)
-        assert p.minconn == 4
-        assert p.maxconn == 4
+        assert p.min_size == 4
+        assert p.max_size == 4
 
         await asyncio.sleep(0.4)
         await p.resize(2)
-        assert p.minconn == 2
-        assert p.maxconn == 2
+        assert p.min_size == 2
+        assert p.max_size == 2
 
         await asyncio.sleep(0.6)
 
@@ -829,7 +829,9 @@ def test_jitter():
 
 @pytest.mark.slow
 async def test_max_lifetime(dsn):
-    async with pool.AsyncConnectionPool(dsn, minconn=1, max_lifetime=0.2) as p:
+    async with pool.AsyncConnectionPool(
+        dsn, min_size=1, max_lifetime=0.2
+    ) as p:
         await asyncio.sleep(0.1)
         pids = []
         for i in range(5):
@@ -842,7 +844,7 @@ async def test_max_lifetime(dsn):
 
 async def test_check(dsn, caplog):
     caplog.set_level(logging.WARNING, logger="psycopg3.pool")
-    async with pool.AsyncConnectionPool(dsn, minconn=4) as p:
+    async with pool.AsyncConnectionPool(dsn, min_size=4) as p:
         await p.wait(1.0)
         async with p.connection() as conn:
             pid = conn.pgconn.backend_pid
@@ -867,7 +869,7 @@ async def test_stats_measures(dsn):
         async with p.connection() as conn:
             await conn.execute("select pg_sleep(0.2)")
 
-    async with pool.AsyncConnectionPool(dsn, minconn=2, maxconn=4) as p:
+    async with pool.AsyncConnectionPool(dsn, min_size=2, max_size=4) as p:
         await p.wait(2.0)
 
         stats = p.get_stats()
@@ -908,7 +910,7 @@ async def test_stats_usage(dsn):
         except pool.PoolTimeout:
             pass
 
-    async with pool.AsyncConnectionPool(dsn, minconn=3) as p:
+    async with pool.AsyncConnectionPool(dsn, min_size=3) as p:
         await p.wait(2.0)
 
         ts = [create_task(worker(i)) for i in range(7)]
@@ -936,7 +938,7 @@ async def test_stats_usage(dsn):
 async def test_stats_connect(dsn, proxy, monkeypatch):
     proxy.start()
     delay_connection(monkeypatch, 0.2)
-    async with pool.AsyncConnectionPool(proxy.client_dsn, minconn=3) as p:
+    async with pool.AsyncConnectionPool(proxy.client_dsn, min_size=3) as p:
         await p.wait()
         stats = p.get_stats()
         assert stats["connections_num"] == 3
@@ -963,7 +965,7 @@ async def test_spike(dsn, monkeypatch):
         async with p.connection():
             await asyncio.sleep(0.002)
 
-    async with pool.AsyncConnectionPool(dsn, minconn=5, maxconn=10) as p:
+    async with pool.AsyncConnectionPool(dsn, min_size=5, max_size=10) as p:
         await p.wait()
 
         ts = [create_task(worker()) for i in range(50)]

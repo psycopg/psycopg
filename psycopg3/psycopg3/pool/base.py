@@ -46,8 +46,8 @@ class BasePool(Generic[ConnectionType]):
         conninfo: str = "",
         *,
         kwargs: Optional[Dict[str, Any]] = None,
-        minconn: int = 4,
-        maxconn: Optional[int] = None,
+        min_size: int = 4,
+        max_size: Optional[int] = None,
         name: Optional[str] = None,
         timeout: float = 30.0,
         max_waiting: int = 0,
@@ -59,10 +59,10 @@ class BasePool(Generic[ConnectionType]):
         ] = None,
         num_workers: int = 3,
     ):
-        if maxconn is None:
-            maxconn = minconn
-        if maxconn < minconn:
-            raise ValueError("maxconn must be greater or equal than minconn")
+        if max_size is None:
+            max_size = min_size
+        if max_size < min_size:
+            raise ValueError("max_size must be greater or equal than min_size")
         if not name:
             num = BasePool._num_pool = BasePool._num_pool + 1
             name = f"pool-{num}"
@@ -75,8 +75,8 @@ class BasePool(Generic[ConnectionType]):
         self._reconnect_failed: Callable[["BasePool[ConnectionType]"], None]
         self._reconnect_failed = reconnect_failed or (lambda pool: None)
         self.name = name
-        self._minconn = minconn
-        self._maxconn = maxconn
+        self._min_size = min_size
+        self._max_size = max_size
         self.timeout = timeout
         self.max_waiting = max_waiting
         self.reconnect_timeout = reconnect_timeout
@@ -84,16 +84,16 @@ class BasePool(Generic[ConnectionType]):
         self.max_idle = max_idle
         self.num_workers = num_workers
 
-        self._nconns = minconn  # currently in the pool, out, being prepared
+        self._nconns = min_size  # currently in the pool, out, being prepared
         self._pool: Deque[ConnectionType] = deque()
         self._stats: "TCounter[str]" = Counter()
 
         # Min number of connections in the pool in a max_idle unit of time.
         # It is reset periodically by the ShrinkPool scheduled task.
-        # It is used to shrink back the pool if maxcon > minconn and extra
+        # It is used to shrink back the pool if maxcon > min_size and extra
         # connections have been acquired, if we notice that in the last
         # max_idle interval they weren't all used.
-        self._nconns_min = minconn
+        self._nconns_min = min_size
 
         # Flag to allow the pool to grow only one connection at time. In case
         # of spike, if threads are allowed to grow in parallel and connection
@@ -112,12 +112,12 @@ class BasePool(Generic[ConnectionType]):
         )
 
     @property
-    def minconn(self) -> int:
-        return self._minconn
+    def min_size(self) -> int:
+        return self._min_size
 
     @property
-    def maxconn(self) -> int:
-        return self._maxconn
+    def max_size(self) -> int:
+        return self._max_size
 
     @property
     def closed(self) -> bool:
@@ -148,8 +148,8 @@ class BasePool(Generic[ConnectionType]):
         Return immediate measures of the pool (not counters).
         """
         return {
-            self._POOL_MIN: self._minconn,
-            self._POOL_MAX: self._maxconn,
+            self._POOL_MIN: self._min_size,
+            self._POOL_MAX: self._max_size,
             self._POOL_SIZE: self._nconns,
             self._POOL_AVAILABLE: len(self._pool),
         }

@@ -93,9 +93,9 @@ execution without being slowed down.
 Pool connection and sizing
 --------------------------
 
-A pool can have a fixed size (specifying no *maxconn* or *maxconn* =
-*minconn*) or a dynamic size (when *maxconn* > *minconn*). In both cases, as
-soon as the pool is created, it will try to acquire *minconn* connections in
+A pool can have a fixed size (specifying no *max_size* or *max_size* =
+*min_size*) or a dynamic size (when *max_size* > *min_size*). In both cases, as
+soon as the pool is created, it will try to acquire *min_size* connections in
 background.
 
 If an attempt to create a connection fails, a new attempt will be made soon
@@ -106,8 +106,8 @@ start a new connection attempt. You can use this function either to send
 alerts or to interrupt the program and allow the rest of your infrastructure
 to restart it.
 
-If more than *minconn* connections are requested concurrently, new ones are
-created, up to *maxconn*. Note that the connections are always created by the
+If more than *min_size* connections are requested concurrently, new ones are
+created, up to *max_size*. Note that the connections are always created by the
 background workers, not by the thread asking the connection: if a client
 requires a new connection, and a previous client terminates its job before the
 new connection is ready, the waiting client will be served the existing
@@ -118,7 +118,7 @@ instance).
 .. __: https://github.com/brettwooldridge/HikariCP/blob/dev/documents/
        Welcome-To-The-Jungle.md
 
-If a pool grows above *minconn*, but its usage decreases afterwards, a number
+If a pool grows above *min_size*, but its usage decreases afterwards, a number
 of connections are eventually closed: one each the *max_idle* time specified
 in the pool constructor.
 
@@ -209,10 +209,10 @@ may not be returned.
 ======================= =====================================================
 Metric                  Meaning
 ======================= =====================================================
- ``pool_min``           Current value for `~ConnectionPool.minconn`
- ``pool_max``           Current value for `~ConnectionPool.maxconn`
- ``pool_size``          Current number of connections in the pool, given,
-                        being prepared
+ ``pool_min``           Current value for `~ConnectionPool.min_size`
+ ``pool_max``           Current value for `~ConnectionPool.max_size`
+ ``pool_size``          Number of connections currently managed by the pool
+                        (in the pool, given to clients, being prepared)
  ``pool_available``     Number of connections currently idle in the pool
  ``requests_waiting``   Number of requests currently waiting in a queue to
                         receive a connection

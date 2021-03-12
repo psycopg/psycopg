@@ -71,11 +71,11 @@ class AsyncConnectionPool(BasePool[AsyncConnection]):
             )
             self._workers.append(t)
 
-        # populate the pool with initial minconn connections in background
+        # populate the pool with initial min_size connections in background
         for i in range(self._nconns):
             self.run_task(AddConnection(self))
 
-        # Schedule a task to shrink the pool if connections over minconn have
+        # Schedule a task to shrink the pool if connections over min_size have
         # remained unused.
         self.run_task(Schedule(self, ShrinkPool(self), self.max_idle))
 
@@ -148,7 +148,7 @@ class AsyncConnectionPool(BasePool[AsyncConnection]):
 
                 # Allow only one thread at time to grow the pool (or returning
                 # connections might be starved).
-                if self._nconns < self._maxconn and not self._growing:
+                if self._nconns < self._max_size and not self._growing:
                     self._nconns += 1
                     logger.info(
                         "growing pool %r to %s", self.name, self._nconns
@@ -261,21 +261,24 @@ class AsyncConnectionPool(BasePool[AsyncConnection]):
         await self.close()
 
     async def resize(
-        self, minconn: int, maxconn: Optional[int] = None
+        self, min_size: int, max_size: Optional[int] = None
     ) -> None:
-        if maxconn is None:
-            maxconn = minconn
-        if maxconn < minconn:
-            raise ValueError("maxconn must be greater or equal than minconn")
+        if max_size is None:
+            max_size = min_size
+        if max_size < min_size:
+            raise ValueError("max_size must be greater or equal than min_size")
 
-        ngrow = max(0, minconn - self._minconn)
+        ngrow = max(0, min_size - self._min_size)
 
         logger.info(
-            "resizing %r to minconn=%s maxconn=%s", self.name, minconn, maxconn
+            "resizing %r to min_size=%s max_size=%s",
+            self.name,
+            min_size,
+            max_size,
         )
         async with self._lock:
-            self._minconn = minconn
-            self._maxconn = maxconn
+            self._min_size = min_size
+            self._max_size = max_size
             self._nconns += ngrow
 
         for i in range(ngrow):
@@ -414,7 +417,7 @@ class AsyncConnectionPool(BasePool[AsyncConnection]):
         await self._add_to_pool(conn)
         if growing:
             async with self._lock:
-                if self._nconns < self._maxconn and self._waiting:
+                if self._nconns < self._max_size and self._waiting:
                     self._nconns += 1
                     logger.info(
                         "growing pool %r to %s", self.name, self._nconns
@@ -528,7 +531,7 @@ class AsyncConnectionPool(BasePool[AsyncConnection]):
             self._nconns_min = len(self._pool)
 
             # If the pool can shrink and connections were unused, drop one
-            if self._nconns > self._minconn and nconns_min > 0:
+            if self._nconns > self._min_size and nconns_min > 0:
                 to_close = self._pool.popleft()
                 self._nconns -= 1
                 self._nconns_min -= 1
