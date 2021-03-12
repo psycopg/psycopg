@@ -95,3 +95,28 @@ relate to each other:
     - :ref:`query-parameters`.
     - :ref:`types-adaptation`.
     - :ref:`transactions`.
+
+
+.. index::
+    pair: Connection; ``with``
+
+.. _with-connection:
+
+Connection context
+------------------
+
+`!psycopg3` `Connection` can be used as a context manager:
+
+.. code:: python
+
+    with psycopg3.connect() as conn:
+        ... # use the connection
+
+    # the connection is now closed
+
+When the block is exited, if there is a transaction open, it will be
+committed. If an exception is raised within the block the transaction is
+rolled back. In either case the connection is closed.
+
+`AsyncConnection` can be also used as context manager, using ``async with``,
+but be careful about its quirkiness: see :ref:`async-with` for details.

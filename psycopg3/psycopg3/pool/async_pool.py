@@ -80,11 +80,6 @@ class AsyncConnectionPool(BasePool[AsyncConnection]):
         self.run_task(Schedule(self, ShrinkPool(self), self.max_idle))
 
     async def wait(self, timeout: float = 30.0) -> None:
-        """
-        Wait for the pool to be full after init.
-
-        Raise `PoolTimeout` if not ready within *timeout* sec.
-        """
         async with self._lock:
             assert not self._pool_full_event
             if len(self._pool) >= self._nconns:
@@ -110,17 +105,6 @@ class AsyncConnectionPool(BasePool[AsyncConnection]):
     async def connection(
         self, timeout: Optional[float] = None
     ) -> AsyncIterator[AsyncConnection]:
-        """Context manager to obtain a connection from the pool.
-
-        Returned the connection immediately if available, otherwise wait up to
-        *timeout* or `self.timeout` and throw `PoolTimeout` if a connection is
-        not available in time.
-
-        Upon context exit, return the connection to the pool. Apply the normal
-        connection context behaviour (commit/rollback the transaction in case
-        of success/error). If the connection is no more in working state
-        replace it with a new one.
-        """
         conn = await self.getconn(timeout=timeout)
         t0 = monotonic()
         try:
@@ -134,15 +118,6 @@ class AsyncConnectionPool(BasePool[AsyncConnection]):
     async def getconn(
         self, timeout: Optional[float] = None
     ) -> AsyncConnection:
-        """Obtain a contection from the pool.
-
-        You should preferrably use `connection()`. Use this function only if
-        it is not possible to use the connection as context manager.
-
-        After using this function you *must* call a corresponding `putconn()`:
-        failing to do so will deplete the pool. A depleted pool is a sad pool:
-        you don't want a depleted pool.
-        """
         logger.info("connection requested to %r", self.name)
         self._stats[self._REQUESTS_NUM] += 1
         # Critical section: decide here if there's a connection ready
@@ -196,11 +171,6 @@ class AsyncConnectionPool(BasePool[AsyncConnection]):
         return conn
 
     async def putconn(self, conn: AsyncConnection) -> None:
-        """Return a connection to the loving hands of its pool.
-
-        Use this function only paired with a `getconn()`. You don't need to use
-        it if you use the much more comfortable `connection()` context manager.
-        """
         # Quick check to discard the wrong connection
         pool = getattr(conn, "_pool", None)
         if pool is not self:
@@ -228,14 +198,6 @@ class AsyncConnectionPool(BasePool[AsyncConnection]):
             await self._return_connection(conn)
 
     async def close(self, timeout: float = 5.0) -> None:
-        """Close the pool and make it unavailable to new clients.
-
-        All the waiting and future client will fail to acquire a connection
-        with a `PoolClosed` exception. Currently used connections will not be
-        closed until returned to the pool.
-
-        Wait *timeout* for threads to terminate their job, if positive.
-        """
         if self._closed:
             return
 
@@ -313,11 +275,6 @@ class AsyncConnectionPool(BasePool[AsyncConnection]):
             self.run_task(AddConnection(self))
 
     async def check(self) -> None:
-        """Verify the state of the connections currently in the pool.
-
-        Test each connection: if it works return it to the pool, otherwise
-        dispose of it and create a new one.
-        """
         async with self._lock:
             conns = list(self._pool)
             self._pool.clear()

@@ -96,9 +96,15 @@ class ConnectionPool(BasePool[Connection]):
 
     def wait(self, timeout: float = 30.0) -> None:
         """
-        Wait for the pool to be full after init.
+        Wait for the pool to be full (with `minconn` connections) after creation.
 
         Raise `PoolTimeout` if not ready within *timeout* sec.
+
+        Calling this method is not mandatory: you can try and use the pool
+        immediately after its creation. The first client will be served as soon
+        as a connection is ready. You can use this method if you prefer your
+        program to terminate in case the environment is not configured
+        properly, rather than trying to stay up the harder it can.
         """
         with self._lock:
             assert not self._pool_full_event
@@ -130,9 +136,10 @@ class ConnectionPool(BasePool[Connection]):
         not available in time.
 
         Upon context exit, return the connection to the pool. Apply the normal
-        connection context behaviour (commit/rollback the transaction in case
-        of success/error). If the connection is no more in working state
-        replace it with a new one.
+        :ref:`connection context behaviour <with-connection>` (commit/rollback
+        the transaction in case of success/error). If the connection is no more
+        in working state replace it with a new one.
+
         """
         conn = self.getconn(timeout=timeout)
         t0 = monotonic()
@@ -239,14 +246,16 @@ class ConnectionPool(BasePool[Connection]):
         else:
             self._return_connection(conn)
 
-    def close(self, timeout: float = 1.0) -> None:
+    def close(self, timeout: float = 5.0) -> None:
         """Close the pool and make it unavailable to new clients.
 
         All the waiting and future client will fail to acquire a connection
         with a `PoolClosed` exception. Currently used connections will not be
         closed until returned to the pool.
 
-        Wait *timeout* for threads to terminate their job, if positive.
+        Wait *timeout* for threads to terminate their job, if positive. If
+        timeout expires the pool is closed anyway, although it may raise some
+        warnings on exit.
         """
         if self._closed:
             return
@@ -305,6 +314,7 @@ class ConnectionPool(BasePool[Connection]):
         self.close()
 
     def resize(self, minconn: int, maxconn: Optional[int] = None) -> None:
+        """Change the size of the pool during runtime."""
         if maxconn is None:
             maxconn = minconn
         if maxconn < minconn:

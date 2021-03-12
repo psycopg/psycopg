@@ -58,7 +58,7 @@ The `!Connection` class
 
     .. automethod:: close
 
-        .. note:: You can use :ref:`with connect(): ...<usage>` to
+        .. note:: You can use :ref:`with connect(): ...<with-connection>` to
             close the connection automatically when the block is exited.
 
     .. autoattribute:: closed

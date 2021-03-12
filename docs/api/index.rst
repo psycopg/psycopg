@@ -9,5 +9,6 @@
     ../cursor
     ../sql
     ../errors
+    ../pool
     ../types
     ../pq
