@@ -183,7 +183,7 @@ If you set up a similar check in your program, in case the database connection
 is temporarily lost, we cannot do anything for the thread which had taken
 already a connection from the pool, but no other thread should be served a
 broken connection, because `!check()` would empty the pool and refill it with
-working connection, as soon as they are available.
+working connections, as soon as they are available.
 
 Faster than you can say poll. Or pool.
 
