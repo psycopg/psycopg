@@ -7,9 +7,9 @@
 .. module:: psycopg3.pool
 
 The package contains two connection pool implementations. A connection pool
-creates and maintains a limited amount of `~psycopg3.Connection` instances and
-allows a larger number of users to use them. See :ref:`connection-pools` for
-more details and usage pattern.
+creates and maintains a limited amount of PostgreSQL connections and allows a
+larger number of users to use them. See :ref:`connection-pools` for more
+details and usage pattern.
 
 There package implement two connection pools: `ConnectionPool` is a
 synchronous connection pool yielding `~psycopg3.Connection` objects and can be
@@ -66,7 +66,7 @@ The `!ConnectionPool` class
                  the pool. The connection is guaranteed to be passed to the
                  *reset()* function in "idle" state (no transaction). When
                  leaving the *reset()* function the connection must be left in
-                 *idle* state, otherwise is discarded.
+                 *idle* state, otherwise it is discarded.
    :type reset: `Callable[[Connection], None]`
 
    :param connection_class: The class of the connections to serve. Default:

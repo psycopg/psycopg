@@ -23,8 +23,8 @@ Pool life cycle
 A typical way to use the pool is to create a single instance of it, as a
 global object, and to use this object in the rest of the program, allowing
 other functions, modules, threads to use it. This is only a common use
-however, and not the necessary one; in particular the connection pool act as a
-context manager and can be closed automatically at the end of its ``with``
+however, and not the necessary one; in particular the connection pool acts as
+a context manager and can be closed automatically at the end of its ``with``
 block::
 
     with my_pool as ConnectionPool(conninfo, **kwargs):
@@ -47,26 +47,28 @@ until the pool is full or will throw a `PoolTimeout` if the pool isn't ready
 within an allocated time.
 
 The pool background workers create connections according to the parameters
-*conninfo*, *kwargs*, *connection_class* passed to the pool constructor. Once
-a connection is created it is also passed to the *configure()* callback, if
-provided, after which it is put in the pool (or passed to a client requesting
-it, if someone is already knocking at the door). If a connection expires
-(it passes *max_lifetime*), is returned to the pool in broken state, is found
-closed by `~ConnectionPool.check()`, then is disposed of and a new connection
-attempt is started in background.
+*conninfo*, *kwargs*, *connection_class* passed to `ConnectionPool`
+constructor. Once a connection is created it is also passed to the
+*configure()* callback, if provided, after which it is put in the pool (or
+passed to a client requesting it, if someone is already knocking at the door).
+If a connection expires (it passes *max_lifetime*), or is returned to the pool
+in broken state, or is found closed by `~ConnectionPool.check()`, then the
+pool will dispose of it and will start a new connection attempt in the
+background.
 
-When the pool is no more to be used you should call the
-`~ConnectionPool.close()` method (unless the ``with`` syntax is used). If the
-pool is a global object it may be unclear how to do so. Missing a call to
-`!close()` shouldn't be a big problem, it should just result in a few warnings
-printed. However, if you think that's sloppy, you can use the `atexit` module
-to have the `!close()` function called at the end of the program.
+When the pool is no more to be used, you should call the
+`~ConnectionPool.close()` method (unless the ``with`` syntax was used). If the
+pool is a module-level object it may be unclear how to do so. Missing a call
+to `!close()` shouldn't be a big problem, it should just result in a few
+warnings printed. However, if you think that's sloppy, you can use the
+`atexit` module to have the `!close()` method called at the end of the
+program.
 
 
 Using connections from the pool
 -------------------------------
 
-The pool can be used to request connection from multiple threads - it is
+The pool can be used to request connections from multiple threads - it is
 hardly useful otherwise! If more connections than the ones available in the
 pool are requested, the requesting threads are queued and are served a
 connection as soon as one is available again: either because another client
@@ -74,7 +76,7 @@ has finished using it or because the pool is allowed to grow and a new
 connection is ready.
 
 The main way to use the pool is to obtain a connection using the
-`~ConnectionPool.connection()` context, which return a `~psycopg3.Connection`
+`~ConnectionPool.connection()` context, which returns a `~psycopg3.Connection`
 or subclass::
 
     with my_pool.connection() as conn:
@@ -82,10 +84,10 @@ or subclass::
 
 At the end of the block the connection is returned to the pool and shouldn't
 be used anymore by the code which obtained it. If a *reset()* function is
-specified in the pool constructor it is called on the connection before
+specified in the pool constructor, it is called on the connection before
 returning it to the pool. Note that the *reset()* function is called in a
-working thread, so that the thread which used the connection can keep its
-execution witout being slowed down.
+worker thread, so that the thread which used the connection can keep its
+execution without being slowed down.
 
 
 Pool connection and sizing
@@ -148,10 +150,10 @@ return and a new connection will be created.
     client.
 
 Why not? Because doing so would require an extra network roundtrip: we want to
-save you from its latency. Before getting too angry about it, think that the
-connection can be lost any moment while your program is using it. As your
+save you from its latency. Before getting too angry about it, just think that
+the connection can be lost any moment while your program is using it. As your
 program should be already able to cope with a loss of a connection during its
-process it should be able to tolerate to be served a broken connection:
+process, it should be able to tolerate to be served a broken connection:
 unpleasant but not the end of the world.
 
 .. warning::
@@ -161,7 +163,7 @@ unpleasant but not the end of the world.
 
 Does the pool keep a watchful eye on the quality of the connections inside it?
 No, it doesn't. Why not? Because you will do it for us! Your program is only
-a big ruse to make sure the connections are kept alive...
+a big ruse to make sure the connections are still alive...
 
 Not (entirely) trolling: if you are using a connection pool, we assume that
 you are using and returning connections at a good pace. If the pool had to
@@ -169,7 +171,7 @@ check for the quality of a broken connection before your program notices it,
 it should be polling each connection even faster than your program uses them.
 Your database server wouldn't be amused...
 
-Can you do something better than that? Of course you can: there is always a
+Can you do something better than that? Of course you can, there is always a
 better way than polling. You can use the same recipe of :ref:`disconnections`:
 you can dedicate a thread (and a connection) to listen for activity on the
 connection. If any activity is detected you can call the pool
@@ -200,7 +202,8 @@ values can be send to a monitoring system such as Graphite_ or Prometheus_.
 .. _Prometheus: https://prometheus.io/
 
 The following values should be provided, but please don't consider them as a
-rigid interface: they may change. Keys whose value is 0 may be not returned.
+rigid interface: it is possible that they might change. Keys whose value is 0
+may not be returned.
 
 
 ======================= =====================================================
@@ -216,7 +219,7 @@ Metric                  Meaning
  ``usage_ms``           Total usage time of the connections outside the pool
  ``requests_num``       Number of connections requested to the pool
  ``requests_queued``    Number of requests queued because a connection wasn't
-                        immedately available
+                        immediately available in the pool
  ``requests_wait_ms``   Total time in the queue for the clients waiting
  ``requests_timeouts``  Number of waiting clients whose request timed out
  ``returns_bad``        Number of connections returned to the pool in a bad
