@@ -40,6 +40,12 @@
   name: Materialize, Inc.
   website: http://materialize.com
 
+- username: getsentry
+  tier: mid
+  avatar: https://avatars.githubusercontent.com/u/1396951?v=4
+  name: Sentry
+  website: https://sentry.io
+
 - username: genropy
   by: gporcari
   tier: mid
