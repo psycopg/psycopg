@@ -46,6 +46,12 @@
   name: Sentry
   website: https://sentry.io
 
+- username: 20tab
+  tier: mid
+  avatar: https://avatars.githubusercontent.com/u/1843159?v=4
+  name: 20tab srl
+  website: http://www.20tab.com
+
 - username: genropy
   by: gporcari
   tier: mid
