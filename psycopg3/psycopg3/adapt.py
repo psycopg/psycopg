@@ -222,7 +222,7 @@ class AdaptersMap(AdaptContext):
         if format == Format.AUTO:
             # When dumping a string with %s we may refer to any type actually,
             # but the user surely passed a text format
-            if cls is str:
+            if issubclass(cls, str):
                 dmaps = [self._dumpers[pq.Format.TEXT]]
             else:
                 dmaps = [

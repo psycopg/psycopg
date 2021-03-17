@@ -102,15 +102,19 @@ def test_dump_utf8_badenc(conn, fmt_in):
         cur.execute(f"select %{fmt_in}", ("\uddf8",))
 
 
-@pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT])
 def test_dump_enum(conn, fmt_in):
     from enum import Enum
 
     class MyEnum(str, Enum):
         foo = "foo"
+        bar = "bar"
 
     cur = conn.cursor()
-    (res,) = cur.execute("select %s", (MyEnum.foo,)).fetchone()
+    cur.execute("create type myenum as enum ('foo', 'bar')")
+    cur.execute("create table with_enum (e myenum)")
+    cur.execute(f"insert into with_enum (e) values (%{fmt_in})", (MyEnum.foo,))
+    (res,) = cur.execute("select e from with_enum").fetchone()
     assert res == "foo"
 
 

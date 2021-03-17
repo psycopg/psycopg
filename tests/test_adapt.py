@@ -48,7 +48,7 @@ def test_dump_connection_ctx(conn):
 
     cur = conn.cursor()
     cur.execute("select %s", [MyStr("hello")])
-    assert cur.fetchone() == ("hellob",)
+    assert cur.fetchone() == ("hellot",)
     cur.execute("select %t", [MyStr("hello")])
     assert cur.fetchone() == ("hellot",)
     cur.execute("select %b", [MyStr("hello")])
@@ -64,7 +64,7 @@ def test_dump_cursor_ctx(conn):
     make_bin_dumper("bc").register(str, cur)
 
     cur.execute("select %s", [MyStr("hello")])
-    assert cur.fetchone() == ("hellobc",)
+    assert cur.fetchone() == ("hellotc",)
     cur.execute("select %t", [MyStr("hello")])
     assert cur.fetchone() == ("hellotc",)
     cur.execute("select %b", [MyStr("hello")])
@@ -72,7 +72,7 @@ def test_dump_cursor_ctx(conn):
 
     cur = conn.cursor()
     cur.execute("select %s", [MyStr("hello")])
-    assert cur.fetchone() == ("hellob",)
+    assert cur.fetchone() == ("hellot",)
     cur.execute("select %t", [MyStr("hello")])
     assert cur.fetchone() == ("hellot",)
     cur.execute("select %b", [MyStr("hello")])
