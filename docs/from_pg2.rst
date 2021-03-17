@@ -53,17 +53,6 @@ works for an empty list, whereas an empty tuple would have resulted in an
 error.
 
 
-.. _diff-numbers:
-
-``int`` is stricter
--------------------
-
-Operations involving numbers may fail if the number is passed to a function or
-operator and PostgreSQL expects a :sql:`integer` and not a :sql:`bigint`.
-Examples may be :sql:`date + int`, :sql:`jsonb -> int`. In this case you
-should use an :sql:`::int` cast or the `psycopg3.types.Int4` wrapper.
-
-
 .. _diff-adapt:
 
 Different adaptation system
