@@ -30,7 +30,7 @@ cdef class _StringDumper(CDumper):
     cdef char *encoding
     cdef bytes _bytes_encoding  # needed to keep `encoding` alive
 
-    def __init__(self, cls: type, context: Optional[AdaptContext] = None):
+    def __init__(self, cls, context: Optional[AdaptContext] = None):
         super().__init__(cls, context)
 
         self.is_utf8 = 0

@@ -67,6 +67,18 @@ def test_dump_int_subtypes(conn, val, expr, fmt_in):
     assert cur.fetchone()[0] is True
 
 
+@pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
+def test_dump_enum(conn, fmt_in):
+    import enum
+
+    class MyEnum(enum.IntEnum):
+        foo = 42
+
+    cur = conn.cursor()
+    (res,) = cur.execute("select %s", (MyEnum.foo,)).fetchone()
+    assert res == 42
+
+
 @pytest.mark.parametrize(
     "val, expr",
     [

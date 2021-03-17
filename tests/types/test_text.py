@@ -102,6 +102,18 @@ def test_dump_utf8_badenc(conn, fmt_in):
         cur.execute(f"select %{fmt_in}", ("\uddf8",))
 
 
+@pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
+def test_dump_enum(conn, fmt_in):
+    from enum import Enum
+
+    class MyEnum(str, Enum):
+        foo = "foo"
+
+    cur = conn.cursor()
+    (res,) = cur.execute("select %s", (MyEnum.foo,)).fetchone()
+    assert res == "foo"
+
+
 @pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
 @pytest.mark.parametrize("encoding", ["utf8", "latin9"])
 @pytest.mark.parametrize("typename", ["text", "varchar", "name", "bpchar"])
