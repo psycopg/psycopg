@@ -502,8 +502,13 @@ class Cursor(BaseCursor["Connection"]):
         """
         Execute a query or command to the database.
         """
-        with self._conn.lock:
-            self._conn.wait(self._execute_gen(query, params, prepare=prepare))
+        try:
+            with self._conn.lock:
+                self._conn.wait(
+                    self._execute_gen(query, params, prepare=prepare)
+                )
+        except e.Error as ex:
+            raise ex.with_traceback(None)
         return self
 
     def executemany(self, query: Query, params_seq: Sequence[Params]) -> None:
@@ -629,10 +634,13 @@ class AsyncCursor(BaseCursor["AsyncConnection"]):
         *,
         prepare: Optional[bool] = None,
     ) -> "AsyncCursor":
-        async with self._conn.lock:
-            await self._conn.wait(
-                self._execute_gen(query, params, prepare=prepare)
-            )
+        try:
+            async with self._conn.lock:
+                await self._conn.wait(
+                    self._execute_gen(query, params, prepare=prepare)
+                )
+        except e.Error as ex:
+            raise ex.with_traceback(None)
         return self
 
     async def executemany(
