@@ -537,7 +537,10 @@ class Connection(BaseConnection):
     ) -> Cursor:
         """Execute a query and return a cursor to read its results."""
         cur = self.cursor()
-        return cur.execute(query, params, prepare=prepare)
+        try:
+            return cur.execute(query, params, prepare=prepare)
+        except e.Error as ex:
+            raise ex.with_traceback(None)
 
     def commit(self) -> None:
         """Commit any pending transaction to the database."""
@@ -713,7 +716,10 @@ class AsyncConnection(BaseConnection):
         prepare: Optional[bool] = None,
     ) -> AsyncCursor:
         cur = self.cursor()
-        return await cur.execute(query, params, prepare=prepare)
+        try:
+            return await cur.execute(query, params, prepare=prepare)
+        except e.Error as ex:
+            raise ex.with_traceback(None)
 
     async def commit(self) -> None:
         async with self.lock:
