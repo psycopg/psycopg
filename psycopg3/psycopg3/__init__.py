@@ -4,6 +4,8 @@ psycopg3 -- PostgreSQL database adapter for Python
 
 # Copyright (C) 2020-2021 The Psycopg Team
 
+import logging
+
 from . import pq
 from . import types
 from .copy import Copy, AsyncCopy
@@ -22,6 +24,9 @@ from .dbapi20 import Binary, Date, DateFromTicks, Time, TimeFromTicks
 from .dbapi20 import Timestamp, TimestampFromTicks
 
 from .version import __version__
+
+# Set the logger to a quiet default, can be enabled if needed
+logging.getLogger("psycopg3").setLevel(logging.WARNING)
 
 # register default adapters
 types.register_default_globals(global_adapters)
