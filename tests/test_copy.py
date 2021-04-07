@@ -12,7 +12,7 @@ from psycopg3 import sql
 from psycopg3 import errors as e
 from psycopg3.pq import Format
 from psycopg3.adapt import Format as PgFormat
-from psycopg3.types.numeric import Int4
+from psycopg3.types import Int4
 
 eur = "\u20ac"
 

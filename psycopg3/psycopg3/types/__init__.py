@@ -11,115 +11,128 @@ from ..proto import AdaptContext
 from . import array, composite, range
 
 # Wrapper objects
-from ..wrappers.numeric import Int2, Int4, Int8, IntNumeric, Oid
-from .json import Json, Jsonb
-from .range import Range
+from ..wrappers.numeric import (
+    Int2 as Int2,
+    Int4 as Int4,
+    Int8 as Int8,
+    IntNumeric as IntNumeric,
+    Oid as Oid,
+)
+from .json import Json as Json, Jsonb as Jsonb
+from .range import Range as Range
 
 # Database types descriptors
-from .._typeinfo import TypeInfo, RangeInfo, CompositeInfo
+from .._typeinfo import (
+    TypeInfo as TypeInfo,
+    RangeInfo as RangeInfo,
+    CompositeInfo as CompositeInfo,
+)
 
 # Json global registrations
-from .json import set_json_dumps, set_json_loads
+from .json import (
+    set_json_dumps as set_json_dumps,
+    set_json_loads as set_json_loads,
+)
 
 # Adapter objects
 from .text import (
-    StringDumper,
-    StringBinaryDumper,
-    TextLoader,
-    TextBinaryLoader,
-    BytesDumper,
-    BytesBinaryDumper,
-    ByteaLoader,
-    ByteaBinaryLoader,
+    StringDumper as StringDumper,
+    StringBinaryDumper as StringBinaryDumper,
+    TextLoader as TextLoader,
+    TextBinaryLoader as TextBinaryLoader,
+    BytesDumper as BytesDumper,
+    BytesBinaryDumper as BytesBinaryDumper,
+    ByteaLoader as ByteaLoader,
+    ByteaBinaryLoader as ByteaBinaryLoader,
 )
 from .numeric import (
-    IntDumper,
-    IntBinaryDumper,
-    FloatDumper,
-    FloatBinaryDumper,
-    DecimalDumper,
-    Int2Dumper,
-    Int4Dumper,
-    Int8Dumper,
-    IntNumericDumper,
-    OidDumper,
-    Int2BinaryDumper,
-    Int4BinaryDumper,
-    Int8BinaryDumper,
-    OidBinaryDumper,
-    IntLoader,
-    Int2BinaryLoader,
-    Int4BinaryLoader,
-    Int8BinaryLoader,
-    OidBinaryLoader,
-    FloatLoader,
-    Float4BinaryLoader,
-    Float8BinaryLoader,
-    NumericLoader,
+    IntDumper as IntDumper,
+    IntBinaryDumper as IntBinaryDumper,
+    FloatDumper as FloatDumper,
+    FloatBinaryDumper as FloatBinaryDumper,
+    DecimalDumper as DecimalDumper,
+    Int2Dumper as Int2Dumper,
+    Int4Dumper as Int4Dumper,
+    Int8Dumper as Int8Dumper,
+    IntNumericDumper as IntNumericDumper,
+    OidDumper as OidDumper,
+    Int2BinaryDumper as Int2BinaryDumper,
+    Int4BinaryDumper as Int4BinaryDumper,
+    Int8BinaryDumper as Int8BinaryDumper,
+    OidBinaryDumper as OidBinaryDumper,
+    IntLoader as IntLoader,
+    Int2BinaryLoader as Int2BinaryLoader,
+    Int4BinaryLoader as Int4BinaryLoader,
+    Int8BinaryLoader as Int8BinaryLoader,
+    OidBinaryLoader as OidBinaryLoader,
+    FloatLoader as FloatLoader,
+    Float4BinaryLoader as Float4BinaryLoader,
+    Float8BinaryLoader as Float8BinaryLoader,
+    NumericLoader as NumericLoader,
 )
 from .singletons import (
-    BoolDumper,
-    BoolBinaryDumper,
-    NoneDumper,
-    BoolLoader,
-    BoolBinaryLoader,
+    BoolDumper as BoolDumper,
+    BoolBinaryDumper as BoolBinaryDumper,
+    NoneDumper as NoneDumper,
+    BoolLoader as BoolLoader,
+    BoolBinaryLoader as BoolBinaryLoader,
 )
 from .date import (
-    DateDumper,
-    TimeDumper,
-    TimeTzDumper,
-    DateTimeTzDumper,
-    DateTimeDumper,
-    TimeDeltaDumper,
-    DateLoader,
-    TimeLoader,
-    TimeTzLoader,
-    TimestampLoader,
-    TimestamptzLoader,
-    IntervalLoader,
+    DateDumper as DateDumper,
+    TimeDumper as TimeDumper,
+    TimeTzDumper as TimeTzDumper,
+    DateTimeTzDumper as DateTimeTzDumper,
+    DateTimeDumper as DateTimeDumper,
+    TimeDeltaDumper as TimeDeltaDumper,
+    DateLoader as DateLoader,
+    TimeLoader as TimeLoader,
+    TimeTzLoader as TimeTzLoader,
+    TimestampLoader as TimestampLoader,
+    TimestamptzLoader as TimestamptzLoader,
+    IntervalLoader as IntervalLoader,
 )
 from .json import (
-    JsonDumper,
-    JsonBinaryDumper,
-    JsonbDumper,
-    JsonbBinaryDumper,
-    JsonLoader,
-    JsonBinaryLoader,
-    JsonbLoader,
-    JsonbBinaryLoader,
+    JsonDumper as JsonDumper,
+    JsonBinaryDumper as JsonBinaryDumper,
+    JsonbDumper as JsonbDumper,
+    JsonbBinaryDumper as JsonbBinaryDumper,
+    JsonLoader as JsonLoader,
+    JsonBinaryLoader as JsonBinaryLoader,
+    JsonbLoader as JsonbLoader,
+    JsonbBinaryLoader as JsonbBinaryLoader,
 )
 from .uuid import (
-    UUIDDumper,
-    UUIDBinaryDumper,
-    UUIDLoader,
-    UUIDBinaryLoader,
+    UUIDDumper as UUIDDumper,
+    UUIDBinaryDumper as UUIDBinaryDumper,
+    UUIDLoader as UUIDLoader,
+    UUIDBinaryLoader as UUIDBinaryLoader,
 )
 from .network import (
-    InterfaceDumper,
-    NetworkDumper,
-    InetLoader,
-    CidrLoader,
+    InterfaceDumper as InterfaceDumper,
+    NetworkDumper as NetworkDumper,
+    InetLoader as InetLoader,
+    CidrLoader as CidrLoader,
 )
 from .range import (
-    RangeDumper,
-    RangeLoader,
-    Int4RangeLoader,
-    Int8RangeLoader,
-    NumericRangeLoader,
-    DateRangeLoader,
-    TimestampRangeLoader,
-    TimestampTZRangeLoader,
+    RangeDumper as RangeDumper,
+    RangeLoader as RangeLoader,
+    Int4RangeLoader as Int4RangeLoader,
+    Int8RangeLoader as Int8RangeLoader,
+    NumericRangeLoader as NumericRangeLoader,
+    DateRangeLoader as DateRangeLoader,
+    TimestampRangeLoader as TimestampRangeLoader,
+    TimestampTZRangeLoader as TimestampTZRangeLoader,
 )
 from .array import (
-    ListDumper,
-    ListBinaryDumper,
+    ListDumper as ListDumper,
+    ListBinaryDumper as ListBinaryDumper,
 )
 from .composite import (
-    TupleDumper,
-    RecordLoader,
-    RecordBinaryLoader,
-    CompositeLoader,
-    CompositeBinaryLoader,
+    TupleDumper as TupleDumper,
+    RecordLoader as RecordLoader,
+    RecordBinaryLoader as RecordBinaryLoader,
+    CompositeLoader as CompositeLoader,
+    CompositeBinaryLoader as CompositeBinaryLoader,
 )
 
 
