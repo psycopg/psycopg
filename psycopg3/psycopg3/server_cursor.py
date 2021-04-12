@@ -6,8 +6,8 @@ psycopg3 server-side cursor objects.
 
 import warnings
 from types import TracebackType
-from typing import Any, AsyncIterator, Generic, List, Iterator, Optional
-from typing import Sequence, Type, Tuple, TYPE_CHECKING
+from typing import AsyncIterator, Generic, List, Iterator, Optional
+from typing import Sequence, Type, TYPE_CHECKING
 
 from . import pq
 from . import sql
@@ -102,7 +102,7 @@ class ServerCursorHelper(Generic[ConnectionType]):
 
     def _fetch_gen(
         self, cur: BaseCursor[ConnectionType], num: Optional[int]
-    ) -> PQGen[List[Tuple[Any, ...]]]:
+    ) -> PQGen[List[Row]]:
         # If we are stealing the cursor, make sure we know its shape
         if not self.described:
             yield from cur._start_query()
@@ -245,7 +245,7 @@ class ServerCursor(BaseCursor["Connection"]):
             recs = self._conn.wait(self._helper._fetch_gen(self, 1))
         if recs:
             self._pos += 1
-            return recs[0]
+            return recs[0]  # type: ignore[no-any-return]
         else:
             return None
 
@@ -362,7 +362,7 @@ class AsyncServerCursor(BaseCursor["AsyncConnection"]):
             recs = await self._conn.wait(self._helper._fetch_gen(self, 1))
         if recs:
             self._pos += 1
-            return recs[0]
+            return recs[0]  # type: ignore[no-any-return]
         else:
             return None
 
