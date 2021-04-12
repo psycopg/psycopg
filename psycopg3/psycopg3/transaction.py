@@ -18,7 +18,7 @@ from .pq.proto import PGresult
 if TYPE_CHECKING:
     from .connection import Connection, AsyncConnection  # noqa: F401
 
-_log = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class Rollback(Exception):
@@ -148,7 +148,7 @@ class BaseTransaction(Generic[ConnectionType]):
 
     def _rollback_gen(self, exc_val: Optional[BaseException]) -> PQGen[bool]:
         if isinstance(exc_val, Rollback):
-            _log.debug(
+            logger.debug(
                 f"{self._conn}: Explicit rollback from: ", exc_info=True
             )
 

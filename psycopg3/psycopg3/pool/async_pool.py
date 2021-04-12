@@ -24,7 +24,7 @@ from .base import ConnectionAttempt, BasePool
 from .sched import AsyncScheduler
 from .errors import PoolClosed, PoolTimeout, TooManyRequests
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("psycopg3.pool")
 
 
 class AsyncConnectionPool(BasePool[AsyncConnection]):
