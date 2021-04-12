@@ -28,6 +28,7 @@ def pytest_addoption(parser):
     parser.addoption(
         "--loop",
         choices=["default", "uvloop"],
+        default="default",
         help="The asyncio loop to use for async tests.",
     )
 
