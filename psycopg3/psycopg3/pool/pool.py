@@ -23,7 +23,7 @@ from .base import ConnectionAttempt, BasePool
 from .sched import Scheduler
 from .errors import PoolClosed, PoolTimeout, TooManyRequests
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("psycopg3.pool")
 
 
 class ConnectionPool(BasePool[Connection]):

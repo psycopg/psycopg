@@ -164,7 +164,6 @@ class AsyncScheduler:
                 self._event.clear()
 
             if task:
-                # logger.info("task %s action %s", task, task.action)
                 if not task.action:
                     break
                 try:

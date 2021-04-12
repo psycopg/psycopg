@@ -4,7 +4,6 @@ psycopg3 connection pool base class and functionalities.
 
 # Copyright (C) 2021 The Psycopg Team
 
-import logging
 from random import random
 from typing import Any, Callable, Deque, Dict, Generic, Optional
 from typing import TYPE_CHECKING
@@ -14,9 +13,6 @@ from ..proto import ConnectionType
 
 if TYPE_CHECKING:
     from typing import Counter as TCounter
-
-
-logger = logging.getLogger(__name__)
 
 
 class BasePool(Generic[ConnectionType]):

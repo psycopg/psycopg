@@ -33,8 +33,7 @@ from .transaction import Transaction, AsyncTransaction
 from .utils.compat import asynccontextmanager
 from .server_cursor import ServerCursor, AsyncServerCursor
 
-logger = logging.getLogger(__name__)
-package_logger = logging.getLogger("psycopg3")
+logger = logging.getLogger("psycopg3")
 
 connect: Callable[[str], PQGenConn["PGconn"]]
 execute: Callable[["PGconn"], PQGen[List["PGresult"]]]
@@ -264,7 +263,7 @@ class BaseConnection(AdaptContext):
             try:
                 cb(diag)
             except Exception as ex:
-                package_logger.exception(
+                logger.exception(
                     "error processing notice callback '%s': %s", cb, ex
                 )
 
