@@ -944,7 +944,7 @@ async def test_stats_connect(dsn, proxy, monkeypatch):
         assert stats["connections_num"] == 3
         assert stats.get("connections_errors", 0) == 0
         assert stats.get("connections_lost", 0) == 0
-        assert 600 <= stats["connections_ms"] < 1200
+        assert 580 <= stats["connections_ms"] < 1200
 
         proxy.stop()
         await p.check()
