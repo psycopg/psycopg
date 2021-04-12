@@ -147,3 +147,9 @@ class TestConnectionInfo:
         assert info.password == "the-pass-word"
         assert "password" not in info.get_parameters()
         assert info.get_parameters()["dbname"] == info.dbname
+
+    def test_parameter_status(self, conn):
+        assert conn.info.parameter_status("nosuchparam") is None
+        tz = conn.info.parameter_status("TimeZone")
+        assert tz and isinstance(tz, str)
+        assert tz == conn.execute("show timezone").fetchone()[0]

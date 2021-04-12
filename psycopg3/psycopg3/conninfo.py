@@ -5,7 +5,7 @@ Functions to manipulate conninfo strings
 # Copyright (C) 2020-2021 The Psycopg Team
 
 import re
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 from pathlib import Path
 
 from . import pq
@@ -155,6 +155,10 @@ class ConnectionInfo:
     @property
     def transaction_status(self) -> pq.TransactionStatus:
         return pq.TransactionStatus(self.pgconn.transaction_status)
+
+    def parameter_status(self, param_name: str) -> Optional[str]:
+        res = self.pgconn.parameter_status(param_name.encode(self._pyenc))
+        return res.decode(self._pyenc) if res is not None else None
 
     def _get_pgconn_attr(self, name: str) -> str:
         value: bytes = getattr(self.pgconn, name)
