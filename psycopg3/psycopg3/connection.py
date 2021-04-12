@@ -217,6 +217,7 @@ class BaseConnection(AdaptContext):
 
     @property
     def info(self) -> ConnectionInfo:
+        """A `ConnectionInfo` attribute to inspect connection properties."""
         return ConnectionInfo(self.pgconn)
 
     @property

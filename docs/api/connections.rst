@@ -159,9 +159,7 @@ The `!Connection` class
             .. __: https://www.postgresql.org/docs/current/multibyte.html
 
 
-    .. attribute:: info
-
-        TODO
+    .. autoattribute:: info
 
     .. automethod:: fileno
 
@@ -250,6 +248,25 @@ Connection support objects
 
     The object is usually returned by `Connection.notifies()`.
 
+
+.. autoclass:: ConnectionInfo()
+
+    The object is usually returned by `Connection.info`.
+
+    .. autoproperty:: host
+    .. autoproperty:: port
+    .. autoproperty:: dbname
+    .. autoproperty:: user
+    .. autoproperty:: password
+    .. autoproperty:: options
+    .. autoproperty:: status
+    .. autoproperty:: transaction_status
+    .. automethod:: get_parameters
+    .. automethod:: parameter_status
+
+        Example of parameters are ``server_version``,
+        ``standard_conforming_string``... See :pq:`PQparameterStatus()` for
+        all the available parameters.
 
 .. rubric:: Objects involved in :ref:`transactions`
 

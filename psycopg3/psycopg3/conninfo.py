@@ -94,31 +94,41 @@ def _param_escape(s: str) -> str:
 
 
 class ConnectionInfo:
+    """Allow access to information about the connection."""
+
+    __module__ = "psycopg3"
+
     def __init__(self, pgconn: pq.proto.PGconn):
         self.pgconn = pgconn
 
     @property
     def host(self) -> str:
+        """The host name of the database."""
         return self._get_pgconn_attr("host")
 
     @property
     def port(self) -> int:
+        """The port of the database connection."""
         return int(self._get_pgconn_attr("port"))
 
     @property
     def dbname(self) -> str:
+        """The name of the connected database."""
         return self._get_pgconn_attr("db")
 
     @property
     def user(self) -> str:
+        """The user of the database connection."""
         return self._get_pgconn_attr("user")
 
     @property
     def password(self) -> str:
+        """The password of the database connection."""
         return self._get_pgconn_attr("password")
 
     @property
     def options(self) -> str:
+        """The options parameter of the database connection."""
         return self._get_pgconn_attr("options")
 
     def get_parameters(self) -> Dict[str, str]:
@@ -150,13 +160,22 @@ class ConnectionInfo:
 
     @property
     def status(self) -> pq.ConnStatus:
+        """`pq.ConnStatus` enum representing the state of the connection."""
         return pq.ConnStatus(self.pgconn.status)
 
     @property
     def transaction_status(self) -> pq.TransactionStatus:
+        """
+        `pq.TransactionStatus` enum representing the state of the transaction.
+        """
         return pq.TransactionStatus(self.pgconn.transaction_status)
 
     def parameter_status(self, param_name: str) -> Optional[str]:
+        """
+        Return a parameter setting of the connection.
+
+        Return `None` is the parameter is unknown.
+        """
         res = self.pgconn.parameter_status(param_name.encode(self._pyenc))
         return res.decode(self._pyenc) if res is not None else None
 
