@@ -157,12 +157,7 @@ class ConnectionInfo:
         return pq.TransactionStatus(self.pgconn.transaction_status)
 
     def _get_pgconn_attr(self, name: str) -> str:
-        value: bytes
-        try:
-            value = getattr(self.pgconn, name)
-        except pq.PQerror as exc:
-            raise e.OperationalError(str(exc))
-
+        value: bytes = getattr(self.pgconn, name)
         return value.decode(self._pyenc)
 
     @property
