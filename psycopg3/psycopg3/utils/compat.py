@@ -24,6 +24,7 @@ else:
 
 if sys.version_info >= (3, 8):
     create_task = asyncio.create_task
+    Task = asyncio.Task
 
 elif sys.version_info >= (3, 7):
 
@@ -32,6 +33,7 @@ elif sys.version_info >= (3, 7):
     ) -> "asyncio.Future[T]":
         return asyncio.create_task(coro)
 
+    Task = asyncio.Future
 
 else:
 
@@ -40,5 +42,6 @@ else:
     ) -> "asyncio.Future[T]":
         return asyncio.ensure_future(coro)
 
+    Task = asyncio.Future
 
 __all__ = ["asynccontextmanager", "get_running_loop", "create_task"]

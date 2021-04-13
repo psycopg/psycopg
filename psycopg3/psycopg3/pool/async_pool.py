@@ -18,7 +18,7 @@ from collections import deque
 from .. import errors as e
 from ..pq import TransactionStatus
 from ..connection import AsyncConnection
-from ..utils.compat import asynccontextmanager, create_task
+from ..utils.compat import Task, asynccontextmanager, create_task
 
 from .base import ConnectionAttempt, BasePool
 from .sched import AsyncScheduler
@@ -57,7 +57,7 @@ class AsyncConnectionPool(BasePool[AsyncConnection]):
 
         self._sched = AsyncScheduler()
         self._tasks: "asyncio.Queue[MaintenanceTask]" = asyncio.Queue()
-        self._workers: "List[asyncio.Task[None]]" = []
+        self._workers: List[Task[None]] = []
 
         super().__init__(conninfo, **kwargs)
 
