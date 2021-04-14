@@ -83,7 +83,6 @@ cdef class Transformer:
     cdef int _nfields, _ntuples
     cdef list _row_dumpers
     cdef list _row_loaders
-    cdef public object make_row
 
     def __cinit__(self, context: Optional["AdaptContext"] = None):
         if context is not None:
@@ -274,7 +273,7 @@ cdef class Transformer:
 
         return ps, ts, fs
 
-    def load_rows(self, int row0, int row1) -> List[Row]:
+    def load_rows(self, int row0, int row1, object make_row) -> List[Row]:
         if self._pgresult is None:
             raise e.InterfaceError("result not set")
 
@@ -334,7 +333,6 @@ cdef class Transformer:
                     Py_INCREF(pyval)
                     PyTuple_SET_ITEM(<object>brecord, col, pyval)
 
-        cdef object make_row = self.make_row
         if make_row is not tuple:
             for i in range(row1 - row0):
                 brecord = PyList_GET_ITEM(records, i)
@@ -345,7 +343,7 @@ cdef class Transformer:
                 Py_DECREF(<object>brecord)
         return records
 
-    def load_row(self, int row) -> Optional[Row]:
+    def load_row(self, int row, object make_row) -> Optional[Row]:
         if self._pgresult is None:
             return None
 
@@ -384,7 +382,6 @@ cdef class Transformer:
             Py_INCREF(pyval)
             PyTuple_SET_ITEM(record, col, pyval)
 
-        cdef object make_row = self.make_row
         if make_row is not tuple:
             record = PyObject_CallFunctionObjArgs(
                 make_row, <PyObject *>record, NULL)

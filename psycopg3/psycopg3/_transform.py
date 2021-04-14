@@ -38,7 +38,6 @@ class Transformer(AdaptContext):
     __module__ = "psycopg3.adapt"
     _adapters: "AdaptersMap"
     _pgresult: Optional["PGresult"] = None
-    make_row: RowMaker = tuple
 
     def __init__(self, context: Optional[AdaptContext] = None):
 
@@ -162,7 +161,7 @@ class Transformer(AdaptContext):
             dumper = cache[key1] = dumper.upgrade(obj, format)
             return dumper
 
-    def load_rows(self, row0: int, row1: int) -> List[Row]:
+    def load_rows(self, row0: int, row1: int, make_row: RowMaker) -> List[Row]:
         res = self._pgresult
         if not res:
             raise e.InterfaceError("result not set")
@@ -179,11 +178,11 @@ class Transformer(AdaptContext):
                 val = res.get_value(row, col)
                 if val is not None:
                     record[col] = self._row_loaders[col](val)
-            records.append(self.make_row(record))
+            records.append(make_row(record))
 
         return records
 
-    def load_row(self, row: int) -> Optional[Row]:
+    def load_row(self, row: int, make_row: RowMaker) -> Optional[Row]:
         res = self._pgresult
         if not res:
             return None
@@ -197,7 +196,7 @@ class Transformer(AdaptContext):
             if val is not None:
                 record[col] = self._row_loaders[col](val)
 
-        return self.make_row(record)  # type: ignore[no-any-return]
+        return make_row(record)  # type: ignore[no-any-return]
 
     def load_sequence(
         self, record: Sequence[Optional[bytes]]

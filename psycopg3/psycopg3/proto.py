@@ -89,8 +89,6 @@ class Transformer(Protocol):
     def __init__(self, context: Optional[AdaptContext] = None):
         ...
 
-    make_row: RowMaker
-
     @property
     def connection(self) -> Optional["BaseConnection"]:
         ...
@@ -121,10 +119,10 @@ class Transformer(Protocol):
     def get_dumper(self, obj: Any, format: Format) -> "Dumper":
         ...
 
-    def load_rows(self, row0: int, row1: int) -> List[Row]:
+    def load_rows(self, row0: int, row1: int, make_row: RowMaker) -> List[Row]:
         ...
 
-    def load_row(self, row: int) -> Optional[Row]:
+    def load_row(self, row: int, make_row: RowMaker) -> Optional[Row]:
         ...
 
     def load_sequence(

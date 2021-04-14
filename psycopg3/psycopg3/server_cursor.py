@@ -120,7 +120,7 @@ class ServerCursorHelper(Generic[ConnectionType]):
 
         cur.pgresult = res
         cur._tx.set_pgresult(res, set_loaders=False)
-        return cur._tx.load_rows(0, res.ntuples)
+        return cur._tx.load_rows(0, res.ntuples, cur._make_row)
 
     def _scroll_gen(
         self, cur: BaseCursor[ConnectionType], value: int, mode: str
