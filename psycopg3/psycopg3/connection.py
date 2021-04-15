@@ -23,7 +23,7 @@ from . import encodings
 from .pq import ConnStatus, ExecStatus, TransactionStatus, Format
 from .sql import Composable
 from .rows import tuple_row
-from .proto import PQGen, PQGenConn, RV, RowFactory, Query, Params
+from .proto import PQGen, PQGenConn, RV, Row, RowFactory, Query, Params
 from .proto import AdaptContext, ConnectionType
 from .cursor import Cursor, AsyncCursor
 from .conninfo import make_conninfo, ConnectionInfo
@@ -98,7 +98,7 @@ class BaseConnection(AdaptContext):
     ConnStatus = pq.ConnStatus
     TransactionStatus = pq.TransactionStatus
 
-    row_factory: RowFactory = tuple_row
+    row_factory: RowFactory[Any] = tuple_row
 
     def __init__(self, pgconn: "PGconn"):
         self.pgconn = pgconn  # TODO: document this
@@ -344,7 +344,7 @@ class BaseConnection(AdaptContext):
         conninfo: str = "",
         *,
         autocommit: bool = False,
-        row_factory: RowFactory,
+        row_factory: RowFactory[Any],
         **kwargs: Any,
     ) -> PQGenConn[ConnectionType]:
         """Generator to connect to the database and create a new instance."""
@@ -443,7 +443,7 @@ class Connection(BaseConnection):
         conninfo: str = "",
         *,
         autocommit: bool = False,
-        row_factory: RowFactory = tuple_row,
+        row_factory: RowFactory[Any] = tuple_row,
         **kwargs: Any,
     ) -> "Connection":
         """
@@ -497,19 +497,23 @@ class Connection(BaseConnection):
         self.pgconn.finish()
 
     @overload
-    def cursor(
-        self, *, binary: bool = False, row_factory: Optional[RowFactory] = None
-    ) -> Cursor:
+    def cursor(self, *, binary: bool = False) -> Cursor[Any]:
         ...
 
     @overload
     def cursor(
-        self,
-        name: str,
-        *,
-        binary: bool = False,
-        row_factory: Optional[RowFactory] = None,
-    ) -> ServerCursor:
+        self, *, binary: bool = False, row_factory: RowFactory[Row]
+    ) -> Cursor[Row]:
+        ...
+
+    @overload
+    def cursor(self, name: str, *, binary: bool = False) -> ServerCursor[Any]:
+        ...
+
+    @overload
+    def cursor(
+        self, name: str, *, binary: bool = False, row_factory: RowFactory[Row]
+    ) -> ServerCursor[Row]:
         ...
 
     def cursor(
@@ -517,8 +521,8 @@ class Connection(BaseConnection):
         name: str = "",
         *,
         binary: bool = False,
-        row_factory: Optional[RowFactory] = None,
-    ) -> Union[Cursor, ServerCursor]:
+        row_factory: Optional[RowFactory[Any]] = None,
+    ) -> Union[Cursor[Any], ServerCursor[Any]]:
         """
         Return a new cursor to send commands and queries to the connection.
         """
@@ -538,9 +542,9 @@ class Connection(BaseConnection):
         params: Optional[Params] = None,
         *,
         prepare: Optional[bool] = None,
-    ) -> Cursor:
+    ) -> Cursor[Any]:
         """Execute a query and return a cursor to read its results."""
-        cur = self.cursor()
+        cur: Cursor[Any] = self.cursor()
         try:
             return cur.execute(query, params, prepare=prepare)
         except e.Error as ex:
@@ -630,7 +634,7 @@ class AsyncConnection(BaseConnection):
         conninfo: str = "",
         *,
         autocommit: bool = False,
-        row_factory: RowFactory = tuple_row,
+        row_factory: RowFactory[Any] = tuple_row,
         **kwargs: Any,
     ) -> "AsyncConnection":
         return await cls._wait_conn(
@@ -678,19 +682,25 @@ class AsyncConnection(BaseConnection):
         self.pgconn.finish()
 
     @overload
-    def cursor(
-        self, *, binary: bool = False, row_factory: Optional[RowFactory] = None
-    ) -> AsyncCursor:
+    def cursor(self, *, binary: bool = False) -> AsyncCursor[Any]:
         ...
 
     @overload
     def cursor(
-        self,
-        name: str,
-        *,
-        binary: bool = False,
-        row_factory: Optional[RowFactory] = None,
-    ) -> AsyncServerCursor:
+        self, *, binary: bool = False, row_factory: RowFactory[Row]
+    ) -> AsyncCursor[Row]:
+        ...
+
+    @overload
+    def cursor(
+        self, name: str, *, binary: bool = False
+    ) -> AsyncServerCursor[Any]:
+        ...
+
+    @overload
+    def cursor(
+        self, name: str, *, binary: bool = False, row_factory: RowFactory[Row]
+    ) -> AsyncServerCursor[Row]:
         ...
 
     def cursor(
@@ -698,8 +708,8 @@ class AsyncConnection(BaseConnection):
         name: str = "",
         *,
         binary: bool = False,
-        row_factory: Optional[RowFactory] = None,
-    ) -> Union[AsyncCursor, AsyncServerCursor]:
+        row_factory: Optional[RowFactory[Any]] = None,
+    ) -> Union[AsyncCursor[Any], AsyncServerCursor[Any]]:
         """
         Return a new `AsyncCursor` to send commands and queries to the connection.
         """
@@ -719,8 +729,8 @@ class AsyncConnection(BaseConnection):
         params: Optional[Params] = None,
         *,
         prepare: Optional[bool] = None,
-    ) -> AsyncCursor:
-        cur = self.cursor()
+    ) -> AsyncCursor[Any]:
+        cur: AsyncCursor[Any] = self.cursor()
         try:
             return await cur.execute(query, params, prepare=prepare)
         except e.Error as ex:

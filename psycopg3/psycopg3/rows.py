@@ -16,9 +16,12 @@ if TYPE_CHECKING:
     from .cursor import BaseCursor
 
 
+TupleRow = Tuple[Any, ...]
+
+
 def tuple_row(
-    cursor: "BaseCursor[Any]",
-) -> Callable[[Sequence[Any]], Tuple[Any, ...]]:
+    cursor: "BaseCursor[Any, TupleRow]",
+) -> Callable[[Sequence[Any]], TupleRow]:
     """Row factory to represent rows as simple tuples.
 
     This is the default factory.
@@ -28,9 +31,12 @@ def tuple_row(
     return tuple
 
 
+DictRow = Dict[str, Any]
+
+
 def dict_row(
-    cursor: "BaseCursor[Any]",
-) -> Callable[[Sequence[Any]], Dict[str, Any]]:
+    cursor: "BaseCursor[Any, DictRow]",
+) -> Callable[[Sequence[Any]], DictRow]:
     """Row factory to represent rows as dicts.
 
     Note that this is not compatible with the DBAPI, which expects the records
@@ -48,7 +54,7 @@ def dict_row(
 
 
 def namedtuple_row(
-    cursor: "BaseCursor[Any]",
+    cursor: "BaseCursor[Any, NamedTuple]",
 ) -> Callable[[Sequence[Any]], NamedTuple]:
     """Row factory to represent rows as `~collections.namedtuple`."""
 

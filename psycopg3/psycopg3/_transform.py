@@ -161,7 +161,9 @@ class Transformer(AdaptContext):
             dumper = cache[key1] = dumper.upgrade(obj, format)
             return dumper
 
-    def load_rows(self, row0: int, row1: int, make_row: RowMaker) -> List[Row]:
+    def load_rows(
+        self, row0: int, row1: int, make_row: RowMaker[Row]
+    ) -> List[Row]:
         res = self._pgresult
         if not res:
             raise e.InterfaceError("result not set")
@@ -171,7 +173,7 @@ class Transformer(AdaptContext):
                 f"rows must be included between 0 and {self._ntuples}"
             )
 
-        records: List[Row] = []
+        records = []
         for row in range(row0, row1):
             record: List[Any] = [None] * self._nfields
             for col in range(self._nfields):
@@ -182,7 +184,7 @@ class Transformer(AdaptContext):
 
         return records
 
-    def load_row(self, row: int, make_row: RowMaker) -> Optional[Row]:
+    def load_row(self, row: int, make_row: RowMaker[Row]) -> Optional[Row]:
         res = self._pgresult
         if not res:
             return None
@@ -196,7 +198,7 @@ class Transformer(AdaptContext):
             if val is not None:
                 record[col] = self._row_loaders[col](val)
 
-        return make_row(record)  # type: ignore[no-any-return]
+        return make_row(record)
 
     def load_sequence(
         self, record: Sequence[Optional[bytes]]

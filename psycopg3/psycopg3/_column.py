@@ -23,7 +23,7 @@ class Column(Sequence[Any]):
 
     __module__ = "psycopg3"
 
-    def __init__(self, cursor: "BaseCursor[Any]", index: int):
+    def __init__(self, cursor: "BaseCursor[Any, Any]", index: int):
         res = cursor.pgresult
         assert res
 

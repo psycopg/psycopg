@@ -52,7 +52,7 @@ class BaseCopy(Generic[ConnectionType]):
 
     formatter: "Formatter"
 
-    def __init__(self, cursor: "BaseCursor[ConnectionType]"):
+    def __init__(self, cursor: "BaseCursor[ConnectionType, Any]"):
         self.cursor = cursor
         self.connection = cursor.connection
         self._pgconn = self.connection.pgconn
@@ -153,7 +153,7 @@ class Copy(BaseCopy["Connection"]):
 
     __module__ = "psycopg3"
 
-    def __init__(self, cursor: "Cursor"):
+    def __init__(self, cursor: "Cursor[Any]"):
         super().__init__(cursor)
         self._queue: queue.Queue[Optional[bytes]] = queue.Queue(
             maxsize=self.QUEUE_SIZE
@@ -285,7 +285,7 @@ class AsyncCopy(BaseCopy["AsyncConnection"]):
 
     __module__ = "psycopg3"
 
-    def __init__(self, cursor: "AsyncCursor"):
+    def __init__(self, cursor: "AsyncCursor[Any]"):
         super().__init__(cursor)
         self._queue: asyncio.Queue[Optional[bytes]] = asyncio.Queue(
             maxsize=self.QUEUE_SIZE

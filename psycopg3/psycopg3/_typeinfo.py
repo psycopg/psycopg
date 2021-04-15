@@ -72,7 +72,7 @@ class TypeInfo:
             name = name.as_string(conn)
         cur = conn.cursor(binary=True, row_factory=dict_row)
         cur.execute(cls._info_query, {"name": name})
-        recs: Sequence[Dict[str, Any]] = cur.fetchall()
+        recs = cur.fetchall()
         return cls._fetch(name, recs)
 
     @classmethod
@@ -91,7 +91,7 @@ class TypeInfo:
 
         cur = conn.cursor(binary=True, row_factory=dict_row)
         await cur.execute(cls._info_query, {"name": name})
-        recs: Sequence[Dict[str, Any]] = await cur.fetchall()
+        recs = await cur.fetchall()
         return cls._fetch(name, recs)
 
     @classmethod

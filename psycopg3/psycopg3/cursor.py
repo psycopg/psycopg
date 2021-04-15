@@ -17,7 +17,6 @@ from . import generators
 
 from .pq import ExecStatus, Format
 from .copy import Copy, AsyncCopy
-from .rows import tuple_row
 from .proto import ConnectionType, Query, Params, PQGen
 from .proto import Row, RowFactory
 from ._column import Column
@@ -42,7 +41,7 @@ else:
     execute = generators.execute
 
 
-class BaseCursor(Generic[ConnectionType]):
+class BaseCursor(Generic[ConnectionType, Row]):
     # Slots with __weakref__ and generic bases don't work on Py 3.6
     # https://bugs.python.org/issue41451
     if sys.version_info >= (3, 7):
@@ -61,7 +60,7 @@ class BaseCursor(Generic[ConnectionType]):
         connection: ConnectionType,
         *,
         format: Format = Format.TEXT,
-        row_factory: RowFactory = tuple_row,
+        row_factory: RowFactory[Row],
     ):
         self._conn = connection
         self.format = format
@@ -174,12 +173,12 @@ class BaseCursor(Generic[ConnectionType]):
             return None
 
     @property
-    def row_factory(self) -> RowFactory:
+    def row_factory(self) -> RowFactory[Row]:
         """Writable attribute to control how result rows are formed."""
         return self._row_factory
 
     @row_factory.setter
-    def row_factory(self, row_factory: RowFactory) -> None:
+    def row_factory(self, row_factory: RowFactory[Row]) -> None:
         self._row_factory = row_factory
         if self.pgresult:
             self._make_row = row_factory(self)
@@ -472,11 +471,11 @@ class BaseCursor(Generic[ConnectionType]):
         self._pgq = pgq
 
 
-class Cursor(BaseCursor["Connection"]):
+class Cursor(BaseCursor["Connection", Row]):
     __module__ = "psycopg3"
     __slots__ = ()
 
-    def __enter__(self) -> "Cursor":
+    def __enter__(self) -> "Cursor[Row]":
         return self
 
     def __exit__(
@@ -499,7 +498,7 @@ class Cursor(BaseCursor["Connection"]):
         params: Optional[Params] = None,
         *,
         prepare: Optional[bool] = None,
-    ) -> "Cursor":
+    ) -> "Cursor[Row]":
         """
         Execute a query or command to the database.
         """
@@ -561,7 +560,7 @@ class Cursor(BaseCursor["Connection"]):
 
         if not size:
             size = self.arraysize
-        records: List[Row] = self._tx.load_rows(
+        records = self._tx.load_rows(
             self._pos,
             min(self._pos + size, self.pgresult.ntuples),
             self._make_row,
@@ -577,7 +576,7 @@ class Cursor(BaseCursor["Connection"]):
         """
         self._check_result()
         assert self.pgresult
-        records: List[Row] = self._tx.load_rows(
+        records = self._tx.load_rows(
             self._pos, self.pgresult.ntuples, self._make_row
         )
         self._pos = self.pgresult.ntuples
@@ -623,11 +622,11 @@ class Cursor(BaseCursor["Connection"]):
             yield copy
 
 
-class AsyncCursor(BaseCursor["AsyncConnection"]):
+class AsyncCursor(BaseCursor["AsyncConnection", Row]):
     __module__ = "psycopg3"
     __slots__ = ()
 
-    async def __aenter__(self) -> "AsyncCursor":
+    async def __aenter__(self) -> "AsyncCursor[Row]":
         return self
 
     async def __aexit__(
@@ -647,7 +646,7 @@ class AsyncCursor(BaseCursor["AsyncConnection"]):
         params: Optional[Params] = None,
         *,
         prepare: Optional[bool] = None,
-    ) -> "AsyncCursor":
+    ) -> "AsyncCursor[Row]":
         try:
             async with self._conn.lock:
                 await self._conn.wait(
@@ -688,7 +687,7 @@ class AsyncCursor(BaseCursor["AsyncConnection"]):
 
         if not size:
             size = self.arraysize
-        records: List[Row] = self._tx.load_rows(
+        records = self._tx.load_rows(
             self._pos,
             min(self._pos + size, self.pgresult.ntuples),
             self._make_row,
@@ -699,7 +698,7 @@ class AsyncCursor(BaseCursor["AsyncConnection"]):
     async def fetchall(self) -> List[Row]:
         self._check_result()
         assert self.pgresult
-        records: List[Row] = self._tx.load_rows(
+        records = self._tx.load_rows(
             self._pos, self.pgresult.ntuples, self._make_row
         )
         self._pos = self.pgresult.ntuples

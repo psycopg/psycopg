@@ -48,15 +48,16 @@ Wait states.
 # Row factories
 
 Row = TypeVar("Row")
+Row_co = TypeVar("Row_co", covariant=True)
 
 
-class RowMaker(Protocol):
-    def __call__(self, __values: Sequence[Any]) -> Any:
+class RowMaker(Protocol[Row_co]):
+    def __call__(self, __values: Sequence[Any]) -> Row_co:
         ...
 
 
-class RowFactory(Protocol):
-    def __call__(self, __cursor: "BaseCursor[Any]") -> RowMaker:
+class RowFactory(Protocol[Row]):
+    def __call__(self, __cursor: "BaseCursor[Any, Row]") -> RowMaker[Row]:
         ...
 
 
@@ -119,10 +120,12 @@ class Transformer(Protocol):
     def get_dumper(self, obj: Any, format: Format) -> "Dumper":
         ...
 
-    def load_rows(self, row0: int, row1: int, make_row: RowMaker) -> List[Row]:
+    def load_rows(
+        self, row0: int, row1: int, make_row: RowMaker[Row]
+    ) -> List[Row]:
         ...
 
-    def load_row(self, row: int, make_row: RowMaker) -> Optional[Row]:
+    def load_row(self, row: int, make_row: RowMaker[Row]) -> Optional[Row]:
         ...
 
     def load_sequence(
