@@ -146,7 +146,7 @@ def test_configure(dsn):
         with conn.transaction():
             conn.execute("set default_transaction_read_only to on")
 
-    with pool.ConnectionPool(min_size=1, configure=configure) as p:
+    with pool.ConnectionPool(dsn, min_size=1, configure=configure) as p:
         p.wait(timeout=1.0)
         with p.connection() as conn:
             assert inits == 1
@@ -172,7 +172,7 @@ def test_configure_badstate(dsn, caplog):
     def configure(conn):
         conn.execute("select 1")
 
-    with pool.ConnectionPool(min_size=1, configure=configure) as p:
+    with pool.ConnectionPool(dsn, min_size=1, configure=configure) as p:
         with pytest.raises(pool.PoolTimeout):
             p.wait(timeout=0.5)
 
@@ -188,7 +188,7 @@ def test_configure_broken(dsn, caplog):
         with conn.transaction():
             conn.execute("WAT")
 
-    with pool.ConnectionPool(min_size=1, configure=configure) as p:
+    with pool.ConnectionPool(dsn, min_size=1, configure=configure) as p:
         with pytest.raises(pool.PoolTimeout):
             p.wait(timeout=0.5)
 
@@ -209,7 +209,7 @@ def test_reset(dsn):
         with conn.transaction():
             conn.execute("set timezone to utc")
 
-    with pool.ConnectionPool(min_size=1, reset=reset) as p:
+    with pool.ConnectionPool(dsn, min_size=1, reset=reset) as p:
         with p.connection() as conn:
             assert resets == 0
             conn.execute("set timezone to '+2:00'")
@@ -231,7 +231,7 @@ def test_reset_badstate(dsn, caplog):
     def reset(conn):
         conn.execute("reset all")
 
-    with pool.ConnectionPool(min_size=1, reset=reset) as p:
+    with pool.ConnectionPool(dsn, min_size=1, reset=reset) as p:
         with p.connection() as conn:
             conn.execute("select 1")
             pid1 = conn.pgconn.backend_pid
@@ -252,7 +252,7 @@ def test_reset_broken(dsn, caplog):
         with conn.transaction():
             conn.execute("WAT")
 
-    with pool.ConnectionPool(min_size=1, reset=reset) as p:
+    with pool.ConnectionPool(dsn, min_size=1, reset=reset) as p:
         with p.connection() as conn:
             conn.execute("select 1")
             pid1 = conn.pgconn.backend_pid
