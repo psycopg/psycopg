@@ -162,7 +162,9 @@ async def test_configure(dsn):
         async with conn.transaction():
             await conn.execute("set default_transaction_read_only to on")
 
-    async with pool.AsyncConnectionPool(min_size=1, configure=configure) as p:
+    async with pool.AsyncConnectionPool(
+        dsn, min_size=1, configure=configure
+    ) as p:
         await p.wait(timeout=1.0)
         async with p.connection() as conn:
             assert inits == 1
@@ -188,7 +190,9 @@ async def test_configure_badstate(dsn, caplog):
     async def configure(conn):
         await conn.execute("select 1")
 
-    async with pool.AsyncConnectionPool(min_size=1, configure=configure) as p:
+    async with pool.AsyncConnectionPool(
+        dsn, min_size=1, configure=configure
+    ) as p:
         with pytest.raises(pool.PoolTimeout):
             await p.wait(timeout=0.5)
 
@@ -204,7 +208,9 @@ async def test_configure_broken(dsn, caplog):
         async with conn.transaction():
             await conn.execute("WAT")
 
-    async with pool.AsyncConnectionPool(min_size=1, configure=configure) as p:
+    async with pool.AsyncConnectionPool(
+        dsn, min_size=1, configure=configure
+    ) as p:
         with pytest.raises(pool.PoolTimeout):
             await p.wait(timeout=0.5)
 
@@ -225,7 +231,7 @@ async def test_reset(dsn):
         async with conn.transaction():
             await conn.execute("set timezone to utc")
 
-    async with pool.AsyncConnectionPool(min_size=1, reset=reset) as p:
+    async with pool.AsyncConnectionPool(dsn, min_size=1, reset=reset) as p:
         async with p.connection() as conn:
             assert resets == 0
             await conn.execute("set timezone to '+2:00'")
@@ -247,7 +253,7 @@ async def test_reset_badstate(dsn, caplog):
     async def reset(conn):
         await conn.execute("reset all")
 
-    async with pool.AsyncConnectionPool(min_size=1, reset=reset) as p:
+    async with pool.AsyncConnectionPool(dsn, min_size=1, reset=reset) as p:
         async with p.connection() as conn:
             await conn.execute("select 1")
             pid1 = conn.pgconn.backend_pid
@@ -268,7 +274,7 @@ async def test_reset_broken(dsn, caplog):
         async with conn.transaction():
             await conn.execute("WAT")
 
-    async with pool.AsyncConnectionPool(min_size=1, reset=reset) as p:
+    async with pool.AsyncConnectionPool(dsn, min_size=1, reset=reset) as p:
         async with p.connection() as conn:
             await conn.execute("select 1")
             pid1 = conn.pgconn.backend_pid
