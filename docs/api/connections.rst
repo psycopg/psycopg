@@ -253,20 +253,25 @@ Connection support objects
 
     The object is usually returned by `Connection.info`.
 
+    .. autoproperty:: status
+    .. autoproperty:: transaction_status
+    .. autoproperty:: server_version
+    .. automethod:: get_parameters
+
     .. autoproperty:: host
     .. autoproperty:: port
     .. autoproperty:: dbname
     .. autoproperty:: user
     .. autoproperty:: password
     .. autoproperty:: options
-    .. autoproperty:: status
-    .. autoproperty:: transaction_status
-    .. automethod:: get_parameters
     .. automethod:: parameter_status
 
         Example of parameters are ``server_version``,
         ``standard_conforming_string``... See :pq:`PQparameterStatus()` for
         all the available parameters.
+
+    .. autoproperty:: protocol_version
+
 
 .. rubric:: Objects involved in :ref:`transactions`
 

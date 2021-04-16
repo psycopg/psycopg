@@ -179,6 +179,23 @@ class ConnectionInfo:
         res = self.pgconn.parameter_status(param_name.encode(self._pyenc))
         return res.decode(self._pyenc) if res is not None else None
 
+    @property
+    def server_version(self) -> int:
+        """An integer representing the server version.
+
+        The number is formed by converting the major, minor, and revision
+        numbers into two-decimal-digit numbers and appending them together.
+        After PostgreSQL 10 the minor version was dropped, so the second group
+        of digits is always 00. For example, version 9.3.5 will be returned as
+        90305, version 10.2 as 100002. See :pq:`PQserverVersion()`.
+        """
+        return self.pgconn.server_version
+
+    @property
+    def protocol_version(self) -> int:
+        """The frontend/backend protocol currently used."""
+        return self.pgconn.protocol_version
+
     def _get_pgconn_attr(self, name: str) -> str:
         value: bytes = getattr(self.pgconn, name)
         return value.decode(self._pyenc)

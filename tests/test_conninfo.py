@@ -153,3 +153,9 @@ class TestConnectionInfo:
         tz = conn.info.parameter_status("TimeZone")
         assert tz and isinstance(tz, str)
         assert tz == conn.execute("show timezone").fetchone()[0]
+
+    def test_server_version(self, conn):
+        assert conn.info.server_version == conn.pgconn.server_version
+
+    def test_protocol_version(self, conn):
+        assert conn.info.protocol_version >= 3
