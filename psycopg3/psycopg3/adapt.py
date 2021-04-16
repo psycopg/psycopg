@@ -39,7 +39,7 @@ class Dumper(ABC):
             context.connection if context else None
         )
 
-        self.oid = self._oid
+        self.oid: int = self._oid
         """The oid to pass to the server, if known."""
 
     @abstractmethod

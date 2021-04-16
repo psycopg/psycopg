@@ -179,7 +179,7 @@ class ServerCursor(BaseCursor["Connection"]):
         super().__init__(connection, format=format, row_factory=row_factory)
         self._helper: ServerCursorHelper["Connection"]
         self._helper = ServerCursorHelper(name)
-        self.itersize = DEFAULT_ITERSIZE
+        self.itersize: int = DEFAULT_ITERSIZE
 
     def __del__(self) -> None:
         if not self._closed:
@@ -300,7 +300,7 @@ class AsyncServerCursor(BaseCursor["AsyncConnection"]):
         super().__init__(connection, format=format, row_factory=row_factory)
         self._helper: ServerCursorHelper["AsyncConnection"]
         self._helper = ServerCursorHelper(name)
-        self.itersize = DEFAULT_ITERSIZE
+        self.itersize: int = DEFAULT_ITERSIZE
 
     def __del__(self) -> None:
         if not self._closed:

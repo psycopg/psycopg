@@ -564,6 +564,7 @@ class Connection(BaseConnection):
             transaction. If `!None`, one will be chosen automatically.
         :param force_rollback: Roll back the transaction at the end of the
             block even if there were no error (e.g. to try a no-op process).
+        :rtype: Transaction
         """
         with Transaction(self, savepoint_name, force_rollback) as tx:
             yield tx
@@ -736,6 +737,8 @@ class AsyncConnection(BaseConnection):
     ) -> AsyncIterator[AsyncTransaction]:
         """
         Start a context block with a new transaction or nested transaction.
+
+        :rtype: AsyncTransaction
         """
         tx = AsyncTransaction(self, savepoint_name, force_rollback)
         async with tx:

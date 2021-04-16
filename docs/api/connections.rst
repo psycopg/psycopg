@@ -62,10 +62,7 @@ The `!Connection` class
             close the connection automatically when the block is exited.
 
     .. autoattribute:: closed
-        :annotation: bool
-
     .. autoattribute:: broken
-        :annotation: bool
 
 
     .. method:: cursor(*, binary: bool = False, row_factory: Optional[RowFactory] = None) -> Cursor
@@ -115,7 +112,7 @@ The `!Connection` class
 
     .. automethod:: commit()
     .. automethod:: rollback()
-    .. automethod:: transaction(savepoint_name: Optional[str] = None, force_rollback: bool = False) -> Transaction
+    .. automethod:: transaction
 
         .. note:: It must be called as ``with conn.transaction() as tx: ...``
 
@@ -123,7 +120,6 @@ The `!Connection` class
         or `rollback()`.
 
     .. autoattribute:: autocommit
-        :annotation: bool
 
         The property is writable for sync connections, read-only for async
         ones: you should call ``await`` `~AsyncConnection.set_autocommit`\
@@ -132,7 +128,6 @@ The `!Connection` class
     .. rubric:: Checking and configuring the connection state
 
     .. autoattribute:: client_encoding
-        :annotation: str
 
         The property is writable for sync connections, read-only for async
         ones: you should call ``await`` `~AsyncConnection.set_client_encoding`\
@@ -168,17 +163,14 @@ The `!Connection` class
 
         TODO
 
-
     .. automethod:: fileno
 
     .. autoattribute:: prepare_threshold
-        :annotation: Optional[int]
 
         See :ref:`prepared-statements` for details.
 
 
     .. autoattribute:: prepared_max
-        :annotation: int
 
         If more queries need to be prepared, old ones are deallocated__.
 
@@ -187,6 +179,8 @@ The `!Connection` class
 
     .. rubric:: Methods you can use to do something cool
 
+    .. automethod:: cancel
+
     .. automethod:: notifies
 
         Notifies are recevied after using :sql:`LISTEN` in a connection, when
@@ -194,15 +188,17 @@ The `!Connection` class
         listened channels.
 
     .. automethod:: add_notify_handler
+
+        :param callback: a callable taking a `Notify` parameter.
+
     .. automethod:: remove_notify_handler
 
     See :ref:`async-notify` for details.
 
-    .. automethod:: cancel
     .. automethod:: add_notice_handler
 
-        The argument of the callback is a `~psycopg3.errors.Diagnostic` object
-        containing all the details about the notice.
+        :param callback: a callable taking a `~psycopg3.errors.Diagnostic`
+            object containing all the details about the notice.
 
     .. automethod:: remove_notice_handler
 
@@ -237,7 +233,7 @@ The `!AsyncConnection` class
     .. automethod:: commit
     .. automethod:: rollback
 
-    .. automethod:: transaction(savepoint_name: Optional[str] = None, force_rollback: bool = False) -> AsyncTransaction
+    .. automethod:: transaction
 
         .. note:: It must be called as ``async with conn.transaction() as tx: ...``.
 
@@ -261,9 +257,10 @@ Connection support objects
 
     .. autoproperty:: savepoint_name
     .. autoattribute:: connection
-        :annotation: Connection
 
 .. autoclass:: AsyncTransaction()
+
+    .. autoattribute:: connection
 
 .. autoexception:: Rollback
 

@@ -6,6 +6,7 @@ Customisation for docs generation.
 
 import os
 import re
+import logging
 import importlib
 from typing import Dict
 from collections import deque
@@ -38,6 +39,12 @@ def setup(app):
 
     recover_defined_module(psycopg3)
     monkeypatch_autodoc()
+
+    # Disable warnings in sphinx_autodoc_typehints because it doesn't seem that
+    # there is a workaround for: "WARNING: Cannot resolve forward reference in
+    # type annotations"
+    logger = logging.getLogger("sphinx.sphinx_autodoc_typehints")
+    logger.setLevel(logging.ERROR)
 
 
 # Classes which may have __module__ overwritten

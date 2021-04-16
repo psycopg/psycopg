@@ -37,6 +37,7 @@ release = "UNRELEASED"
 extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.intersphinx",
+    "sphinx_autodoc_typehints",
     "sql_role",
     "pg3_docs",
     "libpq_docs",

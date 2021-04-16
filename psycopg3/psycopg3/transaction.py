@@ -55,11 +55,6 @@ class BaseTransaction(Generic[ConnectionType]):
         self._entered = self._exited = False
 
     @property
-    def connection(self) -> ConnectionType:
-        """The connection the object is managing."""
-        return self._conn
-
-    @property
     def savepoint_name(self) -> Optional[str]:
         """
         The name of the savepoint; `!None` if handling the main transaction.
@@ -183,6 +178,11 @@ class Transaction(BaseTransaction["Connection"]):
 
     __module__ = "psycopg3"
 
+    @property
+    def connection(self) -> "Connection":
+        """The connection the object is managing."""
+        return self._conn
+
     def __enter__(self) -> "Transaction":
         with self._conn.lock:
             self._conn.wait(self._enter_gen())
@@ -204,6 +204,10 @@ class AsyncTransaction(BaseTransaction["AsyncConnection"]):
     """
 
     __module__ = "psycopg3"
+
+    @property
+    def connection(self) -> "AsyncConnection":
+        return self._conn
 
     async def __aenter__(self) -> "AsyncTransaction":
         async with self._conn.lock:

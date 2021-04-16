@@ -175,6 +175,7 @@ class BaseCursor(Generic[ConnectionType]):
 
     @property
     def row_factory(self) -> RowFactory:
+        """Writable attribute to control how result rows are formed."""
         return self._row_factory
 
     @row_factory.setter
@@ -538,6 +539,8 @@ class Cursor(BaseCursor["Connection"]):
         Return the next record from the current recordset.
 
         Return `!None` the recordset is finished.
+
+        :rtype: Optional[Row], with Row defined by `row_factory`
         """
         self._check_result()
         record = self._tx.load_row(self._pos)
@@ -545,11 +548,13 @@ class Cursor(BaseCursor["Connection"]):
             self._pos += 1
         return record  # type: ignore[no-any-return]
 
-    def fetchmany(self, size: int = 0) -> Sequence[Row]:
+    def fetchmany(self, size: int = 0) -> List[Row]:
         """
         Return the next *size* records from the current recordset.
 
         *size* default to `!self.arraysize` if not specified.
+
+        :rtype: Sequence[Row], with Row defined by `row_factory`
         """
         self._check_result()
         assert self.pgresult
@@ -562,9 +567,11 @@ class Cursor(BaseCursor["Connection"]):
         self._pos += len(records)
         return records
 
-    def fetchall(self) -> Sequence[Row]:
+    def fetchall(self) -> List[Row]:
         """
         Return all the remaining records from the current recordset.
+
+        :rtype: Sequence[Row], with Row defined by `row_factory`
         """
         self._check_result()
         assert self.pgresult
@@ -601,6 +608,8 @@ class Cursor(BaseCursor["Connection"]):
     def copy(self, statement: Query) -> Iterator[Copy]:
         """
         Initiate a :sql:`COPY` operation and return an object to manage it.
+
+        :rtype: Copy
         """
         with self._conn.lock:
             self._conn.wait(self._start_copy_gen(statement))
@@ -704,6 +713,9 @@ class AsyncCursor(BaseCursor["AsyncConnection"]):
 
     @asynccontextmanager
     async def copy(self, statement: Query) -> AsyncIterator[AsyncCopy]:
+        """
+        :rtype: AsyncCopy
+        """
         async with self._conn.lock:
             await self._conn.wait(self._start_copy_gen(statement))
 

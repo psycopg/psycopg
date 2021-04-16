@@ -57,7 +57,6 @@ Module content
 --------------
 
 .. autodata:: __impl__
-    :annotation: str:
 
     The choice of implementation is automatic but can be forced setting the
     :envvar:`PSYCOPG3_IMPL` env var.

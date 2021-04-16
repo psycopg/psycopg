@@ -159,7 +159,6 @@ Objects involved in types adaptation
         your cake. Don't tell me I didn't warn you.
 
     .. autoattribute:: oid
-        :annotation: int
 
         .. admonition:: todo
 

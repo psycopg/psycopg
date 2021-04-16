@@ -46,7 +46,6 @@ The `!Cursor` class
             to close the cursor automatically when the block is exited.
 
     .. autoattribute:: closed
-        :annotation: bool
 
     .. rubric:: Methods to send commands
 
@@ -127,6 +126,14 @@ The `!Cursor` class
     .. note:: cursors are iterable objects, so just using ``for record in
         cursor`` syntax will iterate on the records in the current recordset.
 
+    .. autoproperty:: row_factory
+
+        The property affects the objects returned by the `fetchone()`,
+        `fetchmany()`, `fetchall()` methods. The default
+        (`~psycopg3.rows.tuple_row`) returns a tuple for each record fetched.
+
+        See :ref:`row-factories` for details.
+
     .. automethod:: fetchone
     .. automethod:: fetchmany
     .. automethod:: fetchall
@@ -141,28 +148,22 @@ The `!Cursor` class
 
     .. rubric:: Information about the data
 
-    .. attribute:: description
-        :type: Optional[List[Column]]
+    .. autoattribute:: description
 
         A list of objects describing each column of the current queryset.
 
         `!None` if the last operation didn't return a queryset.
 
     .. autoattribute:: rowcount
-        :annotation: int
-
     .. autoattribute:: rownumber
-        :annotation: int
 
     .. autoattribute:: query
-        :annotation: Optional[bytes]
 
         The query will be in PostgreSQL format (with ``$1``, ``$2``...
         parameters), the parameters will *not* be merged to the query: see
         `params`.
 
     .. autoattribute:: params
-        :annotation: Optional[List[Optional[bytes]]]
 
         The parameters are adapted to PostgreSQL format.
 
@@ -185,7 +186,6 @@ The `!ServerCursor` class
     documented the differences:
 
     .. autoattribute:: name
-        :annotation: str
 
     .. automethod:: close
 
@@ -239,7 +239,6 @@ The `!ServerCursor` class
             batches of `itersize` to reduce the number of server roundtrips.
 
     .. autoattribute:: itersize
-        :annotation: int
 
         Number of records to fetch at time when iterating on the cursor. The
         default is 100.
