@@ -148,7 +148,7 @@ class BaseCopy(Generic[ConnectionType]):
         self._finished = True
 
 
-class Copy(BaseCopy["Connection"]):
+class Copy(BaseCopy["Connection[Any]"]):
     """Manage a :sql:`COPY` operation."""
 
     __module__ = "psycopg3"
@@ -280,7 +280,7 @@ class Copy(BaseCopy["Connection"]):
             self._worker = None  # break the loop
 
 
-class AsyncCopy(BaseCopy["AsyncConnection"]):
+class AsyncCopy(BaseCopy["AsyncConnection[Any]"]):
     """Manage an asynchronous :sql:`COPY` operation."""
 
     __module__ = "psycopg3"

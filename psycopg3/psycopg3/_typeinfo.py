@@ -55,7 +55,7 @@ class TypeInfo:
 
     @classmethod
     def fetch(
-        cls: Type[T], conn: "Connection", name: Union[str, "Identifier"]
+        cls: Type[T], conn: "Connection[Any]", name: Union[str, "Identifier"]
     ) -> Optional[T]:
         """
         Query a system catalog to read information about a type.
@@ -77,7 +77,9 @@ class TypeInfo:
 
     @classmethod
     async def fetch_async(
-        cls: Type[T], conn: "AsyncConnection", name: Union[str, "Identifier"]
+        cls: Type[T],
+        conn: "AsyncConnection[Any]",
+        name: Union[str, "Identifier"],
     ) -> Optional[T]:
         """
         Query a system catalog to read information about a type.

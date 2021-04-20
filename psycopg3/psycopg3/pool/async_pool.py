@@ -27,16 +27,18 @@ from .errors import PoolClosed, PoolTimeout, TooManyRequests
 logger = logging.getLogger("psycopg3.pool")
 
 
-class AsyncConnectionPool(BasePool[AsyncConnection]):
+class AsyncConnectionPool(BasePool[AsyncConnection[Any]]):
     def __init__(
         self,
         conninfo: str = "",
         *,
-        connection_class: Type[AsyncConnection] = AsyncConnection,
+        connection_class: Type[AsyncConnection[Any]] = AsyncConnection,
         configure: Optional[
-            Callable[[AsyncConnection], Awaitable[None]]
+            Callable[[AsyncConnection[Any]], Awaitable[None]]
         ] = None,
-        reset: Optional[Callable[[AsyncConnection], Awaitable[None]]] = None,
+        reset: Optional[
+            Callable[[AsyncConnection[Any]], Awaitable[None]]
+        ] = None,
         **kwargs: Any,
     ):
         # https://bugs.python.org/issue42600
@@ -104,7 +106,7 @@ class AsyncConnectionPool(BasePool[AsyncConnection]):
     @asynccontextmanager
     async def connection(
         self, timeout: Optional[float] = None
-    ) -> AsyncIterator[AsyncConnection]:
+    ) -> AsyncIterator[AsyncConnection[Any]]:
         conn = await self.getconn(timeout=timeout)
         t0 = monotonic()
         try:
@@ -117,7 +119,7 @@ class AsyncConnectionPool(BasePool[AsyncConnection]):
 
     async def getconn(
         self, timeout: Optional[float] = None
-    ) -> AsyncConnection:
+    ) -> AsyncConnection[Any]:
         logger.info("connection requested from %r", self.name)
         self._stats[self._REQUESTS_NUM] += 1
         # Critical section: decide here if there's a connection ready
@@ -177,7 +179,7 @@ class AsyncConnectionPool(BasePool[AsyncConnection]):
         logger.info("connection given by %r", self.name)
         return conn
 
-    async def putconn(self, conn: AsyncConnection) -> None:
+    async def putconn(self, conn: AsyncConnection[Any]) -> None:
         # Quick check to discard the wrong connection
         pool = getattr(conn, "_pool", None)
         if pool is not self:
@@ -343,7 +345,7 @@ class AsyncConnectionPool(BasePool[AsyncConnection]):
                     ex,
                 )
 
-    async def _connect(self) -> AsyncConnection:
+    async def _connect(self) -> AsyncConnection[Any]:
         """Return a new connection configured for the pool."""
         self._stats[self._CONNECTIONS_NUM] += 1
         t0 = monotonic()
@@ -426,7 +428,7 @@ class AsyncConnectionPool(BasePool[AsyncConnection]):
                 else:
                     self._growing = False
 
-    async def _return_connection(self, conn: AsyncConnection) -> None:
+    async def _return_connection(self, conn: AsyncConnection[Any]) -> None:
         """
         Return a connection to the pool after usage.
         """
@@ -447,7 +449,7 @@ class AsyncConnectionPool(BasePool[AsyncConnection]):
 
         await self._add_to_pool(conn)
 
-    async def _add_to_pool(self, conn: AsyncConnection) -> None:
+    async def _add_to_pool(self, conn: AsyncConnection[Any]) -> None:
         """
         Add a connection to the pool.
 
@@ -481,7 +483,7 @@ class AsyncConnectionPool(BasePool[AsyncConnection]):
                 if self._pool_full_event and len(self._pool) >= self._nconns:
                     self._pool_full_event.set()
 
-    async def _reset_connection(self, conn: AsyncConnection) -> None:
+    async def _reset_connection(self, conn: AsyncConnection[Any]) -> None:
         """
         Bring a connection to IDLE state or close it.
         """
@@ -523,7 +525,7 @@ class AsyncConnectionPool(BasePool[AsyncConnection]):
                 await conn.close()
 
     async def _shrink_pool(self) -> None:
-        to_close: Optional[AsyncConnection] = None
+        to_close: Optional[AsyncConnection[Any]] = None
 
         async with self._lock:
             # Reset the min number of connections used
@@ -559,7 +561,7 @@ class AsyncClient:
     __slots__ = ("conn", "error", "_cond")
 
     def __init__(self) -> None:
-        self.conn: Optional[AsyncConnection] = None
+        self.conn: Optional[AsyncConnection[Any]] = None
         self.error: Optional[Exception] = None
 
         # The AsyncClient behaves in a way similar to an Event, but we need
@@ -569,7 +571,7 @@ class AsyncClient:
         # will be lost.
         self._cond = asyncio.Condition()
 
-    async def wait(self, timeout: float) -> AsyncConnection:
+    async def wait(self, timeout: float) -> AsyncConnection[Any]:
         """Wait for a connection to be set and return it.
 
         Raise an exception if the wait times out or if fail() is called.
@@ -589,7 +591,7 @@ class AsyncClient:
             assert self.error
             raise self.error
 
-    async def set(self, conn: AsyncConnection) -> bool:
+    async def set(self, conn: AsyncConnection[Any]) -> bool:
         """Signal the client waiting that a connection is ready.
 
         Return True if the client has "accepted" the connection, False
@@ -685,7 +687,9 @@ class AddConnection(MaintenanceTask):
 class ReturnConnection(MaintenanceTask):
     """Clean up and return a connection to the pool."""
 
-    def __init__(self, pool: "AsyncConnectionPool", conn: "AsyncConnection"):
+    def __init__(
+        self, pool: "AsyncConnectionPool", conn: "AsyncConnection[Any]"
+    ):
         super().__init__(pool)
         self.conn = conn
 
@@ -715,7 +719,10 @@ class Schedule(MaintenanceTask):
     """
 
     def __init__(
-        self, pool: "AsyncConnectionPool", task: MaintenanceTask, delay: float
+        self,
+        pool: "AsyncConnectionPool",
+        task: MaintenanceTask,
+        delay: float,
     ):
         super().__init__(pool)
         self.task = task

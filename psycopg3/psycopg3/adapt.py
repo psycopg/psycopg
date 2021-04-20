@@ -35,7 +35,7 @@ class Dumper(ABC):
 
     def __init__(self, cls: type, context: Optional[AdaptContext] = None):
         self.cls = cls
-        self.connection: Optional["BaseConnection"] = (
+        self.connection: Optional["BaseConnection[Any]"] = (
             context.connection if context else None
         )
 
@@ -109,7 +109,7 @@ class Loader(ABC):
 
     def __init__(self, oid: int, context: Optional[AdaptContext] = None):
         self.oid = oid
-        self.connection: Optional["BaseConnection"] = (
+        self.connection: Optional["BaseConnection[Any]"] = (
             context.connection if context else None
         )
 
@@ -170,7 +170,7 @@ class AdaptersMap(AdaptContext):
         return self
 
     @property
-    def connection(self) -> Optional["BaseConnection"]:
+    def connection(self) -> Optional["BaseConnection[Any]"]:
         return None
 
     def register_dumper(

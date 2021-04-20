@@ -471,7 +471,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
         self._pgq = pgq
 
 
-class Cursor(BaseCursor["Connection", Row]):
+class Cursor(BaseCursor["Connection[Any]", Row]):
     __module__ = "psycopg3"
     __slots__ = ()
 
@@ -622,7 +622,7 @@ class Cursor(BaseCursor["Connection", Row]):
             yield copy
 
 
-class AsyncCursor(BaseCursor["AsyncConnection", Row]):
+class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
     __module__ = "psycopg3"
     __slots__ = ()
 

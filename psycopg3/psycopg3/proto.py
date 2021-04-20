@@ -24,7 +24,7 @@ Buffer = Union[bytes, bytearray, memoryview]
 
 Query = Union[str, bytes, "Composable"]
 Params = Union[Sequence[Any], Mapping[str, Any]]
-ConnectionType = TypeVar("ConnectionType", bound="BaseConnection")
+ConnectionType = TypeVar("ConnectionType", bound="BaseConnection[Any]")
 
 
 # Waiting protocol types
@@ -49,6 +49,8 @@ Wait states.
 
 Row = TypeVar("Row")
 Row_co = TypeVar("Row_co", covariant=True)
+# Type variable for Connection (other are for Cursor).
+RowConn = TypeVar("RowConn")
 
 
 class RowMaker(Protocol[Row_co]):
@@ -82,7 +84,7 @@ class AdaptContext(Protocol):
         ...
 
     @property
-    def connection(self) -> Optional["BaseConnection"]:
+    def connection(self) -> Optional["BaseConnection[Any]"]:
         ...
 
 
@@ -91,7 +93,7 @@ class Transformer(Protocol):
         ...
 
     @property
-    def connection(self) -> Optional["BaseConnection"]:
+    def connection(self) -> Optional["BaseConnection[Any]"]:
         ...
 
     @property

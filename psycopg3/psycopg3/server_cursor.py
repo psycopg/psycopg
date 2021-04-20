@@ -16,6 +16,7 @@ from .cursor import BaseCursor, execute
 from .proto import ConnectionType, Query, Params, PQGen, Row, RowFactory
 
 if TYPE_CHECKING:
+    from typing import Any  # noqa: F401
     from .connection import BaseConnection  # noqa: F401
     from .connection import Connection, AsyncConnection  # noqa: F401
 
@@ -165,20 +166,20 @@ class ServerCursorHelper(Generic[ConnectionType, Row]):
         return sql.SQL(" ").join(parts)
 
 
-class ServerCursor(BaseCursor["Connection", Row]):
+class ServerCursor(BaseCursor["Connection[Any]", Row]):
     __module__ = "psycopg3"
     __slots__ = ("_helper", "itersize")
 
     def __init__(
         self,
-        connection: "Connection",
+        connection: "Connection[Any]",
         name: str,
         *,
         format: pq.Format = pq.Format.TEXT,
         row_factory: RowFactory[Row],
     ):
         super().__init__(connection, format=format, row_factory=row_factory)
-        self._helper: ServerCursorHelper["Connection", Row]
+        self._helper: ServerCursorHelper["Connection[Any]", Row]
         self._helper = ServerCursorHelper(name)
         self.itersize: int = DEFAULT_ITERSIZE
 
@@ -286,20 +287,20 @@ class ServerCursor(BaseCursor["Connection", Row]):
             self._pos = value
 
 
-class AsyncServerCursor(BaseCursor["AsyncConnection", Row]):
+class AsyncServerCursor(BaseCursor["AsyncConnection[Any]", Row]):
     __module__ = "psycopg3"
     __slots__ = ("_helper", "itersize")
 
     def __init__(
         self,
-        connection: "AsyncConnection",
+        connection: "AsyncConnection[Any]",
         name: str,
         *,
         format: pq.Format = pq.Format.TEXT,
         row_factory: RowFactory[Row],
     ):
         super().__init__(connection, format=format, row_factory=row_factory)
-        self._helper: ServerCursorHelper["AsyncConnection", Row]
+        self._helper: ServerCursorHelper["AsyncConnection[Any]", Row]
         self._helper = ServerCursorHelper(name)
         self.itersize: int = DEFAULT_ITERSIZE
 

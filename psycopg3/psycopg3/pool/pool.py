@@ -10,7 +10,8 @@ from abc import ABC, abstractmethod
 from time import monotonic
 from queue import Queue, Empty
 from types import TracebackType
-from typing import Any, Callable, Deque, Dict, Iterator, List, Optional, Type
+from typing import Any, Callable, Deque, Dict, Iterator, List
+from typing import Optional, Type
 from weakref import ref
 from contextlib import contextmanager
 from collections import deque
@@ -26,14 +27,14 @@ from .errors import PoolClosed, PoolTimeout, TooManyRequests
 logger = logging.getLogger("psycopg3.pool")
 
 
-class ConnectionPool(BasePool[Connection]):
+class ConnectionPool(BasePool[Connection[Any]]):
     def __init__(
         self,
         conninfo: str = "",
         *,
-        connection_class: Type[Connection] = Connection,
-        configure: Optional[Callable[[Connection], None]] = None,
-        reset: Optional[Callable[[Connection], None]] = None,
+        connection_class: Type[Connection[Any]] = Connection,
+        configure: Optional[Callable[[Connection[Any]], None]] = None,
+        reset: Optional[Callable[[Connection[Any]], None]] = None,
         **kwargs: Any,
     ):
         self.connection_class = connection_class
@@ -128,7 +129,7 @@ class ConnectionPool(BasePool[Connection]):
     @contextmanager
     def connection(
         self, timeout: Optional[float] = None
-    ) -> Iterator[Connection]:
+    ) -> Iterator[Connection[Any]]:
         """Context manager to obtain a connection from the pool.
 
         Returned the connection immediately if available, otherwise wait up to
@@ -151,7 +152,7 @@ class ConnectionPool(BasePool[Connection]):
             self._stats[self._USAGE_MS] += int(1000.0 * (t1 - t0))
             self.putconn(conn)
 
-    def getconn(self, timeout: Optional[float] = None) -> Connection:
+    def getconn(self, timeout: Optional[float] = None) -> Connection[Any]:
         """Obtain a contection from the pool.
 
         You should preferrably use `connection()`. Use this function only if
@@ -221,7 +222,7 @@ class ConnectionPool(BasePool[Connection]):
         logger.info("connection given by %r", self.name)
         return conn
 
-    def putconn(self, conn: Connection) -> None:
+    def putconn(self, conn: Connection[Any]) -> None:
         """Return a connection to the loving hands of its pool.
 
         Use this function only paired with a `getconn()`. You don't need to use
@@ -416,7 +417,7 @@ class ConnectionPool(BasePool[Connection]):
                     ex,
                 )
 
-    def _connect(self) -> Connection:
+    def _connect(self) -> Connection[Any]:
         """Return a new connection configured for the pool."""
         self._stats[self._CONNECTIONS_NUM] += 1
         t0 = monotonic()
@@ -497,7 +498,7 @@ class ConnectionPool(BasePool[Connection]):
                 else:
                     self._growing = False
 
-    def _return_connection(self, conn: Connection) -> None:
+    def _return_connection(self, conn: Connection[Any]) -> None:
         """
         Return a connection to the pool after usage.
         """
@@ -518,7 +519,7 @@ class ConnectionPool(BasePool[Connection]):
 
         self._add_to_pool(conn)
 
-    def _add_to_pool(self, conn: Connection) -> None:
+    def _add_to_pool(self, conn: Connection[Any]) -> None:
         """
         Add a connection to the pool.
 
@@ -552,7 +553,7 @@ class ConnectionPool(BasePool[Connection]):
                 if self._pool_full_event and len(self._pool) >= self._nconns:
                     self._pool_full_event.set()
 
-    def _reset_connection(self, conn: Connection) -> None:
+    def _reset_connection(self, conn: Connection[Any]) -> None:
         """
         Bring a connection to IDLE state or close it.
         """
@@ -594,7 +595,7 @@ class ConnectionPool(BasePool[Connection]):
                 conn.close()
 
     def _shrink_pool(self) -> None:
-        to_close: Optional[Connection] = None
+        to_close: Optional[Connection[Any]] = None
 
         with self._lock:
             # Reset the min number of connections used
@@ -630,7 +631,7 @@ class WaitingClient:
     __slots__ = ("conn", "error", "_cond")
 
     def __init__(self) -> None:
-        self.conn: Optional[Connection] = None
+        self.conn: Optional[Connection[Any]] = None
         self.error: Optional[Exception] = None
 
         # The WaitingClient behaves in a way similar to an Event, but we need
@@ -640,7 +641,7 @@ class WaitingClient:
         # will be lost.
         self._cond = threading.Condition()
 
-    def wait(self, timeout: float) -> Connection:
+    def wait(self, timeout: float) -> Connection[Any]:
         """Wait for a connection to be set and return it.
 
         Raise an exception if the wait times out or if fail() is called.
@@ -658,7 +659,7 @@ class WaitingClient:
             assert self.error
             raise self.error
 
-    def set(self, conn: Connection) -> bool:
+    def set(self, conn: Connection[Any]) -> bool:
         """Signal the client waiting that a connection is ready.
 
         Return True if the client has "accepted" the connection, False
@@ -760,7 +761,7 @@ class AddConnection(MaintenanceTask):
 class ReturnConnection(MaintenanceTask):
     """Clean up and return a connection to the pool."""
 
-    def __init__(self, pool: "ConnectionPool", conn: "Connection"):
+    def __init__(self, pool: "ConnectionPool", conn: "Connection[Any]"):
         super().__init__(pool)
         self.conn = conn
 

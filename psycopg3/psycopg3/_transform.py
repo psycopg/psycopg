@@ -66,7 +66,7 @@ class Transformer(AdaptContext):
         self._row_loaders: List[LoadFunc] = []
 
     @property
-    def connection(self) -> Optional["BaseConnection"]:
+    def connection(self) -> Optional["BaseConnection[Any]"]:
         return self._conn
 
     @property

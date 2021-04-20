@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Callable, Optional, Sequence
+from typing import Any, Callable, Optional, Sequence, Tuple
 
-from psycopg3 import BaseCursor, Cursor, ServerCursor, connect
+from psycopg3 import BaseCursor, Connection, Cursor, ServerCursor, connect
 
 
 def int_row_factory(
@@ -32,7 +32,7 @@ class Person:
 
 def check_row_factory_cursor() -> None:
     """Type-check connection.cursor(..., row_factory=<MyRowFactory>) case."""
-    conn = connect()
+    conn = connect()  # type: ignore[var-annotated] # Connection[Any]
 
     cur1: Cursor[Any]
     cur1 = conn.cursor()
@@ -58,12 +58,10 @@ def check_row_factory_cursor() -> None:
 def check_row_factory_connection() -> None:
     """Type-check connect(..., row_factory=<MyRowFactory>) or
     Connection.row_factory cases.
-
-    This example is incomplete because Connection is not generic on Row, hence
-    all the Any, which we aim at getting rid of.
     """
-    cur1: Cursor[Any]
-    r1: Any
+    conn1: Connection[int]
+    cur1: Cursor[int]
+    r1: Optional[int]
     conn1 = connect(row_factory=int_row_factory)
     cur1 = conn1.execute("select 1")
     r1 = cur1.fetchone()
@@ -71,8 +69,9 @@ def check_row_factory_connection() -> None:
     with conn1.cursor() as cur1:
         cur1.execute("select 2")
 
-    cur2: Cursor[Any]
-    r2: Any
+    conn2: Connection[Person]
+    cur2: Cursor[Person]
+    r2: Optional[Person]
     conn2 = connect(row_factory=Person.row_factory)
     cur2 = conn2.execute("select * from persons")
     r2 = cur2.fetchone()
@@ -80,9 +79,9 @@ def check_row_factory_connection() -> None:
     with conn2.cursor() as cur2:
         cur2.execute("select 2")
 
-    cur3: Cursor[Any]
-    r3: Optional[Any]
-    conn3 = connect()
+    cur3: Cursor[Tuple[Any, ...]]
+    r3: Optional[Tuple[Any, ...]]
+    conn3 = connect()  # type: ignore[var-annotated]
     cur3 = conn3.execute("select 3")
     with conn3.cursor() as cur3:
         cur3.execute("select 42")
