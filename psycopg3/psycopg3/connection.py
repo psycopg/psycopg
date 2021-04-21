@@ -344,7 +344,7 @@ class BaseConnection(AdaptContext):
         conninfo: str = "",
         *,
         autocommit: bool = False,
-        row_factory: RowFactory[Any],
+        row_factory: Optional[RowFactory[Any]] = None,
         **kwargs: Any,
     ) -> PQGenConn[ConnectionType]:
         """Generator to connect to the database and create a new instance."""
@@ -352,6 +352,8 @@ class BaseConnection(AdaptContext):
         pgconn = yield from connect(conninfo)
         conn = cls(pgconn)
         conn._autocommit = autocommit
+        if row_factory is None:
+            row_factory = cls.row_factory
         conn.row_factory = row_factory
         return conn
 
@@ -443,7 +445,7 @@ class Connection(BaseConnection):
         conninfo: str = "",
         *,
         autocommit: bool = False,
-        row_factory: RowFactory[Any] = tuple_row,
+        row_factory: Optional[RowFactory[Any]] = None,
         **kwargs: Any,
     ) -> "Connection":
         """
@@ -634,7 +636,7 @@ class AsyncConnection(BaseConnection):
         conninfo: str = "",
         *,
         autocommit: bool = False,
-        row_factory: RowFactory[Any] = tuple_row,
+        row_factory: Optional[RowFactory[Any]] = None,
         **kwargs: Any,
     ) -> "AsyncConnection":
         return await cls._wait_conn(
