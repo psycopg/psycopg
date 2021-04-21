@@ -26,7 +26,9 @@ from .dbapi20 import Timestamp, TimestampFromTicks
 from .version import __version__
 
 # Set the logger to a quiet default, can be enabled if needed
-logging.getLogger("psycopg3").setLevel(logging.WARNING)
+logger = logging.getLogger("psycopg3")
+if logger.level == logging.NOTSET:
+    logger.setLevel(logging.WARNING)
 
 # register default adapters
 types.register_default_globals(global_adapters)
