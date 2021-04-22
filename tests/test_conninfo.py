@@ -89,7 +89,8 @@ def test_no_munging():
 
 class TestConnectionInfo:
     @pytest.mark.parametrize(
-        "attr", [("dbname", "db"), "host", "user", "password", "options"]
+        "attr",
+        [("dbname", "db"), "host", "hostaddr", "user", "password", "options"],
     )
     def test_attrs(self, conn, attr):
         if isinstance(attr, tuple):

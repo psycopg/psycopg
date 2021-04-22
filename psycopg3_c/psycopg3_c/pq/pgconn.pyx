@@ -9,6 +9,7 @@ from cpython.mem cimport PyMem_Malloc, PyMem_Free
 from cpython.bytes cimport PyBytes_AsString, PyBytes_AsStringAndSize
 from cpython.memoryview cimport PyMemoryView_FromObject
 
+import ctypes
 import logging
 
 from psycopg3.pq import Format as PqFormat
@@ -116,7 +117,13 @@ cdef class PGconn:
 
     @property
     def hostaddr(self) -> bytes:
-        return b'TODO'
+        # Available only from PG 12. Use the dynamic ctypes implementation
+        from psycopg3.pq import _pq_ctypes
+
+        _ensure_pgconn(self)
+        ctypes_ptr = ctypes.cast(
+            <long><void *>self.pgconn_ptr, _pq_ctypes.PGconn_ptr)
+        return _pq_ctypes.PQhostaddr(ctypes_ptr)
 
     @property
     def port(self) -> bytes:

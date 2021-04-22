@@ -107,6 +107,11 @@ class ConnectionInfo:
         return self._get_pgconn_attr("host")
 
     @property
+    def hostaddr(self) -> str:
+        """The server ip address of the connection."""
+        return self._get_pgconn_attr("hostaddr")
+
+    @property
     def port(self) -> int:
         """The port of the database connection."""
         return int(self._get_pgconn_attr("port"))
