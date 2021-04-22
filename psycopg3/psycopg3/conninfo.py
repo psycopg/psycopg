@@ -103,37 +103,39 @@ class ConnectionInfo:
 
     @property
     def host(self) -> str:
-        """The host name of the database."""
+        """The host name of the database. See :pq:`PQhost`."""
         return self._get_pgconn_attr("host")
 
     @property
     def hostaddr(self) -> str:
-        """The server ip address of the connection."""
+        """The server ip address of the connection. See :pq:`PQhostaddr`."""
         return self._get_pgconn_attr("hostaddr")
 
     @property
     def port(self) -> int:
-        """The port of the database connection."""
+        """The port of the database connection. See :pq:`PQport`."""
         return int(self._get_pgconn_attr("port"))
 
     @property
     def dbname(self) -> str:
-        """The name of the connected database."""
+        """The database name of the connection. See :pq:`PQdb`."""
         return self._get_pgconn_attr("db")
 
     @property
     def user(self) -> str:
-        """The user of the database connection."""
+        """The user of the database connection. See :pq:`PQuser`."""
         return self._get_pgconn_attr("user")
 
     @property
     def password(self) -> str:
-        """The password of the database connection."""
+        """The password of the database connection. See :pq:`PQpass`."""
         return self._get_pgconn_attr("password")
 
     @property
     def options(self) -> str:
-        """The options parameter of the database connection."""
+        """
+        The options parameter of the database connection. See :pq:`PQoptions`.
+        """
         return self._get_pgconn_attr("options")
 
     def get_parameters(self) -> Dict[str, str]:
@@ -186,13 +188,14 @@ class ConnectionInfo:
 
     @property
     def server_version(self) -> int:
-        """An integer representing the server version.
+        """
+        An integer representing the server version. See :pq:`PQserverVersion()`.
 
         The number is formed by converting the major, minor, and revision
         numbers into two-decimal-digit numbers and appending them together.
         After PostgreSQL 10 the minor version was dropped, so the second group
         of digits is always 00. For example, version 9.3.5 will be returned as
-        90305, version 10.2 as 100002. See :pq:`PQserverVersion()`.
+        90305, version 10.2 as 100002.
         """
         return self.pgconn.server_version
 

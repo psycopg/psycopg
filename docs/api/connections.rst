@@ -110,8 +110,8 @@ The `!Connection` class
 
     For details see :ref:`transactions`.
 
-    .. automethod:: commit()
-    .. automethod:: rollback()
+    .. automethod:: commit
+    .. automethod:: rollback
     .. automethod:: transaction
 
         .. note:: It must be called as ``with conn.transaction() as tx: ...``
@@ -253,31 +253,30 @@ Connection support objects
 
     The object is usually returned by `Connection.info`.
 
-    .. autoproperty:: status
-    .. autoproperty:: transaction_status
-    .. autoproperty:: server_version
+    .. autoattribute:: status
+    .. autoattribute:: transaction_status
+    .. autoattribute:: server_version
     .. automethod:: get_parameters
-
-    .. autoproperty:: host
-    .. autoproperty:: port
-    .. autoproperty:: dbname
-    .. autoproperty:: user
-    .. autoproperty:: password
-    .. autoproperty:: options
+    .. autoattribute:: host
+    .. autoattribute:: port
+    .. autoattribute:: dbname
+    .. autoattribute:: user
+    .. autoattribute:: password
+    .. autoattribute:: options
     .. automethod:: parameter_status
 
         Example of parameters are ``server_version``,
         ``standard_conforming_string``... See :pq:`PQparameterStatus()` for
         all the available parameters.
 
-    .. autoproperty:: protocol_version
+    .. autoattribute:: protocol_version
 
 
 .. rubric:: Objects involved in :ref:`transactions`
 
 .. autoclass:: Transaction()
 
-    .. autoproperty:: savepoint_name
+    .. autoattribute:: savepoint_name
     .. autoattribute:: connection
 
 .. autoclass:: AsyncTransaction()

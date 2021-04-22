@@ -83,6 +83,7 @@ def monkeypatch_autodoc():
 
     orig_doc_get_real_modname = Documenter.get_real_modname
     orig_attr_get_real_modname = AttributeDocumenter.get_real_modname
+    orig_attr_add_content = AttributeDocumenter.add_content
 
     def fixed_doc_get_real_modname(self):
         if self.object in recovered_classes:
@@ -94,8 +95,77 @@ def monkeypatch_autodoc():
             return recovered_classes[self.parent]
         return orig_attr_get_real_modname(self)
 
+    def fixed_attr_add_content(self, more_content, no_docstring=False):
+        """
+        Replace a docstring such as::
+
+            .. py:attribute:: ConnectionInfo.dbname
+               :module: psycopg3
+
+               The database name of the connection.
+
+               :rtype: :py:class:`str`
+
+        into:
+
+            .. py:attribute:: ConnectionInfo.dbname
+               :type: str
+               :module: psycopg3
+
+               The database name of the connection.
+
+        which creates a more compact representation of a property.
+
+        """
+        orig_attr_add_content(self, more_content, no_docstring)
+        if not isinstance(self.object, property):
+            return
+        iret, mret = match_in_lines(r"\s*:rtype: (.*)", self.directive.result)
+        iatt, matt = match_in_lines(r"\.\.", self.directive.result)
+        if not (mret and matt):
+            return
+        self.directive.result.pop(iret)
+        self.directive.result.insert(
+            iatt + 1,
+            f"{self.indent}:type: {unrest(mret.group(1))}",
+            source=self.get_sourcename(),
+        )
+
     Documenter.get_real_modname = fixed_doc_get_real_modname
     AttributeDocumenter.get_real_modname = fixed_attr_get_real_modname
+    AttributeDocumenter.add_content = fixed_attr_add_content
+
+
+def match_in_lines(pattern, lines):
+    """Match a regular expression against a list of strings.
+
+    Return the index of the first matched line and the match object.
+    None, None if nothing matched.
+    """
+    for i, line in enumerate(lines):
+        m = re.match(pattern, line)
+        if m:
+            return i, m
+    else:
+        return None, None
+
+
+def unrest(s):
+    r"""remove the reST markup from a string
+
+    e.g. :py:data:`~typing.Optional`\[:py:class:`int`] -> Optional[int]
+
+    required because :type: does the types lookup itself apparently.
+    """
+    s = re.sub(r":[^`]*:`~?([^`]*)`", r"\1", s)  # drop role
+    s = re.sub(r"\\(.)", r"\1", s)  # drop escape
+
+    # note that ~psycopg3.pq.ConnStatus is converted to pq.ConnStatus
+    # which should be interpreted well if currentmodule is set ok.
+    s = re.sub(r"(?:typing|psycopg3)\.", "", s)  # drop unneeded modules
+    s = re.sub(r"~", "", s)  # drop the tilde
+
+    return s
 
 
 def walk_modules(d):

@@ -83,13 +83,13 @@ Objects wrapping libpq structures and functions
 
 .. autoclass:: PGconn()
 
-    .. autoproperty:: pgconn_ptr
+    .. autoattribute:: pgconn_ptr
     .. automethod:: get_cancel
 
 
 .. autoclass:: PGresult()
 
-    .. autoproperty:: pgresult_ptr
+    .. autoattribute:: pgresult_ptr
 
 
 .. autoclass:: Conninfo
