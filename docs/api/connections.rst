@@ -254,10 +254,34 @@ Connection support objects
     The object is usually returned by `Connection.info`.
 
     .. autoattribute:: status
+
+        The status can be one of a number of values. However, only two of
+        these are seen outside of an asynchronous connection procedure:
+        `~pq.ConnStatus.OK` and `~pq.ConnStatus.BAD`. A good connection to the
+        database has the status `!OK`. Ordinarily, an `!OK` status will remain
+        so until `Connection.close()`, but a communications failure might
+        result in the status changing to `!BAD` prematurely.
+
     .. autoattribute:: transaction_status
+
+        The status can be `~pq.TransactionStatus.IDLE` (currently idle),
+        `~pq.TransactionStatus.ACTIVE` (a command is in progress),
+        `~pq.TransactionStatus.INTRANS` (idle, in a valid transaction block),
+        or `~pq.TransactionStatus.INERROR` (idle, in a failed transaction
+        block). `~pq.TransactionStatus.UNKNOWN` is reported if the connection
+        is bad. `!ACTIVE` is reported only when a query has been sent to the
+        server and not yet completed.
+
     .. autoattribute:: server_version
     .. automethod:: get_parameters
     .. autoattribute:: host
+
+        This can be a host name, an IP address, or a directory path if the
+        connection is via Unix socket. (The path case can be distinguished
+        because it will always be an absolute path, beginning with ``/``.)
+
+    .. autoattribute:: hostaddr
+
     .. autoattribute:: port
     .. autoattribute:: dbname
     .. autoattribute:: user

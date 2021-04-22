@@ -103,17 +103,17 @@ class ConnectionInfo:
 
     @property
     def host(self) -> str:
-        """The host name of the database. See :pq:`PQhost`."""
+        """The server host name of the active connection. See :pq:`PQhost`."""
         return self._get_pgconn_attr("host")
 
     @property
     def hostaddr(self) -> str:
-        """The server ip address of the connection. See :pq:`PQhostaddr`."""
+        """The server IP address of the connection. See :pq:`PQhostaddr`."""
         return self._get_pgconn_attr("hostaddr")
 
     @property
     def port(self) -> int:
-        """The port of the database connection. See :pq:`PQport`."""
+        """The port of the active connection. See :pq:`PQport`."""
         return int(self._get_pgconn_attr("port"))
 
     @property
@@ -123,18 +123,19 @@ class ConnectionInfo:
 
     @property
     def user(self) -> str:
-        """The user of the database connection. See :pq:`PQuser`."""
+        """The user name of the connection. See :pq:`PQuser`."""
         return self._get_pgconn_attr("user")
 
     @property
     def password(self) -> str:
-        """The password of the database connection. See :pq:`PQpass`."""
+        """The password of the connection. See :pq:`PQpass`."""
         return self._get_pgconn_attr("password")
 
     @property
     def options(self) -> str:
         """
-        The options parameter of the database connection. See :pq:`PQoptions`.
+        The command-line options passed in the connection request.
+        See :pq:`PQoptions`.
         """
         return self._get_pgconn_attr("options")
 
@@ -167,13 +168,14 @@ class ConnectionInfo:
 
     @property
     def status(self) -> pq.ConnStatus:
-        """`pq.ConnStatus` enum representing the state of the connection."""
+        """The status of the connection. See :pq:`PQstatus`."""
         return pq.ConnStatus(self.pgconn.status)
 
     @property
     def transaction_status(self) -> pq.TransactionStatus:
         """
-        `pq.TransactionStatus` enum representing the state of the transaction.
+        The current in-transaction status of the server.
+        See :pq:`PQtransactionStatus`.
         """
         return pq.TransactionStatus(self.pgconn.transaction_status)
 
@@ -201,7 +203,9 @@ class ConnectionInfo:
 
     @property
     def protocol_version(self) -> int:
-        """The frontend/backend protocol currently used."""
+        """
+        The frontend/backend protocol currently used. See :pq:`PQprotocolVersion`.
+        """
         return self.pgconn.protocol_version
 
     def _get_pgconn_attr(self, name: str) -> str:
