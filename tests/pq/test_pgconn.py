@@ -92,7 +92,7 @@ def test_weakref(dsn):
 
 
 def test_pgconn_ptr(pgconn, libpq):
-    pgconn.pgconn_ptr is not None
+    assert isinstance(pgconn.pgconn_ptr, int)
 
     f = libpq.PQserverVersion
     f.argtypes = [ctypes.c_void_p]

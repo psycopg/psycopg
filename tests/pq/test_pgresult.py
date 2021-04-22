@@ -30,7 +30,7 @@ def test_clear(pgconn):
 
 def test_pgresult_ptr(pgconn, libpq):
     res = pgconn.exec_(b"select 1")
-    assert res.pgresult_ptr is not None
+    assert isinstance(res.pgresult_ptr, int)
 
     f = libpq.PQcmdStatus
     f.argtypes = [ctypes.c_void_p]
