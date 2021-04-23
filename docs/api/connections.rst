@@ -273,6 +273,9 @@ Connection support objects
         server and not yet completed.
 
     .. autoattribute:: server_version
+    .. autoattribute:: backend_pid
+    .. autoattribute:: error_message
+
     .. automethod:: get_parameters
     .. autoattribute:: host
 

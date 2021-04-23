@@ -160,3 +160,23 @@ class TestConnectionInfo:
 
     def test_protocol_version(self, conn):
         assert conn.info.protocol_version >= 3
+
+    def test_error_message(self, conn):
+        assert conn.info.error_message == ""
+        with pytest.raises(psycopg3.ProgrammingError) as ex:
+            conn.execute("wat")
+
+        assert conn.info.error_message
+        assert str(ex.value) in conn.info.error_message
+        assert ex.value.diag.severity in conn.info.error_message
+
+        conn.close()
+        with pytest.raises(psycopg3.OperationalError):
+            conn.info.error_message
+
+    def test_backend_pid(self, conn):
+        assert conn.info.backend_pid
+        assert conn.info.backend_pid == conn.pgconn.backend_pid
+        conn.close()
+        with pytest.raises(psycopg3.OperationalError):
+            conn.info.backend_pid
