@@ -234,11 +234,11 @@ class PGconn:
 
     @property
     def needs_password(self) -> bool:
-        return self._call_bool(impl.PQconnectionNeedsPassword)
+        return bool(impl.PQconnectionNeedsPassword(self._pgconn_ptr))
 
     @property
     def used_password(self) -> bool:
-        return self._call_bool(impl.PQconnectionUsedPassword)
+        return bool(impl.PQconnectionUsedPassword(self._pgconn_ptr))
 
     @property
     def ssl_in_use(self) -> bool:

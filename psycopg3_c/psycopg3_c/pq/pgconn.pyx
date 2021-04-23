@@ -178,11 +178,11 @@ cdef class PGconn:
 
     @property
     def needs_password(self) -> bool:
-        return bool(_call_int(self, libpq.PQconnectionNeedsPassword))
+        return bool(libpq.PQconnectionNeedsPassword(self.pgconn_ptr))
 
     @property
     def used_password(self) -> bool:
-        return bool(_call_int(self, libpq.PQconnectionUsedPassword))
+        return bool(libpq.PQconnectionUsedPassword(self.pgconn_ptr))
 
     @property
     def ssl_in_use(self) -> bool:

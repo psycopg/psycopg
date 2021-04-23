@@ -323,8 +323,7 @@ def test_needs_password(pgconn):
     # assume connection worked so an eventually needed password wasn't missing
     assert pgconn.needs_password is False
     pgconn.finish()
-    with pytest.raises(psycopg3.OperationalError):
-        pgconn.needs_password
+    pgconn.needs_password
 
 
 def test_used_password(pgconn, dsn, monkeypatch):
@@ -347,8 +346,7 @@ def test_used_password(pgconn, dsn, monkeypatch):
             assert pgconn.used_password
 
     pgconn.finish()
-    with pytest.raises(psycopg3.OperationalError):
-        pgconn.used_password
+    pgconn.used_password
 
 
 def test_ssl_in_use(pgconn):
