@@ -98,10 +98,9 @@ class BaseConnection(AdaptContext):
     ConnStatus = pq.ConnStatus
     TransactionStatus = pq.TransactionStatus
 
-    row_factory: RowFactory[Any] = tuple_row
-
-    def __init__(self, pgconn: "PGconn"):
+    def __init__(self, pgconn: "PGconn", row_factory: RowFactory[Any]):
         self.pgconn = pgconn  # TODO: document this
+        self._row_factory = row_factory
         self._autocommit = False
         self._adapters = adapt.AdaptersMap(adapt.global_adapters)
         self._notice_handlers: List[NoticeHandler] = []
@@ -229,6 +228,15 @@ class BaseConnection(AdaptContext):
         # implement the AdaptContext protocol
         return self
 
+    @property
+    def row_factory(self) -> RowFactory[Any]:
+        """Writable attribute to control how result rows are formed."""
+        return self._row_factory
+
+    @row_factory.setter
+    def row_factory(self, row_factory: RowFactory[Any]) -> None:
+        self._row_factory = row_factory
+
     def fileno(self) -> int:
         """Return the file descriptor of the connection.
 
@@ -350,11 +358,10 @@ class BaseConnection(AdaptContext):
         """Generator to connect to the database and create a new instance."""
         conninfo = make_conninfo(conninfo, **kwargs)
         pgconn = yield from connect(conninfo)
-        conn = cls(pgconn)
+        if not row_factory:
+            row_factory = tuple_row
+        conn = cls(pgconn, row_factory)
         conn._autocommit = autocommit
-        if row_factory is None:
-            row_factory = cls.row_factory
-        conn.row_factory = row_factory
         return conn
 
     def _exec_command(self, command: Query) -> PQGen["PGresult"]:
@@ -435,8 +442,8 @@ class Connection(BaseConnection):
 
     __module__ = "psycopg3"
 
-    def __init__(self, pgconn: "PGconn"):
-        super().__init__(pgconn)
+    def __init__(self, pgconn: "PGconn", row_factory: RowFactory[Any]):
+        super().__init__(pgconn, row_factory)
         self.lock = threading.Lock()
 
     @classmethod
@@ -626,8 +633,8 @@ class AsyncConnection(BaseConnection):
 
     __module__ = "psycopg3"
 
-    def __init__(self, pgconn: "PGconn"):
-        super().__init__(pgconn)
+    def __init__(self, pgconn: "PGconn", row_factory: RowFactory[Any]):
+        super().__init__(pgconn, row_factory)
         self.lock = asyncio.Lock()
 
     @classmethod
