@@ -158,8 +158,8 @@ The `!ConnectionPool` class
       The name of the pool set on creation, or automatically generated if not
       set.
 
-   .. autoproperty:: min_size
-   .. autoproperty:: max_size
+   .. autoattribute:: min_size
+   .. autoattribute:: max_size
 
       The current minimum and maximum size of the pool. Use `resize()` to
       change them at runtime.

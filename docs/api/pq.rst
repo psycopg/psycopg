@@ -82,9 +82,16 @@ Objects wrapping libpq structures and functions
     finish documentation
 
 .. autoclass:: PGconn()
-    :members:
+
+    .. autoattribute:: pgconn_ptr
+    .. automethod:: get_cancel
+
 
 .. autoclass:: PGresult()
+
+    .. autoattribute:: pgresult_ptr
+
+
 .. autoclass:: Conninfo
 .. autoclass:: Escaping
 

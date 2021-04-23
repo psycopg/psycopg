@@ -110,8 +110,8 @@ The `!Connection` class
 
     For details see :ref:`transactions`.
 
-    .. automethod:: commit()
-    .. automethod:: rollback()
+    .. automethod:: commit
+    .. automethod:: rollback
     .. automethod:: transaction
 
         .. note:: It must be called as ``with conn.transaction() as tx: ...``
@@ -159,9 +159,7 @@ The `!Connection` class
             .. __: https://www.postgresql.org/docs/current/multibyte.html
 
 
-    .. attribute:: info
-
-        TODO
+    .. autoattribute:: info
 
     .. automethod:: fileno
 
@@ -251,11 +249,61 @@ Connection support objects
     The object is usually returned by `Connection.notifies()`.
 
 
+.. autoclass:: ConnectionInfo()
+
+    The object is usually returned by `Connection.info`.
+
+    .. autoattribute:: status
+
+        The status can be one of a number of values. However, only two of
+        these are seen outside of an asynchronous connection procedure:
+        `~pq.ConnStatus.OK` and `~pq.ConnStatus.BAD`. A good connection to the
+        database has the status `!OK`. Ordinarily, an `!OK` status will remain
+        so until `Connection.close()`, but a communications failure might
+        result in the status changing to `!BAD` prematurely.
+
+    .. autoattribute:: transaction_status
+
+        The status can be `~pq.TransactionStatus.IDLE` (currently idle),
+        `~pq.TransactionStatus.ACTIVE` (a command is in progress),
+        `~pq.TransactionStatus.INTRANS` (idle, in a valid transaction block),
+        or `~pq.TransactionStatus.INERROR` (idle, in a failed transaction
+        block). `~pq.TransactionStatus.UNKNOWN` is reported if the connection
+        is bad. `!ACTIVE` is reported only when a query has been sent to the
+        server and not yet completed.
+
+    .. autoattribute:: server_version
+    .. autoattribute:: backend_pid
+    .. autoattribute:: error_message
+
+    .. automethod:: get_parameters
+    .. autoattribute:: host
+
+        This can be a host name, an IP address, or a directory path if the
+        connection is via Unix socket. (The path case can be distinguished
+        because it will always be an absolute path, beginning with ``/``.)
+
+    .. autoattribute:: hostaddr
+
+    .. autoattribute:: port
+    .. autoattribute:: dbname
+    .. autoattribute:: user
+    .. autoattribute:: password
+    .. autoattribute:: options
+    .. automethod:: parameter_status
+
+        Example of parameters are ``server_version``,
+        ``standard_conforming_string``... See :pq:`PQparameterStatus()` for
+        all the available parameters.
+
+    .. autoattribute:: protocol_version
+
+
 .. rubric:: Objects involved in :ref:`transactions`
 
 .. autoclass:: Transaction()
 
-    .. autoproperty:: savepoint_name
+    .. autoattribute:: savepoint_name
     .. autoattribute:: connection
 
 .. autoclass:: AsyncTransaction()

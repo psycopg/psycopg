@@ -26,7 +26,7 @@ from .rows import tuple_row
 from .proto import PQGen, PQGenConn, RV, RowFactory, Query, Params
 from .proto import AdaptContext, ConnectionType
 from .cursor import Cursor, AsyncCursor
-from .conninfo import make_conninfo
+from .conninfo import make_conninfo, ConnectionInfo
 from .generators import notifies
 from ._preparing import PrepareManager
 from .transaction import Transaction, AsyncTransaction
@@ -214,6 +214,11 @@ class BaseConnection(AdaptContext):
         (result,) = yield from execute(self.pgconn)
         if result.status != ExecStatus.TUPLES_OK:
             raise e.error_from_result(result, encoding=self.client_encoding)
+
+    @property
+    def info(self) -> ConnectionInfo:
+        """A `ConnectionInfo` attribute to inspect connection properties."""
+        return ConnectionInfo(self.pgconn)
 
     @property
     def adapters(self) -> adapt.AdaptersMap:

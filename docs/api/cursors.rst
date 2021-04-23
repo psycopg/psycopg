@@ -126,7 +126,7 @@ The `!Cursor` class
     .. note:: cursors are iterable objects, so just using ``for record in
         cursor`` syntax will iterate on the records in the current recordset.
 
-    .. autoproperty:: row_factory
+    .. autoattribute:: row_factory
 
         The property affects the objects returned by the `fetchone()`,
         `fetchmany()`, `fetchall()` methods. The default
@@ -338,12 +338,12 @@ The description `Column` object
 
     .. __: https://www.python.org/dev/peps/pep-0249/#description
 
-    .. autoproperty:: name
-    .. autoproperty:: type_code
-    .. autoproperty:: display_size
-    .. autoproperty:: internal_size
-    .. autoproperty:: precision
-    .. autoproperty:: scale
+    .. autoattribute:: name
+    .. autoattribute:: type_code
+    .. autoattribute:: display_size
+    .. autoattribute:: internal_size
+    .. autoattribute:: precision
+    .. autoattribute:: scale
 
 
 COPY-related objects

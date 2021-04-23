@@ -92,7 +92,7 @@ def test_weakref(dsn):
 
 
 def test_pgconn_ptr(pgconn, libpq):
-    pgconn.pgconn_ptr is not None
+    assert isinstance(pgconn.pgconn_ptr, int)
 
     f = libpq.PQserverVersion
     f.argtypes = [ctypes.c_void_p]
@@ -207,15 +207,8 @@ def test_hostaddr(pgconn):
     # not in info
     assert isinstance(pgconn.hostaddr, bytes), pgconn.hostaddr
     pgconn.finish()
-    if psycopg3.pq.__impl__ == "python":
-        with pytest.raises(psycopg3.OperationalError):
-            pgconn.hostaddr
-
-    else:
-        if pgconn.hostaddr == b"TODO":
-            pytest.xfail("implement hostaddr in psycopg3_c.pq")
-        else:
-            assert False, "you did it! not fix the test"
+    with pytest.raises(psycopg3.OperationalError):
+        pgconn.hostaddr
 
 
 @pytest.mark.xfail
@@ -330,8 +323,7 @@ def test_needs_password(pgconn):
     # assume connection worked so an eventually needed password wasn't missing
     assert pgconn.needs_password is False
     pgconn.finish()
-    with pytest.raises(psycopg3.OperationalError):
-        pgconn.needs_password
+    pgconn.needs_password
 
 
 def test_used_password(pgconn, dsn, monkeypatch):
@@ -354,8 +346,7 @@ def test_used_password(pgconn, dsn, monkeypatch):
             assert pgconn.used_password
 
     pgconn.finish()
-    with pytest.raises(psycopg3.OperationalError):
-        pgconn.used_password
+    pgconn.used_password
 
 
 def test_ssl_in_use(pgconn):
