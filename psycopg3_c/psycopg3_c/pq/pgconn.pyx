@@ -535,7 +535,7 @@ cdef void notice_receiver(void *arg, const libpq.PGresult *res_ptr) with gil:
     except Exception as e:
         logger.exception("error in notice receiver: %s", e)
 
-    res.pgresult_ptr = NULL  # avoid destroying the pgresult_ptr
+    res._pgresult_ptr = NULL  # avoid destroying the pgresult_ptr
 
 
 cdef (int, libpq.Oid *, char * const*, int *, int *) _query_params_args(

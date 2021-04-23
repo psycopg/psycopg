@@ -107,7 +107,7 @@ cdef class Transformer:
                 self._row_loaders = []
             return
 
-        cdef libpq.PGresult *res = self._pgresult.pgresult_ptr
+        cdef libpq.PGresult *res = self._pgresult._pgresult_ptr
         self._nfields = libpq.PQnfields(res)
         self._ntuples = libpq.PQntuples(res)
 
@@ -283,7 +283,7 @@ cdef class Transformer:
                 f"rows must be included between 0 and {self._ntuples}"
             )
 
-        cdef libpq.PGresult *res = self._pgresult.pgresult_ptr
+        cdef libpq.PGresult *res = self._pgresult._pgresult_ptr
         # cheeky access to the internal PGresult structure
         cdef pg_result_int *ires = <pg_result_int*>res
 
@@ -352,7 +352,7 @@ cdef class Transformer:
         if not 0 <= row < self._ntuples:
             return None
 
-        cdef libpq.PGresult *res = self._pgresult.pgresult_ptr
+        cdef libpq.PGresult *res = self._pgresult._pgresult_ptr
         # cheeky access to the internal PGresult structure
         cdef pg_result_int *ires = <pg_result_int*>res
 

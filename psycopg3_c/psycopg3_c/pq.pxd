@@ -19,7 +19,7 @@ cdef class PGconn:
 
 
 cdef class PGresult:
-    cdef libpq.PGresult* pgresult_ptr
+    cdef libpq.PGresult* _pgresult_ptr
 
     @staticmethod
     cdef PGresult _from_ptr(libpq.PGresult *ptr)
