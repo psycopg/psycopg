@@ -6,7 +6,7 @@ ctypedef int(*conn_int_f) (const libpq.PGconn *)
 
 
 cdef class PGconn:
-    cdef libpq.PGconn* pgconn_ptr
+    cdef libpq.PGconn* _pgconn_ptr
     cdef object __weakref__
     cdef public object notice_handler
     cdef public object notify_handler

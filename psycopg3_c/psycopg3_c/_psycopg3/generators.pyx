@@ -26,7 +26,7 @@ def connect(conninfo: str) -> PQGenConn[proto.PGconn]:
     """
     cdef pq.PGconn conn = pq.PGconn.connect_start(conninfo.encode("utf8"))
     logger.debug("connection started, status %s", conn.status)
-    cdef libpq.PGconn *pgconn_ptr = conn.pgconn_ptr
+    cdef libpq.PGconn *pgconn_ptr = conn._pgconn_ptr
     cdef int conn_status = libpq.PQstatus(pgconn_ptr)
     cdef int poll_status
 
@@ -67,7 +67,7 @@ def execute(pq.PGconn pgconn) -> PQGen[List[proto.PGresult]]:
     or error).
     """
     cdef list results = []
-    cdef libpq.PGconn *pgconn_ptr = pgconn.pgconn_ptr
+    cdef libpq.PGconn *pgconn_ptr = pgconn._pgconn_ptr
     cdef int status
     cdef libpq.PGnotify *notify
     cdef libpq.PGresult *pgres

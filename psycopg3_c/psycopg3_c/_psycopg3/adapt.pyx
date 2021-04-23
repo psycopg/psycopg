@@ -79,11 +79,11 @@ cdef class CDumper:
         ptr_out = PyByteArray_AS_STRING(rv)
 
         if self._pgconn is not None:
-            if self._pgconn.pgconn_ptr == NULL:
+            if self._pgconn._pgconn_ptr == NULL:
                 raise e.OperationalError("the connection is closed")
 
             len_out = libpq.PQescapeStringConn(
-                self._pgconn.pgconn_ptr, ptr_out + 1, ptr, length, &error
+                self._pgconn._pgconn_ptr, ptr_out + 1, ptr, length, &error
             )
             if error:
                 raise e.OperationalError(

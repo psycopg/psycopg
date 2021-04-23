@@ -38,7 +38,7 @@ cdef class _StringDumper(CDumper):
         cdef const char *pgenc
 
         if self._pgconn is not None:
-            pgenc = libpq.PQparameterStatus(self._pgconn.pgconn_ptr, b"client_encoding")
+            pgenc = libpq.PQparameterStatus(self._pgconn._pgconn_ptr, b"client_encoding")
             if pgenc == NULL or pgenc == b"UTF8":
                 self._bytes_encoding = b"utf-8"
                 self.is_utf8 = 1
@@ -111,7 +111,7 @@ cdef class _TextLoader(CLoader):
         cdef const char *pgenc
 
         if self._pgconn is not None:
-            pgenc = libpq.PQparameterStatus(self._pgconn.pgconn_ptr, b"client_encoding")
+            pgenc = libpq.PQparameterStatus(self._pgconn._pgconn_ptr, b"client_encoding")
             if pgenc == NULL or pgenc == b"UTF8":
                 self._bytes_encoding = b"utf-8"
                 self.is_utf8 = 1
@@ -160,9 +160,9 @@ cdef class BytesDumper(CDumper):
 
         _buffer_as_string_and_size(obj, &ptr, &length)
 
-        if self._pgconn is not None and self._pgconn.pgconn_ptr != NULL:
+        if self._pgconn is not None and self._pgconn._pgconn_ptr != NULL:
             out = libpq.PQescapeByteaConn(
-                self._pgconn.pgconn_ptr, <unsigned char *>ptr, length, &len_out)
+                self._pgconn._pgconn_ptr, <unsigned char *>ptr, length, &len_out)
         else:
             out = libpq.PQescapeBytea(<unsigned char *>ptr, length, &len_out)
 

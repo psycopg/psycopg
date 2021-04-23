@@ -23,13 +23,13 @@ cdef class PGconn:
     @staticmethod
     cdef PGconn _from_ptr(libpq.PGconn *ptr):
         cdef PGconn rv = PGconn.__new__(PGconn)
-        rv.pgconn_ptr = ptr
+        rv._pgconn_ptr = ptr
 
         libpq.PQsetNoticeReceiver(ptr, notice_receiver, <void *>rv)
         return rv
 
     def __cinit__(self):
-        self.pgconn_ptr = NULL
+        self._pgconn_ptr = NULL
         self._procpid = getpid()
 
     def __dealloc__(self):
@@ -63,21 +63,21 @@ cdef class PGconn:
         return _call_int(self, <conn_int_f>libpq.PQconnectPoll)
 
     def finish(self) -> None:
-        if self.pgconn_ptr is not NULL:
-            libpq.PQfinish(self.pgconn_ptr)
-            self.pgconn_ptr = NULL
+        if self._pgconn_ptr is not NULL:
+            libpq.PQfinish(self._pgconn_ptr)
+            self._pgconn_ptr = NULL
 
     @property
     def pgconn_ptr(self) -> Optional[int]:
-        if self.pgconn_ptr:
-            return <long><void *>self.pgconn_ptr
+        if self._pgconn_ptr:
+            return <long><void *>self._pgconn_ptr
         else:
             return None
 
     @property
     def info(self) -> List["ConninfoOption"]:
         _ensure_pgconn(self)
-        cdef libpq.PQconninfoOption *opts = libpq.PQconninfo(self.pgconn_ptr)
+        cdef libpq.PQconninfoOption *opts = libpq.PQconninfo(self._pgconn_ptr)
         if opts is NULL:
             raise MemoryError("couldn't allocate connection info")
         rv = _options_from_array(opts)
@@ -86,10 +86,10 @@ cdef class PGconn:
 
     def reset(self) -> None:
         _ensure_pgconn(self)
-        libpq.PQreset(self.pgconn_ptr)
+        libpq.PQreset(self._pgconn_ptr)
 
     def reset_start(self) -> None:
-        if not libpq.PQresetStart(self.pgconn_ptr):
+        if not libpq.PQresetStart(self._pgconn_ptr):
             raise e.OperationalError("couldn't reset connection")
 
     def reset_poll(self) -> int:
@@ -121,9 +121,8 @@ cdef class PGconn:
         from psycopg3.pq import _pq_ctypes
 
         _ensure_pgconn(self)
-        ctypes_ptr = ctypes.cast(
-            <long><void *>self.pgconn_ptr, _pq_ctypes.PGconn_ptr)
-        return _pq_ctypes.PQhostaddr(ctypes_ptr)
+        return _pq_ctypes.PQhostaddr(
+            ctypes.cast(self.pgconn_ptr, _pq_ctypes.PGconn_ptr))
 
     @property
     def port(self) -> bytes:
@@ -139,15 +138,15 @@ cdef class PGconn:
 
     @property
     def status(self) -> int:
-        return libpq.PQstatus(self.pgconn_ptr)
+        return libpq.PQstatus(self._pgconn_ptr)
 
     @property
     def transaction_status(self) -> int:
-        return libpq.PQtransactionStatus(self.pgconn_ptr)
+        return libpq.PQtransactionStatus(self._pgconn_ptr)
 
     def parameter_status(self, const char *name) -> Optional[bytes]:
         _ensure_pgconn(self)
-        cdef const char *rv = libpq.PQparameterStatus(self.pgconn_ptr, name)
+        cdef const char *rv = libpq.PQparameterStatus(self._pgconn_ptr, name)
         if rv is not NULL:
             return rv
         else:
@@ -155,7 +154,7 @@ cdef class PGconn:
 
     @property
     def error_message(self) -> bytes:
-        return libpq.PQerrorMessage(self.pgconn_ptr)
+        return libpq.PQerrorMessage(self._pgconn_ptr)
 
     @property
     def protocol_version(self) -> int:
@@ -178,11 +177,11 @@ cdef class PGconn:
 
     @property
     def needs_password(self) -> bool:
-        return bool(libpq.PQconnectionNeedsPassword(self.pgconn_ptr))
+        return bool(libpq.PQconnectionNeedsPassword(self._pgconn_ptr))
 
     @property
     def used_password(self) -> bool:
-        return bool(libpq.PQconnectionUsedPassword(self.pgconn_ptr))
+        return bool(libpq.PQconnectionUsedPassword(self._pgconn_ptr))
 
     @property
     def ssl_in_use(self) -> bool:
@@ -192,7 +191,7 @@ cdef class PGconn:
         _ensure_pgconn(self)
         cdef libpq.PGresult *pgresult
         with nogil:
-            pgresult = libpq.PQexec(self.pgconn_ptr, command)
+            pgresult = libpq.PQexec(self._pgconn_ptr, command)
         if pgresult is NULL:
             raise MemoryError("couldn't allocate PGresult")
 
@@ -202,7 +201,7 @@ cdef class PGconn:
         _ensure_pgconn(self)
         cdef int rv
         with nogil:
-            rv = libpq.PQsendQuery(self.pgconn_ptr, command)
+            rv = libpq.PQsendQuery(self._pgconn_ptr, command)
         if not rv:
             raise e.OperationalError(f"sending query failed: {error_message(self)}")
 
@@ -227,7 +226,7 @@ cdef class PGconn:
         cdef libpq.PGresult *pgresult
         with nogil:
             pgresult = libpq.PQexecParams(
-                self.pgconn_ptr, command, cnparams, ctypes,
+                self._pgconn_ptr, command, cnparams, ctypes,
                 <const char *const *>cvalues, clengths, cformats, result_format)
         _clear_query_params(ctypes, cvalues, clengths, cformats)
         if pgresult is NULL:
@@ -255,7 +254,7 @@ cdef class PGconn:
         cdef int rv
         with nogil:
             rv = libpq.PQsendQueryParams(
-                self.pgconn_ptr, command, cnparams, ctypes,
+                self._pgconn_ptr, command, cnparams, ctypes,
                 <const char *const *>cvalues, clengths, cformats, result_format)
         _clear_query_params(ctypes, cvalues, clengths, cformats)
         if not rv:
@@ -282,7 +281,7 @@ cdef class PGconn:
         cdef int rv
         with nogil:
             rv = libpq.PQsendPrepare(
-                self.pgconn_ptr, name, command, nparams, atypes
+                self._pgconn_ptr, name, command, nparams, atypes
             )
         PyMem_Free(atypes)
         if not rv:
@@ -310,7 +309,7 @@ cdef class PGconn:
         cdef int rv
         with nogil:
             rv = libpq.PQsendQueryPrepared(
-                self.pgconn_ptr, name, cnparams, <const char *const *>cvalues,
+                self._pgconn_ptr, name, cnparams, <const char *const *>cvalues,
                 clengths, cformats, result_format)
         _clear_query_params(ctypes, cvalues, clengths, cformats)
         if not rv:
@@ -337,7 +336,7 @@ cdef class PGconn:
         cdef libpq.PGresult *rv
         with nogil:
             rv = libpq.PQprepare(
-                self.pgconn_ptr, name, command, nparams, atypes)
+                self._pgconn_ptr, name, command, nparams, atypes)
         PyMem_Free(atypes)
         if rv is NULL:
             raise MemoryError("couldn't allocate PGresult")
@@ -363,7 +362,7 @@ cdef class PGconn:
         cdef libpq.PGresult *rv
         with nogil:
             rv = libpq.PQexecPrepared(
-                self.pgconn_ptr, name, cnparams,
+                self._pgconn_ptr, name, cnparams,
                 <const char *const *>cvalues,
                 clengths, cformats, result_format)
 
@@ -374,14 +373,14 @@ cdef class PGconn:
 
     def describe_prepared(self, const char *name) -> PGresult:
         _ensure_pgconn(self)
-        cdef libpq.PGresult *rv = libpq.PQdescribePrepared(self.pgconn_ptr, name)
+        cdef libpq.PGresult *rv = libpq.PQdescribePrepared(self._pgconn_ptr, name)
         if rv is NULL:
             raise MemoryError("couldn't allocate PGresult")
         return PGresult._from_ptr(rv)
 
     def send_describe_prepared(self, const char *name) -> None:
         _ensure_pgconn(self)
-        cdef int rv = libpq.PQsendDescribePrepared(self.pgconn_ptr, name)
+        cdef int rv = libpq.PQsendDescribePrepared(self._pgconn_ptr, name)
         if not rv:
             raise e.OperationalError(
                 f"sending describe prepared failed: {error_message(self)}"
@@ -389,58 +388,58 @@ cdef class PGconn:
 
     def describe_portal(self, const char *name) -> PGresult:
         _ensure_pgconn(self)
-        cdef libpq.PGresult *rv = libpq.PQdescribePortal(self.pgconn_ptr, name)
+        cdef libpq.PGresult *rv = libpq.PQdescribePortal(self._pgconn_ptr, name)
         if rv is NULL:
             raise MemoryError("couldn't allocate PGresult")
         return PGresult._from_ptr(rv)
 
     def send_describe_portal(self, const char *name) -> None:
         _ensure_pgconn(self)
-        cdef int rv = libpq.PQsendDescribePortal(self.pgconn_ptr, name)
+        cdef int rv = libpq.PQsendDescribePortal(self._pgconn_ptr, name)
         if not rv:
             raise e.OperationalError(
                 f"sending describe prepared failed: {error_message(self)}"
             )
 
     def get_result(self) -> Optional["PGresult"]:
-        cdef libpq.PGresult *pgresult = libpq.PQgetResult(self.pgconn_ptr)
+        cdef libpq.PGresult *pgresult = libpq.PQgetResult(self._pgconn_ptr)
         if pgresult is NULL:
             return None
         return PGresult._from_ptr(pgresult)
 
     def consume_input(self) -> None:
-        if 1 != libpq.PQconsumeInput(self.pgconn_ptr):
+        if 1 != libpq.PQconsumeInput(self._pgconn_ptr):
             raise e.OperationalError(f"consuming input failed: {error_message(self)}")
 
     def is_busy(self) -> int:
         cdef int rv
         with nogil:
-            rv = libpq.PQisBusy(self.pgconn_ptr)
+            rv = libpq.PQisBusy(self._pgconn_ptr)
         return rv
 
     @property
     def nonblocking(self) -> int:
-        return libpq.PQisnonblocking(self.pgconn_ptr)
+        return libpq.PQisnonblocking(self._pgconn_ptr)
 
     @nonblocking.setter
     def nonblocking(self, int arg) -> None:
-        if 0 > libpq.PQsetnonblocking(self.pgconn_ptr, arg):
+        if 0 > libpq.PQsetnonblocking(self._pgconn_ptr, arg):
             raise e.OperationalError(f"setting nonblocking failed: {error_message(self)}")
 
     def flush(self) -> int:
-        if self.pgconn_ptr == NULL:
+        if self._pgconn_ptr == NULL:
             raise e.OperationalError(f"flushing failed: the connection is closed")
-        cdef int rv = libpq.PQflush(self.pgconn_ptr)
+        cdef int rv = libpq.PQflush(self._pgconn_ptr)
         if rv < 0:
             raise e.OperationalError(f"flushing failed: {error_message(self)}")
         return rv
 
     def set_single_row_mode(self) -> None:
-        if not libpq.PQsetSingleRowMode(self.pgconn_ptr):
+        if not libpq.PQsetSingleRowMode(self._pgconn_ptr):
             raise e.OperationalError("setting single row mode failed")
 
     def get_cancel(self) -> PGcancel:
-        cdef libpq.PGcancel *ptr = libpq.PQgetCancel(self.pgconn_ptr)
+        cdef libpq.PGcancel *ptr = libpq.PQgetCancel(self._pgconn_ptr)
         if not ptr:
             raise e.OperationalError("couldn't create cancel object")
         return PGcancel._from_ptr(ptr)
@@ -448,7 +447,7 @@ cdef class PGconn:
     cpdef object notifies(self):
         cdef libpq.PGnotify *ptr
         with nogil:
-            ptr = libpq.PQnotifies(self.pgconn_ptr)
+            ptr = libpq.PQnotifies(self._pgconn_ptr)
         if ptr:
             ret = PGnotify(ptr.relname, ptr.be_pid, ptr.extra)
             libpq.PQfreemem(ptr)
@@ -462,7 +461,7 @@ cdef class PGconn:
         cdef Py_ssize_t length
 
         _buffer_as_string_and_size(buffer, &cbuffer, &length)
-        rv = libpq.PQputCopyData(self.pgconn_ptr, cbuffer, length)
+        rv = libpq.PQputCopyData(self._pgconn_ptr, cbuffer, length)
         if rv < 0:
             raise e.OperationalError(f"sending copy data failed: {error_message(self)}")
         return rv
@@ -472,7 +471,7 @@ cdef class PGconn:
         cdef const char *cerr = NULL
         if error is not None:
             cerr = PyBytes_AsString(error)
-        rv = libpq.PQputCopyEnd(self.pgconn_ptr, cerr)
+        rv = libpq.PQputCopyEnd(self._pgconn_ptr, cerr)
         if rv < 0:
             raise e.OperationalError(f"sending copy end failed: {error_message(self)}")
         return rv
@@ -480,7 +479,7 @@ cdef class PGconn:
     def get_copy_data(self, int async_) -> Tuple[int, memoryview]:
         cdef char *buffer_ptr = NULL
         cdef int nbytes
-        nbytes = libpq.PQgetCopyData(self.pgconn_ptr, &buffer_ptr, async_)
+        nbytes = libpq.PQgetCopyData(self._pgconn_ptr, &buffer_ptr, async_)
         if nbytes == -2:
             raise e.OperationalError(f"receiving copy data failed: {error_message(self)}")
         if buffer_ptr is not NULL:
@@ -492,14 +491,14 @@ cdef class PGconn:
 
     def make_empty_result(self, int exec_status) -> PGresult:
         cdef libpq.PGresult *rv = libpq.PQmakeEmptyPGresult(
-            self.pgconn_ptr, <libpq.ExecStatusType>exec_status)
+            self._pgconn_ptr, <libpq.ExecStatusType>exec_status)
         if not rv:
             raise MemoryError("couldn't allocate empty PGresult")
         return PGresult._from_ptr(rv)
 
 
 cdef int _ensure_pgconn(PGconn pgconn) except 0:
-    if pgconn.pgconn_ptr is not NULL:
+    if pgconn._pgconn_ptr is not NULL:
         return 1
 
     raise e.OperationalError("the connection is closed")
@@ -511,7 +510,7 @@ cdef char *_call_bytes(PGconn pgconn, conn_bytes_f func) except NULL:
     """
     if not _ensure_pgconn(pgconn):
         return NULL
-    cdef char *rv = func(pgconn.pgconn_ptr)
+    cdef char *rv = func(pgconn._pgconn_ptr)
     assert rv is not NULL
     return rv
 
@@ -522,7 +521,7 @@ cdef int _call_int(PGconn pgconn, conn_int_f func) except -2:
     """
     if not _ensure_pgconn(pgconn):
         return -2
-    return func(pgconn.pgconn_ptr)
+    return func(pgconn._pgconn_ptr)
 
 
 cdef void notice_receiver(void *arg, const libpq.PGresult *res_ptr) with gil:

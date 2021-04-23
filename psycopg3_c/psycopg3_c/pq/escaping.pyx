@@ -22,12 +22,12 @@ cdef class Escaping:
 
         if self.conn is None:
             raise e.OperationalError("escape_literal failed: no connection provided")
-        if self.conn.pgconn_ptr is NULL:
+        if self.conn._pgconn_ptr is NULL:
             raise e.OperationalError("the connection is closed")
 
         _buffer_as_string_and_size(data, &ptr, &length)
 
-        out = libpq.PQescapeLiteral(self.conn.pgconn_ptr, ptr, length)
+        out = libpq.PQescapeLiteral(self.conn._pgconn_ptr, ptr, length)
         if out is NULL:
             raise e.OperationalError(
                 f"escape_literal failed: {error_message(self.conn)}"
@@ -46,10 +46,10 @@ cdef class Escaping:
 
         if self.conn is None:
             raise e.OperationalError("escape_identifier failed: no connection provided")
-        if self.conn.pgconn_ptr is NULL:
+        if self.conn._pgconn_ptr is NULL:
             raise e.OperationalError("the connection is closed")
 
-        out = libpq.PQescapeIdentifier(self.conn.pgconn_ptr, ptr, length)
+        out = libpq.PQescapeIdentifier(self.conn._pgconn_ptr, ptr, length)
         if out is NULL:
             raise e.OperationalError(
                 f"escape_identifier failed: {error_message(self.conn)}"
@@ -72,11 +72,11 @@ cdef class Escaping:
         PyByteArray_Resize(rv, length * 2 + 1)
 
         if self.conn is not None:
-            if self.conn.pgconn_ptr is NULL:
+            if self.conn._pgconn_ptr is NULL:
                 raise e.OperationalError("the connection is closed")
 
             len_out = libpq.PQescapeStringConn(
-                self.conn.pgconn_ptr, PyByteArray_AS_STRING(rv),
+                self.conn._pgconn_ptr, PyByteArray_AS_STRING(rv),
                 ptr, length, &error
             )
             if error:
@@ -97,14 +97,14 @@ cdef class Escaping:
         cdef char *ptr
         cdef Py_ssize_t length
 
-        if self.conn is not None and self.conn.pgconn_ptr is NULL:
+        if self.conn is not None and self.conn._pgconn_ptr is NULL:
             raise e.OperationalError("the connection is closed")
 
         _buffer_as_string_and_size(data, &ptr, &length)
 
         if self.conn is not None:
             out = libpq.PQescapeByteaConn(
-                self.conn.pgconn_ptr, <unsigned char *>ptr, length, &len_out)
+                self.conn._pgconn_ptr, <unsigned char *>ptr, length, &len_out)
         else:
             out = libpq.PQescapeBytea(<unsigned char *>ptr, length, &len_out)
 
@@ -121,7 +121,7 @@ cdef class Escaping:
         # not needed, but let's keep it symmetric with the escaping:
         # if a connection is passed in, it must be valid.
         if self.conn is not None:
-            if self.conn.pgconn_ptr is NULL:
+            if self.conn._pgconn_ptr is NULL:
                 raise e.OperationalError("the connection is closed")
 
         cdef size_t len_out
