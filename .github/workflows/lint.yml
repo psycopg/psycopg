@@ -19,3 +19,5 @@ jobs:
         run: tox -e flake8
       - name: Run mypy
         run: tox -e mypy
+      - name: Check documentation
+        run: tox -e docs
