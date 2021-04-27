@@ -16,21 +16,26 @@ This can be implemented as a class, for instance:
 
 .. code:: python
 
+   from typing import Any, Sequence
+   from psycopg3 import BaseCursor
+
    class DictRowFactory:
-       def __init__(self, cursor):
+       def __init__(self, cursor: BaseCursor[Any, dict[str, Any]]):
            self.fields = [c.name for c in cursor.description]
 
-       def __call__(self, values):
+       def __call__(self, values: Sequence[Any]) -> dict[str, Any]:
            return dict(zip(self.fields, values))
 
 or as a plain function:
 
 .. code:: python
 
-   def dict_row_factory(cursor):
+   def dict_row_factory(
+       cursor: BaseCursor[Any, dict[str, Any]]
+   ) -> Callable[[Sequence[Any]], dict[str, Any]]:
        fields = [c.name for c in cursor.description]
 
-       def make_row(values):
+       def make_row(values: Sequence[Any]) -> dict[str, Any]:
            return dict(zip(fields, values))
 
        return make_row
@@ -49,6 +54,11 @@ These can then be used by specifying a `row_factory` argument in
 Later usages of `row_factory` override earlier definitions; for instance,
 the `row_factory` specified at `Connection.connect()` can be overridden by
 passing another value at `Connection.cursor()`.
+
+.. note:: By declaring type annotations on the row factory used in
+   `Connection` or `Cursor`, rows retrieved by `.fetch*()` calls will have the
+   correct return type (i.e. a `dict[str, Any]` in previous example) and your
+   code can be type checked with a static analyzer such as mypy.
 
 Available row factories
 -----------------------
