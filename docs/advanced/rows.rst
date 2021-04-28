@@ -17,10 +17,10 @@ This can be implemented as a class, for instance:
 .. code:: python
 
    from typing import Any, Sequence
-   from psycopg3 import BaseCursor
+   from psycopg3 import AnyCursor
 
    class DictRowFactory:
-       def __init__(self, cursor: BaseCursor[Any, dict[str, Any]]):
+       def __init__(self, cursor: AnyCursor[dict[str, Any]]):
            self.fields = [c.name for c in cursor.description]
 
        def __call__(self, values: Sequence[Any]) -> dict[str, Any]:
@@ -31,7 +31,7 @@ or as a plain function:
 .. code:: python
 
    def dict_row_factory(
-       cursor: BaseCursor[Any, dict[str, Any]]
+       cursor: AnyCursor[dict[str, Any]]
    ) -> Callable[[Sequence[Any]], dict[str, Any]]:
        fields = [c.name for c in cursor.description]
 

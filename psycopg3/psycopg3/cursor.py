@@ -471,6 +471,9 @@ class BaseCursor(Generic[ConnectionType, Row]):
         self._pgq = pgq
 
 
+AnyCursor = BaseCursor[Any, Row]
+
+
 class Cursor(BaseCursor["Connection[Any]", Row]):
     __module__ = "psycopg3"
     __slots__ = ()

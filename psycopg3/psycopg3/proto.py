@@ -14,7 +14,7 @@ from ._enums import Format
 
 if TYPE_CHECKING:
     from .connection import BaseConnection
-    from .cursor import BaseCursor
+    from .cursor import AnyCursor
     from .adapt import Dumper, Loader, AdaptersMap
     from .waiting import Wait, Ready
     from .sql import Composable
@@ -59,7 +59,7 @@ class RowMaker(Protocol[Row_co]):
 
 
 class RowFactory(Protocol[Row]):
-    def __call__(self, __cursor: "BaseCursor[Any, Row]") -> RowMaker[Row]:
+    def __call__(self, __cursor: "AnyCursor[Row]") -> RowMaker[Row]:
         ...
 
 

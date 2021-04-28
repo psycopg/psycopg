@@ -282,7 +282,7 @@ class Thing:
         self.kwargs = kwargs
 
 def thing_row(
-    cur: psycopg3.BaseCursor[Any, Thing],
+    cur: psycopg3.AnyCursor[Thing],
 ) -> Callable[[Sequence[Any]], Thing]:
     assert cur.description
     names = [d.name for d in cur.description]

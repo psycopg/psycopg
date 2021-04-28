@@ -13,14 +13,14 @@ from typing import TYPE_CHECKING
 from . import errors as e
 
 if TYPE_CHECKING:
-    from .cursor import BaseCursor
+    from .cursor import AnyCursor
 
 
 TupleRow = Tuple[Any, ...]
 
 
 def tuple_row(
-    cursor: "BaseCursor[Any, TupleRow]",
+    cursor: "AnyCursor[TupleRow]",
 ) -> Callable[[Sequence[Any]], TupleRow]:
     """Row factory to represent rows as simple tuples.
 
@@ -35,7 +35,7 @@ DictRow = Dict[str, Any]
 
 
 def dict_row(
-    cursor: "BaseCursor[Any, DictRow]",
+    cursor: "AnyCursor[DictRow]",
 ) -> Callable[[Sequence[Any]], DictRow]:
     """Row factory to represent rows as dicts.
 
@@ -54,7 +54,7 @@ def dict_row(
 
 
 def namedtuple_row(
-    cursor: "BaseCursor[Any, NamedTuple]",
+    cursor: "AnyCursor[NamedTuple]",
 ) -> Callable[[Sequence[Any]], NamedTuple]:
     """Row factory to represent rows as `~collections.namedtuple`."""
 
