@@ -74,7 +74,7 @@ as a local context to manage conversions during the query, instantiating the
 required dumpers and loaders and dispatching the values to convert to the
 right instance.
 
-- The `!Trasformer` copies the adapters configuration from the `!Cursor`, thus
+- The `!Transformer` copies the adapters configuration from the `!Cursor`, thus
   inheriting all the changes made to the global configuration, the current
   `!Connection`, the `!Cursor`.
 
