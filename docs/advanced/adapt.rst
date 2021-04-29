@@ -57,9 +57,52 @@ configuration.
     subclass `!Dumper` or `!Loader` you should call the ``.register()`` on the
     class you created.
 
+For example, suppose you want to work with the "infinity" date which is
+available in PostgreSQL but not handled by Python:
+
+.. code:: python
+
+    >>> conn.execute("'infinity'::date").fetchone()
+    Traceback (most recent call last):
+       ...
+    psycopg3.DataError: Python date doesn't support years after 9999: got infinity
+
+One possibility would be to store Python's `datetime.date.max` to PostgreSQL
+infinity. For this, let's create a subclass for the dumper and the loader and
+register them in the working scope (globally or just on a connection or
+cursor):
+
+.. code:: python
+
+    from datetime import date
+
+    from psycopg3.oids import postgres_types as builtins
+    from psycopg3.types import DateLoader, DateDumper
+
+    class InfDateDumper(DateDumper):
+        def dump(self, obj):
+            if obj == date.max:
+                return b"infinity"
+            else:
+                return super().dump(obj)
+
+    class InfDateLoader(DateLoader):
+        def load(self, data):
+            if data == b"infinity":
+                return date.max
+            else:
+                return super().load(data)
+
+    InfDateDumper.register(date, cur)
+    InfDateLoader.register(builtins["date"].oid, cur)
+
+    cur.execute("SELECT %s::text, %s::text", [date(2020, 12, 31), date.max]).fetchone()
+    # ('2020-12-31', 'infinity')
+    cur.execute("select '2020-12-31'::date, 'infinity'::date").fetchone()
+    # (datetime.date(2020, 12, 31), datetime.date(9999, 12, 31))
+
 .. admonition:: TODO
 
-    - Example: infinity date customisation
     - Example: numeric to float
 
 
