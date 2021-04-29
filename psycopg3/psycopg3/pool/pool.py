@@ -422,6 +422,7 @@ class ConnectionPool(BasePool[Connection[Any]]):
         self._stats[self._CONNECTIONS_NUM] += 1
         t0 = monotonic()
         try:
+            conn: Connection[Any]
             conn = self.connection_class.connect(self.conninfo, **self.kwargs)
         except Exception:
             self._stats[self._CONNECTIONS_ERRORS] += 1

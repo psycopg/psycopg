@@ -22,7 +22,7 @@ from . import waiting
 from . import encodings
 from .pq import ConnStatus, ExecStatus, TransactionStatus, Format
 from .sql import Composable
-from .rows import tuple_row
+from .rows import tuple_row, TupleRow
 from .proto import AdaptContext, ConnectionType, Params, PQGen, PQGenConn
 from .proto import Query, Row, RowConn, RowFactory, RV
 from .cursor import Cursor, AsyncCursor
@@ -446,7 +446,30 @@ class Connection(BaseConnection[RowConn]):
         super().__init__(pgconn, row_factory)
         self.lock = threading.Lock()
 
+    @overload
     @classmethod
+    def connect(
+        cls,
+        conninfo: str = "",
+        *,
+        autocommit: bool = False,
+        row_factory: RowFactory[RowConn],
+        **kwargs: Union[None, int, str],
+    ) -> "Connection[RowConn]":
+        ...
+
+    @overload
+    @classmethod
+    def connect(
+        cls,
+        conninfo: str = "",
+        *,
+        autocommit: bool = False,
+        **kwargs: Union[None, int, str],
+    ) -> "Connection[TupleRow]":
+        ...
+
+    @classmethod  # type: ignore[misc]
     def connect(
         cls,
         conninfo: str = "",
@@ -454,7 +477,7 @@ class Connection(BaseConnection[RowConn]):
         autocommit: bool = False,
         row_factory: Optional[RowFactory[RowConn]] = None,
         **kwargs: Any,
-    ) -> "Connection[RowConn]":
+    ) -> "Connection[Any]":
         """
         Connect to a database server and return a new `Connection` instance.
 
@@ -639,7 +662,30 @@ class AsyncConnection(BaseConnection[RowConn]):
         super().__init__(pgconn, row_factory)
         self.lock = asyncio.Lock()
 
+    @overload
     @classmethod
+    async def connect(
+        cls,
+        conninfo: str = "",
+        *,
+        autocommit: bool = False,
+        row_factory: RowFactory[RowConn],
+        **kwargs: Union[None, int, str],
+    ) -> "AsyncConnection[RowConn]":
+        ...
+
+    @overload
+    @classmethod
+    async def connect(
+        cls,
+        conninfo: str = "",
+        *,
+        autocommit: bool = False,
+        **kwargs: Union[None, int, str],
+    ) -> "AsyncConnection[TupleRow]":
+        ...
+
+    @classmethod  # type: ignore[misc]
     async def connect(
         cls,
         conninfo: str = "",
@@ -647,7 +693,7 @@ class AsyncConnection(BaseConnection[RowConn]):
         autocommit: bool = False,
         row_factory: Optional[RowFactory[RowConn]] = None,
         **kwargs: Any,
-    ) -> "AsyncConnection[RowConn]":
+    ) -> "AsyncConnection[Any]":
         return await cls._wait_conn(
             cls._connect_gen(
                 conninfo,

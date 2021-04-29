@@ -32,7 +32,7 @@ class Person:
 
 def check_row_factory_cursor() -> None:
     """Type-check connection.cursor(..., row_factory=<MyRowFactory>) case."""
-    conn = connect()  # type: ignore[var-annotated] # Connection[Any]
+    conn = connect()
 
     cur1: Cursor[Any]
     cur1 = conn.cursor()
@@ -81,7 +81,7 @@ def check_row_factory_connection() -> None:
 
     cur3: Cursor[Tuple[Any, ...]]
     r3: Optional[Tuple[Any, ...]]
-    conn3 = connect()  # type: ignore[var-annotated]
+    conn3 = connect()
     cur3 = conn3.execute("select 3")
     with conn3.cursor() as cur3:
         cur3.execute("select 42")
