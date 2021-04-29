@@ -251,7 +251,7 @@ class ServerCursor(BaseCursor["Connection[Any]", Row]):
         else:
             return None
 
-    def fetchmany(self, size: int = 0) -> Sequence[Row]:
+    def fetchmany(self, size: int = 0) -> List[Row]:
         if not size:
             size = self.arraysize
         with self._conn.lock:
@@ -259,7 +259,7 @@ class ServerCursor(BaseCursor["Connection[Any]", Row]):
         self._pos += len(recs)
         return recs
 
-    def fetchall(self) -> Sequence[Row]:
+    def fetchall(self) -> List[Row]:
         with self._conn.lock:
             recs = self._conn.wait(self._helper._fetch_gen(self, None))
         self._pos += len(recs)
@@ -368,7 +368,7 @@ class AsyncServerCursor(BaseCursor["AsyncConnection[Any]", Row]):
         else:
             return None
 
-    async def fetchmany(self, size: int = 0) -> Sequence[Row]:
+    async def fetchmany(self, size: int = 0) -> List[Row]:
         if not size:
             size = self.arraysize
         async with self._conn.lock:
@@ -376,7 +376,7 @@ class AsyncServerCursor(BaseCursor["AsyncConnection[Any]", Row]):
         self._pos += len(recs)
         return recs
 
-    async def fetchall(self) -> Sequence[Row]:
+    async def fetchall(self) -> List[Row]:
         async with self._conn.lock:
             recs = await self._conn.wait(self._helper._fetch_gen(self, None))
         self._pos += len(recs)

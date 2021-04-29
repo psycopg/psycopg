@@ -175,6 +175,41 @@ obj = {await_} curs.fetchone()
     _test_reveal(stmts, type, mypy, tmpdir)
 
 
+@pytest.mark.slow
+@pytest.mark.parametrize("method", ["fetchmany", "fetchall"])
+@pytest.mark.parametrize(
+    "curs, type",
+    [
+        (
+            "conn.cursor()",
+            "List[Tuple[Any, ...]]",
+        ),
+        (
+            "conn.cursor(row_factory=rows.dict_row)",
+            "List[Dict[str, Any]]",
+        ),
+        (
+            "conn.cursor(row_factory=thing_row)",
+            "List[Thing]",
+        ),
+    ],
+)
+@pytest.mark.parametrize("server_side", [False, True])
+@pytest.mark.parametrize("conn_class", ["Connection", "AsyncConnection"])
+def test_fetchsome_type(
+    conn_class, server_side, curs, type, method, mypy, tmpdir
+):
+    await_ = "await" if "Async" in conn_class else ""
+    if server_side:
+        curs = curs.replace("(", "(name='foo',", 1)
+    stmts = f"""\
+conn = {await_} psycopg3.{conn_class}.connect()
+curs = {curs}
+obj = {await_} curs.{method}()
+"""
+    _test_reveal(stmts, type, mypy, tmpdir)
+
+
 @pytest.fixture(scope="session")
 def mypy(tmp_path_factory):
     cache_dir = tmp_path_factory.mktemp(basename="mypy_cache")
@@ -200,7 +235,7 @@ def _test_reveal(stmts, type, mypy, tmpdir):
     stmts = "\n".join(f"    {line}" for line in stmts.splitlines())
 
     src = f"""\
-from typing import Any, Callable, Dict, NamedTuple, Optional, Sequence, Tuple
+from typing import Any, Callable, Dict, List, NamedTuple, Optional, Sequence, Tuple
 import psycopg3
 from psycopg3 import rows
 
