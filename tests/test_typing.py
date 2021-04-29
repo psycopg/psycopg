@@ -176,6 +176,44 @@ obj = {await_} curs.fetchone()
 
 
 @pytest.mark.slow
+@pytest.mark.parametrize(
+    "curs, type",
+    [
+        (
+            "conn.cursor()",
+            "Tuple[Any, ...]",
+        ),
+        (
+            "conn.cursor(row_factory=rows.dict_row)",
+            "Dict[str, Any]",
+        ),
+        (
+            "conn.cursor(row_factory=thing_row)",
+            "Thing",
+        ),
+    ],
+)
+@pytest.mark.parametrize("server_side", [False, True])
+@pytest.mark.parametrize("conn_class", ["Connection", "AsyncConnection"])
+def test_iter_type(conn_class, server_side, curs, type, mypy, tmpdir):
+    if "Async" in conn_class:
+        async_ = "async "
+        await_ = "await "
+    else:
+        async_ = await_ = ""
+
+    if server_side:
+        curs = curs.replace("(", "(name='foo',", 1)
+    stmts = f"""\
+conn = {await_}psycopg3.{conn_class}.connect()
+curs = {curs}
+{async_}for obj in curs:
+    pass
+"""
+    _test_reveal(stmts, type, mypy, tmpdir)
+
+
+@pytest.mark.slow
 @pytest.mark.parametrize("method", ["fetchmany", "fetchall"])
 @pytest.mark.parametrize(
     "curs, type",
