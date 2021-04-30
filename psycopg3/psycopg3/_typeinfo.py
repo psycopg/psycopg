@@ -55,7 +55,7 @@ class TypeInfo:
 
     @classmethod
     def fetch(
-        cls: Type[T], conn: "Connection", name: Union[str, "Identifier"]
+        cls: Type[T], conn: "Connection[Any]", name: Union[str, "Identifier"]
     ) -> Optional[T]:
         """
         Query a system catalog to read information about a type.
@@ -72,12 +72,14 @@ class TypeInfo:
             name = name.as_string(conn)
         cur = conn.cursor(binary=True, row_factory=dict_row)
         cur.execute(cls._info_query, {"name": name})
-        recs: Sequence[Dict[str, Any]] = cur.fetchall()
+        recs = cur.fetchall()
         return cls._fetch(name, recs)
 
     @classmethod
     async def fetch_async(
-        cls: Type[T], conn: "AsyncConnection", name: Union[str, "Identifier"]
+        cls: Type[T],
+        conn: "AsyncConnection[Any]",
+        name: Union[str, "Identifier"],
     ) -> Optional[T]:
         """
         Query a system catalog to read information about a type.
@@ -91,7 +93,7 @@ class TypeInfo:
 
         cur = conn.cursor(binary=True, row_factory=dict_row)
         await cur.execute(cls._info_query, {"name": name})
-        recs: Sequence[Dict[str, Any]] = await cur.fetchall()
+        recs = await cur.fetchall()
         return cls._fetch(name, recs)
 
     @classmethod

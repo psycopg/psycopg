@@ -10,7 +10,7 @@ from . import pq
 from . import types
 from .copy import Copy, AsyncCopy
 from .adapt import global_adapters
-from .cursor import AsyncCursor, Cursor, BaseCursor
+from .cursor import AnyCursor, AsyncCursor, Cursor
 from .errors import Warning, Error, InterfaceError, DatabaseError
 from .errors import DataError, OperationalError, IntegrityError
 from .errors import InternalError, ProgrammingError, NotSupportedError
@@ -47,13 +47,13 @@ BinaryDumper.register(Binary, global_adapters)  # dbapi20
 # so that function signatures are consistent with the documentation.
 __all__ = [
     "__version__",
+    "AnyCursor",
     "AsyncConnection",
     "AsyncCopy",
     "AsyncCursor",
     "AsyncServerCursor",
     "AsyncTransaction",
     "BaseConnection",
-    "BaseCursor",
     "Column",
     "Connection",
     "Copy",

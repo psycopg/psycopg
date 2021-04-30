@@ -10,7 +10,7 @@ from operator import attrgetter
 from . import errors as e
 
 if TYPE_CHECKING:
-    from .cursor import BaseCursor
+    from .cursor import AnyCursor
 
 
 class ColumnData(NamedTuple):
@@ -23,7 +23,7 @@ class Column(Sequence[Any]):
 
     __module__ = "psycopg3"
 
-    def __init__(self, cursor: "BaseCursor[Any]", index: int):
+    def __init__(self, cursor: "AnyCursor[Any]", index: int):
         res = cursor.pgresult
         assert res
 

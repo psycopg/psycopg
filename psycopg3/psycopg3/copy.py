@@ -52,7 +52,7 @@ class BaseCopy(Generic[ConnectionType]):
 
     formatter: "Formatter"
 
-    def __init__(self, cursor: "BaseCursor[ConnectionType]"):
+    def __init__(self, cursor: "BaseCursor[ConnectionType, Any]"):
         self.cursor = cursor
         self.connection = cursor.connection
         self._pgconn = self.connection.pgconn
@@ -148,12 +148,12 @@ class BaseCopy(Generic[ConnectionType]):
         self._finished = True
 
 
-class Copy(BaseCopy["Connection"]):
+class Copy(BaseCopy["Connection[Any]"]):
     """Manage a :sql:`COPY` operation."""
 
     __module__ = "psycopg3"
 
-    def __init__(self, cursor: "Cursor"):
+    def __init__(self, cursor: "Cursor[Any]"):
         super().__init__(cursor)
         self._queue: queue.Queue[Optional[bytes]] = queue.Queue(
             maxsize=self.QUEUE_SIZE
@@ -280,12 +280,12 @@ class Copy(BaseCopy["Connection"]):
             self._worker = None  # break the loop
 
 
-class AsyncCopy(BaseCopy["AsyncConnection"]):
+class AsyncCopy(BaseCopy["AsyncConnection[Any]"]):
     """Manage an asynchronous :sql:`COPY` operation."""
 
     __module__ = "psycopg3"
 
-    def __init__(self, cursor: "AsyncCursor"):
+    def __init__(self, cursor: "AsyncCursor[Any]"):
         super().__init__(cursor)
         self._queue: asyncio.Queue[Optional[bytes]] = asyncio.Queue(
             maxsize=self.QUEUE_SIZE

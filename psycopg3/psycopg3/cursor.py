@@ -17,9 +17,8 @@ from . import generators
 
 from .pq import ExecStatus, Format
 from .copy import Copy, AsyncCopy
-from .rows import tuple_row
+from .rows import Row, RowFactory
 from .proto import ConnectionType, Query, Params, PQGen
-from .proto import Row, RowFactory
 from ._column import Column
 from ._queries import PostgresQuery
 from ._preparing import Prepare
@@ -42,13 +41,13 @@ else:
     execute = generators.execute
 
 
-class BaseCursor(Generic[ConnectionType]):
+class BaseCursor(Generic[ConnectionType, Row]):
     # Slots with __weakref__ and generic bases don't work on Py 3.6
     # https://bugs.python.org/issue41451
     if sys.version_info >= (3, 7):
         __slots__ = """
             _conn format _adapters arraysize _closed _results pgresult _pos
-            _iresult _rowcount _pgq _tx _last_query _row_factory
+            _iresult _rowcount _pgq _tx _last_query _row_factory _make_row
             __weakref__
             """.split()
 
@@ -61,7 +60,7 @@ class BaseCursor(Generic[ConnectionType]):
         connection: ConnectionType,
         *,
         format: Format = Format.TEXT,
-        row_factory: RowFactory = tuple_row,
+        row_factory: RowFactory[Row],
     ):
         self._conn = connection
         self.format = format
@@ -165,7 +164,7 @@ class BaseCursor(Generic[ConnectionType]):
         if self._iresult < len(self._results):
             self.pgresult = self._results[self._iresult]
             self._tx.set_pgresult(self._results[self._iresult])
-            self._tx.make_row = self._row_factory(self)
+            self._make_row = self._row_factory(self)
             self._pos = 0
             nrows = self.pgresult.command_tuples
             self._rowcount = nrows if nrows is not None else -1
@@ -174,15 +173,15 @@ class BaseCursor(Generic[ConnectionType]):
             return None
 
     @property
-    def row_factory(self) -> RowFactory:
+    def row_factory(self) -> RowFactory[Row]:
         """Writable attribute to control how result rows are formed."""
         return self._row_factory
 
     @row_factory.setter
-    def row_factory(self, row_factory: RowFactory) -> None:
+    def row_factory(self, row_factory: RowFactory[Row]) -> None:
         self._row_factory = row_factory
         if self.pgresult:
-            self._tx.make_row = row_factory(self)
+            self._make_row = row_factory(self)
 
     #
     # Generators for the high level operations on the cursor
@@ -279,7 +278,7 @@ class BaseCursor(Generic[ConnectionType]):
             self.pgresult = res
             self._tx.set_pgresult(res, set_loaders=first)
             if first:
-                self._tx.make_row = self._row_factory(self)
+                self._make_row = self._row_factory(self)
             return res
 
         elif res.status in (ExecStatus.TUPLES_OK, ExecStatus.COMMAND_OK):
@@ -382,7 +381,7 @@ class BaseCursor(Generic[ConnectionType]):
         self._results = list(results)
         self.pgresult = results[0]
         self._tx.set_pgresult(results[0])
-        self._tx.make_row = self._row_factory(self)
+        self._make_row = self._row_factory(self)
         nrows = self.pgresult.command_tuples
         if nrows is not None:
             if self._rowcount < 0:
@@ -472,11 +471,14 @@ class BaseCursor(Generic[ConnectionType]):
         self._pgq = pgq
 
 
-class Cursor(BaseCursor["Connection"]):
+AnyCursor = BaseCursor[Any, Row]
+
+
+class Cursor(BaseCursor["Connection[Any]", Row]):
     __module__ = "psycopg3"
     __slots__ = ()
 
-    def __enter__(self) -> "Cursor":
+    def __enter__(self) -> "Cursor[Row]":
         return self
 
     def __exit__(
@@ -499,7 +501,7 @@ class Cursor(BaseCursor["Connection"]):
         params: Optional[Params] = None,
         *,
         prepare: Optional[bool] = None,
-    ) -> "Cursor":
+    ) -> "Cursor[Row]":
         """
         Execute a query or command to the database.
         """
@@ -529,7 +531,7 @@ class Cursor(BaseCursor["Connection"]):
             self._conn.wait(self._stream_send_gen(query, params))
             first = True
             while self._conn.wait(self._stream_fetchone_gen(first)):
-                rec = self._tx.load_row(0)
+                rec = self._tx.load_row(0, self._make_row)
                 assert rec is not None
                 yield rec
                 first = False
@@ -543,10 +545,10 @@ class Cursor(BaseCursor["Connection"]):
         :rtype: Optional[Row], with Row defined by `row_factory`
         """
         self._check_result()
-        record = self._tx.load_row(self._pos)
+        record = self._tx.load_row(self._pos, self._make_row)
         if record is not None:
             self._pos += 1
-        return record  # type: ignore[no-any-return]
+        return record
 
     def fetchmany(self, size: int = 0) -> List[Row]:
         """
@@ -562,7 +564,9 @@ class Cursor(BaseCursor["Connection"]):
         if not size:
             size = self.arraysize
         records = self._tx.load_rows(
-            self._pos, min(self._pos + size, self.pgresult.ntuples)
+            self._pos,
+            min(self._pos + size, self.pgresult.ntuples),
+            self._make_row,
         )
         self._pos += len(records)
         return records
@@ -575,14 +579,17 @@ class Cursor(BaseCursor["Connection"]):
         """
         self._check_result()
         assert self.pgresult
-        records = self._tx.load_rows(self._pos, self.pgresult.ntuples)
+        records = self._tx.load_rows(
+            self._pos, self.pgresult.ntuples, self._make_row
+        )
         self._pos = self.pgresult.ntuples
         return records
 
     def __iter__(self) -> Iterator[Row]:
         self._check_result()
 
-        load = self._tx.load_row
+        def load(pos: int) -> Optional[Row]:
+            return self._tx.load_row(pos, self._make_row)
 
         while 1:
             row = load(self._pos)
@@ -618,11 +625,11 @@ class Cursor(BaseCursor["Connection"]):
             yield copy
 
 
-class AsyncCursor(BaseCursor["AsyncConnection"]):
+class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
     __module__ = "psycopg3"
     __slots__ = ()
 
-    async def __aenter__(self) -> "AsyncCursor":
+    async def __aenter__(self) -> "AsyncCursor[Row]":
         return self
 
     async def __aexit__(
@@ -642,7 +649,7 @@ class AsyncCursor(BaseCursor["AsyncConnection"]):
         params: Optional[Params] = None,
         *,
         prepare: Optional[bool] = None,
-    ) -> "AsyncCursor":
+    ) -> "AsyncCursor[Row]":
         try:
             async with self._conn.lock:
                 await self._conn.wait(
@@ -665,17 +672,17 @@ class AsyncCursor(BaseCursor["AsyncConnection"]):
             await self._conn.wait(self._stream_send_gen(query, params))
             first = True
             while await self._conn.wait(self._stream_fetchone_gen(first)):
-                rec = self._tx.load_row(0)
+                rec = self._tx.load_row(0, self._make_row)
                 assert rec is not None
                 yield rec
                 first = False
 
     async def fetchone(self) -> Optional[Row]:
         self._check_result()
-        rv = self._tx.load_row(self._pos)
+        rv = self._tx.load_row(self._pos, self._make_row)
         if rv is not None:
             self._pos += 1
-        return rv  # type: ignore[no-any-return]
+        return rv
 
     async def fetchmany(self, size: int = 0) -> List[Row]:
         self._check_result()
@@ -684,7 +691,9 @@ class AsyncCursor(BaseCursor["AsyncConnection"]):
         if not size:
             size = self.arraysize
         records = self._tx.load_rows(
-            self._pos, min(self._pos + size, self.pgresult.ntuples)
+            self._pos,
+            min(self._pos + size, self.pgresult.ntuples),
+            self._make_row,
         )
         self._pos += len(records)
         return records
@@ -692,14 +701,17 @@ class AsyncCursor(BaseCursor["AsyncConnection"]):
     async def fetchall(self) -> List[Row]:
         self._check_result()
         assert self.pgresult
-        records = self._tx.load_rows(self._pos, self.pgresult.ntuples)
+        records = self._tx.load_rows(
+            self._pos, self.pgresult.ntuples, self._make_row
+        )
         self._pos = self.pgresult.ntuples
         return records
 
     async def __aiter__(self) -> AsyncIterator[Row]:
         self._check_result()
 
-        load = self._tx.load_row
+        def load(pos: int) -> Optional[Row]:
+            return self._tx.load_row(pos, self._make_row)
 
         while 1:
             row = load(self._pos)

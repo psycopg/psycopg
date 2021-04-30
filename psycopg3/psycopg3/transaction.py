@@ -16,6 +16,7 @@ from .proto import ConnectionType, PQGen
 from .pq.proto import PGresult
 
 if TYPE_CHECKING:
+    from typing import Any  # noqa: F401
     from .connection import Connection, AsyncConnection  # noqa: F401
 
 logger = logging.getLogger(__name__)
@@ -171,7 +172,7 @@ class BaseTransaction(Generic[ConnectionType]):
         return False
 
 
-class Transaction(BaseTransaction["Connection"]):
+class Transaction(BaseTransaction["Connection[Any]"]):
     """
     Returned by `Connection.transaction()` to handle a transaction block.
     """
@@ -179,7 +180,7 @@ class Transaction(BaseTransaction["Connection"]):
     __module__ = "psycopg3"
 
     @property
-    def connection(self) -> "Connection":
+    def connection(self) -> "Connection[Any]":
         """The connection the object is managing."""
         return self._conn
 
@@ -198,7 +199,7 @@ class Transaction(BaseTransaction["Connection"]):
             return self._conn.wait(self._exit_gen(exc_type, exc_val, exc_tb))
 
 
-class AsyncTransaction(BaseTransaction["AsyncConnection"]):
+class AsyncTransaction(BaseTransaction["AsyncConnection[Any]"]):
     """
     Returned by `AsyncConnection.transaction()` to handle a transaction block.
     """
@@ -206,7 +207,7 @@ class AsyncTransaction(BaseTransaction["AsyncConnection"]):
     __module__ = "psycopg3"
 
     @property
-    def connection(self) -> "AsyncConnection":
+    def connection(self) -> "AsyncConnection[Any]":
         return self._conn
 
     async def __aenter__(self) -> "AsyncTransaction":

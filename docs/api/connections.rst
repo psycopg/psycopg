@@ -101,9 +101,7 @@ The `!Connection` class
         queries.
 
     .. autoattribute:: row_factory
-        :annotation: RowFactory
 
-        Writable attribute to control how result rows are formed.
         See :ref:`row-factories` for details.
 
     .. rubric:: Transaction management methods
