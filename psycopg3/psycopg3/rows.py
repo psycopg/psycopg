@@ -31,13 +31,10 @@ class RowMaker(Protocol[Row_co]):
     program would like to receive: by default (`tuple_row()`) it is a simple
     tuple, but it may be any type of object.
 
-    Typically, `~RowMaker` functions are returned by `RowFactory`.
+    Typically, `!RowMaker` functions are returned by `RowFactory`.
     """
 
     def __call__(self, __values: Sequence[Any]) -> Row_co:
-        """
-        Convert a sequence of values from the database to a finished object.
-        """
         ...
 
 
@@ -56,9 +53,6 @@ class RowFactory(Protocol[Row]):
     """
 
     def __call__(self, __cursor: "AnyCursor[Row]") -> RowMaker[Row]:
-        """
-        Inspect the result on a cursor and return a `RowMaker` to convert rows.
-        """
         ...
 
 
@@ -75,6 +69,7 @@ def tuple_row(
 
     This is the default factory.
 
+    :param cursor: The cursor where the rows are read.
     :rtype: `RowMaker`\ [`TupleRow`]
     """
     # Implementation detail: make sure this is the tuple type itself, not an
@@ -99,6 +94,7 @@ def dict_row(
     Note that this is not compatible with the DBAPI, which expects the records
     to be sequences.
 
+    :param cursor: The cursor where the rows are read.
     :rtype: `RowMaker`\ [`DictRow`]
     """
 
@@ -117,6 +113,7 @@ def namedtuple_row(
 ) -> Callable[[Sequence[Any]], NamedTuple]:
     r"""Row factory to represent rows as `~collections.namedtuple`.
 
+    :param cursor: The cursor where the rows are read.
     :rtype: `RowMaker`\ [`NamedTuple`]
     """
 

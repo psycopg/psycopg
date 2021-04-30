@@ -16,13 +16,22 @@ protocol) is a callable that accepts a `Cursor` object and returns another
 callable (formally the `~psycopg3.rows.RowMaker` protocol) accepting a
 `values` tuple and returning a row in the desired form.
 
-.. autoclass:: psycopg3.rows.RowMaker
+.. autoclass:: psycopg3.rows.RowMaker()
 
-   .. automethod:: __call__
+   .. method:: __call__(values: Sequence[Any]) -> Row
 
-.. autoclass:: psycopg3.rows.RowFactory
+        Convert a sequence of values from the database to a finished object.
 
-   .. automethod:: __call__
+
+.. autoclass:: psycopg3.rows.RowFactory()
+
+   .. method:: __call__(cursor: AnyCursor[Row]) -> RowMaker[Row]
+
+        Inspect the result on a cursor and return a `RowMaker` to convert rows.
+
+        `!AnyCursor` may be either a `~psycopg3.Cursor` or an
+        `~psycopg3.AsyncCursor`.
+
 
 `~RowFactory` objects can be implemented as a class, for instance:
 
@@ -75,13 +84,13 @@ The module `psycopg3.rows` provides the implementation for a few row factories:
 
 .. currentmodule:: psycopg3.rows
 
-.. autofunction:: tuple_row
+.. autofunction:: tuple_row(cursor: AnyCursor[TupleRow])
 .. autodata:: TupleRow
 
-.. autofunction:: dict_row
+.. autofunction:: dict_row(cursor: AnyCursor[DictRow])
 .. autodata:: DictRow
 
-.. autofunction:: namedtuple_row
+.. autofunction:: namedtuple_row(cursor: AnyCursor[NamedTuple])
 
 
 Use with a static analyzer
