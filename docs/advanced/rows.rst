@@ -60,6 +60,7 @@ passing another value at `Connection.cursor()`.
    correct return type (i.e. a `dict[str, Any]` in previous example) and your
    code can be type checked with a static analyzer such as mypy.
 
+
 Available row factories
 -----------------------
 
@@ -70,3 +71,101 @@ The module `psycopg3.rows` provides the implementation for a few row factories:
 .. autofunction:: tuple_row
 .. autofunction:: dict_row
 .. autofunction:: namedtuple_row
+
+
+Use with a static analyzer
+--------------------------
+
+The `Connection` and `Cursor` classes are parametric types: the parameter
+`!Row` is passed by the ``row_factory`` argument (of the
+`~Connection.connect()` and the `~Connection.cursor()` method) and it controls
+what type of record is returned by the fetch methods of the cursors. The
+default `tuple_row()` returns a generic tuple as return type (`Tuple[Any,
+...]`). This information can be used for type checking using a static
+analyzer such as Mypy_.
+
+.. _Mypy: https://mypy.readthedocs.io/
+
+.. code:: python
+
+   conn = psycopg3.connect()
+   # conn type is psycopg3.Connection[Tuple[Any, ...]]
+
+   dconn = psycopg3.connect(row_factory=dict_row)
+   # dconn type is psycopg3.Connection[Dict[str, Any]]
+
+   cur = conn.cursor()
+   # cur type is psycopg3.Cursor[Tuple[Any, ...]]
+
+   dcur = conn.cursor(row_factory=dict_row)
+   dcur = dconn.cursor()
+   # dcur type is psycopg3.Cursor[Dict[str, Any]] in both cases
+
+   rec = cur.fetchone()
+   # rec type is Optional[Tuple[Any, ...]]
+
+   drec = dcur.fetchone()
+   # drec type is Optional[Dict[str, Any]]
+
+
+Example: returning records as Pydantic models
+---------------------------------------------
+
+Using Pydantic_ it is possible to enforce static typing at runtime. Using a
+Pydantic model factory the code can be checked statically using Mypy and
+querying the database will raise an exception if the resultset is not
+compatible with the model.
+
+.. _Pydantic: https://pydantic-docs.helpmanual.io/
+
+The following example can be checked with ``mypy --strict`` without reporting
+any issue. Pydantic will also raise a runtime error in case the
+`!PersonFactory` is used with a query that returns incompatible data.
+
+.. code:: python
+
+    from datetime import date
+    from typing import Any, Optional, Sequence
+
+    import psycopg3
+    from pydantic import BaseModel
+
+    class Person(BaseModel):
+        id: int
+        first_name: str
+        last_name: str
+        dob: Optional[date]
+
+    class PersonFactory:
+        def __init__(self, cur: psycopg3.AnyCursor[Person]):
+            assert cur.description
+            self.fields = [c.name for c in cur.description]
+
+        def __call__(self, values: Sequence[Any]) -> Person:
+            return Person(**dict(zip(self.fields, values)))
+
+    def fetch_person(id: int) -> Person:
+        conn = psycopg3.connect()
+        cur = conn.cursor(row_factory=PersonFactory)
+        cur.execute(
+            """
+            select id, first_name, last_name, dob
+            from (values
+                (1, 'John', 'Doe', '2000-01-01'::date),
+                (2, 'Jane', 'White', NULL)
+            ) as data (id, first_name, last_name, dob)
+            where id = %(id)s;
+            """,
+            {"id": id},
+        )
+        rec = cur.fetchone()
+        if not rec:
+            raise KeyError(f"person {id} not found")
+        return rec
+
+    for id in [1, 2]:
+        p = fetch_person(id)
+        if p.dob:
+            print(f"{p.first_name} was born in {p.dob.year}")
+        else:
+            print(f"Who knows when {p.first_name} was born")
