@@ -13,8 +13,8 @@ factories*.
 
 A row factory (formally implemented by the `~psycopg3.rows.RowFactory`
 protocol) is a callable that accepts a `Cursor` object and returns another
-callable (formally the `~psycopg3.rows.RowMaker`) accepting a `values` tuple
-and returning a row in the desired form.
+callable (formally the `~psycopg3.rows.RowMaker` protocol) accepting a
+`values` tuple and returning a row in the desired form.
 
 .. autoclass:: psycopg3.rows.RowMaker
 

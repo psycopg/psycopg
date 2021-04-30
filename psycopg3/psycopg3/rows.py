@@ -27,8 +27,8 @@ class RowMaker(Protocol[Row_co]):
     Callable protocol taking a sequence of value and returning an object.
 
     The sequence of value is what is returned from a database query, already
-    adapted to the right Python types. Tye return value is the object that your
-    program would like to receive: By defaut (`tuple_row()`) it is a simple
+    adapted to the right Python types. The return value is the object that your
+    program would like to receive: by default (`tuple_row()`) it is a simple
     tuple, but it may be any type of object.
 
     Typically, `~RowMaker` functions are returned by `RowFactory`.
