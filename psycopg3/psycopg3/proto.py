@@ -49,8 +49,6 @@ Wait states.
 
 Row = TypeVar("Row")
 Row_co = TypeVar("Row_co", covariant=True)
-# Type variable for Connection (other are for Cursor).
-RowConn = TypeVar("RowConn")
 
 
 class RowMaker(Protocol[Row_co]):
