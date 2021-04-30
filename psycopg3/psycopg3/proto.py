@@ -13,11 +13,11 @@ from . import pq
 from ._enums import Format
 
 if TYPE_CHECKING:
-    from .connection import BaseConnection
-    from .cursor import AnyCursor
+    from .sql import Composable
+    from .rows import Row, RowMaker
     from .adapt import Dumper, Loader, AdaptersMap
     from .waiting import Wait, Ready
-    from .sql import Composable
+    from .connection import BaseConnection
 
 # An object implementing the buffer protocol
 Buffer = Union[bytes, bytearray, memoryview]
@@ -43,22 +43,6 @@ PQGen = Generator["Wait", "Ready", RV]
 The first item generated is the file descriptor; following items are be the
 Wait states.
 """
-
-
-# Row factories
-
-Row = TypeVar("Row")
-Row_co = TypeVar("Row_co", covariant=True)
-
-
-class RowMaker(Protocol[Row_co]):
-    def __call__(self, __values: Sequence[Any]) -> Row_co:
-        ...
-
-
-class RowFactory(Protocol[Row]):
-    def __call__(self, __cursor: "AnyCursor[Row]") -> RowMaker[Row]:
-        ...
 
 
 # Adaptation types
@@ -121,11 +105,11 @@ class Transformer(Protocol):
         ...
 
     def load_rows(
-        self, row0: int, row1: int, make_row: RowMaker[Row]
-    ) -> List[Row]:
+        self, row0: int, row1: int, make_row: "RowMaker[Row]"
+    ) -> List["Row"]:
         ...
 
-    def load_row(self, row: int, make_row: RowMaker[Row]) -> Optional[Row]:
+    def load_row(self, row: int, make_row: "RowMaker[Row]") -> Optional["Row"]:
         ...
 
     def load_sequence(

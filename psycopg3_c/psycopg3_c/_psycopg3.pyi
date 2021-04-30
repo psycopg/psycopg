@@ -9,11 +9,12 @@ information. Will submit a bug.
 
 from typing import Any, Iterable, List, Optional, Sequence, Tuple
 
-from psycopg3 import proto
-from psycopg3.adapt import Dumper, Loader, AdaptersMap, Format
-from psycopg3.connection import BaseConnection
 from psycopg3 import pq
+from psycopg3 import proto
+from psycopg3.rows import Row, RowMaker
+from psycopg3.adapt import Dumper, Loader, AdaptersMap, Format
 from psycopg3.pq.proto import PGconn, PGresult
+from psycopg3.connection import BaseConnection
 
 class Transformer(proto.AdaptContext):
     def __init__(self, context: Optional[proto.AdaptContext] = None): ...
@@ -34,11 +35,9 @@ class Transformer(proto.AdaptContext):
     ) -> Tuple[List[Any], Tuple[int, ...], Sequence[pq.Format]]: ...
     def get_dumper(self, obj: Any, format: Format) -> Dumper: ...
     def load_rows(
-        self, row0: int, row1: int, make_row: proto.RowMaker[proto.Row]
-    ) -> List[proto.Row]: ...
-    def load_row(
-        self, row: int, make_row: proto.RowMaker[proto.Row]
-    ) -> Optional[proto.Row]: ...
+        self, row0: int, row1: int, make_row: RowMaker[Row]
+    ) -> List[Row]: ...
+    def load_row(self, row: int, make_row: RowMaker[Row]) -> Optional[Row]: ...
     def load_sequence(
         self, record: Sequence[Optional[bytes]]
     ) -> Tuple[Any, ...]: ...

@@ -11,7 +11,8 @@ from collections import defaultdict
 from . import pq
 from . import errors as e
 from .oids import INVALID_OID
-from .proto import LoadFunc, AdaptContext, Row, RowMaker
+from .rows import Row, RowMaker
+from .proto import LoadFunc, AdaptContext
 from ._enums import Format
 
 if TYPE_CHECKING:

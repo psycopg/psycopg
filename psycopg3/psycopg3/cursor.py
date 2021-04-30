@@ -17,8 +17,8 @@ from . import generators
 
 from .pq import ExecStatus, Format
 from .copy import Copy, AsyncCopy
+from .rows import Row, RowFactory
 from .proto import ConnectionType, Query, Params, PQGen
-from .proto import Row, RowFactory
 from ._column import Column
 from ._queries import PostgresQuery
 from ._preparing import Prepare

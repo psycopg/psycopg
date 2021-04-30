@@ -24,7 +24,7 @@ from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 from psycopg3 import errors as e
 from psycopg3._enums import Format as Pg3Format
 from psycopg3.pq import Format as PqFormat
-from psycopg3.proto import Row, RowMaker
+from psycopg3.rows import Row, RowMaker
 
 # internal structure: you are not supposed to know this. But it's worth some
 # 10% of the innermost loop, so I'm willing to ask for forgiveness later...

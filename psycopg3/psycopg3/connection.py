@@ -23,9 +23,9 @@ from . import waiting
 from . import encodings
 from .pq import ConnStatus, ExecStatus, TransactionStatus, Format
 from .sql import Composable
-from .rows import tuple_row, TupleRow
+from .rows import Row, RowFactory, tuple_row, TupleRow
 from .proto import AdaptContext, ConnectionType, Params, PQGen, PQGenConn
-from .proto import Query, Row, RowFactory, RV
+from .proto import Query, RV
 from .cursor import Cursor, AsyncCursor
 from .conninfo import make_conninfo, ConnectionInfo
 from .generators import notifies

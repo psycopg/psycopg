@@ -8,11 +8,23 @@ Row factories
 =============
 
 Cursor's `fetch*` methods return tuples of column values by default. This can
-be changed to adapt the needs of the programmer by using custom row factories.
+be changed to adapt the needs of the programmer by using custom *row
+factories*.
 
-A row factory is a callable that accepts a cursor object and returns another
-callable accepting a `values` tuple and returning a row in the desired form.
-This can be implemented as a class, for instance:
+A row factory (formally implemented by the `~psycopg3.rows.RowFactory`
+protocol) is a callable that accepts a `Cursor` object and returns another
+callable (formally the `~psycopg3.rows.RowMaker`) accepting a `values` tuple
+and returning a row in the desired form.
+
+.. autoclass:: psycopg3.rows.RowMaker
+
+   .. automethod:: __call__
+
+.. autoclass:: psycopg3.rows.RowFactory
+
+   .. automethod:: __call__
+
+`~RowFactory` objects can be implemented as a class, for instance:
 
 .. code:: python
 
@@ -55,11 +67,6 @@ Later usages of `row_factory` override earlier definitions; for instance,
 the `row_factory` specified at `Connection.connect()` can be overridden by
 passing another value at `Connection.cursor()`.
 
-.. note:: By declaring type annotations on the row factory used in
-   `Connection` or `Cursor`, rows retrieved by `.fetch*()` calls will have the
-   correct return type (i.e. a `dict[str, Any]` in previous example) and your
-   code can be type checked with a static analyzer such as mypy.
-
 
 Available row factories
 -----------------------
@@ -69,22 +76,27 @@ The module `psycopg3.rows` provides the implementation for a few row factories:
 .. currentmodule:: psycopg3.rows
 
 .. autofunction:: tuple_row
+.. autodata:: TupleRow
+
 .. autofunction:: dict_row
+.. autodata:: DictRow
+
 .. autofunction:: namedtuple_row
 
 
 Use with a static analyzer
 --------------------------
 
-The `Connection` and `Cursor` classes are parametric types: the parameter
-`!Row` is passed by the ``row_factory`` argument (of the
-`~Connection.connect()` and the `~Connection.cursor()` method) and it controls
-what type of record is returned by the fetch methods of the cursors. The
-default `tuple_row()` returns a generic tuple as return type (`Tuple[Any,
-...]`). This information can be used for type checking using a static
-analyzer such as Mypy_.
+The `~psycopg3.Connection` and `~psycopg3.Cursor` classes are `generic
+types`__: the parameter `!Row` is passed by the ``row_factory`` argument (of
+the `~Connection.connect()` and the `~Connection.cursor()` method) and it
+controls what type of record is returned by the fetch methods of the cursors.
+The default `tuple_row()` returns a generic tuple as return type (`Tuple[Any,
+...]`). This information can be used for type checking using a static analyzer
+such as Mypy_.
 
 .. _Mypy: https://mypy.readthedocs.io/
+.. __: https://mypy.readthedocs.io/en/stable/generics.html
 
 .. code:: python
 

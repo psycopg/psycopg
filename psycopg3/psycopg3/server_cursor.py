@@ -12,8 +12,9 @@ from typing import Sequence, Type, TYPE_CHECKING
 from . import pq
 from . import sql
 from . import errors as e
+from .rows import Row, RowFactory
+from .proto import ConnectionType, Query, Params, PQGen
 from .cursor import BaseCursor, execute
-from .proto import ConnectionType, Query, Params, PQGen, Row, RowFactory
 
 if TYPE_CHECKING:
     from typing import Any  # noqa: F401
