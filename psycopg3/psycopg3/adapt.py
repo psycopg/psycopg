@@ -153,15 +153,15 @@ class AdaptersMap(AdaptContext):
     ):
         if template:
             self._dumpers = template._dumpers.copy()
-            self._own_dumpers = dict.fromkeys(Format, False)
-            template._own_dumpers = dict.fromkeys(Format, False)
+            self._own_dumpers = _dumpers_shared.copy()
+            template._own_dumpers = _dumpers_shared.copy()
             self._loaders = template._loaders[:]
             self._own_loaders = [False, False]
             template._own_loaders = [False, False]
             self.types = TypesRegistry(template.types)
         else:
             self._dumpers = {fmt: {} for fmt in Format}
-            self._own_dumpers = dict.fromkeys(Format, True)
+            self._own_dumpers = _dumpers_owned.copy()
             self._loaders = [{}, {}]
             self._own_loaders = [True, True]
             self.types = types or TypesRegistry()
@@ -281,8 +281,10 @@ class AdaptersMap(AdaptContext):
         return cls
 
 
-global_adapters = AdaptersMap(types=postgres_types)
+_dumpers_owned = dict.fromkeys(Format, True)
+_dumpers_shared = dict.fromkeys(Format, False)
 
+global_adapters = AdaptersMap(types=postgres_types)
 
 Transformer: Type[proto.Transformer]
 
