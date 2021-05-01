@@ -154,8 +154,10 @@ class AdaptersMap(AdaptContext):
         if template:
             self._dumpers = template._dumpers.copy()
             self._own_dumpers = dict.fromkeys(Format, False)
+            template._own_dumpers = dict.fromkeys(Format, False)
             self._loaders = template._loaders[:]
             self._own_loaders = [False, False]
+            template._own_loaders = [False, False]
             self.types = TypesRegistry(template.types)
         else:
             self._dumpers = {fmt: {} for fmt in Format}

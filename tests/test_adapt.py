@@ -147,18 +147,48 @@ def test_load_cursor_ctx(conn):
     make_loader("tc").register(TEXT_OID, cur)
     make_bin_loader("bc").register(TEXT_OID, cur)
 
-    r = cur.execute("select 'hello'::text").fetchone()
-    assert r == ("hellotc",)
+    assert cur.execute("select 'hello'::text").fetchone() == ("hellotc",)
     cur.format = pq.Format.BINARY
-    r = cur.execute("select 'hello'::text").fetchone()
-    assert r == ("hellobc",)
+    assert cur.execute("select 'hello'::text").fetchone() == ("hellobc",)
 
     cur = conn.cursor()
-    r = cur.execute("select 'hello'::text").fetchone()
-    assert r == ("hellot",)
+    assert cur.execute("select 'hello'::text").fetchone() == ("hellot",)
     cur.format = pq.Format.BINARY
-    r = cur.execute("select 'hello'::text").fetchone()
-    assert r == ("hellob",)
+    assert cur.execute("select 'hello'::text").fetchone() == ("hellob",)
+
+
+def test_cow_dumpers(conn):
+    make_dumper("t").register(str, conn)
+
+    cur1 = conn.cursor()
+    cur2 = conn.cursor()
+    make_dumper("c2").register(str, cur2)
+
+    r = cur1.execute("select %s::text -- 1", ["hello"]).fetchone()
+    assert r == ("hellot",)
+    r = cur2.execute("select %s::text -- 1", ["hello"]).fetchone()
+    assert r == ("helloc2",)
+
+    make_dumper("t1").register(str, conn)
+    r = cur1.execute("select %s::text -- 2", ["hello"]).fetchone()
+    assert r == ("hellot",)
+    r = cur2.execute("select %s::text -- 2", ["hello"]).fetchone()
+    assert r == ("helloc2",)
+
+
+def test_cow_loaders(conn):
+    make_loader("t").register(TEXT_OID, conn)
+
+    cur1 = conn.cursor()
+    cur2 = conn.cursor()
+    make_loader("c2").register(TEXT_OID, cur2)
+
+    assert cur1.execute("select 'hello'::text").fetchone() == ("hellot",)
+    assert cur2.execute("select 'hello'::text").fetchone() == ("helloc2",)
+
+    make_loader("t1").register(TEXT_OID, conn)
+    assert cur1.execute("select 'hello2'::text").fetchone() == ("hello2t",)
+    assert cur2.execute("select 'hello2'::text").fetchone() == ("hello2c2",)
 
 
 @pytest.mark.parametrize(
