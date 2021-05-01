@@ -155,7 +155,7 @@ class Faker:
             m(spec, g, w)
 
     def get_supported_types(self):
-        dumpers = self.conn.adapters._dumpers[Format.as_pq(self.format)]
+        dumpers = self.conn.adapters._dumpers[self.format]
         rv = set()
         for cls in dumpers.keys():
             if isinstance(cls, str):

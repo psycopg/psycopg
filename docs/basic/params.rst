@@ -199,10 +199,10 @@ PostgreSQL has two different ways to represent data type on the wire:
 `~psycopg3.pq.Format.BINARY`, available most of the times. Usually the binary
 format is more efficient to use.
 
-`~psycopg3` can support both the formats of each data type, and normally will
-use the binary type if available, falling back on the text type. The selection
-is automatic and will be performed whenever a query uses a ``%s`` placeholder
-to specify the value.
+`~psycopg3` can support both the formats of each data type. Whenever a value
+is passed to a query using the normal ``%s`` placeholder, the best format
+available is chosen (often, but not always, the binary format is picked as the
+best choice).
 
 If you have a reason to select explicitly the binary format or the text format
 for a value you can use respectively a ``%b`` placeholder or a ``%t``

@@ -43,8 +43,8 @@ def test_quote(data, result):
 
 
 def test_dump_connection_ctx(conn):
-    make_dumper("t").register(MyStr, conn)
     make_bin_dumper("b").register(MyStr, conn)
+    make_dumper("t").register(MyStr, conn)
 
     cur = conn.cursor()
     cur.execute("select %s", [MyStr("hello")])
@@ -56,12 +56,12 @@ def test_dump_connection_ctx(conn):
 
 
 def test_dump_cursor_ctx(conn):
-    make_dumper("t").register(str, conn)
     make_bin_dumper("b").register(str, conn)
+    make_dumper("t").register(str, conn)
 
     cur = conn.cursor()
-    make_dumper("tc").register(str, cur)
     make_bin_dumper("bc").register(str, cur)
+    make_dumper("tc").register(str, cur)
 
     cur.execute("select %s", [MyStr("hello")])
     assert cur.fetchone() == ("hellotc",)
@@ -210,17 +210,20 @@ def test_array_dumper(conn, fmt_out):
         assert t.get_dumper(L, fmt_in)
 
 
-def test_string_connection_ctx(conn):
-    make_dumper("t").register(str, conn)
-    make_bin_dumper("b").register(str, conn)
-
+def test_last_dumper_registered_ctx(conn):
     cur = conn.cursor()
-    cur.execute("select %s", ["hello"])
-    assert cur.fetchone() == ("hellot",)  # str prefers text
-    cur.execute("select %t", ["hello"])
-    assert cur.fetchone() == ("hellot",)
-    cur.execute("select %b", ["hello"])
-    assert cur.fetchone() == ("hellob",)
+
+    bd = make_bin_dumper("b")
+    bd.register(str, cur)
+    td = make_dumper("t")
+    td.register(str, cur)
+
+    assert cur.execute("select %s", ["hello"]).fetchone()[0] == "hellot"
+    assert cur.execute("select %t", ["hello"]).fetchone()[0] == "hellot"
+    assert cur.execute("select %b", ["hello"]).fetchone()[0] == "hellob"
+
+    bd.register(str, cur)
+    assert cur.execute("select %s", ["hello"]).fetchone()[0] == "hellob"
 
 
 @pytest.mark.parametrize("fmt_in", [Format.TEXT, Format.BINARY])
@@ -279,9 +282,10 @@ def test_optimised_adapters():
     # All the registered adapters
     reg_adapters = set()
     adapters = (
-        psycopg3.global_adapters._dumpers + psycopg3.global_adapters._loaders
+        list(psycopg3.global_adapters._dumpers.values())
+        + psycopg3.global_adapters._loaders
     )
-    assert len(adapters) == 4
+    assert len(adapters) == 5
     for m in adapters:
         reg_adapters |= set(m.values())
 

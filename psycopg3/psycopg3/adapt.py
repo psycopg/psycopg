@@ -139,7 +139,7 @@ class AdaptersMap(AdaptContext):
     is cheap: a copy is made only on customisation.
     """
 
-    _dumpers: List[Dict[Union[type, str], Type["Dumper"]]]
+    _dumpers: Dict[Format, Dict[Union[type, str], Type["Dumper"]]]
     _loaders: List[Dict[int, Type["Loader"]]]
     types: TypesRegistry
 
@@ -152,14 +152,14 @@ class AdaptersMap(AdaptContext):
         types: Optional[TypesRegistry] = None,
     ):
         if template:
-            self._dumpers = template._dumpers[:]
-            self._own_dumpers = [False, False]
+            self._dumpers = template._dumpers.copy()
+            self._own_dumpers = dict.fromkeys(Format, False)
             self._loaders = template._loaders[:]
             self._own_loaders = [False, False]
             self.types = TypesRegistry(template.types)
         else:
-            self._dumpers = [{}, {}]
-            self._own_dumpers = [True, True]
+            self._dumpers = {fmt: {} for fmt in Format}
+            self._own_dumpers = dict.fromkeys(Format, True)
             self._loaders = [{}, {}]
             self._own_loaders = [True, True]
             self.types = types or TypesRegistry()
@@ -185,12 +185,13 @@ class AdaptersMap(AdaptContext):
             )
 
         dumper = self._get_optimised(dumper)
-        fmt = dumper.format
-        if not self._own_dumpers[fmt]:
-            self._dumpers[fmt] = self._dumpers[fmt].copy()
-            self._own_dumpers[fmt] = True
+        # Register the dumper both as its format and as default
+        for fmt in (Format.from_pq(dumper.format), Format.AUTO):
+            if not self._own_dumpers[fmt]:
+                self._dumpers[fmt] = self._dumpers[fmt].copy()
+                self._own_dumpers[fmt] = True
 
-        self._dumpers[fmt][cls] = dumper
+            self._dumpers[fmt][cls] = dumper
 
     def register_loader(
         self, oid: Union[int, str], loader: Type[Loader]
@@ -219,36 +220,22 @@ class AdaptersMap(AdaptContext):
 
         Raise ProgrammingError if a class is not available.
         """
-        if format == Format.AUTO:
-            # When dumping a string with %s we may refer to any type actually,
-            # but the user surely passed a text format
-            if issubclass(cls, str):
-                dmaps = [self._dumpers[pq.Format.TEXT]]
-            else:
-                dmaps = [
-                    self._dumpers[pq.Format.BINARY],
-                    self._dumpers[pq.Format.TEXT],
-                ]
-        elif format == Format.BINARY:
-            dmaps = [self._dumpers[pq.Format.BINARY]]
-        elif format == Format.TEXT:
-            dmaps = [self._dumpers[pq.Format.TEXT]]
-        else:
+        try:
+            dmap = self._dumpers[format]
+        except KeyError:
             raise ValueError(f"bad dumper format: {format}")
 
         # Look for the right class, including looking at superclasses
         for scls in cls.__mro__:
-            for dmap in dmaps:
-                if scls in dmap:
-                    return dmap[scls]
+            if scls in dmap:
+                return dmap[scls]
 
             # If the adapter is not found, look for its name as a string
             fqn = scls.__module__ + "." + scls.__qualname__
-            for dmap in dmaps:
-                if fqn in dmap:
-                    # Replace the class name with the class itself
-                    d = dmap[scls] = dmap.pop(fqn)
-                    return d
+            if fqn in dmap:
+                # Replace the class name with the class itself
+                d = dmap[scls] = dmap.pop(fqn)
+                return d
 
         raise e.ProgrammingError(
             f"cannot adapt type {cls.__name__}"

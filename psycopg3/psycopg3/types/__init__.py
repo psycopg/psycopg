@@ -137,8 +137,12 @@ from .composite import (
 
 
 def register_default_globals(ctx: AdaptContext) -> None:
-    StringDumper.register(str, ctx)
+    # NOTE: the order the dumpers are registered is relevant.
+    # The last one registered becomes the default for each type.
+    # Normally, binary is the default dumper, except for text (which plays
+    # the role of unknown, so it can be cast automatically to other types).
     StringBinaryDumper.register(str, ctx)
+    StringDumper.register(str, ctx)
     TextLoader.register(INVALID_OID, ctx)
     TextLoader.register("bpchar", ctx)
     TextLoader.register("name", ctx)
@@ -204,10 +208,12 @@ def register_default_globals(ctx: AdaptContext) -> None:
     TimestamptzLoader.register("timestamptz", ctx)
     IntervalLoader.register("interval", ctx)
 
-    JsonDumper.register(Json, ctx)
+    # Currently json binary format is nothing different than text, maybe with
+    # an extra memcopy we can avoid.
     JsonBinaryDumper.register(Json, ctx)
-    JsonbDumper.register(Jsonb, ctx)
+    JsonDumper.register(Json, ctx)
     JsonbBinaryDumper.register(Jsonb, ctx)
+    JsonbDumper.register(Jsonb, ctx)
     JsonLoader.register("json", ctx)
     JsonbLoader.register("jsonb", ctx)
     JsonBinaryLoader.register("json", ctx)

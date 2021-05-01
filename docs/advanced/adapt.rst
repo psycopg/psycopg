@@ -85,6 +85,11 @@ right instance.
   (for instance, a Python `int` might be better dumped as a PostgreSQL
   :sql:`integer`, :sql:`bigint`, :sql:`smallint` according to its value).
 
+- According to the placeholder used (``%s``, ``%b``, ``%t``), psycopg3 may
+  pick a binary or a text dumper. When using the ``%s`` "`~Format.AUTO`"
+  format, if the same type has both a text and a binary dumper registered, the
+  last one registered (using `Dumper.register()`) will be selected.
+
 - For every OID returned by the query, the `!Transformer` will instantiate a
   `!Loader`. All the values with the same OID will be converted by the same
   loader.
@@ -168,6 +173,11 @@ Objects involved in types adaptation
 
         You should call this method on the `Dumper` subclass you create,
         passing the Python type you want to dump as *cls*.
+
+        If two dumpers of different `format` are registered for the same type,
+        the last one registered will be chosen by default when the query
+        doesn't specify a format (i.e. when the value is used with a ``%s``
+        "`~Format.AUTO`" placeholder).
 
         :param cls: The type to manage.
         :type cls: `!type` or `!str`
