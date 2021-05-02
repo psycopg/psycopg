@@ -186,7 +186,9 @@ class AdaptersMap(AdaptContext):
                 f"dumpers should be registered on classes, got {cls} instead"
             )
 
-        dumper = self._get_optimised(dumper)
+        if pq.__impl__ != "python":
+            dumper = self._get_optimised(dumper)
+
         # Register the dumper both as its format and as default
         for fmt in (Format.from_pq(dumper.format), Format.AUTO):
             if not self._own_dumpers[fmt]:
@@ -208,7 +210,9 @@ class AdaptersMap(AdaptContext):
                 f"loaders should be registered on oid, got {oid} instead"
             )
 
-        loader = self._get_optimised(loader)
+        if pq.__impl__ != "python":
+            loader = self._get_optimised(loader)
+
         fmt = loader.format
         if not self._own_loaders[fmt]:
             self._loaders[fmt] = self._loaders[fmt].copy()
@@ -267,15 +271,14 @@ class AdaptersMap(AdaptContext):
 
         # Check if the class comes from psycopg3.types and there is a class
         # with the same name in psycopg3_c._psycopg3.
-        if pq.__impl__ == "c":
-            from psycopg3 import types
-            from psycopg3_c import _psycopg3
+        from psycopg3 import types
+        from psycopg3_c import _psycopg3
 
-            if cls.__module__.startswith(types.__name__):
-                new = cast(Type[RV], getattr(_psycopg3, cls.__name__, None))
-                if new:
-                    self._optimised[cls] = new
-                    return new
+        if cls.__module__.startswith(types.__name__):
+            new = cast(Type[RV], getattr(_psycopg3, cls.__name__, None))
+            if new:
+                self._optimised[cls] = new
+                return new
 
         self._optimised[cls] = cls
         return cls
