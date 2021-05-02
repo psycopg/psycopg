@@ -535,6 +535,38 @@ def test_load_interval_overflow(conn, val):
         cur.fetchone()[0]
 
 
+def test_infinity_date_example(conn):
+    # NOTE: this is an example in the docs. Make sure it doesn't regress when
+    # adding binary datetime adapters
+    from psycopg3.oids import postgres_types as builtins
+    from psycopg3.types import DateLoader, DateDumper
+
+    class InfDateDumper(DateDumper):
+        def dump(self, obj):
+            if obj == dt.date.max:
+                return b"infinity"
+            else:
+                return super().dump(obj)
+
+    class InfDateLoader(DateLoader):
+        def load(self, data):
+            if data == b"infinity":
+                return dt.date.max
+            else:
+                return super().load(data)
+
+    cur = conn.cursor()
+    InfDateDumper.register(dt.date, cur)
+    InfDateLoader.register(builtins["date"].oid, cur)
+
+    rec = cur.execute(
+        "SELECT %s::text, %s::text", [dt.date(2020, 12, 31), dt.date.max]
+    ).fetchone()
+    assert rec == ("2020-12-31", "infinity")
+    rec = cur.execute("select '2020-12-31'::date, 'infinity'::date").fetchone()
+    assert rec == (dt.date(2020, 12, 31), dt.date(9999, 12, 31))
+
+
 #
 # Support
 #

@@ -57,8 +57,12 @@ configuration.
     subclass `!Dumper` or `!Loader` you should call the ``.register()`` on the
     class you created.
 
-For example, suppose you want to work with the "infinity" date which is
-available in PostgreSQL but not handled by Python:
+
+Example: handling inifity date
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Suppose you want to work with the "infinity" date which is available in
+PostgreSQL but not handled by Python:
 
 .. code:: python
 
