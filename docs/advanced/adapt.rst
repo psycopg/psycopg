@@ -58,8 +58,8 @@ configuration.
     class you created.
 
 
-Example: handling inifity date
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Example: handling infinity date
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Suppose you want to work with the "infinity" date which is available in
 PostgreSQL but not handled by Python:
