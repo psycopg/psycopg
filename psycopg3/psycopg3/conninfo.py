@@ -5,7 +5,7 @@ Functions to manipulate conninfo strings
 # Copyright (C) 2020-2021 The Psycopg Team
 
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 from pathlib import Path
 from datetime import tzinfo
 
@@ -93,6 +93,22 @@ def _param_escape(s: str) -> str:
         s = "'" + s + "'"
 
     return s
+
+
+def _conninfo_connect_timeout(
+    conninfo: str, **kwargs: Any
+) -> Tuple[str, Optional[int]]:
+    """
+    Build 'conninfo' by combining input value with kwargs and extract
+    'connect_timeout' parameter.
+    """
+    conninfo = make_conninfo(conninfo, **kwargs)
+    connect_timeout: Optional[int]
+    try:
+        connect_timeout = int(conninfo_to_dict(conninfo)["connect_timeout"])
+    except KeyError:
+        connect_timeout = None
+    return conninfo, connect_timeout
 
 
 class ConnectionInfo:

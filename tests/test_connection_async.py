@@ -38,7 +38,6 @@ async def test_connect_str_subclass(dsn):
 
 
 @pytest.mark.slow
-@pytest.mark.xfail
 async def test_connect_timeout():
     s = socket.socket(socket.AF_INET)
     s.bind(("", 0))

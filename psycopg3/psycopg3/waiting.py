@@ -13,7 +13,7 @@ import select
 import selectors
 from enum import IntEnum
 from typing import Optional
-from asyncio import get_event_loop, Event
+from asyncio import get_event_loop, wait_for, Event, TimeoutError
 from selectors import DefaultSelector, EVENT_READ, EVENT_WRITE
 
 from . import errors as e
@@ -71,23 +71,24 @@ def wait_conn(gen: PQGenConn[RV], timeout: Optional[float] = None) -> RV:
     :param gen: a generator performing database operations and yielding
         (fd, `Ready`) pairs when it would block.
     :param timeout: timeout (in seconds) to check for other interrupt, e.g.
-        to allow Ctrl-C.
+        to allow Ctrl-C. If zero or None, wait indefinitely.
     :type timeout: float
     :return: whatever *gen* returns on completion.
 
     Behave like in `wait()`, but take the fileno to wait from the generator
     itself, which might change during processing.
     """
+    timeout = timeout or None
     try:
         fileno, s = next(gen)
         sel = DefaultSelector()
         while 1:
             sel.register(fileno, s)
-            ready = None
-            while not ready:
-                ready = sel.select(timeout=timeout)
+            ready = sel.select(timeout=timeout)
             sel.unregister(fileno)
-            fileno, s = gen.send(ready[0][1])
+            if not ready:
+                raise e.DatabaseError("timeout expired")
+            fileno, s = gen.send(ready[0][1])  # type: ignore[arg-type]
 
     except StopIteration as ex:
         rv: RV = ex.args[0] if ex.args else None
@@ -144,14 +145,16 @@ async def wait_async(gen: PQGen[RV], fileno: int) -> RV:
         return rv
 
 
-async def wait_conn_async(gen: PQGenConn[RV]) -> RV:
+async def wait_conn_async(
+    gen: PQGenConn[RV], timeout: Optional[float] = None
+) -> RV:
     """
     Coroutine waiting for a connection generator to complete.
 
     :param gen: a generator performing database operations and yielding
         (fd, `Ready`) pairs when it would block.
     :param timeout: timeout (in seconds) to check for other interrupt, e.g.
-        to allow Ctrl-C.
+        to allow Ctrl-C. If zero or None, wait indefinitely.
     :return: whatever *gen* returns on completion.
 
     Behave like in `wait()`, but take the fileno to wait from the generator
@@ -169,27 +172,31 @@ async def wait_conn_async(gen: PQGenConn[RV]) -> RV:
         ready = state
         ev.set()
 
+    timeout = timeout or None
     try:
         fileno, s = next(gen)
         while 1:
             ev.clear()
             if s == Wait.R:
                 loop.add_reader(fileno, wakeup, Ready.R)
-                await ev.wait()
+                await wait_for(ev.wait(), timeout)
                 loop.remove_reader(fileno)
             elif s == Wait.W:
                 loop.add_writer(fileno, wakeup, Ready.W)
-                await ev.wait()
+                await wait_for(ev.wait(), timeout)
                 loop.remove_writer(fileno)
             elif s == Wait.RW:
                 loop.add_reader(fileno, wakeup, Ready.R)
                 loop.add_writer(fileno, wakeup, Ready.W)
-                await ev.wait()
+                await wait_for(ev.wait(), timeout)
                 loop.remove_reader(fileno)
                 loop.remove_writer(fileno)
             else:
                 raise e.InternalError("bad poll status: %s")
             fileno, s = gen.send(ready)
+
+    except TimeoutError:
+        raise e.DatabaseError("timeout expired")
 
     except StopIteration as ex:
         rv: RV = ex.args[0] if ex.args else None
