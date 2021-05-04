@@ -5,9 +5,10 @@ Adapers for numeric types.
 # Copyright (C) 2020-2021 The Psycopg Team
 
 import struct
-from typing import Any, Callable, Dict, Tuple, cast
-from decimal import Decimal
+from typing import Any, Callable, DefaultDict, Dict, Tuple, cast
+from decimal import Decimal, DefaultContext, Context
 
+from .. import errors as e
 from ..pq import Format
 from ..oids import postgres_types as builtins
 from ..adapt import Buffer, Dumper, Loader
@@ -20,11 +21,13 @@ _UnpackInt = Callable[[bytes], Tuple[int]]
 _UnpackFloat = Callable[[bytes], Tuple[float]]
 
 _pack_int2 = cast(_PackInt, struct.Struct("!h").pack)
+_pack_uint2 = cast(_PackInt, struct.Struct("!H").pack)
 _pack_int4 = cast(_PackInt, struct.Struct("!i").pack)
 _pack_uint4 = cast(_PackInt, struct.Struct("!I").pack)
 _pack_int8 = cast(_PackInt, struct.Struct("!q").pack)
 _pack_float8 = cast(_PackFloat, struct.Struct("!d").pack)
 _unpack_int2 = cast(_UnpackInt, struct.Struct("!h").unpack)
+_unpack_uint2 = cast(_UnpackInt, struct.Struct("!H").unpack)
 _unpack_int4 = cast(_UnpackInt, struct.Struct("!i").unpack)
 _unpack_uint4 = cast(_UnpackInt, struct.Struct("!I").unpack)
 _unpack_int8 = cast(_UnpackInt, struct.Struct("!q").unpack)
@@ -267,3 +270,69 @@ class NumericLoader(Loader):
         if isinstance(data, memoryview):
             data = bytes(data)
         return Decimal(data.decode("utf8"))
+
+
+NUMERIC_POS = 0x0000
+NUMERIC_NEG = 0x4000
+NUMERIC_NAN = 0xC000
+NUMERIC_PINF = 0xD000
+NUMERIC_NINF = 0xF000
+
+_numeric_special = {
+    NUMERIC_NAN: Decimal("NaN"),
+    NUMERIC_PINF: Decimal("Infinity"),
+    NUMERIC_NINF: Decimal("-Infinity"),
+}
+
+
+class _ContextMap(DefaultDict[int, Context]):
+    """
+    Cache for decimal contexts to use when the precision requires it.
+
+    Note: if the default context is used (prec=28) you can get an invalid
+    operation or a rounding to 0:
+
+    - Decimal(1000).shift(24) = Decimal('1000000000000000000000000000')
+    - Decimal(1000).shift(25) = Decimal('0')
+    - Decimal(1000).shift(30) raises InvalidOperation
+    """
+
+    def __missing__(self, key: int) -> Context:
+        val = Context(prec=key)
+        self[key] = val
+        return val
+
+
+_contexts = _ContextMap()
+for i in range(DefaultContext.prec):
+    _contexts[i] = DefaultContext
+
+_unpack_numeric_head = cast(
+    Callable[[bytes], Tuple[int, int, int, int]],
+    struct.Struct("!HhHH").unpack_from,
+)
+
+
+class NumericBinaryLoader(Loader):
+
+    format = Format.BINARY
+
+    def load(self, data: Buffer) -> Decimal:
+        ndigits, weight, sign, dscale = _unpack_numeric_head(data)
+        if sign == NUMERIC_POS or sign == NUMERIC_NEG:
+            val = 0
+            for i in range(8, len(data), 2):
+                val = val * 10_000 + data[i] * 0x100 + data[i + 1]
+
+            shift = dscale - (ndigits - weight - 1) * 4
+            ctx = _contexts[weight * 4 + dscale + 8]
+            return (
+                Decimal(val if sign == NUMERIC_POS else -val)
+                .scaleb(-dscale, ctx)
+                .shift(shift, ctx)
+            )
+        else:
+            try:
+                return _numeric_special[sign]
+            except KeyError:
+                raise e.DataError(f"bad value for numeric sign: 0x{sign:X}")

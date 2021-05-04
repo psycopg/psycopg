@@ -69,6 +69,7 @@ from .numeric import (
     Float4BinaryLoader as Float4BinaryLoader,
     Float8BinaryLoader as Float8BinaryLoader,
     NumericLoader as NumericLoader,
+    NumericBinaryLoader as NumericBinaryLoader,
 )
 from .singletons import (
     BoolDumper as BoolDumper,
@@ -190,6 +191,7 @@ def register_default_globals(ctx: AdaptContext) -> None:
     Float4BinaryLoader.register("float4", ctx)
     Float8BinaryLoader.register("float8", ctx)
     NumericLoader.register("numeric", ctx)
+    NumericBinaryLoader.register("numeric", ctx)
 
     BoolDumper.register(bool, ctx)
     BoolBinaryDumper.register(bool, ctx)
