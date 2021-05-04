@@ -1,6 +1,8 @@
 import os
 import pytest
 
+from .utils import check_server_version
+
 
 def pytest_addoption(parser):
     parser.addoption(
@@ -9,6 +11,15 @@ def pytest_addoption(parser):
         default=os.environ.get("PSYCOPG3_TEST_DSN") or None,
         help="Connection string to run database tests requiring a connection"
         " [you can also use the PSYCOPG3_TEST_DSN env var].",
+    )
+
+
+def pytest_configure(config):
+    # register pg marker
+    config.addinivalue_line(
+        "markers",
+        "pg(version_expr): run the test only with matching server version"
+        " (e.g. '>= 10', '< 9.6')",
     )
 
 
@@ -22,7 +33,7 @@ def dsn(request):
 
 
 @pytest.fixture
-def pgconn(dsn):
+def pgconn(dsn, request):
     """Return a PGconn connection open to `--test-dsn`."""
     from psycopg3 import pq
 
@@ -31,26 +42,38 @@ def pgconn(dsn):
         pytest.fail(
             f"bad connection: {conn.error_message.decode('utf8', 'replace')}"
         )
+    msg = check_connection_version(conn.server_version, request.function)
+    if msg:
+        conn.finish()
+        pytest.skip(msg)
     yield conn
     conn.finish()
 
 
 @pytest.fixture
-def conn(dsn):
+def conn(dsn, request):
     """Return a `Connection` connected to the ``--test-dsn`` database."""
     from psycopg3 import Connection
 
     conn = Connection.connect(dsn)
+    msg = check_connection_version(conn.info.server_version, request.function)
+    if msg:
+        conn.close()
+        pytest.skip(msg)
     yield conn
     conn.close()
 
 
 @pytest.fixture
-async def aconn(dsn):
+async def aconn(dsn, request):
     """Return an `AsyncConnection` connected to the ``--test-dsn`` database."""
     from psycopg3 import AsyncConnection
 
     conn = await AsyncConnection.connect(dsn)
+    msg = check_connection_version(conn.info.server_version, request.function)
+    if msg:
+        await conn.close()
+        pytest.skip(msg)
     yield conn
     await conn.close()
 
@@ -107,3 +130,11 @@ class ListPopAll(list):
         out = self[:]
         del self[:]
         return out
+
+
+def check_connection_version(got, function):
+    if not hasattr(function, "pytestmark"):
+        return
+    want = [m.args[0] for m in function.pytestmark if m.name == "pg"]
+    if want:
+        return check_server_version(got, want[0])
