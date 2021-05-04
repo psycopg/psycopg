@@ -28,7 +28,7 @@ from .proto import AdaptContext, ConnectionType, Params, PQGen, PQGenConn
 from .proto import Query, RV
 from .compat import asynccontextmanager
 from .cursor import Cursor, AsyncCursor
-from .conninfo import make_conninfo, ConnectionInfo
+from .conninfo import _conninfo_connect_timeout, ConnectionInfo
 from .generators import notifies
 from ._preparing import PrepareManager
 from .transaction import Transaction, AsyncTransaction
@@ -483,14 +483,13 @@ class Connection(BaseConnection[Row]):
     ) -> "Connection[Any]":
         """
         Connect to a database server and return a new `Connection` instance.
-
-        TODO: connection_timeout to be implemented.
         """
-        conninfo = make_conninfo(conninfo, **kwargs)
+        conninfo, timeout = _conninfo_connect_timeout(conninfo, **kwargs)
         return cls._wait_conn(
             cls._connect_gen(
                 conninfo, autocommit=autocommit, row_factory=row_factory
-            )
+            ),
+            timeout,
         )
 
     def __enter__(self) -> "Connection[Row]":
@@ -639,9 +638,7 @@ class Connection(BaseConnection[Row]):
         return waiting.wait(gen, self.pgconn.socket, timeout=timeout)
 
     @classmethod
-    def _wait_conn(
-        cls, gen: PQGenConn[RV], timeout: Optional[float] = 0.1
-    ) -> RV:
+    def _wait_conn(cls, gen: PQGenConn[RV], timeout: Optional[int]) -> RV:
         """Consume a connection generator."""
         return waiting.wait_conn(gen, timeout=timeout)
 
@@ -697,11 +694,12 @@ class AsyncConnection(BaseConnection[Row]):
         row_factory: Optional[RowFactory[Row]] = None,
         **kwargs: Any,
     ) -> "AsyncConnection[Any]":
-        conninfo = make_conninfo(conninfo, **kwargs)
+        conninfo, timeout = _conninfo_connect_timeout(conninfo, **kwargs)
         return await cls._wait_conn(
             cls._connect_gen(
                 conninfo, autocommit=autocommit, row_factory=row_factory
-            )
+            ),
+            timeout,
         )
 
     async def __aenter__(self) -> "AsyncConnection[Row]":
@@ -836,8 +834,10 @@ class AsyncConnection(BaseConnection[Row]):
         return await waiting.wait_async(gen, self.pgconn.socket)
 
     @classmethod
-    async def _wait_conn(cls, gen: PQGenConn[RV]) -> RV:
-        return await waiting.wait_conn_async(gen)
+    async def _wait_conn(
+        cls, gen: PQGenConn[RV], timeout: Optional[int]
+    ) -> RV:
+        return await waiting.wait_conn_async(gen, timeout)
 
     def _set_client_encoding(self, name: str) -> None:
         raise AttributeError(
