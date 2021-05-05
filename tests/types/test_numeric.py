@@ -340,12 +340,78 @@ def test_quote_numeric(conn, val, expr):
         assert r == (val, -val)
 
 
-@pytest.mark.xfail
-def test_dump_numeric_binary():
-    # TODO: numeric binary adaptation
-    tx = Transformer()
-    n = Decimal(1)
-    tx.get_dumper(n, Format.BINARY).dump(n)
+@pytest.mark.parametrize(
+    "expr",
+    ["NaN", "1", "1.0", "-1", "0.0", "0.01", "11", "1.1", "1.01", "0", "0.00"]
+    + [
+        "0.0000000",
+        "0.00001",
+        "1.00001",
+        "-1.00000000000000",
+        "-2.00000000000000",
+        "1000000000.12345",
+        "100.123456790000000000000000",
+        "1.0e-1000",
+        "1e1000",
+        "0.000000000000000000000000001",
+        "1.0000000000000000000000001",
+        "1000000000000000000000000.001",
+        "1000000000000000000000000000.001",
+        "9999999999999999999999999999.9",
+    ],
+)
+def test_dump_numeric_binary(conn, expr):
+    cur = conn.cursor()
+    val = Decimal(expr)
+    cur.execute("select %b::text = %s::decimal::text", [val, expr])
+    assert cur.fetchone()[0] is True
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize("fmt_in", [Format.TEXT, Format.BINARY])
+def test_dump_numeric_exhaustive(conn, fmt_in):
+    cur = conn.cursor()
+
+    funcs = [
+        (lambda i: "1" + "0" * i),
+        (lambda i: "1" + "0" * i + "." + "0" * i),
+        (lambda i: "-1" + "0" * i),
+        (lambda i: "0." + "0" * i + "1"),
+        (lambda i: "-0." + "0" * i + "1"),
+        (lambda i: "1." + "0" * i + "1"),
+        (lambda i: "1." + "0" * i + "10"),
+        (lambda i: "1" + "0" * i + ".001"),
+        (lambda i: "9" + "9" * i),
+        (lambda i: "9" + "." + "9" * i),
+        (lambda i: "9" + "9" * i + ".9"),
+        (lambda i: "9" + "9" * i + "." + "9" * i),
+        (lambda i: "1.1e%s" % i),
+        (lambda i: "1.1e-%s" % i),
+    ]
+
+    for i in range(100):
+        for f in funcs:
+            expr = f(i)
+            val = Decimal(expr)
+            # For Postgres, NaN = NaN. Shrodinger says it's fine.
+            cur.execute(
+                f"select %{fmt_in}::text = %s::decimal::text", [val, expr]
+            )
+            assert cur.fetchone()[0] is True
+
+
+@pytest.mark.pg(">= 14")
+@pytest.mark.parametrize(
+    "val, expr",
+    [
+        ("inf", "Infinity"),
+        ("-inf", "-Infinity"),
+    ],
+)
+def test_dump_numeric_binary_inf(conn, val, expr):
+    cur = conn.cursor()
+    val = Decimal(val)
+    cur.execute("select %b", [val])
 
 
 @pytest.mark.parametrize(

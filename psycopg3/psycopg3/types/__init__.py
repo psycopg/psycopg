@@ -51,6 +51,7 @@ from .numeric import (
     FloatDumper as FloatDumper,
     FloatBinaryDumper as FloatBinaryDumper,
     DecimalDumper as DecimalDumper,
+    DecimalBinaryDumper as DecimalBinaryDumper,
     Int2Dumper as Int2Dumper,
     Int4Dumper as Int4Dumper,
     Int8Dumper as Int8Dumper,
@@ -168,6 +169,10 @@ def register_default_globals(ctx: AdaptContext) -> None:
     IntBinaryDumper.register(int, ctx)
     FloatDumper.register(float, ctx)
     FloatBinaryDumper.register(float, ctx)
+    # TODO: benchmark to work out if the binary dumper is faster
+    # (the binary format is usually larger)
+    # for now leaving the text format as default.
+    DecimalBinaryDumper.register("decimal.Decimal", ctx)
     DecimalDumper.register("decimal.Decimal", ctx)
     Int2Dumper.register(Int2, ctx)
     Int4Dumper.register(Int4, ctx)
