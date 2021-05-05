@@ -358,10 +358,8 @@ class BaseConnection(AdaptContext, Generic[Row]):
         *,
         autocommit: bool = False,
         row_factory: Optional[RowFactory[Any]] = None,
-        **kwargs: Any,
     ) -> PQGenConn[ConnectionType]:
         """Generator to connect to the database and create a new instance."""
-        conninfo = make_conninfo(conninfo, **kwargs)
         pgconn = yield from connect(conninfo)
         if not row_factory:
             row_factory = tuple_row
@@ -488,12 +486,10 @@ class Connection(BaseConnection[Row]):
 
         TODO: connection_timeout to be implemented.
         """
+        conninfo = make_conninfo(conninfo, **kwargs)
         return cls._wait_conn(
             cls._connect_gen(
-                conninfo,
-                autocommit=autocommit,
-                row_factory=row_factory,
-                **kwargs,
+                conninfo, autocommit=autocommit, row_factory=row_factory
             )
         )
 
@@ -701,12 +697,10 @@ class AsyncConnection(BaseConnection[Row]):
         row_factory: Optional[RowFactory[Row]] = None,
         **kwargs: Any,
     ) -> "AsyncConnection[Any]":
+        conninfo = make_conninfo(conninfo, **kwargs)
         return await cls._wait_conn(
             cls._connect_gen(
-                conninfo,
-                autocommit=autocommit,
-                row_factory=row_factory,
-                **kwargs,
+                conninfo, autocommit=autocommit, row_factory=row_factory
             )
         )
 
