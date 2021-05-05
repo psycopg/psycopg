@@ -364,52 +364,54 @@ class DecimalBinaryDumper(Dumper):
             dscale = -exp
 
             # left pad with 0 to align the py digits to the pg digits
-            tmp = len(digits) + exp
-            if tmp % DEC_DIGITS != 0:
-                pad = DEC_DIGITS - tmp % DEC_DIGITS
-                digits = (0,) * pad + digits
-                tmp += pad
-
-            weight = tmp // DEC_DIGITS - 1
-
-            # drop excessive trailing 0s
-            while digits and digits[-1] == 0:
-                digits = digits[:-1]
-            # but right pad with 0s to the last pg digit
-            if len(digits) % DEC_DIGITS != 0:
-                pad = DEC_DIGITS - len(digits) % DEC_DIGITS
-                digits += (0,) * pad
+            mod = (len(digits) - dscale) % DEC_DIGITS
+            if mod:
+                digits = (0,) * (DEC_DIGITS - mod) + digits
 
         else:
             dscale = 0
 
             # align the py digits to the pg digits if there's some py exponent
             if exp % DEC_DIGITS != 0:
-                digits = digits + (0,) * (exp % DEC_DIGITS)
+                digits += (0,) * (exp % DEC_DIGITS)
 
             # left pad with 0 to align the py digits to the pg digits
-            if len(digits) % DEC_DIGITS != 0:
-                pad = DEC_DIGITS - len(digits) % DEC_DIGITS
-                digits = (0,) * pad + digits
+            mod = len(digits) % DEC_DIGITS
+            if mod:
+                digits = (0,) * (DEC_DIGITS - mod) + digits
 
-            weight = len(digits) // DEC_DIGITS - 1 + exp // DEC_DIGITS
+        weight = (len(digits) + exp) // DEC_DIGITS - 1
+        mod = len(digits) % DEC_DIGITS
 
         out = bytearray(
             _pack_numeric_head(
-                len(digits) // DEC_DIGITS,
+                len(digits) // DEC_DIGITS + (mod and 1),
                 weight,
                 NUMERIC_NEG if sign else NUMERIC_POS,
                 dscale,
             )
         )
 
-        for i in range(0, len(digits), DEC_DIGITS):
+        i = 0
+        while i + 3 < len(digits):
             digit = (
                 1000 * digits[i]
                 + 100 * digits[i + 1]
                 + 10 * digits[i + 2]
                 + digits[i + 3]
             )
+            out += _pack_uint2(digit)
+            i += DEC_DIGITS
+
+        if mod:
+            if mod == 1:
+                digit = 1000 * digits[i]
+            elif mod == 2:
+                digit = 1000 * digits[i] + 100 * digits[i + 1]
+            elif mod == 3:
+                digit = (
+                    1000 * digits[i] + 100 * digits[i + 1] + 10 * digits[i + 2]
+                )
             out += _pack_uint2(digit)
 
         return out

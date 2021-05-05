@@ -363,8 +363,9 @@ def test_quote_numeric(conn, val, expr):
 def test_dump_numeric_binary(conn, expr):
     cur = conn.cursor()
     val = Decimal(expr)
-    cur.execute("select %b::text = %s::decimal::text", [val, expr])
-    assert cur.fetchone()[0] is True
+    cur.execute("select %b::text, %s::decimal::text", [val, expr])
+    want, got = cur.fetchone()
+    assert got == want
 
 
 @pytest.mark.slow
@@ -393,11 +394,11 @@ def test_dump_numeric_exhaustive(conn, fmt_in):
         for f in funcs:
             expr = f(i)
             val = Decimal(expr)
-            # For Postgres, NaN = NaN. Shrodinger says it's fine.
             cur.execute(
-                f"select %{fmt_in}::text = %s::decimal::text", [val, expr]
+                f"select %{fmt_in}::text, %s::decimal::text", [val, expr]
             )
-            assert cur.fetchone()[0] is True
+            want, got = cur.fetchone()
+            assert got == want
 
 
 @pytest.mark.pg(">= 14")
