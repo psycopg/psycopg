@@ -283,6 +283,9 @@ Connection support objects
 
     .. autoattribute:: hostaddr
 
+        Only available if the libpq used is at least from PostgreSQL 12.
+        Raise `~psycopg3.NotSupportedError` otherwise.
+
     .. autoattribute:: port
     .. autoattribute:: dbname
     .. autoattribute:: user

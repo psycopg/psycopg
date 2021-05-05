@@ -98,6 +98,9 @@ class TestConnectionInfo:
         else:
             info_attr = pgconn_attr = attr
 
+        if info_attr == "hostaddr" and psycopg3.pq.version() < 120000:
+            pytest.skip("hostaddr not supported on libpq < 12")
+
         info_val = getattr(conn.info, info_attr)
         pgconn_val = getattr(conn.pgconn, pgconn_attr).decode("utf-8")
         assert info_val == pgconn_val
@@ -105,6 +108,11 @@ class TestConnectionInfo:
         conn.close()
         with pytest.raises(psycopg3.OperationalError):
             getattr(conn.info, info_attr)
+
+    @pytest.mark.libpq("< 12")
+    def test_hostaddr_not_supported(self, conn):
+        with pytest.raises(psycopg3.NotSupportedError):
+            conn.info.hostaddr
 
     def test_port(self, conn):
         assert conn.info.port == int(conn.pgconn.port.decode("utf-8"))
