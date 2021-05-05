@@ -34,10 +34,10 @@ extras_require = {
     "test": [
         "mypy >= 0.812",
         "pproxy >= 2.7, < 2.8",
-        "pytest >= 6, < 6.1",
-        "pytest-asyncio >= 0.14.0, < 0.15",
-        "pytest-randomly >= 3.5, < 3.6",
-        "tenacity >= 6.3, < 6.4",
+        "pytest >= 6.2.4, < 6.3",
+        "pytest-asyncio >= 0.15.0, < 0.16",
+        "pytest-randomly >= 3.7, < 3.8",
+        "tenacity >= 7, < 7.1",
     ],
     "dev": [
         "black",
