@@ -50,7 +50,7 @@ async def test_connect_timeout():
 
     async def connect():
         t0 = time.time()
-        with pytest.raises(psycopg3.DatabaseError):
+        with pytest.raises(psycopg3.OperationalError, match="timeout expired"):
             await AsyncConnection.connect(
                 host="localhost", port=port, connect_timeout=1
             )
