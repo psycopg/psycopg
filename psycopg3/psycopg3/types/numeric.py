@@ -360,58 +360,46 @@ class DecimalBinaryDumper(Dumper):
         elif exp == "F":  # type: ignore[comparison-overlap]
             return NUMERIC_NINF_BIN if sign else NUMERIC_PINF_BIN
 
-        if exp < 0:
+        # Weights of py digits into a pg digit according to their positions.
+        # Starting with an index wi != 0 is equivalent to prepending 0's to
+        # the digits tuple, but without really changing it.
+        weights = (1000, 100, 10, 1)
+        wi = 0
+
+        ndigits = len(digits)
+        if exp <= 0:
             dscale = -exp
-
-            # left pad with 0 to align the py digits to the pg digits
-            mod = (len(digits) - dscale) % DEC_DIGITS
-            if mod:
-                digits = (0,) * (DEC_DIGITS - mod) + digits
-
         else:
             dscale = 0
-
             # align the py digits to the pg digits if there's some py exponent
-            if exp % DEC_DIGITS != 0:
-                digits += (0,) * (exp % DEC_DIGITS)
+            ndigits += exp % DEC_DIGITS
 
-            # left pad with 0 to align the py digits to the pg digits
-            mod = len(digits) % DEC_DIGITS
-            if mod:
-                digits = (0,) * (DEC_DIGITS - mod) + digits
-
-        weight = (len(digits) + exp) // DEC_DIGITS - 1
-        mod = len(digits) % DEC_DIGITS
+        # Equivalent of 0-padding left to align the py digits to the pg digits
+        # but without changing the digits tuple.
+        mod = (ndigits - dscale) % DEC_DIGITS
+        if mod:
+            wi = DEC_DIGITS - mod
+            ndigits += wi
 
         out = bytearray(
             _pack_numeric_head(
-                len(digits) // DEC_DIGITS + (mod and 1),
-                weight,
-                NUMERIC_NEG if sign else NUMERIC_POS,
+                0,  # ndigits, filled ahead
+                (ndigits + exp) // DEC_DIGITS - 1,  # weight
+                NUMERIC_NEG if sign else NUMERIC_POS,  # sign
                 dscale,
             )
         )
 
-        i = 0
-        while i + 3 < len(digits):
-            digit = (
-                1000 * digits[i]
-                + 100 * digits[i + 1]
-                + 10 * digits[i + 2]
-                + digits[i + 3]
-            )
-            out += _pack_uint2(digit)
-            i += DEC_DIGITS
+        pgdigit = 0
+        for digit in digits:
+            pgdigit += weights[wi] * digit
+            wi += 1
+            if wi >= DEC_DIGITS:
+                out += _pack_uint2(pgdigit)
+                pgdigit = wi = 0
 
-        if mod:
-            if mod == 1:
-                digit = 1000 * digits[i]
-            elif mod == 2:
-                digit = 1000 * digits[i] + 100 * digits[i + 1]
-            elif mod == 3:
-                digit = (
-                    1000 * digits[i] + 100 * digits[i + 1] + 10 * digits[i + 2]
-                )
-            out += _pack_uint2(digit)
+        if pgdigit:
+            out += _pack_uint2(pgdigit)
 
+        out[:2] = _pack_uint2((len(out) - 8) // 2)  # num of pg digits
         return out
