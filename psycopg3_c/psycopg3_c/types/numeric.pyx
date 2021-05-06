@@ -4,13 +4,13 @@ Cython adapters for numeric types.
 
 # Copyright (C) 2020-2021 The Psycopg Team
 
-from decimal import Decimal
-
 cimport cython
 
 from libc.stdint cimport *
 from libc.string cimport memcpy, strlen
 from cpython.mem cimport PyMem_Free
+from cpython.ref cimport Py_DECREF
+from cpython.dict cimport PyDict_GetItem, PyDict_SetItem
 from cpython.long cimport (
     PyLong_FromString, PyLong_FromLong, PyLong_FromLongLong,
     PyLong_FromUnsignedLong, PyLong_AsLongLong)
@@ -18,7 +18,10 @@ from cpython.bytes cimport PyBytes_AsStringAndSize
 from cpython.float cimport PyFloat_FromDouble, PyFloat_AsDouble
 from cpython.unicode cimport PyUnicode_DecodeUTF8
 
+from decimal import Decimal, Context, DefaultContext
+
 from psycopg3_c._psycopg3 cimport endian
+from psycopg3 import errors as e
 
 from psycopg3.wrappers.numeric import Int2, Int4, Int8, IntNumeric
 
@@ -168,9 +171,12 @@ cdef class Int8BinaryDumper(CDumper):
 # decimal digits required.
 DEF BIT_PER_PGDIGIT = 0.07525749891599529  # log(2) / log(10_000)
 
+DEF DEC_DIGITS = 4  # decimal digits per Postgres "digit"
 DEF NUMERIC_POS = 0x0000
 DEF NUMERIC_NEG = 0x4000
-
+DEF NUMERIC_NAN = 0xC000
+DEF NUMERIC_PINF = 0xD000
+DEF NUMERIC_NINF = 0xF000
 
 @cython.final
 cdef class IntNumericBinaryDumper(CDumper):
@@ -467,3 +473,61 @@ cdef class NumericLoader(CLoader):
     cdef object cload(self, const char *data, size_t length):
         s = PyUnicode_DecodeUTF8(<char *>data, length, NULL)
         return Decimal(s)
+
+
+cdef dict _decimal_special = {
+    NUMERIC_NAN: Decimal("NaN"),
+    NUMERIC_PINF: Decimal("Infinity"),
+    NUMERIC_NINF: Decimal("-Infinity"),
+}
+
+cdef dict _contexts = {}
+for _i in range(DefaultContext.prec):
+    _contexts[_i] = DefaultContext
+
+
+@cython.final
+cdef class NumericBinaryLoader(CLoader):
+
+    format = PQ_BINARY
+
+    cdef object cload(self, const char *data, size_t length):
+
+        cdef uint16_t *data16 = <uint16_t *>data
+        cdef uint16_t ndigits = endian.be16toh(data16[0])
+        cdef int16_t weight = <int16_t>endian.be16toh(data16[1])
+        cdef uint16_t sign = endian.be16toh(data16[2])
+        cdef uint16_t dscale = endian.be16toh(data16[3])
+        cdef int shift
+        cdef int i
+        cdef PyObject *pctx
+        cdef object key
+
+        if sign == NUMERIC_POS or sign == NUMERIC_NEG:
+            if length != (4 + ndigits) * sizeof(uint16_t):
+                raise e.DataError("bad ndigits in numeric binary representation")
+
+            val = 0
+            for i in range(ndigits):
+                val *= 10_000
+                val += endian.be16toh(data16[i + 4])
+
+            shift = dscale - (ndigits - weight - 1) * DEC_DIGITS
+
+            key = (weight + 2) * DEC_DIGITS + dscale
+            pctx = PyDict_GetItem(_contexts, key)
+            if pctx == NULL:
+                ctx = Context(prec=key)
+                PyDict_SetItem(_contexts, key, ctx)
+                pctx = <PyObject *>ctx
+
+            return (
+                Decimal(val if sign == NUMERIC_POS else -val)
+                .scaleb(-dscale, <object>pctx)
+                .shift(shift, <object>pctx)
+            )
+        else:
+            try:
+                return _decimal_special[sign]
+            except KeyError:
+                raise e.DataError(f"bad value for numeric sign: 0x{sign:X}")
