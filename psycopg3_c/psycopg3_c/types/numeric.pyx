@@ -4,6 +4,8 @@ Cython adapters for numeric types.
 
 # Copyright (C) 2020-2021 The Psycopg Team
 
+from decimal import Decimal
+
 cimport cython
 
 from libc.stdint cimport *
@@ -14,6 +16,7 @@ from cpython.long cimport (
     PyLong_FromUnsignedLong, PyLong_AsLongLong)
 from cpython.bytes cimport PyBytes_AsStringAndSize
 from cpython.float cimport PyFloat_FromDouble, PyFloat_AsDouble
+from cpython.unicode cimport PyUnicode_DecodeUTF8
 
 from psycopg3_c._psycopg3 cimport endian
 
@@ -261,6 +264,7 @@ cdef class IntDumper(_NumberDumper):
                 return self._int_numeric_dumper(IntNumeric)
 
 
+@cython.final
 cdef class IntBinaryDumper(IntDumper):
 
     format = PQ_BINARY
@@ -411,3 +415,55 @@ cdef class Float8BinaryLoader(CLoader):
         cdef uint64_t asint = endian.be64toh((<uint64_t *>data)[0])
         cdef char *swp = <char *>&asint
         return PyFloat_FromDouble((<double *>swp)[0])
+
+
+@cython.final
+cdef class DecimalDumper(CDumper):
+
+    format = PQ_TEXT
+
+    def __cinit__(self):
+        self.oid = oids.NUMERIC_OID
+
+    cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
+        cdef char *src
+        cdef Py_ssize_t length
+        cdef char *buf
+
+        b = bytes(str(obj), "utf-8")
+        PyBytes_AsStringAndSize(b, &src, &length)
+
+        if src[0] != b's':
+            buf = CDumper.ensure_size(rv, offset, length)
+            memcpy(buf, src, length)
+
+        else:  # convert sNaN to NaN
+            length = 3  # NaN
+            buf = CDumper.ensure_size(rv, offset, length)
+            memcpy(buf, b"NaN", length)
+
+        return length
+
+    def quote(self, obj) -> bytes:
+        value = bytes(self.dump(obj))
+        cdef PyObject *ptr = PyDict_GetItem(_special_decimal, value)
+        if ptr != NULL:
+            return <object>ptr
+
+        return value if obj >= 0 else b" " + value
+
+cdef dict _special_decimal = {
+    b"Infinity": b"'Infinity'::numeric",
+    b"-Infinity": b"'-Infinity'::numeric",
+    b"NaN": b"'NaN'::numeric",
+}
+
+
+@cython.final
+cdef class NumericLoader(CLoader):
+
+    format = PQ_TEXT
+
+    cdef object cload(self, const char *data, size_t length):
+        s = PyUnicode_DecodeUTF8(<char *>data, length, NULL)
+        return Decimal(s)
