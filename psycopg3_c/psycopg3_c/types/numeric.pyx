@@ -161,6 +161,14 @@ cdef class Int8BinaryDumper(CDumper):
         return sizeof(int64_t)
 
 
+# Ratio between number of bits required to store a number and number of pg
+# decimal digits required.
+DEF BIT_PER_PGDIGIT = 0.07525749891599529  # log(2) / log(10_000)
+
+DEF NUMERIC_POS = 0x0000
+DEF NUMERIC_NEG = 0x4000
+
+
 @cython.final
 cdef class IntNumericBinaryDumper(CDumper):
 
@@ -170,7 +178,35 @@ cdef class IntNumericBinaryDumper(CDumper):
         self.oid = oids.NUMERIC_OID
 
     cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
-        raise NotImplementedError("binary decimal dump not implemented yet")
+        # Calculate the number of PG digits required to store the number
+        cdef uint16_t ndigits
+        ndigits = <uint16_t>((<int>obj.bit_length()) * BIT_PER_PGDIGIT) + 1
+
+        cdef uint16_t sign = NUMERIC_POS
+        if obj < 0:
+            sign = NUMERIC_NEG
+            obj = -obj
+
+        cdef Py_ssize_t length = sizeof(uint16_t) * (ndigits + 4)
+        cdef uint16_t *buf
+        buf = <uint16_t *><void *>CDumper.ensure_size(rv, offset, length)
+        buf[0] = endian.htobe16(ndigits)
+        buf[1] = endian.htobe16(ndigits - 1)  # weight
+        buf[2] = endian.htobe16(sign)
+        buf[3] = 0  # dscale
+
+        cdef int i = 4 + ndigits - 1
+        cdef uint16_t rem
+        while obj:
+            rem = obj % 10000
+            obj //= 10000
+            buf[i] = endian.htobe16(rem)
+            i -= 1
+        while i > 3:
+            buf[i] = 0
+            i -= 1
+
+        return length
 
 
 cdef class IntDumper(_NumberDumper):

@@ -5,6 +5,7 @@ Adapers for numeric types.
 # Copyright (C) 2020-2021 The Psycopg Team
 
 import struct
+from math import log
 from typing import Any, Callable, DefaultDict, Dict, Tuple, Union, cast
 from decimal import Decimal, DefaultContext, Context
 
@@ -177,12 +178,33 @@ class Int8BinaryDumper(Int8Dumper):
         return _pack_int8(obj)
 
 
+# Ratio between number of bits required to store a number and number of pg
+# decimal digits required.
+BIT_PER_PGDIGIT = log(2) / log(10_000)
+
+
 class IntNumericBinaryDumper(IntNumericDumper):
 
     format = Format.BINARY
 
-    def dump(self, obj: int) -> bytes:
-        raise NotImplementedError("binary decimal dump not implemented yet")
+    def dump(self, obj: int) -> bytearray:
+        ndigits = int(obj.bit_length() * BIT_PER_PGDIGIT) + 1
+        out = bytearray(b"\x00\x00" * (ndigits + 4))
+        if obj < 0:
+            sign = NUMERIC_NEG
+            obj = -obj
+        else:
+            sign = NUMERIC_POS
+
+        out[:8] = _pack_numeric_head(ndigits, ndigits - 1, sign, 0)
+        i = 8 + (ndigits - 1) * 2
+        while obj:
+            rem = obj % 10_000
+            obj //= 10_000
+            out[i : i + 2] = _pack_uint2(rem)
+            i -= 2
+
+        return out
 
 
 class OidBinaryDumper(OidDumper):

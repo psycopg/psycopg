@@ -58,13 +58,16 @@ def test_dump_int(conn, val, expr, fmt_in):
 )
 @pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
 def test_dump_int_subtypes(conn, val, expr, fmt_in):
-    if fmt_in in (Format.AUTO, Format.BINARY) and "numeric" in expr:
-        pytest.xfail("binary numeric not implemented")
     cur = conn.cursor()
     cur.execute(f"select pg_typeof({expr}) = pg_typeof(%{fmt_in})", (val,))
     assert cur.fetchone()[0] is True
-    cur.execute(f"select {expr} = %{fmt_in}", (val,))
-    assert cur.fetchone()[0] is True
+    cur.execute(
+        f"select {expr} = %(v){fmt_in}, {expr}::text, %(v){fmt_in}::text",
+        {"v": val},
+    )
+    ok, want, got = cur.fetchone()
+    assert got == want
+    assert ok
 
 
 @pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
@@ -89,6 +92,10 @@ def test_dump_enum(conn, fmt_in):
         (-42, b" -42"),
         (int(2 ** 63 - 1), b"9223372036854775807"),
         (int(-(2 ** 63)), b" -9223372036854775808"),
+        (int(2 ** 63), b"9223372036854775808"),
+        (int(-(2 ** 63 + 1)), b" -9223372036854775809"),
+        (int(2 ** 100), b"1267650600228229401496703205376"),
+        (int(-(2 ** 100)), b" -1267650600228229401496703205376"),
     ],
 )
 def test_quote_int(conn, val, expr):

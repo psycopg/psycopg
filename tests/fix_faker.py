@@ -272,7 +272,7 @@ class Faker:
             assert got == want
 
     def make_int(self, spec):
-        return randrange(-(1 << 63), 1 << 63)
+        return randrange(-(1 << 90), 1 << 90)
 
     def make_Int2(self, spec):
         return spec(randrange(-(1 << 15), 1 << 15))
