@@ -88,6 +88,13 @@ class DecimalDumper(SpecialValuesDumper):
 
     _oid = builtins["numeric"].oid
 
+    def dump(self, obj: Decimal) -> bytes:
+        if obj.is_nan():
+            # cover NaN and sNaN
+            return b"NaN"
+        else:
+            return str(obj).encode("utf8")
+
     _special = {
         b"Infinity": b"'Infinity'::numeric",
         b"-Infinity": b"'-Infinity'::numeric",
@@ -355,7 +362,7 @@ class DecimalBinaryDumper(Dumper):
 
     def dump(self, obj: Decimal) -> Union[bytearray, bytes]:
         sign, digits, exp = obj.as_tuple()
-        if exp == "n":  # type: ignore[comparison-overlap]
+        if exp == "n" or exp == "N":  # type: ignore[comparison-overlap]
             return NUMERIC_NAN_BIN
         elif exp == "F":  # type: ignore[comparison-overlap]
             return NUMERIC_NINF_BIN if sign else NUMERIC_PINF_BIN

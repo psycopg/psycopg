@@ -297,16 +297,20 @@ def test_load_float_approx(conn, expr, pgtype, want, fmt_out):
     "val",
     [
         "0",
+        "-0",
         "0.0",
         "0.000000000000000000001",
         "-0.000000000000000000001",
         "nan",
+        "snan",
     ],
 )
-def test_roundtrip_numeric(conn, val):
-    cur = conn.cursor()
+@pytest.mark.parametrize("fmt_in", [Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
+def test_roundtrip_numeric(conn, val, fmt_in, fmt_out):
+    cur = conn.cursor(binary=fmt_out)
     val = Decimal(val)
-    cur.execute("select %s", (val,))
+    cur.execute(f"select %{fmt_in}", (val,))
     result = cur.fetchone()[0]
     assert isinstance(result, Decimal)
     if val.is_nan():
@@ -323,6 +327,7 @@ def test_roundtrip_numeric(conn, val):
         ("0.00000000000000001", b"1E-17"),
         ("-0.00000000000000001", b" -1E-17"),
         ("nan", b"'NaN'::numeric"),
+        ("snan", b"'NaN'::numeric"),
     ],
 )
 def test_quote_numeric(conn, val, expr):

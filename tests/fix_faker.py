@@ -229,9 +229,9 @@ class Faker:
     def make_Decimal(self, spec):
         if random() >= 0.99:
             if self.conn.info.server_version >= 140000:
-                return Decimal(choice(["NaN", "Inf", "-Inf"]))
+                return Decimal(choice(["NaN", "sNaN", "Inf", "-Inf"]))
             else:
-                return Decimal("NaN")
+                return Decimal(choice(["NaN", "sNaN"]))
 
         sign = choice("+-")
         num = choice(["0.zd", "d", "d.d"])
