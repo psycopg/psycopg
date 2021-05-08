@@ -395,7 +395,15 @@ class DecimalBinaryDumper(Dumper):
         weights = (1000, 100, 10, 1)
         wi = 0
 
-        ndigits = len(digits)
+        ndigits = nzdigits = len(digits)
+
+        # Find the last nonzero digit
+        while nzdigits > 0 and digits[nzdigits - 1] == 0:
+            nzdigits -= 1
+
+        if not nzdigits:
+            return _pack_numeric_head(0, 0, NUMERIC_POS, -exp)
+
         if exp <= 0:
             dscale = -exp
         else:
@@ -410,9 +418,10 @@ class DecimalBinaryDumper(Dumper):
             wi = DEC_DIGITS - mod
             ndigits += wi
 
+        tmp = nzdigits + wi
         out = bytearray(
             _pack_numeric_head(
-                0,  # ndigits, filled ahead
+                tmp // DEC_DIGITS + (tmp % DEC_DIGITS and 1),  # ndigits
                 (ndigits + exp) // DEC_DIGITS - 1,  # weight
                 NUMERIC_NEG if sign else NUMERIC_POS,  # sign
                 dscale,
@@ -420,8 +429,8 @@ class DecimalBinaryDumper(Dumper):
         )
 
         pgdigit = 0
-        for digit in digits:
-            pgdigit += weights[wi] * digit
+        for i in range(nzdigits):
+            pgdigit += weights[wi] * digits[i]
             wi += 1
             if wi >= DEC_DIGITS:
                 out += _pack_uint2(pgdigit)
@@ -430,5 +439,4 @@ class DecimalBinaryDumper(Dumper):
         if pgdigit:
             out += _pack_uint2(pgdigit)
 
-        out[:2] = _pack_uint2((len(out) - 8) // 2)  # num of pg digits
         return out
