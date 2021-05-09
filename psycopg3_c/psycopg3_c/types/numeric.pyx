@@ -554,6 +554,12 @@ cdef class DecimalBinaryDumper(CDumper):
 
     cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
 
+        # TODO: this implementation is about 30% slower than the text dump.
+        # This might be probably optimised by accessing the C structure of
+        # the Decimal object, if available, which would save the creation of
+        # several intermediate Python objects (the DecimalTuple, the digits
+        # tuple, and then accessing them).
+
         cdef object t = obj.as_tuple()
         cdef int sign = t[0]
         cdef tuple digits = t[1]

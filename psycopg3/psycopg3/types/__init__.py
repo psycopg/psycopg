@@ -169,9 +169,8 @@ def register_default_globals(ctx: AdaptContext) -> None:
     IntBinaryDumper.register(int, ctx)
     FloatDumper.register(float, ctx)
     FloatBinaryDumper.register(float, ctx)
-    # TODO: benchmark to work out if the binary dumper is faster
-    # (the binary format is usually larger)
-    # for now leaving the text format as default.
+    # The binary dumper is currently some 30% slower, so default to text
+    # (see tests/scripts/testdec.py for a rough benchmark)
     DecimalBinaryDumper.register("decimal.Decimal", ctx)
     DecimalDumper.register("decimal.Decimal", ctx)
     Int2Dumper.register(Int2, ctx)
