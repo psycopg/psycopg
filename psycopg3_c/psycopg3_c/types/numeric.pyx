@@ -544,6 +544,7 @@ static const int pydigit_weights[] = {1000, 100, 10, 1};
     const int[4] pydigit_weights
 
 @cython.final
+@cython.cdivision(True)
 cdef class DecimalBinaryDumper(CDumper):
 
     format = PQ_BINARY
@@ -609,6 +610,9 @@ cdef class DecimalBinaryDumper(CDumper):
         # but without changing the digits tuple.
         cdef int wi = 0
         cdef int mod = (ndigits - dscale) % DEC_DIGITS
+        if mod < 0:
+            # the difference between C and Py % operator
+            mod += 4
         if mod:
             wi = DEC_DIGITS - mod
             ndigits += wi
