@@ -595,15 +595,6 @@ cdef class DecimalBinaryDumper(CDumper):
         while nzdigits > 0 and digits[nzdigits - 1] == 0:
             nzdigits -= 1
 
-        if nzdigits == 0:
-            length = 4 * sizeof(uint16_t)
-            buf = <uint16_t *>CDumper.ensure_size(rv, offset, length)
-            buf[0] = 0  # ndigits
-            buf[1] = 0  # weight
-            buf[2] = endian.htobe16(NUMERIC_POS)  # sign
-            buf[3] = endian.htobe16(-exp)  # dscale
-            return length
-
         cdef uint16_t dscale
         if exp <= 0:
             dscale = -exp
@@ -611,6 +602,15 @@ cdef class DecimalBinaryDumper(CDumper):
             dscale = 0
             # align the py digits to the pg digits if there's some py exponent
             ndigits += exp % DEC_DIGITS
+
+        if nzdigits == 0:
+            length = 4 * sizeof(uint16_t)
+            buf = <uint16_t *>CDumper.ensure_size(rv, offset, length)
+            buf[0] = 0  # ndigits
+            buf[1] = 0  # weight
+            buf[2] = endian.htobe16(NUMERIC_POS)  # sign
+            buf[3] = endian.htobe16(dscale)
+            return length
 
         # Equivalent of 0-padding left to align the py digits to the pg digits
         # but without changing the digits tuple.

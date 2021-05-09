@@ -401,15 +401,15 @@ class DecimalBinaryDumper(Dumper):
         while nzdigits > 0 and digits[nzdigits - 1] == 0:
             nzdigits -= 1
 
-        if not nzdigits:
-            return _pack_numeric_head(0, 0, NUMERIC_POS, -exp)
-
         if exp <= 0:
             dscale = -exp
         else:
             dscale = 0
             # align the py digits to the pg digits if there's some py exponent
             ndigits += exp % DEC_DIGITS
+
+        if not nzdigits:
+            return _pack_numeric_head(0, 0, NUMERIC_POS, dscale)
 
         # Equivalent of 0-padding left to align the py digits to the pg digits
         # but without changing the digits tuple.
