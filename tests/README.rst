@@ -54,3 +54,18 @@ Test options
       ========================= test session starts =========================
       [...]
       ==== 1877 passed, 2 skipped, 169 deselected, 48 xfailed in 13.47s =====
+
+
+Testing in docker
+-----------------
+
+Useful order to test other Python versions without installing them. Can be
+used to replicate GitHub actions failures, specifying a ``--randomly-seed``.
+The following ``PG*`` env vars are an example to adjust the test dsn::
+
+    docker run -ti --rm --volume `pwd`:/src --workdir /src \
+        -e PSYCOPG3_TEST_DSN -e PGHOST=172.17.0.1 -e PGUSER=`whoami` \
+        python:3.7 bash
+
+    pip install -e ./psycopg3[test] ./psycopg3_c
+    pytest
