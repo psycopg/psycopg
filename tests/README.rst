@@ -59,13 +59,15 @@ Test options
 Testing in docker
 -----------------
 
-Useful order to test other Python versions without installing them. Can be
-used to replicate GitHub actions failures, specifying a ``--randomly-seed``.
-The following ``PG*`` env vars are an example to adjust the test dsn::
+Useful to test different Python versions without installing them. Can be used
+to replicate GitHub actions failures, specifying the ``--randomly-seed`` used
+in the test run. The following ``PG*`` env vars are an example to adjust the
+test dsn in order to connect to a database running on the docker host: specify
+a set of env vars working for your setup::
 
-    docker run -ti --rm --volume `pwd`:/src --workdir /src \
-        -e PSYCOPG3_TEST_DSN -e PGHOST=172.17.0.1 -e PGUSER=`whoami` \
-        python:3.7 bash
+    $ docker run -ti --rm --volume `pwd`:/src --workdir /src \
+      -e PSYCOPG3_TEST_DSN -e PGHOST=172.17.0.1 -e PGUSER=`whoami` \
+      python:3.7 bash
 
-    pip install -e ./psycopg3[test] ./psycopg3_c
-    pytest
+    # pip install -e ./psycopg3[test] ./psycopg3_c
+    # pytest
