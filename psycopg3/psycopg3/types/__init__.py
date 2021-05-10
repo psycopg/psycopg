@@ -51,6 +51,7 @@ from .numeric import (
     FloatDumper as FloatDumper,
     FloatBinaryDumper as FloatBinaryDumper,
     DecimalDumper as DecimalDumper,
+    DecimalBinaryDumper as DecimalBinaryDumper,
     Int2Dumper as Int2Dumper,
     Int4Dumper as Int4Dumper,
     Int8Dumper as Int8Dumper,
@@ -69,6 +70,7 @@ from .numeric import (
     Float4BinaryLoader as Float4BinaryLoader,
     Float8BinaryLoader as Float8BinaryLoader,
     NumericLoader as NumericLoader,
+    NumericBinaryLoader as NumericBinaryLoader,
 )
 from .singletons import (
     BoolDumper as BoolDumper,
@@ -167,6 +169,9 @@ def register_default_globals(ctx: AdaptContext) -> None:
     IntBinaryDumper.register(int, ctx)
     FloatDumper.register(float, ctx)
     FloatBinaryDumper.register(float, ctx)
+    # The binary dumper is currently some 30% slower, so default to text
+    # (see tests/scripts/testdec.py for a rough benchmark)
+    DecimalBinaryDumper.register("decimal.Decimal", ctx)
     DecimalDumper.register("decimal.Decimal", ctx)
     Int2Dumper.register(Int2, ctx)
     Int4Dumper.register(Int4, ctx)
@@ -190,6 +195,7 @@ def register_default_globals(ctx: AdaptContext) -> None:
     Float4BinaryLoader.register("float4", ctx)
     Float8BinaryLoader.register("float8", ctx)
     NumericLoader.register("numeric", ctx)
+    NumericBinaryLoader.register("numeric", ctx)
 
     BoolDumper.register(bool, ctx)
     BoolBinaryDumper.register(bool, ctx)

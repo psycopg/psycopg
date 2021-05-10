@@ -2,6 +2,7 @@ import importlib
 from math import isnan
 from uuid import UUID
 from random import choice, random, randrange
+from decimal import Decimal
 from collections import deque
 
 import pytest
@@ -225,6 +226,34 @@ class Faker:
         length = randrange(self.str_max_length)
         return spec(bytes([randrange(256) for i in range(length)]))
 
+    def make_Decimal(self, spec):
+        if random() >= 0.99:
+            if self.conn.info.server_version >= 140000:
+                return Decimal(choice(["NaN", "sNaN", "Inf", "-Inf"]))
+            else:
+                return Decimal(choice(["NaN", "sNaN"]))
+
+        sign = choice("+-")
+        num = choice(["0.zd", "d", "d.d"])
+        while "z" in num:
+            ndigits = randrange(1, 20)
+            num = num.replace("z", "0" * ndigits, 1)
+        while "d" in num:
+            ndigits = randrange(1, 20)
+            num = num.replace(
+                "d", "".join([str(randrange(10)) for i in range(ndigits)]), 1
+            )
+        expsign = choice(["e+", "e-", ""])
+        exp = randrange(20) if expsign else ""
+        rv = Decimal(f"{sign}{num}{expsign}{exp}")
+        return rv
+
+    def match_Decimal(self, spec, got, want):
+        if got is not None and got.is_nan():
+            assert want.is_nan()
+        else:
+            assert got == want
+
     def make_float(self, spec):
         if random() <= 0.99:
             # this exponent should generate no inf
@@ -243,7 +272,7 @@ class Faker:
             assert got == want
 
     def make_int(self, spec):
-        return randrange(-(1 << 63), 1 << 63)
+        return randrange(-(1 << 90), 1 << 90)
 
     def make_Int2(self, spec):
         return spec(randrange(-(1 << 15), 1 << 15))

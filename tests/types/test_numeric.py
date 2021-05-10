@@ -58,13 +58,16 @@ def test_dump_int(conn, val, expr, fmt_in):
 )
 @pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
 def test_dump_int_subtypes(conn, val, expr, fmt_in):
-    if fmt_in in (Format.AUTO, Format.BINARY) and "numeric" in expr:
-        pytest.xfail("binary numeric not implemented")
     cur = conn.cursor()
     cur.execute(f"select pg_typeof({expr}) = pg_typeof(%{fmt_in})", (val,))
     assert cur.fetchone()[0] is True
-    cur.execute(f"select {expr} = %{fmt_in}", (val,))
-    assert cur.fetchone()[0] is True
+    cur.execute(
+        f"select {expr} = %(v){fmt_in}, {expr}::text, %(v){fmt_in}::text",
+        {"v": val},
+    )
+    ok, want, got = cur.fetchone()
+    assert got == want
+    assert ok
 
 
 @pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
@@ -89,6 +92,10 @@ def test_dump_enum(conn, fmt_in):
         (-42, b" -42"),
         (int(2 ** 63 - 1), b"9223372036854775807"),
         (int(-(2 ** 63)), b" -9223372036854775808"),
+        (int(2 ** 63), b"9223372036854775808"),
+        (int(-(2 ** 63 + 1)), b" -9223372036854775809"),
+        (int(2 ** 100), b"1267650600228229401496703205376"),
+        (int(-(2 ** 100)), b" -1267650600228229401496703205376"),
     ],
 )
 def test_quote_int(conn, val, expr):
@@ -297,16 +304,20 @@ def test_load_float_approx(conn, expr, pgtype, want, fmt_out):
     "val",
     [
         "0",
+        "-0",
         "0.0",
         "0.000000000000000000001",
         "-0.000000000000000000001",
         "nan",
+        "snan",
     ],
 )
-def test_roundtrip_numeric(conn, val):
-    cur = conn.cursor()
+@pytest.mark.parametrize("fmt_in", [Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
+def test_roundtrip_numeric(conn, val, fmt_in, fmt_out):
+    cur = conn.cursor(binary=fmt_out)
     val = Decimal(val)
-    cur.execute("select %s", (val,))
+    cur.execute(f"select %{fmt_in}", (val,))
     result = cur.fetchone()[0]
     assert isinstance(result, Decimal)
     if val.is_nan():
@@ -323,6 +334,7 @@ def test_roundtrip_numeric(conn, val):
         ("0.00000000000000001", b"1E-17"),
         ("-0.00000000000000001", b" -1E-17"),
         ("nan", b"'NaN'::numeric"),
+        ("snan", b"'NaN'::numeric"),
     ],
 )
 def test_quote_numeric(conn, val, expr):
@@ -340,20 +352,153 @@ def test_quote_numeric(conn, val, expr):
         assert r == (val, -val)
 
 
-@pytest.mark.xfail
-def test_dump_numeric_binary():
-    # TODO: numeric binary adaptation
-    tx = Transformer()
-    n = Decimal(1)
-    tx.get_dumper(n, Format.BINARY).dump(n)
+@pytest.mark.parametrize(
+    "expr",
+    ["NaN", "1", "1.0", "-1", "0.0", "0.01", "11", "1.1", "1.01", "0", "0.00"]
+    + [
+        "0.0000000",
+        "0.00001",
+        "1.00001",
+        "-1.00000000000000",
+        "-2.00000000000000",
+        "1000000000.12345",
+        "100.123456790000000000000000",
+        "1.0e-1000",
+        "1e1000",
+        "0.000000000000000000000000001",
+        "1.0000000000000000000000001",
+        "1000000000000000000000000.001",
+        "1000000000000000000000000000.001",
+        "9999999999999999999999999999.9",
+    ],
+)
+def test_dump_numeric_binary(conn, expr):
+    cur = conn.cursor()
+    val = Decimal(expr)
+    cur.execute("select %b::text, %s::decimal::text", [val, expr])
+    want, got = cur.fetchone()
+    assert got == want
 
 
-@pytest.mark.xfail
-def test_load_numeric_binary(conn):
-    # TODO: numeric binary casting
+@pytest.mark.slow
+@pytest.mark.parametrize("fmt_in", [Format.TEXT, Format.BINARY])
+def test_dump_numeric_exhaustive(conn, fmt_in):
+    cur = conn.cursor()
+
+    funcs = [
+        (lambda i: "1" + "0" * i),
+        (lambda i: "1" + "0" * i + "." + "0" * i),
+        (lambda i: "-1" + "0" * i),
+        (lambda i: "0." + "0" * i + "1"),
+        (lambda i: "-0." + "0" * i + "1"),
+        (lambda i: "1." + "0" * i + "1"),
+        (lambda i: "1." + "0" * i + "10"),
+        (lambda i: "1" + "0" * i + ".001"),
+        (lambda i: "9" + "9" * i),
+        (lambda i: "9" + "." + "9" * i),
+        (lambda i: "9" + "9" * i + ".9"),
+        (lambda i: "9" + "9" * i + "." + "9" * i),
+        (lambda i: "1.1e%s" % i),
+        (lambda i: "1.1e-%s" % i),
+    ]
+
+    for i in range(100):
+        for f in funcs:
+            expr = f(i)
+            val = Decimal(expr)
+            cur.execute(
+                f"select %{fmt_in}::text, %s::decimal::text", [val, expr]
+            )
+            want, got = cur.fetchone()
+            assert got == want
+
+
+@pytest.mark.pg(">= 14")
+@pytest.mark.parametrize(
+    "val, expr",
+    [
+        ("inf", "Infinity"),
+        ("-inf", "-Infinity"),
+    ],
+)
+def test_dump_numeric_binary_inf(conn, val, expr):
+    cur = conn.cursor()
+    val = Decimal(val)
+    cur.execute("select %b", [val])
+
+
+@pytest.mark.parametrize(
+    "expr",
+    ["nan", "0", "1", "-1", "0.0", "0.01"]
+    + [
+        "0.0000000",
+        "-1.00000000000000",
+        "-2.00000000000000",
+        "1000000000.12345",
+        "100.123456790000000000000000",
+        "1.0e-1000",
+        "1e1000",
+        "0.000000000000000000000000001",
+        "1.0000000000000000000000001",
+        "1000000000000000000000000.001",
+        "1000000000000000000000000000.001",
+        "9999999999999999999999999999.9",
+    ],
+)
+def test_load_numeric_binary(conn, expr):
     cur = conn.cursor(binary=1)
-    res = cur.execute("select 1::numeric").fetchone()[0]
-    assert res == Decimal(1)
+    res = cur.execute(f"select '{expr}'::numeric").fetchone()[0]
+    val = Decimal(expr)
+    if val.is_nan():
+        assert res.is_nan()
+    else:
+        assert res == val
+        if "e" not in expr:
+            assert str(res) == str(val)
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
+def test_load_numeric_exhaustive(conn, fmt_out):
+    cur = conn.cursor(binary=fmt_out)
+
+    funcs = [
+        (lambda i: "1" + "0" * i),
+        (lambda i: "1" + "0" * i + "." + "0" * i),
+        (lambda i: "-1" + "0" * i),
+        (lambda i: "0." + "0" * i + "1"),
+        (lambda i: "-0." + "0" * i + "1"),
+        (lambda i: "1." + "0" * i + "1"),
+        (lambda i: "1." + "0" * i + "10"),
+        (lambda i: "1" + "0" * i + ".001"),
+        (lambda i: "9" + "9" * i),
+        (lambda i: "9" + "." + "9" * i),
+        (lambda i: "9" + "9" * i + ".9"),
+        (lambda i: "9" + "9" * i + "." + "9" * i),
+    ]
+
+    for i in range(100):
+        for f in funcs:
+            snum = f(i)
+            want = Decimal(snum)
+            got = cur.execute(f"select '{snum}'::decimal").fetchone()[0]
+            assert want == got
+            assert str(want) == str(got)
+
+
+@pytest.mark.pg(">= 14")
+@pytest.mark.parametrize(
+    "val, expr",
+    [
+        ("inf", "Infinity"),
+        ("-inf", "-Infinity"),
+    ],
+)
+def test_load_numeric_binary_inf(conn, val, expr):
+    cur = conn.cursor(binary=1)
+    res = cur.execute(f"select '{expr}'::numeric").fetchone()[0]
+    val = Decimal(val)
+    assert res == val
 
 
 @pytest.mark.parametrize(
