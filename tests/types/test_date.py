@@ -355,18 +355,11 @@ def test_load_time_24(conn, fmt_out):
         ("max~+12", "23:59:59.999999+12:00"),
     ],
 )
-def test_dump_timetz(conn, val, expr):
+@pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
+def test_dump_timetz(conn, val, expr, fmt_in):
     cur = conn.cursor()
     cur.execute("set timezone to '-02:00'")
-    cur.execute(f"select '{expr}'::timetz = %s", (as_time(val),))
-    assert cur.fetchone()[0] is True
-
-
-@pytest.mark.xfail  # TODO: binary dump
-@pytest.mark.parametrize("val, expr", [("0,0~0", "00:00Z")])
-def test_dump_timetz_binary(conn, val, expr):
-    cur = conn.cursor()
-    cur.execute(f"select '{expr}'::time = %b", (as_time(val),))
+    cur.execute(f"select '{expr}'::timetz = %{fmt_in}", (as_time(val),))
     assert cur.fetchone()[0] is True
 
 
@@ -381,23 +374,16 @@ def test_dump_timetz_binary(conn, val, expr):
         ("3,0,0,456789~-2", "03:00:00.456789", "+02:00"),
     ],
 )
-def test_load_timetz(conn, val, timezone, expr):
-    cur = conn.cursor()
+@pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
+def test_load_timetz(conn, val, timezone, expr, fmt_out):
+    cur = conn.cursor(binary=fmt_out)
     cur.execute(f"set timezone to '{timezone}'")
     cur.execute(f"select '{expr}'::timetz")
     assert cur.fetchone()[0] == as_time(val)
 
 
-@pytest.mark.xfail  # TODO: binary load
-@pytest.mark.parametrize("val, expr, timezone", [("0,0~2", "00:00", "-02:00")])
-def test_load_timetz_binary(conn, val, expr, timezone):
-    cur = conn.cursor(binary=Format.BINARY)
-    cur.execute(f"set timezone to '{timezone}'")
-    cur.execute(f"select '{expr}'::time")
-    assert cur.fetchone()[0] == as_time(val)
-
-
-def test_load_timetz_24(conn):
+@pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
+def test_load_timetz_24(conn, fmt_out):
     cur = conn.cursor()
     cur.execute("select '24:00'::timetz")
     with pytest.raises(DataError):
@@ -414,8 +400,6 @@ def test_load_timetz_24(conn):
 )
 @pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
 def test_dump_time_tz_or_not_tz(conn, val, type, fmt_in):
-    if fmt_in == Format.BINARY:
-        pytest.xfail("binary time not implemented")
     val = as_time(val)
     cur = conn.cursor()
     cur.execute(

@@ -85,6 +85,7 @@ from .date import (
     TimeDumper as TimeDumper,
     TimeBinaryDumper as TimeBinaryDumper,
     TimeTzDumper as TimeTzDumper,
+    TimeTzBinaryDumper as TimeTzBinaryDumper,
     DateTimeTzDumper as DateTimeTzDumper,
     DateTimeDumper as DateTimeDumper,
     TimeDeltaDumper as TimeDeltaDumper,
@@ -93,6 +94,7 @@ from .date import (
     TimeLoader as TimeLoader,
     TimeBinaryLoader as TimeBinaryLoader,
     TimeTzLoader as TimeTzLoader,
+    TimeTzBinaryLoader as TimeTzBinaryLoader,
     TimestampLoader as TimestampLoader,
     TimestamptzLoader as TimestamptzLoader,
     IntervalLoader as IntervalLoader,
@@ -218,6 +220,7 @@ def register_default_globals(ctx: AdaptContext) -> None:
     TimeLoader.register("time", ctx)
     TimeBinaryLoader.register("time", ctx)
     TimeTzLoader.register("timetz", ctx)
+    TimeTzBinaryLoader.register("timetz", ctx)
     TimestampLoader.register("timestamp", ctx)
     TimestamptzLoader.register("timestamptz", ctx)
     IntervalLoader.register("interval", ctx)

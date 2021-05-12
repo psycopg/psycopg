@@ -7,7 +7,7 @@ Adapters for date/time types.
 import re
 import sys
 import struct
-from datetime import date, datetime, time, timedelta
+from datetime import date, datetime, time, timedelta, timezone
 from typing import Callable, cast, Optional, Tuple, Union
 
 from ..pq import Format
@@ -23,6 +23,11 @@ _pack_int4 = cast(_PackInt, struct.Struct("!i").pack)
 _pack_int8 = cast(_PackInt, struct.Struct("!q").pack)
 _unpack_int4 = cast(_UnpackInt, struct.Struct("!i").unpack)
 _unpack_int8 = cast(_UnpackInt, struct.Struct("!q").unpack)
+
+_unpack_timetz = cast(
+    Callable[[bytes], Tuple[int, int]], struct.Struct("!qi").unpack
+)
+_pack_timetz = cast(Callable[[int, int], bytes], struct.Struct("!qi").pack)
 
 _pg_date_epoch = date(2000, 1, 1).toordinal()
 _py_date_min = date.min.toordinal()
@@ -110,7 +115,12 @@ class TimeTzBinaryDumper(TimeBinaryDumper):
     _oid = builtins["timetz"].oid
 
     def dump(self, obj: time) -> bytes:
-        raise NotImplementedError
+        ms = obj.microsecond + 1_000_000 * (
+            obj.second + 60 * (obj.minute + 60 * obj.hour)
+        )
+        off = obj.utcoffset()
+        assert off is not None
+        return _pack_timetz(ms, -int(off.total_seconds()))
 
 
 class DateTimeTzDumper(Dumper):
@@ -298,13 +308,7 @@ class TimeTzLoader(TimeLoader):
     _format = "%H:%M:%S.%f%z"
     _format_no_micro = _format.replace(".%f", "")
 
-    def __init__(self, oid: int, context: Optional[AdaptContext] = None):
-        if sys.version_info < (3, 7):
-            setattr(self, "load", self._load_py36)
-
-        super().__init__(oid, context)
-
-    def load(self, data: Buffer) -> time:
+    def _load(self, data: Buffer) -> time:
         if isinstance(data, memoryview):
             data = bytes(data)
 
@@ -330,7 +334,44 @@ class TimeTzLoader(TimeLoader):
         elif data[-9] in (43, 45):  # +-HH:MM:SS -> +-HHMM
             data = data[:-6] + data[-5:-3]
 
-        return TimeTzLoader.load(self, data)
+        return self._load(data)
+
+
+if sys.version_info >= (3, 7):
+    setattr(TimeTzLoader, "load", TimeTzLoader._load)
+else:
+    setattr(TimeTzLoader, "load", TimeTzLoader._load_py36)
+
+
+class TimeTzBinaryLoader(Loader):
+
+    format = Format.BINARY
+
+    def load(self, data: Buffer) -> time:
+        val, off = _unpack_timetz(data)
+
+        val, ms = divmod(val, 1_000_000)
+        val, s = divmod(val, 60)
+        h, m = divmod(val, 60)
+
+        try:
+            return time(h, m, s, ms, self._tz_from_sec(off))
+        except ValueError:
+            raise DataError(f"time not supported by Python: hour={h}")
+
+    def _tz_from_sec(self, sec: int) -> timezone:
+        return timezone(timedelta(seconds=-sec))
+
+    def _tz_from_sec_36(self, sec: int) -> timezone:
+        if sec % 60:
+            sec = round(sec / 60.0) * 60
+        return timezone(timedelta(seconds=-sec))
+
+
+if sys.version_info < (3, 7):
+    setattr(
+        TimeTzBinaryLoader, "_tz_from_sec", TimeTzBinaryLoader._tz_from_sec_36
+    )
 
 
 class TimestampLoader(DateLoader):

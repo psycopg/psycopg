@@ -134,6 +134,10 @@ class Faker:
                 schema[i] = [scls]
             elif cls is tuple:
                 schema[i] = tuple(self.choose_schema(types=types, ncols=ncols))
+            elif cls is dt.time:
+                # Pick timezone yes/no
+                if choice([True, False]):
+                    schema[i] = TimeTz
 
         return schema
 
@@ -349,6 +353,10 @@ class Faker:
         h, m = divmod(val, 60)
         return dt.time(h, m, s, ms)
 
+    def make_TimeTz(self, spec):
+        rv = self.make_time(spec)
+        return rv.replace(tzinfo=self._make_tz(spec))
+
     def make_UUID(self, spec):
         return UUID(bytes=bytes([randrange(256) for i in range(16)]))
 
@@ -376,9 +384,19 @@ class Faker:
             cls = choice(scal_types)
             return self.make(cls)
 
+    def _make_tz(self, spec):
+        minutes = randrange(-12 * 60, 12 * 60 + 1)
+        return dt.timezone(dt.timedelta(minutes=minutes))
+
 
 class JsonFloat:
     pass
+
+
+class TimeTz(dt.time):
+    """
+    Placeholder to create time objects with tzinfo.
+    """
 
 
 def deep_import(name):
