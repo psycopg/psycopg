@@ -41,7 +41,7 @@ def test_dump_date(conn, val, expr, fmt_in):
 
 @pytest.mark.parametrize("datestyle_in", ["DMY", "MDY", "YMD"])
 def test_dump_date_datestyle(conn, datestyle_in):
-    cur = conn.cursor()
+    cur = conn.cursor(binary=False)
     cur.execute(f"set datestyle = ISO, {datestyle_in}")
     cur.execute("select 'epoch'::date + 1 = %t", (dt.date(1970, 1, 2),))
     assert cur.fetchone()[0] is True
@@ -67,7 +67,7 @@ def test_load_date(conn, val, expr, fmt_out):
 
 @pytest.mark.parametrize("datestyle_out", ["ISO", "Postgres", "SQL", "German"])
 def test_load_date_datestyle(conn, datestyle_out):
-    cur = conn.cursor()
+    cur = conn.cursor(binary=False)
     cur.execute(f"set datestyle = {datestyle_out}, YMD")
     cur.execute("select '2000-01-02'::date")
     assert cur.fetchone()[0] == dt.date(2000, 1, 2)
@@ -76,10 +76,10 @@ def test_load_date_datestyle(conn, datestyle_out):
 @pytest.mark.parametrize("val", ["min", "max"])
 @pytest.mark.parametrize("datestyle_out", ["ISO", "Postgres", "SQL", "German"])
 def test_load_date_overflow(conn, val, datestyle_out):
-    cur = conn.cursor()
+    cur = conn.cursor(binary=False)
     cur.execute(f"set datestyle = {datestyle_out}, YMD")
     cur.execute(
-        "select %s + %s::int", (as_date(val), -1 if val == "min" else 1)
+        "select %t + %s::int", (as_date(val), -1 if val == "min" else 1)
     )
     with pytest.raises(DataError):
         cur.fetchone()[0]
@@ -128,7 +128,7 @@ def test_dump_datetime(conn, val, expr, fmt_in):
 
 @pytest.mark.parametrize("datestyle_in", ["DMY", "MDY", "YMD"])
 def test_dump_datetime_datestyle(conn, datestyle_in):
-    cur = conn.cursor()
+    cur = conn.cursor(binary=False)
     cur.execute(f"set datestyle = ISO, {datestyle_in}")
     cur.execute(
         "select 'epoch'::timestamp + '1d 3h 4m 5s'::interval = %t",
@@ -154,7 +154,7 @@ load_datetime_samples = [
 @pytest.mark.parametrize("datestyle_out", ["ISO", "Postgres", "SQL", "German"])
 @pytest.mark.parametrize("datestyle_in", ["DMY", "MDY", "YMD"])
 def test_load_datetime(conn, val, expr, datestyle_in, datestyle_out):
-    cur = conn.cursor()
+    cur = conn.cursor(binary=False)
     cur.execute(f"set datestyle = {datestyle_out}, {datestyle_in}")
     cur.execute("set timezone to '+02:00'")
     cur.execute(f"select '{expr}'::timestamp")
@@ -172,10 +172,10 @@ def test_load_datetime_binary(conn, val, expr):
 @pytest.mark.parametrize("val", ["min", "max"])
 @pytest.mark.parametrize("datestyle_out", ["ISO", "Postgres", "SQL", "German"])
 def test_load_datetime_overflow(conn, val, datestyle_out):
-    cur = conn.cursor()
+    cur = conn.cursor(binary=False)
     cur.execute(f"set datestyle = {datestyle_out}, YMD")
     cur.execute(
-        "select %s::timestamp + %s * '1s'::interval",
+        "select %t::timestamp + %s * '1s'::interval",
         (as_dt(val), -1 if val == "min" else 1),
     )
     with pytest.raises(DataError):
@@ -240,11 +240,11 @@ def test_dump_datetimetz_binary(conn, val, expr):
 @pytest.mark.parametrize("datestyle_in", ["DMY", "MDY", "YMD"])
 def test_dump_datetimetz_datestyle(conn, datestyle_in):
     tzinfo = dt.timezone(dt.timedelta(hours=2))
-    cur = conn.cursor()
+    cur = conn.cursor(binary=False)
     cur.execute(f"set datestyle = ISO, {datestyle_in}")
     cur.execute("set timezone to '-02:00'")
     cur.execute(
-        "select 'epoch'::timestamptz + '1d 3h 4m 5.678s'::interval = %s",
+        "select 'epoch'::timestamptz + '1d 3h 4m 5.678s'::interval = %t",
         (dt.datetime(1970, 1, 2, 5, 4, 5, 678000, tzinfo=tzinfo),),
     )
     assert cur.fetchone()[0] is True
@@ -265,7 +265,7 @@ def test_dump_datetimetz_datestyle(conn, datestyle_in):
 )
 @pytest.mark.parametrize("datestyle_out", ["ISO"])
 def test_load_datetimetz(conn, val, expr, timezone, datestyle_out):
-    cur = conn.cursor()
+    cur = conn.cursor(binary=False)
     cur.execute(f"set datestyle = {datestyle_out}, DMY")
     cur.execute(f"set timezone to '{timezone}'")
     cur.execute(f"select '{expr}'::timestamptz")
@@ -277,7 +277,7 @@ def test_load_datetimetz(conn, val, expr, timezone, datestyle_out):
 @pytest.mark.parametrize("datestyle_out", ["SQL", "Postgres", "German"])
 @pytest.mark.parametrize("datestyle_in", ["DMY", "MDY", "YMD"])
 def test_load_datetimetz_tzname(conn, val, expr, datestyle_in, datestyle_out):
-    cur = conn.cursor()
+    cur = conn.cursor(binary=False)
     cur.execute(f"set datestyle = {datestyle_out}, {datestyle_in}")
     cur.execute("set timezone to '-02:00'")
     cur.execute(f"select '{expr}'::timestamptz")
@@ -449,9 +449,9 @@ def test_dump_time_tz_or_not_tz(conn, val, type, fmt_in):
     ["sql_standard", "postgres", "postgres_verbose", "iso_8601"],
 )
 def test_dump_interval(conn, val, expr, intervalstyle):
-    cur = conn.cursor()
+    cur = conn.cursor(binary=False)
     cur.execute(f"set IntervalStyle to '{intervalstyle}'")
-    cur.execute(f"select '{expr}'::interval = %s", (as_td(val),))
+    cur.execute(f"select '{expr}'::interval = %t", (as_td(val),))
     assert cur.fetchone()[0] is True
 
 
@@ -503,7 +503,7 @@ def test_load_interval(conn, val, expr):
     ["sql_standard", "postgres_verbose", "iso_8601"],
 )
 def test_load_interval_intervalstyle(conn, val, expr, intervalstyle):
-    cur = conn.cursor()
+    cur = conn.cursor(binary=False)
     cur.execute(f"set IntervalStyle to '{intervalstyle}'")
     cur.execute(f"select '{expr}'::interval")
     assert cur.fetchone()[0] == as_td(val)
