@@ -9,7 +9,6 @@ cimport cython
 from libc.stdint cimport *
 from libc.string cimport memcpy, strlen
 from cpython.mem cimport PyMem_Free
-from cpython.ref cimport Py_DECREF
 from cpython.dict cimport PyDict_GetItem, PyDict_SetItem
 from cpython.long cimport (
     PyLong_FromString, PyLong_FromLong, PyLong_FromLongLong,
