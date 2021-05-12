@@ -20,7 +20,9 @@ _PackInt = Callable[[int], bytes]
 _UnpackInt = Callable[[bytes], Tuple[int]]
 
 _pack_int4 = cast(_PackInt, struct.Struct("!i").pack)
+_pack_int8 = cast(_PackInt, struct.Struct("!q").pack)
 _unpack_int4 = cast(_UnpackInt, struct.Struct("!i").unpack)
+_unpack_int8 = cast(_UnpackInt, struct.Struct("!q").unpack)
 
 _pg_date_epoch = date(2000, 1, 1).toordinal()
 _py_date_min = date.min.toordinal()
@@ -48,25 +50,31 @@ class DateBinaryDumper(Dumper):
         return _pack_int4(days)
 
 
-class TimeDumper(Dumper):
-
-    format = Format.TEXT
+class _BaseTimeDumper(Dumper):
 
     # Can change to timetz type if the object dumped is naive
     _oid = builtins["time"].oid
 
-    def dump(self, obj: time) -> bytes:
-        return str(obj).encode("utf8")
-
     def get_key(
         self, obj: time, format: Pg3Format
     ) -> Union[type, Tuple[type]]:
-        # Use (cls,) to report the need to upgrade  to a dumper for timetz (the
+        # Use (cls,) to report the need to upgrade to a dumper for timetz (the
         # Frankenstein of the data types).
         if not obj.tzinfo:
             return self.cls
         else:
             return (self.cls,)
+
+    def upgrade(self, obj: time, format: Pg3Format) -> "Dumper":
+        raise NotImplementedError
+
+
+class TimeDumper(_BaseTimeDumper):
+
+    format = Format.TEXT
+
+    def dump(self, obj: time) -> bytes:
+        return str(obj).encode("utf8")
 
     def upgrade(self, obj: time, format: Pg3Format) -> "Dumper":
         if not obj.tzinfo:
@@ -78,6 +86,31 @@ class TimeDumper(Dumper):
 class TimeTzDumper(TimeDumper):
 
     _oid = builtins["timetz"].oid
+
+
+class TimeBinaryDumper(_BaseTimeDumper):
+
+    format = Format.BINARY
+
+    def dump(self, obj: time) -> bytes:
+        ms = obj.microsecond + 1_000_000 * (
+            obj.second + 60 * (obj.minute + 60 * obj.hour)
+        )
+        return _pack_int8(ms)
+
+    def upgrade(self, obj: time, format: Pg3Format) -> "Dumper":
+        if not obj.tzinfo:
+            return self
+        else:
+            return TimeTzBinaryDumper(self.cls)
+
+
+class TimeTzBinaryDumper(TimeBinaryDumper):
+
+    _oid = builtins["timetz"].oid
+
+    def dump(self, obj: time) -> bytes:
+        raise NotImplementedError
 
 
 class DateTimeTzDumper(Dumper):
@@ -242,6 +275,21 @@ class TimeLoader(Loader):
 
         # We genuinely received something we cannot parse
         raise exc
+
+
+class TimeBinaryLoader(Loader):
+
+    format = Format.BINARY
+
+    def load(self, data: Buffer) -> time:
+        val = _unpack_int8(data)[0]
+        val, ms = divmod(val, 1_000_000)
+        val, s = divmod(val, 60)
+        h, m = divmod(val, 60)
+        try:
+            return time(h, m, s, ms)
+        except ValueError:
+            raise DataError(f"time not supported by Python: hour={h}")
 
 
 class TimeTzLoader(TimeLoader):

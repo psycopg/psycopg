@@ -342,6 +342,13 @@ class Faker:
 
         return "".join(map(chr, rv))
 
+    def make_time(self, spec):
+        val = randrange(24 * 60 * 60 * 1_000_000)
+        val, ms = divmod(val, 1_000_000)
+        val, s = divmod(val, 60)
+        h, m = divmod(val, 60)
+        return dt.time(h, m, s, ms)
+
     def make_UUID(self, spec):
         return UUID(bytes=bytes([randrange(256) for i in range(16)]))
 

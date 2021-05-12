@@ -305,17 +305,10 @@ def test_dump_datetime_tz_or_not_tz(conn, val, type, fmt_in):
         ("max", "23:59:59.999999"),
     ],
 )
-def test_dump_time(conn, val, expr):
+@pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
+def test_dump_time(conn, val, expr, fmt_in):
     cur = conn.cursor()
-    cur.execute(f"select '{expr}'::time = %s", (as_time(val),))
-    assert cur.fetchone()[0] is True
-
-
-@pytest.mark.xfail  # TODO: binary dump
-@pytest.mark.parametrize("val, expr", [("0,0", "00:00")])
-def test_dump_time_binary(conn, val, expr):
-    cur = conn.cursor()
-    cur.execute(f"select '{expr}'::time = %b", (as_time(val),))
+    cur.execute(f"select '{expr}'::time = %{fmt_in}", (as_time(val),))
     assert cur.fetchone()[0] is True
 
 
@@ -330,22 +323,16 @@ def test_dump_time_binary(conn, val, expr):
         ("max", "23:59:59.999999"),
     ],
 )
-def test_load_time(conn, val, expr):
-    cur = conn.cursor()
+@pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
+def test_load_time(conn, val, expr, fmt_out):
+    cur = conn.cursor(binary=fmt_out)
     cur.execute(f"select '{expr}'::time")
     assert cur.fetchone()[0] == as_time(val)
 
 
-@pytest.mark.xfail  # TODO: binary load
-@pytest.mark.parametrize("val, expr", [("0,0", "00:00")])
-def test_load_time_binary(conn, val, expr):
-    cur = conn.cursor(binary=Format.BINARY)
-    cur.execute(f"select '{expr}'::time")
-    assert cur.fetchone()[0] == as_time(val)
-
-
-def test_load_time_24(conn):
-    cur = conn.cursor()
+@pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
+def test_load_time_24(conn, fmt_out):
+    cur = conn.cursor(binary=fmt_out)
     cur.execute("select '24:00'::time")
     with pytest.raises(DataError):
         cur.fetchone()[0]
