@@ -1,3 +1,4 @@
+import datetime as dt
 import importlib
 from math import isnan
 from uuid import UUID
@@ -225,6 +226,10 @@ class Faker:
     def make_bytes(self, spec):
         length = randrange(self.str_max_length)
         return spec(bytes([randrange(256) for i in range(length)]))
+
+    def make_date(self, spec):
+        day = randrange(dt.date.max.toordinal())
+        return dt.date.fromordinal(day + 1)
 
     def make_Decimal(self, spec):
         if random() >= 0.99:

@@ -6,14 +6,25 @@ Adapters for date/time types.
 
 import re
 import sys
+import struct
 from datetime import date, datetime, time, timedelta
-from typing import cast, Optional, Tuple, Union
+from typing import Callable, cast, Optional, Tuple, Union
 
 from ..pq import Format
 from ..oids import postgres_types as builtins
 from ..adapt import Buffer, Dumper, Loader, Format as Pg3Format
 from ..proto import AdaptContext
 from ..errors import InterfaceError, DataError
+
+_PackInt = Callable[[int], bytes]
+_UnpackInt = Callable[[bytes], Tuple[int]]
+
+_pack_int4 = cast(_PackInt, struct.Struct("!i").pack)
+_unpack_int4 = cast(_UnpackInt, struct.Struct("!i").unpack)
+
+_pg_date_epoch = date(2000, 1, 1).toordinal()
+_py_date_min = date.min.toordinal()
+_py_date_max = date.max.toordinal()
 
 
 class DateDumper(Dumper):
@@ -25,6 +36,16 @@ class DateDumper(Dumper):
         # NOTE: whatever the PostgreSQL DateStyle input format (DMY, MDY, YMD)
         # the YYYY-MM-DD is always understood correctly.
         return str(obj).encode("utf8")
+
+
+class DateBinaryDumper(Dumper):
+
+    format = Format.BINARY
+    _oid = builtins["date"].oid
+
+    def dump(self, obj: date) -> bytes:
+        days = obj.toordinal() - _pg_date_epoch
+        return _pack_int4(days)
 
 
 class TimeDumper(Dumper):
@@ -179,6 +200,21 @@ class DateLoader(Loader):
         datesep = self._format[2].encode("ascii")
         parts = data.split(b" ")[0].split(datesep)
         return max(map(len, parts))
+
+
+class DateBinaryLoader(Loader):
+
+    format = Format.BINARY
+
+    def load(self, data: Buffer) -> date:
+        days = _unpack_int4(data)[0] + _pg_date_epoch
+        if _py_date_min <= days <= _py_date_max:
+            return date.fromordinal(days)
+        else:
+            if days < _py_date_min:
+                raise DataError("date too small (before year 1)")
+            else:
+                raise DataError("date too large (after year 10K)")
 
 
 class TimeLoader(Loader):

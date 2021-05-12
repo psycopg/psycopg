@@ -3,7 +3,7 @@ import datetime as dt
 
 import pytest
 
-from psycopg3 import DataError, sql
+from psycopg3 import DataError, pq, sql
 from psycopg3.adapt import Format
 
 
@@ -23,23 +23,19 @@ from psycopg3.adapt import Format
         ("max", "9999-12-31"),
     ],
 )
-def test_dump_date(conn, val, expr):
+@pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
+def test_dump_date(conn, val, expr, fmt_in):
     val = as_date(val)
     cur = conn.cursor()
-    cur.execute(f"select '{expr}'::date = %s", (val,))
+    cur.execute(f"select '{expr}'::date = %{fmt_in}", (val,))
     assert cur.fetchone()[0] is True
 
     cur.execute(
-        sql.SQL("select {val}::date = %s").format(val=sql.Literal(val)), (val,)
+        sql.SQL("select {}::date = {}").format(
+            sql.Literal(val), sql.Placeholder(format=fmt_in)
+        ),
+        (val,),
     )
-    assert cur.fetchone()[0] is True
-
-
-@pytest.mark.xfail  # TODO: binary dump
-@pytest.mark.parametrize("val, expr", [("2000,1,1", "2000-01-01")])
-def test_dump_date_binary(conn, val, expr):
-    cur = conn.cursor()
-    cur.execute(f"select '{expr}'::date = %b", (as_date(val),))
     assert cur.fetchone()[0] is True
 
 
@@ -47,7 +43,7 @@ def test_dump_date_binary(conn, val, expr):
 def test_dump_date_datestyle(conn, datestyle_in):
     cur = conn.cursor()
     cur.execute(f"set datestyle = ISO, {datestyle_in}")
-    cur.execute("select 'epoch'::date + 1 = %s", (dt.date(1970, 1, 2),))
+    cur.execute("select 'epoch'::date + 1 = %t", (dt.date(1970, 1, 2),))
     assert cur.fetchone()[0] is True
 
 
@@ -62,16 +58,9 @@ def test_dump_date_datestyle(conn, datestyle_in):
         ("max", "9999-12-31"),
     ],
 )
-def test_load_date(conn, val, expr):
-    cur = conn.cursor()
-    cur.execute(f"select '{expr}'::date")
-    assert cur.fetchone()[0] == as_date(val)
-
-
-@pytest.mark.xfail  # TODO: binary load
-@pytest.mark.parametrize("val, expr", [("2000,1,1", "2000-01-01")])
-def test_load_date_binary(conn, val, expr):
-    cur = conn.cursor(binary=Format.BINARY)
+@pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
+def test_load_date(conn, val, expr, fmt_out):
+    cur = conn.cursor(binary=fmt_out)
     cur.execute(f"select '{expr}'::date")
     assert cur.fetchone()[0] == as_date(val)
 
@@ -89,6 +78,16 @@ def test_load_date_datestyle(conn, datestyle_out):
 def test_load_date_overflow(conn, val, datestyle_out):
     cur = conn.cursor()
     cur.execute(f"set datestyle = {datestyle_out}, YMD")
+    cur.execute(
+        "select %s + %s::int", (as_date(val), -1 if val == "min" else 1)
+    )
+    with pytest.raises(DataError):
+        cur.fetchone()[0]
+
+
+@pytest.mark.parametrize("val", ["min", "max"])
+def test_load_date_overflow_binary(conn, val):
+    cur = conn.cursor(binary=True)
     cur.execute(
         "select %s + %s::int", (as_date(val), -1 if val == "min" else 1)
     )

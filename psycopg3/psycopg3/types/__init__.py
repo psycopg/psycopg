@@ -81,12 +81,14 @@ from .singletons import (
 )
 from .date import (
     DateDumper as DateDumper,
+    DateBinaryDumper as DateBinaryDumper,
     TimeDumper as TimeDumper,
     TimeTzDumper as TimeTzDumper,
     DateTimeTzDumper as DateTimeTzDumper,
     DateTimeDumper as DateTimeDumper,
     TimeDeltaDumper as TimeDeltaDumper,
     DateLoader as DateLoader,
+    DateBinaryLoader as DateBinaryLoader,
     TimeLoader as TimeLoader,
     TimeTzLoader as TimeTzLoader,
     TimestampLoader as TimestampLoader,
@@ -204,10 +206,12 @@ def register_default_globals(ctx: AdaptContext) -> None:
     BoolBinaryLoader.register("bool", ctx)
 
     DateDumper.register("datetime.date", ctx)
+    DateBinaryDumper.register("datetime.date", ctx)
     TimeDumper.register("datetime.time", ctx)
     DateTimeTzDumper.register("datetime.datetime", ctx)
     TimeDeltaDumper.register("datetime.timedelta", ctx)
     DateLoader.register("date", ctx)
+    DateBinaryLoader.register("date", ctx)
     TimeLoader.register("time", ctx)
     TimeTzLoader.register("timetz", ctx)
     TimestampLoader.register("timestamp", ctx)
