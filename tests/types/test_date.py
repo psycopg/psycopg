@@ -106,27 +106,23 @@ def test_load_date_overflow_binary(conn, val):
         ("min", "0001-01-01 00:00"),
         ("1000,1,1,0,0", "1000-01-01 00:00"),
         ("2000,1,1,0,0", "2000-01-01 00:00"),
-        ("2000,12,31,23,59,59,999999", "2000-12-31 23:59:59.999999"),
-        ("3000,1,1,0,0", "3000-01-01 00:00"),
+        ("2000,1,2,3,4,5,6", "2000-01-02 03:04:05.000006"),
+        ("2000,1,2,3,4,5,678", "2000-01-02 03:04:05.000678"),
+        ("2000,1,2,3,0,0,456789", "2000-01-02 03:00:00.456789"),
+        ("2000,1,1,0,0,0,1", "2000-01-01 00:00:00.000001"),
+        ("2200,1,1,0,0,0,1", "2200-01-01 00:00:00.000001"),
+        ("2300,1,1,0,0,0,1", "2300-01-01 00:00:00.000001"),
+        ("7000,1,1,0,0,0,1", "7000-01-01 00:00:00.000001"),
         ("max", "9999-12-31 23:59:59.999999"),
     ],
 )
-def test_dump_datetime(conn, val, expr):
+@pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
+def test_dump_datetime(conn, val, expr, fmt_in):
     cur = conn.cursor()
     cur.execute("set timezone to '+02:00'")
-    cur.execute(f"select '{expr}'::timestamp = %s", (as_dt(val),))
-    assert cur.fetchone()[0] is True
-
-
-@pytest.mark.xfail  # TODO: binary dump
-@pytest.mark.parametrize(
-    "val, expr",
-    [("2000,1,1,0,0", "'2000-01-01 00:00'::timestamp")],
-)
-def test_dump_datetime_binary(conn, val, expr):
-    cur = conn.cursor()
-    cur.execute("set timezone to '+02:00'")
-    cur.execute(f"select {expr} = %b", (as_dt(val),))
+    cur.execute(f"select %{fmt_in}", (as_dt(val),))
+    print(cur.fetchone()[0])
+    cur.execute(f"select '{expr}'::timestamp = %{fmt_in}", (as_dt(val),))
     assert cur.fetchone()[0] is True
 
 
@@ -135,31 +131,39 @@ def test_dump_datetime_datestyle(conn, datestyle_in):
     cur = conn.cursor()
     cur.execute(f"set datestyle = ISO, {datestyle_in}")
     cur.execute(
-        "select 'epoch'::timestamp + '1d 3h 4m 5s'::interval = %s",
+        "select 'epoch'::timestamp + '1d 3h 4m 5s'::interval = %t",
         (dt.datetime(1970, 1, 2, 3, 4, 5),),
     )
     assert cur.fetchone()[0] is True
 
 
-@pytest.mark.parametrize(
-    "val, expr",
-    [
-        ("min", "0001-01-01"),
-        ("1000,1,1", "1000-01-01"),
-        ("2000,1,1", "2000-01-01"),
-        ("2000,1,2,3,4,5,6", "2000-01-02 03:04:05.000006"),
-        ("2000,1,2,3,4,5,678", "2000-01-02 03:04:05.000678"),
-        ("2000,1,2,3,0,0,456789", "2000-01-02 03:00:00.456789"),
-        ("2000,12,31", "2000-12-31"),
-        ("3000,1,1", "3000-01-01"),
-        ("max", "9999-12-31 23:59:59.999999"),
-    ],
-)
+load_datetime_samples = [
+    ("min", "0001-01-01"),
+    ("1000,1,1", "1000-01-01"),
+    ("2000,1,1", "2000-01-01"),
+    ("2000,1,2,3,4,5,6", "2000-01-02 03:04:05.000006"),
+    ("2000,1,2,3,4,5,678", "2000-01-02 03:04:05.000678"),
+    ("2000,1,2,3,0,0,456789", "2000-01-02 03:00:00.456789"),
+    ("2000,12,31", "2000-12-31"),
+    ("3000,1,1", "3000-01-01"),
+    ("max", "9999-12-31 23:59:59.999999"),
+]
+
+
+@pytest.mark.parametrize("val, expr", load_datetime_samples)
 @pytest.mark.parametrize("datestyle_out", ["ISO", "Postgres", "SQL", "German"])
 @pytest.mark.parametrize("datestyle_in", ["DMY", "MDY", "YMD"])
 def test_load_datetime(conn, val, expr, datestyle_in, datestyle_out):
     cur = conn.cursor()
     cur.execute(f"set datestyle = {datestyle_out}, {datestyle_in}")
+    cur.execute("set timezone to '+02:00'")
+    cur.execute(f"select '{expr}'::timestamp")
+    assert cur.fetchone()[0] == as_dt(val)
+
+
+@pytest.mark.parametrize("val, expr", load_datetime_samples)
+def test_load_datetime_binary(conn, val, expr):
+    cur = conn.cursor(binary=True)
     cur.execute("set timezone to '+02:00'")
     cur.execute(f"select '{expr}'::timestamp")
     assert cur.fetchone()[0] == as_dt(val)
@@ -172,6 +176,17 @@ def test_load_datetime_overflow(conn, val, datestyle_out):
     cur.execute(f"set datestyle = {datestyle_out}, YMD")
     cur.execute(
         "select %s::timestamp + %s * '1s'::interval",
+        (as_dt(val), -1 if val == "min" else 1),
+    )
+    with pytest.raises(DataError):
+        cur.fetchone()[0]
+
+
+@pytest.mark.parametrize("val", ["min", "max"])
+def test_load_datetime_overflow_binary(conn, val):
+    cur = conn.cursor(binary=True)
+    cur.execute(
+        "select %t::timestamp + %s * '1s'::interval",
         (as_dt(val), -1 if val == "min" else 1),
     )
     with pytest.raises(DataError):

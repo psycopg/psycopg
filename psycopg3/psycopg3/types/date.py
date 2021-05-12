@@ -29,9 +29,10 @@ _unpack_timetz = cast(
 )
 _pack_timetz = cast(Callable[[int, int], bytes], struct.Struct("!qi").pack)
 
-_pg_date_epoch = date(2000, 1, 1).toordinal()
-_py_date_min = date.min.toordinal()
-_py_date_max = date.max.toordinal()
+_pg_date_epoch_days = date(2000, 1, 1).toordinal()
+_pg_datetime_epoch = datetime(2000, 1, 1)
+_pg_datetimetz_epoch = datetime(2000, 1, 1, tzinfo=timezone.utc)
+_py_date_min_days = date.min.toordinal()
 
 
 class DateDumper(Dumper):
@@ -51,7 +52,7 @@ class DateBinaryDumper(Dumper):
     _oid = builtins["date"].oid
 
     def dump(self, obj: date) -> bytes:
-        days = obj.toordinal() - _pg_date_epoch
+        days = obj.toordinal() - _pg_date_epoch_days
         return _pack_int4(days)
 
 
@@ -123,17 +124,10 @@ class TimeTzBinaryDumper(TimeBinaryDumper):
         return _pack_timetz(ms, -int(off.total_seconds()))
 
 
-class DateTimeTzDumper(Dumper):
-
-    format = Format.TEXT
+class _BaseDateTimeDumper(Dumper):
 
     # Can change to timestamp type if the object dumped is naive
     _oid = builtins["timestamptz"].oid
-
-    def dump(self, obj: datetime) -> bytes:
-        # NOTE: whatever the PostgreSQL DateStyle input format (DMY, MDY, YMD)
-        # the YYYY-MM-DD is always understood correctly.
-        return str(obj).encode("utf8")
 
     def get_key(
         self, obj: datetime, format: Pg3Format
@@ -146,6 +140,19 @@ class DateTimeTzDumper(Dumper):
             return (self.cls,)
 
     def upgrade(self, obj: datetime, format: Pg3Format) -> "Dumper":
+        raise NotImplementedError
+
+
+class DateTimeTzDumper(_BaseDateTimeDumper):
+
+    format = Format.TEXT
+
+    def dump(self, obj: datetime) -> bytes:
+        # NOTE: whatever the PostgreSQL DateStyle input format (DMY, MDY, YMD)
+        # the YYYY-MM-DD is always understood correctly.
+        return str(obj).encode("utf8")
+
+    def upgrade(self, obj: datetime, format: Pg3Format) -> "Dumper":
         if obj.tzinfo:
             return self
         else:
@@ -154,6 +161,42 @@ class DateTimeTzDumper(Dumper):
 
 class DateTimeDumper(DateTimeTzDumper):
     _oid = builtins["timestamp"].oid
+
+
+class DateTimeTzBinaryDumper(_BaseDateTimeDumper):
+
+    format = Format.BINARY
+
+    def dump(self, obj: datetime) -> bytes:
+        raise NotImplementedError
+
+    def upgrade(self, obj: datetime, format: Pg3Format) -> "Dumper":
+        if obj.tzinfo:
+            return self
+        else:
+            return DateTimeBinaryDumper(self.cls)
+
+
+class DateTimeBinaryDumper(DateTimeTzBinaryDumper):
+    _oid = builtins["timestamp"].oid
+
+    # Somewhere, between year 2270 and 2275, float rounding in total_seconds
+    # cause us errors: switch to an algorithm without rounding before then.
+    _delta_prec_loss = (
+        datetime(2250, 1, 1) - _pg_datetime_epoch
+    ).total_seconds()
+
+    def dump(self, obj: datetime) -> bytes:
+        delta = obj - _pg_datetime_epoch
+        secs = delta.total_seconds()
+        if secs < self._delta_prec_loss:
+            micros = int(1_000_000 * secs)
+        else:
+            micros = (
+                1_000_000 * (86_400 * delta.days + delta.seconds)
+                + delta.microseconds
+            )
+        return _pack_int8(micros)
 
 
 class TimeDeltaDumper(Dumper):
@@ -250,11 +293,11 @@ class DateBinaryLoader(Loader):
     format = Format.BINARY
 
     def load(self, data: Buffer) -> date:
-        days = _unpack_int4(data)[0] + _pg_date_epoch
-        if _py_date_min <= days <= _py_date_max:
+        days = _unpack_int4(data)[0] + _pg_date_epoch_days
+        try:
             return date.fromordinal(days)
-        else:
-            if days < _py_date_min:
+        except ValueError:
+            if days < _py_date_min_days:
                 raise DataError("date too small (before year 1)")
             else:
                 raise DataError("date too large (after year 10K)")
@@ -429,6 +472,21 @@ class TimestampLoader(DateLoader):
                 return len(parts[4])
             else:
                 return 0
+
+
+class TimestampBinaryLoader(Loader):
+
+    format = Format.BINARY
+
+    def load(self, data: Buffer) -> datetime:
+        micros = _unpack_int8(data)[0]
+        try:
+            return _pg_datetime_epoch + timedelta(microseconds=micros)
+        except OverflowError:
+            if micros <= 0:
+                raise DataError("timestamp too small (before year 1)")
+            else:
+                raise DataError("timestamp too large (after year 10K)")
 
 
 class TimestamptzLoader(TimestampLoader):

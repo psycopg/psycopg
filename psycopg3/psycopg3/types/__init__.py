@@ -87,7 +87,9 @@ from .date import (
     TimeTzDumper as TimeTzDumper,
     TimeTzBinaryDumper as TimeTzBinaryDumper,
     DateTimeTzDumper as DateTimeTzDumper,
+    DateTimeTzBinaryDumper as DateTimeTzBinaryDumper,
     DateTimeDumper as DateTimeDumper,
+    DateTimeBinaryDumper as DateTimeBinaryDumper,
     TimeDeltaDumper as TimeDeltaDumper,
     DateLoader as DateLoader,
     DateBinaryLoader as DateBinaryLoader,
@@ -96,6 +98,7 @@ from .date import (
     TimeTzLoader as TimeTzLoader,
     TimeTzBinaryLoader as TimeTzBinaryLoader,
     TimestampLoader as TimestampLoader,
+    TimestampBinaryLoader as TimestampBinaryLoader,
     TimestamptzLoader as TimestamptzLoader,
     IntervalLoader as IntervalLoader,
 )
@@ -214,6 +217,7 @@ def register_default_globals(ctx: AdaptContext) -> None:
     TimeDumper.register("datetime.time", ctx)
     TimeBinaryDumper.register("datetime.time", ctx)
     DateTimeTzDumper.register("datetime.datetime", ctx)
+    DateTimeTzBinaryDumper.register("datetime.datetime", ctx)
     TimeDeltaDumper.register("datetime.timedelta", ctx)
     DateLoader.register("date", ctx)
     DateBinaryLoader.register("date", ctx)
@@ -222,6 +226,7 @@ def register_default_globals(ctx: AdaptContext) -> None:
     TimeTzLoader.register("timetz", ctx)
     TimeTzBinaryLoader.register("timetz", ctx)
     TimestampLoader.register("timestamp", ctx)
+    TimestampBinaryLoader.register("timestamp", ctx)
     TimestamptzLoader.register("timestamptz", ctx)
     IntervalLoader.register("interval", ctx)
 

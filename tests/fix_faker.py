@@ -235,6 +235,11 @@ class Faker:
         day = randrange(dt.date.max.toordinal())
         return dt.date.fromordinal(day + 1)
 
+    def make_datetime(self, spec):
+        delta = dt.datetime.max - dt.datetime.min
+        micros = randrange((delta.days + 1) * 24 * 60 * 60 * 1_000_000)
+        return dt.datetime.min + dt.timedelta(microseconds=micros)
+
     def make_Decimal(self, spec):
         if random() >= 0.99:
             if self.conn.info.server_version >= 140000:
