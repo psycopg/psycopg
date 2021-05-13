@@ -35,7 +35,6 @@ _unpack_interval = cast(
     Callable[[bytes], Tuple[int, int, int]], struct.Struct("!qii").unpack
 )
 
-
 _pg_date_epoch_days = date(2000, 1, 1).toordinal()
 _pg_datetime_epoch = datetime(2000, 1, 1)
 _pg_datetimetz_epoch = datetime(2000, 1, 1, tzinfo=timezone.utc)
@@ -521,7 +520,11 @@ class TimestampTzLoader(TimestampLoader):
     def _format_from_context(self) -> str:
         ds = self._get_datestyle()
         if ds.startswith(b"I"):  # ISO
-            return "%Y-%m-%d %H:%M:%S.%f%z"
+            if sys.version_info >= (3, 7):
+                return "%Y-%m-%d %H:%M:%S.%f%z"
+            else:
+                # No tz parsing: it will be handles separately.
+                return "%Y-%m-%d %H:%M:%S.%f"
 
         # These don't work: the timezone name is not always displayed
         # elif ds.startswith(b"G"):  # German
@@ -544,6 +547,8 @@ class TimestampTzLoader(TimestampLoader):
             setattr(self, "load", self._load_notimpl)
             return ""
 
+    _re_tz = re.compile(br"([-+])(\d+)(?::(\d+)(?::(\d+))?)?$")
+
     def load(self, data: Buffer) -> datetime:
         if isinstance(data, memoryview):
             data = bytes(data)
@@ -552,22 +557,29 @@ class TimestampTzLoader(TimestampLoader):
         if data[-3] in (43, 45):
             data += b"00"
 
-        return super().load(data)
+        return super().load(data).astimezone(timezone.utc)
 
     def _load_py36(self, data: Buffer) -> datetime:
         if isinstance(data, memoryview):
             data = bytes(data)
-        # Drop seconds from timezone for Python 3.6
-        # Also, Python 3.6 doesn't support HHMM, only HH:MM
-        tzsep = (43, 45)  # + and - bytes
-        if data[-3] in tzsep:  # +HH, -HH
-            data += b"00"
-        elif data[-6] in tzsep:
-            data = data[:-3] + data[-2:]
-        elif data[-9] in tzsep:
-            data = data[:-6] + data[-5:-3]
 
-        return super().load(data)
+        # Separate the timezone from the rest
+        m = self._re_tz.search(data)
+        if not m:
+            raise DataError(
+                "failed to parse timezone from '{data.decode('ascii')}'"
+            )
+
+        sign, hour, min, sec = m.groups()
+        tzoff = timedelta(
+            seconds=(int(sec) if sec else 0)
+            + 60 * ((int(min) if min else 0) + 60 * int(hour))
+        )
+        if sign == b"-":
+            tzoff = -tzoff
+
+        rv = super().load(data[: m.start()])
+        return (rv - tzoff).replace(tzinfo=timezone.utc)
 
     def _load_notimpl(self, data: Buffer) -> datetime:
         if isinstance(data, memoryview):

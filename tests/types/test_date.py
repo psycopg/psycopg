@@ -1,4 +1,3 @@
-import sys
 import datetime as dt
 
 import pytest
@@ -202,9 +201,8 @@ def test_load_datetime_overflow_binary(conn, val):
 @pytest.mark.parametrize(
     "val, expr",
     [
-        ("min~2", "0001-01-01 00:00"),
+        ("min~-2", "0001-01-01 00:00-02:00"),
         ("min~-12", "0001-01-01 00:00-12:00"),
-        ("min~+12", "0001-01-01 00:00+12:00"),
         ("258,1,8,1,12,32,358261~1:2:3", "0258-1-8 1:12:32.358261+01:02:03"),
         ("1000,1,1,0,0~2", "1000-01-01 00:00+2"),
         ("2000,1,1,0,0~2", "2000-01-01 00:00+2"),
@@ -221,12 +219,6 @@ def test_load_datetime_overflow_binary(conn, val):
 )
 @pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
 def test_dump_datetimetz(conn, val, expr, fmt_in):
-    # adjust for Python 3.6 missing seconds in tzinfo
-    if sys.version_info < (3, 7) and val.count(":") > 1:
-        expr = expr.rsplit(":", 1)[0]
-        val, rest = val.rsplit(":", 1)
-        val += rest[3:]  # skip tz seconds, but include micros
-
     cur = conn.cursor()
     cur.execute("set timezone to '-02:00'")
     cur.execute(f"select '{expr}'::timestamptz = %{fmt_in}", (as_dt(val),))
@@ -264,16 +256,18 @@ def test_load_datetimetz(conn, val, expr, timezone, datestyle_out):
     cur = conn.cursor(binary=False)
     cur.execute(f"set datestyle = {datestyle_out}, DMY")
     cur.execute(f"set timezone to '{timezone}'")
-    cur.execute(f"select '{expr}'::timestamptz")
-    assert cur.fetchone()[0] == as_dt(val)
+    got = cur.execute(f"select '{expr}'::timestamptz").fetchone()[0]
+    assert got == as_dt(val)
+    assert got.tzinfo == dt.timezone.utc
 
 
 @pytest.mark.parametrize("val, expr, timezone", load_datetimetz_samples)
 def test_load_datetimetz_binary(conn, val, expr, timezone):
     cur = conn.cursor(binary=True)
     cur.execute(f"set timezone to '{timezone}'")
-    cur.execute(f"select '{expr}'::timestamptz")
-    assert cur.fetchone()[0] == as_utc_dt(val)
+    got = cur.execute(f"select '{expr}'::timestamptz").fetchone()[0]
+    assert got == as_dt(val)
+    assert got.tzinfo == dt.timezone.utc
 
 
 @pytest.mark.xfail  # parse timezone names
@@ -577,22 +571,7 @@ def as_time(s):
     return rv
 
 
-# Note: as_dt and as_utc_dt return the same timestamp, the first in a specified
-# timezone, the second in utc. However on Python < 3.7 there can't be seconds
-# in the timezone offset, so the result might be wrong up to 30 seconds.
-
-
 def as_dt(s):
-    if "~" not in s:
-        return as_naive_dt(s)
-
-    s, off = s.split("~")
-    rv = as_naive_dt(s)
-    rv = rv.replace(tzinfo=as_tzinfo(off))
-    return rv
-
-
-def as_utc_dt(s):
     if "~" not in s:
         return as_naive_dt(s)
 
@@ -625,9 +604,6 @@ def as_tzoffset(s):
 
 def as_tzinfo(s):
     off = as_tzoffset(s)
-    if sys.version_info < (3, 7):
-        off = dt.timedelta(seconds=round(off.total_seconds() // 60) * 60)
-
     return dt.timezone(off)
 
 
