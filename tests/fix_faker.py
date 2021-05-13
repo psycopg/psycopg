@@ -134,10 +134,13 @@ class Faker:
                 schema[i] = [scls]
             elif cls is tuple:
                 schema[i] = tuple(self.choose_schema(types=types, ncols=ncols))
+            # Pick timezone yes/no
             elif cls is dt.time:
-                # Pick timezone yes/no
                 if choice([True, False]):
                     schema[i] = TimeTz
+            elif cls is dt.datetime:
+                if choice([True, False]):
+                    schema[i] = DateTimeTz
 
         return schema
 
@@ -239,6 +242,10 @@ class Faker:
         delta = dt.datetime.max - dt.datetime.min
         micros = randrange((delta.days + 1) * 24 * 60 * 60 * 1_000_000)
         return dt.datetime.min + dt.timedelta(microseconds=micros)
+
+    def make_DateTimeTz(self, spec):
+        rv = self.make_datetime(spec)
+        return rv.replace(tzinfo=self._make_tz(spec))
 
     def make_Decimal(self, spec):
         if random() >= 0.99:
@@ -398,9 +405,15 @@ class JsonFloat:
     pass
 
 
-class TimeTz(dt.time):
+class TimeTz:
     """
     Placeholder to create time objects with tzinfo.
+    """
+
+
+class DateTimeTz:
+    """
+    Placeholder to create datetime objects with tzinfo.
     """
 
 

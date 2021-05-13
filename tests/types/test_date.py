@@ -215,25 +215,17 @@ def test_load_datetime_overflow_binary(conn, val):
         ("max~2", "9999-12-31 23:59:59.999999"),
     ],
 )
-def test_dump_datetimetz(conn, val, expr):
+@pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
+def test_dump_datetimetz(conn, val, expr, fmt_in):
     # adjust for Python 3.6 missing seconds in tzinfo
-    if val.count(":") > 1:
+    if sys.version_info < (3, 7) and val.count(":") > 1:
         expr = expr.rsplit(":", 1)[0]
         val, rest = val.rsplit(":", 1)
         val += rest[3:]  # skip tz seconds, but include micros
 
     cur = conn.cursor()
     cur.execute("set timezone to '-02:00'")
-    cur.execute(f"select '{expr}'::timestamptz = %s", (as_dt(val),))
-    assert cur.fetchone()[0] is True
-
-
-@pytest.mark.xfail  # TODO: binary dump
-@pytest.mark.parametrize("val, expr", [("2000,1,1,0,0~2", "2000-01-01 00:00")])
-def test_dump_datetimetz_binary(conn, val, expr):
-    cur = conn.cursor()
-    cur.execute("set timezone to '-02:00'")
-    cur.execute(f"select '{expr}'::timestamptz = %b", (as_dt(val),))
+    cur.execute(f"select '{expr}'::timestamptz = %{fmt_in}", (as_dt(val),))
     assert cur.fetchone()[0] is True
 
 
@@ -250,23 +242,31 @@ def test_dump_datetimetz_datestyle(conn, datestyle_in):
     assert cur.fetchone()[0] is True
 
 
-@pytest.mark.parametrize(
-    "val, expr, timezone",
-    [
-        ("2000,1,1~2", "2000-01-01", "-02:00"),
-        ("2000,1,2,3,4,5,6~2", "2000-01-02 03:04:05.000006", "-02:00"),
-        ("2000,1,2,3,4,5,678~1", "2000-01-02 03:04:05.000678", "Europe/Rome"),
-        ("2000,7,2,3,4,5,678~2", "2000-07-02 03:04:05.000678", "Europe/Rome"),
-        ("2000,1,2,3,0,0,456789~2", "2000-01-02 03:00:00.456789", "-02:00"),
-        ("2000,1,2,3,0,0,456789~-2", "2000-01-02 03:00:00.456789", "+02:00"),
-        ("2000,12,31~2", "2000-12-31", "-02:00"),
-        ("1900,1,1~05:21:10", "1900-01-01", "Asia/Calcutta"),
-    ],
-)
+load_datetimetz_samples = [
+    ("2000,1,1~2", "2000-01-01", "-02:00"),
+    ("2000,1,2,3,4,5,6~2", "2000-01-02 03:04:05.000006", "-02:00"),
+    ("2000,1,2,3,4,5,678~1", "2000-01-02 03:04:05.000678", "Europe/Rome"),
+    ("2000,7,2,3,4,5,678~2", "2000-07-02 03:04:05.000678", "Europe/Rome"),
+    ("2000,1,2,3,0,0,456789~2", "2000-01-02 03:00:00.456789", "-02:00"),
+    ("2000,1,2,3,0,0,456789~-2", "2000-01-02 03:00:00.456789", "+02:00"),
+    ("2000,12,31~2", "2000-12-31", "-02:00"),
+    ("1900,1,1~05:21:10", "1900-01-01", "Asia/Calcutta"),
+]
+
+
+@pytest.mark.parametrize("val, expr, timezone", load_datetimetz_samples)
 @pytest.mark.parametrize("datestyle_out", ["ISO"])
 def test_load_datetimetz(conn, val, expr, timezone, datestyle_out):
     cur = conn.cursor(binary=False)
     cur.execute(f"set datestyle = {datestyle_out}, DMY")
+    cur.execute(f"set timezone to '{timezone}'")
+    cur.execute(f"select '{expr}'::timestamptz")
+    assert cur.fetchone()[0] == as_dt(val)
+
+
+@pytest.mark.parametrize("val, expr, timezone", load_datetimetz_samples)
+def test_load_datetimetz_binary(conn, val, expr, timezone):
+    cur = conn.cursor(binary=True)
     cur.execute(f"set timezone to '{timezone}'")
     cur.execute(f"select '{expr}'::timestamptz")
     assert cur.fetchone()[0] == as_dt(val)
@@ -294,8 +294,6 @@ def test_load_datetimetz_tzname(conn, val, expr, datestyle_in, datestyle_out):
 )
 @pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
 def test_dump_datetime_tz_or_not_tz(conn, val, type, fmt_in):
-    if fmt_in == Format.BINARY:
-        pytest.xfail("binary datetime not implemented")
     val = as_dt(val)
     cur = conn.cursor()
     cur.execute(

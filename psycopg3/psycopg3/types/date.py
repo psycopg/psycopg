@@ -167,8 +167,22 @@ class DateTimeTzBinaryDumper(_BaseDateTimeDumper):
 
     format = Format.BINARY
 
+    # Somewhere, between year 2270 and 2275, float rounding in total_seconds
+    # cause us errors: switch to an algorithm without rounding before then.
+    _delta_prec_loss = (
+        datetime(2250, 1, 1) - _pg_datetime_epoch
+    ).total_seconds()
+
     def dump(self, obj: datetime) -> bytes:
-        raise NotImplementedError
+        delta = obj - _pg_datetimetz_epoch
+        secs = delta.total_seconds()
+        if secs < self._delta_prec_loss:
+            micros = int(1_000_000 * secs)
+        else:
+            micros = delta.microseconds + 1_000_000 * (
+                86_400 * delta.days + delta.seconds
+            )
+        return _pack_int8(micros)
 
     def upgrade(self, obj: datetime, format: Pg3Format) -> "Dumper":
         if obj.tzinfo:
@@ -179,12 +193,6 @@ class DateTimeTzBinaryDumper(_BaseDateTimeDumper):
 
 class DateTimeBinaryDumper(DateTimeTzBinaryDumper):
     _oid = builtins["timestamp"].oid
-
-    # Somewhere, between year 2270 and 2275, float rounding in total_seconds
-    # cause us errors: switch to an algorithm without rounding before then.
-    _delta_prec_loss = (
-        datetime(2250, 1, 1) - _pg_datetime_epoch
-    ).total_seconds()
 
     def dump(self, obj: datetime) -> bytes:
         delta = obj - _pg_datetime_epoch
@@ -489,15 +497,9 @@ class TimestampBinaryLoader(Loader):
                 raise DataError("timestamp too large (after year 10K)")
 
 
-class TimestamptzLoader(TimestampLoader):
+class TimestampTzLoader(TimestampLoader):
 
     format = Format.TEXT
-
-    def __init__(self, oid: int, context: Optional[AdaptContext] = None):
-        if sys.version_info < (3, 7):
-            setattr(self, "load", self._load_py36)
-
-        super().__init__(oid, context)
 
     def _format_from_context(self) -> str:
         ds = self._get_datestyle()
@@ -557,6 +559,25 @@ class TimestamptzLoader(TimestampLoader):
             "can't parse datetimetz with DateStyle"
             f" {self._get_datestyle().decode('ascii')}: {data.decode('ascii')}"
         )
+
+
+if sys.version_info < (3, 7):
+    setattr(TimestampTzLoader, "load", TimestampTzLoader._load_py36)
+
+
+class TimestampTzBinaryLoader(Loader):
+
+    format = Format.BINARY
+
+    def load(self, data: Buffer) -> datetime:
+        micros = _unpack_int8(data)[0]
+        try:
+            return _pg_datetimetz_epoch + timedelta(microseconds=micros)
+        except OverflowError:
+            if micros <= 0:
+                raise DataError("timestamp too small (before year 1)")
+            else:
+                raise DataError("timestamp too large (after year 10K)")
 
 
 class IntervalLoader(Loader):

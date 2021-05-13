@@ -99,7 +99,8 @@ from .date import (
     TimeTzBinaryLoader as TimeTzBinaryLoader,
     TimestampLoader as TimestampLoader,
     TimestampBinaryLoader as TimestampBinaryLoader,
-    TimestamptzLoader as TimestamptzLoader,
+    TimestampTzLoader as TimestampTzLoader,
+    TimestampTzBinaryLoader as TimestampTzBinaryLoader,
     IntervalLoader as IntervalLoader,
 )
 from .json import (
@@ -227,7 +228,8 @@ def register_default_globals(ctx: AdaptContext) -> None:
     TimeTzBinaryLoader.register("timetz", ctx)
     TimestampLoader.register("timestamp", ctx)
     TimestampBinaryLoader.register("timestamp", ctx)
-    TimestamptzLoader.register("timestamptz", ctx)
+    TimestampTzLoader.register("timestamptz", ctx)
+    TimestampTzBinaryLoader.register("timestamptz", ctx)
     IntervalLoader.register("interval", ctx)
 
     # Currently json binary format is nothing different than text, maybe with
