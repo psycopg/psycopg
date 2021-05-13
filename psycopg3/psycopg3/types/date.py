@@ -183,7 +183,7 @@ class DateTimeTzBinaryDumper(_BaseDateTimeDumper):
     def dump(self, obj: datetime) -> bytes:
         delta = obj - _pg_datetimetz_epoch
         secs = delta.total_seconds()
-        if secs < self._delta_prec_loss:
+        if -self._delta_prec_loss < secs < self._delta_prec_loss:
             micros = int(1_000_000 * secs)
         else:
             micros = delta.microseconds + 1_000_000 * (
@@ -204,7 +204,7 @@ class DateTimeBinaryDumper(DateTimeTzBinaryDumper):
     def dump(self, obj: datetime) -> bytes:
         delta = obj - _pg_datetime_epoch
         secs = delta.total_seconds()
-        if secs < self._delta_prec_loss:
+        if -self._delta_prec_loss < secs < self._delta_prec_loss:
             micros = int(1_000_000 * secs)
         else:
             micros = (
