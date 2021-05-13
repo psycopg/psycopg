@@ -91,6 +91,7 @@ from .date import (
     DateTimeDumper as DateTimeDumper,
     DateTimeBinaryDumper as DateTimeBinaryDumper,
     TimeDeltaDumper as TimeDeltaDumper,
+    TimeDeltaBinaryDumper as TimeDeltaBinaryDumper,
     DateLoader as DateLoader,
     DateBinaryLoader as DateBinaryLoader,
     TimeLoader as TimeLoader,
@@ -102,6 +103,7 @@ from .date import (
     TimestampTzLoader as TimestampTzLoader,
     TimestampTzBinaryLoader as TimestampTzBinaryLoader,
     IntervalLoader as IntervalLoader,
+    IntervalBinaryLoader as IntervalBinaryLoader,
 )
 from .json import (
     JsonDumper as JsonDumper,
@@ -220,6 +222,7 @@ def register_default_globals(ctx: AdaptContext) -> None:
     DateTimeTzDumper.register("datetime.datetime", ctx)
     DateTimeTzBinaryDumper.register("datetime.datetime", ctx)
     TimeDeltaDumper.register("datetime.timedelta", ctx)
+    TimeDeltaBinaryDumper.register("datetime.timedelta", ctx)
     DateLoader.register("date", ctx)
     DateBinaryLoader.register("date", ctx)
     TimeLoader.register("time", ctx)
@@ -231,6 +234,7 @@ def register_default_globals(ctx: AdaptContext) -> None:
     TimestampTzLoader.register("timestamptz", ctx)
     TimestampTzBinaryLoader.register("timestamptz", ctx)
     IntervalLoader.register("interval", ctx)
+    IntervalBinaryLoader.register("interval", ctx)
 
     # Currently json binary format is nothing different than text, maybe with
     # an extra memcopy we can avoid.

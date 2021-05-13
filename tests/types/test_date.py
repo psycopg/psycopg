@@ -428,20 +428,19 @@ def test_dump_time_tz_or_not_tz(conn, val, type, fmt_in):
 # Interval
 #
 
+dump_timedelta_samples = [
+    ("min", "-999999999 days"),
+    ("1d", "1 day"),
+    ("-1d", "-1 day"),
+    ("1s", "1 s"),
+    ("-1s", "-1 s"),
+    ("-1m", "-0.000001 s"),
+    ("1m", "0.000001 s"),
+    ("max", "999999999 days 23:59:59.999999"),
+]
 
-@pytest.mark.parametrize(
-    "val, expr",
-    [
-        ("min", "-999999999 days"),
-        ("1d", "1 day"),
-        ("-1d", "-1 day"),
-        ("1s", "1 s"),
-        ("-1s", "-1 s"),
-        ("-1m", "-0.000001 s"),
-        ("1m", "0.000001 s"),
-        ("max", "999999999 days 23:59:59.999999"),
-    ],
-)
+
+@pytest.mark.parametrize("val, expr", dump_timedelta_samples)
 @pytest.mark.parametrize(
     "intervalstyle",
     ["sql_standard", "postgres", "postgres_verbose", "iso_8601"],
@@ -453,11 +452,10 @@ def test_dump_interval(conn, val, expr, intervalstyle):
     assert cur.fetchone()[0] is True
 
 
-@pytest.mark.xfail  # TODO: binary dump
-@pytest.mark.parametrize("val, expr", [("1s", "1s")])
+@pytest.mark.parametrize("val, expr", dump_timedelta_samples)
 def test_dump_interval_binary(conn, val, expr):
-    cur = conn.cursor()
-    cur.execute(f"select '{expr}'::interval = %b", (as_td(val),))
+    cur = conn.cursor(binary=True)
+    cur.execute(f"select '{expr}'::interval = %t", (as_td(val),))
     assert cur.fetchone()[0] is True
 
 
@@ -488,8 +486,9 @@ def test_dump_interval_binary(conn, val, expr):
         ("-90d", "-3 month"),
     ],
 )
-def test_load_interval(conn, val, expr):
-    cur = conn.cursor()
+@pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
+def test_load_interval(conn, val, expr, fmt_out):
+    cur = conn.cursor(binary=fmt_out)
     cur.execute(f"select '{expr}'::interval")
     assert cur.fetchone()[0] == as_td(val)
 

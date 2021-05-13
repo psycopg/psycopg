@@ -24,10 +24,17 @@ _pack_int8 = cast(_PackInt, struct.Struct("!q").pack)
 _unpack_int4 = cast(_UnpackInt, struct.Struct("!i").unpack)
 _unpack_int8 = cast(_UnpackInt, struct.Struct("!q").unpack)
 
+_pack_timetz = cast(Callable[[int, int], bytes], struct.Struct("!qi").pack)
 _unpack_timetz = cast(
     Callable[[bytes], Tuple[int, int]], struct.Struct("!qi").unpack
 )
-_pack_timetz = cast(Callable[[int, int], bytes], struct.Struct("!qi").pack)
+_pack_interval = cast(
+    Callable[[int, int, int], bytes], struct.Struct("!qii").pack
+)
+_unpack_interval = cast(
+    Callable[[bytes], Tuple[int, int, int]], struct.Struct("!qii").unpack
+)
+
 
 _pg_date_epoch_days = date(2000, 1, 1).toordinal()
 _pg_datetime_epoch = datetime(2000, 1, 1)
@@ -232,6 +239,16 @@ class TimeDeltaDumper(Dumper):
             obj.seconds,
             obj.microseconds,
         )
+
+
+class TimeDeltaBinaryDumper(Dumper):
+
+    format = Format.BINARY
+    _oid = builtins["interval"].oid
+
+    def dump(self, obj: timedelta) -> bytes:
+        micros = 1_000_000 * obj.seconds + obj.microseconds
+        return _pack_interval(micros, obj.days, 0)
 
 
 class DateLoader(Loader):
@@ -651,3 +668,18 @@ class IntervalLoader(Loader):
             "can't parse interval with IntervalStyle"
             f" {ints.decode('ascii')}: {data.decode('ascii')}"
         )
+
+
+class IntervalBinaryLoader(Loader):
+
+    format = Format.BINARY
+
+    def load(self, data: Buffer) -> timedelta:
+        micros, days, months = _unpack_interval(data)
+        if months > 0:
+            years, months = divmod(months, 12)
+            days = days + 30 * months + 365 * years
+        elif months < 0:
+            years, months = divmod(-months, 12)
+            days = days - 30 * months - 365 * years
+        return timedelta(days=days, microseconds=micros)

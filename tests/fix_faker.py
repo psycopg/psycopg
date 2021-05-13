@@ -365,6 +365,9 @@ class Faker:
         h, m = divmod(val, 60)
         return dt.time(h, m, s, ms)
 
+    def make_timedelta(self, spec):
+        return choice([dt.timedelta.min, dt.timedelta.max]) * random()
+
     def make_TimeTz(self, spec):
         rv = self.make_time(spec)
         return rv.replace(tzinfo=self._make_tz(spec))
