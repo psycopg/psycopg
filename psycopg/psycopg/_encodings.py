@@ -63,7 +63,7 @@ py_codecs.update((k.encode(), v) for k, v in _py_codecs.items())
 pg_codecs = {v: k.encode() for k, v in _py_codecs.items()}
 
 
-def py2pg(name: str) -> bytes:
+def py2pgenc(name: str) -> bytes:
     """Convert a Python encoding name to PostgreSQL encoding name.
 
     Raise LookupError if the Python encoding is unknown.
@@ -71,7 +71,7 @@ def py2pg(name: str) -> bytes:
     return pg_codecs[codecs.lookup(name).name]
 
 
-def pg2py(name: Union[bytes, str]) -> str:
+def pg2pyenc(name: Union[bytes, str]) -> str:
     """Convert a Python encoding name to PostgreSQL encoding name.
 
     Raise NotSupportedError if the PostgreSQL encoding is not supported by

@@ -11,8 +11,8 @@ from datetime import tzinfo
 
 from . import pq
 from . import errors as e
-from . import encodings
 from ._tz import get_tzinfo
+from ._encodings import pg2pyenc
 
 
 def make_conninfo(conninfo: str = "", **kwargs: Any) -> str:
@@ -266,4 +266,4 @@ class ConnectionInfo:
     @property
     def _pyenc(self) -> str:
         pgenc = self.pgconn.parameter_status(b"client_encoding") or b"UTF8"
-        return encodings.pg2py(pgenc)
+        return pg2pyenc(pgenc)

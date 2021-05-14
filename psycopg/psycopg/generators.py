@@ -22,9 +22,9 @@ from . import pq
 from . import errors as e
 from .pq import ConnStatus, PollingStatus, ExecStatus
 from .abc import PQGen, PQGenConn
-from .waiting import Wait, Ready
-from .encodings import py_codecs
 from .pq.abc import PGconn, PGresult
+from .waiting import Wait, Ready
+from ._encodings import py_codecs
 
 logger = logging.getLogger(__name__)
 
