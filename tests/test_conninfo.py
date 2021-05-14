@@ -1,3 +1,5 @@
+import datetime as dt
+
 import pytest
 
 import psycopg3
@@ -188,3 +190,27 @@ class TestConnectionInfo:
         conn.close()
         with pytest.raises(psycopg3.OperationalError):
             conn.info.backend_pid
+
+    def test_timezone(self, conn):
+        conn.execute("set timezone to 'Europe/Rome'")
+        tz = conn.info.timezone
+        assert isinstance(tz, dt.tzinfo)
+        assert tz.utcoffset(dt.datetime(2000, 1, 1)).total_seconds() == 3600
+        assert tz.utcoffset(dt.datetime(2000, 7, 1)).total_seconds() == 7200
+
+    def test_timezone_warn(self, conn, caplog):
+        conn.execute("set timezone to 'FOOBAR0'")
+        assert len(caplog.records) == 0
+        tz = conn.info.timezone
+        assert tz == dt.timezone.utc
+        assert len(caplog.records) == 1
+        assert "FOOBAR0" in caplog.records[0].message
+
+        conn.info.timezone
+        assert len(caplog.records) == 1
+
+        conn.execute("set timezone to 'FOOBAAR0'")
+        assert len(caplog.records) == 1
+        conn.info.timezone
+        assert len(caplog.records) == 2
+        assert "FOOBAAR0" in caplog.records[1].message
