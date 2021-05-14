@@ -58,7 +58,7 @@ def error_message(obj: Union[PGconn, PGresult], encoding: str = "utf8") -> str:
             bmsg = bmsg.split(b":", 1)[-1].strip()
 
     elif hasattr(obj, "error_message"):
-        from psycopg.encodings import py_codecs
+        from ..encodings import py_codecs
 
         # obj is a PGconn
         obj = cast(PGconn, obj)

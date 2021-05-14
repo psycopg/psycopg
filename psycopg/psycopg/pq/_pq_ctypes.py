@@ -11,7 +11,7 @@ from ctypes import Structure, CFUNCTYPE, POINTER
 from ctypes import c_char, c_char_p, c_int, c_size_t, c_ubyte, c_uint, c_void_p
 from typing import List, Optional, Tuple
 
-from psycopg.errors import NotSupportedError
+from ..errors import NotSupportedError
 
 if sys.platform == "win32":
     libname = ctypes.util.find_library("libpq.dll")
