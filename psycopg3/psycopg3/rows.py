@@ -9,9 +9,9 @@ import re
 from collections import namedtuple
 from typing import Any, Callable, Dict, NamedTuple, Sequence, Tuple, Type
 from typing import TypeVar, TYPE_CHECKING
-from typing_extensions import Protocol
 
 from . import errors as e
+from .utils.compat import Protocol
 
 if TYPE_CHECKING:
     from .cursor import AnyCursor

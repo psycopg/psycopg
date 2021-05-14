@@ -8,6 +8,11 @@ import sys
 import asyncio
 from typing import Any, Awaitable, Generator, Optional, Union, TypeVar
 
+if sys.version_info >= (3, 8):
+    from typing import Protocol
+else:
+    from typing_extensions import Protocol
+
 T = TypeVar("T")
 FutureT = Union["asyncio.Future[T]", Generator[Any, None, T], Awaitable[T]]
 
@@ -44,4 +49,10 @@ else:
 
     Task = asyncio.Future
 
-__all__ = ["asynccontextmanager", "get_running_loop", "create_task"]
+
+__all__ = [
+    "Protocol",
+    "asynccontextmanager",
+    "create_task",
+    "get_running_loop",
+]
