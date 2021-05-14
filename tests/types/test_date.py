@@ -281,6 +281,25 @@ def test_load_datetimetz_tzname(conn, val, expr, datestyle_in, datestyle_out):
 
 
 @pytest.mark.parametrize(
+    "tzname, expr, tzoff",
+    [
+        ("UTC", "2000-1-1", 0),
+        ("UTC", "2000-7-1", 0),
+        ("Europe/Rome", "2000-1-1", 3600),
+        ("Europe/Rome", "2000-7-1", 7200),
+        ("Europe/Rome", "1000-1-1", 2996),
+        ("NOSUCH0", "2000-1-1", 0),
+    ],
+)
+@pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
+def test_load_datetimetz_tz(conn, fmt_out, tzname, expr, tzoff):
+    conn.execute("select set_config('TimeZone', %s, true)", [tzname])
+    cur = conn.cursor(binary=fmt_out)
+    ts = cur.execute("select %s::timestamptz", [expr]).fetchone()[0]
+    assert ts.utcoffset().total_seconds() == tzoff
+
+
+@pytest.mark.parametrize(
     "val, type",
     [
         ("2000,1,2,3,4,5,6", "timestamp"),
