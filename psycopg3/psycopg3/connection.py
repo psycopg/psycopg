@@ -31,7 +31,7 @@ from .conninfo import make_conninfo, ConnectionInfo
 from .generators import notifies
 from ._preparing import PrepareManager
 from .transaction import Transaction, AsyncTransaction
-from .utils.compat import asynccontextmanager
+from .utils.compat import asynccontextmanager, ZoneInfo
 from .server_cursor import ServerCursor, AsyncServerCursor
 
 logger = logging.getLogger("psycopg3")
@@ -58,6 +58,8 @@ else:
 
     connect = generators.connect
     execute = generators.execute
+
+_UTC = ZoneInfo("UTC")
 
 
 class Notify(NamedTuple):
@@ -218,6 +220,22 @@ class BaseConnection(AdaptContext, Generic[Row]):
         (result,) = yield from execute(self.pgconn)
         if result.status != ExecStatus.TUPLES_OK:
             raise e.error_from_result(result, encoding=self.client_encoding)
+
+    @property
+    def timezone(self) -> ZoneInfo:
+        """The Python timezone info of the connection's timezone."""
+        tzname = self.pgconn.parameter_status(b"TimeZone")
+        if tzname:
+            try:
+                return ZoneInfo(tzname.decode("utf8"))
+            except KeyError:
+                logger.warning(
+                    "unknown PostgreSQL timezone: %r will use UTC",
+                    tzname.decode("utf8"),
+                )
+                return _UTC
+        else:
+            return _UTC
 
     @property
     def info(self) -> ConnectionInfo:

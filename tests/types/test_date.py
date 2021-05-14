@@ -258,7 +258,6 @@ def test_load_datetimetz(conn, val, expr, timezone, datestyle_out):
     cur.execute(f"set timezone to '{timezone}'")
     got = cur.execute(f"select '{expr}'::timestamptz").fetchone()[0]
     assert got == as_dt(val)
-    assert got.tzinfo == dt.timezone.utc
 
 
 @pytest.mark.parametrize("val, expr, timezone", load_datetimetz_samples)
@@ -267,7 +266,6 @@ def test_load_datetimetz_binary(conn, val, expr, timezone):
     cur.execute(f"set timezone to '{timezone}'")
     got = cur.execute(f"select '{expr}'::timestamptz").fetchone()[0]
     assert got == as_dt(val)
-    assert got.tzinfo == dt.timezone.utc
 
 
 @pytest.mark.xfail  # parse timezone names

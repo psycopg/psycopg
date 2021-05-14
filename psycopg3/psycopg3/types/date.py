@@ -15,6 +15,7 @@ from ..oids import postgres_types as builtins
 from ..adapt import Buffer, Dumper, Loader, Format as Pg3Format
 from ..proto import AdaptContext
 from ..errors import InterfaceError, DataError
+from ..utils.compat import ZoneInfo
 
 _PackInt = Callable[[int], bytes]
 _UnpackInt = Callable[[bytes], Tuple[int]]
@@ -39,6 +40,8 @@ _pg_date_epoch_days = date(2000, 1, 1).toordinal()
 _pg_datetime_epoch = datetime(2000, 1, 1)
 _pg_datetimetz_epoch = datetime(2000, 1, 1, tzinfo=timezone.utc)
 _py_date_min_days = date.min.toordinal()
+
+_UTC = ZoneInfo("UTC")
 
 
 class DateDumper(Dumper):
@@ -517,6 +520,10 @@ class TimestampTzLoader(TimestampLoader):
 
     format = Format.TEXT
 
+    def __init__(self, oid: int, context: Optional[AdaptContext] = None):
+        super().__init__(oid, context)
+        self._timezone = self.connection.timezone if self.connection else _UTC
+
     def _format_from_context(self) -> str:
         ds = self._get_datestyle()
         if ds.startswith(b"I"):  # ISO
@@ -557,7 +564,7 @@ class TimestampTzLoader(TimestampLoader):
         if data[-3] in (43, 45):
             data += b"00"
 
-        return super().load(data).astimezone(timezone.utc)
+        return super().load(data).astimezone(self._timezone)
 
     def _load_py36(self, data: Buffer) -> datetime:
         if isinstance(data, memoryview):
@@ -579,7 +586,7 @@ class TimestampTzLoader(TimestampLoader):
             tzoff = -tzoff
 
         rv = super().load(data[: m.start()])
-        return (rv - tzoff).replace(tzinfo=timezone.utc)
+        return (rv - tzoff).replace(tzinfo=self._timezone)
 
     def _load_notimpl(self, data: Buffer) -> datetime:
         if isinstance(data, memoryview):
@@ -598,10 +605,15 @@ class TimestampTzBinaryLoader(Loader):
 
     format = Format.BINARY
 
+    def __init__(self, oid: int, context: Optional[AdaptContext] = None):
+        super().__init__(oid, context)
+        self._timezone = self.connection.timezone if self.connection else _UTC
+
     def load(self, data: Buffer) -> datetime:
         micros = _unpack_int8(data)[0]
         try:
-            return _pg_datetimetz_epoch + timedelta(microseconds=micros)
+            ts = _pg_datetimetz_epoch + timedelta(microseconds=micros)
+            return ts.astimezone(self._timezone)
         except OverflowError:
             if micros <= 0:
                 raise DataError("timestamp too small (before year 1)")
