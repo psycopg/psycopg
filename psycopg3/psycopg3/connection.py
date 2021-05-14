@@ -9,7 +9,7 @@ import logging
 import warnings
 import threading
 from types import TracebackType
-from typing import Any, AsyncIterator, Callable, Generic, Iterator, List
+from typing import Any, AsyncIterator, Dict, Callable, Generic, Iterator, List
 from typing import NamedTuple, Optional, Type, TypeVar, Union
 from typing import overload, TYPE_CHECKING
 from weakref import ref, ReferenceType
@@ -59,7 +59,7 @@ else:
     connect = generators.connect
     execute = generators.execute
 
-_UTC = ZoneInfo("UTC")
+_timezones: Dict[Union[None, bytes], ZoneInfo] = {}
 
 
 class Notify(NamedTuple):
@@ -225,17 +225,20 @@ class BaseConnection(AdaptContext, Generic[Row]):
     def timezone(self) -> ZoneInfo:
         """The Python timezone info of the connection's timezone."""
         tzname = self.pgconn.parameter_status(b"TimeZone")
-        if tzname:
+        try:
+            return _timezones[tzname]
+        except KeyError:
+            sname = tzname.decode("utf8") if tzname else "UTC"
             try:
-                return ZoneInfo(tzname.decode("utf8"))
+                zi = ZoneInfo(sname)
             except KeyError:
                 logger.warning(
-                    "unknown PostgreSQL timezone: %r will use UTC",
-                    tzname.decode("utf8"),
+                    "unknown PostgreSQL timezone: %r will use UTC", sname
                 )
-                return _UTC
-        else:
-            return _UTC
+                zi = ZoneInfo("UTC")
+
+            _timezones[tzname] = zi
+            return zi
 
     @property
     def info(self) -> ConnectionInfo:

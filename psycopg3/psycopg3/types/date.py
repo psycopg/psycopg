@@ -41,8 +41,6 @@ _pg_datetime_epoch = datetime(2000, 1, 1)
 _pg_datetimetz_epoch = datetime(2000, 1, 1, tzinfo=timezone.utc)
 _py_date_min_days = date.min.toordinal()
 
-_UTC = ZoneInfo("UTC")
-
 
 class DateDumper(Dumper):
 
@@ -522,7 +520,9 @@ class TimestampTzLoader(TimestampLoader):
 
     def __init__(self, oid: int, context: Optional[AdaptContext] = None):
         super().__init__(oid, context)
-        self._timezone = self.connection.timezone if self.connection else _UTC
+        self._timezone = (
+            self.connection.timezone if self.connection else ZoneInfo("UTC")
+        )
 
     def _format_from_context(self) -> str:
         ds = self._get_datestyle()
@@ -607,7 +607,9 @@ class TimestampTzBinaryLoader(Loader):
 
     def __init__(self, oid: int, context: Optional[AdaptContext] = None):
         super().__init__(oid, context)
-        self._timezone = self.connection.timezone if self.connection else _UTC
+        self._timezone = (
+            self.connection.timezone if self.connection else ZoneInfo("UTC")
+        )
 
     def load(self, data: Buffer) -> datetime:
         micros = _unpack_int8(data)[0]
