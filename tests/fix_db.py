@@ -112,7 +112,7 @@ def patch_exec(conn, monkeypatch):
     def _exec_command(command, *args, **kwargs):
         cmdcopy = command
         if isinstance(cmdcopy, bytes):
-            cmdcopy = cmdcopy.decode(conn.client_encoding)
+            cmdcopy = cmdcopy.decode(conn.info.encoding)
         elif isinstance(cmdcopy, sql.Composable):
             cmdcopy = cmdcopy.as_string(conn)
 

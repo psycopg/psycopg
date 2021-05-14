@@ -6,6 +6,7 @@ import pytest
 import psycopg
 from psycopg import ProgrammingError
 from psycopg.conninfo import make_conninfo, conninfo_to_dict, ConnectionInfo
+from psycopg._encodings import pg2pyenc
 
 snowman = "\u2603"
 
@@ -245,3 +246,45 @@ class TestConnectionInfo:
         conn.info.timezone
         assert len(caplog.records) == 2
         assert "FOOBAAR0" in caplog.records[1].message
+
+    def test_encoding(self, conn):
+        enc = conn.execute("show client_encoding").fetchone()[0]
+        assert conn.info.encoding == pg2pyenc(enc)
+
+    @pytest.mark.parametrize(
+        "enc, out, codec",
+        [
+            ("utf8", "UTF8", "utf-8"),
+            ("utf-8", "UTF8", "utf-8"),
+            ("utf_8", "UTF8", "utf-8"),
+            ("eucjp", "EUC_JP", "euc_jp"),
+            ("euc-jp", "EUC_JP", "euc_jp"),
+            ("latin9", "LATIN9", "iso8859-15"),
+        ],
+    )
+    def test_normalize_encoding(self, conn, enc, out, codec):
+        conn.execute("select set_config('client_encoding', %s, false)", [enc])
+        assert conn.info.parameter_status("client_encoding") == out
+        assert conn.info.encoding == codec
+
+    @pytest.mark.parametrize(
+        "enc, out, codec",
+        [
+            ("utf8", "UTF8", "utf-8"),
+            ("utf-8", "UTF8", "utf-8"),
+            ("utf_8", "UTF8", "utf-8"),
+            ("eucjp", "EUC_JP", "euc_jp"),
+            ("euc-jp", "EUC_JP", "euc_jp"),
+        ],
+    )
+    def test_encoding_env_var(self, dsn, monkeypatch, enc, out, codec):
+        monkeypatch.setenv("PGCLIENTENCODING", enc)
+        conn = psycopg.connect(dsn)
+        assert conn.info.parameter_status("client_encoding") == out
+        assert conn.info.encoding == codec
+
+    def test_set_encoding_unsupported(self, conn):
+        cur = conn.cursor()
+        cur.execute("set client_encoding to EUC_TW")
+        with pytest.raises(psycopg.NotSupportedError):
+            cur.execute("select 'x'")

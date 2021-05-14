@@ -8,6 +8,7 @@ from typing import Any, NamedTuple, Optional, Sequence, TYPE_CHECKING
 from operator import attrgetter
 
 from . import errors as e
+from ._encodings import pgconn_encoding
 
 if TYPE_CHECKING:
     from .cursor import BaseCursor
@@ -31,7 +32,7 @@ class Column(Sequence[Any]):
         if not fname:
             raise e.InterfaceError(f"no name available for column {index}")
 
-        self._name = fname.decode(cursor.connection.client_encoding)
+        self._name = fname.decode(pgconn_encoding(cursor._pgconn))
 
         self._data = ColumnData(
             ftype=res.ftype(index),

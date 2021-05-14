@@ -12,7 +12,7 @@ from datetime import tzinfo
 from . import pq
 from . import errors as e
 from ._tz import get_tzinfo
-from ._encodings import pg2pyenc
+from ._encodings import pgconn_encoding
 
 
 def make_conninfo(conninfo: str = "", **kwargs: Any) -> str:
@@ -171,7 +171,7 @@ class ConnectionInfo:
         `~Connection.connect()` or from environment variables. The password
         is never returned (you can read it using the `password` attribute).
         """
-        pyenc = self._pyenc
+        pyenc = self.encoding
 
         # Get the known defaults to avoid reporting them
         defaults = {
@@ -222,8 +222,8 @@ class ConnectionInfo:
 
         Return `None` is the parameter is unknown.
         """
-        res = self.pgconn.parameter_status(param_name.encode(self._pyenc))
-        return res.decode(self._pyenc) if res is not None else None
+        res = self.pgconn.parameter_status(param_name.encode(self.encoding))
+        return res.decode(self.encoding) if res is not None else None
 
     @property
     def server_version(self) -> int:
@@ -259,11 +259,11 @@ class ConnectionInfo:
         """The Python timezone info of the connection's timezone."""
         return get_tzinfo(self.pgconn)
 
+    @property
+    def encoding(self) -> str:
+        """The Python codec name of the connection's client encoding."""
+        return pgconn_encoding(self.pgconn)
+
     def _get_pgconn_attr(self, name: str) -> str:
         value: bytes = getattr(self.pgconn, name)
-        return value.decode(self._pyenc)
-
-    @property
-    def _pyenc(self) -> str:
-        pgenc = self.pgconn.parameter_status(b"client_encoding") or b"UTF8"
-        return pg2pyenc(pgenc)
+        return value.decode(self.encoding)

@@ -102,11 +102,11 @@ such as :sql:`text` and :sql:`varchar` are converted back to Python `!str`:
     'Crème Brûlée at 4.99€'
 
 PostgreSQL databases `have an encoding`__, and `the session has an encoding`__
-too, exposed in the `Connection.client_encoding` attribute. If your database
-and connection are in UTF-8 encoding you will likely have no problem,
-otherwise you will have to make sure that your application only deals with the
-non-ASCII chars that the database can handle; failing to do so may result in
-encoding/decoding errors:
+too, exposed in the `!Connection.info.`\ `~ConnectionInfo.encoding`
+attribute. If your database and connection are in UTF-8 encoding you will
+likely have no problem, otherwise you will have to make sure that your
+application only deals with the non-ASCII chars that the database can handle;
+failing to do so may result in encoding/decoding errors:
 
 .. __: https://www.postgresql.org/docs/current/sql-createdatabase.html
 .. __: https://www.postgresql.org/docs/current/multibyte.html
@@ -114,17 +114,17 @@ encoding/decoding errors:
 .. code:: python
 
     # The encoding is set at connection time according to the db configuration
-    conn.client_encoding
+    conn.info.encoding
     'utf-8'
 
     # The Latin-9 encoding can manage some European accented letters
     # and the Euro symbol
-    conn.client_encoding = 'latin9'
+    conn.execute("SET client_encoding TO LATIN9")
     conn.execute("SELECT entry FROM menu WHERE id = 1").fetchone()[0]
     'Crème Brûlée at 4.99€'
 
     # The Latin-1 encoding doesn't have a representation for the Euro symbol
-    conn.client_encoding = 'latin1'
+    conn.execute("SET client_encoding TO LATIN1")
     conn.execute("SELECT entry FROM menu WHERE id = 1").fetchone()[0]
     # Traceback (most recent call last)
     # ...
@@ -132,13 +132,12 @@ encoding/decoding errors:
     # in encoding "UTF8" has no equivalent in encoding "LATIN1"
 
 In rare cases you may have strings with unexpected encodings in the database.
-Using the ``SQL_ASCII`` client encoding (or setting
-`~Connection.client_encoding` ``= "ascii"``) will disable decoding of the data
+Using the ``SQL_ASCII`` client encoding  will disable decoding of the data
 coming from the database, which will be returned as `bytes`:
 
 .. code:: python
 
-    conn.client_encoding = "ascii"
+    conn.execute("SET client_encoding TO SQL_ASCII")
     conn.execute("SELECT entry FROM menu WHERE id = 1").fetchone()[0]
     b'Cr\xc3\xa8me Br\xc3\xbbl\xc3\xa9e at 4.99\xe2\x82\xac'
 

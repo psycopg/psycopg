@@ -15,6 +15,7 @@ from .abc import ConnectionType, Query, Params, PQGen
 from .rows import Row, RowFactory, AsyncRowFactory
 from .cursor import AnyCursor, BaseCursor, Cursor, execute
 from .cursor_async import AsyncCursor
+from ._encodings import pgconn_encoding
 
 if TYPE_CHECKING:
     from .connection import Connection
@@ -83,7 +84,7 @@ class ServerCursorHelper(Generic[ConnectionType, Row]):
     ) -> PQGen[None]:
         conn = cur._conn
         conn.pgconn.send_describe_portal(
-            self.name.encode(conn.client_encoding)
+            self.name.encode(pgconn_encoding(conn.pgconn))
         )
         results = yield from execute(conn.pgconn)
         cur._execute_results(results, format=self.format)
@@ -158,7 +159,7 @@ class ServerCursorHelper(Generic[ConnectionType, Row]):
     ) -> sql.Composable:
 
         if isinstance(query, bytes):
-            query = query.decode(cur._conn.client_encoding)
+            query = query.decode(pgconn_encoding(cur._conn.pgconn))
         if not isinstance(query, sql.Composable):
             query = sql.SQL(query)
 

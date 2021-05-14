@@ -22,6 +22,7 @@ from .rows import Row, RowMaker, RowFactory
 from ._column import Column
 from ._cmodule import _psycopg
 from ._queries import PostgresQuery
+from ._encodings import pgconn_encoding
 from ._preparing import Prepare
 
 if TYPE_CHECKING:
@@ -53,6 +54,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
 
     _tx: "Transformer"
     _make_row: RowMaker[Row]
+    _pgconn: "PGconn"
 
     def __init__(self, connection: ConnectionType):
         self._conn = connection
@@ -238,7 +240,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
             (result,) = yield from execute(self._pgconn)
             if result.status == ExecStatus.FATAL_ERROR:
                 raise e.error_from_result(
-                    result, encoding=self._conn.client_encoding
+                    result, encoding=pgconn_encoding(self._pgconn)
                 )
             self._send_query_prepared(name, pgq, binary=binary)
 
@@ -412,7 +414,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
         badstats = statuses.difference(self._status_ok)
         if results[-1].status == ExecStatus.FATAL_ERROR:
             raise e.error_from_result(
-                results[-1], encoding=self._conn.client_encoding
+                results[-1], encoding=pgconn_encoding(self._pgconn)
             )
         elif statuses.intersection(self._status_copy):
             raise e.ProgrammingError(
@@ -457,7 +459,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
             return
         elif status == ExecStatus.FATAL_ERROR:
             raise e.error_from_result(
-                result, encoding=self._conn.client_encoding
+                result, encoding=pgconn_encoding(self._pgconn)
             )
         else:
             raise e.ProgrammingError(

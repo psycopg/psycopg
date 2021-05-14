@@ -30,7 +30,7 @@ from .cursor import Cursor
 from ._cmodule import _psycopg
 from .conninfo import make_conninfo, conninfo_to_dict, ConnectionInfo
 from .generators import notifies
-from ._encodings import pg2pyenc
+from ._encodings import pgconn_encoding
 from ._preparing import PrepareManager
 from .transaction import Transaction
 from .server_cursor import ServerCursor
@@ -260,12 +260,6 @@ class BaseConnection(Generic[Row]):
                 )
 
     @property
-    def client_encoding(self) -> str:
-        """The Python codec name of the connection's client encoding."""
-        pgenc = self.pgconn.parameter_status(b"client_encoding") or b"UTF8"
-        return pg2pyenc(pgenc)
-
-    @property
     def info(self) -> ConnectionInfo:
         """A `ConnectionInfo` attribute to inspect connection properties."""
         return ConnectionInfo(self.pgconn)
@@ -313,7 +307,7 @@ class BaseConnection(Generic[Row]):
         if not (self and self._notice_handler):
             return
 
-        diag = e.Diagnostic(res, self.client_encoding)
+        diag = e.Diagnostic(res, pgconn_encoding(self.pgconn))
         for cb in self._notice_handlers:
             try:
                 cb(diag)
@@ -342,7 +336,7 @@ class BaseConnection(Generic[Row]):
         if not (self and self._notify_handlers):
             return
 
-        enc = self.client_encoding
+        enc = pgconn_encoding(self.pgconn)
         n = Notify(pgn.relname.decode(enc), pgn.extra.decode(enc), pgn.be_pid)
         for cb in self._notify_handlers:
             cb(n)
@@ -419,7 +413,7 @@ class BaseConnection(Generic[Row]):
             )
 
         if isinstance(command, str):
-            command = command.encode(self.client_encoding)
+            command = command.encode(pgconn_encoding(self.pgconn))
         elif isinstance(command, Composable):
             command = command.as_bytes(self)
 
@@ -434,7 +428,7 @@ class BaseConnection(Generic[Row]):
         if result.status not in (ExecStatus.COMMAND_OK, ExecStatus.TUPLES_OK):
             if result.status == ExecStatus.FATAL_ERROR:
                 raise e.error_from_result(
-                    result, encoding=self.client_encoding
+                    result, encoding=pgconn_encoding(self.pgconn)
                 )
             else:
                 raise e.InterfaceError(
@@ -754,7 +748,7 @@ class Connection(BaseConnection[Row]):
         while 1:
             with self.lock:
                 ns = self.wait(notifies(self.pgconn))
-            enc = self.client_encoding
+            enc = pgconn_encoding(self.pgconn)
             for pgn in ns:
                 n = Notify(
                     pgn.relname.decode(enc), pgn.extra.decode(enc), pgn.be_pid
