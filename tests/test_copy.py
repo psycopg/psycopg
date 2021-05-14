@@ -140,7 +140,7 @@ def test_set_custom_type(conn, hstore):
 def test_copy_out_allchars(conn, format):
     cur = conn.cursor()
     chars = list(map(chr, range(1, 256))) + [eur]
-    conn.client_encoding = "utf8"
+    conn.execute("set client_encoding to utf8")
     rows = []
     query = sql.SQL(
         "copy (select unnest({}::text[])) to stdout (format {})"
@@ -392,7 +392,7 @@ def test_copy_in_allchars(conn):
     cur = conn.cursor()
     ensure_table(cur, sample_tabledef)
 
-    conn.client_encoding = "utf8"
+    conn.execute("set client_encoding to utf8")
     with cur.copy("copy copy_in from stdin (format text)") as copy:
         for i in range(1, 256):
             copy.write_row((i, None, chr(i)))

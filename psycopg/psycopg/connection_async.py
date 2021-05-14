@@ -318,14 +318,6 @@ class AsyncConnection(BaseConnection[Row]):
         async with self.lock:
             super()._set_deferrable(value)
 
-    def _set_client_encoding(self, name: str) -> None:
-        self._no_set_async("client_encoding")
-
-    async def set_client_encoding(self, name: str) -> None:
-        """Async version of the `~Connection.client_encoding` setter."""
-        async with self.lock:
-            await self.wait(self._set_client_encoding_gen(name))
-
     def _no_set_async(self, attribute: str) -> None:
         raise AttributeError(
             f"'the {attribute!r} property is read-only on async connections:"

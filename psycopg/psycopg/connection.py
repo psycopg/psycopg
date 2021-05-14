@@ -265,22 +265,6 @@ class BaseConnection(Generic[Row]):
         pgenc = self.pgconn.parameter_status(b"client_encoding") or b"UTF8"
         return encodings.pg2py(pgenc)
 
-    @client_encoding.setter
-    def client_encoding(self, name: str) -> None:
-        self._set_client_encoding(name)
-
-    def _set_client_encoding(self, name: str) -> None:
-        raise NotImplementedError
-
-    def _set_client_encoding_gen(self, name: str) -> PQGen[None]:
-        self.pgconn.send_query_params(
-            b"SELECT set_config('client_encoding', $1, false)",
-            [encodings.py2pg(name)],
-        )
-        (result,) = yield from execute(self.pgconn)
-        if result.status != ExecStatus.TUPLES_OK:
-            raise e.error_from_result(result, encoding=self.client_encoding)
-
     @property
     def info(self) -> ConnectionInfo:
         """A `ConnectionInfo` attribute to inspect connection properties."""
@@ -806,7 +790,3 @@ class Connection(BaseConnection[Row]):
     def _set_deferrable(self, value: Optional[bool]) -> None:
         with self.lock:
             super()._set_deferrable(value)
-
-    def _set_client_encoding(self, name: str) -> None:
-        with self.lock:
-            self.wait(self._set_client_encoding_gen(name))

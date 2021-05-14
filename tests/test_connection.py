@@ -304,15 +304,6 @@ def test_get_encoding(conn):
     assert conn.client_encoding == encodings.pg2py(enc)
 
 
-def test_set_encoding(conn):
-    newenc = "iso8859-1" if conn.client_encoding != "iso8859-1" else "utf-8"
-    assert conn.client_encoding != newenc
-    conn.client_encoding = newenc
-    assert conn.client_encoding == newenc
-    (enc,) = conn.cursor().execute("show client_encoding").fetchone()
-    assert encodings.pg2py(enc) == newenc
-
-
 @pytest.mark.parametrize(
     "enc, out, codec",
     [
@@ -325,7 +316,7 @@ def test_set_encoding(conn):
     ],
 )
 def test_normalize_encoding(conn, enc, out, codec):
-    conn.client_encoding = enc
+    conn.execute("select set_config('client_encoding', %s, false)", [enc])
     assert conn.pgconn.parameter_status(b"client_encoding").decode() == out
     assert conn.client_encoding == codec
 
@@ -352,11 +343,6 @@ def test_set_encoding_unsupported(conn):
     cur.execute("set client_encoding to EUC_TW")
     with pytest.raises(psycopg.NotSupportedError):
         cur.execute("select 'x'")
-
-
-def test_set_encoding_bad(conn):
-    with pytest.raises(LookupError):
-        conn.client_encoding = "WAT"
 
 
 @pytest.mark.parametrize(
