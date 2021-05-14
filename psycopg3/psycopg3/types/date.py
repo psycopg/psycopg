@@ -586,7 +586,11 @@ class TimestampTzLoader(TimestampLoader):
             tzoff = -tzoff
 
         rv = super().load(data[: m.start()])
-        return (rv - tzoff).replace(tzinfo=self._timezone)
+        return (
+            (rv - tzoff)
+            .replace(tzinfo=timezone.utc)
+            .astimezone(self._timezone)
+        )
 
     def _load_notimpl(self, data: Buffer) -> datetime:
         if isinstance(data, memoryview):
