@@ -45,6 +45,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
         __slots__ = """
             _conn format _adapters arraysize _closed _results pgresult _pos
             _iresult _rowcount _query _tx _last_query _row_factory _make_row
+            _pgconn
             __weakref__
             """.split()
 
@@ -53,12 +54,10 @@ class BaseCursor(Generic[ConnectionType, Row]):
     _tx: "Transformer"
     _make_row: RowMaker[Row]
 
-    def __init__(
-        self,
-        connection: ConnectionType,
-    ):
+    def __init__(self, connection: ConnectionType):
         self._conn = connection
         self.format = Format.TEXT
+        self._pgconn = connection.pgconn
         self._adapters = adapt.AdaptersMap(connection.adapters)
         self.arraysize = 1
         self._closed = False
@@ -75,7 +74,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
 
     def __repr__(self) -> str:
         cls = f"{self.__class__.__module__}.{self.__class__.__qualname__}"
-        info = pq.misc.connection_summary(self._conn.pgconn)
+        info = pq.misc.connection_summary(self._pgconn)
         if self._closed:
             status = "closed"
         elif self.pgresult:
@@ -236,7 +235,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
         else:
             # The query must be prepared and executed
             self._send_prepare(name, pgq)
-            (result,) = yield from execute(self._conn.pgconn)
+            (result,) = yield from execute(self._pgconn)
             if result.status == ExecStatus.FATAL_ERROR:
                 raise e.error_from_result(
                     result, encoding=self._conn.client_encoding
@@ -244,7 +243,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
             self._send_query_prepared(name, pgq, binary=binary)
 
         # run the query
-        results = yield from execute(self._conn.pgconn)
+        results = yield from execute(self._pgconn)
 
         # Update the prepare state of the query.
         # If an operation requires to flush our prepared statements cache, do it.
@@ -265,12 +264,12 @@ class BaseCursor(Generic[ConnectionType, Row]):
         yield from self._start_query(query)
         pgq = self._convert_query(query, params)
         self._execute_send(pgq, binary=binary, no_pqexec=True)
-        self._conn.pgconn.set_single_row_mode()
+        self._pgconn.set_single_row_mode()
         self._last_query = query
 
     def _stream_fetchone_gen(self, first: bool) -> PQGen[Optional["PGresult"]]:
-        yield from generators.send(self._conn.pgconn)
-        res = yield from generators.fetch(self._conn.pgconn)
+        yield from generators.send(self._pgconn)
+        res = yield from generators.fetch(self._pgconn)
         if res is None:
             return None
 
@@ -285,7 +284,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
             # End of single row results
             status = res.status
             while res:
-                res = yield from generators.fetch(self._conn.pgconn)
+                res = yield from generators.fetch(self._pgconn)
             if status != ExecStatus.TUPLES_OK:
                 raise e.ProgrammingError(
                     "the operation in stream() didn't produce a result"
@@ -317,7 +316,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
         query = self._convert_query(statement)
 
         self._execute_send(query, binary=False)
-        results = yield from execute(self._conn.pgconn)
+        results = yield from execute(self._pgconn)
         if len(results) != 1:
             raise e.ProgrammingError(
                 "COPY cannot be mixed with other operations"
@@ -347,7 +346,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
 
         self._query = query
         if query.params or no_pqexec or fmt == Format.BINARY:
-            self._conn.pgconn.send_query_params(
+            self._pgconn.send_query_params(
                 query.query,
                 query.params,
                 param_formats=query.formats,
@@ -357,7 +356,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
         else:
             # if we don't have to, let's use exec_ as it can run more than
             # one query in one go
-            self._conn.pgconn.send_query(query.query)
+            self._pgconn.send_query(query.query)
 
     def _convert_query(
         self, query: Query, params: Optional[Params] = None
@@ -426,9 +425,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
             )
 
     def _send_prepare(self, name: bytes, query: PostgresQuery) -> None:
-        self._conn.pgconn.send_prepare(
-            name, query.query, param_types=query.types
-        )
+        self._pgconn.send_prepare(name, query.query, param_types=query.types)
 
     def _send_query_prepared(
         self, name: bytes, pgq: PostgresQuery, *, binary: Optional[bool] = None
@@ -438,11 +435,8 @@ class BaseCursor(Generic[ConnectionType, Row]):
         else:
             fmt = Format.BINARY if binary else Format.TEXT
 
-        self._conn.pgconn.send_query_prepared(
-            name,
-            pgq.params,
-            param_formats=pgq.formats,
-            result_format=fmt,
+        self._pgconn.send_query_prepared(
+            name, pgq.params, param_formats=pgq.formats, result_format=fmt
         )
 
     def _check_result(self) -> None:
