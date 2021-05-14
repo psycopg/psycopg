@@ -15,7 +15,7 @@ from ..oids import postgres_types as builtins
 from ..adapt import Buffer, Dumper, Loader, Format as Pg3Format
 from ..proto import AdaptContext
 from ..errors import InterfaceError, DataError
-from ..utils.compat import ZoneInfo
+from .._tz import get_tzinfo
 
 _PackInt = Callable[[int], bytes]
 _UnpackInt = Callable[[bytes], Tuple[int]]
@@ -520,8 +520,8 @@ class TimestampTzLoader(TimestampLoader):
 
     def __init__(self, oid: int, context: Optional[AdaptContext] = None):
         super().__init__(oid, context)
-        self._timezone = (
-            self.connection.timezone if self.connection else ZoneInfo("UTC")
+        self._timezone = get_tzinfo(
+            self.connection.pgconn if self.connection else None
         )
 
     def _format_from_context(self) -> str:
@@ -607,8 +607,8 @@ class TimestampTzBinaryLoader(Loader):
 
     def __init__(self, oid: int, context: Optional[AdaptContext] = None):
         super().__init__(oid, context)
-        self._timezone = (
-            self.connection.timezone if self.connection else ZoneInfo("UTC")
+        self._timezone = get_tzinfo(
+            self.connection.pgconn if self.connection else None
         )
 
     def load(self, data: Buffer) -> datetime:
