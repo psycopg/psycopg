@@ -296,8 +296,8 @@ class DateLoader(Loader):
         except ValueError as e:
             s = bytes(data).decode("utf8", "replace")
             if len(s) != 10:
-                raise DataError(f"date not supported: {s!r}")
-            raise DataError(f"can't manage date {s!r}: {e}")
+                raise DataError(f"date not supported: {s!r}") from None
+            raise DataError(f"can't manage date {s!r}: {e}") from None
 
 
 class DateBinaryLoader(Loader):
@@ -310,9 +310,9 @@ class DateBinaryLoader(Loader):
             return date.fromordinal(days)
         except ValueError:
             if days < _py_date_min_days:
-                raise DataError("date too small (before year 1)")
+                raise DataError("date too small (before year 1)") from None
             else:
-                raise DataError("date too large (after year 10K)")
+                raise DataError("date too large (after year 10K)") from None
 
 
 class TimeLoader(Loader):
@@ -342,7 +342,7 @@ class TimeLoader(Loader):
             return time(int(ho), int(mi), int(se), ims)
         except ValueError as e:
             s = bytes(data).decode("utf8", "replace")
-            raise DataError(f"can't manage time {s!r}: {e}")
+            raise DataError(f"can't manage time {s!r}: {e}") from None
 
 
 class TimeBinaryLoader(Loader):
@@ -357,7 +357,9 @@ class TimeBinaryLoader(Loader):
         try:
             return time(h, m, s, ms)
         except ValueError:
-            raise DataError(f"time not supported by Python: hour={h}")
+            raise DataError(
+                f"time not supported by Python: hour={h}"
+            ) from None
 
 
 class TimeTzLoader(Loader):
@@ -403,7 +405,7 @@ class TimeTzLoader(Loader):
             return time(int(ho), int(mi), int(se), ims, tz)
         except ValueError as e:
             s = bytes(data).decode("utf8", "replace")
-            raise DataError(f"can't manage timetz {s!r}: {e}")
+            raise DataError(f"can't manage timetz {s!r}: {e}") from None
 
 
 class TimeTzBinaryLoader(Loader):
@@ -420,7 +422,9 @@ class TimeTzBinaryLoader(Loader):
         try:
             return time(h, m, s, ms, self._tz_from_sec(off))
         except ValueError:
-            raise DataError(f"time not supported by Python: hour={h}")
+            raise DataError(
+                f"time not supported by Python: hour={h}"
+            ) from None
 
     def _tz_from_sec(self, sec: int) -> timezone:
         return timezone(timedelta(seconds=-sec))
@@ -516,7 +520,7 @@ class TimestampLoader(Loader):
                 imo = _month_abbr[mo]
             except KeyError:
                 s = mo.decode("utf8", "replace")
-                raise DataError(f"unexpected month: {s!r}")
+                raise DataError(f"unexpected month: {s!r}") from None
 
         # Pad the fraction of second to get millis
         if ms:
@@ -533,7 +537,7 @@ class TimestampLoader(Loader):
             )
         except ValueError as e:
             s = bytes(data).decode("utf8", "replace")
-            raise DataError(f"can't manage timestamp {s!r}: {e}")
+            raise DataError(f"can't manage timestamp {s!r}: {e}") from None
 
 
 class TimestampBinaryLoader(Loader):
@@ -546,9 +550,13 @@ class TimestampBinaryLoader(Loader):
             return _pg_datetime_epoch + timedelta(microseconds=micros)
         except OverflowError:
             if micros <= 0:
-                raise DataError("timestamp too small (before year 1)")
+                raise DataError(
+                    "timestamp too small (before year 1)"
+                ) from None
             else:
-                raise DataError("timestamp too large (after year 10K)")
+                raise DataError(
+                    "timestamp too large (after year 10K)"
+                ) from None
 
 
 class TimestampTzLoader(Loader):
@@ -610,7 +618,7 @@ class TimestampTzLoader(Loader):
             return (dt - tzoff).astimezone(self._timezone)
         except ValueError as e:
             s = bytes(data).decode("utf8", "replace")
-            raise DataError(f"can't manage timestamp {s!r}: {e}")
+            raise DataError(f"can't manage timestamp {s!r}: {e}") from None
 
     def _load_notimpl(self, data: Buffer) -> datetime:
         s = bytes(data).decode("utf8", "replace")
@@ -637,9 +645,13 @@ class TimestampTzBinaryLoader(Loader):
             return ts.astimezone(self._timezone)
         except OverflowError:
             if micros <= 0:
-                raise DataError("timestamp too small (before year 1)")
+                raise DataError(
+                    "timestamp too small (before year 1)"
+                ) from None
             else:
-                raise DataError("timestamp too large (after year 10K)")
+                raise DataError(
+                    "timestamp too large (after year 10K)"
+                ) from None
 
 
 class IntervalLoader(Loader):
@@ -690,7 +702,7 @@ class IntervalLoader(Loader):
             return timedelta(days=days, seconds=seconds)
         except OverflowError as e:
             s = bytes(data).decode("utf8", "replace")
-            raise DataError(f"can't manage interval {s!r}: {e}")
+            raise DataError(f"can't manage interval {s!r}: {e}") from None
 
     def _load_notimpl(self, data: Buffer) -> timedelta:
         s = bytes(data).decode("utf8", "replace")
