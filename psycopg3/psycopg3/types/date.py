@@ -273,19 +273,19 @@ class _DTTextLoader(Loader):
 
 class DateLoader(_DTTextLoader):
 
-    _re_format = re.compile(rb"^(\d+)[^\d](\d+)[^\d](\d+)( BC)?")
+    _re_format = re.compile(rb"^(\d+)[^\d](\d+)[^\d](\d+)$")
 
     def load(self, data: Buffer) -> date:
         m = self._re_format.match(data)
         if not m:
             s = bytes(data).decode("utf8", "replace")
+            if s.endswith("BC"):
+                raise DataError(f"BC dates not supported, got {s!r}")
             raise DataError(f"can't parse date {s!r}")
 
         t = m.groups()
         ye, mo, da = (t[i] for i in self._order)
         try:
-            if t[3]:
-                raise ValueError("BC dates not supported")
             return date(int(ye), int(mo), int(da))
         except ValueError as e:
             s = bytes(data).decode("utf8", "replace")
@@ -297,9 +297,7 @@ class DateLoader(_DTTextLoader):
             return (0, 1, 2)
         elif ds.startswith(b"G"):  # German
             return (2, 1, 0)
-        elif ds.startswith(b"S"):  # SQL
-            return (2, 1, 0) if ds.endswith(b"DMY") else (2, 0, 1)
-        elif ds.startswith(b"P"):  # Postgres
+        elif ds.startswith(b"S") or ds.startswith(b"P"):  # SQL or Postgres
             return (2, 1, 0) if ds.endswith(b"DMY") else (2, 0, 1)
         else:
             raise InterfaceError(f"unexpected DateStyle: {ds.decode('ascii')}")
@@ -334,13 +332,17 @@ class TimeLoader(Loader):
 
         ho, mi, se, ms = m.groups()
 
-        if ms is None:
-            ms = b"0"
-        elif len(ms) < 6:
-            ms += b"0" * (6 - len(ms))
+        # Pad the fraction of second to get millis
+        if ms:
+            if len(ms) == 6:
+                ims = int(ms)
+            else:
+                ims = int(ms + _ms_trail[len(ms)])
+        else:
+            ims = 0
 
         try:
-            return time(int(ho), int(mi), int(se), int(ms))
+            return time(int(ho), int(mi), int(se), ims)
         except ValueError as e:
             s = bytes(data).decode("utf8", "replace")
             raise DataError(f"can't manage time {s!r}: {e}")
@@ -448,7 +450,6 @@ class TimestampLoader(_DTTextLoader):
         (\d+)
         (?: \.(\d+) )?                  # micros
         (?: [^a-z0-9] (\d+) )?          # year in PG format
-        ( \s* BC)?                      # BC
         $
         """
     )
@@ -457,28 +458,32 @@ class TimestampLoader(_DTTextLoader):
         m = self._re_format.match(data)
         if not m:
             s = bytes(data).decode("utf8", "replace")
+            if s.endswith("BC"):
+                raise DataError(f"BC timestamps not supported, got {s!r}")
             raise DataError(f"can't parse timestamp {s!r}")
 
         t = m.groups()
         ye, mo, da, ho, mi, se, ms = (t[i] for i in self._order)
 
-        if ms is None:
-            ms = b"0"
-        elif len(ms) < 6:
-            ms += b"0" * (6 - len(ms))
+        # Pad the fraction of second to get millis
+        if ms:
+            if len(ms) == 6:
+                ims = int(ms)
+            else:
+                ims = int(ms + _ms_trail[len(ms)])
+        else:
+            ims = 0
+
+        if not b"0" <= mo[0:1] <= b"9":
+            try:
+                mo = _month_abbr[mo]
+            except KeyError:
+                s = mo.decode("utf8", "replace")
+                raise DataError(f"unexpected month: {s!r}")
 
         try:
-            if not b"0" <= mo[0:1] <= b"9":
-                try:
-                    mo = _month_abbr[mo]
-                except KeyError:
-                    s = mo.decode("utf8", "replace")
-                    raise DataError(f"unexpected month: {s!r}")
-
-            if t[8]:
-                raise ValueError("BC dates not supported")
             return datetime(
-                int(ye), int(mo), int(da), int(ho), int(mi), int(se), int(ms)
+                int(ye), int(mo), int(da), int(ho), int(mi), int(se), ims
             )
         except ValueError as e:
             s = bytes(data).decode("utf8", "replace")
@@ -728,3 +733,6 @@ _month_abbr = {
         b"Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split(), 1
     )
 }
+
+# Pad to get milliseconds from a fraction of seconds
+_ms_trail = [b"000000", b"00000", b"0000", b"000", b"00", b"0"]
