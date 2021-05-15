@@ -363,45 +363,50 @@ class TimeBinaryLoader(Loader):
             raise DataError(f"time not supported by Python: hour={h}")
 
 
-class TimeTzLoader(TimeLoader):
+class TimeTzLoader(Loader):
 
     format = Format.TEXT
-    _format = "%H:%M:%S.%f%z"
-    _format_no_micro = _format.replace(".%f", "")
+    _py37 = sys.version_info >= (3, 7)
 
-    def _load(self, data: Buffer) -> time:
-        if isinstance(data, memoryview):
-            data = bytes(data)
+    _re_format = re.compile(
+        rb"""(?ix)
+        ^
+        (\d+) : (\d+) : (\d+) (?: \. (\d+) )?       # Time and micros
+        (-|\+) (\d+) (?: : (\d+) )? (?: : (\d+) )?  # Timezone
+        $
+        """
+    )
 
-        # Hack to convert +HH in +HHMM
-        if data[-3] in (43, 45):
-            data += b"00"
+    def load(self, data: Buffer) -> time:
+        m = self._re_format.match(data)
+        if not m:
+            s = bytes(data).decode("utf8", "replace")
+            raise DataError(f"can't parse timetz {s!r}")
 
-        fmt = self._format if b"." in data else self._format_no_micro
+        ho, mi, se, ms, sgn, oh, om, os = m.groups()
+
+        # Pad the fraction of second to get millis
+        if ms:
+            if len(ms) == 6:
+                ims = int(ms)
+            else:
+                ims = int(ms + _ms_trail[len(ms)])
+        else:
+            ims = 0
+
+        # Calculate timezone
+        off = 60 * 60 * int(oh)
+        if om:
+            off += 60 * int(om)
+        if os and self._py37:
+            off += int(os)
+        tz = timezone(timedelta(0, off if sgn == b"+" else -off))
+
         try:
-            dt = datetime.strptime(data.decode("utf8"), fmt)
+            return time(int(ho), int(mi), int(se), ims, tz)
         except ValueError as e:
-            return self._raise_error(data, e)
-
-        return dt.time().replace(tzinfo=dt.tzinfo)
-
-    def _load_py36(self, data: Buffer) -> time:
-        if isinstance(data, memoryview):
-            data = bytes(data)
-        # Drop seconds from timezone for Python 3.6
-        # Also, Python 3.6 doesn't support HHMM, only HH:MM
-        if data[-6] in (43, 45):  # +-HH:MM -> +-HHMM
-            data = data[:-3] + data[-2:]
-        elif data[-9] in (43, 45):  # +-HH:MM:SS -> +-HHMM
-            data = data[:-6] + data[-5:-3]
-
-        return self._load(data)
-
-
-if sys.version_info >= (3, 7):
-    setattr(TimeTzLoader, "load", TimeTzLoader._load)
-else:
-    setattr(TimeTzLoader, "load", TimeTzLoader._load_py36)
+            s = bytes(data).decode("utf8", "replace")
+            raise DataError(f"can't manage timetz {s!r}: {e}")
 
 
 class TimeTzBinaryLoader(Loader):
