@@ -258,7 +258,6 @@ class TimeDeltaBinaryDumper(Dumper):
 class DateLoader(Loader):
 
     format = Format.TEXT
-    _re_format = re.compile(rb"^(\d+)[^\d](\d+)[^\d](\d+)$")
 
     _ORDER_YMD = 0
     _ORDER_DMY = 1
@@ -279,23 +278,25 @@ class DateLoader(Loader):
             raise InterfaceError(f"unexpected DateStyle: {ds.decode('ascii')}")
 
     def load(self, data: Buffer) -> date:
-        m = self._re_format.match(data)
-        if not m:
-            s = bytes(data).decode("utf8", "replace")
-            if s.endswith("BC"):
-                raise DataError(f"BC dates not supported, got {s!r}")
-            raise DataError(f"can't parse date {s!r}")
-
         if self._order == self._ORDER_YMD:
-            ye, mo, da = m.groups()
+            ye = data[:4]
+            mo = data[5:7]
+            da = data[8:]
         elif self._order == self._ORDER_DMY:
-            da, mo, ye = m.groups()
+            da = data[:2]
+            mo = data[3:5]
+            ye = data[6:]
         else:
-            mo, da, ye = m.groups()
+            mo = data[:2]
+            da = data[3:5]
+            ye = data[6:]
+
         try:
             return date(int(ye), int(mo), int(da))
         except ValueError as e:
             s = bytes(data).decode("utf8", "replace")
+            if len(s) != 10:
+                raise DataError(f"date not supported: {s!r}")
             raise DataError(f"can't manage date {s!r}: {e}")
 
 
