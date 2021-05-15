@@ -323,28 +323,27 @@ class DateBinaryLoader(Loader):
 class TimeLoader(Loader):
 
     format = Format.TEXT
-    _format = "%H:%M:%S.%f"
-    _format_no_micro = _format.replace(".%f", "")
+
+    _re_format = re.compile(rb"^(\d+):(\d+):(\d+)(?:\.(\d+))?")
 
     def load(self, data: Buffer) -> time:
-        # check if the data contains microseconds
-        if isinstance(data, memoryview):
-            data = bytes(data)
-        fmt = self._format if b"." in data else self._format_no_micro
+        m = self._re_format.match(data)
+        if not m:
+            s = bytes(data).decode("utf8", "replace")
+            raise DataError(f"can't parse time {s!r}")
+
+        ho, mi, se, ms = m.groups()
+
+        if ms is None:
+            ms = b"0"
+        elif len(ms) < 6:
+            ms += b"0" * (6 - len(ms))
+
         try:
-            return datetime.strptime(data.decode("utf8"), fmt).time()
+            return time(int(ho), int(mi), int(se), int(ms))
         except ValueError as e:
-            return self._raise_error(data, e)
-
-    def _raise_error(self, data: bytes, exc: ValueError) -> time:
-        # Most likely, time 24:00
-        if data.startswith(b"24"):
-            raise DataError(
-                f"time not supported by Python: {data.decode('ascii')}"
-            )
-
-        # We genuinely received something we cannot parse
-        raise exc
+            s = bytes(data).decode("utf8", "replace")
+            raise DataError(f"can't manage time {s!r}: {e}")
 
 
 class TimeBinaryLoader(Loader):
