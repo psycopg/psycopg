@@ -184,6 +184,14 @@ class TestDatetime:
         with pytest.raises(DataError):
             cur.fetchone()[0]
 
+    def test_load_all_month_names(self, conn):
+        cur = conn.cursor(binary=False)
+        cur.execute("set datestyle = 'Postgres'")
+        for i in range(12):
+            d = dt.datetime(2000, i + 1, 15)
+            cur.execute("select %s", [d])
+            assert cur.fetchone()[0] == d
+
 
 class TestDateTimeTz:
     @pytest.mark.parametrize(
