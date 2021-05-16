@@ -16,21 +16,18 @@ cdef class BoolDumper(CDumper):
         self.oid = oids.BOOL_OID
 
     cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
-        CDumper.ensure_size(rv, offset, 1)
+        cdef char *buf = CDumper.ensure_size(rv, offset, 1)
 
         # Fast paths, just a pointer comparison
-        cdef char val
         if obj is True:
-            val = b"t"
+            buf[0] = b"t"
         elif obj is False:
-            val = b"f"
+            buf[0] = b"f"
         elif obj:
-            val = b"t"
+            buf[0] = b"t"
         else:
-            val = b"f"
+            buf[0] = b"f"
 
-        cdef char *buf = PyByteArray_AS_STRING(rv)
-        buf[offset] = val
         return 1
 
     def quote(self, obj: bool) -> bytes:
@@ -51,21 +48,18 @@ cdef class BoolBinaryDumper(CDumper):
         self.oid = oids.BOOL_OID
 
     cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
-        CDumper.ensure_size(rv, offset, 1)
+        cdef char *buf = CDumper.ensure_size(rv, offset, 1)
 
         # Fast paths, just a pointer comparison
-        cdef char val
         if obj is True:
-            val = b"\x01"
+            buf[0] = b"\x01"
         elif obj is False:
-            val = b"\x00"
+            buf[0] = b"\x00"
         elif obj:
-            val = b"\x01"
+            buf[0] = b"\x01"
         else:
-            val = b"\x00"
+            buf[0] = b"\x00"
 
-        cdef char *buf = PyByteArray_AS_STRING(rv)
-        buf[offset] = val
         return 1
 
 
