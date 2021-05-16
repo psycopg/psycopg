@@ -31,7 +31,6 @@ cdef extern from "Python.h":
     char *PyOS_double_to_string(
         double val, char format_code, int precision, int flags, int *ptype
     ) except NULL
-    int PyOS_snprintf(char *str, size_t size, const char *format, ...)
     int Py_DTSF_ADD_DOT_0
     long long PyLong_AsLongLongAndOverflow(object pylong, int *overflow) except? -1
 
