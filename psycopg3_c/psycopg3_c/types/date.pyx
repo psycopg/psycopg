@@ -5,7 +5,15 @@ Cython adapters for date/time types.
 # Copyright (C) 2021 The Psycopg Team
 
 
+from cpython.object cimport PyObject, PyObject_CallFunctionObjArgs
 from cpython.datetime cimport import_datetime, date_new
+
+cdef extern from "Python.h":
+    const char *PyUnicode_AsUTF8AndSize(unicode obj, Py_ssize_t *size) except NULL
+
+from psycopg3_c._psycopg3 cimport endian
+
+import datetime as dt
 
 from psycopg3 import errors as e
 
@@ -16,6 +24,51 @@ import_datetime()
 DEF ORDER_YMD = 0
 DEF ORDER_DMY = 1
 DEF ORDER_MDY = 2
+
+DEF PG_DATE_EPOCH_DAYS = 730120  # date(2000, 1, 1).toordinal()
+DEF PY_DATE_MIN_DAYS = 1  # date.min.toordinal()
+
+cdef object date_toordinal = dt.date.toordinal
+cdef object date_fromordinal = dt.date.fromordinal
+
+@cython.final
+cdef class DateDumper(CDumper):
+
+    format = PQ_TEXT
+
+    def __cinit__(self):
+        self.oid = oids.DATE_OID
+
+    cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
+        cdef Py_ssize_t size;
+        cdef const char *src
+
+        # NOTE: whatever the PostgreSQL DateStyle input format (DMY, MDY, YMD)
+        # the YYYY-MM-DD is always understood correctly.
+        cdef str s = str(obj)
+        src = PyUnicode_AsUTF8AndSize(s, &size)
+
+        cdef char *buf = CDumper.ensure_size(rv, offset, size)
+        memcpy(buf, src, size)
+        return size
+
+
+@cython.final
+cdef class DateBinaryDumper(CDumper):
+
+    format = PQ_BINARY
+
+    def __cinit__(self):
+        self.oid = oids.DATE_OID
+
+    cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
+        cdef int32_t days = PyObject_CallFunctionObjArgs(
+            date_toordinal, <PyObject *>obj, NULL)
+        days -= PG_DATE_EPOCH_DAYS
+        cdef int32_t *buf = <int32_t *>CDumper.ensure_size(
+            rv, offset, sizeof(int32_t))
+        buf[0] = endian.htobe32(days)
+        return sizeof(int32_t)
 
 
 @cython.final
@@ -68,6 +121,24 @@ cdef class DateLoader(CLoader):
         except ValueError as ex:
             s = bytes(data).decode("utf8", "replace")
             raise e.DataError(f"can't manage date {s!r}: {ex}") from None
+
+
+@cython.final
+cdef class DateBinaryLoader(CLoader):
+
+    format = PQ_BINARY
+
+    cdef object cload(self, const char *data, size_t length):
+        cdef int days = endian.be32toh((<uint32_t *>data)[0])
+        cdef object pydays = days + PG_DATE_EPOCH_DAYS
+        try:
+            return PyObject_CallFunctionObjArgs(
+                date_fromordinal, <PyObject *>pydays, NULL)
+        except ValueError:
+            if days < PY_DATE_MIN_DAYS:
+                raise e.DataError("date too small (before year 1)") from None
+            else:
+                raise e.DataError("date too large (after year 10K)") from None
 
 
 cdef const char *_get_datestyle(pq.PGconn pgconn):
