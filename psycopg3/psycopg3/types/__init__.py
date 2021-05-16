@@ -96,12 +96,12 @@ from .date import (
     DateBinaryLoader as DateBinaryLoader,
     TimeLoader as TimeLoader,
     TimeBinaryLoader as TimeBinaryLoader,
-    TimeTzLoader as TimeTzLoader,
-    TimeTzBinaryLoader as TimeTzBinaryLoader,
+    TimetzLoader as TimetzLoader,
+    TimetzBinaryLoader as TimetzBinaryLoader,
     TimestampLoader as TimestampLoader,
     TimestampBinaryLoader as TimestampBinaryLoader,
-    TimestampTzLoader as TimestampTzLoader,
-    TimestampTzBinaryLoader as TimestampTzBinaryLoader,
+    TimestamptzLoader as TimestamptzLoader,
+    TimestamptzBinaryLoader as TimestamptzBinaryLoader,
     IntervalLoader as IntervalLoader,
     IntervalBinaryLoader as IntervalBinaryLoader,
 )
@@ -227,12 +227,12 @@ def register_default_globals(ctx: AdaptContext) -> None:
     DateBinaryLoader.register("date", ctx)
     TimeLoader.register("time", ctx)
     TimeBinaryLoader.register("time", ctx)
-    TimeTzLoader.register("timetz", ctx)
-    TimeTzBinaryLoader.register("timetz", ctx)
+    TimetzLoader.register("timetz", ctx)
+    TimetzBinaryLoader.register("timetz", ctx)
     TimestampLoader.register("timestamp", ctx)
     TimestampBinaryLoader.register("timestamp", ctx)
-    TimestampTzLoader.register("timestamptz", ctx)
-    TimestampTzBinaryLoader.register("timestamptz", ctx)
+    TimestamptzLoader.register("timestamptz", ctx)
+    TimestamptzBinaryLoader.register("timestamptz", ctx)
     IntervalLoader.register("interval", ctx)
     IntervalBinaryLoader.register("interval", ctx)
 

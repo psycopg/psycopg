@@ -348,7 +348,7 @@ class TimeBinaryLoader(Loader):
             ) from None
 
 
-class TimeTzLoader(Loader):
+class TimetzLoader(Loader):
 
     format = Format.TEXT
     _py37 = sys.version_info >= (3, 7)
@@ -394,7 +394,7 @@ class TimeTzLoader(Loader):
             raise DataError(f"can't manage timetz {s!r}: {e}") from None
 
 
-class TimeTzBinaryLoader(Loader):
+class TimetzBinaryLoader(Loader):
 
     format = Format.BINARY
 
@@ -423,7 +423,7 @@ class TimeTzBinaryLoader(Loader):
 
 if sys.version_info < (3, 7):
     setattr(
-        TimeTzBinaryLoader, "_tz_from_sec", TimeTzBinaryLoader._tz_from_sec_36
+        TimetzBinaryLoader, "_tz_from_sec", TimetzBinaryLoader._tz_from_sec_36
     )
 
 
@@ -545,7 +545,7 @@ class TimestampBinaryLoader(Loader):
                 ) from None
 
 
-class TimestampTzLoader(Loader):
+class TimestamptzLoader(Loader):
 
     format = Format.TEXT
     _re_format = re.compile(
@@ -614,7 +614,7 @@ class TimestampTzLoader(Loader):
         )
 
 
-class TimestampTzBinaryLoader(Loader):
+class TimestamptzBinaryLoader(Loader):
 
     format = Format.BINARY
 
