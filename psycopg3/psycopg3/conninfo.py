@@ -7,10 +7,12 @@ Functions to manipulate conninfo strings
 import re
 from typing import Any, Dict, List, Optional
 from pathlib import Path
+from datetime import tzinfo
 
 from . import pq
 from . import errors as e
 from . import encodings
+from ._tz import get_tzinfo
 
 
 def make_conninfo(conninfo: str = "", **kwargs: Any) -> str:
@@ -223,6 +225,11 @@ class ConnectionInfo:
         See :pq:`PQerrorMessage`.
         """
         return self._get_pgconn_attr("error_message")
+
+    @property
+    def timezone(self) -> tzinfo:
+        """The Python timezone info of the connection's timezone."""
+        return get_tzinfo(self.pgconn)
 
     def _get_pgconn_attr(self, name: str) -> str:
         value: bytes = getattr(self.pgconn, name)

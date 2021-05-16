@@ -275,6 +275,7 @@ Connection support objects
     .. autoattribute:: error_message
 
     .. automethod:: get_parameters
+    .. autoattribute:: timezone
     .. autoattribute:: host
 
         This can be a host name, an IP address, or a directory path if the

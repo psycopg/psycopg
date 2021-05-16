@@ -49,9 +49,14 @@ else:
 
     Task = asyncio.Future
 
+if sys.version_info >= (3, 9):
+    from zoneinfo import ZoneInfo
+else:
+    from backports.zoneinfo import ZoneInfo
 
 __all__ = [
     "Protocol",
+    "ZoneInfo",
     "asynccontextmanager",
     "create_task",
     "get_running_loop",

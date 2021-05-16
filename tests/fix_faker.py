@@ -1,3 +1,4 @@
+import datetime as dt
 import importlib
 from math import isnan
 from uuid import UUID
@@ -133,6 +134,13 @@ class Faker:
                 schema[i] = [scls]
             elif cls is tuple:
                 schema[i] = tuple(self.choose_schema(types=types, ncols=ncols))
+            # Pick timezone yes/no
+            elif cls is dt.time:
+                if choice([True, False]):
+                    schema[i] = TimeTz
+            elif cls is dt.datetime:
+                if choice([True, False]):
+                    schema[i] = DateTimeTz
 
         return schema
 
@@ -225,6 +233,19 @@ class Faker:
     def make_bytes(self, spec):
         length = randrange(self.str_max_length)
         return spec(bytes([randrange(256) for i in range(length)]))
+
+    def make_date(self, spec):
+        day = randrange(dt.date.max.toordinal())
+        return dt.date.fromordinal(day + 1)
+
+    def make_datetime(self, spec):
+        delta = dt.datetime.max - dt.datetime.min
+        micros = randrange((delta.days + 1) * 24 * 60 * 60 * 1_000_000)
+        return dt.datetime.min + dt.timedelta(microseconds=micros)
+
+    def make_DateTimeTz(self, spec):
+        rv = self.make_datetime(spec)
+        return rv.replace(tzinfo=self._make_tz(spec))
 
     def make_Decimal(self, spec):
         if random() >= 0.99:
@@ -337,6 +358,20 @@ class Faker:
 
         return "".join(map(chr, rv))
 
+    def make_time(self, spec):
+        val = randrange(24 * 60 * 60 * 1_000_000)
+        val, ms = divmod(val, 1_000_000)
+        val, s = divmod(val, 60)
+        h, m = divmod(val, 60)
+        return dt.time(h, m, s, ms)
+
+    def make_timedelta(self, spec):
+        return choice([dt.timedelta.min, dt.timedelta.max]) * random()
+
+    def make_TimeTz(self, spec):
+        rv = self.make_time(spec)
+        return rv.replace(tzinfo=self._make_tz(spec))
+
     def make_UUID(self, spec):
         return UUID(bytes=bytes([randrange(256) for i in range(16)]))
 
@@ -364,9 +399,25 @@ class Faker:
             cls = choice(scal_types)
             return self.make(cls)
 
+    def _make_tz(self, spec):
+        minutes = randrange(-12 * 60, 12 * 60 + 1)
+        return dt.timezone(dt.timedelta(minutes=minutes))
+
 
 class JsonFloat:
     pass
+
+
+class TimeTz:
+    """
+    Placeholder to create time objects with tzinfo.
+    """
+
+
+class DateTimeTz:
+    """
+    Placeholder to create datetime objects with tzinfo.
+    """
 
 
 def deep_import(name):
