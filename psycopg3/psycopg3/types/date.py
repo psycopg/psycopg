@@ -178,21 +178,11 @@ class DateTimeTzBinaryDumper(_BaseDateTimeDumper):
 
     format = Format.BINARY
 
-    # Somewhere, between year 2270 and 2275, float rounding in total_seconds
-    # cause us errors: switch to an algorithm without rounding before then.
-    _delta_prec_loss = (
-        datetime(2250, 1, 1) - _pg_datetime_epoch
-    ).total_seconds()
-
     def dump(self, obj: datetime) -> bytes:
         delta = obj - _pg_datetimetz_epoch
-        secs = delta.total_seconds()
-        if -self._delta_prec_loss < secs < self._delta_prec_loss:
-            micros = int(1_000_000 * secs)
-        else:
-            micros = delta.microseconds + 1_000_000 * (
-                86_400 * delta.days + delta.seconds
-            )
+        micros = delta.microseconds + 1_000_000 * (
+            86_400 * delta.days + delta.seconds
+        )
         return _pack_int8(micros)
 
     def upgrade(self, obj: datetime, format: Pg3Format) -> "Dumper":
@@ -207,14 +197,10 @@ class DateTimeBinaryDumper(DateTimeTzBinaryDumper):
 
     def dump(self, obj: datetime) -> bytes:
         delta = obj - _pg_datetime_epoch
-        secs = delta.total_seconds()
-        if -self._delta_prec_loss < secs < self._delta_prec_loss:
-            micros = int(1_000_000 * secs)
-        else:
-            micros = (
-                1_000_000 * (86_400 * delta.days + delta.seconds)
-                + delta.microseconds
-            )
+        micros = (
+            1_000_000 * (86_400 * delta.days + delta.seconds)
+            + delta.microseconds
+        )
         return _pack_int8(micros)
 
 

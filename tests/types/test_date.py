@@ -103,6 +103,7 @@ class TestDatetime:
             ("2000,1,2,3,4,5,678", "2000-01-02 03:04:05.000678"),
             ("2000,1,2,3,0,0,456789", "2000-01-02 03:00:00.456789"),
             ("2000,1,1,0,0,0,1", "2000-01-01 00:00:00.000001"),
+            ("2034,02,03,23,34,27,951357", "2034-02-03 23:34:27.951357"),
             ("2200,1,1,0,0,0,1", "2200-01-01 00:00:00.000001"),
             ("2300,1,1,0,0,0,1", "2300-01-01 00:00:00.000001"),
             ("7000,1,1,0,0,0,1", "7000-01-01 00:00:00.000001"),
@@ -117,7 +118,15 @@ class TestDatetime:
         cur.execute("set timezone to '+02:00'")
         cur.execute(f"select %{fmt_in}", (as_dt(val),))
         cur.execute(f"select '{expr}'::timestamp = %{fmt_in}", (as_dt(val),))
-        assert cur.fetchone()[0] is True
+        cur.execute(
+            f"""
+            select '{expr}'::timestamp = %(val){fmt_in},
+            '{expr}', %(val){fmt_in}::text
+            """,
+            {"val": as_dt(val)},
+        )
+        ok, want, got = cur.fetchone()
+        assert ok, (want, got)
 
     @pytest.mark.parametrize("datestyle_in", ["DMY", "MDY", "YMD"])
     def test_dump_datetime_datestyle(self, conn, datestyle_in):
@@ -210,6 +219,10 @@ class TestDateTimeTz:
             ("2000,1,1,0,0~01:02:03", "2000-01-01 00:00+01:02:03"),
             ("2000,1,1,0,0~-01:02:03", "2000-01-01 00:00-01:02:03"),
             ("2000,12,31,23,59,59,999999~2", "2000-12-31 23:59:59.999999+2"),
+            (
+                "2034,02,03,23,34,27,951357~-4:27",
+                "2034-02-03 23:34:27.951357-04:27",
+            ),
             ("2300,1,1,0,0,0,1~1", "2300-01-01 00:00:00.000001+1"),
             ("3000,1,1,0,0~2", "3000-01-01 00:00+2"),
             ("7000,1,1,0,0,0,1~-1:2:3", "7000-01-01 00:00:00.000001-01:02:03"),
@@ -222,8 +235,15 @@ class TestDateTimeTz:
     def test_dump_datetimetz(self, conn, val, expr, fmt_in):
         cur = conn.cursor()
         cur.execute("set timezone to '-02:00'")
-        cur.execute(f"select '{expr}'::timestamptz = %{fmt_in}", (as_dt(val),))
-        assert cur.fetchone()[0] is True
+        cur.execute(
+            f"""
+            select '{expr}'::timestamptz = %(val){fmt_in},
+            '{expr}', %(val){fmt_in}::text
+            """,
+            {"val": as_dt(val)},
+        )
+        ok, want, got = cur.fetchone()
+        assert ok, (want, got)
 
     @pytest.mark.parametrize("datestyle_in", ["DMY", "MDY", "YMD"])
     def test_dump_datetimetz_datestyle(self, conn, datestyle_in):
