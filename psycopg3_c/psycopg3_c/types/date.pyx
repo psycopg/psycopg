@@ -4,9 +4,8 @@ Cython adapters for date/time types.
 
 # Copyright (C) 2021 The Psycopg Team
 
-
+from cpython cimport datetime as cdt
 from cpython.object cimport PyObject, PyObject_CallFunctionObjArgs
-from cpython.datetime cimport import_datetime, date_new
 
 cdef extern from "Python.h":
     const char *PyUnicode_AsUTF8AndSize(unicode obj, Py_ssize_t *size) except NULL
@@ -19,7 +18,7 @@ from psycopg3 import errors as e
 
 
 # Initialise the datetime C API
-import_datetime()
+cdt.import_datetime()
 
 DEF ORDER_YMD = 0
 DEF ORDER_DMY = 1
@@ -30,6 +29,8 @@ DEF PY_DATE_MIN_DAYS = 1  # date.min.toordinal()
 
 cdef object date_toordinal = dt.date.toordinal
 cdef object date_fromordinal = dt.date.fromordinal
+cdef object time_utcoffset = dt.time.utcoffset
+cdef object timedelta_total_seconds = dt.timedelta.total_seconds
 
 @cython.final
 cdef class DateDumper(CDumper):
@@ -69,6 +70,108 @@ cdef class DateBinaryDumper(CDumper):
             rv, offset, sizeof(int32_t))
         buf[0] = endian.htobe32(days)
         return sizeof(int32_t)
+
+
+cdef class _BaseTimeDumper(CDumper):
+
+    cpdef get_key(self, obj, format):
+        # Use (cls,) to report the need to upgrade to a dumper for timetz (the
+        # Frankenstein of the data types).
+        if not obj.tzinfo:
+            return self.cls
+        else:
+            return (self.cls,)
+
+    cpdef upgrade(self, obj: time, format):
+        raise NotImplementedError
+
+
+cdef class _BaseTimeTextDumper(_BaseTimeDumper):
+
+    format = PQ_TEXT
+
+    cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
+        cdef Py_ssize_t size;
+        cdef const char *src
+
+        cdef str s = str(obj)
+        src = PyUnicode_AsUTF8AndSize(s, &size)
+
+        cdef char *buf = CDumper.ensure_size(rv, offset, size)
+        memcpy(buf, src, size)
+        return size
+
+
+@cython.final
+cdef class TimeDumper(_BaseTimeTextDumper):
+
+    def __cinit__(self):
+        self.oid = oids.TIME_OID
+
+    cpdef upgrade(self, obj, format):
+        if not obj.tzinfo:
+            return self
+        else:
+            return TimeTzDumper(self.cls)
+
+
+@cython.final
+cdef class TimeTzDumper(_BaseTimeTextDumper):
+
+    def __cinit__(self):
+        self.oid = oids.TIMETZ_OID
+
+
+@cython.final
+cdef class TimeBinaryDumper(_BaseTimeDumper):
+
+    format = PQ_BINARY
+
+    def __cinit__(self):
+        self.oid = oids.TIME_OID
+
+    cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
+        cdef int64_t micros = cdt.time_microsecond(obj) + 1000000 * (
+            cdt.time_second(obj)
+            + 60 * (cdt.time_minute(obj) + 60 * <int64_t>cdt.time_hour(obj))
+        )
+
+        cdef int64_t *buf = <int64_t *>CDumper.ensure_size(
+            rv, offset, sizeof(int64_t))
+        buf[0] = endian.htobe64(micros)
+        return sizeof(int64_t)
+
+    cpdef upgrade(self, obj, format):
+        if not obj.tzinfo:
+            return self
+        else:
+            return TimeTzBinaryDumper(self.cls)
+
+
+@cython.final
+cdef class TimeTzBinaryDumper(_BaseTimeDumper):
+
+    format = PQ_BINARY
+
+    def __cinit__(self):
+        self.oid = oids.TIMETZ_OID
+
+    cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
+        cdef int64_t micros = cdt.time_microsecond(obj) + 1000000 * (
+            cdt.time_second(obj)
+            + 60 * (cdt.time_minute(obj) + 60 * <int64_t>cdt.time_hour(obj))
+        )
+
+        off = PyObject_CallFunctionObjArgs(time_utcoffset, <PyObject *>obj, NULL)
+        cdef int32_t offsec = int(PyObject_CallFunctionObjArgs(
+            timedelta_total_seconds, <PyObject *>off, NULL))
+
+        cdef char *buf = CDumper.ensure_size(
+            rv, offset, sizeof(int64_t) + sizeof(int32_t))
+        (<int64_t *>buf)[0] = endian.htobe64(micros)
+        (<int32_t *>(buf + sizeof(int64_t)))[0] = endian.htobe32(-offsec)
+
+        return sizeof(int64_t) + sizeof(int32_t)
 
 
 @cython.final
@@ -113,11 +216,11 @@ cdef class DateLoader(CLoader):
 
         try:
             if self._order == ORDER_YMD:
-                return date_new(vals[0], vals[1], vals[2])
+                return cdt.date_new(vals[0], vals[1], vals[2])
             elif self._order == ORDER_DMY:
-                return date_new(vals[2], vals[1], vals[0])
+                return cdt.date_new(vals[2], vals[1], vals[0])
             else:
-                return date_new(vals[2], vals[0], vals[1])
+                return cdt.date_new(vals[2], vals[0], vals[1])
         except ValueError as ex:
             s = bytes(data).decode("utf8", "replace")
             raise e.DataError(f"can't parse date {s!r}: {ex}") from None
