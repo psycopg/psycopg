@@ -120,7 +120,7 @@ cdef class DateLoader(CLoader):
                 return date_new(vals[2], vals[0], vals[1])
         except ValueError as ex:
             s = bytes(data).decode("utf8", "replace")
-            raise e.DataError(f"can't manage date {s!r}: {ex}") from None
+            raise e.DataError(f"can't parse date {s!r}: {ex}") from None
 
 
 @cython.final

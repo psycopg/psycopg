@@ -283,7 +283,7 @@ class DateLoader(Loader):
             s = bytes(data).decode("utf8", "replace")
             if len(s) != 10:
                 raise DataError(f"date not supported: {s!r}") from None
-            raise DataError(f"can't manage date {s!r}: {e}") from None
+            raise DataError(f"can't parse date {s!r}: {e}") from None
 
 
 class DateBinaryLoader(Loader):
@@ -328,7 +328,7 @@ class TimeLoader(Loader):
             return time(int(ho), int(mi), int(se), ims)
         except ValueError as e:
             s = bytes(data).decode("utf8", "replace")
-            raise DataError(f"can't manage time {s!r}: {e}") from None
+            raise DataError(f"can't parse time {s!r}: {e}") from None
 
 
 class TimeBinaryLoader(Loader):
@@ -391,7 +391,7 @@ class TimetzLoader(Loader):
             return time(int(ho), int(mi), int(se), ims, tz)
         except ValueError as e:
             s = bytes(data).decode("utf8", "replace")
-            raise DataError(f"can't manage timetz {s!r}: {e}") from None
+            raise DataError(f"can't parse timetz {s!r}: {e}") from None
 
 
 class TimetzBinaryLoader(Loader):
@@ -506,7 +506,7 @@ class TimestampLoader(Loader):
                 imo = _month_abbr[mo]
             except KeyError:
                 s = mo.decode("utf8", "replace")
-                raise DataError(f"unexpected month: {s!r}") from None
+                raise DataError(f"can't parse month: {s!r}") from None
 
         # Pad the fraction of second to get millis
         if ms:
@@ -523,7 +523,7 @@ class TimestampLoader(Loader):
             )
         except ValueError as e:
             s = bytes(data).decode("utf8", "replace")
-            raise DataError(f"can't manage timestamp {s!r}: {e}") from None
+            raise DataError(f"can't parse timestamp {s!r}: {e}") from None
 
 
 class TimestampBinaryLoader(Loader):
@@ -604,13 +604,13 @@ class TimestamptzLoader(Loader):
             return (dt - tzoff).astimezone(self._timezone)
         except ValueError as e:
             s = bytes(data).decode("utf8", "replace")
-            raise DataError(f"can't manage timestamp {s!r}: {e}") from None
+            raise DataError(f"can't parse timestamptz {s!r}: {e}") from None
 
     def _load_notimpl(self, data: Buffer) -> datetime:
         s = bytes(data).decode("utf8", "replace")
         ds = _get_datestyle(self.connection).decode("ascii")
         raise NotImplementedError(
-            f"can't parse datetimetz with DateStyle {ds!r}: {s!r}"
+            f"can't parse timestamptz with DateStyle {ds!r}: {s!r}"
         )
 
 
@@ -688,7 +688,7 @@ class IntervalLoader(Loader):
             return timedelta(days=days, seconds=seconds)
         except OverflowError as e:
             s = bytes(data).decode("utf8", "replace")
-            raise DataError(f"can't manage interval {s!r}: {e}") from None
+            raise DataError(f"can't parse interval {s!r}: {e}") from None
 
     def _load_notimpl(self, data: Buffer) -> timedelta:
         s = bytes(data).decode("utf8", "replace")
