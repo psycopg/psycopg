@@ -215,3 +215,14 @@ async def test_diag_from_commit_async(aconn):
         await aconn.commit()
 
     assert exc.value.diag.sqlstate == "23503"
+
+
+def test_query_context(conn):
+    with pytest.raises(e.Error) as exc:
+        conn.execute("select * from wat")
+
+    s = str(exc.value)
+    assert "from wat" in s, s
+    assert exc.value.diag.message_primary in s
+    assert "ERROR" not in s
+    assert not s.endswith("\n")

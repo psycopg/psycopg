@@ -6,7 +6,7 @@ Various functionalities to make easier to work with the libpq.
 
 from typing import cast, NamedTuple, Optional, Union
 
-from ._enums import DiagnosticField, ConnStatus, TransactionStatus
+from ._enums import ConnStatus, TransactionStatus
 from .proto import PGconn, PGresult
 
 
@@ -51,14 +51,11 @@ def error_message(obj: Union[PGconn, PGresult], encoding: str = "utf8") -> str:
     if hasattr(obj, "error_field"):
         # obj is a PGresult
         obj = cast(PGresult, obj)
+        bmsg = obj.error_message
 
-        bmsg = obj.error_field(DiagnosticField.MESSAGE_PRIMARY) or b""
-        if not bmsg:
-            bmsg = obj.error_message
-
-            # strip severity and whitespaces
-            if bmsg:
-                bmsg = bmsg.splitlines()[0].split(b":", 1)[-1].strip()
+        # strip severity and whitespaces
+        if bmsg:
+            bmsg = bmsg.split(b":", 1)[-1].strip()
 
     elif hasattr(obj, "error_message"):
         from psycopg3.encodings import py_codecs
@@ -73,7 +70,7 @@ def error_message(obj: Union[PGconn, PGresult], encoding: str = "utf8") -> str:
 
         # strip severity and whitespaces
         if bmsg:
-            bmsg = bmsg.splitlines()[0].split(b":", 1)[-1].strip()
+            bmsg = bmsg.split(b":", 1)[-1].strip()
 
     else:
         raise TypeError(
