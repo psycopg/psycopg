@@ -407,6 +407,57 @@ cdef class DateBinaryLoader(CLoader):
                 raise e.DataError("date too large (after year 10K)") from None
 
 
+@cython.final
+cdef class TimeLoader(CLoader):
+
+    format = PQ_TEXT
+
+    cdef object cload(self, const char *data, size_t length):
+
+        # Parse the equivalent of the regexp:
+        # rb"^(\d+):(\d+):(\d+)(?:\.(\d+))?"
+
+        DEF HO = 0
+        DEF MI = 1
+        DEF SE = 2
+        DEF MS = 3
+        cdef int vals[4]
+        vals[HO] = vals[MI] = vals[SE] = vals[MS] = 0
+
+        # Parse the first 3 groups of digits
+        cdef size_t i
+        cdef int ival = 0
+        for i in range(length):
+            if b'0' <= data[i] <= b'9':
+                vals[ival] = vals[ival] * 10 + (data[i] - <char>b'0')
+            else:
+                ival += 1
+                if ival >= MS:
+                    break
+
+        # Parse the 4th group of digits. Count the digits parsed
+        cdef int msdigits = 0
+        for i in range(i + 1, length):
+            if b'0' <= data[i] <= b'9':
+                vals[ival] = vals[ival] * 10 + (data[i] - <char>b'0')
+                msdigits += 1
+            else:
+                s = bytes(data).decode("utf8", "replace")
+                raise e.DataError(f"can't parse time {s!r}")
+
+        # Pad the fraction of second to get millis
+        if vals[MS]:
+            while msdigits < 6:
+                vals[MS] *= 10
+                msdigits += 1
+
+        try:
+            return cdt.time_new(vals[HO], vals[MI], vals[SE], vals[MS], None)
+        except ValueError as ex:
+            s = bytes(data).decode("utf8", "replace")
+            raise e.DataError(f"can't parse date {s!r}: {ex}") from None
+
+
 cdef const char *_get_datestyle(pq.PGconn pgconn):
     cdef const char *ds
     if pgconn is not None:
