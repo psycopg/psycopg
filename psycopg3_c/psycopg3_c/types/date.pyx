@@ -458,6 +458,33 @@ cdef class TimeLoader(CLoader):
             raise e.DataError(f"can't parse date {s!r}: {ex}") from None
 
 
+@cython.final
+cdef class TimeBinaryLoader(CLoader):
+
+    format = PQ_BINARY
+
+    cdef object cload(self, const char *data, size_t length):
+        cdef int64_t val = endian.be64toh((<uint64_t *>data)[0])
+        cdef int h, m, s, ms
+
+        with cython.cdivision(True):
+            ms = val % 1_000_000
+            val //= 1_000_000
+
+            s = val % 60
+            val //= 60
+
+            m = val % 60
+            h = val // 60
+
+        try:
+            return cdt.time_new(h, m, s, ms, None)
+        except ValueError:
+            raise e.DataError(
+                f"time not supported by Python: hour={h}"
+            ) from None
+
+
 cdef const char *_get_datestyle(pq.PGconn pgconn):
     cdef const char *ds
     if pgconn is not None:
