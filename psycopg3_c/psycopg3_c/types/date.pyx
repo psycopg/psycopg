@@ -23,6 +23,8 @@ cdt.import_datetime()
 DEF ORDER_YMD = 0
 DEF ORDER_DMY = 1
 DEF ORDER_MDY = 2
+DEF INTERVALSTYLE_OTHERS = 0
+DEF INTERVALSTYLE_SQL_STANDARD = 1
 
 DEF PG_DATE_EPOCH_DAYS = 730120  # date(2000, 1, 1).toordinal()
 DEF PY_DATE_MIN_DAYS = 1  # date.min.toordinal()
@@ -275,6 +277,67 @@ cdef class DateTimeBinaryDumper(_BaseDateTimeDumper):
 
 
 @cython.final
+cdef class TimeDeltaDumper(CDumper):
+
+    format = PQ_TEXT
+    cdef int _style
+
+    def __cinit__(self):
+        self.oid = oids.INTERVAL_OID
+
+    def __init__(self, oid: int, context: Optional[AdaptContext] = None):
+        super().__init__(oid, context)
+
+        cdef const char *ds = _get_intervalstyle(self._pgconn)
+        if ds[0] == b's':  # sql_standard
+            self._style = INTERVALSTYLE_SQL_STANDARD
+        else:  # iso_8601, postgres, postgres_verbose
+            self._style = INTERVALSTYLE_OTHERS
+
+    cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
+        cdef Py_ssize_t size;
+        cdef const char *src
+
+        cdef str s
+        if self._style == INTERVALSTYLE_OTHERS:
+            s = str(obj)
+        else:
+            # sql_standard format needs explicit signs
+            # otherwise -1 day 1 sec will mean -1 sec
+            s = "%+d day %+d second %+d microsecond" % (
+                obj.days, obj.seconds, obj.microseconds)
+
+        src = PyUnicode_AsUTF8AndSize(s, &size)
+
+        cdef char *buf = CDumper.ensure_size(rv, offset, size)
+        memcpy(buf, src, size)
+        return size
+
+
+@cython.final
+cdef class TimeDeltaBinaryDumper(CDumper):
+
+    format = PQ_BINARY
+
+    def __cinit__(self):
+        self.oid = oids.INTERVAL_OID
+
+    cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
+        cdef int64_t micros = (
+            1_000_000 * <int64_t>cdt.timedelta_seconds(obj)
+            + cdt.timedelta_microseconds(obj))
+        cdef int32_t days = cdt.timedelta_days(obj)
+
+        cdef char *buf = CDumper.ensure_size(
+            rv, offset, sizeof(int64_t) + sizeof(int32_t) + sizeof(int32_t))
+        (<int64_t *>buf)[0] = endian.htobe64(micros)
+        (<int32_t *>(buf + sizeof(int64_t)))[0] = endian.htobe32(days)
+        (<int32_t *>(buf + sizeof(int64_t) + sizeof(int32_t)))[0] = 0
+
+        return sizeof(int64_t) + sizeof(int32_t) + sizeof(int32_t)
+
+
+@cython.final
 cdef class DateLoader(CLoader):
 
     format = PQ_TEXT
@@ -352,3 +415,13 @@ cdef const char *_get_datestyle(pq.PGconn pgconn):
             return ds
 
     return b"ISO, DMY"
+
+
+cdef const char *_get_intervalstyle(pq.PGconn pgconn):
+    cdef const char *ds
+    if pgconn is not None:
+        ds = libpq.PQparameterStatus(pgconn._pgconn_ptr, b"IntervalStyle")
+        if ds is not NULL and ds[0]:
+            return ds
+
+    return b"postgres"
