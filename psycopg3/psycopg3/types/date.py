@@ -68,10 +68,6 @@ class DateBinaryDumper(Dumper):
 
 
 class _BaseTimeDumper(Dumper):
-
-    # Can change to timetz type if the object dumped is naive
-    _oid = builtins["time"].oid
-
     def get_key(
         self, obj: time, format: Pg3Format
     ) -> Union[type, Tuple[type]]:
@@ -82,25 +78,30 @@ class _BaseTimeDumper(Dumper):
         else:
             return (self.cls,)
 
-    def upgrade(self, obj: time, format: Pg3Format) -> "Dumper":
+    def upgrade(self, obj: time, format: Pg3Format) -> Dumper:
         raise NotImplementedError
 
 
-class TimeDumper(_BaseTimeDumper):
+class _BaseTimeTextDumper(_BaseTimeDumper):
 
     format = Format.TEXT
 
     def dump(self, obj: time) -> bytes:
         return str(obj).encode("utf8")
 
-    def upgrade(self, obj: time, format: Pg3Format) -> "Dumper":
+
+class TimeDumper(_BaseTimeTextDumper):
+
+    _oid = builtins["time"].oid
+
+    def upgrade(self, obj: time, format: Pg3Format) -> Dumper:
         if not obj.tzinfo:
             return self
         else:
             return TimeTzDumper(self.cls)
 
 
-class TimeTzDumper(TimeDumper):
+class TimeTzDumper(_BaseTimeTextDumper):
 
     _oid = builtins["timetz"].oid
 
@@ -108,6 +109,7 @@ class TimeTzDumper(TimeDumper):
 class TimeBinaryDumper(_BaseTimeDumper):
 
     format = Format.BINARY
+    _oid = builtins["time"].oid
 
     def dump(self, obj: time) -> bytes:
         ms = obj.microsecond + 1_000_000 * (
@@ -115,15 +117,16 @@ class TimeBinaryDumper(_BaseTimeDumper):
         )
         return _pack_int8(ms)
 
-    def upgrade(self, obj: time, format: Pg3Format) -> "Dumper":
+    def upgrade(self, obj: time, format: Pg3Format) -> Dumper:
         if not obj.tzinfo:
             return self
         else:
             return TimeTzBinaryDumper(self.cls)
 
 
-class TimeTzBinaryDumper(TimeBinaryDumper):
+class TimeTzBinaryDumper(_BaseTimeDumper):
 
+    format = Format.BINARY
     _oid = builtins["timetz"].oid
 
     def dump(self, obj: time) -> bytes:
@@ -136,10 +139,6 @@ class TimeTzBinaryDumper(TimeBinaryDumper):
 
 
 class _BaseDateTimeDumper(Dumper):
-
-    # Can change to timestamp type if the object dumped is naive
-    _oid = builtins["timestamptz"].oid
-
     def get_key(
         self, obj: datetime, format: Pg3Format
     ) -> Union[type, Tuple[type]]:
@@ -150,11 +149,11 @@ class _BaseDateTimeDumper(Dumper):
         else:
             return (self.cls,)
 
-    def upgrade(self, obj: datetime, format: Pg3Format) -> "Dumper":
+    def upgrade(self, obj: datetime, format: Pg3Format) -> Dumper:
         raise NotImplementedError
 
 
-class DateTimeTzDumper(_BaseDateTimeDumper):
+class _BaseDateTimeTextDumper(_BaseDateTimeDumper):
 
     format = Format.TEXT
 
@@ -163,20 +162,27 @@ class DateTimeTzDumper(_BaseDateTimeDumper):
         # the YYYY-MM-DD is always understood correctly.
         return str(obj).encode("utf8")
 
-    def upgrade(self, obj: datetime, format: Pg3Format) -> "Dumper":
+
+class DateTimeTzDumper(_BaseDateTimeTextDumper):
+
+    _oid = builtins["timestamptz"].oid
+
+    def upgrade(self, obj: datetime, format: Pg3Format) -> Dumper:
         if obj.tzinfo:
             return self
         else:
             return DateTimeDumper(self.cls)
 
 
-class DateTimeDumper(DateTimeTzDumper):
+class DateTimeDumper(_BaseDateTimeTextDumper):
+
     _oid = builtins["timestamp"].oid
 
 
 class DateTimeTzBinaryDumper(_BaseDateTimeDumper):
 
     format = Format.BINARY
+    _oid = builtins["timestamptz"].oid
 
     def dump(self, obj: datetime) -> bytes:
         delta = obj - _pg_datetimetz_epoch
@@ -185,21 +191,22 @@ class DateTimeTzBinaryDumper(_BaseDateTimeDumper):
         )
         return _pack_int8(micros)
 
-    def upgrade(self, obj: datetime, format: Pg3Format) -> "Dumper":
+    def upgrade(self, obj: datetime, format: Pg3Format) -> Dumper:
         if obj.tzinfo:
             return self
         else:
             return DateTimeBinaryDumper(self.cls)
 
 
-class DateTimeBinaryDumper(DateTimeTzBinaryDumper):
+class DateTimeBinaryDumper(_BaseDateTimeDumper):
+
+    format = Format.BINARY
     _oid = builtins["timestamp"].oid
 
     def dump(self, obj: datetime) -> bytes:
         delta = obj - _pg_datetime_epoch
-        micros = (
-            1_000_000 * (86_400 * delta.days + delta.seconds)
-            + delta.microseconds
+        micros = delta.microseconds + 1_000_000 * (
+            86_400 * delta.days + delta.seconds
         )
         return _pack_int8(micros)
 
