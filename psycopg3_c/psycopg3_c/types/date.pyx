@@ -578,6 +578,39 @@ cdef class TimetzLoader(CLoader):
             raise e.DataError(f"can't parse timetz {s!r}: {ex}") from None
 
 
+@cython.final
+cdef class TimetzBinaryLoader(CLoader):
+
+    format = PQ_BINARY
+
+    cdef object cload(self, const char *data, size_t length):
+        cdef int64_t val = endian.be64toh((<uint64_t *>data)[0])
+        cdef int32_t off = endian.be32toh((<uint32_t *>(data + sizeof(int64_t)))[0])
+        cdef int h, m, s, ms
+
+        with cython.cdivision(True):
+            ms = val % 1_000_000
+            val //= 1_000_000
+
+            s = val % 60
+            val //= 60
+
+            m = val % 60
+            h = val // 60
+
+            # Python < 3.7 didn't support seconds in the timezones
+            if PY_VERSION_HEX >= 0x03070000:
+                off = off // 60 * 60
+
+        tz = timezone_from_seconds(-off)
+        try:
+            return cdt.time_new(h, m, s, ms, tz)
+        except ValueError:
+            raise e.DataError(
+                f"time not supported by Python: hour={h}"
+            ) from None
+
+
 cdef object timezone_from_seconds(int sec, __cache={}):
     cdef object pysec = sec
     cdef PyObject *ptr = PyDict_GetItem(__cache, pysec)
