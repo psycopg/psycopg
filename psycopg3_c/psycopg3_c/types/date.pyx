@@ -174,6 +174,59 @@ cdef class TimeTzBinaryDumper(_BaseTimeDumper):
         return sizeof(int64_t) + sizeof(int32_t)
 
 
+cdef class _BaseDateTimeDumper(CDumper):
+
+    cpdef get_key(self, obj, format):
+        # Use (cls,) to report the need to upgrade (downgrade, actually) to a
+        # dumper for naive timestamp.
+        if obj.tzinfo:
+            return self.cls
+        else:
+            return (self.cls,)
+
+    cpdef upgrade(self, obj: time, format):
+        raise NotImplementedError
+
+
+cdef class _BaseDateTimeTextDumper(_BaseDateTimeDumper):
+
+    format = PQ_TEXT
+
+    cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
+        cdef Py_ssize_t size;
+        cdef const char *src
+
+        # NOTE: whatever the PostgreSQL DateStyle input format (DMY, MDY, YMD)
+        # the YYYY-MM-DD is always understood correctly.
+        cdef str s = str(obj)
+        src = PyUnicode_AsUTF8AndSize(s, &size)
+
+        cdef char *buf = CDumper.ensure_size(rv, offset, size)
+        memcpy(buf, src, size)
+        return size
+
+
+@cython.final
+cdef class DateTimeTzDumper(_BaseDateTimeTextDumper):
+
+    def __cinit__(self):
+        self.oid = oids.TIMESTAMPTZ_OID
+
+    cpdef upgrade(self, obj, format):
+        if obj.tzinfo:
+            return self
+        else:
+            return DateTimeDumper(self.cls)
+
+
+@cython.final
+cdef class DateTimeDumper(_BaseDateTimeTextDumper):
+
+    def __cinit__(self):
+        self.oid = oids.TIMESTAMP_OID
+
+
+
 @cython.final
 cdef class DateLoader(CLoader):
 
