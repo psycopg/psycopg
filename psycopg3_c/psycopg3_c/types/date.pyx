@@ -5,15 +5,25 @@ Cython adapters for date/time types.
 # Copyright (C) 2021 The Psycopg Team
 
 from cpython cimport datetime as cdt
+from cpython.dict cimport PyDict_GetItem
 from cpython.object cimport PyObject, PyObject_CallFunctionObjArgs
 from cpython.version cimport PY_VERSION_HEX
 
 cdef extern from "Python.h":
     const char *PyUnicode_AsUTF8AndSize(unicode obj, Py_ssize_t *size) except NULL
+    object PyTimeZone_FromOffset(object offset)
+
+# Hack to compile on Python 3.6
+cdef extern from *:
+    """
+#if PY_VERSION_HEX < 0x03070000
+#define PyTimeZone_FromOffset(x) x
+#endif
+    """
 
 from psycopg3_c._psycopg3 cimport endian
 
-import datetime as dt
+from datetime import date, time, timedelta, datetime, timezone
 
 from psycopg3 import errors as e
 
@@ -30,12 +40,12 @@ DEF INTERVALSTYLE_SQL_STANDARD = 1
 DEF PG_DATE_EPOCH_DAYS = 730120  # date(2000, 1, 1).toordinal()
 DEF PY_DATE_MIN_DAYS = 1  # date.min.toordinal()
 
-cdef object date_toordinal = dt.date.toordinal
-cdef object date_fromordinal = dt.date.fromordinal
-cdef object time_utcoffset = dt.time.utcoffset
-cdef object timedelta_total_seconds = dt.timedelta.total_seconds
-cdef object pg_datetimetz_epoch = dt.datetime(2000, 1, 1, tzinfo=dt.timezone.utc)
-cdef object pg_datetime_epoch = dt.datetime(2000, 1, 1)
+cdef object date_toordinal = date.toordinal
+cdef object date_fromordinal = date.fromordinal
+cdef object time_utcoffset = time.utcoffset
+cdef object timedelta_total_seconds = timedelta.total_seconds
+cdef object pg_datetimetz_epoch = datetime(2000, 1, 1, tzinfo=timezone.utc)
+cdef object pg_datetime_epoch = datetime(2000, 1, 1)
 
 @cython.final
 cdef class DateDumper(CDumper):
@@ -560,13 +570,27 @@ cdef class TimetzLoader(CLoader):
         if sgn == b"-":
             off = -off
 
-        tz = dt.timezone(cdt.timedelta_new(0, off, 0))
-
+        tz = timezone_from_seconds(off)
         try:
             return cdt.time_new(vals[HO], vals[MI], vals[SE], vals[MS], tz)
         except ValueError as ex:
             s = bytes(data).decode("utf8", "replace")
             raise e.DataError(f"can't parse timetz {s!r}: {ex}") from None
+
+
+cdef object timezone_from_seconds(int sec, __cache={}):
+    cdef object pysec = sec
+    cdef PyObject *ptr = PyDict_GetItem(__cache, pysec)
+    if ptr != NULL:
+        return <object>ptr
+
+    delta = cdt.timedelta_new(0, sec, 0)
+    if PY_VERSION_HEX >= 0x03070000:
+        tz = PyTimeZone_FromOffset(delta)
+    else:
+        tz = timezone(delta)
+    __cache[pysec] = tz
+    return tz
 
 
 cdef const char *_get_datestyle(pq.PGconn pgconn):
