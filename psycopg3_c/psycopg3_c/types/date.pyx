@@ -31,6 +31,8 @@ cdef object date_toordinal = dt.date.toordinal
 cdef object date_fromordinal = dt.date.fromordinal
 cdef object time_utcoffset = dt.time.utcoffset
 cdef object timedelta_total_seconds = dt.timedelta.total_seconds
+cdef object pg_datetimetz_epoch = dt.datetime(2000, 1, 1, tzinfo=dt.timezone.utc)
+cdef object pg_datetime_epoch = dt.datetime(2000, 1, 1)
 
 @cython.final
 cdef class DateDumper(CDumper):
@@ -157,7 +159,7 @@ cdef class TimeTzBinaryDumper(_BaseTimeDumper):
         self.oid = oids.TIMETZ_OID
 
     cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
-        cdef int64_t micros = cdt.time_microsecond(obj) + 1000000 * (
+        cdef int64_t micros = cdt.time_microsecond(obj) + 1_000_000 * (
             cdt.time_second(obj)
             + 60 * (cdt.time_minute(obj) + 60 * <int64_t>cdt.time_hour(obj))
         )
@@ -225,6 +227,51 @@ cdef class DateTimeDumper(_BaseDateTimeTextDumper):
     def __cinit__(self):
         self.oid = oids.TIMESTAMP_OID
 
+
+@cython.final
+cdef class DateTimeTzBinaryDumper(_BaseDateTimeDumper):
+
+    format = PQ_BINARY
+
+    def __cinit__(self):
+        self.oid = oids.TIMESTAMPTZ_OID
+
+    cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
+        delta = obj - pg_datetimetz_epoch
+
+        cdef int64_t micros = cdt.timedelta_microseconds(delta) + 1_000_000 * (
+            86_400 * <int64_t>cdt.timedelta_days(delta)
+                + <int64_t>cdt.timedelta_seconds(delta))
+
+        cdef char *buf = CDumper.ensure_size(rv, offset, sizeof(int64_t))
+        (<int64_t *>buf)[0] = endian.htobe64(micros)
+        return sizeof(int64_t)
+
+    cpdef upgrade(self, obj, format):
+        if obj.tzinfo:
+            return self
+        else:
+            return DateTimeBinaryDumper(self.cls)
+
+
+@cython.final
+cdef class DateTimeBinaryDumper(_BaseDateTimeDumper):
+
+    format = PQ_BINARY
+
+    def __cinit__(self):
+        self.oid = oids.TIMESTAMP_OID
+
+    cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
+        delta = obj - pg_datetime_epoch
+
+        cdef int64_t micros = cdt.timedelta_microseconds(delta) + 1_000_000 * (
+            86_400 * <int64_t>cdt.timedelta_days(delta)
+                + <int64_t>cdt.timedelta_seconds(delta))
+
+        cdef char *buf = CDumper.ensure_size(rv, offset, sizeof(int64_t))
+        (<int64_t *>buf)[0] = endian.htobe64(micros)
+        return sizeof(int64_t)
 
 
 @cython.final
