@@ -6,6 +6,7 @@ Cython adapters for date/time types.
 
 from cpython cimport datetime as cdt
 from cpython.object cimport PyObject, PyObject_CallFunctionObjArgs
+from cpython.version cimport PY_VERSION_HEX
 
 cdef extern from "Python.h":
     const char *PyUnicode_AsUTF8AndSize(unicode obj, Py_ssize_t *size) except NULL
@@ -426,7 +427,7 @@ cdef class TimeLoader(CLoader):
 
         # Parse the first 3 groups of digits
         cdef size_t i
-        cdef int ival = 0
+        cdef int ival = HO
         for i in range(length):
             if b'0' <= data[i] <= b'9':
                 vals[ival] = vals[ival] * 10 + (data[i] - <char>b'0')
@@ -483,6 +484,89 @@ cdef class TimeBinaryLoader(CLoader):
             raise e.DataError(
                 f"time not supported by Python: hour={h}"
             ) from None
+
+
+@cython.final
+cdef class TimetzLoader(CLoader):
+
+    format = PQ_TEXT
+
+    cdef object cload(self, const char *data, size_t length):
+
+        # Parse the equivalent of the regexp:
+        # rb"""(?ix)
+        # ^
+        # (\d+) : (\d+) : (\d+) (?: \. (\d+) )?       # Time and micros
+        # ([-+]) (\d+) (?: : (\d+) )? (?: : (\d+) )?  # Timezone
+        # $
+        # """
+
+        DEF HO = 0
+        DEF MI = 1
+        DEF SE = 2
+        DEF MS = 3
+        DEF OH = 4
+        DEF OM = 5
+        DEF OS = 6
+        cdef int vals[7]
+        vals[HO] = vals[MI] = vals[SE] = vals[MS] = 0
+        vals[OH] = vals[OM] = vals[OS] = 0
+
+        # Parse the first 3 groups of digits
+        cdef size_t i = 0
+        cdef int ival = HO
+        for i in range(length):
+            if b'0' <= data[i] <= b'9':
+                vals[ival] = vals[ival] * 10 + (data[i] - <char>b'0')
+            else:
+                ival += 1
+                if ival >= MS:
+                    break
+
+        # Are there millis?
+        cdef int msdigits = 0
+        if data[i] == b".":
+            # Parse the 4th group of digits. Count the digits parsed
+            for i in range(i + 1, length):
+                if b'0' <= data[i] <= b'9':
+                    vals[ival] = vals[ival] * 10 + (data[i] - <char>b'0')
+                    msdigits += 1
+                else:
+                    ival += 1
+                    break
+
+            # Pad the fraction of second to get millis
+            while msdigits < 6:
+                vals[MS] *= 10
+                msdigits += 1
+
+        # Parse the timezone
+        cdef char sgn = data[i]
+        ival = OH
+        for i in range(i + 1, length):
+            if b'0' <= data[i] <= b'9':
+                vals[ival] = vals[ival] * 10 + (data[i] - <char>b'0')
+            else:
+                ival += 1
+                if ival > OS:
+                    s = bytes(data).decode("utf8", "replace")
+                    raise e.DataError(f"can't parse timetz {s!r}")
+
+        # Calculate timezone
+        cdef int off = 60 * (60 * vals[OH] + vals[OM])
+        # Python < 3.7 didn't support seconds in the timezones
+        if PY_VERSION_HEX >= 0x03070000:
+            off += vals[OS]
+        if sgn == b"-":
+            off = -off
+
+        tz = dt.timezone(cdt.timedelta_new(0, off, 0))
+
+        try:
+            return cdt.time_new(vals[HO], vals[MI], vals[SE], vals[MS], tz)
+        except ValueError as ex:
+            s = bytes(data).decode("utf8", "replace")
+            raise e.DataError(f"can't parse timetz {s!r}: {ex}") from None
 
 
 cdef const char *_get_datestyle(pq.PGconn pgconn):
