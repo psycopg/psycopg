@@ -4,6 +4,7 @@ Cython adapters for date/time types.
 
 # Copyright (C) 2021 The Psycopg Team
 
+from libc.string cimport strchr
 from cpython cimport datetime as cdt
 from cpython.dict cimport PyDict_GetItem
 from cpython.object cimport PyObject, PyObject_CallFunctionObjArgs
@@ -34,6 +35,9 @@ cdt.import_datetime()
 DEF ORDER_YMD = 0
 DEF ORDER_DMY = 1
 DEF ORDER_MDY = 2
+DEF ORDER_PGDM = 3
+DEF ORDER_PGMD = 4
+
 DEF INTERVALSTYLE_OTHERS = 0
 DEF INTERVALSTYLE_SQL_STANDARD = 1
 
@@ -46,6 +50,14 @@ cdef object time_utcoffset = time.utcoffset
 cdef object timedelta_total_seconds = timedelta.total_seconds
 cdef object pg_datetimetz_epoch = datetime(2000, 1, 1, tzinfo=timezone.utc)
 cdef object pg_datetime_epoch = datetime(2000, 1, 1)
+
+cdef object _month_abbr = {
+    n: i
+    for i, n in enumerate(
+        b"Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split(), 1
+    )
+}
+
 
 @cython.final
 cdef class DateDumper(CDumper):
@@ -425,9 +437,6 @@ cdef class TimeLoader(CLoader):
 
     cdef object cload(self, const char *data, size_t length):
 
-        # Parse the equivalent of the regexp:
-        # rb"^(\d+):(\d+):(\d+)(?:\.(\d+))?"
-
         DEF HO = 0
         DEF MI = 1
         DEF SE = 2
@@ -502,14 +511,6 @@ cdef class TimetzLoader(CLoader):
     format = PQ_TEXT
 
     cdef object cload(self, const char *data, size_t length):
-
-        # Parse the equivalent of the regexp:
-        # rb"""(?ix)
-        # ^
-        # (\d+) : (\d+) : (\d+) (?: \. (\d+) )?       # Time and micros
-        # ([-+]) (\d+) (?: : (\d+) )? (?: : (\d+) )?  # Timezone
-        # $
-        # """
 
         DEF HO = 0
         DEF MI = 1
@@ -609,6 +610,173 @@ cdef class TimetzBinaryLoader(CLoader):
             raise e.DataError(
                 f"time not supported by Python: hour={h}"
             ) from None
+
+
+@cython.final
+cdef class TimestampLoader(CLoader):
+
+    format = PQ_TEXT
+    cdef int _order
+
+    def __init__(self, oid: int, context: Optional[AdaptContext] = None):
+        super().__init__(oid, context)
+
+        cdef const char *ds = _get_datestyle(self._pgconn)
+        if ds[0] == b'I':  # ISO
+            self._order = ORDER_YMD
+        elif ds[0] == b'G':  # German
+            self._order = ORDER_DMY
+        elif ds[0] == b'S':  # SQL
+            self._order = (
+                ORDER_DMY if ds.endswith(b"DMY") else ORDER_MDY
+            )
+        elif ds[0] == b'P':  # Postgres
+            self._order = (
+                ORDER_PGDM if ds.endswith(b"DMY") else ORDER_PGMD
+            )
+        else:
+            raise e.InterfaceError(f"unexpected DateStyle: {ds.decode('ascii')}")
+
+    cdef object cload(self, const char *data, size_t length):
+        if data[length - 1] == b'C':  # ends with BC
+            s = bytes(data).decode("utf8", "replace")
+            raise e.DataError(f"BC timestamps not supported, got {s!r}")
+
+        if self._order == ORDER_PGDM or self._order == ORDER_PGMD:
+            return self._cload_pg(data, length)
+
+        DEF D1 = 0
+        DEF D2 = 1
+        DEF D3 = 2
+        DEF HO = 3
+        DEF MI = 4
+        DEF SE = 5
+        DEF MS = 6
+        cdef int vals[7]
+        vals[D1] = vals[D2] = vals[D3] = 0
+        vals[HO] = vals[MI] = vals[SE] = vals[MS] = 0
+
+        # Parse the first 6 groups of digits
+        cdef size_t i
+        cdef int ival = D1
+        for i in range(length):
+            if b'0' <= data[i] <= b'9':
+                vals[ival] = vals[ival] * 10 + (data[i] - <char>b'0')
+            else:
+                ival += 1
+                if ival >= MS:
+                    break
+
+        # Parse the 7th group of digits. Count the digits parsed
+        cdef int msdigits = 0
+        if data[i] == b'.':
+            for i in range(i + 1, length):
+                if b'0' <= data[i] <= b'9':
+                    vals[ival] = vals[ival] * 10 + (data[i] - <char>b'0')
+                    msdigits += 1
+                else:
+                    s = bytes(data).decode("utf8", "replace")
+                    raise e.DataError(f"can't parse timestamp {s!r}")
+
+            # Pad the fraction of second to get millis
+            if vals[MS]:
+                while msdigits < 6:
+                    vals[MS] *= 10
+                    msdigits += 1
+
+        # Resolve the YMD order
+        cdef int y, m, d
+        if self._order == ORDER_YMD:
+            y = vals[D1]
+            m = vals[D2]
+            d = vals[D3]
+        elif self._order == ORDER_DMY:
+            d = vals[D1]
+            m = vals[D2]
+            y = vals[D3]
+        else: # self._order == ORDER_MDY
+            m = vals[D1]
+            d = vals[D2]
+            y = vals[D3]
+
+        try:
+            return cdt.datetime_new(
+                y, m, d, vals[HO], vals[MI], vals[SE], vals[MS], None)
+        except ValueError as ex:
+            s = bytes(data).decode("utf8", "replace")
+            raise e.DataError(f"can't parse timestamp {s!r}: {ex}") from None
+
+    cdef object _cload_pg(self, const char *data, size_t length):
+        DEF HO = 0
+        DEF MI = 1
+        DEF SE = 2
+        DEF MS = 3
+        DEF YE = 4
+        cdef int vals[5]
+        vals[HO] = vals[MI] = vals[SE] = vals[MS] = vals[YE] = 0
+
+        # Find Wed Jun 02 or Wed 02 Jun
+        cdef char *seps[3]
+        seps[0] = strchr(data, b' ')
+        seps[1] = strchr(seps[0] + 1, b' ') if seps[0] != NULL else NULL
+        seps[2] = strchr(seps[1] + 1, b' ') if seps[1] != NULL else NULL
+        if seps[2] == NULL:
+            s = bytes(data).decode("utf8", "replace")
+            raise e.DataError(f"can't parse timestamp {s!r}")
+
+        # Parse the following 3 groups of digits
+        cdef size_t i = seps[2] - data
+        cdef int ival = HO
+        for i in range(i + 1, length):
+            if b'0' <= data[i] <= b'9':
+                vals[ival] = vals[ival] * 10 + (data[i] - <char>b'0')
+            else:
+                ival += 1
+                if ival >= MS:
+                    break
+
+        # Parse the ms group of digits. Count the digits parsed
+        cdef int msdigits = 0
+        if data[i] == b'.':
+            for i in range(i + 1, length):
+                if b'0' <= data[i] <= b'9':
+                    vals[ival] = vals[ival] * 10 + (data[i] - <char>b'0')
+                    msdigits += 1
+                else:
+                    break
+
+            # Pad the fraction of second to get millis
+            if vals[MS]:
+                while msdigits < 6:
+                    vals[MS] *= 10
+                    msdigits += 1
+
+        # Parse the year
+        for i in range(i + 1, length):
+            if b'0' <= data[i] <= b'9':
+                vals[YE] = vals[YE] * 10 + (data[i] - <char>b'0')
+            else:
+                break
+
+        # Resolve the MD order
+        cdef int m, d
+        try:
+            if self._order == ORDER_PGDM:
+                d = int(seps[0][1 : seps[1] - seps[0]])
+                m = _month_abbr[seps[1][1 : seps[2] - seps[1]]]
+            else: # self._order == ORDER_PGMD
+                m = _month_abbr[seps[0][1 : seps[1] - seps[0]]]
+                d = int(seps[1][1 : seps[2] - seps[1]])
+        except (KeyError, ValueError):
+            s = data.decode("utf8", "replace")
+            raise e.DataError(f"can't parse timestamp: {s!r}") from None
+
+        try:
+            return cdt.datetime_new(
+                vals[YE], m, d, vals[HO], vals[MI], vals[SE], vals[MS], None)
+        except ValueError as ex:
+            s = bytes(data).decode("utf8", "replace")
+            raise e.DataError(f"can't parse timestamp {s!r}: {ex}") from None
 
 
 cdef object timezone_from_seconds(int sec, __cache={}):
