@@ -710,6 +710,80 @@ cdef class TimestampBinaryLoader(CLoader):
                 ) from None
 
 
+@cython.final
+cdef class TimestamptzLoader(CLoader):
+
+    format = PQ_TEXT
+    cdef int _order
+
+    def __init__(self, oid: int, context: Optional[AdaptContext] = None):
+        super().__init__(oid, context)
+
+        cdef const char *ds = _get_datestyle(self._pgconn)
+        if ds[0] == b'I':  # ISO
+            self._order = ORDER_YMD
+        else:  # Not true, but any non-YMD will do.
+            self._order = ORDER_DMY
+
+    cdef object cload(self, const char *data, size_t length):
+        if data[length - 1] == b'C':  # ends with BC
+            s = bytes(data).decode("utf8", "replace")
+            raise e.DataError(f"BC timestamptz not supported, got {s!r}")
+
+        if self._order != ORDER_YMD:
+            return self._cload_notimpl(data, length)
+
+        DEF D1 = 0
+        DEF D2 = 1
+        DEF D3 = 2
+        DEF HO = 3
+        DEF MI = 4
+        DEF SE = 5
+        cdef int vals[6]
+        memset(vals, 0, sizeof(vals))
+
+        # Parse the first 6 groups of digits (date and time)
+        cdef const char *ptr
+        ptr = _parse_date_values(data, vals, 6)
+        if ptr == NULL:
+            s = bytes(data).decode("utf8", "replace")
+            raise e.DataError(f"can't parse timestamptz {s!r}")
+
+        # Parse the microseconds
+        cdef int us = 0
+        if ptr[0] == b".":
+            ptr = _parse_micros(ptr + 1, &us)
+
+        # Resolve the YMD order
+        cdef int y, m, d
+        if self._order == ORDER_YMD:
+            y, m, d = vals[D1], vals[D2], vals[D3]
+        elif self._order == ORDER_DMY:
+            d, m, y = vals[D1], vals[D2], vals[D3]
+        else: # self._order == ORDER_MDY
+            m, d, y = vals[D1], vals[D2], vals[D3]
+
+        # Parse the timezone
+        tz = _parse_timezone(&ptr)
+        if ptr == NULL:
+            s = bytes(data).decode("utf8", "replace")
+            raise e.DataError(f"can't parse timetz {s!r}")
+
+        try:
+            return cdt.datetime_new(
+                y, m, d, vals[HO], vals[MI], vals[SE], us, tz)
+        except ValueError as ex:
+            s = bytes(data).decode("utf8", "replace")
+            raise e.DataError(f"can't parse timestamptz {s!r}: {ex}") from None
+
+    cdef object _cload_notimpl(self, const char *data, size_t length):
+        s = bytes(data).decode("utf8", "replace")
+        ds = _get_datestyle(self.connection).decode("ascii")
+        raise NotImplementedError(
+            f"can't parse timestamptz with DateStyle {ds!r}: {s!r}"
+        )
+
+
 cdef const char *_parse_date_values(const char *ptr, int *vals, int nvals):
     """
     Parse *nvals* numeric values separated by non-numeric chars.
