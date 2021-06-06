@@ -374,10 +374,10 @@ cdef class DateLoader(CLoader):
             self._order = ORDER_YMD
         elif ds[0] == b'G':  # German
             self._order = ORDER_DMY
-        elif ds[0] == b'S' or ds[0] == b'P':  # SQL or Postgres
-            self._order = (
-                ORDER_DMY if ds.endswith(b"DMY") else ORDER_MDY
-            )
+        elif ds[0] == b'S':  # SQL, DMY / MDY
+            self._order = ORDER_DMY if ds[5] == b'D' else ORDER_MDY
+        elif ds[0] == b'P':  # Postgres, DMY / MDY
+            self._order = ORDER_DMY if ds[10] == b'D' else ORDER_MDY
         else:
             raise e.InterfaceError(f"unexpected DateStyle: {ds.decode('ascii')}")
 
@@ -626,14 +626,10 @@ cdef class TimestampLoader(CLoader):
             self._order = ORDER_YMD
         elif ds[0] == b'G':  # German
             self._order = ORDER_DMY
-        elif ds[0] == b'S':  # SQL
-            self._order = (
-                ORDER_DMY if ds.endswith(b"DMY") else ORDER_MDY
-            )
-        elif ds[0] == b'P':  # Postgres
-            self._order = (
-                ORDER_PGDM if ds.endswith(b"DMY") else ORDER_PGMD
-            )
+        elif ds[0] == b'S':  # SQL, DMY / MDY
+            self._order = ORDER_DMY if ds[5] == b'D' else ORDER_MDY
+        elif ds[0] == b'P':  # Postgres, DMY / MDY
+            self._order = ORDER_PGDM if ds[10] == b'D' else ORDER_PGMD
         else:
             raise e.InterfaceError(f"unexpected DateStyle: {ds.decode('ascii')}")
 
