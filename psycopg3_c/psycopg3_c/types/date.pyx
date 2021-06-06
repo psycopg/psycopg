@@ -775,6 +775,42 @@ cdef class TimestampLoader(CLoader):
             raise e.DataError(f"can't parse timestamp {s!r}: {ex}") from None
 
 
+@cython.final
+cdef class TimestampBinaryLoader(CLoader):
+
+    format = PQ_BINARY
+
+    cdef object cload(self, const char *data, size_t length):
+        cdef int64_t val = endian.be64toh((<uint64_t *>data)[0])
+        cdef long micros, secs, days
+
+        # Group the micros in biggers stuff or timedelta_new might overflow
+        cdef int64_t aval = val if val >= 0 else -val
+        with cython.cdivision(True):
+            secs = aval // 1_000_000
+            micros = aval % 1_000_000
+
+            days = secs // 86_400
+            secs %= 86_400
+
+        try:
+            delta = cdt.timedelta_new(days, secs, micros)
+            if val > 0:
+                return pg_datetime_epoch + delta
+            else:
+                return pg_datetime_epoch - delta
+
+        except OverflowError:
+            if val <= 0:
+                raise e.DataError(
+                    "timestamp too small (before year 1)"
+                ) from None
+            else:
+                raise e.DataError(
+                    "timestamp too large (after year 10K)"
+                ) from None
+
+
 cdef object timezone_from_seconds(int sec, __cache={}):
     cdef object pysec = sec
     cdef PyObject *ptr = PyDict_GetItem(__cache, pysec)
