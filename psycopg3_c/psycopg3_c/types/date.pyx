@@ -858,6 +858,51 @@ cdef class TimestamptzBinaryLoader(_BaseTimestamptzLoader):
                 ) from None
 
 
+@cython.final
+cdef class IntervalBinaryLoader(CLoader):
+
+    format = PQ_BINARY
+
+    cdef object cload(self, const char *data, size_t length):
+        cdef int64_t val = endian.be64toh((<uint64_t *>data)[0])
+        cdef int32_t days = endian.be32toh(
+            (<uint32_t *>(data + sizeof(int64_t)))[0])
+        cdef int32_t months = endian.be32toh(
+            (<uint32_t *>(data + sizeof(int64_t) + sizeof(int32_t)))[0])
+
+        cdef int years
+        with cython.cdivision(True):
+            if months > 0:
+                years = months // 12
+                months %= 12
+                days += 30 * months + 365 * years
+            elif months < 0:
+                months = -months
+                years = months // 12
+                months %= 12
+                days -= 30 * months + 365 * years
+
+        # Work only with positive values as the cdivision behaves differently
+        # with negative values, and cdivision=False adds overhead.
+        cdef int64_t aval = val if val >= 0 else -val
+        cdef int us, ussecs, usdays
+
+        # Group the micros in biggers stuff or timedelta_new might overflow
+        with cython.cdivision(True):
+            ussecs = aval // 1_000_000
+            us = aval % 1_000_000
+
+            usdays = ussecs // 86_400
+            ussecs %= 86_400
+
+        if val < 0:
+            ussecs = -ussecs
+            usdays = -usdays
+            us = -us
+
+        return cdt.timedelta_new(days + usdays, ussecs, us)
+
+
 cdef const char *_parse_date_values(const char *ptr, int *vals, int nvals):
     """
     Parse *nvals* numeric values separated by non-numeric chars.
