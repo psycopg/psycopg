@@ -112,10 +112,10 @@ class TimeBinaryDumper(_BaseTimeDumper):
     _oid = builtins["time"].oid
 
     def dump(self, obj: time) -> bytes:
-        ms = obj.microsecond + 1_000_000 * (
+        us = obj.microsecond + 1_000_000 * (
             obj.second + 60 * (obj.minute + 60 * obj.hour)
         )
-        return _pack_int8(ms)
+        return _pack_int8(us)
 
     def upgrade(self, obj: time, format: Pg3Format) -> Dumper:
         if not obj.tzinfo:
@@ -130,12 +130,12 @@ class TimeTzBinaryDumper(_BaseTimeDumper):
     _oid = builtins["timetz"].oid
 
     def dump(self, obj: time) -> bytes:
-        ms = obj.microsecond + 1_000_000 * (
+        us = obj.microsecond + 1_000_000 * (
             obj.second + 60 * (obj.minute + 60 * obj.hour)
         )
         off = obj.utcoffset()
         assert off is not None
-        return _pack_timetz(ms, -int(off.total_seconds()))
+        return _pack_timetz(us, -int(off.total_seconds()))
 
 
 class _BaseDateTimeDumper(Dumper):
@@ -320,18 +320,18 @@ class TimeLoader(Loader):
             s = bytes(data).decode("utf8", "replace")
             raise DataError(f"can't parse time {s!r}")
 
-        ho, mi, se, ms = m.groups()
+        ho, mi, se, fr = m.groups()
 
-        # Pad the fraction of second to get millis
-        if ms:
-            ims = int(ms)
-            if len(ms) < 6:
-                ims *= _uspad[len(ms)]
+        # Pad the fraction of second to get micros
+        if fr:
+            us = int(fr)
+            if len(fr) < 6:
+                us *= _uspad[len(fr)]
         else:
-            ims = 0
+            us = 0
 
         try:
-            return time(int(ho), int(mi), int(se), ims)
+            return time(int(ho), int(mi), int(se), us)
         except ValueError as e:
             s = bytes(data).decode("utf8", "replace")
             raise DataError(f"can't parse time {s!r}: {e}") from None
@@ -343,11 +343,11 @@ class TimeBinaryLoader(Loader):
 
     def load(self, data: Buffer) -> time:
         val = _unpack_int8(data)[0]
-        val, ms = divmod(val, 1_000_000)
+        val, us = divmod(val, 1_000_000)
         val, s = divmod(val, 60)
         h, m = divmod(val, 60)
         try:
-            return time(h, m, s, ms)
+            return time(h, m, s, us)
         except ValueError:
             raise DataError(
                 f"time not supported by Python: hour={h}"
@@ -374,15 +374,15 @@ class TimetzLoader(Loader):
             s = bytes(data).decode("utf8", "replace")
             raise DataError(f"can't parse timetz {s!r}")
 
-        ho, mi, se, ms, sgn, oh, om, os = m.groups()
+        ho, mi, se, fr, sgn, oh, om, os = m.groups()
 
-        # Pad the fraction of second to get millis
-        if ms:
-            ims = int(ms)
-            if len(ms) < 6:
-                ims *= _uspad[len(ms)]
+        # Pad the fraction of second to get the micros
+        if fr:
+            us = int(fr)
+            if len(fr) < 6:
+                us *= _uspad[len(fr)]
         else:
-            ims = 0
+            us = 0
 
         # Calculate timezone
         off = 60 * 60 * int(oh)
@@ -393,7 +393,7 @@ class TimetzLoader(Loader):
         tz = timezone(timedelta(0, off if sgn == b"+" else -off))
 
         try:
-            return time(int(ho), int(mi), int(se), ims, tz)
+            return time(int(ho), int(mi), int(se), us, tz)
         except ValueError as e:
             s = bytes(data).decode("utf8", "replace")
             raise DataError(f"can't parse timetz {s!r}: {e}") from None
@@ -406,12 +406,12 @@ class TimetzBinaryLoader(Loader):
     def load(self, data: Buffer) -> time:
         val, off = _unpack_timetz(data)
 
-        val, ms = divmod(val, 1_000_000)
+        val, us = divmod(val, 1_000_000)
         val, s = divmod(val, 60)
         h, m = divmod(val, 60)
 
         try:
-            return time(h, m, s, ms, self._tz_from_sec(off))
+            return time(h, m, s, us, self._tz_from_sec(off))
         except ValueError:
             raise DataError(
                 f"time not supported by Python: hour={h}"
@@ -494,36 +494,36 @@ class TimestampLoader(Loader):
             raise DataError(f"can't parse timestamp {s!r}")
 
         if self._order == self._ORDER_YMD:
-            ye, mo, da, ho, mi, se, ms = m.groups()
+            ye, mo, da, ho, mi, se, fr = m.groups()
             imo = int(mo)
         elif self._order == self._ORDER_DMY:
-            da, mo, ye, ho, mi, se, ms = m.groups()
+            da, mo, ye, ho, mi, se, fr = m.groups()
             imo = int(mo)
         elif self._order == self._ORDER_MDY:
-            mo, da, ye, ho, mi, se, ms = m.groups()
+            mo, da, ye, ho, mi, se, fr = m.groups()
             imo = int(mo)
         else:
             if self._order == self._ORDER_PGDM:
-                da, mo, ho, mi, se, ms, ye = m.groups()
+                da, mo, ho, mi, se, fr, ye = m.groups()
             else:
-                mo, da, ho, mi, se, ms, ye = m.groups()
+                mo, da, ho, mi, se, fr, ye = m.groups()
             try:
                 imo = _month_abbr[mo]
             except KeyError:
                 s = mo.decode("utf8", "replace")
                 raise DataError(f"can't parse month: {s!r}") from None
 
-        # Pad the fraction of second to get millis
-        if ms:
-            ims = int(ms)
-            if len(ms) < 6:
-                ims *= _uspad[len(ms)]
+        # Pad the fraction of second to get the micros
+        if fr:
+            us = int(fr)
+            if len(fr) < 6:
+                us *= _uspad[len(fr)]
         else:
-            ims = 0
+            us = 0
 
         try:
             return datetime(
-                int(ye), imo, int(da), int(ho), int(mi), int(se), ims
+                int(ye), imo, int(da), int(ho), int(mi), int(se), us
             )
         except ValueError as e:
             s = bytes(data).decode("utf8", "replace")
@@ -582,15 +582,15 @@ class TimestamptzLoader(Loader):
                 raise DataError(f"BC timestamps not supported, got {s!r}")
             raise DataError(f"can't parse timestamp {s!r}")
 
-        ye, mo, da, ho, mi, se, ms, sgn, oh, om, os = m.groups()
+        ye, mo, da, ho, mi, se, fr, sgn, oh, om, os = m.groups()
 
-        # Pad the fraction of second to get millis
-        if ms:
-            ims = int(ms)
-            if len(ms) < 6:
-                ims *= _uspad[len(ms)]
+        # Pad the fraction of second to get the micros
+        if fr:
+            us = int(fr)
+            if len(fr) < 6:
+                us *= _uspad[len(fr)]
         else:
-            ims = 0
+            us = 0
 
         # Calculate timezone offset
         soff = 60 * 60 * int(oh)
@@ -607,7 +607,7 @@ class TimestamptzLoader(Loader):
         # the connection timezone.
         try:
             dt = datetime(
-                int(ye), int(mo), int(da), int(ho), int(mi), int(se), ims, utc
+                int(ye), int(mo), int(da), int(ho), int(mi), int(se), us, utc
             )
             return (dt - tzoff).astimezone(self._timezone)
         except ValueError as e:
@@ -741,5 +741,5 @@ _month_abbr = {
     )
 }
 
-# Pad to get milliseconds from a fraction of seconds
+# Pad to get microseconds from a fraction of seconds
 _uspad = [0, 100_000, 10_000, 1_000, 100, 10, 1]

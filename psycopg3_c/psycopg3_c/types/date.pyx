@@ -470,10 +470,10 @@ cdef class TimeBinaryLoader(CLoader):
 
     cdef object cload(self, const char *data, size_t length):
         cdef int64_t val = endian.be64toh((<uint64_t *>data)[0])
-        cdef int h, m, s, ms
+        cdef int h, m, s, us
 
         with cython.cdivision(True):
-            ms = val % 1_000_000
+            us = val % 1_000_000
             val //= 1_000_000
 
             s = val % 60
@@ -483,7 +483,7 @@ cdef class TimeBinaryLoader(CLoader):
             h = val // 60
 
         try:
-            return cdt.time_new(h, m, s, ms, None)
+            return cdt.time_new(h, m, s, us, None)
         except ValueError:
             raise e.DataError(
                 f"time not supported by Python: hour={h}"
@@ -538,10 +538,10 @@ cdef class TimetzBinaryLoader(CLoader):
     cdef object cload(self, const char *data, size_t length):
         cdef int64_t val = endian.be64toh((<uint64_t *>data)[0])
         cdef int32_t off = endian.be32toh((<uint32_t *>(data + sizeof(int64_t)))[0])
-        cdef int h, m, s, ms
+        cdef int h, m, s, us
 
         with cython.cdivision(True):
-            ms = val % 1_000_000
+            us = val % 1_000_000
             val //= 1_000_000
 
             s = val % 60
@@ -552,11 +552,11 @@ cdef class TimetzBinaryLoader(CLoader):
 
             # Python < 3.7 didn't support seconds in the timezones
             if PY_VERSION_HEX >= 0x03070000:
-                off = off // 60 * 60
+                off = round(off / 60.0) * 60
 
         tz = _timezone_from_seconds(-off)
         try:
-            return cdt.time_new(h, m, s, ms, tz)
+            return cdt.time_new(h, m, s, us, tz)
         except ValueError:
             raise e.DataError(
                 f"time not supported by Python: hour={h}"
