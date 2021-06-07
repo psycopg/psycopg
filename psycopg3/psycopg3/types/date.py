@@ -604,6 +604,11 @@ class TimestamptzLoader(Loader):
             soff += int(os)
         tzoff = timedelta(0, soff if sgn == b"+" else -soff)
 
+        # The return value is a datetime with the timezone of the connection
+        # (in order to be consistent with the binary loader, which is the only
+        # thing it can return). So create a temporary datetime object, in utc,
+        # shift it by the offset parsed from the timestamp, and then move it to
+        # the connection timezone.
         try:
             dt = datetime(
                 int(ye), int(mo), int(da), int(ho), int(mi), int(se), ims, utc

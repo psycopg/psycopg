@@ -22,11 +22,12 @@ cdef extern from *:
 #endif
     """
 
-from psycopg3_c._psycopg3 cimport endian
-
 from datetime import date, time, timedelta, datetime, timezone
 
+from psycopg3_c._psycopg3 cimport endian
+
 from psycopg3 import errors as e
+from psycopg3.utils.compat import ZoneInfo
 
 
 # Initialise the datetime C API
@@ -46,10 +47,12 @@ DEF PY_DATE_MIN_DAYS = 1  # date.min.toordinal()
 
 cdef object date_toordinal = date.toordinal
 cdef object date_fromordinal = date.fromordinal
+cdef object datetime_astimezone = datetime.astimezone
 cdef object time_utcoffset = time.utcoffset
 cdef object timedelta_total_seconds = timedelta.total_seconds
-cdef object pg_datetimetz_epoch = datetime(2000, 1, 1, tzinfo=timezone.utc)
+cdef object timezone_utc = timezone.utc
 cdef object pg_datetime_epoch = datetime(2000, 1, 1)
+cdef object pg_datetimetz_epoch = datetime(2000, 1, 1, tzinfo=timezone.utc)
 
 cdef object _month_abbr = {
     n: i
@@ -506,11 +509,16 @@ cdef class TimetzLoader(CLoader):
             ptr = _parse_micros(ptr + 1, &us)
 
         # Parse the timezone
-        tz = _parse_timezone(&ptr)
+        cdef int offsecs = _parse_timezone_to_seconds(&ptr)
         if ptr == NULL:
             s = bytes(data).decode("utf8", "replace")
             raise e.DataError(f"can't parse timetz {s!r}")
 
+        # Python < 3.7 didn't support seconds in the timezones
+        if PY_VERSION_HEX < 0x03070000:
+            offsecs = round(offsecs / 60.0) * 60
+
+        tz = _timezone_from_seconds(offsecs)
         try:
             return cdt.time_new(vals[0], vals[1], vals[2], us, tz)
         except ValueError as ex:
@@ -542,7 +550,7 @@ cdef class TimetzBinaryLoader(CLoader):
             if PY_VERSION_HEX >= 0x03070000:
                 off = off // 60 * 60
 
-        tz = timezone_from_seconds(-off)
+        tz = _timezone_from_seconds(-off)
         try:
             return cdt.time_new(h, m, s, ms, tz)
         except ValueError:
@@ -683,8 +691,11 @@ cdef class TimestampBinaryLoader(CLoader):
         cdef int64_t val = endian.be64toh((<uint64_t *>data)[0])
         cdef long micros, secs, days
 
-        # Group the micros in biggers stuff or timedelta_new might overflow
+        # Work only with positive values as the cdivision behaves differently
+        # with negative values, and cdivision=False adds overhead.
         cdef int64_t aval = val if val >= 0 else -val
+
+        # Group the micros in biggers stuff or timedelta_new might overflow
         with cython.cdivision(True):
             secs = aval // 1_000_000
             micros = aval % 1_000_000
@@ -710,8 +721,16 @@ cdef class TimestampBinaryLoader(CLoader):
                 ) from None
 
 
+cdef class _BaseTimestamptzLoader(CLoader):
+    cdef object _timezone
+
+    def __init__(self, oid: int, context: Optional[AdaptContext] = None):
+        super().__init__(oid, context)
+        self._timezone = _timezone_from_connection(self._pgconn)
+
+
 @cython.final
-cdef class TimestamptzLoader(CLoader):
+cdef class TimestamptzLoader(_BaseTimestamptzLoader):
 
     format = PQ_TEXT
     cdef int _order
@@ -764,14 +783,24 @@ cdef class TimestamptzLoader(CLoader):
             m, d, y = vals[D1], vals[D2], vals[D3]
 
         # Parse the timezone
-        tz = _parse_timezone(&ptr)
+        cdef int offsecs = _parse_timezone_to_seconds(&ptr)
         if ptr == NULL:
             s = bytes(data).decode("utf8", "replace")
-            raise e.DataError(f"can't parse timetz {s!r}")
+            raise e.DataError(f"can't parse timestamptz {s!r}")
 
+        tzoff = cdt.timedelta_new(0, offsecs, 0)
+
+        # The return value is a datetime with the timezone of the connection
+        # (in order to be consistent with the binary loader, which is the only
+        # thing it can return). So create a temporary datetime object, in utc,
+        # shift it by the offset parsed from the timestamp, and then move it to
+        # the connection timezone.
         try:
-            return cdt.datetime_new(
-                y, m, d, vals[HO], vals[MI], vals[SE], us, tz)
+            dt = cdt.datetime_new(
+                y, m, d, vals[HO], vals[MI], vals[SE], us, timezone_utc)
+            dt -= tzoff
+            return PyObject_CallFunctionObjArgs(datetime_astimezone,
+                <PyObject *>dt, <PyObject *>self._timezone, NULL)
         except ValueError as ex:
             s = bytes(data).decode("utf8", "replace")
             raise e.DataError(f"can't parse timestamptz {s!r}: {ex}") from None
@@ -782,6 +811,47 @@ cdef class TimestamptzLoader(CLoader):
         raise NotImplementedError(
             f"can't parse timestamptz with DateStyle {ds!r}: {s!r}"
         )
+
+
+@cython.final
+cdef class TimestamptzBinaryLoader(_BaseTimestamptzLoader):
+
+    format = PQ_BINARY
+
+    cdef object cload(self, const char *data, size_t length):
+        cdef int64_t val = endian.be64toh((<uint64_t *>data)[0])
+        cdef long micros, secs, days
+
+        # Work only with positive values as the cdivision behaves differently
+        # with negative values, and cdivision=False adds overhead.
+        cdef int64_t aval = val if val >= 0 else -val
+
+        # Group the micros in biggers stuff or timedelta_new might overflow
+        with cython.cdivision(True):
+            secs = aval // 1_000_000
+            micros = aval % 1_000_000
+
+            days = secs // 86_400
+            secs %= 86_400
+
+        try:
+            delta = cdt.timedelta_new(days, secs, micros)
+            if val > 0:
+                dt = pg_datetimetz_epoch + delta
+            else:
+                dt = pg_datetimetz_epoch - delta
+            return PyObject_CallFunctionObjArgs(datetime_astimezone,
+                <PyObject *>dt, <PyObject *>self._timezone, NULL)
+
+        except OverflowError:
+            if val <= 0:
+                raise e.DataError(
+                    "timestamp too small (before year 1)"
+                ) from None
+            else:
+                raise e.DataError(
+                    "timestamp too large (after year 10K)"
+                ) from None
 
 
 cdef const char *_parse_date_values(const char *ptr, int *vals, int nvals):
@@ -833,7 +903,7 @@ cdef const char *_parse_micros(const char *ptr, int *us):
     return ptr
 
 
-cdef object _parse_timezone(const char **bufptr):
+cdef int _parse_timezone_to_seconds(const char **bufptr):
     """
     Parse a timezone from a string, return Python timezone object.
 
@@ -843,7 +913,7 @@ cdef object _parse_timezone(const char **bufptr):
     cdef const char *ptr = bufptr[0]
     cdef char sgn = ptr[0]
 
-    # Parse at most three digits
+    # Parse at most three groups of digits
     DEF OH = 0
     DEF OM = 1
     DEF OS = 2
@@ -853,20 +923,13 @@ cdef object _parse_timezone(const char **bufptr):
 
     ptr = _parse_date_values(ptr + 1, vals, NVALS)
     if ptr == NULL:
-        return None
+        return 0
 
-    # Calculate timezone
-    cdef int off = 60 * (60 * vals[OH] + vals[OM])
-    # Python < 3.7 didn't support seconds in the timezones
-    if PY_VERSION_HEX >= 0x03070000:
-        off += vals[OS]
-    if sgn == b"-":
-        off = -off
-
-    return timezone_from_seconds(off)
+    cdef int off = 60 * (60 * vals[OH] + vals[OM]) + vals[OS]
+    return -off if sgn == b"-" else off
 
 
-cdef object timezone_from_seconds(int sec, __cache={}):
+cdef object _timezone_from_seconds(int sec, __cache={}):
     cdef object pysec = sec
     cdef PyObject *ptr = PyDict_GetItem(__cache, pysec)
     if ptr != NULL:
@@ -879,6 +942,30 @@ cdef object timezone_from_seconds(int sec, __cache={}):
         tz = timezone(delta)
     __cache[pysec] = tz
     return tz
+
+
+cdef object _timezone_from_connection(pq.PGconn pgconn, __cache={}):
+    """Return the Python timezone info of the connection's timezone."""
+    if pgconn is None:
+        return timezone_utc
+
+    tzname = libpq.PQparameterStatus(pgconn._pgconn_ptr, b"TimeZone")
+    cdef PyObject *ptr = PyDict_GetItem(__cache, tzname)
+    if ptr != NULL:
+        return <object>ptr
+
+    sname = tzname.decode("utf8") if tzname else "UTC"
+    try:
+        zi = ZoneInfo(sname)
+    except KeyError:
+        logger = logging.getLogger("psycopg3")
+        logger.warning(
+            "unknown PostgreSQL timezone: %r; will use UTC", sname
+        )
+        zi = timezone_utc
+
+    __cache[tzname] = zi
+    return zi
 
 
 cdef const char *_get_datestyle(pq.PGconn pgconn):
