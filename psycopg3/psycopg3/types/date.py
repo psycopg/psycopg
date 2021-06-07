@@ -324,10 +324,9 @@ class TimeLoader(Loader):
 
         # Pad the fraction of second to get millis
         if ms:
-            if len(ms) == 6:
-                ims = int(ms)
-            else:
-                ims = int(ms + _ms_trail[len(ms)])
+            ims = int(ms)
+            if len(ms) < 6:
+                ims *= _uspad[len(ms)]
         else:
             ims = 0
 
@@ -379,10 +378,9 @@ class TimetzLoader(Loader):
 
         # Pad the fraction of second to get millis
         if ms:
-            if len(ms) == 6:
-                ims = int(ms)
-            else:
-                ims = int(ms + _ms_trail[len(ms)])
+            ims = int(ms)
+            if len(ms) < 6:
+                ims *= _uspad[len(ms)]
         else:
             ims = 0
 
@@ -517,10 +515,9 @@ class TimestampLoader(Loader):
 
         # Pad the fraction of second to get millis
         if ms:
-            if len(ms) == 6:
-                ims = int(ms)
-            else:
-                ims = int(ms + _ms_trail[len(ms)])
+            ims = int(ms)
+            if len(ms) < 6:
+                ims *= _uspad[len(ms)]
         else:
             ims = 0
 
@@ -589,10 +586,9 @@ class TimestamptzLoader(Loader):
 
         # Pad the fraction of second to get millis
         if ms:
-            if len(ms) == 6:
-                ims = int(ms)
-            else:
-                ims = int(ms + _ms_trail[len(ms)])
+            ims = int(ms)
+            if len(ms) < 6:
+                ims *= _uspad[len(ms)]
         else:
             ims = 0
 
@@ -746,4 +742,4 @@ _month_abbr = {
 }
 
 # Pad to get milliseconds from a fraction of seconds
-_ms_trail = [b"000000", b"00000", b"0000", b"000", b"00", b"0"]
+_uspad = [0, 100_000, 10_000, 1_000, 100, 10, 1]

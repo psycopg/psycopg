@@ -14,13 +14,17 @@ cdef extern from "Python.h":
     const char *PyUnicode_AsUTF8AndSize(unicode obj, Py_ssize_t *size) except NULL
     object PyTimeZone_FromOffset(object offset)
 
-# Hack to compile on Python 3.6
 cdef extern from *:
     """
+/* Hack to compile on Python 3.6 */
 #if PY_VERSION_HEX < 0x03070000
 #define PyTimeZone_FromOffset(x) x
 #endif
+
+/* Multipliers from fraction of seconds to microseconds */
+static int _uspad[] = {0, 100000, 10000, 1000, 100, 10, 1};
     """
+    cdef int *_uspad
 
 from datetime import date, time, timedelta, datetime, timezone
 
@@ -876,7 +880,7 @@ cdef const char *_parse_date_values(const char *ptr, int *vals, int nvals):
     return ptr
 
 
-cdef const char *_parse_micros(const char *ptr, int *us):
+cdef const char *_parse_micros(const char *start, int *us):
     """
     Parse microseconds from a string.
 
@@ -884,21 +888,18 @@ cdef const char *_parse_micros(const char *ptr, int *us):
 
     Return the pointer at the separator after the final digit.
     """
-    cdef int ndigits = 0
+    cdef const char *ptr = start
     while ptr[0]:
         if b'0' <= ptr[0] <= b'9':
             us[0] = us[0] * 10 + (ptr[0] - <char>b'0')
-            ndigits += 1
         else:
             break
 
         ptr += 1
 
     # Pad the fraction of second to get millis
-    if us[0]:
-        while ndigits < 6:
-            us[0] *= 10
-            ndigits += 1
+    if us[0] and ptr - start < 6:
+        us[0] *= _uspad[ptr - start]
 
     return ptr
 
