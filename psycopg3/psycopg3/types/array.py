@@ -6,7 +6,8 @@ Adapters for arrays
 
 import re
 import struct
-from typing import Any, Iterator, List, Optional, Set, Tuple, Type
+from typing import Any, Callable, Iterator, List, Optional, Set, Tuple, Type
+from typing import cast
 
 from .. import pq
 from .. import errors as e
@@ -14,7 +15,19 @@ from ..oids import postgres_types, TEXT_OID, TEXT_ARRAY_OID, INVALID_OID
 from ..adapt import Buffer, Dumper, Loader, Transformer
 from ..adapt import Format as Pg3Format
 from ..proto import AdaptContext
+from .._struct import pack_len, unpack_len
 from .._typeinfo import TypeInfo
+
+_struct_head = struct.Struct("!III")  # ndims, hasnull, elem oid
+_pack_head = cast(Callable[[int, int, int], bytes], _struct_head.pack)
+_unpack_head = cast(
+    Callable[[bytes], Tuple[int, int, int]], _struct_head.unpack_from
+)
+_struct_dim = struct.Struct("!II")  # dim, lower bound
+_pack_dim = cast(Callable[[int, int], bytes], _struct_dim.pack)
+_unpack_dim = cast(
+    Callable[[bytes, int], Tuple[int, int]], _struct_dim.unpack_from
+)
 
 
 class BaseListDumper(Dumper):
@@ -162,7 +175,7 @@ class ListBinaryDumper(BaseListDumper):
         sub_oid = self.sub_dumper and self.sub_dumper.oid or TEXT_OID
 
         if not obj:
-            return _struct_head.pack(0, 0, sub_oid)
+            return _pack_head(0, 0, sub_oid)
 
         data: List[bytes] = [b"", b""]  # placeholders to avoid a resize
         dims: List[int] = []
@@ -187,7 +200,7 @@ class ListBinaryDumper(BaseListDumper):
                     if item is not None:
                         # If we get here, the sub_dumper must have been set
                         ad = self.sub_dumper.dump(item)  # type: ignore[union-attr]
-                        data.append(_struct_len.pack(len(ad)))
+                        data.append(pack_len(len(ad)))
                         data.append(ad)
                     else:
                         hasnull = 1
@@ -202,8 +215,8 @@ class ListBinaryDumper(BaseListDumper):
 
         dump_list(obj, 0)
 
-        data[0] = _struct_head.pack(len(dims), hasnull, sub_oid)
-        data[1] = b"".join(_struct_dim.pack(dim, 1) for dim in dims)
+        data[0] = _pack_head(len(dims), hasnull, sub_oid)
+        data[1] = b"".join(_pack_dim(dim, 1) for dim in dims)
         return b"".join(data)
 
 
@@ -273,30 +286,23 @@ class ArrayLoader(BaseArrayLoader):
     _re_unescape = re.compile(br"\\(.)")
 
 
-_struct_head = struct.Struct("!III")  # ndims, hasnull, elem oid
-_struct_dim = struct.Struct("!II")  # dim, lower bound
-_struct_len = struct.Struct("!i")
-
-
 class ArrayBinaryLoader(BaseArrayLoader):
 
     format = pq.Format.BINARY
 
     def load(self, data: Buffer) -> List[Any]:
-        ndims, hasnull, oid = _struct_head.unpack_from(data[:12])
+        ndims, hasnull, oid = _unpack_head(data)
         if not ndims:
             return []
 
         fcast = self._tx.get_loader(oid, self.format).load
 
         p = 12 + 8 * ndims
-        dims = [
-            _struct_dim.unpack_from(data, i)[0] for i in list(range(12, p, 8))
-        ]
+        dims = [_unpack_dim(data, i)[0] for i in list(range(12, p, 8))]
 
         def consume(p: int) -> Iterator[Any]:
             while 1:
-                size = _struct_len.unpack_from(data, p)[0]
+                size = unpack_len(data, p)[0]
                 p += 4
                 if size != -1:
                     yield fcast(data[p : p + size])

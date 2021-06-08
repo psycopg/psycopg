@@ -14,27 +14,11 @@ from ..pq import Format
 from ..oids import postgres_types as builtins
 from ..adapt import Buffer, Dumper, Loader
 from ..adapt import Format as Pg3Format
+from .._struct import pack_int2, pack_uint2, unpack_int2
+from .._struct import pack_int4, pack_uint4, unpack_int4, unpack_uint4
+from .._struct import pack_int8, unpack_int8
+from .._struct import pack_float8, unpack_float4, unpack_float8
 from ..wrappers.numeric import Int2, Int4, Int8, IntNumeric
-
-_PackInt = Callable[[int], bytes]
-_PackFloat = Callable[[float], bytes]
-_UnpackInt = Callable[[bytes], Tuple[int]]
-_UnpackFloat = Callable[[bytes], Tuple[float]]
-
-_pack_int2 = cast(_PackInt, struct.Struct("!h").pack)
-_pack_uint2 = cast(_PackInt, struct.Struct("!H").pack)
-_pack_int4 = cast(_PackInt, struct.Struct("!i").pack)
-_pack_uint4 = cast(_PackInt, struct.Struct("!I").pack)
-_pack_int8 = cast(_PackInt, struct.Struct("!q").pack)
-_pack_float8 = cast(_PackFloat, struct.Struct("!d").pack)
-_unpack_int2 = cast(_UnpackInt, struct.Struct("!h").unpack)
-_unpack_uint2 = cast(_UnpackInt, struct.Struct("!H").unpack)
-_unpack_int4 = cast(_UnpackInt, struct.Struct("!i").unpack)
-_unpack_uint4 = cast(_UnpackInt, struct.Struct("!I").unpack)
-_unpack_int8 = cast(_UnpackInt, struct.Struct("!q").unpack)
-_unpack_float4 = cast(_UnpackFloat, struct.Struct("!f").unpack)
-_unpack_float8 = cast(_UnpackFloat, struct.Struct("!d").unpack)
-
 
 # Wrappers to force numbers to be cast as specific PostgreSQL types
 
@@ -82,7 +66,7 @@ class FloatBinaryDumper(Dumper):
     _oid = builtins["float8"].oid
 
     def dump(self, obj: float) -> bytes:
-        return _pack_float8(obj)
+        return pack_float8(obj)
 
 
 class DecimalDumper(SpecialValuesDumper):
@@ -159,7 +143,7 @@ class Int2BinaryDumper(Int2Dumper):
     format = Format.BINARY
 
     def dump(self, obj: int) -> bytes:
-        return _pack_int2(obj)
+        return pack_int2(obj)
 
 
 class Int4BinaryDumper(Int4Dumper):
@@ -167,7 +151,7 @@ class Int4BinaryDumper(Int4Dumper):
     format = Format.BINARY
 
     def dump(self, obj: int) -> bytes:
-        return _pack_int4(obj)
+        return pack_int4(obj)
 
 
 class Int8BinaryDumper(Int8Dumper):
@@ -175,7 +159,7 @@ class Int8BinaryDumper(Int8Dumper):
     format = Format.BINARY
 
     def dump(self, obj: int) -> bytes:
-        return _pack_int8(obj)
+        return pack_int8(obj)
 
 
 # Ratio between number of bits required to store a number and number of pg
@@ -201,7 +185,7 @@ class IntNumericBinaryDumper(IntNumericDumper):
         while obj:
             rem = obj % 10_000
             obj //= 10_000
-            out[i : i + 2] = _pack_uint2(rem)
+            out[i : i + 2] = pack_uint2(rem)
             i -= 2
 
         return out
@@ -212,7 +196,7 @@ class OidBinaryDumper(OidDumper):
     format = Format.BINARY
 
     def dump(self, obj: int) -> bytes:
-        return _pack_uint4(obj)
+        return pack_uint4(obj)
 
 
 class IntBinaryDumper(IntDumper):
@@ -239,7 +223,7 @@ class Int2BinaryLoader(Loader):
     format = Format.BINARY
 
     def load(self, data: Buffer) -> int:
-        return _unpack_int2(data)[0]
+        return unpack_int2(data)[0]
 
 
 class Int4BinaryLoader(Loader):
@@ -247,7 +231,7 @@ class Int4BinaryLoader(Loader):
     format = Format.BINARY
 
     def load(self, data: Buffer) -> int:
-        return _unpack_int4(data)[0]
+        return unpack_int4(data)[0]
 
 
 class Int8BinaryLoader(Loader):
@@ -255,7 +239,7 @@ class Int8BinaryLoader(Loader):
     format = Format.BINARY
 
     def load(self, data: Buffer) -> int:
-        return _unpack_int8(data)[0]
+        return unpack_int8(data)[0]
 
 
 class OidBinaryLoader(Loader):
@@ -263,7 +247,7 @@ class OidBinaryLoader(Loader):
     format = Format.BINARY
 
     def load(self, data: Buffer) -> int:
-        return _unpack_uint4(data)[0]
+        return unpack_uint4(data)[0]
 
 
 class FloatLoader(Loader):
@@ -280,7 +264,7 @@ class Float4BinaryLoader(Loader):
     format = Format.BINARY
 
     def load(self, data: Buffer) -> float:
-        return _unpack_float4(data)[0]
+        return unpack_float4(data)[0]
 
 
 class Float8BinaryLoader(Loader):
@@ -288,7 +272,7 @@ class Float8BinaryLoader(Loader):
     format = Format.BINARY
 
     def load(self, data: Buffer) -> float:
-        return _unpack_float8(data)[0]
+        return unpack_float8(data)[0]
 
 
 class NumericLoader(Loader):
@@ -435,10 +419,10 @@ class DecimalBinaryDumper(Dumper):
             pgdigit += weights[wi] * digits[i]
             wi += 1
             if wi >= DEC_DIGITS:
-                out += _pack_uint2(pgdigit)
+                out += pack_uint2(pgdigit)
                 pgdigit = wi = 0
 
         if pgdigit:
-            out += _pack_uint2(pgdigit)
+            out += pack_uint2(pgdigit)
 
         return out

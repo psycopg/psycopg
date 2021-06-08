@@ -11,32 +11,26 @@ from datetime import date, datetime, time, timedelta, timezone
 from typing import Any, Callable, cast, Optional, Tuple, Union, TYPE_CHECKING
 
 from ..pq import Format
+from .._tz import get_tzinfo
 from ..oids import postgres_types as builtins
 from ..adapt import Buffer, Dumper, Loader, Format as Pg3Format
 from ..proto import AdaptContext
 from ..errors import InterfaceError, DataError
-from .._tz import get_tzinfo
+from .._struct import pack_int4, pack_int8, unpack_int4, unpack_int8
 
 if TYPE_CHECKING:
     from ..connection import BaseConnection
 
-_PackInt = Callable[[int], bytes]
-_UnpackInt = Callable[[bytes], Tuple[int]]
-
-_pack_int4 = cast(_PackInt, struct.Struct("!i").pack)
-_pack_int8 = cast(_PackInt, struct.Struct("!q").pack)
-_unpack_int4 = cast(_UnpackInt, struct.Struct("!i").unpack)
-_unpack_int8 = cast(_UnpackInt, struct.Struct("!q").unpack)
-
-_pack_timetz = cast(Callable[[int, int], bytes], struct.Struct("!qi").pack)
+_struct_timetz = struct.Struct("!qi")  # microseconds, sec tz offset
+_pack_timetz = cast(Callable[[int, int], bytes], _struct_timetz.pack)
 _unpack_timetz = cast(
-    Callable[[bytes], Tuple[int, int]], struct.Struct("!qi").unpack
+    Callable[[bytes], Tuple[int, int]], _struct_timetz.unpack
 )
-_pack_interval = cast(
-    Callable[[int, int, int], bytes], struct.Struct("!qii").pack
-)
+
+_struct_interval = struct.Struct("!qii")  # microseconds, days, months
+_pack_interval = cast(Callable[[int, int, int], bytes], _struct_interval.pack)
 _unpack_interval = cast(
-    Callable[[bytes], Tuple[int, int, int]], struct.Struct("!qii").unpack
+    Callable[[bytes], Tuple[int, int, int]], _struct_interval.unpack
 )
 
 utc = timezone.utc
@@ -64,7 +58,7 @@ class DateBinaryDumper(Dumper):
 
     def dump(self, obj: date) -> bytes:
         days = obj.toordinal() - _pg_date_epoch_days
-        return _pack_int4(days)
+        return pack_int4(days)
 
 
 class _BaseTimeDumper(Dumper):
@@ -115,7 +109,7 @@ class TimeBinaryDumper(_BaseTimeDumper):
         us = obj.microsecond + 1_000_000 * (
             obj.second + 60 * (obj.minute + 60 * obj.hour)
         )
-        return _pack_int8(us)
+        return pack_int8(us)
 
     def upgrade(self, obj: time, format: Pg3Format) -> Dumper:
         if not obj.tzinfo:
@@ -189,7 +183,7 @@ class DateTimeTzBinaryDumper(_BaseDateTimeDumper):
         micros = delta.microseconds + 1_000_000 * (
             86_400 * delta.days + delta.seconds
         )
-        return _pack_int8(micros)
+        return pack_int8(micros)
 
     def upgrade(self, obj: datetime, format: Pg3Format) -> Dumper:
         if obj.tzinfo:
@@ -208,7 +202,7 @@ class DateTimeBinaryDumper(_BaseDateTimeDumper):
         micros = delta.microseconds + 1_000_000 * (
             86_400 * delta.days + delta.seconds
         )
-        return _pack_int8(micros)
+        return pack_int8(micros)
 
 
 class TimeDeltaDumper(Dumper):
@@ -298,7 +292,7 @@ class DateBinaryLoader(Loader):
     format = Format.BINARY
 
     def load(self, data: Buffer) -> date:
-        days = _unpack_int4(data)[0] + _pg_date_epoch_days
+        days = unpack_int4(data)[0] + _pg_date_epoch_days
         try:
             return date.fromordinal(days)
         except ValueError:
@@ -342,7 +336,7 @@ class TimeBinaryLoader(Loader):
     format = Format.BINARY
 
     def load(self, data: Buffer) -> time:
-        val = _unpack_int8(data)[0]
+        val = unpack_int8(data)[0]
         val, us = divmod(val, 1_000_000)
         val, s = divmod(val, 60)
         h, m = divmod(val, 60)
@@ -535,7 +529,7 @@ class TimestampBinaryLoader(Loader):
     format = Format.BINARY
 
     def load(self, data: Buffer) -> datetime:
-        micros = _unpack_int8(data)[0]
+        micros = unpack_int8(data)[0]
         try:
             return _pg_datetime_epoch + timedelta(microseconds=micros)
         except OverflowError:
@@ -633,7 +627,7 @@ class TimestamptzBinaryLoader(Loader):
         )
 
     def load(self, data: Buffer) -> datetime:
-        micros = _unpack_int8(data)[0]
+        micros = unpack_int8(data)[0]
         try:
             ts = _pg_datetimetz_epoch + timedelta(microseconds=micros)
             return ts.astimezone(self._timezone)

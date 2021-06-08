@@ -7,14 +7,20 @@ Support for composite types adaptation.
 import re
 import struct
 from collections import namedtuple
-from typing import Any, Callable, Iterator, List, Optional
+from typing import Any, Callable, cast, Iterator, List, Optional
 from typing import Sequence, Tuple, Type
 
 from .. import pq
 from ..oids import TEXT_OID
 from ..adapt import Buffer, Format, Dumper, Loader, Transformer
 from ..proto import AdaptContext
+from .._struct import unpack_len
 from .._typeinfo import CompositeInfo
+
+_struct_oidlen = struct.Struct("!Ii")
+_unpack_oidlen = cast(
+    Callable[[bytes, int], Tuple[int, int]], _struct_oidlen.unpack_from
+)
 
 
 class SequenceDumper(Dumper):
@@ -116,10 +122,6 @@ class RecordLoader(BaseCompositeLoader):
         )
 
 
-_struct_len = struct.Struct("!i")
-_struct_oidlen = struct.Struct("!Ii")
-
-
 class RecordBinaryLoader(Loader):
 
     format = pq.Format.BINARY
@@ -145,10 +147,10 @@ class RecordBinaryLoader(Loader):
         """
         Yield a sequence of (oid, offset, length) for the content of the record
         """
-        nfields = _struct_len.unpack_from(data, 0)[0]
+        nfields = unpack_len(data, 0)[0]
         i = 4
         for _ in range(nfields):
-            oid, length = _struct_oidlen.unpack_from(data, i)
+            oid, length = _unpack_oidlen(data, i)
             yield oid, i + 8, length
             i += (8 + length) if length > 0 else 8
 
