@@ -352,8 +352,15 @@ class TestTime:
     )
     def test_dump_time(self, conn, val, expr, fmt_in):
         cur = conn.cursor()
-        cur.execute(f"select '{expr}'::time = %{fmt_in}", (as_time(val),))
-        assert cur.fetchone()[0] is True
+        cur.execute(
+            f"""
+            select '{expr}'::time = %(val){fmt_in},
+                '{expr}'::time::text, %(val){fmt_in}::text
+            """,
+            {"val": as_time(val)},
+        )
+        ok, want, got = cur.fetchone()
+        assert ok, (got, want)
 
     @pytest.mark.parametrize(
         "val, expr",

@@ -68,10 +68,6 @@ class DateBinaryDumper(Dumper):
 
 
 class _BaseTimeDumper(Dumper):
-
-    # Can change to timetz type if the object dumped is naive
-    _oid = builtins["time"].oid
-
     def get_key(
         self, obj: time, format: Pg3Format
     ) -> Union[type, Tuple[type]]:
@@ -82,25 +78,30 @@ class _BaseTimeDumper(Dumper):
         else:
             return (self.cls,)
 
-    def upgrade(self, obj: time, format: Pg3Format) -> "Dumper":
+    def upgrade(self, obj: time, format: Pg3Format) -> Dumper:
         raise NotImplementedError
 
 
-class TimeDumper(_BaseTimeDumper):
+class _BaseTimeTextDumper(_BaseTimeDumper):
 
     format = Format.TEXT
 
     def dump(self, obj: time) -> bytes:
         return str(obj).encode("utf8")
 
-    def upgrade(self, obj: time, format: Pg3Format) -> "Dumper":
+
+class TimeDumper(_BaseTimeTextDumper):
+
+    _oid = builtins["time"].oid
+
+    def upgrade(self, obj: time, format: Pg3Format) -> Dumper:
         if not obj.tzinfo:
             return self
         else:
             return TimeTzDumper(self.cls)
 
 
-class TimeTzDumper(TimeDumper):
+class TimeTzDumper(_BaseTimeTextDumper):
 
     _oid = builtins["timetz"].oid
 
@@ -108,38 +109,36 @@ class TimeTzDumper(TimeDumper):
 class TimeBinaryDumper(_BaseTimeDumper):
 
     format = Format.BINARY
+    _oid = builtins["time"].oid
 
     def dump(self, obj: time) -> bytes:
-        ms = obj.microsecond + 1_000_000 * (
+        us = obj.microsecond + 1_000_000 * (
             obj.second + 60 * (obj.minute + 60 * obj.hour)
         )
-        return _pack_int8(ms)
+        return _pack_int8(us)
 
-    def upgrade(self, obj: time, format: Pg3Format) -> "Dumper":
+    def upgrade(self, obj: time, format: Pg3Format) -> Dumper:
         if not obj.tzinfo:
             return self
         else:
             return TimeTzBinaryDumper(self.cls)
 
 
-class TimeTzBinaryDumper(TimeBinaryDumper):
+class TimeTzBinaryDumper(_BaseTimeDumper):
 
+    format = Format.BINARY
     _oid = builtins["timetz"].oid
 
     def dump(self, obj: time) -> bytes:
-        ms = obj.microsecond + 1_000_000 * (
+        us = obj.microsecond + 1_000_000 * (
             obj.second + 60 * (obj.minute + 60 * obj.hour)
         )
         off = obj.utcoffset()
         assert off is not None
-        return _pack_timetz(ms, -int(off.total_seconds()))
+        return _pack_timetz(us, -int(off.total_seconds()))
 
 
 class _BaseDateTimeDumper(Dumper):
-
-    # Can change to timestamp type if the object dumped is naive
-    _oid = builtins["timestamptz"].oid
-
     def get_key(
         self, obj: datetime, format: Pg3Format
     ) -> Union[type, Tuple[type]]:
@@ -150,11 +149,11 @@ class _BaseDateTimeDumper(Dumper):
         else:
             return (self.cls,)
 
-    def upgrade(self, obj: datetime, format: Pg3Format) -> "Dumper":
+    def upgrade(self, obj: datetime, format: Pg3Format) -> Dumper:
         raise NotImplementedError
 
 
-class DateTimeTzDumper(_BaseDateTimeDumper):
+class _BaseDateTimeTextDumper(_BaseDateTimeDumper):
 
     format = Format.TEXT
 
@@ -163,20 +162,27 @@ class DateTimeTzDumper(_BaseDateTimeDumper):
         # the YYYY-MM-DD is always understood correctly.
         return str(obj).encode("utf8")
 
-    def upgrade(self, obj: datetime, format: Pg3Format) -> "Dumper":
+
+class DateTimeTzDumper(_BaseDateTimeTextDumper):
+
+    _oid = builtins["timestamptz"].oid
+
+    def upgrade(self, obj: datetime, format: Pg3Format) -> Dumper:
         if obj.tzinfo:
             return self
         else:
             return DateTimeDumper(self.cls)
 
 
-class DateTimeDumper(DateTimeTzDumper):
+class DateTimeDumper(_BaseDateTimeTextDumper):
+
     _oid = builtins["timestamp"].oid
 
 
 class DateTimeTzBinaryDumper(_BaseDateTimeDumper):
 
     format = Format.BINARY
+    _oid = builtins["timestamptz"].oid
 
     def dump(self, obj: datetime) -> bytes:
         delta = obj - _pg_datetimetz_epoch
@@ -185,21 +191,22 @@ class DateTimeTzBinaryDumper(_BaseDateTimeDumper):
         )
         return _pack_int8(micros)
 
-    def upgrade(self, obj: datetime, format: Pg3Format) -> "Dumper":
+    def upgrade(self, obj: datetime, format: Pg3Format) -> Dumper:
         if obj.tzinfo:
             return self
         else:
             return DateTimeBinaryDumper(self.cls)
 
 
-class DateTimeBinaryDumper(DateTimeTzBinaryDumper):
+class DateTimeBinaryDumper(_BaseDateTimeDumper):
+
+    format = Format.BINARY
     _oid = builtins["timestamp"].oid
 
     def dump(self, obj: datetime) -> bytes:
         delta = obj - _pg_datetime_epoch
-        micros = (
-            1_000_000 * (86_400 * delta.days + delta.seconds)
-            + delta.microseconds
+        micros = delta.microseconds + 1_000_000 * (
+            86_400 * delta.days + delta.seconds
         )
         return _pack_int8(micros)
 
@@ -283,7 +290,7 @@ class DateLoader(Loader):
             s = bytes(data).decode("utf8", "replace")
             if len(s) != 10:
                 raise DataError(f"date not supported: {s!r}") from None
-            raise DataError(f"can't manage date {s!r}: {e}") from None
+            raise DataError(f"can't parse date {s!r}: {e}") from None
 
 
 class DateBinaryLoader(Loader):
@@ -313,22 +320,21 @@ class TimeLoader(Loader):
             s = bytes(data).decode("utf8", "replace")
             raise DataError(f"can't parse time {s!r}")
 
-        ho, mi, se, ms = m.groups()
+        ho, mi, se, fr = m.groups()
 
-        # Pad the fraction of second to get millis
-        if ms:
-            if len(ms) == 6:
-                ims = int(ms)
-            else:
-                ims = int(ms + _ms_trail[len(ms)])
+        # Pad the fraction of second to get micros
+        if fr:
+            us = int(fr)
+            if len(fr) < 6:
+                us *= _uspad[len(fr)]
         else:
-            ims = 0
+            us = 0
 
         try:
-            return time(int(ho), int(mi), int(se), ims)
+            return time(int(ho), int(mi), int(se), us)
         except ValueError as e:
             s = bytes(data).decode("utf8", "replace")
-            raise DataError(f"can't manage time {s!r}: {e}") from None
+            raise DataError(f"can't parse time {s!r}: {e}") from None
 
 
 class TimeBinaryLoader(Loader):
@@ -337,18 +343,18 @@ class TimeBinaryLoader(Loader):
 
     def load(self, data: Buffer) -> time:
         val = _unpack_int8(data)[0]
-        val, ms = divmod(val, 1_000_000)
+        val, us = divmod(val, 1_000_000)
         val, s = divmod(val, 60)
         h, m = divmod(val, 60)
         try:
-            return time(h, m, s, ms)
+            return time(h, m, s, us)
         except ValueError:
             raise DataError(
                 f"time not supported by Python: hour={h}"
             ) from None
 
 
-class TimeTzLoader(Loader):
+class TimetzLoader(Loader):
 
     format = Format.TEXT
     _py37 = sys.version_info >= (3, 7)
@@ -368,16 +374,15 @@ class TimeTzLoader(Loader):
             s = bytes(data).decode("utf8", "replace")
             raise DataError(f"can't parse timetz {s!r}")
 
-        ho, mi, se, ms, sgn, oh, om, os = m.groups()
+        ho, mi, se, fr, sgn, oh, om, os = m.groups()
 
-        # Pad the fraction of second to get millis
-        if ms:
-            if len(ms) == 6:
-                ims = int(ms)
-            else:
-                ims = int(ms + _ms_trail[len(ms)])
+        # Pad the fraction of second to get the micros
+        if fr:
+            us = int(fr)
+            if len(fr) < 6:
+                us *= _uspad[len(fr)]
         else:
-            ims = 0
+            us = 0
 
         # Calculate timezone
         off = 60 * 60 * int(oh)
@@ -388,25 +393,25 @@ class TimeTzLoader(Loader):
         tz = timezone(timedelta(0, off if sgn == b"+" else -off))
 
         try:
-            return time(int(ho), int(mi), int(se), ims, tz)
+            return time(int(ho), int(mi), int(se), us, tz)
         except ValueError as e:
             s = bytes(data).decode("utf8", "replace")
-            raise DataError(f"can't manage timetz {s!r}: {e}") from None
+            raise DataError(f"can't parse timetz {s!r}: {e}") from None
 
 
-class TimeTzBinaryLoader(Loader):
+class TimetzBinaryLoader(Loader):
 
     format = Format.BINARY
 
     def load(self, data: Buffer) -> time:
         val, off = _unpack_timetz(data)
 
-        val, ms = divmod(val, 1_000_000)
+        val, us = divmod(val, 1_000_000)
         val, s = divmod(val, 60)
         h, m = divmod(val, 60)
 
         try:
-            return time(h, m, s, ms, self._tz_from_sec(off))
+            return time(h, m, s, us, self._tz_from_sec(off))
         except ValueError:
             raise DataError(
                 f"time not supported by Python: hour={h}"
@@ -423,7 +428,7 @@ class TimeTzBinaryLoader(Loader):
 
 if sys.version_info < (3, 7):
     setattr(
-        TimeTzBinaryLoader, "_tz_from_sec", TimeTzBinaryLoader._tz_from_sec_36
+        TimetzBinaryLoader, "_tz_from_sec", TimetzBinaryLoader._tz_from_sec_36
     )
 
 
@@ -489,41 +494,40 @@ class TimestampLoader(Loader):
             raise DataError(f"can't parse timestamp {s!r}")
 
         if self._order == self._ORDER_YMD:
-            ye, mo, da, ho, mi, se, ms = m.groups()
+            ye, mo, da, ho, mi, se, fr = m.groups()
             imo = int(mo)
         elif self._order == self._ORDER_DMY:
-            da, mo, ye, ho, mi, se, ms = m.groups()
+            da, mo, ye, ho, mi, se, fr = m.groups()
             imo = int(mo)
         elif self._order == self._ORDER_MDY:
-            mo, da, ye, ho, mi, se, ms = m.groups()
+            mo, da, ye, ho, mi, se, fr = m.groups()
             imo = int(mo)
         else:
             if self._order == self._ORDER_PGDM:
-                da, mo, ho, mi, se, ms, ye = m.groups()
+                da, mo, ho, mi, se, fr, ye = m.groups()
             else:
-                mo, da, ho, mi, se, ms, ye = m.groups()
+                mo, da, ho, mi, se, fr, ye = m.groups()
             try:
                 imo = _month_abbr[mo]
             except KeyError:
                 s = mo.decode("utf8", "replace")
-                raise DataError(f"unexpected month: {s!r}") from None
+                raise DataError(f"can't parse month: {s!r}") from None
 
-        # Pad the fraction of second to get millis
-        if ms:
-            if len(ms) == 6:
-                ims = int(ms)
-            else:
-                ims = int(ms + _ms_trail[len(ms)])
+        # Pad the fraction of second to get the micros
+        if fr:
+            us = int(fr)
+            if len(fr) < 6:
+                us *= _uspad[len(fr)]
         else:
-            ims = 0
+            us = 0
 
         try:
             return datetime(
-                int(ye), imo, int(da), int(ho), int(mi), int(se), ims
+                int(ye), imo, int(da), int(ho), int(mi), int(se), us
             )
         except ValueError as e:
             s = bytes(data).decode("utf8", "replace")
-            raise DataError(f"can't manage timestamp {s!r}: {e}") from None
+            raise DataError(f"can't parse timestamp {s!r}: {e}") from None
 
 
 class TimestampBinaryLoader(Loader):
@@ -545,7 +549,7 @@ class TimestampBinaryLoader(Loader):
                 ) from None
 
 
-class TimestampTzLoader(Loader):
+class TimestamptzLoader(Loader):
 
     format = Format.TEXT
     _re_format = re.compile(
@@ -578,16 +582,15 @@ class TimestampTzLoader(Loader):
                 raise DataError(f"BC timestamps not supported, got {s!r}")
             raise DataError(f"can't parse timestamp {s!r}")
 
-        ye, mo, da, ho, mi, se, ms, sgn, oh, om, os = m.groups()
+        ye, mo, da, ho, mi, se, fr, sgn, oh, om, os = m.groups()
 
-        # Pad the fraction of second to get millis
-        if ms:
-            if len(ms) == 6:
-                ims = int(ms)
-            else:
-                ims = int(ms + _ms_trail[len(ms)])
+        # Pad the fraction of second to get the micros
+        if fr:
+            us = int(fr)
+            if len(fr) < 6:
+                us *= _uspad[len(fr)]
         else:
-            ims = 0
+            us = 0
 
         # Calculate timezone offset
         soff = 60 * 60 * int(oh)
@@ -597,24 +600,29 @@ class TimestampTzLoader(Loader):
             soff += int(os)
         tzoff = timedelta(0, soff if sgn == b"+" else -soff)
 
+        # The return value is a datetime with the timezone of the connection
+        # (in order to be consistent with the binary loader, which is the only
+        # thing it can return). So create a temporary datetime object, in utc,
+        # shift it by the offset parsed from the timestamp, and then move it to
+        # the connection timezone.
         try:
             dt = datetime(
-                int(ye), int(mo), int(da), int(ho), int(mi), int(se), ims, utc
+                int(ye), int(mo), int(da), int(ho), int(mi), int(se), us, utc
             )
             return (dt - tzoff).astimezone(self._timezone)
         except ValueError as e:
             s = bytes(data).decode("utf8", "replace")
-            raise DataError(f"can't manage timestamp {s!r}: {e}") from None
+            raise DataError(f"can't parse timestamptz {s!r}: {e}") from None
 
     def _load_notimpl(self, data: Buffer) -> datetime:
         s = bytes(data).decode("utf8", "replace")
         ds = _get_datestyle(self.connection).decode("ascii")
         raise NotImplementedError(
-            f"can't parse datetimetz with DateStyle {ds!r}: {s!r}"
+            f"can't parse timestamptz with DateStyle {ds!r}: {s!r}"
         )
 
 
-class TimestampTzBinaryLoader(Loader):
+class TimestamptzBinaryLoader(Loader):
 
     format = Format.BINARY
 
@@ -688,7 +696,7 @@ class IntervalLoader(Loader):
             return timedelta(days=days, seconds=seconds)
         except OverflowError as e:
             s = bytes(data).decode("utf8", "replace")
-            raise DataError(f"can't manage interval {s!r}: {e}") from None
+            raise DataError(f"can't parse interval {s!r}: {e}") from None
 
     def _load_notimpl(self, data: Buffer) -> timedelta:
         s = bytes(data).decode("utf8", "replace")
@@ -733,5 +741,5 @@ _month_abbr = {
     )
 }
 
-# Pad to get milliseconds from a fraction of seconds
-_ms_trail = [b"000000", b"00000", b"0000", b"000", b"00", b"0"]
+# Pad to get microseconds from a fraction of seconds
+_uspad = [0, 100_000, 10_000, 1_000, 100, 10, 1]
