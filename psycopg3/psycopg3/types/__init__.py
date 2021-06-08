@@ -144,6 +144,13 @@ from .range import (
     DateRangeLoader as DateRangeLoader,
     TimestampRangeLoader as TimestampRangeLoader,
     TimestampTZRangeLoader as TimestampTZRangeLoader,
+    RangeBinaryLoader as RangeBinaryLoader,
+    Int4RangeBinaryLoader as Int4RangeBinaryLoader,
+    Int8RangeBinaryLoader as Int8RangeBinaryLoader,
+    NumericRangeBinaryLoader as NumericRangeBinaryLoader,
+    DateRangeBinaryLoader as DateRangeBinaryLoader,
+    TimestampRangeBinaryLoader as TimestampRangeBinaryLoader,
+    TimestampTZRangeBinaryLoader as TimestampTZRangeBinaryLoader,
 )
 from .array import (
     ListDumper as ListDumper,
@@ -284,6 +291,12 @@ def register_default_globals(ctx: AdaptContext) -> None:
     DateRangeLoader.register("daterange", ctx)
     TimestampRangeLoader.register("tsrange", ctx)
     TimestampTZRangeLoader.register("tstzrange", ctx)
+    Int4RangeBinaryLoader.register("int4range", ctx)
+    Int8RangeBinaryLoader.register("int8range", ctx)
+    NumericRangeBinaryLoader.register("numrange", ctx)
+    DateRangeBinaryLoader.register("daterange", ctx)
+    TimestampRangeBinaryLoader.register("tsrange", ctx)
+    TimestampTZRangeBinaryLoader.register("tstzrange", ctx)
 
     ListDumper.register(list, ctx)
     ListBinaryDumper.register(list, ctx)

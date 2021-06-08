@@ -11,11 +11,18 @@ from datetime import date, datetime
 
 from ..pq import Format
 from ..oids import postgres_types as builtins, INVALID_OID
-from ..adapt import Buffer, Dumper, Format as Pg3Format
+from ..adapt import Buffer, Dumper, Loader, Format as Pg3Format, Transformer
 from ..proto import AdaptContext
+from .._struct import unpack_len
 from .._typeinfo import RangeInfo
 
 from .composite import SequenceDumper, BaseCompositeLoader
+
+RANGE_EMPTY = 0x01  # range is empty
+RANGE_LB_INC = 0x02  # lower bound is inclusive
+RANGE_UB_INC = 0x04  # upper bound is inclusive
+RANGE_LB_INF = 0x08  # lower bound is -infinity
+RANGE_UB_INF = 0x10  # upper bound is +infinity
 
 T = TypeVar("T")
 
@@ -303,6 +310,44 @@ class RangeLoader(BaseCompositeLoader, Generic[T]):
         return Range(min, max, bounds)
 
 
+class RangeBinaryLoader(Loader, Generic[T]):
+
+    format = Format.BINARY
+    subtype_oid: int
+
+    def __init__(self, oid: int, context: Optional[AdaptContext] = None):
+        super().__init__(oid, context)
+        self._tx = Transformer(context)
+
+    def load(self, data: Buffer) -> Range[T]:
+        head = data[0]
+        if head & RANGE_EMPTY:
+            return Range(empty=True)
+
+        load = self._tx.get_loader(self.subtype_oid, format=Format.BINARY).load
+        lb = "[" if head & RANGE_LB_INC else "("
+        ub = "]" if head & RANGE_UB_INC else ")"
+
+        pos = 1  # after the head
+        if head & RANGE_LB_INF:
+            min = None
+        else:
+            length = unpack_len(data, pos)[0]
+            pos += 4
+            min = load(data[pos : pos + length])
+            pos += length
+
+        if head & RANGE_UB_INF:
+            max = None
+        else:
+            length = unpack_len(data, pos)[0]
+            pos += 4
+            max = load(data[pos : pos + length])
+            pos += length
+
+        return Range(min, max, lb + ub)
+
+
 _int2parens = {ord(c): c for c in "[]()"}
 
 
@@ -317,8 +362,16 @@ def register_adapters(
     )
     loader.register(info.oid, context=context)
 
+    # generate and register a customized binary loader
+    bloader: Type[RangeBinaryLoader[Any]] = type(
+        f"{info.name.title()}BinaryLoader",
+        (RangeBinaryLoader,),
+        {"subtype_oid": info.subtype_oid},
+    )
+    bloader.register(info.oid, context=context)
 
-# Loaders for builtin range types
+
+# Text loaders for builtin range types
 
 
 class Int4RangeLoader(RangeLoader[int]):
@@ -342,4 +395,31 @@ class TimestampRangeLoader(RangeLoader[datetime]):
 
 
 class TimestampTZRangeLoader(RangeLoader[datetime]):
+    subtype_oid = builtins["timestamptz"].oid
+
+
+# Binary loaders for builtin range types
+
+
+class Int4RangeBinaryLoader(RangeBinaryLoader[int]):
+    subtype_oid = builtins["int4"].oid
+
+
+class Int8RangeBinaryLoader(RangeBinaryLoader[int]):
+    subtype_oid = builtins["int8"].oid
+
+
+class NumericRangeBinaryLoader(RangeBinaryLoader[Decimal]):
+    subtype_oid = builtins["numeric"].oid
+
+
+class DateRangeBinaryLoader(RangeBinaryLoader[date]):
+    subtype_oid = builtins["date"].oid
+
+
+class TimestampRangeBinaryLoader(RangeBinaryLoader[datetime]):
+    subtype_oid = builtins["timestamp"].oid
+
+
+class TimestampTZRangeBinaryLoader(RangeBinaryLoader[datetime]):
     subtype_oid = builtins["timestamptz"].oid
