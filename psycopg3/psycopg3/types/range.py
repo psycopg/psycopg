@@ -11,8 +11,8 @@ from datetime import date, datetime
 
 from ..pq import Format
 from ..oids import postgres_types as builtins, INVALID_OID
-from ..adapt import Buffer, Dumper, Loader, Format as Pg3Format, Transformer
-from ..proto import AdaptContext
+from ..adapt import Dumper, RecursiveLoader, Format as Pg3Format
+from ..proto import AdaptContext, Buffer
 from .._struct import unpack_len
 from .._typeinfo import RangeInfo
 
@@ -310,14 +310,10 @@ class RangeLoader(BaseCompositeLoader, Generic[T]):
         return Range(min, max, bounds)
 
 
-class RangeBinaryLoader(Loader, Generic[T]):
+class RangeBinaryLoader(RecursiveLoader, Generic[T]):
 
     format = Format.BINARY
     subtype_oid: int
-
-    def __init__(self, oid: int, context: Optional[AdaptContext] = None):
-        super().__init__(oid, context)
-        self._tx = Transformer(context)
 
     def load(self, data: Buffer) -> Range[T]:
         head = data[0]

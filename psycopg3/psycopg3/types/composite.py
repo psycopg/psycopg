@@ -12,8 +12,8 @@ from typing import Sequence, Tuple, Type
 
 from .. import pq
 from ..oids import TEXT_OID
-from ..adapt import Buffer, Format, Dumper, Loader, Transformer
-from ..proto import AdaptContext
+from ..adapt import Format, RecursiveDumper, RecursiveLoader
+from ..proto import AdaptContext, Buffer
 from .._struct import unpack_len
 from .._typeinfo import CompositeInfo
 
@@ -23,13 +23,9 @@ _unpack_oidlen = cast(
 )
 
 
-class SequenceDumper(Dumper):
+class SequenceDumper(RecursiveDumper):
 
     format = pq.Format.TEXT
-
-    def __init__(self, cls: type, context: Optional[AdaptContext] = None):
-        super().__init__(cls, context)
-        self._tx = Transformer(context)
 
     def _dump_sequence(
         self, obj: Sequence[Any], start: bytes, end: bytes, sep: bytes
@@ -71,13 +67,9 @@ class TupleDumper(SequenceDumper):
         return self._dump_sequence(obj, b"(", b")", b",")
 
 
-class BaseCompositeLoader(Loader):
+class BaseCompositeLoader(RecursiveLoader):
 
     format = pq.Format.TEXT
-
-    def __init__(self, oid: int, context: Optional[AdaptContext] = None):
-        super().__init__(oid, context)
-        self._tx = Transformer(context)
 
     def _parse_record(self, data: bytes) -> Iterator[Optional[bytes]]:
         """
@@ -122,14 +114,10 @@ class RecordLoader(BaseCompositeLoader):
         )
 
 
-class RecordBinaryLoader(Loader):
+class RecordBinaryLoader(RecursiveLoader):
 
     format = pq.Format.BINARY
     _types_set = False
-
-    def __init__(self, oid: int, context: Optional[AdaptContext] = None):
-        super().__init__(oid, context)
-        self._tx = Transformer(context)
 
     def load(self, data: Buffer) -> Tuple[Any, ...]:
         if not self._types_set:

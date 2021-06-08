@@ -12,9 +12,9 @@ from typing import cast
 from .. import pq
 from .. import errors as e
 from ..oids import postgres_types, TEXT_OID, TEXT_ARRAY_OID, INVALID_OID
-from ..adapt import Buffer, Dumper, Loader, Transformer
+from ..adapt import Dumper, RecursiveDumper, RecursiveLoader
 from ..adapt import Format as Pg3Format
-from ..proto import AdaptContext
+from ..proto import AdaptContext, Buffer
 from .._struct import pack_len, unpack_len
 from .._typeinfo import TypeInfo
 
@@ -30,10 +30,9 @@ _unpack_dim = cast(
 )
 
 
-class BaseListDumper(Dumper):
+class BaseListDumper(RecursiveDumper):
     def __init__(self, cls: type, context: Optional[AdaptContext] = None):
         super().__init__(cls, context)
-        self._tx = Transformer(context)
         self.sub_dumper: Optional[Dumper] = None
         self._types = context.adapters.types if context else postgres_types
 
@@ -220,12 +219,8 @@ class ListBinaryDumper(BaseListDumper):
         return b"".join(data)
 
 
-class BaseArrayLoader(Loader):
+class BaseArrayLoader(RecursiveLoader):
     base_oid: int
-
-    def __init__(self, oid: int, context: Optional[AdaptContext] = None):
-        super().__init__(oid, context)
-        self._tx = Transformer(context)
 
 
 class ArrayLoader(BaseArrayLoader):
