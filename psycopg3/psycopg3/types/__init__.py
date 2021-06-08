@@ -131,7 +131,9 @@ from .network import (
     IPv4NetworkBinaryDumper as IPv4NetworkBinaryDumper,
     IPv6NetworkBinaryDumper as IPv6NetworkBinaryDumper,
     InetLoader as InetLoader,
+    InetBinaryLoader as InetBinaryLoader,
     CidrLoader as CidrLoader,
+    CidrBinaryLoader as CidrBinaryLoader,
 )
 from .range import (
     RangeDumper as RangeDumper,
@@ -271,7 +273,9 @@ def register_default_globals(ctx: AdaptContext) -> None:
     IPv4NetworkBinaryDumper.register("ipaddress.IPv4Network", ctx)
     IPv6NetworkBinaryDumper.register("ipaddress.IPv6Network", ctx)
     InetLoader.register("inet", ctx)
+    InetBinaryLoader.register("inet", ctx)
     CidrLoader.register("cidr", ctx)
+    CidrBinaryLoader.register("cidr", ctx)
 
     RangeDumper.register(Range, ctx)
     Int4RangeLoader.register("int4range", ctx)

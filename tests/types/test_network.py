@@ -58,7 +58,6 @@ def test_network_dump(conn, fmt_in, val):
 @pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
 @pytest.mark.parametrize("val", ["127.0.0.1/32", "::ffff:102:300/128"])
 def test_inet_load_address(conn, fmt_out, val):
-    binary_check(fmt_out)
     addr = ipaddress.ip_address(val.split("/", 1)[0])
     cur = conn.cursor(binary=fmt_out)
 
@@ -81,7 +80,6 @@ def test_inet_load_address(conn, fmt_out, val):
 @pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
 @pytest.mark.parametrize("val", ["127.0.0.1/24", "::ffff:102:300/127"])
 def test_inet_load_network(conn, fmt_out, val):
-    binary_check(fmt_out)
     pyval = ipaddress.ip_interface(val)
     cur = conn.cursor(binary=fmt_out)
 
@@ -104,7 +102,6 @@ def test_inet_load_network(conn, fmt_out, val):
 @pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
 @pytest.mark.parametrize("val", ["127.0.0.0/24", "::ffff:102:300/128"])
 def test_cidr_load(conn, fmt_out, val):
-    binary_check(fmt_out)
     pyval = ipaddress.ip_network(val)
     cur = conn.cursor(binary=fmt_out)
 
@@ -122,11 +119,6 @@ def test_cidr_load(conn, fmt_out, val):
         (got,) = copy.read_row()
 
     assert got == pyval
-
-
-def binary_check(fmt):
-    if fmt == Format.BINARY or fmt == pq.Format.BINARY:
-        pytest.xfail("inet binary not implemented")
 
 
 @pytest.mark.subprocess
