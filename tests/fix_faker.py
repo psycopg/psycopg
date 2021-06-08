@@ -1,5 +1,6 @@
 import datetime as dt
 import importlib
+import ipaddress
 from math import isnan
 from uuid import UUID
 from random import choice, random, randrange
@@ -303,6 +304,30 @@ class Faker:
 
     def make_Int8(self, spec):
         return spec(randrange(-(1 << 63), 1 << 63))
+
+    def make_IPv4Address(self, spec):
+        return ipaddress.IPv4Address(bytes(randrange(256) for _ in range(4)))
+
+    def make_IPv4Interface(self, spec):
+        prefix = randrange(32)
+        return ipaddress.IPv4Interface(
+            (bytes(randrange(256) for _ in range(4)), prefix)
+        )
+
+    def make_IPv4Network(self, spec):
+        return self.make_IPv4Interface(spec).network
+
+    def make_IPv6Address(self, spec):
+        return ipaddress.IPv6Address(bytes(randrange(256) for _ in range(16)))
+
+    def make_IPv6Interface(self, spec):
+        prefix = randrange(128)
+        return ipaddress.IPv6Interface(
+            (bytes(randrange(256) for _ in range(16)), prefix)
+        )
+
+    def make_IPv6Network(self, spec):
+        return self.make_IPv6Interface(spec).network
 
     def make_Json(self, spec):
         return spec(self._make_json())
