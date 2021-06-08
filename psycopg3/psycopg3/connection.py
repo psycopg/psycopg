@@ -26,12 +26,12 @@ from .sql import Composable
 from .rows import Row, RowFactory, tuple_row, TupleRow
 from .proto import AdaptContext, ConnectionType, Params, PQGen, PQGenConn
 from .proto import Query, RV
+from .compat import asynccontextmanager
 from .cursor import Cursor, AsyncCursor
 from .conninfo import make_conninfo, ConnectionInfo
 from .generators import notifies
 from ._preparing import PrepareManager
 from .transaction import Transaction, AsyncTransaction
-from .utils.compat import asynccontextmanager
 from .server_cursor import ServerCursor, AsyncServerCursor
 
 logger = logging.getLogger("psycopg3")

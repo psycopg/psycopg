@@ -8,7 +8,7 @@ from typing import Any, Callable, List, Optional, Sequence, Tuple, Union
 from typing import TYPE_CHECKING
 
 from ._enums import Format
-from ..utils.compat import Protocol
+from ..compat import Protocol
 
 if TYPE_CHECKING:
     from .misc import PGnotify, ConninfoOption, PGresAttDesc

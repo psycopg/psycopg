@@ -19,8 +19,8 @@ from . import errors as e
 from .pq import ExecStatus
 from .adapt import Format
 from .proto import ConnectionType, PQGen, Transformer
+from .compat import create_task
 from .generators import copy_from, copy_to, copy_end
-from .utils.compat import create_task
 
 if TYPE_CHECKING:
     from .pq.proto import PGresult

@@ -5,8 +5,8 @@ from functools import partial
 
 import pytest
 
+from psycopg3.compat import create_task
 from psycopg3.pool.sched import AsyncScheduler
-from psycopg3.utils.compat import create_task
 
 pytestmark = pytest.mark.asyncio
 

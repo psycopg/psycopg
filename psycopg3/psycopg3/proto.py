@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 
 from . import pq
 from ._enums import Format
-from .utils.compat import Protocol
+from .compat import Protocol
 
 if TYPE_CHECKING:
     from .sql import Composable

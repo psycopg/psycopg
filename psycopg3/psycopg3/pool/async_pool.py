@@ -18,7 +18,7 @@ from collections import deque
 from .. import errors as e
 from ..pq import TransactionStatus
 from ..connection import AsyncConnection
-from ..utils.compat import Task, asynccontextmanager, create_task
+from ..compat import Task, asynccontextmanager, create_task
 
 from .base import ConnectionAttempt, BasePool
 from .sched import AsyncScheduler

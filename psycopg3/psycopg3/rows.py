@@ -11,7 +11,7 @@ from typing import Any, Callable, Dict, NamedTuple, Sequence, Tuple, Type
 from typing import TypeVar, TYPE_CHECKING
 
 from . import errors as e
-from .utils.compat import Protocol
+from .compat import Protocol
 
 if TYPE_CHECKING:
     from .cursor import AnyCursor

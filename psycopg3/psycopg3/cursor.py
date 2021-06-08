@@ -19,10 +19,10 @@ from .pq import ExecStatus, Format
 from .copy import Copy, AsyncCopy
 from .rows import Row, RowFactory
 from .proto import ConnectionType, Query, Params, PQGen
+from .compat import asynccontextmanager
 from ._column import Column
 from ._queries import PostgresQuery
 from ._preparing import Prepare
-from .utils.compat import asynccontextmanager
 
 if TYPE_CHECKING:
     from .proto import Transformer
