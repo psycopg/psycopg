@@ -12,7 +12,6 @@ from psycopg3.adapt import Format
 @pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
 @pytest.mark.parametrize("val", ["192.168.0.1", "2001:db8::"])
 def test_address_dump(conn, fmt_in, val):
-    binary_check(fmt_in)
     cur = conn.cursor()
     cur.execute(
         f"select %{fmt_in} = %s::inet", (ipaddress.ip_address(val), val)
@@ -28,12 +27,12 @@ def test_address_dump(conn, fmt_in, val):
 @pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
 @pytest.mark.parametrize("val", ["127.0.0.1/24", "::ffff:102:300/128"])
 def test_interface_dump(conn, fmt_in, val):
-    binary_check(fmt_in)
     cur = conn.cursor()
-    cur.execute(
-        f"select %{fmt_in} = %s::inet", (ipaddress.ip_interface(val), val)
-    )
-    assert cur.fetchone()[0] is True
+    rec = cur.execute(
+        f"select %(val){fmt_in} = %(repr)s::inet, %(val){fmt_in}, %(repr)s::inet",
+        {"val": ipaddress.ip_interface(val), "repr": val},
+    ).fetchone()
+    assert rec[0] is True, f"{rec[1]} != {rec[2]}"
     cur.execute(
         f"select %{fmt_in} = array[null, %s]::inet[]",
         ([None, ipaddress.ip_interface(val)], val),
@@ -44,7 +43,6 @@ def test_interface_dump(conn, fmt_in, val):
 @pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
 @pytest.mark.parametrize("val", ["127.0.0.0/24", "::ffff:102:300/128"])
 def test_network_dump(conn, fmt_in, val):
-    binary_check(fmt_in)
     cur = conn.cursor()
     cur.execute(
         f"select %{fmt_in} = %s::cidr", (ipaddress.ip_network(val), val)
