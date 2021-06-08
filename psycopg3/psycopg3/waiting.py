@@ -53,11 +53,13 @@ def wait_selector(
         sel = DefaultSelector()
         while 1:
             sel.register(fileno, s)
-            ready = None
-            while not ready:
-                ready = sel.select(timeout=timeout)
+            rlist = None
+            while not rlist:
+                rlist = sel.select(timeout=timeout)
             sel.unregister(fileno)
-            s = gen.send(ready[0][1])
+            # note: this line should require a cast, but mypy doesn't complain
+            ready: Ready = rlist[0][1]
+            s = gen.send(ready)
 
     except StopIteration as ex:
         rv: RV = ex.args[0] if ex.args else None
@@ -84,11 +86,12 @@ def wait_conn(gen: PQGenConn[RV], timeout: Optional[float] = None) -> RV:
         sel = DefaultSelector()
         while 1:
             sel.register(fileno, s)
-            ready = sel.select(timeout=timeout)
+            rlist = sel.select(timeout=timeout)
             sel.unregister(fileno)
-            if not ready:
+            if not rlist:
                 raise e.OperationalError("timeout expired")
-            fileno, s = gen.send(ready[0][1])  # type: ignore[arg-type]
+            ready: Ready = rlist[0][1]  # type: ignore[assignment]
+            fileno, s = gen.send(ready)
 
     except StopIteration as ex:
         rv: RV = ex.args[0] if ex.args else None
