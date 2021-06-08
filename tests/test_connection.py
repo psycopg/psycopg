@@ -37,7 +37,6 @@ def test_connect_bad():
 
 
 @pytest.mark.slow
-@pytest.mark.xfail
 @pytest.mark.skipif(sys.platform == "win32", reason="connect() hangs on Win32")
 def test_connect_timeout():
     s = socket.socket(socket.AF_INET)
@@ -52,7 +51,7 @@ def test_connect_timeout():
     Thread(target=closer).start()
 
     t0 = time.time()
-    with pytest.raises(psycopg3.DatabaseError):
+    with pytest.raises(psycopg3.OperationalError, match="timeout expired"):
         Connection.connect(host="localhost", port=port, connect_timeout=1)
     elapsed = time.time() - t0
     assert elapsed == pytest.approx(1.0, abs=0.05)

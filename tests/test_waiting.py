@@ -75,10 +75,11 @@ def test_wait_epoll_bad(pgconn):
     assert res.status == ExecStatus.TUPLES_OK
 
 
+@pytest.mark.parametrize("timeout", timeouts)
 @pytest.mark.asyncio
-async def test_wait_conn_async(dsn):
+async def test_wait_conn_async(dsn, timeout):
     gen = generators.connect(dsn)
-    conn = await waiting.wait_conn_async(gen)
+    conn = await waiting.wait_conn_async(gen, **timeout)
     assert conn.status == ConnStatus.OK
 
 

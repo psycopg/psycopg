@@ -38,7 +38,6 @@ async def test_connect_str_subclass(dsn):
 
 
 @pytest.mark.slow
-@pytest.mark.xfail
 async def test_connect_timeout():
     s = socket.socket(socket.AF_INET)
     s.bind(("", 0))
@@ -51,7 +50,7 @@ async def test_connect_timeout():
 
     async def connect():
         t0 = time.time()
-        with pytest.raises(psycopg3.DatabaseError):
+        with pytest.raises(psycopg3.OperationalError, match="timeout expired"):
             await AsyncConnection.connect(
                 host="localhost", port=port, connect_timeout=1
             )
