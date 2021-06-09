@@ -307,7 +307,9 @@ reveal_type(ref)
     out = cp.stdout.decode("utf8", "replace").splitlines()
     assert len(out) == 2, "\n".join(out)
     got, want = [
-        re.sub(r".*Revealed type is '([^']+)'.*", r"\1", line).replace("*", "")
+        re.sub(r".*Revealed type is (['\"])([^']+)\1.*", r"\2", line).replace(
+            "*", ""
+        )
         for line in out
     ]
     assert got == want
