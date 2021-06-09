@@ -6,6 +6,7 @@ import pytest
 
 from psycopg3 import pq
 from psycopg3.sql import Identifier
+from psycopg3.adapt import Format
 from psycopg3.types import Range, RangeInfo
 
 
@@ -50,9 +51,10 @@ samples = [
     "pgtype",
     "int4range int8range numrange daterange tsrange tstzrange".split(),
 )
-def test_dump_builtin_empty(conn, pgtype):
+@pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
+def test_dump_builtin_empty(conn, pgtype, fmt_in):
     r = Range(empty=True)
-    cur = conn.execute(f"select 'empty'::{pgtype} = %s", (r,))
+    cur = conn.execute(f"select 'empty'::{pgtype} = %{fmt_in}", (r,))
     assert cur.fetchone()[0] is True
 
 
@@ -60,22 +62,24 @@ def test_dump_builtin_empty(conn, pgtype):
     "pgtype",
     "int4range int8range numrange daterange tsrange tstzrange".split(),
 )
-def test_dump_builtin_array(conn, pgtype):
+@pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
+def test_dump_builtin_array(conn, pgtype, fmt_in):
     r1 = Range(empty=True)
     r2 = Range(bounds="()")
     cur = conn.execute(
-        f"select array['empty'::{pgtype}, '(,)'::{pgtype}] = %s",
+        f"select array['empty'::{pgtype}, '(,)'::{pgtype}] = %{fmt_in}",
         ([r1, r2],),
     )
     assert cur.fetchone()[0] is True
 
 
 @pytest.mark.parametrize("pgtype, min, max, bounds", samples)
-def test_dump_builtin_range(conn, pgtype, min, max, bounds):
+@pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
+def test_dump_builtin_range(conn, pgtype, min, max, bounds, fmt_in):
     r = Range(min, max, bounds)
     sub = type2sub[pgtype]
     cur = conn.execute(
-        f"select {pgtype}(%s::{sub}, %s::{sub}, %s) = %s::{pgtype}",
+        f"select {pgtype}(%s::{sub}, %s::{sub}, %s) = %{fmt_in}",
         (min, max, bounds, r),
     )
     assert cur.fetchone()[0] is True

@@ -137,6 +137,7 @@ from .network import (
 )
 from .range import (
     RangeDumper as RangeDumper,
+    BinaryRangeDumper as BinaryRangeDumper,
     RangeLoader as RangeLoader,
     Int4RangeLoader as Int4RangeLoader,
     Int8RangeLoader as Int8RangeLoader,
@@ -285,6 +286,7 @@ def register_default_globals(ctx: AdaptContext) -> None:
     CidrBinaryLoader.register("cidr", ctx)
 
     RangeDumper.register(Range, ctx)
+    BinaryRangeDumper.register(Range, ctx)
     Int4RangeLoader.register("int4range", ctx)
     Int8RangeLoader.register("int8range", ctx)
     NumericRangeLoader.register("numrange", ctx)
