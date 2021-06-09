@@ -289,6 +289,7 @@ class TestRangeObject:
             ("[]", True, True),
         ]:
             r = Range(10, 20, bounds)
+            assert r.bounds == bounds
             assert r.lower == 10
             assert r.upper == 20
             assert not r.isempty

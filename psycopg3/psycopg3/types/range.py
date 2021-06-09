@@ -93,6 +93,11 @@ class Range(Generic[T]):
         return self._upper
 
     @property
+    def bounds(self) -> str:
+        """The bounds string (two characters from '[', '(', ']', ')')."""
+        return self._bounds
+
+    @property
     def isempty(self) -> bool:
         """`!True` if the range is empty."""
         return not self._bounds
