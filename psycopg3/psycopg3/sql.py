@@ -29,7 +29,7 @@ def quote(obj: Any, context: Optional[AdaptContext] = None) -> str:
     return Literal(obj).as_string(context)
 
 
-class Composable(object):
+class Composable:
     """
     Abstract base class for objects that can be used to compose an SQL string.
 
