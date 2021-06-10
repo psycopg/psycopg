@@ -295,6 +295,16 @@ def test_load_float_approx(conn, expr, pgtype, want, fmt_out):
     assert result == pytest.approx(want)
 
 
+def test_load_float_copy(conn):
+    cur = conn.cursor(binary=False)
+    with cur.copy("copy (select 3.14::float8, 'hi'::text) to stdout;") as copy:
+        copy.set_types(["float8", "text"])
+        rec = copy.read_row()
+
+    assert rec[0] == pytest.approx(3.14)
+    assert rec[1] == "hi"
+
+
 #
 # Tests with decimal
 #

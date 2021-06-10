@@ -395,8 +395,9 @@ cdef class FloatLoader(CLoader):
     format = PQ_TEXT
 
     cdef object cload(self, const char *data, size_t length):
+        cdef char *endptr
         cdef double d = PyOS_string_to_double(
-            data, NULL, <PyObject *>OverflowError)
+            data, &endptr, <PyObject *>OverflowError)
         return PyFloat_FromDouble(d)
 
 
