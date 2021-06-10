@@ -52,7 +52,6 @@ jobs:
         run: pip install tox
       - name: Run tests
         run: tox -c psycopg3 -e ${{ matrix.python }} -- --color yes
-        timeout-minutes: 10
 
   c:
     name: C implementation
@@ -104,4 +103,3 @@ jobs:
         run: pip install tox
       - name: Run tests
         run: tox -c psycopg3_c -e ${{ matrix.python }} -- --color yes
-        timeout-minutes: 5
