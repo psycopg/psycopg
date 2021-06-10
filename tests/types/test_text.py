@@ -4,6 +4,7 @@ import psycopg3
 from psycopg3 import pq
 from psycopg3 import sql
 from psycopg3.adapt import Format
+from psycopg3 import Binary
 
 eur = "\u20ac"
 
@@ -206,7 +207,7 @@ def test_text_array_ascii(conn, fmt_in, fmt_out):
 
 
 @pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
-@pytest.mark.parametrize("pytype", [bytes, bytearray, memoryview])
+@pytest.mark.parametrize("pytype", [bytes, bytearray, memoryview, Binary])
 def test_dump_1byte(conn, fmt_in, pytype):
     cur = conn.cursor()
     for i in range(0, 256):

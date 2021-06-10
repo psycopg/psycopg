@@ -216,14 +216,20 @@ class Faker:
 
         return None
 
-    # methods to implement specific objects
-
     def make(self, spec):
         # spec can be a type or a list [type] or a tuple (spec, spec, ...)
         return self.get_maker(spec)(spec)
 
     def match_any(self, spec, got, want):
         assert got == want
+
+    # methods to generate samples of specific types
+
+    def make_Binary(self, spec):
+        return self.make_bytes(spec)
+
+    def match_Binary(self, spec, got, want):
+        return want.obj == got
 
     def make_bool(self, spec):
         return choice((True, False))

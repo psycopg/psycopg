@@ -20,8 +20,9 @@ from .connection import BaseConnection, AsyncConnection, Connection, Notify
 from .transaction import Rollback, Transaction, AsyncTransaction
 from .server_cursor import AsyncServerCursor, ServerCursor
 
-from .dbapi20 import BINARY, DATETIME, NUMBER, ROWID, STRING, BinaryDumper
-from .dbapi20 import Binary, Date, DateFromTicks, Time, TimeFromTicks
+from .dbapi20 import BINARY, DATETIME, NUMBER, ROWID, STRING
+from .dbapi20 import Binary, BinaryTextDumper, BinaryBinaryDumper
+from .dbapi20 import Date, DateFromTicks, Time, TimeFromTicks
 from .dbapi20 import Timestamp, TimestampFromTicks
 
 from .version import __version__
@@ -39,7 +40,8 @@ connect = Connection.connect
 apilevel = "2.0"
 threadsafety = 2
 paramstyle = "pyformat"
-BinaryDumper.register(Binary, global_adapters)  # dbapi20
+BinaryTextDumper.register(Binary, global_adapters)  # dbapi20
+BinaryBinaryDumper.register(Binary, global_adapters)  # dbapi20
 
 
 # Note: defining the exported methods helps both Sphynx in documenting that
