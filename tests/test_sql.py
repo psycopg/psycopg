@@ -105,7 +105,7 @@ class TestSqlFormat:
             sql.SQL("select {a:<};").format(a=10)
 
     def test_must_be_adaptable(self, conn):
-        class Foo(object):
+        class Foo:
             pass
 
         s = sql.SQL("select {0};").format(sql.Literal(Foo()))
@@ -262,7 +262,7 @@ class TestLiteral:
         assert sql.Literal("foo") != sql.SQL("foo")
 
     def test_must_be_adaptable(self, conn):
-        class Foo(object):
+        class Foo:
             pass
 
         with pytest.raises(ProgrammingError):
