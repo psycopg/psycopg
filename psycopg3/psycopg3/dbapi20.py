@@ -51,7 +51,7 @@ class Binary:
     def __init__(self, obj: Any):
         self.obj = obj
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         sobj = repr(self.obj)
         if len(sobj) > 40:
             sobj = f"{sobj[:35]} ... ({len(sobj)} byteschars)"
