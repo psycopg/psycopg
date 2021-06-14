@@ -112,6 +112,12 @@ class Faker:
             sql.SQL(", ").join(phs),
         )
 
+    def insert_field_stmt(self, i):
+        ph = sql.Placeholder(format=self.format)
+        return sql.SQL("insert into {} ({}) values ({})").format(
+            self.table_name, self.fields_names[i], ph
+        )
+
     @property
     def select_stmt(self):
         fields = sql.SQL(", ").join(self.fields_names)
