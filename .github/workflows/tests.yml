@@ -5,8 +5,8 @@ on:
   pull_request:
 
 jobs:
-  python:
-    name: Python implementation
+  test-linux:
+    name: Python implementation for Linux
     runs-on: ubuntu-20.04
 
     strategy:
@@ -53,8 +53,8 @@ jobs:
       - name: Run tests
         run: tox -c psycopg3 -e ${{ matrix.python }} -- --color yes
 
-  c:
-    name: C implementation
+  test-c-linux:
+    name: C implementation for Linux
     runs-on: ubuntu-20.04
 
     strategy:
@@ -103,3 +103,80 @@ jobs:
         run: pip install tox
       - name: Run tests
         run: tox -c psycopg3_c -e ${{ matrix.python }} -- --color yes
+
+  test-macos-latest:
+    name: Python implementation for macOS
+    runs-on: macos-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - python: 3.6
+            postgres: 10
+          - python: 3.7
+            postgres: 11
+          - python: 3.8
+            postgres: 12
+          - python: 3.9
+            postgres: 13
+
+    env:
+      PSYCOPG3_IMPL: python
+      PGHOST: 127.0.0.1
+      PGUSER: postgres
+      PSYCOPG3_TEST_DSN: "dbname=postgres"
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install postgres
+        run: brew install postgresql@${{ matrix.postgres }}
+      - name: Start postgres
+        run: brew services start postgresql
+      - name: Install tox
+        run: pip install tox
+      - name: Run tests
+        run: tox -c psycopg3 -e ${{ matrix.python }} -- --color yes
+
+  test-c-macos-latest:
+    name: C implementation for macOS
+    runs-on: macos-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - python: 3.6
+            postgres: 13
+          - python: 3.7
+            postgres: 12
+          - python: 3.8
+            postgres: 11
+          - python: 3.9
+            postgres: 10
+
+    env:
+      PSYCOPG3_IMPL: c
+      PGHOST: 127.0.0.1
+      PGUSER: postgres
+      PSYCOPG3_TEST_DSN: "dbname=postgres"
+      # skip tests failing on importing psycopg3_c.pq on subprocess
+      # they only fail on Travis, work ok locally under tox too.
+      PYTEST_ADDOPTS: "-m 'not subprocess'"
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install postgres
+        run: brew install postgresql@${{ matrix.postgres }}
+      - name: Start postgres
+        run: brew services start postgresql
+      - name: Install tox
+        run: pip install tox
+      - name: Run tests
+        run: tox -c psycopg3 -e ${{ matrix.python }} -- --color yes
