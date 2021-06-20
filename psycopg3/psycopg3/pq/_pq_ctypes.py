@@ -15,6 +15,8 @@ from psycopg3.errors import NotSupportedError
 
 if sys.platform == "win32":
     libname = ctypes.util.find_library("libpq.dll")
+elif sys.platform == "darwin":
+    libname = ctypes.util.find_library("libpq.dylib")
 else:
     libname = ctypes.util.find_library("pq")
 if not libname:
