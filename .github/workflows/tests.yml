@@ -95,8 +95,6 @@ jobs:
           --health-retries 5
 
     steps:
-      - name: print username
-        run: whoami
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2
         with:
@@ -126,7 +124,7 @@ jobs:
     env:
       PSYCOPG3_IMPL: python
       PGHOST: 127.0.0.1
-      PGUSER: postgres
+      PGUSER: runner 
       PSYCOPG3_TEST_DSN: "dbname=postgres"
 
     steps:
@@ -163,7 +161,7 @@ jobs:
     env:
       PSYCOPG3_IMPL: c
       PGHOST: 127.0.0.1
-      PGUSER: postgres
+      PGUSER: runner 
       PSYCOPG3_TEST_DSN: "dbname=postgres"
       # skip tests failing on importing psycopg3_c.pq on subprocess
       # they only fail on Travis, work ok locally under tox too.
