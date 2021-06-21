@@ -2,6 +2,7 @@ import gc
 import pickle
 import weakref
 import datetime as dt
+import sys
 
 import pytest
 
@@ -11,6 +12,11 @@ from psycopg.adapt import PyFormat as Format
 from psycopg.postgres import types as builtins
 
 from .utils import gc_collect
+
+
+def gc_collect():
+    for i in range(3):
+        gc.collect()
 
 
 def test_close(conn):

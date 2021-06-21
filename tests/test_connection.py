@@ -17,6 +17,11 @@ from .utils import gc_collect
 from .test_cursor import my_row_factory
 
 
+def gc_collect():
+    for i in range(3):
+        gc.collect()
+
+
 def test_connect(dsn):
     conn = Connection.connect(dsn)
     assert not conn.closed
@@ -93,15 +98,18 @@ def test_connection_warn_close(dsn, recwarn):
     conn = Connection.connect(dsn)
     conn.close()
     del conn
+    gc_collect()
     assert not recwarn
 
     conn = Connection.connect(dsn)
     del conn
+    gc_collect()
     assert "IDLE" in str(recwarn.pop(ResourceWarning).message)
 
     conn = Connection.connect(dsn)
     conn.execute("select 1")
     del conn
+    gc_collect()
     assert "INTRANS" in str(recwarn.pop(ResourceWarning).message)
 
     conn = Connection.connect(dsn)
@@ -110,11 +118,13 @@ def test_connection_warn_close(dsn, recwarn):
     except Exception:
         pass
     del conn
+    gc_collect()
     assert "INERROR" in str(recwarn.pop(ResourceWarning).message)
 
     with Connection.connect(dsn) as conn:
         pass
     del conn
+    gc_collect()
     assert not recwarn
 
 

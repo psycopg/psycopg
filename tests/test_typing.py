@@ -4,6 +4,9 @@ import subprocess as sp
 
 import pytest
 
+pytestmark = [
+    pytest.mark.skipif(sys.implementation.name == "pypy", reason="mypy not available"),
+]
 
 @pytest.mark.slow
 @pytest.mark.parametrize(

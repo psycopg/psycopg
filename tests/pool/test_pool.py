@@ -1,3 +1,4 @@
+import gc
 import sys
 import logging
 import weakref
@@ -10,6 +11,11 @@ import pytest
 import psycopg
 import psycopg_pool as pool
 from psycopg.pq import TransactionStatus
+
+
+def gc_collect():
+    for i in range(3):
+        gc.collect()
 
 
 def test_defaults(dsn):
@@ -564,6 +570,7 @@ def test_del_no_warning(dsn, recwarn):
     p.wait()
     ref = weakref.ref(p)
     del p
+    gc_collect()
     assert not ref()
     assert not recwarn
 
@@ -573,6 +580,7 @@ def test_del_stop_threads(dsn):
     p = pool.ConnectionPool(dsn)
     ts = [p._sched_runner] + p._workers
     del p
+    gc_collect()
     sleep(0.1)
     for t in ts:
         assert not t.is_alive()

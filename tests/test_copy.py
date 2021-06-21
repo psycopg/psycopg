@@ -3,6 +3,7 @@ import string
 import hashlib
 from io import BytesIO, StringIO
 from itertools import cycle
+import sys
 
 import pytest
 
@@ -46,6 +47,11 @@ sample_binary_rows = [
 ]
 
 sample_binary = b"".join(sample_binary_rows)
+
+
+def gc_collect():
+    for i in range(3):
+        gc.collect()
 
 
 @pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
@@ -583,9 +589,14 @@ def test_copy_to_leaks(dsn, faker, fmt, method, retries):
                 gc_collect()
                 n.append(len(gc.get_objects()))
 
-            assert (
-                n[0] == n[1] == n[2]
-            ), f"objects leaked: {n[1] - n[0]}, {n[2] - n[1]}"
+            if sys.implementation.name == "pypy":
+                assert (
+                    n[0] >= n[1] >= n[2]
+                ), f"objects leaked: {n[1] - n[0]}, {n[2] - n[1]}"
+            else:
+                assert (
+                    n[0] == n[1] == n[2]
+                ), f"objects leaked: {n[1] - n[0]}, {n[2] - n[1]}"
 
 
 @pytest.mark.slow

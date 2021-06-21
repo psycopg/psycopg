@@ -1,8 +1,14 @@
+import gc
 import pytest
 
 from psycopg import errors as e
 from psycopg.pq import Format
 from psycopg.rows import dict_row
+
+
+def gc_collect():
+    for i in range(3):
+        gc.collect()
 
 
 def test_funny_name(conn):
@@ -109,6 +115,7 @@ def test_close(conn, recwarn, retries):
                 "select * from pg_cursors where name = 'foo'"
             ).fetchone()
             del cur
+            gc_collect()
             assert not recwarn, [str(w.message) for w in recwarn.list]
 
 
@@ -150,6 +157,7 @@ def test_context(conn, recwarn, retries):
                 "select * from pg_cursors where name = 'foo'"
             ).fetchone()
             del cur
+            gc_collect()
             assert not recwarn, [str(w.message) for w in recwarn.list]
 
 
@@ -166,6 +174,7 @@ def test_warn_close(conn, recwarn, retries):
             cur = conn.cursor("foo")
             cur.execute("select generate_series(1, 10) as bar")
             del cur
+            gc_collect()
             assert ".close()" in str(recwarn.pop(ResourceWarning).message)
 
 
