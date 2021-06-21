@@ -24,7 +24,7 @@ IF UNAME_SYSNAME == "Darwin":
     cdef inline uint16_t htole16(uint16_t host_16bits):
         return OSSwapHostToLittleInt16(host_16bits)
     cdef inline uint16_t be16toh(uint16_t big_endian_16bits):
-        return OSSwapHostToLittleInt16(big_endian_16bits)
+        return OSSwapBigToHostInt16(big_endian_16bits)
     cdef inline uint16_t le16toh(uint16_t little_endian_16bits):
         return OSSwapLittleToHostInt16(little_endian_16bits)
 
