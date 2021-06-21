@@ -4,20 +4,22 @@
 from libc.stdint cimport uint16_t, uint32_t, uint64_t
 
 IF UNAME_SYSNAME == "Darwin":
-    from libkern.OSByteOrder import (
-        OSSwapHostToBigInt16,
-        OSSwapHostToLittleInt16,
-        OSSwapBigToHostInt16,
-        OSSwapLittleToHostInt16,
-        OSSwapHostToBigInt32,
-        OSSwapHostToLittleInt32,
-        OSSwapBigToHostInt32,
-        OSSwapLittleToHostInt32,
-        OSSwapHostToBigInt64,
-        OSSwapHostToLittleInt64,
-        OSSwapBigToHostInt64,
-        OSSwapLittleToHostInt64
-    )
+
+    cdef extern from "<libkern/OSByteOrder.h>" nogil:
+        cdef uint16_t OSSwapHostToBigInt16(uint16_t x) 
+        cdef uint16_t OSSwapHostToLittleInt16(uint16_t x)
+        cdef uint16_t OSSwapBigToHostInt16(uint16_t x)
+        cdef uint16_t OSSwapLittleToHostInt16(uint16_t x)
+
+        cdef uint32_t OSSwapHostToBigInt32(uint32_t x)
+        cdef uint32_t OSSwapHostToLittleInt32(uint32_t x)
+        cdef uint32_t OSSwapBigToHostInt32(uint32_t x)
+        cdef uint32_t OSSwapLittleToHostInt32(uint32_t x)
+
+        cdef uint64_t OSSwapHostToBigInt64(uint64_t x)
+        cdef uint64_t OSSwapHostToLittleInt64(uint64_t x)
+        cdef uint64_t OSSwapBigToHostInt64(uint64_t x)
+        cdef uint64_t OSSwapLittleToHostInt64(uint64_t x)
 
     cdef inline uint16_t htobe16(uint16_t host_16bits):
         return OSSwapHostToBigInt16(host_16bits)
