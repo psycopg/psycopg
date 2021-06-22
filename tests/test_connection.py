@@ -1,4 +1,3 @@
-import gc
 import sys
 import time
 import socket
@@ -13,6 +12,8 @@ from psycopg3 import Connection, Notify
 from psycopg3.rows import tuple_row
 from psycopg3.errors import UndefinedTable
 from psycopg3.conninfo import conninfo_to_dict
+
+from .utils import gc_collect
 from .test_cursor import my_row_factory
 
 
@@ -175,7 +176,7 @@ def test_weakref(dsn):
     w = weakref.ref(conn)
     conn.close()
     del conn
-    gc.collect()
+    gc_collect()
     assert w() is None
 
 

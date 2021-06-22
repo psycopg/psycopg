@@ -1,3 +1,4 @@
+import gc
 import re
 import operator
 
@@ -67,3 +68,11 @@ def _check_version(got, want, whose_version):
             f"skipping test: {whose_version} version is {'.'.join(map(str, got))}"
             f" {revops[m.group(1)]} {'.'.join(map(str, want))}"
         )
+
+
+def gc_collect():
+    """
+    gc.collect(), but more insisting.
+    """
+    for i in range(3):
+        gc.collect()

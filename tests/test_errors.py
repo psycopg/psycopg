@@ -1,4 +1,3 @@
-import gc
 import pickle
 from weakref import ref
 
@@ -6,6 +5,8 @@ import pytest
 
 from psycopg3 import pq
 from psycopg3 import errors as e
+
+from .utils import gc_collect
 
 eur = "\u20ac"
 
@@ -163,7 +164,7 @@ def test_diag_survives_cursor(conn):
     del exc
     w = ref(cur)
     del cur
-    gc.collect()
+    gc_collect()
     assert w() is None
     assert diag.sqlstate == "42P01"
 

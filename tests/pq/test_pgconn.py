@@ -1,4 +1,3 @@
-import gc
 import os
 import ctypes
 import logging
@@ -10,6 +9,8 @@ import pytest
 import psycopg3
 from psycopg3 import pq
 import psycopg3.generators
+
+from ..utils import gc_collect
 
 
 def test_connectdb(dsn):
@@ -87,7 +88,7 @@ def test_weakref(dsn):
     w = weakref.ref(conn)
     conn.finish()
     del conn
-    gc.collect()
+    gc_collect()
     assert w() is None
 
 

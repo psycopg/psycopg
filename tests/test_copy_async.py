@@ -13,6 +13,7 @@ from psycopg3 import errors as e
 from psycopg3.pq import Format
 from psycopg3.adapt import Format as PgFormat
 
+from .utils import gc_collect
 from .test_copy import sample_text, sample_binary, sample_binary_rows  # noqa
 from .test_copy import eur, sample_values, sample_records, sample_tabledef
 from .test_copy import py_to_raw
@@ -519,8 +520,7 @@ async def test_copy_to_leaks(dsn, faker, fmt, method, retries):
             n = []
             for i in range(3):
                 await work()
-                gc.collect()
-                gc.collect()
+                gc_collect()
                 n.append(len(gc.get_objects()))
 
             assert (
@@ -561,8 +561,7 @@ async def test_copy_from_leaks(dsn, faker, fmt, retries):
             n = []
             for i in range(3):
                 await work()
-                gc.collect()
-                gc.collect()
+                gc_collect()
                 n.append(len(gc.get_objects()))
 
             assert (

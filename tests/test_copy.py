@@ -14,6 +14,8 @@ from psycopg3.pq import Format
 from psycopg3.adapt import Format as PgFormat
 from psycopg3.types import Int4
 
+from .utils import gc_collect
+
 eur = "\u20ac"
 
 sample_records = [(Int4(10), Int4(20), "hello"), (Int4(40), None, "world")]
@@ -540,8 +542,7 @@ def test_copy_to_leaks(dsn, faker, fmt, method, retries):
             n = []
             for i in range(3):
                 work()
-                gc.collect()
-                gc.collect()
+                gc_collect()
                 n.append(len(gc.get_objects()))
 
             assert (
@@ -582,8 +583,7 @@ def test_copy_from_leaks(dsn, faker, fmt, retries):
             n = []
             for i in range(3):
                 work()
-                gc.collect()
-                gc.collect()
+                gc_collect()
                 n.append(len(gc.get_objects()))
 
     assert (

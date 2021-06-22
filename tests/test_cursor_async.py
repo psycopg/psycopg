@@ -6,6 +6,8 @@ import datetime as dt
 import psycopg3
 from psycopg3 import sql, rows
 from psycopg3.adapt import Format
+
+from .utils import gc_collect
 from .test_cursor import my_row_factory
 
 pytestmark = pytest.mark.asyncio
@@ -36,7 +38,7 @@ async def test_weakref(aconn):
     w = weakref.ref(cur)
     await cur.close()
     del cur
-    gc.collect()
+    gc_collect()
     assert w() is None
 
 
@@ -490,8 +492,7 @@ async def test_leak(dsn, faker, fmt, fetch, row_factory):
                 tmp = None
 
         del cur, conn
-        gc.collect()
-        gc.collect()
+        gc_collect()
         n.append(len(gc.get_objects()))
 
     assert (

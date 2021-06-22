@@ -1,4 +1,3 @@
-import gc
 import time
 import socket
 import pytest
@@ -12,6 +11,8 @@ from psycopg3 import AsyncConnection, Notify
 from psycopg3.rows import tuple_row
 from psycopg3.errors import UndefinedTable
 from psycopg3.conninfo import conninfo_to_dict
+
+from .utils import gc_collect
 from .test_cursor import my_row_factory
 
 pytestmark = pytest.mark.asyncio
@@ -180,7 +181,7 @@ async def test_weakref(dsn):
     w = weakref.ref(conn)
     await conn.close()
     del conn
-    gc.collect()
+    gc_collect()
     assert w() is None
 
 

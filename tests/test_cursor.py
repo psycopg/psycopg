@@ -10,6 +10,8 @@ from psycopg3 import sql, rows
 from psycopg3.oids import postgres_types as builtins
 from psycopg3.adapt import Format
 
+from .utils import gc_collect
+
 
 def test_close(conn):
     cur = conn.cursor()
@@ -36,7 +38,7 @@ def test_weakref(conn):
     w = weakref.ref(cur)
     cur.close()
     del cur
-    gc.collect()
+    gc_collect()
     assert w() is None
 
 
@@ -576,8 +578,7 @@ def test_leak(dsn, faker, fmt, fetch, row_factory):
                 tmp = None
 
         del cur, conn
-        gc.collect()
-        gc.collect()
+        gc_collect()
         n.append(len(gc.get_objects()))
 
     assert (
