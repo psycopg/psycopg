@@ -22,7 +22,7 @@ from .. import errors as e
 from . import _pq_ctypes as impl
 from .misc import PGnotify, ConninfoOption, PGresAttDesc
 from .misc import error_message, connection_summary
-from ._enums import Format, ExecStatus
+from ._enums import Format, ExecStatus, PipelineStatus
 
 if TYPE_CHECKING:
     from . import abc
@@ -628,6 +628,39 @@ class PGconn:
         if not rv:
             raise MemoryError("couldn't allocate empty PGresult")
         return PGresult(rv)
+
+    def pipeline_status(self) -> PipelineStatus:
+        return PipelineStatus(impl.PQpipelineStatus(self._pgconn_ptr))
+
+    def enter_pipeline_mode(self) -> None:
+        """Enter pipeline mode.
+
+        :raises ~e.OperationalError: in case of failure to enter the pipeline
+            mode.
+        """
+        if impl.PQenterPipelineMode(self._pgconn_ptr) != 1:
+            raise e.OperationalError("failed to enter pipeline mode")
+
+    def exit_pipeline_mode(self) -> None:
+        """Exit pipeline mode.
+
+        :raises ~e.OperationalError: in case of failure to exit the pipeline
+            mode.
+        """
+        if impl.PQexitPipelineMode(self._pgconn_ptr) != 1:
+            raise e.OperationalError(error_message(self))
+
+    def pipeline_sync(self) -> None:
+        """Mark a synchronization point in a pipeline.
+
+        :raises ~e.OperationalError: if the connection is not in pipeline mode
+            or if sync failed.
+        """
+        rv = impl.PQpipelineSync(self._pgconn_ptr)
+        if rv == 0:
+            raise e.OperationalError("connection not in pipeline mode")
+        if rv != 1:
+            raise e.OperationalError("failed to sync pipeline")
 
     def _call_bytes(
         self, func: Callable[[impl.PGconn_struct], Optional[bytes]]

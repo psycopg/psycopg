@@ -597,6 +597,80 @@ PQsetNoticeReceiver = pq.PQsetNoticeReceiver
 PQsetNoticeReceiver.argtypes = [PGconn_ptr, PQnoticeReceiver, c_void_p]
 PQsetNoticeReceiver.restype = PQnoticeReceiver
 
+# 34.5 Pipeline Mode
+
+_PQpipelineStatus = None
+_PQenterPipelineMode = None
+_PQexitPipelineMode = None
+_PQpipelineSync = None
+_PQsendFlushRequest = None
+
+if libpq_version >= 140000:
+    _PQpipelineStatus = pq.PQpipelineStatus
+    _PQpipelineStatus.argtypes = [PGconn_ptr]
+    _PQpipelineStatus.restype = c_int
+
+    _PQenterPipelineMode = pq.PQenterPipelineMode
+    _PQenterPipelineMode.argtypes = [PGconn_ptr]
+    _PQenterPipelineMode.restype = c_int
+
+    _PQexitPipelineMode = pq.PQexitPipelineMode
+    _PQexitPipelineMode.argtypes = [PGconn_ptr]
+    _PQexitPipelineMode.restype = c_int
+
+    _PQpipelineSync = pq.PQpipelineSync
+    _PQpipelineSync.argtypes = [PGconn_ptr]
+    _PQpipelineSync.restype = c_int
+
+    _PQsendFlushRequest = pq.PQsendFlushRequest
+    _PQsendFlushRequest.argtypes = [PGconn_ptr]
+    _PQsendFlushRequest.restype = c_int
+
+
+def PQpipelineStatus(pgconn: PGconn_struct) -> int:
+    if not _PQpipelineStatus:
+        raise NotSupportedError(
+            f"PQpipelineStatus requires libpq from PostgreSQL 14,"
+            f" {libpq_version} available instead"
+        )
+    return _PQpipelineStatus(pgconn)
+
+
+def PQenterPipelineMode(pgconn: PGconn_struct) -> int:
+    if not _PQenterPipelineMode:
+        raise NotSupportedError(
+            f"PQenterPipelineMode requires libpq from PostgreSQL 14,"
+            f" {libpq_version} available instead"
+        )
+    return _PQenterPipelineMode(pgconn)
+
+
+def PQexitPipelineMode(pgconn: PGconn_struct) -> int:
+    if not _PQexitPipelineMode:
+        raise NotSupportedError(
+            f"PQexitPipelineMode requires libpq from PostgreSQL 14,"
+            f" {libpq_version} available instead"
+        )
+    return _PQexitPipelineMode(pgconn)
+
+
+def PQpipelineSync(pgconn: PGconn_struct) -> int:
+    if not _PQpipelineSync:
+        raise NotSupportedError(
+            f"PQpipelineSync requires libpq from PostgreSQL 14,"
+            f" {libpq_version} available instead"
+        )
+    return _PQpipelineSync(pgconn)
+
+
+def PQsendFlushRequest(pgconn: PGconn_struct) -> int:
+    if not _PQsendFlushRequest:
+        raise NotSupportedError(
+            f"PQsendFlushRequest requires libpq from PostgreSQL 14,"
+            f" {libpq_version} available instead"
+        )
+    return _PQsendFlushRequest(pgconn)
+
 
 # 33.18. SSL Support
 
