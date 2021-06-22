@@ -48,7 +48,13 @@ def libpq():
         else:
             libname = ctypes.util.find_library("pq")
         assert libname, "libpq libname not found"
-        return ctypes.pydll.LoadLibrary(libname)
+        if sys.implementation.name == "pypy" and not hasattr(ctypes, "pydll"):
+            # PyPy issue 3496
+            # https://foss.heptapod.net/pypy/pypy/-/issues/3496
+            # does this work "close enough"?
+            return ctypes.cdll.LoadLibrary(libname)
+        else:
+            return ctypes.pydll.LoadLibrary(libname)
     except Exception as e:
         from psycopg import pq
 

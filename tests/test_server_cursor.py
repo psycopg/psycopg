@@ -1,14 +1,10 @@
-import gc
 import pytest
 
 from psycopg import errors as e
 from psycopg.pq import Format
 from psycopg.rows import dict_row
 
-
-def gc_collect():
-    for i in range(3):
-        gc.collect()
+from .utils import gc_collect
 
 
 def test_funny_name(conn):

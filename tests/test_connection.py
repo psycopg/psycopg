@@ -17,11 +17,6 @@ from .utils import gc_collect
 from .test_cursor import my_row_factory
 
 
-def gc_collect():
-    for i in range(3):
-        gc.collect()
-
-
 def test_connect(dsn):
     conn = Connection.connect(dsn)
     assert not conn.closed

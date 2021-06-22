@@ -17,7 +17,7 @@ jobs:
           - {impl: python, python: 3.7, postgres: 11}
           - {impl: python, python: 3.8, postgres: 12}
           - {impl: python, python: 3.9, postgres: 13}
-          - {impl: python, python: pypy-3.7, postgres: 11}
+          - {impl: python, python: pypy-3.7, postgres: 13}
           - {impl: c, python: 3.6, postgres: 13}
           - {impl: c, python: 3.7, postgres: 12}
           - {impl: c, python: 3.8, postgres: 11}

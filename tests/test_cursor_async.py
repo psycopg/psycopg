@@ -1,6 +1,5 @@
 import gc
 import pytest
-import sys
 import weakref
 import datetime as dt
 
@@ -12,11 +11,6 @@ from .utils import gc_collect
 from .test_cursor import my_row_factory
 
 pytestmark = pytest.mark.asyncio
-
-
-def gc_collect():
-    for i in range(3):
-        gc.collect()
 
 
 async def test_close(aconn):
@@ -576,4 +570,3 @@ async def test_leak(dsn, faker, fmt, fmt_out, fetch, row_factory, retries):
             assert (
                 n[0] == n[1] == n[2]
             ), f"objects leaked: {n[1] - n[0]}, {n[2] - n[1]}"
-
