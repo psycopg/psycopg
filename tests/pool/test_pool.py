@@ -760,16 +760,18 @@ def test_reconnect_failure(proxy):
 
 
 @pytest.mark.slow
-def test_uniform_use(dsn):
-    with pool.ConnectionPool(dsn, min_size=4) as p:
-        counts = Counter()
-        for i in range(8):
-            with p.connection() as conn:
-                sleep(0.1)
-                counts[id(conn)] += 1
+def test_uniform_use(dsn, retries):
+    for retry in retries:
+        with retry:
+            with pool.ConnectionPool(dsn, min_size=4) as p:
+                counts = Counter()
+                for i in range(8):
+                    with p.connection() as conn:
+                        sleep(0.1)
+                        counts[id(conn)] += 1
 
-    assert len(counts) == 4
-    assert set(counts.values()) == set([2])
+            assert len(counts) == 4
+            assert set(counts.values()) == set([2])
 
 
 @pytest.mark.slow

@@ -773,16 +773,18 @@ async def test_reconnect_failure(proxy):
 
 
 @pytest.mark.slow
-async def test_uniform_use(dsn):
-    async with pool.AsyncConnectionPool(dsn, min_size=4) as p:
-        counts = Counter()
-        for i in range(8):
-            async with p.connection() as conn:
-                await asyncio.sleep(0.1)
-                counts[id(conn)] += 1
+async def test_uniform_use(dsn, retries):
+    async for retry in retries:
+        with retry:
+            async with pool.AsyncConnectionPool(dsn, min_size=4) as p:
+                counts = Counter()
+                for i in range(8):
+                    async with p.connection() as conn:
+                        await asyncio.sleep(0.1)
+                        counts[id(conn)] += 1
 
-    assert len(counts) == 4
-    assert set(counts.values()) == set([2])
+            assert len(counts) == 4
+            assert set(counts.values()) == set([2])
 
 
 @pytest.mark.slow
