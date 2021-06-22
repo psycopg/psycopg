@@ -49,8 +49,6 @@ class Faker:
 
     @format.setter
     def format(self, format):
-        if format != Format.BINARY:
-            pytest.xfail("faker to extend to all text dumpers")
         self._format = format
 
     @property
@@ -83,19 +81,26 @@ class Faker:
 
         record = self.make_record(nulls=0)
         tx = psycopg3.adapt.Transformer(self.conn)
-        types = []
-        registry = self.conn.adapters.types
-        for value in record:
-            dumper = tx.get_dumper(value, self.format)
-            dumper.dump(value)  # load the oid if it's dynamic (e.g. array)
-            info = registry.get(dumper.oid) or registry.get("text")
-            if dumper.oid == info.array_oid:
-                types.append(sql.SQL("{}[]").format(sql.Identifier(info.name)))
-            else:
-                types.append(sql.Identifier(info.name))
-
+        types = [
+            self._get_type_name(tx, schema, value)
+            for schema, value in zip(self.schema, record)
+        ]
         self._types_names = types
         return types
+
+    def _get_type_name(self, tx, schema, value):
+        # Special case it as it is passed as unknown so is returned as text
+        if schema == (list, str):
+            return sql.SQL("text[]")
+
+        registry = self.conn.adapters.types
+        dumper = tx.get_dumper(value, self.format)
+        dumper.dump(value)  # load the oid if it's dynamic (e.g. array)
+        info = registry.get(dumper.oid) or registry.get("text")
+        if dumper.oid == info.array_oid:
+            return sql.SQL("{}[]").format(sql.Identifier(info.name))
+        else:
+            return sql.Identifier(info.name)
 
     @property
     def drop_stmt(self):
@@ -138,7 +143,11 @@ class Faker:
         )
 
     def choose_schema(self, ncols=20):
-        schema = [self.make_schema(choice(self.types)) for i in range(ncols)]
+        schema = []
+        while len(schema) < ncols:
+            s = self.make_schema(choice(self.types))
+            if s is not None:
+                schema.append(s)
         return schema
 
     def make_records(self, nrecords):
@@ -184,6 +193,8 @@ class Faker:
         A schema for a type is represented by a tuple (type, ...) which the
         matching make_*() method can interpret, or just type if the type
         doesn't require further specification.
+
+        A `None` means that the type is not supported.
         """
         meth = self._get_method("schema", cls)
         return meth(cls) if meth else cls
@@ -321,6 +332,9 @@ class Faker:
     def make_Int8(self, spec):
         return spec(randrange(-(1 << 63), 1 << 63))
 
+    def make_IntNumeric(self, spec):
+        return spec(randrange(-(1 << 100), 1 << 100))
+
     def make_IPv4Address(self, spec):
         return ipaddress.IPv4Address(bytes(randrange(256) for _ in range(4)))
 
@@ -367,12 +381,15 @@ class Faker:
         )
 
     def schema_list(self, cls):
-        while 1:
+        while True:
             scls = choice(self.types)
-            if scls is not cls:
+            if scls is cls:
+                continue
+            schema = self.make_schema(scls)
+            if schema is not None:
                 break
 
-        return (cls, self.make_schema(scls))
+        return (cls, schema)
 
     def make_list(self, spec):
         # don't make empty lists because they regularly fail cast
@@ -389,6 +406,9 @@ class Faker:
     def make_memoryview(self, spec):
         return self.make_bytes(spec)
 
+    def schema_NoneType(self, spec):
+        return None
+
     def make_NoneType(self, spec):
         return None
 
@@ -397,37 +417,50 @@ class Faker:
 
     def schema_Range(self, cls):
         subtypes = [
-            Int4,
-            Int8,
             Decimal,
             dt.date,
             (dt.datetime, True),
             (dt.datetime, False),
         ]
+        # TODO: learn to dump numeric ranges in binary
+        if self.format != Format.BINARY:
+            subtypes.extend([Int4, Int8])
+
         return (cls, choice(subtypes))
 
     def make_Range(self, spec):
-        if random() < 0.02:
+        # TODO: drop format check after fixing binary dumping of empty ranges
+        if random() < 0.02 and self.format == Format.TEXT:
             return Range(empty=True)
 
-        bounds = []
-        while len(bounds) < 2:
-            if random() < 0.05:
-                bounds.append(None)
-                continue
+        while True:
+            bounds = []
+            while len(bounds) < 2:
+                if random() < 0.05:
+                    bounds.append(None)
+                    continue
 
-            val = self.make(spec[1])
-            # NaN are allowed in a range, but comparison in Python get tricky.
-            if spec[1] is Decimal and val.is_nan():
-                continue
+                val = self.make(spec[1])
+                # NaN are allowed in a range, but comparison in Python get tricky.
+                if spec[1] is Decimal and val.is_nan():
+                    continue
 
-            bounds.append(val)
+                bounds.append(val)
 
-        if bounds[0] is not None and bounds[1] is not None:
-            if bounds[0] > bounds[1]:
-                bounds.reverse()
+            if bounds[0] is not None and bounds[1] is not None:
+                if bounds[0] > bounds[1]:
+                    bounds.reverse()
 
-        return Range(bounds[0], bounds[1], choice("[(") + choice("])"))
+            # avoid generating ranges with no type info if dumping in binary
+            # TODO: lift this limitation after test_copy_in_empty xfail is fixed
+            if self.format == Format.BINARY:
+                if bounds[0] is bounds[1] is None:
+                    continue
+
+            break
+
+        r = Range(bounds[0], bounds[1], choice("[(") + choice("])"))
+        return r
 
     def match_Range(self, spec, got, want):
         # normalise the bounds of unbounded ranges
@@ -465,8 +498,23 @@ class Faker:
         return choice([dt.timedelta.min, dt.timedelta.max]) * random()
 
     def schema_tuple(self, cls):
-        length = randrange(1, self.tuple_max_length)
-        return (cls, self.choose_schema(ncols=length))
+        # TODO: this is a complicated matter as it would involve creating
+        # temporary composite types.
+        # length = randrange(1, self.tuple_max_length)
+        # return (cls, self.choose_schema(ncols=length))
+        return None
+
+    def make_tuple(self, spec):
+        return tuple(self.make(s) for s in spec[1])
+
+    def match_tuple(self, spec, got, want):
+        assert len(got) == len(want) == len(spec[1])
+        for g, w, s in zip(got, want, spec):
+            if g is None or w is None:
+                assert g is w
+            else:
+                m = self.get_matcher(s)
+                m(s, g, w)
 
     def make_UUID(self, spec):
         return UUID(bytes=bytes([randrange(256) for i in range(16)]))

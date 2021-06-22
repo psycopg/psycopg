@@ -345,15 +345,29 @@ def test_optimised_adapters():
 
 @pytest.mark.slow
 @pytest.mark.parametrize("fmt", [Format.AUTO, Format.TEXT, Format.BINARY])
-def test_random(conn, faker, fmt):
+@pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
+def test_random(conn, faker, fmt, fmt_out):
     faker.format = fmt
     faker.choose_schema(ncols=20)
     faker.make_records(50)
 
-    with conn.cursor(binary=Format.as_pq(fmt)) as cur:
+    with conn.cursor(binary=fmt_out) as cur:
         cur.execute(faker.drop_stmt)
         cur.execute(faker.create_stmt)
-        cur.executemany(faker.insert_stmt, faker.records)
+        try:
+            cur.executemany(faker.insert_stmt, faker.records)
+        except psycopg3.DatabaseError:
+            # Insert one by one to find problematic values
+            conn.rollback()
+            cur.execute(faker.drop_stmt)
+            cur.execute(faker.create_stmt)
+            for rec in faker.records:
+                for i, val in enumerate(rec):
+                    cur.execute(faker.insert_field_stmt(i), (val,))
+
+            # just in case, but hopefully we should have triggered the problem
+            raise
+
         cur.execute(faker.select_stmt)
         recs = cur.fetchall()
 

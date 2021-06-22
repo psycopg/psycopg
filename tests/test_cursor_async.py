@@ -4,7 +4,7 @@ import weakref
 import datetime as dt
 
 import psycopg3
-from psycopg3 import sql, rows
+from psycopg3 import pq, sql, rows
 from psycopg3.adapt import Format
 
 from .utils import gc_collect
@@ -452,11 +452,12 @@ async def test_str(aconn):
 
 @pytest.mark.slow
 @pytest.mark.parametrize("fmt", [Format.AUTO, Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
 @pytest.mark.parametrize("fetch", ["one", "many", "all", "iter"])
 @pytest.mark.parametrize(
     "row_factory", ["tuple_row", "dict_row", "namedtuple_row"]
 )
-async def test_leak(dsn, faker, fmt, fetch, row_factory):
+async def test_leak(dsn, faker, fmt, fmt_out, fetch, row_factory):
     faker.format = fmt
     faker.choose_schema(ncols=5)
     faker.make_records(10)
@@ -466,7 +467,7 @@ async def test_leak(dsn, faker, fmt, fetch, row_factory):
     for i in range(3):
         async with await psycopg3.AsyncConnection.connect(dsn) as conn:
             async with conn.cursor(
-                binary=fmt == Format.BINARY, row_factory=row_factory
+                binary=fmt_out, row_factory=row_factory
             ) as cur:
                 await cur.execute(faker.drop_stmt)
                 await cur.execute(faker.create_stmt)

@@ -4,6 +4,7 @@ from decimal import Decimal
 
 import pytest
 
+import psycopg3.errors
 from psycopg3 import pq
 from psycopg3.sql import Identifier
 from psycopg3.adapt import Format
@@ -146,6 +147,45 @@ def test_load_builtin_range(conn, pgtype, min, max, bounds, fmt_out):
         bounds = "[)" if r.lower_inc else "()"
         r = type(r)(r.lower, r.upper + 1, bounds)
     assert cur.fetchone()[0] == r
+
+
+@pytest.mark.parametrize(
+    "min, max, bounds",
+    [
+        ("2000,1,1", "2001,1,1", "[)"),
+        ("2000,1,1", None, "[)"),
+        (None, "2001,1,1", "()"),
+        (None, None, "()"),
+        (None, None, "empty"),
+    ],
+)
+@pytest.mark.parametrize("format", [pq.Format.TEXT, pq.Format.BINARY])
+def test_copy_in_empty(conn, min, max, bounds, format):
+    cur = conn.cursor()
+    cur.execute("create table copyrange (id serial primary key, r daterange)")
+
+    if bounds != "empty":
+        min = dt.date(*map(int, min.split(","))) if min else None
+        max = dt.date(*map(int, max.split(","))) if max else None
+        r = Range(min, max, bounds)
+    else:
+        r = Range(empty=True)
+
+    try:
+        with cur.copy(
+            f"copy copyrange (r) from stdin (format {format.name})"
+        ) as copy:
+            copy.write_row([r])
+    except psycopg3.errors.ProtocolViolation:
+        if not min and not max and format == pq.Format.BINARY:
+            pytest.xfail(
+                "TODO: add annotation to dump array with no type info"
+            )
+        else:
+            raise
+
+    rec = cur.execute("select r from copyrange order by id").fetchone()
+    assert rec[0] == r
 
 
 @pytest.fixture(scope="session")
