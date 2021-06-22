@@ -6,6 +6,7 @@ SQL composition utility module
 
 import codecs
 import string
+from abc import ABC, abstractmethod
 from typing import Any, Iterator, List, Optional, Sequence, Union
 
 from .pq import Escaping
@@ -29,7 +30,7 @@ def quote(obj: Any, context: Optional[AdaptContext] = None) -> str:
     return Literal(obj).as_string(context)
 
 
-class Composable(object):
+class Composable(ABC):
     """
     Abstract base class for objects that can be used to compose an SQL string.
 
@@ -50,6 +51,7 @@ class Composable(object):
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self._obj!r})"
 
+    @abstractmethod
     def as_bytes(self, context: Optional[AdaptContext]) -> bytes:
         """
         Return the value of the object as bytes.
@@ -62,7 +64,7 @@ class Composable(object):
         `!Composable` is passed instead of the query string.
 
         """
-        # TODO: add tests and docs for as_bytes
+        # TODO: add tests for as_bytes
         raise NotImplementedError
 
     def as_string(self, context: Optional[AdaptContext]) -> str:

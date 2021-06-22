@@ -51,14 +51,6 @@ class TestSqlFormat:
         assert isinstance(s1, str)
         assert s1 == 'select "field" from "table"'
 
-    def test_unicode(self, conn):
-        s = sql.SQL(u"select {0} from {1}").format(
-            sql.Identifier(u"field"), sql.Identifier("table")
-        )
-        s1 = s.as_string(conn)
-        assert isinstance(s1, str)
-        assert s1 == u'select "field" from "table"'
-
     def test_compose_literal(self, conn):
         s = sql.SQL("select {0};").format(sql.Literal(dt.date(2016, 12, 31)))
         s1 = s.as_string(conn)
@@ -105,7 +97,7 @@ class TestSqlFormat:
             sql.SQL("select {a:<};").format(a=10)
 
     def test_must_be_adaptable(self, conn):
-        class Foo(object):
+        class Foo:
             pass
 
         s = sql.SQL("select {0};").format(sql.Literal(Foo()))
@@ -262,7 +254,7 @@ class TestLiteral:
         assert sql.Literal("foo") != sql.SQL("foo")
 
     def test_must_be_adaptable(self, conn):
-        class Foo(object):
+        class Foo:
             pass
 
         with pytest.raises(ProgrammingError):

@@ -108,6 +108,7 @@ The `!sql` objects are in the following inheritance hierarchy:
 
 .. autoclass:: Composable()
 
+    .. automethod:: as_bytes
     .. automethod:: as_string
 
 
