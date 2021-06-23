@@ -436,8 +436,8 @@ class Faker:
 
     def make_Range(self, spec):
         # TODO: drop format check after fixing binary dumping of empty ranges
-        if random() < 0.02 and self.format == Format.TEXT:
-            return Range(empty=True)
+        if random() < 0.02 and spec[0] is Range and self.format == Format.TEXT:
+            return spec[0](empty=True)
 
         while True:
             bounds = []
@@ -459,14 +459,32 @@ class Faker:
 
             # avoid generating ranges with no type info if dumping in binary
             # TODO: lift this limitation after test_copy_in_empty xfail is fixed
-            if self.format == Format.BINARY:
+            if spec[0] is Range and self.format == Format.BINARY:
                 if bounds[0] is bounds[1] is None:
                     continue
 
             break
 
-        r = Range(bounds[0], bounds[1], choice("[(") + choice("])"))
+        r = spec[0](bounds[0], bounds[1], choice("[(") + choice("])"))
         return r
+
+    def make_Int4Range(self, spec):
+        return self.make_Range((spec, Int4))
+
+    def make_Int8Range(self, spec):
+        return self.make_Range((spec, Int8))
+
+    def make_NumericRange(self, spec):
+        return self.make_Range((spec, Decimal))
+
+    def make_DateRange(self, spec):
+        return self.make_Range((spec, dt.date))
+
+    def make_TimestampRange(self, spec):
+        return self.make_Range((spec, (dt.datetime, False)))
+
+    def make_TimestamptzRange(self, spec):
+        return self.make_Range((spec, (dt.datetime, True)))
 
     def match_Range(self, spec, got, want):
         # normalise the bounds of unbounded ranges
@@ -474,7 +492,26 @@ class Faker:
             want = type(want)(want.lower, want.upper, "(" + want.bounds[1])
         if want.upper is None and want.upper_inc:
             want = type(want)(want.lower, want.upper, want.bounds[0] + ")")
+
         return got == want
+
+    def match_Int4Range(self, spec, got, want):
+        return self.match_Range((spec, Int4), got, want)
+
+    def match_Int8Range(self, spec, got, want):
+        return self.match_Range((spec, Int8), got, want)
+
+    def match_NumericRange(self, spec, got, want):
+        return self.match_Range((spec, Decimal), got, want)
+
+    def match_DateRange(self, spec, got, want):
+        return self.match_Range((spec, dt.date), got, want)
+
+    def match_TimestampRange(self, spec, got, want):
+        return self.match_Range((spec, (dt.datetime, False)), got, want)
+
+    def match_TimestamptzRange(self, spec, got, want):
+        return self.match_Range((spec, (dt.datetime, True)), got, want)
 
     def make_str(self, spec, length=0):
         if not length:

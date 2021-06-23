@@ -225,6 +225,34 @@ class Range(Generic[T]):
             setattr(self, slot, value)
 
 
+# Subclasses to specify a specific subtype. Usually not needed: only needed
+# in binary copy, where switching to text is not an option.
+
+
+class Int4Range(Range[int]):
+    pass
+
+
+class Int8Range(Range[int]):
+    pass
+
+
+class NumericRange(Range[Decimal]):
+    pass
+
+
+class DateRange(Range[date]):
+    pass
+
+
+class TimestampRange(Range[datetime]):
+    pass
+
+
+class TimestamptzRange(Range[datetime]):
+    pass
+
+
 class BaseRangeDumper(RecursiveDumper):
     def __init__(self, cls: type, context: Optional[AdaptContext] = None):
         super().__init__(cls, context)
@@ -232,7 +260,13 @@ class BaseRangeDumper(RecursiveDumper):
         self._types = context.adapters.types if context else builtins
         self._adapt_format = Pg3Format.from_pq(self.format)
 
-    def get_key(self, obj: Range[Any], format: Pg3Format) -> Tuple[type, ...]:
+    def get_key(
+        self, obj: Range[Any], format: Pg3Format
+    ) -> Union[type, Tuple[type, ...]]:
+        # If we are a subclass whose oid is specified we don't need upgrade
+        if self.oid != INVALID_OID:
+            return self.cls
+
         item = self._get_item(obj)
         if item is not None:
             sd = self._tx.get_dumper(item, self._adapt_format)
@@ -241,6 +275,10 @@ class BaseRangeDumper(RecursiveDumper):
             return (self.cls,)
 
     def upgrade(self, obj: Range[Any], format: Pg3Format) -> "BaseRangeDumper":
+        # If we are a subclass whose oid is specified we don't need upgrade
+        if self.oid != INVALID_OID:
+            return self
+
         item = self._get_item(obj)
         if item is None:
             return RangeDumper(self.cls)
@@ -306,7 +344,7 @@ class RangeDumper(BaseRangeDumper, SequenceDumper):
     _re_needs_quotes = re.compile(br'[",\\\s()\[\]]')
 
 
-class BinaryRangeDumper(BaseRangeDumper):
+class RangeBinaryDumper(BaseRangeDumper):
 
     format = Format.BINARY
 
@@ -419,6 +457,64 @@ def register_adapters(
         {"subtype_oid": info.subtype_oid},
     )
     bloader.register(info.oid, context=context)
+
+
+# Text dumpers for builtin range types wrappers
+# These are registered on specific subtypes so that the upgrade mechanism
+# doesn't kick in.
+
+
+class Int4RangeDumper(RangeDumper):
+    _oid = builtins["int4range"].oid
+
+
+class Int8RangeDumper(RangeDumper):
+    _oid = builtins["int8range"].oid
+
+
+class NumericRangeDumper(RangeDumper):
+    _oid = builtins["numrange"].oid
+
+
+class DateRangeDumper(RangeDumper):
+    _oid = builtins["daterange"].oid
+
+
+class TimestampRangeDumper(RangeDumper):
+    _oid = builtins["tsrange"].oid
+
+
+class TimestamptzRangeDumper(RangeDumper):
+    _oid = builtins["tstzrange"].oid
+
+
+# Binary dumpers for builtin range types wrappers
+# These are registered on specific subtypes so that the upgrade mechanism
+# doesn't kick in.
+
+
+class Int4RangeBinaryDumper(RangeBinaryDumper):
+    _oid = builtins["int4range"].oid
+
+
+class Int8RangeBinaryDumper(RangeBinaryDumper):
+    _oid = builtins["int8range"].oid
+
+
+class NumericRangeBinaryDumper(RangeBinaryDumper):
+    _oid = builtins["numrange"].oid
+
+
+class DateRangeBinaryDumper(RangeBinaryDumper):
+    _oid = builtins["daterange"].oid
+
+
+class TimestampRangeBinaryDumper(RangeBinaryDumper):
+    _oid = builtins["tsrange"].oid
+
+
+class TimestamptzRangeBinaryDumper(RangeBinaryDumper):
+    _oid = builtins["tstzrange"].oid
 
 
 # Text loaders for builtin range types

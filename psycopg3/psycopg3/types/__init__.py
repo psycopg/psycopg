@@ -4,9 +4,10 @@ psycopg3 types package
 
 # Copyright (C) 2020-2021 The Psycopg Team
 
-from . import array
 from ..oids import INVALID_OID
 from ..proto import AdaptContext
+from .array import register_all_arrays
+from . import range as _range
 
 # Wrapper objects
 from ..wrappers.numeric import (
@@ -135,7 +136,19 @@ from .network import (
 )
 from .range import (
     RangeDumper as RangeDumper,
-    BinaryRangeDumper as BinaryRangeDumper,
+    Int4RangeDumper as Int4RangeDumper,
+    Int8RangeDumper as Int8RangeDumper,
+    NumericRangeDumper as NumericRangeDumper,
+    DateRangeDumper as DateRangeDumper,
+    TimestampRangeDumper as TimestampRangeDumper,
+    TimestamptzRangeDumper as TimestamptzRangeDumper,
+    RangeBinaryDumper as RangeBinaryDumper,
+    Int4RangeBinaryDumper as Int4RangeBinaryDumper,
+    Int8RangeBinaryDumper as Int8RangeBinaryDumper,
+    NumericRangeBinaryDumper as NumericRangeBinaryDumper,
+    DateRangeBinaryDumper as DateRangeBinaryDumper,
+    TimestampRangeBinaryDumper as TimestampRangeBinaryDumper,
+    TimestamptzRangeBinaryDumper as TimestamptzRangeBinaryDumper,
     RangeLoader as RangeLoader,
     Int4RangeLoader as Int4RangeLoader,
     Int8RangeLoader as Int8RangeLoader,
@@ -283,8 +296,20 @@ def register_default_globals(ctx: AdaptContext) -> None:
     CidrLoader.register("cidr", ctx)
     CidrBinaryLoader.register("cidr", ctx)
 
+    RangeBinaryDumper.register(Range, ctx)
     RangeDumper.register(Range, ctx)
-    BinaryRangeDumper.register(Range, ctx)
+    Int4RangeDumper.register(_range.Int4Range, ctx)
+    Int8RangeDumper.register(_range.Int8Range, ctx)
+    NumericRangeDumper.register(_range.NumericRange, ctx)
+    DateRangeDumper.register(_range.DateRange, ctx)
+    TimestampRangeDumper.register(_range.TimestampRange, ctx)
+    TimestamptzRangeDumper.register(_range.TimestamptzRange, ctx)
+    Int4RangeBinaryDumper.register(_range.Int4Range, ctx)
+    Int8RangeBinaryDumper.register(_range.Int8Range, ctx)
+    NumericRangeBinaryDumper.register(_range.NumericRange, ctx)
+    DateRangeBinaryDumper.register(_range.DateRange, ctx)
+    TimestampRangeBinaryDumper.register(_range.TimestampRange, ctx)
+    TimestamptzRangeBinaryDumper.register(_range.TimestamptzRange, ctx)
     Int4RangeLoader.register("int4range", ctx)
     Int8RangeLoader.register("int8range", ctx)
     NumericRangeLoader.register("numrange", ctx)
@@ -305,4 +330,4 @@ def register_default_globals(ctx: AdaptContext) -> None:
     RecordLoader.register("record", ctx)
     RecordBinaryLoader.register("record", ctx)
 
-    array.register_all_arrays(ctx)
+    register_all_arrays(ctx)
