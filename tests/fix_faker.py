@@ -318,7 +318,13 @@ class Faker:
         if got is not None and isnan(got):
             assert isnan(want)
         else:
-            assert got == want
+            # Versions older than 12 make some rounding. e.g. in Postgres 10.4
+            # select '-1.409006204063909e+112'::float8
+            #      -> -1.40900620406391e+112
+            if self.conn.info.server_version >= 120000:
+                assert got == want
+            else:
+                assert got == pytest.approx(want)
 
     def make_int(self, spec):
         return randrange(-(1 << 90), 1 << 90)
