@@ -4,11 +4,9 @@ psycopg3 types package
 
 # Copyright (C) 2020-2021 The Psycopg Team
 
+from . import array
 from ..oids import INVALID_OID
 from ..proto import AdaptContext
-
-# Register default adapters
-from . import array, composite, range
 
 # Wrapper objects
 from ..wrappers.numeric import (
