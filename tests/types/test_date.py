@@ -337,6 +337,25 @@ class TestDateTimeTz:
         assert rec[0] is True, type
         assert rec[1] == val
 
+    def test_load_copy(self, conn):
+        cur = conn.cursor(binary=False)
+        with cur.copy(
+            """
+            copy (
+                select
+                    '2000-01-01 01:02:03.123456-10:20'::timestamptz,
+                    '11111111'::int4
+            ) to stdout
+            """
+        ) as copy:
+            copy.set_types(["timestamptz", "int4"])
+            rec = copy.read_row()
+
+        tz = dt.timezone(-dt.timedelta(hours=10, minutes=20))
+        want = dt.datetime(2000, 1, 1, 1, 2, 3, 123456, tzinfo=tz)
+        assert rec[0] == want
+        assert rec[1] == 11111111
+
 
 class TestTime:
     @pytest.mark.parametrize(
@@ -456,6 +475,25 @@ class TestTimeTz:
         assert rec[0] is True, type
         assert rec[1] == val
 
+    def test_load_copy(self, conn):
+        cur = conn.cursor(binary=False)
+        with cur.copy(
+            """
+            copy (
+                select
+                    '01:02:03.123456-10:20'::timetz,
+                    '11111111'::int4
+            ) to stdout
+            """
+        ) as copy:
+            copy.set_types(["timetz", "int4"])
+            rec = copy.read_row()
+
+        tz = dt.timezone(-dt.timedelta(hours=10, minutes=20))
+        want = dt.time(1, 2, 3, 123456, tzinfo=tz)
+        assert rec[0] == want
+        assert rec[1] == 11111111
+
 
 class TestInterval:
     dump_timedelta_samples = [
@@ -573,6 +611,24 @@ class TestInterval:
             "select '2020-12-31'::date, 'infinity'::date"
         ).fetchone()
         assert rec == (dt.date(2020, 12, 31), dt.date(9999, 12, 31))
+
+    def test_load_copy(self, conn):
+        cur = conn.cursor(binary=False)
+        with cur.copy(
+            """
+            copy (
+                select
+                    '1 days +00:00:01.000001'::interval,
+                    'foo bar'::text
+            ) to stdout
+            """
+        ) as copy:
+            copy.set_types(["interval", "text"])
+            rec = copy.read_row()
+
+        want = dt.timedelta(days=1, seconds=1, microseconds=1)
+        assert rec[0] == want
+        assert rec[1] == "foo bar"
 
 
 #
