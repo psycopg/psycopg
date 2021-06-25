@@ -16,7 +16,7 @@ from ..adapt import Dumper, RecursiveDumper, RecursiveLoader
 from ..adapt import Format as Pg3Format
 from ..proto import AdaptContext, Buffer
 from .._struct import pack_len, unpack_len
-from .._typeinfo import RangeInfo
+from .._typeinfo import RangeInfo as RangeInfo  # exported here
 
 from .composite import SequenceDumper, BaseCompositeLoader
 

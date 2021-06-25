@@ -18,9 +18,33 @@ from .._struct import pack_int2, pack_uint2, unpack_int2
 from .._struct import pack_int4, pack_uint4, unpack_int4, unpack_uint4
 from .._struct import pack_int8, unpack_int8
 from .._struct import pack_float8, unpack_float4, unpack_float8
-from ..wrappers.numeric import Int2, Int4, Int8, IntNumeric
 
 # Wrappers to force numbers to be cast as specific PostgreSQL types
+
+
+class Int2(int):
+    def __new__(cls, arg: int) -> "Int2":
+        return super().__new__(cls, arg)
+
+
+class Int4(int):
+    def __new__(cls, arg: int) -> "Int4":
+        return super().__new__(cls, arg)
+
+
+class Int8(int):
+    def __new__(cls, arg: int) -> "Int8":
+        return super().__new__(cls, arg)
+
+
+class IntNumeric(int):
+    def __new__(cls, arg: int) -> "IntNumeric":
+        return super().__new__(cls, arg)
+
+
+class Oid(int):
+    def __new__(cls, arg: int) -> "Oid":
+        return super().__new__(cls, arg)
 
 
 class NumberDumper(Dumper):

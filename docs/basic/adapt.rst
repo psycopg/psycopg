@@ -266,7 +266,7 @@ either `psycopg3.types.Json` or `~psycopg3.types.Jsonb`.
 
 .. code:: python
 
-    from psycopg3.types import Jsonb
+    from psycopg3.types.json import Jsonb
 
     thing = {"foo": ["bar", 42]}
     conn.execute("insert into mytable values (%s)", [Jsonb(thing)])
@@ -275,8 +275,9 @@ By default `!psycopg3` uses the standard library `json.dumps()`__ and
 `json.loads()`__ functions to serialize and de-serialize Python objects to
 JSON. If you want to customise globally how serialization happens, for
 instance changing serialization parameters or using a different JSON library,
-you can specify your own functions using the `psycopg3.types.set_json_dumps()`
-and `~psycopg3.types.set_json_loads()` functions.
+you can specify your own functions using the
+`psycopg3.types.json.set_json_dumps()` and
+`~psycopg3.types.json.set_json_loads()` functions.
 
 ..
     weird: intersphinx doesn't work
@@ -287,7 +288,7 @@ and `~psycopg3.types.set_json_loads()` functions.
 .. code:: python
 
     from functools import partial
-    from psycopg3.types import Jsonb, set_json_dumps, set_json_loads
+    from psycopg3.types.json import Jsonb, set_json_dumps, set_json_loads
     import ujson
 
     # Use a faster dump function

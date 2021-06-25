@@ -4,34 +4,15 @@ psycopg3 types package
 
 # Copyright (C) 2020-2021 The Psycopg Team
 
-from ..oids import INVALID_OID
-from ..proto import AdaptContext
-from .array import register_all_arrays
-from . import range as _range
+from typing import TYPE_CHECKING
 
-# Wrapper objects
-from ..wrappers.numeric import (
-    Int2 as Int2,
-    Int4 as Int4,
-    Int8 as Int8,
-    IntNumeric as IntNumeric,
-    Oid as Oid,
-)
-from .json import Json as Json, Jsonb as Jsonb
-from .range import Range as Range
+from . import json as _json
+from . import array as _array
+from . import range as _range
+from . import numeric as _numeric
 
 # Database types descriptors
-from .._typeinfo import (
-    TypeInfo as TypeInfo,
-    RangeInfo as RangeInfo,
-    CompositeInfo as CompositeInfo,
-)
-
-# Json global registrations
-from .json import (
-    set_json_dumps as set_json_dumps,
-    set_json_loads as set_json_loads,
-)
+from .._typeinfo import TypeInfo as TypeInfo  # exported here
 
 # Adapter objects
 from .text import (
@@ -176,8 +157,14 @@ from .composite import (
     CompositeBinaryLoader as CompositeBinaryLoader,
 )
 
+if TYPE_CHECKING:
+    from ..proto import AdaptContext
 
-def register_default_globals(ctx: AdaptContext) -> None:
+
+def register_default_globals(ctx: "AdaptContext") -> None:
+
+    from ..oids import INVALID_OID
+
     # NOTE: the order the dumpers are registered is relevant.
     # The last one registered becomes the default for each type.
     # Normally, binary is the default dumper, except for text (which plays
@@ -212,15 +199,15 @@ def register_default_globals(ctx: AdaptContext) -> None:
     # (see tests/scripts/testdec.py for a rough benchmark)
     DecimalBinaryDumper.register("decimal.Decimal", ctx)
     DecimalDumper.register("decimal.Decimal", ctx)
-    Int2Dumper.register(Int2, ctx)
-    Int4Dumper.register(Int4, ctx)
-    Int8Dumper.register(Int8, ctx)
-    IntNumericDumper.register(IntNumeric, ctx)
-    OidDumper.register(Oid, ctx)
-    Int2BinaryDumper.register(Int2, ctx)
-    Int4BinaryDumper.register(Int4, ctx)
-    Int8BinaryDumper.register(Int8, ctx)
-    OidBinaryDumper.register(Oid, ctx)
+    Int2Dumper.register(_numeric.Int2, ctx)
+    Int4Dumper.register(_numeric.Int4, ctx)
+    Int8Dumper.register(_numeric.Int8, ctx)
+    IntNumericDumper.register(_numeric.IntNumeric, ctx)
+    OidDumper.register(_numeric.Oid, ctx)
+    Int2BinaryDumper.register(_numeric.Int2, ctx)
+    Int4BinaryDumper.register(_numeric.Int4, ctx)
+    Int8BinaryDumper.register(_numeric.Int8, ctx)
+    OidBinaryDumper.register(_numeric.Oid, ctx)
     IntLoader.register("int2", ctx)
     IntLoader.register("int4", ctx)
     IntLoader.register("int8", ctx)
@@ -265,10 +252,10 @@ def register_default_globals(ctx: AdaptContext) -> None:
 
     # Currently json binary format is nothing different than text, maybe with
     # an extra memcopy we can avoid.
-    JsonBinaryDumper.register(Json, ctx)
-    JsonDumper.register(Json, ctx)
-    JsonbBinaryDumper.register(Jsonb, ctx)
-    JsonbDumper.register(Jsonb, ctx)
+    JsonBinaryDumper.register(_json.Json, ctx)
+    JsonDumper.register(_json.Json, ctx)
+    JsonbBinaryDumper.register(_json.Jsonb, ctx)
+    JsonbDumper.register(_json.Jsonb, ctx)
     JsonLoader.register("json", ctx)
     JsonbLoader.register("jsonb", ctx)
     JsonBinaryLoader.register("json", ctx)
@@ -296,8 +283,8 @@ def register_default_globals(ctx: AdaptContext) -> None:
     CidrLoader.register("cidr", ctx)
     CidrBinaryLoader.register("cidr", ctx)
 
-    RangeBinaryDumper.register(Range, ctx)
-    RangeDumper.register(Range, ctx)
+    RangeBinaryDumper.register(_range.Range, ctx)
+    RangeDumper.register(_range.Range, ctx)
     Int4RangeDumper.register(_range.Int4Range, ctx)
     Int8RangeDumper.register(_range.Int8Range, ctx)
     NumericRangeDumper.register(_range.NumericRange, ctx)
@@ -330,4 +317,4 @@ def register_default_globals(ctx: AdaptContext) -> None:
     RecordLoader.register("record", ctx)
     RecordBinaryLoader.register("record", ctx)
 
-    register_all_arrays(ctx)
+    _array.register_all_arrays(ctx)

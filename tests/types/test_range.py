@@ -8,7 +8,7 @@ import psycopg3.errors
 from psycopg3 import pq
 from psycopg3.sql import Identifier
 from psycopg3.adapt import Format
-from psycopg3.types import Range, RangeInfo
+from psycopg3.types.range import Range, RangeInfo
 
 
 type2sub = {

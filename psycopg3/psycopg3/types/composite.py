@@ -15,7 +15,7 @@ from ..oids import TEXT_OID
 from ..adapt import Format, RecursiveDumper, RecursiveLoader
 from ..proto import AdaptContext, Buffer
 from .._struct import unpack_len
-from .._typeinfo import CompositeInfo
+from .._typeinfo import CompositeInfo as CompositeInfo  # exported here
 
 _struct_oidlen = struct.Struct("!Ii")
 _unpack_oidlen = cast(
