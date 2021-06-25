@@ -12,6 +12,8 @@ import pytest
 import psycopg3
 from psycopg3 import sql
 from psycopg3.adapt import Format
+from psycopg3.types.range import Range
+from psycopg3.wrappers.numeric import Int4, Int8
 
 
 @pytest.fixture
@@ -28,6 +30,7 @@ class Faker:
     json_max_length = 10
     str_max_length = 100
     list_max_length = 20
+    tuple_max_length = 15
 
     def __init__(self, connection):
         self.conn = connection
@@ -35,6 +38,7 @@ class Faker:
         self.records = []
 
         self._schema = None
+        self._types = None
         self._types_names = None
         self._makers = {}
         self.table_name = sql.Identifier("fake_table")
@@ -45,8 +49,6 @@ class Faker:
 
     @format.setter
     def format(self, format):
-        if format != Format.BINARY:
-            pytest.xfail("faker to extend to all text dumpers")
         self._format = format
 
     @property
@@ -65,25 +67,40 @@ class Faker:
         return [sql.Identifier(f"fld_{i}") for i in range(len(self.schema))]
 
     @property
+    def types(self):
+        if not self._types:
+            self._types = sorted(
+                self.get_supported_types(), key=lambda cls: cls.__name__
+            )
+        return self._types
+
+    @property
     def types_names(self):
         if self._types_names:
             return self._types_names
 
         record = self.make_record(nulls=0)
         tx = psycopg3.adapt.Transformer(self.conn)
-        types = []
-        registry = self.conn.adapters.types
-        for value in record:
-            dumper = tx.get_dumper(value, self.format)
-            dumper.dump(value)  # load the oid if it's dynamic (e.g. array)
-            info = registry.get(dumper.oid) or registry.get("text")
-            if dumper.oid == info.array_oid:
-                types.append(sql.SQL("{}[]").format(sql.Identifier(info.name)))
-            else:
-                types.append(sql.Identifier(info.name))
-
+        types = [
+            self._get_type_name(tx, schema, value)
+            for schema, value in zip(self.schema, record)
+        ]
         self._types_names = types
         return types
+
+    def _get_type_name(self, tx, schema, value):
+        # Special case it as it is passed as unknown so is returned as text
+        if schema == (list, str):
+            return sql.SQL("text[]")
+
+        registry = self.conn.adapters.types
+        dumper = tx.get_dumper(value, self.format)
+        dumper.dump(value)  # load the oid if it's dynamic (e.g. array)
+        info = registry.get(dumper.oid) or registry.get("text")
+        if dumper.oid == info.array_oid:
+            return sql.SQL("{}[]").format(sql.Identifier(info.name))
+        else:
+            return sql.Identifier(info.name)
 
     @property
     def drop_stmt(self):
@@ -125,30 +142,12 @@ class Faker:
             fields, self.table_name
         )
 
-    def choose_schema(self, types=None, ncols=20):
-        if not types:
-            types = self.get_supported_types()
-
-        types_list = sorted(types, key=lambda cls: cls.__name__)
-        schema = [choice(types_list) for i in range(ncols)]
-        for i, cls in enumerate(schema):
-            # choose the type of the array
-            if cls is list:
-                while 1:
-                    scls = choice(types_list)
-                    if scls is not list:
-                        break
-                schema[i] = [scls]
-            elif cls is tuple:
-                schema[i] = tuple(self.choose_schema(types=types, ncols=ncols))
-            # Pick timezone yes/no
-            elif cls is dt.time:
-                if choice([True, False]):
-                    schema[i] = TimeTz
-            elif cls is dt.datetime:
-                if choice([True, False]):
-                    schema[i] = DateTimeTz
-
+    def choose_schema(self, ncols=20):
+        schema = []
+        while len(schema) < ncols:
+            s = self.make_schema(choice(self.types))
+            if s is not None:
+                schema.append(s)
         return schema
 
     def make_records(self, nrecords):
@@ -184,9 +183,24 @@ class Faker:
 
         return rv
 
+    def make_schema(self, cls):
+        """Create a schema spec from a Python type.
+
+        A schema specifies what Postgres type to generate when a Python type
+        maps to more than one (e.g. tuple -> composite, list -> array[],
+        datetime -> timestamp[tz]).
+
+        A schema for a type is represented by a tuple (type, ...) which the
+        matching make_*() method can interpret, or just type if the type
+        doesn't require further specification.
+
+        A `None` means that the type is not supported.
+        """
+        meth = self._get_method("schema", cls)
+        return meth(cls) if meth else cls
+
     def get_maker(self, spec):
-        # convert a list or tuple into list or tuple
-        cls = spec if isinstance(spec, type) else type(spec)
+        cls = spec if isinstance(spec, type) else spec[0]
 
         try:
             return self._makers[cls]
@@ -203,8 +217,7 @@ class Faker:
             )
 
     def get_matcher(self, spec):
-        # convert a list or tuple into list or tuple
-        cls = spec if isinstance(spec, type) else type(spec)
+        cls = spec if isinstance(spec, type) else spec[0]
         meth = self._get_method("match", cls)
         return meth if meth else self.match_any
 
@@ -223,7 +236,7 @@ class Faker:
         return None
 
     def make(self, spec):
-        # spec can be a type or a list [type] or a tuple (spec, spec, ...)
+        # spec can be a type or a tuple (type, options)
         return self.get_maker(spec)(spec)
 
     def match_any(self, spec, got, want):
@@ -251,14 +264,16 @@ class Faker:
         day = randrange(dt.date.max.toordinal())
         return dt.date.fromordinal(day + 1)
 
+    def schema_datetime(self, cls):
+        return self.schema_time(cls)
+
     def make_datetime(self, spec):
         delta = dt.datetime.max - dt.datetime.min
         micros = randrange((delta.days + 1) * 24 * 60 * 60 * 1_000_000)
-        return dt.datetime.min + dt.timedelta(microseconds=micros)
-
-    def make_DateTimeTz(self, spec):
-        rv = self.make_datetime(spec)
-        return rv.replace(tzinfo=self._make_tz(spec))
+        rv = dt.datetime.min + dt.timedelta(microseconds=micros)
+        if spec[1]:
+            rv = rv.replace(tzinfo=self._make_tz(spec))
+        return rv
 
     def make_Decimal(self, spec):
         if random() >= 0.99:
@@ -303,7 +318,13 @@ class Faker:
         if got is not None and isnan(got):
             assert isnan(want)
         else:
-            assert got == want
+            # Versions older than 12 make some rounding. e.g. in Postgres 10.4
+            # select '-1.409006204063909e+112'::float8
+            #      -> -1.40900620406391e+112
+            if self.conn.info.server_version >= 120000:
+                assert got == want
+            else:
+                assert got == pytest.approx(want)
 
     def make_int(self, spec):
         return randrange(-(1 << 90), 1 << 90)
@@ -316,6 +337,9 @@ class Faker:
 
     def make_Int8(self, spec):
         return spec(randrange(-(1 << 63), 1 << 63))
+
+    def make_IntNumeric(self, spec):
+        return spec(randrange(-(1 << 100), 1 << 100))
 
     def make_IPv4Address(self, spec):
         return ipaddress.IPv4Address(bytes(randrange(256) for _ in range(4)))
@@ -362,26 +386,132 @@ class Faker:
             f"{choice('-+')}0.{randrange(1 << 20)}e{randrange(-15,15)}"
         )
 
+    def schema_list(self, cls):
+        while True:
+            scls = choice(self.types)
+            if scls is cls:
+                continue
+            schema = self.make_schema(scls)
+            if schema is not None:
+                break
+
+        return (cls, schema)
+
     def make_list(self, spec):
         # don't make empty lists because they regularly fail cast
         length = randrange(1, self.list_max_length)
-        spec = spec[0]
+        spec = spec[1]
         return [self.make(spec) for i in range(length)]
 
     def match_list(self, spec, got, want):
         assert len(got) == len(want)
-        m = self.get_matcher(spec[0])
+        m = self.get_matcher(spec[1])
         for g, w in zip(got, want):
             m(spec, g, w)
 
     def make_memoryview(self, spec):
         return self.make_bytes(spec)
 
+    def schema_NoneType(self, spec):
+        return None
+
     def make_NoneType(self, spec):
         return None
 
     def make_Oid(self, spec):
         return spec(randrange(1 << 32))
+
+    def schema_Range(self, cls):
+        subtypes = [
+            Decimal,
+            dt.date,
+            (dt.datetime, True),
+            (dt.datetime, False),
+        ]
+        # TODO: learn to dump numeric ranges in binary
+        if self.format != Format.BINARY:
+            subtypes.extend([Int4, Int8])
+
+        return (cls, choice(subtypes))
+
+    def make_Range(self, spec):
+        # TODO: drop format check after fixing binary dumping of empty ranges
+        if random() < 0.02 and spec[0] is Range and self.format == Format.TEXT:
+            return spec[0](empty=True)
+
+        while True:
+            bounds = []
+            while len(bounds) < 2:
+                if random() < 0.05:
+                    bounds.append(None)
+                    continue
+
+                val = self.make(spec[1])
+                # NaN are allowed in a range, but comparison in Python get tricky.
+                if spec[1] is Decimal and val.is_nan():
+                    continue
+
+                bounds.append(val)
+
+            if bounds[0] is not None and bounds[1] is not None:
+                if bounds[0] > bounds[1]:
+                    bounds.reverse()
+
+            # avoid generating ranges with no type info if dumping in binary
+            # TODO: lift this limitation after test_copy_in_empty xfail is fixed
+            if spec[0] is Range and self.format == Format.BINARY:
+                if bounds[0] is bounds[1] is None:
+                    continue
+
+            break
+
+        r = spec[0](bounds[0], bounds[1], choice("[(") + choice("])"))
+        return r
+
+    def make_Int4Range(self, spec):
+        return self.make_Range((spec, Int4))
+
+    def make_Int8Range(self, spec):
+        return self.make_Range((spec, Int8))
+
+    def make_NumericRange(self, spec):
+        return self.make_Range((spec, Decimal))
+
+    def make_DateRange(self, spec):
+        return self.make_Range((spec, dt.date))
+
+    def make_TimestampRange(self, spec):
+        return self.make_Range((spec, (dt.datetime, False)))
+
+    def make_TimestamptzRange(self, spec):
+        return self.make_Range((spec, (dt.datetime, True)))
+
+    def match_Range(self, spec, got, want):
+        # normalise the bounds of unbounded ranges
+        if want.lower is None and want.lower_inc:
+            want = type(want)(want.lower, want.upper, "(" + want.bounds[1])
+        if want.upper is None and want.upper_inc:
+            want = type(want)(want.lower, want.upper, want.bounds[0] + ")")
+
+        return got == want
+
+    def match_Int4Range(self, spec, got, want):
+        return self.match_Range((spec, Int4), got, want)
+
+    def match_Int8Range(self, spec, got, want):
+        return self.match_Range((spec, Int8), got, want)
+
+    def match_NumericRange(self, spec, got, want):
+        return self.match_Range((spec, Decimal), got, want)
+
+    def match_DateRange(self, spec, got, want):
+        return self.match_Range((spec, dt.date), got, want)
+
+    def match_TimestampRange(self, spec, got, want):
+        return self.match_Range((spec, (dt.datetime, False)), got, want)
+
+    def match_TimestamptzRange(self, spec, got, want):
+        return self.match_Range((spec, (dt.datetime, True)), got, want)
 
     def make_str(self, spec, length=0):
         if not length:
@@ -395,19 +525,39 @@ class Faker:
 
         return "".join(map(chr, rv))
 
+    def schema_time(self, cls):
+        # Choose timezone yes/no
+        return (cls, choice([True, False]))
+
     def make_time(self, spec):
         val = randrange(24 * 60 * 60 * 1_000_000)
         val, ms = divmod(val, 1_000_000)
         val, s = divmod(val, 60)
         h, m = divmod(val, 60)
-        return dt.time(h, m, s, ms)
+        tz = self._make_tz(spec) if spec[1] else None
+        return dt.time(h, m, s, ms, tz)
 
     def make_timedelta(self, spec):
         return choice([dt.timedelta.min, dt.timedelta.max]) * random()
 
-    def make_TimeTz(self, spec):
-        rv = self.make_time(spec)
-        return rv.replace(tzinfo=self._make_tz(spec))
+    def schema_tuple(self, cls):
+        # TODO: this is a complicated matter as it would involve creating
+        # temporary composite types.
+        # length = randrange(1, self.tuple_max_length)
+        # return (cls, self.choose_schema(ncols=length))
+        return None
+
+    def make_tuple(self, spec):
+        return tuple(self.make(s) for s in spec[1])
+
+    def match_tuple(self, spec, got, want):
+        assert len(got) == len(want) == len(spec[1])
+        for g, w, s in zip(got, want, spec):
+            if g is None or w is None:
+                assert g is w
+            else:
+                m = self.get_matcher(s)
+                m(s, g, w)
 
     def make_UUID(self, spec):
         return UUID(bytes=bytes([randrange(256) for i in range(16)]))
@@ -443,18 +593,6 @@ class Faker:
 
 class JsonFloat:
     pass
-
-
-class TimeTz:
-    """
-    Placeholder to create time objects with tzinfo.
-    """
-
-
-class DateTimeTz:
-    """
-    Placeholder to create datetime objects with tzinfo.
-    """
 
 
 def deep_import(name):

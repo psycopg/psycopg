@@ -300,3 +300,19 @@ else:
     from . import _transform
 
     Transformer = _transform.Transformer
+
+
+class RecursiveDumper(Dumper):
+    """Dumper with a transformer to help dumping recursive types."""
+
+    def __init__(self, cls: type, context: Optional[AdaptContext] = None):
+        super().__init__(cls, context)
+        self._tx = Transformer(context)
+
+
+class RecursiveLoader(Loader):
+    """Loader with a transformer to help loading recursive types."""
+
+    def __init__(self, oid: int, context: Optional[AdaptContext] = None):
+        super().__init__(oid, context)
+        self._tx = Transformer(context)

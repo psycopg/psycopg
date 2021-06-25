@@ -4,7 +4,10 @@ from decimal import Decimal
 
 import pytest
 
+import psycopg3.errors
+from psycopg3 import pq
 from psycopg3.sql import Identifier
+from psycopg3.adapt import Format
 from psycopg3.types import Range, RangeInfo
 
 
@@ -27,6 +30,8 @@ samples = [
     ("int8range", 10, 20, "[)"),
     ("int8range", -(2 ** 63), (2 ** 63) - 1, "[)"),
     ("numrange", Decimal(-100), Decimal("100.123"), "(]"),
+    ("numrange", Decimal(100), None, "()"),
+    ("numrange", None, Decimal(100), "()"),
     ("daterange", dt.date(2000, 1, 1), dt.date(2020, 1, 1), "[)"),
     (
         "tsrange",
@@ -47,9 +52,10 @@ samples = [
     "pgtype",
     "int4range int8range numrange daterange tsrange tstzrange".split(),
 )
-def test_dump_builtin_empty(conn, pgtype):
+@pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
+def test_dump_builtin_empty(conn, pgtype, fmt_in):
     r = Range(empty=True)
-    cur = conn.execute(f"select 'empty'::{pgtype} = %s", (r,))
+    cur = conn.execute(f"select 'empty'::{pgtype} = %{fmt_in}", (r,))
     assert cur.fetchone()[0] is True
 
 
@@ -57,22 +63,24 @@ def test_dump_builtin_empty(conn, pgtype):
     "pgtype",
     "int4range int8range numrange daterange tsrange tstzrange".split(),
 )
-def test_dump_builtin_array(conn, pgtype):
+@pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
+def test_dump_builtin_array(conn, pgtype, fmt_in):
     r1 = Range(empty=True)
     r2 = Range(bounds="()")
     cur = conn.execute(
-        f"select array['empty'::{pgtype}, '(,)'::{pgtype}] = %s",
+        f"select array['empty'::{pgtype}, '(,)'::{pgtype}] = %{fmt_in}",
         ([r1, r2],),
     )
     assert cur.fetchone()[0] is True
 
 
 @pytest.mark.parametrize("pgtype, min, max, bounds", samples)
-def test_dump_builtin_range(conn, pgtype, min, max, bounds):
+@pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
+def test_dump_builtin_range(conn, pgtype, min, max, bounds, fmt_in):
     r = Range(min, max, bounds)
     sub = type2sub[pgtype]
     cur = conn.execute(
-        f"select {pgtype}(%s::{sub}, %s::{sub}, %s) = %s::{pgtype}",
+        f"select {pgtype}(%s::{sub}, %s::{sub}, %s) = %{fmt_in}",
         (min, max, bounds, r),
     )
     assert cur.fetchone()[0] is True
@@ -82,9 +90,11 @@ def test_dump_builtin_range(conn, pgtype, min, max, bounds):
     "pgtype",
     "int4range int8range numrange daterange tsrange tstzrange".split(),
 )
-def test_load_builtin_empty(conn, pgtype):
+@pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
+def test_load_builtin_empty(conn, pgtype, fmt_out):
     r = Range(empty=True)
-    (got,) = conn.execute(f"select 'empty'::{pgtype}").fetchone()
+    cur = conn.cursor(binary=fmt_out)
+    (got,) = cur.execute(f"select 'empty'::{pgtype}").fetchone()
     assert type(got) is Range
     assert got == r
     assert not got
@@ -95,9 +105,11 @@ def test_load_builtin_empty(conn, pgtype):
     "pgtype",
     "int4range int8range numrange daterange tsrange tstzrange".split(),
 )
-def test_load_builtin_inf(conn, pgtype):
+@pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
+def test_load_builtin_inf(conn, pgtype, fmt_out):
     r = Range(bounds="()")
-    (got,) = conn.execute(f"select '(,)'::{pgtype}").fetchone()
+    cur = conn.cursor(binary=fmt_out)
+    (got,) = cur.execute(f"select '(,)'::{pgtype}").fetchone()
     assert type(got) is Range
     assert got == r
     assert got
@@ -110,20 +122,24 @@ def test_load_builtin_inf(conn, pgtype):
     "pgtype",
     "int4range int8range numrange daterange tsrange tstzrange".split(),
 )
-def test_load_builtin_array(conn, pgtype):
+@pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
+def test_load_builtin_array(conn, pgtype, fmt_out):
     r1 = Range(empty=True)
     r2 = Range(bounds="()")
-    (got,) = conn.execute(
+    cur = conn.cursor(binary=fmt_out)
+    (got,) = cur.execute(
         f"select array['empty'::{pgtype}, '(,)'::{pgtype}]"
     ).fetchone()
     assert got == [r1, r2]
 
 
 @pytest.mark.parametrize("pgtype, min, max, bounds", samples)
-def test_load_builtin_range(conn, pgtype, min, max, bounds):
+@pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
+def test_load_builtin_range(conn, pgtype, min, max, bounds, fmt_out):
     r = Range(min, max, bounds)
     sub = type2sub[pgtype]
-    cur = conn.execute(
+    cur = conn.cursor(binary=fmt_out)
+    cur.execute(
         f"select {pgtype}(%s::{sub}, %s::{sub}, %s)", (min, max, bounds)
     )
     # normalise discrete ranges
@@ -131,6 +147,70 @@ def test_load_builtin_range(conn, pgtype, min, max, bounds):
         bounds = "[)" if r.lower_inc else "()"
         r = type(r)(r.lower, r.upper + 1, bounds)
     assert cur.fetchone()[0] == r
+
+
+@pytest.mark.parametrize(
+    "min, max, bounds",
+    [
+        ("2000,1,1", "2001,1,1", "[)"),
+        ("2000,1,1", None, "[)"),
+        (None, "2001,1,1", "()"),
+        (None, None, "()"),
+        (None, None, "empty"),
+    ],
+)
+@pytest.mark.parametrize("format", [pq.Format.TEXT, pq.Format.BINARY])
+def test_copy_in_empty(conn, min, max, bounds, format):
+    cur = conn.cursor()
+    cur.execute("create table copyrange (id serial primary key, r daterange)")
+
+    if bounds != "empty":
+        min = dt.date(*map(int, min.split(","))) if min else None
+        max = dt.date(*map(int, max.split(","))) if max else None
+        r = Range(min, max, bounds)
+    else:
+        r = Range(empty=True)
+
+    try:
+        with cur.copy(
+            f"copy copyrange (r) from stdin (format {format.name})"
+        ) as copy:
+            copy.write_row([r])
+    except psycopg3.errors.ProtocolViolation:
+        if not min and not max and format == pq.Format.BINARY:
+            pytest.xfail(
+                "TODO: add annotation to dump array with no type info"
+            )
+        else:
+            raise
+
+    rec = cur.execute("select r from copyrange order by id").fetchone()
+    assert rec[0] == r
+
+
+@pytest.mark.parametrize("bounds", "() empty".split())
+@pytest.mark.parametrize(
+    "wrapper",
+    """Int4Range Int8Range NumericRange
+       DateRange TimestampRange TimestamptzRange""".split(),
+)
+@pytest.mark.parametrize("format", [pq.Format.TEXT, pq.Format.BINARY])
+def test_copy_in_empty_wrappers(conn, bounds, wrapper, format):
+    from psycopg3.types import range as range_module
+
+    cur = conn.cursor()
+    cur.execute("create table copyrange (id serial primary key, r daterange)")
+
+    cls = getattr(range_module, wrapper)
+    r = cls(empty=True) if bounds == "empty" else cls(None, None, bounds)
+
+    with cur.copy(
+        f"copy copyrange (r) from stdin (format {format.name})"
+    ) as copy:
+        copy.write_row([r])
+
+    rec = cur.execute("select r from copyrange order by id").fetchone()
+    assert rec[0] == r
 
 
 @pytest.fixture(scope="session")
@@ -210,19 +290,22 @@ def test_dump_quoting(conn, testrange):
         assert cur.fetchone()[0] is True
 
 
-def test_load_custom_empty(conn, testrange):
+@pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
+def test_load_custom_empty(conn, testrange, fmt_out):
     info = RangeInfo.fetch(conn, "testrange")
     info.register(conn)
 
-    (got,) = conn.execute("select 'empty'::testrange").fetchone()
+    cur = conn.cursor(binary=fmt_out)
+    (got,) = cur.execute("select 'empty'::testrange").fetchone()
     assert isinstance(got, Range)
     assert got.isempty
 
 
-def test_load_quoting(conn, testrange):
+@pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
+def test_load_quoting(conn, testrange, fmt_out):
     info = RangeInfo.fetch(conn, "testrange")
     info.register(conn)
-    cur = conn.cursor()
+    cur = conn.cursor(binary=fmt_out)
     for i in range(1, 254):
         cur.execute(
             "select testrange(chr(%(low)s::int), chr(%(up)s::int))",
@@ -275,6 +358,7 @@ class TestRangeObject:
             ("[]", True, True),
         ]:
             r = Range(10, 20, bounds)
+            assert r.bounds == bounds
             assert r.lower == 10
             assert r.upper == 20
             assert not r.isempty

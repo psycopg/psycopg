@@ -5,17 +5,28 @@ Support for range types adaptation.
 # Copyright (C) 2020-2021 The Psycopg Team
 
 import re
-from typing import cast, Any, Dict, Generic, Optional, Tuple, TypeVar, Type
+from typing import Any, Dict, Generic, Optional, Tuple, TypeVar, Type, Union
+from typing import cast
 from decimal import Decimal
 from datetime import date, datetime
 
 from ..pq import Format
 from ..oids import postgres_types as builtins, INVALID_OID
-from ..adapt import Buffer, Dumper, Format as Pg3Format
-from ..proto import AdaptContext
+from ..adapt import Dumper, RecursiveDumper, RecursiveLoader
+from ..adapt import Format as Pg3Format
+from ..proto import AdaptContext, Buffer
+from .._struct import pack_len, unpack_len
 from .._typeinfo import RangeInfo
 
 from .composite import SequenceDumper, BaseCompositeLoader
+
+RANGE_EMPTY = 0x01  # range is empty
+RANGE_LB_INC = 0x02  # lower bound is inclusive
+RANGE_UB_INC = 0x04  # upper bound is inclusive
+RANGE_LB_INF = 0x08  # lower bound is -infinity
+RANGE_UB_INF = 0x10  # upper bound is +infinity
+
+_EMPTY_HEAD = bytes([RANGE_EMPTY])
 
 T = TypeVar("T")
 
@@ -84,6 +95,11 @@ class Range(Generic[T]):
     def upper(self) -> Optional[T]:
         """The upper bound of the range. `!None` if empty or unbound."""
         return self._upper
+
+    @property
+    def bounds(self) -> str:
+        """The bounds string (two characters from '[', '(', ']', ')')."""
+        return self._bounds
 
     @property
     def isempty(self) -> bool:
@@ -209,60 +225,83 @@ class Range(Generic[T]):
             setattr(self, slot, value)
 
 
-class RangeDumper(SequenceDumper):
-    """
-    Dumper for range types.
+# Subclasses to specify a specific subtype. Usually not needed: only needed
+# in binary copy, where switching to text is not an option.
 
-    The dumper can upgrade to one specific for a different range type.
-    """
 
-    format = Format.TEXT
+class Int4Range(Range[int]):
+    pass
 
+
+class Int8Range(Range[int]):
+    pass
+
+
+class NumericRange(Range[Decimal]):
+    pass
+
+
+class DateRange(Range[date]):
+    pass
+
+
+class TimestampRange(Range[datetime]):
+    pass
+
+
+class TimestamptzRange(Range[datetime]):
+    pass
+
+
+class BaseRangeDumper(RecursiveDumper):
     def __init__(self, cls: type, context: Optional[AdaptContext] = None):
         super().__init__(cls, context)
         self.sub_dumper: Optional[Dumper] = None
         self._types = context.adapters.types if context else builtins
+        self._adapt_format = Pg3Format.from_pq(self.format)
 
-    def dump(self, obj: Range[Any]) -> bytes:
-        if not obj:
-            return b"empty"
-        else:
-            return self._dump_sequence(
-                (obj.lower, obj.upper),
-                b"[" if obj.lower_inc else b"(",
-                b"]" if obj.upper_inc else b")",
-                b",",
-            )
+    def get_key(
+        self, obj: Range[Any], format: Pg3Format
+    ) -> Union[type, Tuple[type, ...]]:
+        # If we are a subclass whose oid is specified we don't need upgrade
+        if self.oid != INVALID_OID:
+            return self.cls
 
-    _re_needs_quotes = re.compile(br'[",\\\s()\[\]]')
-
-    def get_key(self, obj: Range[Any], format: Pg3Format) -> Tuple[type, ...]:
         item = self._get_item(obj)
         if item is not None:
-            # TODO: binary range support
-            sd = self._tx.get_dumper(item, Pg3Format.TEXT)
+            sd = self._tx.get_dumper(item, self._adapt_format)
             return (self.cls, sd.cls)
         else:
             return (self.cls,)
 
-    def upgrade(self, obj: Range[Any], format: Pg3Format) -> "RangeDumper":
+    def upgrade(self, obj: Range[Any], format: Pg3Format) -> "BaseRangeDumper":
+        # If we are a subclass whose oid is specified we don't need upgrade
+        if self.oid != INVALID_OID:
+            return self
+
         item = self._get_item(obj)
         if item is None:
             return RangeDumper(self.cls)
 
-        # TODO: binary range support
-        sd = self._tx.get_dumper(item, Pg3Format.TEXT)
-        dumper = type(self)(self.cls, self._tx)
-        dumper.sub_dumper = sd
-        if isinstance(item, int):
+        dumper: BaseRangeDumper
+        if type(item) is int:
             # postgres won't cast int4range -> int8range so we must use
             # text format and unknown oid here
+            sd = self._tx.get_dumper(item, Pg3Format.TEXT)
+            dumper = RangeDumper(self.cls, self._tx)
+            dumper.sub_dumper = sd
             dumper.oid = INVALID_OID
-        elif isinstance(item, str) and sd.oid == INVALID_OID:
+            return dumper
+
+        sd = self._tx.get_dumper(item, format)
+        dumper = type(self)(self.cls, self._tx)
+        dumper.sub_dumper = sd
+        if sd.oid == INVALID_OID and isinstance(item, str):
             # Work around the normal mapping where text is dumped as unknown
             dumper.oid = self._get_range_oid(self._types["text"].oid)
         else:
             dumper.oid = self._get_range_oid(sd.oid)
+
         return dumper
 
     def _get_item(self, obj: Range[Any]) -> Any:
@@ -280,6 +319,67 @@ class RangeDumper(SequenceDumper):
         """
         info = self._types.get_range(sub_oid)
         return info.oid if info else INVALID_OID
+
+
+class RangeDumper(BaseRangeDumper, SequenceDumper):
+    """
+    Dumper for range types.
+
+    The dumper can upgrade to one specific for a different range type.
+    """
+
+    format = Format.TEXT
+
+    def dump(self, obj: Range[Any]) -> bytes:
+        if not obj:
+            return b"empty"
+        else:
+            return self._dump_sequence(
+                (obj.lower, obj.upper),
+                b"[" if obj.lower_inc else b"(",
+                b"]" if obj.upper_inc else b")",
+                b",",
+            )
+
+    _re_needs_quotes = re.compile(br'[",\\\s()\[\]]')
+
+
+class RangeBinaryDumper(BaseRangeDumper):
+
+    format = Format.BINARY
+
+    def dump(self, obj: Range[Any]) -> Union[bytes, bytearray]:
+        if not obj:
+            return _EMPTY_HEAD
+
+        out = bytearray([0])  # will replace the head later
+
+        head = 0
+        if obj.lower_inc:
+            head |= RANGE_LB_INC
+        if obj.upper_inc:
+            head |= RANGE_UB_INC
+
+        item = self._get_item(obj)
+        if item is not None:
+            dump = self._tx.get_dumper(item, self._adapt_format).dump
+
+        if obj.lower is not None:
+            data = dump(obj.lower)
+            out += pack_len(len(data))
+            out += data
+        else:
+            head |= RANGE_LB_INF
+
+        if obj.upper is not None:
+            data = dump(obj.upper)
+            out += pack_len(len(data))
+            out += data
+        else:
+            head |= RANGE_UB_INF
+
+        out[0] = head
+        return out
 
 
 class RangeLoader(BaseCompositeLoader, Generic[T]):
@@ -303,6 +403,39 @@ class RangeLoader(BaseCompositeLoader, Generic[T]):
         return Range(min, max, bounds)
 
 
+class RangeBinaryLoader(RecursiveLoader, Generic[T]):
+
+    format = Format.BINARY
+    subtype_oid: int
+
+    def load(self, data: Buffer) -> Range[T]:
+        head = data[0]
+        if head & RANGE_EMPTY:
+            return Range(empty=True)
+
+        load = self._tx.get_loader(self.subtype_oid, format=Format.BINARY).load
+        lb = "[" if head & RANGE_LB_INC else "("
+        ub = "]" if head & RANGE_UB_INC else ")"
+
+        pos = 1  # after the head
+        if head & RANGE_LB_INF:
+            min = None
+        else:
+            length = unpack_len(data, pos)[0]
+            pos += 4
+            min = load(data[pos : pos + length])
+            pos += length
+
+        if head & RANGE_UB_INF:
+            max = None
+        else:
+            length = unpack_len(data, pos)[0]
+            pos += 4
+            max = load(data[pos : pos + length])
+
+        return Range(min, max, lb + ub)
+
+
 _int2parens = {ord(c): c for c in "[]()"}
 
 
@@ -317,8 +450,74 @@ def register_adapters(
     )
     loader.register(info.oid, context=context)
 
+    # generate and register a customized binary loader
+    bloader: Type[RangeBinaryLoader[Any]] = type(
+        f"{info.name.title()}BinaryLoader",
+        (RangeBinaryLoader,),
+        {"subtype_oid": info.subtype_oid},
+    )
+    bloader.register(info.oid, context=context)
 
-# Loaders for builtin range types
+
+# Text dumpers for builtin range types wrappers
+# These are registered on specific subtypes so that the upgrade mechanism
+# doesn't kick in.
+
+
+class Int4RangeDumper(RangeDumper):
+    _oid = builtins["int4range"].oid
+
+
+class Int8RangeDumper(RangeDumper):
+    _oid = builtins["int8range"].oid
+
+
+class NumericRangeDumper(RangeDumper):
+    _oid = builtins["numrange"].oid
+
+
+class DateRangeDumper(RangeDumper):
+    _oid = builtins["daterange"].oid
+
+
+class TimestampRangeDumper(RangeDumper):
+    _oid = builtins["tsrange"].oid
+
+
+class TimestamptzRangeDumper(RangeDumper):
+    _oid = builtins["tstzrange"].oid
+
+
+# Binary dumpers for builtin range types wrappers
+# These are registered on specific subtypes so that the upgrade mechanism
+# doesn't kick in.
+
+
+class Int4RangeBinaryDumper(RangeBinaryDumper):
+    _oid = builtins["int4range"].oid
+
+
+class Int8RangeBinaryDumper(RangeBinaryDumper):
+    _oid = builtins["int8range"].oid
+
+
+class NumericRangeBinaryDumper(RangeBinaryDumper):
+    _oid = builtins["numrange"].oid
+
+
+class DateRangeBinaryDumper(RangeBinaryDumper):
+    _oid = builtins["daterange"].oid
+
+
+class TimestampRangeBinaryDumper(RangeBinaryDumper):
+    _oid = builtins["tsrange"].oid
+
+
+class TimestamptzRangeBinaryDumper(RangeBinaryDumper):
+    _oid = builtins["tstzrange"].oid
+
+
+# Text loaders for builtin range types
 
 
 class Int4RangeLoader(RangeLoader[int]):
@@ -342,4 +541,31 @@ class TimestampRangeLoader(RangeLoader[datetime]):
 
 
 class TimestampTZRangeLoader(RangeLoader[datetime]):
+    subtype_oid = builtins["timestamptz"].oid
+
+
+# Binary loaders for builtin range types
+
+
+class Int4RangeBinaryLoader(RangeBinaryLoader[int]):
+    subtype_oid = builtins["int4"].oid
+
+
+class Int8RangeBinaryLoader(RangeBinaryLoader[int]):
+    subtype_oid = builtins["int8"].oid
+
+
+class NumericRangeBinaryLoader(RangeBinaryLoader[Decimal]):
+    subtype_oid = builtins["numeric"].oid
+
+
+class DateRangeBinaryLoader(RangeBinaryLoader[date]):
+    subtype_oid = builtins["date"].oid
+
+
+class TimestampRangeBinaryLoader(RangeBinaryLoader[datetime]):
+    subtype_oid = builtins["timestamp"].oid
+
+
+class TimestampTZRangeBinaryLoader(RangeBinaryLoader[datetime]):
     subtype_oid = builtins["timestamptz"].oid
