@@ -14,16 +14,42 @@ from ..pq import Format
 from ..oids import postgres_types as builtins
 from ..adapt import Buffer, Dumper, Loader
 from ..adapt import Format as Pg3Format
+from ..proto import AdaptContext
 from .._struct import pack_int2, pack_uint2, unpack_int2
 from .._struct import pack_int4, pack_uint4, unpack_int4, unpack_uint4
 from .._struct import pack_int8, unpack_int8
 from .._struct import pack_float8, unpack_float4, unpack_float8
-from ..wrappers.numeric import Int2, Int4, Int8, IntNumeric
+
 
 # Wrappers to force numbers to be cast as specific PostgreSQL types
 
 
-class NumberDumper(Dumper):
+class Int2(int):
+    def __new__(cls, arg: int) -> "Int2":
+        return super().__new__(cls, arg)
+
+
+class Int4(int):
+    def __new__(cls, arg: int) -> "Int4":
+        return super().__new__(cls, arg)
+
+
+class Int8(int):
+    def __new__(cls, arg: int) -> "Int8":
+        return super().__new__(cls, arg)
+
+
+class IntNumeric(int):
+    def __new__(cls, arg: int) -> "IntNumeric":
+        return super().__new__(cls, arg)
+
+
+class Oid(int):
+    def __new__(cls, arg: int) -> "Oid":
+        return super().__new__(cls, arg)
+
+
+class _NumberDumper(Dumper):
 
     format = Format.TEXT
 
@@ -35,7 +61,7 @@ class NumberDumper(Dumper):
         return value if obj >= 0 else b" " + value
 
 
-class SpecialValuesDumper(NumberDumper):
+class _SpecialValuesDumper(_NumberDumper):
 
     _special: Dict[bytes, bytes] = {}
 
@@ -48,7 +74,7 @@ class SpecialValuesDumper(NumberDumper):
         return value if obj >= 0 else b" " + value
 
 
-class FloatDumper(SpecialValuesDumper):
+class FloatDumper(_SpecialValuesDumper):
 
     format = Format.TEXT
     _oid = builtins["float8"].oid
@@ -69,7 +95,7 @@ class FloatBinaryDumper(Dumper):
         return pack_float8(obj)
 
 
-class DecimalDumper(SpecialValuesDumper):
+class DecimalDumper(_SpecialValuesDumper):
 
     _oid = builtins["numeric"].oid
 
@@ -87,23 +113,23 @@ class DecimalDumper(SpecialValuesDumper):
     }
 
 
-class Int2Dumper(NumberDumper):
+class Int2Dumper(_NumberDumper):
     _oid = builtins["int2"].oid
 
 
-class Int4Dumper(NumberDumper):
+class Int4Dumper(_NumberDumper):
     _oid = builtins["int4"].oid
 
 
-class Int8Dumper(NumberDumper):
+class Int8Dumper(_NumberDumper):
     _oid = builtins["int8"].oid
 
 
-class IntNumericDumper(NumberDumper):
+class IntNumericDumper(_NumberDumper):
     _oid = builtins["numeric"].oid
 
 
-class OidDumper(NumberDumper):
+class OidDumper(_NumberDumper):
     _oid = builtins["oid"].oid
 
 
@@ -426,3 +452,37 @@ class DecimalBinaryDumper(Dumper):
             out += pack_uint2(pgdigit)
 
         return out
+
+
+def register_default_globals(ctx: AdaptContext) -> None:
+    IntDumper.register(int, ctx)
+    IntBinaryDumper.register(int, ctx)
+    FloatDumper.register(float, ctx)
+    FloatBinaryDumper.register(float, ctx)
+    # The binary dumper is currently some 30% slower, so default to text
+    # (see tests/scripts/testdec.py for a rough benchmark)
+    DecimalBinaryDumper.register("decimal.Decimal", ctx)
+    DecimalDumper.register("decimal.Decimal", ctx)
+    Int2Dumper.register(Int2, ctx)
+    Int4Dumper.register(Int4, ctx)
+    Int8Dumper.register(Int8, ctx)
+    IntNumericDumper.register(IntNumeric, ctx)
+    OidDumper.register(Oid, ctx)
+    Int2BinaryDumper.register(Int2, ctx)
+    Int4BinaryDumper.register(Int4, ctx)
+    Int8BinaryDumper.register(Int8, ctx)
+    OidBinaryDumper.register(Oid, ctx)
+    IntLoader.register("int2", ctx)
+    IntLoader.register("int4", ctx)
+    IntLoader.register("int8", ctx)
+    IntLoader.register("oid", ctx)
+    Int2BinaryLoader.register("int2", ctx)
+    Int4BinaryLoader.register("int4", ctx)
+    Int8BinaryLoader.register("int8", ctx)
+    OidBinaryLoader.register("oid", ctx)
+    FloatLoader.register("float4", ctx)
+    FloatLoader.register("float8", ctx)
+    Float4BinaryLoader.register("float4", ctx)
+    Float8BinaryLoader.register("float8", ctx)
+    NumericLoader.register("numeric", ctx)
+    NumericBinaryLoader.register("numeric", ctx)

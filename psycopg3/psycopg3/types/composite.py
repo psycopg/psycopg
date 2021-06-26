@@ -15,7 +15,7 @@ from ..oids import TEXT_OID
 from ..adapt import Format, RecursiveDumper, RecursiveLoader
 from ..proto import AdaptContext, Buffer
 from .._struct import unpack_len
-from .._typeinfo import CompositeInfo
+from .._typeinfo import CompositeInfo as CompositeInfo  # exported here
 
 _struct_oidlen = struct.Struct("!Ii")
 _unpack_oidlen = cast(
@@ -208,3 +208,9 @@ def register_adapters(
         {"factory": factory},
     )
     loader.register(info.oid, context=context)
+
+
+def register_default_globals(ctx: AdaptContext) -> None:
+    TupleDumper.register(tuple, ctx)
+    RecordLoader.register("record", ctx)
+    RecordBinaryLoader.register("record", ctx)

@@ -22,7 +22,7 @@ from decimal import Decimal, Context, DefaultContext
 from psycopg3_c._psycopg3 cimport endian
 from psycopg3 import errors as e
 
-from psycopg3.wrappers.numeric import Int2, Int4, Int8, IntNumeric
+from psycopg3.types.numeric import Int2, Int4, Int8, IntNumeric
 
 cdef extern from "Python.h":
     # work around https://github.com/cython/cython/issues/3909

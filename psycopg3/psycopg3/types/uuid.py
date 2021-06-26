@@ -62,3 +62,10 @@ class UUIDBinaryLoader(UUIDLoader):
         if isinstance(data, memoryview):
             data = bytes(data)
         return UUID(bytes=data)
+
+
+def register_default_globals(ctx: AdaptContext) -> None:
+    UUIDDumper.register("uuid.UUID", ctx)
+    UUIDBinaryDumper.register("uuid.UUID", ctx)
+    UUIDLoader.register("uuid", ctx)
+    UUIDBinaryLoader.register("uuid", ctx)

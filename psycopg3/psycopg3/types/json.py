@@ -162,3 +162,16 @@ class JsonbBinaryLoader(_JsonLoader):
         if isinstance(data, memoryview):
             data = bytes(data)
         return self._loads(data)
+
+
+def register_default_globals(ctx: AdaptContext) -> None:
+    # Currently json binary format is nothing different than text, maybe with
+    # an extra memcopy we can avoid.
+    JsonBinaryDumper.register(Json, ctx)
+    JsonDumper.register(Json, ctx)
+    JsonbBinaryDumper.register(Jsonb, ctx)
+    JsonbDumper.register(Jsonb, ctx)
+    JsonLoader.register("json", ctx)
+    JsonbLoader.register("jsonb", ctx)
+    JsonBinaryLoader.register("json", ctx)
+    JsonbBinaryLoader.register("jsonb", ctx)

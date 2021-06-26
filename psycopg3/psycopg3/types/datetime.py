@@ -132,7 +132,7 @@ class TimeTzBinaryDumper(_BaseTimeDumper):
         return _pack_timetz(us, -int(off.total_seconds()))
 
 
-class _BaseDateTimeDumper(Dumper):
+class _BaseDatetimeDumper(Dumper):
     def get_key(
         self, obj: datetime, format: Pg3Format
     ) -> Union[type, Tuple[type]]:
@@ -147,7 +147,7 @@ class _BaseDateTimeDumper(Dumper):
         raise NotImplementedError
 
 
-class _BaseDateTimeTextDumper(_BaseDateTimeDumper):
+class _BaseDatetimeTextDumper(_BaseDatetimeDumper):
 
     format = Format.TEXT
 
@@ -157,7 +157,7 @@ class _BaseDateTimeTextDumper(_BaseDateTimeDumper):
         return str(obj).encode("utf8")
 
 
-class DateTimeTzDumper(_BaseDateTimeTextDumper):
+class DatetimeDumper(_BaseDatetimeTextDumper):
 
     _oid = builtins["timestamptz"].oid
 
@@ -165,15 +165,15 @@ class DateTimeTzDumper(_BaseDateTimeTextDumper):
         if obj.tzinfo:
             return self
         else:
-            return DateTimeDumper(self.cls)
+            return DatetimeNoTzDumper(self.cls)
 
 
-class DateTimeDumper(_BaseDateTimeTextDumper):
+class DatetimeNoTzDumper(_BaseDatetimeTextDumper):
 
     _oid = builtins["timestamp"].oid
 
 
-class DateTimeTzBinaryDumper(_BaseDateTimeDumper):
+class DatetimeBinaryDumper(_BaseDatetimeDumper):
 
     format = Format.BINARY
     _oid = builtins["timestamptz"].oid
@@ -189,10 +189,10 @@ class DateTimeTzBinaryDumper(_BaseDateTimeDumper):
         if obj.tzinfo:
             return self
         else:
-            return DateTimeBinaryDumper(self.cls)
+            return DatetimeNoTzBinaryDumper(self.cls)
 
 
-class DateTimeBinaryDumper(_BaseDateTimeDumper):
+class DatetimeNoTzBinaryDumper(_BaseDatetimeDumper):
 
     format = Format.BINARY
     _oid = builtins["timestamp"].oid
@@ -205,7 +205,7 @@ class DateTimeBinaryDumper(_BaseDateTimeDumper):
         return pack_int8(micros)
 
 
-class TimeDeltaDumper(Dumper):
+class TimedeltaDumper(Dumper):
 
     format = Format.TEXT
     _oid = builtins["interval"].oid
@@ -232,7 +232,7 @@ class TimeDeltaDumper(Dumper):
         )
 
 
-class TimeDeltaBinaryDumper(Dumper):
+class TimedeltaBinaryDumper(Dumper):
 
     format = Format.BINARY
     _oid = builtins["interval"].oid
@@ -737,3 +737,26 @@ _month_abbr = {
 
 # Pad to get microseconds from a fraction of seconds
 _uspad = [0, 100_000, 10_000, 1_000, 100, 10, 1]
+
+
+def register_default_globals(ctx: AdaptContext) -> None:
+    DateDumper.register("datetime.date", ctx)
+    DateBinaryDumper.register("datetime.date", ctx)
+    TimeDumper.register("datetime.time", ctx)
+    TimeBinaryDumper.register("datetime.time", ctx)
+    DatetimeDumper.register("datetime.datetime", ctx)
+    DatetimeBinaryDumper.register("datetime.datetime", ctx)
+    TimedeltaDumper.register("datetime.timedelta", ctx)
+    TimedeltaBinaryDumper.register("datetime.timedelta", ctx)
+    DateLoader.register("date", ctx)
+    DateBinaryLoader.register("date", ctx)
+    TimeLoader.register("time", ctx)
+    TimeBinaryLoader.register("time", ctx)
+    TimetzLoader.register("timetz", ctx)
+    TimetzBinaryLoader.register("timetz", ctx)
+    TimestampLoader.register("timestamp", ctx)
+    TimestampBinaryLoader.register("timestamp", ctx)
+    TimestamptzLoader.register("timestamptz", ctx)
+    TimestamptzBinaryLoader.register("timestamptz", ctx)
+    IntervalLoader.register("interval", ctx)
+    IntervalBinaryLoader.register("interval", ctx)

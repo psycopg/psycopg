@@ -81,7 +81,7 @@ cursor):
     from datetime import date
 
     from psycopg3.oids import postgres_types as builtins
-    from psycopg3.types import DateLoader, DateDumper
+    from psycopg3.types.datetime import DateLoader, DateDumper
 
     class InfDateDumper(DateDumper):
         def dump(self, obj):

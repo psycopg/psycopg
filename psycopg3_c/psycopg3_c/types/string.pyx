@@ -25,7 +25,7 @@ cdef extern from "Python.h":
     const char *PyUnicode_AsUTF8AndSize(unicode obj, Py_ssize_t *size) except NULL
 
 
-cdef class _StringDumper(CDumper):
+cdef class _StrDumper(CDumper):
     cdef int is_utf8
     cdef char *encoding
     cdef bytes _bytes_encoding  # needed to keep `encoding` alive
@@ -70,7 +70,7 @@ cdef class _StringDumper(CDumper):
 
 
 @cython.final
-cdef class StringBinaryDumper(_StringDumper):
+cdef class StrBinaryDumper(_StrDumper):
 
     format = PQ_BINARY
 
@@ -79,12 +79,12 @@ cdef class StringBinaryDumper(_StringDumper):
 
 
 @cython.final
-cdef class StringDumper(_StringDumper):
+cdef class StrDumper(_StrDumper):
 
     format = PQ_TEXT
 
     cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
-        cdef Py_ssize_t size = StringBinaryDumper.cdump(self, obj, rv, offset)
+        cdef Py_ssize_t size = StrBinaryDumper.cdump(self, obj, rv, offset)
 
         # Like the binary dump, but check for 0, or the string will be truncated
         cdef const char *buf = PyByteArray_AS_STRING(rv)

@@ -207,3 +207,22 @@ class CidrBinaryLoader(_LazyIpaddress):
             return IPv6Network((packed, prefix))
 
         return ip_network(data.decode("utf8"))
+
+
+def register_default_globals(ctx: AdaptContext) -> None:
+    InterfaceDumper.register("ipaddress.IPv4Address", ctx)
+    InterfaceDumper.register("ipaddress.IPv6Address", ctx)
+    InterfaceDumper.register("ipaddress.IPv4Interface", ctx)
+    InterfaceDumper.register("ipaddress.IPv6Interface", ctx)
+    NetworkDumper.register("ipaddress.IPv4Network", ctx)
+    NetworkDumper.register("ipaddress.IPv6Network", ctx)
+    IPv4AddressBinaryDumper.register("ipaddress.IPv4Address", ctx)
+    IPv6AddressBinaryDumper.register("ipaddress.IPv6Address", ctx)
+    IPv4InterfaceBinaryDumper.register("ipaddress.IPv4Interface", ctx)
+    IPv6InterfaceBinaryDumper.register("ipaddress.IPv6Interface", ctx)
+    IPv4NetworkBinaryDumper.register("ipaddress.IPv4Network", ctx)
+    IPv6NetworkBinaryDumper.register("ipaddress.IPv6Network", ctx)
+    InetLoader.register("inet", ctx)
+    InetBinaryLoader.register("inet", ctx)
+    CidrLoader.register("cidr", ctx)
+    CidrBinaryLoader.register("cidr", ctx)

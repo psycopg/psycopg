@@ -328,6 +328,11 @@ def register_adapters(
         loader.register(info.array_oid, context=context)
 
 
+def register_default_globals(ctx: AdaptContext) -> None:
+    ListDumper.register(list, ctx)
+    ListBinaryDumper.register(list, ctx)
+
+
 def register_all_arrays(ctx: AdaptContext) -> None:
     """
     Associate the array oid of all the types in Loader.globals.

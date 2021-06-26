@@ -13,7 +13,7 @@ import psycopg3
 from psycopg3 import sql
 from psycopg3.adapt import Format
 from psycopg3.types.range import Range
-from psycopg3.wrappers.numeric import Int4, Int8
+from psycopg3.types.numeric import Int4, Int8
 
 
 @pytest.fixture
