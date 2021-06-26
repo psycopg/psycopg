@@ -259,15 +259,15 @@ def test_copy_in_empty(conn, format):
 @pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
 def test_subclass_adapter(conn, format):
     if format == Format.TEXT:
-        from psycopg3.types.string import StringDumper as BaseDumper
+        from psycopg3.types.string import StrDumper as BaseDumper
     else:
-        from psycopg3.types.string import StringBinaryDumper as BaseDumper
+        from psycopg3.types.string import StrBinaryDumper as BaseDumper
 
-    class MyStringDumper(BaseDumper):
+    class MyStrDumper(BaseDumper):
         def dump(self, obj):
             return super().dump(obj) * 2
 
-    MyStringDumper.register(str, conn)
+    MyStrDumper.register(str, conn)
 
     cur = conn.cursor()
     ensure_table(cur, sample_tabledef)

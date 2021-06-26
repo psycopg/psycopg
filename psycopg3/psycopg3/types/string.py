@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from ..pq.proto import Escaping as EscapingProto
 
 
-class _StringDumper(Dumper):
+class _StrDumper(Dumper):
 
     _encoding = "utf-8"
 
@@ -30,7 +30,7 @@ class _StringDumper(Dumper):
                 self._encoding = enc
 
 
-class StringBinaryDumper(_StringDumper):
+class StrBinaryDumper(_StrDumper):
 
     format = Format.BINARY
     _oid = builtins["text"].oid
@@ -40,7 +40,7 @@ class StringBinaryDumper(_StringDumper):
         return obj.encode(self._encoding)
 
 
-class StringDumper(_StringDumper):
+class StrDumper(_StrDumper):
 
     format = Format.TEXT
 
@@ -139,8 +139,8 @@ def register_default_globals(ctx: "AdaptContext") -> None:
     # The last one registered becomes the default for each type.
     # Normally, binary is the default dumper, except for text (which plays
     # the role of unknown, so it can be cast automatically to other types).
-    StringBinaryDumper.register(str, ctx)
-    StringDumper.register(str, ctx)
+    StrBinaryDumper.register(str, ctx)
+    StrDumper.register(str, ctx)
     TextLoader.register(INVALID_OID, ctx)
     TextLoader.register("bpchar", ctx)
     TextLoader.register("name", ctx)

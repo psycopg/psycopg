@@ -94,13 +94,13 @@ def test_dump_subclass(conn, fmt_out):
 
 def test_subclass_dumper(conn):
     # This might be a C fast object: make sure that the Python code is called
-    from psycopg3.types.string import StringDumper
+    from psycopg3.types.string import StrDumper
 
-    class MyStringDumper(StringDumper):
+    class MyStrDumper(StrDumper):
         def dump(self, obj):
             return (obj * 2).encode("utf-8")
 
-    MyStringDumper.register(str, conn)
+    MyStrDumper.register(str, conn)
     assert conn.execute("select %t", ["hello"]).fetchone()[0] == "hellohello"
 
 
