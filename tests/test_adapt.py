@@ -94,7 +94,7 @@ def test_dump_subclass(conn, fmt_out):
 
 def test_subclass_dumper(conn):
     # This might be a C fast object: make sure that the Python code is called
-    from psycopg3.types.text import StringDumper
+    from psycopg3.types.string import StringDumper
 
     class MyStringDumper(StringDumper):
         def dump(self, obj):
@@ -106,7 +106,7 @@ def test_subclass_dumper(conn):
 
 def test_subclass_loader(conn):
     # This might be a C fast object: make sure that the Python code is called
-    from psycopg3.types.text import TextLoader
+    from psycopg3.types.string import TextLoader
 
     class MyTextLoader(TextLoader):
         def load(self, data):

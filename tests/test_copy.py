@@ -259,9 +259,9 @@ def test_copy_in_empty(conn, format):
 @pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
 def test_subclass_adapter(conn, format):
     if format == Format.TEXT:
-        from psycopg3.types.text import StringDumper as BaseDumper
+        from psycopg3.types.string import StringDumper as BaseDumper
     else:
-        from psycopg3.types.text import StringBinaryDumper as BaseDumper
+        from psycopg3.types.string import StringBinaryDumper as BaseDumper
 
     class MyStringDumper(BaseDumper):
         def dump(self, obj):
