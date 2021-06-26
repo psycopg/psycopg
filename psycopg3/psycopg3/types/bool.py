@@ -1,5 +1,5 @@
 """
-Adapters for None and boolean.
+Adapters for booleans.
 """
 
 # Copyright (C) 2020-2021 The Psycopg Team
@@ -31,21 +31,6 @@ class BoolBinaryDumper(Dumper):
         return b"\x01" if obj else b"\x00"
 
 
-class NoneDumper(Dumper):
-    """
-    Not a complete dumper as it doesn't implement dump(), but it implements
-    quote(), so it can be used in sql composition.
-    """
-
-    format = Format.TEXT
-
-    def dump(self, obj: None) -> bytes:
-        raise NotImplementedError("NULL is passed to Postgres in other ways")
-
-    def quote(self, obj: None) -> bytes:
-        return b"NULL"
-
-
 class BoolLoader(Loader):
 
     format = Format.TEXT
@@ -65,6 +50,5 @@ class BoolBinaryLoader(Loader):
 def register_default_globals(ctx: AdaptContext) -> None:
     BoolDumper.register(bool, ctx)
     BoolBinaryDumper.register(bool, ctx)
-    NoneDumper.register(type(None), ctx)
     BoolLoader.register("bool", ctx)
     BoolBinaryLoader.register("bool", ctx)

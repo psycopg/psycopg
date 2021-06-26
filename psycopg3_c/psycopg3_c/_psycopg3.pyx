@@ -29,5 +29,5 @@ include "_psycopg3/transform.pyx"
 
 include "types/date.pyx"
 include "types/numeric.pyx"
-include "types/singletons.pyx"
+include "types/bool.pyx"
 include "types/text.pyx"
