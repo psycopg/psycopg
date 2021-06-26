@@ -4,7 +4,7 @@
 .. index::
     single: Error; Class
 
-.. module:: psycopg3
+.. module:: psycopg
 
 This module exposes objects to represent and examine database errors.
 
@@ -13,13 +13,13 @@ This module exposes objects to represent and examine database errors.
     .. autoattribute:: diag
 
 
-.. module:: psycopg3.errors
+.. module:: psycopg.errors
 
 .. autoclass:: Diagnostic()
 
     The object is returned by the `Error.diag` attribute and is passed to the
     callback functions registered with
-    `~psycopg3.Connection.add_notice_handler()`.
+    `~psycopg.Connection.add_notice_handler()`.
 
     All the information available from the :pq:`PQresultErrorField()` function
     are exposed as attributes by the object. For instance the `!severity`
@@ -54,7 +54,7 @@ This module exposes objects to represent and examine database errors.
         server versions.
 
 
-.. currentmodule:: psycopg3
+.. currentmodule:: psycopg
 
 .. index::
     single: Exceptions; DB-API
@@ -64,7 +64,7 @@ This module exposes objects to represent and examine database errors.
 DB-API exceptions
 -----------------
 
-In compliance with the DB-API, all the exceptions raised by ``psycopg3``
+In compliance with the DB-API, all the exceptions raised by Psycopg
 derive from the following classes:
 
 .. parsed-literal::
@@ -81,8 +81,8 @@ derive from the following classes:
             \|__ `ProgrammingError`
             \|__ `NotSupportedError`
 
-These classes are also exposed both by the `!psycopg3` and the
-`!psycopg3.errors` module.
+These classes are also exposed both by the Psycopg and the
+`!psycopg.errors` module.
 
 .. autoexception:: Warning()
 .. autoexception:: InterfaceError()
@@ -95,7 +95,7 @@ These classes are also exposed both by the `!psycopg3` and the
 .. autoexception:: NotSupportedError()
 
 
-.. currentmodule:: psycopg3.errors
+.. currentmodule:: psycopg.errors
 
 .. index::
     single: Exceptions; PostgreSQL
@@ -110,7 +110,7 @@ client-side, such as connection failed) usually have a 5-letters error code
 called SQLSTATE (available in the `~Diagnostic.sqlstate` attribute of
 `Error.diag`).
 
-``psycopg3`` exposes a different class for each SQLSTATE value, allowing to
+Psycopg exposes a different class for each SQLSTATE value, allowing to
 write idiomatic error handling code according to specific conditions happening
 in the database:
 
@@ -118,7 +118,7 @@ in the database:
 
     try:
         cur.execute("LOCK TABLE mytable IN ACCESS EXCLUSIVE MODE NOWAIT")
-    except psycopg3.errors.LockNotAvailable:
+    except psycopg.errors.LockNotAvailable:
         locked = True
 
 The exception names are generated from the PostgreSQL source code and includes
@@ -143,7 +143,7 @@ exception <dbapi-exceptions>` and expose the `Error` interface.
 
         try:
             cur.execute("LOCK TABLE mytable IN ACCESS EXCLUSIVE MODE NOWAIT")
-        except psycopg3.errors.lookup("55P03"):
+        except psycopg.errors.lookup("55P03"):
             locked = True
 
 These are all the classes defined and the DBAPI exception they derive from:

@@ -3,10 +3,10 @@ from types import ModuleType
 
 import pytest
 
-import psycopg3
-from psycopg3 import pq
-from psycopg3.adapt import Transformer, Format, Dumper, Loader
-from psycopg3.oids import postgres_types as builtins, TEXT_OID
+import psycopg
+from psycopg import pq
+from psycopg.adapt import Transformer, Format, Dumper, Loader
+from psycopg.oids import postgres_types as builtins, TEXT_OID
 
 
 @pytest.mark.parametrize(
@@ -94,7 +94,7 @@ def test_dump_subclass(conn, fmt_out):
 
 def test_subclass_dumper(conn):
     # This might be a C fast object: make sure that the Python code is called
-    from psycopg3.types.string import StrDumper
+    from psycopg.types.string import StrDumper
 
     class MyStrDumper(StrDumper):
         def dump(self, obj):
@@ -106,7 +106,7 @@ def test_subclass_dumper(conn):
 
 def test_subclass_loader(conn):
     # This might be a C fast object: make sure that the Python code is called
-    from psycopg3.types.string import TextLoader
+    from psycopg.types.string import TextLoader
 
     class MyTextLoader(TextLoader):
         def load(self, data):
@@ -237,7 +237,7 @@ def test_array_dumper(conn, fmt_out):
 
     L = []
     L.append(L)
-    with pytest.raises(psycopg3.DataError):
+    with pytest.raises(psycopg.DataError):
         assert t.get_dumper(L, fmt_in)
 
 
@@ -292,28 +292,28 @@ def test_no_cast_needed(conn, fmt_in):
     assert cur.fetchone()[0] == 20
 
 
-@pytest.mark.skipif(psycopg3.pq.__impl__ == "python", reason="C module test")
+@pytest.mark.skipif(psycopg.pq.__impl__ == "python", reason="C module test")
 def test_optimised_adapters():
 
-    from psycopg3_c import _psycopg3
+    from psycopg_c import _psycopg
 
     # All the optimised adapters available
     c_adapters = {}
-    for n in dir(_psycopg3):
+    for n in dir(_psycopg):
         if n.startswith("_") or n in ("CDumper", "CLoader"):
             continue
-        obj = getattr(_psycopg3, n)
+        obj = getattr(_psycopg, n)
         if not isinstance(obj, type):
             continue
-        if not issubclass(obj, (_psycopg3.CDumper, _psycopg3.CLoader)):
+        if not issubclass(obj, (_psycopg.CDumper, _psycopg.CLoader)):
             continue
         c_adapters[n] = obj
 
     # All the registered adapters
     reg_adapters = set()
     adapters = (
-        list(psycopg3.global_adapters._dumpers.values())
-        + psycopg3.global_adapters._loaders
+        list(psycopg.global_adapters._dumpers.values())
+        + psycopg.global_adapters._loaders
     )
     assert len(adapters) == 5
     for m in adapters:
@@ -329,8 +329,8 @@ def test_optimised_adapters():
     assert n >= 10
 
     # Check that every optimised adapter is the optimised version of a Py one
-    for n in dir(psycopg3.types):
-        mod = getattr(psycopg3.types, n)
+    for n in dir(psycopg.types):
+        mod = getattr(psycopg.types, n)
         if not isinstance(mod, ModuleType):
             continue
         for n1 in dir(mod):
@@ -357,7 +357,7 @@ def test_random(conn, faker, fmt, fmt_out):
         cur.execute(faker.create_stmt)
         try:
             cur.executemany(faker.insert_stmt, faker.records)
-        except psycopg3.DatabaseError:
+        except psycopg.DatabaseError:
             # Insert one by one to find problematic values
             conn.rollback()
             cur.execute(faker.drop_stmt)

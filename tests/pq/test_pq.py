@@ -1,4 +1,4 @@
-from psycopg3 import pq
+from psycopg import pq
 
 
 def test_version():

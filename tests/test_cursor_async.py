@@ -3,9 +3,9 @@ import pytest
 import weakref
 import datetime as dt
 
-import psycopg3
-from psycopg3 import pq, sql, rows
-from psycopg3.adapt import Format
+import psycopg
+from psycopg import pq, sql, rows
+from psycopg.adapt import Format
 
 from .utils import gc_collect
 from .test_cursor import my_row_factory
@@ -19,7 +19,7 @@ async def test_close(aconn):
     await cur.close()
     assert cur.closed
 
-    with pytest.raises(psycopg3.InterfaceError):
+    with pytest.raises(psycopg.InterfaceError):
         await cur.execute("select 'foo'")
 
     await cur.close()
@@ -88,7 +88,7 @@ async def test_execute_empty_query(aconn, query):
     cur = aconn.cursor()
     await cur.execute(query)
     assert cur.status == cur.ExecStatus.EMPTY_QUERY
-    with pytest.raises(psycopg3.ProgrammingError):
+    with pytest.raises(psycopg.ProgrammingError):
         await cur.fetchone()
 
 
@@ -98,7 +98,7 @@ async def test_execute_empty_query(aconn, query):
 async def test_execute_copy(aconn, query):
     cur = aconn.cursor()
     await cur.execute("create table testcopy (id int)")
-    with pytest.raises(psycopg3.ProgrammingError):
+    with pytest.raises(psycopg.ProgrammingError):
         await cur.execute(query)
 
 
@@ -204,7 +204,7 @@ async def test_executemany_returning_rowcount(aconn, execmany):
 )
 async def test_executemany_badquery(aconn, query):
     cur = aconn.cursor()
-    with pytest.raises(psycopg3.DatabaseError):
+    with pytest.raises(psycopg.DatabaseError):
         await cur.executemany(query, [(10, "hello"), (20, "world")])
 
 
@@ -216,7 +216,7 @@ async def test_executemany_null_first(aconn, fmt_in):
         f"insert into testmany values (%{fmt_in}, %{fmt_in})",
         [[1, None], [3, 4]],
     )
-    with pytest.raises((psycopg3.DataError, psycopg3.ProgrammingError)):
+    with pytest.raises((psycopg.DataError, psycopg.ProgrammingError)):
         await cur.executemany(
             f"insert into testmany values (%{fmt_in}, %{fmt_in})",
             [[1, ""], [3, 4]],
@@ -312,7 +312,7 @@ async def test_row_factory(aconn):
 
 async def test_scroll(aconn):
     cur = aconn.cursor()
-    with pytest.raises(psycopg3.ProgrammingError):
+    with pytest.raises(psycopg.ProgrammingError):
         await cur.scroll(0)
 
     await cur.execute("select generate_series(0,9)")
@@ -365,7 +365,7 @@ async def test_query_params_execute(aconn):
     assert cur.query == b"select 1"
     assert cur.params is None
 
-    with pytest.raises(psycopg3.DataError):
+    with pytest.raises(psycopg.DataError):
         await cur.execute("select %t::int", ["wat"])
 
     assert cur.query == b"select $1::int"
@@ -379,7 +379,7 @@ async def test_query_params_executemany(aconn):
     assert cur.query == b"select $1, $2"
     assert cur.params == [b"3", b"4"]
 
-    with pytest.raises((psycopg3.DataError, TypeError)):
+    with pytest.raises((psycopg.DataError, TypeError)):
         await cur.executemany("select %t::int", [[1], ["x"], [2]])
     assert cur.query == b"select $1::int"
     # TODO: cannot really check this: after introduced row_dumpers, this
@@ -430,7 +430,7 @@ async def test_stream_row_factory(aconn):
 )
 async def test_stream_badquery(aconn, query):
     cur = aconn.cursor()
-    with pytest.raises(psycopg3.ProgrammingError):
+    with pytest.raises(psycopg.ProgrammingError):
         async for rec in cur.stream(query):
             pass
 
@@ -465,7 +465,7 @@ async def test_leak(dsn, faker, fmt, fmt_out, fetch, row_factory):
 
     n = []
     for i in range(3):
-        async with await psycopg3.AsyncConnection.connect(dsn) as conn:
+        async with await psycopg.AsyncConnection.connect(dsn) as conn:
             async with conn.cursor(
                 binary=fmt_out, row_factory=row_factory
             ) as cur:

@@ -35,9 +35,9 @@ def setup(app):
     app.connect("autodoc-process-signature", process_signature)
     app.connect("autodoc-before-process-signature", before_process_signature)
 
-    import psycopg3  # type: ignore
+    import psycopg  # type: ignore
 
-    recover_defined_module(psycopg3)
+    recover_defined_module(psycopg)
     monkeypatch_autodoc()
 
     # Disable warnings in sphinx_autodoc_typehints because it doesn't seem that
@@ -100,7 +100,7 @@ def monkeypatch_autodoc():
         Replace a docstring such as::
 
             .. py:attribute:: ConnectionInfo.dbname
-               :module: psycopg3
+               :module: psycopg
 
                The database name of the connection.
 
@@ -110,7 +110,7 @@ def monkeypatch_autodoc():
 
             .. py:attribute:: ConnectionInfo.dbname
                :type: str
-               :module: psycopg3
+               :module: psycopg
 
                The database name of the connection.
 
@@ -160,9 +160,9 @@ def unrest(s):
     s = re.sub(r":[^`]*:`~?([^`]*)`", r"\1", s)  # drop role
     s = re.sub(r"\\(.)", r"\1", s)  # drop escape
 
-    # note that ~psycopg3.pq.ConnStatus is converted to pq.ConnStatus
+    # note that ~psycopg.pq.ConnStatus is converted to pq.ConnStatus
     # which should be interpreted well if currentmodule is set ok.
-    s = re.sub(r"(?:typing|psycopg3)\.", "", s)  # drop unneeded modules
+    s = re.sub(r"(?:typing|psycopg)\.", "", s)  # drop unneeded modules
     s = re.sub(r"~", "", s)  # drop the tilde
 
     return s

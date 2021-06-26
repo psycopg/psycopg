@@ -1,4 +1,4 @@
-from psycopg3 import rows
+from psycopg import rows
 
 
 def test_tuple_row(conn):

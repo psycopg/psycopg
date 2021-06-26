@@ -4,11 +4,11 @@ from decimal import Decimal
 
 import pytest
 
-import psycopg3.errors
-from psycopg3 import pq
-from psycopg3.sql import Identifier
-from psycopg3.adapt import Format
-from psycopg3.types.range import Range, RangeInfo
+import psycopg.errors
+from psycopg import pq
+from psycopg.sql import Identifier
+from psycopg.adapt import Format
+from psycopg.types.range import Range, RangeInfo
 
 
 type2sub = {
@@ -176,7 +176,7 @@ def test_copy_in_empty(conn, min, max, bounds, format):
             f"copy copyrange (r) from stdin (format {format.name})"
         ) as copy:
             copy.write_row([r])
-    except psycopg3.errors.ProtocolViolation:
+    except psycopg.errors.ProtocolViolation:
         if not min and not max and format == pq.Format.BINARY:
             pytest.xfail(
                 "TODO: add annotation to dump array with no type info"
@@ -196,7 +196,7 @@ def test_copy_in_empty(conn, min, max, bounds, format):
 )
 @pytest.mark.parametrize("format", [pq.Format.TEXT, pq.Format.BINARY])
 def test_copy_in_empty_wrappers(conn, bounds, wrapper, format):
-    from psycopg3.types import range as range_module
+    from psycopg.types import range as range_module
 
     cur = conn.cursor()
     cur.execute("create table copyrange (id serial primary key, r daterange)")

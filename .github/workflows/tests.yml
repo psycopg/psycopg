@@ -23,11 +23,11 @@ jobs:
             postgres: 13
 
     env:
-      PSYCOPG3_IMPL: python
+      PSYCOPG_IMPL: python
       PGHOST: 127.0.0.1
       PGUSER: postgres
       PGPASSWORD: password
-      PSYCOPG3_TEST_DSN: "dbname=postgres"
+      PSYCOPG_TEST_DSN: "dbname=postgres"
 
     services:
       postgresql:
@@ -51,7 +51,7 @@ jobs:
       - name: Install tox
         run: pip install tox
       - name: Run tests
-        run: tox -c psycopg3 -e ${{ matrix.python }} -- --color yes
+        run: tox -c psycopg -e ${{ matrix.python }} -- --color yes
 
   c:
     name: C implementation
@@ -71,12 +71,12 @@ jobs:
             postgres: 10
 
     env:
-      PSYCOPG3_IMPL: c
+      PSYCOPG_IMPL: c
       PGHOST: 127.0.0.1
       PGUSER: postgres
       PGPASSWORD: password
-      PSYCOPG3_TEST_DSN: "dbname=postgres"
-      # skip tests failing on importing psycopg3_c.pq on subprocess
+      PSYCOPG_TEST_DSN: "dbname=postgres"
+      # skip tests failing on importing psycopg_c.pq on subprocess
       # they only fail on Travis, work ok locally under tox too.
       PYTEST_ADDOPTS: "-m 'not subprocess'"
 
@@ -102,4 +102,4 @@ jobs:
       - name: Install tox
         run: pip install tox
       - name: Run tests
-        run: tox -c psycopg3_c -e ${{ matrix.python }} -- --color yes
+        run: tox -c psycopg_c -e ${{ matrix.python }} -- --color yes

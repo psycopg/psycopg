@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Callable, Optional, Sequence, Tuple
 
-from psycopg3 import AnyCursor, Connection, Cursor, ServerCursor, connect
+from psycopg import AnyCursor, Connection, Cursor, ServerCursor, connect
 
 
 def int_row_factory(cursor: AnyCursor[int]) -> Callable[[Sequence[int]], int]:

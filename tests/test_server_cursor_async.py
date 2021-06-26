@@ -1,8 +1,8 @@
 import pytest
 
-from psycopg3 import errors as e
-from psycopg3.rows import dict_row
-from psycopg3.pq import Format
+from psycopg import errors as e
+from psycopg.rows import dict_row
+from psycopg.pq import Format
 
 pytestmark = pytest.mark.asyncio
 

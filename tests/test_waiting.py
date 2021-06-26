@@ -2,10 +2,10 @@ import select
 
 import pytest
 
-import psycopg3
-from psycopg3 import waiting
-from psycopg3 import generators
-from psycopg3.pq import ConnStatus, ExecStatus
+import psycopg
+from psycopg import waiting
+from psycopg import generators
+from psycopg.pq import ConnStatus, ExecStatus
 
 
 skip_no_epoll = pytest.mark.skipif(
@@ -30,7 +30,7 @@ def test_wait_conn(dsn, timeout):
 
 def test_wait_conn_bad(dsn):
     gen = generators.connect("dbname=nosuchdb")
-    with pytest.raises(psycopg3.OperationalError):
+    with pytest.raises(psycopg.OperationalError):
         waiting.wait_conn(gen)
 
 
@@ -54,7 +54,7 @@ def test_wait_selector_bad(pgconn):
     pgconn.send_query(b"select 1")
     gen = generators.execute(pgconn)
     pgconn.finish()
-    with pytest.raises(psycopg3.OperationalError):
+    with pytest.raises(psycopg.OperationalError):
         waiting.wait_selector(gen, pgconn.socket)
 
 
@@ -86,7 +86,7 @@ async def test_wait_conn_async(dsn, timeout):
 @pytest.mark.asyncio
 async def test_wait_conn_async_bad(dsn):
     gen = generators.connect("dbname=nosuchdb")
-    with pytest.raises(psycopg3.OperationalError):
+    with pytest.raises(psycopg.OperationalError):
         await waiting.wait_conn_async(gen)
 
 
@@ -104,5 +104,5 @@ async def test_wait_async_bad(pgconn):
     gen = generators.execute(pgconn)
     socket = pgconn.socket
     pgconn.finish()
-    with pytest.raises(psycopg3.OperationalError):
+    with pytest.raises(psycopg.OperationalError):
         await waiting.wait_async(gen, socket)

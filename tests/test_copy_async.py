@@ -6,12 +6,12 @@ from itertools import cycle
 
 import pytest
 
-import psycopg3
-from psycopg3 import pq
-from psycopg3 import sql
-from psycopg3 import errors as e
-from psycopg3.pq import Format
-from psycopg3.adapt import Format as PgFormat
+import psycopg
+from psycopg import pq
+from psycopg import sql
+from psycopg import errors as e
+from psycopg.pq import Format
+from psycopg.adapt import Format as PgFormat
 
 from .utils import gc_collect
 from .test_copy import sample_text, sample_binary, sample_binary_rows  # noqa
@@ -477,7 +477,7 @@ async def test_copy_to_leaks(dsn, faker, fmt, method, retries):
     faker.make_records(20)
 
     async def work():
-        async with await psycopg3.AsyncConnection.connect(dsn) as conn:
+        async with await psycopg.AsyncConnection.connect(dsn) as conn:
             async with conn.cursor(binary=fmt) as cur:
                 await cur.execute(faker.drop_stmt)
                 await cur.execute(faker.create_stmt)
@@ -536,7 +536,7 @@ async def test_copy_from_leaks(dsn, faker, fmt, retries):
     faker.make_records(20)
 
     async def work():
-        async with await psycopg3.AsyncConnection.connect(dsn) as conn:
+        async with await psycopg.AsyncConnection.connect(dsn) as conn:
             async with conn.cursor(binary=fmt) as cur:
                 await cur.execute(faker.drop_stmt)
                 await cur.execute(faker.create_stmt)

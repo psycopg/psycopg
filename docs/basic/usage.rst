@@ -1,4 +1,4 @@
-.. currentmodule:: psycopg3
+.. currentmodule:: psycopg
 
 .. _module-usage:
 
@@ -15,8 +15,8 @@ the `DB-API`__ protocol. Other database adapters, such as the builtin
 
 .. _usage:
 
-Main objects in ``psycopg3``
-----------------------------
+Main objects in Psycopg 3
+-------------------------
 
 Here is an interactive session showing some of the basic commands:
 
@@ -24,10 +24,10 @@ Here is an interactive session showing some of the basic commands:
 
 .. code:: python
 
-    import psycopg3
+    import psycopg
 
     # Connect to an existing database
-    with psycopg3.connect("dbname=test user=postgres") as conn:
+    with psycopg.connect("dbname=test user=postgres") as conn:
 
         # Open a cursor to perform database operations
         with conn.cursor() as cur:
@@ -105,11 +105,11 @@ relate to each other:
 Connection context
 ------------------
 
-`!psycopg3` `Connection` can be used as a context manager:
+Psycopg 3 `Connection` can be used as a context manager:
 
 .. code:: python
 
-    with psycopg3.connect() as conn:
+    with psycopg.connect() as conn:
         ... # use the connection
 
     # the connection is now closed

@@ -1,4 +1,4 @@
-.. _psycopg3.pq:
+.. _psycopg.pq:
 
 `pq` -- libpq wrapper module
 ============================
@@ -6,16 +6,16 @@
 .. index::
     single: libpq
 
-.. module:: psycopg3.pq
+.. module:: psycopg.pq
 
-``psycopg3`` is built around the libpq_, the PostgreSQL client library, which
+Psycopg is built around the libpq_, the PostgreSQL client library, which
 performs most of the network communications and returns query results in C
 structures.
 
 .. _libpq: https://www.postgresql.org/docs/current/libpq.html
 
 The low-level functions of the library are exposed by the objects in the
-`!psycopg3.pq` module.
+`!psycopg.pq` module.
 
 
 .. _pq-impl:
@@ -34,22 +34,22 @@ same interface. Current implementations are:
   in Cython_). It is much better performing than the ``python``
   implementation, however it requires development packages installed on the
   client machine. It can be installed using the ``c`` extra, i.e. running
-  ``pip install psycopg3[c]``.
+  ``pip install psycopg[c]``.
 
 - ``binary``: a pre-compiled C implementation, bundled with all the required
   libraries. It is the easiest option to deal with, fast to install and it
   should require no development tool or client library, however it may be not
   available for every platform. You can install it using the ``binary`` extra,
-  i.e. running ``pip install psycopg3[binary]``.
+  i.e. running ``pip install psycopg[binary]``.
 
 .. _Cython: https://cython.org/
 
-The implementation currently used is available in the `~psycopg3.pq.__impl__`
+The implementation currently used is available in the `~psycopg.pq.__impl__`
 module constant.
 
-At import, ``psycopg3`` will try to use the best implementation available and
+At import, Psycopg 3 will try to use the best implementation available and
 will fail if none is usable. You can force the use of a specific
-implementation by exporting the env var :envvar:`PSYCOPG3_IMPL`: importing the
+implementation by exporting the env var :envvar:`PSYCOPG_IMPL`: importing the
 library will fail if the requested implementation is not available.
 
 
@@ -59,7 +59,7 @@ Module content
 .. autodata:: __impl__
 
     The choice of implementation is automatic but can be forced setting the
-    :envvar:`PSYCOPG3_IMPL` env var.
+    :envvar:`PSYCOPG_IMPL` env var.
 
 
 .. autofunction:: version

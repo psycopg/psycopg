@@ -1,7 +1,7 @@
 import pytest
 
-import psycopg3
-from psycopg3 import pq
+import psycopg
+from psycopg import pq
 
 sample_values = "values (10::int, 20::int, 'hello'::text), (40, NULL, 'world')"
 
@@ -30,20 +30,20 @@ sample_binary = b"".join(sample_binary_rows)
 
 
 def test_put_data_no_copy(pgconn):
-    with pytest.raises(psycopg3.OperationalError):
+    with pytest.raises(psycopg.OperationalError):
         pgconn.put_copy_data(b"wat")
 
     pgconn.finish()
-    with pytest.raises(psycopg3.OperationalError):
+    with pytest.raises(psycopg.OperationalError):
         pgconn.put_copy_data(b"wat")
 
 
 def test_put_end_no_copy(pgconn):
-    with pytest.raises(psycopg3.OperationalError):
+    with pytest.raises(psycopg.OperationalError):
         pgconn.put_copy_end()
 
     pgconn.finish()
-    with pytest.raises(psycopg3.OperationalError):
+    with pytest.raises(psycopg.OperationalError):
         pgconn.put_copy_end()
 
 
@@ -136,11 +136,11 @@ def test_copy_out_error_end(pgconn):
 
 
 def test_get_data_no_copy(pgconn):
-    with pytest.raises(psycopg3.OperationalError):
+    with pytest.raises(psycopg.OperationalError):
         pgconn.get_copy_data(0)
 
     pgconn.finish()
-    with pytest.raises(psycopg3.OperationalError):
+    with pytest.raises(psycopg.OperationalError):
         pgconn.get_copy_data(0)
 
 

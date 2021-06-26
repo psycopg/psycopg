@@ -1,22 +1,22 @@
-psycopg3 test suite
+psycopg test suite
 ===================
 
 Quick version
 -------------
 
 To run tests on the current code you can install the `test` extra of the
-package, specify a connection string  in the `PSYCOPG3_TEST_DSN` env var to
+package, specify a connection string  in the `PSYCOPG_TEST_DSN` env var to
 connect to a test database, and run ``pytest``::
 
-    $ pip install -e psycopg3[test]
-    $ export PSYCOPG3_TEST_DSN="host=localhost dbname=psycopg3_test"
+    $ pip install -e psycopg[test]
+    $ export PSYCOPG_TEST_DSN="host=localhost dbname=psycopg_test"
     $ pytest
 
 
 Test options
 ------------
 
-- The tests output header shows additional psycopg3 related information,
+- The tests output header shows additional psycopg related information,
   on top of the one normally displayed by ``pytest`` and the extensions used::
 
       $ pytest
@@ -27,18 +27,18 @@ Test options
       libpq wrapper implementation: c
 
 
-- By default the tests run using the ``pq`` implementation that psycopg3 would
+- By default the tests run using the ``pq`` implementation that psycopg would
   choose (the C module if installed, else the Python one). In order to test a
   different implementation, use the normal `pq module selection mechanism`__
-  of the ``PSYCOPG3_IMPL`` env var::
+  of the ``PSYCOPG_IMPL`` env var::
 
-      $ PSYCOPG3_IMPL=python pytest 
+      $ PSYCOPG_IMPL=python pytest 
       ========================= test session starts =========================
       [...]
       libpq available: 130002
       libpq wrapper implementation: python
 
-  .. __: https://www.psycopg.org/psycopg3/docs/api/pq.html#pq-module-implementations
+  .. __: https://www.psycopg.org/psycopg/docs/api/pq.html#pq-module-implementations
 
 
 - Slow tests have a ``slow`` marker which can be selected to reduce test
@@ -66,8 +66,8 @@ test dsn in order to connect to a database running on the docker host: specify
 a set of env vars working for your setup::
 
     $ docker run -ti --rm --volume `pwd`:/src --workdir /src \
-      -e PSYCOPG3_TEST_DSN -e PGHOST=172.17.0.1 -e PGUSER=`whoami` \
+      -e PSYCOPG_TEST_DSN -e PGHOST=172.17.0.1 -e PGUSER=`whoami` \
       python:3.7 bash
 
-    # pip install -e ./psycopg3[test] ./psycopg3_c
+    # pip install -e ./psycopg[test] ./psycopg_c
     # pytest

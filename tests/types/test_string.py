@@ -1,10 +1,10 @@
 import pytest
 
-import psycopg3
-from psycopg3 import pq
-from psycopg3 import sql
-from psycopg3.adapt import Format
-from psycopg3 import Binary
+import psycopg
+from psycopg import pq
+from psycopg import sql
+from psycopg.adapt import Format
+from psycopg import Binary
 
 eur = "\u20ac"
 
@@ -36,14 +36,14 @@ def test_quote_1char(conn):
 def test_dump_zero(conn, fmt_in):
     cur = conn.cursor()
     s = "foo\x00bar"
-    with pytest.raises(psycopg3.DataError):
+    with pytest.raises(psycopg.DataError):
         cur.execute(f"select %{fmt_in}::text", (s,))
 
 
 def test_quote_zero(conn):
     cur = conn.cursor()
     s = "foo\x00bar"
-    with pytest.raises(psycopg3.DataError):
+    with pytest.raises(psycopg.DataError):
         cur.execute(sql.SQL("select {}").format(sql.Literal(s)))
 
 
@@ -148,7 +148,7 @@ def test_load_badenc(conn, typename, fmt_out):
     cur = conn.cursor(binary=fmt_out)
 
     conn.client_encoding = "latin1"
-    with pytest.raises(psycopg3.DataError):
+    with pytest.raises(psycopg.DataError):
         cur.execute(f"select chr(%s::int)::{typename}", (ord(eur),))
 
     stmt = sql.SQL("copy (select chr({}::int)) to stdout (format {})").format(
@@ -156,7 +156,7 @@ def test_load_badenc(conn, typename, fmt_out):
     )
     with cur.copy(stmt) as copy:
         copy.set_types([typename])
-        with pytest.raises(psycopg3.DataError):
+        with pytest.raises(psycopg.DataError):
             copy.read_row()
 
 

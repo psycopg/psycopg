@@ -1,7 +1,7 @@
 import ctypes
 import pytest
 
-from psycopg3 import pq
+from psycopg import pq
 
 
 @pytest.mark.parametrize(

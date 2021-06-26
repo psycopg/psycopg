@@ -6,9 +6,9 @@ from select import select
 
 import pytest
 
-import psycopg3
-from psycopg3 import pq
-import psycopg3.generators
+import psycopg
+from psycopg import pq
+import psycopg.generators
 
 from ..utils import gc_collect
 
@@ -19,7 +19,7 @@ def test_connectdb(dsn):
 
 
 def test_connectdb_error():
-    conn = pq.PGconn.connect(b"dbname=psycopg3_test_not_for_real")
+    conn = pq.PGconn.connect(b"dbname=psycopg_test_not_for_real")
     assert conn.status == pq.ConnStatus.BAD
 
 
@@ -47,7 +47,7 @@ def test_connect_async(dsn):
     assert conn.status == pq.ConnStatus.OK
 
     conn.finish()
-    with pytest.raises(psycopg3.OperationalError):
+    with pytest.raises(psycopg.OperationalError):
         conn.connect_poll()
 
 
@@ -57,7 +57,7 @@ def test_connect_async_bad(dsn):
         for e in pq.Conninfo.parse(dsn.encode("utf8"))
         if e.val
     }
-    parsed_dsn[b"dbname"] = b"psycopg3_test_not_for_real"
+    parsed_dsn[b"dbname"] = b"psycopg_test_not_for_real"
     dsn = b" ".join(b"%s='%s'" % item for item in parsed_dsn.items())
     conn = pq.PGconn.connect_start(dsn)
     while 1:
@@ -120,7 +120,7 @@ def test_info(dsn, pgconn):
     assert dbname.val == (name or user)
 
     pgconn.finish()
-    with pytest.raises(psycopg3.OperationalError):
+    with pytest.raises(psycopg.OperationalError):
         pgconn.info
 
 
@@ -132,7 +132,7 @@ def test_reset(pgconn):
     assert pgconn.status == pq.ConnStatus.OK
 
     pgconn.finish()
-    with pytest.raises(psycopg3.OperationalError):
+    with pytest.raises(psycopg.OperationalError):
         pgconn.reset()
 
     assert pgconn.status == pq.ConnStatus.BAD
@@ -156,10 +156,10 @@ def test_reset_async(pgconn):
     assert pgconn.status == pq.ConnStatus.OK
 
     pgconn.finish()
-    with pytest.raises(psycopg3.OperationalError):
+    with pytest.raises(psycopg.OperationalError):
         pgconn.reset_start()
 
-    with pytest.raises(psycopg3.OperationalError):
+    with pytest.raises(psycopg.OperationalError):
         pgconn.reset_poll()
 
 
@@ -175,7 +175,7 @@ def test_db(pgconn):
     name = [o.val for o in pgconn.info if o.keyword == b"dbname"][0]
     assert pgconn.db == name
     pgconn.finish()
-    with pytest.raises(psycopg3.OperationalError):
+    with pytest.raises(psycopg.OperationalError):
         pgconn.db
 
 
@@ -183,7 +183,7 @@ def test_user(pgconn):
     user = [o.val for o in pgconn.info if o.keyword == b"user"][0]
     assert pgconn.user == user
     pgconn.finish()
-    with pytest.raises(psycopg3.OperationalError):
+    with pytest.raises(psycopg.OperationalError):
         pgconn.user
 
 
@@ -191,7 +191,7 @@ def test_password(pgconn):
     # not in info
     assert isinstance(pgconn.password, bytes)
     pgconn.finish()
-    with pytest.raises(psycopg3.OperationalError):
+    with pytest.raises(psycopg.OperationalError):
         pgconn.password
 
 
@@ -199,7 +199,7 @@ def test_host(pgconn):
     # might be not in info
     assert isinstance(pgconn.host, bytes)
     pgconn.finish()
-    with pytest.raises(psycopg3.OperationalError):
+    with pytest.raises(psycopg.OperationalError):
         pgconn.host
 
 
@@ -208,14 +208,14 @@ def test_hostaddr(pgconn):
     # not in info
     assert isinstance(pgconn.hostaddr, bytes), pgconn.hostaddr
     pgconn.finish()
-    with pytest.raises(psycopg3.OperationalError):
+    with pytest.raises(psycopg.OperationalError):
         pgconn.hostaddr
 
 
 @pytest.mark.xfail
 @pytest.mark.libpq("< 12")
 def test_hostaddr_missing(pgconn):
-    with pytest.raises(psycopg3.NotSupportedError):
+    with pytest.raises(psycopg.NotSupportedError):
         pgconn.hostaddr
 
 
@@ -223,7 +223,7 @@ def test_port(pgconn):
     port = [o.val for o in pgconn.info if o.keyword == b"port"][0]
     assert pgconn.port == port
     pgconn.finish()
-    with pytest.raises(psycopg3.OperationalError):
+    with pytest.raises(psycopg.OperationalError):
         pgconn.port
 
 
@@ -231,7 +231,7 @@ def test_tty(pgconn):
     tty = [o.val for o in pgconn.info if o.keyword == b"tty"][0]
     assert pgconn.tty == tty
     pgconn.finish()
-    with pytest.raises(psycopg3.OperationalError):
+    with pytest.raises(psycopg.OperationalError):
         pgconn.tty
 
 
@@ -241,19 +241,19 @@ def test_transaction_status(pgconn):
     assert pgconn.transaction_status == pq.TransactionStatus.INTRANS
     pgconn.send_query(b"select 1")
     assert pgconn.transaction_status == pq.TransactionStatus.ACTIVE
-    psycopg3.waiting.wait(psycopg3.generators.execute(pgconn), pgconn.socket)
+    psycopg.waiting.wait(psycopg.generators.execute(pgconn), pgconn.socket)
     assert pgconn.transaction_status == pq.TransactionStatus.INTRANS
     pgconn.finish()
     assert pgconn.transaction_status == pq.TransactionStatus.UNKNOWN
 
 
 def test_parameter_status(dsn, monkeypatch):
-    monkeypatch.setenv("PGAPPNAME", "psycopg3 tests")
+    monkeypatch.setenv("PGAPPNAME", "psycopg tests")
     pgconn = pq.PGconn.connect(dsn.encode("utf8"))
-    assert pgconn.parameter_status(b"application_name") == b"psycopg3 tests"
+    assert pgconn.parameter_status(b"application_name") == b"psycopg tests"
     assert pgconn.parameter_status(b"wat") is None
     pgconn.finish()
-    with pytest.raises(psycopg3.OperationalError):
+    with pytest.raises(psycopg.OperationalError):
         pgconn.parameter_status(b"application_name")
 
 
@@ -271,21 +271,21 @@ def test_encoding(pgconn):
     assert pgconn.parameter_status(b"client_encoding") == b"UTF8"
 
     pgconn.finish()
-    with pytest.raises(psycopg3.OperationalError):
+    with pytest.raises(psycopg.OperationalError):
         pgconn.parameter_status(b"client_encoding")
 
 
 def test_protocol_version(pgconn):
     assert pgconn.protocol_version == 3
     pgconn.finish()
-    with pytest.raises(psycopg3.OperationalError):
+    with pytest.raises(psycopg.OperationalError):
         pgconn.protocol_version
 
 
 def test_server_version(pgconn):
     assert pgconn.server_version >= 90400
     pgconn.finish()
-    with pytest.raises(psycopg3.OperationalError):
+    with pytest.raises(psycopg.OperationalError):
         pgconn.server_version
 
 
@@ -299,7 +299,7 @@ def test_socket(pgconn):
     # so let's see if at least an ok value comes out of it.
     try:
         assert pgconn.socket == socket
-    except psycopg3.OperationalError:
+    except psycopg.OperationalError:
         pass
 
 
@@ -316,7 +316,7 @@ def test_error_message(pgconn):
 def test_backend_pid(pgconn):
     assert isinstance(pgconn.backend_pid, int)
     pgconn.finish()
-    with pytest.raises(psycopg3.OperationalError):
+    with pytest.raises(psycopg.OperationalError):
         pgconn.backend_pid
 
 
@@ -362,12 +362,12 @@ def test_ssl_in_use(pgconn):
             assert pgconn.ssl_in_use
 
     pgconn.finish()
-    with pytest.raises(psycopg3.OperationalError):
+    with pytest.raises(psycopg.OperationalError):
         pgconn.ssl_in_use
 
 
 def test_set_single_row_mode(pgconn):
-    with pytest.raises(psycopg3.OperationalError):
+    with pytest.raises(psycopg.OperationalError):
         pgconn.set_single_row_mode()
 
     pgconn.send_query(b"select 1")
@@ -380,14 +380,14 @@ def test_cancel(pgconn):
     cancel.cancel()
     pgconn.finish()
     cancel.cancel()
-    with pytest.raises(psycopg3.OperationalError):
+    with pytest.raises(psycopg.OperationalError):
         pgconn.get_cancel()
 
 
 def test_cancel_free(pgconn):
     cancel = pgconn.get_cancel()
     cancel.free()
-    with pytest.raises(psycopg3.OperationalError):
+    with pytest.raises(psycopg.OperationalError):
         cancel.cancel()
     cancel.free()
 
@@ -445,7 +445,7 @@ def test_notice(pgconn):
 
 
 def test_notice_error(pgconn, caplog):
-    caplog.set_level(logging.WARNING, logger="psycopg3")
+    caplog.set_level(logging.WARNING, logger="psycopg")
 
     def callback(res):
         raise Exception("hello error")

@@ -1,0 +1,4 @@
+/*.so
+_psycopg.c
+pq.c
+*.html

@@ -8,9 +8,9 @@ def pytest_addoption(parser):
     parser.addoption(
         "--test-dsn",
         metavar="DSN",
-        default=os.environ.get("PSYCOPG3_TEST_DSN") or None,
+        default=os.environ.get("PSYCOPG_TEST_DSN") or None,
         help="Connection string to run database tests requiring a connection"
-        " [you can also use the PSYCOPG3_TEST_DSN env var].",
+        " [you can also use the PSYCOPG_TEST_DSN env var].",
     )
 
 
@@ -35,7 +35,7 @@ def dsn(request):
 @pytest.fixture
 def pgconn(dsn, request):
     """Return a PGconn connection open to `--test-dsn`."""
-    from psycopg3 import pq
+    from psycopg import pq
 
     conn = pq.PGconn.connect(dsn.encode("utf8"))
     if conn.status != pq.ConnStatus.OK:
@@ -53,7 +53,7 @@ def pgconn(dsn, request):
 @pytest.fixture
 def conn(dsn, request):
     """Return a `Connection` connected to the ``--test-dsn`` database."""
-    from psycopg3 import Connection
+    from psycopg import Connection
 
     conn = Connection.connect(dsn)
     msg = check_connection_version(conn.info.server_version, request.function)
@@ -67,7 +67,7 @@ def conn(dsn, request):
 @pytest.fixture
 async def aconn(dsn, request):
     """Return an `AsyncConnection` connected to the ``--test-dsn`` database."""
-    from psycopg3 import AsyncConnection
+    from psycopg import AsyncConnection
 
     conn = await AsyncConnection.connect(dsn)
     msg = check_connection_version(conn.info.server_version, request.function)
@@ -83,7 +83,7 @@ def svcconn(dsn):
     """
     Return a session `Connection` connected to the ``--test-dsn`` database.
     """
-    from psycopg3 import Connection
+    from psycopg import Connection
 
     conn = Connection.connect(dsn, autocommit=True)
     yield conn
@@ -104,7 +104,7 @@ def acommands(aconn, monkeypatch):
 
 def patch_exec(conn, monkeypatch):
     """Helper to implement the commands fixture both sync and async."""
-    from psycopg3 import sql
+    from psycopg import sql
 
     _orig_exec_command = conn._exec_command
     L = ListPopAll()

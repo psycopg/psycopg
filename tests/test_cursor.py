@@ -5,10 +5,10 @@ import datetime as dt
 
 import pytest
 
-import psycopg3
-from psycopg3 import pq, sql, rows
-from psycopg3.oids import postgres_types as builtins
-from psycopg3.adapt import Format
+import psycopg
+from psycopg import pq, sql, rows
+from psycopg.oids import postgres_types as builtins
+from psycopg.adapt import Format
 
 from .utils import gc_collect
 
@@ -19,7 +19,7 @@ def test_close(conn):
     cur.close()
     assert cur.closed
 
-    with pytest.raises(psycopg3.InterfaceError):
+    with pytest.raises(psycopg.InterfaceError):
         cur.execute("select 'foo'")
 
     cur.close()
@@ -85,7 +85,7 @@ def test_execute_empty_query(conn, query):
     cur = conn.cursor()
     cur.execute(query)
     assert cur.status == cur.ExecStatus.EMPTY_QUERY
-    with pytest.raises(psycopg3.ProgrammingError):
+    with pytest.raises(psycopg.ProgrammingError):
         cur.fetchone()
 
 
@@ -95,7 +95,7 @@ def test_execute_empty_query(conn, query):
 def test_execute_copy(conn, query):
     cur = conn.cursor()
     cur.execute("create table testcopy (id int)")
-    with pytest.raises(psycopg3.ProgrammingError):
+    with pytest.raises(psycopg.ProgrammingError):
         cur.execute(query)
 
 
@@ -204,7 +204,7 @@ def test_executemany_returning_rowcount(conn, execmany):
 )
 def test_executemany_badquery(conn, query):
     cur = conn.cursor()
-    with pytest.raises(psycopg3.DatabaseError):
+    with pytest.raises(psycopg.DatabaseError):
         cur.executemany(query, [(10, "hello"), (20, "world")])
 
 
@@ -216,7 +216,7 @@ def test_executemany_null_first(conn, fmt_in):
         f"insert into testmany values (%{fmt_in}, %{fmt_in})",
         [[1, None], [3, 4]],
     )
-    with pytest.raises((psycopg3.DataError, psycopg3.ProgrammingError)):
+    with pytest.raises((psycopg.DataError, psycopg.ProgrammingError)):
         cur.executemany(
             f"insert into testmany values (%{fmt_in}, %{fmt_in})",
             [[1, ""], [3, 4]],
@@ -306,7 +306,7 @@ def test_row_factory(conn):
 
 def test_scroll(conn):
     cur = conn.cursor()
-    with pytest.raises(psycopg3.ProgrammingError):
+    with pytest.raises(psycopg.ProgrammingError):
         cur.scroll(0)
 
     cur.execute("select generate_series(0,9)")
@@ -359,7 +359,7 @@ def test_query_params_execute(conn):
     assert cur.query == b"select 1"
     assert cur.params is None
 
-    with pytest.raises(psycopg3.DataError):
+    with pytest.raises(psycopg.DataError):
         cur.execute("select %t::int", ["wat"])
 
     assert cur.query == b"select $1::int"
@@ -373,7 +373,7 @@ def test_query_params_executemany(conn):
     assert cur.query == b"select $1, $2"
     assert cur.params == [b"3", b"4"]
 
-    with pytest.raises((psycopg3.DataError, TypeError)):
+    with pytest.raises((psycopg.DataError, TypeError)):
         cur.executemany("select %t::int", [[1], ["x"], [2]])
     assert cur.query == b"select $1::int"
     # TODO: cannot really check this: after introduced row_dumpers, this
@@ -424,7 +424,7 @@ def test_stream_row_factory(conn):
 )
 def test_stream_badquery(conn, query):
     cur = conn.cursor()
-    with pytest.raises(psycopg3.ProgrammingError):
+    with pytest.raises(psycopg.ProgrammingError):
         for rec in cur.stream(query):
             pass
 
@@ -551,7 +551,7 @@ def test_leak(dsn, faker, fmt, fmt_out, fetch, row_factory):
 
     n = []
     for i in range(3):
-        with psycopg3.connect(dsn) as conn:
+        with psycopg.connect(dsn) as conn:
             with conn.cursor(binary=fmt_out, row_factory=row_factory) as cur:
                 cur.execute(faker.drop_stmt)
                 cur.execute(faker.create_stmt)

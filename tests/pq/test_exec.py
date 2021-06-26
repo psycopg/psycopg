@@ -2,8 +2,8 @@
 
 import pytest
 
-import psycopg3
-from psycopg3 import pq
+import psycopg
+from psycopg import pq
 
 
 def test_exec_none(pgconn):
@@ -15,7 +15,7 @@ def test_exec(pgconn):
     res = pgconn.exec_(b"select 'hel' || 'lo'")
     assert res.get_value(0, 0) == b"hello"
     pgconn.finish()
-    with pytest.raises(psycopg3.OperationalError):
+    with pytest.raises(psycopg.OperationalError):
         pgconn.exec_(b"select 'hello'")
 
 
@@ -24,7 +24,7 @@ def test_exec_params(pgconn):
     assert res.status == pq.ExecStatus.TUPLES_OK
     assert res.get_value(0, 0) == b"8"
     pgconn.finish()
-    with pytest.raises(psycopg3.OperationalError):
+    with pytest.raises(psycopg.OperationalError):
         pgconn.exec_params(b"select $1::int + $2", [b"5", b"3"])
 
 
@@ -91,9 +91,9 @@ def test_prepare(pgconn):
     assert res.get_value(0, 0) == b"8"
 
     pgconn.finish()
-    with pytest.raises(psycopg3.OperationalError):
+    with pytest.raises(psycopg.OperationalError):
         pgconn.prepare(b"prep", b"select $1::int + $2::int")
-    with pytest.raises(psycopg3.OperationalError):
+    with pytest.raises(psycopg.OperationalError):
         pgconn.exec_prepared(b"prep", [b"3", b"5"])
 
 
@@ -149,5 +149,5 @@ def test_describe_portal(pgconn):
     assert res.fname(0) == b"foo"
 
     pgconn.finish()
-    with pytest.raises(psycopg3.OperationalError):
+    with pytest.raises(psycopg.OperationalError):
         pgconn.describe_portal(b"cur")

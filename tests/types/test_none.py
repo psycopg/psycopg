@@ -1,5 +1,5 @@
-from psycopg3 import sql
-from psycopg3.adapt import Transformer, Format
+from psycopg import sql
+from psycopg.adapt import Transformer, Format
 
 
 def test_quote_none(conn):

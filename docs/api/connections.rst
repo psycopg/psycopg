@@ -1,4 +1,4 @@
-.. currentmodule:: psycopg3
+.. currentmodule:: psycopg
 
 Connection classes
 ==================
@@ -40,13 +40,13 @@ The `!Connection` class
                            See `transactions` for details.
         :param row_factory: The row factory specifying what type of records
                             to create fetching data (default:
-                            `~psycopg3.rows.tuple_row()`). See
+                            `~psycopg.rows.tuple_row()`). See
                             :ref:`row-factories` for details.
 
         .. __: https://www.postgresql.org/docs/current/libpq-connect.html
             #LIBPQ-CONNSTRING
 
-        This method is also aliased as `psycopg3.connect()`.
+        This method is also aliased as `psycopg.connect()`.
 
         .. seealso::
 
@@ -193,7 +193,7 @@ The `!Connection` class
 
     .. automethod:: add_notice_handler
 
-        :param callback: a callable taking a `~psycopg3.errors.Diagnostic`
+        :param callback: a callable taking a `~psycopg.errors.Diagnostic`
             object containing all the details about the notice.
 
     .. automethod:: remove_notice_handler
@@ -285,7 +285,7 @@ Connection support objects
     .. autoattribute:: hostaddr
 
         Only available if the libpq used is at least from PostgreSQL 12.
-        Raise `~psycopg3.NotSupportedError` otherwise.
+        Raise `~psycopg.NotSupportedError` otherwise.
 
     .. autoattribute:: port
     .. autoattribute:: dbname

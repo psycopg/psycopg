@@ -1,6 +1,6 @@
 
-Getting started with ``psycopg3``
-=================================
+Getting started with Psycopg 3
+==============================
 
 .. toctree::
     :maxdepth: 1

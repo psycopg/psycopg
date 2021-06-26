@@ -13,7 +13,7 @@ import sys
 import time
 import threading
 
-import psycopg3.pool
+import psycopg.pool
 
 import logging
 
@@ -28,7 +28,7 @@ def main():
 
         logging.getLogger("psycopg2.pool").setLevel(loglevel)
 
-    with psycopg3.pool.ConnectionPool(
+    with psycopg.pool.ConnectionPool(
         opt.dsn,
         min_size=opt.min_size,
         max_size=opt.max_size,
@@ -102,7 +102,7 @@ class Measurer:
             time.sleep(interval)
 
 
-class DelayedConnection(psycopg3.Connection):
+class DelayedConnection(psycopg.Connection):
     """A connection adding a delay to the connection time."""
 
     @classmethod

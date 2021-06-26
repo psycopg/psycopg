@@ -1,4 +1,4 @@
-.. currentmodule:: psycopg3
+.. currentmodule:: psycopg
 
 .. index:: row factories
 
@@ -11,26 +11,26 @@ Cursor's `fetch*` methods return tuples of column values by default. This can
 be changed to adapt the needs of the programmer by using custom *row
 factories*.
 
-A row factory (formally implemented by the `~psycopg3.rows.RowFactory`
+A row factory (formally implemented by the `~psycopg.rows.RowFactory`
 protocol) is a callable that accepts a `Cursor` object and returns another
-callable (formally the `~psycopg3.rows.RowMaker` protocol) accepting a
+callable (formally the `~psycopg.rows.RowMaker` protocol) accepting a
 `values` tuple and returning a row in the desired form.
 
-.. autoclass:: psycopg3.rows.RowMaker()
+.. autoclass:: psycopg.rows.RowMaker()
 
    .. method:: __call__(values: Sequence[Any]) -> Row
 
         Convert a sequence of values from the database to a finished object.
 
 
-.. autoclass:: psycopg3.rows.RowFactory()
+.. autoclass:: psycopg.rows.RowFactory()
 
    .. method:: __call__(cursor: AnyCursor[Row]) -> RowMaker[Row]
 
         Inspect the result on a cursor and return a `RowMaker` to convert rows.
 
-        `!AnyCursor` may be either a `~psycopg3.Cursor` or an
-        `~psycopg3.AsyncCursor`.
+        `!AnyCursor` may be either a `~psycopg.Cursor` or an
+        `~psycopg.AsyncCursor`.
 
 
 `~RowFactory` objects can be implemented as a class, for instance:
@@ -38,7 +38,7 @@ callable (formally the `~psycopg3.rows.RowMaker` protocol) accepting a
 .. code:: python
 
    from typing import Any, Sequence
-   from psycopg3 import AnyCursor
+   from psycopg import AnyCursor
 
    class DictRowFactory:
        def __init__(self, cursor: AnyCursor[dict[str, Any]]):
@@ -67,7 +67,7 @@ These can then be used by specifying a `row_factory` argument in
 
 .. code:: python
 
-    conn = psycopg3.connect(row_factory=DictRowFactory)
+    conn = psycopg.connect(row_factory=DictRowFactory)
     cur = conn.execute("SELECT first_name, last_name, age FROM persons")
     person = cur.fetchone()
     print(f"{person['first_name']} {person['last_name']}")
@@ -80,9 +80,9 @@ passing another value at `Connection.cursor()`.
 Available row factories
 -----------------------
 
-The module `psycopg3.rows` provides the implementation for a few row factories:
+The module `psycopg.rows` provides the implementation for a few row factories:
 
-.. currentmodule:: psycopg3.rows
+.. currentmodule:: psycopg.rows
 
 .. autofunction:: tuple_row(cursor: AnyCursor[TupleRow])
 .. autodata:: TupleRow
@@ -96,7 +96,7 @@ The module `psycopg3.rows` provides the implementation for a few row factories:
 Use with a static analyzer
 --------------------------
 
-The `~psycopg3.Connection` and `~psycopg3.Cursor` classes are `generic
+The `~psycopg.Connection` and `~psycopg.Cursor` classes are `generic
 types`__: the parameter `!Row` is passed by the ``row_factory`` argument (of
 the `~Connection.connect()` and the `~Connection.cursor()` method) and it
 controls what type of record is returned by the fetch methods of the cursors.
@@ -109,18 +109,18 @@ such as Mypy_.
 
 .. code:: python
 
-   conn = psycopg3.connect()
-   # conn type is psycopg3.Connection[Tuple[Any, ...]]
+   conn = psycopg.connect()
+   # conn type is psycopg.Connection[Tuple[Any, ...]]
 
-   dconn = psycopg3.connect(row_factory=dict_row)
-   # dconn type is psycopg3.Connection[Dict[str, Any]]
+   dconn = psycopg.connect(row_factory=dict_row)
+   # dconn type is psycopg.Connection[Dict[str, Any]]
 
    cur = conn.cursor()
-   # cur type is psycopg3.Cursor[Tuple[Any, ...]]
+   # cur type is psycopg.Cursor[Tuple[Any, ...]]
 
    dcur = conn.cursor(row_factory=dict_row)
    dcur = dconn.cursor()
-   # dcur type is psycopg3.Cursor[Dict[str, Any]] in both cases
+   # dcur type is psycopg.Cursor[Dict[str, Any]] in both cases
 
    rec = cur.fetchone()
    # rec type is Optional[Tuple[Any, ...]]
@@ -148,7 +148,7 @@ any issue. Pydantic will also raise a runtime error in case the
     from datetime import date
     from typing import Any, Optional, Sequence
 
-    import psycopg3
+    import psycopg
     from pydantic import BaseModel
 
     class Person(BaseModel):
@@ -158,7 +158,7 @@ any issue. Pydantic will also raise a runtime error in case the
         dob: Optional[date]
 
     class PersonFactory:
-        def __init__(self, cur: psycopg3.AnyCursor[Person]):
+        def __init__(self, cur: psycopg.AnyCursor[Person]):
             assert cur.description
             self.fields = [c.name for c in cur.description]
 
@@ -166,7 +166,7 @@ any issue. Pydantic will also raise a runtime error in case the
             return Person(**dict(zip(self.fields, values)))
 
     def fetch_person(id: int) -> Person:
-        conn = psycopg3.connect()
+        conn = psycopg.connect()
         cur = conn.cursor(row_factory=PersonFactory)
         cur.execute(
             """

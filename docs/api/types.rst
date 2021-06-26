@@ -1,13 +1,13 @@
-.. currentmodule:: psycopg3.types
+.. currentmodule:: psycopg.types
 
-.. _psycopg3.types:
+.. _psycopg.types:
 
 `!types` -- types mapping and adaptation
 ========================================
 
-.. module:: psycopg3.types
+.. module:: psycopg.types
 
-The `!psycopg3.types` package exposes the concrete implementation of `Loader`
+The `!psycopg.types` package exposes the concrete implementation of `Loader`
 and `Dumper` to manage builtin objects, together with objects to describe
 PostgreSQL types and wrappers to help or customise the types conversion.
 
@@ -20,7 +20,7 @@ type, such as its name, oid and array oid. The class can be used to query a
 database for custom data types: this allows for instance to load automatically
 arrays of a custom type, once a loader for the base type has been registered.
 
-The `!TypeInfo` object doesn't instruct `!psycopg3` to convert a PostgreSQL
+The `!TypeInfo` object doesn't instruct Psycopg to convert a PostgreSQL
 type into a Python type: this is the role of a `Loader`. However it can extend
 the behaviour of the adapters: if you create a loader for `!MyType`, using
 `TypeInfo` you will be able to manage seamlessly arrays of `!MyType` or ranges
@@ -31,8 +31,8 @@ and composite types using it as a subtypes.
 
 .. code:: python
 
-    from psycopg3.adapt import Loader
-    from psycopg3.types import TypeInfo
+    from psycopg.adapt import Loader
+    from psycopg.types import TypeInfo
 
     t = TypeInfo.fetch(conn, "mytype")
     t.register(conn)
@@ -56,7 +56,7 @@ and composite types using it as a subtypes.
     .. automethod:: fetch_async
     .. automethod:: register
 
-        The *context* can be a `~psycopg3.Connection` or `~psycopg3.Cursor`.
+        The *context* can be a `~psycopg.Connection` or `~psycopg.Cursor`.
         Specifying no context will register the `!TypeInfo` globally.
 
         Registering the `TypeInfo` in a context allows the adapters of that
@@ -71,7 +71,7 @@ information from certain class of PostgreSQL types and to create more
 specialised adapters configurations.
 
 
-.. autoclass:: psycopg3.types.composite.CompositeInfo
+.. autoclass:: psycopg.types.composite.CompositeInfo
 
     .. automethod:: register
 
@@ -80,7 +80,7 @@ specialised adapters configurations.
         custom object if *factory* is specified.
 
 
-.. autoclass:: psycopg3.types.range.RangeInfo
+.. autoclass:: psycopg.types.range.RangeInfo
 
     .. automethod:: register
 
@@ -112,7 +112,7 @@ Objects wrappers
 JSON adapters
 -------------
 
-.. currentmodule:: psycopg3.types.json
+.. currentmodule:: psycopg.types.json
 
 .. autoclass:: Json
 .. autoclass:: Jsonb
@@ -133,13 +133,13 @@ Any object supported by the underlying `!dumps()` function can be wrapped.
 .. autoclass:: JsonbDumper
 .. autoclass:: JsonbBinaryDumper
 
-`~psycopg3.adapt.Dumper` subclasses using the function provided by
+`~psycopg.adapt.Dumper` subclasses using the function provided by
 `set_json_dumps()` function to serialize the Python object wrapped by
 `Json`/`Jsonb`.
 
 If you need to specify different `!dumps()` functions in different contexts
 you can subclass one/some of these functions to override the
-`~JsonDumper.get_dumps()` method and `~psycopg3.adapt.Dumper.register()` them
+`~JsonDumper.get_dumps()` method and `~psycopg.adapt.Dumper.register()` them
 on the right connection or cursor.
 
 .. autoclass:: JsonLoader
@@ -150,11 +150,11 @@ on the right connection or cursor.
 .. autoclass:: JsonbLoader
 .. autoclass:: JsonbBinaryLoader
 
-`~psycopg3.adapt.Loader` subclasses using the function provided by
+`~psycopg.adapt.Loader` subclasses using the function provided by
 `set_json_loads()` function to de-serialize :sql:`json`/:sql:`jsonb`
 PostgreSQL values to Python objects.
 
 If you need to specify different `!loads()` functions in different contexts
 you can subclass one/some of these functions to override the
-`~JsonLoader.get_loads()` method and `~psycopg3.adapt.Loader.register()` them
+`~JsonLoader.get_loads()` method and `~psycopg.adapt.Loader.register()` them
 on the right connection or cursor.

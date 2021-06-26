@@ -1,7 +1,7 @@
 import pytest
 
-import psycopg3
-from psycopg3 import pq
+import psycopg
+from psycopg import pq
 
 
 def test_defaults(monkeypatch):
@@ -30,6 +30,6 @@ def test_conninfo_parse():
 
 
 def test_conninfo_parse_bad():
-    with pytest.raises(psycopg3.OperationalError) as e:
+    with pytest.raises(psycopg.OperationalError) as e:
         pq.Conninfo.parse(b"bad_conninfo=")
         assert "bad_conninfo" in str(e.value)

@@ -1,10 +1,10 @@
 import pytest
-import psycopg3
-from psycopg3 import pq
-from psycopg3 import sql
-from psycopg3.oids import postgres_types as builtins
-from psycopg3.adapt import Format, Transformer
-from psycopg3.types import TypeInfo
+import psycopg
+from psycopg import pq
+from psycopg import sql
+from psycopg.oids import postgres_types as builtins
+from psycopg.adapt import Format, Transformer
+from psycopg.types import TypeInfo
 
 
 tests_str = [
@@ -89,7 +89,7 @@ def test_dump_list_int(conn, obj, want):
 )
 def test_bad_binary_array(input):
     tx = Transformer()
-    with pytest.raises(psycopg3.DataError):
+    with pytest.raises(psycopg.DataError):
         tx.get_dumper(input, Format.BINARY).dump(input)
 
 

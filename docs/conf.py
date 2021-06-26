@@ -23,7 +23,7 @@ sys.path.append(str(docs_dir / "lib"))
 
 # -- Project information -----------------------------------------------------
 
-project = "psycopg3"
+project = "psycopg"
 copyright = "2020-2021, Daniele Varrazzo and The Psycopg Team"
 author = "Daniele Varrazzo"
 release = "UNRELEASED"

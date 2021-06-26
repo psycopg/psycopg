@@ -1,8 +1,8 @@
 import codecs
 import pytest
 
-import psycopg3
-from psycopg3 import encodings
+import psycopg
+from psycopg import encodings
 
 
 def test_names_normalised():
@@ -39,5 +39,5 @@ def test_pg2py(pyenc, pgenc):
 
 @pytest.mark.parametrize("pgenc", ["MULE_INTERNAL", "EUC_TW"])
 def test_pg2py_missing(pgenc):
-    with pytest.raises(psycopg3.NotSupportedError):
+    with pytest.raises(psycopg.NotSupportedError):
         encodings.pg2py(pgenc.encode("utf-8"))

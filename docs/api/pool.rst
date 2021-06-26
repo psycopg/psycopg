@@ -4,7 +4,7 @@
 .. index::
     double: Connection; Pool
 
-.. module:: psycopg3.pool
+.. module:: psycopg.pool
 
 The package contains two connection pool implementations. A connection pool
 creates and maintains a limited amount of PostgreSQL connections and allows a
@@ -12,10 +12,10 @@ larger number of users to use them. See :ref:`connection-pools` for more
 details and usage pattern.
 
 There package implement two connection pools: `ConnectionPool` is a
-synchronous connection pool yielding `~psycopg3.Connection` objects and can be
+synchronous connection pool yielding `~psycopg.Connection` objects and can be
 used by multithread applications. `AsyncConnectionPool` has a similar
 interface, but with `asyncio` functions replacing blocking functions, and
-yields `~psycopg3.AsyncConnection` instances.
+yields `~psycopg.AsyncConnection` instances.
 
 The intended use (but not mandatory) is to create a single connection pool, as
 a global object exposed by a module in your application, and use the same
@@ -35,7 +35,7 @@ The `!ConnectionPool` class
    required.
 
    :param conninfo: The connection string. See
-                    `~psycopg3.Connection.connect()` for details.
+                    `~psycopg.Connection.connect()` for details.
    :type conninfo: `!str`
 
    :param min_size: The minimum number of connection the pool will hold. The
@@ -60,7 +60,7 @@ The `!ConnectionPool` class
 
    :param connection_class: The class of the connections to serve. It should
                             be a `!Connection` subclass.
-   :type connection_class: `!type`, default: `~psycopg3.Connection`
+   :type connection_class: `!type`, default: `~psycopg.Connection`
 
    :param configure: A callback to configure a connection after creation.
                      Useful, for instance, to configure its adapters. If the
@@ -179,15 +179,15 @@ The `!ConnectionPool` class
 
 .. autoclass:: PoolTimeout()
 
-   Subclass of `~psycopg3.OperationalError`
+   Subclass of `~psycopg.OperationalError`
 
 .. autoclass:: PoolClosed()
 
-   Subclass of `~psycopg3.OperationalError`
+   Subclass of `~psycopg.OperationalError`
 
 .. autoclass:: TooManyRequests()
 
-   Subclass of `~psycopg3.OperationalError`
+   Subclass of `~psycopg.OperationalError`
 
 
 The `!AsyncConnectionPool` class
@@ -207,7 +207,7 @@ listed here.
 
    :param connection_class: The class of the connections to serve. It should
                             be an `!AsyncConnection` subclass.
-   :type connection_class: `!type`, default: `~psycopg3.AsyncConnection`
+   :type connection_class: `!type`, default: `~psycopg.AsyncConnection`
 
    :param configure: A callback to configure a connection after creation.
    :type configure: `async Callable[[AsyncConnection], None]`

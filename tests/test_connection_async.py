@@ -5,12 +5,12 @@ import asyncio
 import logging
 import weakref
 
-import psycopg3
-from psycopg3 import encodings
-from psycopg3 import AsyncConnection, Notify
-from psycopg3.rows import tuple_row
-from psycopg3.errors import UndefinedTable
-from psycopg3.conninfo import conninfo_to_dict
+import psycopg
+from psycopg import encodings
+from psycopg import AsyncConnection, Notify
+from psycopg.rows import tuple_row
+from psycopg.errors import UndefinedTable
+from psycopg.conninfo import conninfo_to_dict
 
 from .utils import gc_collect
 from .test_cursor import my_row_factory
@@ -25,7 +25,7 @@ async def test_connect(dsn):
 
 
 async def test_connect_bad():
-    with pytest.raises(psycopg3.OperationalError):
+    with pytest.raises(psycopg.OperationalError):
         await AsyncConnection.connect("dbname=nosuchdb")
 
 
@@ -51,7 +51,7 @@ async def test_connect_timeout():
 
     async def connect():
         t0 = time.time()
-        with pytest.raises(psycopg3.OperationalError, match="timeout expired"):
+        with pytest.raises(psycopg.OperationalError, match="timeout expired"):
             await AsyncConnection.connect(
                 host="localhost", port=port, connect_timeout=1
             )
@@ -77,12 +77,12 @@ async def test_close(aconn):
     assert aconn.closed
     assert aconn.pgconn.status == aconn.ConnStatus.BAD
 
-    with pytest.raises(psycopg3.OperationalError):
+    with pytest.raises(psycopg.OperationalError):
         await cur.execute("select 1")
 
 
 async def test_broken(aconn):
-    with pytest.raises(psycopg3.OperationalError):
+    with pytest.raises(psycopg.OperationalError):
         await aconn.execute(
             "select pg_terminate_backend(%s)", [aconn.pgconn.backend_pid]
         )
@@ -131,7 +131,7 @@ async def test_context_commit(aconn, dsn):
     assert aconn.closed
     assert not aconn.broken
 
-    async with await psycopg3.AsyncConnection.connect(dsn) as aconn:
+    async with await psycopg.AsyncConnection.connect(dsn) as aconn:
         async with aconn.cursor() as cur:
             await cur.execute("select * from textctx")
             assert await cur.fetchall() == []
@@ -151,7 +151,7 @@ async def test_context_rollback(aconn, dsn):
     assert aconn.closed
     assert not aconn.broken
 
-    async with await psycopg3.AsyncConnection.connect(dsn) as aconn:
+    async with await psycopg.AsyncConnection.connect(dsn) as aconn:
         async with aconn.cursor() as cur:
             with pytest.raises(UndefinedTable):
                 await cur.execute("select * from textctx")
@@ -165,7 +165,7 @@ async def test_context_close(aconn):
 
 async def test_context_rollback_no_clobber(conn, dsn, recwarn):
     with pytest.raises(ZeroDivisionError):
-        async with await psycopg3.AsyncConnection.connect(dsn) as conn2:
+        async with await psycopg.AsyncConnection.connect(dsn) as conn2:
             await conn2.execute("select 1")
             conn.execute(
                 "select pg_terminate_backend(%s::int)",
@@ -177,7 +177,7 @@ async def test_context_rollback_no_clobber(conn, dsn, recwarn):
 
 
 async def test_weakref(dsn):
-    conn = await psycopg3.AsyncConnection.connect(dsn)
+    conn = await psycopg.AsyncConnection.connect(dsn)
     w = weakref.ref(conn)
     await conn.close()
     del conn
@@ -197,7 +197,7 @@ async def test_commit(aconn):
     assert res.get_value(0, 0) == b"1"
 
     await aconn.close()
-    with pytest.raises(psycopg3.OperationalError):
+    with pytest.raises(psycopg.OperationalError):
         await aconn.commit()
 
 
@@ -213,7 +213,7 @@ async def test_rollback(aconn):
     assert res.ntuples == 0
 
     await aconn.close()
-    with pytest.raises(psycopg3.OperationalError):
+    with pytest.raises(psycopg.OperationalError):
         await aconn.rollback()
 
 
@@ -244,7 +244,7 @@ async def test_auto_transaction_fail(aconn):
     await cur.execute("insert into foo values (1)")
     assert aconn.pgconn.transaction_status == aconn.TransactionStatus.INTRANS
 
-    with pytest.raises(psycopg3.DatabaseError):
+    with pytest.raises(psycopg.DatabaseError):
         await cur.execute("meh")
     assert aconn.pgconn.transaction_status == aconn.TransactionStatus.INERROR
 
@@ -270,7 +270,7 @@ async def test_autocommit(aconn):
 
 
 async def test_autocommit_connect(dsn):
-    aconn = await psycopg3.AsyncConnection.connect(dsn, autocommit=True)
+    aconn = await psycopg.AsyncConnection.connect(dsn, autocommit=True)
     assert aconn.autocommit
 
 
@@ -279,17 +279,17 @@ async def test_autocommit_intrans(aconn):
     await cur.execute("select 1")
     assert await cur.fetchone() == (1,)
     assert aconn.pgconn.transaction_status == aconn.TransactionStatus.INTRANS
-    with pytest.raises(psycopg3.ProgrammingError):
+    with pytest.raises(psycopg.ProgrammingError):
         await aconn.set_autocommit(True)
     assert not aconn.autocommit
 
 
 async def test_autocommit_inerror(aconn):
     cur = aconn.cursor()
-    with pytest.raises(psycopg3.DatabaseError):
+    with pytest.raises(psycopg.DatabaseError):
         await cur.execute("meh")
     assert aconn.pgconn.transaction_status == aconn.TransactionStatus.INERROR
-    with pytest.raises(psycopg3.ProgrammingError):
+    with pytest.raises(psycopg.ProgrammingError):
         await aconn.set_autocommit(True)
     assert not aconn.autocommit
 
@@ -297,7 +297,7 @@ async def test_autocommit_inerror(aconn):
 async def test_autocommit_unknown(aconn):
     await aconn.close()
     assert aconn.pgconn.transaction_status == aconn.TransactionStatus.UNKNOWN
-    with pytest.raises(psycopg3.ProgrammingError):
+    with pytest.raises(psycopg.ProgrammingError):
         await aconn.set_autocommit(True)
     assert not aconn.autocommit
 
@@ -355,7 +355,7 @@ async def test_normalize_encoding(aconn, enc, out, codec):
 )
 async def test_encoding_env_var(dsn, monkeypatch, enc, out, codec):
     monkeypatch.setenv("PGCLIENTENCODING", enc)
-    aconn = await psycopg3.AsyncConnection.connect(dsn)
+    aconn = await psycopg.AsyncConnection.connect(dsn)
     assert (
         aconn.pgconn.parameter_status(b"client_encoding").decode("utf-8")
         == out
@@ -366,7 +366,7 @@ async def test_encoding_env_var(dsn, monkeypatch, enc, out, codec):
 async def test_set_encoding_unsupported(aconn):
     cur = aconn.cursor()
     await cur.execute("set client_encoding to EUC_TW")
-    with pytest.raises(psycopg3.NotSupportedError):
+    with pytest.raises(psycopg.NotSupportedError):
         await cur.execute("select 'x'")
 
 
@@ -399,8 +399,8 @@ async def test_connect_args(monkeypatch, pgconn, args, kwargs, want):
         return pgconn
         yield
 
-    monkeypatch.setattr(psycopg3.connection, "connect", fake_connect)
-    await psycopg3.AsyncConnection.connect(*args, **kwargs)
+    monkeypatch.setattr(psycopg.connection, "connect", fake_connect)
+    await psycopg.AsyncConnection.connect(*args, **kwargs)
     assert conninfo_to_dict(the_conninfo) == conninfo_to_dict(want)
 
 
@@ -417,20 +417,20 @@ async def test_connect_badargs(monkeypatch, pgconn, args, kwargs):
         return pgconn
         yield
 
-    monkeypatch.setattr(psycopg3.connection, "connect", fake_connect)
-    with pytest.raises((TypeError, psycopg3.ProgrammingError)):
-        await psycopg3.AsyncConnection.connect(*args, **kwargs)
+    monkeypatch.setattr(psycopg.connection, "connect", fake_connect)
+    with pytest.raises((TypeError, psycopg.ProgrammingError)):
+        await psycopg.AsyncConnection.connect(*args, **kwargs)
 
 
 async def test_broken_connection(aconn):
     cur = aconn.cursor()
-    with pytest.raises(psycopg3.DatabaseError):
+    with pytest.raises(psycopg.DatabaseError):
         await cur.execute("select pg_terminate_backend(pg_backend_pid())")
     assert aconn.closed
 
 
 async def test_notice_handlers(aconn, caplog):
-    caplog.set_level(logging.WARNING, logger="psycopg3")
+    caplog.set_level(logging.WARNING, logger="psycopg")
     messages = []
     severities = []
 
@@ -556,5 +556,5 @@ async def test_str(aconn):
 async def test_fileno(aconn):
     assert aconn.fileno() == aconn.pgconn.socket
     await aconn.close()
-    with pytest.raises(psycopg3.OperationalError):
+    with pytest.raises(psycopg.OperationalError):
         aconn.fileno()

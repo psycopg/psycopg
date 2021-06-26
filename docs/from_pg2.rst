@@ -4,7 +4,7 @@
 Differences from ``psycopg2``
 =============================
 
-`!psycopg3` uses the common DBAPI structure of many other database adapter and
+Psycopg 3 uses the common DBAPI structure of many other database adapter and
 tries to behave as close as possible to `!psycopg2`. There are however a few
 differences to be aware of.
 
@@ -14,7 +14,7 @@ differences to be aware of.
 Server-side binding
 -------------------
 
-`!psycopg3` sends the query and the parameters to the server separately,
+Psycopg 3 sends the query and the parameters to the server separately,
 instead of merging them client-side. PostgreSQL may behave slightly
 differently in this case, usually throwing an error and suggesting to use an
 explicit cast.
@@ -34,17 +34,17 @@ explicit cast.
 PostgreSQL will also reject the execution of several queries at once
 (separated by semicolon), if they contain parameters. If parameters are used
 you should use distinct `execute()` calls; otherwise you may consider merging
-the query client-side, using `psycopg3.sql` module.
+the query client-side, using `psycopg.sql` module.
 
 Certain commands cannot be used with server-side binding, for instance
 :sql:`SET` or :sql:`NOTIFY`::
 
     >>> cur.execute("SET timezone TO %s", ["utc"])
     ...
-    psycopg3.errors.SyntaxError: syntax error at or near "$1"
+    psycopg.errors.SyntaxError: syntax error at or near "$1"
 
 Sometimes PostgreSQL offers an alternative (e.g. :sql:`SELECT set_config()`,
-:sql:`SELECT pg_notify()`). If no alternative exist you can use `psycopg3.sql`
+:sql:`SELECT pg_notify()`). If no alternative exist you can use `psycopg.sql`
 to compose the query client-side.
 
 You cannot use :sql:`IN %s` and pass a tuple, because `IN ()` is an SQL
@@ -75,7 +75,7 @@ Copy is no more file-based
 PostgreSQL :sql:`COPY`. The interface doesn't make easy to load
 dynamically-generated data to the database.
 
-There is now a single `~psycopg3.Cursor.copy()` method, which is similar to
+There is now a single `~psycopg.Cursor.copy()` method, which is similar to
 `!psycopg2` `!copy_expert()` in accepting a free-form :sql:`COPY` command and
 returns an object to read/write data, block-wise or record-wise. The different
 usage pattern also enables :sql:`COPY` to be used in async interactions.
@@ -103,12 +103,12 @@ resources, such as files.
 `cursor.callproc()` is not implemented. The method has a simplistic
 semantic which doesn't account for PostgreSQL positional parameters,
 procedures, set-returning functions. Use a normal
-`~psycopg3.Cursor.execute()` with :sql:`SELECT function_name(...)` or
+`~psycopg.Cursor.execute()` with :sql:`SELECT function_name(...)` or
 :sql:`CALL procedure_name(...)` instead.
 
 
-What's new in psycopg3
-----------------------
+What's new in Psycopg 3
+-----------------------
 
 .. admonition:: TODO
 

@@ -1,6 +1,6 @@
 import pytest
 
-from psycopg3 import ProgrammingError, Rollback
+from psycopg import ProgrammingError, Rollback
 
 from .test_transaction import in_transaction, insert_row, inserted
 from .test_transaction import ExpectedException

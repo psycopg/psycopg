@@ -1,4 +1,4 @@
-.. currentmodule:: psycopg3
+.. currentmodule:: psycopg
 
 .. index::
     pair: Query; Parameters
@@ -100,7 +100,7 @@ query.
 - The variables placeholder *must always be a* ``%s``, even if a different
   placeholder (such as a ``%d`` for integers or ``%f`` for floats) may look
   more appropriate for the type. You may find other placeholders used in
-  `~psycopg3` queries (``%b`` and ``%t``) but they are not related to the
+  Psycopg queries (``%b`` and ``%t``) but they are not related to the
   type of the argument: see :ref:`binary-data` if you want to read more::
 
     cur.execute("INSERT INTO numbers VALUES (%d)", (10,))   # WRONG
@@ -109,7 +109,7 @@ query.
 - Only query values should be bound via this method: it shouldn't be used to
   merge table or field names to the query. If you need to generate SQL queries
   dynamically (for instance choosing a table name at runtime) you can use the
-  functionalities provided in the `psycopg3.sql` module::
+  functionalities provided in the `psycopg.sql` module::
 
     cur.execute("INSERT INTO %s VALUES (%s)", ('numbers', 10))  # WRONG
     cur.execute(                                                # correct
@@ -183,7 +183,7 @@ argument of the `Cursor.execute()` method::
 .. seealso::
 
     Now that you know how to pass parameters to queries, you can take a look
-    at :ref:`how psycopg3 converts data types <types-adaptation>`.
+    at :ref:`how Psycopg converts data types <types-adaptation>`.
 
 
 .. index::
@@ -195,11 +195,11 @@ Binary parameters and results
 -----------------------------
 
 PostgreSQL has two different ways to represent data type on the wire:
-`~psycopg3.pq.Format.TEXT`, always available, and
-`~psycopg3.pq.Format.BINARY`, available most of the times. Usually the binary
+`~psycopg.pq.Format.TEXT`, always available, and
+`~psycopg.pq.Format.BINARY`, available most of the times. Usually the binary
 format is more efficient to use.
 
-`~psycopg3` can support both the formats of each data type. Whenever a value
+Psycopg can support both the formats of each data type. Whenever a value
 is passed to a query using the normal ``%s`` placeholder, the best format
 available is chosen (often, but not always, the binary format is picked as the
 best choice).
@@ -207,14 +207,14 @@ best choice).
 If you have a reason to select explicitly the binary format or the text format
 for a value you can use respectively a ``%b`` placeholder or a ``%t``
 placeholder instead. `~Cursor.execute()` will fail if a
-`~psycopg3.adapt.Dumper` for the right parameter type and format is not
+`~psycopg.adapt.Dumper` for the right parameter type and format is not
 available.
 
 The same two formats, text or binary, are used by PostgreSQL to return data
 from a query to the client. Unlike with parameters, where you can choose the
 format value-by-value, all the columns returned by a query will have the same
 format. For each of the types returned by the query, a
-`~psycopg3.adapt.Loader` must be available, otherwise the data will be
+`~psycopg.adapt.Loader` must be available, otherwise the data will be
 returned as unparsed `!str` or buffer.
 
 .. warning::
@@ -222,7 +222,7 @@ returned as unparsed `!str` or buffer.
     Currently the default is to return values from database queries in textual
     type, for the simple reason that not all the PostgreSQL data types have a
     binary `!Loader` implemented. The plan is to support the binary format for
-    all PostgreSQL builtins before the first `psycopg3` released: TODO!
+    all PostgreSQL builtins before the first Psycopg 3 released: TODO!
 
 By default the data will be returned in text format. In order to return data
 in binary format you can create the cursor using `Connection.cursor`\

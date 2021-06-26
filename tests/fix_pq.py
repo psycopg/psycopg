@@ -7,7 +7,7 @@ from .utils import check_libpq_version
 
 def pytest_report_header(config):
     try:
-        from psycopg3 import pq
+        from psycopg import pq
     except ImportError:
         return []
 
@@ -27,7 +27,7 @@ def pytest_configure(config):
 
 
 def pytest_runtest_setup(item):
-    from psycopg3 import pq
+    from psycopg import pq
 
     for m in item.iter_markers(name="libpq"):
         assert len(m.args) == 1
@@ -50,7 +50,7 @@ def libpq():
         assert libname, "libpq libname not found"
         return ctypes.pydll.LoadLibrary(libname)
     except Exception as e:
-        from psycopg3 import pq
+        from psycopg import pq
 
         if pq.__impl__ == "binary":
             pytest.skip(f"can't load libpq for testing: {e}")

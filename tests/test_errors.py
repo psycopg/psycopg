@@ -3,8 +3,8 @@ from weakref import ref
 
 import pytest
 
-from psycopg3 import pq
-from psycopg3 import errors as e
+from psycopg import pq
+from psycopg import errors as e
 
 from .utils import gc_collect
 

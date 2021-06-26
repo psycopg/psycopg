@@ -1,4 +1,4 @@
-.. currentmodule:: psycopg3
+.. currentmodule:: psycopg
 
 Cursor classes
 ==============
@@ -130,7 +130,7 @@ The `!Cursor` class
 
         The property affects the objects returned by the `fetchone()`,
         `fetchmany()`, `fetchall()` methods. The default
-        (`~psycopg3.rows.tuple_row`) returns a tuple for each record fetched.
+        (`~psycopg.rows.tuple_row`) returns a tuple for each record fetched.
 
         See :ref:`row-factories` for details.
 
@@ -140,7 +140,7 @@ The `!Cursor` class
     .. automethod:: nextset
     .. automethod:: scroll
     .. attribute:: pgresult
-        :type: Optional[psycopg3.pq.PGresult]
+        :type: Optional[psycopg.pq.PGresult]
 
         The result returned by the last query and currently exposed by the
         cursor, if available, else `!None`.

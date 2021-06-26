@@ -5,8 +5,8 @@ from functools import partial
 
 import pytest
 
-from psycopg3.compat import create_task
-from psycopg3.pool.sched import AsyncScheduler
+from psycopg.compat import create_task
+from psycopg.pool.sched import AsyncScheduler
 
 pytestmark = pytest.mark.asyncio
 
@@ -61,7 +61,7 @@ async def test_sched_task():
 
 @pytest.mark.slow
 async def test_sched_error(caplog):
-    caplog.set_level(logging.WARNING, logger="psycopg3")
+    caplog.set_level(logging.WARNING, logger="psycopg")
     s = AsyncScheduler()
     t = create_task(s.run())
 

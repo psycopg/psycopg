@@ -11,11 +11,11 @@ import pytest
     ],
 )
 def test_connect(monkeypatch, dsn, args, kwargs, want_conninfo):
-    # Check the main args passing from psycopg3.connect to the conn generator
+    # Check the main args passing from psycopg.connect to the conn generator
     # Details of the params manipulation are in test_conninfo.
-    import psycopg3.connection
+    import psycopg.connection
 
-    orig_connect = psycopg3.connection.connect
+    orig_connect = psycopg.connection.connect
 
     got_conninfo = None
 
@@ -24,7 +24,7 @@ def test_connect(monkeypatch, dsn, args, kwargs, want_conninfo):
         got_conninfo = conninfo
         return orig_connect(dsn)
 
-    monkeypatch.setattr(psycopg3.connection, "connect", mock_connect)
+    monkeypatch.setattr(psycopg.connection, "connect", mock_connect)
 
-    psycopg3.connect(*args, **kwargs)
+    psycopg.connect(*args, **kwargs)
     assert got_conninfo == want_conninfo

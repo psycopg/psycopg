@@ -1,4 +1,4 @@
-.. currentmodule:: psycopg3.pool
+.. currentmodule:: psycopg.pool
 
 .. _connection-pools:
 
@@ -12,7 +12,7 @@ latency of a program operations.
 
 .. __: https://en.wikipedia.org/wiki/Connection_pool
 
-This page explains a few basic concepts of `!psycopg3` connection pool's
+This page explains a few basic concepts of Psycopg connection pool's
 behaviour. Please refer to the `ConnectionPool` object API for details about
 the pool operations.
 
@@ -76,7 +76,7 @@ has finished using it or because the pool is allowed to grow and a new
 connection is ready.
 
 The main way to use the pool is to obtain a connection using the
-`~ConnectionPool.connection()` context, which returns a `~psycopg3.Connection`
+`~ConnectionPool.connection()` context, which returns a `~psycopg.Connection`
 or subclass::
 
     with my_pool.connection() as conn:

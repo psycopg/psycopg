@@ -9,11 +9,11 @@ from collections import deque
 
 import pytest
 
-import psycopg3
-from psycopg3 import sql
-from psycopg3.adapt import Format
-from psycopg3.types.range import Range
-from psycopg3.types.numeric import Int4, Int8
+import psycopg
+from psycopg import sql
+from psycopg.adapt import Format
+from psycopg.types.range import Range
+from psycopg.types.numeric import Int4, Int8
 
 
 @pytest.fixture
@@ -80,7 +80,7 @@ class Faker:
             return self._types_names
 
         record = self.make_record(nulls=0)
-        tx = psycopg3.adapt.Transformer(self.conn)
+        tx = psycopg.adapt.Transformer(self.conn)
         types = [
             self._get_type_name(tx, schema, value)
             for schema, value in zip(self.schema, record)

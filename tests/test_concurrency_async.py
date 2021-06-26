@@ -3,8 +3,8 @@ import pytest
 import asyncio
 from asyncio.queues import Queue
 
-import psycopg3
-from psycopg3.compat import create_task
+import psycopg
+from psycopg.compat import create_task
 
 pytestmark = pytest.mark.asyncio
 
@@ -44,7 +44,7 @@ async def test_commit_concurrency(aconn):
 @pytest.mark.slow
 async def test_concurrent_execution(dsn):
     async def worker():
-        cnn = await psycopg3.AsyncConnection.connect(dsn)
+        cnn = await psycopg.AsyncConnection.connect(dsn)
         cur = cnn.cursor()
         await cur.execute("select pg_sleep(0.5)")
         await cur.close()
@@ -58,7 +58,7 @@ async def test_concurrent_execution(dsn):
 
 @pytest.mark.slow
 async def test_notifies(aconn, dsn):
-    nconn = await psycopg3.AsyncConnection.connect(dsn, autocommit=True)
+    nconn = await psycopg.AsyncConnection.connect(dsn, autocommit=True)
     npid = nconn.pgconn.backend_pid
 
     async def notifier():
@@ -112,7 +112,7 @@ async def test_cancel(aconn):
 
     async def worker():
         cur = aconn.cursor()
-        with pytest.raises(psycopg3.DatabaseError):
+        with pytest.raises(psycopg.DatabaseError):
             await cur.execute("select pg_sleep(2)")
 
     workers = [worker(), canceller()]
@@ -133,7 +133,7 @@ async def test_cancel(aconn):
 
 @pytest.mark.slow
 async def test_identify_closure(aconn, dsn):
-    conn2 = await psycopg3.AsyncConnection.connect(dsn)
+    conn2 = await psycopg.AsyncConnection.connect(dsn)
 
     async def closer():
         await asyncio.sleep(0.3)
@@ -148,7 +148,7 @@ async def test_identify_closure(aconn, dsn):
     create_task(closer())
 
     await asyncio.wait_for(ev.wait(), 1.0)
-    with pytest.raises(psycopg3.OperationalError):
+    with pytest.raises(psycopg.OperationalError):
         await aconn.execute("select 1")
     t1 = time.time()
     assert 0.3 < t1 - t0 < 0.5

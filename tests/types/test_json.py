@@ -3,11 +3,11 @@ from copy import deepcopy
 
 import pytest
 
-import psycopg3.types
-from psycopg3 import pq
-from psycopg3 import sql
-from psycopg3.adapt import Format
-from psycopg3.types.json import Json, Jsonb, set_json_dumps, set_json_loads
+import psycopg.types
+from psycopg import pq
+from psycopg import sql
+from psycopg.adapt import Format
+from psycopg.types.json import Json, Jsonb, set_json_dumps, set_json_loads
 
 samples = [
     "null",
@@ -68,7 +68,7 @@ def test_json_load_copy(conn, val, jtype, fmt_out):
 @pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
 @pytest.mark.parametrize("wrapper", ["Json", "Jsonb"])
 def test_json_dump_customise(conn, wrapper, fmt_in):
-    wrapper = getattr(psycopg3.types.json, wrapper)
+    wrapper = getattr(psycopg.types.json, wrapper)
     obj = {"foo": "bar"}
     cur = conn.cursor()
 
@@ -84,10 +84,10 @@ def test_json_dump_customise(conn, wrapper, fmt_in):
 @pytest.mark.parametrize("wrapper", ["Json", "Jsonb"])
 def test_json_dump_subclass(conn, wrapper, fmt_in):
     JDumper = getattr(
-        psycopg3.types.json,
+        psycopg.types.json,
         f"{wrapper}{'Binary' if fmt_in != Format.TEXT else ''}Dumper",
     )
-    wrapper = getattr(psycopg3.types.json, wrapper)
+    wrapper = getattr(psycopg.types.json, wrapper)
 
     class MyJsonDumper(JDumper):
         def get_dumps(self):
@@ -120,7 +120,7 @@ def test_json_load_customise(conn, binary, pgtype):
 @pytest.mark.parametrize("pgtype", ["json", "jsonb"])
 def test_json_load_subclass(conn, binary, pgtype):
     JLoader = getattr(
-        psycopg3.types.json,
+        psycopg.types.json,
         f"{pgtype.title()}{'Binary' if binary else ''}Loader",
     )
 

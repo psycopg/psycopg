@@ -3,10 +3,10 @@ from math import isnan, isinf, exp
 
 import pytest
 
-from psycopg3 import pq
-from psycopg3 import sql
-from psycopg3.adapt import Transformer, Format
-from psycopg3.types.numeric import FloatLoader
+from psycopg import pq
+from psycopg import sql
+from psycopg.adapt import Transformer, Format
+from psycopg.types.numeric import FloatLoader
 
 
 #

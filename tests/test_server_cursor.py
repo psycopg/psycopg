@@ -1,8 +1,8 @@
 import pytest
 
-from psycopg3 import errors as e
-from psycopg3.pq import Format
-from psycopg3.rows import dict_row
+from psycopg import errors as e
+from psycopg.pq import Format
+from psycopg.rows import dict_row
 
 
 def test_funny_name(conn):

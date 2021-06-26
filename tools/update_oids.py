@@ -73,14 +73,14 @@ order by typname
 
 def update_python_oids() -> None:
     queries = [version_sql, py_types_sql, py_ranges_sql]
-    fn = ROOT / "psycopg3/psycopg3/oids.py"
+    fn = ROOT / "psycopg/psycopg/oids.py"
     update_file(fn, queries)
     sp.check_call(["black", "-q", fn])
 
 
 def update_cython_oids() -> None:
     queries = [version_sql, cython_oids_sql]
-    fn = ROOT / "psycopg3_c/psycopg3_c/_psycopg3/oids.pxd"
+    fn = ROOT / "psycopg/psycopg/_psycopg/oids.pxd"
     update_file(fn, queries)
 
 

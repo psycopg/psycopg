@@ -6,8 +6,8 @@ from shutil import which
 
 import pytest
 
-import psycopg3
-from psycopg3 import conninfo
+import psycopg
+from psycopg import conninfo
 
 logger = logging.getLogger()
 
@@ -71,7 +71,7 @@ class Proxy:
         # verify that the proxy works
         # TODO: investigate why it doesn't on Travis
         try:
-            with psycopg3.connect(self.client_dsn):
+            with psycopg.connect(self.client_dsn):
                 pass
         except Exception as e:
             pytest.xfail(f"failed to create a working proxy: {e}")

@@ -1,12 +1,12 @@
 import pytest
 from select import select
-import psycopg3
-from psycopg3 import pq
-from psycopg3.generators import execute
+import psycopg
+from psycopg import pq
+from psycopg.generators import execute
 
 
 def execute_wait(pgconn):
-    return psycopg3.waiting.wait(execute(pgconn), pgconn.socket)
+    return psycopg.waiting.wait(execute(pgconn), pgconn.socket)
 
 
 def test_send_query(pgconn):
@@ -62,7 +62,7 @@ def test_send_query(pgconn):
 
 
 def test_send_query_compact_test(pgconn):
-    # Like the above test but use psycopg3 facilities for compactness
+    # Like the above test but use psycopg facilities for compactness
     pgconn.send_query(
         b"/* %s */ select pg_sleep(0.01); select 1 as foo;"
         % (b"x" * 1_000_000)
@@ -78,7 +78,7 @@ def test_send_query_compact_test(pgconn):
     assert results[1].get_value(0, 0) == b"1"
 
     pgconn.finish()
-    with pytest.raises(psycopg3.OperationalError):
+    with pytest.raises(psycopg.OperationalError):
         pgconn.send_query(b"select 1")
 
 
@@ -111,7 +111,7 @@ def test_send_query_params(pgconn):
     assert res.get_value(0, 0) == b"8"
 
     pgconn.finish()
-    with pytest.raises(psycopg3.OperationalError):
+    with pytest.raises(psycopg.OperationalError):
         pgconn.send_query_params(b"select $1", [b"1"])
 
 
@@ -125,9 +125,9 @@ def test_send_prepare(pgconn):
     assert res.get_value(0, 0) == b"8"
 
     pgconn.finish()
-    with pytest.raises(psycopg3.OperationalError):
+    with pytest.raises(psycopg.OperationalError):
         pgconn.send_prepare(b"prep", b"select $1::int + $2::int")
-    with pytest.raises(psycopg3.OperationalError):
+    with pytest.raises(psycopg.OperationalError):
         pgconn.send_query_prepared(b"prep", [b"3", b"5"])
 
 
@@ -187,7 +187,7 @@ def test_send_describe_prepared(pgconn):
     assert res.ftype(0) == 23
 
     pgconn.finish()
-    with pytest.raises(psycopg3.OperationalError):
+    with pytest.raises(psycopg.OperationalError):
         pgconn.send_describe_prepared(b"prep")
 
 
@@ -207,5 +207,5 @@ def test_send_describe_portal(pgconn):
     assert res.fname(0) == b"foo"
 
     pgconn.finish()
-    with pytest.raises(psycopg3.OperationalError):
+    with pytest.raises(psycopg.OperationalError):
         pgconn.send_describe_portal(b"cur")

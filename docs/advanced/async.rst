@@ -1,4 +1,4 @@
-.. currentmodule:: psycopg3
+.. currentmodule:: psycopg
 
 .. index:: asyncio
 
@@ -7,7 +7,7 @@
 Async operations
 ================
 
-psycopg3 `~Connection` and `~Cursor` have counterparts `~AsyncConnection` and
+Psycopg `~Connection` and `~Cursor` have counterparts `~AsyncConnection` and
 `~AsyncCursor` supporting an `asyncio` interface.
 
 The design of the asynchronous objects is pretty much the same of the sync
@@ -16,7 +16,7 @@ here and there.
 
 .. code:: python
 
-    async with await psycopg3.AsyncConnection.connect(
+    async with await psycopg.AsyncConnection.connect(
             "dbname=test user=postgres") as aconn:
         async with aconn.cursor() as acur:
             await acur.execute(
@@ -41,7 +41,7 @@ context managers, so you can run:
 
 .. code:: python
 
-    with psycopg3.connect("dbname=test user=postgres") as conn:
+    with psycopg.connect("dbname=test user=postgres") as conn:
         with conn.cursor() as cur:
             cur.execute(...)
         # the cursor is closed upon leaving the context
@@ -59,7 +59,7 @@ two steps instead, as in
 
 .. code:: python
 
-    aconn = await psycopg3.AsyncConnection.connect():
+    aconn = await psycopg.AsyncConnection.connect():
     async with aconn:
         async with aconn.cursor() as cur:
             await cur.execute(...)
@@ -68,7 +68,7 @@ which can be condensed as:
 
 .. code:: python
 
-    async with await psycopg3.AsyncConnection.connect() as aconn:
+    async with await psycopg.AsyncConnection.connect() as aconn:
         async with aconn.cursor() as cur:
             await cur.execute(...)
 
@@ -119,8 +119,8 @@ the ``stop`` message is received.
 
 .. code:: python
 
-    import psycopg3
-    conn = psycopg3.connect("", autocommit=True)
+    import psycopg
+    conn = psycopg.connect("", autocommit=True)
     conn.cursor().execute("LISTEN mychan")
     gen = conn.notifies()
     for notify in gen:
@@ -205,7 +205,7 @@ something else to do too.
         # Activity detected. Is the connection still ok?
         try:
             conn.execute("select 1")
-        except psycopg3.OperationalError:
+        except psycopg.OperationalError:
             # You were disconnected: do something useful such as panicking
             logger.error("we lost our database!")
             sys.exit(1)
@@ -230,6 +230,6 @@ something similar using `~asyncio.loop.add_reader`:
         # Activity detected. Is the connection still ok?
         try:
             await conn.execute("select 1")
-        except psycopg3.OperationalError:
+        except psycopg.OperationalError:
             # Guess what happened
             ...

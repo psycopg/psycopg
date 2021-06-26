@@ -7,9 +7,9 @@ from collections import Counter
 
 import pytest
 
-import psycopg3
-from psycopg3 import pool
-from psycopg3.pq import TransactionStatus
+import psycopg
+from psycopg import pool
+from psycopg.pq import TransactionStatus
 
 
 def test_defaults(dsn):
@@ -34,7 +34,7 @@ def test_min_size_max_size(dsn):
 
 
 def test_connection_class(dsn):
-    class MyConn(psycopg3.Connection):
+    class MyConn(psycopg.Connection):
         pass
 
     with pool.ConnectionPool(dsn, connection_class=MyConn, min_size=1) as p:
@@ -167,7 +167,7 @@ def test_configure(dsn):
 
 @pytest.mark.slow
 def test_configure_badstate(dsn, caplog):
-    caplog.set_level(logging.WARNING, logger="psycopg3.pool")
+    caplog.set_level(logging.WARNING, logger="psycopg.pool")
 
     def configure(conn):
         conn.execute("select 1")
@@ -182,7 +182,7 @@ def test_configure_badstate(dsn, caplog):
 
 @pytest.mark.slow
 def test_configure_broken(dsn, caplog):
-    caplog.set_level(logging.WARNING, logger="psycopg3.pool")
+    caplog.set_level(logging.WARNING, logger="psycopg.pool")
 
     def configure(conn):
         with conn.transaction():
@@ -226,7 +226,7 @@ def test_reset(dsn):
 
 
 def test_reset_badstate(dsn, caplog):
-    caplog.set_level(logging.WARNING, logger="psycopg3.pool")
+    caplog.set_level(logging.WARNING, logger="psycopg.pool")
 
     def reset(conn):
         conn.execute("reset all")
@@ -246,7 +246,7 @@ def test_reset_badstate(dsn, caplog):
 
 
 def test_reset_broken(dsn, caplog):
-    caplog.set_level(logging.WARNING, logger="psycopg3.pool")
+    caplog.set_level(logging.WARNING, logger="psycopg.pool")
 
     def reset(conn):
         with conn.transaction():
@@ -429,7 +429,7 @@ def test_broken_reconnect(dsn):
 
 
 def test_intrans_rollback(dsn, caplog):
-    caplog.set_level(logging.WARNING, logger="psycopg3.pool")
+    caplog.set_level(logging.WARNING, logger="psycopg.pool")
 
     with pool.ConnectionPool(dsn, min_size=1) as p:
         conn = p.getconn()
@@ -450,12 +450,12 @@ def test_intrans_rollback(dsn, caplog):
 
 
 def test_inerror_rollback(dsn, caplog):
-    caplog.set_level(logging.WARNING, logger="psycopg3.pool")
+    caplog.set_level(logging.WARNING, logger="psycopg.pool")
 
     with pool.ConnectionPool(dsn, min_size=1) as p:
         conn = p.getconn()
         pid = conn.pgconn.backend_pid
-        with pytest.raises(psycopg3.ProgrammingError):
+        with pytest.raises(psycopg.ProgrammingError):
             conn.execute("wat")
         assert conn.pgconn.transaction_status == TransactionStatus.INERROR
         p.putconn(conn)
@@ -469,7 +469,7 @@ def test_inerror_rollback(dsn, caplog):
 
 
 def test_active_close(dsn, caplog):
-    caplog.set_level(logging.WARNING, logger="psycopg3.pool")
+    caplog.set_level(logging.WARNING, logger="psycopg.pool")
 
     with pool.ConnectionPool(dsn, min_size=1) as p:
         conn = p.getconn()
@@ -490,7 +490,7 @@ def test_active_close(dsn, caplog):
 
 
 def test_fail_rollback_close(dsn, caplog, monkeypatch):
-    caplog.set_level(logging.WARNING, logger="psycopg3.pool")
+    caplog.set_level(logging.WARNING, logger="psycopg.pool")
 
     with pool.ConnectionPool(dsn, min_size=1) as p:
         conn = p.getconn()
@@ -504,7 +504,7 @@ def test_fail_rollback_close(dsn, caplog, monkeypatch):
         monkeypatch.setattr(conn, "rollback", bad_rollback)
 
         pid = conn.pgconn.backend_pid
-        with pytest.raises(psycopg3.ProgrammingError):
+        with pytest.raises(psycopg.ProgrammingError):
             conn.execute("wat")
         assert conn.pgconn.transaction_status == TransactionStatus.INERROR
         p.putconn(conn)
@@ -533,7 +533,7 @@ def test_close_no_threads(dsn):
 
 def test_putconn_no_pool(dsn):
     with pool.ConnectionPool(dsn, min_size=1) as p:
-        conn = psycopg3.connect(dsn)
+        conn = psycopg.connect(dsn)
         with pytest.raises(ValueError):
             p.putconn(conn)
 
@@ -655,7 +655,7 @@ def test_grow(dsn, monkeypatch, retries):
 @pytest.mark.slow
 def test_shrink(dsn, monkeypatch):
 
-    from psycopg3.pool.pool import ShrinkPool
+    from psycopg.pool.pool import ShrinkPool
 
     results = []
 
@@ -686,7 +686,7 @@ def test_shrink(dsn, monkeypatch):
 
 @pytest.mark.slow
 def test_reconnect(proxy, caplog, monkeypatch):
-    caplog.set_level(logging.WARNING, logger="psycopg3.pool")
+    caplog.set_level(logging.WARNING, logger="psycopg.pool")
 
     assert pool.base.ConnectionAttempt.INITIAL_DELAY == 1.0
     assert pool.base.ConnectionAttempt.DELAY_JITTER == 0.1
@@ -698,7 +698,7 @@ def test_reconnect(proxy, caplog, monkeypatch):
         p.wait(2.0)
         proxy.stop()
 
-        with pytest.raises(psycopg3.OperationalError):
+        with pytest.raises(psycopg.OperationalError):
             with p.connection() as conn:
                 conn.execute("select 1")
 
@@ -741,7 +741,7 @@ def test_reconnect_failure(proxy):
         p.wait(2.0)
         proxy.stop()
 
-        with pytest.raises(psycopg3.OperationalError):
+        with pytest.raises(psycopg.OperationalError):
             with p.connection() as conn:
                 conn.execute("select 1")
 
@@ -835,7 +835,7 @@ def test_max_lifetime(dsn):
 
 
 def test_check(dsn, caplog):
-    caplog.set_level(logging.WARNING, logger="psycopg3.pool")
+    caplog.set_level(logging.WARNING, logger="psycopg.pool")
     with pool.ConnectionPool(dsn, min_size=4) as p:
         p.wait(1.0)
         with p.connection() as conn:
@@ -861,7 +861,7 @@ def test_check(dsn, caplog):
 def test_async_pool_not_supported(dsn):
     # note: this test is here because the all the ones in test_pool_async are
     # skipped on Py 3.6
-    with pytest.raises(psycopg3.NotSupportedError):
+    with pytest.raises(psycopg.NotSupportedError):
         pool.AsyncConnectionPool(dsn)
 
 
@@ -993,5 +993,5 @@ def delay_connection(monkeypatch, sec):
         sleep(sec - (t1 - t0))
         return rv
 
-    connect_orig = psycopg3.Connection.connect
-    monkeypatch.setattr(psycopg3.Connection, "connect", connect_delay)
+    connect_orig = psycopg.Connection.connect
+    monkeypatch.setattr(psycopg.Connection, "connect", connect_delay)

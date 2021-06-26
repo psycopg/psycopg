@@ -20,7 +20,7 @@ def pytest_configure(config):
     # There are troubles on travis with these kind of tests and I cannot
     # catch the exception for my life.
     config.addinivalue_line(
-        "markers", "subprocess: the test import psycopg3 after subprocess"
+        "markers", "subprocess: the test import psycopg after subprocess"
     )
 
 

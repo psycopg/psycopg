@@ -2,8 +2,8 @@ import datetime as dt
 
 import pytest
 
-from psycopg3 import DataError, pq, sql
-from psycopg3.adapt import Format
+from psycopg import DataError, pq, sql
+from psycopg.adapt import Format
 
 
 class TestDate:
@@ -582,8 +582,8 @@ class TestInterval:
     def test_infinity_date_example(self, conn):
         # NOTE: this is an example in the docs. Make sure it doesn't regress when
         # adding binary datetime adapters
-        from psycopg3.oids import postgres_types as builtins
-        from psycopg3.types.datetime import DateLoader, DateDumper
+        from psycopg.oids import postgres_types as builtins
+        from psycopg.types.datetime import DateLoader, DateDumper
 
         class InfDateDumper(DateDumper):
             def dump(self, obj):

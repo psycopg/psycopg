@@ -1,4 +1,4 @@
-.. currentmodule:: psycopg3
+.. currentmodule:: psycopg
 
 .. index::
     single: Adaptation
@@ -117,7 +117,7 @@ Python `int` values are converted to PostgreSQL :sql:`bigint` (a.k.a.
       # UndefinedFunction: operator does not exist: date + bigint
 
   In this case you should add an :sql:`::int` cast to your query or use the
-  `~psycopg3.types.Int4` wrapper::
+  `~psycopg.types.numeric.Int4` wrapper::
 
       cur.execute("select current_date + %s::int", [1])
 
@@ -164,7 +164,7 @@ such as :sql:`text` and :sql:`varchar` are converted back to Python `!str`:
 
 .. code:: python
 
-    conn = psycopg3.connect()
+    conn = psycopg.connect()
     conn.execute(
         "insert into strtest (id, data) values (%s, %s)",
         (1, "Crème Brûlée at 4.99€"))
@@ -254,30 +254,30 @@ time and more bandwidth. See :ref:`binary-data` for details.
 JSON adaptation
 ---------------
 
-`!psycopg3` can map between Python objects and PostgreSQL `json/jsonb
+Psycopg can map between Python objects and PostgreSQL `json/jsonb
 types`__, allowing to customise the load and dump function used.
 
 .. __: https://www.postgresql.org/docs/current/datatype-json.html
 
 Because several Python objects could be considered JSON (dicts, lists,
 scalars, even date/time if using a dumps function customised to use them),
-`!psycopg3` requires you to wrap what you want to dump as JSON into a wrapper:
-either `psycopg3.types.Json` or `~psycopg3.types.Jsonb`.
+Psycopg requires you to wrap what you want to dump as JSON into a wrapper:
+either `psycopg.types.json.Json` or `~psycopg.types.json.Jsonb`.
 
 .. code:: python
 
-    from psycopg3.types.json import Jsonb
+    from psycopg.types.json import Jsonb
 
     thing = {"foo": ["bar", 42]}
     conn.execute("insert into mytable values (%s)", [Jsonb(thing)])
 
-By default `!psycopg3` uses the standard library `json.dumps()`__ and
+By default Psycopg uses the standard library `json.dumps()`__ and
 `json.loads()`__ functions to serialize and de-serialize Python objects to
 JSON. If you want to customise globally how serialization happens, for
 instance changing serialization parameters or using a different JSON library,
 you can specify your own functions using the
-`psycopg3.types.json.set_json_dumps()` and
-`~psycopg3.types.json.set_json_loads()` functions.
+`psycopg.types.json.set_json_dumps()` and
+`~psycopg.types.json.set_json_loads()` functions.
 
 ..
     weird: intersphinx doesn't work
@@ -288,7 +288,7 @@ you can specify your own functions using the
 .. code:: python
 
     from functools import partial
-    from psycopg3.types.json import Jsonb, set_json_dumps, set_json_loads
+    from psycopg.types.json import Jsonb, set_json_dumps, set_json_loads
     import ujson
 
     # Use a faster dump function

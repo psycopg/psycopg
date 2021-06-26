@@ -6,10 +6,10 @@ from collections import Counter
 
 import pytest
 
-import psycopg3
-from psycopg3 import pool
-from psycopg3.pq import TransactionStatus
-from psycopg3.compat import create_task
+import psycopg
+from psycopg import pool
+from psycopg.pq import TransactionStatus
+from psycopg.compat import create_task
 
 pytestmark = [
     pytest.mark.asyncio,
@@ -42,7 +42,7 @@ async def test_min_size_max_size(dsn):
 
 
 async def test_connection_class(dsn):
-    class MyConn(psycopg3.AsyncConnection):
+    class MyConn(psycopg.AsyncConnection):
         pass
 
     async with pool.AsyncConnectionPool(
@@ -185,7 +185,7 @@ async def test_configure(dsn):
 
 @pytest.mark.slow
 async def test_configure_badstate(dsn, caplog):
-    caplog.set_level(logging.WARNING, logger="psycopg3.pool")
+    caplog.set_level(logging.WARNING, logger="psycopg.pool")
 
     async def configure(conn):
         await conn.execute("select 1")
@@ -202,7 +202,7 @@ async def test_configure_badstate(dsn, caplog):
 
 @pytest.mark.slow
 async def test_configure_broken(dsn, caplog):
-    caplog.set_level(logging.WARNING, logger="psycopg3.pool")
+    caplog.set_level(logging.WARNING, logger="psycopg.pool")
 
     async def configure(conn):
         async with conn.transaction():
@@ -248,7 +248,7 @@ async def test_reset(dsn):
 
 
 async def test_reset_badstate(dsn, caplog):
-    caplog.set_level(logging.WARNING, logger="psycopg3.pool")
+    caplog.set_level(logging.WARNING, logger="psycopg.pool")
 
     async def reset(conn):
         await conn.execute("reset all")
@@ -268,7 +268,7 @@ async def test_reset_badstate(dsn, caplog):
 
 
 async def test_reset_broken(dsn, caplog):
-    caplog.set_level(logging.WARNING, logger="psycopg3.pool")
+    caplog.set_level(logging.WARNING, logger="psycopg.pool")
 
     async def reset(conn):
         async with conn.transaction():
@@ -466,7 +466,7 @@ async def test_intrans_rollback(dsn, caplog):
     recs = [
         r
         for r in caplog.records
-        if r.name.startswith("psycopg3") and r.levelno >= logging.WARNING
+        if r.name.startswith("psycopg") and r.levelno >= logging.WARNING
     ]
     assert len(recs) == 1
     assert "INTRANS" in recs[0].message
@@ -476,7 +476,7 @@ async def test_inerror_rollback(dsn, caplog):
     async with pool.AsyncConnectionPool(dsn, min_size=1) as p:
         conn = await p.getconn()
         pid = conn.pgconn.backend_pid
-        with pytest.raises(psycopg3.ProgrammingError):
+        with pytest.raises(psycopg.ProgrammingError):
             await conn.execute("wat")
         assert conn.pgconn.transaction_status == TransactionStatus.INERROR
         await p.putconn(conn)
@@ -488,7 +488,7 @@ async def test_inerror_rollback(dsn, caplog):
     recs = [
         r
         for r in caplog.records
-        if r.name.startswith("psycopg3") and r.levelno >= logging.WARNING
+        if r.name.startswith("psycopg") and r.levelno >= logging.WARNING
     ]
     assert len(recs) == 1
     assert "INERROR" in recs[0].message
@@ -513,7 +513,7 @@ async def test_active_close(dsn, caplog):
     recs = [
         r
         for r in caplog.records
-        if r.name.startswith("psycopg3") and r.levelno >= logging.WARNING
+        if r.name.startswith("psycopg") and r.levelno >= logging.WARNING
     ]
     assert len(recs) == 2
     assert "ACTIVE" in recs[0].message
@@ -533,7 +533,7 @@ async def test_fail_rollback_close(dsn, caplog, monkeypatch):
         monkeypatch.setattr(conn, "rollback", bad_rollback)
 
         pid = conn.pgconn.backend_pid
-        with pytest.raises(psycopg3.ProgrammingError):
+        with pytest.raises(psycopg.ProgrammingError):
             await conn.execute("wat")
         assert conn.pgconn.transaction_status == TransactionStatus.INERROR
         await p.putconn(conn)
@@ -545,7 +545,7 @@ async def test_fail_rollback_close(dsn, caplog, monkeypatch):
     recs = [
         r
         for r in caplog.records
-        if r.name.startswith("psycopg3") and r.levelno >= logging.WARNING
+        if r.name.startswith("psycopg") and r.levelno >= logging.WARNING
     ]
     assert len(recs) == 3
     assert "INERROR" in recs[0].message
@@ -567,7 +567,7 @@ async def test_close_no_tasks(dsn):
 
 async def test_putconn_no_pool(dsn):
     async with pool.AsyncConnectionPool(dsn, min_size=1) as p:
-        conn = psycopg3.connect(dsn)
+        conn = psycopg.connect(dsn)
         with pytest.raises(ValueError):
             await p.putconn(conn)
 
@@ -663,7 +663,7 @@ async def test_grow(dsn, monkeypatch, retries):
 @pytest.mark.slow
 async def test_shrink(dsn, monkeypatch):
 
-    from psycopg3.pool.async_pool import ShrinkPool
+    from psycopg.pool.async_pool import ShrinkPool
 
     results = []
 
@@ -706,7 +706,7 @@ async def test_reconnect(proxy, caplog, monkeypatch):
         await p.wait(2.0)
         proxy.stop()
 
-        with pytest.raises(psycopg3.OperationalError):
+        with pytest.raises(psycopg.OperationalError):
             async with p.connection() as conn:
                 await conn.execute("select 1")
 
@@ -720,7 +720,7 @@ async def test_reconnect(proxy, caplog, monkeypatch):
     recs = [
         r
         for r in caplog.records
-        if r.name.startswith("psycopg3") and r.levelno >= logging.WARNING
+        if r.name.startswith("psycopg") and r.levelno >= logging.WARNING
     ]
     assert "BAD" in recs[0].message
     times = [rec.created for rec in recs]
@@ -754,7 +754,7 @@ async def test_reconnect_failure(proxy):
         await p.wait(2.0)
         proxy.stop()
 
-        with pytest.raises(psycopg3.OperationalError):
+        with pytest.raises(psycopg.OperationalError):
             async with p.connection() as conn:
                 await conn.execute("select 1")
 
@@ -851,7 +851,7 @@ async def test_max_lifetime(dsn):
 
 
 async def test_check(dsn, caplog):
-    caplog.set_level(logging.WARNING, logger="psycopg3.pool")
+    caplog.set_level(logging.WARNING, logger="psycopg.pool")
     async with pool.AsyncConnectionPool(dsn, min_size=4) as p:
         await p.wait(1.0)
         async with p.connection() as conn:
@@ -995,5 +995,5 @@ def delay_connection(monkeypatch, sec):
         await asyncio.sleep(sec - (t1 - t0))
         return rv
 
-    connect_orig = psycopg3.AsyncConnection.connect
-    monkeypatch.setattr(psycopg3.AsyncConnection, "connect", connect_delay)
+    connect_orig = psycopg.AsyncConnection.connect
+    monkeypatch.setattr(psycopg.AsyncConnection, "connect", connect_delay)

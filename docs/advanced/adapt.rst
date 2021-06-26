@@ -1,11 +1,11 @@
-.. currentmodule:: psycopg3.adapt
+.. currentmodule:: psycopg.adapt
 
 .. _adaptation:
 
 Data adaptation configuration
 =============================
 
-The adaptation system is at the core of psycopg3 and allows to customise the
+The adaptation system is at the core of Psycopg and allows to customise the
 way Python objects are converted to PostgreSQL when a query is performed and
 how PostgreSQL values are converted to Python objects when query results are
 returned.
@@ -16,7 +16,7 @@ returned.
     described in this page is useful if you intend to *customise* the
     adaptation rules.
 
-- The `~psycopg3.types.TypeInfo` object allows to query type information from
+- The `~psycopg.types.TypeInfo` object allows to query type information from
   a database, which can be used by the adapters: for instance to make them
   able to decode arrays of base types or composite types.
 
@@ -30,11 +30,11 @@ returned.
   `!bytes` string from PostgreSQL and create a Python object.
 
 `!Dumper` and `!Loader` are abstract classes: concrete classes must implement
-the `~Dumper.dump()` and `~Loader.load()` methods. `!psycopg3` provides
+the `~Dumper.dump()` and `~Loader.load()` methods. Psycopg provides
 implementation for several builtin Python and PostgreSQL types.
 
 Psycopg provides adapters for several builtin types, which can be used as the
-base to build more complex ones: they all live in the `psycopg3.types`
+base to build more complex ones: they all live in the `psycopg.types`
 package.
 
 
@@ -42,7 +42,7 @@ Dumpers and loaders configuration
 ---------------------------------
 
 Dumpers and loaders can be registered on different scopes: globally, per
-`~psycopg3.Connection`, per `~psycopg3.Cursor`, so that adaptation rules can
+`~psycopg.Connection`, per `~psycopg.Cursor`, so that adaptation rules can
 be customised for specific needs within the same application: in order to do
 so you can use the *context* parameter of `Dumper.register()` and
 `Loader.register()`.
@@ -69,7 +69,7 @@ PostgreSQL but not handled by Python:
     >>> conn.execute("'infinity'::date").fetchone()
     Traceback (most recent call last):
        ...
-    psycopg3.DataError: Python date doesn't support years after 9999: got infinity
+    psycopg.DataError: Python date doesn't support years after 9999: got infinity
 
 One possibility would be to store Python's `datetime.date.max` to PostgreSQL
 infinity. For this, let's create a subclass for the dumper and the loader and
@@ -80,8 +80,8 @@ cursor):
 
     from datetime import date
 
-    from psycopg3.oids import postgres_types as builtins
-    from psycopg3.types.datetime import DateLoader, DateDumper
+    from psycopg.oids import postgres_types as builtins
+    from psycopg.types.datetime import DateLoader, DateDumper
 
     class InfDateDumper(DateDumper):
         def dump(self, obj):
@@ -113,7 +113,7 @@ cursor):
 Dumpers and loaders life cycle
 ------------------------------
 
-Registering dumpers and loaders will instruct `!psycopg3` to use them
+Registering dumpers and loaders will instruct `!psycopg` to use them
 in the queries to follow, in the context where they have been registered.
 
 When a query is performed on a `!Cursor`, a `Transformer` object is created
@@ -132,7 +132,7 @@ right instance.
   (for instance, a Python `int` might be better dumped as a PostgreSQL
   :sql:`integer`, :sql:`bigint`, :sql:`smallint` according to its value).
 
-- According to the placeholder used (``%s``, ``%b``, ``%t``), psycopg3 may
+- According to the placeholder used (``%s``, ``%b``, ``%t``), Psycopg may
   pick a binary or a text dumper. When using the ``%s`` "`~Format.AUTO`"
   format, if the same type has both a text and a binary dumper registered, the
   last one registered (using `Dumper.register()`) will be selected.
@@ -149,7 +149,7 @@ As a consequence it is possible to perform certain choices only once per query
 for each value to convert.
 
 Querying will fail if a Python object for which there isn't a `!Dumper`
-registered (for the right `~psycopg3.pq.Format`) is used as query parameter.
+registered (for the right `~psycopg.pq.Format`) is used as query parameter.
 If the query returns a data type whose OID doesn't have a `!Loader`, the
 value will be returned as a string (or bytes string for binary types).
 
@@ -180,7 +180,7 @@ Objects involved in types adaptation
     :param context: The context where the transformation is performed. If not
         specified the conversion might be inaccurate, for instance it will not
         be possible to know the connection encoding or the server date format.
-    :type context: `~psycopg3.Connection`, `~psycopg3.Cursor`, or `Transformer`
+    :type context: `~psycopg.Connection`, `~psycopg.Cursor`, or `Transformer`
 
     .. attribute:: format
         :type: pq.Format
@@ -203,7 +203,7 @@ Objects involved in types adaptation
 
         .. tip::
 
-            This method will be used by `~psycopg3.sql.Literal` to convert a
+            This method will be used by `~psycopg.sql.Literal` to convert a
             value client-side.
 
         This method only makes sense for text dumpers; the result of calling
@@ -230,7 +230,7 @@ Objects involved in types adaptation
         :type cls: `!type` or `!str`
         :param context: Where the dumper should be used. If `!None` the dumper
             will be used globally.
-        :type context: `~psycopg3.Connection`, `~psycopg3.Cursor`, or `Transformer`
+        :type context: `~psycopg.Connection`, `~psycopg.Cursor`, or `Transformer`
 
         If *cls* is specified as string it will be lazy-loaded, so that it
         will be possible to register it without importing it before. In this
@@ -248,7 +248,7 @@ Objects involved in types adaptation
     :param context: The context where the transformation is performed. If not
         specified the conversion might be inaccurate, for instance it will not
         be possible to know the connection encoding or the server date format.
-    :type context: `~psycopg3.Connection`, `~psycopg3.Cursor`, or `Transformer`
+    :type context: `~psycopg.Connection`, `~psycopg.Cursor`, or `Transformer`
 
     .. attribute:: format
         :type: Format
@@ -267,12 +267,12 @@ Objects involved in types adaptation
         :type oid: `!int`
         :param context: Where the loader should be used. If `!None` the loader
             will be used globally.
-        :type context: `~psycopg3.Connection`, `~psycopg3.Cursor`, or `Transformer`
+        :type context: `~psycopg.Connection`, `~psycopg.Cursor`, or `Transformer`
 
 
 .. autoclass:: Transformer(context=None)
 
     :param context: The context where the transformer should operate.
-    :type context: `~psycopg3.Connection`, `~psycopg3.Cursor`, or `Transformer`
+    :type context: `~psycopg.Connection`, `~psycopg.Cursor`, or `Transformer`
 
     TODO: finalise the interface of this object

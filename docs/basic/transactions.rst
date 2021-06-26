@@ -1,4 +1,4 @@
-.. currentmodule:: psycopg3
+.. currentmodule:: psycopg
 
 .. index:: Transactions management
 .. index:: InFailedSqlTransaction
@@ -9,7 +9,7 @@
 Transaction management
 ======================
 
-`!psycopg3` has a behaviour that may result surprising compared to
+Psycopg has a behaviour that may result surprising compared to
 :program:`psql`: by default, any database operation will start a new
 transaction. As a consequence, changes made by any cursor of the connection
 will not be visible until `Connection.commit()` is called, and will be
@@ -34,7 +34,7 @@ Autocommit transactions
 -----------------------
 
 The manual commit requirement can be suspended using `~Connection.autocommit`,
-either as connection attribute or as `~psycopg3.Connection.connect()`
+either as connection attribute or as `~psycopg.Connection.connect()`
 parameter. This may be required to run operations that cannot be executed
 inside a transaction, such as :sql:`CREATE DATABASE`, :sql:`VACUUM`,
 :sql:`CALL` on `stored procedures`__ using transaction control.
@@ -130,7 +130,7 @@ but not entirely committed yet.
 
 .. code:: python
 
-    from psycopg3 import Rollback
+    from psycopg import Rollback
 
     with conn.transaction() as outer_tx:
         for command in commands():

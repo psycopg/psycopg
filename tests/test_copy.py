@@ -6,13 +6,13 @@ from itertools import cycle
 
 import pytest
 
-import psycopg3
-from psycopg3 import pq
-from psycopg3 import sql
-from psycopg3 import errors as e
-from psycopg3.pq import Format
-from psycopg3.adapt import Format as PgFormat
-from psycopg3.types.numeric import Int4
+import psycopg
+from psycopg import pq
+from psycopg import sql
+from psycopg import errors as e
+from psycopg.pq import Format
+from psycopg.adapt import Format as PgFormat
+from psycopg.types.numeric import Int4
 
 from .utils import gc_collect
 
@@ -259,9 +259,9 @@ def test_copy_in_empty(conn, format):
 @pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
 def test_subclass_adapter(conn, format):
     if format == Format.TEXT:
-        from psycopg3.types.string import StrDumper as BaseDumper
+        from psycopg.types.string import StrDumper as BaseDumper
     else:
-        from psycopg3.types.string import StrBinaryDumper as BaseDumper
+        from psycopg.types.string import StrBinaryDumper as BaseDumper
 
     class MyStrDumper(BaseDumper):
         def dump(self, obj):
@@ -501,7 +501,7 @@ def test_copy_to_leaks(dsn, faker, fmt, method, retries):
     faker.make_records(20)
 
     def work():
-        with psycopg3.connect(dsn) as conn:
+        with psycopg.connect(dsn) as conn:
             with conn.cursor(binary=fmt) as cur:
                 cur.execute(faker.drop_stmt)
                 cur.execute(faker.create_stmt)
@@ -558,7 +558,7 @@ def test_copy_from_leaks(dsn, faker, fmt, retries):
     faker.make_records(20)
 
     def work():
-        with psycopg3.connect(dsn) as conn:
+        with psycopg.connect(dsn) as conn:
             with conn.cursor(binary=fmt) as cur:
                 cur.execute(faker.drop_stmt)
                 cur.execute(faker.create_stmt)

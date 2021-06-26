@@ -3,17 +3,17 @@ A quick and rough performance comparison of text vs. binary Decimal adaptation
 """
 from random import randrange
 from decimal import Decimal
-import psycopg3
-from psycopg3 import sql
+import psycopg
+from psycopg import sql
 
 ncols = 10
 nrows = 500000
-format = psycopg3.pq.Format.BINARY
+format = psycopg.pq.Format.BINARY
 test = "copy"
 
 
 def main():
-    cnn = psycopg3.connect()
+    cnn = psycopg.connect()
 
     cnn.execute(
         sql.SQL("create table testdec ({})").format(

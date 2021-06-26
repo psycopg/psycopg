@@ -1,5 +1,5 @@
-``psycopg3`` API
-================
+Psycopg 3 API
+=============
 
 .. toctree::
     :maxdepth: 1

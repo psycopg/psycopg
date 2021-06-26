@@ -11,13 +11,13 @@ import selectors
 import threading
 import subprocess as sp
 
-import psycopg3
+import psycopg
 
 
 @pytest.mark.slow
 def test_concurrent_execution(dsn):
     def worker():
-        cnn = psycopg3.connect(dsn)
+        cnn = psycopg.connect(dsn)
         cur = cnn.cursor()
         cur.execute("select pg_sleep(0.5)")
         cur.close()
@@ -67,10 +67,10 @@ def test_multiprocess_close(dsn, tmpdir):
     # Subprocess gcs the copy of the fd after fork so it closes connection.
     module = f"""\
 import time
-import psycopg3
+import psycopg
 
 def thread():
-    conn = psycopg3.connect({dsn!r})
+    conn = psycopg.connect({dsn!r})
     curs = conn.cursor()
     for i in range(10):
         curs.execute("select 1")
@@ -105,7 +105,7 @@ t.join()
 
 @pytest.mark.slow
 def test_notifies(conn, dsn):
-    nconn = psycopg3.connect(dsn, autocommit=True)
+    nconn = psycopg.connect(dsn, autocommit=True)
     npid = nconn.pgconn.backend_pid
 
     def notifier():
@@ -131,7 +131,7 @@ def test_notifies(conn, dsn):
     assert len(ns) == 2
 
     n, t1 = ns[0]
-    assert isinstance(n, psycopg3.Notify)
+    assert isinstance(n, psycopg.Notify)
     assert n.pid == npid
     assert n.channel == "foo"
     assert n.payload == "1"
@@ -161,7 +161,7 @@ def test_cancel(conn):
     t0 = time.time()
     t.start()
 
-    with pytest.raises(psycopg3.DatabaseError):
+    with pytest.raises(psycopg.DatabaseError):
         cur.execute("select pg_sleep(2)")
 
     t1 = time.time()
@@ -175,7 +175,7 @@ def test_cancel(conn):
 
 @pytest.mark.slow
 def test_identify_closure(conn, dsn):
-    conn2 = psycopg3.connect(dsn)
+    conn2 = psycopg.connect(dsn)
 
     def closer():
         time.sleep(0.3)
@@ -190,7 +190,7 @@ def test_identify_closure(conn, dsn):
     t.start()
 
     assert sel.select(timeout=1.0)
-    with pytest.raises(psycopg3.OperationalError):
+    with pytest.raises(psycopg.OperationalError):
         conn.execute("select 1")
     t1 = time.time()
     assert 0.3 < t1 - t0 < 0.5

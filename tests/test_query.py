@@ -1,9 +1,9 @@
 import pytest
 
-import psycopg3
-from psycopg3 import pq
-from psycopg3.adapt import Transformer, Format
-from psycopg3._queries import PostgresQuery, _split_query
+import psycopg
+from psycopg import pq
+from psycopg.adapt import Transformer, Format
+from psycopg._queries import PostgresQuery, _split_query
 
 
 @pytest.mark.parametrize(
@@ -61,7 +61,7 @@ def test_split_query(input, want):
     ],
 )
 def test_split_query_bad(input):
-    with pytest.raises(psycopg3.ProgrammingError):
+    with pytest.raises(psycopg.ProgrammingError):
         _split_query(input)
 
 
@@ -158,5 +158,5 @@ def test_pq_query_badtype(query, params):
 )
 def test_pq_query_badprog(query, params):
     pq = PostgresQuery(Transformer())
-    with pytest.raises(psycopg3.ProgrammingError):
+    with pytest.raises(psycopg.ProgrammingError):
         pq.convert(query, params)

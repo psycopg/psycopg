@@ -5,7 +5,7 @@ from threading import Thread
 
 import pytest
 
-from psycopg3.pool.sched import Scheduler
+from psycopg.pool.sched import Scheduler
 
 
 @pytest.mark.slow
@@ -59,7 +59,7 @@ def test_sched_thread():
 
 @pytest.mark.slow
 def test_sched_error(caplog):
-    caplog.set_level(logging.WARNING, logger="psycopg3")
+    caplog.set_level(logging.WARNING, logger="psycopg")
     s = Scheduler()
     t = Thread(target=s.run, daemon=True)
     t.start()

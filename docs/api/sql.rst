@@ -4,11 +4,11 @@
 .. index::
     double: Binding; Client-Side
 
-.. module:: psycopg3.sql
+.. module:: psycopg.sql
 
 The module contains objects and functions useful to generate SQL dynamically,
 in a convenient and safe way. SQL identifiers (e.g. names of tables and
-fields) cannot be passed to the `~psycopg3.Cursor.execute()` method like query
+fields) cannot be passed to the `~psycopg.Cursor.execute()` method like query
 arguments::
 
     # This will not work
@@ -27,9 +27,9 @@ instance::
 This sort of works, but it is an accident waiting to happen: the table name
 may be an invalid SQL literal and need quoting; even more serious is the
 security problem in case the table name comes from an untrusted source. The
-name should be escaped using `~psycopg3.pq.Escaping.escape_identifier()`::
+name should be escaped using `~psycopg.pq.Escaping.escape_identifier()`::
 
-    from psycopg3.pq import Escaping
+    from psycopg.pq import Escaping
 
     # This works, but it is not optimal
     table_name = 'my_table'
@@ -45,11 +45,11 @@ but will eventually crash in the presence of a table or field name with
 containing characters to escape, or will present a potentially exploitable
 weakness.
 
-The objects exposed by the `!psycopg3.sql` module allow generating SQL
+The objects exposed by the `!psycopg.sql` module allow generating SQL
 statements on the fly, separating clearly the variable parts of the statement
 from the query parameters::
 
-    from psycopg3 import sql
+    from psycopg import sql
 
     cur.execute(
         sql.SQL("insert into {} values (%s, %s)")
@@ -64,7 +64,7 @@ Usually you should express the template of your query as an `SQL` instance
 with ``{}``\-style placeholders and use `~SQL.format()` to merge the variable
 parts into them, all of which must be `Composable` subclasses. You can still
 have ``%s``\-style placeholders in your query and pass values to
-`~psycopg3.Cursor.execute()`: such value placeholders will be untouched by
+`~psycopg.Cursor.execute()`: such value placeholders will be untouched by
 `!format()`::
 
     query = sql.SQL("select {field} from {table} where {pkey} = %s").format(
@@ -73,8 +73,8 @@ have ``%s``\-style placeholders in your query and pass values to
         pkey=sql.Identifier('id'))
 
 The resulting object is meant to be passed directly to cursor methods such as
-`~psycopg3.Cursor.execute()`, `~psycopg3.Cursor.executemany()`,
-`~psycopg3.Cursor.copy()`, but can also be used to compose a query as a Python
+`~psycopg.Cursor.execute()`, `~psycopg.Cursor.executemany()`,
+`~psycopg.Cursor.copy()`, but can also be used to compose a query as a Python
 string, using the `~Composable.as_string()` method::
 
     cur.execute(query, (42,))
@@ -102,7 +102,7 @@ The `!sql` objects are in the following inheritance hierarchy:
 |   ``|__`` `SQL`: a literal snippet of an SQL query
 |   ``|__`` `Identifier`: a PostgreSQL identifier or dot-separated sequence of identifiers
 |   ``|__`` `Literal`: a value hardcoded into a query
-|   ``|__`` `Placeholder`: a `%s`\ -style placeholder whose value will be added later e.g. by `~psycopg3.Cursor.execute()`
+|   ``|__`` `Placeholder`: a `%s`\ -style placeholder whose value will be added later e.g. by `~psycopg.Cursor.execute()`
 |   ``|__`` `Composed`: a sequence of `!Composable` instances.
 
 

@@ -2,9 +2,9 @@ import datetime as dt
 
 import pytest
 
-import psycopg3
-from psycopg3 import ProgrammingError
-from psycopg3.conninfo import (
+import psycopg
+from psycopg import ProgrammingError
+from psycopg.conninfo import (
     _conninfo_connect_timeout,
     make_conninfo,
     conninfo_to_dict,
@@ -136,7 +136,7 @@ class TestConnectionInfo:
         else:
             info_attr = pgconn_attr = attr
 
-        if info_attr == "hostaddr" and psycopg3.pq.version() < 120000:
+        if info_attr == "hostaddr" and psycopg.pq.version() < 120000:
             pytest.skip("hostaddr not supported on libpq < 12")
 
         info_val = getattr(conn.info, info_attr)
@@ -144,18 +144,18 @@ class TestConnectionInfo:
         assert info_val == pgconn_val
 
         conn.close()
-        with pytest.raises(psycopg3.OperationalError):
+        with pytest.raises(psycopg.OperationalError):
             getattr(conn.info, info_attr)
 
     @pytest.mark.libpq("< 12")
     def test_hostaddr_not_supported(self, conn):
-        with pytest.raises(psycopg3.NotSupportedError):
+        with pytest.raises(psycopg.NotSupportedError):
             conn.info.hostaddr
 
     def test_port(self, conn):
         assert conn.info.port == int(conn.pgconn.port.decode("utf-8"))
         conn.close()
-        with pytest.raises(psycopg3.OperationalError):
+        with pytest.raises(psycopg.OperationalError):
             conn.info.port
 
     def test_get_params(self, conn, dsn):
@@ -168,11 +168,11 @@ class TestConnectionInfo:
         dsn.pop("application_name", None)
 
         monkeypatch.delenv("PGAPPNAME", raising=False)
-        with psycopg3.connect(**dsn) as conn:
+        with psycopg.connect(**dsn) as conn:
             assert "application_name" not in conn.info.get_parameters()
 
         monkeypatch.setenv("PGAPPNAME", "hello test")
-        with psycopg3.connect(**dsn) as conn:
+        with psycopg.connect(**dsn) as conn:
             assert (
                 conn.info.get_parameters()["application_name"] == "hello test"
             )
@@ -189,7 +189,7 @@ class TestConnectionInfo:
 
     def test_no_password(self, dsn):
         dsn2 = make_conninfo(dsn, password="the-pass-word")
-        pgconn = psycopg3.pq.PGconn.connect_start(dsn2.encode("utf8"))
+        pgconn = psycopg.pq.PGconn.connect_start(dsn2.encode("utf8"))
         info = ConnectionInfo(pgconn)
         assert info.password == "the-pass-word"
         assert "password" not in info.get_parameters()
@@ -209,7 +209,7 @@ class TestConnectionInfo:
 
     def test_error_message(self, conn):
         assert conn.info.error_message == ""
-        with pytest.raises(psycopg3.ProgrammingError) as ex:
+        with pytest.raises(psycopg.ProgrammingError) as ex:
             conn.execute("wat")
 
         assert conn.info.error_message
@@ -217,14 +217,14 @@ class TestConnectionInfo:
         assert ex.value.diag.severity in conn.info.error_message
 
         conn.close()
-        with pytest.raises(psycopg3.OperationalError):
+        with pytest.raises(psycopg.OperationalError):
             conn.info.error_message
 
     def test_backend_pid(self, conn):
         assert conn.info.backend_pid
         assert conn.info.backend_pid == conn.pgconn.backend_pid
         conn.close()
-        with pytest.raises(psycopg3.OperationalError):
+        with pytest.raises(psycopg.OperationalError):
             conn.info.backend_pid
 
     def test_timezone(self, conn):

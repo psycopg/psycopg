@@ -1,8 +1,8 @@
 import pytest
 import datetime as dt
 
-import psycopg3
-from psycopg3.conninfo import conninfo_to_dict
+import psycopg
+from psycopg.conninfo import conninfo_to_dict
 
 from . import dbapi20
 
@@ -13,8 +13,8 @@ def with_dsn(request, dsn):
 
 
 @pytest.mark.usefixtures("with_dsn")
-class Psycopg3Tests(dbapi20.DatabaseAPI20Test):
-    driver = psycopg3
+class PsycopgTests(dbapi20.DatabaseAPI20Test):
+    driver = psycopg
     # connect_args = () # set by the fixture
     connect_kw_args = {}
 
@@ -28,7 +28,7 @@ class Psycopg3Tests(dbapi20.DatabaseAPI20Test):
 
 
 # Shut up warnings
-Psycopg3Tests.failUnless = Psycopg3Tests.assertTrue
+PsycopgTests.failUnless = PsycopgTests.assertTrue
 
 
 @pytest.mark.parametrize(
@@ -55,7 +55,7 @@ Psycopg3Tests.failUnless = Psycopg3Tests.assertTrue
     ],
 )
 def test_singletons(conn, typename, singleton):
-    singleton = getattr(psycopg3, singleton)
+    singleton = getattr(psycopg, singleton)
     cur = conn.cursor()
     cur.execute(f"select null::{typename}")
     oid = cur.description[0].type_code
@@ -73,7 +73,7 @@ def test_singletons(conn, typename, singleton):
     ],
 )
 def test_timestamp_from_ticks(ticks, want):
-    s = psycopg3.TimestampFromTicks(ticks)
+    s = psycopg.TimestampFromTicks(ticks)
     want = dt.datetime.strptime(want, "%Y-%m-%dT%H:%M:%S.%f%z")
     assert s == want
 
@@ -87,7 +87,7 @@ def test_timestamp_from_ticks(ticks, want):
     ],
 )
 def test_date_from_ticks(ticks, want):
-    s = psycopg3.DateFromTicks(ticks)
+    s = psycopg.DateFromTicks(ticks)
     if isinstance(want, str):
         want = [want]
     want = [dt.datetime.strptime(w, "%Y-%m-%d").date() for w in want]
@@ -99,7 +99,7 @@ def test_date_from_ticks(ticks, want):
     [(0, "00:00:00.000000"), (1273173119.99992, "00:11:59.999920")],
 )
 def test_time_from_ticks(ticks, want):
-    s = psycopg3.TimeFromTicks(ticks)
+    s = psycopg.TimeFromTicks(ticks)
     want = dt.datetime.strptime(want, "%H:%M:%S.%f").time()
     assert s.replace(hour=0) == want
 
@@ -128,8 +128,8 @@ def test_connect_args(monkeypatch, pgconn, args, kwargs, want):
         return pgconn
         yield
 
-    monkeypatch.setattr(psycopg3.connection, "connect", fake_connect)
-    psycopg3.connect(*args, **kwargs)
+    monkeypatch.setattr(psycopg.connection, "connect", fake_connect)
+    psycopg.connect(*args, **kwargs)
     assert conninfo_to_dict(the_conninfo) == conninfo_to_dict(want)
 
 
@@ -146,6 +146,6 @@ def test_connect_badargs(monkeypatch, pgconn, args, kwargs):
         return pgconn
         yield
 
-    monkeypatch.setattr(psycopg3.connection, "connect", fake_connect)
-    with pytest.raises((TypeError, psycopg3.ProgrammingError)):
-        psycopg3.connect(*args, **kwargs)
+    monkeypatch.setattr(psycopg.connection, "connect", fake_connect)
+    with pytest.raises((TypeError, psycopg.ProgrammingError)):
+        psycopg.connect(*args, **kwargs)

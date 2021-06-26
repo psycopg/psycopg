@@ -1,6 +1,6 @@
 import pytest
 
-from psycopg3 import Connection, ProgrammingError, Rollback
+from psycopg import Connection, ProgrammingError, Rollback
 
 
 @pytest.fixture(autouse=True)

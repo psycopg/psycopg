@@ -14,7 +14,7 @@ help:
 	@$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O) || true
 
 serve:
-	PSYCOPG3_IMPL=python sphinx-autobuild . _build/html/
+	PSYCOPG_IMPL=python sphinx-autobuild . _build/html/
 
 .PHONY: help serve env Makefile
 
@@ -22,7 +22,7 @@ env: .venv
 
 .venv: requirements.txt
 	$(PYTHON) -m venv .venv
-	./.venv/bin/pip install -e ../psycopg3
+	./.venv/bin/pip install -e ../psycopg
 	./.venv/bin/pip install -r requirements.txt
 
 # Catch-all target: route all unknown targets to Sphinx using the new

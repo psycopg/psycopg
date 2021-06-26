@@ -6,16 +6,16 @@ Installation
 Installing the development state
 --------------------------------
 
-``psycopg3`` packages have not been released yet, but you can try it out
+Psycopg 3 packages have not been released yet, but you can try it out
 already by installing it `from the GitHub project`__:
 
 .. code:: bash
 
-    $ pip install git+https://github.com/psycopg/psycopg3.git#subdirectory=psycopg3
+    $ pip install git+https://github.com/psycopg/psycopg.git#subdirectory=psycopg
     $ python3
-    >>> import psycopg3
+    >>> import psycopg
 
-.. __: https://github.com/psycopg/psycopg3
+.. __: https://github.com/psycopg/psycopg
 
 
 .. _binary-install:
@@ -25,21 +25,21 @@ Binary installation
 
 .. warning::
 
-    `!psycopg3` is still in a development phase: packages haven't been
+    Psycopg 3 is still in a development phase: packages haven't been
     released yet on PyPI.
 
     Please refer to `the README`__ for the current installation state, and
     please know that things may change.
 
-    .. __: https://github.com/psycopg/psycopg3#readme
+    .. __: https://github.com/psycopg/psycopg#readme
 
     The following is how it will be *supposed* to work, once it is released...
 
 
-The quickest way to start developing with psycopg3 is to install the binary
+The quickest way to start developing with Psycopg 3 is to install the binary
 packages by running::
 
-    pip install psycopg3[binary]
+    pip install psycopg[binary]
 
 This will install a self-contained package with all the libraries needed.
 
@@ -56,11 +56,11 @@ In these case you should proceed to a :ref:`local installation
 
 .. seealso::
 
-    Did ``psycopg3`` install ok? Great! You can now move on to the :ref:`basic
+    Did Psycopg 3 install ok? Great! You can now move on to the :ref:`basic
     module usage <module-usage>` to learn how it works.
 
     You can come back here if you the above method didn't work and you need a
-    way to install ``psycopg3`` past the basic one.
+    way to install Psycopg 3 past the basic one.
 
 
 .. _local-installation:
@@ -71,7 +71,7 @@ Local installation
 A "Local installation" means obtaining a performing and maintainable library.
 The library will include a performing C module and will be bound to the system
 libraries (``libpq``, ``libssl``...) so that system upgrade of libraries will
-upgrade the libraries used by ``psycopg3`` too.
+upgrade the libraries used by Psycopg 3 too.
 
 In order to perform a local installation you need some prerequisites:
 
@@ -86,7 +86,7 @@ try this and follow the `binary installation`_ instead.
 
 If your build prerequisites are in place you can run::
 
-    pip install psycopg3[c]
+    pip install psycopg[c]
 
 
 .. _pure-python-installation:
@@ -96,7 +96,7 @@ Pure Python installation
 
 If you simply install::
 
-    pip install psycopg3
+    pip install psycopg
 
 without ``[c]`` or ``[binary]`` extras you will obtain a pure Python
 implementation. This is particularly handy to debug and hack, but it still
@@ -114,8 +114,8 @@ installation`_.
 
 
 
-``psycopg3`` and the ``libpq``
-------------------------------
+Psycopg 3 and the ``libpq``
+---------------------------
 
 .. admonition:: TODO
 

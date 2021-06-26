@@ -6,12 +6,12 @@ import logging
 import weakref
 from threading import Thread
 
-import psycopg3
-from psycopg3 import encodings
-from psycopg3 import Connection, Notify
-from psycopg3.rows import tuple_row
-from psycopg3.errors import UndefinedTable
-from psycopg3.conninfo import conninfo_to_dict
+import psycopg
+from psycopg import encodings
+from psycopg import Connection, Notify
+from psycopg.rows import tuple_row
+from psycopg.errors import UndefinedTable
+from psycopg.conninfo import conninfo_to_dict
 
 from .utils import gc_collect
 from .test_cursor import my_row_factory
@@ -33,7 +33,7 @@ def test_connect_str_subclass(dsn):
 
 
 def test_connect_bad():
-    with pytest.raises(psycopg3.OperationalError):
+    with pytest.raises(psycopg.OperationalError):
         Connection.connect("dbname=nosuchdb")
 
 
@@ -52,7 +52,7 @@ def test_connect_timeout():
     Thread(target=closer).start()
 
     t0 = time.time()
-    with pytest.raises(psycopg3.OperationalError, match="timeout expired"):
+    with pytest.raises(psycopg.OperationalError, match="timeout expired"):
         Connection.connect(host="localhost", port=port, connect_timeout=1)
     elapsed = time.time() - t0
     assert elapsed == pytest.approx(1.0, abs=0.05)
@@ -72,12 +72,12 @@ def test_close(conn):
     assert conn.closed
     assert conn.pgconn.status == conn.ConnStatus.BAD
 
-    with pytest.raises(psycopg3.OperationalError):
+    with pytest.raises(psycopg.OperationalError):
         cur.execute("select 1")
 
 
 def test_broken(conn):
-    with pytest.raises(psycopg3.OperationalError):
+    with pytest.raises(psycopg.OperationalError):
         conn.execute(
             "select pg_terminate_backend(%s)", [conn.pgconn.backend_pid]
         )
@@ -126,7 +126,7 @@ def test_context_commit(conn, dsn):
     assert conn.closed
     assert not conn.broken
 
-    with psycopg3.connect(dsn) as conn:
+    with psycopg.connect(dsn) as conn:
         with conn.cursor() as cur:
             cur.execute("select * from textctx")
             assert cur.fetchall() == []
@@ -146,7 +146,7 @@ def test_context_rollback(conn, dsn):
     assert conn.closed
     assert not conn.broken
 
-    with psycopg3.connect(dsn) as conn:
+    with psycopg.connect(dsn) as conn:
         with conn.cursor() as cur:
             with pytest.raises(UndefinedTable):
                 cur.execute("select * from textctx")
@@ -160,7 +160,7 @@ def test_context_close(conn):
 
 def test_context_rollback_no_clobber(conn, dsn, recwarn):
     with pytest.raises(ZeroDivisionError):
-        with psycopg3.connect(dsn) as conn2:
+        with psycopg.connect(dsn) as conn2:
             conn2.execute("select 1")
             conn.execute(
                 "select pg_terminate_backend(%s::int)",
@@ -172,7 +172,7 @@ def test_context_rollback_no_clobber(conn, dsn, recwarn):
 
 
 def test_weakref(dsn):
-    conn = psycopg3.connect(dsn)
+    conn = psycopg.connect(dsn)
     w = weakref.ref(conn)
     conn.close()
     del conn
@@ -192,7 +192,7 @@ def test_commit(conn):
     assert res.get_value(0, 0) == b"1"
 
     conn.close()
-    with pytest.raises(psycopg3.OperationalError):
+    with pytest.raises(psycopg.OperationalError):
         conn.commit()
 
 
@@ -208,7 +208,7 @@ def test_rollback(conn):
     assert res.ntuples == 0
 
     conn.close()
-    with pytest.raises(psycopg3.OperationalError):
+    with pytest.raises(psycopg.OperationalError):
         conn.rollback()
 
 
@@ -238,11 +238,11 @@ def test_auto_transaction_fail(conn):
     cur.execute("insert into foo values (1)")
     assert conn.pgconn.transaction_status == conn.TransactionStatus.INTRANS
 
-    with pytest.raises(psycopg3.DatabaseError):
+    with pytest.raises(psycopg.DatabaseError):
         cur.execute("meh")
     assert conn.pgconn.transaction_status == conn.TransactionStatus.INERROR
 
-    with pytest.raises(psycopg3.errors.InFailedSqlTransaction):
+    with pytest.raises(psycopg.errors.InFailedSqlTransaction):
         cur.execute("select 1")
 
     conn.commit()
@@ -269,17 +269,17 @@ def test_autocommit_intrans(conn):
     cur = conn.cursor()
     assert cur.execute("select 1").fetchone() == (1,)
     assert conn.pgconn.transaction_status == conn.TransactionStatus.INTRANS
-    with pytest.raises(psycopg3.ProgrammingError):
+    with pytest.raises(psycopg.ProgrammingError):
         conn.autocommit = True
     assert not conn.autocommit
 
 
 def test_autocommit_inerror(conn):
     cur = conn.cursor()
-    with pytest.raises(psycopg3.DatabaseError):
+    with pytest.raises(psycopg.DatabaseError):
         cur.execute("meh")
     assert conn.pgconn.transaction_status == conn.TransactionStatus.INERROR
-    with pytest.raises(psycopg3.ProgrammingError):
+    with pytest.raises(psycopg.ProgrammingError):
         conn.autocommit = True
     assert not conn.autocommit
 
@@ -287,7 +287,7 @@ def test_autocommit_inerror(conn):
 def test_autocommit_unknown(conn):
     conn.close()
     assert conn.pgconn.transaction_status == conn.TransactionStatus.UNKNOWN
-    with pytest.raises(psycopg3.ProgrammingError):
+    with pytest.raises(psycopg.ProgrammingError):
         conn.autocommit = True
     assert not conn.autocommit
 
@@ -337,7 +337,7 @@ def test_normalize_encoding(conn, enc, out, codec):
 )
 def test_encoding_env_var(dsn, monkeypatch, enc, out, codec):
     monkeypatch.setenv("PGCLIENTENCODING", enc)
-    conn = psycopg3.connect(dsn)
+    conn = psycopg.connect(dsn)
     assert (
         conn.pgconn.parameter_status(b"client_encoding").decode("utf-8") == out
     )
@@ -347,7 +347,7 @@ def test_encoding_env_var(dsn, monkeypatch, enc, out, codec):
 def test_set_encoding_unsupported(conn):
     cur = conn.cursor()
     cur.execute("set client_encoding to EUC_TW")
-    with pytest.raises(psycopg3.NotSupportedError):
+    with pytest.raises(psycopg.NotSupportedError):
         cur.execute("select 'x'")
 
 
@@ -380,8 +380,8 @@ def test_connect_args(monkeypatch, pgconn, args, kwargs, want):
         return pgconn
         yield
 
-    monkeypatch.setattr(psycopg3.connection, "connect", fake_connect)
-    psycopg3.Connection.connect(*args, **kwargs)
+    monkeypatch.setattr(psycopg.connection, "connect", fake_connect)
+    psycopg.Connection.connect(*args, **kwargs)
     assert conninfo_to_dict(the_conninfo) == conninfo_to_dict(want)
 
 
@@ -398,20 +398,20 @@ def test_connect_badargs(monkeypatch, pgconn, args, kwargs):
         return pgconn
         yield
 
-    monkeypatch.setattr(psycopg3.connection, "connect", fake_connect)
-    with pytest.raises((TypeError, psycopg3.ProgrammingError)):
-        psycopg3.Connection.connect(*args, **kwargs)
+    monkeypatch.setattr(psycopg.connection, "connect", fake_connect)
+    with pytest.raises((TypeError, psycopg.ProgrammingError)):
+        psycopg.Connection.connect(*args, **kwargs)
 
 
 def test_broken_connection(conn):
     cur = conn.cursor()
-    with pytest.raises(psycopg3.DatabaseError):
+    with pytest.raises(psycopg.DatabaseError):
         cur.execute("select pg_terminate_backend(pg_backend_pid())")
     assert conn.closed
 
 
 def test_notice_handlers(conn, caplog):
-    caplog.set_level(logging.WARNING, logger="psycopg3")
+    caplog.set_level(logging.WARNING, logger="psycopg")
     messages = []
     severities = []
 
@@ -538,5 +538,5 @@ def test_str(conn):
 def test_fileno(conn):
     assert conn.fileno() == conn.pgconn.socket
     conn.close()
-    with pytest.raises(psycopg3.OperationalError):
+    with pytest.raises(psycopg.OperationalError):
         conn.fileno()

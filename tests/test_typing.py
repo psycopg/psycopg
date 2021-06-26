@@ -19,40 +19,40 @@ def test_typing_example(mypy):
     "conn, type",
     [
         (
-            "psycopg3.connect()",
-            "psycopg3.Connection[Tuple[Any, ...]]",
+            "psycopg.connect()",
+            "psycopg.Connection[Tuple[Any, ...]]",
         ),
         (
-            "psycopg3.connect(row_factory=rows.tuple_row)",
-            "psycopg3.Connection[Tuple[Any, ...]]",
+            "psycopg.connect(row_factory=rows.tuple_row)",
+            "psycopg.Connection[Tuple[Any, ...]]",
         ),
         (
-            "psycopg3.connect(row_factory=rows.dict_row)",
-            "psycopg3.Connection[Dict[str, Any]]",
+            "psycopg.connect(row_factory=rows.dict_row)",
+            "psycopg.Connection[Dict[str, Any]]",
         ),
         (
-            "psycopg3.connect(row_factory=rows.namedtuple_row)",
-            "psycopg3.Connection[NamedTuple]",
+            "psycopg.connect(row_factory=rows.namedtuple_row)",
+            "psycopg.Connection[NamedTuple]",
         ),
         (
-            "psycopg3.connect(row_factory=thing_row)",
-            "psycopg3.Connection[Thing]",
+            "psycopg.connect(row_factory=thing_row)",
+            "psycopg.Connection[Thing]",
         ),
         (
-            "psycopg3.Connection.connect()",
-            "psycopg3.Connection[Tuple[Any, ...]]",
+            "psycopg.Connection.connect()",
+            "psycopg.Connection[Tuple[Any, ...]]",
         ),
         (
-            "psycopg3.Connection.connect(row_factory=rows.dict_row)",
-            "psycopg3.Connection[Dict[str, Any]]",
+            "psycopg.Connection.connect(row_factory=rows.dict_row)",
+            "psycopg.Connection[Dict[str, Any]]",
         ),
         (
-            "await psycopg3.AsyncConnection.connect()",
-            "psycopg3.AsyncConnection[Tuple[Any, ...]]",
+            "await psycopg.AsyncConnection.connect()",
+            "psycopg.AsyncConnection[Tuple[Any, ...]]",
         ),
         (
-            "await psycopg3.AsyncConnection.connect(row_factory=rows.dict_row)",
-            "psycopg3.AsyncConnection[Dict[str, Any]]",
+            "await psycopg.AsyncConnection.connect(row_factory=rows.dict_row)",
+            "psycopg.AsyncConnection[Dict[str, Any]]",
         ),
     ],
 )
@@ -66,72 +66,72 @@ def test_connection_type(conn, type, mypy, tmpdir):
     "conn, curs, type",
     [
         (
-            "psycopg3.connect()",
+            "psycopg.connect()",
             "conn.cursor()",
-            "psycopg3.Cursor[Tuple[Any, ...]]",
+            "psycopg.Cursor[Tuple[Any, ...]]",
         ),
         (
-            "psycopg3.connect(row_factory=rows.dict_row)",
+            "psycopg.connect(row_factory=rows.dict_row)",
             "conn.cursor()",
-            "psycopg3.Cursor[Dict[str, Any]]",
+            "psycopg.Cursor[Dict[str, Any]]",
         ),
         (
-            "psycopg3.connect(row_factory=rows.dict_row)",
+            "psycopg.connect(row_factory=rows.dict_row)",
             "conn.cursor(row_factory=rows.namedtuple_row)",
-            "psycopg3.Cursor[NamedTuple]",
+            "psycopg.Cursor[NamedTuple]",
         ),
         (
-            "psycopg3.connect(row_factory=thing_row)",
+            "psycopg.connect(row_factory=thing_row)",
             "conn.cursor()",
-            "psycopg3.Cursor[Thing]",
+            "psycopg.Cursor[Thing]",
         ),
         (
-            "psycopg3.connect()",
+            "psycopg.connect()",
             "conn.cursor(row_factory=thing_row)",
-            "psycopg3.Cursor[Thing]",
+            "psycopg.Cursor[Thing]",
         ),
         # Async cursors
         (
-            "await psycopg3.AsyncConnection.connect()",
+            "await psycopg.AsyncConnection.connect()",
             "conn.cursor()",
-            "psycopg3.AsyncCursor[Tuple[Any, ...]]",
+            "psycopg.AsyncCursor[Tuple[Any, ...]]",
         ),
         (
-            "await psycopg3.AsyncConnection.connect()",
+            "await psycopg.AsyncConnection.connect()",
             "conn.cursor(row_factory=thing_row)",
-            "psycopg3.AsyncCursor[Thing]",
+            "psycopg.AsyncCursor[Thing]",
         ),
         # Server-side cursors
         (
-            "psycopg3.connect()",
+            "psycopg.connect()",
             "conn.cursor(name='foo')",
-            "psycopg3.ServerCursor[Tuple[Any, ...]]",
+            "psycopg.ServerCursor[Tuple[Any, ...]]",
         ),
         (
-            "psycopg3.connect(row_factory=rows.dict_row)",
+            "psycopg.connect(row_factory=rows.dict_row)",
             "conn.cursor(name='foo')",
-            "psycopg3.ServerCursor[Dict[str, Any]]",
+            "psycopg.ServerCursor[Dict[str, Any]]",
         ),
         (
-            "psycopg3.connect()",
+            "psycopg.connect()",
             "conn.cursor(name='foo', row_factory=rows.dict_row)",
-            "psycopg3.ServerCursor[Dict[str, Any]]",
+            "psycopg.ServerCursor[Dict[str, Any]]",
         ),
         # Async server-side cursors
         (
-            "await psycopg3.AsyncConnection.connect()",
+            "await psycopg.AsyncConnection.connect()",
             "conn.cursor(name='foo')",
-            "psycopg3.AsyncServerCursor[Tuple[Any, ...]]",
+            "psycopg.AsyncServerCursor[Tuple[Any, ...]]",
         ),
         (
-            "await psycopg3.AsyncConnection.connect(row_factory=rows.dict_row)",
+            "await psycopg.AsyncConnection.connect(row_factory=rows.dict_row)",
             "conn.cursor(name='foo')",
-            "psycopg3.AsyncServerCursor[Dict[str, Any]]",
+            "psycopg.AsyncServerCursor[Dict[str, Any]]",
         ),
         (
-            "psycopg3.connect()",
+            "psycopg.connect()",
             "conn.cursor(name='foo', row_factory=rows.dict_row)",
-            "psycopg3.ServerCursor[Dict[str, Any]]",
+            "psycopg.ServerCursor[Dict[str, Any]]",
         ),
     ],
 )
@@ -168,7 +168,7 @@ def test_fetchone_type(conn_class, server_side, curs, type, mypy, tmpdir):
     if server_side:
         curs = curs.replace("(", "(name='foo',", 1)
     stmts = f"""\
-conn = {await_} psycopg3.{conn_class}.connect()
+conn = {await_} psycopg.{conn_class}.connect()
 curs = {curs}
 obj = {await_} curs.fetchone()
 """
@@ -205,7 +205,7 @@ def test_iter_type(conn_class, server_side, curs, type, mypy, tmpdir):
     if server_side:
         curs = curs.replace("(", "(name='foo',", 1)
     stmts = f"""\
-conn = {await_}psycopg3.{conn_class}.connect()
+conn = {await_}psycopg.{conn_class}.connect()
 curs = {curs}
 {async_}for obj in curs:
     pass
@@ -241,7 +241,7 @@ def test_fetchsome_type(
     if server_side:
         curs = curs.replace("(", "(name='foo',", 1)
     stmts = f"""\
-conn = {await_} psycopg3.{conn_class}.connect()
+conn = {await_} psycopg.{conn_class}.connect()
 curs = {curs}
 obj = {await_} curs.{method}()
 """
@@ -274,15 +274,15 @@ def _test_reveal(stmts, type, mypy, tmpdir):
 
     src = f"""\
 from typing import Any, Callable, Dict, List, NamedTuple, Optional, Sequence, Tuple
-import psycopg3
-from psycopg3 import rows
+import psycopg
+from psycopg import rows
 
 class Thing:
     def __init__(self, **kwargs: Any) -> None:
         self.kwargs = kwargs
 
 def thing_row(
-    cur: psycopg3.AnyCursor[Thing],
+    cur: psycopg.AnyCursor[Thing],
 ) -> Callable[[Sequence[Any]], Thing]:
     assert cur.description
     names = [d.name for d in cur.description]

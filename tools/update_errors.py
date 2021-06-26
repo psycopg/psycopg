@@ -16,7 +16,7 @@ import subprocess as sp
 from urllib.request import urlopen
 from collections import defaultdict, namedtuple
 
-from psycopg3.errors import get_base_exception  # type: ignore
+from psycopg.errors import get_base_exception  # type: ignore
 
 logger = logging.getLogger()
 logging.basicConfig(
@@ -27,7 +27,7 @@ logging.basicConfig(
 def main():
     classes, errors = fetch_errors(["9.6", "10", "11", "12", "13"])
 
-    fn = os.path.dirname(__file__) + "/../psycopg3/psycopg3/errors.py"
+    fn = os.path.dirname(__file__) + "/../psycopg/psycopg/errors.py"
     update_file(fn, generate_module_data(classes, errors))
 
     logger.info("running black on the resulting module")

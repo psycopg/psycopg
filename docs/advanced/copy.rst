@@ -1,4 +1,4 @@
-.. currentmodule:: psycopg3
+.. currentmodule:: psycopg
 
 .. index::
     pair: COPY; SQL command
@@ -8,7 +8,7 @@
 Using COPY TO and COPY FROM
 ===========================
 
-`psycopg3` allows to operate with `PostgreSQL COPY protocol`__. :sql:`COPY` is
+Psycopg allows to operate with `PostgreSQL COPY protocol`__. :sql:`COPY` is
 one of the most efficient ways to load data into the database (and to modify
 it, with some SQL creativity).
 
@@ -24,7 +24,7 @@ resulting `Copy` object in a ``with`` block:
         # pass data to the 'copy' object using write()/write_row()
 
 You can compose a COPY statement dynamically by using objects from the
-`psycopg3.sql` module:
+`psycopg.sql` module:
 
 .. code:: python
 
