@@ -52,16 +52,20 @@ def set_json_loads(loads: JsonLoadsFunction) -> None:
 
 
 class _JsonWrapper:
-    __slots__ = ("obj",)
+    __slots__ = ("obj", "_dumps")
 
-    def __init__(self, obj: Any):
+    def __init__(self, obj: Any, dumps: Optional[JsonDumpsFunction] = None):
         self.obj = obj
+        self._dumps = dumps or _dumps
 
     def __repr__(self) -> str:
         sobj = repr(self.obj)
         if len(sobj) > 40:
             sobj = f"{sobj[:35]} ... ({len(sobj)} chars)"
         return f"{self.__class__.__name__}({sobj})"
+
+    def dumps(self) -> str:
+        return self._dumps(self.obj)
 
 
 class Json(_JsonWrapper):
@@ -76,21 +80,8 @@ class _JsonDumper(Dumper):
 
     format = Format.TEXT
 
-    def __init__(self, cls: type, context: Optional[AdaptContext] = None):
-        super().__init__(cls, context)
-        self._dumps = self.get_dumps()
-
-    def get_dumps(self) -> JsonDumpsFunction:
-        r"""
-        Return a `json.dumps()`\-compatible function to serialize the object.
-
-        Subclasses can override this function to specify custom JSON
-        serialization per context.
-        """
-        return _dumps
-
     def dump(self, obj: _JsonWrapper) -> bytes:
-        return self._dumps(obj.obj).encode("utf-8")
+        return obj.dumps().encode("utf-8")
 
 
 class JsonDumper(_JsonDumper):
@@ -115,7 +106,7 @@ class JsonbBinaryDumper(JsonbDumper):
     format = Format.BINARY
 
     def dump(self, obj: _JsonWrapper) -> bytes:
-        return b"\x01" + self._dumps(obj.obj).encode("utf-8")
+        return b"\x01" + obj.dumps().encode("utf-8")
 
 
 class _JsonLoader(Loader):
