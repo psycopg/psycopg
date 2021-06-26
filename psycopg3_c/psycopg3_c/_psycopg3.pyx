@@ -27,7 +27,7 @@ include "_psycopg3/copy.pyx"
 include "_psycopg3/generators.pyx"
 include "_psycopg3/transform.pyx"
 
-include "types/date.pyx"
+include "types/datetime.pyx"
 include "types/numeric.pyx"
 include "types/bool.pyx"
 include "types/text.pyx"

@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING
 
 from . import net
 from . import bool
-from . import date
 from . import json
 from . import none
 from . import text
@@ -16,6 +15,7 @@ from . import uuid
 from . import array
 from . import range
 from . import numeric
+from . import datetime
 from . import composite
 
 from .._typeinfo import TypeInfo as TypeInfo  # exported here
@@ -27,7 +27,6 @@ if TYPE_CHECKING:
 def register_default_globals(ctx: "AdaptContext") -> None:
     net.register_default_globals(ctx)
     bool.register_default_globals(ctx)
-    date.register_default_globals(ctx)
     json.register_default_globals(ctx)
     none.register_default_globals(ctx)
     text.register_default_globals(ctx)
@@ -35,6 +34,7 @@ def register_default_globals(ctx: "AdaptContext") -> None:
     array.register_default_globals(ctx)
     range.register_default_globals(ctx)
     numeric.register_default_globals(ctx)
+    datetime.register_default_globals(ctx)
     composite.register_default_globals(ctx)
 
     # Must come after all the types are registered
