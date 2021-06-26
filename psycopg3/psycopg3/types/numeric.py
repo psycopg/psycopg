@@ -20,6 +20,7 @@ from .._struct import pack_int4, pack_uint4, unpack_int4, unpack_uint4
 from .._struct import pack_int8, unpack_int8
 from .._struct import pack_float8, unpack_float4, unpack_float8
 
+
 # Wrappers to force numbers to be cast as specific PostgreSQL types
 
 
@@ -48,7 +49,7 @@ class Oid(int):
         return super().__new__(cls, arg)
 
 
-class NumberDumper(Dumper):
+class _NumberDumper(Dumper):
 
     format = Format.TEXT
 
@@ -60,7 +61,7 @@ class NumberDumper(Dumper):
         return value if obj >= 0 else b" " + value
 
 
-class SpecialValuesDumper(NumberDumper):
+class _SpecialValuesDumper(_NumberDumper):
 
     _special: Dict[bytes, bytes] = {}
 
@@ -73,7 +74,7 @@ class SpecialValuesDumper(NumberDumper):
         return value if obj >= 0 else b" " + value
 
 
-class FloatDumper(SpecialValuesDumper):
+class FloatDumper(_SpecialValuesDumper):
 
     format = Format.TEXT
     _oid = builtins["float8"].oid
@@ -94,7 +95,7 @@ class FloatBinaryDumper(Dumper):
         return pack_float8(obj)
 
 
-class DecimalDumper(SpecialValuesDumper):
+class DecimalDumper(_SpecialValuesDumper):
 
     _oid = builtins["numeric"].oid
 
@@ -112,23 +113,23 @@ class DecimalDumper(SpecialValuesDumper):
     }
 
 
-class Int2Dumper(NumberDumper):
+class Int2Dumper(_NumberDumper):
     _oid = builtins["int2"].oid
 
 
-class Int4Dumper(NumberDumper):
+class Int4Dumper(_NumberDumper):
     _oid = builtins["int4"].oid
 
 
-class Int8Dumper(NumberDumper):
+class Int8Dumper(_NumberDumper):
     _oid = builtins["int8"].oid
 
 
-class IntNumericDumper(NumberDumper):
+class IntNumericDumper(_NumberDumper):
     _oid = builtins["numeric"].oid
 
 
-class OidDumper(NumberDumper):
+class OidDumper(_NumberDumper):
     _oid = builtins["oid"].oid
 
 
