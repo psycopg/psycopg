@@ -7,6 +7,7 @@ Adapters for None and boolean.
 from ..pq import Format
 from ..oids import postgres_types as builtins
 from ..adapt import Buffer, Dumper, Loader
+from ..proto import AdaptContext
 
 
 class BoolDumper(Dumper):
@@ -59,3 +60,11 @@ class BoolBinaryLoader(Loader):
 
     def load(self, data: Buffer) -> bool:
         return data != b"\x00"
+
+
+def register_default_globals(ctx: AdaptContext) -> None:
+    BoolDumper.register(bool, ctx)
+    BoolBinaryDumper.register(bool, ctx)
+    NoneDumper.register(type(None), ctx)
+    BoolLoader.register("bool", ctx)
+    BoolBinaryLoader.register("bool", ctx)

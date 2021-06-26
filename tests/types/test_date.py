@@ -583,7 +583,7 @@ class TestInterval:
         # NOTE: this is an example in the docs. Make sure it doesn't regress when
         # adding binary datetime adapters
         from psycopg3.oids import postgres_types as builtins
-        from psycopg3.types import DateLoader, DateDumper
+        from psycopg3.types.date import DateLoader, DateDumper
 
         class InfDateDumper(DateDumper):
             def dump(self, obj):

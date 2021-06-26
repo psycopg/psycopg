@@ -130,3 +130,33 @@ class ByteaBinaryLoader(Loader):
 
     def load(self, data: Buffer) -> bytes:
         return data
+
+
+def register_default_globals(ctx: "AdaptContext") -> None:
+    from ..oids import INVALID_OID
+
+    # NOTE: the order the dumpers are registered is relevant.
+    # The last one registered becomes the default for each type.
+    # Normally, binary is the default dumper, except for text (which plays
+    # the role of unknown, so it can be cast automatically to other types).
+    StringBinaryDumper.register(str, ctx)
+    StringDumper.register(str, ctx)
+    TextLoader.register(INVALID_OID, ctx)
+    TextLoader.register("bpchar", ctx)
+    TextLoader.register("name", ctx)
+    TextLoader.register("text", ctx)
+    TextLoader.register("varchar", ctx)
+    TextBinaryLoader.register("bpchar", ctx)
+    TextBinaryLoader.register("name", ctx)
+    TextBinaryLoader.register("text", ctx)
+    TextBinaryLoader.register("varchar", ctx)
+
+    BytesDumper.register(bytes, ctx)
+    BytesDumper.register(bytearray, ctx)
+    BytesDumper.register(memoryview, ctx)
+    BytesBinaryDumper.register(bytes, ctx)
+    BytesBinaryDumper.register(bytearray, ctx)
+    BytesBinaryDumper.register(memoryview, ctx)
+    ByteaLoader.register("bytea", ctx)
+    ByteaBinaryLoader.register(INVALID_OID, ctx)
+    ByteaBinaryLoader.register("bytea", ctx)

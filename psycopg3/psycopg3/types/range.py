@@ -569,3 +569,32 @@ class TimestampRangeBinaryLoader(RangeBinaryLoader[datetime]):
 
 class TimestampTZRangeBinaryLoader(RangeBinaryLoader[datetime]):
     subtype_oid = builtins["timestamptz"].oid
+
+
+def register_default_globals(ctx: AdaptContext) -> None:
+    RangeBinaryDumper.register(Range, ctx)
+    RangeDumper.register(Range, ctx)
+    Int4RangeDumper.register(Int4Range, ctx)
+    Int8RangeDumper.register(Int8Range, ctx)
+    NumericRangeDumper.register(NumericRange, ctx)
+    DateRangeDumper.register(DateRange, ctx)
+    TimestampRangeDumper.register(TimestampRange, ctx)
+    TimestamptzRangeDumper.register(TimestamptzRange, ctx)
+    Int4RangeBinaryDumper.register(Int4Range, ctx)
+    Int8RangeBinaryDumper.register(Int8Range, ctx)
+    NumericRangeBinaryDumper.register(NumericRange, ctx)
+    DateRangeBinaryDumper.register(DateRange, ctx)
+    TimestampRangeBinaryDumper.register(TimestampRange, ctx)
+    TimestamptzRangeBinaryDumper.register(TimestamptzRange, ctx)
+    Int4RangeLoader.register("int4range", ctx)
+    Int8RangeLoader.register("int8range", ctx)
+    NumericRangeLoader.register("numrange", ctx)
+    DateRangeLoader.register("daterange", ctx)
+    TimestampRangeLoader.register("tsrange", ctx)
+    TimestampTZRangeLoader.register("tstzrange", ctx)
+    Int4RangeBinaryLoader.register("int4range", ctx)
+    Int8RangeBinaryLoader.register("int8range", ctx)
+    NumericRangeBinaryLoader.register("numrange", ctx)
+    DateRangeBinaryLoader.register("daterange", ctx)
+    TimestampRangeBinaryLoader.register("tsrange", ctx)
+    TimestampTZRangeBinaryLoader.register("tstzrange", ctx)

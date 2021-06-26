@@ -71,7 +71,7 @@ information from certain class of PostgreSQL types and to create more
 specialised adapters configurations.
 
 
-.. autoclass:: CompositeInfo
+.. autoclass:: psycopg3.types.composite.CompositeInfo
 
     .. automethod:: register
 
@@ -80,7 +80,7 @@ specialised adapters configurations.
         custom object if *factory* is specified.
 
 
-.. autoclass:: RangeInfo
+.. autoclass:: psycopg3.types.range.RangeInfo
 
     .. automethod:: register
 
@@ -111,6 +111,8 @@ Objects wrappers
 
 JSON adapters
 -------------
+
+.. currentmodule:: psycopg3.types.json
 
 .. autoclass:: Json
 .. autoclass:: Jsonb

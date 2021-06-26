@@ -1,4 +1,5 @@
 import datetime as dt
+from types import ModuleType
 
 import pytest
 
@@ -93,7 +94,7 @@ def test_dump_subclass(conn, fmt_out):
 
 def test_subclass_dumper(conn):
     # This might be a C fast object: make sure that the Python code is called
-    from psycopg3.types import StringDumper
+    from psycopg3.types.text import StringDumper
 
     class MyStringDumper(StringDumper):
         def dump(self, obj):
@@ -105,7 +106,7 @@ def test_subclass_dumper(conn):
 
 def test_subclass_loader(conn):
     # This might be a C fast object: make sure that the Python code is called
-    from psycopg3.types import TextLoader
+    from psycopg3.types.text import TextLoader
 
     class MyTextLoader(TextLoader):
         def load(self, data):
@@ -291,9 +292,8 @@ def test_no_cast_needed(conn, fmt_in):
     assert cur.fetchone()[0] == 20
 
 
+@pytest.mark.skipif(psycopg3.pq.__impl__ == "python", reason="C module test")
 def test_optimised_adapters():
-    if psycopg3.pq.__impl__ == "python":
-        pytest.skip("test C module only")
 
     from psycopg3_c import _psycopg3
 
@@ -330,15 +330,16 @@ def test_optimised_adapters():
 
     # Check that every optimised adapter is the optimised version of a Py one
     for n in dir(psycopg3.types):
-        obj = getattr(psycopg3.types, n)
-        if not isinstance(obj, type):
+        mod = getattr(psycopg3.types, n)
+        if not isinstance(mod, ModuleType):
             continue
-        if not issubclass(obj, (Dumper, Loader)):
-            continue
-        c_adapters.pop(obj.__name__, None)
-
-    # TODO: This dumper is not registered yet as not implemented
-    del c_adapters["IntNumericBinaryDumper"]
+        for n1 in dir(mod):
+            obj = getattr(mod, n1)
+            if not isinstance(obj, type):
+                continue
+            if not issubclass(obj, (Dumper, Loader)):
+                continue
+            c_adapters.pop(obj.__name__, None)
 
     assert not c_adapters
 

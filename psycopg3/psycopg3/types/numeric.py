@@ -14,6 +14,7 @@ from ..pq import Format
 from ..oids import postgres_types as builtins
 from ..adapt import Buffer, Dumper, Loader
 from ..adapt import Format as Pg3Format
+from ..proto import AdaptContext
 from .._struct import pack_int2, pack_uint2, unpack_int2
 from .._struct import pack_int4, pack_uint4, unpack_int4, unpack_uint4
 from .._struct import pack_int8, unpack_int8
@@ -450,3 +451,37 @@ class DecimalBinaryDumper(Dumper):
             out += pack_uint2(pgdigit)
 
         return out
+
+
+def register_default_globals(ctx: AdaptContext) -> None:
+    IntDumper.register(int, ctx)
+    IntBinaryDumper.register(int, ctx)
+    FloatDumper.register(float, ctx)
+    FloatBinaryDumper.register(float, ctx)
+    # The binary dumper is currently some 30% slower, so default to text
+    # (see tests/scripts/testdec.py for a rough benchmark)
+    DecimalBinaryDumper.register("decimal.Decimal", ctx)
+    DecimalDumper.register("decimal.Decimal", ctx)
+    Int2Dumper.register(Int2, ctx)
+    Int4Dumper.register(Int4, ctx)
+    Int8Dumper.register(Int8, ctx)
+    IntNumericDumper.register(IntNumeric, ctx)
+    OidDumper.register(Oid, ctx)
+    Int2BinaryDumper.register(Int2, ctx)
+    Int4BinaryDumper.register(Int4, ctx)
+    Int8BinaryDumper.register(Int8, ctx)
+    OidBinaryDumper.register(Oid, ctx)
+    IntLoader.register("int2", ctx)
+    IntLoader.register("int4", ctx)
+    IntLoader.register("int8", ctx)
+    IntLoader.register("oid", ctx)
+    Int2BinaryLoader.register("int2", ctx)
+    Int4BinaryLoader.register("int4", ctx)
+    Int8BinaryLoader.register("int8", ctx)
+    OidBinaryLoader.register("oid", ctx)
+    FloatLoader.register("float4", ctx)
+    FloatLoader.register("float8", ctx)
+    Float4BinaryLoader.register("float4", ctx)
+    Float8BinaryLoader.register("float8", ctx)
+    NumericLoader.register("numeric", ctx)
+    NumericBinaryLoader.register("numeric", ctx)

@@ -737,3 +737,26 @@ _month_abbr = {
 
 # Pad to get microseconds from a fraction of seconds
 _uspad = [0, 100_000, 10_000, 1_000, 100, 10, 1]
+
+
+def register_default_globals(ctx: AdaptContext) -> None:
+    DateDumper.register("datetime.date", ctx)
+    DateBinaryDumper.register("datetime.date", ctx)
+    TimeDumper.register("datetime.time", ctx)
+    TimeBinaryDumper.register("datetime.time", ctx)
+    DateTimeTzDumper.register("datetime.datetime", ctx)
+    DateTimeTzBinaryDumper.register("datetime.datetime", ctx)
+    TimeDeltaDumper.register("datetime.timedelta", ctx)
+    TimeDeltaBinaryDumper.register("datetime.timedelta", ctx)
+    DateLoader.register("date", ctx)
+    DateBinaryLoader.register("date", ctx)
+    TimeLoader.register("time", ctx)
+    TimeBinaryLoader.register("time", ctx)
+    TimetzLoader.register("timetz", ctx)
+    TimetzBinaryLoader.register("timetz", ctx)
+    TimestampLoader.register("timestamp", ctx)
+    TimestampBinaryLoader.register("timestamp", ctx)
+    TimestamptzLoader.register("timestamptz", ctx)
+    TimestamptzBinaryLoader.register("timestamptz", ctx)
+    IntervalLoader.register("interval", ctx)
+    IntervalBinaryLoader.register("interval", ctx)

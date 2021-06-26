@@ -208,3 +208,9 @@ def register_adapters(
         {"factory": factory},
     )
     loader.register(info.oid, context=context)
+
+
+def register_default_globals(ctx: AdaptContext) -> None:
+    TupleDumper.register(tuple, ctx)
+    RecordLoader.register("record", ctx)
+    RecordBinaryLoader.register("record", ctx)
