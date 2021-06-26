@@ -6,6 +6,7 @@ psycopg3 types package
 
 from typing import TYPE_CHECKING
 
+from . import net
 from . import bool
 from . import date
 from . import json
@@ -14,7 +15,6 @@ from . import text
 from . import uuid
 from . import array
 from . import range
-from . import network
 from . import numeric
 from . import composite
 
@@ -25,6 +25,7 @@ if TYPE_CHECKING:
 
 
 def register_default_globals(ctx: "AdaptContext") -> None:
+    net.register_default_globals(ctx)
     bool.register_default_globals(ctx)
     date.register_default_globals(ctx)
     json.register_default_globals(ctx)
@@ -33,7 +34,6 @@ def register_default_globals(ctx: "AdaptContext") -> None:
     uuid.register_default_globals(ctx)
     array.register_default_globals(ctx)
     range.register_default_globals(ctx)
-    network.register_default_globals(ctx)
     numeric.register_default_globals(ctx)
     composite.register_default_globals(ctx)
 
