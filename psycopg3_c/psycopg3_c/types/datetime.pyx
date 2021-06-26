@@ -209,7 +209,7 @@ cdef class TimeTzBinaryDumper(_BaseTimeDumper):
         return sizeof(int64_t) + sizeof(int32_t)
 
 
-cdef class _BaseDateTimeDumper(CDumper):
+cdef class _BaseDatetimeDumper(CDumper):
 
     cpdef get_key(self, obj, format):
         # Use (cls,) to report the need to upgrade (downgrade, actually) to a
@@ -223,7 +223,7 @@ cdef class _BaseDateTimeDumper(CDumper):
         raise NotImplementedError
 
 
-cdef class _BaseDateTimeTextDumper(_BaseDateTimeDumper):
+cdef class _BaseDatetimeTextDumper(_BaseDatetimeDumper):
 
     format = PQ_TEXT
 
@@ -242,7 +242,7 @@ cdef class _BaseDateTimeTextDumper(_BaseDateTimeDumper):
 
 
 @cython.final
-cdef class DateTimeTzDumper(_BaseDateTimeTextDumper):
+cdef class DatetimeDumper(_BaseDatetimeTextDumper):
 
     def __cinit__(self):
         self.oid = oids.TIMESTAMPTZ_OID
@@ -251,18 +251,18 @@ cdef class DateTimeTzDumper(_BaseDateTimeTextDumper):
         if obj.tzinfo:
             return self
         else:
-            return DateTimeDumper(self.cls)
+            return DatetimeNoTzDumper(self.cls)
 
 
 @cython.final
-cdef class DateTimeDumper(_BaseDateTimeTextDumper):
+cdef class DatetimeNoTzDumper(_BaseDatetimeTextDumper):
 
     def __cinit__(self):
         self.oid = oids.TIMESTAMP_OID
 
 
 @cython.final
-cdef class DateTimeTzBinaryDumper(_BaseDateTimeDumper):
+cdef class DatetimeBinaryDumper(_BaseDatetimeDumper):
 
     format = PQ_BINARY
 
@@ -284,11 +284,11 @@ cdef class DateTimeTzBinaryDumper(_BaseDateTimeDumper):
         if obj.tzinfo:
             return self
         else:
-            return DateTimeBinaryDumper(self.cls)
+            return DatetimeNoTzBinaryDumper(self.cls)
 
 
 @cython.final
-cdef class DateTimeBinaryDumper(_BaseDateTimeDumper):
+cdef class DatetimeNoTzBinaryDumper(_BaseDatetimeDumper):
 
     format = PQ_BINARY
 
@@ -308,7 +308,7 @@ cdef class DateTimeBinaryDumper(_BaseDateTimeDumper):
 
 
 @cython.final
-cdef class TimeDeltaDumper(CDumper):
+cdef class TimedeltaDumper(CDumper):
 
     format = PQ_TEXT
     cdef int _style
@@ -346,7 +346,7 @@ cdef class TimeDeltaDumper(CDumper):
 
 
 @cython.final
-cdef class TimeDeltaBinaryDumper(CDumper):
+cdef class TimedeltaBinaryDumper(CDumper):
 
     format = PQ_BINARY
 
