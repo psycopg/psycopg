@@ -271,19 +271,13 @@ either `psycopg.types.json.Json` or `~psycopg.types.json.Jsonb`.
     thing = {"foo": ["bar", 42]}
     conn.execute("insert into mytable values (%s)", [Jsonb(thing)])
 
-By default Psycopg uses the standard library `json.dumps()`__ and
-`json.loads()`__ functions to serialize and de-serialize Python objects to
-JSON. If you want to customise globally how serialization happens, for
-instance changing serialization parameters or using a different JSON library,
-you can specify your own functions using the
-`psycopg.types.json.set_json_dumps()` and
-`~psycopg.types.json.set_json_loads()` functions.
-
-..
-    weird: intersphinx doesn't work
-
-.. __: https://docs.python.org/3/library/json.html#json.dumps
-.. __: https://docs.python.org/3/library/json.html#json.loads
+By default Psycopg uses the standard library `json.dumps` and `json.loads`
+functions to serialize and de-serialize Python objects to JSON. If you want to
+customise how serialization happens, for instance changing serialization
+parameters or using a different JSON library, you can specify your own
+functions using the `psycopg.types.json.set_json_dumps()` and
+`~psycopg.types.json.set_json_loads()` functions, to apply either globally or
+to a specific context (connection or cursor).
 
 .. code:: python
 
@@ -294,15 +288,34 @@ you can specify your own functions using the
     # Use a faster dump function
     set_json_dumps(ujson.dumps)
 
-    # Return floating point values as Decimal
-    set_json_loads(partial(json.loads, parse_float=Decimal))
+    # Return floating point values as Decimal, just in one connection
+    set_json_loads(partial(json.loads, parse_float=Decimal), conn)
 
     conn.execute("select %s", [Jsonb({"value": 123.45})]).fetchone()[0]
     # {'value': Decimal('123.45')}
 
-If you need a more precise customisation, such as per-connection instead of
-global, you can subclass and register the JSON adapters in the right context:
-see :ref:`json-adapters`.
+If you need an even more specific dump customisation only for certain objects
+(including different configurations in the same query) you can specify a
+*dumps* parameter in the
+`~psycopg.types.json.Json`/`~psycopg.types.json.Jsonb` wrapper, which will
+take precedence over what specified by `!set_json_dumps()`.
+
+.. code:: python
+
+    from uuid import UUID, uuid4
+
+    class UUIDEncoder(json.JSONEncoder):
+        """A JSON encoder which can dump UUID."""
+        def default(self, obj):
+            if isinstance(obj, UUID):
+                return str(obj)
+            return json.JSONEncoder.default(self, obj)
+
+    uuid_dumps = partial(json.dumps, cls=UUIDEncoder)
+    obj = {"uuid": uuid4()}
+    cnn.execute("insert into objs values %s", [Json(obj, dumps=uuid_dumps)])
+    # will insert: {'uuid': '0a40799d-3980-4c65-8315-2956b18ab0e1'}
+
 
 .. _adapt-date:
 .. _adapt-list:
