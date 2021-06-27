@@ -82,6 +82,21 @@ def test_json_dump_customise(conn, wrapper, fmt_in):
 
 @pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
 @pytest.mark.parametrize("wrapper", ["Json", "Jsonb"])
+def test_json_dump_customise_context(conn, wrapper, fmt_in):
+    wrapper = getattr(psycopg.types.json, wrapper)
+    obj = {"foo": "bar"}
+    cur1 = conn.cursor()
+    cur2 = conn.cursor()
+
+    set_json_dumps(my_dumps, cur2)
+    cur1.execute(f"select %{fmt_in}->>'baz'", (wrapper(obj),))
+    assert cur1.fetchone()[0] is None
+    cur2.execute(f"select %{fmt_in}->>'baz'", (wrapper(obj),))
+    assert cur2.fetchone()[0] == "qux"
+
+
+@pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("wrapper", ["Json", "Jsonb"])
 def test_json_dump_customise_wrapper(conn, wrapper, fmt_in):
     wrapper = getattr(psycopg.types.json, wrapper)
     obj = {"foo": "bar"}
@@ -90,29 +105,9 @@ def test_json_dump_customise_wrapper(conn, wrapper, fmt_in):
     assert cur.fetchone()[0] is True
 
 
-@pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
-@pytest.mark.parametrize("wrapper", ["Json", "Jsonb"])
-def test_json_dump_subclass(conn, wrapper, fmt_in):
-    JDumper = getattr(
-        psycopg.types.json,
-        f"{wrapper}{'Binary' if fmt_in != Format.TEXT else ''}Dumper",
-    )
-    wrapper = getattr(psycopg.types.json, wrapper)
-
-    class MyJsonDumper(JDumper):
-        _dumps = my_dumps
-
-    obj = {"foo": "bar"}
-    cur = conn.cursor()
-    MyJsonDumper.register(wrapper, context=cur)
-    cur.execute(f"select %{fmt_in}->>'baz' = 'qux'", (wrapper(obj),))
-    assert cur.fetchone()[0] is True
-
-
 @pytest.mark.parametrize("binary", [True, False])
 @pytest.mark.parametrize("pgtype", ["json", "jsonb"])
 def test_json_load_customise(conn, binary, pgtype):
-    obj = {"foo": "bar"}
     cur = conn.cursor(binary=binary)
 
     set_json_loads(my_loads)
@@ -127,21 +122,20 @@ def test_json_load_customise(conn, binary, pgtype):
 
 @pytest.mark.parametrize("binary", [True, False])
 @pytest.mark.parametrize("pgtype", ["json", "jsonb"])
-def test_json_load_subclass(conn, binary, pgtype):
-    JLoader = getattr(
-        psycopg.types.json,
-        f"{pgtype.title()}{'Binary' if binary else ''}Loader",
-    )
+def test_json_load_customise_context(conn, binary, pgtype):
+    cur1 = conn.cursor(binary=binary)
+    cur2 = conn.cursor(binary=binary)
 
-    class MyJsonLoader(JLoader):
-        _loads = my_loads
+    set_json_loads(my_loads, cur2)
+    cur1.execute(f"""select '{{"foo": "bar"}}'::{pgtype}""")
+    got = cur1.fetchone()[0]
+    assert got["foo"] == "bar"
+    assert "answer" not in got
 
-    cur = conn.cursor(binary=binary)
-    MyJsonLoader.register(cur.adapters.types[pgtype].oid, context=cur)
-    cur.execute(f"""select '{{"foo": "bar"}}'::{pgtype}""")
-    obj = cur.fetchone()[0]
-    assert obj["foo"] == "bar"
-    assert obj["answer"] == 42
+    cur2.execute(f"""select '{{"foo": "bar"}}'::{pgtype}""")
+    got = cur2.fetchone()[0]
+    assert got["foo"] == "bar"
+    assert got["answer"] == 42
 
 
 def my_dumps(obj):

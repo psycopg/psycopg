@@ -5,7 +5,7 @@ Adapers for JSON types.
 # Copyright (C) 2020-2021 The Psycopg Team
 
 import json
-from typing import Any, Callable, Optional, Union
+from typing import Any, Callable, Optional, Type, Union
 
 from ..pq import Format
 from ..oids import postgres_types as builtins
@@ -17,24 +17,60 @@ JsonDumpsFunction = Callable[[Any], str]
 JsonLoadsFunction = Callable[[Union[str, bytes, bytearray]], Any]
 
 
-def set_json_dumps(dumps: JsonDumpsFunction) -> None:
+def set_json_dumps(
+    dumps: JsonDumpsFunction, context: Optional[AdaptContext] = None
+) -> None:
     """
     Set a global JSON serialisation function to use by default by JSON dumpers.
 
     By default dumping JSON uses the builtin `json.dumps()`. You can override
     it to use a different JSON library or to use customised arguments.
     """
-    _JsonDumper._dumps = dumps
+    if context is None:
+        # If changing load function globally, just change the default on the
+        # global class
+        _JsonDumper._dumps = dumps
+    else:
+        # If the scope is smaller than global, create subclassess and register
+        # them in the appropriate scope.
+        grid = [
+            (Json, JsonDumper),
+            (Json, JsonBinaryDumper),
+            (Jsonb, JsonbDumper),
+            (Jsonb, JsonbBinaryDumper),
+        ]
+        dumper: Type[_JsonDumper]
+        for wrapper, base in grid:
+            dumper = type(f"Custom{base.__name__}", (base,), {"_dumps": dumps})
+            dumper.register(wrapper, context=context)
 
 
-def set_json_loads(loads: JsonLoadsFunction) -> None:
+def set_json_loads(
+    loads: JsonLoadsFunction, context: Optional[AdaptContext] = None
+) -> None:
     """
     Set a global JSON parsing function to use by default by the JSON loaders.
 
     By default loading JSON uses the builtin `json.loads()`. You can override
     it to use a different JSON library or to use customised arguments.
     """
-    _JsonLoader._loads = loads
+    if context is None:
+        # If changing load function globally, just change the default on the
+        # global class
+        _JsonLoader._loads = loads
+    else:
+        # If the scope is smaller than global, create subclassess and register
+        # them in the appropriate scope.
+        grid = [
+            ("json", JsonLoader),
+            ("json", JsonBinaryLoader),
+            ("jsonb", JsonbLoader),
+            ("jsonb", JsonbBinaryLoader),
+        ]
+        loader: Type[_JsonLoader]
+        for tname, base in grid:
+            loader = type(f"Custom{base.__name__}", (base,), {"_loads": loads})
+            loader.register(tname, context=context)
 
 
 class _JsonWrapper:
