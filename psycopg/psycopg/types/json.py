@@ -82,9 +82,10 @@ class JsonDumper(_JsonDumper):
     _oid = builtins["json"].oid
 
 
-class JsonBinaryDumper(JsonDumper):
+class JsonBinaryDumper(_JsonDumper):
 
     format = Format.BINARY
+    _oid = builtins["json"].oid
 
 
 class JsonbDumper(_JsonDumper):
@@ -93,9 +94,10 @@ class JsonbDumper(_JsonDumper):
     _oid = builtins["jsonb"].oid
 
 
-class JsonbBinaryDumper(JsonbDumper):
+class JsonbBinaryDumper(_JsonDumper):
 
     format = Format.BINARY
+    _oid = builtins["jsonb"].oid
 
     def dump(self, obj: _JsonWrapper) -> bytes:
         dumps = obj.dumps or self.dumps
