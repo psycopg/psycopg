@@ -994,3 +994,11 @@ class Escaping:
         rv = string_at(out, len_out.value)
         impl.PQfreemem(out)
         return memoryview(rv)
+
+
+# importing the ssl module sets up Python's libcrypto callbacks
+import ssl  # noqa
+
+# disable libcrypto setup in libpq, so it won't stomp on the callbacks
+# that have already been set up
+impl.PQinitOpenSSL(1, 0)

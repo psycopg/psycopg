@@ -23,3 +23,11 @@ include "pq/pgcancel.pyx"
 include "pq/conninfo.pyx"
 include "pq/escaping.pyx"
 include "pq/pqbuffer.pyx"
+
+
+# importing the ssl module sets up Python's libcrypto callbacks
+import ssl  # noqa
+
+# disable libcrypto setup in libpq, so it won't stomp on the callbacks
+# that have already been set up
+libpq.PQinitOpenSSL(1, 0)

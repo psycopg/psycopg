@@ -5,7 +5,6 @@ Libpq header definition for the cython psycopg.pq implementation.
 # Copyright (C) 2020-2021 The Psycopg Team
 
 cdef extern from "libpq-fe.h":
-    int PQlibVersion()
 
     # structures and types
 
@@ -257,3 +256,6 @@ cdef extern from "libpq-fe.h":
     ctypedef void (*PQnoticeReceiver)(void *arg, const PGresult *res)
     PQnoticeReceiver PQsetNoticeReceiver(
         PGconn *conn, PQnoticeReceiver prog, void *arg)
+
+    # 33.18. SSL Support
+    void PQinitOpenSSL(int do_ssl, int do_crypto)

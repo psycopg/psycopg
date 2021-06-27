@@ -573,6 +573,13 @@ PQsetNoticeReceiver.argtypes = [PGconn_ptr, PQnoticeReceiver, c_void_p]
 PQsetNoticeReceiver.restype = PQnoticeReceiver
 
 
+# 33.18. SSL Support
+
+PQinitOpenSSL = pq.PQinitOpenSSL
+PQinitOpenSSL.argtypes = [c_int, c_int]
+PQinitOpenSSL.restype = None
+
+
 def generate_stub() -> None:
     import re
     from ctypes import _CFuncPtr
