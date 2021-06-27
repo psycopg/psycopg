@@ -9,3 +9,4 @@ __pycache__/
 /docs/_build/
 /docs/.venv/
 *.html
+/psycopg_binary/
