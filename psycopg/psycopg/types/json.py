@@ -21,10 +21,19 @@ def set_json_dumps(
     dumps: JsonDumpsFunction, context: Optional[AdaptContext] = None
 ) -> None:
     """
-    Set a global JSON serialisation function to use by default by JSON dumpers.
+    Set the JSON serialisation function to store JSON objects in the database.
 
-    By default dumping JSON uses the builtin `json.dumps()`. You can override
+    :param dumps: The dump function to use.
+    :type dumps: `!Callable[[Any], str]`
+    :param context: Where to use the *dumps* function. If not specified, use it
+        globally.
+    :type context: `~psycopg.Connection` or `~psycopg.Cursor`
+
+    By default dumping JSON uses the builtin `json.dumps`. You can override
     it to use a different JSON library or to use customised arguments.
+
+    If the `Json` wrapper specified a *dumps* function, use it in precedence
+    of the one set by this function.
     """
     if context is None:
         # If changing load function globally, just change the default on the
@@ -49,9 +58,15 @@ def set_json_loads(
     loads: JsonLoadsFunction, context: Optional[AdaptContext] = None
 ) -> None:
     """
-    Set a global JSON parsing function to use by default by the JSON loaders.
+    Set the JSON parsing function to fetch JSON objects from the database.
 
-    By default loading JSON uses the builtin `json.loads()`. You can override
+    :param loads: The load function to use.
+    :type loads: `!Callable[[bytes], Any]`
+    :param context: Where to use the *loads* function. If not specified, use it
+        globally.
+    :type context: `~psycopg.Connection` or `~psycopg.Cursor`
+
+    By default loading JSON uses the builtin `json.loads`. You can override
     it to use a different JSON library or to use customised arguments.
     """
     if context is None:
