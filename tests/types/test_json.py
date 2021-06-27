@@ -93,15 +93,19 @@ def test_json_dump_customise_wrapper(conn, wrapper, fmt_in):
 @pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
 @pytest.mark.parametrize("wrapper", ["Json", "Jsonb"])
 def test_json_dump_subclass(conn, wrapper, fmt_in):
+    JDumper = getattr(
+        psycopg.types.json,
+        f"{wrapper}{'Binary' if fmt_in != Format.TEXT else ''}Dumper",
+    )
     wrapper = getattr(psycopg.types.json, wrapper)
 
-    class MyWrapper(wrapper):
-        def dumps(self):
-            return my_dumps(self.obj)
+    class MyJsonDumper(JDumper):
+        _dumps = my_dumps
 
     obj = {"foo": "bar"}
     cur = conn.cursor()
-    cur.execute(f"select %{fmt_in}->>'baz' = 'qux'", (MyWrapper(obj),))
+    MyJsonDumper.register(wrapper, context=cur)
+    cur.execute(f"select %{fmt_in}->>'baz' = 'qux'", (wrapper(obj),))
     assert cur.fetchone()[0] is True
 
 
@@ -130,8 +134,7 @@ def test_json_load_subclass(conn, binary, pgtype):
     )
 
     class MyJsonLoader(JLoader):
-        def get_loads(self):
-            return my_loads
+        _loads = my_loads
 
     cur = conn.cursor(binary=binary)
     MyJsonLoader.register(cur.adapters.types[pgtype].oid, context=cur)
