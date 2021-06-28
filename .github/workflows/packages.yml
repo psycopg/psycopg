@@ -20,7 +20,7 @@ jobs:
         uses: docker/setup-qemu-action@v1
 
       - name: Create the binary package source tree
-        run: ./tools/build/copy_to_binary.sh
+        run: python3 ./tools/build/copy_to_binary.py
 
       - name: Build wheels
         uses: pypa/cibuildwheel@v1.12.0
