@@ -7,6 +7,8 @@ import pytest
 
 from psycopg.pool.sched import Scheduler
 
+pytestmark = pytest.mark.timing
+
 
 @pytest.mark.slow
 def test_sched():

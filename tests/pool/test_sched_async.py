@@ -8,7 +8,7 @@ import pytest
 from psycopg.compat import create_task
 from psycopg.pool.sched import AsyncScheduler
 
-pytestmark = pytest.mark.asyncio
+pytestmark = [pytest.mark.asyncio, pytest.mark.timing]
 
 
 @pytest.mark.slow

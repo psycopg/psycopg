@@ -23,6 +23,11 @@ def pytest_configure(config):
         "markers", "subprocess: the test import psycopg after subprocess"
     )
 
+    config.addinivalue_line(
+        "markers",
+        "timing: the test is timing based and can fail on cheese hardware",
+    )
+
 
 def pytest_addoption(parser):
     parser.addoption(
