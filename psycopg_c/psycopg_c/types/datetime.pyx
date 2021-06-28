@@ -698,7 +698,7 @@ cdef class TimestampBinaryLoader(CLoader):
 
     cdef object cload(self, const char *data, size_t length):
         cdef int64_t val = endian.be64toh((<uint64_t *>data)[0])
-        cdef long micros, secs, days
+        cdef int64_t micros, secs, days
 
         # Work only with positive values as the cdivision behaves differently
         # with negative values, and cdivision=False adds overhead.
@@ -830,7 +830,7 @@ cdef class TimestamptzBinaryLoader(_BaseTimestamptzLoader):
 
     cdef object cload(self, const char *data, size_t length):
         cdef int64_t val = endian.be64toh((<uint64_t *>data)[0])
-        cdef long micros, secs, days
+        cdef int64_t micros, secs, days
 
         # Work only with positive values as the cdivision behaves differently
         # with negative values, and cdivision=False adds overhead.

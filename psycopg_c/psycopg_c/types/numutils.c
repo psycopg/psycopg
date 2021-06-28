@@ -9,17 +9,7 @@
 #include <stdint.h>
 #include <string.h>
 
-/* configuration */
-
-#ifdef __GNUC__
-#define SIZEOF_VOID_P __SIZEOF_POINTER__
-#define HAVE__BUILTIN_CLZ 1
-#else
-#error 'you need to define this for your compiler'
-#endif
-
-/* TODO: this is a guess, it is on my Ubuntu 20.04 */
-#define HAVE_LONG_INT_64 1
+#include "pg_config.h"
 
 
 /*
