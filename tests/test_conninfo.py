@@ -161,7 +161,10 @@ class TestConnectionInfo:
     def test_get_params(self, conn, dsn):
         info = conn.info.get_parameters()
         for k, v in conninfo_to_dict(dsn).items():
-            assert info.get(k) == v
+            if k != "password":
+                assert info.get(k) == v
+            else:
+                assert k not in info
 
     def test_get_params_env(self, dsn, monkeypatch):
         dsn = conninfo_to_dict(dsn)
