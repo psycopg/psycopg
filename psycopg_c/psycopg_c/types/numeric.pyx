@@ -21,8 +21,7 @@ from decimal import Decimal, Context, DefaultContext
 
 from psycopg_c._psycopg cimport endian
 from psycopg import errors as e
-
-from psycopg.types.numeric import Int2, Int4, Int8, IntNumeric
+from psycopg._wrappers import Int2, Int4, Int8, IntNumeric
 
 cdef extern from "Python.h":
     # work around https://github.com/cython/cython/issues/3909

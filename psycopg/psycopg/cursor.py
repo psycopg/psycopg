@@ -21,6 +21,7 @@ from .rows import Row, RowFactory
 from .proto import ConnectionType, Query, Params, PQGen
 from .compat import asynccontextmanager
 from ._column import Column
+from ._cmodule import _psycopg
 from ._queries import PostgresQuery
 from ._preparing import Prepare
 
@@ -32,9 +33,7 @@ if TYPE_CHECKING:
 
 execute: Callable[["PGconn"], PQGen[List["PGresult"]]]
 
-if pq.__impl__ == "c":
-    from psycopg_c import _psycopg
-
+if _psycopg:
     execute = _psycopg.execute
 
 else:

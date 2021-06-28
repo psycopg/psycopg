@@ -28,6 +28,7 @@ from .proto import AdaptContext, ConnectionType, Params, PQGen, PQGenConn
 from .proto import Query, RV
 from .compat import asynccontextmanager
 from .cursor import Cursor, AsyncCursor
+from ._cmodule import _psycopg
 from .conninfo import _conninfo_connect_timeout, ConnectionInfo
 from .generators import notifies
 from ._preparing import PrepareManager
@@ -47,9 +48,7 @@ if TYPE_CHECKING:
     from .pq.proto import PGconn, PGresult
     from .pool.base import BasePool
 
-if pq.__impl__ == "c":
-    from psycopg_c import _psycopg
-
+if _psycopg:
     connect = _psycopg.connect
     execute = _psycopg.execute
 

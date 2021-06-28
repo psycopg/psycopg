@@ -20,6 +20,7 @@ from .pq import ExecStatus
 from .adapt import Format
 from .proto import ConnectionType, PQGen, Transformer
 from .compat import create_task
+from ._cmodule import _psycopg
 from .generators import copy_from, copy_to, copy_end
 
 if TYPE_CHECKING:
@@ -639,9 +640,7 @@ def _load_sub(
 
 
 # Override functions with fast versions if available
-if pq.__impl__ == "c":
-    from psycopg_c import _psycopg
-
+if _psycopg:
     format_row_text = _psycopg.format_row_text
     format_row_binary = _psycopg.format_row_binary
     parse_row_text = _psycopg.parse_row_text

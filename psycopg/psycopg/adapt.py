@@ -14,6 +14,7 @@ from . import errors as e
 from ._enums import Format as Format
 from .oids import postgres_types
 from .proto import AdaptContext, Buffer as Buffer
+from ._cmodule import _psycopg
 from ._typeinfo import TypesRegistry
 
 if TYPE_CHECKING:
@@ -186,7 +187,7 @@ class AdaptersMap(AdaptContext):
                 f"dumpers should be registered on classes, got {cls} instead"
             )
 
-        if pq.__impl__ != "python":
+        if _psycopg:
             dumper = self._get_optimised(dumper)
 
         # Register the dumper both as its format and as default
@@ -210,7 +211,7 @@ class AdaptersMap(AdaptContext):
                 f"loaders should be registered on oid, got {oid} instead"
             )
 
-        if pq.__impl__ != "python":
+        if _psycopg:
             loader = self._get_optimised(loader)
 
         fmt = loader.format
@@ -272,7 +273,6 @@ class AdaptersMap(AdaptContext):
         # Check if the class comes from psycopg.types and there is a class
         # with the same name in psycopg_c._psycopg.
         from psycopg import types
-        from psycopg_c import _psycopg
 
         if cls.__module__.startswith(types.__name__):
             new = cast(Type[RV], getattr(_psycopg, cls.__name__, None))
@@ -292,9 +292,7 @@ global_adapters = AdaptersMap(types=postgres_types)
 Transformer: Type[proto.Transformer]
 
 # Override it with fast object if available
-if pq.__impl__ == "c":
-    from psycopg_c import _psycopg
-
+if _psycopg:
     Transformer = _psycopg.Transformer
 else:
     from . import _transform

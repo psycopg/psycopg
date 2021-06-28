@@ -7,6 +7,7 @@ import psycopg
 from psycopg import pq
 from psycopg.adapt import Transformer, Format, Dumper, Loader
 from psycopg.oids import postgres_types as builtins, TEXT_OID
+from psycopg._cmodule import _psycopg
 
 
 @pytest.mark.parametrize(
@@ -292,10 +293,8 @@ def test_no_cast_needed(conn, fmt_in):
     assert cur.fetchone()[0] == 20
 
 
-@pytest.mark.skipif(psycopg.pq.__impl__ == "python", reason="C module test")
+@pytest.mark.skipif(_psycopg is None, reason="C module test")
 def test_optimised_adapters():
-
-    from psycopg_c import _psycopg
 
     # All the optimised adapters available
     c_adapters = {}
