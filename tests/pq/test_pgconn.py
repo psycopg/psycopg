@@ -167,7 +167,7 @@ def test_ping(dsn):
     rv = pq.PGconn.ping(dsn.encode("utf8"))
     assert rv == pq.Ping.OK
 
-    rv = pq.PGconn.ping(b"port=99999")
+    rv = pq.PGconn.ping(b"port=9999")
     assert rv == pq.Ping.NO_RESPONSE
 
 
@@ -212,7 +212,6 @@ def test_hostaddr(pgconn):
         pgconn.hostaddr
 
 
-@pytest.mark.xfail
 @pytest.mark.libpq("< 12")
 def test_hostaddr_missing(pgconn):
     with pytest.raises(psycopg.NotSupportedError):

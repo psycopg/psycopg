@@ -17,6 +17,7 @@ def test_defaults(monkeypatch):
     assert port.dispsize == 6
 
 
+@pytest.mark.libpq(">= 10")
 def test_conninfo_parse():
     info = pq.Conninfo.parse(
         b"postgresql://host1:123,host2:456/somedb"
@@ -26,6 +27,18 @@ def test_conninfo_parse():
     assert info[b"host"] == b"host1,host2"
     assert info[b"port"] == b"123,456"
     assert info[b"dbname"] == b"somedb"
+    assert info[b"application_name"] == b"myapp"
+
+
+@pytest.mark.libpq("< 10")
+def test_conninfo_parse_96():
+    info = pq.Conninfo.parse(
+        b"postgresql://other@localhost/otherdb"
+        b"?connect_timeout=10&application_name=myapp"
+    )
+    info = {i.keyword: i.val for i in info if i.val is not None}
+    assert info[b"host"] == b"localhost"
+    assert info[b"dbname"] == b"otherdb"
     assert info[b"application_name"] == b"myapp"
 
 
