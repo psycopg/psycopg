@@ -58,3 +58,36 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+
+  build_macos:
+    name: Build MacOS packages
+    runs-on: macos-10.15
+    strategy:
+      matrix:
+        pyver: [cp36, cp37, cp38, cp39]
+        arch: [x86_64]
+        # These archs require an Apple M1 runner: [arm64, universal2]
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Create the binary package source tree
+        run: python3 ./tools/build/copy_to_binary.py
+
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v1.12.0
+        with:
+          package-dir: psycopg_binary
+        env:
+          CIBW_BUILD: ${{matrix.pyver}}-macosx_${{matrix.arch}}
+          CIBW_ARCHS_MACOS: x86_64 arm64 universal2
+          CIBW_BEFORE_ALL_MACOS: ./tools/build/wheel_macos_before_all.sh
+          CIBW_BEFORE_TEST: pip install ./psycopg[test]
+          CIBW_TEST_COMMAND: pytest {project}/tests -m 'not slow' --color yes
+          CIBW_ENVIRONMENT: >-
+            PSYCOPG_IMPL=binary
+            PSYCOPG_TEST_DSN='dbname=postgres'
+
+      - uses: actions/upload-artifact@v2
+        with:
+          path: ./wheelhouse/*.whl
