@@ -349,7 +349,7 @@ async def test_queue_size(dsn):
 
 
 @pytest.mark.slow
-async def test_queue_timeout(dsn):
+async def test_queue_timeout(dsn, retries):
     async def worker(n):
         t0 = time()
         try:
@@ -365,17 +365,21 @@ async def test_queue_timeout(dsn):
             t1 = time()
             results.append((n, t1 - t0, pid))
 
-    results = []
-    errors = []
+    async for retry in retries:
+        with retry:
+            results = []
+            errors = []
 
-    async with pool.AsyncConnectionPool(dsn, min_size=2, timeout=0.1) as p:
-        ts = [create_task(worker(i)) for i in range(4)]
-        await asyncio.gather(*ts)
+            async with pool.AsyncConnectionPool(
+                dsn, min_size=2, timeout=0.1
+            ) as p:
+                ts = [create_task(worker(i)) for i in range(4)]
+                await asyncio.gather(*ts)
 
-    assert len(results) == 2
-    assert len(errors) == 2
-    for e in errors:
-        assert 0.1 < e[1] < 0.15
+            assert len(results) == 2
+            assert len(errors) == 2
+            for e in errors:
+                assert 0.1 < e[1] < 0.15
 
 
 @pytest.mark.slow
@@ -403,7 +407,7 @@ async def test_dead_client(dsn):
 
 
 @pytest.mark.slow
-async def test_queue_timeout_override(dsn):
+async def test_queue_timeout_override(dsn, retries):
     async def worker(n):
         t0 = time()
         timeout = 0.25 if n == 3 else None
@@ -420,17 +424,21 @@ async def test_queue_timeout_override(dsn):
             t1 = time()
             results.append((n, t1 - t0, pid))
 
-    results = []
-    errors = []
+    async for retry in retries:
+        with retry:
+            results = []
+            errors = []
 
-    async with pool.AsyncConnectionPool(dsn, min_size=2, timeout=0.1) as p:
-        ts = [create_task(worker(i)) for i in range(4)]
-        await asyncio.gather(*ts)
+            async with pool.AsyncConnectionPool(
+                dsn, min_size=2, timeout=0.1
+            ) as p:
+                ts = [create_task(worker(i)) for i in range(4)]
+                await asyncio.gather(*ts)
 
-    assert len(results) == 3
-    assert len(errors) == 1
-    for e in errors:
-        assert 0.1 < e[1] < 0.15
+            assert len(results) == 3
+            assert len(errors) == 1
+            for e in errors:
+                assert 0.1 < e[1] < 0.15
 
 
 async def test_broken_reconnect(dsn):

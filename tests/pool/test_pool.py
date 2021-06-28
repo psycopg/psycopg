@@ -329,7 +329,7 @@ def test_queue_size(dsn):
 
 
 @pytest.mark.slow
-def test_queue_timeout(dsn):
+def test_queue_timeout(dsn, retries):
     def worker(n):
         t0 = time()
         try:
@@ -344,18 +344,20 @@ def test_queue_timeout(dsn):
             t1 = time()
             results.append((n, t1 - t0, pid))
 
-    results = []
-    errors = []
+    for retry in retries:
+        with retry:
+            results = []
+            errors = []
 
-    with pool.ConnectionPool(dsn, min_size=2, timeout=0.1) as p:
-        ts = [Thread(target=worker, args=(i,)) for i in range(4)]
-        [t.start() for t in ts]
-        [t.join() for t in ts]
+            with pool.ConnectionPool(dsn, min_size=2, timeout=0.1) as p:
+                ts = [Thread(target=worker, args=(i,)) for i in range(4)]
+                [t.start() for t in ts]
+                [t.join() for t in ts]
 
-    assert len(results) == 2
-    assert len(errors) == 2
-    for e in errors:
-        assert 0.1 < e[1] < 0.15
+            assert len(results) == 2
+            assert len(errors) == 2
+            for e in errors:
+                assert 0.1 < e[1] < 0.15
 
 
 @pytest.mark.slow
@@ -384,7 +386,7 @@ def test_dead_client(dsn):
 
 
 @pytest.mark.slow
-def test_queue_timeout_override(dsn):
+def test_queue_timeout_override(dsn, retries):
     def worker(n):
         t0 = time()
         timeout = 0.25 if n == 3 else None
@@ -400,18 +402,20 @@ def test_queue_timeout_override(dsn):
             t1 = time()
             results.append((n, t1 - t0, pid))
 
-    results = []
-    errors = []
+    for retry in retries:
+        with retry:
+            results = []
+            errors = []
 
-    with pool.ConnectionPool(dsn, min_size=2, timeout=0.1) as p:
-        ts = [Thread(target=worker, args=(i,)) for i in range(4)]
-        [t.start() for t in ts]
-        [t.join() for t in ts]
+            with pool.ConnectionPool(dsn, min_size=2, timeout=0.1) as p:
+                ts = [Thread(target=worker, args=(i,)) for i in range(4)]
+                [t.start() for t in ts]
+                [t.join() for t in ts]
 
-    assert len(results) == 3
-    assert len(errors) == 1
-    for e in errors:
-        assert 0.1 < e[1] < 0.15
+            assert len(results) == 3
+            assert len(errors) == 1
+            for e in errors:
+                assert 0.1 < e[1] < 0.15
 
 
 def test_broken_reconnect(dsn):
