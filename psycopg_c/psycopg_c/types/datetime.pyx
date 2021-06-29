@@ -731,11 +731,11 @@ cdef class TimestampBinaryLoader(CLoader):
 
 
 cdef class _BaseTimestamptzLoader(CLoader):
-    cdef object _timezone
+    cdef object _time_zone
 
     def __init__(self, oid: int, context: Optional[AdaptContext] = None):
         super().__init__(oid, context)
-        self._timezone = _timezone_from_connection(self._pgconn)
+        self._time_zone = _timezone_from_connection(self._pgconn)
 
 
 @cython.final
@@ -810,7 +810,7 @@ cdef class TimestamptzLoader(_BaseTimestamptzLoader):
                 y, m, d, vals[HO], vals[MI], vals[SE], us, timezone_utc)
             dt -= tzoff
             return PyObject_CallFunctionObjArgs(datetime_astimezone,
-                <PyObject *>dt, <PyObject *>self._timezone, NULL)
+                <PyObject *>dt, <PyObject *>self._time_zone, NULL)
         except ValueError as ex:
             s = bytes(data).decode("utf8", "replace")
             raise e.DataError(f"can't parse timestamptz {s!r}: {ex}") from None
@@ -851,7 +851,7 @@ cdef class TimestamptzBinaryLoader(_BaseTimestamptzLoader):
             else:
                 dt = pg_datetimetz_epoch - delta
             return PyObject_CallFunctionObjArgs(datetime_astimezone,
-                <PyObject *>dt, <PyObject *>self._timezone, NULL)
+                <PyObject *>dt, <PyObject *>self._time_zone, NULL)
 
         except OverflowError:
             if val <= 0:
