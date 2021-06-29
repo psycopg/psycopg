@@ -1,4 +1,8 @@
-from posix.fcntl cimport pid_t
+IF UNAME_SYSNAME != "Windows":
+    from posix.fcntl cimport pid_t
+ELSE:
+    ctypedef int pid_t
+
 from psycopg_c.pq cimport libpq
 
 ctypedef char *(*conn_bytes_f) (const libpq.PGconn *)

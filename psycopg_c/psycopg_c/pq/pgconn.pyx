@@ -4,7 +4,14 @@ psycopg_c.pq.PGconn object implementation.
 
 # Copyright (C) 2020-2021 The Psycopg Team
 
-from posix.unistd cimport getpid
+IF UNAME_SYSNAME != "Windows":
+    from posix.unistd cimport getpid
+ELSE:
+    # We don't need a real definition for this because Windows is not affected
+    # by the issue caused by closing the fds after fork.
+    cdef int getpid():
+        return 0
+
 from cpython.mem cimport PyMem_Malloc, PyMem_Free
 from cpython.bytes cimport PyBytes_AsString, PyBytes_AsStringAndSize
 from cpython.memoryview cimport PyMemoryView_FromObject
