@@ -72,7 +72,9 @@ cdef extern from * nogil:
 #elif defined(__WINDOWS__)
 
 #	include <winsock2.h>
-#	include <sys/param.h>
+#       ifndef _MSC_VER
+#	    include <sys/param.h>
+#       endif
 
 #	if BYTE_ORDER == LITTLE_ENDIAN
 
