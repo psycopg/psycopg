@@ -12,6 +12,20 @@ from psycopg import conninfo
 logger = logging.getLogger()
 
 
+def pytest_collection_modifyitems(items):
+    for item in items:
+        if "proxy" in item.fixturenames:
+            item.add_marker(pytest.mark.proxy)
+
+
+def pytest_configure(config):
+    config.addinivalue_line(
+        "markers",
+        "proxy: the test uses pproxy (the marker is set automatically"
+        " on tests using the fixture)",
+    )
+
+
 @pytest.fixture
 def proxy(dsn):
     """Return a proxy to the --test-dsn database"""

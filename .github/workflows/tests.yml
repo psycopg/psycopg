@@ -123,7 +123,8 @@ jobs:
       PSYCOPG_TEST_DSN: "host=127.0.0.1 user=runner dbname=postgres"
       # MacOS on GitHub Actions seems particularly slow.
       # Don't run timing-based tests as they regularly fail.
-      PYTEST_ADDOPTS: "-m 'not timing'"
+      # pproxy-based tests fail too, with the proxy not coming up in 2s.
+      PYTEST_ADDOPTS: "-m 'not timing and not proxy'"
 
     steps:
       - uses: actions/checkout@v2
