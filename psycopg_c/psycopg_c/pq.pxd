@@ -1,7 +1,15 @@
-IF UNAME_SYSNAME != "Windows":
-    from posix.fcntl cimport pid_t
-ELSE:
-    ctypedef int pid_t
+# Include pid_t but Windows doesn't have it
+# Don't use "IF" so that the generated C is portable and can be included
+# in the sdist.
+cdef extern from * nogil:
+    """
+#if defined(_WIN32) || defined(WIN32) || defined(MS_WINDOWS)
+    typedef signed pid_t;
+#else
+    #include <fcntl.h>
+#endif
+    """
+    ctypedef signed pid_t
 
 from psycopg_c.pq cimport libpq
 
