@@ -58,6 +58,12 @@ class psycopg_build_ext(build_ext):
             ext.include_dirs.append(includedir)
             ext.library_dirs.append(libdir)
 
+            # hack to build on GH Actions (pg_config --libdir broken)
+            # https://github.com/actions/runner/issues/1178
+            for path in os.environ.get("PG_LIBPATH", "").split(os.pathsep):
+                if path:
+                    ext.library_dirs.append(path)
+
         if cythonize is not None:
             for ext in self.distribution.ext_modules:
                 for i in range(len(ext.sources)):

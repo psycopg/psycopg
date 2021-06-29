@@ -153,3 +153,7 @@ jobs:
       - name: Run tests (C implementation)
         run: tox -c psycopg_c -e ${{ matrix.python }} -- --color yes
         if: ${{ matrix.impl == 'c' }}
+        env:
+          # the pg_config returns the wrong path
+          # Note: this env var name must be in the tox.ini passenv
+          PG_LIBPATH: 'C:\Program Files\PostgreSQL\13\lib'
