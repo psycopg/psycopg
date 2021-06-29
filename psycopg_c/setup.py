@@ -64,6 +64,10 @@ class psycopg_build_ext(build_ext):
                 if path:
                     ext.library_dirs.append(path)
 
+            if sys.platform == "win32":
+                # For __imp_htons and others
+                ext.libraries.append("ws2_32")
+
         if cythonize is not None:
             for ext in self.distribution.ext_modules:
                 for i in range(len(ext.sources)):
