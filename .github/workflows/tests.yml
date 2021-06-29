@@ -67,6 +67,7 @@ jobs:
   macos:
     name: Test on MacOS
     runs-on: macos-10.15
+
     strategy:
       fail-fast: false
       matrix:
@@ -93,6 +94,48 @@ jobs:
 
       - name: Start PostgreSQL service for test
         run: brew services start postgresql
+
+      - uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Install tox
+        run: pip install tox
+
+      - name: Run tests (Python implementation)
+        run: tox -c psycopg -e ${{ matrix.python }} -- --color yes
+        if: ${{ matrix.impl == 'python' }}
+
+      - name: Run tests (C implementation)
+        run: tox -c psycopg_c -e ${{ matrix.python }} -- --color yes
+        if: ${{ matrix.impl == 'c' }}
+
+
+  windows:
+    name: Test on Windows
+    runs-on: windows-2019
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # - {impl: c, python: 3.6}
+          # - {impl: c, python: 3.7}
+          - {impl: c, python: 3.8}
+          # - {impl: c, python: 3.9}
+          - {impl: python, python: 3.9}
+
+    env:
+      PSYCOPG_IMPL: ${{ matrix.impl }}
+      PSYCOPG_TEST_DSN: "host=127.0.0.1 dbname=postgres"
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Start PostgreSQL service for test
+        run: |
+          $postgreSqlSvc = Get-Service "postgresql*"
+          Set-Service $postgreSqlSvc.Name -StartupType manual
+          $postgreSqlSvc.Start()
 
       - uses: actions/setup-python@v2
         with:
