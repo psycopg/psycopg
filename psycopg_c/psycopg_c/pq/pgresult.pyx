@@ -38,7 +38,7 @@ cdef class PGresult:
     @property
     def pgresult_ptr(self) -> Optional[int]:
         if self._pgresult_ptr:
-            return <long><void *>self._pgresult_ptr
+            return <long long><void *>self._pgresult_ptr
         else:
             return None
 
@@ -137,7 +137,7 @@ cdef class PGresult:
         return libpq.PQoidValue(self._pgresult_ptr)
 
     def set_attributes(self, descriptions: List[PGresAttDesc]):
-        cdef int num = len(descriptions)
+        cdef Py_ssize_t num = len(descriptions)
         cdef libpq.PGresAttDesc *attrs = <libpq.PGresAttDesc *>PyMem_Malloc(
             num * sizeof(libpq.PGresAttDesc))
 
@@ -151,7 +151,7 @@ cdef class PGresult:
             attrs[i].typlen = descr.typlen
             attrs[i].atttypmod = descr.atttypmod
 
-        cdef int res = libpq.PQsetResultAttrs(self._pgresult_ptr, num, attrs)
+        cdef int res = libpq.PQsetResultAttrs(self._pgresult_ptr, <int>num, attrs)
         PyMem_Free(attrs)
         if (res == 0):
             raise e.OperationalError("PQsetResultAttrs failed")

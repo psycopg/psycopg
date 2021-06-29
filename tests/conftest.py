@@ -1,3 +1,4 @@
+import sys
 import asyncio
 import inspect
 
@@ -44,6 +45,13 @@ def pytest_report_header(config):
         return []
 
     return [f"asyncio loop: {loop}"]
+
+
+def pytest_runtest_setup(item):
+    # Skip asyncio tests on Windows: they just don't seem to work
+    if sys.platform == "win32":
+        for mark in item.iter_markers(name="asyncio"):
+            pytest.skip(f"cannot run asyncio tests on {sys.platform}")
 
 
 @pytest.fixture

@@ -132,7 +132,7 @@ cdef class Transformer:
             types: Sequence[int], formats: Sequence[Format]) -> None:
         self._c_set_row_types(len(types), types, formats)
 
-    cdef void _c_set_row_types(self, int ntypes, list types, list formats):
+    cdef void _c_set_row_types(self, Py_ssize_t ntypes, list types, list formats):
         cdef list loaders = PyList_New(ntypes)
 
         # these are used more as Python object than C
@@ -223,7 +223,7 @@ cdef class Transformer:
 
     cpdef dump_sequence(self, object params, object formats):
         # Verify that they are not none and that PyList_GET_ITEM won't blow up
-        cdef int nparams = len(params)
+        cdef Py_ssize_t nparams = len(params)
         cdef list ps = PyList_New(nparams)
         cdef tuple ts = PyTuple_New(nparams)
         cdef list fs = PyList_New(nparams)
@@ -388,7 +388,7 @@ cdef class Transformer:
         return record
 
     cpdef object load_sequence(self, record: Sequence[Optional[bytes]]):
-        cdef int nfields = len(record)
+        cdef Py_ssize_t nfields = len(record)
         out = PyTuple_New(nfields)
         cdef PyObject *loader  # borrowed RowLoader
         cdef int col

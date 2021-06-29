@@ -1,3 +1,4 @@
+import sys
 import datetime as dt
 
 import pytest
@@ -310,6 +311,8 @@ class TestDateTimeTz:
     )
     @pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
     def test_load_datetimetz_tz(self, conn, fmt_out, tzname, expr, tzoff):
+        if "/" in tzname and sys.platform == "win32":
+            pytest.skip("no IANA db on Windows")
         conn.execute("select set_config('TimeZone', %s, true)", [tzname])
         cur = conn.cursor(binary=fmt_out)
         ts = cur.execute("select %s::timestamptz", [expr]).fetchone()[0]

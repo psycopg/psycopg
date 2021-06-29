@@ -7,6 +7,7 @@ PostgreSQL database adapter for Python - optimisation package
 
 import os
 import re
+import sys
 import subprocess as sp
 
 from setuptools import setup, Extension
@@ -27,6 +28,16 @@ with open("psycopg_c/version.py") as f:
     version = m.group(1)
 
 
+def get_config(what: str) -> str:
+    try:
+        out = sp.run(["pg_config", f"--{what}"], stdout=sp.PIPE, check=True)
+    except Exception as e:
+        log.error("cannot build C module: %s", e)
+        raise
+    else:
+        return out.stdout.strip().decode("utf8")
+
+
 class psycopg_build_ext(build_ext):
     def finalize_options(self) -> None:
         self._setup_ext_build()
@@ -40,18 +51,22 @@ class psycopg_build_ext(build_ext):
         if os.path.exists("psycopg_c/_psycopg.pyx"):
             from Cython.Build import cythonize
 
-        # Add the include dir for the libpq.
-        try:
-            out = sp.run(
-                ["pg_config", "--includedir"], stdout=sp.PIPE, check=True
-            )
-        except Exception as e:
-            log.error("cannot build C module: %s", e)
-            raise
-
-        includedir = out.stdout.strip().decode("utf8")
+        # Add include and lib dir for the libpq.
+        includedir = get_config("includedir")
+        libdir = get_config("libdir")
         for ext in self.distribution.ext_modules:
             ext.include_dirs.append(includedir)
+            ext.library_dirs.append(libdir)
+
+            # hack to build on GH Actions (pg_config --libdir broken)
+            # https://github.com/actions/runner/issues/1178
+            for path in os.environ.get("PG_LIBPATH", "").split(os.pathsep):
+                if path:
+                    ext.library_dirs.append(path)
+
+            if sys.platform == "win32":
+                # For __imp_htons and others
+                ext.libraries.append("ws2_32")
 
         if cythonize is not None:
             for ext in self.distribution.ext_modules:
@@ -72,6 +87,9 @@ class psycopg_build_ext(build_ext):
             self.distribution.ext_modules = [pgext, pqext]
 
 
+# MSVC requires an explicit "libpq"
+libpq = "pq" if sys.platform != "win32" else "libpq"
+
 # Some details missing, to be finished by psycopg_build_ext.finalize_options
 pgext = Extension(
     "psycopg_c._psycopg",
@@ -79,14 +97,14 @@ pgext = Extension(
         "psycopg_c/_psycopg.c",
         "psycopg_c/types/numutils.c",
     ],
-    libraries=["pq"],
+    libraries=[libpq],
     include_dirs=[],
 )
 
 pqext = Extension(
     "psycopg_c.pq",
     ["psycopg_c/pq.c"],
-    libraries=["pq"],
+    libraries=[libpq],
     include_dirs=[],
 )
 

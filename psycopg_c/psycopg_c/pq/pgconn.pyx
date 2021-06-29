@@ -4,7 +4,19 @@ psycopg_c.pq.PGconn object implementation.
 
 # Copyright (C) 2020-2021 The Psycopg Team
 
-from posix.unistd cimport getpid
+cdef extern from * nogil:
+    """
+#if defined(_WIN32) || defined(WIN32) || defined(MS_WINDOWS)
+    /* We don't need a real definition for this because Windows is not affected
+     * by the issue caused by closing the fds after fork.
+     */
+    #define getpid() (0)
+#else
+    #include <unistd.h>
+#endif
+    """
+    pid_t getpid()
+
 from cpython.mem cimport PyMem_Malloc, PyMem_Free
 from cpython.bytes cimport PyBytes_AsString, PyBytes_AsStringAndSize
 from cpython.memoryview cimport PyMemoryView_FromObject
@@ -70,7 +82,7 @@ cdef class PGconn:
     @property
     def pgconn_ptr(self) -> Optional[int]:
         if self._pgconn_ptr:
-            return <long><void *>self._pgconn_ptr
+            return <long long><void *>self._pgconn_ptr
         else:
             return None
 
@@ -215,7 +227,7 @@ cdef class PGconn:
     ) -> PGresult:
         _ensure_pgconn(self)
 
-        cdef int cnparams
+        cdef Py_ssize_t cnparams
         cdef libpq.Oid *ctypes
         cdef char *const *cvalues
         cdef int *clengths
@@ -226,7 +238,7 @@ cdef class PGconn:
         cdef libpq.PGresult *pgresult
         with nogil:
             pgresult = libpq.PQexecParams(
-                self._pgconn_ptr, command, cnparams, ctypes,
+                self._pgconn_ptr, command, <int>cnparams, ctypes,
                 <const char *const *>cvalues, clengths, cformats, result_format)
         _clear_query_params(ctypes, cvalues, clengths, cformats)
         if pgresult is NULL:
@@ -243,7 +255,7 @@ cdef class PGconn:
     ) -> None:
         _ensure_pgconn(self)
 
-        cdef int cnparams
+        cdef Py_ssize_t cnparams
         cdef libpq.Oid *ctypes
         cdef char *const *cvalues
         cdef int *clengths
@@ -254,7 +266,7 @@ cdef class PGconn:
         cdef int rv
         with nogil:
             rv = libpq.PQsendQueryParams(
-                self._pgconn_ptr, command, cnparams, ctypes,
+                self._pgconn_ptr, command, <int>cnparams, ctypes,
                 <const char *const *>cvalues, clengths, cformats, result_format)
         _clear_query_params(ctypes, cvalues, clengths, cformats)
         if not rv:
@@ -271,7 +283,7 @@ cdef class PGconn:
         _ensure_pgconn(self)
 
         cdef int i
-        cdef int nparams = len(param_types) if param_types else 0
+        cdef Py_ssize_t nparams = len(param_types) if param_types else 0
         cdef libpq.Oid *atypes = NULL
         if nparams:
             atypes = <libpq.Oid *>PyMem_Malloc(nparams * sizeof(libpq.Oid))
@@ -281,7 +293,7 @@ cdef class PGconn:
         cdef int rv
         with nogil:
             rv = libpq.PQsendPrepare(
-                self._pgconn_ptr, name, command, nparams, atypes
+                self._pgconn_ptr, name, command, <int>nparams, atypes
             )
         PyMem_Free(atypes)
         if not rv:
@@ -298,7 +310,7 @@ cdef class PGconn:
     ) -> None:
         _ensure_pgconn(self)
 
-        cdef int cnparams
+        cdef Py_ssize_t cnparams
         cdef libpq.Oid *ctypes
         cdef char *const *cvalues
         cdef int *clengths
@@ -309,7 +321,7 @@ cdef class PGconn:
         cdef int rv
         with nogil:
             rv = libpq.PQsendQueryPrepared(
-                self._pgconn_ptr, name, cnparams, <const char *const *>cvalues,
+                self._pgconn_ptr, name, <int>cnparams, <const char *const *>cvalues,
                 clengths, cformats, result_format)
         _clear_query_params(ctypes, cvalues, clengths, cformats)
         if not rv:
@@ -326,7 +338,7 @@ cdef class PGconn:
         _ensure_pgconn(self)
 
         cdef int i
-        cdef int nparams = len(param_types) if param_types else 0
+        cdef Py_ssize_t nparams = len(param_types) if param_types else 0
         cdef libpq.Oid *atypes = NULL
         if nparams:
             atypes = <libpq.Oid *>PyMem_Malloc(nparams * sizeof(libpq.Oid))
@@ -336,7 +348,7 @@ cdef class PGconn:
         cdef libpq.PGresult *rv
         with nogil:
             rv = libpq.PQprepare(
-                self._pgconn_ptr, name, command, nparams, atypes)
+                self._pgconn_ptr, name, command, <int>nparams, atypes)
         PyMem_Free(atypes)
         if rv is NULL:
             raise MemoryError("couldn't allocate PGresult")
@@ -351,7 +363,7 @@ cdef class PGconn:
     ) -> PGresult:
         _ensure_pgconn(self)
 
-        cdef int cnparams
+        cdef Py_ssize_t cnparams
         cdef libpq.Oid *ctypes
         cdef char *const *cvalues
         cdef int *clengths
@@ -362,7 +374,7 @@ cdef class PGconn:
         cdef libpq.PGresult *rv
         with nogil:
             rv = libpq.PQexecPrepared(
-                self._pgconn_ptr, name, cnparams,
+                self._pgconn_ptr, name, <int>cnparams,
                 <const char *const *>cvalues,
                 clengths, cformats, result_format)
 
@@ -461,7 +473,7 @@ cdef class PGconn:
         cdef Py_ssize_t length
 
         _buffer_as_string_and_size(buffer, &cbuffer, &length)
-        rv = libpq.PQputCopyData(self._pgconn_ptr, cbuffer, length)
+        rv = libpq.PQputCopyData(self._pgconn_ptr, cbuffer, <int>length)
         if rv < 0:
             raise e.OperationalError(f"sending copy data failed: {error_message(self)}")
         return rv
@@ -538,7 +550,7 @@ cdef void notice_receiver(void *arg, const libpq.PGresult *res_ptr) with gil:
     res._pgresult_ptr = NULL  # avoid destroying the pgresult_ptr
 
 
-cdef (int, libpq.Oid *, char * const*, int *, int *) _query_params_args(
+cdef (Py_ssize_t, libpq.Oid *, char * const*, int *, int *) _query_params_args(
     list param_values: Optional[Sequence[Optional[bytes]]],
     param_types: Optional[Sequence[int]],
     list param_formats: Optional[Sequence[int]],
@@ -553,7 +565,7 @@ cdef (int, libpq.Oid *, char * const*, int *, int *) _query_params_args(
     else:
         tparam_types = param_types
 
-    cdef int nparams = len(param_values) if param_values else 0
+    cdef Py_ssize_t nparams = len(param_values) if param_values else 0
     if tparam_types is not None and len(tparam_types) != nparams:
         raise ValueError(
             "got %d param_values but %d param_types"
@@ -583,7 +595,7 @@ cdef (int, libpq.Oid *, char * const*, int *, int *) _query_params_args(
                 # on internal error, e.g. if obj is not a buffer)
                 _buffer_as_string_and_size(obj, &ptr, &length)
                 aparams[i] = ptr
-                alenghts[i] = length
+                alenghts[i] = <int>length
 
     cdef libpq.Oid *atypes = NULL
     if tparam_types:

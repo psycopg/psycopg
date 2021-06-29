@@ -24,7 +24,7 @@ def format_row_binary(
 ) -> bytearray:
     """Convert a row of adapted data to the data to send for binary copy"""
     cdef Py_ssize_t rowlen = len(row)
-    cdef uint16_t berowlen = endian.htobe16(rowlen)
+    cdef uint16_t berowlen = endian.htobe16(<int16_t>rowlen)
 
     cdef Py_ssize_t pos  # offset in 'out' where to write
     if out is None:
@@ -58,7 +58,7 @@ def format_row_binary(
                 size = (<RowDumper>row_dumper).cdumper.cdump(
                     item, out, pos + sizeof(besize))
                 # Also add the size of the item, before the item
-                besize = endian.htobe32(size)
+                besize = endian.htobe32(<int32_t>size)
                 target = PyByteArray_AS_STRING(out)  # might have been moved by cdump
                 memcpy(target + pos, <void *>&besize, sizeof(besize))
             else:
@@ -67,7 +67,7 @@ def format_row_binary(
                     (<RowDumper>row_dumper).dumpfunc, <PyObject *>item, NULL)
                 _buffer_as_string_and_size(b, &buf, &size)
                 target = CDumper.ensure_size(out, pos, size + sizeof(besize))
-                besize = endian.htobe32(size)
+                besize = endian.htobe32(<int32_t>size)
                 memcpy(target, <void *>&besize, sizeof(besize))
                 memcpy(target + sizeof(besize), buf, size)
 
@@ -155,7 +155,7 @@ def format_row_text(
         if nesc > 0:
             tmpsize = size + nesc
             target = <unsigned char *>CDumper.ensure_size(out, pos, tmpsize)
-            for j in range(size - 1, -1, -1):
+            for j in range(<int>size - 1, -1, -1):
                 target[j + nesc] = target[j]
                 if copy_escape_lut[target[j]] != 0:
                     nesc -= 1
