@@ -121,6 +121,8 @@ jobs:
         env:
           CIBW_BUILD: ${{matrix.pyver}}-${{matrix.arch}}
           CIBW_ARCHS_WINDOWS: AMD64 x86
+          CIBW_BEFORE_ALL_WINDOWS: >-
+            powershell.exe tools\build\wheel_windows_before_all.ps1
           CIBW_BEFORE_BUILD_WINDOWS: "pip install delvewheel"
           CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: >-
             delvewheel repair -w {dest_dir} {wheel}
