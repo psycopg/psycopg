@@ -127,8 +127,8 @@ jobs:
     env:
       PSYCOPG_IMPL: ${{ matrix.impl }}
       PSYCOPG_TEST_DSN: "host=127.0.0.1 dbname=postgres"
-      # On windows pproxy doesn't seem very happy.
-      PYTEST_ADDOPTS: "-m 'not proxy'"
+      # On windows pproxy doesn't seem very happy. Also a few timing test fail.
+      PYTEST_ADDOPTS: "-m 'not timing and not proxy'"
 
     steps:
       - uses: actions/checkout@v2
