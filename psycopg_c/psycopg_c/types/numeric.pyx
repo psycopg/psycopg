@@ -124,7 +124,7 @@ cdef class Int2BinaryDumper(CDumper):
     cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
         cdef int16_t *buf = <int16_t *>CDumper.ensure_size(
             rv, offset, sizeof(int16_t))
-        cdef int16_t val = PyLong_AsLongLong(obj)
+        cdef int16_t val = <int16_t>PyLong_AsLongLong(obj)
         # swap bytes if needed
         cdef uint16_t *ptvar = <uint16_t *>(&val)
         buf[0] = endian.htobe16(ptvar[0])
@@ -142,7 +142,7 @@ cdef class Int4BinaryDumper(CDumper):
     cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
         cdef int32_t *buf = <int32_t *>CDumper.ensure_size(
             rv, offset, sizeof(int32_t))
-        cdef int32_t val = PyLong_AsLongLong(obj)
+        cdef int32_t val = <int32_t>PyLong_AsLongLong(obj)
         # swap bytes if needed
         cdef uint32_t *ptvar = <uint32_t *>(&val)
         buf[0] = endian.htobe32(ptvar[0])
@@ -586,7 +586,7 @@ cdef class DecimalBinaryDumper(CDumper):
             return length
 
         cdef int exp = pyexp
-        cdef uint16_t ndigits = len(digits)
+        cdef uint16_t ndigits = <uint16_t>len(digits)
 
         # Find the last nonzero digit
         cdef int nzdigits = ndigits

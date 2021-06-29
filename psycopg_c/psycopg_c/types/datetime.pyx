@@ -483,7 +483,7 @@ cdef class TimeBinaryLoader(CLoader):
             val //= 60
 
             m = val % 60
-            h = val // 60
+            h = <int>(val // 60)
 
         try:
             return cdt.time_new(h, m, s, us, None)
@@ -552,7 +552,7 @@ cdef class TimetzBinaryLoader(CLoader):
             val //= 60
 
             m = val % 60
-            h = val // 60
+            h = <int>(val // 60)
 
             # Python < 3.7 didn't support seconds in the timezones
             if PY_VERSION_HEX >= 0x03070000:
@@ -713,7 +713,7 @@ cdef class TimestampBinaryLoader(CLoader):
             secs %= 86_400
 
         try:
-            delta = cdt.timedelta_new(days, secs, micros)
+            delta = cdt.timedelta_new(<int>days, <int>secs, <int>micros)
             if val > 0:
                 return pg_datetime_epoch + delta
             else:
@@ -845,7 +845,7 @@ cdef class TimestamptzBinaryLoader(_BaseTimestamptzLoader):
             secs %= 86_400
 
         try:
-            delta = cdt.timedelta_new(days, secs, micros)
+            delta = cdt.timedelta_new(<int>days, <int>secs, <int>micros)
             if val > 0:
                 dt = pg_datetimetz_epoch + delta
             else:
@@ -992,7 +992,7 @@ cdef class IntervalBinaryLoader(CLoader):
 
         # Group the micros in biggers stuff or timedelta_new might overflow
         with cython.cdivision(True):
-            ussecs = aval // 1_000_000
+            ussecs = <int>(aval // 1_000_000)
             us = aval % 1_000_000
 
             usdays = ussecs // 86_400
