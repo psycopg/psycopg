@@ -72,11 +72,14 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          - {impl: python, python: 3.6}
+          - {impl: python, python: 3.7}
+          - {impl: python, python: 3.8}
+          - {impl: python, python: 3.9}
           - {impl: c, python: 3.6}
           - {impl: c, python: 3.7}
           - {impl: c, python: 3.8}
           - {impl: c, python: 3.9}
-          - {impl: python, python: 3.9}
 
     env:
       PSYCOPG_IMPL: ${{ matrix.impl }}
@@ -118,10 +121,13 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # - {impl: c, python: 3.6}
-          # - {impl: c, python: 3.7}
+          - {impl: c, python: 3.6}
+          - {impl: c, python: 3.7}
           - {impl: c, python: 3.8}
-          # - {impl: c, python: 3.9}
+          - {impl: c, python: 3.9}
+          - {impl: python, python: 3.6}
+          - {impl: python, python: 3.7}
+          - {impl: python, python: 3.8}
           - {impl: python, python: 3.9}
 
     env:
