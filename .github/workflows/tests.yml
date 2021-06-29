@@ -24,10 +24,8 @@ jobs:
 
     env:
       PSYCOPG_IMPL: python
-      PGHOST: 127.0.0.1
-      PGUSER: postgres
+      PSYCOPG_TEST_DSN: "host=127.0.0.1 user=postgres"
       PGPASSWORD: password
-      PSYCOPG_TEST_DSN: "dbname=postgres"
 
     services:
       postgresql:
@@ -45,11 +43,14 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
+
       - uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python }}
+
       - name: Install tox
         run: pip install tox
+
       - name: Run tests
         run: tox -c psycopg -e ${{ matrix.python }} -- --color yes
 
@@ -72,10 +73,8 @@ jobs:
 
     env:
       PSYCOPG_IMPL: c
-      PGHOST: 127.0.0.1
-      PGUSER: postgres
+      PSYCOPG_TEST_DSN: "host=127.0.0.1 user=postgres"
       PGPASSWORD: password
-      PSYCOPG_TEST_DSN: "dbname=postgres"
       # skip tests failing on importing psycopg_c.pq on subprocess
       # they only fail on Travis, work ok locally under tox too.
       PYTEST_ADDOPTS: "-m 'not subprocess'"
@@ -96,10 +95,53 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
+
       - uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python }}
+
       - name: Install tox
         run: pip install tox
+
+      - name: Run tests
+        run: tox -c psycopg_c -e ${{ matrix.python }} -- --color yes
+
+  test-macos:
+    name: C implementation on MacOS
+    runs-on: macos-10.15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - python: 3.6
+          - python: 3.7
+          - python: 3.8
+          - python: 3.9
+
+    env:
+      PSYCOPG_IMPL: c
+      PSYCOPG_TEST_DSN: "host=127.0.0.1 user=runner dbname=postgres"
+      # MacOS on GitHub Actions seems particularly slow.
+      # Don't run timing-based tests as they regularly fail.
+      # pproxy-based tests fail too, with the proxy not coming up in 2s.
+      PYTEST_ADDOPTS: "-m 'not timing and not proxy'"
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: install PostgreSQL on the runner
+        run: brew install postgresql@13
+
+      - name: start PostgreSQL service for test
+        run: brew services start postgresql
+        # Note: race condition, we expect the service will be up after build
+
+      - uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Install tox
+        run: pip install tox
+
       - name: Run tests
         run: tox -c psycopg_c -e ${{ matrix.python }} -- --color yes

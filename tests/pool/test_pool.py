@@ -82,6 +82,7 @@ def test_connection_not_lost(dsn):
 
 
 @pytest.mark.slow
+@pytest.mark.timing
 def test_concurrent_filling(dsn, monkeypatch, retries):
     delay_connection(monkeypatch, 0.1)
 
@@ -106,6 +107,7 @@ def test_concurrent_filling(dsn, monkeypatch, retries):
 
 
 @pytest.mark.slow
+@pytest.mark.timing
 def test_wait_ready(dsn, monkeypatch):
     delay_connection(monkeypatch, 0.1)
     with pytest.raises(pool.PoolTimeout):
@@ -267,6 +269,7 @@ def test_reset_broken(dsn, caplog):
 
 
 @pytest.mark.slow
+@pytest.mark.timing
 def test_queue(dsn, retries):
     def worker(n):
         t0 = time()
@@ -329,6 +332,7 @@ def test_queue_size(dsn):
 
 
 @pytest.mark.slow
+@pytest.mark.timing
 def test_queue_timeout(dsn, retries):
     def worker(n):
         t0 = time()
@@ -361,6 +365,7 @@ def test_queue_timeout(dsn, retries):
 
 
 @pytest.mark.slow
+@pytest.mark.timing
 def test_dead_client(dsn):
     def worker(i, timeout):
         try:
@@ -386,6 +391,7 @@ def test_dead_client(dsn):
 
 
 @pytest.mark.slow
+@pytest.mark.timing
 def test_queue_timeout_override(dsn, retries):
     def worker(n):
         t0 = time()
@@ -628,6 +634,7 @@ def test_closed_queue(dsn):
 
 
 @pytest.mark.slow
+@pytest.mark.timing
 def test_grow(dsn, monkeypatch, retries):
     delay_connection(monkeypatch, 0.1)
 
@@ -657,6 +664,7 @@ def test_grow(dsn, monkeypatch, retries):
 
 
 @pytest.mark.slow
+@pytest.mark.timing
 def test_shrink(dsn, monkeypatch):
 
     from psycopg.pool.pool import ShrinkPool
@@ -725,6 +733,7 @@ def test_reconnect(proxy, caplog, monkeypatch):
 
 
 @pytest.mark.slow
+@pytest.mark.timing
 def test_reconnect_failure(proxy):
     proxy.start()
 
@@ -779,6 +788,7 @@ def test_uniform_use(dsn, retries):
 
 
 @pytest.mark.slow
+@pytest.mark.timing
 def test_resize(dsn):
     def sampler():
         sleep(0.05)  # ensure sampling happens after shrink check
@@ -826,6 +836,7 @@ def test_jitter():
 
 
 @pytest.mark.slow
+@pytest.mark.timing
 def test_max_lifetime(dsn):
     with pool.ConnectionPool(dsn, min_size=1, max_lifetime=0.2) as p:
         sleep(0.1)
@@ -870,6 +881,7 @@ def test_async_pool_not_supported(dsn):
 
 
 @pytest.mark.slow
+@pytest.mark.timing
 def test_stats_measures(dsn):
     def worker(n):
         with p.connection() as conn:
@@ -910,6 +922,7 @@ def test_stats_measures(dsn):
 
 
 @pytest.mark.slow
+@pytest.mark.timing
 def test_stats_usage(dsn):
     def worker(n):
         try:

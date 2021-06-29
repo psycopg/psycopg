@@ -38,6 +38,7 @@ def test_connect_bad():
 
 
 @pytest.mark.slow
+@pytest.mark.timing
 @pytest.mark.skipif(sys.platform == "win32", reason="connect() hangs on Win32")
 def test_connect_timeout():
     s = socket.socket(socket.AF_INET)

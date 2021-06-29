@@ -57,6 +57,7 @@ async def test_concurrent_execution(dsn):
 
 
 @pytest.mark.slow
+@pytest.mark.timing
 async def test_notifies(aconn, dsn):
     nconn = await psycopg.AsyncConnection.connect(dsn, autocommit=True)
     npid = nconn.pgconn.backend_pid
@@ -151,4 +152,4 @@ async def test_identify_closure(aconn, dsn):
     with pytest.raises(psycopg.OperationalError):
         await aconn.execute("select 1")
     t1 = time.time()
-    assert 0.3 < t1 - t0 < 0.5
+    assert 0.3 < t1 - t0 < 0.6

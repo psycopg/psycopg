@@ -128,10 +128,10 @@ def test_array_register(conn):
 
 
 def test_array_of_unknown_builtin(conn):
+    user = conn.execute("select user").fetchone()[0]
     # we cannot load this type, but we understand it is an array
-    val = "postgres=arwdDxt/postgres"
-    cur = conn.cursor()
-    cur.execute(f"select '{val}'::aclitem, array['{val}']::aclitem[]")
+    val = f"{user}=arwdDxt/{user}"
+    cur = conn.execute(f"select '{val}'::aclitem, array['{val}']::aclitem[]")
     res = cur.fetchone()
     assert cur.description[0].type_code == builtins["aclitem"].oid
     assert res[0] == val

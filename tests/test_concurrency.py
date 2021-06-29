@@ -104,6 +104,7 @@ t.join()
 
 
 @pytest.mark.slow
+@pytest.mark.timing
 def test_notifies(conn, dsn):
     nconn = psycopg.connect(dsn, autocommit=True)
     npid = nconn.pgconn.backend_pid
@@ -193,4 +194,4 @@ def test_identify_closure(conn, dsn):
     with pytest.raises(psycopg.OperationalError):
         conn.execute("select 1")
     t1 = time.time()
-    assert 0.3 < t1 - t0 < 0.5
+    assert 0.3 < t1 - t0 < 0.6
