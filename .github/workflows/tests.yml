@@ -5,41 +5,27 @@ on:
   pull_request:
 
 jobs:
-  python:
-    name: Python implementation
+  linux:
+    name: Test on Linux
     runs-on: ubuntu-20.04
 
     strategy:
       fail-fast: false
       matrix:
         include:
-          - python: 3.6
-            postgres: 10
-          - python: 3.7
-            postgres: 11
-          - python: 3.8
-            postgres: 12
-          - python: 3.9
-            postgres: 13
+          - {impl: python, python: 3.6, postgres: 10}
+          - {impl: python, python: 3.7, postgres: 11}
+          - {impl: python, python: 3.8, postgres: 12}
+          - {impl: python, python: 3.9, postgres: 13}
+          - {impl: c, python: 3.6, postgres: 13}
+          - {impl: c, python: 3.7, postgres: 12}
+          - {impl: c, python: 3.8, postgres: 11}
+          - {impl: c, python: 3.9, postgres: 10}
 
     env:
-      PSYCOPG_IMPL: python
+      PSYCOPG_IMPL: ${{ matrix.impl }}
       PSYCOPG_TEST_DSN: "host=127.0.0.1 user=postgres"
       PGPASSWORD: password
-
-    services:
-      postgresql:
-        image: postgres:${{ matrix.postgres }}
-        env:
-          POSTGRES_PASSWORD: password
-        ports:
-          - 5432:5432
-        # Set health checks to wait until postgres has started
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
 
     steps:
       - uses: actions/checkout@v2
@@ -51,33 +37,17 @@ jobs:
       - name: Install tox
         run: pip install tox
 
-      - name: Run tests
+      - name: Run tests (Python implementation)
         run: tox -c psycopg -e ${{ matrix.python }} -- --color yes
+        if: ${{ matrix.impl == 'python' }}
 
-  c:
-    name: C implementation
-    runs-on: ubuntu-20.04
-
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - python: 3.6
-            postgres: 13
-          - python: 3.7
-            postgres: 12
-          - python: 3.8
-            postgres: 11
-          - python: 3.9
-            postgres: 10
-
-    env:
-      PSYCOPG_IMPL: c
-      PSYCOPG_TEST_DSN: "host=127.0.0.1 user=postgres"
-      PGPASSWORD: password
-      # skip tests failing on importing psycopg_c.pq on subprocess
-      # they only fail on Travis, work ok locally under tox too.
-      PYTEST_ADDOPTS: "-m 'not subprocess'"
+      - name: Run tests (C implementation)
+        run: tox -c psycopg_c -e ${{ matrix.python }} -- --color yes
+        if: ${{ matrix.impl == 'c' }}
+        env:
+          # skip tests failing on importing psycopg_c.pq on subprocess
+          # they only fail on Travis, work ok locally under tox too.
+          PYTEST_ADDOPTS: "-m 'not subprocess'"
 
     services:
       postgresql:
@@ -93,33 +63,22 @@ jobs:
           --health-timeout 5s
           --health-retries 5
 
-    steps:
-      - uses: actions/checkout@v2
 
-      - uses: actions/setup-python@v2
-        with:
-          python-version: ${{ matrix.python }}
-
-      - name: Install tox
-        run: pip install tox
-
-      - name: Run tests
-        run: tox -c psycopg_c -e ${{ matrix.python }} -- --color yes
-
-  test-macos:
-    name: C implementation on MacOS
+  macos:
+    name: Test on MacOS
     runs-on: macos-10.15
     strategy:
       fail-fast: false
       matrix:
         include:
-          - python: 3.6
-          - python: 3.7
-          - python: 3.8
-          - python: 3.9
+          - {impl: c, python: 3.6}
+          - {impl: c, python: 3.7}
+          - {impl: c, python: 3.8}
+          - {impl: c, python: 3.9}
+          - {impl: python, python: 3.9}
 
     env:
-      PSYCOPG_IMPL: c
+      PSYCOPG_IMPL: ${{ matrix.impl }}
       PSYCOPG_TEST_DSN: "host=127.0.0.1 user=runner dbname=postgres"
       # MacOS on GitHub Actions seems particularly slow.
       # Don't run timing-based tests as they regularly fail.
@@ -129,12 +88,11 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: install PostgreSQL on the runner
+      - name: Install PostgreSQL on the runner
         run: brew install postgresql@13
 
-      - name: start PostgreSQL service for test
+      - name: Start PostgreSQL service for test
         run: brew services start postgresql
-        # Note: race condition, we expect the service will be up after build
 
       - uses: actions/setup-python@v2
         with:
@@ -143,5 +101,10 @@ jobs:
       - name: Install tox
         run: pip install tox
 
-      - name: Run tests
+      - name: Run tests (Python implementation)
+        run: tox -c psycopg -e ${{ matrix.python }} -- --color yes
+        if: ${{ matrix.impl == 'python' }}
+
+      - name: Run tests (C implementation)
         run: tox -c psycopg_c -e ${{ matrix.python }} -- --color yes
+        if: ${{ matrix.impl == 'c' }}
