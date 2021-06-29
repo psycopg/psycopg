@@ -464,6 +464,7 @@ async def test_leak(dsn, faker, fmt, fmt_out, fetch, row_factory):
     row_factory = getattr(rows, row_factory)
 
     n = []
+    gc_collect()
     for i in range(3):
         async with await psycopg.AsyncConnection.connect(dsn) as conn:
             async with conn.cursor(

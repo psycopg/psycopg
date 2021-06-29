@@ -537,6 +537,7 @@ def test_copy_to_leaks(dsn, faker, fmt, method, retries):
                     elif method == "rows":
                         list(copy.rows())
 
+    gc_collect()
     for retry in retries:
         with retry:
             n = []
@@ -578,6 +579,7 @@ def test_copy_from_leaks(dsn, faker, fmt, retries):
                 for got, want in zip(recs, faker.records):
                     faker.assert_record(got, want)
 
+    gc_collect()
     for retry in retries:
         with retry:
             n = []

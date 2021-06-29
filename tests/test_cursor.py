@@ -550,6 +550,7 @@ def test_leak(dsn, faker, fmt, fmt_out, fetch, row_factory):
     row_factory = getattr(rows, row_factory)
 
     n = []
+    gc_collect()
     for i in range(3):
         with psycopg.connect(dsn) as conn:
             with conn.cursor(binary=fmt_out, row_factory=row_factory) as cur:
