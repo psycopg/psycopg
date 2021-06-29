@@ -7,6 +7,7 @@ PostgreSQL database adapter for Python - optimisation package
 
 import os
 import re
+import sys
 import subprocess as sp
 
 from setuptools import setup, Extension
@@ -72,6 +73,9 @@ class psycopg_build_ext(build_ext):
             self.distribution.ext_modules = [pgext, pqext]
 
 
+# MSVC requires an explicit "libpq"
+libpq = "pq" if sys.platform != "win32" else "libpq"
+
 # Some details missing, to be finished by psycopg_build_ext.finalize_options
 pgext = Extension(
     "psycopg_c._psycopg",
@@ -79,14 +83,14 @@ pgext = Extension(
         "psycopg_c/_psycopg.c",
         "psycopg_c/types/numutils.c",
     ],
-    libraries=["pq"],
+    libraries=[libpq],
     include_dirs=[],
 )
 
 pqext = Extension(
     "psycopg_c.pq",
     ["psycopg_c/pq.c"],
-    libraries=["pq"],
+    libraries=[libpq],
     include_dirs=[],
 )
 
