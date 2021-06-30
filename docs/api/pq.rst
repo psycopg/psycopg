@@ -50,7 +50,12 @@ module constant.
 At import, Psycopg 3 will try to use the best implementation available and
 will fail if none is usable. You can force the use of a specific
 implementation by exporting the env var :envvar:`PSYCOPG_IMPL`: importing the
-library will fail if the requested implementation is not available.
+library will fail if the requested implementation is not available::
+
+    $ PSYCOPG_IMPL=c python -c "import psycopg"
+    Traceback (most recent call last):
+       ...
+    ImportError: couldn't import requested psycopg 'c' implementation: No module named 'psycopg_c'
 
 
 Module content
