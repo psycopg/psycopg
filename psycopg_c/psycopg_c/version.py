@@ -4,4 +4,8 @@ psycopg-c distribution version file.
 
 # Copyright (C) 2020-2021 The Psycopg Team
 
-__version__ = "2.99.0"
+# Use a versioning scheme as defined in
+# https://www.python.org/dev/peps/pep-0440/
+__version__ = "3.0.dev0"
+
+# also change psycopg/psycopg/version.py accordingly.
