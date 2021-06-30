@@ -1,0 +1,141 @@
+name: Build packages
+
+on:
+  workflow_dispatch:
+
+jobs:
+  linux:
+    name: Build Linux packages
+    runs-on: ubuntu-20.04
+
+    strategy:
+      matrix:
+        pyver: [cp36, cp37, cp38, cp39]
+        arch: [x86_64, i686, ppc64le, aarch64]
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up QEMU for multi-arch build
+        uses: docker/setup-qemu-action@v1
+
+      - name: Create the binary package source tree
+        run: python3 ./tools/build/copy_to_binary.py
+
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v1.12.0
+        with:
+          package-dir: psycopg_binary
+        env:
+          CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_24
+          CIBW_MANYLINUX_I686_IMAGE: manylinux_2_24
+          CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_24
+          CIBW_MANYLINUX_PPC64LE_IMAGE: manylinux_2_24
+          CIBW_BUILD: ${{matrix.pyver}}-manylinux_${{matrix.arch}}
+          CIBW_ARCHS_LINUX: auto aarch64 ppc64le
+          CIBW_BEFORE_ALL_LINUX: ./tools/build/wheel_linux_before_all.sh
+          CIBW_BEFORE_TEST: pip install ./psycopg[test]
+          CIBW_TEST_COMMAND: pytest {project}/tests -m 'not slow' --color yes
+          CIBW_ENVIRONMENT: >-
+            PSYCOPG_IMPL=binary
+            PSYCOPG_TEST_DSN='host=172.17.0.1 user=postgres'
+            PGPASSWORD=password
+
+      - uses: actions/upload-artifact@v2
+        with:
+          path: ./wheelhouse/*.whl
+
+    services:
+      postgresql:
+        image: postgres:13
+        env:
+          POSTGRES_PASSWORD: password
+        ports:
+          - 5432:5432
+        # Set health checks to wait until postgres has started
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+  macos:
+    name: Build MacOS packages
+    runs-on: macos-10.15
+
+    strategy:
+      matrix:
+        pyver: [cp36, cp37, cp38, cp39]
+        arch: [x86_64]
+        # These archs require an Apple M1 runner: [arm64, universal2]
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Create the binary package source tree
+        run: python3 ./tools/build/copy_to_binary.py
+
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v1.12.0
+        with:
+          package-dir: psycopg_binary
+        env:
+          CIBW_BUILD: ${{matrix.pyver}}-macosx_${{matrix.arch}}
+          CIBW_ARCHS_MACOS: x86_64 arm64 universal2
+          CIBW_BEFORE_ALL_MACOS: ./tools/build/wheel_macos_before_all.sh
+          CIBW_BEFORE_TEST: pip install ./psycopg[test]
+          CIBW_TEST_COMMAND: pytest {project}/tests -m 'not slow' --color yes
+          CIBW_ENVIRONMENT: >-
+            PSYCOPG_IMPL=binary
+            PSYCOPG_TEST_DSN='dbname=postgres'
+
+      - uses: actions/upload-artifact@v2
+        with:
+          path: ./wheelhouse/*.whl
+
+  windows:
+    name: Build Windows packages
+    runs-on: windows-2019
+    # TODO: Currently disabled: not completed yet. See the
+    # wheel_windows_before_all script.
+    if: false
+
+    strategy:
+      matrix:
+        pyver: [cp36, cp37, cp38, cp39]
+        arch: [win_amd64]
+        # Might want to add win32, untested at the moment.
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Start PostgreSQL service for test
+        run: |
+          $postgreSqlSvc = Get-Service "postgresql*"
+          Set-Service $postgreSqlSvc.Name -StartupType manual
+          $postgreSqlSvc.Start()
+
+      - name: Create the binary package source tree
+        run: python3 ./tools/build/copy_to_binary.py
+
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v1.12.0
+        with:
+          package-dir: psycopg_binary
+        env:
+          CIBW_BUILD: ${{matrix.pyver}}-${{matrix.arch}}
+          CIBW_ARCHS_WINDOWS: AMD64 x86
+          CIBW_BEFORE_ALL_WINDOWS: >-
+            powershell.exe tools\build\wheel_windows_before_all.ps1
+          CIBW_BEFORE_BUILD_WINDOWS: "pip install delvewheel"
+          CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: >-
+            delvewheel repair -w {dest_dir} {wheel}
+          CIBW_BEFORE_TEST: pip install ./psycopg[test]
+          CIBW_TEST_COMMAND: pytest {project}/tests -m 'not slow' --color yes
+          CIBW_ENVIRONMENT: >-
+            PSYCOPG_IMPL=binary
+            PSYCOPG_TEST_DSN='host=172.17.0.1 user=postgres'
+
+      - uses: actions/upload-artifact@v2
+        with:
+          path: ./wheelhouse/*.whl
