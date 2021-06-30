@@ -1,5 +1,5 @@
 Psycopg 3 -- PostgreSQL database adapter for Python
-==================================================
+===================================================
 
 Psycopg 3 is a modern implementation of a PostgreSQL adapter for Python.
 
@@ -7,9 +7,8 @@ Psycopg 3 is a modern implementation of a PostgreSQL adapter for Python.
 Installation
 ------------
 
-The library is still in a development stage and is not available on PyPI in
-the form of packages yet. You can install it directly `from the GitHub
-project`__::
+The library is still in a development stage: you can obtain the most
+up-to-date code `from the GitHub project`__::
 
     $ pip install git+https://github.com/psycopg/psycopg.git#subdirectory=psycopg
     $ python3
@@ -17,14 +16,24 @@ project`__::
 
 .. __: https://github.com/psycopg/psycopg
 
+or the last packages `released on TestPyPI`__ using::
+
+    pip install -i https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ psycopg
+
+.. __: https://test.pypi.org/project/psycopg/
+
 You are required to have the ``libpq``, the PostgreSQL client library, already
 installed in the system before using ``psycopg``. On Debian system you can
 obtain it by running::
 
-    sudo apt-get install libpq5
+    sudo apt install libpq5
 
 Please check your system's documentation for information about installing the
 ``libpq`` on your platform.
+
+For further information about installation please check `the documentation`__.
+
+.. __: https://www.psycopg.org/psycopg3/docs/basic/install.html
 
 
 Hacking
@@ -48,7 +57,7 @@ different requirements:
   C/Cython. In order to build it you will need a few development tools: please
   look at `Local installation`__ in the docs for the details.
 
-  .. __: https://www.psycopg.org/psycopg/docs/install.html#local-installation
+  .. __: https://www.psycopg.org/psycopg3/docs/basic/install.html#local-installation
 
 You can create a local virtualenv and install there the packages `in
 development mode`__, together with their development and testing
