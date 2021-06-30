@@ -3,6 +3,11 @@
 # Configure the environment needed to build wheel packages on Windows.
 # This script is designed to be used by cibuildwheel as CIBW_BEFORE_ALL_WINDOWS
 
+# The script is currently incomplete. The image seems to have postgres
+# installed but without libpq.lib, so installation fails. This is an incomplete
+# attempt to download the binary package (which is 235MB and takes forever)
+# and use it for building.
+
 # Set-PSDebug -Trace 1
 
 python -c "import os; print(os.environ['PATH'])"

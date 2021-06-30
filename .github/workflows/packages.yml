@@ -96,6 +96,10 @@ jobs:
   windows:
     name: Build Windows packages
     runs-on: windows-2019
+    # TODO: Currently disabled: not completed yet. See the
+    # wheel_windows_before_all script.
+    if: false
+
     strategy:
       matrix:
         pyver: [cp36, cp37, cp38, cp39]
