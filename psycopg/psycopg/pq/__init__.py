@@ -51,11 +51,11 @@ def import_from_libpq() -> None:
 
     def handle_error(name: str, e: Exception) -> None:
         if not impl:
-            msg = f"error importing '{name}' wrapper: {e}"
+            msg = f"couldn't import psycopg '{name}' implementation: {e}"
             logger.debug(msg)
             attempts.append(msg)
         else:
-            msg = f"error importing requested '{name}' wrapper: {e}"
+            msg = f"couldn't import requested psycopg '{name}' implementation: {e}"
             raise ImportError(msg) from e
 
     # The best implementation: fast but requires the system libpq installed
@@ -89,7 +89,7 @@ def import_from_libpq() -> None:
         Escaping = module.Escaping
         PGcancel = module.PGcancel
     elif impl:
-        raise ImportError(f"requested pq impementation '{impl}' unknown")
+        raise ImportError(f"requested psycopg impementation '{impl}' unknown")
     else:
         sattempts = "\n".join(f"- {attempt}" for attempt in attempts)
         raise ImportError(
