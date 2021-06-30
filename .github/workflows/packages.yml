@@ -4,6 +4,64 @@ on:
   workflow_dispatch:
 
 jobs:
+  sdist:
+    name: Build sdist packages
+    runs-on: ubuntu-20.04
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {package: psycopg, impl: python}
+          - {package: psycopg_c, impl: c}
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions/setup-python@v2
+        with:
+          python-version: 3.9
+
+      - name: Create the sdist packages
+        run: >-
+          python ${{ matrix.package }}/setup.py sdist -d `pwd`/dist/
+
+      - name: Install the Python package and test requirements
+        run: pip install `ls dist/psycopg-*.tar.gz`[test]
+        if: ${{ matrix.package == 'psycopg' }}
+
+      - name: Install the C package and test requirements
+        run: |-
+          pip install dist/psycopg-c-*.tar.gz
+          pip install -e ./psycopg[test]
+        if: ${{ matrix.package == 'psycopg_c' }}
+
+      - name: Test the sdist package
+        run: pytest -m 'not slow' --color yes
+        env:
+          PSYCOPG_IMPL: ${{ matrix.impl }}
+          PSYCOPG_TEST_DSN: "host=127.0.0.1 user=postgres"
+          PGPASSWORD: password
+
+      - uses: actions/upload-artifact@v2
+        with:
+          path: ./dist/*.tar.gz
+
+    services:
+      postgresql:
+        image: postgres:13
+        env:
+          POSTGRES_PASSWORD: password
+        ports:
+          - 5432:5432
+        # Set health checks to wait until postgres has started
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+
   linux:
     name: Build Linux packages
     runs-on: ubuntu-20.04
@@ -59,6 +117,7 @@ jobs:
           --health-timeout 5s
           --health-retries 5
 
+
   macos:
     name: Build MacOS packages
     runs-on: macos-10.15
@@ -92,6 +151,7 @@ jobs:
       - uses: actions/upload-artifact@v2
         with:
           path: ./wheelhouse/*.whl
+
 
   windows:
     name: Build Windows packages
