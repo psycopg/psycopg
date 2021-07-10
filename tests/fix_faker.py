@@ -11,7 +11,7 @@ import pytest
 
 import psycopg
 from psycopg import sql
-from psycopg.adapt import Format
+from psycopg.adapt import PyFormat
 from psycopg.types.range import Range
 from psycopg.types.numeric import Int4, Int8
 
@@ -34,7 +34,7 @@ class Faker:
 
     def __init__(self, connection):
         self.conn = connection
-        self._format = Format.BINARY
+        self._format = PyFormat.BINARY
         self.records = []
 
         self._schema = None
@@ -429,14 +429,18 @@ class Faker:
             (dt.datetime, False),
         ]
         # TODO: learn to dump numeric ranges in binary
-        if self.format != Format.BINARY:
+        if self.format != PyFormat.BINARY:
             subtypes.extend([Int4, Int8])
 
         return (cls, choice(subtypes))
 
     def make_Range(self, spec):
         # TODO: drop format check after fixing binary dumping of empty ranges
-        if random() < 0.02 and spec[0] is Range and self.format == Format.TEXT:
+        if (
+            random() < 0.02
+            and spec[0] is Range
+            and self.format == PyFormat.TEXT
+        ):
             return spec[0](empty=True)
 
         while True:
@@ -459,7 +463,7 @@ class Faker:
 
             # avoid generating ranges with no type info if dumping in binary
             # TODO: lift this limitation after test_copy_in_empty xfail is fixed
-            if spec[0] is Range and self.format == Format.BINARY:
+            if spec[0] is Range and self.format == PyFormat.BINARY:
                 if bounds[0] is bounds[1] is None:
                     continue
 

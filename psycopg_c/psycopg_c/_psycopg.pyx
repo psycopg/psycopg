@@ -12,14 +12,14 @@ from psycopg_c.pq cimport libpq
 from psycopg_c._psycopg cimport oids
 
 from psycopg.pq import Format as _pq_Format
-from psycopg._enums import Format as _pg_Format
+from psycopg._enums import PyFormat as _py_Format
 
 PQ_TEXT = _pq_Format.TEXT
 PQ_BINARY = _pq_Format.BINARY
 
-PG_AUTO = _pg_Format.AUTO
-PG_TEXT = _pg_Format.TEXT
-PG_BINARY = _pg_Format.BINARY
+PG_AUTO = _py_Format.AUTO
+PG_TEXT = _py_Format.TEXT
+PG_BINARY = _py_Format.BINARY
 
 
 include "_psycopg/adapt.pyx"

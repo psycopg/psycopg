@@ -12,7 +12,7 @@ from typing import Sequence, Tuple, Type
 
 from .. import pq
 from ..oids import TEXT_OID
-from ..adapt import Format, RecursiveDumper, RecursiveLoader
+from ..adapt import PyFormat, RecursiveDumper, RecursiveLoader
 from ..proto import AdaptContext, Buffer
 from .._struct import unpack_len
 from .._typeinfo import CompositeInfo as CompositeInfo  # exported here
@@ -40,7 +40,7 @@ class SequenceDumper(RecursiveDumper):
                 parts.append(sep)
                 continue
 
-            dumper = self._tx.get_dumper(item, Format.from_pq(self.format))
+            dumper = self._tx.get_dumper(item, PyFormat.from_pq(self.format))
             ad = dumper.dump(item)
             if not ad:
                 ad = b'""'

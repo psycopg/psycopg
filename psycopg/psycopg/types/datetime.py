@@ -13,7 +13,7 @@ from typing import Any, Callable, cast, Optional, Tuple, Union, TYPE_CHECKING
 from ..pq import Format
 from .._tz import get_tzinfo
 from ..oids import postgres_types as builtins
-from ..adapt import Buffer, Dumper, Loader, Format as Pg3Format
+from ..adapt import Buffer, Dumper, Loader, PyFormat
 from ..proto import AdaptContext
 from ..errors import InterfaceError, DataError
 from .._struct import pack_int4, pack_int8, unpack_int4, unpack_int8
@@ -62,9 +62,7 @@ class DateBinaryDumper(Dumper):
 
 
 class _BaseTimeDumper(Dumper):
-    def get_key(
-        self, obj: time, format: Pg3Format
-    ) -> Union[type, Tuple[type]]:
+    def get_key(self, obj: time, format: PyFormat) -> Union[type, Tuple[type]]:
         # Use (cls,) to report the need to upgrade to a dumper for timetz (the
         # Frankenstein of the data types).
         if not obj.tzinfo:
@@ -72,7 +70,7 @@ class _BaseTimeDumper(Dumper):
         else:
             return (self.cls,)
 
-    def upgrade(self, obj: time, format: Pg3Format) -> Dumper:
+    def upgrade(self, obj: time, format: PyFormat) -> Dumper:
         raise NotImplementedError
 
 
@@ -88,7 +86,7 @@ class TimeDumper(_BaseTimeTextDumper):
 
     _oid = builtins["time"].oid
 
-    def upgrade(self, obj: time, format: Pg3Format) -> Dumper:
+    def upgrade(self, obj: time, format: PyFormat) -> Dumper:
         if not obj.tzinfo:
             return self
         else:
@@ -111,7 +109,7 @@ class TimeBinaryDumper(_BaseTimeDumper):
         )
         return pack_int8(us)
 
-    def upgrade(self, obj: time, format: Pg3Format) -> Dumper:
+    def upgrade(self, obj: time, format: PyFormat) -> Dumper:
         if not obj.tzinfo:
             return self
         else:
@@ -134,7 +132,7 @@ class TimeTzBinaryDumper(_BaseTimeDumper):
 
 class _BaseDatetimeDumper(Dumper):
     def get_key(
-        self, obj: datetime, format: Pg3Format
+        self, obj: datetime, format: PyFormat
     ) -> Union[type, Tuple[type]]:
         # Use (cls,) to report the need to upgrade (downgrade, actually) to a
         # dumper for naive timestamp.
@@ -143,7 +141,7 @@ class _BaseDatetimeDumper(Dumper):
         else:
             return (self.cls,)
 
-    def upgrade(self, obj: datetime, format: Pg3Format) -> Dumper:
+    def upgrade(self, obj: datetime, format: PyFormat) -> Dumper:
         raise NotImplementedError
 
 
@@ -161,7 +159,7 @@ class DatetimeDumper(_BaseDatetimeTextDumper):
 
     _oid = builtins["timestamptz"].oid
 
-    def upgrade(self, obj: datetime, format: Pg3Format) -> Dumper:
+    def upgrade(self, obj: datetime, format: PyFormat) -> Dumper:
         if obj.tzinfo:
             return self
         else:
@@ -185,7 +183,7 @@ class DatetimeBinaryDumper(_BaseDatetimeDumper):
         )
         return pack_int8(micros)
 
-    def upgrade(self, obj: datetime, format: Pg3Format) -> Dumper:
+    def upgrade(self, obj: datetime, format: PyFormat) -> Dumper:
         if obj.tzinfo:
             return self
         else:

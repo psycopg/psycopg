@@ -3,7 +3,7 @@ import pytest
 from psycopg import pq
 from psycopg.sql import Identifier
 from psycopg.oids import postgres_types as builtins
-from psycopg.adapt import Format, global_adapters
+from psycopg.adapt import PyFormat as Format, global_adapters
 from psycopg.types.composite import CompositeInfo
 
 

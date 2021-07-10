@@ -10,7 +10,7 @@ from typing import cast, TYPE_CHECKING, TypeVar
 
 from . import pq
 from . import errors as e
-from ._enums import Format as Format
+from ._enums import PyFormat as PyFormat
 from .oids import postgres_types
 from .proto import AdaptContext, Buffer as Buffer
 from ._cmodule import _psycopg
@@ -60,7 +60,7 @@ class Dumper(ABC):
             return b"'%s'" % esc.escape_string(value)
 
     def get_key(
-        self, obj: Any, format: Format
+        self, obj: Any, format: PyFormat
     ) -> Union[type, Tuple[type, ...]]:
         """Return an alternative key to upgrade the dumper to represent *obj*
 
@@ -80,7 +80,7 @@ class Dumper(ABC):
         """
         return self.cls
 
-    def upgrade(self, obj: Any, format: Format) -> "Dumper":
+    def upgrade(self, obj: Any, format: PyFormat) -> "Dumper":
         """Return a new dumper to manage *obj*.
 
         Once `Transformer.get_dumper()` has been notified that this Dumper
@@ -140,7 +140,7 @@ class AdaptersMap(AdaptContext):
     is cheap: a copy is made only on customisation.
     """
 
-    _dumpers: Dict[Format, Dict[Union[type, str], Type["proto.Dumper"]]]
+    _dumpers: Dict[PyFormat, Dict[Union[type, str], Type["proto.Dumper"]]]
     _loaders: List[Dict[int, Type["Loader"]]]
     types: TypesRegistry
 
@@ -161,7 +161,7 @@ class AdaptersMap(AdaptContext):
             template._own_loaders = [False, False]
             self.types = TypesRegistry(template.types)
         else:
-            self._dumpers = {fmt: {} for fmt in Format}
+            self._dumpers = {fmt: {} for fmt in PyFormat}
             self._own_dumpers = _dumpers_owned.copy()
             self._loaders = [{}, {}]
             self._own_loaders = [True, True]
@@ -192,7 +192,7 @@ class AdaptersMap(AdaptContext):
 
         # Register the dumper both as its format and as auto
         # so that the last dumper registered is used in auto (%s) format
-        for fmt in (Format.from_pq(dumper.format), Format.AUTO):
+        for fmt in (PyFormat.from_pq(dumper.format), PyFormat.AUTO):
             if not self._own_dumpers[fmt]:
                 self._dumpers[fmt] = self._dumpers[fmt].copy()
                 self._own_dumpers[fmt] = True
@@ -222,7 +222,7 @@ class AdaptersMap(AdaptContext):
 
         self._loaders[fmt][oid] = loader
 
-    def get_dumper(self, cls: type, format: Format) -> Type["proto.Dumper"]:
+    def get_dumper(self, cls: type, format: PyFormat) -> Type["proto.Dumper"]:
         """
         Return the dumper class for the given type and format.
 
@@ -247,7 +247,7 @@ class AdaptersMap(AdaptContext):
 
         raise e.ProgrammingError(
             f"cannot adapt type {cls.__name__}"
-            f" to format {Format(format).name}"
+            f" to format {PyFormat(format).name}"
         )
 
     def get_loader(
@@ -285,8 +285,8 @@ class AdaptersMap(AdaptContext):
         return cls
 
 
-_dumpers_owned = dict.fromkeys(Format, True)
-_dumpers_shared = dict.fromkeys(Format, False)
+_dumpers_owned = dict.fromkeys(PyFormat, True)
+_dumpers_shared = dict.fromkeys(PyFormat, False)
 
 global_adapters = AdaptersMap(types=postgres_types)
 

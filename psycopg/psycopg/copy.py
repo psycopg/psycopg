@@ -17,7 +17,7 @@ from typing import Any, Dict, List, Match, Optional, Sequence, Type, Tuple
 from . import pq
 from . import errors as e
 from .pq import ExecStatus
-from .adapt import Format
+from .adapt import PyFormat
 from .proto import ConnectionType, PQGen, Transformer
 from .compat import create_task
 from ._cmodule import _psycopg
@@ -541,7 +541,7 @@ def _format_row_text(
 
     for item in row:
         if item is not None:
-            dumper = tx.get_dumper(item, Format.TEXT)
+            dumper = tx.get_dumper(item, PyFormat.TEXT)
             b = dumper.dump(item)
             out += _dump_re.sub(_dump_sub, b)
         else:
@@ -562,7 +562,7 @@ def _format_row_binary(
     out += _pack_int2(len(row))
     for item in row:
         if item is not None:
-            dumper = tx.get_dumper(item, Format.BINARY)
+            dumper = tx.get_dumper(item, PyFormat.BINARY)
             b = dumper.dump(item)
             out += _pack_int4(len(b))
             out += b

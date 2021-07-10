@@ -12,7 +12,7 @@ from typing import cast
 from .. import pq
 from .. import errors as e
 from ..oids import postgres_types, TEXT_OID, TEXT_ARRAY_OID, INVALID_OID
-from ..adapt import RecursiveDumper, RecursiveLoader, Format as Pg3Format
+from ..adapt import RecursiveDumper, RecursiveLoader, PyFormat
 from ..proto import Dumper, AdaptContext, Buffer
 from .._struct import pack_len, unpack_len
 from .._typeinfo import TypeInfo
@@ -35,7 +35,7 @@ class BaseListDumper(RecursiveDumper):
         self.sub_dumper: Optional[Dumper] = None
         self._types = context.adapters.types if context else postgres_types
 
-    def get_key(self, obj: List[Any], format: Pg3Format) -> Tuple[type, ...]:
+    def get_key(self, obj: List[Any], format: PyFormat) -> Tuple[type, ...]:
         item = self._find_list_element(obj)
         if item is not None:
             sd = self._tx.get_dumper(item, format)
@@ -43,7 +43,7 @@ class BaseListDumper(RecursiveDumper):
         else:
             return (self.cls,)
 
-    def upgrade(self, obj: List[Any], format: Pg3Format) -> "BaseListDumper":
+    def upgrade(self, obj: List[Any], format: PyFormat) -> "BaseListDumper":
         item = self._find_list_element(obj)
         if item is None:
             # Empty lists can only be dumped as text if the type is unknown.

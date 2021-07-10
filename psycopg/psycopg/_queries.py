@@ -13,7 +13,7 @@ from . import pq
 from . import errors as e
 from .sql import Composable
 from .proto import Query, Params
-from ._enums import Format
+from ._enums import PyFormat
 
 if TYPE_CHECKING:
     from .proto import Transformer
@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 class QueryPart(NamedTuple):
     pre: bytes
     item: Union[int, str]
-    format: Format
+    format: PyFormat
 
 
 class PostgresQuery:
@@ -43,7 +43,7 @@ class PostgresQuery:
         self.types: Tuple[int, ...] = ()
 
         # The format requested by the user and the ones to really pass Postgres
-        self._want_formats: Optional[List[Format]] = None
+        self._want_formats: Optional[List[PyFormat]] = None
         self.formats: Optional[Sequence[pq.Format]] = None
 
         self._parts: List[QueryPart]
@@ -103,7 +103,7 @@ class PostgresQuery:
 @lru_cache()
 def _query2pg(
     query: Union[bytes, str], encoding: str
-) -> Tuple[bytes, List[Format], Optional[List[str]], List[QueryPart]]:
+) -> Tuple[bytes, List[PyFormat], Optional[List[str]], List[QueryPart]]:
     """
     Convert Python query and params into something Postgres understands.
 
@@ -136,7 +136,7 @@ def _query2pg(
             formats.append(part.format)
 
     elif isinstance(parts[0].item, str):
-        seen: Dict[str, Tuple[bytes, Format]] = {}
+        seen: Dict[str, Tuple[bytes, PyFormat]] = {}
         order = []
         for part in parts[:-1]:
             assert isinstance(part.item, str)
@@ -250,7 +250,7 @@ def _split_query(query: bytes, encoding: str = "ascii") -> List[QueryPart]:
         pre, m = parts[i]
         if m is None:
             # last part
-            rv.append(QueryPart(pre, 0, Format.AUTO))
+            rv.append(QueryPart(pre, 0, PyFormat.AUTO))
             break
 
         ph = m.group(0)
@@ -297,7 +297,7 @@ def _split_query(query: bytes, encoding: str = "ascii") -> List[QueryPart]:
 
 
 _ph_to_fmt = {
-    b"s": Format.AUTO,
-    b"t": Format.TEXT,
-    b"b": Format.BINARY,
+    b"s": PyFormat.AUTO,
+    b"t": PyFormat.TEXT,
+    b"b": PyFormat.BINARY,
 }

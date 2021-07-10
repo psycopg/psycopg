@@ -10,7 +10,7 @@ from abc import ABC, abstractmethod
 from typing import Any, Iterator, List, Optional, Sequence, Union
 
 from .pq import Escaping
-from .adapt import Transformer, Format
+from .adapt import Transformer, PyFormat
 from .proto import AdaptContext
 
 
@@ -395,7 +395,7 @@ class Literal(Composable):
 
     def as_bytes(self, context: Optional[AdaptContext]) -> bytes:
         tx = Transformer(context)
-        dumper = tx.get_dumper(self._obj, Format.TEXT)
+        dumper = tx.get_dumper(self._obj, PyFormat.TEXT)
         return dumper.quote(self._obj)
 
 
@@ -427,7 +427,7 @@ class Placeholder(Composable):
 
     """
 
-    def __init__(self, name: str = "", format: Format = Format.AUTO):
+    def __init__(self, name: str = "", format: PyFormat = PyFormat.AUTO):
         super().__init__(name)
         if not isinstance(name, str):
             raise TypeError(f"expected string as name, got {name!r}")
@@ -441,8 +441,8 @@ class Placeholder(Composable):
         parts = []
         if self._obj:
             parts.append(repr(self._obj))
-        if self._format != Format.AUTO:
-            parts.append(f"format={Format(self._format).name}")
+        if self._format != PyFormat.AUTO:
+            parts.append(f"format={PyFormat(self._format).name}")
 
         return f"{self.__class__.__name__}({', '.join(parts)})"
 

@@ -8,7 +8,7 @@ import datetime as dt
 import pytest
 
 from psycopg import sql, ProgrammingError
-from psycopg.adapt import Format
+from psycopg.adapt import PyFormat as Format
 
 
 @pytest.mark.parametrize(

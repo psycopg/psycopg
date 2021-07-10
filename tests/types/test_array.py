@@ -3,7 +3,7 @@ import psycopg
 from psycopg import pq
 from psycopg import sql
 from psycopg.oids import postgres_types as builtins
-from psycopg.adapt import Format, Transformer
+from psycopg.adapt import PyFormat as Format, Transformer
 from psycopg.types import TypeInfo
 
 

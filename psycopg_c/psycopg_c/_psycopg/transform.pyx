@@ -22,7 +22,6 @@ from cpython.object cimport PyObject, PyObject_CallFunctionObjArgs
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
 from psycopg import errors as e
-from psycopg._enums import Format as Pg3Format
 from psycopg.pq import Format as PqFormat
 from psycopg.rows import Row, RowMaker
 

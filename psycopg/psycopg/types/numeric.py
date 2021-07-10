@@ -12,8 +12,7 @@ from decimal import Decimal, DefaultContext, Context
 from .. import errors as e
 from ..pq import Format
 from ..oids import postgres_types as builtins
-from ..adapt import Buffer, Dumper, Loader
-from ..adapt import Format as Pg3Format
+from ..adapt import Buffer, Dumper, Loader, PyFormat
 from ..proto import AdaptContext
 from .._struct import pack_int2, pack_uint2, unpack_int2
 from .._struct import pack_int4, pack_uint4, unpack_int4, unpack_uint4
@@ -124,7 +123,7 @@ class IntDumper(Dumper):
             " dump() is not supposed to be called"
         )
 
-    def get_key(self, obj: int, format: Pg3Format) -> type:
+    def get_key(self, obj: int, format: PyFormat) -> type:
         return self.upgrade(obj, format).cls
 
     _int2_dumper = Int2Dumper(Int2)
@@ -132,7 +131,7 @@ class IntDumper(Dumper):
     _int8_dumper = Int8Dumper(Int8)
     _int_numeric_dumper = IntNumericDumper(IntNumeric)
 
-    def upgrade(self, obj: int, format: Pg3Format) -> Dumper:
+    def upgrade(self, obj: int, format: PyFormat) -> Dumper:
         if -(2 ** 31) <= obj < 2 ** 31:
             if -(2 ** 15) <= obj < 2 ** 15:
                 return self._int2_dumper

@@ -12,7 +12,7 @@ from typing import Any, Iterable, List, Optional, Sequence, Tuple
 from psycopg import pq
 from psycopg import proto
 from psycopg.rows import Row, RowMaker
-from psycopg.adapt import  Loader, AdaptersMap, Format
+from psycopg.adapt import  Loader, AdaptersMap, PyFormat
 from psycopg.proto import Dumper
 from psycopg.pq.proto import PGconn, PGresult
 from psycopg.connection import BaseConnection
@@ -32,9 +32,9 @@ class Transformer(proto.AdaptContext):
         self, types: Sequence[int], formats: Sequence[pq.Format]
     ) -> None: ...
     def dump_sequence(
-        self, params: Sequence[Any], formats: Sequence[Format]
+        self, params: Sequence[Any], formats: Sequence[PyFormat]
     ) -> Tuple[List[Any], Tuple[int, ...], Sequence[pq.Format]]: ...
-    def get_dumper(self, obj: Any, format: Format) -> Dumper: ...
+    def get_dumper(self, obj: Any, format: PyFormat) -> Dumper: ...
     def load_rows(
         self, row0: int, row1: int, make_row: RowMaker[Row]
     ) -> List[Row]: ...

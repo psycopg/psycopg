@@ -12,8 +12,7 @@ from . import pq
 from . import errors as e
 from .oids import INVALID_OID
 from .rows import Row, RowMaker
-from .proto import LoadFunc, AdaptContext
-from ._enums import Format
+from .proto import LoadFunc, AdaptContext, PyFormat
 
 if TYPE_CHECKING:
     from .pq.proto import PGresult
@@ -54,7 +53,7 @@ class Transformer(AdaptContext):
             self._conn = None
 
         # mapping class, fmt -> Dumper instance
-        self._dumpers_cache: DefaultDict[Format, DumperCache] = defaultdict(
+        self._dumpers_cache: DefaultDict[PyFormat, DumperCache] = defaultdict(
             dict
         )
 
@@ -112,7 +111,7 @@ class Transformer(AdaptContext):
         self._row_loaders = rc
 
     def dump_sequence(
-        self, params: Sequence[Any], formats: Sequence[Format]
+        self, params: Sequence[Any], formats: Sequence[PyFormat]
     ) -> Tuple[List[Any], Tuple[int, ...], Sequence[pq.Format]]:
         ps: List[Optional[bytes]] = [None] * len(params)
         ts = [INVALID_OID] * len(params)
@@ -134,7 +133,7 @@ class Transformer(AdaptContext):
 
         return ps, tuple(ts), fs
 
-    def get_dumper(self, obj: Any, format: Format) -> "Dumper":
+    def get_dumper(self, obj: Any, format: PyFormat) -> "Dumper":
         """
         Return a Dumper instance to dump *obj*.
         """

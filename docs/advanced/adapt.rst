@@ -133,7 +133,7 @@ right instance.
   :sql:`integer`, :sql:`bigint`, :sql:`smallint` according to its value).
 
 - According to the placeholder used (``%s``, ``%b``, ``%t``), Psycopg may
-  pick a binary or a text dumper. When using the ``%s`` "`~Format.AUTO`"
+  pick a binary or a text dumper. When using the ``%s`` "`~PyFormat.AUTO`"
   format, if the same type has both a text and a binary dumper registered, the
   last one registered (using `Dumper.register()`) will be selected.
 
@@ -162,7 +162,7 @@ Objects involved in types adaptation
     move to API section
 
 
-.. autoclass:: Format
+.. autoclass:: PyFormat
     :members:
 
 

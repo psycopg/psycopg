@@ -9,7 +9,7 @@ from typing import List, Optional, Sequence, Tuple, TypeVar, Union
 from typing import TYPE_CHECKING
 
 from . import pq
-from . import _enums
+from ._enums import PyFormat as PyFormat
 from .compat import Protocol
 
 if TYPE_CHECKING:
@@ -21,9 +21,6 @@ if TYPE_CHECKING:
 
     from .waiting import Wait, Ready
     from .connection import BaseConnection
-
-# NOMERGE: change name of _enums.Format
-PyFormat = _enums.Format
 
 # An object implementing the buffer protocol
 Buffer = Union[bytes, bytearray, memoryview]

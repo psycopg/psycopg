@@ -11,7 +11,7 @@ from psycopg import pq
 from psycopg import sql
 from psycopg import errors as e
 from psycopg.pq import Format
-from psycopg.adapt import Format as PgFormat
+from psycopg.adapt import PyFormat as PgFormat
 from psycopg.types.numeric import Int4
 
 from .utils import gc_collect

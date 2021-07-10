@@ -5,7 +5,7 @@ import pytest
 
 import psycopg
 from psycopg import pq, sql
-from psycopg.adapt import Transformer, Format, Dumper, Loader
+from psycopg.adapt import Transformer, PyFormat as Format, Dumper, Loader
 from psycopg.oids import postgres_types as builtins, TEXT_OID
 from psycopg._cmodule import _psycopg
 

@@ -4,7 +4,7 @@ import datetime as dt
 import pytest
 
 from psycopg import DataError, pq, sql
-from psycopg.adapt import Format
+from psycopg.adapt import PyFormat as Format
 
 
 class TestDate:

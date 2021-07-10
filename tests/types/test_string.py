@@ -3,7 +3,7 @@ import pytest
 import psycopg
 from psycopg import pq
 from psycopg import sql
-from psycopg.adapt import Format
+from psycopg.adapt import PyFormat as Format
 from psycopg import Binary
 
 eur = "\u20ac"

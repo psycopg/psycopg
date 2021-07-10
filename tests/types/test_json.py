@@ -6,7 +6,7 @@ import pytest
 import psycopg.types
 from psycopg import pq
 from psycopg import sql
-from psycopg.adapt import Format
+from psycopg.adapt import PyFormat as Format
 from psycopg.types.json import Json, Jsonb, set_json_dumps, set_json_loads
 
 samples = [

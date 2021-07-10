@@ -6,8 +6,8 @@ from dataclasses import dataclass
 from typing import Any, Callable, Optional, Sequence, Tuple
 
 from psycopg import AnyCursor, Connection, Cursor, ServerCursor, connect
-from psycopg import pq, adapt
-from psycopg.proto import Dumper, AdaptContext
+from psycopg import pq
+from psycopg.proto import Dumper, AdaptContext, PyFormat
 
 
 def int_row_factory(cursor: AnyCursor[int]) -> Callable[[Sequence[int]], int]:
@@ -110,8 +110,8 @@ class MyStrDumper:
         esc = pq.Escaping()
         return b"'%s'" % esc.escape_string(value.replace(b"h", b"q"))
 
-    def get_key(self, obj: str, format: adapt.Format) -> type:
+    def get_key(self, obj: str, format: PyFormat) -> type:
         return self.cls
 
-    def upgrade(self, obj: str, format: adapt.Format) -> "MyStrDumper":
+    def upgrade(self, obj: str, format: PyFormat) -> "MyStrDumper":
         return self

@@ -11,7 +11,7 @@ from psycopg import pq
 from psycopg import sql
 from psycopg import errors as e
 from psycopg.pq import Format
-from psycopg.adapt import Format as PgFormat
+from psycopg.adapt import PyFormat as PgFormat
 
 from .utils import gc_collect
 from .test_copy import sample_text, sample_binary, sample_binary_rows  # noqa

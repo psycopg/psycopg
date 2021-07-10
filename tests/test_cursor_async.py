@@ -5,7 +5,7 @@ import datetime as dt
 
 import psycopg
 from psycopg import pq, sql, rows
-from psycopg.adapt import Format
+from psycopg.adapt import PyFormat as Format
 
 from .utils import gc_collect
 from .test_cursor import my_row_factory

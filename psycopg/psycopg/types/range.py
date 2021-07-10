@@ -12,7 +12,7 @@ from datetime import date, datetime
 
 from ..pq import Format
 from ..oids import postgres_types as builtins, INVALID_OID
-from ..adapt import RecursiveDumper, RecursiveLoader, Format as Pg3Format
+from ..adapt import RecursiveDumper, RecursiveLoader, PyFormat
 from ..proto import Dumper, AdaptContext, Buffer
 from .._struct import pack_len, unpack_len
 from .._typeinfo import RangeInfo as RangeInfo  # exported here
@@ -257,10 +257,10 @@ class BaseRangeDumper(RecursiveDumper):
         super().__init__(cls, context)
         self.sub_dumper: Optional[Dumper] = None
         self._types = context.adapters.types if context else builtins
-        self._adapt_format = Pg3Format.from_pq(self.format)
+        self._adapt_format = PyFormat.from_pq(self.format)
 
     def get_key(
-        self, obj: Range[Any], format: Pg3Format
+        self, obj: Range[Any], format: PyFormat
     ) -> Union[type, Tuple[type, ...]]:
         # If we are a subclass whose oid is specified we don't need upgrade
         if self.oid != INVALID_OID:
@@ -273,7 +273,7 @@ class BaseRangeDumper(RecursiveDumper):
         else:
             return (self.cls,)
 
-    def upgrade(self, obj: Range[Any], format: Pg3Format) -> "BaseRangeDumper":
+    def upgrade(self, obj: Range[Any], format: PyFormat) -> "BaseRangeDumper":
         # If we are a subclass whose oid is specified we don't need upgrade
         if self.oid != INVALID_OID:
             return self
@@ -286,7 +286,7 @@ class BaseRangeDumper(RecursiveDumper):
         if type(item) is int:
             # postgres won't cast int4range -> int8range so we must use
             # text format and unknown oid here
-            sd = self._tx.get_dumper(item, Pg3Format.TEXT)
+            sd = self._tx.get_dumper(item, PyFormat.TEXT)
             dumper = RangeDumper(self.cls, self._tx)
             dumper.sub_dumper = sd
             dumper.oid = INVALID_OID
