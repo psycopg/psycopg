@@ -95,7 +95,7 @@ class AsyncConnectionPool(BasePool[AsyncConnection[Any]]):
             await self.close()  # stop all the threads
             raise PoolTimeout(
                 f"pool initialization incomplete after {timeout} sec"
-            )
+            ) from None
 
         async with self._lock:
             assert self._pool_full_event

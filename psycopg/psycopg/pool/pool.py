@@ -105,7 +105,7 @@ class ConnectionPool(BasePool[Connection[Any]]):
         immediately after its creation. The first client will be served as soon
         as a connection is ready. You can use this method if you prefer your
         program to terminate in case the environment is not configured
-        properly, rather than trying to stay up the harder it can.
+        properly, rather than trying to stay up the hardest it can.
         """
         with self._lock:
             assert not self._pool_full_event
