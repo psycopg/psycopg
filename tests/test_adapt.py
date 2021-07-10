@@ -118,6 +118,18 @@ def test_dumper_protocol(conn):
     assert sql.Literal("hello").as_string(conn) == "'qelloqello'"
 
 
+def test_loader_protocol(conn):
+
+    # This class doesn't inherit from adapt.Loader but passes a mypy check
+    from .typing_example import MyTextLoader
+
+    conn.adapters.register_loader("text", MyTextLoader)
+    cur = conn.execute("select 'hello'::text")
+    assert cur.fetchone()[0] == "hellohello"
+    cur = conn.execute("select '{hi,ha}'::text[]")
+    assert cur.fetchone()[0] == ["hihi", "haha"]
+
+
 def test_subclass_loader(conn):
     # This might be a C fast object: make sure that the Python code is called
     from psycopg.types.string import TextLoader

@@ -141,7 +141,7 @@ class AdaptersMap(AdaptContext):
     """
 
     _dumpers: Dict[PyFormat, Dict[Union[type, str], Type["proto.Dumper"]]]
-    _loaders: List[Dict[int, Type["Loader"]]]
+    _loaders: List[Dict[int, Type["proto.Loader"]]]
     types: TypesRegistry
 
     # Record if a dumper or loader has an optimised version.
@@ -200,7 +200,7 @@ class AdaptersMap(AdaptContext):
             self._dumpers[fmt][cls] = dumper
 
     def register_loader(
-        self, oid: Union[int, str], loader: Type[Loader]
+        self, oid: Union[int, str], loader: Type["proto.Loader"]
     ) -> None:
         """
         Configure the context to use *loader* to convert data of oid *oid*.
@@ -252,7 +252,7 @@ class AdaptersMap(AdaptContext):
 
     def get_loader(
         self, oid: int, format: pq.Format
-    ) -> Optional[Type[Loader]]:
+    ) -> Optional[Type["proto.Loader"]]:
         """
         Return the loader class for the given oid and format.
 

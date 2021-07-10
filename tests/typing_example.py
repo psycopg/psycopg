@@ -7,7 +7,7 @@ from typing import Any, Callable, Optional, Sequence, Tuple, Union
 
 from psycopg import AnyCursor, Connection, Cursor, ServerCursor, connect
 from psycopg import pq
-from psycopg.proto import Dumper, AdaptContext, PyFormat
+from psycopg.proto import Dumper, Loader, AdaptContext, PyFormat, Buffer
 
 
 def int_row_factory(cursor: AnyCursor[int]) -> Callable[[Sequence[int]], int]:
@@ -94,6 +94,9 @@ def f() -> None:
     assert d.dump("abc") == b"abcabc"
     assert d.quote("abc") == b"'abcabc'"
 
+    lo: Loader = MyTextLoader(0, None)
+    assert lo.load(b"abc") == "abcabc"
+
 
 class MyStrDumper:
     format = pq.Format.TEXT
@@ -115,6 +118,16 @@ class MyStrDumper:
 
     def upgrade(self, obj: str, format: PyFormat) -> "MyStrDumper":
         return self
+
+
+class MyTextLoader:
+    format = pq.Format.TEXT
+
+    def __init__(self, oid: int, context: Optional[AdaptContext] = None):
+        pass
+
+    def load(self, data: Buffer) -> str:
+        return (bytes(data) * 2).decode("utf-8")
 
 
 # This should be the definition of psycopg.adapt.DumperKey, but mypy doesn't

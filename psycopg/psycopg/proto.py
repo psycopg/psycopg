@@ -15,7 +15,6 @@ from .compat import Protocol
 if TYPE_CHECKING:
     from .sql import Composable
     from .rows import Row, RowMaker
-    from . import adapt
     from .adapt import AdaptersMap
     from .pq.proto import PGresult
 
@@ -93,6 +92,16 @@ class Dumper(Protocol):
         ...
 
 
+class Loader(Protocol):
+    format: pq.Format
+
+    def __init__(self, oid: int, context: Optional[AdaptContext] = None):
+        ...
+
+    def load(self, data: Buffer) -> Any:
+        ...
+
+
 class Transformer(Protocol):
     def __init__(self, context: Optional[AdaptContext] = None):
         ...
@@ -140,5 +149,5 @@ class Transformer(Protocol):
     ) -> Tuple[Any, ...]:
         ...
 
-    def get_loader(self, oid: int, format: pq.Format) -> "adapt.Loader":
+    def get_loader(self, oid: int, format: pq.Format) -> Loader:
         ...

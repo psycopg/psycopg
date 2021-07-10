@@ -16,8 +16,8 @@ from .proto import LoadFunc, AdaptContext, PyFormat, DumperKey
 
 if TYPE_CHECKING:
     from .pq.proto import PGresult
-    from .adapt import Loader, AdaptersMap
-    from .proto import Dumper
+    from .adapt import AdaptersMap
+    from .proto import Dumper, Loader
     from .connection import BaseConnection
 
 DumperCache = Dict[DumperKey, "Dumper"]
