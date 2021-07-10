@@ -9,7 +9,6 @@ from typing import Any, Dict, List, Optional, Type, Tuple, Union
 from typing import cast, TYPE_CHECKING, TypeVar
 
 from . import pq
-from . import proto
 from . import errors as e
 from ._enums import Format as Format
 from .oids import postgres_types
@@ -18,6 +17,7 @@ from ._cmodule import _psycopg
 from ._typeinfo import TypesRegistry
 
 if TYPE_CHECKING:
+    from . import proto
     from .connection import BaseConnection
 
 RV = TypeVar("RV")
@@ -140,7 +140,7 @@ class AdaptersMap(AdaptContext):
     is cheap: a copy is made only on customisation.
     """
 
-    _dumpers: Dict[Format, Dict[Union[type, str], Type["Dumper"]]]
+    _dumpers: Dict[Format, Dict[Union[type, str], Type["proto.Dumper"]]]
     _loaders: List[Dict[int, Type["Loader"]]]
     types: TypesRegistry
 
@@ -190,7 +190,8 @@ class AdaptersMap(AdaptContext):
         if _psycopg:
             dumper = self._get_optimised(dumper)
 
-        # Register the dumper both as its format and as default
+        # Register the dumper both as its format and as auto
+        # so that the last dumper registered is used in auto (%s) format
         for fmt in (Format.from_pq(dumper.format), Format.AUTO):
             if not self._own_dumpers[fmt]:
                 self._dumpers[fmt] = self._dumpers[fmt].copy()
@@ -221,7 +222,7 @@ class AdaptersMap(AdaptContext):
 
         self._loaders[fmt][oid] = loader
 
-    def get_dumper(self, cls: type, format: Format) -> Type[Dumper]:
+    def get_dumper(self, cls: type, format: Format) -> Type["proto.Dumper"]:
         """
         Return the dumper class for the given type and format.
 
@@ -289,7 +290,7 @@ _dumpers_shared = dict.fromkeys(Format, False)
 
 global_adapters = AdaptersMap(types=postgres_types)
 
-Transformer: Type[proto.Transformer]
+Transformer: Type["proto.Transformer"]
 
 # Override it with fast object if available
 if _psycopg:

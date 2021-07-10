@@ -6,6 +6,8 @@ from dataclasses import dataclass
 from typing import Any, Callable, Optional, Sequence, Tuple
 
 from psycopg import AnyCursor, Connection, Cursor, ServerCursor, connect
+from psycopg import pq, adapt
+from psycopg.proto import Dumper, AdaptContext
 
 
 def int_row_factory(cursor: AnyCursor[int]) -> Callable[[Sequence[int]], int]:
@@ -85,3 +87,31 @@ def check_row_factory_connection() -> None:
         cur3.execute("select 42")
         r3 = cur3.fetchone()
         r3 and len(r3)
+
+
+def f() -> None:
+    d: Dumper = MyStrDumper(str, None)
+    assert d.dump("abc") == b"abcabc"
+    assert d.quote("abc") == b"'abcabc'"
+
+
+class MyStrDumper:
+    format = pq.Format.TEXT
+
+    def __init__(self, cls: type, context: Optional[AdaptContext] = None):
+        self.cls = cls
+        self.oid = 25  # text
+
+    def dump(self, obj: str) -> bytes:
+        return (obj * 2).encode("utf-8")
+
+    def quote(self, obj: str) -> bytes:
+        value = self.dump(obj)
+        esc = pq.Escaping()
+        return b"'%s'" % esc.escape_string(value.replace(b"h", b"q"))
+
+    def get_key(self, obj: str, format: adapt.Format) -> type:
+        return self.cls
+
+    def upgrade(self, obj: str, format: adapt.Format) -> "MyStrDumper":
+        return self

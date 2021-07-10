@@ -9,15 +9,21 @@ from typing import List, Optional, Sequence, Tuple, TypeVar, Union
 from typing import TYPE_CHECKING
 
 from . import pq
-from ._enums import Format
+from . import _enums
 from .compat import Protocol
 
 if TYPE_CHECKING:
     from .sql import Composable
     from .rows import Row, RowMaker
-    from .adapt import Dumper, Loader, AdaptersMap
+    from . import adapt
+    from .adapt import AdaptersMap
+    from .pq.proto import PGresult
+
     from .waiting import Wait, Ready
     from .connection import BaseConnection
+
+# NOMERGE: change name of _enums.Format
+PyFormat = _enums.Format
 
 # An object implementing the buffer protocol
 Buffer = Union[bytes, bytearray, memoryview]
@@ -50,9 +56,6 @@ Wait states.
 DumpFunc = Callable[[Any], bytes]
 LoadFunc = Callable[[bytes], Any]
 
-# TODO: Loader, Dumper should probably become protocols
-# as there are both C and a Python implementation
-
 
 class AdaptContext(Protocol):
     """
@@ -70,6 +73,27 @@ class AdaptContext(Protocol):
         ...
 
 
+class Dumper(Protocol):
+    format: pq.Format
+    oid: int
+    cls: type
+
+    def __init__(self, cls: type, context: Optional[AdaptContext] = None):
+        ...
+
+    def dump(self, obj: Any) -> Buffer:
+        ...
+
+    def quote(self, obj: Any) -> Buffer:
+        ...
+
+    def get_key(self, obj: Any, format: PyFormat) -> DumperKey:
+        ...
+
+    def upgrade(self, obj: Any, format: PyFormat) -> "Dumper":
+        ...
+
+
 class Transformer(Protocol):
     def __init__(self, context: Optional[AdaptContext] = None):
         ...
@@ -83,11 +107,11 @@ class Transformer(Protocol):
         ...
 
     @property
-    def pgresult(self) -> Optional[pq.proto.PGresult]:
+    def pgresult(self) -> Optional["PGresult"]:
         ...
 
     def set_pgresult(
-        self, result: Optional[pq.proto.PGresult], set_loaders: bool = True
+        self, result: Optional["PGresult"], set_loaders: bool = True
     ) -> None:
         ...
 
@@ -97,11 +121,11 @@ class Transformer(Protocol):
         ...
 
     def dump_sequence(
-        self, params: Sequence[Any], formats: Sequence[Format]
+        self, params: Sequence[Any], formats: Sequence[PyFormat]
     ) -> Tuple[List[Any], Tuple[int, ...], Sequence[pq.Format]]:
         ...
 
-    def get_dumper(self, obj: Any, format: Format) -> "Dumper":
+    def get_dumper(self, obj: Any, format: PyFormat) -> Dumper:
         ...
 
     def load_rows(
@@ -117,5 +141,5 @@ class Transformer(Protocol):
     ) -> Tuple[Any, ...]:
         ...
 
-    def get_loader(self, oid: int, format: pq.Format) -> "Loader":
+    def get_loader(self, oid: int, format: pq.Format) -> "adapt.Loader":
         ...

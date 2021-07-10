@@ -17,7 +17,8 @@ from ._enums import Format
 
 if TYPE_CHECKING:
     from .pq.proto import PGresult
-    from .adapt import Dumper, Loader, AdaptersMap
+    from .adapt import Loader, AdaptersMap
+    from .proto import Dumper
     from .connection import BaseConnection
 
 DumperKey = Union[type, Tuple[type, ...]]

@@ -4,7 +4,7 @@ from types import ModuleType
 import pytest
 
 import psycopg
-from psycopg import pq
+from psycopg import pq, sql
 from psycopg.adapt import Transformer, Format, Dumper, Loader
 from psycopg.oids import postgres_types as builtins, TEXT_OID
 from psycopg._cmodule import _psycopg
@@ -103,6 +103,19 @@ def test_subclass_dumper(conn):
 
     MyStrDumper.register(str, conn)
     assert conn.execute("select %t", ["hello"]).fetchone()[0] == "hellohello"
+
+
+def test_dumper_protocol(conn):
+
+    # This class doesn't inherit from adapt.Dumper but passes a mypy check
+    from .typing_example import MyStrDumper
+
+    conn.adapters.register_dumper(str, MyStrDumper)
+    cur = conn.execute("select %s", ["hello"])
+    assert cur.fetchone()[0] == "hellohello"
+    cur = conn.execute("select %s", [["hi", "ha"]])
+    assert cur.fetchone()[0] == ["hihi", "haha"]
+    assert sql.Literal("hello").as_string(conn) == "'qelloqello'"
 
 
 def test_subclass_loader(conn):

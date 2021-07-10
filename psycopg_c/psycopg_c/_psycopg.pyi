@@ -12,7 +12,8 @@ from typing import Any, Iterable, List, Optional, Sequence, Tuple
 from psycopg import pq
 from psycopg import proto
 from psycopg.rows import Row, RowMaker
-from psycopg.adapt import Dumper, Loader, AdaptersMap, Format
+from psycopg.adapt import  Loader, AdaptersMap, Format
+from psycopg.proto import Dumper
 from psycopg.pq.proto import PGconn, PGresult
 from psycopg.connection import BaseConnection
 
