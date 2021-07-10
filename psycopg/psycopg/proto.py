@@ -29,6 +29,9 @@ Query = Union[str, bytes, "Composable"]
 Params = Union[Sequence[Any], Mapping[str, Any]]
 ConnectionType = TypeVar("ConnectionType", bound="BaseConnection[Any]")
 
+# TODO: make it recursive when mypy will support it
+# DumperKey = Union[type, Tuple[Union[type, "DumperKey"]]]
+DumperKey = Union[type, Tuple[type, ...]]
 
 # Waiting protocol types
 
@@ -73,7 +76,6 @@ class AdaptContext(Protocol):
 class Dumper(Protocol):
     format: pq.Format
     oid: int
-    cls: type
 
     def __init__(self, cls: type, context: Optional[AdaptContext] = None):
         ...

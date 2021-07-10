@@ -13,7 +13,7 @@ from .. import pq
 from .. import errors as e
 from ..oids import postgres_types, TEXT_OID, TEXT_ARRAY_OID, INVALID_OID
 from ..adapt import RecursiveDumper, RecursiveLoader, PyFormat
-from ..proto import Dumper, AdaptContext, Buffer
+from ..proto import AdaptContext, Buffer, Dumper, DumperKey
 from .._struct import pack_len, unpack_len
 from .._typeinfo import TypeInfo
 
@@ -35,11 +35,11 @@ class BaseListDumper(RecursiveDumper):
         self.sub_dumper: Optional[Dumper] = None
         self._types = context.adapters.types if context else postgres_types
 
-    def get_key(self, obj: List[Any], format: PyFormat) -> Tuple[type, ...]:
+    def get_key(self, obj: List[Any], format: PyFormat) -> DumperKey:
         item = self._find_list_element(obj)
         if item is not None:
             sd = self._tx.get_dumper(item, format)
-            return (self.cls, sd.cls)
+            return (self.cls, sd.get_key(item, format))  # type: ignore
         else:
             return (self.cls,)
 

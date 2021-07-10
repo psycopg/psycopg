@@ -5,7 +5,7 @@ Support for range types adaptation.
 # Copyright (C) 2020-2021 The Psycopg Team
 
 import re
-from typing import Any, Dict, Generic, Optional, Tuple, TypeVar, Type, Union
+from typing import Any, Dict, Generic, Optional, TypeVar, Type, Union
 from typing import cast
 from decimal import Decimal
 from datetime import date, datetime
@@ -13,7 +13,7 @@ from datetime import date, datetime
 from ..pq import Format
 from ..oids import postgres_types as builtins, INVALID_OID
 from ..adapt import RecursiveDumper, RecursiveLoader, PyFormat
-from ..proto import Dumper, AdaptContext, Buffer
+from ..proto import AdaptContext, Buffer, Dumper, DumperKey
 from .._struct import pack_len, unpack_len
 from .._typeinfo import RangeInfo as RangeInfo  # exported here
 
@@ -259,9 +259,7 @@ class BaseRangeDumper(RecursiveDumper):
         self._types = context.adapters.types if context else builtins
         self._adapt_format = PyFormat.from_pq(self.format)
 
-    def get_key(
-        self, obj: Range[Any], format: PyFormat
-    ) -> Union[type, Tuple[type, ...]]:
+    def get_key(self, obj: Range[Any], format: PyFormat) -> DumperKey:
         # If we are a subclass whose oid is specified we don't need upgrade
         if self.oid != INVALID_OID:
             return self.cls
@@ -269,7 +267,7 @@ class BaseRangeDumper(RecursiveDumper):
         item = self._get_item(obj)
         if item is not None:
             sd = self._tx.get_dumper(item, self._adapt_format)
-            return (self.cls, sd.cls)
+            return (self.cls, sd.get_key(item, format))  # type: ignore
         else:
             return (self.cls,)
 

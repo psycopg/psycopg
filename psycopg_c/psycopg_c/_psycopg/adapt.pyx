@@ -98,10 +98,10 @@ cdef class CDumper:
 
         return rv
 
-    cdef object get_key(self, object obj, object format):
+    cpdef object get_key(self, object obj, object format):
         return self.cls
 
-    cdef object upgrade(self, object obj, object format):
+    cpdef object upgrade(self, object obj, object format):
         return self
 
     @classmethod

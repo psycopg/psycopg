@@ -8,13 +8,13 @@ import re
 import sys
 import struct
 from datetime import date, datetime, time, timedelta, timezone
-from typing import Any, Callable, cast, Optional, Tuple, Union, TYPE_CHECKING
+from typing import Any, Callable, cast, Optional, Tuple, TYPE_CHECKING
 
 from ..pq import Format
 from .._tz import get_tzinfo
 from ..oids import postgres_types as builtins
 from ..adapt import Buffer, Dumper, Loader, PyFormat
-from ..proto import AdaptContext
+from ..proto import AdaptContext, DumperKey
 from ..errors import InterfaceError, DataError
 from .._struct import pack_int4, pack_int8, unpack_int4, unpack_int8
 
@@ -62,7 +62,7 @@ class DateBinaryDumper(Dumper):
 
 
 class _BaseTimeDumper(Dumper):
-    def get_key(self, obj: time, format: PyFormat) -> Union[type, Tuple[type]]:
+    def get_key(self, obj: time, format: PyFormat) -> DumperKey:
         # Use (cls,) to report the need to upgrade to a dumper for timetz (the
         # Frankenstein of the data types).
         if not obj.tzinfo:
@@ -131,9 +131,7 @@ class TimeTzBinaryDumper(_BaseTimeDumper):
 
 
 class _BaseDatetimeDumper(Dumper):
-    def get_key(
-        self, obj: datetime, format: PyFormat
-    ) -> Union[type, Tuple[type]]:
+    def get_key(self, obj: datetime, format: PyFormat) -> DumperKey:
         # Use (cls,) to report the need to upgrade (downgrade, actually) to a
         # dumper for naive timestamp.
         if obj.tzinfo:

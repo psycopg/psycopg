@@ -4,7 +4,7 @@ Helper object to transform values between Python and PostgreSQL
 
 # Copyright (C) 2020-2021 The Psycopg Team
 
-from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 from typing import DefaultDict, TYPE_CHECKING
 from collections import defaultdict
 
@@ -12,7 +12,7 @@ from . import pq
 from . import errors as e
 from .oids import INVALID_OID
 from .rows import Row, RowMaker
-from .proto import LoadFunc, AdaptContext, PyFormat
+from .proto import LoadFunc, AdaptContext, PyFormat, DumperKey
 
 if TYPE_CHECKING:
     from .pq.proto import PGresult
@@ -20,11 +20,8 @@ if TYPE_CHECKING:
     from .proto import Dumper
     from .connection import BaseConnection
 
-DumperKey = Union[type, Tuple[type, ...]]
 DumperCache = Dict[DumperKey, "Dumper"]
-
-LoaderKey = int
-LoaderCache = Dict[LoaderKey, "Loader"]
+LoaderCache = Dict[int, "Loader"]
 
 
 class Transformer(AdaptContext):

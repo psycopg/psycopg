@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Callable, Optional, Sequence, Tuple
+from typing import Any, Callable, Optional, Sequence, Tuple, Union
 
 from psycopg import AnyCursor, Connection, Cursor, ServerCursor, connect
 from psycopg import pq
@@ -99,7 +99,7 @@ class MyStrDumper:
     format = pq.Format.TEXT
 
     def __init__(self, cls: type, context: Optional[AdaptContext] = None):
-        self.cls = cls
+        self._cls = cls
         self.oid = 25  # text
 
     def dump(self, obj: str) -> bytes:
@@ -111,7 +111,13 @@ class MyStrDumper:
         return b"'%s'" % esc.escape_string(value.replace(b"h", b"q"))
 
     def get_key(self, obj: str, format: PyFormat) -> type:
-        return self.cls
+        return self._cls
 
     def upgrade(self, obj: str, format: PyFormat) -> "MyStrDumper":
         return self
+
+
+# This should be the definition of psycopg.adapt.DumperKey, but mypy doesn't
+# support recursive types. When it will, this statement will give an error
+# (unused type: ignore) so we can fix our definition.
+_DumperKey = Union[type, Tuple[Union[type, "_DumperKey"]]]  # type: ignore
