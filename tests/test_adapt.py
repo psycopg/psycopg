@@ -44,6 +44,22 @@ def test_quote(data, result):
     assert dumper.quote(data) == result
 
 
+def test_dump_global_ctx(dsn):
+    try:
+        psycopg.adapters.register_dumper(MyStr, make_bin_dumper("gb"))
+        psycopg.adapters.register_dumper(MyStr, make_dumper("gt"))
+        conn = psycopg.connect(dsn)
+        cur = conn.execute("select %s", [MyStr("hello")])
+        assert cur.fetchone() == ("hellogt",)
+        cur = conn.execute("select %b", [MyStr("hello")])
+        assert cur.fetchone() == ("hellogb",)
+        cur = conn.execute("select %t", [MyStr("hello")])
+        assert cur.fetchone() == ("hellogt",)
+    finally:
+        for fmt in Format:
+            psycopg.adapters._dumpers[fmt].pop(MyStr, None)
+
+
 def test_dump_connection_ctx(conn):
     conn.adapters.register_dumper(MyStr, make_bin_dumper("b"))
     conn.adapters.register_dumper(MyStr, make_dumper("t"))
@@ -154,6 +170,22 @@ def test_cast(data, format, type, result):
     t = Transformer()
     rv = t.get_loader(builtins[type].oid, format).load(data)
     assert rv == result
+
+
+def test_load_global_ctx(dsn):
+    from psycopg.types import string
+
+    try:
+        psycopg.adapters.register_loader(TEXT_OID, make_loader("gt"))
+        psycopg.adapters.register_loader(TEXT_OID, make_bin_loader("gb"))
+        conn = psycopg.connect(dsn)
+        cur = conn.cursor(binary=False).execute("select 'hello'::text")
+        assert cur.fetchone() == ("hellogt",)
+        cur = conn.cursor(binary=True).execute("select 'hello'::text")
+        assert cur.fetchone() == ("hellogb",)
+    finally:
+        psycopg.adapters.register_loader(TEXT_OID, string.TextLoader)
+        psycopg.adapters.register_loader(TEXT_OID, string.TextBinaryLoader)
 
 
 def test_load_connection_ctx(conn):

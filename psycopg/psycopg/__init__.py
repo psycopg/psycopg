@@ -33,15 +33,16 @@ if logger.level == logging.NOTSET:
     logger.setLevel(logging.WARNING)
 
 # register default adapters for PostgreSQL
-postgres.register_default_adapters(postgres.adapters)
+adapters = postgres.adapters  # exposed by the package
+postgres.register_default_adapters(adapters)
 
 # DBAPI compliancy
 connect = Connection.connect
 apilevel = "2.0"
 threadsafety = 2
 paramstyle = "pyformat"
-postgres.adapters.register_dumper(Binary, BinaryTextDumper)  # dbapi20
-postgres.adapters.register_dumper(Binary, BinaryBinaryDumper)  # dbapi20
+adapters.register_dumper(Binary, BinaryTextDumper)  # dbapi20
+adapters.register_dumper(Binary, BinaryBinaryDumper)  # dbapi20
 
 
 # Note: defining the exported methods helps both Sphynx in documenting that
