@@ -87,18 +87,6 @@ class Dumper(ABC):
         """
         return self
 
-    @classmethod
-    def register(
-        this_cls, cls: Union[type, str], context: Optional[AdaptContext] = None
-    ) -> None:
-        """
-        Configure *context* to use this dumper to convert object of type *cls*.
-        """
-        from . import postgres
-
-        adapters = context.adapters if context else postgres.adapters
-        adapters.register_dumper(cls, this_cls)
-
 
 class Loader(ABC):
     """
@@ -117,18 +105,6 @@ class Loader(ABC):
     def load(self, data: Buffer) -> Any:
         """Convert a PostgreSQL value to a Python object."""
         ...
-
-    @classmethod
-    def register(
-        cls, oid: Union[int, str], context: Optional[AdaptContext] = None
-    ) -> None:
-        """
-        Configure *context* to use this loader to convert values with OID *oid*.
-        """
-        from . import postgres
-
-        adapters = context.adapters if context else postgres.adapters
-        adapters.register_loader(oid, cls)
 
 
 Transformer: Type["proto.Transformer"]
