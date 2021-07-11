@@ -44,6 +44,22 @@ def test_quote(data, result):
     assert dumper.quote(data) == result
 
 
+def test_register_dumper_by_class(conn):
+    dumper = make_dumper("x")
+    assert conn.adapters.get_dumper(MyStr, Format.TEXT) is not dumper
+    conn.adapters.register_dumper(MyStr, dumper)
+    assert conn.adapters.get_dumper(MyStr, Format.TEXT) is dumper
+
+
+def test_register_dumper_by_class_name(conn):
+    dumper = make_dumper("x")
+    assert conn.adapters.get_dumper(MyStr, Format.TEXT) is not dumper
+    conn.adapters.register_dumper(
+        f"{MyStr.__module__}.{MyStr.__qualname__}", dumper
+    )
+    assert conn.adapters.get_dumper(MyStr, Format.TEXT) is dumper
+
+
 def test_dump_global_ctx(dsn):
     try:
         psycopg.adapters.register_dumper(MyStr, make_bin_dumper("gb"))
@@ -172,25 +188,40 @@ def test_cast(data, format, type, result):
     assert rv == result
 
 
+def test_register_loader_by_oid(conn):
+    assert TEXT_OID == 25
+    loader = make_loader("x")
+    assert conn.adapters.get_loader(TEXT_OID, pq.Format.TEXT) is not loader
+    conn.adapters.register_loader(TEXT_OID, loader)
+    assert conn.adapters.get_loader(TEXT_OID, pq.Format.TEXT) is loader
+
+
+def test_register_loader_by_type_name(conn):
+    loader = make_loader("x")
+    assert conn.adapters.get_loader(TEXT_OID, pq.Format.TEXT) is not loader
+    conn.adapters.register_loader("text", loader)
+    assert conn.adapters.get_loader(TEXT_OID, pq.Format.TEXT) is loader
+
+
 def test_load_global_ctx(dsn):
     from psycopg.types import string
 
     try:
-        psycopg.adapters.register_loader(TEXT_OID, make_loader("gt"))
-        psycopg.adapters.register_loader(TEXT_OID, make_bin_loader("gb"))
+        psycopg.adapters.register_loader("text", make_loader("gt"))
+        psycopg.adapters.register_loader("text", make_bin_loader("gb"))
         conn = psycopg.connect(dsn)
         cur = conn.cursor(binary=False).execute("select 'hello'::text")
         assert cur.fetchone() == ("hellogt",)
         cur = conn.cursor(binary=True).execute("select 'hello'::text")
         assert cur.fetchone() == ("hellogb",)
     finally:
-        psycopg.adapters.register_loader(TEXT_OID, string.TextLoader)
-        psycopg.adapters.register_loader(TEXT_OID, string.TextBinaryLoader)
+        psycopg.adapters.register_loader("text", string.TextLoader)
+        psycopg.adapters.register_loader("text", string.TextBinaryLoader)
 
 
 def test_load_connection_ctx(conn):
-    conn.adapters.register_loader(TEXT_OID, make_loader("t"))
-    conn.adapters.register_loader(TEXT_OID, make_bin_loader("b"))
+    conn.adapters.register_loader("text", make_loader("t"))
+    conn.adapters.register_loader("text", make_bin_loader("b"))
 
     r = conn.cursor(binary=False).execute("select 'hello'::text").fetchone()
     assert r == ("hellot",)
@@ -199,12 +230,12 @@ def test_load_connection_ctx(conn):
 
 
 def test_load_cursor_ctx(conn):
-    conn.adapters.register_loader(TEXT_OID, make_loader("t"))
-    conn.adapters.register_loader(TEXT_OID, make_bin_loader("b"))
+    conn.adapters.register_loader("text", make_loader("t"))
+    conn.adapters.register_loader("text", make_bin_loader("b"))
 
     cur = conn.cursor()
-    cur.adapters.register_loader(TEXT_OID, make_loader("tc"))
-    cur.adapters.register_loader(TEXT_OID, make_bin_loader("bc"))
+    cur.adapters.register_loader("text", make_loader("tc"))
+    cur.adapters.register_loader("text", make_bin_loader("bc"))
 
     assert cur.execute("select 'hello'::text").fetchone() == ("hellotc",)
     cur.format = pq.Format.BINARY
@@ -236,16 +267,16 @@ def test_cow_dumpers(conn):
 
 
 def test_cow_loaders(conn):
-    conn.adapters.register_loader(TEXT_OID, make_loader("t"))
+    conn.adapters.register_loader("text", make_loader("t"))
 
     cur1 = conn.cursor()
     cur2 = conn.cursor()
-    cur2.adapters.register_loader(TEXT_OID, make_loader("c2"))
+    cur2.adapters.register_loader("text", make_loader("c2"))
 
     assert cur1.execute("select 'hello'::text").fetchone() == ("hellot",)
     assert cur2.execute("select 'hello'::text").fetchone() == ("helloc2",)
 
-    conn.adapters.register_loader(TEXT_OID, make_loader("t1"))
+    conn.adapters.register_loader("text", make_loader("t1"))
     assert cur1.execute("select 'hello2'::text").fetchone() == ("hello2t",)
     assert cur2.execute("select 'hello2'::text").fetchone() == ("hello2c2",)
 
