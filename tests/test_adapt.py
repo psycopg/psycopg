@@ -108,7 +108,7 @@ def test_subclass_dumper(conn):
 def test_dumper_protocol(conn):
 
     # This class doesn't inherit from adapt.Dumper but passes a mypy check
-    from .typing_example import MyStrDumper
+    from .adapters_example import MyStrDumper
 
     conn.adapters.register_dumper(str, MyStrDumper)
     cur = conn.execute("select %s", ["hello"])
@@ -121,7 +121,7 @@ def test_dumper_protocol(conn):
 def test_loader_protocol(conn):
 
     # This class doesn't inherit from adapt.Loader but passes a mypy check
-    from .typing_example import MyTextLoader
+    from .adapters_example import MyTextLoader
 
     conn.adapters.register_loader("text", MyTextLoader)
     cur = conn.execute("select 'hello'::text")
