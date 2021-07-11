@@ -9,9 +9,9 @@ from math import log
 from typing import Any, Callable, DefaultDict, Dict, Tuple, Union, cast
 from decimal import Decimal, DefaultContext, Context
 
+from .. import postgres
 from .. import errors as e
 from ..pq import Format
-from ..oids import postgres_types as builtins
 from ..adapt import Buffer, Dumper, Loader, PyFormat
 from ..proto import AdaptContext
 from .._struct import pack_int2, pack_uint2, unpack_int2
@@ -57,7 +57,7 @@ class _SpecialValuesDumper(_NumberDumper):
 class FloatDumper(_SpecialValuesDumper):
 
     format = Format.TEXT
-    _oid = builtins["float8"].oid
+    _oid = postgres.types["float8"].oid
 
     _special = {
         b"inf": b"'Infinity'::float8",
@@ -69,7 +69,7 @@ class FloatDumper(_SpecialValuesDumper):
 class FloatBinaryDumper(Dumper):
 
     format = Format.BINARY
-    _oid = builtins["float8"].oid
+    _oid = postgres.types["float8"].oid
 
     def dump(self, obj: float) -> bytes:
         return pack_float8(obj)
@@ -77,7 +77,7 @@ class FloatBinaryDumper(Dumper):
 
 class DecimalDumper(_SpecialValuesDumper):
 
-    _oid = builtins["numeric"].oid
+    _oid = postgres.types["numeric"].oid
 
     def dump(self, obj: Decimal) -> bytes:
         if obj.is_nan():
@@ -94,23 +94,23 @@ class DecimalDumper(_SpecialValuesDumper):
 
 
 class Int2Dumper(_NumberDumper):
-    _oid = builtins["int2"].oid
+    _oid = postgres.types["int2"].oid
 
 
 class Int4Dumper(_NumberDumper):
-    _oid = builtins["int4"].oid
+    _oid = postgres.types["int4"].oid
 
 
 class Int8Dumper(_NumberDumper):
-    _oid = builtins["int8"].oid
+    _oid = postgres.types["int8"].oid
 
 
 class IntNumericDumper(_NumberDumper):
-    _oid = builtins["numeric"].oid
+    _oid = postgres.types["numeric"].oid
 
 
 class OidDumper(_NumberDumper):
-    _oid = builtins["oid"].oid
+    _oid = postgres.types["oid"].oid
 
 
 class IntDumper(Dumper):
@@ -372,7 +372,7 @@ NUMERIC_NINF_BIN = _pack_numeric_head(0, 0, NUMERIC_NINF, 0)
 class DecimalBinaryDumper(Dumper):
 
     format = Format.BINARY
-    _oid = builtins["numeric"].oid
+    _oid = postgres.types["numeric"].oid
 
     def dump(self, obj: Decimal) -> Union[bytearray, bytes]:
         sign, digits, exp = obj.as_tuple()
@@ -434,35 +434,36 @@ class DecimalBinaryDumper(Dumper):
         return out
 
 
-def register_default_globals(ctx: AdaptContext) -> None:
-    IntDumper.register(int, ctx)
-    IntBinaryDumper.register(int, ctx)
-    FloatDumper.register(float, ctx)
-    FloatBinaryDumper.register(float, ctx)
+def register_default_adapters(context: AdaptContext) -> None:
+    adapters = context.adapters
+    adapters.register_dumper(int, IntDumper)
+    adapters.register_dumper(int, IntBinaryDumper)
+    adapters.register_dumper(float, FloatDumper)
+    adapters.register_dumper(float, FloatBinaryDumper)
     # The binary dumper is currently some 30% slower, so default to text
     # (see tests/scripts/testdec.py for a rough benchmark)
-    DecimalBinaryDumper.register("decimal.Decimal", ctx)
-    DecimalDumper.register("decimal.Decimal", ctx)
-    Int2Dumper.register(Int2, ctx)
-    Int4Dumper.register(Int4, ctx)
-    Int8Dumper.register(Int8, ctx)
-    IntNumericDumper.register(IntNumeric, ctx)
-    OidDumper.register(Oid, ctx)
-    Int2BinaryDumper.register(Int2, ctx)
-    Int4BinaryDumper.register(Int4, ctx)
-    Int8BinaryDumper.register(Int8, ctx)
-    OidBinaryDumper.register(Oid, ctx)
-    IntLoader.register("int2", ctx)
-    IntLoader.register("int4", ctx)
-    IntLoader.register("int8", ctx)
-    IntLoader.register("oid", ctx)
-    Int2BinaryLoader.register("int2", ctx)
-    Int4BinaryLoader.register("int4", ctx)
-    Int8BinaryLoader.register("int8", ctx)
-    OidBinaryLoader.register("oid", ctx)
-    FloatLoader.register("float4", ctx)
-    FloatLoader.register("float8", ctx)
-    Float4BinaryLoader.register("float4", ctx)
-    Float8BinaryLoader.register("float8", ctx)
-    NumericLoader.register("numeric", ctx)
-    NumericBinaryLoader.register("numeric", ctx)
+    adapters.register_dumper("decimal.Decimal", DecimalBinaryDumper)
+    adapters.register_dumper("decimal.Decimal", DecimalDumper)
+    adapters.register_dumper(Int2, Int2Dumper)
+    adapters.register_dumper(Int4, Int4Dumper)
+    adapters.register_dumper(Int8, Int8Dumper)
+    adapters.register_dumper(IntNumeric, IntNumericDumper)
+    adapters.register_dumper(Oid, OidDumper)
+    adapters.register_dumper(Int2, Int2BinaryDumper)
+    adapters.register_dumper(Int4, Int4BinaryDumper)
+    adapters.register_dumper(Int8, Int8BinaryDumper)
+    adapters.register_dumper(Oid, OidBinaryDumper)
+    adapters.register_loader("int2", IntLoader)
+    adapters.register_loader("int4", IntLoader)
+    adapters.register_loader("int8", IntLoader)
+    adapters.register_loader("oid", IntLoader)
+    adapters.register_loader("int2", Int2BinaryLoader)
+    adapters.register_loader("int4", Int4BinaryLoader)
+    adapters.register_loader("int8", Int8BinaryLoader)
+    adapters.register_loader("oid", OidBinaryLoader)
+    adapters.register_loader("float4", FloatLoader)
+    adapters.register_loader("float8", FloatLoader)
+    adapters.register_loader("float4", Float4BinaryLoader)
+    adapters.register_loader("float8", Float8BinaryLoader)
+    adapters.register_loader("numeric", NumericLoader)
+    adapters.register_loader("numeric", NumericBinaryLoader)

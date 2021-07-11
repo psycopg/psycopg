@@ -10,13 +10,13 @@ from typing import cast
 from decimal import Decimal
 from datetime import date, datetime
 
+from .. import postgres
 from ..pq import Format
-from ..oids import postgres_types as builtins, INVALID_OID
 from ..adapt import RecursiveDumper, RecursiveLoader, PyFormat
 from ..proto import AdaptContext, Buffer, Dumper, DumperKey
 from .._struct import pack_len, unpack_len
+from ..postgres import INVALID_OID
 from .._typeinfo import RangeInfo as RangeInfo  # exported here
-
 from .composite import SequenceDumper, BaseCompositeLoader
 
 RANGE_EMPTY = 0x01  # range is empty
@@ -256,7 +256,7 @@ class BaseRangeDumper(RecursiveDumper):
     def __init__(self, cls: type, context: Optional[AdaptContext] = None):
         super().__init__(cls, context)
         self.sub_dumper: Optional[Dumper] = None
-        self._types = context.adapters.types if context else builtins
+        self._types = context.adapters.types if context else postgres.types
         self._adapt_format = PyFormat.from_pq(self.format)
 
     def get_key(self, obj: Range[Any], format: PyFormat) -> DumperKey:
@@ -437,15 +437,17 @@ _int2parens = {ord(c): c for c in "[]()"}
 
 
 def register_adapters(
-    info: RangeInfo, context: Optional["AdaptContext"]
+    info: RangeInfo, context: Optional[AdaptContext] = None
 ) -> None:
+    adapters = context.adapters if context else postgres.adapters
+
     # generate and register a customized text loader
     loader: Type[RangeLoader[Any]] = type(
         f"{info.name.title()}Loader",
         (RangeLoader,),
         {"subtype_oid": info.subtype_oid},
     )
-    loader.register(info.oid, context=context)
+    adapters.register_loader(info.oid, loader)
 
     # generate and register a customized binary loader
     bloader: Type[RangeBinaryLoader[Any]] = type(
@@ -453,7 +455,7 @@ def register_adapters(
         (RangeBinaryLoader,),
         {"subtype_oid": info.subtype_oid},
     )
-    bloader.register(info.oid, context=context)
+    adapters.register_loader(info.oid, bloader)
 
 
 # Text dumpers for builtin range types wrappers
@@ -462,27 +464,27 @@ def register_adapters(
 
 
 class Int4RangeDumper(RangeDumper):
-    _oid = builtins["int4range"].oid
+    _oid = postgres.types["int4range"].oid
 
 
 class Int8RangeDumper(RangeDumper):
-    _oid = builtins["int8range"].oid
+    _oid = postgres.types["int8range"].oid
 
 
 class NumericRangeDumper(RangeDumper):
-    _oid = builtins["numrange"].oid
+    _oid = postgres.types["numrange"].oid
 
 
 class DateRangeDumper(RangeDumper):
-    _oid = builtins["daterange"].oid
+    _oid = postgres.types["daterange"].oid
 
 
 class TimestampRangeDumper(RangeDumper):
-    _oid = builtins["tsrange"].oid
+    _oid = postgres.types["tsrange"].oid
 
 
 class TimestamptzRangeDumper(RangeDumper):
-    _oid = builtins["tstzrange"].oid
+    _oid = postgres.types["tstzrange"].oid
 
 
 # Binary dumpers for builtin range types wrappers
@@ -491,107 +493,108 @@ class TimestamptzRangeDumper(RangeDumper):
 
 
 class Int4RangeBinaryDumper(RangeBinaryDumper):
-    _oid = builtins["int4range"].oid
+    _oid = postgres.types["int4range"].oid
 
 
 class Int8RangeBinaryDumper(RangeBinaryDumper):
-    _oid = builtins["int8range"].oid
+    _oid = postgres.types["int8range"].oid
 
 
 class NumericRangeBinaryDumper(RangeBinaryDumper):
-    _oid = builtins["numrange"].oid
+    _oid = postgres.types["numrange"].oid
 
 
 class DateRangeBinaryDumper(RangeBinaryDumper):
-    _oid = builtins["daterange"].oid
+    _oid = postgres.types["daterange"].oid
 
 
 class TimestampRangeBinaryDumper(RangeBinaryDumper):
-    _oid = builtins["tsrange"].oid
+    _oid = postgres.types["tsrange"].oid
 
 
 class TimestamptzRangeBinaryDumper(RangeBinaryDumper):
-    _oid = builtins["tstzrange"].oid
+    _oid = postgres.types["tstzrange"].oid
 
 
 # Text loaders for builtin range types
 
 
 class Int4RangeLoader(RangeLoader[int]):
-    subtype_oid = builtins["int4"].oid
+    subtype_oid = postgres.types["int4"].oid
 
 
 class Int8RangeLoader(RangeLoader[int]):
-    subtype_oid = builtins["int8"].oid
+    subtype_oid = postgres.types["int8"].oid
 
 
 class NumericRangeLoader(RangeLoader[Decimal]):
-    subtype_oid = builtins["numeric"].oid
+    subtype_oid = postgres.types["numeric"].oid
 
 
 class DateRangeLoader(RangeLoader[date]):
-    subtype_oid = builtins["date"].oid
+    subtype_oid = postgres.types["date"].oid
 
 
 class TimestampRangeLoader(RangeLoader[datetime]):
-    subtype_oid = builtins["timestamp"].oid
+    subtype_oid = postgres.types["timestamp"].oid
 
 
 class TimestampTZRangeLoader(RangeLoader[datetime]):
-    subtype_oid = builtins["timestamptz"].oid
+    subtype_oid = postgres.types["timestamptz"].oid
 
 
 # Binary loaders for builtin range types
 
 
 class Int4RangeBinaryLoader(RangeBinaryLoader[int]):
-    subtype_oid = builtins["int4"].oid
+    subtype_oid = postgres.types["int4"].oid
 
 
 class Int8RangeBinaryLoader(RangeBinaryLoader[int]):
-    subtype_oid = builtins["int8"].oid
+    subtype_oid = postgres.types["int8"].oid
 
 
 class NumericRangeBinaryLoader(RangeBinaryLoader[Decimal]):
-    subtype_oid = builtins["numeric"].oid
+    subtype_oid = postgres.types["numeric"].oid
 
 
 class DateRangeBinaryLoader(RangeBinaryLoader[date]):
-    subtype_oid = builtins["date"].oid
+    subtype_oid = postgres.types["date"].oid
 
 
 class TimestampRangeBinaryLoader(RangeBinaryLoader[datetime]):
-    subtype_oid = builtins["timestamp"].oid
+    subtype_oid = postgres.types["timestamp"].oid
 
 
 class TimestampTZRangeBinaryLoader(RangeBinaryLoader[datetime]):
-    subtype_oid = builtins["timestamptz"].oid
+    subtype_oid = postgres.types["timestamptz"].oid
 
 
-def register_default_globals(ctx: AdaptContext) -> None:
-    RangeBinaryDumper.register(Range, ctx)
-    RangeDumper.register(Range, ctx)
-    Int4RangeDumper.register(Int4Range, ctx)
-    Int8RangeDumper.register(Int8Range, ctx)
-    NumericRangeDumper.register(NumericRange, ctx)
-    DateRangeDumper.register(DateRange, ctx)
-    TimestampRangeDumper.register(TimestampRange, ctx)
-    TimestamptzRangeDumper.register(TimestamptzRange, ctx)
-    Int4RangeBinaryDumper.register(Int4Range, ctx)
-    Int8RangeBinaryDumper.register(Int8Range, ctx)
-    NumericRangeBinaryDumper.register(NumericRange, ctx)
-    DateRangeBinaryDumper.register(DateRange, ctx)
-    TimestampRangeBinaryDumper.register(TimestampRange, ctx)
-    TimestamptzRangeBinaryDumper.register(TimestamptzRange, ctx)
-    Int4RangeLoader.register("int4range", ctx)
-    Int8RangeLoader.register("int8range", ctx)
-    NumericRangeLoader.register("numrange", ctx)
-    DateRangeLoader.register("daterange", ctx)
-    TimestampRangeLoader.register("tsrange", ctx)
-    TimestampTZRangeLoader.register("tstzrange", ctx)
-    Int4RangeBinaryLoader.register("int4range", ctx)
-    Int8RangeBinaryLoader.register("int8range", ctx)
-    NumericRangeBinaryLoader.register("numrange", ctx)
-    DateRangeBinaryLoader.register("daterange", ctx)
-    TimestampRangeBinaryLoader.register("tsrange", ctx)
-    TimestampTZRangeBinaryLoader.register("tstzrange", ctx)
+def register_default_adapters(context: AdaptContext) -> None:
+    adapters = context.adapters
+    adapters.register_dumper(Range, RangeBinaryDumper)
+    adapters.register_dumper(Range, RangeDumper)
+    adapters.register_dumper(Int4Range, Int4RangeDumper)
+    adapters.register_dumper(Int8Range, Int8RangeDumper)
+    adapters.register_dumper(NumericRange, NumericRangeDumper)
+    adapters.register_dumper(DateRange, DateRangeDumper)
+    adapters.register_dumper(TimestampRange, TimestampRangeDumper)
+    adapters.register_dumper(TimestamptzRange, TimestamptzRangeDumper)
+    adapters.register_dumper(Int4Range, Int4RangeBinaryDumper)
+    adapters.register_dumper(Int8Range, Int8RangeBinaryDumper)
+    adapters.register_dumper(NumericRange, NumericRangeBinaryDumper)
+    adapters.register_dumper(DateRange, DateRangeBinaryDumper)
+    adapters.register_dumper(TimestampRange, TimestampRangeBinaryDumper)
+    adapters.register_dumper(TimestamptzRange, TimestamptzRangeBinaryDumper)
+    adapters.register_loader("int4range", Int4RangeLoader)
+    adapters.register_loader("int8range", Int8RangeLoader)
+    adapters.register_loader("numrange", NumericRangeLoader)
+    adapters.register_loader("daterange", DateRangeLoader)
+    adapters.register_loader("tsrange", TimestampRangeLoader)
+    adapters.register_loader("tstzrange", TimestampTZRangeLoader)
+    adapters.register_loader("int4range", Int4RangeBinaryLoader)
+    adapters.register_loader("int8range", Int8RangeBinaryLoader)
+    adapters.register_loader("numrange", NumericRangeBinaryLoader)
+    adapters.register_loader("daterange", DateRangeBinaryLoader)
+    adapters.register_loader("tsrange", TimestampRangeBinaryLoader)
+    adapters.register_loader("tstzrange", TimestampTZRangeBinaryLoader)

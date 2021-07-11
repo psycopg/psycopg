@@ -523,7 +523,7 @@ def test_load_numeric_binary_inf(conn, val, expr):
 )
 def test_numeric_as_float(conn, val):
     cur = conn.cursor()
-    FloatLoader.register(conn.adapters.types["numeric"].oid, cur)
+    cur.adapters.register_loader("numeric", FloatLoader)
 
     val = Decimal(val)
     cur.execute("select %s as val", (val,))

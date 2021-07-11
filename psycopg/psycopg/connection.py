@@ -20,6 +20,7 @@ from . import pq
 from . import adapt
 from . import errors as e
 from . import waiting
+from . import postgres
 from . import encodings
 from .pq import ConnStatus, ExecStatus, TransactionStatus, Format
 from .sql import Composable
@@ -106,7 +107,7 @@ class BaseConnection(AdaptContext, Generic[Row]):
         self.pgconn = pgconn  # TODO: document this
         self._row_factory = row_factory
         self._autocommit = False
-        self._adapters = adapt.AdaptersMap(adapt.global_adapters)
+        self._adapters = adapt.AdaptersMap(postgres.adapters)
         self._notice_handlers: List[NoticeHandler] = []
         self._notify_handlers: List[NotifyHandler] = []
 

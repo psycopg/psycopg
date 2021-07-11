@@ -9,10 +9,11 @@ from typing import DefaultDict, TYPE_CHECKING
 from collections import defaultdict
 
 from . import pq
+from . import postgres
 from . import errors as e
-from .oids import INVALID_OID
 from .rows import Row, RowMaker
 from .proto import LoadFunc, AdaptContext, PyFormat, DumperKey
+from .postgres import INVALID_OID
 
 if TYPE_CHECKING:
     from .pq.proto import PGresult
@@ -44,9 +45,7 @@ class Transformer(AdaptContext):
             self._adapters = context.adapters
             self._conn = context.connection
         else:
-            from .adapt import global_adapters
-
-            self._adapters = global_adapters
+            self._adapters = postgres.adapters
             self._conn = None
 
         # mapping class, fmt -> Dumper instance

@@ -15,11 +15,10 @@ from .compat import Protocol
 if TYPE_CHECKING:
     from .sql import Composable
     from .rows import Row, RowMaker
-    from .adapt import AdaptersMap
     from .pq.proto import PGresult
-
     from .waiting import Wait, Ready
     from .connection import BaseConnection
+    from ._adapters_map import AdaptersMap
 
 # An object implementing the buffer protocol
 Buffer = Union[bytes, bytearray, memoryview]

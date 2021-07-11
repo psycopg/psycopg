@@ -6,8 +6,8 @@ Adapters for network types.
 
 from typing import Callable, Optional, Type, Union, TYPE_CHECKING
 
+from .. import postgres
 from ..pq import Format
-from ..oids import postgres_types as builtins
 from ..adapt import Buffer, Dumper, Loader
 from ..proto import AdaptContext
 
@@ -39,7 +39,7 @@ IPV6_PREFIXLEN = 128
 class InterfaceDumper(Dumper):
 
     format = Format.TEXT
-    _oid = builtins["inet"].oid
+    _oid = postgres.types["inet"].oid
 
     def dump(self, obj: Interface) -> bytes:
         return str(obj).encode("utf8")
@@ -48,7 +48,7 @@ class InterfaceDumper(Dumper):
 class NetworkDumper(Dumper):
 
     format = Format.TEXT
-    _oid = builtins["cidr"].oid
+    _oid = postgres.types["cidr"].oid
 
     def dump(self, obj: Network) -> bytes:
         return str(obj).encode("utf8")
@@ -67,7 +67,7 @@ class _IPv6Mixin:
 class _AddressBinaryDumper(Dumper):
 
     format = Format.BINARY
-    _oid = builtins["inet"].oid
+    _oid = postgres.types["inet"].oid
 
     _family: int
     _prefixlen: int
@@ -89,7 +89,7 @@ class IPv6AddressBinaryDumper(_IPv6Mixin, _AddressBinaryDumper):
 class _InterfaceBinaryDumper(Dumper):
 
     format = Format.BINARY
-    _oid = builtins["inet"].oid
+    _oid = postgres.types["inet"].oid
 
     _family: int
 
@@ -110,7 +110,7 @@ class IPv6InterfaceBinaryDumper(_IPv6Mixin, _InterfaceBinaryDumper):
 class _NetworkBinaryDumper(Dumper):
 
     format = Format.BINARY
-    _oid = builtins["cidr"].oid
+    _oid = postgres.types["cidr"].oid
 
     _family: int
 
@@ -209,20 +209,25 @@ class CidrBinaryLoader(_LazyIpaddress):
         return ip_network(data.decode("utf8"))
 
 
-def register_default_globals(ctx: AdaptContext) -> None:
-    InterfaceDumper.register("ipaddress.IPv4Address", ctx)
-    InterfaceDumper.register("ipaddress.IPv6Address", ctx)
-    InterfaceDumper.register("ipaddress.IPv4Interface", ctx)
-    InterfaceDumper.register("ipaddress.IPv6Interface", ctx)
-    NetworkDumper.register("ipaddress.IPv4Network", ctx)
-    NetworkDumper.register("ipaddress.IPv6Network", ctx)
-    IPv4AddressBinaryDumper.register("ipaddress.IPv4Address", ctx)
-    IPv6AddressBinaryDumper.register("ipaddress.IPv6Address", ctx)
-    IPv4InterfaceBinaryDumper.register("ipaddress.IPv4Interface", ctx)
-    IPv6InterfaceBinaryDumper.register("ipaddress.IPv6Interface", ctx)
-    IPv4NetworkBinaryDumper.register("ipaddress.IPv4Network", ctx)
-    IPv6NetworkBinaryDumper.register("ipaddress.IPv6Network", ctx)
-    InetLoader.register("inet", ctx)
-    InetBinaryLoader.register("inet", ctx)
-    CidrLoader.register("cidr", ctx)
-    CidrBinaryLoader.register("cidr", ctx)
+def register_default_adapters(context: AdaptContext) -> None:
+    adapters = context.adapters
+    adapters.register_dumper("ipaddress.IPv4Address", InterfaceDumper)
+    adapters.register_dumper("ipaddress.IPv6Address", InterfaceDumper)
+    adapters.register_dumper("ipaddress.IPv4Interface", InterfaceDumper)
+    adapters.register_dumper("ipaddress.IPv6Interface", InterfaceDumper)
+    adapters.register_dumper("ipaddress.IPv4Network", NetworkDumper)
+    adapters.register_dumper("ipaddress.IPv6Network", NetworkDumper)
+    adapters.register_dumper("ipaddress.IPv4Address", IPv4AddressBinaryDumper)
+    adapters.register_dumper("ipaddress.IPv6Address", IPv6AddressBinaryDumper)
+    adapters.register_dumper(
+        "ipaddress.IPv4Interface", IPv4InterfaceBinaryDumper
+    )
+    adapters.register_dumper(
+        "ipaddress.IPv6Interface", IPv6InterfaceBinaryDumper
+    )
+    adapters.register_dumper("ipaddress.IPv4Network", IPv4NetworkBinaryDumper)
+    adapters.register_dumper("ipaddress.IPv6Network", IPv6NetworkBinaryDumper)
+    adapters.register_loader("inet", InetLoader)
+    adapters.register_loader("inet", InetBinaryLoader)
+    adapters.register_loader("cidr", CidrLoader)
+    adapters.register_loader("cidr", CidrBinaryLoader)

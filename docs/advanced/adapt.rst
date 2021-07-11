@@ -79,8 +79,6 @@ cursor):
 .. code:: python
 
     from datetime import date
-
-    from psycopg.oids import postgres_types as builtins
     from psycopg.types.datetime import DateLoader, DateDumper
 
     class InfDateDumper(DateDumper):
@@ -97,8 +95,8 @@ cursor):
             else:
                 return super().load(data)
 
-    InfDateDumper.register(date, cur)
-    InfDateLoader.register(builtins["date"].oid, cur)
+    cur.adapters.register_dumper(date, InfDateDumper)
+    cur.adapters.register_loader("date", InfDateLoader)
 
     cur.execute("SELECT %s::text, %s::text", [date(2020, 12, 31), date.max]).fetchone()
     # ('2020-12-31', 'infinity')

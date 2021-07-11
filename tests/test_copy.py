@@ -267,7 +267,7 @@ def test_subclass_adapter(conn, format):
         def dump(self, obj):
             return super().dump(obj) * 2
 
-    MyStrDumper.register(str, conn)
+    conn.adapters.register_dumper(str, MyStrDumper)
 
     cur = conn.cursor()
     ensure_table(cur, sample_tabledef)

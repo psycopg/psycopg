@@ -24,5 +24,5 @@ class NoneDumper(Dumper):
         return b"NULL"
 
 
-def register_default_globals(ctx: AdaptContext) -> None:
-    NoneDumper.register(type(None), ctx)
+def register_default_adapters(context: AdaptContext) -> None:
+    context.adapters.register_dumper(type(None), NoneDumper)

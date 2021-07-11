@@ -111,19 +111,16 @@ class TypeInfo:
                 f"found {len(recs)} different types named {name}"
             )
 
-    def register(
-        self,
-        context: Optional["AdaptContext"] = None,
-    ) -> None:
+    def register(self, context: Optional[AdaptContext] = None) -> None:
         """
         Register the type information, globally or in the specified *context*.
         """
         if context:
             types = context.adapters.types
         else:
-            from .oids import postgres_types
+            from . import postgres
 
-            types = postgres_types
+            types = postgres.types
 
         types.add(self)
 
@@ -151,10 +148,7 @@ class RangeInfo(TypeInfo):
         super().__init__(name, oid, array_oid)
         self.subtype_oid = subtype_oid
 
-    def register(
-        self,
-        context: Optional[AdaptContext] = None,
-    ) -> None:
+    def register(self, context: Optional[AdaptContext] = None) -> None:
         super().register(context)
 
         from .types.range import register_adapters

@@ -11,10 +11,11 @@ from typing import cast
 
 from .. import pq
 from .. import errors as e
-from ..oids import postgres_types, TEXT_OID, TEXT_ARRAY_OID, INVALID_OID
+from .. import postgres
 from ..adapt import RecursiveDumper, RecursiveLoader, PyFormat
 from ..proto import AdaptContext, Buffer, Dumper, DumperKey
 from .._struct import pack_len, unpack_len
+from ..postgres import TEXT_OID, INVALID_OID
 from .._typeinfo import TypeInfo
 
 _struct_head = struct.Struct("!III")  # ndims, hasnull, elem oid
@@ -28,12 +29,14 @@ _unpack_dim = cast(
     Callable[[bytes, int], Tuple[int, int]], _struct_dim.unpack_from
 )
 
+TEXT_ARRAY_OID = postgres.types["text"].array_oid
+
 
 class BaseListDumper(RecursiveDumper):
     def __init__(self, cls: type, context: Optional[AdaptContext] = None):
         super().__init__(cls, context)
         self.sub_dumper: Optional[Dumper] = None
-        self._types = context.adapters.types if context else postgres_types
+        self._types = context.adapters.types if context else postgres.types
 
     def get_key(self, obj: List[Any], format: PyFormat) -> DumperKey:
         item = self._find_list_element(obj)
@@ -317,29 +320,30 @@ class ArrayBinaryLoader(BaseArrayLoader):
 
 
 def register_adapters(
-    info: TypeInfo, context: Optional["AdaptContext"]
+    info: TypeInfo, context: Optional[AdaptContext] = None
 ) -> None:
+    adapters = context.adapters if context else postgres.adapters
     for base in (ArrayLoader, ArrayBinaryLoader):
         lname = f"{info.name.title()}{base.__name__}"
         loader: Type[BaseArrayLoader] = type(
             lname, (base,), {"base_oid": info.oid}
         )
-        loader.register(info.array_oid, context=context)
+        adapters.register_loader(info.array_oid, loader)
 
 
-def register_default_globals(ctx: AdaptContext) -> None:
-    ListDumper.register(list, ctx)
-    ListBinaryDumper.register(list, ctx)
+def register_default_adapters(context: AdaptContext) -> None:
+    context.adapters.register_dumper(list, ListDumper)
+    context.adapters.register_dumper(list, ListBinaryDumper)
 
 
-def register_all_arrays(ctx: AdaptContext) -> None:
+def register_all_arrays(context: AdaptContext) -> None:
     """
     Associate the array oid of all the types in Loader.globals.
 
     This function is designed to be called once at import time, after having
     registered all the base loaders.
     """
-    for t in ctx.adapters.types:
+    for t in context.adapters.types:
         # TODO: handle different delimiters (box)
         if t.array_oid and getattr(t, "delimiter", None) == ",":
-            t.register(ctx)
+            t.register(context)

@@ -11,10 +11,11 @@ from typing import Any, Callable, cast, Iterator, List, Optional
 from typing import Sequence, Tuple, Type
 
 from .. import pq
-from ..oids import TEXT_OID
+from .. import postgres
 from ..adapt import PyFormat, RecursiveDumper, RecursiveLoader
 from ..proto import AdaptContext, Buffer
 from .._struct import unpack_len
+from ..postgres import TEXT_OID
 from .._typeinfo import CompositeInfo as CompositeInfo  # exported here
 
 _struct_oidlen = struct.Struct("!Ii")
@@ -184,11 +185,13 @@ class CompositeBinaryLoader(RecordBinaryLoader):
 
 def register_adapters(
     info: CompositeInfo,
-    context: Optional["AdaptContext"],
+    context: Optional[AdaptContext] = None,
     factory: Optional[Callable[..., Any]] = None,
 ) -> None:
     if not factory:
         factory = namedtuple(info.name, info.field_names)  # type: ignore
+
+    adapters = context.adapters if context else postgres.adapters
 
     # generate and register a customized text loader
     loader: Type[BaseCompositeLoader] = type(
@@ -199,7 +202,7 @@ def register_adapters(
             "fields_types": info.field_types,
         },
     )
-    loader.register(info.oid, context=context)
+    adapters.register_loader(info.oid, loader)
 
     # generate and register a customized binary loader
     loader = type(
@@ -207,10 +210,11 @@ def register_adapters(
         (CompositeBinaryLoader,),
         {"factory": factory},
     )
-    loader.register(info.oid, context=context)
+    adapters.register_loader(info.oid, loader)
 
 
-def register_default_globals(ctx: AdaptContext) -> None:
-    TupleDumper.register(tuple, ctx)
-    RecordLoader.register("record", ctx)
-    RecordBinaryLoader.register("record", ctx)
+def register_default_adapters(context: AdaptContext) -> None:
+    adapters = context.adapters
+    adapters.register_dumper(tuple, TupleDumper)
+    adapters.register_loader("record", RecordLoader)
+    adapters.register_loader("record", RecordBinaryLoader)

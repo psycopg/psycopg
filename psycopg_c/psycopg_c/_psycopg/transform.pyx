@@ -88,8 +88,8 @@ cdef class Transformer:
             self.adapters = context.adapters
             self.connection = context.connection
         else:
-            from psycopg.adapt import global_adapters
-            self.adapters = global_adapters
+            from psycopg import postgres
+            self.adapters = postgres.adapters
             self.connection = None
 
     @property

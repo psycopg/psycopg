@@ -1,9 +1,9 @@
 import pytest
 
-from psycopg import pq
+from psycopg import pq, postgres
 from psycopg.sql import Identifier
-from psycopg.oids import postgres_types as builtins
-from psycopg.adapt import PyFormat as Format, global_adapters
+from psycopg.adapt import PyFormat as Format
+from psycopg.postgres import types as builtins
 from psycopg.types.composite import CompositeInfo
 
 
@@ -218,18 +218,18 @@ def test_register_scope(conn, testcomp):
     info.register()
     for fmt in (pq.Format.TEXT, pq.Format.BINARY):
         for oid in (info.oid, info.array_oid):
-            assert global_adapters._loaders[fmt].pop(oid)
+            assert postgres.adapters._loaders[fmt].pop(oid)
 
     cur = conn.cursor()
     info.register(cur)
     for fmt in (pq.Format.TEXT, pq.Format.BINARY):
         for oid in (info.oid, info.array_oid):
-            assert oid not in global_adapters._loaders[fmt]
+            assert oid not in postgres.adapters._loaders[fmt]
             assert oid not in conn.adapters._loaders[fmt]
             assert oid in cur.adapters._loaders[fmt]
 
     info.register(conn)
     for fmt in (pq.Format.TEXT, pq.Format.BINARY):
         for oid in (info.oid, info.array_oid):
-            assert oid not in global_adapters._loaders[fmt]
+            assert oid not in postgres.adapters._loaders[fmt]
             assert oid in conn.adapters._loaders[fmt]

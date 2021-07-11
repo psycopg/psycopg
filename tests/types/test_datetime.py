@@ -585,12 +585,12 @@ class TestInterval:
     def test_infinity_date_example(self, conn):
         # NOTE: this is an example in the docs. Make sure it doesn't regress when
         # adding binary datetime adapters
-        from psycopg.oids import postgres_types as builtins
+        from datetime import date
         from psycopg.types.datetime import DateLoader, DateDumper
 
         class InfDateDumper(DateDumper):
             def dump(self, obj):
-                if obj == dt.date.max:
+                if obj == date.max:
                     return b"infinity"
                 else:
                     return super().dump(obj)
@@ -598,22 +598,22 @@ class TestInterval:
         class InfDateLoader(DateLoader):
             def load(self, data):
                 if data == b"infinity":
-                    return dt.date.max
+                    return date.max
                 else:
                     return super().load(data)
 
         cur = conn.cursor()
-        InfDateDumper.register(dt.date, cur)
-        InfDateLoader.register(builtins["date"].oid, cur)
+        cur.adapters.register_dumper(date, InfDateDumper)
+        cur.adapters.register_loader("date", InfDateLoader)
 
         rec = cur.execute(
-            "SELECT %s::text, %s::text", [dt.date(2020, 12, 31), dt.date.max]
+            "SELECT %s::text, %s::text", [date(2020, 12, 31), date.max]
         ).fetchone()
         assert rec == ("2020-12-31", "infinity")
         rec = cur.execute(
             "select '2020-12-31'::date, 'infinity'::date"
         ).fetchone()
-        assert rec == (dt.date(2020, 12, 31), dt.date(9999, 12, 31))
+        assert rec == (date(2020, 12, 31), date(9999, 12, 31))
 
     def test_load_copy(self, conn):
         cur = conn.cursor(binary=False)
