@@ -8,8 +8,8 @@ from typing import Callable, Optional, Type, Union, TYPE_CHECKING
 
 from .. import postgres
 from ..pq import Format
+from ..abc import AdaptContext
 from ..adapt import Buffer, Dumper, Loader
-from ..proto import AdaptContext
 
 if TYPE_CHECKING:
     import ipaddress

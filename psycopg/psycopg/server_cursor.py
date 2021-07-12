@@ -12,8 +12,8 @@ from typing import Sequence, Type, TYPE_CHECKING
 from . import pq
 from . import sql
 from . import errors as e
+from .abc import ConnectionType, Query, Params, PQGen
 from .rows import Row, RowFactory
-from .proto import ConnectionType, Query, Params, PQGen
 from .cursor import BaseCursor, execute
 
 if TYPE_CHECKING:

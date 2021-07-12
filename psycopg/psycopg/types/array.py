@@ -12,8 +12,8 @@ from typing import cast
 from .. import pq
 from .. import errors as e
 from .. import postgres
+from ..abc import AdaptContext, Buffer, Dumper, DumperKey
 from ..adapt import RecursiveDumper, RecursiveLoader, PyFormat
-from ..proto import AdaptContext, Buffer, Dumper, DumperKey
 from .._struct import pack_len, unpack_len
 from ..postgres import TEXT_OID, INVALID_OID
 from .._typeinfo import TypeInfo

@@ -8,12 +8,12 @@ from typing import Optional, Union, TYPE_CHECKING
 
 from .. import postgres
 from ..pq import Format, Escaping
+from ..abc import AdaptContext
 from ..adapt import Buffer, Dumper, Loader
-from ..proto import AdaptContext
 from ..errors import DataError
 
 if TYPE_CHECKING:
-    from ..pq.proto import Escaping as EscapingProto
+    from ..pq.abc import Escaping as EscapingProto
 
 
 class _StrDumper(Dumper):

@@ -1,12 +1,10 @@
-`proto` -- Psycopg abstract classes
-===================================
-
-TODO: rename to abc
+`!abc` -- Psycopg abstract classes
+==================================
 
 The module exposes Psycopg definitions which can be used for static type
 checking.
 
-.. module:: psycopg.proto
+.. module:: psycopg.abc
 
 .. autoclass:: Dumper(cls, context=None)
 

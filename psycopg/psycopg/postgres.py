@@ -5,7 +5,7 @@ Types configuration specific to PostgreSQL.
 # Copyright (C) 2020-2021 The Psycopg Team
 
 from ._typeinfo import TypeInfo, RangeInfo, TypesRegistry
-from .proto import AdaptContext
+from .abc import AdaptContext
 from ._adapters_map import AdaptersMap
 
 # Global objects with PostgreSQL builtins and globally registered user types.

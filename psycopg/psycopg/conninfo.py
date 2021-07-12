@@ -116,7 +116,7 @@ class ConnectionInfo:
 
     __module__ = "psycopg"
 
-    def __init__(self, pgconn: pq.proto.PGconn):
+    def __init__(self, pgconn: pq.abc.PGconn):
         self.pgconn = pgconn
 
     @property

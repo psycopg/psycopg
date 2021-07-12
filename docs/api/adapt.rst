@@ -23,7 +23,7 @@ Dumpers and loaders
     This is an abstract base class: subclasses *must* at least implement the
     `dump()` method and specify the `format`.
 
-    The class implements the `~psycopg.proto.Dumper` protocol.
+    The class implements the `~psycopg.abc.Dumper` protocol.
 
     .. automethod:: dump
 
@@ -39,7 +39,7 @@ Dumpers and loaders
     This is an abstract base class: subclasses *must* at least implement the
     `!load()` method and specify a `format`.
 
-    The class implements the `~psycopg.proto.Loader` protocol.
+    The class implements the `~psycopg.abc.Loader` protocol.
 
     .. automethod:: load
 
@@ -79,4 +79,4 @@ Other objects used in adaptations
 .. autoclass:: Transformer(context=None)
 
     :param context: The context where the transformer should operate.
-    :type context: `~psycopg.proto.AdaptContext`
+    :type context: `~psycopg.abc.AdaptContext`

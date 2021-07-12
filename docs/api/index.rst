@@ -11,6 +11,6 @@ Psycopg 3 API
     errors
     adapt
     types
-    proto
+    abc
     pool
     pq

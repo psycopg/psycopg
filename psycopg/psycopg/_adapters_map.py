@@ -9,8 +9,8 @@ from typing import cast, TYPE_CHECKING
 
 from . import pq
 from . import errors as e
+from .abc import Dumper, Loader
 from ._enums import PyFormat as PyFormat
-from .proto import Dumper, Loader
 from ._cmodule import _psycopg
 from ._typeinfo import TypesRegistry
 
@@ -23,7 +23,7 @@ RV = TypeVar("RV")
 class AdaptersMap:
     r"""
     Establish how types should be converted between Python and PostgreSQL in
-    an `~psycopg.proto.AdaptContext`.
+    an `~psycopg.abc.AdaptContext`.
 
     `!AdaptersMap` maps Python types to `~psycopg.adapt.Dumper` classes to
     define how Python types are converted to PostgreSQL, and maps OIDs to
@@ -32,7 +32,7 @@ class AdaptersMap:
 
     Every `!AdaptContext` object has an underlying `!AdaptersMap` defining how
     types are converted in that context, exposed as the
-    `~psycopg.proto.AdaptContext.adapters` attribute: changing such map allows
+    `~psycopg.abc.AdaptContext.adapters` attribute: changing such map allows
     to customise adaptation in a context without changing separated contexts.
 
     When a context is created from another context (for instance when a

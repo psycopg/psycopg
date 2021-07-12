@@ -17,8 +17,8 @@ returned.
     adaptation rules.
 
 - Adaptation configuration is performed by changing the
-  `~psycopg.proto.AdaptContext.adapters` object of objects implementing the
-  `~psycopg.proto.AdaptContext` protocols, for instance `~psycopg.Connection`
+  `~psycopg.abc.AdaptContext.adapters` object of objects implementing the
+  `~psycopg.abc.AdaptContext` protocols, for instance `~psycopg.Connection`
   or `~psycopg.Cursor`.
 
 - Every context object derived from another context inherits its adapters
@@ -31,21 +31,21 @@ returned.
      :align: center
 
 - The `!adapters` attribute are `AdaptersMap` instances, and contain the
-  mapping from Python types and `~psycopg.proto.Dumper` classes, and from
-  PostgreSQL oids to `~psycopg.proto.Loader` classes. Changing this mapping
+  mapping from Python types and `~psycopg.abc.Dumper` classes, and from
+  PostgreSQL oids to `~psycopg.abc.Loader` classes. Changing this mapping
   (e.g. writing and registering your own adapters, or using a different
   configuration of builtin adapters) affects how types are converted between
   Python and PostgreSQL.
 
-  - Dumpers (objects implementing the `~psycopg.proto.Dumper` protocol) are
+  - Dumpers (objects implementing the `~psycopg.abc.Dumper` protocol) are
     the objects used to perform the conversion from a Python object to a bytes
     sequence in a format understood by PostgreSQL. The string returned
     *shouldn't be quoted*: the value will be passed to the database using
     functions such as :pq:`PQexecParams()` so quoting and quotes escaping is
     not necessary. The dumper usually also suggests the server what type to
-    use, via its `~psycopg.proto.Dumper.oid` attribute.
+    use, via its `~psycopg.abc.Dumper.oid` attribute.
 
-  - Loaders (objects implementing the `~psycopg.proto.Loader` protocol) are
+  - Loaders (objects implementing the `~psycopg.abc.Loader` protocol) are
     the objects used to perform the opposite operation: reading a bytes
     sequence from PostgreSQL and create a Python object out of it.
 
@@ -141,7 +141,7 @@ and dispatching the values to convert to the right instance.
   type to use (for instance the PostgreSQL type of a Python list depends on
   the objects it contains, whether to use an :sql:`integer` or :sql:`bigint`
   depends on the number size...) In these cases the mechanism provided by
-  `~psycopg.proto.Dumper.get_key()` and `~psycopg.proto.Dumper.upgrade()` is
+  `~psycopg.abc.Dumper.get_key()` and `~psycopg.abc.Dumper.upgrade()` is
   used.
 
 - For every OID returned by the query, the `!Transformer` will instantiate a

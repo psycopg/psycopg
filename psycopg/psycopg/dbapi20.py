@@ -11,8 +11,8 @@ from typing import Any, Optional, Sequence
 
 from . import postgres
 from .pq import Format, Escaping
+from .abc import AdaptContext
 from .adapt import Dumper
-from .proto import AdaptContext
 
 
 class DBAPITypeObject:

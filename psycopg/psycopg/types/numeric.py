@@ -12,8 +12,8 @@ from decimal import Decimal, DefaultContext, Context
 from .. import postgres
 from .. import errors as e
 from ..pq import Format
+from ..abc import AdaptContext
 from ..adapt import Buffer, Dumper, Loader, PyFormat
-from ..proto import AdaptContext
 from .._struct import pack_int2, pack_uint2, unpack_int2
 from .._struct import pack_int4, pack_uint4, unpack_int4, unpack_uint4
 from .._struct import pack_int8, unpack_int8

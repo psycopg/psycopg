@@ -6,8 +6,8 @@ Adapters for booleans.
 
 from .. import postgres
 from ..pq import Format
+from ..abc import AdaptContext
 from ..adapt import Buffer, Dumper, Loader
-from ..proto import AdaptContext
 
 
 class BoolDumper(Dumper):

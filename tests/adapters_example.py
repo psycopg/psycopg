@@ -1,7 +1,7 @@
 from typing import Optional, Tuple, Union
 
 from psycopg import pq
-from psycopg.proto import Dumper, Loader, AdaptContext, PyFormat, Buffer
+from psycopg.abc import Dumper, Loader, AdaptContext, PyFormat, Buffer
 
 
 def f() -> None:

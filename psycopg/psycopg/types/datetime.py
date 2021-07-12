@@ -13,8 +13,8 @@ from typing import Any, Callable, cast, Optional, Tuple, TYPE_CHECKING
 from .. import postgres
 from ..pq import Format
 from .._tz import get_tzinfo
+from ..abc import AdaptContext, DumperKey
 from ..adapt import Buffer, Dumper, Loader, PyFormat
-from ..proto import AdaptContext, DumperKey
 from ..errors import InterfaceError, DataError
 from .._struct import pack_int4, pack_int8, unpack_int4, unpack_int8
 

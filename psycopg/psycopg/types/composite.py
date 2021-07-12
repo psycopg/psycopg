@@ -12,8 +12,8 @@ from typing import Sequence, Tuple, Type
 
 from .. import pq
 from .. import postgres
+from ..abc import AdaptContext, Buffer
 from ..adapt import PyFormat, RecursiveDumper, RecursiveLoader
-from ..proto import AdaptContext, Buffer
 from .._struct import unpack_len
 from ..postgres import TEXT_OID
 from .._typeinfo import CompositeInfo as CompositeInfo  # exported here

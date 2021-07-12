@@ -10,8 +10,8 @@ from abc import ABC, abstractmethod
 from typing import Any, Iterator, List, Optional, Sequence, Union
 
 from .pq import Escaping
+from .abc import AdaptContext
 from .adapt import Transformer, PyFormat
-from .proto import AdaptContext
 
 
 def quote(obj: Any, context: Optional[AdaptContext] = None) -> str:

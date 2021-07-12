@@ -10,8 +10,8 @@ import logging
 from typing import List
 
 from psycopg import errors as e
-from psycopg.pq import proto, error_message
-from psycopg.proto import PQGen
+from psycopg.pq import abc, error_message
+from psycopg.abc import PQGen
 from psycopg.waiting import Wait, Ready
 
 cdef object WAIT_W = Wait.W
@@ -19,7 +19,7 @@ cdef object WAIT_R = Wait.R
 cdef object WAIT_RW = Wait.RW
 cdef int READY_R = Ready.R
 
-def connect(conninfo: str) -> PQGenConn[proto.PGconn]:
+def connect(conninfo: str) -> PQGenConn[abc.PGconn]:
     """
     Generator to create a database connection without blocking.
 
@@ -55,7 +55,7 @@ def connect(conninfo: str) -> PQGenConn[proto.PGconn]:
     return conn
 
 
-def execute(pq.PGconn pgconn) -> PQGen[List[proto.PGresult]]:
+def execute(pq.PGconn pgconn) -> PQGen[List[abc.PGresult]]:
     """
     Generator sending a query and returning results without blocking.
 

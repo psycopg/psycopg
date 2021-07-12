@@ -13,11 +13,11 @@ import os
 import logging
 from typing import Callable, List, Type
 
+from . import abc
 from .misc import ConninfoOption, PGnotify, PGresAttDesc
 from .misc import error_message
 from ._enums import ConnStatus, DiagnosticField, ExecStatus, Format
 from ._enums import Ping, PollingStatus, TransactionStatus
-from . import proto
 
 logger = logging.getLogger(__name__)
 
@@ -28,11 +28,11 @@ Possible values include ``python``, ``c``, ``binary``.
 """
 
 version: Callable[[], int]
-PGconn: Type[proto.PGconn]
-PGresult: Type[proto.PGresult]
-Conninfo: Type[proto.Conninfo]
-Escaping: Type[proto.Escaping]
-PGcancel: Type[proto.PGcancel]
+PGconn: Type[abc.PGconn]
+PGresult: Type[abc.PGresult]
+Conninfo: Type[abc.Conninfo]
+Escaping: Type[abc.Escaping]
+PGcancel: Type[abc.PGcancel]
 
 
 def import_from_libpq() -> None:

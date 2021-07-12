@@ -21,10 +21,10 @@ from typing import List, Optional, Union
 from . import pq
 from . import errors as e
 from .pq import ConnStatus, PollingStatus, ExecStatus
-from .proto import PQGen, PQGenConn
+from .abc import PQGen, PQGenConn
 from .waiting import Wait, Ready
 from .encodings import py_codecs
-from .pq.proto import PGconn, PGresult
+from .pq.abc import PGconn, PGresult
 
 logger = logging.getLogger(__name__)
 

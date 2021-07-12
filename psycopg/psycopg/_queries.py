@@ -12,11 +12,11 @@ from functools import lru_cache
 from . import pq
 from . import errors as e
 from .sql import Composable
-from .proto import Query, Params
+from .abc import Query, Params
 from ._enums import PyFormat
 
 if TYPE_CHECKING:
-    from .proto import Transformer
+    from .abc import Transformer
 
 
 class QueryPart(NamedTuple):

@@ -23,10 +23,9 @@ from . import waiting
 from . import postgres
 from . import encodings
 from .pq import ConnStatus, ExecStatus, TransactionStatus, Format
+from .abc import ConnectionType, Params, PQGen, PQGenConn, Query, RV
 from .sql import Composable
 from .rows import Row, RowFactory, tuple_row, TupleRow
-from .proto import ConnectionType, Params, PQGen, PQGenConn
-from .proto import Query, RV
 from .compat import asynccontextmanager
 from .cursor import Cursor, AsyncCursor
 from ._cmodule import _psycopg
@@ -46,7 +45,7 @@ execute: Callable[["PGconn"], PQGen[List["PGresult"]]]
 CursorRow = TypeVar("CursorRow")
 
 if TYPE_CHECKING:
-    from .pq.proto import PGconn, PGresult
+    from .pq.abc import PGconn, PGresult
     from .pool.base import BasePool
 
 if _psycopg:

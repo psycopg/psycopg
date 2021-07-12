@@ -17,14 +17,14 @@ from typing import Any, Dict, List, Match, Optional, Sequence, Type, Tuple
 from . import pq
 from . import errors as e
 from .pq import ExecStatus
+from .abc import ConnectionType, PQGen, Transformer
 from .adapt import PyFormat
-from .proto import ConnectionType, PQGen, Transformer
 from .compat import create_task
 from ._cmodule import _psycopg
 from .generators import copy_from, copy_to, copy_end
 
 if TYPE_CHECKING:
-    from .pq.proto import PGresult
+    from .pq.abc import PGresult
     from .cursor import BaseCursor, Cursor, AsyncCursor
     from .connection import Connection, AsyncConnection  # noqa: F401
 

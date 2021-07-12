@@ -12,8 +12,8 @@ from typing import Generic, Optional, Type, Union, TYPE_CHECKING
 from . import pq
 from . import sql
 from .pq import TransactionStatus
-from .proto import ConnectionType, PQGen
-from .pq.proto import PGresult
+from .abc import ConnectionType, PQGen
+from .pq.abc import PGresult
 
 if TYPE_CHECKING:
     from typing import Any  # noqa: F401

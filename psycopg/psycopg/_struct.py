@@ -7,7 +7,7 @@ Utility functions to deal with binary structs.
 import struct
 from typing import Callable, cast, Optional, Tuple
 
-from .proto import Buffer
+from .abc import Buffer
 from .compat import Protocol
 
 PackInt = Callable[[int], bytes]

@@ -11,8 +11,8 @@ from typing import Any, Callable, Dict, Iterator, Optional
 from typing import Sequence, Type, TypeVar, Union, TYPE_CHECKING
 
 from . import errors as e
+from .abc import AdaptContext
 from .rows import dict_row
-from .proto import AdaptContext
 
 if TYPE_CHECKING:
     from .connection import Connection, AsyncConnection

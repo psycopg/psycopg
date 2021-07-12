@@ -16,9 +16,9 @@ from . import errors as e
 from . import generators
 
 from .pq import ExecStatus, Format
+from .abc import ConnectionType, Query, Params, PQGen
 from .copy import Copy, AsyncCopy
 from .rows import Row, RowFactory
-from .proto import ConnectionType, Query, Params, PQGen
 from .compat import asynccontextmanager
 from ._column import Column
 from ._cmodule import _psycopg
@@ -26,8 +26,8 @@ from ._queries import PostgresQuery
 from ._preparing import Prepare
 
 if TYPE_CHECKING:
-    from .proto import Transformer
-    from .pq.proto import PGconn, PGresult
+    from .abc import Transformer
+    from .pq.abc import PGconn, PGresult
     from .connection import BaseConnection  # noqa: F401
     from .connection import Connection, AsyncConnection  # noqa: F401
 

@@ -17,7 +17,7 @@ from asyncio import get_event_loop, wait_for, Event, TimeoutError
 from selectors import DefaultSelector, EVENT_READ, EVENT_WRITE
 
 from . import errors as e
-from .proto import PQGen, PQGenConn, RV
+from .abc import PQGen, PQGenConn, RV
 
 
 class Wait(IntEnum):

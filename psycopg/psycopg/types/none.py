@@ -5,8 +5,8 @@ Adapters for None.
 # Copyright (C) 2020-2021 The Psycopg Team
 
 from ..pq import Format
+from ..abc import AdaptContext
 from ..adapt import Dumper
-from ..proto import AdaptContext
 
 
 class NoneDumper(Dumper):

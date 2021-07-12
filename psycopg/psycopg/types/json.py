@@ -9,8 +9,8 @@ from typing import Any, Callable, Optional, Type, Union
 
 from .. import postgres
 from ..pq import Format
+from ..abc import AdaptContext
 from ..adapt import Buffer, Dumper, Loader
-from ..proto import AdaptContext
 from ..errors import DataError
 
 JsonDumpsFunction = Callable[[Any], str]

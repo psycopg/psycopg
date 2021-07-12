@@ -11,14 +11,14 @@ from collections import defaultdict
 from . import pq
 from . import postgres
 from . import errors as e
+from .abc import LoadFunc, AdaptContext, PyFormat, DumperKey
 from .rows import Row, RowMaker
-from .proto import LoadFunc, AdaptContext, PyFormat, DumperKey
 from .postgres import INVALID_OID
 
 if TYPE_CHECKING:
-    from .pq.proto import PGresult
+    from .abc import Dumper, Loader
     from .adapt import AdaptersMap
-    from .proto import Dumper, Loader
+    from .pq.abc import PGresult
     from .connection import BaseConnection
 
 DumperCache = Dict[DumperKey, "Dumper"]

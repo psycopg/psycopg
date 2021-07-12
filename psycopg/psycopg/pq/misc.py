@@ -6,8 +6,8 @@ Various functionalities to make easier to work with the libpq.
 
 from typing import cast, NamedTuple, Optional, Union
 
+from .abc import PGconn, PGresult
 from ._enums import ConnStatus, TransactionStatus
-from .proto import PGconn, PGresult
 
 
 class PGnotify(NamedTuple):
