@@ -1,4 +1,0 @@
-Sphinx >= 3.3, < 3.4
-docutils >= 0.16, < 0.17
-sphinx-autodoc-typehints >= 1.12, < 1.13
-furo

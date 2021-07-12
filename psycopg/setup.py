@@ -31,6 +31,7 @@ extras_require = {
     "binary": [
         f"psycopg-binary == {version}",
     ],
+    # Requirements to run the test suite
     "test": [
         "mypy >= 0.812",
         "pproxy >= 2.7, < 2.8",
@@ -39,10 +40,18 @@ extras_require = {
         "pytest-randomly >= 3.7, < 3.8",
         "tenacity >= 7, < 7.1",
     ],
+    # Requirements needed for development
     "dev": [
         "black",
         "flake8 >= 3.8, < 3.9",
         "mypy >= 0.812",
+    ],
+    # Requirements needed to build the documentation
+    "docs": [
+        "Sphinx >= 4.1, < 4.2",
+        "docutils >= 0.17, < 0.18",
+        "sphinx-autodoc-typehints >= 1.12, < 1.13",
+        "furo >= 2021.7.5b38",
     ],
 }
 
