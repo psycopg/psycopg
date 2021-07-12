@@ -7,29 +7,29 @@ Entry point into the adaptation system.
 from abc import ABC, abstractmethod
 from typing import Any, Optional, Type, Tuple, Union, TYPE_CHECKING
 
-from . import pq
+from . import pq, proto
 from . import _adapters_map
 from .proto import AdaptContext, Buffer as Buffer
 from ._enums import PyFormat as PyFormat
 from ._cmodule import _psycopg
 
 if TYPE_CHECKING:
-    from . import proto
     from .connection import BaseConnection
 
 AdaptersMap = _adapters_map.AdaptersMap
 
 
-class Dumper(ABC):
+class Dumper(proto.Dumper, ABC):
     """
     Convert Python object of the type *cls* to PostgreSQL representation.
     """
 
-    format: pq.Format
-
     # A class-wide oid, which will be used by default by instances unless
     # the subclass overrides it in init.
     _oid: int = 0
+
+    oid: int
+    """The oid to pass to the server, if known."""
 
     def __init__(self, cls: type, context: Optional[AdaptContext] = None):
         self.cls = cls
@@ -37,16 +37,19 @@ class Dumper(ABC):
             context.connection if context else None
         )
 
-        self.oid: int = self._oid
-        """The oid to pass to the server, if known."""
+        self.oid = self._oid
 
     @abstractmethod
     def dump(self, obj: Any) -> Buffer:
-        """Convert the object *obj* to PostgreSQL representation."""
         ...
 
     def quote(self, obj: Any) -> Buffer:
-        """Convert the object *obj* to escaped representation."""
+        """
+        By default return the `dump()` value quoted and sanitised, so
+        that the result can be used to build a SQL string. This works well
+        for most types and you won't likely have to implement this method in a
+        subclass.
+        """
         value = self.dump(obj)
 
         if self.connection:
@@ -59,31 +62,25 @@ class Dumper(ABC):
     def get_key(
         self, obj: Any, format: PyFormat
     ) -> Union[type, Tuple[type, ...]]:
-        """Return an alternative key to upgrade the dumper to represent *obj*
+        """
+        Implementation of the `~psycopg.proto.Dumper.get_key()` member of the
+        `~psycopg.proto.Dumper` protocol. Look at its definition for details.
 
-        Normally the type of the object is all it takes to define how to dump
-        the object to the database. In a few cases this is not enough. Example
+        This implementation returns the *cls* passed in the constructor.
+        Subclasses needing to specialise the PostgreSQL type according to the
+        *value* of the object dumped (not only according to to its type)
+        should override this class.
 
-        - Python int could be several Postgres types: int2, int4, int8, numeric
-        - Python lists should be dumped according to the type they contain
-          to convert them to e.g. array of strings, array of ints (which?...)
-
-        In these cases a Dumper can implement `get_key()` and return a new
-        class, or sequence of classes, that can be used to indentify the same
-        dumper again.
-
-        If a Dumper implements `get_key()` it should also implmement
-        `upgrade()`.
         """
         return self.cls
 
     def upgrade(self, obj: Any, format: PyFormat) -> "Dumper":
-        """Return a new dumper to manage *obj*.
+        """
+        Implementation of the `~psycopg.proto.Dumper.upgrade()` member of the
+        `~psycopg.proto.Dumper` protocol. Look at its definition for details.
 
-        Once `Transformer.get_dumper()` has been notified that this Dumper
-        class cannot handle *obj* itself it will invoke `upgrade()`, which
-        should return a new `Dumper` instance, and will be reused for every
-        objects for which `get_key()` returns the same result.
+        This implementation just returns *self*. If a subclass implements
+        `get_key()` it should probably override `!upgrade()` too.
         """
         return self
 

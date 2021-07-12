@@ -29,9 +29,11 @@ class Transformer(AdaptContext):
     """
     An object that can adapt efficiently between Python and PostgreSQL.
 
-    The life cycle of the object is the query, so it is assumed that stuff like
-    the server version or connection encoding will not change. It can have its
-    state so adapting several values of the same type can be optimised.
+    The life cycle of the object is the query, so it is assumed that attributes
+    such as the server version or the connection encoding will not change. The
+    object have its state so adapting several values of the same type can be
+    optimised.
+
     """
 
     __module__ = "psycopg.adapt"

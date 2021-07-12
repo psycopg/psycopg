@@ -25,7 +25,7 @@ from . import encodings
 from .pq import ConnStatus, ExecStatus, TransactionStatus, Format
 from .sql import Composable
 from .rows import Row, RowFactory, tuple_row, TupleRow
-from .proto import AdaptContext, ConnectionType, Params, PQGen, PQGenConn
+from .proto import ConnectionType, Params, PQGen, PQGenConn
 from .proto import Query, RV
 from .compat import asynccontextmanager
 from .cursor import Cursor, AsyncCursor
@@ -79,7 +79,7 @@ NoticeHandler = Callable[[e.Diagnostic], None]
 NotifyHandler = Callable[[Notify], None]
 
 
-class BaseConnection(AdaptContext, Generic[Row]):
+class BaseConnection(Generic[Row]):
     """
     Base class for different types of connections.
 

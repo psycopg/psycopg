@@ -10,7 +10,7 @@ from typing import cast, TYPE_CHECKING
 from . import pq
 from . import errors as e
 from ._enums import PyFormat as PyFormat
-from .proto import AdaptContext, Dumper, Loader
+from .proto import Dumper, Loader
 from ._cmodule import _psycopg
 from ._typeinfo import TypesRegistry
 
@@ -20,9 +20,31 @@ if TYPE_CHECKING:
 RV = TypeVar("RV")
 
 
-class AdaptersMap(AdaptContext):
-    """
-    Map oids to Loaders and types to Dumpers.
+class AdaptersMap:
+    r"""
+    Establish how types should be converted between Python and PostgreSQL in
+    an `~psycopg.proto.AdaptContext`.
+
+    `!AdaptersMap` maps Python types to `~psycopg.adapt.Dumper` classes to
+    define how Python types are converted to PostgreSQL, and maps OIDs to
+    `~psycopg.adapt.Loader` classes to establish how query results are
+    converted to Python.
+
+    Every `!AdaptContext` object has an underlying `!AdaptersMap` defining how
+    types are converted in that context, exposed as the
+    `~psycopg.proto.AdaptContext.adapters` attribute: changing such map allows
+    to customise adaptation in a context without changing separated contexts.
+
+    When a context is created from another context (for instance when a
+    `~psycopg.Cursor` is created from a `~psycopg.Connection`), the parent's
+    `!adapters` are used as template for the child's `!adapters`, so that every
+    cursor created from the same connection use the connection's types
+    configuration, but separate connections have independent mappings. Once
+    created, `!AdaptersMap` are independent.
+
+    The connections adapters are initialised using a global `!AdptersMap`
+    template, exposed as `psycopg.adapters`: changing such mapping allows to
+    customise the type mapping for the entire application.
 
     The object can start empty or copy from another object of the same class.
     Copies are copy-on-write: if the maps are updated make a copy. This way
@@ -32,9 +54,10 @@ class AdaptersMap(AdaptContext):
 
     __module__ = "psycopg.adapt"
 
+    types: TypesRegistry
+
     _dumpers: Dict[PyFormat, Dict[Union[type, str], Type[Dumper]]]
     _loaders: List[Dict[int, Type[Loader]]]
-    types: TypesRegistry
 
     # Record if a dumper or loader has an optimised version.
     _optimised: Dict[type, type] = {}
@@ -73,6 +96,19 @@ class AdaptersMap(AdaptContext):
     ) -> None:
         """
         Configure the context to use *dumper* to convert object of type *cls*.
+
+        If two dumpers with different `~Dumper.format` are registered for the
+        same type, the last one registered will be chosen when the query
+        doesn't specify a format (i.e. when the value is used with a ``%s``
+        "`~PyFormat.AUTO`" placeholder).
+
+        :param cls: The type to manage.
+        :param dumper: The dumper to register for *cls*.
+
+        If *cls* is specified as string it will be lazy-loaded, so that it
+        will be possible to register it without importing it before. In this
+        case it should be the fully qualified name of the object (e.g.
+        ``"uuid.UUID"``).
         """
         if not isinstance(cls, (str, type)):
             raise TypeError(
@@ -96,6 +132,13 @@ class AdaptersMap(AdaptContext):
     ) -> None:
         """
         Configure the context to use *loader* to convert data of oid *oid*.
+
+        :param oid: The PostgreSQL OID or type name to manage.
+        :param loader: The loar to register for *oid*.
+
+        If `oid` is specified as string, it refers to a type name, which is
+        looked up in the `types` registry. `
+
         """
         if isinstance(oid, str):
             oid = self.types[oid].oid

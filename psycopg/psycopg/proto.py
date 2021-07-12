@@ -59,39 +59,104 @@ class AdaptContext(Protocol):
     """
     A context describing how types are adapted.
 
-    Example of AdaptContext are connections, cursors, transformers.
+    Example of `~AdaptContext` are `~psycopg.Connection`, `~psycopg.Cursor`,
+    `~psycopg.adapt.Transformer`, `~psycopg.adapt.AdaptersMap`.
+
+    Note that this is a `~typing.Protocol`, so objects implementing
+    `!AdaptContext` don't need to explicitly inherit from this class.
+
     """
 
     @property
     def adapters(self) -> "AdaptersMap":
+        """The adapters configuration that this object uses."""
         ...
 
     @property
     def connection(self) -> Optional["BaseConnection[Any]"]:
+        """The connection used by this object, if available.
+
+        :rtype: `~psycopg.Connection` or `~psycopg.AsyncConnection` or `!None`
+        """
         ...
 
 
 class Dumper(Protocol):
+    """
+    Convert Python objects of type *cls* to PostgreSQL representation.
+    """
+
     format: pq.Format
     oid: int
+    """The oid to pass to the server, if known; 0 otherwise."""
 
     def __init__(self, cls: type, context: Optional[AdaptContext] = None):
         ...
 
     def dump(self, obj: Any) -> Buffer:
+        """Convert the object *obj* to PostgreSQL representation."""
         ...
 
     def quote(self, obj: Any) -> Buffer:
+        """Convert the object *obj* to escaped representation."""
         ...
 
     def get_key(self, obj: Any, format: PyFormat) -> DumperKey:
+        """Return an alternative key to upgrade the dumper to represent *obj*.
+
+        :param obj: The object to convert
+        :param format: The format to convert to
+
+        Normally the type of the object is all it takes to define how to dump
+        the object to the database. For instance, a Python `~datetime.date` can
+        be simply converted into a PostgreSQL :sql:`date`.
+
+        In a few cases, just the type is not enough. For example:
+
+        - A Python `~datetime.datetime` could be represented as a
+          :sql:`timestamptz` or a :sql:`timestamp`, according to whether it
+          specifies a `!tzinfo` or not.
+
+        - A Python int could be stored as several Postgres types: int2, int4,
+          int8, numeric. If a type too small is used, it may result in an
+          overflow. If a type too large is used, PostgreSQL may not want to
+          cast it to a smaller type.
+
+        - Python lists should be dumped according to the type they contain to
+          convert them to e.g. array of strings, array of ints (and which
+          size of int?...)
+
+        In these cases, a dumper can implement `!get_key()` and return a new
+        class, or sequence of classes, that can be used to indentify the same
+        dumper again. If the mechanism is not needed, the method should return
+        the same *cls* object passed in the constructor.
+
+        If a dumper implements `get_key()` it should also implmement
+        `upgrade()`.
+
+        """
         ...
 
     def upgrade(self, obj: Any, format: PyFormat) -> "Dumper":
+        """Return a new dumper to manage *obj*.
+
+        :param obj: The object to convert
+        :param format: The format to convert to
+
+        Once `Transformer.get_dumper()` has been notified by `get_key()` that
+        this Dumper class cannot handle *obj* itself, it will invoke
+        `!upgrade()`, which should return a new `Dumper` instance, which will
+        be reused for every objects for which `!get_key()` returns the same
+        result.
+        """
         ...
 
 
 class Loader(Protocol):
+    """
+    Convert PostgreSQL objects with OID *oid* to Python objects.
+    """
+
     format: pq.Format
 
     def __init__(self, oid: int, context: Optional[AdaptContext] = None):

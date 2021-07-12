@@ -6,4 +6,6 @@ psycopg types package
 
 from .. import _typeinfo
 
-TypeInfo = _typeinfo.TypeInfo  # exported here
+# Exposed here
+TypeInfo = _typeinfo.TypeInfo
+TypesRegistry = _typeinfo.TypesRegistry

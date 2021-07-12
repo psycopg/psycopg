@@ -223,6 +223,8 @@ class TypesRegistry:
     Container for the information about types in a database.
     """
 
+    __module__ = "psycopg.types"
+
     def __init__(self, template: Optional["TypesRegistry"] = None):
         self._by_oid: Dict[int, TypeInfo]
         self._by_name: Dict[str, TypeInfo]

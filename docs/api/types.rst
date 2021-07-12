@@ -2,8 +2,8 @@
 
 .. _psycopg.types:
 
-`!types` -- types mapping and adaptation
-========================================
+`!types` -- Types information and adapters
+==========================================
 
 .. module:: psycopg.types
 
@@ -64,6 +64,9 @@ and composite types using it as a subtypes.
         recognise automatically arrays of that type and load them from the
         database as a list of the base type (how the base type is converted to
         Python is demanded to a `Loader`.
+
+
+.. autoclass:: TypesRegistry
 
 
 The following `!TypeInfo` subclasses allow to fetch more specialised
