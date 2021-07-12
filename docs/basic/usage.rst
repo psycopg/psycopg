@@ -98,6 +98,52 @@ relate to each other:
     - :ref:`transactions`.
 
 
+Shortcuts
+---------
+
+The pattern above is familiar to `!psycopg2` users. However, Psycopg 3 also
+exposes a few simple extensions which make the above pattern leaner:
+
+- the `Connection` objects exposes a `~Connection.execute()` method,
+  equivalent to creating a cursor, calling its `~Cursor.execute()` method, and
+  returning it.
+
+  .. code::
+
+      # This
+      cur = conn.execute(...)
+
+      # is equivalent to:
+      cur = conn.cursor()
+      cur.execute(...)
+
+- The `Cursor.execute()` method returns `!self`. This means that you can chain
+  a fetch operation, such as `~Cursor.fetchone()`, to the `!execute()` call:
+
+  .. code::
+
+      # This
+      cur.execute(...)
+      record = cur.fetchone()
+
+      cur.execute(...)
+      for record in cur:
+          ...
+
+      # is equivalent to:
+      record = cur.execute(...).fetchone()
+      for record in cur.execute(...):
+          ...
+
+Using them together, in simple cases, you can go from creating a connection to
+using a result in a single expression:
+
+.. code::
+
+    print(psycopg.connect(DSN).execute("select now()").fetchone()[0])
+    # 2042-07-12 18:15:10.706497+01:00
+
+
 .. index::
     pair: Connection; ``with``
 

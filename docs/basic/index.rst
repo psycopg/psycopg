@@ -1,3 +1,4 @@
+.. _basic:
 
 Getting started with Psycopg 3
 ==============================

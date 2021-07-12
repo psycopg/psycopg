@@ -17,6 +17,8 @@
 import sys
 from pathlib import Path
 
+import psycopg
+
 docs_dir = Path(__file__).parent
 sys.path.append(str(docs_dir / "lib"))
 
@@ -26,7 +28,7 @@ sys.path.append(str(docs_dir / "lib"))
 project = "psycopg"
 copyright = "2020-2021, Daniele Varrazzo and The Psycopg Team"
 author = "Daniele Varrazzo"
-release = "UNRELEASED"
+release = psycopg.__version__
 
 
 # -- General configuration ---------------------------------------------------
