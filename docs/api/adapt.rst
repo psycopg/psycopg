@@ -51,15 +51,6 @@ Other objects used in adaptations
     :members:
 
 
-.. data:: psycopg.adapters
-
-   The global, default adapters map establishing how Python and PostgreSQL
-   types are converted into each other. This map is used as template when new
-   connections are created, using `psycopg.connect()`.
-
-   :type: `~psycopg.adapt.AdaptersMap`
-
-
 .. autoclass:: AdaptersMap
 
    .. automethod:: register_dumper

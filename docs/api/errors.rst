@@ -81,8 +81,8 @@ derive from the following classes:
             \|__ `ProgrammingError`
             \|__ `NotSupportedError`
 
-These classes are also exposed both by the Psycopg and the
-`!psycopg.errors` module.
+These classes are exposed both by the Psycopg and the `!psycopg.errors`
+module.
 
 .. autoexception:: Warning()
 .. autoexception:: InterfaceError()
@@ -107,8 +107,8 @@ SQLSTATE exceptions
 
 Errors coming from a database server (as opposite as ones generated
 client-side, such as connection failed) usually have a 5-letters error code
-called SQLSTATE (available in the `~Diagnostic.sqlstate` attribute of
-`Error.diag`).
+called SQLSTATE (available in the `~Diagnostic.sqlstate` attribute of the
+error's `~psycopg.Error.diag` attribute).
 
 Psycopg exposes a different class for each SQLSTATE value, allowing to
 write idiomatic error handling code according to specific conditions happening
@@ -126,8 +126,8 @@ classes for every error defined by PostgreSQL in versions between 9.6 and 13.
 Every class in the module is named after what referred as "condition name" `in
 the documentation`__, converted to CamelCase: e.g. the error 22012,
 ``division_by_zero`` is exposed by this module as the class `!DivisionByZero`.
-There is a handful of exception, required for disambiguate clashes: please
-refer to the table below for all the classes defined.
+There is a handful of... exceptions to this rule, required for disambiguate
+name clashes: please refer to the table below for all the classes defined.
 
 .. __: https://www.postgresql.org/docs/current/errcodes-appendix.html#ERRCODES-TABLE
 

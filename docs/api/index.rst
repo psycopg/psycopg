@@ -5,12 +5,13 @@ Psycopg 3 API
     :maxdepth: 2
     :caption: Contents:
 
+    module
     connections
     cursors
     sql
     errors
+    pool
     adapt
     types
     abc
-    pool
     pq
