@@ -6,7 +6,6 @@ Advanced topics
     :caption: Contents:
 
     async
-    copy
     cursors
     rows
     pool
