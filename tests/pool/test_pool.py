@@ -605,10 +605,7 @@ def test_closed_putconn(dsn):
 
 
 @pytest.mark.slow
-def test_closed_queue(dsn):
-    p = pool.ConnectionPool(dsn, min_size=1)
-    success = []
-
+def test_closed_queue(dsn, retries):
     def w1():
         with p.connection() as conn:
             assert (
@@ -622,15 +619,20 @@ def test_closed_queue(dsn):
                 pass
         success.append("w2")
 
-    t1 = Thread(target=w1)
-    t2 = Thread(target=w2)
-    t1.start()
-    sleep(0.1)
-    t2.start()
-    p.close()
-    t1.join()
-    t2.join()
-    assert len(success) == 2
+    for retry in retries:
+        with retry:
+            p = pool.ConnectionPool(dsn, min_size=1)
+            success = []
+
+            t1 = Thread(target=w1)
+            t2 = Thread(target=w2)
+            t1.start()
+            sleep(0.1)
+            t2.start()
+            p.close()
+            t1.join()
+            t2.join()
+            assert len(success) == 2
 
 
 @pytest.mark.slow
@@ -697,7 +699,7 @@ def test_shrink(dsn, monkeypatch):
 
 
 @pytest.mark.slow
-def test_reconnect(proxy, caplog, monkeypatch):
+def test_reconnect(proxy, caplog, monkeypatch, retries):
     caplog.set_level(logging.WARNING, logger="psycopg.pool")
 
     assert pool.base.ConnectionAttempt.INITIAL_DELAY == 1.0
@@ -705,31 +707,35 @@ def test_reconnect(proxy, caplog, monkeypatch):
     monkeypatch.setattr(pool.base.ConnectionAttempt, "INITIAL_DELAY", 0.1)
     monkeypatch.setattr(pool.base.ConnectionAttempt, "DELAY_JITTER", 0.0)
 
-    proxy.start()
-    with pool.ConnectionPool(proxy.client_dsn, min_size=1) as p:
-        p.wait(2.0)
-        proxy.stop()
+    for retry in retries:
+        with retry:
+            proxy.start()
+            with pool.ConnectionPool(proxy.client_dsn, min_size=1) as p:
+                p.wait(2.0)
+                proxy.stop()
 
-        with pytest.raises(psycopg.OperationalError):
-            with p.connection() as conn:
-                conn.execute("select 1")
+                with pytest.raises(psycopg.OperationalError):
+                    with p.connection() as conn:
+                        conn.execute("select 1")
 
-        sleep(1.0)
-        proxy.start()
-        p.wait()
+                sleep(1.0)
+                proxy.start()
+                p.wait()
 
-        with p.connection() as conn:
-            conn.execute("select 1")
+                with p.connection() as conn:
+                    conn.execute("select 1")
 
-    assert "BAD" in caplog.messages[0]
-    times = [rec.created for rec in caplog.records]
-    assert times[1] - times[0] < 0.05
-    deltas = [times[i + 1] - times[i] for i in range(1, len(times) - 1)]
-    assert len(deltas) == 3
-    want = 0.1
-    for delta in deltas:
-        assert delta == pytest.approx(want, 0.05), deltas
-        want *= 2
+            assert "BAD" in caplog.messages[0]
+            times = [rec.created for rec in caplog.records]
+            assert times[1] - times[0] < 0.05
+            deltas = [
+                times[i + 1] - times[i] for i in range(1, len(times) - 1)
+            ]
+            assert len(deltas) == 3
+            want = 0.1
+            for delta in deltas:
+                assert delta == pytest.approx(want, 0.05), deltas
+                want *= 2
 
 
 @pytest.mark.slow

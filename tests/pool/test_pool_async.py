@@ -621,10 +621,7 @@ async def test_closed_putconn(dsn):
 
 
 @pytest.mark.slow
-async def test_closed_queue(dsn):
-    p = pool.AsyncConnectionPool(dsn, min_size=1)
-    success = []
-
+async def test_closed_queue(dsn, retries):
     async def w1():
         async with p.connection() as conn:
             res = await conn.execute("select 1 from pg_sleep(0.2)")
@@ -637,12 +634,17 @@ async def test_closed_queue(dsn):
                 pass
         success.append("w2")
 
-    t1 = create_task(w1())
-    await asyncio.sleep(0.1)
-    t2 = create_task(w2())
-    await p.close()
-    await asyncio.gather(t1, t2)
-    assert len(success) == 2
+    async for retry in retries:
+        with retry:
+            p = pool.AsyncConnectionPool(dsn, min_size=1)
+            success = []
+
+            t1 = create_task(w1())
+            await asyncio.sleep(0.1)
+            t2 = create_task(w2())
+            await p.close()
+            await asyncio.gather(t1, t2)
+            assert len(success) == 2
 
 
 @pytest.mark.slow
@@ -711,42 +713,49 @@ async def test_shrink(dsn, monkeypatch):
 
 
 @pytest.mark.slow
-async def test_reconnect(proxy, caplog, monkeypatch):
+async def test_reconnect(proxy, caplog, monkeypatch, retries):
     assert pool.base.ConnectionAttempt.INITIAL_DELAY == 1.0
     assert pool.base.ConnectionAttempt.DELAY_JITTER == 0.1
     monkeypatch.setattr(pool.base.ConnectionAttempt, "INITIAL_DELAY", 0.1)
     monkeypatch.setattr(pool.base.ConnectionAttempt, "DELAY_JITTER", 0.0)
 
-    proxy.start()
-    async with pool.AsyncConnectionPool(proxy.client_dsn, min_size=1) as p:
-        await p.wait(2.0)
-        proxy.stop()
+    async for retry in retries:
+        with retry:
+            proxy.start()
+            async with pool.AsyncConnectionPool(
+                proxy.client_dsn, min_size=1
+            ) as p:
+                await p.wait(2.0)
+                proxy.stop()
 
-        with pytest.raises(psycopg.OperationalError):
-            async with p.connection() as conn:
-                await conn.execute("select 1")
+                with pytest.raises(psycopg.OperationalError):
+                    async with p.connection() as conn:
+                        await conn.execute("select 1")
 
-        await asyncio.sleep(1.0)
-        proxy.start()
-        await p.wait()
+                await asyncio.sleep(1.0)
+                proxy.start()
+                await p.wait()
 
-        async with p.connection() as conn:
-            await conn.execute("select 1")
+                async with p.connection() as conn:
+                    await conn.execute("select 1")
 
-    recs = [
-        r
-        for r in caplog.records
-        if r.name.startswith("psycopg") and r.levelno >= logging.WARNING
-    ]
-    assert "BAD" in recs[0].message
-    times = [rec.created for rec in recs]
-    assert times[1] - times[0] < 0.05
-    deltas = [times[i + 1] - times[i] for i in range(1, len(times) - 1)]
-    assert len(deltas) == 3
-    want = 0.1
-    for delta in deltas:
-        assert delta == pytest.approx(want, 0.05), deltas
-        want *= 2
+            recs = [
+                r
+                for r in caplog.records
+                if r.name.startswith("psycopg")
+                and r.levelno >= logging.WARNING
+            ]
+            assert "BAD" in recs[0].message
+            times = [rec.created for rec in recs]
+            assert times[1] - times[0] < 0.05
+            deltas = [
+                times[i + 1] - times[i] for i in range(1, len(times) - 1)
+            ]
+            assert len(deltas) == 3
+            want = 0.1
+            for delta in deltas:
+                assert delta == pytest.approx(want, 0.05), deltas
+                want *= 2
 
 
 @pytest.mark.slow
