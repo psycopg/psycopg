@@ -7,10 +7,10 @@ Adapers for JSON types.
 import json
 from typing import Any, Callable, Optional, Type, Union
 
+from .. import postgres
 from ..pq import Format
-from ..oids import postgres_types as builtins
+from ..abc import AdaptContext
 from ..adapt import Buffer, Dumper, Loader
-from ..proto import AdaptContext
 from ..errors import DataError
 
 JsonDumpsFunction = Callable[[Any], str]
@@ -51,7 +51,7 @@ def set_json_dumps(
         dumper: Type[_JsonDumper]
         for wrapper, base in grid:
             dumper = type(f"Custom{base.__name__}", (base,), {"_dumps": dumps})
-            dumper.register(wrapper, context=context)
+            context.adapters.register_dumper(wrapper, dumper)
 
 
 def set_json_loads(
@@ -85,7 +85,7 @@ def set_json_loads(
         loader: Type[_JsonLoader]
         for tname, base in grid:
             loader = type(f"Custom{base.__name__}", (base,), {"_loads": loads})
-            loader.register(tname, context=context)
+            context.adapters.register_loader(tname, loader)
 
 
 class _JsonWrapper:
@@ -130,25 +130,25 @@ class _JsonDumper(Dumper):
 class JsonDumper(_JsonDumper):
 
     format = Format.TEXT
-    _oid = builtins["json"].oid
+    _oid = postgres.types["json"].oid
 
 
 class JsonBinaryDumper(_JsonDumper):
 
     format = Format.BINARY
-    _oid = builtins["json"].oid
+    _oid = postgres.types["json"].oid
 
 
 class JsonbDumper(_JsonDumper):
 
     format = Format.TEXT
-    _oid = builtins["jsonb"].oid
+    _oid = postgres.types["jsonb"].oid
 
 
 class JsonbBinaryDumper(_JsonDumper):
 
     format = Format.BINARY
-    _oid = builtins["jsonb"].oid
+    _oid = postgres.types["jsonb"].oid
 
     def dump(self, obj: _JsonWrapper) -> bytes:
         dumps = obj.dumps or self.dumps
@@ -197,14 +197,16 @@ class JsonbBinaryLoader(_JsonLoader):
         return self.loads(data)
 
 
-def register_default_globals(ctx: AdaptContext) -> None:
+def register_default_adapters(context: AdaptContext) -> None:
+    adapters = context.adapters
+
     # Currently json binary format is nothing different than text, maybe with
     # an extra memcopy we can avoid.
-    JsonBinaryDumper.register(Json, ctx)
-    JsonDumper.register(Json, ctx)
-    JsonbBinaryDumper.register(Jsonb, ctx)
-    JsonbDumper.register(Jsonb, ctx)
-    JsonLoader.register("json", ctx)
-    JsonbLoader.register("jsonb", ctx)
-    JsonBinaryLoader.register("json", ctx)
-    JsonbBinaryLoader.register("jsonb", ctx)
+    adapters.register_dumper(Json, JsonBinaryDumper)
+    adapters.register_dumper(Json, JsonDumper)
+    adapters.register_dumper(Jsonb, JsonbBinaryDumper)
+    adapters.register_dumper(Jsonb, JsonbDumper)
+    adapters.register_loader("json", JsonLoader)
+    adapters.register_loader("jsonb", JsonbLoader)
+    adapters.register_loader("json", JsonBinaryLoader)
+    adapters.register_loader("jsonb", JsonbBinaryLoader)

@@ -6,9 +6,20 @@ import pytest
 
 
 @pytest.mark.slow
-@pytest.mark.skipif(sys.version_info < (3, 7), reason="no future annotations")
-def test_typing_example(mypy):
-    cp = mypy.run("tests/typing_example.py")
+@pytest.mark.parametrize(
+    "filename",
+    [
+        "tests/adapters_example.py",
+        pytest.param(
+            "tests/typing_example.py",
+            marks=pytest.mark.skipif(
+                sys.version_info < (3, 7), reason="no future annotations"
+            ),
+        ),
+    ],
+)
+def test_typing_example(mypy, filename):
+    cp = mypy.run(filename)
     errors = cp.stdout.decode("utf8", "replace").splitlines()
     assert not errors
     assert cp.returncode == 0

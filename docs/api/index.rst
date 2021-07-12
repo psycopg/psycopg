@@ -2,13 +2,15 @@ Psycopg 3 API
 =============
 
 .. toctree::
-    :maxdepth: 1
+    :maxdepth: 2
     :caption: Contents:
 
     connections
     cursors
     sql
     errors
-    pool
+    adapt
     types
+    abc
+    pool
     pq

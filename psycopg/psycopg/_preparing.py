@@ -12,7 +12,7 @@ from .pq import ExecStatus
 from ._queries import PostgresQuery
 
 if TYPE_CHECKING:
-    from .pq.proto import PGresult
+    from .pq.abc import PGresult
 
 
 class Prepare(IntEnum):

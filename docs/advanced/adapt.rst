@@ -16,50 +16,45 @@ returned.
     described in this page is useful if you intend to *customise* the
     adaptation rules.
 
-- The `~psycopg.types.TypeInfo` object allows to query type information from
-  a database, which can be used by the adapters: for instance to make them
-  able to decode arrays of base types or composite types.
+- Adaptation configuration is performed by changing the
+  `~psycopg.abc.AdaptContext.adapters` object of objects implementing the
+  `~psycopg.abc.AdaptContext` protocols, for instance `~psycopg.Connection`
+  or `~psycopg.Cursor`.
 
-- The `Dumper` is the base object to perform conversion from a Python object
-  to a `!bytes` string understood by PostgreSQL. The string returned
-  *shouldn't be quoted*: the value will be passed to the database using
-  functions such as :pq:`PQexecParams()` so quoting and quotes escaping is not
-  necessary.
+- Every context object derived from another context inherits its adapters
+  mapping: cursors created from a connection inherit the connection's
+  configuration. Connections obtain an adapters map from the global map
+  exposed as `psycopg.adapters`: changing the content of this object will
+  affect every connection created afterwards.
 
-- The `Loader` is the base object to perform the opposite operation: to read a
-  `!bytes` string from PostgreSQL and create a Python object.
+  .. image:: ../pictures/adapt.svg
+     :align: center
 
-`!Dumper` and `!Loader` are abstract classes: concrete classes must implement
-the `~Dumper.dump()` and `~Loader.load()` methods. Psycopg provides
-implementation for several builtin Python and PostgreSQL types.
+- The `!adapters` attribute are `AdaptersMap` instances, and contain the
+  mapping from Python types and `~psycopg.abc.Dumper` classes, and from
+  PostgreSQL oids to `~psycopg.abc.Loader` classes. Changing this mapping
+  (e.g. writing and registering your own adapters, or using a different
+  configuration of builtin adapters) affects how types are converted between
+  Python and PostgreSQL.
 
-Psycopg provides adapters for several builtin types, which can be used as the
-base to build more complex ones: they all live in the `psycopg.types`
-package.
+  - Dumpers (objects implementing the `~psycopg.abc.Dumper` protocol) are
+    the objects used to perform the conversion from a Python object to a bytes
+    sequence in a format understood by PostgreSQL. The string returned
+    *shouldn't be quoted*: the value will be passed to the database using
+    functions such as :pq:`PQexecParams()` so quoting and quotes escaping is
+    not necessary. The dumper usually also suggests the server what type to
+    use, via its `~psycopg.abc.Dumper.oid` attribute.
 
+  - Loaders (objects implementing the `~psycopg.abc.Loader` protocol) are
+    the objects used to perform the opposite operation: reading a bytes
+    sequence from PostgreSQL and create a Python object out of it.
 
-Dumpers and loaders configuration
----------------------------------
-
-Dumpers and loaders can be registered on different scopes: globally, per
-`~psycopg.Connection`, per `~psycopg.Cursor`, so that adaptation rules can
-be customised for specific needs within the same application: in order to do
-so you can use the *context* parameter of `Dumper.register()` and
-`Loader.register()`.
-
-When a `!Connection` is created, it inherits the global adapters
-configuration; when a `!Cursor` is created it inherits its `!Connection`
-configuration.
-
-.. note::
-
-    `!register()` is a class method on the base class, so if you
-    subclass `!Dumper` or `!Loader` you should call the ``.register()`` on the
-    class you created.
+  - Dumpers and loaders are instantiated on demand by a `~Transformer` object
+    when a query is executed.
 
 
 Example: handling infinity date
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+-------------------------------
 
 Suppose you want to work with the "infinity" date which is available in
 PostgreSQL but not handled by Python:
@@ -80,7 +75,7 @@ cursor):
 
     from datetime import date
 
-    from psycopg.oids import postgres_types as builtins
+    # Subclass existing adapters so that the base case is handled normally.
     from psycopg.types.datetime import DateLoader, DateDumper
 
     class InfDateDumper(DateDumper):
@@ -97,33 +92,38 @@ cursor):
             else:
                 return super().load(data)
 
-    InfDateDumper.register(date, cur)
-    InfDateLoader.register(builtins["date"].oid, cur)
+    # The new classes can be registered globally, on a connection, on a cursor
+    cur.adapters.register_dumper(date, InfDateDumper)
+    cur.adapters.register_loader("date", InfDateLoader)
 
     cur.execute("SELECT %s::text, %s::text", [date(2020, 12, 31), date.max]).fetchone()
     # ('2020-12-31', 'infinity')
     cur.execute("select '2020-12-31'::date, 'infinity'::date").fetchone()
     # (datetime.date(2020, 12, 31), datetime.date(9999, 12, 31))
 
+
+Example: PostgreSQL numeric to Python float
+-------------------------------------------
+
 .. admonition:: TODO
 
-    - Example: numeric to float
+    Write it
 
 
 Dumpers and loaders life cycle
 ------------------------------
 
-Registering dumpers and loaders will instruct `!psycopg` to use them
+Registering dumpers and loaders will instruct Psycopg to use them
 in the queries to follow, in the context where they have been registered.
 
-When a query is performed on a `!Cursor`, a `Transformer` object is created
-as a local context to manage conversions during the query, instantiating the
-required dumpers and loaders and dispatching the values to convert to the
-right instance.
+When a query is performed on a `~psycopg.Cursor`, a
+`~psycopg.adapt.Transformer` object is created as a local context to manage
+conversions during the query, instantiating the required dumpers and loaders
+and dispatching the values to convert to the right instance.
 
-- The `!Transformer` copies the adapters configuration from the `!Cursor`, thus
-  inheriting all the changes made to the global configuration, the current
-  `!Connection`, the `!Cursor`.
+- The `!Transformer` copies the adapters configuration from the `!Cursor`,
+  thus inheriting all the changes made to the global `psycopg.adapters`
+  configuration, the current `!Connection`, the `!Cursor`.
 
 - For every Python type passed as query argument, the `!Transformer` will
   instantiate a `!Dumper`. Usually all the objects of the same type will be
@@ -132,10 +132,17 @@ right instance.
   (for instance, a Python `int` might be better dumped as a PostgreSQL
   :sql:`integer`, :sql:`bigint`, :sql:`smallint` according to its value).
 
-- According to the placeholder used (``%s``, ``%b``, ``%t``), Psycopg may
-  pick a binary or a text dumper. When using the ``%s`` "`~Format.AUTO`"
-  format, if the same type has both a text and a binary dumper registered, the
-  last one registered (using `Dumper.register()`) will be selected.
+- According to the placeholder used (``%s``, ``%b``, ``%t``), Psycopg may pick
+  a binary or a text dumper. When using the ``%s`` "`~PyFormat.AUTO`" format,
+  if the same type has both a text and a binary dumper registered, the last
+  one registered by `~AdaptersMap.register_dumper()` will be used.
+
+- Sometimes, just the Python type is not enough to infer the best PostgreSQL
+  type to use (for instance the PostgreSQL type of a Python list depends on
+  the objects it contains, whether to use an :sql:`integer` or :sql:`bigint`
+  depends on the number size...) In these cases the mechanism provided by
+  `~psycopg.abc.Dumper.get_key()` and `~psycopg.abc.Dumper.upgrade()` is
+  used.
 
 - For every OID returned by the query, the `!Transformer` will instantiate a
   `!Loader`. All the values with the same OID will be converted by the same
@@ -152,127 +159,3 @@ Querying will fail if a Python object for which there isn't a `!Dumper`
 registered (for the right `~psycopg.pq.Format`) is used as query parameter.
 If the query returns a data type whose OID doesn't have a `!Loader`, the
 value will be returned as a string (or bytes string for binary types).
-
-
-Objects involved in types adaptation
-------------------------------------
-
-.. admonition:: TODO
-
-    move to API section
-
-
-.. autoclass:: Format
-    :members:
-
-
-.. autoclass:: Dumper(cls, context=None)
-
-    This is an abstract base class: subclasses *must* implement the `dump()`
-    method and specify the `format`.
-    They *may* implement `oid` (as attribute or property) in order to
-    override the oid type oid; if not PostgreSQL will try to infer the type
-    from the context, but this may fail in some contexts and may require a
-    cast.
-
-    :param cls: The type that will be managed by this dumper.
-    :type cls: type
-    :param context: The context where the transformation is performed. If not
-        specified the conversion might be inaccurate, for instance it will not
-        be possible to know the connection encoding or the server date format.
-    :type context: `~psycopg.Connection`, `~psycopg.Cursor`, or `Transformer`
-
-    .. attribute:: format
-        :type: pq.Format
-
-        The format this class dumps, `~Format.TEXT` or `~Format.BINARY`.
-        This is a class attribute.
-
-
-    .. automethod:: dump
-
-        The format returned by dump shouldn't contain quotes or escaped
-        values.
-
-    .. automethod:: quote
-
-        By default return the `dump()` value quoted and sanitised, so
-        that the result can be used to build a SQL string. This works well
-        for most types and you won't likely have to implement this method in a
-        subclass.
-
-        .. tip::
-
-            This method will be used by `~psycopg.sql.Literal` to convert a
-            value client-side.
-
-        This method only makes sense for text dumpers; the result of calling
-        it on a binary dumper is undefined. It might scratch your car, or burn
-        your cake. Don't tell me I didn't warn you.
-
-    .. autoattribute:: oid
-
-        .. admonition:: todo
-
-            Document how to find type OIDs in a database.
-
-    .. automethod:: register(cls, context=None)
-
-        You should call this method on the `Dumper` subclass you create,
-        passing the Python type you want to dump as *cls*.
-
-        If two dumpers of different `format` are registered for the same type,
-        the last one registered will be chosen by default when the query
-        doesn't specify a format (i.e. when the value is used with a ``%s``
-        "`~Format.AUTO`" placeholder).
-
-        :param cls: The type to manage.
-        :type cls: `!type` or `!str`
-        :param context: Where the dumper should be used. If `!None` the dumper
-            will be used globally.
-        :type context: `~psycopg.Connection`, `~psycopg.Cursor`, or `Transformer`
-
-        If *cls* is specified as string it will be lazy-loaded, so that it
-        will be possible to register it without importing it before. In this
-        case it should be the fully qualified name of the object (e.g.
-        ``"uuid.UUID"``).
-
-
-.. autoclass:: Loader(oid, context=None)
-
-    This is an abstract base class: subclasses *must* implement the `load()`
-    method and specify a `format`.
-
-    :param oid: The type that will be managed by this dumper.
-    :type oid: int
-    :param context: The context where the transformation is performed. If not
-        specified the conversion might be inaccurate, for instance it will not
-        be possible to know the connection encoding or the server date format.
-    :type context: `~psycopg.Connection`, `~psycopg.Cursor`, or `Transformer`
-
-    .. attribute:: format
-        :type: Format
-
-        The format this class can load, `~Format.TEXT` or `~Format.BINARY`.
-        This is a class attribute.
-
-    .. automethod:: load
-
-    .. automethod:: register(oid, context=None)
-
-        You should call this method on the `Loader` subclass you create,
-        passing the OID of the type you want to load as *oid* parameter.
-
-        :param oid: The PostgreSQL OID to manage.
-        :type oid: `!int`
-        :param context: Where the loader should be used. If `!None` the loader
-            will be used globally.
-        :type context: `~psycopg.Connection`, `~psycopg.Cursor`, or `Transformer`
-
-
-.. autoclass:: Transformer(context=None)
-
-    :param context: The context where the transformer should operate.
-    :type context: `~psycopg.Connection`, `~psycopg.Cursor`, or `Transformer`
-
-    TODO: finalise the interface of this object

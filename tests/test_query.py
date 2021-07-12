@@ -2,7 +2,7 @@ import pytest
 
 import psycopg
 from psycopg import pq
-from psycopg.adapt import Transformer, Format
+from psycopg.adapt import Transformer, PyFormat as Format
 from psycopg._queries import PostgresQuery, _split_query
 
 

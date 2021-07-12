@@ -7,7 +7,7 @@ import pytest
 import psycopg.errors
 from psycopg import pq
 from psycopg.sql import Identifier
-from psycopg.adapt import Format
+from psycopg.adapt import PyFormat as Format
 from psycopg.types.range import Range, RangeInfo
 
 

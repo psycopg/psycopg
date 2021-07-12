@@ -9,7 +9,7 @@ from typing import Dict, Optional, Union
 from datetime import timezone, tzinfo
 
 from .compat import ZoneInfo
-from .pq.proto import PGconn
+from .pq.abc import PGconn
 
 logger = logging.getLogger("psycopg")
 

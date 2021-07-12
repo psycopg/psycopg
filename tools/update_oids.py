@@ -73,7 +73,7 @@ order by typname
 
 def update_python_oids() -> None:
     queries = [version_sql, py_types_sql, py_ranges_sql]
-    fn = ROOT / "psycopg/psycopg/oids.py"
+    fn = ROOT / "psycopg/psycopg/postgres.py"
     update_file(fn, queries)
     sp.check_call(["black", "-q", fn])
 

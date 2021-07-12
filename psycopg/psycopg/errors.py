@@ -20,7 +20,8 @@ DBAPI-defined Exceptions are defined in the following hierarchy::
 
 from typing import Any, Callable, Dict, Optional, Sequence, Tuple, Type, Union
 from typing import cast
-from psycopg.pq.proto import PGresult
+
+from psycopg.pq.abc import PGresult
 from psycopg.pq._enums import DiagnosticField
 
 

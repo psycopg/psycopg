@@ -11,7 +11,7 @@ from psycopg import pq
 from psycopg import sql
 from psycopg import errors as e
 from psycopg.pq import Format
-from psycopg.adapt import Format as PgFormat
+from psycopg.adapt import PyFormat as PgFormat
 from psycopg.types.numeric import Int4
 
 from .utils import gc_collect
@@ -267,7 +267,7 @@ def test_subclass_adapter(conn, format):
         def dump(self, obj):
             return super().dump(obj) * 2
 
-    MyStrDumper.register(str, conn)
+    conn.adapters.register_dumper(str, MyStrDumper)
 
     cur = conn.cursor()
     ensure_table(cur, sample_tabledef)

@@ -1,4 +1,4 @@
-`errors` -- package exceptions
+`errors` -- Package exceptions
 ==============================
 
 .. index::

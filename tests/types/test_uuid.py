@@ -6,7 +6,7 @@ import pytest
 
 from psycopg import pq
 from psycopg import sql
-from psycopg.adapt import Format
+from psycopg.adapt import PyFormat as Format
 
 
 @pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])

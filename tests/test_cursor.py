@@ -7,8 +7,8 @@ import pytest
 
 import psycopg
 from psycopg import pq, sql, rows
-from psycopg.oids import postgres_types as builtins
-from psycopg.adapt import Format
+from psycopg.adapt import PyFormat as Format
+from psycopg.postgres import types as builtins
 
 from .utils import gc_collect
 

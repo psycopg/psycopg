@@ -6,10 +6,10 @@ Adapters for the UUID type.
 
 from typing import Callable, Optional, TYPE_CHECKING
 
+from .. import postgres
 from ..pq import Format
-from ..oids import postgres_types as builtins
+from ..abc import AdaptContext
 from ..adapt import Buffer, Dumper, Loader
-from ..proto import AdaptContext
 
 if TYPE_CHECKING:
     import uuid
@@ -22,7 +22,7 @@ UUID: Callable[..., "uuid.UUID"]
 class UUIDDumper(Dumper):
 
     format = Format.TEXT
-    _oid = builtins["uuid"].oid
+    _oid = postgres.types["uuid"].oid
 
     def dump(self, obj: "uuid.UUID") -> bytes:
         return obj.hex.encode("utf8")
@@ -64,8 +64,9 @@ class UUIDBinaryLoader(UUIDLoader):
         return UUID(bytes=data)
 
 
-def register_default_globals(ctx: AdaptContext) -> None:
-    UUIDDumper.register("uuid.UUID", ctx)
-    UUIDBinaryDumper.register("uuid.UUID", ctx)
-    UUIDLoader.register("uuid", ctx)
-    UUIDBinaryLoader.register("uuid", ctx)
+def register_default_adapters(context: AdaptContext) -> None:
+    adapters = context.adapters
+    adapters.register_dumper("uuid.UUID", UUIDDumper)
+    adapters.register_dumper("uuid.UUID", UUIDBinaryDumper)
+    adapters.register_loader("uuid", UUIDLoader)
+    adapters.register_loader("uuid", UUIDBinaryLoader)

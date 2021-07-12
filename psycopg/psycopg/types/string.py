@@ -6,14 +6,14 @@ Adapters for textual types.
 
 from typing import Optional, Union, TYPE_CHECKING
 
+from .. import postgres
 from ..pq import Format, Escaping
-from ..oids import postgres_types as builtins
+from ..abc import AdaptContext
 from ..adapt import Buffer, Dumper, Loader
-from ..proto import AdaptContext
 from ..errors import DataError
 
 if TYPE_CHECKING:
-    from ..pq.proto import Escaping as EscapingProto
+    from ..pq.abc import Escaping as EscapingProto
 
 
 class _StrDumper(Dumper):
@@ -33,7 +33,7 @@ class _StrDumper(Dumper):
 class StrBinaryDumper(_StrDumper):
 
     format = Format.BINARY
-    _oid = builtins["text"].oid
+    _oid = postgres.types["text"].oid
 
     def dump(self, obj: str) -> bytes:
         # the server will raise DataError subclass if the string contains 0x00
@@ -84,7 +84,7 @@ class TextBinaryLoader(TextLoader):
 class BytesDumper(Dumper):
 
     format = Format.TEXT
-    _oid = builtins["bytea"].oid
+    _oid = postgres.types["bytea"].oid
 
     def __init__(self, cls: type, context: Optional[AdaptContext] = None):
         super().__init__(cls, context)
@@ -101,7 +101,7 @@ class BytesDumper(Dumper):
 class BytesBinaryDumper(Dumper):
 
     format = Format.BINARY
-    _oid = builtins["bytea"].oid
+    _oid = postgres.types["bytea"].oid
 
     def dump(
         self, obj: Union[bytes, bytearray, memoryview]
@@ -132,31 +132,31 @@ class ByteaBinaryLoader(Loader):
         return data
 
 
-def register_default_globals(ctx: "AdaptContext") -> None:
-    from ..oids import INVALID_OID
+def register_default_adapters(context: AdaptContext) -> None:
+    adapters = context.adapters
 
     # NOTE: the order the dumpers are registered is relevant.
     # The last one registered becomes the default for each type.
     # Normally, binary is the default dumper, except for text (which plays
     # the role of unknown, so it can be cast automatically to other types).
-    StrBinaryDumper.register(str, ctx)
-    StrDumper.register(str, ctx)
-    TextLoader.register(INVALID_OID, ctx)
-    TextLoader.register("bpchar", ctx)
-    TextLoader.register("name", ctx)
-    TextLoader.register("text", ctx)
-    TextLoader.register("varchar", ctx)
-    TextBinaryLoader.register("bpchar", ctx)
-    TextBinaryLoader.register("name", ctx)
-    TextBinaryLoader.register("text", ctx)
-    TextBinaryLoader.register("varchar", ctx)
+    adapters.register_dumper(str, StrBinaryDumper)
+    adapters.register_dumper(str, StrDumper)
+    adapters.register_loader(postgres.INVALID_OID, TextLoader)
+    adapters.register_loader("bpchar", TextLoader)
+    adapters.register_loader("name", TextLoader)
+    adapters.register_loader("text", TextLoader)
+    adapters.register_loader("varchar", TextLoader)
+    adapters.register_loader("bpchar", TextBinaryLoader)
+    adapters.register_loader("name", TextBinaryLoader)
+    adapters.register_loader("text", TextBinaryLoader)
+    adapters.register_loader("varchar", TextBinaryLoader)
 
-    BytesDumper.register(bytes, ctx)
-    BytesDumper.register(bytearray, ctx)
-    BytesDumper.register(memoryview, ctx)
-    BytesBinaryDumper.register(bytes, ctx)
-    BytesBinaryDumper.register(bytearray, ctx)
-    BytesBinaryDumper.register(memoryview, ctx)
-    ByteaLoader.register("bytea", ctx)
-    ByteaBinaryLoader.register(INVALID_OID, ctx)
-    ByteaBinaryLoader.register("bytea", ctx)
+    adapters.register_dumper(bytes, BytesDumper)
+    adapters.register_dumper(bytearray, BytesDumper)
+    adapters.register_dumper(memoryview, BytesDumper)
+    adapters.register_dumper(bytes, BytesBinaryDumper)
+    adapters.register_dumper(bytearray, BytesBinaryDumper)
+    adapters.register_dumper(memoryview, BytesBinaryDumper)
+    adapters.register_loader("bytea", ByteaLoader)
+    adapters.register_loader(postgres.INVALID_OID, ByteaBinaryLoader)
+    adapters.register_loader("bytea", ByteaBinaryLoader)

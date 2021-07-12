@@ -9,16 +9,16 @@ import datetime as dt
 from math import floor
 from typing import Any, Optional, Sequence
 
+from . import postgres
 from .pq import Format, Escaping
-from .oids import postgres_types as builtins
+from .abc import AdaptContext
 from .adapt import Dumper
-from .proto import AdaptContext
 
 
 class DBAPITypeObject:
     def __init__(self, name: str, type_names: Sequence[str]):
         self.name = name
-        self.values = tuple(builtins[n].oid for n in type_names)
+        self.values = tuple(postgres.types[n].oid for n in type_names)
 
     def __repr__(self) -> str:
         return f"psycopg.{self.name}"
@@ -61,7 +61,7 @@ class Binary:
 class BinaryBinaryDumper(Dumper):
 
     format = Format.BINARY
-    _oid = builtins["bytea"].oid
+    _oid = postgres.types["bytea"].oid
 
     def dump(self, obj: Binary) -> bytes:
         wrapped = obj.obj

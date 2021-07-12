@@ -4,36 +4,36 @@ Helper object to transform values between Python and PostgreSQL
 
 # Copyright (C) 2020-2021 The Psycopg Team
 
-from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 from typing import DefaultDict, TYPE_CHECKING
 from collections import defaultdict
 
 from . import pq
+from . import postgres
 from . import errors as e
-from .oids import INVALID_OID
+from .abc import LoadFunc, AdaptContext, PyFormat, DumperKey
 from .rows import Row, RowMaker
-from .proto import LoadFunc, AdaptContext
-from ._enums import Format
+from .postgres import INVALID_OID
 
 if TYPE_CHECKING:
-    from .pq.proto import PGresult
-    from .adapt import Dumper, Loader, AdaptersMap
+    from .abc import Dumper, Loader
+    from .adapt import AdaptersMap
+    from .pq.abc import PGresult
     from .connection import BaseConnection
 
-DumperKey = Union[type, Tuple[type, ...]]
 DumperCache = Dict[DumperKey, "Dumper"]
-
-LoaderKey = int
-LoaderCache = Dict[LoaderKey, "Loader"]
+LoaderCache = Dict[int, "Loader"]
 
 
 class Transformer(AdaptContext):
     """
     An object that can adapt efficiently between Python and PostgreSQL.
 
-    The life cycle of the object is the query, so it is assumed that stuff like
-    the server version or connection encoding will not change. It can have its
-    state so adapting several values of the same type can be optimised.
+    The life cycle of the object is the query, so it is assumed that attributes
+    such as the server version or the connection encoding will not change. The
+    object have its state so adapting several values of the same type can be
+    optimised.
+
     """
 
     __module__ = "psycopg.adapt"
@@ -47,13 +47,11 @@ class Transformer(AdaptContext):
             self._adapters = context.adapters
             self._conn = context.connection
         else:
-            from .adapt import global_adapters
-
-            self._adapters = global_adapters
+            self._adapters = postgres.adapters
             self._conn = None
 
         # mapping class, fmt -> Dumper instance
-        self._dumpers_cache: DefaultDict[Format, DumperCache] = defaultdict(
+        self._dumpers_cache: DefaultDict[PyFormat, DumperCache] = defaultdict(
             dict
         )
 
@@ -111,7 +109,7 @@ class Transformer(AdaptContext):
         self._row_loaders = rc
 
     def dump_sequence(
-        self, params: Sequence[Any], formats: Sequence[Format]
+        self, params: Sequence[Any], formats: Sequence[PyFormat]
     ) -> Tuple[List[Any], Tuple[int, ...], Sequence[pq.Format]]:
         ps: List[Optional[bytes]] = [None] * len(params)
         ts = [INVALID_OID] * len(params)
@@ -133,7 +131,7 @@ class Transformer(AdaptContext):
 
         return ps, tuple(ts), fs
 
-    def get_dumper(self, obj: Any, format: Format) -> "Dumper":
+    def get_dumper(self, obj: Any, format: PyFormat) -> "Dumper":
         """
         Return a Dumper instance to dump *obj*.
         """

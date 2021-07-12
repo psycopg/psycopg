@@ -5,8 +5,8 @@ Adapters for None.
 # Copyright (C) 2020-2021 The Psycopg Team
 
 from ..pq import Format
+from ..abc import AdaptContext
 from ..adapt import Dumper
-from ..proto import AdaptContext
 
 
 class NoneDumper(Dumper):
@@ -24,5 +24,5 @@ class NoneDumper(Dumper):
         return b"NULL"
 
 
-def register_default_globals(ctx: AdaptContext) -> None:
-    NoneDumper.register(type(None), ctx)
+def register_default_adapters(context: AdaptContext) -> None:
+    context.adapters.register_dumper(type(None), NoneDumper)

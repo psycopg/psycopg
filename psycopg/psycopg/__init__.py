@@ -8,8 +8,8 @@ import logging
 
 from . import pq
 from . import types
+from . import postgres
 from .copy import Copy, AsyncCopy
-from .adapt import global_adapters
 from .cursor import AnyCursor, AsyncCursor, Cursor
 from .errors import Warning, Error, InterfaceError, DatabaseError
 from .errors import DataError, OperationalError, IntegrityError
@@ -32,16 +32,17 @@ logger = logging.getLogger("psycopg")
 if logger.level == logging.NOTSET:
     logger.setLevel(logging.WARNING)
 
-# register default adapters
-types.register_default_globals(global_adapters)
+# register default adapters for PostgreSQL
+adapters = postgres.adapters  # exposed by the package
+postgres.register_default_adapters(adapters)
 
 # DBAPI compliancy
 connect = Connection.connect
 apilevel = "2.0"
 threadsafety = 2
 paramstyle = "pyformat"
-BinaryTextDumper.register(Binary, global_adapters)  # dbapi20
-BinaryBinaryDumper.register(Binary, global_adapters)  # dbapi20
+adapters.register_dumper(Binary, BinaryTextDumper)  # dbapi20
+adapters.register_dumper(Binary, BinaryBinaryDumper)  # dbapi20
 
 
 # Note: defining the exported methods helps both Sphynx in documenting that

@@ -25,7 +25,7 @@ from .misc import error_message, connection_summary
 from ._enums import Format, ExecStatus
 
 if TYPE_CHECKING:
-    from . import proto
+    from . import abc
 
 __impl__ = "python"
 
@@ -70,9 +70,7 @@ class PGconn:
 
     def __init__(self, pgconn_ptr: impl.PGconn_struct):
         self._pgconn_ptr: Optional[impl.PGconn_struct] = pgconn_ptr
-        self.notice_handler: Optional[
-            Callable[["proto.PGresult"], None]
-        ] = None
+        self.notice_handler: Optional[Callable[["abc.PGresult"], None]] = None
         self.notify_handler: Optional[Callable[[PGnotify], None]] = None
 
         self._notice_receiver = impl.PQnoticeReceiver(  # type: ignore
@@ -881,7 +879,7 @@ class Escaping:
     def __init__(self, conn: Optional[PGconn] = None):
         self.conn = conn
 
-    def escape_literal(self, data: "proto.Buffer") -> memoryview:
+    def escape_literal(self, data: "abc.Buffer") -> memoryview:
         if not self.conn:
             raise e.OperationalError(
                 "escape_literal failed: no connection provided"
@@ -900,7 +898,7 @@ class Escaping:
         impl.PQfreemem(out)
         return memoryview(rv)
 
-    def escape_identifier(self, data: "proto.Buffer") -> memoryview:
+    def escape_identifier(self, data: "abc.Buffer") -> memoryview:
         if not self.conn:
             raise e.OperationalError(
                 "escape_identifier failed: no connection provided"
@@ -919,7 +917,7 @@ class Escaping:
         impl.PQfreemem(out)
         return memoryview(rv)
 
-    def escape_string(self, data: "proto.Buffer") -> memoryview:
+    def escape_string(self, data: "abc.Buffer") -> memoryview:
         if not isinstance(data, bytes):
             data = bytes(data)
 
@@ -950,7 +948,7 @@ class Escaping:
 
         return memoryview(out.value)
 
-    def escape_bytea(self, data: "proto.Buffer") -> memoryview:
+    def escape_bytea(self, data: "abc.Buffer") -> memoryview:
         len_out = c_size_t()
         # TODO: might be able to do without a copy but it's a mess.
         # the C library does it better anyway, so maybe not worth optimising

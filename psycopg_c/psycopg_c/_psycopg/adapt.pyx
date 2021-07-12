@@ -16,7 +16,6 @@ equivalent C implementations.
 from typing import Any
 
 cimport cython
-from cpython.bytes cimport PyBytes_AsStringAndSize
 from cpython.bytearray cimport PyByteArray_FromStringAndSize, PyByteArray_Resize
 from cpython.bytearray cimport PyByteArray_GET_SIZE, PyByteArray_AS_STRING
 
@@ -98,25 +97,11 @@ cdef class CDumper:
 
         return rv
 
-    cdef object get_key(self, object obj, object format):
+    cpdef object get_key(self, object obj, object format):
         return self.cls
 
-    cdef object upgrade(self, object obj, object format):
+    cpdef object upgrade(self, object obj, object format):
         return self
-
-    @classmethod
-    def register(
-        this_cls,
-        cls: Union[type, str],
-        context: Optional[AdaptContext] = None,
-        int format = PQ_TEXT,
-    ) -> None:
-        if context is not None:
-            adapters = context.adapters
-        else:
-            from psycopg.adapt import global_adapters as adapters
-
-        adapters.register_dumper(cls, this_cls)
 
     @staticmethod
     cdef char *ensure_size(bytearray ba, Py_ssize_t offset, Py_ssize_t size) except NULL:
@@ -152,17 +137,3 @@ cdef class CLoader:
         cdef Py_ssize_t length
         _buffer_as_string_and_size(data, &ptr, &length)
         return self.cload(ptr, length)
-
-    @classmethod
-    def register(
-        cls,
-        oid: Union[int, str],
-        context: Optional["AdaptContext"] = None,
-        int format = PQ_TEXT,
-    ) -> None:
-        if context is not None:
-            adapters = context.adapters
-        else:
-            from psycopg.adapt import global_adapters as adapters
-
-        adapters.register_loader(oid, cls)

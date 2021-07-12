@@ -11,8 +11,8 @@ from typing import Any, Callable, Dict, Iterator, Optional
 from typing import Sequence, Type, TypeVar, Union, TYPE_CHECKING
 
 from . import errors as e
+from .abc import AdaptContext
 from .rows import dict_row
-from .proto import AdaptContext
 
 if TYPE_CHECKING:
     from .connection import Connection, AsyncConnection
@@ -111,19 +111,16 @@ class TypeInfo:
                 f"found {len(recs)} different types named {name}"
             )
 
-    def register(
-        self,
-        context: Optional["AdaptContext"] = None,
-    ) -> None:
+    def register(self, context: Optional[AdaptContext] = None) -> None:
         """
         Register the type information, globally or in the specified *context*.
         """
         if context:
             types = context.adapters.types
         else:
-            from .oids import postgres_types
+            from . import postgres
 
-            types = postgres_types
+            types = postgres.types
 
         types.add(self)
 
@@ -151,10 +148,7 @@ class RangeInfo(TypeInfo):
         super().__init__(name, oid, array_oid)
         self.subtype_oid = subtype_oid
 
-    def register(
-        self,
-        context: Optional[AdaptContext] = None,
-    ) -> None:
+    def register(self, context: Optional[AdaptContext] = None) -> None:
         super().register(context)
 
         from .types.range import register_adapters
@@ -228,6 +222,8 @@ class TypesRegistry:
     """
     Container for the information about types in a database.
     """
+
+    __module__ = "psycopg.types"
 
     def __init__(self, template: Optional["TypesRegistry"] = None):
         self._by_oid: Dict[int, TypeInfo]

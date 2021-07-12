@@ -12,7 +12,7 @@ from enum import Enum
 from . import pq
 
 
-class Format(str, Enum):
+class PyFormat(str, Enum):
     """
     Enum representing the format wanted for a query argument.
 
@@ -30,20 +30,20 @@ class Format(str, Enum):
     """Binary parameter (``%b`` placeholder)."""
 
     @classmethod
-    def from_pq(cls, fmt: pq.Format) -> "Format":
+    def from_pq(cls, fmt: pq.Format) -> "PyFormat":
         return _pg2py[fmt]
 
     @classmethod
-    def as_pq(cls, fmt: "Format") -> pq.Format:
+    def as_pq(cls, fmt: "PyFormat") -> pq.Format:
         return _py2pg[fmt]
 
 
 _py2pg = {
-    Format.TEXT: pq.Format.TEXT,
-    Format.BINARY: pq.Format.BINARY,
+    PyFormat.TEXT: pq.Format.TEXT,
+    PyFormat.BINARY: pq.Format.BINARY,
 }
 
 _pg2py = {
-    pq.Format.TEXT: Format.TEXT,
-    pq.Format.BINARY: Format.BINARY,
+    pq.Format.TEXT: PyFormat.TEXT,
+    pq.Format.BINARY: PyFormat.BINARY,
 }

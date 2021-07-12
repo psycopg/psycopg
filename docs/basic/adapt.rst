@@ -14,7 +14,8 @@ Many standard Python types are adapted into SQL and returned as Python
 objects when a query is executed.
 
 The following table shows the default mapping between Python and PostgreSQL
-types:
+types. In case you need to customise the conversion you should take a look at
+:ref:`adaptation`.
 
 TODO: complete table
 

@@ -20,12 +20,12 @@ from . import pq
 from . import adapt
 from . import errors as e
 from . import waiting
+from . import postgres
 from . import encodings
 from .pq import ConnStatus, ExecStatus, TransactionStatus, Format
+from .abc import ConnectionType, Params, PQGen, PQGenConn, Query, RV
 from .sql import Composable
 from .rows import Row, RowFactory, tuple_row, TupleRow
-from .proto import AdaptContext, ConnectionType, Params, PQGen, PQGenConn
-from .proto import Query, RV
 from .compat import asynccontextmanager
 from .cursor import Cursor, AsyncCursor
 from ._cmodule import _psycopg
@@ -45,7 +45,7 @@ execute: Callable[["PGconn"], PQGen[List["PGresult"]]]
 CursorRow = TypeVar("CursorRow")
 
 if TYPE_CHECKING:
-    from .pq.proto import PGconn, PGresult
+    from .pq.abc import PGconn, PGresult
     from .pool.base import BasePool
 
 if _psycopg:
@@ -78,7 +78,7 @@ NoticeHandler = Callable[[e.Diagnostic], None]
 NotifyHandler = Callable[[Notify], None]
 
 
-class BaseConnection(AdaptContext, Generic[Row]):
+class BaseConnection(Generic[Row]):
     """
     Base class for different types of connections.
 
@@ -106,7 +106,7 @@ class BaseConnection(AdaptContext, Generic[Row]):
         self.pgconn = pgconn  # TODO: document this
         self._row_factory = row_factory
         self._autocommit = False
-        self._adapters = adapt.AdaptersMap(adapt.global_adapters)
+        self._adapters = adapt.AdaptersMap(postgres.adapters)
         self._notice_handlers: List[NoticeHandler] = []
         self._notify_handlers: List[NotifyHandler] = []
 
