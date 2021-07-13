@@ -63,6 +63,7 @@ class TypeInfo:
         :param conn: the connection to query
         :param name: the name of the type to query. It can include a schema
             name.
+        :type name: `!str` or `~psycopg.sql.Identifier`
         :return: a `!TypeInfo` object populated with the type information,
             `!None` if not found.
         """
