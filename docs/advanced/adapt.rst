@@ -127,10 +127,7 @@ and dispatching the values to convert to the right instance.
 
 - For every Python type passed as query argument, the `!Transformer` will
   instantiate a `!Dumper`. Usually all the objects of the same type will be
-  converted by the same dumper; certain dumpers may be used in more than one
-  instance, because the same Python type maps to more than one PostgreSQL type
-  (for instance, a Python `int` might be better dumped as a PostgreSQL
-  :sql:`integer`, :sql:`bigint`, :sql:`smallint` according to its value).
+  converted by the same dumper instance.
 
 - According to the placeholder used (``%s``, ``%b``, ``%t``), Psycopg may pick
   a binary or a text dumper. When using the ``%s`` "`~PyFormat.AUTO`" format,
@@ -142,11 +139,14 @@ and dispatching the values to convert to the right instance.
   the objects it contains, whether to use an :sql:`integer` or :sql:`bigint`
   depends on the number size...) In these cases the mechanism provided by
   `~psycopg.abc.Dumper.get_key()` and `~psycopg.abc.Dumper.upgrade()` is
-  used.
+  used to create more specific dumpers.
+
+- The query is executed. Upon successful request, the result is received as a
+  `~psycopg.pq.PGresult`.
 
 - For every OID returned by the query, the `!Transformer` will instantiate a
   `!Loader`. All the values with the same OID will be converted by the same
-  loader.
+  loader instance.
 
 - Recursive types (e.g. Python lists, PostgreSQL arrays and composite types)
   will use the same adaptation rules.
