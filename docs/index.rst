@@ -24,7 +24,7 @@ Documentation
 =============
 
 .. toctree::
-    :maxdepth: 1
+    :maxdepth: 2
 
     basic/index
     advanced/index
