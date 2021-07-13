@@ -8,7 +8,7 @@ Once you have familiarised yourself with the :ref:`Psycopg basic operations
 usages.
 
 .. toctree::
-    :maxdepth: 1
+    :maxdepth: 2
     :caption: Contents:
 
     async

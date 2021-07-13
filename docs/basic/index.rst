@@ -8,7 +8,7 @@ This section of the documentation will explain :ref:`how to install Psycopg
 the database <usage>` or :ref:`loading data using COPY <copy>`.
 
 .. toctree::
-    :maxdepth: 1
+    :maxdepth: 2
     :caption: Contents:
 
     install
