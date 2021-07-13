@@ -53,6 +53,41 @@ returned.
     when a query is executed.
 
 
+Example: PostgreSQL numeric to Python float
+-------------------------------------------
+
+Normally PostgreSQL :sql:`numeric` values are converted to Python
+`~decimal.Decimal` instances, because both the types allow fixed-precision
+arithmetic and are not subject to rounding.
+
+Sometimes, however, you may want to perform floating-point math on
+:sql:`numeric` values, and `!Decimal` may get in the way (maybe because it is
+slower, or maybe because mixing `!float` and `!Decimal` values causes Python
+errors).
+
+If you are fine with the potential loss of precision and you simply want to
+receive :sql:`numeric` values as Python `!float`, you can register on
+:sql:`numeric` the same `Loader` class used to load
+:sql:`float4`\/:sql:`float8` values. Because the PostgreSQL textual
+representation of both floats and decimal is the same, the two loaders are
+compatible.
+
+.. code:: python
+
+    conn = psycopg.connect()
+
+    conn.execute("select 123.45").fetchone()[0]
+    # Decimal('123.45')
+
+    conn.adapters.register_loader("numeric", psycopg.types.numeric.FloatLoader)
+
+    conn.execute("select 123.45").fetchone()[0]
+    # 123.45
+
+In this example the customised adaptation takes effect only on the connection
+`!conn` and on any cursor created from it, not on other connections.
+
+
 Example: handling infinity date
 -------------------------------
 
@@ -100,14 +135,6 @@ cursor):
     # ('2020-12-31', 'infinity')
     cur.execute("select '2020-12-31'::date, 'infinity'::date").fetchone()
     # (datetime.date(2020, 12, 31), datetime.date(9999, 12, 31))
-
-
-Example: PostgreSQL numeric to Python float
--------------------------------------------
-
-.. admonition:: TODO
-
-    Write it
 
 
 Dumpers and loaders life cycle
