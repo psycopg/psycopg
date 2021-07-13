@@ -30,9 +30,9 @@ returned.
   .. image:: ../pictures/adapt.svg
      :align: center
 
-- The `!adapters` attribute are `AdaptersMap` instances, and contain the
+- The `!adapters` attributes are `AdaptersMap` instances, and contain the
   mapping from Python types and `~psycopg.abc.Dumper` classes, and from
-  PostgreSQL oids to `~psycopg.abc.Loader` classes. Changing this mapping
+  PostgreSQL OIDs to `~psycopg.abc.Loader` classes. Changing this mapping
   (e.g. writing and registering your own adapters, or using a different
   configuration of builtin adapters) affects how types are converted between
   Python and PostgreSQL.
@@ -145,8 +145,9 @@ in the queries to follow, in the context where they have been registered.
 
 When a query is performed on a `~psycopg.Cursor`, a
 `~psycopg.adapt.Transformer` object is created as a local context to manage
-conversions during the query, instantiating the required dumpers and loaders
-and dispatching the values to convert to the right instance.
+adaptation during the query, instantiating the required dumpers and loaders
+and dispatching the values to perform the wanted conversions from Python to
+Postgres and back.
 
 - The `!Transformer` copies the adapters configuration from the `!Cursor`,
   thus inheriting all the changes made to the global `psycopg.adapters`
@@ -156,17 +157,17 @@ and dispatching the values to convert to the right instance.
   instantiate a `!Dumper`. Usually all the objects of the same type will be
   converted by the same dumper instance.
 
-- According to the placeholder used (``%s``, ``%b``, ``%t``), Psycopg may pick
-  a binary or a text dumper. When using the ``%s`` "`~PyFormat.AUTO`" format,
-  if the same type has both a text and a binary dumper registered, the last
-  one registered by `~AdaptersMap.register_dumper()` will be used.
+  - According to the placeholder used (``%s``, ``%b``, ``%t``), Psycopg may
+    pick a binary or a text dumper. When using the ``%s`` "`~PyFormat.AUTO`"
+    format, if the same type has both a text and a binary dumper registered,
+    the last one registered by `~AdaptersMap.register_dumper()` will be used.
 
-- Sometimes, just the Python type is not enough to infer the best PostgreSQL
-  type to use (for instance the PostgreSQL type of a Python list depends on
-  the objects it contains, whether to use an :sql:`integer` or :sql:`bigint`
-  depends on the number size...) In these cases the mechanism provided by
-  `~psycopg.abc.Dumper.get_key()` and `~psycopg.abc.Dumper.upgrade()` is
-  used to create more specific dumpers.
+  - Sometimes, just looking at the Python type is not enough to decide the
+    best PostgreSQL type to use (for instance the PostgreSQL type of a Python
+    list depends on the objects it contains, whether to use an :sql:`integer`
+    or :sql:`bigint` depends on the number size...) In these cases the
+    mechanism provided by `~psycopg.abc.Dumper.get_key()` and
+    `~psycopg.abc.Dumper.upgrade()` is used to create more specific dumpers.
 
 - The query is executed. Upon successful request, the result is received as a
   `~psycopg.pq.PGresult`.
