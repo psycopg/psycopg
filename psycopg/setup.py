@@ -45,6 +45,7 @@ extras_require = {
         "black",
         "flake8 >= 3.8, < 3.9",
         "mypy >= 0.812",
+        "wheel",
     ],
     # Requirements needed to build the documentation
     "docs": [
