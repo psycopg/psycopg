@@ -1,5 +1,4 @@
-/* style rubric in furo
- * TODO: remove after https://github.com/pradyunsg/furo/issues/33 fixed */
+/* style rubric in furo (too small IMO) */
 p.rubric {
   font-size: 1.2rem;
   font-weight: bold;
