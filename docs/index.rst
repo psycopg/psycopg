@@ -29,7 +29,6 @@ Documentation
     basic/index
     advanced/index
     api/index
-    from_pg2
 
 
 Indices and tables

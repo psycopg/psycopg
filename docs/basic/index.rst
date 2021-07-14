@@ -17,3 +17,4 @@ the database <usage>` or :ref:`loading data using COPY <copy>`.
     adapt
     transactions
     copy
+    from_pg2

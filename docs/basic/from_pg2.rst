@@ -1,6 +1,9 @@
 .. index::
     pair: psycopg2; Differences
 
+.. currentmodule:: psycopg
+
+
 Differences from ``psycopg2``
 =============================
 
@@ -62,8 +65,14 @@ The adaptation system has been completely rewritten, in order to address
 server-side parameters adaptation, but also to consider performance,
 flexibility, ease of customization.
 
-Builtin data types should work as expected; if you have wrapped a custom data
-type you should check the :ref:`adaptation` topic.
+The behaviour with builtin data should be as expected; if you have customised
+the way to adapt data, or you have your own extension types, you should look
+at the new objects involved in adaptation.
+
+.. seealso::
+
+    - :ref:`types-adaptation` for the basic behaviour.
+    - :ref:`adaptation` for more advanced use.
 
 
 .. _diff-copy:
@@ -75,12 +84,12 @@ Copy is no more file-based
 PostgreSQL :sql:`COPY`. The interface doesn't make easy to load
 dynamically-generated data to the database.
 
-There is now a single `~psycopg.Cursor.copy()` method, which is similar to
+There is now a single `~Cursor.copy()` method, which is similar to
 `!psycopg2` `!copy_expert()` in accepting a free-form :sql:`COPY` command and
 returns an object to read/write data, block-wise or record-wise. The different
 usage pattern also enables :sql:`COPY` to be used in async interactions.
 
-See :ref:`copy` for the details.
+.. seealso:: See :ref:`copy` for the details.
 
 
 .. _diff-with:
@@ -88,11 +97,20 @@ See :ref:`copy` for the details.
 ``with`` connection
 -------------------
 
-When the connection is used as context manager, at the end of the context
-the connection will be closed. In `!psycopg2` only the transaction is closed,
-so a connection can be used in several contexts, but the behaviour is
-surprising for people used to several other Python classes wrapping
-resources, such as files.
+In `!psycopg2`, using the syntax :ref:`with connection <pg2:with>`,
+only the transaction is closed, not the connection. This behaviour is
+surprising for people used to several other Python classes wrapping resources,
+such as files.
+
+In psycopg3, using :ref:`with connection <with-connection>` will close the
+connection at the end of the `!with` block, making handling the connection
+resources more familiar.
+
+In order to manage transactions as blocks you can use the
+`Connection.transaction()` method, which allows for finer control, for
+instance to use nested transactions.
+
+.. seealso:: See :ref:`transaction-block` for details.
 
 
 .. _diff-callproc:
@@ -100,11 +118,10 @@ resources, such as files.
 ``callproc()`` is gone
 ----------------------
 
-`cursor.callproc()` is not implemented. The method has a simplistic
-semantic which doesn't account for PostgreSQL positional parameters,
-procedures, set-returning functions. Use a normal
-`~psycopg.Cursor.execute()` with :sql:`SELECT function_name(...)` or
-:sql:`CALL procedure_name(...)` instead.
+`cursor.callproc()` is not implemented. The method has a simplistic semantic
+which doesn't account for PostgreSQL positional parameters, procedures,
+set-returning functions... Use a normal `~Cursor.execute()` with :sql:`SELECT
+function_name(...)` or :sql:`CALL procedure_name(...)` instead.
 
 
 What's new in Psycopg 3
