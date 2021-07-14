@@ -47,8 +47,8 @@ same interface. Current implementations are:
 The implementation currently used is available in the `~psycopg.pq.__impl__`
 module constant.
 
-At import, Psycopg 3 will try to use the best implementation available and
-will fail if none is usable. You can force the use of a specific
+At import time, Psycopg 3 will try to use the best implementation available
+and will fail if none is usable. You can force the use of a specific
 implementation by exporting the env var :envvar:`PSYCOPG_IMPL`: importing the
 library will fail if the requested implementation is not available::
 
