@@ -179,6 +179,7 @@ jobs:
 
         env:
           # the pg_config returns the wrong path
+          # https://github.com/actions/runner/issues/1178
           # Note: this env var name must be in the tox.ini passenv
           PG_LIBPATH: 'C:\Program Files\PostgreSQL\13\lib'
 
