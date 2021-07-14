@@ -55,6 +55,18 @@ def test_network_dump(conn, fmt_in, val):
     assert cur.fetchone()[0] is True
 
 
+@pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
+def test_network_mixed_size_array(conn, fmt_in):
+    val = [
+        ipaddress.IPv4Network("192.168.0.1/32"),
+        ipaddress.IPv6Network("::1/128"),
+    ]
+    cur = conn.cursor()
+    cur.execute(f"select %{fmt_in}", (val,))
+    got = cur.fetchone()[0]
+    assert val == got
+
+
 @pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
 @pytest.mark.parametrize("val", ["127.0.0.1/32", "::ffff:102:300/128"])
 def test_inet_load_address(conn, fmt_out, val):

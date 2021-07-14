@@ -54,78 +54,40 @@ class NetworkDumper(Dumper):
         return str(obj).encode("utf8")
 
 
-class _IPv4Mixin:
-    _family = PGSQL_AF_INET
-    _prefixlen = IPV4_PREFIXLEN
-
-
-class _IPv6Mixin:
-    _family = PGSQL_AF_INET6
-    _prefixlen = IPV6_PREFIXLEN
-
-
-class _AddressBinaryDumper(Dumper):
+class AddressBinaryDumper(Dumper):
 
     format = Format.BINARY
     _oid = postgres.types["inet"].oid
-
-    _family: int
-    _prefixlen: int
 
     def dump(self, obj: Address) -> bytes:
         packed = obj.packed
-        head = bytes((self._family, self._prefixlen, 0, len(packed)))
+        family = PGSQL_AF_INET if obj.version == 4 else PGSQL_AF_INET6
+        head = bytes((family, obj.max_prefixlen, 0, len(packed)))
         return head + packed
 
 
-class IPv4AddressBinaryDumper(_IPv4Mixin, _AddressBinaryDumper):
-    pass
-
-
-class IPv6AddressBinaryDumper(_IPv6Mixin, _AddressBinaryDumper):
-    pass
-
-
-class _InterfaceBinaryDumper(Dumper):
+class InterfaceBinaryDumper(Dumper):
 
     format = Format.BINARY
     _oid = postgres.types["inet"].oid
 
-    _family: int
-
     def dump(self, obj: Interface) -> bytes:
         packed = obj.packed
-        head = bytes((self._family, obj.network.prefixlen, 0, len(packed)))
+        family = PGSQL_AF_INET if obj.version == 4 else PGSQL_AF_INET6
+        head = bytes((family, obj.network.prefixlen, 0, len(packed)))
         return head + packed
 
 
-class IPv4InterfaceBinaryDumper(_IPv4Mixin, _InterfaceBinaryDumper):
-    pass
-
-
-class IPv6InterfaceBinaryDumper(_IPv6Mixin, _InterfaceBinaryDumper):
-    pass
-
-
-class _NetworkBinaryDumper(Dumper):
+class NetworkBinaryDumper(Dumper):
 
     format = Format.BINARY
     _oid = postgres.types["cidr"].oid
 
-    _family: int
-
     def dump(self, obj: Network) -> bytes:
         packed = obj.network_address.packed
-        head = bytes((self._family, obj.prefixlen, 1, len(packed)))
+        family = PGSQL_AF_INET if obj.version == 4 else PGSQL_AF_INET6
+        head = bytes((family, obj.prefixlen, 1, len(packed)))
         return head + packed
-
-
-class IPv4NetworkBinaryDumper(_IPv4Mixin, _NetworkBinaryDumper):
-    pass
-
-
-class IPv6NetworkBinaryDumper(_IPv6Mixin, _NetworkBinaryDumper):
-    pass
 
 
 class _LazyIpaddress(Loader):
@@ -217,16 +179,12 @@ def register_default_adapters(context: AdaptContext) -> None:
     adapters.register_dumper("ipaddress.IPv6Interface", InterfaceDumper)
     adapters.register_dumper("ipaddress.IPv4Network", NetworkDumper)
     adapters.register_dumper("ipaddress.IPv6Network", NetworkDumper)
-    adapters.register_dumper("ipaddress.IPv4Address", IPv4AddressBinaryDumper)
-    adapters.register_dumper("ipaddress.IPv6Address", IPv6AddressBinaryDumper)
-    adapters.register_dumper(
-        "ipaddress.IPv4Interface", IPv4InterfaceBinaryDumper
-    )
-    adapters.register_dumper(
-        "ipaddress.IPv6Interface", IPv6InterfaceBinaryDumper
-    )
-    adapters.register_dumper("ipaddress.IPv4Network", IPv4NetworkBinaryDumper)
-    adapters.register_dumper("ipaddress.IPv6Network", IPv6NetworkBinaryDumper)
+    adapters.register_dumper("ipaddress.IPv4Address", AddressBinaryDumper)
+    adapters.register_dumper("ipaddress.IPv6Address", AddressBinaryDumper)
+    adapters.register_dumper("ipaddress.IPv4Interface", InterfaceBinaryDumper)
+    adapters.register_dumper("ipaddress.IPv6Interface", InterfaceBinaryDumper)
+    adapters.register_dumper("ipaddress.IPv4Network", NetworkBinaryDumper)
+    adapters.register_dumper("ipaddress.IPv6Network", NetworkBinaryDumper)
     adapters.register_loader("inet", InetLoader)
     adapters.register_loader("inet", InetBinaryLoader)
     adapters.register_loader("cidr", CidrLoader)
