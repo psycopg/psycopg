@@ -1,19 +1,69 @@
 `errors` -- Package exceptions
 ==============================
 
+.. module:: psycopg.errors
+
 .. index::
     single: Error; Class
 
-.. module:: psycopg
-
 This module exposes objects to represent and examine database errors.
+
+
+.. currentmodule:: psycopg
+
+.. index::
+    single: Exceptions; DB-API
+
+.. _dbapi-exceptions:
+
+DB-API exceptions
+-----------------
+
+In compliance with the DB-API, all the exceptions raised by Psycopg
+derive from the following classes:
+
+.. parsed-literal::
+
+    `!Exception`
+    \|__ `Warning`
+    \|__ `Error`
+        \|__ `InterfaceError`
+        \|__ `DatabaseError`
+            \|__ `DataError`
+            \|__ `OperationalError`
+            \|__ `IntegrityError`
+            \|__ `InternalError`
+            \|__ `ProgrammingError`
+            \|__ `NotSupportedError`
+
+These classes are exposed both by the Psycopg and the `!psycopg.errors`
+module.
 
 .. autoexception:: Error()
 
     .. autoattribute:: diag
 
+.. autoexception:: Warning()
+.. autoexception:: InterfaceError()
+.. autoexception:: DatabaseError()
+.. autoexception:: DataError()
+.. autoexception:: OperationalError()
+.. autoexception:: IntegrityError()
+.. autoexception:: InternalError()
+.. autoexception:: ProgrammingError()
+.. autoexception:: NotSupportedError()
 
-.. module:: psycopg.errors
+
+.. currentmodule:: psycopg.errors
+
+.. index::
+    single: Exceptions; PostgreSQL
+
+.. _sqlstate-exceptions:
+
+
+Error diagnostics
+-----------------
 
 .. autoclass:: Diagnostic()
 
@@ -53,54 +103,6 @@ This module exposes objects to represent and examine database errors.
         not all the fields are available for all the errors and for all the
         server versions.
 
-
-.. currentmodule:: psycopg
-
-.. index::
-    single: Exceptions; DB-API
-
-.. _dbapi-exceptions:
-
-DB-API exceptions
------------------
-
-In compliance with the DB-API, all the exceptions raised by Psycopg
-derive from the following classes:
-
-.. parsed-literal::
-
-    `!Exception`
-    \|__ `Warning`
-    \|__ `Error`
-        \|__ `InterfaceError`
-        \|__ `DatabaseError`
-            \|__ `DataError`
-            \|__ `OperationalError`
-            \|__ `IntegrityError`
-            \|__ `InternalError`
-            \|__ `ProgrammingError`
-            \|__ `NotSupportedError`
-
-These classes are exposed both by the Psycopg and the `!psycopg.errors`
-module.
-
-.. autoexception:: Warning()
-.. autoexception:: InterfaceError()
-.. autoexception:: DatabaseError()
-.. autoexception:: DataError()
-.. autoexception:: OperationalError()
-.. autoexception:: IntegrityError()
-.. autoexception:: InternalError()
-.. autoexception:: ProgrammingError()
-.. autoexception:: NotSupportedError()
-
-
-.. currentmodule:: psycopg.errors
-
-.. index::
-    single: Exceptions; PostgreSQL
-
-.. _sqlstate-exceptions:
 
 SQLSTATE exceptions
 -------------------

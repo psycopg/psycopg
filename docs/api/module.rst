@@ -7,8 +7,7 @@ it also exposes the `module-level objects`__ required by the specifications.
 .. __: https://www.python.org/dev/peps/pep-0249/
 .. __: https://www.python.org/dev/peps/pep-0249/#module-interface
 
-
-.. currentmodule:: psycopg
+.. module:: psycopg
 
 .. autofunction:: connect
 
