@@ -111,17 +111,16 @@ def test_load_list_int(conn, obj, want, fmt_out):
 
 
 def test_array_register(conn):
-    cur = conn.cursor()
-    cur.execute("create table mytype (data text)")
-    cur.execute("""select '(foo)'::mytype, '{"(foo)"}'::mytype[] -- 1""")
+    conn.execute("create table mytype (data text)")
+    cur = conn.execute("""select '(foo)'::mytype, '{"(foo)"}'::mytype[]""")
     res = cur.fetchone()
     assert res[0] == "(foo)"
     assert res[1] == "{(foo)}"
 
     info = TypeInfo.fetch(conn, "mytype")
-    info.register(cur)
+    info.register(conn)
 
-    cur.execute("""select '(foo)'::mytype, '{"(foo)"}'::mytype[] -- 2""")
+    cur = conn.execute("""select '(foo)'::mytype, '{"(foo)"}'::mytype[]""")
     res = cur.fetchone()
     assert res[0] == "(foo)"
     assert res[1] == ["(foo)"]

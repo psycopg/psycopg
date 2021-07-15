@@ -246,8 +246,7 @@ def test_fetch_info(conn, testrange, name, subtype):
 
 
 def test_fetch_info_not_found(conn):
-    with pytest.raises(conn.ProgrammingError):
-        RangeInfo.fetch(conn, "nosuchrange")
+    assert RangeInfo.fetch(conn, "nosuchrange") is None
 
 
 @pytest.mark.asyncio
@@ -262,8 +261,7 @@ async def test_fetch_info_async(aconn, testrange, name, subtype):
 
 @pytest.mark.asyncio
 async def test_fetch_info_not_found_async(aconn):
-    with pytest.raises(aconn.ProgrammingError):
-        await RangeInfo.fetch_async(aconn, "nosuchrange")
+    assert await RangeInfo.fetch_async(aconn, "nosuchrange") is None
 
 
 def test_dump_custom_empty(conn, testrange):

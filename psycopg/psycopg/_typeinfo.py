@@ -24,11 +24,6 @@ T = TypeVar("T", bound="TypeInfo")
 class TypeInfo:
     """
     Hold information about a PostgreSQL base type.
-
-    The class allows to:
-
-    - read information about a range type using `fetch()` and `fetch_async()`
-    - configure a composite type adaptation using `register()`
     """
 
     __module__ = "psycopg.types"
@@ -71,8 +66,17 @@ class TypeInfo:
 
         if isinstance(name, Composable):
             name = name.as_string(conn)
+
         cur = conn.cursor(binary=True, row_factory=dict_row)
-        cur.execute(cls._info_query, {"name": name})
+        # This might result in a nested transaction. What we want is to leave
+        # the function with the connection in the state we found (either idle
+        # or intrans)
+        try:
+            with conn.transaction():
+                cur.execute(cls._info_query, {"name": name})
+        except e.UndefinedObject:
+            return None
+
         recs = cur.fetchall()
         return cls._fetch(name, recs)
 
@@ -93,7 +97,12 @@ class TypeInfo:
             name = name.as_string(conn)
 
         cur = conn.cursor(binary=True, row_factory=dict_row)
-        await cur.execute(cls._info_query, {"name": name})
+        try:
+            async with conn.transaction():
+                await cur.execute(cls._info_query, {"name": name})
+        except e.UndefinedObject:
+            return None
+
         recs = await cur.fetchall()
         return cls._fetch(name, recs)
 
