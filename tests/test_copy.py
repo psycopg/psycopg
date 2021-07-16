@@ -588,9 +588,9 @@ def test_copy_from_leaks(dsn, faker, fmt, retries):
                 gc_collect()
                 n.append(len(gc.get_objects()))
 
-    assert (
-        n[0] == n[1] == n[2]
-    ), f"objects leaked: {n[1] - n[0]}, {n[2] - n[1]}"
+            assert (
+                n[0] == n[1] == n[2]
+            ), f"objects leaked: {n[1] - n[0]}, {n[2] - n[1]}"
 
 
 def py_to_raw(item, fmt):
