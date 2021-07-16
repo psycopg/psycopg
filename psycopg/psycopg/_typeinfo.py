@@ -232,15 +232,13 @@ class TypesRegistry:
         self._by_range_subtype: Dict[int, TypeInfo]
 
         # Make a shallow copy: it will become a proper copy if the registry
-        # is edited (note the BUG: a child will get shallow-copied, but changing
-        # the parent will change children who weren't copied yet. It can be
-        # probably fixed by setting _own_state to False on the parent on copy,
-        # but needs testing and for the moment I'll leave it there TODO).
+        # is edited.
         if template:
             self._by_oid = template._by_oid
             self._by_name = template._by_name
             self._by_range_subtype = template._by_range_subtype
             self._own_state = False
+            template._own_state = False
         else:
             self.clear()
 
