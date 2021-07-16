@@ -9,6 +9,7 @@ pytest_plugins = (
     "tests.fix_pq",
     "tests.fix_proxy",
     "tests.fix_faker",
+    "tests.fix_psycopg",
 )
 
 

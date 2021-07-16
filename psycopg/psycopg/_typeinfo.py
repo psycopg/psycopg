@@ -242,10 +242,13 @@ class TypesRegistry:
             self._by_range_subtype = template._by_range_subtype
             self._own_state = False
         else:
-            self._by_oid = {}
-            self._by_name = {}
-            self._by_range_subtype = {}
-            self._own_state = True
+            self.clear()
+
+    def clear(self) -> None:
+        self._by_oid = {}
+        self._by_name = {}
+        self._by_range_subtype = {}
+        self._own_state = True
 
     def add(self, info: TypeInfo) -> None:
         self._ensure_own_state()

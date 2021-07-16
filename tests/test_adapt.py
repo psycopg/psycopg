@@ -60,20 +60,16 @@ def test_register_dumper_by_class_name(conn):
     assert conn.adapters.get_dumper(MyStr, Format.TEXT) is dumper
 
 
-def test_dump_global_ctx(dsn):
-    try:
-        psycopg.adapters.register_dumper(MyStr, make_bin_dumper("gb"))
-        psycopg.adapters.register_dumper(MyStr, make_dumper("gt"))
-        conn = psycopg.connect(dsn)
-        cur = conn.execute("select %s", [MyStr("hello")])
-        assert cur.fetchone() == ("hellogt",)
-        cur = conn.execute("select %b", [MyStr("hello")])
-        assert cur.fetchone() == ("hellogb",)
-        cur = conn.execute("select %t", [MyStr("hello")])
-        assert cur.fetchone() == ("hellogt",)
-    finally:
-        for fmt in Format:
-            psycopg.adapters._dumpers[fmt].pop(MyStr, None)
+def test_dump_global_ctx(dsn, global_adapters):
+    psycopg.adapters.register_dumper(MyStr, make_bin_dumper("gb"))
+    psycopg.adapters.register_dumper(MyStr, make_dumper("gt"))
+    conn = psycopg.connect(dsn)
+    cur = conn.execute("select %s", [MyStr("hello")])
+    assert cur.fetchone() == ("hellogt",)
+    cur = conn.execute("select %b", [MyStr("hello")])
+    assert cur.fetchone() == ("hellogb",)
+    cur = conn.execute("select %t", [MyStr("hello")])
+    assert cur.fetchone() == ("hellogt",)
 
 
 def test_dump_connection_ctx(conn):
@@ -203,20 +199,14 @@ def test_register_loader_by_type_name(conn):
     assert conn.adapters.get_loader(TEXT_OID, pq.Format.TEXT) is loader
 
 
-def test_load_global_ctx(dsn):
-    from psycopg.types import string
-
-    try:
-        psycopg.adapters.register_loader("text", make_loader("gt"))
-        psycopg.adapters.register_loader("text", make_bin_loader("gb"))
-        conn = psycopg.connect(dsn)
-        cur = conn.cursor(binary=False).execute("select 'hello'::text")
-        assert cur.fetchone() == ("hellogt",)
-        cur = conn.cursor(binary=True).execute("select 'hello'::text")
-        assert cur.fetchone() == ("hellogb",)
-    finally:
-        psycopg.adapters.register_loader("text", string.TextLoader)
-        psycopg.adapters.register_loader("text", string.TextBinaryLoader)
+def test_load_global_ctx(dsn, global_adapters):
+    psycopg.adapters.register_loader("text", make_loader("gt"))
+    psycopg.adapters.register_loader("text", make_bin_loader("gb"))
+    conn = psycopg.connect(dsn)
+    cur = conn.cursor(binary=False).execute("select 'hello'::text")
+    assert cur.fetchone() == ("hellogt",)
+    cur = conn.cursor(binary=True).execute("select 'hello'::text")
+    assert cur.fetchone() == ("hellogb",)
 
 
 def test_load_connection_ctx(conn):
