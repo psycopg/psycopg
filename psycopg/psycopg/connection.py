@@ -561,15 +561,19 @@ class Connection(BaseConnection[Row]):
         """
         Return a new cursor to send commands and queries to the connection.
         """
-        format = Format.BINARY if binary else Format.TEXT
         if not row_factory:
             row_factory = self.row_factory
+
+        cur: Union[Cursor[Any], ServerCursor[Any]]
         if name:
-            return ServerCursor(
-                self, name=name, format=format, row_factory=row_factory
-            )
+            cur = ServerCursor(self, name=name, row_factory=row_factory)
         else:
-            return Cursor(self, format=format, row_factory=row_factory)
+            cur = Cursor(self, row_factory=row_factory)
+
+        if binary:
+            cur.format = Format.BINARY
+
+        return cur
 
     def execute(
         self,
@@ -772,15 +776,19 @@ class AsyncConnection(BaseConnection[Row]):
         """
         Return a new `AsyncCursor` to send commands and queries to the connection.
         """
-        format = Format.BINARY if binary else Format.TEXT
         if not row_factory:
             row_factory = self.row_factory
+
+        cur: Union[AsyncCursor[Any], AsyncServerCursor[Any]]
         if name:
-            return AsyncServerCursor(
-                self, name=name, format=format, row_factory=row_factory
-            )
+            cur = AsyncServerCursor(self, name=name, row_factory=row_factory)
         else:
-            return AsyncCursor(self, format=format, row_factory=row_factory)
+            cur = AsyncCursor(self, row_factory=row_factory)
+
+        if binary:
+            cur.format = Format.BINARY
+
+        return cur
 
     async def execute(
         self,

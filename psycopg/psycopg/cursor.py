@@ -58,11 +58,10 @@ class BaseCursor(Generic[ConnectionType, Row]):
         self,
         connection: ConnectionType,
         *,
-        format: Format = Format.TEXT,
         row_factory: RowFactory[Row],
     ):
         self._conn = connection
-        self.format = format
+        self.format = Format.TEXT
         self._adapters = adapt.AdaptersMap(connection.adapters)
         self._row_factory = row_factory
         self.arraysize = 1

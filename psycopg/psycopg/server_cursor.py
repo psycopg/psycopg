@@ -176,10 +176,9 @@ class ServerCursor(BaseCursor["Connection[Any]", Row]):
         connection: "Connection[Any]",
         name: str,
         *,
-        format: pq.Format = pq.Format.TEXT,
         row_factory: RowFactory[Row],
     ):
-        super().__init__(connection, format=format, row_factory=row_factory)
+        super().__init__(connection, row_factory=row_factory)
         self._helper: ServerCursorHelper["Connection[Any]", Row]
         self._helper = ServerCursorHelper(name)
         self.itersize: int = DEFAULT_ITERSIZE
@@ -297,10 +296,9 @@ class AsyncServerCursor(BaseCursor["AsyncConnection[Any]", Row]):
         connection: "AsyncConnection[Any]",
         name: str,
         *,
-        format: pq.Format = pq.Format.TEXT,
         row_factory: RowFactory[Row],
     ):
-        super().__init__(connection, format=format, row_factory=row_factory)
+        super().__init__(connection, row_factory=row_factory)
         self._helper: ServerCursorHelper["AsyncConnection[Any]", Row]
         self._helper = ServerCursorHelper(name)
         self.itersize: int = DEFAULT_ITERSIZE
