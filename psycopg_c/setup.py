@@ -29,10 +29,13 @@ with open("psycopg_c/version.py") as f:
 
 
 def get_config(what: str) -> str:
+    # Allow to specify PG_CONFIG using an env var
+    # Changing the path in the cibuildwheel image seems difficult
+    pg_config = os.environ.get("PG_CONFIG", "pg_config")
     try:
-        out = sp.run(["pg_config", f"--{what}"], stdout=sp.PIPE, check=True)
+        out = sp.run([pg_config, f"--{what}"], stdout=sp.PIPE, check=True)
     except Exception as e:
-        log.error("cannot build C module: %s", e)
+        log.error(f"couldn't run {pg_config!r} --{what}: %s", e)
         raise
     else:
         return out.stdout.strip().decode("utf8")
@@ -57,12 +60,6 @@ class psycopg_build_ext(build_ext):
         for ext in self.distribution.ext_modules:
             ext.include_dirs.append(includedir)
             ext.library_dirs.append(libdir)
-
-            # hack to build on GH Actions (pg_config --libdir broken)
-            # https://github.com/actions/runner/issues/1178
-            for path in os.environ.get("PG_LIBPATH", "").split(os.pathsep):
-                if path:
-                    ext.library_dirs.append(path)
 
             if sys.platform == "win32":
                 # For __imp_htons and others

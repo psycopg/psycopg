@@ -156,9 +156,6 @@ jobs:
   windows:
     name: Build Windows packages
     runs-on: windows-2019
-    # TODO: Currently disabled: not completed yet. See the
-    # wheel_windows_before_all script.
-    if: false
 
     strategy:
       matrix:
@@ -168,12 +165,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
-
-      - name: Start PostgreSQL service for test
-        run: |
-          $postgreSqlSvc = Get-Service "postgresql*"
-          Set-Service $postgreSqlSvc.Name -StartupType manual
-          $postgreSqlSvc.Start()
 
       - name: Create the binary package source tree
         run: python3 ./tools/build/copy_to_binary.py
@@ -191,10 +182,11 @@ jobs:
           CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: >-
             delvewheel repair -w {dest_dir} {wheel}
           CIBW_BEFORE_TEST: pip install ./psycopg[test]
-          CIBW_TEST_COMMAND: pytest {project}/tests -m 'not slow' --color yes
-          CIBW_ENVIRONMENT: >-
+          CIBW_TEST_COMMAND: pytest {project}/tests -m "not slow" --color yes
+          CIBW_ENVIRONMENT_WINDOWS: >-
             PSYCOPG_IMPL=binary
-            PSYCOPG_TEST_DSN='host=172.17.0.1 user=postgres'
+            PSYCOPG_TEST_DSN='host=127.0.0.1 user=postgres'
+            PG_CONFIG='C:\Program Files\PostgreSQL\13\bin\pg_config.exe'
 
       - uses: actions/upload-artifact@v2
         with:

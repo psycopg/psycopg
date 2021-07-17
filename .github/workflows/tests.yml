@@ -117,18 +117,19 @@ jobs:
   windows:
     name: Test on Windows
     runs-on: windows-2019
+
     strategy:
       fail-fast: false
       matrix:
         include:
-          - {impl: c, python: 3.6}
-          - {impl: c, python: 3.7}
-          - {impl: c, python: 3.8}
-          - {impl: c, python: 3.9}
           - {impl: python, python: 3.6}
           - {impl: python, python: 3.7}
           - {impl: python, python: 3.8}
           - {impl: python, python: 3.9}
+          - {impl: c, python: 3.6}
+          - {impl: c, python: 3.7}
+          - {impl: c, python: 3.8}
+          - {impl: c, python: 3.9}
 
     env:
       PSYCOPG_IMPL: ${{ matrix.impl }}
@@ -141,51 +142,43 @@ jobs:
 
       - name: Start PostgreSQL service for test
         run: |
-          $postgreSqlSvc = Get-Service "postgresql*"
-          Set-Service $postgreSqlSvc.Name -StartupType manual
-          $postgreSqlSvc.Start()
+          $PgSvc = Get-Service "postgresql*"
+          Set-Service $PgSvc.Name -StartupType manual
+          $PgSvc.Start()
 
       - uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python }}
 
       - name: Install tox
-        run: pip install tox
+        run: pip install tox wheel
 
       - name: Run tests (Python implementation)
-        run: tox -c psycopg -e ${{ matrix.python }} -- --color yes
         if: ${{ matrix.impl == 'python' }}
+        run: tox -c psycopg -e ${{ matrix.python }} -- --color yes
 
-      # An attepnt to add the path to find libpq.lib and avoid:
-      # "The specified module could not be found"
-      # It doesn't work, but leaving this here because appending to path
-      # is a pretty clunky matter I don't want to google for again.
-      - name: append the libpq.lib path to the PATH
-        run: >-
-          echo "C:\Program Files\PostgreSQL\13\lib" |
-          Out-File -FilePath $env:GITHUB_PATH -Append
+      # Build a wheel package of the C extensions.
+      # Specify a pg_config explicitly because there are wrong ones along the
+      # path (https://github.com/actions/virtual-environments/issues/3730).
+      #
+      # Don't add the Postgres bindir to the path because that causes problems
+      # in delocating (https://github.com/pypa/cibuildwheel/issues/766).
+      #
+      # If the wheel is not delocated, import fails with some dll not found
+      # (but it won't tell which one).
+      - name: Build the C wheel
         if: ${{ matrix.impl == 'c' }}
+        run: |
+          $env:PG_CONFIG = "C:\Program Files\PostgreSQL\13\bin\pg_config.exe"
+          python ./psycopg_c/setup.py bdist_wheel
+          pip install delvewheel
+          &"delvewheel" repair @(Get-ChildItem psycopg_c\dist\*.whl)
 
-      - name: Run tests (C implementation)
-        run: tox -c psycopg_c -e ${{ matrix.python }} -- --color yes
-
-        # For the moment don't run the C module. It compiles alright
-        # but import fails with:
-        #
-        #   error importing requested 'c' wrapper: DLL load failed while
-        #   importing pq: The specified module could not be found
-        # if: ${{ matrix.impl == 'c' }}
-        if: false
-
-        env:
-          # the pg_config returns the wrong path
-          # https://github.com/actions/runner/issues/1178
-          # Note: this env var name must be in the tox.ini passenv
-          PG_LIBPATH: 'C:\Program Files\PostgreSQL\13\lib'
-
-      # TODO Remove once testing is fixed
-      - name: Build the C extension
-        run: python ./psycopg_c/setup.py build
+      # tox will only build the package from sdist, not from wheel, so we can't
+      # use it for testing. Just test everything in the global installation.
+      - name: Install and run tests (C implementation)
         if: ${{ matrix.impl == 'c' }}
-        env:
-          PG_LIBPATH: 'C:\Program Files\PostgreSQL\13\lib'
+        run: |
+          pip install ./psycopg/[test]
+          &"pip" install @(Get-ChildItem wheelhouse\*.whl)
+          pytest --color yes
