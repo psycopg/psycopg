@@ -42,7 +42,7 @@ async def test_commit_concurrency(aconn):
 
 
 @pytest.mark.slow
-async def test_concurrent_execution(dsn):
+async def test_concurrent_execution(dsn, retries):
     async def worker():
         cnn = await psycopg.AsyncConnection.connect(dsn)
         cur = cnn.cursor()
@@ -50,10 +50,12 @@ async def test_concurrent_execution(dsn):
         await cur.close()
         await cnn.close()
 
-    workers = [worker(), worker()]
-    t0 = time.time()
-    await asyncio.gather(*workers)
-    assert time.time() - t0 < 0.8, "something broken in concurrency"
+    async for retry in retries:
+        with retry:
+            workers = [worker(), worker()]
+            t0 = time.time()
+            await asyncio.gather(*workers)
+            assert time.time() - t0 < 0.8, "something broken in concurrency"
 
 
 @pytest.mark.slow

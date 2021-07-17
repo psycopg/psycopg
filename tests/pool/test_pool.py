@@ -929,7 +929,7 @@ def test_stats_measures(dsn):
 
 @pytest.mark.slow
 @pytest.mark.timing
-def test_stats_usage(dsn):
+def test_stats_usage(dsn, retries):
     def worker(n):
         try:
             with p.connection(timeout=0.3) as conn:
@@ -937,29 +937,31 @@ def test_stats_usage(dsn):
         except pool.PoolTimeout:
             pass
 
-    with pool.ConnectionPool(dsn, min_size=3) as p:
-        p.wait(2.0)
+    for retry in retries:
+        with retry:
+            with pool.ConnectionPool(dsn, min_size=3) as p:
+                p.wait(2.0)
 
-        ts = [Thread(target=worker, args=(i,)) for i in range(7)]
-        [t.start() for t in ts]
-        [t.join() for t in ts]
-        stats = p.get_stats()
-        assert stats["requests_num"] == 7
-        assert stats["requests_queued"] == 4
-        assert 850 <= stats["requests_wait_ms"] <= 950
-        assert stats["requests_errors"] == 1
-        assert 1150 <= stats["usage_ms"] <= 1250
-        assert stats.get("returns_bad", 0) == 0
+                ts = [Thread(target=worker, args=(i,)) for i in range(7)]
+                [t.start() for t in ts]
+                [t.join() for t in ts]
+                stats = p.get_stats()
+                assert stats["requests_num"] == 7
+                assert stats["requests_queued"] == 4
+                assert 850 <= stats["requests_wait_ms"] <= 950
+                assert stats["requests_errors"] == 1
+                assert 1150 <= stats["usage_ms"] <= 1250
+                assert stats.get("returns_bad", 0) == 0
 
-        with p.connection() as conn:
-            conn.close()
-        p.wait()
-        stats = p.pop_stats()
-        assert stats["requests_num"] == 8
-        assert stats["returns_bad"] == 1
-        with p.connection():
-            pass
-        assert p.get_stats()["requests_num"] == 1
+                with p.connection() as conn:
+                    conn.close()
+                p.wait()
+                stats = p.pop_stats()
+                assert stats["requests_num"] == 8
+                assert stats["returns_bad"] == 1
+                with p.connection():
+                    pass
+                assert p.get_stats()["requests_num"] == 1
 
 
 @pytest.mark.slow

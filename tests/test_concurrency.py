@@ -15,7 +15,7 @@ import psycopg
 
 
 @pytest.mark.slow
-def test_concurrent_execution(dsn):
+def test_concurrent_execution(dsn, retries):
     def worker():
         cnn = psycopg.connect(dsn)
         cur = cnn.cursor()
@@ -23,14 +23,16 @@ def test_concurrent_execution(dsn):
         cur.close()
         cnn.close()
 
-    t1 = threading.Thread(target=worker)
-    t2 = threading.Thread(target=worker)
-    t0 = time.time()
-    t1.start()
-    t2.start()
-    t1.join()
-    t2.join()
-    assert time.time() - t0 < 0.8, "something broken in concurrency"
+    for retry in retries:
+        with retry:
+            t1 = threading.Thread(target=worker)
+            t2 = threading.Thread(target=worker)
+            t0 = time.time()
+            t1.start()
+            t2.start()
+            t1.join()
+            t2.join()
+            assert time.time() - t0 < 0.8, "something broken in concurrency"
 
 
 @pytest.mark.slow
