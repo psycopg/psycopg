@@ -541,3 +541,28 @@ def test_fileno(conn):
     conn.close()
     with pytest.raises(psycopg.OperationalError):
         conn.fileno()
+
+
+def test_cursor_factory(conn):
+    assert conn.cursor_factory is psycopg.Cursor
+
+    class MyCursor(psycopg.Cursor):
+        pass
+
+    conn.cursor_factory = MyCursor
+    with conn.cursor() as cur:
+        assert isinstance(cur, MyCursor)
+
+    with conn.execute("select 1") as cur:
+        assert isinstance(cur, MyCursor)
+
+
+def test_server_cursor_factory(conn):
+    assert conn.server_cursor_factory is psycopg.ServerCursor
+
+    class MyServerCursor(psycopg.ServerCursor):
+        pass
+
+    conn.server_cursor_factory = MyServerCursor
+    with conn.cursor(name="n") as cur:
+        assert isinstance(cur, MyServerCursor)

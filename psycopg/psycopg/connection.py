@@ -444,9 +444,14 @@ class Connection(BaseConnection[Row]):
 
     __module__ = "psycopg"
 
+    cursor_factory: Type[Cursor[Row]]
+    server_cursor_factory: Type[ServerCursor[Row]]
+
     def __init__(self, pgconn: "PGconn", row_factory: RowFactory[Row]):
         super().__init__(pgconn, row_factory)
         self.lock = threading.Lock()
+        self.cursor_factory = Cursor
+        self.server_cursor_factory = ServerCursor
 
     @overload
     @classmethod
@@ -566,9 +571,11 @@ class Connection(BaseConnection[Row]):
 
         cur: Union[Cursor[Any], ServerCursor[Any]]
         if name:
-            cur = ServerCursor(self, name=name, row_factory=row_factory)
+            cur = self.server_cursor_factory(
+                self, name=name, row_factory=row_factory
+            )
         else:
-            cur = Cursor(self, row_factory=row_factory)
+            cur = self.cursor_factory(self, row_factory=row_factory)
 
         if binary:
             cur.format = Format.BINARY
@@ -661,9 +668,14 @@ class AsyncConnection(BaseConnection[Row]):
 
     __module__ = "psycopg"
 
+    cursor_factory: Type[AsyncCursor[Row]]
+    server_cursor_factory: Type[AsyncServerCursor[Row]]
+
     def __init__(self, pgconn: "PGconn", row_factory: RowFactory[Row]):
         super().__init__(pgconn, row_factory)
         self.lock = asyncio.Lock()
+        self.cursor_factory = AsyncCursor
+        self.server_cursor_factory = AsyncServerCursor
 
     @overload
     @classmethod
@@ -781,9 +793,11 @@ class AsyncConnection(BaseConnection[Row]):
 
         cur: Union[AsyncCursor[Any], AsyncServerCursor[Any]]
         if name:
-            cur = AsyncServerCursor(self, name=name, row_factory=row_factory)
+            cur = self.server_cursor_factory(
+                self, name=name, row_factory=row_factory
+            )
         else:
-            cur = AsyncCursor(self, row_factory=row_factory)
+            cur = self.cursor_factory(self, row_factory=row_factory)
 
         if binary:
             cur.format = Format.BINARY

@@ -64,7 +64,6 @@ The `!Connection` class
     .. autoattribute:: closed
     .. autoattribute:: broken
 
-
     .. method:: cursor(*, binary: bool = False, row_factory: Optional[RowFactory] = None) -> Cursor
     .. method:: cursor(name: str, *, binary: bool = False, row_factory: Optional[RowFactory] = None) -> ServerCursor
         :noindex:
@@ -79,9 +78,24 @@ The `!Connection` class
                        loader. See :ref:`binary-data` for details.
         :param row_factory: If specified override the `row_factory` set on the
                             connection. See :ref:`row-factories` for details.
+        :return: A cursor of the class specified by `cursor_factory` (or
+                 `server_cursor_factory` if *name* is specified).
 
         .. note:: You can use :ref:`with conn.cursor(): ...<usage>`
             to close the cursor automatically when the block is exited.
+
+    .. autoattribute:: cursor_factory
+
+        The type, of factory function, returned by `cursor()` and `execute()`.
+
+        Default is `psycopg.Cursor`.
+
+    .. autoattribute:: server_cursor_factory
+
+        The type, of factory function, returned by `cursor()` when a name is
+        specified.
+
+        Default is `psycopg.ServerCursor`.
 
     .. automethod:: execute(query, params=None, prepare=None) -> Cursor
 
@@ -224,6 +238,14 @@ The `!AsyncConnection` class
 
         .. note:: You can use ``async with conn.cursor() as cur: ...`` to
             close the cursor automatically when the block is exited.
+
+    .. autoattribute:: cursor_factory
+
+        Default is `psycopg.AsyncCursor`.
+
+    .. autoattribute:: server_cursor_factory
+
+        Default is `psycopg.AsyncServerCursor`.
 
     .. automethod:: execute(query, params=None, prepare=None) -> AsyncCursor
     .. automethod:: commit
