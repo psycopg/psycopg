@@ -68,8 +68,8 @@ jobs:
 
     strategy:
       matrix:
-        pyver: [cp36, cp37, cp38, cp39]
         arch: [x86_64, i686, ppc64le, aarch64]
+        pyver: [cp36, cp37, cp38, cp39]
 
     steps:
       - uses: actions/checkout@v2
@@ -92,7 +92,7 @@ jobs:
           CIBW_BUILD: ${{matrix.pyver}}-manylinux_${{matrix.arch}}
           CIBW_ARCHS_LINUX: auto aarch64 ppc64le
           CIBW_BEFORE_ALL_LINUX: ./tools/build/wheel_linux_before_all.sh
-          CIBW_BEFORE_TEST: pip install ./psycopg[test]
+          CIBW_TEST_REQUIRES: ./psycopg[test]
           CIBW_TEST_COMMAND: pytest {project}/tests -m 'not slow' --color yes
           CIBW_ENVIRONMENT: >-
             PSYCOPG_IMPL=binary
@@ -124,9 +124,9 @@ jobs:
 
     strategy:
       matrix:
-        pyver: [cp36, cp37, cp38, cp39]
-        arch: [x86_64]
         # These archs require an Apple M1 runner: [arm64, universal2]
+        arch: [x86_64]
+        pyver: [cp36, cp37, cp38, cp39]
 
     steps:
       - uses: actions/checkout@v2
@@ -142,7 +142,7 @@ jobs:
           CIBW_BUILD: ${{matrix.pyver}}-macosx_${{matrix.arch}}
           CIBW_ARCHS_MACOS: x86_64 arm64 universal2
           CIBW_BEFORE_ALL_MACOS: ./tools/build/wheel_macos_before_all.sh
-          CIBW_BEFORE_TEST: pip install ./psycopg[test]
+          CIBW_TEST_REQUIRES: ./psycopg[test]
           CIBW_TEST_COMMAND: pytest {project}/tests -m 'not slow' --color yes
           CIBW_ENVIRONMENT: >-
             PSYCOPG_IMPL=binary
@@ -159,12 +159,18 @@ jobs:
 
     strategy:
       matrix:
-        pyver: [cp36, cp37, cp38, cp39]
-        arch: [win_amd64]
         # Might want to add win32, untested at the moment.
+        arch: [win_amd64]
+        pyver: [cp36, cp37, cp38, cp39]
 
     steps:
       - uses: actions/checkout@v2
+
+      - name: Start PostgreSQL service for test
+        run: |
+          $PgSvc = Get-Service "postgresql*"
+          Set-Service $PgSvc.Name -StartupType manual
+          $PgSvc.Start()
 
       - name: Create the binary package source tree
         run: python3 ./tools/build/copy_to_binary.py
@@ -176,17 +182,15 @@ jobs:
         env:
           CIBW_BUILD: ${{matrix.pyver}}-${{matrix.arch}}
           CIBW_ARCHS_WINDOWS: AMD64 x86
-          CIBW_BEFORE_ALL_WINDOWS: >-
-            powershell.exe tools\build\wheel_windows_before_all.ps1
-          CIBW_BEFORE_BUILD_WINDOWS: "pip install delvewheel"
+          CIBW_BEFORE_BUILD_WINDOWS: pip install delvewheel
           CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: >-
-            delvewheel repair -w {dest_dir} {wheel}
-          CIBW_BEFORE_TEST: pip install ./psycopg[test]
+            delvewheel repair -w {dest_dir} --no-mangle libiconv-2.dll {wheel}
+          CIBW_TEST_REQUIRES: ./psycopg[test]
           CIBW_TEST_COMMAND: pytest {project}/tests -m "not slow" --color yes
           CIBW_ENVIRONMENT_WINDOWS: >-
             PSYCOPG_IMPL=binary
-            PSYCOPG_TEST_DSN='host=127.0.0.1 user=postgres'
-            PG_CONFIG='C:\Program Files\PostgreSQL\13\bin\pg_config.exe'
+            PATH="C:\\Program Files\\PostgreSQL\\13\\bin;$PATH"
+            PSYCOPG_TEST_DSN="host=127.0.0.1 user=postgres"
 
       - uses: actions/upload-artifact@v2
         with:
