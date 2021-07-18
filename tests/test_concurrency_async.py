@@ -10,7 +10,6 @@ pytestmark = pytest.mark.asyncio
 
 
 @pytest.mark.slow
-@pytest.mark.skip
 async def test_commit_concurrency(aconn):
     # Check the condition reported in psycopg2#103
     # Because of bad status check, we commit even when a commit is already on
