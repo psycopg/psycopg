@@ -481,7 +481,8 @@ async def test_copy_to_leaks(dsn, faker, fmt, method, retries):
             async with conn.cursor(binary=fmt) as cur:
                 await cur.execute(faker.drop_stmt)
                 await cur.execute(faker.create_stmt)
-                await cur.executemany(faker.insert_stmt, faker.records)
+                async with faker.find_insert_problem_async(conn):
+                    await cur.executemany(faker.insert_stmt, faker.records)
 
                 stmt = sql.SQL(
                     "copy (select {} from {} order by id) to stdout (format {})"

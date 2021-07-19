@@ -505,7 +505,8 @@ def test_copy_to_leaks(dsn, faker, fmt, method, retries):
             with conn.cursor(binary=fmt) as cur:
                 cur.execute(faker.drop_stmt)
                 cur.execute(faker.create_stmt)
-                cur.executemany(faker.insert_stmt, faker.records)
+                with faker.find_insert_problem(conn):
+                    cur.executemany(faker.insert_stmt, faker.records)
 
                 stmt = sql.SQL(
                     "copy (select {} from {} order by id) to stdout (format {})"

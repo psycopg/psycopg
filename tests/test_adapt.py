@@ -431,19 +431,8 @@ def test_random(conn, faker, fmt, fmt_out):
     with conn.cursor(binary=fmt_out) as cur:
         cur.execute(faker.drop_stmt)
         cur.execute(faker.create_stmt)
-        try:
+        with faker.find_insert_problem(conn):
             cur.executemany(faker.insert_stmt, faker.records)
-        except psycopg.DatabaseError:
-            # Insert one by one to find problematic values
-            conn.rollback()
-            cur.execute(faker.drop_stmt)
-            cur.execute(faker.create_stmt)
-            for rec in faker.records:
-                for i, val in enumerate(rec):
-                    cur.execute(faker.insert_field_stmt(i), (val,))
-
-            # just in case, but hopefully we should have triggered the problem
-            raise
 
         cur.execute(faker.select_stmt)
         recs = cur.fetchall()

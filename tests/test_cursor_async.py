@@ -463,39 +463,39 @@ async def test_leak(dsn, faker, fmt, fmt_out, fetch, row_factory, retries):
     faker.make_records(10)
     row_factory = getattr(rows, row_factory)
 
+    async def work():
+        async with await psycopg.AsyncConnection.connect(dsn) as conn:
+            async with conn.cursor(
+                binary=fmt_out, row_factory=row_factory
+            ) as cur:
+                await cur.execute(faker.drop_stmt)
+                await cur.execute(faker.create_stmt)
+                async with faker.find_insert_problem_async(conn):
+                    await cur.executemany(faker.insert_stmt, faker.records)
+                await cur.execute(faker.select_stmt)
+
+                if fetch == "one":
+                    while 1:
+                        tmp = await cur.fetchone()
+                        if tmp is None:
+                            break
+                elif fetch == "many":
+                    while 1:
+                        tmp = await cur.fetchmany(3)
+                        if not tmp:
+                            break
+                elif fetch == "all":
+                    await cur.fetchall()
+                elif fetch == "iter":
+                    async for rec in cur:
+                        pass
+
     async for retry in retries:
         with retry:
             n = []
             gc_collect()
             for i in range(3):
-                async with await psycopg.AsyncConnection.connect(dsn) as conn:
-                    async with conn.cursor(
-                        binary=fmt_out, row_factory=row_factory
-                    ) as cur:
-                        await cur.execute(faker.drop_stmt)
-                        await cur.execute(faker.create_stmt)
-                        await cur.executemany(faker.insert_stmt, faker.records)
-                        await cur.execute(faker.select_stmt)
-
-                        if fetch == "one":
-                            while 1:
-                                tmp = await cur.fetchone()
-                                if tmp is None:
-                                    break
-                        elif fetch == "many":
-                            while 1:
-                                tmp = await cur.fetchmany(3)
-                                if not tmp:
-                                    break
-                        elif fetch == "all":
-                            await cur.fetchall()
-                        elif fetch == "iter":
-                            async for rec in cur:
-                                pass
-
-                        tmp = None
-
-                del cur, conn
+                await work()
                 gc_collect()
                 n.append(len(gc.get_objects()))
 

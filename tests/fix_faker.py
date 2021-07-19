@@ -5,6 +5,7 @@ from math import isnan
 from uuid import UUID
 from random import choice, random, randrange
 from decimal import Decimal
+from contextlib import contextmanager
 from collections import deque
 
 import pytest
@@ -12,6 +13,7 @@ import pytest
 import psycopg
 from psycopg import sql
 from psycopg.adapt import PyFormat
+from psycopg.compat import asynccontextmanager
 from psycopg.types.range import Range
 from psycopg.types.numeric import Int4, Int8
 
@@ -129,17 +131,70 @@ class Faker:
             sql.SQL(", ").join(phs),
         )
 
-    def insert_field_stmt(self, i):
-        ph = sql.Placeholder(format=self.format)
-        return sql.SQL("insert into {} ({}) values ({})").format(
-            self.table_name, self.fields_names[i], ph
-        )
-
     @property
     def select_stmt(self):
         fields = sql.SQL(", ").join(self.fields_names)
         return sql.SQL("select {} from {} order by id").format(
             fields, self.table_name
+        )
+
+    @contextmanager
+    def find_insert_problem(self, conn):
+        """Context manager to help finding a problematic vaule."""
+        try:
+            yield
+        except psycopg.DatabaseError:
+            conn.rollback()
+            cur = conn.cursor()
+            # Repeat insert one field at time, until finding the wrong one
+            cur.execute(self.drop_stmt)
+            cur.execute(self.create_stmt)
+            for i, rec in enumerate(self.records):
+                for j, val in enumerate(rec):
+                    try:
+                        cur.execute(self._insert_field_stmt(j), (val,))
+                    except psycopg.DatabaseError as e:
+                        r = repr(val)
+                        if len(r) > 200:
+                            r = f"{r[:200]}... ({len(r)} chars)"
+                        raise Exception(
+                            f"value {r!r} at record {i} column0 {j}"
+                            f" failed insert: {e}"
+                        ) from None
+
+            # just in case, but hopefully we should have triggered the problem
+            raise
+
+    @asynccontextmanager
+    async def find_insert_problem_async(self, aconn):
+        try:
+            yield
+        except psycopg.DatabaseError:
+            await aconn.rollback()
+            acur = aconn.cursor()
+            # Repeat insert one field at time, until finding the wrong one
+            await acur.execute(self.drop_stmt)
+            await acur.execute(self.create_stmt)
+            for i, rec in enumerate(self.records):
+                for j, val in enumerate(rec):
+                    try:
+                        await acur.execute(self._insert_field_stmt(j), (val,))
+                    except psycopg.DatabaseError as e:
+                        r = repr(val)
+                        if len(r) > 200:
+                            r = f"{r[:200]}... ({len(r)} chars)"
+                        raise Exception(
+                            f"value {r!r} at record {i} column0 {j}"
+                            f" failed insert: {e}"
+                        ) from None
+
+            # just in case, but hopefully we should have triggered the problem
+            raise
+
+    def _insert_field_stmt(self, i):
+        ph = sql.Placeholder(format=self.format)
+        return sql.SQL("insert into {} ({}) values ({})").format(
+            self.table_name, self.fields_names[i], ph
         )
 
     def choose_schema(self, ncols=20):

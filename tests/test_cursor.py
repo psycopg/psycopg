@@ -549,42 +549,40 @@ def test_leak(dsn, faker, fmt, fmt_out, fetch, row_factory, retries):
     faker.make_records(10)
     row_factory = getattr(rows, row_factory)
 
+    def work():
+        with psycopg.connect(dsn) as conn:
+            with conn.cursor(binary=fmt_out, row_factory=row_factory) as cur:
+                cur.execute(faker.drop_stmt)
+                cur.execute(faker.create_stmt)
+                with faker.find_insert_problem(conn):
+                    cur.executemany(faker.insert_stmt, faker.records)
+
+                cur.execute(faker.select_stmt)
+
+                if fetch == "one":
+                    while 1:
+                        tmp = cur.fetchone()
+                        if tmp is None:
+                            break
+                elif fetch == "many":
+                    while 1:
+                        tmp = cur.fetchmany(3)
+                        if not tmp:
+                            break
+                elif fetch == "all":
+                    cur.fetchall()
+                elif fetch == "iter":
+                    for rec in cur:
+                        pass
+
     for retry in retries:
         with retry:
             n = []
             gc_collect()
             for i in range(3):
-                with psycopg.connect(dsn) as conn:
-                    with conn.cursor(
-                        binary=fmt_out, row_factory=row_factory
-                    ) as cur:
-                        cur.execute(faker.drop_stmt)
-                        cur.execute(faker.create_stmt)
-                        cur.executemany(faker.insert_stmt, faker.records)
-                        cur.execute(faker.select_stmt)
-
-                        if fetch == "one":
-                            while 1:
-                                tmp = cur.fetchone()
-                                if tmp is None:
-                                    break
-                        elif fetch == "many":
-                            while 1:
-                                tmp = cur.fetchmany(3)
-                                if not tmp:
-                                    break
-                        elif fetch == "all":
-                            cur.fetchall()
-                        elif fetch == "iter":
-                            for rec in cur:
-                                pass
-
-                        tmp = None
-
-                del cur, conn
+                work()
                 gc_collect()
                 n.append(len(gc.get_objects()))
-
             assert (
                 n[0] == n[1] == n[2]
             ), f"objects leaked: {n[1] - n[0]}, {n[2] - n[1]}"
