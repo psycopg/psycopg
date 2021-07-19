@@ -9,8 +9,6 @@ import pytest
 import psycopg
 from psycopg import conninfo
 
-logger = logging.getLogger()
-
 
 def pytest_collection_modifyitems(items):
     for item in items:
@@ -66,7 +64,8 @@ class Proxy:
 
     def start(self):
         if self.proc:
-            raise ValueError("proxy already running")
+            logging.info("proxy already started")
+            return
 
         logging.info("starting proxy")
         pproxy = which("pproxy")
