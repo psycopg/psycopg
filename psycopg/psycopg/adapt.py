@@ -39,6 +39,12 @@ class Dumper(abc.Dumper, ABC):
 
         self.oid = self._oid
 
+    def __repr__(self) -> str:
+        return (
+            f"<{type(self).__module__}.{type(self).__qualname__}"
+            f" (oid={self.oid}) at 0x{id(self):x}>"
+        )
+
     @abstractmethod
     def dump(self, obj: Any) -> Buffer:
         ...
