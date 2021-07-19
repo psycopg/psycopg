@@ -148,10 +148,7 @@ def test_notifies(conn, dsn):
 
 
 @pytest.mark.slow
-def test_cancel(conn):
-
-    errors = []
-
+def test_cancel(conn, retries):
     def canceller():
         try:
             time.sleep(0.5)
@@ -159,21 +156,25 @@ def test_cancel(conn):
         except Exception as exc:
             errors.append(exc)
 
-    cur = conn.cursor()
-    t = threading.Thread(target=canceller)
-    t0 = time.time()
-    t.start()
+    for retry in retries:
+        with retry:
+            errors = []
 
-    with pytest.raises(psycopg.DatabaseError):
-        cur.execute("select pg_sleep(2)")
+            cur = conn.cursor()
+            t = threading.Thread(target=canceller)
+            t0 = time.time()
+            t.start()
 
-    t1 = time.time()
-    assert not errors
-    assert 0.0 < t1 - t0 < 1.0
+            with pytest.raises(psycopg.DatabaseError):
+                cur.execute("select pg_sleep(2)")
 
-    # still working
-    conn.rollback()
-    assert cur.execute("select 1").fetchone()[0] == 1
+            t1 = time.time()
+            assert not errors
+            assert 0.0 < t1 - t0 < 1.0
+
+            # still working
+            conn.rollback()
+            assert cur.execute("select 1").fetchone()[0] == 1
 
 
 @pytest.mark.slow

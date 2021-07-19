@@ -101,10 +101,7 @@ async def test_notifies(aconn, dsn):
 
 
 @pytest.mark.slow
-async def test_cancel(aconn):
-
-    errors = []
-
+async def test_cancel(aconn, retries):
     async def canceller():
         try:
             await asyncio.sleep(0.5)
@@ -117,20 +114,23 @@ async def test_cancel(aconn):
         with pytest.raises(psycopg.DatabaseError):
             await cur.execute("select pg_sleep(2)")
 
-    workers = [worker(), canceller()]
+    async for retry in retries:
+        with retry:
+            errors = []
+            workers = [worker(), canceller()]
 
-    t0 = time.time()
-    await asyncio.gather(*workers)
+            t0 = time.time()
+            await asyncio.gather(*workers)
 
-    t1 = time.time()
-    assert not errors
-    assert 0.0 < t1 - t0 < 1.0
+            t1 = time.time()
+            assert not errors
+            assert 0.0 < t1 - t0 < 1.0
 
-    # still working
-    await aconn.rollback()
-    cur = aconn.cursor()
-    await cur.execute("select 1")
-    assert await cur.fetchone() == (1,)
+            # still working
+            await aconn.rollback()
+            cur = aconn.cursor()
+            await cur.execute("select 1")
+            assert await cur.fetchone() == (1,)
 
 
 @pytest.mark.slow
