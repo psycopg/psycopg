@@ -317,6 +317,20 @@ def test_load_quoting(conn, testrange, fmt_out):
         assert ord(got.upper) == i + 1
 
 
+@pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
+def test_mixed_array_types(conn, fmt_out):
+    conn.execute("create table testmix (a daterange[], b tstzrange[])")
+    r1 = Range(dt.date(2000, 1, 1), dt.date(2001, 1, 1), "[)")
+    r2 = Range(
+        dt.datetime(2000, 1, 1, tzinfo=dt.timezone.utc),
+        dt.datetime(2001, 1, 1, tzinfo=dt.timezone.utc),
+        "[)",
+    )
+    conn.execute("insert into testmix values (%s, %s)", [[r1], [r2]])
+    got = conn.execute("select * from testmix").fetchone()
+    assert got == ([r1], [r2])
+
+
 class TestRangeObject:
     def test_noparam(self):
         r = Range()

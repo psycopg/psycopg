@@ -15,7 +15,7 @@ from ..pq import Format
 from ..abc import AdaptContext, Buffer, Dumper, DumperKey
 from ..adapt import RecursiveDumper, RecursiveLoader, PyFormat
 from .._struct import pack_len, unpack_len
-from ..postgres import INVALID_OID
+from ..postgres import INVALID_OID, TEXT_OID
 from .._typeinfo import RangeInfo as RangeInfo  # exported here
 from .composite import SequenceDumper, BaseCompositeLoader
 
@@ -261,7 +261,7 @@ class BaseRangeDumper(RecursiveDumper):
 
     def get_key(self, obj: Range[Any], format: PyFormat) -> DumperKey:
         # If we are a subclass whose oid is specified we don't need upgrade
-        if self.oid != INVALID_OID:
+        if self.cls is not Range:
             return self.cls
 
         item = self._get_item(obj)
@@ -273,7 +273,7 @@ class BaseRangeDumper(RecursiveDumper):
 
     def upgrade(self, obj: Range[Any], format: PyFormat) -> "BaseRangeDumper":
         # If we are a subclass whose oid is specified we don't need upgrade
-        if self.oid != INVALID_OID:
+        if self.cls is not Range:
             return self
 
         item = self._get_item(obj)
@@ -295,7 +295,7 @@ class BaseRangeDumper(RecursiveDumper):
         dumper.sub_dumper = sd
         if sd.oid == INVALID_OID and isinstance(item, str):
             # Work around the normal mapping where text is dumped as unknown
-            dumper.oid = self._get_range_oid(self._types["text"].oid)
+            dumper.oid = self._get_range_oid(TEXT_OID)
         else:
             dumper.oid = self._get_range_oid(sd.oid)
 
