@@ -284,7 +284,7 @@ def test_non_scrollable(conn):
         curs.scroll(-1)
 
 
-@pytest.mark.parametrize("kwargs", [{}, {"hold": False}])
+@pytest.mark.parametrize("kwargs", [{}, {"withhold": False}])
 def test_no_hold(conn, kwargs):
     with pytest.raises(e.InvalidCursorName):
         with conn.cursor("foo") as curs:
@@ -296,7 +296,7 @@ def test_no_hold(conn, kwargs):
 
 def test_hold(conn):
     with conn.cursor("foo") as curs:
-        curs.execute("select generate_series(0, 5)", hold=True)
+        curs.execute("select generate_series(0, 5)", withhold=True)
         assert curs.fetchone() == (0,)
         conn.commit()
         assert curs.fetchone() == (1,)

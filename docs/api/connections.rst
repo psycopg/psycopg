@@ -78,6 +78,10 @@ The `!Connection` class
                        loader. See :ref:`binary-data` for details.
         :param row_factory: If specified override the `row_factory` set on the
                             connection. See :ref:`row-factories` for details.
+        :param scrollable: Specify the `~ServerCursor.scrollable` property of
+                           the server-side cursor created.
+        :param withhold: Specify the `~ServerCursor.withhold` property of
+                         the server-side cursor created.
         :return: A cursor of the class specified by `cursor_factory` (or
                  `server_cursor_factory` if *name* is specified).
 

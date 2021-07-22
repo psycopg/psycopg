@@ -196,7 +196,7 @@ The `!ServerCursor` class
             ...` pattern is especially useful so that the cursor is closed at
             the end of the block.
 
-    .. automethod:: execute(query, params=None, *, scrollable=None, hold=False) -> ServerCursor
+    .. automethod:: execute(query, params=None, *, scrollable=None, withhold=False) -> ServerCursor
 
         :param query: The query to execute.
         :type query: `!str`, `!bytes`, or `sql.Composable`
@@ -205,9 +205,9 @@ The `!ServerCursor` class
         :param scrollable: if `!True` make the cursor scrollable, if `!False`
                            not. if `!None` leave the choice to the server.
         :type scrollable: `!Optional[bool]`
-        :param hold: if `!True` allow the cursor to be used after the
-                     transaction creating it has committed.
-        :type hold: `!bool`
+        :param withhold: if `!True` allow the cursor to be used after the
+                         transaction creating it has committed.
+        :type withhold: `!bool`
 
         Create a server cursor with given `name` and the *query* in argument.
         If using :sql:`DECLARE` is not appropriate you can avoid to use
@@ -314,7 +314,7 @@ The `!AsyncServerCursor` class
         .. note:: You can close the cursor automatically using :samp:`async
             with conn.cursor({name}): ...`
 
-    .. automethod:: execute(query, params=None, *, scrollable=None, hold=False) -> AsyncServerCursor
+    .. automethod:: execute(query, params=None, *, scrollable=None, withhold=False) -> AsyncServerCursor
     .. automethod:: executemany(query: Query, params_seq: Sequence[Args])
     .. automethod:: fetchone
     .. automethod:: fetchmany
