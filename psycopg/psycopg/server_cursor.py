@@ -25,15 +25,22 @@ DEFAULT_ITERSIZE = 100
 
 
 class ServerCursorHelper(Generic[ConnectionType, Row]):
-    __slots__ = ("name", "described")
+    __slots__ = ("name", "scrollable", "withhold", "described")
     """Helper object for common ServerCursor code.
 
     TODO: this should be a mixin, but couldn't find a way to work it
     correctly with the generic.
     """
 
-    def __init__(self, name: str):
+    def __init__(
+        self,
+        name: str,
+        scrollable: Optional[bool],
+        withhold: bool,
+    ):
         self.name = name
+        self.scrollable = scrollable
+        self.withhold = withhold
         self.described = False
 
     def _repr(self, cur: BaseCursor[ConnectionType, Row]) -> str:
@@ -143,8 +150,6 @@ class ServerCursorHelper(Generic[ConnectionType, Row]):
         self,
         cur: BaseCursor[ConnectionType, Row],
         query: Query,
-        scrollable: Optional[bool],
-        withhold: bool,
     ) -> sql.Composable:
 
         if isinstance(query, bytes):
@@ -156,10 +161,10 @@ class ServerCursorHelper(Generic[ConnectionType, Row]):
             sql.SQL("declare"),
             sql.Identifier(self.name),
         ]
-        if scrollable is not None:
-            parts.append(sql.SQL("scroll" if scrollable else "no scroll"))
+        if self.scrollable is not None:
+            parts.append(sql.SQL("scroll" if self.scrollable else "no scroll"))
         parts.append(sql.SQL("cursor"))
-        if withhold:
+        if self.withhold:
             parts.append(sql.SQL("with hold"))
         parts.append(sql.SQL("for"))
         parts.append(query)
@@ -177,10 +182,12 @@ class ServerCursor(BaseCursor["Connection[Any]", Row]):
         name: str,
         *,
         row_factory: RowFactory[Row],
+        scrollable: Optional[bool] = None,
+        withhold: bool = False,
     ):
         super().__init__(connection, row_factory=row_factory)
         self._helper: ServerCursorHelper["Connection[Any]", Row]
-        self._helper = ServerCursorHelper(name)
+        self._helper = ServerCursorHelper(name, scrollable, withhold)
         self.itersize: int = DEFAULT_ITERSIZE
 
     def __del__(self) -> None:
@@ -210,6 +217,23 @@ class ServerCursor(BaseCursor["Connection[Any]", Row]):
         """The name of the cursor."""
         return self._helper.name
 
+    @property
+    def scrollable(self) -> Optional[bool]:
+        """
+        Whether the cursor is scrollable or not.
+
+        If `!None` leave the choice to the server. Use `!True` if you want to
+        use `scroll()` on the cursor.
+        """
+        return self._helper.scrollable
+
+    @property
+    def withhold(self) -> bool:
+        """
+        If the cursor can be used after the creating transaction has committed.
+        """
+        return self._helper.withhold
+
     def close(self) -> None:
         """
         Close the current cursor and free associated resources.
@@ -222,16 +246,11 @@ class ServerCursor(BaseCursor["Connection[Any]", Row]):
         self,
         query: Query,
         params: Optional[Params] = None,
-        *,
-        scrollable: Optional[bool] = None,
-        withhold: bool = False,
     ) -> "ServerCursor[Row]":
         """
         Open a cursor to execute a query to the database.
         """
-        query = self._helper._make_declare_statement(
-            self, query, scrollable=scrollable, withhold=withhold
-        )
+        query = self._helper._make_declare_statement(self, query)
         with self._conn.lock:
             self._conn.wait(self._helper._declare_gen(self, query, params))
         return self
@@ -297,10 +316,12 @@ class AsyncServerCursor(BaseCursor["AsyncConnection[Any]", Row]):
         name: str,
         *,
         row_factory: RowFactory[Row],
+        scrollable: Optional[bool] = None,
+        withhold: bool = False,
     ):
         super().__init__(connection, row_factory=row_factory)
         self._helper: ServerCursorHelper["AsyncConnection[Any]", Row]
-        self._helper = ServerCursorHelper(name)
+        self._helper = ServerCursorHelper(name, scrollable, withhold)
         self.itersize: int = DEFAULT_ITERSIZE
 
     def __del__(self) -> None:
@@ -329,6 +350,14 @@ class AsyncServerCursor(BaseCursor["AsyncConnection[Any]", Row]):
     def name(self) -> str:
         return self._helper.name
 
+    @property
+    def scrollable(self) -> Optional[bool]:
+        return self._helper.scrollable
+
+    @property
+    def withhold(self) -> bool:
+        return self._helper.withhold
+
     async def close(self) -> None:
         async with self._conn.lock:
             await self._conn.wait(self._helper._close_gen(self))
@@ -338,13 +367,8 @@ class AsyncServerCursor(BaseCursor["AsyncConnection[Any]", Row]):
         self,
         query: Query,
         params: Optional[Params] = None,
-        *,
-        scrollable: Optional[bool] = None,
-        withhold: bool = False,
     ) -> "AsyncServerCursor[Row]":
-        query = self._helper._make_declare_statement(
-            self, query, scrollable=scrollable, withhold=withhold
-        )
+        query = self._helper._make_declare_statement(self, query)
         async with self._conn.lock:
             await self._conn.wait(
                 self._helper._declare_gen(self, query, params)

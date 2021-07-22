@@ -180,8 +180,8 @@ def test_row_factory(conn):
         n += 1
         return lambda values: [n] + [-v for v in values]
 
-    cur = conn.cursor("foo", row_factory=my_row_factory)
-    cur.execute("select generate_series(1, 3) as x", scrollable=True)
+    cur = conn.cursor("foo", row_factory=my_row_factory, scrollable=True)
+    cur.execute("select generate_series(1, 3) as x")
     rows = cur.fetchall()
     cur.scroll(0, "absolute")
     while 1:
@@ -247,12 +247,16 @@ def test_itersize(conn, commands):
             assert ("fetch forward 2") in cmd.lower()
 
 
-def test_scroll(conn):
+def test_cant_scroll_by_default(conn):
     cur = conn.cursor("tmp")
+    assert cur.scrollable is None
     with pytest.raises(e.ProgrammingError):
         cur.scroll(0)
 
-    cur.execute("select generate_series(0,9)", scrollable=True)
+
+def test_scroll(conn):
+    cur = conn.cursor("tmp", scrollable=True)
+    cur.execute("select generate_series(0,9)")
     cur.scroll(2)
     assert cur.fetchone() == (2,)
     cur.scroll(2)
@@ -267,8 +271,9 @@ def test_scroll(conn):
 
 
 def test_scrollable(conn):
-    curs = conn.cursor("foo")
-    curs.execute("select generate_series(0, 5)", scrollable=True)
+    curs = conn.cursor("foo", scrollable=True)
+    assert curs.scrollable is True
+    curs.execute("select generate_series(0, 5)")
     curs.scroll(5)
     for i in range(4, -1, -1):
         curs.scroll(-1)
@@ -277,8 +282,9 @@ def test_scrollable(conn):
 
 
 def test_non_scrollable(conn):
-    curs = conn.cursor("foo")
-    curs.execute("select generate_series(0, 5)", scrollable=False)
+    curs = conn.cursor("foo", scrollable=False)
+    assert curs.scrollable is False
+    curs.execute("select generate_series(0, 5)")
     curs.scroll(5)
     with pytest.raises(e.OperationalError):
         curs.scroll(-1)
@@ -287,16 +293,18 @@ def test_non_scrollable(conn):
 @pytest.mark.parametrize("kwargs", [{}, {"withhold": False}])
 def test_no_hold(conn, kwargs):
     with pytest.raises(e.InvalidCursorName):
-        with conn.cursor("foo") as curs:
-            curs.execute("select generate_series(0, 2)", **kwargs)
+        with conn.cursor("foo", **kwargs) as curs:
+            assert curs.withhold is False
+            curs.execute("select generate_series(0, 2)")
             assert curs.fetchone() == (0,)
             conn.commit()
             curs.fetchone()
 
 
 def test_hold(conn):
-    with conn.cursor("foo") as curs:
-        curs.execute("select generate_series(0, 5)", withhold=True)
+    with conn.cursor("foo", withhold=True) as curs:
+        assert curs.withhold is True
+        curs.execute("select generate_series(0, 5)")
         assert curs.fetchone() == (0,)
         conn.commit()
         assert curs.fetchone() == (1,)

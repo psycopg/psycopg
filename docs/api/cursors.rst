@@ -186,6 +186,18 @@ The `!ServerCursor` class
     documented the differences:
 
     .. autoattribute:: name
+    .. autoattribute:: scrollable
+
+       .. seealso:: The PostgreSQL DECLARE_ statement documetation
+          for the description of :sql:`[NO] SCROLL`.
+
+    .. autoattribute:: withhold
+
+       .. seealso:: The PostgreSQL DECLARE_ statement documetation
+          for the description of :sql:`{WITH|WITHOUT} HOLD`.
+
+    .. _DECLARE: https://www.postgresql.org/docs/current/sql-declare.html
+
 
     .. automethod:: close
 
@@ -196,18 +208,12 @@ The `!ServerCursor` class
             ...` pattern is especially useful so that the cursor is closed at
             the end of the block.
 
-    .. automethod:: execute(query, params=None, *, scrollable=None, withhold=False) -> ServerCursor
+    .. automethod:: execute(query, params=None, *) -> ServerCursor
 
         :param query: The query to execute.
         :type query: `!str`, `!bytes`, or `sql.Composable`
         :param params: The parameters to pass to the query, if any.
         :type params: Sequence or Mapping
-        :param scrollable: if `!True` make the cursor scrollable, if `!False`
-                           not. if `!None` leave the choice to the server.
-        :type scrollable: `!Optional[bool]`
-        :param withhold: if `!True` allow the cursor to be used after the
-                         transaction creating it has committed.
-        :type withhold: `!bool`
 
         Create a server cursor with given `name` and the *query* in argument.
         If using :sql:`DECLARE` is not appropriate you can avoid to use
@@ -216,11 +222,6 @@ The `!ServerCursor` class
 
         Using `!execute()` more than once will close the previous cursor and
         open a new one with the same name.
-
-        .. seealso:: The PostgreSQL DECLARE_ statement documetation describe
-            in details all the parameters.
-
-        .. _DECLARE: https://www.postgresql.org/docs/current/sql-declare.html
 
     .. automethod:: executemany(query: Query, params_seq: Sequence[Args])
 
@@ -248,7 +249,7 @@ The `!ServerCursor` class
         This method uses the MOVE_ SQL statement to move the current position
         in the server-side cursor, which will affect following `!fetch*()`
         operations. If you need to scroll backwards you should probably
-        use `scrollable=True` in `execute()`.
+        call `~Connection.cursor()` using `scrollable=True`.
 
         Note that PostgreSQL doesn't provide a reliable way to report when a
         cursor moves out of bound, so the method might not raise `!IndexError`
@@ -314,7 +315,7 @@ The `!AsyncServerCursor` class
         .. note:: You can close the cursor automatically using :samp:`async
             with conn.cursor({name}): ...`
 
-    .. automethod:: execute(query, params=None, *, scrollable=None, withhold=False) -> AsyncServerCursor
+    .. automethod:: execute(query, params=None) -> AsyncServerCursor
     .. automethod:: executemany(query: Query, params_seq: Sequence[Args])
     .. automethod:: fetchone
     .. automethod:: fetchmany

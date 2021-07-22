@@ -186,8 +186,8 @@ async def test_row_factory(aconn):
         n += 1
         return lambda values: [n] + [-v for v in values]
 
-    cur = aconn.cursor("foo", row_factory=my_row_factory)
-    await cur.execute("select generate_series(1, 3) as x", scrollable=True)
+    cur = aconn.cursor("foo", row_factory=my_row_factory, scrollable=True)
+    await cur.execute("select generate_series(1, 3) as x")
     rows = await cur.fetchall()
     await cur.scroll(0, "absolute")
     while 1:
@@ -258,12 +258,16 @@ async def test_itersize(aconn, acommands):
             assert ("fetch forward 2") in cmd.lower()
 
 
-async def test_scroll(aconn):
+async def test_cant_scroll_by_default(aconn):
     cur = aconn.cursor("tmp")
+    assert cur.scrollable is None
     with pytest.raises(e.ProgrammingError):
         await cur.scroll(0)
 
-    await cur.execute("select generate_series(0,9)", scrollable=True)
+
+async def test_scroll(aconn):
+    cur = aconn.cursor("tmp", scrollable=True)
+    await cur.execute("select generate_series(0,9)")
     await cur.scroll(2)
     assert await cur.fetchone() == (2,)
     await cur.scroll(2)
@@ -278,8 +282,9 @@ async def test_scroll(aconn):
 
 
 async def test_scrollable(aconn):
-    curs = aconn.cursor("foo")
-    await curs.execute("select generate_series(0, 5)", scrollable=True)
+    curs = aconn.cursor("foo", scrollable=True)
+    assert curs.scrollable is True
+    await curs.execute("select generate_series(0, 5)")
     await curs.scroll(5)
     for i in range(4, -1, -1):
         await curs.scroll(-1)
@@ -288,8 +293,9 @@ async def test_scrollable(aconn):
 
 
 async def test_non_scrollable(aconn):
-    curs = aconn.cursor("foo")
-    await curs.execute("select generate_series(0, 5)", scrollable=False)
+    curs = aconn.cursor("foo", scrollable=False)
+    assert curs.scrollable is False
+    await curs.execute("select generate_series(0, 5)")
     await curs.scroll(5)
     with pytest.raises(e.OperationalError):
         await curs.scroll(-1)
@@ -298,16 +304,18 @@ async def test_non_scrollable(aconn):
 @pytest.mark.parametrize("kwargs", [{}, {"withhold": False}])
 async def test_no_hold(aconn, kwargs):
     with pytest.raises(e.InvalidCursorName):
-        async with aconn.cursor("foo") as curs:
-            await curs.execute("select generate_series(0, 2)", **kwargs)
+        async with aconn.cursor("foo", **kwargs) as curs:
+            assert curs.withhold is False
+            await curs.execute("select generate_series(0, 2)")
             assert await curs.fetchone() == (0,)
             await aconn.commit()
             await curs.fetchone()
 
 
 async def test_hold(aconn):
-    async with aconn.cursor("foo") as curs:
-        await curs.execute("select generate_series(0, 5)", withhold=True)
+    async with aconn.cursor("foo", withhold=True) as curs:
+        assert curs.withhold is True
+        await curs.execute("select generate_series(0, 5)")
         assert await curs.fetchone() == (0,)
         await aconn.commit()
         assert await curs.fetchone() == (1,)

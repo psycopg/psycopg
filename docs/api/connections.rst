@@ -58,14 +58,24 @@ The `!Connection` class
 
     .. automethod:: close
 
-        .. note:: You can use :ref:`with connect(): ...<with-connection>` to
-            close the connection automatically when the block is exited.
+        .. note::
+
+            You can use::
+
+                with psycopg.connect() as conn:
+                    ...
+
+            to close the connection automatically when the block is exited.
+            See :ref:`with-connection`.
 
     .. autoattribute:: closed
     .. autoattribute:: broken
 
-    .. method:: cursor(*, binary: bool = False, row_factory: Optional[RowFactory] = None) -> Cursor
-    .. method:: cursor(name: str, *, binary: bool = False, row_factory: Optional[RowFactory] = None) -> ServerCursor
+    .. method:: cursor(*, binary: bool = False, \
+           row_factory: Optional[RowFactory] = None) -> Cursor
+    .. method:: cursor(name: str, *, binary: bool = False, \
+            row_factory: Optional[RowFactory] = None, \
+            scrollable: Optional[bool] = None, withhold: bool = False) -> ServerCursor
         :noindex:
 
         Return a new cursor to send commands and queries to the connection.
@@ -236,8 +246,11 @@ The `!AsyncConnection` class
             automatically when the block is exited, but be careful about
             the async quirkness: see :ref:`async-with` for details.
 
-    .. method:: cursor(*, binary: bool = False, row_factory: Optional[RowFactory] = None) -> AsyncCursor
-    .. method:: cursor(name: str, *, binary: bool = False, row_factory: Optional[RowFactory] = None) -> AsyncServerCursor
+    .. method:: cursor(*, binary: bool = False, \
+            row_factory: Optional[RowFactory] = None) -> AsyncCursor
+    .. method:: cursor(name: str, *, binary: bool = False, \
+            row_factory: Optional[RowFactory] = None, \
+            scrollable: Optional[bool] = None, withhold: bool = False) -> AsyncServerCursor
         :noindex:
 
         .. note:: You can use ``async with conn.cursor() as cur: ...`` to

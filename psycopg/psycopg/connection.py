@@ -543,7 +543,14 @@ class Connection(BaseConnection[Row]):
         ...
 
     @overload
-    def cursor(self, name: str, *, binary: bool = False) -> ServerCursor[Row]:
+    def cursor(
+        self,
+        name: str,
+        *,
+        binary: bool = False,
+        scrollable: Optional[bool] = None,
+        withhold: bool = False,
+    ) -> ServerCursor[Row]:
         ...
 
     @overload
@@ -553,6 +560,8 @@ class Connection(BaseConnection[Row]):
         *,
         binary: bool = False,
         row_factory: RowFactory[CursorRow],
+        scrollable: Optional[bool] = None,
+        withhold: bool = False,
     ) -> ServerCursor[CursorRow]:
         ...
 
@@ -562,6 +571,8 @@ class Connection(BaseConnection[Row]):
         *,
         binary: bool = False,
         row_factory: Optional[RowFactory[Any]] = None,
+        scrollable: Optional[bool] = None,
+        withhold: bool = False,
     ) -> Union[Cursor[Any], ServerCursor[Any]]:
         """
         Return a new cursor to send commands and queries to the connection.
@@ -572,7 +583,11 @@ class Connection(BaseConnection[Row]):
         cur: Union[Cursor[Any], ServerCursor[Any]]
         if name:
             cur = self.server_cursor_factory(
-                self, name=name, row_factory=row_factory
+                self,
+                name=name,
+                row_factory=row_factory,
+                scrollable=scrollable,
+                withhold=withhold,
             )
         else:
             cur = self.cursor_factory(self, row_factory=row_factory)
@@ -764,7 +779,12 @@ class AsyncConnection(BaseConnection[Row]):
 
     @overload
     def cursor(
-        self, name: str, *, binary: bool = False
+        self,
+        name: str,
+        *,
+        binary: bool = False,
+        scrollable: Optional[bool] = None,
+        withhold: bool = False,
     ) -> AsyncServerCursor[Row]:
         ...
 
@@ -775,6 +795,8 @@ class AsyncConnection(BaseConnection[Row]):
         *,
         binary: bool = False,
         row_factory: RowFactory[CursorRow],
+        scrollable: Optional[bool] = None,
+        withhold: bool = False,
     ) -> AsyncServerCursor[CursorRow]:
         ...
 
@@ -784,6 +806,8 @@ class AsyncConnection(BaseConnection[Row]):
         *,
         binary: bool = False,
         row_factory: Optional[RowFactory[Any]] = None,
+        scrollable: Optional[bool] = None,
+        withhold: bool = False,
     ) -> Union[AsyncCursor[Any], AsyncServerCursor[Any]]:
         """
         Return a new `AsyncCursor` to send commands and queries to the connection.
@@ -794,7 +818,11 @@ class AsyncConnection(BaseConnection[Row]):
         cur: Union[AsyncCursor[Any], AsyncServerCursor[Any]]
         if name:
             cur = self.server_cursor_factory(
-                self, name=name, row_factory=row_factory
+                self,
+                name=name,
+                row_factory=row_factory,
+                scrollable=scrollable,
+                withhold=withhold,
             )
         else:
             cur = self.cursor_factory(self, row_factory=row_factory)
