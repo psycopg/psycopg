@@ -76,6 +76,15 @@ def test_close_noop(conn, recwarn, retries):
             assert not recwarn, [str(w.message) for w in recwarn.list]
 
 
+def test_close_on_error(conn):
+    cur = conn.cursor("foo")
+    cur.execute("select 1")
+    with pytest.raises(e.ProgrammingError):
+        conn.execute("wat")
+    assert conn.info.transaction_status == conn.TransactionStatus.INERROR
+    cur.close()
+
+
 def test_context(conn, recwarn, retries):
     for retry in retries:
         with retry:
@@ -292,12 +301,12 @@ def test_non_scrollable(conn):
 
 @pytest.mark.parametrize("kwargs", [{}, {"withhold": False}])
 def test_no_hold(conn, kwargs):
-    with pytest.raises(e.InvalidCursorName):
-        with conn.cursor("foo", **kwargs) as curs:
-            assert curs.withhold is False
-            curs.execute("select generate_series(0, 2)")
-            assert curs.fetchone() == (0,)
-            conn.commit()
+    with conn.cursor("foo", **kwargs) as curs:
+        assert curs.withhold is False
+        curs.execute("select generate_series(0, 2)")
+        assert curs.fetchone() == (0,)
+        conn.commit()
+        with pytest.raises(e.InvalidCursorName):
             curs.fetchone()
 
 

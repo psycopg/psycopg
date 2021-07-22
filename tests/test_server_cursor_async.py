@@ -80,6 +80,15 @@ async def test_close_noop(aconn, recwarn, retries):
             assert not recwarn, [str(w.message) for w in recwarn.list]
 
 
+async def test_close_on_error(aconn):
+    cur = aconn.cursor("foo")
+    await cur.execute("select 1")
+    with pytest.raises(e.ProgrammingError):
+        await aconn.execute("wat")
+    assert aconn.info.transaction_status == aconn.TransactionStatus.INERROR
+    await cur.close()
+
+
 async def test_context(aconn, recwarn, retries):
     async for retry in retries:
         with retry:
@@ -303,12 +312,12 @@ async def test_non_scrollable(aconn):
 
 @pytest.mark.parametrize("kwargs", [{}, {"withhold": False}])
 async def test_no_hold(aconn, kwargs):
-    with pytest.raises(e.InvalidCursorName):
-        async with aconn.cursor("foo", **kwargs) as curs:
-            assert curs.withhold is False
-            await curs.execute("select generate_series(0, 2)")
-            assert await curs.fetchone() == (0,)
-            await aconn.commit()
+    async with aconn.cursor("foo", **kwargs) as curs:
+        assert curs.withhold is False
+        await curs.execute("select generate_series(0, 2)")
+        assert await curs.fetchone() == (0,)
+        await aconn.commit()
+        with pytest.raises(e.InvalidCursorName):
             await curs.fetchone()
 
 

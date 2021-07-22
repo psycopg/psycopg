@@ -90,11 +90,14 @@ class ServerCursorHelper(Generic[ConnectionType, Row]):
         self.described = True
 
     def _close_gen(self, cur: BaseCursor[ConnectionType, Row]) -> PQGen[None]:
+        ts = cur._conn.pgconn.transaction_status
+
         # if the connection is not in a sane state, don't even try
-        if cur._conn.pgconn.transaction_status not in (
-            pq.TransactionStatus.IDLE,
-            pq.TransactionStatus.INTRANS,
-        ):
+        if ts not in (pq.TransactionStatus.IDLE, pq.TransactionStatus.INTRANS):
+            return
+
+        # If we are IDLE, a WITHOUT HOLD cursor will surely have gone already.
+        if not self.withhold and ts == pq.TransactionStatus.IDLE:
             return
 
         # if we didn't declare the cursor ourselves we still have to close it
