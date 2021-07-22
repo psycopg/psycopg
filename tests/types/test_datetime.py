@@ -359,6 +359,45 @@ class TestDateTimeTz:
         assert rec[0] == want
         assert rec[1] == 11111111
 
+    mark_tz_sec = (
+        pytest.mark.skipif(
+            sys.version_info < (3, 7), reason="no seconds in tz offset"
+        ),
+    )
+
+    @pytest.mark.xfail(
+        sys.platform == "win32", reason="TODO why? Missing tzdata?"
+    )
+    @pytest.mark.parametrize(
+        "valname, tzval, tzname",
+        [
+            ("max", "-06", "America/Chicago"),
+            pytest.param("min", "+09:18:59", "Asia/Tokyo", marks=mark_tz_sec),
+        ],
+    )
+    @pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
+    def test_max_with_timezone(self, conn, fmt_out, valname, tzval, tzname):
+        # This happens e.g. in Django when it caches forever.
+        # e.g. see Django test cache.tests.DBCacheTests.test_forever_timeout
+        val = getattr(dt.datetime, valname).replace(microsecond=0)
+        tz = dt.timezone(as_tzoffset(tzval))
+        want = val.replace(tzinfo=tz)
+
+        conn.execute("set timezone to '%s'" % tzname)
+        cur = conn.cursor(binary=fmt_out)
+        cur.execute("select %s::timestamptz", [str(val) + tzval])
+        got = cur.fetchone()[0]
+
+        assert got == want
+
+        extra = "1 day" if valname == "max" else "-1 day"
+        with pytest.raises(DataError):
+            cur.execute(
+                "select %s::timestamptz + %s::interval",
+                [str(val) + tzval, extra],
+            )
+            got = cur.fetchone()[0]
+
 
 class TestTime:
     @pytest.mark.parametrize(

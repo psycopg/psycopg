@@ -595,14 +595,26 @@ class TimestamptzLoader(Loader):
         # thing it can return). So create a temporary datetime object, in utc,
         # shift it by the offset parsed from the timestamp, and then move it to
         # the connection timezone.
+        dt = None
+        ex: Exception
         try:
             dt = datetime(
                 int(ye), int(mo), int(da), int(ho), int(mi), int(se), us, utc
             )
             return (dt - tzoff).astimezone(self._timezone)
+        except OverflowError as e:
+            # If we have created the temporary 'dt' it means that we have a
+            # datetime close to max, the shift pushed it past max, overflowing.
+            # In this case return the datetime in a fixed offset timezone.
+            if dt is not None:
+                return dt.replace(tzinfo=timezone(tzoff))
+            else:
+                ex = e
         except ValueError as e:
-            s = bytes(data).decode("utf8", "replace")
-            raise DataError(f"can't parse timestamptz {s!r}: {e}") from None
+            ex = e
+
+        s = bytes(data).decode("utf8", "replace")
+        raise DataError(f"can't parse timestamptz {s!r}: {ex}") from None
 
     def _load_notimpl(self, data: Buffer) -> datetime:
         s = bytes(data).decode("utf8", "replace")
@@ -628,6 +640,25 @@ class TimestamptzBinaryLoader(Loader):
             ts = _pg_datetimetz_epoch + timedelta(microseconds=micros)
             return ts.astimezone(self._timezone)
         except OverflowError:
+            # If we were asked about a timestamp which would overflow in UTC,
+            # but not in the desired timezone (e.g. datetime.max at Chicago
+            # timezone) we can still save the day by shifting the value by the
+            # timezone offset and then replacing the timezone.
+            if self._timezone:
+                utcoff = self._timezone.utcoffset(
+                    datetime.min if micros < 0 else datetime.max
+                )
+                if utcoff:
+                    usoff = 1_000_000 * int(utcoff.total_seconds())
+                    try:
+                        ts = _pg_datetime_epoch + timedelta(
+                            microseconds=micros + usoff
+                        )
+                    except OverflowError:
+                        pass  # will raise downstream
+                    else:
+                        return ts.replace(tzinfo=self._timezone)
+
             if micros <= 0:
                 raise DataError(
                     "timestamp too small (before year 1)"
