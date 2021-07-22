@@ -95,7 +95,13 @@ The `!Connection` class
         :return: A cursor of the class specified by `cursor_factory` (or
                  `server_cursor_factory` if *name* is specified).
 
-        .. note:: You can use :ref:`with conn.cursor(): ...<usage>`
+        .. note::
+
+            You can use::
+
+                with conn.cursor() as cur:
+                    ...
+
             to close the cursor automatically when the block is exited.
 
     .. autoattribute:: cursor_factory
@@ -140,7 +146,18 @@ The `!Connection` class
     .. automethod:: rollback
     .. automethod:: transaction
 
-        .. note:: It must be called as ``with conn.transaction() as tx: ...``
+        .. note::
+
+            The method must be called with a syntax such as::
+
+                with conn.transaction():
+                    ...
+
+                with conn.transaction() as tx:
+                    ...
+
+            The latter is useful if you need to interact with the
+            `Transaction` object. See :ref:`transaction-block` for details.
 
         Inside a transaction block it will not be possible to call `commit()`
         or `rollback()`.
@@ -253,8 +270,14 @@ The `!AsyncConnection` class
             scrollable: Optional[bool] = None, withhold: bool = False) -> AsyncServerCursor
         :noindex:
 
-        .. note:: You can use ``async with conn.cursor() as cur: ...`` to
-            close the cursor automatically when the block is exited.
+        .. note::
+
+            You can use::
+
+                async with conn.cursor() as cur:
+                    ...
+
+            to close the cursor automatically when the block is exited.
 
     .. autoattribute:: cursor_factory
 
@@ -270,7 +293,12 @@ The `!AsyncConnection` class
 
     .. automethod:: transaction
 
-        .. note:: It must be called as ``async with conn.transaction() as tx: ...``.
+        .. note::
+
+            It must be called as::
+
+                async with conn.transaction() as tx:
+                    ...
 
     .. automethod:: notifies
     .. automethod:: set_client_encoding

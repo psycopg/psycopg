@@ -42,8 +42,15 @@ The `!Cursor` class
 
     .. automethod:: close
 
-        .. note:: you can use :ref:`with conn.cursor(): ...<usage>`
-            to close the cursor automatically when the block is exited.
+        .. note::
+
+            You can use::
+
+                with conn.cursor() as cur:
+                    ...
+
+            to close the cursor automatically when the block is exited. See
+            :ref:`usage`.
 
     .. autoattribute:: closed
 
@@ -84,7 +91,12 @@ The `!Cursor` class
         :param statement: The copy operation to execute
         :type statement: `!str`, `!bytes`, or `sql.Composable`
 
-        .. note:: it must be called as ``with cur.copy() as copy: ...``
+        .. note::
+
+            The method must be called with::
+
+                with cursor.copy() as copy:
+                    ...
 
         See :ref:`copy` for information about :sql:`COPY`.
 
@@ -123,8 +135,14 @@ The `!Cursor` class
     an exception if used with operations that don't return result, such as an
     :sql:`INSERT` with no :sql:`RETURNING` or an :sql:`ALTER TABLE`.
 
-    .. note:: cursors are iterable objects, so just using ``for record in
-        cursor`` syntax will iterate on the records in the current recordset.
+    .. note::
+
+        Cursors are iterable objects, so just using the::
+
+            for record in cursor:
+                ...
+
+        syntax will iterate on the records in the current recordset.
 
     .. autoattribute:: row_factory
 
@@ -204,9 +222,13 @@ The `!ServerCursor` class
         .. warning:: Closing a server-side cursor is more important than
             closing a client-side one because it also releases the resources
             on the server, which otherwise might remain allocated until the
-            end of the session (memory, locks). Using the `with conn.cursor():
-            ...` pattern is especially useful so that the cursor is closed at
-            the end of the block.
+            end of the session (memory, locks). Using the pattern::
+
+                with conn.cursor():
+                    ...
+
+            is especially useful so that the cursor is closed at the end of
+            the block.
 
     .. automethod:: execute(query, params=None, *) -> ServerCursor
 
@@ -216,7 +238,9 @@ The `!ServerCursor` class
         :type params: Sequence or Mapping
 
         Create a server cursor with given `name` and the *query* in argument.
-        If using :sql:`DECLARE` is not appropriate you can avoid to use
+
+        If using :sql:`DECLARE` is not appropriate (for instance because the
+        cursor is returned by calling a stored procedure) you can avoid to use
         `!execute()`, crete the cursor in other ways, and use directly the
         `!fetch*()` methods instead. See :ref:`cursor-steal` for an example.
 
@@ -234,10 +258,17 @@ The `!ServerCursor` class
 
         .. _FETCH: https://www.postgresql.org/docs/current/sql-fetch.html
 
-        .. note:: You can also iterate on the cursor to read its result one at
-            time with `for record in cur: ...`. In this case, the records are
-            not fetched one at time from the server but they are retrieved in
-            batches of `itersize` to reduce the number of server roundtrips.
+        .. note::
+
+            You can also iterate on the cursor to read its result one at
+            time with::
+
+                for record in cur:
+                    ...
+
+            In this case, the records are not fetched one at time from the
+            server but they are retrieved in batches of `itersize` to reduce
+            the number of server roundtrips.
 
     .. autoattribute:: itersize
 
@@ -275,27 +306,48 @@ The `!AsyncCursor` class
 
     .. automethod:: close
 
-        .. note:: You can use ``async with conn.cursor(): ...`` to close the
-            cursor automatically when the block is exited.
+        .. note::
+
+            You can use::
+
+                async with conn.cursor():
+                    ...
+
+            to close the cursor automatically when the block is exited.
 
     .. automethod:: execute(query, params=None, *, prepare=None) -> AsyncCursor
     .. automethod:: executemany(query: Query, params_seq: Sequence[Args])
     .. automethod:: copy(statement: Query) -> AsyncCopy
 
-        .. note:: It must be called as ``async with cur.copy() as copy: ...``
+        .. note::
+
+            The method must be called with::
+
+                async with cursor.copy() as copy:
+                    ...
 
     .. automethod:: stream(query, params=None) -> AsyncIterable[Sequence[Any]]
 
-        .. note:: It must be called as ``async for record in cur.stream(query):
-            ...``
+        .. note::
+
+            The method must be called with::
+
+                async for record in cursor.stream(query):
+                    ...
 
     .. automethod:: fetchone
     .. automethod:: fetchmany
     .. automethod:: fetchall
     .. automethod:: scroll
 
-    .. note:: You can also use ``async for record in cursor: ...`` to iterate
-        on the async cursor results.
+    .. note::
+
+        You can also use::
+
+            async for record in cursor:
+                ...
+
+        to iterate on the async cursor results.
 
 
 The `!AsyncServerCursor` class
@@ -312,8 +364,11 @@ The `!AsyncServerCursor` class
 
     .. automethod:: close
 
-        .. note:: You can close the cursor automatically using :samp:`async
-            with conn.cursor({name}): ...`
+        .. note::
+            You can close the cursor automatically using::
+
+                async with conn.cursor("name") as cursor:
+                    ...
 
     .. automethod:: execute(query, params=None) -> AsyncServerCursor
     .. automethod:: executemany(query: Query, params_seq: Sequence[Args])
@@ -321,8 +376,12 @@ The `!AsyncServerCursor` class
     .. automethod:: fetchmany
     .. automethod:: fetchall
 
-        .. note:: You can also iterate on the cursor using `async for record
-            in cur: ...`.
+        .. note::
+
+            You can also iterate on the cursor using::
+
+                async for record in cur:
+                    ...
 
     .. automethod:: scroll
 
