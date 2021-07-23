@@ -25,7 +25,7 @@ a `~rollback()` is called.
     *InFailedSqlTransaction: current transaction is aborted, commands ignored
     until end of transaction block*, it means that **a previous operation
     failed** and the database session is in a state of error. You need to call
-    `!rollback()` if you want to keep on using the same connection.
+    `~Connection.rollback()` if you want to keep on using the same connection.
 
 
 .. _autocommit:
@@ -141,3 +141,43 @@ but not entirely committed yet.
 
     # If `Rollback` is raised, it would propagate only up to this block,
     # and the program would continue from here with no exception.
+
+
+.. _transaction-characteristics:
+
+Transaction characteristics
+---------------------------
+
+You can set `transaction parameters`__ for the transactions that Psycopg
+handles. They affect the transactions started implicitly by non-autocommit
+transactions and the ones started explicitly by `Connection.transaction()` for
+both autocommit and non-autocommit transactions. Leaving these parameters to
+`!None` will leave the behaviour to the server's default (which is controlled
+by server settings such as default_transaction_isolation__).
+
+.. __: https://www.postgresql.org/docs/current/sql-set-transaction.html
+.. __: https://www.postgresql.org/docs/current/runtime-config-client.html
+       #GUC-DEFAULT-TRANSACTION-ISOLATION
+
+In order to set these parameters you can use the connection attributes
+`~Connection.isolation_level`, `~Connection.read_only`,
+`~Connection.deferrable`. For async connections you must use the equivalent
+`~AsyncConnection.set_isolation_level()` method and similar. The parameters
+can only be changed if there isn't a transaction already active on the
+connection.
+
+.. warning::
+
+   Applications running at `~IsolationLevel.REPEATABLE_READ` or
+   `~IsolationLevel.SERIALIZABLE` isolation level are exposed to serialization
+   failures. `In certain concurrent update cases`__, PostgreSQL will raise an
+   exception looking like::
+
+        psycopg2.errors.SerializationFailure: could not serialize access
+        due to concurrent update
+
+   In this case the application must be prepared to repeat the operation that
+   caused the exception.
+
+   .. __: https://www.postgresql.org/docs/current/transaction-iso.html
+          #XACT-REPEATABLE-READ

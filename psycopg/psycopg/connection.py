@@ -26,6 +26,7 @@ from .pq import ConnStatus, ExecStatus, TransactionStatus, Format
 from .abc import ConnectionType, Params, PQGen, PQGenConn, Query, RV
 from .sql import Composable
 from .rows import Row, RowFactory, tuple_row, TupleRow
+from ._enums import IsolationLevel
 from .compat import asynccontextmanager
 from .cursor import Cursor, AsyncCursor
 from ._cmodule import _psycopg
@@ -129,6 +130,10 @@ class BaseConnection(Generic[Row]):
         # Time after which the connection should be closed
         self._expire_at: float
 
+        self._isolation_level: Optional[IsolationLevel] = None
+        self._read_only: Optional[bool] = None
+        self._deferrable: Optional[bool] = None
+
     def __del__(self) -> None:
         # If fails on connection we might not have this attribute yet
         if not hasattr(self, "pgconn"):
@@ -178,23 +183,79 @@ class BaseConnection(Generic[Row]):
         self._set_autocommit(value)
 
     def _set_autocommit(self, value: bool) -> None:
-        # Base implementation, not thread safe
-        # subclasses must call it holding a lock
+        # Base implementation, not thread safe.
+        # Subclasses must call it holding a lock
+        self._check_intrans("autocommit")
+        self._autocommit = value
+
+    @property
+    def isolation_level(self) -> Optional[IsolationLevel]:
+        """
+        The isolation level of the new transactions started on the connection.
+        """
+        return self._isolation_level
+
+    @isolation_level.setter
+    def isolation_level(self, value: Optional[IsolationLevel]) -> None:
+        self._set_isolation_level(value)
+
+    def _set_isolation_level(self, value: Optional[IsolationLevel]) -> None:
+        # Base implementation, not thread safe.
+        # Subclasses must call it holding a lock
+        self._check_intrans("isolation_level")
+        self._isolation_level = (
+            IsolationLevel(value) if value is not None else None
+        )
+
+    @property
+    def read_only(self) -> Optional[bool]:
+        """
+        The read-only state of the new transactions started on the connection.
+        """
+        return self._read_only
+
+    @read_only.setter
+    def read_only(self, value: Optional[bool]) -> None:
+        self._set_read_only(value)
+
+    def _set_read_only(self, value: Optional[bool]) -> None:
+        # Base implementation, not thread safe.
+        # Subclasses must call it holding a lock
+        self._check_intrans("read_only")
+        self._read_only = value
+
+    @property
+    def deferrable(self) -> Optional[bool]:
+        """
+        The deferrable state of the new transactions started on the connection.
+        """
+        return self._deferrable
+
+    @deferrable.setter
+    def deferrable(self, value: Optional[bool]) -> None:
+        self._set_deferrable(value)
+
+    def _set_deferrable(self, value: Optional[bool]) -> None:
+        # Base implementation, not thread safe.
+        # Subclasses must call it holding a lock
+        self._check_intrans("deferrable")
+        self._deferrable = value
+
+    def _check_intrans(self, attribute: str) -> None:
+        # Raise an exception if we are in a transaction
         status = self.pgconn.transaction_status
         if status != TransactionStatus.IDLE:
             if self._savepoints:
                 raise e.ProgrammingError(
-                    "couldn't change autocommit state: "
+                    f"can't change {attribute!r} now: "
                     "connection.transaction() context in progress"
                 )
             else:
                 raise e.ProgrammingError(
-                    "couldn't change autocommit state: "
+                    f"can't change {attribute!r} now: "
                     "connection in transaction status "
                     f"{TransactionStatus(status).name}"
                 )
-
-        self._autocommit = value
 
     @property
     def client_encoding(self) -> str:
@@ -408,7 +469,25 @@ class BaseConnection(Generic[Row]):
         if self.pgconn.transaction_status != TransactionStatus.IDLE:
             return
 
-        yield from self._exec_command(b"begin")
+        yield from self._exec_command(self._get_tx_start_command())
+
+    def _get_tx_start_command(self) -> bytes:
+        parts = [b"begin"]
+
+        if self.isolation_level is not None:
+            val = IsolationLevel(self.isolation_level)
+            parts.append(b"isolation level")
+            parts.append(val.name.lower().replace("_", " ").encode("utf8"))
+
+        if self.read_only is not None:
+            parts.append(b"read only" if self.read_only else b"read write")
+
+        if self.deferrable is not None:
+            parts.append(
+                b"deferrable" if self.deferrable else b"not deferrable"
+            )
+
+        return b" ".join(parts)
 
     def _commit_gen(self) -> PQGen[None]:
         """Generator implementing `Connection.commit()`."""
@@ -671,6 +750,18 @@ class Connection(BaseConnection[Row]):
         with self.lock:
             super()._set_autocommit(value)
 
+    def _set_isolation_level(self, value: Optional[IsolationLevel]) -> None:
+        with self.lock:
+            super()._set_isolation_level(value)
+
+    def _set_read_only(self, value: Optional[bool]) -> None:
+        with self.lock:
+            super()._set_read_only(value)
+
+    def _set_deferrable(self, value: Optional[bool]) -> None:
+        with self.lock:
+            super()._set_deferrable(value)
+
     def _set_client_encoding(self, name: str) -> None:
         with self.lock:
             self.wait(self._set_client_encoding_gen(name))
@@ -888,26 +979,50 @@ class AsyncConnection(BaseConnection[Row]):
     ) -> RV:
         return await waiting.wait_conn_async(gen, timeout)
 
+    def _set_autocommit(self, value: bool) -> None:
+        self._no_set_async("autocommit")
+
+    async def set_autocommit(self, value: bool) -> None:
+        """Async version of the `~Connection.autocommit` setter."""
+        async with self.lock:
+            super()._set_autocommit(value)
+
+    def _set_isolation_level(self, value: Optional[IsolationLevel]) -> None:
+        self._no_set_async("isolation_level")
+
+    async def set_isolation_level(
+        self, value: Optional[IsolationLevel]
+    ) -> None:
+        """Async version of the `~Connection.isolation_level` setter."""
+        async with self.lock:
+            super()._set_isolation_level(value)
+
+    def _set_read_only(self, value: Optional[bool]) -> None:
+        self._no_set_async("read_only")
+
+    async def set_read_only(self, value: Optional[bool]) -> None:
+        """Async version of the `~Connection.read_only` setter."""
+        async with self.lock:
+            super()._set_read_only(value)
+
+    def _set_deferrable(self, value: Optional[bool]) -> None:
+        self._no_set_async("deferrable")
+
+    async def set_deferrable(self, value: Optional[bool]) -> None:
+        """Async version of the `~Connection.deferrable` setter."""
+        async with self.lock:
+            super()._set_deferrable(value)
+
     def _set_client_encoding(self, name: str) -> None:
-        raise AttributeError(
-            "'client_encoding' is read-only on async connections:"
-            " please use await .set_client_encoding() instead."
-        )
+        self._no_set_async("client_encoding")
 
     async def set_client_encoding(self, name: str) -> None:
         """Async version of the `~Connection.client_encoding` setter."""
         async with self.lock:
             await self.wait(self._set_client_encoding_gen(name))
 
-    def _set_autocommit(self, value: bool) -> None:
+    def _no_set_async(self, attribute: str) -> None:
         raise AttributeError(
-            "autocommit is read-only on async connections:"
-            " please use await connection.set_autocommit() instead."
-            " Note that you can pass an 'autocommit' value to 'connect()'"
-            " if it doesn't need to change during the connection's lifetime."
+            f"'the {attribute!r} property is read-only on async connections:"
+            f" please use 'await .set_{attribute}()' instead."
         )
-
-    async def set_autocommit(self, value: bool) -> None:
-        """Async version of the `~Connection.autocommit` setter."""
-        async with self.lock:
-            super()._set_autocommit(value)

@@ -7,7 +7,7 @@ libpq-defined enums.
 
 # Copyright (C) 2020-2021 The Psycopg Team
 
-from enum import Enum
+from enum import Enum, IntEnum
 
 from . import pq
 
@@ -36,6 +36,23 @@ class PyFormat(str, Enum):
     @classmethod
     def as_pq(cls, fmt: "PyFormat") -> pq.Format:
         return _py2pg[fmt]
+
+
+class IsolationLevel(IntEnum):
+    """
+    Enum representing the isolation level for a transaction.
+    """
+
+    __module__ = "psycopg"
+
+    READ_UNCOMMITTED = 1
+    """:sql:`READ UNCOMMITTED` isolation level."""
+    READ_COMMITTED = 2
+    """:sql:`READ COMMITTED` isolation level."""
+    REPEATABLE_READ = 3
+    """:sql:`REPEATABLE READ` isolation level."""
+    SERIALIZABLE = 4
+    """:sql:`SERIALIZABLE` isolation level."""
 
 
 _py2pg = {

@@ -10,6 +10,7 @@ from . import pq
 from . import types
 from . import postgres
 from .copy import Copy, AsyncCopy
+from ._enums import IsolationLevel
 from .cursor import AnyCursor, AsyncCursor, Cursor
 from .errors import Warning, Error, InterfaceError, DatabaseError
 from .errors import DataError, OperationalError, IntegrityError
@@ -61,6 +62,7 @@ __all__ = [
     "Connection",
     "Copy",
     "Cursor",
+    "IsolationLevel",
     "Notify",
     "Rollback",
     "ServerCursor",
