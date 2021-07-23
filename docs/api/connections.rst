@@ -165,8 +165,36 @@ The `!Connection` class
     .. autoattribute:: autocommit
 
         The property is writable for sync connections, read-only for async
-        ones: you should call ``await`` `~AsyncConnection.set_autocommit`\
+        ones: you should call ``await`` `~AsyncConnection.set_autocommit`
         :samp:`({value})` instead.
+
+    The following three properties control the characteristics of new
+    transactions. See :ref:`transaction-characteristics` for detils.
+
+    .. autoattribute:: isolation_level
+
+        `!None` means use the default set in the default_transaction_isolation__
+        configuration parameter of the server.
+
+        .. __: https://www.postgresql.org/docs/current/runtime-config-client.html
+               #GUC-DEFAULT-TRANSACTION-ISOLATION
+
+    .. autoattribute:: read_only
+
+        `!None` means use the default set in the default_transaction_read_only__
+        configuration parameter of the server.
+
+        .. __: https://www.postgresql.org/docs/current/runtime-config-client.html
+               #GUC-DEFAULT-TRANSACTION-READ-ONLY
+
+    .. autoattribute:: deferrable
+
+        `!None` means use the default set in the default_transaction_deferrable__
+        configuration parameter of the server.
+
+        .. __: https://www.postgresql.org/docs/current/runtime-config-client.html
+               #GUC-DEFAULT-TRANSACTION-DEFERRABLE
+
 
     .. rubric:: Checking and configuring the connection state
 
@@ -303,6 +331,9 @@ The `!AsyncConnection` class
     .. automethod:: notifies
     .. automethod:: set_client_encoding
     .. automethod:: set_autocommit
+    .. automethod:: set_isolation_level
+    .. automethod:: set_read_only
+    .. automethod:: set_deferrable
 
 
 Connection support objects
@@ -369,6 +400,16 @@ Connection support objects
 
 
 .. rubric:: Objects involved in :ref:`transactions`
+
+.. autoclass:: IsolationLevel
+    :members:
+
+    The value is usually used with the `Connection.isolation_level` property.
+
+    Check the PostgreSQL documentation for a description of the effects of the
+    different `levels of transaction isolation`__.
+
+    .. __: https://www.postgresql.org/docs/current/transaction-iso.html
 
 .. autoclass:: Transaction()
 

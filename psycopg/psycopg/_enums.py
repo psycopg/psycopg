@@ -38,6 +38,23 @@ class PyFormat(str, Enum):
         return _py2pg[fmt]
 
 
+class IsolationLevel(Enum):
+    """
+    Enum representing the isolation level for a transaction.
+    """
+
+    __module__ = "psycopg"
+
+    READ_UNCOMMITTED = 1
+    """:sql:`READ UNCOMMITTED` isolation level."""
+    READ_COMMITTED = 2
+    """:sql:`READ COMMITTED` isolation level."""
+    REPEATABLE_READ = 3
+    """:sql:`REPEATABLE READ` isolation level."""
+    SERIALIZABLE = 4
+    """:sql:`SERIALIZABLE` isolation level."""
+
+
 _py2pg = {
     PyFormat.TEXT: pq.Format.TEXT,
     PyFormat.BINARY: pq.Format.BINARY,
