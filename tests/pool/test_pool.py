@@ -709,6 +709,7 @@ def test_reconnect(proxy, caplog, monkeypatch, retries):
 
     for retry in retries:
         with retry:
+            caplog.clear()
             proxy.start()
             with pool.ConnectionPool(proxy.client_dsn, min_size=1) as p:
                 p.wait(2.0)

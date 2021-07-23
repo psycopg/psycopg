@@ -721,6 +721,7 @@ async def test_reconnect(proxy, caplog, monkeypatch, retries):
 
     async for retry in retries:
         with retry:
+            caplog.clear()
             proxy.start()
             async with pool.AsyncConnectionPool(
                 proxy.client_dsn, min_size=1
