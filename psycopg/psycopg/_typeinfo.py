@@ -259,7 +259,8 @@ class TypesRegistry:
 
     def add(self, info: TypeInfo) -> None:
         self._ensure_own_state()
-        self._by_oid[info.oid] = info
+        if info.oid:
+            self._by_oid[info.oid] = info
         if info.array_oid:
             self._by_oid[info.array_oid] = info
         self._by_name[info.name] = info

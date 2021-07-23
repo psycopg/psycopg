@@ -104,3 +104,40 @@ def test_registry_by_builtin_name(conn, name):
     info = psycopg.adapters.types[name]
     assert info.name == "text"
     assert info.oid == 25
+
+
+def test_registry_empty():
+    r = psycopg.types.TypesRegistry()
+    assert r.get("text") is None
+    with pytest.raises(KeyError):
+        r["text"]
+
+
+@pytest.mark.parametrize("oid, aoid", [(1, 2), (1, 0), (0, 2), (0, 0)])
+def test_registry_invalid_oid(oid, aoid):
+    r = psycopg.types.TypesRegistry()
+    ti = psycopg.types.TypeInfo("test", oid, aoid)
+    r.add(ti)
+    assert r["test"] is ti
+    if oid:
+        assert r[oid] is ti
+    if aoid:
+        assert r[aoid] is ti
+    with pytest.raises(KeyError):
+        r[0]
+
+
+def test_registry_copy():
+    r = psycopg.types.TypesRegistry(psycopg.postgres.types)
+    assert r.get("text") is r["text"] is r[25]
+    assert r["text"].oid == 25
+
+
+def test_registry_isolated():
+    orig = psycopg.postgres.types
+    tinfo = orig["text"]
+    r = psycopg.types.TypesRegistry(orig)
+    tdummy = psycopg.types.TypeInfo("dummy", tinfo.oid, tinfo.array_oid)
+    r.add(tdummy)
+    assert r[25] is r["dummy"] is tdummy
+    assert orig[25] is r["text"] is tinfo
