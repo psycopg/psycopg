@@ -107,7 +107,7 @@ and create the server cursor:
 
 .. code:: python
 
-    conn.execute("select reffunc('curname')")
+    conn.execute("SELECT reffunc('curname')")
 
 then create a server-side cursor with the same name and call directly the
 fetch methods, omitting to call `~ServerCursor.execute()` before:

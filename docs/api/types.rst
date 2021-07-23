@@ -37,7 +37,7 @@ can extend the behaviour of the adapters: if you create a loader for
     t = TypeInfo.fetch(conn, "mytype")
     t.register(conn)
 
-    for record in conn.execute("select mytypearray from mytable"):
+    for record in conn.execute("SELECT mytypearray FROM mytable"):
         # records will return lists of "mytype" as string
 
     class MyTypeLoader(Loader):
@@ -46,7 +46,7 @@ can extend the behaviour of the adapters: if you create a loader for
 
     conn.adapters.register_loader("mytype", MyTypeLoader)
 
-    for record in conn.execute("select mytypearray from mytable"):
+    for record in conn.execute("SELECT mytypearray FROM mytable"):
         # records will return lists of MyType instances
 
 

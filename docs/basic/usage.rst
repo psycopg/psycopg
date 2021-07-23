@@ -140,7 +140,7 @@ using a result in a single expression:
 
 .. code::
 
-    print(psycopg.connect(DSN).execute("select now()").fetchone()[0])
+    print(psycopg.connect(DSN).execute("SELECT now()").fetchone()[0])
     # 2042-07-12 18:15:10.706497+01:00
 
 

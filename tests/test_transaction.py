@@ -357,43 +357,43 @@ def test_named_savepoints_successful_exit(conn, commands):
     # Using Transaction explicitly becase conn.transaction() enters the contetx
     assert not commands
     with conn.transaction() as tx:
-        assert commands.popall() == ["begin"]
+        assert commands.popall() == ["BEGIN"]
         assert not tx.savepoint_name
-    assert commands.popall() == ["commit"]
+    assert commands.popall() == ["COMMIT"]
 
     # Case 1 (with a transaction already started)
     conn.cursor().execute("select 1")
-    assert commands.popall() == ["begin"]
+    assert commands.popall() == ["BEGIN"]
     with conn.transaction() as tx:
-        assert commands.popall() == ['savepoint "_pg3_1"']
+        assert commands.popall() == ['SAVEPOINT "_pg3_1"']
         assert tx.savepoint_name == "_pg3_1"
-    assert commands.popall() == ['release "_pg3_1"']
+    assert commands.popall() == ['RELEASE "_pg3_1"']
     conn.rollback()
-    assert commands.popall() == ["rollback"]
+    assert commands.popall() == ["ROLLBACK"]
 
     # Case 2
     with conn.transaction(savepoint_name="foo") as tx:
-        assert commands.popall() == ['begin; savepoint "foo"']
+        assert commands.popall() == ['BEGIN; SAVEPOINT "foo"']
         assert tx.savepoint_name == "foo"
-    assert commands.popall() == ["commit"]
+    assert commands.popall() == ["COMMIT"]
 
     # Case 3 (with savepoint name provided)
     with conn.transaction():
-        assert commands.popall() == ["begin"]
+        assert commands.popall() == ["BEGIN"]
         with conn.transaction(savepoint_name="bar") as tx:
-            assert commands.popall() == ['savepoint "bar"']
+            assert commands.popall() == ['SAVEPOINT "bar"']
             assert tx.savepoint_name == "bar"
-        assert commands.popall() == ['release "bar"']
-    assert commands.popall() == ["commit"]
+        assert commands.popall() == ['RELEASE "bar"']
+    assert commands.popall() == ["COMMIT"]
 
     # Case 3 (with savepoint name auto-generated)
     with conn.transaction():
-        assert commands.popall() == ["begin"]
+        assert commands.popall() == ["BEGIN"]
         with conn.transaction() as tx:
-            assert commands.popall() == ['savepoint "_pg3_2"']
+            assert commands.popall() == ['SAVEPOINT "_pg3_2"']
             assert tx.savepoint_name == "_pg3_2"
-        assert commands.popall() == ['release "_pg3_2"']
-    assert commands.popall() == ["commit"]
+        assert commands.popall() == ['RELEASE "_pg3_2"']
+    assert commands.popall() == ["COMMIT"]
 
 
 def test_named_savepoints_exception_exit(conn, commands):
@@ -405,40 +405,40 @@ def test_named_savepoints_exception_exit(conn, commands):
     # Case 1
     with pytest.raises(ExpectedException):
         with conn.transaction() as tx:
-            assert commands.popall() == ["begin"]
+            assert commands.popall() == ["BEGIN"]
             assert not tx.savepoint_name
             raise ExpectedException
-    assert commands.popall() == ["rollback"]
+    assert commands.popall() == ["ROLLBACK"]
 
     # Case 2
     with pytest.raises(ExpectedException):
         with conn.transaction(savepoint_name="foo") as tx:
-            assert commands.popall() == ['begin; savepoint "foo"']
+            assert commands.popall() == ['BEGIN; SAVEPOINT "foo"']
             assert tx.savepoint_name == "foo"
             raise ExpectedException
-    assert commands.popall() == ["rollback"]
+    assert commands.popall() == ["ROLLBACK"]
 
     # Case 3 (with savepoint name provided)
     with conn.transaction():
-        assert commands.popall() == ["begin"]
+        assert commands.popall() == ["BEGIN"]
         with pytest.raises(ExpectedException):
             with conn.transaction(savepoint_name="bar") as tx:
-                assert commands.popall() == ['savepoint "bar"']
+                assert commands.popall() == ['SAVEPOINT "bar"']
                 assert tx.savepoint_name == "bar"
                 raise ExpectedException
-        assert commands.popall() == ['rollback to "bar"; release "bar"']
-    assert commands.popall() == ["commit"]
+        assert commands.popall() == ['ROLLBACK TO "bar"; RELEASE "bar"']
+    assert commands.popall() == ["COMMIT"]
 
     # Case 3 (with savepoint name auto-generated)
     with conn.transaction():
-        assert commands.popall() == ["begin"]
+        assert commands.popall() == ["BEGIN"]
         with pytest.raises(ExpectedException):
             with conn.transaction() as tx:
-                assert commands.popall() == ['savepoint "_pg3_2"']
+                assert commands.popall() == ['SAVEPOINT "_pg3_2"']
                 assert tx.savepoint_name == "_pg3_2"
                 raise ExpectedException
-        assert commands.popall() == ['rollback to "_pg3_2"; release "_pg3_2"']
-    assert commands.popall() == ["commit"]
+        assert commands.popall() == ['ROLLBACK TO "_pg3_2"; RELEASE "_pg3_2"']
+    assert commands.popall() == ["COMMIT"]
 
 
 def test_named_savepoints_with_repeated_names_works(conn):

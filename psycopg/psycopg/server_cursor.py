@@ -104,13 +104,13 @@ class ServerCursorHelper(Generic[ConnectionType, Row]):
         # but we must make sure it exists.
         if not self.described:
             query = sql.SQL(
-                "select 1 from pg_catalog.pg_cursors where name = {}"
+                "SELECT 1 FROM pg_catalog.pg_cursors WHERE name = {}"
             ).format(sql.Literal(self.name))
             res = yield from cur._conn._exec_command(query)
             if res.ntuples == 0:
                 return
 
-        query = sql.SQL("close {}").format(sql.Identifier(self.name))
+        query = sql.SQL("CLOSE {}").format(sql.Identifier(self.name))
         yield from cur._conn._exec_command(query)
 
     def _fetch_gen(
@@ -124,9 +124,9 @@ class ServerCursorHelper(Generic[ConnectionType, Row]):
         if num is not None:
             howmuch: sql.Composable = sql.Literal(num)
         else:
-            howmuch = sql.SQL("all")
+            howmuch = sql.SQL("ALL")
 
-        query = sql.SQL("fetch forward {} from {}").format(
+        query = sql.SQL("FETCH FORWARD {} FROM {}").format(
             howmuch, sql.Identifier(self.name)
         )
         res = yield from cur._conn._exec_command(query)
@@ -142,8 +142,8 @@ class ServerCursorHelper(Generic[ConnectionType, Row]):
             raise ValueError(
                 f"bad mode: {mode}. It should be 'relative' or 'absolute'"
             )
-        query = sql.SQL("move{} {} from {}").format(
-            sql.SQL(" absolute" if mode == "absolute" else ""),
+        query = sql.SQL("MOVE{} {} FROM {}").format(
+            sql.SQL(" ABSOLUTE" if mode == "absolute" else ""),
             sql.Literal(value),
             sql.Identifier(self.name),
         )
@@ -161,15 +161,15 @@ class ServerCursorHelper(Generic[ConnectionType, Row]):
             query = sql.SQL(query)
 
         parts = [
-            sql.SQL("declare"),
+            sql.SQL("DECLARE"),
             sql.Identifier(self.name),
         ]
         if self.scrollable is not None:
-            parts.append(sql.SQL("scroll" if self.scrollable else "no scroll"))
-        parts.append(sql.SQL("cursor"))
+            parts.append(sql.SQL("SCROLL" if self.scrollable else "NO SCROLL"))
+        parts.append(sql.SQL("CURSOR"))
         if self.withhold:
-            parts.append(sql.SQL("with hold"))
-        parts.append(sql.SQL("for"))
+            parts.append(sql.SQL("WITH HOLD"))
+        parts.append(sql.SQL("FOR"))
         parts.append(query)
 
         return sql.SQL(" ").join(parts)

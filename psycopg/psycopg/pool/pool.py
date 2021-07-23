@@ -357,7 +357,7 @@ class ConnectionPool(BasePool[Connection[Any]]):
         while conns:
             conn = conns.pop()
             try:
-                conn.execute("select 1")
+                conn.execute("SELECT 1")
             except Exception:
                 self._stats[self._CONNECTIONS_LOST] += 1
                 logger.warning("discarding broken connection: %s", conn)

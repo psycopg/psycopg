@@ -103,7 +103,7 @@ class BaseTransaction(Generic[ConnectionType]):
 
         if self._savepoint_name:
             commands.append(
-                sql.SQL("savepoint {}")
+                sql.SQL("SAVEPOINT {}")
                 .format(sql.Identifier(self._savepoint_name))
                 .as_bytes(self._conn)
             )
@@ -131,14 +131,14 @@ class BaseTransaction(Generic[ConnectionType]):
         commands = []
         if self._savepoint_name and not self._outer_transaction:
             commands.append(
-                sql.SQL("release {}")
+                sql.SQL("RELEASE {}")
                 .format(sql.Identifier(self._savepoint_name))
                 .as_bytes(self._conn)
             )
 
         if self._outer_transaction:
             assert not self._conn._savepoints
-            commands.append(b"commit")
+            commands.append(b"COMMIT")
 
         return self._conn._exec_command(b"; ".join(commands))
 
@@ -154,14 +154,14 @@ class BaseTransaction(Generic[ConnectionType]):
         commands = []
         if self._savepoint_name and not self._outer_transaction:
             commands.append(
-                sql.SQL("rollback to {n}; release {n}")
+                sql.SQL("ROLLBACK TO {n}; RELEASE {n}")
                 .format(n=sql.Identifier(self._savepoint_name))
                 .as_bytes(self._conn)
             )
 
         if self._outer_transaction:
             assert not self._conn._savepoints
-            commands.append(b"rollback")
+            commands.append(b"ROLLBACK")
 
         yield from self._conn._exec_command(b"; ".join(commands))
 

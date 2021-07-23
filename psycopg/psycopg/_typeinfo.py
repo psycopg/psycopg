@@ -140,12 +140,12 @@ class TypeInfo:
             register_adapters(self, context)
 
     _info_query = """\
-select
-    typname as name, oid, typarray as array_oid,
-    oid::regtype as alt_name, typdelim as delimiter
-from pg_type t
-where t.oid = %(name)s::regtype
-order by t.oid
+SELECT
+    typname AS name, oid, typarray AS array_oid,
+    oid::regtype AS alt_name, typdelim AS delimiter
+FROM pg_type t
+WHERE t.oid = %(name)s::regtype
+ORDER BY t.oid
 """
 
 
@@ -166,11 +166,11 @@ class RangeInfo(TypeInfo):
         register_adapters(self, context)
 
     _info_query = """\
-select t.typname as name, t.oid as oid, t.typarray as array_oid,
-    r.rngsubtype as subtype_oid
-from pg_type t
-join pg_range r on t.oid = r.rngtypid
-where t.oid = %(name)s::regtype
+SELECT t.typname AS name, t.oid AS oid, t.typarray AS array_oid,
+    r.rngsubtype AS subtype_oid
+FROM pg_type t
+JOIN pg_range r ON t.oid = r.rngtypid
+WHERE t.oid = %(name)s::regtype
 """
 
 
@@ -203,28 +203,28 @@ class CompositeInfo(TypeInfo):
         register_adapters(self, context, factory)
 
     _info_query = """\
-select
-    t.typname as name, t.oid as oid, t.typarray as array_oid,
-    coalesce(a.fnames, '{}') as field_names,
-    coalesce(a.ftypes, '{}') as field_types
-from pg_type t
-left join (
-    select
+SELECT
+    t.typname AS name, t.oid AS oid, t.typarray AS array_oid,
+    coalesce(a.fnames, '{}') AS field_names,
+    coalesce(a.ftypes, '{}') AS field_types
+FROM pg_type t
+LEFT JOIN (
+    SELECT
         attrelid,
-        array_agg(attname) as fnames,
-        array_agg(atttypid) as ftypes
-    from (
-        select a.attrelid, a.attname, a.atttypid
-        from pg_attribute a
-        join pg_type t on t.typrelid = a.attrelid
-        where t.oid = %(name)s::regtype
-        and a.attnum > 0
-        and not a.attisdropped
-        order by a.attnum
+        array_agg(attname) AS fnames,
+        array_agg(atttypid) AS ftypes
+    FROM (
+        SELECT a.attrelid, a.attname, a.atttypid
+        FROM pg_attribute a
+        JOIN pg_type t ON t.typrelid = a.attrelid
+        WHERE t.oid = %(name)s::regtype
+        AND a.attnum > 0
+        AND NOT a.attisdropped
+        ORDER BY a.attnum
     ) x
-    group by attrelid
-) a on a.attrelid = t.typrelid
-where t.oid = %(name)s::regtype
+    GROUP BY attrelid
+) a ON a.attrelid = t.typrelid
+WHERE t.oid = %(name)s::regtype
 """
 
 

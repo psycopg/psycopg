@@ -13,7 +13,7 @@ arguments::
 
     # This will not work
     table_name = 'my_table'
-    cur.execute("insert into %s values (%s, %s)", [table_name, 10, 20])
+    cur.execute("INSERT INTO %s VALUES (%s, %s)", [table_name, 10, 20])
 
 The SQL query should be composed before the arguments are merged, for
 instance::
@@ -21,7 +21,7 @@ instance::
     # This works, but it is not optimal
     table_name = 'my_table'
     cur.execute(
-        "insert into %s values (%%s, %%s)" % table_name,
+        "INSERT INTO %s VALUES (%%s, %%s)" % table_name,
         [10, 20])
 
 This sort of works, but it is an accident waiting to happen: the table name
@@ -34,7 +34,7 @@ name should be escaped using `~psycopg.pq.Escaping.escape_identifier()`::
     # This works, but it is not optimal
     table_name = 'my_table'
     cur.execute(
-        "insert into %s values (%%s, %%s)" % Escaping.escape_identifier(table_name),
+        "INSERT INTO %s VALUES (%%s, %%s)" % Escaping.escape_identifier(table_name),
         [10, 20])
 
 This is now safe, but it somewhat ad-hoc. In case, for some reason, it is
@@ -52,7 +52,7 @@ from the query parameters::
     from psycopg import sql
 
     cur.execute(
-        sql.SQL("insert into {} values (%s, %s)")
+        sql.SQL("INSERT INTO {} VALUES (%s, %s)")
             .format(sql.Identifier('my_table')),
         [10, 20])
 
@@ -67,7 +67,7 @@ have ``%s``\-style placeholders in your query and pass values to
 `~psycopg.Cursor.execute()`: such value placeholders will be untouched by
 `!format()`::
 
-    query = sql.SQL("select {field} from {table} where {pkey} = %s").format(
+    query = sql.SQL("SELECT {field} FROM {table} WHERE {pkey} = %s").format(
         field=sql.Identifier('my_name'),
         table=sql.Identifier('some_table'),
         pkey=sql.Identifier('id'))
@@ -84,7 +84,7 @@ If part of your query is a variable sequence of arguments, such as a
 comma-separated list of field names, you can use the `SQL.join()` method to
 pass them to the query::
 
-    query = sql.SQL("select {fields} from {table}").format(
+    query = sql.SQL("SELECT {fields} FROM {table}").format(
         fields=sql.SQL(',').join([
             sql.Identifier('field1'),
             sql.Identifier('field2'),

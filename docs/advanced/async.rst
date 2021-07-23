@@ -161,7 +161,7 @@ received immediately, but only during a connection operation, such as a query.
     # =# notify mychan, 'hey';
     # NOTIFY
 
-    print(conn.cursor().execute("select 1").fetchone())
+    print(conn.cursor().execute("SELECT 1").fetchone())
     # got this: Notify(channel='mychan', payload='hey', pid=961823)
     # (1,)
 
@@ -204,7 +204,7 @@ something else to do too.
 
         # Activity detected. Is the connection still ok?
         try:
-            conn.execute("select 1")
+            conn.execute("SELECT 1")
         except psycopg.OperationalError:
             # You were disconnected: do something useful such as panicking
             logger.error("we lost our database!")
@@ -229,7 +229,7 @@ something similar using `~asyncio.loop.add_reader`:
 
         # Activity detected. Is the connection still ok?
         try:
-            await conn.execute("select 1")
+            await conn.execute("SELECT 1")
         except psycopg.OperationalError:
             # Guess what happened
             ...

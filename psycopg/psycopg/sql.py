@@ -114,9 +114,9 @@ class Composed(Composable):
     Example::
 
         >>> comp = sql.Composed(
-        ...     [sql.SQL("insert into "), sql.Identifier("table")])
+        ...     [sql.SQL("INSERT INTO "), sql.Identifier("table")])
         >>> print(comp.as_string(conn))
-        insert into "table"
+        INSERT INTO "table"
 
     `!Composed` objects are iterable (so they can be used in `SQL.join` for
     instance).
@@ -185,11 +185,11 @@ class SQL(Composable):
 
     Example::
 
-        >>> query = sql.SQL("select {0} from {1}").format(
+        >>> query = sql.SQL("SELECT {0} FROM {1}").format(
         ...    sql.SQL(', ').join([sql.Identifier('foo'), sql.Identifier('bar')]),
         ...    sql.Identifier('table'))
         >>> print(query.as_string(conn))
-        select "foo", "bar" from "table"
+        SELECT "foo", "bar" FROM "table"
     """
 
     _obj: str
@@ -235,15 +235,15 @@ class SQL(Composable):
 
         Example::
 
-            >>> print(sql.SQL("select * from {} where {} = %s")
+            >>> print(sql.SQL("SELECT * FROM {} WHERE {} = %s")
             ...     .format(sql.Identifier('people'), sql.Identifier('id'))
             ...     .as_string(conn))
-            select * from "people" where "id" = %s
+            SELECT * FROM "people" WHERE "id" = %s
 
-            >>> print(sql.SQL("select * from {tbl} where name = {name}")
+            >>> print(sql.SQL("SELECT * FROM {tbl} WHERE name = {name}")
             ...     .format(tbl=sql.Identifier('people'), name="O'Rourke"))
             ...     .as_string(conn))
-            select * from "people" where name = 'O''Rourke'
+            SELECT * FROM "people" WHERE name = 'O''Rourke'
 
         """
         rv: List[Composable] = []
@@ -336,11 +336,11 @@ class Identifier(Composable):
 
     Example::
 
-        >>> query = sql.SQL("select {} from {}").format(
+        >>> query = sql.SQL("SELECT {} FROM {}").format(
         ...     sql.Identifier("table", "field"),
         ...     sql.Identifier("schema", "table"))
         >>> print(query.as_string(conn))
-        select "table"."field" from "schema"."table"
+        SELECT "table"."field" FROM "schema"."table"
 
     """
 
@@ -413,17 +413,17 @@ class Placeholder(Composable):
 
         >>> names = ['foo', 'bar', 'baz']
 
-        >>> q1 = sql.SQL("insert into table ({}) values ({})").format(
+        >>> q1 = sql.SQL("INSERT INTO my_table ({}) VALUES ({})").format(
         ...     sql.SQL(', ').join(map(sql.Identifier, names)),
         ...     sql.SQL(', ').join(sql.Placeholder() * len(names)))
         >>> print(q1.as_string(conn))
-        insert into table ("foo", "bar", "baz") values (%s, %s, %s)
+        INSERT INTO my_table ("foo", "bar", "baz") VALUES (%s, %s, %s)
 
-        >>> q2 = sql.SQL("insert into table ({}) values ({})").format(
+        >>> q2 = sql.SQL("INSERT INTO my_table ({}) VALUES ({})").format(
         ...     sql.SQL(', ').join(map(sql.Identifier, names)),
         ...     sql.SQL(', ').join(map(sql.Placeholder, names)))
         >>> print(q2.as_string(conn))
-        insert into table ("foo", "bar", "baz") values (%(foo)s, %(bar)s, %(baz)s)
+        INSERT INTO my_table ("foo", "bar", "baz") VALUES (%(foo)s, %(bar)s, %(baz)s)
 
     """
 

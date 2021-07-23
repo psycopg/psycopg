@@ -294,7 +294,7 @@ class AsyncConnectionPool(BasePool[AsyncConnection[Any]]):
         while conns:
             conn = conns.pop()
             try:
-                await conn.execute("select 1")
+                await conn.execute("SELECT 1")
             except Exception:
                 self._stats[self._CONNECTIONS_LOST] += 1
                 logger.warning("discarding broken connection: %s", conn)

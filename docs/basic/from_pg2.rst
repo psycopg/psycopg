@@ -24,14 +24,14 @@ explicit cast.
 
 .. code:: python
 
-    cur.execute("select '[10,20,30]'::jsonb -> 1").fetchone()
+    cur.execute("SELECT '[10,20,30]'::jsonb -> 1").fetchone()
     # returns (20,)
 
-    cur.execute("select '[10,20,30]'::jsonb -> %s", [1]).fetchone()
+    cur.execute("SELECT '[10,20,30]'::jsonb -> %s", [1]).fetchone()
     # raises an exception:
     # UndefinedFunction: operator does not exist: jsonb -> numeric
 
-    cur.execute("select '[10,20,30]'::jsonb -> %s::int", [1]).fetchone()
+    cur.execute("SELECT '[10,20,30]'::jsonb -> %s::int", [1]).fetchone()
     # returns (20,)
 
 PostgreSQL will also reject the execution of several queries at once

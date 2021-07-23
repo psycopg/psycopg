@@ -170,12 +170,12 @@ any issue. Pydantic will also raise a runtime error in case the
         cur = conn.cursor(row_factory=PersonFactory)
         cur.execute(
             """
-            select id, first_name, last_name, dob
-            from (values
+            SELECT id, first_name, last_name, dob
+            FROM (VALUES
                 (1, 'John', 'Doe', '2000-01-01'::date),
                 (2, 'Jane', 'White', NULL)
-            ) as data (id, first_name, last_name, dob)
-            where id = %(id)s;
+            ) AS data (id, first_name, last_name, dob)
+            WHERE id = %(id)s;
             """,
             {"id": id},
         )

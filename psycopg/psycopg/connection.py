@@ -276,7 +276,7 @@ class BaseConnection(Generic[Row]):
 
     def _set_client_encoding_gen(self, name: str) -> PQGen[None]:
         self.pgconn.send_query_params(
-            b"select set_config('client_encoding', $1, false)",
+            b"SELECT set_config('client_encoding', $1, false)",
             [encodings.py2pg(name)],
         )
         (result,) = yield from execute(self.pgconn)
@@ -479,19 +479,19 @@ class BaseConnection(Generic[Row]):
         if self._begin_statement:
             return self._begin_statement
 
-        parts = [b"begin"]
+        parts = [b"BEGIN"]
 
         if self.isolation_level is not None:
             val = IsolationLevel(self.isolation_level)
-            parts.append(b"isolation level")
-            parts.append(val.name.lower().replace("_", " ").encode("utf8"))
+            parts.append(b"ISOLATION LEVEL")
+            parts.append(val.name.replace("_", " ").encode("utf8"))
 
         if self.read_only is not None:
-            parts.append(b"read only" if self.read_only else b"read write")
+            parts.append(b"READ ONLY" if self.read_only else b"READ WRITE")
 
         if self.deferrable is not None:
             parts.append(
-                b"deferrable" if self.deferrable else b"not deferrable"
+                b"DEFERRABLE" if self.deferrable else b"NOT DEFERRABLE"
             )
 
         self._begin_statement = b" ".join(parts)
@@ -508,7 +508,7 @@ class BaseConnection(Generic[Row]):
         if self.pgconn.transaction_status == TransactionStatus.IDLE:
             return
 
-        yield from self._exec_command(b"commit")
+        yield from self._exec_command(b"COMMIT")
 
     def _rollback_gen(self) -> PQGen[None]:
         """Generator implementing `Connection.rollback()`."""
@@ -521,7 +521,7 @@ class BaseConnection(Generic[Row]):
         if self.pgconn.transaction_status == TransactionStatus.IDLE:
             return
 
-        yield from self._exec_command(b"rollback")
+        yield from self._exec_command(b"ROLLBACK")
 
 
 class Connection(BaseConnection[Row]):

@@ -114,15 +114,15 @@ Python `int` values are converted to PostgreSQL :sql:`bigint` (a.k.a.
   expect an :sql:`integer` (aka :sql:`int4`): passing them a :sql:`bigint`
   may cause an error::
 
-      cur.execute("select current_date + %s", [1])
+      cur.execute("SELECT current_date + %s", [1])
       # UndefinedFunction: operator does not exist: date + bigint
 
   In this case you should add an :sql:`::int` cast to your query or use the
   `~psycopg.types.numeric.Int4` wrapper::
 
-      cur.execute("select current_date + %s::int", [1])
+      cur.execute("SELECT current_date + %s::int", [1])
 
-      cur.execute("select current_date + %s", [Int4(1)])
+      cur.execute("SELECT current_date + %s", [Int4(1)])
 
   .. admonition:: TODO
 
@@ -167,9 +167,9 @@ such as :sql:`text` and :sql:`varchar` are converted back to Python `!str`:
 
     conn = psycopg.connect()
     conn.execute(
-        "insert into strtest (id, data) values (%s, %s)",
+        "INSERT INTO strtest (id, data) VALUES (%s, %s)",
         (1, "Crème Brûlée at 4.99€"))
-    conn.execute("select data from strtest where id = 1").fetchone()[0]
+    conn.execute("SELECT data FROM strtest WHERE id = 1").fetchone()[0]
     'Crème Brûlée at 4.99€'
 
 PostgreSQL databases `have an encoding`__, and `the session has an encoding`__
@@ -191,12 +191,12 @@ encoding/decoding errors:
     # The Latin-9 encoding can manage some European accented letters
     # and the Euro symbol
     conn.client_encoding = 'latin9'
-    conn.execute("select data from strtest where id = 1").fetchone()[0]
+    conn.execute("SELECT data FROM strtest WHERE id = 1").fetchone()[0]
     'Crème Brûlée at 4.99€'
 
     # The Latin-1 encoding doesn't have a representation for the Euro symbol
     conn.client_encoding = 'latin1'
-    conn.execute("select data from strtest where id = 1").fetchone()[0]
+    conn.execute("SELECT data FROM strtest WHERE id = 1").fetchone()[0]
     # Traceback (most recent call last)
     # ...
     # UntranslatableCharacter: character with byte sequence 0xe2 0x82 0xac
@@ -210,7 +210,7 @@ coming from the database, which will be returned as `bytes`:
 .. code:: python
 
     conn.client_encoding = "ascii"
-    conn.execute("select data from strtest where id = 1").fetchone()[0]
+    conn.execute("SELECT data FROM strtest WHERE id = 1").fetchone()[0]
     b'Cr\xc3\xa8me Br\xc3\xbbl\xc3\xa9e at 4.99\xe2\x82\xac'
 
 Alternatively you can cast the unknown encoding data to :sql:`bytea` to
@@ -270,7 +270,7 @@ either `psycopg.types.json.Json` or `~psycopg.types.json.Jsonb`.
     from psycopg.types.json import Jsonb
 
     thing = {"foo": ["bar", 42]}
-    conn.execute("insert into mytable values (%s)", [Jsonb(thing)])
+    conn.execute("INSERT INTO mytable VALUES (%s)", [Jsonb(thing)])
 
 By default Psycopg uses the standard library `json.dumps` and `json.loads`
 functions to serialize and de-serialize Python objects to JSON. If you want to
@@ -292,7 +292,7 @@ to a specific context (connection or cursor).
     # Return floating point values as Decimal, just in one connection
     set_json_loads(partial(json.loads, parse_float=Decimal), conn)
 
-    conn.execute("select %s", [Jsonb({"value": 123.45})]).fetchone()[0]
+    conn.execute("SELECT %s", [Jsonb({"value": 123.45})]).fetchone()[0]
     # {'value': Decimal('123.45')}
 
 If you need an even more specific dump customisation only for certain objects
@@ -314,7 +314,7 @@ take precedence over what specified by `!set_json_dumps()`.
 
     uuid_dumps = partial(json.dumps, cls=UUIDEncoder)
     obj = {"uuid": uuid4()}
-    cnn.execute("insert into objs values %s", [Json(obj, dumps=uuid_dumps)])
+    cnn.execute("INSERT INTO objs VALUES %s", [Json(obj, dumps=uuid_dumps)])
     # will insert: {'uuid': '0a40799d-3980-4c65-8315-2956b18ab0e1'}
 
 

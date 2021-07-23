@@ -76,12 +76,12 @@ compatible.
 
     conn = psycopg.connect()
 
-    conn.execute("select 123.45").fetchone()[0]
+    conn.execute("SELECT 123.45").fetchone()[0]
     # Decimal('123.45')
 
     conn.adapters.register_loader("numeric", psycopg.types.numeric.FloatLoader)
 
-    conn.execute("select 123.45").fetchone()[0]
+    conn.execute("SELECT 123.45").fetchone()[0]
     # 123.45
 
 In this example the customised adaptation takes effect only on the connection
@@ -133,7 +133,7 @@ cursor):
 
     cur.execute("SELECT %s::text, %s::text", [date(2020, 12, 31), date.max]).fetchone()
     # ('2020-12-31', 'infinity')
-    cur.execute("select '2020-12-31'::date, 'infinity'::date").fetchone()
+    cur.execute("SELECT '2020-12-31'::date, 'infinity'::date").fetchone()
     # (datetime.date(2020, 12, 31), datetime.date(9999, 12, 31))
 
 
