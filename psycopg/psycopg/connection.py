@@ -469,7 +469,25 @@ class BaseConnection(Generic[Row]):
         if self.pgconn.transaction_status != TransactionStatus.IDLE:
             return
 
-        yield from self._exec_command(b"begin")
+        yield from self._exec_command(self._get_tx_start_command())
+
+    def _get_tx_start_command(self) -> bytes:
+        parts = [b"begin"]
+
+        if self.isolation_level is not None:
+            val = IsolationLevel(self.isolation_level)
+            parts.append(b"isolation level")
+            parts.append(val.name.lower().replace("_", " ").encode("utf8"))
+
+        if self.read_only is not None:
+            parts.append(b"read only" if self.read_only else b"read write")
+
+        if self.deferrable is not None:
+            parts.append(
+                b"deferrable" if self.deferrable else b"not deferrable"
+            )
+
+        return b" ".join(parts)
 
     def _commit_gen(self) -> PQGen[None]:
         """Generator implementing `Connection.commit()`."""

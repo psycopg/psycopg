@@ -99,7 +99,7 @@ class BaseTransaction(Generic[ConnectionType]):
         commands = []
         if self._outer_transaction:
             assert not self._conn._savepoints, self._conn._savepoints
-            commands.append(b"begin")
+            commands.append(self._conn._get_tx_start_command())
 
         if self._savepoint_name:
             commands.append(

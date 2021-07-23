@@ -7,7 +7,7 @@ libpq-defined enums.
 
 # Copyright (C) 2020-2021 The Psycopg Team
 
-from enum import Enum
+from enum import Enum, IntEnum
 
 from . import pq
 
@@ -38,7 +38,7 @@ class PyFormat(str, Enum):
         return _py2pg[fmt]
 
 
-class IsolationLevel(Enum):
+class IsolationLevel(IntEnum):
     """
     Enum representing the isolation level for a transaction.
     """

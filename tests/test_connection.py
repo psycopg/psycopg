@@ -566,3 +566,107 @@ def test_server_cursor_factory(conn):
     conn.server_cursor_factory = MyServerCursor
     with conn.cursor(name="n") as cur:
         assert isinstance(cur, MyServerCursor)
+
+
+tx_params = {
+    "isolation_level": {
+        "guc": "isolation",
+        "values": list(psycopg.IsolationLevel),
+        "set_method": "set_isolation_level",
+    },
+    "read_only": {
+        "guc": "read_only",
+        "values": [True, False],
+        "set_method": "set_read_only",
+    },
+    "deferrable": {
+        "guc": "deferrable",
+        "values": [True, False],
+        "set_method": "set_deferrable",
+    },
+}
+
+# Map Python values to Postgres values for the tx_params possible values
+tx_values_map = {
+    v.name.lower().replace("_", " "): v.value for v in psycopg.IsolationLevel
+}
+tx_values_map["on"] = True
+tx_values_map["off"] = False
+
+
+@pytest.mark.parametrize("attr", list(tx_params))
+def test_transaction_param_default(conn, attr):
+    assert getattr(conn, attr) is None
+    guc = tx_params[attr]["guc"]
+    current, default = conn.execute(
+        "select current_setting(%s), current_setting(%s)",
+        [f"transaction_{guc}", f"default_transaction_{guc}"],
+    ).fetchone()
+    assert current == default
+
+
+@pytest.mark.parametrize("autocommit", [True, False])
+@pytest.mark.parametrize("attr", list(tx_params))
+def test_set_transaction_param_implicit(conn, attr, autocommit):
+    guc = tx_params[attr]["guc"]
+    conn.autocommit = autocommit
+    for value in tx_params[attr]["values"]:
+        setattr(conn, attr, value)
+        pgval, default = conn.execute(
+            "select current_setting(%s), current_setting(%s)",
+            [f"transaction_{guc}", f"default_transaction_{guc}"],
+        ).fetchone()
+        if autocommit:
+            assert pgval == default
+        else:
+            assert tx_values_map[pgval] == value
+        conn.rollback()
+
+
+@pytest.mark.parametrize("autocommit", [True, False])
+@pytest.mark.parametrize("attr", list(tx_params))
+def test_set_transaction_param_block(conn, attr, autocommit):
+    guc = tx_params[attr]["guc"]
+    conn.autocommit = autocommit
+    for value in tx_params[attr]["values"]:
+        setattr(conn, attr, value)
+        with conn.transaction():
+            pgval = conn.execute(
+                "select current_setting(%s)", [f"transaction_{guc}"]
+            ).fetchone()[0]
+        assert tx_values_map[pgval] == value
+
+
+@pytest.mark.parametrize("attr", list(tx_params))
+def test_set_transaction_param_not_intrans_implicit(conn, attr):
+    conn.execute("select 1")
+    with pytest.raises(psycopg.ProgrammingError):
+        setattr(conn, attr, tx_params[attr]["values"][0])
+
+
+@pytest.mark.parametrize("attr", list(tx_params))
+def test_set_transaction_param_not_intrans_block(conn, attr):
+    with conn.transaction():
+        with pytest.raises(psycopg.ProgrammingError):
+            setattr(conn, attr, tx_params[attr]["values"][0])
+
+
+@pytest.mark.parametrize("attr", list(tx_params))
+def test_set_transaction_param_not_intrans_external(conn, attr):
+    conn.autocommit = True
+    conn.execute("begin")
+    with pytest.raises(psycopg.ProgrammingError):
+        setattr(conn, attr, tx_params[attr]["values"][0])
+
+
+def test_set_transaction_param_all(conn):
+    for attr in tx_params:
+        value = tx_params[attr]["values"][0]
+        setattr(conn, attr, value)
+
+    for attr in tx_params:
+        guc = tx_params[attr]["guc"]
+        pgval = conn.execute(
+            "select current_setting(%s)", [f"transaction_{guc}"]
+        ).fetchone()[0]
+        assert tx_values_map[pgval] == value

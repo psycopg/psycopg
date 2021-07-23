@@ -14,6 +14,7 @@ from psycopg.conninfo import conninfo_to_dict
 
 from .utils import gc_collect
 from .test_cursor import my_row_factory
+from .test_connection import tx_params, tx_values_map
 
 pytestmark = pytest.mark.asyncio
 
@@ -584,3 +585,94 @@ async def test_server_cursor_factory(aconn):
     aconn.server_cursor_factory = MyServerCursor
     async with aconn.cursor(name="n") as cur:
         assert isinstance(cur, MyServerCursor)
+
+
+@pytest.mark.parametrize("attr", list(tx_params))
+async def test_transaction_param_default(aconn, attr):
+    assert getattr(aconn, attr) is None
+    guc = tx_params[attr]["guc"]
+    cur = await aconn.execute(
+        "select current_setting(%s), current_setting(%s)",
+        [f"transaction_{guc}", f"default_transaction_{guc}"],
+    )
+    current, default = await cur.fetchone()
+    assert current == default
+
+
+@pytest.mark.parametrize("attr", list(tx_params))
+async def test_transaction_param_readonly_property(aconn, attr):
+    with pytest.raises(AttributeError):
+        setattr(aconn, attr, None)
+
+
+@pytest.mark.parametrize("autocommit", [True, False])
+@pytest.mark.parametrize("attr", list(tx_params))
+async def test_set_transaction_param_implicit(aconn, attr, autocommit):
+    guc = tx_params[attr]["guc"]
+    await aconn.set_autocommit(autocommit)
+    for value in tx_params[attr]["values"]:
+        await getattr(aconn, tx_params[attr]["set_method"])(value)
+        cur = await aconn.execute(
+            "select current_setting(%s), current_setting(%s)",
+            [f"transaction_{guc}", f"default_transaction_{guc}"],
+        )
+        pgval, default = await cur.fetchone()
+        if autocommit:
+            assert pgval == default
+        else:
+            assert tx_values_map[pgval] == value
+        await aconn.rollback()
+
+
+@pytest.mark.parametrize("autocommit", [True, False])
+@pytest.mark.parametrize("attr", list(tx_params))
+async def test_set_transaction_param_block(aconn, attr, autocommit):
+    guc = tx_params[attr]["guc"]
+    await aconn.set_autocommit(autocommit)
+    for value in tx_params[attr]["values"]:
+        await getattr(aconn, tx_params[attr]["set_method"])(value)
+        async with aconn.transaction():
+            cur = await aconn.execute(
+                "select current_setting(%s)", [f"transaction_{guc}"]
+            )
+            pgval = (await cur.fetchone())[0]
+        assert tx_values_map[pgval] == value
+
+
+@pytest.mark.parametrize("attr", list(tx_params))
+async def test_set_transaction_param_not_intrans_implicit(aconn, attr):
+    await aconn.execute("select 1")
+    value = tx_params[attr]["values"][0]
+    with pytest.raises(psycopg.ProgrammingError):
+        await getattr(aconn, tx_params[attr]["set_method"])(value)
+
+
+@pytest.mark.parametrize("attr", list(tx_params))
+async def test_set_transaction_param_not_intrans_block(aconn, attr):
+    value = tx_params[attr]["values"][0]
+    async with aconn.transaction():
+        with pytest.raises(psycopg.ProgrammingError):
+            await getattr(aconn, tx_params[attr]["set_method"])(value)
+
+
+@pytest.mark.parametrize("attr", list(tx_params))
+async def test_set_transaction_param_not_intrans_external(aconn, attr):
+    value = tx_params[attr]["values"][0]
+    await aconn.set_autocommit(True)
+    await aconn.execute("begin")
+    with pytest.raises(psycopg.ProgrammingError):
+        await getattr(aconn, tx_params[attr]["set_method"])(value)
+
+
+async def test_set_transaction_param_all(aconn):
+    for attr in tx_params:
+        value = tx_params[attr]["values"][0]
+        await getattr(aconn, tx_params[attr]["set_method"])(value)
+
+    for attr in tx_params:
+        guc = tx_params[attr]["guc"]
+        cur = await aconn.execute(
+            "select current_setting(%s)", [f"transaction_{guc}"]
+        )
+        pgval = (await cur.fetchone())[0]
+        assert tx_values_map[pgval] == value
