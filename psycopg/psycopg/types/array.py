@@ -36,7 +36,6 @@ class BaseListDumper(RecursiveDumper):
     def __init__(self, cls: type, context: Optional[AdaptContext] = None):
         super().__init__(cls, context)
         self.sub_dumper: Optional[Dumper] = None
-        self._types = context.adapters.types if context else postgres.types
 
     def get_key(self, obj: List[Any], format: PyFormat) -> DumperKey:
         item = self._find_list_element(obj)
@@ -106,7 +105,7 @@ class BaseListDumper(RecursiveDumper):
         """
         oid = 0
         if base_oid:
-            info = self._types.get(base_oid)
+            info = self._tx.adapters.types.get(base_oid)
             if info:
                 oid = info.array_oid
 

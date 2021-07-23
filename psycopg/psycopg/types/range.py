@@ -256,7 +256,6 @@ class BaseRangeDumper(RecursiveDumper):
     def __init__(self, cls: type, context: Optional[AdaptContext] = None):
         super().__init__(cls, context)
         self.sub_dumper: Optional[Dumper] = None
-        self._types = context.adapters.types if context else postgres.types
         self._adapt_format = PyFormat.from_pq(self.format)
 
     def get_key(self, obj: Range[Any], format: PyFormat) -> DumperKey:
@@ -314,7 +313,7 @@ class BaseRangeDumper(RecursiveDumper):
 
         Raise InterfaceError if not found.
         """
-        info = self._types.get_range(sub_oid)
+        info = self._tx.adapters.types.get_range(sub_oid)
         return info.oid if info else INVALID_OID
 
 
