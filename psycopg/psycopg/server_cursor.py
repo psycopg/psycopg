@@ -46,7 +46,7 @@ class ServerCursorHelper(Generic[ConnectionType, Row]):
     def _repr(self, cur: BaseCursor[ConnectionType, Row]) -> str:
         cls = f"{cur.__class__.__module__}.{cur.__class__.__qualname__}"
         info = pq.misc.connection_summary(cur._conn.pgconn)
-        if cur._closed:
+        if cur.closed:
             status = "closed"
         elif not cur.pgresult:
             status = "no result"
@@ -194,7 +194,7 @@ class ServerCursor(BaseCursor["Connection[Any]", Row]):
         self.itersize: int = DEFAULT_ITERSIZE
 
     def __del__(self) -> None:
-        if not self._closed:
+        if not self.closed:
             warnings.warn(
                 f"the server-side cursor {self} was deleted while still open."
                 f" Please use 'with' or '.close()' to close the cursor properly",
@@ -242,8 +242,10 @@ class ServerCursor(BaseCursor["Connection[Any]", Row]):
         Close the current cursor and free associated resources.
         """
         with self._conn.lock:
+            if self.closed:
+                return
             self._conn.wait(self._helper._close_gen(self))
-        self._close()
+            self._close()
 
     def execute(
         self,
@@ -328,7 +330,7 @@ class AsyncServerCursor(BaseCursor["AsyncConnection[Any]", Row]):
         self.itersize: int = DEFAULT_ITERSIZE
 
     def __del__(self) -> None:
-        if not self._closed:
+        if not self.closed:
             warnings.warn(
                 f"the server-side cursor {self} was deleted while still open."
                 f" Please use 'with' or '.close()' to close the cursor properly",
@@ -363,8 +365,10 @@ class AsyncServerCursor(BaseCursor["AsyncConnection[Any]", Row]):
 
     async def close(self) -> None:
         async with self._conn.lock:
+            if self.closed:
+                return
             await self._conn.wait(self._helper._close_gen(self))
-        self._close()
+            self._close()
 
     async def execute(
         self,

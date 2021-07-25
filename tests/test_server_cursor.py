@@ -67,6 +67,14 @@ def test_close(conn, recwarn, retries):
             assert not recwarn, [str(w.message) for w in recwarn.list]
 
 
+def test_close_idempotent(conn):
+    cur = conn.cursor("foo")
+    cur.execute("select 1")
+    cur.fetchall()
+    cur.close()
+    cur.close()
+
+
 def test_close_noop(conn, recwarn, retries):
     for retry in retries:
         with retry:

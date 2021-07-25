@@ -71,6 +71,14 @@ async def test_close(aconn, recwarn, retries):
             assert not recwarn, [str(w.message) for w in recwarn.list]
 
 
+async def test_close_idempotent(aconn):
+    cur = aconn.cursor("foo")
+    await cur.execute("select 1")
+    await cur.fetchall()
+    await cur.close()
+    await cur.close()
+
+
 async def test_close_noop(aconn, recwarn, retries):
     async for retry in retries:
         with retry:
