@@ -393,7 +393,7 @@ Connection support objects
     .. automethod:: parameter_status
 
         Example of parameters are ``server_version``,
-        ``standard_conforming_string``... See :pq:`PQparameterStatus()` for
+        ``standard_conforming_strings``... See :pq:`PQparameterStatus()` for
         all the available parameters.
 
     .. autoattribute:: protocol_version
