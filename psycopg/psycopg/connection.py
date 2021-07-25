@@ -187,7 +187,7 @@ class BaseConnection(Generic[Row]):
         # Base implementation, not thread safe.
         # Subclasses must call it holding a lock
         self._check_intrans("autocommit")
-        self._autocommit = value
+        self._autocommit = bool(value)
 
     @property
     def isolation_level(self) -> Optional[IsolationLevel]:
@@ -428,7 +428,7 @@ class BaseConnection(Generic[Row]):
         if not row_factory:
             row_factory = tuple_row
         conn = cls(pgconn, row_factory)
-        conn._autocommit = autocommit
+        conn._autocommit = bool(autocommit)
         return conn
 
     def _exec_command(self, command: Query) -> PQGen["PGresult"]:
