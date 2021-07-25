@@ -148,8 +148,12 @@ cdef class BytesDumper(CDumper):
 
     format = PQ_TEXT
 
+    # 0: not set, 1: just  single "'" quote, 3: " E'" qoute
+    cdef int _qplen
+
     def __cinit__(self):
         self.oid = oids.BYTEA_OID
+        self._qplen = 0
 
     cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
 
@@ -176,6 +180,56 @@ cdef class BytesDumper(CDumper):
         memcpy(buf, out, len_out)
         libpq.PQfreemem(out)
         return len_out
+
+    def quote(self, obj) -> bytearray:
+        cdef size_t len_esc
+        cdef size_t len_out
+        cdef unsigned char *out
+        cdef char *ptr
+        cdef Py_ssize_t length
+        cdef bytearray rv
+
+        _buffer_as_string_and_size(obj, &ptr, &length)
+
+        if self._pgconn is not None and self._pgconn._pgconn_ptr != NULL:
+            out = libpq.PQescapeByteaConn(
+                self._pgconn._pgconn_ptr, <unsigned char *>ptr, length, &len_esc)
+        else:
+            out = libpq.PQescapeBytea(<unsigned char *>ptr, length, &len_esc)
+
+        if out is NULL:
+            raise MemoryError(
+                f"couldn't allocate for escape_bytea of {length} bytes"
+            )
+
+        if not self._qplen:
+            self._qplen = 3
+            if self._pgconn is not None and self._pgconn._pgconn_ptr != NULL:
+                scs = libpq.PQparameterStatus(self._pgconn._pgconn_ptr,
+                    b"standard_conforming_strings")
+                if scs and scs[0] == b'o' and scs[1] == b"n":  # == "on"
+                    self._qplen = 1
+
+        # len_esc includes the final 0
+        # So the final string is len_esc - 1 plus quotes, which might be 2 or 4 bytes
+        len_out = len_esc + self._qplen
+        rv = PyByteArray_FromStringAndSize("", 0)
+        cdef char *buf = CDumper.ensure_size(rv, 0, len_out)
+        memcpy(buf + self._qplen, out, len_esc)
+        libpq.PQfreemem(out)
+
+        if self._qplen == 3:
+            # Quote as " E'content'"
+            buf[0] = b' '
+            buf[1] = b'E'
+            buf[2] = b'\''
+        else:
+            # Quote as "'content'"
+            buf[0] = b'\''
+
+        buf[len_out - 1] = b'\''
+
+        return rv
 
 
 @cython.final

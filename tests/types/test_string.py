@@ -212,23 +212,31 @@ def test_dump_1byte(conn, fmt_in, pytype):
     cur = conn.cursor()
     for i in range(0, 256):
         obj = pytype(bytes([i]))
-        cur.execute(f"select %{fmt_in} = %s::bytea", (obj, fr"\x{i:02x}"))
+        cur.execute(f"select %{fmt_in} = set_byte('x', 0, %s)", (obj, i))
         assert cur.fetchone()[0] is True, i
 
 
-def test_quote_1byte(conn):
+@pytest.mark.parametrize("scs", ["on", "off"])
+def test_quote_1byte(conn, scs):
+    messages = []
+    conn.add_notice_handler(lambda msg: messages.append(msg.message_primary))
+    conn.execute(f"set standard_conforming_strings to {scs}")
+
     cur = conn.cursor()
-    query = sql.SQL("select {ch} = %s::bytea")
+    query = sql.SQL("select {ch} = set_byte('x', 0, %s)")
     for i in range(0, 256):
-        cur.execute(query.format(ch=sql.Literal(bytes([i]))), (fr"\x{i:02x}",))
+        cur.execute(query.format(ch=sql.Literal(bytes([i]))), (i,))
         assert cur.fetchone()[0] is True, i
+
+    # No "nonstandard use of \\ in a string literal" warning
+    assert not messages
 
 
 @pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
 def test_load_1byte(conn, fmt_out):
     cur = conn.cursor(binary=fmt_out)
     for i in range(0, 256):
-        cur.execute("select %s::bytea", (fr"\x{i:02x}",))
+        cur.execute("select set_byte('x', 0, %s)", (i,))
         assert cur.fetchone()[0] == bytes([i])
 
     assert cur.pgresult.fformat(0) == fmt_out

@@ -85,6 +85,7 @@ class BytesDumper(Dumper):
 
     format = Format.TEXT
     _oid = postgres.types["bytea"].oid
+    _qprefix = b""
 
     def __init__(self, cls: type, context: Optional[AdaptContext] = None):
         super().__init__(cls, context)
@@ -96,6 +97,19 @@ class BytesDumper(Dumper):
         # TODO: mypy doesn't complain, but this function has the wrong signature
         # probably dump return value should be extended to Buffer
         return self._esc.escape_bytea(obj)
+
+    def quote(self, obj: bytes) -> bytes:
+        if not self._qprefix:
+            if self.connection:
+                scs = self.connection.pgconn.parameter_status(
+                    b"standard_conforming_strings"
+                )
+                self._qprefix = b"'" if scs == b"on" else b" E'"
+            else:
+                self._qprefix = b" E'"
+
+        escaped = self.dump(obj)
+        return self._qprefix + bytes(escaped) + b"'"
 
 
 class BytesBinaryDumper(Dumper):
