@@ -125,9 +125,18 @@ def test_exception_class_fallback(conn):
 
 def test_lookup():
     assert e.lookup("42P01") is e.UndefinedTable
+    assert e.lookup("42p01") is e.UndefinedTable
+    assert e.lookup("UNDEFINED_TABLE") is e.UndefinedTable
+    assert e.lookup("undefined_table") is e.UndefinedTable
 
     with pytest.raises(KeyError):
         e.lookup("XXXXX")
+
+
+def test_error_sqlstate():
+    assert e.Error.sqlstate is None
+    assert e.ProgrammingError.sqlstate is None
+    assert e.UndefinedTable.sqlstate == "42P01"
 
 
 def test_error_pickle(conn):

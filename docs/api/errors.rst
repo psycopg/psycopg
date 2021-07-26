@@ -36,12 +36,17 @@ derive from the following classes:
             \|__ `ProgrammingError`
             \|__ `NotSupportedError`
 
-These classes are exposed both by the Psycopg and the `!psycopg.errors`
-module.
+These classes are exposed both by this module and the root `psycopg` module.
 
 .. autoexception:: Error()
 
     .. autoattribute:: diag
+    .. autoattribute:: sqlstate
+
+        The code of the error, if defined.
+
+        This is a class attribute defined for all the
+        :ref:`sqlstate-exceptions` classed, `None` for the base classes.
 
 .. autoexception:: Warning()
 .. autoexception:: InterfaceError()
@@ -58,8 +63,6 @@ module.
 
 .. index::
     single: Exceptions; PostgreSQL
-
-.. _sqlstate-exceptions:
 
 
 Error diagnostics
@@ -104,6 +107,8 @@ Error diagnostics
         server versions.
 
 
+.. _sqlstate-exceptions:
+
 SQLSTATE exceptions
 -------------------
 
@@ -139,14 +144,18 @@ exception <dbapi-exceptions>` and expose the `Error` interface.
 
 .. autofunction:: lookup
 
-    Example:
+    Example: if you have code using constant names or sql codes you can use
+    them to look up the exception class.
 
     .. code-block:: python
 
         try:
             cur.execute("LOCK TABLE mytable IN ACCESS EXCLUSIVE MODE NOWAIT")
+        except psycopg.errors.lookup("UNDEFINED_TABLE"):
+            missing = True
         except psycopg.errors.lookup("55P03"):
             locked = True
+
 
 These are all the classes defined and the DBAPI exception they derive from:
 

@@ -33,7 +33,7 @@ def main():
     logger.info("running black on the resulting module")
     sp.check_call(["black", fn])
 
-    fn = os.path.dirname(__file__) + "/../docs/errors.rst"
+    fn = os.path.dirname(__file__) + "/../docs/api/errors.rst"
     update_file(fn, generate_docs_data(classes, errors))
 
 
@@ -141,7 +141,7 @@ def fetch_errors(versions):
 
 def generate_module_data(classes, errors):
     tmpl = """
-@sqlcode(%(sqlstate)r)
+@sqlcode(%(errlabel)r, %(sqlstate)r)
 class %(clsname)s(%(basename)s):
     pass
 """

@@ -50,6 +50,8 @@ class Error(Exception):
 
     __module__ = "psycopg"
 
+    sqlstate: Optional[str] = None
+
     def __init__(
         self,
         *args: Sequence[Any],
@@ -266,11 +268,14 @@ class Diagnostic:
 
 
 def lookup(sqlstate: str) -> Type[Error]:
-    """Lookup an error code and return its exception class.
+    """Lookup an error code or `constant name`__ and return its exception class.
 
     Raise `!KeyError` if the code is not found.
+
+    .. __: https://www.postgresql.org/docs/current/errcodes-appendix.html
+            #ERRCODES-TABLE
     """
-    return _sqlcodes[sqlstate]
+    return _sqlcodes[sqlstate.upper()]
 
 
 def error_from_result(result: PGresult, encoding: str = "utf-8") -> Error:
@@ -336,13 +341,16 @@ _base_exc_map = {
 }
 
 
-def sqlcode(code: str) -> Callable[[Type[Error]], Type[Error]]:
+def sqlcode(
+    const_name: str, code: str
+) -> Callable[[Type[Error]], Type[Error]]:
     """
     Decorator to associate an exception class to a sqlstate.
     """
 
     def sqlcode_(cls: Type[Error]) -> Type[Error]:
-        _sqlcodes[code] = cls
+        _sqlcodes[code] = _sqlcodes[const_name] = cls
+        cls.sqlstate = code
         return cls
 
     return sqlcode_
@@ -357,12 +365,12 @@ _sqlcodes: Dict[str, Type[Error]] = {}
 # Class 02 - No Data (this is also a warning class per the SQL standard)
 
 
-@sqlcode("02000")
+@sqlcode("NO_DATA", "02000")
 class NoData(DatabaseError):
     pass
 
 
-@sqlcode("02001")
+@sqlcode("NO_ADDITIONAL_DYNAMIC_RESULT_SETS_RETURNED", "02001")
 class NoAdditionalDynamicResultSetsReturned(DatabaseError):
     pass
 
@@ -370,7 +378,7 @@ class NoAdditionalDynamicResultSetsReturned(DatabaseError):
 # Class 03 - SQL Statement Not Yet Complete
 
 
-@sqlcode("03000")
+@sqlcode("SQL_STATEMENT_NOT_YET_COMPLETE", "03000")
 class SqlStatementNotYetComplete(DatabaseError):
     pass
 
@@ -378,37 +386,37 @@ class SqlStatementNotYetComplete(DatabaseError):
 # Class 08 - Connection Exception
 
 
-@sqlcode("08000")
+@sqlcode("CONNECTION_EXCEPTION", "08000")
 class ConnectionException(OperationalError):
     pass
 
 
-@sqlcode("08001")
+@sqlcode("SQLCLIENT_UNABLE_TO_ESTABLISH_SQLCONNECTION", "08001")
 class SqlclientUnableToEstablishSqlconnection(OperationalError):
     pass
 
 
-@sqlcode("08003")
+@sqlcode("CONNECTION_DOES_NOT_EXIST", "08003")
 class ConnectionDoesNotExist(OperationalError):
     pass
 
 
-@sqlcode("08004")
+@sqlcode("SQLSERVER_REJECTED_ESTABLISHMENT_OF_SQLCONNECTION", "08004")
 class SqlserverRejectedEstablishmentOfSqlconnection(OperationalError):
     pass
 
 
-@sqlcode("08006")
+@sqlcode("CONNECTION_FAILURE", "08006")
 class ConnectionFailure(OperationalError):
     pass
 
 
-@sqlcode("08007")
+@sqlcode("TRANSACTION_RESOLUTION_UNKNOWN", "08007")
 class TransactionResolutionUnknown(OperationalError):
     pass
 
 
-@sqlcode("08P01")
+@sqlcode("PROTOCOL_VIOLATION", "08P01")
 class ProtocolViolation(OperationalError):
     pass
 
@@ -416,7 +424,7 @@ class ProtocolViolation(OperationalError):
 # Class 09 - Triggered Action Exception
 
 
-@sqlcode("09000")
+@sqlcode("TRIGGERED_ACTION_EXCEPTION", "09000")
 class TriggeredActionException(DatabaseError):
     pass
 
@@ -424,7 +432,7 @@ class TriggeredActionException(DatabaseError):
 # Class 0A - Feature Not Supported
 
 
-@sqlcode("0A000")
+@sqlcode("FEATURE_NOT_SUPPORTED", "0A000")
 class FeatureNotSupported(NotSupportedError):
     pass
 
@@ -432,7 +440,7 @@ class FeatureNotSupported(NotSupportedError):
 # Class 0B - Invalid Transaction Initiation
 
 
-@sqlcode("0B000")
+@sqlcode("INVALID_TRANSACTION_INITIATION", "0B000")
 class InvalidTransactionInitiation(DatabaseError):
     pass
 
@@ -440,12 +448,12 @@ class InvalidTransactionInitiation(DatabaseError):
 # Class 0F - Locator Exception
 
 
-@sqlcode("0F000")
+@sqlcode("LOCATOR_EXCEPTION", "0F000")
 class LocatorException(DatabaseError):
     pass
 
 
-@sqlcode("0F001")
+@sqlcode("INVALID_LOCATOR_SPECIFICATION", "0F001")
 class InvalidLocatorSpecification(DatabaseError):
     pass
 
@@ -453,12 +461,12 @@ class InvalidLocatorSpecification(DatabaseError):
 # Class 0L - Invalid Grantor
 
 
-@sqlcode("0L000")
+@sqlcode("INVALID_GRANTOR", "0L000")
 class InvalidGrantor(DatabaseError):
     pass
 
 
-@sqlcode("0LP01")
+@sqlcode("INVALID_GRANT_OPERATION", "0LP01")
 class InvalidGrantOperation(DatabaseError):
     pass
 
@@ -466,7 +474,7 @@ class InvalidGrantOperation(DatabaseError):
 # Class 0P - Invalid Role Specification
 
 
-@sqlcode("0P000")
+@sqlcode("INVALID_ROLE_SPECIFICATION", "0P000")
 class InvalidRoleSpecification(DatabaseError):
     pass
 
@@ -474,12 +482,12 @@ class InvalidRoleSpecification(DatabaseError):
 # Class 0Z - Diagnostics Exception
 
 
-@sqlcode("0Z000")
+@sqlcode("DIAGNOSTICS_EXCEPTION", "0Z000")
 class DiagnosticsException(DatabaseError):
     pass
 
 
-@sqlcode("0Z002")
+@sqlcode("STACKED_DIAGNOSTICS_ACCESSED_WITHOUT_ACTIVE_HANDLER", "0Z002")
 class StackedDiagnosticsAccessedWithoutActiveHandler(DatabaseError):
     pass
 
@@ -487,7 +495,7 @@ class StackedDiagnosticsAccessedWithoutActiveHandler(DatabaseError):
 # Class 20 - Case Not Found
 
 
-@sqlcode("20000")
+@sqlcode("CASE_NOT_FOUND", "20000")
 class CaseNotFound(ProgrammingError):
     pass
 
@@ -495,7 +503,7 @@ class CaseNotFound(ProgrammingError):
 # Class 21 - Cardinality Violation
 
 
-@sqlcode("21000")
+@sqlcode("CARDINALITY_VIOLATION", "21000")
 class CardinalityViolation(ProgrammingError):
     pass
 
@@ -503,337 +511,337 @@ class CardinalityViolation(ProgrammingError):
 # Class 22 - Data Exception
 
 
-@sqlcode("22000")
+@sqlcode("DATA_EXCEPTION", "22000")
 class DataException(DataError):
     pass
 
 
-@sqlcode("22001")
+@sqlcode("STRING_DATA_RIGHT_TRUNCATION", "22001")
 class StringDataRightTruncation(DataError):
     pass
 
 
-@sqlcode("22002")
+@sqlcode("NULL_VALUE_NO_INDICATOR_PARAMETER", "22002")
 class NullValueNoIndicatorParameter(DataError):
     pass
 
 
-@sqlcode("22003")
+@sqlcode("NUMERIC_VALUE_OUT_OF_RANGE", "22003")
 class NumericValueOutOfRange(DataError):
     pass
 
 
-@sqlcode("22004")
+@sqlcode("NULL_VALUE_NOT_ALLOWED", "22004")
 class NullValueNotAllowed(DataError):
     pass
 
 
-@sqlcode("22005")
+@sqlcode("ERROR_IN_ASSIGNMENT", "22005")
 class ErrorInAssignment(DataError):
     pass
 
 
-@sqlcode("22007")
+@sqlcode("INVALID_DATETIME_FORMAT", "22007")
 class InvalidDatetimeFormat(DataError):
     pass
 
 
-@sqlcode("22008")
+@sqlcode("DATETIME_FIELD_OVERFLOW", "22008")
 class DatetimeFieldOverflow(DataError):
     pass
 
 
-@sqlcode("22009")
+@sqlcode("INVALID_TIME_ZONE_DISPLACEMENT_VALUE", "22009")
 class InvalidTimeZoneDisplacementValue(DataError):
     pass
 
 
-@sqlcode("2200B")
+@sqlcode("ESCAPE_CHARACTER_CONFLICT", "2200B")
 class EscapeCharacterConflict(DataError):
     pass
 
 
-@sqlcode("2200C")
+@sqlcode("INVALID_USE_OF_ESCAPE_CHARACTER", "2200C")
 class InvalidUseOfEscapeCharacter(DataError):
     pass
 
 
-@sqlcode("2200D")
+@sqlcode("INVALID_ESCAPE_OCTET", "2200D")
 class InvalidEscapeOctet(DataError):
     pass
 
 
-@sqlcode("2200F")
+@sqlcode("ZERO_LENGTH_CHARACTER_STRING", "2200F")
 class ZeroLengthCharacterString(DataError):
     pass
 
 
-@sqlcode("2200G")
+@sqlcode("MOST_SPECIFIC_TYPE_MISMATCH", "2200G")
 class MostSpecificTypeMismatch(DataError):
     pass
 
 
-@sqlcode("2200H")
+@sqlcode("SEQUENCE_GENERATOR_LIMIT_EXCEEDED", "2200H")
 class SequenceGeneratorLimitExceeded(DataError):
     pass
 
 
-@sqlcode("2200L")
+@sqlcode("NOT_AN_XML_DOCUMENT", "2200L")
 class NotAnXmlDocument(DataError):
     pass
 
 
-@sqlcode("2200M")
+@sqlcode("INVALID_XML_DOCUMENT", "2200M")
 class InvalidXmlDocument(DataError):
     pass
 
 
-@sqlcode("2200N")
+@sqlcode("INVALID_XML_CONTENT", "2200N")
 class InvalidXmlContent(DataError):
     pass
 
 
-@sqlcode("2200S")
+@sqlcode("INVALID_XML_COMMENT", "2200S")
 class InvalidXmlComment(DataError):
     pass
 
 
-@sqlcode("2200T")
+@sqlcode("INVALID_XML_PROCESSING_INSTRUCTION", "2200T")
 class InvalidXmlProcessingInstruction(DataError):
     pass
 
 
-@sqlcode("22010")
+@sqlcode("INVALID_INDICATOR_PARAMETER_VALUE", "22010")
 class InvalidIndicatorParameterValue(DataError):
     pass
 
 
-@sqlcode("22011")
+@sqlcode("SUBSTRING_ERROR", "22011")
 class SubstringError(DataError):
     pass
 
 
-@sqlcode("22012")
+@sqlcode("DIVISION_BY_ZERO", "22012")
 class DivisionByZero(DataError):
     pass
 
 
-@sqlcode("22013")
+@sqlcode("INVALID_PRECEDING_OR_FOLLOWING_SIZE", "22013")
 class InvalidPrecedingOrFollowingSize(DataError):
     pass
 
 
-@sqlcode("22014")
+@sqlcode("INVALID_ARGUMENT_FOR_NTILE_FUNCTION", "22014")
 class InvalidArgumentForNtileFunction(DataError):
     pass
 
 
-@sqlcode("22015")
+@sqlcode("INTERVAL_FIELD_OVERFLOW", "22015")
 class IntervalFieldOverflow(DataError):
     pass
 
 
-@sqlcode("22016")
+@sqlcode("INVALID_ARGUMENT_FOR_NTH_VALUE_FUNCTION", "22016")
 class InvalidArgumentForNthValueFunction(DataError):
     pass
 
 
-@sqlcode("22018")
+@sqlcode("INVALID_CHARACTER_VALUE_FOR_CAST", "22018")
 class InvalidCharacterValueForCast(DataError):
     pass
 
 
-@sqlcode("22019")
+@sqlcode("INVALID_ESCAPE_CHARACTER", "22019")
 class InvalidEscapeCharacter(DataError):
     pass
 
 
-@sqlcode("2201B")
+@sqlcode("INVALID_REGULAR_EXPRESSION", "2201B")
 class InvalidRegularExpression(DataError):
     pass
 
 
-@sqlcode("2201E")
+@sqlcode("INVALID_ARGUMENT_FOR_LOGARITHM", "2201E")
 class InvalidArgumentForLogarithm(DataError):
     pass
 
 
-@sqlcode("2201F")
+@sqlcode("INVALID_ARGUMENT_FOR_POWER_FUNCTION", "2201F")
 class InvalidArgumentForPowerFunction(DataError):
     pass
 
 
-@sqlcode("2201G")
+@sqlcode("INVALID_ARGUMENT_FOR_WIDTH_BUCKET_FUNCTION", "2201G")
 class InvalidArgumentForWidthBucketFunction(DataError):
     pass
 
 
-@sqlcode("2201W")
+@sqlcode("INVALID_ROW_COUNT_IN_LIMIT_CLAUSE", "2201W")
 class InvalidRowCountInLimitClause(DataError):
     pass
 
 
-@sqlcode("2201X")
+@sqlcode("INVALID_ROW_COUNT_IN_RESULT_OFFSET_CLAUSE", "2201X")
 class InvalidRowCountInResultOffsetClause(DataError):
     pass
 
 
-@sqlcode("22021")
+@sqlcode("CHARACTER_NOT_IN_REPERTOIRE", "22021")
 class CharacterNotInRepertoire(DataError):
     pass
 
 
-@sqlcode("22022")
+@sqlcode("INDICATOR_OVERFLOW", "22022")
 class IndicatorOverflow(DataError):
     pass
 
 
-@sqlcode("22023")
+@sqlcode("INVALID_PARAMETER_VALUE", "22023")
 class InvalidParameterValue(DataError):
     pass
 
 
-@sqlcode("22024")
+@sqlcode("UNTERMINATED_C_STRING", "22024")
 class UnterminatedCString(DataError):
     pass
 
 
-@sqlcode("22025")
+@sqlcode("INVALID_ESCAPE_SEQUENCE", "22025")
 class InvalidEscapeSequence(DataError):
     pass
 
 
-@sqlcode("22026")
+@sqlcode("STRING_DATA_LENGTH_MISMATCH", "22026")
 class StringDataLengthMismatch(DataError):
     pass
 
 
-@sqlcode("22027")
+@sqlcode("TRIM_ERROR", "22027")
 class TrimError(DataError):
     pass
 
 
-@sqlcode("2202E")
+@sqlcode("ARRAY_SUBSCRIPT_ERROR", "2202E")
 class ArraySubscriptError(DataError):
     pass
 
 
-@sqlcode("2202G")
+@sqlcode("INVALID_TABLESAMPLE_REPEAT", "2202G")
 class InvalidTablesampleRepeat(DataError):
     pass
 
 
-@sqlcode("2202H")
+@sqlcode("INVALID_TABLESAMPLE_ARGUMENT", "2202H")
 class InvalidTablesampleArgument(DataError):
     pass
 
 
-@sqlcode("22030")
+@sqlcode("DUPLICATE_JSON_OBJECT_KEY_VALUE", "22030")
 class DuplicateJsonObjectKeyValue(DataError):
     pass
 
 
-@sqlcode("22031")
+@sqlcode("INVALID_ARGUMENT_FOR_SQL_JSON_DATETIME_FUNCTION", "22031")
 class InvalidArgumentForSqlJsonDatetimeFunction(DataError):
     pass
 
 
-@sqlcode("22032")
+@sqlcode("INVALID_JSON_TEXT", "22032")
 class InvalidJsonText(DataError):
     pass
 
 
-@sqlcode("22033")
+@sqlcode("INVALID_SQL_JSON_SUBSCRIPT", "22033")
 class InvalidSqlJsonSubscript(DataError):
     pass
 
 
-@sqlcode("22034")
+@sqlcode("MORE_THAN_ONE_SQL_JSON_ITEM", "22034")
 class MoreThanOneSqlJsonItem(DataError):
     pass
 
 
-@sqlcode("22035")
+@sqlcode("NO_SQL_JSON_ITEM", "22035")
 class NoSqlJsonItem(DataError):
     pass
 
 
-@sqlcode("22036")
+@sqlcode("NON_NUMERIC_SQL_JSON_ITEM", "22036")
 class NonNumericSqlJsonItem(DataError):
     pass
 
 
-@sqlcode("22037")
+@sqlcode("NON_UNIQUE_KEYS_IN_A_JSON_OBJECT", "22037")
 class NonUniqueKeysInAJsonObject(DataError):
     pass
 
 
-@sqlcode("22038")
+@sqlcode("SINGLETON_SQL_JSON_ITEM_REQUIRED", "22038")
 class SingletonSqlJsonItemRequired(DataError):
     pass
 
 
-@sqlcode("22039")
+@sqlcode("SQL_JSON_ARRAY_NOT_FOUND", "22039")
 class SqlJsonArrayNotFound(DataError):
     pass
 
 
-@sqlcode("2203A")
+@sqlcode("SQL_JSON_MEMBER_NOT_FOUND", "2203A")
 class SqlJsonMemberNotFound(DataError):
     pass
 
 
-@sqlcode("2203B")
+@sqlcode("SQL_JSON_NUMBER_NOT_FOUND", "2203B")
 class SqlJsonNumberNotFound(DataError):
     pass
 
 
-@sqlcode("2203C")
+@sqlcode("SQL_JSON_OBJECT_NOT_FOUND", "2203C")
 class SqlJsonObjectNotFound(DataError):
     pass
 
 
-@sqlcode("2203D")
+@sqlcode("TOO_MANY_JSON_ARRAY_ELEMENTS", "2203D")
 class TooManyJsonArrayElements(DataError):
     pass
 
 
-@sqlcode("2203E")
+@sqlcode("TOO_MANY_JSON_OBJECT_MEMBERS", "2203E")
 class TooManyJsonObjectMembers(DataError):
     pass
 
 
-@sqlcode("2203F")
+@sqlcode("SQL_JSON_SCALAR_REQUIRED", "2203F")
 class SqlJsonScalarRequired(DataError):
     pass
 
 
-@sqlcode("22P01")
+@sqlcode("FLOATING_POINT_EXCEPTION", "22P01")
 class FloatingPointException(DataError):
     pass
 
 
-@sqlcode("22P02")
+@sqlcode("INVALID_TEXT_REPRESENTATION", "22P02")
 class InvalidTextRepresentation(DataError):
     pass
 
 
-@sqlcode("22P03")
+@sqlcode("INVALID_BINARY_REPRESENTATION", "22P03")
 class InvalidBinaryRepresentation(DataError):
     pass
 
 
-@sqlcode("22P04")
+@sqlcode("BAD_COPY_FILE_FORMAT", "22P04")
 class BadCopyFileFormat(DataError):
     pass
 
 
-@sqlcode("22P05")
+@sqlcode("UNTRANSLATABLE_CHARACTER", "22P05")
 class UntranslatableCharacter(DataError):
     pass
 
 
-@sqlcode("22P06")
+@sqlcode("NONSTANDARD_USE_OF_ESCAPE_CHARACTER", "22P06")
 class NonstandardUseOfEscapeCharacter(DataError):
     pass
 
@@ -841,37 +849,37 @@ class NonstandardUseOfEscapeCharacter(DataError):
 # Class 23 - Integrity Constraint Violation
 
 
-@sqlcode("23000")
+@sqlcode("INTEGRITY_CONSTRAINT_VIOLATION", "23000")
 class IntegrityConstraintViolation(IntegrityError):
     pass
 
 
-@sqlcode("23001")
+@sqlcode("RESTRICT_VIOLATION", "23001")
 class RestrictViolation(IntegrityError):
     pass
 
 
-@sqlcode("23502")
+@sqlcode("NOT_NULL_VIOLATION", "23502")
 class NotNullViolation(IntegrityError):
     pass
 
 
-@sqlcode("23503")
+@sqlcode("FOREIGN_KEY_VIOLATION", "23503")
 class ForeignKeyViolation(IntegrityError):
     pass
 
 
-@sqlcode("23505")
+@sqlcode("UNIQUE_VIOLATION", "23505")
 class UniqueViolation(IntegrityError):
     pass
 
 
-@sqlcode("23514")
+@sqlcode("CHECK_VIOLATION", "23514")
 class CheckViolation(IntegrityError):
     pass
 
 
-@sqlcode("23P01")
+@sqlcode("EXCLUSION_VIOLATION", "23P01")
 class ExclusionViolation(IntegrityError):
     pass
 
@@ -879,7 +887,7 @@ class ExclusionViolation(IntegrityError):
 # Class 24 - Invalid Cursor State
 
 
-@sqlcode("24000")
+@sqlcode("INVALID_CURSOR_STATE", "24000")
 class InvalidCursorState(InternalError):
     pass
 
@@ -887,62 +895,62 @@ class InvalidCursorState(InternalError):
 # Class 25 - Invalid Transaction State
 
 
-@sqlcode("25000")
+@sqlcode("INVALID_TRANSACTION_STATE", "25000")
 class InvalidTransactionState(InternalError):
     pass
 
 
-@sqlcode("25001")
+@sqlcode("ACTIVE_SQL_TRANSACTION", "25001")
 class ActiveSqlTransaction(InternalError):
     pass
 
 
-@sqlcode("25002")
+@sqlcode("BRANCH_TRANSACTION_ALREADY_ACTIVE", "25002")
 class BranchTransactionAlreadyActive(InternalError):
     pass
 
 
-@sqlcode("25003")
+@sqlcode("INAPPROPRIATE_ACCESS_MODE_FOR_BRANCH_TRANSACTION", "25003")
 class InappropriateAccessModeForBranchTransaction(InternalError):
     pass
 
 
-@sqlcode("25004")
+@sqlcode("INAPPROPRIATE_ISOLATION_LEVEL_FOR_BRANCH_TRANSACTION", "25004")
 class InappropriateIsolationLevelForBranchTransaction(InternalError):
     pass
 
 
-@sqlcode("25005")
+@sqlcode("NO_ACTIVE_SQL_TRANSACTION_FOR_BRANCH_TRANSACTION", "25005")
 class NoActiveSqlTransactionForBranchTransaction(InternalError):
     pass
 
 
-@sqlcode("25006")
+@sqlcode("READ_ONLY_SQL_TRANSACTION", "25006")
 class ReadOnlySqlTransaction(InternalError):
     pass
 
 
-@sqlcode("25007")
+@sqlcode("SCHEMA_AND_DATA_STATEMENT_MIXING_NOT_SUPPORTED", "25007")
 class SchemaAndDataStatementMixingNotSupported(InternalError):
     pass
 
 
-@sqlcode("25008")
+@sqlcode("HELD_CURSOR_REQUIRES_SAME_ISOLATION_LEVEL", "25008")
 class HeldCursorRequiresSameIsolationLevel(InternalError):
     pass
 
 
-@sqlcode("25P01")
+@sqlcode("NO_ACTIVE_SQL_TRANSACTION", "25P01")
 class NoActiveSqlTransaction(InternalError):
     pass
 
 
-@sqlcode("25P02")
+@sqlcode("IN_FAILED_SQL_TRANSACTION", "25P02")
 class InFailedSqlTransaction(InternalError):
     pass
 
 
-@sqlcode("25P03")
+@sqlcode("IDLE_IN_TRANSACTION_SESSION_TIMEOUT", "25P03")
 class IdleInTransactionSessionTimeout(InternalError):
     pass
 
@@ -950,7 +958,7 @@ class IdleInTransactionSessionTimeout(InternalError):
 # Class 26 - Invalid SQL Statement Name
 
 
-@sqlcode("26000")
+@sqlcode("INVALID_SQL_STATEMENT_NAME", "26000")
 class InvalidSqlStatementName(ProgrammingError):
     pass
 
@@ -958,7 +966,7 @@ class InvalidSqlStatementName(ProgrammingError):
 # Class 27 - Triggered Data Change Violation
 
 
-@sqlcode("27000")
+@sqlcode("TRIGGERED_DATA_CHANGE_VIOLATION", "27000")
 class TriggeredDataChangeViolation(OperationalError):
     pass
 
@@ -966,12 +974,12 @@ class TriggeredDataChangeViolation(OperationalError):
 # Class 28 - Invalid Authorization Specification
 
 
-@sqlcode("28000")
+@sqlcode("INVALID_AUTHORIZATION_SPECIFICATION", "28000")
 class InvalidAuthorizationSpecification(OperationalError):
     pass
 
 
-@sqlcode("28P01")
+@sqlcode("INVALID_PASSWORD", "28P01")
 class InvalidPassword(OperationalError):
     pass
 
@@ -979,12 +987,12 @@ class InvalidPassword(OperationalError):
 # Class 2B - Dependent Privilege Descriptors Still Exist
 
 
-@sqlcode("2B000")
+@sqlcode("DEPENDENT_PRIVILEGE_DESCRIPTORS_STILL_EXIST", "2B000")
 class DependentPrivilegeDescriptorsStillExist(InternalError):
     pass
 
 
-@sqlcode("2BP01")
+@sqlcode("DEPENDENT_OBJECTS_STILL_EXIST", "2BP01")
 class DependentObjectsStillExist(InternalError):
     pass
 
@@ -992,7 +1000,7 @@ class DependentObjectsStillExist(InternalError):
 # Class 2D - Invalid Transaction Termination
 
 
-@sqlcode("2D000")
+@sqlcode("INVALID_TRANSACTION_TERMINATION", "2D000")
 class InvalidTransactionTermination(InternalError):
     pass
 
@@ -1000,27 +1008,27 @@ class InvalidTransactionTermination(InternalError):
 # Class 2F - SQL Routine Exception
 
 
-@sqlcode("2F000")
+@sqlcode("SQL_ROUTINE_EXCEPTION", "2F000")
 class SqlRoutineException(OperationalError):
     pass
 
 
-@sqlcode("2F002")
+@sqlcode("MODIFYING_SQL_DATA_NOT_PERMITTED", "2F002")
 class ModifyingSqlDataNotPermitted(OperationalError):
     pass
 
 
-@sqlcode("2F003")
+@sqlcode("PROHIBITED_SQL_STATEMENT_ATTEMPTED", "2F003")
 class ProhibitedSqlStatementAttempted(OperationalError):
     pass
 
 
-@sqlcode("2F004")
+@sqlcode("READING_SQL_DATA_NOT_PERMITTED", "2F004")
 class ReadingSqlDataNotPermitted(OperationalError):
     pass
 
 
-@sqlcode("2F005")
+@sqlcode("FUNCTION_EXECUTED_NO_RETURN_STATEMENT", "2F005")
 class FunctionExecutedNoReturnStatement(OperationalError):
     pass
 
@@ -1028,7 +1036,7 @@ class FunctionExecutedNoReturnStatement(OperationalError):
 # Class 34 - Invalid Cursor Name
 
 
-@sqlcode("34000")
+@sqlcode("INVALID_CURSOR_NAME", "34000")
 class InvalidCursorName(ProgrammingError):
     pass
 
@@ -1036,27 +1044,27 @@ class InvalidCursorName(ProgrammingError):
 # Class 38 - External Routine Exception
 
 
-@sqlcode("38000")
+@sqlcode("EXTERNAL_ROUTINE_EXCEPTION", "38000")
 class ExternalRoutineException(OperationalError):
     pass
 
 
-@sqlcode("38001")
+@sqlcode("CONTAINING_SQL_NOT_PERMITTED", "38001")
 class ContainingSqlNotPermitted(OperationalError):
     pass
 
 
-@sqlcode("38002")
+@sqlcode("MODIFYING_SQL_DATA_NOT_PERMITTED", "38002")
 class ModifyingSqlDataNotPermittedExt(OperationalError):
     pass
 
 
-@sqlcode("38003")
+@sqlcode("PROHIBITED_SQL_STATEMENT_ATTEMPTED", "38003")
 class ProhibitedSqlStatementAttemptedExt(OperationalError):
     pass
 
 
-@sqlcode("38004")
+@sqlcode("READING_SQL_DATA_NOT_PERMITTED", "38004")
 class ReadingSqlDataNotPermittedExt(OperationalError):
     pass
 
@@ -1064,32 +1072,32 @@ class ReadingSqlDataNotPermittedExt(OperationalError):
 # Class 39 - External Routine Invocation Exception
 
 
-@sqlcode("39000")
+@sqlcode("EXTERNAL_ROUTINE_INVOCATION_EXCEPTION", "39000")
 class ExternalRoutineInvocationException(OperationalError):
     pass
 
 
-@sqlcode("39001")
+@sqlcode("INVALID_SQLSTATE_RETURNED", "39001")
 class InvalidSqlstateReturned(OperationalError):
     pass
 
 
-@sqlcode("39004")
+@sqlcode("NULL_VALUE_NOT_ALLOWED", "39004")
 class NullValueNotAllowedExt(OperationalError):
     pass
 
 
-@sqlcode("39P01")
+@sqlcode("TRIGGER_PROTOCOL_VIOLATED", "39P01")
 class TriggerProtocolViolated(OperationalError):
     pass
 
 
-@sqlcode("39P02")
+@sqlcode("SRF_PROTOCOL_VIOLATED", "39P02")
 class SrfProtocolViolated(OperationalError):
     pass
 
 
-@sqlcode("39P03")
+@sqlcode("EVENT_TRIGGER_PROTOCOL_VIOLATED", "39P03")
 class EventTriggerProtocolViolated(OperationalError):
     pass
 
@@ -1097,12 +1105,12 @@ class EventTriggerProtocolViolated(OperationalError):
 # Class 3B - Savepoint Exception
 
 
-@sqlcode("3B000")
+@sqlcode("SAVEPOINT_EXCEPTION", "3B000")
 class SavepointException(OperationalError):
     pass
 
 
-@sqlcode("3B001")
+@sqlcode("INVALID_SAVEPOINT_SPECIFICATION", "3B001")
 class InvalidSavepointSpecification(OperationalError):
     pass
 
@@ -1110,7 +1118,7 @@ class InvalidSavepointSpecification(OperationalError):
 # Class 3D - Invalid Catalog Name
 
 
-@sqlcode("3D000")
+@sqlcode("INVALID_CATALOG_NAME", "3D000")
 class InvalidCatalogName(ProgrammingError):
     pass
 
@@ -1118,7 +1126,7 @@ class InvalidCatalogName(ProgrammingError):
 # Class 3F - Invalid Schema Name
 
 
-@sqlcode("3F000")
+@sqlcode("INVALID_SCHEMA_NAME", "3F000")
 class InvalidSchemaName(ProgrammingError):
     pass
 
@@ -1126,27 +1134,27 @@ class InvalidSchemaName(ProgrammingError):
 # Class 40 - Transaction Rollback
 
 
-@sqlcode("40000")
+@sqlcode("TRANSACTION_ROLLBACK", "40000")
 class TransactionRollback(OperationalError):
     pass
 
 
-@sqlcode("40001")
+@sqlcode("SERIALIZATION_FAILURE", "40001")
 class SerializationFailure(OperationalError):
     pass
 
 
-@sqlcode("40002")
+@sqlcode("TRANSACTION_INTEGRITY_CONSTRAINT_VIOLATION", "40002")
 class TransactionIntegrityConstraintViolation(OperationalError):
     pass
 
 
-@sqlcode("40003")
+@sqlcode("STATEMENT_COMPLETION_UNKNOWN", "40003")
 class StatementCompletionUnknown(OperationalError):
     pass
 
 
-@sqlcode("40P01")
+@sqlcode("DEADLOCK_DETECTED", "40P01")
 class DeadlockDetected(OperationalError):
     pass
 
@@ -1154,222 +1162,222 @@ class DeadlockDetected(OperationalError):
 # Class 42 - Syntax Error or Access Rule Violation
 
 
-@sqlcode("42000")
+@sqlcode("SYNTAX_ERROR_OR_ACCESS_RULE_VIOLATION", "42000")
 class SyntaxErrorOrAccessRuleViolation(ProgrammingError):
     pass
 
 
-@sqlcode("42501")
+@sqlcode("INSUFFICIENT_PRIVILEGE", "42501")
 class InsufficientPrivilege(ProgrammingError):
     pass
 
 
-@sqlcode("42601")
+@sqlcode("SYNTAX_ERROR", "42601")
 class SyntaxError(ProgrammingError):
     pass
 
 
-@sqlcode("42602")
+@sqlcode("INVALID_NAME", "42602")
 class InvalidName(ProgrammingError):
     pass
 
 
-@sqlcode("42611")
+@sqlcode("INVALID_COLUMN_DEFINITION", "42611")
 class InvalidColumnDefinition(ProgrammingError):
     pass
 
 
-@sqlcode("42622")
+@sqlcode("NAME_TOO_LONG", "42622")
 class NameTooLong(ProgrammingError):
     pass
 
 
-@sqlcode("42701")
+@sqlcode("DUPLICATE_COLUMN", "42701")
 class DuplicateColumn(ProgrammingError):
     pass
 
 
-@sqlcode("42702")
+@sqlcode("AMBIGUOUS_COLUMN", "42702")
 class AmbiguousColumn(ProgrammingError):
     pass
 
 
-@sqlcode("42703")
+@sqlcode("UNDEFINED_COLUMN", "42703")
 class UndefinedColumn(ProgrammingError):
     pass
 
 
-@sqlcode("42704")
+@sqlcode("UNDEFINED_OBJECT", "42704")
 class UndefinedObject(ProgrammingError):
     pass
 
 
-@sqlcode("42710")
+@sqlcode("DUPLICATE_OBJECT", "42710")
 class DuplicateObject(ProgrammingError):
     pass
 
 
-@sqlcode("42712")
+@sqlcode("DUPLICATE_ALIAS", "42712")
 class DuplicateAlias(ProgrammingError):
     pass
 
 
-@sqlcode("42723")
+@sqlcode("DUPLICATE_FUNCTION", "42723")
 class DuplicateFunction(ProgrammingError):
     pass
 
 
-@sqlcode("42725")
+@sqlcode("AMBIGUOUS_FUNCTION", "42725")
 class AmbiguousFunction(ProgrammingError):
     pass
 
 
-@sqlcode("42803")
+@sqlcode("GROUPING_ERROR", "42803")
 class GroupingError(ProgrammingError):
     pass
 
 
-@sqlcode("42804")
+@sqlcode("DATATYPE_MISMATCH", "42804")
 class DatatypeMismatch(ProgrammingError):
     pass
 
 
-@sqlcode("42809")
+@sqlcode("WRONG_OBJECT_TYPE", "42809")
 class WrongObjectType(ProgrammingError):
     pass
 
 
-@sqlcode("42830")
+@sqlcode("INVALID_FOREIGN_KEY", "42830")
 class InvalidForeignKey(ProgrammingError):
     pass
 
 
-@sqlcode("42846")
+@sqlcode("CANNOT_COERCE", "42846")
 class CannotCoerce(ProgrammingError):
     pass
 
 
-@sqlcode("42883")
+@sqlcode("UNDEFINED_FUNCTION", "42883")
 class UndefinedFunction(ProgrammingError):
     pass
 
 
-@sqlcode("428C9")
+@sqlcode("GENERATED_ALWAYS", "428C9")
 class GeneratedAlways(ProgrammingError):
     pass
 
 
-@sqlcode("42939")
+@sqlcode("RESERVED_NAME", "42939")
 class ReservedName(ProgrammingError):
     pass
 
 
-@sqlcode("42P01")
+@sqlcode("UNDEFINED_TABLE", "42P01")
 class UndefinedTable(ProgrammingError):
     pass
 
 
-@sqlcode("42P02")
+@sqlcode("UNDEFINED_PARAMETER", "42P02")
 class UndefinedParameter(ProgrammingError):
     pass
 
 
-@sqlcode("42P03")
+@sqlcode("DUPLICATE_CURSOR", "42P03")
 class DuplicateCursor(ProgrammingError):
     pass
 
 
-@sqlcode("42P04")
+@sqlcode("DUPLICATE_DATABASE", "42P04")
 class DuplicateDatabase(ProgrammingError):
     pass
 
 
-@sqlcode("42P05")
+@sqlcode("DUPLICATE_PREPARED_STATEMENT", "42P05")
 class DuplicatePreparedStatement(ProgrammingError):
     pass
 
 
-@sqlcode("42P06")
+@sqlcode("DUPLICATE_SCHEMA", "42P06")
 class DuplicateSchema(ProgrammingError):
     pass
 
 
-@sqlcode("42P07")
+@sqlcode("DUPLICATE_TABLE", "42P07")
 class DuplicateTable(ProgrammingError):
     pass
 
 
-@sqlcode("42P08")
+@sqlcode("AMBIGUOUS_PARAMETER", "42P08")
 class AmbiguousParameter(ProgrammingError):
     pass
 
 
-@sqlcode("42P09")
+@sqlcode("AMBIGUOUS_ALIAS", "42P09")
 class AmbiguousAlias(ProgrammingError):
     pass
 
 
-@sqlcode("42P10")
+@sqlcode("INVALID_COLUMN_REFERENCE", "42P10")
 class InvalidColumnReference(ProgrammingError):
     pass
 
 
-@sqlcode("42P11")
+@sqlcode("INVALID_CURSOR_DEFINITION", "42P11")
 class InvalidCursorDefinition(ProgrammingError):
     pass
 
 
-@sqlcode("42P12")
+@sqlcode("INVALID_DATABASE_DEFINITION", "42P12")
 class InvalidDatabaseDefinition(ProgrammingError):
     pass
 
 
-@sqlcode("42P13")
+@sqlcode("INVALID_FUNCTION_DEFINITION", "42P13")
 class InvalidFunctionDefinition(ProgrammingError):
     pass
 
 
-@sqlcode("42P14")
+@sqlcode("INVALID_PREPARED_STATEMENT_DEFINITION", "42P14")
 class InvalidPreparedStatementDefinition(ProgrammingError):
     pass
 
 
-@sqlcode("42P15")
+@sqlcode("INVALID_SCHEMA_DEFINITION", "42P15")
 class InvalidSchemaDefinition(ProgrammingError):
     pass
 
 
-@sqlcode("42P16")
+@sqlcode("INVALID_TABLE_DEFINITION", "42P16")
 class InvalidTableDefinition(ProgrammingError):
     pass
 
 
-@sqlcode("42P17")
+@sqlcode("INVALID_OBJECT_DEFINITION", "42P17")
 class InvalidObjectDefinition(ProgrammingError):
     pass
 
 
-@sqlcode("42P18")
+@sqlcode("INDETERMINATE_DATATYPE", "42P18")
 class IndeterminateDatatype(ProgrammingError):
     pass
 
 
-@sqlcode("42P19")
+@sqlcode("INVALID_RECURSION", "42P19")
 class InvalidRecursion(ProgrammingError):
     pass
 
 
-@sqlcode("42P20")
+@sqlcode("WINDOWING_ERROR", "42P20")
 class WindowingError(ProgrammingError):
     pass
 
 
-@sqlcode("42P21")
+@sqlcode("COLLATION_MISMATCH", "42P21")
 class CollationMismatch(ProgrammingError):
     pass
 
 
-@sqlcode("42P22")
+@sqlcode("INDETERMINATE_COLLATION", "42P22")
 class IndeterminateCollation(ProgrammingError):
     pass
 
@@ -1377,7 +1385,7 @@ class IndeterminateCollation(ProgrammingError):
 # Class 44 - WITH CHECK OPTION Violation
 
 
-@sqlcode("44000")
+@sqlcode("WITH_CHECK_OPTION_VIOLATION", "44000")
 class WithCheckOptionViolation(ProgrammingError):
     pass
 
@@ -1385,27 +1393,27 @@ class WithCheckOptionViolation(ProgrammingError):
 # Class 53 - Insufficient Resources
 
 
-@sqlcode("53000")
+@sqlcode("INSUFFICIENT_RESOURCES", "53000")
 class InsufficientResources(OperationalError):
     pass
 
 
-@sqlcode("53100")
+@sqlcode("DISK_FULL", "53100")
 class DiskFull(OperationalError):
     pass
 
 
-@sqlcode("53200")
+@sqlcode("OUT_OF_MEMORY", "53200")
 class OutOfMemory(OperationalError):
     pass
 
 
-@sqlcode("53300")
+@sqlcode("TOO_MANY_CONNECTIONS", "53300")
 class TooManyConnections(OperationalError):
     pass
 
 
-@sqlcode("53400")
+@sqlcode("CONFIGURATION_LIMIT_EXCEEDED", "53400")
 class ConfigurationLimitExceeded(OperationalError):
     pass
 
@@ -1413,22 +1421,22 @@ class ConfigurationLimitExceeded(OperationalError):
 # Class 54 - Program Limit Exceeded
 
 
-@sqlcode("54000")
+@sqlcode("PROGRAM_LIMIT_EXCEEDED", "54000")
 class ProgramLimitExceeded(OperationalError):
     pass
 
 
-@sqlcode("54001")
+@sqlcode("STATEMENT_TOO_COMPLEX", "54001")
 class StatementTooComplex(OperationalError):
     pass
 
 
-@sqlcode("54011")
+@sqlcode("TOO_MANY_COLUMNS", "54011")
 class TooManyColumns(OperationalError):
     pass
 
 
-@sqlcode("54023")
+@sqlcode("TOO_MANY_ARGUMENTS", "54023")
 class TooManyArguments(OperationalError):
     pass
 
@@ -1436,27 +1444,27 @@ class TooManyArguments(OperationalError):
 # Class 55 - Object Not In Prerequisite State
 
 
-@sqlcode("55000")
+@sqlcode("OBJECT_NOT_IN_PREREQUISITE_STATE", "55000")
 class ObjectNotInPrerequisiteState(OperationalError):
     pass
 
 
-@sqlcode("55006")
+@sqlcode("OBJECT_IN_USE", "55006")
 class ObjectInUse(OperationalError):
     pass
 
 
-@sqlcode("55P02")
+@sqlcode("CANT_CHANGE_RUNTIME_PARAM", "55P02")
 class CantChangeRuntimeParam(OperationalError):
     pass
 
 
-@sqlcode("55P03")
+@sqlcode("LOCK_NOT_AVAILABLE", "55P03")
 class LockNotAvailable(OperationalError):
     pass
 
 
-@sqlcode("55P04")
+@sqlcode("UNSAFE_NEW_ENUM_VALUE_USAGE", "55P04")
 class UnsafeNewEnumValueUsage(OperationalError):
     pass
 
@@ -1464,32 +1472,32 @@ class UnsafeNewEnumValueUsage(OperationalError):
 # Class 57 - Operator Intervention
 
 
-@sqlcode("57000")
+@sqlcode("OPERATOR_INTERVENTION", "57000")
 class OperatorIntervention(OperationalError):
     pass
 
 
-@sqlcode("57014")
+@sqlcode("QUERY_CANCELED", "57014")
 class QueryCanceled(OperationalError):
     pass
 
 
-@sqlcode("57P01")
+@sqlcode("ADMIN_SHUTDOWN", "57P01")
 class AdminShutdown(OperationalError):
     pass
 
 
-@sqlcode("57P02")
+@sqlcode("CRASH_SHUTDOWN", "57P02")
 class CrashShutdown(OperationalError):
     pass
 
 
-@sqlcode("57P03")
+@sqlcode("CANNOT_CONNECT_NOW", "57P03")
 class CannotConnectNow(OperationalError):
     pass
 
 
-@sqlcode("57P04")
+@sqlcode("DATABASE_DROPPED", "57P04")
 class DatabaseDropped(OperationalError):
     pass
 
@@ -1497,22 +1505,22 @@ class DatabaseDropped(OperationalError):
 # Class 58 - System Error (errors external to PostgreSQL itself)
 
 
-@sqlcode("58000")
+@sqlcode("SYSTEM_ERROR", "58000")
 class SystemError(OperationalError):
     pass
 
 
-@sqlcode("58030")
+@sqlcode("IO_ERROR", "58030")
 class IoError(OperationalError):
     pass
 
 
-@sqlcode("58P01")
+@sqlcode("UNDEFINED_FILE", "58P01")
 class UndefinedFile(OperationalError):
     pass
 
 
-@sqlcode("58P02")
+@sqlcode("DUPLICATE_FILE", "58P02")
 class DuplicateFile(OperationalError):
     pass
 
@@ -1520,7 +1528,7 @@ class DuplicateFile(OperationalError):
 # Class 72 - Snapshot Failure
 
 
-@sqlcode("72000")
+@sqlcode("SNAPSHOT_TOO_OLD", "72000")
 class SnapshotTooOld(DatabaseError):
     pass
 
@@ -1528,12 +1536,12 @@ class SnapshotTooOld(DatabaseError):
 # Class F0 - Configuration File Error
 
 
-@sqlcode("F0000")
+@sqlcode("CONFIG_FILE_ERROR", "F0000")
 class ConfigFileError(OperationalError):
     pass
 
 
-@sqlcode("F0001")
+@sqlcode("LOCK_FILE_EXISTS", "F0001")
 class LockFileExists(OperationalError):
     pass
 
@@ -1541,137 +1549,137 @@ class LockFileExists(OperationalError):
 # Class HV - Foreign Data Wrapper Error (SQL/MED)
 
 
-@sqlcode("HV000")
+@sqlcode("FDW_ERROR", "HV000")
 class FdwError(OperationalError):
     pass
 
 
-@sqlcode("HV001")
+@sqlcode("FDW_OUT_OF_MEMORY", "HV001")
 class FdwOutOfMemory(OperationalError):
     pass
 
 
-@sqlcode("HV002")
+@sqlcode("FDW_DYNAMIC_PARAMETER_VALUE_NEEDED", "HV002")
 class FdwDynamicParameterValueNeeded(OperationalError):
     pass
 
 
-@sqlcode("HV004")
+@sqlcode("FDW_INVALID_DATA_TYPE", "HV004")
 class FdwInvalidDataType(OperationalError):
     pass
 
 
-@sqlcode("HV005")
+@sqlcode("FDW_COLUMN_NAME_NOT_FOUND", "HV005")
 class FdwColumnNameNotFound(OperationalError):
     pass
 
 
-@sqlcode("HV006")
+@sqlcode("FDW_INVALID_DATA_TYPE_DESCRIPTORS", "HV006")
 class FdwInvalidDataTypeDescriptors(OperationalError):
     pass
 
 
-@sqlcode("HV007")
+@sqlcode("FDW_INVALID_COLUMN_NAME", "HV007")
 class FdwInvalidColumnName(OperationalError):
     pass
 
 
-@sqlcode("HV008")
+@sqlcode("FDW_INVALID_COLUMN_NUMBER", "HV008")
 class FdwInvalidColumnNumber(OperationalError):
     pass
 
 
-@sqlcode("HV009")
+@sqlcode("FDW_INVALID_USE_OF_NULL_POINTER", "HV009")
 class FdwInvalidUseOfNullPointer(OperationalError):
     pass
 
 
-@sqlcode("HV00A")
+@sqlcode("FDW_INVALID_STRING_FORMAT", "HV00A")
 class FdwInvalidStringFormat(OperationalError):
     pass
 
 
-@sqlcode("HV00B")
+@sqlcode("FDW_INVALID_HANDLE", "HV00B")
 class FdwInvalidHandle(OperationalError):
     pass
 
 
-@sqlcode("HV00C")
+@sqlcode("FDW_INVALID_OPTION_INDEX", "HV00C")
 class FdwInvalidOptionIndex(OperationalError):
     pass
 
 
-@sqlcode("HV00D")
+@sqlcode("FDW_INVALID_OPTION_NAME", "HV00D")
 class FdwInvalidOptionName(OperationalError):
     pass
 
 
-@sqlcode("HV00J")
+@sqlcode("FDW_OPTION_NAME_NOT_FOUND", "HV00J")
 class FdwOptionNameNotFound(OperationalError):
     pass
 
 
-@sqlcode("HV00K")
+@sqlcode("FDW_REPLY_HANDLE", "HV00K")
 class FdwReplyHandle(OperationalError):
     pass
 
 
-@sqlcode("HV00L")
+@sqlcode("FDW_UNABLE_TO_CREATE_EXECUTION", "HV00L")
 class FdwUnableToCreateExecution(OperationalError):
     pass
 
 
-@sqlcode("HV00M")
+@sqlcode("FDW_UNABLE_TO_CREATE_REPLY", "HV00M")
 class FdwUnableToCreateReply(OperationalError):
     pass
 
 
-@sqlcode("HV00N")
+@sqlcode("FDW_UNABLE_TO_ESTABLISH_CONNECTION", "HV00N")
 class FdwUnableToEstablishConnection(OperationalError):
     pass
 
 
-@sqlcode("HV00P")
+@sqlcode("FDW_NO_SCHEMAS", "HV00P")
 class FdwNoSchemas(OperationalError):
     pass
 
 
-@sqlcode("HV00Q")
+@sqlcode("FDW_SCHEMA_NOT_FOUND", "HV00Q")
 class FdwSchemaNotFound(OperationalError):
     pass
 
 
-@sqlcode("HV00R")
+@sqlcode("FDW_TABLE_NOT_FOUND", "HV00R")
 class FdwTableNotFound(OperationalError):
     pass
 
 
-@sqlcode("HV010")
+@sqlcode("FDW_FUNCTION_SEQUENCE_ERROR", "HV010")
 class FdwFunctionSequenceError(OperationalError):
     pass
 
 
-@sqlcode("HV014")
+@sqlcode("FDW_TOO_MANY_HANDLES", "HV014")
 class FdwTooManyHandles(OperationalError):
     pass
 
 
-@sqlcode("HV021")
+@sqlcode("FDW_INCONSISTENT_DESCRIPTOR_INFORMATION", "HV021")
 class FdwInconsistentDescriptorInformation(OperationalError):
     pass
 
 
-@sqlcode("HV024")
+@sqlcode("FDW_INVALID_ATTRIBUTE_VALUE", "HV024")
 class FdwInvalidAttributeValue(OperationalError):
     pass
 
 
-@sqlcode("HV090")
+@sqlcode("FDW_INVALID_STRING_LENGTH_OR_BUFFER_LENGTH", "HV090")
 class FdwInvalidStringLengthOrBufferLength(OperationalError):
     pass
 
 
-@sqlcode("HV091")
+@sqlcode("FDW_INVALID_DESCRIPTOR_FIELD_IDENTIFIER", "HV091")
 class FdwInvalidDescriptorFieldIdentifier(OperationalError):
     pass
 
@@ -1679,27 +1687,27 @@ class FdwInvalidDescriptorFieldIdentifier(OperationalError):
 # Class P0 - PL/pgSQL Error
 
 
-@sqlcode("P0000")
+@sqlcode("PLPGSQL_ERROR", "P0000")
 class PlpgsqlError(ProgrammingError):
     pass
 
 
-@sqlcode("P0001")
+@sqlcode("RAISE_EXCEPTION", "P0001")
 class RaiseException(ProgrammingError):
     pass
 
 
-@sqlcode("P0002")
+@sqlcode("NO_DATA_FOUND", "P0002")
 class NoDataFound(ProgrammingError):
     pass
 
 
-@sqlcode("P0003")
+@sqlcode("TOO_MANY_ROWS", "P0003")
 class TooManyRows(ProgrammingError):
     pass
 
 
-@sqlcode("P0004")
+@sqlcode("ASSERT_FAILURE", "P0004")
 class AssertFailure(ProgrammingError):
     pass
 
@@ -1707,17 +1715,17 @@ class AssertFailure(ProgrammingError):
 # Class XX - Internal Error
 
 
-@sqlcode("XX000")
+@sqlcode("INTERNAL_ERROR", "XX000")
 class InternalError_(InternalError):
     pass
 
 
-@sqlcode("XX001")
+@sqlcode("DATA_CORRUPTED", "XX001")
 class DataCorrupted(InternalError):
     pass
 
 
-@sqlcode("XX002")
+@sqlcode("INDEX_CORRUPTED", "XX002")
 class IndexCorrupted(InternalError):
     pass
 
