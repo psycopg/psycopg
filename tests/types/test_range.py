@@ -8,6 +8,7 @@ import psycopg.errors
 from psycopg import pq
 from psycopg.sql import Identifier
 from psycopg.adapt import PyFormat as Format
+from psycopg.types import range as range_module
 from psycopg.types.range import Range, RangeInfo
 
 
@@ -60,16 +61,76 @@ def test_dump_builtin_empty(conn, pgtype, fmt_in):
 
 
 @pytest.mark.parametrize(
+    "wrapper",
+    """
+    Int4Range Int8Range NumericRange DateRange TimestampRange TimestamptzRange
+    """.split(),
+)
+@pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
+def test_dump_builtin_empty_wrapper(conn, wrapper, fmt_in):
+    wrapper = getattr(range_module, wrapper)
+    r = wrapper(empty=True)
+    cur = conn.execute(f"select 'empty' = %{fmt_in}", (r,))
+    assert cur.fetchone()[0] is True
+
+
+@pytest.mark.parametrize(
     "pgtype",
     "int4range int8range numrange daterange tsrange tstzrange".split(),
 )
-@pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize(
+    "fmt_in",
+    [
+        Format.AUTO,
+        Format.TEXT,
+        # There are many ways to work around this (use text, use a cast on the
+        # placeholder, use specific Range subclasses).
+        pytest.param(
+            Format.BINARY,
+            marks=pytest.mark.xfail(
+                reason="can't dump an array of untypes binary range without cast"
+            ),
+        ),
+    ],
+)
 def test_dump_builtin_array(conn, pgtype, fmt_in):
     r1 = Range(empty=True)
     r2 = Range(bounds="()")
     cur = conn.execute(
         f"select array['empty'::{pgtype}, '(,)'::{pgtype}] = %{fmt_in}",
         ([r1, r2],),
+    )
+    assert cur.fetchone()[0] is True
+
+
+@pytest.mark.parametrize(
+    "pgtype",
+    "int4range int8range numrange daterange tsrange tstzrange".split(),
+)
+@pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
+def test_dump_builtin_array_with_cast(conn, pgtype, fmt_in):
+    r1 = Range(empty=True)
+    r2 = Range(bounds="()")
+    cur = conn.execute(
+        f"select array['empty'::{pgtype}, '(,)'::{pgtype}] = %{fmt_in}::{pgtype}[]",
+        ([r1, r2],),
+    )
+    assert cur.fetchone()[0] is True
+
+
+@pytest.mark.parametrize(
+    "wrapper",
+    """
+    Int4Range Int8Range NumericRange DateRange TimestampRange TimestamptzRange
+    """.split(),
+)
+@pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
+def test_dump_builtin_array_wrapper(conn, wrapper, fmt_in):
+    wrapper = getattr(range_module, wrapper)
+    r1 = wrapper(empty=True)
+    r2 = wrapper(bounds="()")
+    cur = conn.execute(
+        f"""select '{{empty,"(,)"}}' = %{fmt_in}""", ([r1, r2],)
     )
     assert cur.fetchone()[0] is True
 
@@ -191,13 +252,12 @@ def test_copy_in_empty(conn, min, max, bounds, format):
 @pytest.mark.parametrize("bounds", "() empty".split())
 @pytest.mark.parametrize(
     "wrapper",
-    """Int4Range Int8Range NumericRange
-       DateRange TimestampRange TimestamptzRange""".split(),
+    """
+    Int4Range Int8Range NumericRange DateRange TimestampRange TimestamptzRange
+    """.split(),
 )
 @pytest.mark.parametrize("format", [pq.Format.TEXT, pq.Format.BINARY])
 def test_copy_in_empty_wrappers(conn, bounds, wrapper, format):
-    from psycopg.types import range as range_module
-
     cur = conn.cursor()
     cur.execute("create table copyrange (id serial primary key, r daterange)")
 

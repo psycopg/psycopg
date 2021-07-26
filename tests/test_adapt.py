@@ -293,8 +293,12 @@ def test_array_dumper(conn, fmt_out):
     t = Transformer(conn)
     fmt_in = Format.from_pq(fmt_out)
     dint = t.get_dumper([0], fmt_in)
-    assert dint.oid == builtins["int2"].array_oid
-    assert dint.sub_dumper.oid == builtins["int2"].oid
+    if fmt_out == pq.Format.BINARY:
+        assert dint.oid == builtins["int2"].array_oid
+        assert dint.sub_dumper.oid == builtins["int2"].oid
+    else:
+        assert dint.oid == builtins["numeric"].array_oid
+        assert dint.sub_dumper is None
 
     dstr = t.get_dumper([""], fmt_in)
     if fmt_in == Format.BINARY:

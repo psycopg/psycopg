@@ -1,4 +1,7 @@
+from decimal import Decimal
+
 import pytest
+
 import psycopg
 from psycopg import pq
 from psycopg import sql
@@ -146,6 +149,15 @@ def test_array_mixed_numbers(array, type):
     dumper = tx.get_dumper(array, Format.BINARY)
     dumper.dump(array)
     assert dumper.oid == builtins[type].array_oid
+
+
+def test_mix_types(conn):
+    cur = conn.cursor()
+    cur.execute("create table test (id serial primary key, data numeric[])")
+    cur.execute("insert into test (data) values (%s)", ([1, 2, 0.5],))
+    cur.execute("select data from test")
+    assert cur.fetchone()[0] == [1, 2, Decimal("0.5")]
+    assert cur.description[0].type_code == builtins["numeric"].array_oid
 
 
 @pytest.mark.parametrize("fmt_in", fmts_in)
