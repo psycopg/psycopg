@@ -129,10 +129,7 @@ class BytesBinaryDumper(Dumper):
     format = Format.BINARY
     _oid = postgres.types["bytea"].oid
 
-    def dump(
-        self, obj: Union[bytes, bytearray, memoryview]
-    ) -> Union[bytes, bytearray, memoryview]:
-        # TODO: mypy doesn't complain, but this function has the wrong signature
+    def dump(self, obj: Buffer) -> Buffer:
         return obj
 
 

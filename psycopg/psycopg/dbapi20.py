@@ -7,12 +7,11 @@ Compatibility objects with DBAPI 2.0
 import time
 import datetime as dt
 from math import floor
-from typing import Any, Optional, Sequence
+from typing import Any, Sequence
 
 from . import postgres
-from .pq import Format, Escaping
-from .abc import AdaptContext
-from .adapt import Dumper
+from .abc import Buffer
+from .types.string import BytesDumper, BytesBinaryDumper
 
 
 class DBAPITypeObject:
@@ -58,32 +57,14 @@ class Binary:
         return f"{self.__class__.__name__}({sobj})"
 
 
-class BinaryBinaryDumper(Dumper):
-
-    format = Format.BINARY
-    _oid = postgres.types["bytea"].oid
-
-    def dump(self, obj: Binary) -> bytes:
-        wrapped = obj.obj
-        if isinstance(wrapped, bytes):
-            return wrapped
-        else:
-            return bytes(wrapped)
+class BinaryBinaryDumper(BytesBinaryDumper):
+    def dump(self, obj: Binary) -> Buffer:  # type: ignore
+        return super().dump(obj.obj)
 
 
-class BinaryTextDumper(BinaryBinaryDumper):
-
-    format = Format.TEXT
-
-    def __init__(self, cls: type, context: Optional[AdaptContext] = None):
-        super().__init__(cls, context)
-        self._esc = Escaping(
-            self.connection.pgconn if self.connection else None
-        )
-
-    def dump(self, obj: Binary) -> bytes:
-        data = super().dump(obj)
-        return self._esc.escape_bytea(data)
+class BinaryTextDumper(BytesDumper):
+    def dump(self, obj: Binary) -> Buffer:  # type: ignore
+        return super().dump(obj.obj)
 
 
 def Date(year: int, month: int, day: int) -> dt.date:

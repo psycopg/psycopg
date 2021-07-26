@@ -224,7 +224,8 @@ def test_dump_1byte(conn, fmt_in, pytype):
 
 
 @pytest.mark.parametrize("scs", ["on", "off"])
-def test_quote_1byte(conn, scs):
+@pytest.mark.parametrize("pytype", [bytes, bytearray, memoryview, Binary])
+def test_quote_1byte(conn, scs, pytype):
     messages = []
     conn.add_notice_handler(lambda msg: messages.append(msg.message_primary))
     conn.execute(f"set standard_conforming_strings to {scs}")
@@ -233,7 +234,8 @@ def test_quote_1byte(conn, scs):
     cur = conn.cursor()
     query = sql.SQL("select {ch} = set_byte('x', 0, %s)")
     for i in range(0, 256):
-        cur.execute(query.format(ch=sql.Literal(bytes([i]))), (i,))
+        obj = pytype(bytes([i]))
+        cur.execute(query.format(ch=sql.Literal(obj)), (i,))
         assert cur.fetchone()[0] is True, i
 
     # No "nonstandard use of \\ in a string literal" warning
