@@ -16,10 +16,12 @@ equivalent C implementations.
 from typing import Any
 
 cimport cython
+
+from libc.string cimport memcpy, memchr
 from cpython.bytearray cimport PyByteArray_FromStringAndSize, PyByteArray_Resize
 from cpython.bytearray cimport PyByteArray_GET_SIZE, PyByteArray_AS_STRING
 
-from psycopg_c.pq cimport _buffer_as_string_and_size
+from psycopg_c.pq cimport _buffer_as_string_and_size, Escaping
 
 from psycopg import errors as e
 from psycopg.pq.misc import error_message
@@ -57,44 +59,67 @@ cdef class CDumper:
         """
         raise NotImplementedError()
 
-    def dump(self, obj: Any) -> bytearray:
+    def dump(self, obj):
         """Return the Postgres representation of *obj* as Python array of bytes"""
         cdef rv = PyByteArray_FromStringAndSize("", 0)
         cdef Py_ssize_t length = self.cdump(obj, rv, 0)
         PyByteArray_Resize(rv, length)
         return rv
 
-    def quote(self, obj: Any) -> bytearray:
+    def quote(self, obj):
         cdef char *ptr
         cdef char *ptr_out
-        cdef Py_ssize_t length, len_out
-        cdef int error
-        cdef bytearray rv
+        cdef Py_ssize_t length
 
-        pyout = self.dump(obj)
-        _buffer_as_string_and_size(pyout, &ptr, &length)
-        rv = PyByteArray_FromStringAndSize("", 0)
-        PyByteArray_Resize(rv, length * 2 + 3)  # Must include the quotes
-        ptr_out = PyByteArray_AS_STRING(rv)
+        value = self.dump(obj)
 
         if self._pgconn is not None:
-            if self._pgconn._pgconn_ptr == NULL:
-                raise e.OperationalError("the connection is closed")
+            esc = Escaping(self._pgconn)
+            # escaping and quoting
+            return esc.escape_literal(value)
 
-            len_out = libpq.PQescapeStringConn(
-                self._pgconn._pgconn_ptr, ptr_out + 1, ptr, length, &error
-            )
-            if error:
-                raise e.OperationalError(
-                    f"escape_string failed: {error_message(self._pgconn)}"
-                )
-        else:
-            len_out = libpq.PQescapeString(ptr_out + 1, ptr, length)
+        # This path is taken when quote is asked without a connection,
+        # usually it means by psycopg.sql.quote() or by
+        # 'Composible.as_string(None)'. Most often than not this is done by
+        # someone generating a SQL file to consume elsewhere.
 
-        ptr_out[0] = b'\''
-        ptr_out[len_out + 1] = b'\''
-        PyByteArray_Resize(rv, len_out + 2)
+        rv = PyByteArray_FromStringAndSize("", 0)
 
+        # No quoting, only quote escaping, random bs escaping. See further.
+        esc = Escaping()
+        out = esc.escape_string(value)
+
+        _buffer_as_string_and_size(out, &ptr, &length)
+
+        if not memchr(ptr, b'\\', length):
+            # If the string has no backslash, the result is correct and we
+            # don't need to bother with standard_conforming_strings.
+            PyByteArray_Resize(rv, length + 2)  # Must include the quotes
+            ptr_out = PyByteArray_AS_STRING(rv)
+            ptr_out[0] = b"'"
+            memcpy(ptr_out + 1, ptr, length)
+            ptr_out[length + 1] = b"'"
+            return rv
+
+        # The libpq has a crazy behaviour: PQescapeString uses the last
+        # standard_conforming_strings setting seen on a connection. This
+        # means that backslashes might be escaped or might not.
+        #
+        # A syntax E'\\' works everywhere, whereas E'\' is an error. OTOH,
+        # if scs is off, '\\' raises a warning and '\' is an error.
+        #
+        # Check what the libpq does, and if it doesn't escape the backslash
+        # let's do it on our own. Never mind the race condition.
+        PyByteArray_Resize(rv, length + 4)  # Must include " E'...'" quotes
+        ptr_out = PyByteArray_AS_STRING(rv)
+        ptr_out[0] = b" "
+        ptr_out[1] = b"E"
+        ptr_out[2] = b"'"
+        memcpy(ptr_out + 3, ptr, length)
+        ptr_out[length + 3] = b"'"
+
+        if esc.escape_string(b"\\") == b"\\":
+            rv = bytes(rv).replace(b"\\", b"\\\\")
         return rv
 
     cpdef object get_key(self, object obj, object format):

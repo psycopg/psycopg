@@ -14,7 +14,7 @@ cdef class Escaping:
     def __init__(self, PGconn conn = None):
         self.conn = conn
 
-    def escape_literal(self, data: "Buffer") -> memoryview:
+    cpdef escape_literal(self, data):
         cdef char *out
         cdef bytes rv
         cdef char *ptr
@@ -37,7 +37,7 @@ cdef class Escaping:
             PQBuffer._from_buffer(<unsigned char *>out, strlen(out))
         )
 
-    def escape_identifier(self, data: "Buffer") -> memoryview:
+    cpdef escape_identifier(self, data):
         cdef char *out
         cdef char *ptr
         cdef Py_ssize_t length
@@ -59,7 +59,7 @@ cdef class Escaping:
             PQBuffer._from_buffer(<unsigned char *>out, strlen(out))
         )
 
-    def escape_string(self, data: "Buffer") -> memoryview:
+    cpdef escape_string(self, data):
         cdef int error
         cdef size_t len_out
         cdef char *ptr
@@ -91,7 +91,7 @@ cdef class Escaping:
         PyByteArray_Resize(rv, len_out)
         return PyMemoryView_FromObject(rv)
 
-    def escape_bytea(self, data: "Buffer") -> memoryview:
+    cpdef escape_bytea(self, data):
         cdef size_t len_out
         cdef unsigned char *out
         cdef char *ptr
@@ -117,7 +117,7 @@ cdef class Escaping:
             PQBuffer._from_buffer(out, len_out - 1)  # out includes final 0
         )
 
-    def unescape_bytea(self, const unsigned char *data) -> memoryview:
+    cpdef unescape_bytea(self, const unsigned char *data):
         # not needed, but let's keep it symmetric with the escaping:
         # if a connection is passed in, it must be valid.
         if self.conn is not None:

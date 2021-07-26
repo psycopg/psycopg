@@ -99,17 +99,29 @@ class BytesDumper(Dumper):
         return self._esc.escape_bytea(obj)
 
     def quote(self, obj: bytes) -> bytes:
-        if not self._qprefix:
-            if self.connection:
+        escaped = self.dump(obj)
+
+        # We cannot use the base quoting because escape_bytea already returns
+        # the quotes content. if scs is off it will escape the backslashes in
+        # the format, otherwise it won't, but it doesn't tell us what quotes to
+        # use.
+        if self.connection:
+            if not self._qprefix:
                 scs = self.connection.pgconn.parameter_status(
                     b"standard_conforming_strings"
                 )
                 self._qprefix = b"'" if scs == b"on" else b" E'"
-            else:
-                self._qprefix = b" E'"
 
-        escaped = self.dump(obj)
-        return self._qprefix + bytes(escaped) + b"'"
+            return self._qprefix + escaped + b"'"
+
+        # We don't have a connection, so someone is using us to generate a file
+        # to use off-line or something like that. PQescapeBytea, like its
+        # string counterpart, is not predictable whether it will escape
+        # backslashes.
+        rv: bytes = b" E'" + escaped + b"'"
+        if self._esc.escape_bytea(b"\x00") == b"\\000":
+            rv = rv.replace(b"\\", b"\\\\")
+        return rv
 
 
 class BytesBinaryDumper(Dumper):

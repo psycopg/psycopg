@@ -181,53 +181,58 @@ cdef class BytesDumper(CDumper):
         libpq.PQfreemem(out)
         return len_out
 
-    def quote(self, obj) -> bytearray:
-        cdef size_t len_esc
+    def quote(self, obj):
         cdef size_t len_out
         cdef unsigned char *out
         cdef char *ptr
         cdef Py_ssize_t length
-        cdef bytearray rv
+        cdef const char *scs
 
-        _buffer_as_string_and_size(obj, &ptr, &length)
+        escaped = self.dump(obj)
+        _buffer_as_string_and_size(escaped, &ptr, &length)
 
-        if self._pgconn is not None and self._pgconn._pgconn_ptr != NULL:
-            out = libpq.PQescapeByteaConn(
-                self._pgconn._pgconn_ptr, <unsigned char *>ptr, length, &len_esc)
-        else:
-            out = libpq.PQescapeBytea(<unsigned char *>ptr, length, &len_esc)
+        rv = PyByteArray_FromStringAndSize("", 0)
 
-        if out is NULL:
-            raise MemoryError(
-                f"couldn't allocate for escape_bytea of {length} bytes"
-            )
-
-        if not self._qplen:
-            self._qplen = 3
-            if self._pgconn is not None and self._pgconn._pgconn_ptr != NULL:
+        # We cannot use the base quoting because escape_bytea already returns
+        # the quotes content. if scs is off it will escape the backslashes in
+        # the format, otherwise it won't, but it doesn't tell us what quotes to
+        # use.
+        if self._pgconn is not None:
+            if not self._qplen:
                 scs = libpq.PQparameterStatus(self._pgconn._pgconn_ptr,
                     b"standard_conforming_strings")
                 if scs and scs[0] == b'o' and scs[1] == b"n":  # == "on"
                     self._qplen = 1
+                else:
+                    self._qplen = 3
 
-        # len_esc includes the final 0
-        # So the final string is len_esc - 1 plus quotes, which might be 2 or 4 bytes
-        len_out = len_esc + self._qplen
-        rv = PyByteArray_FromStringAndSize("", 0)
-        cdef char *buf = CDumper.ensure_size(rv, 0, len_out)
-        memcpy(buf + self._qplen, out, len_esc)
-        libpq.PQfreemem(out)
+            PyByteArray_Resize(rv, length + self._qplen + 1)  # Include quotes
+            ptr_out = PyByteArray_AS_STRING(rv)
+            if self._qplen == 1:
+                ptr_out[0] = b"'"
+            else:
+                ptr_out[0] = b" "
+                ptr_out[1] = b"E"
+                ptr_out[2] = b"'"
+            memcpy(ptr_out + self._qplen, ptr, length)
+            ptr_out[length + self._qplen] = b"'"
+            return rv
 
-        if self._qplen == 3:
-            # Quote as " E'content'"
-            buf[0] = b' '
-            buf[1] = b'E'
-            buf[2] = b'\''
-        else:
-            # Quote as "'content'"
-            buf[0] = b'\''
+        # We don't have a connection, so someone is using us to generate a file
+        # to use off-line or something like that. PQescapeBytea, like its
+        # string counterpart, is not predictable whether it will escape
+        # backslashes.
+        PyByteArray_Resize(rv, length + 4)  # Include quotes
+        ptr_out = PyByteArray_AS_STRING(rv)
+        ptr_out[0] = b" "
+        ptr_out[1] = b"E"
+        ptr_out[2] = b"'"
+        memcpy(ptr_out + 3, ptr, length)
+        ptr_out[length + 3] = b"'"
 
-        buf[len_out - 1] = b'\''
+        esc = Escaping()
+        if esc.escape_bytea(b"\x00") == b"\\000":
+            rv = bytes(rv).replace(b"\\", b"\\\\")
 
         return rv
 

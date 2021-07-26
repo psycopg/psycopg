@@ -7,16 +7,68 @@ import datetime as dt
 
 import pytest
 
-from psycopg import sql, ProgrammingError
+from psycopg import pq, sql, ProgrammingError
 from psycopg.adapt import PyFormat as Format
 
 
 @pytest.mark.parametrize(
     "obj, quoted",
-    [("hello", "'hello'"), (42, "42"), (True, "true"), (None, "NULL")],
+    [
+        ("foo\\bar", " E'foo\\\\bar'"),
+        ("hello", "'hello'"),
+        (42, "42"),
+        (True, "true"),
+        (None, "NULL"),
+    ],
 )
 def test_quote(obj, quoted):
     assert sql.quote(obj) == quoted
+
+
+@pytest.mark.parametrize("scs", ["on", "off"])
+def test_quote_roundtrip(conn, scs):
+    messages = []
+    conn.add_notice_handler(lambda msg: messages.append(msg.message_primary))
+    conn.execute(f"set standard_conforming_strings to {scs}")
+
+    for i in range(1, 256):
+        want = chr(i)
+        quoted = sql.quote(want)
+        got = conn.execute(f"select {quoted}::text").fetchone()[0]
+        assert want == got
+
+        # No "nonstandard use of \\ in a string literal" warning
+        assert not messages, f"error with {want!r}"
+
+
+def test_quote_stable_despite_deranged_libpq(conn):
+    # Verify the libpq behaviour of PQescapeString using the last setting seen.
+    # Check that we are not affected by it.
+    good_str = " E'\\\\'"
+    good_bytes = " E'\\\\000'"
+    conn.execute("set standard_conforming_strings to on")
+    assert pq.Escaping().escape_string(b"\\") == b"\\"
+    assert sql.quote("\\") == good_str
+    assert pq.Escaping().escape_bytea(b"\x00") == b"\\000"
+    assert sql.quote(b"\x00") == good_bytes
+
+    conn.execute("set standard_conforming_strings to off")
+    assert pq.Escaping().escape_string(b"\\") == b"\\\\"
+    assert sql.quote("\\") == good_str
+    assert pq.Escaping().escape_bytea(b"\x00") == b"\\\\000"
+    assert sql.quote(b"\x00") == good_bytes
+
+    # Verify that the good values are actually good
+    messages = []
+    conn.add_notice_handler(lambda msg: messages.append(msg.message_primary))
+    conn.execute("set escape_string_warning to on")
+    for scs in ("on", "off"):
+        conn.execute(f"set standard_conforming_strings to {scs}")
+        cur = conn.execute(f"select {good_str}, {good_bytes}::bytea")
+        assert cur.fetchone() == ("\\", b"\x00")
+
+    # No "nonstandard use of \\ in a string literal" warning
+    assert not messages
 
 
 class TestSqlFormat:
@@ -188,7 +240,7 @@ class TestIdentifier:
 
     def test_init(self):
         assert isinstance(sql.Identifier("foo"), sql.Identifier)
-        assert isinstance(sql.Identifier(u"foo"), sql.Identifier)
+        assert isinstance(sql.Identifier("foo"), sql.Identifier)
         assert isinstance(sql.Identifier("foo", "bar", "baz"), sql.Identifier)
         with pytest.raises(TypeError):
             sql.Identifier()
@@ -230,7 +282,7 @@ class TestLiteral:
 
     def test_init(self):
         assert isinstance(sql.Literal("foo"), sql.Literal)
-        assert isinstance(sql.Literal(u"foo"), sql.Literal)
+        assert isinstance(sql.Literal("foo"), sql.Literal)
         assert isinstance(sql.Literal(b"foo"), sql.Literal)
         assert isinstance(sql.Literal(42), sql.Literal)
         assert isinstance(sql.Literal(dt.date(2016, 12, 31)), sql.Literal)
@@ -267,7 +319,7 @@ class TestSQL:
 
     def test_init(self):
         assert isinstance(sql.SQL("foo"), sql.SQL)
-        assert isinstance(sql.SQL(u"foo"), sql.SQL)
+        assert isinstance(sql.SQL("foo"), sql.SQL)
         with pytest.raises(TypeError):
             sql.SQL(10)
         with pytest.raises(TypeError):

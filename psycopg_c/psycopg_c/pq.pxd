@@ -47,6 +47,12 @@ cdef class PGcancel:
 cdef class Escaping:
     cdef PGconn conn
 
+    cpdef escape_literal(self, data)
+    cpdef escape_identifier(self, data)
+    cpdef escape_string(self, data)
+    cpdef escape_bytea(self, data)
+    cpdef unescape_bytea(self, const unsigned char *data)
+
 
 cdef class PQBuffer:
     cdef unsigned char *buf

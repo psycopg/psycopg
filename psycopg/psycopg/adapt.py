@@ -18,6 +18,8 @@ if TYPE_CHECKING:
 AdaptersMap = _adapters_map.AdaptersMap
 Buffer = abc.Buffer
 
+ORD_BS = ord("\\")
+
 
 class Dumper(abc.Dumper, ABC):
     """
@@ -60,10 +62,37 @@ class Dumper(abc.Dumper, ABC):
 
         if self.connection:
             esc = pq.Escaping(self.connection.pgconn)
+            # escaping and quoting
             return esc.escape_literal(value)
-        else:
-            esc = pq.Escaping()
-            return b"'%s'" % esc.escape_string(value)
+
+        # This path is taken when quote is asked without a connection,
+        # usually it means by psycopg.sql.quote() or by
+        # 'Composible.as_string(None)'. Most often than not this is done by
+        # someone generating a SQL file to consume elsewhere.
+
+        # No quoting, only quote escaping, random bs escaping. See further.
+        esc = pq.Escaping()
+        out = esc.escape_string(value)
+
+        # b"\\" in memoryview doesn't work so search for the ascii value
+        if ORD_BS not in out:
+            # If the string has no backslash, the result is correct and we
+            # don't need to bother with standard_conforming_strings.
+            return b"'" + out + b"'"
+
+        # The libpq has a crazy behaviour: PQescapeString uses the last
+        # standard_conforming_strings setting seen on a connection. This
+        # means that backslashes might be escaped or might not.
+        #
+        # A syntax E'\\' works everywhere, whereas E'\' is an error. OTOH,
+        # if scs is off, '\\' raises a warning and '\' is an error.
+        #
+        # Check what the libpq does, and if it doesn't escape the backslash
+        # let's do it on our own. Never mind the race condition.
+        rv: bytes = b" E'" + out + b"'"
+        if esc.escape_string(b"\\") == b"\\":
+            rv = rv.replace(b"\\", b"\\\\")
+        return rv
 
     def get_key(
         self, obj: Any, format: PyFormat

@@ -18,18 +18,27 @@ eur = "\u20ac"
 def test_dump_1char(conn, fmt_in):
     cur = conn.cursor()
     for i in range(1, 256):
-        cur.execute(f"select %{fmt_in} = chr(%s::int)", (chr(i), i))
+        cur.execute(f"select %{fmt_in} = chr(%s)", (chr(i), i))
         assert cur.fetchone()[0] is True, chr(i)
 
 
-def test_quote_1char(conn):
+@pytest.mark.parametrize("scs", ["on", "off"])
+def test_quote_1char(conn, scs):
+    messages = []
+    conn.add_notice_handler(lambda msg: messages.append(msg.message_primary))
+    conn.execute(f"set standard_conforming_strings to {scs}")
+    conn.execute("set escape_string_warning to on")
+
     cur = conn.cursor()
-    query = sql.SQL("select {ch} = chr(%s::int)")
+    query = sql.SQL("select {ch} = chr(%s)")
     for i in range(1, 256):
         if chr(i) == "%":
             continue
         cur.execute(query.format(ch=sql.Literal(chr(i))), (i,))
         assert cur.fetchone()[0] is True, chr(i)
+
+    # No "nonstandard use of \\ in a string literal" warning
+    assert not messages
 
 
 @pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
@@ -57,7 +66,7 @@ def test_quote_percent(conn):
     assert cur.fetchone()[0] == "%"
 
     cur.execute(
-        sql.SQL("select {ch} = chr(%s::int)").format(ch=sql.Literal("%")),
+        sql.SQL("select {ch} = chr(%s)").format(ch=sql.Literal("%")),
         (ord("%"),),
     )
     assert cur.fetchone()[0] is True
@@ -68,7 +77,7 @@ def test_quote_percent(conn):
 def test_load_1char(conn, typename, fmt_out):
     cur = conn.cursor(binary=fmt_out)
     for i in range(1, 256):
-        cur.execute(f"select chr(%s::int)::{typename}", (i,))
+        cur.execute(f"select chr(%s)::{typename}", (i,))
         res = cur.fetchone()[0]
         assert res == chr(i)
 
@@ -126,12 +135,10 @@ def test_load_enc(conn, typename, encoding, fmt_out):
     cur = conn.cursor(binary=fmt_out)
 
     conn.client_encoding = encoding
-    (res,) = cur.execute(
-        f"select chr(%s::int)::{typename}", (ord(eur),)
-    ).fetchone()
+    (res,) = cur.execute(f"select chr(%s)::{typename}", (ord(eur),)).fetchone()
     assert res == eur
 
-    stmt = sql.SQL("copy (select chr({}::int)) to stdout (format {})").format(
+    stmt = sql.SQL("copy (select chr({})) to stdout (format {})").format(
         ord(eur), sql.SQL(fmt_out.name)
     )
     with cur.copy(stmt) as copy:
@@ -149,9 +156,9 @@ def test_load_badenc(conn, typename, fmt_out):
 
     conn.client_encoding = "latin1"
     with pytest.raises(psycopg.DataError):
-        cur.execute(f"select chr(%s::int)::{typename}", (ord(eur),))
+        cur.execute(f"select chr(%s)::{typename}", (ord(eur),))
 
-    stmt = sql.SQL("copy (select chr({}::int)) to stdout (format {})").format(
+    stmt = sql.SQL("copy (select chr({})) to stdout (format {})").format(
         ord(eur), sql.SQL(fmt_out.name)
     )
     with cur.copy(stmt) as copy:
@@ -166,10 +173,10 @@ def test_load_ascii(conn, typename, fmt_out):
     cur = conn.cursor(binary=fmt_out)
 
     conn.client_encoding = "ascii"
-    cur.execute(f"select chr(%s::int)::{typename}", (ord(eur),))
+    cur.execute(f"select chr(%s)::{typename}", (ord(eur),))
     assert cur.fetchone()[0] == eur.encode("utf8")
 
-    stmt = sql.SQL("copy (select chr({}::int)) to stdout (format {})").format(
+    stmt = sql.SQL("copy (select chr({})) to stdout (format {})").format(
         ord(eur), sql.SQL(fmt_out.name)
     )
     with cur.copy(stmt) as copy:
@@ -221,6 +228,7 @@ def test_quote_1byte(conn, scs):
     messages = []
     conn.add_notice_handler(lambda msg: messages.append(msg.message_primary))
     conn.execute(f"set standard_conforming_strings to {scs}")
+    conn.execute("set escape_string_warning to on")
 
     cur = conn.cursor()
     query = sql.SQL("select {ch} = set_byte('x', 0, %s)")
