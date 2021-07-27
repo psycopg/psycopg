@@ -109,7 +109,7 @@ to restart it.
 If more than *min_size* connections are requested concurrently, new ones are
 created, up to *max_size*. Note that the connections are always created by the
 background workers, not by the thread asking the connection: if a client
-requires a new connection, and a previous client terminates its job before the
+requests a new connection, and a previous client terminates its job before the
 new connection is ready, the waiting client will be served the existing
 connection. This is especially useful in scenarios where the time to connect
 is longer than the time the connection is used (see `this analysis`__, for

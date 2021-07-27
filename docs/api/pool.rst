@@ -11,7 +11,7 @@ creates and maintains a limited amount of PostgreSQL connections and allows a
 larger number of users to use them. See :ref:`connection-pools` for more
 details and usage pattern.
 
-There package implement two connection pools: `ConnectionPool` is a
+This module implement two connection pools: `ConnectionPool` is a
 synchronous connection pool yielding `~psycopg.Connection` objects and can be
 used by multithread applications. `AsyncConnectionPool` has a similar
 interface, but with `asyncio` functions replacing blocking functions, and
@@ -89,8 +89,8 @@ The `!ConnectionPool` class
    :type timeout: `!float`, default: 30 seconds
 
    :param max_waiting: Maximum number of requests that can be queued to the
-                       pool. Requesting will fail, raising `TooManyRequests`.
-                       0 means no queue limit.
+                       pool, after which new requests will fail, raising
+                       `TooManyRequests`. 0 means no queue limit.
    :type max_waiting: `!int`, default: 0
 
    :param max_lifetime: The maximum lifetime of a connection in the pool, in
@@ -176,6 +176,8 @@ The `!ConnectionPool` class
    .. automethod:: getconn
    .. automethod:: putconn
 
+Pool exceptions
+---------------
 
 .. autoclass:: PoolTimeout()
 
@@ -195,8 +197,8 @@ The `!AsyncConnectionPool` class
 
 `!AsyncConnectionPool` has a very similar interface to the `ConnectionPool`
 class but its blocking method are implemented as `async` coroutines. It
-returns `AsyncConnection` instances, or its subclasses if specified so in the
-*connection_class* parameter.
+returns `~psycopg.AsyncConnection` instances, or its subclasses if specified
+so in the *connection_class* parameter.
 
 Only the function with different signature from `!ConnectionPool` are
 listed here.

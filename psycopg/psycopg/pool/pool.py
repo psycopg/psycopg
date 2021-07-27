@@ -132,7 +132,7 @@ class ConnectionPool(BasePool[Connection[Any]]):
     ) -> Iterator[Connection[Any]]:
         """Context manager to obtain a connection from the pool.
 
-        Returned the connection immediately if available, otherwise wait up to
+        Return the connection immediately if available, otherwise wait up to
         *timeout* or `self.timeout` seconds and throw `PoolTimeout` if a
         connection is not available in time.
 
@@ -261,9 +261,9 @@ class ConnectionPool(BasePool[Connection[Any]]):
         with a `PoolClosed` exception. Currently used connections will not be
         closed until returned to the pool.
 
-        Wait *timeout* for threads to terminate their job, if positive. If
-        timeout expires the pool is closed anyway, although it may raise some
-        warnings on exit.
+        Wait *timeout* seconds for threads to terminate their job, if positive.
+        If the timeout expires the pool is closed anyway, although it may raise
+        some warnings on exit.
         """
         if self._closed:
             return
