@@ -371,7 +371,7 @@ class Faker:
                 (0.0, -0.0, float("-inf"), float("inf"), float("nan"))
             )
 
-    def match_float(self, spec, got, want, approx=False):
+    def match_float(self, spec, got, want, approx=False, rel=None):
         if got is not None and isnan(got):
             assert isnan(want)
         else:
@@ -381,13 +381,13 @@ class Faker:
             if not approx and self.conn.info.server_version >= 120000:
                 assert got == want
             else:
-                assert got == pytest.approx(want)
+                assert got == pytest.approx(want, rel=rel)
 
     def make_Float4(self, spec):
         return spec(self.make_float(spec, double=False))
 
     def match_Float4(self, spec, got, want):
-        return self.match_float(spec, got, want, approx=True)
+        return self.match_float(spec, got, want, approx=True, rel=1e-5)
 
     def make_Float8(self, spec):
         return spec(self.make_float(spec))
