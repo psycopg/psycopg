@@ -18,7 +18,8 @@
   tier: top
   avatar: https://avatars.githubusercontent.com/u/56135630?v=4
   name: bit.io
-  website: https://bit.io
+  website: https://bit.io/?utm_campaign=sponsorship&utm_source=psycopg2&utm_medium=web
+  keep_website: true
 
 
 - username: yougov

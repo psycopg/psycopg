@@ -63,7 +63,10 @@ def update_entry(opt, filedata, entry):
         username = entry["username"]
 
     userdata = get_user_data(fetch_user(username))
-    entry.update(userdata)
+    for k, v in userdata.items():
+        if entry.get("keep_" + k):
+            continue
+        entry[k] = v
 
 
 def main():
