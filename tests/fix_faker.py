@@ -446,6 +446,11 @@ class Faker:
             scls = choice(self.types)
             if scls is cls:
                 continue
+            if scls is float:
+                # TODO: float lists are currently adapted as decimal.
+                # There may be rounding errors or problems with inf.
+                continue
+
             schema = self.make_schema(scls)
             if schema is not None:
                 break
