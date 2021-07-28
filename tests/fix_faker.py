@@ -358,28 +358,41 @@ class Faker:
         else:
             assert got == want
 
-    def make_float(self, spec):
+    def make_float(self, spec, double=True):
         if random() <= 0.99:
-            # this exponent should generate no inf
+            # These exponents should generate no inf
             return float(
                 f"{choice('-+')}0.{randrange(1 << 53)}e{randrange(-310,309)}"
+                if double
+                else f"{choice('-+')}0.{randrange(1 << 22)}e{randrange(-37,38)}"
             )
         else:
             return choice(
                 (0.0, -0.0, float("-inf"), float("inf"), float("nan"))
             )
 
-    def match_float(self, spec, got, want):
+    def match_float(self, spec, got, want, approx=False):
         if got is not None and isnan(got):
             assert isnan(want)
         else:
             # Versions older than 12 make some rounding. e.g. in Postgres 10.4
             # select '-1.409006204063909e+112'::float8
             #      -> -1.40900620406391e+112
-            if self.conn.info.server_version >= 120000:
+            if not approx and self.conn.info.server_version >= 120000:
                 assert got == want
             else:
                 assert got == pytest.approx(want)
+
+    def make_Float4(self, spec):
+        return spec(self.make_float(spec, double=False))
+
+    def match_Float4(self, spec, got, want):
+        return self.match_float(spec, got, want, approx=True)
+
+    def make_Float8(self, spec):
+        return spec(self.make_float(spec))
+
+    match_Float8 = match_float
 
     def make_int(self, spec):
         return randrange(-(1 << 90), 1 << 90)

@@ -151,6 +151,28 @@ def test_array_mixed_numbers(array, type):
     assert dumper.oid == builtins[type].array_oid
 
 
+@pytest.mark.parametrize(
+    "wrapper", "Int2 Int4 Int8 Float4 Float8 Decimal".split()
+)
+@pytest.mark.parametrize("fmt_in", fmts_in)
+@pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
+def test_list_number_wrapper(conn, wrapper, fmt_in, fmt_out):
+    wrapper = getattr(psycopg.types.numeric, wrapper)
+    if wrapper is Decimal:
+        want_cls = Decimal
+    else:
+        assert wrapper.__mro__[1] in (int, float)
+        want_cls = wrapper.__mro__[1]
+
+    obj = [wrapper(1), wrapper(0), wrapper(-1), None]
+    cur = conn.cursor(binary=fmt_out)
+    got = cur.execute("select %s", [obj]).fetchone()[0]
+    assert got == obj
+    for i in got:
+        if i is not None:
+            assert type(i) is want_cls
+
+
 def test_mix_types(conn):
     cur = conn.cursor()
     cur.execute("create table test (id serial primary key, data numeric[])")

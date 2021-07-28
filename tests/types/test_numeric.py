@@ -3,6 +3,7 @@ from math import isnan, isinf, exp
 
 import pytest
 
+import psycopg
 from psycopg import pq
 from psycopg import sql
 from psycopg.adapt import Transformer, PyFormat as Format
@@ -566,3 +567,22 @@ def test_minus_minus_quote(conn, pgtype):
     cur.execute(sql.SQL("select -{}{}").format(sql.Literal(-1), sql.SQL(cast)))
     result = cur.fetchone()[0]
     assert result == 1
+
+
+@pytest.mark.parametrize("wrapper", "Int2 Int4 Int8 Oid Float4 Float8".split())
+def test_dump_wrapper_oid(wrapper):
+    wrapper = getattr(psycopg.types.numeric, wrapper)
+    base = wrapper.__mro__[1]
+    assert base in (int, float)
+    n = base(3.14)
+    assert str(wrapper(n)) == str(n)
+    assert repr(wrapper(n)) == f"{wrapper.__name__}({n})"
+
+
+@pytest.mark.parametrize("wrapper", "Int2 Int4 Int8 Oid Float4 Float8".split())
+@pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
+def test_repr_wrapper(conn, wrapper, fmt_in):
+    wrapper = getattr(psycopg.types.numeric, wrapper)
+    cur = conn.execute(f"select pg_typeof(%{fmt_in})::oid", [wrapper(0)])
+    oid = cur.fetchone()[0]
+    assert oid == psycopg.postgres.types[wrapper.__name__.lower()].oid

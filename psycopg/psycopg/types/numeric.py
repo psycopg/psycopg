@@ -17,7 +17,7 @@ from ..adapt import Buffer, Dumper, Loader, PyFormat
 from .._struct import pack_int2, pack_uint2, unpack_int2
 from .._struct import pack_int4, pack_uint4, unpack_int4, unpack_uint4
 from .._struct import pack_int8, unpack_int8
-from .._struct import pack_float8, unpack_float4, unpack_float8
+from .._struct import pack_float4, pack_float8, unpack_float4, unpack_float8
 
 # Exposed here
 from .._wrappers import (
@@ -26,6 +26,8 @@ from .._wrappers import (
     Int8 as Int8,
     IntNumeric as IntNumeric,
     Oid as Oid,
+    Float4 as Float4,
+    Float8 as Float8,
 )
 
 
@@ -66,6 +68,10 @@ class FloatDumper(_SpecialValuesDumper):
     }
 
 
+class Float4Dumper(FloatDumper):
+    _oid = postgres.types["float4"].oid
+
+
 class FloatBinaryDumper(Dumper):
 
     format = Format.BINARY
@@ -73,6 +79,14 @@ class FloatBinaryDumper(Dumper):
 
     def dump(self, obj: float) -> bytes:
         return pack_float8(obj)
+
+
+class Float4BinaryDumper(FloatBinaryDumper):
+
+    _oid = postgres.types["float4"].oid
+
+    def dump(self, obj: float) -> bytes:
+        return pack_float4(obj)
 
 
 class DecimalDumper(_SpecialValuesDumper):
@@ -449,10 +463,14 @@ def register_default_adapters(context: AdaptContext) -> None:
     adapters.register_dumper(Int8, Int8Dumper)
     adapters.register_dumper(IntNumeric, IntNumericDumper)
     adapters.register_dumper(Oid, OidDumper)
+    adapters.register_dumper(Float4, Float4Dumper)
+    adapters.register_dumper(Float8, FloatDumper)
     adapters.register_dumper(Int2, Int2BinaryDumper)
     adapters.register_dumper(Int4, Int4BinaryDumper)
     adapters.register_dumper(Int8, Int8BinaryDumper)
     adapters.register_dumper(Oid, OidBinaryDumper)
+    adapters.register_dumper(Float4, Float4BinaryDumper)
+    adapters.register_dumper(Float8, FloatBinaryDumper)
     adapters.register_loader("int2", IntLoader)
     adapters.register_loader("int4", IntLoader)
     adapters.register_loader("int8", IntLoader)

@@ -26,6 +26,7 @@ pack_uint2 = cast(PackInt, struct.Struct("!H").pack)
 pack_int4 = cast(PackInt, struct.Struct("!i").pack)
 pack_uint4 = cast(PackInt, struct.Struct("!I").pack)
 pack_int8 = cast(PackInt, struct.Struct("!q").pack)
+pack_float4 = cast(PackFloat, struct.Struct("!f").pack)
 pack_float8 = cast(PackFloat, struct.Struct("!d").pack)
 
 unpack_int2 = cast(UnpackInt, struct.Struct("!h").unpack)
