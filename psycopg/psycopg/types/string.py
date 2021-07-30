@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     from ..pq.abc import Escaping as EscapingProto
 
 
-class _StrDumper(Dumper):
+class _BaseStrDumper(Dumper):
 
     _encoding = "utf-8"
 
@@ -30,7 +30,7 @@ class _StrDumper(Dumper):
                 self._encoding = enc
 
 
-class StrBinaryDumper(_StrDumper):
+class StrBinaryDumper(_BaseStrDumper):
 
     format = Format.BINARY
     _oid = postgres.types["text"].oid
@@ -40,7 +40,7 @@ class StrBinaryDumper(_StrDumper):
         return obj.encode(self._encoding)
 
 
-class StrDumper(_StrDumper):
+class _StrDumper(_BaseStrDumper):
 
     format = Format.TEXT
 
@@ -51,6 +51,33 @@ class StrDumper(_StrDumper):
             )
         else:
             return obj.encode(self._encoding)
+
+
+class StrDumper(_StrDumper):
+    """
+    Dumper for strings in text format to the text oid.
+
+    Note that this dumper is not used by deafult because the type is too strict
+    and PostgreSQL would require an explicit casts to everything that is not a
+    text field. However it is useful where the unknown oid is ambiguous and the
+    text oid is required, for instance with variadic functions.
+    """
+
+    _oid = postgres.types["text"].oid
+
+
+class StrDumperUnknown(_StrDumper):
+    """
+    Dumper for strings in text format to the unknown oid.
+
+    This dumper is the default dumper for strings and allows to use Python
+    strings to represent almost every data type. In a few places, however, the
+    unknown oid is not accepted (for instance in variadic functions such as
+    'concat()'). In that case either a cast on the placeholder ('%s::text) or
+    the StrTextDumper should be used.
+    """
+
+    pass
 
 
 class TextLoader(Loader):
@@ -163,7 +190,7 @@ def register_default_adapters(context: AdaptContext) -> None:
     # Normally, binary is the default dumper, except for text (which plays
     # the role of unknown, so it can be cast automatically to other types).
     adapters.register_dumper(str, StrBinaryDumper)
-    adapters.register_dumper(str, StrDumper)
+    adapters.register_dumper(str, StrDumperUnknown)
     adapters.register_loader(postgres.INVALID_OID, TextLoader)
     adapters.register_loader("bpchar", TextLoader)
     adapters.register_loader("name", TextLoader)

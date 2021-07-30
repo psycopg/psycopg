@@ -5,6 +5,7 @@ import pytest
 
 import psycopg
 from psycopg import pq, sql, postgres
+from psycopg import errors as e
 from psycopg.adapt import Transformer, PyFormat as Format, Dumper, Loader
 from psycopg._cmodule import _psycopg
 from psycopg.postgres import types as builtins, TEXT_OID
@@ -357,12 +358,19 @@ def test_return_untyped(conn, fmt_in):
     # Currently string are passed as unknown oid to libpq. This is because
     # unknown is more easily cast by postgres to different types (see jsonb
     # later).
-    cur.execute("select %s, %s", ["hello", 10])
+    cur.execute(f"select %{fmt_in}, %{fmt_in}", ["hello", 10])
     assert cur.fetchone() == ("hello", 10)
 
     cur.execute("create table testjson(data jsonb)")
-    cur.execute("insert into testjson (data) values (%s)", ["{}"])
-    assert cur.execute("select data from testjson").fetchone() == ({},)
+    if fmt_in != Format.BINARY:
+        cur.execute(f"insert into testjson (data) values (%{fmt_in})", ["{}"])
+        assert cur.execute("select data from testjson").fetchone() == ({},)
+    else:
+        # Binary types cannot be passed as unknown oids.
+        with pytest.raises(e.DatatypeMismatch):
+            cur.execute(
+                f"insert into testjson (data) values (%{fmt_in})", ["{}"]
+            )
 
 
 @pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])

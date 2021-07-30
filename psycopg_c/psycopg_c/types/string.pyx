@@ -25,7 +25,7 @@ cdef extern from "Python.h":
     const char *PyUnicode_AsUTF8AndSize(unicode obj, Py_ssize_t *size) except NULL
 
 
-cdef class _StrDumper(CDumper):
+cdef class _BaseStrDumper(CDumper):
     cdef int is_utf8
     cdef char *encoding
     cdef bytes _bytes_encoding  # needed to keep `encoding` alive
@@ -70,7 +70,7 @@ cdef class _StrDumper(CDumper):
 
 
 @cython.final
-cdef class StrBinaryDumper(_StrDumper):
+cdef class StrBinaryDumper(_BaseStrDumper):
 
     format = PQ_BINARY
 
@@ -78,8 +78,7 @@ cdef class StrBinaryDumper(_StrDumper):
         self.oid = oids.TEXT_OID
 
 
-@cython.final
-cdef class StrDumper(_StrDumper):
+cdef class _StrDumper(_BaseStrDumper):
 
     format = PQ_TEXT
 
@@ -93,6 +92,18 @@ cdef class StrDumper(_StrDumper):
                 "PostgreSQL text fields cannot contain NUL (0x00) bytes"
             )
         return size
+
+
+@cython.final
+cdef class StrDumper(_StrDumper):
+
+    def __cinit__(self):
+        self.oid = oids.TEXT_OID
+
+
+@cython.final
+cdef class StrDumperUnknown(_StrDumper):
+    pass
 
 
 cdef class _TextLoader(CLoader):

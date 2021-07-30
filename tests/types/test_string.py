@@ -3,6 +3,7 @@ import pytest
 import psycopg
 from psycopg import pq
 from psycopg import sql
+from psycopg import errors as e
 from psycopg.adapt import PyFormat as Format
 from psycopg import Binary
 
@@ -126,6 +127,17 @@ def test_dump_enum(conn, fmt_in):
     cur.execute(f"insert into with_enum (e) values (%{fmt_in})", (MyEnum.foo,))
     (res,) = cur.execute("select e from with_enum").fetchone()
     assert res == "foo"
+
+
+@pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT])
+def test_dump_text_oid(conn, fmt_in):
+    conn.autocommit = True
+
+    with pytest.raises(e.IndeterminateDatatype):
+        conn.execute(f"select concat(%{fmt_in}, %{fmt_in})", ["foo", "bar"])
+    conn.adapters.register_dumper(str, psycopg.types.string.StrDumper)
+    cur = conn.execute(f"select concat(%{fmt_in}, %{fmt_in})", ["foo", "bar"])
+    assert cur.fetchone()[0] == "foobar"
 
 
 @pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
