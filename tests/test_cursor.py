@@ -50,7 +50,7 @@ def test_status(conn):
     cur.execute("select 1")
     assert cur.status == cur.ExecStatus.TUPLES_OK
     cur.close()
-    assert cur.status is None
+    assert cur.status == cur.ExecStatus.TUPLES_OK
 
 
 def test_execute_many_results(conn):
@@ -241,7 +241,7 @@ def test_rowcount(conn):
     assert cur.rowcount == 42
 
     cur.close()
-    assert cur.rowcount == -1
+    assert cur.rowcount == 42
 
 
 def test_rownumber(conn):

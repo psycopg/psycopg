@@ -462,11 +462,6 @@ class BaseCursor(Generic[ConnectionType, Row]):
 
     def _close(self) -> None:
         self._closed = True
-        # however keep the query available, which can be useful for debugging
-        # in case of errors
-        pgq = self._pgq
-        self._reset()
-        self._pgq = pgq
 
 
 AnyCursor = BaseCursor[Any, Row]

@@ -50,7 +50,7 @@ async def test_status(aconn):
     await cur.execute("select 1")
     assert cur.status == cur.ExecStatus.TUPLES_OK
     await cur.close()
-    assert cur.status is None
+    assert cur.status == cur.ExecStatus.TUPLES_OK
 
 
 async def test_execute_many_results(aconn):
@@ -243,7 +243,7 @@ async def test_rowcount(aconn):
     assert cur.rowcount == 42
 
     await cur.close()
-    assert cur.rowcount == -1
+    assert cur.rowcount == 42
 
 
 async def test_rownumber(aconn):
