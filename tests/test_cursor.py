@@ -304,6 +304,14 @@ def test_row_factory(conn):
     assert cur.fetchone() == {"y": "y", "z": "z"}
 
 
+def test_row_factory_none(conn):
+    cur = conn.cursor(row_factory=None)
+    assert cur.row_factory is rows.tuple_row
+    r = cur.execute("select 1 as a, 2 as b").fetchone()
+    assert type(r) is tuple
+    assert r == (1, 2)
+
+
 def test_bad_row_factory(conn):
     def broken_factory(cur):
         1 / 0

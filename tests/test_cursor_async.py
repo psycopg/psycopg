@@ -310,6 +310,15 @@ async def test_row_factory(aconn):
     assert await cur.fetchone() == {"y": "y", "z": "z"}
 
 
+async def test_row_factory_none(aconn):
+    cur = aconn.cursor(row_factory=None)
+    assert cur.row_factory is rows.tuple_row
+    await cur.execute("select 1 as a, 2 as b")
+    r = await cur.fetchone()
+    assert type(r) is tuple
+    assert r == (1, 2)
+
+
 async def test_bad_row_factory(aconn):
     def broken_factory(cur):
         1 / 0
