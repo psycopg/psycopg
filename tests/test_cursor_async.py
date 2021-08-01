@@ -310,6 +310,26 @@ async def test_row_factory(aconn):
     assert await cur.fetchone() == {"y": "y", "z": "z"}
 
 
+async def test_bad_row_factory(aconn):
+    def broken_factory(cur):
+        1 / 0
+
+    cur = aconn.cursor(row_factory=broken_factory)
+    with pytest.raises(ZeroDivisionError):
+        await cur.execute("select 1")
+
+    def broken_maker(cur):
+        def make_row(seq):
+            1 / 0
+
+        return make_row
+
+    cur = aconn.cursor(row_factory=broken_maker)
+    await cur.execute("select 1")
+    with pytest.raises(ZeroDivisionError):
+        await cur.fetchone()
+
+
 async def test_scroll(aconn):
     cur = aconn.cursor()
     with pytest.raises(psycopg.ProgrammingError):

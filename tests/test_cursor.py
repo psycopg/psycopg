@@ -304,6 +304,26 @@ def test_row_factory(conn):
     assert cur.fetchone() == {"y": "y", "z": "z"}
 
 
+def test_bad_row_factory(conn):
+    def broken_factory(cur):
+        1 / 0
+
+    cur = conn.cursor(row_factory=broken_factory)
+    with pytest.raises(ZeroDivisionError):
+        cur.execute("select 1")
+
+    def broken_maker(cur):
+        def make_row(seq):
+            1 / 0
+
+        return make_row
+
+    cur = conn.cursor(row_factory=broken_maker)
+    cur.execute("select 1")
+    with pytest.raises(ZeroDivisionError):
+        cur.fetchone()
+
+
 def test_scroll(conn):
     cur = conn.cursor()
     with pytest.raises(psycopg.ProgrammingError):
