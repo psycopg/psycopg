@@ -270,6 +270,11 @@ async def test_autocommit(aconn):
     assert await cur.fetchone() == (1,)
     assert aconn.pgconn.transaction_status == aconn.TransactionStatus.IDLE
 
+    await aconn.set_autocommit("")
+    assert aconn.autocommit is False
+    await aconn.set_autocommit("yeah")
+    assert aconn.autocommit is True
+
 
 async def test_autocommit_connect(dsn):
     aconn = await psycopg.AsyncConnection.connect(dsn, autocommit=True)
@@ -676,3 +681,18 @@ async def test_set_transaction_param_all(aconn):
         )
         pgval = (await cur.fetchone())[0]
         assert tx_values_map[pgval] == value
+
+
+async def test_set_transaction_param_strange(aconn):
+    for val in ("asdf", 0, 5):
+        with pytest.raises(ValueError):
+            await aconn.set_isolation_level(val)
+
+    await aconn.set_isolation_level(psycopg.IsolationLevel.SERIALIZABLE.value)
+    assert aconn.isolation_level is psycopg.IsolationLevel.SERIALIZABLE
+
+    await aconn.set_read_only(1)
+    assert aconn.read_only is True
+
+    await aconn.set_deferrable(0)
+    assert aconn.deferrable is False

@@ -223,7 +223,7 @@ class BaseConnection(Generic[Row]):
         # Base implementation, not thread safe.
         # Subclasses must call it holding a lock
         self._check_intrans("read_only")
-        self._read_only = value
+        self._read_only = bool(value)
         self._begin_statement = b""
 
     @property
@@ -241,7 +241,7 @@ class BaseConnection(Generic[Row]):
         # Base implementation, not thread safe.
         # Subclasses must call it holding a lock
         self._check_intrans("deferrable")
-        self._deferrable = value
+        self._deferrable = bool(value)
         self._begin_statement = b""
 
     def _check_intrans(self, attribute: str) -> None:

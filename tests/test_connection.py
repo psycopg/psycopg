@@ -260,6 +260,11 @@ def test_autocommit(conn):
     assert cur.execute("select 1").fetchone() == (1,)
     assert conn.pgconn.transaction_status == conn.TransactionStatus.IDLE
 
+    conn.autocommit = ""
+    assert conn.autocommit is False
+    conn.autocommit = "yeah"
+    assert conn.autocommit is True
+
 
 def test_autocommit_connect(dsn):
     conn = Connection.connect(dsn, autocommit=True)
@@ -670,3 +675,18 @@ def test_set_transaction_param_all(conn):
             "select current_setting(%s)", [f"transaction_{guc}"]
         ).fetchone()[0]
         assert tx_values_map[pgval] == value
+
+
+def test_set_transaction_param_strange(conn):
+    for val in ("asdf", 0, 5):
+        with pytest.raises(ValueError):
+            conn.isolation_level = val
+
+    conn.isolation_level = psycopg.IsolationLevel.SERIALIZABLE.value
+    assert conn.isolation_level is psycopg.IsolationLevel.SERIALIZABLE
+
+    conn.read_only = 1
+    assert conn.read_only is True
+
+    conn.deferrable = 0
+    assert conn.deferrable is False
