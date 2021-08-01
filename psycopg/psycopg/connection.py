@@ -9,7 +9,7 @@ import logging
 import warnings
 import threading
 from types import TracebackType
-from typing import Any, AsyncIterator, Callable, Generic, Iterator, List
+from typing import Any, AsyncIterator, Callable, cast, Generic, Iterator, List
 from typing import NamedTuple, Optional, Type, TypeVar, Union
 from typing import overload, TYPE_CHECKING
 from weakref import ref, ReferenceType
@@ -25,7 +25,7 @@ from . import encodings
 from .pq import ConnStatus, ExecStatus, TransactionStatus, Format
 from .abc import ConnectionType, Params, PQGen, PQGenConn, Query, RV
 from .sql import Composable
-from .rows import Row, RowFactory, tuple_row, TupleRow
+from .rows import Row, RowFactory, AsyncRowFactory, tuple_row, TupleRow
 from ._enums import IsolationLevel
 from .compat import asynccontextmanager
 from .cursor import Cursor, AsyncCursor
@@ -103,7 +103,11 @@ class BaseConnection(Generic[Row]):
     ConnStatus = pq.ConnStatus
     TransactionStatus = pq.TransactionStatus
 
-    def __init__(self, pgconn: "PGconn", row_factory: RowFactory[Row]):
+    def __init__(
+        self,
+        pgconn: "PGconn",
+        row_factory: Union[RowFactory[Row], AsyncRowFactory[Row]],
+    ):
         self.pgconn = pgconn  # TODO: document this
         self._row_factory = row_factory
         self._autocommit = False
@@ -296,15 +300,6 @@ class BaseConnection(Generic[Row]):
     def connection(self) -> "BaseConnection[Row]":
         # implement the AdaptContext protocol
         return self
-
-    @property
-    def row_factory(self) -> RowFactory[Row]:
-        """Writable attribute to control how result rows are formed."""
-        return self._row_factory
-
-    @row_factory.setter
-    def row_factory(self, row_factory: RowFactory[Row]) -> None:
-        self._row_factory = row_factory
 
     def fileno(self) -> int:
         """Return the file descriptor of the connection.
@@ -619,6 +614,15 @@ class Connection(BaseConnection[Row]):
         self._closed = True
         self.pgconn.finish()
 
+    @property
+    def row_factory(self) -> RowFactory[Row]:
+        """Writable attribute to control how result rows are formed."""
+        return cast(RowFactory[Row], self._row_factory)
+
+    @row_factory.setter
+    def row_factory(self, row_factory: RowFactory[Row]) -> None:
+        self._row_factory = row_factory
+
     @overload
     def cursor(self, *, binary: bool = False) -> Cursor[Row]:
         ...
@@ -785,7 +789,7 @@ class AsyncConnection(BaseConnection[Row]):
     cursor_factory: Type[AsyncCursor[Row]]
     server_cursor_factory: Type[AsyncServerCursor[Row]]
 
-    def __init__(self, pgconn: "PGconn", row_factory: RowFactory[Row]):
+    def __init__(self, pgconn: "PGconn", row_factory: AsyncRowFactory[Row]):
         super().__init__(pgconn, row_factory)
         self.lock = asyncio.Lock()
         self.cursor_factory = AsyncCursor
@@ -798,7 +802,7 @@ class AsyncConnection(BaseConnection[Row]):
         conninfo: str = "",
         *,
         autocommit: bool = False,
-        row_factory: RowFactory[Row],
+        row_factory: AsyncRowFactory[Row],
         **kwargs: Union[None, int, str],
     ) -> "AsyncConnection[Row]":
         ...
@@ -866,13 +870,22 @@ class AsyncConnection(BaseConnection[Row]):
         self._closed = True
         self.pgconn.finish()
 
+    @property
+    def row_factory(self) -> AsyncRowFactory[Row]:
+        """Writable attribute to control how result rows are formed."""
+        return cast(AsyncRowFactory[Row], self._row_factory)
+
+    @row_factory.setter
+    def row_factory(self, row_factory: AsyncRowFactory[Row]) -> None:
+        self._row_factory = row_factory
+
     @overload
     def cursor(self, *, binary: bool = False) -> AsyncCursor[Row]:
         ...
 
     @overload
     def cursor(
-        self, *, binary: bool = False, row_factory: RowFactory[CursorRow]
+        self, *, binary: bool = False, row_factory: AsyncRowFactory[CursorRow]
     ) -> AsyncCursor[CursorRow]:
         ...
 
@@ -893,7 +906,7 @@ class AsyncConnection(BaseConnection[Row]):
         name: str,
         *,
         binary: bool = False,
-        row_factory: RowFactory[CursorRow],
+        row_factory: AsyncRowFactory[CursorRow],
         scrollable: Optional[bool] = None,
         withhold: bool = False,
     ) -> AsyncServerCursor[CursorRow]:
@@ -904,7 +917,7 @@ class AsyncConnection(BaseConnection[Row]):
         name: str = "",
         *,
         binary: bool = False,
-        row_factory: Optional[RowFactory[Any]] = None,
+        row_factory: Optional[AsyncRowFactory[Any]] = None,
         scrollable: Optional[bool] = None,
         withhold: bool = False,
     ) -> Union[AsyncCursor[Any], AsyncServerCursor[Any]]:

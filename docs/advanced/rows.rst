@@ -25,13 +25,21 @@ callable (formally the `~psycopg.rows.RowMaker` protocol) accepting a
 
 .. autoclass:: psycopg.rows.RowFactory()
 
-   .. method:: __call__(cursor: AnyCursor[Row]) -> RowMaker[Row]
+   .. method:: __call__(cursor: Cursor[Row]) -> RowMaker[Row]
 
         Inspect the result on a cursor and return a `RowMaker` to convert rows.
 
-        `!AnyCursor` may be either a `~psycopg.Cursor` or an
-        `~psycopg.AsyncCursor`.
+.. autoclass:: psycopg.rows.AsyncRowFactory()
 
+   .. method:: __call__(cursor: AsyncCursor[Row]) -> RowMaker[Row]
+
+        Inspect the result on a cursor and return a `RowMaker` to convert rows.
+
+Note that it's easy to implement an object implementing both `!RowFactory` and
+`!AsyncRowFactory`: usually, everything you need to implement a row factory is
+to access `~Cursor.description`, which is provided by both the cursor flavours.
+The `psycopg` module also exposes a class `AnyCursor` which you may use if you
+want to use the same row factory for both sync and async cursors.
 
 `~RowFactory` objects can be implemented as a class, for instance:
 

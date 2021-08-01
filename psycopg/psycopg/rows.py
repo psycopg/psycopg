@@ -14,7 +14,7 @@ from . import errors as e
 from .compat import Protocol
 
 if TYPE_CHECKING:
-    from .cursor import AnyCursor
+    from .cursor import AnyCursor, Cursor, AsyncCursor
 
 # Row factories
 
@@ -52,7 +52,16 @@ class RowFactory(Protocol[Row]):
     use the values to create a dictionary for each record.
     """
 
-    def __call__(self, __cursor: "AnyCursor[Row]") -> RowMaker[Row]:
+    def __call__(self, __cursor: "Cursor[Row]") -> RowMaker[Row]:
+        ...
+
+
+class AsyncRowFactory(Protocol[Row]):
+    """
+    Callable protocol taking an `~psycopg.AsyncCursor` and returning a `RowMaker`.
+    """
+
+    def __call__(self, __cursor: "AsyncCursor[Row]") -> RowMaker[Row]:
         ...
 
 
