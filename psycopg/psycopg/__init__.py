@@ -11,7 +11,7 @@ from . import types
 from . import postgres
 from .copy import Copy, AsyncCopy
 from ._enums import IsolationLevel
-from .cursor import AnyCursor, AsyncCursor, Cursor
+from .cursor import AsyncCursor, Cursor
 from .errors import Warning, Error, InterfaceError, DatabaseError
 from .errors import DataError, OperationalError, IntegrityError
 from .errors import InternalError, ProgrammingError, NotSupportedError
@@ -51,7 +51,6 @@ adapters.register_dumper(Binary, BinaryBinaryDumper)  # dbapi20
 # so that function signatures are consistent with the documentation.
 __all__ = [
     "__version__",
-    "AnyCursor",
     "AsyncConnection",
     "AsyncCopy",
     "AsyncCursor",

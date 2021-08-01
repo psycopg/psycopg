@@ -5,21 +5,18 @@ psycopg server-side cursor objects.
 # Copyright (C) 2020-2021 The Psycopg Team
 
 import warnings
-from types import TracebackType
-from typing import AsyncIterator, Generic, List, Iterator, Optional
-from typing import Sequence, Type, TYPE_CHECKING
+from typing import Any, AsyncIterator, cast, Generic, List, Iterator, Optional
+from typing import Sequence, TYPE_CHECKING
 
 from . import pq
 from . import sql
 from . import errors as e
 from .abc import ConnectionType, Query, Params, PQGen
-from .rows import Row, RowFactory
-from .cursor import BaseCursor, execute
+from .rows import Row, RowFactory, AsyncRowFactory
+from .cursor import AnyCursor, BaseCursor, Cursor, AsyncCursor, execute
 
 if TYPE_CHECKING:
-    from typing import Any  # noqa: F401
-    from .connection import BaseConnection  # noqa: F401
-    from .connection import Connection, AsyncConnection  # noqa: F401
+    from .connection import Connection, AsyncConnection
 
 DEFAULT_ITERSIZE = 100
 
@@ -175,7 +172,7 @@ class ServerCursorHelper(Generic[ConnectionType, Row]):
         return sql.SQL(" ").join(parts)
 
 
-class ServerCursor(BaseCursor["Connection[Any]", Row]):
+class ServerCursor(Cursor[Row]):
     __module__ = "psycopg"
     __slots__ = ("_helper", "itersize")
 
@@ -203,17 +200,6 @@ class ServerCursor(BaseCursor["Connection[Any]", Row]):
 
     def __repr__(self) -> str:
         return self._helper._repr(self)
-
-    def __enter__(self) -> "ServerCursor[Row]":
-        return self
-
-    def __exit__(
-        self,
-        exc_type: Optional[Type[BaseException]],
-        exc_val: Optional[BaseException],
-        exc_tb: Optional[TracebackType],
-    ) -> None:
-        self.close()
 
     @property
     def name(self) -> str:
@@ -245,19 +231,23 @@ class ServerCursor(BaseCursor["Connection[Any]", Row]):
             if self.closed:
                 return
             self._conn.wait(self._helper._close_gen(self))
-            self._close()
+            super().close()
 
     def execute(
-        self,
+        self: AnyCursor,
         query: Query,
         params: Optional[Params] = None,
-    ) -> "ServerCursor[Row]":
+        **kwargs: Any,
+    ) -> AnyCursor:
         """
         Open a cursor to execute a query to the database.
         """
-        query = self._helper._make_declare_statement(self, query)
+        if kwargs:
+            raise TypeError(f"keyword not supported: {list(kwargs)[0]}")
+        helper = cast(ServerCursor[Row], self)._helper
+        query = helper._make_declare_statement(self, query)
         with self._conn.lock:
-            self._conn.wait(self._helper._declare_gen(self, query, params))
+            self._conn.wait(helper._declare_gen(self, query, params))
         return self
 
     def executemany(self, query: Query, params_seq: Sequence[Params]) -> None:
@@ -311,7 +301,7 @@ class ServerCursor(BaseCursor["Connection[Any]", Row]):
             self._pos = value
 
 
-class AsyncServerCursor(BaseCursor["AsyncConnection[Any]", Row]):
+class AsyncServerCursor(AsyncCursor[Row]):
     __module__ = "psycopg"
     __slots__ = ("_helper", "itersize")
 
@@ -320,7 +310,7 @@ class AsyncServerCursor(BaseCursor["AsyncConnection[Any]", Row]):
         connection: "AsyncConnection[Any]",
         name: str,
         *,
-        row_factory: RowFactory[Row],
+        row_factory: AsyncRowFactory[Row],
         scrollable: Optional[bool] = None,
         withhold: bool = False,
     ):
@@ -340,17 +330,6 @@ class AsyncServerCursor(BaseCursor["AsyncConnection[Any]", Row]):
     def __repr__(self) -> str:
         return self._helper._repr(self)
 
-    async def __aenter__(self) -> "AsyncServerCursor[Row]":
-        return self
-
-    async def __aexit__(
-        self,
-        exc_type: Optional[Type[BaseException]],
-        exc_val: Optional[BaseException],
-        exc_tb: Optional[TracebackType],
-    ) -> None:
-        await self.close()
-
     @property
     def name(self) -> str:
         return self._helper.name
@@ -368,18 +347,20 @@ class AsyncServerCursor(BaseCursor["AsyncConnection[Any]", Row]):
             if self.closed:
                 return
             await self._conn.wait(self._helper._close_gen(self))
-            self._close()
+            await super().close()
 
     async def execute(
-        self,
+        self: AnyCursor,
         query: Query,
         params: Optional[Params] = None,
-    ) -> "AsyncServerCursor[Row]":
-        query = self._helper._make_declare_statement(self, query)
+        **kwargs: Any,
+    ) -> AnyCursor:
+        if kwargs:
+            raise TypeError(f"keyword not supported: {list(kwargs)[0]}")
+        helper = cast(AsyncServerCursor[Row], self)._helper
+        query = helper._make_declare_statement(self, query)
         async with self._conn.lock:
-            await self._conn.wait(
-                self._helper._declare_gen(self, query, params)
-            )
+            await self._conn.wait(helper._declare_gen(self, query, params))
         return self
 
     async def executemany(

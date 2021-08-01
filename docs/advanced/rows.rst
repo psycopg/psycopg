@@ -25,23 +25,29 @@ callable (formally the `~psycopg.rows.RowMaker` protocol) accepting a
 
 .. autoclass:: psycopg.rows.RowFactory()
 
-   .. method:: __call__(cursor: AnyCursor[Row]) -> RowMaker[Row]
+   .. method:: __call__(cursor: Cursor[Row]) -> RowMaker[Row]
 
         Inspect the result on a cursor and return a `RowMaker` to convert rows.
 
-        `!AnyCursor` may be either a `~psycopg.Cursor` or an
-        `~psycopg.AsyncCursor`.
+.. autoclass:: psycopg.rows.AsyncRowFactory()
 
+   .. method:: __call__(cursor: AsyncCursor[Row]) -> RowMaker[Row]
+
+        Inspect the result on a cursor and return a `RowMaker` to convert rows.
+
+Note that it's easy to implement an object implementing both `!RowFactory` and
+`!AsyncRowFactory`: usually, everything you need to implement a row factory is
+to access `~Cursor.description`, which is provided by both the cursor flavours.
 
 `~RowFactory` objects can be implemented as a class, for instance:
 
 .. code:: python
 
    from typing import Any, Sequence
-   from psycopg import AnyCursor
+   from psycopg import Cursor
 
    class DictRowFactory:
-       def __init__(self, cursor: AnyCursor[dict[str, Any]]):
+       def __init__(self, cursor: Cursor[dict[str, Any]]):
            self.fields = [c.name for c in cursor.description]
 
        def __call__(self, values: Sequence[Any]) -> dict[str, Any]:
@@ -51,9 +57,7 @@ or as a plain function:
 
 .. code:: python
 
-   def dict_row_factory(
-       cursor: AnyCursor[dict[str, Any]]
-   ) -> Callable[[Sequence[Any]], dict[str, Any]]:
+   def dict_row_factory(cursor: Cursor[dict[str, Any]]) -> RowMaker[dict[str, Any]]:
        fields = [c.name for c in cursor.description]
 
        def make_row(values: Sequence[Any]) -> dict[str, Any]:
@@ -84,13 +88,13 @@ The module `psycopg.rows` provides the implementation for a few row factories:
 
 .. currentmodule:: psycopg.rows
 
-.. autofunction:: tuple_row(cursor: AnyCursor[TupleRow])
+.. autofunction:: tuple_row
 .. autodata:: TupleRow
 
-.. autofunction:: dict_row(cursor: AnyCursor[DictRow])
+.. autofunction:: dict_row
 .. autodata:: DictRow
 
-.. autofunction:: namedtuple_row(cursor: AnyCursor[NamedTuple])
+.. autofunction:: namedtuple_row
 
 
 Use with a static analyzer
@@ -102,9 +106,9 @@ the `~Connection.connect()` and the `~Connection.cursor()` method) and it
 controls what type of record is returned by the fetch methods of the cursors.
 The default `tuple_row()` returns a generic tuple as return type (`Tuple[Any,
 ...]`). This information can be used for type checking using a static analyzer
-such as Mypy_.
+such as mypy_.
 
-.. _Mypy: https://mypy.readthedocs.io/
+.. _mypy: https://mypy.readthedocs.io/
 .. __: https://mypy.readthedocs.io/en/stable/generics.html
 
 .. code:: python
@@ -133,7 +137,7 @@ Example: returning records as Pydantic models
 ---------------------------------------------
 
 Using Pydantic_ it is possible to enforce static typing at runtime. Using a
-Pydantic model factory the code can be checked statically using Mypy and
+Pydantic model factory the code can be checked statically using mypy and
 querying the database will raise an exception if the resultset is not
 compatible with the model.
 
@@ -158,7 +162,7 @@ any issue. Pydantic will also raise a runtime error in case the
         dob: Optional[date]
 
     class PersonFactory:
-        def __init__(self, cur: psycopg.AnyCursor[Person]):
+        def __init__(self, cur: psycopg.Cursor[Person]):
             assert cur.description
             self.fields = [c.name for c in cur.description]
 
@@ -190,3 +194,56 @@ any issue. Pydantic will also raise a runtime error in case the
             print(f"{p.first_name} was born in {p.dob.year}")
         else:
             print(f"Who knows when {p.first_name} was born")
+
+
+Another level of generic
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+Note that, in the example above, the `!PersonFactory` implementation has
+nothing specific to the `!Person` class, apart from the returned type itself.
+This suggests that it's actually possible to create a... factory of factories:
+a function that, given a Pydantic model, returns a RowFactory that can be used
+to annotate connections and cursor statically.
+
+In the example above, the `!PersonFactory` class can be implemented as a
+function:
+
+.. code:: python
+
+    def person_factory(cursor: Cursor[Person]) -> RowMaker[Person]:
+        assert cursor.description
+        fields = [c.name for c in cursor.description]
+
+        def person_factory_(values: Sequence[Any]) -> Person:
+            return Person(**dict(zip(fields, values)))
+
+        return person_factory_
+
+The function `!person_factory()` is a `!RowFactory[Person]`. We can introduce
+a generic `M`, which can be any Pydantic model, and write a function returning
+`!RowFactory[M]`:
+
+.. code:: python
+
+    M = TypeVar("M", bound=BaseModel)
+
+    def model_factory(model: Type[M]) -> RowFactory[M]:
+        def model_factory_(cursor: Cursor[M]) -> RowMaker[M]:
+            assert cursor.description
+            fields = [c.name for c in cursor.description]
+
+            def model_factory__(values: Sequence[Any]) -> M:
+                return model(**dict(zip(fields, values)))
+
+            return model_factory__
+
+        return model_factory_
+
+which can be used to declare the types of connections and cursors:
+
+.. code:: python
+
+    conn = psycopg.connect()
+    cur = conn.cursor(row_factory=model_factory(Person))
+    x = cur.fetchone()
+    # the type of x is Optional[Person]

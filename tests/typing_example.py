@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Callable, Optional, Sequence, Tuple
+from typing import Any, Callable, Optional, Sequence, Tuple, Union
 
-from psycopg import AnyCursor, Connection, Cursor, ServerCursor, connect
+from psycopg import Connection, Cursor, ServerCursor, connect
+from psycopg import AsyncConnection, AsyncCursor, AsyncServerCursor
 
 
-def int_row_factory(cursor: AnyCursor[int]) -> Callable[[Sequence[int]], int]:
+def int_row_factory(
+    cursor: Union[Cursor[int], AsyncCursor[int]]
+) -> Callable[[Sequence[int]], int]:
     return lambda values: values[0] if values else 42
 
 
@@ -19,7 +22,7 @@ class Person:
 
     @classmethod
     def row_factory(
-        cls, cursor: AnyCursor[Person]
+        cls, cursor: Union[Cursor[Person], AsyncCursor[Person]]
     ) -> Callable[[Sequence[str]], Person]:
         def mkrow(values: Sequence[str]) -> Person:
             name, address = values
@@ -50,6 +53,31 @@ def check_row_factory_cursor() -> None:
     with conn.cursor(name="s", row_factory=Person.row_factory) as cur3:
         cur3.execute("select * from persons where name like 'al%'")
         persons = cur3.fetchall()
+        persons[0].address
+
+
+async def async_check_row_factory_cursor() -> None:
+    """Type-check connection.cursor(..., row_factory=<MyRowFactory>) case."""
+    conn = await AsyncConnection.connect()
+
+    cur1: AsyncCursor[Any]
+    cur1 = conn.cursor()
+    r1: Optional[Any]
+    r1 = await cur1.fetchone()
+    r1 is not None
+
+    cur2: AsyncCursor[int]
+    r2: Optional[int]
+    async with conn.cursor(row_factory=int_row_factory) as cur2:
+        await cur2.execute("select 1")
+        r2 = await cur2.fetchone()
+        r2 and r2 > 0
+
+    cur3: AsyncServerCursor[Person]
+    persons: Sequence[Person]
+    async with conn.cursor(name="s", row_factory=Person.row_factory) as cur3:
+        await cur3.execute("select * from persons where name like 'al%'")
+        persons = await cur3.fetchall()
         persons[0].address
 
 
@@ -84,4 +112,38 @@ def check_row_factory_connection() -> None:
     with conn3.cursor() as cur3:
         cur3.execute("select 42")
         r3 = cur3.fetchone()
+        r3 and len(r3)
+
+
+async def async_check_row_factory_connection() -> None:
+    """Type-check connect(..., row_factory=<MyRowFactory>) or
+    Connection.row_factory cases.
+    """
+    conn1: AsyncConnection[int]
+    cur1: AsyncCursor[int]
+    r1: Optional[int]
+    conn1 = await AsyncConnection.connect(row_factory=int_row_factory)
+    cur1 = await conn1.execute("select 1")
+    r1 = await cur1.fetchone()
+    r1 != 0
+    async with conn1.cursor() as cur1:
+        await cur1.execute("select 2")
+
+    conn2: AsyncConnection[Person]
+    cur2: AsyncCursor[Person]
+    r2: Optional[Person]
+    conn2 = await AsyncConnection.connect(row_factory=Person.row_factory)
+    cur2 = await conn2.execute("select * from persons")
+    r2 = await cur2.fetchone()
+    r2 and r2.name
+    async with conn2.cursor() as cur2:
+        await cur2.execute("select 2")
+
+    cur3: AsyncCursor[Tuple[Any, ...]]
+    r3: Optional[Tuple[Any, ...]]
+    conn3 = await AsyncConnection.connect()
+    cur3 = await conn3.execute("select 3")
+    async with conn3.cursor() as cur3:
+        await cur3.execute("select 42")
+        r3 = await cur3.fetchone()
         r3 and len(r3)

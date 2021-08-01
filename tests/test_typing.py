@@ -284,7 +284,8 @@ def _test_reveal(stmts, type, mypy, tmpdir):
     stmts = "\n".join(f"    {line}" for line in stmts.splitlines())
 
     src = f"""\
-from typing import Any, Callable, Dict, List, NamedTuple, Optional, Sequence, Tuple
+from typing import Any, Callable, Dict, List, NamedTuple, Optional, Sequence
+from typing import Tuple, Union
 import psycopg
 from psycopg import rows
 
@@ -293,7 +294,7 @@ class Thing:
         self.kwargs = kwargs
 
 def thing_row(
-    cur: psycopg.AnyCursor[Thing],
+    cur: Union[psycopg.Cursor[Thing], psycopg.AsyncCursor[Thing]],
 ) -> Callable[[Sequence[Any]], Thing]:
     assert cur.description
     names = [d.name for d in cur.description]

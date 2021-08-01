@@ -7,7 +7,7 @@ psycopg cursor objects
 import sys
 from types import TracebackType
 from typing import Any, AsyncIterator, Callable, Generic, Iterator, List
-from typing import Optional, NoReturn, Sequence, Type, TYPE_CHECKING
+from typing import Optional, NoReturn, Sequence, Type, TYPE_CHECKING, TypeVar
 from contextlib import contextmanager
 
 from . import pq
@@ -18,7 +18,7 @@ from . import generators
 from .pq import ExecStatus, Format
 from .abc import ConnectionType, Query, Params, PQGen
 from .copy import Copy, AsyncCopy
-from .rows import Row, RowFactory
+from .rows import Row, RowMaker, RowFactory, AsyncRowFactory
 from .compat import asynccontextmanager
 from ._column import Column
 from ._cmodule import _psycopg
@@ -28,8 +28,7 @@ from ._preparing import Prepare
 if TYPE_CHECKING:
     from .abc import Transformer
     from .pq.abc import PGconn, PGresult
-    from .connection import BaseConnection  # noqa: F401
-    from .connection import Connection, AsyncConnection  # noqa: F401
+    from .connection import Connection, AsyncConnection
 
 execute: Callable[["PGconn"], PQGen[List["PGresult"]]]
 
@@ -53,17 +52,15 @@ class BaseCursor(Generic[ConnectionType, Row]):
     ExecStatus = pq.ExecStatus
 
     _tx: "Transformer"
+    _make_row: RowMaker[Row]
 
     def __init__(
         self,
         connection: ConnectionType,
-        *,
-        row_factory: RowFactory[Row],
     ):
         self._conn = connection
         self.format = Format.TEXT
         self._adapters = adapt.AdaptersMap(connection.adapters)
-        self._row_factory = row_factory
         self.arraysize = 1
         self._closed = False
         self._last_query: Optional[Query] = None
@@ -162,7 +159,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
         if self._iresult < len(self._results):
             self.pgresult = self._results[self._iresult]
             self._tx.set_pgresult(self._results[self._iresult])
-            self._make_row = self._row_factory(self)
+            self._make_row = self._make_row_maker()
             self._pos = 0
             nrows = self.pgresult.command_tuples
             self._rowcount = nrows if nrows is not None else -1
@@ -170,16 +167,8 @@ class BaseCursor(Generic[ConnectionType, Row]):
         else:
             return None
 
-    @property
-    def row_factory(self) -> RowFactory[Row]:
-        """Writable attribute to control how result rows are formed."""
-        return self._row_factory
-
-    @row_factory.setter
-    def row_factory(self, row_factory: RowFactory[Row]) -> None:
-        self._row_factory = row_factory
-        if self.pgresult:
-            self._make_row = row_factory(self)
+    def _make_row_maker(self) -> RowMaker[Row]:
+        raise NotImplementedError
 
     #
     # Generators for the high level operations on the cursor
@@ -276,7 +265,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
             self.pgresult = res
             self._tx.set_pgresult(res, set_loaders=first)
             if first:
-                self._make_row = self._row_factory(self)
+                self._make_row = self._make_row_maker()
             return res
 
         elif res.status in (ExecStatus.TUPLES_OK, ExecStatus.COMMAND_OK):
@@ -379,15 +368,13 @@ class BaseCursor(Generic[ConnectionType, Row]):
         self._results = list(results)
         self.pgresult = results[0]
         self._tx.set_pgresult(results[0])
-        self._make_row = self._row_factory(self)
+        self._make_row = self._make_row_maker()
         nrows = self.pgresult.command_tuples
         if nrows is not None:
             if self._rowcount < 0:
                 self._rowcount = nrows
             else:
                 self._rowcount += nrows
-
-        return
 
     def _raise_from_results(self, results: Sequence["PGresult"]) -> NoReturn:
         statuses = {res.status for res in results}
@@ -464,14 +451,20 @@ class BaseCursor(Generic[ConnectionType, Row]):
         self._closed = True
 
 
-AnyCursor = BaseCursor[Any, Row]
+AnyCursor = TypeVar("AnyCursor", bound="BaseCursor[Any, Any]")
 
 
 class Cursor(BaseCursor["Connection[Any]", Row]):
     __module__ = "psycopg"
     __slots__ = ()
 
-    def __enter__(self) -> "Cursor[Row]":
+    def __init__(
+        self, connection: "Connection[Any]", *, row_factory: RowFactory[Row]
+    ):
+        super().__init__(connection)
+        self._row_factory = row_factory
+
+    def __enter__(self: AnyCursor) -> AnyCursor:
         return self
 
     def __exit__(
@@ -488,13 +481,27 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
         """
         self._close()
 
+    @property
+    def row_factory(self) -> RowFactory[Row]:
+        """Writable attribute to control how result rows are formed."""
+        return self._row_factory
+
+    @row_factory.setter
+    def row_factory(self, row_factory: RowFactory[Row]) -> None:
+        self._row_factory = row_factory
+        if self.pgresult:
+            self._make_row = row_factory(self)
+
+    def _make_row_maker(self) -> RowMaker[Row]:
+        return self._row_factory(self)
+
     def execute(
-        self,
+        self: AnyCursor,
         query: Query,
         params: Optional[Params] = None,
         *,
         prepare: Optional[bool] = None,
-    ) -> "Cursor[Row]":
+    ) -> AnyCursor:
         """
         Execute a query or command to the database.
         """
@@ -622,7 +629,16 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
     __module__ = "psycopg"
     __slots__ = ()
 
-    async def __aenter__(self) -> "AsyncCursor[Row]":
+    def __init__(
+        self,
+        connection: "AsyncConnection[Any]",
+        *,
+        row_factory: AsyncRowFactory[Row],
+    ):
+        super().__init__(connection)
+        self._row_factory = row_factory
+
+    async def __aenter__(self: AnyCursor) -> AnyCursor:
         return self
 
     async def __aexit__(
@@ -636,13 +652,26 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
     async def close(self) -> None:
         self._close()
 
+    @property
+    def row_factory(self) -> AsyncRowFactory[Row]:
+        return self._row_factory
+
+    @row_factory.setter
+    def row_factory(self, row_factory: AsyncRowFactory[Row]) -> None:
+        self._row_factory = row_factory
+        if self.pgresult:
+            self._make_row = row_factory(self)
+
+    def _make_row_maker(self) -> RowMaker[Row]:
+        return self._row_factory(self)
+
     async def execute(
-        self,
+        self: AnyCursor,
         query: Query,
         params: Optional[Params] = None,
         *,
         prepare: Optional[bool] = None,
-    ) -> "AsyncCursor[Row]":
+    ) -> AnyCursor:
         try:
             async with self._conn.lock:
                 await self._conn.wait(
