@@ -13,11 +13,10 @@ from . import sql
 from . import errors as e
 from .abc import ConnectionType, Query, Params, PQGen
 from .rows import Row, RowFactory, AsyncRowFactory
-from .cursor import C, BaseCursor, Cursor, AsyncCursor, execute
+from .cursor import AnyCursor, BaseCursor, Cursor, AsyncCursor, execute
 
 if TYPE_CHECKING:
-    from .connection import BaseConnection  # noqa: F401
-    from .connection import Connection, AsyncConnection  # noqa: F401
+    from .connection import Connection, AsyncConnection
 
 DEFAULT_ITERSIZE = 100
 
@@ -235,11 +234,11 @@ class ServerCursor(Cursor[Row]):
             super().close()
 
     def execute(
-        self: C,
+        self: AnyCursor,
         query: Query,
         params: Optional[Params] = None,
         **kwargs: Any,
-    ) -> C:
+    ) -> AnyCursor:
         """
         Open a cursor to execute a query to the database.
         """
@@ -351,11 +350,11 @@ class AsyncServerCursor(AsyncCursor[Row]):
             await super().close()
 
     async def execute(
-        self: C,
+        self: AnyCursor,
         query: Query,
         params: Optional[Params] = None,
         **kwargs: Any,
-    ) -> C:
+    ) -> AnyCursor:
         if kwargs:
             raise TypeError(f"keyword not supported: {list(kwargs)[0]}")
         helper = cast(AsyncServerCursor[Row], self)._helper

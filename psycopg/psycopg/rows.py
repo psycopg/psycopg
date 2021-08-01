@@ -7,14 +7,14 @@ psycopg row factories
 import functools
 import re
 from collections import namedtuple
-from typing import Any, Callable, Dict, NamedTuple, Sequence, Tuple, Type
-from typing import TypeVar, TYPE_CHECKING
+from typing import Any, Dict, NamedTuple, Sequence, Tuple, Type, TypeVar
+from typing import TYPE_CHECKING
 
 from . import errors as e
 from .compat import Protocol
 
 if TYPE_CHECKING:
-    from .cursor import AnyCursor, Cursor, AsyncCursor
+    from .cursor import BaseCursor, Cursor, AsyncCursor
 
 # Row factories
 
@@ -72,14 +72,13 @@ An alias for the type returned by `tuple_row()` (i.e. a tuple of any content).
 
 
 def tuple_row(
-    cursor: "AnyCursor[TupleRow]",
-) -> Callable[[Sequence[Any]], TupleRow]:
+    cursor: "BaseCursor[Any, TupleRow]",
+) -> RowMaker[TupleRow]:
     r"""Row factory to represent rows as simple tuples.
 
     This is the default factory.
 
-    :param cursor: The cursor where the rows are read.
-    :rtype: `RowMaker`\ [`TupleRow`]
+    :param cursor: The cursor where to read from.
     """
     # Implementation detail: make sure this is the tuple type itself, not an
     # equivalent function, because the C code fast-paths on it.
@@ -96,15 +95,14 @@ database.
 
 
 def dict_row(
-    cursor: "AnyCursor[DictRow]",
-) -> Callable[[Sequence[Any]], DictRow]:
+    cursor: "BaseCursor[Any, DictRow]",
+) -> RowMaker[DictRow]:
     r"""Row factory to represent rows as dicts.
 
     Note that this is not compatible with the DBAPI, which expects the records
     to be sequences.
 
-    :param cursor: The cursor where the rows are read.
-    :rtype: `RowMaker`\ [`DictRow`]
+    :param cursor: The cursor where to read from.
     """
 
     def make_row(values: Sequence[Any]) -> Dict[str, Any]:
@@ -118,12 +116,11 @@ def dict_row(
 
 
 def namedtuple_row(
-    cursor: "AnyCursor[NamedTuple]",
-) -> Callable[[Sequence[Any]], NamedTuple]:
+    cursor: "BaseCursor[Any, NamedTuple]",
+) -> RowMaker[NamedTuple]:
     r"""Row factory to represent rows as `~collections.namedtuple`.
 
-    :param cursor: The cursor where the rows are read.
-    :rtype: `RowMaker`\ [`NamedTuple`]
+    :param cursor: The cursor where to read from.
     """
 
     def make_row(values: Sequence[Any]) -> NamedTuple:

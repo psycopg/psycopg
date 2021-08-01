@@ -38,8 +38,6 @@ callable (formally the `~psycopg.rows.RowMaker` protocol) accepting a
 Note that it's easy to implement an object implementing both `!RowFactory` and
 `!AsyncRowFactory`: usually, everything you need to implement a row factory is
 to access `~Cursor.description`, which is provided by both the cursor flavours.
-The `psycopg` module also exposes a class `AnyCursor` which you may use if you
-want to use the same row factory for both sync and async cursors.
 
 `~RowFactory` objects can be implemented as a class, for instance:
 
@@ -90,13 +88,13 @@ The module `psycopg.rows` provides the implementation for a few row factories:
 
 .. currentmodule:: psycopg.rows
 
-.. autofunction:: tuple_row(cursor: AnyCursor[TupleRow])
+.. autofunction:: tuple_row
 .. autodata:: TupleRow
 
-.. autofunction:: dict_row(cursor: AnyCursor[DictRow])
+.. autofunction:: dict_row
 .. autodata:: DictRow
 
-.. autofunction:: namedtuple_row(cursor: AnyCursor[NamedTuple])
+.. autofunction:: namedtuple_row
 
 
 Use with a static analyzer

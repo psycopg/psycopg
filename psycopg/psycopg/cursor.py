@@ -28,8 +28,7 @@ from ._preparing import Prepare
 if TYPE_CHECKING:
     from .abc import Transformer
     from .pq.abc import PGconn, PGresult
-    from .connection import BaseConnection  # noqa: F401
-    from .connection import Connection, AsyncConnection  # noqa: F401
+    from .connection import Connection, AsyncConnection
 
 execute: Callable[["PGconn"], PQGen[List["PGresult"]]]
 
@@ -452,10 +451,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
         self._closed = True
 
 
-AnyCursor = BaseCursor[Any, Row]
-
-
-C = TypeVar("C", bound="BaseCursor[Any, Any]")
+AnyCursor = TypeVar("AnyCursor", bound="BaseCursor[Any, Any]")
 
 
 class Cursor(BaseCursor["Connection[Any]", Row]):
@@ -468,7 +464,7 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
         super().__init__(connection)
         self._row_factory = row_factory
 
-    def __enter__(self: C) -> C:
+    def __enter__(self: AnyCursor) -> AnyCursor:
         return self
 
     def __exit__(
@@ -500,12 +496,12 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
         return self._row_factory(self)
 
     def execute(
-        self: C,
+        self: AnyCursor,
         query: Query,
         params: Optional[Params] = None,
         *,
         prepare: Optional[bool] = None,
-    ) -> C:
+    ) -> AnyCursor:
         """
         Execute a query or command to the database.
         """
@@ -642,7 +638,7 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
         super().__init__(connection)
         self._row_factory = row_factory
 
-    async def __aenter__(self: C) -> C:
+    async def __aenter__(self: AnyCursor) -> AnyCursor:
         return self
 
     async def __aexit__(
@@ -670,12 +666,12 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
         return self._row_factory(self)
 
     async def execute(
-        self: C,
+        self: AnyCursor,
         query: Query,
         params: Optional[Params] = None,
         *,
         prepare: Optional[bool] = None,
-    ) -> C:
+    ) -> AnyCursor:
         try:
             async with self._conn.lock:
                 await self._conn.wait(
