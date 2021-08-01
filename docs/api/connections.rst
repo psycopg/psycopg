@@ -106,16 +106,27 @@ The `!Connection` class
 
     .. autoattribute:: cursor_factory
 
-        The type, of factory function, returned by `cursor()` and `execute()`.
+        The type, or factory function, returned by `cursor()` and `execute()`.
 
         Default is `psycopg.Cursor`.
 
     .. autoattribute:: server_cursor_factory
 
-        The type, of factory function, returned by `cursor()` when a name is
+        The type, or factory function, returned by `cursor()` when a name is
         specified.
 
         Default is `psycopg.ServerCursor`.
+
+    .. autoattribute:: row_factory
+
+        The row factory defining the type of rows returned by
+        `~Cursor.fetchone()` and the other cursor fetch methods.
+
+        The default is `~psycopg.rows.tuple_row`, which means that the fetch
+        methods will return simple tuples.
+
+        .. seealso:: See :ref:`row-factories` for details about defining the
+            objects returned by cursors.
 
     .. automethod:: execute(query, params=None, prepare=None) -> Cursor
 
@@ -133,10 +144,6 @@ The `!Connection` class
 
         See :ref:`query-parameters` for all the details about executing
         queries.
-
-    .. autoattribute:: row_factory
-
-        See :ref:`row-factories` for details.
 
     .. rubric:: Transaction management methods
 
@@ -314,6 +321,8 @@ The `!AsyncConnection` class
     .. autoattribute:: server_cursor_factory
 
         Default is `psycopg.AsyncServerCursor`.
+
+    .. autoattribute:: row_factory
 
     .. automethod:: execute(query, params=None, prepare=None) -> AsyncCursor
     .. automethod:: commit
