@@ -137,10 +137,13 @@ def get_reader():
 
 
 def pq_role(name, rawtext, text, lineno, inliner, options={}, content=[]):
+    text = utils.unescape(text)
+
     reader = get_reader()
     if "(" in text:
         func, noise = text.split("(", 1)
         noise = "(" + noise
+
     else:
         func = text
         noise = ""
@@ -154,7 +157,10 @@ def pq_role(name, rawtext, text, lineno, inliner, options={}, content=[]):
         prb = inliner.problematic(rawtext, rawtext, msg)
         return [prb], [msg]
 
-    text = utils.unescape(text)
+    # For a function f(), include the () in the signature for consistency
+    # with a normal `thing()`
+    if noise == "()":
+        func, noise = func + noise, ""
 
     the_nodes = []
     the_nodes.append(nodes.reference(func, func, refuri=url))
