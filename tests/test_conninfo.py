@@ -167,6 +167,13 @@ class TestConnectionInfo:
             else:
                 assert k not in info
 
+    def test_dsn(self, conn, dsn):
+        dsn = conn.info.dsn
+        assert "password" not in dsn
+        for k, v in conninfo_to_dict(dsn).items():
+            if k != "password":
+                assert f"{k}=" in dsn
+
     def test_get_params_env(self, dsn, monkeypatch):
         dsn = conninfo_to_dict(dsn)
         dsn.pop("application_name", None)
@@ -180,6 +187,18 @@ class TestConnectionInfo:
             assert (
                 conn.info.get_parameters()["application_name"] == "hello test"
             )
+
+    def test_dsn_env(self, dsn, monkeypatch):
+        dsn = conninfo_to_dict(dsn)
+        dsn.pop("application_name", None)
+
+        monkeypatch.delenv("PGAPPNAME", raising=False)
+        with psycopg.connect(**dsn) as conn:
+            assert "application_name=" not in conn.info.dsn
+
+        monkeypatch.setenv("PGAPPNAME", "hello test")
+        with psycopg.connect(**dsn) as conn:
+            assert "application_name='hello test'" in conn.info.dsn
 
     def test_status(self, conn):
         assert conn.info.status.name == "OK"
@@ -198,6 +217,14 @@ class TestConnectionInfo:
         assert info.password == "the-pass-word"
         assert "password" not in info.get_parameters()
         assert info.get_parameters()["dbname"] == info.dbname
+
+    def test_dsn_no_password(self, dsn):
+        dsn2 = make_conninfo(dsn, password="the-pass-word")
+        pgconn = psycopg.pq.PGconn.connect_start(dsn2.encode("utf8"))
+        info = ConnectionInfo(pgconn)
+        assert info.password == "the-pass-word"
+        assert "password" not in info.dsn
+        assert f"dbname={info.dbname}" in info.dsn
 
     def test_parameter_status(self, conn):
         assert conn.info.parameter_status("nosuchparam") is None

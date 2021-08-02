@@ -358,6 +358,11 @@ Connection support objects
 
     The object is usually returned by `Connection.info`.
 
+    .. autoattribute:: dsn
+
+        .. note:: The `get_parameters()` method returns the same information
+            as a dict.
+
     .. autoattribute:: status
 
         The status can be one of a number of values. However, only two of

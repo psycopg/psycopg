@@ -161,8 +161,9 @@ class ConnectionInfo:
         """Return the connection parameters values.
 
         Return all the parameters set to a non-default value, which might come
-        either from the connection string or from environment variables. Don't
-        report the password (you can read it using the `password` attribute).
+        either from the connection string and parameters passed to
+        `~Connection.connect()` or from environment variables. The password
+        is never returned (you can read it using the `password` attribute).
         """
         pyenc = self._pyenc
 
@@ -183,6 +184,18 @@ class ConnectionInfo:
             and i.keyword != b"password"
             and i.val != defaults.get(i.keyword)
         }
+
+    @property
+    def dsn(self) -> str:
+        """Return the conneciton string to connect to the database.
+
+        The string contains all the parameters set to a non-default value,
+        which might come either from the connection string and parameters
+        passed to `~Connection.connect()` or from environment variables. The
+        password is never returned (you can read it using the `password`
+        attribute).
+        """
+        return make_conninfo(**self.get_parameters())
 
     @property
     def status(self) -> pq.ConnStatus:
