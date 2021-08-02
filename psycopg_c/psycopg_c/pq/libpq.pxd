@@ -248,6 +248,8 @@ cdef extern from "libpq-fe.h":
     # 33.11. Miscellaneous Functions
     void PQfreemem(void *ptr) nogil
     void PQconninfoFree(PQconninfoOption *connOptions)
+    char *PQencryptPasswordConn(
+        PGconn *conn, const char *passwd, const char *user, const char *algorithm);
     PGresult *PQmakeEmptyPGresult(PGconn *conn, ExecStatusType status)
     int PQsetResultAttrs(PGresult *res, int numAttributes, PGresAttDesc *attDescs)
     int PQlibVersion()

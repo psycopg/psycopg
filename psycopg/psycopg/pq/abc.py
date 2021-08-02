@@ -238,6 +238,11 @@ class PGconn(Protocol):
     def get_copy_data(self, async_: int) -> Tuple[int, memoryview]:
         ...
 
+    def encrypt_password(
+        self, passwd: bytes, user: bytes, algorithm: Optional[bytes] = None
+    ) -> bytes:
+        ...
+
     def make_empty_result(self, exec_status: int) -> "PGresult":
         ...
 

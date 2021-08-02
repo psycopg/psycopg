@@ -603,6 +603,21 @@ class PGconn:
         else:
             return nbytes, memoryview(b"")
 
+    def encrypt_password(
+        self, passwd: bytes, user: bytes, algorithm: Optional[bytes] = None
+    ) -> bytes:
+        out = impl.PQencryptPasswordConn(
+            self._pgconn_ptr, passwd, user, algorithm
+        )
+        if not out:
+            raise e.OperationalError(
+                f"password encryption failed: {error_message(self)}"
+            )
+
+        rv = string_at(out)
+        impl.PQfreemem(out)
+        return rv
+
     def make_empty_result(self, exec_status: int) -> "PGresult":
         rv = impl.PQmakeEmptyPGresult(self._pgconn_ptr, exec_status)
         if not rv:

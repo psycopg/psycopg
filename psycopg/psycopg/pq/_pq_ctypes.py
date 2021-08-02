@@ -557,6 +557,10 @@ PQfreemem = pq.PQfreemem
 PQfreemem.argtypes = [c_void_p]
 PQfreemem.restype = None
 
+PQencryptPasswordConn = pq.PQencryptPasswordConn
+PQencryptPasswordConn.argtypes = [PGconn_ptr, c_char_p, c_char_p, c_char_p]
+PQencryptPasswordConn.restype = POINTER(c_char)
+
 PQmakeEmptyPGresult = pq.PQmakeEmptyPGresult
 PQmakeEmptyPGresult.argtypes = [PGconn_ptr, c_int]
 PQmakeEmptyPGresult.restype = PGresult_ptr

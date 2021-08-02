@@ -501,6 +501,23 @@ cdef class PGconn:
         else:
             return nbytes, b""  # won't parse it, doesn't really be memoryview
 
+    def encrypt_password(
+        self, const char *passwd, const char *user, algorithm = None
+    ) -> bytes:
+        cdef char *out
+        cdef const char *calgo = NULL
+        if algorithm:
+            calgo = algorithm
+        out = libpq.PQencryptPasswordConn(self._pgconn_ptr, passwd, user, calgo)
+        if not out:
+            raise e.OperationalError(
+                f"password encryption failed: {error_message(self)}"
+            )
+
+        rv = bytes(out)
+        libpq.PQfreemem(out)
+        return rv
+
     def make_empty_result(self, int exec_status) -> PGresult:
         cdef libpq.PGresult *rv = libpq.PQmakeEmptyPGresult(
             self._pgconn_ptr, <libpq.ExecStatusType>exec_status)

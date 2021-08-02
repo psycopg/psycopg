@@ -462,6 +462,39 @@ def test_notice_error(pgconn, caplog):
     assert "hello error" in rec.message
 
 
+def test_encrypt_password(pgconn):
+    enc = pgconn.encrypt_password(b"psycopg2", b"ashesh", b"md5")
+    assert enc == b"md594839d658c28a357126f105b9cb14cfc"
+
+
+def test_encrypt_password_scram(pgconn):
+    enc = pgconn.encrypt_password(b"psycopg2", b"ashesh", b"scram-sha-256")
+    assert enc.startswith(b"SCRAM-SHA-256$")
+
+
+def test_encrypt_password_badalgo(pgconn):
+    with pytest.raises(psycopg.OperationalError):
+        assert pgconn.encrypt_password(b"psycopg2", b"ashesh", b"wat")
+
+
+def test_encrypt_password_query(pgconn):
+    res = pgconn.exec_(b"set password_encryption to 'md5'")
+    assert res.status == pq.ExecStatus.COMMAND_OK
+    enc = pgconn.encrypt_password(b"psycopg2", b"ashesh")
+    assert enc == b"md594839d658c28a357126f105b9cb14cfc"
+
+    res = pgconn.exec_(b"set password_encryption to 'scram-sha-256'")
+    assert res.status == pq.ExecStatus.COMMAND_OK
+    enc = pgconn.encrypt_password(b"psycopg2", b"ashesh")
+    assert enc.startswith(b"SCRAM-SHA-256$")
+
+
+def test_encrypt_password_closed(pgconn):
+    pgconn.finish()
+    with pytest.raises(psycopg.OperationalError):
+        assert pgconn.encrypt_password(b"psycopg2", b"ashesh")
+
+
 def test_str(pgconn, dsn):
     assert "[IDLE]" in str(pgconn)
     pgconn.finish()
