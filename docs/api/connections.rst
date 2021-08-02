@@ -382,12 +382,22 @@ Connection support objects
         is bad. `!ACTIVE` is reported only when a query has been sent to the
         server and not yet completed.
 
-    .. autoattribute:: server_version
     .. autoattribute:: backend_pid
+    .. autoattribute:: server_version
     .. autoattribute:: error_message
 
     .. automethod:: get_parameters
+
+        .. note:: The `dsn` attribute returns the same information in the form
+                as a string.
+
     .. autoattribute:: timezone
+
+        .. code:: pycon
+
+            >>> conn.info.timezone
+            zoneinfo.ZoneInfo(key='Europe/Rome')
+
     .. autoattribute:: host
 
         This can be a host name, an IP address, or a directory path if the

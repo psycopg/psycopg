@@ -185,7 +185,7 @@ class Format(IntEnum):
     Enum representing the format of a query argument or return value.
 
     These values are only the ones managed by the libpq. `~psycopg` may also
-    support automatically-chosen values: see `psycopg.adapt.Format`.
+    support automatically-chosen values: see `psycopg.adapt.PyFormat`.
     """
 
     __module__ = "psycopg.pq"

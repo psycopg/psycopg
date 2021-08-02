@@ -670,7 +670,7 @@ class PGresult:
     def pgresult_ptr(self) -> Optional[int]:
         """The pointer to the underlying ``PGresult`` structure, as integer.
 
-        `!None` if the result waas cleared.
+        `!None` if the result was cleared.
 
         The value can be used to pass the structure to libpq functions which
         psycopg doesn't (currently) wrap, either in C or in Python using FFI
@@ -789,11 +789,11 @@ class PGcancel:
 
     def free(self) -> None:
         """
-        Free the data structure created by PQgetCancel.
+        Free the data structure created by :pq:`PQgetCancel()`.
 
         Automatically invoked by `!__del__()`.
 
-        See :pq:`PQfreeCancel` for details.
+        See :pq:`PQfreeCancel()` for details.
         """
         self.pgcancel_ptr, p = None, self.pgcancel_ptr
         if p:
