@@ -176,7 +176,7 @@ The `!Connection` class
         :samp:`({value})` instead.
 
     The following three properties control the characteristics of new
-    transactions. See :ref:`transaction-characteristics` for detils.
+    transactions. See :ref:`transaction-characteristics` for details.
 
     .. autoattribute:: isolation_level
 
