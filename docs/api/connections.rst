@@ -420,8 +420,6 @@ Connection support objects
         ``standard_conforming_strings``... See :pq:`PQparameterStatus()` for
         all the available parameters.
 
-    .. autoattribute:: protocol_version
-
 
 .. rubric:: Objects involved in :ref:`transactions`
 

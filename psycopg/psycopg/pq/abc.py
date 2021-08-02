@@ -101,10 +101,6 @@ class PGconn(Protocol):
         ...
 
     @property
-    def protocol_version(self) -> int:
-        ...
-
-    @property
     def server_version(self) -> int:
         ...
 

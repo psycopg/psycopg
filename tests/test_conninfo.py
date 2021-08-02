@@ -235,9 +235,6 @@ class TestConnectionInfo:
     def test_server_version(self, conn):
         assert conn.info.server_version == conn.pgconn.server_version
 
-    def test_protocol_version(self, conn):
-        assert conn.info.protocol_version >= 3
-
     def test_error_message(self, conn):
         assert conn.info.error_message == ""
         with pytest.raises(psycopg.ProgrammingError) as ex:
