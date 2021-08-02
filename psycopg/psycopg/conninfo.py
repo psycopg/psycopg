@@ -170,7 +170,7 @@ class ConnectionInfo:
         defaults = {
             i.keyword: i.compiled
             for i in pq.Conninfo.get_defaults()
-            if i.compiled
+            if i.compiled is not None
         }
         # Not returned by the libq. Bug? Bet we're using SSH.
         defaults.setdefault(b"channel_binding", b"prefer")
