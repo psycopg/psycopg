@@ -96,6 +96,30 @@ The module `psycopg.rows` provides the implementation for a few row factories:
 
 .. autofunction:: namedtuple_row
 
+.. autofunction:: class_row
+
+    This is not a row factory, but rather a factory of row factories.
+    Specifying ``row_factory=class_row(MyClass)`` will create connections and
+    cursors returning `!MyClass` objects on fetch.
+
+    Example::
+
+        from dataclasses import dataclass
+        import psycopg
+        from psycopg.rows import class_row
+
+        @dataclass
+        class Person:
+            first_name: str
+            last_name: str
+            age: int = None
+
+        conn = psycopg.connect()
+        cur = conn.cursor(row_factory=class_row(Person))
+
+        cur.execute("select 'John' as first_name, 'Smith' as last_name").fetchone()
+        # Person(first_name='John', last_name='Smith', age=None)
+
 
 Use with a static analyzer
 --------------------------

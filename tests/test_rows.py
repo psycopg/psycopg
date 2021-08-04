@@ -57,8 +57,26 @@ def test_namedtuple_row(conn):
     assert type(r1) is not type(r2)
 
 
+def test_class_row(conn):
+    cur = conn.cursor(row_factory=rows.class_row(Person))
+    cur.execute("select 'John' as first, 'Doe' as last")
+    (p,) = cur.fetchall()
+    assert isinstance(p, Person)
+    assert p.first == "John"
+    assert p.last == "Doe"
+    assert p.age is None
+
+    for query in (
+        "select 'John' as first",
+        "select 'John' as first, 'Doe' as last, 42 as wat",
+    ):
+        cur.execute(query)
+        with pytest.raises(TypeError):
+            cur.fetchone()
+
+
 @pytest.mark.parametrize(
-    "factory", "tuple_row dict_row namedtuple_row".split()
+    "factory", "tuple_row dict_row namedtuple_row class_row".split()
 )
 def test_no_result(factory, conn):
     cur = conn.cursor(row_factory=factory_from_name(factory))
@@ -76,6 +94,30 @@ def test_no_column(factory, conn):
     assert not recs[0]
 
 
+def test_no_column_class_row(conn):
+    class Empty:
+        def __init__(self, x=10, y=20):
+            self.x = x
+            self.y = y
+
+    cur = conn.cursor(row_factory=rows.class_row(Empty))
+    cur.execute("select")
+    x = cur.fetchone()
+    assert isinstance(x, Empty)
+    assert x.x == 10
+    assert x.y == 20
+
+
 def factory_from_name(name):
     factory = getattr(rows, name)
+    if factory is rows.class_row:
+        factory = factory(Person)
+
     return factory
+
+
+class Person:
+    def __init__(self, first, last, age=None):
+        self.first = first
+        self.last = last
+        self.age = age

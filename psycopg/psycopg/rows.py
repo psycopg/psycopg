@@ -6,7 +6,7 @@ psycopg row factories
 
 import re
 import functools
-from typing import Any, Dict, NamedTuple, NoReturn, Sequence, Tuple
+from typing import Any, Callable, Dict, NamedTuple, NoReturn, Sequence, Tuple
 from typing import TYPE_CHECKING, Type, TypeVar
 from collections import namedtuple
 
@@ -141,6 +141,32 @@ def _make_nt(*key: str) -> Type[NamedTuple]:
             s = "f" + s
         fields.append(s)
     return namedtuple("Row", fields)  # type: ignore[return-value]
+
+
+def class_row(cls: Type[T]) -> Callable[["BaseCursor[Any, T]"], RowMaker[T]]:
+    r"""Function to generate row factory functions returning a specific class.
+
+    The class must support every output column name as a keyword parameter.
+
+    :param cls: The class to return for each row. It must support the fields
+        returned by the query as keyword arguments.
+    :rtype: `!Callable[[Cursor],` `RowMaker`\[~T]]
+    """
+
+    def class_row_(cur: "BaseCursor[Any, T]") -> RowMaker[T]:
+        desc = cur.description
+        if desc is not None:
+            names = [d.name for d in desc]
+
+            def class_row__(values: Sequence[Any]) -> T:
+                return cls(**dict(zip(names, values)))  # type: ignore
+
+            return class_row__
+
+        else:
+            return no_result
+
+    return class_row_
 
 
 def no_result(values: Sequence[Any]) -> NoReturn:
