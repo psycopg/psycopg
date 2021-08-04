@@ -1,3 +1,5 @@
+import pytest
+
 from psycopg import rows
 
 
@@ -53,3 +55,27 @@ def test_namedtuple_row(conn):
     assert r2.number == 1
     assert not cur.nextset()
     assert type(r1) is not type(r2)
+
+
+@pytest.mark.parametrize(
+    "factory", "tuple_row dict_row namedtuple_row".split()
+)
+def test_no_result(factory, conn):
+    cur = conn.cursor(row_factory=factory_from_name(factory))
+    cur.execute("reset search_path")
+
+
+@pytest.mark.parametrize(
+    "factory", "tuple_row dict_row namedtuple_row".split()
+)
+def test_no_column(factory, conn):
+    cur = conn.cursor(row_factory=factory_from_name(factory))
+    cur.execute("select")
+    recs = cur.fetchall()
+    assert len(recs) == 1
+    assert not recs[0]
+
+
+def factory_from_name(name):
+    factory = getattr(rows, name)
+    return factory

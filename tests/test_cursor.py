@@ -633,12 +633,15 @@ def test_leak(dsn, faker, fmt, fmt_out, fetch, row_factory, retries):
 
 
 def my_row_factory(cursor):
-    assert cursor.description is not None
-    titles = [c.name for c in cursor.description]
+    if cursor.description is not None:
+        titles = [c.name for c in cursor.description]
 
-    def mkrow(values):
-        return [
-            f"{value.upper()}{title}" for title, value in zip(titles, values)
-        ]
+        def mkrow(values):
+            return [
+                f"{value.upper()}{title}"
+                for title, value in zip(titles, values)
+            ]
 
-    return mkrow
+        return mkrow
+    else:
+        return rows.no_result

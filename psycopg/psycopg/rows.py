@@ -4,17 +4,19 @@ psycopg row factories
 
 # Copyright (C) 2021 The Psycopg Team
 
-import functools
 import re
+import functools
+from typing import Any, Dict, NamedTuple, NoReturn, Sequence, Tuple
+from typing import TYPE_CHECKING, Type, TypeVar
 from collections import namedtuple
-from typing import Any, Dict, NamedTuple, Sequence, Tuple, Type, TypeVar
-from typing import TYPE_CHECKING
 
 from . import errors as e
 from .compat import Protocol
 
 if TYPE_CHECKING:
     from .cursor import BaseCursor, Cursor, AsyncCursor
+
+T = TypeVar("T")
 
 # Row factories
 
@@ -71,20 +73,6 @@ An alias for the type returned by `tuple_row()` (i.e. a tuple of any content).
 """
 
 
-def tuple_row(
-    cursor: "BaseCursor[Any, TupleRow]",
-) -> RowMaker[TupleRow]:
-    r"""Row factory to represent rows as simple tuples.
-
-    This is the default factory.
-
-    :param cursor: The cursor where to read from.
-    """
-    # Implementation detail: make sure this is the tuple type itself, not an
-    # equivalent function, because the C code fast-paths on it.
-    return tuple
-
-
 DictRow = Dict[str, Any]
 """
 An alias for the type returned by `dict_row()`
@@ -94,45 +82,46 @@ database.
 """
 
 
-def dict_row(
-    cursor: "BaseCursor[Any, DictRow]",
-) -> RowMaker[DictRow]:
-    r"""Row factory to represent rows as dicts.
+def tuple_row(cursor: "BaseCursor[Any, TupleRow]") -> RowMaker[TupleRow]:
+    r"""Row factory to represent rows as simple tuples.
+
+    This is the default factory.
+    """
+    # Implementation detail: make sure this is the tuple type itself, not an
+    # equivalent function, because the C code fast-paths on it.
+    return tuple
+
+
+def dict_row(cursor: "BaseCursor[Any, DictRow]") -> RowMaker[DictRow]:
+    """Row factory to represent rows as dicts.
 
     Note that this is not compatible with the DBAPI, which expects the records
     to be sequences.
-
-    :param cursor: The cursor where to read from.
     """
+    desc = cursor.description
+    if desc is not None:
+        titles = [c.name for c in desc]
 
-    def make_row(values: Sequence[Any]) -> Dict[str, Any]:
-        desc = cursor.description
-        if desc is None:
-            raise e.InterfaceError("The cursor doesn't have a result")
-        titles = (c.name for c in desc)
-        return dict(zip(titles, values))
+        def dict_row_(values: Sequence[Any]) -> Dict[str, Any]:
+            return dict(zip(titles, values))
 
-    return make_row
+        return dict_row_
+
+    else:
+        return no_result
 
 
 def namedtuple_row(
     cursor: "BaseCursor[Any, NamedTuple]",
 ) -> RowMaker[NamedTuple]:
-    r"""Row factory to represent rows as `~collections.namedtuple`.
+    """Row factory to represent rows as `~collections.namedtuple`."""
+    desc = cursor.description
+    if desc is not None:
+        nt = _make_nt(*(c.name for c in desc))
+        return nt._make
 
-    :param cursor: The cursor where to read from.
-    """
-
-    def make_row(values: Sequence[Any]) -> NamedTuple:
-        desc = cursor.description
-        if desc is None:
-            raise e.InterfaceError("The cursor doesn't have a result")
-        key = tuple(c.name for c in desc)
-        nt = _make_nt(key)
-        rv = nt._make(values)
-        return rv
-
-    return make_row
+    else:
+        return no_result
 
 
 # ascii except alnum and underscore
@@ -142,7 +131,7 @@ _re_clean = re.compile(
 
 
 @functools.lru_cache(512)
-def _make_nt(key: Sequence[str]) -> Type[NamedTuple]:
+def _make_nt(*key: str) -> Type[NamedTuple]:
     fields = []
     for s in key:
         s = _re_clean.sub("_", s)
@@ -152,3 +141,13 @@ def _make_nt(key: Sequence[str]) -> Type[NamedTuple]:
             s = "f" + s
         fields.append(s)
     return namedtuple("Row", fields)  # type: ignore[return-value]
+
+
+def no_result(values: Sequence[Any]) -> NoReturn:
+    """A `RowMaker` that always fail.
+
+    It can be used as return value for a `RowFactory` called with no result.
+    Note that the `!RowFactory` *will* be called with no result, but the
+    resulting `!RowMaker` never should.
+    """
+    raise e.InterfaceError("the cursor doesn't have a result")
