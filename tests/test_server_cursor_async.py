@@ -195,6 +195,15 @@ async def test_nextset(aconn):
         assert not cur.nextset()
 
 
+async def test_no_result(aconn):
+    async with aconn.cursor("foo") as cur:
+        await cur.execute(
+            "select generate_series(1, %s) as bar where false", (3,)
+        )
+        assert len(cur.description) == 1
+        assert (await cur.fetchall()) == []
+
+
 async def test_row_factory(aconn):
     n = 0
 

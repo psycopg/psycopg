@@ -123,9 +123,18 @@ class BaseCursor(Generic[ConnectionType, Row]):
         `!None` if the current resultset didn't return tuples.
         """
         res = self.pgresult
-        if not (res and res.nfields):
+
+        # We return columns if we have nfields, but also if we don't but
+        # the query said we got tuples (mostly to handle the super useful
+        # query "SELECT ;"
+        if res and (
+            res.nfields
+            or res.status == ExecStatus.TUPLES_OK
+            or res.status == ExecStatus.SINGLE_TUPLE
+        ):
+            return [Column(self, i) for i in range(res.nfields)]
+        else:
             return None
-        return [Column(self, i) for i in range(res.nfields)]
 
     @property
     def rowcount(self) -> int:
