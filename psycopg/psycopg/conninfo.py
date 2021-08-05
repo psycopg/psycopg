@@ -187,7 +187,7 @@ class ConnectionInfo:
 
     @property
     def dsn(self) -> str:
-        """Return the conneciton string to connect to the database.
+        """Return the connection string to connect to the database.
 
         The string contains all the parameters set to a non-default value,
         which might come either from the connection string and parameters
