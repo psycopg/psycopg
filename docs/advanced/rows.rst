@@ -170,9 +170,10 @@ any issue. Pydantic will also raise a runtime error in case the
 .. code:: python
 
     from datetime import date
-    from typing import Any, Optional, Sequence
+    from typing import Optional
 
     import psycopg
+    from psycopg.rows import class_row
     from pydantic import BaseModel
 
     class Person(BaseModel):
@@ -181,32 +182,30 @@ any issue. Pydantic will also raise a runtime error in case the
         last_name: str
         dob: Optional[date]
 
-    class PersonFactory:
-        def __init__(self, cur: psycopg.Cursor[Person]):
-            assert cur.description
-            self.fields = [c.name for c in cur.description]
-
-        def __call__(self, values: Sequence[Any]) -> Person:
-            return Person(**dict(zip(self.fields, values)))
-
     def fetch_person(id: int) -> Person:
-        conn = psycopg.connect()
-        cur = conn.cursor(row_factory=PersonFactory)
-        cur.execute(
-            """
-            SELECT id, first_name, last_name, dob
-            FROM (VALUES
-                (1, 'John', 'Doe', '2000-01-01'::date),
-                (2, 'Jane', 'White', NULL)
-            ) AS data (id, first_name, last_name, dob)
-            WHERE id = %(id)s;
-            """,
-            {"id": id},
-        )
-        rec = cur.fetchone()
-        if not rec:
-            raise KeyError(f"person {id} not found")
-        return rec
+        with psycopg.connect() as conn:
+            with conn.cursor(row_factory=class_row(Person)) as cur:
+                cur.execute(
+                    """
+                    SELECT id, first_name, last_name, dob
+                    FROM (VALUES
+                        (1, 'John', 'Doe', '2000-01-01'::date),
+                        (2, 'Jane', 'White', NULL)
+                    ) AS data (id, first_name, last_name, dob)
+                    WHERE id = %(id)s;
+                    """,
+                    {"id": id},
+                )
+                obj = cur.fetchone()
+
+                # reveal_type(obj) would return 'Optional[Person]' here
+
+                if not obj:
+                    raise KeyError(f"person {id} not found")
+
+                # reveal_type(obj) would return 'Person' here
+
+                return obj
 
     for id in [1, 2]:
         p = fetch_person(id)
@@ -214,56 +213,3 @@ any issue. Pydantic will also raise a runtime error in case the
             print(f"{p.first_name} was born in {p.dob.year}")
         else:
             print(f"Who knows when {p.first_name} was born")
-
-
-Another level of generic
-^^^^^^^^^^^^^^^^^^^^^^^^
-
-Note that, in the example above, the `!PersonFactory` implementation has
-nothing specific to the `!Person` class, apart from the returned type itself.
-This suggests that it's actually possible to create a... factory of factories:
-a function that, given a Pydantic model, returns a RowFactory that can be used
-to annotate connections and cursor statically.
-
-In the example above, the `!PersonFactory` class can be implemented as a
-function:
-
-.. code:: python
-
-    def person_factory(cursor: Cursor[Person]) -> RowMaker[Person]:
-        assert cursor.description
-        fields = [c.name for c in cursor.description]
-
-        def person_factory_(values: Sequence[Any]) -> Person:
-            return Person(**dict(zip(fields, values)))
-
-        return person_factory_
-
-The function `!person_factory()` is a `!RowFactory[Person]`. We can introduce
-a generic `M`, which can be any Pydantic model, and write a function returning
-`!RowFactory[M]`:
-
-.. code:: python
-
-    M = TypeVar("M", bound=BaseModel)
-
-    def model_factory(model: Type[M]) -> RowFactory[M]:
-        def model_factory_(cursor: Cursor[M]) -> RowMaker[M]:
-            assert cursor.description
-            fields = [c.name for c in cursor.description]
-
-            def model_factory__(values: Sequence[Any]) -> M:
-                return model(**dict(zip(fields, values)))
-
-            return model_factory__
-
-        return model_factory_
-
-which can be used to declare the types of connections and cursors:
-
-.. code:: python
-
-    conn = psycopg.connect()
-    cur = conn.cursor(row_factory=model_factory(Person))
-    x = cur.fetchone()
-    # the type of x is Optional[Person]
