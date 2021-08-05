@@ -290,6 +290,11 @@ def test_iter_stop(conn):
 
 def test_row_factory(conn):
     cur = conn.cursor(row_factory=my_row_factory)
+
+    cur.execute("reset search_path")
+    with pytest.raises(psycopg.ProgrammingError):
+        cur.fetchone()
+
     cur.execute("select 'foo' as bar")
     (r,) = cur.fetchone()
     assert r == "FOObar"
@@ -442,6 +447,12 @@ def test_stream_row_factory(conn):
     assert next(it).a == 2
 
 
+def test_stream_no_col(conn):
+    cur = conn.cursor()
+    it = iter(cur.stream("select"))
+    assert list(it) == [()]
+
+
 @pytest.mark.parametrize(
     "query",
     [
@@ -548,6 +559,11 @@ class TestColumn:
         unpickled = pickle.loads(pickled)
         assert [tuple(d) for d in description] == [tuple(d) for d in unpickled]
 
+    def test_no_col_query(self, conn):
+        cur = conn.execute("select")
+        assert cur.description == []
+        assert cur.fetchall() == [()]
+
 
 def test_str(conn):
     cur = conn.cursor()
@@ -617,12 +633,15 @@ def test_leak(dsn, faker, fmt, fmt_out, fetch, row_factory, retries):
 
 
 def my_row_factory(cursor):
-    assert cursor.description is not None
-    titles = [c.name for c in cursor.description]
+    if cursor.description is not None:
+        titles = [c.name for c in cursor.description]
 
-    def mkrow(values):
-        return [
-            f"{value.upper()}{title}" for title, value in zip(titles, values)
-        ]
+        def mkrow(values):
+            return [
+                f"{value.upper()}{title}"
+                for title, value in zip(titles, values)
+            ]
 
-    return mkrow
+        return mkrow
+    else:
+        return rows.no_result

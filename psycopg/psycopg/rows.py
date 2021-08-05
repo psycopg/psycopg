@@ -4,17 +4,19 @@ psycopg row factories
 
 # Copyright (C) 2021 The Psycopg Team
 
-import functools
 import re
+import functools
+from typing import Any, Callable, Dict, NamedTuple, NoReturn, Sequence, Tuple
+from typing import TYPE_CHECKING, Type, TypeVar
 from collections import namedtuple
-from typing import Any, Dict, NamedTuple, Sequence, Tuple, Type, TypeVar
-from typing import TYPE_CHECKING
 
 from . import errors as e
 from .compat import Protocol
 
 if TYPE_CHECKING:
     from .cursor import BaseCursor, Cursor, AsyncCursor
+
+T = TypeVar("T")
 
 # Row factories
 
@@ -58,10 +60,19 @@ class RowFactory(Protocol[Row]):
 
 class AsyncRowFactory(Protocol[Row]):
     """
-    Callable protocol taking an `~psycopg.AsyncCursor` and returning a `RowMaker`.
+    Like `RowFactory`, taking an async cursor as argument.
     """
 
     def __call__(self, __cursor: "AsyncCursor[Row]") -> RowMaker[Row]:
+        ...
+
+
+class BaseRowFactory(Protocol[Row]):
+    """
+    Like `RowFactory`, taking either type of cursor as argument.
+    """
+
+    def __call__(self, __cursor: "BaseCursor[Any, Row]") -> RowMaker[Row]:
         ...
 
 
@@ -69,20 +80,6 @@ TupleRow = Tuple[Any, ...]
 """
 An alias for the type returned by `tuple_row()` (i.e. a tuple of any content).
 """
-
-
-def tuple_row(
-    cursor: "BaseCursor[Any, TupleRow]",
-) -> RowMaker[TupleRow]:
-    r"""Row factory to represent rows as simple tuples.
-
-    This is the default factory.
-
-    :param cursor: The cursor where to read from.
-    """
-    # Implementation detail: make sure this is the tuple type itself, not an
-    # equivalent function, because the C code fast-paths on it.
-    return tuple
 
 
 DictRow = Dict[str, Any]
@@ -94,45 +91,40 @@ database.
 """
 
 
-def dict_row(
-    cursor: "BaseCursor[Any, DictRow]",
-) -> RowMaker[DictRow]:
-    r"""Row factory to represent rows as dicts.
+def tuple_row(cursor: "BaseCursor[Any, TupleRow]") -> RowMaker[TupleRow]:
+    r"""Row factory to represent rows as simple tuples.
 
-    Note that this is not compatible with the DBAPI, which expects the records
-    to be sequences.
-
-    :param cursor: The cursor where to read from.
+    This is the default factory.
     """
+    # Implementation detail: make sure this is the tuple type itself, not an
+    # equivalent function, because the C code fast-paths on it.
+    return tuple
 
-    def make_row(values: Sequence[Any]) -> Dict[str, Any]:
-        desc = cursor.description
-        if desc is None:
-            raise e.InterfaceError("The cursor doesn't have a result")
-        titles = (c.name for c in desc)
+
+def dict_row(cursor: "BaseCursor[Any, DictRow]") -> RowMaker[DictRow]:
+    """Row factory to represent rows as dictionaries."""
+    desc = cursor.description
+    if desc is None:
+        return no_result
+
+    titles = [c.name for c in desc]
+
+    def dict_row_(values: Sequence[Any]) -> Dict[str, Any]:
         return dict(zip(titles, values))
 
-    return make_row
+    return dict_row_
 
 
 def namedtuple_row(
     cursor: "BaseCursor[Any, NamedTuple]",
 ) -> RowMaker[NamedTuple]:
-    r"""Row factory to represent rows as `~collections.namedtuple`.
+    """Row factory to represent rows as `~collections.namedtuple`."""
+    desc = cursor.description
+    if desc is None:
+        return no_result
 
-    :param cursor: The cursor where to read from.
-    """
-
-    def make_row(values: Sequence[Any]) -> NamedTuple:
-        desc = cursor.description
-        if desc is None:
-            raise e.InterfaceError("The cursor doesn't have a result")
-        key = tuple(c.name for c in desc)
-        nt = _make_nt(key)
-        rv = nt._make(values)
-        return rv
-
-    return make_row
+    nt = _make_nt(*(c.name for c in desc))
+    return nt._make
 
 
 # ascii except alnum and underscore
@@ -142,7 +134,7 @@ _re_clean = re.compile(
 
 
 @functools.lru_cache(512)
-def _make_nt(key: Sequence[str]) -> Type[NamedTuple]:
+def _make_nt(*key: str) -> Type[NamedTuple]:
     fields = []
     for s in key:
         s = _re_clean.sub("_", s)
@@ -152,3 +144,76 @@ def _make_nt(key: Sequence[str]) -> Type[NamedTuple]:
             s = "f" + s
         fields.append(s)
     return namedtuple("Row", fields)  # type: ignore[return-value]
+
+
+def class_row(cls: Type[T]) -> BaseRowFactory[T]:
+    r"""Generate a row factory to represent rows as instances of the class *cls*.
+
+    The class must support every output column name as a keyword parameter.
+
+    :param cls: The class to return for each row. It must support the fields
+        returned by the query as keyword arguments.
+    :rtype: `!Callable[[Cursor],` `RowMaker`\[~T]]
+    """
+
+    def class_row_(cur: "BaseCursor[Any, T]") -> RowMaker[T]:
+        desc = cur.description
+        if desc is None:
+            return no_result
+
+        names = [d.name for d in desc]
+
+        def class_row__(values: Sequence[Any]) -> T:
+            return cls(**dict(zip(names, values)))  # type: ignore
+
+        return class_row__
+
+    return class_row_
+
+
+def args_row(func: Callable[..., T]) -> BaseRowFactory[T]:
+    """Generate a row factory calling *func* with positional parameters for every row.
+
+    :param func: The function to call for each row. It must support the fields
+        returned by the query as positional arguments.
+    """
+
+    def args_row_(cur: "BaseCursor[Any, T]") -> RowMaker[T]:
+        def args_row__(values: Sequence[Any]) -> T:
+            return func(*values)
+
+        return args_row__
+
+    return args_row_
+
+
+def kwargs_row(func: Callable[..., T]) -> BaseRowFactory[T]:
+    """Generate a row factory calling *func* with keyword parameters for every row.
+
+    :param func: The function to call for each row. It must support the fields
+        returned by the query as keyword arguments.
+    """
+
+    def kwargs_row_(cur: "BaseCursor[Any, T]") -> RowMaker[T]:
+        desc = cur.description
+        if desc is None:
+            return no_result
+
+        names = [d.name for d in desc]
+
+        def kwargs_row__(values: Sequence[Any]) -> T:
+            return func(**dict(zip(names, values)))
+
+        return kwargs_row__
+
+    return kwargs_row_
+
+
+def no_result(values: Sequence[Any]) -> NoReturn:
+    """A `RowMaker` that always fail.
+
+    It can be used as return value for a `RowFactory` called with no result.
+    Note that the `!RowFactory` *will* be called with no result, but the
+    resulting `!RowMaker` never should.
+    """
+    raise e.InterfaceError("the cursor doesn't have a result")

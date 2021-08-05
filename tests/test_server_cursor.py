@@ -189,6 +189,13 @@ def test_nextset(conn):
         assert not cur.nextset()
 
 
+def test_no_result(conn):
+    with conn.cursor("foo") as cur:
+        cur.execute("select generate_series(1, %s) as bar where false", (3,))
+        assert len(cur.description) == 1
+        assert cur.fetchall() == []
+
+
 def test_row_factory(conn):
     n = 0
 

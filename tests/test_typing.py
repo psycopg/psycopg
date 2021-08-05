@@ -46,6 +46,10 @@ def test_typing_example(mypy, filename):
             "psycopg.Connection[NamedTuple]",
         ),
         (
+            "psycopg.connect(row_factory=rows.class_row(Thing))",
+            "psycopg.Connection[Thing]",
+        ),
+        (
             "psycopg.connect(row_factory=thing_row)",
             "psycopg.Connection[Thing]",
         ),
@@ -90,6 +94,11 @@ def test_connection_type(conn, type, mypy, tmpdir):
             "psycopg.connect(row_factory=rows.dict_row)",
             "conn.cursor(row_factory=rows.namedtuple_row)",
             "psycopg.Cursor[NamedTuple]",
+        ),
+        (
+            "psycopg.connect(row_factory=rows.class_row(Thing))",
+            "conn.cursor()",
+            "psycopg.Cursor[Thing]",
         ),
         (
             "psycopg.connect(row_factory=thing_row)",
