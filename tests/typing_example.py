@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Callable, Optional, Sequence, Tuple, Union
+from typing import Any, Callable, Dict, Optional, Sequence, Tuple, Union
 
-from psycopg import Connection, Cursor, ServerCursor, connect
+from psycopg import Connection, Cursor, ServerCursor, connect, rows
 from psycopg import AsyncConnection, AsyncCursor, AsyncServerCursor
 
 
@@ -29,6 +29,14 @@ class Person:
             return cls(name, address)
 
         return mkrow
+
+
+def kwargsf(*, foo: int, bar: int, baz: int) -> int:
+    return 42
+
+
+def argsf(foo: int, bar: int, baz: int) -> float:
+    return 42.0
 
 
 def check_row_factory_cursor() -> None:
@@ -147,3 +155,22 @@ async def async_check_row_factory_connection() -> None:
         await cur3.execute("select 42")
         r3 = await cur3.fetchone()
         r3 and len(r3)
+
+
+def check_row_factories() -> None:
+    conn1 = connect(row_factory=rows.tuple_row)
+    v1: Tuple[Any, ...] = conn1.execute("").fetchall()[0]
+
+    conn2 = connect(row_factory=rows.dict_row)
+    v2: Dict[str, Any] = conn2.execute("").fetchall()[0]
+
+    conn3 = connect(row_factory=rows.class_row(Person))
+    v3: Person = conn3.execute("").fetchall()[0]
+
+    conn4 = connect(row_factory=rows.args_row(argsf))
+    v4: float = conn4.execute("").fetchall()[0]
+
+    conn5 = connect(row_factory=rows.kwargs_row(kwargsf))
+    v5: int = conn5.execute("").fetchall()[0]
+
+    v1, v2, v3, v4, v5

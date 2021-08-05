@@ -31,9 +31,8 @@ callable (formally the `~psycopg.rows.RowMaker` protocol) accepting a
 
 .. autoclass:: psycopg.rows.AsyncRowFactory()
 
-   .. method:: __call__(cursor: AsyncCursor[Row]) -> RowMaker[Row]
+.. autoclass:: psycopg.rows.BaseRowFactory()
 
-        Inspect the result on a cursor and return a `RowMaker` to convert rows.
 
 Note that it's easy to implement an object implementing both `!RowFactory` and
 `!AsyncRowFactory`: usually, everything you need to implement a row factory is
@@ -89,14 +88,11 @@ The module `psycopg.rows` provides the implementation for a few row factories:
 .. currentmodule:: psycopg.rows
 
 .. autofunction:: tuple_row
-.. autodata:: TupleRow
-
 .. autofunction:: dict_row
-.. autodata:: DictRow
-
 .. autofunction:: namedtuple_row
-
 .. autofunction:: class_row
+.. autofunction:: args_row
+.. autofunction:: kwargs_row
 
     This is not a row factory, but rather a factory of row factories.
     Specifying ``row_factory=class_row(MyClass)`` will create connections and
@@ -162,7 +158,7 @@ Example: returning records as Pydantic models
 
 Using Pydantic_ it is possible to enforce static typing at runtime. Using a
 Pydantic model factory the code can be checked statically using mypy and
-querying the database will raise an exception if the resultset is not
+querying the database will raise an exception if the rows returned is not
 compatible with the model.
 
 .. _Pydantic: https://pydantic-docs.helpmanual.io/

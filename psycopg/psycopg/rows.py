@@ -60,10 +60,19 @@ class RowFactory(Protocol[Row]):
 
 class AsyncRowFactory(Protocol[Row]):
     """
-    Callable protocol taking an `~psycopg.AsyncCursor` and returning a `RowMaker`.
+    Like `RowFactory`, taking an async cursor as argument.
     """
 
     def __call__(self, __cursor: "AsyncCursor[Row]") -> RowMaker[Row]:
+        ...
+
+
+class BaseRowFactory(Protocol[Row]):
+    """
+    Like `RowFactory`, taking either type of cursor as argument.
+    """
+
+    def __call__(self, __cursor: "BaseCursor[Any, Row]") -> RowMaker[Row]:
         ...
 
 
@@ -93,11 +102,7 @@ def tuple_row(cursor: "BaseCursor[Any, TupleRow]") -> RowMaker[TupleRow]:
 
 
 def dict_row(cursor: "BaseCursor[Any, DictRow]") -> RowMaker[DictRow]:
-    """Row factory to represent rows as dicts.
-
-    Note that this is not compatible with the DBAPI, which expects the records
-    to be sequences.
-    """
+    """Row factory to represent rows as dictionaries."""
     desc = cursor.description
     if desc is None:
         return no_result
@@ -141,8 +146,8 @@ def _make_nt(*key: str) -> Type[NamedTuple]:
     return namedtuple("Row", fields)  # type: ignore[return-value]
 
 
-def class_row(cls: Type[T]) -> Callable[["BaseCursor[Any, T]"], RowMaker[T]]:
-    r"""Function to generate row factory functions returning a specific class.
+def class_row(cls: Type[T]) -> BaseRowFactory[T]:
+    r"""Generate a row factory to represent rows as instances of the class *cls*.
 
     The class must support every output column name as a keyword parameter.
 
@@ -164,6 +169,44 @@ def class_row(cls: Type[T]) -> Callable[["BaseCursor[Any, T]"], RowMaker[T]]:
         return class_row__
 
     return class_row_
+
+
+def args_row(func: Callable[..., T]) -> BaseRowFactory[T]:
+    """Generate a row factory calling *func* with positional parameters for every row.
+
+    :param func: The function to call for each row. It must support the fields
+        returned by the query as positional arguments.
+    """
+
+    def args_row_(cur: "BaseCursor[Any, T]") -> RowMaker[T]:
+        def args_row__(values: Sequence[Any]) -> T:
+            return func(*values)
+
+        return args_row__
+
+    return args_row_
+
+
+def kwargs_row(func: Callable[..., T]) -> BaseRowFactory[T]:
+    """Generate a row factory calling *func* with keyword parameters for every row.
+
+    :param func: The function to call for each row. It must support the fields
+        returned by the query as keyword arguments.
+    """
+
+    def kwargs_row_(cur: "BaseCursor[Any, T]") -> RowMaker[T]:
+        desc = cur.description
+        if desc is None:
+            return no_result
+
+        names = [d.name for d in desc]
+
+        def kwargs_row__(values: Sequence[Any]) -> T:
+            return func(**dict(zip(names, values)))
+
+        return kwargs_row__
+
+    return kwargs_row_
 
 
 def no_result(values: Sequence[Any]) -> NoReturn:
