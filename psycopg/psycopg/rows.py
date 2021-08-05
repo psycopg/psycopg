@@ -99,16 +99,15 @@ def dict_row(cursor: "BaseCursor[Any, DictRow]") -> RowMaker[DictRow]:
     to be sequences.
     """
     desc = cursor.description
-    if desc is not None:
-        titles = [c.name for c in desc]
-
-        def dict_row_(values: Sequence[Any]) -> Dict[str, Any]:
-            return dict(zip(titles, values))
-
-        return dict_row_
-
-    else:
+    if desc is None:
         return no_result
+
+    titles = [c.name for c in desc]
+
+    def dict_row_(values: Sequence[Any]) -> Dict[str, Any]:
+        return dict(zip(titles, values))
+
+    return dict_row_
 
 
 def namedtuple_row(
@@ -116,12 +115,11 @@ def namedtuple_row(
 ) -> RowMaker[NamedTuple]:
     """Row factory to represent rows as `~collections.namedtuple`."""
     desc = cursor.description
-    if desc is not None:
-        nt = _make_nt(*(c.name for c in desc))
-        return nt._make
-
-    else:
+    if desc is None:
         return no_result
+
+    nt = _make_nt(*(c.name for c in desc))
+    return nt._make
 
 
 # ascii except alnum and underscore
@@ -155,16 +153,15 @@ def class_row(cls: Type[T]) -> Callable[["BaseCursor[Any, T]"], RowMaker[T]]:
 
     def class_row_(cur: "BaseCursor[Any, T]") -> RowMaker[T]:
         desc = cur.description
-        if desc is not None:
-            names = [d.name for d in desc]
-
-            def class_row__(values: Sequence[Any]) -> T:
-                return cls(**dict(zip(names, values)))  # type: ignore
-
-            return class_row__
-
-        else:
+        if desc is None:
             return no_result
+
+        names = [d.name for d in desc]
+
+        def class_row__(values: Sequence[Any]) -> T:
+            return cls(**dict(zip(names, values)))  # type: ignore
+
+        return class_row__
 
     return class_row_
 
