@@ -173,7 +173,7 @@ jobs:
       - name: Install and run tests (C implementation)
         if: ${{ matrix.impl == 'c' }}
         run: |
-          pip install ./psycopg/[test]
+          pip install ./psycopg/[test] ./psycopg_pool
           &"pip" install @(Get-ChildItem wheelhouse\*.whl)
           # Fix the path for the tests using ctypes
           $env:Path = "C:\Program Files\PostgreSQL\13\bin\;$env:Path"

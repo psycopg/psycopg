@@ -5,7 +5,7 @@ from threading import Thread
 
 import pytest
 
-from psycopg.pool.sched import Scheduler
+from psycopg_pool.sched import Scheduler
 
 pytestmark = pytest.mark.timing
 

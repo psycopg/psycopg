@@ -8,7 +8,7 @@ from collections import Counter
 import pytest
 
 import psycopg
-from psycopg import pool
+import psycopg_pool as pool
 from psycopg.pq import TransactionStatus
 
 
@@ -669,7 +669,7 @@ def test_grow(dsn, monkeypatch, retries):
 @pytest.mark.timing
 def test_shrink(dsn, monkeypatch):
 
-    from psycopg.pool.pool import ShrinkPool
+    from psycopg_pool.pool import ShrinkPool
 
     results = []
 

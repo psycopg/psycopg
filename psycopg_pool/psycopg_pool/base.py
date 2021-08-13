@@ -9,7 +9,7 @@ from typing import Any, Callable, Deque, Dict, Generic, Optional
 from typing import TYPE_CHECKING
 from collections import Counter, deque
 
-from ..abc import ConnectionType
+from psycopg.abc import ConnectionType
 
 if TYPE_CHECKING:
     from typing import Counter as TCounter

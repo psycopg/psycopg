@@ -4,7 +4,7 @@
 .. index::
     double: Connection; Pool
 
-.. module:: psycopg.pool
+.. module:: psycopg_pool
 
 The package contains two connection pool implementations. A connection pool
 creates and maintains a limited amount of PostgreSQL connections and allows a

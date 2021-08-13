@@ -31,6 +31,10 @@ extras_require = {
     "binary": [
         f"psycopg-binary == {version}",
     ],
+    # Install the connection pool
+    "pool": [
+        "psycopg-pool",
+    ],
     # Requirements to run the test suite
     "test": [
         "mypy >= 0.812",

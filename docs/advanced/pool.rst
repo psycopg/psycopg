@@ -1,4 +1,4 @@
-.. currentmodule:: psycopg.pool
+.. currentmodule:: psycopg_pool
 
 .. _connection-pools:
 
