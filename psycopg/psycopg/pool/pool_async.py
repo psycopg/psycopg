@@ -1,5 +1,5 @@
 """
-psycopg synchronous connection pool
+psycopg asynchronous connection pool
 """
 
 # Copyright (C) 2021 The Psycopg Team

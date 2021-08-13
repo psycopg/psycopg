@@ -681,7 +681,7 @@ async def test_grow(dsn, monkeypatch, retries):
 @pytest.mark.timing
 async def test_shrink(dsn, monkeypatch):
 
-    from psycopg.pool.async_pool import ShrinkPool
+    from psycopg.pool.pool_async import ShrinkPool
 
     results = []
 
