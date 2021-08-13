@@ -1,0 +1,301 @@
+"""
+psycopg async connection objects
+"""
+
+# Copyright (C) 2020-2021 The Psycopg Team
+
+import asyncio
+import logging
+import warnings
+from types import TracebackType
+from typing import Any, AsyncIterator, cast
+from typing import Optional, Type, Union
+from typing import overload, TYPE_CHECKING
+
+from . import errors as e
+from . import waiting
+from .pq import Format
+from .abc import Params, PQGen, PQGenConn, Query, RV
+from .rows import Row, AsyncRowFactory, tuple_row, TupleRow
+from ._enums import IsolationLevel
+from .compat import asynccontextmanager
+from .cursor import AsyncCursor
+from .conninfo import _conninfo_connect_timeout
+from .connection import BaseConnection, CursorRow, Notify
+from .generators import notifies
+from .transaction import AsyncTransaction
+from .server_cursor import AsyncServerCursor
+
+if TYPE_CHECKING:
+    from .pq.abc import PGconn
+
+
+logger = logging.getLogger("psycopg")
+
+
+class AsyncConnection(BaseConnection[Row]):
+    """
+    Asynchronous wrapper for a connection to the database.
+    """
+
+    __module__ = "psycopg"
+
+    cursor_factory: Type[AsyncCursor[Row]]
+    server_cursor_factory: Type[AsyncServerCursor[Row]]
+    row_factory: AsyncRowFactory[Row]
+
+    def __init__(
+        self,
+        pgconn: "PGconn",
+        row_factory: Optional[AsyncRowFactory[Row]] = None,
+    ):
+        super().__init__(pgconn)
+        self.row_factory = row_factory or cast(AsyncRowFactory[Row], tuple_row)
+        self.lock = asyncio.Lock()
+        self.cursor_factory = AsyncCursor
+        self.server_cursor_factory = AsyncServerCursor
+
+    @overload
+    @classmethod
+    async def connect(
+        cls,
+        conninfo: str = "",
+        *,
+        autocommit: bool = False,
+        row_factory: AsyncRowFactory[Row],
+        **kwargs: Union[None, int, str],
+    ) -> "AsyncConnection[Row]":
+        ...
+
+    @overload
+    @classmethod
+    async def connect(
+        cls,
+        conninfo: str = "",
+        *,
+        autocommit: bool = False,
+        **kwargs: Union[None, int, str],
+    ) -> "AsyncConnection[TupleRow]":
+        ...
+
+    @classmethod  # type: ignore[misc]
+    async def connect(
+        cls,
+        conninfo: str = "",
+        *,
+        autocommit: bool = False,
+        row_factory: Optional[AsyncRowFactory[Row]] = None,
+        **kwargs: Any,
+    ) -> "AsyncConnection[Any]":
+        conninfo, timeout = _conninfo_connect_timeout(conninfo, **kwargs)
+        rv = await cls._wait_conn(
+            cls._connect_gen(conninfo, autocommit=autocommit),
+            timeout,
+        )
+        if row_factory:
+            rv.row_factory = row_factory
+        return rv
+
+    async def __aenter__(self) -> "AsyncConnection[Row]":
+        return self
+
+    async def __aexit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc_val: Optional[BaseException],
+        exc_tb: Optional[TracebackType],
+    ) -> None:
+        if self.closed:
+            return
+
+        if exc_type:
+            # try to rollback, but if there are problems (connection in a bad
+            # state) just warn without clobbering the exception bubbling up.
+            try:
+                await self.rollback()
+            except Exception as exc2:
+                warnings.warn(
+                    f"error rolling back the transaction on {self}: {exc2}",
+                    RuntimeWarning,
+                )
+        else:
+            await self.commit()
+
+        # Close the connection only if it doesn't belong to a pool.
+        if not getattr(self, "_pool", None):
+            await self.close()
+
+    async def close(self) -> None:
+        if self.closed:
+            return
+        self._closed = True
+        self.pgconn.finish()
+
+    @overload
+    def cursor(self, *, binary: bool = False) -> AsyncCursor[Row]:
+        ...
+
+    @overload
+    def cursor(
+        self, *, binary: bool = False, row_factory: AsyncRowFactory[CursorRow]
+    ) -> AsyncCursor[CursorRow]:
+        ...
+
+    @overload
+    def cursor(
+        self,
+        name: str,
+        *,
+        binary: bool = False,
+        scrollable: Optional[bool] = None,
+        withhold: bool = False,
+    ) -> AsyncServerCursor[Row]:
+        ...
+
+    @overload
+    def cursor(
+        self,
+        name: str,
+        *,
+        binary: bool = False,
+        row_factory: AsyncRowFactory[CursorRow],
+        scrollable: Optional[bool] = None,
+        withhold: bool = False,
+    ) -> AsyncServerCursor[CursorRow]:
+        ...
+
+    def cursor(
+        self,
+        name: str = "",
+        *,
+        binary: bool = False,
+        row_factory: Optional[AsyncRowFactory[Any]] = None,
+        scrollable: Optional[bool] = None,
+        withhold: bool = False,
+    ) -> Union[AsyncCursor[Any], AsyncServerCursor[Any]]:
+        """
+        Return a new `AsyncCursor` to send commands and queries to the connection.
+        """
+        if not row_factory:
+            row_factory = self.row_factory
+
+        cur: Union[AsyncCursor[Any], AsyncServerCursor[Any]]
+        if name:
+            cur = self.server_cursor_factory(
+                self,
+                name=name,
+                row_factory=row_factory,
+                scrollable=scrollable,
+                withhold=withhold,
+            )
+        else:
+            cur = self.cursor_factory(self, row_factory=row_factory)
+
+        if binary:
+            cur.format = Format.BINARY
+
+        return cur
+
+    async def execute(
+        self,
+        query: Query,
+        params: Optional[Params] = None,
+        *,
+        prepare: Optional[bool] = None,
+    ) -> AsyncCursor[Row]:
+        cur = self.cursor()
+        try:
+            return await cur.execute(query, params, prepare=prepare)
+        except e.Error as ex:
+            raise ex.with_traceback(None)
+
+    async def commit(self) -> None:
+        async with self.lock:
+            await self.wait(self._commit_gen())
+
+    async def rollback(self) -> None:
+        async with self.lock:
+            await self.wait(self._rollback_gen())
+
+    @asynccontextmanager
+    async def transaction(
+        self,
+        savepoint_name: Optional[str] = None,
+        force_rollback: bool = False,
+    ) -> AsyncIterator[AsyncTransaction]:
+        """
+        Start a context block with a new transaction or nested transaction.
+
+        :rtype: AsyncTransaction
+        """
+        tx = AsyncTransaction(self, savepoint_name, force_rollback)
+        async with tx:
+            yield tx
+
+    async def notifies(self) -> AsyncIterator[Notify]:
+        while 1:
+            async with self.lock:
+                ns = await self.wait(notifies(self.pgconn))
+            enc = self.client_encoding
+            for pgn in ns:
+                n = Notify(
+                    pgn.relname.decode(enc), pgn.extra.decode(enc), pgn.be_pid
+                )
+                yield n
+
+    async def wait(self, gen: PQGen[RV]) -> RV:
+        return await waiting.wait_async(gen, self.pgconn.socket)
+
+    @classmethod
+    async def _wait_conn(
+        cls, gen: PQGenConn[RV], timeout: Optional[int]
+    ) -> RV:
+        return await waiting.wait_conn_async(gen, timeout)
+
+    def _set_autocommit(self, value: bool) -> None:
+        self._no_set_async("autocommit")
+
+    async def set_autocommit(self, value: bool) -> None:
+        """Async version of the `~Connection.autocommit` setter."""
+        async with self.lock:
+            super()._set_autocommit(value)
+
+    def _set_isolation_level(self, value: Optional[IsolationLevel]) -> None:
+        self._no_set_async("isolation_level")
+
+    async def set_isolation_level(
+        self, value: Optional[IsolationLevel]
+    ) -> None:
+        """Async version of the `~Connection.isolation_level` setter."""
+        async with self.lock:
+            super()._set_isolation_level(value)
+
+    def _set_read_only(self, value: Optional[bool]) -> None:
+        self._no_set_async("read_only")
+
+    async def set_read_only(self, value: Optional[bool]) -> None:
+        """Async version of the `~Connection.read_only` setter."""
+        async with self.lock:
+            super()._set_read_only(value)
+
+    def _set_deferrable(self, value: Optional[bool]) -> None:
+        self._no_set_async("deferrable")
+
+    async def set_deferrable(self, value: Optional[bool]) -> None:
+        """Async version of the `~Connection.deferrable` setter."""
+        async with self.lock:
+            super()._set_deferrable(value)
+
+    def _set_client_encoding(self, name: str) -> None:
+        self._no_set_async("client_encoding")
+
+    async def set_client_encoding(self, name: str) -> None:
+        """Async version of the `~Connection.client_encoding` setter."""
+        async with self.lock:
+            await self.wait(self._set_client_encoding_gen(name))
+
+    def _no_set_async(self, attribute: str) -> None:
+        raise AttributeError(
+            f"'the {attribute!r} property is read-only on async connections:"
+            f" please use 'await .set_{attribute}()' instead."
+        )

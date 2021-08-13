@@ -28,7 +28,8 @@ from ._preparing import Prepare
 if TYPE_CHECKING:
     from .abc import Transformer
     from .pq.abc import PGconn, PGresult
-    from .connection import Connection, AsyncConnection
+    from .connection import Connection
+    from .connection_async import AsyncConnection
 
 execute: Callable[["PGconn"], PQGen[List["PGresult"]]]
 

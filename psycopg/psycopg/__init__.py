@@ -17,9 +17,10 @@ from .errors import DataError, OperationalError, IntegrityError
 from .errors import InternalError, ProgrammingError, NotSupportedError
 from ._column import Column
 from .conninfo import ConnectionInfo
-from .connection import BaseConnection, AsyncConnection, Connection, Notify
+from .connection import BaseConnection, Connection, Notify
 from .transaction import Rollback, Transaction, AsyncTransaction
 from .server_cursor import AsyncServerCursor, ServerCursor
+from .connection_async import AsyncConnection
 
 from .dbapi20 import BINARY, DATETIME, NUMBER, ROWID, STRING
 from .dbapi20 import Binary, BinaryTextDumper, BinaryBinaryDumper

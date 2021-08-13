@@ -16,8 +16,9 @@ from .abc import ConnectionType, PQGen
 from .pq.abc import PGresult
 
 if TYPE_CHECKING:
-    from typing import Any  # noqa: F401
-    from .connection import Connection, AsyncConnection  # noqa: F401
+    from typing import Any
+    from .connection import Connection
+    from .connection_async import AsyncConnection
 
 logger = logging.getLogger(__name__)
 

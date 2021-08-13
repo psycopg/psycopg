@@ -15,7 +15,8 @@ from .abc import AdaptContext
 from .rows import dict_row
 
 if TYPE_CHECKING:
-    from .connection import Connection, AsyncConnection
+    from .connection import Connection
+    from .connection_async import AsyncConnection
     from .sql import Identifier
 
 T = TypeVar("T", bound="TypeInfo")
