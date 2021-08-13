@@ -14,7 +14,8 @@ from . import errors as e
 from .compat import Protocol
 
 if TYPE_CHECKING:
-    from .cursor import BaseCursor, Cursor, AsyncCursor
+    from .cursor import BaseCursor, Cursor
+    from .cursor_async import AsyncCursor
 
 T = TypeVar("T")
 

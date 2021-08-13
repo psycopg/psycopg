@@ -11,7 +11,7 @@ from . import types
 from . import postgres
 from .copy import Copy, AsyncCopy
 from ._enums import IsolationLevel
-from .cursor import AsyncCursor, Cursor
+from .cursor import Cursor
 from .errors import Warning, Error, InterfaceError, DatabaseError
 from .errors import DataError, OperationalError, IntegrityError
 from .errors import InternalError, ProgrammingError, NotSupportedError
@@ -19,6 +19,7 @@ from ._column import Column
 from .conninfo import ConnectionInfo
 from .connection import BaseConnection, Connection, Notify
 from .transaction import Rollback, Transaction, AsyncTransaction
+from .cursor_async import AsyncCursor
 from .server_cursor import AsyncServerCursor, ServerCursor
 from .connection_async import AsyncConnection
 

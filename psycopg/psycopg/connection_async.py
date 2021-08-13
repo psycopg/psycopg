@@ -19,11 +19,11 @@ from .abc import Params, PQGen, PQGenConn, Query, RV
 from .rows import Row, AsyncRowFactory, tuple_row, TupleRow
 from ._enums import IsolationLevel
 from .compat import asynccontextmanager
-from .cursor import AsyncCursor
 from .conninfo import _conninfo_connect_timeout
 from .connection import BaseConnection, CursorRow, Notify
 from .generators import notifies
 from .transaction import AsyncTransaction
+from .cursor_async import AsyncCursor
 from .server_cursor import AsyncServerCursor
 
 if TYPE_CHECKING:
