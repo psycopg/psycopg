@@ -129,12 +129,16 @@ cdef class PGconn:
 
     @property
     def hostaddr(self) -> bytes:
-        # Available only from PG 12. Use the dynamic ctypes implementation
-        from psycopg.pq import _pq_ctypes
+        if libpq.PG_VERSION_NUM < 120000:
+            raise e.NotSupportedError(
+                f"PQhostaddr requires libpq from PostgreSQL 12,"
+                f" {libpq.PG_VERSION_NUM} available instead"
+            )
 
         _ensure_pgconn(self)
-        return _pq_ctypes.PQhostaddr(
-            ctypes.cast(self.pgconn_ptr, _pq_ctypes.PGconn_ptr))
+        cdef char *rv = libpq.PQhostaddr(self._pgconn_ptr)
+        assert rv is not NULL
+        return rv
 
     @property
     def port(self) -> bytes:
@@ -504,6 +508,12 @@ cdef class PGconn:
     def encrypt_password(
         self, const char *passwd, const char *user, algorithm = None
     ) -> bytes:
+        if libpq.PG_VERSION_NUM < 100000:
+            raise e.NotSupportedError(
+                f"PQencryptPasswordConn requires libpq from PostgreSQL 10,"
+                f" {libpq.PG_VERSION_NUM} available instead"
+            )
+
         cdef char *out
         cdef const char *calgo = NULL
         if algorithm:
