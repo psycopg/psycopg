@@ -552,7 +552,7 @@ class Connection(BaseConnection[Row]):
     ) -> "Connection[TupleRow]":
         ...
 
-    @classmethod  # type: ignore[misc]
+    @classmethod  # type: ignore[misc] # https://github.com/python/mypy/issues/11004
     def connect(
         cls,
         conninfo: str = "",

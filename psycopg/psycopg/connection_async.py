@@ -78,7 +78,7 @@ class AsyncConnection(BaseConnection[Row]):
     ) -> "AsyncConnection[TupleRow]":
         ...
 
-    @classmethod  # type: ignore[misc]
+    @classmethod  # type: ignore[misc] # https://github.com/python/mypy/issues/11004
     async def connect(
         cls,
         conninfo: str = "",
