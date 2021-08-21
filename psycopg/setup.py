@@ -51,7 +51,7 @@ extras_require = {
     "docs": [
         "Sphinx >= 4.1, < 4.2",
         "docutils >= 0.17, < 0.18",
-        "furo >= 2021.7.5b38",
+        "furo >= furo-2021.8.17b43",
         "sphinx-autobuild >= 2021.3.14",
         "sphinx-autodoc-typehints >= 1.12, < 1.13",
     ],

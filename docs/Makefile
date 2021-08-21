@@ -20,7 +20,7 @@ serve:
 
 env: .venv
 
-.venv: requirements.txt
+.venv:
 	$(PYTHON) -m venv .venv
 	./.venv/bin/pip install -e ../psycopg[docs]
 
