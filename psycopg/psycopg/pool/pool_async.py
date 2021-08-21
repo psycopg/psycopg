@@ -1,5 +1,5 @@
 """
-psycopg synchronous connection pool
+psycopg asynchronous connection pool
 """
 
 # Copyright (C) 2021 The Psycopg Team
@@ -17,8 +17,8 @@ from collections import deque
 
 from .. import errors as e
 from ..pq import TransactionStatus
-from ..connection import AsyncConnection
 from ..compat import Task, asynccontextmanager, create_task
+from ..connection_async import AsyncConnection
 
 from .base import ConnectionAttempt, BasePool
 from .sched import AsyncScheduler

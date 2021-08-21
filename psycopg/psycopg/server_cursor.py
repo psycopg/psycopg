@@ -13,10 +13,12 @@ from . import sql
 from . import errors as e
 from .abc import ConnectionType, Query, Params, PQGen
 from .rows import Row, RowFactory, AsyncRowFactory
-from .cursor import AnyCursor, BaseCursor, Cursor, AsyncCursor, execute
+from .cursor import AnyCursor, BaseCursor, Cursor, execute
+from .cursor_async import AsyncCursor
 
 if TYPE_CHECKING:
-    from .connection import Connection, AsyncConnection
+    from .connection import Connection
+    from .connection_async import AsyncConnection
 
 DEFAULT_ITERSIZE = 100
 

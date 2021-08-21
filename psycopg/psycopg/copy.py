@@ -25,8 +25,10 @@ from .generators import copy_from, copy_to, copy_end
 
 if TYPE_CHECKING:
     from .pq.abc import PGresult
-    from .cursor import BaseCursor, Cursor, AsyncCursor
-    from .connection import Connection, AsyncConnection  # noqa: F401
+    from .cursor import BaseCursor, Cursor
+    from .cursor_async import AsyncCursor
+    from .connection import Connection  # noqa: F401
+    from .connection_async import AsyncConnection  # noqa: F401
 
 TEXT = pq.Format.TEXT
 BINARY = pq.Format.BINARY
