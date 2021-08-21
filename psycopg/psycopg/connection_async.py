@@ -8,9 +8,8 @@ import asyncio
 import logging
 import warnings
 from types import TracebackType
-from typing import Any, AsyncIterator, cast
-from typing import Optional, Type, Union
-from typing import overload, TYPE_CHECKING
+from typing import Any, AsyncIterator, Dict, Optional, Type, Union
+from typing import cast, overload, TYPE_CHECKING
 
 from . import errors as e
 from . import waiting
@@ -19,7 +18,7 @@ from .abc import Params, PQGen, PQGenConn, Query, RV
 from .rows import Row, AsyncRowFactory, tuple_row, TupleRow
 from ._enums import IsolationLevel
 from .compat import asynccontextmanager
-from .conninfo import _conninfo_connect_timeout
+from .conninfo import make_conninfo, conninfo_to_dict
 from .connection import BaseConnection, CursorRow, Notify
 from .generators import notifies
 from .transaction import AsyncTransaction
@@ -87,10 +86,12 @@ class AsyncConnection(BaseConnection[Row]):
         row_factory: Optional[AsyncRowFactory[Row]] = None,
         **kwargs: Any,
     ) -> "AsyncConnection[Any]":
-        conninfo, timeout = _conninfo_connect_timeout(conninfo, **kwargs)
+        params = await cls._get_connection_params(conninfo, **kwargs)
+        conninfo = make_conninfo(**params)
+
         rv = await cls._wait_conn(
             cls._connect_gen(conninfo, autocommit=autocommit),
-            timeout,
+            timeout=params["connect_timeout"],
         )
         if row_factory:
             rv.row_factory = row_factory
@@ -124,6 +125,24 @@ class AsyncConnection(BaseConnection[Row]):
         # Close the connection only if it doesn't belong to a pool.
         if not getattr(self, "_pool", None):
             await self.close()
+
+    @classmethod
+    async def _get_connection_params(
+        cls, conninfo: str, **kwargs: Any
+    ) -> Dict[str, Any]:
+        """Adjust connection parameters before conecting."""
+        params = conninfo_to_dict(conninfo, **kwargs)
+
+        # Make sure there is an usable connect_timeout
+        if "connect_timeout" in params:
+            params["connect_timeout"] = int(params["connect_timeout"])
+        else:
+            params["connect_timeout"] = None
+
+        # TODO: resolve host names to hostaddr asynchronously
+        # TODO: SRV lookup (RFC 2782)
+
+        return params
 
     async def close(self) -> None:
         if self.closed:

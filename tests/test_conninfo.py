@@ -5,12 +5,7 @@ import pytest
 
 import psycopg
 from psycopg import ProgrammingError
-from psycopg.conninfo import (
-    _conninfo_connect_timeout,
-    make_conninfo,
-    conninfo_to_dict,
-    ConnectionInfo,
-)
+from psycopg.conninfo import make_conninfo, conninfo_to_dict, ConnectionInfo
 
 snowman = "\u2603"
 
@@ -93,37 +88,6 @@ def test_no_munging():
     dsnin = "dbname=a host=b user=c password=d"
     dsnout = make_conninfo(dsnin)
     assert dsnin == dsnout
-
-
-@pytest.mark.parametrize(
-    "dsn, kwargs, exp",
-    [
-        (
-            "",
-            {"host": "localhost", "connect_timeout": 1},
-            ({"host": "localhost", "connect_timeout": "1"}, 1),
-        ),
-        (
-            "dbname=postgres",
-            {},
-            ({"dbname": "postgres"}, None),
-        ),
-        (
-            "dbname=postgres connect_timeout=2",
-            {},
-            ({"dbname": "postgres", "connect_timeout": "2"}, 2),
-        ),
-        (
-            "postgresql:///postgres?connect_timeout=2",
-            {"connect_timeout": 10},
-            ({"dbname": "postgres", "connect_timeout": "10"}, 10),
-        ),
-    ],
-)
-def test__conninfo_connect_timeout(dsn, kwargs, exp):
-    conninfo, connect_timeout = _conninfo_connect_timeout(dsn, **kwargs)
-    assert conninfo_to_dict(conninfo) == exp[0]
-    assert connect_timeout == exp[1]
 
 
 class TestConnectionInfo:

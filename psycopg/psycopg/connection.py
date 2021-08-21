@@ -8,7 +8,7 @@ import logging
 import warnings
 import threading
 from types import TracebackType
-from typing import Any, Callable, cast, Generic, Iterator, List
+from typing import Any, Callable, cast, Dict, Generic, Iterator, List
 from typing import NamedTuple, Optional, Type, TypeVar, Union
 from typing import overload, TYPE_CHECKING
 from weakref import ref, ReferenceType
@@ -28,7 +28,7 @@ from .rows import Row, RowFactory, tuple_row, TupleRow
 from ._enums import IsolationLevel
 from .cursor import Cursor
 from ._cmodule import _psycopg
-from .conninfo import _conninfo_connect_timeout, ConnectionInfo
+from .conninfo import make_conninfo, conninfo_to_dict, ConnectionInfo
 from .generators import notifies
 from ._preparing import PrepareManager
 from .transaction import Transaction
@@ -564,10 +564,12 @@ class Connection(BaseConnection[Row]):
         """
         Connect to a database server and return a new `Connection` instance.
         """
-        conninfo, timeout = _conninfo_connect_timeout(conninfo, **kwargs)
+        params = cls._get_connection_params(conninfo, **kwargs)
+        conninfo = make_conninfo(**params)
+
         rv = cls._wait_conn(
             cls._connect_gen(conninfo, autocommit=autocommit),
-            timeout,
+            timeout=params["connect_timeout"],
         )
         if row_factory:
             rv.row_factory = row_factory
@@ -601,6 +603,23 @@ class Connection(BaseConnection[Row]):
         # Close the connection only if it doesn't belong to a pool.
         if not getattr(self, "_pool", None):
             self.close()
+
+    @classmethod
+    def _get_connection_params(
+        cls, conninfo: str, **kwargs: Any
+    ) -> Dict[str, Any]:
+        """Adjust connection parameters before conecting."""
+        params = conninfo_to_dict(conninfo, **kwargs)
+
+        # Make sure there is an usable connect_timeout
+        if "connect_timeout" in params:
+            params["connect_timeout"] = int(params["connect_timeout"])
+        else:
+            params["connect_timeout"] = None
+
+        # TODO: SRV lookup (RFC 2782)
+
+        return params
 
     def close(self) -> None:
         """Close the database connection."""

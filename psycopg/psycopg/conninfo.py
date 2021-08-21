@@ -5,7 +5,7 @@ Functions to manipulate conninfo strings
 # Copyright (C) 2020-2021 The Psycopg Team
 
 import re
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 from pathlib import Path
 from datetime import tzinfo
 
@@ -49,18 +49,22 @@ def make_conninfo(conninfo: str = "", **kwargs: Any) -> str:
     return conninfo
 
 
-def conninfo_to_dict(conninfo: str) -> Dict[str, str]:
+def conninfo_to_dict(conninfo: str = "", **kwargs: Any) -> Dict[str, Any]:
     """
     Convert the *conninfo* string into a dictionary of parameters.
 
     Raise ProgrammingError if the string is not valid.
     """
     opts = _parse_conninfo(conninfo)
-    return {
+    rv = {
         opt.keyword.decode("utf8"): opt.val.decode("utf8")
         for opt in opts
         if opt.val is not None
     }
+    for k, v in kwargs.items():
+        if v is not None:
+            rv[k] = v
+    return rv
 
 
 def _parse_conninfo(conninfo: str) -> List[pq.ConninfoOption]:
@@ -93,22 +97,6 @@ def _param_escape(s: str) -> str:
         s = "'" + s + "'"
 
     return s
-
-
-def _conninfo_connect_timeout(
-    conninfo: str, **kwargs: Any
-) -> Tuple[str, Optional[int]]:
-    """
-    Build 'conninfo' by combining input value with kwargs and extract
-    'connect_timeout' parameter.
-    """
-    conninfo = make_conninfo(conninfo, **kwargs)
-    connect_timeout: Optional[int]
-    try:
-        connect_timeout = int(conninfo_to_dict(conninfo)["connect_timeout"])
-    except KeyError:
-        connect_timeout = None
-    return conninfo, connect_timeout
 
 
 class ConnectionInfo:

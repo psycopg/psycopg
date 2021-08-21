@@ -11,7 +11,7 @@ from psycopg import encodings
 from psycopg import Connection, Notify
 from psycopg.rows import tuple_row
 from psycopg.errors import UndefinedTable
-from psycopg.conninfo import conninfo_to_dict
+from psycopg.conninfo import conninfo_to_dict, make_conninfo
 
 from .utils import gc_collect
 from .test_cursor import my_row_factory
@@ -690,3 +690,40 @@ def test_set_transaction_param_strange(conn):
 
     conn.deferrable = 0
     assert conn.deferrable is False
+
+
+conninfo_params_timeout = [
+    (
+        "",
+        {"host": "localhost", "connect_timeout": None},
+        ({"host": "localhost"}, None),
+    ),
+    (
+        "",
+        {"host": "localhost", "connect_timeout": 1},
+        ({"host": "localhost", "connect_timeout": "1"}, 1),
+    ),
+    (
+        "dbname=postgres",
+        {},
+        ({"dbname": "postgres"}, None),
+    ),
+    (
+        "dbname=postgres connect_timeout=2",
+        {},
+        ({"dbname": "postgres", "connect_timeout": "2"}, 2),
+    ),
+    (
+        "postgresql:///postgres?connect_timeout=2",
+        {"connect_timeout": 10},
+        ({"dbname": "postgres", "connect_timeout": "10"}, 10),
+    ),
+]
+
+
+@pytest.mark.parametrize("dsn, kwargs, exp", conninfo_params_timeout)
+def test_get_connection_params(dsn, kwargs, exp):
+    params = Connection._get_connection_params(dsn, **kwargs)
+    conninfo = make_conninfo(**params)
+    assert conninfo_to_dict(conninfo) == exp[0]
+    assert params.get("connect_timeout") == exp[1]

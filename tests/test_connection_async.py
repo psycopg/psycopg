@@ -10,11 +10,11 @@ from psycopg import encodings
 from psycopg import AsyncConnection, Notify
 from psycopg.rows import tuple_row
 from psycopg.errors import UndefinedTable
-from psycopg.conninfo import conninfo_to_dict
+from psycopg.conninfo import conninfo_to_dict, make_conninfo
 
 from .utils import gc_collect
 from .test_cursor import my_row_factory
-from .test_connection import tx_params, tx_values_map
+from .test_connection import tx_params, tx_values_map, conninfo_params_timeout
 
 pytestmark = pytest.mark.asyncio
 
@@ -696,3 +696,11 @@ async def test_set_transaction_param_strange(aconn):
 
     await aconn.set_deferrable(0)
     assert aconn.deferrable is False
+
+
+@pytest.mark.parametrize("dsn, kwargs, exp", conninfo_params_timeout)
+async def test_get_connection_params(dsn, kwargs, exp):
+    params = await AsyncConnection._get_connection_params(dsn, **kwargs)
+    conninfo = make_conninfo(**params)
+    assert conninfo_to_dict(conninfo) == exp[0]
+    assert params["connect_timeout"] == exp[1]
