@@ -29,9 +29,7 @@ with open("psycopg_c/version.py") as f:
 
 
 def get_config(what: str) -> str:
-    # Allow to specify PG_CONFIG using an env var
-    # Changing the path in the cibuildwheel image seems difficult
-    pg_config = os.environ.get("PG_CONFIG", "pg_config")
+    pg_config = "pg_config"
     try:
         out = sp.run([pg_config, f"--{what}"], stdout=sp.PIPE, check=True)
     except Exception as e:

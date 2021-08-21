@@ -9,7 +9,7 @@ import ctypes.util
 import sys
 from ctypes import Structure, CFUNCTYPE, POINTER
 from ctypes import c_char, c_char_p, c_int, c_size_t, c_ubyte, c_uint, c_void_p
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 from psycopg.errors import NotSupportedError
 
@@ -177,14 +177,14 @@ if libpq_version >= 120000:
     _PQhostaddr.restype = c_char_p
 
 
-def PQhostaddr(pgconn: type) -> bytes:
-    if _PQhostaddr:
-        return _PQhostaddr(pgconn)
-    else:
+def PQhostaddr(pgconn: PGconn_struct) -> bytes:
+    if not _PQhostaddr:
         raise NotSupportedError(
             f"PQhostaddr requires libpq from PostgreSQL 12,"
             f" {libpq_version} available instead"
         )
+
+    return _PQhostaddr(pgconn)
 
 
 PQport = pq.PQport
@@ -557,9 +557,28 @@ PQfreemem = pq.PQfreemem
 PQfreemem.argtypes = [c_void_p]
 PQfreemem.restype = None
 
-PQencryptPasswordConn = pq.PQencryptPasswordConn
-PQencryptPasswordConn.argtypes = [PGconn_ptr, c_char_p, c_char_p, c_char_p]
-PQencryptPasswordConn.restype = POINTER(c_char)
+if libpq_version >= 100000:
+    _PQencryptPasswordConn = pq.PQencryptPasswordConn
+    _PQencryptPasswordConn.argtypes = [
+        PGconn_ptr,
+        c_char_p,
+        c_char_p,
+        c_char_p,
+    ]
+    _PQencryptPasswordConn.restype = POINTER(c_char)
+
+
+def PQencryptPasswordConn(
+    pgconn: PGconn_struct, passwd: bytes, user: bytes, algorithm: bytes
+) -> Optional[bytes]:
+    if not _PQencryptPasswordConn:
+        raise NotSupportedError(
+            f"PQencryptPasswordConn requires libpq from PostgreSQL 10,"
+            f" {libpq_version} available instead"
+        )
+
+    return _PQencryptPasswordConn(pgconn, passwd, user, algorithm)
+
 
 PQmakeEmptyPGresult = pq.PQmakeEmptyPGresult
 PQmakeEmptyPGresult.argtypes = [PGconn_ptr, c_int]
@@ -588,7 +607,7 @@ PQinitOpenSSL.restype = None
 
 def generate_stub() -> None:
     import re
-    from ctypes import _CFuncPtr
+    from ctypes import _CFuncPtr  # type: ignore
 
     def type2str(fname, narg, t):
         if t is None:

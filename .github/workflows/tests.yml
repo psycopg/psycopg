@@ -158,21 +158,15 @@ jobs:
         run: tox -c psycopg -e ${{ matrix.python }} -- --color yes
 
       # Build a wheel package of the C extensions.
-      # Specify a pg_config explicitly because there are wrong ones along the
-      # path (https://github.com/actions/virtual-environments/issues/3730).
-      #
-      # Don't add the Postgres bindir to the path because that causes problems
-      # in delocating (https://github.com/pypa/cibuildwheel/issues/766).
-      #
       # If the wheel is not delocated, import fails with some dll not found
       # (but it won't tell which one).
       - name: Build the C wheel
         if: ${{ matrix.impl == 'c' }}
         run: |
-          $env:PG_CONFIG = "C:\Program Files\PostgreSQL\13\bin\pg_config.exe"
+          $env:Path = "C:\Program Files\PostgreSQL\13\bin\;$env:Path"
           python ./psycopg_c/setup.py bdist_wheel
           pip install delvewheel
-          &"delvewheel" repair @(Get-ChildItem psycopg_c\dist\*.whl)
+          &"delvewheel" repair --no-mangle libiconv-2.dll @(Get-ChildItem psycopg_c\dist\*.whl)
 
       # tox will only build the package from sdist, not from wheel, so we can't
       # use it for testing. Just test everything in the global installation.
@@ -181,4 +175,6 @@ jobs:
         run: |
           pip install ./psycopg/[test]
           &"pip" install @(Get-ChildItem wheelhouse\*.whl)
+          # Fix the path for the tests using ctypes
+          $env:Path = "C:\Program Files\PostgreSQL\13\bin\;$env:Path"
           pytest --color yes
