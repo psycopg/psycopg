@@ -14,6 +14,7 @@ jobs:
         include:
           - {package: psycopg, impl: python}
           - {package: psycopg_c, impl: c}
+          - {package: psycopg_pool, impl: python}
 
     steps:
       - uses: actions/checkout@v2
@@ -27,14 +28,23 @@ jobs:
           python ${{ matrix.package }}/setup.py sdist -d `pwd`/dist/
 
       - name: Install the Python package and test requirements
-        run: pip install `ls dist/psycopg-*.tar.gz`[test]
+        run: |-
+          pip install `ls dist/psycopg-*.tar.gz`[test]
+          pip install -e ./psycopg_pool --no-deps
         if: ${{ matrix.package == 'psycopg' }}
 
       - name: Install the C package and test requirements
         run: |-
           pip install dist/psycopg-c-*.tar.gz
           pip install -e ./psycopg[test]
+          pip install -e ./psycopg_pool --no-deps
         if: ${{ matrix.package == 'psycopg_c' }}
+
+      - name: Install the Python pool package and test requirements
+        run: |-
+          pip install `ls dist/psycopg-pool-*.tar.gz` --no-deps
+          pip install -e ./psycopg[test]
+        if: ${{ matrix.package == 'psycopg_pool' }}
 
       - name: Test the sdist package
         run: pytest -m 'not slow' --color yes
@@ -92,7 +102,7 @@ jobs:
           CIBW_BUILD: ${{matrix.pyver}}-manylinux_${{matrix.arch}}
           CIBW_ARCHS_LINUX: auto aarch64 ppc64le
           CIBW_BEFORE_ALL_LINUX: ./tools/build/wheel_linux_before_all.sh
-          CIBW_TEST_REQUIRES: ./psycopg[test]
+          CIBW_TEST_REQUIRES: ./psycopg[test] ./psycopg_pool
           CIBW_TEST_COMMAND: pytest {project}/tests -m 'not slow' --color yes
           CIBW_ENVIRONMENT: >-
             PSYCOPG_IMPL=binary
@@ -142,7 +152,7 @@ jobs:
           CIBW_BUILD: ${{matrix.pyver}}-macosx_${{matrix.arch}}
           CIBW_ARCHS_MACOS: x86_64 arm64 universal2
           CIBW_BEFORE_ALL_MACOS: ./tools/build/wheel_macos_before_all.sh
-          CIBW_TEST_REQUIRES: ./psycopg[test]
+          CIBW_TEST_REQUIRES: ./psycopg[test] ./psycopg_pool
           CIBW_TEST_COMMAND: pytest {project}/tests -m 'not slow' --color yes
           CIBW_ENVIRONMENT: >-
             PSYCOPG_IMPL=binary
@@ -185,7 +195,7 @@ jobs:
           CIBW_BEFORE_BUILD_WINDOWS: pip install delvewheel
           CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: >-
             delvewheel repair -w {dest_dir} --no-mangle libiconv-2.dll {wheel}
-          CIBW_TEST_REQUIRES: ./psycopg[test]
+          CIBW_TEST_REQUIRES: ./psycopg[test] ./psycopg_pool
           CIBW_TEST_COMMAND: pytest {project}/tests -m "not slow" --color yes
           CIBW_ENVIRONMENT_WINDOWS: >-
             PSYCOPG_IMPL=binary

@@ -36,7 +36,7 @@ from .server_cursor import ServerCursor
 
 if TYPE_CHECKING:
     from .pq.abc import PGconn, PGresult
-    from .pool.base import BasePool
+    from psycopg_pool.base import BasePool
 
 logger = logging.getLogger("psycopg")
 

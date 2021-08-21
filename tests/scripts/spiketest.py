@@ -13,7 +13,8 @@ import sys
 import time
 import threading
 
-import psycopg.pool
+import psycopg
+import psycopg_pool
 
 import logging
 
@@ -28,7 +29,7 @@ def main():
 
         logging.getLogger("psycopg2.pool").setLevel(loglevel)
 
-    with psycopg.pool.ConnectionPool(
+    with psycopg_pool.ConnectionPool(
         opt.dsn,
         min_size=opt.min_size,
         max_size=opt.max_size,

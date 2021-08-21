@@ -6,7 +6,7 @@ from functools import partial
 import pytest
 
 from psycopg.compat import create_task
-from psycopg.pool.sched import AsyncScheduler
+from psycopg_pool.sched import AsyncScheduler
 
 pytestmark = [pytest.mark.asyncio, pytest.mark.timing]
 

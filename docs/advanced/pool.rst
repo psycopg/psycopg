@@ -1,4 +1,4 @@
-.. currentmodule:: psycopg.pool
+.. currentmodule:: psycopg_pool
 
 .. _connection-pools:
 
@@ -16,6 +16,11 @@ This page explains a few basic concepts of Psycopg connection pool's
 behaviour. Please refer to the `ConnectionPool` object API for details about
 the pool operations.
 
+.. note:: The connection pool objects are distributed in a package separate
+   from the main `psycopg` package: use ``pip install psycopg[pool]`` or ``pip
+   install psycopg_pool`` to make the `psycopg_pool` package available. See
+   :ref:`pool-installation`.
+
 
 Pool life cycle
 ---------------
@@ -26,6 +31,8 @@ other functions, modules, threads to use it. This is only a common use
 however, and not the necessary one; in particular the connection pool acts as
 a context manager and can be closed automatically at the end of its ``with``
 block::
+
+    from psycopg_pool import ConnectionPool
 
     with ConnectionPool(conninfo, **kwargs) as my_pool:
         run_app(my_pool)

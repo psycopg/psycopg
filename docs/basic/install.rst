@@ -141,6 +141,20 @@ If you are not able to fulfill this requirement please follow the `binary
 installation`_.
 
 
+.. _pool-installation:
+
+Installing the connection pool
+------------------------------
+
+The :ref:`Psycopg connection pools <connection-pools>` are distributed in a
+separate package from the `!psycopg` package itself, in order to allow a
+different release cycle.
+
+In order to use the pool you must install the ``pool`` extra, using ``pip
+install psycopg[pool]``, or install the `psycopg_pool` package separately,
+which would allow to specify the release to install more precisely.
+
+
 Handling dependencies
 ---------------------
 

@@ -65,8 +65,9 @@ requirements::
 
     python -m venv .venv
     source .venv/bin/activate
-    pip install -e ./psycopg[dev,test]     # for the base Python package
-    pip install -e ./psycopg_c             # for the C extension module
+    pip install -e ./psycopg[dev,test]          # for the base Python package
+    pip install -e ./psycopg_c                  # for the C extension module
+    pip install -e ./psycopg_pool --no-deps     # for the connection pool
 
 .. __: https://pip.pypa.io/en/stable/reference/pip_install/#install-editable
 
