@@ -1,5 +1,5 @@
-`pool` -- Connection pool implementations
-=========================================
+`!psycopg_pool` -- Connection pool implementations
+==================================================
 
 .. index::
     double: Connection; Pool
@@ -21,6 +21,10 @@ The intended use (but not mandatory) is to create a single connection pool, as
 a global object exposed by a module in your application, and use the same
 instance from the rest of the code (especially the
 `~ConnectionPool.connection()` method.
+
+.. note:: The `!psycopg_pool` package is distributed separately from the main
+   `psycopg` package: use ``pip install psycopg[pool]`` or ``pip install
+   psycopg_pool`` to make it available. See :ref:`pool-installation`.
 
 
 The `!ConnectionPool` class
