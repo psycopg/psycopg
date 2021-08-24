@@ -288,15 +288,20 @@ class TypesRegistry:
 
         Raise KeyError if not found.
         """
-        if isinstance(key, str):
-            if key.endswith("[]"):
-                key = key[:-2]
-            return self._by_name[key]
-        elif isinstance(key, int):
-            return self._by_oid[key]
-        else:
-            raise TypeError(
-                f"the key must be an oid or a name, got {type(key)}"
+        try:
+            if isinstance(key, str):
+                if key.endswith("[]"):
+                    key = key[:-2]
+                return self._by_name[key]
+            elif isinstance(key, int):
+                return self._by_oid[key]
+            else:
+                raise TypeError(
+                    f"the key must be an oid or a name, got {type(key)}"
+                )
+        except KeyError:
+            raise KeyError(
+                f"couldn't find the type {key!r} in the types registry"
             )
 
     def get(self, key: Union[str, int]) -> Optional[TypeInfo]:
