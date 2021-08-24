@@ -143,7 +143,7 @@ class TypeInfo:
     _info_query = """\
 SELECT
     typname AS name, oid, typarray AS array_oid,
-    oid::regtype AS alt_name, typdelim AS delimiter
+    oid::regtype::text AS alt_name, typdelim AS delimiter
 FROM pg_type t
 WHERE t.oid = %(name)s::regtype
 ORDER BY t.oid
