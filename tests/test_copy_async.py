@@ -11,7 +11,9 @@ from psycopg import pq
 from psycopg import sql
 from psycopg import errors as e
 from psycopg.pq import Format
+from psycopg.types import TypeInfo
 from psycopg.adapt import PyFormat as PgFormat
+from psycopg.types.hstore import register_adapters as register_hstore
 
 from .utils import gc_collect
 from .test_copy import sample_text, sample_binary, sample_binary_rows  # noqa
@@ -97,6 +99,23 @@ async def test_rows(aconn, format):
 
     assert rows == sample_records
     assert aconn.pgconn.transaction_status == aconn.TransactionStatus.INTRANS
+
+
+async def test_set_custom_type(aconn, hstore):
+    command = """copy (select '"a"=>"1", "b"=>"2"'::hstore) to stdout"""
+    cur = aconn.cursor()
+
+    async with cur.copy(command) as copy:
+        rows = [row async for row in copy.rows()]
+
+    assert rows == [('"a"=>"1", "b"=>"2"',)]
+
+    register_hstore(await TypeInfo.fetch_async(aconn, "hstore"), cur)
+    async with cur.copy(command) as copy:
+        copy.set_types(["hstore"])
+        rows = [row async for row in copy.rows()]
+
+    assert rows == [({"a": "1", "b": "2"},)]
 
 
 @pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])

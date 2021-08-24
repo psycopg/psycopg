@@ -138,3 +138,14 @@ def check_connection_version(got, function):
     want = [m.args[0] for m in function.pytestmark if m.name == "pg"]
     if want:
         return check_server_version(got, want[0])
+
+
+@pytest.fixture
+def hstore(svcconn):
+    from psycopg import Error
+
+    try:
+        with svcconn.transaction():
+            svcconn.execute("create extension if not exists hstore")
+    except Error as e:
+        pytest.skip(str(e))

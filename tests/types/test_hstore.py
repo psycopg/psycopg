@@ -97,12 +97,3 @@ def test_roundtrip_array(hstore, conn):
     register_adapters(TypeInfo.fetch(conn, "hstore"), conn)
     samp1 = conn.execute("select %s", (samp,)).fetchone()[0]
     assert samp1 == samp
-
-
-@pytest.fixture
-def hstore(svcconn):
-    try:
-        with svcconn.transaction():
-            svcconn.execute("create extension if not exists hstore")
-    except psycopg.Error as e:
-        pytest.skip(str(e))

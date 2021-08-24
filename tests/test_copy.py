@@ -12,6 +12,8 @@ from psycopg import sql
 from psycopg import errors as e
 from psycopg.pq import Format
 from psycopg.adapt import PyFormat as PgFormat
+from psycopg.types import TypeInfo
+from psycopg.types.hstore import register_adapters as register_hstore
 from psycopg.types.numeric import Int4
 
 from .utils import gc_collect
@@ -114,6 +116,23 @@ def test_rows(conn, format):
 
     assert rows == sample_records
     assert conn.pgconn.transaction_status == conn.TransactionStatus.INTRANS
+
+
+def test_set_custom_type(conn, hstore):
+    command = """copy (select '"a"=>"1", "b"=>"2"'::hstore) to stdout"""
+    cur = conn.cursor()
+
+    with cur.copy(command) as copy:
+        rows = list(copy.rows())
+
+    assert rows == [('"a"=>"1", "b"=>"2"',)]
+
+    register_hstore(TypeInfo.fetch(conn, "hstore"), cur)
+    with cur.copy(command) as copy:
+        copy.set_types(["hstore"])
+        rows = list(copy.rows())
+
+    assert rows == [({"a": "1", "b": "2"},)]
 
 
 @pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])

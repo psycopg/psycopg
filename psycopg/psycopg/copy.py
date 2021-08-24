@@ -91,12 +91,6 @@ class BaseCopy(Generic[ConnectionType]):
 
         The types must be specified as a sequence of oid or PostgreSQL type
         names (e.g. ``int4``, ``timestamptz[]``).
-
-        .. admonition:: TODO
-
-            Only builtin names are supprted for the moment. In order to specify
-            custom data types you must use their oid.
-
         """
         registry = self.cursor.adapters.types
         oids = [
