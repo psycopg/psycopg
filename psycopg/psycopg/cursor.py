@@ -286,8 +286,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
 
         else:
             # Errors, unexpected values
-            self._raise_from_results([res])
-            return None  # TODO: shouldn't be needed
+            return self._raise_from_results([res])
 
     def _start_query(self, query: Optional[Query] = None) -> PQGen[None]:
         """Generator to start the processing of a query.
