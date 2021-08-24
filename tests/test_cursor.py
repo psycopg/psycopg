@@ -42,17 +42,6 @@ def test_weakref(conn):
     assert w() is None
 
 
-def test_status(conn):
-    cur = conn.cursor()
-    assert cur.status is None
-    cur.execute("reset all")
-    assert cur.status == cur.ExecStatus.COMMAND_OK
-    cur.execute("select 1")
-    assert cur.status == cur.ExecStatus.TUPLES_OK
-    cur.close()
-    assert cur.status == cur.ExecStatus.TUPLES_OK
-
-
 def test_execute_many_results(conn):
     cur = conn.cursor()
     assert cur.nextset() is None
@@ -84,7 +73,7 @@ def test_execute_sequence(conn):
 def test_execute_empty_query(conn, query):
     cur = conn.cursor()
     cur.execute(query)
-    assert cur.status == cur.ExecStatus.EMPTY_QUERY
+    assert cur.pgresult.status == cur.ExecStatus.EMPTY_QUERY
     with pytest.raises(psycopg.ProgrammingError):
         cur.fetchone()
 

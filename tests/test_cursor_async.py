@@ -42,17 +42,6 @@ async def test_weakref(aconn):
     assert w() is None
 
 
-async def test_status(aconn):
-    cur = aconn.cursor()
-    assert cur.status is None
-    await cur.execute("reset all")
-    assert cur.status == cur.ExecStatus.COMMAND_OK
-    await cur.execute("select 1")
-    assert cur.status == cur.ExecStatus.TUPLES_OK
-    await cur.close()
-    assert cur.status == cur.ExecStatus.TUPLES_OK
-
-
 async def test_execute_many_results(aconn):
     cur = aconn.cursor()
     assert cur.nextset() is None
@@ -87,7 +76,7 @@ async def test_execute_sequence(aconn):
 async def test_execute_empty_query(aconn, query):
     cur = aconn.cursor()
     await cur.execute(query)
-    assert cur.status == cur.ExecStatus.EMPTY_QUERY
+    assert cur.pgresult.status == cur.ExecStatus.EMPTY_QUERY
     with pytest.raises(psycopg.ProgrammingError):
         await cur.fetchone()
 

@@ -99,12 +99,6 @@ class BaseCursor(Generic[ConnectionType, Row]):
         return self._closed
 
     @property
-    def status(self) -> Optional[pq.ExecStatus]:
-        # TODO: do we want this?
-        res = self.pgresult
-        return pq.ExecStatus(res.status) if res else None
-
-    @property
     def query(self) -> Optional[bytes]:
         """The last query sent to the server, if available."""
         return self._pgq.query if self._pgq else None
