@@ -64,24 +64,24 @@ class BaseListDumper(RecursiveDumper):
 
         return None
 
-    def _get_array_oid(self, base_oid: int) -> int:
+    def _get_base_type_info(self, base_oid: int) -> TypeInfo:
         """
-        Return the oid of the array from the oid of the base item.
+        Return info about the base type.
 
-        Fall back on text[].
+        Return text info as fallback.
         """
-        oid = 0
         if base_oid:
             info = self._tx.adapters.types.get(base_oid)
             if info:
-                oid = info.array_oid
+                return info
 
-        return oid or TEXT_ARRAY_OID
+        return self._tx.adapters.types["text"]
 
 
 class ListDumper(BaseListDumper):
 
     format = pq.Format.TEXT
+    delimiter = b","
 
     def get_key(self, obj: List[Any], format: PyFormat) -> DumperKey:
         if self.oid:
@@ -120,25 +120,13 @@ class ListDumper(BaseListDumper):
         # We consider an array of unknowns as unknown, so we can dump empty
         # lists or lists containing only None elements.
         if sd.oid != INVALID_OID:
-            dumper.oid = self._get_array_oid(sd.oid)
+            info = self._get_base_type_info(sd.oid)
+            dumper.oid = info.array_oid or TEXT_ARRAY_OID
+            dumper.delimiter = info.delimiter.encode("utf-8")
         else:
             dumper.oid = INVALID_OID
 
         return dumper
-
-    # from https://www.postgresql.org/docs/current/arrays.html#ARRAYS-IO
-    #
-    # The array output routine will put double quotes around element values if
-    # they are empty strings, contain curly braces, delimiter characters,
-    # double quotes, backslashes, or white space, or match the word NULL.
-    # TODO: recognise only , as delimiter. Should be configured
-    _re_needs_quotes = re.compile(
-        br"""(?xi)
-          ^$              # the empty string
-        | ["{},\\\s]      # or a char to escape
-        | ^null$          # or the word NULL
-        """
-    )
 
     # Double quotes and backslashes embedded in element values will be
     # backslash-escaped.
@@ -146,6 +134,7 @@ class ListDumper(BaseListDumper):
 
     def dump(self, obj: List[Any]) -> bytes:
         tokens: List[bytes] = []
+        needs_quotes = _get_needs_quotes_regexp(self.delimiter).search
 
         def dump_list(obj: List[Any]) -> None:
             if not obj:
@@ -158,7 +147,7 @@ class ListDumper(BaseListDumper):
                     dump_list(item)
                 elif item is not None:
                     ad = self._dump_item(item)
-                    if self._re_needs_quotes.search(ad):
+                    if needs_quotes(ad):
                         if not isinstance(ad, bytes):
                             ad = bytes(ad)
                         ad = b'"' + self._re_esc.sub(br"\\\1", ad) + b'"'
@@ -166,7 +155,7 @@ class ListDumper(BaseListDumper):
                 else:
                     tokens.append(b"NULL")
 
-                tokens.append(b",")
+                tokens.append(self.delimiter)
 
             tokens[-1] = b"}"
 
@@ -179,6 +168,26 @@ class ListDumper(BaseListDumper):
             return self.sub_dumper.dump(item)
         else:
             return self._tx.get_dumper(item, PyFormat.TEXT).dump(item)
+
+
+@lru_cache()
+def _get_needs_quotes_regexp(delimiter: bytes) -> Pattern[bytes]:
+    """Return a regexp to recognise when a value needs quotes
+
+    from https://www.postgresql.org/docs/current/arrays.html#ARRAYS-IO
+
+    The array output routine will put double quotes around element values if
+    they are empty strings, contain curly braces, delimiter characters,
+    double quotes, backslashes, or white space, or match the word NULL.
+    """
+    return re.compile(
+        br"""(?xi)
+          ^$              # the empty string
+        | ["{}%s\\\s]      # or a char to escape
+        | ^null$          # or the word NULL
+        """
+        % delimiter
+    )
 
 
 class MixedItemsListDumper(ListDumper):
@@ -234,7 +243,8 @@ class ListBinaryDumper(BaseListDumper):
         sd = self._tx.get_dumper(item, format.from_pq(self.format))
         dumper = type(self)(self.cls, self._tx)
         dumper.sub_dumper = sd
-        dumper.oid = self._get_array_oid(sd.oid)
+        info = self._get_base_type_info(sd.oid)
+        dumper.oid = info.array_oid or TEXT_ARRAY_OID
 
         return dumper
 
