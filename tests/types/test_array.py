@@ -220,3 +220,9 @@ def test_empty_list_after_choice(conn, fmt_in):
     )
     cur.execute("select data from test order by id")
     assert cur.fetchall() == [([1.0],), ([],)]
+
+
+def test_array_no_comma_separator(conn):
+    cur = conn.execute("select '{(2,2),(1,1);(5,6),(3,4)}'::box[]")
+    # Not parsed at the moment, but split ok on ; separator
+    assert cur.fetchone()[0] == ["(2,2),(1,1)", "(5,6),(3,4)"]
