@@ -61,7 +61,6 @@ def import_from_libpq() -> None:
     # The best implementation: fast but requires the system libpq installed
     if not impl or impl == "c":
         try:
-            # TODO: extension module not recognised by mypy?
             from psycopg_c import pq as module  # type: ignore
         except Exception as e:
             handle_error("c", e)
