@@ -64,7 +64,6 @@ class Composable(ABC):
         `!Composable` is passed instead of the query string.
 
         """
-        # TODO: add tests for as_bytes
         raise NotImplementedError
 
     def as_string(self, context: Optional[AdaptContext]) -> str:
