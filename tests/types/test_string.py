@@ -73,11 +73,17 @@ def test_quote_percent(conn):
     assert cur.fetchone()[0] is True
 
 
-@pytest.mark.parametrize("typename", ["text", "varchar", "name", "bpchar"])
+@pytest.mark.parametrize(
+    "typename", ["text", "varchar", "name", "bpchar", '"char"']
+)
 @pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
 def test_load_1char(conn, typename, fmt_out):
     cur = conn.cursor(binary=fmt_out)
     for i in range(1, 256):
+        if typename == '"char"' and i > 127:
+            # for char > 128 the client receives only 194 or 195.
+            continue
+
         cur.execute(f"select chr(%s)::{typename}", (i,))
         res = cur.fetchone()[0]
         assert res == chr(i)

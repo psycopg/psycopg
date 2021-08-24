@@ -191,15 +191,18 @@ def register_default_adapters(context: AdaptContext) -> None:
     # the role of unknown, so it can be cast automatically to other types).
     adapters.register_dumper(str, StrBinaryDumper)
     adapters.register_dumper(str, StrDumperUnknown)
+
     adapters.register_loader(postgres.INVALID_OID, TextLoader)
     adapters.register_loader("bpchar", TextLoader)
     adapters.register_loader("name", TextLoader)
     adapters.register_loader("text", TextLoader)
     adapters.register_loader("varchar", TextLoader)
+    adapters.register_loader('"char"', TextLoader)
     adapters.register_loader("bpchar", TextBinaryLoader)
     adapters.register_loader("name", TextBinaryLoader)
     adapters.register_loader("text", TextBinaryLoader)
     adapters.register_loader("varchar", TextBinaryLoader)
+    adapters.register_loader('"char"', TextBinaryLoader)
 
     adapters.register_dumper(bytes, BytesDumper)
     adapters.register_dumper(bytearray, BytesDumper)
@@ -207,6 +210,7 @@ def register_default_adapters(context: AdaptContext) -> None:
     adapters.register_dumper(bytes, BytesBinaryDumper)
     adapters.register_dumper(bytearray, BytesBinaryDumper)
     adapters.register_dumper(memoryview, BytesBinaryDumper)
+
     adapters.register_loader("bytea", ByteaLoader)
     adapters.register_loader(postgres.INVALID_OID, ByteaBinaryLoader)
     adapters.register_loader("bytea", ByteaBinaryLoader)
