@@ -82,12 +82,11 @@ class Proxy:
         self._wait_listen()
 
         # verify that the proxy works
-        # TODO: investigate why it doesn't on Travis
         try:
             with psycopg.connect(self.client_dsn):
                 pass
         except Exception as e:
-            pytest.xfail(f"failed to create a working proxy: {e}")
+            pytest.fail(f"failed to create a working proxy: {e}")
 
     def stop(self):
         if not self.proc:
