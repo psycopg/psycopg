@@ -618,6 +618,7 @@ class Connection(BaseConnection[Row]):
             params["connect_timeout"] = None
 
         # TODO: SRV lookup (RFC 2782)
+        # https://github.com/psycopg/psycopg/issues/70
 
         return params
 
