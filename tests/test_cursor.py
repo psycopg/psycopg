@@ -42,6 +42,21 @@ def test_weakref(conn):
     assert w() is None
 
 
+def test_statusmessage(conn):
+    cur = conn.cursor()
+    assert cur.statusmessage is None
+
+    cur.execute("select generate_series(1, 10)")
+    assert cur.statusmessage == "SELECT 10"
+
+    cur.execute("create table statusmessage ()")
+    assert cur.statusmessage == "CREATE TABLE"
+
+    with pytest.raises(psycopg.ProgrammingError):
+        cur.execute("wat")
+    assert cur.statusmessage is None
+
+
 def test_execute_many_results(conn):
     cur = conn.cursor()
     assert cur.nextset() is None

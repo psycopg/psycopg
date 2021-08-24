@@ -169,6 +169,19 @@ class BaseCursor(Generic[ConnectionType, Row]):
         else:
             return None
 
+    @property
+    def statusmessage(self) -> Optional[str]:
+        """
+        The command status tag from the last SQL command executed.
+
+        `!None` if the cursor doesn't have a result available.
+        """
+        msg = self.pgresult.command_status if self.pgresult else None
+        if msg:
+            return msg.decode("utf-8")
+        else:
+            return None
+
     def _make_row_maker(self) -> RowMaker[Row]:
         raise NotImplementedError
 

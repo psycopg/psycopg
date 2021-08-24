@@ -172,6 +172,11 @@ The `!Cursor` class
 
         `!None` if the last operation didn't return a queryset.
 
+    .. autoattribute:: statusmessage
+
+        This is the status tag you typically see in :program:`psql` after
+        a successful command, such as ``CREATE TABLE`` or ``UPDATE 42``.
+
     .. autoattribute:: rowcount
     .. autoattribute:: rownumber
 

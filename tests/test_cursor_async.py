@@ -42,6 +42,21 @@ async def test_weakref(aconn):
     assert w() is None
 
 
+async def test_statusmessage(aconn):
+    cur = aconn.cursor()
+    assert cur.statusmessage is None
+
+    await cur.execute("select generate_series(1, 10)")
+    assert cur.statusmessage == "SELECT 10"
+
+    await cur.execute("create table statusmessage ()")
+    assert cur.statusmessage == "CREATE TABLE"
+
+    with pytest.raises(psycopg.ProgrammingError):
+        await cur.execute("wat")
+    assert cur.statusmessage is None
+
+
 async def test_execute_many_results(aconn):
     cur = aconn.cursor()
     assert cur.nextset() is None
