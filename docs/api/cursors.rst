@@ -180,15 +180,41 @@ The `!Cursor` class
     .. autoattribute:: rowcount
     .. autoattribute:: rownumber
 
-    .. autoattribute:: query
+    .. attribute:: _query
 
-        The query will be in PostgreSQL format (with ``$1``, ``$2``...
-        parameters), the parameters will *not* be merged to the query: see
-        `params`.
+        An helper object used to convert queries and parameters before sending
+        them to PostgreSQL.
 
-    .. autoattribute:: params
+        .. note::
+            This attribute is exposed because it might be helpful to debug
+            problems when the communication between Python and PostgreSQL
+            doesn't work as expected. For this reason, the attribute is
+            available when a query fails too.
 
-        The parameters are adapted to PostgreSQL format.
+            .. warning::
+                You shouldn't consider it part of the public interface of the
+                object: it might change without warnings.
+
+                Except this warning, I guess.
+
+            If you would like to build reliable features using this object,
+            please get in touch so we can try and design an useful interface
+            for it.
+
+        Among the properties currently exposed by this object:
+
+        - `!query` (`!bytes`): the query effectively sent to PostgreSQL. It
+          will have Python placeholders (``%s``\-style) replaced with
+          PostgreSQL ones (``$1``, ``$2``\-style).
+
+        - `!params` (sequence of `!bytes`): the parameters passed to
+          PostgreSQL, adapted to the database format.
+
+        - `!types` (sequence of `!int`): the OID of the parameters passed to
+          PostgreSQL.
+
+        - `!formats` (sequence of `pq.Format`): whether the parameter format
+          is text or binary.
 
 
 The `!ServerCursor` class

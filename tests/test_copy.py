@@ -470,8 +470,8 @@ def test_copy_rowcount(conn):
 def test_copy_query(conn):
     cur = conn.cursor()
     with cur.copy("copy (select 1) to stdout") as copy:
-        assert cur.query == b"copy (select 1) to stdout"
-        assert cur.params is None
+        assert cur._query.query == b"copy (select 1) to stdout"
+        assert cur._query.params is None
         list(copy)
 
 

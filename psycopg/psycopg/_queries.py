@@ -31,8 +31,8 @@ class PostgresQuery:
     """
 
     __slots__ = """
-        params types formats
-        _tx _want_formats _parts query _encoding _order
+        query params types formats
+        _tx _want_formats _parts _encoding _order
         """.split()
 
     def __init__(self, transformer: "Transformer"):

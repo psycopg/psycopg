@@ -43,12 +43,11 @@ def test_format(conn):
 
 def test_query_params(conn):
     with conn.cursor("foo") as cur:
-        assert cur.query is None
-        assert cur.params is None
+        assert cur._query is None
         cur.execute("select generate_series(1, %s) as bar", (3,))
-        assert b"declare" in cur.query.lower()
-        assert b"(1, $1)" in cur.query.lower()
-        assert cur.params == [bytes([0, 3])]  # 3 as binary int2
+        assert b"declare" in cur._query.query.lower()
+        assert b"(1, $1)" in cur._query.query.lower()
+        assert cur._query.params == [bytes([0, 3])]  # 3 as binary int2
 
 
 def test_close(conn, recwarn, retries):

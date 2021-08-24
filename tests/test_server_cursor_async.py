@@ -45,12 +45,11 @@ async def test_format(aconn):
 
 async def test_query_params(aconn):
     async with aconn.cursor("foo") as cur:
-        assert cur.query is None
-        assert cur.params is None
+        assert cur._query is None
         await cur.execute("select generate_series(1, %s) as bar", (3,))
-        assert b"declare" in cur.query.lower()
-        assert b"(1, $1)" in cur.query.lower()
-        assert cur.params == [bytes([0, 3])]  # 3 as binary int2
+        assert b"declare" in cur._query.query.lower()
+        assert b"(1, $1)" in cur._query.query.lower()
+        assert cur._query.params == [bytes([0, 3])]  # 3 as binary int2
 
 
 async def test_close(aconn, recwarn, retries):

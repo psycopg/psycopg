@@ -44,7 +44,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
     if sys.version_info >= (3, 7):
         __slots__ = """
             _conn format _adapters arraysize _closed _results pgresult _pos
-            _iresult _rowcount _pgq _tx _last_query _row_factory _make_row
+            _iresult _rowcount _query _tx _last_query _row_factory _make_row
             __weakref__
             """.split()
 
@@ -71,7 +71,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
         self._pos = 0
         self._iresult = 0
         self._rowcount = -1
-        self._pgq: Optional[PostgresQuery] = None
+        self._query: Optional[PostgresQuery] = None
 
     def __repr__(self) -> str:
         cls = f"{self.__class__.__module__}.{self.__class__.__qualname__}"
@@ -97,16 +97,6 @@ class BaseCursor(Generic[ConnectionType, Row]):
     def closed(self) -> bool:
         """`True` if the cursor is closed."""
         return self._closed
-
-    @property
-    def query(self) -> Optional[bytes]:
-        """The last query sent to the server, if available."""
-        return self._pgq.query if self._pgq else None
-
-    @property
-    def params(self) -> Optional[List[Optional[bytes]]]:
-        """The last set of parameters sent to the server, if available."""
-        return self._pgq.params if self._pgq else None
 
     @property
     def description(self) -> Optional[List[Column]]:
@@ -216,7 +206,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
         for params in params_seq:
             if first:
                 pgq = self._convert_query(query, params)
-                self._pgq = pgq
+                self._query = pgq
                 first = False
             else:
                 pgq.dump(params)
@@ -335,7 +325,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
 
         This is not a generator, but a normal non-blocking function.
         """
-        self._pgq = query
+        self._query = query
         if query.params or no_pqexec or self.format == Format.BINARY:
             self._conn.pgconn.send_query_params(
                 query.query,

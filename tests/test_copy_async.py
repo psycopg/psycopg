@@ -457,8 +457,8 @@ async def test_copy_rowcount(aconn):
 async def test_copy_query(aconn):
     cur = aconn.cursor()
     async with cur.copy("copy (select 1) to stdout") as copy:
-        assert cur.query == b"copy (select 1) to stdout"
-        assert cur.params is None
+        assert cur._query.query == b"copy (select 1) to stdout"
+        assert cur._query.params is None
         async for record in copy:
             pass
 

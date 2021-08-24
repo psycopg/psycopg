@@ -387,37 +387,29 @@ async def test_scroll(aconn):
 
 async def test_query_params_execute(aconn):
     cur = aconn.cursor()
-    assert cur.query is None
-    assert cur.params is None
+    assert cur._query is None
 
     await cur.execute("select %t, %s::text", [1, None])
-    assert cur.query == b"select $1, $2::text"
-    assert cur.params == [b"1", None]
+    assert cur._query.query == b"select $1, $2::text"
+    assert cur._query.params == [b"1", None]
 
     await cur.execute("select 1")
-    assert cur.query == b"select 1"
-    assert cur.params is None
+    assert cur._query.query == b"select 1"
+    assert cur._query.params is None
 
     with pytest.raises(psycopg.DataError):
         await cur.execute("select %t::int", ["wat"])
 
-    assert cur.query == b"select $1::int"
-    assert cur.params == [b"wat"]
+    assert cur._query.query == b"select $1::int"
+    assert cur._query.params == [b"wat"]
 
 
 async def test_query_params_executemany(aconn):
     cur = aconn.cursor()
 
     await cur.executemany("select %t, %t", [[1, 2], [3, 4]])
-    assert cur.query == b"select $1, $2"
-    assert cur.params == [b"3", b"4"]
-
-    with pytest.raises((psycopg.DataError, TypeError)):
-        await cur.executemany("select %t::int", [[1], ["x"], [2]])
-    assert cur.query == b"select $1::int"
-    # TODO: cannot really check this: after introduced row_dumpers, this
-    # fails dumping, not query passing.
-    # assert cur.params == [b"x"]
+    assert cur._query.query == b"select $1, $2"
+    assert cur._query.params == [b"3", b"4"]
 
 
 async def test_stream(aconn):
