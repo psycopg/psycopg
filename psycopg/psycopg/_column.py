@@ -127,10 +127,7 @@ class Column(Sequence[Any]):
 
     @property
     def scale(self) -> Optional[int]:
-        """The number of digits after the decimal point if available.
-
-        TODO: probably better than precision for datetime objects? review.
-        """
+        """The number of digits after the decimal point if available."""
         if self._type and self._type.name == "numeric":
             fmod = self._data.fmod - 4
             if fmod >= 0:
