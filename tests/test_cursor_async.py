@@ -112,23 +112,33 @@ async def test_fetchone(aconn):
     assert cur.pgresult.fformat(0) == 0
 
     row = await cur.fetchone()
-    assert row[0] == 1
-    assert row[1] == "foo"
-    assert row[2] is None
+    assert row == (1, "foo", None)
     row = await cur.fetchone()
     assert row is None
 
 
-async def test_execute_binary_result(aconn):
+async def test_binary_cursor_execute(aconn):
     cur = aconn.cursor(binary=True)
-    await cur.execute("select %s::text, %s::text", ["foo", None])
+    await cur.execute("select %s, %s", [1, None])
+    assert (await cur.fetchone()) == (1, None)
     assert cur.pgresult.fformat(0) == 1
+    assert cur.pgresult.get_value(0, 0) == b"\x00\x01"
 
-    row = await cur.fetchone()
-    assert row[0] == "foo"
-    assert row[1] is None
-    row = await cur.fetchone()
-    assert row is None
+
+async def test_execute_binary(aconn):
+    cur = aconn.cursor()
+    await cur.execute("select %s, %s", [1, None], binary=True)
+    assert (await cur.fetchone()) == (1, None)
+    assert cur.pgresult.fformat(0) == 1
+    assert cur.pgresult.get_value(0, 0) == b"\x00\x01"
+
+
+async def test_binary_cursor_text_override(aconn):
+    cur = aconn.cursor(binary=True)
+    await cur.execute("select %s, %s", [1, None], binary=False)
+    assert (await cur.fetchone()) == (1, None)
+    assert cur.pgresult.fformat(0) == 0
+    assert cur.pgresult.get_value(0, 0) == b"1"
 
 
 @pytest.mark.parametrize("encoding", ["utf8", "latin9"])
@@ -458,6 +468,39 @@ async def test_stream_badquery(aconn, query):
     with pytest.raises(psycopg.ProgrammingError):
         async for rec in cur.stream(query):
             pass
+
+
+async def test_stream_binary_cursor(aconn):
+    cur = aconn.cursor(binary=True)
+    recs = []
+    async for rec in cur.stream("select generate_series(1, 2)"):
+        recs.append(rec)
+        assert cur.pgresult.fformat(0) == 1
+        assert cur.pgresult.get_value(0, 0) == bytes([0, 0, 0, rec[0]])
+
+    assert recs == [(1,), (2,)]
+
+
+async def test_stream_execute_binary(aconn):
+    cur = aconn.cursor()
+    recs = []
+    async for rec in cur.stream("select generate_series(1, 2)", binary=True):
+        recs.append(rec)
+        assert cur.pgresult.fformat(0) == 1
+        assert cur.pgresult.get_value(0, 0) == bytes([0, 0, 0, rec[0]])
+
+    assert recs == [(1,), (2,)]
+
+
+async def test_stream_binary_cursor_text_override(aconn):
+    cur = aconn.cursor(binary=True)
+    recs = []
+    async for rec in cur.stream("select generate_series(1, 2)", binary=False):
+        recs.append(rec)
+        assert cur.pgresult.fformat(0) == 0
+        assert cur.pgresult.get_value(0, 0) == str(rec[0]).encode("utf8")
+
+    assert recs == [(1,), (2,)]
 
 
 async def test_str(aconn):

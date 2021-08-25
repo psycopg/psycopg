@@ -523,12 +523,21 @@ async def test_notify_handlers(aconn):
 async def test_execute(aconn):
     cur = await aconn.execute("select %s, %s", [10, 20])
     assert await cur.fetchone() == (10, 20)
+    assert cur.format == 0
+    assert cur.pgresult.fformat(0) == 0
 
     cur = await aconn.execute("select %(a)s, %(b)s", {"a": 11, "b": 21})
     assert await cur.fetchone() == (11, 21)
 
     cur = await aconn.execute("select 12, 22")
     assert await cur.fetchone() == (12, 22)
+
+
+async def test_execute_binary(aconn):
+    cur = await aconn.execute("select %s, %s", [10, 20], binary=True)
+    assert await cur.fetchone() == (10, 20)
+    assert cur.format == 1
+    assert cur.pgresult.fformat(0) == 1
 
 
 async def test_row_factory(dsn):

@@ -194,47 +194,48 @@ argument of the `Cursor.execute()` method::
 Binary parameters and results
 -----------------------------
 
-PostgreSQL has two different ways to represent data type on the wire:
-`~psycopg.pq.Format.TEXT`, always available, and
-`~psycopg.pq.Format.BINARY`, available most of the times. Usually the binary
-format is more efficient to use.
+PostgreSQL has two different ways to transmit data between client and server:
+`~psycopg.pq.Format.TEXT`, always available, and `~psycopg.pq.Format.BINARY`,
+available most of the times but not always. Usually the binary format is more
+efficient to use.
 
-Psycopg can support both the formats of each data type. Whenever a value
+Psycopg can support both the formats for each data type. Whenever a value
 is passed to a query using the normal ``%s`` placeholder, the best format
 available is chosen (often, but not always, the binary format is picked as the
 best choice).
 
 If you have a reason to select explicitly the binary format or the text format
 for a value you can use respectively a ``%b`` placeholder or a ``%t``
-placeholder instead. `~Cursor.execute()` will fail if a
-`~psycopg.adapt.Dumper` for the right parameter type and format is not
-available.
+placeholder instead of the normal ``%s``. `~Cursor.execute()` will fail if a
+`~psycopg.adapt.Dumper` for the right data type and format is not available.
 
 The same two formats, text or binary, are used by PostgreSQL to return data
 from a query to the client. Unlike with parameters, where you can choose the
 format value-by-value, all the columns returned by a query will have the same
-format. For each of the types returned by the query, a
-`~psycopg.adapt.Loader` must be available, otherwise the data will be
-returned as unparsed `!str` or buffer.
+format. Every type returned by the query should have a `~psycopg.adapt.Loader`
+configured, otherwise the data will be returned as unparsed `!str` (for text
+results) or buffer (for binary results).
 
-.. warning::
+.. note::
+    The `pg_type`_ table defines which format is supported for each PostgreSQL
+    data type. Text input/output is managed by the functions declared in the
+    ``typinput`` and ``typoutput`` fields (always present), binary
+    input/output is managed by the ``typsend`` and ``typreceive`` (which are
+    optional).
 
-    Currently the default is to return values from database queries in textual
-    type, for the simple reason that not all the PostgreSQL data types have a
-    binary `!Loader` implemented. The plan is to support the binary format for
-    all PostgreSQL builtins before the first Psycopg 3 released: TODO!
+    .. _pg_type: https://www.postgresql.org/docs/current/catalog-pg-type.html
 
-By default the data will be returned in text format. In order to return data
-in binary format you can create the cursor using `Connection.cursor`\
-``(binary=True)``.
+Because not every PostgreSQL type supports binary output, By default the data
+will be returned in text format. In order to return data in binary format you
+can create the cursor using `Connection.cursor`\ ``(binary=True)`` or execute
+the query using `Cursor.execute`\ ``(binary=True)``. A case in which
+requesting binary results is a clear winner is when you have large binary data
+in the database, such as images::
+
+    cur.execute(
+        "select image_data from images where id = %s", [image_id], binary=True)
+    data = cur.fetchone()[0]
 
 .. admonition:: TODO
 
-    add a `Cursor.execute`\ ``(binary=True)`` parameter?
-
-
-.. admonition:: TODO
-
-    - pass parameters in binary with ``%b``
-    - return parameters in binary with `!cursor(binary=True)`
     - cannot pass multiple statements in binary

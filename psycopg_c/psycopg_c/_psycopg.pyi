@@ -25,7 +25,11 @@ class Transformer(abc.AdaptContext):
     @property
     def pgresult(self) -> Optional[PGresult]: ...
     def set_pgresult(
-        self, result: Optional["PGresult"], set_loaders: bool = True
+        self,
+        result: Optional["PGresult"],
+        *,
+        set_loaders: bool = True,
+        format: Optional[pq.Format] = None,
     ) -> None: ...
     def set_row_types(
         self, types: Sequence[int], formats: Sequence[pq.Format]

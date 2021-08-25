@@ -183,7 +183,11 @@ class Transformer(Protocol):
         ...
 
     def set_pgresult(
-        self, result: Optional["PGresult"], set_loaders: bool = True
+        self,
+        result: Optional["PGresult"],
+        *,
+        set_loaders: bool = True,
+        format: Optional[pq.Format] = None
     ) -> None:
         ...
 

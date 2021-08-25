@@ -504,12 +504,21 @@ def test_notify_handlers(conn):
 def test_execute(conn):
     cur = conn.execute("select %s, %s", [10, 20])
     assert cur.fetchone() == (10, 20)
+    assert cur.format == 0
+    assert cur.pgresult.fformat(0) == 0
 
     cur = conn.execute("select %(a)s, %(b)s", {"a": 11, "b": 21})
     assert cur.fetchone() == (11, 21)
 
     cur = conn.execute("select 12, 22")
     assert cur.fetchone() == (12, 22)
+
+
+def test_execute_binary(conn):
+    cur = conn.execute("select %s, %s", [10, 20], binary=True)
+    assert cur.fetchone() == (10, 20)
+    assert cur.format == 1
+    assert cur.pgresult.fformat(0) == 1
 
 
 def test_row_factory(dsn):

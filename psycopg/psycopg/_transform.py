@@ -77,7 +77,11 @@ class Transformer(AdaptContext):
         return self._pgresult
 
     def set_pgresult(
-        self, result: Optional["PGresult"], set_loaders: bool = True
+        self,
+        result: Optional["PGresult"],
+        *,
+        set_loaders: bool = True,
+        format: Optional[pq.Format] = None,
     ) -> None:
         self._pgresult = result
 
@@ -96,7 +100,7 @@ class Transformer(AdaptContext):
             rc = self._row_loaders = []
             for i in range(nf):
                 oid = result.ftype(i)
-                fmt = result.fformat(i)
+                fmt = result.fformat(i) if format is None else format
                 rc.append(self.get_loader(oid, fmt).load)  # type: ignore
 
     def set_row_types(

@@ -56,7 +56,7 @@ The `!Cursor` class
 
     .. rubric:: Methods to send commands
 
-    .. automethod:: execute(query, params=None, *, prepare=None) -> Cursor
+    .. automethod:: execute
 
         :param query: The query to execute.
         :type query: `!str`, `!bytes`, or `sql.Composable`
@@ -65,6 +65,9 @@ The `!Cursor` class
         :param prepare: Force (`!True`) or disallow (`!False`) preparation of
             the query. By default (`!None`) prepare automatically. See
             :ref:`prepared-statements`.
+        :param binary: Specify whether the server shoul return data in binary
+            format (`!True`) or in text format (`!False`). By default
+            (`!None`) return data as requested by the cursor's `~Cursor.format`.
 
         Return the cursor itself, so that it will be possible to chain a fetch
         operation after the call.
@@ -119,13 +122,14 @@ The `!Cursor` class
 
         The format of the data returned by the queries. It can be selected
         initially e.g. specifying `Connection.cursor`\ ``(binary=True)`` and
-        changed during the cursor's lifetime.
+        changed during the cursor's lifetime. It is also possible  to override
+        the value for single queries, e.g. specifying `execute`\
+        ``(binary=True)``.
 
-        :type: pq.Format
+        :type: `pq.Format`
+        :default: `~pq.Format.TEXT`
 
-        .. admonition:: TODO
-
-            Add `execute`\ ``(binary=True)`` too?
+        .. seealso:: :ref:`binary-data`
 
 
     .. rubric:: Methods to retrieve results
@@ -265,12 +269,15 @@ The `!ServerCursor` class
             is especially useful so that the cursor is closed at the end of
             the block.
 
-    .. automethod:: execute(query, params=None, *) -> ServerCursor
+    .. automethod:: execute
 
         :param query: The query to execute.
         :type query: `!str`, `!bytes`, or `sql.Composable`
         :param params: The parameters to pass to the query, if any.
         :type params: Sequence or Mapping
+        :param binary: Specify whether the server shoul return data in binary
+            format (`!True`) or in text format (`!False`). By default
+            (`!None`) return data as requested by the cursor's `~Cursor.format`.
 
         Create a server cursor with given `name` and the *query* in argument.
 
@@ -350,9 +357,9 @@ The `!AsyncCursor` class
 
             to close the cursor automatically when the block is exited.
 
-    .. automethod:: execute(query, params=None, *, prepare=None) -> AsyncCursor
-    .. automethod:: executemany(query: Query, params_seq: Sequence[Args])
-    .. automethod:: copy(statement: Query) -> AsyncCopy
+    .. automethod:: execute
+    .. automethod:: executemany
+    .. automethod:: copy
 
         .. note::
 
@@ -405,8 +412,8 @@ The `!AsyncServerCursor` class
                 async with conn.cursor("name") as cursor:
                     ...
 
-    .. automethod:: execute(query, params=None) -> AsyncServerCursor
-    .. automethod:: executemany(query: Query, params_seq: Sequence[Args])
+    .. automethod:: execute
+    .. automethod:: executemany
     .. automethod:: fetchone
     .. automethod:: fetchmany
     .. automethod:: fetchall

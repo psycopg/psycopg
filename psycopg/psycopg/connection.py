@@ -416,7 +416,9 @@ class BaseConnection(Generic[Row]):
         conn._autocommit = bool(autocommit)
         return conn
 
-    def _exec_command(self, command: Query) -> PQGen["PGresult"]:
+    def _exec_command(
+        self, command: Query, result_format: Format = Format.TEXT
+    ) -> PQGen["PGresult"]:
         """
         Generator to send a command and receive the result to the backend.
 
@@ -436,7 +438,13 @@ class BaseConnection(Generic[Row]):
         elif isinstance(command, Composable):
             command = command.as_bytes(self)
 
-        self.pgconn.send_query(command)
+        if result_format == Format.TEXT:
+            self.pgconn.send_query(command)
+        else:
+            self.pgconn.send_query_params(
+                command, None, result_format=result_format
+            )
+
         result = (yield from execute(self.pgconn))[-1]
         if result.status not in (ExecStatus.COMMAND_OK, ExecStatus.TUPLES_OK):
             if result.status == ExecStatus.FATAL_ERROR:
@@ -700,9 +708,13 @@ class Connection(BaseConnection[Row]):
         params: Optional[Params] = None,
         *,
         prepare: Optional[bool] = None,
+        binary: bool = False,
     ) -> Cursor[Row]:
         """Execute a query and return a cursor to read its results."""
         cur = self.cursor()
+        if binary:
+            cur.format = Format.BINARY
+
         try:
             return cur.execute(query, params, prepare=prepare)
         except e.Error as ex:

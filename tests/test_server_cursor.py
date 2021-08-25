@@ -50,6 +50,49 @@ def test_query_params(conn):
         assert cur._query.params == [bytes([0, 3])]  # 3 as binary int2
 
 
+def test_binary_cursor_execute(conn):
+    cur = conn.cursor("foo", binary=True)
+    cur.execute("select generate_series(1, 2)")
+    assert cur.fetchone() == (1,)
+    assert cur.pgresult.fformat(0) == 1
+    assert cur.pgresult.get_value(0, 0) == b"\x00\x00\x00\x01"
+    assert cur.fetchone() == (2,)
+    assert cur.pgresult.fformat(0) == 1
+    assert cur.pgresult.get_value(0, 0) == b"\x00\x00\x00\x02"
+
+
+def test_execute_binary(conn):
+    cur = conn.cursor("foo")
+    cur.execute("select generate_series(1, 2)", binary=True)
+    assert cur.fetchone() == (1,)
+    assert cur.pgresult.fformat(0) == 1
+    assert cur.pgresult.get_value(0, 0) == b"\x00\x00\x00\x01"
+    assert cur.fetchone() == (2,)
+    assert cur.pgresult.fformat(0) == 1
+    assert cur.pgresult.get_value(0, 0) == b"\x00\x00\x00\x02"
+
+    cur.execute("select generate_series(1, 1)")
+    assert cur.fetchone() == (1,)
+    assert cur.pgresult.fformat(0) == 0
+    assert cur.pgresult.get_value(0, 0) == b"1"
+
+
+def test_binary_cursor_text_override(conn):
+    cur = conn.cursor("foo", binary=True)
+    cur.execute("select generate_series(1, 2)", binary=False)
+    assert cur.fetchone() == (1,)
+    assert cur.pgresult.fformat(0) == 0
+    assert cur.pgresult.get_value(0, 0) == b"1"
+    assert cur.fetchone() == (2,)
+    assert cur.pgresult.fformat(0) == 0
+    assert cur.pgresult.get_value(0, 0) == b"2"
+
+    cur.execute("select generate_series(1, 2)")
+    assert cur.fetchone() == (1,)
+    assert cur.pgresult.fformat(0) == 1
+    assert cur.pgresult.get_value(0, 0) == b"\x00\x00\x00\x01"
+
+
 def test_close(conn, recwarn, retries):
     for retry in retries:
         with retry:

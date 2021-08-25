@@ -128,7 +128,7 @@ The `!Connection` class
         .. seealso:: See :ref:`row-factories` for details about defining the
             objects returned by cursors.
 
-    .. automethod:: execute(query, params=None, prepare=None) -> Cursor
+    .. automethod:: execute
 
         :param query: The query to execute.
         :type query: `!str`, `!bytes`, or `sql.Composable`
@@ -137,10 +137,12 @@ The `!Connection` class
         :param prepare: Force (`!True`) or disallow (`!False`) preparation of
             the query. By default (`!None`) prepare automatically. See
             :ref:`prepared-statements`.
+        :param binary: If `!True` the cursor will return binary values from the
+            database. All the types returned by the query must have a binary
+            loader. See :ref:`binary-data` for details.
 
-        The cursor is what returned calling `cursor()` without parameters. The
-        parameters are passed to its `~Cursor.execute()` and the cursor is
-        returned.
+        The method simply creates a `Cursor` instance, `~Cursor.execute()` the
+        query requested, and return it.
 
         See :ref:`query-parameters` for all the details about executing
         queries.
@@ -332,7 +334,7 @@ The `!AsyncConnection` class
 
     .. autoattribute:: row_factory
 
-    .. automethod:: execute(query, params=None, prepare=None) -> AsyncCursor
+    .. automethod:: execute
     .. automethod:: commit
     .. automethod:: rollback
 

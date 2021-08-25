@@ -224,8 +224,12 @@ class AsyncConnection(BaseConnection[Row]):
         params: Optional[Params] = None,
         *,
         prepare: Optional[bool] = None,
+        binary: bool = False,
     ) -> AsyncCursor[Row]:
         cur = self.cursor()
+        if binary:
+            cur.format = Format.BINARY
+
         try:
             return await cur.execute(query, params, prepare=prepare)
         except e.Error as ex:

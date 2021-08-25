@@ -66,11 +66,14 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
         params: Optional[Params] = None,
         *,
         prepare: Optional[bool] = None,
+        binary: Optional[bool] = None,
     ) -> AnyCursor:
         try:
             async with self._conn.lock:
                 await self._conn.wait(
-                    self._execute_gen(query, params, prepare=prepare)
+                    self._execute_gen(
+                        query, params, prepare=prepare, binary=binary
+                    )
                 )
         except e.Error as ex:
             raise ex.with_traceback(None)
@@ -83,10 +86,16 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
             await self._conn.wait(self._executemany_gen(query, params_seq))
 
     async def stream(
-        self, query: Query, params: Optional[Params] = None
+        self,
+        query: Query,
+        params: Optional[Params] = None,
+        *,
+        binary: Optional[bool] = None,
     ) -> AsyncIterator[Row]:
         async with self._conn.lock:
-            await self._conn.wait(self._stream_send_gen(query, params))
+            await self._conn.wait(
+                self._stream_send_gen(query, params, binary=binary)
+            )
             first = True
             while await self._conn.wait(self._stream_fetchone_gen(first)):
                 rec = self._tx.load_row(0, self._make_row)

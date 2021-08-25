@@ -98,7 +98,12 @@ cdef class Transformer:
     def pgresult(self) -> Optional[PGresult]:
         return self._pgresult
 
-    cpdef void set_pgresult(self, pq.PGresult result, object set_loaders = True):
+    cpdef void set_pgresult(
+        self,
+        pq.PGresult result,
+        object set_loaders = True,
+        object format = None
+    ):
         self._pgresult = result
 
         if result is None:
@@ -123,7 +128,7 @@ cdef class Transformer:
                 Py_INCREF(tmp)
                 PyList_SET_ITEM(types, i, tmp)
 
-                tmp = libpq.PQfformat(res, i)
+                tmp = libpq.PQfformat(res, i) if format is None else format
                 Py_INCREF(tmp)
                 PyList_SET_ITEM(formats, i, tmp)
 

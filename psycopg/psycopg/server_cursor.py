@@ -24,7 +24,7 @@ DEFAULT_ITERSIZE = 100
 
 
 class ServerCursorHelper(Generic[ConnectionType, Row]):
-    __slots__ = ("name", "scrollable", "withhold", "described")
+    __slots__ = ("name", "scrollable", "withhold", "described", "format")
     """Helper object for common ServerCursor code.
 
     TODO: this should be a mixin, but couldn't find a way to work it
@@ -41,6 +41,7 @@ class ServerCursorHelper(Generic[ConnectionType, Row]):
         self.scrollable = scrollable
         self.withhold = withhold
         self.described = False
+        self.format = pq.Format.TEXT
 
     def _repr(self, cur: BaseCursor[ConnectionType, Row]) -> str:
         cls = f"{cur.__class__.__module__}.{cur.__class__.__qualname__}"
@@ -85,7 +86,7 @@ class ServerCursorHelper(Generic[ConnectionType, Row]):
             self.name.encode(conn.client_encoding)
         )
         results = yield from execute(conn.pgconn)
-        cur._execute_results(results)
+        cur._execute_results(results, format=self.format)
         self.described = True
 
     def _close_gen(self, cur: BaseCursor[ConnectionType, Row]) -> PQGen[None]:
@@ -128,7 +129,9 @@ class ServerCursorHelper(Generic[ConnectionType, Row]):
         query = sql.SQL("FETCH FORWARD {} FROM {}").format(
             howmuch, sql.Identifier(self.name)
         )
-        res = yield from cur._conn._exec_command(query)
+        res = yield from cur._conn._exec_command(
+            query, result_format=self.format
+        )
 
         cur.pgresult = res
         cur._tx.set_pgresult(res, set_loaders=False)
@@ -239,6 +242,8 @@ class ServerCursor(Cursor[Row]):
         self: AnyCursor,
         query: Query,
         params: Optional[Params] = None,
+        *,
+        binary: Optional[bool] = None,
         **kwargs: Any,
     ) -> AnyCursor:
         """
@@ -248,6 +253,12 @@ class ServerCursor(Cursor[Row]):
             raise TypeError(f"keyword not supported: {list(kwargs)[0]}")
         helper = cast(ServerCursor[Row], self)._helper
         query = helper._make_declare_statement(self, query)
+
+        if binary is None:
+            helper.format = self.format
+        else:
+            helper.format = pq.Format.BINARY if binary else pq.Format.TEXT
+
         with self._conn.lock:
             self._conn.wait(helper._declare_gen(self, query, params))
         return self
@@ -355,12 +366,20 @@ class AsyncServerCursor(AsyncCursor[Row]):
         self: AnyCursor,
         query: Query,
         params: Optional[Params] = None,
+        *,
+        binary: Optional[bool] = None,
         **kwargs: Any,
     ) -> AnyCursor:
         if kwargs:
             raise TypeError(f"keyword not supported: {list(kwargs)[0]}")
         helper = cast(AsyncServerCursor[Row], self)._helper
         query = helper._make_declare_statement(self, query)
+
+        if binary is None:
+            helper.format = self.format
+        else:
+            helper.format = pq.Format.BINARY if binary else pq.Format.TEXT
+
         async with self._conn.lock:
             await self._conn.wait(helper._declare_gen(self, query, params))
         return self

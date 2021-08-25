@@ -109,23 +109,33 @@ def test_fetchone(conn):
     assert cur.pgresult.fformat(0) == 0
 
     row = cur.fetchone()
-    assert row[0] == 1
-    assert row[1] == "foo"
-    assert row[2] is None
+    assert row == (1, "foo", None)
     row = cur.fetchone()
     assert row is None
 
 
-def test_execute_binary_result(conn):
+def test_binary_cursor_execute(conn):
     cur = conn.cursor(binary=True)
-    cur.execute("select %s::text, %s::text", ["foo", None])
+    cur.execute("select %s, %s", [1, None])
+    assert cur.fetchone() == (1, None)
     assert cur.pgresult.fformat(0) == 1
+    assert cur.pgresult.get_value(0, 0) == b"\x00\x01"
 
-    row = cur.fetchone()
-    assert row[0] == "foo"
-    assert row[1] is None
-    row = cur.fetchone()
-    assert row is None
+
+def test_execute_binary(conn):
+    cur = conn.cursor()
+    cur.execute("select %s, %s", [1, None], binary=True)
+    assert cur.fetchone() == (1, None)
+    assert cur.pgresult.fformat(0) == 1
+    assert cur.pgresult.get_value(0, 0) == b"\x00\x01"
+
+
+def test_binary_cursor_text_override(conn):
+    cur = conn.cursor(binary=True)
+    cur.execute("select %s, %s", [1, None], binary=False)
+    assert cur.fetchone() == (1, None)
+    assert cur.pgresult.fformat(0) == 0
+    assert cur.pgresult.get_value(0, 0) == b"1"
 
 
 @pytest.mark.parametrize("encoding", ["utf8", "latin9"])
@@ -462,6 +472,39 @@ def test_stream_badquery(conn, query):
     with pytest.raises(psycopg.ProgrammingError):
         for rec in cur.stream(query):
             pass
+
+
+def test_stream_binary_cursor(conn):
+    cur = conn.cursor(binary=True)
+    recs = []
+    for rec in cur.stream("select generate_series(1, 2)"):
+        recs.append(rec)
+        assert cur.pgresult.fformat(0) == 1
+        assert cur.pgresult.get_value(0, 0) == bytes([0, 0, 0, rec[0]])
+
+    assert recs == [(1,), (2,)]
+
+
+def test_stream_execute_binary(conn):
+    cur = conn.cursor()
+    recs = []
+    for rec in cur.stream("select generate_series(1, 2)", binary=True):
+        recs.append(rec)
+        assert cur.pgresult.fformat(0) == 1
+        assert cur.pgresult.get_value(0, 0) == bytes([0, 0, 0, rec[0]])
+
+    assert recs == [(1,), (2,)]
+
+
+def test_stream_binary_cursor_text_override(conn):
+    cur = conn.cursor(binary=True)
+    recs = []
+    for rec in cur.stream("select generate_series(1, 2)", binary=False):
+        recs.append(rec)
+        assert cur.pgresult.fformat(0) == 0
+        assert cur.pgresult.get_value(0, 0) == str(rec[0]).encode("utf8")
+
+    assert recs == [(1,), (2,)]
 
 
 class TestColumn:

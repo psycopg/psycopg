@@ -189,11 +189,14 @@ class BaseCursor(Generic[ConnectionType, Row]):
         params: Optional[Params] = None,
         *,
         prepare: Optional[bool] = None,
+        binary: Optional[bool] = None,
     ) -> PQGen[None]:
         """Generator implementing `Cursor.execute()`."""
         yield from self._start_query(query)
         pgq = self._convert_query(query, params)
-        results = yield from self._maybe_prepare_gen(pgq, prepare)
+        results = yield from self._maybe_prepare_gen(
+            pgq, prepare=prepare, binary=binary
+        )
         self._execute_results(results)
         self._last_query = query
 
@@ -211,23 +214,27 @@ class BaseCursor(Generic[ConnectionType, Row]):
             else:
                 pgq.dump(params)
 
-            results = yield from self._maybe_prepare_gen(pgq, True)
+            results = yield from self._maybe_prepare_gen(pgq, prepare=True)
             self._execute_results(results)
 
         self._last_query = query
 
     def _maybe_prepare_gen(
-        self, pgq: PostgresQuery, prepare: Optional[bool]
+        self,
+        pgq: PostgresQuery,
+        *,
+        prepare: Optional[bool] = None,
+        binary: Optional[bool] = None,
     ) -> PQGen[Sequence["PGresult"]]:
         # Check if the query is prepared or needs preparing
         prep, name = self._conn._prepared.get(pgq, prepare)
         if prep is Prepare.YES:
             # The query is already prepared
-            self._send_query_prepared(name, pgq)
+            self._send_query_prepared(name, pgq, binary=binary)
 
         elif prep is Prepare.NO:
             # The query must be executed without preparing
-            self._execute_send(pgq)
+            self._execute_send(pgq, binary=binary)
 
         else:
             # The query must be prepared and executed
@@ -237,7 +244,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
                 raise e.error_from_result(
                     result, encoding=self._conn.client_encoding
                 )
-            self._send_query_prepared(name, pgq)
+            self._send_query_prepared(name, pgq, binary=binary)
 
         # run the query
         results = yield from execute(self._conn.pgconn)
@@ -251,12 +258,16 @@ class BaseCursor(Generic[ConnectionType, Row]):
         return results
 
     def _stream_send_gen(
-        self, query: Query, params: Optional[Params] = None
+        self,
+        query: Query,
+        params: Optional[Params] = None,
+        *,
+        binary: Optional[bool] = None,
     ) -> PQGen[None]:
         """Generator to send the query for `Cursor.stream()`."""
         yield from self._start_query(query)
         pgq = self._convert_query(query, params)
-        self._execute_send(pgq, no_pqexec=True)
+        self._execute_send(pgq, binary=binary, no_pqexec=True)
         self._conn.pgconn.set_single_row_mode()
         self._last_query = query
 
@@ -317,21 +328,30 @@ class BaseCursor(Generic[ConnectionType, Row]):
         self._tx.set_pgresult(result)
 
     def _execute_send(
-        self, query: PostgresQuery, no_pqexec: bool = False
+        self,
+        query: PostgresQuery,
+        *,
+        no_pqexec: bool = False,
+        binary: Optional[bool] = None,
     ) -> None:
         """
         Implement part of execute() before waiting common to sync and async.
 
         This is not a generator, but a normal non-blocking function.
         """
+        if binary is None:
+            fmt = self.format
+        else:
+            fmt = Format.BINARY if binary else Format.TEXT
+
         self._query = query
-        if query.params or no_pqexec or self.format == Format.BINARY:
+        if query.params or no_pqexec or fmt == Format.BINARY:
             self._conn.pgconn.send_query_params(
                 query.query,
                 query.params,
                 param_formats=query.formats,
                 param_types=query.types,
-                result_format=self.format,
+                result_format=fmt,
             )
         else:
             # if we don't have to, let's use exec_ as it can run more than
@@ -356,7 +376,9 @@ class BaseCursor(Generic[ConnectionType, Row]):
         ExecStatus.COPY_BOTH,
     )
 
-    def _execute_results(self, results: Sequence["PGresult"]) -> None:
+    def _execute_results(
+        self, results: Sequence["PGresult"], format: Optional[Format] = None
+    ) -> None:
         """
         Implement part of execute() after waiting common to sync and async
 
@@ -371,7 +393,12 @@ class BaseCursor(Generic[ConnectionType, Row]):
 
         self._results = list(results)
         self.pgresult = results[0]
-        self._tx.set_pgresult(results[0])
+
+        # Note: the only reason to override format is to correclty set
+        # binary loaders on server-side cursors, because send_describe_portal
+        # only returns a text result.
+        self._tx.set_pgresult(results[0], format=format)
+
         self._make_row = self._make_row_maker()
         nrows = self.pgresult.command_tuples
         if nrows is not None:
@@ -402,12 +429,19 @@ class BaseCursor(Generic[ConnectionType, Row]):
             name, query.query, param_types=query.types
         )
 
-    def _send_query_prepared(self, name: bytes, pgq: PostgresQuery) -> None:
+    def _send_query_prepared(
+        self, name: bytes, pgq: PostgresQuery, *, binary: Optional[bool] = None
+    ) -> None:
+        if binary is None:
+            fmt = self.format
+        else:
+            fmt = Format.BINARY if binary else Format.TEXT
+
         self._conn.pgconn.send_query_prepared(
             name,
             pgq.params,
             param_formats=pgq.formats,
-            result_format=self.format,
+            result_format=fmt,
         )
 
     def _check_result(self) -> None:
@@ -505,6 +539,7 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
         params: Optional[Params] = None,
         *,
         prepare: Optional[bool] = None,
+        binary: Optional[bool] = None,
     ) -> AnyCursor:
         """
         Execute a query or command to the database.
@@ -512,7 +547,9 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
         try:
             with self._conn.lock:
                 self._conn.wait(
-                    self._execute_gen(query, params, prepare=prepare)
+                    self._execute_gen(
+                        query, params, prepare=prepare, binary=binary
+                    )
                 )
         except e.Error as ex:
             raise ex.with_traceback(None)
@@ -526,13 +563,19 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
             self._conn.wait(self._executemany_gen(query, params_seq))
 
     def stream(
-        self, query: Query, params: Optional[Params] = None
+        self,
+        query: Query,
+        params: Optional[Params] = None,
+        *,
+        binary: Optional[bool] = None,
     ) -> Iterator[Row]:
         """
         Iterate row-by-row on a result from the database.
         """
         with self._conn.lock:
-            self._conn.wait(self._stream_send_gen(query, params))
+            self._conn.wait(
+                self._stream_send_gen(query, params, binary=binary)
+            )
             first = True
             while self._conn.wait(self._stream_fetchone_gen(first)):
                 rec = self._tx.load_row(0, self._make_row)

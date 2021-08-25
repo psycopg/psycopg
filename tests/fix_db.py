@@ -109,7 +109,7 @@ def patch_exec(conn, monkeypatch):
     _orig_exec_command = conn._exec_command
     L = ListPopAll()
 
-    def _exec_command(command):
+    def _exec_command(command, *args, **kwargs):
         cmdcopy = command
         if isinstance(cmdcopy, bytes):
             cmdcopy = cmdcopy.decode(conn.client_encoding)
@@ -117,7 +117,7 @@ def patch_exec(conn, monkeypatch):
             cmdcopy = cmdcopy.as_string(conn)
 
         L.insert(0, cmdcopy)
-        return _orig_exec_command(command)
+        return _orig_exec_command(command, *args, **kwargs)
 
     monkeypatch.setattr(conn, "_exec_command", _exec_command)
     return L
