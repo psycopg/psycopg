@@ -235,7 +235,3 @@ in the database, such as images::
     cur.execute(
         "select image_data from images where id = %s", [image_id], binary=True)
     data = cur.fetchone()[0]
-
-.. admonition:: TODO
-
-    - cannot pass multiple statements in binary
