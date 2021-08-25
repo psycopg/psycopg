@@ -180,6 +180,13 @@ The `!Cursor` class
     .. autoattribute:: rowcount
     .. autoattribute:: rownumber
 
+    .. attribute:: pgresult
+
+        The `~pq.PGresult` object obtained by the last query.
+
+        It can be used to obtain low level info about the last query result
+        and to access to features not currently wrapped by Psycopg.
+
     .. attribute:: _query
 
         An helper object used to convert queries and parameters before sending

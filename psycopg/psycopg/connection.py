@@ -102,7 +102,7 @@ class BaseConnection(Generic[Row]):
     TransactionStatus = pq.TransactionStatus
 
     def __init__(self, pgconn: "PGconn"):
-        self.pgconn = pgconn  # TODO: document this
+        self.pgconn = pgconn
         self._autocommit = False
         self._adapters = adapt.AdaptersMap(postgres.adapters)
         self._notice_handlers: List[NoticeHandler] = []

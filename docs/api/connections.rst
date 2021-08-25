@@ -205,6 +205,15 @@ The `!Connection` class
 
     .. rubric:: Checking and configuring the connection state
 
+    .. autoattribute:: pgconn
+
+        The `~pq.PGconn` libpq connection wrapper underlying the `!Connection`.
+
+        It can be used to send low level commands to PostgreSQL and access to
+        features not currently wrapped by Psycopg.
+
+    .. autoattribute:: info
+
     .. autoattribute:: client_encoding
 
         The property is writable for sync connections, read-only for async
@@ -236,10 +245,6 @@ The `!Connection` class
 
             .. __: https://www.postgresql.org/docs/current/multibyte.html
 
-
-    .. autoattribute:: info
-
-    .. automethod:: fileno
 
     .. autoattribute:: prepare_threshold
 
@@ -277,6 +282,8 @@ The `!Connection` class
             object containing all the details about the notice.
 
     .. automethod:: remove_notice_handler
+
+    .. automethod:: fileno
 
 
 The `!AsyncConnection` class
