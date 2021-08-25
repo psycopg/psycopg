@@ -23,6 +23,7 @@ def test_fetch(conn, name, status):
 
     assert info.oid == psycopg.adapters.types["text"].oid
     assert info.array_oid == psycopg.adapters.types["text"].array_oid
+    assert info.alt_name == "text"
 
 
 @pytest.mark.asyncio

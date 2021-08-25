@@ -5,7 +5,7 @@ import pytest
 import psycopg
 from psycopg import pq
 from psycopg import sql
-from psycopg.adapt import PyFormat as Format, Transformer
+from psycopg.adapt import PyFormat as Format, Transformer, Dumper
 from psycopg.types import TypeInfo
 from psycopg.postgres import types as builtins
 
@@ -220,3 +220,35 @@ def test_empty_list_after_choice(conn, fmt_in):
     )
     cur.execute("select data from test order by id")
     assert cur.fetchall() == [([1.0],), ([],)]
+
+
+def test_dump_list_no_comma_separator(conn):
+    class Box:
+        def __init__(self, x1, y1, x2, y2):
+            self.coords = (x1, y1, x2, y2)
+
+    class BoxDumper(Dumper):
+
+        format = pq.Format.TEXT
+        _oid = psycopg.postgres.types["box"].oid
+
+        def dump(self, box):
+            return ("(%s,%s),(%s,%s)" % box.coords).encode("utf8")
+
+    conn.adapters.register_dumper(Box, BoxDumper)
+
+    cur = conn.execute("select (%s::box)::text", (Box(1, 2, 3, 4),))
+    got = cur.fetchone()[0]
+    assert got == "(3,4),(1,2)"
+
+    cur = conn.execute(
+        "select (%s::box[])::text", ([Box(1, 2, 3, 4), Box(5, 4, 3, 2)],)
+    )
+    got = cur.fetchone()[0]
+    assert got == "{(3,4),(1,2);(5,4),(3,2)}"
+
+
+def test_load_array_no_comma_separator(conn):
+    cur = conn.execute("select '{(2,2),(1,1);(5,6),(3,4)}'::box[]")
+    # Not parsed at the moment, but split ok on ; separator
+    assert cur.fetchone()[0] == ["(2,2),(1,1)", "(5,6),(3,4)"]

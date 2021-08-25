@@ -48,7 +48,10 @@ class Column(Sequence[Any]):
     )
 
     def __repr__(self) -> str:
-        return f"<Column {self.name!r}, type: {self._type_display()}>"
+        return (
+            f"<Column {self.name!r},"
+            f" type: {self._type_display()} (oid: {self.type_code})>"
+        )
 
     def __len__(self) -> int:
         return 7
