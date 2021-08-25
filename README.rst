@@ -59,15 +59,21 @@ different requirements:
 
   .. __: https://www.psycopg.org/psycopg3/docs/basic/install.html#local-installation
 
+- The ``psycopg_pool`` directory contains the `connection pools`__
+  implementations. This is kept as a separate package to allow a different
+  release cycle.
+
+  .. __: https://www.psycopg.org/psycopg3/docs/advanced/pool.html
+
 You can create a local virtualenv and install there the packages `in
 development mode`__, together with their development and testing
 requirements::
 
     python -m venv .venv
     source .venv/bin/activate
-    pip install -e ./psycopg[dev,test]          # for the base Python package
-    pip install -e ./psycopg_c                  # for the C extension module
-    pip install -e ./psycopg_pool --no-deps     # for the connection pool
+    pip install -e ./psycopg[dev,test]      # for the base Python package
+    pip install -e ./psycopg_c              # for the C extension module
+    pip install -e ./psycopg_pool           # for the connection pool
 
 .. __: https://pip.pypa.io/en/stable/reference/pip_install/#install-editable
 

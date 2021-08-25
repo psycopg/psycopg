@@ -2,7 +2,12 @@ Psycopg 3: PostgreSQL database adapter for Python - Connection Pool
 ===================================================================
 
 This distribution contains the optional connection pool package
-``psycopg_pool``.
+`psycopg_pool`__.
+
+.. __: https://www.psycopg.org/psycopg3/docs/advanced/pool.html
+
+This package is kept separate from the main ``psycopg`` package because it is
+likely that it will follow a different release cycle.
 
 You can also install this package using::
 
@@ -13,6 +18,7 @@ more details.
 
 .. __: https://github.com/psycopg/psycopg#readme
 .. __: https://www.psycopg.org/psycopg3/docs/basic/install.html
+       #installing-the-connection-pool
 
 
 Copyright (C) 2020-2021 The Psycopg Team
