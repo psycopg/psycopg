@@ -359,20 +359,16 @@ class TestDateTimeTz:
         assert rec[0] == want
         assert rec[1] == 11111111
 
-    mark_tz_sec = (
-        pytest.mark.skipif(
-            sys.version_info < (3, 7), reason="no seconds in tz offset"
-        ),
+    tz_sec = pytest.mark.skipif(
+        sys.version_info < (3, 7), reason="no seconds in tz offset"
     )
 
-    @pytest.mark.xfail(
-        sys.platform == "win32", reason="TODO why? Missing tzdata?"
-    )
+    @pytest.mark.xfail(sys.platform == "win32", reason="no IANA db on Windows")
     @pytest.mark.parametrize(
         "valname, tzval, tzname",
         [
             ("max", "-06", "America/Chicago"),
-            pytest.param("min", "+09:18:59", "Asia/Tokyo", marks=mark_tz_sec),
+            pytest.param("min", "+09:18:59", "Asia/Tokyo", marks=[tz_sec]),
         ],
     )
     @pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
