@@ -205,7 +205,8 @@ The `!Connection` class
 
     .. rubric:: Checking and configuring the connection state
 
-    .. autoattribute:: pgconn
+    .. attribute:: pgconn
+        :type: psycopg.pq.PGconn
 
         The `~pq.PGconn` libpq connection wrapper underlying the `!Connection`.
 

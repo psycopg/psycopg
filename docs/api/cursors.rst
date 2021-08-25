@@ -157,11 +157,15 @@ The `!Cursor` class
     .. automethod:: fetchall
     .. automethod:: nextset
     .. automethod:: scroll
+
     .. attribute:: pgresult
         :type: Optional[psycopg.pq.PGresult]
 
         The result returned by the last query and currently exposed by the
         cursor, if available, else `!None`.
+
+        It can be used to obtain low level info about the last query result
+        and to access to features not currently wrapped by Psycopg.
 
 
     .. rubric:: Information about the data
@@ -179,13 +183,6 @@ The `!Cursor` class
 
     .. autoattribute:: rowcount
     .. autoattribute:: rownumber
-
-    .. attribute:: pgresult
-
-        The `~pq.PGresult` object obtained by the last query.
-
-        It can be used to obtain low level info about the last query result
-        and to access to features not currently wrapped by Psycopg.
 
     .. attribute:: _query
 
