@@ -30,19 +30,19 @@ jobs:
       - name: Install the Python package and test requirements
         run: |-
           pip install `ls dist/psycopg-*.tar.gz`[test]
-          pip install -e ./psycopg_pool --no-deps
+          pip install -e ./psycopg_pool
         if: ${{ matrix.package == 'psycopg' }}
 
       - name: Install the C package and test requirements
         run: |-
           pip install dist/psycopg-c-*.tar.gz
           pip install -e ./psycopg[test]
-          pip install -e ./psycopg_pool --no-deps
+          pip install -e ./psycopg_pool
         if: ${{ matrix.package == 'psycopg_c' }}
 
       - name: Install the Python pool package and test requirements
         run: |-
-          pip install `ls dist/psycopg-pool-*.tar.gz` --no-deps
+          pip install dist/psycopg-pool-*.tar.gz
           pip install -e ./psycopg[test]
         if: ${{ matrix.package == 'psycopg_pool' }}
 
