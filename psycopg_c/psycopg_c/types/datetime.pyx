@@ -71,9 +71,7 @@ cdef object _month_abbr = {
 cdef class DateDumper(CDumper):
 
     format = PQ_TEXT
-
-    def __cinit__(self):
-        self.oid = oids.DATE_OID
+    oid = oids.DATE_OID
 
     cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
         cdef Py_ssize_t size;
@@ -93,9 +91,7 @@ cdef class DateDumper(CDumper):
 cdef class DateBinaryDumper(CDumper):
 
     format = PQ_BINARY
-
-    def __cinit__(self):
-        self.oid = oids.DATE_OID
+    oid = oids.DATE_OID
 
     cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
         cdef int32_t days = PyObject_CallFunctionObjArgs(
@@ -140,8 +136,7 @@ cdef class _BaseTimeTextDumper(_BaseTimeDumper):
 @cython.final
 cdef class TimeDumper(_BaseTimeTextDumper):
 
-    def __cinit__(self):
-        self.oid = oids.TIME_OID
+    oid = oids.TIME_OID
 
     cpdef upgrade(self, obj, format):
         if not obj.tzinfo:
@@ -153,17 +148,14 @@ cdef class TimeDumper(_BaseTimeTextDumper):
 @cython.final
 cdef class TimeTzDumper(_BaseTimeTextDumper):
 
-    def __cinit__(self):
-        self.oid = oids.TIMETZ_OID
+    oid = oids.TIMETZ_OID
 
 
 @cython.final
 cdef class TimeBinaryDumper(_BaseTimeDumper):
 
     format = PQ_BINARY
-
-    def __cinit__(self):
-        self.oid = oids.TIME_OID
+    oid = oids.TIME_OID
 
     cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
         cdef int64_t micros = cdt.time_microsecond(obj) + 1000000 * (
@@ -187,9 +179,7 @@ cdef class TimeBinaryDumper(_BaseTimeDumper):
 cdef class TimeTzBinaryDumper(_BaseTimeDumper):
 
     format = PQ_BINARY
-
-    def __cinit__(self):
-        self.oid = oids.TIMETZ_OID
+    oid = oids.TIMETZ_OID
 
     cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
         cdef int64_t micros = cdt.time_microsecond(obj) + 1_000_000 * (
@@ -244,8 +234,7 @@ cdef class _BaseDatetimeTextDumper(_BaseDatetimeDumper):
 @cython.final
 cdef class DatetimeDumper(_BaseDatetimeTextDumper):
 
-    def __cinit__(self):
-        self.oid = oids.TIMESTAMPTZ_OID
+    oid = oids.TIMESTAMPTZ_OID
 
     cpdef upgrade(self, obj, format):
         if obj.tzinfo:
@@ -257,17 +246,14 @@ cdef class DatetimeDumper(_BaseDatetimeTextDumper):
 @cython.final
 cdef class DatetimeNoTzDumper(_BaseDatetimeTextDumper):
 
-    def __cinit__(self):
-        self.oid = oids.TIMESTAMP_OID
+    oid = oids.TIMESTAMP_OID
 
 
 @cython.final
 cdef class DatetimeBinaryDumper(_BaseDatetimeDumper):
 
     format = PQ_BINARY
-
-    def __cinit__(self):
-        self.oid = oids.TIMESTAMPTZ_OID
+    oid = oids.TIMESTAMPTZ_OID
 
     cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
         delta = obj - pg_datetimetz_epoch
@@ -291,9 +277,7 @@ cdef class DatetimeBinaryDumper(_BaseDatetimeDumper):
 cdef class DatetimeNoTzBinaryDumper(_BaseDatetimeDumper):
 
     format = PQ_BINARY
-
-    def __cinit__(self):
-        self.oid = oids.TIMESTAMP_OID
+    oid = oids.TIMESTAMP_OID
 
     cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
         delta = obj - pg_datetime_epoch
@@ -311,13 +295,11 @@ cdef class DatetimeNoTzBinaryDumper(_BaseDatetimeDumper):
 cdef class TimedeltaDumper(CDumper):
 
     format = PQ_TEXT
+    oid = oids.INTERVAL_OID
     cdef int _style
 
-    def __cinit__(self):
-        self.oid = oids.INTERVAL_OID
-
-    def __init__(self, oid: int, context: Optional[AdaptContext] = None):
-        super().__init__(oid, context)
+    def __init__(self, cls, context: Optional[AdaptContext] = None):
+        super().__init__(cls, context)
 
         cdef const char *ds = _get_intervalstyle(self._pgconn)
         if ds[0] == b's':  # sql_standard
@@ -349,9 +331,7 @@ cdef class TimedeltaDumper(CDumper):
 cdef class TimedeltaBinaryDumper(CDumper):
 
     format = PQ_BINARY
-
-    def __cinit__(self):
-        self.oid = oids.INTERVAL_OID
+    oid = oids.INTERVAL_OID
 
     cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
         cdef int64_t micros = (

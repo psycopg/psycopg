@@ -88,38 +88,32 @@ cdef class _NumberDumper(CDumper):
 @cython.final
 cdef class Int2Dumper(_NumberDumper):
 
-    def __cinit__(self):
-        self.oid = oids.INT2_OID
+    oid = oids.INT2_OID
 
 
 @cython.final
 cdef class Int4Dumper(_NumberDumper):
 
-    def __cinit__(self):
-        self.oid = oids.INT4_OID
+    oid = oids.INT4_OID
 
 
 @cython.final
 cdef class Int8Dumper(_NumberDumper):
 
-    def __cinit__(self):
-        self.oid = oids.INT8_OID
+    oid = oids.INT8_OID
 
 
 @cython.final
 cdef class IntNumericDumper(_NumberDumper):
 
-    def __cinit__(self):
-        self.oid = oids.NUMERIC_OID
+    oid = oids.NUMERIC_OID
 
 
 @cython.final
 cdef class Int2BinaryDumper(CDumper):
 
     format = PQ_BINARY
-
-    def __cinit__(self):
-        self.oid = oids.INT2_OID
+    oid = oids.INT2_OID
 
     cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
         cdef int16_t *buf = <int16_t *>CDumper.ensure_size(
@@ -135,9 +129,7 @@ cdef class Int2BinaryDumper(CDumper):
 cdef class Int4BinaryDumper(CDumper):
 
     format = PQ_BINARY
-
-    def __cinit__(self):
-        self.oid = oids.INT4_OID
+    oid = oids.INT4_OID
 
     cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
         cdef int32_t *buf = <int32_t *>CDumper.ensure_size(
@@ -153,9 +145,7 @@ cdef class Int4BinaryDumper(CDumper):
 cdef class Int8BinaryDumper(CDumper):
 
     format = PQ_BINARY
-
-    def __cinit__(self):
-        self.oid = oids.INT8_OID
+    oid = oids.INT8_OID
 
     cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
         cdef int64_t *buf = <int64_t *>CDumper.ensure_size(
@@ -182,9 +172,7 @@ DEF NUMERIC_NINF = 0xF000
 cdef class IntNumericBinaryDumper(CDumper):
 
     format = PQ_BINARY
-
-    def __cinit__(self):
-        self.oid = oids.NUMERIC_OID
+    oid = oids.NUMERIC_OID
 
     cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
         # Calculate the number of PG digits required to store the number
@@ -342,9 +330,7 @@ cdef class OidBinaryLoader(CLoader):
 cdef class FloatDumper(CDumper):
 
     format = PQ_TEXT
-
-    def __cinit__(self):
-        self.oid = oids.FLOAT8_OID
+    oid = oids.FLOAT8_OID
 
     cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
         cdef double d = PyFloat_AsDouble(obj)
@@ -375,9 +361,7 @@ cdef dict _special_float = {
 cdef class FloatBinaryDumper(CDumper):
 
     format = PQ_BINARY
-
-    def __cinit__(self):
-        self.oid = oids.FLOAT8_OID
+    oid = oids.FLOAT8_OID
 
     cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
         cdef double d = PyFloat_AsDouble(obj)
@@ -428,9 +412,7 @@ cdef class Float8BinaryLoader(CLoader):
 cdef class DecimalDumper(CDumper):
 
     format = PQ_TEXT
-
-    def __cinit__(self):
-        self.oid = oids.NUMERIC_OID
+    oid = oids.NUMERIC_OID
 
     cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
         cdef char *src
@@ -546,9 +528,7 @@ static const int pydigit_weights[] = {1000, 100, 10, 1};
 cdef class DecimalBinaryDumper(CDumper):
 
     format = PQ_BINARY
-
-    def __cinit__(self):
-        self.oid = oids.NUMERIC_OID
+    oid = oids.NUMERIC_OID
 
     cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
 
