@@ -136,9 +136,9 @@ class TypeInfo:
         types.add(self)
 
         if self.array_oid:
-            from .types.array import register_adapters
+            from .types.array import register_array
 
-            register_adapters(self, context)
+            register_array(self, context)
 
     _info_query = """\
 SELECT
@@ -162,9 +162,9 @@ class RangeInfo(TypeInfo):
     def register(self, context: Optional[AdaptContext] = None) -> None:
         super().register(context)
 
-        from .types.range import register_adapters
+        from .types.range import register_range
 
-        register_adapters(self, context)
+        register_range(self, context)
 
     _info_query = """\
 SELECT t.typname AS name, t.oid AS oid, t.typarray AS array_oid,
@@ -199,9 +199,9 @@ class CompositeInfo(TypeInfo):
     ) -> None:
         super().register(context)
 
-        from .types.composite import register_adapters
+        from .types.composite import register_composite
 
-        register_adapters(self, context, factory)
+        register_composite(self, context, factory)
 
     _info_query = """\
 SELECT

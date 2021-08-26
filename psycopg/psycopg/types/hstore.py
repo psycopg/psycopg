@@ -105,7 +105,7 @@ class HstoreLoader(RecursiveLoader):
         return rv
 
 
-def register_adapters(
+def register_hstore(
     info: TypeInfo, context: Optional[AdaptContext] = None
 ) -> None:
 

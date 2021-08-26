@@ -13,7 +13,7 @@ from psycopg import errors as e
 from psycopg.pq import Format
 from psycopg.types import TypeInfo
 from psycopg.adapt import PyFormat as PgFormat
-from psycopg.types.hstore import register_adapters as register_hstore
+from psycopg.types.hstore import register_hstore
 
 from .utils import gc_collect
 from .test_copy import sample_text, sample_binary, sample_binary_rows  # noqa

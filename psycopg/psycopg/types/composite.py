@@ -183,7 +183,7 @@ class CompositeBinaryLoader(RecordBinaryLoader):
         return type(self).factory(*r)
 
 
-def register_adapters(
+def register_composite(
     info: CompositeInfo,
     context: Optional[AdaptContext] = None,
     factory: Optional[Callable[..., Any]] = None,

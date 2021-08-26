@@ -2,7 +2,7 @@ import pytest
 
 import psycopg
 from psycopg.types import TypeInfo
-from psycopg.types.hstore import HstoreLoader, register_adapters
+from psycopg.types.hstore import HstoreLoader, register_hstore
 
 
 @pytest.mark.parametrize(
@@ -46,7 +46,7 @@ def test_parse_bad(s):
 
 def test_register_conn(hstore, conn):
     info = TypeInfo.fetch(conn, "hstore")
-    register_adapters(info, conn)
+    register_hstore(info, conn)
     assert conn.adapters.types[info.oid].name == "hstore"
 
     cur = conn.execute("select null::hstore, ''::hstore, 'a => b'::hstore")
@@ -56,7 +56,7 @@ def test_register_conn(hstore, conn):
 def test_register_curs(hstore, conn):
     info = TypeInfo.fetch(conn, "hstore")
     cur = conn.cursor()
-    register_adapters(info, cur)
+    register_hstore(info, cur)
     assert conn.adapters.types.get(info.oid) is None
     assert cur.adapters.types[info.oid].name == "hstore"
 
@@ -66,7 +66,7 @@ def test_register_curs(hstore, conn):
 
 def test_register_globally(hstore, dsn, svcconn, global_adapters):
     info = TypeInfo.fetch(svcconn, "hstore")
-    register_adapters(info)
+    register_hstore(info)
     assert psycopg.adapters.types[info.oid].name == "hstore"
 
     assert svcconn.adapters.types.get(info.oid) is None
@@ -88,12 +88,12 @@ samp = [
 
 @pytest.mark.parametrize("d", samp)
 def test_roundtrip(hstore, conn, d):
-    register_adapters(TypeInfo.fetch(conn, "hstore"), conn)
+    register_hstore(TypeInfo.fetch(conn, "hstore"), conn)
     d1 = conn.execute("select %s", [d]).fetchone()[0]
     assert d == d1
 
 
 def test_roundtrip_array(hstore, conn):
-    register_adapters(TypeInfo.fetch(conn, "hstore"), conn)
+    register_hstore(TypeInfo.fetch(conn, "hstore"), conn)
     samp1 = conn.execute("select %s", (samp,)).fetchone()[0]
     assert samp1 == samp

@@ -435,9 +435,16 @@ class RangeBinaryLoader(RecursiveLoader, Generic[T]):
 _int2parens = {ord(c): c for c in "[]()"}
 
 
-def register_adapters(
+def register_range(
     info: RangeInfo, context: Optional[AdaptContext] = None
 ) -> None:
+    """
+    Register custom range adapters on a context.
+
+    Just register loaders associated to the range oid, loading bounds of the
+    right subtype. Dumping the range just works, navigating from tye Python
+    type to the type oid, to the range oid.
+    """
     adapters = context.adapters if context else postgres.adapters
 
     # generate and register a customized text loader

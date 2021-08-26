@@ -414,7 +414,7 @@ class ArrayBinaryLoader(BaseArrayLoader):
         return agg(dims)
 
 
-def register_adapters(
+def register_array(
     info: TypeInfo, context: Optional[AdaptContext] = None
 ) -> None:
     adapters = context.adapters if context else postgres.adapters

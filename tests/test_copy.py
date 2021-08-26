@@ -13,7 +13,7 @@ from psycopg import errors as e
 from psycopg.pq import Format
 from psycopg.adapt import PyFormat as PgFormat
 from psycopg.types import TypeInfo
-from psycopg.types.hstore import register_adapters as register_hstore
+from psycopg.types.hstore import register_hstore
 from psycopg.types.numeric import Int4
 
 from .utils import gc_collect
