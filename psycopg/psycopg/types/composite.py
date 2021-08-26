@@ -11,14 +11,16 @@ from typing import Any, Callable, cast, Iterator, List, Optional
 from typing import Sequence, Tuple, Type
 
 from .. import pq
+from .. import errors as e
 from .. import postgres
 from ..abc import AdaptContext, Buffer
 from ..adapt import PyFormat, RecursiveDumper, RecursiveLoader
-from .._struct import unpack_len
+from .._struct import pack_len, unpack_len
 from ..postgres import TEXT_OID
 from .._typeinfo import CompositeInfo as CompositeInfo  # exported here
 
 _struct_oidlen = struct.Struct("!Ii")
+_pack_oidlen = cast(Callable[[int, int], bytes], _struct_oidlen.pack)
 _unpack_oidlen = cast(
     Callable[[bytes, int], Tuple[int, int]], _struct_oidlen.unpack_from
 )
@@ -66,6 +68,36 @@ class TupleDumper(SequenceDumper):
 
     def dump(self, obj: Tuple[Any, ...]) -> bytes:
         return self._dump_sequence(obj, b"(", b")", b",")
+
+
+class TupleBinaryDumper(RecursiveDumper):
+
+    format = pq.Format.BINARY
+
+    # Subclasses must set an info
+    info: CompositeInfo
+
+    def dump(self, obj: Tuple[Any, ...]) -> bytearray:
+
+        if len(obj) != len(self.info.field_types):
+            raise e.DataError(
+                f"expected a sequence of {len(self.info.field_types)} items,"
+                f" got {len(obj)}"
+            )
+
+        out = bytearray(pack_len(len(obj)))
+        get_dumper = self._tx.get_dumper
+        for i in range(len(obj)):
+            item = obj[i]
+            if item is not None:
+                dumper = get_dumper(item, PyFormat.BINARY)
+                b = dumper.dump(item)
+                out += _pack_oidlen(dumper.oid, len(b))
+                out += b
+            else:
+                out += _pack_oidlen(self.info.field_types[i], -1)
+
+        return out
 
 
 class BaseCompositeLoader(RecursiveLoader):
@@ -216,12 +248,21 @@ def register_composite(
     )
     adapters.register_loader(info.oid, loader)
 
-    # If the factory is a type, register a dumper for it
+    # If the factory is a type, create and register dumpers for it
     if isinstance(factory, type):
+        dumper = type(
+            f"{info.name.title()}BinaryDumper",
+            (TupleBinaryDumper,),
+            {"_oid": info.oid, "info": info},
+        )
+        adapters.register_dumper(factory, dumper)
+
+        # Default to the text dumper because it is more flexible
         dumper = type(
             f"{info.name.title()}Dumper", (TupleDumper,), {"_oid": info.oid}
         )
         adapters.register_dumper(factory, dumper)
+
         info.python_type = factory
 
 
