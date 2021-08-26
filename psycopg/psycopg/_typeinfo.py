@@ -149,6 +149,10 @@ WHERE t.oid = %(name)s::regtype
 ORDER BY t.oid
 """
 
+    def _added(self, registry: "TypesRegistry") -> None:
+        """Method called by the *registry* when the object is added there."""
+        pass
+
 
 class RangeInfo(TypeInfo):
     """Manage information about a range type."""
@@ -166,6 +170,11 @@ FROM pg_type t
 JOIN pg_range r ON t.oid = r.rngtypid
 WHERE t.oid = %(name)s::regtype
 """
+
+    def _added(self, registry: "TypesRegistry") -> None:
+        """Method called by the *registry* when the object is added there."""
+        # Map ranges subtypes to info
+        registry._by_range_subtype[self.subtype_oid] = self
 
 
 class CompositeInfo(TypeInfo):
@@ -253,9 +262,8 @@ class TypesRegistry:
         if info.alt_name and info.alt_name not in self._by_name:
             self._by_name[info.alt_name] = info
 
-        # Map ranges subtypes to info
-        if isinstance(info, RangeInfo):
-            self._by_range_subtype[info.subtype_oid] = info
+        # Allow info to customise further their relation with the registry
+        info._added(self)
 
     def __iter__(self) -> Iterator[TypeInfo]:
         seen = set()
