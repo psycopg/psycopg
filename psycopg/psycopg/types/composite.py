@@ -212,6 +212,14 @@ def register_composite(
     )
     adapters.register_loader(info.oid, loader)
 
+    # If the factory is a type, register a dumper for it
+    if isinstance(factory, type):
+        dumper = type(
+            f"{info.name.title()}Dumper", (TupleDumper,), {"_oid": info.oid}
+        )
+        adapters.register_dumper(factory, dumper)
+        info.python_type = factory
+
 
 def register_default_adapters(context: AdaptContext) -> None:
     adapters = context.adapters

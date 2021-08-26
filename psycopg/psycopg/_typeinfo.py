@@ -191,6 +191,8 @@ class CompositeInfo(TypeInfo):
         super().__init__(name, oid, array_oid)
         self.field_names = field_names
         self.field_types = field_types
+        # Will be set by register() if the `factory` is a type
+        self.python_type: Optional[type] = None
 
     def register(
         self,
