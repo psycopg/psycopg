@@ -65,36 +65,19 @@ can extend the behaviour of the adapters: if you create a loader for
         database as a list of the base type.
 
 
-.. autoclass:: TypesRegistry
-
-
 The following `!TypeInfo` subclasses allow to fetch more specialised
-information from certain class of PostgreSQL types and to create more
-specialised adapters configurations.
-
+information from certain class of PostgreSQL types.
 
 .. autoclass:: psycopg.types.composite.CompositeInfo
 
-    .. automethod:: register
-
-        Using `!CompositeInfo.register()` will also register a specialised
-        loader to fetch the composite type as a Python named tuple, or a
-        custom object if *factory* is specified.
-
-
 .. autoclass:: psycopg.types.range.RangeInfo
 
-    .. automethod:: register
 
-        Using `!RangeInfo.register()` will also register a specialised loaders
-        and dumpers. For instance, if you create a PostgreSQL range on the
-        type :sql:`inet`, loading these object with the database will use the
-        loader for the :sql:`inet` type to parse the range bounds - either the
-        builtin ones or any one you might have configured.
+`!TypeInfo` objects are collected in `TypesRegistry` instances, which help type
+information lookup. Every `~psycopg.adapt.AdaptersMap` expose its type map on
+its `~psycopg.adapt.AdaptersMap.types` attribute.
 
-        The type information will also be used by the `Range` dumper so that
-        if you dump a `!Range(address1, address2)` object it will use the
-        correct oid for your :sql:`inetrange` type.
+.. autoclass:: TypesRegistry
 
 
 .. _numeric-wrappers:

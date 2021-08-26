@@ -445,6 +445,10 @@ def register_range(
     right subtype. Dumping the range just works, navigating from tye Python
     type to the type oid, to the range oid.
     """
+
+    # Register arrays and type info
+    info.register(context)
+
     adapters = context.adapters if context else postgres.adapters
 
     # generate and register a customized text loader

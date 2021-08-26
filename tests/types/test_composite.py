@@ -4,8 +4,8 @@ from psycopg import pq, postgres
 from psycopg.sql import Identifier
 from psycopg.adapt import PyFormat as Format
 from psycopg.postgres import types as builtins
-from psycopg.types.composite import CompositeInfo, TupleDumper
-
+from psycopg.types.composite import CompositeInfo, register_composite
+from psycopg.types.composite import TupleDumper
 
 tests_str = [
     ("", ()),
@@ -39,7 +39,7 @@ def test_dump_tuple(conn, rec, obj):
         """
     )
     info = CompositeInfo.fetch(conn, "tmptype")
-    info.register(context=conn)
+    register_composite(info, conn)
 
     res = conn.execute("select %s::tmptype", [obj]).fetchone()[0]
     assert res == obj
@@ -172,7 +172,7 @@ def test_dump_composite_all_chars(conn, fmt_in, testcomp):
 @pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
 def test_load_composite(conn, testcomp, fmt_out):
     info = CompositeInfo.fetch(conn, "testcomp")
-    info.register(conn)
+    register_composite(info, conn)
 
     cur = conn.cursor(binary=fmt_out)
     res = cur.execute("select row('hello', 10, 20)::testcomp").fetchone()[0]
@@ -197,7 +197,7 @@ def test_load_composite_factory(conn, testcomp, fmt_out):
         def __init__(self, *args):
             self.foo, self.bar, self.baz = args
 
-    info.register(conn, factory=MyThing)
+    register_composite(info, conn, factory=MyThing)
     assert info.python_type is MyThing
 
     cur = conn.cursor(binary=fmt_out)
@@ -216,7 +216,7 @@ def test_load_composite_factory(conn, testcomp, fmt_out):
 
 def test_register_scope(conn, testcomp):
     info = CompositeInfo.fetch(conn, "testcomp")
-    info.register()
+    register_composite(info)
     for fmt in (pq.Format.TEXT, pq.Format.BINARY):
         for oid in (info.oid, info.array_oid):
             assert postgres.adapters._loaders[fmt].pop(oid)
@@ -227,14 +227,14 @@ def test_register_scope(conn, testcomp):
     assert info.python_type not in postgres.adapters._dumpers[Format.BINARY]
 
     cur = conn.cursor()
-    info.register(cur)
+    register_composite(info, cur)
     for fmt in (pq.Format.TEXT, pq.Format.BINARY):
         for oid in (info.oid, info.array_oid):
             assert oid not in postgres.adapters._loaders[fmt]
             assert oid not in conn.adapters._loaders[fmt]
             assert oid in cur.adapters._loaders[fmt]
 
-    info.register(conn)
+    register_composite(info, conn)
     for fmt in (pq.Format.TEXT, pq.Format.BINARY):
         for oid in (info.oid, info.array_oid):
             assert oid not in postgres.adapters._loaders[fmt]
@@ -243,7 +243,7 @@ def test_register_scope(conn, testcomp):
 
 def test_type_dumper_registered(conn, testcomp):
     info = CompositeInfo.fetch(conn, "testcomp")
-    info.register(conn)
+    register_composite(info, conn)
     assert issubclass(info.python_type, tuple)
     assert info.python_type.__name__ == "testcomp"
     d = conn.adapters.get_dumper(info.python_type, "s")
@@ -261,7 +261,7 @@ def test_callable_dumper_not_registered(conn, testcomp):
     def fac(*args):
         return args + (args[-1],)
 
-    info.register(conn, factory=fac)
+    register_composite(info, conn, factory=fac)
     assert info.python_type is None
 
     # but the loader is registered

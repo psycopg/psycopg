@@ -7,7 +7,7 @@ information to the adapters if needed.
 
 # Copyright (C) 2020-2021 The Psycopg Team
 
-from typing import Any, Callable, Dict, Iterator, Optional
+from typing import Any, Dict, Iterator, Optional
 from typing import Sequence, Type, TypeVar, Union, TYPE_CHECKING
 
 from . import errors as e
@@ -159,13 +159,6 @@ class RangeInfo(TypeInfo):
         super().__init__(name, oid, array_oid)
         self.subtype_oid = subtype_oid
 
-    def register(self, context: Optional[AdaptContext] = None) -> None:
-        super().register(context)
-
-        from .types.range import register_range
-
-        register_range(self, context)
-
     _info_query = """\
 SELECT t.typname AS name, t.oid AS oid, t.typarray AS array_oid,
     r.rngsubtype AS subtype_oid
@@ -193,17 +186,6 @@ class CompositeInfo(TypeInfo):
         self.field_types = field_types
         # Will be set by register() if the `factory` is a type
         self.python_type: Optional[type] = None
-
-    def register(
-        self,
-        context: Optional[AdaptContext] = None,
-        factory: Optional[Callable[..., Any]] = None,
-    ) -> None:
-        super().register(context)
-
-        from .types.composite import register_composite
-
-        register_composite(self, context, factory)
 
     _info_query = """\
 SELECT

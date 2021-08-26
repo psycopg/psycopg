@@ -188,6 +188,10 @@ def register_composite(
     context: Optional[AdaptContext] = None,
     factory: Optional[Callable[..., Any]] = None,
 ) -> None:
+
+    # Register arrays and type info
+    info.register(context)
+
     if not factory:
         factory = namedtuple(info.name, info.field_names)  # type: ignore
 
