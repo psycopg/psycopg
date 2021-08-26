@@ -62,8 +62,7 @@ can extend the behaviour of the adapters: if you create a loader for
         Registering the `TypeInfo` in a context allows the adapters of that
         context to look up type information: for instance it allows to
         recognise automatically arrays of that type and load them from the
-        database as a list of the base type (how the base type is converted to
-        Python is demanded to a `Loader`.
+        database as a list of the base type.
 
 
 .. autoclass:: TypesRegistry
@@ -98,14 +97,27 @@ specialised adapters configurations.
         correct oid for your :sql:`inetrange` type.
 
 
-Objects wrappers
+.. _numeric-wrappers:
+
+Numeric wrappers
 ----------------
+
+.. autoclass:: psycopg.types.numeric.Int2
+.. autoclass:: psycopg.types.numeric.Int4
+.. autoclass:: psycopg.types.numeric.Int8
+.. autoclass:: psycopg.types.numeric.Oid
+.. autoclass:: psycopg.types.numeric.Float4
+.. autoclass:: psycopg.types.numeric.Float8
+
+These wrappers can be used to force to dump Python numeric values to a certain
+PostgreSQL type. This is rarely needed, usually the automatic rules do the
+right thing. One case when they are needed is :ref:`copy-binary`.
+
 
 .. admonition:: TODO
 
     Document the various objects wrappers
 
-    - Int2, Int4, Int8, ...
     - Range
 
 

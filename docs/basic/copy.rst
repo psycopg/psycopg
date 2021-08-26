@@ -39,6 +39,8 @@ have to commit the pending changes and you can still roll them back. See
 :ref:`transactions` for details.
 
 
+.. _copy-in-row:
+
 Writing data row-by-row
 -----------------------
 
@@ -64,17 +66,25 @@ In order to read or write from `!Copy` row-by-row you must not specify
 :sql:`COPY` options such as :sql:`FORMAT CSV`, :sql:`DELIMITER`, :sql:`NULL`:
 please leave these details alone, thank you :)
 
+
+.. _copy-binary:
+
+Binary copy
+-----------
+
 Binary copy is supported by specifying :sql:`FORMAT BINARY` in the :sql:`COPY`
 statement. In order to load binary data, all the types passed to the database
 must have a binary dumper registered (see see :ref:`binary-data`).
 
 Note that PostgreSQL is particularly finicky when loading data in binary mode
-and will apply *no cast rule*. This means that e.g. passing a Python `!int`
-object to an :sql:`integer` column (aka :sql:`int4`) will likely fail, because
-the default `!int` `~adapt.Dumper` will use the :sql:`bigint` aka :sql:`int8`
-format. You can work around the problem by registering the right binary dumper
-on the cursor or using the right data wrapper (see :ref:`adaptation`).
+and will apply *no cast rule*. This means that e.g. passing the value 100 to
+an `integer` column will fail because Psycopg will pass it as a `smallint`
+value. You can work around the problem by registering the right binary
+`~adapt.Dumper` on the cursor (see :ref:`adaptation`) or using the right data
+wrapper (e.g. `~psycopg.types.numeric.Int4`).
 
+
+.. _copy-out-row:
 
 Reading data row-by-row
 -----------------------
@@ -104,6 +114,8 @@ you have to specify them yourselves.
         for row in copy.rows():
             print(row)  # (10, datetime.date(2046, 12, 24))
 
+
+.. _copy-block:
 
 Copying block-by-block
 ----------------------
@@ -135,6 +147,8 @@ produce a stream of `!bytes`:
             for data in copy:
                 f.write(data)
 
+
+.. _copy-async:
 
 Asynchronous copy support
 -------------------------

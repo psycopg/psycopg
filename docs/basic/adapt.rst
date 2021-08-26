@@ -32,9 +32,10 @@ TODO: complete table
     | `!float`           | | :sql:`real`           | :ref:`adapt-numbers`     |
     |                    | | :sql:`double`         |                          |
     +--------------------+-------------------------+                          |
-    | | `!int`           | | :sql:`smallint`       |                          |
-    | |                  | | :sql:`integer`        |                          |
+    | `!int`             | | :sql:`smallint`       |                          |
+    |                    | | :sql:`integer`        |                          |
     |                    | | :sql:`bigint`         |                          |
+    |                    | | :sql:`numeric`        |                          |
     +--------------------+-------------------------+                          |
     | `~decimal.Decimal` | :sql:`numeric`          |                          |
     +--------------------+-------------------------+--------------------------+
@@ -103,37 +104,37 @@ Python `bool` values `!True` and `!False` are converted to the equivalent
 Numbers adaptation
 ------------------
 
-Python `int` values are converted to PostgreSQL :sql:`bigint` (a.k.a.
-:sql:`int8`). Note that this could create some problems:
+.. seealso::
 
-- Python `!int` is unbounded. If you are inserting numbers larger than 2^63
-  (so your target table is `numeric`, or you'll get an overflow on
-  arrival...) you should convert them to `~decimal.Decimal`.
+    - `PostgreSQL numeric types
+      <https://www.postgresql.org/docs/current/static/datatype-numeric.html>`__
 
-- Certain PostgreSQL functions and operators, such a :sql:`date + int`
-  expect an :sql:`integer` (aka :sql:`int4`): passing them a :sql:`bigint`
-  may cause an error::
+- Python `int` values can be converted to PostgreSQL :sql:`smallint`,
+  :sql:`integer`, :sql:`bigint`, or :sql:`numeric`, according to their numeric
+  value. Psycopg will choose the smallest data type available, because
+  PostgreSQL can automatically cast a type up (e.g. passing a `smallint` where
+  PostgreSQL expect an `integer` is gladly accepted) but will not cast down
+  automatically (e.g. if a function has an :sql:`integer` argument, passing it
+  a :sql:`bigint` value will fail, even if the value is 1).
 
-      cur.execute("SELECT current_date + %s", [1])
-      # UndefinedFunction: operator does not exist: date + bigint
+- Python `float` values are converted to PostgreSQL :sql:`float8`.
 
-  In this case you should add an :sql:`::int` cast to your query or use the
-  `~psycopg.types.numeric.Int4` wrapper::
-
-      cur.execute("SELECT current_date + %s::int", [1])
-
-      cur.execute("SELECT current_date + %s", [Int4(1)])
-
-  .. admonition:: TODO
-
-      document Int* wrappers
-
-Python `float` values are converted to PostgreSQL :sql:`float8`.
-
-Python `~decimal.Decimal` values are converted to PostgreSQL :sql:`numeric`.
+- Python `~decimal.Decimal` values are converted to PostgreSQL :sql:`numeric`.
 
 On the way back, smaller types (:sql:`int2`, :sql:`int4`, :sql:`flaot4`) are
 promoted to the larger Python counterpart.
+
+If you need a more precise control of how `!int` or `!float` are converted,
+The `psycopg.types.numeric` module contains a few :ref:`wrappers
+<numeric-wrappers>` which can be used to convince Psycopg to cast the values
+to a specific PostgreSQL type::
+
+    >>> conn.execute("select pg_typeof(%s), pg_typeof(%s)", (42, Int4(42))).fetchone()
+    ('smallint', 'integer')
+
+These wrappers are rarely needed, because PostgreSQL cast rules and Psycopg
+choices usually do the right thing. One use case where they are useful is
+:ref:`copy-binary`.
 
 .. note::
 
@@ -141,13 +142,6 @@ promoted to the larger Python counterpart.
     instead, for performance reason or ease of manipulation: you can configure
     an adapter to :ref:`cast PostgreSQL numeric to Python float <faq-float>`.
     This of course may imply a loss of precision.
-
-.. seealso::
-
-    - `PostgreSQL numeric types
-      <https://www.postgresql.org/docs/current/static/datatype-numeric.html>`__
-    - `Musings about numeric adaptation choices
-      <https://www.varrazzo.com/blog/2020/11/07/psycopg3-adaptation/>`__
 
 
 .. index::
@@ -160,16 +154,21 @@ promoted to the larger Python counterpart.
 Strings adaptation
 ------------------
 
-Python `str` is converted to PostgreSQL string syntax, and PostgreSQL types
+.. seealso::
+
+    - `PostgreSQL character types
+      <https://www.postgresql.org/docs/current/datatype-character.html>`__
+
+Python `str` are converted to PostgreSQL string syntax, and PostgreSQL types
 such as :sql:`text` and :sql:`varchar` are converted back to Python `!str`:
 
 .. code:: python
 
     conn = psycopg.connect()
     conn.execute(
-        "INSERT INTO strtest (id, data) VALUES (%s, %s)",
+        "INSERT INTO menu (id, entry) VALUES (%s, %s)",
         (1, "Crème Brûlée at 4.99€"))
-    conn.execute("SELECT data FROM strtest WHERE id = 1").fetchone()[0]
+    conn.execute("SELECT entry FROM menu WHERE id = 1").fetchone()[0]
     'Crème Brûlée at 4.99€'
 
 PostgreSQL databases `have an encoding`__, and `the session has an encoding`__
@@ -191,12 +190,12 @@ encoding/decoding errors:
     # The Latin-9 encoding can manage some European accented letters
     # and the Euro symbol
     conn.client_encoding = 'latin9'
-    conn.execute("SELECT data FROM strtest WHERE id = 1").fetchone()[0]
+    conn.execute("SELECT entry FROM menu WHERE id = 1").fetchone()[0]
     'Crème Brûlée at 4.99€'
 
     # The Latin-1 encoding doesn't have a representation for the Euro symbol
     conn.client_encoding = 'latin1'
-    conn.execute("SELECT data FROM strtest WHERE id = 1").fetchone()[0]
+    conn.execute("SELECT entry FROM menu WHERE id = 1").fetchone()[0]
     # Traceback (most recent call last)
     # ...
     # UntranslatableCharacter: character with byte sequence 0xe2 0x82 0xac
@@ -210,7 +209,7 @@ coming from the database, which will be returned as `bytes`:
 .. code:: python
 
     conn.client_encoding = "ascii"
-    conn.execute("SELECT data FROM strtest WHERE id = 1").fetchone()[0]
+    conn.execute("SELECT entry FROM menu WHERE id = 1").fetchone()[0]
     b'Cr\xc3\xa8me Br\xc3\xbbl\xc3\xa9e at 4.99\xe2\x82\xac'
 
 Alternatively you can cast the unknown encoding data to :sql:`bytea` to
@@ -250,6 +249,40 @@ time and more bandwidth. See :ref:`binary-data` for details.
 .. __: https://www.postgresql.org/docs/current/datatype-binary.html
 
 
+.. _adapt-date:
+
+Date/time types adaptation
+--------------------------
+
+.. seealso::
+
+    - `PostgreSQL date/time types
+      <https://www.postgresql.org/docs/current/datatype-datetime.html>`__
+
+- Python `~datetime.date` objects are converted to PostgreSQL :sql:`date`.
+- Python `~datetime.datetime` objects are converted to PostgreSQL
+  :sql:`timestamp` (if they don't have a `!tzinfo` set) or :sql:`timestamptz`
+  (if they do).
+- Python `~datetime.time` objects are converted to PostgreSQL :sql:`time`
+  (if they don't have a `!tzinfo` set) or :sql:`timetz` (if they do).
+- Python `~datetime.timedelta` objects are converted to PostgreSQL
+  :sql:`interval`.
+
+PostgreSQL :sql:`timestamptz` values are returned with a timezone set to the
+`connection TimeZone setting`__, which is available as a Python
+`~zoneinfo.ZoneInfo` object in the `!Connection.info`.\ `~ConnectionInfo.timezone`
+attribute::
+
+    >>> cnn.info.timezone
+    zoneinfo.ZoneInfo(key='Europe/London')
+
+    >>> cnn.execute("select '2048-07-08 12:00'::timestamptz").fetchone()[0]
+    datetime.datetime(2048, 7, 8, 12, 0, tzinfo=zoneinfo.ZoneInfo(key='Europe/London'))
+
+
+.. __: https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-TIMEZONE
+
+
 .. _adapt-json:
 
 JSON adaptation
@@ -262,7 +295,7 @@ types`__, allowing to customise the load and dump function used.
 
 Because several Python objects could be considered JSON (dicts, lists,
 scalars, even date/time if using a dumps function customised to use them),
-Psycopg requires you to wrap what you want to dump as JSON into a wrapper:
+Psycopg requires you to wrap the object to dump as JSON into a wrapper:
 either `psycopg.types.json.Json` or `~psycopg.types.json.Jsonb`.
 
 .. code:: python
@@ -318,7 +351,6 @@ take precedence over what specified by `!set_json_dumps()`.
     # will insert: {'uuid': '0a40799d-3980-4c65-8315-2956b18ab0e1'}
 
 
-.. _adapt-date:
 .. _adapt-list:
 .. _adapt-composite:
 .. _adapt-hstore:

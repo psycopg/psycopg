@@ -12,6 +12,9 @@ _MODULE = "psycopg.types.numeric"
 
 
 class Int2(int):
+    """
+    Force dumping a Python `!int` as a PostgreSQL :sql:`smallint/int2`.
+    """
 
     __module__ = _MODULE
     __slots__ = ()
@@ -27,6 +30,9 @@ class Int2(int):
 
 
 class Int4(int):
+    """
+    Force dumping a Python `!int` as a PostgreSQL :sql:`integer/int4`.
+    """
 
     __module__ = _MODULE
     __slots__ = ()
@@ -42,6 +48,9 @@ class Int4(int):
 
 
 class Int8(int):
+    """
+    Force dumping a Python `!int` as a PostgreSQL :sql:`bigint/int8`.
+    """
 
     __module__ = _MODULE
     __slots__ = ()
@@ -57,6 +66,9 @@ class Int8(int):
 
 
 class IntNumeric(int):
+    """
+    Force dumping a Python `!int` as a PostgreSQL :sql:`numeric/decimal`.
+    """
 
     __module__ = _MODULE
     __slots__ = ()
@@ -72,6 +84,9 @@ class IntNumeric(int):
 
 
 class Float4(float):
+    """
+    Force dumping a Python `!float` as a PostgreSQL :sql:`float4/real`.
+    """
 
     __module__ = _MODULE
     __slots__ = ()
@@ -87,6 +102,9 @@ class Float4(float):
 
 
 class Float8(float):
+    """
+    Force dumping a Python `!float` as a PostgreSQL :sql:`float8/double precision`.
+    """
 
     __module__ = _MODULE
     __slots__ = ()
@@ -102,6 +120,9 @@ class Float8(float):
 
 
 class Oid(int):
+    """
+    Force dumping a Python `!int` as a PostgreSQL :sql:`oid`.
+    """
 
     __module__ = _MODULE
     __slots__ = ()
