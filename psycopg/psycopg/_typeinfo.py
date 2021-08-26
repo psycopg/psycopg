@@ -7,7 +7,7 @@ information to the adapters if needed.
 
 # Copyright (C) 2020-2021 The Psycopg Team
 
-from typing import Any, Dict, Iterator, Optional
+from typing import Any, Dict, Iterator, Optional, overload
 from typing import Sequence, Type, TypeVar, Union, TYPE_CHECKING
 
 from . import errors as e
@@ -49,20 +49,34 @@ class TypeInfo:
             f" {self.name} (oid: {self.oid}, array oid: {self.array_oid})>"
         )
 
+    @overload
     @classmethod
     def fetch(
         cls: Type[T], conn: "Connection[Any]", name: Union[str, "Identifier"]
     ) -> Optional[T]:
-        """
-        Query a system catalog to read information about a type.
+        ...
 
-        :param conn: the connection to query
-        :param name: the name of the type to query. It can include a schema
-            name.
-        :type name: `!str` or `~psycopg.sql.Identifier`
-        :return: a `!TypeInfo` object populated with the type information,
-            `!None` if not found.
-        """
+    @overload
+    @classmethod
+    async def fetch(
+        cls: Type[T],
+        conn: "AsyncConnection[Any]",
+        name: Union[str, "Identifier"],
+    ) -> Optional[T]:
+        ...
+
+    @classmethod
+    def fetch(
+        cls: Type[T],
+        conn: "Union[Connection[Any], AsyncConnection[Any]]",
+        name: Union[str, "Identifier"],
+    ) -> Any:
+        """Query a system catalog to read information about a type."""
+        from .connection_async import AsyncConnection
+
+        if isinstance(conn, AsyncConnection):
+            return cls._fetch_async(conn, name)
+
         from .sql import Composable
 
         if isinstance(name, Composable):
@@ -79,10 +93,10 @@ class TypeInfo:
             return None
 
         recs = cur.fetchall()
-        return cls._fetch(name, recs)
+        return cls._from_records(name, recs)
 
     @classmethod
-    async def fetch_async(
+    async def _fetch_async(
         cls: Type[T],
         conn: "AsyncConnection[Any]",
         name: Union[str, "Identifier"],
@@ -105,13 +119,11 @@ class TypeInfo:
             return None
 
         recs = await cur.fetchall()
-        return cls._fetch(name, recs)
+        return cls._from_records(name, recs)
 
     @classmethod
-    def _fetch(
-        cls: Type[T],
-        name: str,
-        recs: Sequence[Dict[str, Any]],
+    def _from_records(
+        cls: Type[T], name: str, recs: Sequence[Dict[str, Any]]
     ) -> Optional[T]:
         if len(recs) == 1:
             return cls(**recs[0])

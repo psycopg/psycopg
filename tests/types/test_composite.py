@@ -145,7 +145,7 @@ def test_fetch_info(conn, testcomp, name, fields):
 @pytest.mark.asyncio
 @pytest.mark.parametrize("name, fields", fetch_cases)
 async def test_fetch_info_async(aconn, testcomp, name, fields):
-    info = await CompositeInfo.fetch_async(aconn, name)
+    info = await CompositeInfo.fetch(aconn, name)
     assert info.name == "testcomp"
     assert info.oid > 0
     assert info.oid != info.array_oid > 0

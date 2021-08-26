@@ -104,7 +104,7 @@ async def test_set_custom_type(aconn, hstore):
 
     assert rows == [('"a"=>"1", "b"=>"2"',)]
 
-    register_hstore(await TypeInfo.fetch_async(aconn, "hstore"), cur)
+    register_hstore(await TypeInfo.fetch(aconn, "hstore"), cur)
     async with cur.copy(command) as copy:
         copy.set_types(["hstore"])
         rows = [row async for row in copy.rows()]

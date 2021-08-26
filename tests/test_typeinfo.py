@@ -35,7 +35,7 @@ async def test_fetch_async(aconn, name, status):
         await aconn.execute("select 1")
 
     assert aconn.info.transaction_status == status
-    info = await TypeInfo.fetch_async(aconn, name)
+    info = await TypeInfo.fetch(aconn, name)
     assert aconn.info.transaction_status == status
 
     assert info.name == "text"
@@ -66,7 +66,7 @@ async def test_fetch_not_found_async(aconn, name, status):
         await aconn.execute("select 1")
 
     assert aconn.info.transaction_status == status
-    info = await TypeInfo.fetch_async(aconn, name)
+    info = await TypeInfo.fetch(aconn, name)
     assert aconn.info.transaction_status == status
 
     assert info is None

@@ -312,7 +312,7 @@ def test_fetch_info_not_found(conn):
 @pytest.mark.asyncio
 @pytest.mark.parametrize("name, subtype", fetch_cases)
 async def test_fetch_info_async(aconn, testrange, name, subtype):
-    info = await RangeInfo.fetch_async(aconn, name)
+    info = await RangeInfo.fetch(aconn, name)
     assert info.name == "testrange"
     assert info.oid > 0
     assert info.oid != info.array_oid > 0
@@ -321,7 +321,7 @@ async def test_fetch_info_async(aconn, testrange, name, subtype):
 
 @pytest.mark.asyncio
 async def test_fetch_info_not_found_async(aconn):
-    assert await RangeInfo.fetch_async(aconn, "nosuchrange") is None
+    assert await RangeInfo.fetch(aconn, "nosuchrange") is None
 
 
 def test_dump_custom_empty(conn, testrange):

@@ -52,12 +52,35 @@ can extend the behaviour of the adapters: if you create a loader for
 
 .. autoclass:: TypeInfo
 
-    .. automethod:: fetch
-    .. automethod:: fetch_async
+    .. method:: fetch(conn, name)
+        :classmethod:
+
+    .. method:: fetch(aconn, name)
+        :classmethod:
+        :async:
+        :noindex:
+
+        Query a system catalog to read information about a type.
+
+        :param conn: the connection to query
+        :type conn: ~psycopg.Connection or ~psycopg.AsyncConnection
+        :param name: the name of the type to query. It can include a schema
+            name.
+        :type name: `!str` or `~psycopg.sql.Identifier`
+        :return: a `!TypeInfo` object (or subclass) populated with the type
+            information, `!None` if not found.
+
+        If the connection is async the function will behave as a coroutine and
+        the caller will need to `await` on it to get the result::
+
+            t = await TypeInfo.fetch(aconn, "mytype")
+
     .. automethod:: register
 
-        The *context* can be a `~psycopg.Connection` or `~psycopg.Cursor`.
-        Specifying no context will register the `!TypeInfo` globally.
+        :param context: the context where the type is registered, for instance
+            a `~psycopg.Connection` or `~psycopg.Cursor`. `!None` registers
+            the `!TypeInfo` globally.
+        :type context: Optional[~psycopg.abc.AdaptContext]
 
         Registering the `TypeInfo` in a context allows the adapters of that
         context to look up type information: for instance it allows to
