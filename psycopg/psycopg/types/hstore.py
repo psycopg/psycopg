@@ -116,7 +116,7 @@ def register_hstore(
 
     # Generate and register a customized text dumper
     dumper: Type[BaseHstoreDumper] = type(
-        "HstoreDumper", (BaseHstoreDumper,), {"_oid": info.oid}
+        "HstoreDumper", (BaseHstoreDumper,), {"oid": info.oid}
     )
     adapters.register_dumper(dict, dumper)
 

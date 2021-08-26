@@ -15,10 +15,10 @@ def f() -> None:
 
 class MyStrDumper:
     format = pq.Format.TEXT
+    oid = 25  # text
 
     def __init__(self, cls: type, context: Optional[AdaptContext] = None):
         self._cls = cls
-        self.oid = 25  # text
 
     def dump(self, obj: str) -> bytes:
         return (obj * 2).encode("utf-8")

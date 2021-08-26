@@ -39,7 +39,7 @@ IPV6_PREFIXLEN = 128
 class InterfaceDumper(Dumper):
 
     format = Format.TEXT
-    _oid = postgres.types["inet"].oid
+    oid = postgres.types["inet"].oid
 
     def dump(self, obj: Interface) -> bytes:
         return str(obj).encode("utf8")
@@ -48,7 +48,7 @@ class InterfaceDumper(Dumper):
 class NetworkDumper(Dumper):
 
     format = Format.TEXT
-    _oid = postgres.types["cidr"].oid
+    oid = postgres.types["cidr"].oid
 
     def dump(self, obj: Network) -> bytes:
         return str(obj).encode("utf8")
@@ -57,7 +57,7 @@ class NetworkDumper(Dumper):
 class AddressBinaryDumper(Dumper):
 
     format = Format.BINARY
-    _oid = postgres.types["inet"].oid
+    oid = postgres.types["inet"].oid
 
     def dump(self, obj: Address) -> bytes:
         packed = obj.packed
@@ -69,7 +69,7 @@ class AddressBinaryDumper(Dumper):
 class InterfaceBinaryDumper(Dumper):
 
     format = Format.BINARY
-    _oid = postgres.types["inet"].oid
+    oid = postgres.types["inet"].oid
 
     def dump(self, obj: Interface) -> bytes:
         packed = obj.packed
@@ -81,7 +81,7 @@ class InterfaceBinaryDumper(Dumper):
 class NetworkBinaryDumper(Dumper):
 
     format = Format.BINARY
-    _oid = postgres.types["cidr"].oid
+    oid = postgres.types["cidr"].oid
 
     def dump(self, obj: Network) -> bytes:
         packed = obj.network_address.packed

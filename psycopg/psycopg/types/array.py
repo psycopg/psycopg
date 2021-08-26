@@ -213,7 +213,7 @@ class MixedNumbersListDumper(MixedItemsListDumper):
 
     NUMBERS_TYPES = (int, float, Decimal)
 
-    _oid = postgres.types["numeric"].array_oid
+    oid = postgres.types["numeric"].array_oid
 
 
 class ListBinaryDumper(BaseListDumper):

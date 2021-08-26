@@ -26,11 +26,7 @@ class Dumper(abc.Dumper, ABC):
     Convert Python object of the type *cls* to PostgreSQL representation.
     """
 
-    # A class-wide oid, which will be used by default by instances unless
-    # the subclass overrides it in init.
-    _oid: int = 0
-
-    oid: int
+    oid: int = 0
     """The oid to pass to the server, if known."""
 
     def __init__(self, cls: type, context: Optional[abc.AdaptContext] = None):
@@ -38,8 +34,6 @@ class Dumper(abc.Dumper, ABC):
         self.connection: Optional["BaseConnection[Any]"] = (
             context.connection if context else None
         )
-
-        self.oid = self._oid
 
     def __repr__(self) -> str:
         return (

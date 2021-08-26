@@ -130,25 +130,25 @@ class _JsonDumper(Dumper):
 class JsonDumper(_JsonDumper):
 
     format = Format.TEXT
-    _oid = postgres.types["json"].oid
+    oid = postgres.types["json"].oid
 
 
 class JsonBinaryDumper(_JsonDumper):
 
     format = Format.BINARY
-    _oid = postgres.types["json"].oid
+    oid = postgres.types["json"].oid
 
 
 class JsonbDumper(_JsonDumper):
 
     format = Format.TEXT
-    _oid = postgres.types["jsonb"].oid
+    oid = postgres.types["jsonb"].oid
 
 
 class JsonbBinaryDumper(_JsonDumper):
 
     format = Format.BINARY
-    _oid = postgres.types["jsonb"].oid
+    oid = postgres.types["jsonb"].oid
 
     def dump(self, obj: _JsonWrapper) -> bytes:
         dumps = obj.dumps or self.dumps

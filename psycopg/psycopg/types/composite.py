@@ -64,7 +64,7 @@ class SequenceDumper(RecursiveDumper):
 class TupleDumper(SequenceDumper):
 
     # Should be this, but it doesn't work
-    # _oid = postgres_types["record"].oid
+    # oid = postgres_types["record"].oid
 
     def dump(self, obj: Tuple[Any, ...]) -> bytes:
         return self._dump_sequence(obj, b"(", b")", b",")
@@ -253,13 +253,13 @@ def register_composite(
         dumper = type(
             f"{info.name.title()}BinaryDumper",
             (TupleBinaryDumper,),
-            {"_oid": info.oid, "info": info},
+            {"oid": info.oid, "info": info},
         )
         adapters.register_dumper(factory, dumper)
 
         # Default to the text dumper because it is more flexible
         dumper = type(
-            f"{info.name.title()}Dumper", (TupleDumper,), {"_oid": info.oid}
+            f"{info.name.title()}Dumper", (TupleDumper,), {"oid": info.oid}
         )
         adapters.register_dumper(factory, dumper)
 

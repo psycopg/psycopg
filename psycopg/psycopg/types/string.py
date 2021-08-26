@@ -33,7 +33,7 @@ class _BaseStrDumper(Dumper):
 class StrBinaryDumper(_BaseStrDumper):
 
     format = Format.BINARY
-    _oid = postgres.types["text"].oid
+    oid = postgres.types["text"].oid
 
     def dump(self, obj: str) -> bytes:
         # the server will raise DataError subclass if the string contains 0x00
@@ -63,7 +63,7 @@ class StrDumper(_StrDumper):
     text oid is required, for instance with variadic functions.
     """
 
-    _oid = postgres.types["text"].oid
+    oid = postgres.types["text"].oid
 
 
 class StrDumperUnknown(_StrDumper):
@@ -111,7 +111,7 @@ class TextBinaryLoader(TextLoader):
 class BytesDumper(Dumper):
 
     format = Format.TEXT
-    _oid = postgres.types["bytea"].oid
+    oid = postgres.types["bytea"].oid
     _qprefix = b""
 
     def __init__(self, cls: type, context: Optional[AdaptContext] = None):
@@ -154,7 +154,7 @@ class BytesDumper(Dumper):
 class BytesBinaryDumper(Dumper):
 
     format = Format.BINARY
-    _oid = postgres.types["bytea"].oid
+    oid = postgres.types["bytea"].oid
 
     def dump(self, obj: Buffer) -> Buffer:
         return obj

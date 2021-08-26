@@ -22,7 +22,7 @@ UUID: Callable[..., "uuid.UUID"]
 class UUIDDumper(Dumper):
 
     format = Format.TEXT
-    _oid = postgres.types["uuid"].oid
+    oid = postgres.types["uuid"].oid
 
     def dump(self, obj: "uuid.UUID") -> bytes:
         return obj.hex.encode("utf8")
