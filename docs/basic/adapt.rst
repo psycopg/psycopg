@@ -236,11 +236,6 @@ Python types representing binary objects (`bytes`, `bytearray`, `memoryview`)
 are converted by default to :sql:`bytea` fields. By default data received is
 returned as `!bytes`.
 
-.. admonition:: todo
-
-    Make sure bytearry/memoryview work and are compsable with
-    arrays/composite
-
 If you are storing large binary data in bytea fields (such as binary documents
 or images) you should probably use the binary format to pass and return
 values, otherwise binary data will undergo `ASCII escaping`__, taking some CPU

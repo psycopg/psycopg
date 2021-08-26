@@ -240,6 +240,9 @@ def test_dump_1byte(conn, fmt_in, pytype):
         cur.execute(f"select %{fmt_in} = set_byte('x', 0, %s)", (obj, i))
         assert cur.fetchone()[0] is True, i
 
+    cur.execute(f"select %{fmt_in} = array[set_byte('x', 0, %s)]", ([obj], i))
+    assert cur.fetchone()[0] is True
+
 
 @pytest.mark.parametrize("scs", ["on", "off"])
 @pytest.mark.parametrize("pytype", [bytes, bytearray, memoryview, Binary])
