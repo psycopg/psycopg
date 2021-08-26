@@ -268,12 +268,26 @@ PostgreSQL :sql:`timestamptz` values are returned with a timezone set to the
 `~zoneinfo.ZoneInfo` object in the `!Connection.info`.\ `~ConnectionInfo.timezone`
 attribute::
 
-    >>> cnn.info.timezone
+    >>> conn.info.timezone
     zoneinfo.ZoneInfo(key='Europe/London')
 
-    >>> cnn.execute("select '2048-07-08 12:00'::timestamptz").fetchone()[0]
+    >>> conn.execute("select '2048-07-08 12:00'::timestamptz").fetchone()[0]
     datetime.datetime(2048, 7, 8, 12, 0, tzinfo=zoneinfo.ZoneInfo(key='Europe/London'))
 
+.. note::
+    PostgreSQL :sql:`timestamptz` doesn't store "a timestamp with a timezone
+    attached": it stores a timestamp always in UTC, which is converted, on
+    output, to the connection TimeZone setting::
+
+    >>> conn.execute("SET TIMEZONE to 'Europe/Rome'")  # UTC+2 in summer
+
+    >>> conn.execute("SELECT '2042-07-01 12:00Z'::timestamptz").fetchone()[0]  # UTC input
+    datetime.datetime(2042, 7, 1, 14, 0, tzinfo=zoneinfo.ZoneInfo(key='Europe/Rome'))
+
+    Check out the `PostgreSQL documentation about timezones`__ for all the
+    details.
+
+    .. __: https://www.postgresql.org/docs/13/datatype-datetime.html#DATATYPE-TIMEZONES
 
 .. __: https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-TIMEZONE
 
