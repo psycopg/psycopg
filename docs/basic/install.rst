@@ -180,12 +180,3 @@ In both cases you can specify which version of Psycopg to use using
 If you want to make sure that a specific implementation is used you can
 specify the :envvar:`PSYCOPG_IMPL` environment variable: importing the library
 will fail if the implementation specified is not available. See :ref:`pq-impl`.
-
-
-Psycopg 3 and the ``libpq``
----------------------------
-
-.. admonition:: TODO
-
-    describe the relations between psycopg and the libpq and the binding
-    choices
