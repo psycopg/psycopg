@@ -478,7 +478,7 @@ async def test_copy_query(aconn):
     cur = aconn.cursor()
     async with cur.copy("copy (select 1) to stdout") as copy:
         assert cur._query.query == b"copy (select 1) to stdout"
-        assert cur._query.params is None
+        assert not cur._query.params
         async for record in copy:
             pass
 

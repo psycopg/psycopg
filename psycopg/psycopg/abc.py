@@ -169,6 +169,10 @@ class Loader(Protocol):
 
 
 class Transformer(Protocol):
+
+    types: Tuple[int, ...]
+    formats: Sequence[pq.Format]
+
     def __init__(self, context: Optional[AdaptContext] = None):
         ...
 
@@ -205,7 +209,7 @@ class Transformer(Protocol):
 
     def dump_sequence(
         self, params: Sequence[Any], formats: Sequence[PyFormat]
-    ) -> Tuple[List[Any], Tuple[int, ...], Sequence[pq.Format]]:
+    ) -> Sequence[Optional[Buffer]]:
         ...
 
     def get_dumper(self, obj: Any, format: PyFormat) -> Dumper:

@@ -11,7 +11,7 @@ from collections import defaultdict
 from . import pq
 from . import postgres
 from . import errors as e
-from .abc import LoadFunc, AdaptContext, PyFormat, DumperKey
+from .abc import Buffer, LoadFunc, AdaptContext, PyFormat, DumperKey
 from .rows import Row, RowMaker
 from .postgres import INVALID_OID
 
@@ -42,7 +42,12 @@ class Transformer(AdaptContext):
     _adapters: "AdaptersMap"
     _pgresult: Optional["PGresult"] = None
 
+    types: Tuple[int, ...]
+    formats: List[pq.Format]
+
     def __init__(self, context: Optional[AdaptContext] = None):
+        self.types = ()
+        self.formats = []
 
         # WARNING: don't store context, or you'll create a loop with the Cursor
         if context:
@@ -91,52 +96,65 @@ class Transformer(AdaptContext):
     ) -> None:
         self._pgresult = result
 
-        self._ntuples: int
-        self._nfields: int
         if not result:
             self._nfields = self._ntuples = 0
             if set_loaders:
                 self._row_loaders = []
             return
 
-        nf = self._nfields = result.nfields
         self._ntuples = result.ntuples
+        nf = self._nfields = result.nfields
 
-        if set_loaders:
-            rc = self._row_loaders = []
-            for i in range(nf):
-                oid = result.ftype(i)
-                fmt = result.fformat(i) if format is None else format
-                rc.append(self.get_loader(oid, fmt).load)  # type: ignore
+        if not set_loaders:
+            return
+
+        if not nf:
+            self._row_loaders = []
+            return
+
+        fmt: pq.Format
+        fmt = result.fformat(0) if format is None else format  # type: ignore
+        self._row_loaders = [
+            self.get_loader(result.ftype(i), fmt).load for i in range(nf)
+        ]
 
     def set_dumper_types(
         self, types: Sequence[int], format: pq.Format
     ) -> None:
-        dumpers: List[Optional["Dumper"]] = []
-        for i in range(len(types)):
-            dumpers.append(self.get_dumper_by_oid(types[i], format))
-
-        self._row_dumpers = dumpers
+        self._row_dumpers = [
+            self.get_dumper_by_oid(oid, format) for oid in types
+        ]
+        self.types = tuple(types)
+        self.formats = [format] * len(types)
 
     def set_loader_types(
         self, types: Sequence[int], format: pq.Format
     ) -> None:
-        loaders: List[LoadFunc] = []
-        for i in range(len(types)):
-            loaders.append(self.get_loader(types[i], format).load)
-
-        self._row_loaders = loaders
+        self._row_loaders = [
+            self.get_loader(oid, format).load for oid in types
+        ]
 
     def dump_sequence(
         self, params: Sequence[Any], formats: Sequence[PyFormat]
-    ) -> Tuple[List[Any], Tuple[int, ...], Sequence[pq.Format]]:
-        ps: List[Optional[bytes]] = [None] * len(params)
-        ts = [INVALID_OID] * len(params)
-        fs: List[pq.Format] = [pq.Format.TEXT] * len(params)
+    ) -> Sequence[Optional[Buffer]]:
+        out: List[Optional[Buffer]] = [None] * len(params)
 
-        dumpers = self._row_dumpers
+        change_state = False
+
+        dumpers: List[Optional[Dumper]] = self._row_dumpers
+        types: Optional[List[int]] = None
+        pqformats: Optional[List[pq.Format]] = None
+
+        # If we have dumpers, it means dump_sequnece or set_dumper_types were
+        # called already, in which case self.types and self.formats are set to
+        # sequences of the right size. We may change their contents if
+        # now we find a dumper we didn't have before, for instance because in
+        # an executemany the first records has a null, the second has a value.
         if not dumpers:
-            dumpers = self._row_dumpers = [None] * len(params)
+            change_state = True
+            dumpers = [None] * len(params)
+            types = [INVALID_OID] * len(params)
+            pqformats = [pq.Format.TEXT] * len(params)
 
         for i in range(len(params)):
             param = params[i]
@@ -144,11 +162,24 @@ class Transformer(AdaptContext):
                 dumper = dumpers[i]
                 if not dumper:
                     dumper = dumpers[i] = self.get_dumper(param, formats[i])
-                ps[i] = dumper.dump(param)
-                ts[i] = dumper.oid
-                fs[i] = dumper.format
+                    change_state = True
+                    if not types:
+                        types = list(self.types)
+                    types[i] = dumper.oid
+                    if not pqformats:
+                        pqformats = list(self.formats)
+                    pqformats[i] = dumper.format
 
-        return ps, tuple(ts), fs
+                out[i] = dumper.dump(param)
+
+        if change_state:
+            self._row_dumpers = dumpers
+            assert types is not None
+            self.types = tuple(types)
+            assert pqformats is not None
+            self.formats = pqformats
+
+        return out
 
     def get_dumper(self, obj: Any, format: PyFormat) -> "Dumper":
         """

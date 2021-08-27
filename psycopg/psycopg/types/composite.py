@@ -80,11 +80,11 @@ class TupleBinaryDumper(RecursiveDumper):
         super().__init__(cls, context)
         nfields = len(self.info.field_types)
         self._tx.set_dumper_types(self.info.field_types, self.format)
-        self._formats = [PyFormat.from_pq(self.format)] * nfields
+        self._formats = (PyFormat.from_pq(self.format),) * nfields
 
     def dump(self, obj: Tuple[Any, ...]) -> bytearray:
         out = bytearray(pack_len(len(obj)))
-        adapted, _, _ = self._tx.dump_sequence(obj, self._formats)
+        adapted = self._tx.dump_sequence(obj, self._formats)
         for i in range(len(obj)):
             b = adapted[i]
             oid = self.info.field_types[i]

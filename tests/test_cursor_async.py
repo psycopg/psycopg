@@ -405,7 +405,7 @@ async def test_query_params_execute(aconn):
 
     await cur.execute("select 1")
     assert cur._query.query == b"select 1"
-    assert cur._query.params is None
+    assert not cur._query.params
 
     with pytest.raises(psycopg.DataError):
         await cur.execute("select %t::int", ["wat"])
