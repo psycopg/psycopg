@@ -208,6 +208,33 @@ class AdaptersMap:
             f" to format {PyFormat(format).name}"
         )
 
+    def get_dumper_by_oid(self, oid: int, format: pq.Format) -> Type["Dumper"]:
+        """
+        Return the dumper class for the given oid and format.
+
+        Raise ProgrammingError if a class is not available.
+        """
+        try:
+            dmap = self._dumpers_by_oid[format]
+        except KeyError:
+            raise ValueError(f"bad dumper format: {format}")
+
+        try:
+            return dmap[oid]
+        except KeyError:
+            info = self.types.get(oid)
+            if info:
+                msg = (
+                    f"cannot find a dumper for type {info.name} (oid {oid})"
+                    f" format {pq.Format(format).name}"
+                )
+            else:
+                msg = (
+                    f"cannot find a dumper for unknown type with oid {oid}"
+                    f" format {pq.Format(format).name}"
+                )
+            raise e.ProgrammingError(msg)
+
     def get_loader(
         self, oid: int, format: pq.Format
     ) -> Optional[Type["Loader"]]:

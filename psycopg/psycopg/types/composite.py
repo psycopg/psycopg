@@ -86,16 +86,17 @@ class TupleBinaryDumper(RecursiveDumper):
             )
 
         out = bytearray(pack_len(len(obj)))
-        get_dumper = self._tx.get_dumper
+        get_dumper = self._tx.get_dumper_by_oid
         for i in range(len(obj)):
             item = obj[i]
+            oid = self.info.field_types[i]
             if item is not None:
-                dumper = get_dumper(item, PyFormat.BINARY)
+                dumper = get_dumper(oid, self.format)
                 b = dumper.dump(item)
-                out += _pack_oidlen(dumper.oid, len(b))
+                out += _pack_oidlen(oid, len(b))
                 out += b
             else:
-                out += _pack_oidlen(self.info.field_types[i], -1)
+                out += _pack_oidlen(oid, -1)
 
         return out
 

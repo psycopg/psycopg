@@ -206,6 +206,9 @@ class Transformer(Protocol):
     def get_dumper(self, obj: Any, format: PyFormat) -> Dumper:
         ...
 
+    def get_dumper_by_oid(self, oid: int, format: pq.Format) -> Dumper:
+        ...
+
     def load_rows(
         self, row0: int, row1: int, make_row: "RowMaker[Row]"
     ) -> List["Row"]:

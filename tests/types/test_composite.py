@@ -6,7 +6,6 @@ from psycopg.adapt import PyFormat as Format
 from psycopg.postgres import types as builtins
 from psycopg.types.composite import CompositeInfo, register_composite
 from psycopg.types.composite import TupleDumper, TupleBinaryDumper
-from psycopg.types.numeric import Int8, Float8
 
 tests_str = [
     ("", ()),
@@ -175,11 +174,7 @@ def test_dump_composite_all_chars(conn, fmt_in, testcomp):
     register_composite(testcomp, cur)
     factory = testcomp.python_type
     for i in range(1, 256):
-        if fmt_in == Format.BINARY:
-            obj = factory(chr(i), Int8(1), Float8(1.0))
-        else:
-            obj = factory(chr(i), 1, 1.0)
-
+        obj = factory(chr(i), 1, 1.0)
         (res,) = cur.execute(
             f"select row(chr(%s::int), 1, 1.0)::testcomp = %{fmt_in}", (i, obj)
         ).fetchone()
@@ -192,15 +187,14 @@ def test_dump_composite_null(conn, fmt_in, testcomp):
     register_composite(testcomp, cur)
     factory = testcomp.python_type
 
-    if fmt_in == Format.BINARY:
-        obj = factory("foo", Int8(1), None)
-    else:
-        obj = factory("foo", 1, None)
-
-    (res,) = cur.execute(
-        f"select row('foo', 1, NULL)::testcomp = %{fmt_in}", (obj,)
+    obj = factory("foo", 1, None)
+    rec = cur.execute(
+        f"""
+        select row('foo', 1, NULL)::testcomp = %(obj){fmt_in}, %(obj){fmt_in}::text
+        """,
+        {"obj": obj},
     ).fetchone()
-    assert res is True
+    assert rec[0] is True, rec[1]
 
 
 @pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
@@ -296,7 +290,7 @@ def test_type_dumper_registered_binary(conn, testcomp):
     assert issubclass(d, TupleBinaryDumper)
     assert d is not TupleBinaryDumper
 
-    tc = info.python_type("foo", Int8(42), Float8(3.14))
+    tc = info.python_type("foo", 42, 3.14)
     cur = conn.execute("select pg_typeof(%b)", [tc])
     assert cur.fetchone()[0] == "testcomp"
 

@@ -25,6 +25,8 @@ from psycopg import errors as e
 from psycopg.pq import Format as PqFormat
 from psycopg.rows import Row, RowMaker
 
+NoneType = type(None)
+
 # internal structure: you are not supposed to know this. But it's worth some
 # 10% of the innermost loop, so I'm willing to ask for forgiveness later...
 
@@ -79,6 +81,10 @@ cdef class Transformer:
     # mapping oid -> Loader instance (text, binary)
     cdef dict _text_loaders
     cdef dict _binary_loaders
+
+    # mapping oid -> Dumper instance (text, binary)
+    cdef dict _oid_text_dumpers
+    cdef dict _oid_binary_dumpers
 
     cdef pq.PGresult _pgresult
     cdef int _nfields, _ntuples
@@ -226,6 +232,39 @@ cdef class Transformer:
         row_dumper = _as_row_dumper(dumper)
         PyDict_SetItem(<object>cache, key1, row_dumper)
         return <PyObject *>row_dumper
+
+    def get_dumper_by_oid(self, oid, format) -> "Dumper":
+        cdef PyObject *ptr
+        cdef PyObject *cache
+        cdef RowDumper row_dumper
+
+        # Establish where would the dumper be cached
+        if format == PQ_TEXT:
+            if self._oid_text_dumpers is None:
+                self._oid_text_dumpers = {}
+            cache = <PyObject *>self._oid_text_dumpers
+        elif format == PQ_BINARY:
+            if self._oid_binary_dumpers is None:
+                self._oid_binary_dumpers = {}
+            cache = <PyObject *>self._oid_binary_dumpers
+        else:
+            raise ValueError(
+                f"format should be a psycopg.pq.Format, not {format}")
+
+        # Reuse an existing Dumper class for objects of the same type
+        ptr = PyDict_GetItem(<object>cache, oid)
+        if ptr == NULL:
+            dcls = PyObject_CallFunctionObjArgs(
+                self.adapters.get_dumper_by_oid,
+                <PyObject *>oid, <PyObject *>format, NULL)
+            dumper = PyObject_CallFunctionObjArgs(
+                dcls, <PyObject *>NoneType, <PyObject *>self, NULL)
+
+            row_dumper = _as_row_dumper(dumper)
+            PyDict_SetItem(<object>cache, oid, row_dumper)
+            ptr = <PyObject *>row_dumper
+
+        return (<RowDumper>ptr).pydumper
 
     cpdef dump_sequence(self, object params, object formats):
         # Verify that they are not none and that PyList_GET_ITEM won't blow up
@@ -431,7 +470,6 @@ cdef class Transformer:
         cdef PyObject *row_loader = self._c_get_loader(
             <PyObject *>oid, <PyObject *>format)
         return (<RowLoader>row_loader).pyloader
-
 
     cdef PyObject *_c_get_loader(self, PyObject *oid, PyObject *fmt) except NULL:
         """
