@@ -17,6 +17,8 @@ from psycopg.pq.abc import PGconn, PGresult
 from psycopg.connection import BaseConnection
 
 class Transformer(abc.AdaptContext):
+    types: Optional[Tuple[int, ...]]
+    formats: Optional[List[pq.Format]]
     def __init__(self, context: Optional[abc.AdaptContext] = None): ...
     @property
     def connection(self) -> Optional[BaseConnection[Any]]: ...
@@ -31,12 +33,15 @@ class Transformer(abc.AdaptContext):
         set_loaders: bool = True,
         format: Optional[pq.Format] = None,
     ) -> None: ...
-    def set_row_types(
-        self, types: Sequence[int], formats: Sequence[pq.Format]
+    def set_dumper_types(
+        self, types: Sequence[int], format: pq.Format
+    ) -> None: ...
+    def set_loader_types(
+        self, types: Sequence[int], format: pq.Format
     ) -> None: ...
     def dump_sequence(
         self, params: Sequence[Any], formats: Sequence[PyFormat]
-    ) -> Tuple[List[Any], Tuple[int, ...], Sequence[pq.Format]]: ...
+    ) -> Sequence[Optional[abc.Buffer]]: ...
     def get_dumper(self, obj: Any, format: PyFormat) -> abc.Dumper: ...
     def load_rows(
         self, row0: int, row1: int, make_row: RowMaker[Row]

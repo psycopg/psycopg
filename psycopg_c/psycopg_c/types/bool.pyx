@@ -11,9 +11,7 @@ cimport cython
 cdef class BoolDumper(CDumper):
 
     format = PQ_TEXT
-
-    def __cinit__(self):
-        self.oid = oids.BOOL_OID
+    oid = oids.BOOL_OID
 
     cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
         cdef char *buf = CDumper.ensure_size(rv, offset, 1)
@@ -43,9 +41,7 @@ cdef class BoolDumper(CDumper):
 cdef class BoolBinaryDumper(CDumper):
 
     format = PQ_BINARY
-
-    def __cinit__(self):
-        self.oid = oids.BOOL_OID
+    oid = oids.BOOL_OID
 
     cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
         cdef char *buf = CDumper.ensure_size(rv, offset, 1)

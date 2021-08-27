@@ -43,7 +43,7 @@ _py_date_min_days = date.min.toordinal()
 class DateDumper(Dumper):
 
     format = Format.TEXT
-    _oid = postgres.types["date"].oid
+    oid = postgres.types["date"].oid
 
     def dump(self, obj: date) -> bytes:
         # NOTE: whatever the PostgreSQL DateStyle input format (DMY, MDY, YMD)
@@ -54,7 +54,7 @@ class DateDumper(Dumper):
 class DateBinaryDumper(Dumper):
 
     format = Format.BINARY
-    _oid = postgres.types["date"].oid
+    oid = postgres.types["date"].oid
 
     def dump(self, obj: date) -> bytes:
         days = obj.toordinal() - _pg_date_epoch_days
@@ -84,7 +84,7 @@ class _BaseTimeTextDumper(_BaseTimeDumper):
 
 class TimeDumper(_BaseTimeTextDumper):
 
-    _oid = postgres.types["time"].oid
+    oid = postgres.types["time"].oid
 
     def upgrade(self, obj: time, format: PyFormat) -> Dumper:
         if not obj.tzinfo:
@@ -95,13 +95,13 @@ class TimeDumper(_BaseTimeTextDumper):
 
 class TimeTzDumper(_BaseTimeTextDumper):
 
-    _oid = postgres.types["timetz"].oid
+    oid = postgres.types["timetz"].oid
 
 
 class TimeBinaryDumper(_BaseTimeDumper):
 
     format = Format.BINARY
-    _oid = postgres.types["time"].oid
+    oid = postgres.types["time"].oid
 
     def dump(self, obj: time) -> bytes:
         us = obj.microsecond + 1_000_000 * (
@@ -119,7 +119,7 @@ class TimeBinaryDumper(_BaseTimeDumper):
 class TimeTzBinaryDumper(_BaseTimeDumper):
 
     format = Format.BINARY
-    _oid = postgres.types["timetz"].oid
+    oid = postgres.types["timetz"].oid
 
     def dump(self, obj: time) -> bytes:
         us = obj.microsecond + 1_000_000 * (
@@ -155,7 +155,7 @@ class _BaseDatetimeTextDumper(_BaseDatetimeDumper):
 
 class DatetimeDumper(_BaseDatetimeTextDumper):
 
-    _oid = postgres.types["timestamptz"].oid
+    oid = postgres.types["timestamptz"].oid
 
     def upgrade(self, obj: datetime, format: PyFormat) -> Dumper:
         if obj.tzinfo:
@@ -166,13 +166,13 @@ class DatetimeDumper(_BaseDatetimeTextDumper):
 
 class DatetimeNoTzDumper(_BaseDatetimeTextDumper):
 
-    _oid = postgres.types["timestamp"].oid
+    oid = postgres.types["timestamp"].oid
 
 
 class DatetimeBinaryDumper(_BaseDatetimeDumper):
 
     format = Format.BINARY
-    _oid = postgres.types["timestamptz"].oid
+    oid = postgres.types["timestamptz"].oid
 
     def dump(self, obj: datetime) -> bytes:
         delta = obj - _pg_datetimetz_epoch
@@ -191,7 +191,7 @@ class DatetimeBinaryDumper(_BaseDatetimeDumper):
 class DatetimeNoTzBinaryDumper(_BaseDatetimeDumper):
 
     format = Format.BINARY
-    _oid = postgres.types["timestamp"].oid
+    oid = postgres.types["timestamp"].oid
 
     def dump(self, obj: datetime) -> bytes:
         delta = obj - _pg_datetime_epoch
@@ -204,7 +204,7 @@ class DatetimeNoTzBinaryDumper(_BaseDatetimeDumper):
 class TimedeltaDumper(Dumper):
 
     format = Format.TEXT
-    _oid = postgres.types["interval"].oid
+    oid = postgres.types["interval"].oid
 
     def __init__(self, cls: type, context: Optional[AdaptContext] = None):
         super().__init__(cls, context)
@@ -231,7 +231,7 @@ class TimedeltaDumper(Dumper):
 class TimedeltaBinaryDumper(Dumper):
 
     format = Format.BINARY
-    _oid = postgres.types["interval"].oid
+    oid = postgres.types["interval"].oid
 
     def dump(self, obj: timedelta) -> bytes:
         micros = 1_000_000 * obj.seconds + obj.microseconds
@@ -770,10 +770,20 @@ def register_default_adapters(context: AdaptContext) -> None:
     adapters = context.adapters
     adapters.register_dumper("datetime.date", DateDumper)
     adapters.register_dumper("datetime.date", DateBinaryDumper)
+
+    # first register dumpers for 'timetz' oid, then the proper ones on time type.
+    adapters.register_dumper("datetime.time", TimeTzDumper)
+    adapters.register_dumper("datetime.time", TimeTzBinaryDumper)
     adapters.register_dumper("datetime.time", TimeDumper)
     adapters.register_dumper("datetime.time", TimeBinaryDumper)
+
+    # first register dumpers for 'timestamp' oid, then the proper ones
+    # on the datetime type.
+    adapters.register_dumper("datetime.datetime", DatetimeNoTzDumper)
+    adapters.register_dumper("datetime.datetime", DatetimeNoTzBinaryDumper)
     adapters.register_dumper("datetime.datetime", DatetimeDumper)
     adapters.register_dumper("datetime.datetime", DatetimeBinaryDumper)
+
     adapters.register_dumper("datetime.timedelta", TimedeltaDumper)
     adapters.register_dumper("datetime.timedelta", TimedeltaBinaryDumper)
     adapters.register_loader("date", DateLoader)

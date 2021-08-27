@@ -11,7 +11,6 @@ from typing import Any, Callable, cast, Iterator, List, Optional
 from typing import Sequence, Tuple, Type
 
 from .. import pq
-from .. import errors as e
 from .. import postgres
 from ..abc import AdaptContext, Buffer
 from ..adapt import PyFormat, RecursiveDumper, RecursiveLoader
@@ -64,7 +63,7 @@ class SequenceDumper(RecursiveDumper):
 class TupleDumper(SequenceDumper):
 
     # Should be this, but it doesn't work
-    # _oid = postgres_types["record"].oid
+    # oid = postgres_types["record"].oid
 
     def dump(self, obj: Tuple[Any, ...]) -> bytes:
         return self._dump_sequence(obj, b"(", b")", b",")
@@ -77,25 +76,23 @@ class TupleBinaryDumper(RecursiveDumper):
     # Subclasses must set an info
     info: CompositeInfo
 
+    def __init__(self, cls: type, context: Optional[AdaptContext] = None):
+        super().__init__(cls, context)
+        nfields = len(self.info.field_types)
+        self._tx.set_dumper_types(self.info.field_types, self.format)
+        self._formats = (PyFormat.from_pq(self.format),) * nfields
+
     def dump(self, obj: Tuple[Any, ...]) -> bytearray:
-
-        if len(obj) != len(self.info.field_types):
-            raise e.DataError(
-                f"expected a sequence of {len(self.info.field_types)} items,"
-                f" got {len(obj)}"
-            )
-
         out = bytearray(pack_len(len(obj)))
-        get_dumper = self._tx.get_dumper
+        adapted = self._tx.dump_sequence(obj, self._formats)
         for i in range(len(obj)):
-            item = obj[i]
-            if item is not None:
-                dumper = get_dumper(item, PyFormat.BINARY)
-                b = dumper.dump(item)
-                out += _pack_oidlen(dumper.oid, len(b))
+            b = adapted[i]
+            oid = self.info.field_types[i]
+            if b is not None:
+                out += _pack_oidlen(oid, len(b))
                 out += b
             else:
-                out += _pack_oidlen(self.info.field_types[i], -1)
+                out += _pack_oidlen(oid, -1)
 
         return out
 
@@ -177,7 +174,7 @@ class RecordBinaryLoader(RecursiveLoader):
 
     def _config_types(self, data: bytes) -> None:
         oids = [r[0] for r in self._walk_record(data)]
-        self._tx.set_row_types(oids, [pq.Format.BINARY] * len(oids))
+        self._tx.set_loader_types(oids, self.format)
 
 
 class CompositeLoader(RecordLoader):
@@ -200,9 +197,7 @@ class CompositeLoader(RecordLoader):
         )
 
     def _config_types(self, data: bytes) -> None:
-        self._tx.set_row_types(
-            self.fields_types, [pq.Format.TEXT] * len(self.fields_types)
-        )
+        self._tx.set_loader_types(self.fields_types, self.format)
 
 
 class CompositeBinaryLoader(RecordBinaryLoader):
@@ -253,13 +248,13 @@ def register_composite(
         dumper = type(
             f"{info.name.title()}BinaryDumper",
             (TupleBinaryDumper,),
-            {"_oid": info.oid, "info": info},
+            {"oid": info.oid, "info": info},
         )
         adapters.register_dumper(factory, dumper)
 
         # Default to the text dumper because it is more flexible
         dumper = type(
-            f"{info.name.title()}Dumper", (TupleDumper,), {"_oid": info.oid}
+            f"{info.name.title()}Dumper", (TupleDumper,), {"oid": info.oid}
         )
         adapters.register_dumper(factory, dumper)
 

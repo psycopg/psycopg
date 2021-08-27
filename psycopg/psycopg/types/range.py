@@ -474,27 +474,27 @@ def register_range(
 
 
 class Int4RangeDumper(RangeDumper):
-    _oid = postgres.types["int4range"].oid
+    oid = postgres.types["int4range"].oid
 
 
 class Int8RangeDumper(RangeDumper):
-    _oid = postgres.types["int8range"].oid
+    oid = postgres.types["int8range"].oid
 
 
 class NumericRangeDumper(RangeDumper):
-    _oid = postgres.types["numrange"].oid
+    oid = postgres.types["numrange"].oid
 
 
 class DateRangeDumper(RangeDumper):
-    _oid = postgres.types["daterange"].oid
+    oid = postgres.types["daterange"].oid
 
 
 class TimestampRangeDumper(RangeDumper):
-    _oid = postgres.types["tsrange"].oid
+    oid = postgres.types["tsrange"].oid
 
 
 class TimestamptzRangeDumper(RangeDumper):
-    _oid = postgres.types["tstzrange"].oid
+    oid = postgres.types["tstzrange"].oid
 
 
 # Binary dumpers for builtin range types wrappers
@@ -503,27 +503,27 @@ class TimestamptzRangeDumper(RangeDumper):
 
 
 class Int4RangeBinaryDumper(RangeBinaryDumper):
-    _oid = postgres.types["int4range"].oid
+    oid = postgres.types["int4range"].oid
 
 
 class Int8RangeBinaryDumper(RangeBinaryDumper):
-    _oid = postgres.types["int8range"].oid
+    oid = postgres.types["int8range"].oid
 
 
 class NumericRangeBinaryDumper(RangeBinaryDumper):
-    _oid = postgres.types["numrange"].oid
+    oid = postgres.types["numrange"].oid
 
 
 class DateRangeBinaryDumper(RangeBinaryDumper):
-    _oid = postgres.types["daterange"].oid
+    oid = postgres.types["daterange"].oid
 
 
 class TimestampRangeBinaryDumper(RangeBinaryDumper):
-    _oid = postgres.types["tsrange"].oid
+    oid = postgres.types["tsrange"].oid
 
 
 class TimestamptzRangeBinaryDumper(RangeBinaryDumper):
-    _oid = postgres.types["tstzrange"].oid
+    oid = postgres.types["tstzrange"].oid
 
 
 # Text loaders for builtin range types

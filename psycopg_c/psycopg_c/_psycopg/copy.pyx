@@ -49,34 +49,44 @@ def format_row_binary(
     cdef PyObject *fmt = <PyObject *>PG_BINARY
     cdef PyObject *row_dumper
 
+    if not tx._row_dumpers:
+        tx._row_dumpers = PyList_New(rowlen)
+
+    dumpers = tx._row_dumpers
+
     for i in range(rowlen):
         item = row[i]
-        if item is not None:
-            row_dumper = tx.get_row_dumper(<PyObject *>item, fmt)
-            if (<RowDumper>row_dumper).cdumper is not None:
-                # A cdumper can resize if necessary and copy in place
-                size = (<RowDumper>row_dumper).cdumper.cdump(
-                    item, out, pos + sizeof(besize))
-                # Also add the size of the item, before the item
-                besize = endian.htobe32(<int32_t>size)
-                target = PyByteArray_AS_STRING(out)  # might have been moved by cdump
-                memcpy(target + pos, <void *>&besize, sizeof(besize))
-            else:
-                # A Python dumper, gotta call it and extract its juices
-                b = PyObject_CallFunctionObjArgs(
-                    (<RowDumper>row_dumper).dumpfunc, <PyObject *>item, NULL)
-                _buffer_as_string_and_size(b, &buf, &size)
-                target = CDumper.ensure_size(out, pos, size + sizeof(besize))
-                besize = endian.htobe32(<int32_t>size)
-                memcpy(target, <void *>&besize, sizeof(besize))
-                memcpy(target + sizeof(besize), buf, size)
-
-            pos += size + sizeof(besize)
-
-        else:
+        if item is None:
             target = CDumper.ensure_size(out, pos, sizeof(_binary_null))
             memcpy(target, <void *>&_binary_null, sizeof(_binary_null))
             pos += sizeof(_binary_null)
+            continue
+
+        row_dumper = PyList_GET_ITEM(dumpers, i)
+        if not row_dumper:
+            row_dumper = tx.get_row_dumper(<PyObject *>item, fmt)
+            Py_INCREF(<object>row_dumper)
+            PyList_SET_ITEM(dumpers, i, <object>row_dumper)
+
+        if (<RowDumper>row_dumper).cdumper is not None:
+            # A cdumper can resize if necessary and copy in place
+            size = (<RowDumper>row_dumper).cdumper.cdump(
+                item, out, pos + sizeof(besize))
+            # Also add the size of the item, before the item
+            besize = endian.htobe32(<int32_t>size)
+            target = PyByteArray_AS_STRING(out)  # might have been moved by cdump
+            memcpy(target + pos, <void *>&besize, sizeof(besize))
+        else:
+            # A Python dumper, gotta call it and extract its juices
+            b = PyObject_CallFunctionObjArgs(
+                (<RowDumper>row_dumper).dumpfunc, <PyObject *>item, NULL)
+            _buffer_as_string_and_size(b, &buf, &size)
+            target = CDumper.ensure_size(out, pos, size + sizeof(besize))
+            besize = endian.htobe32(<int32_t>size)
+            memcpy(target, <void *>&besize, sizeof(besize))
+            memcpy(target + sizeof(besize), buf, size)
+
+        pos += size + sizeof(besize)
 
     # Resize to the final size
     PyByteArray_Resize(out, pos)

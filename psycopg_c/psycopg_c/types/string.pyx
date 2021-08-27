@@ -73,9 +73,7 @@ cdef class _BaseStrDumper(CDumper):
 cdef class StrBinaryDumper(_BaseStrDumper):
 
     format = PQ_BINARY
-
-    def __cinit__(self):
-        self.oid = oids.TEXT_OID
+    oid = oids.TEXT_OID
 
 
 cdef class _StrDumper(_BaseStrDumper):
@@ -97,8 +95,7 @@ cdef class _StrDumper(_BaseStrDumper):
 @cython.final
 cdef class StrDumper(_StrDumper):
 
-    def __cinit__(self):
-        self.oid = oids.TEXT_OID
+    oid = oids.TEXT_OID
 
 
 @cython.final
@@ -158,12 +155,12 @@ cdef class TextBinaryLoader(_TextLoader):
 cdef class BytesDumper(CDumper):
 
     format = PQ_TEXT
+    oid = oids.BYTEA_OID
 
     # 0: not set, 1: just  single "'" quote, 3: " E'" qoute
     cdef int _qplen
 
     def __cinit__(self):
-        self.oid = oids.BYTEA_OID
         self._qplen = 0
 
     cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
@@ -252,9 +249,7 @@ cdef class BytesDumper(CDumper):
 cdef class BytesBinaryDumper(CDumper):
 
     format = PQ_BINARY
-
-    def __cinit__(self):
-        self.oid = oids.BYTEA_OID
+    oid = oids.BYTEA_OID
 
     cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
         cdef char *src

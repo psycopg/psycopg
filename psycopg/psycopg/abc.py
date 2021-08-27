@@ -87,8 +87,10 @@ class Dumper(Protocol):
     """
 
     format: pq.Format
+    """The format this dumper produces (class attirbute)."""
+
     oid: int
-    """The oid to pass to the server, if known; 0 otherwise."""
+    """The oid to pass to the server, if known; 0 otherwise (class attribute)."""
 
     def __init__(self, cls: type, context: Optional[AdaptContext] = None):
         ...
@@ -167,6 +169,10 @@ class Loader(Protocol):
 
 
 class Transformer(Protocol):
+
+    types: Optional[Tuple[int, ...]]
+    formats: Optional[List[pq.Format]]
+
     def __init__(self, context: Optional[AdaptContext] = None):
         ...
 
@@ -191,14 +197,19 @@ class Transformer(Protocol):
     ) -> None:
         ...
 
-    def set_row_types(
-        self, types: Sequence[int], formats: Sequence[pq.Format]
+    def set_dumper_types(
+        self, types: Sequence[int], format: pq.Format
+    ) -> None:
+        ...
+
+    def set_loader_types(
+        self, types: Sequence[int], format: pq.Format
     ) -> None:
         ...
 
     def dump_sequence(
         self, params: Sequence[Any], formats: Sequence[PyFormat]
-    ) -> Tuple[List[Any], Tuple[int, ...], Sequence[pq.Format]]:
+    ) -> Sequence[Optional[Buffer]]:
         ...
 
     def get_dumper(self, obj: Any, format: PyFormat) -> Dumper:

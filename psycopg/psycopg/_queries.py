@@ -12,7 +12,7 @@ from functools import lru_cache
 from . import pq
 from . import errors as e
 from .sql import Composable
-from .abc import Query, Params
+from .abc import Buffer, Query, Params
 from ._enums import PyFormat
 
 if TYPE_CHECKING:
@@ -38,7 +38,7 @@ class PostgresQuery:
     def __init__(self, transformer: "Transformer"):
         self._tx = transformer
 
-        self.params: Optional[List[Optional[bytes]]] = None
+        self.params: Optional[Sequence[Optional[Buffer]]] = None
         # these are tuples so they can be used as keys e.g. in prepared stmts
         self.types: Tuple[int, ...] = ()
 
@@ -91,9 +91,9 @@ class PostgresQuery:
                 self._parts, vars, self._order
             )
             assert self._want_formats is not None
-            self.params, self.types, self.formats = self._tx.dump_sequence(
-                params, self._want_formats
-            )
+            self.params = self._tx.dump_sequence(params, self._want_formats)
+            self.types = self._tx.types or ()
+            self.formats = self._tx.formats
         else:
             self.params = None
             self.types = ()

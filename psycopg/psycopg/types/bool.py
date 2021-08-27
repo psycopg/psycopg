@@ -13,7 +13,7 @@ from ..adapt import Buffer, Dumper, Loader
 class BoolDumper(Dumper):
 
     format = Format.TEXT
-    _oid = postgres.types["bool"].oid
+    oid = postgres.types["bool"].oid
 
     def dump(self, obj: bool) -> bytes:
         return b"t" if obj else b"f"
@@ -25,7 +25,7 @@ class BoolDumper(Dumper):
 class BoolBinaryDumper(Dumper):
 
     format = Format.BINARY
-    _oid = postgres.types["bool"].oid
+    oid = postgres.types["bool"].oid
 
     def dump(self, obj: bool) -> bytes:
         return b"\x01" if obj else b"\x00"

@@ -32,9 +32,11 @@ logger = logging.getLogger("psycopg.adapt")
 
 @cython.freelist(8)
 cdef class CDumper:
+
     cdef readonly object cls
-    cdef public libpq.Oid oid
     cdef pq.PGconn _pgconn
+
+    oid = oids.INVALID_OID
 
     def __init__(self, cls, context: Optional[AdaptContext] = None):
         self.cls = cls

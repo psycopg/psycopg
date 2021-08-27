@@ -5,13 +5,13 @@ Helper object to transform values between Python and PostgreSQL
 # Copyright (C) 2020-2021 The Psycopg Team
 
 from typing import Any, Dict, List, Optional, Sequence, Tuple
-from typing import DefaultDict, TYPE_CHECKING
+from typing import DefaultDict, Type, TYPE_CHECKING
 from collections import defaultdict
 
 from . import pq
 from . import postgres
 from . import errors as e
-from .abc import LoadFunc, AdaptContext, PyFormat, DumperKey
+from .abc import Buffer, LoadFunc, AdaptContext, PyFormat, DumperKey
 from .rows import Row, RowMaker
 from .postgres import INVALID_OID
 
@@ -21,7 +21,9 @@ if TYPE_CHECKING:
     from .pq.abc import PGresult
     from .connection import BaseConnection
 
+NoneType: Type[None] = type(None)
 DumperCache = Dict[DumperKey, "Dumper"]
+OidDumperCache = Dict[int, "Dumper"]
 LoaderCache = Dict[int, "Loader"]
 
 
@@ -40,7 +42,11 @@ class Transformer(AdaptContext):
     _adapters: "AdaptersMap"
     _pgresult: Optional["PGresult"] = None
 
+    types: Optional[Tuple[int, ...]]
+    formats: Optional[List[pq.Format]]
+
     def __init__(self, context: Optional[AdaptContext] = None):
+        self.types = self.formats = None
 
         # WARNING: don't store context, or you'll create a loop with the Cursor
         if context:
@@ -50,13 +56,17 @@ class Transformer(AdaptContext):
             self._adapters = postgres.adapters
             self._conn = None
 
-        # mapping class, fmt -> Dumper instance
-        self._dumpers_cache: DefaultDict[PyFormat, DumperCache] = defaultdict(
-            dict
-        )
+        # mapping fmt, class -> Dumper instance
+        self._dumpers: DefaultDict[PyFormat, DumperCache]
+        self._dumpers = defaultdict(dict)
 
-        # mapping oid, fmt -> Loader instance
-        self._loaders_cache: Tuple[LoaderCache, LoaderCache] = ({}, {})
+        # mapping fmt, oid -> Dumper instance
+        # Not often used, so create it only if needed.
+        self._oid_dumpers: Optional[Tuple[OidDumperCache, OidDumperCache]]
+        self._oid_dumpers = None
+
+        # mapping fmt, oid -> Loader instance
+        self._loaders: Tuple[LoaderCache, LoaderCache] = ({}, {})
 
         self._row_dumpers: List[Optional["Dumper"]] = []
 
@@ -85,55 +95,97 @@ class Transformer(AdaptContext):
     ) -> None:
         self._pgresult = result
 
-        self._ntuples: int
-        self._nfields: int
         if not result:
             self._nfields = self._ntuples = 0
             if set_loaders:
                 self._row_loaders = []
             return
 
-        nf = self._nfields = result.nfields
         self._ntuples = result.ntuples
+        nf = self._nfields = result.nfields
 
-        if set_loaders:
-            rc = self._row_loaders = []
-            for i in range(nf):
-                oid = result.ftype(i)
-                fmt = result.fformat(i) if format is None else format
-                rc.append(self.get_loader(oid, fmt).load)  # type: ignore
+        if not set_loaders:
+            return
 
-    def set_row_types(
-        self, types: Sequence[int], formats: Sequence[pq.Format]
+        if not nf:
+            self._row_loaders = []
+            return
+
+        fmt: pq.Format
+        fmt = result.fformat(0) if format is None else format  # type: ignore
+        self._row_loaders = [
+            self.get_loader(result.ftype(i), fmt).load for i in range(nf)
+        ]
+
+    def set_dumper_types(
+        self, types: Sequence[int], format: pq.Format
     ) -> None:
-        rc: List[LoadFunc] = []
-        for i in range(len(types)):
-            rc.append(self.get_loader(types[i], formats[i]).load)
+        self._row_dumpers = [
+            self.get_dumper_by_oid(oid, format) for oid in types
+        ]
+        self.types = tuple(types)
+        self.formats = [format] * len(types)
 
-        self._row_loaders = rc
+    def set_loader_types(
+        self, types: Sequence[int], format: pq.Format
+    ) -> None:
+        self._row_loaders = [
+            self.get_loader(oid, format).load for oid in types
+        ]
 
     def dump_sequence(
         self, params: Sequence[Any], formats: Sequence[PyFormat]
-    ) -> Tuple[List[Any], Tuple[int, ...], Sequence[pq.Format]]:
-        ps: List[Optional[bytes]] = [None] * len(params)
-        ts = [INVALID_OID] * len(params)
-        fs: List[pq.Format] = [pq.Format.TEXT] * len(params)
+    ) -> Sequence[Optional[Buffer]]:
+        nparams = len(params)
+        out: List[Optional[Buffer]] = [None] * nparams
 
-        dumpers = self._row_dumpers
+        change_state = False
+
+        dumpers: List[Optional[Dumper]] = self._row_dumpers
+        types: Optional[List[int]] = None
+        pqformats: Optional[List[pq.Format]] = None
+
+        # If we have dumpers, it means dump_sequnece or set_dumper_types were
+        # called already, in which case self.types and self.formats are set to
+        # sequences of the right size. We may change their contents if
+        # now we find a dumper we didn't have before, for instance because in
+        # an executemany the first records has a null, the second has a value.
         if not dumpers:
-            dumpers = self._row_dumpers = [None] * len(params)
+            change_state = True
+            dumpers = [None] * nparams
+            types = [INVALID_OID] * nparams
+            pqformats = [pq.Format.TEXT] * nparams
 
-        for i in range(len(params)):
+        for i in range(nparams):
             param = params[i]
             if param is not None:
                 dumper = dumpers[i]
                 if not dumper:
+                    change_state = True
                     dumper = dumpers[i] = self.get_dumper(param, formats[i])
-                ps[i] = dumper.dump(param)
-                ts[i] = dumper.oid
-                fs[i] = dumper.format
 
-        return ps, tuple(ts), fs
+                    if not types:
+                        types = (
+                            list(self.types)
+                            if self.types
+                            else [INVALID_OID] * nparams
+                        )
+                    types[i] = dumper.oid
+
+                    if not pqformats:
+                        pqformats = self.formats or [pq.Format.TEXT] * nparams
+                    pqformats[i] = dumper.format
+
+                out[i] = dumper.dump(param)
+
+        if change_state:
+            self._row_dumpers = dumpers
+            assert types is not None
+            self.types = tuple(types)
+            assert pqformats is not None
+            self.formats = pqformats
+
+        return out
 
     def get_dumper(self, obj: Any, format: PyFormat) -> "Dumper":
         """
@@ -143,7 +195,7 @@ class Transformer(AdaptContext):
         key = type(obj)
 
         # Reuse an existing Dumper class for objects of the same type
-        cache = self._dumpers_cache[format]
+        cache = self._dumpers[format]
         try:
             dumper = cache[key]
         except KeyError:
@@ -163,6 +215,25 @@ class Transformer(AdaptContext):
         except KeyError:
             dumper = cache[key1] = dumper.upgrade(obj, format)
             return dumper
+
+    def get_dumper_by_oid(self, oid: int, format: pq.Format) -> "Dumper":
+        """
+        Return a Dumper to dump an object to the type with given oid.
+        """
+        if not self._oid_dumpers:
+            self._oid_dumpers = ({}, {})
+
+        # Reuse an existing Dumper class for objects of the same type
+        cache = self._oid_dumpers[format]
+        try:
+            return cache[oid]
+        except KeyError:
+            # If it's the first time we see this type, look for a dumper
+            # configured for it.
+            dcls = self.adapters.get_dumper_by_oid(oid, format)
+            cache[oid] = dumper = dcls(NoneType, self)
+
+        return dumper
 
     def load_rows(
         self, row0: int, row1: int, make_row: RowMaker[Row]
@@ -219,7 +290,7 @@ class Transformer(AdaptContext):
 
     def get_loader(self, oid: int, format: pq.Format) -> "Loader":
         try:
-            return self._loaders_cache[format][oid]
+            return self._loaders[format][oid]
         except KeyError:
             pass
 
@@ -228,5 +299,5 @@ class Transformer(AdaptContext):
             loader_cls = self._adapters.get_loader(INVALID_OID, format)
             if not loader_cls:
                 raise e.InterfaceError("unknown oid loader not found")
-        loader = self._loaders_cache[format][oid] = loader_cls(oid, self)
+        loader = self._loaders[format][oid] = loader_cls(oid, self)
         return loader
