@@ -770,10 +770,20 @@ def register_default_adapters(context: AdaptContext) -> None:
     adapters = context.adapters
     adapters.register_dumper("datetime.date", DateDumper)
     adapters.register_dumper("datetime.date", DateBinaryDumper)
+
+    # first register dumpers for 'timetz' oid, then the proper ones on time type.
+    adapters.register_dumper("datetime.time", TimeTzDumper)
+    adapters.register_dumper("datetime.time", TimeTzBinaryDumper)
     adapters.register_dumper("datetime.time", TimeDumper)
     adapters.register_dumper("datetime.time", TimeBinaryDumper)
+
+    # first register dumpers for 'timestamp' oid, then the proper ones
+    # on the datetime type.
+    adapters.register_dumper("datetime.datetime", DatetimeNoTzDumper)
+    adapters.register_dumper("datetime.datetime", DatetimeNoTzBinaryDumper)
     adapters.register_dumper("datetime.datetime", DatetimeDumper)
     adapters.register_dumper("datetime.datetime", DatetimeBinaryDumper)
+
     adapters.register_dumper("datetime.timedelta", TimedeltaDumper)
     adapters.register_dumper("datetime.timedelta", TimedeltaBinaryDumper)
     adapters.register_loader("date", DateLoader)

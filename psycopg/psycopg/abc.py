@@ -87,8 +87,10 @@ class Dumper(Protocol):
     """
 
     format: pq.Format
+    """The format this dumper produces (class attirbute)."""
+
     oid: int
-    """The oid to pass to the server, if known; 0 otherwise."""
+    """The oid to pass to the server, if known; 0 otherwise (class attribute)."""
 
     def __init__(self, cls: type, context: Optional[AdaptContext] = None):
         ...

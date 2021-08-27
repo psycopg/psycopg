@@ -454,15 +454,18 @@ def register_default_adapters(context: AdaptContext) -> None:
     adapters.register_dumper(int, IntBinaryDumper)
     adapters.register_dumper(float, FloatDumper)
     adapters.register_dumper(float, FloatBinaryDumper)
-    # The binary dumper is currently some 30% slower, so default to text
-    # (see tests/scripts/testdec.py for a rough benchmark)
-    adapters.register_dumper("decimal.Decimal", DecimalBinaryDumper)
-    adapters.register_dumper("decimal.Decimal", DecimalDumper)
     adapters.register_dumper(Int2, Int2Dumper)
     adapters.register_dumper(Int4, Int4Dumper)
     adapters.register_dumper(Int8, Int8Dumper)
     adapters.register_dumper(IntNumeric, IntNumericDumper)
     adapters.register_dumper(Oid, OidDumper)
+
+    # The binary dumper is currently some 30% slower, so default to text
+    # (see tests/scripts/testdec.py for a rough benchmark)
+    # Also, must be after IntNumericDumper
+    adapters.register_dumper("decimal.Decimal", DecimalBinaryDumper)
+    adapters.register_dumper("decimal.Decimal", DecimalDumper)
+
     adapters.register_dumper(Float4, Float4Dumper)
     adapters.register_dumper(Float8, FloatDumper)
     adapters.register_dumper(Int2, Int2BinaryDumper)

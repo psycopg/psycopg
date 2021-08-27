@@ -57,6 +57,7 @@ class AdaptersMap:
     types: TypesRegistry
 
     _dumpers: Dict[PyFormat, Dict[Union[type, str], Type[Dumper]]]
+    _dumpers_by_oid: List[Dict[int, Type[Dumper]]]
     _loaders: List[Dict[int, Type[Loader]]]
 
     # Record if a dumper or loader has an optimised version.
@@ -71,15 +72,27 @@ class AdaptersMap:
             self._dumpers = template._dumpers.copy()
             self._own_dumpers = _dumpers_shared.copy()
             template._own_dumpers = _dumpers_shared.copy()
+
+            self._dumpers_by_oid = template._dumpers_by_oid[:]
+            self._own_dumpers_by_oid = [False, False]
+            template._own_dumpers_by_oid = [False, False]
+
             self._loaders = template._loaders[:]
             self._own_loaders = [False, False]
             template._own_loaders = [False, False]
+
             self.types = TypesRegistry(template.types)
+
         else:
             self._dumpers = {fmt: {} for fmt in PyFormat}
             self._own_dumpers = _dumpers_owned.copy()
+
+            self._dumpers_by_oid = [{}, {}]
+            self._own_dumpers_by_oid = [True, True]
+
             self._loaders = [{}, {}]
             self._own_loaders = [True, True]
+
             self.types = types or TypesRegistry()
 
     # implement the AdaptContext protocol too
@@ -126,6 +139,16 @@ class AdaptersMap:
                 self._own_dumpers[fmt] = True
 
             self._dumpers[fmt][cls] = dumper
+
+        # Register the dumper by oid, if the oid of the dumper is fixed
+        if dumper.oid:
+            if not self._own_dumpers_by_oid[dumper.format]:
+                self._dumpers_by_oid[dumper.format] = self._dumpers_by_oid[
+                    dumper.format
+                ].copy()
+                self._own_dumpers_by_oid[dumper.format] = True
+
+            self._dumpers_by_oid[dumper.format][dumper.oid] = dumper
 
     def register_loader(
         self, oid: Union[int, str], loader: Type["Loader"]

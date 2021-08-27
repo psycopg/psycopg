@@ -37,7 +37,6 @@ if logger.level == logging.NOTSET:
 
 # register default adapters for PostgreSQL
 adapters = postgres.adapters  # exposed by the package
-postgres.register_default_adapters(adapters)
 
 # DBAPI compliancy
 connect = Connection.connect
@@ -47,6 +46,8 @@ paramstyle = "pyformat"
 adapters.register_dumper(Binary, BinaryTextDumper)  # dbapi20
 adapters.register_dumper(Binary, BinaryBinaryDumper)  # dbapi20
 
+# After registering the dbapi20 dumpers to clobber the oid they set
+postgres.register_default_adapters(adapters)
 
 # Note: defining the exported methods helps both Sphynx in documenting that
 # this is the canonical place to obtain them and should be used by MyPy too,

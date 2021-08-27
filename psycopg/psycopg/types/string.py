@@ -185,11 +185,14 @@ class ByteaBinaryLoader(Loader):
 def register_default_adapters(context: AdaptContext) -> None:
     adapters = context.adapters
 
-    # NOTE: the order the dumpers are registered is relevant.
-    # The last one registered becomes the default for each type.
-    # Normally, binary is the default dumper, except for text (which plays
-    # the role of unknown, so it can be cast automatically to other types).
+    # NOTE: the order the dumpers are registered is relevant. The last one
+    # registered becomes the default for each type. Usually, binary is the
+    # default dumper. For text we use the text dumper as default because it
+    # plays the role of unknown, and it can be cast automatically to other
+    # types. However, before that, we register a dumper with the text oid,
+    # which will be used when a text dumper is looked up by oid.
     adapters.register_dumper(str, StrBinaryDumper)
+    adapters.register_dumper(str, StrDumper)
     adapters.register_dumper(str, StrDumperUnknown)
 
     adapters.register_loader(postgres.INVALID_OID, TextLoader)
