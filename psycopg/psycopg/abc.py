@@ -193,8 +193,13 @@ class Transformer(Protocol):
     ) -> None:
         ...
 
-    def set_row_types(
-        self, types: Sequence[int], formats: Sequence[pq.Format]
+    def set_dumper_types(
+        self, types: Sequence[int], format: pq.Format
+    ) -> None:
+        ...
+
+    def set_loader_types(
+        self, types: Sequence[int], format: pq.Format
     ) -> None:
         ...
 

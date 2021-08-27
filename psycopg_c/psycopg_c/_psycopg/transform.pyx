@@ -125,36 +125,31 @@ cdef class Transformer:
         cdef int i
         cdef object tmp
         cdef list types
-        cdef list formats
+        if format is None:
+            format = libpq.PQfformat(res, 0)
+
         if set_loaders:
             types = PyList_New(self._nfields)
-            formats = PyList_New(self._nfields)
             for i in range(self._nfields):
                 tmp = libpq.PQftype(res, i)
                 Py_INCREF(tmp)
                 PyList_SET_ITEM(types, i, tmp)
 
-                tmp = libpq.PQfformat(res, i) if format is None else format
-                Py_INCREF(tmp)
-                PyList_SET_ITEM(formats, i, tmp)
+            self._c_loader_types(self._nfields, types, format)
 
-            self._c_set_row_types(self._nfields, types, formats)
+    def set_loader_types(self,
+            types: Sequence[int], format: Format) -> None:
+        self._c_loader_types(len(types), types, format)
 
-    def set_row_types(self,
-            types: Sequence[int], formats: Sequence[Format]) -> None:
-        self._c_set_row_types(len(types), types, formats)
-
-    cdef void _c_set_row_types(self, Py_ssize_t ntypes, list types, list formats):
+    cdef void _c_loader_types(self, Py_ssize_t ntypes, list types, int format):
         cdef list loaders = PyList_New(ntypes)
 
         # these are used more as Python object than C
         cdef PyObject *oid
-        cdef PyObject *fmt
         cdef PyObject *row_loader
         for i in range(ntypes):
             oid = PyList_GET_ITEM(types, i)
-            fmt = PyList_GET_ITEM(formats, i)
-            row_loader = self._c_get_loader(oid, fmt)
+            row_loader = self._c_get_loader(oid, <PyObject *>format)
             Py_INCREF(<object>row_loader)
             PyList_SET_ITEM(loaders, i, <object>row_loader)
 

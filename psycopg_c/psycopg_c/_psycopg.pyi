@@ -31,8 +31,11 @@ class Transformer(abc.AdaptContext):
         set_loaders: bool = True,
         format: Optional[pq.Format] = None,
     ) -> None: ...
-    def set_row_types(
-        self, types: Sequence[int], formats: Sequence[pq.Format]
+    def set_dumper_types(
+        self, types: Sequence[int], format: pq.Format
+    ) -> None: ...
+    def set_loader_types(
+        self, types: Sequence[int], format: pq.Format
     ) -> None: ...
     def dump_sequence(
         self, params: Sequence[Any], formats: Sequence[PyFormat]

@@ -96,9 +96,15 @@ class BaseCopy(Generic[ConnectionType]):
         oids = [
             t if isinstance(t, int) else registry.get_oid(t) for t in types
         ]
-        self.formatter.transformer.set_row_types(
-            oids, [self.formatter.format] * len(types)
-        )
+
+        if self._pgresult.status == ExecStatus.COPY_IN:
+            self.formatter.transformer.set_dumper_types(
+                oids, self.formatter.format
+            )
+        else:
+            self.formatter.transformer.set_loader_types(
+                oids, self.formatter.format
+            )
 
     # High level copy protocol generators (state change of the Copy object)
 
@@ -556,10 +562,9 @@ def _format_row_binary(
         out = bytearray()
 
     out += _pack_int2(len(row))
-    for item in row:
-        if item is not None:
-            dumper = tx.get_dumper(item, PyFormat.BINARY)
-            b = dumper.dump(item)
+    adapted, _, _ = tx.dump_sequence(row, [PyFormat.BINARY] * len(row))
+    for b in adapted:
+        if b is not None:
             out += _pack_int4(len(b))
             out += b
         else:

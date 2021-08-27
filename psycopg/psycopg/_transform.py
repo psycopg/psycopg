@@ -109,14 +109,23 @@ class Transformer(AdaptContext):
                 fmt = result.fformat(i) if format is None else format
                 rc.append(self.get_loader(oid, fmt).load)  # type: ignore
 
-    def set_row_types(
-        self, types: Sequence[int], formats: Sequence[pq.Format]
+    def set_dumper_types(
+        self, types: Sequence[int], format: pq.Format
     ) -> None:
-        rc: List[LoadFunc] = []
+        dumpers: List[Optional["Dumper"]] = []
         for i in range(len(types)):
-            rc.append(self.get_loader(types[i], formats[i]).load)
+            dumpers.append(self.get_dumper_by_oid(types[i], format))
 
-        self._row_loaders = rc
+        self._row_dumpers = dumpers
+
+    def set_loader_types(
+        self, types: Sequence[int], format: pq.Format
+    ) -> None:
+        loaders: List[LoadFunc] = []
+        for i in range(len(types)):
+            loaders.append(self.get_loader(types[i], format).load)
+
+        self._row_loaders = loaders
 
     def dump_sequence(
         self, params: Sequence[Any], formats: Sequence[PyFormat]

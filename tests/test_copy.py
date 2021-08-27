@@ -20,7 +20,7 @@ from .utils import gc_collect
 
 eur = "\u20ac"
 
-sample_records = [(Int4(10), Int4(20), "hello"), (Int4(40), None, "world")]
+sample_records = [(10, 20, "hello"), (40, None, "world")]
 
 sample_values = "values (10::int, 20::int, 'hello'::text), (40, NULL, 'world')"
 
@@ -79,6 +79,7 @@ def test_copy_out_iter(conn, format):
         want = [row + b"\n" for row in sample_text.splitlines()]
     else:
         want = sample_binary_rows
+
     cur = conn.cursor()
     with cur.copy(
         f"copy ({sample_values}) to stdout (format {format.name})"
@@ -341,6 +342,22 @@ def test_copy_in_records(conn, format):
     ensure_table(cur, sample_tabledef)
 
     with cur.copy(f"copy copy_in from stdin (format {format.name})") as copy:
+        for row in sample_records:
+            if format == Format.BINARY:
+                row = tuple(Int4(i) if isinstance(i, int) else i for i in row)
+            copy.write_row(row)
+
+    data = cur.execute("select * from copy_in order by 1").fetchall()
+    assert data == sample_records
+
+
+@pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
+def test_copy_in_records_set_types(conn, format):
+    cur = conn.cursor()
+    ensure_table(cur, sample_tabledef)
+
+    with cur.copy(f"copy copy_in from stdin (format {format.name})") as copy:
+        copy.set_types(["int4", "int4", "text"])
         for row in sample_records:
             copy.write_row(row)
 

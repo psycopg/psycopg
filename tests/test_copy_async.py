@@ -14,6 +14,7 @@ from psycopg.pq import Format
 from psycopg.types import TypeInfo
 from psycopg.adapt import PyFormat as PgFormat
 from psycopg.types.hstore import register_hstore
+from psycopg.types.numeric import Int4
 
 from .utils import gc_collect
 from .test_copy import sample_text, sample_binary, sample_binary_rows  # noqa
@@ -325,6 +326,25 @@ async def test_copy_in_records(aconn, format):
     async with cur.copy(
         f"copy copy_in from stdin (format {format.name})"
     ) as copy:
+        for row in sample_records:
+            if format == Format.BINARY:
+                row = tuple(Int4(i) if isinstance(i, int) else i for i in row)
+            await copy.write_row(row)
+
+    await cur.execute("select * from copy_in order by 1")
+    data = await cur.fetchall()
+    assert data == sample_records
+
+
+@pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
+async def test_copy_in_records_set_types(aconn, format):
+    cur = aconn.cursor()
+    await ensure_table(cur, sample_tabledef)
+
+    async with cur.copy(
+        f"copy copy_in from stdin (format {format.name})"
+    ) as copy:
+        copy.set_types(["int4", "int4", "text"])
         for row in sample_records:
             await copy.write_row(row)
 
