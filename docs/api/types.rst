@@ -52,12 +52,35 @@ can extend the behaviour of the adapters: if you create a loader for
 
 .. autoclass:: TypeInfo
 
-    .. automethod:: fetch
-    .. automethod:: fetch_async
+    .. method:: fetch(conn, name)
+        :classmethod:
+
+    .. method:: fetch(aconn, name)
+        :classmethod:
+        :async:
+        :noindex:
+
+        Query a system catalog to read information about a type.
+
+        :param conn: the connection to query
+        :type conn: ~psycopg.Connection or ~psycopg.AsyncConnection
+        :param name: the name of the type to query. It can include a schema
+            name.
+        :type name: `!str` or `~psycopg.sql.Identifier`
+        :return: a `!TypeInfo` object (or subclass) populated with the type
+            information, `!None` if not found.
+
+        If the connection is async the function will behave as a coroutine and
+        the caller will need to `await` on it to get the result::
+
+            t = await TypeInfo.fetch(aconn, "mytype")
+
     .. automethod:: register
 
-        The *context* can be a `~psycopg.Connection` or `~psycopg.Cursor`.
-        Specifying no context will register the `!TypeInfo` globally.
+        :param context: the context where the type is registered, for instance
+            a `~psycopg.Connection` or `~psycopg.Cursor`. `!None` registers
+            the `!TypeInfo` globally.
+        :type context: Optional[~psycopg.abc.AdaptContext]
 
         Registering the `TypeInfo` in a context allows the adapters of that
         context to look up type information: for instance it allows to
@@ -65,36 +88,19 @@ can extend the behaviour of the adapters: if you create a loader for
         database as a list of the base type.
 
 
-.. autoclass:: TypesRegistry
-
-
 The following `!TypeInfo` subclasses allow to fetch more specialised
-information from certain class of PostgreSQL types and to create more
-specialised adapters configurations.
-
+information from certain class of PostgreSQL types.
 
 .. autoclass:: psycopg.types.composite.CompositeInfo
 
-    .. automethod:: register
-
-        Using `!CompositeInfo.register()` will also register a specialised
-        loader to fetch the composite type as a Python named tuple, or a
-        custom object if *factory* is specified.
-
-
 .. autoclass:: psycopg.types.range.RangeInfo
 
-    .. automethod:: register
 
-        Using `!RangeInfo.register()` will also register a specialised loaders
-        and dumpers. For instance, if you create a PostgreSQL range on the
-        type :sql:`inet`, loading these object with the database will use the
-        loader for the :sql:`inet` type to parse the range bounds - either the
-        builtin ones or any one you might have configured.
+`!TypeInfo` objects are collected in `TypesRegistry` instances, which help type
+information lookup. Every `~psycopg.adapt.AdaptersMap` expose its type map on
+its `~psycopg.adapt.AdaptersMap.types` attribute.
 
-        The type information will also be used by the `Range` dumper so that
-        if you dump a `!Range(address1, address2)` object it will use the
-        correct oid for your :sql:`inetrange` type.
+.. autoclass:: TypesRegistry
 
 
 .. _numeric-wrappers:

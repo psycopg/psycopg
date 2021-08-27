@@ -77,3 +77,6 @@ checking.
 
 .. autoclass:: AdaptContext
     :members:
+
+    .. seealso:: :ref:`adaptation` for an explanation about how contexts are
+        connected.

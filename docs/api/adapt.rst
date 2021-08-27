@@ -53,6 +53,9 @@ Other objects used in adaptations
 
 .. autoclass:: AdaptersMap
 
+   .. seealso:: :ref:`adaptation` for an explanation about how contexts are
+       connected.
+
    .. automethod:: register_dumper
    .. automethod:: register_loader
 

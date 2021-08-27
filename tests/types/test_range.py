@@ -9,7 +9,7 @@ from psycopg import pq
 from psycopg.sql import Identifier
 from psycopg.adapt import PyFormat as Format
 from psycopg.types import range as range_module
-from psycopg.types.range import Range, RangeInfo
+from psycopg.types.range import Range, RangeInfo, register_range
 
 
 type2sub = {
@@ -312,7 +312,7 @@ def test_fetch_info_not_found(conn):
 @pytest.mark.asyncio
 @pytest.mark.parametrize("name, subtype", fetch_cases)
 async def test_fetch_info_async(aconn, testrange, name, subtype):
-    info = await RangeInfo.fetch_async(aconn, name)
+    info = await RangeInfo.fetch(aconn, name)
     assert info.name == "testrange"
     assert info.oid > 0
     assert info.oid != info.array_oid > 0
@@ -321,12 +321,12 @@ async def test_fetch_info_async(aconn, testrange, name, subtype):
 
 @pytest.mark.asyncio
 async def test_fetch_info_not_found_async(aconn):
-    assert await RangeInfo.fetch_async(aconn, "nosuchrange") is None
+    assert await RangeInfo.fetch(aconn, "nosuchrange") is None
 
 
 def test_dump_custom_empty(conn, testrange):
     info = RangeInfo.fetch(conn, "testrange")
-    info.register(conn)
+    register_range(info, conn)
 
     r = Range(empty=True)
     cur = conn.execute("select 'empty'::testrange = %s", (r,))
@@ -335,7 +335,7 @@ def test_dump_custom_empty(conn, testrange):
 
 def test_dump_quoting(conn, testrange):
     info = RangeInfo.fetch(conn, "testrange")
-    info.register(conn)
+    register_range(info, conn)
     cur = conn.cursor()
     for i in range(1, 254):
         cur.execute(
@@ -351,7 +351,7 @@ def test_dump_quoting(conn, testrange):
 @pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
 def test_load_custom_empty(conn, testrange, fmt_out):
     info = RangeInfo.fetch(conn, "testrange")
-    info.register(conn)
+    register_range(info, conn)
 
     cur = conn.cursor(binary=fmt_out)
     (got,) = cur.execute("select 'empty'::testrange").fetchone()
@@ -362,7 +362,7 @@ def test_load_custom_empty(conn, testrange, fmt_out):
 @pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
 def test_load_quoting(conn, testrange, fmt_out):
     info = RangeInfo.fetch(conn, "testrange")
-    info.register(conn)
+    register_range(info, conn)
     cur = conn.cursor(binary=fmt_out)
     for i in range(1, 254):
         cur.execute(

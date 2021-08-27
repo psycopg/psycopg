@@ -7,7 +7,7 @@ information to the adapters if needed.
 
 # Copyright (C) 2020-2021 The Psycopg Team
 
-from typing import Any, Callable, Dict, Iterator, Optional
+from typing import Any, Dict, Iterator, Optional, overload
 from typing import Sequence, Type, TypeVar, Union, TYPE_CHECKING
 
 from . import errors as e
@@ -49,20 +49,34 @@ class TypeInfo:
             f" {self.name} (oid: {self.oid}, array oid: {self.array_oid})>"
         )
 
+    @overload
     @classmethod
     def fetch(
         cls: Type[T], conn: "Connection[Any]", name: Union[str, "Identifier"]
     ) -> Optional[T]:
-        """
-        Query a system catalog to read information about a type.
+        ...
 
-        :param conn: the connection to query
-        :param name: the name of the type to query. It can include a schema
-            name.
-        :type name: `!str` or `~psycopg.sql.Identifier`
-        :return: a `!TypeInfo` object populated with the type information,
-            `!None` if not found.
-        """
+    @overload
+    @classmethod
+    async def fetch(
+        cls: Type[T],
+        conn: "AsyncConnection[Any]",
+        name: Union[str, "Identifier"],
+    ) -> Optional[T]:
+        ...
+
+    @classmethod
+    def fetch(
+        cls: Type[T],
+        conn: "Union[Connection[Any], AsyncConnection[Any]]",
+        name: Union[str, "Identifier"],
+    ) -> Any:
+        """Query a system catalog to read information about a type."""
+        from .connection_async import AsyncConnection
+
+        if isinstance(conn, AsyncConnection):
+            return cls._fetch_async(conn, name)
+
         from .sql import Composable
 
         if isinstance(name, Composable):
@@ -79,10 +93,10 @@ class TypeInfo:
             return None
 
         recs = cur.fetchall()
-        return cls._fetch(name, recs)
+        return cls._from_records(name, recs)
 
     @classmethod
-    async def fetch_async(
+    async def _fetch_async(
         cls: Type[T],
         conn: "AsyncConnection[Any]",
         name: Union[str, "Identifier"],
@@ -105,13 +119,11 @@ class TypeInfo:
             return None
 
         recs = await cur.fetchall()
-        return cls._fetch(name, recs)
+        return cls._from_records(name, recs)
 
     @classmethod
-    def _fetch(
-        cls: Type[T],
-        name: str,
-        recs: Sequence[Dict[str, Any]],
+    def _from_records(
+        cls: Type[T], name: str, recs: Sequence[Dict[str, Any]]
     ) -> Optional[T]:
         if len(recs) == 1:
             return cls(**recs[0])
@@ -149,6 +161,10 @@ WHERE t.oid = %(name)s::regtype
 ORDER BY t.oid
 """
 
+    def _added(self, registry: "TypesRegistry") -> None:
+        """Method called by the *registry* when the object is added there."""
+        pass
+
 
 class RangeInfo(TypeInfo):
     """Manage information about a range type."""
@@ -159,13 +175,6 @@ class RangeInfo(TypeInfo):
         super().__init__(name, oid, array_oid)
         self.subtype_oid = subtype_oid
 
-    def register(self, context: Optional[AdaptContext] = None) -> None:
-        super().register(context)
-
-        from .types.range import register_range
-
-        register_range(self, context)
-
     _info_query = """\
 SELECT t.typname AS name, t.oid AS oid, t.typarray AS array_oid,
     r.rngsubtype AS subtype_oid
@@ -173,6 +182,11 @@ FROM pg_type t
 JOIN pg_range r ON t.oid = r.rngtypid
 WHERE t.oid = %(name)s::regtype
 """
+
+    def _added(self, registry: "TypesRegistry") -> None:
+        """Method called by the *registry* when the object is added there."""
+        # Map ranges subtypes to info
+        registry._by_range_subtype[self.subtype_oid] = self
 
 
 class CompositeInfo(TypeInfo):
@@ -191,17 +205,8 @@ class CompositeInfo(TypeInfo):
         super().__init__(name, oid, array_oid)
         self.field_names = field_names
         self.field_types = field_types
-
-    def register(
-        self,
-        context: Optional[AdaptContext] = None,
-        factory: Optional[Callable[..., Any]] = None,
-    ) -> None:
-        super().register(context)
-
-        from .types.composite import register_composite
-
-        register_composite(self, context, factory)
+        # Will be set by register() if the `factory` is a type
+        self.python_type: Optional[type] = None
 
     _info_query = """\
 SELECT
@@ -269,9 +274,8 @@ class TypesRegistry:
         if info.alt_name and info.alt_name not in self._by_name:
             self._by_name[info.alt_name] = info
 
-        # Map ranges subtypes to info
-        if isinstance(info, RangeInfo):
-            self._by_range_subtype[info.subtype_oid] = info
+        # Allow info to customise further their relation with the registry
+        info._added(self)
 
     def __iter__(self) -> Iterator[TypeInfo]:
         seen = set()

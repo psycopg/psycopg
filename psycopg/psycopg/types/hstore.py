@@ -109,6 +109,7 @@ def register_hstore(
     info: TypeInfo, context: Optional[AdaptContext] = None
 ) -> None:
 
+    # Register arrays and type info
     info.register(context)
 
     adapters = context.adapters if context else postgres.adapters

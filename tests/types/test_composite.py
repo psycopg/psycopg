@@ -4,8 +4,9 @@ from psycopg import pq, postgres
 from psycopg.sql import Identifier
 from psycopg.adapt import PyFormat as Format
 from psycopg.postgres import types as builtins
-from psycopg.types.composite import CompositeInfo
-
+from psycopg.types.composite import CompositeInfo, register_composite
+from psycopg.types.composite import TupleDumper, TupleBinaryDumper
+from psycopg.types.numeric import Int8, Float8
 
 tests_str = [
     ("", ()),
@@ -39,7 +40,7 @@ def test_dump_tuple(conn, rec, obj):
         """
     )
     info = CompositeInfo.fetch(conn, "tmptype")
-    info.register(context=conn)
+    register_composite(info, conn)
 
     res = conn.execute("select %s::tmptype", [obj]).fetchone()[0]
     assert res == obj
@@ -107,6 +108,7 @@ def testcomp(svcconn):
         create type testschema.testcomp as (foo text, bar int8, qux bool);
         """
     )
+    return CompositeInfo.fetch(svcconn, "testcomp")
 
 
 fetch_cases = [
@@ -145,7 +147,7 @@ def test_fetch_info(conn, testcomp, name, fields):
 @pytest.mark.asyncio
 @pytest.mark.parametrize("name, fields", fetch_cases)
 async def test_fetch_info_async(aconn, testcomp, name, fields):
-    info = await CompositeInfo.fetch_async(aconn, name)
+    info = await CompositeInfo.fetch(aconn, name)
     assert info.name == "testcomp"
     assert info.oid > 0
     assert info.oid != info.array_oid > 0
@@ -156,10 +158,8 @@ async def test_fetch_info_async(aconn, testcomp, name, fields):
         assert info.field_types[i] == builtins[t].oid
 
 
-@pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
-def test_dump_composite_all_chars(conn, fmt_in, testcomp):
-    if fmt_in == Format.BINARY:
-        pytest.xfail("binary composite dumper not implemented")
+@pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT])
+def test_dump_tuple_all_chars(conn, fmt_in, testcomp):
     cur = conn.cursor()
     for i in range(1, 256):
         (res,) = cur.execute(
@@ -169,10 +169,44 @@ def test_dump_composite_all_chars(conn, fmt_in, testcomp):
         assert res is True
 
 
+@pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
+def test_dump_composite_all_chars(conn, fmt_in, testcomp):
+    cur = conn.cursor()
+    register_composite(testcomp, cur)
+    factory = testcomp.python_type
+    for i in range(1, 256):
+        if fmt_in == Format.BINARY:
+            obj = factory(chr(i), Int8(1), Float8(1.0))
+        else:
+            obj = factory(chr(i), 1, 1.0)
+
+        (res,) = cur.execute(
+            f"select row(chr(%s::int), 1, 1.0)::testcomp = %{fmt_in}", (i, obj)
+        ).fetchone()
+        assert res is True
+
+
+@pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
+def test_dump_composite_null(conn, fmt_in, testcomp):
+    cur = conn.cursor()
+    register_composite(testcomp, cur)
+    factory = testcomp.python_type
+
+    if fmt_in == Format.BINARY:
+        obj = factory("foo", Int8(1), None)
+    else:
+        obj = factory("foo", 1, None)
+
+    (res,) = cur.execute(
+        f"select row('foo', 1, NULL)::testcomp = %{fmt_in}", (obj,)
+    ).fetchone()
+    assert res is True
+
+
 @pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
 def test_load_composite(conn, testcomp, fmt_out):
     info = CompositeInfo.fetch(conn, "testcomp")
-    info.register(conn)
+    register_composite(info, conn)
 
     cur = conn.cursor(binary=fmt_out)
     res = cur.execute("select row('hello', 10, 20)::testcomp").fetchone()[0]
@@ -197,7 +231,8 @@ def test_load_composite_factory(conn, testcomp, fmt_out):
         def __init__(self, *args):
             self.foo, self.bar, self.baz = args
 
-    info.register(conn, factory=MyThing)
+    register_composite(info, conn, factory=MyThing)
+    assert info.python_type is MyThing
 
     cur = conn.cursor(binary=fmt_out)
     res = cur.execute("select row('hello', 10, 20)::testcomp").fetchone()[0]
@@ -215,21 +250,66 @@ def test_load_composite_factory(conn, testcomp, fmt_out):
 
 def test_register_scope(conn, testcomp):
     info = CompositeInfo.fetch(conn, "testcomp")
-    info.register()
+    register_composite(info)
     for fmt in (pq.Format.TEXT, pq.Format.BINARY):
         for oid in (info.oid, info.array_oid):
             assert postgres.adapters._loaders[fmt].pop(oid)
 
+    for fmt in Format:
+        assert postgres.adapters._dumpers[fmt].pop(info.python_type)
+
     cur = conn.cursor()
-    info.register(cur)
+    register_composite(info, cur)
     for fmt in (pq.Format.TEXT, pq.Format.BINARY):
         for oid in (info.oid, info.array_oid):
             assert oid not in postgres.adapters._loaders[fmt]
             assert oid not in conn.adapters._loaders[fmt]
             assert oid in cur.adapters._loaders[fmt]
 
-    info.register(conn)
+    register_composite(info, conn)
     for fmt in (pq.Format.TEXT, pq.Format.BINARY):
         for oid in (info.oid, info.array_oid):
             assert oid not in postgres.adapters._loaders[fmt]
             assert oid in conn.adapters._loaders[fmt]
+
+
+def test_type_dumper_registered(conn, testcomp):
+    info = CompositeInfo.fetch(conn, "testcomp")
+    register_composite(info, conn)
+    assert issubclass(info.python_type, tuple)
+    assert info.python_type.__name__ == "testcomp"
+    d = conn.adapters.get_dumper(info.python_type, "s")
+    assert issubclass(d, TupleDumper)
+    assert d is not TupleDumper
+
+    tc = info.python_type("foo", 42, 3.14)
+    cur = conn.execute("select pg_typeof(%s)", [tc])
+    assert cur.fetchone()[0] == "testcomp"
+
+
+def test_type_dumper_registered_binary(conn, testcomp):
+    info = CompositeInfo.fetch(conn, "testcomp")
+    register_composite(info, conn)
+    assert issubclass(info.python_type, tuple)
+    assert info.python_type.__name__ == "testcomp"
+    d = conn.adapters.get_dumper(info.python_type, "b")
+    assert issubclass(d, TupleBinaryDumper)
+    assert d is not TupleBinaryDumper
+
+    tc = info.python_type("foo", Int8(42), Float8(3.14))
+    cur = conn.execute("select pg_typeof(%b)", [tc])
+    assert cur.fetchone()[0] == "testcomp"
+
+
+def test_callable_dumper_not_registered(conn, testcomp):
+    info = CompositeInfo.fetch(conn, "testcomp")
+
+    def fac(*args):
+        return args + (args[-1],)
+
+    register_composite(info, conn, factory=fac)
+    assert info.python_type is None
+
+    # but the loader is registered
+    cur = conn.execute("select '(foo,42,3.14)'::testcomp")
+    assert cur.fetchone()[0] == ("foo", 42, 3.14, 3.14)
