@@ -68,7 +68,7 @@ def test_split_query_bad(input):
 @pytest.mark.parametrize(
     "query, params, want, wformats, wparams",
     [
-        (b"", None, b"", (), ()),
+        (b"", None, b"", None, None),
         (b"", [], b"", [], []),
         (b"%%", [], b"%", [], []),
         (b"select %t", (1,), b"select $1", [pq.Format.TEXT], [b"1"]),

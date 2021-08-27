@@ -170,8 +170,8 @@ class Loader(Protocol):
 
 class Transformer(Protocol):
 
-    types: Tuple[int, ...]
-    formats: Sequence[pq.Format]
+    types: Optional[Tuple[int, ...]]
+    formats: Optional[List[pq.Format]]
 
     def __init__(self, context: Optional[AdaptContext] = None):
         ...
@@ -213,9 +213,6 @@ class Transformer(Protocol):
         ...
 
     def get_dumper(self, obj: Any, format: PyFormat) -> Dumper:
-        ...
-
-    def get_dumper_by_oid(self, oid: int, format: pq.Format) -> Dumper:
         ...
 
     def load_rows(

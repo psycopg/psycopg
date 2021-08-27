@@ -42,12 +42,11 @@ class Transformer(AdaptContext):
     _adapters: "AdaptersMap"
     _pgresult: Optional["PGresult"] = None
 
-    types: Tuple[int, ...]
-    formats: List[pq.Format]
+    types: Optional[Tuple[int, ...]]
+    formats: Optional[List[pq.Format]]
 
     def __init__(self, context: Optional[AdaptContext] = None):
-        self.types = ()
-        self.formats = []
+        self.types = self.formats = None
 
         # WARNING: don't store context, or you'll create a loop with the Cursor
         if context:
@@ -137,7 +136,8 @@ class Transformer(AdaptContext):
     def dump_sequence(
         self, params: Sequence[Any], formats: Sequence[PyFormat]
     ) -> Sequence[Optional[Buffer]]:
-        out: List[Optional[Buffer]] = [None] * len(params)
+        nparams = len(params)
+        out: List[Optional[Buffer]] = [None] * nparams
 
         change_state = False
 
@@ -152,22 +152,28 @@ class Transformer(AdaptContext):
         # an executemany the first records has a null, the second has a value.
         if not dumpers:
             change_state = True
-            dumpers = [None] * len(params)
-            types = [INVALID_OID] * len(params)
-            pqformats = [pq.Format.TEXT] * len(params)
+            dumpers = [None] * nparams
+            types = [INVALID_OID] * nparams
+            pqformats = [pq.Format.TEXT] * nparams
 
-        for i in range(len(params)):
+        for i in range(nparams):
             param = params[i]
             if param is not None:
                 dumper = dumpers[i]
                 if not dumper:
-                    dumper = dumpers[i] = self.get_dumper(param, formats[i])
                     change_state = True
+                    dumper = dumpers[i] = self.get_dumper(param, formats[i])
+
                     if not types:
-                        types = list(self.types)
+                        types = (
+                            list(self.types)
+                            if self.types
+                            else [INVALID_OID] * nparams
+                        )
                     types[i] = dumper.oid
+
                     if not pqformats:
-                        pqformats = list(self.formats)
+                        pqformats = self.formats or [pq.Format.TEXT] * nparams
                     pqformats[i] = dumper.format
 
                 out[i] = dumper.dump(param)
