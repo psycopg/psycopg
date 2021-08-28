@@ -105,7 +105,7 @@ class AdaptersMap:
         return None
 
     def register_dumper(
-        self, cls: Union[type, str], dumper: Type[Dumper]
+        self, cls: Union[type, str, None], dumper: Type[Dumper]
     ) -> None:
         """
         Configure the context to use *dumper* to convert object of type *cls*.
@@ -123,7 +123,7 @@ class AdaptersMap:
         case it should be the fully qualified name of the object (e.g.
         ``"uuid.UUID"``).
         """
-        if not isinstance(cls, (str, type)):
+        if not (cls is None or isinstance(cls, (str, type))):
             raise TypeError(
                 f"dumpers should be registered on classes, got {cls} instead"
             )
@@ -133,12 +133,13 @@ class AdaptersMap:
 
         # Register the dumper both as its format and as auto
         # so that the last dumper registered is used in auto (%s) format
-        for fmt in (PyFormat.from_pq(dumper.format), PyFormat.AUTO):
-            if not self._own_dumpers[fmt]:
-                self._dumpers[fmt] = self._dumpers[fmt].copy()
-                self._own_dumpers[fmt] = True
+        if cls:
+            for fmt in (PyFormat.from_pq(dumper.format), PyFormat.AUTO):
+                if not self._own_dumpers[fmt]:
+                    self._dumpers[fmt] = self._dumpers[fmt].copy()
+                    self._own_dumpers[fmt] = True
 
-            self._dumpers[fmt][cls] = dumper
+                self._dumpers[fmt][cls] = dumper
 
         # Register the dumper by oid, if the oid of the dumper is fixed
         if dumper.oid:

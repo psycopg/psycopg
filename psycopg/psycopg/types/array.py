@@ -35,9 +35,16 @@ TEXT_ARRAY_OID = postgres.types["text"].array_oid
 
 
 class BaseListDumper(RecursiveDumper):
+    element_oid = 0
+
     def __init__(self, cls: type, context: Optional[AdaptContext] = None):
         super().__init__(cls, context)
         self.sub_dumper: Optional[Dumper] = None
+        if self.element_oid and context:
+            sdclass = context.adapters.get_dumper_by_oid(
+                self.element_oid, self.format
+            )
+            self.sub_dumper = sdclass(type(None), context)
 
     def _find_list_element(self, L: List[Any]) -> Any:
         """
@@ -417,22 +424,44 @@ class ArrayBinaryLoader(BaseArrayLoader):
 def register_array(
     info: TypeInfo, context: Optional[AdaptContext] = None
 ) -> None:
+    if not info.array_oid:
+        raise ValueError(f"the type info {info} doesn't describe an array")
+
     adapters = context.adapters if context else postgres.adapters
 
-    base: Type[BaseArrayLoader] = ArrayLoader
-    lname = f"{info.name.title()}{base.__name__}"
+    base: Type = ArrayLoader
+    name = f"{info.name.title()}{base.__name__}"
     attribs = {
         "base_oid": info.oid,
         "delimiter": info.delimiter.encode("utf-8"),
     }
-    loader = type(lname, (base,), attribs)
+    loader = type(name, (base,), attribs)
     adapters.register_loader(info.array_oid, loader)
 
     base = ArrayBinaryLoader
-    lname = f"{info.name.title()}{base.__name__}"
+    name = f"{info.name.title()}{base.__name__}"
     attribs = {"base_oid": info.oid}
-    loader = type(lname, (base,), attribs)
+    loader = type(name, (base,), attribs)
     adapters.register_loader(info.array_oid, loader)
+
+    base = ListDumper
+    name = f"{info.name.title()}{base.__name__}"
+    attribs = {
+        "oid": info.array_oid,
+        "element_oid": info.oid,
+        "delimiter": info.delimiter.encode("utf-8"),
+    }
+    dumper = type(name, (base,), attribs)
+    adapters.register_dumper(None, dumper)
+
+    base = ListBinaryDumper
+    name = f"{info.name.title()}{base.__name__}"
+    attribs = {
+        "oid": info.array_oid,
+        "element_oid": info.oid,
+    }
+    dumper = type(name, (base,), attribs)
+    adapters.register_dumper(None, dumper)
 
 
 def register_default_adapters(context: AdaptContext) -> None:

@@ -4,6 +4,7 @@ from psycopg import pq, postgres
 from psycopg.sql import Identifier
 from psycopg.adapt import PyFormat as Format
 from psycopg.postgres import types as builtins
+from psycopg.types.range import Range
 from psycopg.types.composite import CompositeInfo, register_composite
 from psycopg.types.composite import TupleDumper, TupleBinaryDumper
 
@@ -61,6 +62,25 @@ def test_load_all_chars(conn, fmt_out):
     s = "".join(map(chr, range(1, 256)))
     res = cur.execute("select row(%s::text)", [s]).fetchone()[0]
     assert res == (s,)
+
+
+@pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
+def test_dump_builtin_empty_range(conn, fmt_in):
+    conn.execute(
+        """
+        drop type if exists tmptype;
+        create type tmptype as (num integer, range daterange, nums integer[])
+        """
+    )
+    info = CompositeInfo.fetch(conn, "tmptype")
+    register_composite(info, conn)
+
+    cur = conn.execute(
+        f"select pg_typeof(%{fmt_in})",
+        [info.python_type(10, Range(empty=True), [])],
+    )
+    print(cur._query.params[0])
+    assert cur.fetchone()[0] == "tmptype"
 
 
 @pytest.mark.parametrize(
