@@ -30,8 +30,6 @@ TODO: complete table
     | | `!tuple`         | Composite types         |:ref:`adapt-composite`    |
     | | `!namedtuple`    |                         |                          |
     +--------------------+-------------------------+--------------------------+
-    | `!dict`            | :sql:`hstore`           | :ref:`adapt-hstore`      |
-    +--------------------+-------------------------+--------------------------+
 
 
 .. index::
@@ -374,7 +372,6 @@ address types`__:
 .. __: https://www.postgresql.org/docs/current/datatype-net-types.html#DATATYPE-CIDR
 
 .. _adapt-composite:
-.. _adapt-hstore:
 
 
 TODO adaptation

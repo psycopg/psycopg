@@ -71,6 +71,7 @@ its subtype and make it work like the builtin ones.
 
 Example::
 
+    >>> from psycopg.types.range import Range, RangeInfo, register_range
     >>> conn.execute("create type strrange as range (subtype = text)")
 
     >>> info = RangeInfo.fetch(conn, "strrange")
@@ -80,4 +81,54 @@ Example::
     'strrange'
 
     >>> conn.execute("select '[a,z]'::strrange").fetchone()[0]
-     Range('a', 'z', '[]')
+    Range('a', 'z', '[]')
+
+
+.. index::
+    pair: hstore; Data types
+    pair: dict; Adaptation
+
+.. _adapt-hstore:
+
+Hstore adaptation
+-----------------
+
+The |hstore|_ data type is a key-value store embedded in PostgreSQL. It
+supports GiST or GIN indexes allowing search by keys or key/value pairs as
+well as regular BTree indexes for equality, uniqueness etc.
+
+.. |hstore| replace:: :sql:`hstore`
+.. _hstore: https://www.postgresql.org/docs/current/static/hstore.html
+
+Psycopg can convert Python `!dict` objects to and from |hstore| structures.
+Only dictionaries with string keys and values are supported. `!None` is also
+allowed as value but not as a key.
+
+In order to use the |hstore| data type it is necessary to load it in a
+database using 
+
+.. code:: none
+
+    =# CREATE EXTENSION hstore;
+
+Because |hstore| is distributed as a contrib module, its oid is not well
+known, so it is necessary to use `~psycopg.types.TypeInfo` to query the
+database and get its oid. After that you can use
+`~psycopg.types.hstore.register_hstore()` to allow dumping `!dict` to |hstore|
+and parsing |hstore| back to `!dict` in the context where it is registered.
+
+.. autofunction:: psycopg.types.hstore.register_hstore
+
+Example::
+
+    >>> from psycopg.types import TypeInfo
+    >>> from psycopg.types.hstore import register_hstore
+
+    >>> info = TypeInfo.fetch(conn, "hstore")
+    >>> register_hstore(info, conn)
+
+    >>> conn.execute("select pg_typeof(%s)", [{"a": "b"}]).fetchone()[0]
+    'hstore'
+
+    >>> conn.execute("select 'foo => bar'::hstore").fetchone()[0]
+    {'foo': 'bar'}
