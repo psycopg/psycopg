@@ -68,9 +68,8 @@ extension types if they have been registered::
     >>> import xml.etree.ElementTree as ET
     >>> from psycopg.adapt import Loader
 
-    >>> # Create a class setting the `format` and implementing the `load()` method.
+    >>> # Create a class implementing the `load()` method.
     >>> class XmlLoader(Loader):
-    ...     format = psycopg.pq.Format.TEXT
     ...     def load(self, data):
     ...         return ET.fromstring(data)
 

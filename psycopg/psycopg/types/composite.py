@@ -26,9 +26,6 @@ _unpack_oidlen = cast(
 
 
 class SequenceDumper(RecursiveDumper):
-
-    format = pq.Format.TEXT
-
     def _dump_sequence(
         self, obj: Sequence[Any], start: bytes, end: bytes, sep: bytes
     ) -> bytes:
@@ -98,9 +95,6 @@ class TupleBinaryDumper(RecursiveDumper):
 
 
 class BaseCompositeLoader(RecursiveLoader):
-
-    format = pq.Format.TEXT
-
     def _parse_record(self, data: bytes) -> Iterator[Optional[bytes]]:
         """
         Split a non-empty representation of a composite type into components.
@@ -179,7 +173,6 @@ class RecordBinaryLoader(RecursiveLoader):
 
 class CompositeLoader(RecordLoader):
 
-    format = pq.Format.TEXT
     factory: Callable[..., Any]
     fields_types: List[int]
     _types_set = False

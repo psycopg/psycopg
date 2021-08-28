@@ -4,7 +4,6 @@ Adapters for None.
 
 # Copyright (C) 2020-2021 The Psycopg Team
 
-from ..pq import Format
 from ..abc import AdaptContext
 from ..adapt import Dumper
 
@@ -14,8 +13,6 @@ class NoneDumper(Dumper):
     Not a complete dumper as it doesn't implement dump(), but it implements
     quote(), so it can be used in sql composition.
     """
-
-    format = Format.TEXT
 
     def dump(self, obj: None) -> bytes:
         raise NotImplementedError("NULL is passed to Postgres in other ways")

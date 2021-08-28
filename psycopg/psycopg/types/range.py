@@ -324,8 +324,6 @@ class RangeDumper(BaseRangeDumper, SequenceDumper):
     The dumper can upgrade to one specific for a different range type.
     """
 
-    format = Format.TEXT
-
     def dump(self, obj: Range[Any]) -> bytes:
         if not obj:
             return b"empty"

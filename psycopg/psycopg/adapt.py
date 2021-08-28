@@ -29,6 +29,9 @@ class Dumper(abc.Dumper, ABC):
     oid: int = 0
     """The oid to pass to the server, if known."""
 
+    format: pq.Format = pq.Format.TEXT
+    """The format of the data dumped."""
+
     def __init__(self, cls: type, context: Optional[abc.AdaptContext] = None):
         self.cls = cls
         self.connection: Optional["BaseConnection[Any]"] = (
@@ -119,7 +122,8 @@ class Loader(ABC):
     Convert PostgreSQL objects with OID *oid* to Python objects.
     """
 
-    format: pq.Format
+    format: pq.Format = pq.Format.TEXT
+    """The format of the data loaded."""
 
     def __init__(self, oid: int, context: Optional[abc.AdaptContext] = None):
         self.oid = oid

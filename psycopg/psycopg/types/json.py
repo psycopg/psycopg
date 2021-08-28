@@ -112,8 +112,6 @@ class Jsonb(_JsonWrapper):
 
 class _JsonDumper(Dumper):
 
-    format = Format.TEXT
-
     # The globally used JSON dumps() function. It can be changed globally (by
     # set_json_dumps) or by a subclass.
     _dumps: JsonDumpsFunction = json.dumps
@@ -129,7 +127,6 @@ class _JsonDumper(Dumper):
 
 class JsonDumper(_JsonDumper):
 
-    format = Format.TEXT
     oid = postgres.types["json"].oid
 
 
@@ -141,7 +138,6 @@ class JsonBinaryDumper(_JsonDumper):
 
 class JsonbDumper(_JsonDumper):
 
-    format = Format.TEXT
     oid = postgres.types["jsonb"].oid
 
 
@@ -173,11 +169,11 @@ class _JsonLoader(Loader):
 
 
 class JsonLoader(_JsonLoader):
-    format = Format.TEXT
+    pass
 
 
 class JsonbLoader(_JsonLoader):
-    format = Format.TEXT
+    pass
 
 
 class JsonBinaryLoader(_JsonLoader):

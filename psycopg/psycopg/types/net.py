@@ -38,7 +38,6 @@ IPV6_PREFIXLEN = 128
 
 class InterfaceDumper(Dumper):
 
-    format = Format.TEXT
     oid = postgres.types["inet"].oid
 
     def dump(self, obj: Interface) -> bytes:
@@ -47,7 +46,6 @@ class InterfaceDumper(Dumper):
 
 class NetworkDumper(Dumper):
 
-    format = Format.TEXT
     oid = postgres.types["cidr"].oid
 
     def dump(self, obj: Network) -> bytes:
@@ -107,9 +105,6 @@ class _LazyIpaddress(Loader):
 
 
 class InetLoader(_LazyIpaddress):
-
-    format = Format.TEXT
-
     def load(self, data: Buffer) -> Union[Address, Interface]:
         if isinstance(data, memoryview):
             data = bytes(data)
@@ -143,9 +138,6 @@ class InetBinaryLoader(_LazyIpaddress):
 
 
 class CidrLoader(_LazyIpaddress):
-
-    format = Format.TEXT
-
     def load(self, data: Buffer) -> Network:
         if isinstance(data, memoryview):
             data = bytes(data)

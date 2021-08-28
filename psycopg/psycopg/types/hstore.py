@@ -7,7 +7,6 @@ Dict to hstore adaptation
 import re
 from typing import Dict, List, Optional, Type
 
-from .. import pq
 from .. import errors as e
 from .. import postgres
 from ..abc import Buffer, AdaptContext
@@ -39,9 +38,6 @@ Hstore = Dict[str, Optional[str]]
 
 
 class BaseHstoreDumper(RecursiveDumper):
-
-    format = pq.Format.TEXT
-
     def dump(self, obj: Hstore) -> bytes:
         if not obj:
             return b""
@@ -77,9 +73,6 @@ class BaseHstoreDumper(RecursiveDumper):
 
 
 class HstoreLoader(RecursiveLoader):
-
-    format = pq.Format.TEXT
-
     def load(self, data: Buffer) -> Hstore:
         loader = self._tx.get_loader(TEXT_OID, self.format)
         s: str = loader.load(data)

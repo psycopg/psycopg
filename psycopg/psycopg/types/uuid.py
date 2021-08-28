@@ -21,7 +21,6 @@ UUID: Callable[..., "uuid.UUID"]
 
 class UUIDDumper(Dumper):
 
-    format = Format.TEXT
     oid = postgres.types["uuid"].oid
 
     def dump(self, obj: "uuid.UUID") -> bytes:
@@ -37,9 +36,6 @@ class UUIDBinaryDumper(UUIDDumper):
 
 
 class UUIDLoader(Loader):
-
-    format = Format.TEXT
-
     def __init__(self, oid: int, context: Optional[AdaptContext] = None):
         super().__init__(oid, context)
         global imported, UUID

@@ -87,7 +87,6 @@ class BaseListDumper(RecursiveDumper):
 
 class ListDumper(BaseListDumper):
 
-    format = pq.Format.TEXT
     delimiter = b","
 
     def get_key(self, obj: List[Any], format: PyFormat) -> DumperKey:
@@ -322,7 +321,6 @@ class BaseArrayLoader(RecursiveLoader):
 
 class ArrayLoader(BaseArrayLoader):
 
-    format = pq.Format.TEXT
     delimiter = b","
 
     def load(self, data: Buffer) -> List[Any]:

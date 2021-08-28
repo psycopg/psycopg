@@ -32,9 +32,6 @@ from .._wrappers import (
 
 
 class _NumberDumper(Dumper):
-
-    format = Format.TEXT
-
     def dump(self, obj: Any) -> bytes:
         return str(obj).encode("utf8")
 
@@ -58,7 +55,6 @@ class _SpecialValuesDumper(_NumberDumper):
 
 class FloatDumper(_SpecialValuesDumper):
 
-    format = Format.TEXT
     oid = postgres.types["float8"].oid
 
     _special = {
@@ -128,9 +124,6 @@ class OidDumper(_NumberDumper):
 
 
 class IntDumper(Dumper):
-
-    format = Format.TEXT
-
     def dump(self, obj: Any) -> bytes:
         raise TypeError(
             f"{type(self).__name__} is a dispatcher to other dumpers:"
@@ -230,9 +223,6 @@ class IntBinaryDumper(IntDumper):
 
 
 class IntLoader(Loader):
-
-    format = Format.TEXT
-
     def load(self, data: Buffer) -> int:
         # it supports bytes directly
         return int(data)
@@ -271,9 +261,6 @@ class OidBinaryLoader(Loader):
 
 
 class FloatLoader(Loader):
-
-    format = Format.TEXT
-
     def load(self, data: Buffer) -> float:
         # it supports bytes directly
         return float(data)
@@ -296,9 +283,6 @@ class Float8BinaryLoader(Loader):
 
 
 class NumericLoader(Loader):
-
-    format = Format.TEXT
-
     def load(self, data: Buffer) -> Decimal:
         if isinstance(data, memoryview):
             data = bytes(data)

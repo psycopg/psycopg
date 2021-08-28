@@ -42,7 +42,6 @@ _py_date_min_days = date.min.toordinal()
 
 class DateDumper(Dumper):
 
-    format = Format.TEXT
     oid = postgres.types["date"].oid
 
     def dump(self, obj: date) -> bytes:
@@ -75,9 +74,6 @@ class _BaseTimeDumper(Dumper):
 
 
 class _BaseTimeTextDumper(_BaseTimeDumper):
-
-    format = Format.TEXT
-
     def dump(self, obj: time) -> bytes:
         return str(obj).encode("utf8")
 
@@ -144,9 +140,6 @@ class _BaseDatetimeDumper(Dumper):
 
 
 class _BaseDatetimeTextDumper(_BaseDatetimeDumper):
-
-    format = Format.TEXT
-
     def dump(self, obj: datetime) -> bytes:
         # NOTE: whatever the PostgreSQL DateStyle input format (DMY, MDY, YMD)
         # the YYYY-MM-DD is always understood correctly.
@@ -203,7 +196,6 @@ class DatetimeNoTzBinaryDumper(_BaseDatetimeDumper):
 
 class TimedeltaDumper(Dumper):
 
-    format = Format.TEXT
     oid = postgres.types["interval"].oid
 
     def __init__(self, cls: type, context: Optional[AdaptContext] = None):
@@ -239,8 +231,6 @@ class TimedeltaBinaryDumper(Dumper):
 
 
 class DateLoader(Loader):
-
-    format = Format.TEXT
 
     _ORDER_YMD = 0
     _ORDER_DMY = 1
@@ -300,8 +290,6 @@ class DateBinaryLoader(Loader):
 
 class TimeLoader(Loader):
 
-    format = Format.TEXT
-
     _re_format = re.compile(rb"^(\d+):(\d+):(\d+)(?:\.(\d+))?")
 
     def load(self, data: Buffer) -> time:
@@ -346,7 +334,6 @@ class TimeBinaryLoader(Loader):
 
 class TimetzLoader(Loader):
 
-    format = Format.TEXT
     _py37 = sys.version_info >= (3, 7)
 
     _re_format = re.compile(
@@ -423,8 +410,6 @@ if sys.version_info < (3, 7):
 
 
 class TimestampLoader(Loader):
-
-    format = Format.TEXT
 
     _re_format = re.compile(
         rb"""(?ix)
@@ -541,7 +526,6 @@ class TimestampBinaryLoader(Loader):
 
 class TimestamptzLoader(Loader):
 
-    format = Format.TEXT
     _re_format = re.compile(
         rb"""(?ix)
         ^
@@ -670,8 +654,6 @@ class TimestamptzBinaryLoader(Loader):
 
 
 class IntervalLoader(Loader):
-
-    format = Format.TEXT
 
     _re_interval = re.compile(
         br"""

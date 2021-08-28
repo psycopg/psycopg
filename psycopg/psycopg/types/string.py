@@ -41,9 +41,6 @@ class StrBinaryDumper(_BaseStrDumper):
 
 
 class _StrDumper(_BaseStrDumper):
-
-    format = Format.TEXT
-
     def dump(self, obj: str) -> bytes:
         if "\x00" in obj:
             raise DataError(
@@ -82,7 +79,6 @@ class StrDumperUnknown(_StrDumper):
 
 class TextLoader(Loader):
 
-    format = Format.TEXT
     _encoding = "utf-8"
 
     def __init__(self, oid: int, context: Optional[AdaptContext] = None):
@@ -110,7 +106,6 @@ class TextBinaryLoader(TextLoader):
 
 class BytesDumper(Dumper):
 
-    format = Format.TEXT
     oid = postgres.types["bytea"].oid
     _qprefix = b""
 
@@ -162,7 +157,6 @@ class BytesBinaryDumper(Dumper):
 
 class ByteaLoader(Loader):
 
-    format = Format.TEXT
     _escaping: "EscapingProto"
 
     def __init__(self, oid: int, context: Optional[AdaptContext] = None):
