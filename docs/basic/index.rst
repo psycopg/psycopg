@@ -15,6 +15,7 @@ the database <usage>` or :ref:`loading data using COPY <copy>`.
     usage
     params
     adapt
+    pgtypes
     transactions
     copy
     from_pg2

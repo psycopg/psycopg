@@ -31,7 +31,7 @@ T = TypeVar("T")
 
 
 class Range(Generic[T]):
-    """Python representation for a PostgreSQL |range|_ type.
+    """Python representation for a PostgreSQL range type.
 
     :param lower: lower bound for the range. `!None` means unbound
     :param upper: upper bound for the range. `!None` means unbound
@@ -441,9 +441,8 @@ def register_range(
     """
     Register custom range adapters on a context.
 
-    Just register loaders associated to the range oid, loading bounds of the
-    right subtype. Dumping the range just works, navigating from tye Python
-    type to the type oid, to the range oid.
+    Register loaders so that loading data of this type will result in a `Range`
+    with bounds parsed as the right subtype.
     """
 
     # Register arrays and type info

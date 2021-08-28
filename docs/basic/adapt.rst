@@ -7,8 +7,8 @@
 
 .. _types-adaptation:
 
-Adaptation between Python and PostgreSQL types
-==============================================
+Adapting basic Python types
+===========================
 
 Many standard Python types are adapted into SQL and returned as Python
 objects when a query is executed.
@@ -31,8 +31,6 @@ TODO: complete table
     | | `!namedtuple`    |                         |                          |
     +--------------------+-------------------------+--------------------------+
     | `!dict`            | :sql:`hstore`           | :ref:`adapt-hstore`      |
-    +--------------------+-------------------------+--------------------------+
-    | Psycopg's `!Range` | :sql:`range`            | :ref:`adapt-range`       |
     +--------------------+-------------------------+--------------------------+
 
 
@@ -377,7 +375,6 @@ address types`__:
 
 .. _adapt-composite:
 .. _adapt-hstore:
-.. _adapt-range:
 
 
 TODO adaptation

@@ -88,13 +88,9 @@ can extend the behaviour of the adapters: if you create a loader for
         database as a list of the base type.
 
 
-The following `!TypeInfo` subclasses allow to fetch more specialised
-information from certain class of PostgreSQL types.
-
-.. autoclass:: psycopg.types.composite.CompositeInfo
-
-.. autoclass:: psycopg.types.range.RangeInfo
-
+For recursive types, Psycopg offers a few `!TypeInfo` subclasses which can be
+used to extract more complete information, for instance
+`~psycopg.types.composite.CompositeInfo` and `~psycopg.types.range.RangeInfo`.
 
 `!TypeInfo` objects are collected in `TypesRegistry` instances, which help type
 information lookup. Every `~psycopg.adapt.AdaptersMap` expose its type map on
