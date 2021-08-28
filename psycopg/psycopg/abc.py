@@ -96,11 +96,17 @@ class Dumper(Protocol):
         ...
 
     def dump(self, obj: Any) -> Buffer:
-        """Convert the object *obj* to PostgreSQL representation."""
+        """Convert the object *obj* to PostgreSQL representation.
+
+        :param obj: the object to convert.
+        """
         ...
 
     def quote(self, obj: Any) -> Buffer:
-        """Convert the object *obj* to escaped representation."""
+        """Convert the object *obj* to escaped representation.
+
+        :param obj: the object to convert.
+        """
         ...
 
     def get_key(self, obj: Any, format: PyFormat) -> DumperKey:
@@ -165,6 +171,11 @@ class Loader(Protocol):
         ...
 
     def load(self, data: Buffer) -> Any:
+        """
+        Convert the data returned by the database into a Python object.
+
+        :param data: the data to convert.
+        """
         ...
 
 

@@ -53,17 +53,20 @@ returned.
     when a query is executed.
 
 
-Writing a custom loader: XML
-----------------------------
+.. _adapt-example-xml:
 
-Psycopg doesn't provide a loader for the XML data type because there are just
-too many ways of handling it in Python. Creating a loader to parse the
+Writing a custom adapter: XML
+-----------------------------
+
+Psycopg doesn't provide adapters for the XML data type, because there are just
+too many ways of handling XML in Python.Creating a loader to parse the
 `PostgreSQL xml type`__ to `~xml.etree.ElementTree` is very simple, using the
-`psycopg.adapt.Loader` base class.
+`psycopg.adapt.Loader` base class and implementing the
+`~psycopg.abc.Loader.load()` method:
 
-Note that it is possible to use a `~psycopg.types.TypesRegistry`, exposed by
-any `~psycopg.abc.AdaptContext`, to obtain information on builtin types, or
-extension types if they have been registered::
+.. __: https://www.postgresql.org/docs/current/datatype-xml.html
+
+.. code:: python
 
     >>> import xml.etree.ElementTree as ET
     >>> from psycopg.adapt import Loader
@@ -83,11 +86,37 @@ extension types if they have been registered::
     ...            <book><title>Manual</title><chapter>...</chapter></book>')
     ...     """)
 
-    >>> cur.fetchone()[0]
+    >>> elem = cur.fetchone()[0]
+    >>> elem
     <Element 'book' at 0x7ffb55142ef0>
 
-.. __: https://www.postgresql.org/docs/current/datatype-xml.html
+The opposite operation, converting Python objects to PostgreSQL, is performed
+by dumpers. The `psycopg.adapt.Dumper` base class makes easy to implement one:
+you only need to implement the `~psycopg.abc.Dumper.dump()` method::
 
+    >>> from psycopg.adapt import Dumper
+
+    >>> class XmlDumper(Dumper):
+    ...     # Setting an OID is not necessary but can be helpful
+    ...     oid = psycopg.adapters.types["xml"].oid
+    ...
+    ...     def dump(self, elem):
+    ...         return ET.tostring(elem)
+
+    >>> # Register the dumper on the adapters of a context
+    >>> conn.adapters.register_dumper(ET.Element, XmlDumper)
+
+    >>> # Now, in that context, it is possible to use ET.Element objects as parameters
+    >>> conn.execute("SELECT xpath('//title/text()', %s)", [elem]).fetchone()[0]
+    ['Manual']
+
+Note that it is possible to use a `~psycopg.types.TypesRegistry`, exposed by
+any `~psycopg.abc.AdaptContext`, to obtain information on builtin types, or
+extension types if they have been registered on that context using the
+`~psycopg.types.TypeInfo`\.\ `~psycopg.types.TypeInfo.register()` method.
+
+
+.. _adapt-example-float:
 
 Example: PostgreSQL numeric to Python float
 -------------------------------------------
@@ -123,6 +152,8 @@ compatible.
 In this example the customised adaptation takes effect only on the connection
 `!conn` and on any cursor created from it, not on other connections.
 
+
+.. _adapt-example-inf-date:
 
 Example: handling infinity date
 -------------------------------

@@ -42,13 +42,13 @@ checking.
 
     .. autoattribute:: oid
 
-        If the oid is not specified, PostgreSQL will try to infer the type
+        If the OID is not specified, PostgreSQL will try to infer the type
         from the context, but this may fail in some contexts and may require a
         cast (e.g. specifying :samp:`%s::{type}` for its placeholder).
 
-        .. admonition:: todo
-
-            Document how to find type OIDs in a database.
+        You can use the `psycopg.adapters`\ ``.``\ `~psycopg.adapt.AdaptersMap.types`
+        registry to find the OID of builtin types, and you can use
+        `~psycopg.types.TypeInfo` to extend the registry to custom types.
 
     .. automethod:: get_key
     .. automethod:: upgrade
