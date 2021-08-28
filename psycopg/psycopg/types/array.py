@@ -429,7 +429,7 @@ def register_array(
 
     adapters = context.adapters if context else postgres.adapters
 
-    base: Type = ArrayLoader
+    base: Type[Any] = ArrayLoader
     name = f"{info.name.title()}{base.__name__}"
     attribs = {
         "base_oid": info.oid,
