@@ -12,8 +12,8 @@ usages.
     :caption: Contents:
 
     async
-    cursors
     rows
     pool
+    cursors
     adapt
     prepare

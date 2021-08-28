@@ -7,36 +7,76 @@
 Row factories
 =============
 
-Cursor's `fetch*` methods return tuples of column values by default. This can
-be changed to adapt the needs of the programmer by using custom *row
-factories*.
+Cursor's `fetch*` methods, by default, return the records received from the
+database as tuples. This can be changed to better suit the needs of the
+programmer by using custom *row factories*.
 
-A row factory (formally implemented by the `~psycopg.rows.RowFactory`
-protocol) is a callable that accepts a `Cursor` object and returns another
-callable (formally the `~psycopg.rows.RowMaker` protocol) accepting a
-`values` tuple and returning a row in the desired form.
+The module `psycopg.rows` exposes several row factories ready to be used. For
+instance, if you want to return your records as dictionaries, you can use
+`~psycopg.rows.dict_row`::
 
-.. autoclass:: psycopg.rows.RowMaker()
+    >>> from psycopg.rows import dict_row
 
-   .. method:: __call__(values: Sequence[Any]) -> Row
+    >>> conn = psycopg.connect(DSN, row_factory=dict_row)
 
-        Convert a sequence of values from the database to a finished object.
+    >>> conn.execute("select 'John Doe' as name, 33 as age").fetchone()
+    {'name': 'John Doe', 'age': 33}
+
+The `!row_factory` parameter is supported by the `~Connection.connect()`
+method and the `~Connection.cursor()` method. Later usage of `!row_factory`
+overrides a previous one. It is also possible to change the
+`Connection.row_factory` or `Cursor.row_factory` attributes to change what
+they return::
+
+    >>> cur = conn.cursor(row_factory=dict_row)
+    >>> cur.execute("select 'John Doe' as name, 33 as age").fetchone()
+    {'name': 'John Doe', 'age': 33}
+
+    >>> from psycopg.rows import namedtuple_row
+    >>> cur.row_factory = namedtuple_row
+    >>> cur.execute("select 'John Doe' as name, 33 as age").fetchone()
+    Row(name='John Doe', age=33)
+
+If you want to return objects of your choice you can use a row factory
+*generator*, for instance `~psycopg.rows.class_row` or
+`~psycopg.rows.args_row`, or you can :ref:`write your own row factory
+<row-factory-create>`::
+
+    >>> from dataclasses import dataclass
+
+    >>> @dataclass
+    ... class Person:
+    ...     name: str
+    ...     age: int
+    ...     weight: Optional[int] = None
+
+    >>> from psycopg.rows import class_row
+    >>> cur = conn.cursor(row_factory=class_row(Person))
+    >>> cur.execute("select 'John Doe' as name, 33 as age").fetchone()
+    Person(name='John Doe', age=33, weight=None)
 
 
-.. autoclass:: psycopg.rows.RowFactory()
+.. index::
+    single: Row Maker
+    single: Row Factory
 
-   .. method:: __call__(cursor: Cursor[Row]) -> RowMaker[Row]
+.. _row-factory-create:
 
-        Inspect the result on a cursor and return a `RowMaker` to convert rows.
+Creating new row factories
+--------------------------
 
-.. autoclass:: psycopg.rows.AsyncRowFactory()
+A *row factory* is a callable that accepts a `Cursor` object and returns
+another callable, a *row maker*, which takes a raw data (as a sequence of
+values) and returns the desired object.
 
-.. autoclass:: psycopg.rows.BaseRowFactory()
+The role of the row factory is to inspect a query result (it is called after a
+query is executed and properties such as `~Cursor.description` and
+`~Cursor.pgresult` are available on the cursor) and to prepare a callable
+which is efficient to call repeatedly (because, for instance, the names of the
+columns are extracted, sanitised, and stored in local variables).
 
-
-Note that it's easy to implement an object implementing both `!RowFactory` and
-`!AsyncRowFactory`: usually, everything you need to implement a row factory is
-to access `~Cursor.description`, which is provided by both the cursor flavours.
+Formally, these objects are represented by the `~psycopg.rows.RowFactory` and
+`~psycopg.rows.RowMaker` protocols.
 
 `~RowFactory` objects can be implemented as a class, for instance:
 
@@ -75,58 +115,19 @@ These can then be used by specifying a `row_factory` argument in
     person = cur.fetchone()
     print(f"{person['first_name']} {person['last_name']}")
 
-Later usages of `row_factory` override earlier definitions; for instance,
-the `row_factory` specified at `Connection.connect()` can be overridden by
-passing another value at `Connection.cursor()`.
 
-
-Available row factories
------------------------
-
-The module `psycopg.rows` provides the implementation for a few row factories:
-
-.. currentmodule:: psycopg.rows
-
-.. autofunction:: tuple_row
-.. autofunction:: dict_row
-.. autofunction:: namedtuple_row
-.. autofunction:: class_row
-.. autofunction:: args_row
-.. autofunction:: kwargs_row
-
-    This is not a row factory, but rather a factory of row factories.
-    Specifying ``row_factory=class_row(MyClass)`` will create connections and
-    cursors returning `!MyClass` objects on fetch.
-
-    Example::
-
-        from dataclasses import dataclass
-        import psycopg
-        from psycopg.rows import class_row
-
-        @dataclass
-        class Person:
-            first_name: str
-            last_name: str
-            age: int = None
-
-        conn = psycopg.connect()
-        cur = conn.cursor(row_factory=class_row(Person))
-
-        cur.execute("select 'John' as first_name, 'Smith' as last_name").fetchone()
-        # Person(first_name='John', last_name='Smith', age=None)
-
+.. _row-factory-static:
 
 Use with a static analyzer
 --------------------------
 
-The `~psycopg.Connection` and `~psycopg.Cursor` classes are `generic
-types`__: the parameter `!Row` is passed by the ``row_factory`` argument (of
-the `~Connection.connect()` and the `~Connection.cursor()` method) and it
-controls what type of record is returned by the fetch methods of the cursors.
-The default `tuple_row()` returns a generic tuple as return type (`Tuple[Any,
-...]`). This information can be used for type checking using a static analyzer
-such as mypy_.
+The `~psycopg.Connection` and `~psycopg.Cursor` classes are `generic types`__:
+the parameter `!Row` is passed by the ``row_factory`` argument (of the
+`~Connection.connect()` and the `~Connection.cursor()` method) and it controls
+what type of record is returned by the fetch methods of the cursors. The
+default `~psycopg.rows.tuple_row` returns a generic tuple as return type
+(`Tuple[Any, ...]`). This information can be used for type checking using a
+static analyzer such as mypy_.
 
 .. _mypy: https://mypy.readthedocs.io/
 .. __: https://mypy.readthedocs.io/en/stable/generics.html
@@ -154,7 +155,7 @@ such as mypy_.
 
 
 Example: returning records as Pydantic models
----------------------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Using Pydantic_ it is possible to enforce static typing at runtime. Using a
 Pydantic model factory the code can be checked statically using mypy and
@@ -165,7 +166,7 @@ compatible with the model.
 
 The following example can be checked with ``mypy --strict`` without reporting
 any issue. Pydantic will also raise a runtime error in case the
-`!PersonFactory` is used with a query that returns incompatible data.
+`!Person` is used with a query that returns incompatible data.
 
 .. code:: python
 

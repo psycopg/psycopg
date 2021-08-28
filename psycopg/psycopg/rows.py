@@ -92,18 +92,24 @@ database.
 """
 
 
-def tuple_row(cursor: "BaseCursor[Any, TupleRow]") -> RowMaker[TupleRow]:
+def tuple_row(cursor: "BaseCursor[Any, TupleRow]") -> "RowMaker[TupleRow]":
     r"""Row factory to represent rows as simple tuples.
 
-    This is the default factory.
+    This is the default factory, used when `~psycopg.Connection.connect()` or
+    `~psycopg.Connection.cursor()` are called withouth a `!row_factory`
+    parameter.
+
     """
     # Implementation detail: make sure this is the tuple type itself, not an
     # equivalent function, because the C code fast-paths on it.
     return tuple
 
 
-def dict_row(cursor: "BaseCursor[Any, DictRow]") -> RowMaker[DictRow]:
-    """Row factory to represent rows as dictionaries."""
+def dict_row(cursor: "BaseCursor[Any, DictRow]") -> "RowMaker[DictRow]":
+    """Row factory to represent rows as dictionaries.
+
+    The dictionary keys are taken from the column names of the returned columns.
+    """
     desc = cursor.description
     if desc is None:
         return no_result
@@ -118,8 +124,12 @@ def dict_row(cursor: "BaseCursor[Any, DictRow]") -> RowMaker[DictRow]:
 
 def namedtuple_row(
     cursor: "BaseCursor[Any, NamedTuple]",
-) -> RowMaker[NamedTuple]:
-    """Row factory to represent rows as `~collections.namedtuple`."""
+) -> "RowMaker[NamedTuple]":
+    """Row factory to represent rows as `~collections.namedtuple`.
+
+    The field names are taken from the column names of the returned columns,
+    with some mangling to deal with invalid names.
+    """
     desc = cursor.description
     if desc is None:
         return no_result
@@ -157,7 +167,7 @@ def class_row(cls: Type[T]) -> BaseRowFactory[T]:
     :rtype: `!Callable[[Cursor],` `RowMaker`\[~T]]
     """
 
-    def class_row_(cur: "BaseCursor[Any, T]") -> RowMaker[T]:
+    def class_row_(cur: "BaseCursor[Any, T]") -> "RowMaker[T]":
         desc = cur.description
         if desc is None:
             return no_result
@@ -179,7 +189,7 @@ def args_row(func: Callable[..., T]) -> BaseRowFactory[T]:
         returned by the query as positional arguments.
     """
 
-    def args_row_(cur: "BaseCursor[Any, T]") -> RowMaker[T]:
+    def args_row_(cur: "BaseCursor[Any, T]") -> "RowMaker[T]":
         def args_row__(values: Sequence[Any]) -> T:
             return func(*values)
 
@@ -195,7 +205,7 @@ def kwargs_row(func: Callable[..., T]) -> BaseRowFactory[T]:
         returned by the query as keyword arguments.
     """
 
-    def kwargs_row_(cur: "BaseCursor[Any, T]") -> RowMaker[T]:
+    def kwargs_row_(cur: "BaseCursor[Any, T]") -> "RowMaker[T]":
         desc = cur.description
         if desc is None:
             return no_result
