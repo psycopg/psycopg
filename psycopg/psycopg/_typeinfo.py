@@ -288,7 +288,7 @@ class TypesRegistry:
         """
         Return info about a type, specified by name or oid
 
-        The type name or oid may refer to the array too.
+        :param key: the name or oid of the type to look for.
 
         Raise KeyError if not found.
         """
@@ -312,9 +312,9 @@ class TypesRegistry:
         """
         Return info about a type, specified by name or oid
 
-        The type name or oid may refer to the array too.
+        :param key: the name or oid of the type to look for.
 
-        Return None if not found.
+        Unlike `__getitem__`, return None if not found.
         """
         try:
             return self[key]
@@ -325,7 +325,9 @@ class TypesRegistry:
         """
         Return the oid of a PostgreSQL type by name.
 
-        Return the array oid if the type ends with "[]"
+        :param key: the name of the type to look for.
+
+        Return the array oid if the type ends with "``[]``"
 
         Raise KeyError if the name is unknown.
         """

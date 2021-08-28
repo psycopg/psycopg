@@ -105,6 +105,26 @@ its `~psycopg.adapt.AdaptersMap.types` attribute.
    The global registry, from which the others inherit from, is available as
    `psycopg.adapters`\ ``.types``.
 
+   .. automethod:: __getitem__
+
+       .. code:: python
+
+           >>> import psycopg
+
+           >>> psycopg.adapters.types["text"]
+           <TypeInfo: text (oid: 25, array oid: 1009)>
+
+           >>> psycopg.adapters.types[23]
+           <TypeInfo: int4 (oid: 23, array oid: 1007)>
+
+   .. automethod:: get
+
+   .. automethod:: get_oid
+
+       .. code:: python
+
+           >>> psycopg.adapters.types.get_oid("text[]")
+           1009
 
 .. _numeric-wrappers:
 

@@ -46,9 +46,10 @@ checking.
         from the context, but this may fail in some contexts and may require a
         cast (e.g. specifying :samp:`%s::{type}` for its placeholder).
 
-        You can use the `psycopg.adapters`\ ``.``\ `~psycopg.adapt.AdaptersMap.types`
-        registry to find the OID of builtin types, and you can use
-        `~psycopg.types.TypeInfo` to extend the registry to custom types.
+        You can use the `psycopg.adapters`\ ``.``\
+        `~psycopg.adapt.AdaptersMap.types` registry to find the OID of builtin
+        types, and you can use `~psycopg.types.TypeInfo` to extend the
+        registry to custom types.
 
     .. automethod:: get_key
     .. automethod:: upgrade
