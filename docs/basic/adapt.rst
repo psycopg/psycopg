@@ -330,7 +330,14 @@ list may contain `!None` elements).
 UUID adaptation
 ---------------
 
-Python `uuid.UUID` objects are adapted to PostgreSQL `UUID type`__ and back.
+Python `uuid.UUID` objects are adapted to PostgreSQL `UUID type`__ and back::
+
+    >>> conn.execute("select gen_random_uuid()").fetchone()[0]
+    UUID('97f0dd62-3bd2-459e-89b8-a5e36ea3c16c')
+
+    >>> from uuid import uuid4
+    >>> conn.execute("select gen_random_uuid() = %s", [uuid4()]).fetchone()[0]
+    False  # long shot
 
 .. __: https://www.postgresql.org/docs/current/datatype-uuid.html
 
@@ -356,3 +363,11 @@ address types`__:
   :sql:`inet` and :sql:`cidr` values.
 
 .. __: https://www.postgresql.org/docs/current/datatype-net-types.html#DATATYPE-CIDR
+
+.. code:: python
+
+    >>> conn.execute("select '192.168.0.1'::inet, '192.168.0.1/24'::inet").fetchone()
+    (IPv4Address('192.168.0.1'), IPv4Interface('192.168.0.1/24'))
+
+    >>> conn.execute("select '::ffff:1.2.3.0/120'::cidr").fetchone()[0]
+    IPv6Network('::ffff:102:300/120')
