@@ -13,9 +13,9 @@ Adaptation between Python and PostgreSQL types
 Many standard Python types are adapted into SQL and returned as Python
 objects when a query is executed.
 
-The following table shows the default mapping between Python and PostgreSQL
-types. In case you need to customise the conversion you should take a look at
-:ref:`adaptation`.
+Converting the following data types between Python and PostgreSQL works
+out-of-the-box and doesn't require any configuration. In case you need to
+customise the conversion you should take a look at :ref:`adaptation`.
 
 TODO: complete table
 
@@ -27,37 +27,6 @@ TODO: complete table
     +--------------------+-------------------------+--------------------------+
     | Python             | PostgreSQL              | See also                 |
     +====================+=========================+==========================+
-    | `!bool`            | :sql:`bool`             | :ref:`adapt-bool`        |
-    +--------------------+-------------------------+--------------------------+
-    | `!float`           | | :sql:`real`           | :ref:`adapt-numbers`     |
-    |                    | | :sql:`double`         |                          |
-    +--------------------+-------------------------+                          |
-    | `!int`             | | :sql:`smallint`       |                          |
-    |                    | | :sql:`integer`        |                          |
-    |                    | | :sql:`bigint`         |                          |
-    |                    | | :sql:`numeric`        |                          |
-    +--------------------+-------------------------+                          |
-    | `~decimal.Decimal` | :sql:`numeric`          |                          |
-    +--------------------+-------------------------+--------------------------+
-    | | `!str`           | | :sql:`varchar`        | :ref:`adapt-string`      |
-    | |                  | | :sql:`text`           |                          |
-    +--------------------+-------------------------+--------------------------+
-    | | `bytes`          | :sql:`bytea`            | :ref:`adapt-binary`      |
-    | | `bytearray`      |                         |                          |
-    | | `memoryview`     |                         |                          |
-    +--------------------+-------------------------+--------------------------+
-    | `!date`            | :sql:`date`             | :ref:`adapt-date`        |
-    +--------------------+-------------------------+                          |
-    | `!time`            | | :sql:`time`           |                          |
-    |                    | | :sql:`timetz`         |                          |
-    +--------------------+-------------------------+                          |
-    | `!datetime`        | | :sql:`timestamp`      |                          |
-    |                    | | :sql:`timestamptz`    |                          |
-    +--------------------+-------------------------+                          |
-    | `!timedelta`       | :sql:`interval`         |                          |
-    +--------------------+-------------------------+--------------------------+
-    | `!list`            | :sql:`ARRAY`            | :ref:`adapt-list`        |
-    +--------------------+-------------------------+--------------------------+
     | | `!tuple`         | Composite types         |:ref:`adapt-composite`    |
     | | `!namedtuple`    |                         |                          |
     +--------------------+-------------------------+--------------------------+
@@ -65,15 +34,6 @@ TODO: complete table
     +--------------------+-------------------------+--------------------------+
     | Psycopg's `!Range` | :sql:`range`            | :ref:`adapt-range`       |
     +--------------------+-------------------------+--------------------------+
-    | Anything\ |tm|     | :sql:`json`             | :ref:`adapt-json`        |
-    +--------------------+-------------------------+--------------------------+
-    | `~uuid.UUID`       | :sql:`uuid`             | :ref:`adapt-uuid`        |
-    +--------------------+-------------------------+--------------------------+
-    | `ipaddress`        | | :sql:`inet`           | :ref:`adapt-network`     |
-    | objects            | | :sql:`cidr`           |                          |
-    +--------------------+-------------------------+--------------------------+
-
-.. |tm| unicode:: U+2122
 
 
 .. index::
@@ -123,18 +83,6 @@ Numbers adaptation
 
 On the way back, smaller types (:sql:`int2`, :sql:`int4`, :sql:`flaot4`) are
 promoted to the larger Python counterpart.
-
-If you need a more precise control of how `!int` or `!float` are converted,
-The `psycopg.types.numeric` module contains a few :ref:`wrappers
-<numeric-wrappers>` which can be used to convince Psycopg to cast the values
-to a specific PostgreSQL type::
-
-    >>> conn.execute("select pg_typeof(%s), pg_typeof(%s)", (42, Int4(42))).fetchone()
-    ('smallint', 'integer')
-
-These wrappers are rarely needed, because PostgreSQL cast rules and Psycopg
-choices usually do the right thing. One use case where they are useful is
-:ref:`copy-binary`.
 
 .. note::
 
@@ -361,11 +309,76 @@ take precedence over what specified by `!set_json_dumps()`.
 
 
 .. _adapt-list:
+
+Lists adaptation
+----------------
+
+Python `list` objects are adapted to `PostgreSQL arrays`__ and back. Only
+lists containing objects of the same type can be dumped to PostgreSQL (but the
+list may contain `!None` elements).
+
+.. __: https://www.postgresql.org/docs/current/arrays.html
+
+.. note::
+
+    If you have a list of values which you want to use with the :sql:`IN`
+    operator... don't. It won't work (neither with a list nor with a tuple)::
+
+        >>> conn.execute("SELECT * FROM mytable WHERE id IN %s", [[10,20,30]])
+        Traceback (most recent call last):
+          File "<stdin>", line 1, in <module>
+        psycopg.errors.SyntaxError: syntax error at or near "$1"
+        LINE 1: SELECT * FROM mytable WHERE id IN $1
+                                                  ^
+    
+    What you want to do instead is to use the `'= ANY()' expression`__ and pass
+    the values as a list (not a tuple).
+
+        >>> conn.execute("SELECT * FROM mytable WHERE id = ANY(%s)", [[10,20,30]])
+
+    This has also the advantage of working with an empty list, whereas ``IN
+    ()`` is not valid SQL.
+
+    .. __: https://www.postgresql.org/docs/current/functions-comparisons.html
+            #id-1.5.8.30.16
+
+
+.. _adapt-uuid:
+
+UUID adaptation
+---------------
+
+Python `uuid.UUID` objects are adapted to PostgreSQL `UUID type`__ and back.
+
+.. __: https://www.postgresql.org/docs/current/datatype-uuid.html
+
+
+.. _adapt-network:
+
+Network data types adaptation
+-----------------------------
+
+Objects from the `ipaddress` module are converted to PostgreSQL `network
+address types`__:
+
+- `~ipaddress.IPv4Address`, `~ipaddress.IPv4Interface` objects are converted
+  to the PostgreSQL :sql:`inet` type. On the way back, :sql:`inet` values
+  indicating a single address are converted to `!IPv4Address`, otherwise they
+  are converted to `!IPv4Interface`
+
+- `~ipaddress.IPv4Network` objects are converted to the :sql:`cidr` type and
+  back.
+
+- `~ipaddress.IPv6Address`, `~ipaddress.IPv6Interface`,
+  `~ipaddress.IPv6Network` objects follow the same rules, with IPv6
+  :sql:`inet` and :sql:`cidr` values.
+
+.. __: https://www.postgresql.org/docs/current/datatype-net-types.html#DATATYPE-CIDR
+
 .. _adapt-composite:
 .. _adapt-hstore:
 .. _adapt-range:
-.. _adapt-uuid:
-.. _adapt-network:
+
 
 TODO adaptation
 ----------------
