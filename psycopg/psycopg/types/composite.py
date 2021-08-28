@@ -215,6 +215,14 @@ def register_composite(
     context: Optional[AdaptContext] = None,
     factory: Optional[Callable[..., Any]] = None,
 ) -> None:
+    """Register the adapters to load and dump a composite type.
+
+    :param info: The object with the information about the composite to register.
+    :param context: The context where to register the adapters. If `!None`,
+        register it globally.
+    :param factory: Callable to convert the sequence of attributes read from
+        the composite into a Python object.
+    """
 
     # Register arrays and type info
     info.register(context)

@@ -14,6 +14,85 @@ PostgreSQL offers other data types which don't map to native Python types.
 Psycopg offers wrappers and conversion functions to allow their use.
 
 
+.. index::
+    pair: Composite types; Data types
+    pair: tuple; Adaptation
+    pair: namedtuple; Adaptation
+
+.. _adapt-composite:
+
+Composite types casting
+-----------------------
+
+Psycopg can adapt PostgreSQL composite types (either created with the |CREATE
+TYPE|_ command or implicitly defined after a table row type) to and from
+Python tuples or `~collections.namedtuple`.
+
+.. |CREATE TYPE| replace:: :sql:`CREATE TYPE`
+.. _CREATE TYPE: https://www.postgresql.org/docs/current/static/sql-createtype.html
+
+Before using a composite type it is necessary to get information about it
+using the `~psycopg.types.composite.CompositeInfo` class and to register it
+using `~psycopg.types.composite.register_composite()`.
+
+.. autoclass:: psycopg.types.composite.CompositeInfo
+
+   `!CompositeInfo` is a `~psycopg.types.TypeInfo` subclass: check its
+   documentation for generic details.
+
+   .. attribute:: python_type
+
+       After `register_composite()` is called, it will contain the python type
+       mapping to the registered composite.
+
+.. autofunction:: psycopg.types.composite.register_composite
+
+   After registering, fetching data of the registered composite will invoke
+   *factory* to create corresponding Python objects.
+
+   If no factory is specified, a `~collection.namedtuple` is created and used
+   to return data.
+
+   If the *factory* is a type (and not a generic callable), then dumpers for
+   that type are created and registered too, so that passing objects of that
+   type to a query will adapt them to the registered type.
+
+Example::
+
+    >>> from psycopg.types.composite import CompositeInfo, register_composite
+
+    >>> conn.execute("CREATE TYPE card AS (value int, suit text)")
+
+    >>> info = TypeInfo.fetch(conn, "card")
+    >>> register_composite(info, conn)
+
+    >>> my_card = info.python_type(8, "hearts")
+    >>> my_card
+    card(value=8, suit='hearts')
+
+    >>> conn.execute(
+    ...     "SELECT pg_typeof(%(card)s), (%(card)s).suit", {"card": my_card}
+    ...     ).fetchone()
+    ('card', 'hearts')
+
+    >>> conn.execute("SELECT (%s, %s)::card", [1, "spades"]).fetchone()[0]
+    card(value=1, suit='spades')
+
+
+Nested composite types are handled as expected, provided that the type of the
+composite components are registered as well::
+
+    >>> conn.execute("CREATE TYPE card_back AS (face card, back text)")
+
+    >>> info2 = CompositeInfo.fetch(conn, "card_back")
+    >>> register_composite(info2, conn)
+
+    >>> conn.execute("SELECT ((8, 'hearts'), 'blue')::card_back").fetchone()[0]
+
+
+.. index::
+    pair: range; Data types
+
 .. _adapt-range:
 
 Range adaptation
@@ -64,7 +143,7 @@ its subtype and make it work like the builtin ones.
 
 .. autoclass:: psycopg.types.range.RangeInfo
 
-   `~RangeInfo` is a `~psycopg.types.TypeInfo` subclass: check its
+   `!RangeInfo` is a `~psycopg.types.TypeInfo` subclass: check its
    documentation for generic details.
 
 .. autofunction:: psycopg.types.range.register_range
@@ -77,10 +156,10 @@ Example::
     >>> info = RangeInfo.fetch(conn, "strrange")
     >>> register_range(info, conn)
 
-    >>> conn.execute("select pg_typeof(%s)", [Range("a", "z")]).fetchone()[0]
+    >>> conn.execute("SELECT pg_typeof(%s)", [Range("a", "z")]).fetchone()[0]
     'strrange'
 
-    >>> conn.execute("select '[a,z]'::strrange").fetchone()[0]
+    >>> conn.execute("SELECT '[a,z]'::strrange").fetchone()[0]
     Range('a', 'z', '[]')
 
 
@@ -127,8 +206,8 @@ Example::
     >>> info = TypeInfo.fetch(conn, "hstore")
     >>> register_hstore(info, conn)
 
-    >>> conn.execute("select pg_typeof(%s)", [{"a": "b"}]).fetchone()[0]
+    >>> conn.execute("SELECT pg_typeof(%s)", [{"a": "b"}]).fetchone()[0]
     'hstore'
 
-    >>> conn.execute("select 'foo => bar'::hstore").fetchone()[0]
+    >>> conn.execute("SELECT 'foo => bar'::hstore").fetchone()[0]
     {'foo': 'bar'}

@@ -108,6 +108,12 @@ class HstoreLoader(RecursiveLoader):
 def register_hstore(
     info: TypeInfo, context: Optional[AdaptContext] = None
 ) -> None:
+    """Register the adapters to load and dump hstore.
+
+    :param info: The object with the information about the hstore type.
+    :param context: The context where to register the adapters. If `!None`,
+        register it globally.
+    """
 
     # Register arrays and type info
     info.register(context)

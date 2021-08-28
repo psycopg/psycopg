@@ -17,20 +17,6 @@ Converting the following data types between Python and PostgreSQL works
 out-of-the-box and doesn't require any configuration. In case you need to
 customise the conversion you should take a look at :ref:`adaptation`.
 
-TODO: complete table
-
-.. only:: html
-
-  .. table::
-    :class: data-types
-
-    +--------------------+-------------------------+--------------------------+
-    | Python             | PostgreSQL              | See also                 |
-    +====================+=========================+==========================+
-    | | `!tuple`         | Composite types         |:ref:`adapt-composite`    |
-    | | `!namedtuple`    |                         |                          |
-    +--------------------+-------------------------+--------------------------+
-
 
 .. index::
     pair: Boolean; Adaptation
@@ -370,13 +356,3 @@ address types`__:
   :sql:`inet` and :sql:`cidr` values.
 
 .. __: https://www.postgresql.org/docs/current/datatype-net-types.html#DATATYPE-CIDR
-
-.. _adapt-composite:
-
-
-TODO adaptation
-----------------
-
-.. admonition:: TODO
-
-    Document the other types

@@ -438,8 +438,11 @@ _int2parens = {ord(c): c for c in "[]()"}
 def register_range(
     info: RangeInfo, context: Optional[AdaptContext] = None
 ) -> None:
-    """
-    Register custom range adapters on a context.
+    """Register the adapters to load and dump a range type.
+
+    :param info: The object with the information about the range to register.
+    :param context: The context where to register the adapters. If `!None`,
+        register it globally.
 
     Register loaders so that loading data of this type will result in a `Range`
     with bounds parsed as the right subtype.
