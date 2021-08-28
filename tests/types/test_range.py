@@ -273,6 +273,28 @@ def test_copy_in_empty_wrappers(conn, bounds, wrapper, format):
     assert rec[0] == r
 
 
+@pytest.mark.parametrize("bounds", "() empty".split())
+@pytest.mark.parametrize(
+    "pgtype",
+    "int4range int8range numrange daterange tsrange tstzrange".split(),
+)
+@pytest.mark.parametrize("format", [pq.Format.TEXT, pq.Format.BINARY])
+def test_copy_in_empty_set_type(conn, bounds, pgtype, format):
+    cur = conn.cursor()
+    cur.execute(f"create table copyrange (id serial primary key, r {pgtype})")
+
+    r = Range(empty=True) if bounds == "empty" else Range(None, None, bounds)
+
+    with cur.copy(
+        f"copy copyrange (r) from stdin (format {format.name})"
+    ) as copy:
+        copy.set_types([pgtype])
+        copy.write_row([r])
+
+    rec = cur.execute("select r from copyrange order by id").fetchone()
+    assert rec[0] == r
+
+
 @pytest.fixture(scope="session")
 def testrange(svcconn):
     svcconn.execute(
