@@ -110,19 +110,19 @@ exposes a few simple extensions which make the above pattern leaner:
 
   .. code::
 
-      # This
-      cur = conn.execute(...)
-
-      # is equivalent to:
+      # In Psycopg 2
       cur = conn.cursor()
       cur.execute(...)
+
+      # In Psycopg 3
+      cur = conn.execute(...)
 
 - The `Cursor.execute()` method returns `!self`. This means that you can chain
   a fetch operation, such as `~Cursor.fetchone()`, to the `!execute()` call:
 
   .. code::
 
-      # This
+      # In Psycopg 2
       cur.execute(...)
       record = cur.fetchone()
 
@@ -130,8 +130,9 @@ exposes a few simple extensions which make the above pattern leaner:
       for record in cur:
           ...
 
-      # is equivalent to:
+      # In Psycopg 3
       record = cur.execute(...).fetchone()
+
       for record in cur.execute(...):
           ...
 
