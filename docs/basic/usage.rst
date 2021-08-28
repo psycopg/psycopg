@@ -9,6 +9,8 @@ The basic Psycopg usage is common to all the database adapters implementing
 the `DB-API`__ protocol. Other database adapters, such as the builtin
 `sqlite3` or `psycopg2`, have roughly the same pattern of interaction.
 
+.. __: https://www.python.org/dev/peps/pep-0249/
+
 
 .. index::
     pair: Example; Usage
@@ -19,8 +21,6 @@ Main objects in Psycopg 3
 -------------------------
 
 Here is an interactive session showing some of the basic commands:
-
-.. __: https://www.python.org/dev/peps/pep-0249/
 
 .. code:: python
 
@@ -164,7 +164,25 @@ Psycopg 3 `Connection` can be used as a context manager:
 
 When the block is exited, if there is a transaction open, it will be
 committed. If an exception is raised within the block the transaction is
-rolled back. In either case the connection is closed.
+rolled back. In both cases the connection is closed.
 
 `AsyncConnection` can be also used as context manager, using ``async with``,
 but be careful about its quirkiness: see :ref:`async-with` for details.
+
+
+Adapting pyscopg to your program
+--------------------------------
+
+The above :ref:`pattern of use <usage>` only shows the default behaviour of
+the adapter. Psycopg can be customised in several way, to allow the smoothest
+integration between your Python program and your PostgreSQL database:
+
+- If your program is concurrent and based on `asyncio` instead of on
+  threads/processes, you can use :ref:`async connections and cursors <async>`.
+
+- If you want to customise the objects that the cursor returns, instead of
+  receiving tuples, you can specify your :ref:`row factories <row-factories>`.
+
+- If you want to customise how Python values and PostgreSQL types are mapped
+  into each other, beside the :ref:`basic type mapping <types-adaptation>`,
+  you can :ref:`configure your types <adaptation>`.
