@@ -44,8 +44,16 @@ exceptions, mapping to the database error states (see
 
 .. data:: adapters
 
-   The global, default adapters map establishing how Python and PostgreSQL
-   types are converted into each other. This map is used as template when new
-   connections are created, using `psycopg.connect()`.
+   The default adapters map establishing how Python and PostgreSQL types are
+   converted into each other.
+
+   This map is used as template when new connections are created, using
+   `psycopg.connect()`. Its `~psycopg.adapt.AdaptersMap.types` attribute is a
+   `~psycopg.types.TypesRegistry` containing information about every
+   PostgreSQL builtin type, useful for adaptation customisation (see
+   :ref:`adaptation`)::
+
+       >>> psycopg.adapters.types["int4"]
+       <TypeInfo: int4 (oid: 23, array oid: 1007)>
 
    :type: `~psycopg.adapt.AdaptersMap`

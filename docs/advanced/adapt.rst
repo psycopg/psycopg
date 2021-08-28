@@ -53,6 +53,43 @@ returned.
     when a query is executed.
 
 
+Writing a custom loader: XML
+----------------------------
+
+Psycopg doesn't provide a loader for the XML data type because there are just
+too many ways of handling it in Python. Creating a loader to parse the
+`PostgreSQL xml type`__ to `~xml.etree.ElementTree` is very simple, using the
+`psycopg.adapt.Loader` base class.
+
+Note that it is possible to use a `~psycopg.types.TypesRegistry`, exposed by
+any `~psycopg.abc.AdaptContext`, to obtain information on builtin types, or
+extension types if they have been registered::
+
+    >>> import xml.etree.ElementTree as ET
+    >>> from psycopg.adapt import Loader
+
+    >>> # Create a class setting the `format` and implementing the `load()` method.
+    >>> class XmlLoader(Loader):
+    ...     format = psycopg.pq.Format.TEXT
+    ...     def load(self, data):
+    ...         return ET.fromstring(data)
+
+    >>> # Register the loader on the adapters of a context.
+    >>> conn.adapters.register_loader(conn.adapters.types["xml"].oid, XmlLoader)
+
+    >>> # Now just query the database returning XML data.
+    >>> cur = conn.execute(
+    ...     """select XMLPARSE (DOCUMENT '
+    ...            <?xml version="1.0"?>
+    ...            <book><title>Manual</title><chapter>...</chapter></book>')
+    ...     """)
+
+    >>> cur.fetchone()[0]
+    <Element 'book' at 0x7ffb55142ef0>
+
+.. __: https://www.postgresql.org/docs/current/datatype-xml.html
+
+
 Example: PostgreSQL numeric to Python float
 -------------------------------------------
 

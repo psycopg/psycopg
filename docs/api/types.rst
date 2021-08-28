@@ -98,6 +98,13 @@ its `~psycopg.adapt.AdaptersMap.types` attribute.
 
 .. autoclass:: TypesRegistry
 
+   `!TypeRegistry` instances are typically exposed by
+   `~psycopg.adapt.AdaptersMap` objects in adapt contexts such as
+   `~psycopg.Connection` or `~psycopg.Cursor` (e.g. `!conn.adapters.types`).
+
+   The global registry, from which the others inherit from, is available as
+   `psycopg.adapters`\ ``.types``.
+
 
 .. _numeric-wrappers:
 
