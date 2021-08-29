@@ -5,6 +5,7 @@ DNS query support
 
 # Copyright (C) 2021 The Psycopg Team
 
+import os
 from typing import Any, Dict
 from functools import lru_cache
 from ipaddress import ip_address
@@ -48,26 +49,29 @@ async def resolve_hostaddr_async(params: Dict[str, Any]) -> Dict[str, Any]:
     .. warning::
         This function doesn't handle the ``/etc/hosts`` file.
     """
-    if params.get("hostaddr") or not params.get("host"):
+    host_arg: str = params.get("host", os.environ.get("PGHOST", ""))
+    hostaddr_arg = params.get("hostaddr", os.environ.get("PGHOSTADDR", ""))
+
+    if hostaddr_arg or not host_arg:
         return params
+
+    port_arg: str = str(params.get("port", os.environ.get("PGPORT", "")))
 
     if pq.version() < 100000:
         # hostaddr not supported
         return params
 
-    host = params["host"]
-
-    if host.startswith("/") or host[1:2] == ":":
+    if host_arg.startswith("/") or host_arg[1:2] == ":":
         # Local path
         return params
 
-    hosts_in = host.split(",")
-    ports_in = str(params["port"]).split(",") if params.get("port") else []
-    if len(ports_in) <= 1:
+    hosts_in = host_arg.split(",")
+    ports_in = port_arg.split(",")
+    if len(ports_in) == 1:
         # If only one port is specified, the libpq will apply it to all
         # the hosts, so don't mangle it.
         del ports_in[:]
-    else:
+    elif len(ports_in) > 1:
         if len(ports_in) != len(hosts_in):
             # ProgrammingError would have been more appropriate, but this is
             # what the raise if the libpq fails connect in the same case.
