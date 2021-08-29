@@ -23,6 +23,7 @@ $$,
 """
 
 # Note: "record" is a pseudotype but still a useful one to have.
+# "pg_lsn" is a documented public type and useful in streaming replication
 py_types_sql = """
 select
     'TypeInfo('
@@ -42,7 +43,7 @@ from pg_type t
 where
     oid < 10000
     and (typtype = 'b' or typname = 'record')
-    and typname !~ '^(_|pg_)'
+    and (typname !~ '^(_|pg_)' or typname = 'pg_lsn')
 order by typname
 """
 
@@ -56,7 +57,7 @@ from
 where
     oid < 10000
     and typtype = 'r'
-    and typname !~ '^(_|pg_)'
+    and (typname !~ '^(_|pg_)' or typname = 'pg_lsn')
 order by typname
 """
 
@@ -66,7 +67,7 @@ from pg_type
 where
     oid < 10000
     and (typtype = any('{b,r}') or typname = 'record')
-    and typname !~ '^(_|pg_)'
+    and (typname !~ '^(_|pg_)' or typname = 'pg_lsn')
 order by typname
 """
 
@@ -80,7 +81,7 @@ def update_python_oids() -> None:
 
 def update_cython_oids() -> None:
     queries = [version_sql, cython_oids_sql]
-    fn = ROOT / "psycopg/psycopg/_psycopg/oids.pxd"
+    fn = ROOT / "psycopg_c/psycopg_c/_psycopg/oids.pxd"
     update_file(fn, queries)
 
 
