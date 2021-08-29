@@ -54,6 +54,7 @@ extras_require = {
     # Requirements needed to build the documentation
     "docs": [
         "Sphinx >= 4.1, < 4.2",
+        "dnspython >= 2.1.0",  # to become a package dependency
         "docutils >= 0.17, < 0.18",
         "furo >= furo-2021.8.17b43",
         "sphinx-autobuild >= 2021.3.14",

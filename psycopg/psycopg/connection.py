@@ -616,7 +616,13 @@ class Connection(BaseConnection[Row]):
     def _get_connection_params(
         cls, conninfo: str, **kwargs: Any
     ) -> Dict[str, Any]:
-        """Adjust connection parameters before conecting."""
+        """Manipulate connection parameters before connecting.
+
+        :param conninfo: Connection string as received by `~Connection.connect()`.
+        :param kwargs: Overriding connection arguments as received by `!connect()`.
+        :return: Connection arguments merged and eventually modified, in a
+            format similar to `~conninfo.conninfo_to_dict()`.
+        """
         params = conninfo_to_dict(conninfo, **kwargs)
 
         # Make sure there is an usable connect_timeout
