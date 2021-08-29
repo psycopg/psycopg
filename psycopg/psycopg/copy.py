@@ -19,7 +19,7 @@ from . import errors as e
 from .pq import ExecStatus
 from .abc import ConnectionType, PQGen, Transformer
 from .adapt import PyFormat
-from .compat import create_task
+from ._compat import create_task
 from ._cmodule import _psycopg
 from .generators import copy_from, copy_to, copy_end
 

@@ -8,7 +8,7 @@ import struct
 from typing import Callable, cast, Optional, Tuple
 
 from .abc import Buffer
-from .compat import Protocol
+from ._compat import Protocol
 
 PackInt = Callable[[int], bytes]
 UnpackInt = Callable[[bytes], Tuple[int]]

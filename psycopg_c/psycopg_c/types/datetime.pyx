@@ -31,7 +31,7 @@ from datetime import date, time, timedelta, datetime, timezone
 from psycopg_c._psycopg cimport endian
 
 from psycopg import errors as e
-from psycopg.compat import ZoneInfo
+from psycopg._compat import ZoneInfo
 
 
 # Initialise the datetime C API

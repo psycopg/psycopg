@@ -17,7 +17,7 @@ from .pq import Format
 from .abc import Params, PQGen, PQGenConn, Query, RV
 from .rows import Row, AsyncRowFactory, tuple_row, TupleRow
 from ._enums import IsolationLevel
-from .compat import asynccontextmanager
+from ._compat import asynccontextmanager
 from .conninfo import make_conninfo, conninfo_to_dict
 from .connection import BaseConnection, CursorRow, Notify
 from .generators import notifies

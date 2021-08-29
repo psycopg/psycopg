@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Type, TypeVar
 from collections import namedtuple
 
 from . import errors as e
-from .compat import Protocol
+from ._compat import Protocol
 
 if TYPE_CHECKING:
     from .cursor import BaseCursor, Cursor

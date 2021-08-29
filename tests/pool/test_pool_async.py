@@ -9,7 +9,7 @@ import pytest
 import psycopg
 import psycopg_pool as pool
 from psycopg.pq import TransactionStatus
-from psycopg.compat import create_task
+from psycopg._compat import create_task
 
 pytestmark = [
     pytest.mark.asyncio,

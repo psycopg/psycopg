@@ -13,8 +13,8 @@ from . import errors as e
 from .abc import Query, Params
 from .copy import AsyncCopy
 from .rows import Row, RowMaker, AsyncRowFactory
-from .compat import asynccontextmanager
 from .cursor import BaseCursor, AnyCursor
+from ._compat import asynccontextmanager
 
 if TYPE_CHECKING:
     from .connection_async import AsyncConnection

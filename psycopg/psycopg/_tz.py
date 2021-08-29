@@ -8,8 +8,8 @@ import logging
 from typing import Dict, Optional, Union
 from datetime import timezone, tzinfo
 
-from .compat import ZoneInfo
 from .pq.abc import PGconn
+from ._compat import ZoneInfo
 
 logger = logging.getLogger("psycopg")
 

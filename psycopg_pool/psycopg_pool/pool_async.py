@@ -17,7 +17,7 @@ from collections import deque
 
 from psycopg import errors as e
 from psycopg.pq import TransactionStatus
-from psycopg.compat import Task, asynccontextmanager, create_task
+from psycopg._compat import Task, asynccontextmanager, create_task
 from psycopg.connection_async import AsyncConnection
 
 from .base import ConnectionAttempt, BasePool

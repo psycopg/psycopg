@@ -4,7 +4,7 @@ import asyncio
 from asyncio.queues import Queue
 
 import psycopg
-from psycopg.compat import create_task
+from psycopg._compat import create_task
 
 pytestmark = pytest.mark.asyncio
 
