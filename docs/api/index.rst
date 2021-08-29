@@ -23,3 +23,4 @@ This sections is a reference for all the public objects exposed by the
     abc
     pq
     pool
+    _dns

@@ -30,15 +30,18 @@ async def resolve_hostaddr_async(params: Dict[str, Any]) -> Dict[str, Any]:
     """
     Perform async DNS lookup of the hosts and return a new params dict.
 
+    :param params: The input parameters, for instance as returned by
+        `~psycopg.conninfo.conninfo_to_dict()`.
+
     If a ``host`` param is present but not ``hostname``, resolve the host
     addresses dynamically.
 
-    Change ``host``, ``hostname``, ``port`` in place to allow to connect
-    without further DNS lookups (remove hosts that are not resolved, keep the
-    lists consistent).
+    The function may change the input ``host``, ``hostname``, ``port`` to allow
+    to connect without further DNS lookups, eventually removing hosts that are
+    not resolved, keeping the lists of hosts and ports consistent.
 
-    Raise `OperationalError` if connection is not possible (e.g. no host
-    resolve, inconsistent lists length).
+    Raise `~psycopg.OperationalError` if connection is not possible (e.g. no
+    host resolve, inconsistent lists length).
 
     See `the PostgreSQL docs`__ for explanation of how these params are used,
     and how they support multiple entries.
@@ -47,7 +50,7 @@ async def resolve_hostaddr_async(params: Dict[str, Any]) -> Dict[str, Any]:
            #LIBPQ-PARAMKEYWORDS
 
     .. warning::
-        This function doesn't handle the ``/etc/hosts`` file.
+        This function currently doesn't handle the ``/etc/hosts`` file.
     """
     host_arg: str = params.get("host", os.environ.get("PGHOST", ""))
     hostaddr_arg = params.get("hostaddr", os.environ.get("PGHOSTADDR", ""))

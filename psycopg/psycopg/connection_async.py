@@ -130,7 +130,7 @@ class AsyncConnection(BaseConnection[Row]):
     async def _get_connection_params(
         cls, conninfo: str, **kwargs: Any
     ) -> Dict[str, Any]:
-        """Adjust connection parameters before conecting."""
+        """Manipulate connection parameters before connecting."""
         params = conninfo_to_dict(conninfo, **kwargs)
 
         # Make sure there is an usable connect_timeout
