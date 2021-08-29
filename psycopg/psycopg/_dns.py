@@ -52,24 +52,24 @@ async def resolve_hostaddr_async(params: Dict[str, Any]) -> Dict[str, Any]:
     .. warning::
         This function currently doesn't handle the ``/etc/hosts`` file.
     """
-    host_arg: str = params.get("host", os.environ.get("PGHOST", ""))
     hostaddr_arg = params.get("hostaddr", os.environ.get("PGHOSTADDR", ""))
-
-    if hostaddr_arg or not host_arg:
+    if hostaddr_arg:
+        # Already resolved
         return params
-
-    port_arg: str = str(params.get("port", os.environ.get("PGPORT", "")))
 
     if pq.version() < 100000:
         # hostaddr not supported
         return params
 
-    if host_arg.startswith("/") or host_arg[1:2] == ":":
-        # Local path
+    host_arg: str = params.get("host", os.environ.get("PGHOST", ""))
+    if not host_arg:
+        # Nothing to resolve
         return params
 
     hosts_in = host_arg.split(",")
+    port_arg: str = str(params.get("port", os.environ.get("PGPORT", "")))
     ports_in = port_arg.split(",")
+
     if len(ports_in) == 1:
         # If only one port is specified, the libpq will apply it to all
         # the hosts, so don't mangle it.
@@ -87,6 +87,14 @@ async def resolve_hostaddr_async(params: Dict[str, Any]) -> Dict[str, Any]:
     hosts_out = []
     hostaddr_out = []
     for i, host in enumerate(hosts_in):
+        if not host or host.startswith("/") or host[1:2] == ":":
+            # Local path
+            hosts_out.append(host)
+            hostaddr_out.append("")
+            if ports_in:
+                ports_out.append(ports_in[i])
+            continue
+
         # If the host is already an ip address don't try to resolve it
         if is_ip_address(host):
             hosts_out.append(host)

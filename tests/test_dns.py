@@ -72,6 +72,11 @@ async def test_resolve_hostaddr_async_no_resolve(
             None,
         ),
         (
+            "host=foo.com, port=5432,5433",
+            "host=foo.com, hostaddr=1.1.1.1, port=5432,5433",
+            None,
+        ),
+        (
             "host=nosuchhost.com,foo.com",
             "host=foo.com hostaddr=1.1.1.1",
             None,
