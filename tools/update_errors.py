@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# type: ignore
 """
 Generate per-sqlstate errors from PostgreSQL source code.
 
@@ -6,7 +7,6 @@ The script can be run at a new PostgreSQL release to refresh the module.
 """
 
 # Copyright (C) 2020-2021 The Psycopg Team
-
 
 import os
 import re
@@ -16,7 +16,7 @@ import subprocess as sp
 from urllib.request import urlopen
 from collections import defaultdict, namedtuple
 
-from psycopg.errors import get_base_exception  # type: ignore
+from psycopg.errors import get_base_exception
 
 logger = logging.getLogger()
 logging.basicConfig(
@@ -25,7 +25,7 @@ logging.basicConfig(
 
 
 def main():
-    classes, errors = fetch_errors(["9.6", "10", "11", "12", "13"])
+    classes, errors = fetch_errors(["9.6", "10", "11", "12", "13", "14"])
 
     fn = os.path.dirname(__file__) + "/../psycopg/psycopg/errors.py"
     update_file(fn, generate_module_data(classes, errors))

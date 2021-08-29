@@ -129,7 +129,7 @@ in the database:
         locked = True
 
 The exception names are generated from the PostgreSQL source code and includes
-classes for every error defined by PostgreSQL in versions between 9.6 and 13.
+classes for every error defined by PostgreSQL in versions between 9.6 and 14.
 Every class in the module is named after what referred as "condition name" `in
 the documentation`__, converted to CamelCase: e.g. the error 22012,
 ``division_by_zero`` is exposed by this module as the class `!DivisionByZero`.
@@ -441,6 +441,7 @@ SQLSTATE  Exception                                          Base exception
 ``57P02`` `!CrashShutdown`                                   `!OperationalError`
 ``57P03`` `!CannotConnectNow`                                `!OperationalError`
 ``57P04`` `!DatabaseDropped`                                 `!OperationalError`
+``57P05`` `!IdleSessionTimeout`                              `!OperationalError`
 **Class 58**: Class 58 - System Error (errors external to PostgreSQL itself)
 ---------------------------------------------------------------------------------
 ``58000`` `!SystemError`                                     `!OperationalError`

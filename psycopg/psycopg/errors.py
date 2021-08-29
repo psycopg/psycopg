@@ -1502,6 +1502,11 @@ class DatabaseDropped(OperationalError):
     pass
 
 
+@sqlcode("IDLE_SESSION_TIMEOUT", "57P05")
+class IdleSessionTimeout(OperationalError):
+    pass
+
+
 # Class 58 - System Error (errors external to PostgreSQL itself)
 
 
