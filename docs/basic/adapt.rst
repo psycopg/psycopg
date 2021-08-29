@@ -217,7 +217,8 @@ attribute::
     Check out the `PostgreSQL documentation about timezones`__ for all the
     details.
 
-    .. __: https://www.postgresql.org/docs/13/datatype-datetime.html#DATATYPE-TIMEZONES
+    .. __: https://www.postgresql.org/docs/current/datatype-datetime.html
+           #DATATYPE-TIMEZONES
 
 .. __: https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-TIMEZONE
 
