@@ -19,7 +19,15 @@ def make_conninfo(conninfo: str = "", **kwargs: Any) -> str:
     """
     Merge a string and keyword params into a single conninfo string.
 
-    Raise ProgrammingError if the input don't make a valid conninfo.
+    :param conninfo: A `connection string`__ as accepted by PostgreSQL.
+    :param kwargs: Parameters overriding the ones specified in *conninfo*.
+    :return: A connection string valid for PostgreSQL, with the *kwargs*
+        parameters merged.
+
+    Raise `~psycopg.ProgrammingError` if the input don't make a valid conninfo.
+
+    .. __: https://www.postgresql.org/docs/current/libpq-connect.html
+           #LIBPQ-CONNSTRING
     """
     if not conninfo and not kwargs:
         return ""
@@ -53,7 +61,15 @@ def conninfo_to_dict(conninfo: str = "", **kwargs: Any) -> Dict[str, Any]:
     """
     Convert the *conninfo* string into a dictionary of parameters.
 
+    :param conninfo: A `connection string`__ as accepted by PostgreSQL.
+    :param kwargs: Parameters overriding the ones specified in *conninfo*.
+    :return: Dictionary with the parameters parsed from *conninfo* and
+        *kwargs*.
+
     Raise ProgrammingError if the string is not valid.
+
+    .. __: https://www.postgresql.org/docs/current/libpq-connect.html
+           #LIBPQ-CONNSTRING
     """
     opts = _parse_conninfo(conninfo)
     rv = {

@@ -17,6 +17,7 @@ This sections is a reference for all the public objects exposed by the
     sql
     rows
     errors
+    conninfo
     adapt
     types
     abc
