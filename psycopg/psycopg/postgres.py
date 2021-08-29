@@ -100,48 +100,19 @@ TEXT_ARRAY_OID = types["text"].array_oid
 
 def register_default_adapters(context: AdaptContext) -> None:
 
-    from .types import array
+    from .types import array, bool, composite, datetime, json
+    from .types import net, none, numeric, range, string, uuid
 
     array.register_default_adapters(context)
-
-    from .types import bool
-
     bool.register_default_adapters(context)
-
-    from .types import composite
-
     composite.register_default_adapters(context)
-
-    from .types import datetime
-
     datetime.register_default_adapters(context)
-
-    from .types import json
-
     json.register_default_adapters(context)
-
-    from .types import net
-
     net.register_default_adapters(context)
-
-    from .types import none
-
     none.register_default_adapters(context)
-
-    from .types import numeric
-
     numeric.register_default_adapters(context)
-
-    from .types import range
-
     range.register_default_adapters(context)
-
-    from .types import string
-
     string.register_default_adapters(context)
-
-    from .types import uuid
-
     uuid.register_default_adapters(context)
 
     # Must come after all the types are registered
