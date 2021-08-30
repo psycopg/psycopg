@@ -7,6 +7,7 @@ How to make a psycopg release
 
   - ``psycopg_c/psycopg_c/version.py``
   - ``psycopg/psycopg/version.py``
+  - ``psycopg_pool/psycopg_pool/version.py``
 
 - Push to GitHub to run `the tests workflow`__.
 
