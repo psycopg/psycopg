@@ -3,35 +3,12 @@
 Installation
 ============
 
-Installing the development state
---------------------------------
+In short::
 
-Psycopg 3 packages have not been released on the PyPI index yet: you can try
-it out by installing it `from the GitHub project`__:
+    pip install -U pip                  # upgrade pip to at least 20.3
+    pip install --pre psycopg[binary]
 
-.. code:: bash
-
-    $ pip install git+https://github.com/psycopg/psycopg.git#subdirectory=psycopg
-    $ python3
-    >>> import psycopg
-
-.. __: https://github.com/psycopg/psycopg
-
-or from `the TestPyPI index`__::
-
-    pip install -i https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ psycopg
-
-.. __: https://test.pypi.org/project/psycopg/
-
-.. warning::
-
-    Psycopg 3 is still in a development phase: packages haven't been
-    released yet on PyPI.
-
-    Please refer to `the README`__ for the current installation state, and
-    please know that things may change.
-
-    .. __: https://github.com/psycopg/psycopg#readme
+and you should be :ref:`ready to start <module-usage>`.
 
 
 .. _binary-install:
@@ -42,16 +19,7 @@ Binary installation
 The quickest way to start developing with Psycopg 3 is to install the binary
 packages by running::
 
-    pip install psycopg[binary]
-
-.. warning::
-
-    Add the following options to pip::
-
-        -i https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/
-
-    to install the Psycopg from TestPyPI, before the final packages are
-    uploaded on PyPI.
+    pip install --pre psycopg[binary]
 
 This will install a self-contained package with all the libraries needed.
 You will need pip >= 20.3 at least: please run ``pip install -U pip`` to update
@@ -105,16 +73,7 @@ try this and follow the `binary installation`_ instead.
 
 If your build prerequisites are in place you can run::
 
-    pip install psycopg[c]
-
-.. warning::
-
-    Add the following options to pip::
-
-        -i https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/
-
-    to install the Psycopg from TestPyPI, before the final packages are
-    uploaded on PyPI.
+    pip install --pre psycopg[c]
 
 
 .. _pure-python-installation:
@@ -124,7 +83,7 @@ Pure Python installation
 
 If you simply install::
 
-    pip install psycopg
+    pip install --pre psycopg
 
 without ``[c]`` or ``[binary]`` extras you will obtain a pure Python
 implementation. This is particularly handy to debug and hack, but it still
