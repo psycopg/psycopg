@@ -7,6 +7,15 @@ Psycopg 3 is a modern implementation of a PostgreSQL adapter for Python.
 Installation
 ------------
 
+Quick version::
+
+    pip install -U pip                      # upgrade pip to at least 20.3
+    pip install --pre psycopg[binary,pool]  # install binary files
+
+
+Install from source
+-------------------
+
 The library is still in a development stage: you can obtain the most
 up-to-date code `from the GitHub project`__::
 
@@ -15,12 +24,6 @@ up-to-date code `from the GitHub project`__::
     >>> import psycopg
 
 .. __: https://github.com/psycopg/psycopg
-
-or the last packages `released on TestPyPI`__ using::
-
-    pip install -i https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ psycopg
-
-.. __: https://test.pypi.org/project/psycopg/
 
 You are required to have the ``libpq``, the PostgreSQL client library, already
 installed in the system before using ``psycopg``. On Debian system you can
