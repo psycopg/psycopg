@@ -146,7 +146,7 @@ async def test_resolve_hostaddr_conn(monkeypatch, fake_resolve):
 
 @pytest.fixture
 def fake_resolve(monkeypatch):
-    _import_dnspython()
+    import_dnspython()
 
     import dns.rdtypes.IN.A
     from dns.exception import DNSException
@@ -170,7 +170,7 @@ def fake_resolve(monkeypatch):
 
 @pytest.fixture
 def fail_resolve(monkeypatch):
-    _import_dnspython()
+    import_dnspython()
 
     async def fail_resolve_(qname):
         pytest.fail(f"shouldn't try to resolve {qname}")
@@ -178,7 +178,7 @@ def fail_resolve(monkeypatch):
     monkeypatch.setattr(psycopg._dns.async_resolver, "resolve", fail_resolve_)
 
 
-def _import_dnspython():
+def import_dnspython():
     try:
         import dns.rdtypes.IN.A  # noqa: F401
     except ImportError:

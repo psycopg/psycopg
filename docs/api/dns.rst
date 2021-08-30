@@ -40,6 +40,32 @@ server before performing a connection.
                    return params
 
 
+.. autofunction:: resolve_srv
+
+   .. warning::
+       This is an experimental functionality.
+
+   .. note::
+       One possible way to use this function automatically is to subclass
+       `~psycopg.Connection`, extending the
+       `~psycopg.Connection._get_connection_params()` method::
+
+           import psycopg._dns  # not imported automatically
+
+           class SrvCognizantConnection(psycopg.Connection):
+               @classmethod
+               def _get_connection_params(cls, conninfo, **kwargs):
+                   params = super()._get_connection_params(conninfo, **kwargs)
+                   params = psycopg._dns.resolve_srv(params)
+                   return params
+
+           # The name will be resolved to db1.example.com
+           cnn = SrvCognizantConnection.connect("host=_postgres._tcp.db.psycopg.org")
+
+
+.. autofunction:: resolve_srv_async
+
+
 .. automethod:: psycopg.Connection._get_connection_params
 
     .. warning::
