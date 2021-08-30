@@ -29,6 +29,18 @@ here and there.
                 print(record)
 
 
+.. warning::
+
+    `AsyncConnection.connect()` may still block on DNS name resolution.
+    To avoid that you should `set the hostaddr connection parameter`__.
+
+    The `~psycopg._dns.resolve_hostaddr_async()` is an experimental solution
+    to help to do that. Feedback about the feature is welcome!
+
+    .. __: https://www.postgresql.org/docs/current/libpq-connect.html
+           #LIBPQ-PARAMKEYWORDS
+
+
 .. index:: with
 
 .. _async-with:
