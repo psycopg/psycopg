@@ -57,7 +57,7 @@ def test_srv(conninfo, want, env, fake_srv, retries, monkeypatch):
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("conninfo, want, env", samples_ok)
-async def test_srv_async(conninfo, want, env, fake_srv, retries, monkeypatch):
+async def test_srv_async(conninfo, want, env, afake_srv, retries, monkeypatch):
     if env:
         for k, v in env.items():
             monkeypatch.setenv(k, v)
@@ -86,7 +86,7 @@ def test_srv_bad(conninfo, env, fake_srv, monkeypatch):
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("conninfo,  env", samples_bad)
-async def test_srv_bad_async(conninfo, env, fake_srv, monkeypatch):
+async def test_srv_bad_async(conninfo, env, afake_srv, monkeypatch):
     if env:
         for k, v in env.items():
             monkeypatch.setenv(k, v)
@@ -97,6 +97,21 @@ async def test_srv_bad_async(conninfo, env, fake_srv, monkeypatch):
 
 @pytest.fixture
 def fake_srv(monkeypatch):
+    f = get_fake_srv_function(monkeypatch)
+    monkeypatch.setattr(psycopg._dns.resolver, "resolve", f)
+
+
+@pytest.fixture
+def afake_srv(monkeypatch):
+    f = get_fake_srv_function(monkeypatch)
+
+    async def af(qname, rdtype):
+        return f(qname, rdtype)
+
+    monkeypatch.setattr(psycopg._dns.async_resolver, "resolve", af)
+
+
+def get_fake_srv_function(monkeypatch):
     import_dnspython()
 
     from dns.rdtypes.IN.A import A
@@ -134,8 +149,4 @@ def fake_srv(monkeypatch):
 
         return rv
 
-    async def afake_srv_(qname, rdtype):
-        return fake_srv(qname, rdtype)
-
-    monkeypatch.setattr(psycopg._dns.resolver, "resolve", fake_srv_)
-    monkeypatch.setattr(psycopg._dns.async_resolver, "resolve", afake_srv_)
+    return fake_srv_

@@ -259,10 +259,7 @@ class Rfc2782Resolver:
                 hp = HostPort(host=host, port=port)
             out.append(hp)
 
-        if srv_found:
-            return out
-        else:
-            return []
+        return out if srv_found else []
 
     def _resolve_srv(self, hp: HostPort) -> List[HostPort]:
         try:
@@ -273,7 +270,7 @@ class Rfc2782Resolver:
 
     async def _resolve_srv_async(self, hp: HostPort) -> List[HostPort]:
         try:
-            ans = resolver.resolve(hp.host, "SRV")
+            ans = await async_resolver.resolve(hp.host, "SRV")
         except DNSException:
             ans = ()
         return self._get_solved_entries(hp, ans)
