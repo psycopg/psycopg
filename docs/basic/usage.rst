@@ -174,7 +174,7 @@ Adapting pyscopg to your program
 --------------------------------
 
 The above :ref:`pattern of use <usage>` only shows the default behaviour of
-the adapter. Psycopg can be customised in several way, to allow the smoothest
+the adapter. Psycopg can be customised in several ways, to allow the smoothest
 integration between your Python program and your PostgreSQL database:
 
 - If your program is concurrent and based on `asyncio` instead of on
