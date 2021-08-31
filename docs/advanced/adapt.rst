@@ -77,12 +77,11 @@ too many ways of handling XML in Python.Creating a loader to parse the
     ...         return ET.fromstring(data)
 
     >>> # Register the loader on the adapters of a context.
-    >>> conn.adapters.register_loader(conn.adapters.types["xml"].oid, XmlLoader)
+    >>> conn.adapters.register_loader("xml", XmlLoader)
 
     >>> # Now just query the database returning XML data.
     >>> cur = conn.execute(
-    ...     """select XMLPARSE (DOCUMENT '
-    ...            <?xml version="1.0"?>
+    ...     """select XMLPARSE (DOCUMENT '<?xml version="1.0"?>
     ...            <book><title>Manual</title><chapter>...</chapter></book>')
     ...     """)
 
