@@ -37,7 +37,7 @@ extras_require = {
     ],
     # Requirements to run the test suite
     "test": [
-        "mypy >= 0.812; implementation_name !='pypy'",
+        "mypy >= 0.812; implementation_name != 'pypy'",
         "pproxy >= 2.7, < 2.8",
         "pytest >= 6.2.4, < 6.3",
         "pytest-asyncio >= 0.15.0, < 0.16",

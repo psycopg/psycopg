@@ -96,18 +96,15 @@ def test_connection_warn_close(dsn, recwarn):
     conn = Connection.connect(dsn)
     conn.close()
     del conn
-    gc_collect()
     assert not recwarn
 
     conn = Connection.connect(dsn)
     del conn
-    gc_collect()
     assert "IDLE" in str(recwarn.pop(ResourceWarning).message)
 
     conn = Connection.connect(dsn)
     conn.execute("select 1")
     del conn
-    gc_collect()
     assert "INTRANS" in str(recwarn.pop(ResourceWarning).message)
 
     conn = Connection.connect(dsn)
@@ -116,13 +113,11 @@ def test_connection_warn_close(dsn, recwarn):
     except Exception:
         pass
     del conn
-    gc_collect()
     assert "INERROR" in str(recwarn.pop(ResourceWarning).message)
 
     with Connection.connect(dsn) as conn:
         pass
     del conn
-    gc_collect()
     assert not recwarn
 
 

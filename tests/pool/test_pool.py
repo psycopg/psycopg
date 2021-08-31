@@ -1,4 +1,3 @@
-import gc
 import sys
 import logging
 import weakref
@@ -12,10 +11,7 @@ import psycopg
 import psycopg_pool as pool
 from psycopg.pq import TransactionStatus
 
-
-def gc_collect():
-    for i in range(3):
-        gc.collect()
+from ..utils import gc_collect
 
 
 def test_defaults(dsn):
