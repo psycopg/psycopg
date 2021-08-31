@@ -89,6 +89,9 @@ def test_broken(conn):
     assert conn.broken
 
 
+@pytest.mark.skipif(
+    sys.implementation.name == "pypy", reason="depends on refcount semantics"
+)
 def test_connection_warn_close(dsn, recwarn):
     conn = Connection.connect(dsn)
     conn.close()

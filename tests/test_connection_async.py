@@ -3,6 +3,7 @@ import socket
 import pytest
 import asyncio
 import logging
+import sys
 import weakref
 
 import psycopg
@@ -95,6 +96,9 @@ async def test_broken(aconn):
     assert aconn.broken
 
 
+@pytest.mark.skipif(
+    sys.implementation.name == "pypy", reason="depends on refcount semantics"
+)
 async def test_connection_warn_close(dsn, recwarn):
     conn = await AsyncConnection.connect(dsn)
     await conn.close()
