@@ -96,6 +96,9 @@ def test_binary_cursor_text_override(conn):
 def test_close(conn, recwarn, retries):
     for retry in retries:
         with retry:
+            if conn.info.transaction_status == conn.TransactionStatus.INTRANS:
+                # connection dirty from previous failure
+                conn.execute("close foo")
             recwarn.clear()
             cur = conn.cursor("foo")
             cur.execute("select generate_series(1, 10) as bar")

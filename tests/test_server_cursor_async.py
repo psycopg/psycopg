@@ -98,6 +98,12 @@ async def test_binary_cursor_text_override(aconn):
 async def test_close(aconn, recwarn, retries):
     async for retry in retries:
         with retry:
+            if (
+                aconn.info.transaction_status
+                == aconn.TransactionStatus.INTRANS
+            ):
+                # connection dirty from previous failure
+                await aconn.execute("close foo")
             recwarn.clear()
             cur = aconn.cursor("foo")
             await cur.execute("select generate_series(1, 10) as bar")
