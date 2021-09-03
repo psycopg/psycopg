@@ -187,7 +187,11 @@ def copy_from(pgconn: PGconn) -> PQGen[Union[memoryview, PGresult]]:
         return data
 
     # Retrieve the final result of copy
-    (result,) = yield from fetch_many(pgconn)
+    results = yield from fetch_many(pgconn)
+    if len(results) > 1:
+        # TODO: too brutal? Copy worked.
+        raise e.ProgrammingError("you cannot mix COPY with other operations")
+    result = results[0]
     if result.status != ExecStatus.COMMAND_OK:
         encoding = py_codecs.get(
             pgconn.parameter_status(b"client_encoding") or "", "utf-8"

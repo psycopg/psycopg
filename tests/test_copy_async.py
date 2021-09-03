@@ -224,6 +224,14 @@ async def test_copy_bad_result(aconn):
         async with cur.copy("reset timezone"):
             pass
 
+    with pytest.raises(e.ProgrammingError):
+        async with cur.copy("copy (select 1) to stdout; select 1") as copy:
+            [_ async for _ in copy]
+
+    with pytest.raises(e.ProgrammingError):
+        async with cur.copy("select 1; copy (select 1) to stdout"):
+            pass
+
 
 async def test_copy_in_str(aconn):
     cur = aconn.cursor()

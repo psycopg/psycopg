@@ -316,10 +316,14 @@ class BaseCursor(Generic[ConnectionType, Row]):
         yield from self._start_query()
         query = self._convert_query(statement)
 
-        # Make sure to avoid PQexec to avoid receiving a mix of COPY and
-        # other operations.
-        self._execute_send(query, no_pqexec=True)
-        (result,) = yield from execute(self._conn.pgconn)
+        self._execute_send(query, binary=False)
+        results = yield from execute(self._conn.pgconn)
+        if len(results) != 1:
+            raise e.ProgrammingError(
+                "COPY cannot be mixed with other operations"
+            )
+
+        result = results[0]
         self._check_copy_result(result)
         self.pgresult = result
         self._tx.set_pgresult(result)

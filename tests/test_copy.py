@@ -244,6 +244,14 @@ def test_copy_bad_result(conn):
         with cur.copy("reset timezone"):
             pass
 
+    with pytest.raises(e.ProgrammingError):
+        with cur.copy("copy (select 1) to stdout; select 1") as copy:
+            list(copy)
+
+    with pytest.raises(e.ProgrammingError):
+        with cur.copy("select 1; copy (select 1) to stdout"):
+            pass
+
 
 def test_copy_in_str(conn):
     cur = conn.cursor()
