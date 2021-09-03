@@ -86,7 +86,6 @@ jobs:
       matrix:
         include:
           - {package: psycopg, impl: python}
-          - {package: psycopg_c, impl: c}
           - {package: psycopg_pool, impl: python}
 
     steps:
@@ -106,13 +105,6 @@ jobs:
           pip install `ls dist/*.whl`[test]
           pip install -e ./psycopg_pool
         if: ${{ matrix.package == 'psycopg' }}
-
-      - name: Install the C package and test requirements
-        run: |-
-          pip install dist/*.whl
-          pip install -e ./psycopg[test]
-          pip install -e ./psycopg_pool
-        if: ${{ matrix.package == 'psycopg_c' }}
 
       - name: Install the Python pool package and test requirements
         run: |-
