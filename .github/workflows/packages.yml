@@ -8,6 +8,8 @@ jobs:
   sdist:  # {{{
     name: Build sdist packages
     runs-on: ubuntu-20.04
+    # NOMERGE
+    if: false
 
     strategy:
       fail-fast: false
@@ -75,9 +77,82 @@ jobs:
   # }}}
 
 
+  wheel:  # {{{
+    name: Build wheel packages
+    runs-on: ubuntu-20.04
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {package: psycopg, impl: python}
+          - {package: psycopg_c, impl: c}
+          - {package: psycopg_pool, impl: python}
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions/setup-python@v2
+        with:
+          python-version: 3.9
+
+      - name: Create the wheel packages
+        run: |-
+          pip install wheel
+          python ${{ matrix.package }}/setup.py bdist_wheel -d `pwd`/dist/
+
+      - name: Install the Python package and test requirements
+        run: |-
+          pip install `ls dist/*.whl`[test]
+          pip install -e ./psycopg_pool
+        if: ${{ matrix.package == 'psycopg' }}
+
+      - name: Install the C package and test requirements
+        run: |-
+          pip install dist/*.whl
+          pip install -e ./psycopg[test]
+          pip install -e ./psycopg_pool
+        if: ${{ matrix.package == 'psycopg_c' }}
+
+      - name: Install the Python pool package and test requirements
+        run: |-
+          pip install dist/*.whl
+          pip install -e ./psycopg[test]
+        if: ${{ matrix.package == 'psycopg_pool' }}
+
+      - name: Test the wheel package
+        run: pytest -m 'not slow' --color yes
+        env:
+          PSYCOPG_IMPL: ${{ matrix.impl }}
+          PSYCOPG_TEST_DSN: "host=127.0.0.1 user=postgres"
+          PGPASSWORD: password
+
+      - uses: actions/upload-artifact@v2
+        with:
+          path: ./dist/*.whl
+
+    services:
+      postgresql:
+        image: postgres:13
+        env:
+          POSTGRES_PASSWORD: password
+        ports:
+          - 5432:5432
+        # Set health checks to wait until postgres has started
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+  # }}}
+
+
   linux:  # {{{
     name: Build Linux packages
     runs-on: ubuntu-20.04
+    # NOMERGE
+    if: false
 
     strategy:
       matrix:
@@ -136,6 +211,8 @@ jobs:
   macos:  # {{{
     name: Build MacOS packages
     runs-on: macos-10.15
+    # NOMERGE
+    if: false
 
     strategy:
       matrix:
@@ -173,6 +250,8 @@ jobs:
   windows:  # {{{
     name: Build Windows packages
     runs-on: windows-2019
+    # NOMERGE
+    if: false
 
     strategy:
       matrix:
