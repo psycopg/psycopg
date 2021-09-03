@@ -4,7 +4,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  sdist:
+
+  sdist:  # {{{
     name: Build sdist packages
     runs-on: ubuntu-20.04
 
@@ -71,8 +72,10 @@ jobs:
           --health-timeout 5s
           --health-retries 5
 
+  # }}}
 
-  linux:
+
+  linux:  # {{{
     name: Build Linux packages
     runs-on: ubuntu-20.04
 
@@ -127,8 +130,10 @@ jobs:
           --health-timeout 5s
           --health-retries 5
 
+  # }}}
 
-  macos:
+
+  macos:  # {{{
     name: Build MacOS packages
     runs-on: macos-10.15
 
@@ -162,8 +167,10 @@ jobs:
         with:
           path: ./wheelhouse/*.whl
 
+  # }}}
 
-  windows:
+
+  windows:  # {{{
     name: Build Windows packages
     runs-on: windows-2019
 
@@ -205,3 +212,5 @@ jobs:
       - uses: actions/upload-artifact@v2
         with:
           path: ./wheelhouse/*.whl
+
+  # }}}
