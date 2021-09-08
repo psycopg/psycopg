@@ -4,8 +4,8 @@
 
 .. _async:
 
-Async operations
-================
+Asynchronous operations
+=======================
 
 Psycopg `~Connection` and `~Cursor` have counterparts `~AsyncConnection` and
 `~AsyncCursor` supporting an `asyncio` interface.
@@ -63,8 +63,8 @@ For asynchronous connections it's *almost* what you'd expect, but
 not quite. Please note that `~Connection.connect()` and `~Connection.cursor()`
 *don't return a context*: they are both factory methods which return *an
 object which can be used as a context*. That's because there are several use
-cases where it's useful to handle the object manually and `!close()` them when
-required.
+cases where it's useful to handle the objects manually and only `!close()` them
+when required.
 
 As a consequence you cannot use `!async with connect()`: you have to do it in
 two steps instead, as in
@@ -76,7 +76,7 @@ two steps instead, as in
         async with aconn.cursor() as cur:
             await cur.execute(...)
 
-which can be condensed as:
+which can be condensed into `!async with await`:
 
 .. code:: python
 
@@ -86,10 +86,9 @@ which can be condensed as:
 
 ...but no less than that: you still need to do the double async thing.
 
-The `AsyncConnection.cursor()` function is not marked as `!async` (it never
-performs I/O), so you don't need an `!await` on it and you can use the normal
-`async with` context manager.
-
+Note that the `AsyncConnection.cursor()` function is not an `!async` function
+(it never performs I/O), so you don't need an `!await` on it; as a consequence
+you can use the normal `async with` context manager.
 
 
 .. index::
