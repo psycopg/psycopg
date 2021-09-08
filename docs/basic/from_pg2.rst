@@ -11,49 +11,110 @@ Psycopg 3 uses the common DBAPI structure of many other database adapter and
 tries to behave as close as possible to `!psycopg2`. There are however a few
 differences to be aware of.
 
+.. note::
+    Most of the times, the workarounds suggested here will work with both
+    Psycopg 2 and 3, which could be useful if you are porting a program or
+    writing a program that should work with both Psycopg 2 and 3.
+
 
 .. _server-side-binding:
 
 Server-side binding
 -------------------
 
-Psycopg 3 sends the query and the parameters to the server separately,
-instead of merging them client-side. PostgreSQL may behave slightly
-differently in this case, usually throwing an error and suggesting to use an
-explicit cast.
+Psycopg 3 sends the query and the parameters to the server separately, instead
+of merging them on the client side. Server-side binding works for normal
+:sql:`SELECT` and data manipulation statements (:sql:`INSERT`, :sql:`UPDATE`,
+:sql:`DELETE`), but it doesn't work with many other statements. For instance,
+it doesn't work with :sql:`SET` or with :sql:`NOTIFY`::
 
-.. code:: python
-
-    cur.execute("SELECT '[10,20,30]'::jsonb -> 1").fetchone()
-    # returns (20,)
-
-    cur.execute("SELECT '[10,20,30]'::jsonb -> %s", [1]).fetchone()
-    # raises an exception:
-    # UndefinedFunction: operator does not exist: jsonb -> numeric
-
-    cur.execute("SELECT '[10,20,30]'::jsonb -> %s::int", [1]).fetchone()
-    # returns (20,)
-
-PostgreSQL will also reject the execution of several queries at once
-(separated by semicolon), if they contain parameters. If parameters are used
-you should use distinct `execute()` calls; otherwise you may consider merging
-the query client-side, using `psycopg.sql` module.
-
-Certain commands cannot be used with server-side binding, for instance
-:sql:`SET` or :sql:`NOTIFY`::
-
-    >>> cur.execute("SET timezone TO %s", ["utc"])
+    >>> conn.execute("SET TimeZone TO %s", ["UTC"])
+    Traceback (most recent call last):
     ...
     psycopg.errors.SyntaxError: syntax error at or near "$1"
+    LINE 1: SET TimeZone TO $1
+                            ^
 
-Sometimes PostgreSQL offers an alternative (e.g. :sql:`SELECT set_config()`,
-:sql:`SELECT pg_notify()`). If no alternative exist you can use `psycopg.sql`
-to compose the query client-side.
+    >>> conn.execute("NOTIFY %s, %s", ["chan", 42])
+    Traceback (most recent call last):
+    ...
+    psycopg.errors.SyntaxError: syntax error at or near "$1"
+    LINE 1: NOTIFY $1, $2
+                   ^
 
-You cannot use :sql:`IN %s` and pass a tuple, because `IN ()` is an SQL
-construct. You must use :sql:`= any(%s)` and pass a list. Note that this also
-works for an empty list, whereas an empty tuple would have resulted in an
-error.
+and with any data definition statement::
+
+    >>> conn.execute("CREATE TABLE foo (id int DEFAULT %s)", [42])
+    Traceback (most recent call last):
+    ...
+    psycopg.errors.UndefinedParameter: there is no parameter $1
+    LINE 1: CREATE TABLE foo (id int DEFAULT $1)
+                                             ^
+
+Sometimes, PostgreSQL offers an alternative: for instance the `set_config()`__
+function can be used instead of the :sql:`SET` statement, the `pg_notify()`__
+function can be used instead of :sql:`NOTIFY`::
+
+    >>> conn.execute("SELECT set_config('TimeZone', %s, false)", ["UTC"])
+
+    >>> conn.execute("SELECT pg_notify(%s, %s)", ["chan", "42"])
+
+.. __: https://www.postgresql.org/docs/current/functions-admin.html
+    #FUNCTIONS-ADMIN-SET
+
+.. __: https://www.postgresql.org/docs/current/sql-notify.html
+    #id-1.9.3.157.7.5
+
+If this is not possible, you can use client-side binding using the objects
+from the `sql` module::
+
+    >>> from psycopg import sql
+    >>> conn.execute(sql.SQL("CREATE TABLE foo (id int DEFAULT {})").format(42))
+
+
+.. _difference-cast-rules:
+
+Different cast rules
+--------------------
+
+In rare cases, especially around variadic functions, PostgreSQL might fail to
+find a function candidate for the given data types::
+
+    >>> conn.execute("SELECT json_build_array(%s, %s)", ["foo", "bar"])
+    Traceback (most recent call last):
+    psycopg.errors.IndeterminateDatatype: could not determine data type of parameter $1
+
+This can be worked around specifying the argument types explicitly via a cast::
+
+    >>> conn.execute("SELECT json_build_array(%s::text, %s::text)", ["foo", "bar"])
+
+
+.. _in-and-tuple:
+
+You cannot use ``IN %s`` with a tuple
+-------------------------------------
+
+``IN`` cannot be used with a tuple as single parameter, as was possible with
+``psycopg2``::
+
+    >>> conn.execute("SELECT * FROM foo WHERE id IN %s", [(10,20,30)])
+    Traceback (most recent call last):
+    ...
+    psycopg.errors.SyntaxError: syntax error at or near "$1"
+    LINE 1: SELECT * FROM foo WHERE id IN $1
+                                          ^
+
+What you can do is to use the `= ANY()`__ construct and pass the candidate
+values as a list instead of a tuple, which will be adapted to a PostgreSQL
+array::
+
+    >>> conn.execute("SELECT * FROM foo WHERE id = ANY(%s)", [[10,20,30]])
+
+Note that this variant is also superior because, unlike :sql:`IN`, it works
+with an empty list of values.
+
+.. __: https://www.postgresql.org/docs/current/functions-comparisons.html
+    #id-1.5.8.30.16
 
 
 .. _diff-adapt:
@@ -65,9 +126,10 @@ The adaptation system has been completely rewritten, in order to address
 server-side parameters adaptation, but also to consider performance,
 flexibility, ease of customization.
 
-The behaviour with builtin data should be as expected; if you have customised
-the way to adapt data, or you have your own extension types, you should look
-at the new objects involved in adaptation.
+The default behaviour with builtin data should be :ref:`what you would expect
+<types-adaptation>`. If you have customised the way to adapt data, or if you
+are managing your own extension types, you should look at the :ref:`new
+adaptation system <adaptation>`.
 
 .. seealso::
 
@@ -81,8 +143,8 @@ Copy is no more file-based
 --------------------------
 
 `!psycopg2` exposes :ref:`a few copy methods <pg2:copy>` to interact with
-PostgreSQL :sql:`COPY`. The interface doesn't make easy to load
-dynamically-generated data to the database.
+PostgreSQL :sql:`COPY`. Their file-based interface doesn't make easy to load
+dynamically-generated data into a database.
 
 There is now a single `~Cursor.copy()` method, which is similar to
 `!psycopg2` `!copy_expert()` in accepting a free-form :sql:`COPY` command and
@@ -133,5 +195,6 @@ What's new in Psycopg 3
 
 - `asyncio` support.
 - Several data types are adapted out-of-the-box: uuid, network, range, bytea,
-  array of any supported type are dealt with automatically.
-- Access to the low-level libpq functions.
+  array of any supported type are dealt with automatically
+  (see :ref:`types-adaptation`).
+- Access to the low-level libpq functions via the `pq` module.
