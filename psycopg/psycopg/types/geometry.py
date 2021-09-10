@@ -25,22 +25,26 @@ def register_shapely_adapters(conn: psycopg.Connection):
 
     class GeometryBinaryLoader(Loader):
         format = Format.BINARY
+
         def load(self, data):
             return shapely.wkb.loads(data)
 
     class GeometryTextLoader(Loader):
         format = Format.TEXT
+
         def load(self, data):
             # it's a hex string in binary
             return shapely.wkb.loads(data.decode(), hex=True)
 
     class GeometryBinaryDumper(Dumper):
         format = Format.BINARY
+
         def dump(self, obj):
             return shapely.wkb.dumps(obj).encode()
 
     class GeometryTextDumper(Dumper):
         format = Format.TEXT
+
         def dump(self, obj):
             return shapely.wkb.dumps(obj, hex=True).encode()
 
