@@ -7,9 +7,11 @@ from typing import TYPE_CHECKING
 from psycopg.adapt import Dumper, Loader
 from psycopg.pq import Format
 from psycopg.types import TypeInfo
+
 if TYPE_CHECKING:
     from psycopg.connection import Connection
     from psycopg.rows import Row
+
 
 def register_shapely_adapters(conn: Connection[Row]) -> None:
     """Register Shapely dumper and loaders.
@@ -43,13 +45,13 @@ def register_shapely_adapters(conn: Connection[Row]) -> None:
         format = Format.BINARY
 
         def dump(self, obj: BaseGeometry) -> bytes:
-            return shapely.wkb.dumps(obj).encode() # type: ignore
+            return shapely.wkb.dumps(obj).encode()  # type: ignore
 
     class GeometryTextDumper(Dumper):
         format = Format.TEXT
 
         def dump(self, obj: BaseGeometry) -> bytes:
-            return shapely.wkb.dumps(obj, hex=True).encode() # type: ignore
+            return shapely.wkb.dumps(obj, hex=True).encode()  # type: ignore
 
     t = TypeInfo.fetch(conn, "geometry")
     if t is None:
