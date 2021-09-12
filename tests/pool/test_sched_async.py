@@ -6,9 +6,13 @@ from functools import partial
 import pytest
 
 from psycopg._compat import create_task
-from psycopg_pool.sched import AsyncScheduler
 
 pytestmark = [pytest.mark.asyncio, pytest.mark.timing]
+
+try:
+    from psycopg_pool.sched import AsyncScheduler
+except ImportError as ex:
+    pytestmark.append(pytest.mark.skip(reason=str(ex)))
 
 
 @pytest.mark.slow

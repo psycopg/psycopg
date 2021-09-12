@@ -8,8 +8,16 @@ from collections import Counter
 import pytest
 
 import psycopg
-import psycopg_pool as pool
 from psycopg.pq import TransactionStatus
+
+pytestmark = []
+
+try:
+    from psycopg_pool import ConnectionPool  # noqa: F401
+except ImportError as ex:
+    pytestmark.append(pytest.mark.skip(reason=str(ex)))
+else:
+    import psycopg_pool as pool
 
 
 def test_defaults(dsn):

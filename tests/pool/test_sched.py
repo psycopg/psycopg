@@ -5,9 +5,12 @@ from threading import Thread
 
 import pytest
 
-from psycopg_pool.sched import Scheduler
+pytestmark = [pytest.mark.timing]
 
-pytestmark = pytest.mark.timing
+try:
+    from psycopg_pool.sched import Scheduler
+except ImportError as ex:
+    pytestmark.append(pytest.mark.skip(reason=str(ex)))
 
 
 @pytest.mark.slow
