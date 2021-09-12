@@ -30,6 +30,11 @@ def pytest_configure(config):
         "timing: the test is timing based and can fail on cheese hardware",
     )
 
+    config.addinivalue_line(
+        "markers",
+        "dns: the test requires dnspython to run",
+    )
+
 
 def pytest_addoption(parser):
     parser.addoption(

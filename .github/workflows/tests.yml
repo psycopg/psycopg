@@ -21,6 +21,7 @@ jobs:
           - {impl: c, python: 3.7, postgres: 12}
           - {impl: c, python: 3.8, postgres: 11}
           - {impl: c, python: 3.9, postgres: 10}
+          - {impl: dns, python: 3.9, postgres: 13}
 
     env:
       PSYCOPG_IMPL: ${{ matrix.impl }}
@@ -48,6 +49,12 @@ jobs:
           # skip tests failing on importing psycopg_c.pq on subprocess
           # they only fail on Travis, work ok locally under tox too.
           PYTEST_ADDOPTS: "-m 'not subprocess'"
+
+      - name: Run DNS-related tests
+        run: tox -c psycopg -e dns -- --color yes -m dns
+        if: ${{ matrix.impl == 'dns' }}
+        env:
+          PSYCOPG_IMPL: python
 
     services:
       postgresql:

@@ -3,6 +3,8 @@ import pytest
 import psycopg
 from psycopg.conninfo import conninfo_to_dict
 
+pytestmark = [pytest.mark.dns]
+
 
 @pytest.mark.parametrize(
     "conninfo, want, env",

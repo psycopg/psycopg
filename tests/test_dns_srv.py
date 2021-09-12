@@ -5,6 +5,8 @@ from psycopg.conninfo import conninfo_to_dict
 
 from .test_dns import import_dnspython
 
+pytestmark = [pytest.mark.dns]
+
 samples_ok = [
     ("", "", None),
     ("host=_pg._tcp.foo.com", "host=db1.example.com port=5432", None),
