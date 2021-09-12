@@ -184,7 +184,7 @@ Only dictionaries with string keys and values are supported. `!None` is also
 allowed as value but not as a key.
 
 In order to use the |hstore| data type it is necessary to load it in a
-database using 
+database using
 
 .. code:: none
 

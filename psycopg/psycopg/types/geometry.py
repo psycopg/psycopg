@@ -10,15 +10,16 @@ from ..adapt import Dumper, Loader
 from ..pq import Format
 from .._typeinfo import TypeInfo
 
-_shapely_imported = False
 
 try:
     import shapely.wkb as wkb
     from shapely.geometry.base import BaseGeometry
 
-    _shapely_imported = True
 except ImportError:
-    pass
+    raise ImportError(
+        "The module psycopg.types.geometry requires the package 'Shapely'"
+        " to be installed"
+    )
 
 
 class GeometryBinaryLoader(Loader):
@@ -61,18 +62,13 @@ def register_shapely(
 
     Similarly, shape objects can be sent to the database.
 
-    This requires the Shapely library to be installed, or will raise an
-    exception.
+    This requires the Shapely library to be installed.
 
     :param info: The object with the information about the geometry type.
     :param context: The context where to register the adapters. If `!None`,
         register it globally.
 
     """
-    if not _shapely_imported:
-        raise ModuleNotFoundError(
-            "Shapely library not found, please install it"
-        )
 
     info.register(context)
     adapters = context.adapters if context else postgres.adapters
