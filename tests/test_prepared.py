@@ -143,7 +143,7 @@ def test_evict_lru(conn):
     assert len(conn._prepared._prepared) == 5
     assert conn._prepared._prepared[b"select 'a'", ()] == b"_pg3_0"
     for i in [9, 8, 7, 6]:
-        assert conn._prepared._prepared[f"select {i}".encode("utf8"), ()] == 1
+        assert conn._prepared._prepared[f"select {i}".encode(), ()] == 1
 
     cur = conn.execute("select statement from pg_prepared_statements")
     assert cur.fetchall() == [("select 'a'",)]
@@ -158,9 +158,8 @@ def test_evict_lru_deallocate(conn):
 
     assert len(conn._prepared._prepared) == 5
     for i in [9, 8, 7, 6, "'a'"]:
-        assert conn._prepared._prepared[
-            f"select {i}".encode("utf8"), ()
-        ].startswith(b"_pg3_")
+        name = conn._prepared._prepared[f"select {i}".encode(), ()]
+        assert name.startswith(b"_pg3_")
 
     cur = conn.execute(
         "select statement from pg_prepared_statements order by prepare_time",

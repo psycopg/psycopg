@@ -24,7 +24,7 @@ def connect(conninfo: str) -> PQGenConn[abc.PGconn]:
     Generator to create a database connection without blocking.
 
     """
-    cdef pq.PGconn conn = pq.PGconn.connect_start(conninfo.encode("utf8"))
+    cdef pq.PGconn conn = pq.PGconn.connect_start(conninfo.encode())
     logger.debug("connection started, status %s", conn.status)
     cdef libpq.PGconn *pgconn_ptr = conn._pgconn_ptr
     cdef int conn_status = libpq.PQstatus(pgconn_ptr)

@@ -128,7 +128,7 @@ class ListDumper(BaseListDumper):
         if sd.oid != INVALID_OID:
             info = self._get_base_type_info(sd.oid)
             dumper.oid = info.array_oid or TEXT_ARRAY_OID
-            dumper.delimiter = info.delimiter.encode("utf-8")
+            dumper.delimiter = info.delimiter.encode()
         else:
             dumper.oid = INVALID_OID
 
@@ -431,7 +431,7 @@ def register_array(
     name = f"{info.name.title()}{base.__name__}"
     attribs = {
         "base_oid": info.oid,
-        "delimiter": info.delimiter.encode("utf-8"),
+        "delimiter": info.delimiter.encode(),
     }
     loader = type(name, (base,), attribs)
     adapters.register_loader(info.array_oid, loader)
@@ -447,7 +447,7 @@ def register_array(
     attribs = {
         "oid": info.array_oid,
         "element_oid": info.oid,
-        "delimiter": info.delimiter.encode("utf-8"),
+        "delimiter": info.delimiter.encode(),
     }
     dumper = type(name, (base,), attribs)
     adapters.register_dumper(None, dumper)

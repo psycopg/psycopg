@@ -33,7 +33,7 @@ from .._wrappers import (
 
 class _NumberDumper(Dumper):
     def dump(self, obj: Any) -> bytes:
-        return str(obj).encode("utf8")
+        return str(obj).encode()
 
     def quote(self, obj: Any) -> bytes:
         value = self.dump(obj)
@@ -94,7 +94,7 @@ class DecimalDumper(_SpecialValuesDumper):
             # cover NaN and sNaN
             return b"NaN"
         else:
-            return str(obj).encode("utf8")
+            return str(obj).encode()
 
     _special = {
         b"Infinity": b"'Infinity'::numeric",
@@ -286,7 +286,7 @@ class NumericLoader(Loader):
     def load(self, data: Buffer) -> Decimal:
         if isinstance(data, memoryview):
             data = bytes(data)
-        return Decimal(data.decode("utf8"))
+        return Decimal(data.decode())
 
 
 DEC_DIGITS = 4  # decimal digits per Postgres "digit"

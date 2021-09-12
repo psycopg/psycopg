@@ -233,7 +233,7 @@ def test_dump_list_no_comma_separator(conn):
         oid = psycopg.postgres.types["box"].oid
 
         def dump(self, box):
-            return ("(%s,%s),(%s,%s)" % box.coords).encode("utf8")
+            return ("(%s,%s),(%s,%s)" % box.coords).encode()
 
     conn.adapters.register_dumper(Box, BoxDumper)
 

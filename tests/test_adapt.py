@@ -128,7 +128,7 @@ def test_subclass_dumper(conn):
 
     class MyStrDumper(StrDumper):
         def dump(self, obj):
-            return (obj * 2).encode("utf-8")
+            return (obj * 2).encode()
 
     conn.adapters.register_dumper(str, MyStrDumper)
     assert conn.execute("select %t", ["hello"]).fetchone()[0] == "hellohello"
@@ -165,7 +165,7 @@ def test_subclass_loader(conn):
 
     class MyTextLoader(TextLoader):
         def load(self, data):
-            return (bytes(data) * 2).decode("utf-8")
+            return (bytes(data) * 2).decode()
 
     conn.adapters.register_loader("text", MyTextLoader)
     assert conn.execute("select 'hello'::text").fetchone()[0] == "hellohello"

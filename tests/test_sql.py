@@ -329,7 +329,7 @@ class TestLiteral:
         )
 
         conn.client_encoding = "utf8"
-        assert sql.Literal(eur).as_bytes(conn) == f"'{eur}'".encode("utf8")
+        assert sql.Literal(eur).as_bytes(conn) == f"'{eur}'".encode()
         conn.client_encoding = "latin9"
         assert sql.Literal(eur).as_bytes(conn) == f"'{eur}'".encode("latin9")
 
@@ -411,7 +411,7 @@ class TestSQL:
         assert sql.SQL("foo").as_bytes(conn) == b"foo"
 
         conn.client_encoding = "utf8"
-        assert sql.SQL(eur).as_bytes(conn) == eur.encode("utf8")
+        assert sql.SQL(eur).as_bytes(conn) == eur.encode()
 
         conn.client_encoding = "latin9"
         assert sql.SQL(eur).as_bytes(conn) == eur.encode("latin9")
@@ -485,7 +485,7 @@ class TestComposed:
         obj = sql.Composed([sql.SQL("foo"), sql.SQL(eur)])
 
         conn.client_encoding = "utf8"
-        assert obj.as_bytes(conn) == ("foo" + eur).encode("utf8")
+        assert obj.as_bytes(conn) == ("foo" + eur).encode()
 
         conn.client_encoding = "latin9"
         assert obj.as_bytes(conn) == ("foo" + eur).encode("latin9")

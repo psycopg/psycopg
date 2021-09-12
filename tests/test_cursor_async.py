@@ -498,7 +498,7 @@ async def test_stream_binary_cursor_text_override(aconn):
     async for rec in cur.stream("select generate_series(1, 2)", binary=False):
         recs.append(rec)
         assert cur.pgresult.fformat(0) == 0
-        assert cur.pgresult.get_value(0, 0) == str(rec[0]).encode("utf8")
+        assert cur.pgresult.get_value(0, 0) == str(rec[0]).encode()
 
     assert recs == [(1,), (2,)]
 

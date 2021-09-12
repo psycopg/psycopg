@@ -47,7 +47,7 @@ class DateDumper(Dumper):
     def dump(self, obj: date) -> bytes:
         # NOTE: whatever the PostgreSQL DateStyle input format (DMY, MDY, YMD)
         # the YYYY-MM-DD is always understood correctly.
-        return str(obj).encode("utf8")
+        return str(obj).encode()
 
 
 class DateBinaryDumper(Dumper):
@@ -75,7 +75,7 @@ class _BaseTimeDumper(Dumper):
 
 class _BaseTimeTextDumper(_BaseTimeDumper):
     def dump(self, obj: time) -> bytes:
-        return str(obj).encode("utf8")
+        return str(obj).encode()
 
 
 class TimeDumper(_BaseTimeTextDumper):
@@ -143,7 +143,7 @@ class _BaseDatetimeTextDumper(_BaseDatetimeDumper):
     def dump(self, obj: datetime) -> bytes:
         # NOTE: whatever the PostgreSQL DateStyle input format (DMY, MDY, YMD)
         # the YYYY-MM-DD is always understood correctly.
-        return str(obj).encode("utf8")
+        return str(obj).encode()
 
 
 class DatetimeDumper(_BaseDatetimeTextDumper):
@@ -208,7 +208,7 @@ class TimedeltaDumper(Dumper):
                 setattr(self, "dump", self._dump_sql)
 
     def dump(self, obj: timedelta) -> bytes:
-        return str(obj).encode("utf8")
+        return str(obj).encode()
 
     def _dump_sql(self, obj: timedelta) -> bytes:
         # sql_standard format needs explicit signs

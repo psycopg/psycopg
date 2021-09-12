@@ -122,7 +122,7 @@ class _JsonDumper(Dumper):
 
     def dump(self, obj: _JsonWrapper) -> bytes:
         dumps = obj.dumps or self.dumps
-        return dumps(obj.obj).encode("utf-8")
+        return dumps(obj.obj).encode()
 
 
 class JsonDumper(_JsonDumper):
@@ -148,7 +148,7 @@ class JsonbBinaryDumper(_JsonDumper):
 
     def dump(self, obj: _JsonWrapper) -> bytes:
         dumps = obj.dumps or self.dumps
-        return b"\x01" + dumps(obj.obj).encode("utf-8")
+        return b"\x01" + dumps(obj.obj).encode()
 
 
 class _JsonLoader(Loader):

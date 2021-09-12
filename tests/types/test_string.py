@@ -192,7 +192,7 @@ def test_load_ascii(conn, typename, fmt_out):
 
     conn.client_encoding = "ascii"
     cur.execute(f"select chr(%s)::{typename}", (ord(eur),))
-    assert cur.fetchone()[0] == eur.encode("utf8")
+    assert cur.fetchone()[0] == eur.encode()
 
     stmt = sql.SQL("copy (select chr({})) to stdout (format {})").format(
         ord(eur), sql.SQL(fmt_out.name)
@@ -201,7 +201,7 @@ def test_load_ascii(conn, typename, fmt_out):
         copy.set_types([typename])
         (res,) = copy.read_row()
 
-    assert res == eur.encode("utf8")
+    assert res == eur.encode()
 
 
 @pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
@@ -221,7 +221,7 @@ def test_text_array_ascii(conn, fmt_in, fmt_out):
     conn.client_encoding = "ascii"
     cur = conn.cursor(binary=fmt_out)
     a = list(map(chr, range(1, 256))) + [eur]
-    exp = [s.encode("utf8") for s in a]
+    exp = [s.encode() for s in a]
     (res,) = cur.execute(f"select %{fmt_in}::text[]", (a,)).fetchone()
     assert res == exp
 

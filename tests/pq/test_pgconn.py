@@ -14,7 +14,7 @@ from ..utils import gc_collect
 
 
 def test_connectdb(dsn):
-    conn = pq.PGconn.connect(dsn.encode("utf8"))
+    conn = pq.PGconn.connect(dsn.encode())
     assert conn.status == pq.ConnStatus.OK, conn.error_message
 
 
@@ -30,7 +30,7 @@ def test_connectdb_badtype(baddsn):
 
 
 def test_connect_async(dsn):
-    conn = pq.PGconn.connect_start(dsn.encode("utf8"))
+    conn = pq.PGconn.connect_start(dsn.encode())
     conn.nonblocking = 1
     while 1:
         assert conn.status != pq.ConnStatus.BAD
@@ -53,9 +53,7 @@ def test_connect_async(dsn):
 
 def test_connect_async_bad(dsn):
     parsed_dsn = {
-        e.keyword: e.val
-        for e in pq.Conninfo.parse(dsn.encode("utf8"))
-        if e.val
+        e.keyword: e.val for e in pq.Conninfo.parse(dsn.encode()) if e.val
     }
     parsed_dsn[b"dbname"] = b"psycopg_test_not_for_real"
     dsn = b" ".join(b"%s='%s'" % item for item in parsed_dsn.items())
@@ -84,7 +82,7 @@ def test_finish(pgconn):
 
 
 def test_weakref(dsn):
-    conn = pq.PGconn.connect(dsn.encode("utf8"))
+    conn = pq.PGconn.connect(dsn.encode())
     w = weakref.ref(conn)
     conn.finish()
     del conn
@@ -114,7 +112,7 @@ def test_info(dsn, pgconn):
     assert dbname.dispchar == b""
     assert dbname.dispsize == 20
 
-    parsed = pq.Conninfo.parse(dsn.encode("utf8"))
+    parsed = pq.Conninfo.parse(dsn.encode())
     name = [o.val for o in parsed if o.keyword == b"dbname"][0]
     user = [o.val for o in parsed if o.keyword == b"user"][0]
     assert dbname.val == (name or user)
@@ -164,7 +162,7 @@ def test_reset_async(pgconn):
 
 
 def test_ping(dsn):
-    rv = pq.PGconn.ping(dsn.encode("utf8"))
+    rv = pq.PGconn.ping(dsn.encode())
     assert rv == pq.Ping.OK
 
     rv = pq.PGconn.ping(b"port=9999")
@@ -248,7 +246,7 @@ def test_transaction_status(pgconn):
 
 def test_parameter_status(dsn, monkeypatch):
     monkeypatch.setenv("PGAPPNAME", "psycopg tests")
-    pgconn = pq.PGconn.connect(dsn.encode("utf8"))
+    pgconn = pq.PGconn.connect(dsn.encode())
     assert pgconn.parameter_status(b"application_name") == b"psycopg tests"
     assert pgconn.parameter_status(b"wat") is None
     pgconn.finish()
@@ -291,9 +289,7 @@ def test_server_version(pgconn):
 def test_socket(pgconn):
     socket = pgconn.socket
     assert socket > 0
-    pgconn.exec_(
-        f"select pg_terminate_backend({pgconn.backend_pid})".encode("utf8")
-    )
+    pgconn.exec_(f"select pg_terminate_backend({pgconn.backend_pid})".encode())
     # TODO: on my box it raises OperationalError as it should. Not on Travis,
     # so let's see if at least an ok value comes out of it.
     try:
@@ -333,7 +329,7 @@ def test_used_password(pgconn, dsn, monkeypatch):
     # Note that the server may still need a password passed via pgpass
     # so it may be that has_password is false but still a password was
     # requested by the server and passed by libpq.
-    info = pq.Conninfo.parse(dsn.encode("utf8"))
+    info = pq.Conninfo.parse(dsn.encode())
     has_password = (
         "PGPASSWORD" in os.environ
         or [i for i in info if i.keyword == b"password"][0].val is not None
@@ -515,6 +511,6 @@ def test_str(pgconn, dsn):
     pgconn.finish()
     assert "[BAD]" in str(pgconn)
 
-    pgconn2 = pq.PGconn.connect_start(dsn.encode("utf8"))
+    pgconn2 = pq.PGconn.connect_start(dsn.encode())
     assert "[" in str(pgconn2)
     assert "[IDLE]" not in str(pgconn2)

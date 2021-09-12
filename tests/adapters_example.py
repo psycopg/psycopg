@@ -21,7 +21,7 @@ class MyStrDumper:
         self._cls = cls
 
     def dump(self, obj: str) -> bytes:
-        return (obj * 2).encode("utf-8")
+        return (obj * 2).encode()
 
     def quote(self, obj: str) -> bytes:
         value = self.dump(obj)
@@ -42,7 +42,7 @@ class MyTextLoader:
         pass
 
     def load(self, data: Buffer) -> str:
-        return (bytes(data) * 2).decode("utf-8")
+        return (bytes(data) * 2).decode()
 
 
 # This should be the definition of psycopg.adapt.DumperKey, but mypy doesn't

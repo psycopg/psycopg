@@ -60,7 +60,7 @@ class PrepareManager:
 
         if value >= self.prepare_threshold or prepare:
             # The query has been executed enough times and needs to be prepared
-            name = f"_pg3_{self._prepared_idx}".encode("utf-8")
+            name = f"_pg3_{self._prepared_idx}".encode()
             self._prepared_idx += 1
             return Prepare.SHOULD, name
         else:

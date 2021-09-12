@@ -36,7 +36,7 @@ def get_config(what: str) -> str:
         log.error(f"couldn't run {pg_config!r} --{what}: %s", e)
         raise
     else:
-        return out.stdout.strip().decode("utf8")
+        return out.stdout.strip().decode()
 
 
 class psycopg_build_ext(build_ext):

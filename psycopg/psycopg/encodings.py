@@ -58,9 +58,9 @@ _py_codecs = {
 
 py_codecs: Dict[Union[bytes, str], str] = {}
 py_codecs.update((k, v) for k, v in _py_codecs.items())
-py_codecs.update((k.encode("utf-8"), v) for k, v in _py_codecs.items())
+py_codecs.update((k.encode(), v) for k, v in _py_codecs.items())
 
-pg_codecs = {v: k.encode("utf-8") for k, v in _py_codecs.items()}
+pg_codecs = {v: k.encode() for k, v in _py_codecs.items()}
 
 
 def py2pg(name: str) -> bytes:

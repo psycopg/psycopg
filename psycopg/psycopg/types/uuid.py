@@ -24,7 +24,7 @@ class UUIDDumper(Dumper):
     oid = postgres.types["uuid"].oid
 
     def dump(self, obj: "uuid.UUID") -> bytes:
-        return obj.hex.encode("utf8")
+        return obj.hex.encode()
 
 
 class UUIDBinaryDumper(UUIDDumper):
@@ -47,7 +47,7 @@ class UUIDLoader(Loader):
     def load(self, data: Buffer) -> "uuid.UUID":
         if isinstance(data, memoryview):
             data = bytes(data)
-        return UUID(data.decode("utf8"))
+        return UUID(data.decode())
 
 
 class UUIDBinaryLoader(UUIDLoader):

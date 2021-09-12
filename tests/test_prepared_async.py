@@ -151,7 +151,7 @@ async def test_evict_lru(aconn):
     assert len(aconn._prepared._prepared) == 5
     assert aconn._prepared._prepared[b"select 'a'", ()] == b"_pg3_0"
     for i in [9, 8, 7, 6]:
-        assert aconn._prepared._prepared[f"select {i}".encode("utf8"), ()] == 1
+        assert aconn._prepared._prepared[f"select {i}".encode(), ()] == 1
 
     cur = await aconn.execute("select statement from pg_prepared_statements")
     assert await cur.fetchall() == [("select 'a'",)]
@@ -167,7 +167,7 @@ async def test_evict_lru_deallocate(aconn):
     assert len(aconn._prepared._prepared) == 5
     for i in [9, 8, 7, 6, "'a'"]:
         assert aconn._prepared._prepared[
-            f"select {i}".encode("utf8"), ()
+            f"select {i}".encode(), ()
         ].startswith(b"_pg3_")
 
     cur = await aconn.execute(

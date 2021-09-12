@@ -105,7 +105,7 @@ class TestConnectionInfo:
             pytest.skip("hostaddr not supported on libpq < 12")
 
         info_val = getattr(conn.info, info_attr)
-        pgconn_val = getattr(conn.pgconn, pgconn_attr).decode("utf-8")
+        pgconn_val = getattr(conn.pgconn, pgconn_attr).decode()
         assert info_val == pgconn_val
 
         conn.close()
@@ -118,7 +118,7 @@ class TestConnectionInfo:
             conn.info.hostaddr
 
     def test_port(self, conn):
-        assert conn.info.port == int(conn.pgconn.port.decode("utf-8"))
+        assert conn.info.port == int(conn.pgconn.port.decode())
         conn.close()
         with pytest.raises(psycopg.OperationalError):
             conn.info.port
@@ -176,7 +176,7 @@ class TestConnectionInfo:
 
     def test_no_password(self, dsn):
         dsn2 = make_conninfo(dsn, password="the-pass-word")
-        pgconn = psycopg.pq.PGconn.connect_start(dsn2.encode("utf8"))
+        pgconn = psycopg.pq.PGconn.connect_start(dsn2.encode())
         info = ConnectionInfo(pgconn)
         assert info.password == "the-pass-word"
         assert "password" not in info.get_parameters()
@@ -184,7 +184,7 @@ class TestConnectionInfo:
 
     def test_dsn_no_password(self, dsn):
         dsn2 = make_conninfo(dsn, password="the-pass-word")
-        pgconn = psycopg.pq.PGconn.connect_start(dsn2.encode("utf8"))
+        pgconn = psycopg.pq.PGconn.connect_start(dsn2.encode())
         info = ConnectionInfo(pgconn)
         assert info.password == "the-pass-word"
         assert "password" not in info.dsn

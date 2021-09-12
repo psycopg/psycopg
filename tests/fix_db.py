@@ -37,7 +37,7 @@ def pgconn(dsn, request):
     """Return a PGconn connection open to `--test-dsn`."""
     from psycopg import pq
 
-    conn = pq.PGconn.connect(dsn.encode("utf8"))
+    conn = pq.PGconn.connect(dsn.encode())
     if conn.status != pq.ConnStatus.OK:
         pytest.fail(
             f"bad connection: {conn.error_message.decode('utf8', 'replace')}"

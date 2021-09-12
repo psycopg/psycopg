@@ -24,7 +24,7 @@ from psycopg.types.hstore import HstoreLoader, register_hstore
 )
 def test_parse_ok(s, d):
     loader = HstoreLoader(dict, None)
-    assert loader.load(s.encode("utf8")) == d
+    assert loader.load(s.encode()) == d
 
 
 @pytest.mark.parametrize(
@@ -41,7 +41,7 @@ def test_parse_ok(s, d):
 def test_parse_bad(s):
     with pytest.raises(psycopg.DataError):
         loader = HstoreLoader(dict, None)
-        loader.load(s.encode("utf8"))
+        loader.load(s.encode())
 
 
 def test_register_conn(hstore, conn):

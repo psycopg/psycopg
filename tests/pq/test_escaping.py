@@ -145,7 +145,7 @@ def test_escape_string_badconn(pgconn):
 def test_escape_string_badenc(pgconn):
     res = pgconn.exec_(b"set client_encoding to 'UTF8'")
     assert res.status == pq.ExecStatus.COMMAND_OK
-    data = "\u20ac".encode("utf8")[:-1]
+    data = "\u20ac".encode()[:-1]
     esc = pq.Escaping(pgconn)
     with pytest.raises(psycopg.OperationalError):
         esc.escape_string(data)

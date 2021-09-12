@@ -96,12 +96,12 @@ def connection_summary(pgconn: PGconn) -> str:
 
         status = TransactionStatus(pgconn.transaction_status).name
         if not pgconn.host.startswith(b"/"):
-            parts.append(("host", pgconn.host.decode("utf-8")))
+            parts.append(("host", pgconn.host.decode()))
         if pgconn.port != b"5432":
-            parts.append(("port", pgconn.port.decode("utf-8")))
+            parts.append(("port", pgconn.port.decode()))
         if pgconn.user != pgconn.db:
-            parts.append(("user", pgconn.user.decode("utf-8")))
-        parts.append(("database", pgconn.db.decode("utf-8")))
+            parts.append(("user", pgconn.user.decode()))
+        parts.append(("database", pgconn.db.decode()))
     else:
         status = ConnStatus(pgconn.status).name
 

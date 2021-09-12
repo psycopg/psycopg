@@ -1115,7 +1115,7 @@ cdef object _timezone_from_connection(pq.PGconn pgconn, __cache={}):
     if ptr != NULL:
         return <object>ptr
 
-    sname = tzname.decode("utf8") if tzname else "UTC"
+    sname = tzname.decode() if tzname else "UTC"
     try:
         zi = ZoneInfo(sname)
     except KeyError:

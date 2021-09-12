@@ -454,7 +454,7 @@ class BaseConnection(Generic[Row]):
             else:
                 raise e.InterfaceError(
                     f"unexpected result {ExecStatus(result.status).name}"
-                    f" from command {command.decode('utf8')!r}"
+                    f" from command {command.decode()!r}"
                 )
         return result
 
@@ -477,7 +477,7 @@ class BaseConnection(Generic[Row]):
         if self.isolation_level is not None:
             val = IsolationLevel(self.isolation_level)
             parts.append(b"ISOLATION LEVEL")
-            parts.append(val.name.replace("_", " ").encode("utf8"))
+            parts.append(val.name.replace("_", " ").encode())
 
         if self.read_only is not None:
             parts.append(b"READ ONLY" if self.read_only else b"READ WRITE")

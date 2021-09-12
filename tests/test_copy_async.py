@@ -229,7 +229,7 @@ async def test_copy_in_str(aconn):
     cur = aconn.cursor()
     await ensure_table(cur, sample_tabledef)
     async with cur.copy("copy copy_in from stdin (format text)") as copy:
-        await copy.write(sample_text.decode("utf8"))
+        await copy.write(sample_text.decode())
 
     await cur.execute("select * from copy_in order by 1")
     data = await cur.fetchall()
@@ -241,7 +241,7 @@ async def test_copy_in_str_binary(aconn):
     await ensure_table(cur, sample_tabledef)
     with pytest.raises(e.QueryCanceled):
         async with cur.copy("copy copy_in from stdin (format binary)") as copy:
-            await copy.write(sample_text.decode("utf8"))
+            await copy.write(sample_text.decode())
 
     assert aconn.pgconn.transaction_status == aconn.TransactionStatus.INERROR
 
@@ -418,7 +418,7 @@ async def test_copy_from_to_bytes(aconn):
     cur = aconn.cursor()
     async with cur.copy("copy copy_in from stdin") as copy:
         for block in gen.blocks():
-            await copy.write(block.encode("utf8"))
+            await copy.write(block.encode())
 
     await gen.assert_data()
 
@@ -682,6 +682,6 @@ class DataGenerator:
             if not block:
                 break
             if isinstance(block, str):
-                block = block.encode("utf8")
+                block = block.encode()
             m.update(block)
         return m.hexdigest()

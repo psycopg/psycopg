@@ -25,7 +25,7 @@ def get_tzinfo(pgconn: Optional[PGconn]) -> tzinfo:
     try:
         return _timezones[tzname]
     except KeyError:
-        sname = tzname.decode("utf8") if tzname else "UTC"
+        sname = tzname.decode() if tzname else "UTC"
         try:
             zi: tzinfo = ZoneInfo(sname)
         except KeyError:

@@ -75,7 +75,7 @@ def conninfo_to_dict(conninfo: str = "", **kwargs: Any) -> Dict[str, Any]:
     """
     opts = _parse_conninfo(conninfo)
     rv = {
-        opt.keyword.decode("utf8"): opt.val.decode("utf8")
+        opt.keyword.decode(): opt.val.decode()
         for opt in opts
         if opt.val is not None
     }
@@ -94,7 +94,7 @@ def _parse_conninfo(conninfo: str) -> List[pq.ConninfoOption]:
     Return the result of pq.Conninfo.parse() on success.
     """
     try:
-        return pq.Conninfo.parse(conninfo.encode("utf8"))
+        return pq.Conninfo.parse(conninfo.encode())
     except e.OperationalError as ex:
         raise e.ProgrammingError(str(ex))
 
@@ -181,7 +181,7 @@ class ConnectionInfo:
         }
         # Not returned by the libq. Bug? Bet we're using SSH.
         defaults.setdefault(b"channel_binding", b"prefer")
-        defaults[b"passfile"] = str(Path.home() / ".pgpass").encode("utf-8")
+        defaults[b"passfile"] = str(Path.home() / ".pgpass").encode()
 
         return {
             i.keyword.decode(pyenc): i.val.decode(pyenc)

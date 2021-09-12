@@ -34,7 +34,7 @@ def connect(conninfo: str) -> PQGenConn[PGconn]:
     Generator to create a database connection without blocking.
 
     """
-    conn = pq.PGconn.connect_start(conninfo.encode("utf8"))
+    conn = pq.PGconn.connect_start(conninfo.encode())
     while 1:
         if conn.status == ConnStatus.BAD:
             raise e.OperationalError(

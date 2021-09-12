@@ -343,10 +343,7 @@ async def test_set_encoding(aconn):
 )
 async def test_normalize_encoding(aconn, enc, out, codec):
     await aconn.set_client_encoding(enc)
-    assert (
-        aconn.pgconn.parameter_status(b"client_encoding").decode("utf-8")
-        == out
-    )
+    assert aconn.pgconn.parameter_status(b"client_encoding").decode() == out
     assert aconn.client_encoding == codec
 
 
@@ -363,10 +360,7 @@ async def test_normalize_encoding(aconn, enc, out, codec):
 async def test_encoding_env_var(dsn, monkeypatch, enc, out, codec):
     monkeypatch.setenv("PGCLIENTENCODING", enc)
     aconn = await psycopg.AsyncConnection.connect(dsn)
-    assert (
-        aconn.pgconn.parameter_status(b"client_encoding").decode("utf-8")
-        == out
-    )
+    assert aconn.pgconn.parameter_status(b"client_encoding").decode() == out
     assert aconn.client_encoding == codec
 
 

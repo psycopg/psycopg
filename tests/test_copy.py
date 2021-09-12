@@ -249,7 +249,7 @@ def test_copy_in_str(conn):
     cur = conn.cursor()
     ensure_table(cur, sample_tabledef)
     with cur.copy("copy copy_in from stdin (format text)") as copy:
-        copy.write(sample_text.decode("utf8"))
+        copy.write(sample_text.decode())
 
     data = cur.execute("select * from copy_in order by 1").fetchall()
     assert data == sample_records
@@ -260,7 +260,7 @@ def test_copy_in_str_binary(conn):
     ensure_table(cur, sample_tabledef)
     with pytest.raises(e.QueryCanceled):
         with cur.copy("copy copy_in from stdin (format binary)") as copy:
-            copy.write(sample_text.decode("utf8"))
+            copy.write(sample_text.decode())
 
     assert conn.pgconn.transaction_status == conn.TransactionStatus.INERROR
 
@@ -428,7 +428,7 @@ def test_copy_from_to_bytes(conn):
     cur = conn.cursor()
     with cur.copy("copy copy_in from stdin") as copy:
         for block in gen.blocks():
-            copy.write(block.encode("utf8"))
+            copy.write(block.encode())
 
     gen.assert_data()
 
@@ -639,7 +639,7 @@ def py_to_raw(item, fmt):
         if isinstance(item, int):
             return bytes([0, 0, 0, item])
         elif isinstance(item, str):
-            return item.encode("utf8")
+            return item.encode()
     return item
 
 
@@ -696,6 +696,6 @@ class DataGenerator:
             if not block:
                 break
             if isinstance(block, str):
-                block = block.encode("utf8")
+                block = block.encode()
             m.update(block)
         return m.hexdigest()

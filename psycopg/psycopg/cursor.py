@@ -167,10 +167,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
         `!None` if the cursor doesn't have a result available.
         """
         msg = self.pgresult.command_status if self.pgresult else None
-        if msg:
-            return msg.decode("utf-8")
-        else:
-            return None
+        return msg.decode() if msg else None
 
     def _make_row_maker(self) -> RowMaker[Row]:
         raise NotImplementedError

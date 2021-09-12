@@ -43,7 +43,7 @@ cdef class _BaseStrDumper(CDumper):
                 self._bytes_encoding = b"utf-8"
                 self.is_utf8 = 1
             else:
-                self._bytes_encoding = pg2py(pgenc).encode("utf-8")
+                self._bytes_encoding = pg2py(pgenc).encode()
                 if self._bytes_encoding == b"ascii":
                     self.is_utf8 = 1
             self.encoding = PyBytes_AsString(self._bytes_encoding)
@@ -124,7 +124,7 @@ cdef class _TextLoader(CLoader):
                 self._bytes_encoding = b"utf-8"
                 self.is_utf8 = 1
             else:
-                self._bytes_encoding = pg2py(pgenc).encode("utf-8")
+                self._bytes_encoding = pg2py(pgenc).encode()
 
             if pgenc == b"SQL_ASCII":
                 self.encoding = NULL

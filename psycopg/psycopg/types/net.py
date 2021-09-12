@@ -41,7 +41,7 @@ class InterfaceDumper(Dumper):
     oid = postgres.types["inet"].oid
 
     def dump(self, obj: Interface) -> bytes:
-        return str(obj).encode("utf8")
+        return str(obj).encode()
 
 
 class NetworkDumper(Dumper):
@@ -49,7 +49,7 @@ class NetworkDumper(Dumper):
     oid = postgres.types["cidr"].oid
 
     def dump(self, obj: Network) -> bytes:
-        return str(obj).encode("utf8")
+        return str(obj).encode()
 
 
 class AddressBinaryDumper(Dumper):
@@ -110,9 +110,9 @@ class InetLoader(_LazyIpaddress):
             data = bytes(data)
 
         if b"/" in data:
-            return ip_interface(data.decode("utf8"))
+            return ip_interface(data.decode())
         else:
-            return ip_address(data.decode("utf8"))
+            return ip_address(data.decode())
 
 
 class InetBinaryLoader(_LazyIpaddress):
@@ -142,7 +142,7 @@ class CidrLoader(_LazyIpaddress):
         if isinstance(data, memoryview):
             data = bytes(data)
 
-        return ip_network(data.decode("utf8"))
+        return ip_network(data.decode())
 
 
 class CidrBinaryLoader(_LazyIpaddress):
@@ -160,7 +160,7 @@ class CidrBinaryLoader(_LazyIpaddress):
         else:
             return IPv6Network((packed, prefix))
 
-        return ip_network(data.decode("utf8"))
+        return ip_network(data.decode())
 
 
 def register_default_adapters(context: AdaptContext) -> None:
