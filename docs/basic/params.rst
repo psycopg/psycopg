@@ -225,7 +225,7 @@ results) or buffer (for binary results).
 
     .. _pg_type: https://www.postgresql.org/docs/current/catalog-pg-type.html
 
-Because not every PostgreSQL type supports binary output, By default the data
+Because not every PostgreSQL type supports binary output, by default, the data
 will be returned in text format. In order to return data in binary format you
 can create the cursor using `Connection.cursor`\ ``(binary=True)`` or execute
 the query using `Cursor.execute`\ ``(binary=True)``. A case in which
