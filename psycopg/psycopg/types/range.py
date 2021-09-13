@@ -62,15 +62,12 @@ class Range(Generic[T]):
             self._bounds = ""
 
     def __repr__(self) -> str:
-        if not self._bounds:
-            return "%s(empty=True)" % self.__class__.__name__
+        if self._bounds:
+            args = f"{self._lower!r}, {self._upper!r}, {self._bounds!r}"
         else:
-            return "%s(%r, %r, %r)" % (
-                self.__class__.__name__,
-                self._lower,
-                self._upper,
-                self._bounds,
-            )
+            args = "empty=True"
+
+        return f"{self.__class__.__name__}({args})"
 
     def __str__(self) -> str:
         if not self._bounds:

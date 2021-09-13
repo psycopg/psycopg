@@ -64,8 +64,7 @@ class BaseListDumper(RecursiveDumper):
 
         for item in L:
             if type(item) is list:
-                for subit in self._flatiter(item, seen):
-                    yield subit
+                yield from self._flatiter(item, seen)
             elif item is not None:
                 yield item
 

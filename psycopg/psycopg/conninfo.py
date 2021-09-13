@@ -49,7 +49,7 @@ def make_conninfo(conninfo: str = "", **kwargs: Any) -> str:
         kwargs = tmp
 
     conninfo = " ".join(
-        ["%s=%s" % (k, _param_escape(str(v))) for (k, v) in kwargs.items()]
+        f"{k}={_param_escape(str(v))}" for (k, v) in kwargs.items()
     )
 
     # Verify the result is valid
