@@ -5,14 +5,14 @@ Adapters for PostGIS geometries
 from typing import Optional, Type
 
 from .. import postgres
-from ..abc import AdaptContext
+from ..abc import AdaptContext, Buffer
 from ..adapt import Dumper, Loader
 from ..pq import Format
 from .._typeinfo import TypeInfo
 
 
 try:
-    import shapely.wkb as wkb
+    from shapely.wkb import loads, dumps
     from shapely.geometry.base import BaseGeometry
 
 except ImportError:
@@ -25,30 +25,34 @@ except ImportError:
 class GeometryBinaryLoader(Loader):
     format = Format.BINARY
 
-    def load(self, data: bytes) -> "BaseGeometry":
-        return wkb.loads(data)
+    def load(self, data: Buffer) -> "BaseGeometry":
+        if not isinstance(data, bytes):
+            data = bytes(data)
+        return loads(data)
 
 
 class GeometryLoader(Loader):
     format = Format.TEXT
 
-    def load(self, data: bytes) -> "BaseGeometry":
+    def load(self, data: Buffer) -> "BaseGeometry":
         # it's a hex string in binary
-        return wkb.loads(data.decode(), hex=True)
+        if isinstance(data, memoryview):
+            data = bytes(data)
+        return loads(data.decode(), hex=True)
 
 
 class GeometryBinaryDumper(Dumper):
     format = Format.BINARY
 
     def dump(self, obj: "BaseGeometry") -> bytes:
-        return wkb.dumps(obj).encode()  # type: ignore
+        return dumps(obj)  # type: ignore
 
 
 class GeometryDumper(Dumper):
     format = Format.TEXT
 
     def dump(self, obj: "BaseGeometry") -> bytes:
-        return wkb.dumps(obj, hex=True).encode()  # type: ignore
+        return dumps(obj, hex=True).encode()  # type: ignore
 
 
 def register_shapely(
