@@ -211,3 +211,56 @@ Example::
 
     >>> conn.execute("SELECT 'foo => bar'::hstore").fetchone()[0]
     {'foo': 'bar'}
+
+Geometry adaptation using Shapely
+---------------------------------
+
+When using the PostGIS_ extension, it can be useful to retrieve geometry_
+values and have them automatically converted to Shapely_ instances. Likewise,
+you may want to store such instances in the database and have the conversion
+happen automatically.
+
+To support this, you will need to install Shapely_
+
+.. _PostGIS: https://postgis.net/
+.. _geometry: https://postgis.net/docs/geometry.html
+.. _Shapely: https://github.com/Toblerity/Shapely
+.. _shape: https://shapely.readthedocs.io/en/stable/manual.html#shapely.geometry.shape
+
+Since PostgGIS is an extension, its oid is not well known, so it is necessary
+to use `~psycopg.types.TypeInfo` to query the database and get its oid. After
+that you can use `~psycopg.types.geometry.register_shapely()` to allow dumping
+`shape`_ instances to :sql:`geometry` columns and parsing :sql:`geometry` back
+to `!shape` in the context where it is registered.
+
+.. autofunction:: psycopg.types.geometry.register_shapely
+
+Example::
+
+    >>> from psycopg.types import TypeInfo
+    >>> from psycopg.types.geometry import register_shapely
+    >>> from shapely.geometry import Point
+
+    >>> info = TypeInfo.fetch(conn, "geometry")
+    >>> register_shapely(info, conn)
+
+    >>> conn.execute("SELECT pg_typeof(%s)", [Point(1.2, 3.4)]).fetchone()[0]
+    'geometry'
+
+    >>> conn.execute("""
+    ... SELECT ST_GeomFromGeoJSON('{
+    ...     "type":"Point",
+    ...     "coordinates":[-48.23456,20.12345]}')
+    ... """).fetchone()[0]
+    <shapely.geometry.multipolygon.MultiPolygon object at 0x7fb131f3cd90>
+
+Notice that the adapter is registered on the specific object, other
+connections will be unaffected::
+
+    >>> conn2 = psycopg.connect(CONN_STR)
+    >>> conn2.execute("""
+    ... SELECT ST_GeomFromGeoJSON('{
+    ...     "type":"Point",
+    ...     "coordinates":[-48.23456,20.12345]}')
+    ... """).fetchone()[0]
+    '0101000020E61000009279E40F061E48C0F2B0506B9A1F3440'
