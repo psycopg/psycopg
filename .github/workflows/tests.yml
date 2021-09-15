@@ -63,7 +63,7 @@ jobs:
 
     services:
       postgresql:
-        image: ${{ matrix.impl == 'postgis' && 'postgis' || 'postgresql'  }}:${{ matrix.postgres }}
+        image: ${{ matrix.impl == 'postgis' && 'postgis' || 'postgres'  }}:${{ matrix.postgres }}
         env:
           POSTGRES_PASSWORD: password
         ports:
