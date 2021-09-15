@@ -59,7 +59,7 @@ jobs:
 
       - name: Run PostGIS-related tests
         run: tox -c psycopg -e postgis -- --color yes -m postgis
-        if: ${{ matrix.postgis }}
+        if: ${{ matrix.postgis == 'yes' }}
 
     services:
       postgresql:
@@ -92,6 +92,7 @@ jobs:
           - {impl: c, python: 3.7}
           - {impl: c, python: 3.8}
           - {impl: c, python: 3.9}
+          - {impl: python, python: 3.9, postgres: "13-master", postgis: "yes"}
 
     env:
       PSYCOPG_IMPL: ${{ matrix.impl }}
@@ -106,6 +107,10 @@ jobs:
 
       - name: Install PostgreSQL on the runner
         run: brew install postgresql@13
+
+      - name: Install PostGIS extension on the runner
+        run: brew install postgis@3.1.4
+        if: ${{ matrix.postgis == 'yes' }}
 
       - name: Start PostgreSQL service for test
         run: brew services start postgresql
@@ -125,6 +130,9 @@ jobs:
         run: tox -c psycopg_c -e ${{ matrix.python }} -- --color yes
         if: ${{ matrix.impl == 'c' }}
 
+      - name: Run PostGIS-related tests
+        run: tox -c psycopg -e postgis -- --color yes -m postgis
+        if: ${{ matrix.postgis == 'yes' }}
 
   windows:
     name: Test on Windows

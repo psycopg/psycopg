@@ -6,6 +6,7 @@ from psycopg.types import TypeInfo
 from psycopg import ProgrammingError
 
 pytestmark = [pytest.mark.postgis]
+pytest.importorskip("shapely")
 
 # real example, with CRS and "holes"
 MULTIPOLYGON_GEOJSON = """
@@ -51,7 +52,7 @@ SAMPLE_POINT_GEOJSON = '{"type":"Point","coordinates":[1.2, 3.4]}'
 
 
 @pytest.fixture
-def shapely_conn(conn, skip_without_shapely):
+def shapely_conn(conn):
     from psycopg.types.shapely import register_shapely
 
     info = TypeInfo.fetch(conn, "geometry")
@@ -59,7 +60,7 @@ def shapely_conn(conn, skip_without_shapely):
     return conn
 
 
-def test_no_adapter(conn, skip_without_shapely):
+def test_no_adapter(conn):
     from shapely.geometry import Point
 
     point = Point(1.2, 3.4)
@@ -67,7 +68,7 @@ def test_no_adapter(conn, skip_without_shapely):
         conn.execute("SELECT pg_typeof(%s)", [point]).fetchone()[0]
 
 
-def test_with_adapter(shapely_conn, skip_without_shapely):
+def test_with_adapter(shapely_conn):
     from shapely.geometry import Point, Polygon
 
     SAMPLE_POINT = Point(1.2, 3.4)
@@ -91,7 +92,7 @@ def test_with_adapter(shapely_conn, skip_without_shapely):
 
 
 @pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
-def test_write_read_shape(shapely_conn, fmt_out, skip_without_shapely):
+def test_write_read_shape(shapely_conn, fmt_out):
     from shapely.geometry import Point, Polygon
 
     SAMPLE_POINT = Point(1.2, 3.4)
@@ -127,7 +128,7 @@ def test_write_read_shape(shapely_conn, fmt_out, skip_without_shapely):
 
 
 @pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
-def test_match_geojson(shapely_conn, fmt_out, skip_without_shapely):
+def test_match_geojson(shapely_conn, fmt_out):
     from shapely.geometry import Point
 
     SAMPLE_POINT = Point(1.2, 3.4)
@@ -140,11 +141,3 @@ def test_match_geojson(shapely_conn, fmt_out, skip_without_shapely):
         result = cur.fetchone()[0]
         # clone the coordinates to have a list instead of a shapely wrapper
         assert result.coords[:] == SAMPLE_POINT.coords[:]
-
-
-@pytest.fixture
-def skip_without_shapely():
-    try:
-        import shapely  # noqa: F401
-    except ImportError:
-        pytest.skip("Shapely package not available")
