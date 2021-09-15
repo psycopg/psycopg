@@ -22,6 +22,7 @@ jobs:
           - {impl: c, python: 3.8, postgres: 11}
           - {impl: c, python: 3.9, postgres: 10}
           - {impl: dns, python: 3.9, postgres: 13}
+          - {impl: postgis, python: 3.9, postgres: "13-master"}
 
     env:
       PSYCOPG_IMPL: ${{ matrix.impl }}
@@ -51,14 +52,18 @@ jobs:
           PYTEST_ADDOPTS: "-m 'not subprocess'"
 
       - name: Run DNS-related tests
-        run: tox -c psycopg -e dns -- --color yes -m dns
+        run: tox -c psycopg -e dns -- --color yes
         if: ${{ matrix.impl == 'dns' }}
         env:
           PSYCOPG_IMPL: python
 
+      - name: Run PostGIS-related tests
+        run: tox -c psycopg -e postgis -- --color yes -m postgis
+        if: ${{ matrix.impl == 'postgis' }}
+
     services:
       postgresql:
-        image: postgres:${{ matrix.postgres }}
+        image: ${{ matrix.impl == 'postgis' && 'postgis' || 'postgresql'  }}:${{ matrix.postgres }}
         env:
           POSTGRES_PASSWORD: password
         ports:
