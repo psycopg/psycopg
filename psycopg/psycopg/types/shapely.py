@@ -17,7 +17,7 @@ try:
 
 except ImportError:
     raise ImportError(
-        "The module psycopg.types.geometry requires the package 'Shapely'"
+        "The module psycopg.types.shapely requires the package 'Shapely'"
         " to be installed"
     )
 
