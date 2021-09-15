@@ -97,6 +97,9 @@ def test_write_read_shape(shapely_conn, fmt_out):
 
     SAMPLE_POINT = Point(1.2, 3.4)
     SAMPLE_POLYGON = Polygon([(0, 0), (1, 1), (1, 0)])
+
+    fmt_placeholder = "%b" if fmt_out == Format.BINARY else "%t"
+
     with shapely_conn.cursor(binary=fmt_out) as cur:
         cur.execute(
             """
@@ -107,10 +110,11 @@ def test_write_read_shape(shapely_conn, fmt_out):
         """
         )
         cur.execute(
-            "insert into sample_geoms(id, geom) VALUES(1, %s)", (SAMPLE_POINT,)
+            f"insert into sample_geoms(id, geom) VALUES(1, {fmt_placeholder})",
+            (SAMPLE_POINT,),
         )
         cur.execute(
-            "insert into sample_geoms(id, geom) VALUES(2, %s)",
+            f"insert into sample_geoms(id, geom) VALUES(2, {fmt_placeholder})",
             (SAMPLE_POLYGON,),
         )
 
