@@ -124,4 +124,5 @@ def test_match_geojson(shapely_conn, fmt_out):
             """
         )
         result = cur.fetchone()[0]
+        # clone the coordinates to have a list instead of a shapely wrapper
         assert result.coords[:] == SAMPLE_POINT.coords[:]
