@@ -2,43 +2,43 @@ import pytest
 
 import psycopg
 from psycopg import pq
-from psycopg.adapt import Transformer, PyFormat as Format
+from psycopg.adapt import Transformer, PyFormat
 from psycopg._queries import PostgresQuery, _split_query
 
 
 @pytest.mark.parametrize(
     "input, want",
     [
-        (b"", [(b"", 0, Format.AUTO)]),
-        (b"foo bar", [(b"foo bar", 0, Format.AUTO)]),
-        (b"foo %% bar", [(b"foo % bar", 0, Format.AUTO)]),
-        (b"%s", [(b"", 0, Format.AUTO), (b"", 0, Format.AUTO)]),
-        (b"%s foo", [(b"", 0, Format.AUTO), (b" foo", 0, Format.AUTO)]),
-        (b"%b foo", [(b"", 0, Format.BINARY), (b" foo", 0, Format.AUTO)]),
-        (b"foo %s", [(b"foo ", 0, Format.AUTO), (b"", 0, Format.AUTO)]),
+        (b"", [(b"", 0, PyFormat.AUTO)]),
+        (b"foo bar", [(b"foo bar", 0, PyFormat.AUTO)]),
+        (b"foo %% bar", [(b"foo % bar", 0, PyFormat.AUTO)]),
+        (b"%s", [(b"", 0, PyFormat.AUTO), (b"", 0, PyFormat.AUTO)]),
+        (b"%s foo", [(b"", 0, PyFormat.AUTO), (b" foo", 0, PyFormat.AUTO)]),
+        (b"%b foo", [(b"", 0, PyFormat.BINARY), (b" foo", 0, PyFormat.AUTO)]),
+        (b"foo %s", [(b"foo ", 0, PyFormat.AUTO), (b"", 0, PyFormat.AUTO)]),
         (
             b"foo %%%s bar",
-            [(b"foo %", 0, Format.AUTO), (b" bar", 0, Format.AUTO)],
+            [(b"foo %", 0, PyFormat.AUTO), (b" bar", 0, PyFormat.AUTO)],
         ),
         (
             b"foo %(name)s bar",
-            [(b"foo ", "name", Format.AUTO), (b" bar", 0, Format.AUTO)],
+            [(b"foo ", "name", PyFormat.AUTO), (b" bar", 0, PyFormat.AUTO)],
         ),
         (
             b"foo %(name)s %(name)b bar",
             [
-                (b"foo ", "name", Format.AUTO),
-                (b" ", "name", Format.BINARY),
-                (b" bar", 0, Format.AUTO),
+                (b"foo ", "name", PyFormat.AUTO),
+                (b" ", "name", PyFormat.BINARY),
+                (b" bar", 0, PyFormat.AUTO),
             ],
         ),
         (
             b"foo %s%b bar %s baz",
             [
-                (b"foo ", 0, Format.AUTO),
-                (b"", 1, Format.BINARY),
-                (b" bar ", 2, Format.AUTO),
-                (b" baz", 0, Format.AUTO),
+                (b"foo ", 0, PyFormat.AUTO),
+                (b"", 1, PyFormat.BINARY),
+                (b" bar ", 2, PyFormat.AUTO),
+                (b" baz", 0, PyFormat.AUTO),
             ],
         ),
     ],

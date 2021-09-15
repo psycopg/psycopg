@@ -7,7 +7,7 @@ import pytest
 import psycopg.errors
 from psycopg import pq
 from psycopg.sql import Identifier
-from psycopg.adapt import PyFormat as Format
+from psycopg.adapt import PyFormat
 from psycopg.types import range as range_module
 from psycopg.types.range import Range, RangeInfo, register_range
 
@@ -53,7 +53,7 @@ samples = [
     "pgtype",
     "int4range int8range numrange daterange tsrange tstzrange".split(),
 )
-@pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("fmt_in", PyFormat)
 def test_dump_builtin_empty(conn, pgtype, fmt_in):
     r = Range(empty=True)
     cur = conn.execute(f"select 'empty'::{pgtype} = %{fmt_in}", (r,))
@@ -66,7 +66,7 @@ def test_dump_builtin_empty(conn, pgtype, fmt_in):
     Int4Range Int8Range NumericRange DateRange TimestampRange TimestamptzRange
     """.split(),
 )
-@pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("fmt_in", PyFormat)
 def test_dump_builtin_empty_wrapper(conn, wrapper, fmt_in):
     wrapper = getattr(range_module, wrapper)
     r = wrapper(empty=True)
@@ -81,12 +81,12 @@ def test_dump_builtin_empty_wrapper(conn, wrapper, fmt_in):
 @pytest.mark.parametrize(
     "fmt_in",
     [
-        Format.AUTO,
-        Format.TEXT,
+        PyFormat.AUTO,
+        PyFormat.TEXT,
         # There are many ways to work around this (use text, use a cast on the
         # placeholder, use specific Range subclasses).
         pytest.param(
-            Format.BINARY,
+            PyFormat.BINARY,
             marks=pytest.mark.xfail(
                 reason="can't dump an array of untypes binary range without cast"
             ),
@@ -107,7 +107,7 @@ def test_dump_builtin_array(conn, pgtype, fmt_in):
     "pgtype",
     "int4range int8range numrange daterange tsrange tstzrange".split(),
 )
-@pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("fmt_in", PyFormat)
 def test_dump_builtin_array_with_cast(conn, pgtype, fmt_in):
     r1 = Range(empty=True)
     r2 = Range(bounds="()")
@@ -124,7 +124,7 @@ def test_dump_builtin_array_with_cast(conn, pgtype, fmt_in):
     Int4Range Int8Range NumericRange DateRange TimestampRange TimestamptzRange
     """.split(),
 )
-@pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("fmt_in", PyFormat)
 def test_dump_builtin_array_wrapper(conn, wrapper, fmt_in):
     wrapper = getattr(range_module, wrapper)
     r1 = wrapper(empty=True)
@@ -136,7 +136,7 @@ def test_dump_builtin_array_wrapper(conn, wrapper, fmt_in):
 
 
 @pytest.mark.parametrize("pgtype, min, max, bounds", samples)
-@pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("fmt_in", PyFormat)
 def test_dump_builtin_range(conn, pgtype, min, max, bounds, fmt_in):
     r = Range(min, max, bounds)
     sub = type2sub[pgtype]
@@ -151,7 +151,7 @@ def test_dump_builtin_range(conn, pgtype, min, max, bounds, fmt_in):
     "pgtype",
     "int4range int8range numrange daterange tsrange tstzrange".split(),
 )
-@pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
+@pytest.mark.parametrize("fmt_out", pq.Format)
 def test_load_builtin_empty(conn, pgtype, fmt_out):
     r = Range(empty=True)
     cur = conn.cursor(binary=fmt_out)
@@ -166,7 +166,7 @@ def test_load_builtin_empty(conn, pgtype, fmt_out):
     "pgtype",
     "int4range int8range numrange daterange tsrange tstzrange".split(),
 )
-@pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
+@pytest.mark.parametrize("fmt_out", pq.Format)
 def test_load_builtin_inf(conn, pgtype, fmt_out):
     r = Range(bounds="()")
     cur = conn.cursor(binary=fmt_out)
@@ -183,7 +183,7 @@ def test_load_builtin_inf(conn, pgtype, fmt_out):
     "pgtype",
     "int4range int8range numrange daterange tsrange tstzrange".split(),
 )
-@pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
+@pytest.mark.parametrize("fmt_out", pq.Format)
 def test_load_builtin_array(conn, pgtype, fmt_out):
     r1 = Range(empty=True)
     r2 = Range(bounds="()")
@@ -195,7 +195,7 @@ def test_load_builtin_array(conn, pgtype, fmt_out):
 
 
 @pytest.mark.parametrize("pgtype, min, max, bounds", samples)
-@pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
+@pytest.mark.parametrize("fmt_out", pq.Format)
 def test_load_builtin_range(conn, pgtype, min, max, bounds, fmt_out):
     r = Range(min, max, bounds)
     sub = type2sub[pgtype]
@@ -220,7 +220,7 @@ def test_load_builtin_range(conn, pgtype, min, max, bounds, fmt_out):
         (None, None, "empty"),
     ],
 )
-@pytest.mark.parametrize("format", [pq.Format.TEXT, pq.Format.BINARY])
+@pytest.mark.parametrize("format", pq.Format)
 def test_copy_in_empty(conn, min, max, bounds, format):
     cur = conn.cursor()
     cur.execute("create table copyrange (id serial primary key, r daterange)")
@@ -256,7 +256,7 @@ def test_copy_in_empty(conn, min, max, bounds, format):
     Int4Range Int8Range NumericRange DateRange TimestampRange TimestamptzRange
     """.split(),
 )
-@pytest.mark.parametrize("format", [pq.Format.TEXT, pq.Format.BINARY])
+@pytest.mark.parametrize("format", pq.Format)
 def test_copy_in_empty_wrappers(conn, bounds, wrapper, format):
     cur = conn.cursor()
     cur.execute("create table copyrange (id serial primary key, r daterange)")
@@ -278,7 +278,7 @@ def test_copy_in_empty_wrappers(conn, bounds, wrapper, format):
     "pgtype",
     "int4range int8range numrange daterange tsrange tstzrange".split(),
 )
-@pytest.mark.parametrize("format", [pq.Format.TEXT, pq.Format.BINARY])
+@pytest.mark.parametrize("format", pq.Format)
 def test_copy_in_empty_set_type(conn, bounds, pgtype, format):
     cur = conn.cursor()
     cur.execute(f"create table copyrange (id serial primary key, r {pgtype})")
@@ -370,7 +370,7 @@ def test_dump_quoting(conn, testrange):
         assert cur.fetchone()[0] is True
 
 
-@pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
+@pytest.mark.parametrize("fmt_out", pq.Format)
 def test_load_custom_empty(conn, testrange, fmt_out):
     info = RangeInfo.fetch(conn, "testrange")
     register_range(info, conn)
@@ -381,7 +381,7 @@ def test_load_custom_empty(conn, testrange, fmt_out):
     assert got.isempty
 
 
-@pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
+@pytest.mark.parametrize("fmt_out", pq.Format)
 def test_load_quoting(conn, testrange, fmt_out):
     info = RangeInfo.fetch(conn, "testrange")
     register_range(info, conn)
@@ -397,7 +397,7 @@ def test_load_quoting(conn, testrange, fmt_out):
         assert ord(got.upper) == i + 1
 
 
-@pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
+@pytest.mark.parametrize("fmt_out", pq.Format)
 def test_mixed_array_types(conn, fmt_out):
     conn.execute("create table testmix (a daterange[], b tstzrange[])")
     r1 = Range(dt.date(2000, 1, 1), dt.date(2001, 1, 1), "[)")

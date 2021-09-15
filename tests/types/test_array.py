@@ -5,7 +5,7 @@ import pytest
 import psycopg
 from psycopg import pq
 from psycopg import sql
-from psycopg.adapt import PyFormat as Format, Transformer, Dumper
+from psycopg.adapt import PyFormat, Transformer, Dumper
 from psycopg.types import TypeInfo
 from psycopg.postgres import types as builtins
 
@@ -27,10 +27,8 @@ tests_str = [
     ),
 ]
 
-fmts_in = [Format.AUTO, Format.TEXT, Format.BINARY]
 
-
-@pytest.mark.parametrize("fmt_in", fmts_in)
+@pytest.mark.parametrize("fmt_in", PyFormat)
 @pytest.mark.parametrize("obj, want", tests_str)
 def test_dump_list_str(conn, obj, want, fmt_in):
     cur = conn.cursor()
@@ -38,7 +36,7 @@ def test_dump_list_str(conn, obj, want, fmt_in):
     assert cur.fetchone()[0]
 
 
-@pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
+@pytest.mark.parametrize("fmt_out", pq.Format)
 @pytest.mark.parametrize("want, obj", tests_str)
 def test_load_list_str(conn, obj, want, fmt_out):
     cur = conn.cursor(binary=fmt_out)
@@ -46,8 +44,8 @@ def test_load_list_str(conn, obj, want, fmt_out):
     assert cur.fetchone()[0] == want
 
 
-@pytest.mark.parametrize("fmt_in", fmts_in)
-@pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
+@pytest.mark.parametrize("fmt_in", PyFormat)
+@pytest.mark.parametrize("fmt_out", pq.Format)
 def test_all_chars(conn, fmt_in, fmt_out):
     cur = conn.cursor(binary=fmt_out)
     for i in range(1, 256):
@@ -93,10 +91,10 @@ def test_dump_list_int(conn, obj, want):
 def test_bad_binary_array(input):
     tx = Transformer()
     with pytest.raises(psycopg.DataError):
-        tx.get_dumper(input, Format.BINARY).dump(input)
+        tx.get_dumper(input, PyFormat.BINARY).dump(input)
 
 
-@pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
+@pytest.mark.parametrize("fmt_out", pq.Format)
 @pytest.mark.parametrize("want, obj", tests_int)
 def test_load_list_int(conn, obj, want, fmt_out):
     cur = conn.cursor(binary=fmt_out)
@@ -146,7 +144,7 @@ def test_array_of_unknown_builtin(conn):
 )
 def test_array_mixed_numbers(array, type):
     tx = Transformer()
-    dumper = tx.get_dumper(array, Format.BINARY)
+    dumper = tx.get_dumper(array, PyFormat.BINARY)
     dumper.dump(array)
     assert dumper.oid == builtins[type].array_oid
 
@@ -154,8 +152,8 @@ def test_array_mixed_numbers(array, type):
 @pytest.mark.parametrize(
     "wrapper", "Int2 Int4 Int8 Float4 Float8 Decimal".split()
 )
-@pytest.mark.parametrize("fmt_in", fmts_in)
-@pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
+@pytest.mark.parametrize("fmt_in", PyFormat)
+@pytest.mark.parametrize("fmt_out", pq.Format)
 def test_list_number_wrapper(conn, wrapper, fmt_in, fmt_out):
     wrapper = getattr(psycopg.types.numeric, wrapper)
     if wrapper is Decimal:
@@ -182,7 +180,7 @@ def test_mix_types(conn):
     assert cur.description[0].type_code == builtins["numeric"].array_oid
 
 
-@pytest.mark.parametrize("fmt_in", fmts_in)
+@pytest.mark.parametrize("fmt_in", PyFormat)
 def test_empty_list_mix(conn, fmt_in):
     objs = list(range(3))
     conn.execute("create table testarrays (col1 bigint[], col2 bigint[])")
@@ -195,7 +193,7 @@ def test_empty_list_mix(conn, fmt_in):
     assert f2 == []
 
 
-@pytest.mark.parametrize("fmt_in", fmts_in)
+@pytest.mark.parametrize("fmt_in", PyFormat)
 def test_empty_list(conn, fmt_in):
     cur = conn.cursor()
     cur.execute("create table test (id serial primary key, data date[])")
@@ -211,7 +209,7 @@ def test_empty_list(conn, fmt_in):
     assert not cur.fetchone()
 
 
-@pytest.mark.parametrize("fmt_in", fmts_in)
+@pytest.mark.parametrize("fmt_in", PyFormat)
 def test_empty_list_after_choice(conn, fmt_in):
     cur = conn.cursor()
     cur.execute("create table test (id serial primary key, data float[])")
