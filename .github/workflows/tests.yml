@@ -22,7 +22,7 @@ jobs:
           - {impl: c, python: 3.8, postgres: 11}
           - {impl: c, python: 3.9, postgres: 10}
           - {impl: dns, python: 3.9, postgres: 13}
-          - {impl: python, python: 3.9, postgres: "13-master", postgis: true}
+          - {impl: python, python: 3.9, postgres: "13-master", postgis: "yes"}
 
     env:
       PSYCOPG_IMPL: ${{ matrix.impl }}
@@ -63,7 +63,7 @@ jobs:
 
     services:
       postgresql:
-        image: ${{ matrix.postgis && 'postgis/postgis' || 'postgres'  }}:${{ matrix.postgres }}
+        image: ${{ matrix.postgis == 'yes' && 'postgis/postgis' || 'postgres'  }}:${{ matrix.postgres }}
         env:
           POSTGRES_PASSWORD: password
         ports:
