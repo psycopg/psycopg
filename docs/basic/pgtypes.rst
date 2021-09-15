@@ -229,16 +229,16 @@ To support this, you will need to install Shapely_
 
 Since PostgGIS is an extension, its oid is not well known, so it is necessary
 to use `~psycopg.types.TypeInfo` to query the database and get its oid. After
-that you can use `~psycopg.types.geometry.register_shapely()` to allow dumping
+that you can use `~psycopg.types.shapely.register_shapely()` to allow dumping
 `shape`_ instances to :sql:`geometry` columns and parsing :sql:`geometry` back
 to `!shape` in the context where it is registered.
 
-.. autofunction:: psycopg.types.geometry.register_shapely
+.. autofunction:: psycopg.types.shapely.register_shapely
 
 Example::
 
     >>> from psycopg.types import TypeInfo
-    >>> from psycopg.types.geometry import register_shapely
+    >>> from psycopg.types.shapely import register_shapely
     >>> from shapely.geometry import Point
 
     >>> info = TypeInfo.fetch(conn, "geometry")
