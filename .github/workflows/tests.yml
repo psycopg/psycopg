@@ -22,7 +22,7 @@ jobs:
           - {impl: c, python: 3.8, postgres: 11}
           - {impl: c, python: 3.9, postgres: 10}
           - {impl: dns, python: 3.9, postgres: 13}
-          - {impl: postgis, python: 3.9, postgres: "13-master"}
+          - {impl: python, python: 3.9, postgres: "13-master", postgis: true}
 
     env:
       PSYCOPG_IMPL: ${{ matrix.impl }}
@@ -59,11 +59,11 @@ jobs:
 
       - name: Run PostGIS-related tests
         run: tox -c psycopg -e postgis -- --color yes -m postgis
-        if: ${{ matrix.impl == 'postgis' }}
+        if: ${{ matrix.postgis }}
 
     services:
       postgresql:
-        image: ${{ matrix.impl == 'postgis' && 'postgis/postgis' || 'postgres'  }}:${{ matrix.postgres }}
+        image: ${{ matrix.postgis && 'postgis/postgis' || 'postgres'  }}:${{ matrix.postgres }}
         env:
           POSTGRES_PASSWORD: password
         ports:
