@@ -86,5 +86,5 @@ def register_shapely(
 
     adapters.register_loader(info.oid, GeometryBinaryLoader)
     adapters.register_loader(info.oid, GeometryLoader)
-    adapters.register_dumper(BaseGeometry, binary_dumper)
     adapters.register_dumper(BaseGeometry, dumper)
+    adapters.register_dumper(BaseGeometry, binary_dumper)
