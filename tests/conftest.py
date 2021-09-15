@@ -35,6 +35,11 @@ def pytest_configure(config):
         "dns: the test requires dnspython to run",
     )
 
+    config.addinivalue_line(
+        "markers",
+        "postgis: the test requires the PostGIS extension to run",
+    )
+
 
 def pytest_addoption(parser):
     parser.addoption(
