@@ -2,9 +2,8 @@ import pytest
 
 from psycopg.pq import Format
 from psycopg.types import TypeInfo
-from psycopg.types.shapely import register_shapely
+
 from psycopg import ProgrammingError
-from shapely.geometry import Point, Polygon
 
 pytestmark = [pytest.mark.shapely]
 
@@ -52,24 +51,30 @@ MULTIPOLYGON_GEOJSON = """
 
 SAMPLE_POINT_GEOJSON = '{"type":"Point","coordinates":[1.2, 3.4]}'
 
-SAMPLE_POINT = Point(1.2, 3.4)
-SAMPLE_POLYGON = Polygon([(0, 0), (1, 1), (1, 0)])
-
 
 @pytest.fixture
 def shapely_conn(conn):
+    from psycopg.types.shapely import register_shapely
+
     info = TypeInfo.fetch(conn, "geometry")
     register_shapely(info, conn)
     return conn
 
 
 def test_no_adapter(conn):
+    from shapely.geometry import Point
+
     point = Point(1.2, 3.4)
     with pytest.raises(ProgrammingError, match="cannot adapt type Point"):
         conn.execute("SELECT pg_typeof(%s)", [point]).fetchone()[0]
 
 
 def test_with_adapter(shapely_conn):
+    from shapely.geometry import Point, Polygon
+
+    SAMPLE_POINT = Point(1.2, 3.4)
+    SAMPLE_POLYGON = Polygon([(0, 0), (1, 1), (1, 0)])
+
     assert (
         shapely_conn.execute(
             "SELECT pg_typeof(%s)",
@@ -89,6 +94,10 @@ def test_with_adapter(shapely_conn):
 
 @pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
 def test_write_read_shape(shapely_conn, fmt_out):
+    from shapely.geometry import Point, Polygon
+
+    SAMPLE_POINT = Point(1.2, 3.4)
+    SAMPLE_POLYGON = Polygon([(0, 0), (1, 1), (1, 0)])
     with shapely_conn.cursor(binary=fmt_out) as cur:
         cur.execute(
             """
@@ -117,6 +126,9 @@ def test_write_read_shape(shapely_conn, fmt_out):
 
 @pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
 def test_match_geojson(shapely_conn, fmt_out):
+    from shapely.geometry import Point
+
+    SAMPLE_POINT = Point(1.2, 3.4)
     with shapely_conn.cursor(binary=fmt_out) as cur:
         cur.execute(
             f"""
