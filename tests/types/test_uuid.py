@@ -6,10 +6,10 @@ import pytest
 
 from psycopg import pq
 from psycopg import sql
-from psycopg.adapt import PyFormat as Format
+from psycopg.adapt import PyFormat
 
 
-@pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("fmt_in", PyFormat)
 def test_uuid_dump(conn, fmt_in):
     val = "12345678123456781234567812345679"
     cur = conn.cursor()
@@ -17,7 +17,7 @@ def test_uuid_dump(conn, fmt_in):
     assert cur.fetchone()[0] is True
 
 
-@pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
+@pytest.mark.parametrize("fmt_out", pq.Format)
 def test_uuid_load(conn, fmt_out):
     cur = conn.cursor(binary=fmt_out)
     val = "12345678123456781234567812345679"

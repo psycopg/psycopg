@@ -5,7 +5,7 @@ import datetime as dt
 
 import psycopg
 from psycopg import pq, sql, rows
-from psycopg.adapt import PyFormat as Format
+from psycopg.adapt import PyFormat
 
 from .utils import gc_collect
 from .test_cursor import my_row_factory
@@ -222,7 +222,7 @@ async def test_executemany_badquery(aconn, query):
         await cur.executemany(query, [(10, "hello"), (20, "world")])
 
 
-@pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("fmt_in", PyFormat)
 async def test_executemany_null_first(aconn, fmt_in):
     cur = aconn.cursor()
     await cur.execute("create table testmany (a bigint, b bigint)")
@@ -519,8 +519,8 @@ async def test_str(aconn):
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize("fmt", [Format.AUTO, Format.TEXT, Format.BINARY])
-@pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
+@pytest.mark.parametrize("fmt", PyFormat)
+@pytest.mark.parametrize("fmt_out", pq.Format)
 @pytest.mark.parametrize("fetch", ["one", "many", "all", "iter"])
 @pytest.mark.parametrize(
     "row_factory", ["tuple_row", "dict_row", "namedtuple_row"]

@@ -6,7 +6,7 @@ import pytest
 import psycopg
 from psycopg import pq, sql, postgres
 from psycopg import errors as e
-from psycopg.adapt import Transformer, PyFormat as Format, Dumper, Loader
+from psycopg.adapt import Transformer, PyFormat, Dumper, Loader
 from psycopg._cmodule import _psycopg
 from psycopg.postgres import types as builtins, TEXT_OID
 
@@ -14,16 +14,16 @@ from psycopg.postgres import types as builtins, TEXT_OID
 @pytest.mark.parametrize(
     "data, format, result, type",
     [
-        (1, Format.TEXT, b"1", "int2"),
-        ("hello", Format.TEXT, b"hello", "text"),
-        ("hello", Format.BINARY, b"hello", "text"),
+        (1, PyFormat.TEXT, b"1", "int2"),
+        ("hello", PyFormat.TEXT, b"hello", "text"),
+        ("hello", PyFormat.BINARY, b"hello", "text"),
     ],
 )
 def test_dump(data, format, result, type):
     t = Transformer()
     dumper = t.get_dumper(data, format)
     assert dumper.dump(data) == result
-    if type == "text" and format != Format.BINARY:
+    if type == "text" and format != PyFormat.BINARY:
         assert dumper.oid == 0
     else:
         assert dumper.oid == builtins[type].oid
@@ -41,24 +41,24 @@ def test_dump(data, format, result, type):
 )
 def test_quote(data, result):
     t = Transformer()
-    dumper = t.get_dumper(data, Format.TEXT)
+    dumper = t.get_dumper(data, PyFormat.TEXT)
     assert dumper.quote(data) == result
 
 
 def test_register_dumper_by_class(conn):
     dumper = make_dumper("x")
-    assert conn.adapters.get_dumper(MyStr, Format.TEXT) is not dumper
+    assert conn.adapters.get_dumper(MyStr, PyFormat.TEXT) is not dumper
     conn.adapters.register_dumper(MyStr, dumper)
-    assert conn.adapters.get_dumper(MyStr, Format.TEXT) is dumper
+    assert conn.adapters.get_dumper(MyStr, PyFormat.TEXT) is dumper
 
 
 def test_register_dumper_by_class_name(conn):
     dumper = make_dumper("x")
-    assert conn.adapters.get_dumper(MyStr, Format.TEXT) is not dumper
+    assert conn.adapters.get_dumper(MyStr, PyFormat.TEXT) is not dumper
     conn.adapters.register_dumper(
         f"{MyStr.__module__}.{MyStr.__qualname__}", dumper
     )
-    assert conn.adapters.get_dumper(MyStr, Format.TEXT) is dumper
+    assert conn.adapters.get_dumper(MyStr, PyFormat.TEXT) is dumper
 
 
 def test_dump_global_ctx(dsn, global_adapters):
@@ -110,8 +110,7 @@ def test_dump_cursor_ctx(conn):
     assert cur.fetchone() == ("hellob",)
 
 
-@pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
-def test_dump_subclass(conn, fmt_out):
+def test_dump_subclass(conn):
     class MyString(str):
         pass
 
@@ -276,7 +275,7 @@ def test_cow_loaders(conn):
     "sql, obj",
     [("'{hello}'::text[]", ["helloc"]), ("row('hello'::text)", ("helloc",))],
 )
-@pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
+@pytest.mark.parametrize("fmt_out", pq.Format)
 def test_load_cursor_ctx_nested(conn, sql, obj, fmt_out):
     cur = conn.cursor(binary=fmt_out == pq.Format.BINARY)
     if fmt_out == pq.Format.TEXT:
@@ -289,10 +288,10 @@ def test_load_cursor_ctx_nested(conn, sql, obj, fmt_out):
     assert res == obj
 
 
-@pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
+@pytest.mark.parametrize("fmt_out", pq.Format)
 def test_array_dumper(conn, fmt_out):
     t = Transformer(conn)
-    fmt_in = Format.from_pq(fmt_out)
+    fmt_in = PyFormat.from_pq(fmt_out)
     dint = t.get_dumper([0], fmt_in)
     if fmt_out == pq.Format.BINARY:
         assert dint.oid == builtins["int2"].array_oid
@@ -302,7 +301,7 @@ def test_array_dumper(conn, fmt_out):
         assert dint.sub_dumper is None
 
     dstr = t.get_dumper([""], fmt_in)
-    if fmt_in == Format.BINARY:
+    if fmt_in == PyFormat.BINARY:
         assert dstr.oid == builtins["text"].array_oid
         assert dstr.sub_dumper.oid == builtins["text"].oid
     else:
@@ -341,7 +340,7 @@ def test_last_dumper_registered_ctx(conn):
     assert cur.execute("select %s", ["hello"]).fetchone()[0] == "hellob"
 
 
-@pytest.mark.parametrize("fmt_in", [Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("fmt_in", [PyFormat.TEXT, PyFormat.BINARY])
 def test_none_type_argument(conn, fmt_in):
     cur = conn.cursor()
     cur.execute("create table none_args (id serial primary key, num integer)")
@@ -351,7 +350,7 @@ def test_none_type_argument(conn, fmt_in):
     assert cur.fetchone()[0]
 
 
-@pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("fmt_in", PyFormat)
 def test_return_untyped(conn, fmt_in):
     # Analyze and check for changes using strings in untyped/typed contexts
     cur = conn.cursor()
@@ -362,7 +361,7 @@ def test_return_untyped(conn, fmt_in):
     assert cur.fetchone() == ("hello", 10)
 
     cur.execute("create table testjson(data jsonb)")
-    if fmt_in != Format.BINARY:
+    if fmt_in != PyFormat.BINARY:
         cur.execute(f"insert into testjson (data) values (%{fmt_in})", ["{}"])
         assert cur.execute("select data from testjson").fetchone() == ({},)
     else:
@@ -373,7 +372,7 @@ def test_return_untyped(conn, fmt_in):
             )
 
 
-@pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("fmt_in", PyFormat.AUTO)
 def test_no_cast_needed(conn, fmt_in):
     # Verify that there is no need of cast in certain common scenario
     cur = conn.execute("select '2021-01-01'::date + %s", [3])
@@ -433,7 +432,7 @@ def test_optimised_adapters():
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize("fmt", [Format.AUTO, Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("fmt", PyFormat)
 @pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
 def test_random(conn, faker, fmt, fmt_out):
     faker.format = fmt

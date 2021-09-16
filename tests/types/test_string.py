@@ -4,18 +4,17 @@ import psycopg
 from psycopg import pq
 from psycopg import sql
 from psycopg import errors as e
-from psycopg.adapt import PyFormat as Format
+from psycopg.adapt import PyFormat
 from psycopg import Binary
 
 eur = "\u20ac"
-
 
 #
 # tests with text
 #
 
 
-@pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("fmt_in", PyFormat)
 def test_dump_1char(conn, fmt_in):
     cur = conn.cursor()
     for i in range(1, 256):
@@ -42,7 +41,7 @@ def test_quote_1char(conn, scs):
     assert not messages
 
 
-@pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("fmt_in", PyFormat)
 def test_dump_zero(conn, fmt_in):
     cur = conn.cursor()
     s = "foo\x00bar"
@@ -76,7 +75,7 @@ def test_quote_percent(conn):
 @pytest.mark.parametrize(
     "typename", ["text", "varchar", "name", "bpchar", '"char"']
 )
-@pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
+@pytest.mark.parametrize("fmt_out", pq.Format)
 def test_load_1char(conn, typename, fmt_out):
     cur = conn.cursor(binary=fmt_out)
     for i in range(1, 256):
@@ -91,7 +90,7 @@ def test_load_1char(conn, typename, fmt_out):
     assert cur.pgresult.fformat(0) == fmt_out
 
 
-@pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("fmt_in", PyFormat)
 @pytest.mark.parametrize("encoding", ["utf8", "latin9", "ascii"])
 def test_dump_enc(conn, fmt_in, encoding):
     cur = conn.cursor()
@@ -101,7 +100,7 @@ def test_dump_enc(conn, fmt_in, encoding):
     assert res == ord(eur)
 
 
-@pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("fmt_in", PyFormat)
 def test_dump_badenc(conn, fmt_in):
     cur = conn.cursor()
 
@@ -110,7 +109,7 @@ def test_dump_badenc(conn, fmt_in):
         cur.execute(f"select %{fmt_in}::bytea", (eur,))
 
 
-@pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("fmt_in", PyFormat)
 def test_dump_utf8_badenc(conn, fmt_in):
     cur = conn.cursor()
 
@@ -119,7 +118,7 @@ def test_dump_utf8_badenc(conn, fmt_in):
         cur.execute(f"select %{fmt_in}", ("\uddf8",))
 
 
-@pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT])
+@pytest.mark.parametrize("fmt_in", [PyFormat.AUTO, PyFormat.TEXT])
 def test_dump_enum(conn, fmt_in):
     from enum import Enum
 
@@ -135,7 +134,7 @@ def test_dump_enum(conn, fmt_in):
     assert res == "foo"
 
 
-@pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT])
+@pytest.mark.parametrize("fmt_in", [PyFormat.AUTO, PyFormat.TEXT])
 def test_dump_text_oid(conn, fmt_in):
     conn.autocommit = True
 
@@ -146,7 +145,7 @@ def test_dump_text_oid(conn, fmt_in):
     assert cur.fetchone()[0] == "foobar"
 
 
-@pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
+@pytest.mark.parametrize("fmt_out", pq.Format)
 @pytest.mark.parametrize("encoding", ["utf8", "latin9"])
 @pytest.mark.parametrize("typename", ["text", "varchar", "name", "bpchar"])
 def test_load_enc(conn, typename, encoding, fmt_out):
@@ -166,7 +165,7 @@ def test_load_enc(conn, typename, encoding, fmt_out):
     assert res == eur
 
 
-@pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
+@pytest.mark.parametrize("fmt_out", pq.Format)
 @pytest.mark.parametrize("typename", ["text", "varchar", "name", "bpchar"])
 def test_load_badenc(conn, typename, fmt_out):
     conn.autocommit = True
@@ -185,7 +184,7 @@ def test_load_badenc(conn, typename, fmt_out):
             copy.read_row()
 
 
-@pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
+@pytest.mark.parametrize("fmt_out", pq.Format)
 @pytest.mark.parametrize("typename", ["text", "varchar", "name", "bpchar"])
 def test_load_ascii(conn, typename, fmt_out):
     cur = conn.cursor(binary=fmt_out)
@@ -204,8 +203,8 @@ def test_load_ascii(conn, typename, fmt_out):
     assert res == eur.encode()
 
 
-@pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
-@pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
+@pytest.mark.parametrize("fmt_in", PyFormat)
+@pytest.mark.parametrize("fmt_out", pq.Format)
 @pytest.mark.parametrize("typename", ["text", "varchar", "name", "bpchar"])
 def test_text_array(conn, typename, fmt_in, fmt_out):
     cur = conn.cursor(binary=fmt_out)
@@ -215,8 +214,8 @@ def test_text_array(conn, typename, fmt_in, fmt_out):
     assert res == a
 
 
-@pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
-@pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
+@pytest.mark.parametrize("fmt_in", PyFormat)
+@pytest.mark.parametrize("fmt_out", pq.Format)
 def test_text_array_ascii(conn, fmt_in, fmt_out):
     conn.client_encoding = "ascii"
     cur = conn.cursor(binary=fmt_out)
@@ -231,7 +230,7 @@ def test_text_array_ascii(conn, fmt_in, fmt_out):
 #
 
 
-@pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("fmt_in", PyFormat)
 @pytest.mark.parametrize("pytype", [bytes, bytearray, memoryview, Binary])
 def test_dump_1byte(conn, fmt_in, pytype):
     cur = conn.cursor()
@@ -263,7 +262,7 @@ def test_quote_1byte(conn, scs, pytype):
     assert not messages
 
 
-@pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
+@pytest.mark.parametrize("fmt_out", pq.Format)
 def test_load_1byte(conn, fmt_out):
     cur = conn.cursor(binary=fmt_out)
     for i in range(0, 256):
@@ -273,8 +272,8 @@ def test_load_1byte(conn, fmt_out):
     assert cur.pgresult.fformat(0) == fmt_out
 
 
-@pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
-@pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
+@pytest.mark.parametrize("fmt_in", PyFormat)
+@pytest.mark.parametrize("fmt_out", pq.Format)
 def test_bytea_array(conn, fmt_in, fmt_out):
     cur = conn.cursor(binary=fmt_out)
     a = [bytes(range(0, 256))]

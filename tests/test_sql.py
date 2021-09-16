@@ -8,7 +8,7 @@ import datetime as dt
 import pytest
 
 from psycopg import pq, sql, ProgrammingError
-from psycopg.adapt import PyFormat as Format
+from psycopg.adapt import PyFormat
 
 eur = "\u20ac"
 
@@ -495,16 +495,16 @@ class TestPlaceholder:
     def test_class(self):
         assert issubclass(sql.Placeholder, sql.Composable)
 
-    @pytest.mark.parametrize("format", Format)
+    @pytest.mark.parametrize("format", PyFormat)
     def test_repr_format(self, conn, format):
         ph = sql.Placeholder(format=format)
-        add = f"format={format.name}" if format != Format.AUTO else ""
+        add = f"format={format.name}" if format != PyFormat.AUTO else ""
         assert str(ph) == repr(ph) == f"Placeholder({add})"
 
-    @pytest.mark.parametrize("format", Format)
+    @pytest.mark.parametrize("format", PyFormat)
     def test_repr_name_format(self, conn, format):
         ph = sql.Placeholder("foo", format=format)
-        add = f", format={format.name}" if format != Format.AUTO else ""
+        add = f", format={format.name}" if format != PyFormat.AUTO else ""
         assert str(ph) == repr(ph) == f"Placeholder('foo'{add})"
 
     def test_bad_name(self):
@@ -519,7 +519,7 @@ class TestPlaceholder:
         assert sql.Placeholder("foo") != sql.Placeholder()
         assert sql.Placeholder("foo") != sql.Literal("foo")
 
-    @pytest.mark.parametrize("format", Format)
+    @pytest.mark.parametrize("format", PyFormat)
     def test_as_string(self, conn, format):
         ph = sql.Placeholder(format=format)
         assert ph.as_string(conn) == f"%{format}"
@@ -527,7 +527,7 @@ class TestPlaceholder:
         ph = sql.Placeholder(name="foo", format=format)
         assert ph.as_string(conn) == f"%(foo){format}"
 
-    @pytest.mark.parametrize("format", Format)
+    @pytest.mark.parametrize("format", PyFormat)
     def test_as_bytes(self, conn, format):
         ph = sql.Placeholder(format=format)
         assert ph.as_bytes(conn) == f"%{format}".encode("ascii")

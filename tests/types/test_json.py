@@ -6,7 +6,7 @@ import pytest
 import psycopg.types
 from psycopg import pq
 from psycopg import sql
-from psycopg.adapt import PyFormat as Format
+from psycopg.adapt import PyFormat
 from psycopg.types.json import Json, Jsonb, set_json_dumps, set_json_loads
 
 samples = [
@@ -22,7 +22,7 @@ samples = [
 
 
 @pytest.mark.parametrize("val", samples)
-@pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("fmt_in", PyFormat)
 def test_json_dump(conn, val, fmt_in):
     obj = json.loads(val)
     cur = conn.cursor()
@@ -32,7 +32,7 @@ def test_json_dump(conn, val, fmt_in):
     assert cur.fetchone()[0] is True
 
 
-@pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("fmt_in", PyFormat)
 @pytest.mark.parametrize("val", samples)
 def test_jsonb_dump(conn, val, fmt_in):
     obj = json.loads(val)
@@ -43,7 +43,7 @@ def test_jsonb_dump(conn, val, fmt_in):
 
 @pytest.mark.parametrize("val", samples)
 @pytest.mark.parametrize("jtype", ["json", "jsonb"])
-@pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
+@pytest.mark.parametrize("fmt_out", pq.Format)
 def test_json_load(conn, val, jtype, fmt_out):
     cur = conn.cursor(binary=fmt_out)
     cur.execute(f"select %s::{jtype}", (val,))
@@ -52,7 +52,7 @@ def test_json_load(conn, val, jtype, fmt_out):
 
 @pytest.mark.parametrize("val", samples)
 @pytest.mark.parametrize("jtype", ["json", "jsonb"])
-@pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
+@pytest.mark.parametrize("fmt_out", pq.Format)
 def test_json_load_copy(conn, val, jtype, fmt_out):
     cur = conn.cursor()
     stmt = sql.SQL("copy (select {}::{}) to stdout (format {})").format(
@@ -65,7 +65,7 @@ def test_json_load_copy(conn, val, jtype, fmt_out):
     assert got == json.loads(val)
 
 
-@pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("fmt_in", PyFormat)
 @pytest.mark.parametrize("wrapper", ["Json", "Jsonb"])
 def test_json_dump_customise(conn, wrapper, fmt_in):
     wrapper = getattr(psycopg.types.json, wrapper)
@@ -80,7 +80,7 @@ def test_json_dump_customise(conn, wrapper, fmt_in):
         set_json_dumps(json.dumps)
 
 
-@pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("fmt_in", PyFormat)
 @pytest.mark.parametrize("wrapper", ["Json", "Jsonb"])
 def test_json_dump_customise_context(conn, wrapper, fmt_in):
     wrapper = getattr(psycopg.types.json, wrapper)
@@ -95,7 +95,7 @@ def test_json_dump_customise_context(conn, wrapper, fmt_in):
     assert cur2.fetchone()[0] == "qux"
 
 
-@pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("fmt_in", PyFormat)
 @pytest.mark.parametrize("wrapper", ["Json", "Jsonb"])
 def test_json_dump_customise_wrapper(conn, wrapper, fmt_in):
     wrapper = getattr(psycopg.types.json, wrapper)

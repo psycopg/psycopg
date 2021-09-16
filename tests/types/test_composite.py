@@ -2,7 +2,7 @@ import pytest
 
 from psycopg import pq, postgres
 from psycopg.sql import Identifier
-from psycopg.adapt import PyFormat as Format
+from psycopg.adapt import PyFormat
 from psycopg.postgres import types as builtins
 from psycopg.types.range import Range
 from psycopg.types.composite import CompositeInfo, register_composite
@@ -46,7 +46,7 @@ def test_dump_tuple(conn, rec, obj):
     assert res == obj
 
 
-@pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
+@pytest.mark.parametrize("fmt_out", pq.Format)
 def test_load_all_chars(conn, fmt_out):
     cur = conn.cursor(binary=fmt_out)
     for i in range(1, 256):
@@ -64,7 +64,7 @@ def test_load_all_chars(conn, fmt_out):
     assert res == (s,)
 
 
-@pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("fmt_in", PyFormat)
 def test_dump_builtin_empty_range(conn, fmt_in):
     conn.execute(
         """
@@ -177,7 +177,7 @@ async def test_fetch_info_async(aconn, testcomp, name, fields):
         assert info.field_types[i] == builtins[t].oid
 
 
-@pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT])
+@pytest.mark.parametrize("fmt_in", [PyFormat.AUTO, PyFormat.TEXT])
 def test_dump_tuple_all_chars(conn, fmt_in, testcomp):
     cur = conn.cursor()
     for i in range(1, 256):
@@ -188,7 +188,7 @@ def test_dump_tuple_all_chars(conn, fmt_in, testcomp):
         assert res is True
 
 
-@pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("fmt_in", PyFormat)
 def test_dump_composite_all_chars(conn, fmt_in, testcomp):
     cur = conn.cursor()
     register_composite(testcomp, cur)
@@ -201,7 +201,7 @@ def test_dump_composite_all_chars(conn, fmt_in, testcomp):
         assert res is True
 
 
-@pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("fmt_in", PyFormat)
 def test_dump_composite_null(conn, fmt_in, testcomp):
     cur = conn.cursor()
     register_composite(testcomp, cur)
@@ -217,7 +217,7 @@ def test_dump_composite_null(conn, fmt_in, testcomp):
     assert rec[0] is True, rec[1]
 
 
-@pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
+@pytest.mark.parametrize("fmt_out", pq.Format)
 def test_load_composite(conn, testcomp, fmt_out):
     info = CompositeInfo.fetch(conn, "testcomp")
     register_composite(info, conn)
@@ -237,7 +237,7 @@ def test_load_composite(conn, testcomp, fmt_out):
     assert isinstance(res[0].baz, float)
 
 
-@pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
+@pytest.mark.parametrize("fmt_out", pq.Format)
 def test_load_composite_factory(conn, testcomp, fmt_out):
     info = CompositeInfo.fetch(conn, "testcomp")
 
@@ -265,23 +265,23 @@ def test_load_composite_factory(conn, testcomp, fmt_out):
 def test_register_scope(conn, testcomp):
     info = CompositeInfo.fetch(conn, "testcomp")
     register_composite(info)
-    for fmt in (pq.Format.TEXT, pq.Format.BINARY):
+    for fmt in pq.Format:
         for oid in (info.oid, info.array_oid):
             assert postgres.adapters._loaders[fmt].pop(oid)
 
-    for fmt in Format:
+    for fmt in PyFormat:
         assert postgres.adapters._dumpers[fmt].pop(info.python_type)
 
     cur = conn.cursor()
     register_composite(info, cur)
-    for fmt in (pq.Format.TEXT, pq.Format.BINARY):
+    for fmt in pq.Format:
         for oid in (info.oid, info.array_oid):
             assert oid not in postgres.adapters._loaders[fmt]
             assert oid not in conn.adapters._loaders[fmt]
             assert oid in cur.adapters._loaders[fmt]
 
     register_composite(info, conn)
-    for fmt in (pq.Format.TEXT, pq.Format.BINARY):
+    for fmt in pq.Format:
         for oid in (info.oid, info.array_oid):
             assert oid not in postgres.adapters._loaders[fmt]
             assert oid in conn.adapters._loaders[fmt]

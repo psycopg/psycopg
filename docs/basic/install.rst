@@ -30,7 +30,7 @@ some cases though:
 
 - you need a glibc-based Linux distribution: the ``binary`` package doesn't
   work on Alpine Linux for instance;
-- you have a newly released Python or Mac Os X version for which binary
+- you have a newly released Python or macOS version for which binary
   packages are not ready yet.
 
 In these case you should proceed to a :ref:`local installation

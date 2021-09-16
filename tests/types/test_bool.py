@@ -2,12 +2,12 @@ import pytest
 
 from psycopg import pq
 from psycopg import sql
-from psycopg.adapt import Transformer, PyFormat as Format
+from psycopg.adapt import Transformer, PyFormat
 from psycopg.postgres import types as builtins
 
 
-@pytest.mark.parametrize("fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY])
-@pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
+@pytest.mark.parametrize("fmt_in", PyFormat)
+@pytest.mark.parametrize("fmt_out", pq.Format)
 @pytest.mark.parametrize("b", [True, False])
 def test_roundtrip_bool(conn, b, fmt_in, fmt_out):
     cur = conn.cursor(binary=fmt_out)
@@ -28,7 +28,7 @@ def test_roundtrip_bool(conn, b, fmt_in, fmt_out):
 def test_quote_bool(conn, val):
 
     tx = Transformer()
-    assert tx.get_dumper(val, Format.TEXT).quote(val) == str(
+    assert tx.get_dumper(val, PyFormat.TEXT).quote(val) == str(
         val
     ).lower().encode("ascii")
 
@@ -40,7 +40,7 @@ def test_quote_bool(conn, val):
 def test_quote_none(conn):
 
     tx = Transformer()
-    assert tx.get_dumper(None, Format.TEXT).quote(None) == b"NULL"
+    assert tx.get_dumper(None, PyFormat.TEXT).quote(None) == b"NULL"
 
     cur = conn.cursor()
     cur.execute(sql.SQL("select {v}").format(v=sql.Literal(None)))

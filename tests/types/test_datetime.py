@@ -4,7 +4,7 @@ import datetime as dt
 import pytest
 
 from psycopg import DataError, pq, sql
-from psycopg.adapt import PyFormat as Format
+from psycopg.adapt import PyFormat
 
 
 class TestDate:
@@ -19,9 +19,7 @@ class TestDate:
             ("max", "9999-12-31"),
         ],
     )
-    @pytest.mark.parametrize(
-        "fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY]
-    )
+    @pytest.mark.parametrize("fmt_in", PyFormat)
     def test_dump_date(self, conn, val, expr, fmt_in):
         val = as_date(val)
         cur = conn.cursor()
@@ -54,7 +52,7 @@ class TestDate:
             ("max", "9999-12-31"),
         ],
     )
-    @pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
+    @pytest.mark.parametrize("fmt_out", pq.Format)
     def test_load_date(self, conn, val, expr, fmt_out):
         cur = conn.cursor(binary=fmt_out)
         cur.execute(f"select '{expr}'::date")
@@ -111,9 +109,7 @@ class TestDatetime:
             ("max", "9999-12-31 23:59:59.999999"),
         ],
     )
-    @pytest.mark.parametrize(
-        "fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY]
-    )
+    @pytest.mark.parametrize("fmt_in", PyFormat)
     def test_dump_datetime(self, conn, val, expr, fmt_in):
         cur = conn.cursor()
         cur.execute("set timezone to '+02:00'")
@@ -230,9 +226,7 @@ class TestDateTimeTz:
             ("max~2", "9999-12-31 23:59:59.999999"),
         ],
     )
-    @pytest.mark.parametrize(
-        "fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY]
-    )
+    @pytest.mark.parametrize("fmt_in", PyFormat)
     def test_dump_datetimetz(self, conn, val, expr, fmt_in):
         cur = conn.cursor()
         cur.execute("set timezone to '-02:00'")
@@ -309,7 +303,7 @@ class TestDateTimeTz:
             ("NOSUCH0", "2000-1-1", 0),
         ],
     )
-    @pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
+    @pytest.mark.parametrize("fmt_out", pq.Format)
     def test_load_datetimetz_tz(self, conn, fmt_out, tzname, expr, tzoff):
         if "/" in tzname and sys.platform == "win32":
             pytest.skip("no IANA db on Windows")
@@ -326,9 +320,7 @@ class TestDateTimeTz:
             ("2000,1,2,3,4,5,6~2", "timestamptz"),
         ],
     )
-    @pytest.mark.parametrize(
-        "fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY]
-    )
+    @pytest.mark.parametrize("fmt_in", PyFormat)
     def test_dump_datetime_tz_or_not_tz(self, conn, val, type, fmt_in):
         val = as_dt(val)
         cur = conn.cursor()
@@ -371,7 +363,7 @@ class TestDateTimeTz:
             pytest.param("min", "+09:18:59", "Asia/Tokyo", marks=[tz_sec]),
         ],
     )
-    @pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
+    @pytest.mark.parametrize("fmt_out", pq.Format)
     def test_max_with_timezone(self, conn, fmt_out, valname, tzval, tzname):
         # This happens e.g. in Django when it caches forever.
         # e.g. see Django test cache.tests.DBCacheTests.test_forever_timeout
@@ -404,9 +396,7 @@ class TestTime:
             ("max", "23:59:59.999999"),
         ],
     )
-    @pytest.mark.parametrize(
-        "fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY]
-    )
+    @pytest.mark.parametrize("fmt_in", PyFormat)
     def test_dump_time(self, conn, val, expr, fmt_in):
         cur = conn.cursor()
         cur.execute(
@@ -430,13 +420,13 @@ class TestTime:
             ("max", "23:59:59.999999"),
         ],
     )
-    @pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
+    @pytest.mark.parametrize("fmt_out", pq.Format)
     def test_load_time(self, conn, val, expr, fmt_out):
         cur = conn.cursor(binary=fmt_out)
         cur.execute(f"select '{expr}'::time")
         assert cur.fetchone()[0] == as_time(val)
 
-    @pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
+    @pytest.mark.parametrize("fmt_out", pq.Format)
     def test_load_time_24(self, conn, fmt_out):
         cur = conn.cursor(binary=fmt_out)
         cur.execute("select '24:00'::time")
@@ -457,9 +447,7 @@ class TestTimeTz:
             ("max~+12", "23:59:59.999999+12:00"),
         ],
     )
-    @pytest.mark.parametrize(
-        "fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY]
-    )
+    @pytest.mark.parametrize("fmt_in", PyFormat)
     def test_dump_timetz(self, conn, val, expr, fmt_in):
         cur = conn.cursor()
         cur.execute("set timezone to '-02:00'")
@@ -477,14 +465,14 @@ class TestTimeTz:
             ("3,0,0,456789~-2", "03:00:00.456789", "+02:00"),
         ],
     )
-    @pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
+    @pytest.mark.parametrize("fmt_out", pq.Format)
     def test_load_timetz(self, conn, val, timezone, expr, fmt_out):
         cur = conn.cursor(binary=fmt_out)
         cur.execute(f"set timezone to '{timezone}'")
         cur.execute(f"select '{expr}'::timetz")
         assert cur.fetchone()[0] == as_time(val)
 
-    @pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
+    @pytest.mark.parametrize("fmt_out", pq.Format)
     def test_load_timetz_24(self, conn, fmt_out):
         cur = conn.cursor()
         cur.execute("select '24:00'::timetz")
@@ -499,9 +487,7 @@ class TestTimeTz:
             ("3,4,5,6~2", "timetz"),
         ],
     )
-    @pytest.mark.parametrize(
-        "fmt_in", [Format.AUTO, Format.TEXT, Format.BINARY]
-    )
+    @pytest.mark.parametrize("fmt_in", PyFormat)
     def test_dump_time_tz_or_not_tz(self, conn, val, type, fmt_in):
         val = as_time(val)
         cur = conn.cursor()
@@ -589,7 +575,7 @@ class TestInterval:
             ("-90d", "-3 month"),
         ],
     )
-    @pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
+    @pytest.mark.parametrize("fmt_out", pq.Format)
     def test_load_interval(self, conn, val, expr, fmt_out):
         cur = conn.cursor(binary=fmt_out)
         cur.execute(f"select '{expr}'::interval")
