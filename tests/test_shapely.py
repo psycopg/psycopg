@@ -3,7 +3,6 @@ import pytest
 from psycopg.pq import Format
 from psycopg.types import TypeInfo
 from psycopg.adapt import PyFormat
-
 from psycopg import ProgrammingError
 
 pytestmark = [pytest.mark.postgis]
@@ -134,9 +133,10 @@ def test_match_geojson(shapely_conn, fmt_out):
     SAMPLE_POINT = Point(1.2, 3.4)
     with shapely_conn.cursor(binary=fmt_out) as cur:
         cur.execute(
-            f"""
-            select ST_GeomFromGeoJSON('{SAMPLE_POINT_GEOJSON}')
             """
+            select ST_GeomFromGeoJSON(%s)
+            """,
+            (SAMPLE_POINT_GEOJSON,),
         )
         result = cur.fetchone()[0]
         # clone the coordinates to have a list instead of a shapely wrapper
