@@ -52,7 +52,7 @@ jobs:
           PYTEST_ADDOPTS: "-m 'not subprocess'"
 
       - name: Run DNS-related tests
-        run: tox -c psycopg -e dns -- --color yes
+        run: tox -c psycopg -e dns -- --color yes -m dns
         if: ${{ matrix.impl == 'dns' }}
         env:
           PSYCOPG_IMPL: python
@@ -60,6 +60,8 @@ jobs:
       - name: Run PostGIS-related tests
         run: tox -c psycopg -e postgis -- --color yes -m postgis
         if: ${{ matrix.postgis == 'yes' }}
+        env:
+          PSYCOPG_IMPL: python
 
     services:
       postgresql:
