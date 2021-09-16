@@ -2,6 +2,7 @@ import pytest
 
 from psycopg.pq import Format
 from psycopg.types import TypeInfo
+from psycopg.adapt import PyFormat
 
 from psycopg import ProgrammingError
 
@@ -91,14 +92,13 @@ def test_with_adapter(shapely_conn):
     )
 
 
+@pytest.mark.parametrize("fmt_in", PyFormat)
 @pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
-def test_write_read_shape(shapely_conn, fmt_out):
+def test_write_read_shape(shapely_conn, fmt_in, fmt_out):
     from shapely.geometry import Point, Polygon
 
     SAMPLE_POINT = Point(1.2, 3.4)
     SAMPLE_POLYGON = Polygon([(0, 0), (1, 1), (1, 0)])
-
-    fmt_placeholder = "%b" if fmt_out == Format.BINARY else "%t"
 
     with shapely_conn.cursor(binary=fmt_out) as cur:
         cur.execute(
@@ -110,11 +110,11 @@ def test_write_read_shape(shapely_conn, fmt_out):
         """
         )
         cur.execute(
-            f"insert into sample_geoms(id, geom) VALUES(1, {fmt_placeholder})",
+            f"insert into sample_geoms(id, geom) VALUES(1, %{fmt_in})",
             (SAMPLE_POINT,),
         )
         cur.execute(
-            f"insert into sample_geoms(id, geom) VALUES(2, {fmt_placeholder})",
+            f"insert into sample_geoms(id, geom) VALUES(2, %{fmt_in})",
             (SAMPLE_POLYGON,),
         )
 
