@@ -118,7 +118,7 @@ jobs:
         run: brew services start postgresql
 
       - name: Enable PostGIS extension
-        run: psql -c "CREATE EXTENSION postgis;" postgres
+        run: psql -h 127.0.0.1 -U runner -c "CREATE EXTENSION postgis;" postgres
         if: ${{ matrix.postgis == 'yes' }}
 
       - uses: actions/setup-python@v2
