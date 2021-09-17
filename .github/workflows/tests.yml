@@ -94,7 +94,6 @@ jobs:
           - {impl: c, python: 3.7}
           - {impl: c, python: 3.8}
           - {impl: c, python: 3.9}
-          - {impl: python, python: 3.9, postgis: "yes"}
 
     env:
       PSYCOPG_IMPL: ${{ matrix.impl }}
@@ -110,16 +109,8 @@ jobs:
       - name: Install PostgreSQL on the runner
         run: brew install postgresql@13
 
-      - name: Install PostGIS extension on the runner
-        run: brew install postgis
-        if: ${{ matrix.postgis == 'yes' }}
-
       - name: Start PostgreSQL service for test
         run: brew services start postgresql
-
-      - name: Enable PostGIS extension
-        run: psql -h 127.0.0.1 -U runner -c "CREATE EXTENSION postgis;" postgres
-        if: ${{ matrix.postgis == 'yes' }}
 
       - uses: actions/setup-python@v2
         with:
@@ -135,10 +126,6 @@ jobs:
       - name: Run tests (C implementation)
         run: tox -c psycopg_c -e ${{ matrix.python }} -- --color yes
         if: ${{ matrix.impl == 'c' }}
-
-      - name: Run PostGIS-related tests
-        run: tox -c psycopg -e postgis -- --color yes -m postgis
-        if: ${{ matrix.postgis == 'yes' }}
 
   windows:
     name: Test on Windows
