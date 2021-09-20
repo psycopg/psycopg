@@ -21,7 +21,7 @@ MULTIPOLYGON_GEOJSON = """
    "coordinates":[
       [
          [
-            [1489574.61111389, 6894228.638802719],
+            [89574.61111389, 6894228.638802719],
             [89576.815239808, 6894208.60747024],
             [89576.904295401, 6894207.820852726],
             [89577.99522641, 6894208.022080451],
@@ -38,7 +38,7 @@ MULTIPOLYGON_GEOJSON = """
             [89574.61111389, 6894228.638802719]
          ],
          [
-            [1489610.344670435, 6894182.466199101],
+            [89610.344670435, 6894182.466199101],
             [89625.985058891, 6894184.258949757],
             [89629.547282597, 6894153.270030369],
             [89613.918026089, 6894151.458993318],
@@ -128,7 +128,7 @@ def test_write_read_shape(shapely_conn, fmt_in, fmt_out):
 
 @pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
 def test_match_geojson(shapely_conn, fmt_out):
-    from shapely.geometry import Point
+    from shapely.geometry import MultiPolygon, Point
 
     SAMPLE_POINT = Point(1.2, 3.4)
     with shapely_conn.cursor(binary=fmt_out) as cur:
@@ -141,3 +141,12 @@ def test_match_geojson(shapely_conn, fmt_out):
         result = cur.fetchone()[0]
         # clone the coordinates to have a list instead of a shapely wrapper
         assert result.coords[:] == SAMPLE_POINT.coords[:]
+        #
+        cur.execute(
+            """
+            select ST_GeomFromGeoJSON(%s)
+            """,
+            (MULTIPOLYGON_GEOJSON,),
+        )
+        result = cur.fetchone()[0]
+        assert isinstance(result, MultiPolygon)
