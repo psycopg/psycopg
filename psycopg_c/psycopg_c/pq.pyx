@@ -11,6 +11,7 @@ from psycopg.pq import Format
 from psycopg.pq.misc import error_message
 
 __impl__ = 'c'
+__build_version__ = libpq.PG_VERSION_NUM
 
 
 def version():

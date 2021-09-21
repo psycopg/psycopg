@@ -12,8 +12,9 @@ def pytest_report_header(config):
         return []
 
     return [
-        f"libpq available: {pq.version()}",
         f"libpq wrapper implementation: {pq.__impl__}",
+        f"libpq used: {pq.version()}",
+        f"libpq compiled: {pq.__build_version__}",
     ]
 
 

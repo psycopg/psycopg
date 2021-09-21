@@ -76,6 +76,8 @@ Module content
     .. seealso:: the :pq:`PQlibVersion()` function
 
 
+.. autodata:: __build_version__
+
 .. autofunction:: error_message
 
 
