@@ -13,15 +13,16 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - {impl: python, python: 3.6, postgres: 10}
-          - {impl: python, python: 3.7, postgres: 11}
-          - {impl: python, python: 3.8, postgres: 12}
-          - {impl: python, python: 3.9, postgres: 13}
-          - {impl: c, python: 3.6, postgres: 13}
-          - {impl: c, python: 3.7, postgres: 12}
-          - {impl: c, python: 3.8, postgres: 11}
-          - {impl: c, python: 3.9, postgres: 10}
-          - {impl: dns, python: 3.9, postgres: 13}
+          - {impl: python, python: 3.6, image: "postgres:10"}
+          - {impl: python, python: 3.7, image: "postgres:11"}
+          - {impl: python, python: 3.8, image: "postgres:12"}
+          - {impl: python, python: 3.9, image: "postgres:13"}
+          - {impl: c, python: 3.6, image: "postgres:13"}
+          - {impl: c, python: 3.7, image: "postgres:12"}
+          - {impl: c, python: 3.8, image: "postgres:11"}
+          - {impl: c, python: 3.9, image: "postgres:10"}
+          - {impl: dns, python: 3.9, image: "postgres:13"}
+          - {impl: postgis, python: 3.9, image: "postgis/postgis:13-master"}
 
     env:
       PSYCOPG_IMPL: ${{ matrix.impl }}
@@ -56,9 +57,15 @@ jobs:
         env:
           PSYCOPG_IMPL: python
 
+      - name: Run PostGIS-related tests
+        run: tox -c psycopg -e postgis -- --color yes -m postgis
+        if: ${{ matrix.impl == 'postgis' }}
+        env:
+          PSYCOPG_IMPL: python
+
     services:
       postgresql:
-        image: postgres:${{ matrix.postgres }}
+        image: ${{ matrix.image }}
         env:
           POSTGRES_PASSWORD: password
         ports:
@@ -119,7 +126,6 @@ jobs:
       - name: Run tests (C implementation)
         run: tox -c psycopg_c -e ${{ matrix.python }} -- --color yes
         if: ${{ matrix.impl == 'c' }}
-
 
   windows:
     name: Test on Windows
