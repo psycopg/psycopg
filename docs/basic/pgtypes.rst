@@ -191,10 +191,12 @@ database using
     =# CREATE EXTENSION hstore;
 
 Because |hstore| is distributed as a contrib module, its oid is not well
-known, so it is necessary to use `~psycopg.types.TypeInfo` to query the
-database and get its oid. After that you can use
-`~psycopg.types.hstore.register_hstore()` to allow dumping `!dict` to |hstore|
-and parsing |hstore| back to `!dict` in the context where it is registered.
+known, so it is necessary to use `!TypeInfo`\.\
+`~psycopg.types.TypeInfo.fetch()` to query the database and get its oid. The
+resulting object you can use passed to
+`~psycopg.types.hstore.register_hstore()` to configure dumping `!dict` to
+|hstore| and parsing |hstore| back to `!dict`, in the context where the
+adapter is registered.
 
 .. autofunction:: psycopg.types.hstore.register_hstore
 
@@ -212,6 +214,11 @@ Example::
     >>> conn.execute("SELECT 'foo => bar'::hstore").fetchone()[0]
     {'foo': 'bar'}
 
+
+.. index::
+    pair: geometry; Data types
+    single: PostGIS; Data types
+
 Geometry adaptation using Shapely
 ---------------------------------
 
@@ -220,18 +227,26 @@ values and have them automatically converted to Shapely_ instances. Likewise,
 you may want to store such instances in the database and have the conversion
 happen automatically.
 
-To support this, you will need to install Shapely_
+.. warning::
+    Psycopg doesn't have a dependency on the ``shapely`` package: you should
+    install the library as an additional dependency of your project.
+
+.. warning::
+    This module is experimental and might be changed in the future according
+    to users' feedback.
 
 .. _PostGIS: https://postgis.net/
 .. _geometry: https://postgis.net/docs/geometry.html
 .. _Shapely: https://github.com/Toblerity/Shapely
 .. _shape: https://shapely.readthedocs.io/en/stable/manual.html#shapely.geometry.shape
 
-Since PostgGIS is an extension, its oid is not well known, so it is necessary
-to use `~psycopg.types.TypeInfo` to query the database and get its oid. After
-that you can use `~psycopg.types.shapely.register_shapely()` to allow dumping
-`shape`_ instances to :sql:`geometry` columns and parsing :sql:`geometry` back
-to `!shape` in the context where it is registered.
+Since PostgGIS is an extension, the :sql:`geometry` type oid is not well
+known, so it is necessary to use `!TypeInfo`\.\
+`~psycopg.types.TypeInfo.fetch()` to query the database and find it. The
+resulting object can be passed to `~psycopg.types.shapely.register_shapely()`
+to configure dumping `shape`_ instances to :sql:`geometry` columns and parsing
+:sql:`geometry` data back to `!shape` instances, in the context where the
+adapters are registered.
 
 .. autofunction:: psycopg.types.shapely.register_shapely
 
@@ -254,8 +269,8 @@ Example::
     ... """).fetchone()[0]
     <shapely.geometry.multipolygon.MultiPolygon object at 0x7fb131f3cd90>
 
-Notice that the adapter is registered on the specific object, other
-connections will be unaffected::
+Notice that, if the geometry adapters are registered on a specific object (a
+connection or cursor), other connections and cursors will be unaffected::
 
     >>> conn2 = psycopg.connect(CONN_STR)
     >>> conn2.execute("""
