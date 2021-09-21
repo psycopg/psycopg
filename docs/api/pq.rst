@@ -69,10 +69,6 @@ Module content
 
 .. autofunction:: version
 
-    .. admonition:: TODO
-
-        Document pg10 quirk.
-
     .. seealso:: the :pq:`PQlibVersion()` function
 
 

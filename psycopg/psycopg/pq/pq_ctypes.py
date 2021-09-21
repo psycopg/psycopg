@@ -33,7 +33,12 @@ logger = logging.getLogger("psycopg")
 
 
 def version() -> int:
-    """Return the version number of the libpq currently loaded."""
+    """Return the version number of the libpq currently loaded.
+
+    The number is in the same format of `~psycopg.ConnectionInfo.server_version`.
+
+    Certain features might not be available if the libpq library used is too old.
+    """
     return impl.PQlibVersion()
 
 
