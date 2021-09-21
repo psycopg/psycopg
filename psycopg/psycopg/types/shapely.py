@@ -2,7 +2,7 @@
 Adapters for PostGIS geometries
 """
 
-from typing import Optional, Type
+from typing import Optional
 
 from .. import postgres
 from ..abc import AdaptContext, Buffer
@@ -32,8 +32,6 @@ class GeometryBinaryLoader(Loader):
 
 
 class GeometryLoader(Loader):
-    format = Format.TEXT
-
     def load(self, data: Buffer) -> "BaseGeometry":
         # it's a hex string in binary
         if isinstance(data, memoryview):
@@ -41,16 +39,14 @@ class GeometryLoader(Loader):
         return loads(data.decode(), hex=True)
 
 
-class GeometryBinaryDumper(Dumper):
+class BaseGeometryBinaryDumper(Dumper):
     format = Format.BINARY
 
     def dump(self, obj: "BaseGeometry") -> bytes:
         return dumps(obj)  # type: ignore
 
 
-class GeometryDumper(Dumper):
-    format = Format.TEXT
-
+class BaseGeometryDumper(Dumper):
     def dump(self, obj: "BaseGeometry") -> bytes:
         return dumps(obj, hex=True).encode()  # type: ignore
 
@@ -81,15 +77,15 @@ def register_shapely(
 
     info.register(context)
     adapters = context.adapters if context else postgres.adapters
-    # Generate and register the text and binary dumper
-    binary_dumper: Type[GeometryBinaryDumper] = type(
-        "GeometryBinaryDumper", (GeometryBinaryDumper,), {"oid": info.oid}
-    )
-    dumper: Type[GeometryDumper] = type(
-        "GeometryDumper", (GeometryDumper,), {"oid": info.oid}
-    )
+
+    class GeometryDumper(BaseGeometryDumper):
+        oid = info.oid
+
+    class GeometryBinaryDumper(BaseGeometryBinaryDumper):
+        oid = info.oid
 
     adapters.register_loader(info.oid, GeometryBinaryLoader)
     adapters.register_loader(info.oid, GeometryLoader)
-    adapters.register_dumper(BaseGeometry, dumper)
-    adapters.register_dumper(BaseGeometry, binary_dumper)
+    # Default binary dump
+    adapters.register_dumper(BaseGeometry, GeometryDumper)
+    adapters.register_dumper(BaseGeometry, GeometryBinaryDumper)
