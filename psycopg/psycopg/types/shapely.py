@@ -74,6 +74,11 @@ def register_shapely(
 
     """
 
+    # A friendly error warning instead of an AttributeError in case fetch()
+    # failed and it wasn't noticed.
+    if not info:
+        raise TypeError("no info passed. Is the 'postgis' extension loaded?")
+
     info.register(context)
     adapters = context.adapters if context else postgres.adapters
     # Generate and register the text and binary dumper

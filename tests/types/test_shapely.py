@@ -77,6 +77,13 @@ def test_no_adapter(conn):
         conn.execute("SELECT pg_typeof(%s)", [point]).fetchone()[0]
 
 
+def test_no_info_error(conn):
+    from psycopg.types.shapely import register_shapely
+
+    with pytest.raises(TypeError, match="postgis.*extension"):
+        register_shapely(None, conn)
+
+
 def test_with_adapter(shapely_conn):
     SAMPLE_POINT = Point(1.2, 3.4)
     SAMPLE_POLYGON = Polygon([(0, 0), (1, 1), (1, 0)])
