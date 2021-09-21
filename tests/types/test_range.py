@@ -667,3 +667,8 @@ class TestRangeObject:
         expected = "[2010-01-01 00:00:00-05:00, 2011-01-01 00:00:00-05:00)"
         result = str(r)
         assert result == expected
+
+
+def test_no_info_error(conn):
+    with pytest.raises(TypeError, match="range"):
+        register_range(None, conn)

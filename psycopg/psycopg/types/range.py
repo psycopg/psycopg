@@ -442,6 +442,10 @@ def register_range(
     Register loaders so that loading data of this type will result in a `Range`
     with bounds parsed as the right subtype.
     """
+    # A friendly error warning instead of an AttributeError in case fetch()
+    # failed and it wasn't noticed.
+    if not info:
+        raise TypeError("no info passed. Is the requested range available?")
 
     # Register arrays and type info
     info.register(context)

@@ -217,6 +217,13 @@ def register_composite(
         the composite into a Python object.
     """
 
+    # A friendly error warning instead of an AttributeError in case fetch()
+    # failed and it wasn't noticed.
+    if not info:
+        raise TypeError(
+            "no info passed. Is the requested composite available?"
+        )
+
     # Register arrays and type info
     info.register(context)
 

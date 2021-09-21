@@ -97,3 +97,8 @@ def test_roundtrip_array(hstore, conn):
     register_hstore(TypeInfo.fetch(conn, "hstore"), conn)
     samp1 = conn.execute("select %s", (samp,)).fetchone()[0]
     assert samp1 == samp
+
+
+def test_no_info_error(conn):
+    with pytest.raises(TypeError, match="hstore.*extension"):
+        register_hstore(None, conn)

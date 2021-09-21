@@ -327,3 +327,8 @@ def test_callable_dumper_not_registered(conn, testcomp):
     # but the loader is registered
     cur = conn.execute("select '(foo,42,3.14)'::testcomp")
     assert cur.fetchone()[0] == ("foo", 42, 3.14, 3.14)
+
+
+def test_no_info_error(conn):
+    with pytest.raises(TypeError, match="composite"):
+        register_composite(None, conn)
