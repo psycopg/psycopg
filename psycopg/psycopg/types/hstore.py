@@ -5,7 +5,7 @@ Dict to hstore adaptation
 # Copyright (C) 2021 The Psycopg Team
 
 import re
-from typing import Dict, List, Optional, Type
+from typing import Dict, List, Optional
 
 from .. import errors as e
 from .. import postgres
@@ -118,10 +118,10 @@ def register_hstore(
     adapters = context.adapters if context else postgres.adapters
 
     # Generate and register a customized text dumper
-    dumper: Type[BaseHstoreDumper] = type(
-        "HstoreDumper", (BaseHstoreDumper,), {"oid": info.oid}
-    )
-    adapters.register_dumper(dict, dumper)
+    class HstoreDumper(BaseHstoreDumper):
+        oid = info.oid
+
+    adapters.register_dumper(dict, HstoreDumper)
 
     # register the text loader on the oid
     adapters.register_loader(info.oid, HstoreLoader)
