@@ -1,12 +1,16 @@
 import pytest
 
+import psycopg
 from psycopg.pq import Format
 from psycopg.types import TypeInfo
 from psycopg.adapt import PyFormat
-from psycopg import ProgrammingError
+
+pytest.importorskip("shapely")
+
+from shapely.geometry import Point, Polygon, MultiPolygon  # noqa: E402
+from psycopg.types.shapely import register_shapely  # noqa: E402
 
 pytestmark = [pytest.mark.postgis]
-pytest.importorskip("shapely")
 
 # real example, with CRS and "holes"
 MULTIPOLYGON_GEOJSON = """
@@ -52,50 +56,49 @@ SAMPLE_POINT_GEOJSON = '{"type":"Point","coordinates":[1.2, 3.4]}'
 
 
 @pytest.fixture
-def shapely_conn(conn):
-    from psycopg.types.shapely import register_shapely
+def shapely_conn(conn, svcconn):
+    try:
+        with svcconn.transaction():
+            svcconn.execute("create extension if not exists postgis")
+    except psycopg.Error as e:
+        pytest.skip(f"can't create extension postgis: {e}")
 
     info = TypeInfo.fetch(conn, "geometry")
+    assert info
     register_shapely(info, conn)
     return conn
 
 
 def test_no_adapter(conn):
-    from shapely.geometry import Point
-
     point = Point(1.2, 3.4)
-    with pytest.raises(ProgrammingError, match="cannot adapt type Point"):
+    with pytest.raises(
+        psycopg.ProgrammingError, match="cannot adapt type Point"
+    ):
         conn.execute("SELECT pg_typeof(%s)", [point]).fetchone()[0]
 
 
 def test_with_adapter(shapely_conn):
-    from shapely.geometry import Point, Polygon
-
     SAMPLE_POINT = Point(1.2, 3.4)
     SAMPLE_POLYGON = Polygon([(0, 0), (1, 1), (1, 0)])
 
     assert (
         shapely_conn.execute(
-            "SELECT pg_typeof(%s)",
-            [SAMPLE_POINT],
+            "SELECT pg_typeof(%s)", [SAMPLE_POINT]
         ).fetchone()[0]
         == "geometry"
     )
 
     assert (
         shapely_conn.execute(
-            "SELECT pg_typeof(%s)",
-            [SAMPLE_POLYGON],
+            "SELECT pg_typeof(%s)", [SAMPLE_POLYGON]
         ).fetchone()[0]
         == "geometry"
     )
 
 
 @pytest.mark.parametrize("fmt_in", PyFormat)
-@pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("fmt_out", Format)
 def test_write_read_shape(shapely_conn, fmt_in, fmt_out):
-    from shapely.geometry import Point, Polygon
-
     SAMPLE_POINT = Point(1.2, 3.4)
     SAMPLE_POLYGON = Polygon([(0, 0), (1, 1), (1, 0)])
 
@@ -128,8 +131,6 @@ def test_write_read_shape(shapely_conn, fmt_in, fmt_out):
 
 @pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
 def test_match_geojson(shapely_conn, fmt_out):
-    from shapely.geometry import MultiPolygon, Point
-
     SAMPLE_POINT = Point(1.2, 3.4)
     with shapely_conn.cursor(binary=fmt_out) as cur:
         cur.execute(
@@ -142,11 +143,6 @@ def test_match_geojson(shapely_conn, fmt_out):
         # clone the coordinates to have a list instead of a shapely wrapper
         assert result.coords[:] == SAMPLE_POINT.coords[:]
         #
-        cur.execute(
-            """
-            select ST_GeomFromGeoJSON(%s)
-            """,
-            (MULTIPOLYGON_GEOJSON,),
-        )
+        cur.execute("select ST_GeomFromGeoJSON(%s)", (MULTIPOLYGON_GEOJSON,))
         result = cur.fetchone()[0]
         assert isinstance(result, MultiPolygon)
