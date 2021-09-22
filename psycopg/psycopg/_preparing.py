@@ -79,6 +79,20 @@ class PrepareManager:
         if self.prepare_threshold is None:
             return None
 
+        # Check if we need to discard our entire state: it should happen on
+        # rollback or on dropping objects, because the same object may get
+        # recreated and postgres would fail internal lookups.
+        if self._prepared or prep == Prepare.SHOULD:
+            for result in results:
+                if result.status != ExecStatus.COMMAND_OK:
+                    continue
+                cmdstat = result.command_status
+                if cmdstat and (
+                    cmdstat.startswith(b"DROP ") or cmdstat == b"ROLLBACK"
+                ):
+                    self._prepared.clear()
+                    return b"DEALLOCATE ALL"
+
         key = (query.query, query.types)
 
         # If we know the query already the cache size won't change
@@ -97,11 +111,8 @@ class PrepareManager:
             # We cannot prepare a multiple statement
             return None
 
-        result = results[0]
-        if (
-            result.status != ExecStatus.TUPLES_OK
-            and result.status != ExecStatus.COMMAND_OK
-        ):
+        status = results[0].status
+        if ExecStatus.COMMAND_OK != status != ExecStatus.TUPLES_OK:
             # We don't prepare failed queries or other weird results
             return None
 
@@ -116,5 +127,13 @@ class PrepareManager:
         old_val = self._prepared.popitem(last=False)[1]
         if isinstance(old_val, bytes):
             return b"DEALLOCATE " + old_val
+        else:
+            return None
+
+    def clear(self) -> Optional[bytes]:
+        if self._prepared_idx:
+            self._prepared.clear()
+            self._prepared_idx = 0
+            return b"DEALLOCATE ALL"
         else:
             return None

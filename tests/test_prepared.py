@@ -191,3 +191,69 @@ def test_untyped_json(conn):
 
     cur = conn.execute("select parameter_types from pg_prepared_statements")
     assert cur.fetchall() == [(["jsonb"],)]
+
+
+def test_change_type_execute(conn):
+    conn.prepare_threshold = 0
+    for i in range(3):
+        conn.execute("CREATE TYPE prepenum AS ENUM ('foo', 'bar', 'baz')")
+        conn.execute("CREATE TABLE preptable(id integer, bar prepenum[])")
+        conn.cursor().execute(
+            "INSERT INTO preptable (bar) VALUES (%(enum_col)s::prepenum[])",
+            {"enum_col": ["foo"]},
+        )
+        conn.rollback()
+
+
+def test_change_type_executemany(conn):
+    for i in range(3):
+        conn.execute("CREATE TYPE prepenum AS ENUM ('foo', 'bar', 'baz')")
+        conn.execute("CREATE TABLE preptable(id integer, bar prepenum[])")
+        conn.cursor().executemany(
+            "INSERT INTO preptable (bar) VALUES (%(enum_col)s::prepenum[])",
+            [{"enum_col": ["foo"]}, {"enum_col": ["foo", "bar"]}],
+        )
+        conn.rollback()
+
+
+def test_change_type(conn):
+    conn.prepare_threshold = 0
+    conn.execute("CREATE TYPE prepenum AS ENUM ('foo', 'bar', 'baz')")
+    conn.execute("CREATE TABLE preptable(id integer, bar prepenum[])")
+    conn.cursor().execute(
+        "INSERT INTO preptable (bar) VALUES (%(enum_col)s::prepenum[])",
+        {"enum_col": ["foo"]},
+    )
+    conn.execute("DROP TABLE preptable")
+    conn.execute("DROP TYPE prepenum")
+    conn.execute("CREATE TYPE prepenum AS ENUM ('foo', 'bar', 'baz')")
+    conn.execute("CREATE TABLE preptable(id integer, bar prepenum[])")
+    conn.cursor().execute(
+        "INSERT INTO preptable (bar) VALUES (%(enum_col)s::prepenum[])",
+        {"enum_col": ["foo"]},
+    )
+
+    cur = conn.execute(
+        "select count(*) from pg_prepared_statements", prepare=False
+    )
+    assert cur.fetchone()[0] == 3
+
+
+def test_change_type_savepoint(conn):
+    conn.prepare_threshold = 0
+    with conn.transaction():
+        for i in range(3):
+            with pytest.raises(ZeroDivisionError):
+                with conn.transaction():
+                    conn.execute(
+                        "CREATE TYPE prepenum AS ENUM ('foo', 'bar', 'baz')"
+                    )
+                    conn.execute(
+                        "CREATE TABLE preptable(id integer, bar prepenum[])"
+                    )
+                    conn.cursor().execute(
+                        "INSERT INTO preptable (bar) "
+                        "VALUES (%(enum_col)s::prepenum[])",
+                        {"enum_col": ["foo"]},
+                    )
+                    raise ZeroDivisionError()

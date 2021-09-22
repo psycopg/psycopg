@@ -164,6 +164,11 @@ class BaseTransaction(Generic[ConnectionType]):
             assert not self._conn._savepoints
             commands.append(b"ROLLBACK")
 
+        # Also clear the prepared statements cache.
+        cmd = self._conn._prepared.clear()
+        if cmd:
+            commands.append(cmd)
+
         yield from self._conn._exec_command(b"; ".join(commands))
 
         if isinstance(exc_val, Rollback):
