@@ -39,17 +39,20 @@ class AdaptersMap:
     `~psycopg.Cursor` is created from a `~psycopg.Connection`), the parent's
     `!adapters` are used as template for the child's `!adapters`, so that every
     cursor created from the same connection use the connection's types
-    configuration, but separate connections have independent mappings. Once
-    created, `!AdaptersMap` are independent.
+    configuration, but separate connections have independent mappings.
+
+    Once created, `!AdaptersMap` are independent. This means that objects
+    already created are not affected if a wider scope (e.g. the global one) is
+    changed.
 
     The connections adapters are initialised using a global `!AdptersMap`
     template, exposed as `psycopg.adapters`: changing such mapping allows to
-    customise the type mapping for the entire application.
+    customise the type mapping for every connections created afterwards.
 
     The object can start empty or copy from another object of the same class.
     Copies are copy-on-write: if the maps are updated make a copy. This way
     extending e.g. global map by a connection or a connection map from a cursor
-    is cheap: a copy is made only on customisation.
+    is cheap: a copy is only made on customisation.
     """
 
     __module__ = "psycopg.adapt"

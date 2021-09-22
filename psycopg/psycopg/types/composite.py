@@ -215,6 +215,13 @@ def register_composite(
         register it globally.
     :param factory: Callable to convert the sequence of attributes read from
         the composite into a Python object.
+
+    .. note::
+
+        Registering the adapters doesn't affect objects already created, even
+        if they are children of the registered context. For instance,
+        registering the adapter globally doesn't affect already existing
+        connections.
     """
 
     # A friendly error warning instead of an AttributeError in case fetch()

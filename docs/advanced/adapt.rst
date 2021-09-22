@@ -18,7 +18,7 @@ returned.
 
 - Adaptation configuration is performed by changing the
   `~psycopg.abc.AdaptContext.adapters` object of objects implementing the
-  `~psycopg.abc.AdaptContext` protocols, for instance `~psycopg.Connection`
+  `~psycopg.abc.AdaptContext` protocol, for instance `~psycopg.Connection`
   or `~psycopg.Cursor`.
 
 - Every context object derived from another context inherits its adapters
@@ -51,6 +51,12 @@ returned.
 
   - Dumpers and loaders are instantiated on demand by a `~Transformer` object
     when a query is executed.
+
+.. note::
+    Changing adapters in a context only affects that context and its children
+    objects created *afterwards*; the objects already created are not
+    affected. For instance, changing the global context will only change newly
+    created connections, not the ones already existing.
 
 
 .. _adapt-example-xml:

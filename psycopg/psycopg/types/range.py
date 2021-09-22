@@ -441,6 +441,13 @@ def register_range(
 
     Register loaders so that loading data of this type will result in a `Range`
     with bounds parsed as the right subtype.
+
+    .. note::
+
+        Registering the adapters doesn't affect objects already created, even
+        if they are children of the registered context. For instance,
+        registering the adapter globally doesn't affect already existing
+        connections.
     """
     # A friendly error warning instead of an AttributeError in case fetch()
     # failed and it wasn't noticed.

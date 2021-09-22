@@ -68,6 +68,12 @@ def register_shapely(
     :param context: The context where to register the adapters. If `!None`,
         register it globally.
 
+    .. note::
+
+        Registering the adapters doesn't affect objects already created, even
+        if they are children of the registered context. For instance,
+        registering the adapter globally doesn't affect already existing
+        connections.
     """
 
     # A friendly error warning instead of an AttributeError in case fetch()
