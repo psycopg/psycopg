@@ -136,7 +136,7 @@ def test_write_read_shape(shapely_conn, fmt_in, fmt_out):
         assert result == SAMPLE_POLYGON
 
 
-@pytest.mark.parametrize("fmt_out", [Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("fmt_out", Format)
 def test_match_geojson(shapely_conn, fmt_out):
     SAMPLE_POINT = Point(1.2, 3.4)
     with shapely_conn.cursor(binary=fmt_out) as cur:

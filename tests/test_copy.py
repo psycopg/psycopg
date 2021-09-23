@@ -11,7 +11,7 @@ from psycopg import pq
 from psycopg import sql
 from psycopg import errors as e
 from psycopg.pq import Format
-from psycopg.adapt import PyFormat as PgFormat
+from psycopg.adapt import PyFormat
 from psycopg.types import TypeInfo
 from psycopg.types.hstore import register_hstore
 from psycopg.types.numeric import Int4
@@ -48,7 +48,7 @@ sample_binary_rows = [
 sample_binary = b"".join(sample_binary_rows)
 
 
-@pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("format", Format)
 def test_copy_out_read(conn, format):
     if format == pq.Format.TEXT:
         want = [row + b"\n" for row in sample_text.splitlines()]
@@ -73,7 +73,7 @@ def test_copy_out_read(conn, format):
     assert conn.pgconn.transaction_status == conn.TransactionStatus.INTRANS
 
 
-@pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("format", Format)
 def test_copy_out_iter(conn, format):
     if format == pq.Format.TEXT:
         want = [row + b"\n" for row in sample_text.splitlines()]
@@ -89,7 +89,7 @@ def test_copy_out_iter(conn, format):
     assert conn.pgconn.transaction_status == conn.TransactionStatus.INTRANS
 
 
-@pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("format", Format)
 @pytest.mark.parametrize("typetype", ["names", "oids"])
 def test_read_rows(conn, format, typetype):
     cur = conn.cursor()
@@ -106,7 +106,7 @@ def test_read_rows(conn, format, typetype):
     assert conn.pgconn.transaction_status == conn.TransactionStatus.INTRANS
 
 
-@pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("format", Format)
 def test_rows(conn, format):
     cur = conn.cursor()
     with cur.copy(
@@ -136,7 +136,7 @@ def test_set_custom_type(conn, hstore):
     assert rows == [({"a": "1", "b": "2"},)]
 
 
-@pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("format", Format)
 def test_copy_out_allchars(conn, format):
     cur = conn.cursor()
     chars = list(map(chr, range(1, 256))) + [eur]
@@ -157,7 +157,7 @@ def test_copy_out_allchars(conn, format):
     assert rows == chars
 
 
-@pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("format", Format)
 def test_read_row_notypes(conn, format):
     cur = conn.cursor()
     with cur.copy(
@@ -177,7 +177,7 @@ def test_read_row_notypes(conn, format):
     assert rows == ref
 
 
-@pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("format", Format)
 def test_rows_notypes(conn, format):
     cur = conn.cursor()
     with cur.copy(
@@ -192,7 +192,7 @@ def test_rows_notypes(conn, format):
 
 
 @pytest.mark.parametrize("err", [-1, 1])
-@pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("format", Format)
 def test_copy_out_badntypes(conn, format, err):
     cur = conn.cursor()
     with cur.copy(
@@ -273,7 +273,7 @@ def test_copy_in_str_binary(conn):
     assert conn.pgconn.transaction_status == conn.TransactionStatus.INERROR
 
 
-@pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("format", Format)
 def test_copy_in_empty(conn, format):
     cur = conn.cursor()
     ensure_table(cur, sample_tabledef)
@@ -284,7 +284,7 @@ def test_copy_in_empty(conn, format):
     assert cur.rowcount == 0
 
 
-@pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("format", Format)
 def test_subclass_adapter(conn, format):
     if format == Format.TEXT:
         from psycopg.types.string import StrDumper as BaseDumper
@@ -309,7 +309,7 @@ def test_subclass_adapter(conn, format):
     assert rec[0] == "hellohello"
 
 
-@pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("format", Format)
 def test_copy_in_error_empty(conn, format):
     cur = conn.cursor()
     ensure_table(cur, sample_tabledef)
@@ -344,7 +344,7 @@ def test_copy_in_buffers_with_py_error(conn):
     assert conn.pgconn.transaction_status == conn.TransactionStatus.INERROR
 
 
-@pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("format", Format)
 def test_copy_in_records(conn, format):
     cur = conn.cursor()
     ensure_table(cur, sample_tabledef)
@@ -359,7 +359,7 @@ def test_copy_in_records(conn, format):
     assert data == sample_records
 
 
-@pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("format", Format)
 def test_copy_in_records_set_types(conn, format):
     cur = conn.cursor()
     ensure_table(cur, sample_tabledef)
@@ -373,7 +373,7 @@ def test_copy_in_records_set_types(conn, format):
     assert data == sample_records
 
 
-@pytest.mark.parametrize("format", [Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize("format", Format)
 def test_copy_in_records_binary(conn, format):
     cur = conn.cursor()
     ensure_table(cur, "col1 serial primary key, col2 int, data text")
@@ -540,7 +540,7 @@ def test_worker_life(conn, format, buffer):
 @pytest.mark.parametrize("fmt", [Format.TEXT, Format.BINARY])
 @pytest.mark.parametrize("method", ["read", "iter", "row", "rows"])
 def test_copy_to_leaks(dsn, faker, fmt, method, retries):
-    faker.format = PgFormat.from_pq(fmt)
+    faker.format = PyFormat.from_pq(fmt)
     faker.choose_schema(ncols=20)
     faker.make_records(20)
 
@@ -599,7 +599,7 @@ def test_copy_to_leaks(dsn, faker, fmt, method, retries):
 @pytest.mark.slow
 @pytest.mark.parametrize("fmt", [Format.TEXT, Format.BINARY])
 def test_copy_from_leaks(dsn, faker, fmt, retries):
-    faker.format = PgFormat.from_pq(fmt)
+    faker.format = PyFormat.from_pq(fmt)
     faker.choose_schema(ncols=20)
     faker.make_records(20)
 
