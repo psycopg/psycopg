@@ -15,6 +15,7 @@ from psycopg.conninfo import conninfo_to_dict, make_conninfo
 
 from .utils import gc_collect
 from .test_cursor import my_row_factory
+from .test_adapt import make_bin_dumper, make_dumper
 
 
 def test_connect(dsn):
@@ -732,3 +733,28 @@ def test_get_connection_params(dsn, kwargs, exp):
     conninfo = make_conninfo(**params)
     assert conninfo_to_dict(conninfo) == exp[0]
     assert params.get("connect_timeout") == exp[1]
+
+
+def test_connect_context(dsn):
+    ctx = psycopg.adapt.AdaptersMap(psycopg.adapters)
+    ctx.register_dumper(str, make_bin_dumper("b"))
+    ctx.register_dumper(str, make_dumper("t"))
+
+    conn = psycopg.connect(dsn, context=ctx)
+
+    cur = conn.execute("select %s", ["hello"])
+    assert cur.fetchone()[0] == "hellot"
+    cur = conn.execute("select %b", ["hello"])
+    assert cur.fetchone()[0] == "hellob"
+
+
+def test_connect_context_copy(dsn, conn):
+    conn.adapters.register_dumper(str, make_bin_dumper("b"))
+    conn.adapters.register_dumper(str, make_dumper("t"))
+
+    conn2 = psycopg.connect(dsn, context=conn)
+
+    cur = conn2.execute("select %s", ["hello"])
+    assert cur.fetchone()[0] == "hellot"
+    cur = conn2.execute("select %b", ["hello"])
+    assert cur.fetchone()[0] == "hellob"

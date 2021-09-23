@@ -43,6 +43,14 @@ The `!Connection` class
                             `~psycopg.rows.tuple_row()`). See
                             :ref:`row-factories` for details.
 
+        More specialized use:
+
+        :param context: A context to copy the initial adapters configuration
+                        from. It might be an `~psycopg.adapt.AdaptersMap` with
+                        customized loaders and dumpers, used as a template to
+                        create several connections. See :ref:`adaptation` for
+                        further details.
+
         .. __: https://www.postgresql.org/docs/current/libpq-connect.html
             #LIBPQ-CONNSTRING
 

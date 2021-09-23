@@ -15,6 +15,7 @@ from psycopg.conninfo import conninfo_to_dict, make_conninfo
 from .utils import gc_collect
 from .test_cursor import my_row_factory
 from .test_connection import tx_params, tx_values_map, conninfo_params_timeout
+from .test_adapt import make_bin_dumper, make_dumper
 
 pytestmark = pytest.mark.asyncio
 
@@ -707,3 +708,28 @@ async def test_get_connection_params(dsn, kwargs, exp):
     conninfo = make_conninfo(**params)
     assert conninfo_to_dict(conninfo) == exp[0]
     assert params["connect_timeout"] == exp[1]
+
+
+async def test_connect_context_adapters(dsn):
+    ctx = psycopg.adapt.AdaptersMap(psycopg.adapters)
+    ctx.register_dumper(str, make_bin_dumper("b"))
+    ctx.register_dumper(str, make_dumper("t"))
+
+    conn = await psycopg.AsyncConnection.connect(dsn, context=ctx)
+
+    cur = await conn.execute("select %s", ["hello"])
+    assert (await cur.fetchone())[0] == "hellot"
+    cur = await conn.execute("select %b", ["hello"])
+    assert (await cur.fetchone())[0] == "hellob"
+
+
+async def test_connect_context_copy(dsn, aconn):
+    aconn.adapters.register_dumper(str, make_bin_dumper("b"))
+    aconn.adapters.register_dumper(str, make_dumper("t"))
+
+    aconn2 = await psycopg.AsyncConnection.connect(dsn, context=aconn)
+
+    cur = await aconn2.execute("select %s", ["hello"])
+    assert (await cur.fetchone())[0] == "hellot"
+    cur = await aconn2.execute("select %b", ["hello"])
+    assert (await cur.fetchone())[0] == "hellob"

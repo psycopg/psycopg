@@ -23,9 +23,13 @@ returned.
 
 - Every context object derived from another context inherits its adapters
   mapping: cursors created from a connection inherit the connection's
-  configuration. Connections obtain an adapters map from the global map
+  configuration.
+
+  By default, connections obtain an adapters map from the global map
   exposed as `psycopg.adapters`: changing the content of this object will
-  affect every connection created afterwards.
+  affect every connection created afterwards. You may specify a different
+  template adapters map using the *context* parameter on
+  `~psycopg.Connection.connect()`.
 
   .. image:: ../pictures/adapt.svg
      :align: center

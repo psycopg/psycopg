@@ -14,8 +14,9 @@ from typing import cast, overload, TYPE_CHECKING
 from . import errors as e
 from . import waiting
 from .pq import Format
-from .abc import Params, PQGen, PQGenConn, Query, RV
+from .abc import AdaptContext, Params, PQGen, PQGenConn, Query, RV
 from .rows import Row, AsyncRowFactory, tuple_row, TupleRow
+from .adapt import AdaptersMap
 from ._enums import IsolationLevel
 from ._compat import asynccontextmanager
 from .conninfo import make_conninfo, conninfo_to_dict
@@ -62,6 +63,7 @@ class AsyncConnection(BaseConnection[Row]):
         *,
         autocommit: bool = False,
         row_factory: AsyncRowFactory[Row],
+        context: Optional[AdaptContext] = None,
         **kwargs: Union[None, int, str],
     ) -> "AsyncConnection[Row]":
         ...
@@ -73,6 +75,7 @@ class AsyncConnection(BaseConnection[Row]):
         conninfo: str = "",
         *,
         autocommit: bool = False,
+        context: Optional[AdaptContext] = None,
         **kwargs: Union[None, int, str],
     ) -> "AsyncConnection[TupleRow]":
         ...
@@ -83,6 +86,7 @@ class AsyncConnection(BaseConnection[Row]):
         conninfo: str = "",
         *,
         autocommit: bool = False,
+        context: Optional[AdaptContext] = None,
         row_factory: Optional[AsyncRowFactory[Row]] = None,
         **kwargs: Any,
     ) -> "AsyncConnection[Any]":
@@ -95,6 +99,8 @@ class AsyncConnection(BaseConnection[Row]):
         )
         if row_factory:
             rv.row_factory = row_factory
+        if context:
+            rv._adapters = AdaptersMap(context.adapters)
         return rv
 
     async def __aenter__(self) -> "AsyncConnection[Row]":

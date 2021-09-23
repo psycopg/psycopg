@@ -16,15 +16,16 @@ from functools import partial
 from contextlib import contextmanager
 
 from . import pq
-from . import adapt
 from . import errors as e
 from . import waiting
 from . import postgres
 from . import encodings
 from .pq import ConnStatus, ExecStatus, TransactionStatus, Format
-from .abc import ConnectionType, Params, PQGen, PQGenConn, Query, RV
+from .abc import AdaptContext, ConnectionType, Params, Query, RV
+from .abc import PQGen, PQGenConn
 from .sql import Composable
 from .rows import Row, RowFactory, tuple_row, TupleRow
+from .adapt import AdaptersMap
 from ._enums import IsolationLevel
 from .cursor import Cursor
 from ._cmodule import _psycopg
@@ -104,7 +105,7 @@ class BaseConnection(Generic[Row]):
     def __init__(self, pgconn: "PGconn"):
         self.pgconn = pgconn
         self._autocommit = False
-        self._adapters = adapt.AdaptersMap(postgres.adapters)
+        self._adapters = AdaptersMap(postgres.adapters)
         self._notice_handlers: List[NoticeHandler] = []
         self._notify_handlers: List[NotifyHandler] = []
 
@@ -286,7 +287,7 @@ class BaseConnection(Generic[Row]):
         return ConnectionInfo(self.pgconn)
 
     @property
-    def adapters(self) -> adapt.AdaptersMap:
+    def adapters(self) -> AdaptersMap:
         return self._adapters
 
     @property
@@ -548,6 +549,7 @@ class Connection(BaseConnection[Row]):
         *,
         autocommit: bool = False,
         row_factory: RowFactory[Row],
+        context: Optional[AdaptContext] = None,
         **kwargs: Union[None, int, str],
     ) -> "Connection[Row]":
         ...
@@ -559,6 +561,7 @@ class Connection(BaseConnection[Row]):
         conninfo: str = "",
         *,
         autocommit: bool = False,
+        context: Optional[AdaptContext] = None,
         **kwargs: Union[None, int, str],
     ) -> "Connection[TupleRow]":
         ...
@@ -570,6 +573,7 @@ class Connection(BaseConnection[Row]):
         *,
         autocommit: bool = False,
         row_factory: Optional[RowFactory[Row]] = None,
+        context: Optional[AdaptContext] = None,
         **kwargs: Any,
     ) -> "Connection[Any]":
         """
@@ -584,6 +588,8 @@ class Connection(BaseConnection[Row]):
         )
         if row_factory:
             rv.row_factory = row_factory
+        if context:
+            rv._adapters = AdaptersMap(context.adapters)
         return rv
 
     def __enter__(self) -> "Connection[Row]":
