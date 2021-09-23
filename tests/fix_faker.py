@@ -210,7 +210,7 @@ class Faker:
 
     def make_record(self, nulls=0):
         if not nulls:
-            return tuple(self.make(spec) for spec in self.schema)
+            return tuple(self.example(spec) for spec in self.schema)
         else:
             return tuple(
                 self.make(spec) if random() > nulls else None
@@ -293,6 +293,15 @@ class Faker:
     def make(self, spec):
         # spec can be a type or a tuple (type, options)
         return self.get_maker(spec)(spec)
+
+    def example(self, spec):
+        # A good representative of the object - no degenerate case
+        cls = spec if isinstance(spec, type) else spec[0]
+        meth = self._get_method("example", cls)
+        if meth:
+            return meth(spec)
+        else:
+            return self.make(spec)
 
     def match_any(self, spec, got, want):
         assert got == want
@@ -497,29 +506,23 @@ class Faker:
     def schema_Range(self, cls):
         subtypes = [
             Decimal,
+            Int4,
+            Int8,
             dt.date,
             (dt.datetime, True),
             (dt.datetime, False),
         ]
-        # TODO: learn to dump numeric ranges in binary
-        if self.format != PyFormat.BINARY:
-            subtypes.extend([Int4, Int8])
 
         return (cls, choice(subtypes))
 
-    def make_Range(self, spec):
-        # TODO: drop format check after fixing binary dumping of empty ranges
-        if (
-            random() < 0.02
-            and spec[0] is Range
-            and self.format == PyFormat.TEXT
-        ):
+    def make_Range(self, spec, empty_chance=0.02, no_bound_chance=0.05):
+        if random() < empty_chance and spec[0] is Range:
             return spec[0](empty=True)
 
         while True:
             bounds = []
             while len(bounds) < 2:
-                if random() < 0.05:
+                if random() < no_bound_chance:
                     bounds.append(None)
                     continue
 
@@ -544,6 +547,9 @@ class Faker:
 
         r = spec[0](bounds[0], bounds[1], choice("[(") + choice("])"))
         return r
+
+    def example_Range(self, spec):
+        return self.make_Range(spec, empty_chance=0, no_bound_chance=0)
 
     def make_Int4Range(self, spec):
         return self.make_Range((spec, Int4))
