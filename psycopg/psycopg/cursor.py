@@ -246,9 +246,8 @@ class BaseCursor(Generic[ConnectionType, Row]):
         # run the query
         results = yield from execute(self._conn.pgconn)
 
-        # Update the prepare state of the query
-        # If an operation requires to flush our prepared statements cache,
-        # do it. Note that there is an off-by-one error because
+        # Update the prepare state of the query.
+        # If an operation requires to flush our prepared statements cache, do it.
         cmd = self._conn._prepared.maintain(pgq, results, prep, name)
         if cmd:
             yield from self._conn._exec_command(cmd)
