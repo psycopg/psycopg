@@ -115,6 +115,3 @@ def register_default_adapters(context: AdaptContext) -> None:
     range.register_default_adapters(context)
     string.register_default_adapters(context)
     uuid.register_default_adapters(context)
-
-    # Must come after all the types are registered
-    array.register_all_arrays(context)

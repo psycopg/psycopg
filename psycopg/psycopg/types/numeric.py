@@ -184,24 +184,8 @@ class IntNumericBinaryDumper(IntNumericDumper):
 
     format = Format.BINARY
 
-    def dump(self, obj: int) -> bytearray:
-        ndigits = int(obj.bit_length() * BIT_PER_PGDIGIT) + 1
-        out = bytearray(b"\x00\x00" * (ndigits + 4))
-        if obj < 0:
-            sign = NUMERIC_NEG
-            obj = -obj
-        else:
-            sign = NUMERIC_POS
-
-        out[:8] = _pack_numeric_head(ndigits, ndigits - 1, sign, 0)
-        i = 8 + (ndigits - 1) * 2
-        while obj:
-            rem = obj % 10_000
-            obj //= 10_000
-            out[i : i + 2] = pack_uint2(rem)
-            i -= 2
-
-        return out
+    def dump(self, obj: int) -> Buffer:
+        return dump_int_to_numeric_binary(obj)
 
 
 class OidBinaryDumper(OidDumper):
@@ -372,64 +356,108 @@ class DecimalBinaryDumper(Dumper):
     format = Format.BINARY
     oid = postgres.types["numeric"].oid
 
-    def dump(self, obj: Decimal) -> Union[bytearray, bytes]:
-        sign, digits, exp = obj.as_tuple()
-        if exp == "n" or exp == "N":  # type: ignore[comparison-overlap]
-            return NUMERIC_NAN_BIN
-        elif exp == "F":  # type: ignore[comparison-overlap]
-            return NUMERIC_NINF_BIN if sign else NUMERIC_PINF_BIN
+    def dump(self, obj: Decimal) -> Buffer:
+        return dump_decimal_to_numeric_binary(obj)
 
-        # Weights of py digits into a pg digit according to their positions.
-        # Starting with an index wi != 0 is equivalent to prepending 0's to
-        # the digits tuple, but without really changing it.
-        weights = (1000, 100, 10, 1)
-        wi = 0
 
-        ndigits = nzdigits = len(digits)
-
-        # Find the last nonzero digit
-        while nzdigits > 0 and digits[nzdigits - 1] == 0:
-            nzdigits -= 1
-
-        if exp <= 0:
-            dscale = -exp
+class NumericDumper(DecimalDumper):
+    def dump(self, obj: Union[Decimal, int]) -> bytes:
+        if isinstance(obj, int):
+            return str(obj).encode()
         else:
-            dscale = 0
-            # align the py digits to the pg digits if there's some py exponent
-            ndigits += exp % DEC_DIGITS
+            return super().dump(obj)
 
-        if not nzdigits:
-            return _pack_numeric_head(0, 0, NUMERIC_POS, dscale)
 
-        # Equivalent of 0-padding left to align the py digits to the pg digits
-        # but without changing the digits tuple.
-        mod = (ndigits - dscale) % DEC_DIGITS
-        if mod:
-            wi = DEC_DIGITS - mod
-            ndigits += wi
+class NumericBinaryDumper(Dumper):
 
-        tmp = nzdigits + wi
-        out = bytearray(
-            _pack_numeric_head(
-                tmp // DEC_DIGITS + (tmp % DEC_DIGITS and 1),  # ndigits
-                (ndigits + exp) // DEC_DIGITS - 1,  # weight
-                NUMERIC_NEG if sign else NUMERIC_POS,  # sign
-                dscale,
-            )
+    format = Format.BINARY
+    oid = postgres.types["numeric"].oid
+
+    def dump(self, obj: Union[Decimal, int]) -> Buffer:
+        if isinstance(obj, int):
+            return dump_int_to_numeric_binary(obj)
+        else:
+            return dump_decimal_to_numeric_binary(obj)
+
+
+def dump_decimal_to_numeric_binary(obj: Decimal) -> Union[bytearray, bytes]:
+    sign, digits, exp = obj.as_tuple()
+    if exp == "n" or exp == "N":  # type: ignore[comparison-overlap]
+        return NUMERIC_NAN_BIN
+    elif exp == "F":  # type: ignore[comparison-overlap]
+        return NUMERIC_NINF_BIN if sign else NUMERIC_PINF_BIN
+
+    # Weights of py digits into a pg digit according to their positions.
+    # Starting with an index wi != 0 is equivalent to prepending 0's to
+    # the digits tuple, but without really changing it.
+    weights = (1000, 100, 10, 1)
+    wi = 0
+
+    ndigits = nzdigits = len(digits)
+
+    # Find the last nonzero digit
+    while nzdigits > 0 and digits[nzdigits - 1] == 0:
+        nzdigits -= 1
+
+    if exp <= 0:
+        dscale = -exp
+    else:
+        dscale = 0
+        # align the py digits to the pg digits if there's some py exponent
+        ndigits += exp % DEC_DIGITS
+
+    if not nzdigits:
+        return _pack_numeric_head(0, 0, NUMERIC_POS, dscale)
+
+    # Equivalent of 0-padding left to align the py digits to the pg digits
+    # but without changing the digits tuple.
+    mod = (ndigits - dscale) % DEC_DIGITS
+    if mod:
+        wi = DEC_DIGITS - mod
+        ndigits += wi
+
+    tmp = nzdigits + wi
+    out = bytearray(
+        _pack_numeric_head(
+            tmp // DEC_DIGITS + (tmp % DEC_DIGITS and 1),  # ndigits
+            (ndigits + exp) // DEC_DIGITS - 1,  # weight
+            NUMERIC_NEG if sign else NUMERIC_POS,  # sign
+            dscale,
         )
+    )
 
-        pgdigit = 0
-        for i in range(nzdigits):
-            pgdigit += weights[wi] * digits[i]
-            wi += 1
-            if wi >= DEC_DIGITS:
-                out += pack_uint2(pgdigit)
-                pgdigit = wi = 0
-
-        if pgdigit:
+    pgdigit = 0
+    for i in range(nzdigits):
+        pgdigit += weights[wi] * digits[i]
+        wi += 1
+        if wi >= DEC_DIGITS:
             out += pack_uint2(pgdigit)
+            pgdigit = wi = 0
 
-        return out
+    if pgdigit:
+        out += pack_uint2(pgdigit)
+
+    return out
+
+
+def dump_int_to_numeric_binary(obj: int) -> bytearray:
+    ndigits = int(obj.bit_length() * BIT_PER_PGDIGIT) + 1
+    out = bytearray(b"\x00\x00" * (ndigits + 4))
+    if obj < 0:
+        sign = NUMERIC_NEG
+        obj = -obj
+    else:
+        sign = NUMERIC_POS
+
+    out[:8] = _pack_numeric_head(ndigits, ndigits - 1, sign, 0)
+    i = 8 + (ndigits - 1) * 2
+    while obj:
+        rem = obj % 10_000
+        obj //= 10_000
+        out[i : i + 2] = pack_uint2(rem)
+        i -= 2
+
+    return out
 
 
 def register_default_adapters(context: AdaptContext) -> None:
@@ -449,6 +477,10 @@ def register_default_adapters(context: AdaptContext) -> None:
     # Also, must be after IntNumericDumper
     adapters.register_dumper("decimal.Decimal", DecimalBinaryDumper)
     adapters.register_dumper("decimal.Decimal", DecimalDumper)
+
+    # Used only by oid, can take both int and Decimal as input
+    adapters.register_dumper(None, NumericBinaryDumper)
+    adapters.register_dumper(None, NumericDumper)
 
     adapters.register_dumper(Float4, Float4Dumper)
     adapters.register_dumper(Float8, FloatDumper)

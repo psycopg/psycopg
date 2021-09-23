@@ -7,10 +7,10 @@ Compatibility objects with DBAPI 2.0
 import time
 import datetime as dt
 from math import floor
-from typing import Any, Sequence
+from typing import Any, Sequence, Union
 
 from . import postgres
-from .abc import Buffer
+from .abc import AdaptContext, Buffer
 from .types.string import BytesDumper, BytesBinaryDumper
 
 
@@ -58,13 +58,19 @@ class Binary:
 
 
 class BinaryBinaryDumper(BytesBinaryDumper):
-    def dump(self, obj: Binary) -> Buffer:  # type: ignore
-        return super().dump(obj.obj)
+    def dump(self, obj: Union[Buffer, Binary]) -> Buffer:
+        if isinstance(obj, Binary):
+            return super().dump(obj.obj)
+        else:
+            return super().dump(obj)
 
 
 class BinaryTextDumper(BytesDumper):
-    def dump(self, obj: Binary) -> Buffer:  # type: ignore
-        return super().dump(obj.obj)
+    def dump(self, obj: Union[Buffer, Binary]) -> Buffer:
+        if isinstance(obj, Binary):
+            return super().dump(obj.obj)
+        else:
+            return super().dump(obj)
 
 
 def Date(year: int, month: int, day: int) -> dt.date:
@@ -96,3 +102,13 @@ def TimestampFromTicks(ticks: float) -> dt.datetime:
     tzinfo = dt.timezone(dt.timedelta(seconds=t.tm_gmtoff))
     rv = dt.datetime(*t[:6], round(frac * 1_000_000), tzinfo=tzinfo)
     return rv
+
+
+def register_dbapi20_adapters(context: AdaptContext) -> None:
+    adapters = context.adapters
+    adapters.register_dumper(Binary, BinaryTextDumper)
+    adapters.register_dumper(Binary, BinaryBinaryDumper)
+
+    # Make them also the default dumpers when dumping by bytea oid
+    adapters.register_dumper(None, BinaryTextDumper)
+    adapters.register_dumper(None, BinaryBinaryDumper)

@@ -32,19 +32,23 @@ _unpack_dim = cast(
 )
 
 TEXT_ARRAY_OID = postgres.types["text"].array_oid
+NoneType: type = type(None)
 
 
 class BaseListDumper(RecursiveDumper):
     element_oid = 0
 
     def __init__(self, cls: type, context: Optional[AdaptContext] = None):
+        if cls is NoneType:
+            cls = list
+
         super().__init__(cls, context)
         self.sub_dumper: Optional[Dumper] = None
         if self.element_oid and context:
             sdclass = context.adapters.get_dumper_by_oid(
                 self.element_oid, self.format
             )
-            self.sub_dumper = sdclass(type(None), context)
+            self.sub_dumper = sdclass(NoneType, context)
 
     def _find_list_element(self, L: List[Any]) -> Any:
         """
