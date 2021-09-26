@@ -36,6 +36,21 @@ IPV4_PREFIXLEN = 32
 IPV6_PREFIXLEN = 128
 
 
+class _LazyIpaddress:
+    def _ensure_module(self) -> None:
+        global imported, ip_address, ip_interface, ip_network
+        global IPv4Address, IPv6Address, IPv4Interface, IPv6Interface
+        global IPv4Network, IPv6Network
+
+        if not imported:
+            from ipaddress import ip_address, ip_interface, ip_network
+            from ipaddress import IPv4Address, IPv6Address
+            from ipaddress import IPv4Interface, IPv6Interface
+            from ipaddress import IPv4Network, IPv6Network
+
+            imported = True
+
+
 class InterfaceDumper(Dumper):
 
     oid = postgres.types["inet"].oid
@@ -52,11 +67,12 @@ class NetworkDumper(Dumper):
         return str(obj).encode()
 
 
-class AddressBinaryDumper(Dumper):
-
+class _AIBinaryDumper(Dumper):
     format = Format.BINARY
     oid = postgres.types["inet"].oid
 
+
+class AddressBinaryDumper(_AIBinaryDumper):
     def dump(self, obj: Address) -> bytes:
         packed = obj.packed
         family = PGSQL_AF_INET if obj.version == 4 else PGSQL_AF_INET6
@@ -64,15 +80,33 @@ class AddressBinaryDumper(Dumper):
         return head + packed
 
 
-class InterfaceBinaryDumper(Dumper):
-
-    format = Format.BINARY
-    oid = postgres.types["inet"].oid
-
+class InterfaceBinaryDumper(_AIBinaryDumper):
     def dump(self, obj: Interface) -> bytes:
         packed = obj.packed
         family = PGSQL_AF_INET if obj.version == 4 else PGSQL_AF_INET6
         head = bytes((family, obj.network.prefixlen, 0, len(packed)))
+        return head + packed
+
+
+class InetBinaryDumper(_AIBinaryDumper, _LazyIpaddress):
+    """Either an address or an interface to inet
+
+    Used when looking up by oid.
+    """
+
+    def __init__(self, cls: type, context: Optional[AdaptContext] = None):
+        super().__init__(cls, context)
+        self._ensure_module()
+
+    def dump(self, obj: Union[Address, Interface]) -> bytes:
+        packed = obj.packed
+        family = PGSQL_AF_INET if obj.version == 4 else PGSQL_AF_INET6
+        if isinstance(obj, (IPv4Interface, IPv6Interface)):
+            prefixlen = obj.network.prefixlen
+        else:
+            prefixlen = obj.max_prefixlen
+
+        head = bytes((family, prefixlen, 0, len(packed)))
         return head + packed
 
 
@@ -88,23 +122,13 @@ class NetworkBinaryDumper(Dumper):
         return head + packed
 
 
-class _LazyIpaddress(Loader):
+class _LazyIpaddressLoader(Loader, _LazyIpaddress):
     def __init__(self, oid: int, context: Optional[AdaptContext] = None):
         super().__init__(oid, context)
-        global imported, ip_address, ip_interface, ip_network
-        global IPv4Address, IPv6Address, IPv4Interface, IPv6Interface
-        global IPv4Network, IPv6Network
-
-        if not imported:
-            from ipaddress import ip_address, ip_interface, ip_network
-            from ipaddress import IPv4Address, IPv6Address
-            from ipaddress import IPv4Interface, IPv6Interface
-            from ipaddress import IPv4Network, IPv6Network
-
-            imported = True
+        self._ensure_module()
 
 
-class InetLoader(_LazyIpaddress):
+class InetLoader(_LazyIpaddressLoader):
     def load(self, data: Buffer) -> Union[Address, Interface]:
         if isinstance(data, memoryview):
             data = bytes(data)
@@ -115,7 +139,7 @@ class InetLoader(_LazyIpaddress):
             return ip_address(data.decode())
 
 
-class InetBinaryLoader(_LazyIpaddress):
+class InetBinaryLoader(_LazyIpaddressLoader):
 
     format = Format.BINARY
 
@@ -137,7 +161,7 @@ class InetBinaryLoader(_LazyIpaddress):
                 return IPv6Interface((packed, prefix))
 
 
-class CidrLoader(_LazyIpaddress):
+class CidrLoader(_LazyIpaddressLoader):
     def load(self, data: Buffer) -> Network:
         if isinstance(data, memoryview):
             data = bytes(data)
@@ -145,7 +169,7 @@ class CidrLoader(_LazyIpaddress):
         return ip_network(data.decode())
 
 
-class CidrBinaryLoader(_LazyIpaddress):
+class CidrBinaryLoader(_LazyIpaddressLoader):
 
     format = Format.BINARY
 
@@ -177,6 +201,7 @@ def register_default_adapters(context: AdaptContext) -> None:
     adapters.register_dumper("ipaddress.IPv6Interface", InterfaceBinaryDumper)
     adapters.register_dumper("ipaddress.IPv4Network", NetworkBinaryDumper)
     adapters.register_dumper("ipaddress.IPv6Network", NetworkBinaryDumper)
+    adapters.register_dumper(None, InetBinaryDumper)
     adapters.register_loader("inet", InetLoader)
     adapters.register_loader("inet", InetBinaryLoader)
     adapters.register_loader("cidr", CidrLoader)

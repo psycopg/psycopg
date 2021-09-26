@@ -84,13 +84,22 @@ class BaseCopy(Generic[ConnectionType]):
 
     def set_types(self, types: Sequence[Union[int, str]]) -> None:
         """
-        Set the types expected out of a :sql:`COPY TO` operation.
-
-        Without setting the types, the data from :sql:`COPY TO` will be
-        returned as unparsed strings or bytes.
+        Set the types expected in a COPY operation.
 
         The types must be specified as a sequence of oid or PostgreSQL type
         names (e.g. ``int4``, ``timestamptz[]``).
+
+        This operation overcomes the lack of metadata returned by PostgreSQL
+        when a COPY operation begins:
+
+        - On :sql:`COPY TO`, `!set_types()` allows to specify what types the
+          operation returns. If `!set_types()` is not used, the data will be
+          reurned as unparsed strings or bytes instead of Python objects.
+
+        - On :sql:`COPY FROM`, `!set_types()` allows to choose what type the
+          database expects. This is especially useful in binary copy, because
+          PostgreSQL will apply no cast rule.
+
         """
         registry = self.cursor.adapters.types
         oids = [

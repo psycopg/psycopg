@@ -23,6 +23,7 @@ from .cursor_async import AsyncCursor
 from .server_cursor import AsyncServerCursor, ServerCursor
 from .connection_async import AsyncConnection
 
+from . import dbapi20
 from .dbapi20 import BINARY, DATETIME, NUMBER, ROWID, STRING
 from .dbapi20 import Binary, BinaryTextDumper, BinaryBinaryDumper
 from .dbapi20 import Date, DateFromTicks, Time, TimeFromTicks
@@ -43,11 +44,14 @@ connect = Connection.connect
 apilevel = "2.0"
 threadsafety = 2
 paramstyle = "pyformat"
-adapters.register_dumper(Binary, BinaryTextDumper)  # dbapi20
-adapters.register_dumper(Binary, BinaryBinaryDumper)  # dbapi20
 
-# After registering the dbapi20 dumpers to clobber the oid they set
 postgres.register_default_adapters(adapters)
+
+# After the default one because they can deal with the bytea oid better
+dbapi20.register_dbapi20_adapters(adapters)
+
+# Must come after all the types are registered
+types.array.register_all_arrays(adapters)
 
 # Note: defining the exported methods helps both Sphynx in documenting that
 # this is the canonical place to obtain them and should be used by MyPy too,

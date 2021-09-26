@@ -77,7 +77,7 @@ class Faker:
         return self._types
 
     @property
-    def types_names(self):
+    def types_names_sql(self):
         if self._types_names:
             return self._types_names
 
@@ -88,6 +88,14 @@ class Faker:
             for schema, value in zip(self.schema, record)
         ]
         self._types_names = types
+        return types
+
+    @property
+    def types_names(self):
+        types = [
+            t.as_string(self.conn).replace('"', "")
+            for t in self.types_names_sql
+        ]
         return types
 
     def _get_type_name(self, tx, schema, value):
@@ -111,7 +119,7 @@ class Faker:
     @property
     def create_stmt(self):
         fields = []
-        for name, type in zip(self.fields_names, self.types_names):
+        for name, type in zip(self.fields_names, self.types_names_sql):
             fields.append(sql.SQL("{} {}").format(name, type))
 
         fields = sql.SQL(", ").join(fields)

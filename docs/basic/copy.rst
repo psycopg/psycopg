@@ -79,9 +79,8 @@ must have a binary dumper registered (see see :ref:`binary-data`).
 Note that PostgreSQL is particularly finicky when loading data in binary mode
 and will apply *no cast rule*. This means that e.g. passing the value 100 to
 an `integer` column will fail because Psycopg will pass it as a `smallint`
-value. You can work around the problem by registering the right binary
-`~adapt.Dumper` on the cursor (see :ref:`adaptation`) or using the right data
-wrapper (e.g. `~psycopg.types.numeric.Int4`).
+value. You can work around the problem using the `~Copy.set_types()` method of
+the `!Copy` object and specify carefully the types to dump.
 
 
 .. _copy-out-row:

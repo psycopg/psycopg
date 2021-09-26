@@ -52,23 +52,7 @@ cdef class _NumberDumper(CDumper):
     format = PQ_TEXT
 
     cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
-        cdef long long val
-        cdef int overflow
-        cdef char *buf
-        cdef char *src
-        cdef Py_ssize_t length
-
-        val = PyLong_AsLongLongAndOverflow(obj, &overflow)
-        if not overflow:
-            buf = CDumper.ensure_size(rv, offset, MAXINT8LEN + 1)
-            length = pg_lltoa(val, buf)
-        else:
-            b = bytes(str(obj), "utf-8")
-            PyBytes_AsStringAndSize(b, &src, &length)
-            buf = CDumper.ensure_size(rv, offset, length)
-            memcpy(buf, src, length)
-
-        return length
+        return dump_int_to_text(obj, rv, offset)
 
     def quote(self, obj) -> bytearray:
         cdef Py_ssize_t length
@@ -175,35 +159,7 @@ cdef class IntNumericBinaryDumper(CDumper):
     oid = oids.NUMERIC_OID
 
     cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
-        # Calculate the number of PG digits required to store the number
-        cdef uint16_t ndigits
-        ndigits = <uint16_t>((<int>obj.bit_length()) * BIT_PER_PGDIGIT) + 1
-
-        cdef uint16_t sign = NUMERIC_POS
-        if obj < 0:
-            sign = NUMERIC_NEG
-            obj = -obj
-
-        cdef Py_ssize_t length = sizeof(uint16_t) * (ndigits + 4)
-        cdef uint16_t *buf
-        buf = <uint16_t *><void *>CDumper.ensure_size(rv, offset, length)
-        buf[0] = endian.htobe16(ndigits)
-        buf[1] = endian.htobe16(ndigits - 1)  # weight
-        buf[2] = endian.htobe16(sign)
-        buf[3] = 0  # dscale
-
-        cdef int i = 4 + ndigits - 1
-        cdef uint16_t rem
-        while obj:
-            rem = obj % 10000
-            obj //= 10000
-            buf[i] = endian.htobe16(rem)
-            i -= 1
-        while i > 3:
-            buf[i] = 0
-            i -= 1
-
-        return length
+        return dump_int_to_numeric_binary(obj, rv, offset)
 
 
 cdef class IntDumper(_NumberDumper):
@@ -415,23 +371,7 @@ cdef class DecimalDumper(CDumper):
     oid = oids.NUMERIC_OID
 
     cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
-        cdef char *src
-        cdef Py_ssize_t length
-        cdef char *buf
-
-        b = bytes(str(obj), "utf-8")
-        PyBytes_AsStringAndSize(b, &src, &length)
-
-        if src[0] != b's':
-            buf = CDumper.ensure_size(rv, offset, length)
-            memcpy(buf, src, length)
-
-        else:  # convert sNaN to NaN
-            length = 3  # NaN
-            buf = CDumper.ensure_size(rv, offset, length)
-            memcpy(buf, b"NaN", length)
-
-        return length
+        return dump_decimal_to_text(obj, rv, offset)
 
     def quote(self, obj) -> bytes:
         value = bytes(self.dump(obj))
@@ -516,6 +456,62 @@ cdef class NumericBinaryLoader(CLoader):
                 raise e.DataError(f"bad value for numeric sign: 0x{sign:X}")
 
 
+@cython.final
+cdef class DecimalBinaryDumper(CDumper):
+
+    format = PQ_BINARY
+    oid = oids.NUMERIC_OID
+
+    cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
+        return dump_decimal_to_numeric_binary(obj, rv, offset)
+
+
+@cython.final
+cdef class NumericDumper(CDumper):
+
+    format = PQ_TEXT
+    oid = oids.NUMERIC_OID
+
+    cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
+        if isinstance(obj, int):
+            return dump_int_to_text(obj, rv, offset)
+        else:
+            return dump_decimal_to_text(obj, rv, offset)
+
+
+@cython.final
+cdef class NumericBinaryDumper(CDumper):
+
+    format = PQ_BINARY
+    oid = oids.NUMERIC_OID
+
+    cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
+        if isinstance(obj, int):
+            return dump_int_to_numeric_binary(obj, rv, offset)
+        else:
+            return dump_decimal_to_numeric_binary(obj, rv, offset)
+
+
+cdef Py_ssize_t dump_decimal_to_text(obj, bytearray rv, Py_ssize_t offset) except -1:
+    cdef char *src
+    cdef Py_ssize_t length
+    cdef char *buf
+
+    b = bytes(str(obj), "utf-8")
+    PyBytes_AsStringAndSize(b, &src, &length)
+
+    if src[0] != b's':
+        buf = CDumper.ensure_size(rv, offset, length)
+        memcpy(buf, src, length)
+
+    else:  # convert sNaN to NaN
+        length = 3  # NaN
+        buf = CDumper.ensure_size(rv, offset, length)
+        memcpy(buf, b"NaN", length)
+
+    return length
+
+
 cdef extern from *:
     """
 /* Weights of py digits into a pg digit according to their positions. */
@@ -523,104 +519,153 @@ static const int pydigit_weights[] = {1000, 100, 10, 1};
 """
     const int[4] pydigit_weights
 
-@cython.final
+
 @cython.cdivision(True)
-cdef class DecimalBinaryDumper(CDumper):
+cdef Py_ssize_t dump_decimal_to_numeric_binary(
+    obj, bytearray rv, Py_ssize_t offset
+) except -1:
 
-    format = PQ_BINARY
-    oid = oids.NUMERIC_OID
+    # TODO: this implementation is about 30% slower than the text dump.
+    # This might be probably optimised by accessing the C structure of
+    # the Decimal object, if available, which would save the creation of
+    # several intermediate Python objects (the DecimalTuple, the digits
+    # tuple, and then accessing them).
 
-    cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
+    cdef object t = obj.as_tuple()
+    cdef int sign = t[0]
+    cdef tuple digits = t[1]
+    cdef uint16_t *buf
+    cdef Py_ssize_t length
 
-        # TODO: this implementation is about 30% slower than the text dump.
-        # This might be probably optimised by accessing the C structure of
-        # the Decimal object, if available, which would save the creation of
-        # several intermediate Python objects (the DecimalTuple, the digits
-        # tuple, and then accessing them).
-
-        cdef object t = obj.as_tuple()
-        cdef int sign = t[0]
-        cdef tuple digits = t[1]
-        cdef uint16_t *buf
-        cdef Py_ssize_t length
-
-        cdef object pyexp = t[2]
-        cdef const char *bexp
-        if not isinstance(pyexp, int):
-            # Handle inf, nan
-            length = 4 * sizeof(uint16_t)
-            buf = <uint16_t *>CDumper.ensure_size(rv, offset, length)
-            buf[0] = 0
-            buf[1] = 0
-            buf[3] = 0
-            bexp = PyUnicode_AsUTF8(pyexp)
-            if bexp[0] == b'n' or bexp[0] == b'N':
-                buf[2] = endian.htobe16(NUMERIC_NAN)
-            elif bexp[0] == b'F':
-                if sign:
-                    buf[2] = endian.htobe16(NUMERIC_NINF)
-                else:
-                    buf[2] = endian.htobe16(NUMERIC_PINF)
+    cdef object pyexp = t[2]
+    cdef const char *bexp
+    if not isinstance(pyexp, int):
+        # Handle inf, nan
+        length = 4 * sizeof(uint16_t)
+        buf = <uint16_t *>CDumper.ensure_size(rv, offset, length)
+        buf[0] = 0
+        buf[1] = 0
+        buf[3] = 0
+        bexp = PyUnicode_AsUTF8(pyexp)
+        if bexp[0] == b'n' or bexp[0] == b'N':
+            buf[2] = endian.htobe16(NUMERIC_NAN)
+        elif bexp[0] == b'F':
+            if sign:
+                buf[2] = endian.htobe16(NUMERIC_NINF)
             else:
-                raise e.DataError(f"unexpected decimal exponent: {pyexp}")
-            return length
-
-        cdef int exp = pyexp
-        cdef uint16_t ndigits = <uint16_t>len(digits)
-
-        # Find the last nonzero digit
-        cdef int nzdigits = ndigits
-        while nzdigits > 0 and digits[nzdigits - 1] == 0:
-            nzdigits -= 1
-
-        cdef uint16_t dscale
-        if exp <= 0:
-            dscale = -exp
+                buf[2] = endian.htobe16(NUMERIC_PINF)
         else:
-            dscale = 0
-            # align the py digits to the pg digits if there's some py exponent
-            ndigits += exp % DEC_DIGITS
-
-        if nzdigits == 0:
-            length = 4 * sizeof(uint16_t)
-            buf = <uint16_t *>CDumper.ensure_size(rv, offset, length)
-            buf[0] = 0  # ndigits
-            buf[1] = 0  # weight
-            buf[2] = endian.htobe16(NUMERIC_POS)  # sign
-            buf[3] = endian.htobe16(dscale)
-            return length
-
-        # Equivalent of 0-padding left to align the py digits to the pg digits
-        # but without changing the digits tuple.
-        cdef int wi = 0
-        cdef int mod = (ndigits - dscale) % DEC_DIGITS
-        if mod < 0:
-            # the difference between C and Py % operator
-            mod += 4
-        if mod:
-            wi = DEC_DIGITS - mod
-            ndigits += wi
-
-        cdef int tmp = nzdigits + wi
-        cdef int pgdigits = tmp // DEC_DIGITS + (tmp % DEC_DIGITS and 1)
-        length = (pgdigits + 4) * sizeof(uint16_t)
-        buf = <uint16_t*>CDumper.ensure_size(rv, offset, length)
-        buf[0] = endian.htobe16(pgdigits)
-        buf[1] = endian.htobe16(<int16_t>((ndigits + exp) // DEC_DIGITS - 1))
-        buf[2] = endian.htobe16(NUMERIC_NEG) if sign else endian.htobe16(NUMERIC_POS)
-        buf[3] = endian.htobe16(dscale)
-
-        cdef uint16_t pgdigit = 0
-        cdef int bi = 4
-        for i in range(nzdigits):
-            pgdigit += pydigit_weights[wi] * <int>(digits[i])
-            wi += 1
-            if wi >= DEC_DIGITS:
-                buf[bi] = endian.htobe16(pgdigit)
-                pgdigit = wi = 0
-                bi += 1
-
-        if pgdigit:
-            buf[bi] = endian.htobe16(pgdigit)
-
+            raise e.DataError(f"unexpected decimal exponent: {pyexp}")
         return length
+
+    cdef int exp = pyexp
+    cdef uint16_t ndigits = <uint16_t>len(digits)
+
+    # Find the last nonzero digit
+    cdef int nzdigits = ndigits
+    while nzdigits > 0 and digits[nzdigits - 1] == 0:
+        nzdigits -= 1
+
+    cdef uint16_t dscale
+    if exp <= 0:
+        dscale = -exp
+    else:
+        dscale = 0
+        # align the py digits to the pg digits if there's some py exponent
+        ndigits += exp % DEC_DIGITS
+
+    if nzdigits == 0:
+        length = 4 * sizeof(uint16_t)
+        buf = <uint16_t *>CDumper.ensure_size(rv, offset, length)
+        buf[0] = 0  # ndigits
+        buf[1] = 0  # weight
+        buf[2] = endian.htobe16(NUMERIC_POS)  # sign
+        buf[3] = endian.htobe16(dscale)
+        return length
+
+    # Equivalent of 0-padding left to align the py digits to the pg digits
+    # but without changing the digits tuple.
+    cdef int wi = 0
+    cdef int mod = (ndigits - dscale) % DEC_DIGITS
+    if mod < 0:
+        # the difference between C and Py % operator
+        mod += 4
+    if mod:
+        wi = DEC_DIGITS - mod
+        ndigits += wi
+
+    cdef int tmp = nzdigits + wi
+    cdef int pgdigits = tmp // DEC_DIGITS + (tmp % DEC_DIGITS and 1)
+    length = (pgdigits + 4) * sizeof(uint16_t)
+    buf = <uint16_t*>CDumper.ensure_size(rv, offset, length)
+    buf[0] = endian.htobe16(pgdigits)
+    buf[1] = endian.htobe16(<int16_t>((ndigits + exp) // DEC_DIGITS - 1))
+    buf[2] = endian.htobe16(NUMERIC_NEG) if sign else endian.htobe16(NUMERIC_POS)
+    buf[3] = endian.htobe16(dscale)
+
+    cdef uint16_t pgdigit = 0
+    cdef int bi = 4
+    for i in range(nzdigits):
+        pgdigit += pydigit_weights[wi] * <int>(digits[i])
+        wi += 1
+        if wi >= DEC_DIGITS:
+            buf[bi] = endian.htobe16(pgdigit)
+            pgdigit = wi = 0
+            bi += 1
+
+    if pgdigit:
+        buf[bi] = endian.htobe16(pgdigit)
+
+    return length
+
+
+cdef Py_ssize_t dump_int_to_text(obj, bytearray rv, Py_ssize_t offset) except -1:
+    cdef long long val
+    cdef int overflow
+    cdef char *buf
+    cdef char *src
+    cdef Py_ssize_t length
+
+    val = PyLong_AsLongLongAndOverflow(obj, &overflow)
+    if not overflow:
+        buf = CDumper.ensure_size(rv, offset, MAXINT8LEN + 1)
+        length = pg_lltoa(val, buf)
+    else:
+        b = bytes(str(obj), "utf-8")
+        PyBytes_AsStringAndSize(b, &src, &length)
+        buf = CDumper.ensure_size(rv, offset, length)
+        memcpy(buf, src, length)
+
+    return length
+
+
+cdef Py_ssize_t dump_int_to_numeric_binary(obj, bytearray rv, Py_ssize_t offset) except -1:
+    # Calculate the number of PG digits required to store the number
+    cdef uint16_t ndigits
+    ndigits = <uint16_t>((<int>obj.bit_length()) * BIT_PER_PGDIGIT) + 1
+
+    cdef uint16_t sign = NUMERIC_POS
+    if obj < 0:
+        sign = NUMERIC_NEG
+        obj = -obj
+
+    cdef Py_ssize_t length = sizeof(uint16_t) * (ndigits + 4)
+    cdef uint16_t *buf
+    buf = <uint16_t *><void *>CDumper.ensure_size(rv, offset, length)
+    buf[0] = endian.htobe16(ndigits)
+    buf[1] = endian.htobe16(ndigits - 1)  # weight
+    buf[2] = endian.htobe16(sign)
+    buf[3] = 0  # dscale
+
+    cdef int i = 4 + ndigits - 1
+    cdef uint16_t rem
+    while obj:
+        rem = obj % 10000
+        obj //= 10000
+        buf[i] = endian.htobe16(rem)
+        i -= 1
+    while i > 3:
+        buf[i] = 0
+        i -= 1
+
+    return length
