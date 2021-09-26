@@ -5,9 +5,12 @@ Mappings between PostgreSQL and Python encodings.
 # Copyright (C) 2020-2021 The Psycopg Team
 
 import codecs
-from typing import Dict, Union
+from typing import Dict, Union, TYPE_CHECKING
 
 from .errors import NotSupportedError
+
+if TYPE_CHECKING:
+    from .pq.abc import PGconn
 
 _py_codecs = {
     "BIG5": "big5",
@@ -63,7 +66,12 @@ py_codecs.update((k.encode(), v) for k, v in _py_codecs.items())
 pg_codecs = {v: k.encode() for k, v in _py_codecs.items()}
 
 
-def py2pg(name: str) -> bytes:
+def pgconn_encoding(pgconn: "PGconn") -> str:
+    pgenc = pgconn.parameter_status(b"client_encoding") or b"UTF8"
+    return pg2pyenc(pgenc)
+
+
+def py2pgenc(name: str) -> bytes:
     """Convert a Python encoding name to PostgreSQL encoding name.
 
     Raise LookupError if the Python encoding is unknown.
@@ -71,7 +79,7 @@ def py2pg(name: str) -> bytes:
     return pg_codecs[codecs.lookup(name).name]
 
 
-def pg2py(name: Union[bytes, str]) -> str:
+def pg2pyenc(name: Union[bytes, str]) -> str:
     """Convert a Python encoding name to PostgreSQL encoding name.
 
     Raise NotSupportedError if the PostgreSQL encoding is not supported by

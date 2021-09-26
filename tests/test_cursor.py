@@ -140,14 +140,14 @@ def test_binary_cursor_text_override(conn):
 
 @pytest.mark.parametrize("encoding", ["utf8", "latin9"])
 def test_query_encode(conn, encoding):
-    conn.client_encoding = encoding
+    conn.execute(f"set client_encoding to {encoding}")
     cur = conn.cursor()
     (res,) = cur.execute("select '\u20ac'").fetchone()
     assert res == "\u20ac"
 
 
 def test_query_badenc(conn):
-    conn.client_encoding = "latin1"
+    conn.execute("set client_encoding to latin1")
     cur = conn.cursor()
     with pytest.raises(UnicodeEncodeError):
         cur.execute("select '\u20ac'")

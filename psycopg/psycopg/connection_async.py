@@ -20,6 +20,7 @@ from .adapt import AdaptersMap
 from ._enums import IsolationLevel
 from ._compat import asynccontextmanager
 from .conninfo import make_conninfo, conninfo_to_dict
+from ._encodings import pgconn_encoding
 from .connection import BaseConnection, CursorRow, Notify
 from .generators import notifies
 from .transaction import AsyncTransaction
@@ -268,7 +269,7 @@ class AsyncConnection(BaseConnection[Row]):
         while 1:
             async with self.lock:
                 ns = await self.wait(notifies(self.pgconn))
-            enc = self.client_encoding
+            enc = pgconn_encoding(self.pgconn)
             for pgn in ns:
                 n = Notify(
                     pgn.relname.decode(enc), pgn.extra.decode(enc), pgn.be_pid
@@ -317,14 +318,6 @@ class AsyncConnection(BaseConnection[Row]):
         """Async version of the `~Connection.deferrable` setter."""
         async with self.lock:
             super()._set_deferrable(value)
-
-    def _set_client_encoding(self, name: str) -> None:
-        self._no_set_async("client_encoding")
-
-    async def set_client_encoding(self, name: str) -> None:
-        """Async version of the `~Connection.client_encoding` setter."""
-        async with self.lock:
-            await self.wait(self._set_client_encoding_gen(name))
 
     def _no_set_async(self, attribute: str) -> None:
         raise AttributeError(

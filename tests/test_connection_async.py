@@ -6,7 +6,6 @@ import logging
 import weakref
 
 import psycopg
-from psycopg import encodings
 from psycopg import AsyncConnection, Notify
 from psycopg.rows import tuple_row
 from psycopg.errors import UndefinedTable
@@ -308,73 +307,6 @@ async def test_autocommit_unknown(aconn):
     with pytest.raises(psycopg.ProgrammingError):
         await aconn.set_autocommit(True)
     assert not aconn.autocommit
-
-
-async def test_get_encoding(aconn):
-    cur = aconn.cursor()
-    await cur.execute("show client_encoding")
-    (enc,) = await cur.fetchone()
-    assert aconn.client_encoding == encodings.pg2py(enc)
-
-
-async def test_set_encoding(aconn):
-    newenc = "iso8859-1" if aconn.client_encoding != "iso8859-1" else "utf-8"
-    assert aconn.client_encoding != newenc
-    with pytest.raises(AttributeError):
-        aconn.client_encoding = newenc
-    assert aconn.client_encoding != newenc
-    await aconn.set_client_encoding(newenc)
-    assert aconn.client_encoding == newenc
-    cur = aconn.cursor()
-    await cur.execute("show client_encoding")
-    (enc,) = await cur.fetchone()
-    assert encodings.pg2py(enc) == newenc
-
-
-@pytest.mark.parametrize(
-    "enc, out, codec",
-    [
-        ("utf8", "UTF8", "utf-8"),
-        ("utf-8", "UTF8", "utf-8"),
-        ("utf_8", "UTF8", "utf-8"),
-        ("eucjp", "EUC_JP", "euc_jp"),
-        ("euc-jp", "EUC_JP", "euc_jp"),
-        ("latin9", "LATIN9", "iso8859-15"),
-    ],
-)
-async def test_normalize_encoding(aconn, enc, out, codec):
-    await aconn.set_client_encoding(enc)
-    assert aconn.pgconn.parameter_status(b"client_encoding").decode() == out
-    assert aconn.client_encoding == codec
-
-
-@pytest.mark.parametrize(
-    "enc, out, codec",
-    [
-        ("utf8", "UTF8", "utf-8"),
-        ("utf-8", "UTF8", "utf-8"),
-        ("utf_8", "UTF8", "utf-8"),
-        ("eucjp", "EUC_JP", "euc_jp"),
-        ("euc-jp", "EUC_JP", "euc_jp"),
-    ],
-)
-async def test_encoding_env_var(dsn, monkeypatch, enc, out, codec):
-    monkeypatch.setenv("PGCLIENTENCODING", enc)
-    aconn = await psycopg.AsyncConnection.connect(dsn)
-    assert aconn.pgconn.parameter_status(b"client_encoding").decode() == out
-    assert aconn.client_encoding == codec
-
-
-async def test_set_encoding_unsupported(aconn):
-    cur = aconn.cursor()
-    await cur.execute("set client_encoding to EUC_TW")
-    with pytest.raises(psycopg.NotSupportedError):
-        await cur.execute("select 'x'")
-
-
-async def test_set_encoding_bad(aconn):
-    with pytest.raises(LookupError):
-        await aconn.set_client_encoding("WAT")
 
 
 @pytest.mark.parametrize(

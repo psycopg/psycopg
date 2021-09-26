@@ -11,6 +11,7 @@ from ..pq import Format, Escaping
 from ..abc import AdaptContext
 from ..adapt import Buffer, Dumper, Loader
 from ..errors import DataError
+from .._encodings import pgconn_encoding
 
 if TYPE_CHECKING:
     from ..pq.abc import Escaping as EscapingProto
@@ -25,7 +26,7 @@ class _BaseStrDumper(Dumper):
 
         conn = self.connection
         if conn:
-            enc = conn.client_encoding
+            enc = pgconn_encoding(conn.pgconn)
             if enc != "ascii":
                 self._encoding = enc
 
@@ -85,7 +86,7 @@ class TextLoader(Loader):
         super().__init__(oid, context)
         conn = self.connection
         if conn:
-            enc = conn.client_encoding
+            enc = pgconn_encoding(conn.pgconn)
             self._encoding = enc if enc != "ascii" else ""
 
     def load(self, data: Buffer) -> Union[bytes, str]:

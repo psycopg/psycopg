@@ -117,7 +117,7 @@ async def test_set_custom_type(aconn, hstore):
 async def test_copy_out_allchars(aconn, format):
     cur = aconn.cursor()
     chars = list(map(chr, range(1, 256))) + [eur]
-    await aconn.set_client_encoding("utf8")
+    await aconn.execute("set client_encoding to utf8")
     rows = []
     query = sql.SQL(
         "copy (select unnest({}::text[])) to stdout (format {})"
@@ -381,7 +381,7 @@ async def test_copy_in_allchars(aconn):
     cur = aconn.cursor()
     await ensure_table(cur, sample_tabledef)
 
-    await aconn.set_client_encoding("utf8")
+    await aconn.execute("set client_encoding to utf8")
     async with cur.copy("copy copy_in from stdin (format text)") as copy:
         for i in range(1, 256):
             await copy.write_row((i, None, chr(i)))

@@ -143,7 +143,7 @@ async def test_binary_cursor_text_override(aconn):
 
 @pytest.mark.parametrize("encoding", ["utf8", "latin9"])
 async def test_query_encode(aconn, encoding):
-    await aconn.set_client_encoding(encoding)
+    await aconn.execute(f"set client_encoding to {encoding}")
     cur = aconn.cursor()
     await cur.execute("select '\u20ac'")
     (res,) = await cur.fetchone()
@@ -151,7 +151,7 @@ async def test_query_encode(aconn, encoding):
 
 
 async def test_query_badenc(aconn):
-    await aconn.set_client_encoding("latin1")
+    await aconn.execute("set client_encoding to latin1")
     cur = aconn.cursor()
     with pytest.raises(UnicodeEncodeError):
         await cur.execute("select '\u20ac'")

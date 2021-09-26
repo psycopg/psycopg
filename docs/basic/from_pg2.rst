@@ -186,6 +186,19 @@ set-returning functions... Use a normal `~Cursor.execute()` with :sql:`SELECT
 function_name(...)` or :sql:`CALL procedure_name(...)` instead.
 
 
+.. _diff-client-encoding:
+
+``client_encoding`` is gone
+---------------------------
+
+Psycopg uses automatically the database client encoding to decode data to
+Unicode strings. Use `ConnectionInfo.encoding` if you need to read the
+encoding. You can select an encoding at connection time using the
+``client_encoding`` connection parameter and you can change the encoding of a
+connection by running a :sql:`SET client_encoding` statement... But why would
+you?
+
+
 What's new in Psycopg 3
 -----------------------
 

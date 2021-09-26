@@ -9,6 +9,7 @@ import pytest
 
 from psycopg import pq, sql, ProgrammingError
 from psycopg.adapt import PyFormat
+from psycopg._encodings import py2pgenc
 
 eur = "\u20ac"
 
@@ -290,7 +291,7 @@ class TestIdentifier:
     )
     def test_as_bytes(self, conn, args, want, enc):
         want = want.encode(enc)
-        conn.client_encoding = enc
+        conn.execute(f"set client_encoding to {py2pgenc(enc).decode()}")
         assert sql.Identifier(*args).as_bytes(conn) == want
 
     def test_join(self):
@@ -328,9 +329,9 @@ class TestLiteral:
             sql.Literal(dt.date(2017, 1, 1)).as_bytes(conn) == b"'2017-01-01'"
         )
 
-        conn.client_encoding = "utf8"
+        conn.execute("set client_encoding to utf8")
         assert sql.Literal(eur).as_bytes(conn) == f"'{eur}'".encode()
-        conn.client_encoding = "latin9"
+        conn.execute("set client_encoding to latin9")
         assert sql.Literal(eur).as_bytes(conn) == f"'{eur}'".encode("latin9")
 
     def test_eq(self):
@@ -410,10 +411,10 @@ class TestSQL:
     def test_as_bytes(self, conn):
         assert sql.SQL("foo").as_bytes(conn) == b"foo"
 
-        conn.client_encoding = "utf8"
+        conn.execute("set client_encoding to utf8")
         assert sql.SQL(eur).as_bytes(conn) == eur.encode()
 
-        conn.client_encoding = "latin9"
+        conn.execute("set client_encoding to latin9")
         assert sql.SQL(eur).as_bytes(conn) == eur.encode("latin9")
 
 
@@ -484,10 +485,10 @@ class TestComposed:
 
         obj = sql.Composed([sql.SQL("foo"), sql.SQL(eur)])
 
-        conn.client_encoding = "utf8"
+        conn.execute("set client_encoding to utf8")
         assert obj.as_bytes(conn) == ("foo" + eur).encode()
 
-        conn.client_encoding = "latin9"
+        conn.execute("set client_encoding to latin9")
         assert obj.as_bytes(conn) == ("foo" + eur).encode("latin9")
 
 
