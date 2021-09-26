@@ -41,6 +41,7 @@ extensions = [
     "sphinx.ext.intersphinx",
     "sphinx_autodoc_typehints",
     "sql_role",
+    "ticket_role",
     "pg3_docs",
     "libpq_docs",
 ]
@@ -103,3 +104,6 @@ autodoc_member_order = "bysource"
 
 # PostgreSQL docs version to link libpq functions to
 libpq_docs_version = "13"
+
+# Where to point on :ticket: role
+ticket_url = "https://github.com/psycopg/psycopg/issues/%s"

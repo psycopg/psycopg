@@ -32,6 +32,7 @@ Documentation
     basic/index
     advanced/index
     api/index
+    news
 
 
 Indices and tables

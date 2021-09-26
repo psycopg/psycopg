@@ -219,6 +219,8 @@ Example::
     pair: geometry; Data types
     single: PostGIS; Data types
 
+.. _adapt-shapely:
+
 Geometry adaptation using Shapely
 ---------------------------------
 
