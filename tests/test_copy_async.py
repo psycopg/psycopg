@@ -530,9 +530,12 @@ async def test_worker_life(aconn, format, buffer):
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize("fmt", [Format.TEXT, Format.BINARY])
+@pytest.mark.parametrize(
+    "fmt, set_types",
+    [(Format.TEXT, True), (Format.TEXT, False), (Format.BINARY, True)],
+)
 @pytest.mark.parametrize("method", ["read", "iter", "row", "rows"])
-async def test_copy_to_leaks(dsn, faker, fmt, method, retries):
+async def test_copy_to_leaks(dsn, faker, fmt, set_types, method, retries):
     faker.format = PyFormat.from_pq(fmt)
     faker.choose_schema(ncols=20)
     faker.make_records(20)
@@ -554,11 +557,8 @@ async def test_copy_to_leaks(dsn, faker, fmt, method, retries):
                 )
 
                 async with cur.copy(stmt) as copy:
-                    types = [
-                        t.as_string(conn).replace('"', "")
-                        for t in faker.types_names
-                    ]
-                    copy.set_types(types)
+                    if set_types:
+                        copy.set_types(faker.types_names)
 
                     if method == "read":
                         while 1:
@@ -590,8 +590,11 @@ async def test_copy_to_leaks(dsn, faker, fmt, method, retries):
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize("fmt", [Format.TEXT, Format.BINARY])
-async def test_copy_from_leaks(dsn, faker, fmt, retries):
+@pytest.mark.parametrize(
+    "fmt, set_types",
+    [(Format.TEXT, True), (Format.TEXT, False), (Format.BINARY, True)],
+)
+async def test_copy_from_leaks(dsn, faker, fmt, set_types, retries):
     faker.format = PyFormat.from_pq(fmt)
     faker.choose_schema(ncols=20)
     faker.make_records(20)
@@ -608,6 +611,8 @@ async def test_copy_from_leaks(dsn, faker, fmt, retries):
                     sql.SQL(fmt.name),
                 )
                 async with cur.copy(stmt) as copy:
+                    if set_types:
+                        copy.set_types(faker.types_names)
                     for row in faker.records:
                         await copy.write_row(row)
 
