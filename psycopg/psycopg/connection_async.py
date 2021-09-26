@@ -146,12 +146,6 @@ class AsyncConnection(BaseConnection[Row]):
         else:
             params["connect_timeout"] = None
 
-        # TODO: resolve host names to hostaddr asynchronously
-        # https://github.com/psycopg/psycopg/issues/69
-
-        # TODO: SRV lookup (RFC 2782)
-        # https://github.com/psycopg/psycopg/issues/70
-
         return params
 
     async def close(self) -> None:
