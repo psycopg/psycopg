@@ -11,7 +11,7 @@ Installation
 
 In short, run the following::
 
-    pip install -U pip                  # to upgrade pip
+    pip install --upgrade pip           # to upgrade pip
     pip install psycopg[binary,pool]    # to install package and dependencies
 
 If something goes wrong, and for more information about installation, please

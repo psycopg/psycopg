@@ -9,30 +9,8 @@ Installation
 
 Quick version::
 
-    pip install -U pip                      # upgrade pip to at least 20.3
-    pip install --pre psycopg[binary,pool]  # install binary files
-
-
-Install from source
--------------------
-
-The library is still in a development stage: you can obtain the most
-up-to-date code `from the GitHub project`__::
-
-    $ pip install git+https://github.com/psycopg/psycopg.git#subdirectory=psycopg
-    $ python3
-    >>> import psycopg
-
-.. __: https://github.com/psycopg/psycopg
-
-You are required to have the ``libpq``, the PostgreSQL client library, already
-installed in the system before using ``psycopg``. On Debian system you can
-obtain it by running::
-
-    sudo apt install libpq5
-
-Please check your system's documentation for information about installing the
-``libpq`` on your platform.
+    pip install --upgrade pip               # upgrade pip to at least 20.3
+    pip install --pre psycopg[binary,pool]  # install binary dependencies
 
 For further information about installation please check `the documentation`__.
 
@@ -42,7 +20,13 @@ For further information about installation please check `the documentation`__.
 Hacking
 -------
 
-In order to work on the Psycopg source code you should clone this repository::
+In order to work on the Psycopg source code you need to have the ``libpq``
+PostgreSQL client library installed in the system. For instance, on Debian
+systems, you can obtain it by running::
+
+    sudo apt install libpq5
+
+After which you can clone this repository::
 
     git clone https://github.com/psycopg/psycopg.git
     cd psycopg
@@ -52,9 +36,8 @@ packages: that's why you don't see a ``setup.py`` here. The packages may have
 different requirements:
 
 - The ``psycopg`` directory contains the pure python implementation of
-  ``psycopg``. The package has only a runtime dependency on the ``libpq``,
-  the PostgreSQL client library, which should have been already installed in
-  your system.
+  ``psycopg``. The package has only a runtime dependency on the ``libpq``, the
+  PostgreSQL client library, which should be installed in your system.
 
 - The ``psycopg_c`` directory contains an optimization module written in
   C/Cython. In order to build it you will need a few development tools: please

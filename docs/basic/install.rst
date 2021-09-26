@@ -5,7 +5,7 @@ Installation
 
 In short::
 
-    pip install -U pip                  # upgrade pip to at least 20.3
+    pip install --upgrade pip           # upgrade pip to at least 20.3
     pip install --pre psycopg[binary]
 
 and you should be :ref:`ready to start <module-usage>`.
@@ -21,9 +21,9 @@ packages by running::
 
     pip install --pre psycopg[binary]
 
-This will install a self-contained package with all the libraries needed.
-You will need pip >= 20.3 at least: please run ``pip install -U pip`` to update
-it beforehand.
+This will install a self-contained package with all the libraries needed. You
+will need pip >= 20.3 at least: please run ``pip install --upgrade pip`` to
+update it beforehand.
 
 The above package should work in most situations. It **will not work** in
 some cases though:
@@ -54,8 +54,8 @@ In these case you should proceed to a :ref:`local installation
 Local installation
 ------------------
 
-A "Local installation" means obtaining a performing and maintainable library.
-The library will include a performing C module and will be bound to the system
+A "Local installation" results in a performing and maintainable library. The
+library will include a the speed-up C module and will be linked to the system
 libraries (``libpq``, ``libssl``...) so that system upgrade of libraries will
 upgrade the libraries used by Psycopg 3 too. This is the preferred way to
 install Psycopg for a production site.
@@ -63,8 +63,8 @@ install Psycopg for a production site.
 In order to perform a local installation you need some prerequisites:
 
 - a C compiler,
-- Python development headers (e.g. the python3-dev package).
-- PostgreSQL client development headers (e.g. the libpq-dev package).
+- Python development headers (e.g. the ``python3-dev`` package).
+- PostgreSQL client development headers (e.g. the ``libpq-dev`` package).
 - The :program:`pg_config` program available in the :envvar:`PATH`.
 
 You **must be able** to troubleshoot an extension build, for instance you must
