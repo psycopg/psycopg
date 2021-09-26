@@ -105,7 +105,7 @@ or as a plain function:
        return make_row
 
 These can then be used by specifying a `row_factory` argument in
-`Connection.connect()`, `Connection.cursor()`, or by writing to
+`Connection.connect()`, `Connection.cursor()`, or by setting the
 `Connection.row_factory` attribute.
 
 .. code:: python
