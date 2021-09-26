@@ -67,6 +67,7 @@ Other objects used in adaptations
        :type: `~psycopg.types.TypesRegistry`
 
    .. automethod:: get_dumper
+   .. automethod:: get_dumper_by_oid
    .. automethod:: get_loader
 
 

@@ -125,6 +125,12 @@ class AdaptersMap:
         will be possible to register it without importing it before. In this
         case it should be the fully qualified name of the object (e.g.
         ``"uuid.UUID"``).
+
+        If *cls* is None, only use the dumper when looking up using
+        `get_dumper_by_oid()`, which happens when we know the Postgres type to
+        adapt to, but not the Python type that will be adapted (e.g. in COPY
+        after using `~psycopg.Copy.set_types()`).
+
         """
         if not (cls is None or isinstance(cls, (str, type))):
             raise TypeError(
@@ -188,7 +194,11 @@ class AdaptersMap:
         """
         Return the dumper class for the given type and format.
 
-        Raise ProgrammingError if a class is not available.
+        Raise `~psycopg.ProgrammingError` if a class is not available.
+
+        :param cls: The class to adapt.
+        :param format: The format to dump to. If `~psycopg.adapt.PyFormat.AUTO`,
+            use the last one of the dumpers registered on *cls*.
         """
         try:
             dmap = self._dumpers[format]
@@ -216,7 +226,10 @@ class AdaptersMap:
         """
         Return the dumper class for the given oid and format.
 
-        Raise ProgrammingError if a class is not available.
+        Raise `~psycopg.ProgrammingError` if a class is not available.
+
+        :param oid: The oid of the type to dump to.
+        :param format: The format to dump to.
         """
         try:
             dmap = self._dumpers_by_oid[format]
@@ -245,7 +258,10 @@ class AdaptersMap:
         """
         Return the loader class for the given oid and format.
 
-        Return None if not found.
+        Return `!None` if not found.
+
+        :param oid: The oid of the type to load.
+        :param format: The format to load from.
         """
         return self._loaders[format].get(oid)
 
