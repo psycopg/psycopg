@@ -115,9 +115,7 @@ class BytesDumper(Dumper):
             self.connection.pgconn if self.connection else None
         )
 
-    def dump(self, obj: bytes) -> memoryview:
-        # TODO: mypy doesn't complain, but this function has the wrong signature
-        # probably dump return value should be extended to Buffer
+    def dump(self, obj: bytes) -> Buffer:
         return self._esc.escape_bytea(obj)
 
     def quote(self, obj: bytes) -> bytes:
