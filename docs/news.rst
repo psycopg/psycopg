@@ -8,8 +8,8 @@ Release notes
 Current release
 ---------------
 
-psycopg 3.0.b2
-^^^^^^^^^^^^^^
+psycopg 3.0b2
+^^^^^^^^^^^^^
 
 - Add :ref:`adapt-shapely` (:ticket:`#80`).
 - Add `psycopg.pq.__build_version__` constant.
@@ -18,7 +18,7 @@ psycopg 3.0.b2
 - Fix selection of dumper by oid after `~psycopg.Copy.set_types()`.
 
 
-psycopg 3.0.b1
---------------
+psycopg 3.0b1
+^^^^^^^^^^^^^
 
 - First public release on PyPI.
