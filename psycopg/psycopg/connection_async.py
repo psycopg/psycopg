@@ -93,7 +93,10 @@ class AsyncConnection(BaseConnection[Row]):
     ) -> "AsyncConnection[Any]":
 
         if sys.platform == "win32":
-            loop = asyncio.get_running_loop()
+            if sys.version_info < (3, 7):
+                loop = asyncio.get_event_loop()
+            else:
+                loop = asyncio.get_running_loop()
             if isinstance(loop, asyncio.ProactorEventLoop):
                 raise e.InterfaceError(
                     "psycopg does not currently support running in async mode "

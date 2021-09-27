@@ -87,8 +87,16 @@ def event_loop(request):
     else:
         assert loop == "default"
 
+    loop = None
     if sys.platform == "win32":
-        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-    loop = asyncio.get_event_loop_policy().new_event_loop()
+        if sys.version_info < (3, 7):
+            loop = asyncio.SelectorEventLoop()
+            asyncio.set_event_loop(loop)
+        else:
+            asyncio.set_event_loop_policy(
+                asyncio.WindowsSelectorEventLoopPolicy()
+            )
+    if not loop:
+        loop = asyncio.get_event_loop_policy().new_event_loop()
     yield loop
     loop.close()
