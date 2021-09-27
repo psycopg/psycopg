@@ -334,9 +334,23 @@ Connection support objects
 --------------------------
 
 .. autoclass:: Notify()
-    :members: channel, payload, pid
 
     The object is usually returned by `Connection.notifies()`.
+
+    .. attribute:: channel
+        :type: str
+
+        The name of the channel on which the notification was received.
+
+    .. attribute:: payload
+        :type: str
+
+        The message attached to the notification.
+
+    .. attribute:: pid
+        :type: int
+
+        The PID of the backend process which sent the notification.
 
 
 .. autoclass:: ConnectionInfo()
