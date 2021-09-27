@@ -6,7 +6,6 @@ psycopg async connection objects
 
 import asyncio
 import logging
-import warnings
 from types import TracebackType
 from typing import Any, AsyncIterator, Dict, Optional, Type, Union
 from typing import cast, overload, TYPE_CHECKING
@@ -122,9 +121,10 @@ class AsyncConnection(BaseConnection[Row]):
             try:
                 await self.rollback()
             except Exception as exc2:
-                warnings.warn(
-                    f"error rolling back the transaction on {self}: {exc2}",
-                    RuntimeWarning,
+                logger.warning(
+                    "error ignored rolling back transaction on %s: %s",
+                    self,
+                    exc2,
                 )
         else:
             await self.commit()

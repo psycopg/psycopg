@@ -165,7 +165,7 @@ async def test_context_close(aconn):
         await aconn.close()
 
 
-async def test_context_rollback_no_clobber(conn, dsn, recwarn):
+async def test_context_rollback_no_clobber(conn, dsn, caplog):
     with pytest.raises(ZeroDivisionError):
         async with await psycopg.AsyncConnection.connect(dsn) as conn2:
             await conn2.execute("select 1")
@@ -175,7 +175,10 @@ async def test_context_rollback_no_clobber(conn, dsn, recwarn):
             )
             1 / 0
 
-    assert "rolling back" in str(recwarn.pop(RuntimeWarning).message)
+    assert len(caplog.records) == 1
+    rec = caplog.records[0]
+    assert rec.levelno == logging.WARNING
+    assert "rolling back" in rec.message
 
 
 async def test_weakref(dsn):

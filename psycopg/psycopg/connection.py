@@ -588,9 +588,10 @@ class Connection(BaseConnection[Row]):
             try:
                 self.rollback()
             except Exception as exc2:
-                warnings.warn(
-                    f"error rolling back the transaction on {self}: {exc2}",
-                    RuntimeWarning,
+                logger.warning(
+                    "error ignored rolling back transaction on %s: %s",
+                    self,
+                    exc2,
                 )
         else:
             self.commit()

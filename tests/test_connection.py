@@ -159,7 +159,9 @@ def test_context_close(conn):
         conn.close()
 
 
-def test_context_rollback_no_clobber(conn, dsn, recwarn):
+def test_context_rollback_no_clobber(conn, dsn, caplog):
+    caplog.set_level(logging.WARNING, logger="psycopg")
+
     with pytest.raises(ZeroDivisionError):
         with psycopg.connect(dsn) as conn2:
             conn2.execute("select 1")
@@ -169,7 +171,10 @@ def test_context_rollback_no_clobber(conn, dsn, recwarn):
             )
             1 / 0
 
-    assert "rolling back" in str(recwarn.pop(RuntimeWarning).message)
+    assert len(caplog.records) == 1
+    rec = caplog.records[0]
+    assert rec.levelno == logging.WARNING
+    assert "rolling back" in rec.message
 
 
 def test_weakref(dsn):
