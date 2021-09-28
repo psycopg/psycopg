@@ -6,6 +6,7 @@ psycopg async connection objects
 
 import asyncio
 import logging
+import sys
 from types import TracebackType
 from typing import Any, AsyncIterator, Dict, Optional, Type, Union
 from typing import cast, overload, TYPE_CHECKING
@@ -90,6 +91,21 @@ class AsyncConnection(BaseConnection[Row]):
         row_factory: Optional[AsyncRowFactory[Row]] = None,
         **kwargs: Any,
     ) -> "AsyncConnection[Any]":
+
+        if sys.platform == "win32":
+            if sys.version_info < (3, 7):
+                loop = asyncio.get_event_loop()
+            else:
+                loop = asyncio.get_running_loop()
+            if isinstance(loop, asyncio.ProactorEventLoop):
+                raise e.InterfaceError(
+                    "psycopg does not currently support running in async mode "
+                    "on windows on the 'ProactorEventLoop'. "
+                    "Please ensure that a compatible event loop is used, like "
+                    "by setting ``asyncio.set_event_loop_policy`` to "
+                    "WindowsSelectorEventLoopPolicy"
+                )
+
         params = await cls._get_connection_params(conninfo, **kwargs)
         conninfo = make_conninfo(**params)
 

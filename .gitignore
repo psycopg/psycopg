@@ -10,3 +10,4 @@ __pycache__/
 /docs/.venv/
 *.html
 /psycopg_binary/
+.vscode

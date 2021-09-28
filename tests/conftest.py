@@ -58,13 +58,6 @@ def pytest_report_header(config):
     return [f"asyncio loop: {loop}"]
 
 
-def pytest_runtest_setup(item):
-    # Skip asyncio tests on Windows: they just don't seem to work
-    if sys.platform == "win32":
-        for mark in item.iter_markers(name="asyncio"):
-            pytest.skip(f"cannot run asyncio tests on {sys.platform}")
-
-
 @pytest.fixture
 def retries(request):
     """Retry a block in a test a few times before giving up."""
@@ -83,6 +76,8 @@ def retries(request):
 @pytest.fixture
 def event_loop(request):
     """Return the event loop to test asyncio-marked tests."""
+    # pytest-asyncio reset the the loop config after each test, so set
+    # set them each time
 
     loop = request.config.getoption("--loop")
     if loop == "uvloop":
@@ -92,6 +87,16 @@ def event_loop(request):
     else:
         assert loop == "default"
 
-    loop = asyncio.get_event_loop_policy().new_event_loop()
+    loop = None
+    if sys.platform == "win32":
+        if sys.version_info < (3, 7):
+            loop = asyncio.SelectorEventLoop()
+            asyncio.set_event_loop(loop)
+        else:
+            asyncio.set_event_loop_policy(
+                asyncio.WindowsSelectorEventLoopPolicy()
+            )
+    if not loop:
+        loop = asyncio.get_event_loop_policy().new_event_loop()
     yield loop
     loop.close()

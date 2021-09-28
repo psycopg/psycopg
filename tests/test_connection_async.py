@@ -3,12 +3,13 @@ import socket
 import pytest
 import asyncio
 import logging
+import sys
 import weakref
 
 import psycopg
 from psycopg import AsyncConnection, Notify
 from psycopg.rows import tuple_row
-from psycopg.errors import UndefinedTable
+from psycopg.errors import InterfaceError, UndefinedTable
 from psycopg.conninfo import conninfo_to_dict, make_conninfo
 
 from .utils import gc_collect
@@ -668,3 +669,17 @@ async def test_connect_context_copy(dsn, aconn):
     assert (await cur.fetchone())[0] == "hellot"
     cur = await aconn2.execute("select %b", ["hello"])
     assert (await cur.fetchone())[0] == "hellob"
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="windows is required")
+def test_windows_error(dsn):
+    loop = asyncio.ProactorEventLoop()
+
+    async def go():
+        with pytest.raises(
+            InterfaceError,
+            match="psycopg does not currently support running in async mode",
+        ):
+            await psycopg.AsyncConnection.connect(dsn)
+
+    loop.run_until_complete(go())
