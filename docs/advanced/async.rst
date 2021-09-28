@@ -40,6 +40,21 @@ here and there.
     .. __: https://www.postgresql.org/docs/current/libpq-connect.html
            #LIBPQ-PARAMKEYWORDS
 
+.. warning::
+
+    On Windows, Psycopg is not compatible with the default
+    `~asyncio.ProactorEventLoop`. Please use a different loop, for instance
+    the `~asyncio.SelectorEventLoop`.
+
+    For instance, you can use, early in your program:
+
+    .. parsed-literal::
+
+        `asyncio.set_event_loop_policy`\ (
+            `asyncio.WindowsSelectorEventLoopPolicy`\ ()
+        )
+
+
 
 .. index:: with
 
