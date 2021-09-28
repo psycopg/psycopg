@@ -4,9 +4,9 @@ psycopg async connection objects
 
 # Copyright (C) 2020-2021 The Psycopg Team
 
+import sys
 import asyncio
 import logging
-import sys
 from types import TracebackType
 from typing import Any, AsyncIterator, Dict, Optional, Type, Union
 from typing import cast, overload, TYPE_CHECKING
@@ -18,7 +18,7 @@ from .abc import AdaptContext, Params, PQGen, PQGenConn, Query, RV
 from .rows import Row, AsyncRowFactory, tuple_row, TupleRow
 from .adapt import AdaptersMap
 from ._enums import IsolationLevel
-from ._compat import asynccontextmanager
+from ._compat import asynccontextmanager, get_running_loop
 from .conninfo import make_conninfo, conninfo_to_dict
 from ._encodings import pgconn_encoding
 from .connection import BaseConnection, CursorRow, Notify
@@ -93,17 +93,13 @@ class AsyncConnection(BaseConnection[Row]):
     ) -> "AsyncConnection[Any]":
 
         if sys.platform == "win32":
-            if sys.version_info < (3, 7):
-                loop = asyncio.get_event_loop()
-            else:
-                loop = asyncio.get_running_loop()
+            loop = get_running_loop()
             if isinstance(loop, asyncio.ProactorEventLoop):
                 raise e.InterfaceError(
-                    "psycopg does not currently support running in async mode "
-                    "on windows on the 'ProactorEventLoop'. "
-                    "Please ensure that a compatible event loop is used, like "
-                    "by setting ``asyncio.set_event_loop_policy`` to "
-                    "WindowsSelectorEventLoopPolicy"
+                    "Psycopg cannot use the 'ProactorEventLoop' to run in async"
+                    " mode. Please use a compatible event loop, for instance by"
+                    " setting 'asyncio.set_event_loop_policy"
+                    "(WindowsSelectorEventLoopPolicy())'"
                 )
 
         params = await cls._get_connection_params(conninfo, **kwargs)

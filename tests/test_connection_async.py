@@ -671,14 +671,14 @@ async def test_connect_context_copy(dsn, aconn):
     assert (await cur.fetchone())[0] == "hellob"
 
 
-@pytest.mark.skipif(sys.platform != "win32", reason="windows is required")
+@pytest.mark.skipif(sys.platform != "win32", reason="windows only test")
 def test_windows_error(dsn):
     loop = asyncio.ProactorEventLoop()
 
     async def go():
         with pytest.raises(
             InterfaceError,
-            match="psycopg does not currently support running in async mode",
+            match="Psycopg cannot use the 'ProactorEventLoop'",
         ):
             await psycopg.AsyncConnection.connect(dsn)
 
