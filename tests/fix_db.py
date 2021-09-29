@@ -8,7 +8,7 @@ def pytest_addoption(parser):
     parser.addoption(
         "--test-dsn",
         metavar="DSN",
-        default=os.environ.get("PSYCOPG_TEST_DSN") or None,
+        default=os.environ.get("PSYCOPG_TEST_DSN"),
         help="Connection string to run database tests requiring a connection"
         " [you can also use the PSYCOPG_TEST_DSN env var].",
     )
@@ -27,7 +27,7 @@ def pytest_configure(config):
 def dsn(request):
     """Return the dsn used to connect to the `--test-dsn` database."""
     dsn = request.config.getoption("--test-dsn")
-    if not dsn:
+    if dsn is None:
         pytest.skip("skipping test as no --test-dsn")
     return dsn
 
