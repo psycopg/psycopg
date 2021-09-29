@@ -224,12 +224,19 @@ def test_port(pgconn):
         pgconn.port
 
 
+@pytest.mark.libpq("< 14")
 def test_tty(pgconn):
     tty = [o.val for o in pgconn.info if o.keyword == b"tty"][0]
     assert pgconn.tty == tty
     pgconn.finish()
     with pytest.raises(psycopg.OperationalError):
         pgconn.tty
+
+
+@pytest.mark.libpq(">= 14")
+def test_tty_noop(pgconn):
+    assert not any(o.val for o in pgconn.info if o.keyword == b"tty")
+    assert pgconn.tty == b""
 
 
 def test_transaction_status(pgconn):
