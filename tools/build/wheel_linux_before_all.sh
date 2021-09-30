@@ -15,7 +15,10 @@ if [[ ! "$AUDITWHEEL_ARCH" = "aarch64" ]]; then
     source /etc/os-release
     echo "deb http://apt.postgresql.org/pub/repos/apt ${VERSION_CODENAME}-pgdg main" \
         > /etc/apt/sources.list.d/pgdg.list
-    curl --silent https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+    # TODO: on 2021-09-30 curl fails with
+    # curl: (60) SSL certificate problem: certificate has expired
+    # Test again later if -k can be removed.
+    curl -sk https://www.postgresql.org/media/keys/ACCC4CF8.asc \
         | apt-key add -
 fi
 apt-get update

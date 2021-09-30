@@ -19,7 +19,7 @@ Supported systems
 
 The psycopg version documented here has *official and tested* support for:
 
-- Python: from version 3.6 to 3.9
+- Python: from version 3.6 to 3.10
 - PostgreSQL: from version 10 to 14
 - OS: Linux, macOS, Windows
 
