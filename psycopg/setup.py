@@ -37,18 +37,18 @@ extras_require = {
     ],
     # Requirements to run the test suite
     "test": [
-        "mypy >= 0.812",
-        "pproxy >= 2.7, < 2.8",
-        "pytest >= 6.2.4, < 6.3",
-        "pytest-asyncio >= 0.15.0, < 0.16",
-        "pytest-randomly >= 3.7, < 3.8",
-        "tenacity >= 7, < 7.1",
+        "mypy >= 0.910",
+        "pproxy ~= 2.7.8",
+        "pytest ~= 6.2.5",
+        "pytest-asyncio ~= 0.15.1",
+        "pytest-randomly ~= 3.10.1",
+        "tenacity ~= 8.0.1",
     ],
     # Requirements needed for development
     "dev": [
         "black",
         "flake8 ~= 3.9.2",
-        "mypy >= 0.812",
+        "mypy >= 0.910",
         "wheel",
     ],
     # Requirements needed to build the documentation
