@@ -113,8 +113,17 @@ def test_info(dsn, pgconn):
     assert dbname.dispsize == 20
 
     parsed = pq.Conninfo.parse(dsn.encode())
-    name = [o.val for o in parsed if o.keyword == b"dbname"][0]
-    user = [o.val for o in parsed if o.keyword == b"user"][0]
+    # take the name and the user either from params or from env vars
+    name = [
+        o.val or os.environ.get(o.envvar.decode(), "").encode()
+        for o in parsed
+        if o.keyword == b"dbname"
+    ][0]
+    user = [
+        o.val or os.environ.get(o.envvar.decode(), "").encode()
+        for o in parsed
+        if o.keyword == b"user"
+    ][0]
     assert dbname.val == (name or user)
 
     pgconn.finish()

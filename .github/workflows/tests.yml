@@ -15,11 +15,11 @@ jobs:
         include:
           - {impl: python, python: 3.6, image: "postgres:10"}
           - {impl: python, python: 3.7, image: "postgres:11"}
-          - {impl: python, python: 3.8, image: "postgres:12"}
-          - {impl: python, python: 3.9, image: "postgres:13"}
-          - {impl: c, python: 3.6, image: "postgres:13"}
-          - {impl: c, python: 3.7, image: "postgres:12"}
-          - {impl: c, python: 3.8, image: "postgres:11"}
+          - {impl: python, python: 3.8, image: "postgres:13"}
+          - {impl: python, python: 3.9, image: "postgres:14rc1"}
+          - {impl: c, python: 3.6, image: "postgres:14rc1"}
+          - {impl: c, python: 3.7, image: "postgres:13"}
+          - {impl: c, python: 3.8, image: "postgres:12"}
           - {impl: c, python: 3.9, image: "postgres:10"}
           - {impl: dns, python: 3.9, image: "postgres:13"}
           - {impl: postgis, python: 3.9, image: "postgis/postgis:13-master"}

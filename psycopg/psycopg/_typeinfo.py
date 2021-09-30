@@ -8,7 +8,7 @@ information to the adapters if needed.
 # Copyright (C) 2020-2021 The Psycopg Team
 
 from typing import Any, Dict, Iterator, Optional, overload
-from typing import Sequence, Type, TypeVar, Union, TYPE_CHECKING
+from typing import Sequence, Tuple, Type, TypeVar, Union, TYPE_CHECKING
 
 from . import errors as e
 from .abc import AdaptContext
@@ -82,17 +82,17 @@ class TypeInfo:
         if isinstance(name, Composable):
             name = name.as_string(conn)
 
-        cur = conn.cursor(binary=True, row_factory=dict_row)
         # This might result in a nested transaction. What we want is to leave
         # the function with the connection in the state we found (either idle
         # or intrans)
         try:
             with conn.transaction():
-                cur.execute(cls._info_query, {"name": name})
+                with conn.cursor(binary=True, row_factory=dict_row) as cur:
+                    cur.execute(cls._get_info_query(conn), {"name": name})
+                    recs = cur.fetchall()
         except e.UndefinedObject:
             return None
 
-        recs = cur.fetchall()
         return cls._from_records(name, recs)
 
     @classmethod
@@ -111,14 +111,18 @@ class TypeInfo:
         if isinstance(name, Composable):
             name = name.as_string(conn)
 
-        cur = conn.cursor(binary=True, row_factory=dict_row)
         try:
             async with conn.transaction():
-                await cur.execute(cls._info_query, {"name": name})
+                async with conn.cursor(
+                    binary=True, row_factory=dict_row
+                ) as cur:
+                    await cur.execute(
+                        cls._get_info_query(conn), {"name": name}
+                    )
+                    recs = await cur.fetchall()
         except e.UndefinedObject:
             return None
 
-        recs = await cur.fetchall()
         return cls._from_records(name, recs)
 
     @classmethod
@@ -152,7 +156,11 @@ class TypeInfo:
 
             register_array(self, context)
 
-    _info_query = """\
+    @classmethod
+    def _get_info_query(
+        cls, conn: "Union[Connection[Any], AsyncConnection[Any]]"
+    ) -> str:
+        return """\
 SELECT
     typname AS name, oid, typarray AS array_oid,
     oid::regtype::text AS alt_name, typdelim AS delimiter
@@ -175,7 +183,11 @@ class RangeInfo(TypeInfo):
         super().__init__(name, oid, array_oid)
         self.subtype_oid = subtype_oid
 
-    _info_query = """\
+    @classmethod
+    def _get_info_query(
+        cls, conn: "Union[Connection[Any], AsyncConnection[Any]]"
+    ) -> str:
+        return """\
 SELECT t.typname AS name, t.oid AS oid, t.typarray AS array_oid,
     r.rngsubtype AS subtype_oid
 FROM pg_type t
@@ -184,9 +196,48 @@ WHERE t.oid = %(name)s::regtype
 """
 
     def _added(self, registry: "TypesRegistry") -> None:
-        """Method called by the *registry* when the object is added there."""
         # Map ranges subtypes to info
-        registry._by_range_subtype[self.subtype_oid] = self
+        registry._registry[RangeInfo, self.subtype_oid] = self
+
+
+class MultirangeInfo(TypeInfo):
+    """Manage information about a multirange type."""
+
+    # TODO: expose to multirange module once added
+    # __module__ = "psycopg.types.multirange"
+
+    def __init__(
+        self,
+        name: str,
+        oid: int,
+        array_oid: int,
+        range_oid: int,
+        subtype_oid: int,
+    ):
+        super().__init__(name, oid, array_oid)
+        self.range_oid = range_oid
+        self.subtype_oid = subtype_oid
+
+    @classmethod
+    def _get_info_query(
+        cls, conn: "Union[Connection[Any], AsyncConnection[Any]]"
+    ) -> str:
+        if conn.info.server_version < 140000:
+            raise e.NotSupportedError(
+                "multirange types are only available from PostgreSQL 14"
+            )
+        return """\
+SELECT t.typname AS name, t.oid AS oid, t.typarray AS array_oid,
+    r.rngtypid AS range_oid, r.rngsubtype AS subtype_oid
+FROM pg_type t
+JOIN pg_range r ON t.oid = r.rngmultitypid
+WHERE t.oid = %(name)s::regtype
+"""
+
+    def _added(self, registry: "TypesRegistry") -> None:
+        # Map multiranges ranges and subtypes to info
+        registry._registry[MultirangeInfo, self.range_oid] = self
+        registry._registry[MultirangeInfo, self.subtype_oid] = self
 
 
 class CompositeInfo(TypeInfo):
@@ -208,7 +259,11 @@ class CompositeInfo(TypeInfo):
         # Will be set by register() if the `factory` is a type
         self.python_type: Optional[type] = None
 
-    _info_query = """\
+    @classmethod
+    def _get_info_query(
+        cls, conn: "Union[Connection[Any], AsyncConnection[Any]]"
+    ) -> str:
+        return """\
 SELECT
     t.typname AS name, t.oid AS oid, t.typarray AS array_oid,
     coalesce(a.fnames, '{}') AS field_names,
@@ -234,6 +289,9 @@ WHERE t.oid = %(name)s::regtype
 """
 
 
+RegistryKey = Union[str, int, Tuple[type, int]]
+
+
 class TypesRegistry:
     """
     Container for the information about types in a database.
@@ -242,49 +300,51 @@ class TypesRegistry:
     __module__ = "psycopg.types"
 
     def __init__(self, template: Optional["TypesRegistry"] = None):
-        self._by_oid: Dict[int, TypeInfo]
-        self._by_name: Dict[str, TypeInfo]
-        self._by_range_subtype: Dict[int, TypeInfo]
+        self._registry: Dict[RegistryKey, TypeInfo]
 
         # Make a shallow copy: it will become a proper copy if the registry
         # is edited.
         if template:
-            self._by_oid = template._by_oid
-            self._by_name = template._by_name
-            self._by_range_subtype = template._by_range_subtype
+            self._registry = template._registry
             self._own_state = False
             template._own_state = False
         else:
             self.clear()
 
     def clear(self) -> None:
-        self._by_oid = {}
-        self._by_name = {}
-        self._by_range_subtype = {}
+        self._registry = {}
         self._own_state = True
 
     def add(self, info: TypeInfo) -> None:
         self._ensure_own_state()
         if info.oid:
-            self._by_oid[info.oid] = info
+            self._registry[info.oid] = info
         if info.array_oid:
-            self._by_oid[info.array_oid] = info
-        self._by_name[info.name] = info
+            self._registry[info.array_oid] = info
+        self._registry[info.name] = info
 
-        if info.alt_name and info.alt_name not in self._by_name:
-            self._by_name[info.alt_name] = info
+        if info.alt_name and info.alt_name not in self._registry:
+            self._registry[info.alt_name] = info
 
         # Allow info to customise further their relation with the registry
         info._added(self)
 
     def __iter__(self) -> Iterator[TypeInfo]:
         seen = set()
-        for t in self._by_oid.values():
+        for t in self._registry.values():
             if t.oid not in seen:
                 seen.add(t.oid)
                 yield t
 
+    @overload
     def __getitem__(self, key: Union[str, int]) -> TypeInfo:
+        ...
+
+    @overload
+    def __getitem__(self, key: Tuple[Type[T], int]) -> T:
+        ...
+
+    def __getitem__(self, key: RegistryKey) -> TypeInfo:
         """
         Return info about a type, specified by name or oid
 
@@ -292,23 +352,29 @@ class TypesRegistry:
 
         Raise KeyError if not found.
         """
+        if isinstance(key, str):
+            if key.endswith("[]"):
+                key = key[:-2]
+        elif not isinstance(key, (int, tuple)):
+            raise TypeError(
+                f"the key must be an oid or a name, got {type(key)}"
+            )
         try:
-            if isinstance(key, str):
-                if key.endswith("[]"):
-                    key = key[:-2]
-                return self._by_name[key]
-            elif isinstance(key, int):
-                return self._by_oid[key]
-            else:
-                raise TypeError(
-                    f"the key must be an oid or a name, got {type(key)}"
-                )
+            return self._registry[key]
         except KeyError:
             raise KeyError(
                 f"couldn't find the type {key!r} in the types registry"
             )
 
+    @overload
     def get(self, key: Union[str, int]) -> Optional[TypeInfo]:
+        ...
+
+    @overload
+    def get(self, key: Tuple[Type[T], int]) -> Optional[T]:
+        ...
+
+    def get(self, key: RegistryKey) -> Optional[TypeInfo]:
         """
         Return info about a type, specified by name or oid
 
@@ -337,22 +403,22 @@ class TypesRegistry:
         else:
             return t.oid
 
-    def get_range(self, key: Union[str, int]) -> Optional[TypeInfo]:
+    def get_by_subtype(
+        self, cls: Type[T], subtype: Union[int, str]
+    ) -> Optional[T]:
         """
-        Return info about a range by its element name or oid
+        Return info about a TypeInfo subclass by its element name or oid
 
         Return None if the element or its range are not found.
         """
         try:
-            info = self[key]
+            info = self[subtype]
         except KeyError:
             return None
-        return self._by_range_subtype.get(info.oid)
+        return self.get((cls, info.oid))
 
     def _ensure_own_state(self) -> None:
         # Time to write! so, copy.
         if not self._own_state:
-            self._by_oid = self._by_oid.copy()
-            self._by_name = self._by_name.copy()
-            self._by_range_subtype = self._by_range_subtype.copy()
+            self._registry = self._registry.copy()
             self._own_state = True

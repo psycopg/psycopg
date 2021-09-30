@@ -307,10 +307,8 @@ class BaseRangeDumper(RecursiveDumper):
     def _get_range_oid(self, sub_oid: int) -> int:
         """
         Return the oid of the range from the oid of its elements.
-
-        Raise InterfaceError if not found.
         """
-        info = self._tx.adapters.types.get_range(sub_oid)
+        info = self._tx.adapters.types.get_by_subtype(RangeInfo, sub_oid)
         return info.oid if info else INVALID_OID
 
 
