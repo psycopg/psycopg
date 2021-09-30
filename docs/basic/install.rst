@@ -3,12 +3,38 @@
 Installation
 ============
 
-In short::
+In short, if you use a :ref:`supported system<supported-systems>`::
 
     pip install --upgrade pip           # upgrade pip to at least 20.3
     pip install --pre psycopg[binary]
 
-and you should be :ref:`ready to start <module-usage>`.
+and you should be :ref:`ready to start <module-usage>`. Read further for
+alternative ways to install.
+
+
+.. _supported-systems:
+
+Supported systems
+-----------------
+
+The psycopg version documented here has *official and tested* support for:
+
+- Python: from version 3.6 to 3.9
+- PostgreSQL: from version 10 to 14
+- OS: Linux, macOS, Windows
+
+The tests to verify the supported systems run in `Github workflows`__:
+anything that is not tested there is not officially supported. This includes:
+
+.. __: https://github.com/psycopg/psycopg/actions
+
+- Unofficial Python distributions such as Conda;
+- Alternative PostgreSQL implementation;
+- macOS hardware and releases not available on Github workflows.
+
+If you use an unsupported system things may work (because, for instance, the
+database may use the same wire protocol as PostgreSQL) but we cannot guarantee
+the correct working or a smooth ride.
 
 
 .. _binary-install:
