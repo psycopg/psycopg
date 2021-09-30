@@ -61,19 +61,33 @@ where
 order by typname
 """
 
+py_multiranges_sql = """
+select
+    format('MultirangeInfo(%L, %s, %s, range_oid=%s, subtype_oid=%s),',
+        typname, oid, typarray, rngtypid, rngsubtype)
+from
+    pg_type t
+    join pg_range r on t.oid = rngmultitypid
+where
+    oid < 10000
+    and typtype = 'm'
+    and (typname !~ '^(_|pg_)' or typname = 'pg_lsn')
+order by typname
+"""
+
 cython_oids_sql = """
 select format('%s_OID = %s', upper(typname), oid)
 from pg_type
 where
     oid < 10000
-    and (typtype = any('{b,r}') or typname = 'record')
+    and (typtype = any('{b,r,m}') or typname = 'record')
     and (typname !~ '^(_|pg_)' or typname = 'pg_lsn')
 order by typname
 """
 
 
 def update_python_oids() -> None:
-    queries = [version_sql, py_types_sql, py_ranges_sql]
+    queries = [version_sql, py_types_sql, py_ranges_sql, py_multiranges_sql]
     fn = ROOT / "psycopg/psycopg/postgres.py"
     update_file(fn, queries)
     sp.check_call(["black", "-q", fn])

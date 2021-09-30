@@ -82,17 +82,17 @@ class TypeInfo:
         if isinstance(name, Composable):
             name = name.as_string(conn)
 
-        cur = conn.cursor(binary=True, row_factory=dict_row)
         # This might result in a nested transaction. What we want is to leave
         # the function with the connection in the state we found (either idle
         # or intrans)
         try:
             with conn.transaction():
-                cur.execute(cls._info_query, {"name": name})
+                with conn.cursor(binary=True, row_factory=dict_row) as cur:
+                    cur.execute(cls._get_info_query(conn), {"name": name})
+                    recs = cur.fetchall()
         except e.UndefinedObject:
             return None
 
-        recs = cur.fetchall()
         return cls._from_records(name, recs)
 
     @classmethod
@@ -111,14 +111,18 @@ class TypeInfo:
         if isinstance(name, Composable):
             name = name.as_string(conn)
 
-        cur = conn.cursor(binary=True, row_factory=dict_row)
         try:
             async with conn.transaction():
-                await cur.execute(cls._info_query, {"name": name})
+                async with conn.cursor(
+                    binary=True, row_factory=dict_row
+                ) as cur:
+                    await cur.execute(
+                        cls._get_info_query(conn), {"name": name}
+                    )
+                    recs = await cur.fetchall()
         except e.UndefinedObject:
             return None
 
-        recs = await cur.fetchall()
         return cls._from_records(name, recs)
 
     @classmethod
@@ -152,7 +156,11 @@ class TypeInfo:
 
             register_array(self, context)
 
-    _info_query = """\
+    @classmethod
+    def _get_info_query(
+        cls, conn: "Union[Connection[Any], AsyncConnection[Any]]"
+    ) -> str:
+        return """\
 SELECT
     typname AS name, oid, typarray AS array_oid,
     oid::regtype::text AS alt_name, typdelim AS delimiter
@@ -175,7 +183,11 @@ class RangeInfo(TypeInfo):
         super().__init__(name, oid, array_oid)
         self.subtype_oid = subtype_oid
 
-    _info_query = """\
+    @classmethod
+    def _get_info_query(
+        cls, conn: "Union[Connection[Any], AsyncConnection[Any]]"
+    ) -> str:
+        return """\
 SELECT t.typname AS name, t.oid AS oid, t.typarray AS array_oid,
     r.rngsubtype AS subtype_oid
 FROM pg_type t
@@ -184,9 +196,48 @@ WHERE t.oid = %(name)s::regtype
 """
 
     def _added(self, registry: "TypesRegistry") -> None:
-        """Method called by the *registry* when the object is added there."""
         # Map ranges subtypes to info
         registry._registry[RangeInfo, self.subtype_oid] = self
+
+
+class MultirangeInfo(TypeInfo):
+    """Manage information about a multirange type."""
+
+    # TODO: expose to multirange module once added
+    # __module__ = "psycopg.types.multirange"
+
+    def __init__(
+        self,
+        name: str,
+        oid: int,
+        array_oid: int,
+        range_oid: int,
+        subtype_oid: int,
+    ):
+        super().__init__(name, oid, array_oid)
+        self.range_oid = range_oid
+        self.subtype_oid = subtype_oid
+
+    @classmethod
+    def _get_info_query(
+        cls, conn: "Union[Connection[Any], AsyncConnection[Any]]"
+    ) -> str:
+        if conn.info.server_version < 140000:
+            raise e.NotSupportedError(
+                "multirange types are only available from PostgreSQL 14"
+            )
+        return """\
+SELECT t.typname AS name, t.oid AS oid, t.typarray AS array_oid,
+    r.rngtypid AS range_oid, r.rngsubtype AS subtype_oid
+FROM pg_type t
+JOIN pg_range r ON t.oid = r.rngmultitypid
+WHERE t.oid = %(name)s::regtype
+"""
+
+    def _added(self, registry: "TypesRegistry") -> None:
+        # Map multiranges ranges and subtypes to info
+        registry._registry[MultirangeInfo, self.range_oid] = self
+        registry._registry[MultirangeInfo, self.subtype_oid] = self
 
 
 class CompositeInfo(TypeInfo):
@@ -208,7 +259,11 @@ class CompositeInfo(TypeInfo):
         # Will be set by register() if the `factory` is a type
         self.python_type: Optional[type] = None
 
-    _info_query = """\
+    @classmethod
+    def _get_info_query(
+        cls, conn: "Union[Connection[Any], AsyncConnection[Any]]"
+    ) -> str:
+        return """\
 SELECT
     t.typname AS name, t.oid AS oid, t.typarray AS array_oid,
     coalesce(a.fnames, '{}') AS field_names,
