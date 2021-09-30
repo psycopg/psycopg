@@ -16,12 +16,15 @@ jobs:
         include:
           - {impl: python, python: "3.6", postgres: "postgres:10"}
           - {impl: python, python: "3.7", postgres: "postgres:11"}
-          - {impl: python, python: "3.8", postgres: "postgres:13"}
+          - {impl: python, python: "3.8", postgres: "postgres:12"}
+          # Don't test two experimental things together
           - {impl: python, python: "3.9", postgres: "postgres:14rc1"}
+          - {impl: python, python: "3.10", postgres: "postgres:13"}
           - {impl: c, python: "3.6", postgres: "postgres:14rc1"}
           - {impl: c, python: "3.7", postgres: "postgres:13"}
           - {impl: c, python: "3.8", postgres: "postgres:12"}
-          - {impl: c, python: "3.9", postgres: "postgres:10"}
+          - {impl: c, python: "3.9", postgres: "postgres:11"}
+          - {impl: c, python: "3.10", postgres: "postgres:10"}
           - {impl: dns, python: "3.9", postgres: "postgres:13"}
           - {impl: postgis, python: "3.9", postgres: "postgis/postgis:13-master"}
 
@@ -36,6 +39,12 @@ jobs:
       - uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python }}
+        if: ${{ matrix.python != '3.10' }}
+
+      - uses: actions/setup-python@v2
+        with:
+          python-version: "3.10.0-alpha - 3.10.0"
+        if: ${{ matrix.python == '3.10' }}
 
       - name: Install tox
         run: pip install tox
@@ -93,10 +102,12 @@ jobs:
           - {impl: python, python: "3.7"}
           - {impl: python, python: "3.8"}
           - {impl: python, python: "3.9"}
+          - {impl: python, python: "3.10"}
           - {impl: c, python: "3.6"}
           - {impl: c, python: "3.7"}
           - {impl: c, python: "3.8"}
           - {impl: c, python: "3.9"}
+          - {impl: c, python: "3.10"}
 
     env:
       PSYCOPG_IMPL: ${{ matrix.impl }}
@@ -118,6 +129,12 @@ jobs:
       - uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python }}
+        if: ${{ matrix.python != '3.10' }}
+
+      - uses: actions/setup-python@v2
+        with:
+          python-version: "3.10.0-alpha - 3.10.0"
+        if: ${{ matrix.python == '3.10' }}
 
       - name: Install tox
         run: pip install tox
@@ -145,10 +162,12 @@ jobs:
           - {impl: python, python: "3.7"}
           - {impl: python, python: "3.8"}
           - {impl: python, python: "3.9"}
+          - {impl: python, python: "3.10"}
           - {impl: c, python: "3.6"}
           - {impl: c, python: "3.7"}
           - {impl: c, python: "3.8"}
           - {impl: c, python: "3.9"}
+          - {impl: c, python: "3.10"}
 
     env:
       PSYCOPG_IMPL: ${{ matrix.impl }}
@@ -168,6 +187,12 @@ jobs:
       - uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python }}
+        if: ${{ matrix.python != '3.10' }}
+
+      - uses: actions/setup-python@v2
+        with:
+          python-version: "3.10.0-alpha - 3.10.0"
+        if: ${{ matrix.python == '3.10' }}
 
       - name: Install tox
         run: pip install tox wheel
