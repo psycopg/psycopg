@@ -281,7 +281,15 @@ class TypesRegistry:
                 seen.add(t.oid)
                 yield t
 
+    @overload
     def __getitem__(self, key: Union[str, int]) -> TypeInfo:
+        ...
+
+    @overload
+    def __getitem__(self, key: Tuple[Type[T], int]) -> T:
+        ...
+
+    def __getitem__(self, key: RegistryKey) -> TypeInfo:
         """
         Return info about a type, specified by name or oid
 
@@ -292,7 +300,7 @@ class TypesRegistry:
         if isinstance(key, str):
             if key.endswith("[]"):
                 key = key[:-2]
-        elif not isinstance(key, int):
+        elif not isinstance(key, (int, tuple)):
             raise TypeError(
                 f"the key must be an oid or a name, got {type(key)}"
             )
@@ -303,7 +311,15 @@ class TypesRegistry:
                 f"couldn't find the type {key!r} in the types registry"
             )
 
+    @overload
     def get(self, key: Union[str, int]) -> Optional[TypeInfo]:
+        ...
+
+    @overload
+    def get(self, key: Tuple[Type[T], int]) -> Optional[T]:
+        ...
+
+    def get(self, key: RegistryKey) -> Optional[TypeInfo]:
         """
         Return info about a type, specified by name or oid
 
@@ -332,17 +348,19 @@ class TypesRegistry:
         else:
             return t.oid
 
-    def get_range(self, key: Union[str, int]) -> Optional[TypeInfo]:
+    def get_by_subtype(
+        self, cls: Type[T], subtype: Union[int, str]
+    ) -> Optional[T]:
         """
-        Return info about a range by its element name or oid
+        Return info about a TypeInfo subclass by its element name or oid
 
         Return None if the element or its range are not found.
         """
         try:
-            info = self[key]
+            info = self[subtype]
         except KeyError:
             return None
-        return self._registry.get((RangeInfo, info.oid))
+        return self.get((cls, info.oid))
 
     def _ensure_own_state(self) -> None:
         # Time to write! so, copy.
