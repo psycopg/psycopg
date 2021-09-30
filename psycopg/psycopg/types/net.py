@@ -19,16 +19,15 @@ Interface = Union["ipaddress.IPv4Interface", "ipaddress.IPv6Interface"]
 Network = Union["ipaddress.IPv4Network", "ipaddress.IPv6Network"]
 
 # These objects will be imported lazily
-imported = False
-ip_address: Callable[[str], Address]
-ip_interface: Callable[[str], Interface]
-ip_network: Callable[[str], Network]
-IPv4Address: "Type[ipaddress.IPv4Address]"
-IPv6Address: "Type[ipaddress.IPv6Address]"
-IPv4Interface: "Type[ipaddress.IPv4Interface]"
-IPv6Interface: "Type[ipaddress.IPv6Interface]"
-IPv4Network: "Type[ipaddress.IPv4Network]"
-IPv6Network: "Type[ipaddress.IPv6Network]"
+ip_address: Callable[[str], Address] = None  # type: ignore[assignment]
+ip_interface: Callable[[str], Interface] = None  # type: ignore[assignment]
+ip_network: Callable[[str], Network] = None  # type: ignore[assignment]
+IPv4Address: "Type[ipaddress.IPv4Address]" = None  # type: ignore[assignment]
+IPv6Address: "Type[ipaddress.IPv6Address]" = None  # type: ignore[assignment]
+IPv4Interface: "Type[ipaddress.IPv4Interface]" = None  # type: ignore[assignment]
+IPv6Interface: "Type[ipaddress.IPv6Interface]" = None  # type: ignore[assignment]
+IPv4Network: "Type[ipaddress.IPv4Network]" = None  # type: ignore[assignment]
+IPv6Network: "Type[ipaddress.IPv6Network]" = None  # type: ignore[assignment]
 
 PGSQL_AF_INET = 2
 PGSQL_AF_INET6 = 3
@@ -38,17 +37,15 @@ IPV6_PREFIXLEN = 128
 
 class _LazyIpaddress:
     def _ensure_module(self) -> None:
-        global imported, ip_address, ip_interface, ip_network
+        global ip_address, ip_interface, ip_network
         global IPv4Address, IPv6Address, IPv4Interface, IPv6Interface
         global IPv4Network, IPv6Network
 
-        if not imported:
+        if not ip_address:
             from ipaddress import ip_address, ip_interface, ip_network
             from ipaddress import IPv4Address, IPv6Address
             from ipaddress import IPv4Interface, IPv6Interface
             from ipaddress import IPv4Network, IPv6Network
-
-            imported = True
 
 
 class InterfaceDumper(Dumper):

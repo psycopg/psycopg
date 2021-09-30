@@ -47,7 +47,7 @@ extras_require = {
     # Requirements needed for development
     "dev": [
         "black",
-        "flake8 >= 3.8, < 3.9",
+        "flake8 ~= 3.9.2",
         "mypy >= 0.812",
         "wheel",
     ],

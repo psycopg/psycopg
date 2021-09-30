@@ -15,8 +15,7 @@ if TYPE_CHECKING:
     import uuid
 
 # Importing the uuid module is slow, so import it only on request.
-imported = False
-UUID: Callable[..., "uuid.UUID"]
+UUID: Callable[..., "uuid.UUID"] = None  # type: ignore[assignment]
 
 
 class UUIDDumper(Dumper):
@@ -38,11 +37,9 @@ class UUIDBinaryDumper(UUIDDumper):
 class UUIDLoader(Loader):
     def __init__(self, oid: int, context: Optional[AdaptContext] = None):
         super().__init__(oid, context)
-        global imported, UUID
-        if not imported:
+        global UUID
+        if not UUID:
             from uuid import UUID
-
-            imported = True
 
     def load(self, data: Buffer) -> "uuid.UUID":
         if isinstance(data, memoryview):
