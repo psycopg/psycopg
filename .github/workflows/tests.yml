@@ -5,7 +5,8 @@ on:
   pull_request:
 
 jobs:
-  linux:
+
+  linux:  # {{{
     name: Test on Linux
     runs-on: ubuntu-20.04
 
@@ -13,16 +14,16 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - {impl: python, python: 3.6, image: "postgres:10"}
-          - {impl: python, python: 3.7, image: "postgres:11"}
-          - {impl: python, python: 3.8, image: "postgres:13"}
-          - {impl: python, python: 3.9, image: "postgres:14rc1"}
-          - {impl: c, python: 3.6, image: "postgres:14rc1"}
-          - {impl: c, python: 3.7, image: "postgres:13"}
-          - {impl: c, python: 3.8, image: "postgres:12"}
-          - {impl: c, python: 3.9, image: "postgres:10"}
-          - {impl: dns, python: 3.9, image: "postgres:13"}
-          - {impl: postgis, python: 3.9, image: "postgis/postgis:13-master"}
+          - {impl: python, python: "3.6", postgres: "postgres:10"}
+          - {impl: python, python: "3.7", postgres: "postgres:11"}
+          - {impl: python, python: "3.8", postgres: "postgres:13"}
+          - {impl: python, python: "3.9", postgres: "postgres:14rc1"}
+          - {impl: c, python: "3.6", postgres: "postgres:14rc1"}
+          - {impl: c, python: "3.7", postgres: "postgres:13"}
+          - {impl: c, python: "3.8", postgres: "postgres:12"}
+          - {impl: c, python: "3.9", postgres: "postgres:10"}
+          - {impl: dns, python: "3.9", postgres: "postgres:13"}
+          - {impl: postgis, python: "3.9", postgres: "postgis/postgis:13-master"}
 
     env:
       PSYCOPG_IMPL: ${{ matrix.impl }}
@@ -65,7 +66,7 @@ jobs:
 
     services:
       postgresql:
-        image: ${{ matrix.image }}
+        image: ${{ matrix.postgres }}
         env:
           POSTGRES_PASSWORD: password
         ports:
@@ -78,7 +79,9 @@ jobs:
           --health-retries 5
 
 
-  macos:
+  # }}}
+
+  macos:  # {{{
     name: Test on MacOS
     runs-on: macos-10.15
 
@@ -86,14 +89,14 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - {impl: python, python: 3.6}
-          - {impl: python, python: 3.7}
-          - {impl: python, python: 3.8}
-          - {impl: python, python: 3.9}
-          - {impl: c, python: 3.6}
-          - {impl: c, python: 3.7}
-          - {impl: c, python: 3.8}
-          - {impl: c, python: 3.9}
+          - {impl: python, python: "3.6"}
+          - {impl: python, python: "3.7"}
+          - {impl: python, python: "3.8"}
+          - {impl: python, python: "3.9"}
+          - {impl: c, python: "3.6"}
+          - {impl: c, python: "3.7"}
+          - {impl: c, python: "3.8"}
+          - {impl: c, python: "3.9"}
 
     env:
       PSYCOPG_IMPL: ${{ matrix.impl }}
@@ -127,7 +130,10 @@ jobs:
         run: tox -c psycopg_c -e ${{ matrix.python }} -- --color yes
         if: ${{ matrix.impl == 'c' }}
 
-  windows:
+
+  # }}}
+
+  windows:  # {{{
     name: Test on Windows
     runs-on: windows-2019
 
@@ -135,14 +141,14 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - {impl: python, python: 3.6}
-          - {impl: python, python: 3.7}
-          - {impl: python, python: 3.8}
-          - {impl: python, python: 3.9}
-          - {impl: c, python: 3.6}
-          - {impl: c, python: 3.7}
-          - {impl: c, python: 3.8}
-          - {impl: c, python: 3.9}
+          - {impl: python, python: "3.6"}
+          - {impl: python, python: "3.7"}
+          - {impl: python, python: "3.8"}
+          - {impl: python, python: "3.9"}
+          - {impl: c, python: "3.6"}
+          - {impl: c, python: "3.7"}
+          - {impl: c, python: "3.8"}
+          - {impl: c, python: "3.9"}
 
     env:
       PSYCOPG_IMPL: ${{ matrix.impl }}
@@ -191,3 +197,6 @@ jobs:
           # Fix the path for the tests using ctypes
           $env:Path = "C:\Program Files\PostgreSQL\13\bin\;$env:Path"
           pytest --color yes
+
+
+  # }}}
