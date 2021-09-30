@@ -179,7 +179,7 @@ jobs:
           $env:Path = "C:\Program Files\PostgreSQL\13\bin\;$env:Path"
           python ./psycopg_c/setup.py bdist_wheel
           pip install delvewheel
-          &"delvewheel" repair --no-mangle libiconv-2.dll @(Get-ChildItem psycopg_c\dist\*.whl)
+          &"delvewheel" repair --no-mangle "libiconv-2.dll;libwinpthread-1.dll" @(Get-ChildItem psycopg_c\dist\*.whl)
 
       # tox will only build the package from sdist, not from wheel, so we can't
       # use it for testing. Just test everything in the global installation.

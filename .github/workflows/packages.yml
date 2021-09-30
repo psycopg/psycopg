@@ -210,7 +210,7 @@ jobs:
           CIBW_ARCHS_WINDOWS: AMD64 x86
           CIBW_BEFORE_BUILD_WINDOWS: pip install delvewheel
           CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: >-
-            delvewheel repair -w {dest_dir} --no-mangle libiconv-2.dll {wheel}
+            delvewheel repair -w {dest_dir} --no-mangle "libiconv-2.dll;libwinpthread-1.dll" {wheel}
           CIBW_TEST_REQUIRES: ./psycopg[test] ./psycopg_pool
           CIBW_TEST_COMMAND: pytest {project}/tests -m "not slow" --color yes
           CIBW_ENVIRONMENT_WINDOWS: >-
