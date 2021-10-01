@@ -17,7 +17,7 @@ from . import abc
 from .misc import ConninfoOption, PGnotify, PGresAttDesc
 from .misc import error_message
 from ._enums import ConnStatus, DiagnosticField, ExecStatus, Format
-from ._enums import Ping, PollingStatus, TransactionStatus
+from ._enums import Ping, PipelineStatus, PollingStatus, TransactionStatus
 
 logger = logging.getLogger(__name__)
 
@@ -115,6 +115,7 @@ import_from_libpq()
 
 __all__ = (
     "ConnStatus",
+    "PipelineStatus",
     "PollingStatus",
     "TransactionStatus",
     "ExecStatus",

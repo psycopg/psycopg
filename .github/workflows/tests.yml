@@ -14,19 +14,19 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - {impl: python, python: "3.6", postgres: "postgres:10"}
-          - {impl: python, python: "3.7", postgres: "postgres:11"}
-          - {impl: python, python: "3.8", postgres: "postgres:12"}
+          - {impl: python, python: "3.6", postgres: "postgres:10", libpq: "14"}
+          - {impl: python, python: "3.7", postgres: "postgres:11", libpq: null}
+          - {impl: python, python: "3.8", postgres: "postgres:12", libpq: null}
           # Don't test two experimental things together
-          - {impl: python, python: "3.9", postgres: "postgres:14rc1"}
-          - {impl: python, python: "3.10", postgres: "postgres:13"}
-          - {impl: c, python: "3.6", postgres: "postgres:14rc1"}
-          - {impl: c, python: "3.7", postgres: "postgres:13"}
-          - {impl: c, python: "3.8", postgres: "postgres:12"}
-          - {impl: c, python: "3.9", postgres: "postgres:11"}
-          - {impl: c, python: "3.10", postgres: "postgres:10"}
-          - {impl: dns, python: "3.9", postgres: "postgres:13"}
-          - {impl: postgis, python: "3.9", postgres: "postgis/postgis:13-master"}
+          - {impl: python, python: "3.9", postgres: "postgres:14", libpq: "14"}
+          - {impl: python, python: "3.10", postgres: "postgres:13", libpq: null}
+          - {impl: c, python: "3.6", postgres: "postgres:14", libpq: null}
+          - {impl: c, python: "3.7", postgres: "postgres:13", libpq: "14"}
+          - {impl: c, python: "3.8", postgres: "postgres:12", libpq: "14"}
+          - {impl: c, python: "3.9", postgres: "postgres:11", libpq: "14"}
+          - {impl: c, python: "3.10", postgres: "postgres:10", libpq: null}
+          - {impl: dns, python: "3.9", postgres: "postgres:13", libpq: null}
+          - {impl: postgis, python: "3.9", postgres: "postgis/postgis:13-master", libpq: null}
 
     env:
       PSYCOPG_IMPL: ${{ matrix.impl }}
@@ -45,6 +45,13 @@ jobs:
         with:
           python-version: "3.10.0-alpha - 3.10.0"
         if: ${{ matrix.python == '3.10' }}
+
+      - name: Install libpq 14
+        if: ${{ matrix.libpq == '14' }}
+        run: |
+          echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -c -s)-pgdg main" | sudo tee -a /etc/apt/sources.list.d/pgdg.list
+          sudo apt-get -qq update
+          sudo apt-get -y install libpq-dev>=14 libpq5>=14
 
       - name: Install tox
         run: pip install tox

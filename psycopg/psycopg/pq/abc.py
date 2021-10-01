@@ -4,10 +4,10 @@ Protocol objects to represent objects exposed by different pq implementations.
 
 # Copyright (C) 2020-2021 The Psycopg Team
 
-from typing import Any, Callable, List, Optional, Sequence, Tuple, Union
-from typing import TYPE_CHECKING
+from typing import Any, Callable, List, Optional, Sequence, Tuple
+from typing import Union, TYPE_CHECKING
 
-from ._enums import Format
+from ._enums import Format, PipelineStatus
 from .._compat import Protocol
 
 if TYPE_CHECKING:
@@ -240,6 +240,18 @@ class PGconn(Protocol):
         ...
 
     def make_empty_result(self, exec_status: int) -> "PGresult":
+        ...
+
+    def pipeline_status(self) -> PipelineStatus:
+        ...
+
+    def enter_pipeline_mode(self) -> None:
+        ...
+
+    def exit_pipeline_mode(self) -> None:
+        ...
+
+    def pipeline_sync(self) -> None:
         ...
 
 

@@ -102,6 +102,23 @@ class ExecStatus(IntEnum):
     query.
     """
 
+    PIPELINE_SYNC = auto()
+    """
+    The PGresult represents a synchronization point in pipeline mode,
+    requested by PQpipelineSync.
+
+    This status occurs only when pipeline mode has been selected.
+    """
+
+    PIPELINE_ABORTED = auto()
+    """
+    The PGresult represents a pipeline that has received an error from the server.
+
+    PQgetResult must be called repeatedly, and each time it will return this
+    status code until the end of the current pipeline, at which point it will
+    return PGRES_PIPELINE_SYNC and normal processing can resume.
+    """
+
 
 class TransactionStatus(IntEnum):
     """
@@ -149,6 +166,27 @@ class Ping(IntEnum):
     NO_ATTEMPT = auto()
     """
     No attempt was made to contact the server.
+    """
+
+
+class PipelineStatus(IntEnum):
+    """Pipeline mode status of the libpq connection."""
+
+    __module__ = "psycopg.pq"
+
+    OFF = 0
+    """
+    The libpq connection is *not* in pipeline mode.
+    """
+    ON = auto()
+    """
+    The libpq connection is in pipeline mode.
+    """
+    ABORTED = auto()
+    """
+    The libpq connection is in pipeline mode and an error occurred while
+    processing the current pipeline. The aborted flag is cleared when
+    PQgetResult returns a result of type PGRES_PIPELINE_SYNC.
     """
 
 

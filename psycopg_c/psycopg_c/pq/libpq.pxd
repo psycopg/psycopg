@@ -267,6 +267,18 @@ cdef extern from "libpq-fe.h":
     # 33.18. SSL Support
     void PQinitOpenSSL(int do_ssl, int do_crypto)
 
+    # 34.5 Pipeline Mode
+
+    ctypedef enum PGpipelineStatus:
+        PQ_PIPELINE_OFF
+        PQ_PIPELINE_ON
+        PQ_PIPELINE_ABORTED
+
+    PGpipelineStatus PQpipelineStatus(const PGconn *conn)
+    int PQenterPipelineMode(PGconn *conn)
+    int PQexitPipelineMode(PGconn *conn)
+    int PQpipelineSync(PGconn *conn)
+    int PQsendFlushRequest(PGconn *conn)
 
 cdef extern from *:
     """
@@ -277,5 +289,18 @@ cdef extern from *:
 
 #if PG_VERSION_NUM < 120000
 #define PQhostaddr(conn) NULL
+#endif
+
+#if PG_VERSION_NUM < 140000
+typedef enum {
+    PQ_PIPELINE_OFF,
+    PQ_PIPELINE_ON,
+    PQ_PIPELINE_ABORTED
+} PGpipelineStatus;
+#define PQpipelineStatus(conn) NULL
+#define PQenterPipelineMode(conn) NULL
+#define PQexitPipelineMode(conn) NULL
+#define PQpipelineSync(conn) NULL
+#define PQsendFlushRequest(conn) NULL
 #endif
 """
