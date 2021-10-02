@@ -23,6 +23,14 @@ def pytest_configure(config):
     )
 
 
+def pytest_runtest_setup(item):
+    # Copy the want marker on the function so we can check the version
+    # after the connection has been created.
+    want_ver = [m.args[0] for m in item.iter_markers() if m.name == "pg"]
+    if want_ver:
+        item.function.want_pg_version = want_ver[0]
+
+
 @pytest.fixture(scope="session")
 def dsn(request):
     """Return the dsn used to connect to the `--test-dsn` database."""
@@ -133,11 +141,9 @@ class ListPopAll(list):
 
 
 def check_connection_version(got, function):
-    if not hasattr(function, "pytestmark"):
+    if not hasattr(function, "want_pg_version"):
         return
-    want = [m.args[0] for m in function.pytestmark if m.name == "pg"]
-    if want:
-        return check_server_version(got, want[0])
+    return check_server_version(got, function.want_pg_version)
 
 
 @pytest.fixture
