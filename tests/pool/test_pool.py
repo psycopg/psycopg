@@ -573,7 +573,7 @@ def test_del_no_warning(dsn, recwarn):
     ref = weakref.ref(p)
     del p
     assert not ref()
-    assert not recwarn
+    assert not recwarn, [str(w.message) for w in recwarn.list]
 
 
 @pytest.mark.slow

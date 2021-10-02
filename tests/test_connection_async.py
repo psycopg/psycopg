@@ -100,7 +100,7 @@ async def test_connection_warn_close(dsn, recwarn):
     conn = await AsyncConnection.connect(dsn)
     await conn.close()
     del conn
-    assert not recwarn
+    assert not recwarn, [str(w.message) for w in recwarn.list]
 
     conn = await AsyncConnection.connect(dsn)
     del conn
@@ -122,7 +122,7 @@ async def test_connection_warn_close(dsn, recwarn):
     async with await AsyncConnection.connect(dsn) as conn:
         pass
     del conn
-    assert not recwarn
+    assert not recwarn, [str(w.message) for w in recwarn.list]
 
 
 async def test_context_commit(aconn, dsn):

@@ -93,7 +93,7 @@ def test_connection_warn_close(dsn, recwarn):
     conn = Connection.connect(dsn)
     conn.close()
     del conn
-    assert not recwarn
+    assert not recwarn, [str(w.message) for w in recwarn.list]
 
     conn = Connection.connect(dsn)
     del conn
@@ -115,7 +115,7 @@ def test_connection_warn_close(dsn, recwarn):
     with Connection.connect(dsn) as conn:
         pass
     del conn
-    assert not recwarn
+    assert not recwarn, [str(w.message) for w in recwarn.list]
 
 
 def test_context_commit(conn, dsn):
