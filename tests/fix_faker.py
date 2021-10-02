@@ -340,7 +340,11 @@ class Faker:
         return self.schema_time(cls)
 
     def make_datetime(self, spec):
-        delta = dt.datetime.max - dt.datetime.min
+        # Comparisons might get unreliable too far in the future
+        # https://bugs.python.org/issue45347
+        # delta = dt.datetime.max - dt.datetime.min
+        delta = dt.timedelta(days=3000 * 365)
+
         micros = randrange((delta.days + 1) * 24 * 60 * 60 * 1_000_000)
         rv = dt.datetime.min + dt.timedelta(microseconds=micros)
         if spec[1]:
@@ -404,7 +408,7 @@ class Faker:
         return spec(self.make_float(spec, double=False))
 
     def match_Float4(self, spec, got, want):
-        return self.match_float(spec, got, want, approx=True, rel=1e-5)
+        self.match_float(spec, got, want, approx=True, rel=1e-5)
 
     def make_Float8(self, spec):
         return spec(self.make_float(spec))
@@ -462,7 +466,7 @@ class Faker:
         return spec(self._make_json())
 
     def match_Jsonb(self, spec, got, want):
-        return self.match_Json(spec, got, want)
+        self.match_Json(spec, got, want)
 
     def make_JsonFloat(self, spec):
         # A float limited to what json accepts
@@ -497,7 +501,7 @@ class Faker:
         assert len(got) == len(want)
         m = self.get_matcher(spec[1])
         for g, w in zip(got, want):
-            m(spec, g, w)
+            m(spec[1], g, w)
 
     def make_memoryview(self, spec):
         return self.make_bytes(spec)
@@ -584,7 +588,25 @@ class Faker:
         if want.upper is None and want.upper_inc:
             want = type(want)(want.lower, want.upper, want.bounds[0] + ")")
 
-        return got == want
+        # Normalise discrete ranges
+        if spec[1] is dt.date:
+            unit = dt.timedelta(days=1)
+        elif type(spec[1]) is type and issubclass(spec[1], int):
+            unit = 1
+        else:
+            unit = None
+
+        if unit is not None:
+            if want.lower is not None and not want.lower_inc:
+                want = type(want)(
+                    want.lower + unit, want.upper, "[" + want.bounds[1]
+                )
+            if want.upper_inc:
+                want = type(want)(
+                    want.lower, want.upper + unit, want.bounds[0] + ")"
+                )
+
+        assert got == want
 
     def match_Int4Range(self, spec, got, want):
         return self.match_Range((spec, Int4), got, want)
