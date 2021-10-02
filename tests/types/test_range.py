@@ -48,11 +48,14 @@ samples = [
     ),
 ]
 
+range_names = """int4range int8range numrange
+    daterange tsrange tstzrange""".split()
 
-@pytest.mark.parametrize(
-    "pgtype",
-    "int4range int8range numrange daterange tsrange tstzrange".split(),
-)
+range_classes = """Int4Range Int8Range NumericRange
+    DateRange TimestampRange TimestamptzRange""".split()
+
+
+@pytest.mark.parametrize("pgtype", range_names)
 @pytest.mark.parametrize("fmt_in", PyFormat)
 def test_dump_builtin_empty(conn, pgtype, fmt_in):
     r = Range(empty=True)
@@ -60,12 +63,7 @@ def test_dump_builtin_empty(conn, pgtype, fmt_in):
     assert cur.fetchone()[0] is True
 
 
-@pytest.mark.parametrize(
-    "wrapper",
-    """
-    Int4Range Int8Range NumericRange DateRange TimestampRange TimestamptzRange
-    """.split(),
-)
+@pytest.mark.parametrize("wrapper", range_classes)
 @pytest.mark.parametrize("fmt_in", PyFormat)
 def test_dump_builtin_empty_wrapper(conn, wrapper, fmt_in):
     wrapper = getattr(range_module, wrapper)
@@ -74,10 +72,7 @@ def test_dump_builtin_empty_wrapper(conn, wrapper, fmt_in):
     assert cur.fetchone()[0] is True
 
 
-@pytest.mark.parametrize(
-    "pgtype",
-    "int4range int8range numrange daterange tsrange tstzrange".split(),
-)
+@pytest.mark.parametrize("pgtype", range_names)
 @pytest.mark.parametrize(
     "fmt_in",
     [
@@ -103,10 +98,7 @@ def test_dump_builtin_array(conn, pgtype, fmt_in):
     assert cur.fetchone()[0] is True
 
 
-@pytest.mark.parametrize(
-    "pgtype",
-    "int4range int8range numrange daterange tsrange tstzrange".split(),
-)
+@pytest.mark.parametrize("pgtype", range_names)
 @pytest.mark.parametrize("fmt_in", PyFormat)
 def test_dump_builtin_array_with_cast(conn, pgtype, fmt_in):
     r1 = Range(empty=True)
@@ -118,12 +110,7 @@ def test_dump_builtin_array_with_cast(conn, pgtype, fmt_in):
     assert cur.fetchone()[0] is True
 
 
-@pytest.mark.parametrize(
-    "wrapper",
-    """
-    Int4Range Int8Range NumericRange DateRange TimestampRange TimestamptzRange
-    """.split(),
-)
+@pytest.mark.parametrize("wrapper", range_classes)
 @pytest.mark.parametrize("fmt_in", PyFormat)
 def test_dump_builtin_array_wrapper(conn, wrapper, fmt_in):
     wrapper = getattr(range_module, wrapper)
@@ -147,10 +134,7 @@ def test_dump_builtin_range(conn, pgtype, min, max, bounds, fmt_in):
     assert cur.fetchone()[0] is True
 
 
-@pytest.mark.parametrize(
-    "pgtype",
-    "int4range int8range numrange daterange tsrange tstzrange".split(),
-)
+@pytest.mark.parametrize("pgtype", range_names)
 @pytest.mark.parametrize("fmt_out", pq.Format)
 def test_load_builtin_empty(conn, pgtype, fmt_out):
     r = Range(empty=True)
@@ -162,10 +146,7 @@ def test_load_builtin_empty(conn, pgtype, fmt_out):
     assert got.isempty
 
 
-@pytest.mark.parametrize(
-    "pgtype",
-    "int4range int8range numrange daterange tsrange tstzrange".split(),
-)
+@pytest.mark.parametrize("pgtype", range_names)
 @pytest.mark.parametrize("fmt_out", pq.Format)
 def test_load_builtin_inf(conn, pgtype, fmt_out):
     r = Range(bounds="()")
@@ -179,10 +160,7 @@ def test_load_builtin_inf(conn, pgtype, fmt_out):
     assert got.upper_inf
 
 
-@pytest.mark.parametrize(
-    "pgtype",
-    "int4range int8range numrange daterange tsrange tstzrange".split(),
-)
+@pytest.mark.parametrize("pgtype", range_names)
 @pytest.mark.parametrize("fmt_out", pq.Format)
 def test_load_builtin_array(conn, pgtype, fmt_out):
     r1 = Range(empty=True)
@@ -250,12 +228,7 @@ def test_copy_in_empty(conn, min, max, bounds, format):
 
 
 @pytest.mark.parametrize("bounds", "() empty".split())
-@pytest.mark.parametrize(
-    "wrapper",
-    """
-    Int4Range Int8Range NumericRange DateRange TimestampRange TimestamptzRange
-    """.split(),
-)
+@pytest.mark.parametrize("wrapper", range_classes)
 @pytest.mark.parametrize("format", pq.Format)
 def test_copy_in_empty_wrappers(conn, bounds, wrapper, format):
     cur = conn.cursor()
@@ -274,10 +247,7 @@ def test_copy_in_empty_wrappers(conn, bounds, wrapper, format):
 
 
 @pytest.mark.parametrize("bounds", "() empty".split())
-@pytest.mark.parametrize(
-    "pgtype",
-    "int4range int8range numrange daterange tsrange tstzrange".split(),
-)
+@pytest.mark.parametrize("pgtype", range_names)
 @pytest.mark.parametrize("format", pq.Format)
 def test_copy_in_empty_set_type(conn, bounds, pgtype, format):
     cur = conn.cursor()
