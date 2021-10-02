@@ -264,6 +264,8 @@ The `!Connection` class
 
     .. automethod:: fileno
 
+    .. automethod:: pipeline
+
 
     .. _tpc-methods:
 
@@ -444,6 +446,15 @@ The `!AsyncConnection` class
     .. automethod:: set_isolation_level
     .. automethod:: set_read_only
     .. automethod:: set_deferrable
+
+    .. automethod:: pipeline
+
+        .. note::
+
+            It must be called as::
+
+                async with conn.pipeline() as pipeline:
+                    ...
 
     .. automethod:: tpc_prepare
     .. automethod:: tpc_commit
@@ -634,3 +645,13 @@ Connection support objects
         Named of the database in which the transaction was executed.
 
         Only available on recovered transactions.
+
+
+.. autoclass:: Pipeline
+
+   .. automethod:: sync
+
+
+.. autoclass:: AsyncPipeline
+
+   .. automethod:: sync

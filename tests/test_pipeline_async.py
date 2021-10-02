@@ -2,7 +2,7 @@ import asyncio
 
 import pytest
 
-from psycopg import waiting
+from psycopg import pq, waiting
 
 pytestmark = [
     pytest.mark.libpq(">= 14"),
@@ -31,3 +31,14 @@ async def test_pipeline_communicate_async(pgconn, demo_pipeline, generators):
                 continue
             else:
                 next(demo_pipeline, None)
+
+
+async def test_pipeline_status(aconn):
+    async with aconn.pipeline() as p:
+        assert p.status == pq.PipelineStatus.ON
+        await p.sync()
+        r = aconn.pgconn.get_result()
+        assert r.status == pq.ExecStatus.PIPELINE_SYNC
+        r = aconn.pgconn.get_result()
+        assert r is None
+    assert p.status == pq.PipelineStatus.OFF
