@@ -200,7 +200,9 @@ class BaseCursor(Generic[ConnectionType, Row]):
         results = yield from self._maybe_prepare_gen(
             pgq, prepare=prepare, binary=binary
         )
-        self._execute_results(results)
+        if results is not None:
+            # pipeline mode otherwise
+            self._execute_results(results)
         self._last_query = query
 
     def _executemany_gen(
@@ -218,7 +220,9 @@ class BaseCursor(Generic[ConnectionType, Row]):
                 pgq.dump(params)
 
             results = yield from self._maybe_prepare_gen(pgq, prepare=True)
-            self._execute_results(results)
+            if results is not None:
+                # pipeline mode otherwise
+                self._execute_results(results)
 
         self._last_query = query
 
@@ -228,7 +232,8 @@ class BaseCursor(Generic[ConnectionType, Row]):
         *,
         prepare: Optional[bool] = None,
         binary: Optional[bool] = None,
-    ) -> PQGen[Sequence["PGresult"]]:
+    ) -> PQGen[Optional[Sequence["PGresult"]]]:
+        pipeline_mode = self._conn._pipeline_mode
         # Check if the query is prepared or needs preparing
         prep, name = self._conn._prepared.get(pgq, prepare)
         if prep is Prepare.YES:
@@ -242,12 +247,19 @@ class BaseCursor(Generic[ConnectionType, Row]):
         else:
             # The query must be prepared and executed
             self._send_prepare(name, pgq)
-            (result,) = yield from execute(self._pgconn)
-            if result.status == ExecStatus.FATAL_ERROR:
-                raise e.error_from_result(
-                    result, encoding=pgconn_encoding(self._pgconn)
-                )
+            if pipeline_mode:
+                yield from send(self._pgconn)
+            else:
+                (result,) = yield from execute(self._pgconn)
+                if result.status == ExecStatus.FATAL_ERROR:
+                    raise e.error_from_result(
+                        result, encoding=pgconn_encoding(self._pgconn)
+                    )
             self._send_query_prepared(name, pgq, binary=binary)
+
+        if pipeline_mode:
+            yield from send(self._pgconn)
+            return None
 
         # run the query
         results = yield from execute(self._pgconn)
@@ -275,6 +287,9 @@ class BaseCursor(Generic[ConnectionType, Row]):
         self._last_query = query
 
     def _stream_fetchone_gen(self, first: bool) -> PQGen[Optional["PGresult"]]:
+        assert (
+            not self._conn._pipeline_mode
+        ), "pipeline mode not supported"  # TODO
         yield from send(self._pgconn)
         res = yield from fetch(self._pgconn)
         if res is None:

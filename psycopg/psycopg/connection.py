@@ -51,12 +51,14 @@ CursorRow = TypeVar("CursorRow")
 if _psycopg:
     connect = _psycopg.connect
     execute = _psycopg.execute
+    send = _psycopg.send
 
 else:
     from . import generators
 
     connect = generators.connect
     execute = generators.execute
+    send = generators.send
 
 
 class Notify(NamedTuple):
@@ -422,7 +424,7 @@ class BaseConnection(Generic[Row]):
 
     def _exec_command(
         self, command: Query, result_format: Format = Format.TEXT
-    ) -> PQGen["PGresult"]:
+    ) -> PQGen[Optional["PGresult"]]:
         """
         Generator to send a command and receive the result to the backend.
 
@@ -448,6 +450,10 @@ class BaseConnection(Generic[Row]):
             self.pgconn.send_query_params(
                 command, None, result_format=result_format
             )
+
+        if self._pipeline_mode:
+            yield from send(self.pgconn)
+            return None
 
         result = (yield from execute(self.pgconn))[-1]
         if result.status not in (ExecStatus.COMMAND_OK, ExecStatus.TUPLES_OK):
