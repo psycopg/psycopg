@@ -238,6 +238,12 @@ class Faker:
         for cls in dumpers.keys():
             if isinstance(cls, str):
                 cls = deep_import(cls)
+            if (
+                issubclass(cls, psycopg.types.multirange.Multirange)
+                and self.conn.info.server_version < 140000
+            ):
+                continue
+
             rv.add(cls)
 
         # check all the types are handled
