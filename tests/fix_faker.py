@@ -528,7 +528,13 @@ class Faker:
         return (cls, choice(subtypes))
 
     def make_Range(self, spec, empty_chance=0.02, no_bound_chance=0.05):
-        if random() < empty_chance and spec[0] is Range:
+        # TODO: drop format check after fixing binary dumping of empty ranges
+        # (an array starting with an empty range will get the wrong type currently)
+        if (
+            random() < empty_chance
+            and spec[0] is Range
+            and self.format == PyFormat.TEXT
+        ):
             return spec[0](empty=True)
 
         while True:
