@@ -30,7 +30,7 @@ class SequenceDumper(RecursiveDumper):
         self, obj: Sequence[Any], start: bytes, end: bytes, sep: bytes
     ) -> bytes:
         if not obj:
-            return b"()"
+            return start + end
 
         parts = [start]
 
