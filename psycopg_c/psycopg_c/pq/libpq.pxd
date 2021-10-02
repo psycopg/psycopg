@@ -95,6 +95,8 @@ cdef extern from "libpq-fe.h":
         PGRES_FATAL_ERROR
         PGRES_COPY_BOTH
         PGRES_SINGLE_TUPLE
+        PGRES_PIPELINE_SYNC
+        PGRES_PIPELINE_ABORT
 
     # 33.1. Database Connection Control Functions
     PGconn *PQconnectdb(const char *conninfo)
