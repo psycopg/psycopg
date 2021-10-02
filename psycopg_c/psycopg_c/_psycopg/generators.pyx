@@ -106,7 +106,7 @@ def fetch_many(pq.PGconn pgconn) -> PQGen[List[PGresult]]:
     Generator retrieving results from the database without blocking.
 
     The query must have already been sent to the server, so pgconn.flush() has
-    already returned 0.
+    already returned 0 or pgconn.pipeline_sync() been successfully called.
 
     Return the list of results returned by the database (whether success
     or error).
@@ -137,7 +137,7 @@ def fetch(pq.PGconn pgconn) -> PQGen[Optional[PGresult]]:
     Generator retrieving a single result from the database without blocking.
 
     The query must have already been sent to the server, so pgconn.flush() has
-    already returned 0.
+    already returned 0 or pgconn.pipeline_sync() been successfully called.
 
     Return a result from the database (whether success or error).
     """

@@ -52,6 +52,7 @@ if _psycopg:
     connect = _psycopg.connect
     execute = _psycopg.execute
     send = _psycopg.send
+    fetch_many = _psycopg.fetch_many
 
 else:
     from . import generators
@@ -59,6 +60,7 @@ else:
     connect = generators.connect
     execute = generators.execute
     send = generators.send
+    fetch_many = generators.fetch_many
 
 
 class Notify(NamedTuple):
@@ -528,6 +530,11 @@ class BaseConnection(Generic[Row]):
         cmd = self._prepared.clear()
         if cmd:
             yield from self._exec_command(cmd)
+
+    def _fetch_many_gen(self) -> PQGen[List["PGresult"]]:
+        """Return results of one query from the database."""
+        results = yield from fetch_many(self.pgconn)
+        return results
 
 
 class Connection(BaseConnection[Row]):
