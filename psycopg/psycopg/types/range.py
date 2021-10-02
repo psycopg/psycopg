@@ -56,6 +56,13 @@ class Range(Generic[T]):
 
             self._lower = lower
             self._upper = upper
+
+            # Make bounds consistent with infs
+            if lower is None and bounds[0] == "[":
+                bounds = "(" + bounds[1]
+            if upper is None and bounds[1] == "]":
+                bounds = bounds[0] + ")"
+
             self._bounds = bounds
         else:
             self._lower = self._upper = None

@@ -668,6 +668,24 @@ class TestRangeObject:
         result = str(r)
         assert result == expected
 
+    def test_exclude_inf_bounds(self):
+        r = Range(None, 10, "[]")
+        assert r.lower is None
+        assert not r.lower_inc
+        assert r.bounds == "(]"
+
+        r = Range(10, None, "[]")
+        assert r.upper is None
+        assert not r.upper_inc
+        assert r.bounds == "[)"
+
+        r = Range(None, None, "[]")
+        assert r.lower is None
+        assert not r.lower_inc
+        assert r.upper is None
+        assert not r.upper_inc
+        assert r.bounds == "()"
+
 
 def test_no_info_error(conn):
     with pytest.raises(TypeError, match="range"):
