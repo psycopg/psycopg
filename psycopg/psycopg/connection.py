@@ -78,6 +78,28 @@ NoticeHandler = Callable[[e.Diagnostic], None]
 NotifyHandler = Callable[[Notify], None]
 
 
+class BasePipeline:
+    def __init__(self, pgconn: "PGconn") -> None:
+        self.pgconn = pgconn
+
+    def _status(self) -> pq.PipelineStatus:
+        return self.pgconn.pipeline_status()
+
+    def _sync(self) -> None:
+        self.pgconn.pipeline_sync()
+
+
+class Pipeline(BasePipeline):
+    """Handler for connection in pipeline mode."""
+
+    def status(self) -> pq.PipelineStatus:
+        return self._status()
+
+    def sync(self) -> None:
+        """Mark a synchronization point in the pipeline."""
+        self._sync()
+
+
 class BaseConnection(Generic[Row]):
     """
     Base class for different types of connections.
@@ -124,6 +146,9 @@ class BaseConnection(Generic[Row]):
         # Attribute is only set if the connection is from a pool so we can tell
         # apart a connection in the pool too (when _pool = None)
         self._pool: Optional["BasePool[Any]"]
+
+        # Attribute set when the connection enters pipeline mode.
+        self._pipeline_mode = False
 
         # Time after which the connection should be closed
         self._expire_at: float
@@ -752,6 +777,20 @@ class Connection(BaseConnection[Row]):
                     pgn.relname.decode(enc), pgn.extra.decode(enc), pgn.be_pid
                 )
                 yield n
+
+    @contextmanager
+    def pipeline(self) -> Iterator[Pipeline]:
+        """Context manager to switch the connection into pipeline mode.
+
+        :rtype: Pipeline
+        """
+        self.pgconn.enter_pipeline_mode()
+        self._pipeline_mode = True
+        try:
+            yield Pipeline(self.pgconn)
+        finally:
+            self.pgconn.exit_pipeline_mode()
+            self._pipeline_mode = False
 
     def wait(self, gen: PQGen[RV], timeout: Optional[float] = 0.1) -> RV:
         """

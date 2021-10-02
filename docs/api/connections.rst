@@ -264,6 +264,8 @@ The `!Connection` class
 
     .. automethod:: fileno
 
+    .. automethod:: pipeline
+
 
 The `!AsyncConnection` class
 ----------------------------
@@ -328,6 +330,15 @@ The `!AsyncConnection` class
     .. automethod:: set_isolation_level
     .. automethod:: set_read_only
     .. automethod:: set_deferrable
+
+    .. automethod:: pipeline
+
+        .. note::
+
+            It must be called as::
+
+                async with conn.pipeline() as pipeline:
+                    ...
 
 
 Connection support objects
@@ -474,3 +485,11 @@ Connection support objects
       the `Transaction` *tx* (returned by a statement such as :samp:`with
       conn.transaction() as {tx}:` and all the blocks nested within. The
       program will continue after the *tx* block.
+
+.. autoclass:: Pipeline
+
+   .. automethod:: sync
+
+.. autoclass:: AsyncPipeline
+
+   .. automethod:: sync
