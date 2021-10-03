@@ -172,9 +172,6 @@ class Range(Generic[T]):
             and self._bounds == other._bounds
         )
 
-    def __ne__(self, other: Any) -> bool:
-        return not self.__eq__(other)
-
     def __hash__(self) -> int:
         return hash((self._lower, self._upper, self._bounds))
 
@@ -199,22 +196,16 @@ class Range(Generic[T]):
         return False
 
     def __le__(self, other: Any) -> bool:
-        if self == other:
-            return True
-        else:
-            return self.__lt__(other)
+        return self == other or self < other  # type: ignore
 
     def __gt__(self, other: Any) -> bool:
         if isinstance(other, Range):
-            return other.__lt__(self)
+            return other < self
         else:
             return NotImplemented
 
     def __ge__(self, other: Any) -> bool:
-        if self == other:
-            return True
-        else:
-            return self.__gt__(other)
+        return self == other or self > other  # type: ignore
 
     def __getstate__(self) -> Dict[str, Any]:
         return {

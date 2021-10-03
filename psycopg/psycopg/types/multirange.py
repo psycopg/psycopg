@@ -72,6 +72,29 @@ class Multirange(MutableSequence[Range[T]]):
     def insert(self, index: int, value: Range[T]) -> None:
         self._ranges.insert(index, value)
 
+    def __eq__(self, other: Any) -> bool:
+        if not isinstance(other, Multirange):
+            return False
+        return self._ranges == other._ranges
+
+    # Order is arbitrary but consistent
+
+    def __lt__(self, other: Any) -> bool:
+        if not isinstance(other, Multirange):
+            return NotImplemented
+        return self._ranges < other._ranges
+
+    def __le__(self, other: Any) -> bool:
+        return self == other or self < other  # type: ignore
+
+    def __gt__(self, other: Any) -> bool:
+        if not isinstance(other, Multirange):
+            return NotImplemented
+        return self._ranges > other._ranges
+
+    def __ge__(self, other: Any) -> bool:
+        return self == other or self > other  # type: ignore
+
 
 # Subclasses to specify a specific subtype. Usually not needed
 
