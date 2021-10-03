@@ -7,8 +7,9 @@ psycopg connection objects
 import logging
 import warnings
 import threading
+from collections import deque
 from types import TracebackType
-from typing import Any, Callable, cast, Dict, Generic, Iterator, List
+from typing import Any, Callable, cast, Deque, Dict, Generic, Iterator, List
 from typing import NamedTuple, Optional, Type, TypeVar, Union
 from typing import overload, TYPE_CHECKING
 from weakref import ref, ReferenceType
@@ -37,6 +38,7 @@ from .server_cursor import ServerCursor
 
 if TYPE_CHECKING:
     from .pq.abc import PGconn, PGresult
+    from .cursor import BaseCursor
     from psycopg_pool.base import BasePool
 
 logger = logging.getLogger("psycopg")
@@ -81,16 +83,24 @@ Notify.__module__ = "psycopg"
 NoticeHandler = Callable[[e.Diagnostic], None]
 NotifyHandler = Callable[[Notify], None]
 
+PipelineQueue = Deque[Optional["BaseCursor[Any, Any]"]]
+
 
 class BasePipeline:
-    def __init__(self, pgconn: "PGconn") -> None:
+    def __init__(self, pgconn: "PGconn", queue: PipelineQueue) -> None:
         self.pgconn = pgconn
+        self._queue = queue
+
+    def __len__(self) -> int:
+        return len(self._queue)
 
     def _status(self) -> pq.PipelineStatus:
         return self.pgconn.pipeline_status()
 
     def _sync(self) -> None:
         self.pgconn.pipeline_sync()
+        self._queue.append(None)
+        logger.debug("sent a sync message to pipeline")
 
 
 class Pipeline(BasePipeline):
@@ -153,6 +163,11 @@ class BaseConnection(Generic[Row]):
 
         # Attribute set when the connection enters pipeline mode.
         self._pipeline_mode = False
+
+        # Attribute only set when the connection is in pipeline mode; this
+        # contains either a cursor, if queued query is expected to have data
+        # in its results or None otherwise.
+        self._pipeline_queue: PipelineQueue = deque()
 
         # Time after which the connection should be closed
         self._expire_at: float
@@ -455,6 +470,8 @@ class BaseConnection(Generic[Row]):
 
         if self._pipeline_mode:
             yield from send(self.pgconn)
+            self._pipeline_queue.append(None)
+            logger.debug("sent command '%s' in pipeline", command.decode())
             return None
 
         result = (yield from execute(self.pgconn))[-1]
@@ -534,7 +551,32 @@ class BaseConnection(Generic[Row]):
     def _fetch_many_gen(self) -> PQGen[List["PGresult"]]:
         """Return results of one query from the database."""
         results = yield from fetch_many(self.pgconn)
+        logger.debug(
+            "received '%s' result(s) from pipeline",
+            ", ".join(pq.ExecStatus(r.status).name for r in results),
+        )
         return results
+
+    def _end_pipeline_gen(self) -> PQGen[None]:
+        """Empty the pipeline queue from unfetched results, usually those from
+        commands (e.g. COMMIT) or pipeline synchronization points which
+        results are not expected to be fetched by the user.
+        """
+        while self._pipeline_queue:
+            queued = self._pipeline_queue.popleft()
+
+            if queued is not None:
+                raise e.ProgrammingError(
+                    f"{queued} has unfetched results in the pipeline"
+                )
+
+            results = yield from self._fetch_many_gen()
+
+            (result,) = results
+            if result.status == ExecStatus.FATAL_ERROR:
+                raise e.error_from_result(
+                    result, encoding=pgconn_encoding(self.pgconn)
+                )
 
 
 class Connection(BaseConnection[Row]):
@@ -797,11 +839,14 @@ class Connection(BaseConnection[Row]):
 
         :rtype: Pipeline
         """
+        assert not self._pipeline_queue
         self.pgconn.enter_pipeline_mode()
         self._pipeline_mode = True
         try:
-            yield Pipeline(self.pgconn)
+            yield Pipeline(self.pgconn, self._pipeline_queue)
         finally:
+            with self.lock:
+                self.wait(self._end_pipeline_gen())
             self.pgconn.exit_pipeline_mode()
             self._pipeline_mode = False
 

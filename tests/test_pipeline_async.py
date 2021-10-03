@@ -1,12 +1,21 @@
+import logging
+
 import pytest
 
 import psycopg
 from psycopg import pq
+from psycopg.errors import UndefinedTable
 
 pytestmark = [
     pytest.mark.asyncio,
     pytest.mark.libpq(">=14"),
 ]
+
+
+@pytest.fixture(autouse=True)
+def debug_logs(caplog):
+    caplog.set_level(logging.DEBUG, logger="psycopg")
+    caplog.set_level(logging.DEBUG, logger="asyncio")
 
 
 async def test_pipeline_status(aconn):
@@ -16,8 +25,8 @@ async def test_pipeline_status(aconn):
         assert aconn._pipeline_mode
         await p.sync()
 
-        (r,) = await aconn.wait(aconn._fetch_many_gen())
-        assert r.status == pq.ExecStatus.PIPELINE_SYNC
+        # PQpipelineSync
+        assert len(p) == 1
 
     assert await p.status() == pq.PipelineStatus.OFF
     assert not aconn._pipeline_mode
@@ -25,10 +34,14 @@ async def test_pipeline_status(aconn):
 
 async def test_pipeline_busy(aconn):
     with pytest.raises(
-        psycopg.OperationalError, match="cannot exit pipeline mode while busy"
+        psycopg.ProgrammingError, match="has unfetched results in the pipeline"
     ):
-        async with aconn.cursor() as cur, aconn.pipeline():
+        async with aconn.cursor() as cur, aconn.pipeline() as pipeline:
             await cur.execute("select 1")
+            await pipeline.sync()
+
+            # PQsendQuery[BEGIN], PQsendQuery, PQpipelineSync
+            assert len(pipeline) == 3
 
 
 async def test_pipeline(aconn):
@@ -37,25 +50,25 @@ async def test_pipeline(aconn):
         c2 = aconn.cursor()
         await c1.execute("select 1")
         await pipeline.sync()
+        await c1.execute("select 11")
         await c2.execute("select 2")
         await pipeline.sync()
 
-        (r,) = await aconn.wait(aconn._fetch_many_gen())
-        assert r.status == pq.ExecStatus.COMMAND_OK  # BEGIN
+        # PQsendQuery[BEGIN], PQsendQuery(3), PQpipelineSync(2)
+        assert len(pipeline) == 6
 
-        (r,) = await aconn.wait(aconn._fetch_many_gen())
-        assert r.status == pq.ExecStatus.TUPLES_OK
-        assert r.get_value(0, 0) == b"1"
+        (r1,) = await c1.fetchone()
+        assert r1 == 1
+        assert len(pipeline) == 4  # -COMMAND_OK, -TUPLES_OK
 
-        (r,) = await aconn.wait(aconn._fetch_many_gen())
-        assert r.status == pq.ExecStatus.PIPELINE_SYNC
+        (r2,) = await c2.fetchone()
+        assert r2 == 2
+        assert len(pipeline) == 1  # -PIPELINE_SYNC, -TUPLES_OK(2)
 
-        (r,) = await aconn.wait(aconn._fetch_many_gen())
-        assert r.status == pq.ExecStatus.TUPLES_OK
-        assert r.get_value(0, 0) == b"2"
-
-        (r,) = await aconn.wait(aconn._fetch_many_gen())
-        assert r.status == pq.ExecStatus.PIPELINE_SYNC
+        (r11,) = await c1.fetchone()
+        assert r11 == 11
+        # Same as before, since results have already been fetched.
+        assert len(pipeline) == 1
 
 
 async def test_autocommit(aconn):
@@ -64,12 +77,11 @@ async def test_autocommit(aconn):
         await c.execute("select 1")
         await pipeline.sync()
 
-        (r,) = await aconn.wait(aconn._fetch_many_gen())
-        assert r.status == pq.ExecStatus.TUPLES_OK
-        assert r.get_value(0, 0) == b"1"
+        # PQsendQuery, PQpipelineSync
+        assert len(pipeline) == 2
 
-        (r,) = await aconn.wait(aconn._fetch_many_gen())
-        assert r.status == pq.ExecStatus.PIPELINE_SYNC
+        (r,) = await c.fetchone()
+        assert r == 1
 
 
 async def test_pipeline_aborted(aconn):
@@ -83,32 +95,28 @@ async def test_pipeline_aborted(aconn):
         await c.execute("select 2")
         await pipeline.sync()
 
-        (r,) = await aconn.wait(aconn._fetch_many_gen())
-        assert r.status == pq.ExecStatus.TUPLES_OK
-        assert r.get_value(0, 0) == b"1"
+        # PQsendQuery(4), PQpipelineSync(3)
+        assert len(pipeline) == 7
 
-        (r,) = await aconn.wait(aconn._fetch_many_gen())
-        assert r.status == pq.ExecStatus.PIPELINE_SYNC
+        (r,) = await c.fetchone()
+        assert r == 1
+        assert len(pipeline) == 6
 
-        (r,) = await aconn.wait(aconn._fetch_many_gen())
-        assert r.status == pq.ExecStatus.FATAL_ERROR
+        with pytest.raises(UndefinedTable):
+            await c.fetchone()
         assert await pipeline.status() == pq.PipelineStatus.ABORTED
+        assert len(pipeline) == 4  # -PIPELINE_SYNC, -TUPLES_OK
 
-        (r,) = await aconn.wait(aconn._fetch_many_gen())
-        assert r.status == pq.ExecStatus.PIPELINE_ABORTED
-
+        with pytest.raises(psycopg.OperationalError, match="pipeline aborted"):
+            await c.fetchone()
         assert await pipeline.status() == pq.PipelineStatus.ABORTED
+        assert len(pipeline) == 3  # -TUPLES_OK
 
-        (r,) = await aconn.wait(aconn._fetch_many_gen())
-        assert r.status == pq.ExecStatus.PIPELINE_SYNC
+        (r,) = await c.fetchone()
+        assert r == 2
 
-        (r,) = await aconn.wait(aconn._fetch_many_gen())
+        assert len(pipeline) == 1  # -PIPELINE_SYNC, -TUPLES_OK
         assert await pipeline.status() == pq.PipelineStatus.ON
-        assert r.status == pq.ExecStatus.TUPLES_OK
-        assert r.get_value(0, 0) == b"2"
-
-        (r,) = await aconn.wait(aconn._fetch_many_gen())
-        assert r.status == pq.ExecStatus.PIPELINE_SYNC
 
 
 async def test_prepared(aconn):
@@ -118,19 +126,16 @@ async def test_prepared(aconn):
         await c.execute("select count(*) from pg_prepared_statements")
         await pipeline.sync()
 
-        (r,) = await aconn.wait(aconn._fetch_many_gen())
-        assert r.status == pq.ExecStatus.COMMAND_OK  # PREPARE
+        # PQsendPrepare, PQsendQuery(2), PQpipelineSync
+        assert len(pipeline) == 4
 
-        (r,) = await aconn.wait(aconn._fetch_many_gen())
-        assert r.status == pq.ExecStatus.TUPLES_OK
-        assert r.get_value(0, 0) == b"10"
+        (r,) = await c.fetchone()
+        assert r == 10
+        assert len(pipeline) == 2  # -COMMAND_OK, -TUPLES_OK
 
-        (r,) = await aconn.wait(aconn._fetch_many_gen())
-        assert r.status == pq.ExecStatus.TUPLES_OK
-        assert r.get_value(0, 0) == b"1"
-
-        (r,) = await aconn.wait(aconn._fetch_many_gen())
-        assert r.status == pq.ExecStatus.PIPELINE_SYNC
+        (r,) = await c.fetchone()
+        assert r == 1
+        assert len(pipeline) == 1  # -TUPLES_OK
 
 
 @pytest.mark.xfail
@@ -138,36 +143,25 @@ async def test_auto_prepare(aconn):
     # Auto prepare does not work because cache maintainance requires access to
     # results at the moment.
     await aconn.set_autocommit(True)
-    async with aconn.pipeline() as pipeline:
+    async with aconn.pipeline() as pipeline, aconn.cursor() as cur:
         for i in range(10):
-            await aconn.execute("select count(*) from pg_prepared_statements")
+            await cur.execute("select count(*) from pg_prepared_statements")
         await pipeline.sync()
 
         for i, v in zip(range(10), [0] * 5 + [1] * 5):
-            (r,) = await aconn.wait(aconn._fetch_many_gen())
-            assert r.status == pq.ExecStatus.TUPLES_OK
-            rv = int(r.get_value(0, 0).decode())
-            assert rv == v
-
-        (r,) = await aconn.wait(aconn._fetch_many_gen())
-        assert r.status == pq.ExecStatus.PIPELINE_SYNC
+            (r,) = await cur.fetchone()
+            assert r == v
 
 
 async def test_transaction(aconn):
     async with aconn.pipeline() as pipeline:
         async with aconn.transaction():
-            await aconn.execute("select 'tx'")
+            cur = await aconn.execute("select 'tx'")
         await pipeline.sync()
 
-        (r,) = await aconn.wait(aconn._fetch_many_gen())
-        assert r.status == pq.ExecStatus.COMMAND_OK  # BEGIN
+        # PQsendQuery[BEGIN], PQsendQuery, PQsendQuery[COMMIT], PQpipelineSync
+        assert len(pipeline) == 4
 
-        (r,) = await aconn.wait(aconn._fetch_many_gen())
-        assert r.status == pq.ExecStatus.TUPLES_OK
-        assert r.get_value(0, 0) == b"tx"
-
-        (r,) = await aconn.wait(aconn._fetch_many_gen())
-        assert r.status == pq.ExecStatus.COMMAND_OK  # COMMIT
-
-        (r,) = await aconn.wait(aconn._fetch_many_gen())
-        assert r.status == pq.ExecStatus.PIPELINE_SYNC
+        (r,) = await cur.fetchone()
+        assert r == "tx"
+        assert len(pipeline) == 2  # -COMMAND_OK, -TUPLES_OK

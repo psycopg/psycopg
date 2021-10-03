@@ -4,6 +4,7 @@ psycopg cursor objects
 
 # Copyright (C) 2020-2021 The Psycopg Team
 
+import logging
 import sys
 from types import TracebackType
 from typing import Any, Callable, Generic, Iterator, List
@@ -28,6 +29,8 @@ if TYPE_CHECKING:
     from .abc import Transformer
     from .pq.abc import PGconn, PGresult
     from .connection import Connection
+
+logger = logging.getLogger("psycopg")
 
 execute: Callable[["PGconn"], PQGen[List["PGresult"]]]
 
@@ -249,6 +252,11 @@ class BaseCursor(Generic[ConnectionType, Row]):
             self._send_prepare(name, pgq)
             if pipeline_mode:
                 yield from send(self._pgconn)
+                logger.debug(
+                    "sent prepared statement creation request for '%s' in pipeline",
+                    pgq.query.decode(),
+                )
+                self._conn._pipeline_queue.append(None)
             else:
                 (result,) = yield from execute(self._pgconn)
                 if result.status == ExecStatus.FATAL_ERROR:
@@ -259,6 +267,8 @@ class BaseCursor(Generic[ConnectionType, Row]):
 
         if pipeline_mode:
             yield from send(self._pgconn)
+            self._conn._pipeline_queue.append(self)
+            logger.debug("sent query '%s' in pipeline", pgq.query.decode())
             return None
 
         # run the query
@@ -436,6 +446,8 @@ class BaseCursor(Generic[ConnectionType, Row]):
             raise e.error_from_result(
                 results[-1], encoding=pgconn_encoding(self._pgconn)
             )
+        elif results[-1].status == ExecStatus.PIPELINE_ABORTED:
+            raise e.OperationalError("pipeline aborted")
         elif statuses.intersection(self._status_copy):
             raise e.ProgrammingError(
                 "COPY cannot be used with this method; use copy() insead"
@@ -501,6 +513,47 @@ class BaseCursor(Generic[ConnectionType, Row]):
         if not 0 <= newpos < self.pgresult.ntuples:
             raise IndexError("position out of bound")
         self._pos = newpos
+
+    def _fetch_pipeline_gen(self) -> PQGen[None]:
+        """Process the pipeline queue until current cursor is found.
+        For each queued items poped in the meanwhile, fetch and process
+        respective pipeline results.
+
+        Might be a no-op if results of this cursor have already been fetched
+        and processed during a prior results fetch of another cursor which
+        query got issued after this one's in the pipeline.
+        """
+        if self not in self._conn._pipeline_queue:
+            return
+
+        while True:
+            cursor = self._conn._pipeline_queue.popleft()
+            results = yield from self._conn._fetch_many_gen()
+
+            if cursor is None:
+                (result,) = results
+                if result.status in (
+                    ExecStatus.FATAL_ERROR,
+                    ExecStatus.PIPELINE_ABORTED,
+                ):
+                    raise e.error_from_result(
+                        result, encoding=pgconn_encoding(self._pgconn)
+                    )
+                elif result.status == ExecStatus.PIPELINE_SYNC:
+                    logger.debug("received pipeline sync result")
+                continue
+
+            cursor._reset()
+            cursor._execute_results(results)
+
+            if cursor is self:
+                break
+
+        else:
+            raise e.ProgrammingError(
+                f"{self} not found in pipeline results; "
+                "missing a synchronization point?"
+            )
 
     def _close(self) -> None:
         self._closed = True
@@ -608,6 +661,7 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
 
         :rtype: Optional[Row], with Row defined by `row_factory`
         """
+        self._fetch_pipeline()
         self._check_result()
         record = self._tx.load_row(self._pos, self._make_row)
         if record is not None:
@@ -622,6 +676,7 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
 
         :rtype: Sequence[Row], with Row defined by `row_factory`
         """
+        self._fetch_pipeline()
         self._check_result()
         assert self.pgresult
 
@@ -641,6 +696,7 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
 
         :rtype: Sequence[Row], with Row defined by `row_factory`
         """
+        self._fetch_pipeline()
         self._check_result()
         assert self.pgresult
         records = self._tx.load_rows(
@@ -650,6 +706,7 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
         return records
 
     def __iter__(self) -> Iterator[Row]:
+        self._fetch_pipeline()
         self._check_result()
 
         def load(pos: int) -> Optional[Row]:
@@ -673,6 +730,7 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
         Raise `!IndexError` in case a scroll operation would leave the result
         set. In this case the position will not change.
         """
+        self._fetch_pipeline()
         self._scroll(value, mode)
 
     @contextmanager
@@ -687,3 +745,8 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
 
         with Copy(self) as copy:
             yield copy
+
+    def _fetch_pipeline(self) -> None:
+        if self._conn._pipeline_mode:
+            with self._conn.lock:
+                self._conn.wait(self._fetch_pipeline_gen())
