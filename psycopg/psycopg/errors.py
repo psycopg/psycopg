@@ -298,6 +298,8 @@ def _class_for_state(sqlstate: str) -> Type[Error]:
 
 
 def get_base_exception(sqlstate: str) -> Type[Error]:
+    if not sqlstate:
+        return DatabaseError
     return (
         _base_exc_map.get(sqlstate[:2])
         or _base_exc_map.get(sqlstate[0])
