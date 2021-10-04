@@ -23,6 +23,11 @@ from .range import dump_range_text, dump_range_binary, fail_dump
 
 
 class Multirange(MutableSequence[Range[T]]):
+    """Python representation for a PostgreSQL multirange type.
+
+    :param items: Sequence of ranges to initialise the object.
+    """
+
     def __init__(self, items: Iterable[Range[T]] = ()):
         self._ranges: List[Range[T]] = list(map(self._check_type, items))
 

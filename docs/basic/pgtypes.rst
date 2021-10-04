@@ -116,6 +116,10 @@ different types.
     features: it doesn't perform normalization and doesn't implement all the
     operators__ supported by the database.
 
+    PostgreSQL will perform normalisation on `!Range` objects used as query
+    parameters, so, when they are fetched back, they will be found in the
+    normal form (for instance ranges on integers will have `[)` bounds).
+
     .. __: https://www.postgresql.org/docs/current/static/functions-range.html#RANGE-OPERATORS-TABLE
 
     `!Range` objects are immutable, hashable, and support the ``in`` operator
@@ -151,8 +155,8 @@ its subtype and make it work like the builtin ones.
 Example::
 
     >>> from psycopg.types.range import Range, RangeInfo, register_range
-    >>> conn.execute("create type strrange as range (subtype = text)")
 
+    >>> conn.execute("CREATE TYPE strrange AS RANGE (SUBTYPE = text)")
     >>> info = RangeInfo.fetch(conn, "strrange")
     >>> register_range(info, conn)
 
@@ -161,6 +165,81 @@ Example::
 
     >>> conn.execute("SELECT '[a,z]'::strrange").fetchone()[0]
     Range('a', 'z', '[]')
+
+
+.. index::
+    pair: range; Data types
+
+.. _adapt-multirange:
+
+Multirange adaptation
+---------------------
+
+Since PostgreSQL 14, every range type is associated with a multirange__, a
+type representing a disjoint set of ranges. A multirange is
+automatically available for every range, built-in and user-defined.
+
+.. __: https://www.postgresql.org/docs/current/rangetypes.html
+
+All the PostgreSQL range types are loaded as the
+`~psycopg.types.multirange.Multirange` Python type, which is a mutable
+sequence of `~psycopg.types.range.Range` elements.
+
+.. autoclass:: psycopg.types.multirange.Multirange
+
+    This Python type is only used to pass and retrieve multirange values to
+    and from PostgreSQL and doesn't attempt to replicate the PostgreSQL
+    multirange features: overlapping items are not merged, empty ranges are
+    not discarded, the items are not ordered, the behaviour of `multirange
+    operators`__ is not replicated in Python.
+
+    PostgreSQL will perform normalisation on `!Multirange` objects used as
+    query parameters, so, when they are fetched back, they will be found
+    ordered, with overlapping ranges merged, etc.
+
+    .. __: https://www.postgresql.org/docs/current/static/functions-range.html#MULTIRANGE-OPERATORS-TABLE
+
+    `!Multirange` objects are a `~collections.abc.MutableSequence` and are
+    totally ordered: they behave pretty much like a list of `!Range`. Like
+    Range, they are `~typing.Generic` on the subtype of their range, so you
+    can declare a variable to be `!Multitype[date]` and mypy will complain if
+    you try to add it a `Range[Decimal]`.
+
+Like for `~psycopg.types.range.Range`, built-in multirange objects are adapted
+automatically: if a `!Multirange` objects contains `!Range` with
+`~datetime.date` bounds, it is dumped using the :sql:`datemultirange` OID, and
+:sql:`datemultirange` values are loaded back as `!Multirange[date]`.
+
+If you have created your own range type you can use
+`~psycopg.types.multirange.MultirangeInfo` and
+`~psycopg.types.multirange.register_multirange()` to associate the resulting
+multirange type with its subtype and make it work like the builtin ones.
+
+.. autoclass:: psycopg.types.multirange.MultirangeInfo
+
+   `!MultirangeInfo` is a `~psycopg.types.TypeInfo` subclass: check its
+   documentation for generic details.
+
+.. autofunction:: psycopg.types.multirange.register_multirange
+
+Example::
+
+    >>> from psycopg.types.multirange import \
+    ...     Multirange, MultirangeInfo, register_multirange
+    >>> from psycopg.types.range import Range
+
+    >>> conn.execute("CREATE TYPE strrange AS RANGE (SUBTYPE = text)")
+    >>> info = MultirangeInfo.fetch(conn, "strmultirange")
+    >>> register_multirange(info, conn)
+
+    >>> rec = conn.execute(
+    ...     "SELECT pg_typeof(%(mr)s), %(mr)s",
+    ...     {"mr": Multirange([Range("a", "q"), Range("l", "z")])}).fetchone()
+
+    >>> rec[0]
+    'strmultirange'
+    >>> rec[1]
+    Multirange([Range('a', 'z', '[)')])
 
 
 .. index::
