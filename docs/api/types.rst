@@ -16,18 +16,23 @@ Types information
 -----------------
 
 The `TypeInfo` object describes simple information about a PostgreSQL data
-type, such as its name, oid and array oid. The class can be used to query a
-database for custom data types: this allows for instance to load automatically
-arrays of a custom type, once a loader for the base type has been registered.
+type, such as its name, oid and array oid. Subclasses may hold more
+information, for instance the components of a composite type.
+
+You can use `TypeInfo.fetch()` to query information from a database catalog,
+which is then used by helper functions, such as
+`~psycopg.types.hstore.register_hstore()`, to register adapters on types whose
+OID is not known upfront or to create more specialised adapters.
 
 The `!TypeInfo` object doesn't instruct Psycopg to convert a PostgreSQL type
 into a Python type: this is the role of a `~psycopg.abc.Loader`. However it
-can extend the behaviour of the adapters: if you create a loader for
-`!MyType`, using `TypeInfo` you will be able to manage seamlessly arrays of
-`!MyType` or ranges and composite types using it as a subtype.
+can extend the behaviour of other adapters: if you create a loader for
+`!MyType`, using the `TypeInfo` information, Psycopg will be able to manage
+seamlessly arrays of `!MyType` or ranges and composite types using `!MyType`
+as a subtype.
 
-.. seealso:: :ref:`adaptation` describes about how to convert from Python
-    types to PostgreSQL types and back.
+.. seealso:: :ref:`adaptation` describes how to convert from Python objects to
+    PostgreSQL types and back.
 
 .. code:: python
 
@@ -89,11 +94,12 @@ can extend the behaviour of the adapters: if you create a loader for
 
 
 For recursive types, Psycopg offers a few `!TypeInfo` subclasses which can be
-used to extract more complete information, for instance
-`~psycopg.types.composite.CompositeInfo` and `~psycopg.types.range.RangeInfo`.
+used to extract more complete information, such as
+`~psycopg.types.composite.CompositeInfo`, `~psycopg.types.range.RangeInfo`,
+`~psycopg.types.multirange.MultirangeInfo`.
 
 `!TypeInfo` objects are collected in `TypesRegistry` instances, which help type
-information lookup. Every `~psycopg.adapt.AdaptersMap` expose its type map on
+information lookup. Every `~psycopg.adapt.AdaptersMap` exposes its type map on
 its `~psycopg.adapt.AdaptersMap.types` attribute.
 
 .. autoclass:: TypesRegistry
@@ -125,6 +131,9 @@ its `~psycopg.adapt.AdaptersMap.types` attribute.
 
            >>> psycopg.adapters.types.get_oid("text[]")
            1009
+
+   .. automethod:: get_by_subtype
+
 
 .. _numeric-wrappers:
 

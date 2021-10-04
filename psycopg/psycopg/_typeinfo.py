@@ -407,9 +407,14 @@ class TypesRegistry:
         self, cls: Type[T], subtype: Union[int, str]
     ) -> Optional[T]:
         """
-        Return info about a TypeInfo subclass by its element name or oid
+        Return info about a `TypeInfo` subclass by its element name or oid.
 
-        Return None if the element or its range are not found.
+        :param cls: the subtype of `!TypeInfo` to look for. Currently
+            supported are `~psycopg.types.range.RangeInfo` and
+            `~psycopg.types.multirange.MultirangeInfo`.
+        :param subtype: The name or OID of the subtype of the element to look for.
+        :return: The `!TypeInfo` object of class *cls* whose subtype is
+            *subtype*. `!None` if the element or its range are not found.
         """
         try:
             info = self[subtype]
