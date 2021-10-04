@@ -44,12 +44,12 @@ def test_pipeline(conn):
         assert r.status == pq.ExecStatus.TUPLES_OK
         assert r.get_value(0, 0) == b"1"
 
-        (rs, rto) = conn.wait(conn._fetch_many_gen())
+        (r,) = conn.wait(conn._fetch_many_gen())
+        assert r.status == pq.ExecStatus.PIPELINE_SYNC
 
-        assert rs.status == pq.ExecStatus.PIPELINE_SYNC
-
-        assert rto.status == pq.ExecStatus.TUPLES_OK
-        assert rto.get_value(0, 0) == b"2"
+        (r,) = conn.wait(conn._fetch_many_gen())
+        assert r.status == pq.ExecStatus.TUPLES_OK
+        assert r.get_value(0, 0) == b"2"
 
         (r,) = conn.wait(conn._fetch_many_gen())
         assert r.status == pq.ExecStatus.PIPELINE_SYNC
@@ -84,11 +84,11 @@ def test_pipeline_aborted(conn):
         assert r.status == pq.ExecStatus.TUPLES_OK
         assert r.get_value(0, 0) == b"1"
 
-        (rs, rfe) = conn.wait(conn._fetch_many_gen())
+        (r,) = conn.wait(conn._fetch_many_gen())
+        assert r.status == pq.ExecStatus.PIPELINE_SYNC
 
-        assert rs.status == pq.ExecStatus.PIPELINE_SYNC
-
-        assert rfe.status == pq.ExecStatus.FATAL_ERROR
+        (r,) = conn.wait(conn._fetch_many_gen())
+        assert r.status == pq.ExecStatus.FATAL_ERROR
 
         assert pipeline.status() == pq.PipelineStatus.ABORTED
 
@@ -97,14 +97,13 @@ def test_pipeline_aborted(conn):
 
         assert pipeline.status() == pq.PipelineStatus.ABORTED
 
-        (rs, rto) = conn.wait(conn._fetch_many_gen())
+        (r,) = conn.wait(conn._fetch_many_gen())
+        assert r.status == pq.ExecStatus.PIPELINE_SYNC
 
-        assert rs.status == pq.ExecStatus.PIPELINE_SYNC
-
+        (r,) = conn.wait(conn._fetch_many_gen())
         assert pipeline.status() == pq.PipelineStatus.ON
-
-        assert rto.status == pq.ExecStatus.TUPLES_OK
-        assert rto.get_value(0, 0) == b"2"
+        assert r.status == pq.ExecStatus.TUPLES_OK
+        assert r.get_value(0, 0) == b"2"
 
         (r,) = conn.wait(conn._fetch_many_gen())
         assert r.status == pq.ExecStatus.PIPELINE_SYNC

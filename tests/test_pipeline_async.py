@@ -47,12 +47,12 @@ async def test_pipeline(aconn):
         assert r.status == pq.ExecStatus.TUPLES_OK
         assert r.get_value(0, 0) == b"1"
 
-        (rs, rto) = await aconn.wait(aconn._fetch_many_gen())
+        (r,) = await aconn.wait(aconn._fetch_many_gen())
+        assert r.status == pq.ExecStatus.PIPELINE_SYNC
 
-        assert rs.status == pq.ExecStatus.PIPELINE_SYNC
-
-        assert rto.status == pq.ExecStatus.TUPLES_OK
-        assert rto.get_value(0, 0) == b"2"
+        (r,) = await aconn.wait(aconn._fetch_many_gen())
+        assert r.status == pq.ExecStatus.TUPLES_OK
+        assert r.get_value(0, 0) == b"2"
 
         (r,) = await aconn.wait(aconn._fetch_many_gen())
         assert r.status == pq.ExecStatus.PIPELINE_SYNC
@@ -87,11 +87,11 @@ async def test_pipeline_aborted(aconn):
         assert r.status == pq.ExecStatus.TUPLES_OK
         assert r.get_value(0, 0) == b"1"
 
-        (rs, rfe) = await aconn.wait(aconn._fetch_many_gen())
+        (r,) = await aconn.wait(aconn._fetch_many_gen())
+        assert r.status == pq.ExecStatus.PIPELINE_SYNC
 
-        assert rs.status == pq.ExecStatus.PIPELINE_SYNC
-        assert rfe.status == pq.ExecStatus.FATAL_ERROR
-
+        (r,) = await aconn.wait(aconn._fetch_many_gen())
+        assert r.status == pq.ExecStatus.FATAL_ERROR
         assert await pipeline.status() == pq.PipelineStatus.ABORTED
 
         (r,) = await aconn.wait(aconn._fetch_many_gen())
@@ -99,14 +99,13 @@ async def test_pipeline_aborted(aconn):
 
         assert await pipeline.status() == pq.PipelineStatus.ABORTED
 
-        (rs, rto) = await aconn.wait(aconn._fetch_many_gen())
+        (r,) = await aconn.wait(aconn._fetch_many_gen())
+        assert r.status == pq.ExecStatus.PIPELINE_SYNC
 
-        assert rs.status == pq.ExecStatus.PIPELINE_SYNC
-
+        (r,) = await aconn.wait(aconn._fetch_many_gen())
         assert await pipeline.status() == pq.PipelineStatus.ON
-
-        assert rto.status == pq.ExecStatus.TUPLES_OK
-        assert rto.get_value(0, 0) == b"2"
+        assert r.status == pq.ExecStatus.TUPLES_OK
+        assert r.get_value(0, 0) == b"2"
 
         (r,) = await aconn.wait(aconn._fetch_many_gen())
         assert r.status == pq.ExecStatus.PIPELINE_SYNC

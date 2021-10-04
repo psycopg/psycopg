@@ -294,6 +294,8 @@ cdef extern from *:
 #endif
 
 #if PG_VERSION_NUM < 140000
+int PGRES_PIPELINE_SYNC = 10;
+int PGRES_PIPELINE_ABORTED = 11;
 typedef enum {
     PQ_PIPELINE_OFF,
     PQ_PIPELINE_ON,
