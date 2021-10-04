@@ -115,6 +115,14 @@ def fetch_many(pgconn: PGconn) -> PQGen[List[PGresult]]:
             break
 
         results.append(res)
+
+        if res.status == ExecStatus.PIPELINE_SYNC:
+            # Return any PIPELINE_SYNC result separately, as they are not
+            # followed by a NULL in contrast with other kind of results.
+            # Though, such a result should come first while fetching.
+            assert len(results) == 1
+            break
+
         if res.status in _copy_statuses:
             # After entering copy mode the libpq will create a phony result
             # for every request so let's break the endless loop.
