@@ -14,6 +14,7 @@ psycopg 3.0b2
 ^^^^^^^^^^^^^
 
 - Add :ref:`adapt-shapely` (:ticket:`#80`).
+- Add :ref:`adapt-multirange` (:ticket:`#75`).
 - Add `pq.__build_version__` constant.
 - Don't use the extended protocol with COPY, (:tickets:`#78, #82`).
 - Add *context* parameter to `~Connection.connect()` (:ticket:`#83`).

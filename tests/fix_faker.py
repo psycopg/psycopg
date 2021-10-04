@@ -238,6 +238,12 @@ class Faker:
         for cls in dumpers.keys():
             if isinstance(cls, str):
                 cls = deep_import(cls)
+            if (
+                issubclass(cls, psycopg.types.multirange.Multirange)
+                and self.conn.info.server_version < 140000
+            ):
+                continue
+
             rv.add(cls)
 
         # check all the types are handled
@@ -506,7 +512,95 @@ class Faker:
     def make_memoryview(self, spec):
         return self.make_bytes(spec)
 
-    def schema_NoneType(self, spec):
+    def schema_Multirange(self, cls):
+        return self.schema_Range(cls)
+
+    def make_Multirange(self, spec, length=None, **kwargs):
+        if length is None:
+            length = randrange(0, self.list_max_length)
+
+        def overlap(r1, r2):
+            l1, u1 = r1.lower, r1.upper
+            l2, u2 = r2.lower, r2.upper
+            if l1 is None and l2 is None:
+                return True
+            elif l1 is None:
+                l1 = l2
+            elif l2 is None:
+                l2 = l1
+
+            if u1 is None and u2 is None:
+                return True
+            elif u1 is None:
+                u1 = u2
+            elif u2 is None:
+                u2 = u1
+
+            return l1 <= u2 and l2 <= u1
+
+        out = []
+        for i in range(length):
+            r = self.make_Range((Range, spec[1]), **kwargs)
+            if r.isempty:
+                continue
+            for r2 in out:
+                if overlap(r, r2):
+                    insert = False
+                    break
+            else:
+                insert = True
+            if insert:
+                out.append(r)  # alternatively, we could merge
+
+        return spec[0](sorted(out))
+
+    def example_Multirange(self, spec):
+        return self.make_Multirange(
+            spec, length=1, empty_chance=0, no_bound_chance=0
+        )
+
+    def make_Int4Multirange(self, spec):
+        return self.make_Multirange((spec, Int4))
+
+    def make_Int8Multirange(self, spec):
+        return self.make_Multirange((spec, Int8))
+
+    def make_NumericMultirange(self, spec):
+        return self.make_Multirange((spec, Decimal))
+
+    def make_DateMultirange(self, spec):
+        return self.make_Multirange((spec, dt.date))
+
+    def make_TimestampMultirange(self, spec):
+        return self.make_Multirange((spec, (dt.datetime, False)))
+
+    def make_TimestamptzMultirange(self, spec):
+        return self.make_Multirange((spec, (dt.datetime, True)))
+
+    def match_Multirange(self, spec, got, want):
+        assert len(got) == len(want)
+        for ig, iw in zip(got, want):
+            self.match_Range(spec, ig, iw)
+
+    def match_Int4Multirange(self, spec, got, want):
+        return self.match_Multirange((spec, Int4), got, want)
+
+    def match_Int8Multirange(self, spec, got, want):
+        return self.match_Multirange((spec, Int8), got, want)
+
+    def match_NumericMultirange(self, spec, got, want):
+        return self.match_Multirange((spec, Decimal), got, want)
+
+    def match_DateMultirange(self, spec, got, want):
+        return self.match_Multirange((spec, dt.date), got, want)
+
+    def match_TimestampMultirange(self, spec, got, want):
+        return self.match_Multirange((spec, (dt.datetime, False)), got, want)
+
+    def match_TimestamptzMultirange(self, spec, got, want):
+        return self.match_Multirange((spec, (dt.datetime, True)), got, want)
+
+    def schema_NoneType(self, cls):
         return None
 
     def make_NoneType(self, spec):

@@ -4,8 +4,8 @@ from decimal import Decimal
 
 import pytest
 
-import psycopg.errors
 from psycopg import pq
+from psycopg import errors as e
 from psycopg.sql import Identifier
 from psycopg.adapt import PyFormat
 from psycopg.types import range as range_module
@@ -48,11 +48,13 @@ samples = [
     ),
 ]
 
-range_names = """int4range int8range numrange
-    daterange tsrange tstzrange""".split()
+range_names = """
+    int4range int8range numrange daterange tsrange tstzrange
+    """.split()
 
-range_classes = """Int4Range Int8Range NumericRange
-    DateRange TimestampRange TimestamptzRange""".split()
+range_classes = """
+    Int4Range Int8Range NumericRange DateRange TimestampRange TimestamptzRange
+    """.split()
 
 
 @pytest.mark.parametrize("pgtype", range_names)
@@ -199,7 +201,7 @@ def test_load_builtin_range(conn, pgtype, min, max, bounds, fmt_out):
     ],
 )
 @pytest.mark.parametrize("format", pq.Format)
-def test_copy_in_empty(conn, min, max, bounds, format):
+def test_copy_in(conn, min, max, bounds, format):
     cur = conn.cursor()
     cur.execute("create table copyrange (id serial primary key, r daterange)")
 
@@ -215,10 +217,10 @@ def test_copy_in_empty(conn, min, max, bounds, format):
             f"copy copyrange (r) from stdin (format {format.name})"
         ) as copy:
             copy.write_row([r])
-    except psycopg.errors.ProtocolViolation:
+    except e.ProtocolViolation:
         if not min and not max and format == pq.Format.BINARY:
             pytest.xfail(
-                "TODO: add annotation to dump array with no type info"
+                "TODO: add annotation to dump ranges with no type info"
             )
         else:
             raise
@@ -267,7 +269,11 @@ def test_copy_in_empty_set_type(conn, bounds, pgtype, format):
 
 @pytest.fixture(scope="session")
 def testrange(svcconn):
-    svcconn.execute(
+    create_test_range(svcconn)
+
+
+def create_test_range(conn):
+    conn.execute(
         """
         create schema if not exists testschema;
 
