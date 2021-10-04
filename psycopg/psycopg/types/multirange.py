@@ -6,7 +6,7 @@ Support for multirange types adaptation.
 
 from decimal import Decimal
 from typing import Any, Generic, List, Iterable
-from typing import MutableSequence, Optional, Union, overload
+from typing import MutableSequence, Optional, Type, Union, overload
 from datetime import date, datetime
 
 from .. import errors as e
@@ -24,7 +24,14 @@ from .range import dump_range_text, dump_range_binary, fail_dump
 
 class Multirange(MutableSequence[Range[T]]):
     def __init__(self, items: Iterable[Range[T]] = ()):
-        self._ranges: List[Range[T]] = list(items)
+        self._ranges: List[Range[T]] = list(map(self._check_type, items))
+
+    def _check_type(self, item: Any) -> Range[Any]:
+        if not isinstance(item, Range):
+            raise TypeError(
+                f"Multirange is a sequence of Range, got {type(item).__name__}"
+            )
+        return item
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self._ranges!r})"
@@ -64,13 +71,21 @@ class Multirange(MutableSequence[Range[T]]):
         index: Union[int, slice],
         value: Union[Range[T], Iterable[Range[T]]],
     ) -> None:
-        self._ranges[index] = value  # type: ignore
+        if isinstance(index, int):
+            self._check_type(value)
+            self._ranges[index] = self._check_type(value)
+        else:
+            if isinstance(value, Iterable):
+                value = map(self._check_type, value)
+            else:
+                value = [self._check_type(value)]
+            self._ranges[index] = value
 
     def __delitem__(self, index: Union[int, slice]) -> None:
         del self._ranges[index]
 
     def insert(self, index: int, value: Range[T]) -> None:
-        self._ranges.insert(index, value)
+        self._ranges.insert(index, self._check_type(value))
 
     def __eq__(self, other: Any) -> bool:
         if not isinstance(other, Multirange):
@@ -311,6 +326,54 @@ class MultirangeBinaryLoader(BaseMultirangeLoader[T]):
             raise e.DataError("unexpected trailing data in multirange")
 
         return out
+
+
+def register_multirange(
+    info: MultirangeInfo, context: Optional[AdaptContext] = None
+) -> None:
+    """Register the adapters to load and dump a multirange type.
+
+    :param info: The object with the information about the range to register.
+    :param context: The context where to register the adapters. If `!None`,
+        register it globally.
+
+    Register loaders so that loading data of this type will result in a `Range`
+    with bounds parsed as the right subtype.
+
+    .. note::
+
+        Registering the adapters doesn't affect objects already created, even
+        if they are children of the registered context. For instance,
+        registering the adapter globally doesn't affect already existing
+        connections.
+    """
+    # A friendly error warning instead of an AttributeError in case fetch()
+    # failed and it wasn't noticed.
+    if not info:
+        raise TypeError(
+            "no info passed. Is the requested multirange available?"
+        )
+
+    # Register arrays and type info
+    info.register(context)
+
+    adapters = context.adapters if context else postgres.adapters
+
+    # generate and register a customized text loader
+    loader: Type[MultirangeLoader[Any]] = type(
+        f"{info.name.title()}Loader",
+        (MultirangeLoader,),
+        {"subtype_oid": info.subtype_oid},
+    )
+    adapters.register_loader(info.oid, loader)
+
+    # generate and register a customized binary loader
+    bloader: Type[MultirangeBinaryLoader[Any]] = type(
+        f"{info.name.title()}BinaryLoader",
+        (MultirangeBinaryLoader,),
+        {"subtype_oid": info.subtype_oid},
+    )
+    adapters.register_loader(info.oid, bloader)
 
 
 # Text dumpers for builtin multirange types wrappers
