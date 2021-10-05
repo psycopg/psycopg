@@ -96,7 +96,6 @@ def send(pgconn: PGconn) -> PQGen[None]:
             # This call may read notifies: they will be saved in the
             # PGconn buffer and passed to Python later, in `fetch()`.
             pgconn.consume_input()
-        continue
 
 
 def fetch_many(pgconn: PGconn) -> PQGen[List[PGresult]]:
