@@ -12,3 +12,23 @@ testpaths=[
 # Note: On Travis they these options seem to leak objects
 # log_format = "%(asctime)s.%(msecs)03d %(levelname)-8s %(name)s:%(filename)s:%(lineno)d %(message)s"
 # log_level = "DEBUG"
+
+
+[tool.mypy]
+files = ["psycopg/psycopg", "psycopg_pool/psycopg_pool", "psycopg_c/psycopg_c"]
+warn_unused_ignores = true
+show_error_codes = true
+strict = true
+
+[[tool.mypy.overrides]]
+module = [
+    "pytest",
+    "setuptools",
+    "shapely.*",
+]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+disallow_untyped_calls = false
