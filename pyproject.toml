@@ -22,8 +22,6 @@ strict = true
 
 [[tool.mypy.overrides]]
 module = [
-    "pytest",
-    "setuptools",
     "shapely.*",
 ]
 ignore_missing_imports = true

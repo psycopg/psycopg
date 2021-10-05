@@ -49,6 +49,8 @@ extras_require = {
         "black",
         "flake8 ~= 3.9.2",
         "mypy >= 0.910",
+        "pytest-mypy >= 0.8.1",
+        "types-setuptools >= 57.4.0",
         "wheel",
     ],
     # Requirements needed to build the documentation
