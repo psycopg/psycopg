@@ -13,7 +13,6 @@ from contextlib import contextmanager
 from . import pq
 from . import adapt
 from . import errors as e
-from . import generators
 
 from .pq import ExecStatus, Format
 from .abc import ConnectionType, Query, Params, PQGen
@@ -34,9 +33,15 @@ execute: Callable[["PGconn"], PQGen[List["PGresult"]]]
 
 if _psycopg:
     execute = _psycopg.execute
+    fetch = _psycopg.fetch
+    send = _psycopg.send
 
 else:
+    from . import generators
+
     execute = generators.execute
+    fetch = generators.fetch
+    send = generators.send
 
 
 class BaseCursor(Generic[ConnectionType, Row]):
@@ -270,8 +275,8 @@ class BaseCursor(Generic[ConnectionType, Row]):
         self._last_query = query
 
     def _stream_fetchone_gen(self, first: bool) -> PQGen[Optional["PGresult"]]:
-        yield from generators.send(self._pgconn)
-        res = yield from generators.fetch(self._pgconn)
+        yield from send(self._pgconn)
+        res = yield from fetch(self._pgconn)
         if res is None:
             return None
 
@@ -286,7 +291,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
             # End of single row results
             status = res.status
             while res:
-                res = yield from generators.fetch(self._pgconn)
+                res = yield from fetch(self._pgconn)
             if status != ExecStatus.TUPLES_OK:
                 raise e.ProgrammingError(
                     "the operation in stream() didn't produce a result"
