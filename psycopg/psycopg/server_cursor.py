@@ -108,7 +108,8 @@ class ServerCursorHelper(Generic[ConnectionType, Row]):
                 "SELECT 1 FROM pg_catalog.pg_cursors WHERE name = {}"
             ).format(sql.Literal(self.name))
             res = yield from cur._conn._exec_command(query)
-            assert res is not None, "pipeline mode not supported"  # TODO
+            # Would happen in pipeline mode, unsupported here.
+            assert res is not None
             if res.ntuples == 0:
                 return
 
@@ -134,7 +135,8 @@ class ServerCursorHelper(Generic[ConnectionType, Row]):
         res = yield from cur._conn._exec_command(
             query, result_format=self.format
         )
-        assert res is not None, "pipeline mode not supported"  # TODO
+        # Would happen in pipeline mode, unsupported here.
+        assert res is not None
 
         cur.pgresult = res
         cur._tx.set_pgresult(res, set_loaders=False)
@@ -254,6 +256,10 @@ class ServerCursor(Cursor[Row]):
         """
         if kwargs:
             raise TypeError(f"keyword not supported: {list(kwargs)[0]}")
+        if self._pgconn.pipeline_status:
+            raise e.NotSupportedError(
+                "server-side cursors not supported in pipeline mode"
+            )
         helper = cast(ServerCursor[Row], self)._helper
         query = helper._make_declare_statement(self, query)
 
@@ -375,6 +381,10 @@ class AsyncServerCursor(AsyncCursor[Row]):
     ) -> AnyCursor:
         if kwargs:
             raise TypeError(f"keyword not supported: {list(kwargs)[0]}")
+        if self._pgconn.pipeline_status:
+            raise e.NotSupportedError(
+                "server-side cursors not supported in pipeline mode"
+            )
         helper = cast(AsyncServerCursor[Row], self)._helper
         query = helper._make_declare_statement(self, query)
 

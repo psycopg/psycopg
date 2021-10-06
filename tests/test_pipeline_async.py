@@ -159,6 +159,13 @@ async def test_cursor_stream(aconn):
             await cur.stream("select 1").__anext__()
 
 
+async def test_server_cursor(aconn):
+    cur = aconn.cursor(name="pipeline")
+    async with aconn.pipeline():
+        with pytest.raises(psycopg.NotSupportedError):
+            await cur.execute("select 1")
+
+
 async def test_transaction(aconn):
     async with aconn.pipeline() as pipeline:
         async with aconn.transaction():

@@ -156,6 +156,13 @@ def test_cursor_stream(conn):
             cur.stream("select 1").__next__()
 
 
+def test_server_cursor(conn):
+    cur = conn.cursor(name="pipeline")
+    with conn.pipeline():
+        with pytest.raises(psycopg.NotSupportedError):
+            cur.execute("select 1")
+
+
 def test_transaction(conn):
     with conn.pipeline() as pipeline:
         with conn.transaction():
