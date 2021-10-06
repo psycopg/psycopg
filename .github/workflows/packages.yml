@@ -213,12 +213,13 @@ jobs:
           CIBW_ARCHS_WINDOWS: AMD64 x86
           CIBW_BEFORE_BUILD_WINDOWS: pip install delvewheel
           CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: >-
-            delvewheel repair -w {dest_dir} --no-mangle "libiconv-2.dll;libwinpthread-1.dll" {wheel}
+            delvewheel repair -w {dest_dir}
+            --no-mangle "libiconv-2.dll;libwinpthread-1.dll" {wheel}
           CIBW_TEST_REQUIRES: ./psycopg[test] ./psycopg_pool
           CIBW_TEST_COMMAND: pytest {project}/tests -m "not slow" --color yes
           CIBW_ENVIRONMENT_WINDOWS: >-
             PSYCOPG_IMPL=binary
-            PATH="C:\\Program Files\\PostgreSQL\\13\\bin;$PATH"
+            PATH="C:\\Program Files\\PostgreSQL\\14\\bin;$PATH"
             PSYCOPG_TEST_DSN="host=127.0.0.1 user=postgres"
 
       - uses: actions/upload-artifact@v2
