@@ -94,6 +94,11 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
         *,
         binary: Optional[bool] = None,
     ) -> AsyncIterator[Row]:
+        if self._pgconn.pipeline_status:
+            raise e.ProgrammingError(
+                "stream() cannot be used in pipeline mode"
+            )
+
         async with self._conn.lock:
             await self._conn.wait(
                 self._stream_send_gen(query, params, binary=binary)

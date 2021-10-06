@@ -588,6 +588,11 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
         """
         Iterate row-by-row on a result from the database.
         """
+        if self._pgconn.pipeline_status:
+            raise e.ProgrammingError(
+                "stream() cannot be used in pipeline mode"
+            )
+
         with self._conn.lock:
             self._conn.wait(
                 self._stream_send_gen(query, params, binary=binary)
