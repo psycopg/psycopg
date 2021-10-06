@@ -249,6 +249,10 @@ class ServerCursor(Cursor[Row]):
         """
         if kwargs:
             raise TypeError(f"keyword not supported: {list(kwargs)[0]}")
+        if self._pgconn.pipeline_status:
+            raise e.NotSupportedError(
+                "server-side cursors not supported in pipeline mode"
+            )
 
         try:
             with self._conn.lock:
@@ -370,6 +374,11 @@ class AsyncServerCursor(AsyncCursor[Row]):
     ) -> _AC:
         if kwargs:
             raise TypeError(f"keyword not supported: {list(kwargs)[0]}")
+        if self._pgconn.pipeline_status:
+            raise e.NotSupportedError(
+                "server-side cursors not supported in pipeline mode"
+            )
+
         try:
             async with self._conn.lock:
                 await self._conn.wait(
