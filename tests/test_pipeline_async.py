@@ -19,17 +19,17 @@ def debug_logs(caplog):
 
 
 async def test_pipeline_status(aconn):
-    assert not aconn._pipeline_mode
+    assert not aconn.pgconn.pipeline_status
     async with aconn.pipeline() as p:
-        assert await p.status() == pq.PipelineStatus.ON
-        assert aconn._pipeline_mode
+        assert p.status == pq.PipelineStatus.ON
+        assert aconn.pgconn.pipeline_status
         await p.sync()
 
         # PQpipelineSync
         assert len(p) == 1
 
-    assert await p.status() == pq.PipelineStatus.OFF
-    assert not aconn._pipeline_mode
+    assert p.status == pq.PipelineStatus.OFF
+    assert not aconn.pgconn.pipeline_status
 
 
 async def test_pipeline_busy(aconn):
@@ -104,19 +104,19 @@ async def test_pipeline_aborted(aconn):
 
         with pytest.raises(UndefinedTable):
             await c.fetchone()
-        assert await pipeline.status() == pq.PipelineStatus.ABORTED
+        assert pipeline.status == pq.PipelineStatus.ABORTED
         assert len(pipeline) == 4  # -PIPELINE_SYNC, -TUPLES_OK
 
         with pytest.raises(psycopg.OperationalError, match="pipeline aborted"):
             await c.fetchone()
-        assert await pipeline.status() == pq.PipelineStatus.ABORTED
+        assert pipeline.status == pq.PipelineStatus.ABORTED
         assert len(pipeline) == 3  # -TUPLES_OK
 
         (r,) = await c.fetchone()
         assert r == 2
 
         assert len(pipeline) == 1  # -PIPELINE_SYNC, -TUPLES_OK
-        assert await pipeline.status() == pq.PipelineStatus.ON
+        assert pipeline.status == pq.PipelineStatus.ON
 
 
 async def test_prepared(aconn):

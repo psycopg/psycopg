@@ -236,7 +236,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
         prepare: Optional[bool] = None,
         binary: Optional[bool] = None,
     ) -> PQGen[Optional[Sequence["PGresult"]]]:
-        pipeline_mode = self._conn._pipeline_mode
+        pipeline_mode = self._pgconn.pipeline_status
         # Check if the query is prepared or needs preparing
         prep, name = self._conn._prepared.get(pgq, prepare)
         if prep is Prepare.YES:
@@ -639,7 +639,7 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
         """
         Iterate row-by-row on a result from the database.
         """
-        if self._conn._pipeline_mode:
+        if self._pgconn.pipeline_status:
             raise e.ProgrammingError(
                 "stream() cannot be used in pipeline mode"
             )
@@ -749,6 +749,6 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
             yield copy
 
     def _fetch_pipeline(self) -> None:
-        if self._conn._pipeline_mode:
+        if self._pgconn.pipeline_status:
             with self._conn.lock:
                 self._conn.wait(self._fetch_pipeline_gen())

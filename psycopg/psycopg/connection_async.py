@@ -13,7 +13,7 @@ from typing import cast, overload, TYPE_CHECKING
 
 from . import errors as e
 from . import waiting
-from .pq import Format, PipelineStatus
+from .pq import Format
 from .abc import AdaptContext, Params, PQGen, PQGenConn, Query, RV
 from .rows import Row, AsyncRowFactory, tuple_row, TupleRow
 from .adapt import AdaptersMap
@@ -36,9 +36,6 @@ logger = logging.getLogger("psycopg")
 
 class AsyncPipeline(BasePipeline):
     """Handler for async connection in pipeline mode."""
-
-    async def status(self) -> PipelineStatus:
-        return self._status()
 
     async def sync(self) -> None:
         """Mark a synchronization point in the pipeline."""
@@ -300,15 +297,13 @@ class AsyncConnection(BaseConnection[Row]):
         :rtype: AsyncPipeline
         """
         assert not self._pipeline_queue
-        self.pgconn.enter_pipeline_mode()
-        self._pipeline_mode = True
+        self.pgconn.pipeline_status = True
         try:
             yield AsyncPipeline(self.pgconn, self._pipeline_queue)
         finally:
             async with self.lock:
                 await self.wait(self._end_pipeline_gen())
-            self.pgconn.exit_pipeline_mode()
-            self._pipeline_mode = False
+            self.pgconn.pipeline_status = False
 
     async def wait(self, gen: PQGen[RV]) -> RV:
         return await waiting.wait_async(gen, self.pgconn.socket)

@@ -94,8 +94,11 @@ class BasePipeline:
     def __len__(self) -> int:
         return len(self._queue)
 
-    def _status(self) -> pq.PipelineStatus:
-        return self.pgconn.pipeline_status()
+    @property
+    def status(self) -> pq.PipelineStatus:
+        status = self.pgconn.pipeline_status
+        assert isinstance(status, pq.PipelineStatus)
+        return status
 
     def _sync(self) -> None:
         self.pgconn.pipeline_sync()
@@ -105,9 +108,6 @@ class BasePipeline:
 
 class Pipeline(BasePipeline):
     """Handler for connection in pipeline mode."""
-
-    def status(self) -> pq.PipelineStatus:
-        return self._status()
 
     def sync(self) -> None:
         """Mark a synchronization point in the pipeline."""
@@ -160,9 +160,6 @@ class BaseConnection(Generic[Row]):
         # Attribute is only set if the connection is from a pool so we can tell
         # apart a connection in the pool too (when _pool = None)
         self._pool: Optional["BasePool[Any]"]
-
-        # Attribute set when the connection enters pipeline mode.
-        self._pipeline_mode = False
 
         # Attribute only set when the connection is in pipeline mode; this
         # contains either a cursor, if queued query is expected to have data
@@ -468,7 +465,7 @@ class BaseConnection(Generic[Row]):
                 command, None, result_format=result_format
             )
 
-        if self._pipeline_mode:
+        if self.pgconn.pipeline_status:
             yield from send(self.pgconn)
             self._pipeline_queue.append(None)
             logger.debug("sent command '%s' in pipeline", command.decode())
@@ -839,16 +836,13 @@ class Connection(BaseConnection[Row]):
 
         :rtype: Pipeline
         """
-        assert not self._pipeline_queue
-        self.pgconn.enter_pipeline_mode()
-        self._pipeline_mode = True
+        self.pgconn.pipeline_status = True
         try:
             yield Pipeline(self.pgconn, self._pipeline_queue)
         finally:
             with self.lock:
                 self.wait(self._end_pipeline_gen())
-            self.pgconn.exit_pipeline_mode()
-            self._pipeline_mode = False
+            self.pgconn.pipeline_status = False
 
     def wait(self, gen: PQGen[RV], timeout: Optional[float] = 0.1) -> RV:
         """

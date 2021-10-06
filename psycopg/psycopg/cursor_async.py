@@ -95,7 +95,7 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
         *,
         binary: Optional[bool] = None,
     ) -> AsyncIterator[Row]:
-        if self._conn._pipeline_mode:
+        if self._pgconn.pipeline_status:
             raise e.ProgrammingError(
                 "stream() cannot be used in pipeline mode"
             )
@@ -173,6 +173,6 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
             yield copy
 
     async def _fetch_pipeline(self) -> None:
-        if self._conn._pipeline_mode:
+        if self._pgconn.pipeline_status:
             async with self._conn.lock:
                 await self._conn.wait(self._fetch_pipeline_gen())

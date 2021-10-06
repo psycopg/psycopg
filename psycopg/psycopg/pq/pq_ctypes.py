@@ -15,7 +15,7 @@ from functools import partial
 
 from ctypes import Array, pointer, string_at, create_string_buffer, byref
 from ctypes import addressof, c_char_p, c_int, c_size_t, c_ulong
-from typing import Any, Callable, List, Optional, Sequence, Tuple
+from typing import Any, Callable, List, Optional, Sequence, Tuple, Union
 from typing import cast as t_cast, TYPE_CHECKING
 
 from .. import errors as e
@@ -629,26 +629,40 @@ class PGconn:
             raise MemoryError("couldn't allocate empty PGresult")
         return PGresult(rv)
 
-    def pipeline_status(self) -> PipelineStatus:
-        return PipelineStatus(impl.PQpipelineStatus(self._pgconn_ptr))
+    @property
+    def pipeline_status(self) -> Union[bool, PipelineStatus]:
+        """The current pipeline mode status.
 
-    def enter_pipeline_mode(self) -> None:
-        """Enter pipeline mode.
+        For libpq < 14.0, always return False.
 
-        :raises ~e.OperationalError: in case of failure to enter the pipeline
-            mode.
+        :raises ~e.ProgrammingError: if pipeline mode is not off when trying
+            to enter.
+        :raises ~e.OperationalError: in case of failure to enter or exit the
+            pipeline mode.
         """
-        if impl.PQenterPipelineMode(self._pgconn_ptr) != 1:
-            raise e.OperationalError("failed to enter pipeline mode")
+        try:
+            return PipelineStatus(impl.PQpipelineStatus(self._pgconn_ptr))
+        except e.NotSupportedError:
+            return False
 
-    def exit_pipeline_mode(self) -> None:
-        """Exit pipeline mode.
-
-        :raises ~e.OperationalError: in case of failure to exit the pipeline
-            mode.
-        """
-        if impl.PQexitPipelineMode(self._pgconn_ptr) != 1:
-            raise e.OperationalError(error_message(self))
+    @pipeline_status.setter
+    def pipeline_status(self, value: Union[bool, PipelineStatus]) -> None:
+        if value in (True, PipelineStatus.ON):
+            status = self.pipeline_status
+            if status:
+                assert isinstance(status, PipelineStatus)
+                raise e.ProgrammingError(
+                    f"cannot enter pipeline mode, pipeline is {status.name}"
+                )
+            if impl.PQenterPipelineMode(self._pgconn_ptr) != 1:
+                raise e.OperationalError(
+                    f"failed to enter pipeline mode: {error_message(self)}"
+                )
+        elif not value:
+            if impl.PQexitPipelineMode(self._pgconn_ptr) != 1:
+                raise e.OperationalError(error_message(self))
+        else:
+            raise ValueError(value)
 
     def pipeline_sync(self) -> None:
         """Mark a synchronization point in a pipeline.

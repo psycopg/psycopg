@@ -242,13 +242,12 @@ class PGconn(Protocol):
     def make_empty_result(self, exec_status: int) -> "PGresult":
         ...
 
-    def pipeline_status(self) -> PipelineStatus:
+    @property
+    def pipeline_status(self) -> Union[bool, PipelineStatus]:
         ...
 
-    def enter_pipeline_mode(self) -> None:
-        ...
-
-    def exit_pipeline_mode(self) -> None:
+    @pipeline_status.setter
+    def pipeline_status(self, value: Union[bool, PipelineStatus]) -> None:
         ...
 
     def pipeline_sync(self) -> None:

@@ -16,17 +16,17 @@ pytestmark = pytest.mark.libpq(">=14")
 
 
 def test_pipeline_status(conn):
-    assert not conn._pipeline_mode
+    assert not conn.pgconn.pipeline_status
     with conn.pipeline() as p:
-        assert p.status() == pq.PipelineStatus.ON
-        assert conn._pipeline_mode
+        assert p.status == pq.PipelineStatus.ON
+        assert conn.pgconn.pipeline_status
         p.sync()
 
         # PQpipelineSync
         assert len(p) == 1
 
-    assert p.status() == pq.PipelineStatus.OFF
-    assert not conn._pipeline_mode
+    assert p.status == pq.PipelineStatus.OFF
+    assert not conn.pgconn.pipeline_status
 
 
 def test_pipeline_busy(conn):
@@ -101,19 +101,19 @@ def test_pipeline_aborted(conn):
 
         with pytest.raises(UndefinedTable):
             c.fetchone()
-        assert pipeline.status() == pq.PipelineStatus.ABORTED
+        assert pipeline.status == pq.PipelineStatus.ABORTED
         assert len(pipeline) == 4  # -PIPELINE_SYNC, -TUPLES_OK
 
         with pytest.raises(psycopg.OperationalError, match="pipeline aborted"):
             c.fetchone()
-        assert pipeline.status() == pq.PipelineStatus.ABORTED
+        assert pipeline.status == pq.PipelineStatus.ABORTED
         assert len(pipeline) == 3  # -TUPLES_OK
 
         (r,) = c.fetchone()
         assert r == 2
 
         assert len(pipeline) == 1  # -PIPELINE_SYNC, -TUPLES_OK
-        assert pipeline.status() == pq.PipelineStatus.ON
+        assert pipeline.status == pq.PipelineStatus.ON
 
 
 def test_prepared(conn):
