@@ -511,47 +511,6 @@ class BaseCursor(Generic[ConnectionType, Row]):
             raise IndexError("position out of bound")
         self._pos = newpos
 
-    def _fetch_pipeline_gen(self) -> PQGen[None]:
-        """Process the pipeline queue until current cursor is found.
-        For each queued items poped in the meanwhile, fetch and process
-        respective pipeline results.
-
-        Might be a no-op if results of this cursor have already been fetched
-        and processed during a prior results fetch of another cursor which
-        query got issued after this one's in the pipeline.
-        """
-        if self not in self._conn._pipeline_queue:
-            return
-
-        while True:
-            cursor = self._conn._pipeline_queue.popleft()
-            results = yield from self._conn._fetch_many_gen()
-
-            if cursor is None:
-                (result,) = results
-                if result.status in (
-                    ExecStatus.FATAL_ERROR,
-                    ExecStatus.PIPELINE_ABORTED,
-                ):
-                    raise e.error_from_result(
-                        result, encoding=pgconn_encoding(self._pgconn)
-                    )
-                elif result.status == ExecStatus.PIPELINE_SYNC:
-                    logger.debug("received pipeline sync result")
-                continue
-
-            cursor._reset()
-            cursor._execute_results(results)
-
-            if cursor is self:
-                break
-
-        else:
-            raise e.ProgrammingError(
-                f"{self} not found in pipeline results; "
-                "missing a synchronization point?"
-            )
-
     def _close(self) -> None:
         self._closed = True
 
@@ -751,4 +710,4 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
     def _fetch_pipeline(self) -> None:
         if self._pgconn.pipeline_status:
             with self._conn.lock:
-                self._conn.wait(self._fetch_pipeline_gen())
+                self._conn.wait(self._conn._fetch_pipeline_gen(self))

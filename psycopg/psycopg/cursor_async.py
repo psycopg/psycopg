@@ -175,4 +175,4 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
     async def _fetch_pipeline(self) -> None:
         if self._pgconn.pipeline_status:
             async with self._conn.lock:
-                await self._conn.wait(self._fetch_pipeline_gen())
+                await self._conn.wait(self._conn._fetch_pipeline_gen(self))

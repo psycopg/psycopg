@@ -32,16 +32,16 @@ async def test_pipeline_status(aconn):
     assert not aconn.pgconn.pipeline_status
 
 
-async def test_pipeline_busy(aconn):
-    with pytest.raises(
-        psycopg.ProgrammingError, match="has unfetched results in the pipeline"
-    ):
-        async with aconn.cursor() as cur, aconn.pipeline() as pipeline:
-            await cur.execute("select 1")
-            await pipeline.sync()
+async def test_pipeline_processed_at_exit(aconn):
+    async with aconn.cursor() as cur, aconn.pipeline() as pipeline:
+        await cur.execute("select 1")
+        await pipeline.sync()
 
-            # PQsendQuery[BEGIN], PQsendQuery, PQpipelineSync
-            assert len(pipeline) == 3
+        # PQsendQuery[BEGIN], PQsendQuery, PQpipelineSync
+        assert len(pipeline) == 3
+
+    assert len(pipeline) == 0
+    assert await cur.fetchone() == (1,)
 
 
 async def test_pipeline(aconn):
@@ -67,8 +67,7 @@ async def test_pipeline(aconn):
 
         (r11,) = await c1.fetchone()
         assert r11 == 11
-        # Same as before, since results have already been fetched.
-        assert len(pipeline) == 1
+        assert len(pipeline) == 0  # -PIPELINE_SYNC
 
 
 async def test_autocommit(aconn):

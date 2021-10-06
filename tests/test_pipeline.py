@@ -29,16 +29,16 @@ def test_pipeline_status(conn):
     assert not conn.pgconn.pipeline_status
 
 
-def test_pipeline_busy(conn):
-    with pytest.raises(
-        psycopg.ProgrammingError, match="has unfetched results in the pipeline"
-    ):
-        with conn.cursor() as cur, conn.pipeline() as pipeline:
-            cur.execute("select 1")
-            pipeline.sync()
+def test_pipeline_processed_at_exit(conn):
+    with conn.cursor() as cur, conn.pipeline() as pipeline:
+        cur.execute("select 1")
+        pipeline.sync()
 
-            # PQsendQuery[BEGIN], PQsendQuery, PQpipelineSync
-            assert len(pipeline) == 3
+        # PQsendQuery[BEGIN], PQsendQuery, PQpipelineSync
+        assert len(pipeline) == 3
+
+    assert len(pipeline) == 0
+    assert cur.fetchone() == (1,)
 
 
 def test_pipeline(conn):
@@ -64,8 +64,7 @@ def test_pipeline(conn):
 
         (r11,) = c1.fetchone()
         assert r11 == 11
-        # Same as before, since results have already been fetched.
-        assert len(pipeline) == 1
+        assert len(pipeline) == 0  # -PIPELINE_SYNC
 
 
 def test_autocommit(conn):

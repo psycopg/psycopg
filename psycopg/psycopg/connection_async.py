@@ -302,7 +302,7 @@ class AsyncConnection(BaseConnection[Row]):
             yield AsyncPipeline(self.pgconn, self._pipeline_queue)
         finally:
             async with self.lock:
-                await self.wait(self._end_pipeline_gen())
+                await self.wait(self._fetch_pipeline_gen())
             self.pgconn.exit_pipeline_mode()
 
     async def wait(self, gen: PQGen[RV]) -> RV:

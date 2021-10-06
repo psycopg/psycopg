@@ -552,26 +552,33 @@ class BaseConnection(Generic[Row]):
         )
         return results
 
-    def _end_pipeline_gen(self) -> PQGen[None]:
-        """Empty the pipeline queue from unfetched results, usually those from
-        commands (e.g. COMMIT) or pipeline synchronization points which
-        results are not expected to be fetched by the user.
+    def _fetch_pipeline_gen(
+        self, target: Optional["BaseCursor[Any, Any]"] = None
+    ) -> PQGen[None]:
+        """Fetch pipeline results and populate queued cursors until 'target'
+        cursor is eventually found in the queue.
         """
         while self._pipeline_queue:
             queued = self._pipeline_queue.popleft()
-
-            if queued is not None:
-                raise e.ProgrammingError(
-                    f"{queued} has unfetched results in the pipeline"
-                )
-
             results = yield from self._fetch_many_gen()
 
-            (result,) = results
-            if result.status == ExecStatus.FATAL_ERROR:
-                raise e.error_from_result(
-                    result, encoding=pgconn_encoding(self.pgconn)
-                )
+            if queued is None:
+                (result,) = results
+                if result.status in (
+                    ExecStatus.FATAL_ERROR,
+                    ExecStatus.PIPELINE_ABORTED,
+                ):
+                    raise e.error_from_result(
+                        result, encoding=pgconn_encoding(self.pgconn)
+                    )
+                elif result.status == ExecStatus.PIPELINE_SYNC:
+                    logger.debug("received pipeline sync result")
+            else:
+                cursor = queued
+                cursor._reset()
+                cursor._execute_results(results)
+                if cursor is target:
+                    break
 
 
 class Connection(BaseConnection[Row]):
@@ -840,7 +847,7 @@ class Connection(BaseConnection[Row]):
             yield Pipeline(self.pgconn, self._pipeline_queue)
         finally:
             with self.lock:
-                self.wait(self._end_pipeline_gen())
+                self.wait(self._fetch_pipeline_gen())
             self.pgconn.exit_pipeline_mode()
 
     def wait(self, gen: PQGen[RV], timeout: Optional[float] = 0.1) -> RV:
