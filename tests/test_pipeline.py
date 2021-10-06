@@ -150,6 +150,12 @@ def test_auto_prepare(conn):
             assert r == v
 
 
+def test_cursor_stream(conn):
+    with conn.pipeline(), conn.cursor() as cur:
+        with pytest.raises(psycopg.ProgrammingError):
+            cur.stream("select 1").__next__()
+
+
 def test_transaction(conn):
     with conn.pipeline() as pipeline:
         with conn.transaction():

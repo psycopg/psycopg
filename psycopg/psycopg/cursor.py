@@ -297,9 +297,6 @@ class BaseCursor(Generic[ConnectionType, Row]):
         self._last_query = query
 
     def _stream_fetchone_gen(self, first: bool) -> PQGen[Optional["PGresult"]]:
-        assert (
-            not self._conn._pipeline_mode
-        ), "pipeline mode not supported"  # TODO
         yield from send(self._pgconn)
         res = yield from fetch(self._pgconn)
         if res is None:
@@ -642,6 +639,11 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
         """
         Iterate row-by-row on a result from the database.
         """
+        if self._conn._pipeline_mode:
+            raise e.ProgrammingError(
+                "stream() cannot be used in pipeline mode"
+            )
+
         with self._conn.lock:
             self._conn.wait(
                 self._stream_send_gen(query, params, binary=binary)
