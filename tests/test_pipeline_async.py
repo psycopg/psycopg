@@ -26,3 +26,9 @@ async def test_cursor_stream(aconn):
     async with aconn.pipeline(), aconn.cursor() as cur:
         with pytest.raises(psycopg.ProgrammingError):
             await cur.stream("select 1").__anext__()
+
+
+async def test_server_cursor(aconn):
+    async with aconn.cursor(name="pipeline") as cur, aconn.pipeline():
+        with pytest.raises(psycopg.NotSupportedError):
+            await cur.execute("select 1")

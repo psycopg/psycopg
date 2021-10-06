@@ -23,3 +23,9 @@ def test_cursor_stream(conn):
     with conn.pipeline(), conn.cursor() as cur:
         with pytest.raises(psycopg.ProgrammingError):
             cur.stream("select 1").__next__()
+
+
+def test_server_cursor(conn):
+    with conn.cursor(name="pipeline") as cur, conn.pipeline():
+        with pytest.raises(psycopg.NotSupportedError):
+            cur.execute("select 1")
