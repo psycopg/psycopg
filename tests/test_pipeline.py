@@ -1,5 +1,6 @@
 import pytest
 
+import psycopg
 from psycopg import pq
 from psycopg.errors import ProgrammingError
 
@@ -16,3 +17,9 @@ def test_pipeline_status(conn):
                 pass
     assert p.status == pq.PipelineStatus.OFF
     assert not conn._pipeline
+
+
+def test_cursor_stream(conn):
+    with conn.pipeline(), conn.cursor() as cur:
+        with pytest.raises(psycopg.ProgrammingError):
+            cur.stream("select 1").__next__()
