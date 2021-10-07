@@ -313,6 +313,7 @@ async def test_queue(dsn, retries):
         with retry:
             results = []
             async with pool.AsyncConnectionPool(dsn, min_size=2) as p:
+                await p.wait()
                 ts = [create_task(worker(i)) for i in range(6)]
                 await asyncio.gather(*ts)
 

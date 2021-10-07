@@ -292,6 +292,7 @@ def test_queue(dsn, retries):
         with retry:
             results = []
             with pool.ConnectionPool(dsn, min_size=2) as p:
+                p.wait()
                 ts = [Thread(target=worker, args=(i,)) for i in range(6)]
                 [t.start() for t in ts]
                 [t.join() for t in ts]
