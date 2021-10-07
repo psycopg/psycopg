@@ -6,18 +6,20 @@ psycopg async cursor objects
 
 from types import TracebackType
 from typing import Any, AsyncIterator, List
-from typing import Optional, Sequence, Type, TYPE_CHECKING
+from typing import Optional, Sequence, Type, TypeVar, TYPE_CHECKING
 
 from . import errors as e
 
 from .abc import Query, Params
 from .copy import AsyncCopy
 from .rows import Row, RowMaker, AsyncRowFactory
-from .cursor import BaseCursor, AnyCursor
+from .cursor import BaseCursor
 from ._compat import asynccontextmanager
 
 if TYPE_CHECKING:
     from .connection_async import AsyncConnection
+
+_C = TypeVar("_C", bound="AsyncCursor[Any]")
 
 
 class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
@@ -33,7 +35,7 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
         super().__init__(connection)
         self._row_factory = row_factory
 
-    async def __aenter__(self: AnyCursor) -> AnyCursor:
+    async def __aenter__(self: _C) -> _C:
         return self
 
     async def __aexit__(
@@ -61,13 +63,13 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
         return self._row_factory(self)
 
     async def execute(
-        self: AnyCursor,
+        self: _C,
         query: Query,
         params: Optional[Params] = None,
         *,
         prepare: Optional[bool] = None,
         binary: Optional[bool] = None,
-    ) -> AnyCursor:
+    ) -> _C:
         try:
             async with self._conn.lock:
                 await self._conn.wait(

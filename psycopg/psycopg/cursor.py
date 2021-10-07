@@ -7,7 +7,7 @@ psycopg cursor objects
 import sys
 from types import TracebackType
 from typing import Any, Callable, Generic, Iterator, List
-from typing import Optional, NoReturn, Sequence, Type, TYPE_CHECKING, TypeVar
+from typing import Optional, NoReturn, Sequence, Type, TypeVar, TYPE_CHECKING
 from contextlib import contextmanager
 
 from . import pq
@@ -42,6 +42,8 @@ else:
     execute = generators.execute
     fetch = generators.fetch
     send = generators.send
+
+_C = TypeVar("_C", bound="Cursor[Any]")
 
 
 class BaseCursor(Generic[ConnectionType, Row]):
@@ -491,9 +493,6 @@ class BaseCursor(Generic[ConnectionType, Row]):
         self._closed = True
 
 
-AnyCursor = TypeVar("AnyCursor", bound="BaseCursor[Any, Any]")
-
-
 class Cursor(BaseCursor["Connection[Any]", Row]):
     __module__ = "psycopg"
     __slots__ = ()
@@ -504,7 +503,7 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
         super().__init__(connection)
         self._row_factory = row_factory
 
-    def __enter__(self: AnyCursor) -> AnyCursor:
+    def __enter__(self: _C) -> _C:
         return self
 
     def __exit__(
@@ -536,13 +535,13 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
         return self._row_factory(self)
 
     def execute(
-        self: AnyCursor,
+        self: _C,
         query: Query,
         params: Optional[Params] = None,
         *,
         prepare: Optional[bool] = None,
         binary: Optional[bool] = None,
-    ) -> AnyCursor:
+    ) -> _C:
         """
         Execute a query or command to the database.
         """
