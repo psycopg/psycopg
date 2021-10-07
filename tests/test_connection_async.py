@@ -682,4 +682,8 @@ def test_windows_error(dsn):
         ):
             await psycopg.AsyncConnection.connect(dsn)
 
-    loop.run_until_complete(go())
+    try:
+        loop.run_until_complete(go())
+    finally:
+        loop.run_until_complete(loop.shutdown_asyncgens())
+        loop.close()
