@@ -5,15 +5,15 @@ psycopg server-side cursor objects.
 # Copyright (C) 2020-2021 The Psycopg Team
 
 import warnings
-from typing import Any, AsyncIterator, cast, Generic, List, Iterator, Optional
-from typing import Sequence, TYPE_CHECKING
+from typing import Any, AsyncIterator, Generic, List, Iterator, Optional
+from typing import Sequence, TypeVar, TYPE_CHECKING
 
 from . import pq
 from . import sql
 from . import errors as e
 from .abc import ConnectionType, Query, Params, PQGen
 from .rows import Row, RowFactory, AsyncRowFactory
-from .cursor import AnyCursor, BaseCursor, Cursor, execute
+from .cursor import BaseCursor, Cursor, execute
 from .cursor_async import AsyncCursor
 from ._encodings import pgconn_encoding
 
@@ -178,6 +178,10 @@ class ServerCursorHelper(Generic[ConnectionType, Row]):
         return sql.SQL(" ").join(parts)
 
 
+_C = TypeVar("_C", bound="ServerCursor[Any]")
+_AC = TypeVar("_AC", bound="AsyncServerCursor[Any]")
+
+
 class ServerCursor(Cursor[Row]):
     __module__ = "psycopg"
     __slots__ = ("_helper", "itersize")
@@ -240,19 +244,19 @@ class ServerCursor(Cursor[Row]):
             super().close()
 
     def execute(
-        self: AnyCursor,
+        self: _C,
         query: Query,
         params: Optional[Params] = None,
         *,
         binary: Optional[bool] = None,
         **kwargs: Any,
-    ) -> AnyCursor:
+    ) -> _C:
         """
         Open a cursor to execute a query to the database.
         """
         if kwargs:
             raise TypeError(f"keyword not supported: {list(kwargs)[0]}")
-        helper = cast(ServerCursor[Row], self)._helper
+        helper = self._helper
         query = helper._make_declare_statement(self, query)
 
         if binary is None:
@@ -364,16 +368,16 @@ class AsyncServerCursor(AsyncCursor[Row]):
             await super().close()
 
     async def execute(
-        self: AnyCursor,
+        self: _AC,
         query: Query,
         params: Optional[Params] = None,
         *,
         binary: Optional[bool] = None,
         **kwargs: Any,
-    ) -> AnyCursor:
+    ) -> _AC:
         if kwargs:
             raise TypeError(f"keyword not supported: {list(kwargs)[0]}")
-        helper = cast(AsyncServerCursor[Row], self)._helper
+        helper = self._helper
         query = helper._make_declare_statement(self, query)
 
         if binary is None:
