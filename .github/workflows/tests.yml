@@ -214,7 +214,7 @@ jobs:
       - name: Build the C wheel
         if: ${{ matrix.impl == 'c' }}
         run: |
-          $env:Path = "C:\Program Files\PostgreSQL\13\bin\;$env:Path"
+          $env:Path = "C:\Program Files\PostgreSQL\14\bin\;$env:Path"
           python ./psycopg_c/setup.py bdist_wheel
           pip install delvewheel
           &"delvewheel" repair --no-mangle "libiconv-2.dll;libwinpthread-1.dll" @(Get-ChildItem psycopg_c\dist\*.whl)
@@ -227,7 +227,7 @@ jobs:
           pip install ./psycopg/[test] ./psycopg_pool
           &"pip" install @(Get-ChildItem wheelhouse\*.whl)
           # Fix the path for the tests using ctypes
-          $env:Path = "C:\Program Files\PostgreSQL\13\bin\;$env:Path"
+          $env:Path = "C:\Program Files\PostgreSQL\14\bin\;$env:Path"
           pytest --color yes
 
 
