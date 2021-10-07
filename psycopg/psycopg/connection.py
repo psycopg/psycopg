@@ -96,9 +96,7 @@ class BasePipeline:
 
     @property
     def status(self) -> pq.PipelineStatus:
-        status = self.pgconn.pipeline_status
-        assert isinstance(status, pq.PipelineStatus)
-        return status
+        return pq.PipelineStatus(self.pgconn.pipeline_status)
 
     def _sync(self) -> None:
         self.pgconn.pipeline_sync()
@@ -837,13 +835,13 @@ class Connection(BaseConnection[Row]):
         :rtype: Pipeline
         """
         assert not self._pipeline_queue
-        self.pgconn.pipeline_status = True
+        self.pgconn.enter_pipeline_mode()
         try:
             yield Pipeline(self.pgconn, self._pipeline_queue)
         finally:
             with self.lock:
                 self.wait(self._end_pipeline_gen())
-            self.pgconn.pipeline_status = False
+            self.pgconn.exit_pipeline_mode()
 
     def wait(self, gen: PQGen[RV], timeout: Optional[float] = 0.1) -> RV:
         """

@@ -297,13 +297,13 @@ class AsyncConnection(BaseConnection[Row]):
         :rtype: AsyncPipeline
         """
         assert not self._pipeline_queue
-        self.pgconn.pipeline_status = True
+        self.pgconn.enter_pipeline_mode()
         try:
             yield AsyncPipeline(self.pgconn, self._pipeline_queue)
         finally:
             async with self.lock:
                 await self.wait(self._end_pipeline_gen())
-            self.pgconn.pipeline_status = False
+            self.pgconn.exit_pipeline_mode()
 
     async def wait(self, gen: PQGen[RV]) -> RV:
         return await waiting.wait_async(gen, self.pgconn.socket)

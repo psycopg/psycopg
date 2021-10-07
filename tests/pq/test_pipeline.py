@@ -6,64 +6,31 @@ from psycopg import pq
 
 @pytest.mark.libpq("< 14")
 def test_old_libpq(pgconn):
-    assert pgconn.pipeline_status is False
+    assert pgconn.pipeline_status == 0
     with pytest.raises(psycopg.NotSupportedError):
-        pgconn.pipeline_status = True
+        pgconn.enter_pipeline_mode()
     with pytest.raises(psycopg.NotSupportedError):
-        pgconn.pipeline_status = False
+        pgconn.exit_pipeline_mode()
     with pytest.raises(psycopg.NotSupportedError):
         pgconn.pipeline_sync()
-
-
-@pytest.mark.libpq(">= 14")
-def test_pipeline_status(pgconn):
-    assert not pgconn.pipeline_status
-    pgconn.pipeline_status = False
-    pgconn.pipeline_status = True
-
-    pgconn.pipeline_status = pq.PipelineStatus.OFF
-    assert not pgconn.pipeline_status
-
-    with pytest.raises(ValueError):
-        pgconn.pipeline_status = pq.PipelineStatus.ABORTED
-
-    pgconn.pipeline_status = pq.PipelineStatus.ON
-    assert pgconn.pipeline_status
-
-    with pytest.raises(
-        psycopg.ProgrammingError,
-        match="cannot enter pipeline mode, pipeline is ON",
-    ):
-        pgconn.pipeline_status = True
-
-    pgconn.send_query(b"select * from doesnotexist")
-    pgconn.get_result()
-    assert pgconn.pipeline_status == pq.PipelineStatus.ABORTED
-    with pytest.raises(
-        psycopg.ProgrammingError,
-        match="cannot enter pipeline mode, pipeline is ABORTED",
-    ):
-        pgconn.pipeline_status = True
-    pgconn.pipeline_status = False
-    assert pgconn.pipeline_status == pq.PipelineStatus.OFF
 
 
 @pytest.mark.libpq(">= 14")
 def test_work_in_progress(pgconn):
     assert not pgconn.nonblocking
     assert not pgconn.pipeline_status
-    pgconn.pipeline_status = True
+    pgconn.enter_pipeline_mode()
     pgconn.send_query_params(b"select $1", [b"1"])
     with pytest.raises(
         psycopg.OperationalError, match="cannot exit pipeline mode"
     ):
-        pgconn.pipeline_status = False
+        pgconn.exit_pipeline_mode()
 
 
 @pytest.mark.libpq(">= 14")
 def test_multi_pipelines(pgconn):
     assert not pgconn.pipeline_status
-    pgconn.pipeline_status = True
+    pgconn.enter_pipeline_mode()
     pgconn.send_query_params(b"select $1", [b"1"])
     pgconn.pipeline_sync()
     pgconn.send_query_params(b"select $1", [b"2"])
@@ -98,7 +65,8 @@ def test_multi_pipelines(pgconn):
     # pipeline still ON
     assert pgconn.pipeline_status == pq.PipelineStatus.ON
 
-    pgconn.pipeline_status = False
+    pgconn.exit_pipeline_mode()
+
     assert pgconn.pipeline_status == pq.PipelineStatus.OFF
 
     assert result1.get_value(0, 0) == b"1"
@@ -116,7 +84,7 @@ def table(pgconn):
 @pytest.mark.libpq(">= 14")
 def test_pipeline_abort(pgconn, table):
     assert not pgconn.pipeline_status
-    pgconn.pipeline_status = True
+    pgconn.enter_pipeline_mode()
     pgconn.send_query_params(b"insert into pipeline values ($1)", [b"1"])
     pgconn.send_query_params(b"select no_such_function($1)", [b"1"])
     pgconn.send_query_params(b"insert into pipeline values ($1)", [b"2"])
@@ -178,4 +146,4 @@ def test_pipeline_abort(pgconn, table):
     # NULL signals end of result
     assert pgconn.get_result() is None
 
-    pgconn.pipeline_status = False
+    pgconn.exit_pipeline_mode()

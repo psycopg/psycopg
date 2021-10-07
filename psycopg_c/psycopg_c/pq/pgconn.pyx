@@ -537,43 +537,43 @@ cdef class PGconn:
         return PGresult._from_ptr(rv)
 
     @property
-    def pipeline_status(self) -> Union[bool, PipelineStatus]:
+    def pipeline_status(self) -> int:
         """The current pipeline mode status.
 
-        For libpq < 14.0, always return False.
-
-        :raises ~e.ProgrammingError: if pipeline mode is not off when trying
-            to enter.
-        :raises ~e.OperationalError: in case of failure to enter or exit the
-            pipeline mode.
+        For libpq < 14.0, always return 0 (PQ_PIPELINE_OFF).
         """
         if libpq.PG_VERSION_NUM < 140000:
-            return False
+            return 0
         cdef int status = libpq.PQpipelineStatus(self._pgconn_ptr)
-        return PipelineStatus(status)
+        return status
 
-    @pipeline_status.setter
-    def pipeline_status(self, value: Union[bool, PipelineStatus]) -> None:
+    def enter_pipeline_mode(self) -> None:
+        """Enter pipeline mode.
+
+        :raises ~e.OperationalError: in case of failure to enter the pipeline
+            mode.
+        """
         if libpq.PG_VERSION_NUM < 140000:
             raise e.NotSupportedError(
-                f"PQ(enter,exit)PipelineMode require libpq from PostgreSQL 14,"
+                f"PQenterPipelineMode requires libpq from PostgreSQL 14,"
                 f" {libpq.PG_VERSION_NUM} available instead"
             )
-        if value in (True, PipelineStatus.ON):
-            status = self.pipeline_status
-            if status:
-                raise e.ProgrammingError(
-                    f"cannot enter pipeline mode, pipeline is {status.name}"
-                )
-            if libpq.PQenterPipelineMode(self._pgconn_ptr) != 1:
-                raise e.OperationalError(
-                    f"failed to enter pipeline mode: {error_message(self)}"
-                )
-        elif not value:
-            if libpq.PQexitPipelineMode(self._pgconn_ptr) != 1:
-                raise e.OperationalError(error_message(self))
-        else:
-            raise ValueError(value)
+        if libpq.PQenterPipelineMode(self._pgconn_ptr) != 1:
+            raise e.OperationalError("failed to enter pipeline mode")
+
+    def exit_pipeline_mode(self) -> None:
+        """Exit pipeline mode.
+
+        :raises ~e.OperationalError: in case of failure to exit the pipeline
+            mode.
+        """
+        if libpq.PG_VERSION_NUM < 140000:
+            raise e.NotSupportedError(
+                f"PQexitPipelineMode requires libpq from PostgreSQL 14,"
+                f" {libpq.PG_VERSION_NUM} available instead"
+            )
+        if libpq.PQexitPipelineMode(self._pgconn_ptr) != 1:
+            raise e.OperationalError(error_message(self))
 
     def pipeline_sync(self) -> None:
         """Mark a synchronization point in a pipeline.
