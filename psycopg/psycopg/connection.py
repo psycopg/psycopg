@@ -577,6 +577,7 @@ class BaseConnection(Generic[Row]):
                 cursor = queued
                 cursor._reset()
                 cursor._execute_results(results)
+                cursor._queued.set()
                 if cursor is target:
                     break
 

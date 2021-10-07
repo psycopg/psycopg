@@ -5,10 +5,12 @@ psycopg cursor objects
 # Copyright (C) 2020-2021 The Psycopg Team
 
 import logging
+import threading
 import sys
 from types import TracebackType
 from typing import Any, Callable, Generic, Iterator, List
-from typing import Optional, NoReturn, Sequence, Type, TYPE_CHECKING, TypeVar
+from typing import Optional, NoReturn, Sequence, Type, TypeVar, Union
+from typing import TYPE_CHECKING
 from contextlib import contextmanager
 
 from . import pq
@@ -26,6 +28,7 @@ from ._encodings import pgconn_encoding
 from ._preparing import Prepare
 
 if TYPE_CHECKING:
+    import asyncio
     from .abc import Transformer
     from .pq.abc import PGconn, PGresult
     from .connection import Connection
@@ -54,7 +57,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
         __slots__ = """
             _conn format _adapters arraysize _closed _results pgresult _pos
             _iresult _rowcount _query _tx _last_query _row_factory _make_row
-            _pgconn
+            _queued _pgconn
             __weakref__
             """.split()
 
@@ -63,6 +66,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
     _tx: "Transformer"
     _make_row: RowMaker[Row]
     _pgconn: "PGconn"
+    _queued: Union[threading.Event, "asyncio.Event"]
 
     def __init__(self, connection: ConnectionType):
         self._conn = connection
@@ -527,6 +531,8 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
     ):
         super().__init__(connection)
         self._row_factory = row_factory
+        self._queued: threading.Event = threading.Event()
+        self._queued.set()
 
     def __enter__(self: AnyCursor) -> AnyCursor:
         return self
@@ -570,6 +576,8 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
         """
         Execute a query or command to the database.
         """
+        if self._pgconn.pipeline_status:
+            self._queued.wait()
         try:
             with self._conn.lock:
                 self._conn.wait(
@@ -579,14 +587,20 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
                 )
         except e.Error as ex:
             raise ex.with_traceback(None)
+        if self._pgconn.pipeline_status:
+            self._queued.clear()
         return self
 
     def executemany(self, query: Query, params_seq: Sequence[Params]) -> None:
         """
         Execute the same command with a sequence of input data.
         """
+        if self._pgconn.pipeline_status:
+            self._queued.wait()
         with self._conn.lock:
             self._conn.wait(self._executemany_gen(query, params_seq))
+        if self._pgconn.pipeline_status:
+            self._queued.clear()
 
     def stream(
         self,

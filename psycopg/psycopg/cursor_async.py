@@ -4,6 +4,7 @@ psycopg async cursor objects
 
 # Copyright (C) 2020-2021 The Psycopg Team
 
+import asyncio
 import logging
 from types import TracebackType
 from typing import Any, AsyncIterator, List
@@ -35,6 +36,8 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
     ):
         super().__init__(connection)
         self._row_factory = row_factory
+        self._queued: asyncio.Event = asyncio.Event()
+        self._queued.set()
 
     async def __aenter__(self: AnyCursor) -> AnyCursor:
         return self
@@ -71,6 +74,8 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
         prepare: Optional[bool] = None,
         binary: Optional[bool] = None,
     ) -> AnyCursor:
+        if self._pgconn.pipeline_status:
+            await self._queued.wait()  # type: ignore[misc]
         try:
             async with self._conn.lock:
                 await self._conn.wait(
@@ -80,13 +85,19 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
                 )
         except e.Error as ex:
             raise ex.with_traceback(None)
+        if self._pgconn.pipeline_status:
+            self._queued.clear()
         return self
 
     async def executemany(
         self, query: Query, params_seq: Sequence[Params]
     ) -> None:
+        if self._pgconn.pipeline_status:
+            await self._queued.wait()
         async with self._conn.lock:
             await self._conn.wait(self._executemany_gen(query, params_seq))
+        if self._pgconn.pipeline_status:
+            self._queued.clear()
 
     async def stream(
         self,

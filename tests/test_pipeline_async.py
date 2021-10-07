@@ -1,3 +1,4 @@
+import asyncio
 import logging
 
 import pytest
@@ -46,28 +47,48 @@ async def test_pipeline_processed_at_exit(aconn):
 
 async def test_pipeline(aconn):
     async with aconn.pipeline() as pipeline:
-        c1 = aconn.cursor()
-        c2 = aconn.cursor()
-        await c1.execute("select 1")
+        c1 = await aconn.execute("select 1")
         await pipeline.sync()
-        await c1.execute("select 11")
-        await c2.execute("select 2")
+        c2 = await aconn.execute("select 2")
         await pipeline.sync()
 
-        # PQsendQuery[BEGIN], PQsendQuery(3), PQpipelineSync(2)
-        assert len(pipeline) == 6
+        # PQsendQuery[BEGIN], PQsendQuery(2), PQpipelineSync(2)
+        assert len(pipeline) == 5
 
         (r1,) = await c1.fetchone()
         assert r1 == 1
-        assert len(pipeline) == 4  # -COMMAND_OK, -TUPLES_OK
+        assert len(pipeline) == 3  # -COMMAND_OK, -TUPLES_OK
 
         (r2,) = await c2.fetchone()
         assert r2 == 2
-        assert len(pipeline) == 1  # -PIPELINE_SYNC, -TUPLES_OK(2)
+        assert len(pipeline) == 1  # -PIPELINE_SYNC, -TUPLES_OK
+
+        await c1.execute("select 11")
+        await pipeline.sync()
+        assert len(pipeline) == 3  # PQsendQuery, PQpipelineSync
 
         (r11,) = await c1.fetchone()
         assert r11 == 11
-        assert len(pipeline) == 0  # -PIPELINE_SYNC
+        assert len(pipeline) == 1  # -TUPLES_OK, -PIPELINE_SYNC
+
+
+async def test_pipeline_execute_wait(aconn):
+    cur = aconn.cursor()
+
+    async def fetchone(pipeline):
+        await asyncio.sleep(0.1)
+        await pipeline.sync()
+        return await cur.fetchone()
+
+    async with aconn.pipeline() as pipeline:
+        await cur.execute("select 1")
+        t = asyncio.create_task(fetchone(pipeline))
+        # This execute() blocks until cur.fetch*() is called.
+        await cur.execute("select generate_series(1, 3)")
+        await pipeline.sync()
+
+        assert await cur.fetchall() == [(1,), (2,), (3,)]
+        assert await t == (1,)
 
 
 async def test_autocommit(aconn):
@@ -85,33 +106,33 @@ async def test_autocommit(aconn):
 
 async def test_pipeline_aborted(aconn):
     await aconn.set_autocommit(True)
-    async with aconn.pipeline() as pipeline, aconn.cursor() as c:
-        await c.execute("select 1")
+    async with aconn.pipeline() as pipeline:
+        c1 = await aconn.execute("select 1")
         await pipeline.sync()
-        await c.execute("select * from doesnotexist")
-        await c.execute("select 'aborted'")
+        c2 = await aconn.execute("select * from doesnotexist")
+        c3 = await aconn.execute("select 'aborted'")
         await pipeline.sync()
-        await c.execute("select 2")
+        c4 = await aconn.execute("select 2")
         await pipeline.sync()
 
         # PQsendQuery(4), PQpipelineSync(3)
         assert len(pipeline) == 7
 
-        (r,) = await c.fetchone()
+        (r,) = await c1.fetchone()
         assert r == 1
         assert len(pipeline) == 6
 
         with pytest.raises(UndefinedTable):
-            await c.fetchone()
+            await c2.fetchone()
         assert pipeline.status == pq.PipelineStatus.ABORTED
         assert len(pipeline) == 4  # -PIPELINE_SYNC, -TUPLES_OK
 
         with pytest.raises(psycopg.OperationalError, match="pipeline aborted"):
-            await c.fetchone()
+            await c3.fetchone()
         assert pipeline.status == pq.PipelineStatus.ABORTED
         assert len(pipeline) == 3  # -TUPLES_OK
 
-        (r,) = await c.fetchone()
+        (r,) = await c4.fetchone()
         assert r == 2
 
         assert len(pipeline) == 1  # -PIPELINE_SYNC, -TUPLES_OK
@@ -120,19 +141,19 @@ async def test_pipeline_aborted(aconn):
 
 async def test_prepared(aconn):
     await aconn.set_autocommit(True)
-    async with aconn.pipeline() as pipeline, aconn.cursor() as c:
-        await c.execute("select %s::int", [10], prepare=True)
-        await c.execute("select count(*) from pg_prepared_statements")
+    async with aconn.pipeline() as pipeline:
+        c1 = await aconn.execute("select %s::int", [10], prepare=True)
+        c2 = await aconn.execute("select count(*) from pg_prepared_statements")
         await pipeline.sync()
 
         # PQsendPrepare, PQsendQuery(2), PQpipelineSync
         assert len(pipeline) == 4
 
-        (r,) = await c.fetchone()
+        (r,) = await c1.fetchone()
         assert r == 10
         assert len(pipeline) == 2  # -COMMAND_OK, -TUPLES_OK
 
-        (r,) = await c.fetchone()
+        (r,) = await c2.fetchone()
         assert r == 1
         assert len(pipeline) == 1  # -TUPLES_OK
 
@@ -142,12 +163,17 @@ async def test_auto_prepare(aconn):
     # Auto prepare does not work because cache maintainance requires access to
     # results at the moment.
     await aconn.set_autocommit(True)
-    async with aconn.pipeline() as pipeline, aconn.cursor() as cur:
+    async with aconn.pipeline() as pipeline:
+        cursors = []
         for i in range(10):
-            await cur.execute("select count(*) from pg_prepared_statements")
+            cursors.append(
+                await aconn.execute(
+                    "select count(*) from pg_prepared_statements"
+                )
+            )
         await pipeline.sync()
 
-        for i, v in zip(range(10), [0] * 5 + [1] * 5):
+        for cur, v in zip(cursors, [0] * 5 + [1] * 5):
             (r,) = await cur.fetchone()
             assert r == v
 

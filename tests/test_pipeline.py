@@ -1,4 +1,5 @@
 import logging
+import threading
 
 import pytest
 
@@ -43,28 +44,50 @@ def test_pipeline_processed_at_exit(conn):
 
 def test_pipeline(conn):
     with conn.pipeline() as pipeline:
-        c1 = conn.cursor()
-        c2 = conn.cursor()
-        c1.execute("select 1")
+        c1 = conn.execute("select 1")
         pipeline.sync()
-        c1.execute("select 11")
-        c2.execute("select 2")
+        c2 = conn.execute("select 2")
         pipeline.sync()
 
-        # PQsendQuery[BEGIN], PQsendQuery(3), PQpipelineSync(2)
-        assert len(pipeline) == 6
+        # PQsendQuery[BEGIN], PQsendQuery(2), PQpipelineSync(2)
+        assert len(pipeline) == 5
 
         (r1,) = c1.fetchone()
         assert r1 == 1
-        assert len(pipeline) == 4  # -COMMAND_OK, -TUPLES_OK
+        assert len(pipeline) == 3  # -COMMAND_OK, -TUPLES_OK
 
         (r2,) = c2.fetchone()
         assert r2 == 2
-        assert len(pipeline) == 1  # -PIPELINE_SYNC, -TUPLES_OK(2)
+        assert len(pipeline) == 1  # -PIPELINE_SYNC, -TUPLES_OK
+
+        c1.execute("select 11")
+        pipeline.sync()
+        assert len(pipeline) == 3  # PQsendQuery, PQpipelineSync
 
         (r11,) = c1.fetchone()
         assert r11 == 11
-        assert len(pipeline) == 0  # -PIPELINE_SYNC
+        assert len(pipeline) == 1  # -TUPLES_OK, -PIPELINE_SYNC
+
+
+def test_pipeline_execute_wait(conn):
+    cur = conn.cursor()
+
+    results = []
+
+    def fetchone(pipeline):
+        pipeline.sync()
+        results.append(cur.fetchone())
+
+    with conn.pipeline() as pipeline:
+        cur.execute("select 1")
+        t = threading.Timer(0.1, fetchone, args=(pipeline,))
+        t.start()
+        # This execute() blocks until cur.fetch*() is called.
+        cur.execute("select generate_series(1, 3)")
+        pipeline.sync()
+
+        assert cur.fetchall() == [(1,), (2,), (3,)]
+        assert results[0] == (1,)
 
 
 def test_autocommit(conn):
@@ -82,33 +105,33 @@ def test_autocommit(conn):
 
 def test_pipeline_aborted(conn):
     conn.autocommit = True
-    with conn.pipeline() as pipeline, conn.cursor() as c:
-        c.execute("select 1")
+    with conn.pipeline() as pipeline:
+        c1 = conn.execute("select 1")
         pipeline.sync()
-        c.execute("select * from doesnotexist")
-        c.execute("select 'aborted'")
+        c2 = conn.execute("select * from doesnotexist")
+        c3 = conn.execute("select 'aborted'")
         pipeline.sync()
-        c.execute("select 2")
+        c4 = conn.execute("select 2")
         pipeline.sync()
 
         # PQsendQuery(4), PQpipelineSync(3)
         assert len(pipeline) == 7
 
-        (r,) = c.fetchone()
+        (r,) = c1.fetchone()
         assert r == 1
         assert len(pipeline) == 6
 
         with pytest.raises(UndefinedTable):
-            c.fetchone()
+            c2.fetchone()
         assert pipeline.status == pq.PipelineStatus.ABORTED
         assert len(pipeline) == 4  # -PIPELINE_SYNC, -TUPLES_OK
 
         with pytest.raises(psycopg.OperationalError, match="pipeline aborted"):
-            c.fetchone()
+            c3.fetchone()
         assert pipeline.status == pq.PipelineStatus.ABORTED
         assert len(pipeline) == 3  # -TUPLES_OK
 
-        (r,) = c.fetchone()
+        (r,) = c4.fetchone()
         assert r == 2
 
         assert len(pipeline) == 1  # -PIPELINE_SYNC, -TUPLES_OK
@@ -117,19 +140,19 @@ def test_pipeline_aborted(conn):
 
 def test_prepared(conn):
     conn.autocommit = True
-    with conn.pipeline() as pipeline, conn.cursor() as c:
-        c.execute("select %s::int", [10], prepare=True)
-        c.execute("select count(*) from pg_prepared_statements")
+    with conn.pipeline() as pipeline:
+        c1 = conn.execute("select %s::int", [10], prepare=True)
+        c2 = conn.execute("select count(*) from pg_prepared_statements")
         pipeline.sync()
 
         # PQsendPrepare, PQsendQuery(2), PQpipelineSync
         assert len(pipeline) == 4
 
-        (r,) = c.fetchone()
+        (r,) = c1.fetchone()
         assert r == 10
         assert len(pipeline) == 2  # -COMMAND_OK, -TUPLES_OK
 
-        (r,) = c.fetchone()
+        (r,) = c2.fetchone()
         assert r == 1
         assert len(pipeline) == 1  # -TUPLES_OK
 
@@ -139,12 +162,15 @@ def test_auto_prepare(conn):
     # Auto prepare does not work because cache maintainance requires access to
     # results at the moment.
     conn.autocommit = True
-    with conn.pipeline() as pipeline, conn.cursor() as cur:
+    with conn.pipeline() as pipeline:
+        cursors = []
         for i in range(10):
-            cur.execute("select count(*) from pg_prepared_statements")
+            cursors.append(
+                conn.execute("select count(*) from pg_prepared_statements")
+            )
         pipeline.sync()
 
-        for v in [0] * 5 + [1] * 5:
+        for cur, v in zip(cursors, [0] * 5 + [1] * 5):
             (r,) = cur.fetchone()
             assert r == v
 
