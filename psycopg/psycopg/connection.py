@@ -836,6 +836,7 @@ class Connection(BaseConnection[Row]):
 
         :rtype: Pipeline
         """
+        assert not self._pipeline_queue
         self.pgconn.pipeline_status = True
         try:
             yield Pipeline(self.pgconn, self._pipeline_queue)
