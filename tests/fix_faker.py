@@ -646,6 +646,10 @@ class Faker:
                 bounds.append(val)
 
             if bounds[0] is not None and bounds[1] is not None:
+                if bounds[0] == bounds[1]:
+                    # It would come out empty
+                    continue
+
                 if bounds[0] > bounds[1]:
                     bounds.reverse()
 
