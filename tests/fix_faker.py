@@ -346,13 +346,16 @@ class Faker:
         return self.schema_time(cls)
 
     def make_datetime(self, spec):
+        # Add a day because with timezone we might go BC
+        dtmin = dt.datetime.min + dt.timedelta(days=1)
+
         # Comparisons might get unreliable too far in the future
         # https://bugs.python.org/issue45347
-        # delta = dt.datetime.max - dt.datetime.min
+        # delta = dt.datetime.max - dtmin
         delta = dt.timedelta(days=3000 * 365)
 
         micros = randrange((delta.days + 1) * 24 * 60 * 60 * 1_000_000)
-        rv = dt.datetime.min + dt.timedelta(microseconds=micros)
+        rv = dtmin + dt.timedelta(microseconds=micros)
         if spec[1]:
             rv = rv.replace(tzinfo=self._make_tz(spec))
         return rv
@@ -646,6 +649,10 @@ class Faker:
                 bounds.append(val)
 
             if bounds[0] is not None and bounds[1] is not None:
+                if bounds[0] == bounds[1]:
+                    # It would come out empty
+                    continue
+
                 if bounds[0] > bounds[1]:
                     bounds.reverse()
 

@@ -49,6 +49,8 @@ else:
     fetch = generators.fetch
     send = generators.send
 
+_C = TypeVar("_C", bound="Cursor[Any]")
+
 
 class BaseCursor(Generic[ConnectionType, Row]):
     # Slots with __weakref__ and generic bases don't work on Py 3.6
@@ -519,9 +521,6 @@ class BaseCursor(Generic[ConnectionType, Row]):
         self._closed = True
 
 
-AnyCursor = TypeVar("AnyCursor", bound="BaseCursor[Any, Any]")
-
-
 class Cursor(BaseCursor["Connection[Any]", Row]):
     __module__ = "psycopg"
     __slots__ = ()
@@ -534,7 +533,7 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
         self._queued: threading.Event = threading.Event()
         self._queued.set()
 
-    def __enter__(self: AnyCursor) -> AnyCursor:
+    def __enter__(self: _C) -> _C:
         return self
 
     def __exit__(
@@ -566,13 +565,13 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
         return self._row_factory(self)
 
     def execute(
-        self: AnyCursor,
+        self: _C,
         query: Query,
         params: Optional[Params] = None,
         *,
         prepare: Optional[bool] = None,
         binary: Optional[bool] = None,
-    ) -> AnyCursor:
+    ) -> _C:
         """
         Execute a query or command to the database.
         """

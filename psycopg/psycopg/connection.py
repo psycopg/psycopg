@@ -643,10 +643,14 @@ class Connection(BaseConnection[Row]):
         params = cls._get_connection_params(conninfo, **kwargs)
         conninfo = make_conninfo(**params)
 
-        rv = cls._wait_conn(
-            cls._connect_gen(conninfo, autocommit=autocommit),
-            timeout=params["connect_timeout"],
-        )
+        try:
+            rv = cls._wait_conn(
+                cls._connect_gen(conninfo, autocommit=autocommit),
+                timeout=params["connect_timeout"],
+            )
+        except e.Error as ex:
+            raise ex.with_traceback(None)
+
         if row_factory:
             rv.row_factory = row_factory
         if context:

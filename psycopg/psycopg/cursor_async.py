@@ -8,20 +8,22 @@ import asyncio
 import logging
 from types import TracebackType
 from typing import Any, AsyncIterator, List
-from typing import Optional, Sequence, Type, TYPE_CHECKING
+from typing import Optional, Sequence, Type, TypeVar, TYPE_CHECKING
 
 from . import errors as e
 
 from .abc import Query, Params
 from .copy import AsyncCopy
 from .rows import Row, RowMaker, AsyncRowFactory
-from .cursor import BaseCursor, AnyCursor
+from .cursor import BaseCursor
 from ._compat import asynccontextmanager
 
 if TYPE_CHECKING:
     from .connection_async import AsyncConnection
 
 logger = logging.getLogger("psycopg")
+
+_C = TypeVar("_C", bound="AsyncCursor[Any]")
 
 
 class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
@@ -39,7 +41,7 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
         self._queued: asyncio.Event = asyncio.Event()
         self._queued.set()
 
-    async def __aenter__(self: AnyCursor) -> AnyCursor:
+    async def __aenter__(self: _C) -> _C:
         return self
 
     async def __aexit__(
@@ -67,15 +69,15 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
         return self._row_factory(self)
 
     async def execute(
-        self: AnyCursor,
+        self: _C,
         query: Query,
         params: Optional[Params] = None,
         *,
         prepare: Optional[bool] = None,
         binary: Optional[bool] = None,
-    ) -> AnyCursor:
+    ) -> _C:
         if self._pgconn.pipeline_status:
-            await self._queued.wait()  # type: ignore[misc]
+            await self._queued.wait()
         try:
             async with self._conn.lock:
                 await self._conn.wait(

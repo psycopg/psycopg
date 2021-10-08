@@ -16,7 +16,7 @@ timeouts = [
     {},
     {"timeout": None},
     {"timeout": 0},
-    {"timeout": 0.1},
+    {"timeout": 0.2},
     {"timeout": 10},
 ]
 

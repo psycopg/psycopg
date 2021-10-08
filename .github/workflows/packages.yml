@@ -69,7 +69,7 @@ jobs:
 
     services:
       postgresql:
-        image: postgres:13
+        image: postgres:14
         env:
           POSTGRES_PASSWORD: password
         ports:
@@ -128,6 +128,9 @@ jobs:
 
     services:
       postgresql:
+        # Can update to 14 only after aarch64 will be able to build with libpq
+        # > 10 or if we reconfigure the server to use md5 instead of SCRAM
+        # authentication.
         image: postgres:13
         env:
           POSTGRES_PASSWORD: password
@@ -213,12 +216,13 @@ jobs:
           CIBW_ARCHS_WINDOWS: AMD64 x86
           CIBW_BEFORE_BUILD_WINDOWS: pip install delvewheel
           CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: >-
-            delvewheel repair -w {dest_dir} --no-mangle "libiconv-2.dll;libwinpthread-1.dll" {wheel}
+            delvewheel repair -w {dest_dir}
+            --no-mangle "libiconv-2.dll;libwinpthread-1.dll" {wheel}
           CIBW_TEST_REQUIRES: ./psycopg[test] ./psycopg_pool
           CIBW_TEST_COMMAND: pytest {project}/tests -m "not slow" --color yes
           CIBW_ENVIRONMENT_WINDOWS: >-
             PSYCOPG_IMPL=binary
-            PATH="C:\\Program Files\\PostgreSQL\\13\\bin;$PATH"
+            PATH="C:\\Program Files\\PostgreSQL\\14\\bin;$PATH"
             PSYCOPG_TEST_DSN="host=127.0.0.1 user=postgres"
 
       - uses: actions/upload-artifact@v2
