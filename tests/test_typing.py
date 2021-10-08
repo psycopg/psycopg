@@ -266,6 +266,7 @@ obj = {await_} curs.{method}()
     _test_reveal(stmts, type, mypy)
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize("server_side", [False, True])
 @pytest.mark.parametrize("conn_class", ["Connection", "AsyncConnection"])
 def test_cur_subclass_execute(mypy, conn_class, server_side):
