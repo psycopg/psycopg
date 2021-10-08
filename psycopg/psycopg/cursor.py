@@ -441,6 +441,8 @@ class BaseCursor(Generic[ConnectionType, Row]):
                 self._rowcount = nrows
             else:
                 self._rowcount += nrows
+        if self._pgconn.pipeline_status:
+            self._queued.set()
 
     def _raise_from_results(self, results: Sequence["PGresult"]) -> NoReturn:
         statuses = {res.status for res in results}
