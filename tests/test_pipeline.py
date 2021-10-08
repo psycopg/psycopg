@@ -86,6 +86,7 @@ def test_pipeline_execute_wait(conn):
         cur.execute("select generate_series(1, 3)")
         pipeline.sync()
 
+        t.join()
         assert cur.fetchall() == [(1,), (2,), (3,)]
         assert results[0] == (1,)
 
