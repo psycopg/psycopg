@@ -575,7 +575,6 @@ class BaseConnection(Generic[Row]):
                     logger.debug("received pipeline sync result")
             else:
                 cursor = queued
-                cursor._reset()
                 cursor._execute_results(results)
                 cursor._queued.set()
                 if cursor is target:
