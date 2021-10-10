@@ -18,7 +18,7 @@ def test_old_libpq(pgconn):
 @pytest.mark.libpq(">= 14")
 def test_work_in_progress(pgconn):
     assert not pgconn.nonblocking
-    assert not pgconn.pipeline_status
+    assert pgconn.pipeline_status == pq.PipelineStatus.OFF
     pgconn.enter_pipeline_mode()
     pgconn.send_query_params(b"select $1", [b"1"])
     with pytest.raises(
@@ -29,7 +29,7 @@ def test_work_in_progress(pgconn):
 
 @pytest.mark.libpq(">= 14")
 def test_multi_pipelines(pgconn):
-    assert not pgconn.pipeline_status
+    assert pgconn.pipeline_status == pq.PipelineStatus.OFF
     pgconn.enter_pipeline_mode()
     pgconn.send_query_params(b"select $1", [b"1"])
     pgconn.pipeline_sync()
@@ -83,7 +83,7 @@ def table(pgconn):
 
 @pytest.mark.libpq(">= 14")
 def test_pipeline_abort(pgconn, table):
-    assert not pgconn.pipeline_status
+    assert pgconn.pipeline_status == pq.PipelineStatus.OFF
     pgconn.enter_pipeline_mode()
     pgconn.send_query_params(b"insert into pipeline values ($1)", [b"1"])
     pgconn.send_query_params(b"select no_such_function($1)", [b"1"])

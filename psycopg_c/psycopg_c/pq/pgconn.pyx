@@ -543,7 +543,7 @@ cdef class PGconn:
         For libpq < 14.0, always return 0 (PQ_PIPELINE_OFF).
         """
         if libpq.PG_VERSION_NUM < 140000:
-            return 0
+            return libpq.PQ_PIPELINE_OFF
         cdef int status = libpq.PQpipelineStatus(self._pgconn_ptr)
         return status
 
