@@ -536,15 +536,16 @@ cdef class PGconn:
             raise MemoryError("couldn't allocate empty PGresult")
         return PGresult._from_ptr(rv)
 
-    def pipeline_status(self) -> PipelineStatus:
-        """Return the current pipeline mode status."""
+    @property
+    def pipeline_status(self) -> int:
+        """The current pipeline mode status.
+
+        For libpq < 14.0, always return 0 (PQ_PIPELINE_OFF).
+        """
         if libpq.PG_VERSION_NUM < 140000:
-            raise e.NotSupportedError(
-                f"PQpipelineStatus requires libpq from PostgreSQL 14,"
-                f" {libpq.PG_VERSION_NUM} available instead"
-            )
+            return 0
         cdef int status = libpq.PQpipelineStatus(self._pgconn_ptr)
-        return PipelineStatus(status)
+        return status
 
     def enter_pipeline_mode(self) -> None:
         """Enter pipeline mode.

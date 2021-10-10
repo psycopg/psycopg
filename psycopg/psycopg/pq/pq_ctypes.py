@@ -22,7 +22,7 @@ from .. import errors as e
 from . import _pq_ctypes as impl
 from .misc import PGnotify, ConninfoOption, PGresAttDesc
 from .misc import error_message, connection_summary
-from ._enums import Format, ExecStatus, PipelineStatus
+from ._enums import Format, ExecStatus
 
 if TYPE_CHECKING:
     from . import abc
@@ -629,8 +629,11 @@ class PGconn:
             raise MemoryError("couldn't allocate empty PGresult")
         return PGresult(rv)
 
-    def pipeline_status(self) -> PipelineStatus:
-        return PipelineStatus(impl.PQpipelineStatus(self._pgconn_ptr))
+    @property
+    def pipeline_status(self) -> int:
+        if version() < 140000:
+            return 0
+        return impl.PQpipelineStatus(self._pgconn_ptr)
 
     def enter_pipeline_mode(self) -> None:
         """Enter pipeline mode.
