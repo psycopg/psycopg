@@ -7,7 +7,7 @@ Protocol objects to represent objects exposed by different pq implementations.
 from typing import Any, Callable, List, Optional, Sequence, Tuple
 from typing import Union, TYPE_CHECKING
 
-from ._enums import Format, PipelineStatus
+from ._enums import Format
 from .._compat import Protocol
 
 if TYPE_CHECKING:
@@ -242,7 +242,8 @@ class PGconn(Protocol):
     def make_empty_result(self, exec_status: int) -> "PGresult":
         ...
 
-    def pipeline_status(self) -> PipelineStatus:
+    @property
+    def pipeline_status(self) -> int:
         ...
 
     def enter_pipeline_mode(self) -> None:

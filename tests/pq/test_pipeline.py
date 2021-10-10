@@ -5,13 +5,12 @@ from psycopg import pq
 
 
 @pytest.mark.libpq("< 14")
-def test_unsupported(pgconn):
+def test_old_libpq(pgconn):
+    assert pgconn.pipeline_status == 0
     with pytest.raises(psycopg.NotSupportedError):
         pgconn.enter_pipeline_mode()
     with pytest.raises(psycopg.NotSupportedError):
         pgconn.exit_pipeline_mode()
-    with pytest.raises(psycopg.NotSupportedError):
-        pgconn.pipeline_status()
     with pytest.raises(psycopg.NotSupportedError):
         pgconn.pipeline_sync()
 
@@ -19,6 +18,7 @@ def test_unsupported(pgconn):
 @pytest.mark.libpq(">= 14")
 def test_work_in_progress(pgconn):
     assert not pgconn.nonblocking
+    assert pgconn.pipeline_status == pq.PipelineStatus.OFF
     pgconn.enter_pipeline_mode()
     pgconn.send_query_params(b"select $1", [b"1"])
     with pytest.raises(
@@ -29,6 +29,7 @@ def test_work_in_progress(pgconn):
 
 @pytest.mark.libpq(">= 14")
 def test_multi_pipelines(pgconn):
+    assert pgconn.pipeline_status == pq.PipelineStatus.OFF
     pgconn.enter_pipeline_mode()
     pgconn.send_query_params(b"select $1", [b"1"])
     pgconn.pipeline_sync()
@@ -62,11 +63,11 @@ def test_multi_pipelines(pgconn):
     assert sync_result.status == pq.ExecStatus.PIPELINE_SYNC
 
     # pipeline still ON
-    assert pgconn.pipeline_status() == pq.PipelineStatus.ON
+    assert pgconn.pipeline_status == pq.PipelineStatus.ON
 
     pgconn.exit_pipeline_mode()
 
-    assert pgconn.pipeline_status() == pq.PipelineStatus.OFF
+    assert pgconn.pipeline_status == pq.PipelineStatus.OFF
 
     assert result1.get_value(0, 0) == b"1"
     assert result2.get_value(0, 0) == b"2"
@@ -82,6 +83,7 @@ def table(pgconn):
 
 @pytest.mark.libpq(">= 14")
 def test_pipeline_abort(pgconn, table):
+    assert pgconn.pipeline_status == pq.PipelineStatus.OFF
     pgconn.enter_pipeline_mode()
     pgconn.send_query_params(b"insert into pipeline values ($1)", [b"1"])
     pgconn.send_query_params(b"select no_such_function($1)", [b"1"])
@@ -107,7 +109,7 @@ def test_pipeline_abort(pgconn, table):
     assert pgconn.get_result() is None
 
     # pipeline should be aborted, due to previous error
-    assert pgconn.pipeline_status() == pq.PipelineStatus.ABORTED
+    assert pgconn.pipeline_status == pq.PipelineStatus.ABORTED
 
     # result from second INSERT, aborted due to previous error
     r = pgconn.get_result()
@@ -118,7 +120,7 @@ def test_pipeline_abort(pgconn, table):
     assert pgconn.get_result() is None
 
     # pipeline is still aborted
-    assert pgconn.pipeline_status() == pq.PipelineStatus.ABORTED
+    assert pgconn.pipeline_status == pq.PipelineStatus.ABORTED
 
     # sync result
     r = pgconn.get_result()
@@ -126,7 +128,7 @@ def test_pipeline_abort(pgconn, table):
     assert r.status == pq.ExecStatus.PIPELINE_SYNC
 
     # aborted flag is clear, pipeline is on again
-    assert pgconn.pipeline_status() == pq.PipelineStatus.ON
+    assert pgconn.pipeline_status == pq.PipelineStatus.ON
 
     # result from the third INSERT
     r = pgconn.get_result()
