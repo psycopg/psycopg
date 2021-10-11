@@ -506,6 +506,9 @@ class Faker:
         spec = spec[1]
         return [self.make(spec) for i in range(length)]
 
+    def example_list(self, spec):
+        return [self.example(spec[1])]
+
     def match_list(self, spec, got, want):
         assert len(got) == len(want)
         m = self.get_matcher(spec[1])
