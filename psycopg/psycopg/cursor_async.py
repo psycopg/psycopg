@@ -111,6 +111,7 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
                 first = False
 
     async def fetchone(self) -> Optional[Row]:
+        await self._fetch_pipeline()
         self._check_result()
         rv = self._tx.load_row(self._pos, self._make_row)
         if rv is not None:
@@ -118,6 +119,7 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
         return rv
 
     async def fetchmany(self, size: int = 0) -> List[Row]:
+        await self._fetch_pipeline()
         self._check_result()
         assert self.pgresult
 
@@ -132,6 +134,7 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
         return records
 
     async def fetchall(self) -> List[Row]:
+        await self._fetch_pipeline()
         self._check_result()
         assert self.pgresult
         records = self._tx.load_rows(
@@ -141,6 +144,7 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
         return records
 
     async def __aiter__(self) -> AsyncIterator[Row]:
+        await self._fetch_pipeline()
         self._check_result()
 
         def load(pos: int) -> Optional[Row]:
@@ -166,3 +170,11 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
 
         async with AsyncCopy(self) as copy:
             yield copy
+
+    async def _fetch_pipeline(self) -> None:
+        if self._pgconn.pipeline_status:
+            async with self._conn.lock:
+                await self._conn.wait(
+                    self._conn._pipeline_fetch_gen(flush=True)
+                )
+            assert self.pgresult

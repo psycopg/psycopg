@@ -301,10 +301,13 @@ class AsyncConnection(BaseConnection[Row]):
 
         :rtype: AsyncPipeline
         """
+        assert not self._pipeline_queue
         self.pgconn.enter_pipeline_mode()
         try:
-            yield AsyncPipeline(self.pgconn)
+            yield AsyncPipeline(self.pgconn, self._pipeline_queue)
         finally:
+            async with self.lock:
+                await self.wait(self._pipeline_fetch_gen(flush=True))
             self.pgconn.exit_pipeline_mode()
 
     async def wait(self, gen: PQGen[RV]) -> RV:

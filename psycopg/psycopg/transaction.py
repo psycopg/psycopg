@@ -78,7 +78,7 @@ class BaseTransaction(Generic[ConnectionType]):
         sp = f"{self.savepoint_name!r} " if self.savepoint_name else ""
         return f"<{cls} {sp}({status}) {info} at 0x{id(self):x}>"
 
-    def _enter_gen(self) -> PQGen[PGresult]:
+    def _enter_gen(self) -> PQGen[Optional[PGresult]]:
         if self._entered:
             raise TypeError("transaction blocks can be used only once")
         self._entered = True
@@ -134,7 +134,7 @@ class BaseTransaction(Generic[ConnectionType]):
                 )
                 return False
 
-    def _commit_gen(self) -> PQGen[PGresult]:
+    def _commit_gen(self) -> PQGen[Optional[PGresult]]:
         assert self._conn._savepoints[-1] == self._savepoint_name
         self._conn._savepoints.pop()
         self._exited = True

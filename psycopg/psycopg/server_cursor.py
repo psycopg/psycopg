@@ -112,6 +112,8 @@ class ServerCursorHelper(Generic[ConnectionType, Row]):
                 "SELECT 1 FROM pg_catalog.pg_cursors WHERE name = {}"
             ).format(sql.Literal(self.name))
             res = yield from cur._conn._exec_command(query)
+            # pipeline mode otherwise, unsupported here.
+            assert res is not None
             if res.ntuples == 0:
                 return
 
@@ -135,6 +137,8 @@ class ServerCursorHelper(Generic[ConnectionType, Row]):
         res = yield from cur._conn._exec_command(
             query, result_format=self._format
         )
+        # pipeline mode otherwise, unsupported here.
+        assert res is not None
 
         cur.pgresult = res
         cur._tx.set_pgresult(res, set_loaders=False)
