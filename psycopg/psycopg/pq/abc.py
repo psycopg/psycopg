@@ -255,6 +255,9 @@ class PGconn(Protocol):
     def pipeline_sync(self) -> None:
         ...
 
+    def send_flush_request(self) -> None:
+        ...
+
 
 class PGresult(Protocol):
     def clear(self) -> None:
