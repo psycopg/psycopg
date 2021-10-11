@@ -13,6 +13,8 @@ def test_old_libpq(pgconn):
         pgconn.exit_pipeline_mode()
     with pytest.raises(psycopg.NotSupportedError):
         pgconn.pipeline_sync()
+    with pytest.raises(psycopg.NotSupportedError):
+        pgconn.send_flush_request()
 
 
 @pytest.mark.libpq(">= 14")
@@ -71,6 +73,18 @@ def test_multi_pipelines(pgconn):
 
     assert result1.get_value(0, 0) == b"1"
     assert result2.get_value(0, 0) == b"2"
+
+
+@pytest.mark.libpq(">= 14")
+def test_flush_request(pgconn):
+    assert pgconn.pipeline_status == pq.PipelineStatus.OFF
+    pgconn.enter_pipeline_mode()
+    pgconn.send_query_params(b"select $1", [b"1"])
+    pgconn.send_flush_request()
+    r = pgconn.get_result()
+    assert r.status == pq.ExecStatus.TUPLES_OK
+    assert r.get_value(0, 0) == b"1"
+    pgconn.exit_pipeline_mode()
 
 
 @pytest.fixture

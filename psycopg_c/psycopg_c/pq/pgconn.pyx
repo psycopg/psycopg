@@ -592,6 +592,20 @@ cdef class PGconn:
         if rv != 1:
             raise e.OperationalError("failed to sync pipeline")
 
+    def send_flush_request(self) -> None:
+        """Sends a request for the server to flush its output buffer.
+
+        :raises ~e.OperationalError: if the flush request failed.
+        """
+        if libpq.PG_VERSION_NUM < 140000:
+            raise e.NotSupportedError(
+                f"PQsendFlushRequest requires libpq from PostgreSQL 14,"
+                f" {libpq.PG_VERSION_NUM} available instead"
+            )
+        cdef int rv = libpq.PQsendFlushRequest(self._pgconn_ptr)
+        if rv == 0:
+            raise e.OperationalError(f"flush request failed: {error_message(self)}")
+
 
 cdef int _ensure_pgconn(PGconn pgconn) except 0:
     if pgconn._pgconn_ptr is not NULL:

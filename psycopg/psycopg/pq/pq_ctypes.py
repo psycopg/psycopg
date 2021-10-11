@@ -665,6 +665,16 @@ class PGconn:
         if rv != 1:
             raise e.OperationalError("failed to sync pipeline")
 
+    def send_flush_request(self) -> None:
+        """Sends a request for the server to flush its output buffer.
+
+        :raises ~e.OperationalError: if the flush request failed.
+        """
+        if impl.PQsendFlushRequest(self._pgconn_ptr) == 0:
+            raise e.OperationalError(
+                f"flush request failed: {error_message(self)}"
+            )
+
     def _call_bytes(
         self, func: Callable[[impl.PGconn_struct], Optional[bytes]]
     ) -> bytes:
