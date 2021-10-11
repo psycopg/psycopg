@@ -319,7 +319,19 @@ class AsyncConnection(BaseConnection[Row]):
         pipeline = self._pipeline = AsyncPipeline(self.pgconn)
         try:
             async with pipeline:
-                yield
+                try:
+                    yield
+                finally:
+                    async with self.lock:
+                        pipeline.sync()
+                        try:
+                            # Send an pending commands (e.g. COMMIT or Sync);
+                            # while processing results, we might get errors...
+                            await self.wait(pipeline._communicate_gen())
+                        finally:
+                            # then fetch all remaining results but without forcing
+                            # flush since we emitted a sync just before.
+                            await self.wait(pipeline._fetch_gen(flush=False))
         finally:
             assert pipeline.status == PipelineStatus.OFF, pipeline.status
             self._pipeline = None
