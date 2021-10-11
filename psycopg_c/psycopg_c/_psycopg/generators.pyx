@@ -11,8 +11,9 @@ from typing import List
 
 from psycopg import errors as e
 from psycopg.pq import abc, error_message
-from psycopg.abc import PQGen
+from psycopg.abc import Command, PQGen
 from psycopg.waiting import Wait, Ready
+from psycopg._compat import Deque
 from psycopg._encodings import conninfo_encoding
 
 cdef object WAIT_W = Wait.W
@@ -187,3 +188,72 @@ def fetch(pq.PGconn pgconn) -> PQGen[Optional[PGresult]]:
     if pgres is NULL:
         return None
     return pq.PGresult._from_ptr(pgres)
+
+
+def pipeline_communicate(pq.PGconn pgconn, commands: Deque[Command]) -> PQGen[List[List[PGresult]]]:
+    """Generator to send queries from a connection in pipeline mode while also
+    receiving results.
+
+    Return a list results, including single PIPELINE_SYNC elements.
+    """
+    cdef libpq.PGconn *pgconn_ptr = pgconn._pgconn_ptr
+    cdef object notify_handler = pgconn.notify_handler
+    cdef libpq.PGnotify *notify
+    cdef int cires
+    cdef libpq.PGresult *pgres
+    cdef list res = []
+    cdef list results = []
+    cdef pq.PGresult r
+
+    while True:
+        ready = yield WAIT_RW
+
+        if ready & Ready.R:
+            pgconn.consume_input()
+            with nogil:
+                cires = libpq.PQconsumeInput(pgconn_ptr)
+            if 1 != cires:
+                raise e.OperationalError(
+                    f"consuming input failed: {error_message(pgconn)}")
+
+            if notify_handler is not None:
+                while True:
+                    pynotify = pgconn.notifies()
+                    if pynotify is None:
+                        break
+                    PyObject_CallFunctionObjArgs(
+                        notify_handler, <PyObject *>pynotify, NULL
+                    )
+            else:
+                while True:
+                    notify = libpq.PQnotifies(pgconn_ptr)
+                    if notify is NULL:
+                        break
+                    libpq.PQfreemem(notify)
+
+            res: List[PGresult] = []
+            while not libpq.PQisBusy(pgconn_ptr):
+                pgres = libpq.PQgetResult(pgconn_ptr)
+                if pgres is NULL:
+                    if not res:
+                        break
+                    results.append(res)
+                    res = []
+                else:
+                    status = libpq.PQresultStatus(pgres)
+                    r = pq.PGresult._from_ptr(pgres)
+                    if status == libpq.PGRES_PIPELINE_SYNC:
+                        assert not res
+                        results.append([r])
+                        break
+                    else:
+                        res.append(r)
+
+
+        if ready & Ready.W:
+            libpq.PQflush(pgconn_ptr)
+            if not commands:
+                break
+            commands.popleft()()
+
+    return results
