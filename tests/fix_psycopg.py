@@ -77,3 +77,18 @@ class Tpc:
         """Return the number of records in the test table."""
         cur = self.conn.execute("select count(*) from test_tpc")
         return cur.fetchone()[0]
+
+
+@pytest.fixture(scope="module")
+def generators():
+    """Return the 'generators' module for selected psycopg implementation."""
+    from psycopg import pq
+
+    if pq.__impl__ == "c":
+        from psycopg._cmodule import _psycopg
+
+        return _psycopg
+    else:
+        import psycopg.generators
+
+        return psycopg.generators

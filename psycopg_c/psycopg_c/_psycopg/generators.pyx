@@ -180,3 +180,84 @@ def fetch(pq.PGconn pgconn) -> PQGen[Optional[PGresult]]:
     if pgres is NULL:
         return None
     return pq.PGresult._from_ptr(pgres)
+
+
+def pipeline_communicate(pq.PGconn pgconn) -> PQGen[List[List[PGresult]]]:
+    """Generator to send queries from a connection in pipeline mode while also
+    receiving results.
+
+    Return a list results, including single PIPELINE_SYNC elements.
+
+    We wait for the connection socket to be read-ready or write-ready.
+    If read-ready, the server output buffer will be consumed completely until
+    no more results are available. Then, if write-ready, the client buffer
+    will be flushed the function returns.
+
+    When the client buffer got flushed but the socket is not read-ready,
+    meaning we cannot get results from the server, this will return no
+    results. In that case, the caller should issue pgconn.send_flush_request()
+    or pgconn.pipeline_sync() and retry, or wait for the server to flush its
+    output buffer.
+    """
+    cdef libpq.PGconn *pgconn_ptr = pgconn._pgconn_ptr
+    cdef object notify_handler = pgconn.notify_handler
+    cdef libpq.PGnotify *notify
+    cdef int cires
+    cdef libpq.PGresult *pgres
+    cdef list res = []
+    cdef list results = []
+    cdef pq.PGresult r
+
+    while True:
+        ready = yield WAIT_RW
+
+        if ready & Ready.R:
+            # This requires that the server has its output buffer flushed,
+            # which happens either automatically upon PQpipelineSync() or by
+            # calling PQsendFlushRequest().
+            pgconn.consume_input()
+            with nogil:
+                cires = libpq.PQconsumeInput(pgconn_ptr)
+            if 1 != cires:
+                raise e.OperationalError(
+                    f"consuming input failed: {error_message(pgconn)}")
+
+            # Consume notifies
+            if notify_handler is not None:
+                while 1:
+                    pynotify = pgconn.notifies()
+                    if pynotify is None:
+                        break
+                    PyObject_CallFunctionObjArgs(
+                        notify_handler, <PyObject *>pynotify, NULL
+                    )
+            else:
+                while 1:
+                    notify = libpq.PQnotifies(pgconn_ptr)
+                    if notify is NULL:
+                        break
+                    libpq.PQfreemem(notify)
+
+            res: List[PGresult] = []
+            while not libpq.PQisBusy(pgconn_ptr):
+                pgres = libpq.PQgetResult(pgconn_ptr)
+                if pgres is NULL:
+                    if not res:
+                        break
+                    results.append(res[:])
+                    del res[:]
+                else:
+                    status = libpq.PQresultStatus(pgres)
+                    r = pq.PGresult._from_ptr(pgres)
+                    if status == libpq.PGRES_PIPELINE_SYNC:
+                        assert not res
+                        results.append([r])
+                        break
+                    else:
+                        res.append(r)
+
+        if ready & Ready.W:
+            if libpq.PQflush(pgconn_ptr) == 0:
+                break
+
+    return results

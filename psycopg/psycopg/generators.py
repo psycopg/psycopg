@@ -149,6 +149,63 @@ def fetch(pgconn: PGconn) -> PQGen[Optional[PGresult]]:
     return pgconn.get_result()
 
 
+def pipeline_communicate(pgconn: PGconn) -> PQGen[List[List[PGresult]]]:
+    """Generator to send queries from a connection in pipeline mode while also
+    receiving results.
+
+    Return a list results, including single PIPELINE_SYNC elements.
+
+    We wait for the connection socket to be read-ready or write-ready.
+    If read-ready, the server output buffer will be consumed completely until
+    no more results are available. Then, if write-ready, the client buffer
+    will be flushed the function returns.
+
+    When the client buffer got flushed but the socket is not read-ready,
+    meaning we cannot get results from the server, this will return no
+    results. In that case, the caller should issue pgconn.send_flush_request()
+    or pgconn.pipeline_sync() and retry, or wait for the server to flush its
+    output buffer.
+    """
+    results = []
+
+    while True:
+        ready = yield Wait.RW
+
+        if ready & Ready.R:
+            # This requires that the server has its output buffer flushed,
+            # which happens either automatically upon PQpipelineSync() or by
+            # calling PQsendFlushRequest().
+            pgconn.consume_input()
+
+            # Consume notifies
+            while 1:
+                n = pgconn.notifies()
+                if not n:
+                    break
+                if pgconn.notify_handler:
+                    pgconn.notify_handler(n)
+
+            res: List[PGresult] = []
+            while not pgconn.is_busy():
+                r = pgconn.get_result()
+                if r is None:
+                    if not res:
+                        break
+                    results.append(res[:])
+                    del res[:]
+                elif r.status == pq.ExecStatus.PIPELINE_SYNC:
+                    assert not res
+                    results.append([r])
+                else:
+                    res.append(r)
+
+        if ready & Ready.W:
+            if pgconn.flush() == 0:
+                break
+
+    return results
+
+
 _copy_statuses = (
     ExecStatus.COPY_IN,
     ExecStatus.COPY_OUT,
