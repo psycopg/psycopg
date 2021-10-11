@@ -47,7 +47,7 @@ extras_require = {
     # Requirements needed for development
     "dev": [
         "black",
-        "flake8 ~= 3.9.2",
+        "flake8 ~= 4.0.1",
         "mypy >= 0.910",
         "pytest-mypy >= 0.8.1",
         "types-setuptools >= 57.4.0",
