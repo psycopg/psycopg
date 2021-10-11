@@ -113,6 +113,7 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
                 first = False
 
     async def fetchone(self) -> Optional[Row]:
+        await self._fetch_pipeline()
         self._check_result_for_fetch()
         rv = self._tx.load_row(self._pos, self._make_row)
         if rv is not None:
@@ -120,6 +121,7 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
         return rv
 
     async def fetchmany(self, size: int = 0) -> List[Row]:
+        await self._fetch_pipeline()
         self._check_result_for_fetch()
         assert self.pgresult
 
@@ -134,6 +136,7 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
         return records
 
     async def fetchall(self) -> List[Row]:
+        await self._fetch_pipeline()
         self._check_result_for_fetch()
         assert self.pgresult
         records = self._tx.load_rows(self._pos, self.pgresult.ntuples, self._make_row)
@@ -141,6 +144,7 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
         return records
 
     async def __aiter__(self) -> AsyncIterator[Row]:
+        await self._fetch_pipeline()
         self._check_result_for_fetch()
 
         def load(pos: int) -> Optional[Row]:
@@ -166,3 +170,9 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
 
         async with AsyncCopy(self) as copy:
             yield copy
+
+    async def _fetch_pipeline(self) -> None:
+        if not self.pgresult and self._conn._pipeline:
+            async with self._conn.lock:
+                await self._conn.wait(self._conn._pipeline._fetch_gen(flush=True))
+            assert self.pgresult
