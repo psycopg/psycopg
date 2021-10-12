@@ -13,7 +13,13 @@ import select
 import selectors
 from enum import IntEnum
 from typing import Optional
-from asyncio import get_event_loop, wait_for, TimeoutError
+from asyncio import (
+    get_event_loop,
+    wait as asyncio_wait,
+    wait_for,
+    FIRST_COMPLETED,
+    TimeoutError,
+)
 from selectors import DefaultSelector, EVENT_READ, EVENT_WRITE
 
 from . import errors as e
@@ -29,6 +35,7 @@ class Wait(IntEnum):
 class Ready(IntEnum):
     R = EVENT_READ
     W = EVENT_WRITE
+    RW = EVENT_READ | EVENT_WRITE
 
 
 def wait_selector(
@@ -57,8 +64,7 @@ def wait_selector(
             while not rlist:
                 rlist = sel.select(timeout=timeout)
             sel.unregister(fileno)
-            # note: this line should require a cast, but mypy doesn't complain
-            ready: Ready = rlist[0][1]
+            ready = Ready(rlist[0][1])
             s = gen.send(ready)
 
     except StopIteration as ex:
@@ -115,21 +121,32 @@ async def wait_async(gen: PQGen[RV], fileno: int) -> RV:
     try:
         s = next(gen)
         while 1:
-            fut = loop.create_future()
             if s == Wait.R:
+                fut = loop.create_future()
                 loop.add_reader(fileno, fut.set_result, Ready.R)
                 fut.add_done_callback(lambda f: loop.remove_reader(fileno))
+                ready = await fut
             elif s == Wait.W:
+                fut = loop.create_future()
                 loop.add_writer(fileno, fut.set_result, Ready.W)
                 fut.add_done_callback(lambda f: loop.remove_writer(fileno))
+                ready = await fut
             elif s == Wait.RW:
-                loop.add_reader(fileno, fut.set_result, Ready.R)
-                fut.add_done_callback(lambda f: loop.remove_reader(fileno))
-                loop.add_writer(fileno, fut.set_result, Ready.W)
-                fut.add_done_callback(lambda f: loop.remove_writer(fileno))
+                rfut = loop.create_future()
+                loop.add_reader(fileno, rfut.set_result, Ready.R)
+                rfut.add_done_callback(lambda f: loop.remove_reader(fileno))
+                wfut = loop.create_future()
+                loop.add_writer(fileno, wfut.set_result, Ready.W)
+                wfut.add_done_callback(lambda f: loop.remove_writer(fileno))
+                done, _ = await asyncio_wait(
+                    (rfut, wfut), return_when=FIRST_COMPLETED
+                )
+                ready = done.pop().result()
+                if done:
+                    ready |= done.pop().result()
+                    assert not done
             else:
                 raise e.InternalError("bad poll status: %s")
-            ready = await fut
             s = gen.send(ready)
 
     except StopIteration as ex:
@@ -200,6 +217,9 @@ def wait_epoll(
     else:
         timeout = int(timeout * 1000.0)
 
+    r, w = select.EPOLLIN, select.EPOLLOUT
+    rw = r | w
+
     try:
         s = next(gen)
         epoll = select.epoll()
@@ -210,10 +230,13 @@ def wait_epoll(
             while not fileevs:
                 fileevs = epoll.poll(timeout)
             ev = fileevs[0][1]
-            if ev & ~select.EPOLLOUT:
-                s = Ready.R
-            else:
+            if ev & rw:
+                s = Ready.RW
+            elif ev & ~r:
                 s = Ready.W
+            else:
+                assert ev & ~w
+                s = Ready.R
             s = gen.send(s)
             evmask = poll_evmasks[s]
             epoll.modify(fileno, evmask)
