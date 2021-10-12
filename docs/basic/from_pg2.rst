@@ -202,12 +202,10 @@ you?
 What's new in Psycopg 3
 -----------------------
 
-.. admonition:: TODO
-
-    to be completed
-
-- `asyncio` support.
-- Several data types are adapted out-of-the-box: uuid, network, range, bytea,
-  array of any supported type are dealt with automatically
-  (see :ref:`types-adaptation`).
-- Access to the low-level libpq functions via the `pq` module.
+- :ref:`Asynchronous support <async>`
+- :ref:`Server-side parameters binding <server-side-binding>`
+- :ref:`prepared statements <prepared-statements>`
+- :ref:`Binary communication <binary-data>`
+- :ref:`Python-based COPY support <copy>`
+- :ref:`Support for static typing <row-factory-static>`
+- :ref:`Direct access to the libpq functionalities <psycopg.pq>`

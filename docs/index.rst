@@ -14,8 +14,8 @@ more modern PostgreSQL and Python features, such as:
 - :ref:`prepared statements <prepared-statements>`
 - :ref:`binary communication <binary-data>`
 - :ref:`great COPY support <copy>`
-- :ref:`direct access to the libpq functionalities <psycopg.pq>`
 - :ref:`support for static typing <row-factory-static>`
+- :ref:`direct access to the libpq functionalities <psycopg.pq>`
 
 .. _Python: https://www.python.org/
 .. _PostgreSQL: https://www.postgresql.org/
