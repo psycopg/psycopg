@@ -135,30 +135,6 @@ its `~psycopg.adapt.AdaptersMap.types` attribute.
    .. automethod:: get_by_subtype
 
 
-.. _numeric-wrappers:
-
-Numeric wrappers
-----------------
-
-.. autoclass:: psycopg.types.numeric.Int2
-.. autoclass:: psycopg.types.numeric.Int4
-.. autoclass:: psycopg.types.numeric.Int8
-.. autoclass:: psycopg.types.numeric.Oid
-.. autoclass:: psycopg.types.numeric.Float4
-.. autoclass:: psycopg.types.numeric.Float8
-
-These wrappers can be used to force to dump Python numeric values to a certain
-PostgreSQL type. This is rarely needed, usually the automatic rules do the
-right thing. One case when they are needed is :ref:`copy-binary`.
-
-
-.. admonition:: TODO
-
-    Document the various objects wrappers
-
-    - Range
-
-
 .. _json-adapters:
 
 JSON adapters
