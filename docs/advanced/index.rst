@@ -12,6 +12,7 @@ usages.
     :caption: Contents:
 
     async
+    typing
     rows
     pool
     cursors

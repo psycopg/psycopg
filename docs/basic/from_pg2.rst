@@ -204,8 +204,9 @@ What's new in Psycopg 3
 
 - :ref:`Asynchronous support <async>`
 - :ref:`Server-side parameters binding <server-side-binding>`
-- :ref:`prepared statements <prepared-statements>`
+- :ref:`Prepared statements <prepared-statements>`
 - :ref:`Binary communication <binary-data>`
 - :ref:`Python-based COPY support <copy>`
-- :ref:`Support for static typing <row-factory-static>`
+- :ref:`Support for static typing <static-typing>`
+- :ref:`A redesigned connection pool <connection-pools>`
 - :ref:`Direct access to the libpq functionalities <psycopg.pq>`
