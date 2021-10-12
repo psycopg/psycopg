@@ -47,9 +47,9 @@ packages by running::
 
     pip install psycopg[binary]
 
-This will install a self-contained package with all the libraries needed. You
-will need pip >= 20.3 at least: please run ``pip install --upgrade pip`` to
-update it beforehand.
+This will install a self-contained package with all the libraries needed.
+**You will need pip 20.3 at least**: please run ``pip install --upgrade pip``
+to update it beforehand.
 
 The above package should work in most situations. It **will not work** in
 some cases though:
