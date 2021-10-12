@@ -20,7 +20,7 @@ The `!Connection` class
 
     This class implements a `DBAPI-compliant interface`__. It is what you want
     to use if you write a "classic", blocking program (eventually using
-    threads or Eventlet/gevent for concurrency. If your program uses `asyncio`
+    threads or Eventlet/gevent for concurrency). If your program uses `asyncio`
     you might want to use `AsyncConnection` instead.
 
     .. __: https://www.python.org/dev/peps/pep-0249/#connection-objects
