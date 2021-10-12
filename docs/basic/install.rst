@@ -68,8 +68,8 @@ In these case you should proceed to a :ref:`local installation
     Did Psycopg 3 install ok? Great! You can now move on to the :ref:`basic
     module usage <module-usage>` to learn how it works.
 
-    You can come back here if you the above method didn't work and you need a
-    way to install Psycopg 3 past the basic one.
+    Keep on reading if the above method didn't work and you need a different
+    way to install Psycopg 3.
 
     For further information about the differences between the packages see
     :ref:`pq-impl`.
