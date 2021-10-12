@@ -6,7 +6,7 @@ Installation
 In short, if you use a :ref:`supported system<supported-systems>`::
 
     pip install --upgrade pip           # upgrade pip to at least 20.3
-    pip install --pre psycopg[binary]
+    pip install psycopg[binary]
 
 and you should be :ref:`ready to start <module-usage>`. Read further for
 alternative ways to install.
@@ -45,7 +45,7 @@ Binary installation
 The quickest way to start developing with Psycopg 3 is to install the binary
 packages by running::
 
-    pip install --pre psycopg[binary]
+    pip install psycopg[binary]
 
 This will install a self-contained package with all the libraries needed. You
 will need pip >= 20.3 at least: please run ``pip install --upgrade pip`` to
@@ -99,7 +99,7 @@ try this and follow the `binary installation`_ instead.
 
 If your build prerequisites are in place you can run::
 
-    pip install --pre psycopg[c]
+    pip install psycopg[c]
 
 
 .. _pure-python-installation:
@@ -109,7 +109,7 @@ Pure Python installation
 
 If you simply install::
 
-    pip install --pre psycopg
+    pip install psycopg
 
 without ``[c]`` or ``[binary]`` extras you will obtain a pure Python
 implementation. This is particularly handy to debug and hack, but it still
