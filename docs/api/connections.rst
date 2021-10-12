@@ -150,7 +150,7 @@ The `!Connection` class
             loader. See :ref:`binary-data` for details.
 
         The method simply creates a `Cursor` instance, `~Cursor.execute()` the
-        query requested, and return it.
+        query requested, and returns it.
 
         See :ref:`query-parameters` for all the details about executing
         queries.
