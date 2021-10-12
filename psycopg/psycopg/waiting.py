@@ -29,6 +29,7 @@ class Wait(IntEnum):
 class Ready(IntEnum):
     R = EVENT_READ
     W = EVENT_WRITE
+    RW = EVENT_READ | EVENT_WRITE
 
 
 def wait_selector(

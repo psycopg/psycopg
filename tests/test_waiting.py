@@ -59,11 +59,9 @@ if hasepoll:
 
 waits, wids = list(zip(*waits_and_ids))
 
-readys = [waiting.Ready.R, waiting.Ready.W, waiting.Ready.R | waiting.Ready.W]
-
 
 @pytest.mark.parametrize("waitfn", waits, ids=wids)
-@pytest.mark.parametrize("wait, ready", zip(waiting.Wait, readys))
+@pytest.mark.parametrize("wait, ready", zip(waiting.Wait, waiting.Ready))
 @skip_if_not_linux
 def test_wait_ready(waitfn, wait, ready):
     def gen():
@@ -132,7 +130,7 @@ async def test_wait_async(pgconn):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("wait, ready", zip(waiting.Wait, readys))
+@pytest.mark.parametrize("wait, ready", zip(waiting.Wait, waiting.Ready))
 @skip_if_not_linux
 async def test_wait_ready_async(wait, ready):
     def gen():
