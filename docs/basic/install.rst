@@ -17,7 +17,7 @@ alternative ways to install.
 Supported systems
 -----------------
 
-The psycopg version documented here has *official and tested* support for:
+The Psycopg version documented here has *official and tested* support for:
 
 - Python: from version 3.6 to 3.10
 - PostgreSQL: from version 10 to 14
@@ -81,7 +81,7 @@ Local installation
 ------------------
 
 A "Local installation" results in a performing and maintainable library. The
-library will include a the speed-up C module and will be linked to the system
+library will include the speed-up C module and will be linked to the system
 libraries (``libpq``, ``libssl``...) so that system upgrade of libraries will
 upgrade the libraries used by Psycopg 3 too. This is the preferred way to
 install Psycopg for a production site.
