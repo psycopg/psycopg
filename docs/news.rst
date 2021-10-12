@@ -10,8 +10,10 @@ Release notes
 Current release
 ---------------
 
-psycopg 3.0b2
-^^^^^^^^^^^^^
+psycopg 3.0
+-----------
+
+First stable release. Changed from 3.0b1:
 
 - Add :ref:`adapt-shapely` (:ticket:`#80`).
 - Add :ref:`adapt-multirange` (:ticket:`#75`).
@@ -21,6 +23,7 @@ psycopg 3.0b2
 - Fix selection of dumper by oid after `~Copy.set_types()`.
 - Drop `!Connection.client_encoding`. Use `ConnectionInfo.encoding` to read
   it, and a :sql:`SET` statement to change it.
+- Add binary packages for Python 3.10 (:ticket:`#103`).
 
 
 psycopg 3.0b1
