@@ -107,6 +107,15 @@ async def test_execute_type_change(aconn):
     assert (await cur.fetchall()) == [(1,), (100_000,)]
 
 
+async def test_executemany_type_change(aconn):
+    await aconn.execute("create table bug_112 (num integer)")
+    sql = "insert into bug_112 (num) values (%s)"
+    cur = aconn.cursor()
+    await cur.executemany(sql, [(1,), (100_000,)])
+    await cur.execute("select num from bug_112 order by num")
+    assert (await cur.fetchall()) == [(1,), (100_000,)]
+
+
 @pytest.mark.parametrize(
     "query", ["copy testcopy from stdin", "copy testcopy to stdout"]
 )
