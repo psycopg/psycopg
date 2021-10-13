@@ -13,7 +13,7 @@ import select
 import selectors
 from enum import IntEnum
 from typing import Optional
-from asyncio import get_event_loop, wait_for, Event, TimeoutError
+from asyncio import get_event_loop, wait_for, TimeoutError
 from selectors import DefaultSelector, EVENT_READ, EVENT_WRITE
 
 from . import errors as e
@@ -109,38 +109,27 @@ async def wait_async(gen: PQGen[RV], fileno: int) -> RV:
 
     Behave like in `wait()`, but exposing an `asyncio` interface.
     """
-    # Use an event to block and restart after the fd state changes.
-    # Not sure this is the best implementation but it's a start.
-    ev = Event()
     loop = get_event_loop()
-    ready: Ready
     s: Wait
-
-    def wakeup(state: Ready) -> None:
-        nonlocal ready
-        ready = state
-        ev.set()
 
     try:
         s = next(gen)
         while 1:
-            ev.clear()
+            fut = loop.create_future()
             if s == Wait.R:
-                loop.add_reader(fileno, wakeup, Ready.R)
-                await ev.wait()
-                loop.remove_reader(fileno)
+                loop.add_reader(fileno, fut.set_result, Ready.R)
+                fut.add_done_callback(lambda f: loop.remove_reader(fileno))
             elif s == Wait.W:
-                loop.add_writer(fileno, wakeup, Ready.W)
-                await ev.wait()
-                loop.remove_writer(fileno)
+                loop.add_writer(fileno, fut.set_result, Ready.W)
+                fut.add_done_callback(lambda f: loop.remove_writer(fileno))
             elif s == Wait.RW:
-                loop.add_reader(fileno, wakeup, Ready.R)
-                loop.add_writer(fileno, wakeup, Ready.W)
-                await ev.wait()
-                loop.remove_reader(fileno)
-                loop.remove_writer(fileno)
+                loop.add_reader(fileno, fut.set_result, Ready.R)
+                fut.add_done_callback(lambda f: loop.remove_reader(fileno))
+                loop.add_writer(fileno, fut.set_result, Ready.W)
+                fut.add_done_callback(lambda f: loop.remove_writer(fileno))
             else:
                 raise e.InternalError("bad poll status: %s")
+            ready = await fut
             s = gen.send(ready)
 
     except StopIteration as ex:
@@ -163,39 +152,28 @@ async def wait_conn_async(
     Behave like in `wait()`, but take the fileno to wait from the generator
     itself, which might change during processing.
     """
-    # Use an event to block and restart after the fd state changes.
-    # Not sure this is the best implementation but it's a start.
-    ev = Event()
     loop = get_event_loop()
-    ready: Ready
     s: Wait
-
-    def wakeup(state: Ready) -> None:
-        nonlocal ready
-        ready = state
-        ev.set()
 
     timeout = timeout or None
     try:
         fileno, s = next(gen)
         while 1:
-            ev.clear()
+            fut = loop.create_future()
             if s == Wait.R:
-                loop.add_reader(fileno, wakeup, Ready.R)
-                await wait_for(ev.wait(), timeout)
-                loop.remove_reader(fileno)
+                loop.add_reader(fileno, fut.set_result, Ready.R)
+                fut.add_done_callback(lambda f: loop.remove_reader(fileno))
             elif s == Wait.W:
-                loop.add_writer(fileno, wakeup, Ready.W)
-                await wait_for(ev.wait(), timeout)
-                loop.remove_writer(fileno)
+                loop.add_writer(fileno, fut.set_result, Ready.W)
+                fut.add_done_callback(lambda f: loop.remove_writer(fileno))
             elif s == Wait.RW:
-                loop.add_reader(fileno, wakeup, Ready.R)
-                loop.add_writer(fileno, wakeup, Ready.W)
-                await wait_for(ev.wait(), timeout)
-                loop.remove_reader(fileno)
-                loop.remove_writer(fileno)
+                loop.add_reader(fileno, fut.set_result, Ready.R)
+                fut.add_done_callback(lambda f: loop.remove_reader(fileno))
+                loop.add_writer(fileno, fut.set_result, Ready.W)
+                fut.add_done_callback(lambda f: loop.remove_writer(fileno))
             else:
                 raise e.InternalError("bad poll status: %s")
+            ready = await wait_for(fut, timeout)
             fileno, s = gen.send(ready)
 
     except TimeoutError:
