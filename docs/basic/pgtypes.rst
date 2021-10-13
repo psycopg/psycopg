@@ -63,7 +63,7 @@ Example::
 
     >>> conn.execute("CREATE TYPE card AS (value int, suit text)")
 
-    >>> info = TypeInfo.fetch(conn, "card")
+    >>> info = CompositeInfo.fetch(conn, "card")
     >>> register_composite(info, conn)
 
     >>> my_card = info.python_type(8, "hearts")
@@ -88,6 +88,7 @@ composite components are registered as well::
     >>> register_composite(info2, conn)
 
     >>> conn.execute("SELECT ((8, 'hearts'), 'blue')::card_back").fetchone()[0]
+    card_back(face=card(value=8, suit='hearts'), back='blue')
 
 
 .. index::
