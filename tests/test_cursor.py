@@ -93,6 +93,17 @@ def test_execute_empty_query(conn, query):
         cur.fetchone()
 
 
+def test_execute_type_change(conn):
+    # issue #112
+    conn.execute("create table bug_112 (num integer)")
+    sql = "insert into bug_112 (num) values (%s)"
+    cur = conn.cursor()
+    cur.execute(sql, (1,))
+    cur.execute(sql, (100_000,))
+    cur.execute("select num from bug_112 order by num")
+    assert cur.fetchall() == [(1,), (100_000,)]
+
+
 @pytest.mark.parametrize(
     "query", ["copy testcopy from stdin", "copy testcopy to stdout"]
 )
