@@ -295,41 +295,43 @@ cdef class Transformer:
         cdef Py_ssize_t nparams = len(params)
         cdef list out = PyList_New(nparams)
 
-        cdef int change_state = 0
-
-        dumpers = self._row_dumpers
-        cdef object types = None
-        cdef object pqformats = None
-
-        if not dumpers:
-            change_state = 1
-            dumpers = PyList_New(nparams)
-            types = [oids.INVALID_OID] * nparams
-            pqformats = [PQ_TEXT] * nparams
-
         cdef int i
         cdef PyObject *dumper_ptr  # borrowed pointer to row dumper
         cdef object dumped
         cdef Py_ssize_t size
+
+        dumpers = self._row_dumpers
+
+        if dumpers:
+            for i in range(nparams):
+                param = params[i]
+                if param is not None:
+                    dumper_ptr = PyList_GET_ITEM(dumpers, i)
+                    if (<RowDumper>dumper_ptr).cdumper is not None:
+                        dumped = PyByteArray_FromStringAndSize("", 0)
+                        size = (<RowDumper>dumper_ptr).cdumper.cdump(
+                            param, <bytearray>dumped, 0)
+                        PyByteArray_Resize(dumped, size)
+                    else:
+                        dumped = PyObject_CallFunctionObjArgs(
+                            (<RowDumper>dumper_ptr).dumpfunc,
+                            <PyObject *>param, NULL)
+                else:
+                    dumped = None
+
+                Py_INCREF(dumped)
+                PyList_SET_ITEM(out, i, dumped)
+
+            return out
+
+        cdef tuple types = PyTuple_New(nparams)
+        cdef list pqformats = PyList_New(nparams)
+
         for i in range(nparams):
             param = params[i]
             if param is not None:
-                dumper_ptr = PyList_GET_ITEM(dumpers, i)
-                if dumper_ptr == NULL:
-                    change_state = 1
-                    dumper_ptr = self.get_row_dumper(
-                        <PyObject *>param, <PyObject *>formats[i])
-                    Py_INCREF(<object>dumper_ptr)
-                    PyList_SET_ITEM(dumpers, i, <object>dumper_ptr)
-
-                    if types is None:
-                        types = list(self.types)
-                    types[i] = (<RowDumper>dumper_ptr).oid
-
-                    if pqformats is None:
-                        pqformats = list(self.formats)
-                    pqformats[i] = (<RowDumper>dumper_ptr).format
-
+                dumper_ptr = self.get_row_dumper(
+                    <PyObject *>param, <PyObject *>formats[i])
                 if (<RowDumper>dumper_ptr).cdumper is not None:
                     dumped = PyByteArray_FromStringAndSize("", 0)
                     size = (<RowDumper>dumper_ptr).cdumper.cdump(
@@ -339,17 +341,24 @@ cdef class Transformer:
                     dumped = PyObject_CallFunctionObjArgs(
                         (<RowDumper>dumper_ptr).dumpfunc,
                         <PyObject *>param, NULL)
+                oid = (<RowDumper>dumper_ptr).oid
+                fmt = (<RowDumper>dumper_ptr).format
             else:
                 dumped = None
+                oid = oids.INVALID_OID
+                fmt = PQ_TEXT
 
             Py_INCREF(dumped)
             PyList_SET_ITEM(out, i, dumped)
 
-        if change_state:
-            self._row_dumpers = dumpers
-            self.types = tuple(types)
-            self.formats = pqformats
+            Py_INCREF(oid)
+            PyTuple_SET_ITEM(types, i, oid)
 
+            Py_INCREF(fmt)
+            PyList_SET_ITEM(pqformats, i, fmt)
+
+        self.types = types
+        self.formats = pqformats
         return out
 
     def load_rows(self, int row0, int row1, object make_row) -> List[Row]:

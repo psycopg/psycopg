@@ -68,7 +68,7 @@ class Transformer(AdaptContext):
         # mapping fmt, oid -> Loader instance
         self._loaders: Tuple[LoaderCache, LoaderCache] = ({}, {})
 
-        self._row_dumpers: List[Optional["Dumper"]] = []
+        self._row_dumpers: Optional[List["Dumper"]] = None
 
         # sequence of load functions from value to python
         # the length of the result columns
@@ -139,51 +139,30 @@ class Transformer(AdaptContext):
         nparams = len(params)
         out: List[Optional[Buffer]] = [None] * nparams
 
-        change_state = False
+        # If we have dumpers, it means set_dumper_types had been called, in
+        # which case self.types and self.formats are set to sequences of the
+        # right size.
+        if self._row_dumpers:
+            for i in range(nparams):
+                param = params[i]
+                if param is not None:
+                    out[i] = self._row_dumpers[i].dump(param)
+            return out
 
-        dumpers: List[Optional[Dumper]] = self._row_dumpers
-        types: Optional[List[int]] = None
-        pqformats: Optional[List[pq.Format]] = None
-
-        # If we have dumpers, it means dump_sequnece or set_dumper_types were
-        # called already, in which case self.types and self.formats are set to
-        # sequences of the right size. We may change their contents if
-        # now we find a dumper we didn't have before, for instance because in
-        # an executemany the first records has a null, the second has a value.
-        if not dumpers:
-            change_state = True
-            dumpers = [None] * nparams
-            types = [INVALID_OID] * nparams
-            pqformats = [pq.Format.TEXT] * nparams
+        types = [INVALID_OID] * nparams
+        pqformats = [pq.Format.TEXT] * nparams
 
         for i in range(nparams):
             param = params[i]
-            if param is not None:
-                dumper = dumpers[i]
-                if not dumper:
-                    change_state = True
-                    dumper = dumpers[i] = self.get_dumper(param, formats[i])
+            if param is None:
+                continue
+            dumper = self.get_dumper(param, formats[i])
+            out[i] = dumper.dump(param)
+            types[i] = dumper.oid
+            pqformats[i] = dumper.format
 
-                    if not types:
-                        types = (
-                            list(self.types)
-                            if self.types
-                            else [INVALID_OID] * nparams
-                        )
-                    types[i] = dumper.oid
-
-                    if not pqformats:
-                        pqformats = self.formats or [pq.Format.TEXT] * nparams
-                    pqformats[i] = dumper.format
-
-                out[i] = dumper.dump(param)
-
-        if change_state:
-            self._row_dumpers = dumpers
-            assert types is not None
-            self.types = tuple(types)
-            assert pqformats is not None
-            self.formats = pqformats
+        self.types = tuple(types)
+        self.formats = pqformats
 
         return out
 
