@@ -1,7 +1,7 @@
 *.egg-info/
 .tox
 /.eggs/
-build/
+/build
 dist/
 *.pstats
 .mypy_cache
