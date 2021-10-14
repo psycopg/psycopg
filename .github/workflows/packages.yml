@@ -4,8 +4,7 @@ on:
   workflow_dispatch:
 
 jobs:
-
-  source:  # {{{
+  source: # {{{
     name: Build sdist packages
     runs-on: ubuntu-20.04
 
@@ -13,11 +12,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - {package: psycopg, format: sdist, impl: python}
-          - {package: psycopg, format: wheel, impl: python}
-          - {package: psycopg_c, format: sdist, impl: c}
-          - {package: psycopg_pool, format: sdist, impl: python}
-          - {package: psycopg_pool, format: wheel, impl: python}
+          - { package: psycopg, format: sdist, impl: python }
+          - { package: psycopg, format: wheel, impl: python }
+          - { package: psycopg_c, format: sdist, impl: c }
+          - { package: psycopg_pool, format: sdist, impl: python }
+          - { package: psycopg_pool, format: wheel, impl: python }
 
     steps:
       - uses: actions/checkout@v2
@@ -81,70 +80,68 @@ jobs:
           --health-timeout 5s
           --health-retries 5
 
-
   # }}}
 
-    manylinux2014:  # {{{
-      name: Build Linux packages
-      runs-on: ubuntu-20.04
+  manylinux2014: # {{{
+    name: Build Linux packages
+    runs-on: ubuntu-20.04
 
-      strategy:
-        fail-fast: false
-        matrix:
-          arch: [x86_64, i686]
-          pyver: [cp36, cp37, cp38, cp39, cp310]
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x86_64, i686]
+        pyver: [cp36, cp37, cp38, cp39, cp310]
 
-      steps:
-        - uses: actions/checkout@v2
+    steps:
+      - uses: actions/checkout@v2
 
-        - name: Set up QEMU for multi-arch build
-          uses: docker/setup-qemu-action@v1
+      - name: Set up QEMU for multi-arch build
+        uses: docker/setup-qemu-action@v1
 
-        - name: Create the binary package source tree
-          run: python3 ./tools/build/copy_to_binary.py
+      - name: Create the binary package source tree
+        run: python3 ./tools/build/copy_to_binary.py
 
-        - name: Build wheels
-          uses: pypa/cibuildwheel@v2.1.2
-          with:
-            package-dir: psycopg_binary
-          env:
-            CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
-            CIBW_MANYLINUX_I686_IMAGE: manylinux2014
-            CIBW_BUILD: ${{matrix.pyver}}-manylinux_${{matrix.arch}}
-            CIBW_ARCHS_LINUX: auto
-            CIBW_BEFORE_ALL_LINUX: ./tools/build/wheel_manylinux2014_before_all.sh
-            CIBW_TEST_REQUIRES: ./psycopg[test] ./psycopg_pool
-            CIBW_TEST_COMMAND: pytest {project}/tests -m 'not slow' --color yes
-            CIBW_ENVIRONMENT: >-
-              PSYCOPG_IMPL=binary
-              PSYCOPG_TEST_DSN='host=172.17.0.1 user=postgres'
-              PGPASSWORD=password
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v2.1.2
+        with:
+          package-dir: psycopg_binary
+        env:
+          CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
+          CIBW_MANYLINUX_I686_IMAGE: manylinux2014
+          CIBW_BUILD: ${{matrix.pyver}}-manylinux_${{matrix.arch}}
+          CIBW_ARCHS_LINUX: auto
+          CIBW_BEFORE_ALL_LINUX: ./tools/build/wheel_manylinux2014_before_all.sh
+          CIBW_TEST_REQUIRES: ./psycopg[test] ./psycopg_pool
+          CIBW_TEST_COMMAND: pytest {project}/tests -m 'not slow' --color yes
+          CIBW_ENVIRONMENT: >-
+            PSYCOPG_IMPL=binary
+            PSYCOPG_TEST_DSN='host=172.17.0.1 user=postgres'
+            PGPASSWORD=password
 
-        - uses: actions/upload-artifact@v2
-          with:
-            path: ./wheelhouse/*.whl
+      - uses: actions/upload-artifact@v2
+        with:
+          path: ./wheelhouse/*.whl
 
-      services:
-        postgresql:
-          # Can update to 14 only after aarch64 will be able to build with libpq
-          # > 10 or if we reconfigure the server to use md5 instead of SCRAM
-          # authentication.
-          image: postgres:13
-          env:
-            POSTGRES_PASSWORD: password
-          ports:
-            - 5432:5432
-          # Set health checks to wait until postgres has started
-          options: >-
-            --health-cmd pg_isready
-            --health-interval 10s
-            --health-timeout 5s
-            --health-retries 5
-
+    services:
+      postgresql:
+        # Can update to 14 only after aarch64 will be able to build with libpq
+        # > 10 or if we reconfigure the server to use md5 instead of SCRAM
+        # authentication.
+        image: postgres:13
+        env:
+          POSTGRES_PASSWORD: password
+        ports:
+          - 5432:5432
+        # Set health checks to wait until postgres has started
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     # }}}
 
-  manylinux_2_24:  # {{{
+  manylinux_2_24: # {{{
     name: Build Linux packages
     runs-on: ubuntu-20.04
 
@@ -203,10 +200,9 @@ jobs:
           --health-timeout 5s
           --health-retries 5
 
-
   # }}}
 
-  macos:  # {{{
+  macos: # {{{
     name: Build MacOS packages
     runs-on: macos-10.15
 
@@ -241,10 +237,9 @@ jobs:
         with:
           path: ./wheelhouse/*.whl
 
-
   # }}}
 
-  windows:  # {{{
+  windows: # {{{
     name: Build Windows packages
     runs-on: windows-2019
 
@@ -288,6 +283,5 @@ jobs:
       - uses: actions/upload-artifact@v2
         with:
           path: ./wheelhouse/*.whl
-
 
   # }}}
