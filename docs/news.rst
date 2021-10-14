@@ -10,6 +10,13 @@ Release notes
 Current release
 ---------------
 
+psycopg 3.0.1
+^^^^^^^^^^^^^
+
+- Fix use of the wrong dumper reusing cursors with the same query but different
+  parameter types (:ticket:`112`).
+
+
 psycopg 3.0
 -----------
 
