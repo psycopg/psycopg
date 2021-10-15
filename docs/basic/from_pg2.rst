@@ -72,6 +72,51 @@ from the `sql` module::
     >>> conn.execute(sql.SQL("CREATE TABLE foo (id int DEFAULT {})").format(42))
 
 
+.. _multi-statements:
+
+Multiple statements in the same query
+-------------------------------------
+
+As a consequence of using :ref:`server-side bindings <server-side-binding>`,
+when parameters are used, it is not possible to execute several statements in
+the same `!execute()` call, separating them by semicolon::
+
+    >>> conn.execute(
+    ...     "insert into foo values (%s); insert into foo values (%s)",
+    ...     (10, 20))
+    Traceback (most recent call last):
+    ...
+    psycopg.errors.SyntaxError: cannot insert multiple commands into a prepared statement
+
+One obvious way to work around the problem is to use several `!execute()`
+calls.
+
+There is no such limitation if no parameter is used. This allows to generate
+batches of statement entirely on the client side, for instance using the
+`psycopg.sql` objects, and to run them in the same `!execute()` call::
+
+    >>> from psycopg import sql
+    >>> query = sql.SQL(
+    ...     "insert into foo values ({}); insert into foo values ({})"
+    ... ).format(10, 20))
+    >>> conn.execute(query)
+
+Note that statements that require to run outside a transaction (such as
+:sql:`CREATE DATABASE`) can never be executed in batch with other statements,
+even if the transaction is in autocommit mode::
+
+    >>> conn.autocommit = True
+    >>> conn.execute("create database foo; select 1")
+    Traceback (most recent call last):
+    ...
+    psycopg.errors.ActiveSqlTransaction: CREATE DATABASE cannot run inside a transaction block
+
+This happens because PostgreSQL will wrap multiple statements in a transaction
+itself and is different from how :program:`psql` behaves (:program:`psql`
+split the queries on semicolons and sends them separately). This is not new in
+Psycopg 3: the same limitation is present in `!psycopg2` too.
+
+
 .. _difference-cast-rules:
 
 Different cast rules
@@ -82,6 +127,7 @@ find a function candidate for the given data types::
 
     >>> conn.execute("SELECT json_build_array(%s, %s)", ["foo", "bar"])
     Traceback (most recent call last):
+    ...
     psycopg.errors.IndeterminateDatatype: could not determine data type of parameter $1
 
 This can be worked around specifying the argument types explicitly via a cast::
