@@ -83,7 +83,7 @@ jobs:
   # }}}
 
   manylinux2014: # {{{
-    name: Build Linux packages
+    name: Build manylinux2014 packages
     runs-on: ubuntu-20.04
 
     strategy:
@@ -142,7 +142,7 @@ jobs:
     # }}}
 
   manylinux_2_24: # {{{
-    name: Build Linux packages
+    name: Build manylinux_2_24 packages
     runs-on: ubuntu-20.04
 
     strategy:
