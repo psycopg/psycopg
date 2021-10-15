@@ -172,7 +172,7 @@ In order to manage transactions as blocks you can use the
 `Connection.transaction()` method, which allows for finer control, for
 instance to use nested transactions.
 
-.. seealso:: See :ref:`transaction-block` for details.
+.. seealso:: See :ref:`transaction-context` for details.
 
 
 .. _diff-callproc:

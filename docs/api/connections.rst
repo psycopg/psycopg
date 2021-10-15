@@ -174,7 +174,7 @@ The `!Connection` class
                     ...
 
             The latter is useful if you need to interact with the
-            `Transaction` object. See :ref:`transaction-block` for details.
+            `Transaction` object. See :ref:`transaction-context` for details.
 
         Inside a transaction block it will not be possible to call `commit()`
         or `rollback()`.
