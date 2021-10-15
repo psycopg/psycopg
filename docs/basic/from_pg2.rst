@@ -79,7 +79,7 @@ Multiple statements in the same query
 
 As a consequence of using :ref:`server-side bindings <server-side-binding>`,
 when parameters are used, it is not possible to execute several statements in
-the same `!execute()` call, separating them by semicolon::
+the same `!execute()` call, separating them with a semicolon::
 
     >>> conn.execute(
     ...     "insert into foo values (%s); insert into foo values (%s)",
@@ -91,9 +91,9 @@ the same `!execute()` call, separating them by semicolon::
 One obvious way to work around the problem is to use several `!execute()`
 calls.
 
-There is no such limitation if no parameter is used. This allows to generate
-batches of statement entirely on the client side, for instance using the
-`psycopg.sql` objects, and to run them in the same `!execute()` call::
+There is no such limitation if no parameters are used. This allows one to generate
+batches of statements entirely on the client side (for instance using the
+`psycopg.sql` objects) and to run them in the same `!execute()` call::
 
     >>> from psycopg import sql
     >>> query = sql.SQL(
@@ -101,9 +101,9 @@ batches of statement entirely on the client side, for instance using the
     ... ).format(10, 20))
     >>> conn.execute(query)
 
-Note that statements that require to run outside a transaction (such as
+Note that statements that must be run outside a transaction (such as
 :sql:`CREATE DATABASE`) can never be executed in batch with other statements,
-even if the transaction is in autocommit mode::
+even if the connection is in autocommit mode::
 
     >>> conn.autocommit = True
     >>> conn.execute("create database foo; select 1")
@@ -112,8 +112,8 @@ even if the transaction is in autocommit mode::
     psycopg.errors.ActiveSqlTransaction: CREATE DATABASE cannot run inside a transaction block
 
 This happens because PostgreSQL will wrap multiple statements in a transaction
-itself and is different from how :program:`psql` behaves (:program:`psql`
-split the queries on semicolons and sends them separately). This is not new in
+itself and is different from how :program:`psql` behaves (:program:`psql` will
+split the queries on semicolons and send them separately). This is not new in
 Psycopg 3: the same limitation is present in `!psycopg2` too.
 
 
