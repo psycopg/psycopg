@@ -63,7 +63,8 @@ with an exception):
 The code modified using a connection context will result in the following
 sequence of database statements:
 
-.. code:: python
+.. code-block:: python
+    :emphasize-lines: 1
 
     with psycopg.connect() as conn:
 
@@ -121,7 +122,8 @@ inside a transaction, such as :sql:`CREATE DATABASE`, :sql:`VACUUM`,
 
 With an autocommit transaction, the above sequence of operation results in:
 
-.. code:: python
+.. code-block:: python
+    :emphasize-lines: 1
 
     with psycopg.connect(autocommit=True) as conn:
 
@@ -162,7 +164,8 @@ Continuing the example above, if you want to use an autocommit connection but
 still wrap selected groups of commands inside an atomic transaction, you can
 use a `!transaction()` context:
 
-.. code:: python
+.. code-block:: python
+    :emphasize-lines: 8
 
     with psycopg.connect(autocommit=True) as conn:
 
