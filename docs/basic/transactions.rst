@@ -228,8 +228,9 @@ context.
     developers is to:
 
     - use a connection block: ``with psycopg.connect(...) as conn``;
-    - use an autocommit connection: ``conn.autocommit = True``, eventually as
-      `!connect()` parameter too;
+    - use an autocommit connection, either passing ``autocommit=True`` as
+      `!connect()` parameter or setting the attribute ``conn.autocommit =
+      True``;
     - use `!with conn.transaction()` blocks to manage transactions only where
       needed.
 
