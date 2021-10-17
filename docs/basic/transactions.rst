@@ -34,7 +34,7 @@ disappointed by it), is likely:
 
     # Creating a cursor doesn't start a transaction or affect the connection
     # in any way.
-    cur = con.cursor()
+    cur = conn.cursor()
 
     cur.execute("SELECT count(*) FROM my_table")
     # This function call executes:
@@ -68,7 +68,7 @@ sequence of database statements:
 
     with psycopg.connect() as conn:
 
-        cur = con.cursor()
+        cur = conn.cursor()
 
         cur.execute("SELECT count(*) FROM my_table")
         # This function call executes:
@@ -127,7 +127,7 @@ With an autocommit transaction, the above sequence of operation results in:
 
     with psycopg.connect(autocommit=True) as conn:
 
-        cur = con.cursor()
+        cur = conn.cursor()
 
         cur.execute("SELECT count(*) FROM my_table")
         # This function call now only executes:
@@ -169,7 +169,7 @@ use a `!transaction()` context:
 
     with psycopg.connect(autocommit=True) as conn:
 
-        cur = con.cursor()
+        cur = conn.cursor()
 
         cur.execute("SELECT count(*) FROM my_table")
         # The connection is autocommit, so no BEGIN executed.
@@ -198,7 +198,7 @@ as explained in :ref:`transactions`:
 
     conn = psycopg.connect()
 
-    cur = con.cursor()
+    cur = conn.cursor()
 
     cur.execute("SELECT count(*) FROM my_table")
     # This function call executes:
