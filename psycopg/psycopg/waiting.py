@@ -232,11 +232,12 @@ def wait_epoll(
             while not fileevs:
                 fileevs = epoll.poll(timeout)
             ev = fileevs[0][1]
+            ready = 0
             if ev & ~select.EPOLLOUT:
-                s = Ready.R
-            else:
-                s = Ready.W
-            s = gen.send(s)
+                ready = Ready.R
+            if ev & ~select.EPOLLIN:
+                ready |= Ready.W
+            s = gen.send(ready)
             evmask = poll_evmasks[s]
             epoll.modify(fileno, evmask)
 
