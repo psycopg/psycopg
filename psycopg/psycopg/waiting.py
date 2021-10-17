@@ -59,6 +59,7 @@ def wait_selector(
             sel.unregister(fileno)
             # note: this line should require a cast, but mypy doesn't complain
             ready: Ready = rlist[0][1]
+            assert s & ready
             s = gen.send(ready)
 
     except StopIteration as ex:
@@ -237,6 +238,7 @@ def wait_epoll(
                 ready = Ready.R
             if ev & ~select.EPOLLIN:
                 ready |= Ready.W
+            assert s & ready
             s = gen.send(ready)
             evmask = poll_evmasks[s]
             epoll.modify(fileno, evmask)
