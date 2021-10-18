@@ -113,6 +113,20 @@ class PrepareManager:
         value: Value = name if prep is Prepare.SHOULD else 1
         return key, value
 
+    @staticmethod
+    def check_results(results: Sequence["PGresult"]) -> bool:
+        """Return False if 'results' are invalid for prepared statement cache."""
+        if len(results) != 1:
+            # We cannot prepare a multiple statement
+            return False
+
+        status = results[0].status
+        if ExecStatus.COMMAND_OK != status != ExecStatus.TUPLES_OK:
+            # We don't prepare failed queries or other weird results
+            return False
+
+        return True
+
     def maintain(
         self,
         query: PostgresQuery,
@@ -134,13 +148,7 @@ class PrepareManager:
             return None
 
         # The query is not in cache. Let's see if we must add it
-        if len(results) != 1:
-            # We cannot prepare a multiple statement
-            return None
-
-        status = results[0].status
-        if ExecStatus.COMMAND_OK != status != ExecStatus.TUPLES_OK:
-            # We don't prepare failed queries or other weird results
+        if not self.check_results(results):
             return None
 
         # Ok, we got to the conclusion that this query is genuinely to prepare
