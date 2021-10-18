@@ -22,6 +22,7 @@ class Prepare(IntEnum):
 
 
 Key = Tuple[bytes, Tuple[int, ...]]
+Value = Union[int, bytes]
 
 
 class PrepareManager:
@@ -38,7 +39,7 @@ class PrepareManager:
         # Note: with this implementation we keep the tally of up to 100
         # queries, but most likely we will prepare way less than that. We might
         # change that if we think it would be better.
-        self._prepared: OrderedDict[Key, Union[int, bytes]] = OrderedDict()
+        self._prepared: OrderedDict[Key, Value] = OrderedDict()
 
         # Counter to generate prepared statements names
         self._prepared_idx = 0
@@ -91,6 +92,27 @@ class PrepareManager:
                     return b"DEALLOCATE ALL"
         return None
 
+    def setdefault(
+        self, query: PostgresQuery, prep: Prepare, name: bytes
+    ) -> Optional[Tuple[Key, Value]]:
+        """Check if the query is already in cache.
+
+        If not, return a new 'key' matching given query. Otherwise, just
+        update the count for that query and record as last used.
+        """
+        key = self.key(query)
+        if key in self._prepared:
+            if isinstance(self._prepared[key], int):
+                if prep is Prepare.SHOULD:
+                    self._prepared[key] = name
+                else:
+                    self._prepared[key] += 1  # type: ignore[operator]
+            self._prepared.move_to_end(key)
+            return None
+
+        value: Value = name if prep is Prepare.SHOULD else 1
+        return key, value
+
     def maintain(
         self,
         query: PostgresQuery,
@@ -107,17 +129,8 @@ class PrepareManager:
         if cmd:
             return cmd
 
-        key = self.key(query)
-
-        # If we know the query already the cache size won't change
-        # So just update the count and record as last used
-        if key in self._prepared:
-            if isinstance(self._prepared[key], int):
-                if prep is Prepare.SHOULD:
-                    self._prepared[key] = name
-                else:
-                    self._prepared[key] += 1  # type: ignore  # operator
-            self._prepared.move_to_end(key)
+        cached = self.setdefault(query, prep, name)
+        if cached is None:
             return None
 
         # The query is not in cache. Let's see if we must add it
@@ -131,7 +144,8 @@ class PrepareManager:
             return None
 
         # Ok, we got to the conclusion that this query is genuinely to prepare
-        self._prepared[key] = name if prep is Prepare.SHOULD else 1
+        key, value = cached
+        self._prepared[key] = value
 
         # Evict an old value from the cache; if it was prepared, deallocate it
         # Do it only once: if the cache was resized, deallocate gradually
