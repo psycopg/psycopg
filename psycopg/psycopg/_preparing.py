@@ -72,6 +72,25 @@ class PrepareManager:
             # The query is not to be prepared yet
             return Prepare.NO, b""
 
+    def should_discard(
+        self, prep: Prepare, results: Sequence["PGresult"]
+    ) -> Optional[bytes]:
+        """Check if we need to discard our entire state: it should happen on
+        rollback or on dropping objects, because the same object may get
+        recreated and postgres would fail internal lookups.
+        """
+        if self._prepared or prep == Prepare.SHOULD:
+            for result in results:
+                if result.status != ExecStatus.COMMAND_OK:
+                    continue
+                cmdstat = result.command_status
+                if cmdstat and (
+                    cmdstat.startswith(b"DROP ") or cmdstat == b"ROLLBACK"
+                ):
+                    self._prepared.clear()
+                    return b"DEALLOCATE ALL"
+        return None
+
     def maintain(
         self,
         query: PostgresQuery,
@@ -84,19 +103,9 @@ class PrepareManager:
         if self.prepare_threshold is None:
             return None
 
-        # Check if we need to discard our entire state: it should happen on
-        # rollback or on dropping objects, because the same object may get
-        # recreated and postgres would fail internal lookups.
-        if self._prepared or prep == Prepare.SHOULD:
-            for result in results:
-                if result.status != ExecStatus.COMMAND_OK:
-                    continue
-                cmdstat = result.command_status
-                if cmdstat and (
-                    cmdstat.startswith(b"DROP ") or cmdstat == b"ROLLBACK"
-                ):
-                    self._prepared.clear()
-                    return b"DEALLOCATE ALL"
+        cmd = self.should_discard(prep, results)
+        if cmd:
+            return cmd
 
         key = self.key(query)
 
