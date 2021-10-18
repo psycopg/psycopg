@@ -127,6 +127,21 @@ class PrepareManager:
 
         return True
 
+    def rotate(self) -> Optional[bytes]:
+        """Evict an old value from the cache.
+
+        If it was prepared, deallocate it. Do it only once: if the cache was
+        resized, deallocate gradually.
+        """
+        if len(self._prepared) <= self.prepared_max:
+            return None
+
+        old_val = self._prepared.popitem(last=False)[1]
+        if isinstance(old_val, bytes):
+            return b"DEALLOCATE " + old_val
+        else:
+            return None
+
     def maintain(
         self,
         query: PostgresQuery,
@@ -155,16 +170,7 @@ class PrepareManager:
         key, value = cached
         self._prepared[key] = value
 
-        # Evict an old value from the cache; if it was prepared, deallocate it
-        # Do it only once: if the cache was resized, deallocate gradually
-        if len(self._prepared) <= self.prepared_max:
-            return None
-
-        old_val = self._prepared.popitem(last=False)[1]
-        if isinstance(old_val, bytes):
-            return b"DEALLOCATE " + old_val
-        else:
-            return None
+        return self.rotate()
 
     def clear(self) -> Optional[bytes]:
         if self._prepared_idx:
