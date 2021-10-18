@@ -21,6 +21,9 @@ class Prepare(IntEnum):
     SHOULD = auto()
 
 
+Key = Tuple[bytes, Tuple[int, ...]]
+
+
 class PrepareManager:
     # Number of times a query is executed before it is prepared.
     prepare_threshold: Optional[int] = 5
@@ -35,12 +38,14 @@ class PrepareManager:
         # Note: with this implementation we keep the tally of up to 100
         # queries, but most likely we will prepare way less than that. We might
         # change that if we think it would be better.
-        self._prepared: OrderedDict[
-            Tuple[bytes, Tuple[int, ...]], Union[int, bytes]
-        ] = OrderedDict()
+        self._prepared: OrderedDict[Key, Union[int, bytes]] = OrderedDict()
 
         # Counter to generate prepared statements names
         self._prepared_idx = 0
+
+    @staticmethod
+    def key(query: PostgresQuery) -> Key:
+        return (query.query, query.types)
 
     def get(
         self, query: PostgresQuery, prepare: Optional[bool] = None
@@ -52,7 +57,7 @@ class PrepareManager:
             # The user doesn't want this query to be prepared
             return Prepare.NO, b""
 
-        key = (query.query, query.types)
+        key = self.key(query)
         value: Union[bytes, int] = self._prepared.get(key, 0)
         if isinstance(value, bytes):
             # The query was already prepared in this session
@@ -93,7 +98,7 @@ class PrepareManager:
                     self._prepared.clear()
                     return b"DEALLOCATE ALL"
 
-        key = (query.query, query.types)
+        key = self.key(query)
 
         # If we know the query already the cache size won't change
         # So just update the count and record as last used
