@@ -142,6 +142,42 @@ class PrepareManager:
         else:
             return None
 
+    def handle(
+        self, query: PostgresQuery, prep: Prepare, name: bytes
+    ) -> Optional[Key]:
+        """Handle 'query' for possible addition to the cache.
+
+        If a new entry has been added, return its key. Return None otherwise
+        (meaning the query is already in cache or cache is not enabled).
+        """
+        if self.prepare_threshold is None:
+            return None
+        cached = self.setdefault(query, prep, name)
+        if cached is None:
+            return None
+        key, value = cached
+        self._prepared[key] = value
+        return key
+
+    def validate(
+        self,
+        key: Key,
+        prep: Prepare,
+        name: bytes,
+        results: Sequence["PGresult"],
+    ) -> Optional[bytes]:
+        """Validate cached entry with 'key' by checking query 'results'.
+
+        Possibly return a command to perform maintainance on database side.
+        """
+        cmd = self.should_discard(prep, results)
+        if cmd:
+            return cmd
+        if not self.check_results(results):
+            del self._prepared[key]
+            return None
+        return self.rotate()
+
     def maintain(
         self,
         query: PostgresQuery,
