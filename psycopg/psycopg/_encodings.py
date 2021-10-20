@@ -88,4 +88,6 @@ def pg2pyenc(name: Union[bytes, str]) -> str:
     try:
         return py_codecs[name]
     except KeyError:
-        raise NotSupportedError("codec not available in Python: {name!r}")
+        if isinstance(name, bytes):
+            name = name.decode("utf8", "replace")
+        raise NotSupportedError(f"codec not available in Python: {name!r}")
