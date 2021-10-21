@@ -164,7 +164,51 @@ Psycopg 3 `Connection` can be used as a context manager:
 
 When the block is exited, if there is a transaction open, it will be
 committed. If an exception is raised within the block the transaction is
-rolled back. In both cases the connection is closed.
+rolled back. In both cases the connection is closed. It is roughly the
+equivalent of:
+
+.. code:: python
+
+    conn = psycopg.connect()
+    try:
+        ... # use the connection
+    except BaseException:
+        conn.rollback()
+    else:
+        conn.commit()
+    finally:
+        conn.close()
+
+.. note::
+    This behaviour is not what `!psycopg2` does: in `!psycopg2` :ref:`there is
+    no final close() <pg2:with>` and the connection can be used in several
+    ``with`` statements to manage different transactions. This behaviour has
+    been considered non-standard and surprising so it has been replaced by the
+    more explicit `~Connection.transaction()` block.
+
+Note that, while the above pattern is what most people would use, `connect()`
+doesn't enter a block itself, but returns an "un-entered" connection, so that
+it is still possible to use a connection regardless of the code scope and the
+developer is free to use (and responsible of calling) `~Connection.commit()`,
+`~Connection.rollback()`, `~Connection.close()` as and where needed.
+
+.. warning::
+    If a connection is just left to go out of scope, the way it will behave
+    with or without the use of a ``with`` block is different:
+
+    - if the connection is used without a ``with`` block, the server will find
+      a connection closed INTRANS and roll back the current transaction;
+
+    - if the connection is used with a ``with`` block, there will be an
+      explicit COMMIT and the operations will be finalised.
+
+    You should use a ``with`` block when your intention is just to execute a
+    set of operations and then committing the result, which is the most usual
+    thing to do with a connection. If your connection life cycle and
+    transaction pattern is different, and want more control on it, the use
+    without ``with`` might be more convenient.
+
+    See :ref:`transactions` for more information.
 
 `AsyncConnection` can be also used as context manager, using ``async with``,
 but be careful about its quirkiness: see :ref:`async-with` for details.
