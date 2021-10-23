@@ -451,6 +451,8 @@ class BaseCursor(Generic[ConnectionType, Row]):
         )
 
     def _check_result(self) -> None:
+        if self._conn.closed:
+            raise e.InterfaceError("the cursor is closed")
         res = self.pgresult
         if not res:
             raise e.ProgrammingError("no result available")
