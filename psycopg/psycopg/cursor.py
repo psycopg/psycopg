@@ -73,13 +73,15 @@ class BaseCursor(Generic[ConnectionType, Row]):
         self._last_query: Optional[Query] = None
         self._reset()
 
-    def _reset(self) -> None:
+    def _reset(self, reset_query: bool = True) -> None:
         self._results: List["PGresult"] = []
         self.pgresult: Optional["PGresult"] = None
         self._pos = 0
         self._iresult = 0
         self._rowcount = -1
-        self._query: Optional[PostgresQuery] = None
+        self._query: Optional[PostgresQuery]
+        if reset_query:
+            self._query = None
 
     def __repr__(self) -> str:
         cls = f"{self.__class__.__module__}.{self.__class__.__qualname__}"
@@ -490,6 +492,10 @@ class BaseCursor(Generic[ConnectionType, Row]):
         self._pos = newpos
 
     def _close(self) -> None:
+        """Non-blocking part of closing. Common to sync/async."""
+        # Don't reset the query because it may be useful to investigate after
+        # an error.
+        self._reset(reset_query=False)
         self._closed = True
 
 

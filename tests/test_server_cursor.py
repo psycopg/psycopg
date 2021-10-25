@@ -138,6 +138,14 @@ def test_close_on_error(conn):
     cur.close()
 
 
+def test_pgresult(conn):
+    cur = conn.cursor()
+    cur.execute("select 1")
+    assert cur.pgresult
+    cur.close()
+    assert not cur.pgresult
+
+
 def test_context(conn, recwarn, retries):
     for retry in retries:
         with retry:

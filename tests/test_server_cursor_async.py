@@ -145,6 +145,14 @@ async def test_close_on_error(aconn):
     await cur.close()
 
 
+async def test_pgresult(aconn):
+    cur = aconn.cursor()
+    await cur.execute("select 1")
+    assert cur.pgresult
+    await cur.close()
+    assert not cur.pgresult
+
+
 async def test_context(aconn, recwarn, retries):
     async for retry in retries:
         with retry:

@@ -42,6 +42,14 @@ def test_weakref(conn):
     assert w() is None
 
 
+def test_pgresult(conn):
+    cur = conn.cursor()
+    cur.execute("select 1")
+    assert cur.pgresult
+    cur.close()
+    assert not cur.pgresult
+
+
 def test_statusmessage(conn):
     cur = conn.cursor()
     assert cur.statusmessage is None
@@ -272,9 +280,6 @@ def test_rowcount(conn):
     cur.execute(
         "insert into test_rowcount_notuples select generate_series(1, 42)"
     )
-    assert cur.rowcount == 42
-
-    cur.close()
     assert cur.rowcount == 42
 
 

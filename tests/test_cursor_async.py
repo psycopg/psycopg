@@ -42,6 +42,14 @@ async def test_weakref(aconn):
     assert w() is None
 
 
+async def test_pgresult(aconn):
+    cur = aconn.cursor()
+    await cur.execute("select 1")
+    assert cur.pgresult
+    await cur.close()
+    assert not cur.pgresult
+
+
 async def test_statusmessage(aconn):
     cur = aconn.cursor()
     assert cur.statusmessage is None
@@ -274,9 +282,6 @@ async def test_rowcount(aconn):
     await cur.execute(
         "insert into test_rowcount_notuples select generate_series(1, 42)"
     )
-    assert cur.rowcount == 42
-
-    await cur.close()
     assert cur.rowcount == 42
 
 
