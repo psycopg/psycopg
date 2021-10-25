@@ -55,7 +55,7 @@ extras_require = {
     ],
     # Requirements needed to build the documentation
     "docs": [
-        "Sphinx >= 4.1, < 4.2",
+        "Sphinx ~= 4.2, < 4.3",
         "docutils >= 0.17, < 0.18",
         "furo >= 2021.9.8",
         "sphinx-autobuild >= 2021.3.14",
