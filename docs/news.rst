@@ -10,21 +10,21 @@ Release notes
 Current release
 ---------------
 
-psycopg 3.0.2
+Psycopg 3.0.2
 ^^^^^^^^^^^^^
 
 - Fix type hint for `sql.SQL.join()` (:ticket:`#127`).
 - Fix type hint for `Connection.notifies()` (:ticket:`#128`).
 
 
-psycopg 3.0.1
+Psycopg 3.0.1
 ^^^^^^^^^^^^^
 
 - Fix use of the wrong dumper reusing cursors with the same query but different
-  parameter types (:ticket:`112`).
+  parameter types (:ticket:`#112`).
 
 
-psycopg 3.0
+Psycopg 3.0
 -----------
 
 First stable release. Changed from 3.0b1:
@@ -40,7 +40,7 @@ First stable release. Changed from 3.0b1:
 - Add binary packages for Python 3.10 (:ticket:`#103`).
 
 
-psycopg 3.0b1
+Psycopg 3.0b1
 ^^^^^^^^^^^^^
 
 - First public release on PyPI.
