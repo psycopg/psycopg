@@ -8,8 +8,8 @@ import logging
 import warnings
 import threading
 from types import TracebackType
-from typing import Any, Callable, cast, Dict, Generic, Iterator, List
-from typing import NamedTuple, Optional, Type, TypeVar, Union
+from typing import Any, Callable, cast, Dict, Generator, Generic, Iterator
+from typing import List, NamedTuple, Optional, Type, TypeVar, Union
 from typing import overload, TYPE_CHECKING
 from weakref import ref, ReferenceType
 from functools import partial
@@ -743,7 +743,7 @@ class Connection(BaseConnection[Row]):
         with Transaction(self, savepoint_name, force_rollback) as tx:
             yield tx
 
-    def notifies(self) -> Iterator[Notify]:
+    def notifies(self) -> Generator[Notify, None, None]:
         """
         Yield `Notify` objects as soon as they are received from the database.
         """

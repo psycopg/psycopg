@@ -8,8 +8,8 @@ import sys
 import asyncio
 import logging
 from types import TracebackType
-from typing import Any, AsyncIterator, Dict, Optional, Type, Union
-from typing import cast, overload, TYPE_CHECKING
+from typing import Any, AsyncGenerator, AsyncIterator, Dict, Optional
+from typing import Type, Union, cast, overload, TYPE_CHECKING
 
 from . import errors as e
 from . import waiting
@@ -275,7 +275,7 @@ class AsyncConnection(BaseConnection[Row]):
         async with tx:
             yield tx
 
-    async def notifies(self) -> AsyncIterator[Notify]:
+    async def notifies(self) -> AsyncGenerator[Notify, None]:
         while 1:
             async with self.lock:
                 ns = await self.wait(notifies(self.pgconn))

@@ -14,6 +14,7 @@ psycopg 3.0.2
 ^^^^^^^^^^^^^
 
 - Fix type hint for `sql.SQL.join()` (:ticket:`#127`).
+- Fix type hint for `Connection.notifies()` (:ticket:`#128`).
 
 
 psycopg 3.0.1
