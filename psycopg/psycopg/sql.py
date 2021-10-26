@@ -7,7 +7,7 @@ SQL composition utility module
 import codecs
 import string
 from abc import ABC, abstractmethod
-from typing import Any, Iterator, List, Optional, Sequence, Union
+from typing import Any, Iterator, Iterable, List, Optional, Sequence, Union
 
 from .pq import Escaping
 from .abc import AdaptContext
@@ -280,7 +280,7 @@ class SQL(Composable):
 
         return Composed(rv)
 
-    def join(self, seq: Sequence[Composable]) -> Composed:
+    def join(self, seq: Iterable[Composable]) -> Composed:
         """
         Join a sequence of `Composable`.
 

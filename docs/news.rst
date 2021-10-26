@@ -10,6 +10,12 @@ Release notes
 Current release
 ---------------
 
+psycopg 3.0.2
+^^^^^^^^^^^^^
+
+- Fix type hint for `sql.SQL.join()` (:ticket:`#127`).
+
+
 psycopg 3.0.1
 ^^^^^^^^^^^^^
 
