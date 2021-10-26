@@ -9,7 +9,7 @@ import warnings
 import threading
 from types import TracebackType
 from typing import Any, Callable, cast, Dict, Generator, Generic, Iterator
-from typing import List, NamedTuple, Optional, Type, TypeVar, Union
+from typing import List, NamedTuple, Optional, Type, TypeVar, Tuple, Union
 from typing import overload, TYPE_CHECKING
 from weakref import ref, ReferenceType
 from functools import partial
@@ -22,8 +22,9 @@ from . import postgres
 from .pq import ConnStatus, ExecStatus, TransactionStatus, Format
 from .abc import AdaptContext, ConnectionType, Params, Query, RV
 from .abc import PQGen, PQGenConn
-from .sql import Composable
-from .rows import Row, RowFactory, tuple_row, TupleRow
+from .sql import Composable, SQL
+from ._tpc import Xid
+from .rows import Row, RowFactory, tuple_row, TupleRow, args_row
 from .adapt import AdaptersMap
 from ._enums import IsolationLevel
 from .cursor import Cursor
@@ -116,6 +117,7 @@ class BaseConnection(Generic[Row]):
 
         self._closed = False  # closed by an explicit close()
         self._prepared: PrepareManager = PrepareManager()
+        self._tpc: Optional[Tuple[Xid, bool]] = None  # xid, prepared
 
         wself = ref(self)
         pgconn.notice_handler = partial(BaseConnection._notice_handler, wself)
@@ -284,6 +286,11 @@ class BaseConnection(Generic[Row]):
 
     def cancel(self) -> None:
         """Cancel the current operation on the connection."""
+        if self._tpc and self._tpc[1]:
+            raise e.ProgrammingError(
+                "cancel() cannot be used with a prepared two-phase transaction"
+            )
+
         c = self.pgconn.get_cancel()
         c.cancel()
 
@@ -477,6 +484,10 @@ class BaseConnection(Generic[Row]):
                 "context. (Transaction will be automatically committed "
                 "on successful exit from context.)"
             )
+        if self._tpc:
+            raise e.ProgrammingError(
+                "commit() cannot be used during a two-phase transaction"
+            )
         if self.pgconn.transaction_status == TransactionStatus.IDLE:
             return
 
@@ -490,6 +501,10 @@ class BaseConnection(Generic[Row]):
                 "context. (Either raise Rollback() or allow "
                 "an exception to propagate out of the context.)"
             )
+        if self._tpc:
+            raise e.ProgrammingError(
+                "rollback() cannot be used during a two-phase transaction"
+            )
         if self.pgconn.transaction_status == TransactionStatus.IDLE:
             return
 
@@ -497,6 +512,74 @@ class BaseConnection(Generic[Row]):
         cmd = self._prepared.clear()
         if cmd:
             yield from self._exec_command(cmd)
+
+    def xid(self, format_id: int, gtrid: str, bqual: str) -> Xid:
+        return Xid.from_parts(format_id, gtrid, bqual)
+
+    def _tpc_begin_gen(self, xid: Union[Xid, str]) -> PQGen[None]:
+        if not isinstance(xid, Xid):
+            xid = Xid.from_string(xid)
+
+        if self.pgconn.transaction_status != TransactionStatus.IDLE:
+            raise e.ProgrammingError(
+                f"can't start two-phase transaction: connection in status"
+                f" {TransactionStatus(self.pgconn.transaction_status).name}"
+            )
+
+        if self._autocommit:
+            raise e.ProgrammingError(
+                "can't use two-phase transctions in autocommit mode"
+            )
+
+        self._tpc = (xid, False)
+        yield from self._exec_command(self._get_tx_start_command())
+
+    def _tpc_prepare_gen(self) -> PQGen[None]:
+        if not self._tpc:
+            raise e.ProgrammingError(
+                "'tpc_prepare()' must be called inside a two-phase transaction"
+            )
+        if self._tpc[1]:
+            raise e.ProgrammingError(
+                "'tpc_prepare()' cannot be used during a prepared"
+                " two-phase transaction"
+            )
+        xid = self._tpc[0]
+        self._tpc = (xid, True)
+        yield from self._exec_command(
+            SQL("PREPARE TRANSACTION {}").format(str(xid))
+        )
+
+    def _tpc_finish_gen(
+        self, action: str, xid: Union[Xid, str, None]
+    ) -> PQGen[None]:
+        fname = f"tpc_{action}()"
+        if xid is None:
+            if not self._tpc:
+                raise e.ProgrammingError(
+                    f"{fname} without xid must must be"
+                    " called inside a two-phase transaction"
+                )
+            xid = self._tpc[0]
+        else:
+            if self._tpc:
+                raise e.ProgrammingError(
+                    f"{fname} with xid must must be called"
+                    " outside a two-phase transaction"
+                )
+            if not isinstance(xid, Xid):
+                xid = Xid.from_string(xid)
+
+        if self._tpc and not self._tpc[1]:
+            meth: Callable[[], PQGen[None]]
+            meth = getattr(self, f"_{action}_gen")
+            self._tpc = None
+            yield from meth()
+        else:
+            yield from self._exec_command(
+                SQL("{} PREPARED {}").format(SQL(action.upper()), str(xid))
+            )
+            self._tpc = None
 
 
 class Connection(BaseConnection[Row]):
@@ -786,3 +869,36 @@ class Connection(BaseConnection[Row]):
     def _set_deferrable(self, value: Optional[bool]) -> None:
         with self.lock:
             super()._set_deferrable(value)
+
+    def tpc_begin(self, xid: Union[Xid, str]) -> None:
+        with self.lock:
+            self.wait(self._tpc_begin_gen(xid))
+
+    def tpc_prepare(self) -> None:
+        try:
+            with self.lock:
+                self.wait(self._tpc_prepare_gen())
+        except e.ObjectNotInPrerequisiteState as ex:
+            raise e.NotSupportedError(str(ex)) from None
+
+    def tpc_commit(self, xid: Union[Xid, str, None] = None) -> None:
+        with self.lock:
+            self.wait(self._tpc_finish_gen("commit", xid))
+
+    def tpc_rollback(self, xid: Union[Xid, str, None] = None) -> None:
+        with self.lock:
+            self.wait(self._tpc_finish_gen("rollback", xid))
+
+    def tpc_recover(self) -> List[Xid]:
+        status = self.info.transaction_status
+        with self.cursor(row_factory=args_row(Xid._from_record)) as cur:
+            cur.execute(Xid._get_recover_query())
+            res = cur.fetchall()
+
+        if (
+            status == TransactionStatus.IDLE
+            and self.info.transaction_status == TransactionStatus.INTRANS
+        ):
+            self.rollback()
+
+        return res
