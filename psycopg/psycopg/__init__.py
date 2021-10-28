@@ -6,7 +6,7 @@ psycopg -- PostgreSQL database adapter for Python
 
 import logging
 
-from . import pq
+from . import pq  # noqa: F401 import early to stabilize side effects
 from . import types
 from . import postgres
 from .copy import Copy, AsyncCopy
@@ -25,8 +25,7 @@ from .connection_async import AsyncConnection
 
 from . import dbapi20
 from .dbapi20 import BINARY, DATETIME, NUMBER, ROWID, STRING
-from .dbapi20 import Binary, BinaryTextDumper, BinaryBinaryDumper
-from .dbapi20 import Date, DateFromTicks, Time, TimeFromTicks
+from .dbapi20 import Binary, Date, DateFromTicks, Time, TimeFromTicks
 from .dbapi20 import Timestamp, TimestampFromTicks
 
 from .version import __version__
@@ -36,21 +35,20 @@ logger = logging.getLogger("psycopg")
 if logger.level == logging.NOTSET:
     logger.setLevel(logging.WARNING)
 
-# register default adapters for PostgreSQL
-adapters = postgres.adapters  # exposed by the package
-
 # DBAPI compliancy
 connect = Connection.connect
 apilevel = "2.0"
 threadsafety = 2
 paramstyle = "pyformat"
 
+# register default adapters for PostgreSQL
+adapters = postgres.adapters  # exposed by the package
 postgres.register_default_adapters(adapters)
 
-# After the default one because they can deal with the bytea oid better
+# After the default ones, because these can deal with the bytea oid better
 dbapi20.register_dbapi20_adapters(adapters)
 
-# Must come after all the types are registered
+# Must come after all the types have been registered
 types.array.register_all_arrays(adapters)
 
 # Note: defining the exported methods helps both Sphynx in documenting that
@@ -66,6 +64,7 @@ __all__ = [
     "BaseConnection",
     "Column",
     "Connection",
+    "ConnectionInfo",
     "Copy",
     "Cursor",
     "IsolationLevel",
@@ -89,16 +88,16 @@ __all__ = [
     "ProgrammingError",
     "NotSupportedError",
     # DBAPI type constructors and singletons
-    "Date",
-    "Time",
-    "Timestamp",
-    "DateFromTicks",
-    "TimeFromTicks",
-    "TimestampFromTicks",
     "Binary",
-    "STRING",
+    "Date",
+    "DateFromTicks",
+    "Time",
+    "TimeFromTicks",
+    "Timestamp",
+    "TimestampFromTicks",
     "BINARY",
-    "NUMBER",
     "DATETIME",
+    "NUMBER",
     "ROWID",
+    "STRING",
 ]
