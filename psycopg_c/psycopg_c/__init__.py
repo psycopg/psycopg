@@ -13,4 +13,4 @@ if "psycopg" not in sys.modules:
         "the psycopg package should be imported before psycopg_c"
     )
 
-from .version import __version__  # noqa
+from .version import __version__ as __version__  # noqa

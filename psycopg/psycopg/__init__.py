@@ -28,7 +28,7 @@ from .dbapi20 import BINARY, DATETIME, NUMBER, ROWID, STRING
 from .dbapi20 import Binary, Date, DateFromTicks, Time, TimeFromTicks
 from .dbapi20 import Timestamp, TimestampFromTicks
 
-from .version import __version__
+from .version import __version__ as __version__  # noqa: F401
 
 # Set the logger to a quiet default, can be enabled if needed
 logger = logging.getLogger("psycopg")
@@ -55,7 +55,6 @@ types.array.register_all_arrays(adapters)
 # this is the canonical place to obtain them and should be used by MyPy too,
 # so that function signatures are consistent with the documentation.
 __all__ = [
-    "__version__",
     "AsyncConnection",
     "AsyncCopy",
     "AsyncCursor",

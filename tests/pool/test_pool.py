@@ -20,6 +20,16 @@ else:
     import psycopg_pool as pool
 
 
+def test_package_version(mypy):
+    cp = mypy.run_on_source(
+        """\
+from psycopg_pool import __version__
+assert __version__
+"""
+    )
+    assert not cp.stdout
+
+
 def test_defaults(dsn):
     with pool.ConnectionPool(dsn) as p:
         assert p.min_size == p.max_size == 4
