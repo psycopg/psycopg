@@ -1,11 +1,8 @@
-import re
 import sys
-import subprocess as sp
 
 import pytest
 
 
-@pytest.mark.slow
 @pytest.mark.parametrize(
     "filename",
     [
@@ -25,7 +22,6 @@ def test_typing_example(mypy, filename):
     assert cp.returncode == 0
 
 
-@pytest.mark.slow
 @pytest.mark.parametrize(
     "conn, type",
     [
@@ -76,7 +72,6 @@ def test_connection_type(conn, type, mypy):
     _test_reveal(stmts, type, mypy)
 
 
-@pytest.mark.slow
 @pytest.mark.parametrize(
     "conn, curs, type",
     [
@@ -163,7 +158,6 @@ obj = {curs}
     _test_reveal(stmts, type, mypy)
 
 
-@pytest.mark.slow
 @pytest.mark.parametrize(
     "curs, type",
     [
@@ -195,7 +189,6 @@ obj = {await_} curs.fetchone()
     _test_reveal(stmts, type, mypy)
 
 
-@pytest.mark.slow
 @pytest.mark.parametrize(
     "curs, type",
     [
@@ -233,7 +226,6 @@ curs = {curs}
     _test_reveal(stmts, type, mypy)
 
 
-@pytest.mark.slow
 @pytest.mark.parametrize("method", ["fetchmany", "fetchall"])
 @pytest.mark.parametrize(
     "curs, type",
@@ -266,7 +258,6 @@ obj = {await_} curs.{method}()
     _test_reveal(stmts, type, mypy)
 
 
-@pytest.mark.slow
 @pytest.mark.parametrize("server_side", [False, True])
 @pytest.mark.parametrize("conn_class", ["Connection", "AsyncConnection"])
 def test_cur_subclass_execute(mypy, conn_class, server_side):
@@ -307,38 +298,6 @@ class MyCursor(psycopg.{cur_base_class}[Row]):
     types = [mypy.get_revealed(line) for line in out]
     assert types[0] == types[1]
     assert types[0] == types[2]
-
-
-@pytest.fixture(scope="session")
-def mypy(tmp_path_factory):
-    cache_dir = tmp_path_factory.mktemp(basename="mypy_cache")
-    src_dir = tmp_path_factory.mktemp("source")
-
-    class MypyRunner:
-        def run_on_file(self, filename):
-            cmdline = f"""
-                mypy
-                --strict
-                --show-error-codes --no-color-output --no-error-summary
-                --config-file= --cache-dir={cache_dir}
-                """.split()
-            cmdline.append(filename)
-            return sp.run(cmdline, stdout=sp.PIPE, stderr=sp.STDOUT)
-
-        def run_on_source(self, source):
-            fn = src_dir / "tmp.py"
-            with fn.open("w") as f:
-                f.write(source)
-
-            return self.run_on_file(str(fn))
-
-        def get_revealed(self, line):
-            """return the type from an output of reveal_type"""
-            return re.sub(
-                r".*Revealed type is (['\"])([^']+)\1.*", r"\2", line
-            ).replace("*", "")
-
-    return MypyRunner()
 
 
 def _test_reveal(stmts, type, mypy):

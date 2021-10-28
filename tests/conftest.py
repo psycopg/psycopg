@@ -7,8 +7,9 @@ import pytest
 pytest_plugins = (
     "tests.fix_db",
     "tests.fix_pq",
-    "tests.fix_proxy",
+    "tests.fix_mypy",
     "tests.fix_faker",
+    "tests.fix_proxy",
     "tests.fix_psycopg",
 )
 
