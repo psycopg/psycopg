@@ -88,4 +88,17 @@ __all__ = [
     "InternalError",
     "ProgrammingError",
     "NotSupportedError",
+    # DBAPI type constructors and singletons
+    "Date",
+    "Time",
+    "Timestamp",
+    "DateFromTicks",
+    "TimeFromTicks",
+    "TimestampFromTicks",
+    "Binary",
+    "STRING",
+    "BINARY",
+    "NUMBER",
+    "DATETIME",
+    "ROWID",
 ]
