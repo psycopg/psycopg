@@ -15,7 +15,12 @@ testpaths=[
 
 
 [tool.mypy]
-files = ["psycopg/psycopg", "psycopg_pool/psycopg_pool", "psycopg_c/psycopg_c"]
+files = [
+    "psycopg/psycopg",
+    "psycopg_pool/psycopg_pool",
+    "psycopg_c/psycopg_c",
+    "tests/types",
+]
 warn_unused_ignores = true
 show_error_codes = true
 strict = true
@@ -28,5 +33,6 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = "tests.*"
+check_untyped_defs = true
 disallow_untyped_defs = false
 disallow_untyped_calls = false
