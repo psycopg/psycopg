@@ -341,17 +341,18 @@ class Faker:
     def make_datetime(self, spec):
         # Add a day because with timezone we might go BC
         dtmin = dt.datetime.min + dt.timedelta(days=1)
-
-        # Comparisons might get unreliable too far in the future
-        # https://bugs.python.org/issue45347
-        # delta = dt.datetime.max - dtmin
-        delta = dt.timedelta(days=3000 * 365)
-
+        delta = dt.datetime.max - dtmin
         micros = randrange((delta.days + 1) * 24 * 60 * 60 * 1_000_000)
         rv = dtmin + dt.timedelta(microseconds=micros)
         if spec[1]:
             rv = rv.replace(tzinfo=self._make_tz(spec))
         return rv
+
+    def match_datetime(self, spec, got, want):
+        # Comparisons with different timezones is unreliable: certain pairs
+        # are reported different but their delta is 0
+        # https://bugs.python.org/issue45347
+        assert not (got - want)
 
     def make_Decimal(self, spec):
         if random() >= 0.99:
@@ -717,6 +718,17 @@ class Faker:
                 want = type(want)(
                     want.lower, want.upper + unit, want.bounds[0] + ")"
                 )
+
+        if spec[1] == (dt.datetime, True):
+            # work around https://bugs.python.org/issue45347
+            def fix_dt(x):
+                return x.astimezone(dt.timezone.utc) if x is not None else None
+
+            def fix_range(r):
+                return type(r)(fix_dt(r.lower), fix_dt(r.upper), r.bounds)
+
+            want = fix_range(want)
+            got = fix_range(got)
 
         assert got == want
 
