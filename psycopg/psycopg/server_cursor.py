@@ -62,7 +62,9 @@ class ServerCursorHelper(Generic[ConnectionType, Row]):
         params: Optional[Params] = None,
     ) -> PQGen[None]:
         """Generator implementing `ServerCursor.execute()`."""
+
         conn = cur._conn
+        query = self._make_declare_statement(conn, query)
 
         # If the cursor is being reused, the previous one must be closed.
         if self.described:
@@ -153,13 +155,11 @@ class ServerCursorHelper(Generic[ConnectionType, Row]):
         yield from cur._conn._exec_command(query)
 
     def _make_declare_statement(
-        self,
-        cur: BaseCursor[ConnectionType, Row],
-        query: Query,
+        self, conn: ConnectionType, query: Query
     ) -> sql.Composable:
 
         if isinstance(query, bytes):
-            query = query.decode(pgconn_encoding(cur._conn.pgconn))
+            query = query.decode(pgconn_encoding(conn.pgconn))
         if not isinstance(query, sql.Composable):
             query = sql.SQL(query)
 
@@ -257,7 +257,6 @@ class ServerCursor(Cursor[Row]):
         if kwargs:
             raise TypeError(f"keyword not supported: {list(kwargs)[0]}")
         helper = self._helper
-        query = helper._make_declare_statement(self, query)
 
         if binary is None:
             helper.format = self.format
@@ -378,7 +377,6 @@ class AsyncServerCursor(AsyncCursor[Row]):
         if kwargs:
             raise TypeError(f"keyword not supported: {list(kwargs)[0]}")
         helper = self._helper
-        query = helper._make_declare_statement(self, query)
 
         if binary is None:
             helper.format = self.format
