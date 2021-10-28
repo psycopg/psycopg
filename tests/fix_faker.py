@@ -719,7 +719,7 @@ class Faker:
                     want.lower, want.upper + unit, want.bounds[0] + ")"
                 )
 
-        if spec[1] == (dt.datetime, True):
+        if spec[1] == (dt.datetime, True) and not want.isempty:
             # work around https://bugs.python.org/issue45347
             def fix_dt(x):
                 return x.astimezone(dt.timezone.utc) if x is not None else None
