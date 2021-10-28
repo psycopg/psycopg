@@ -101,4 +101,4 @@ def test_roundtrip_array(hstore, conn):
 
 def test_no_info_error(conn):
     with pytest.raises(TypeError, match="hstore.*extension"):
-        register_hstore(None, conn)
+        register_hstore(None, conn)  # type: ignore[arg-type]

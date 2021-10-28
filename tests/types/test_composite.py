@@ -331,4 +331,4 @@ def test_callable_dumper_not_registered(conn, testcomp):
 
 def test_no_info_error(conn):
     with pytest.raises(TypeError, match="composite"):
-        register_composite(None, conn)
+        register_composite(None, conn)  # type: ignore[arg-type]

@@ -665,4 +665,4 @@ class TestRangeObject:
 
 def test_no_info_error(conn):
     with pytest.raises(TypeError, match="range"):
-        register_range(None, conn)
+        register_range(None, conn)  # type: ignore[arg-type]
