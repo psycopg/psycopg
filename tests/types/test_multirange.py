@@ -67,7 +67,10 @@ class TestMultirangeObject:
         assert mr == Multirange([Range(10, 20), Range(31, 41), Range(51, 61)])
 
         mr = Multirange([Range(10, 20), Range(30, 40), Range(50, 60)])
-        mr[1:3] = Range(31, 41)
+        with pytest.raises(TypeError, match="can only assign an iterable"):
+            mr[1:3] = Range(31, 41)  # type: ignore[call-overload]
+
+        mr[1:3] = [Range(31, 41)]
         assert mr == Multirange([Range(10, 20), Range(31, 41)])
 
     def test_delitem(self):

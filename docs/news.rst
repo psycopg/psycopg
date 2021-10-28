@@ -15,6 +15,8 @@ Psycopg 3.0.2
 
 - Fix type hint for `sql.SQL.join()` (:ticket:`#127`).
 - Fix type hint for `Connection.notifies()` (:ticket:`#128`).
+- Fix call to `MultiRange.__setitem__()` with a non-iterable value and a
+  slice, now raising a `TypeError` (:ticket:`#129`).
 
 
 Psycopg 3.0.1

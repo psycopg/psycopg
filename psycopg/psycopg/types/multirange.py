@@ -79,11 +79,10 @@ class Multirange(MutableSequence[Range[T]]):
         if isinstance(index, int):
             self._check_type(value)
             self._ranges[index] = self._check_type(value)
+        elif not isinstance(value, Iterable):
+            raise TypeError("can only assign an iterable")
         else:
-            if isinstance(value, Iterable):
-                value = map(self._check_type, value)
-            else:
-                value = [self._check_type(value)]
+            value = map(self._check_type, value)
             self._ranges[index] = value
 
     def __delitem__(self, index: Union[int, slice]) -> None:
