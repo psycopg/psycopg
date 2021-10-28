@@ -672,7 +672,10 @@ def as_time(s):
     else:
         off = None
 
-    rv = dt.time(*map(int, s.split(","))) if "," in s else getattr(dt.time, s)
+    if "," in s:
+        rv = dt.time(*map(int, s.split(",")))  # type: ignore[arg-type]
+    else:
+        rv = getattr(dt.time, s)
     if off:
         rv = rv.replace(tzinfo=as_tzinfo(off))
 
@@ -692,7 +695,7 @@ def as_dt(s):
 
 def as_naive_dt(s):
     if "," in s:
-        rv = dt.datetime(*map(int, s.split(",")))
+        rv = dt.datetime(*map(int, s.split(",")))  # type: ignore[arg-type]
     else:
         rv = getattr(dt.datetime, s)
 
