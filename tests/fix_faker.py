@@ -16,6 +16,7 @@ from psycopg.adapt import PyFormat
 from psycopg._compat import asynccontextmanager
 from psycopg.types.range import Range
 from psycopg.types.numeric import Int4, Int8
+from psycopg.types.multirange import Multirange
 
 
 @pytest.fixture
@@ -36,7 +37,7 @@ class Faker:
 
     def __init__(self, connection):
         self.conn = connection
-        self._format = PyFormat.BINARY
+        self.format = PyFormat.BINARY
         self.records = []
 
         self._schema = None
@@ -44,14 +45,6 @@ class Faker:
         self._types_names = None
         self._makers = {}
         self.table_name = sql.Identifier("fake_table")
-
-    @property
-    def format(self):
-        return self._format
-
-    @format.setter
-    def format(self, format):
-        self._format = format
 
     @property
     def schema(self):
@@ -239,7 +232,7 @@ class Faker:
             if isinstance(cls, str):
                 cls = deep_import(cls)
             if (
-                issubclass(cls, psycopg.types.multirange.Multirange)
+                issubclass(cls, Multirange)
                 and self.conn.info.server_version < 140000
             ):
                 continue
@@ -504,7 +497,16 @@ class Faker:
         # don't make empty lists because they regularly fail cast
         length = randrange(1, self.list_max_length)
         spec = spec[1]
-        return [self.make(spec) for i in range(length)]
+        while 1:
+            rv = [self.make(spec) for i in range(length)]
+
+            # TODO multirange lists fail binary dump if the first element is
+            # empty and there is no type annotation. See xfail in
+            # test_multirange::test_dump_builtin_array
+            if rv and isinstance(rv[0], Multirange) and not rv[0]:
+                continue
+
+            return rv
 
     def example_list(self, spec):
         return [self.example(spec[1])]
