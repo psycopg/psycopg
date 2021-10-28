@@ -58,9 +58,9 @@ def test_all_chars(conn, fmt_in, fmt_out):
     cur.execute(f"select %{fmt_in}::text[]", (a,))
     assert cur.fetchone()[0] == a
 
-    a = "".join(a)
-    cur.execute(f"select %{fmt_in}::text[]", ([a],))
-    assert cur.fetchone()[0] == [a]
+    s = "".join(a)
+    cur.execute(f"select %{fmt_in}::text[]", ([s],))
+    assert cur.fetchone()[0] == [s]
 
 
 tests_int = [
