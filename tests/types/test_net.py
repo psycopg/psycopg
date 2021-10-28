@@ -133,6 +133,7 @@ def test_cidr_load(conn, fmt_out, val):
     assert got == pyval
 
 
+@pytest.mark.slow
 @pytest.mark.subprocess
 def test_lazy_load(dsn):
     script = f"""\

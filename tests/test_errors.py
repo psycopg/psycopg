@@ -165,6 +165,7 @@ def test_diag_pickle(conn):
     assert diag2.sqlstate == "42P01"
 
 
+@pytest.mark.slow
 def test_diag_survives_cursor(conn):
     cur = conn.cursor()
     with pytest.raises(e.Error) as exc:

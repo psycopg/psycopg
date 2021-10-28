@@ -81,6 +81,7 @@ def test_finish(pgconn):
     assert pgconn.status == pq.ConnStatus.BAD
 
 
+@pytest.mark.slow
 def test_weakref(dsn):
     conn = pq.PGconn.connect(dsn.encode())
     w = weakref.ref(conn)

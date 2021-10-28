@@ -382,6 +382,7 @@ def test_no_cast_needed(conn, fmt_in):
     assert cur.fetchone()[0] == 20
 
 
+@pytest.mark.slow
 @pytest.mark.skipif(_psycopg is None, reason="C module test")
 def test_optimised_adapters():
 

@@ -34,6 +34,7 @@ def test_uuid_load(conn, fmt_out):
     assert res == UUID(val)
 
 
+@pytest.mark.slow
 @pytest.mark.subprocess
 def test_lazy_load(dsn):
     script = f"""\

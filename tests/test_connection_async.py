@@ -182,6 +182,7 @@ async def test_context_rollback_no_clobber(conn, dsn, caplog):
     assert "rolling back" in rec.message
 
 
+@pytest.mark.slow
 async def test_weakref(dsn):
     conn = await psycopg.AsyncConnection.connect(dsn)
     w = weakref.ref(conn)

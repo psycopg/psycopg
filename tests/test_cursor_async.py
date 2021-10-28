@@ -33,6 +33,7 @@ async def test_context(aconn):
     assert cur.closed
 
 
+@pytest.mark.slow
 async def test_weakref(aconn):
     cur = aconn.cursor()
     w = weakref.ref(cur)

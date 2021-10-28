@@ -33,6 +33,7 @@ def test_context(conn):
     assert cur.closed
 
 
+@pytest.mark.slow
 def test_weakref(conn):
     cur = conn.cursor()
     w = weakref.ref(cur)
