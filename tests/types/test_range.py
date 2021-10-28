@@ -60,7 +60,7 @@ range_classes = """
 @pytest.mark.parametrize("pgtype", range_names)
 @pytest.mark.parametrize("fmt_in", PyFormat)
 def test_dump_builtin_empty(conn, pgtype, fmt_in):
-    r = Range(empty=True)
+    r = Range(empty=True)  # type: ignore[var-annotated]
     cur = conn.execute(f"select 'empty'::{pgtype} = %{fmt_in}", (r,))
     assert cur.fetchone()[0] is True
 
@@ -91,8 +91,8 @@ def test_dump_builtin_empty_wrapper(conn, wrapper, fmt_in):
     ],
 )
 def test_dump_builtin_array(conn, pgtype, fmt_in):
-    r1 = Range(empty=True)
-    r2 = Range(bounds="()")
+    r1 = Range(empty=True)  # type: ignore[var-annotated]
+    r2 = Range(bounds="()")  # type: ignore[var-annotated]
     cur = conn.execute(
         f"select array['empty'::{pgtype}, '(,)'::{pgtype}] = %{fmt_in}",
         ([r1, r2],),
@@ -103,8 +103,8 @@ def test_dump_builtin_array(conn, pgtype, fmt_in):
 @pytest.mark.parametrize("pgtype", range_names)
 @pytest.mark.parametrize("fmt_in", PyFormat)
 def test_dump_builtin_array_with_cast(conn, pgtype, fmt_in):
-    r1 = Range(empty=True)
-    r2 = Range(bounds="()")
+    r1 = Range(empty=True)  # type: ignore[var-annotated]
+    r2 = Range(bounds="()")  # type: ignore[var-annotated]
     cur = conn.execute(
         f"select array['empty'::{pgtype}, '(,)'::{pgtype}] = %{fmt_in}::{pgtype}[]",
         ([r1, r2],),
@@ -127,7 +127,7 @@ def test_dump_builtin_array_wrapper(conn, wrapper, fmt_in):
 @pytest.mark.parametrize("pgtype, min, max, bounds", samples)
 @pytest.mark.parametrize("fmt_in", PyFormat)
 def test_dump_builtin_range(conn, pgtype, min, max, bounds, fmt_in):
-    r = Range(min, max, bounds)
+    r = Range(min, max, bounds)  # type: ignore[var-annotated]
     sub = type2sub[pgtype]
     cur = conn.execute(
         f"select {pgtype}(%s::{sub}, %s::{sub}, %s) = %{fmt_in}",
@@ -139,7 +139,7 @@ def test_dump_builtin_range(conn, pgtype, min, max, bounds, fmt_in):
 @pytest.mark.parametrize("pgtype", range_names)
 @pytest.mark.parametrize("fmt_out", pq.Format)
 def test_load_builtin_empty(conn, pgtype, fmt_out):
-    r = Range(empty=True)
+    r = Range(empty=True)  # type: ignore[var-annotated]
     cur = conn.cursor(binary=fmt_out)
     (got,) = cur.execute(f"select 'empty'::{pgtype}").fetchone()
     assert type(got) is Range
@@ -151,7 +151,7 @@ def test_load_builtin_empty(conn, pgtype, fmt_out):
 @pytest.mark.parametrize("pgtype", range_names)
 @pytest.mark.parametrize("fmt_out", pq.Format)
 def test_load_builtin_inf(conn, pgtype, fmt_out):
-    r = Range(bounds="()")
+    r = Range(bounds="()")  # type: ignore[var-annotated]
     cur = conn.cursor(binary=fmt_out)
     (got,) = cur.execute(f"select '(,)'::{pgtype}").fetchone()
     assert type(got) is Range
@@ -165,8 +165,8 @@ def test_load_builtin_inf(conn, pgtype, fmt_out):
 @pytest.mark.parametrize("pgtype", range_names)
 @pytest.mark.parametrize("fmt_out", pq.Format)
 def test_load_builtin_array(conn, pgtype, fmt_out):
-    r1 = Range(empty=True)
-    r2 = Range(bounds="()")
+    r1 = Range(empty=True)  # type: ignore[var-annotated]
+    r2 = Range(bounds="()")  # type: ignore[var-annotated]
     cur = conn.cursor(binary=fmt_out)
     (got,) = cur.execute(
         f"select array['empty'::{pgtype}, '(,)'::{pgtype}]"
@@ -177,7 +177,7 @@ def test_load_builtin_array(conn, pgtype, fmt_out):
 @pytest.mark.parametrize("pgtype, min, max, bounds", samples)
 @pytest.mark.parametrize("fmt_out", pq.Format)
 def test_load_builtin_range(conn, pgtype, min, max, bounds, fmt_out):
-    r = Range(min, max, bounds)
+    r = Range(min, max, bounds)  # type: ignore[var-annotated]
     sub = type2sub[pgtype]
     cur = conn.cursor(binary=fmt_out)
     cur.execute(
@@ -208,7 +208,7 @@ def test_copy_in(conn, min, max, bounds, format):
     if bounds != "empty":
         min = dt.date(*map(int, min.split(","))) if min else None
         max = dt.date(*map(int, max.split(","))) if max else None
-        r = Range(min, max, bounds)
+        r = Range[dt.date](min, max, bounds)
     else:
         r = Range(empty=True)
 
@@ -255,7 +255,10 @@ def test_copy_in_empty_set_type(conn, bounds, pgtype, format):
     cur = conn.cursor()
     cur.execute(f"create table copyrange (id serial primary key, r {pgtype})")
 
-    r = Range(empty=True) if bounds == "empty" else Range(None, None, bounds)
+    if bounds == "empty":
+        r = Range(empty=True)  # type: ignore[var-annotated]
+    else:
+        r = Range(None, None, bounds)
 
     with cur.copy(
         f"copy copyrange (r) from stdin (format {format.name})"
@@ -326,7 +329,7 @@ def test_dump_custom_empty(conn, testrange):
     info = RangeInfo.fetch(conn, "testrange")
     register_range(info, conn)
 
-    r = Range(empty=True)
+    r = Range[str](empty=True)
     cur = conn.execute("select 'empty'::testrange = %s", (r,))
     assert cur.fetchone()[0] is True
 
@@ -367,10 +370,10 @@ def test_load_quoting(conn, testrange, fmt_out):
             "select testrange(chr(%(low)s::int), chr(%(up)s::int))",
             {"low": i, "up": i + 1},
         )
-        got = cur.fetchone()[0]
+        got: Range[str] = cur.fetchone()[0]
         assert isinstance(got, Range)
-        assert ord(got.lower) == i
-        assert ord(got.upper) == i + 1
+        assert got.lower and ord(got.lower) == i
+        assert got.upper and ord(got.upper) == i + 1
 
 
 @pytest.mark.parametrize("fmt_out", pq.Format)
@@ -389,7 +392,7 @@ def test_mixed_array_types(conn, fmt_out):
 
 class TestRangeObject:
     def test_noparam(self):
-        r = Range()
+        r = Range()  # type: ignore[var-annotated]
 
         assert not r.isempty
         assert r.lower is None
@@ -400,7 +403,7 @@ class TestRangeObject:
         assert not r.upper_inc
 
     def test_empty(self):
-        r = Range(empty=True)
+        r = Range(empty=True)  # type: ignore[var-annotated]
 
         assert r.isempty
         assert r.lower is None
@@ -463,8 +466,9 @@ class TestRangeObject:
             Range(bounds="[}")
 
     def test_in(self):
-        r = Range(empty=True)
+        r = Range[int](empty=True)
         assert 10 not in r
+        assert "x" not in r  # type: ignore[operator]
 
         r = Range()
         assert 10 in r
