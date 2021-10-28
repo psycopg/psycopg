@@ -23,7 +23,7 @@ from psycopg.types.hstore import HstoreLoader, register_hstore
     ],
 )
 def test_parse_ok(s, d):
-    loader = HstoreLoader(dict, None)
+    loader = HstoreLoader(0, None)
     assert loader.load(s.encode()) == d
 
 
@@ -40,7 +40,7 @@ def test_parse_ok(s, d):
 )
 def test_parse_bad(s):
     with pytest.raises(psycopg.DataError):
-        loader = HstoreLoader(dict, None)
+        loader = HstoreLoader(0, None)
         loader.load(s.encode())
 
 
