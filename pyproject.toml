@@ -19,6 +19,7 @@ files = [
     "psycopg/psycopg",
     "psycopg_pool/psycopg_pool",
     "psycopg_c/psycopg_c",
+    "tests/pq",
     "tests/types",
 ]
 warn_unused_ignores = true
