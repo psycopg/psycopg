@@ -20,7 +20,7 @@ pytestmark = pytest.mark.pg(">= 14")
 
 class TestMultirangeObject:
     def test_empty(self):
-        mr = Multirange()
+        mr = Multirange[int]()
         assert not mr
         assert len(mr) == 0
 
@@ -37,24 +37,24 @@ class TestMultirangeObject:
 
     def test_bad_type(self):
         with pytest.raises(TypeError):
-            Multirange(Range(10, 20))
+            Multirange(Range(10, 20))  # type: ignore[arg-type]
 
         with pytest.raises(TypeError):
-            Multirange([10])
+            Multirange([10])  # type: ignore[arg-type]
 
         mr = Multirange([Range(10, 20), Range(30, 40), Range(50, 60)])
 
         with pytest.raises(TypeError):
-            mr[0] = "foo"
+            mr[0] = "foo"  # type: ignore[call-overload]
 
         with pytest.raises(TypeError):
-            mr[0:1] = "foo"
+            mr[0:1] = "foo"  # type: ignore[assignment]
 
         with pytest.raises(TypeError):
-            mr[0:1] = ["foo"]
+            mr[0:1] = ["foo"]  # type: ignore[list-item]
 
         with pytest.raises(TypeError):
-            mr.insert(0, "foo")
+            mr.insert(0, "foo")  # type: ignore[arg-type]
 
     def test_setitem(self):
         mr = Multirange([Range(10, 20), Range(30, 40), Range(50, 60)])
@@ -169,7 +169,7 @@ mr_classes = """
 @pytest.mark.parametrize("pgtype", mr_names)
 @pytest.mark.parametrize("fmt_in", PyFormat)
 def test_dump_builtin_empty(conn, pgtype, fmt_in):
-    mr = Multirange()
+    mr = Multirange()  # type: ignore[var-annotated]
     cur = conn.execute(f"select '{{}}'::{pgtype} = %{fmt_in}", (mr,))
     assert cur.fetchone()[0] is True
 
@@ -209,8 +209,8 @@ def test_dump_builtin_empty_wrapper(conn, wrapper, fmt_in):
     ],
 )
 def test_dump_builtin_array(conn, pgtype, fmt_in):
-    mr1 = Multirange()
-    mr2 = Multirange([Range(bounds="()")])
+    mr1 = Multirange()  # type: ignore[var-annotated]
+    mr2 = Multirange([Range(bounds="()")])  # type: ignore[var-annotated]
     cur = conn.execute(
         f"select array['{{}}'::{pgtype}, '{{(,)}}'::{pgtype}] = %{fmt_in}",
         ([mr1, mr2],),
@@ -221,8 +221,8 @@ def test_dump_builtin_array(conn, pgtype, fmt_in):
 @pytest.mark.parametrize("pgtype", mr_names)
 @pytest.mark.parametrize("fmt_in", PyFormat)
 def test_dump_builtin_array_with_cast(conn, pgtype, fmt_in):
-    mr1 = Multirange()
-    mr2 = Multirange([Range(bounds="()")])
+    mr1 = Multirange()  # type: ignore[var-annotated]
+    mr2 = Multirange([Range(bounds="()")])  # type: ignore[var-annotated]
     cur = conn.execute(
         f"""
         select array['{{}}'::{pgtype}, '{{(,)}}'::{pgtype}] = %{fmt_in}::{pgtype}[]
@@ -236,8 +236,8 @@ def test_dump_builtin_array_with_cast(conn, pgtype, fmt_in):
 @pytest.mark.parametrize("fmt_in", PyFormat)
 def test_dump_builtin_array_wrapper(conn, wrapper, fmt_in):
     wrapper = getattr(multirange, wrapper)
-    mr1 = Multirange()
-    mr2 = Multirange([Range(bounds="()")])
+    mr1 = Multirange()  # type: ignore[var-annotated]
+    mr2 = Multirange([Range(bounds="()")])  # type: ignore[var-annotated]
     cur = conn.execute(
         f"""select '{{"{{}}","{{(,)}}"}}' = %{fmt_in}""", ([mr1, mr2],)
     )
@@ -257,7 +257,7 @@ def test_dump_builtin_multirange(conn, pgtype, ranges, fmt_in):
 @pytest.mark.parametrize("pgtype", mr_names)
 @pytest.mark.parametrize("fmt_out", pq.Format)
 def test_load_builtin_empty(conn, pgtype, fmt_out):
-    mr = Multirange()
+    mr = Multirange()  # type: ignore[var-annotated]
     cur = conn.cursor(binary=fmt_out)
     (got,) = cur.execute(f"select '{{}}'::{pgtype}").fetchone()
     assert type(got) is Multirange
@@ -267,8 +267,8 @@ def test_load_builtin_empty(conn, pgtype, fmt_out):
 @pytest.mark.parametrize("pgtype", mr_names)
 @pytest.mark.parametrize("fmt_out", pq.Format)
 def test_load_builtin_array(conn, pgtype, fmt_out):
-    mr1 = Multirange()
-    mr2 = Multirange([Range(bounds="()")])
+    mr1 = Multirange()  # type: ignore[var-annotated]
+    mr2 = Multirange([Range(bounds="()")])  # type: ignore[var-annotated]
     cur = conn.cursor(binary=fmt_out)
     (got,) = cur.execute(
         f"select array['{{}}'::{pgtype}, '{{(,)}}'::{pgtype}]"
@@ -307,7 +307,7 @@ def test_copy_in(conn, min, max, bounds, format):
     if bounds != "empty":
         min = dt.date(*map(int, min.split(","))) if min else None
         max = dt.date(*map(int, max.split(","))) if max else None
-        r = Range(min, max, bounds)
+        r = Range[dt.date](min, max, bounds)
     else:
         r = Range(empty=True)
 
@@ -357,7 +357,7 @@ def test_copy_in_empty_set_type(conn, pgtype, format):
     cur = conn.cursor()
     cur.execute(f"create table copymr (id serial primary key, mr {pgtype})")
 
-    mr = Multirange()
+    mr = Multirange()  # type: ignore[var-annotated]
 
     with cur.copy(
         f"copy copymr (mr) from stdin (format {format.name})"
@@ -414,7 +414,7 @@ def test_dump_custom_empty(conn, testmr):
     info = MultirangeInfo.fetch(conn, "testmultirange")
     register_multirange(info, conn)
 
-    r = Multirange()
+    r = Multirange()  # type: ignore[var-annotated]
     cur = conn.execute("select '{}'::testmultirange = %s", (r,))
     assert cur.fetchone()[0] is True
 
