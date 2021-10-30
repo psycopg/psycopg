@@ -1,13 +1,8 @@
-from operator import attrgetter
-
 import pytest
 
 import psycopg
 
-from .test_tpc import tpc  # noqa: F401  # fixture
-
 pytestmark = [pytest.mark.asyncio]
-tpc = tpc  # Silence F811 in the rest of the file
 
 
 async def test_tpc_disabled(aconn):
@@ -188,7 +183,7 @@ class TestTPC:
 
         xids = await aconn.tpc_recover()
         xids = [xid for xid in xids if xid.database == aconn.info.dbname]
-        xids.sort(key=attrgetter("gtrid"))
+        xids.sort(key=lambda x: x.gtrid)
 
         # check the values returned
         assert len(okvals) == len(xids)

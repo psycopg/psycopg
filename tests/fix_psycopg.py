@@ -21,3 +21,59 @@ def global_adapters():
     adapters.types.clear()
     for t in types:
         adapters.types.add(t)
+
+
+@pytest.fixture
+def tpc(svcconn):
+    tpc = Tpc(svcconn)
+    tpc.check_tpc()
+    tpc.clear_test_xacts()
+    tpc.make_test_table()
+    yield tpc
+    tpc.clear_test_xacts()
+
+
+class Tpc:
+    """Helper object to test two-phase transactions"""
+
+    def __init__(self, conn):
+        assert conn.autocommit
+        self.conn = conn
+
+    def check_tpc(self):
+        val = int(
+            self.conn.execute("show max_prepared_transactions").fetchone()[0]
+        )
+        if not val:
+            pytest.skip("prepared transactions disabled in the database")
+
+    def clear_test_xacts(self):
+        """Rollback all the prepared transaction in the testing db."""
+        from psycopg import sql
+
+        cur = self.conn.execute(
+            "select gid from pg_prepared_xacts where database = %s",
+            (self.conn.info.dbname,),
+        )
+        gids = [r[0] for r in cur]
+        for gid in gids:
+            self.conn.execute(sql.SQL("rollback prepared {}").format(gid))
+
+    def make_test_table(self):
+        self.conn.execute("CREATE TABLE IF NOT EXISTS test_tpc (data text)")
+        self.conn.execute("TRUNCATE test_tpc")
+
+    def count_xacts(self):
+        """Return the number of prepared xacts currently in the test db."""
+        cur = self.conn.execute(
+            """
+            select count(*) from pg_prepared_xacts
+            where database = %s""",
+            (self.conn.info.dbname,),
+        )
+        return cur.fetchone()[0]
+
+    def count_test_records(self):
+        """Return the number of records in the test table."""
+        cur = self.conn.execute("select count(*) from test_tpc")
+        return cur.fetchone()[0]

@@ -8,8 +8,6 @@ from psycopg.conninfo import conninfo_to_dict
 from . import dbapi20
 from . import dbapi20_tpc
 
-from .test_tpc import tpc  # noqa F401  # fixture
-
 
 @pytest.fixture(scope="class")
 def with_dsn(request, dsn):
