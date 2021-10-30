@@ -55,14 +55,14 @@ extras_require = {
     ],
     # Requirements needed to build the documentation
     "docs": [
-        "Sphinx ~= 4.2, < 4.3",
-        "docutils >= 0.17, < 0.18",
+        "Sphinx ~= 4.2.0",
+        "docutils ~= 0.17.0",
         "furo >= 2021.9.8",
         "sphinx-autobuild >= 2021.3.14",
-        "sphinx-autodoc-typehints >= 1.12, < 1.13",
+        "sphinx-autodoc-typehints ~= 1.12.0",
         # to document optional modules
-        "dnspython >= 2.1.0",
-        "shapely >= 1.7",
+        "dnspython ~= 2.1.0",
+        "shapely ~= 1.7.0",
     ],
 }
 
