@@ -11,3 +11,4 @@ __pycache__/
 *.html
 /psycopg_binary/
 .vscode
+.venv
