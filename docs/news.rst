@@ -9,6 +9,11 @@ Release notes
 
 Current release
 ---------------
+Psycopg 3.0.3
+^^^^^^^^^^^^^
+
+- Fix disable cursors methods after close() (:ticket:`#125`).
+
 
 Psycopg 3.0.2
 ^^^^^^^^^^^^^
