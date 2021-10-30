@@ -127,6 +127,52 @@ async def test_close_idempotent(aconn):
     await cur.close()
 
 
+async def test_cursor_close_fetchone(aconn):
+    cur = aconn.cursor("foo")
+    assert not cur.closed
+
+    query = "select * from generate_series(1, 10)"
+    await cur.execute(query)
+    for _ in range(5):
+        await cur.fetchone()
+
+    await cur.close()
+    assert cur.closed
+
+    with pytest.raises(e.InterfaceError):
+        await cur.fetchone()
+
+
+async def test_cursor_close_fetchmany(aconn):
+    cur = aconn.cursor("foo")
+    assert not cur.closed
+
+    query = "select * from generate_series(1, 10)"
+    await cur.execute(query)
+    assert len(await cur.fetchmany(2)) == 2
+
+    await cur.close()
+    assert cur.closed
+
+    with pytest.raises(e.InterfaceError):
+        await cur.fetchmany(2)
+
+
+async def test_cursor_close_fetchall(aconn):
+    cur = aconn.cursor("foo")
+    assert not cur.closed
+
+    query = "select * from generate_series(1, 10)"
+    await cur.execute(query)
+    assert len(await cur.fetchall()) == 10
+
+    await cur.close()
+    assert cur.closed
+
+    with pytest.raises(e.InterfaceError):
+        await cur.fetchall()
+
+
 async def test_close_noop(aconn, recwarn, retries):
     async for retry in retries:
         with retry:
