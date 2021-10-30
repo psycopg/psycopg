@@ -48,19 +48,6 @@ def test_cursor_close_fetchmany(conn):
 
     query = "select * from generate_series(1, 10)"
     cur.execute(query)
-    cur.close()
-    assert cur.closed
-
-    with pytest.raises(psycopg.InterfaceError):
-        cur.fetchmany(1)
-
-
-def test_cursor_close_fetchmany(conn):
-    cur = conn.cursor()
-    assert not cur.closed
-
-    query = "select * from generate_series(1, 10)"
-    cur.execute(query)
     assert len(cur.fetchmany(2)) == 2
 
     cur.close()
