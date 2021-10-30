@@ -7,7 +7,7 @@ dist/
 .mypy_cache
 __pycache__/
 /docs/_build/
-/docs/.venv/
 *.html
 /psycopg_binary/
 .vscode
+.venv
