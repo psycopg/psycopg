@@ -17,7 +17,7 @@ Psycopg 3.0.2
 - Fix type hint for `Connection.notifies()` (:ticket:`#128`).
 - Fix call to `MultiRange.__setitem__()` with a non-iterable value and a
   slice, now raising a `TypeError` (:ticket:`#129`).
-
+- Fix disable cursors methods after close() (:ticket:`#125`).
 
 Psycopg 3.0.1
 ^^^^^^^^^^^^^

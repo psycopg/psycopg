@@ -120,6 +120,52 @@ def test_close_idempotent(conn):
     cur.close()
 
 
+def test_cursor_close_fetchone(conn):
+    cur = conn.cursor("foo")
+    assert not cur.closed
+
+    query = "select * from generate_series(1, 10)"
+    cur.execute(query)
+    for _ in range(5):
+        cur.fetchone()
+
+    cur.close()
+    assert cur.closed
+
+    with pytest.raises(e.InterfaceError):
+        cur.fetchone()
+
+
+def test_cursor_close_fetchmany(conn):
+    cur = conn.cursor("foo")
+    assert not cur.closed
+
+    query = "select * from generate_series(1, 10)"
+    cur.execute(query)
+    assert len(cur.fetchmany(2)) == 2
+
+    cur.close()
+    assert cur.closed
+
+    with pytest.raises(e.InterfaceError):
+        cur.fetchmany(2)
+
+
+def test_cursor_close_fetchall(conn):
+    cur = conn.cursor("foo")
+    assert not cur.closed
+
+    query = "select * from generate_series(1, 10)"
+    cur.execute(query)
+    assert len(cur.fetchall()) == 10
+
+    cur.close()
+    assert cur.closed
+
+    with pytest.raises(e.InterfaceError):
+        cur.fetchall()
+
+
 def test_close_noop(conn, recwarn, retries):
     for retry in retries:
         with retry:

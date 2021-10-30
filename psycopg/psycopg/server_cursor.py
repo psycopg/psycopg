@@ -126,6 +126,8 @@ class ServerCursorHelper(Generic[ConnectionType, Row]):
     def _fetch_gen(
         self, cur: BaseCursor[ConnectionType, Row], num: Optional[int]
     ) -> PQGen[List[Row]]:
+        if cur.closed:
+            raise e.InterfaceError("the cursor is closed")
         # If we are stealing the cursor, make sure we know its shape
         if not self.described:
             yield from cur._start_query()
