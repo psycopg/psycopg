@@ -45,15 +45,10 @@ class ServerCursorHelper(Generic[ConnectionType, Row]):
         self._format = pq.Format.TEXT
 
     def _repr(self, cur: BaseCursor[ConnectionType, Row]) -> str:
-        cls = f"{cur.__class__.__module__}.{cur.__class__.__qualname__}"
-        info = pq.misc.connection_summary(cur._conn.pgconn)
-        if cur.closed:
-            status = "closed"
-        elif not cur.pgresult:
-            status = "no result"
-        else:
-            status = pq.ExecStatus(cur.pgresult.status).name
-        return f"<{cls} {self.name!r} [{status}] {info} at 0x{id(cur):x}>"
+        # Insert the name as the second word
+        parts = parts = BaseCursor.__repr__(cur).split(None, 1)
+        parts.insert(1, f"{self.name!r}")
+        return " ".join(parts)
 
     def _declare_gen(
         self,
@@ -133,13 +128,9 @@ class ServerCursorHelper(Generic[ConnectionType, Row]):
             yield from cur._start_query()
             yield from self._describe_gen(cur)
 
-        if num is not None:
-            howmuch: sql.Composable = sql.Literal(num)
-        else:
-            howmuch = sql.SQL("ALL")
-
         query = sql.SQL("FETCH FORWARD {} FROM {}").format(
-            howmuch, sql.Identifier(self.name)
+            sql.SQL("ALL") if num is None else sql.Literal(num),
+            sql.Identifier(self.name),
         )
         res = yield from cur._conn._exec_command(
             query, result_format=self._format
