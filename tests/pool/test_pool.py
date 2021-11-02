@@ -4,7 +4,7 @@ import weakref
 from time import sleep, time
 from threading import Thread, Event
 from collections import Counter
-from typing import Any
+from typing import Any, List, Tuple
 
 import pytest
 
@@ -114,7 +114,7 @@ def test_concurrent_filling(dsn, monkeypatch, retries):
 
     for retry in retries:
         with retry:
-            times = []
+            times: List[float] = []
             t0 = time()
 
             with pool.ConnectionPool(dsn, min_size=5, num_workers=2) as p:
@@ -301,7 +301,7 @@ def test_queue(dsn, retries):
 
     for retry in retries:
         with retry:
-            results = []
+            results: List[Tuple[int, float, int]] = []
             with pool.ConnectionPool(dsn, min_size=2) as p:
                 p.wait()
                 ts = [Thread(target=worker, args=(i,)) for i in range(6)]
@@ -331,8 +331,8 @@ def test_queue_size(dsn):
         else:
             success.append(True)
 
-    errors = []
-    success = []
+    errors: List[Exception] = []
+    success: List[bool] = []
 
     with pool.ConnectionPool(dsn, min_size=1, max_waiting=3) as p:
         p.wait()
@@ -374,8 +374,8 @@ def test_queue_timeout(dsn, retries):
 
     for retry in retries:
         with retry:
-            results = []
-            errors = []
+            results: List[Tuple[int, float, int]] = []
+            errors: List[Tuple[int, float, Exception]] = []
 
             with pool.ConnectionPool(dsn, min_size=2, timeout=0.1) as p:
                 ts = [Thread(target=worker, args=(i,)) for i in range(4)]
@@ -402,7 +402,7 @@ def test_dead_client(dsn):
             if timeout > 0.2:
                 raise
 
-    results = []
+    results: List[int] = []
 
     with pool.ConnectionPool(dsn, min_size=2) as p:
         ts = [
@@ -438,8 +438,8 @@ def test_queue_timeout_override(dsn, retries):
 
     for retry in retries:
         with retry:
-            results = []
-            errors = []
+            results: List[Tuple[int, float, int]] = []
+            errors: List[Tuple[int, float, Exception]] = []
 
             with pool.ConnectionPool(dsn, min_size=2, timeout=0.1) as p:
                 ts = [Thread(target=worker, args=(i,)) for i in range(4)]
@@ -652,7 +652,7 @@ def test_closed_queue(dsn, retries):
     for retry in retries:
         with retry:
             p = pool.ConnectionPool(dsn, min_size=1)
-            success = []
+            success: List[str] = []
 
             t1 = Thread(target=w1)
             t2 = Thread(target=w2)
@@ -683,7 +683,7 @@ def test_grow(dsn, monkeypatch, retries):
                 dsn, min_size=2, max_size=4, num_workers=3
             ) as p:
                 p.wait(1.0)
-                results = []
+                results: List[Tuple[int, float]] = []
 
                 ts = [Thread(target=worker, args=(i,)) for i in range(6)]
                 for t in ts:
@@ -703,7 +703,7 @@ def test_shrink(dsn, monkeypatch):
 
     from psycopg_pool.pool import ShrinkPool
 
-    results = []
+    results: List[Tuple[int, int]] = []
 
     def run_hacked(self, pool):
         n0 = pool._nconns
@@ -843,7 +843,7 @@ def test_resize(dsn):
         with p.connection() as conn:
             conn.execute("select pg_sleep(%s)", [t])
 
-    size = []
+    size: List[int] = []
 
     with pool.ConnectionPool(dsn, min_size=2, max_idle=0.2) as p:
         s = Thread(target=sampler)
