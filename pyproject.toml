@@ -51,6 +51,10 @@ module = "tenacity.*"
 implicit_reexport = true
 
 [[tool.mypy.overrides]]
+module = "uvloop"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
 module = "tests.*"
 check_untyped_defs = true
 disallow_untyped_defs = false
