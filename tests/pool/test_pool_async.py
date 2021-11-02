@@ -71,11 +71,11 @@ async def test_its_really_a_pool(dsn):
     async with pool.AsyncConnectionPool(dsn, min_size=2) as p:
         async with p.connection() as conn:
             cur = await conn.execute("select pg_backend_pid()")
-            (pid1,) = await cur.fetchone()
+            (pid1,) = await cur.fetchone()  # type: ignore[misc]
 
             async with p.connection() as conn2:
                 cur = await conn2.execute("select pg_backend_pid()")
-                (pid2,) = await cur.fetchone()
+                (pid2,) = await cur.fetchone()  # type: ignore[misc]
 
         async with p.connection() as conn:
             assert conn.pgconn.backend_pid in (pid1, pid2)
@@ -178,18 +178,18 @@ async def test_configure(dsn):
         async with p.connection() as conn:
             assert inits == 1
             res = await conn.execute("show default_transaction_read_only")
-            assert (await res.fetchone())[0] == "on"
+            assert (await res.fetchone())[0] == "on"  # type: ignore[index]
 
         async with p.connection() as conn:
             assert inits == 1
             res = await conn.execute("show default_transaction_read_only")
-            assert (await res.fetchone())[0] == "on"
+            assert (await res.fetchone())[0] == "on"  # type: ignore[index]
             await conn.close()
 
         async with p.connection() as conn:
             assert inits == 2
             res = await conn.execute("show default_transaction_read_only")
-            assert (await res.fetchone())[0] == "on"
+            assert (await res.fetchone())[0] == "on"  # type: ignore[index]
 
 
 @pytest.mark.slow
@@ -306,7 +306,7 @@ async def test_queue(dsn, retries):
             cur = await conn.execute(
                 "select pg_backend_pid() from pg_sleep(0.2)"
             )
-            (pid,) = await cur.fetchone()
+            (pid,) = await cur.fetchone()  # type: ignore[misc]
         t1 = time()
         results.append((n, t1 - t0, pid))
 
@@ -369,7 +369,7 @@ async def test_queue_timeout(dsn, retries):
                 cur = await conn.execute(
                     "select pg_backend_pid() from pg_sleep(0.2)"
                 )
-                (pid,) = await cur.fetchone()
+                (pid,) = await cur.fetchone()  # type: ignore[misc]
         except pool.PoolTimeout as e:
             t1 = time()
             errors.append((n, t1 - t0, e))
@@ -430,7 +430,7 @@ async def test_queue_timeout_override(dsn, retries):
                 cur = await conn.execute(
                     "select pg_backend_pid() from pg_sleep(0.2)"
                 )
-                (pid,) = await cur.fetchone()
+                (pid,) = await cur.fetchone()  # type: ignore[misc]
         except pool.PoolTimeout as e:
             t1 = time()
             errors.append((n, t1 - t0, e))
@@ -459,12 +459,12 @@ async def test_broken_reconnect(dsn):
     async with pool.AsyncConnectionPool(dsn, min_size=1) as p:
         async with p.connection() as conn:
             cur = await conn.execute("select pg_backend_pid()")
-            (pid1,) = await cur.fetchone()
+            (pid1,) = await cur.fetchone()  # type: ignore[misc]
             await conn.close()
 
         async with p.connection() as conn2:
             cur = await conn2.execute("select pg_backend_pid()")
-            (pid2,) = await cur.fetchone()
+            (pid2,) = await cur.fetchone()  # type: ignore[misc]
 
     assert pid1 != pid2
 
