@@ -818,7 +818,7 @@ def test_uniform_use(dsn, retries):
     for retry in retries:
         with retry:
             with pool.ConnectionPool(dsn, min_size=4) as p:
-                counts = Counter()
+                counts = Counter()  # type: Counter[int]
                 for i in range(8):
                     with p.connection() as conn:
                         sleep(0.1)

@@ -812,7 +812,7 @@ async def test_uniform_use(dsn, retries):
     async for retry in retries:
         with retry:
             async with pool.AsyncConnectionPool(dsn, min_size=4) as p:
-                counts = Counter()
+                counts = Counter()  # type: Counter[int]
                 for i in range(8):
                     async with p.connection() as conn:
                         await asyncio.sleep(0.1)
