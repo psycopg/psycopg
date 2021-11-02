@@ -118,12 +118,12 @@ def test_info(dsn, pgconn):
     name = [
         o.val or os.environ.get(o.envvar.decode(), "").encode()
         for o in parsed
-        if o.keyword == b"dbname"
+        if o.keyword == b"dbname" and o.envvar
     ][0]
     user = [
         o.val or os.environ.get(o.envvar.decode(), "").encode()
         for o in parsed
-        if o.keyword == b"user"
+        if o.keyword == b"user" and o.envvar
     ][0]
     assert dbname.val == (name or user)
 
