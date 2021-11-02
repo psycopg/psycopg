@@ -73,11 +73,11 @@ def test_its_really_a_pool(dsn):
     with pool.ConnectionPool(dsn, min_size=2) as p:
         with p.connection() as conn:
             with conn.execute("select pg_backend_pid()") as cur:
-                (pid1,) = cur.fetchone()
+                (pid1,) = cur.fetchone()  # type: ignore[misc]
 
             with p.connection() as conn2:
                 with conn2.execute("select pg_backend_pid()") as cur:
-                    (pid2,) = cur.fetchone()
+                    (pid2,) = cur.fetchone()  # type: ignore[misc]
 
         with p.connection() as conn:
             assert conn.pgconn.backend_pid in (pid1, pid2)
@@ -172,18 +172,18 @@ def test_configure(dsn):
         with p.connection() as conn:
             assert inits == 1
             res = conn.execute("show default_transaction_read_only")
-            assert res.fetchone()[0] == "on"
+            assert res.fetchone()[0] == "on"  # type: ignore[index]
 
         with p.connection() as conn:
             assert inits == 1
             res = conn.execute("show default_transaction_read_only")
-            assert res.fetchone()[0] == "on"
+            assert res.fetchone()[0] == "on"  # type: ignore[index]
             conn.close()
 
         with p.connection() as conn:
             assert inits == 2
             res = conn.execute("show default_transaction_read_only")
-            assert res.fetchone()[0] == "on"
+            assert res.fetchone()[0] == "on"  # type: ignore[index]
 
 
 @pytest.mark.slow
@@ -295,7 +295,7 @@ def test_queue(dsn, retries):
         with p.connection() as conn:
             (pid,) = conn.execute(
                 "select pg_backend_pid() from pg_sleep(0.2)"
-            ).fetchone()
+            ).fetchone()  # type: ignore[misc]
         t1 = time()
         results.append((n, t1 - t0, pid))
 
@@ -362,7 +362,7 @@ def test_queue_timeout(dsn, retries):
         t0 = time()
         try:
             with p.connection() as conn:
-                (pid,) = conn.execute(
+                (pid,) = conn.execute(  # type: ignore[misc]
                     "select pg_backend_pid() from pg_sleep(0.2)"
                 ).fetchone()
         except pool.PoolTimeout as e:
@@ -426,7 +426,7 @@ def test_queue_timeout_override(dsn, retries):
         timeout = 0.25 if n == 3 else None
         try:
             with p.connection(timeout=timeout) as conn:
-                (pid,) = conn.execute(
+                (pid,) = conn.execute(  # type: ignore[misc]
                     "select pg_backend_pid() from pg_sleep(0.2)"
                 ).fetchone()
         except pool.PoolTimeout as e:
@@ -458,12 +458,12 @@ def test_broken_reconnect(dsn):
     with pool.ConnectionPool(dsn, min_size=1) as p:
         with p.connection() as conn:
             with conn.execute("select pg_backend_pid()") as cur:
-                (pid1,) = cur.fetchone()
+                (pid1,) = cur.fetchone()  # type: ignore[misc]
             conn.close()
 
         with p.connection() as conn2:
             with conn2.execute("select pg_backend_pid()") as cur:
-                (pid2,) = cur.fetchone()
+                (pid2,) = cur.fetchone()  # type: ignore[misc]
 
     assert pid1 != pid2
 
@@ -638,9 +638,8 @@ def test_closed_putconn(dsn):
 def test_closed_queue(dsn, retries):
     def w1():
         with p.connection() as conn:
-            assert (
-                conn.execute("select 1 from pg_sleep(0.2)").fetchone()[0] == 1
-            )
+            cur = conn.execute("select 1 from pg_sleep(0.2)")
+            assert cur.fetchone()[0] == 1  # type: ignore[index]
         success.append("w1")
 
     def w2():
