@@ -248,9 +248,9 @@ class TestIdentifier:
         with pytest.raises(TypeError):
             sql.Identifier()
         with pytest.raises(TypeError):
-            sql.Identifier(10)
+            sql.Identifier(10)  # type: ignore[arg-type]
         with pytest.raises(TypeError):
-            sql.Identifier(dt.date(2016, 12, 31))
+            sql.Identifier(dt.date(2016, 12, 31))  # type: ignore[arg-type]
 
     def test_repr(self):
         obj = sql.Identifier("fo'o")
@@ -356,9 +356,9 @@ class TestSQL:
         assert isinstance(sql.SQL("foo"), sql.SQL)
         assert isinstance(sql.SQL("foo"), sql.SQL)
         with pytest.raises(TypeError):
-            sql.SQL(10)
+            sql.SQL(10)  # type: ignore[arg-type]
         with pytest.raises(TypeError):
-            sql.SQL(dt.date(2016, 12, 31))
+            sql.SQL(dt.date(2016, 12, 31))  # type: ignore[arg-type]
 
     def test_repr(self, conn):
         assert repr(sql.SQL("foo")) == "SQL('foo')"
