@@ -555,6 +555,6 @@ def noe(s):
     if isinstance(s, str):
         return re.sub(r"\bE'", "'", s)
     elif isinstance(s, bytes):
-        return re.sub(br"\bE'", "'", s)
+        return re.sub(rb"\bE'", b"'", s)
     else:
         raise TypeError(f"not dealing with {type(s).__name__}: {s}")
