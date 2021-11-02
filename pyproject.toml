@@ -23,6 +23,7 @@ files = [
     "tests/pool",
     "tests/pq",
     "tests/scripts",
+    "tests/test_dns*",
     "tests/test_psycopg_dbapi20.py",
     "tests/test_sql.py",
     "tests/types",
