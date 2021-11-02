@@ -12,7 +12,7 @@ sample_text = b"""\
 40\t\\N\tworld
 """
 
-sample_binary = """
+sample_binary_value = """
 5047 434f 5059 0aff 0d0a 00
 00 0000 0000 0000 00
 00 0300 0000 0400 0000 0a00 0000 0400 0000 1400 0000 0568 656c 6c6f
@@ -23,7 +23,8 @@ ff ff
 """
 
 sample_binary_rows = [
-    bytes.fromhex("".join(row.split())) for row in sample_binary.split("\n\n")
+    bytes.fromhex("".join(row.split()))
+    for row in sample_binary_value.split("\n\n")
 ]
 
 sample_binary = b"".join(sample_binary_rows)
