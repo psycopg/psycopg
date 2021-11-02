@@ -22,6 +22,7 @@ files = [
     "tests/dbapi20.py",
     "tests/pool",
     "tests/pq",
+    "tests/scripts",
     "tests/test_psycopg_dbapi20.py",
     "tests/test_sql.py",
     "tests/types",
