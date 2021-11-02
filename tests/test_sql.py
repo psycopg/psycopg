@@ -377,7 +377,7 @@ class TestSQL:
         assert obj.as_string(conn) == "foobar"
 
     def test_sum_inplace(self, conn):
-        obj = sql.SQL("foo")
+        obj = sql.SQL("f") + sql.SQL("oo")
         obj += sql.SQL("bar")
         assert isinstance(obj, sql.Composed)
         assert obj.as_string(conn) == "foobar"
