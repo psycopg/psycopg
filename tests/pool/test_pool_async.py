@@ -3,6 +3,7 @@ import asyncio
 import logging
 from time import time
 from collections import Counter
+from typing import Any
 
 import pytest
 
@@ -48,7 +49,7 @@ async def test_min_size_max_size(dsn):
 
 
 async def test_connection_class(dsn):
-    class MyConn(psycopg.AsyncConnection):
+    class MyConn(psycopg.AsyncConnection[Any]):
         pass
 
     async with pool.AsyncConnectionPool(

@@ -4,6 +4,7 @@ import weakref
 from time import sleep, time
 from threading import Thread, Event
 from collections import Counter
+from typing import Any
 
 import pytest
 
@@ -52,7 +53,7 @@ def test_min_size_max_size(dsn):
 
 
 def test_connection_class(dsn):
-    class MyConn(psycopg.Connection):
+    class MyConn(psycopg.Connection[Any]):
         pass
 
     with pool.ConnectionPool(dsn, connection_class=MyConn, min_size=1) as p:
