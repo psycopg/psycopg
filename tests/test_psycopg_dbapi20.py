@@ -134,18 +134,17 @@ def test_connect_args(monkeypatch, pgconn, args, kwargs, want):
 
 
 @pytest.mark.parametrize(
-    "args, kwargs",
+    "args, kwargs, exctype",
     [
-        (("host=foo", "host=bar"), {}),
-        (("", ""), {}),
-        ((), {"nosuchparam": 42}),
+        (("host=foo", "host=bar"), {}, TypeError),
+        (("", ""), {}, TypeError),
+        ((), {"nosuchparam": 42}, psycopg.ProgrammingError),
     ],
 )
-def test_connect_badargs(monkeypatch, pgconn, args, kwargs):
+def test_connect_badargs(monkeypatch, pgconn, args, kwargs, exctype):
     def fake_connect(conninfo):
         return pgconn
         yield
 
-    monkeypatch.setattr(psycopg.connection, "connect", fake_connect)
-    with pytest.raises((TypeError, psycopg.ProgrammingError)):
+    with pytest.raises(exctype):
         psycopg.connect(*args, **kwargs)
