@@ -19,22 +19,7 @@ files = [
     "psycopg/psycopg",
     "psycopg_pool/psycopg_pool",
     "psycopg_c/psycopg_c",
-    "tests/dbapi20.py",
-    "tests/fix_faker.py",
-    "tests/pool",
-    "tests/pq",
-    "tests/scripts",
-    "tests/test_adapt.py",
-    "tests/test_concurrency*.py",
-    "tests/test_conninfo.py",
-    "tests/test_copy*.py",
-    "tests/test_dns*",
-    "tests/test_errors.py",
-    "tests/test_prepared*.py",
-    "tests/test_psycopg_dbapi20.py",
-    "tests/test_sql.py",
-    "tests/test_*cursor*.py",
-    "tests/types",
+    "tests",
 ]
 warn_unused_ignores = true
 show_error_codes = true
