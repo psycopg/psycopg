@@ -767,9 +767,6 @@ class DatabaseAPI20Test(unittest.TestCase):
         finally:
             con.close()
 
-    def test_nextset(self):
-        raise NotImplementedError('Drivers need to override this test')
-
     def test_arraysize(self):
         # Not much here - rest of the tests for this are in test_fetchmany
         con = self._connect()
