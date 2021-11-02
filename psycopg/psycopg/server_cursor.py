@@ -5,8 +5,8 @@ psycopg server-side cursor objects.
 # Copyright (C) 2020-2021 The Psycopg Team
 
 import warnings
-from typing import Any, AsyncIterator, Generic, List, Iterator, Optional
-from typing import Sequence, TypeVar, TYPE_CHECKING
+from typing import Any, AsyncIterator, Generic, List, Iterable, Iterator
+from typing import Optional, TypeVar, TYPE_CHECKING
 
 from . import pq
 from . import sql
@@ -267,7 +267,7 @@ class ServerCursor(Cursor[Row]):
 
         return self
 
-    def executemany(self, query: Query, params_seq: Sequence[Params]) -> None:
+    def executemany(self, query: Query, params_seq: Iterable[Params]) -> None:
         """Method not implemented for server-side cursors."""
         raise e.NotSupportedError(
             "executemany not supported on server-side cursors"
@@ -387,7 +387,7 @@ class AsyncServerCursor(AsyncCursor[Row]):
         return self
 
     async def executemany(
-        self, query: Query, params_seq: Sequence[Params]
+        self, query: Query, params_seq: Iterable[Params]
     ) -> None:
         raise e.NotSupportedError(
             "executemany not supported on server-side cursors"
