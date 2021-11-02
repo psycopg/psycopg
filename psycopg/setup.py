@@ -47,6 +47,7 @@ extras_require = {
     # Requirements needed for development
     "dev": [
         "black",
+        "dnspython ~= 2.1.0",
         "flake8 ~= 4.0.1",
         "mypy >= 0.910",
         "pytest-mypy >= 0.8.1",
