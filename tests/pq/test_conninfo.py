@@ -32,11 +32,11 @@ def test_conninfo_parse():
 
 @pytest.mark.libpq("< 10")
 def test_conninfo_parse_96():
-    info = pq.Conninfo.parse(
+    conninfo = pq.Conninfo.parse(
         b"postgresql://other@localhost/otherdb"
         b"?connect_timeout=10&application_name=myapp"
     )
-    info = {i.keyword: i.val for i in info if i.val is not None}
+    info = {i.keyword: i.val for i in conninfo if i.val is not None}
     assert info[b"host"] == b"localhost"
     assert info[b"dbname"] == b"otherdb"
     assert info[b"application_name"] == b"myapp"
