@@ -12,7 +12,7 @@ format = psycopg.pq.Format.BINARY
 test = "copy"
 
 
-def main():
+def main() -> None:
     cnn = psycopg.connect()
 
     cnn.execute(
