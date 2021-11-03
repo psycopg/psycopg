@@ -111,7 +111,7 @@ def test_empty_queue_timeout():
         times.append(time() - t0)
         return rv
 
-    s._event.wait = wait_logging
+    setattr(s._event, "wait", wait_logging)
     s.EMPTY_QUEUE_TIMEOUT = 0.2
 
     t = Thread(target=s.run)
@@ -138,7 +138,7 @@ def test_first_task_rescheduling():
         times.append(time() - t0)
         return rv
 
-    s._event.wait = wait_logging
+    setattr(s._event, "wait", wait_logging)
     s.EMPTY_QUEUE_TIMEOUT = 0.1
 
     s.enter(0.4, lambda: None)

@@ -3,6 +3,7 @@ import asyncio
 import logging
 from time import time
 from collections import Counter
+from typing import Any, List, Tuple
 
 import pytest
 
@@ -48,7 +49,7 @@ async def test_min_size_max_size(dsn):
 
 
 async def test_connection_class(dsn):
-    class MyConn(psycopg.AsyncConnection):
+    class MyConn(psycopg.AsyncConnection[Any]):
         pass
 
     async with pool.AsyncConnectionPool(
@@ -70,11 +71,11 @@ async def test_its_really_a_pool(dsn):
     async with pool.AsyncConnectionPool(dsn, min_size=2) as p:
         async with p.connection() as conn:
             cur = await conn.execute("select pg_backend_pid()")
-            (pid1,) = await cur.fetchone()
+            (pid1,) = await cur.fetchone()  # type: ignore[misc]
 
             async with p.connection() as conn2:
                 cur = await conn2.execute("select pg_backend_pid()")
-                (pid2,) = await cur.fetchone()
+                (pid2,) = await cur.fetchone()  # type: ignore[misc]
 
         async with p.connection() as conn:
             assert conn.pgconn.backend_pid in (pid1, pid2)
@@ -111,7 +112,7 @@ async def test_concurrent_filling(dsn, monkeypatch, retries):
 
     async for retry in retries:
         with retry:
-            times = []
+            times: List[float] = []
             t0 = time()
 
             async with pool.AsyncConnectionPool(
@@ -177,18 +178,18 @@ async def test_configure(dsn):
         async with p.connection() as conn:
             assert inits == 1
             res = await conn.execute("show default_transaction_read_only")
-            assert (await res.fetchone())[0] == "on"
+            assert (await res.fetchone())[0] == "on"  # type: ignore[index]
 
         async with p.connection() as conn:
             assert inits == 1
             res = await conn.execute("show default_transaction_read_only")
-            assert (await res.fetchone())[0] == "on"
+            assert (await res.fetchone())[0] == "on"  # type: ignore[index]
             await conn.close()
 
         async with p.connection() as conn:
             assert inits == 2
             res = await conn.execute("show default_transaction_read_only")
-            assert (await res.fetchone())[0] == "on"
+            assert (await res.fetchone())[0] == "on"  # type: ignore[index]
 
 
 @pytest.mark.slow
@@ -305,13 +306,13 @@ async def test_queue(dsn, retries):
             cur = await conn.execute(
                 "select pg_backend_pid() from pg_sleep(0.2)"
             )
-            (pid,) = await cur.fetchone()
+            (pid,) = await cur.fetchone()  # type: ignore[misc]
         t1 = time()
         results.append((n, t1 - t0, pid))
 
     async for retry in retries:
         with retry:
-            results = []
+            results: List[Tuple[int, float, int]] = []
             async with pool.AsyncConnectionPool(dsn, min_size=2) as p:
                 await p.wait()
                 ts = [create_task(worker(i)) for i in range(6)]
@@ -338,8 +339,8 @@ async def test_queue_size(dsn):
         else:
             success.append(True)
 
-    errors = []
-    success = []
+    errors: List[Exception] = []
+    success: List[bool] = []
 
     async with pool.AsyncConnectionPool(dsn, min_size=1, max_waiting=3) as p:
         await p.wait()
@@ -368,7 +369,7 @@ async def test_queue_timeout(dsn, retries):
                 cur = await conn.execute(
                     "select pg_backend_pid() from pg_sleep(0.2)"
                 )
-                (pid,) = await cur.fetchone()
+                (pid,) = await cur.fetchone()  # type: ignore[misc]
         except pool.PoolTimeout as e:
             t1 = time()
             errors.append((n, t1 - t0, e))
@@ -378,8 +379,8 @@ async def test_queue_timeout(dsn, retries):
 
     async for retry in retries:
         with retry:
-            results = []
-            errors = []
+            results: List[Tuple[int, float, int]] = []
+            errors: List[Tuple[int, float, Exception]] = []
 
             async with pool.AsyncConnectionPool(
                 dsn, min_size=2, timeout=0.1
@@ -406,7 +407,7 @@ async def test_dead_client(dsn):
                 raise
 
     async with pool.AsyncConnectionPool(dsn, min_size=2) as p:
-        results = []
+        results: List[int] = []
         ts = [
             create_task(worker(i, timeout))
             for i, timeout in enumerate([0.4, 0.4, 0.1, 0.4, 0.4])
@@ -429,7 +430,7 @@ async def test_queue_timeout_override(dsn, retries):
                 cur = await conn.execute(
                     "select pg_backend_pid() from pg_sleep(0.2)"
                 )
-                (pid,) = await cur.fetchone()
+                (pid,) = await cur.fetchone()  # type: ignore[misc]
         except pool.PoolTimeout as e:
             t1 = time()
             errors.append((n, t1 - t0, e))
@@ -439,8 +440,8 @@ async def test_queue_timeout_override(dsn, retries):
 
     async for retry in retries:
         with retry:
-            results = []
-            errors = []
+            results: List[Tuple[int, float, int]] = []
+            errors: List[Tuple[int, float, Exception]] = []
 
             async with pool.AsyncConnectionPool(
                 dsn, min_size=2, timeout=0.1
@@ -458,12 +459,12 @@ async def test_broken_reconnect(dsn):
     async with pool.AsyncConnectionPool(dsn, min_size=1) as p:
         async with p.connection() as conn:
             cur = await conn.execute("select pg_backend_pid()")
-            (pid1,) = await cur.fetchone()
+            (pid1,) = await cur.fetchone()  # type: ignore[misc]
             await conn.close()
 
         async with p.connection() as conn2:
             cur = await conn2.execute("select pg_backend_pid()")
-            (pid2,) = await cur.fetchone()
+            (pid2,) = await cur.fetchone()  # type: ignore[misc]
 
     assert pid1 != pid2
 
@@ -588,7 +589,7 @@ async def test_close_no_tasks(dsn):
 
 async def test_putconn_no_pool(dsn):
     async with pool.AsyncConnectionPool(dsn, min_size=1) as p:
-        conn = psycopg.connect(dsn)
+        conn = await psycopg.AsyncConnection.connect(dsn)
         with pytest.raises(ValueError):
             await p.putconn(conn)
 
@@ -644,7 +645,7 @@ async def test_closed_queue(dsn, retries):
     async for retry in retries:
         with retry:
             p = pool.AsyncConnectionPool(dsn, min_size=1)
-            success = []
+            success: List[str] = []
 
             t1 = create_task(w1())
             await asyncio.sleep(0.1)
@@ -673,7 +674,7 @@ async def test_grow(dsn, monkeypatch, retries):
             ) as p:
                 await p.wait(1.0)
                 ts = []
-                results = []
+                results: List[Tuple[int, float]] = []
 
                 ts = [create_task(worker(i)) for i in range(6)]
                 await asyncio.gather(*ts)
@@ -690,7 +691,7 @@ async def test_shrink(dsn, monkeypatch):
 
     from psycopg_pool.pool_async import ShrinkPool
 
-    results = []
+    results: List[Tuple[int, int]] = []
 
     async def run_hacked(self, pool):
         n0 = pool._nconns
@@ -811,7 +812,7 @@ async def test_uniform_use(dsn, retries):
     async for retry in retries:
         with retry:
             async with pool.AsyncConnectionPool(dsn, min_size=4) as p:
-                counts = Counter()
+                counts = Counter()  # type: Counter[int]
                 for i in range(8):
                     async with p.connection() as conn:
                         await asyncio.sleep(0.1)
@@ -836,7 +837,7 @@ async def test_resize(dsn):
         async with p.connection() as conn:
             await conn.execute("select pg_sleep(%s)", [t])
 
-    size = []
+    size: List[int] = []
 
     async with pool.AsyncConnectionPool(dsn, min_size=2, max_idle=0.2) as p:
         s = create_task(sampler())

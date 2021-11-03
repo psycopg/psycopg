@@ -4,6 +4,7 @@ import weakref
 from time import sleep, time
 from threading import Thread, Event
 from collections import Counter
+from typing import Any, List, Tuple
 
 import pytest
 
@@ -52,7 +53,7 @@ def test_min_size_max_size(dsn):
 
 
 def test_connection_class(dsn):
-    class MyConn(psycopg.Connection):
+    class MyConn(psycopg.Connection[Any]):
         pass
 
     with pool.ConnectionPool(dsn, connection_class=MyConn, min_size=1) as p:
@@ -72,11 +73,11 @@ def test_its_really_a_pool(dsn):
     with pool.ConnectionPool(dsn, min_size=2) as p:
         with p.connection() as conn:
             with conn.execute("select pg_backend_pid()") as cur:
-                (pid1,) = cur.fetchone()
+                (pid1,) = cur.fetchone()  # type: ignore[misc]
 
             with p.connection() as conn2:
                 with conn2.execute("select pg_backend_pid()") as cur:
-                    (pid2,) = cur.fetchone()
+                    (pid2,) = cur.fetchone()  # type: ignore[misc]
 
         with p.connection() as conn:
             assert conn.pgconn.backend_pid in (pid1, pid2)
@@ -113,7 +114,7 @@ def test_concurrent_filling(dsn, monkeypatch, retries):
 
     for retry in retries:
         with retry:
-            times = []
+            times: List[float] = []
             t0 = time()
 
             with pool.ConnectionPool(dsn, min_size=5, num_workers=2) as p:
@@ -171,18 +172,18 @@ def test_configure(dsn):
         with p.connection() as conn:
             assert inits == 1
             res = conn.execute("show default_transaction_read_only")
-            assert res.fetchone()[0] == "on"
+            assert res.fetchone()[0] == "on"  # type: ignore[index]
 
         with p.connection() as conn:
             assert inits == 1
             res = conn.execute("show default_transaction_read_only")
-            assert res.fetchone()[0] == "on"
+            assert res.fetchone()[0] == "on"  # type: ignore[index]
             conn.close()
 
         with p.connection() as conn:
             assert inits == 2
             res = conn.execute("show default_transaction_read_only")
-            assert res.fetchone()[0] == "on"
+            assert res.fetchone()[0] == "on"  # type: ignore[index]
 
 
 @pytest.mark.slow
@@ -294,18 +295,20 @@ def test_queue(dsn, retries):
         with p.connection() as conn:
             (pid,) = conn.execute(
                 "select pg_backend_pid() from pg_sleep(0.2)"
-            ).fetchone()
+            ).fetchone()  # type: ignore[misc]
         t1 = time()
         results.append((n, t1 - t0, pid))
 
     for retry in retries:
         with retry:
-            results = []
+            results: List[Tuple[int, float, int]] = []
             with pool.ConnectionPool(dsn, min_size=2) as p:
                 p.wait()
                 ts = [Thread(target=worker, args=(i,)) for i in range(6)]
-                [t.start() for t in ts]
-                [t.join() for t in ts]
+                for t in ts:
+                    t.start()
+                for t in ts:
+                    t.join()
 
             times = [item[1] for item in results]
             want_times = [0.2, 0.2, 0.4, 0.4, 0.6, 0.6]
@@ -328,8 +331,8 @@ def test_queue_size(dsn):
         else:
             success.append(True)
 
-    errors = []
-    success = []
+    errors: List[Exception] = []
+    success: List[bool] = []
 
     with pool.ConnectionPool(dsn, min_size=1, max_waiting=3) as p:
         p.wait()
@@ -339,8 +342,10 @@ def test_queue_size(dsn):
         ev.wait()
 
         ts = [Thread(target=worker, args=(0.1,)) for i in range(4)]
-        [t.start() for t in ts]
-        [t.join() for t in ts]
+        for t in ts:
+            t.start()
+        for t in ts:
+            t.join()
 
     assert len(success) == 4
     assert len(errors) == 1
@@ -357,7 +362,7 @@ def test_queue_timeout(dsn, retries):
         t0 = time()
         try:
             with p.connection() as conn:
-                (pid,) = conn.execute(
+                (pid,) = conn.execute(  # type: ignore[misc]
                     "select pg_backend_pid() from pg_sleep(0.2)"
                 ).fetchone()
         except pool.PoolTimeout as e:
@@ -369,13 +374,15 @@ def test_queue_timeout(dsn, retries):
 
     for retry in retries:
         with retry:
-            results = []
-            errors = []
+            results: List[Tuple[int, float, int]] = []
+            errors: List[Tuple[int, float, Exception]] = []
 
             with pool.ConnectionPool(dsn, min_size=2, timeout=0.1) as p:
                 ts = [Thread(target=worker, args=(i,)) for i in range(4)]
-                [t.start() for t in ts]
-                [t.join() for t in ts]
+                for t in ts:
+                    t.start()
+                for t in ts:
+                    t.join()
 
             assert len(results) == 2
             assert len(errors) == 2
@@ -395,15 +402,17 @@ def test_dead_client(dsn):
             if timeout > 0.2:
                 raise
 
-    results = []
+    results: List[int] = []
 
     with pool.ConnectionPool(dsn, min_size=2) as p:
         ts = [
             Thread(target=worker, args=(i, timeout))
             for i, timeout in enumerate([0.4, 0.4, 0.1, 0.4, 0.4])
         ]
-        [t.start() for t in ts]
-        [t.join() for t in ts]
+        for t in ts:
+            t.start()
+        for t in ts:
+            t.join()
         sleep(0.2)
         assert set(results) == set([0, 1, 3, 4])
         assert len(p._pool) == 2  # no connection was lost
@@ -417,7 +426,7 @@ def test_queue_timeout_override(dsn, retries):
         timeout = 0.25 if n == 3 else None
         try:
             with p.connection(timeout=timeout) as conn:
-                (pid,) = conn.execute(
+                (pid,) = conn.execute(  # type: ignore[misc]
                     "select pg_backend_pid() from pg_sleep(0.2)"
                 ).fetchone()
         except pool.PoolTimeout as e:
@@ -429,13 +438,15 @@ def test_queue_timeout_override(dsn, retries):
 
     for retry in retries:
         with retry:
-            results = []
-            errors = []
+            results: List[Tuple[int, float, int]] = []
+            errors: List[Tuple[int, float, Exception]] = []
 
             with pool.ConnectionPool(dsn, min_size=2, timeout=0.1) as p:
                 ts = [Thread(target=worker, args=(i,)) for i in range(4)]
-                [t.start() for t in ts]
-                [t.join() for t in ts]
+                for t in ts:
+                    t.start()
+                for t in ts:
+                    t.join()
 
             assert len(results) == 3
             assert len(errors) == 1
@@ -447,12 +458,12 @@ def test_broken_reconnect(dsn):
     with pool.ConnectionPool(dsn, min_size=1) as p:
         with p.connection() as conn:
             with conn.execute("select pg_backend_pid()") as cur:
-                (pid1,) = cur.fetchone()
+                (pid1,) = cur.fetchone()  # type: ignore[misc]
             conn.close()
 
         with p.connection() as conn2:
             with conn2.execute("select pg_backend_pid()") as cur:
-                (pid2,) = cur.fetchone()
+                (pid2,) = cur.fetchone()  # type: ignore[misc]
 
     assert pid1 != pid2
 
@@ -627,9 +638,8 @@ def test_closed_putconn(dsn):
 def test_closed_queue(dsn, retries):
     def w1():
         with p.connection() as conn:
-            assert (
-                conn.execute("select 1 from pg_sleep(0.2)").fetchone()[0] == 1
-            )
+            cur = conn.execute("select 1 from pg_sleep(0.2)")
+            assert cur.fetchone()[0] == 1  # type: ignore[index]
         success.append("w1")
 
     def w2():
@@ -641,7 +651,7 @@ def test_closed_queue(dsn, retries):
     for retry in retries:
         with retry:
             p = pool.ConnectionPool(dsn, min_size=1)
-            success = []
+            success: List[str] = []
 
             t1 = Thread(target=w1)
             t2 = Thread(target=w2)
@@ -672,11 +682,13 @@ def test_grow(dsn, monkeypatch, retries):
                 dsn, min_size=2, max_size=4, num_workers=3
             ) as p:
                 p.wait(1.0)
-                results = []
+                results: List[Tuple[int, float]] = []
 
                 ts = [Thread(target=worker, args=(i,)) for i in range(6)]
-                [t.start() for t in ts]
-                [t.join() for t in ts]
+                for t in ts:
+                    t.start()
+                for t in ts:
+                    t.join()
 
             want_times = [0.2, 0.2, 0.3, 0.4, 0.4, 0.4]
             times = [item[1] for item in results]
@@ -690,7 +702,7 @@ def test_shrink(dsn, monkeypatch):
 
     from psycopg_pool.pool import ShrinkPool
 
-    results = []
+    results: List[Tuple[int, int]] = []
 
     def run_hacked(self, pool):
         n0 = pool._nconns
@@ -710,8 +722,10 @@ def test_shrink(dsn, monkeypatch):
         assert p.max_idle == 0.2
 
         ts = [Thread(target=worker, args=(i,)) for i in range(4)]
-        [t.start() for t in ts]
-        [t.join() for t in ts]
+        for t in ts:
+            t.start()
+        for t in ts:
+            t.join()
         sleep(1)
 
     assert results == [(4, 4), (4, 3), (3, 2), (2, 2), (2, 2)]
@@ -803,7 +817,7 @@ def test_uniform_use(dsn, retries):
     for retry in retries:
         with retry:
             with pool.ConnectionPool(dsn, min_size=4) as p:
-                counts = Counter()
+                counts = Counter()  # type: Counter[int]
                 for i in range(8):
                     with p.connection() as conn:
                         sleep(0.1)
@@ -828,7 +842,7 @@ def test_resize(dsn):
         with p.connection() as conn:
             conn.execute("select pg_sleep(%s)", [t])
 
-    size = []
+    size: List[int] = []
 
     with pool.ConnectionPool(dsn, min_size=2, max_idle=0.2) as p:
         s = Thread(target=sampler)
@@ -924,10 +938,12 @@ def test_stats_measures(dsn):
         assert stats["requests_waiting"] == 0
 
         ts = [Thread(target=worker, args=(i,)) for i in range(3)]
-        [t.start() for t in ts]
+        for t in ts:
+            t.start()
         sleep(0.1)
         stats = p.get_stats()
-        [t.join() for t in ts]
+        for t in ts:
+            t.join()
         assert stats["pool_min"] == 2
         assert stats["pool_max"] == 4
         assert stats["pool_size"] == 3
@@ -936,10 +952,12 @@ def test_stats_measures(dsn):
 
         p.wait(2.0)
         ts = [Thread(target=worker, args=(i,)) for i in range(7)]
-        [t.start() for t in ts]
+        for t in ts:
+            t.start()
         sleep(0.1)
         stats = p.get_stats()
-        [t.join() for t in ts]
+        for t in ts:
+            t.join()
         assert stats["pool_min"] == 2
         assert stats["pool_max"] == 4
         assert stats["pool_size"] == 4
@@ -963,8 +981,10 @@ def test_stats_usage(dsn, retries):
                 p.wait(2.0)
 
                 ts = [Thread(target=worker, args=(i,)) for i in range(7)]
-                [t.start() for t in ts]
-                [t.join() for t in ts]
+                for t in ts:
+                    t.start()
+                for t in ts:
+                    t.join()
                 stats = p.get_stats()
                 assert stats["requests_num"] == 7
                 assert stats["requests_queued"] == 4
@@ -1019,8 +1039,10 @@ def test_spike(dsn, monkeypatch):
         p.wait()
 
         ts = [Thread(target=worker) for i in range(50)]
-        [t.start() for t in ts]
-        [t.join() for t in ts]
+        for t in ts:
+            t.start()
+        for t in ts:
+            t.join()
         p.wait()
 
         assert len(p._pool) < 7
