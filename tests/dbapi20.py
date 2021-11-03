@@ -20,6 +20,7 @@ __author__ = 'Stuart Bishop <stuart@stuartbishop.net>'
 import unittest
 import time
 import sys
+from typing import Any, Dict
 
 
 # Revision 1.12  2009/02/06 03:35:11  kf7xm
@@ -98,9 +99,9 @@ class DatabaseAPI20Test(unittest.TestCase):
 
     # The self.driver module. This should be the module where the 'connect'
     # method is to be found
-    driver = None
+    driver: Any = None
     connect_args = () # List of arguments to pass to connect
-    connect_kw_args = {} # Keyword arguments for connect
+    connect_kw_args: Dict[str, Any] = {} # Keyword arguments for connect
     table_prefix = 'dbapi20test_' # If you need to specify a prefix for tables
 
     ddl1 = 'create table %sbooze (name varchar(20))' % table_prefix
@@ -191,8 +192,8 @@ class DatabaseAPI20Test(unittest.TestCase):
             self.failUnless(issubclass(self.driver.Warning,Exception))
             self.failUnless(issubclass(self.driver.Error,Exception))
         else:
-            self.failUnless(issubclass(self.driver.Warning,StandardError))
-            self.failUnless(issubclass(self.driver.Error,StandardError))
+            self.failUnless(issubclass(self.driver.Warning,StandardError))  # type: ignore[name-defined]
+            self.failUnless(issubclass(self.driver.Error,StandardError))  # type: ignore[name-defined]
 
         self.failUnless(
             issubclass(self.driver.InterfaceError,self.driver.Error)
@@ -766,9 +767,6 @@ class DatabaseAPI20Test(unittest.TestCase):
 
         finally:
             con.close()
-
-    def test_nextset(self):
-        raise NotImplementedError('Drivers need to override this test')
 
     def test_arraysize(self):
         # Not much here - rest of the tests for this are in test_fetchmany

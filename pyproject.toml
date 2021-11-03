@@ -19,7 +19,9 @@ files = [
     "psycopg/psycopg",
     "psycopg_pool/psycopg_pool",
     "psycopg_c/psycopg_c",
+    "tests/dbapi20.py",
     "tests/pq",
+    "tests/test_psycopg_dbapi20.py",
     "tests/test_sql.py",
     "tests/types",
 ]
