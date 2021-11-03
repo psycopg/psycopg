@@ -5,8 +5,8 @@ psycopg async cursor objects
 # Copyright (C) 2020-2021 The Psycopg Team
 
 from types import TracebackType
-from typing import Any, AsyncIterator, List
-from typing import Optional, Sequence, Type, TypeVar, TYPE_CHECKING
+from typing import Any, AsyncIterator, Iterable, List
+from typing import Optional, Type, TypeVar, TYPE_CHECKING
 
 from . import errors as e
 
@@ -82,7 +82,7 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
         return self
 
     async def executemany(
-        self, query: Query, params_seq: Sequence[Params]
+        self, query: Query, params_seq: Iterable[Params]
     ) -> None:
         async with self._conn.lock:
             await self._conn.wait(self._executemany_gen(query, params_seq))

@@ -8,18 +8,20 @@ The test is inspired to the `spike analysis`__ illustrated by HikariCP
        Welcome-To-The-Jungle.md
 
 """
+# mypy: allow-untyped-defs
+# mypy: allow-untyped-calls
 
-import sys
 import time
 import threading
 
 import psycopg
 import psycopg_pool
+from psycopg.rows import Row
 
 import logging
 
 
-def main():
+def main() -> None:
     opt = parse_cmdline()
     if opt.loglevel:
         loglevel = getattr(logging, opt.loglevel.upper())
@@ -47,7 +49,8 @@ def main():
             )
             for i in range(opt.num_clients)
         ]
-        [t.start() for t in threads]
+        for t in threads:
+            t.start()
         time.sleep(0.2)
 
         # Release the threads!
@@ -56,7 +59,8 @@ def main():
         ev.set()
 
         # Wait for the threads to finish
-        [t.join() for t in threads]
+        for t in threads:
+            t.join()
         t1 = time.time()
         measurer.stop()
 
@@ -103,7 +107,7 @@ class Measurer:
             time.sleep(interval)
 
 
-class DelayedConnection(psycopg.Connection):
+class DelayedConnection(psycopg.Connection[Row]):
     """A connection adding a delay to the connection time."""
 
     @classmethod
@@ -155,4 +159,4 @@ def parse_cmdline():
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()

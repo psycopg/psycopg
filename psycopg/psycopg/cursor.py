@@ -6,7 +6,7 @@ psycopg cursor objects
 
 import sys
 from types import TracebackType
-from typing import Any, Callable, Generic, Iterator, List
+from typing import Any, Callable, Generic, Iterable, Iterator, List
 from typing import Optional, NoReturn, Sequence, Type, TypeVar, TYPE_CHECKING
 from contextlib import contextmanager
 
@@ -208,7 +208,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
         self._last_query = query
 
     def _executemany_gen(
-        self, query: Query, params_seq: Sequence[Params]
+        self, query: Query, params_seq: Iterable[Params]
     ) -> PQGen[None]:
         """Generator implementing `Cursor.executemany()`."""
         yield from self._start_query(query)
@@ -564,7 +564,7 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
             raise ex.with_traceback(None)
         return self
 
-    def executemany(self, query: Query, params_seq: Sequence[Params]) -> None:
+    def executemany(self, query: Query, params_seq: Iterable[Params]) -> None:
         """
         Execute the same command with a sequence of input data.
         """
