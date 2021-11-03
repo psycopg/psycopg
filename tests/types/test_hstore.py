@@ -23,7 +23,7 @@ from psycopg.types.hstore import HstoreLoader, register_hstore
     ],
 )
 def test_parse_ok(s, d):
-    loader = HstoreLoader(dict, None)
+    loader = HstoreLoader(0, None)
     assert loader.load(s.encode()) == d
 
 
@@ -40,7 +40,7 @@ def test_parse_ok(s, d):
 )
 def test_parse_bad(s):
     with pytest.raises(psycopg.DataError):
-        loader = HstoreLoader(dict, None)
+        loader = HstoreLoader(0, None)
         loader.load(s.encode())
 
 
@@ -101,4 +101,4 @@ def test_roundtrip_array(hstore, conn):
 
 def test_no_info_error(conn):
     with pytest.raises(TypeError, match="hstore.*extension"):
-        register_hstore(None, conn)
+        register_hstore(None, conn)  # type: ignore[arg-type]

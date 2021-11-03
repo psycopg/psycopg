@@ -269,8 +269,8 @@ def test_register_scope(conn, testcomp):
         for oid in (info.oid, info.array_oid):
             assert postgres.adapters._loaders[fmt].pop(oid)
 
-    for fmt in PyFormat:
-        assert postgres.adapters._dumpers[fmt].pop(info.python_type)
+    for f in PyFormat:
+        assert postgres.adapters._dumpers[f].pop(info.python_type)
 
     cur = conn.cursor()
     register_composite(info, cur)
@@ -331,4 +331,4 @@ def test_callable_dumper_not_registered(conn, testcomp):
 
 def test_no_info_error(conn):
     with pytest.raises(TypeError, match="composite"):
-        register_composite(None, conn)
+        register_composite(None, conn)  # type: ignore[arg-type]

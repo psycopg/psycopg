@@ -81,7 +81,7 @@ def test_no_info_error(conn):
     from psycopg.types.shapely import register_shapely
 
     with pytest.raises(TypeError, match="postgis.*extension"):
-        register_shapely(None, conn)
+        register_shapely(None, conn)  # type: ignore[arg-type]
 
 
 def test_with_adapter(shapely_conn):
