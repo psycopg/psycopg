@@ -2,6 +2,7 @@ import pytest
 
 import psycopg
 from psycopg.conninfo import conninfo_to_dict
+from psycopg.rows import Row
 
 pytestmark = [pytest.mark.dns]
 
@@ -131,7 +132,7 @@ async def test_resolve_hostaddr_conn(monkeypatch, fake_resolve):
     )
 
     # TODO: not enabled by default, but should be usable to make a subclass
-    class AsyncDnsConnection(psycopg.AsyncConnection):
+    class AsyncDnsConnection(psycopg.AsyncConnection[Row]):
         @classmethod
         async def _get_connection_params(cls, conninfo, **kwargs):
             params = await super()._get_connection_params(conninfo, **kwargs)
