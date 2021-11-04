@@ -119,7 +119,7 @@ async def test_resolve_hostaddr_async_bad(
         for k, v in env.items():
             monkeypatch.setenv(k, v)
     params = conninfo_to_dict(conninfo)
-    with pytest.raises((TypeError, psycopg.Error)):
+    with pytest.raises(psycopg.Error):
         await psycopg._dns.resolve_hostaddr_async(  # type: ignore[attr-defined]
             params
         )
