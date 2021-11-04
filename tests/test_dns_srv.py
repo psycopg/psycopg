@@ -1,3 +1,5 @@
+from typing import List, Union
+
 import pytest
 
 import psycopg
@@ -149,7 +151,7 @@ def get_fake_srv_function(monkeypatch):
             ans = fake_hosts[qname, rdtype]
         except KeyError:
             raise DNSException(f"unknown test host: {qname} {rdtype}")
-        rv = []
+        rv: List[Union[A, SRV]] = []
 
         if rdtype == "A":
             for entry in ans:
