@@ -464,8 +464,8 @@ def test_execute_binary(conn):
 
 
 def test_row_factory(dsn):
-    conn = Connection.connect(dsn)
-    assert conn.row_factory is tuple_row  # type: ignore[comparison-overlap]
+    defaultconn = Connection.connect(dsn)
+    assert defaultconn.row_factory is tuple_row  # type: ignore[comparison-overlap]
 
     conn = Connection.connect(dsn, row_factory=my_row_factory)
     assert conn.row_factory is my_row_factory  # type: ignore[comparison-overlap]
@@ -473,17 +473,19 @@ def test_row_factory(dsn):
     cur = conn.execute("select 'a' as ve")
     assert cur.fetchone() == ["Ave"]
 
-    with conn.cursor(row_factory=lambda c: set) as cur:
-        cur.execute("select 1, 1, 2")
-        assert cur.fetchall() == [{1, 2}]
+    with conn.cursor(row_factory=lambda c: set) as cur1:
+        cur1.execute("select 1, 1, 2")
+        assert cur1.fetchall() == [{1, 2}]
 
-    with conn.cursor(row_factory=tuple_row) as cur:
-        cur.execute("select 1, 1, 2")
-        assert cur.fetchall() == [(1, 1, 2)]
+    with conn.cursor(row_factory=tuple_row) as cur2:
+        cur2.execute("select 1, 1, 2")
+        assert cur2.fetchall() == [(1, 1, 2)]
 
-    conn.row_factory = tuple_row
-    cur = conn.execute("select 'vale'")
-    assert cur.fetchone() == ("vale",)
+    # TODO: maybe fix something to get rid of 'type: ignore' below.
+    conn.row_factory = tuple_row  # type: ignore[assignment]
+    cur3 = conn.execute("select 'vale'")
+    r = cur3.fetchone()
+    assert r and r == ("vale",)  # type: ignore[comparison-overlap]
 
 
 def test_str(conn):
