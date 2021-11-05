@@ -131,7 +131,7 @@ def patch_exec(conn, monkeypatch):
     return L
 
 
-class ListPopAll(list):
+class ListPopAll(list):  # type: ignore[type-arg]
     """A list, with a popall() method."""
 
     def popall(self):
