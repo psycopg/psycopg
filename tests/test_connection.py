@@ -465,10 +465,10 @@ def test_execute_binary(conn):
 
 def test_row_factory(dsn):
     conn = Connection.connect(dsn)
-    assert conn.row_factory is tuple_row
+    assert conn.row_factory is tuple_row  # type: ignore[comparison-overlap]
 
     conn = Connection.connect(dsn, row_factory=my_row_factory)
-    assert conn.row_factory is my_row_factory
+    assert conn.row_factory is my_row_factory  # type: ignore[comparison-overlap]
 
     cur = conn.execute("select 'a' as ve")
     assert cur.fetchone() == ["Ave"]
