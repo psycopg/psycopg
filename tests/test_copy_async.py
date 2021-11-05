@@ -270,7 +270,9 @@ async def test_subclass_adapter(aconn, format):
     if format == Format.TEXT:
         from psycopg.types.string import StrDumper as BaseDumper
     else:
-        from psycopg.types.string import StrBinaryDumper as BaseDumper
+        from psycopg.types.string import (  # type: ignore[no-redef]
+            StrBinaryDumper as BaseDumper,
+        )
 
     class MyStrDumper(BaseDumper):
         def dump(self, obj):
@@ -336,7 +338,9 @@ async def test_copy_in_records(aconn, format):
     ) as copy:
         for row in sample_records:
             if format == Format.BINARY:
-                row = tuple(Int4(i) if isinstance(i, int) else i for i in row)
+                row = tuple(
+                    Int4(i) if isinstance(i, int) else i for i in row
+                )  # type: ignore[assignment]
             await copy.write_row(row)
 
     await cur.execute("select * from copy_in order by 1")
@@ -569,7 +573,7 @@ async def test_copy_to_leaks(dsn, faker, fmt, set_types, method, retries):
                         await alist(copy)
                     elif method == "row":
                         while 1:
-                            tmp = await copy.read_row()
+                            tmp = await copy.read_row()  # type: ignore[assignment]
                             if tmp is None:
                                 break
                     elif method == "rows":
