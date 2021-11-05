@@ -473,8 +473,8 @@ async def test_execute_binary(aconn):
 
 
 async def test_row_factory(dsn):
-    conn = await AsyncConnection.connect(dsn)
-    assert conn.row_factory is tuple_row  # type: ignore[comparison-overlap]
+    defaultconn = await AsyncConnection.connect(dsn)
+    assert defaultconn.row_factory is tuple_row  # type: ignore[comparison-overlap]
 
     conn = await AsyncConnection.connect(dsn, row_factory=my_row_factory)
     assert conn.row_factory is my_row_factory  # type: ignore[comparison-overlap]
@@ -482,17 +482,19 @@ async def test_row_factory(dsn):
     cur = await conn.execute("select 'a' as ve")
     assert await cur.fetchone() == ["Ave"]
 
-    async with conn.cursor(row_factory=lambda c: set) as cur:
-        await cur.execute("select 1, 1, 2")
-        assert await cur.fetchall() == [{1, 2}]
+    async with conn.cursor(row_factory=lambda c: set) as cur1:
+        await cur1.execute("select 1, 1, 2")
+        assert await cur1.fetchall() == [{1, 2}]
 
-    async with conn.cursor(row_factory=tuple_row) as cur:
-        await cur.execute("select 1, 1, 2")
-        assert await cur.fetchall() == [(1, 1, 2)]
+    async with conn.cursor(row_factory=tuple_row) as cur2:
+        await cur2.execute("select 1, 1, 2")
+        assert await cur2.fetchall() == [(1, 1, 2)]
 
-    conn.row_factory = tuple_row
-    cur = await conn.execute("select 'vale'")
-    assert await cur.fetchone() == ("vale",)
+    # TODO: maybe fix something to get rid of 'type: ignore' below.
+    conn.row_factory = tuple_row  # type: ignore[assignment]
+    cur3 = await conn.execute("select 'vale'")
+    r = await cur3.fetchone()
+    assert r and r == ("vale",)  # type: ignore[comparison-overlap]
 
 
 async def test_str(aconn):
