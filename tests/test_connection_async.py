@@ -52,6 +52,8 @@ async def test_connect_timeout():
         await asyncio.sleep(1.5)
         s.close()
 
+    elapsed: float = 0
+
     async def connect():
         t0 = time.time()
         with pytest.raises(psycopg.OperationalError, match="timeout expired"):
@@ -61,7 +63,6 @@ async def test_connect_timeout():
         nonlocal elapsed
         elapsed = time.time() - t0
 
-    elapsed = 0
     await asyncio.gather(closer(), connect())
     assert elapsed == pytest.approx(1.0, abs=0.05)
 
