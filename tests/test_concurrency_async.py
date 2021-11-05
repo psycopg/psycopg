@@ -2,6 +2,7 @@ import time
 import pytest
 import asyncio
 from asyncio.queues import Queue
+from typing import List, Tuple
 
 import psycopg
 from psycopg._compat import create_task
@@ -14,7 +15,7 @@ async def test_commit_concurrency(aconn):
     # Check the condition reported in psycopg2#103
     # Because of bad status check, we commit even when a commit is already on
     # its way. We can detect this condition by the warnings.
-    notices = Queue()
+    notices = Queue()  # type: ignore[var-annotated]
     aconn.add_notice_handler(
         lambda diag: notices.put_nowait(diag.message_primary)
     )
@@ -81,7 +82,7 @@ async def test_notifies(aconn, dsn):
             if len(ns) >= 2:
                 await gen.aclose()
 
-    ns = []
+    ns: List[Tuple[psycopg.Notify, float]] = []
     t0 = time.time()
     workers = [notifier(), receiver()]
     await asyncio.gather(*workers)
@@ -116,7 +117,7 @@ async def test_cancel(aconn, retries):
 
     async for retry in retries:
         with retry:
-            errors = []
+            errors: List[Exception] = []
             workers = [worker(), canceller()]
 
             t0 = time.time()
