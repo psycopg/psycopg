@@ -24,6 +24,7 @@ files = [
     "tests/pool",
     "tests/pq",
     "tests/scripts",
+    "tests/test_adapt.py",
     "tests/test_conninfo.py",
     "tests/test_dns*",
     "tests/test_errors.py",
