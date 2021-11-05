@@ -53,7 +53,7 @@ def test_srv(conninfo, want, env, fake_srv, retries, monkeypatch):
     for retry in retries:
         with retry:
             params = conninfo_to_dict(conninfo)
-            params = psycopg._dns.resolve_srv(params)
+            params = psycopg._dns.resolve_srv(params)  # type: ignore[attr-defined]
             assert conninfo_to_dict(want) == params
 
 
@@ -66,7 +66,11 @@ async def test_srv_async(conninfo, want, env, afake_srv, retries, monkeypatch):
     async for retry in retries:
         with retry:
             params = conninfo_to_dict(conninfo)
-            params = await psycopg._dns.resolve_srv_async(params)
+            params = await (
+                psycopg._dns.resolve_srv_async(  # type: ignore[attr-defined]
+                    params
+                )
+            )
             assert conninfo_to_dict(want) == params
 
 
@@ -83,7 +87,7 @@ def test_srv_bad(conninfo, env, fake_srv, monkeypatch):
             monkeypatch.setenv(k, v)
     params = conninfo_to_dict(conninfo)
     with pytest.raises(psycopg.OperationalError):
-        psycopg._dns.resolve_srv(params)
+        psycopg._dns.resolve_srv(params)  # type: ignore[attr-defined]
 
 
 @pytest.mark.asyncio
@@ -94,13 +98,17 @@ async def test_srv_bad_async(conninfo, env, afake_srv, monkeypatch):
             monkeypatch.setenv(k, v)
     params = conninfo_to_dict(conninfo)
     with pytest.raises(psycopg.OperationalError):
-        await psycopg._dns.resolve_srv_async(params)
+        await psycopg._dns.resolve_srv_async(params)  # type: ignore[attr-defined]
 
 
 @pytest.fixture
 def fake_srv(monkeypatch):
     f = get_fake_srv_function(monkeypatch)
-    monkeypatch.setattr(psycopg._dns.resolver, "resolve", f)
+    monkeypatch.setattr(
+        psycopg._dns.resolver,  # type: ignore[attr-defined]
+        "resolve",
+        f,
+    )
 
 
 @pytest.fixture
@@ -110,7 +118,11 @@ def afake_srv(monkeypatch):
     async def af(qname, rdtype):
         return f(qname, rdtype)
 
-    monkeypatch.setattr(psycopg._dns.async_resolver, "resolve", af)
+    monkeypatch.setattr(
+        psycopg._dns.async_resolver,  # type: ignore[attr-defined]
+        "resolve",
+        af,
+    )
 
 
 def get_fake_srv_function(monkeypatch):
