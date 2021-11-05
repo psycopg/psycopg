@@ -157,8 +157,8 @@ def test_evict_lru_deallocate(conn):
         conn.execute(f"select {i}")
 
     assert len(conn._prepared._prepared) == 5
-    for i in [9, 8, 7, 6, "'a'"]:
-        name = conn._prepared._prepared[f"select {i}".encode(), ()]
+    for j in [9, 8, 7, 6, "'a'"]:
+        name = conn._prepared._prepared[f"select {j}".encode(), ()]
         assert name.startswith(b"_pg3_")
 
     cur = conn.execute(
