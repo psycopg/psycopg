@@ -5,6 +5,12 @@ import pytest
 import logging
 import weakref
 from threading import Thread
+from typing import Any, List
+
+if sys.version_info >= (3, 8):
+    from typing import TypedDict
+else:
+    from typing_extensions import TypedDict
 
 import psycopg
 from psycopg import Connection, Notify
@@ -526,22 +532,34 @@ def test_server_cursor_factory(conn):
         assert isinstance(cur, MyServerCursor)
 
 
+class ParamDef(TypedDict):
+    guc: str
+    values: List[Any]
+    set_method: str
+
+
 tx_params = {
-    "isolation_level": {
-        "guc": "isolation",
-        "values": list(psycopg.IsolationLevel),
-        "set_method": "set_isolation_level",
-    },
-    "read_only": {
-        "guc": "read_only",
-        "values": [True, False],
-        "set_method": "set_read_only",
-    },
-    "deferrable": {
-        "guc": "deferrable",
-        "values": [True, False],
-        "set_method": "set_deferrable",
-    },
+    "isolation_level": ParamDef(
+        {
+            "guc": "isolation",
+            "values": list(psycopg.IsolationLevel),
+            "set_method": "set_isolation_level",
+        }
+    ),
+    "read_only": ParamDef(
+        {
+            "guc": "read_only",
+            "values": [True, False],
+            "set_method": "set_read_only",
+        }
+    ),
+    "deferrable": ParamDef(
+        {
+            "guc": "deferrable",
+            "values": [True, False],
+            "set_method": "set_deferrable",
+        }
+    ),
 }
 
 # Map Python values to Postgres values for the tx_params possible values
