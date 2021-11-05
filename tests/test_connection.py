@@ -320,7 +320,7 @@ def test_autocommit_unknown(conn):
     ],
 )
 def test_connect_args(monkeypatch, pgconn, args, kwargs, want):
-    the_conninfo = None
+    the_conninfo: str
 
     def fake_connect(conninfo):
         nonlocal the_conninfo
