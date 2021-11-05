@@ -267,7 +267,7 @@ def test_autocommit(conn):
     assert conn.pgconn.transaction_status == conn.TransactionStatus.IDLE
 
     conn.autocommit = ""
-    assert conn.autocommit is False
+    assert conn.autocommit is False  # type: ignore[comparison-overlap]
     conn.autocommit = "yeah"
     assert conn.autocommit is True
 
