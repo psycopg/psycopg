@@ -474,10 +474,10 @@ async def test_execute_binary(aconn):
 
 async def test_row_factory(dsn):
     conn = await AsyncConnection.connect(dsn)
-    assert conn.row_factory is tuple_row
+    assert conn.row_factory is tuple_row  # type: ignore[comparison-overlap]
 
     conn = await AsyncConnection.connect(dsn, row_factory=my_row_factory)
-    assert conn.row_factory is my_row_factory
+    assert conn.row_factory is my_row_factory  # type: ignore[comparison-overlap]
 
     cur = await conn.execute("select 'a' as ve")
     assert await cur.fetchone() == ["Ave"]
