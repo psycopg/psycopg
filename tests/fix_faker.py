@@ -6,6 +6,7 @@ from uuid import UUID
 from random import choice, random, randrange
 from decimal import Decimal
 from contextlib import contextmanager
+from typing import Any, List, Set, Tuple, Union
 
 import pytest
 
@@ -63,9 +64,11 @@ class Faker:
     @property
     def types(self):
         if not self._types:
-            self._types = sorted(
-                self.get_supported_types(), key=lambda cls: cls.__name__
-            )
+
+            def key(cls: type) -> str:
+                return cls.__name__
+
+            self._types = sorted(self.get_supported_types(), key=key)
         return self._types
 
     @property
@@ -110,11 +113,11 @@ class Faker:
 
     @property
     def create_stmt(self):
-        fields = []
+        field_values = []
         for name, type in zip(self.fields_names, self.types_names_sql):
-            fields.append(sql.SQL("{} {}").format(name, type))
+            field_values.append(sql.SQL("{} {}").format(name, type))
 
-        fields = sql.SQL(", ").join(fields)
+        fields = sql.SQL(", ").join(field_values)
         return sql.SQL(
             "create table {table} (id serial primary key, {fields})"
         ).format(table=self.table_name, fields=fields)
@@ -198,7 +201,7 @@ class Faker:
         )
 
     def choose_schema(self, ncols=20):
-        schema = []
+        schema: List[Union[Tuple[type, ...], type]] = []
         while len(schema) < ncols:
             s = self.make_schema(choice(self.types))
             if s is not None:
@@ -224,7 +227,7 @@ class Faker:
             m = self.get_matcher(spec)
             m(spec, g, w)
 
-    def get_supported_types(self):
+    def get_supported_types(self) -> Set[type]:
         dumpers = self.conn.adapters._dumpers[self.format]
         rv = set()
         for cls in dumpers.keys():
@@ -244,7 +247,7 @@ class Faker:
 
         return rv
 
-    def make_schema(self, cls):
+    def make_schema(self, cls: type) -> Union[Tuple[type, ...], type, None]:
         """Create a schema spec from a Python type.
 
         A schema specifies what Postgres type to generate when a Python type
@@ -546,7 +549,7 @@ class Faker:
 
             return l1 <= u2 and l2 <= u1
 
-        out = []
+        out: List[Range[Any]] = []
         for i in range(length):
             r = self.make_Range((Range, spec[1]), **kwargs)
             if r.isempty:
@@ -640,7 +643,7 @@ class Faker:
             return spec[0](empty=True)
 
         while True:
-            bounds = []
+            bounds: List[Union[Any, None]] = []
             while len(bounds) < 2:
                 if random() < no_bound_chance:
                     bounds.append(None)
@@ -701,6 +704,7 @@ class Faker:
             want = type(want)(want.lower, want.upper, want.bounds[0] + ")")
 
         # Normalise discrete ranges
+        unit: Union[dt.timedelta, int, None]
         if spec[1] is dt.date:
             unit = dt.timedelta(days=1)
         elif type(spec[1]) is type and issubclass(spec[1], int):
@@ -753,7 +757,7 @@ class Faker:
         if not length:
             length = randrange(self.str_max_length)
 
-        rv = []
+        rv: List[int] = []
         while len(rv) < length:
             c = randrange(1, 128) if random() < 0.5 else randrange(1, 0x110000)
             if not (0xD800 <= c <= 0xDBFF or 0xDC00 <= c <= 0xDFFF):
@@ -819,7 +823,7 @@ class Faker:
                 assert False, f"unknown rec type: {cls}"
 
         else:
-            cls = choice(scal_types)
+            cls = choice(scal_types)  # type: ignore[assignment]
             return self.make(cls)
 
     def _make_tz(self, spec):
