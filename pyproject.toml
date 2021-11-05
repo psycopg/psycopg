@@ -20,6 +20,7 @@ files = [
     "psycopg_pool/psycopg_pool",
     "psycopg_c/psycopg_c",
     "tests/dbapi20.py",
+    "tests/fix_faker.py",
     "tests/pool",
     "tests/pq",
     "tests/scripts",
