@@ -690,9 +690,9 @@ def test_connect_context(dsn):
     conn = psycopg.connect(dsn, context=ctx)
 
     cur = conn.execute("select %s", ["hello"])
-    assert cur.fetchone()[0] == "hellot"
+    assert cur.fetchone()[0] == "hellot"  # type: ignore[index]
     cur = conn.execute("select %b", ["hello"])
-    assert cur.fetchone()[0] == "hellob"
+    assert cur.fetchone()[0] == "hellob"  # type: ignore[index]
 
 
 def test_connect_context_copy(dsn, conn):
@@ -702,6 +702,6 @@ def test_connect_context_copy(dsn, conn):
     conn2 = psycopg.connect(dsn, context=conn)
 
     cur = conn2.execute("select %s", ["hello"])
-    assert cur.fetchone()[0] == "hellot"
+    assert cur.fetchone()[0] == "hellot"  # type: ignore[index]
     cur = conn2.execute("select %b", ["hello"])
-    assert cur.fetchone()[0] == "hellob"
+    assert cur.fetchone()[0] == "hellob"  # type: ignore[index]
