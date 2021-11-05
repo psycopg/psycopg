@@ -676,7 +676,7 @@ async def test_connect_context_copy(dsn, aconn):
 
 @pytest.mark.skipif(sys.platform != "win32", reason="windows only test")
 def test_windows_error(dsn):
-    loop = asyncio.ProactorEventLoop()
+    loop = asyncio.ProactorEventLoop()  # type: ignore[attr-defined]
 
     async def go():
         with pytest.raises(
