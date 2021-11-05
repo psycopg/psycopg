@@ -657,9 +657,9 @@ async def test_connect_context_adapters(dsn):
     conn = await psycopg.AsyncConnection.connect(dsn, context=ctx)
 
     cur = await conn.execute("select %s", ["hello"])
-    assert (await cur.fetchone())[0] == "hellot"
+    assert (await cur.fetchone())[0] == "hellot"  # type: ignore[index]
     cur = await conn.execute("select %b", ["hello"])
-    assert (await cur.fetchone())[0] == "hellob"
+    assert (await cur.fetchone())[0] == "hellob"  # type: ignore[index]
 
 
 async def test_connect_context_copy(dsn, aconn):
@@ -669,9 +669,9 @@ async def test_connect_context_copy(dsn, aconn):
     aconn2 = await psycopg.AsyncConnection.connect(dsn, context=aconn)
 
     cur = await aconn2.execute("select %s", ["hello"])
-    assert (await cur.fetchone())[0] == "hellot"
+    assert (await cur.fetchone())[0] == "hellot"  # type: ignore[index]
     cur = await aconn2.execute("select %b", ["hello"])
-    assert (await cur.fetchone())[0] == "hellob"
+    assert (await cur.fetchone())[0] == "hellob"  # type: ignore[index]
 
 
 @pytest.mark.skipif(sys.platform != "win32", reason="windows only test")
