@@ -513,7 +513,7 @@ async def test_fileno(aconn):
 async def test_cursor_factory(aconn):
     assert aconn.cursor_factory is psycopg.AsyncCursor
 
-    class MyCursor(psycopg.AsyncCursor):
+    class MyCursor(psycopg.AsyncCursor[psycopg.rows.Row]):
         pass
 
     aconn.cursor_factory = MyCursor
@@ -527,7 +527,7 @@ async def test_cursor_factory(aconn):
 async def test_server_cursor_factory(aconn):
     assert aconn.server_cursor_factory is psycopg.AsyncServerCursor
 
-    class MyServerCursor(psycopg.AsyncServerCursor):
+    class MyServerCursor(psycopg.AsyncServerCursor[psycopg.rows.Row]):
         pass
 
     aconn.server_cursor_factory = MyServerCursor

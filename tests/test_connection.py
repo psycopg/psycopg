@@ -504,7 +504,7 @@ def test_fileno(conn):
 def test_cursor_factory(conn):
     assert conn.cursor_factory is psycopg.Cursor
 
-    class MyCursor(psycopg.Cursor):
+    class MyCursor(psycopg.Cursor[psycopg.rows.Row]):
         pass
 
     conn.cursor_factory = MyCursor
@@ -518,7 +518,7 @@ def test_cursor_factory(conn):
 def test_server_cursor_factory(conn):
     assert conn.server_cursor_factory is psycopg.ServerCursor
 
-    class MyServerCursor(psycopg.ServerCursor):
+    class MyServerCursor(psycopg.ServerCursor[psycopg.rows.Row]):
         pass
 
     conn.server_cursor_factory = MyServerCursor
