@@ -14,6 +14,7 @@ Psycopg 3.0.3
 ^^^^^^^^^^^^^
 
 - Reduce size of binary package by stripping debug symbols (:ticket:`#142`).
+- Include typing information in the `!psycopg_binary` package.
 
 
 Psycopg 3.0.2
