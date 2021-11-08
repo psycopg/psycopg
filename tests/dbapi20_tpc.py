@@ -6,11 +6,12 @@
 """
 
 import unittest
+from typing import Any
 
 
 class TwoPhaseCommitTests(unittest.TestCase):
 
-    driver = None
+    driver: Any = None
 
     def connect(self):
         """Make a database connection."""
