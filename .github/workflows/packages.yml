@@ -115,6 +115,7 @@ jobs:
           CIBW_BUILD: ${{matrix.pyver}}-manylinux_${{matrix.arch}}
           CIBW_ARCHS_LINUX: auto aarch64 ppc64le
           CIBW_BEFORE_ALL_LINUX: ./tools/build/wheel_linux_before_all.sh
+          CIBW_REPAIR_WHEEL_COMMAND: 'auditwheel repair --strip -w {dest_dir} {wheel}'
           CIBW_TEST_REQUIRES: ./psycopg[test] ./psycopg_pool
           CIBW_TEST_COMMAND: pytest {project}/tests -m 'not slow' --color yes
           CIBW_ENVIRONMENT: >-
