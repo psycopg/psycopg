@@ -1,14 +1,17 @@
+import os
 import sys
 
 import pytest
+
+HERE = os.path.dirname(os.path.abspath(__file__))
 
 
 @pytest.mark.parametrize(
     "filename",
     [
-        "tests/adapters_example.py",
+        "adapters_example.py",
         pytest.param(
-            "tests/typing_example.py",
+            "typing_example.py",
             marks=pytest.mark.skipif(
                 sys.version_info < (3, 7), reason="no future annotations"
             ),
@@ -16,7 +19,7 @@ import pytest
     ],
 )
 def test_typing_example(mypy, filename):
-    cp = mypy.run_on_file(filename)
+    cp = mypy.run_on_file(os.path.join(HERE, filename))
     errors = cp.stdout.decode("utf8", "replace").splitlines()
     assert not errors
     assert cp.returncode == 0
