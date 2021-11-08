@@ -10,6 +10,12 @@ Release notes
 Current release
 ---------------
 
+Psycopg 3.0.3
+^^^^^^^^^^^^^
+
+- Reduce size of binary package by stripping debug symbols (:ticket:`#142`).
+
+
 Psycopg 3.0.2
 ^^^^^^^^^^^^^
 
