@@ -21,5 +21,8 @@ if [[ ! "$AUDITWHEEL_ARCH" = "aarch64" ]]; then
     curl -sk https://www.postgresql.org/media/keys/ACCC4CF8.asc \
         | apt-key add -
 fi
+
 apt-get update
-apt-get -y install libpq-dev
+
+# zip is required by strip_wheel.sh
+apt-get -y install libpq-dev zip
