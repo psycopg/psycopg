@@ -5,14 +5,10 @@ psycopg connection pool base class and functionalities.
 # Copyright (C) 2021 The Psycopg Team
 
 from random import random
-from typing import Any, Callable, Deque, Dict, Generic, Optional
-from typing import TYPE_CHECKING
-from collections import Counter, deque
+from typing import Any, Callable, Dict, Generic, Optional
 
 from psycopg.abc import ConnectionType
-
-if TYPE_CHECKING:
-    from typing import Counter as TCounter
+from psycopg._compat import Counter, Deque
 
 
 class BasePool(Generic[ConnectionType]):
@@ -81,8 +77,8 @@ class BasePool(Generic[ConnectionType]):
         self.num_workers = num_workers
 
         self._nconns = min_size  # currently in the pool, out, being prepared
-        self._pool: Deque[ConnectionType] = deque()
-        self._stats: "TCounter[str]" = Counter()
+        self._pool = Deque[ConnectionType]()
+        self._stats = Counter[str]()
 
         # Min number of connections in the pool in a max_idle unit of time.
         # It is reset periodically by the ShrinkPool scheduled task.

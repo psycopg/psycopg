@@ -10,14 +10,13 @@ import logging
 from abc import ABC, abstractmethod
 from time import monotonic
 from types import TracebackType
-from typing import Any, AsyncIterator, Awaitable, Callable, Deque
+from typing import Any, AsyncIterator, Awaitable, Callable
 from typing import Dict, List, Optional, Type
 from weakref import ref
-from collections import deque
 
 from psycopg import errors as e
 from psycopg.pq import TransactionStatus
-from psycopg._compat import Task, asynccontextmanager, create_task
+from psycopg._compat import Task, asynccontextmanager, create_task, Deque
 from psycopg.connection_async import AsyncConnection
 
 from .base import ConnectionAttempt, BasePool
@@ -52,7 +51,7 @@ class AsyncConnectionPool(BasePool[AsyncConnection[Any]]):
         self._reset = reset
 
         self._lock = asyncio.Lock()
-        self._waiting: Deque["AsyncClient"] = deque()
+        self._waiting = Deque["AsyncClient"]()
 
         # to notify that the pool is full
         self._pool_full_event: Optional[asyncio.Event] = None
@@ -463,8 +462,6 @@ class AsyncConnectionPool(BasePool[AsyncConnection[Any]]):
         # to the state, to avoid to create a reference loop.
         # Also disable the warning for open connection in conn.__del__
         conn._pool = None
-
-        pos: Optional[AsyncClient] = None
 
         # Critical section: if there is a client waiting give it the connection
         # otherwise put it back into the pool.

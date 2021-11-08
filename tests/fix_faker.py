@@ -6,14 +6,13 @@ from uuid import UUID
 from random import choice, random, randrange
 from decimal import Decimal
 from contextlib import contextmanager
-from collections import deque
 
 import pytest
 
 import psycopg
 from psycopg import sql
 from psycopg.adapt import PyFormat
-from psycopg._compat import asynccontextmanager
+from psycopg._compat import asynccontextmanager, Deque
 from psycopg.types.range import Range
 from psycopg.types.numeric import Int4, Int8
 from psycopg.types.multirange import Multirange
@@ -833,7 +832,7 @@ class JsonFloat:
 
 
 def deep_import(name):
-    parts = deque(name.split("."))
+    parts = Deque(name.split("."))
     seen = []
     if not parts:
         raise ValueError("name must be a dot-separated name")

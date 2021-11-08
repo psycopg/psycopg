@@ -51,10 +51,14 @@ else:
 
 if sys.version_info >= (3, 9):
     from zoneinfo import ZoneInfo
+    from collections import Counter, deque as Deque
 else:
     from backports.zoneinfo import ZoneInfo
+    from typing import Counter, Deque
 
 __all__ = [
+    "Counter",
+    "Deque",
     "Protocol",
     "ZoneInfo",
     "asynccontextmanager",

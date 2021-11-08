@@ -2,14 +2,13 @@ import sys
 import asyncio
 import logging
 from time import time
-from collections import Counter
 from typing import Any, List, Tuple
 
 import pytest
 
 import psycopg
 from psycopg.pq import TransactionStatus
-from psycopg._compat import create_task
+from psycopg._compat import create_task, Counter
 
 pytestmark = [
     pytest.mark.asyncio,
@@ -812,7 +811,7 @@ async def test_uniform_use(dsn, retries):
     async for retry in retries:
         with retry:
             async with pool.AsyncConnectionPool(dsn, min_size=4) as p:
-                counts = Counter()  # type: Counter[int]
+                counts = Counter[int]()
                 for i in range(8):
                     async with p.connection() as conn:
                         await asyncio.sleep(0.1)

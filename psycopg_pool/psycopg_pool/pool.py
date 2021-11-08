@@ -10,15 +10,15 @@ from abc import ABC, abstractmethod
 from time import monotonic
 from queue import Queue, Empty
 from types import TracebackType
-from typing import Any, Callable, Deque, Dict, Iterator, List
+from typing import Any, Callable, Dict, Iterator, List
 from typing import Optional, Type
 from weakref import ref
 from contextlib import contextmanager
-from collections import deque
 
 from psycopg import errors as e
 from psycopg import Connection
 from psycopg.pq import TransactionStatus
+from psycopg._compat import Deque
 
 from .base import ConnectionAttempt, BasePool
 from .sched import Scheduler
@@ -42,7 +42,7 @@ class ConnectionPool(BasePool[Connection[Any]]):
         self._reset = reset
 
         self._lock = threading.RLock()
-        self._waiting: Deque["WaitingClient"] = deque()
+        self._waiting = Deque["WaitingClient"]()
 
         # to notify that the pool is full
         self._pool_full_event: Optional[threading.Event] = None
@@ -533,8 +533,6 @@ class ConnectionPool(BasePool[Connection[Any]]):
         # to the state, to avoid to create a reference loop.
         # Also disable the warning for open connection in conn.__del__
         conn._pool = None
-
-        pos: Optional[WaitingClient] = None
 
         # Critical section: if there is a client waiting give it the connection
         # otherwise put it back into the pool.
