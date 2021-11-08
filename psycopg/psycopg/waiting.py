@@ -96,7 +96,7 @@ def wait_conn(gen: PQGenConn[RV], timeout: Optional[float] = None) -> RV:
         return rv
 
 
-async def wait_async(gen: PQGen[RV], fileno: int) -> RV:
+async def wait_asyncio(gen: PQGen[RV], fileno: int) -> RV:
     """
     Coroutine waiting for a generator to complete.
 
@@ -146,7 +146,7 @@ async def wait_async(gen: PQGen[RV], fileno: int) -> RV:
         return rv
 
 
-async def wait_conn_async(gen: PQGenConn[RV], timeout: Optional[float] = None) -> RV:
+async def wait_conn_asyncio(gen: PQGenConn[RV], timeout: Optional[float] = None) -> RV:
     """
     Coroutine waiting for a connection generator to complete.
 

@@ -345,7 +345,7 @@ class AsyncConnection(BaseConnection[Row]):
 
     async def wait(self, gen: PQGen[RV]) -> RV:
         try:
-            return await waiting.wait_async(gen, self.pgconn.socket)
+            return await waiting.wait_asyncio(gen, self.pgconn.socket)
         except KeyboardInterrupt:
             # TODO: this doesn't seem to work as it does for sync connections
             # see tests/test_concurrency_async.py::test_ctrl_c
@@ -356,14 +356,14 @@ class AsyncConnection(BaseConnection[Row]):
             c = self.pgconn.get_cancel()
             c.cancel()
             try:
-                await waiting.wait_async(gen, self.pgconn.socket)
+                await waiting.wait_asyncio(gen, self.pgconn.socket)
             except e.QueryCanceled:
                 pass  # as expected
             raise
 
     @classmethod
     async def _wait_conn(cls, gen: PQGenConn[RV], timeout: Optional[int]) -> RV:
-        return await waiting.wait_conn_async(gen, timeout)
+        return await waiting.wait_conn_asyncio(gen, timeout)
 
     def _set_autocommit(self, value: bool) -> None:
         self._no_set_async("autocommit")

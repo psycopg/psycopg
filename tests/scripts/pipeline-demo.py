@@ -212,7 +212,7 @@ async def pipeline_demo_pq_async(rows_to_send: int, logger: logging.Logger) -> N
         results_queue,
     ):
         while results_queue:
-            fetched = await waiting.wait_async(
+            fetched = await waiting.wait_asyncio(
                 pipeline_communicate(
                     pgconn,  # type: ignore[arg-type]
                     commands,
