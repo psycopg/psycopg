@@ -6,23 +6,33 @@
 set -euo pipefail
 set -x
 
-dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+. /etc/os-release
 
-# Install libpq
-# Note that the pgdg doesn't have an aarch64 repository so wheels are build
-# with the libpq packaged with Debian 9, which is 9.6.
-if [[ ! "$AUDITWHEEL_ARCH" = "aarch64" ]]; then
-    source /etc/os-release
-    echo "deb http://apt.postgresql.org/pub/repos/apt ${VERSION_CODENAME}-pgdg main" \
-        > /etc/apt/sources.list.d/pgdg.list
-    # TODO: on 2021-09-30 curl fails with
-    # curl: (60) SSL certificate problem: certificate has expired
-    # Test again later if -k can be removed.
-    curl -sk https://www.postgresql.org/media/keys/ACCC4CF8.asc \
-        | apt-key add -
-fi
-
-apt-get update
-
-# zip is required by strip_wheel.sh
-apt-get -y install libpq-dev zip
+# Install PostgreSQL development files.
+case "$ID" in
+    alpine)
+        # zip is required by strip_wheel.sh
+        # tzdata is required for datetime tests.
+        apk add --no-cache postgresql-dev tzdata zip
+        ;;
+    debian)
+        # Note that the pgdg doesn't have an aarch64 repository so wheels are
+        # build with the libpq packaged with Debian 9, which is 9.6.
+        if [ "$AUDITWHEEL_ARCH" != 'aarch64' ]; then
+            echo "deb http://apt.postgresql.org/pub/repos/apt $VERSION_CODENAME-pgdg main" \
+                > /etc/apt/sources.list.d/pgdg.list
+            # TODO: On 2021-11-09 curl fails on 'ppc64le' with:
+            #   curl: (60) SSL certificate problem: certificate has expired
+            # Test again later if -k can be removed.
+            curl -skf https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+                > /etc/apt/trusted.gpg.d/postgresql.asc
+        fi
+        apt-get update
+        # zip is required by strip_wheel.sh
+        apt-get -y install libpq-dev zip
+        ;;
+    *)
+        echo "Unexpected Linux distribution: '$ID'" >&2
+        exit 1
+        ;;
+esac
