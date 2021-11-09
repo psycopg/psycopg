@@ -13,6 +13,8 @@ Current release
 Psycopg 3.0.3
 ^^^^^^^^^^^^^
 
+- Release musllinux binary packages, compatible with Alpine Linux
+  (:ticket:`#141`).
 - Reduce size of binary package by stripping debug symbols (:ticket:`#142`).
 - Include typing information in the `!psycopg_binary` package.
 
