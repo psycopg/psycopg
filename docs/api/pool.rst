@@ -6,10 +6,11 @@
 
 .. module:: psycopg_pool
 
-The package contains two connection pool implementations. A connection pool
-creates and maintains a limited amount of PostgreSQL connections and allows a
-larger number of users to use them. See :ref:`connection-pools` for more
-details and usage pattern.
+A connection pool is an object to create and maintain a specified amount of
+PostgreSQL connections, reducing the time requested by the program to obtain a
+working connection and allowing an arbitrary large number of concurrent
+threads or tasks to use a controlled amount of resources on the server. See
+:ref:`connection-pools` for more details and usage pattern.
 
 This module implement two connection pools: `ConnectionPool` is a
 synchronous connection pool yielding `~psycopg.Connection` objects and can be
@@ -17,7 +18,7 @@ used by multithread applications. `AsyncConnectionPool` has a similar
 interface, but with `asyncio` functions replacing blocking functions, and
 yields `~psycopg.AsyncConnection` instances.
 
-The intended use (but not mandatory) is to create a single connection pool, as
+The intended (but not mandatory) use is to create a single connection pool, as
 a global object exposed by a module in your application, and use the same
 instance from the rest of the code (especially the
 `~ConnectionPool.connection()` method.
