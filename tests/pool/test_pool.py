@@ -910,6 +910,14 @@ def test_check(dsn, caplog):
         assert pid not in pids2
 
 
+def test_check_idle(dsn):
+    with pool.ConnectionPool(dsn, min_size=2) as p:
+        p.wait(1.0)
+        p.check()
+        with p.connection() as conn:
+            assert conn.info.transaction_status == TransactionStatus.IDLE
+
+
 @pytest.mark.skipif(
     sys.version_info >= (3, 7), reason="async pool supported from Python 3.7"
 )

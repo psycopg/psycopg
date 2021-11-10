@@ -33,11 +33,19 @@ Documentation
     basic/index
     advanced/index
     api/index
+
+Release notes
+-------------
+
+.. toctree::
+    :maxdepth: 1
+
     news
+    news_pool
 
 
 Indices and tables
-==================
+------------------
 
 * :ref:`genindex`
 * :ref:`modindex`

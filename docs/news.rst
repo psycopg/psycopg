@@ -4,8 +4,8 @@
     single: Release notes
     single: News
 
-Release notes
-=============
+``psycopg`` release notes
+=========================
 
 Current release
 ---------------

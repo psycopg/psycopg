@@ -907,6 +907,14 @@ async def test_check(dsn, caplog):
         assert pid not in pids2
 
 
+async def test_check_idle(dsn):
+    async with pool.AsyncConnectionPool(dsn, min_size=2) as p:
+        await p.wait(1.0)
+        await p.check()
+        async with p.connection() as conn:
+            assert conn.info.transaction_status == TransactionStatus.IDLE
+
+
 @pytest.mark.slow
 @pytest.mark.timing
 async def test_stats_measures(dsn):
