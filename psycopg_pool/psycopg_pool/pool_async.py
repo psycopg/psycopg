@@ -294,6 +294,8 @@ class AsyncConnectionPool(BasePool[AsyncConnection[Any]]):
             conn = conns.pop()
             try:
                 await conn.execute("SELECT 1")
+                if conn.pgconn.transaction_status == TransactionStatus.INTRANS:
+                    await conn.rollback()
             except Exception:
                 self._stats[self._CONNECTIONS_LOST] += 1
                 logger.warning("discarding broken connection: %s", conn)
