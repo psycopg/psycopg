@@ -413,7 +413,7 @@ class BaseConnection(Generic[Row]):
     # These operations are expressed in terms of non-blocking generators
     # and the task of waiting when needed (when the generators yield) is left
     # to the connections subclass, which might wait either in blocking mode
-    # or through asyncio.
+    # or through an async library.
     #
     # All these generators assume exclusive access to the connection: subclasses
     # should have a lock and hold it before calling and consuming them.

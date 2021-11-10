@@ -178,7 +178,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
     # Generators for the high level operations on the cursor
     #
     # Like for sync/async connections, these are implemented as generators
-    # so that different concurrency strategies (threads,asyncio) can use their
+    # so that different concurrency strategies (threads, async lib) can use their
     # own way of waiting (or better, `connection.wait()`).
     #
 
