@@ -40,7 +40,7 @@ extras_require = {
         "mypy >= 0.910",
         "pproxy ~= 2.7.8",
         "pytest ~= 6.2.5",
-        "pytest-asyncio >= 0.15.1, <0.17.0",
+        "pytest-asyncio ~= 0.16.0",
         "pytest-randomly ~= 3.10.1",
         "tenacity ~= 8.0.1",
     ],
