@@ -5,6 +5,12 @@ import pytest
 import logging
 import weakref
 from threading import Thread
+from typing import Any, List
+
+if sys.version_info >= (3, 8):
+    from typing import TypedDict
+else:
+    from typing_extensions import TypedDict
 
 import psycopg
 from psycopg import Connection, Notify
@@ -267,7 +273,7 @@ def test_autocommit(conn):
     assert conn.pgconn.transaction_status == conn.TransactionStatus.IDLE
 
     conn.autocommit = ""
-    assert conn.autocommit is False
+    assert conn.autocommit is False  # type: ignore[comparison-overlap]
     conn.autocommit = "yeah"
     assert conn.autocommit is True
 
@@ -320,7 +326,7 @@ def test_autocommit_unknown(conn):
     ],
 )
 def test_connect_args(monkeypatch, pgconn, args, kwargs, want):
-    the_conninfo = None
+    the_conninfo: str
 
     def fake_connect(conninfo):
         nonlocal the_conninfo
@@ -334,20 +340,20 @@ def test_connect_args(monkeypatch, pgconn, args, kwargs, want):
 
 
 @pytest.mark.parametrize(
-    "args, kwargs",
+    "args, kwargs, exctype",
     [
-        (("host=foo", "host=bar"), {}),
-        (("", ""), {}),
-        ((), {"nosuchparam": 42}),
+        (("host=foo", "host=bar"), {}, TypeError),
+        (("", ""), {}, TypeError),
+        ((), {"nosuchparam": 42}, psycopg.ProgrammingError),
     ],
 )
-def test_connect_badargs(monkeypatch, pgconn, args, kwargs):
+def test_connect_badargs(monkeypatch, pgconn, args, kwargs, exctype):
     def fake_connect(conninfo):
         return pgconn
         yield
 
     monkeypatch.setattr(psycopg.connection, "connect", fake_connect)
-    with pytest.raises((TypeError, psycopg.ProgrammingError)):
+    with pytest.raises(exctype):
         psycopg.Connection.connect(*args, **kwargs)
 
 
@@ -464,26 +470,28 @@ def test_execute_binary(conn):
 
 
 def test_row_factory(dsn):
-    conn = Connection.connect(dsn)
-    assert conn.row_factory is tuple_row
+    defaultconn = Connection.connect(dsn)
+    assert defaultconn.row_factory is tuple_row  # type: ignore[comparison-overlap]
 
     conn = Connection.connect(dsn, row_factory=my_row_factory)
-    assert conn.row_factory is my_row_factory
+    assert conn.row_factory is my_row_factory  # type: ignore[comparison-overlap]
 
     cur = conn.execute("select 'a' as ve")
     assert cur.fetchone() == ["Ave"]
 
-    with conn.cursor(row_factory=lambda c: set) as cur:
-        cur.execute("select 1, 1, 2")
-        assert cur.fetchall() == [{1, 2}]
+    with conn.cursor(row_factory=lambda c: set) as cur1:
+        cur1.execute("select 1, 1, 2")
+        assert cur1.fetchall() == [{1, 2}]
 
-    with conn.cursor(row_factory=tuple_row) as cur:
-        cur.execute("select 1, 1, 2")
-        assert cur.fetchall() == [(1, 1, 2)]
+    with conn.cursor(row_factory=tuple_row) as cur2:
+        cur2.execute("select 1, 1, 2")
+        assert cur2.fetchall() == [(1, 1, 2)]
 
-    conn.row_factory = tuple_row
-    cur = conn.execute("select 'vale'")
-    assert cur.fetchone() == ("vale",)
+    # TODO: maybe fix something to get rid of 'type: ignore' below.
+    conn.row_factory = tuple_row  # type: ignore[assignment]
+    cur3 = conn.execute("select 'vale'")
+    r = cur3.fetchone()
+    assert r and r == ("vale",)  # type: ignore[comparison-overlap]
 
 
 def test_str(conn):
@@ -502,7 +510,7 @@ def test_fileno(conn):
 def test_cursor_factory(conn):
     assert conn.cursor_factory is psycopg.Cursor
 
-    class MyCursor(psycopg.Cursor):
+    class MyCursor(psycopg.Cursor[psycopg.rows.Row]):
         pass
 
     conn.cursor_factory = MyCursor
@@ -516,7 +524,7 @@ def test_cursor_factory(conn):
 def test_server_cursor_factory(conn):
     assert conn.server_cursor_factory is psycopg.ServerCursor
 
-    class MyServerCursor(psycopg.ServerCursor):
+    class MyServerCursor(psycopg.ServerCursor[psycopg.rows.Row]):
         pass
 
     conn.server_cursor_factory = MyServerCursor
@@ -524,22 +532,34 @@ def test_server_cursor_factory(conn):
         assert isinstance(cur, MyServerCursor)
 
 
+class ParamDef(TypedDict):
+    guc: str
+    values: List[Any]
+    set_method: str
+
+
 tx_params = {
-    "isolation_level": {
-        "guc": "isolation",
-        "values": list(psycopg.IsolationLevel),
-        "set_method": "set_isolation_level",
-    },
-    "read_only": {
-        "guc": "read_only",
-        "values": [True, False],
-        "set_method": "set_read_only",
-    },
-    "deferrable": {
-        "guc": "deferrable",
-        "values": [True, False],
-        "set_method": "set_deferrable",
-    },
+    "isolation_level": ParamDef(
+        {
+            "guc": "isolation",
+            "values": list(psycopg.IsolationLevel),
+            "set_method": "set_isolation_level",
+        }
+    ),
+    "read_only": ParamDef(
+        {
+            "guc": "read_only",
+            "values": [True, False],
+            "set_method": "set_read_only",
+        }
+    ),
+    "deferrable": ParamDef(
+        {
+            "guc": "deferrable",
+            "values": [True, False],
+            "set_method": "set_deferrable",
+        }
+    ),
 }
 
 # Map Python values to Postgres values for the tx_params possible values
@@ -688,9 +708,9 @@ def test_connect_context(dsn):
     conn = psycopg.connect(dsn, context=ctx)
 
     cur = conn.execute("select %s", ["hello"])
-    assert cur.fetchone()[0] == "hellot"
+    assert cur.fetchone()[0] == "hellot"  # type: ignore[index]
     cur = conn.execute("select %b", ["hello"])
-    assert cur.fetchone()[0] == "hellob"
+    assert cur.fetchone()[0] == "hellob"  # type: ignore[index]
 
 
 def test_connect_context_copy(dsn, conn):
@@ -700,6 +720,6 @@ def test_connect_context_copy(dsn, conn):
     conn2 = psycopg.connect(dsn, context=conn)
 
     cur = conn2.execute("select %s", ["hello"])
-    assert cur.fetchone()[0] == "hellot"
+    assert cur.fetchone()[0] == "hellot"  # type: ignore[index]
     cur = conn2.execute("select %b", ["hello"])
-    assert cur.fetchone()[0] == "hellob"
+    assert cur.fetchone()[0] == "hellob"  # type: ignore[index]

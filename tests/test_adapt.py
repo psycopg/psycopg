@@ -1,5 +1,6 @@
 import datetime as dt
 from types import ModuleType
+from typing import Any, List
 
 import pytest
 
@@ -9,6 +10,7 @@ from psycopg import errors as e
 from psycopg.adapt import Transformer, PyFormat, Dumper, Loader
 from psycopg._cmodule import _psycopg
 from psycopg.postgres import types as builtins, TEXT_OID
+from psycopg.types.array import ListDumper, ListBinaryDumper
 
 
 @pytest.mark.parametrize(
@@ -294,19 +296,23 @@ def test_array_dumper(conn, fmt_out):
     fmt_in = PyFormat.from_pq(fmt_out)
     dint = t.get_dumper([0], fmt_in)
     if fmt_out == pq.Format.BINARY:
+        assert isinstance(dint, ListBinaryDumper)
         assert dint.oid == builtins["int2"].array_oid
-        assert dint.sub_dumper.oid == builtins["int2"].oid
+        assert dint.sub_dumper and dint.sub_dumper.oid == builtins["int2"].oid
     else:
+        assert isinstance(dint, ListDumper)
         assert dint.oid == builtins["numeric"].array_oid
         assert dint.sub_dumper is None
 
     dstr = t.get_dumper([""], fmt_in)
     if fmt_in == PyFormat.BINARY:
+        assert isinstance(dstr, ListBinaryDumper)
         assert dstr.oid == builtins["text"].array_oid
-        assert dstr.sub_dumper.oid == builtins["text"].oid
+        assert dstr.sub_dumper and dstr.sub_dumper.oid == builtins["text"].oid
     else:
+        assert isinstance(dstr, ListDumper)
         assert dstr.oid == 0
-        assert dstr.sub_dumper.oid == 0
+        assert dstr.sub_dumper and dstr.sub_dumper.oid == 0
 
     assert dstr is not dint
 
@@ -318,7 +324,7 @@ def test_array_dumper(conn, fmt_out):
     assert dempty.oid == 0
     assert dempty.dump([]) == b"{}"
 
-    L = []
+    L: List[List[Any]] = []
     L.append(L)
     with pytest.raises(psycopg.DataError):
         assert t.get_dumper(L, fmt_in)
@@ -394,27 +400,31 @@ def test_optimised_adapters():
         obj = getattr(_psycopg, n)
         if not isinstance(obj, type):
             continue
-        if not issubclass(obj, (_psycopg.CDumper, _psycopg.CLoader)):
+        if not issubclass(
+            obj,
+            (_psycopg.CDumper, _psycopg.CLoader),  # type: ignore[attr-defined]
+        ):
             continue
         c_adapters[n] = obj
 
     # All the registered adapters
     reg_adapters = set()
     adapters = (
-        list(postgres.adapters._dumpers.values()) + postgres.adapters._loaders
+        list(postgres.adapters._dumpers.values())
+        + postgres.adapters._loaders  # type: ignore[operator]
     )
     assert len(adapters) == 5
     for m in adapters:
         reg_adapters |= set(m.values())
 
     # Check that the registered adapters are the optimised one
-    n = 0
+    i = 0
     for cls in reg_adapters:
         if cls.__name__ in c_adapters:
             assert cls is c_adapters[cls.__name__]
-            n += 1
+            i += 1
 
-    assert n >= 10
+    assert i >= 10
 
     # Check that every optimised adapter is the optimised version of a Py one
     for n in dir(psycopg.types):

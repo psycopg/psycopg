@@ -227,8 +227,10 @@ class TestConnectionInfo:
         conn.execute("set timezone to 'Europe/Rome'")
         tz = conn.info.timezone
         assert isinstance(tz, dt.tzinfo)
-        assert tz.utcoffset(dt.datetime(2000, 1, 1)).total_seconds() == 3600
-        assert tz.utcoffset(dt.datetime(2000, 7, 1)).total_seconds() == 7200
+        offset = tz.utcoffset(dt.datetime(2000, 1, 1))
+        assert offset and offset.total_seconds() == 3600
+        offset = tz.utcoffset(dt.datetime(2000, 7, 1))
+        assert offset and offset.total_seconds() == 7200
 
     def test_timezone_warn(self, conn, caplog):
         conn.execute("set timezone to 'FOOBAR0'")

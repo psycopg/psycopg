@@ -2,6 +2,7 @@ import pytest
 
 import psycopg
 from psycopg.conninfo import conninfo_to_dict
+from psycopg.rows import Row
 
 pytestmark = [pytest.mark.dns]
 
@@ -46,7 +47,9 @@ async def test_resolve_hostaddr_async_no_resolve(
         for k, v in env.items():
             monkeypatch.setenv(k, v)
     params = conninfo_to_dict(conninfo)
-    params = await psycopg._dns.resolve_hostaddr_async(params)
+    params = await psycopg._dns.resolve_hostaddr_async(  # type: ignore[attr-defined]
+        params
+    )
     assert conninfo_to_dict(want) == params
 
 
@@ -93,7 +96,9 @@ async def test_resolve_hostaddr_async_no_resolve(
 @pytest.mark.asyncio
 async def test_resolve_hostaddr_async(conninfo, want, env, fake_resolve):
     params = conninfo_to_dict(conninfo)
-    params = await psycopg._dns.resolve_hostaddr_async(params)
+    params = await psycopg._dns.resolve_hostaddr_async(  # type: ignore[attr-defined]
+        params
+    )
     assert conninfo_to_dict(want) == params
 
 
@@ -114,8 +119,10 @@ async def test_resolve_hostaddr_async_bad(
         for k, v in env.items():
             monkeypatch.setenv(k, v)
     params = conninfo_to_dict(conninfo)
-    with pytest.raises((TypeError, psycopg.Error)):
-        await psycopg._dns.resolve_hostaddr_async(params)
+    with pytest.raises(psycopg.Error):
+        await psycopg._dns.resolve_hostaddr_async(  # type: ignore[attr-defined]
+            params
+        )
 
 
 @pytest.mark.asyncio
@@ -131,11 +138,15 @@ async def test_resolve_hostaddr_conn(monkeypatch, fake_resolve):
     )
 
     # TODO: not enabled by default, but should be usable to make a subclass
-    class AsyncDnsConnection(psycopg.AsyncConnection):
+    class AsyncDnsConnection(psycopg.AsyncConnection[Row]):
         @classmethod
         async def _get_connection_params(cls, conninfo, **kwargs):
             params = await super()._get_connection_params(conninfo, **kwargs)
-            params = await psycopg._dns.resolve_hostaddr_async(params)
+            params = await (
+                psycopg._dns.resolve_hostaddr_async(  # type: ignore[attr-defined]
+                    params
+                )
+            )
             return params
 
     with pytest.raises(ZeroDivisionError):
@@ -167,7 +178,11 @@ def fake_resolve(monkeypatch):
         else:
             return [dns.rdtypes.IN.A.A("IN", "A", addr)]
 
-    monkeypatch.setattr(psycopg._dns.async_resolver, "resolve", fake_resolve_)
+    monkeypatch.setattr(
+        psycopg._dns.async_resolver,  # type: ignore[attr-defined]
+        "resolve",
+        fake_resolve_,
+    )
 
 
 @pytest.fixture
@@ -177,7 +192,11 @@ def fail_resolve(monkeypatch):
     async def fail_resolve_(qname):
         pytest.fail(f"shouldn't try to resolve {qname}")
 
-    monkeypatch.setattr(psycopg._dns.async_resolver, "resolve", fail_resolve_)
+    monkeypatch.setattr(
+        psycopg._dns.async_resolver,  # type: ignore[attr-defined]
+        "resolve",
+        fail_resolve_,
+    )
 
 
 def import_dnspython():

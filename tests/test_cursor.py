@@ -2,6 +2,7 @@ import gc
 import pickle
 import weakref
 import datetime as dt
+from typing import List, Union
 
 import pytest
 
@@ -9,6 +10,7 @@ import psycopg
 from psycopg import pq, sql, rows
 from psycopg.adapt import PyFormat
 from psycopg.postgres import types as builtins
+from psycopg.rows import RowMaker
 
 from .utils import gc_collect
 
@@ -343,8 +345,9 @@ def test_rownumber(conn):
     assert cur.rownumber == 2
     cur.fetchmany(10)
     assert cur.rownumber == 12
-    rns = []
+    rns: List[int] = []
     for i in cur:
+        assert cur.rownumber
         rns.append(cur.rownumber)
         if len(rns) >= 3:
             break
@@ -470,6 +473,7 @@ def test_query_params_execute(conn):
     assert cur._query is None
 
     cur.execute("select %t, %s::text", [1, None])
+    assert cur._query is not None
     assert cur._query.query == b"select $1, $2::text"
     assert cur._query.params == [b"1", None]
 
@@ -743,7 +747,9 @@ def test_leak(dsn, faker, fmt, fmt_out, fetch, row_factory, retries):
             ), f"objects leaked: {n[1] - n[0]}, {n[2] - n[1]}"
 
 
-def my_row_factory(cursor):
+def my_row_factory(
+    cursor: Union[psycopg.Cursor[List[str]], psycopg.AsyncCursor[List[str]]]
+) -> RowMaker[List[str]]:
     if cursor.description is not None:
         titles = [c.name for c in cursor.description]
 

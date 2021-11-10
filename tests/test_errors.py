@@ -1,4 +1,5 @@
 import pickle
+from typing import List
 from weakref import ref
 
 import pytest
@@ -34,7 +35,8 @@ def test_diag_right_attr(pgconn, monkeypatch):
     res = pgconn.make_empty_result(pq.ExecStatus.NONFATAL_ERROR)
     diag = e.Diagnostic(res)
 
-    checked = []
+    to_check: pq.DiagnosticField
+    checked: List[pq.DiagnosticField] = []
 
     def check_val(self, v):
         nonlocal to_check
@@ -62,7 +64,7 @@ def test_diag_attr_values(conn):
         cur.execute("insert into test_exc values(2)")
     diag = exc.value.diag
     assert diag.sqlstate == "23514"
-    assert diag.schema_name[:7] == "pg_temp"
+    assert diag.schema_name and diag.schema_name[:7] == "pg_temp"
     assert diag.table_name == "test_exc"
     assert diag.constraint_name == "chk_eq1"
     if conn.pgconn.server_version >= 90600:
@@ -97,7 +99,7 @@ def test_error_encoding(conn, enc):
         )
 
     diag = excinfo.value.diag
-    assert f'"{eur}"' in diag.message_primary
+    assert diag.message_primary and f'"{eur}"' in diag.message_primary
     assert diag.sqlstate == "42P01"
 
 
@@ -235,6 +237,7 @@ def test_query_context(conn):
 
     s = str(exc.value)
     assert "from wat" in s, s
+    assert exc.value.diag.message_primary
     assert exc.value.diag.message_primary in s
     assert "ERROR" not in s
     assert not s.endswith("\n")

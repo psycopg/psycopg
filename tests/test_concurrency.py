@@ -10,6 +10,7 @@ import pytest
 import selectors
 import threading
 import subprocess as sp
+from typing import List
 
 import psycopg
 
@@ -40,7 +41,7 @@ def test_commit_concurrency(conn):
     # Check the condition reported in psycopg2#103
     # Because of bad status check, we commit even when a commit is already on
     # its way. We can detect this condition by the warnings.
-    notices = queue.Queue()
+    notices = queue.Queue()  # type: ignore[var-annotated]
     conn.add_notice_handler(lambda diag: notices.put(diag.message_primary))
     stop = False
 
@@ -158,7 +159,7 @@ def test_cancel(conn, retries):
 
     for retry in retries:
         with retry:
-            errors = []
+            errors: List[Exception] = []
 
             cur = conn.cursor()
             t = threading.Thread(target=canceller)

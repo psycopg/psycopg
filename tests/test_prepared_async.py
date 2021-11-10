@@ -165,9 +165,9 @@ async def test_evict_lru_deallocate(aconn):
         await aconn.execute(f"select {i}")
 
     assert len(aconn._prepared._prepared) == 5
-    for i in [9, 8, 7, 6, "'a'"]:
+    for j in [9, 8, 7, 6, "'a'"]:
         assert aconn._prepared._prepared[
-            f"select {i}".encode(), ()
+            f"select {j}".encode(), ()
         ].startswith(b"_pg3_")
 
     cur = await aconn.execute(

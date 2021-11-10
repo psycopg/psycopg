@@ -19,13 +19,7 @@ files = [
     "psycopg/psycopg",
     "psycopg_pool/psycopg_pool",
     "psycopg_c/psycopg_c",
-    "tests/dbapi20.py",
-    "tests/pool",
-    "tests/pq",
-    "tests/scripts",
-    "tests/test_psycopg_dbapi20.py",
-    "tests/test_sql.py",
-    "tests/types",
+    "tests",
 ]
 warn_unused_ignores = true
 show_error_codes = true
@@ -35,6 +29,14 @@ strict = true
 module = [
     "shapely.*",
 ]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "tenacity.*"
+implicit_reexport = true
+
+[[tool.mypy.overrides]]
+module = "uvloop"
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]

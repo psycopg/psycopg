@@ -45,6 +45,7 @@ def test_query_params(conn):
     with conn.cursor("foo") as cur:
         assert cur._query is None
         cur.execute("select generate_series(1, %s) as bar", (3,))
+        assert cur._query
         assert b"declare" in cur._query.query.lower()
         assert b"(1, $1)" in cur._query.query.lower()
         assert cur._query.params == [bytes([0, 3])]  # 3 as binary int2
