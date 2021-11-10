@@ -104,7 +104,7 @@ Shortcuts
 The pattern above is familiar to `!psycopg2` users. However, Psycopg 3 also
 exposes a few simple extensions which make the above pattern leaner:
 
-- the `Connection` objects exposes a `~Connection.execute()` method,
+- the `Connection` objects exposes an `~Connection.execute()` method,
   equivalent to creating a cursor, calling its `~Cursor.execute()` method, and
   returning it.
 
