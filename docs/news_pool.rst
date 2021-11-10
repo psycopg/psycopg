@@ -1,0 +1,23 @@
+.. currentmodule:: psycopg_pool
+
+.. index::
+    single: Release notes
+    single: News
+
+``psycopg_pool`` release notes
+==============================
+
+Current release
+---------------
+
+psycopg_pool 3.0.1
+^^^^^^^^^^^^^^^^^^
+
+- Don't leave connections idle in transaction after calling
+  `~ConnectionPool.check()` (:ticket:`#144`).
+
+
+psycopg_pool 3.0
+----------------
+
+- First release on PyPI.
