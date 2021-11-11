@@ -103,7 +103,6 @@ def test_pipeline_processed_at_exit(conn):
         assert len(pipeline) == 3
 
     assert len(pipeline) == 0
-    assert cur.fetchone() == (1,)
 
 
 def test_pipeline(conn):

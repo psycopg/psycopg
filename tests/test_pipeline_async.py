@@ -107,7 +107,6 @@ async def test_pipeline_processed_at_exit(aconn):
         assert len(pipeline) == 3
 
     assert len(pipeline) == 0
-    assert await cur.fetchone() == (1,)
 
 
 async def test_pipeline(aconn):
