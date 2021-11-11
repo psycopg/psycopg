@@ -16,9 +16,11 @@ set -euo pipefail
 set -x
 
 wheel=$(realpath "$1")
+shift
+
 tmpdir=$(mktemp -d)
 trap "rm -r ${tmpdir}" EXIT
 
 unzip -d "${tmpdir}" "${wheel}"
-find "${tmpdir}" -name \*.so | xargs strip
+find "${tmpdir}" -name \*.so | xargs strip "$@"
 (cd "${tmpdir}" && zip -fr ${wheel} *)
