@@ -119,29 +119,27 @@ async def wait_async(gen: PQGen[RV], fileno: int) -> RV:
 
     def wakeup(state: Ready) -> None:
         nonlocal ready
-        ready = state
+        ready |= state  # type: ignore[assignment]
         ev.set()
 
     try:
         s = next(gen)
         while 1:
+            reader = s & Wait.R
+            writer = s & Wait.W
+            if not reader and not writer:
+                raise e.InternalError(f"bad poll status: {s}")
             ev.clear()
-            if s == Wait.R:
+            ready = 0  # type: ignore[assignment]
+            if reader:
                 loop.add_reader(fileno, wakeup, Ready.R)
-                await ev.wait()
-                loop.remove_reader(fileno)
-            elif s == Wait.W:
+            if writer:
                 loop.add_writer(fileno, wakeup, Ready.W)
-                await ev.wait()
-                loop.remove_writer(fileno)
-            elif s == Wait.RW:
-                loop.add_reader(fileno, wakeup, Ready.R)
-                loop.add_writer(fileno, wakeup, Ready.W)
-                await ev.wait()
+            await ev.wait()
+            if reader:
                 loop.remove_reader(fileno)
+            if writer:
                 loop.remove_writer(fileno)
-            else:
-                raise e.InternalError("bad poll status: %s")
             s = gen.send(ready)
 
     except StopIteration as ex:
@@ -180,23 +178,21 @@ async def wait_conn_async(
     try:
         fileno, s = next(gen)
         while 1:
+            reader = s & Wait.R
+            writer = s & Wait.W
+            if not reader and not writer:
+                raise e.InternalError(f"bad poll status: {s}")
             ev.clear()
-            if s == Wait.R:
+            ready = 0  # type: ignore[assignment]
+            if reader:
                 loop.add_reader(fileno, wakeup, Ready.R)
-                await wait_for(ev.wait(), timeout)
-                loop.remove_reader(fileno)
-            elif s == Wait.W:
+            if writer:
                 loop.add_writer(fileno, wakeup, Ready.W)
-                await wait_for(ev.wait(), timeout)
-                loop.remove_writer(fileno)
-            elif s == Wait.RW:
-                loop.add_reader(fileno, wakeup, Ready.R)
-                loop.add_writer(fileno, wakeup, Ready.W)
-                await wait_for(ev.wait(), timeout)
+            await wait_for(ev.wait(), timeout)
+            if reader:
                 loop.remove_reader(fileno)
+            if writer:
                 loop.remove_writer(fileno)
-            else:
-                raise e.InternalError("bad poll status: %s")
             fileno, s = gen.send(ready)
 
     except TimeoutError:
