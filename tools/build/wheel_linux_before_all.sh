@@ -11,10 +11,10 @@ set -x
 # Install PostgreSQL development files.
 case "$ID" in
     alpine)
-        # zip is required by strip_wheel.sh
         # tzdata is required for datetime tests.
-        apk add --no-cache postgresql-dev tzdata zip
+        apk add --no-cache postgresql-dev tzdata
         ;;
+
     debian)
         # Note that the pgdg doesn't have an aarch64 repository so wheels are
         # build with the libpq packaged with Debian 9, which is 9.6.
@@ -28,9 +28,9 @@ case "$ID" in
                 > /etc/apt/trusted.gpg.d/postgresql.asc
         fi
         apt-get update
-        # zip is required by strip_wheel.sh
-        apt-get -y install libpq-dev zip
+        apt-get -y install libpq-dev
         ;;
+
     *)
         echo "Unexpected Linux distribution: '$ID'" >&2
         exit 1
