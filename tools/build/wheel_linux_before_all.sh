@@ -12,6 +12,7 @@ set -x
 case "$ID" in
     alpine)
         # tzdata is required for datetime tests.
+        apk update
         apk add --no-cache postgresql-dev tzdata
         ;;
 
