@@ -5,8 +5,7 @@ on:
 
 jobs:
 
-  source:  # {{{
-    name: Build sdist packages
+  sdist:  # {{{
     runs-on: ubuntu-20.04
 
     strategy:
@@ -85,7 +84,6 @@ jobs:
   # }}}
 
   linux:  # {{{
-    name: Build Linux packages
     runs-on: ubuntu-20.04
 
     strategy:
@@ -151,7 +149,6 @@ jobs:
   # }}}
 
   macos:  # {{{
-    name: Build MacOS packages
     runs-on: macos-10.15
 
     strategy:
@@ -189,7 +186,6 @@ jobs:
   # }}}
 
   windows:  # {{{
-    name: Build Windows packages
     runs-on: windows-2019
 
     strategy:
