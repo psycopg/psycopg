@@ -214,7 +214,7 @@ jobs:
         env:
           CIBW_BUILD: ${{matrix.pyver}}-${{matrix.arch}}
           CIBW_ARCHS_WINDOWS: AMD64 x86
-          CIBW_BEFORE_BUILD_WINDOWS: pip install delvewheel
+          CIBW_BEFORE_BUILD_WINDOWS: '.\tools\build\wheel_win32_before_build.bat'
           CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: >-
             delvewheel repair -w {dest_dir}
             --no-mangle "libiconv-2.dll;libwinpthread-1.dll" {wheel}
