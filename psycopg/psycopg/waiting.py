@@ -135,11 +135,13 @@ async def wait_async(gen: PQGen[RV], fileno: int) -> RV:
                 loop.add_reader(fileno, wakeup, Ready.R)
             if writer:
                 loop.add_writer(fileno, wakeup, Ready.W)
-            await ev.wait()
-            if reader:
-                loop.remove_reader(fileno)
-            if writer:
-                loop.remove_writer(fileno)
+            try:
+                await ev.wait()
+            finally:
+                if reader:
+                    loop.remove_reader(fileno)
+                if writer:
+                    loop.remove_writer(fileno)
             s = gen.send(ready)
 
     except StopIteration as ex:
@@ -188,11 +190,13 @@ async def wait_conn_async(
                 loop.add_reader(fileno, wakeup, Ready.R)
             if writer:
                 loop.add_writer(fileno, wakeup, Ready.W)
-            await wait_for(ev.wait(), timeout)
-            if reader:
-                loop.remove_reader(fileno)
-            if writer:
-                loop.remove_writer(fileno)
+            try:
+                await wait_for(ev.wait(), timeout)
+            finally:
+                if reader:
+                    loop.remove_reader(fileno)
+                if writer:
+                    loop.remove_writer(fileno)
             fileno, s = gen.send(ready)
 
     except TimeoutError:
