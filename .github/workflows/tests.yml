@@ -13,19 +13,19 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - {impl: python, python: "3.6", postgres: "postgres:10", libpq: "14"}
-          - {impl: python, python: "3.7", postgres: "postgres:11", libpq: null}
-          - {impl: python, python: "3.8", postgres: "postgres:12", libpq: null}
-          # Don't test two experimental things together
-          - {impl: python, python: "3.9", postgres: "postgres:14", libpq: "14"}
-          - {impl: python, python: "3.10", postgres: "postgres:13", libpq: null}
-          - {impl: c, python: "3.6", postgres: "postgres:14", libpq: null}
-          - {impl: c, python: "3.7", postgres: "postgres:13", libpq: "14"}
-          - {impl: c, python: "3.8", postgres: "postgres:12", libpq: "14"}
-          - {impl: c, python: "3.9", postgres: "postgres:11", libpq: "14"}
-          - {impl: c, python: "3.10", postgres: "postgres:10", libpq: null}
-          - {impl: dns, python: "3.9", postgres: "postgres:13", libpq: null}
-          - {impl: postgis, python: "3.9", postgres: "postgis/postgis:13-master", libpq: null}
+          # Test different combinations of Python, Postgres, libpq.
+          - {impl: python, python: "3.6", postgres: "postgres:10", libpq: "newest"}
+          - {impl: python, python: "3.7", postgres: "postgres:11", libpq: ""}
+          - {impl: python, python: "3.8", postgres: "postgres:12", libpq: ""}
+          - {impl: python, python: "3.9", postgres: "postgres:13", libpq: "newest"}
+          - {impl: python, python: "3.10", postgres: "postgres:14", libpq: "oldest"}
+          - {impl: c, python: "3.6", postgres: "postgres:14", libpq: "oldest"}
+          - {impl: c, python: "3.7", postgres: "postgres:13", libpq: ""}
+          - {impl: c, python: "3.8", postgres: "postgres:12", libpq: "newest"}
+          - {impl: c, python: "3.9", postgres: "postgres:11", libpq: ""}
+          - {impl: c, python: "3.10", postgres: "postgres:10", libpq: "oldest"}
+          - {impl: dns, python: "3.9", postgres: "postgres:14", libpq: ""}
+          - {impl: postgis, python: "3.9", postgres: "postgis/postgis", libpq: ""}
 
     env:
       PSYCOPG_IMPL: ${{ matrix.impl }}
@@ -39,14 +39,26 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
 
-      - name: Install libpq 14
-        if: ${{ matrix.libpq == '14' }}
+      - name: Install the newest libpq version available
+        if: ${{ matrix.libpq == 'newest' }}
         run: |
+          set -x
           rel=$(lsb_release -c -s)
           echo "deb http://apt.postgresql.org/pub/repos/apt ${rel}-pgdg main" \
             | sudo tee -a /etc/apt/sources.list.d/pgdg.list
           sudo apt-get -qq update
-          sudo apt-get -y install libpq-dev>=14 libpq5>=14
+          pqver=$(apt-cache show libpq5  | grep ^Version: | head -1 \
+            | awk '{print $2}')
+          sudo apt-get -qq -y install "libpq-dev=${pqver}" "libpq5=${pqver}"
+
+      - name: Install the oldest libpq version available
+        if: ${{ matrix.libpq == 'oldest' }}
+        run: |
+          set -x
+          pqver=$(apt-cache show libpq5  | grep ^Version: | tail -1 \
+            | awk '{print $2}')
+          sudo apt-get -qq -y --allow-downgrades install \
+            "libpq-dev=${pqver}" "libpq5=${pqver}"
 
       - name: Install tox
         run: pip install tox
