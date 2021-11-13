@@ -42,7 +42,9 @@ jobs:
       - name: Install libpq 14
         if: ${{ matrix.libpq == '14' }}
         run: |
-          echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -c -s)-pgdg main" | sudo tee -a /etc/apt/sources.list.d/pgdg.list
+          rel=$(lsb_release -c -s)
+          echo "deb http://apt.postgresql.org/pub/repos/apt ${rel}-pgdg main" \
+            | sudo tee -a /etc/apt/sources.list.d/pgdg.list
           sudo apt-get -qq update
           sudo apt-get -y install libpq-dev>=14 libpq5>=14
 
@@ -50,26 +52,32 @@ jobs:
         run: pip install tox
 
       - name: Run tests (Python implementation)
-        run: tox -c psycopg -e ${{ matrix.python }} -- --color yes
         if: ${{ matrix.impl == 'python' }}
+        run: >
+          tox -c psycopg -e ${{ matrix.python }} --
+          --color yes -W error
 
       - name: Run tests (C implementation)
-        run: tox -c psycopg_c -e ${{ matrix.python }} -- --color yes
         if: ${{ matrix.impl == 'c' }}
-        env:
-          # skip tests failing on importing psycopg_c.pq on subprocess
-          # they only fail on Travis, work ok locally under tox too.
-          PYTEST_ADDOPTS: "-m 'not subprocess'"
+        # skip tests failing on importing psycopg_c.pq on subprocess
+        # they only fail on Travis, work ok locally under tox too.
+        run: >
+          tox -c psycopg_c -e ${{ matrix.python }} --
+          --color yes -W error -m 'not subprocess'
 
       - name: Run DNS-related tests
-        run: tox -c psycopg -e dns -- --color yes -m dns
         if: ${{ matrix.impl == 'dns' }}
+        run: >
+          tox -c psycopg -e dns --
+          --color yes -W error -m dns
         env:
           PSYCOPG_IMPL: python
 
       - name: Run PostGIS-related tests
-        run: tox -c psycopg -e postgis -- --color yes -m postgis
         if: ${{ matrix.impl == 'postgis' }}
+        run: >
+          tox -c psycopg -e postgis --
+          --color yes -W error -m postgis
         env:
           PSYCOPG_IMPL: python
 
@@ -133,12 +141,16 @@ jobs:
         run: pip install tox
 
       - name: Run tests (Python implementation)
-        run: tox -c psycopg -e ${{ matrix.python }} -- --color yes
         if: ${{ matrix.impl == 'python' }}
+        run: >
+          tox -c psycopg -e ${{ matrix.python }} --
+          --color yes -W error
 
       - name: Run tests (C implementation)
-        run: tox -c psycopg_c -e ${{ matrix.python }} -- --color yes
         if: ${{ matrix.impl == 'c' }}
+        run: >
+          tox -c psycopg_c -e ${{ matrix.python }} --
+          --color yes -W error
 
 
   # }}}
@@ -183,7 +195,9 @@ jobs:
 
       - name: Run tests (Python implementation)
         if: ${{ matrix.impl == 'python' }}
-        run: tox -c psycopg -e ${{ matrix.python }} -- --color yes
+        run: >
+          tox -c psycopg -e ${{ matrix.python }} --
+          --color yes -W error
 
       # Build a wheel package of the C extensions.
       # If the wheel is not delocated, import fails with some dll not found
@@ -194,7 +208,9 @@ jobs:
           $env:Path = "C:\Program Files\PostgreSQL\14\bin\;$env:Path"
           python ./psycopg_c/setup.py bdist_wheel
           pip install delvewheel
-          &"delvewheel" repair --no-mangle "libiconv-2.dll;libwinpthread-1.dll" @(Get-ChildItem psycopg_c\dist\*.whl)
+          &"delvewheel" repair `
+            --no-mangle "libiconv-2.dll;libwinpthread-1.dll" `
+            @(Get-ChildItem psycopg_c\dist\*.whl)
 
       # tox will only build the package from sdist, not from wheel, so we can't
       # use it for testing. Just test everything in the global installation.
@@ -205,7 +221,7 @@ jobs:
           &"pip" install @(Get-ChildItem wheelhouse\*.whl)
           # Fix the path for the tests using ctypes
           $env:Path = "C:\Program Files\PostgreSQL\14\bin\;$env:Path"
-          pytest --color yes
+          pytest --color yes -W error
 
 
   # }}}
