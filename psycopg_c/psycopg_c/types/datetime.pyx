@@ -808,7 +808,7 @@ cdef class TimestamptzLoader(_BaseTimestamptzLoader):
 
     cdef object _cload_notimpl(self, const char *data, size_t length):
         s = bytes(data)[:length].decode("utf8", "replace")
-        ds = _get_datestyle(self.connection).decode("ascii")
+        ds = _get_datestyle(self._pgconn).decode()
         raise NotImplementedError(
             f"can't parse timestamptz with DateStyle {ds!r}: {s!r}"
         )
@@ -965,7 +965,7 @@ cdef class IntervalLoader(CLoader):
 
     cdef object _cload_notimpl(self, const char *data, size_t length):
         s = bytes(data).decode("utf8", "replace")
-        style = _get_intervalstyle(self.connection).decode("ascii")
+        style = _get_intervalstyle(self._pgconn).decode()
         raise NotImplementedError(
             f"can't parse interval with IntervalStyle {style!r}: {s!r}"
         )
@@ -1118,7 +1118,12 @@ cdef object _timezone_from_connection(pq.PGconn pgconn, __cache={}):
     sname = tzname.decode() if tzname else "UTC"
     try:
         zi = ZoneInfo(sname)
-    except KeyError:
+    # Usually KeyError, but might be a DeprecationWarning raised by -Werror
+    # (experienced on Python 3.6.12, backport.zoneinfo 0.2.1).
+    # https://github.com/pganssle/zoneinfo/issues/109
+    # Curiously, not trapping the latter, causes a segfault.
+    # In such case the error message is wrong, but hey.
+    except Exception:
         logger = logging.getLogger("psycopg")
         logger.warning(
             "unknown PostgreSQL timezone: %r; will use UTC", sname
