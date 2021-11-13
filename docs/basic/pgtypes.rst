@@ -203,7 +203,7 @@ sequence of `~psycopg.types.range.Range` elements.
     `!Multirange` objects are a `~collections.abc.MutableSequence` and are
     totally ordered: they behave pretty much like a list of `!Range`. Like
     Range, they are `~typing.Generic` on the subtype of their range, so you
-    can declare a variable to be `!Multitype[date]` and mypy will complain if
+    can declare a variable to be `!Multirange[date]` and mypy will complain if
     you try to add it a `Range[Decimal]`.
 
 Like for `~psycopg.types.range.Range`, built-in multirange objects are adapted
