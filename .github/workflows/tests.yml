@@ -53,17 +53,21 @@ jobs:
 
       - name: Run tests (Python implementation)
         if: ${{ matrix.impl == 'python' }}
+        # The zoneinfo warning ignore is only required on Python 3.6
         run: >
           tox -c psycopg -e ${{ matrix.python }} --
           --color yes -W error
+          -W ignore::DeprecationWarning:backports.zoneinfo._common
 
       - name: Run tests (C implementation)
         if: ${{ matrix.impl == 'c' }}
         # skip tests failing on importing psycopg_c.pq on subprocess
         # they only fail on Travis, work ok locally under tox too.
+        # The zoneinfo warning ignore is only required on Python 3.6
         run: >
           tox -c psycopg_c -e ${{ matrix.python }} --
           --color yes -W error -m 'not subprocess'
+          -W ignore::DeprecationWarning:backports.zoneinfo._common
 
       - name: Run DNS-related tests
         if: ${{ matrix.impl == 'dns' }}
@@ -142,15 +146,18 @@ jobs:
 
       - name: Run tests (Python implementation)
         if: ${{ matrix.impl == 'python' }}
+        # The zoneinfo warning ignore is only required on Python 3.6
         run: >
           tox -c psycopg -e ${{ matrix.python }} --
           --color yes -W error
+          -W ignore::DeprecationWarning:backports.zoneinfo._common
 
       - name: Run tests (C implementation)
         if: ${{ matrix.impl == 'c' }}
         run: >
           tox -c psycopg_c -e ${{ matrix.python }} --
           --color yes -W error
+          -W ignore::DeprecationWarning:backports.zoneinfo._common
 
 
   # }}}
