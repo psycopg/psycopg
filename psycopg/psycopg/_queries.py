@@ -63,8 +63,12 @@ class PostgresQuery:
         The results of this function can be obtained accessing the object
         attributes (`query`, `params`, `types`, `formats`).
         """
-        if isinstance(query, Composable):
-            query = query.as_bytes(self._tx)
+        if isinstance(query, str):
+            bquery = query.encode(self._encoding)
+        elif isinstance(query, Composable):
+            bquery = query.as_bytes(self._tx)
+        else:
+            bquery = query
 
         if vars is not None:
             (
@@ -72,11 +76,9 @@ class PostgresQuery:
                 self._want_formats,
                 self._order,
                 self._parts,
-            ) = _query2pg(query, self._encoding)
+            ) = _query2pg(bquery, self._encoding)
         else:
-            if isinstance(query, str):
-                query = query.encode(self._encoding)
-            self.query = query
+            self.query = bquery
             self._want_formats = self._order = None
 
         self.dump(vars)
@@ -103,7 +105,7 @@ class PostgresQuery:
 
 @lru_cache()
 def _query2pg(
-    query: Union[bytes, str], encoding: str
+    query: bytes, encoding: str
 ) -> Tuple[bytes, List[PyFormat], Optional[List[str]], List[QueryPart]]:
     """
     Convert Python query and params into something Postgres understands.
@@ -115,15 +117,6 @@ def _query2pg(
       (sequence of names used in the query, in the position they appear)
       ``parts`` (splits of queries and placeholders).
     """
-    if isinstance(query, str):
-        query = query.encode(encoding)
-    if not isinstance(query, bytes):
-        # encoding from str already happened
-        raise TypeError(
-            f"the query should be str or bytes,"
-            f" got {type(query).__name__} instead"
-        )
-
     parts = _split_query(query, encoding)
     order: Optional[List[str]] = None
     chunks: List[bytes] = []

@@ -251,7 +251,7 @@ class TestConnectionInfo:
 
     def test_encoding(self, conn):
         enc = conn.execute("show client_encoding").fetchone()[0]
-        assert conn.info.encoding == pg2pyenc(enc)
+        assert conn.info.encoding == pg2pyenc(enc.encode())
 
     @pytest.mark.parametrize(
         "enc, out, codec",
