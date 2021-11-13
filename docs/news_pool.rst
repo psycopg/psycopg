@@ -10,6 +10,12 @@
 Current release
 ---------------
 
+psycopg_pool 3.0.2
+^^^^^^^^^^^^^^^^^^
+
+- Remove dependency on the internal `!psycopg._compat` module.
+
+
 psycopg_pool 3.0.1
 ^^^^^^^^^^^^^^^^^^
 
