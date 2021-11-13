@@ -12,17 +12,20 @@ async def test_funny_name(aconn):
     await cur.execute("select generate_series(1, 3) as bar")
     assert await cur.fetchall() == [(1,), (2,), (3,)]
     assert cur.name == "1-2-3"
+    await cur.close()
 
 
 async def test_repr(aconn):
     cur = aconn.cursor("my-name")
     assert "AsyncServerCursor" in repr(cur)
     assert "my-name" in repr(cur)
+    await cur.close()
 
 
 async def test_connection(aconn):
     cur = aconn.cursor("foo")
     assert cur.connection is aconn
+    await cur.close()
 
 
 async def test_description(aconn):
@@ -33,14 +36,17 @@ async def test_description(aconn):
     assert cur.description[0].name == "bar"
     assert cur.description[0].type_code == cur.adapters.types["int4"].oid
     assert cur.pgresult.ntuples == 0
+    await cur.close()
 
 
 async def test_format(aconn):
     cur = aconn.cursor("foo")
     assert cur.format == Format.TEXT
+    await cur.close()
 
     cur = aconn.cursor("foo", binary=True)
     assert cur.format == Format.BINARY
+    await cur.close()
 
 
 async def test_query_params(aconn):
@@ -62,6 +68,7 @@ async def test_binary_cursor_execute(aconn):
     assert (await cur.fetchone()) == (2,)
     assert cur.pgresult.fformat(0) == 1
     assert cur.pgresult.get_value(0, 0) == b"\x00\x00\x00\x02"
+    await cur.close()
 
 
 async def test_execute_binary(aconn):
@@ -78,6 +85,7 @@ async def test_execute_binary(aconn):
     assert (await cur.fetchone()) == (1,)
     assert cur.pgresult.fformat(0) == 0
     assert cur.pgresult.get_value(0, 0) == b"1"
+    await cur.close()
 
 
 async def test_binary_cursor_text_override(aconn):
@@ -94,6 +102,7 @@ async def test_binary_cursor_text_override(aconn):
     assert (await cur.fetchone()) == (1,)
     assert cur.pgresult.fformat(0) == 1
     assert cur.pgresult.get_value(0, 0) == b"\x00\x00\x00\x01"
+    await cur.close()
 
 
 async def test_close(aconn, recwarn, retries):
@@ -254,12 +263,14 @@ async def test_execute_error(aconn, stmt):
     cur = aconn.cursor("foo")
     with pytest.raises(e.ProgrammingError):
         await cur.execute(stmt)
+    await cur.close()
 
 
 async def test_executemany(aconn):
     cur = aconn.cursor("foo")
     with pytest.raises(e.NotSupportedError):
         await cur.executemany("select %s", [(1,), (2,)])
+    await cur.close()
 
 
 async def test_fetchone(aconn):
@@ -329,6 +340,7 @@ async def test_row_factory(aconn):
     await cur.scroll(0, "absolute")
     cur.row_factory = dict_row
     assert await cur.fetchone() == {"x": 1}
+    await cur.close()
 
 
 async def test_rownumber(aconn):
@@ -346,6 +358,7 @@ async def test_rownumber(aconn):
     assert cur.rownumber == 12
     await cur.fetchall()
     assert cur.rownumber == 42
+    await cur.close()
 
 
 async def test_iter(aconn):
@@ -392,6 +405,7 @@ async def test_cant_scroll_by_default(aconn):
     assert cur.scrollable is None
     with pytest.raises(e.ProgrammingError):
         await cur.scroll(0)
+    await cur.close()
 
 
 async def test_scroll(aconn):
@@ -408,6 +422,7 @@ async def test_scroll(aconn):
 
     with pytest.raises(ValueError):
         await cur.scroll(9, mode="wat")
+    await cur.close()
 
 
 async def test_scrollable(aconn):
@@ -419,6 +434,7 @@ async def test_scrollable(aconn):
         await curs.scroll(-1)
         assert i == (await curs.fetchone())[0]
         await curs.scroll(-1)
+    await curs.close()
 
 
 async def test_non_scrollable(aconn):
@@ -428,6 +444,7 @@ async def test_non_scrollable(aconn):
     await curs.scroll(5)
     with pytest.raises(e.OperationalError):
         await curs.scroll(-1)
+    await curs.close()
 
 
 @pytest.mark.parametrize("kwargs", [{}, {"withhold": False}])
@@ -461,6 +478,7 @@ async def test_steal_cursor(aconn):
     assert await cur2.fetchone() == (1,)
     assert await cur2.fetchmany(3) == [(2,), (3,), (4,)]
     assert await cur2.fetchall() == [(5,), (6,)]
+    await cur2.close()
 
 
 async def test_stolen_cursor_close(aconn):

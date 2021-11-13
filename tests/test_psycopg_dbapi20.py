@@ -130,8 +130,9 @@ def test_connect_args(monkeypatch, pgconn, args, kwargs, want):
         yield
 
     monkeypatch.setattr(psycopg.connection, "connect", fake_connect)
-    psycopg.connect(*args, **kwargs)
+    conn = psycopg.connect(*args, **kwargs)
     assert conninfo_to_dict(the_conninfo) == conninfo_to_dict(want)
+    conn.close()
 
 
 @pytest.mark.parametrize(

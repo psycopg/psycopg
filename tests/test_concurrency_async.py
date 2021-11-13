@@ -158,3 +158,6 @@ async def test_identify_closure(dsn, retries):
                 await aconn.execute("select 1")
             t1 = time.time()
             assert 0.3 < t1 - t0 < 0.6
+
+            await aconn.close()
+            await conn2.close()

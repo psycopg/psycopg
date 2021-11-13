@@ -10,6 +10,12 @@
 Current release
 ---------------
 
+Psycopg 3.0.4
+^^^^^^^^^^^^^
+
+- Allow to use the module with strict strings comparison (:ticket:`#147`).
+
+
 Psycopg 3.0.3
 ^^^^^^^^^^^^^
 

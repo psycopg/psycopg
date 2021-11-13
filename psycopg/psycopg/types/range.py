@@ -455,7 +455,7 @@ def load_range_text(
     if item is None:
         item = m.group(4)
         if item is not None:
-            upper = load(_re_undouble.sub(r"\1", item))
+            upper = load(_re_undouble.sub(rb"\1", item))
     else:
         upper = load(item)
 

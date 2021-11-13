@@ -24,6 +24,7 @@ async def test_connect(dsn):
     conn = await AsyncConnection.connect(dsn)
     assert not conn.closed
     assert conn.pgconn.status == conn.ConnStatus.OK
+    await conn.close()
 
 
 async def test_connect_bad():
@@ -38,6 +39,7 @@ async def test_connect_str_subclass(dsn):
     conn = await AsyncConnection.connect(MyString(dsn))
     assert not conn.closed
     assert conn.pgconn.status == conn.ConnStatus.OK
+    await conn.close()
 
 
 @pytest.mark.slow
@@ -285,6 +287,7 @@ async def test_autocommit(aconn):
 async def test_autocommit_connect(dsn):
     aconn = await psycopg.AsyncConnection.connect(dsn, autocommit=True)
     assert aconn.autocommit
+    await aconn.close()
 
 
 async def test_autocommit_intrans(aconn):
@@ -340,8 +343,9 @@ async def test_connect_args(monkeypatch, pgconn, args, kwargs, want):
         yield
 
     monkeypatch.setattr(psycopg.connection, "connect", fake_connect)
-    await psycopg.AsyncConnection.connect(*args, **kwargs)
+    conn = await psycopg.AsyncConnection.connect(*args, **kwargs)
     assert conninfo_to_dict(the_conninfo) == conninfo_to_dict(want)
+    await conn.close()
 
 
 @pytest.mark.parametrize(
@@ -476,6 +480,7 @@ async def test_execute_binary(aconn):
 async def test_row_factory(dsn):
     defaultconn = await AsyncConnection.connect(dsn)
     assert defaultconn.row_factory is tuple_row  # type: ignore[comparison-overlap]
+    await defaultconn.close()
 
     conn = await AsyncConnection.connect(dsn, row_factory=my_row_factory)
     assert conn.row_factory is my_row_factory  # type: ignore[comparison-overlap]
@@ -496,6 +501,7 @@ async def test_row_factory(dsn):
     cur3 = await conn.execute("select 'vale'")
     r = await cur3.fetchone()
     assert r and r == ("vale",)  # type: ignore[comparison-overlap]
+    await conn.close()
 
 
 async def test_str(aconn):
@@ -661,6 +667,7 @@ async def test_connect_context_adapters(dsn):
     assert (await cur.fetchone())[0] == "hellot"  # type: ignore[index]
     cur = await conn.execute("select %b", ["hello"])
     assert (await cur.fetchone())[0] == "hellob"  # type: ignore[index]
+    await conn.close()
 
 
 async def test_connect_context_copy(dsn, aconn):
@@ -673,6 +680,7 @@ async def test_connect_context_copy(dsn, aconn):
     assert (await cur.fetchone())[0] == "hellot"  # type: ignore[index]
     cur = await aconn2.execute("select %b", ["hello"])
     assert (await cur.fetchone())[0] == "hellob"  # type: ignore[index]
+    await aconn2.close()
 
 
 @pytest.mark.skipif(sys.platform != "win32", reason="windows only test")

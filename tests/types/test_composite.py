@@ -79,7 +79,6 @@ def test_dump_builtin_empty_range(conn, fmt_in):
         f"select pg_typeof(%{fmt_in})",
         [info.python_type(10, Range(empty=True), [])],
     )
-    print(cur._query.params[0])
     assert cur.fetchone()[0] == "tmptype"
 
 

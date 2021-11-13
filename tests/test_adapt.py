@@ -73,6 +73,7 @@ def test_dump_global_ctx(dsn, global_adapters):
     assert cur.fetchone() == ("hellogb",)
     cur = conn.execute("select %t", [MyStr("hello")])
     assert cur.fetchone() == ("hellogt",)
+    conn.close()
 
 
 def test_dump_connection_ctx(conn):
@@ -209,6 +210,7 @@ def test_load_global_ctx(dsn, global_adapters):
     assert cur.fetchone() == ("hellogt",)
     cur = conn.cursor(binary=True).execute("select 'hello'::text")
     assert cur.fetchone() == ("hellogb",)
+    conn.close()
 
 
 def test_load_connection_ctx(conn):

@@ -60,7 +60,6 @@ _py_codecs = {
 }
 
 py_codecs: Dict[Union[bytes, str], str] = {}
-py_codecs.update((k, v) for k, v in _py_codecs.items())
 py_codecs.update((k.encode(), v) for k, v in _py_codecs.items())
 
 pg_codecs = {v: k.encode() for k, v in _py_codecs.items()}
@@ -79,7 +78,7 @@ def py2pgenc(name: str) -> bytes:
     return pg_codecs[codecs.lookup(name).name]
 
 
-def pg2pyenc(name: Union[bytes, str]) -> str:
+def pg2pyenc(name: bytes) -> str:
     """Convert a Python encoding name to PostgreSQL encoding name.
 
     Raise NotSupportedError if the PostgreSQL encoding is not supported by
@@ -88,6 +87,5 @@ def pg2pyenc(name: Union[bytes, str]) -> str:
     try:
         return py_codecs[name]
     except KeyError:
-        if isinstance(name, bytes):
-            name = name.decode("utf8", "replace")
-        raise NotSupportedError(f"codec not available in Python: {name!r}")
+        sname = name.decode("utf8", "replace")
+        raise NotSupportedError(f"codec not available in Python: {sname!r}")
