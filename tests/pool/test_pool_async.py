@@ -629,31 +629,44 @@ async def test_closed_putconn(dsn):
     assert conn.closed
 
 
-@pytest.mark.slow
-async def test_closed_queue(dsn, retries):
+async def test_closed_queue(dsn):
     async def w1():
         async with p.connection() as conn:
-            res = await conn.execute("select 1 from pg_sleep(0.2)")
-            assert await res.fetchone() == (1,)
+            e1.set()  # Tell w0 that w1 got a connection
+            cur = await conn.execute("select 1")
+            assert await cur.fetchone() == (1,)
+            await e2.wait()  # Wait until w0 has tested w2
         success.append("w1")
 
     async def w2():
-        with pytest.raises(pool.PoolClosed):
+        try:
             async with p.connection():
-                pass
-        success.append("w2")
+                pass  # unexpected
+        except pool.PoolClosed:
+            success.append("w2")
 
-    async for retry in retries:
-        with retry:
-            p = pool.AsyncConnectionPool(dsn, min_size=1)
-            success: List[str] = []
+    e1 = asyncio.Event()
+    e2 = asyncio.Event()
 
-            t1 = create_task(w1())
-            await asyncio.sleep(0.1)
-            t2 = create_task(w2())
-            await p.close()
-            await asyncio.gather(t1, t2)
-            assert len(success) == 2
+    p = pool.AsyncConnectionPool(dsn, min_size=1)
+    await p.wait()
+    success: List[str] = []
+
+    t1 = create_task(w1())
+    # Wait until w1 has received a connection
+    await e1.wait()
+
+    t2 = create_task(w2())
+    # Wait until w2 is in the queue
+    while not p._waiting:
+        await asyncio.sleep(0)
+
+    await p.close()
+
+    # Wait for the workers to finish
+    e2.set()
+    await asyncio.gather(t1, t2)
+    assert len(success) == 2
 
 
 @pytest.mark.slow

@@ -59,6 +59,7 @@ def test_commit_concurrency(conn):
 
     # Stop the committer thread
     stop = True
+    t1.join()
 
     assert notices.empty(), "%d notices raised" % notices.qsize()
 
