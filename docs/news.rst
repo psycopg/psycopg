@@ -14,6 +14,9 @@ Psycopg 3.0.4
 ^^^^^^^^^^^^^
 
 - Allow to use the module with strict strings comparison (:ticket:`#147`).
+- Fix segfault on Python 3.6 running in ``-W error`` mode, related to
+  `!backport.zoneinfo` `ticket #109
+  <https://github.com/pganssle/zoneinfo/issues/109>`__.
 
 
 Psycopg 3.0.3
