@@ -10,17 +10,20 @@ def test_funny_name(conn):
     cur.execute("select generate_series(1, 3) as bar")
     assert cur.fetchall() == [(1,), (2,), (3,)]
     assert cur.name == "1-2-3"
+    cur.close()
 
 
 def test_repr(conn):
     cur = conn.cursor("my-name")
     assert "ServerCursor" in repr(cur)
     assert "my-name" in repr(cur)
+    cur.close()
 
 
 def test_connection(conn):
     cur = conn.cursor("foo")
     assert cur.connection is conn
+    cur.close()
 
 
 def test_description(conn):
@@ -31,14 +34,17 @@ def test_description(conn):
     assert cur.description[0].name == "bar"
     assert cur.description[0].type_code == cur.adapters.types["int4"].oid
     assert cur.pgresult.ntuples == 0
+    cur.close()
 
 
 def test_format(conn):
     cur = conn.cursor("foo")
     assert cur.format == Format.TEXT
+    cur.close()
 
     cur = conn.cursor("foo", binary=True)
     assert cur.format == Format.BINARY
+    cur.close()
 
 
 def test_query_params(conn):
@@ -60,6 +66,7 @@ def test_binary_cursor_execute(conn):
     assert cur.fetchone() == (2,)
     assert cur.pgresult.fformat(0) == 1
     assert cur.pgresult.get_value(0, 0) == b"\x00\x00\x00\x02"
+    cur.close()
 
 
 def test_execute_binary(conn):
@@ -76,6 +83,7 @@ def test_execute_binary(conn):
     assert cur.fetchone() == (1,)
     assert cur.pgresult.fformat(0) == 0
     assert cur.pgresult.get_value(0, 0) == b"1"
+    cur.close()
 
 
 def test_binary_cursor_text_override(conn):
@@ -92,6 +100,7 @@ def test_binary_cursor_text_override(conn):
     assert cur.fetchone() == (1,)
     assert cur.pgresult.fformat(0) == 1
     assert cur.pgresult.get_value(0, 0) == b"\x00\x00\x00\x01"
+    cur.close()
 
 
 def test_close(conn, recwarn, retries):
@@ -245,12 +254,14 @@ def test_execute_error(conn, stmt):
     cur = conn.cursor("foo")
     with pytest.raises(e.ProgrammingError):
         cur.execute(stmt)
+    cur.close()
 
 
 def test_executemany(conn):
     cur = conn.cursor("foo")
     with pytest.raises(e.NotSupportedError):
         cur.executemany("select %s", [(1,), (2,)])
+    cur.close()
 
 
 def test_fetchone(conn):
@@ -318,6 +329,7 @@ def test_row_factory(conn):
     cur.scroll(0, "absolute")
     cur.row_factory = dict_row
     assert cur.fetchone() == {"x": 1}
+    cur.close()
 
 
 def test_rownumber(conn):
@@ -335,6 +347,7 @@ def test_rownumber(conn):
     assert cur.rownumber == 12
     cur.fetchall()
     assert cur.rownumber == 42
+    cur.close()
 
 
 def test_iter(conn):
@@ -376,6 +389,7 @@ def test_cant_scroll_by_default(conn):
     assert cur.scrollable is None
     with pytest.raises(e.ProgrammingError):
         cur.scroll(0)
+    cur.close()
 
 
 def test_scroll(conn):
@@ -392,6 +406,7 @@ def test_scroll(conn):
 
     with pytest.raises(ValueError):
         cur.scroll(9, mode="wat")
+    cur.close()
 
 
 def test_scrollable(conn):
@@ -403,6 +418,7 @@ def test_scrollable(conn):
         curs.scroll(-1)
         assert i == curs.fetchone()[0]
         curs.scroll(-1)
+    curs.close()
 
 
 def test_non_scrollable(conn):
@@ -412,6 +428,7 @@ def test_non_scrollable(conn):
     curs.scroll(5)
     with pytest.raises(e.OperationalError):
         curs.scroll(-1)
+    curs.close()
 
 
 @pytest.mark.parametrize("kwargs", [{}, {"withhold": False}])
@@ -443,6 +460,7 @@ def test_steal_cursor(conn):
     assert cur2.fetchone() == (1,)
     assert cur2.fetchmany(3) == [(2,), (3,), (4,)]
     assert cur2.fetchall() == [(5,), (6,)]
+    cur2.close()
 
 
 def test_stolen_cursor_close(conn):

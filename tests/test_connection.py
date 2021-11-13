@@ -27,6 +27,7 @@ def test_connect(dsn):
     conn = Connection.connect(dsn)
     assert not conn.closed
     assert conn.pgconn.status == conn.ConnStatus.OK
+    conn.close()
 
 
 def test_connect_str_subclass(dsn):
@@ -36,6 +37,7 @@ def test_connect_str_subclass(dsn):
     conn = Connection.connect(MyString(dsn))
     assert not conn.closed
     assert conn.pgconn.status == conn.ConnStatus.OK
+    conn.close()
 
 
 def test_connect_bad():
@@ -281,6 +283,7 @@ def test_autocommit(conn):
 def test_autocommit_connect(dsn):
     conn = Connection.connect(dsn, autocommit=True)
     assert conn.autocommit
+    conn.close()
 
 
 def test_autocommit_intrans(conn):
@@ -335,8 +338,9 @@ def test_connect_args(monkeypatch, pgconn, args, kwargs, want):
         yield
 
     monkeypatch.setattr(psycopg.connection, "connect", fake_connect)
-    psycopg.Connection.connect(*args, **kwargs)
+    conn = psycopg.Connection.connect(*args, **kwargs)
     assert conninfo_to_dict(the_conninfo) == conninfo_to_dict(want)
+    conn.close()
 
 
 @pytest.mark.parametrize(
@@ -472,6 +476,7 @@ def test_execute_binary(conn):
 def test_row_factory(dsn):
     defaultconn = Connection.connect(dsn)
     assert defaultconn.row_factory is tuple_row  # type: ignore[comparison-overlap]
+    defaultconn.close()
 
     conn = Connection.connect(dsn, row_factory=my_row_factory)
     assert conn.row_factory is my_row_factory  # type: ignore[comparison-overlap]
@@ -492,6 +497,7 @@ def test_row_factory(dsn):
     cur3 = conn.execute("select 'vale'")
     r = cur3.fetchone()
     assert r and r == ("vale",)  # type: ignore[comparison-overlap]
+    conn.close()
 
 
 def test_str(conn):
@@ -711,6 +717,7 @@ def test_connect_context(dsn):
     assert cur.fetchone()[0] == "hellot"  # type: ignore[index]
     cur = conn.execute("select %b", ["hello"])
     assert cur.fetchone()[0] == "hellob"  # type: ignore[index]
+    conn.close()
 
 
 def test_connect_context_copy(dsn, conn):
@@ -723,3 +730,4 @@ def test_connect_context_copy(dsn, conn):
     assert cur.fetchone()[0] == "hellot"  # type: ignore[index]
     cur = conn2.execute("select %b", ["hello"])
     assert cur.fetchone()[0] == "hellob"  # type: ignore[index]
+    conn2.close()

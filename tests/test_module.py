@@ -28,8 +28,9 @@ def test_connect(monkeypatch, dsn, args, kwargs, want_conninfo):
 
     monkeypatch.setattr(psycopg.connection, "connect", mock_connect)
 
-    psycopg.connect(*args, **kwargs)
+    conn = psycopg.connect(*args, **kwargs)
     assert got_conninfo == want_conninfo
+    conn.close()
 
 
 def test_version(mypy):

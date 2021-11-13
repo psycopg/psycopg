@@ -75,6 +75,7 @@ def test_register_globally(hstore, dsn, svcconn, global_adapters):
 
     cur = conn.execute("select null::hstore, ''::hstore, 'a => b'::hstore")
     assert cur.fetchone() == (None, {}, {"a": "b"})
+    conn.close()
 
 
 ab = list(map(chr, range(32, 128)))

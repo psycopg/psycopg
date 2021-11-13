@@ -284,6 +284,7 @@ class TestConnectionInfo:
         conn = psycopg.connect(dsn)
         assert conn.info.parameter_status("client_encoding") == out
         assert conn.info.encoding == codec
+        conn.close()
 
     def test_set_encoding_unsupported(self, conn):
         cur = conn.cursor()

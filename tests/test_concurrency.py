@@ -117,6 +117,7 @@ def test_notifies(conn, dsn):
         nconn.cursor().execute("notify foo, '1'")
         time.sleep(0.25)
         nconn.cursor().execute("notify foo, '2'")
+        nconn.close()
 
     conn.autocommit = True
     conn.cursor().execute("listen foo")
@@ -202,3 +203,6 @@ def test_identify_closure(dsn, retries):
                 conn.execute("select 1")
             t1 = time.time()
             assert 0.3 < t1 - t0 < 0.6
+
+            conn.close()
+            conn2.close()

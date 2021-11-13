@@ -577,6 +577,8 @@ def test_putconn_no_pool(dsn):
         with pytest.raises(ValueError):
             p.putconn(conn)
 
+    conn.close()
+
 
 def test_putconn_wrong_pool(dsn):
     with pool.ConnectionPool(dsn, min_size=1) as p1:
