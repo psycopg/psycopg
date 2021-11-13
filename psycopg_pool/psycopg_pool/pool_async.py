@@ -16,12 +16,12 @@ from weakref import ref
 
 from psycopg import errors as e
 from psycopg.pq import TransactionStatus
-from psycopg._compat import Task, asynccontextmanager, create_task, Deque
 from psycopg.connection_async import AsyncConnection
 
 from .base import ConnectionAttempt, BasePool
 from .sched import AsyncScheduler
 from .errors import PoolClosed, PoolTimeout, TooManyRequests
+from ._compat import Task, asynccontextmanager, create_task, Deque
 
 logger = logging.getLogger("psycopg.pool")
 

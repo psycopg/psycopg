@@ -18,11 +18,11 @@ from contextlib import contextmanager
 from psycopg import errors as e
 from psycopg import Connection
 from psycopg.pq import TransactionStatus
-from psycopg._compat import Deque
 
 from .base import ConnectionAttempt, BasePool
 from .sched import Scheduler
 from .errors import PoolClosed, PoolTimeout, TooManyRequests
+from ._compat import Deque
 
 logger = logging.getLogger("psycopg.pool")
 
