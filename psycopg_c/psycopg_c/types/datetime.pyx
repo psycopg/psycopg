@@ -1105,13 +1105,17 @@ cdef object _timezone_from_seconds(int sec, __cache={}):
     return tz
 
 
-cdef object _timezone_from_connection(pq.PGconn pgconn, __cache={}):
+cdef _timezones = {}
+_timezones[None] = timezone_utc
+_timezones[b"UTC"] = timezone_utc
+
+cdef object _timezone_from_connection(pq.PGconn pgconn):
     """Return the Python timezone info of the connection's timezone."""
     if pgconn is None:
         return timezone_utc
 
-    tzname = libpq.PQparameterStatus(pgconn._pgconn_ptr, b"TimeZone")
-    cdef PyObject *ptr = PyDict_GetItem(__cache, tzname)
+    cdef bytes tzname = libpq.PQparameterStatus(pgconn._pgconn_ptr, b"TimeZone")
+    cdef PyObject *ptr = PyDict_GetItem(_timezones, tzname)
     if ptr != NULL:
         return <object>ptr
 
@@ -1130,7 +1134,7 @@ cdef object _timezone_from_connection(pq.PGconn pgconn, __cache={}):
         )
         zi = timezone_utc
 
-    __cache[tzname] = zi
+    _timezones[tzname] = zi
     return zi
 
 
