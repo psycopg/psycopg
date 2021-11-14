@@ -147,7 +147,7 @@ the ``stop`` message is received.
 
     import psycopg
     conn = psycopg.connect("", autocommit=True)
-    conn.cursor().execute("LISTEN mychan")
+    conn.execute("LISTEN mychan")
     gen = conn.notifies()
     for notify in gen:
         print(notify)
@@ -187,7 +187,7 @@ received immediately, but only during a connection operation, such as a query.
     # =# notify mychan, 'hey';
     # NOTIFY
 
-    print(conn.cursor().execute("SELECT 1").fetchone())
+    print(conn.execute("SELECT 1").fetchone())
     # got this: Notify(channel='mychan', payload='hey', pid=961823)
     # (1,)
 
