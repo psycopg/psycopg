@@ -65,27 +65,23 @@ jobs:
 
       - name: Run tests (Python implementation)
         if: ${{ matrix.impl == 'python' }}
-        # The zoneinfo warning ignore is only required on Python 3.6
         run: >
           tox -c psycopg -e ${{ matrix.python }} --
-          --color yes -W error
-          -W ignore::DeprecationWarning:backports.zoneinfo._common
+          --color yes
 
       - name: Run tests (C implementation)
         if: ${{ matrix.impl == 'c' }}
         # skip tests failing on importing psycopg_c.pq on subprocess
         # they only fail on Travis, work ok locally under tox too.
-        # The zoneinfo warning ignore is only required on Python 3.6
         run: >
           tox -c psycopg_c -e ${{ matrix.python }} --
-          --color yes -W error -m 'not subprocess'
-          -W ignore::DeprecationWarning:backports.zoneinfo._common
+          --color yes -m 'not subprocess'
 
       - name: Run DNS-related tests
         if: ${{ matrix.impl == 'dns' }}
         run: >
           tox -c psycopg -e dns --
-          --color yes -W error -m dns
+          --color yes -m dns
         env:
           PSYCOPG_IMPL: python
 
@@ -93,7 +89,7 @@ jobs:
         if: ${{ matrix.impl == 'postgis' }}
         run: >
           tox -c psycopg -e postgis --
-          --color yes -W error -m postgis
+          --color yes -m postgis
         env:
           PSYCOPG_IMPL: python
 
@@ -158,18 +154,15 @@ jobs:
 
       - name: Run tests (Python implementation)
         if: ${{ matrix.impl == 'python' }}
-        # The zoneinfo warning ignore is only required on Python 3.6
         run: >
           tox -c psycopg -e ${{ matrix.python }} --
-          --color yes -W error
-          -W ignore::DeprecationWarning:backports.zoneinfo._common
+          --color yes
 
       - name: Run tests (C implementation)
         if: ${{ matrix.impl == 'c' }}
         run: >
           tox -c psycopg_c -e ${{ matrix.python }} --
-          --color yes -W error
-          -W ignore::DeprecationWarning:backports.zoneinfo._common
+          --color yes
 
 
   # }}}
@@ -216,11 +209,9 @@ jobs:
 
       - name: Run tests (Python implementation)
         if: ${{ matrix.impl == 'python' }}
-        # The zoneinfo warning ignore is only required on Python 3.6
         run: >
           tox -c psycopg -e ${{ matrix.python }} --
-          --color yes -W error
-          -W ignore::DeprecationWarning:backports.zoneinfo._common
+          --color yes
 
       # Build a wheel package of the C extensions.
       # If the wheel is not delocated, import fails with some dll not found
@@ -244,9 +235,7 @@ jobs:
           &"pip" install @(Get-ChildItem wheelhouse\*.whl)
           # Fix the path for the tests using ctypes
           $env:Path = "C:\Program Files\PostgreSQL\14\bin\;$env:Path"
-          # The zoneinfo warning ignore is only required on Python 3.6
-          pytest --color yes -W error `
-            -W ignore::DeprecationWarning:backports.zoneinfo._common
+          pytest --color yes
 
 
   # }}}
