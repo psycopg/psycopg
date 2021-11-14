@@ -18,7 +18,8 @@ Psycopg 3.0.4
   `!backport.zoneinfo` `ticket #109
   <https://github.com/pganssle/zoneinfo/issues/109>`__.
 - Build binary package with libpq versions not affected by `CVE-2021-23222
-  <https://www.postgresql.org/support/security/CVE-2021-23222/>`__.
+  <https://www.postgresql.org/support/security/CVE-2021-23222/>`__
+  (:ticket:`#149`).
 
 
 Psycopg 3.0.3
