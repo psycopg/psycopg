@@ -52,15 +52,14 @@ This will install a self-contained package with all the libraries needed.
 to update it beforehand.
 
 The above package should work in most situations. It **will not work** in
-some cases though:
+some cases though.
 
-- you need a glibc-based Linux distribution: the ``binary`` package doesn't
-  work on Alpine Linux for instance;
-- you have a newly released Python or macOS version for which binary
-  packages are not ready yet.
+.. warning::
+    At the time of writing we don't distribute binary packages for Apple M1
+    (ARM) processors.
 
-In these case you should proceed to a :ref:`local installation
-<local-installation>` or a :ref:`pure Python installation
+If you platform is not supported you should proceed to a :ref:`local
+installation <local-installation>` or a :ref:`pure Python installation
 <pure-python-installation>`.
 
 .. seealso::
