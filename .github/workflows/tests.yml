@@ -196,15 +196,19 @@ jobs:
           $PgSvc.Start()
 
       - uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python }}
 
       - name: Install tox
         run: pip install tox wheel
 
       - name: Run tests (Python implementation)
         if: ${{ matrix.impl == 'python' }}
+        # The zoneinfo warning ignore is only required on Python 3.6
         run: >
           tox -c psycopg -e ${{ matrix.python }} --
           --color yes -W error
+          -W ignore::DeprecationWarning:backports.zoneinfo._common
 
       # Build a wheel package of the C extensions.
       # If the wheel is not delocated, import fails with some dll not found
@@ -228,7 +232,9 @@ jobs:
           &"pip" install @(Get-ChildItem wheelhouse\*.whl)
           # Fix the path for the tests using ctypes
           $env:Path = "C:\Program Files\PostgreSQL\14\bin\;$env:Path"
-          pytest --color yes -W error
+          # The zoneinfo warning ignore is only required on Python 3.6
+          pytest --color yes -W error `
+            -W ignore::DeprecationWarning:backports.zoneinfo._common
 
 
   # }}}
