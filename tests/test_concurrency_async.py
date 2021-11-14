@@ -146,18 +146,21 @@ async def test_identify_closure(dsn, retries):
         with retry:
             aconn = await psycopg.AsyncConnection.connect(dsn)
             conn2 = await psycopg.AsyncConnection.connect(dsn)
+            try:
+                t0 = time.time()
+                ev = asyncio.Event()
+                loop = asyncio.get_event_loop()
+                loop.add_reader(aconn.fileno(), ev.set)
+                t = create_task(closer())
+                try:
 
-            t0 = time.time()
-            ev = asyncio.Event()
-            loop = asyncio.get_event_loop()
-            loop.add_reader(aconn.fileno(), ev.set)
-            create_task(closer())
-
-            await asyncio.wait_for(ev.wait(), 1.0)
-            with pytest.raises(psycopg.OperationalError):
-                await aconn.execute("select 1")
-            t1 = time.time()
-            assert 0.3 < t1 - t0 < 0.6
-
-            await aconn.close()
-            await conn2.close()
+                    await asyncio.wait_for(ev.wait(), 1.0)
+                    with pytest.raises(psycopg.OperationalError):
+                        await aconn.execute("select 1")
+                    t1 = time.time()
+                    assert 0.3 < t1 - t0 < 0.6
+                finally:
+                    await asyncio.gather(*t)
+            finally:
+                await aconn.close()
+                await conn2.close()
