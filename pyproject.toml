@@ -6,6 +6,11 @@ build-backend = "setuptools.build_meta"
 line-length = 79
 
 [tool.pytest.ini_options]
+filterwarnings = [
+    "error",
+    # The zoneinfo warning ignore is only required on Python 3.6
+    "ignore::DeprecationWarning:backports.zoneinfo._common",
+]
 testpaths=[
     "tests",
 ]
