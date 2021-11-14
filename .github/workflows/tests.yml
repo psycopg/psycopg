@@ -31,6 +31,7 @@ jobs:
       PSYCOPG_IMPL: ${{ matrix.impl }}
       PSYCOPG_TEST_DSN: "host=127.0.0.1 user=postgres"
       PGPASSWORD: password
+      PYTEST_ADDOPTS: --color yes
 
     steps:
       - uses: actions/checkout@v2
@@ -65,31 +66,23 @@ jobs:
 
       - name: Run tests (Python implementation)
         if: ${{ matrix.impl == 'python' }}
-        run: >
-          tox -c psycopg -e ${{ matrix.python }} --
-          --color yes
+        run: tox -c psycopg -e ${{ matrix.python }}
 
       - name: Run tests (C implementation)
         if: ${{ matrix.impl == 'c' }}
         # skip tests failing on importing psycopg_c.pq on subprocess
         # they only fail on Travis, work ok locally under tox too.
-        run: >
-          tox -c psycopg_c -e ${{ matrix.python }} --
-          --color yes -m 'not subprocess'
+        run: tox -c psycopg_c -e ${{ matrix.python }} -m 'not subprocess'
 
       - name: Run DNS-related tests
         if: ${{ matrix.impl == 'dns' }}
-        run: >
-          tox -c psycopg -e dns --
-          --color yes -m dns
+        run: tox -c psycopg -e dns -m dns
         env:
           PSYCOPG_IMPL: python
 
       - name: Run PostGIS-related tests
         if: ${{ matrix.impl == 'postgis' }}
-        run: >
-          tox -c psycopg -e postgis --
-          --color yes -m postgis
+        run: tox -c psycopg -e postgis -m postgis
         env:
           PSYCOPG_IMPL: python
 
@@ -134,7 +127,7 @@ jobs:
       # MacOS on GitHub Actions seems particularly slow.
       # Don't run timing-based tests as they regularly fail.
       # pproxy-based tests fail too, with the proxy not coming up in 2s.
-      PYTEST_ADDOPTS: "-m 'not timing and not proxy'"
+      PYTEST_ADDOPTS: -m 'not timing and not proxy' --color yes
 
     steps:
       - uses: actions/checkout@v2
@@ -154,15 +147,11 @@ jobs:
 
       - name: Run tests (Python implementation)
         if: ${{ matrix.impl == 'python' }}
-        run: >
-          tox -c psycopg -e ${{ matrix.python }} --
-          --color yes
+        run: tox -c psycopg -e ${{ matrix.python }}
 
       - name: Run tests (C implementation)
         if: ${{ matrix.impl == 'c' }}
-        run: >
-          tox -c psycopg_c -e ${{ matrix.python }} --
-          --color yes
+        run: tox -c psycopg_c -e ${{ matrix.python }}
 
 
   # }}}
@@ -189,7 +178,7 @@ jobs:
       PSYCOPG_IMPL: ${{ matrix.impl }}
       PSYCOPG_TEST_DSN: "host=127.0.0.1 dbname=postgres"
       # On windows pproxy doesn't seem very happy. Also a few timing test fail.
-      PYTEST_ADDOPTS: "-m 'not timing and not proxy'"
+      PYTEST_ADDOPTS: -m 'not timing and not proxy' --color yes
 
     steps:
       - uses: actions/checkout@v2
@@ -209,9 +198,7 @@ jobs:
 
       - name: Run tests (Python implementation)
         if: ${{ matrix.impl == 'python' }}
-        run: >
-          tox -c psycopg -e ${{ matrix.python }} --
-          --color yes
+        run: tox -c psycopg -e ${{ matrix.python }}
 
       # Build a wheel package of the C extensions.
       # If the wheel is not delocated, import fails with some dll not found
@@ -235,7 +222,7 @@ jobs:
           &"pip" install @(Get-ChildItem wheelhouse\*.whl)
           # Fix the path for the tests using ctypes
           $env:Path = "C:\Program Files\PostgreSQL\14\bin\;$env:Path"
-          pytest --color yes
+          pytest
 
 
   # }}}
