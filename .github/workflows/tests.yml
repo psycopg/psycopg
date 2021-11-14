@@ -72,17 +72,17 @@ jobs:
         if: ${{ matrix.impl == 'c' }}
         # skip tests failing on importing psycopg_c.pq on subprocess
         # they only fail on Travis, work ok locally under tox too.
-        run: tox -c psycopg_c -e ${{ matrix.python }} -m 'not subprocess'
+        run: tox -c psycopg_c -e ${{ matrix.python }} -- -m 'not subprocess'
 
       - name: Run DNS-related tests
         if: ${{ matrix.impl == 'dns' }}
-        run: tox -c psycopg -e dns -m dns
+        run: tox -c psycopg -e dns -- -m dns
         env:
           PSYCOPG_IMPL: python
 
       - name: Run PostGIS-related tests
         if: ${{ matrix.impl == 'postgis' }}
-        run: tox -c psycopg -e postgis -m postgis
+        run: tox -c psycopg -e postgis -- -m postgis
         env:
           PSYCOPG_IMPL: python
 
