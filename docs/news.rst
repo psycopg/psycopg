@@ -17,6 +17,8 @@ Psycopg 3.0.4
 - Fix segfault on Python 3.6 running in ``-W error`` mode, related to
   `!backport.zoneinfo` `ticket #109
   <https://github.com/pganssle/zoneinfo/issues/109>`__.
+- Build binary package with libpq versions not affected by `CVE-2021-23222
+  <https://www.postgresql.org/support/security/CVE-2021-23222/>`__.
 
 
 Psycopg 3.0.3

@@ -16,9 +16,19 @@ set -euo pipefail
 set -x
 
 wheel=$(realpath "$1")
+shift
+
 tmpdir=$(mktemp -d)
 trap "rm -r ${tmpdir}" EXIT
 
-unzip -d "${tmpdir}" "${wheel}"
-find "${tmpdir}" -name \*.so | xargs strip
-(cd "${tmpdir}" && zip -fr ${wheel} *)
+cd "${tmpdir}"
+python -m zipfile -e "${wheel}" .
+
+# Busybox doesn't have "find -ls"
+find . -name \*.so | xargs ls -l
+find . -name \*.so -exec strip "$@" {} \;
+find . -name \*.so | xargs ls -l
+
+python -m zipfile -c ${wheel} *
+
+cd -
