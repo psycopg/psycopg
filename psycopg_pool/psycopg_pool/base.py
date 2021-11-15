@@ -94,9 +94,7 @@ class BasePool(Generic[ConnectionType]):
         # connections to the pool.
         self._growing = False
 
-        # _close should be the last property to be set in the state
-        # to avoid warning on __del__ in case __init__ fails.
-        self._closed = False
+        self._closed = True
 
     def __repr__(self) -> str:
         return (
