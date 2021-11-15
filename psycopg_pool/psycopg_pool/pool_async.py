@@ -11,7 +11,7 @@ from abc import ABC, abstractmethod
 from time import monotonic
 from types import TracebackType
 from typing import Any, AsyncIterator, Awaitable, Callable
-from typing import Dict, List, Optional, Type
+from typing import Dict, List, Optional, Sequence, Type
 from weakref import ref
 
 from psycopg import errors as e
@@ -229,12 +229,19 @@ class AsyncConnectionPool(BasePool[AsyncConnection[Any]]):
             # Take waiting client and pool connections out of the state
             waiting = list(self._waiting)
             self._waiting.clear()
-            pool = list(self._pool)
+            connections = list(self._pool)
             self._pool.clear()
 
         # Now that the flag _closed is set, getconn will fail immediately,
         # putconn will just close the returned connection.
+        await self._stop_workers(waiting, connections, timeout)
 
+    async def _stop_workers(
+        self,
+        waiting_clients: Sequence["AsyncClient"] = (),
+        connections: Sequence[AsyncConnection[Any]] = (),
+        timeout: float = 0,
+    ) -> None:
         # Stop the scheduler
         await self._sched.enter(0, None)
 
@@ -244,11 +251,11 @@ class AsyncConnectionPool(BasePool[AsyncConnection[Any]]):
             self.run_task(StopWorker(self))
 
         # Signal to eventual clients in the queue that business is closed.
-        for pos in waiting:
+        for pos in waiting_clients:
             await pos.fail(PoolClosed(f"the pool {self.name!r} is closed"))
 
         # Close the connections still in the pool
-        for conn in pool:
+        for conn in connections:
             await conn.close()
 
         # Wait for the worker tasks to terminate
