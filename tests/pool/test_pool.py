@@ -688,11 +688,11 @@ def test_noopen(dsn):
     assert not p._sched_runner
     assert not p._workers
     assert p.closed
-    p.open()
-    assert p._sched_runner
-    assert p._workers
-    assert not p.closed
-    p.close()
+
+    with p:
+        assert p._sched_runner
+        assert p._workers
+        assert not p.closed
 
 
 def test_reopen(dsn):

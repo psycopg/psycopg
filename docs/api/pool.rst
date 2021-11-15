@@ -156,7 +156,7 @@ The `!ConnectionPool` class
       .. note::
           
           The pool can be used as context manager too, in which case it will
-          be closed at the end of the block:
+          be opened when entering the block and closed at the end:
 
           .. code:: python
 
@@ -246,7 +246,7 @@ listed here.
       .. note::
           
           The pool can be used as context manager too, in which case it will
-          be closed at the end of the block:
+          be opened when entering the block and closed at the end:
 
           .. code:: python
 

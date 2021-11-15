@@ -325,6 +325,7 @@ class ConnectionPool(BasePool[Connection[Any]]):
                     )
 
     def __enter__(self) -> "ConnectionPool":
+        self.open()
         return self
 
     def __exit__(

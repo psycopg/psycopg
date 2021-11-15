@@ -672,16 +672,16 @@ async def test_closed_queue(dsn):
     assert len(success) == 2
 
 
-async def test_noopen(dsn):
+async def test_noopen_at_init_contextmanager(dsn):
     p = pool.AsyncConnectionPool(dsn, open=False)
     assert not p._sched_runner
     assert not p._workers
     assert p.closed
-    p.open()
-    assert p._sched_runner
-    assert p._workers
-    assert not p.closed
-    await p.close()
+
+    async with p:
+        assert p._sched_runner
+        assert p._workers
+        assert not p.closed
 
 
 async def test_reopen(dsn):

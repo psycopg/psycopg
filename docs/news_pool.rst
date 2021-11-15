@@ -17,6 +17,8 @@ psycopg_pool 3.1.0
   (:ticket:`#151`).
 - Add an `open` parameter to pool initilization to control whether workers
   should be started at initialization or not (:ticket:`#151`).
+- Possibly open pool (start worker tasks) when entering context manager
+  (:ticket:`#151`).
 
 psycopg_pool 3.0.2
 ^^^^^^^^^^^^^^^^^^

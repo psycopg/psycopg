@@ -272,6 +272,7 @@ class AsyncConnectionPool(BasePool[AsyncConnection[Any]]):
             )
 
     async def __aenter__(self) -> "AsyncConnectionPool":
+        self.open()
         return self
 
     async def __aexit__(
