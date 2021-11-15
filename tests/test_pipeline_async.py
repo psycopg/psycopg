@@ -42,38 +42,6 @@ async def test_pipeline_communicate_async(pgconn, demo_pipeline, generators):
                 next(demo_pipeline, None)
 
 
-@pytest.mark.slow
-async def test_pipeline_demo(aconn):
-    # This reproduces libpq_pipeline::pipelined_insert PostgreSQL test at
-    # src/test/modules/libpq_pipeline/libpq_pipeline.c::test_pipelined_insert()
-    # using plain psycopg API.
-    #
-    # We do not fetch results explicitly (using cursor.fetch*()), this is
-    # handled by execute() calls when pgconn socket is read-ready, which
-    # happens when the output buffer is full.
-    #
-    # Run with --log-file=<path> to see what happens.
-    rows_to_send = 10_000
-    await aconn.set_autocommit(True)
-    async with aconn.pipeline() as pipeline:
-        async with aconn.transaction():
-            await aconn.execute("DROP TABLE IF EXISTS pq_pipeline_demo")
-            await aconn.execute(
-                "CREATE UNLOGGED TABLE pq_pipeline_demo("
-                " id serial primary key,"
-                " itemno integer,"
-                " int8filler int8"
-                ")"
-            )
-            for r in range(rows_to_send, 0, -1):
-                await aconn.execute(
-                    "INSERT INTO pq_pipeline_demo(itemno, int8filler)"
-                    " VALUES (%s, %s)",
-                    (r, 1 << 62),
-                )
-        await pipeline.sync()
-
-
 async def test_pipeline_status(aconn):
     async with aconn.pipeline() as p:
         assert p.status == pq.PipelineStatus.ON

@@ -38,38 +38,6 @@ def test_pipeline_communicate(pgconn, demo_pipeline, generators):
                 next(demo_pipeline, None)
 
 
-@pytest.mark.slow
-def test_pipeline_demo(conn):
-    # This reproduces libpq_pipeline::pipelined_insert PostgreSQL test at
-    # src/test/modules/libpq_pipeline/libpq_pipeline.c::test_pipelined_insert()
-    # using plain psycopg API.
-    #
-    # We do not fetch results explicitly (using cursor.fetch*()), this is
-    # handled by execute() calls when pgconn socket is read-ready, which
-    # happens when the output buffer is full.
-    #
-    # Run with --log-file=<path> to see what happens.
-    rows_to_send = 10_000
-    conn.autocommit = True
-    with conn.pipeline() as pipeline:
-        with conn.transaction():
-            conn.execute("DROP TABLE IF EXISTS pq_pipeline_demo")
-            conn.execute(
-                "CREATE UNLOGGED TABLE pq_pipeline_demo("
-                " id serial primary key,"
-                " itemno integer,"
-                " int8filler int8"
-                ")"
-            )
-            for r in range(rows_to_send, 0, -1):
-                conn.execute(
-                    "INSERT INTO pq_pipeline_demo(itemno, int8filler)"
-                    " VALUES (%s, %s)",
-                    (r, 1 << 62),
-                )
-        pipeline.sync()
-
-
 def test_pipeline_status(conn):
     with conn.pipeline() as p:
         assert p.status == pq.PipelineStatus.ON
