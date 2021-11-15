@@ -299,7 +299,8 @@ class ConnectionPool(BasePool[Connection[Any]]):
         self._sched.enter(0, None)
 
         # Stop the worker threads
-        for i in range(len(self._workers)):
+        workers, self._workers = self._workers[:], []
+        for i in range(len(workers)):
             self.run_task(StopWorker(self))
 
         # Signal to eventual clients in the queue that business is closed.
@@ -312,8 +313,9 @@ class ConnectionPool(BasePool[Connection[Any]]):
 
         # Wait for the worker threads to terminate
         assert self._sched_runner is not None
+        sched_runner, self._sched_runner = self._sched_runner, None
         if timeout > 0:
-            for t in [self._sched_runner] + self._workers:
+            for t in [sched_runner] + workers:
                 if not t.is_alive():
                     continue
                 t.join(timeout)
@@ -324,7 +326,6 @@ class ConnectionPool(BasePool[Connection[Any]]):
                         self.name,
                         timeout,
                     )
-        self._sched_runner = None
 
     def __enter__(self) -> "ConnectionPool":
         return self

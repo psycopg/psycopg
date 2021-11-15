@@ -562,12 +562,15 @@ def test_fail_rollback_close(dsn, caplog, monkeypatch):
 def test_close_no_threads(dsn):
     p = pool.ConnectionPool(dsn)
     assert p._sched_runner and p._sched_runner.is_alive()
-    for t in p._workers:
+    workers = p._workers[:]
+    assert workers
+    for t in workers:
         assert t.is_alive()
 
     p.close()
     assert p._sched_runner is None
-    for t in p._workers:
+    assert not p._workers
+    for t in workers:
         assert not t.is_alive()
 
 
@@ -678,6 +681,21 @@ def test_closed_queue(dsn):
     t1.join()
     t2.join()
     assert len(success) == 2
+
+
+def test_reopen(dsn):
+    p = pool.ConnectionPool(dsn)
+    with p.connection() as conn:
+        conn.execute("select 1")
+    p.close()
+    assert p._sched_runner is None
+    assert not p._workers
+    p.open()
+    assert p._sched_runner is not None
+    assert p._workers
+    with p.connection() as conn:
+        conn.execute("select 1")
+    p.close()
 
 
 @pytest.mark.slow

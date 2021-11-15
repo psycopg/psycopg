@@ -239,7 +239,8 @@ class AsyncConnectionPool(BasePool[AsyncConnection[Any]]):
         await self._sched.enter(0, None)
 
         # Stop the worker tasks
-        for w in self._workers:
+        workers, self._workers = self._workers[:], []
+        for w in workers:
             self.run_task(StopWorker(self))
 
         # Signal to eventual clients in the queue that business is closed.
@@ -252,7 +253,8 @@ class AsyncConnectionPool(BasePool[AsyncConnection[Any]]):
 
         # Wait for the worker tasks to terminate
         assert self._sched_runner is not None
-        wait = asyncio.gather(self._sched_runner, *self._workers)
+        sched_runner, self._sched_runner = self._sched_runner, None
+        wait = asyncio.gather(sched_runner, *workers)
         try:
             if timeout > 0:
                 await asyncio.wait_for(asyncio.shield(wait), timeout=timeout)
@@ -264,7 +266,6 @@ class AsyncConnectionPool(BasePool[AsyncConnection[Any]]):
                 self.name,
                 timeout,
             )
-        self._sched_runner = None
 
     async def __aenter__(self) -> "AsyncConnectionPool":
         return self
