@@ -10,6 +10,12 @@
 Current release
 ---------------
 
+psycopg_pool 3.1.0
+^^^^^^^^^^^^^^^^^^
+
+- Add `ConnectionPool.open()` and `AsyncConnectionPool.open()`
+  (:ticket:`#155`).
+
 psycopg_pool 3.0.2
 ^^^^^^^^^^^^^^^^^^
 
