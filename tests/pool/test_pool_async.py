@@ -577,12 +577,15 @@ async def test_fail_rollback_close(dsn, caplog, monkeypatch):
 async def test_close_no_tasks(dsn):
     p = pool.AsyncConnectionPool(dsn)
     assert p._sched_runner and not p._sched_runner.done()
-    for t in p._workers:
+    assert p._workers
+    workers = p._workers[:]
+    for t in workers:
         assert not t.done()
 
     await p.close()
     assert p._sched_runner is None
-    for t in p._workers:
+    assert not p._workers
+    for t in workers:
         assert t.done()
 
 
@@ -667,6 +670,19 @@ async def test_closed_queue(dsn):
     e2.set()
     await asyncio.gather(t1, t2)
     assert len(success) == 2
+
+
+async def test_reopen(dsn):
+    p = pool.AsyncConnectionPool(dsn)
+    async with p.connection() as conn:
+        await conn.execute("select 1")
+    await p.close()
+    assert p._sched_runner is None
+    p.open()
+    assert p._sched_runner is not None
+    async with p.connection() as conn:
+        await conn.execute("select 1")
+    await p.close()
 
 
 @pytest.mark.slow
