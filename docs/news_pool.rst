@@ -10,9 +10,11 @@
 Current release
 ---------------
 
-psycopg_pool 3.1.0
+psycopg_pool 4.0.0
 ^^^^^^^^^^^^^^^^^^
 
+- Open pool (i.e. start worker tasks) when entering context manager instead of
+  at object initialization (:ticket:`#155`).
 - Add `ConnectionPool.open()` and `AsyncConnectionPool.open()`
   (:ticket:`#155`).
 

@@ -63,8 +63,6 @@ class AsyncConnectionPool(BasePool[AsyncConnection[Any]]):
 
         super().__init__(conninfo, **kwargs)
 
-        self.open()
-
     async def wait(self, timeout: float = 30.0) -> None:
         async with self._lock:
             assert not self._pool_full_event
@@ -275,6 +273,7 @@ class AsyncConnectionPool(BasePool[AsyncConnection[Any]]):
             )
 
     async def __aenter__(self) -> "AsyncConnectionPool":
+        self.open()
         return self
 
     async def __aexit__(

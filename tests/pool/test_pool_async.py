@@ -576,6 +576,7 @@ async def test_fail_rollback_close(dsn, caplog, monkeypatch):
 
 async def test_close_no_tasks(dsn):
     p = pool.AsyncConnectionPool(dsn)
+    p.open()
     assert p._sched_runner and not p._sched_runner.done()
     assert p._workers
     workers = p._workers[:]
@@ -608,6 +609,7 @@ async def test_putconn_wrong_pool(dsn):
 
 async def test_closed_getconn(dsn):
     p = pool.AsyncConnectionPool(dsn, min_size=1)
+    p.open()
     assert not p.closed
     async with p.connection():
         pass
@@ -622,6 +624,7 @@ async def test_closed_getconn(dsn):
 
 async def test_closed_putconn(dsn):
     p = pool.AsyncConnectionPool(dsn, min_size=1)
+    p.open()
 
     async with p.connection() as conn:
         pass
@@ -652,6 +655,7 @@ async def test_closed_queue(dsn):
     e2 = asyncio.Event()
 
     p = pool.AsyncConnectionPool(dsn, min_size=1)
+    p.open()
     await p.wait()
     success: List[str] = []
 
@@ -674,6 +678,7 @@ async def test_closed_queue(dsn):
 
 async def test_reopen(dsn):
     p = pool.AsyncConnectionPool(dsn)
+    p.open()
     async with p.connection() as conn:
         await conn.execute("select 1")
     await p.close()

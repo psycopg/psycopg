@@ -25,11 +25,11 @@ Pool life cycle
 ---------------
 
 A typical way to use the pool is to create a single instance of it, as a
-global object, and to use this object in the rest of the program, allowing
-other functions, modules, threads to use it. This is only a common use
-however, and not the necessary one; in particular the connection pool acts as
-a context manager and can be closed automatically at the end of its ``with``
-block::
+global object, open it, and to use this object in the rest of the program,
+allowing other functions, modules, threads to use it. This is only a common
+use however, and not the necessary one; in particular the connection pool acts
+as a context manager and can be closed automatically at the end of its
+``with`` block::
 
     from psycopg_pool import ConnectionPool
 
@@ -42,15 +42,15 @@ If necessary, or convenient, your application may create more than one pool,
 for instance to connect to more than one database or to provide separate
 read-only and read/write connections.
 
-Once a pool is instantiated, the constructor returns immediately, while the
-background workers try to create the required number of connections to fill
-the pool. If your application is misconfigured, or the network is down, it
-means that the pool will be available but threads requesting a connection will
-fail with a `PoolTimeout` after the `~ConnectionPool.connection()` timeout is
-expired. If this behaviour is not desirable you should call the
-`~ConnectionPool.wait()` method after creating the pool, which will block
-until the pool is full or will throw a `PoolTimeout` if the pool isn't ready
-within an allocated time.
+When a pool is instantiated, the constructor returns immediately. It is then
+required to open it to start the background workers that will try to create
+the required number of connections to fill the pool. If your application is
+misconfigured, or the network is down, it means that the pool will be
+available but threads requesting a connection will fail with a `PoolTimeout`
+after the `~ConnectionPool.connection()` timeout is expired. If this behaviour
+is not desirable you should call the `~ConnectionPool.wait()` method after
+opening the pool, which will block until the pool is full or will throw a
+`PoolTimeout` if the pool isn't ready within an allocated time.
 
 The pool background workers create connections according to the parameters
 *conninfo*, *kwargs*, and *connection_class* passed to `ConnectionPool`

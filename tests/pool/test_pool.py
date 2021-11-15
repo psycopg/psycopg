@@ -84,7 +84,9 @@ def test_its_really_a_pool(dsn):
 
 
 def test_context(dsn):
-    with pool.ConnectionPool(dsn, min_size=1) as p:
+    p = pool.ConnectionPool(dsn, min_size=1)
+    assert p.closed
+    with p:
         assert not p.closed
     assert p.closed
 
@@ -561,6 +563,7 @@ def test_fail_rollback_close(dsn, caplog, monkeypatch):
 
 def test_close_no_threads(dsn):
     p = pool.ConnectionPool(dsn)
+    p.open()
     assert p._sched_runner and p._sched_runner.is_alive()
     workers = p._workers[:]
     assert workers
@@ -593,6 +596,7 @@ def test_putconn_wrong_pool(dsn):
 
 def test_del_no_warning(dsn, recwarn):
     p = pool.ConnectionPool(dsn, min_size=2)
+    p.open()
     with p.connection() as conn:
         conn.execute("select 1")
 
@@ -606,6 +610,7 @@ def test_del_no_warning(dsn, recwarn):
 @pytest.mark.slow
 def test_del_stop_threads(dsn):
     p = pool.ConnectionPool(dsn)
+    p.open()
     assert p._sched_runner is not None
     ts = [p._sched_runner] + p._workers
     del p
@@ -616,6 +621,7 @@ def test_del_stop_threads(dsn):
 
 def test_closed_getconn(dsn):
     p = pool.ConnectionPool(dsn, min_size=1)
+    p.open()
     assert not p.closed
     with p.connection():
         pass
@@ -630,6 +636,7 @@ def test_closed_getconn(dsn):
 
 def test_closed_putconn(dsn):
     p = pool.ConnectionPool(dsn, min_size=1)
+    p.open()
 
     with p.connection() as conn:
         pass
@@ -660,6 +667,7 @@ def test_closed_queue(dsn):
     e2 = Event()
 
     p = pool.ConnectionPool(dsn, min_size=1)
+    p.open()
     p.wait()
     success: List[str] = []
 
@@ -685,6 +693,7 @@ def test_closed_queue(dsn):
 
 def test_reopen(dsn):
     p = pool.ConnectionPool(dsn)
+    p.open()
     with p.connection() as conn:
         conn.execute("select 1")
     p.close()

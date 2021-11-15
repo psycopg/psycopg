@@ -54,8 +54,6 @@ class ConnectionPool(BasePool[Connection[Any]]):
 
         super().__init__(conninfo, **kwargs)
 
-        self.open()
-
     def __del__(self) -> None:
         # If the '_closed' property is not set we probably failed in __init__.
         # Don't try anything complicated as probably it won't work.
@@ -327,6 +325,7 @@ class ConnectionPool(BasePool[Connection[Any]]):
                     )
 
     def __enter__(self) -> "ConnectionPool":
+        self.open()
         return self
 
     def __exit__(
