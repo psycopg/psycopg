@@ -63,8 +63,6 @@ class AsyncConnectionPool(BasePool[AsyncConnection[Any]]):
 
         super().__init__(conninfo, **kwargs)
 
-        self.open()
-
     async def wait(self, timeout: float = 30.0) -> None:
         async with self._lock:
             assert not self._pool_full_event
@@ -216,7 +214,7 @@ class AsyncConnectionPool(BasePool[AsyncConnection[Any]]):
         # remained unused.
         self.run_task(Schedule(self, ShrinkPool(self), self.max_idle))
 
-        self._closed = False
+        super().open()
 
     async def close(self, timeout: float = 5.0) -> None:
         if self._closed:

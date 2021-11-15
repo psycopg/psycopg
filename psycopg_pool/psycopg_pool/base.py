@@ -95,6 +95,7 @@ class BasePool(Generic[ConnectionType]):
         self._growing = False
 
         self._closed = True
+        self.open()
 
     def __repr__(self) -> str:
         return (
@@ -114,6 +115,9 @@ class BasePool(Generic[ConnectionType]):
     def closed(self) -> bool:
         """`!True` if the pool is closed."""
         return self._closed
+
+    def open(self) -> None:
+        self._closed = False
 
     def get_stats(self) -> Dict[str, int]:
         """

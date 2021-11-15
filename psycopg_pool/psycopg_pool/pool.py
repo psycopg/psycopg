@@ -54,8 +54,6 @@ class ConnectionPool(BasePool[Connection[Any]]):
 
         super().__init__(conninfo, **kwargs)
 
-        self.open()
-
     def __del__(self) -> None:
         # If the '_closed' property is not set we probably failed in __init__.
         # Don't try anything complicated as probably it won't work.
@@ -257,7 +255,7 @@ class ConnectionPool(BasePool[Connection[Any]]):
         # remained unused.
         self.schedule_task(ShrinkPool(self), self.max_idle)
 
-        self._closed = False
+        super().open()
 
     def close(self, timeout: float = 5.0) -> None:
         """Close the pool and make it unavailable to new clients.
