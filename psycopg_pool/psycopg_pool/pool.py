@@ -48,35 +48,13 @@ class ConnectionPool(BasePool[Connection[Any]]):
         self._pool_full_event: Optional[threading.Event] = None
 
         self._sched = Scheduler()
+        self._sched_runner: Optional[threading.Thread] = None
         self._tasks: "Queue[MaintenanceTask]" = Queue()
         self._workers: List[threading.Thread] = []
 
         super().__init__(conninfo, **kwargs)
 
-        self._sched_runner = threading.Thread(
-            target=self._sched.run, name=f"{self.name}-scheduler", daemon=True
-        )
-        for i in range(self.num_workers):
-            t = threading.Thread(
-                target=self.worker,
-                args=(self._tasks,),
-                name=f"{self.name}-worker-{i}",
-                daemon=True,
-            )
-            self._workers.append(t)
-
-        # The object state is complete. Start the worker threads
-        self._sched_runner.start()
-        for t in self._workers:
-            t.start()
-
-        # populate the pool with initial min_size connections in background
-        for i in range(self._nconns):
-            self.run_task(AddConnection(self))
-
-        # Schedule a task to shrink the pool if connections over min_size have
-        # remained unused.
-        self.schedule_task(ShrinkPool(self), self.max_idle)
+        self.open()
 
     def __del__(self) -> None:
         # If the '_closed' property is not set we probably failed in __init__.
@@ -254,6 +232,42 @@ class ConnectionPool(BasePool[Connection[Any]]):
         else:
             self._return_connection(conn)
 
+    def open(self) -> None:
+        """Open the pool by starting worker threads.
+
+        No-op if the pool is already opened.
+        """
+        if not self._closed:
+            return
+
+        self._sched_runner = threading.Thread(
+            target=self._sched.run, name=f"{self.name}-scheduler", daemon=True
+        )
+        assert not self._workers
+        for i in range(self.num_workers):
+            t = threading.Thread(
+                target=self.worker,
+                args=(self._tasks,),
+                name=f"{self.name}-worker-{i}",
+                daemon=True,
+            )
+            self._workers.append(t)
+
+        # The object state is complete. Start the worker threads
+        self._sched_runner.start()
+        for t in self._workers:
+            t.start()
+
+        # populate the pool with initial min_size connections in background
+        for i in range(self._nconns):
+            self.run_task(AddConnection(self))
+
+        # Schedule a task to shrink the pool if connections over min_size have
+        # remained unused.
+        self.schedule_task(ShrinkPool(self), self.max_idle)
+
+        self._closed = False
+
     def close(self, timeout: float = 5.0) -> None:
         """Close the pool and make it unavailable to new clients.
 
@@ -297,6 +311,7 @@ class ConnectionPool(BasePool[Connection[Any]]):
             conn.close()
 
         # Wait for the worker threads to terminate
+        assert self._sched_runner is not None
         if timeout > 0:
             for t in [self._sched_runner] + self._workers:
                 if not t.is_alive():
@@ -309,6 +324,7 @@ class ConnectionPool(BasePool[Connection[Any]]):
                         self.name,
                         timeout,
                     )
+        self._sched_runner = None
 
     def __enter__(self) -> "ConnectionPool":
         return self

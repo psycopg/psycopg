@@ -145,6 +145,8 @@ The `!ConnectionPool` class
 
           # the connection is now back in the pool
    
+   .. automethod:: open
+
    .. automethod:: close
 
       .. note::
@@ -233,6 +235,8 @@ listed here.
 
           # the connection is now back in the pool
    
+   .. automethod:: open
+
    .. automethod:: close
 
       .. note::

@@ -576,12 +576,12 @@ async def test_fail_rollback_close(dsn, caplog, monkeypatch):
 
 async def test_close_no_tasks(dsn):
     p = pool.AsyncConnectionPool(dsn)
-    assert not p._sched_runner.done()
+    assert p._sched_runner and not p._sched_runner.done()
     for t in p._workers:
         assert not t.done()
 
     await p.close()
-    assert p._sched_runner.done()
+    assert p._sched_runner is None
     for t in p._workers:
         assert t.done()
 

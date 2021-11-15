@@ -561,12 +561,12 @@ def test_fail_rollback_close(dsn, caplog, monkeypatch):
 
 def test_close_no_threads(dsn):
     p = pool.ConnectionPool(dsn)
-    assert p._sched_runner.is_alive()
+    assert p._sched_runner and p._sched_runner.is_alive()
     for t in p._workers:
         assert t.is_alive()
 
     p.close()
-    assert not p._sched_runner.is_alive()
+    assert p._sched_runner is None
     for t in p._workers:
         assert not t.is_alive()
 
@@ -603,6 +603,7 @@ def test_del_no_warning(dsn, recwarn):
 @pytest.mark.slow
 def test_del_stop_threads(dsn):
     p = pool.ConnectionPool(dsn)
+    assert p._sched_runner is not None
     ts = [p._sched_runner] + p._workers
     del p
     sleep(0.1)
