@@ -51,6 +51,7 @@ class BasePool(Generic[ConnectionType]):
             Callable[["BasePool[ConnectionType]"], None]
         ] = None,
         num_workers: int = 3,
+        open: bool = True,
     ):
         if max_size is None:
             max_size = min_size
@@ -95,7 +96,8 @@ class BasePool(Generic[ConnectionType]):
         self._growing = False
 
         self._closed = True
-        self.open()
+        if open:
+            self.open()
 
     def __repr__(self) -> str:
         return (

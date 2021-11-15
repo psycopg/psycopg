@@ -74,6 +74,10 @@ The `!ConnectionPool` class
                      before leaving the function.
    :type configure: `Callable[[Connection], None]`
 
+   :param open: Whether to open the pool at initialization; if `!True`, start
+        worker tasks immediately.
+   :type open: bool, default: `!True`
+
    :param reset: A callback to reset a function after it has been returned to
                  the pool. The connection is guaranteed to be passed to the
                  *reset()* function in "idle" state (no transaction). When

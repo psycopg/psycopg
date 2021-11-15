@@ -683,6 +683,18 @@ def test_closed_queue(dsn):
     assert len(success) == 2
 
 
+def test_noopen(dsn):
+    p = pool.ConnectionPool(dsn, open=False)
+    assert not p._sched_runner
+    assert not p._workers
+    assert p.closed
+    p.open()
+    assert p._sched_runner
+    assert p._workers
+    assert not p.closed
+    p.close()
+
+
 def test_reopen(dsn):
     p = pool.ConnectionPool(dsn)
     with p.connection() as conn:

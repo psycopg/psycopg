@@ -15,6 +15,8 @@ psycopg_pool 3.1.0
 
 - Add `ConnectionPool.open()` and `AsyncConnectionPool.open()`
   (:ticket:`#151`).
+- Add an `open` parameter to pool initilization to control whether workers
+  should be started at initialization or not (:ticket:`#151`).
 
 psycopg_pool 3.0.2
 ^^^^^^^^^^^^^^^^^^
