@@ -199,8 +199,8 @@ def pipeline_communicate(pgconn: PGconn) -> PQGen[List[List[PGresult]]]:
                 if r is None:
                     if not res:
                         break
-                    results.append(res[:])
-                    del res[:]
+                    results.append(res)
+                    res = []
                 elif r.status == pq.ExecStatus.PIPELINE_SYNC:
                     assert not res
                     results.append([r])

@@ -252,8 +252,8 @@ def pipeline_communicate(pq.PGconn pgconn) -> PQGen[List[List[PGresult]]]:
                 if pgres is NULL:
                     if not res:
                         break
-                    results.append(res[:])
-                    del res[:]
+                    results.append(res)
+                    res = []
                 else:
                     status = libpq.PQresultStatus(pgres)
                     r = pq.PGresult._from_ptr(pgres)
