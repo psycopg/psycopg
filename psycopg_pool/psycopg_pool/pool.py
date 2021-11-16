@@ -231,6 +231,8 @@ class ConnectionPool(BasePool[Connection[Any]]):
         if not self._closed:
             return
 
+        self._check_open()
+
         self._sched_runner = threading.Thread(
             target=self._sched.run, name=f"{self.name}-scheduler", daemon=True
         )
@@ -258,6 +260,7 @@ class ConnectionPool(BasePool[Connection[Any]]):
         self.schedule_task(ShrinkPool(self), self.max_idle)
 
         self._closed = False
+        self._opened = True
 
     def close(self, timeout: float = 5.0) -> None:
         """Close the pool and make it unavailable to new clients.

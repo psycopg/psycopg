@@ -198,6 +198,8 @@ class AsyncConnectionPool(BasePool[AsyncConnection[Any]]):
         if not self._closed:
             return
 
+        self._check_open()
+
         self._sched_runner = create_task(
             self._sched.run(), name=f"{self.name}-scheduler"
         )
@@ -217,6 +219,7 @@ class AsyncConnectionPool(BasePool[AsyncConnection[Any]]):
         self.run_task(Schedule(self, ShrinkPool(self), self.max_idle))
 
         self._closed = False
+        self._opened = True
 
     async def close(self, timeout: float = 5.0) -> None:
         if self._closed:
