@@ -88,8 +88,7 @@ class PrepareManager:
                 if cmdstat and (
                     cmdstat.startswith(b"DROP ") or cmdstat == b"ROLLBACK"
                 ):
-                    self._prepared.clear()
-                    return b"DEALLOCATE ALL"
+                    return self.clear()
         return None
 
     def setdefault(
