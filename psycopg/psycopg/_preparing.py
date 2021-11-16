@@ -73,7 +73,7 @@ class PrepareManager:
             # The query is not to be prepared yet
             return Prepare.NO, b""
 
-    def should_discard(
+    def _should_discard(
         self, prep: Prepare, results: Sequence["PGresult"]
     ) -> Optional[bytes]:
         """Check if we need to discard our entire state: it should happen on
@@ -91,7 +91,7 @@ class PrepareManager:
                     return self.clear()
         return None
 
-    def setdefault(
+    def _check_in_cache_or_increment(
         self, query: PostgresQuery, prep: Prepare, name: bytes
     ) -> Optional[Tuple[Key, Value]]:
         """Check if the query is already in cache.
@@ -113,7 +113,7 @@ class PrepareManager:
         return key, value
 
     @staticmethod
-    def check_results(results: Sequence["PGresult"]) -> bool:
+    def _check_results(results: Sequence["PGresult"]) -> bool:
         """Return False if 'results' are invalid for prepared statement cache."""
         if len(results) != 1:
             # We cannot prepare a multiple statement
@@ -126,7 +126,7 @@ class PrepareManager:
 
         return True
 
-    def rotate(self) -> Optional[bytes]:
+    def _rotate(self) -> Optional[bytes]:
         """Evict an old value from the cache.
 
         If it was prepared, deallocate it. Do it only once: if the cache was
@@ -141,17 +141,19 @@ class PrepareManager:
         else:
             return None
 
-    def handle(
+    def maybe_add_to_cache(
         self, query: PostgresQuery, prep: Prepare, name: bytes
     ) -> Optional[Key]:
         """Handle 'query' for possible addition to the cache.
 
         If a new entry has been added, return its key. Return None otherwise
         (meaning the query is already in cache or cache is not enabled).
+
+        Note: This method is only called in pipeline mode.
         """
         if self.prepare_threshold is None:
             return None
-        cached = self.setdefault(query, prep, name)
+        cached = self._check_in_cache_or_increment(query, prep, name)
         if cached is None:
             return None
         key, value = cached
@@ -168,14 +170,16 @@ class PrepareManager:
         """Validate cached entry with 'key' by checking query 'results'.
 
         Possibly return a command to perform maintainance on database side.
+
+        Note: this method is only called in pipeline mode.
         """
-        cmd = self.should_discard(prep, results)
+        cmd = self._should_discard(prep, results)
         if cmd:
             return cmd
-        if not self.check_results(results):
+        if not self._check_results(results):
             del self._prepared[key]
             return None
-        return self.rotate()
+        return self._rotate()
 
     def maintain(
         self,
@@ -189,23 +193,23 @@ class PrepareManager:
         if self.prepare_threshold is None:
             return None
 
-        cmd = self.should_discard(prep, results)
+        cmd = self._should_discard(prep, results)
         if cmd:
             return cmd
 
-        cached = self.setdefault(query, prep, name)
+        cached = self._check_in_cache_or_increment(query, prep, name)
         if cached is None:
             return None
 
         # The query is not in cache. Let's see if we must add it
-        if not self.check_results(results):
+        if not self._check_results(results):
             return None
 
         # Ok, we got to the conclusion that this query is genuinely to prepare
         key, value = cached
         self._prepared[key] = value
 
-        return self.rotate()
+        return self._rotate()
 
     def clear(self) -> Optional[bytes]:
         if self._prepared_idx:
