@@ -151,6 +151,7 @@ class PrepareManager:
 
         Note: This method is only called in pipeline mode.
         """
+        # don't do anything if prepared statements are disabled
         if self.prepare_threshold is None:
             return None
         cached = self._check_in_cache_or_increment(query, prep, name)
@@ -189,27 +190,11 @@ class PrepareManager:
         name: bytes,
     ) -> Optional[bytes]:
         """Maintain the cache of the prepared statements."""
-        # don't do anything if prepared statements are disabled
-        if self.prepare_threshold is None:
+        key = self.maybe_add_to_cache(query, prep, name)
+        if key is None:
             return None
 
-        cmd = self._should_discard(prep, results)
-        if cmd:
-            return cmd
-
-        cached = self._check_in_cache_or_increment(query, prep, name)
-        if cached is None:
-            return None
-
-        # The query is not in cache. Let's see if we must add it
-        if not self._check_results(results):
-            return None
-
-        # Ok, we got to the conclusion that this query is genuinely to prepare
-        key, value = cached
-        self._prepared[key] = value
-
-        return self._rotate()
+        return self.validate(key, prep, name, results)
 
     def clear(self) -> Optional[bytes]:
         if self._prepared_idx:
