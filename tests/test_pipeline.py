@@ -25,10 +25,10 @@ def test_cursor_stream(conn):
 
 
 def test_server_cursor(conn):
-    cur = conn.cursor(name="pipeline")
-    with conn.pipeline():
-        with pytest.raises(psycopg.NotSupportedError):
-            cur.execute("select 1")
+    with conn.cursor(name="pipeline") as cur:
+        with conn.pipeline():
+            with pytest.raises(psycopg.NotSupportedError):
+                cur.execute("select 1")
 
 
 def test_pipeline_processed_at_exit(conn):

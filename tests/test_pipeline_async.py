@@ -28,10 +28,10 @@ async def test_cursor_stream(aconn):
 
 
 async def test_server_cursor(aconn):
-    cur = aconn.cursor(name="pipeline")
-    async with aconn.pipeline():
-        with pytest.raises(psycopg.NotSupportedError):
-            await cur.execute("select 1")
+    async with aconn.cursor(name="pipeline") as cur:
+        async with aconn.pipeline():
+            with pytest.raises(psycopg.NotSupportedError):
+                await cur.execute("select 1")
 
 
 async def test_pipeline_processed_at_exit(aconn):
