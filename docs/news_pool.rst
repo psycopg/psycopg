@@ -17,6 +17,8 @@ psycopg_pool 4.0.0
   at object initialization (:ticket:`#155`).
 - Add `ConnectionPool.open()` and `AsyncConnectionPool.open()`
   (:ticket:`#155`).
+- Raise an `~psycopg.OperationalError` when trying to re-open a closed pool
+  (:ticket:`#155`).
 
 psycopg_pool 3.0.2
 ^^^^^^^^^^^^^^^^^^

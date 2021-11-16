@@ -8,6 +8,7 @@ from typing import Any, List, Tuple
 import pytest
 
 import psycopg
+from psycopg.errors import OperationalError
 from psycopg.pq import TransactionStatus
 from psycopg._compat import Counter
 
@@ -699,12 +700,9 @@ def test_reopen(dsn):
     p.close()
     assert p._sched_runner is None
     assert not p._workers
-    p.open()
-    assert p._sched_runner is not None
-    assert p._workers
-    with p.connection() as conn:
-        conn.execute("select 1")
-    p.close()
+
+    with pytest.raises(OperationalError, match="cannot be reused"):
+        p.open()
 
 
 @pytest.mark.slow
