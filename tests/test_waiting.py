@@ -1,4 +1,6 @@
 import select
+import socket
+import sys
 
 import pytest
 
@@ -8,9 +10,8 @@ from psycopg import generators
 from psycopg.pq import ConnStatus, ExecStatus
 
 
-skip_no_epoll = pytest.mark.skipif(
-    not hasattr(select, "epoll"), reason="epoll not available"
-)
+hasepoll = hasattr(select, "epoll")
+skip_no_epoll = pytest.mark.skipif(not hasepoll, reason="epoll not available")
 
 timeouts = [
     {},
@@ -19,6 +20,11 @@ timeouts = [
     {"timeout": 0.2},
     {"timeout": 10},
 ]
+
+
+skip_if_not_linux = pytest.mark.skipif(
+    not sys.platform.startswith("linux"), reason="non-Linux platform"
+)
 
 
 @pytest.mark.parametrize("timeout", timeouts)
@@ -42,6 +48,29 @@ def test_wait(pgconn, timeout):
     gen = generators.execute(pgconn)
     (res,) = waiting.wait(gen, pgconn.socket, **timeout)
     assert res.status == ExecStatus.TUPLES_OK
+
+
+waits_and_ids = [
+    (waiting.wait, "wait"),
+    (waiting.wait_selector, "wait_selector"),
+]
+if hasepoll:
+    waits_and_ids.append((waiting.wait_epoll, "wait_epoll"))
+
+waits, wids = list(zip(*waits_and_ids))
+
+
+@pytest.mark.parametrize("waitfn", waits, ids=wids)
+@pytest.mark.parametrize("wait, ready", zip(waiting.Wait, waiting.Ready))
+@skip_if_not_linux
+def test_wait_ready(waitfn, wait, ready):
+    def gen():
+        r = yield wait
+        return r
+
+    with socket.socket() as s:
+        r = waitfn(gen(), s.fileno())
+    assert r & ready
 
 
 @pytest.mark.parametrize("timeout", timeouts)
@@ -98,6 +127,19 @@ async def test_wait_async(pgconn):
     gen = generators.execute(pgconn)
     (res,) = await waiting.wait_async(gen, pgconn.socket)
     assert res.status == ExecStatus.TUPLES_OK
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("wait, ready", zip(waiting.Wait, waiting.Ready))
+@skip_if_not_linux
+async def test_wait_ready_async(wait, ready):
+    def gen():
+        r = yield wait
+        return r
+
+    with socket.socket() as s:
+        r = await waiting.wait_async(gen(), s.fileno())
+    assert r & ready
 
 
 @pytest.mark.asyncio

@@ -29,6 +29,7 @@ class Wait(IntEnum):
 class Ready(IntEnum):
     R = EVENT_READ
     W = EVENT_WRITE
+    RW = EVENT_READ | EVENT_WRITE
 
 
 def wait_selector(
@@ -59,6 +60,7 @@ def wait_selector(
             sel.unregister(fileno)
             # note: this line should require a cast, but mypy doesn't complain
             ready: Ready = rlist[0][1]
+            assert s & ready
             s = gen.send(ready)
 
     except StopIteration as ex:
@@ -118,29 +120,29 @@ async def wait_async(gen: PQGen[RV], fileno: int) -> RV:
 
     def wakeup(state: Ready) -> None:
         nonlocal ready
-        ready = state
+        ready |= state  # type: ignore[assignment]
         ev.set()
 
     try:
         s = next(gen)
         while 1:
+            reader = s & Wait.R
+            writer = s & Wait.W
+            if not reader and not writer:
+                raise e.InternalError(f"bad poll status: {s}")
             ev.clear()
-            if s == Wait.R:
+            ready = 0  # type: ignore[assignment]
+            if reader:
                 loop.add_reader(fileno, wakeup, Ready.R)
-                await ev.wait()
-                loop.remove_reader(fileno)
-            elif s == Wait.W:
+            if writer:
                 loop.add_writer(fileno, wakeup, Ready.W)
+            try:
                 await ev.wait()
-                loop.remove_writer(fileno)
-            elif s == Wait.RW:
-                loop.add_reader(fileno, wakeup, Ready.R)
-                loop.add_writer(fileno, wakeup, Ready.W)
-                await ev.wait()
-                loop.remove_reader(fileno)
-                loop.remove_writer(fileno)
-            else:
-                raise e.InternalError("bad poll status: %s")
+            finally:
+                if reader:
+                    loop.remove_reader(fileno)
+                if writer:
+                    loop.remove_writer(fileno)
             s = gen.send(ready)
 
     except StopIteration as ex:
@@ -179,23 +181,23 @@ async def wait_conn_async(
     try:
         fileno, s = next(gen)
         while 1:
+            reader = s & Wait.R
+            writer = s & Wait.W
+            if not reader and not writer:
+                raise e.InternalError(f"bad poll status: {s}")
             ev.clear()
-            if s == Wait.R:
+            ready = 0  # type: ignore[assignment]
+            if reader:
                 loop.add_reader(fileno, wakeup, Ready.R)
-                await wait_for(ev.wait(), timeout)
-                loop.remove_reader(fileno)
-            elif s == Wait.W:
+            if writer:
                 loop.add_writer(fileno, wakeup, Ready.W)
+            try:
                 await wait_for(ev.wait(), timeout)
-                loop.remove_writer(fileno)
-            elif s == Wait.RW:
-                loop.add_reader(fileno, wakeup, Ready.R)
-                loop.add_writer(fileno, wakeup, Ready.W)
-                await wait_for(ev.wait(), timeout)
-                loop.remove_reader(fileno)
-                loop.remove_writer(fileno)
-            else:
-                raise e.InternalError("bad poll status: %s")
+            finally:
+                if reader:
+                    loop.remove_reader(fileno)
+                if writer:
+                    loop.remove_writer(fileno)
             fileno, s = gen.send(ready)
 
     except TimeoutError:
@@ -232,11 +234,13 @@ def wait_epoll(
             while not fileevs:
                 fileevs = epoll.poll(timeout)
             ev = fileevs[0][1]
+            ready = 0
             if ev & ~select.EPOLLOUT:
-                s = Ready.R
-            else:
-                s = Ready.W
-            s = gen.send(s)
+                ready = Ready.R
+            if ev & ~select.EPOLLIN:
+                ready |= Ready.W
+            assert s & ready
+            s = gen.send(ready)
             evmask = poll_evmasks[s]
             epoll.modify(fileno, evmask)
 
