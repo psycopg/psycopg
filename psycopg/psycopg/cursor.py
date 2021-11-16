@@ -258,9 +258,11 @@ class BaseCursor(Generic[ConnectionType, Row]):
 
         # Update the prepare state of the query.
         # If an operation requires to flush our prepared statements cache, do it.
-        cmd = self._conn._prepared.maintain(pgq, results, prep, name)
-        if cmd:
-            yield from self._conn._exec_command(cmd)
+        key = self._conn._prepared.maybe_add_to_cache(pgq, prep, name)
+        if key is not None:
+            cmd = self._conn._prepared.validate(key, prep, name, results)
+            if cmd:
+                yield from self._conn._exec_command(cmd)
 
         return results
 

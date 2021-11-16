@@ -182,20 +182,6 @@ class PrepareManager:
             return None
         return self._rotate()
 
-    def maintain(
-        self,
-        query: PostgresQuery,
-        results: Sequence["PGresult"],
-        prep: Prepare,
-        name: bytes,
-    ) -> Optional[bytes]:
-        """Maintain the cache of the prepared statements."""
-        key = self.maybe_add_to_cache(query, prep, name)
-        if key is None:
-            return None
-
-        return self.validate(key, prep, name, results)
-
     def clear(self) -> Optional[bytes]:
         if self._prepared_idx:
             self._prepared.clear()
