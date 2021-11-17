@@ -91,27 +91,6 @@ class PrepareManager:
                     return self.clear()
         return None
 
-    def _check_in_cache_or_increment(
-        self, query: PostgresQuery, prep: Prepare, name: bytes
-    ) -> Optional[Tuple[Key, Value]]:
-        """Check if the query is already in cache.
-
-        If not, return a new 'key' matching given query. Otherwise, just
-        update the count for that query and record as last used.
-        """
-        key = self.key(query)
-        if key in self._prepared:
-            if isinstance(self._prepared[key], int):
-                if prep is Prepare.SHOULD:
-                    self._prepared[key] = name
-                else:
-                    self._prepared[key] += 1  # type: ignore[operator]
-            self._prepared.move_to_end(key)
-            return None
-
-        value: Value = name if prep is Prepare.SHOULD else 1
-        return key, value
-
     @staticmethod
     def _check_results(results: Sequence["PGresult"]) -> bool:
         """Return False if 'results' are invalid for prepared statement cache."""
@@ -154,12 +133,20 @@ class PrepareManager:
         # don't do anything if prepared statements are disabled
         if self.prepare_threshold is None:
             return None
-        cached = self._check_in_cache_or_increment(query, prep, name)
-        if cached is None:
+
+        key = self.key(query)
+        if key in self._prepared:
+            if isinstance(self._prepared[key], int):
+                if prep is Prepare.SHOULD:
+                    self._prepared[key] = name
+                else:
+                    self._prepared[key] += 1  # type: ignore[operator]
+            self._prepared.move_to_end(key)
             return None
-        key, value = cached
-        self._prepared[key] = value
-        return key
+        else:
+            value: Value = name if prep is Prepare.SHOULD else 1
+            self._prepared[key] = value
+            return key
 
     def validate(
         self,
