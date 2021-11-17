@@ -83,7 +83,8 @@ async def test_prepare_disable(aconn):
         res.append((await cur.fetchone())[0])
 
     assert res == [0] * 10
-    assert not aconn._prepared._prepared
+    assert not aconn._prepared._names
+    assert not aconn._prepared._counts
 
 
 async def test_no_prepare_multi(aconn):
@@ -148,10 +149,10 @@ async def test_evict_lru(aconn):
         await aconn.execute("select 'a'")
         await aconn.execute(f"select {i}")
 
-    assert len(aconn._prepared._prepared) == 5
-    assert aconn._prepared._prepared[b"select 'a'", ()] == b"_pg3_0"
+    assert len(aconn._prepared._names) == 1
+    assert aconn._prepared._names[b"select 'a'", ()] == b"_pg3_0"
     for i in [9, 8, 7, 6]:
-        assert aconn._prepared._prepared[f"select {i}".encode(), ()] == 1
+        assert aconn._prepared._counts[f"select {i}".encode(), ()] == 1
 
     cur = await aconn.execute("select statement from pg_prepared_statements")
     assert await cur.fetchall() == [("select 'a'",)]
@@ -164,11 +165,10 @@ async def test_evict_lru_deallocate(aconn):
         await aconn.execute("select 'a'")
         await aconn.execute(f"select {i}")
 
-    assert len(aconn._prepared._prepared) == 5
+    assert len(aconn._prepared._names) == 5
     for j in [9, 8, 7, 6, "'a'"]:
-        assert aconn._prepared._prepared[
-            f"select {j}".encode(), ()
-        ].startswith(b"_pg3_")
+        name = aconn._prepared._names[f"select {j}".encode(), ()]
+        assert name.startswith(b"_pg3_")
 
     cur = await aconn.execute(
         "select statement from pg_prepared_statements order by prepare_time",
