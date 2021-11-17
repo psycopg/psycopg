@@ -191,7 +191,7 @@ async def test_auto_prepare(aconn):
             for i in range(10)
         ]
 
-        assert len(aconn._prepared._prepared) == 1
+        assert len(aconn._prepared._names) == 1
 
     res = [(await c.fetchone())[0] for c in cursors]
     assert res == [0] * 5 + [1] * 5

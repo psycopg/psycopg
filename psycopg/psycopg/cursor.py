@@ -212,6 +212,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
         else:
             assert results is not None
             self._execute_results(results)
+
         self._last_query = query
 
         for cmd in self._conn._prepared.get_maintenance_commands():
@@ -279,27 +280,27 @@ class BaseCursor(Generic[ConnectionType, Row]):
                     )
             self._send_query_prepared(name, pgq, binary=binary)
 
+        key = self._conn._prepared.maybe_add_to_cache(pgq, prep, name)
+
         if pipeline_mode:
             logger.debug("sending query '%s' in pipeline", pgq.query.decode())
-            key = self._conn._prepared.handle(pgq, prep, name)
             if key is not None:
                 queued: "PipelineQueueItem" = (self, (key, prep, name))
             else:
                 queued = (self, None)
             self._conn._pipeline_queue.append(queued)
             return None
+        else:
+            # run the query
+            results = yield from execute(self._pgconn)
 
-        # run the query
-        results = yield from execute(self._pgconn)
+            # Update the prepare state of the query.
+            # If an operation requires to flush our prepared statements cache,
+            # it will be added to the maintenance commands to execute later.
+            if key is not None:
+                self._conn._prepared.validate(key, prep, name, results)
 
-        # Update the prepare state of the query.
-        # If an operation requires to flush our prepared statements cache,
-        # it will be added to the maintenance commands to execute later.
-        key = self._conn._prepared.maybe_add_to_cache(pgq, prep, name)
-        if key is not None:
-            self._conn._prepared.validate(key, prep, name, results)
-
-        return results
+            return results
 
     def _stream_send_gen(
         self,

@@ -188,7 +188,7 @@ def test_auto_prepare(conn):
             for i in range(10)
         ]
 
-        assert len(conn._prepared._prepared) == 1
+        assert len(conn._prepared._names) == 1
 
     res = [c.fetchone()[0] for c in cursors]
     assert res == [0] * 5 + [1] * 5

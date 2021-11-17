@@ -649,7 +649,7 @@ class BaseConnection(Generic[Row]):
         """
         fetched = yield from pipeline_communicate(self.pgconn)
         for results in fetched:
-            yield from self._pipeline_process_results_gen(results)
+            self._pipeline_process_results(results)
 
     def _pipeline_fetch_gen(self, *, flush: bool) -> PQGen[None]:
         """Fetch available results from the connection and process them with
@@ -673,11 +673,9 @@ class BaseConnection(Generic[Row]):
             results = yield from fetch_many(self.pgconn)
             if not results:
                 break
-            yield from self._pipeline_process_results_gen(results)
+            self._pipeline_process_results(results)
 
-    def _pipeline_process_results_gen(
-        self, results: List["PGresult"]
-    ) -> PQGen[None]:
+    def _pipeline_process_results(self, results: List["PGresult"]) -> None:
         """Process a results set fetched from the current pipeline.
 
         This matchs 'results' with its respective element in the pipeline
@@ -705,11 +703,7 @@ class BaseConnection(Generic[Row]):
             if prepinfo:
                 key, prep, name = prepinfo
                 # Update the prepare state of the query.
-                # If an operation requires to flush our prepared statements
-                # cache, do it.
-                cmd = self._prepared.validate(key, prep, name, results)
-                if cmd:
-                    yield from self._exec_command(cmd)
+                self._prepared.validate(key, prep, name, results)
 
 
 class Connection(BaseConnection[Row]):
