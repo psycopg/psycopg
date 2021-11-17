@@ -188,7 +188,7 @@ class AsyncConnectionPool(BasePool[AsyncConnection[Any]]):
         else:
             await self._return_connection(conn)
 
-    def open(self) -> None:
+    async def open(self) -> None:
         """Open the pool by starting worker tasks.
 
         No-op if the pool is already opened.
@@ -276,7 +276,7 @@ class AsyncConnectionPool(BasePool[AsyncConnection[Any]]):
             )
 
     async def __aenter__(self) -> "AsyncConnectionPool":
-        self.open()
+        await self.open()
         return self
 
     async def __aexit__(
