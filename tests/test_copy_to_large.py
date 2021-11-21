@@ -5,7 +5,8 @@ import pytest
 def test_copy_to_large(conn):
     cur = conn.cursor()
 
-    cur.execute("""
+    cur.execute(
+        """
 CREATE TEMP TABLE dump_test_table AS
 SELECT 
     md5('00' || x::text)::text AS col_00,
@@ -24,7 +25,8 @@ SELECT
     md5('13' || x::text)::text AS col_13,
     md5('14' || x::text)::text AS col_14,
     md5('15' || x::text)::text AS col_15
-FROM generate_series(1, 3000000) AS x;""")
+FROM generate_series(1, 3000000) AS x;"""
+    )
 
     with cur.copy("""COPY pg_temp.dump_test_table TO STDOUT;""") as copy:
         while copy.read():
