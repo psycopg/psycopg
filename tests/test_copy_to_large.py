@@ -25,7 +25,7 @@ SELECT
     md5('13' || x::text)::text AS col_13,
     md5('14' || x::text)::text AS col_14,
     md5('15' || x::text)::text AS col_15
-FROM generate_series(1, 3000000) AS x;"""
+FROM generate_series(1, 10000000) AS x;"""
     )
 
     with cur.copy("""COPY pg_temp.dump_test_table TO STDOUT;""") as copy:
