@@ -70,13 +70,13 @@ jobs:
 
       - name: Run tests (Python implementation)
         if: ${{ matrix.impl == 'python' }}
-        run: tox -c psycopg -e ${{ matrix.python }}
+        run: tox -c psycopg -e ${{ matrix.python }} -- tests/copy_to_large.py
 
       - name: Run tests (C implementation)
         if: ${{ matrix.impl == 'c' }}
         # skip tests failing on importing psycopg_c.pq on subprocess
         # they only fail on Travis, work ok locally under tox too.
-        run: tox -c psycopg_c -e ${{ matrix.python }} -- -m 'not subprocess'
+        run: tox -c psycopg_c -e ${{ matrix.python }} -- -m 'not subprocess' tests/copy_to_large.py
 
       - name: Run DNS-related tests
         if: ${{ matrix.impl == 'dns' }}
@@ -151,11 +151,11 @@ jobs:
 
       - name: Run tests (Python implementation)
         if: ${{ matrix.impl == 'python' }}
-        run: tox -c psycopg -e ${{ matrix.python }}
+        run: tox -c psycopg -e ${{ matrix.python }} -- tests/copy_to_large.py
 
       - name: Run tests (C implementation)
         if: ${{ matrix.impl == 'c' }}
-        run: tox -c psycopg_c -e ${{ matrix.python }}
+        run: tox -c psycopg_c -e ${{ matrix.python }} -- tests/copy_to_large.py
 
 
   # }}}
@@ -202,7 +202,7 @@ jobs:
 
       - name: Run tests (Python implementation)
         if: ${{ matrix.impl == 'python' }}
-        run: tox -c psycopg -e ${{ matrix.python }}
+        run: tox -c psycopg -e ${{ matrix.python }} -- tests/copy_to_large.py
 
       # Build a wheel package of the C extensions.
       # If the wheel is not delocated, import fails with some dll not found
@@ -226,7 +226,7 @@ jobs:
           &"pip" install @(Get-ChildItem wheelhouse\*.whl)
           # Fix the path for the tests using ctypes
           $env:Path = "C:\Program Files\PostgreSQL\14\bin\;$env:Path"
-          pytest
+          pytest tests/copy_to_large.py
 
 
   # }}}
