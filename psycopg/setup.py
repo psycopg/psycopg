@@ -41,6 +41,7 @@ extras_require = {
         "pproxy ~= 2.7.8",
         "pytest ~= 6.2.5",
         "pytest-asyncio ~= 0.16.0",
+        "pytest-cov ~= 3.0.0",
         "pytest-randomly ~= 3.10.1",
         "tenacity ~= 8.0.1",
     ],
