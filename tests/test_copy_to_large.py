@@ -8,7 +8,7 @@ def test_copy_to_large(conn):
     cur.execute(
         """
 CREATE TEMP TABLE dump_test_table AS
-SELECT 
+SELECT
     md5('00' || x::text)::text AS col_00,
     md5('01' || x::text)::text AS col_01,
     md5('02' || x::text)::text AS col_02,
