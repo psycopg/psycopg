@@ -18,6 +18,16 @@ testpaths=[
 # log_format = "%(asctime)s.%(msecs)03d %(levelname)-8s %(name)s:%(filename)s:%(lineno)d %(message)s"
 # log_level = "DEBUG"
 
+[tool.coverage.run]
+source = [
+    "psycopg/psycopg",
+    "psycopg_pool/psycopg_pool",
+]
+[tool.coverage.report]
+exclude_lines = [
+    "if TYPE_CHECKING:",
+    '\.\.\.$',
+]
 
 [tool.mypy]
 files = [

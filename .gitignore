@@ -11,3 +11,5 @@ __pycache__/
 /psycopg_binary/
 .vscode
 .venv
+.coverage
+htmlcov
