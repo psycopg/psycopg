@@ -1080,7 +1080,7 @@ def delay_connection(monkeypatch, sec):
         t0 = time()
         rv = connect_orig(*args, **kwargs)
         t1 = time()
-        sleep(sec - (t1 - t0))
+        sleep(max(0, sec - (t1 - t0)))
         return rv
 
     connect_orig = psycopg.Connection.connect

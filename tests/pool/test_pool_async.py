@@ -1055,7 +1055,7 @@ def delay_connection(monkeypatch, sec):
         t0 = time()
         rv = await connect_orig(*args, **kwargs)
         t1 = time()
-        await asyncio.sleep(sec - (t1 - t0))
+        await asyncio.sleep(max(0, sec - (t1 - t0)))
         return rv
 
     connect_orig = psycopg.AsyncConnection.connect
