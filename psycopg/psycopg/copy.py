@@ -168,9 +168,7 @@ class Copy(BaseCopy["Connection[Any]"]):
 
     def __init__(self, cursor: "Cursor[Any]"):
         super().__init__(cursor)
-        self._queue: queue.Queue[Optional[bytes]] = queue.Queue(
-            maxsize=self.QUEUE_SIZE
-        )
+        self._queue: queue.Queue[bytes] = queue.Queue(maxsize=self.QUEUE_SIZE)
         self._worker: Optional[threading.Thread] = None
 
     def __enter__(self) -> "Copy":
@@ -286,7 +284,7 @@ class Copy(BaseCopy["Connection[Any]"]):
     def _write_end(self) -> None:
         data = self.formatter.end()
         self._write(data)
-        self._queue.put(None)
+        self._queue.put(b"")
 
         if self._worker:
             self._worker.join()
@@ -300,7 +298,7 @@ class AsyncCopy(BaseCopy["AsyncConnection[Any]"]):
 
     def __init__(self, cursor: "AsyncCursor[Any]"):
         super().__init__(cursor)
-        self._queue: asyncio.Queue[Optional[bytes]] = asyncio.Queue(
+        self._queue: asyncio.Queue[bytes] = asyncio.Queue(
             maxsize=self.QUEUE_SIZE
         )
         self._worker: Optional[asyncio.Future[None]] = None
@@ -380,7 +378,7 @@ class AsyncCopy(BaseCopy["AsyncConnection[Any]"]):
     async def _write_end(self) -> None:
         data = self.formatter.end()
         await self._write(data)
-        await self._queue.put(None)
+        await self._queue.put(b"")
 
         if self._worker:
             await asyncio.gather(self._worker)
