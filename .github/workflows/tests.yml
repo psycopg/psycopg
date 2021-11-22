@@ -149,6 +149,9 @@ jobs:
       - name: Install tox
         run: pip install tox
 
+      - name: Show file limits
+        run: launchctl limit maxfiles
+
       - name: Run tests (Python implementation)
         if: ${{ matrix.impl == 'python' }}
         run: tox -c psycopg -e ${{ matrix.python }} -- tests/test_copy_to_large.py
