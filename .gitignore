@@ -1,8 +1,5 @@
 *.egg-info/
 .tox
-/.eggs/
-./build/
-dist/
 *.pstats
 .mypy_cache
 __pycache__/
@@ -13,3 +10,12 @@ __pycache__/
 .venv
 .coverage
 htmlcov
+
+.eggs/
+dist/
+# Spelling these explicitly because we have /scripts/build/ to not ignore
+# but I still want 'ag' to avoid looking here.
+/build/
+/psycopg/build/
+/psycopg_c/build/
+/psycopg_pool/build/
