@@ -268,8 +268,8 @@ def _split_query(query: bytes, encoding: str = "ascii") -> List[QueryPart]:
             )
         elif ph[-1:] not in b"sbt":
             raise e.ProgrammingError(
-                f"only '%s', '%b', '%t' placeholders allowed, got"
-                f" {m.group(0).decode(encoding)}"
+                f"only '%s', '%b', '%t' are allowed as placeholders, got"
+                f" '{m.group(0).decode(encoding)}'"
             )
 
         # Index or name

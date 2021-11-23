@@ -218,8 +218,8 @@ class AdaptersMap:
                 return d
 
         raise e.ProgrammingError(
-            f"cannot adapt type {cls.__name__}"
-            f" to format {PyFormat(format).name}"
+            f"cannot adapt type {cls.__name__!r} using placeholder '%{format}'"
+            f" (format: {PyFormat(format).name})"
         )
 
     def get_dumper_by_oid(self, oid: int, format: pq.Format) -> Type["Dumper"]:
