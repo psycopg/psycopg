@@ -51,17 +51,17 @@ def wait_selector(
     """
     try:
         s = next(gen)
-        sel = DefaultSelector()
-        while 1:
-            sel.register(fileno, s)
-            rlist = None
-            while not rlist:
-                rlist = sel.select(timeout=timeout)
-            sel.unregister(fileno)
-            # note: this line should require a cast, but mypy doesn't complain
-            ready: Ready = rlist[0][1]
-            assert s & ready
-            s = gen.send(ready)
+        with DefaultSelector() as sel:
+            while 1:
+                sel.register(fileno, s)
+                rlist = None
+                while not rlist:
+                    rlist = sel.select(timeout=timeout)
+                sel.unregister(fileno)
+                # note: this line should require a cast, but mypy doesn't complain
+                ready: Ready = rlist[0][1]
+                assert s & ready
+                s = gen.send(ready)
 
     except StopIteration as ex:
         rv: RV = ex.args[0] if ex.args else None
@@ -85,15 +85,15 @@ def wait_conn(gen: PQGenConn[RV], timeout: Optional[float] = None) -> RV:
     timeout = timeout or None
     try:
         fileno, s = next(gen)
-        sel = DefaultSelector()
-        while 1:
-            sel.register(fileno, s)
-            rlist = sel.select(timeout=timeout)
-            sel.unregister(fileno)
-            if not rlist:
-                raise e.OperationalError("timeout expired")
-            ready: Ready = rlist[0][1]  # type: ignore[assignment]
-            fileno, s = gen.send(ready)
+        with DefaultSelector() as sel:
+            while 1:
+                sel.register(fileno, s)
+                rlist = sel.select(timeout=timeout)
+                sel.unregister(fileno)
+                if not rlist:
+                    raise e.OperationalError("timeout expired")
+                ready: Ready = rlist[0][1]  # type: ignore[assignment]
+                fileno, s = gen.send(ready)
 
     except StopIteration as ex:
         rv: RV = ex.args[0] if ex.args else None
@@ -226,23 +226,23 @@ def wait_epoll(
 
     try:
         s = next(gen)
-        epoll = select.epoll()
-        evmask = poll_evmasks[s]
-        epoll.register(fileno, evmask)
-        while 1:
-            fileevs = None
-            while not fileevs:
-                fileevs = epoll.poll(timeout)
-            ev = fileevs[0][1]
-            ready = 0
-            if ev & ~select.EPOLLOUT:
-                ready = Ready.R
-            if ev & ~select.EPOLLIN:
-                ready |= Ready.W
-            assert s & ready
-            s = gen.send(ready)
+        with select.epoll() as epoll:
             evmask = poll_evmasks[s]
-            epoll.modify(fileno, evmask)
+            epoll.register(fileno, evmask)
+            while 1:
+                fileevs = None
+                while not fileevs:
+                    fileevs = epoll.poll(timeout)
+                ev = fileevs[0][1]
+                ready = 0
+                if ev & ~select.EPOLLOUT:
+                    ready = Ready.R
+                if ev & ~select.EPOLLIN:
+                    ready |= Ready.W
+                assert s & ready
+                s = gen.send(ready)
+                evmask = poll_evmasks[s]
+                epoll.modify(fileno, evmask)
 
     except StopIteration as ex:
         rv: RV = ex.args[0] if ex.args else None

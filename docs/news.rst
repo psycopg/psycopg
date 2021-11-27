@@ -10,6 +10,13 @@
 Current release
 ---------------
 
+Psycopg 3.0.5
+^^^^^^^^^^^^^
+
+- Fix possible "Too many open files" OS error, reported on macOS but possible
+  on other platforms too (:ticket:`#158`).
+
+
 Psycopg 3.0.4
 ^^^^^^^^^^^^^
 
