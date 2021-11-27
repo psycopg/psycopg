@@ -103,7 +103,7 @@ intersphinx_mapping = {
 autodoc_member_order = "bysource"
 
 # PostgreSQL docs version to link libpq functions to
-libpq_docs_version = "13"
+libpq_docs_version = "14"
 
 # Where to point on :ticket: role
 ticket_url = "https://github.com/psycopg/psycopg/issues/%s"
