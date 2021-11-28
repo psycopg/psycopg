@@ -1,6 +1,7 @@
 import pytest
 
 import psycopg
+from psycopg.pq import TransactionStatus
 
 pytestmark = [pytest.mark.asyncio]
 
@@ -20,10 +21,10 @@ async def test_tpc_disabled(aconn):
 class TestTPC:
     async def test_tpc_commit(self, aconn, tpc):
         xid = aconn.xid(1, "gtrid", "bqual")
-        assert aconn.info.transaction_status == aconn.TransactionStatus.IDLE
+        assert aconn.info.transaction_status == TransactionStatus.IDLE
 
         await aconn.tpc_begin(xid)
-        assert aconn.info.transaction_status == aconn.TransactionStatus.INTRANS
+        assert aconn.info.transaction_status == TransactionStatus.INTRANS
 
         cur = aconn.cursor()
         await cur.execute("insert into test_tpc values ('test_tpc_commit')")
@@ -31,21 +32,21 @@ class TestTPC:
         assert tpc.count_test_records() == 0
 
         await aconn.tpc_prepare()
-        assert aconn.info.transaction_status == aconn.TransactionStatus.IDLE
+        assert aconn.info.transaction_status == TransactionStatus.IDLE
         assert tpc.count_xacts() == 1
         assert tpc.count_test_records() == 0
 
         await aconn.tpc_commit()
-        assert aconn.info.transaction_status == aconn.TransactionStatus.IDLE
+        assert aconn.info.transaction_status == TransactionStatus.IDLE
         assert tpc.count_xacts() == 0
         assert tpc.count_test_records() == 1
 
     async def test_tpc_commit_one_phase(self, aconn, tpc):
         xid = aconn.xid(1, "gtrid", "bqual")
-        assert aconn.info.transaction_status == aconn.TransactionStatus.IDLE
+        assert aconn.info.transaction_status == TransactionStatus.IDLE
 
         await aconn.tpc_begin(xid)
-        assert aconn.info.transaction_status == aconn.TransactionStatus.INTRANS
+        assert aconn.info.transaction_status == TransactionStatus.INTRANS
 
         cur = aconn.cursor()
         await cur.execute("insert into test_tpc values ('test_tpc_commit_1p')")
@@ -53,16 +54,16 @@ class TestTPC:
         assert tpc.count_test_records() == 0
 
         await aconn.tpc_commit()
-        assert aconn.info.transaction_status == aconn.TransactionStatus.IDLE
+        assert aconn.info.transaction_status == TransactionStatus.IDLE
         assert tpc.count_xacts() == 0
         assert tpc.count_test_records() == 1
 
     async def test_tpc_commit_recovered(self, aconn, dsn, tpc):
         xid = aconn.xid(1, "gtrid", "bqual")
-        assert aconn.info.transaction_status == aconn.TransactionStatus.IDLE
+        assert aconn.info.transaction_status == TransactionStatus.IDLE
 
         await aconn.tpc_begin(xid)
-        assert aconn.info.transaction_status == aconn.TransactionStatus.INTRANS
+        assert aconn.info.transaction_status == TransactionStatus.INTRANS
 
         cur = aconn.cursor()
         await cur.execute(
@@ -76,20 +77,20 @@ class TestTPC:
         assert tpc.count_xacts() == 1
         assert tpc.count_test_records() == 0
 
-        aconn = await psycopg.AsyncConnection.connect(dsn)
-        xid = aconn.xid(1, "gtrid", "bqual")
-        await aconn.tpc_commit(xid)
+        async with await psycopg.AsyncConnection.connect(dsn) as aconn:
+            xid = aconn.xid(1, "gtrid", "bqual")
+            await aconn.tpc_commit(xid)
+            assert aconn.info.transaction_status == TransactionStatus.IDLE
 
-        assert aconn.info.transaction_status == aconn.TransactionStatus.IDLE
         assert tpc.count_xacts() == 0
         assert tpc.count_test_records() == 1
 
     async def test_tpc_rollback(self, aconn, tpc):
         xid = aconn.xid(1, "gtrid", "bqual")
-        assert aconn.info.transaction_status == aconn.TransactionStatus.IDLE
+        assert aconn.info.transaction_status == TransactionStatus.IDLE
 
         await aconn.tpc_begin(xid)
-        assert aconn.info.transaction_status == aconn.TransactionStatus.INTRANS
+        assert aconn.info.transaction_status == TransactionStatus.INTRANS
 
         cur = aconn.cursor()
         await cur.execute("insert into test_tpc values ('test_tpc_rollback')")
@@ -97,21 +98,21 @@ class TestTPC:
         assert tpc.count_test_records() == 0
 
         await aconn.tpc_prepare()
-        assert aconn.info.transaction_status == aconn.TransactionStatus.IDLE
+        assert aconn.info.transaction_status == TransactionStatus.IDLE
         assert tpc.count_xacts() == 1
         assert tpc.count_test_records() == 0
 
         await aconn.tpc_rollback()
-        assert aconn.info.transaction_status == aconn.TransactionStatus.IDLE
+        assert aconn.info.transaction_status == TransactionStatus.IDLE
         assert tpc.count_xacts() == 0
         assert tpc.count_test_records() == 0
 
     async def test_tpc_rollback_one_phase(self, aconn, tpc):
         xid = aconn.xid(1, "gtrid", "bqual")
-        assert aconn.info.transaction_status == aconn.TransactionStatus.IDLE
+        assert aconn.info.transaction_status == TransactionStatus.IDLE
 
         await aconn.tpc_begin(xid)
-        assert aconn.info.transaction_status == aconn.TransactionStatus.INTRANS
+        assert aconn.info.transaction_status == TransactionStatus.INTRANS
 
         cur = aconn.cursor()
         await cur.execute(
@@ -121,16 +122,16 @@ class TestTPC:
         assert tpc.count_test_records() == 0
 
         await aconn.tpc_rollback()
-        assert aconn.info.transaction_status == aconn.TransactionStatus.IDLE
+        assert aconn.info.transaction_status == TransactionStatus.IDLE
         assert tpc.count_xacts() == 0
         assert tpc.count_test_records() == 0
 
     async def test_tpc_rollback_recovered(self, aconn, dsn, tpc):
         xid = aconn.xid(1, "gtrid", "bqual")
-        assert aconn.info.transaction_status == aconn.TransactionStatus.IDLE
+        assert aconn.info.transaction_status == TransactionStatus.IDLE
 
         await aconn.tpc_begin(xid)
-        assert aconn.info.transaction_status == aconn.TransactionStatus.INTRANS
+        assert aconn.info.transaction_status == TransactionStatus.INTRANS
 
         cur = aconn.cursor()
         await cur.execute(
@@ -144,24 +145,24 @@ class TestTPC:
         assert tpc.count_xacts() == 1
         assert tpc.count_test_records() == 0
 
-        aconn = await psycopg.AsyncConnection.connect(dsn)
-        xid = aconn.xid(1, "gtrid", "bqual")
-        await aconn.tpc_rollback(xid)
+        async with await psycopg.AsyncConnection.connect(dsn) as aconn:
+            xid = aconn.xid(1, "gtrid", "bqual")
+            await aconn.tpc_rollback(xid)
+            assert aconn.info.transaction_status == TransactionStatus.IDLE
 
-        assert aconn.info.transaction_status == aconn.TransactionStatus.IDLE
         assert tpc.count_xacts() == 0
         assert tpc.count_test_records() == 0
 
     async def test_status_after_recover(self, aconn, tpc):
-        assert aconn.info.transaction_status == aconn.TransactionStatus.IDLE
+        assert aconn.info.transaction_status == TransactionStatus.IDLE
         await aconn.tpc_recover()
-        assert aconn.info.transaction_status == aconn.TransactionStatus.IDLE
+        assert aconn.info.transaction_status == TransactionStatus.IDLE
 
         cur = aconn.cursor()
         await cur.execute("select 1")
-        assert aconn.info.transaction_status == aconn.TransactionStatus.INTRANS
+        assert aconn.info.transaction_status == TransactionStatus.INTRANS
         await aconn.tpc_recover()
-        assert aconn.info.transaction_status == aconn.TransactionStatus.INTRANS
+        assert aconn.info.transaction_status == TransactionStatus.INTRANS
 
     async def test_recovered_xids(self, aconn, tpc):
         # insert a few test xns
@@ -219,19 +220,19 @@ class TestTPC:
         await aconn.tpc_prepare()
         await aconn.close()
 
-        aconn = await psycopg.AsyncConnection.connect(dsn)
-        xids = [
-            x
-            for x in await aconn.tpc_recover()
-            if x.database == aconn.info.dbname
-        ]
-        assert len(xids) == 1
-        xid = xids[0]
+        async with await psycopg.AsyncConnection.connect(dsn) as aconn:
+            xids = [
+                x
+                for x in await aconn.tpc_recover()
+                if x.database == aconn.info.dbname
+            ]
+            assert len(xids) == 1
+            xid = xids[0]
+            await aconn.tpc_rollback(xid)
+
         assert xid.format_id == fid
         assert xid.gtrid == gtrid
         assert xid.bqual == bqual
-
-        await aconn.tpc_rollback(xid)
 
     @pytest.mark.parametrize(
         "tid",
@@ -246,19 +247,19 @@ class TestTPC:
         await aconn.tpc_prepare()
         await aconn.close()
 
-        aconn = await psycopg.AsyncConnection.connect(dsn)
-        xids = [
-            x
-            for x in await aconn.tpc_recover()
-            if x.database == aconn.info.dbname
-        ]
-        assert len(xids) == 1
-        xid = xids[0]
+        async with await psycopg.AsyncConnection.connect(dsn) as aconn:
+            xids = [
+                x
+                for x in await aconn.tpc_recover()
+                if x.database == aconn.info.dbname
+            ]
+            assert len(xids) == 1
+            xid = xids[0]
+            await aconn.tpc_rollback(xid)
+
         assert xid.format_id is None
         assert xid.gtrid == tid
         assert xid.bqual is None
-
-        await aconn.tpc_rollback(xid)
 
     async def test_xid_unicode(self, aconn, dsn, tpc):
         x1 = aconn.xid(10, "uni", "code")
@@ -266,12 +267,13 @@ class TestTPC:
         await aconn.tpc_prepare()
         await aconn.close()
 
-        aconn = await psycopg.AsyncConnection.connect(dsn)
-        xid = [
-            x
-            for x in await aconn.tpc_recover()
-            if x.database == aconn.info.dbname
-        ][0]
+        async with await psycopg.AsyncConnection.connect(dsn) as aconn:
+            xid = [
+                x
+                for x in await aconn.tpc_recover()
+                if x.database == aconn.info.dbname
+            ][0]
+
         assert 10 == xid.format_id
         assert "uni" == xid.gtrid
         assert "code" == xid.bqual
@@ -287,12 +289,13 @@ class TestTPC:
         await aconn.tpc_prepare()
         await aconn.close()
 
-        aconn = await psycopg.AsyncConnection.connect(dsn)
-        xid = [
-            x
-            for x in await aconn.tpc_recover()
-            if x.database == aconn.info.dbname
-        ][0]
+        async with await psycopg.AsyncConnection.connect(dsn) as aconn:
+            xid = [
+                x
+                for x in await aconn.tpc_recover()
+                if x.database == aconn.info.dbname
+            ][0]
+
         assert xid.format_id is None
         assert xid.gtrid == "transaction-id"
         assert xid.bqual is None
@@ -309,9 +312,10 @@ class TestTPC:
         await aconn.tpc_prepare()
         await aconn.close()
 
-        aconn = await psycopg.AsyncConnection.connect(dsn)
-        xids = await aconn.tpc_recover()
-        xid = [x for x in xids if x.database == aconn.info.dbname][0]
+        async with await psycopg.AsyncConnection.connect(dsn) as aconn:
+            xids = await aconn.tpc_recover()
+            xid = [x for x in xids if x.database == aconn.info.dbname][0]
+
         assert xid.format_id is None
         assert xid.gtrid == "dict-connection"
         assert xid.bqual is None

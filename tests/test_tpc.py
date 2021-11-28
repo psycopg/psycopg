@@ -1,6 +1,7 @@
 import pytest
 
 import psycopg
+from psycopg.pq import TransactionStatus
 
 
 def test_tpc_disabled(conn):
@@ -17,10 +18,10 @@ def test_tpc_disabled(conn):
 class TestTPC:
     def test_tpc_commit(self, conn, tpc):
         xid = conn.xid(1, "gtrid", "bqual")
-        assert conn.info.transaction_status == conn.TransactionStatus.IDLE
+        assert conn.info.transaction_status == TransactionStatus.IDLE
 
         conn.tpc_begin(xid)
-        assert conn.info.transaction_status == conn.TransactionStatus.INTRANS
+        assert conn.info.transaction_status == TransactionStatus.INTRANS
 
         cur = conn.cursor()
         cur.execute("insert into test_tpc values ('test_tpc_commit')")
@@ -28,21 +29,21 @@ class TestTPC:
         assert tpc.count_test_records() == 0
 
         conn.tpc_prepare()
-        assert conn.info.transaction_status == conn.TransactionStatus.IDLE
+        assert conn.info.transaction_status == TransactionStatus.IDLE
         assert tpc.count_xacts() == 1
         assert tpc.count_test_records() == 0
 
         conn.tpc_commit()
-        assert conn.info.transaction_status == conn.TransactionStatus.IDLE
+        assert conn.info.transaction_status == TransactionStatus.IDLE
         assert tpc.count_xacts() == 0
         assert tpc.count_test_records() == 1
 
     def test_tpc_commit_one_phase(self, conn, tpc):
         xid = conn.xid(1, "gtrid", "bqual")
-        assert conn.info.transaction_status == conn.TransactionStatus.IDLE
+        assert conn.info.transaction_status == TransactionStatus.IDLE
 
         conn.tpc_begin(xid)
-        assert conn.info.transaction_status == conn.TransactionStatus.INTRANS
+        assert conn.info.transaction_status == TransactionStatus.INTRANS
 
         cur = conn.cursor()
         cur.execute("insert into test_tpc values ('test_tpc_commit_1p')")
@@ -50,16 +51,16 @@ class TestTPC:
         assert tpc.count_test_records() == 0
 
         conn.tpc_commit()
-        assert conn.info.transaction_status == conn.TransactionStatus.IDLE
+        assert conn.info.transaction_status == TransactionStatus.IDLE
         assert tpc.count_xacts() == 0
         assert tpc.count_test_records() == 1
 
     def test_tpc_commit_recovered(self, conn, dsn, tpc):
         xid = conn.xid(1, "gtrid", "bqual")
-        assert conn.info.transaction_status == conn.TransactionStatus.IDLE
+        assert conn.info.transaction_status == TransactionStatus.IDLE
 
         conn.tpc_begin(xid)
-        assert conn.info.transaction_status == conn.TransactionStatus.INTRANS
+        assert conn.info.transaction_status == TransactionStatus.INTRANS
 
         cur = conn.cursor()
         cur.execute("insert into test_tpc values ('test_tpc_commit_rec')")
@@ -71,20 +72,20 @@ class TestTPC:
         assert tpc.count_xacts() == 1
         assert tpc.count_test_records() == 0
 
-        conn = psycopg.connect(dsn)
-        xid = conn.xid(1, "gtrid", "bqual")
-        conn.tpc_commit(xid)
+        with psycopg.connect(dsn) as conn:
+            xid = conn.xid(1, "gtrid", "bqual")
+            conn.tpc_commit(xid)
+            assert conn.info.transaction_status == TransactionStatus.IDLE
 
-        assert conn.info.transaction_status == conn.TransactionStatus.IDLE
         assert tpc.count_xacts() == 0
         assert tpc.count_test_records() == 1
 
     def test_tpc_rollback(self, conn, tpc):
         xid = conn.xid(1, "gtrid", "bqual")
-        assert conn.info.transaction_status == conn.TransactionStatus.IDLE
+        assert conn.info.transaction_status == TransactionStatus.IDLE
 
         conn.tpc_begin(xid)
-        assert conn.info.transaction_status == conn.TransactionStatus.INTRANS
+        assert conn.info.transaction_status == TransactionStatus.INTRANS
 
         cur = conn.cursor()
         cur.execute("insert into test_tpc values ('test_tpc_rollback')")
@@ -92,21 +93,21 @@ class TestTPC:
         assert tpc.count_test_records() == 0
 
         conn.tpc_prepare()
-        assert conn.info.transaction_status == conn.TransactionStatus.IDLE
+        assert conn.info.transaction_status == TransactionStatus.IDLE
         assert tpc.count_xacts() == 1
         assert tpc.count_test_records() == 0
 
         conn.tpc_rollback()
-        assert conn.info.transaction_status == conn.TransactionStatus.IDLE
+        assert conn.info.transaction_status == TransactionStatus.IDLE
         assert tpc.count_xacts() == 0
         assert tpc.count_test_records() == 0
 
     def test_tpc_rollback_one_phase(self, conn, tpc):
         xid = conn.xid(1, "gtrid", "bqual")
-        assert conn.info.transaction_status == conn.TransactionStatus.IDLE
+        assert conn.info.transaction_status == TransactionStatus.IDLE
 
         conn.tpc_begin(xid)
-        assert conn.info.transaction_status == conn.TransactionStatus.INTRANS
+        assert conn.info.transaction_status == TransactionStatus.INTRANS
 
         cur = conn.cursor()
         cur.execute("insert into test_tpc values ('test_tpc_rollback_1p')")
@@ -114,16 +115,16 @@ class TestTPC:
         assert tpc.count_test_records() == 0
 
         conn.tpc_rollback()
-        assert conn.info.transaction_status == conn.TransactionStatus.IDLE
+        assert conn.info.transaction_status == TransactionStatus.IDLE
         assert tpc.count_xacts() == 0
         assert tpc.count_test_records() == 0
 
     def test_tpc_rollback_recovered(self, conn, dsn, tpc):
         xid = conn.xid(1, "gtrid", "bqual")
-        assert conn.info.transaction_status == conn.TransactionStatus.IDLE
+        assert conn.info.transaction_status == TransactionStatus.IDLE
 
         conn.tpc_begin(xid)
-        assert conn.info.transaction_status == conn.TransactionStatus.INTRANS
+        assert conn.info.transaction_status == TransactionStatus.INTRANS
 
         cur = conn.cursor()
         cur.execute("insert into test_tpc values ('test_tpc_commit_rec')")
@@ -135,24 +136,24 @@ class TestTPC:
         assert tpc.count_xacts() == 1
         assert tpc.count_test_records() == 0
 
-        conn = psycopg.connect(dsn)
-        xid = conn.xid(1, "gtrid", "bqual")
-        conn.tpc_rollback(xid)
+        with psycopg.connect(dsn) as conn:
+            xid = conn.xid(1, "gtrid", "bqual")
+            conn.tpc_rollback(xid)
+            assert conn.info.transaction_status == TransactionStatus.IDLE
 
-        assert conn.info.transaction_status == conn.TransactionStatus.IDLE
         assert tpc.count_xacts() == 0
         assert tpc.count_test_records() == 0
 
     def test_status_after_recover(self, conn, tpc):
-        assert conn.info.transaction_status == conn.TransactionStatus.IDLE
+        assert conn.info.transaction_status == TransactionStatus.IDLE
         conn.tpc_recover()
-        assert conn.info.transaction_status == conn.TransactionStatus.IDLE
+        assert conn.info.transaction_status == TransactionStatus.IDLE
 
         cur = conn.cursor()
         cur.execute("select 1")
-        assert conn.info.transaction_status == conn.TransactionStatus.INTRANS
+        assert conn.info.transaction_status == TransactionStatus.INTRANS
         conn.tpc_recover()
-        assert conn.info.transaction_status == conn.TransactionStatus.INTRANS
+        assert conn.info.transaction_status == TransactionStatus.INTRANS
 
     def test_recovered_xids(self, conn, tpc):
         # insert a few test xns
@@ -210,17 +211,18 @@ class TestTPC:
         conn.tpc_prepare()
         conn.close()
 
-        conn = psycopg.connect(dsn)
-        xids = [
-            x for x in conn.tpc_recover() if x.database == conn.info.dbname
-        ]
-        assert len(xids) == 1
-        xid = xids[0]
+        with psycopg.connect(dsn) as conn:
+            xids = [
+                x for x in conn.tpc_recover() if x.database == conn.info.dbname
+            ]
+
+            assert len(xids) == 1
+            xid = xids[0]
+            conn.tpc_rollback(xid)
+
         assert xid.format_id == fid
         assert xid.gtrid == gtrid
         assert xid.bqual == bqual
-
-        conn.tpc_rollback(xid)
 
     @pytest.mark.parametrize(
         "tid",
@@ -235,17 +237,18 @@ class TestTPC:
         conn.tpc_prepare()
         conn.close()
 
-        conn = psycopg.connect(dsn)
-        xids = [
-            x for x in conn.tpc_recover() if x.database == conn.info.dbname
-        ]
-        assert len(xids) == 1
-        xid = xids[0]
+        with psycopg.connect(dsn) as conn:
+            xids = [
+                x for x in conn.tpc_recover() if x.database == conn.info.dbname
+            ]
+
+            assert len(xids) == 1
+            xid = xids[0]
+            conn.tpc_rollback(xid)
+
         assert xid.format_id is None
         assert xid.gtrid == tid
         assert xid.bqual is None
-
-        conn.tpc_rollback(xid)
 
     def test_xid_unicode(self, conn, dsn, tpc):
         x1 = conn.xid(10, "uni", "code")
@@ -253,10 +256,10 @@ class TestTPC:
         conn.tpc_prepare()
         conn.close()
 
-        conn = psycopg.connect(dsn)
-        xid = [
-            x for x in conn.tpc_recover() if x.database == conn.info.dbname
-        ][0]
+        with psycopg.connect(dsn) as conn:
+            xid = [
+                x for x in conn.tpc_recover() if x.database == conn.info.dbname
+            ][0]
         assert 10 == xid.format_id
         assert "uni" == xid.gtrid
         assert "code" == xid.bqual
@@ -272,10 +275,11 @@ class TestTPC:
         conn.tpc_prepare()
         conn.close()
 
-        conn = psycopg.connect(dsn)
-        xid = [
-            x for x in conn.tpc_recover() if x.database == conn.info.dbname
-        ][0]
+        with psycopg.connect(dsn) as conn:
+            xid = [
+                x for x in conn.tpc_recover() if x.database == conn.info.dbname
+            ][0]
+
         assert xid.format_id is None
         assert xid.gtrid == "transaction-id"
         assert xid.bqual is None
@@ -292,9 +296,10 @@ class TestTPC:
         conn.tpc_prepare()
         conn.close()
 
-        conn = psycopg.connect(dsn)
-        xids = conn.tpc_recover()
-        xid = [x for x in xids if x.database == conn.info.dbname][0]
+        with psycopg.connect(dsn) as conn:
+            xids = conn.tpc_recover()
+            xid = [x for x in xids if x.database == conn.info.dbname][0]
+
         assert xid.format_id is None
         assert xid.gtrid == "dict-connection"
         assert xid.bqual is None
