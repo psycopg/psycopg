@@ -122,7 +122,17 @@ class BaseTransaction(Generic[ConnectionType]):
             yield from self._commit_gen()
             return False
         else:
-            return (yield from self._rollback_gen(exc_val))
+            # try to rollback, but if there are problems (connection in a bad
+            # state) just warn without clobbering the exception bubbling up.
+            try:
+                return (yield from self._rollback_gen(exc_val))
+            except Exception as exc2:
+                logger.warning(
+                    "error ignored in rollback of %s: %s",
+                    self,
+                    exc2,
+                )
+                return False
 
     def _commit_gen(self) -> PQGen[PGresult]:
         assert self._conn._savepoints[-1] == self._savepoint_name

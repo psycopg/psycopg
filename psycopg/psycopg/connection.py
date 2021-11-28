@@ -593,7 +593,7 @@ class Connection(BaseConnection[Row]):
                 self.rollback()
             except Exception as exc2:
                 logger.warning(
-                    "error ignored rolling back transaction on %s: %s",
+                    "error ignored in rollback on %s: %s",
                     self,
                     exc2,
                 )

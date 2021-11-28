@@ -1,3 +1,5 @@
+import logging
+
 import pytest
 
 from psycopg import Connection, ProgrammingError, Rollback
@@ -116,6 +118,45 @@ def test_rollback_on_exception_exit(conn):
 
     assert not in_transaction(conn)
     assert not inserted(conn)
+
+
+def test_context_inerror_rollback_no_clobber(conn, dsn, caplog):
+    caplog.set_level(logging.WARNING, logger="psycopg")
+
+    with pytest.raises(ZeroDivisionError):
+        with Connection.connect(dsn) as conn2:
+            with conn2.transaction():
+                conn2.execute("select 1")
+                conn.execute(
+                    "select pg_terminate_backend(%s::int)",
+                    [conn2.pgconn.backend_pid],
+                )
+                1 / 0
+
+    assert len(caplog.records) == 1
+    rec = caplog.records[0]
+    assert rec.levelno == logging.WARNING
+    assert "in rollback" in rec.message
+
+
+def test_context_active_rollback_no_clobber(conn, dsn, caplog):
+    caplog.set_level(logging.WARNING, logger="psycopg")
+
+    with pytest.raises(ZeroDivisionError):
+        conn2 = Connection.connect(dsn)
+        with conn2.transaction():
+            with conn2.cursor() as cur:
+                with cur.copy(
+                    "copy (select generate_series(1, 10)) to stdout"
+                ) as copy:
+                    for row in copy.rows():
+                        1 / 0
+
+    assert len(caplog.records) == 1
+    rec = caplog.records[0]
+    assert rec.levelno == logging.WARNING
+    assert "in rollback" in rec.message
+    conn2.close()
 
 
 def test_interaction_dbapi_transaction(conn):
