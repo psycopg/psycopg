@@ -76,7 +76,8 @@ pygments_style = "tango"
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 html_theme = "furo"
-html_show_sphinx = False
+html_show_sphinx = True
+html_show_sourcelink = False
 html_theme_options = {
     "announcement": announcement,
     "sidebar_hide_name": False,
