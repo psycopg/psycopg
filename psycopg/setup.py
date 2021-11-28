@@ -59,7 +59,7 @@ extras_require = {
     "docs": [
         "Sphinx ~= 4.2.0",
         "docutils ~= 0.17.0",
-        "furo >= 2021.9.8",
+        "furo == 2021.11.23",
         "sphinx-autobuild >= 2021.3.14",
         "sphinx-autodoc-typehints ~= 1.12.0",
         # to document optional modules
