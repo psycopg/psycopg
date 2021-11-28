@@ -198,18 +198,18 @@ def test_identify_closure(dsn, retries):
             conn2 = psycopg.connect(dsn)
             try:
                 t0 = time.time()
-                sel = selectors.DefaultSelector()
-                sel.register(conn, selectors.EVENT_READ)
-                t = threading.Thread(target=closer)
-                t.start()
-                try:
-                    assert sel.select(timeout=1.0)
-                    with pytest.raises(psycopg.OperationalError):
-                        conn.execute("select 1")
-                    t1 = time.time()
-                    assert 0.3 < t1 - t0 < 0.6
-                finally:
-                    t.join()
+                with selectors.DefaultSelector() as sel:
+                    sel.register(conn, selectors.EVENT_READ)
+                    t = threading.Thread(target=closer)
+                    t.start()
+                    try:
+                        assert sel.select(timeout=1.0)
+                        with pytest.raises(psycopg.OperationalError):
+                            conn.execute("select 1")
+                        t1 = time.time()
+                        assert 0.3 < t1 - t0 < 0.6
+                    finally:
+                        t.join()
             finally:
                 conn.close()
                 conn2.close()
