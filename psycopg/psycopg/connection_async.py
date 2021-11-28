@@ -8,14 +8,15 @@ import sys
 import asyncio
 import logging
 from types import TracebackType
-from typing import Any, AsyncGenerator, AsyncIterator, Dict, Optional
+from typing import Any, AsyncGenerator, AsyncIterator, Dict, List, Optional
 from typing import Type, Union, cast, overload, TYPE_CHECKING
 
 from . import errors as e
 from . import waiting
-from .pq import Format
+from .pq import Format, TransactionStatus
 from .abc import AdaptContext, Params, PQGen, PQGenConn, Query, RV
-from .rows import Row, AsyncRowFactory, tuple_row, TupleRow
+from ._tpc import Xid
+from .rows import Row, AsyncRowFactory, tuple_row, TupleRow, args_row
 from .adapt import AdaptersMap
 from ._enums import IsolationLevel
 from ._compat import asynccontextmanager, get_running_loop
@@ -334,3 +335,36 @@ class AsyncConnection(BaseConnection[Row]):
             f"'the {attribute!r} property is read-only on async connections:"
             f" please use 'await .set_{attribute}()' instead."
         )
+
+    async def tpc_begin(self, xid: Union[Xid, str]) -> None:
+        async with self.lock:
+            await self.wait(self._tpc_begin_gen(xid))
+
+    async def tpc_prepare(self) -> None:
+        try:
+            async with self.lock:
+                await self.wait(self._tpc_prepare_gen())
+        except e.ObjectNotInPrerequisiteState as ex:
+            raise e.NotSupportedError(str(ex)) from None
+
+    async def tpc_commit(self, xid: Union[Xid, str, None] = None) -> None:
+        async with self.lock:
+            await self.wait(self._tpc_finish_gen("commit", xid))
+
+    async def tpc_rollback(self, xid: Union[Xid, str, None] = None) -> None:
+        async with self.lock:
+            await self.wait(self._tpc_finish_gen("rollback", xid))
+
+    async def tpc_recover(self) -> List[Xid]:
+        status = self.info.transaction_status
+        async with self.cursor(row_factory=args_row(Xid._from_record)) as cur:
+            await cur.execute(Xid._get_recover_query())
+            res = await cur.fetchall()
+
+        if (
+            status == TransactionStatus.IDLE
+            and self.info.transaction_status == TransactionStatus.INTRANS
+        ):
+            await self.rollback()
+
+        return res

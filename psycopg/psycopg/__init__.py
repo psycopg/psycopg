@@ -9,6 +9,7 @@ import logging
 from . import pq  # noqa: F401 import early to stabilize side effects
 from . import types
 from . import postgres
+from ._tpc import Xid
 from .copy import Copy, AsyncCopy
 from ._enums import IsolationLevel
 from .cursor import Cursor
@@ -71,6 +72,7 @@ __all__ = [
     "Rollback",
     "ServerCursor",
     "Transaction",
+    "Xid",
     # DBAPI exports
     "connect",
     "apilevel",

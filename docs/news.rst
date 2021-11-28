@@ -7,6 +7,12 @@
 ``psycopg`` release notes
 =========================
 
+Psycopg 3.1 (unreleased)
+------------------------
+
+- Add :ref:`Two-Phase Commit <two-phase-commit>` support (:ticket:`#72`).
+
+
 Current release
 ---------------
 
