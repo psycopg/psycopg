@@ -15,6 +15,8 @@ Psycopg 3.0.5
 
 - Fix possible "Too many open files" OS error, reported on macOS but possible
   on other platforms too (:ticket:`#158`).
+- Don't clobber exceptions if a transaction block exit with error and rollback
+  fails (:ticket:`#165`).
 
 
 Psycopg 3.0.4
