@@ -15,7 +15,12 @@ _re_xid = re.compile(r"^(\d+)_([^_]*)_([^_]*)$")
 
 @dataclass(frozen=True)
 class Xid:
-    """A two-phase commit transaction identifier."""
+    """A two-phase commit transaction identifier.
+
+    The object can also be unpacked as a 3-item tuple (`format_id`, `gtrid`,
+    `bqual`).
+
+    """
 
     format_id: Optional[int]
     gtrid: str

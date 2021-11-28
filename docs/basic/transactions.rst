@@ -335,3 +335,54 @@ connection.
 
    .. __: https://www.postgresql.org/docs/current/transaction-iso.html
           #XACT-REPEATABLE-READ
+
+
+.. index::
+    pair: Two-phase commit; Transaction
+
+.. _two-phase-commit:
+
+Two-Phase Commit protocol support
+---------------------------------
+
+.. versionadded:: 3.1
+
+Psycopg exposes the two-phase commit features available in PostgreSQL
+implementing the `two-phase commit extensions`__ proposed by the DBAPI.
+
+The DBAPI model of two-phase commit is inspired by the `XA specification`__,
+according to which transaction IDs are formed from three components:
+
+- a format ID (non-negative 32 bit integer)
+- a global transaction ID (string not longer than 64 bytes)
+- a branch qualifier (string not longer than 64 bytes)
+
+For a particular global transaction, the first two components will be the same
+for all the resources. Every resource will be assigned a different branch
+qualifier.
+
+According to the DBAPI specification, a transaction ID is created using the
+`Connection.xid()` method. Once you have a transaction id, a distributed
+transaction can be started with `Connection.tpc_begin()`, prepared using
+`~Connection.tpc_prepare()` and completed using `~Connection.tpc_commit()` or
+`~Connection.tpc_rollback()`.  Transaction IDs can also be retrieved from the
+database using `~Connection.tpc_recover()` and completed using the above
+`!tpc_commit()` and `!tpc_rollback()`.
+
+PostgreSQL doesn't follow the XA standard though, and the ID for a PostgreSQL
+prepared transaction can be any string up to 200 characters long. Psycopg's
+`Xid` objects can represent both XA-style transactions IDs (such as the ones
+created by the `!xid()` method) and PostgreSQL transaction IDs identified by
+an unparsed string.
+
+The format in which the Xids are converted into strings passed to the
+database is the same employed by the `PostgreSQL JDBC driver`__: this should
+allow interoperation between tools written in Python and in Java. For example
+a recovery tool written in Python would be able to recognize the components of
+transactions produced by a Java program.
+
+For further details see the documentation for the :ref:`tpc-methods`.
+
+.. __: https://www.python.org/dev/peps/pep-0249/#optional-two-phase-commit-extensions
+.. __: https://publications.opengroup.org/c193
+.. __: https://jdbc.postgresql.org/

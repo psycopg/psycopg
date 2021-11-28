@@ -514,6 +514,15 @@ class BaseConnection(Generic[Row]):
             yield from self._exec_command(cmd)
 
     def xid(self, format_id: int, gtrid: str, bqual: str) -> Xid:
+        """
+        Returns a `Xid` to pass to the `!tpc_*()` methods of this connection.
+
+        The argument types and constraints are explained in
+        :ref:`two-phase-commit`.
+
+        The values passed to the method will be available on the returned
+        object as the members `~Xid.format_id`, `~Xid.gtrid`, `~Xid.bqual`.
+        """
         return Xid.from_parts(format_id, gtrid, bqual)
 
     def _tpc_begin_gen(self, xid: Union[Xid, str]) -> PQGen[None]:
@@ -871,10 +880,16 @@ class Connection(BaseConnection[Row]):
             super()._set_deferrable(value)
 
     def tpc_begin(self, xid: Union[Xid, str]) -> None:
+        """
+        Begin a TPC transaction with the given transaction ID *xid*.
+        """
         with self.lock:
             self.wait(self._tpc_begin_gen(xid))
 
     def tpc_prepare(self) -> None:
+        """
+        Perform the first phase of a transaction started with `tpc_begin()`.
+        """
         try:
             with self.lock:
                 self.wait(self._tpc_prepare_gen())
@@ -882,10 +897,16 @@ class Connection(BaseConnection[Row]):
             raise e.NotSupportedError(str(ex)) from None
 
     def tpc_commit(self, xid: Union[Xid, str, None] = None) -> None:
+        """
+        Commit a prepared two-phase transaction.
+        """
         with self.lock:
             self.wait(self._tpc_finish_gen("commit", xid))
 
     def tpc_rollback(self, xid: Union[Xid, str, None] = None) -> None:
+        """
+        Roll back a prepared two-phase transaction.
+        """
         with self.lock:
             self.wait(self._tpc_finish_gen("rollback", xid))
 

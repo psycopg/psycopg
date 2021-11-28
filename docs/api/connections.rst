@@ -265,6 +265,122 @@ The `!Connection` class
     .. automethod:: fileno
 
 
+    .. _tpc-methods:
+
+    .. rubric:: Two-Phase Commit support methods
+
+    .. versionadded:: 3.1
+
+    .. seealso:: :ref:`two-phase-commit` for an introductory explanation of
+        these methods.
+
+    .. automethod:: xid
+
+    .. automethod:: tpc_begin
+
+        :param xid: The id of the transaction
+        :type xid: Xid or str
+
+        This method should be called outside of a transaction (i.e. nothing
+        may have executed since the last `commit()` or `rollback()` and
+        `~ConnectionInfo.transaction_status` is `~pq.TransactionStatus.IDLE`).
+
+        Furthermore, it is an error to call `!commit()` or `!rollback()`
+        within the TPC transaction: in this case a `ProgrammingError`
+        is raised.
+
+        The *xid* may be either an object returned by the `xid()` method or a
+        plain string: the latter allows to create a transaction using the
+        provided string as PostgreSQL transaction id. See also
+        `tpc_recover()`.
+
+
+    .. automethod:: tpc_prepare
+
+        A `ProgrammingError` is raised if this method is used outside of a TPC
+        transaction.
+
+        After calling `!tpc_prepare()`, no statements can be executed until
+        `tpc_commit()` or `tpc_rollback()` will be
+        called.
+
+        .. seealso:: The |PREPARE TRANSACTION|_ PostgreSQL command.
+
+        .. |PREPARE TRANSACTION| replace:: :sql:`PREPARE TRANSACTION`
+        .. _PREPARE TRANSACTION: https://www.postgresql.org/docs/current/static/sql-prepare-transaction.html
+
+
+    .. automethod:: tpc_commit
+
+        :param xid: The id of the transaction
+        :type xid: Xid or str
+
+        When called with no arguments, `!tpc_commit()` commits a TPC
+        transaction previously prepared with `tpc_prepare()`.
+
+        If `!tpc_commit()` is called prior to `!tpc_prepare()`, a single phase
+        commit is performed.  A transaction manager may choose to do this if
+        only a single resource is participating in the global transaction.
+
+        When called with a transaction ID *xid*, the database commits the
+        given transaction.  If an invalid transaction ID is provided, a
+        `ProgrammingError` will be raised.  This form should be called outside
+        of a transaction, and is intended for use in recovery.
+
+        On return, the TPC transaction is ended.
+
+        .. seealso:: The |COMMIT PREPARED|_ PostgreSQL command.
+
+        .. |COMMIT PREPARED| replace:: :sql:`COMMIT PREPARED`
+        .. _COMMIT PREPARED: https://www.postgresql.org/docs/current/static/sql-commit-prepared.html
+
+
+    .. automethod:: tpc_rollback
+
+        :param xid: The id of the transaction
+        :type xid: Xid or str
+
+        When called with no arguments, `!tpc_rollback()` rolls back a TPC
+        transaction.  It may be called before or after `tpc_prepare()`.
+
+        When called with a transaction ID *xid*, it rolls back the given
+        transaction.  If an invalid transaction ID is provided, a
+        `ProgrammingError` is raised.  This form should be called outside of a
+        transaction, and is intended for use in recovery.
+
+        On return, the TPC transaction is ended.
+
+        .. seealso:: The |ROLLBACK PREPARED|_ PostgreSQL command.
+
+        .. |ROLLBACK PREPARED| replace:: :sql:`ROLLBACK PREPARED`
+        .. _ROLLBACK PREPARED: https://www.postgresql.org/docs/current/static/sql-rollback-prepared.html
+
+
+    .. automethod:: tpc_recover
+
+        Returns a list of `Xid` representing pending transactions, suitable
+        for use with `tpc_commit()` or `tpc_rollback()`.
+
+        If a transaction was not initiated by Psycopg, the returned Xids will
+        have attributes `~Xid.format_id` and `~Xid.bqual` set to `!None` and
+        the `~Xid.gtrid` set to the PostgreSQL transaction ID: such Xids are
+        still usable for recovery.  Psycopg uses the same algorithm of the
+        `PostgreSQL JDBC driver`__ to encode a XA triple in a string, so
+        transactions initiated by a program using such driver should be
+        unpacked correctly.
+
+        .. __: https://jdbc.postgresql.org/
+
+        Xids returned by `!tpc_recover()` also have extra attributes
+        `~Xid.prepared`, `~Xid.owner`, `~Xid.database` populated with the
+        values read from the server.
+
+        .. seealso:: the |pg_prepared_xacts|_ system view.
+
+        .. |pg_prepared_xacts| replace:: `pg_prepared_xacts`
+        .. _pg_prepared_xacts: https://www.postgresql.org/docs/current/static/view-pg-prepared-xacts.html
+
+
 The `!AsyncConnection` class
 ----------------------------
 
@@ -328,6 +444,11 @@ The `!AsyncConnection` class
     .. automethod:: set_isolation_level
     .. automethod:: set_read_only
     .. automethod:: set_deferrable
+
+    .. automethod:: tpc_prepare
+    .. automethod:: tpc_commit
+    .. automethod:: tpc_rollback
+    .. automethod:: tpc_recover
 
 
 Connection support objects
@@ -474,3 +595,42 @@ Connection support objects
       the `Transaction` *tx* (returned by a statement such as :samp:`with
       conn.transaction() as {tx}:` and all the blocks nested within. The
       program will continue after the *tx* block.
+
+
+.. autoclass:: Xid()
+
+    See :ref:`two-phase-commit` for details.
+
+    .. autoattribute:: format_id
+
+        Format Identifier of the two-phase transaction.
+
+    .. autoattribute:: gtrid
+
+        Global Transaction Identifier of the two-phase transaction.
+
+        If the Xid doesn't follow the XA standard, it will be the PostgreSQL
+        ID of the transaction (in which case `format_id` and `bqual` will be
+        `!None`).
+
+    .. autoattribute:: bqual
+
+        Branch Qualifier of the two-phase transaction.
+
+    .. autoattribute:: prepared
+
+        Timestamp at which the transaction was prepared for commit.
+
+        Only available on transactions recovered by `~Connection.tpc_recover()`.
+
+    .. autoattribute:: owner
+
+        Named of the user that executed the transaction.
+
+        Only available on recovered transactions.
+
+    .. autoattribute:: database
+
+        Named of the database in which the transaction was executed.
+
+        Only available on recovered transactions.
