@@ -91,7 +91,8 @@ class ServerCursorHelper(Generic[ConnectionType, Row]):
             self.name.encode(pgconn_encoding(conn.pgconn))
         )
         results = yield from execute(conn.pgconn)
-        cur._execute_results(results, format=self._format)
+        cur._set_results(results)
+        cur._set_result(0, format=self._format)
         self.described = True
 
     def _close_gen(self, cur: BaseCursor[ConnectionType, Row]) -> PQGen[None]:
