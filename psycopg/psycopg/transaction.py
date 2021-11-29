@@ -175,9 +175,9 @@ class BaseTransaction(Generic[ConnectionType]):
             commands.append(b"ROLLBACK")
 
         # Also clear the prepared statements cache.
-        cmd = self._conn._prepared.clear()
-        if cmd:
-            commands.append(cmd)
+        if self._conn._prepared.clear():
+            for cmd in self._conn._prepared.get_maintenance_commands():
+                commands.append(cmd)
 
         yield from self._conn._exec_command(b"; ".join(commands))
 

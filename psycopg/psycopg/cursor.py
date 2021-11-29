@@ -207,6 +207,9 @@ class BaseCursor(Generic[ConnectionType, Row]):
         self._execute_results(results)
         self._last_query = query
 
+        for cmd in self._conn._prepared.get_maintenance_commands():
+            yield from self._conn._exec_command(cmd)
+
     def _executemany_gen(
         self, query: Query, params_seq: Iterable[Params]
     ) -> PQGen[None]:
@@ -225,6 +228,9 @@ class BaseCursor(Generic[ConnectionType, Row]):
             self._execute_results(results)
 
         self._last_query = query
+
+        for cmd in self._conn._prepared.get_maintenance_commands():
+            yield from self._conn._exec_command(cmd)
 
     def _maybe_prepare_gen(
         self,
@@ -257,10 +263,11 @@ class BaseCursor(Generic[ConnectionType, Row]):
         results = yield from execute(self._pgconn)
 
         # Update the prepare state of the query.
-        # If an operation requires to flush our prepared statements cache, do it.
-        cmd = self._conn._prepared.maintain(pgq, results, prep, name)
-        if cmd:
-            yield from self._conn._exec_command(cmd)
+        # If an operation requires to flush our prepared statements cache,
+        # it will be added to the maintenance commands to execute later.
+        key = self._conn._prepared.maybe_add_to_cache(pgq, prep, name)
+        if key is not None:
+            self._conn._prepared.validate(key, prep, name, results)
 
         return results
 

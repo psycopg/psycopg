@@ -5,10 +5,11 @@ Support for prepared statements
 # Copyright (C) 2020-2021 The Psycopg Team
 
 from enum import IntEnum, auto
-from typing import Optional, Sequence, Tuple, TYPE_CHECKING, Union
+from typing import Iterator, Optional, Sequence, Tuple, TYPE_CHECKING
 from collections import OrderedDict
 
 from .pq import ExecStatus
+from ._compat import Deque
 from ._queries import PostgresQuery
 
 if TYPE_CHECKING:
@@ -21,6 +22,9 @@ class Prepare(IntEnum):
     SHOULD = auto()
 
 
+Key = Tuple[bytes, Tuple[int, ...]]
+
+
 class PrepareManager:
     # Number of times a query is executed before it is prepared.
     prepare_threshold: Optional[int] = 5
@@ -29,18 +33,20 @@ class PrepareManager:
     prepared_max: int = 100
 
     def __init__(self) -> None:
-        # Number of times each query was seen in order to prepare it.
-        # Map (query, types) -> name or number of times seen
-        #
-        # Note: with this implementation we keep the tally of up to 100
-        # queries, but most likely we will prepare way less than that. We might
-        # change that if we think it would be better.
-        self._prepared: OrderedDict[
-            Tuple[bytes, Tuple[int, ...]], Union[int, bytes]
-        ] = OrderedDict()
+        # Map (query, types) to the number of times the query was seen.
+        self._counts: OrderedDict[Key, int] = OrderedDict()
+
+        # Map (query, types) to the name of the statement if  prepared.
+        self._names: OrderedDict[Key, bytes] = OrderedDict()
 
         # Counter to generate prepared statements names
         self._prepared_idx = 0
+
+        self._maint_commands = Deque[bytes]()
+
+    @staticmethod
+    def key(query: PostgresQuery) -> Key:
+        return (query.query, query.types)
 
     def get(
         self, query: PostgresQuery, prepare: Optional[bool] = None
@@ -52,13 +58,14 @@ class PrepareManager:
             # The user doesn't want this query to be prepared
             return Prepare.NO, b""
 
-        key = (query.query, query.types)
-        value: Union[bytes, int] = self._prepared.get(key, 0)
-        if isinstance(value, bytes):
+        key = self.key(query)
+        name = self._names.get(key)
+        if name:
             # The query was already prepared in this session
-            return Prepare.YES, value
+            return Prepare.YES, name
 
-        if value >= self.prepare_threshold or prepare:
+        count = self._counts.get(key, 0)
+        if count >= self.prepare_threshold or prepare:
             # The query has been executed enough times and needs to be prepared
             name = f"_pg3_{self._prepared_idx}".encode()
             self._prepared_idx += 1
@@ -67,22 +74,14 @@ class PrepareManager:
             # The query is not to be prepared yet
             return Prepare.NO, b""
 
-    def maintain(
-        self,
-        query: PostgresQuery,
-        results: Sequence["PGresult"],
-        prep: Prepare,
-        name: bytes,
-    ) -> Optional[bytes]:
-        """Maintain the cache of the prepared statements."""
-        # don't do anything if prepared statements are disabled
-        if self.prepare_threshold is None:
-            return None
-
-        # Check if we need to discard our entire state: it should happen on
-        # rollback or on dropping objects, because the same object may get
-        # recreated and postgres would fail internal lookups.
-        if self._prepared or prep == Prepare.SHOULD:
+    def _should_discard(
+        self, prep: Prepare, results: Sequence["PGresult"]
+    ) -> bool:
+        """Check if we need to discard our entire state: it should happen on
+        rollback or on dropping objects, because the same object may get
+        recreated and postgres would fail internal lookups.
+        """
+        if self._names or prep == Prepare.SHOULD:
             for result in results:
                 if result.status != ExecStatus.COMMAND_OK:
                     continue
@@ -90,50 +89,110 @@ class PrepareManager:
                 if cmdstat and (
                     cmdstat.startswith(b"DROP ") or cmdstat == b"ROLLBACK"
                 ):
-                    self._prepared.clear()
-                    return b"DEALLOCATE ALL"
+                    return self.clear()
+        return False
 
-        key = (query.query, query.types)
-
-        # If we know the query already the cache size won't change
-        # So just update the count and record as last used
-        if key in self._prepared:
-            if isinstance(self._prepared[key], int):
-                if prep is Prepare.SHOULD:
-                    self._prepared[key] = name
-                else:
-                    self._prepared[key] += 1  # type: ignore  # operator
-            self._prepared.move_to_end(key)
-            return None
-
-        # The query is not in cache. Let's see if we must add it
+    @staticmethod
+    def _check_results(results: Sequence["PGresult"]) -> bool:
+        """Return False if 'results' are invalid for prepared statement cache."""
         if len(results) != 1:
             # We cannot prepare a multiple statement
-            return None
+            return False
 
         status = results[0].status
         if ExecStatus.COMMAND_OK != status != ExecStatus.TUPLES_OK:
             # We don't prepare failed queries or other weird results
+            return False
+
+        return True
+
+    def _rotate(self) -> None:
+        """Evict an old value from the cache.
+
+        If it was prepared, deallocate it. Do it only once: if the cache was
+        resized, deallocate gradually.
+        """
+        if len(self._counts) > self.prepared_max:
+            self._counts.popitem(last=False)
+
+        if len(self._names) > self.prepared_max:
+            name = self._names.popitem(last=False)[1]
+            self._maint_commands.append(b"DEALLOCATE " + name)
+
+    def maybe_add_to_cache(
+        self, query: PostgresQuery, prep: Prepare, name: bytes
+    ) -> Optional[Key]:
+        """Handle 'query' for possible addition to the cache.
+
+        If a new entry has been added, return its key. Return None otherwise
+        (meaning the query is already in cache or cache is not enabled).
+
+        Note: This method is only called in pipeline mode.
+        """
+        # don't do anything if prepared statements are disabled
+        if self.prepare_threshold is None:
             return None
 
-        # Ok, we got to the conclusion that this query is genuinely to prepare
-        self._prepared[key] = name if prep is Prepare.SHOULD else 1
-
-        # Evict an old value from the cache; if it was prepared, deallocate it
-        # Do it only once: if the cache was resized, deallocate gradually
-        if len(self._prepared) <= self.prepared_max:
+        key = self.key(query)
+        if key in self._counts:
+            if prep is Prepare.SHOULD:
+                del self._counts[key]
+                self._names[key] = name
+            else:
+                self._counts[key] += 1
+                self._counts.move_to_end(key)
             return None
 
-        old_val = self._prepared.popitem(last=False)[1]
-        if isinstance(old_val, bytes):
-            return b"DEALLOCATE " + old_val
+        elif key in self._names:
+            self._names.move_to_end(key)
+            return None
+
         else:
-            return None
+            if prep is Prepare.SHOULD:
+                self._names[key] = name
+            else:
+                self._counts[key] = 1
+            return key
 
-    def clear(self) -> Optional[bytes]:
-        if self._prepared_idx:
-            self._prepared.clear()
-            self._prepared_idx = 0
-            return b"DEALLOCATE ALL"
+    def validate(
+        self,
+        key: Key,
+        prep: Prepare,
+        name: bytes,
+        results: Sequence["PGresult"],
+    ) -> None:
+        """Validate cached entry with 'key' by checking query 'results'.
+
+        Possibly return a command to perform maintainance on database side.
+
+        Note: this method is only called in pipeline mode.
+        """
+        if self._should_discard(prep, results):
+            return
+
+        if not self._check_results(results):
+            self._names.pop(key, None)
+            self._counts.pop(key, None)
         else:
-            return None
+            self._rotate()
+
+    def clear(self) -> bool:
+        """Clear the cache of the maintenance commands.
+
+        Clear the internal state and prepare a command to clear the state of
+        the server.
+        """
+        if self._names:
+            self._names.clear()
+            self._maint_commands.clear()
+            self._maint_commands.append(b"DEALLOCATE ALL")
+            return True
+        else:
+            return False
+
+    def get_maintenance_commands(self) -> Iterator[bytes]:
+        """
+        Iterate over the commands needed to align the server state to our state
+        """
+        while self._maint_commands:
+            yield self._maint_commands.popleft()
