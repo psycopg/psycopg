@@ -110,7 +110,6 @@ class BasePipeline:
 
     def _sync(self) -> None:
         self.pgconn.pipeline_sync()
-        logger.debug("sending sync message to pipeline")
         self._queue.append(None)
 
 
@@ -481,7 +480,6 @@ class BaseConnection(Generic[Row]):
 
         if self.pgconn.pipeline_status:
             self._pipeline_queue.append(None)
-            logger.debug("sending command '%s' in pipeline", command.decode())
             return None
 
         result = (yield from execute(self.pgconn))[-1]
@@ -661,11 +659,9 @@ class BaseConnection(Generic[Row]):
         fetching.
         """
         if not self._pipeline_queue:
-            logger.debug("pipeline queue is empty, skipping fetch")
             return
 
         if flush:
-            logger.debug("sending flush request")
             self.pgconn.send_flush_request()
             yield from send(self.pgconn)
 
@@ -684,10 +680,6 @@ class BaseConnection(Generic[Row]):
         cache. Otherwise, results are attached to their respective cursor.
         """
         queued = self._pipeline_queue.popleft()
-        logger.debug(
-            "received %s results from pipeline",
-            ", ".join(pq.ExecStatus(r.status).name for r in results),
-        )
         if queued is None:
             (result,) = results
             if result.status in (

@@ -4,7 +4,6 @@ psycopg cursor objects
 
 # Copyright (C) 2020-2021 The Psycopg Team
 
-import logging
 import sys
 from types import TracebackType
 from typing import Any, Callable, Generic, Iterable, Iterator, List
@@ -29,8 +28,6 @@ if TYPE_CHECKING:
     from .abc import Transformer
     from .pq.abc import PGconn, PGresult
     from .connection import Connection, PipelineQueueItem
-
-logger = logging.getLogger("psycopg")
 
 execute: Callable[["PGconn"], PQGen[List["PGresult"]]]
 
@@ -266,11 +263,6 @@ class BaseCursor(Generic[ConnectionType, Row]):
             # The query must be prepared and executed
             self._send_prepare(name, pgq)
             if pipeline_mode:
-                logger.debug(
-                    "sending prepared statement creation request for '%s' "
-                    "in pipeline",
-                    pgq.query.decode(),
-                )
                 self._conn._pipeline_queue.append(None)
             else:
                 (result,) = yield from execute(self._pgconn)
@@ -283,7 +275,6 @@ class BaseCursor(Generic[ConnectionType, Row]):
         key = self._conn._prepared.maybe_add_to_cache(pgq, prep, name)
 
         if pipeline_mode:
-            logger.debug("sending query '%s' in pipeline", pgq.query.decode())
             if key is not None:
                 queued: "PipelineQueueItem" = (self, (key, prep, name))
             else:
