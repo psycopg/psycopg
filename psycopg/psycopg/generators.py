@@ -125,6 +125,12 @@ def fetch_many(pgconn: PGconn) -> PQGen[List[PGresult]]:
             # for every request so let's break the endless loop.
             break
 
+        if res.status == pq.ExecStatus.PIPELINE_SYNC:
+            # PIPELINE_SYNC is not followed by a NULL, but we return it alone
+            # similarly to other result sets.
+            assert len(results) == 1, results
+            break
+
     return results
 
 
