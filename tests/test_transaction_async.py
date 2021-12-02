@@ -371,7 +371,7 @@ async def test_named_savepoints_successful_exit(aconn, acommands):
 
     # Case 2
     async with aconn.transaction(savepoint_name="foo") as tx:
-        assert commands.popall() == ['BEGIN; SAVEPOINT "foo"']
+        assert commands.popall() == ["BEGIN", 'SAVEPOINT "foo"']
         assert tx.savepoint_name == "foo"
     assert commands.popall() == ["COMMIT"]
 
@@ -413,7 +413,7 @@ async def test_named_savepoints_exception_exit(aconn, acommands):
     # Case 2
     with pytest.raises(ExpectedException):
         async with aconn.transaction(savepoint_name="foo") as tx:
-            assert commands.popall() == ['BEGIN; SAVEPOINT "foo"']
+            assert commands.popall() == ["BEGIN", 'SAVEPOINT "foo"']
             assert tx.savepoint_name == "foo"
             raise ExpectedException
     assert commands.popall() == ["ROLLBACK"]
@@ -426,7 +426,7 @@ async def test_named_savepoints_exception_exit(aconn, acommands):
                 assert commands.popall() == ['SAVEPOINT "bar"']
                 assert tx.savepoint_name == "bar"
                 raise ExpectedException
-        assert commands.popall() == ['ROLLBACK TO "bar"; RELEASE "bar"']
+        assert commands.popall() == ['ROLLBACK TO "bar"', 'RELEASE "bar"']
     assert commands.popall() == ["COMMIT"]
 
     # Case 3 (with savepoint name auto-generated)
@@ -437,7 +437,10 @@ async def test_named_savepoints_exception_exit(aconn, acommands):
                 assert commands.popall() == ['SAVEPOINT "_pg3_2"']
                 assert tx.savepoint_name == "_pg3_2"
                 raise ExpectedException
-        assert commands.popall() == ['ROLLBACK TO "_pg3_2"; RELEASE "_pg3_2"']
+        assert commands.popall() == [
+            'ROLLBACK TO "_pg3_2"',
+            'RELEASE "_pg3_2"',
+        ]
     assert commands.popall() == ["COMMIT"]
 
 
