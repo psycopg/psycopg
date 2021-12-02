@@ -246,20 +246,17 @@ class BaseCursor(Generic[ConnectionType, Row]):
     ) -> PQGen[List["PGresult"]]:
         # Check if the query is prepared or needs preparing
         prep, name = self._conn._prepared.get(pgq, prepare)
-        if prep is Prepare.YES:
-            # The query is already prepared
-            self._send_query_prepared(name, pgq, binary=binary)
-
-        elif prep is Prepare.NO:
+        if prep is Prepare.NO:
             # The query must be executed without preparing
             self._execute_send(pgq, binary=binary)
-
         else:
-            # The query must be prepared and executed
-            self._send_prepare(name, pgq)
-            (result,) = yield from execute(self._pgconn)
-            if result.status == ExecStatus.FATAL_ERROR:
-                raise e.error_from_result(result, encoding=self._encoding)
+            # If the query is not already prepared, prepare it.
+            if prep is Prepare.SHOULD:
+                self._send_prepare(name, pgq)
+                (result,) = yield from execute(self._pgconn)
+                if result.status == ExecStatus.FATAL_ERROR:
+                    raise e.error_from_result(result, encoding=self._encoding)
+            # Then execute it.
             self._send_query_prepared(name, pgq, binary=binary)
 
         # run the query
