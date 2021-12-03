@@ -137,7 +137,7 @@ jobs:
       - uses: actions/checkout@v2
 
       - name: Install PostgreSQL on the runner
-        run: brew install postgresql@13
+        run: brew install postgresql@14
 
       - name: Start PostgreSQL service for test
         run: brew services start postgresql
