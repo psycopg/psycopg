@@ -24,6 +24,23 @@ if not libname:
 
 pq = ctypes.cdll.LoadLibrary(libname)
 
+
+class FILE(Structure):
+    pass
+
+
+FILE_ptr = POINTER(FILE)
+
+if sys.platform == "linux":
+    libcname = ctypes.util.find_library("c")
+    assert libcname
+    libc = ctypes.cdll.LoadLibrary(libcname)
+
+    fdopen = libc.fdopen
+    fdopen.argtypes = (c_int, c_char_p)
+    fdopen.restype = FILE_ptr
+
+
 # Get the libpq version to define what functions are available.
 
 PQlibVersion = pq.PQlibVersion
@@ -551,6 +568,34 @@ PQgetCopyData.argtypes = [PGconn_ptr, POINTER(c_char_p), c_int]
 PQgetCopyData.restype = c_int
 
 
+# 33.10. Control Functions
+
+PQtrace = pq.PQtrace
+PQtrace.argtypes = [PGconn_ptr, FILE_ptr]
+PQtrace.restype = None
+
+_PQsetTraceFlags = None
+
+if libpq_version >= 140000:
+    _PQsetTraceFlags = pq.PQsetTraceFlags
+    _PQsetTraceFlags.argtypes = [PGconn_ptr, c_int]
+    _PQsetTraceFlags.restype = None
+
+
+def PQsetTraceFlags(pgconn: PGconn_struct, flags: int) -> None:
+    if not _PQsetTraceFlags:
+        raise NotSupportedError(
+            f"PQsetTraceFlags requires libpq from PostgreSQL 14,"
+            f" {libpq_version} available instead"
+        )
+
+    _PQsetTraceFlags(pgconn, flags)
+
+
+PQuntrace = pq.PQuntrace
+PQuntrace.argtypes = [PGconn_ptr]
+PQuntrace.restype = None
+
 # 33.11. Miscellaneous Functions
 
 PQfreemem = pq.PQfreemem
@@ -715,6 +760,7 @@ def generate_stub() -> None:
             "LP_c_int",
             "LP_c_uint",
             "LP_c_ulong",
+            "LP_FILE",
         ):
             return f"pointer[{t.__name__[3:]}]"
 

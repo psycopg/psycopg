@@ -7,7 +7,7 @@ Protocol objects to represent objects exposed by different pq implementations.
 from typing import Any, Callable, List, Optional, Sequence, Tuple
 from typing import Union, TYPE_CHECKING
 
-from ._enums import Format
+from ._enums import Format, Trace
 from .._compat import Protocol
 
 if TYPE_CHECKING:
@@ -232,6 +232,15 @@ class PGconn(Protocol):
         ...
 
     def get_copy_data(self, async_: int) -> Tuple[int, memoryview]:
+        ...
+
+    def trace(self, fileno: int) -> None:
+        ...
+
+    def set_trace_flags(self, flags: Trace) -> None:
+        ...
+
+    def untrace(self) -> None:
         ...
 
     def encrypt_password(

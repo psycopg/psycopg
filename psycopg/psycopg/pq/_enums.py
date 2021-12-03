@@ -4,7 +4,7 @@ libpq enum definitions for psycopg
 
 # Copyright (C) 2020-2021 The Psycopg Team
 
-from enum import IntEnum, auto
+from enum import IntEnum, IntFlag, auto
 
 
 class ConnStatus(IntEnum):
@@ -232,3 +232,17 @@ class Format(IntEnum):
     """Text parameter."""
     BINARY = 1
     """Binary parameter."""
+
+
+class Trace(IntFlag):
+    """
+    Enum to control tracing of the client/server communication.
+    """
+
+    __module__ = "psycopg.pq"
+
+    SUPPRESS_TIMESTAMPS = 1
+    """Do not include timestamps in messages."""
+
+    REGRESS_MODE = 2
+    """Redact some fields, e.g. OIDs, from messages."""

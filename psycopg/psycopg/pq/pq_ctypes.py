@@ -10,6 +10,7 @@ implementation.
 
 import os
 import logging
+import sys
 from weakref import ref
 from functools import partial
 
@@ -22,7 +23,7 @@ from .. import errors as e
 from . import _pq_ctypes as impl
 from .misc import PGnotify, ConninfoOption, PGresAttDesc
 from .misc import error_message, connection_summary
-from ._enums import Format, ExecStatus
+from ._enums import Format, ExecStatus, Trace
 
 if TYPE_CHECKING:
     from . import abc
@@ -607,6 +608,18 @@ class PGconn:
             return nbytes, memoryview(data)
         else:
             return nbytes, memoryview(b"")
+
+    def trace(self, fileno: int) -> None:
+        if sys.platform != "linux":
+            raise e.NotSupportedError("only supported on Linux")
+        stream = impl.fdopen(fileno, b"w")
+        impl.PQtrace(self._pgconn_ptr, stream)
+
+    def set_trace_flags(self, flags: Trace) -> None:
+        impl.PQsetTraceFlags(self._pgconn_ptr, flags)
+
+    def untrace(self) -> None:
+        impl.PQuntrace(self._pgconn_ptr)
 
     def encrypt_password(
         self, passwd: bytes, user: bytes, algorithm: Optional[bytes] = None

@@ -17,13 +17,15 @@ cdef extern from * nogil:
     """
     pid_t getpid()
 
+from libc.stdio cimport fdopen
 from cpython.mem cimport PyMem_Malloc, PyMem_Free
 from cpython.bytes cimport PyBytes_AsString
 from cpython.memoryview cimport PyMemoryView_FromObject
 
 import logging
+import sys
 
-from psycopg.pq import Format as PqFormat
+from psycopg.pq import Format as PqFormat, Trace
 from psycopg.pq.misc import PGnotify, connection_summary
 from psycopg_c.pq cimport PQBuffer
 
@@ -503,6 +505,23 @@ cdef class PGconn:
             return nbytes, data
         else:
             return nbytes, b""  # won't parse it, doesn't really be memoryview
+
+    def trace(self, fileno: int) -> None:
+        if sys.platform != "linux":
+            raise e.NotSupportedError("only supported on Linux")
+        stream = fdopen(fileno, b"w")
+        libpq.PQtrace(self._pgconn_ptr, stream)
+
+    def set_trace_flags(self, flags: Trace) -> None:
+        if libpq.PG_VERSION_NUM < 140000:
+            raise e.NotSupportedError(
+                f"PQsetTraceFlags requires libpq from PostgreSQL 14,"
+                f" {libpq.PG_VERSION_NUM} available instead"
+            )
+        libpq.PQsetTraceFlags(self._pgconn_ptr, flags)
+
+    def untrace(self) -> None:
+        libpq.PQuntrace(self._pgconn_ptr)
 
     def encrypt_password(
         self, const char *passwd, const char *user, algorithm = None
