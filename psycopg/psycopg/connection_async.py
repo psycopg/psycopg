@@ -216,6 +216,8 @@ class AsyncConnection(BaseConnection[Row]):
         """
         Return a new `AsyncCursor` to send commands and queries to the connection.
         """
+        self._check_connection_ok()
+
         if not row_factory:
             row_factory = self.row_factory
 
@@ -244,12 +246,13 @@ class AsyncConnection(BaseConnection[Row]):
         prepare: Optional[bool] = None,
         binary: bool = False,
     ) -> AsyncCursor[Row]:
-        cur = self.cursor()
-        if binary:
-            cur.format = Format.BINARY
-
         try:
+            cur = self.cursor()
+            if binary:
+                cur.format = Format.BINARY
+
             return await cur.execute(query, params, prepare=prepare)
+
         except e.Error as ex:
             raise ex.with_traceback(None)
 

@@ -72,12 +72,13 @@ async def test_connect_timeout():
 async def test_close(aconn):
     assert not aconn.closed
     assert not aconn.broken
+
+    cur = aconn.cursor()
+
     await aconn.close()
     assert aconn.closed
     assert not aconn.broken
     assert aconn.pgconn.status == aconn.ConnStatus.BAD
-
-    cur = aconn.cursor()
 
     await aconn.close()
     assert aconn.closed
@@ -97,6 +98,16 @@ async def test_broken(aconn):
     await aconn.close()
     assert aconn.closed
     assert aconn.broken
+
+
+async def test_cursor_closed(aconn):
+    await aconn.close()
+    with pytest.raises(psycopg.OperationalError):
+        async with aconn.cursor("foo"):
+            pass
+        aconn.cursor("foo")
+    with pytest.raises(psycopg.OperationalError):
+        aconn.cursor()
 
 
 async def test_connection_warn_close(dsn, recwarn):

@@ -411,13 +411,7 @@ class BaseConnection(Generic[Row]):
         Only used to implement internal commands such as "commit", with eventual
         arguments bound client-side. The cursor can do more complex stuff.
         """
-        if self.pgconn.status != ConnStatus.OK:
-            if self.pgconn.status == ConnStatus.BAD:
-                raise e.OperationalError("the connection is closed")
-            raise e.InterfaceError(
-                f"cannot execute operations: the connection is"
-                f" in status {self.pgconn.status}"
-            )
+        self._check_connection_ok()
 
         if isinstance(command, str):
             command = command.encode(pgconn_encoding(self.pgconn))
@@ -443,6 +437,17 @@ class BaseConnection(Generic[Row]):
                     f" from command {command.decode()!r}"
                 )
         return result
+
+    def _check_connection_ok(self) -> None:
+        if self.pgconn.status == ConnStatus.OK:
+            return
+
+        if self.pgconn.status == ConnStatus.BAD:
+            raise e.OperationalError("the connection is closed")
+        raise e.InterfaceError(
+            f"cannot execute operations: the connection is"
+            f" in status {self.pgconn.status}"
+        )
 
     def _start_query(self) -> PQGen[None]:
         """Generator to start a transaction if necessary."""
@@ -769,6 +774,8 @@ class Connection(BaseConnection[Row]):
         """
         Return a new cursor to send commands and queries to the connection.
         """
+        self._check_connection_ok()
+
         if not row_factory:
             row_factory = self.row_factory
 
@@ -798,12 +805,13 @@ class Connection(BaseConnection[Row]):
         binary: bool = False,
     ) -> Cursor[Row]:
         """Execute a query and return a cursor to read its results."""
-        cur = self.cursor()
-        if binary:
-            cur.format = Format.BINARY
-
         try:
+            cur = self.cursor()
+            if binary:
+                cur.format = Format.BINARY
+
             return cur.execute(query, params, prepare=prepare)
+
         except e.Error as ex:
             raise ex.with_traceback(None)
 

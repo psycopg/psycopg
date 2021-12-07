@@ -70,12 +70,13 @@ def test_connect_timeout():
 def test_close(conn):
     assert not conn.closed
     assert not conn.broken
+
+    cur = conn.cursor()
+
     conn.close()
     assert conn.closed
     assert not conn.broken
     assert conn.pgconn.status == conn.ConnStatus.BAD
-
-    cur = conn.cursor()
 
     conn.close()
     assert conn.closed
@@ -95,6 +96,15 @@ def test_broken(conn):
     conn.close()
     assert conn.closed
     assert conn.broken
+
+
+def test_cursor_closed(conn):
+    conn.close()
+    with pytest.raises(psycopg.OperationalError):
+        with conn.cursor("foo"):
+            pass
+    with pytest.raises(psycopg.OperationalError):
+        conn.cursor()
 
 
 def test_connection_warn_close(dsn, recwarn):
