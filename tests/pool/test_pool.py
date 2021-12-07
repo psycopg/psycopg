@@ -885,7 +885,6 @@ def test_resize(dsn):
 
 def test_jitter():
     rnds = [pool.ConnectionPool._jitter(30, -0.1, +0.2) for i in range(100)]
-    rnds.sort()
     assert 27 <= min(rnds) <= 28
     assert 35 < max(rnds) < 36
 
