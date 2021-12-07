@@ -240,7 +240,8 @@ class ServerCursor(Cursor[Row]):
         with self._conn.lock:
             if self.closed:
                 return
-            self._conn.wait(self._helper._close_gen(self))
+            if not self._conn.closed:
+                self._conn.wait(self._helper._close_gen(self))
             super().close()
 
     def execute(
@@ -363,7 +364,8 @@ class AsyncServerCursor(AsyncCursor[Row]):
         async with self._conn.lock:
             if self.closed:
                 return
-            await self._conn.wait(self._helper._close_gen(self))
+            if not self._conn.closed:
+                await self._conn.wait(self._helper._close_gen(self))
             await super().close()
 
     async def execute(

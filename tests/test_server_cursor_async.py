@@ -137,6 +137,13 @@ async def test_close_idempotent(aconn):
     await cur.close()
 
 
+async def test_close_broken_conn(aconn):
+    cur = aconn.cursor("foo")
+    await aconn.close()
+    await cur.close()
+    assert cur.closed
+
+
 async def test_cursor_close_fetchone(aconn):
     cur = aconn.cursor("foo")
     assert not cur.closed

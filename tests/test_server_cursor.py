@@ -130,6 +130,13 @@ def test_close_idempotent(conn):
     cur.close()
 
 
+def test_close_broken_conn(conn):
+    cur = conn.cursor("foo")
+    conn.close()
+    cur.close()
+    assert cur.closed
+
+
 def test_cursor_close_fetchone(conn):
     cur = conn.cursor("foo")
     assert not cur.closed

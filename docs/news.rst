@@ -16,6 +16,13 @@ Psycopg 3.1 (unreleased)
 Current release
 ---------------
 
+Psycopg 3.0.6
+^^^^^^^^^^^^^
+
+- `ServerCursor.close()` doesn't raise exceptions if the connection is closed
+  (:ticket:`#173`).
+
+
 Psycopg 3.0.5
 ^^^^^^^^^^^^^
 
