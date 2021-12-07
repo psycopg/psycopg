@@ -7,11 +7,11 @@
 ``psycopg`` release notes
 =========================
 
-Current release
+Future releases
 ---------------
 
-Psycopg 3.0.6
-^^^^^^^^^^^^^
+Psycopg 3.0.6 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 - Allow to use `Cursor.description` if the connection is closed
   (:ticket:`#172`).
@@ -19,6 +19,9 @@ Psycopg 3.0.6
   (:ticket:`#173`).
 - Fail on `Connection.cursor()` if the connection is closed (:ticket:`#174`).
 
+
+Current release
+---------------
 
 Psycopg 3.0.5
 ^^^^^^^^^^^^^
