@@ -19,6 +19,8 @@ Current release
 Psycopg 3.0.6
 ^^^^^^^^^^^^^
 
+- Allow to use `Cursor.description` if the connection is closed
+  (:ticket:`#172`).
 - Don't raise exceptions on `ServerCursor.close()` if the connection is closed
   (:ticket:`#173`).
 - Fail on `Connection.cursor()` if the connection is closed (:ticket:`#174`).

@@ -15,7 +15,6 @@ from .abc import ConnectionType, Query, Params, PQGen
 from .rows import Row, RowFactory, AsyncRowFactory
 from .cursor import BaseCursor, Cursor, execute
 from .cursor_async import AsyncCursor
-from ._encodings import pgconn_encoding
 
 if TYPE_CHECKING:
     from .connection import Connection
@@ -59,8 +58,7 @@ class ServerCursorHelper(Generic[ConnectionType, Row]):
     ) -> PQGen[None]:
         """Generator implementing `ServerCursor.execute()`."""
 
-        conn = cur._conn
-        query = self._make_declare_statement(conn, query)
+        query = self._make_declare_statement(cur, query)
 
         # If the cursor is being reused, the previous one must be closed.
         if self.described:
@@ -70,7 +68,7 @@ class ServerCursorHelper(Generic[ConnectionType, Row]):
         yield from cur._start_query(query)
         pgq = cur._convert_query(query, params)
         cur._execute_send(pgq, no_pqexec=True)
-        results = yield from execute(conn.pgconn)
+        results = yield from execute(cur._conn.pgconn)
         if results[-1].status != pq.ExecStatus.COMMAND_OK:
             cur._raise_from_results(results)
 
@@ -87,9 +85,7 @@ class ServerCursorHelper(Generic[ConnectionType, Row]):
         self, cur: BaseCursor[ConnectionType, Row]
     ) -> PQGen[None]:
         conn = cur._conn
-        conn.pgconn.send_describe_portal(
-            self.name.encode(pgconn_encoding(conn.pgconn))
-        )
+        conn.pgconn.send_describe_portal(self.name.encode(cur._encoding))
         results = yield from execute(conn.pgconn)
         cur._execute_results(results, format=self._format)
         self.described = True
@@ -155,11 +151,11 @@ class ServerCursorHelper(Generic[ConnectionType, Row]):
         yield from cur._conn._exec_command(query)
 
     def _make_declare_statement(
-        self, conn: ConnectionType, query: Query
+        self, cur: BaseCursor[ConnectionType, Row], query: Query
     ) -> sql.Composable:
 
         if isinstance(query, bytes):
-            query = query.decode(pgconn_encoding(conn.pgconn))
+            query = query.decode(cur._encoding)
         if not isinstance(query, sql.Composable):
             query = sql.SQL(query)
 
