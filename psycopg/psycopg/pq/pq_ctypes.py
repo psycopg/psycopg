@@ -611,7 +611,7 @@ class PGconn:
 
     def trace(self, fileno: int) -> None:
         if sys.platform != "linux":
-            raise e.NotSupportedError("only supported on Linux")
+            raise e.NotSupportedError("currently only supported on Linux")
         stream = impl.fdopen(fileno, b"w")
         impl.PQtrace(self._pgconn_ptr, stream)
 
