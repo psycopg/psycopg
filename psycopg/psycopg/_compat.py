@@ -37,7 +37,6 @@ elif sys.version_info >= (3, 7):
     ) -> "asyncio.Future[T]":
         return asyncio.create_task(coro)
 
-
 else:
 
     def create_task(
