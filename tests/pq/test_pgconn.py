@@ -471,6 +471,50 @@ def test_notice_error(pgconn, caplog):
     assert "hello error" in rec.message
 
 
+@pytest.mark.libpq("< 14")
+@pytest.mark.skipif("sys.platform != 'linux'")
+def test_trace_pre14(pgconn, tmp_path):
+    tracef = tmp_path / "trace"
+    with tracef.open("w") as f:
+        pgconn.trace(f.fileno())
+        with pytest.raises(psycopg.NotSupportedError):
+            pgconn.set_trace_flags(0)
+        pgconn.exec_(b"select 1")
+        pgconn.untrace()
+        pgconn.exec_(b"select 2")
+    traces = tracef.read_text()
+    assert "select 1" in traces
+    assert "select 2" not in traces
+
+
+@pytest.mark.libpq(">= 14")
+@pytest.mark.skipif("sys.platform != 'linux'")
+def test_trace(pgconn, tmp_path):
+    tracef = tmp_path / "trace"
+    with tracef.open("w") as f:
+        pgconn.trace(f.fileno())
+        pgconn.set_trace_flags(
+            pq.Trace.SUPPRESS_TIMESTAMPS | pq.Trace.REGRESS_MODE
+        )
+        pgconn.exec_(b"select 1")
+        pgconn.untrace()
+        pgconn.exec_(b"select 2")
+    traces = [line.split("\t") for line in tracef.read_text().splitlines()]
+    assert traces == [
+        ["F", "13", "Query", ' "select 1"'],
+        ["B", "33", "RowDescription", ' 1 "?column?" NNNN 0 NNNN 4 -1 0'],
+        ["B", "11", "DataRow", " 1 1 '1'"],
+        ["B", "13", "CommandComplete", ' "SELECT 1"'],
+        ["B", "5", "ReadyForQuery", " I"],
+    ]
+
+
+@pytest.mark.skipif("sys.platform == 'linux'")
+def test_trace_nonlinux(pgconn):
+    with pytest.raises(psycopg.NotSupportedError):
+        pgconn.trace(1)
+
+
 @pytest.mark.libpq(">= 10")
 def test_encrypt_password(pgconn):
     enc = pgconn.encrypt_password(b"psycopg2", b"ashesh", b"md5")

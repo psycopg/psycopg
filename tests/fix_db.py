@@ -1,8 +1,11 @@
 import os
 import pytest
 import logging
+from contextlib import contextmanager
 from typing import List
 
+import psycopg
+from psycopg import pq
 from .utils import check_server_version
 
 
@@ -13,6 +16,12 @@ def pytest_addoption(parser):
         default=os.environ.get("PSYCOPG_TEST_DSN"),
         help="Connection string to run database tests requiring a connection"
         " [you can also use the PSYCOPG_TEST_DSN env var].",
+    )
+    parser.addoption(
+        "--pq-tracefile",
+        metavar="TRACEFILE",
+        default=None,
+        help="Generate a libpq trace to TRACEFILE.",
     )
 
 
@@ -51,8 +60,48 @@ def dsn(request):
     return dsn
 
 
+@pytest.fixture(scope="session")
+def tracefile(request):
+    """Open and yield a file for libpq client/server communication traces if
+    --pq-tracefile option is set.
+    """
+    tracefile = request.config.getoption("--pq-tracefile")
+    if not tracefile:
+        yield None
+        return
+
+    with open(tracefile, "w") as f:
+        yield f
+
+
+@contextmanager
+def maybe_trace(pgconn, tracefile, function):
+    """Handle libpq client/server communication traces for a single test
+    function.
+    """
+    if tracefile is None:
+        yield None
+        return
+
+    title = f" {function.__module__}::{function.__qualname__} ".center(80, "=")
+    tracefile.write(title + "\n")
+    tracefile.flush()
+
+    pgconn.trace(tracefile.fileno())
+    try:
+        pgconn.set_trace_flags(
+            pq.Trace.SUPPRESS_TIMESTAMPS | pq.Trace.REGRESS_MODE
+        )
+    except psycopg.NotSupportedError:
+        pass
+    try:
+        yield None
+    finally:
+        pgconn.untrace()
+
+
 @pytest.fixture
-def pgconn(dsn, request):
+def pgconn(dsn, request, tracefile):
     """Return a PGconn connection open to `--test-dsn`."""
     from psycopg import pq
 
@@ -65,12 +114,15 @@ def pgconn(dsn, request):
     if msg:
         conn.finish()
         pytest.skip(msg)
-    yield conn
+
+    with maybe_trace(conn, tracefile, request.function):
+        yield conn
+
     conn.finish()
 
 
 @pytest.fixture
-def conn(dsn, request):
+def conn(dsn, request, tracefile):
     """Return a `Connection` connected to the ``--test-dsn`` database."""
     from psycopg import Connection
 
@@ -79,12 +131,13 @@ def conn(dsn, request):
     if msg:
         conn.close()
         pytest.skip(msg)
-    yield conn
+    with maybe_trace(conn.pgconn, tracefile, request.function):
+        yield conn
     conn.close()
 
 
 @pytest.fixture
-async def aconn(dsn, request):
+async def aconn(dsn, request, tracefile):
     """Return an `AsyncConnection` connected to the ``--test-dsn`` database."""
     from psycopg import AsyncConnection
 
@@ -93,7 +146,8 @@ async def aconn(dsn, request):
     if msg:
         await conn.close()
         pytest.skip(msg)
-    yield conn
+    with maybe_trace(conn.pgconn, tracefile, request.function):
+        yield conn
     await conn.close()
 
 

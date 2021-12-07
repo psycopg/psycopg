@@ -4,6 +4,11 @@ Libpq header definition for the cython psycopg.pq implementation.
 
 # Copyright (C) 2020-2021 The Psycopg Team
 
+cdef extern from "stdio.h":
+
+    ctypedef struct FILE:
+        pass
+
 cdef extern from "pg_config.h":
 
     int PG_VERSION_NUM
@@ -251,6 +256,11 @@ cdef extern from "libpq-fe.h":
     int PQputCopyData(PGconn *conn, const char *buffer, int nbytes)
     int PQputCopyEnd(PGconn *conn, const char *errormsg)
     int PQgetCopyData(PGconn *conn, char **buffer, int async)
+
+    # 33.10. Control Functions
+    void PQtrace(PGconn *conn, FILE *stream);
+    void PQsetTraceFlags(PGconn *conn, int flags);
+    void PQuntrace(PGconn *conn);
 
     # 33.11. Miscellaneous Functions
     void PQfreemem(void *ptr) nogil
