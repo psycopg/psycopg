@@ -9,6 +9,8 @@ How to make a psycopg release
   - ``psycopg/psycopg/version.py``
   - ``psycopg_pool/psycopg_pool/version.py``
 
+- Change docs/news.rst to drop the "unreleased" mark from the version
+
 - Push to GitHub to run `the tests workflow`__.
 
   .. __: https://github.com/psycopg/psycopg/actions/workflows/tests.yml
