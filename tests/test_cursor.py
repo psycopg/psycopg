@@ -679,6 +679,16 @@ class TestColumn:
         assert cur.description == []
         assert cur.fetchall() == [()]
 
+    def test_description_closed_connection(self, conn):
+        # If we have reasons to break this test we will (e.g. we really need
+        # the connection). In #172 it fails just by accident.
+        cur = conn.execute("select 1::int4 as foo")
+        conn.close()
+        assert len(cur.description) == 1
+        col = cur.description[0]
+        assert col.name == "foo"
+        assert col.type_code == 23
+
 
 def test_str(conn):
     cur = conn.cursor()

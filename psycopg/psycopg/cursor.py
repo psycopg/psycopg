@@ -51,7 +51,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
         __slots__ = """
             _conn format _adapters arraysize _closed _results pgresult _pos
             _iresult _rowcount _query _tx _last_query _row_factory _make_row
-            _pgconn
+            _pgconn _encoding
             __weakref__
             """.split()
 
@@ -78,6 +78,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
         self._iresult = 0
         self._rowcount = -1
         self._query: Optional[PostgresQuery]
+        self._encoding = "utf-8"
         if reset_query:
             self._query = None
 
@@ -250,9 +251,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
             self._send_prepare(name, pgq)
             (result,) = yield from execute(self._pgconn)
             if result.status == ExecStatus.FATAL_ERROR:
-                raise e.error_from_result(
-                    result, encoding=pgconn_encoding(self._pgconn)
-                )
+                raise e.error_from_result(result, encoding=self._encoding)
             self._send_query_prepared(name, pgq, binary=binary)
 
         # run the query
@@ -318,6 +317,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
             raise e.InterfaceError("the cursor is closed")
 
         self._reset()
+        self._encoding = pgconn_encoding(self._pgconn)
         if not self._last_query or (self._last_query is not query):
             self._last_query = None
             self._tx = adapt.Transformer(self)
@@ -423,9 +423,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
         statuses = {res.status for res in results}
         badstats = statuses.difference(self._status_ok)
         if results[-1].status == ExecStatus.FATAL_ERROR:
-            raise e.error_from_result(
-                results[-1], encoding=pgconn_encoding(self._pgconn)
-            )
+            raise e.error_from_result(results[-1], encoding=self._encoding)
         elif statuses.intersection(self._status_copy):
             raise e.ProgrammingError(
                 "COPY cannot be used with this method; use copy() insead"
@@ -470,9 +468,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
         if status in (ExecStatus.COPY_IN, ExecStatus.COPY_OUT):
             return
         elif status == ExecStatus.FATAL_ERROR:
-            raise e.error_from_result(
-                result, encoding=pgconn_encoding(self._pgconn)
-            )
+            raise e.error_from_result(result, encoding=self._encoding)
         else:
             raise e.ProgrammingError(
                 "copy() should be used only with COPY ... TO STDOUT or COPY ..."
