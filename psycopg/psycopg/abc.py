@@ -144,7 +144,7 @@ class Dumper(Protocol):
         dumper again. If the mechanism is not needed, the method should return
         the same *cls* object passed in the constructor.
 
-        If a dumper implements `get_key()` it should also implmement
+        If a dumper implements `get_key()` it should also implement
         `upgrade()`.
 
         """
