@@ -16,8 +16,8 @@ class PyFormat(str, Enum):
     """
     Enum representing the format wanted for a query argument.
 
-    The value `AUTO` allows psycopg to choose the best value for a certain
-    value.
+    The value `AUTO` allows psycopg to choose the best format for a certain
+    parameter.
     """
 
     __module__ = "psycopg.adapt"
