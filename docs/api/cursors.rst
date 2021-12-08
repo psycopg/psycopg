@@ -176,10 +176,6 @@ The `!Cursor` class
 
     .. autoattribute:: description
 
-        A list of objects describing each column of the current queryset.
-
-        `!None` if the last operation didn't return a queryset.
-
     .. autoattribute:: statusmessage
 
         This is the status tag you typically see in :program:`psql` after
