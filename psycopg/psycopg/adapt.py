@@ -117,9 +117,9 @@ class Dumper(abc.Dumper, ABC):
         return self
 
 
-class Loader(ABC):
+class Loader(abc.Loader, ABC):
     """
-    Convert PostgreSQL objects with OID *oid* to Python objects.
+    Convert PostgreSQL values with type OID *oid* to Python objects.
     """
 
     format: pq.Format = pq.Format.TEXT

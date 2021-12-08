@@ -18,11 +18,7 @@ checking.
     A partial implementation of this protocol (implementing everyting except
     `dump()`) is available as `psycopg.adapt.Dumper`.
 
-    .. attribute:: format
-        :type: pq.Format
-
-        The format this class dumps, `~Format.TEXT` or `~Format.BINARY`.
-        This is a class attribute.
+    .. autoattribute:: format
 
     .. automethod:: dump
 
@@ -67,11 +63,7 @@ checking.
     A partial implementation of this protocol (implementing everyting except
     `load()`) is available as `psycopg.adapt.Loader`.
 
-    .. attribute:: format
-        :type: Format
-
-        The format this class can load, `~Format.TEXT` or `~Format.BINARY`.
-        This is a class attribute.
+    .. autoattribute:: format
 
     .. automethod:: load
 

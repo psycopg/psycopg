@@ -14,18 +14,26 @@ in the normal use of Psycopg.
 
 See :ref:`adaptation` for an overview of the Psycopg adaptation system.
 
+.. _abstract base class: https://docs.python.org/glossary.html#term-abstract-base-class
+
 
 Dumpers and loaders
 -------------------
 
 .. autoclass:: Dumper(cls, context=None)
 
-    This is an abstract base class: subclasses *must* at least implement the
-    `dump()` method and specify the `format`.
-
-    The class implements the `~psycopg.abc.Dumper` protocol.
+    This is an `abstract base class`_, partially implementing the
+    `~psycopg.abc.Dumper` protocol. Subclasses *must* at least implement the
+    `.dump()` method and optionally override other members.
 
     .. automethod:: dump
+
+    .. attribute:: format
+        :type: psycopg.pq.Format
+        :value: TEXT
+
+        Class attribute. Set it to `~psycopg.pq.Format.BINARY` if the class
+        `dump()` methods converts the object to binary format.
 
     .. automethod:: quote
 
@@ -36,12 +44,18 @@ Dumpers and loaders
 
 .. autoclass:: Loader(oid, context=None)
 
-    This is an abstract base class: subclasses *must* at least implement the
-    `!load()` method and specify a `format`.
-
-    The class implements the `~psycopg.abc.Loader` protocol.
+    This is an `abstract base class`_, partially implementing the
+    `~psycopg.abc.Loader` protocol. Subclasses *must* at least implement the
+    `.load()` method and optionally override other members.
 
     .. automethod:: load
+
+    .. attribute:: format
+        :type: psycopg.pq.Format
+        :value: TEXT
+
+        Class attribute. Set it to `~psycopg.pq.Format.BINARY` if the class
+        `load()` methods converts the object from binary format.
 
 
 Other objects used in adaptations
