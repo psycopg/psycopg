@@ -1,3 +1,4 @@
+import concurrent.futures
 import logging
 
 import pytest
@@ -648,3 +649,17 @@ def test_str(conn):
 
     assert "[IDLE]" in str(tx)
     assert "(terminated)" in str(tx)
+
+
+def test_concurrency(conn):
+    conn.autocommit = True
+
+    def fn(value):
+        with conn.transaction():
+            cur = conn.execute("select %s", (value,))
+        return cur
+
+    values = range(2)
+    with concurrent.futures.ThreadPoolExecutor() as e:
+        cursors = e.map(fn, values)
+    assert sum(cur.fetchone()[0] for cur in cursors) == sum(values)

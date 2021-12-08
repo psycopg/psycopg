@@ -1,3 +1,4 @@
+import asyncio
 import logging
 
 import pytest
@@ -615,3 +616,16 @@ async def test_str(aconn):
 
     assert "[IDLE]" in str(tx)
     assert "(terminated)" in str(tx)
+
+
+async def test_concurrency(aconn):
+    await aconn.set_autocommit(True)
+
+    async def fn(value):
+        async with aconn.transaction():
+            cur = await aconn.execute("select %s", (value,))
+        return cur
+
+    values = range(2)
+    cursors = await asyncio.gather(*[fn(value) for value in values])
+    assert sum([(await cur.fetchone())[0] for cur in cursors]) == sum(values)
