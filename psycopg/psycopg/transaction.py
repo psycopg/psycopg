@@ -11,6 +11,7 @@ from typing import Generic, Optional, Type, Union, TYPE_CHECKING
 
 from . import pq
 from . import sql
+from . import errors as e
 from .pq import TransactionStatus
 from .abc import ConnectionType, PQGen
 from .pq.abc import PGresult
@@ -42,6 +43,10 @@ class Rollback(Exception):
 
     def __repr__(self) -> str:
         return f"{self.__class__.__qualname__}({self.transaction!r})"
+
+
+class OutOfOrderTransactionNesting(e.ProgrammingError):
+    """Out-of-order transaction nesting detected"""
 
 
 class BaseTransaction(Generic[ConnectionType]):
@@ -126,18 +131,24 @@ class BaseTransaction(Generic[ConnectionType]):
             # state) just warn without clobbering the exception bubbling up.
             try:
                 return (yield from self._rollback_gen(exc_val))
+            except OutOfOrderTransactionNesting:
+                # Clobber an exception happened in the block with the exception
+                # caused by out-of-order transaction detected, so make the
+                # behaviour consistent with _commit_gen and to make sure the
+                # user fixes this condition, which is unrelated from
+                # operational error that might arise in the block.
+                raise
             except Exception as exc2:
                 logger.warning(
-                    "error ignored in rollback of %s: %s",
-                    self,
-                    exc2,
+                    "error ignored in rollback of %s: %s", self, exc2
                 )
                 return False
 
     def _commit_gen(self) -> PQGen[PGresult]:
-        assert self._conn._savepoints[-1] == self._savepoint_name
-        self._conn._savepoints.pop()
+        ex = self._pop_savepoint("commit")
         self._exited = True
+        if ex:
+            raise ex
 
         commands = []
         if self._savepoint_name and not self._outer_transaction:
@@ -159,8 +170,10 @@ class BaseTransaction(Generic[ConnectionType]):
                 f"{self._conn}: Explicit rollback from: ", exc_info=True
             )
 
-        assert self._conn._savepoints[-1] == self._savepoint_name
-        self._conn._savepoints.pop()
+        ex = self._pop_savepoint("roll back")
+        self._exited = True
+        if ex:
+            raise ex
 
         commands = []
         if self._savepoint_name and not self._outer_transaction:
@@ -186,6 +199,17 @@ class BaseTransaction(Generic[ConnectionType]):
                 return True  # Swallow the exception
 
         return False
+
+    def _pop_savepoint(self, action: str) -> Optional[Exception]:
+        sp = self._conn._savepoints.pop()
+        if sp == self._savepoint_name:
+            return None
+
+        other = f"the savepoint {sp!r}" if sp else "the top-level transaction"
+        return OutOfOrderTransactionNesting(
+            f"transactions not correctly nested: {self} would {action}"
+            f" in the wrong order compared to {other}"
+        )
 
 
 class Transaction(BaseTransaction["Connection[Any]"]):
