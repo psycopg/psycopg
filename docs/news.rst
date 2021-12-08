@@ -22,6 +22,7 @@ Psycopg 3.0.6 (unreleased)
 - Don't raise exceptions on `ServerCursor.close()` if the connection is closed
   (:ticket:`#173`).
 - Fail on `Connection.cursor()` if the connection is closed (:ticket:`#174`).
+- Add `!CHECK_STANDBY` value to `~pq.ConnStatus` enum.
 
 
 Current release

@@ -108,7 +108,9 @@ Enumerations
 .. autoclass:: ConnStatus
     :members:
 
-    Other possible status are only seen during the connection phase.
+    There are other values in this enum, but only `OK` and `BAD` are seen
+    after a connection has been established. Other statuses might only be seen
+    during the connection phase and are considered internal.
 
     .. seealso:: :pq:`PQstatus()` returns this value.
 
