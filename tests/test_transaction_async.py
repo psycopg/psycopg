@@ -618,21 +618,41 @@ async def test_str(aconn):
     assert "[IDLE]" in str(tx)
     assert "(terminated)" in str(tx)
 
+    with pytest.raises(ZeroDivisionError):
+        async with aconn.transaction() as tx:
+            1 / 0
 
-@pytest.mark.parametrize("fail", [False, True])
-async def test_concurrency(aconn, fail):
+    assert "(terminated)" in str(tx)
+
+
+@pytest.mark.parametrize("what", ["commit", "rollback", "error"])
+async def test_concurrency(aconn, what):
     await aconn.set_autocommit(True)
 
     e = [asyncio.Event() for i in range(3)]
 
     async def worker(unlock, wait_on):
-        with pytest.raises(ProgrammingError):
+        with pytest.raises(ProgrammingError) as ex:
             async with aconn.transaction():
                 unlock.set()
                 await wait_on.wait()
                 await aconn.execute("select 1")
-                if fail:
+
+                if what == "error":
                     1 / 0
+                elif what == "rollback":
+                    raise Rollback()
+                else:
+                    assert what == "commit"
+
+        if what == "error":
+            assert "would roll back" in str(ex.value)
+            assert isinstance(ex.value.__context__, ZeroDivisionError)
+        elif what == "rollback":
+            assert "would roll back" in str(ex.value)
+            assert isinstance(ex.value.__context__, Rollback)
+        else:
+            assert "would commit" in str(ex.value)
 
     # Start a first transaction in a task
     t1 = create_task(worker(unlock=e[0], wait_on=e[1]))
