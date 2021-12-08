@@ -1,5 +1,5 @@
-import concurrent.futures
 import logging
+from threading import Thread, Event
 
 import pytest
 
@@ -651,15 +651,31 @@ def test_str(conn):
     assert "(terminated)" in str(tx)
 
 
-def test_concurrency(conn):
+@pytest.mark.parametrize("fail", [False, True])
+def test_concurrency(conn, fail):
     conn.autocommit = True
 
-    def fn(value):
-        with conn.transaction():
-            cur = conn.execute("select %s", (value,))
-        return cur
+    e = [Event() for i in range(3)]
 
-    values = range(2)
-    with concurrent.futures.ThreadPoolExecutor() as e:
-        cursors = e.map(fn, values)
-    assert sum(cur.fetchone()[0] for cur in cursors) == sum(values)
+    def worker(unlock, wait_on):
+        with pytest.raises(ProgrammingError):
+            with conn.transaction():
+                unlock.set()
+                wait_on.wait()
+                conn.execute("select 1")
+                if fail:
+                    1 / 0
+
+    # Start a first transaction in a thread
+    t1 = Thread(target=worker, kwargs={"unlock": e[0], "wait_on": e[1]})
+    t1.start()
+    e[0].wait()
+
+    # Start a nested transaction in a thread
+    t2 = Thread(target=worker, kwargs={"unlock": e[1], "wait_on": e[2]})
+    t2.start()
+
+    # Terminate the first transaction before the second does
+    t1.join()
+    e[2].set()
+    t2.join()
