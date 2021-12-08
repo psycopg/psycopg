@@ -21,7 +21,7 @@ yields `~psycopg.AsyncConnection` instances.
 The intended (but not mandatory) use is to create a single connection pool, as
 a global object exposed by a module in your application, and use the same
 instance from the rest of the code (especially the
-`~ConnectionPool.connection()` method.
+`ConnectionPool.connection()` method).
 
 .. note:: The `!psycopg_pool` package is distributed separately from the main
    `psycopg` package: use ``pip install psycopg[pool]`` or ``pip install
@@ -33,7 +33,7 @@ The `!ConnectionPool` class
 
 .. autoclass:: ConnectionPool(conninfo, *, **arguments)
 
-   This class implements a connection pool serving `~psycopg2.Connection`
+   This class implements a connection pool serving `~psycopg.Connection`
    instances (or subclasses). The constructor has *alot* of arguments, but
    only *conninfo* and *min_size* are the fundamental ones, all the other
    arguments have meaningful defaults and can probably be tweaked later, if
