@@ -14,7 +14,7 @@ from contextlib import asynccontextmanager
 
 from . import errors as e
 from . import waiting
-from .pq import Format, TransactionStatus
+from .pq import Format, PipelineStatus, TransactionStatus
 from .abc import AdaptContext, Params, PQGen, PQGenConn, Query, RV
 from ._tpc import Xid
 from .rows import Row, AsyncRowFactory, tuple_row, TupleRow, args_row
@@ -22,7 +22,7 @@ from .adapt import AdaptersMap
 from ._enums import IsolationLevel
 from .conninfo import make_conninfo, conninfo_to_dict
 from ._encodings import pgconn_encoding
-from .connection import BaseConnection, CursorRow, Notify
+from .connection import BaseConnection, BasePipeline, CursorRow, Notify
 from .generators import notifies
 from .transaction import AsyncTransaction
 from .cursor_async import AsyncCursor
@@ -35,6 +35,22 @@ if TYPE_CHECKING:
 logger = logging.getLogger("psycopg")
 
 
+class AsyncPipeline(BasePipeline):
+    """Handler for async connection in pipeline mode."""
+
+    async def __aenter__(self) -> "AsyncPipeline":
+        self._enter()
+        return self
+
+    async def __aexit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc_val: Optional[BaseException],
+        exc_tb: Optional[TracebackType],
+    ) -> None:
+        self._exit()
+
+
 class AsyncConnection(BaseConnection[Row]):
     """
     Asynchronous wrapper for a connection to the database.
@@ -45,6 +61,8 @@ class AsyncConnection(BaseConnection[Row]):
     cursor_factory: Type[AsyncCursor[Row]]
     server_cursor_factory: Type[AsyncServerCursor[Row]]
     row_factory: AsyncRowFactory[Row]
+
+    _pipeline: Optional[AsyncPipeline]
 
     def __init__(
         self,
@@ -291,6 +309,20 @@ class AsyncConnection(BaseConnection[Row]):
             for pgn in ns:
                 n = Notify(pgn.relname.decode(enc), pgn.extra.decode(enc), pgn.be_pid)
                 yield n
+
+    @asynccontextmanager
+    async def pipeline(self) -> AsyncIterator[None]:
+        """Context manager to switch the connection into pipeline mode."""
+        if self._pipeline is not None:
+            raise e.ProgrammingError("already in pipeline mode")
+
+        pipeline = self._pipeline = AsyncPipeline(self.pgconn)
+        try:
+            async with pipeline:
+                yield
+        finally:
+            assert pipeline.status == PipelineStatus.OFF, pipeline.status
+            self._pipeline = None
 
     async def wait(self, gen: PQGen[RV]) -> RV:
         try:

@@ -266,6 +266,8 @@ The `!Connection` class
 
     .. automethod:: fileno
 
+    .. automethod:: pipeline
+
 
     .. _tpc-methods:
 
@@ -446,6 +448,15 @@ The `!AsyncConnection` class
     .. automethod:: set_isolation_level
     .. automethod:: set_read_only
     .. automethod:: set_deferrable
+
+    .. automethod:: pipeline
+
+        .. note::
+
+            It must be called as::
+
+                async with conn.pipeline():
+                    ...
 
     .. automethod:: tpc_prepare
     .. automethod:: tpc_commit
