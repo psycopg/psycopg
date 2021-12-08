@@ -87,7 +87,12 @@ class Dumper(Protocol):
     """
 
     format: pq.Format
-    """The format this dumper produces (class attirbute)."""
+    """
+    The format that this class `dump()` method produces,
+    `~psycopg.pq.Format.TEXT` or `~psycopg.pq.Format.BINARY`.
+
+    This is a class attribute.
+    """
 
     oid: int
     """The oid to pass to the server, if known; 0 otherwise (class attribute)."""
@@ -162,10 +167,16 @@ class Dumper(Protocol):
 
 class Loader(Protocol):
     """
-    Convert PostgreSQL objects with OID *oid* to Python objects.
+    Convert PostgreSQL values with type OID *oid* to Python objects.
     """
 
     format: pq.Format
+    """
+    The format that this class `load()` method can convert,
+    `~psycopg.pq.Format.TEXT` or `~psycopg.pq.Format.BINARY`.
+
+    This is a class attribute.
+    """
 
     def __init__(self, oid: int, context: Optional[AdaptContext] = None):
         ...
