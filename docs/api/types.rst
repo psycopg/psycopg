@@ -7,16 +7,24 @@
 
 .. module:: psycopg.types
 
-The `!psycopg.types` package exposes the concrete implementation of `Loader`
-and `Dumper` to manage builtin objects, together with objects to describe
-PostgreSQL types and wrappers to help or customise the types conversion.
+The `!psycopg.types` package exposes:
+
+- objects to describe PostgreSQL types, such as `TypeInfo`, `TypesRegistry`,
+  to help or :ref:`customise the types conversion <adaptation>`;
+
+- concrete implementations of `~psycopg.abc.Loader` and `~psycopg.abc.Dumper`
+  protocols to :ref:`handle builtin data types <types-adaptation>`;
+
+- helper objects to represent PostgreSQL data types which :ref:`don't have a
+  straightforward Python representation <extra-adaptation>`, such as
+  `~range.Range`.
 
 
 Types information
 -----------------
 
 The `TypeInfo` object describes simple information about a PostgreSQL data
-type, such as its name, oid and array oid. Subclasses may hold more
+type, such as its name, oid and array oid. `!TypeInfo` subclasses may hold more
 information, for instance the components of a composite type.
 
 You can use `TypeInfo.fetch()` to query information from a database catalog,
