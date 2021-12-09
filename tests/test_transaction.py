@@ -1,3 +1,4 @@
+import sys
 import logging
 from threading import Thread, Event
 
@@ -53,6 +54,16 @@ def in_transaction(conn):
         return True
     else:
         assert False, conn.pgconn.transaction_status
+
+
+def get_exc_info(exc):
+    """Return the exc info for an exception or a success if exc is None"""
+    if not exc:
+        return (None,) * 3
+    try:
+        raise exc
+    except exc:
+        return sys.exc_info()
 
 
 class ExpectedException(Exception):
@@ -655,6 +666,40 @@ def test_str(conn):
             1 / 0
 
     assert "(terminated)" in str(tx)
+
+
+@pytest.mark.parametrize("exit_error", [None, ZeroDivisionError, Rollback])
+def test_out_of_order_exit(conn, exit_error):
+    conn.autocommit = True
+
+    t1 = conn.transaction()
+    t1.__enter__()
+
+    t2 = conn.transaction()
+    t2.__enter__()
+
+    with pytest.raises(ProgrammingError):
+        t1.__exit__(*get_exc_info(exit_error))
+
+    with pytest.raises(ProgrammingError):
+        t2.__exit__(*get_exc_info(exit_error))
+
+
+@pytest.mark.parametrize("exit_error", [None, ZeroDivisionError, Rollback])
+def test_out_of_order_implicit_begin(conn, exit_error):
+    conn.execute("select 1")
+
+    t1 = conn.transaction()
+    t1.__enter__()
+
+    t2 = conn.transaction()
+    t2.__enter__()
+
+    with pytest.raises(ProgrammingError):
+        t1.__exit__(*get_exc_info(exit_error))
+
+    with pytest.raises(ProgrammingError):
+        t2.__exit__(*get_exc_info(exit_error))
 
 
 @pytest.mark.parametrize("what", ["commit", "rollback", "error"])
