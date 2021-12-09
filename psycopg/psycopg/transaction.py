@@ -12,7 +12,7 @@ from typing import Generic, List, Optional, Type, Union, TYPE_CHECKING
 from . import pq
 from . import sql
 from . import errors as e
-from .pq import TransactionStatus
+from .pq import TransactionStatus, ConnStatus
 from .abc import ConnectionType, PQGen
 from .pq.abc import PGresult
 
@@ -258,8 +258,13 @@ class Transaction(BaseTransaction["Connection[Any]"]):
         exc_val: Optional[BaseException],
         exc_tb: Optional[TracebackType],
     ) -> bool:
-        with self._conn.lock:
-            return self._conn.wait(self._exit_gen(exc_type, exc_val, exc_tb))
+        if self._conn.pgconn.status == ConnStatus.OK:
+            with self._conn.lock:
+                return self._conn.wait(
+                    self._exit_gen(exc_type, exc_val, exc_tb)
+                )
+        else:
+            return False
 
 
 class AsyncTransaction(BaseTransaction["AsyncConnection[Any]"]):
@@ -284,7 +289,10 @@ class AsyncTransaction(BaseTransaction["AsyncConnection[Any]"]):
         exc_val: Optional[BaseException],
         exc_tb: Optional[TracebackType],
     ) -> bool:
-        async with self._conn.lock:
-            return await self._conn.wait(
-                self._exit_gen(exc_type, exc_val, exc_tb)
-            )
+        if self._conn.pgconn.status == ConnStatus.OK:
+            async with self._conn.lock:
+                return await self._conn.wait(
+                    self._exit_gen(exc_type, exc_val, exc_tb)
+                )
+        else:
+            return False
