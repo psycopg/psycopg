@@ -23,7 +23,7 @@ Psycopg 3.0.6 (unreleased)
   (:ticket:`#173`).
 - Fail on `Connection.cursor()` if the connection is closed (:ticket:`#174`).
 - Raise `ProgrammingError` if out-of-order exit from transaction contexts is
-  detected (:ticket:`#176`).
+  detected (:tickets:`#176, #177`).
 - Add `!CHECK_STANDBY` value to `~pq.ConnStatus` enum.
 
 

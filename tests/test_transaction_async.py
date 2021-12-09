@@ -488,15 +488,6 @@ async def test_named_savepoints_with_repeated_names_works(aconn):
             assert await inserted(aconn) == {"tx1"}
         assert await inserted(aconn) == {"tx1"}
 
-    # Will not (always) catch out-of-order exits
-    async with aconn.transaction(force_rollback=True):
-        tx1 = aconn.transaction("s1")
-        tx2 = aconn.transaction("s1")
-        await tx1.__aenter__()
-        await tx2.__aenter__()
-        await tx1.__aexit__(None, None, None)
-        await tx2.__aexit__(None, None, None)
-
 
 async def test_force_rollback_successful_exit(aconn, svcconn):
     """
@@ -659,6 +650,22 @@ async def test_out_of_order_implicit_begin(aconn, exit_error):
         await t2.__aexit__(*get_exc_info(exit_error))
 
 
+@pytest.mark.parametrize("exit_error", [None, ZeroDivisionError, Rollback])
+async def test_out_of_order_exit_same_name(aconn, exit_error):
+    await aconn.set_autocommit(True)
+
+    t1 = aconn.transaction("save")
+    await t1.__aenter__()
+    t2 = aconn.transaction("save")
+    await t2.__aenter__()
+
+    with pytest.raises(ProgrammingError):
+        await t1.__aexit__(*get_exc_info(exit_error))
+
+    with pytest.raises(ProgrammingError):
+        await t2.__aexit__(*get_exc_info(exit_error))
+
+
 @pytest.mark.parametrize("what", ["commit", "rollback", "error"])
 async def test_concurrency(aconn, what):
     await aconn.set_autocommit(True)
@@ -680,13 +687,13 @@ async def test_concurrency(aconn, what):
                     assert what == "commit"
 
         if what == "error":
-            assert "would roll back" in str(ex.value)
+            assert "transaction rollback" in str(ex.value)
             assert isinstance(ex.value.__context__, ZeroDivisionError)
         elif what == "rollback":
-            assert "would roll back" in str(ex.value)
+            assert "transaction rollback" in str(ex.value)
             assert isinstance(ex.value.__context__, Rollback)
         else:
-            assert "would commit" in str(ex.value)
+            assert "transaction commit" in str(ex.value)
 
     # Start a first transaction in a task
     t1 = create_task(worker(unlock=e[0], wait_on=e[1]))
