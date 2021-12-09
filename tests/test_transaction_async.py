@@ -7,7 +7,7 @@ from psycopg import AsyncConnection, ProgrammingError, Rollback
 from psycopg._compat import create_task
 
 from .test_transaction import in_transaction, insert_row, inserted
-from .test_transaction import ExpectedException
+from .test_transaction import ExpectedException, get_exc_info
 from .test_transaction import create_test_table  # noqa  # autouse fixture
 
 pytestmark = pytest.mark.asyncio
@@ -623,6 +623,40 @@ async def test_str(aconn):
             1 / 0
 
     assert "(terminated)" in str(tx)
+
+
+@pytest.mark.parametrize("exit_error", [None, ZeroDivisionError, Rollback])
+async def test_out_of_order_exit(aconn, exit_error):
+    await aconn.set_autocommit(True)
+
+    t1 = aconn.transaction()
+    await t1.__aenter__()
+
+    t2 = aconn.transaction()
+    await t2.__aenter__()
+
+    with pytest.raises(ProgrammingError):
+        await t1.__aexit__(*get_exc_info(exit_error))
+
+    with pytest.raises(ProgrammingError):
+        await t2.__aexit__(*get_exc_info(exit_error))
+
+
+@pytest.mark.parametrize("exit_error", [None, ZeroDivisionError, Rollback])
+async def test_out_of_order_implicit_begin(aconn, exit_error):
+    await aconn.execute("select 1")
+
+    t1 = aconn.transaction()
+    await t1.__aenter__()
+
+    t2 = aconn.transaction()
+    await t2.__aenter__()
+
+    with pytest.raises(ProgrammingError):
+        await t1.__aexit__(*get_exc_info(exit_error))
+
+    with pytest.raises(ProgrammingError):
+        await t2.__aexit__(*get_exc_info(exit_error))
 
 
 @pytest.mark.parametrize("what", ["commit", "rollback", "error"])
