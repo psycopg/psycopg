@@ -4,10 +4,21 @@ import subprocess as sp
 import pytest
 
 
+def pytest_configure(config):
+    config.addinivalue_line(
+        "markers",
+        "mypy: the test uses mypy (the marker is set automatically"
+        " on tests using the fixture)",
+    )
+
+
 def pytest_collection_modifyitems(items):
-    # All the tests using mypy are slow
     for item in items:
         if "mypy" in item.fixturenames:
+            # add a mypy tag so we can address these tests only
+            item.add_marker(pytest.mark.mypy)
+
+            # All the tests using mypy are slow
             item.add_marker(pytest.mark.slow)
 
 
