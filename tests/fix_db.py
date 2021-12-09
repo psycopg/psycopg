@@ -6,7 +6,7 @@ from typing import List
 
 import psycopg
 from psycopg import pq
-from .utils import check_server_version
+from .utils import check_libpq_version, check_server_version
 
 
 def pytest_addoption(parser):
@@ -41,6 +41,14 @@ def pytest_report_header(config):
     return [
         f"Server version: {server_version}",
     ]
+
+
+def pytest_collection_modifyitems(items):
+    for item in items:
+        for name in item.fixturenames:
+            if name in ("pipeline", "apipeline"):
+                item.add_marker(pytest.mark.pipeline)
+                break
 
 
 def pytest_configure(config):
@@ -150,6 +158,19 @@ def conn(dsn, request, tracefile):
     conn.close()
 
 
+@pytest.fixture(params=[True, False], ids=["pipeline=on", "pipeline=off"])
+def pipeline(request, conn):
+    if request.param:
+        msg = check_libpq_version(pq.version(), ">= 14")
+        if msg:
+            pytest.skip(msg)
+        with conn.pipeline() as p:
+            yield p
+        return
+    else:
+        yield None
+
+
 @pytest.fixture
 async def aconn(dsn, request, tracefile):
     """Return an `AsyncConnection` connected to the ``--test-dsn`` database."""
@@ -163,6 +184,19 @@ async def aconn(dsn, request, tracefile):
     with maybe_trace(conn.pgconn, tracefile, request.function):
         yield conn
     await conn.close()
+
+
+@pytest.fixture(params=[True, False], ids=["pipeline=on", "pipeline=off"])
+async def apipeline(request, aconn):
+    if request.param:
+        msg = check_libpq_version(pq.version(), ">= 14")
+        if msg:
+            pytest.skip(msg)
+        async with aconn.pipeline() as p:
+            yield p
+        return
+    else:
+        yield None
 
 
 @pytest.fixture(scope="session")

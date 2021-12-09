@@ -29,6 +29,11 @@ def pytest_configure(config):
     for marker in markers:
         config.addinivalue_line("markers", marker)
 
+    config.addinivalue_line(
+        "markers",
+        "pipeline: the test runs with connection in pipeline mode",
+    )
+
 
 def pytest_addoption(parser):
     parser.addoption(
