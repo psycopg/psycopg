@@ -61,6 +61,7 @@ class BaseTransaction(Generic[ConnectionType]):
         self.force_rollback = force_rollback
         self._entered = self._exited = False
         self._outer_transaction = False
+        self._stack_index = -1
 
     @property
     def savepoint_name(self) -> Optional[str]:
@@ -135,7 +136,7 @@ class BaseTransaction(Generic[ConnectionType]):
                 f"{self._conn}: Explicit rollback from: ", exc_info=True
             )
 
-        ex = self._pop_savepoint("roll back")
+        ex = self._pop_savepoint("rollback")
         self._exited = True
         if ex:
             raise ex
@@ -172,7 +173,7 @@ class BaseTransaction(Generic[ConnectionType]):
             )
 
         if self._outer_transaction:
-            assert not self._conn._savepoints
+            assert not self._conn._num_transactions
             commands.append(b"COMMIT")
 
         return commands
@@ -187,7 +188,7 @@ class BaseTransaction(Generic[ConnectionType]):
             )
 
         if self._outer_transaction:
-            assert not self._conn._savepoints
+            assert not self._conn._num_transactions
             commands.append(b"ROLLBACK")
 
         # Also clear the prepared statements cache.
@@ -209,14 +210,16 @@ class BaseTransaction(Generic[ConnectionType]):
         if self._outer_transaction:
             # outer transaction: if no name it's only a begin, else
             # there will be an additional savepoint
-            assert not self._conn._savepoints
+            assert not self._conn._num_transactions
         else:
             # inner transaction: it always has a name
             if not self._savepoint_name:
                 self._savepoint_name = (
-                    f"_pg3_{len(self._conn._savepoints) + 1}"
+                    f"_pg3_{self._conn._num_transactions + 1}"
                 )
-        self._conn._savepoints.append(self._savepoint_name)
+
+        self._stack_index = self._conn._num_transactions
+        self._conn._num_transactions += 1
 
     def _pop_savepoint(self, action: str) -> Optional[Exception]:
         """
@@ -224,14 +227,12 @@ class BaseTransaction(Generic[ConnectionType]):
 
         Also verify the state consistency.
         """
-        sp = self._conn._savepoints.pop()
-        if sp == self._savepoint_name:
+        self._conn._num_transactions -= 1
+        if self._conn._num_transactions == self._stack_index:
             return None
 
-        other = f"the savepoint {sp!r}" if sp else "the top-level transaction"
         return OutOfOrderTransactionNesting(
-            f"transactions not correctly nested: {self} would {action}"
-            f" in the wrong order compared to {other}"
+            f"transaction {action} at the wrong nesting level: {self}"
         )
 
 
