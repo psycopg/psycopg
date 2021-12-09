@@ -110,10 +110,8 @@ class BaseConnection(Generic[Row]):
         self._notice_handlers: List[NoticeHandler] = []
         self._notify_handlers: List[NotifyHandler] = []
 
-        # Stack of savepoint names managed by current transaction blocks.
-        # the first item is "" in case the outermost Transaction must manage
-        # only a begin/commit and not a savepoint.
-        self._savepoints: List[str] = []
+        # Number of transaction blocks currently entered
+        self._num_transactions = 0
 
         self._closed = False  # closed by an explicit close()
         self._prepared: PrepareManager = PrepareManager()
@@ -249,7 +247,7 @@ class BaseConnection(Generic[Row]):
         # Raise an exception if we are in a transaction
         status = self.pgconn.transaction_status
         if status != TransactionStatus.IDLE:
-            if self._savepoints:
+            if self._num_transactions:
                 raise e.ProgrammingError(
                     f"can't change {attribute!r} now: "
                     "connection.transaction() context in progress"
@@ -483,7 +481,7 @@ class BaseConnection(Generic[Row]):
 
     def _commit_gen(self) -> PQGen[None]:
         """Generator implementing `Connection.commit()`."""
-        if self._savepoints:
+        if self._num_transactions:
             raise e.ProgrammingError(
                 "Explicit commit() forbidden within a Transaction "
                 "context. (Transaction will be automatically committed "
@@ -500,7 +498,7 @@ class BaseConnection(Generic[Row]):
 
     def _rollback_gen(self) -> PQGen[None]:
         """Generator implementing `Connection.rollback()`."""
-        if self._savepoints:
+        if self._num_transactions:
             raise e.ProgrammingError(
                 "Explicit rollback() forbidden within a Transaction "
                 "context. (Either raise Rollback() or allow "

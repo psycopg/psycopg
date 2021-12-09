@@ -1,3 +1,4 @@
+import sys
 import logging
 from threading import Thread, Event
 
@@ -53,6 +54,16 @@ def in_transaction(conn):
         return True
     else:
         assert False, conn.pgconn.transaction_status
+
+
+def get_exc_info(exc):
+    """Return the exc info for an exception or a success if exc is None"""
+    if not exc:
+        return (None,) * 3
+    try:
+        raise exc
+    except exc:
+        return sys.exc_info()
 
 
 class ExpectedException(Exception):
@@ -522,15 +533,6 @@ def test_named_savepoints_with_repeated_names_works(conn):
             assert inserted(conn) == {"tx1"}
         assert inserted(conn) == {"tx1"}
 
-    # Will not (always) catch out-of-order exits
-    with conn.transaction(force_rollback=True):
-        tx1 = conn.transaction("s1")
-        tx2 = conn.transaction("s1")
-        tx1.__enter__()
-        tx2.__enter__()
-        tx1.__exit__(None, None, None)
-        tx2.__exit__(None, None, None)
-
 
 def test_force_rollback_successful_exit(conn, svcconn):
     """
@@ -657,6 +659,56 @@ def test_str(conn):
     assert "(terminated)" in str(tx)
 
 
+@pytest.mark.parametrize("exit_error", [None, ZeroDivisionError, Rollback])
+def test_out_of_order_exit(conn, exit_error):
+    conn.autocommit = True
+
+    t1 = conn.transaction()
+    t1.__enter__()
+
+    t2 = conn.transaction()
+    t2.__enter__()
+
+    with pytest.raises(ProgrammingError):
+        t1.__exit__(*get_exc_info(exit_error))
+
+    with pytest.raises(ProgrammingError):
+        t2.__exit__(*get_exc_info(exit_error))
+
+
+@pytest.mark.parametrize("exit_error", [None, ZeroDivisionError, Rollback])
+def test_out_of_order_implicit_begin(conn, exit_error):
+    conn.execute("select 1")
+
+    t1 = conn.transaction()
+    t1.__enter__()
+
+    t2 = conn.transaction()
+    t2.__enter__()
+
+    with pytest.raises(ProgrammingError):
+        t1.__exit__(*get_exc_info(exit_error))
+
+    with pytest.raises(ProgrammingError):
+        t2.__exit__(*get_exc_info(exit_error))
+
+
+@pytest.mark.parametrize("exit_error", [None, ZeroDivisionError, Rollback])
+def test_out_of_order_exit_same_name(conn, exit_error):
+    conn.autocommit = True
+
+    t1 = conn.transaction("save")
+    t1.__enter__()
+    t2 = conn.transaction("save")
+    t2.__enter__()
+
+    with pytest.raises(ProgrammingError):
+        t1.__exit__(*get_exc_info(exit_error))
+
+    with pytest.raises(ProgrammingError):
+        t2.__exit__(*get_exc_info(exit_error))
+
+
 @pytest.mark.parametrize("what", ["commit", "rollback", "error"])
 def test_concurrency(conn, what):
     conn.autocommit = True
@@ -678,13 +730,13 @@ def test_concurrency(conn, what):
                     assert what == "commit"
 
         if what == "error":
-            assert "would roll back" in str(ex.value)
+            assert "transaction rollback" in str(ex.value)
             assert isinstance(ex.value.__context__, ZeroDivisionError)
         elif what == "rollback":
-            assert "would roll back" in str(ex.value)
+            assert "transaction rollback" in str(ex.value)
             assert isinstance(ex.value.__context__, Rollback)
         else:
-            assert "would commit" in str(ex.value)
+            assert "transaction commit" in str(ex.value)
 
     # Start a first transaction in a thread
     t1 = Thread(target=worker, kwargs={"unlock": e[0], "wait_on": e[1]})

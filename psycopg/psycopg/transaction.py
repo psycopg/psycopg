@@ -7,12 +7,12 @@ Transaction context managers returned by Connection.transaction()
 import logging
 
 from types import TracebackType
-from typing import Generic, Optional, Type, Union, TYPE_CHECKING
+from typing import Generic, List, Optional, Type, Union, TYPE_CHECKING
 
 from . import pq
 from . import sql
 from . import errors as e
-from .pq import TransactionStatus
+from .pq import TransactionStatus, ConnStatus
 from .abc import ConnectionType, PQGen
 from .pq.abc import PGresult
 
@@ -60,6 +60,8 @@ class BaseTransaction(Generic[ConnectionType]):
         self._savepoint_name = savepoint_name or ""
         self.force_rollback = force_rollback
         self._entered = self._exited = False
+        self._outer_transaction = False
+        self._stack_index = -1
 
     @property
     def savepoint_name(self) -> Optional[str]:
@@ -88,33 +90,8 @@ class BaseTransaction(Generic[ConnectionType]):
             raise TypeError("transaction blocks can be used only once")
         self._entered = True
 
-        self._outer_transaction = (
-            self._conn.pgconn.transaction_status == TransactionStatus.IDLE
-        )
-        if self._outer_transaction:
-            # outer transaction: if no name it's only a begin, else
-            # there will be an additional savepoint
-            assert not self._conn._savepoints
-        else:
-            # inner transaction: it always has a name
-            if not self._savepoint_name:
-                self._savepoint_name = (
-                    f"_pg3_{len(self._conn._savepoints) + 1}"
-                )
-
-        commands = []
-        if self._outer_transaction:
-            assert not self._conn._savepoints, self._conn._savepoints
-            commands.append(self._conn._get_tx_start_command())
-
-        if self._savepoint_name:
-            commands.append(
-                sql.SQL("SAVEPOINT {}")
-                .format(sql.Identifier(self._savepoint_name))
-                .as_bytes(self._conn)
-            )
-
-        self._conn._savepoints.append(self._savepoint_name)
+        self._push_savepoint()
+        commands = self._get_enter_commands()
         return self._conn._exec_command(b"; ".join(commands))
 
     def _exit_gen(
@@ -150,6 +127,43 @@ class BaseTransaction(Generic[ConnectionType]):
         if ex:
             raise ex
 
+        commands = self._get_commit_commands()
+        return self._conn._exec_command(b"; ".join(commands))
+
+    def _rollback_gen(self, exc_val: Optional[BaseException]) -> PQGen[bool]:
+        if isinstance(exc_val, Rollback):
+            logger.debug(
+                f"{self._conn}: Explicit rollback from: ", exc_info=True
+            )
+
+        ex = self._pop_savepoint("rollback")
+        self._exited = True
+        if ex:
+            raise ex
+
+        commands = self._get_rollback_commands()
+        yield from self._conn._exec_command(b"; ".join(commands))
+
+        if isinstance(exc_val, Rollback):
+            if not exc_val.transaction or exc_val.transaction is self:
+                return True  # Swallow the exception
+
+        return False
+
+    def _get_enter_commands(self) -> List[bytes]:
+        commands = []
+        if self._outer_transaction:
+            commands.append(self._conn._get_tx_start_command())
+
+        if self._savepoint_name:
+            commands.append(
+                sql.SQL("SAVEPOINT {}")
+                .format(sql.Identifier(self._savepoint_name))
+                .as_bytes(self._conn)
+            )
+        return commands
+
+    def _get_commit_commands(self) -> List[bytes]:
         commands = []
         if self._savepoint_name and not self._outer_transaction:
             commands.append(
@@ -159,22 +173,12 @@ class BaseTransaction(Generic[ConnectionType]):
             )
 
         if self._outer_transaction:
-            assert not self._conn._savepoints
+            assert not self._conn._num_transactions
             commands.append(b"COMMIT")
 
-        return self._conn._exec_command(b"; ".join(commands))
+        return commands
 
-    def _rollback_gen(self, exc_val: Optional[BaseException]) -> PQGen[bool]:
-        if isinstance(exc_val, Rollback):
-            logger.debug(
-                f"{self._conn}: Explicit rollback from: ", exc_info=True
-            )
-
-        ex = self._pop_savepoint("roll back")
-        self._exited = True
-        if ex:
-            raise ex
-
+    def _get_rollback_commands(self) -> List[bytes]:
         commands = []
         if self._savepoint_name and not self._outer_transaction:
             commands.append(
@@ -184,7 +188,7 @@ class BaseTransaction(Generic[ConnectionType]):
             )
 
         if self._outer_transaction:
-            assert not self._conn._savepoints
+            assert not self._conn._num_transactions
             commands.append(b"ROLLBACK")
 
         # Also clear the prepared statements cache.
@@ -192,23 +196,43 @@ class BaseTransaction(Generic[ConnectionType]):
             for cmd in self._conn._prepared.get_maintenance_commands():
                 commands.append(cmd)
 
-        yield from self._conn._exec_command(b"; ".join(commands))
+        return commands
 
-        if isinstance(exc_val, Rollback):
-            if not exc_val.transaction or exc_val.transaction is self:
-                return True  # Swallow the exception
+    def _push_savepoint(self) -> None:
+        """
+        Push the transaction on the connection transactions stack.
 
-        return False
+        Also set the internal state of the object and verify consistency.
+        """
+        self._outer_transaction = (
+            self._conn.pgconn.transaction_status == TransactionStatus.IDLE
+        )
+        if self._outer_transaction:
+            # outer transaction: if no name it's only a begin, else
+            # there will be an additional savepoint
+            assert not self._conn._num_transactions
+        else:
+            # inner transaction: it always has a name
+            if not self._savepoint_name:
+                self._savepoint_name = (
+                    f"_pg3_{self._conn._num_transactions + 1}"
+                )
+
+        self._stack_index = self._conn._num_transactions
+        self._conn._num_transactions += 1
 
     def _pop_savepoint(self, action: str) -> Optional[Exception]:
-        sp = self._conn._savepoints.pop()
-        if sp == self._savepoint_name:
+        """
+        Pop the transaction from the connection transactions stack.
+
+        Also verify the state consistency.
+        """
+        self._conn._num_transactions -= 1
+        if self._conn._num_transactions == self._stack_index:
             return None
 
-        other = f"the savepoint {sp!r}" if sp else "the top-level transaction"
         return OutOfOrderTransactionNesting(
-            f"transactions not correctly nested: {self} would {action}"
-            f" in the wrong order compared to {other}"
+            f"transaction {action} at the wrong nesting level: {self}"
         )
 
 
@@ -235,8 +259,13 @@ class Transaction(BaseTransaction["Connection[Any]"]):
         exc_val: Optional[BaseException],
         exc_tb: Optional[TracebackType],
     ) -> bool:
-        with self._conn.lock:
-            return self._conn.wait(self._exit_gen(exc_type, exc_val, exc_tb))
+        if self._conn.pgconn.status == ConnStatus.OK:
+            with self._conn.lock:
+                return self._conn.wait(
+                    self._exit_gen(exc_type, exc_val, exc_tb)
+                )
+        else:
+            return False
 
 
 class AsyncTransaction(BaseTransaction["AsyncConnection[Any]"]):
@@ -261,7 +290,10 @@ class AsyncTransaction(BaseTransaction["AsyncConnection[Any]"]):
         exc_val: Optional[BaseException],
         exc_tb: Optional[TracebackType],
     ) -> bool:
-        async with self._conn.lock:
-            return await self._conn.wait(
-                self._exit_gen(exc_type, exc_val, exc_tb)
-            )
+        if self._conn.pgconn.status == ConnStatus.OK:
+            async with self._conn.lock:
+                return await self._conn.wait(
+                    self._exit_gen(exc_type, exc_val, exc_tb)
+                )
+        else:
+            return False
