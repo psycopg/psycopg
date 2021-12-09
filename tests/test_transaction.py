@@ -1,4 +1,5 @@
 import logging
+from threading import Thread, Event
 
 import pytest
 
@@ -648,3 +649,53 @@ def test_str(conn):
 
     assert "[IDLE]" in str(tx)
     assert "(terminated)" in str(tx)
+
+    with pytest.raises(ZeroDivisionError):
+        with conn.transaction() as tx:
+            1 / 0
+
+    assert "(terminated)" in str(tx)
+
+
+@pytest.mark.parametrize("what", ["commit", "rollback", "error"])
+def test_concurrency(conn, what):
+    conn.autocommit = True
+
+    e = [Event() for i in range(3)]
+
+    def worker(unlock, wait_on):
+        with pytest.raises(ProgrammingError) as ex:
+            with conn.transaction():
+                unlock.set()
+                wait_on.wait()
+                conn.execute("select 1")
+
+                if what == "error":
+                    1 / 0
+                elif what == "rollback":
+                    raise Rollback()
+                else:
+                    assert what == "commit"
+
+        if what == "error":
+            assert "would roll back" in str(ex.value)
+            assert isinstance(ex.value.__context__, ZeroDivisionError)
+        elif what == "rollback":
+            assert "would roll back" in str(ex.value)
+            assert isinstance(ex.value.__context__, Rollback)
+        else:
+            assert "would commit" in str(ex.value)
+
+    # Start a first transaction in a thread
+    t1 = Thread(target=worker, kwargs={"unlock": e[0], "wait_on": e[1]})
+    t1.start()
+    e[0].wait()
+
+    # Start a nested transaction in a thread
+    t2 = Thread(target=worker, kwargs={"unlock": e[1], "wait_on": e[2]})
+    t2.start()
+
+    # Terminate the first transaction before the second does
+    t1.join()
+    e[2].set()
+    t2.join()
