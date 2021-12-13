@@ -14,8 +14,11 @@ Psycopg 3.1 (unreleased)
 - Add `pq.PGconn.trace()` and related trace functions (:ticket:`#167`).
 
 
-Psycopg 3.0.6 (unreleased)
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+Current release
+---------------
+
+Psycopg 3.0.6
+^^^^^^^^^^^^^
 
 - Allow to use `Cursor.description` if the connection is closed
   (:ticket:`#172`).
@@ -26,9 +29,6 @@ Psycopg 3.0.6 (unreleased)
   detected (:tickets:`#176, #177`).
 - Add `!CHECK_STANDBY` value to `~pq.ConnStatus` enum.
 
-
-Current release
----------------
 
 Psycopg 3.0.5
 ^^^^^^^^^^^^^
