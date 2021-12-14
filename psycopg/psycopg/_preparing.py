@@ -182,6 +182,7 @@ class PrepareManager:
         Clear the internal state and prepare a command to clear the state of
         the server.
         """
+        self._counts.clear()
         if self._names:
             self._names.clear()
             self._maint_commands.clear()

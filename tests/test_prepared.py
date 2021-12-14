@@ -92,6 +92,16 @@ def test_no_prepare_multi(conn):
     assert res == [0] * 10
 
 
+def test_no_prepare_multi_with_drop(conn):
+    conn.execute("select 1", prepare=True)
+
+    for i in range(10):
+        conn.execute("drop table if exists noprep; create table noprep()")
+
+    cur = conn.execute("select count(*) from pg_prepared_statements")
+    assert cur.fetchone() == (0,)
+
+
 def test_no_prepare_error(conn):
     conn.autocommit = True
     for i in range(10):
