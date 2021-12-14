@@ -7,11 +7,16 @@
 ``psycopg`` release notes
 =========================
 
+Future releases
+---------------
+
 Psycopg 3.0.7 (unreleased)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 - Fix crash in `~Cursor.executemany()` with no input sequence
   (:ticket:`#179`).
+- Fix wrong `~Cursor.rowcount` after an `~Cursor.executemany()` returning no
+  rows (:ticket:`#178`).
 
 
 Current release

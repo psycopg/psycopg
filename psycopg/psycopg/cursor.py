@@ -228,7 +228,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
         # Override rowcout for the first result. Calls to nextset() will change
         # it to the value of that result only, but we hope nobody will notice.
         # You haven't read this comment.
-        self._rowcount = nrows or -1
+        self._rowcount = nrows
         self._last_query = query
 
     def _maybe_prepare_gen(

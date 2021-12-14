@@ -291,6 +291,18 @@ def test_executemany_returning_rowcount(conn, execmany):
     assert cur.rowcount == 2
 
 
+def test_executemany_rowcount_no_hit(conn, execmany):
+    cur = conn.cursor()
+    cur.executemany("delete from execmany where id = %s", [(-1,), (-2,)])
+    assert cur.rowcount == 0
+    cur.executemany("delete from execmany where id = %s", [])
+    assert cur.rowcount == 0
+    cur.executemany(
+        "delete from execmany where id = %s returning num", [(-1,), (-2,)]
+    )
+    assert cur.rowcount == 0
+
+
 @pytest.mark.parametrize(
     "query",
     [
