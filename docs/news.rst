@@ -14,17 +14,17 @@ Psycopg 3.1 (unreleased)
 - Add `pq.PGconn.trace()` and related trace functions (:ticket:`#167`).
 
 
-Psycopg 3.0.7 (unreleased)
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+Current release
+---------------
+
+Psycopg 3.0.7
+^^^^^^^^^^^^^
 
 - Fix crash in `~Cursor.executemany()` with no input sequence
   (:ticket:`#179`).
 - Fix wrong `~Cursor.rowcount` after an `~Cursor.executemany()` returning no
   rows (:ticket:`#178`).
 
-
-Current release
----------------
 
 Psycopg 3.0.6
 ^^^^^^^^^^^^^
