@@ -267,6 +267,12 @@ def test_executemany_name(conn, execmany):
     assert cur.fetchall() == [(11, "hello"), (21, "world")]
 
 
+def test_executemany_no_data(conn, execmany):
+    cur = conn.cursor()
+    cur.executemany("insert into execmany(num, data) values (%s, %s)", [])
+    assert cur.rowcount == 0
+
+
 def test_executemany_rowcount(conn, execmany):
     cur = conn.cursor()
     cur.executemany(

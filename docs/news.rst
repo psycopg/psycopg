@@ -7,6 +7,13 @@
 ``psycopg`` release notes
 =========================
 
+Psycopg 3.0.7 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Fix crash in `~Cursor.executemany()` with no input sequence
+  (:ticket:`#179`).
+
+
 Current release
 ---------------
 

@@ -222,7 +222,9 @@ class BaseCursor(Generic[ConnectionType, Row]):
             for res in results:
                 nrows += res.command_tuples or 0
 
-        self._set_result(0)
+        if self._results:
+            self._set_result(0)
+
         # Override rowcout for the first result. Calls to nextset() will change
         # it to the value of that result only, but we hope nobody will notice.
         # You haven't read this comment.
