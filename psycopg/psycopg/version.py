@@ -8,7 +8,7 @@ psycopg distribution version file.
 # https://www.python.org/dev/peps/pep-0440/
 
 # STOP AND READ! if you change:
-__version__ = "3.0.6"
+__version__ = "3.0.7.dev0"
 # also change:
 # - `docs/news.rst` to declare this as the current version or an unreleased one
 # - `psycopg_c/psycopg_c/version.py` to the same version.
