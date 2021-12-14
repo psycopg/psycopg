@@ -266,6 +266,14 @@ async def test_executemany_name(aconn, execmany):
     assert rv == [(11, "hello"), (21, "world")]
 
 
+async def test_executemany_no_data(aconn, execmany):
+    cur = aconn.cursor()
+    await cur.executemany(
+        "insert into execmany(num, data) values (%s, %s)", []
+    )
+    assert cur.rowcount == 0
+
+
 async def test_executemany_rowcount(aconn, execmany):
     cur = aconn.cursor()
     await cur.executemany(
