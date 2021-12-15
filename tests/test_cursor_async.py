@@ -10,7 +10,9 @@ from psycopg.adapt import PyFormat
 
 from .utils import gc_collect
 from .test_cursor import my_row_factory
+from .test_cursor import execmany, _execmany  # noqa: F401
 
+execmany = execmany  # avoid F811 underneath
 pytestmark = pytest.mark.asyncio
 
 
@@ -231,17 +233,6 @@ async def test_query_badenc(aconn):
     cur = aconn.cursor()
     with pytest.raises(UnicodeEncodeError):
         await cur.execute("select '\u20ac'")
-
-
-@pytest.fixture(scope="function")
-async def execmany(svcconn):
-    cur = svcconn.cursor()
-    cur.execute(
-        """
-        drop table if exists execmany;
-        create table execmany (id serial primary key, num integer, data text)
-        """
-    )
 
 
 async def test_executemany(aconn, execmany):
