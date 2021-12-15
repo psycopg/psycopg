@@ -151,7 +151,8 @@ class BaseCursor(Generic[ConnectionType, Row]):
 
     def nextset(self) -> Optional[bool]:
         """
-        Move to the next result set if `execute()` returned more than one.
+        Move to the result set of the next query executed through `executemany()`
+        or to the next result set if `execute()` returned more than one.
 
         Return `!True` if a new result is available, which will be the one
         methods `!fetch*()` will operate on.
@@ -222,6 +223,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
 
             results = yield from self._maybe_prepare_gen(pgq, prepare=True)
             self._check_results(results)
+            self._results.extend(results)
 
             for res in results:
                 nrows += res.command_tuples or 0

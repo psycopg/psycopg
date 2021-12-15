@@ -274,13 +274,17 @@ async def test_executemany_rowcount(aconn, execmany):
     assert cur.rowcount == 2
 
 
-async def test_executemany_returning_rowcount(aconn, execmany):
+async def test_executemany_returning(aconn, execmany):
     cur = aconn.cursor()
     await cur.executemany(
         "insert into execmany(num, data) values (%s, %s) returning num",
         [(10, "hello"), (20, "world")],
     )
     assert cur.rowcount == 2
+    assert (await cur.fetchone()) == (10,)
+    assert cur.nextset()
+    assert (await cur.fetchone()) == (20,)
+    assert cur.nextset() is None
 
 
 async def test_executemany_rowcount_no_hit(aconn, execmany):

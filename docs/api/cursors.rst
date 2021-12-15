@@ -89,6 +89,9 @@ The `!Cursor` class
         See :ref:`query-parameters` for all the details about executing
         queries.
 
+        Results from each query, if any, can be walked through by calling
+        `nextset()`.
+
     .. automethod:: copy
 
         :param statement: The copy operation to execute

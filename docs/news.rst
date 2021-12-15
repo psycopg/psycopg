@@ -12,6 +12,8 @@ Psycopg 3.1 (unreleased)
 
 - Add :ref:`Two-Phase Commit <two-phase-commit>` support (:ticket:`#72`).
 - Add `pq.PGconn.trace()` and related trace functions (:ticket:`#167`).
+- Return results from all queries run through `~Cursor.executemany()`; each
+  result set can be accessed by calling `~Cursor.nextset()` (:ticket:`#164`).
 
 
 Current release
