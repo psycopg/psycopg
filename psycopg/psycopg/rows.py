@@ -175,7 +175,7 @@ def class_row(cls: Type[T]) -> BaseRowFactory[T]:
         names = [d.name for d in desc]
 
         def class_row__(values: Sequence[Any]) -> T:
-            return cls(**dict(zip(names, values)))  # type: ignore
+            return cls(**dict(zip(names, values)))
 
         return class_row__
 
