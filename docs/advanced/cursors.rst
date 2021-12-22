@@ -48,7 +48,7 @@ reasonably small result sets.
 Server-side cursors
 -------------------
 
-PostgreSQL has also its own concept of *cursor* (sometimes also called
+PostgreSQL also has its own concept of *cursor* (sometimes also called
 *portal*). When a database cursor is created, the query is not necessarily
 completely processed: the server might be able to produce results only as they
 are needed. Only the results requested are transmitted to the client: if the
@@ -68,7 +68,7 @@ server (for instance when fetching new records or when moving using
 `~Cursor.scroll()`).
 
 Using a server-side cursor it is possible to process datasets larger than what
-would fit in the client memory. However for small queries they are less
+would fit in the clients memory. However for small queries they are less
 efficient because it takes more commands to receive their result, so you
 should use them only if you need to process huge results or if only a partial
 result is needed.
@@ -114,7 +114,7 @@ you can run a one-off command in the same connection to call it (e.g. using
     conn.execute("SELECT reffunc('curname')")
 
 after which you can create a server-side cursor declared by the same name, and
-call directly the fetch methods, skipping the `~ServerCursor.execute()` call:
+directly call the fetch methods, skipping the `~ServerCursor.execute()` call:
 
 .. code:: python
 

@@ -26,7 +26,7 @@ Statement preparation can be controlled in several ways:
   wasn't already, and executed as prepared from its first use.
 
 - Conversely, passing ``prepare=False`` to `!execute()` will avoid to prepare
-  the query, regardless of the number of times it is executed. The default of
+  the query, regardless of the number of times it is executed. The default for
   the parameter is `!None`, meaning that the query is prepared if the
   conditions described above are met.
 

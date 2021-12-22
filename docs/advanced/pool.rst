@@ -6,13 +6,13 @@ Connection pools
 ================
 
 A `connection pool`__ is an object managing a set of connections and allowing
-their use to functions needing one. Because the time to establish a new
+their use in functions needing one. Because the time to establish a new
 connection can be relatively long, keeping connections open can reduce the
-latency of a program operations.
+latency of program operations.
 
 .. __: https://en.wikipedia.org/wiki/Connection_pool
 
-This page explains a few basic concepts of Psycopg connection pool's
+This page explains a few basic concepts of Psycopg connection pools
 behaviour. Please refer to the `ConnectionPool` object API for details about
 the pool operations.
 
@@ -54,7 +54,7 @@ until the pool is full or will throw a `PoolTimeout` if the pool isn't ready
 within an allocated time.
 
 The pool background workers create connections according to the parameters
-*conninfo*, *kwargs*, *connection_class* passed to `ConnectionPool`
+*conninfo*, *kwargs* and *connection_class* passed to `ConnectionPool`
 constructor. Once a connection is created it is also passed to the
 *configure()* callback, if provided, after which it is put in the pool (or
 passed to a client requesting it, if someone is already knocking at the door).
@@ -103,7 +103,7 @@ Pool connection and sizing
 A pool can have a fixed size (specifying no *max_size* or *max_size* =
 *min_size*) or a dynamic size (when *max_size* > *min_size*). In both cases, as
 soon as the pool is created, it will try to acquire *min_size* connections in
-background.
+the background.
 
 If an attempt to create a connection fails, a new attempt will be made soon
 after, using an exponential backoff to increase the time between attempts,
@@ -115,7 +115,7 @@ to restart it.
 
 If more than *min_size* connections are requested concurrently, new ones are
 created, up to *max_size*. Note that the connections are always created by the
-background workers, not by the thread asking the connection: if a client
+background workers, not by the thread asking for the connection: if a client
 requests a new connection, and a previous client terminates its job before the
 new connection is ready, the waiting client will be served the existing
 connection. This is especially useful in scenarios where the time to connect
@@ -134,7 +134,7 @@ What's the right size for the pool
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Big question. Who knows. However, probably not as large as you imagine. Please
-take a look at `this this analysis`__ for some ideas.
+take a look at `this analysis`__ for some ideas.
 
 .. __: https://github.com/brettwooldridge/HikariCP/wiki/About-Pool-Sizing
 
@@ -144,8 +144,8 @@ program, eventually adjusting the size of the pool using the
 `~ConnectionPool.resize()` method.
 
 
-Connections quality
--------------------
+Connection quality
+------------------
 
 The state of the connection is verified when a connection is returned to the
 pool: if a connection is broken during its usage it will be discarded on
@@ -159,7 +159,7 @@ return and a new connection will be created.
 Why not? Because doing so would require an extra network roundtrip: we want to
 save you from its latency. Before getting too angry about it, just think that
 the connection can be lost any moment while your program is using it. As your
-program should be already able to cope with a loss of a connection during its
+program should already be able to cope with a loss of a connection during its
 process, it should be able to tolerate to be served a broken connection:
 unpleasant but not the end of the world.
 
@@ -187,8 +187,8 @@ briefly unavailable and run a quick check on them, returning them to the pool
 if they are still working or creating a new connection if they aren't.
 
 If you set up a similar check in your program, in case the database connection
-is temporarily lost, we cannot do anything for the thread which had taken
-already a connection from the pool, but no other thread should be served a
+is temporarily lost, we cannot do anything for the thread which already had taken
+a connection from the pool, but no other thread should be served a
 broken connection, because `!check()` would empty the pool and refill it with
 working connections, as soon as they are available.
 
@@ -203,7 +203,7 @@ Pool stats
 The pool can return information about its usage using the methods
 `~ConnectionPool.get_stats()` or `~ConnectionPool.pop_stats()`. Both methods
 return the same values, but the latter reset the counters after its use. The
-values can be send to a monitoring system such as Graphite_ or Prometheus_.
+values can be sent to a monitoring system such as Graphite_ or Prometheus_.
 
 .. _Graphite: https://graphiteapp.org/
 .. _Prometheus: https://prometheus.io/

@@ -189,7 +189,7 @@ equivalent of:
 Note that, while the above pattern is what most people would use, `connect()`
 doesn't enter a block itself, but returns an "un-entered" connection, so that
 it is still possible to use a connection regardless of the code scope and the
-developer is free to use (and responsible of calling) `~Connection.commit()`,
+developer is free to use (and responsible for calling) `~Connection.commit()`,
 `~Connection.rollback()`, `~Connection.close()` as and where needed.
 
 .. warning::

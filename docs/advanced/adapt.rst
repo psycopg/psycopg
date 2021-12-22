@@ -22,7 +22,7 @@ returned.
   or `~psycopg.Cursor`.
 
 - Every context object derived from another context inherits its adapters
-  mapping: cursors created from a connection inherit the connection's
+  mapping: cursors created from a connection inherit the connections
   configuration.
 
   By default, connections obtain an adapters map from the global map
@@ -46,12 +46,12 @@ returned.
     sequence in a format understood by PostgreSQL. The string returned
     *shouldn't be quoted*: the value will be passed to the database using
     functions such as :pq:`PQexecParams()` so quoting and quotes escaping is
-    not necessary. The dumper usually also suggests the server what type to
+    not necessary. The dumper usually also suggests to the server what type to
     use, via its `~psycopg.abc.Dumper.oid` attribute.
 
   - Loaders (objects implementing the `~psycopg.abc.Loader` protocol) are
     the objects used to perform the opposite operation: reading a bytes
-    sequence from PostgreSQL and create a Python object out of it.
+    sequence from PostgreSQL and creating a Python object out of it.
 
   - Dumpers and loaders are instantiated on demand by a `~Transformer` object
     when a query is executed.
@@ -69,7 +69,7 @@ Writing a custom adapter: XML
 -----------------------------
 
 Psycopg doesn't provide adapters for the XML data type, because there are just
-too many ways of handling XML in Python.Creating a loader to parse the
+too many ways of handling XML in Python. Creating a loader to parse the
 `PostgreSQL xml type`__ to `~xml.etree.ElementTree` is very simple, using the
 `psycopg.adapt.Loader` base class and implementing the
 `~psycopg.abc.Loader.load()` method:
@@ -100,7 +100,7 @@ too many ways of handling XML in Python.Creating a loader to parse the
     <Element 'book' at 0x7ffb55142ef0>
 
 The opposite operation, converting Python objects to PostgreSQL, is performed
-by dumpers. The `psycopg.adapt.Dumper` base class makes easy to implement one:
+by dumpers. The `psycopg.adapt.Dumper` base class makes it easy to implement one:
 you only need to implement the `~psycopg.abc.Dumper.dump()` method::
 
     >>> from psycopg.adapt import Dumper
@@ -177,7 +177,7 @@ PostgreSQL but not handled by Python:
        ...
     psycopg.DataError: Python date doesn't support years after 9999: got infinity
 
-One possibility would be to store Python's `datetime.date.max` to PostgreSQL
+One possibility would be to store Python's `datetime.date.max` as PostgreSQL
 infinity. For this, let's create a subclass for the dumper and the loader and
 register them in the working scope (globally or just on a connection or
 cursor):
