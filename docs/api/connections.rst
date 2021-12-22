@@ -220,7 +220,7 @@ The `!Connection` class
 
         The `~pq.PGconn` libpq connection wrapper underlying the `!Connection`.
 
-        It can be used to send low level commands to PostgreSQL and access to
+        It can be used to send low level commands to PostgreSQL and access
         features not currently wrapped by Psycopg.
 
     .. autoattribute:: info
@@ -243,7 +243,7 @@ The `!Connection` class
 
     .. automethod:: notifies
 
-        Notifies are recevied after using :sql:`LISTEN` in a connection, when
+        Notifies are received after using :sql:`LISTEN` in a connection, when
         any sessions in the database generates a :sql:`NOTIFY` on one of the
         listened channels.
 

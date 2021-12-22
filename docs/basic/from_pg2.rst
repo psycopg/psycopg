@@ -7,7 +7,7 @@
 Differences from ``psycopg2``
 =============================
 
-Psycopg 3 uses the common DBAPI structure of many other database adapter and
+Psycopg 3 uses the common DBAPI structure of many other database adapters and
 tries to behave as close as possible to `!psycopg2`. There are however a few
 differences to be aware of.
 
@@ -185,11 +185,11 @@ adaptation system <adaptation>`.
 
 .. _diff-copy:
 
-Copy is no more file-based
---------------------------
+Copy is no longer file-based
+----------------------------
 
 `!psycopg2` exposes :ref:`a few copy methods <pg2:copy>` to interact with
-PostgreSQL :sql:`COPY`. Their file-based interface doesn't make easy to load
+PostgreSQL :sql:`COPY`. Their file-based interface doesn't make it easy to load
 dynamically-generated data into a database.
 
 There is now a single `~Cursor.copy()` method, which is similar to
@@ -237,7 +237,7 @@ function_name(...)` or :sql:`CALL procedure_name(...)` instead.
 ``client_encoding`` is gone
 ---------------------------
 
-Psycopg uses automatically the database client encoding to decode data to
+Psycopg automatically uses the database client encoding to decode data to
 Unicode strings. Use `ConnectionInfo.encoding` if you need to read the
 encoding. You can select an encoding at connection time using the
 ``client_encoding`` connection parameter and you can change the encoding of a

@@ -271,7 +271,7 @@ If you need an even more specific dump customisation only for certain objects
 (including different configurations in the same query) you can specify a
 *dumps* parameter in the
 `~psycopg.types.json.Json`/`~psycopg.types.json.Jsonb` wrapper, which will
-take precedence over what specified by `!set_json_dumps()`.
+take precedence over what is specified by `!set_json_dumps()`.
 
 .. code:: python
 
