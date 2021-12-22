@@ -58,7 +58,7 @@ some cases though.
     At the time of writing we don't distribute binary packages for Apple M1
     (ARM) processors.
 
-If you platform is not supported you should proceed to a :ref:`local
+If your platform is not supported you should proceed to a :ref:`local
 installation <local-installation>` or a :ref:`pure Python installation
 <pure-python-installation>`.
 

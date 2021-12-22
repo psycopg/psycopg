@@ -23,7 +23,7 @@ it also exposes the `module-level objects`__ required by the specifications.
 The standard `DBAPI exceptions`__ are exposed both by the `!psycopg` module
 and by the `psycopg.errors` module. The latter also exposes more specific
 exceptions, mapping to the database error states (see
-:ref:`sqlstate-exceptions`.
+:ref:`sqlstate-exceptions`).
 
 .. __: https://www.python.org/dev/peps/pep-0249/#exceptions
 
@@ -47,7 +47,7 @@ exceptions, mapping to the database error states (see
    The default adapters map establishing how Python and PostgreSQL types are
    converted into each other.
 
-   This map is used as template when new connections are created, using
+   This map is used as a template when new connections are created, using
    `psycopg.connect()`. Its `~psycopg.adapt.AdaptersMap.types` attribute is a
    `~psycopg.types.TypesRegistry` containing information about every
    PostgreSQL builtin type, useful for adaptation customisation (see
