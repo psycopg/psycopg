@@ -45,7 +45,7 @@ Writing data row-by-row
 -----------------------
 
 Using a copy operation you can load data into the database from any Python
-iterable (a list of tuple, or any iterable of sequences): the Python values
+iterable (a list of tuples, or any iterable of sequences): the Python values
 are adapted as they would be in normal querying. To perform such operation use
 a :sql:`COPY ... FROM STDIN` with `Cursor.copy()` and use `~Copy.write_row()`
 on the resulting object in a ``with`` block. On exiting the block the
@@ -74,10 +74,10 @@ Binary copy
 
 Binary copy is supported by specifying :sql:`FORMAT BINARY` in the :sql:`COPY`
 statement. In order to load binary data, all the types passed to the database
-must have a binary dumper registered (see see :ref:`binary-data`).
+must have a binary dumper registered (see :ref:`binary-data`).
 
 Note that PostgreSQL is particularly finicky when loading data in binary mode
-and will apply *no cast rule*. This means that e.g. passing the value 100 to
+and will apply *no cast rules*. This means that e.g. passing the value 100 to
 an `integer` column will fail because Psycopg will pass it as a `smallint`
 value. You can work around the problem using the `~Copy.set_types()` method of
 the `!Copy` object and specify carefully the types to dump.
@@ -163,5 +163,5 @@ a fully-async copy operation could be:
         while data := await f.read():
             await copy.write(data)
 
-The `AsyncCopy` object documentation describe the signature of the
+The `AsyncCopy` object documentation describes the signature of the
 asynchronous methods and the differences from its sync `Copy` counterpart.

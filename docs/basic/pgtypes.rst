@@ -100,7 +100,7 @@ Range adaptation
 ----------------
 
 PostgreSQL `range types`__ are a family of data types representing a range of
-value between two elements. The type of the element is called the range
+values between two elements. The type of the element is called the range
 *subtype*. PostgreSQL offers a few built-in range types and allows the
 definition of custom ones.
 
@@ -125,8 +125,8 @@ different types.
 
     `!Range` objects are immutable, hashable, and support the ``in`` operator
     (checking if an element is within the range). They can be tested for
-    equivalence. Empty ranges evaluate to `!False` in boolean context,
-    nonempty evaluate to `!True`.
+    equivalence. Empty ranges evaluate to `!False` in a boolean context,
+    nonempty ones evaluate to `!True`.
 
     `!Range` objects have the following attributes:
 
@@ -207,7 +207,7 @@ sequence of `~psycopg.types.range.Range` elements.
     you try to add it a `Range[Decimal]`.
 
 Like for `~psycopg.types.range.Range`, built-in multirange objects are adapted
-automatically: if a `!Multirange` objects contains `!Range` with
+automatically: if a `!Multirange` object contains `!Range` with
 `~datetime.date` bounds, it is dumped using the :sql:`datemultirange` OID, and
 :sql:`datemultirange` values are loaded back as `!Multirange[date]`.
 
@@ -273,7 +273,7 @@ database using:
 Because |hstore| is distributed as a contrib module, its oid is not well
 known, so it is necessary to use `!TypeInfo`\.\
 `~psycopg.types.TypeInfo.fetch()` to query the database and get its oid. The
-resulting object you can use passed to
+resulting object can be passed to
 `~psycopg.types.hstore.register_hstore()` to configure dumping `!dict` to
 |hstore| and parsing |hstore| back to `!dict`, in the context where the
 adapter is registered.

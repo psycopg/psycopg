@@ -86,7 +86,7 @@ two steps instead, as in
 
 .. code:: python
 
-    aconn = await psycopg.AsyncConnection.connect():
+    aconn = await psycopg.AsyncConnection.connect()
     async with aconn:
         async with aconn.cursor() as cur:
             await cur.execute(...)

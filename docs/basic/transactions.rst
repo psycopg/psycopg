@@ -9,7 +9,7 @@
 Transaction management
 ======================
 
-Psycopg has a behaviour that may result surprising compared to
+Psycopg has a behaviour that may seem surprising compared to
 :program:`psql`: by default, any database operation will start a new
 transaction. As a consequence, changes made by any cursor of the connection
 will not be visible until `Connection.commit()` is called, and will be
@@ -79,13 +79,13 @@ sequence of database statements:
         cur.execute("INSERT INTO data VALUES (%s)", ("Hello",))
         # This statement is executed inside the transaction
 
-    # No exception the end of the block:
+    # No exception at the end of the block:
     # COMMIT is executed.
 
 This way we don't have to remember to call neither `!close()` nor `!commit()`
-and the database operation have actually a persistent effect. The code might
+and the database operations actually have a persistent effect. The code might
 still do something you don't expect: keep a transaction from the first
-operation to the connection closure. You can have a finer control on the
+operation to the connection closure. You can have a finer control over the
 transactions using an :ref:`autocommit transaction <autocommit>` and/or
 :ref:`transaction contexts <transaction-context>`.
 
@@ -227,7 +227,7 @@ context.
 .. hint::
     The interaction between non-autocommit transactions and transaction
     contexts is probably surprising. Although the non-autocommit default is
-    what demanded by the DBAPI, the personal preference of several experienced
+    what's demanded by the DBAPI, the personal preference of several experienced
     developers is to:
 
     - use a connection block: ``with psycopg.connect(...) as conn``;
@@ -278,7 +278,7 @@ transaction block, by raising the `Rollback` exception. The exception "jumps"
 to the end of a transaction block, rolling back its transaction but allowing
 the program execution to continue from there. By default the exception rolls
 back the innermost transaction block, but any current block can be specified
-as the target. In the following example, an hypothetical `!CancelCommand`
+as the target. In the following example, a hypothetical `!CancelCommand`
 may stop the processing and cancel any operation previously performed,
 but not entirely committed yet.
 
@@ -305,8 +305,8 @@ Transaction characteristics
 You can set `transaction parameters`__ for the transactions that Psycopg
 handles. They affect the transactions started implicitly by non-autocommit
 transactions and the ones started explicitly by `Connection.transaction()` for
-both autocommit and non-autocommit transactions. Leaving these parameters to
-`!None` will leave the behaviour to the server's default (which is controlled
+both autocommit and non-autocommit transactions. Leaving these parameters as
+`!None` will use the server's default behaviour (which is controlled
 by server settings such as default_transaction_isolation__).
 
 .. __: https://www.postgresql.org/docs/current/sql-set-transaction.html
