@@ -7,7 +7,7 @@
 Row factories
 =============
 
-Cursor's `fetch*` methods, by default, return the records received from the
+The cursors `fetch*` methods, by default, return the records received from the
 database as tuples. This can be changed to better suit the needs of the
 programmer by using custom *row factories*.
 

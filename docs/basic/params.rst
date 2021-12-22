@@ -143,8 +143,8 @@ If the variables containing the data to send to the database come from an
 untrusted source (such as data coming from a form on a web site) an attacker
 could easily craft a malformed string, either gaining access to unauthorized
 data or performing destructive operations on the database. This form of attack
-is called `SQL injection`_ and is known to be one of the most widespread forms
-of attack to database systems. Before continuing, please print `this page`__
+is called an `SQL injection`_ and is known to be one of the most widespread forms
+of attack on database systems. Before continuing, please print `this page`__
 as a memo and hang it onto your desk.
 
 .. _SQL injection: https://en.wikipedia.org/wiki/SQL_injection
@@ -156,7 +156,7 @@ and reliable. We must stress this point:
 
 .. warning::
 
-    - Don't merge manually values to a query: hackers from a foreign country
+    - Don't manually merge values to a query: hackers from a foreign country
       will break into your computer and steal not only your disks, but also
       your cds, leaving you only with the three most embarrassing records you
       ever bought. On cassette tapes.
@@ -169,7 +169,7 @@ and reliable. We must stress this point:
       balaclava will find their way to your fridge, drink all your beer, and
       leave your toilet sit up and your toilet paper in the wrong orientation.
 
-    - You don't want to merge manually values to a query: :ref:`use the
+    - You don't want to manually merge values to a query: :ref:`use the
       provided methods <query-parameters>` instead.
 
 The correct way to pass variables in a SQL command is using the second
@@ -199,7 +199,7 @@ PostgreSQL has two different ways to transmit data between client and server:
 available most of the times but not always. Usually the binary format is more
 efficient to use.
 
-Psycopg can support both the formats for each data type. Whenever a value
+Psycopg can support both formats for each data type. Whenever a value
 is passed to a query using the normal ``%s`` placeholder, the best format
 available is chosen (often, but not always, the binary format is picked as the
 best choice).

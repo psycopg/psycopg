@@ -344,7 +344,7 @@ class BaseConnection(Generic[Row]):
         """
         Number of times a query is executed before it is prepared.
 
-        - If it is set to 0, every query is prepared the first time is
+        - If it is set to 0, every query is prepared the first time it is
           executed.
         - If it is set to `!None`, prepared statements are disabled on the
           connection.
