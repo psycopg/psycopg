@@ -8,11 +8,11 @@ Connection pools
 A `connection pool`__ is an object managing a set of connections and allowing
 their use in functions needing one. Because the time to establish a new
 connection can be relatively long, keeping connections open can reduce the
-latency of program operations.
+latency of the program.
 
 .. __: https://en.wikipedia.org/wiki/Connection_pool
 
-This page explains a few basic concepts of Psycopg connection pools
+This page explains a few basic concepts of Psycopg connection pool's
 behaviour. Please refer to the `ConnectionPool` object API for details about
 the pool operations.
 
@@ -54,7 +54,7 @@ until the pool is full or will throw a `PoolTimeout` if the pool isn't ready
 within an allocated time.
 
 The pool background workers create connections according to the parameters
-*conninfo*, *kwargs* and *connection_class* passed to `ConnectionPool`
+*conninfo*, *kwargs*, and *connection_class* passed to `ConnectionPool`
 constructor. Once a connection is created it is also passed to the
 *configure()* callback, if provided, after which it is put in the pool (or
 passed to a client requesting it, if someone is already knocking at the door).

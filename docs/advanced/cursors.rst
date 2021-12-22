@@ -68,7 +68,7 @@ server (for instance when fetching new records or when moving using
 `~Cursor.scroll()`).
 
 Using a server-side cursor it is possible to process datasets larger than what
-would fit in the clients memory. However for small queries they are less
+would fit in the client's memory. However for small queries they are less
 efficient because it takes more commands to receive their result, so you
 should use them only if you need to process huge results or if only a partial
 result is needed.

@@ -273,7 +273,7 @@ database using:
 Because |hstore| is distributed as a contrib module, its oid is not well
 known, so it is necessary to use `!TypeInfo`\.\
 `~psycopg.types.TypeInfo.fetch()` to query the database and get its oid. The
-resulting object you can pass to
+resulting object can be passed to
 `~psycopg.types.hstore.register_hstore()` to configure dumping `!dict` to
 |hstore| and parsing |hstore| back to `!dict`, in the context where the
 adapter is registered.

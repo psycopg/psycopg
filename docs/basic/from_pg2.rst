@@ -4,8 +4,8 @@
 .. currentmodule:: psycopg
 
 
-Differences to ``psycopg2``
-===========================
+Differences from ``psycopg2``
+=============================
 
 Psycopg 3 uses the common DBAPI structure of many other database adapters and
 tries to behave as close as possible to `!psycopg2`. There are however a few

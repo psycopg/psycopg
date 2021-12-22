@@ -22,7 +22,7 @@ returned.
   or `~psycopg.Cursor`.
 
 - Every context object derived from another context inherits its adapters
-  mapping: cursors created from a connection inherit the connections
+  mapping: cursors created from a connection inherit the connection's
   configuration.
 
   By default, connections obtain an adapters map from the global map
