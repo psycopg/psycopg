@@ -38,18 +38,18 @@ extras_require = {
     # Requirements to run the test suite
     "test": [
         "mypy >= 0.920, != 0.930",
-        "pproxy ~= 2.7.8",
-        "pytest ~= 6.2.5",
-        "pytest-asyncio ~= 0.16.0",
-        "pytest-cov ~= 3.0.0",
-        "pytest-randomly ~= 3.10.1",
-        "tenacity ~= 8.0.1",
+        "pproxy >= 2.7.8",
+        "pytest >= 6.2.5",
+        "pytest-asyncio >= 0.16.0",
+        "pytest-cov >= 3.0.0",
+        "pytest-randomly >= 3.10.1",
+        "tenacity >= 8.0.1",
     ],
     # Requirements needed for development
     "dev": [
         "black",
-        "dnspython ~= 2.1.0",
-        "flake8 ~= 4.0.1",
+        "dnspython >= 2.1.0",
+        "flake8 >= 4.0.1",
         "mypy >= 0.920, != 0.930",
         "pytest-mypy >= 0.8.1",
         "types-setuptools >= 57.4.0",
@@ -57,14 +57,14 @@ extras_require = {
     ],
     # Requirements needed to build the documentation
     "docs": [
-        "Sphinx ~= 4.2.0",
-        "docutils ~= 0.17.0",
-        "furo >= 2021.9.8",
+        "Sphinx >= 4.2.0",
+        "docutils >= 0.17.0",
+        "furo == 2021.11.23",
         "sphinx-autobuild >= 2021.3.14",
-        "sphinx-autodoc-typehints ~= 1.12.0",
+        "sphinx-autodoc-typehints >= 1.12.0",
         # to document optional modules
-        "dnspython ~= 2.1.0",
-        "shapely ~= 1.7.0",
+        "dnspython >= 2.1.0",
+        "shapely >= 1.7.0",
     ],
 }
 
