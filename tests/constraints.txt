@@ -1,0 +1,35 @@
+# This is a constraint file forcing the minimum allowed version to be
+# installed.
+#
+# https://pip.pypa.io/en/stable/user_guide/#constraints-files
+
+# From install_requires
+backports.zoneinfo == 0.2.0
+dataclasses == 0.8
+typing_extensions == 3.10.0.0
+
+# From the 'test' extra
+mypy == 0.920
+pproxy == 2.7.0
+pytest == 6.2.5
+pytest-asyncio == 0.16.0
+pytest-cov == 3.0.0
+pytest-randomly == 3.10.0
+tenacity == 8.0.0
+
+# From the 'dev' extra
+black == 21.12b0
+dnspython == 2.1.0
+flake8 == 4.0.0
+mypy == 0.920
+pytest-mypy == 0.8.0
+types-setuptools == 57.4.0
+wheel == 0.36.0
+
+# From the 'docs' extra
+Sphinx == 4.2.0
+furo == 2021.11.23
+sphinx-autobuild == 2021.3.14
+sphinx-autodoc-typehints == 1.12.0
+dnspython == 2.1.0
+shapely == 1.7.0
