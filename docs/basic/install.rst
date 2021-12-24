@@ -121,6 +121,13 @@ need::
 
     sudo apt install libpq5
 
+.. note::
+
+    The ``libpq`` is the client library used by :program:`psql`, the
+    PostgreSQL command line client, to connect to the database.  On most
+    systems, installing :program:`psql` will install the ``libpq`` too as a
+    dependency.
+
 If you are not able to fulfill this requirement please follow the `binary
 installation`_.
 
