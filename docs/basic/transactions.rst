@@ -6,8 +6,8 @@
 
 .. _transactions:
 
-Transaction management
-======================
+Transactions management
+=======================
 
 Psycopg has a behaviour that may seem surprising compared to
 :program:`psql`: by default, any database operation will start a new
