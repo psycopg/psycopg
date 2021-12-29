@@ -37,7 +37,7 @@ The `!Connection` class
         :param kwargs: Further parameters specifying the connection string.
                        They override the ones specified in *conninfo*.
         :param autocommit: If `!True` don't start transactions automatically.
-                           See `transactions` for details.
+                           See :ref:`transactions` for details.
         :param row_factory: The row factory specifying what type of records
                             to create fetching data (default:
                             `~psycopg.rows.tuple_row()`). See
