@@ -66,7 +66,7 @@ Creating new row factories
 --------------------------
 
 A *row factory* is a callable that accepts a `Cursor` object and returns
-another callable, a *row maker*, which takes a raw data (as a sequence of
+another callable, a *row maker*, which takes raw data (as a sequence of
 values) and returns the desired object.
 
 The role of the row factory is to inspect a query result (it is called after a
