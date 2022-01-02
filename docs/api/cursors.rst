@@ -81,16 +81,29 @@ The `!Cursor` class
         :type query: `!str`, `!bytes`, or `sql.Composable`
         :param params_seq: The parameters to pass to the query
         :type params_seq: Sequence of Sequences or Mappings
+        :param returning: If `!false`, query results won't be available to fetch
+        :type returning: `!bool`
 
         This is more efficient than performing separate queries, but in case of
         several :sql:`INSERT` (and with some SQL creativity for massive
         :sql:`UPDATE` too) you may consider using `copy()`.
 
+        If the queries return data (e.g. when executing an :sql:`INSERT ...
+        RETURNING` or a :sql:`SELECT` with a side-effect), the result will be
+        available in the cursor's state, using `fetchone()` and similar
+        methods; results after the first will be available using `nextset()`.
+        In case this makes use of an unacceptable amount of memory you can use
+        `!returning=False` to disable returning the results. This is not
+        necessary if the queries return no data (e.g. on :sql:`INSERT` without
+        returning).
+
         See :ref:`query-parameters` for all the details about executing
         queries.
 
-        Results from each query, if any, can be walked through by calling
-        `nextset()`.
+        .. versionchanged:: 3.1
+
+            results are now available in the cursor state, added `!returning`
+            parameter to disable it.
 
     .. automethod:: copy
 

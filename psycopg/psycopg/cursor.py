@@ -207,7 +207,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
             yield from self._conn._exec_command(cmd)
 
     def _executemany_gen(
-        self, query: Query, params_seq: Iterable[Params]
+        self, query: Query, params_seq: Iterable[Params], returning: bool
     ) -> PQGen[None]:
         """Generator implementing `Cursor.executemany()`."""
         yield from self._start_query(query)
@@ -223,7 +223,8 @@ class BaseCursor(Generic[ConnectionType, Row]):
 
             results = yield from self._maybe_prepare_gen(pgq, prepare=True)
             self._check_results(results)
-            self._results.extend(results)
+            if returning and results[0].status == ExecStatus.TUPLES_OK:
+                self._results.extend(results)
 
             for res in results:
                 nrows += res.command_tuples or 0
@@ -577,13 +578,21 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
             raise ex.with_traceback(None)
         return self
 
-    def executemany(self, query: Query, params_seq: Iterable[Params]) -> None:
+    def executemany(
+        self,
+        query: Query,
+        params_seq: Iterable[Params],
+        *,
+        returning: bool = True,
+    ) -> None:
         """
         Execute the same command with a sequence of input data.
         """
         try:
             with self._conn.lock:
-                self._conn.wait(self._executemany_gen(query, params_seq))
+                self._conn.wait(
+                    self._executemany_gen(query, params_seq, returning)
+                )
         except e.Error as ex:
             raise ex.with_traceback(None)
 

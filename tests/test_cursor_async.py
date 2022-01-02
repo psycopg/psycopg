@@ -287,6 +287,31 @@ async def test_executemany_returning(aconn, execmany):
     assert cur.nextset() is None
 
 
+async def test_executemany_returning_discard(aconn, execmany):
+    cur = aconn.cursor()
+    await cur.executemany(
+        "insert into execmany(num, data) values (%s, %s) returning num",
+        [(10, "hello"), (20, "world")],
+        returning=False,
+    )
+    assert cur.rowcount == 2
+    with pytest.raises(psycopg.ProgrammingError):
+        await cur.fetchone()
+    assert cur.nextset() is None
+
+
+async def test_executemany_no_result(aconn, execmany):
+    cur = aconn.cursor()
+    await cur.executemany(
+        "insert into execmany(num, data) values (%s, %s)",
+        [(10, "hello"), (20, "world")],
+    )
+    assert cur.rowcount == 2
+    with pytest.raises(psycopg.ProgrammingError):
+        await cur.fetchone()
+    assert cur.nextset() is None
+
+
 async def test_executemany_rowcount_no_hit(aconn, execmany):
     cur = aconn.cursor()
     await cur.executemany("delete from execmany where id = %s", [(-1,), (-2,)])
