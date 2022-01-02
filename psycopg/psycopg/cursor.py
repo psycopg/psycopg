@@ -228,7 +228,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
         if self._results:
             self._set_result(0)
 
-        # Override rowcout for the first result. Calls to nextset() will change
+        # Override rowcount for the first result. Calls to nextset() will change
         # it to the value of that result only, but we hope nobody will notice.
         # You haven't read this comment.
         self._rowcount = nrows
