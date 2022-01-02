@@ -574,8 +574,11 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
         """
         Execute the same command with a sequence of input data.
         """
-        with self._conn.lock:
-            self._conn.wait(self._executemany_gen(query, params_seq))
+        try:
+            with self._conn.lock:
+                self._conn.wait(self._executemany_gen(query, params_seq))
+        except e.Error as ex:
+            raise ex.with_traceback(None)
 
     def stream(
         self,
