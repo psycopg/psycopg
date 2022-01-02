@@ -7,7 +7,6 @@ import sys
 import time
 import queue
 import pytest
-import selectors
 import threading
 import subprocess as sp
 from typing import List
@@ -187,7 +186,7 @@ def test_cancel(conn, retries):
 @pytest.mark.slow
 def test_identify_closure(dsn, retries):
     def closer():
-        time.sleep(0.3)
+        time.sleep(0.2)
         conn2.execute(
             "select pg_terminate_backend(%s)", [conn.pgconn.backend_pid]
         )
@@ -197,19 +196,16 @@ def test_identify_closure(dsn, retries):
             conn = psycopg.connect(dsn)
             conn2 = psycopg.connect(dsn)
             try:
+                t = threading.Thread(target=closer)
+                t.start()
                 t0 = time.time()
-                with selectors.DefaultSelector() as sel:
-                    sel.register(conn, selectors.EVENT_READ)
-                    t = threading.Thread(target=closer)
-                    t.start()
-                    try:
-                        assert sel.select(timeout=1.0)
-                        with pytest.raises(psycopg.OperationalError):
-                            conn.execute("select 1")
-                        t1 = time.time()
-                        assert 0.3 < t1 - t0 < 0.6
-                    finally:
-                        t.join()
+                try:
+                    with pytest.raises(psycopg.OperationalError):
+                        conn.execute("select pg_sleep(1.0)")
+                    t1 = time.time()
+                    assert 0.2 < t1 - t0 < 0.4
+                finally:
+                    t.join()
             finally:
                 conn.close()
                 conn2.close()
