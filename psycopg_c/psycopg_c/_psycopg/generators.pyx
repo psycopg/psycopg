@@ -146,7 +146,7 @@ def fetch(pq.PGconn pgconn) -> PQGen[Optional[PGresult]]:
     """
     cdef libpq.PGconn *pgconn_ptr = pgconn._pgconn_ptr
     cdef libpq.PGnotify *notify
-    cdef int cires, ibres
+    cdef int cires, ibres = 0
     cdef object notify_handler = pgconn.notify_handler
     cdef libpq.PGresult *pgres
 
