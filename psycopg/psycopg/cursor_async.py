@@ -109,14 +109,14 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
                 first = False
 
     async def fetchone(self) -> Optional[Row]:
-        self._check_result()
+        self._check_result_for_fetch()
         rv = self._tx.load_row(self._pos, self._make_row)
         if rv is not None:
             self._pos += 1
         return rv
 
     async def fetchmany(self, size: int = 0) -> List[Row]:
-        self._check_result()
+        self._check_result_for_fetch()
         assert self.pgresult
 
         if not size:
@@ -130,7 +130,7 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
         return records
 
     async def fetchall(self) -> List[Row]:
-        self._check_result()
+        self._check_result_for_fetch()
         assert self.pgresult
         records = self._tx.load_rows(
             self._pos, self.pgresult.ntuples, self._make_row
@@ -139,7 +139,7 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
         return records
 
     async def __aiter__(self) -> AsyncIterator[Row]:
-        self._check_result()
+        self._check_result_for_fetch()
 
         def load(pos: int) -> Optional[Row]:
             return self._tx.load_row(pos, self._make_row)
