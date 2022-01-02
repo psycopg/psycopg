@@ -10,8 +10,8 @@
 Current release
 ---------------
 
-Psycopg 3.0.8
-^^^^^^^^^^^^^
+Psycopg 3.0.8 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 - Decode connection errors in the ``client_encoding`` specified in the
   connection string, if available (:ticket:`#194`).
