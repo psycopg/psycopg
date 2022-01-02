@@ -416,7 +416,9 @@ async def test_notice_handlers(aconn, caplog):
     aconn.add_notice_handler(cb1)
     aconn.add_notice_handler(cb2)
     aconn.add_notice_handler("the wrong thing")
-    aconn.add_notice_handler(lambda diag: severities.append(diag.severity))
+    aconn.add_notice_handler(
+        lambda diag: severities.append(diag.severity_nonlocalized)
+    )
 
     aconn.pgconn.exec_(b"set client_min_messages to notice")
     cur = aconn.cursor()

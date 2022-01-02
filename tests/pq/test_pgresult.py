@@ -52,7 +52,9 @@ def test_error_message(pgconn):
 
 def test_error_field(pgconn):
     res = pgconn.exec_(b"select wat")
-    assert res.error_field(pq.DiagnosticField.SEVERITY) == b"ERROR"
+    assert (
+        res.error_field(pq.DiagnosticField.SEVERITY_NONLOCALIZED) == b"ERROR"
+    )
     assert res.error_field(pq.DiagnosticField.SQLSTATE) == b"42703"
     assert b"wat" in res.error_field(pq.DiagnosticField.MESSAGE_PRIMARY)
     res.clear()
