@@ -239,10 +239,11 @@ class AsyncConnectionPool(BasePool[AsyncConnection[Any]]):
 
         # Wait for the worker threads to terminate
         wait = asyncio.gather(self._sched_runner, *self._workers)
-        if timeout > 0:
-            wait = asyncio.wait_for(asyncio.shield(wait), timeout=timeout)
         try:
-            await wait
+            if timeout > 0:
+                await asyncio.wait_for(asyncio.shield(wait), timeout=timeout)
+            else:
+                await wait
         except asyncio.TimeoutError:
             logger.warning(
                 "couldn't stop pool %r tasks within %s seconds",
