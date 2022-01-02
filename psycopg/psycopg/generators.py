@@ -24,7 +24,7 @@ from .pq import ConnStatus, PollingStatus, ExecStatus
 from .abc import PQGen, PQGenConn
 from .pq.abc import PGconn, PGresult
 from .waiting import Wait, Ready
-from ._encodings import py_codecs
+from ._encodings import py_codecs, conninfo_encoding
 
 logger = logging.getLogger(__name__)
 
@@ -37,8 +37,9 @@ def connect(conninfo: str) -> PQGenConn[PGconn]:
     conn = pq.PGconn.connect_start(conninfo.encode())
     while 1:
         if conn.status == ConnStatus.BAD:
+            encoding = conninfo_encoding(conninfo)
             raise e.OperationalError(
-                f"connection is bad: {pq.error_message(conn)}"
+                f"connection is bad: {pq.error_message(conn, encoding=encoding)}"
             )
 
         status = conn.connect_poll()
@@ -49,8 +50,9 @@ def connect(conninfo: str) -> PQGenConn[PGconn]:
         elif status == PollingStatus.WRITING:
             yield conn.socket, Wait.W
         elif status == PollingStatus.FAILED:
+            encoding = conninfo_encoding(conninfo)
             raise e.OperationalError(
-                f"connection failed: {pq.error_message(conn)}"
+                f"connection failed: {pq.error_message(conn, encoding=encoding)}"
             )
         else:
             raise e.InternalError(f"unexpected poll status: {status}")

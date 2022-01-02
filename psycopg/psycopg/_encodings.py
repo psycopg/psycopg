@@ -62,12 +62,41 @@ _py_codecs = {
 py_codecs: Dict[Union[bytes, str], str] = {}
 py_codecs.update((k.encode(), v) for k, v in _py_codecs.items())
 
+# Add an alias without underscore, for lenient lookups
+py_codecs.update(
+    (k.replace("_", "").encode(), v) for k, v in _py_codecs.items() if "_" in k
+)
+
 pg_codecs = {v: k.encode() for k, v in _py_codecs.items()}
 
 
 def pgconn_encoding(pgconn: "PGconn") -> str:
+    """
+    Return the Python encoding name of a connection.
+
+    Default to utf8 if the connection has no encoding info.
+    """
     pgenc = pgconn.parameter_status(b"client_encoding") or b"UTF8"
     return pg2pyenc(pgenc)
+
+
+def conninfo_encoding(conninfo: str) -> str:
+    """
+    Return the Python encoding name passed in a conninfo string. Default to utf8.
+
+    Because the input is likely to come from the user and not normalised by the
+    server, be somewhat lenient (non-case-sensitive lookup, ignore noise chars).
+    """
+    from .conninfo import conninfo_to_dict
+
+    params = conninfo_to_dict(conninfo)
+    pgenc = params.get("client_encoding")
+    if pgenc:
+        pgenc = pgenc.replace("-", "").replace("_", "").upper().encode()
+        if pgenc in py_codecs:
+            return py_codecs[pgenc]
+
+    return "utf-8"
 
 
 def py2pgenc(name: str) -> bytes:

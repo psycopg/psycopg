@@ -17,6 +17,13 @@ Psycopg 3.1 (unreleased)
 Current release
 ---------------
 
+Psycopg 3.0.8
+^^^^^^^^^^^^^
+
+- Decode connection errors in the ``client_encoding`` specified in the
+  connection string, if available (:ticket:`#194`).
+
+
 Psycopg 3.0.7
 ^^^^^^^^^^^^^
 

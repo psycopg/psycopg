@@ -41,3 +41,17 @@ def test_pg2py(pyenc, pgenc):
 def test_pg2py_missing(pgenc):
     with pytest.raises(psycopg.NotSupportedError):
         encodings.pg2pyenc(pgenc.encode())
+
+
+@pytest.mark.parametrize(
+    "conninfo, pyenc",
+    [
+        ("", "utf-8"),
+        ("user=foo, dbname=bar", "utf-8"),
+        ("user=foo, dbname=bar, client_encoding=EUC_JP", "euc_jp"),
+        ("user=foo, dbname=bar, client_encoding=euc-jp", "euc_jp"),
+        ("user=foo, dbname=bar, client_encoding=WAT", "utf-8"),
+    ],
+)
+def test_conninfo_encoding(conninfo, pyenc):
+    assert encodings.conninfo_encoding(conninfo) == pyenc
