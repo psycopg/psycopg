@@ -308,7 +308,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
 
         else:
             # Errors, unexpected values
-            return self._raise_from_results([res])
+            return self._raise_for_result(res)
 
     def _start_query(self, query: Optional[Query] = None) -> PQGen[None]:
         """Generator to start the processing of a query.
@@ -404,7 +404,23 @@ class BaseCursor(Generic[ConnectionType, Row]):
 
         for res in results:
             if res.status not in self._status_ok:
-                self._raise_from_results(results)
+                self._raise_for_result(res)
+
+    def _raise_for_result(self, result: "PGresult") -> NoReturn:
+        """
+        Raise an appropriate error message for an unexpected database result
+        """
+        if result.status == ExecStatus.FATAL_ERROR:
+            raise e.error_from_result(result, encoding=self._encoding)
+        elif result.status in self._status_copy:
+            raise e.ProgrammingError(
+                "COPY cannot be used with this method; use copy() insead"
+            )
+        else:
+            raise e.InternalError(
+                f"unexpected result status from query:"
+                f" {ExecStatus(result.status).name}"
+            )
 
     def _set_result(self, i: int, format: Optional[Format] = None) -> None:
         """
@@ -422,21 +438,6 @@ class BaseCursor(Generic[ConnectionType, Row]):
         self._pos = 0
         nrows = self.pgresult.command_tuples
         self._rowcount = nrows if nrows is not None else -1
-
-    def _raise_from_results(self, results: List["PGresult"]) -> NoReturn:
-        statuses = {res.status for res in results}
-        badstats = statuses.difference(self._status_ok)
-        if results[-1].status == ExecStatus.FATAL_ERROR:
-            raise e.error_from_result(results[-1], encoding=self._encoding)
-        elif statuses.intersection(self._status_copy):
-            raise e.ProgrammingError(
-                "COPY cannot be used with this method; use copy() insead"
-            )
-        else:
-            raise e.InternalError(
-                f"got unexpected status from query:"
-                f" {', '.join(sorted(ExecStatus(s).name for s in badstats))}"
-            )
 
     def _send_prepare(self, name: bytes, query: PostgresQuery) -> None:
         self._pgconn.send_prepare(name, query.query, param_types=query.types)

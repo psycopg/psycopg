@@ -70,7 +70,7 @@ class ServerCursorHelper(Generic[ConnectionType, Row]):
         cur._execute_send(pgq, no_pqexec=True)
         results = yield from execute(cur._conn.pgconn)
         if results[-1].status != pq.ExecStatus.COMMAND_OK:
-            cur._raise_from_results(results)
+            cur._raise_for_result(results[-1])
 
         # Set the format, which will be used by describe and fetch operations
         if binary is None:
