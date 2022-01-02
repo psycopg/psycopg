@@ -8,7 +8,7 @@ from typing import cast, NamedTuple, Optional, Union
 
 from .abc import PGconn, PGresult
 from ._enums import ConnStatus, TransactionStatus
-from .._encodings import py_codecs
+from .._encodings import pgconn_encoding
 
 
 class PGnotify(NamedTuple):
@@ -62,9 +62,7 @@ def error_message(obj: Union[PGconn, PGresult], encoding: str = "utf8") -> str:
         # obj is a PGconn
         obj = cast(PGconn, obj)
         if obj.status == ConnStatus.OK:
-            encoding = py_codecs.get(
-                obj.parameter_status(b"client_encoding") or "", "utf-8"
-            )
+            encoding = pgconn_encoding(obj)
         bmsg = obj.error_message
 
         # strip severity and whitespaces
