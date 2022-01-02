@@ -282,13 +282,42 @@ def test_executemany_rowcount(conn, execmany):
     assert cur.rowcount == 2
 
 
-def test_executemany_returning_rowcount(conn, execmany):
+def test_executemany_returning(conn, execmany):
     cur = conn.cursor()
     cur.executemany(
         "insert into execmany(num, data) values (%s, %s) returning num",
         [(10, "hello"), (20, "world")],
     )
     assert cur.rowcount == 2
+    assert cur.fetchone() == (10,)
+    assert cur.nextset()
+    assert cur.fetchone() == (20,)
+    assert cur.nextset() is None
+
+
+def test_executemany_returning_discard(conn, execmany):
+    cur = conn.cursor()
+    cur.executemany(
+        "insert into execmany(num, data) values (%s, %s) returning num",
+        [(10, "hello"), (20, "world")],
+        returning=False,
+    )
+    assert cur.rowcount == 2
+    with pytest.raises(psycopg.ProgrammingError):
+        cur.fetchone()
+    assert cur.nextset() is None
+
+
+def test_executemany_no_result(conn, execmany):
+    cur = conn.cursor()
+    cur.executemany(
+        "insert into execmany(num, data) values (%s, %s)",
+        [(10, "hello"), (20, "world")],
+    )
+    assert cur.rowcount == 2
+    with pytest.raises(psycopg.ProgrammingError):
+        cur.fetchone()
+    assert cur.nextset() is None
 
 
 def test_executemany_rowcount_no_hit(conn, execmany):
