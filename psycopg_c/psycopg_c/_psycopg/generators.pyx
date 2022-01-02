@@ -13,6 +13,7 @@ from psycopg import errors as e
 from psycopg.pq import abc, error_message
 from psycopg.abc import PQGen
 from psycopg.waiting import Wait, Ready
+from psycopg._encodings import conninfo_encoding
 
 cdef object WAIT_W = Wait.W
 cdef object WAIT_R = Wait.R
@@ -32,8 +33,9 @@ def connect(conninfo: str) -> PQGenConn[abc.PGconn]:
 
     while 1:
         if conn_status == libpq.CONNECTION_BAD:
+            encoding = conninfo_encoding(conninfo)
             raise e.OperationalError(
-                f"connection is bad: {error_message(conn)}"
+                f"connection is bad: {error_message(conn, encoding=encoding)}"
             )
 
         poll_status = libpq.PQconnectPoll(pgconn_ptr)
@@ -45,8 +47,9 @@ def connect(conninfo: str) -> PQGenConn[abc.PGconn]:
         elif poll_status == libpq.PGRES_POLLING_WRITING:
             yield (libpq.PQsocket(pgconn_ptr), WAIT_W)
         elif poll_status == libpq.PGRES_POLLING_FAILED:
+            encoding = conninfo_encoding(conninfo)
             raise e.OperationalError(
-                f"connection failed: {error_message(conn)}"
+                f"connection failed: {error_message(conn, encoding=encoding)}"
             )
         else:
             raise e.InternalError(f"unexpected poll status: {poll_status}")
