@@ -75,7 +75,7 @@ The `!Cursor` class
         See :ref:`query-parameters` for all the details about executing
         queries.
 
-    .. automethod:: executemany(query: Query, params_seq: Sequence[Args])
+    .. automethod:: executemany
 
         :param query: The query to execute
         :type query: `!str`, `!bytes`, or `sql.Composable`
@@ -89,7 +89,7 @@ The `!Cursor` class
         See :ref:`query-parameters` for all the details about executing
         queries.
 
-    .. automethod:: copy(statement: Query) -> Copy
+    .. automethod:: copy
 
         :param statement: The copy operation to execute
         :type statement: `!str`, `!bytes`, or `sql.Composable`
@@ -103,7 +103,7 @@ The `!Cursor` class
 
         See :ref:`copy` for information about :sql:`COPY`.
 
-    .. automethod:: stream(query, params=None) -> Iterable[Sequence[Any]]
+    .. automethod:: stream
 
         This command is similar to execute + iter; however it supports endless
         data streams. The feature is not available in PostgreSQL, but some
@@ -285,8 +285,7 @@ The `!ServerCursor` class
         Using `!execute()` more than once will close the previous cursor and
         open a new one with the same name.
 
-    .. automethod:: executemany(query: Query, params_seq: Sequence[Args])
-
+    .. automethod:: executemany
     .. automethod:: fetchone
     .. automethod:: fetchmany
     .. automethod:: fetchall
@@ -364,7 +363,7 @@ The `!AsyncCursor` class
                 async with cursor.copy() as copy:
                     ...
 
-    .. automethod:: stream(query, params=None) -> AsyncIterable[Sequence[Any]]
+    .. automethod:: stream
 
         .. note::
 
