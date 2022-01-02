@@ -87,7 +87,8 @@ class ServerCursorHelper(Generic[ConnectionType, Row]):
         conn = cur._conn
         conn.pgconn.send_describe_portal(self.name.encode(cur._encoding))
         results = yield from execute(conn.pgconn)
-        cur._set_results(results)
+        cur._check_results(results)
+        cur._results = results
         cur._set_result(0, format=self._format)
         self.described = True
 

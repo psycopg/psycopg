@@ -197,7 +197,8 @@ class BaseCursor(Generic[ConnectionType, Row]):
         results = yield from self._maybe_prepare_gen(
             pgq, prepare=prepare, binary=binary
         )
-        self._set_results(results)
+        self._check_results(results)
+        self._results = results
         self._set_result(0)
         self._last_query = query
 
@@ -220,7 +221,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
                 pgq.dump(params)
 
             results = yield from self._maybe_prepare_gen(pgq, prepare=True)
-            self._set_results(results)
+            self._check_results(results)
 
             for res in results:
                 nrows += res.command_tuples or 0
@@ -398,9 +399,12 @@ class BaseCursor(Generic[ConnectionType, Row]):
         ExecStatus.COPY_BOTH,
     )
 
-    def _set_results(self, results: List["PGresult"]) -> None:
+    def _check_results(self, results: List["PGresult"]) -> None:
         """
-        Set the results from a query into the cursor state.
+        Verify that the results of a query are valid.
+
+        Verify that the query returned at least one result and that they all
+        represent a valid result from the database.
         """
         if not results:
             raise e.InternalError("got no result from the query")
@@ -408,8 +412,6 @@ class BaseCursor(Generic[ConnectionType, Row]):
         for res in results:
             if res.status not in self._status_ok:
                 self._raise_from_results(results)
-
-        self._results = results
 
     def _set_result(self, i: int, format: Optional[Format] = None) -> None:
         """
