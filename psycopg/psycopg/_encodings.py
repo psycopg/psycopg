@@ -5,7 +5,7 @@ Mappings between PostgreSQL and Python encodings.
 # Copyright (C) 2020-2021 The Psycopg Team
 
 import codecs
-from typing import Dict, Union, TYPE_CHECKING
+from typing import Dict, TYPE_CHECKING
 
 from .errors import NotSupportedError
 
@@ -59,7 +59,7 @@ _py_codecs = {
     "WIN874": "cp874",
 }
 
-py_codecs: Dict[Union[bytes, str], str] = {}
+py_codecs: Dict[bytes, str] = {}
 py_codecs.update((k.encode(), v) for k, v in _py_codecs.items())
 
 # Add an alias without underscore, for lenient lookups
