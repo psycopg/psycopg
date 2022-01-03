@@ -1,0 +1,66 @@
+name: Build pool packages
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '28 6 * * sun'
+
+jobs:
+
+  sdist:
+    runs-on: ubuntu-20.04
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {package: psycopg_pool, format: sdist, impl: python}
+          - {package: psycopg_pool, format: wheel, impl: python}
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions/setup-python@v2
+        with:
+          python-version: 3.9
+
+      - name: Create the sdist packages
+        run: |-
+          python ${{ matrix.package }}/setup.py sdist -d `pwd`/dist/
+        if: ${{ matrix.format == 'sdist' }}
+
+      - name: Create the wheel packages
+        run: |-
+          pip install wheel
+          python ${{ matrix.package }}/setup.py bdist_wheel -d `pwd`/dist/
+        if: ${{ matrix.format == 'wheel' }}
+
+      - name: Install the Python pool package and test requirements
+        run: |-
+          pip install dist/*
+          pip install -e ./psycopg[test]
+
+      - name: Test the sdist package
+        run: pytest -m 'not slow' --color yes
+        env:
+          PSYCOPG_IMPL: ${{ matrix.impl }}
+          PSYCOPG_TEST_DSN: "host=127.0.0.1 user=postgres"
+          PGPASSWORD: password
+
+      - uses: actions/upload-artifact@v2
+        with:
+          path: ./dist/*
+
+    services:
+      postgresql:
+        image: postgres:14
+        env:
+          POSTGRES_PASSWORD: password
+        ports:
+          - 5432:5432
+        # Set health checks to wait until postgres has started
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
