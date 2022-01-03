@@ -673,6 +673,57 @@ async def test_closed_queue(dsn):
     assert len(success) == 2
 
 
+async def test_open_explicit(dsn):
+    p = pool.AsyncConnectionPool(dsn, open=False)
+    assert p.closed
+    with pytest.raises(pool.PoolClosed):
+        await p.getconn()
+
+    with pytest.raises(pool.PoolClosed):
+        async with p.connection():
+            pass
+
+    p.open()
+    try:
+        assert not p.closed
+
+        async with p.connection() as conn:
+            cur = await conn.execute("select 1")
+            assert await cur.fetchone() == (1,)
+
+    finally:
+        await p.close()
+
+
+async def test_open_context(dsn):
+    p = pool.AsyncConnectionPool(dsn, open=False)
+    assert p.closed
+
+    async with p:
+        assert not p.closed
+
+        async with p.connection() as conn:
+            cur = await conn.execute("select 1")
+            assert await cur.fetchone() == (1,)
+
+    assert p.closed
+
+
+async def test_open_no_op(dsn):
+    p = pool.AsyncConnectionPool(dsn)
+    try:
+        assert not p.closed
+        p.open()
+        assert not p.closed
+
+        async with p.connection() as conn:
+            cur = await conn.execute("select 1")
+            assert await cur.fetchone() == (1,)
+
+    finally:
+        await p.close()
+
+
 async def test_reopen(dsn):
     p = pool.AsyncConnectionPool(dsn)
     async with p.connection() as conn:

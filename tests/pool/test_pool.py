@@ -684,6 +684,57 @@ def test_closed_queue(dsn):
     assert len(success) == 2
 
 
+def test_open_explicit(dsn):
+    p = pool.ConnectionPool(dsn, open=False)
+    assert p.closed
+    with pytest.raises(pool.PoolClosed):
+        p.getconn()
+
+    with pytest.raises(pool.PoolClosed):
+        with p.connection():
+            pass
+
+    p.open()
+    try:
+        assert not p.closed
+
+        with p.connection() as conn:
+            cur = conn.execute("select 1")
+            assert cur.fetchone() == (1,)
+
+    finally:
+        p.close()
+
+
+def test_open_context(dsn):
+    p = pool.ConnectionPool(dsn, open=False)
+    assert p.closed
+
+    with p:
+        assert not p.closed
+
+        with p.connection() as conn:
+            cur = conn.execute("select 1")
+            assert cur.fetchone() == (1,)
+
+    assert p.closed
+
+
+def test_open_no_op(dsn):
+    p = pool.ConnectionPool(dsn)
+    try:
+        assert not p.closed
+        p.open()
+        assert not p.closed
+
+        with p.connection() as conn:
+            cur = conn.execute("select 1")
+            assert cur.fetchone() == (1,)
+
+    finally:
+        p.close()
+
+
 def test_reopen(dsn):
     p = pool.ConnectionPool(dsn)
     with p.connection() as conn:

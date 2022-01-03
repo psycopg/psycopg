@@ -42,6 +42,7 @@ class BasePool(Generic[ConnectionType]):
         kwargs: Optional[Dict[str, Any]] = None,
         min_size: int = 4,
         max_size: Optional[int] = None,
+        open: bool = True,
         name: Optional[str] = None,
         timeout: float = 30.0,
         max_waiting: int = 0,

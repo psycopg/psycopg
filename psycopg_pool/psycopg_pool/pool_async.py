@@ -31,6 +31,7 @@ class AsyncConnectionPool(BasePool[AsyncConnection[Any]]):
         self,
         conninfo: str = "",
         *,
+        open: bool = True,
         connection_class: Type[AsyncConnection[Any]] = AsyncConnection,
         configure: Optional[
             Callable[[AsyncConnection[Any]], Awaitable[None]]
@@ -63,7 +64,8 @@ class AsyncConnectionPool(BasePool[AsyncConnection[Any]]):
 
         super().__init__(conninfo, **kwargs)
 
-        self.open()
+        if open:
+            self.open()
 
     async def wait(self, timeout: float = 30.0) -> None:
         async with self._lock:
@@ -191,15 +193,17 @@ class AsyncConnectionPool(BasePool[AsyncConnection[Any]]):
             await self._return_connection(conn)
 
     def open(self) -> None:
-        """Open the pool by starting worker tasks.
-
-        No-op if the pool is already opened.
-        """
         if not self._closed:
             return
 
         self._check_open()
 
+        self._start_workers()
+
+        self._closed = False
+        self._opened = True
+
+    def _start_workers(self) -> None:
         self._sched_runner = create_task(
             self._sched.run(), name=f"{self.name}-scheduler"
         )
@@ -217,9 +221,6 @@ class AsyncConnectionPool(BasePool[AsyncConnection[Any]]):
         # Schedule a task to shrink the pool if connections over min_size have
         # remained unused.
         self.run_task(Schedule(self, ShrinkPool(self), self.max_idle))
-
-        self._closed = False
-        self._opened = True
 
     async def close(self, timeout: float = 5.0) -> None:
         if self._closed:
@@ -278,6 +279,7 @@ class AsyncConnectionPool(BasePool[AsyncConnection[Any]]):
             )
 
     async def __aenter__(self) -> "AsyncConnectionPool":
+        self.open()
         return self
 
     async def __aexit__(

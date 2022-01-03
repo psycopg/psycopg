@@ -32,6 +32,7 @@ class ConnectionPool(BasePool[Connection[Any]]):
         self,
         conninfo: str = "",
         *,
+        open: bool = True,
         connection_class: Type[Connection[Any]] = Connection,
         configure: Optional[Callable[[Connection[Any]], None]] = None,
         reset: Optional[Callable[[Connection[Any]], None]] = None,
@@ -54,7 +55,8 @@ class ConnectionPool(BasePool[Connection[Any]]):
 
         super().__init__(conninfo, **kwargs)
 
-        self.open()
+        if open:
+            self.open()
 
     def __del__(self) -> None:
         # If the '_closed' property is not set we probably failed in __init__.
@@ -228,13 +230,22 @@ class ConnectionPool(BasePool[Connection[Any]]):
 
         No-op if the pool is already opened.
         """
-        if not self._closed:
-            return
+        with self._lock:
+            if not self._closed:
+                return
 
-        self._check_open()
+            self._check_open()
 
+            self._start_workers()
+
+            self._closed = False
+            self._opened = True
+
+    def _start_workers(self) -> None:
         self._sched_runner = threading.Thread(
-            target=self._sched.run, name=f"{self.name}-scheduler", daemon=True
+            target=self._sched.run,
+            name=f"{self.name}-scheduler",
+            daemon=True,
         )
         assert not self._workers
         for i in range(self.num_workers):
@@ -258,9 +269,6 @@ class ConnectionPool(BasePool[Connection[Any]]):
         # Schedule a task to shrink the pool if connections over min_size have
         # remained unused.
         self.schedule_task(ShrinkPool(self), self.max_idle)
-
-        self._closed = False
-        self._opened = True
 
     def close(self, timeout: float = 5.0) -> None:
         """Close the pool and make it unavailable to new clients.
@@ -330,6 +338,7 @@ class ConnectionPool(BasePool[Connection[Any]]):
                     )
 
     def __enter__(self) -> "ConnectionPool":
+        self.open()
         return self
 
     def __exit__(
