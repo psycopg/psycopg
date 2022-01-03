@@ -687,7 +687,7 @@ def test_closed_queue(dsn):
 def test_open_explicit(dsn):
     p = pool.ConnectionPool(dsn, open=False)
     assert p.closed
-    with pytest.raises(pool.PoolClosed, match="has not been opened yet"):
+    with pytest.raises(pool.PoolClosed, match="is not open yet"):
         p.getconn()
 
     with pytest.raises(pool.PoolClosed):
@@ -705,7 +705,7 @@ def test_open_explicit(dsn):
     finally:
         p.close()
 
-    with pytest.raises(pool.PoolClosed, match="has already been closed"):
+    with pytest.raises(pool.PoolClosed, match="is already closed"):
         p.getconn()
 
 

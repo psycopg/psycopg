@@ -128,13 +128,9 @@ class BasePool(Generic[ConnectionType]):
     def _check_open_getconn(self) -> None:
         if self._closed:
             if self._opened:
-                raise PoolClosed(
-                    f"the pool {self.name!r} has already been closed"
-                )
+                raise PoolClosed(f"the pool {self.name!r} is already closed")
             else:
-                raise PoolClosed(
-                    f"the pool {self.name!r} has not been opened yet"
-                )
+                raise PoolClosed(f"the pool {self.name!r} is not open yet")
 
     def get_stats(self) -> Dict[str, int]:
         """
