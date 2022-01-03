@@ -454,13 +454,17 @@ class ConnectionPool(BasePool[Connection[Any]]):
                     ex,
                 )
 
-    def _connect(self) -> Connection[Any]:
+    def _connect(self, timeout: Optional[float] = None) -> Connection[Any]:
         """Return a new connection configured for the pool."""
         self._stats[self._CONNECTIONS_NUM] += 1
+        kwargs = self.kwargs
+        if timeout:
+            kwargs = kwargs.copy()
+            kwargs["connect_timeout"] = max(round(timeout), 1)
         t0 = monotonic()
         try:
             conn: Connection[Any]
-            conn = self.connection_class.connect(self.conninfo, **self.kwargs)
+            conn = self.connection_class.connect(self.conninfo, **kwargs)
         except Exception:
             self._stats[self._CONNECTIONS_ERRORS] += 1
             raise

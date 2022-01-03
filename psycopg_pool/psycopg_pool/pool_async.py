@@ -368,15 +368,18 @@ class AsyncConnectionPool(BasePool[AsyncConnection[Any]]):
                     ex,
                 )
 
-    async def _connect(self) -> AsyncConnection[Any]:
-        """Return a new connection configured for the pool."""
+    async def _connect(
+        self, timeout: Optional[float] = None
+    ) -> AsyncConnection[Any]:
         self._stats[self._CONNECTIONS_NUM] += 1
+        kwargs = self.kwargs
+        if timeout:
+            kwargs = kwargs.copy()
+            kwargs["connect_timeout"] = max(round(timeout), 1)
         t0 = monotonic()
         try:
             conn: AsyncConnection[Any]
-            conn = await self.connection_class.connect(
-                self.conninfo, **self.kwargs
-            )
+            conn = await self.connection_class.connect(self.conninfo, **kwargs)
         except Exception:
             self._stats[self._CONNECTIONS_ERRORS] += 1
             raise

@@ -6,7 +6,9 @@ compatibility functions for different Python versions
 
 import sys
 import asyncio
-from typing import Any, Awaitable, Generator, Optional, Union, TypeVar
+from typing import Any, Awaitable, Generator, Optional, Union, Type, TypeVar
+
+import psycopg.errors as e
 
 T = TypeVar("T")
 FutureT = Union["asyncio.Future[T]", Generator[Any, None, T], Awaitable[T]]
@@ -35,3 +37,14 @@ __all__ = [
     "Task",
     "create_task",
 ]
+
+# Workaround for psycopg < 3.0.8.
+# Timeout on NullPool connection mignt not work correctly.
+try:
+    ConnectionTimeout: Type[e.OperationalError] = e.ConnectionTimeout
+except AttributeError:
+
+    class DummyConnectionTimeout(e.OperationalError):
+        pass
+
+    ConnectionTimeout = DummyConnectionTimeout
