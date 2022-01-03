@@ -7,16 +7,18 @@
 ``psycopg_pool`` release notes
 ==============================
 
-Current release
+Future releases
 ---------------
 
-psycopg_pool 3.1.0
-^^^^^^^^^^^^^^^^^^
+psycopg_pool 3.1.0 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-- Add `ConnectionPool.open()` and `AsyncConnectionPool.open()`
-  (:ticket:`#155`).
-- Raise an `~psycopg.OperationalError` when trying to re-open a closed pool
-  (:ticket:`#155`).
+- Add `ConnectionPool.open()` and `!open` parameter to the pool init
+  (:ticket:`#151`).
+
+
+Current release
+---------------
 
 psycopg_pool 3.0.2
 ^^^^^^^^^^^^^^^^^^

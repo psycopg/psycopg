@@ -111,7 +111,6 @@ class ConnectionPool(BasePool[Connection[Any]]):
         :ref:`connection context behaviour <with-connection>` (commit/rollback
         the transaction in case of success/error). If the connection is no more
         in working state replace it with a new one.
-
         """
         conn = self.getconn(timeout=timeout)
         t0 = monotonic()
@@ -226,9 +225,11 @@ class ConnectionPool(BasePool[Connection[Any]]):
             self._return_connection(conn)
 
     def open(self) -> None:
-        """Open the pool by starting worker threads.
+        """Open the pool by starting connecting and and accepting clients.
 
-        No-op if the pool is already opened.
+        The method is no-op if the pool is already opened (because the method
+        was already called, or because the pool context was entered, or because
+        the pool was initialized with ``open=true``.
         """
         with self._lock:
             if not self._closed:
@@ -273,7 +274,7 @@ class ConnectionPool(BasePool[Connection[Any]]):
     def close(self, timeout: float = 5.0) -> None:
         """Close the pool and make it unavailable to new clients.
 
-        All the waiting and future client will fail to acquire a connection
+        All the waiting and future clients will fail to acquire a connection
         with a `PoolClosed` exception. Currently used connections will not be
         closed until returned to the pool.
 
