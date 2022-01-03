@@ -679,7 +679,7 @@ async def test_open_explicit(dsn):
     with pytest.raises(pool.PoolClosed):
         await p.getconn()
 
-    with pytest.raises(pool.PoolClosed):
+    with pytest.raises(pool.PoolClosed, match="has not been opened yet"):
         async with p.connection():
             pass
 
@@ -693,6 +693,9 @@ async def test_open_explicit(dsn):
 
     finally:
         await p.close()
+
+    with pytest.raises(pool.PoolClosed, match="has already been closed"):
+        await p.getconn()
 
 
 async def test_open_context(dsn):

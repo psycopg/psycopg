@@ -111,8 +111,7 @@ class AsyncConnectionPool(BasePool[AsyncConnection[Any]]):
         # Critical section: decide here if there's a connection ready
         # or if the client needs to wait.
         async with self._lock:
-            if self._closed:
-                raise PoolClosed(f"the pool {self.name!r} is closed")
+            self._check_open_getconn()
 
             pos: Optional[AsyncClient] = None
             if self._pool:

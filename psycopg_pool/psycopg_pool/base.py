@@ -9,6 +9,7 @@ from typing import Any, Callable, Dict, Generic, Optional
 
 from psycopg.abc import ConnectionType
 from psycopg import errors as e
+from .errors import PoolClosed
 
 from ._compat import Counter, Deque
 
@@ -123,6 +124,17 @@ class BasePool(Generic[ConnectionType]):
             raise e.OperationalError(
                 "pool has already been opened/closed and cannot be reused"
             )
+
+    def _check_open_getconn(self) -> None:
+        if self._closed:
+            if self._opened:
+                raise PoolClosed(
+                    f"the pool {self.name!r} has already been closed"
+                )
+            else:
+                raise PoolClosed(
+                    f"the pool {self.name!r} has not been opened yet"
+                )
 
     def get_stats(self) -> Dict[str, int]:
         """

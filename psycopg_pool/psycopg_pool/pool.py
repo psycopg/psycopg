@@ -137,8 +137,7 @@ class ConnectionPool(BasePool[Connection[Any]]):
         # Critical section: decide here if there's a connection ready
         # or if the client needs to wait.
         with self._lock:
-            if self._closed:
-                raise PoolClosed(f"the pool {self.name!r} is closed")
+            self._check_open_getconn()
 
             pos: Optional[WaitingClient] = None
             if self._pool:
