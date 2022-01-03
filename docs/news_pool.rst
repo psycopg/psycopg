@@ -7,6 +7,16 @@
 ``psycopg_pool`` release notes
 ==============================
 
+Future releases
+---------------
+
+psycopg_pool 3.0.3 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Throw `!ValueError` if the pool `!min_size` is set to 0 (instead of
+  hanging).
+
+
 Current release
 ---------------
 

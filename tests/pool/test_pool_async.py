@@ -43,8 +43,11 @@ async def test_min_size_max_size(dsn):
         assert p.min_size == 2
         assert p.max_size == 4
 
+
+@pytest.mark.parametrize("min_size, max_size", [(0, 0), (-1, None), (4, 2)])
+async def test_bad_size(dsn, min_size, max_size):
     with pytest.raises(ValueError):
-        pool.AsyncConnectionPool(dsn, min_size=4, max_size=2)
+        pool.AsyncConnectionPool(min_size=min_size, max_size=max_size)
 
 
 async def test_connection_class(dsn):
@@ -858,6 +861,13 @@ async def test_resize(dsn):
 
     await asyncio.gather(s, c)
     assert size == [2, 1, 3, 4, 3, 2, 2]
+
+
+@pytest.mark.parametrize("min_size, max_size", [(0, 0), (-1, None), (4, 2)])
+async def test_bad_resize(dsn, min_size, max_size):
+    async with pool.AsyncConnectionPool() as p:
+        with pytest.raises(ValueError):
+            await p.resize(min_size=min_size, max_size=max_size)
 
 
 def test_jitter():
