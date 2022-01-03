@@ -6,4 +6,4 @@ psycopg pool version file.
 
 # Use a versioning scheme as defined in
 # https://www.python.org/dev/peps/pep-0440/
-__version__ = "3.0.3.dev0"
+__version__ = "3.1.dev0"
