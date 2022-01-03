@@ -17,6 +17,13 @@ psycopg_pool 3.1.0 (unreleased)
   (:ticket:`#151`).
 
 
+psycopg_pool 3.0.3 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Throw `!ValueError` if the pool `!min_size` is set to 0 (instead of
+  hanging).
+
+
 Current release
 ---------------
 

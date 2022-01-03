@@ -121,6 +121,9 @@ class BasePool(Generic[ConnectionType]):
     def _check_size(
         self, min_size: int, max_size: Optional[int]
     ) -> Tuple[int, int]:
+        if min_size <= 0:
+            raise ValueError("min_size must be greater than 0")
+
         if max_size is None:
             max_size = min_size
         if max_size < min_size:
