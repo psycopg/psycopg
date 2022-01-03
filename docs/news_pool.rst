@@ -7,6 +7,16 @@
 ``psycopg_pool`` release notes
 ==============================
 
+Future releases
+---------------
+
+psycopg_pool 3.1.0 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Add `ConnectionPool.open()` and `!open` parameter to the pool init
+  (:ticket:`#151`).
+
+
 Current release
 ---------------
 

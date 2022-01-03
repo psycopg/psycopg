@@ -7,6 +7,7 @@ from typing import Any, List, Tuple
 import pytest
 
 import psycopg
+from psycopg.errors import OperationalError
 from psycopg.pq import TransactionStatus
 from psycopg._compat import create_task, Counter
 
@@ -576,13 +577,16 @@ async def test_fail_rollback_close(dsn, caplog, monkeypatch):
 
 async def test_close_no_tasks(dsn):
     p = pool.AsyncConnectionPool(dsn)
-    assert not p._sched_runner.done()
-    for t in p._workers:
+    assert p._sched_runner and not p._sched_runner.done()
+    assert p._workers
+    workers = p._workers[:]
+    for t in workers:
         assert not t.done()
 
     await p.close()
-    assert p._sched_runner.done()
-    for t in p._workers:
+    assert p._sched_runner is None
+    assert not p._workers
+    for t in workers:
         assert t.done()
 
 
@@ -667,6 +671,71 @@ async def test_closed_queue(dsn):
     e2.set()
     await asyncio.gather(t1, t2)
     assert len(success) == 2
+
+
+async def test_open_explicit(dsn):
+    p = pool.AsyncConnectionPool(dsn, open=False)
+    assert p.closed
+    with pytest.raises(pool.PoolClosed):
+        await p.getconn()
+
+    with pytest.raises(pool.PoolClosed, match="is not open yet"):
+        async with p.connection():
+            pass
+
+    await p.open()
+    try:
+        assert not p.closed
+
+        async with p.connection() as conn:
+            cur = await conn.execute("select 1")
+            assert await cur.fetchone() == (1,)
+
+    finally:
+        await p.close()
+
+    with pytest.raises(pool.PoolClosed, match="is already closed"):
+        await p.getconn()
+
+
+async def test_open_context(dsn):
+    p = pool.AsyncConnectionPool(dsn, open=False)
+    assert p.closed
+
+    async with p:
+        assert not p.closed
+
+        async with p.connection() as conn:
+            cur = await conn.execute("select 1")
+            assert await cur.fetchone() == (1,)
+
+    assert p.closed
+
+
+async def test_open_no_op(dsn):
+    p = pool.AsyncConnectionPool(dsn)
+    try:
+        assert not p.closed
+        await p.open()
+        assert not p.closed
+
+        async with p.connection() as conn:
+            cur = await conn.execute("select 1")
+            assert await cur.fetchone() == (1,)
+
+    finally:
+        await p.close()
+
+
+async def test_reopen(dsn):
+    p = pool.AsyncConnectionPool(dsn)
+    async with p.connection() as conn:
+        await conn.execute("select 1")
+    await p.close()
+    assert p._sched_runner is None
+
+    with pytest.raises(OperationalError, match="cannot be reused"):
+        await p.open()
 
 
 @pytest.mark.slow

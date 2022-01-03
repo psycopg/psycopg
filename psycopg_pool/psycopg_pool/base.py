@@ -8,6 +8,8 @@ from random import random
 from typing import Any, Callable, Dict, Generic, Optional
 
 from psycopg.abc import ConnectionType
+from psycopg import errors as e
+from .errors import PoolClosed
 
 from ._compat import Counter, Deque
 
@@ -41,6 +43,7 @@ class BasePool(Generic[ConnectionType]):
         kwargs: Optional[Dict[str, Any]] = None,
         min_size: int = 4,
         max_size: Optional[int] = None,
+        open: bool = True,
         name: Optional[str] = None,
         timeout: float = 30.0,
         max_waiting: int = 0,
@@ -94,9 +97,8 @@ class BasePool(Generic[ConnectionType]):
         # connections to the pool.
         self._growing = False
 
-        # _close should be the last property to be set in the state
-        # to avoid warning on __del__ in case __init__ fails.
-        self._closed = False
+        self._opened = False
+        self._closed = True
 
     def __repr__(self) -> str:
         return (
@@ -116,6 +118,19 @@ class BasePool(Generic[ConnectionType]):
     def closed(self) -> bool:
         """`!True` if the pool is closed."""
         return self._closed
+
+    def _check_open(self) -> None:
+        if self._closed and self._opened:
+            raise e.OperationalError(
+                "pool has already been opened/closed and cannot be reused"
+            )
+
+    def _check_open_getconn(self) -> None:
+        if self._closed:
+            if self._opened:
+                raise PoolClosed(f"the pool {self.name!r} is already closed")
+            else:
+                raise PoolClosed(f"the pool {self.name!r} is not open yet")
 
     def get_stats(self) -> Dict[str, int]:
         """

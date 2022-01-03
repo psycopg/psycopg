@@ -31,7 +31,7 @@ instance from the rest of the code (especially the
 The `!ConnectionPool` class
 ---------------------------
 
-.. autoclass:: ConnectionPool(conninfo, *, **arguments)
+.. autoclass:: ConnectionPool
 
    This class implements a connection pool serving `~psycopg.Connection`
    instances (or subclasses). The constructor has *alot* of arguments, but
@@ -66,6 +66,12 @@ The `!ConnectionPool` class
    :param connection_class: The class of the connections to serve. It should
                             be a `!Connection` subclass.
    :type connection_class: `!type`, default: `~psycopg.Connection`
+
+   :param open: If `!true`, open the pool, creating the required connections,
+                on init. If `!false`, open the pool when `!open()` is called or
+                when the pool context is entered. See the `open()` method
+                documentation for more details.
+   :type open: `!bool`, default: `!true`
 
    :param configure: A callback to configure a connection after creation.
                      Useful, for instance, to configure its adapters. If the
@@ -119,7 +125,7 @@ The `!ConnectionPool` class
                              the connection attempt is aborted and the
                              *reconnect_failed* callback invoked.
    :type reconnect_timeout: `!float`, default: 5 minutes
-                             
+
    :param reconnect_failed: Callback invoked if an attempt to create a new
                             connection fails for more than *reconnect_timeout*
                             seconds. The user may decide, for instance, to
@@ -135,27 +141,41 @@ The `!ConnectionPool` class
                        they are returned to the pool.
    :type num_workers: `!int`, default: 3
 
+   .. versionchanged:: psycopg_pool 3.1
+
+        Added `!open` parameter to init method.
+
+   .. note:: In a future version, the deafult value for the `!open` parameter
+        might be changed to `!false`. If you rely on this behaviour (e.g. if
+        you don't use the pool as a context manager) you might want to specify
+        this parameter explicitly.
+
    .. automethod:: wait
    .. automethod:: connection
-   
+
       .. code:: python
 
           with my_pool.connection() as conn:
               conn.execute(...)
 
           # the connection is now back in the pool
-   
+
+   .. automethod:: open
+
+      .. versionadded:: psycopg_pool 3.1
+
+
    .. automethod:: close
 
-      .. note::
-          
-          The pool can be used as context manager too, in which case it will
-          be closed at the end of the block:
+   .. note::
 
-          .. code:: python
+      The pool can be also used as a context manager, in which case it will
+      be opened (if necessary) on entering the block and closed on exiting it:
 
-              with ConnectionPool(...) as pool:
-                  # code using the pool
+      .. code:: python
+
+          with ConnectionPool(...) as pool:
+              # code using the pool
 
    .. attribute:: name
       :type: str
@@ -168,7 +188,7 @@ The `!ConnectionPool` class
 
       The current minimum and maximum size of the pool. Use `resize()` to
       change them at runtime.
-   
+
    .. automethod:: resize
    .. automethod:: check
    .. automethod:: get_stats
@@ -180,6 +200,7 @@ The `!ConnectionPool` class
 
    .. automethod:: getconn
    .. automethod:: putconn
+
 
 Pool exceptions
 ---------------
@@ -208,7 +229,7 @@ so in the *connection_class* parameter.
 Only the function with different signature from `!ConnectionPool` are
 listed here.
 
-.. autoclass:: AsyncConnectionPool(conninfo, *, **arguments)
+.. autoclass:: AsyncConnectionPool
 
    All the other parameters are the same.
 
@@ -225,25 +246,28 @@ listed here.
 
    .. automethod:: wait
    .. automethod:: connection
-   
+
       .. code:: python
 
           async with my_pool.connection() as conn:
               await conn.execute(...)
 
           # the connection is now back in the pool
-   
+
+   .. automethod:: open
+
    .. automethod:: close
 
-      .. note::
-          
-          The pool can be used as context manager too, in which case it will
-          be closed at the end of the block:
+   .. note::
 
-          .. code:: python
+      The pool can be also used as an async context manager, in which case it
+      will be opened (if necessary) on entering the block and closed on
+      exiting it:
 
-              async with AsyncConnectionPool(...) as pool:
-                  # code using the pool
+      .. code:: python
+
+          async with AsyncConnectionPool(...) as pool:
+              # code using the pool
 
    .. automethod:: resize
    .. automethod:: check

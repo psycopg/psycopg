@@ -8,6 +8,7 @@ from typing import Any, List, Tuple
 import pytest
 
 import psycopg
+from psycopg.errors import OperationalError
 from psycopg.pq import TransactionStatus
 from psycopg._compat import Counter
 
@@ -561,13 +562,16 @@ def test_fail_rollback_close(dsn, caplog, monkeypatch):
 
 def test_close_no_threads(dsn):
     p = pool.ConnectionPool(dsn)
-    assert p._sched_runner.is_alive()
-    for t in p._workers:
+    assert p._sched_runner and p._sched_runner.is_alive()
+    workers = p._workers[:]
+    assert workers
+    for t in workers:
         assert t.is_alive()
 
     p.close()
-    assert not p._sched_runner.is_alive()
-    for t in p._workers:
+    assert p._sched_runner is None
+    assert not p._workers
+    for t in workers:
         assert not t.is_alive()
 
 
@@ -603,6 +607,7 @@ def test_del_no_warning(dsn, recwarn):
 @pytest.mark.slow
 def test_del_stop_threads(dsn):
     p = pool.ConnectionPool(dsn)
+    assert p._sched_runner is not None
     ts = [p._sched_runner] + p._workers
     del p
     sleep(0.1)
@@ -677,6 +682,72 @@ def test_closed_queue(dsn):
     t1.join()
     t2.join()
     assert len(success) == 2
+
+
+def test_open_explicit(dsn):
+    p = pool.ConnectionPool(dsn, open=False)
+    assert p.closed
+    with pytest.raises(pool.PoolClosed, match="is not open yet"):
+        p.getconn()
+
+    with pytest.raises(pool.PoolClosed):
+        with p.connection():
+            pass
+
+    p.open()
+    try:
+        assert not p.closed
+
+        with p.connection() as conn:
+            cur = conn.execute("select 1")
+            assert cur.fetchone() == (1,)
+
+    finally:
+        p.close()
+
+    with pytest.raises(pool.PoolClosed, match="is already closed"):
+        p.getconn()
+
+
+def test_open_context(dsn):
+    p = pool.ConnectionPool(dsn, open=False)
+    assert p.closed
+
+    with p:
+        assert not p.closed
+
+        with p.connection() as conn:
+            cur = conn.execute("select 1")
+            assert cur.fetchone() == (1,)
+
+    assert p.closed
+
+
+def test_open_no_op(dsn):
+    p = pool.ConnectionPool(dsn)
+    try:
+        assert not p.closed
+        p.open()
+        assert not p.closed
+
+        with p.connection() as conn:
+            cur = conn.execute("select 1")
+            assert cur.fetchone() == (1,)
+
+    finally:
+        p.close()
+
+
+def test_reopen(dsn):
+    p = pool.ConnectionPool(dsn)
+    with p.connection() as conn:
+        conn.execute("select 1")
+    p.close()
+    assert p._sched_runner is None
+    assert not p._workers
+
+    with pytest.raises(OperationalError, match="cannot be reused"):
+        p.open()
 
 
 @pytest.mark.slow

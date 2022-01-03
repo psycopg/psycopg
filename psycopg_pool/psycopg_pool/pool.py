@@ -11,7 +11,7 @@ from time import monotonic
 from queue import Queue, Empty
 from types import TracebackType
 from typing import Any, Callable, Dict, Iterator, List
-from typing import Optional, Type
+from typing import Optional, Sequence, Type
 from weakref import ref
 from contextlib import contextmanager
 
@@ -32,6 +32,7 @@ class ConnectionPool(BasePool[Connection[Any]]):
         self,
         conninfo: str = "",
         *,
+        open: bool = True,
         connection_class: Type[Connection[Any]] = Connection,
         configure: Optional[Callable[[Connection[Any]], None]] = None,
         reset: Optional[Callable[[Connection[Any]], None]] = None,
@@ -48,35 +49,14 @@ class ConnectionPool(BasePool[Connection[Any]]):
         self._pool_full_event: Optional[threading.Event] = None
 
         self._sched = Scheduler()
+        self._sched_runner: Optional[threading.Thread] = None
         self._tasks: "Queue[MaintenanceTask]" = Queue()
         self._workers: List[threading.Thread] = []
 
         super().__init__(conninfo, **kwargs)
 
-        self._sched_runner = threading.Thread(
-            target=self._sched.run, name=f"{self.name}-scheduler", daemon=True
-        )
-        for i in range(self.num_workers):
-            t = threading.Thread(
-                target=self.worker,
-                args=(self._tasks,),
-                name=f"{self.name}-worker-{i}",
-                daemon=True,
-            )
-            self._workers.append(t)
-
-        # The object state is complete. Start the worker threads
-        self._sched_runner.start()
-        for t in self._workers:
-            t.start()
-
-        # populate the pool with initial min_size connections in background
-        for i in range(self._nconns):
-            self.run_task(AddConnection(self))
-
-        # Schedule a task to shrink the pool if connections over min_size have
-        # remained unused.
-        self.schedule_task(ShrinkPool(self), self.max_idle)
+        if open:
+            self.open()
 
     def __del__(self) -> None:
         # If the '_closed' property is not set we probably failed in __init__.
@@ -84,16 +64,7 @@ class ConnectionPool(BasePool[Connection[Any]]):
         if getattr(self, "_closed", True):
             return
 
-        # Things we can try to do on a best-effort basis while the world
-        # is crumbling (a-la Eternal Sunshine of the Spotless Mind)
-        # At worse we put an item in a queue that is being deleted.
-
-        # Stop the scheduler
-        self._sched.enter(0, None)
-
-        # Stop the worker threads
-        for i in range(len(self._workers)):
-            self.run_task(StopWorker(self))
+        self._stop_workers()
 
     def wait(self, timeout: float = 30.0) -> None:
         """
@@ -140,7 +111,6 @@ class ConnectionPool(BasePool[Connection[Any]]):
         :ref:`connection context behaviour <with-connection>` (commit/rollback
         the transaction in case of success/error). If the connection is no more
         in working state replace it with a new one.
-
         """
         conn = self.getconn(timeout=timeout)
         t0 = monotonic()
@@ -167,8 +137,7 @@ class ConnectionPool(BasePool[Connection[Any]]):
         # Critical section: decide here if there's a connection ready
         # or if the client needs to wait.
         with self._lock:
-            if self._closed:
-                raise PoolClosed(f"the pool {self.name!r} is closed")
+            self._check_open_getconn()
 
             pos: Optional[WaitingClient] = None
             if self._pool:
@@ -254,10 +223,57 @@ class ConnectionPool(BasePool[Connection[Any]]):
         else:
             self._return_connection(conn)
 
+    def open(self) -> None:
+        """Open the pool by starting connecting and and accepting clients.
+
+        The method is no-op if the pool is already opened (because the method
+        was already called, or because the pool context was entered, or because
+        the pool was initialized with ``open=true``.
+        """
+        with self._lock:
+            if not self._closed:
+                return
+
+            self._check_open()
+
+            self._start_workers()
+
+            self._closed = False
+            self._opened = True
+
+    def _start_workers(self) -> None:
+        self._sched_runner = threading.Thread(
+            target=self._sched.run,
+            name=f"{self.name}-scheduler",
+            daemon=True,
+        )
+        assert not self._workers
+        for i in range(self.num_workers):
+            t = threading.Thread(
+                target=self.worker,
+                args=(self._tasks,),
+                name=f"{self.name}-worker-{i}",
+                daemon=True,
+            )
+            self._workers.append(t)
+
+        # The object state is complete. Start the worker threads
+        self._sched_runner.start()
+        for t in self._workers:
+            t.start()
+
+        # populate the pool with initial min_size connections in background
+        for i in range(self._nconns):
+            self.run_task(AddConnection(self))
+
+        # Schedule a task to shrink the pool if connections over min_size have
+        # remained unused.
+        self.schedule_task(ShrinkPool(self), self.max_idle)
+
     def close(self, timeout: float = 5.0) -> None:
         """Close the pool and make it unavailable to new clients.
 
-        All the waiting and future client will fail to acquire a connection
+        All the waiting and future clients will fail to acquire a connection
         with a `PoolClosed` exception. Currently used connections will not be
         closed until returned to the pool.
 
@@ -275,30 +291,41 @@ class ConnectionPool(BasePool[Connection[Any]]):
             # Take waiting client and pool connections out of the state
             waiting = list(self._waiting)
             self._waiting.clear()
-            pool = list(self._pool)
+            connections = list(self._pool)
             self._pool.clear()
 
         # Now that the flag _closed is set, getconn will fail immediately,
         # putconn will just close the returned connection.
+        self._stop_workers(waiting, connections, timeout)
+
+    def _stop_workers(
+        self,
+        waiting_clients: Sequence["WaitingClient"] = (),
+        connections: Sequence[Connection[Any]] = (),
+        timeout: float = 0,
+    ) -> None:
 
         # Stop the scheduler
         self._sched.enter(0, None)
 
         # Stop the worker threads
-        for i in range(len(self._workers)):
+        workers, self._workers = self._workers[:], []
+        for i in range(len(workers)):
             self.run_task(StopWorker(self))
 
         # Signal to eventual clients in the queue that business is closed.
-        for pos in waiting:
+        for pos in waiting_clients:
             pos.fail(PoolClosed(f"the pool {self.name!r} is closed"))
 
         # Close the connections still in the pool
-        for conn in pool:
+        for conn in connections:
             conn.close()
 
         # Wait for the worker threads to terminate
+        assert self._sched_runner is not None
+        sched_runner, self._sched_runner = self._sched_runner, None
         if timeout > 0:
-            for t in [self._sched_runner] + self._workers:
+            for t in [sched_runner] + workers:
                 if not t.is_alive():
                     continue
                 t.join(timeout)
@@ -311,6 +338,7 @@ class ConnectionPool(BasePool[Connection[Any]]):
                     )
 
     def __enter__(self) -> "ConnectionPool":
+        self.open()
         return self
 
     def __exit__(
