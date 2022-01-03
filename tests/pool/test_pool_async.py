@@ -683,7 +683,7 @@ async def test_open_explicit(dsn):
         async with p.connection():
             pass
 
-    p.open()
+    await p.open()
     try:
         assert not p.closed
 
@@ -713,7 +713,7 @@ async def test_open_no_op(dsn):
     p = pool.AsyncConnectionPool(dsn)
     try:
         assert not p.closed
-        p.open()
+        await p.open()
         assert not p.closed
 
         async with p.connection() as conn:
@@ -732,7 +732,7 @@ async def test_reopen(dsn):
     assert p._sched_runner is None
 
     with pytest.raises(OperationalError, match="cannot be reused"):
-        p.open()
+        await p.open()
 
 
 @pytest.mark.slow
