@@ -1,10 +1,8 @@
 import sys
 import time
-import socket
 import pytest
 import logging
 import weakref
-from threading import Thread
 from typing import Any, List
 
 if sys.version_info >= (3, 8):
@@ -47,22 +45,10 @@ def test_connect_bad():
 
 @pytest.mark.slow
 @pytest.mark.timing
-@pytest.mark.skipif(sys.platform == "win32", reason="connect() hangs on Win32")
-def test_connect_timeout():
-    s = socket.socket(socket.AF_INET)
-    s.bind(("localhost", 0))
-    port = s.getsockname()[1]
-    s.listen(0)
-
-    def closer():
-        time.sleep(1.5)
-        s.close()
-
-    Thread(target=closer).start()
-
+def test_connect_timeout(deaf_port):
     t0 = time.time()
     with pytest.raises(psycopg.OperationalError, match="timeout expired"):
-        Connection.connect(host="localhost", port=port, connect_timeout=1)
+        Connection.connect(host="localhost", port=deaf_port, connect_timeout=1)
     elapsed = time.time() - t0
     assert elapsed == pytest.approx(1.0, abs=0.05)
 
