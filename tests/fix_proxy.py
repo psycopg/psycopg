@@ -12,7 +12,11 @@ from psycopg import conninfo
 
 def pytest_collection_modifyitems(items):
     for item in items:
-        if "proxy" in item.fixturenames:
+        # TODO: there is a race condition on macOS and Windows in the CI:
+        # listen returns before really listening and tests based on 'deaf_port'
+        # fail 50% of the times. Just add the 'proxy' mark on these tests
+        # because they are already skipped in the CI.
+        if "proxy" in item.fixturenames or "deaf_port" in item.fixturenames:
             item.add_marker(pytest.mark.proxy)
 
 
