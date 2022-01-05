@@ -470,6 +470,8 @@ async def test_broken_reconnect(dsn):
 
 
 async def test_intrans_rollback(dsn, caplog):
+    caplog.set_level(logging.WARNING, logger="psycopg.pool")
+
     async with pool.AsyncConnectionPool(dsn, min_size=1) as p:
         conn = await p.getconn()
         pid = conn.pgconn.backend_pid
@@ -480,21 +482,18 @@ async def test_intrans_rollback(dsn, caplog):
         async with p.connection() as conn2:
             assert conn2.pgconn.backend_pid == pid
             assert conn2.pgconn.transaction_status == TransactionStatus.IDLE
-            cur = await conn.execute(
+            cur = await conn2.execute(
                 "select 1 from pg_class where relname = 'test_intrans_rollback'"
             )
             assert not await cur.fetchone()
 
-    recs = [
-        r
-        for r in caplog.records
-        if r.name.startswith("psycopg") and r.levelno >= logging.WARNING
-    ]
-    assert len(recs) == 1
-    assert "INTRANS" in recs[0].message
+    assert len(caplog.records) == 1
+    assert "INTRANS" in caplog.records[0].message
 
 
 async def test_inerror_rollback(dsn, caplog):
+    caplog.set_level(logging.WARNING, logger="psycopg.pool")
+
     async with pool.AsyncConnectionPool(dsn, min_size=1) as p:
         conn = await p.getconn()
         pid = conn.pgconn.backend_pid
@@ -507,16 +506,13 @@ async def test_inerror_rollback(dsn, caplog):
             assert conn2.pgconn.backend_pid == pid
             assert conn2.pgconn.transaction_status == TransactionStatus.IDLE
 
-    recs = [
-        r
-        for r in caplog.records
-        if r.name.startswith("psycopg") and r.levelno >= logging.WARNING
-    ]
-    assert len(recs) == 1
-    assert "INERROR" in recs[0].message
+    assert len(caplog.records) == 1
+    assert "INERROR" in caplog.records[0].message
 
 
 async def test_active_close(dsn, caplog):
+    caplog.set_level(logging.WARNING, logger="psycopg.pool")
+
     async with pool.AsyncConnectionPool(dsn, min_size=1) as p:
         conn = await p.getconn()
         pid = conn.pgconn.backend_pid
@@ -532,17 +528,14 @@ async def test_active_close(dsn, caplog):
             assert conn2.pgconn.backend_pid != pid
             assert conn2.pgconn.transaction_status == TransactionStatus.IDLE
 
-    recs = [
-        r
-        for r in caplog.records
-        if r.name.startswith("psycopg") and r.levelno >= logging.WARNING
-    ]
-    assert len(recs) == 2
-    assert "ACTIVE" in recs[0].message
-    assert "BAD" in recs[1].message
+    assert len(caplog.records) == 2
+    assert "ACTIVE" in caplog.records[0].message
+    assert "BAD" in caplog.records[1].message
 
 
 async def test_fail_rollback_close(dsn, caplog, monkeypatch):
+    caplog.set_level(logging.WARNING, logger="psycopg.pool")
+
     async with pool.AsyncConnectionPool(dsn, min_size=1) as p:
         conn = await p.getconn()
 
@@ -564,15 +557,10 @@ async def test_fail_rollback_close(dsn, caplog, monkeypatch):
             assert conn2.pgconn.backend_pid != pid
             assert conn2.pgconn.transaction_status == TransactionStatus.IDLE
 
-    recs = [
-        r
-        for r in caplog.records
-        if r.name.startswith("psycopg") and r.levelno >= logging.WARNING
-    ]
-    assert len(recs) == 3
-    assert "INERROR" in recs[0].message
-    assert "OperationalError" in recs[1].message
-    assert "BAD" in recs[2].message
+    assert len(caplog.records) == 3
+    assert "INERROR" in caplog.records[0].message
+    assert "OperationalError" in caplog.records[1].message
+    assert "BAD" in caplog.records[2].message
 
 
 async def test_close_no_tasks(dsn):
@@ -805,6 +793,8 @@ async def test_shrink(dsn, monkeypatch):
 
 @pytest.mark.slow
 async def test_reconnect(proxy, caplog, monkeypatch, retries):
+    caplog.set_level(logging.WARNING, logger="psycopg.pool")
+
     assert pool.base.ConnectionAttempt.INITIAL_DELAY == 1.0
     assert pool.base.ConnectionAttempt.DELAY_JITTER == 0.1
     monkeypatch.setattr(pool.base.ConnectionAttempt, "INITIAL_DELAY", 0.1)
@@ -831,14 +821,8 @@ async def test_reconnect(proxy, caplog, monkeypatch, retries):
                 async with p.connection() as conn:
                     await conn.execute("select 1")
 
-            recs = [
-                r
-                for r in caplog.records
-                if r.name.startswith("psycopg")
-                and r.levelno >= logging.WARNING
-            ]
-            assert "BAD" in recs[0].message
-            times = [rec.created for rec in recs]
+            assert "BAD" in caplog.messages[0]
+            times = [rec.created for rec in caplog.records]
             assert times[1] - times[0] < 0.05
             deltas = [
                 times[i + 1] - times[i] for i in range(1, len(times) - 1)
