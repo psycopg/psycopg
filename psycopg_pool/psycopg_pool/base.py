@@ -4,8 +4,9 @@ psycopg connection pool base class and functionalities.
 
 # Copyright (C) 2021 The Psycopg Team
 
+from time import monotonic
 from random import random
-from typing import Any, Callable, Dict, Generic, Optional
+from typing import Any, Callable, Dict, Generic, Optional, Tuple
 
 from psycopg.abc import ConnectionType
 from psycopg import errors as e
@@ -55,10 +56,8 @@ class BasePool(Generic[ConnectionType]):
         ] = None,
         num_workers: int = 3,
     ):
-        if max_size is None:
-            max_size = min_size
-        if max_size < min_size:
-            raise ValueError("max_size must be greater or equal than min_size")
+        min_size, max_size = self._check_size(min_size, max_size)
+
         if not name:
             num = BasePool._num_pool = BasePool._num_pool + 1
             name = f"pool-{num}"
@@ -119,6 +118,19 @@ class BasePool(Generic[ConnectionType]):
         """`!True` if the pool is closed."""
         return self._closed
 
+    def _check_size(
+        self, min_size: int, max_size: Optional[int]
+    ) -> Tuple[int, int]:
+        if min_size <= 0:
+            raise ValueError("min_size must be greater than 0")
+
+        if max_size is None:
+            max_size = min_size
+        if max_size < min_size:
+            raise ValueError("max_size must be greater or equal than min_size")
+
+        return min_size, max_size
+
     def _check_open(self) -> None:
         if self._closed and self._opened:
             raise e.OperationalError(
@@ -131,6 +143,19 @@ class BasePool(Generic[ConnectionType]):
                 raise PoolClosed(f"the pool {self.name!r} is already closed")
             else:
                 raise PoolClosed(f"the pool {self.name!r} is not open yet")
+
+    def _check_pool_putconn(self, conn: ConnectionType) -> None:
+        pool = getattr(conn, "_pool", None)
+        if pool is self:
+            return
+
+        if pool:
+            msg = f"it comes from pool {pool.name!r}"
+        else:
+            msg = "it doesn't come from any pool"
+        raise ValueError(
+            f"can't return connection to pool {self.name!r}, {msg}: {conn}"
+        )
 
     def get_stats(self) -> Dict[str, int]:
         """
@@ -168,6 +193,15 @@ class BasePool(Generic[ConnectionType]):
         Add a random value to *value* between *min_pc* and *max_pc* percent.
         """
         return value * (1.0 + ((max_pc - min_pc) * random()) + min_pc)
+
+    def _set_connection_expiry_date(self, conn: ConnectionType) -> None:
+        """Set an expiry date on a connection.
+
+        Add some randomness to avoid mass reconnection.
+        """
+        conn._expire_at = monotonic() + self._jitter(
+            self.max_lifetime, -0.05, 0.0
+        )
 
 
 class ConnectionAttempt:
