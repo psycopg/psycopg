@@ -168,6 +168,12 @@ class NotSupportedError(DatabaseError):
     __module__ = "psycopg"
 
 
+class ConnectionTimeout(OperationalError):
+    """
+    Exception raised on timeout connection.
+    """
+
+
 class Diagnostic:
     """Details from a database error report."""
 

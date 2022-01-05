@@ -91,7 +91,7 @@ def wait_conn(gen: PQGenConn[RV], timeout: Optional[float] = None) -> RV:
                 rlist = sel.select(timeout=timeout)
                 sel.unregister(fileno)
                 if not rlist:
-                    raise e.OperationalError("timeout expired")
+                    raise e.ConnectionTimeout("connection timeout expired")
                 ready: Ready = rlist[0][1]  # type: ignore[assignment]
                 fileno, s = gen.send(ready)
 
@@ -201,7 +201,7 @@ async def wait_conn_async(
             fileno, s = gen.send(ready)
 
     except TimeoutError:
-        raise e.OperationalError("timeout expired")
+        raise e.ConnectionTimeout("connection timeout expired")
 
     except StopIteration as ex:
         rv: RV = ex.args[0] if ex.args else None
