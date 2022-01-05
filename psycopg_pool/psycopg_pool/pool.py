@@ -107,6 +107,8 @@ class ConnectionPool(BasePool[Connection[Any]]):
         program to terminate in case the environment is not configured
         properly, rather than trying to stay up the hardest it can.
         """
+        self._check_open_getconn()
+
         with self._lock:
             assert not self._pool_full_event
             if len(self._pool) >= self._nconns:

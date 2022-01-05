@@ -145,6 +145,14 @@ async def test_wait_ready(dsn, monkeypatch):
         await p.wait(0.0001)  # idempotent
 
 
+async def test_wait_closed(dsn):
+    async with pool.AsyncConnectionPool(dsn) as p:
+        pass
+
+    with pytest.raises(pool.PoolClosed):
+        await p.wait()
+
+
 @pytest.mark.slow
 async def test_setup_no_timeout(dsn, proxy):
     with pytest.raises(pool.PoolTimeout):
