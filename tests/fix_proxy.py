@@ -32,6 +32,16 @@ def proxy(dsn):
     p.stop()
 
 
+@pytest.fixture
+def deaf_port(dsn):
+    """Return a port number with a socket open but not answering"""
+    with socket.socket(socket.AF_INET) as s:
+        s.bind(("", 0))
+        port = s.getsockname()[1]
+        s.listen(0)
+        yield port
+
+
 class Proxy:
     """
     Proxy a Postgres service for testing purpose.
