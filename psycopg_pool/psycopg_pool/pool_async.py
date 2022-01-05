@@ -81,6 +81,8 @@ class AsyncConnectionPool(BasePool[AsyncConnection[Any]]):
         self.run_task(Schedule(self, ShrinkPool(self), self.max_idle))
 
     async def wait(self, timeout: float = 30.0) -> None:
+        self._check_open_getconn()
+
         async with self._lock:
             assert not self._pool_full_event
             if len(self._pool) >= self._nconns:
@@ -121,11 +123,11 @@ class AsyncConnectionPool(BasePool[AsyncConnection[Any]]):
     ) -> AsyncConnection[Any]:
         logger.info("connection requested from %r", self.name)
         self._stats[self._REQUESTS_NUM] += 1
+
         # Critical section: decide here if there's a connection ready
         # or if the client needs to wait.
         async with self._lock:
-            if self._closed:
-                raise PoolClosed(f"the pool {self.name!r} is closed")
+            self._check_open_getconn()
 
             pos: Optional[AsyncClient] = None
             if self._pool:
@@ -179,16 +181,7 @@ class AsyncConnectionPool(BasePool[AsyncConnection[Any]]):
         return conn
 
     async def putconn(self, conn: AsyncConnection[Any]) -> None:
-        # Quick check to discard the wrong connection
-        pool = getattr(conn, "_pool", None)
-        if pool is not self:
-            if pool:
-                msg = f"it comes from pool {pool.name!r}"
-            else:
-                msg = "it doesn't come from any pool"
-            raise ValueError(
-                f"can't return connection to pool {self.name!r}, {msg}: {conn}"
-            )
+        self._check_pool_putconn(conn)
 
         logger.info("returning connection to %r", self.name)
 
@@ -265,10 +258,7 @@ class AsyncConnectionPool(BasePool[AsyncConnection[Any]]):
     async def resize(
         self, min_size: int, max_size: Optional[int] = None
     ) -> None:
-        if max_size is None:
-            max_size = min_size
-        if max_size < min_size:
-            raise ValueError("max_size must be greater or equal than min_size")
+        min_size, max_size = self._check_size(min_size, max_size)
 
         ngrow = max(0, min_size - self._min_size)
 
@@ -369,16 +359,14 @@ class AsyncConnectionPool(BasePool[AsyncConnection[Any]]):
             await self._configure(conn)
             status = conn.pgconn.transaction_status
             if status != TransactionStatus.IDLE:
-                nstatus = TransactionStatus(status).name
+                sname = TransactionStatus(status).name
                 raise e.ProgrammingError(
-                    f"connection left in status {nstatus} by configure function"
+                    f"connection left in status {sname} by configure function"
                     f" {self._configure}: discarded"
                 )
 
         # Set an expiry date, with some randomness to avoid mass reconnection
-        conn._expire_at = monotonic() + self._jitter(
-            self.max_lifetime, -0.05, 0.0
-        )
+        self._set_connection_expiry_date(conn)
         return conn
 
     async def _add_connection(
@@ -516,9 +504,9 @@ class AsyncConnectionPool(BasePool[AsyncConnection[Any]]):
                 await self._reset(conn)
                 status = conn.pgconn.transaction_status
                 if status != TransactionStatus.IDLE:
-                    nstatus = TransactionStatus(status).name
+                    sname = TransactionStatus(status).name
                     raise e.ProgrammingError(
-                        f"connection left in status {nstatus} by reset function"
+                        f"connection left in status {sname} by reset function"
                         f" {self._reset}: discarded"
                     )
             except Exception as ex:

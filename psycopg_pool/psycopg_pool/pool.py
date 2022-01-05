@@ -107,6 +107,8 @@ class ConnectionPool(BasePool[Connection[Any]]):
         program to terminate in case the environment is not configured
         properly, rather than trying to stay up the hardest it can.
         """
+        self._check_open_getconn()
+
         with self._lock:
             assert not self._pool_full_event
             if len(self._pool) >= self._nconns:
@@ -164,11 +166,11 @@ class ConnectionPool(BasePool[Connection[Any]]):
         """
         logger.info("connection requested from %r", self.name)
         self._stats[self._REQUESTS_NUM] += 1
+
         # Critical section: decide here if there's a connection ready
         # or if the client needs to wait.
         with self._lock:
-            if self._closed:
-                raise PoolClosed(f"the pool {self.name!r} is closed")
+            self._check_open_getconn()
 
             pos: Optional[WaitingClient] = None
             if self._pool:
@@ -229,15 +231,7 @@ class ConnectionPool(BasePool[Connection[Any]]):
         it if you use the much more comfortable `connection()` context manager.
         """
         # Quick check to discard the wrong connection
-        pool = getattr(conn, "_pool", None)
-        if pool is not self:
-            if pool:
-                msg = f"it comes from pool {pool.name!r}"
-            else:
-                msg = "it doesn't come from any pool"
-            raise ValueError(
-                f"can't return connection to pool {self.name!r}, {msg}: {conn}"
-            )
+        self._check_pool_putconn(conn)
 
         logger.info("returning connection to %r", self.name)
 
@@ -323,10 +317,7 @@ class ConnectionPool(BasePool[Connection[Any]]):
 
     def resize(self, min_size: int, max_size: Optional[int] = None) -> None:
         """Change the size of the pool during runtime."""
-        if max_size is None:
-            max_size = min_size
-        if max_size < min_size:
-            raise ValueError("max_size must be greater or equal than min_size")
+        min_size, max_size = self._check_size(min_size, max_size)
 
         ngrow = max(0, min_size - self._min_size)
 
@@ -439,16 +430,14 @@ class ConnectionPool(BasePool[Connection[Any]]):
             self._configure(conn)
             status = conn.pgconn.transaction_status
             if status != TransactionStatus.IDLE:
-                nstatus = TransactionStatus(status).name
+                sname = TransactionStatus(status).name
                 raise e.ProgrammingError(
-                    f"connection left in status {nstatus} by configure function"
+                    f"connection left in status {sname} by configure function"
                     f" {self._configure}: discarded"
                 )
 
         # Set an expiry date, with some randomness to avoid mass reconnection
-        conn._expire_at = monotonic() + self._jitter(
-            self.max_lifetime, -0.05, 0.0
-        )
+        self._set_connection_expiry_date(conn)
         return conn
 
     def _add_connection(
@@ -586,9 +575,9 @@ class ConnectionPool(BasePool[Connection[Any]]):
                 self._reset(conn)
                 status = conn.pgconn.transaction_status
                 if status != TransactionStatus.IDLE:
-                    nstatus = TransactionStatus(status).name
+                    sname = TransactionStatus(status).name
                     raise e.ProgrammingError(
-                        f"connection left in status {nstatus} by reset function"
+                        f"connection left in status {sname} by reset function"
                         f" {self._reset}: discarded"
                     )
             except Exception as ex:

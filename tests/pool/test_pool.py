@@ -48,8 +48,11 @@ def test_min_size_max_size(dsn):
         assert p.min_size == 2
         assert p.max_size == 4
 
+
+@pytest.mark.parametrize("min_size, max_size", [(0, 0), (-1, None), (4, 2)])
+def test_bad_size(dsn, min_size, max_size):
     with pytest.raises(ValueError):
-        pool.ConnectionPool(dsn, min_size=4, max_size=2)
+        pool.ConnectionPool(min_size=min_size, max_size=max_size)
 
 
 def test_connection_class(dsn):
@@ -139,6 +142,14 @@ def test_wait_ready(dsn, monkeypatch):
     with pool.ConnectionPool(dsn, min_size=4, num_workers=2) as p:
         p.wait(0.3)
         p.wait(0.0001)  # idempotent
+
+
+def test_wait_closed(dsn):
+    with pool.ConnectionPool(dsn) as p:
+        pass
+
+    with pytest.raises(pool.PoolClosed):
+        p.wait()
 
 
 @pytest.mark.slow
@@ -881,6 +892,13 @@ def test_resize(dsn):
 
     s.join()
     assert size == [2, 1, 3, 4, 3, 2, 2]
+
+
+@pytest.mark.parametrize("min_size, max_size", [(0, 0), (-1, None), (4, 2)])
+def test_bad_resize(dsn, min_size, max_size):
+    with pool.ConnectionPool() as p:
+        with pytest.raises(ValueError):
+            p.resize(min_size=min_size, max_size=max_size)
 
 
 def test_jitter():
