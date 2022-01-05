@@ -68,6 +68,8 @@ class AsyncConnectionPool(BasePool[AsyncConnection[Any]]):
             self._open()
 
     async def wait(self, timeout: float = 30.0) -> None:
+        self._check_open_getconn()
+
         async with self._lock:
             assert not self._pool_full_event
             if len(self._pool) >= self._nconns:

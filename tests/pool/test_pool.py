@@ -8,7 +8,6 @@ from typing import Any, List, Tuple
 import pytest
 
 import psycopg
-from psycopg.errors import OperationalError
 from psycopg.pq import TransactionStatus
 from psycopg._compat import Counter
 
@@ -143,6 +142,14 @@ def test_wait_ready(dsn, monkeypatch):
     with pool.ConnectionPool(dsn, min_size=4, num_workers=2) as p:
         p.wait(0.3)
         p.wait(0.0001)  # idempotent
+
+
+def test_wait_closed(dsn):
+    with pool.ConnectionPool(dsn) as p:
+        pass
+
+    with pytest.raises(pool.PoolClosed):
+        p.wait()
 
 
 @pytest.mark.slow
@@ -749,7 +756,7 @@ def test_reopen(dsn):
     assert p._sched_runner is None
     assert not p._workers
 
-    with pytest.raises(OperationalError, match="cannot be reused"):
+    with pytest.raises(psycopg.OperationalError, match="cannot be reused"):
         p.open()
 
 
