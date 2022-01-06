@@ -13,7 +13,8 @@ Future releases
 psycopg_pool 3.1.0 (unreleased)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-- Add `ConnectionPool.open()` and `!open` parameter to the pool init
+- Add :ref:`null-pool` (:ticket:`#148`).
+- Add `ConnectionPool.open()` and *open* parameter to the pool init
   (:ticket:`#151`).
 
 

@@ -56,7 +56,8 @@ class NullConnectionPool(_BaseNullConnectionPool, ConnectionPool):
         database works as expected. However the connection will not be stored
         in the pool.
 
-        Raise `PoolTimeout` if not ready within *timeout* sec.
+        Close the pool, and raise `PoolTimeout`, if not ready within *timeout*
+        sec.
         """
         self._check_open_getconn()
 
@@ -153,6 +154,10 @@ class NullConnectionPool(_BaseNullConnectionPool, ConnectionPool):
             self._return_connection(conn)
 
     def resize(self, min_size: int, max_size: Optional[int] = None) -> None:
+        """Change the size of the pool during runtime.
+
+        Only *max_size* can be changed; *min_size* must remain 0.
+        """
         min_size, max_size = self._check_size(min_size, max_size)
 
         logger.info(
