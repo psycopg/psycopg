@@ -8,8 +8,8 @@ implementation.
 
 # Copyright (C) 2020-2021 The Psycopg Team
 
-import os
 import logging
+from os import getpid
 from weakref import ref
 from functools import partial
 
@@ -23,6 +23,9 @@ from . import _pq_ctypes as impl
 from .misc import PGnotify, ConninfoOption, PGresAttDesc
 from .misc import error_message, connection_summary
 from ._enums import Format, ExecStatus
+
+# Imported locally to call them from __del__ methods
+from ._pq_ctypes import PQclear, PQfinish, PQfreeCancel, PQstatus
 
 if TYPE_CHECKING:
     from . import abc
@@ -83,12 +86,12 @@ class PGconn:
         )
         impl.PQsetNoticeReceiver(pgconn_ptr, self._notice_receiver, None)
 
-        self._procpid = os.getpid()
+        self._procpid = getpid()
 
     def __del__(self) -> None:
         # Close the connection only if it was created in this process,
         # not if this object is being GC'd after fork.
-        if os.getpid() == self._procpid:
+        if getpid() == self._procpid:
             self.finish()
 
     def __repr__(self) -> str:
@@ -122,7 +125,7 @@ class PGconn:
     def finish(self) -> None:
         self._pgconn_ptr, p = None, self._pgconn_ptr
         if p:
-            impl.PQfinish(p)
+            PQfinish(p)
 
     @property
     def pgconn_ptr(self) -> Optional[int]:
@@ -202,7 +205,7 @@ class PGconn:
 
     @property
     def status(self) -> int:
-        return impl.PQstatus(self._pgconn_ptr)
+        return PQstatus(self._pgconn_ptr)
 
     @property
     def transaction_status(self) -> int:
@@ -730,7 +733,7 @@ class PGresult:
     def clear(self) -> None:
         self._pgresult_ptr, p = None, self._pgresult_ptr
         if p:
-            impl.PQclear(p)
+            PQclear(p)
 
     @property
     def pgresult_ptr(self) -> Optional[int]:
@@ -863,7 +866,7 @@ class PGcancel:
         """
         self.pgcancel_ptr, p = None, self.pgcancel_ptr
         if p:
-            impl.PQfreeCancel(p)
+            PQfreeCancel(p)
 
     def cancel(self) -> None:
         """Requests that the server abandon processing of the current command.

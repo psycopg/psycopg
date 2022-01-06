@@ -5,13 +5,13 @@ psycopg connection objects
 # Copyright (C) 2020-2021 The Psycopg Team
 
 import logging
-import warnings
 import threading
 from types import TracebackType
 from typing import Any, Callable, cast, Dict, Generator, Generic, Iterator
 from typing import List, NamedTuple, Optional, Type, TypeVar, Union
 from typing import overload, TYPE_CHECKING
 from weakref import ref, ReferenceType
+from warnings import warn
 from functools import partial
 from contextlib import contextmanager
 
@@ -144,7 +144,7 @@ class BaseConnection(Generic[Row]):
         if hasattr(self, "_pool"):
             return
 
-        warnings.warn(
+        warn(
             f"connection {self} was deleted while still open."
             f" Please use 'with' or '.close()' to close the connection",
             ResourceWarning,
