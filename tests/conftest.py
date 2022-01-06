@@ -11,35 +11,23 @@ pytest_plugins = (
     "tests.fix_faker",
     "tests.fix_proxy",
     "tests.fix_psycopg",
+    "tests.pool.fix_pool",
 )
 
 
 def pytest_configure(config):
-    # register slow marker
-    config.addinivalue_line(
-        "markers", "slow: this test is kinda slow (skip with -m 'not slow')"
-    )
-
-    # There are troubles on travis with these kind of tests and I cannot
-    # catch the exception for my life.
-    config.addinivalue_line(
-        "markers", "subprocess: the test import psycopg after subprocess"
-    )
-
-    config.addinivalue_line(
-        "markers",
+    markers = [
+        "slow: this test is kinda slow (skip with -m 'not slow')",
+        # There are troubles on travis with these kind of tests and I cannot
+        # catch the exception for my life.
+        "subprocess: the test import psycopg after subprocess",
         "timing: the test is timing based and can fail on cheese hardware",
-    )
-
-    config.addinivalue_line(
-        "markers",
         "dns: the test requires dnspython to run",
-    )
-
-    config.addinivalue_line(
-        "markers",
         "postgis: the test requires the PostGIS extension to run",
-    )
+    ]
+
+    for marker in markers:
+        config.addinivalue_line("markers", marker)
 
 
 def pytest_addoption(parser):

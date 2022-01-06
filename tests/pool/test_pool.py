@@ -11,14 +11,11 @@ import psycopg
 from psycopg.pq import TransactionStatus
 from psycopg._compat import Counter
 
-pytestmark = []
-
 try:
-    from psycopg_pool import ConnectionPool  # noqa: F401
-except ImportError as ex:
-    pytestmark.append(pytest.mark.skip(reason=str(ex)))
-else:
     import psycopg_pool as pool
+except ImportError:
+    # Tests should have been skipped if the package is not available
+    pass
 
 
 def test_package_version(mypy):

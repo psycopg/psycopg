@@ -10,6 +10,12 @@ import psycopg
 from psycopg.pq import TransactionStatus
 from psycopg._compat import create_task, Counter
 
+try:
+    import psycopg_pool as pool
+except ImportError:
+    # Tests should have been skipped if the package is not available
+    pass
+
 pytestmark = [
     pytest.mark.asyncio,
     pytest.mark.skipif(
@@ -17,13 +23,6 @@ pytestmark = [
         reason="async pool not supported before Python 3.7",
     ),
 ]
-
-try:
-    from psycopg_pool import AsyncConnectionPool  # noqa: F401
-except ImportError as ex:
-    pytestmark.append(pytest.mark.skip(reason=str(ex)))
-else:
-    import psycopg_pool as pool
 
 
 async def test_defaults(dsn):
