@@ -7,12 +7,13 @@ import pytest
 
 from psycopg._compat import create_task
 
-pytestmark = [pytest.mark.asyncio, pytest.mark.timing]
-
 try:
     from psycopg_pool.sched import AsyncScheduler
-except ImportError as ex:
-    pytestmark.append(pytest.mark.skip(reason=str(ex)))
+except ImportError:
+    # Tests should have been skipped if the package is not available
+    pass
+
+pytestmark = [pytest.mark.asyncio, pytest.mark.timing]
 
 
 @pytest.mark.slow
