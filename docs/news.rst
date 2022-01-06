@@ -24,6 +24,8 @@ Psycopg 3.0.8 (unreleased)
 
 - Decode connection errors in the ``client_encoding`` specified in the
   connection string, if available (:ticket:`#194`).
+- Fix possible warnings in objects deletion on interpreter shutdown
+  (:ticket:`#198`).
 
 
 Psycopg 3.0.7

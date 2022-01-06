@@ -4,9 +4,9 @@ psycopg server-side cursor objects.
 
 # Copyright (C) 2020-2021 The Psycopg Team
 
-import warnings
 from typing import Any, AsyncIterator, Generic, List, Iterable, Iterator
 from typing import Optional, TypeVar, TYPE_CHECKING
+from warnings import warn
 
 from . import pq
 from . import sql
@@ -200,7 +200,7 @@ class ServerCursor(Cursor[Row]):
 
     def __del__(self) -> None:
         if not self.closed:
-            warnings.warn(
+            warn(
                 f"the server-side cursor {self} was deleted while still open."
                 f" Please use 'with' or '.close()' to close the cursor properly",
                 ResourceWarning,
@@ -343,7 +343,7 @@ class AsyncServerCursor(AsyncCursor[Row]):
 
     def __del__(self) -> None:
         if not self.closed:
-            warnings.warn(
+            warn(
                 f"the server-side cursor {self} was deleted while still open."
                 f" Please use 'with' or '.close()' to close the cursor properly",
                 ResourceWarning,
