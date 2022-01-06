@@ -35,16 +35,18 @@ async def test_defaults(dsn):
         assert p.num_workers == 3
 
 
-async def test_min_size_max_size(dsn):
-    async with pool.AsyncConnectionPool(dsn, min_size=2) as p:
-        assert p.min_size == p.max_size == 2
+@pytest.mark.parametrize("min_size, max_size", [(2, None), (0, 2), (2, 4)])
+async def test_min_size_max_size(dsn, min_size, max_size):
+    async with pool.AsyncConnectionPool(
+        dsn, min_size=min_size, max_size=max_size
+    ) as p:
+        assert p.min_size == min_size
+        assert p.max_size == max_size if max_size is not None else min_size
 
-    async with pool.AsyncConnectionPool(dsn, min_size=2, max_size=4) as p:
-        assert p.min_size == 2
-        assert p.max_size == 4
 
-
-@pytest.mark.parametrize("min_size, max_size", [(0, 0), (-1, None), (4, 2)])
+@pytest.mark.parametrize(
+    "min_size, max_size", [(0, 0), (0, None), (-1, None), (4, 2)]
+)
 async def test_bad_size(dsn, min_size, max_size):
     with pytest.raises(ValueError):
         pool.AsyncConnectionPool(min_size=min_size, max_size=max_size)
@@ -670,29 +672,35 @@ async def test_closed_queue(dsn):
 
 @pytest.mark.slow
 @pytest.mark.timing
-async def test_grow(dsn, monkeypatch, retries):
+@pytest.mark.parametrize(
+    "min_size, want_times",
+    [
+        (2, [0.25, 0.25, 0.35, 0.45, 0.50, 0.50, 0.60, 0.70]),
+        (0, [0.35, 0.45, 0.55, 0.60, 0.65, 0.70, 0.80, 0.85]),
+    ],
+)
+async def test_grow(dsn, monkeypatch, retries, min_size, want_times):
     delay_connection(monkeypatch, 0.1)
 
     async def worker(n):
         t0 = time()
         async with p.connection() as conn:
-            await conn.execute("select 1 from pg_sleep(0.2)")
+            await conn.execute("select 1 from pg_sleep(0.25)")
         t1 = time()
         results.append((n, t1 - t0))
 
     async for retry in retries:
         with retry:
             async with pool.AsyncConnectionPool(
-                dsn, min_size=2, max_size=4, num_workers=3
+                dsn, min_size=min_size, max_size=4, num_workers=3
             ) as p:
                 await p.wait(1.0)
                 ts = []
                 results: List[Tuple[int, float]] = []
 
-                ts = [create_task(worker(i)) for i in range(6)]
+                ts = [create_task(worker(i)) for i in range(len(want_times))]
                 await asyncio.gather(*ts)
 
-            want_times = [0.2, 0.2, 0.3, 0.4, 0.4, 0.4]
             times = [item[1] for item in results]
             for got, want in zip(times, want_times):
                 assert got == pytest.approx(want, 0.1), times

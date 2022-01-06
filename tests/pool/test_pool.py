@@ -40,16 +40,16 @@ def test_defaults(dsn):
         assert p.num_workers == 3
 
 
-def test_min_size_max_size(dsn):
-    with pool.ConnectionPool(dsn, min_size=2) as p:
-        assert p.min_size == p.max_size == 2
-
-    with pool.ConnectionPool(dsn, min_size=2, max_size=4) as p:
-        assert p.min_size == 2
-        assert p.max_size == 4
+@pytest.mark.parametrize("min_size, max_size", [(2, None), (0, 2), (2, 4)])
+def test_min_size_max_size(dsn, min_size, max_size):
+    with pool.ConnectionPool(dsn, min_size=min_size, max_size=max_size) as p:
+        assert p.min_size == min_size
+        assert p.max_size == max_size if max_size is not None else min_size
 
 
-@pytest.mark.parametrize("min_size, max_size", [(0, 0), (-1, None), (4, 2)])
+@pytest.mark.parametrize(
+    "min_size, max_size", [(0, 0), (0, None), (-1, None), (4, 2)]
+)
 def test_bad_size(dsn, min_size, max_size):
     with pytest.raises(ValueError):
         pool.ConnectionPool(min_size=min_size, max_size=max_size)
@@ -692,31 +692,40 @@ def test_closed_queue(dsn):
 
 @pytest.mark.slow
 @pytest.mark.timing
-def test_grow(dsn, monkeypatch, retries):
+@pytest.mark.parametrize(
+    "min_size, want_times",
+    [
+        (2, [0.25, 0.25, 0.35, 0.45, 0.50, 0.50, 0.60, 0.70]),
+        (0, [0.35, 0.45, 0.55, 0.60, 0.65, 0.70, 0.80, 0.85]),
+    ],
+)
+def test_grow(dsn, monkeypatch, retries, min_size, want_times):
     delay_connection(monkeypatch, 0.1)
 
     def worker(n):
         t0 = time()
         with p.connection() as conn:
-            conn.execute("select 1 from pg_sleep(0.2)")
+            conn.execute("select 1 from pg_sleep(0.25)")
         t1 = time()
         results.append((n, t1 - t0))
 
     for retry in retries:
         with retry:
             with pool.ConnectionPool(
-                dsn, min_size=2, max_size=4, num_workers=3
+                dsn, min_size=min_size, max_size=4, num_workers=3
             ) as p:
                 p.wait(1.0)
                 results: List[Tuple[int, float]] = []
 
-                ts = [Thread(target=worker, args=(i,)) for i in range(6)]
+                ts = [
+                    Thread(target=worker, args=(i,))
+                    for i in range(len(want_times))
+                ]
                 for t in ts:
                     t.start()
                 for t in ts:
                     t.join()
 
-            want_times = [0.2, 0.2, 0.3, 0.4, 0.4, 0.4]
             times = [item[1] for item in results]
             for got, want in zip(times, want_times):
                 assert got == pytest.approx(want, 0.1), times
