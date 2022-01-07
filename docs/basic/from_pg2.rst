@@ -69,7 +69,11 @@ If this is not possible, you can use client-side binding using the objects
 from the `sql` module::
 
     >>> from psycopg import sql
+
     >>> conn.execute(sql.SQL("CREATE TABLE foo (id int DEFAULT {})").format(42))
+
+    # This will correctly quote the password
+    >>> conn.execute(sql.SQL("ALTER USER john SET PASSWORD {}").format(password))
 
 
 .. _multi-statements:
