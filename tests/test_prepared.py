@@ -8,18 +8,6 @@ from decimal import Decimal
 import pytest
 
 
-def test_connection_attributes(conn, monkeypatch):
-    assert conn.prepare_threshold == 5
-    assert conn.prepared_max == 100
-
-    # They are on the class
-    monkeypatch.setattr(conn.__class__, "prepare_threshold", 10)
-    assert conn.prepare_threshold == 10
-
-    monkeypatch.setattr(conn.__class__, "prepared_max", 200)
-    assert conn.prepared_max == 200
-
-
 def test_dont_prepare(conn):
     cur = conn.cursor()
     for i in range(10):
