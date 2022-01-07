@@ -10,18 +10,6 @@ import pytest
 pytestmark = pytest.mark.asyncio
 
 
-async def test_connection_attributes(aconn, monkeypatch):
-    assert aconn.prepare_threshold == 5
-    assert aconn.prepared_max == 100
-
-    # They are on the class
-    monkeypatch.setattr(aconn.__class__, "prepare_threshold", 10)
-    assert aconn.prepare_threshold == 10
-
-    monkeypatch.setattr(aconn.__class__, "prepared_max", 200)
-    assert aconn.prepared_max == 200
-
-
 async def test_dont_prepare(aconn):
     cur = aconn.cursor()
     for i in range(10):
