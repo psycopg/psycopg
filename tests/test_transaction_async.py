@@ -94,24 +94,26 @@ async def test_context_inerror_rollback_no_clobber(aconn, dsn, caplog):
     assert "in rollback" in rec.message
 
 
-async def test_context_active_rollback_no_clobber(aconn, dsn, caplog):
+async def test_context_active_rollback_no_clobber(dsn, caplog):
     caplog.set_level(logging.WARNING, logger="psycopg")
 
-    with pytest.raises(ZeroDivisionError):
-        conn2 = await AsyncConnection.connect(dsn)
-        async with conn2.transaction():
-            async with conn2.cursor() as cur:
-                async with cur.copy(
-                    "copy (select generate_series(1, 10)) to stdout"
-                ) as copy:
-                    async for row in copy.rows():
-                        1 / 0
+    conn = await AsyncConnection.connect(dsn)
+    try:
+        with pytest.raises(ZeroDivisionError):
+            async with conn.transaction():
+                conn.pgconn.exec_(
+                    b"copy (select generate_series(1, 10)) to stdout"
+                )
+                status = conn.info.transaction_status
+                assert status == conn.TransactionStatus.ACTIVE
+                1 / 0
 
-    assert len(caplog.records) == 1
-    rec = caplog.records[0]
-    assert rec.levelno == logging.WARNING
-    assert "in rollback" in rec.message
-    await conn2.close()
+        assert len(caplog.records) == 1
+        rec = caplog.records[0]
+        assert rec.levelno == logging.WARNING
+        assert "in rollback" in rec.message
+    finally:
+        await conn.close()
 
 
 async def test_interaction_dbapi_transaction(aconn):

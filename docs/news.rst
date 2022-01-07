@@ -27,6 +27,8 @@ Psycopg 3.0.8 (unreleased)
   connection string, if available (:ticket:`#194`).
 - Fix possible warnings in objects deletion on interpreter shutdown
   (:ticket:`#198`).
+- Don't leave connections in ACTIVE state in case of error during COPY ... TO
+  STDOUT (:ticket:`#203`).
 
 
 Psycopg 3.0.7

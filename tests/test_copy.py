@@ -347,6 +347,40 @@ def test_copy_in_buffers_with_py_error(conn):
     assert conn.info.transaction_status == conn.TransactionStatus.INERROR
 
 
+def test_copy_out_error_with_copy_finished(conn):
+    cur = conn.cursor()
+    with pytest.raises(ZeroDivisionError):
+        with cur.copy("copy (select generate_series(1, 2)) to stdout") as copy:
+            copy.read_row()
+            1 / 0
+
+    assert conn.info.transaction_status == conn.TransactionStatus.INTRANS
+
+
+def test_copy_out_error_with_copy_not_finished(conn):
+    cur = conn.cursor()
+    with pytest.raises(ZeroDivisionError):
+        with cur.copy(
+            "copy (select generate_series(1, 1000000)) to stdout"
+        ) as copy:
+            copy.read_row()
+            1 / 0
+
+    assert conn.info.transaction_status == conn.TransactionStatus.INERROR
+
+
+def test_copy_out_server_error(conn):
+    cur = conn.cursor()
+    with pytest.raises(e.DivisionByZero):
+        with cur.copy(
+            "copy (select 1/n from generate_series(-10, 10) x(n)) to stdout"
+        ) as copy:
+            for block in copy:
+                pass
+
+    assert conn.info.transaction_status == conn.TransactionStatus.INERROR
+
+
 @pytest.mark.parametrize("format", Format)
 def test_copy_in_records(conn, format):
     cur = conn.cursor()
