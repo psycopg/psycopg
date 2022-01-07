@@ -146,7 +146,7 @@ class BaseCopy(Generic[ConnectionType]):
 
         return row
 
-    def _end_copy_gen(self, exc: Optional[BaseException]) -> PQGen[None]:
+    def _end_copy_in_gen(self, exc: Optional[BaseException]) -> PQGen[None]:
         bmsg: Optional[bytes]
         if exc:
             msg = f"error from Python: {type(exc).__qualname__} - {exc}"
@@ -159,6 +159,29 @@ class BaseCopy(Generic[ConnectionType]):
         nrows = res.command_tuples
         self.cursor._rowcount = nrows if nrows is not None else -1
         self._finished = True
+
+    def _end_copy_out_gen(self, exc: Optional[BaseException]) -> PQGen[None]:
+        if not exc:
+            return
+
+        if (
+            self.connection.pgconn.transaction_status
+            != pq.TransactionStatus.ACTIVE
+        ):
+            # The server has already finished to send copy data. The connection
+            # is already in a good state.
+            return
+
+        # Throw a cancel to the server, then consume the rest of the copy data
+        # (which might or might not have been already transferred entirely to
+        # the client, so we won't necessary see the exception associated with
+        # canceling).
+        self.connection.cancel()
+        try:
+            while (yield from self._read_gen()):
+                pass
+        except e.QueryCanceled:
+            pass
 
 
 class Copy(BaseCopy["Connection[Any]"]):
@@ -247,12 +270,11 @@ class Copy(BaseCopy["Connection[Any]"]):
         by exit. It is available if, despite what is documented, you end up
         using the `Copy` object outside a block.
         """
-        # no-op in COPY TO
-        if self._pgresult.status == ExecStatus.COPY_OUT:
-            return
-
-        self._write_end()
-        self.connection.wait(self._end_copy_gen(exc))
+        if self._pgresult.status == ExecStatus.COPY_IN:
+            self._write_end()
+            self.connection.wait(self._end_copy_in_gen(exc))
+        else:
+            self.connection.wait(self._end_copy_out_gen(exc))
 
     # Concurrent copy support
 
@@ -263,7 +285,7 @@ class Copy(BaseCopy["Connection[Any]"]):
 
         The function is designed to be run in a separate thread.
         """
-        while 1:
+        while True:
             data = self._queue.get(block=True, timeout=24 * 60 * 60)
             if not data:
                 break
@@ -344,12 +366,11 @@ class AsyncCopy(BaseCopy["AsyncConnection[Any]"]):
         await self._write(data)
 
     async def finish(self, exc: Optional[BaseException]) -> None:
-        # no-op in COPY TO
-        if self._pgresult.status == ExecStatus.COPY_OUT:
-            return
-
-        await self._write_end()
-        await self.connection.wait(self._end_copy_gen(exc))
+        if self._pgresult.status == ExecStatus.COPY_IN:
+            await self._write_end()
+            await self.connection.wait(self._end_copy_in_gen(exc))
+        else:
+            await self.connection.wait(self._end_copy_out_gen(exc))
 
     # Concurrent copy support
 
@@ -360,7 +381,7 @@ class AsyncCopy(BaseCopy["AsyncConnection[Any]"]):
 
         The function is designed to be run in a separate thread.
         """
-        while 1:
+        while True:
             data = await self._queue.get()
             if not data:
                 break

@@ -327,6 +327,42 @@ async def test_copy_in_buffers_with_py_error(aconn):
     assert aconn.info.transaction_status == aconn.TransactionStatus.INERROR
 
 
+async def test_copy_out_error_with_copy_finished(aconn):
+    cur = aconn.cursor()
+    with pytest.raises(ZeroDivisionError):
+        async with cur.copy(
+            "copy (select generate_series(1, 2)) to stdout"
+        ) as copy:
+            await copy.read_row()
+            1 / 0
+
+    assert aconn.info.transaction_status == aconn.TransactionStatus.INTRANS
+
+
+async def test_copy_out_error_with_copy_not_finished(aconn):
+    cur = aconn.cursor()
+    with pytest.raises(ZeroDivisionError):
+        async with cur.copy(
+            "copy (select generate_series(1, 1000000)) to stdout"
+        ) as copy:
+            await copy.read_row()
+            1 / 0
+
+    assert aconn.info.transaction_status == aconn.TransactionStatus.INERROR
+
+
+async def test_copy_out_server_error(aconn):
+    cur = aconn.cursor()
+    with pytest.raises(e.DivisionByZero):
+        async with cur.copy(
+            "copy (select 1/n from generate_series(-10, 10) x(n)) to stdout"
+        ) as copy:
+            async for block in copy:
+                pass
+
+    assert aconn.info.transaction_status == aconn.TransactionStatus.INERROR
+
+
 @pytest.mark.parametrize("format", Format)
 async def test_copy_in_records(aconn, format):
     cur = aconn.cursor()
