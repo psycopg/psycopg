@@ -42,6 +42,8 @@ The `!Connection` class
                             to create fetching data (default:
                             `~psycopg.rows.tuple_row()`). See
                             :ref:`row-factories` for details.
+        :param prepare_threshold: Set the `prepare_threshold` attribute of the
+                                  connection.
 
         More specialized use:
 
@@ -63,6 +65,9 @@ The `!Connection` class
 
             .. __: https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-PARAMKEYWORDS
             .. __: https://www.postgresql.org/docs/current/libpq-envars.html
+
+        .. versionchanged:: 3.1
+            Added *prepare_threshold* parameter.
 
     .. automethod:: close
 

@@ -64,6 +64,7 @@ class AsyncConnection(BaseConnection[Row]):
         conninfo: str = "",
         *,
         autocommit: bool = False,
+        prepare_threshold: Optional[int] = 5,
         row_factory: AsyncRowFactory[Row],
         context: Optional[AdaptContext] = None,
         **kwargs: Union[None, int, str],
@@ -77,6 +78,7 @@ class AsyncConnection(BaseConnection[Row]):
         conninfo: str = "",
         *,
         autocommit: bool = False,
+        prepare_threshold: Optional[int] = 5,
         context: Optional[AdaptContext] = None,
         **kwargs: Union[None, int, str],
     ) -> "AsyncConnection[TupleRow]":
@@ -88,6 +90,7 @@ class AsyncConnection(BaseConnection[Row]):
         conninfo: str = "",
         *,
         autocommit: bool = False,
+        prepare_threshold: Optional[int] = 5,
         context: Optional[AdaptContext] = None,
         row_factory: Optional[AsyncRowFactory[Row]] = None,
         **kwargs: Any,
@@ -118,6 +121,7 @@ class AsyncConnection(BaseConnection[Row]):
             rv.row_factory = row_factory
         if context:
             rv._adapters = AdaptersMap(context.adapters)
+        rv.prepare_threshold = prepare_threshold
         return rv
 
     async def __aenter__(self) -> "AsyncConnection[Row]":

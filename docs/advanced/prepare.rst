@@ -33,6 +33,10 @@ Statement preparation can be controlled in several ways:
 - You can disable the use of prepared statements on a connection by setting
   its `~Connection.prepare_threshold` attribute to `!None`.
 
+.. versionchanged:: 3.1
+    You can set `!prepare_threshold` as a `~Connection.connect()` keyword
+    parameter too.
+
 .. seealso::
 
     The `PREPARE`__ PostgreSQL documentation contains plenty of details about
@@ -43,3 +47,11 @@ Statement preparation can be controlled in several ways:
     ones exposed by :pq:`PQsendPrepare`, :pq:`PQsendQueryPrepared`.
 
     .. __: https://www.postgresql.org/docs/current/sql-prepare.html
+
+.. warning::
+
+    Using external connection poolers, such as PgBouncer, is not compatible
+    with prepared statements, because the same client connection may change
+    the server session it refers to. If such middleware is used you should
+    disable connection pooling, by setting the `Connection.prepare_threshold`
+    attribute to `!None`.

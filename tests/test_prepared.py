@@ -7,6 +7,14 @@ from decimal import Decimal
 
 import pytest
 
+import psycopg
+
+
+@pytest.mark.parametrize("value", [None, 0, 3])
+def test_prepare_threshold_init(dsn, value):
+    with psycopg.connect(dsn, prepare_threshold=value) as conn:
+        assert conn.prepare_threshold == value
+
 
 def test_dont_prepare(conn):
     cur = conn.cursor()

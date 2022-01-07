@@ -622,6 +622,7 @@ class Connection(BaseConnection[Row]):
         *,
         autocommit: bool = False,
         row_factory: RowFactory[Row],
+        prepare_threshold: Optional[int] = 5,
         context: Optional[AdaptContext] = None,
         **kwargs: Union[None, int, str],
     ) -> "Connection[Row]":
@@ -634,6 +635,7 @@ class Connection(BaseConnection[Row]):
         conninfo: str = "",
         *,
         autocommit: bool = False,
+        prepare_threshold: Optional[int] = 5,
         context: Optional[AdaptContext] = None,
         **kwargs: Union[None, int, str],
     ) -> "Connection[TupleRow]":
@@ -645,6 +647,7 @@ class Connection(BaseConnection[Row]):
         conninfo: str = "",
         *,
         autocommit: bool = False,
+        prepare_threshold: Optional[int] = 5,
         row_factory: Optional[RowFactory[Row]] = None,
         context: Optional[AdaptContext] = None,
         **kwargs: Any,
@@ -667,6 +670,7 @@ class Connection(BaseConnection[Row]):
             rv.row_factory = row_factory
         if context:
             rv._adapters = AdaptersMap(context.adapters)
+        rv.prepare_threshold = prepare_threshold
         return rv
 
     def __enter__(self) -> "Connection[Row]":

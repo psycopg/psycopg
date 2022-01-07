@@ -7,7 +7,17 @@ from decimal import Decimal
 
 import pytest
 
+import psycopg
+
 pytestmark = pytest.mark.asyncio
+
+
+@pytest.mark.parametrize("value", [None, 0, 3])
+async def test_prepare_threshold_init(dsn, value):
+    async with await psycopg.AsyncConnection.connect(
+        dsn, prepare_threshold=value
+    ) as conn:
+        assert conn.prepare_threshold == value
 
 
 async def test_dont_prepare(aconn):
