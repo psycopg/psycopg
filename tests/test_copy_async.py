@@ -39,15 +39,14 @@ async def test_copy_out_read(aconn, format):
             got = await copy.read()
             assert got == row
             assert (
-                aconn.pgconn.transaction_status
-                == aconn.TransactionStatus.ACTIVE
+                aconn.info.transaction_status == aconn.TransactionStatus.ACTIVE
             )
 
         assert await copy.read() == b""
         assert await copy.read() == b""
 
     assert await copy.read() == b""
-    assert aconn.pgconn.transaction_status == aconn.TransactionStatus.INTRANS
+    assert aconn.info.transaction_status == aconn.TransactionStatus.INTRANS
 
 
 @pytest.mark.parametrize("format", Format)
@@ -63,7 +62,7 @@ async def test_copy_out_iter(aconn, format):
     ) as copy:
         assert await alist(copy) == want
 
-    assert aconn.pgconn.transaction_status == aconn.TransactionStatus.INTRANS
+    assert aconn.info.transaction_status == aconn.TransactionStatus.INTRANS
 
 
 @pytest.mark.parametrize("format", Format)
@@ -80,7 +79,7 @@ async def test_read_rows(aconn, format, typetype):
         assert (await copy.read_row()) is None
 
     assert row == (10, "hello", [0.0, 1.0])
-    assert aconn.pgconn.transaction_status == aconn.TransactionStatus.INTRANS
+    assert aconn.info.transaction_status == aconn.TransactionStatus.INTRANS
 
 
 @pytest.mark.parametrize("format", Format)
@@ -93,7 +92,7 @@ async def test_rows(aconn, format):
         rows = await alist(copy.rows())
 
     assert rows == sample_records
-    assert aconn.pgconn.transaction_status == aconn.TransactionStatus.INTRANS
+    assert aconn.info.transaction_status == aconn.TransactionStatus.INTRANS
 
 
 async def test_set_custom_type(aconn, hstore):
@@ -204,7 +203,7 @@ async def test_copy_in_buffers_pg_error(aconn):
         async with cur.copy("copy copy_in from stdin (format text)") as copy:
             await copy.write(sample_text)
             await copy.write(sample_text)
-    assert aconn.pgconn.transaction_status == aconn.TransactionStatus.INERROR
+    assert aconn.info.transaction_status == aconn.TransactionStatus.INERROR
 
 
 async def test_copy_bad_result(aconn):
@@ -251,7 +250,7 @@ async def test_copy_in_str_binary(aconn):
         async with cur.copy("copy copy_in from stdin (format binary)") as copy:
             await copy.write(sample_text.decode())
 
-    assert aconn.pgconn.transaction_status == aconn.TransactionStatus.INERROR
+    assert aconn.info.transaction_status == aconn.TransactionStatus.INERROR
 
 
 @pytest.mark.parametrize("format", Format)
@@ -261,7 +260,7 @@ async def test_copy_in_empty(aconn, format):
     async with cur.copy(f"copy copy_in from stdin (format {format.name})"):
         pass
 
-    assert aconn.pgconn.transaction_status == aconn.TransactionStatus.INTRANS
+    assert aconn.info.transaction_status == aconn.TransactionStatus.INTRANS
     assert cur.rowcount == 0
 
 
@@ -302,7 +301,7 @@ async def test_copy_in_error_empty(aconn, format):
             raise Exception("mannaggiamiseria")
 
     assert "mannaggiamiseria" in str(exc.value)
-    assert aconn.pgconn.transaction_status == aconn.TransactionStatus.INERROR
+    assert aconn.info.transaction_status == aconn.TransactionStatus.INERROR
 
 
 async def test_copy_in_buffers_with_pg_error(aconn):
@@ -313,7 +312,7 @@ async def test_copy_in_buffers_with_pg_error(aconn):
             await copy.write(sample_text)
             await copy.write(sample_text)
 
-    assert aconn.pgconn.transaction_status == aconn.TransactionStatus.INERROR
+    assert aconn.info.transaction_status == aconn.TransactionStatus.INERROR
 
 
 async def test_copy_in_buffers_with_py_error(aconn):
@@ -325,7 +324,7 @@ async def test_copy_in_buffers_with_py_error(aconn):
             raise Exception("nuttengoggenio")
 
     assert "nuttengoggenio" in str(exc.value)
-    assert aconn.pgconn.transaction_status == aconn.TransactionStatus.INERROR
+    assert aconn.info.transaction_status == aconn.TransactionStatus.INERROR
 
 
 @pytest.mark.parametrize("format", Format)
