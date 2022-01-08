@@ -75,6 +75,18 @@ class Transformer(AdaptContext):
         # the length of the result columns
         self._row_loaders: List[LoadFunc] = []
 
+    @classmethod
+    def from_context(cls, context: Optional[AdaptContext]) -> "Transformer":
+        """
+        Return a Transformer from an AdaptContext.
+
+        If the context is a Transformer instance, just return it.
+        """
+        if isinstance(context, Transformer):
+            return context
+        else:
+            return cls(context)
+
     @property
     def connection(self) -> Optional["BaseConnection[Any]"]:
         return self._conn

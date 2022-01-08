@@ -390,7 +390,7 @@ class Literal(Composable):
     """
 
     def as_bytes(self, context: Optional[AdaptContext]) -> bytes:
-        tx = Transformer(context)
+        tx = Transformer.from_context(context)
         dumper = tx.get_dumper(self._obj, PyFormat.TEXT)
         return dumper.quote(self._obj)
 

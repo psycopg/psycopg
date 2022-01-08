@@ -104,6 +104,18 @@ cdef class Transformer:
 
         self.types = self.formats = None
 
+    @classmethod
+    def from_context(cls, context: Optional["AdaptContext"]):
+        """
+        Return a Transformer from an AdaptContext.
+
+        If the context is a Transformer instance, just return it.
+        """
+        if isinstance(context, Transformer):
+            return context
+        else:
+            return cls(context)
+
     @property
     def pgresult(self) -> Optional[PGresult]:
         return self._pgresult

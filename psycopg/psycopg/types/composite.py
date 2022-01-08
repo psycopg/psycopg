@@ -13,7 +13,7 @@ from typing import Sequence, Tuple, Type
 from .. import pq
 from .. import postgres
 from ..abc import AdaptContext, Buffer
-from ..adapt import PyFormat, RecursiveDumper, RecursiveLoader
+from ..adapt import Transformer, PyFormat, RecursiveDumper, Loader
 from .._struct import pack_len, unpack_len
 from ..postgres import TEXT_OID
 from .._typeinfo import CompositeInfo as CompositeInfo  # exported here
@@ -94,7 +94,11 @@ class TupleBinaryDumper(RecursiveDumper):
         return out
 
 
-class BaseCompositeLoader(RecursiveLoader):
+class BaseCompositeLoader(Loader):
+    def __init__(self, oid: int, context: Optional[AdaptContext] = None):
+        super().__init__(oid, context)
+        self._tx = Transformer(context)
+
     def _parse_record(self, data: bytes) -> Iterator[Optional[bytes]]:
         """
         Split a non-empty representation of a composite type into components.
@@ -138,10 +142,13 @@ class RecordLoader(BaseCompositeLoader):
         )
 
 
-class RecordBinaryLoader(RecursiveLoader):
-
+class RecordBinaryLoader(Loader):
     format = pq.Format.BINARY
     _types_set = False
+
+    def __init__(self, oid: int, context: Optional[AdaptContext] = None):
+        super().__init__(oid, context)
+        self._tx = Transformer(context)
 
     def load(self, data: Buffer) -> Tuple[Any, ...]:
         if not self._types_set:

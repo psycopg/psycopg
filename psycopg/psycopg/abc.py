@@ -196,6 +196,10 @@ class Transformer(Protocol):
     def __init__(self, context: Optional[AdaptContext] = None):
         ...
 
+    @classmethod
+    def from_context(cls, context: Optional[AdaptContext]) -> "Transformer":
+        ...
+
     @property
     def connection(self) -> Optional["BaseConnection[Any]"]:
         ...
