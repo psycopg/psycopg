@@ -54,13 +54,13 @@ def test_sched_thread():
 
     t.join()
     t1 = time()
-    assert t1 - t0 == pytest.approx(0.3, 0.1)
+    assert t1 - t0 == pytest.approx(0.3, 0.2)
 
     assert len(results) == 2
     assert results[0][0] == 1
-    assert results[0][1] - t0 == pytest.approx(0.1, 0.1)
+    assert results[0][1] - t0 == pytest.approx(0.1, 0.2)
     assert results[1][0] == 2
-    assert results[1][1] - t0 == pytest.approx(0.2, 0.1)
+    assert results[1][1] - t0 == pytest.approx(0.2, 0.2)
 
 
 @pytest.mark.slow
@@ -122,7 +122,7 @@ def test_empty_queue_timeout():
     t.join()
     times.append(time() - t0)
     for got, want in zip(times, [0.2, 0.4, 0.5, 1.0]):
-        assert got == pytest.approx(want, 0.1)
+        assert got == pytest.approx(want, 0.2), times
 
 
 @pytest.mark.slow
@@ -151,4 +151,4 @@ def test_first_task_rescheduling():
     t.join()
     times.append(time() - t0)
     for got, want in zip(times, [0.1, 0.2, 0.4, 0.6, 0.6]):
-        assert got == pytest.approx(want, 0.1)
+        assert got == pytest.approx(want, 0.2), times
