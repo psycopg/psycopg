@@ -79,7 +79,7 @@ def test_its_really_a_pool(dsn):
                     (pid2,) = cur.fetchone()  # type: ignore[misc]
 
         with p.connection() as conn:
-            assert conn.pgconn.backend_pid in (pid1, pid2)
+            assert conn.info.backend_pid in (pid1, pid2)
 
 
 def test_context(dsn):
@@ -92,11 +92,11 @@ def test_connection_not_lost(dsn):
     with pool.ConnectionPool(dsn, min_size=1) as p:
         with pytest.raises(ZeroDivisionError):
             with p.connection() as conn:
-                pid = conn.pgconn.backend_pid
+                pid = conn.info.backend_pid
                 1 / 0
 
         with p.connection() as conn2:
-            assert conn2.pgconn.backend_pid == pid
+            assert conn2.info.backend_pid == pid
 
 
 @pytest.mark.slow
@@ -262,11 +262,11 @@ def test_reset_badstate(dsn, caplog):
     with pool.ConnectionPool(dsn, min_size=1, reset=reset) as p:
         with p.connection() as conn:
             conn.execute("select 1")
-            pid1 = conn.pgconn.backend_pid
+            pid1 = conn.info.backend_pid
 
         with p.connection() as conn:
             conn.execute("select 1")
-            pid2 = conn.pgconn.backend_pid
+            pid2 = conn.info.backend_pid
 
     assert pid1 != pid2
     assert caplog.records
@@ -283,11 +283,11 @@ def test_reset_broken(dsn, caplog):
     with pool.ConnectionPool(dsn, min_size=1, reset=reset) as p:
         with p.connection() as conn:
             conn.execute("select 1")
-            pid1 = conn.pgconn.backend_pid
+            pid1 = conn.info.backend_pid
 
         with p.connection() as conn:
             conn.execute("select 1")
-            pid2 = conn.pgconn.backend_pid
+            pid2 = conn.info.backend_pid
 
     assert pid1 != pid2
     assert caplog.records
@@ -480,14 +480,14 @@ def test_intrans_rollback(dsn, caplog):
 
     with pool.ConnectionPool(dsn, min_size=1) as p:
         conn = p.getconn()
-        pid = conn.pgconn.backend_pid
+        pid = conn.info.backend_pid
         conn.execute("create table test_intrans_rollback ()")
-        assert conn.pgconn.transaction_status == TransactionStatus.INTRANS
+        assert conn.info.transaction_status == TransactionStatus.INTRANS
         p.putconn(conn)
 
         with p.connection() as conn2:
-            assert conn2.pgconn.backend_pid == pid
-            assert conn2.pgconn.transaction_status == TransactionStatus.IDLE
+            assert conn2.info.backend_pid == pid
+            assert conn2.info.transaction_status == TransactionStatus.IDLE
             assert not conn2.execute(
                 "select 1 from pg_class where relname = 'test_intrans_rollback'"
             ).fetchone()
@@ -501,15 +501,15 @@ def test_inerror_rollback(dsn, caplog):
 
     with pool.ConnectionPool(dsn, min_size=1) as p:
         conn = p.getconn()
-        pid = conn.pgconn.backend_pid
+        pid = conn.info.backend_pid
         with pytest.raises(psycopg.ProgrammingError):
             conn.execute("wat")
-        assert conn.pgconn.transaction_status == TransactionStatus.INERROR
+        assert conn.info.transaction_status == TransactionStatus.INERROR
         p.putconn(conn)
 
         with p.connection() as conn2:
-            assert conn2.pgconn.backend_pid == pid
-            assert conn2.pgconn.transaction_status == TransactionStatus.IDLE
+            assert conn2.info.backend_pid == pid
+            assert conn2.info.transaction_status == TransactionStatus.IDLE
 
     assert len(caplog.records) == 1
     assert "INERROR" in caplog.records[0].message
@@ -520,16 +520,16 @@ def test_active_close(dsn, caplog):
 
     with pool.ConnectionPool(dsn, min_size=1) as p:
         conn = p.getconn()
-        pid = conn.pgconn.backend_pid
-        cur = conn.cursor()
-        with cur.copy("copy (select * from generate_series(1, 10)) to stdout"):
-            pass
-        assert conn.pgconn.transaction_status == TransactionStatus.ACTIVE
+        pid = conn.info.backend_pid
+        conn.pgconn.exec_(
+            b"copy (select * from generate_series(1, 10)) to stdout"
+        )
+        assert conn.info.transaction_status == TransactionStatus.ACTIVE
         p.putconn(conn)
 
         with p.connection() as conn2:
-            assert conn2.pgconn.backend_pid != pid
-            assert conn2.pgconn.transaction_status == TransactionStatus.IDLE
+            assert conn2.info.backend_pid != pid
+            assert conn2.info.transaction_status == TransactionStatus.IDLE
 
     assert len(caplog.records) == 2
     assert "ACTIVE" in caplog.records[0].message
@@ -550,15 +550,15 @@ def test_fail_rollback_close(dsn, caplog, monkeypatch):
         orig_rollback = conn.rollback
         monkeypatch.setattr(conn, "rollback", bad_rollback)
 
-        pid = conn.pgconn.backend_pid
+        pid = conn.info.backend_pid
         with pytest.raises(psycopg.ProgrammingError):
             conn.execute("wat")
-        assert conn.pgconn.transaction_status == TransactionStatus.INERROR
+        assert conn.info.transaction_status == TransactionStatus.INERROR
         p.putconn(conn)
 
         with p.connection() as conn2:
-            assert conn2.pgconn.backend_pid != pid
-            assert conn2.pgconn.transaction_status == TransactionStatus.IDLE
+            assert conn2.info.backend_pid != pid
+            assert conn2.info.transaction_status == TransactionStatus.IDLE
 
     assert len(caplog.records) == 3
     assert "INERROR" in caplog.records[0].message
@@ -678,8 +678,7 @@ def test_closed_queue(dsn):
     t2 = Thread(target=w2)
     t2.start()
     # Wait until w2 is in the queue
-    while not p._waiting:
-        sleep(0)
+    ensure_waiting(p)
 
     p.close(0)
 
@@ -1020,7 +1019,7 @@ def test_max_lifetime(dsn):
         pids = []
         for i in range(5):
             with p.connection() as conn:
-                pids.append(conn.pgconn.backend_pid)
+                pids.append(conn.info.backend_pid)
             sleep(0.2)
 
     assert pids[0] == pids[1] != pids[4], pids
@@ -1031,10 +1030,10 @@ def test_check(dsn, caplog):
     with pool.ConnectionPool(dsn, min_size=4) as p:
         p.wait(1.0)
         with p.connection() as conn:
-            pid = conn.pgconn.backend_pid
+            pid = conn.info.backend_pid
 
         p.wait(1.0)
-        pids = set(conn.pgconn.backend_pid for conn in p._pool)
+        pids = set(conn.info.backend_pid for conn in p._pool)
         assert pid in pids
         conn.close()
 
@@ -1042,7 +1041,7 @@ def test_check(dsn, caplog):
         p.check()
         assert len(caplog.records) == 1
         p.wait(1.0)
-        pids2 = set(conn.pgconn.backend_pid for conn in p._pool)
+        pids2 = set(conn.info.backend_pid for conn in p._pool)
         assert len(pids & pids2) == 3
         assert pid not in pids2
 
@@ -1197,3 +1196,11 @@ def delay_connection(monkeypatch, sec):
 
     connect_orig = psycopg.Connection.connect
     monkeypatch.setattr(psycopg.Connection, "connect", connect_delay)
+
+
+def ensure_waiting(p, num=1):
+    """
+    Wait until there are at least *num* clients waiting in the queue.
+    """
+    while len(p._waiting) < num:
+        sleep(0)

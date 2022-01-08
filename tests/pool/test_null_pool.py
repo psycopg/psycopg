@@ -9,7 +9,7 @@ from packaging.version import parse as ver  # noqa: F401  # used in skipif
 import psycopg
 from psycopg.pq import TransactionStatus
 
-from .test_pool import delay_connection
+from .test_pool import delay_connection, ensure_waiting
 
 try:
     from psycopg_pool import NullConnectionPool
@@ -67,7 +67,7 @@ def test_its_no_pool_at_all(dsn):
                     (pid2,) = cur.fetchone()  # type: ignore[misc]
 
         with p.connection() as conn:
-            assert conn.pgconn.backend_pid not in (pid1, pid2)
+            assert conn.info.backend_pid not in (pid1, pid2)
 
 
 def test_context(dsn):
@@ -189,7 +189,7 @@ def test_reset(dsn):
             assert resets == 1
             with conn.execute("show timezone") as cur:
                 assert cur.fetchone() == ("UTC",)
-            pids.append(conn.pgconn.backend_pid)
+            pids.append(conn.info.backend_pid)
 
     with NullConnectionPool(dsn, max_size=1, reset=reset) as p:
         with p.connection() as conn:
@@ -198,10 +198,11 @@ def test_reset(dsn):
             # instead of making a new one.
             t = Thread(target=worker)
             t.start()
+            ensure_waiting(p)
 
             assert resets == 0
             conn.execute("set timezone to '+2:00'")
-            pids.append(conn.pgconn.backend_pid)
+            pids.append(conn.info.backend_pid)
 
         t.join()
         p.wait()
@@ -221,16 +222,17 @@ def test_reset_badstate(dsn, caplog):
     def worker():
         with p.connection() as conn:
             conn.execute("select 1")
-            pids.append(conn.pgconn.backend_pid)
+            pids.append(conn.info.backend_pid)
 
     with NullConnectionPool(dsn, max_size=1, reset=reset) as p:
         with p.connection() as conn:
 
             t = Thread(target=worker)
             t.start()
+            ensure_waiting(p)
 
             conn.execute("select 1")
-            pids.append(conn.pgconn.backend_pid)
+            pids.append(conn.info.backend_pid)
 
         t.join()
 
@@ -251,16 +253,17 @@ def test_reset_broken(dsn, caplog):
     def worker():
         with p.connection() as conn:
             conn.execute("select 1")
-            pids.append(conn.pgconn.backend_pid)
+            pids.append(conn.info.backend_pid)
 
     with NullConnectionPool(dsn, max_size=1, reset=reset) as p:
         with p.connection() as conn:
 
             t = Thread(target=worker)
             t.start()
+            ensure_waiting(p)
 
             conn.execute("select 1")
-            pids.append(conn.pgconn.backend_pid)
+            pids.append(conn.info.backend_pid)
 
         t.join()
 
@@ -466,8 +469,8 @@ def test_intrans_rollback(dsn, caplog):
 
     def worker():
         with p.connection() as conn:
-            pids.append(conn.pgconn.backend_pid)
-            assert conn.pgconn.transaction_status == TransactionStatus.IDLE
+            pids.append(conn.info.backend_pid)
+            assert conn.info.transaction_status == TransactionStatus.IDLE
             assert not conn.execute(
                 "select 1 from pg_class where relname = 'test_intrans_rollback'"
             ).fetchone()
@@ -479,10 +482,11 @@ def test_intrans_rollback(dsn, caplog):
         # of making a new one.
         t = Thread(target=worker)
         t.start()
+        ensure_waiting(p)
 
-        pids.append(conn.pgconn.backend_pid)
+        pids.append(conn.info.backend_pid)
         conn.execute("create table test_intrans_rollback ()")
-        assert conn.pgconn.transaction_status == TransactionStatus.INTRANS
+        assert conn.info.transaction_status == TransactionStatus.INTRANS
         p.putconn(conn)
         t.join()
 
@@ -497,8 +501,8 @@ def test_inerror_rollback(dsn, caplog):
 
     def worker():
         with p.connection() as conn:
-            pids.append(conn.pgconn.backend_pid)
-            assert conn.pgconn.transaction_status == TransactionStatus.IDLE
+            pids.append(conn.info.backend_pid)
+            assert conn.info.transaction_status == TransactionStatus.IDLE
 
     with NullConnectionPool(dsn, max_size=1) as p:
         conn = p.getconn()
@@ -507,11 +511,12 @@ def test_inerror_rollback(dsn, caplog):
         # of making a new one.
         t = Thread(target=worker)
         t.start()
+        ensure_waiting(p)
 
-        pids.append(conn.pgconn.backend_pid)
+        pids.append(conn.info.backend_pid)
         with pytest.raises(psycopg.ProgrammingError):
             conn.execute("wat")
-        assert conn.pgconn.transaction_status == TransactionStatus.INERROR
+        assert conn.info.transaction_status == TransactionStatus.INERROR
         p.putconn(conn)
         t.join()
 
@@ -526,20 +531,21 @@ def test_active_close(dsn, caplog):
 
     def worker():
         with p.connection() as conn:
-            pids.append(conn.pgconn.backend_pid)
-            assert conn.pgconn.transaction_status == TransactionStatus.IDLE
+            pids.append(conn.info.backend_pid)
+            assert conn.info.transaction_status == TransactionStatus.IDLE
 
     with NullConnectionPool(dsn, max_size=1) as p:
         conn = p.getconn()
 
         t = Thread(target=worker)
         t.start()
+        ensure_waiting(p)
 
-        pids.append(conn.pgconn.backend_pid)
-        cur = conn.cursor()
-        with cur.copy("copy (select * from generate_series(1, 10)) to stdout"):
-            pass
-        assert conn.pgconn.transaction_status == TransactionStatus.ACTIVE
+        pids.append(conn.info.backend_pid)
+        conn.pgconn.exec_(
+            b"copy (select * from generate_series(1, 10)) to stdout"
+        )
+        assert conn.info.transaction_status == TransactionStatus.ACTIVE
         p.putconn(conn)
         t.join()
 
@@ -555,8 +561,8 @@ def test_fail_rollback_close(dsn, caplog, monkeypatch):
 
     def worker(p):
         with p.connection() as conn:
-            pids.append(conn.pgconn.backend_pid)
-            assert conn.pgconn.transaction_status == TransactionStatus.IDLE
+            pids.append(conn.info.backend_pid)
+            assert conn.info.transaction_status == TransactionStatus.IDLE
 
     with NullConnectionPool(dsn, max_size=1) as p:
         conn = p.getconn()
@@ -571,11 +577,12 @@ def test_fail_rollback_close(dsn, caplog, monkeypatch):
 
         t = Thread(target=worker, args=(p,))
         t.start()
+        ensure_waiting(p)
 
-        pids.append(conn.pgconn.backend_pid)
+        pids.append(conn.info.backend_pid)
         with pytest.raises(psycopg.ProgrammingError):
             conn.execute("wat")
-        assert conn.pgconn.transaction_status == TransactionStatus.INERROR
+        assert conn.info.transaction_status == TransactionStatus.INERROR
         p.putconn(conn)
         t.join()
 
@@ -686,8 +693,7 @@ def test_closed_queue(dsn):
     t2 = Thread(target=w2)
     t2.start()
     # Wait until w2 is in the queue
-    while not p._waiting:
-        sleep(0)
+    ensure_waiting(p)
 
     p.close(0)
 
@@ -780,7 +786,7 @@ def test_max_lifetime(dsn):
 
     def worker(p):
         with p.connection() as conn:
-            pids.append(conn.pgconn.backend_pid)
+            pids.append(conn.info.backend_pid)
             sleep(0.1)
 
     ts = []

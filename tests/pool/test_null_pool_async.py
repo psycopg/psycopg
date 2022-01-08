@@ -10,7 +10,7 @@ from packaging.version import parse as ver  # noqa: F401  # used in skipif
 import psycopg
 from psycopg.pq import TransactionStatus
 from psycopg._compat import create_task
-from .test_pool_async import delay_connection
+from .test_pool_async import delay_connection, ensure_waiting
 
 pytestmark = [
     pytest.mark.asyncio,
@@ -76,7 +76,7 @@ async def test_its_no_pool_at_all(dsn):
                 (pid2,) = await cur.fetchone()  # type: ignore[misc]
 
         async with p.connection() as conn:
-            assert conn.pgconn.backend_pid not in (pid1, pid2)
+            assert conn.info.backend_pid not in (pid1, pid2)
 
 
 async def test_context(dsn):
@@ -200,7 +200,7 @@ async def test_reset(dsn):
             assert resets == 1
             cur = await conn.execute("show timezone")
             assert (await cur.fetchone()) == ("UTC",)
-            pids.append(conn.pgconn.backend_pid)
+            pids.append(conn.info.backend_pid)
 
     async with AsyncNullConnectionPool(dsn, max_size=1, reset=reset) as p:
         async with p.connection() as conn:
@@ -208,10 +208,11 @@ async def test_reset(dsn):
             # Queue the worker so it will take the same connection a second time
             # instead of making a new one.
             t = create_task(worker())
+            await ensure_waiting(p)
 
             assert resets == 0
             await conn.execute("set timezone to '+2:00'")
-            pids.append(conn.pgconn.backend_pid)
+            pids.append(conn.info.backend_pid)
 
         await asyncio.gather(t)
         await p.wait()
@@ -231,15 +232,16 @@ async def test_reset_badstate(dsn, caplog):
     async def worker():
         async with p.connection() as conn:
             await conn.execute("select 1")
-            pids.append(conn.pgconn.backend_pid)
+            pids.append(conn.info.backend_pid)
 
     async with AsyncNullConnectionPool(dsn, max_size=1, reset=reset) as p:
         async with p.connection() as conn:
 
             t = create_task(worker())
+            await ensure_waiting(p)
 
             await conn.execute("select 1")
-            pids.append(conn.pgconn.backend_pid)
+            pids.append(conn.info.backend_pid)
 
         await asyncio.gather(t)
 
@@ -260,15 +262,16 @@ async def test_reset_broken(dsn, caplog):
     async def worker():
         async with p.connection() as conn:
             await conn.execute("select 1")
-            pids.append(conn.pgconn.backend_pid)
+            pids.append(conn.info.backend_pid)
 
     async with AsyncNullConnectionPool(dsn, max_size=1, reset=reset) as p:
         async with p.connection() as conn:
 
             t = create_task(worker())
+            await ensure_waiting(p)
 
             await conn.execute("select 1")
-            pids.append(conn.pgconn.backend_pid)
+            pids.append(conn.info.backend_pid)
 
         await asyncio.gather(t)
 
@@ -465,8 +468,8 @@ async def test_intrans_rollback(dsn, caplog):
 
     async def worker():
         async with p.connection() as conn:
-            pids.append(conn.pgconn.backend_pid)
-            assert conn.pgconn.transaction_status == TransactionStatus.IDLE
+            pids.append(conn.info.backend_pid)
+            assert conn.info.transaction_status == TransactionStatus.IDLE
             cur = await conn.execute(
                 "select 1 from pg_class where relname = 'test_intrans_rollback'"
             )
@@ -478,10 +481,11 @@ async def test_intrans_rollback(dsn, caplog):
         # Queue the worker so it will take the connection a second time instead
         # of making a new one.
         t = create_task(worker())
+        await ensure_waiting(p)
 
-        pids.append(conn.pgconn.backend_pid)
+        pids.append(conn.info.backend_pid)
         await conn.execute("create table test_intrans_rollback ()")
-        assert conn.pgconn.transaction_status == TransactionStatus.INTRANS
+        assert conn.info.transaction_status == TransactionStatus.INTRANS
         await p.putconn(conn)
         await asyncio.gather(t)
 
@@ -496,18 +500,19 @@ async def test_inerror_rollback(dsn, caplog):
 
     async def worker():
         async with p.connection() as conn:
-            pids.append(conn.pgconn.backend_pid)
-            assert conn.pgconn.transaction_status == TransactionStatus.IDLE
+            pids.append(conn.info.backend_pid)
+            assert conn.info.transaction_status == TransactionStatus.IDLE
 
     async with AsyncNullConnectionPool(dsn, max_size=1) as p:
         conn = await p.getconn()
 
         t = create_task(worker())
+        await ensure_waiting(p)
 
-        pids.append(conn.pgconn.backend_pid)
+        pids.append(conn.info.backend_pid)
         with pytest.raises(psycopg.ProgrammingError):
             await conn.execute("wat")
-        assert conn.pgconn.transaction_status == TransactionStatus.INERROR
+        assert conn.info.transaction_status == TransactionStatus.INERROR
         await p.putconn(conn)
         await asyncio.gather(t)
 
@@ -522,21 +527,20 @@ async def test_active_close(dsn, caplog):
 
     async def worker():
         async with p.connection() as conn:
-            pids.append(conn.pgconn.backend_pid)
-            assert conn.pgconn.transaction_status == TransactionStatus.IDLE
+            pids.append(conn.info.backend_pid)
+            assert conn.info.transaction_status == TransactionStatus.IDLE
 
     async with AsyncNullConnectionPool(dsn, max_size=1) as p:
         conn = await p.getconn()
 
         t = create_task(worker())
+        await ensure_waiting(p)
 
-        pids.append(conn.pgconn.backend_pid)
-        cur = conn.cursor()
-        async with cur.copy(
-            "copy (select * from generate_series(1, 10)) to stdout"
-        ):
-            pass
-        assert conn.pgconn.transaction_status == TransactionStatus.ACTIVE
+        pids.append(conn.info.backend_pid)
+        conn.pgconn.exec_(
+            b"copy (select * from generate_series(1, 10)) to stdout"
+        )
+        assert conn.info.transaction_status == TransactionStatus.ACTIVE
         await p.putconn(conn)
         await asyncio.gather(t)
 
@@ -552,12 +556,13 @@ async def test_fail_rollback_close(dsn, caplog, monkeypatch):
 
     async def worker():
         async with p.connection() as conn:
-            pids.append(conn.pgconn.backend_pid)
-            assert conn.pgconn.transaction_status == TransactionStatus.IDLE
+            pids.append(conn.info.backend_pid)
+            assert conn.info.transaction_status == TransactionStatus.IDLE
 
     async with AsyncNullConnectionPool(dsn, max_size=1) as p:
         conn = await p.getconn()
         t = create_task(worker())
+        await ensure_waiting(p)
 
         async def bad_rollback():
             conn.pgconn.finish()
@@ -567,10 +572,10 @@ async def test_fail_rollback_close(dsn, caplog, monkeypatch):
         orig_rollback = conn.rollback
         monkeypatch.setattr(conn, "rollback", bad_rollback)
 
-        pids.append(conn.pgconn.backend_pid)
+        pids.append(conn.info.backend_pid)
         with pytest.raises(psycopg.ProgrammingError):
             await conn.execute("wat")
-        assert conn.pgconn.transaction_status == TransactionStatus.INERROR
+        assert conn.info.transaction_status == TransactionStatus.INERROR
         await p.putconn(conn)
         await asyncio.gather(t)
 
@@ -668,9 +673,7 @@ async def test_closed_queue(dsn):
 
     t2 = create_task(w2())
     # Wait until w2 is in the queue
-    while not p._waiting:
-        await asyncio.sleep(0)
-
+    await ensure_waiting(p)
     await p.close()
 
     # Wait for the workers to finish
@@ -760,7 +763,7 @@ async def test_max_lifetime(dsn):
 
     async def worker():
         async with p.connection() as conn:
-            pids.append(conn.pgconn.backend_pid)
+            pids.append(conn.info.backend_pid)
             await asyncio.sleep(0.1)
 
     async with AsyncNullConnectionPool(dsn, max_size=1, max_lifetime=0.2) as p:
