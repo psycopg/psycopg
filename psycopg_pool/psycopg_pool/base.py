@@ -8,10 +8,10 @@ from time import monotonic
 from random import random
 from typing import Any, Callable, Dict, Generic, Optional, Tuple
 
-from psycopg.abc import ConnectionType
 from psycopg import errors as e
-from .errors import PoolClosed
+from psycopg.abc import ConnectionType
 
+from .errors import PoolClosed
 from ._compat import Counter, Deque
 
 

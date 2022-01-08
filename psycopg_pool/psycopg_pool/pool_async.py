@@ -15,8 +15,8 @@ from weakref import ref
 from contextlib import asynccontextmanager
 
 from psycopg import errors as e
+from psycopg import AsyncConnection
 from psycopg.pq import TransactionStatus
-from psycopg.connection_async import AsyncConnection
 
 from .base import ConnectionAttempt, BasePool
 from .sched import AsyncScheduler
@@ -109,40 +109,20 @@ class AsyncConnectionPool(BasePool[AsyncConnection[Any]]):
         # or if the client needs to wait.
         async with self._lock:
             self._check_open_getconn()
-
-            pos: Optional[AsyncClient] = None
-            if self._pool:
-                # Take a connection ready out of the pool
-                conn = self._pool.popleft()
-                if len(self._pool) < self._nconns_min:
-                    self._nconns_min = len(self._pool)
-            else:
-                if self.max_waiting and len(self._waiting) >= self.max_waiting:
-                    self._stats[self._REQUESTS_ERRORS] += 1
-                    raise TooManyRequests(
-                        f"the pool {self.name!r} has aleady"
-                        f" {len(self._waiting)} requests waiting"
-                    )
-
+            conn = await self._get_ready_connection(timeout)
+            if not conn:
                 # No connection available: put the client in the waiting queue
                 t0 = monotonic()
                 pos = AsyncClient()
                 self._waiting.append(pos)
                 self._stats[self._REQUESTS_QUEUED] += 1
 
-                # Allow only one task at time to grow the pool (or returning
-                # connections might be starved).
-                if self._nconns < self._max_size and not self._growing:
-                    self._nconns += 1
-                    logger.info(
-                        "growing pool %r to %s", self.name, self._nconns
-                    )
-                    self._growing = True
-                    self.run_task(AddConnection(self, growing=True))
+                # If there is space for the pool to grow, let's do it
+                self._maybe_grow_pool()
 
         # If we are in the waiting queue, wait to be assigned a connection
         # (outside the critical section, so only the waiting client is locked)
-        if pos:
+        if not conn:
             if timeout is None:
                 timeout = self.timeout
             try:
@@ -161,16 +141,37 @@ class AsyncConnectionPool(BasePool[AsyncConnection[Any]]):
         logger.info("connection given by %r", self.name)
         return conn
 
+    async def _get_ready_connection(
+        self, timeout: Optional[float]
+    ) -> Optional[AsyncConnection[Any]]:
+        conn: Optional[AsyncConnection[Any]] = None
+        if self._pool:
+            # Take a connection ready out of the pool
+            conn = self._pool.popleft()
+            if len(self._pool) < self._nconns_min:
+                self._nconns_min = len(self._pool)
+        elif self.max_waiting and len(self._waiting) >= self.max_waiting:
+            self._stats[self._REQUESTS_ERRORS] += 1
+            raise TooManyRequests(
+                f"the pool {self.name!r} has aleady"
+                f" {len(self._waiting)} requests waiting"
+            )
+        return conn
+
+    def _maybe_grow_pool(self) -> None:
+        # Allow only one task at time to grow the pool (or returning
+        # connections might be starved).
+        if self._nconns < self._max_size and not self._growing:
+            self._nconns += 1
+            logger.info("growing pool %r to %s", self.name, self._nconns)
+            self._growing = True
+            self.run_task(AddConnection(self, growing=True))
+
     async def putconn(self, conn: AsyncConnection[Any]) -> None:
         self._check_pool_putconn(conn)
 
         logger.info("returning connection to %r", self.name)
-
-        # If the pool is closed just close the connection instead of returning
-        # it to the pool. For extra refcare remove the pool reference from it.
-        if self._closed:
-            conn._pool = None
-            await conn.close()
+        if await self._maybe_close_connection(conn):
             return
 
         # Use a worker to perform eventual maintenance work in a separate task
@@ -178,6 +179,18 @@ class AsyncConnectionPool(BasePool[AsyncConnection[Any]]):
             self.run_task(ReturnConnection(self, conn))
         else:
             await self._return_connection(conn)
+
+    async def _maybe_close_connection(
+        self, conn: AsyncConnection[Any]
+    ) -> bool:
+        # If the pool is closed just close the connection instead of returning
+        # it to the pool. For extra refcare remove the pool reference from it.
+        if not self._closed:
+            return False
+
+        conn._pool = None
+        await conn.close()
+        return True
 
     async def open(self, wait: bool = False, timeout: float = 30.0) -> None:
         async with self._lock:

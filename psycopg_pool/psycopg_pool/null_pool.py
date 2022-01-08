@@ -6,14 +6,12 @@ Psycopg null connection pools
 
 import logging
 import threading
-from time import monotonic
 from typing import Any, Optional, Tuple
 
 from psycopg import Connection
 from psycopg.pq import TransactionStatus
 
-from .pool import ConnectionPool, WaitingClient
-from .pool import AddConnection, ReturnConnection
+from .pool import ConnectionPool, AddConnection
 from .errors import PoolTimeout, TooManyRequests
 from ._compat import ConnectionTimeout
 
@@ -45,6 +43,10 @@ class _BaseNullConnectionPool:
         # Null pools don't have background tasks to fill connections
         # or to grow/shrink.
         return
+
+    def _maybe_grow_pool(self) -> None:
+        # null pools don't grow
+        pass
 
 
 class NullConnectionPool(_BaseNullConnectionPool, ConnectionPool):
@@ -79,79 +81,37 @@ class NullConnectionPool(_BaseNullConnectionPool, ConnectionPool):
 
         logger.info("pool %r is ready to use", self.name)
 
-    def getconn(self, timeout: Optional[float] = None) -> Connection[Any]:
-        logger.info("connection requested from %r", self.name)
-        self._stats[self._REQUESTS_NUM] += 1
-
-        # Critical section: decide here if there's a connection ready
-        # or if the client needs to wait.
-        with self._lock:
-            self._check_open_getconn()
-
-            pos: Optional[WaitingClient] = None
-            if self.max_size == 0 or self._nconns < self.max_size:
-                # Create a new connection for the client
-                try:
-                    conn = self._connect(timeout=timeout)
-                except ConnectionTimeout as ex:
-                    raise PoolTimeout(str(ex)) from None
-                self._nconns += 1
-            else:
-                if self.max_waiting and len(self._waiting) >= self.max_waiting:
-                    self._stats[self._REQUESTS_ERRORS] += 1
-                    raise TooManyRequests(
-                        f"the pool {self.name!r} has aleady"
-                        f" {len(self._waiting)} requests waiting"
-                    )
-
-                # No connection available: put the client in the waiting queue
-                t0 = monotonic()
-                pos = WaitingClient()
-                self._waiting.append(pos)
-                self._stats[self._REQUESTS_QUEUED] += 1
-
-        # If we are in the waiting queue, wait to be assigned a connection
-        # (outside the critical section, so only the waiting client is locked)
-        if pos:
-            if timeout is None:
-                timeout = self.timeout
+    def _get_ready_connection(
+        self, timeout: Optional[float]
+    ) -> Optional[Connection[Any]]:
+        conn: Optional[Connection[Any]] = None
+        if self.max_size == 0 or self._nconns < self.max_size:
+            # Create a new connection for the client
             try:
-                conn = pos.wait(timeout=timeout)
-            except Exception:
-                self._stats[self._REQUESTS_ERRORS] += 1
-                raise
-            finally:
-                t1 = monotonic()
-                self._stats[self._REQUESTS_WAIT_MS] += int(1000.0 * (t1 - t0))
+                conn = self._connect(timeout=timeout)
+            except ConnectionTimeout as ex:
+                raise PoolTimeout(str(ex)) from None
+            self._nconns += 1
 
-        # Tell the connection it belongs to a pool to avoid closing on __exit__
-        conn._pool = self
-        logger.info("connection given by %r", self.name)
+        elif self.max_waiting and len(self._waiting) >= self.max_waiting:
+            self._stats[self._REQUESTS_ERRORS] += 1
+            raise TooManyRequests(
+                f"the pool {self.name!r} has aleady"
+                f" {len(self._waiting)} requests waiting"
+            )
         return conn
 
-    def putconn(self, conn: Connection[Any]) -> None:
-        # Quick check to discard the wrong connection
-        self._check_pool_putconn(conn)
-
-        logger.info("returning connection to %r", self.name)
-
-        # Close the connection if no client is waiting for it, or if the pool
-        # is closed. For extra refcare remove the pool reference from it.
-        # Maintain the stats.
+    def _maybe_close_connection(self, conn: Connection[Any]) -> bool:
         with self._lock:
-            if self._closed or not self._waiting:
-                conn._pool = None
-                if conn.pgconn.transaction_status == TransactionStatus.UNKNOWN:
-                    self._stats[self._RETURNS_BAD] += 1
-                conn.close()
-                self._nconns -= 1
-                return
+            if not self._closed and self._waiting:
+                return False
 
-        # Use a worker to perform eventual maintenance work in a separate thread
-        if self._reset:
-            self.run_task(ReturnConnection(self, conn))
-        else:
-            self._return_connection(conn)
+            conn._pool = None
+            if conn.pgconn.transaction_status == TransactionStatus.UNKNOWN:
+                self._stats[self._RETURNS_BAD] += 1
+            conn.close()
+            self._nconns -= 1
+            return True
 
     def resize(self, min_size: int, max_size: Optional[int] = None) -> None:
         """Change the size of the pool during runtime.
