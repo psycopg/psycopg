@@ -2,7 +2,7 @@
 psycopg server-side cursor objects.
 """
 
-# Copyright (C) 2020-2021 The Psycopg Team
+# Copyright (C) 2020 The Psycopg Team
 
 from typing import Any, AsyncIterator, Generic, List, Iterable, Iterator
 from typing import Optional, TypeVar, TYPE_CHECKING

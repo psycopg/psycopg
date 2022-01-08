@@ -2,7 +2,7 @@
 Adapters for textual types.
 """
 
-# Copyright (C) 2020-2021 The Psycopg Team
+# Copyright (C) 2020 The Psycopg Team
 
 from typing import Optional, Union, TYPE_CHECKING
 

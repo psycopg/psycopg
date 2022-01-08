@@ -6,7 +6,7 @@ the `pq` module instead, which is in charge of choosing the best
 implementation.
 """
 
-# Copyright (C) 2020-2021 The Psycopg Team
+# Copyright (C) 2020 The Psycopg Team
 
 import logging
 from os import getpid

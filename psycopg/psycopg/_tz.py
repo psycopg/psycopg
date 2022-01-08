@@ -2,7 +2,7 @@
 Timezone utility functions.
 """
 
-# Copyright (C) 2020-2021 The Psycopg Team
+# Copyright (C) 2020 The Psycopg Team
 
 import logging
 from typing import Dict, Optional, Union

@@ -2,7 +2,7 @@
 Utility functions to deal with binary structs.
 """
 
-# Copyright (C) 2020-2021 The Psycopg Team
+# Copyright (C) 2020 The Psycopg Team
 
 import struct
 from typing import Callable, cast, Optional, Tuple

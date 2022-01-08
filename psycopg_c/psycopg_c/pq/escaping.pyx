@@ -2,7 +2,7 @@
 psycopg_c.pq.Escaping object implementation.
 """
 
-# Copyright (C) 2020-2021 The Psycopg Team
+# Copyright (C) 2020 The Psycopg Team
 
 from libc.string cimport strlen
 from cpython.bytearray cimport PyByteArray_FromStringAndSize, PyByteArray_Resize

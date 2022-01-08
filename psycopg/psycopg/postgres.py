@@ -2,7 +2,7 @@
 Types configuration specific to PostgreSQL.
 """
 
-# Copyright (C) 2020-2021 The Psycopg Team
+# Copyright (C) 2020 The Psycopg Team
 
 from ._typeinfo import TypeInfo, RangeInfo, MultirangeInfo, TypesRegistry
 from .abc import AdaptContext

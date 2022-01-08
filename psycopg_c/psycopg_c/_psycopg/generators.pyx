@@ -2,7 +2,7 @@
 C implementation of generators for the communication protocols with the libpq
 """
 
-# Copyright (C) 2020-2021 The Psycopg Team
+# Copyright (C) 2020 The Psycopg Team
 
 from cpython.object cimport PyObject_CallFunctionObjArgs
 

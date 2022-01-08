@@ -2,7 +2,7 @@
 Access to endian conversion function
 """
 
-# Copyright (C) 2020-2021 The Psycopg Team
+# Copyright (C) 2020 The Psycopg Team
 
 from libc.stdint cimport uint16_t, uint32_t, uint64_t
 

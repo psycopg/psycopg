@@ -2,7 +2,7 @@
 Support for range types adaptation.
 """
 
-# Copyright (C) 2020-2021 The Psycopg Team
+# Copyright (C) 2020 The Psycopg Team
 
 import re
 from typing import Any, Callable, Dict, Generic, Optional, TypeVar, Type, Tuple

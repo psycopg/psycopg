@@ -2,7 +2,7 @@
 psycopg -- PostgreSQL database adapter for Python
 """
 
-# Copyright (C) 2020-2021 The Psycopg Team
+# Copyright (C) 2020 The Psycopg Team
 
 import logging
 

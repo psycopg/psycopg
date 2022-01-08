@@ -2,7 +2,7 @@
 Various functionalities to make easier to work with the libpq.
 """
 
-# Copyright (C) 2020-2021 The Psycopg Team
+# Copyright (C) 2020 The Psycopg Team
 
 from typing import cast, NamedTuple, Optional, Union
 
