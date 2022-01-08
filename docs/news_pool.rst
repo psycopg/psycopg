@@ -7,19 +7,15 @@
 ``psycopg_pool`` release notes
 ==============================
 
-Future releases
----------------
-
-psycopg_pool 3.0.3 (unreleased)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-- Throw `!ValueError` if `ConnectionPool` `!min_size` and `!max_size` are both
-  set to 0 (instead of hanging).
-- Throw `PoolClosed` calling `~ConnectionPool.wait()` on a closed pool.
-
-
 Current release
 ---------------
+
+psycopg_pool 3.0.3
+^^^^^^^^^^^^^^^^^^
+
+- Raise `!ValueError` if `ConnectionPool` `!min_size` and `!max_size` are both
+  set to 0 (instead of hanging).
+- Raise `PoolClosed` calling `~ConnectionPool.wait()` on a closed pool.
 
 psycopg_pool 3.0.2
 ^^^^^^^^^^^^^^^^^^
