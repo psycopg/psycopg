@@ -1,4 +1,3 @@
-import sys
 import logging
 import weakref
 from time import sleep, time
@@ -1024,16 +1023,6 @@ def test_check_idle(dsn):
         p.check()
         with p.connection() as conn:
             assert conn.info.transaction_status == TransactionStatus.IDLE
-
-
-@pytest.mark.skipif(
-    sys.version_info >= (3, 7), reason="async pool supported from Python 3.7"
-)
-def test_async_pool_not_supported(dsn):
-    # note: this test is here because the all the ones in test_pool_async are
-    # skipped on Py 3.6
-    with pytest.raises(psycopg.NotSupportedError):
-        pool.AsyncConnectionPool(dsn)
 
 
 @pytest.mark.slow

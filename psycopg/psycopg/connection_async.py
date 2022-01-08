@@ -10,6 +10,7 @@ import logging
 from types import TracebackType
 from typing import Any, AsyncGenerator, AsyncIterator, Dict, List, Optional
 from typing import Type, Union, cast, overload, TYPE_CHECKING
+from contextlib import asynccontextmanager
 
 from . import errors as e
 from . import waiting
@@ -19,7 +20,6 @@ from ._tpc import Xid
 from .rows import Row, AsyncRowFactory, tuple_row, TupleRow, args_row
 from .adapt import AdaptersMap
 from ._enums import IsolationLevel
-from ._compat import asynccontextmanager, get_running_loop
 from .conninfo import make_conninfo, conninfo_to_dict
 from ._encodings import pgconn_encoding
 from .connection import BaseConnection, CursorRow, Notify
@@ -97,7 +97,7 @@ class AsyncConnection(BaseConnection[Row]):
     ) -> "AsyncConnection[Any]":
 
         if sys.platform == "win32":
-            loop = get_running_loop()
+            loop = asyncio.get_running_loop()
             if isinstance(loop, asyncio.ProactorEventLoop):
                 raise e.InterfaceError(
                     "Psycopg cannot use the 'ProactorEventLoop' to run in async"

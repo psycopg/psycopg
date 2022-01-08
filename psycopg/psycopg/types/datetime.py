@@ -5,7 +5,6 @@ Adapters for date/time types.
 # Copyright (C) 2020 The Psycopg Team
 
 import re
-import sys
 import struct
 from datetime import date, datetime, time, timedelta, timezone
 from typing import Any, Callable, cast, Optional, Tuple, TYPE_CHECKING
@@ -334,8 +333,6 @@ class TimeBinaryLoader(Loader):
 
 class TimetzLoader(Loader):
 
-    _py37 = sys.version_info >= (3, 7)
-
     _re_format = re.compile(
         rb"""(?ix)
         ^
@@ -365,7 +362,7 @@ class TimetzLoader(Loader):
         off = 60 * 60 * int(oh)
         if om:
             off += 60 * int(om)
-        if os and self._py37:
+        if os:
             off += int(os)
         tz = timezone(timedelta(0, off if sgn == b"+" else -off))
 
@@ -388,25 +385,11 @@ class TimetzBinaryLoader(Loader):
         h, m = divmod(val, 60)
 
         try:
-            return time(h, m, s, us, self._tz_from_sec(off))
+            return time(h, m, s, us, timezone(timedelta(seconds=-off)))
         except ValueError:
             raise DataError(
                 f"time not supported by Python: hour={h}"
             ) from None
-
-    def _tz_from_sec(self, sec: int) -> timezone:
-        return timezone(timedelta(seconds=-sec))
-
-    def _tz_from_sec_36(self, sec: int) -> timezone:
-        if sec % 60:
-            sec = round(sec / 60.0) * 60
-        return timezone(timedelta(seconds=-sec))
-
-
-if sys.version_info < (3, 7):
-    setattr(
-        TimetzBinaryLoader, "_tz_from_sec", TimetzBinaryLoader._tz_from_sec_36
-    )
 
 
 class TimestampLoader(Loader):

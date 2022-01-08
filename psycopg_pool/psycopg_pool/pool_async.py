@@ -4,7 +4,6 @@ psycopg asynchronous connection pool
 
 # Copyright (C) 2021 The Psycopg Team
 
-import sys
 import asyncio
 import logging
 from abc import ABC, abstractmethod
@@ -13,6 +12,7 @@ from types import TracebackType
 from typing import Any, AsyncIterator, Awaitable, Callable
 from typing import Dict, List, Optional, Sequence, Type
 from weakref import ref
+from contextlib import asynccontextmanager
 
 from psycopg import errors as e
 from psycopg.pq import TransactionStatus
@@ -21,7 +21,7 @@ from psycopg.connection_async import AsyncConnection
 from .base import ConnectionAttempt, BasePool
 from .sched import AsyncScheduler
 from .errors import PoolClosed, PoolTimeout, TooManyRequests
-from ._compat import Task, asynccontextmanager, create_task, Deque
+from ._compat import Task, create_task, Deque
 
 logger = logging.getLogger("psycopg.pool")
 
@@ -41,12 +41,6 @@ class AsyncConnectionPool(BasePool[AsyncConnection[Any]]):
         ] = None,
         **kwargs: Any,
     ):
-        # https://bugs.python.org/issue42600
-        if sys.version_info < (3, 7):
-            raise e.NotSupportedError(
-                "async pool not supported before Python 3.7"
-            )
-
         self.connection_class = connection_class
         self._configure = configure
         self._reset = reset

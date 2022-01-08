@@ -7,6 +7,7 @@ psycopg async cursor objects
 from types import TracebackType
 from typing import Any, AsyncIterator, Iterable, List
 from typing import Optional, Type, TypeVar, TYPE_CHECKING
+from contextlib import asynccontextmanager
 
 from . import errors as e
 
@@ -14,7 +15,6 @@ from .abc import Query, Params
 from .copy import AsyncCopy
 from .rows import Row, RowMaker, AsyncRowFactory
 from .cursor import BaseCursor
-from ._compat import asynccontextmanager
 
 if TYPE_CHECKING:
     from .connection_async import AsyncConnection

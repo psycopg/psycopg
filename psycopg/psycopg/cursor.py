@@ -4,7 +4,6 @@ psycopg cursor objects
 
 # Copyright (C) 2020 The Psycopg Team
 
-import sys
 from types import TracebackType
 from typing import Any, Generic, Iterable, Iterator, List
 from typing import Optional, NoReturn, Sequence, Type, TypeVar, TYPE_CHECKING
@@ -45,15 +44,12 @@ _C = TypeVar("_C", bound="Cursor[Any]")
 
 
 class BaseCursor(Generic[ConnectionType, Row]):
-    # Slots with __weakref__ and generic bases don't work on Py 3.6
-    # https://bugs.python.org/issue41451
-    if sys.version_info >= (3, 7):
-        __slots__ = """
-            _conn format _adapters arraysize _closed _results pgresult _pos
-            _iresult _rowcount _query _tx _last_query _row_factory _make_row
-            _pgconn _encoding
-            __weakref__
-            """.split()
+    __slots__ = """
+        _conn format _adapters arraysize _closed _results pgresult _pos
+        _iresult _rowcount _query _tx _last_query _row_factory _make_row
+        _pgconn _encoding
+        __weakref__
+        """.split()
 
     ExecStatus = pq.ExecStatus
 

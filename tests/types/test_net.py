@@ -140,9 +140,7 @@ def test_lazy_load(dsn):
 import sys
 import psycopg
 
-# In 3.6 it seems already loaded (at least on Travis).
-if sys.version_info >= (3, 7):
-    assert 'ipaddress' not in sys.modules
+assert 'ipaddress' not in sys.modules
 
 conn = psycopg.connect({dsn!r})
 with conn.cursor() as cur:

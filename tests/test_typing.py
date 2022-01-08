@@ -1,5 +1,4 @@
 import os
-import sys
 
 import pytest
 
@@ -8,15 +7,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 
 @pytest.mark.parametrize(
     "filename",
-    [
-        "adapters_example.py",
-        pytest.param(
-            "typing_example.py",
-            marks=pytest.mark.skipif(
-                sys.version_info < (3, 7), reason="no future annotations"
-            ),
-        ),
-    ],
+    ["adapters_example.py", "typing_example.py"],
 )
 def test_typing_example(mypy, filename):
     cp = mypy.run_on_file(os.path.join(HERE, filename))

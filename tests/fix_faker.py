@@ -4,16 +4,16 @@ import ipaddress
 from math import isnan
 from uuid import UUID
 from random import choice, random, randrange
-from decimal import Decimal
-from contextlib import contextmanager
 from typing import Any, List, Set, Tuple, Union
+from decimal import Decimal
+from contextlib import contextmanager, asynccontextmanager
 
 import pytest
 
 import psycopg
 from psycopg import sql
 from psycopg.adapt import PyFormat
-from psycopg._compat import asynccontextmanager, Deque
+from psycopg._compat import Deque
 from psycopg.types.range import Range
 from psycopg.types.numeric import Int4, Int8
 from psycopg.types.multirange import Multirange

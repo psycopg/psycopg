@@ -8,7 +8,6 @@ from libc.string cimport memset, strchr
 from cpython cimport datetime as cdt
 from cpython.dict cimport PyDict_GetItem
 from cpython.object cimport PyObject, PyObject_CallFunctionObjArgs
-from cpython.version cimport PY_VERSION_HEX
 
 cdef extern from "Python.h":
     const char *PyUnicode_AsUTF8AndSize(unicode obj, Py_ssize_t *size) except NULL
@@ -16,11 +15,6 @@ cdef extern from "Python.h":
 
 cdef extern from *:
     """
-/* Hack to compile on Python 3.6 */
-#if PY_VERSION_HEX < 0x03070000
-#define PyTimeZone_FromOffset(x) x
-#endif
-
 /* Multipliers from fraction of seconds to microseconds */
 static int _uspad[] = {0, 100000, 10000, 1000, 100, 10, 1};
     """
@@ -502,10 +496,6 @@ cdef class TimetzLoader(CLoader):
             s = bytes(data).decode("utf8", "replace")
             raise e.DataError(f"can't parse timetz {s!r}")
 
-        # Python < 3.7 didn't support seconds in the timezones
-        if PY_VERSION_HEX < 0x03070000:
-            offsecs = round(offsecs / 60.0) * 60
-
         tz = _timezone_from_seconds(offsecs)
         try:
             return cdt.time_new(vals[0], vals[1], vals[2], us, tz)
@@ -533,10 +523,6 @@ cdef class TimetzBinaryLoader(CLoader):
 
             m = val % 60
             h = <int>(val // 60)
-
-            # Python < 3.7 didn't support seconds in the timezones
-            if PY_VERSION_HEX >= 0x03070000:
-                off = round(off / 60.0) * 60
 
         tz = _timezone_from_seconds(-off)
         try:
@@ -1097,10 +1083,7 @@ cdef object _timezone_from_seconds(int sec, __cache={}):
         return <object>ptr
 
     delta = cdt.timedelta_new(0, sec, 0)
-    if PY_VERSION_HEX >= 0x03070000:
-        tz = PyTimeZone_FromOffset(delta)
-    else:
-        tz = timezone(delta)
+    tz = timezone(delta)
     __cache[pysec] = tz
     return tz
 
@@ -1122,12 +1105,7 @@ cdef object _timezone_from_connection(pq.PGconn pgconn):
     sname = tzname.decode() if tzname else "UTC"
     try:
         zi = ZoneInfo(sname)
-    # Usually KeyError, but might be a DeprecationWarning raised by -Werror
-    # (experienced on Python 3.6.12, backport.zoneinfo 0.2.1).
-    # https://github.com/pganssle/zoneinfo/issues/109
-    # Curiously, not trapping the latter, causes a segfault.
-    # In such case the error message is wrong, but hey.
-    except Exception:
+    except KeyError:
         logger = logging.getLogger("psycopg")
         logger.warning(
             "unknown PostgreSQL timezone: %r; will use UTC", sname

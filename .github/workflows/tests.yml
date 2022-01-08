@@ -20,15 +20,13 @@ jobs:
       matrix:
         include:
           # Test different combinations of Python, Postgres, libpq.
-          - {impl: python, python: "3.6", postgres: "postgres:10", libpq: "newest"}
-          - {impl: python, python: "3.7", postgres: "postgres:11", libpq: ""}
+          - {impl: python, python: "3.7", postgres: "postgres:10", libpq: "newest"}
           - {impl: python, python: "3.8", postgres: "postgres:12", libpq: ""}
           - {impl: python, python: "3.9", postgres: "postgres:13", libpq: "newest"}
           - {impl: python, python: "3.10", postgres: "postgres:14", libpq: "oldest"}
-          - {impl: c, python: "3.6", postgres: "postgres:14", libpq: "oldest"}
-          - {impl: c, python: "3.7", postgres: "postgres:13", libpq: ""}
-          - {impl: c, python: "3.8", postgres: "postgres:12", libpq: "newest"}
-          - {impl: c, python: "3.9", postgres: "postgres:11", libpq: ""}
+          - {impl: c, python: "3.7", postgres: "postgres:14", libpq: "oldest"}
+          - {impl: c, python: "3.8", postgres: "postgres:13", libpq: "newest"}
+          - {impl: c, python: "3.9", postgres: "postgres:12", libpq: ""}
           - {impl: c, python: "3.10", postgres: "postgres:10", libpq: "oldest"}
           - {impl: dns, python: "3.9", postgres: "postgres:14", libpq: ""}
           - {impl: postgis, python: "3.9", postgres: "postgis/postgis", libpq: ""}
@@ -116,12 +114,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - {impl: python, python: "3.6"}
           - {impl: python, python: "3.7"}
           - {impl: python, python: "3.8"}
           - {impl: python, python: "3.9"}
           - {impl: python, python: "3.10"}
-          - {impl: c, python: "3.6"}
           - {impl: c, python: "3.7"}
           - {impl: c, python: "3.8"}
           - {impl: c, python: "3.9"}
@@ -169,12 +165,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - {impl: python, python: "3.6"}
           - {impl: python, python: "3.7"}
           - {impl: python, python: "3.8"}
           - {impl: python, python: "3.9"}
           - {impl: python, python: "3.10"}
-          - {impl: c, python: "3.6"}
           - {impl: c, python: "3.7"}
           - {impl: c, python: "3.8"}
           - {impl: c, python: "3.9"}

@@ -1,4 +1,3 @@
-import sys
 import asyncio
 import logging
 from time import time
@@ -16,13 +15,7 @@ except ImportError:
     # Tests should have been skipped if the package is not available
     pass
 
-pytestmark = [
-    pytest.mark.asyncio,
-    pytest.mark.skipif(
-        sys.version_info < (3, 7),
-        reason="async pool not supported before Python 3.7",
-    ),
-]
+pytestmark = [pytest.mark.asyncio]
 
 
 async def test_defaults(dsn):

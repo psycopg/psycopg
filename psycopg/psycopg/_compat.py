@@ -16,33 +16,15 @@ else:
 T = TypeVar("T")
 FutureT = Union["asyncio.Future[T]", Generator[Any, None, T], Awaitable[T]]
 
-if sys.version_info >= (3, 7):
-    from contextlib import asynccontextmanager
-
-    get_running_loop = asyncio.get_running_loop
-
-else:
-    from ._context import asynccontextmanager
-
-    get_running_loop = asyncio.get_event_loop
-
-
 if sys.version_info >= (3, 8):
     create_task = asyncio.create_task
 
-elif sys.version_info >= (3, 7):
+else:
 
     def create_task(
         coro: FutureT[T], name: Optional[str] = None
     ) -> "asyncio.Future[T]":
         return asyncio.create_task(coro)
-
-else:
-
-    def create_task(
-        coro: FutureT[T], name: Optional[str] = None
-    ) -> "asyncio.Future[T]":
-        return asyncio.ensure_future(coro)
 
 
 if sys.version_info >= (3, 9):
@@ -57,7 +39,5 @@ __all__ = [
     "Deque",
     "Protocol",
     "ZoneInfo",
-    "asynccontextmanager",
     "create_task",
-    "get_running_loop",
 ]
