@@ -5,7 +5,7 @@ These types allow to read information from the system catalog and provide
 information to the adapters if needed.
 """
 
-# Copyright (C) 2020-2021 The Psycopg Team
+# Copyright (C) 2020 The Psycopg Team
 
 from typing import Any, Dict, Iterator, Optional, overload
 from typing import Sequence, Tuple, Type, TypeVar, Union, TYPE_CHECKING

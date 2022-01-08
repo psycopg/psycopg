@@ -2,7 +2,7 @@
 psycopg async cursor objects
 """
 
-# Copyright (C) 2020-2021 The Psycopg Team
+# Copyright (C) 2020 The Psycopg Team
 
 from types import TracebackType
 from typing import Any, AsyncIterator, Iterable, List

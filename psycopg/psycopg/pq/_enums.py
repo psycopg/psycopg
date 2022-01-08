@@ -2,7 +2,7 @@
 libpq enum definitions for psycopg
 """
 
-# Copyright (C) 2020-2021 The Psycopg Team
+# Copyright (C) 2020 The Psycopg Team
 
 from enum import IntEnum, IntFlag, auto
 

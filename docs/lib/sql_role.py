@@ -5,8 +5,8 @@
 
     An interpreted text role to style SQL syntax in Psycopg documentation.
 
-    :copyright: Copyright 2010-2020 by Daniele Varrazzo.
-    :copyright: Copyright 2020-2021 The Psycopg Team.
+    :copyright: Copyright 2010 by Daniele Varrazzo.
+    :copyright: Copyright 2020 The Psycopg Team.
 """
 
 from docutils import nodes, utils

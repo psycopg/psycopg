@@ -2,7 +2,7 @@
 Entry point into the adaptation system.
 """
 
-# Copyright (C) 2020-2021 The Psycopg Team
+# Copyright (C) 2020 The Psycopg Team
 
 from abc import ABC, abstractmethod
 from typing import Any, Optional, Type, Tuple, Union, TYPE_CHECKING

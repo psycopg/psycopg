@@ -2,7 +2,7 @@
 psycopg async connection objects
 """
 
-# Copyright (C) 2020-2021 The Psycopg Team
+# Copyright (C) 2020 The Psycopg Team
 
 import sys
 import asyncio

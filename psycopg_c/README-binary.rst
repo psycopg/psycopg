@@ -26,4 +26,4 @@ more details.
 .. __: https://www.psycopg.org/psycopg3/docs/basic/install.html
 
 
-Copyright (C) 2020-2021 The Psycopg Team
+Copyright (C) 2020 The Psycopg Team

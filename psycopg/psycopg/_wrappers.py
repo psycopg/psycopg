@@ -2,7 +2,7 @@
 Wrappers for numeric types.
 """
 
-# Copyright (C) 2020-2021 The Psycopg Team
+# Copyright (C) 2020 The Psycopg Team
 
 # Wrappers to force numbers to be cast as specific PostgreSQL types
 

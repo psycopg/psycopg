@@ -2,7 +2,7 @@
 Utility module to manipulate queries
 """
 
-# Copyright (C) 2020-2021 The Psycopg Team
+# Copyright (C) 2020 The Psycopg Team
 
 import re
 from typing import Any, Dict, List, Mapping, Match, NamedTuple, Optional

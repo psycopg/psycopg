@@ -2,7 +2,7 @@
 Mapping from types/oids to Dumpers/Loaders
 """
 
-# Copyright (C) 2020-2021 The Psycopg Team
+# Copyright (C) 2020 The Psycopg Team
 
 from typing import Any, Dict, List, Optional, Type, TypeVar, Union
 from typing import cast, TYPE_CHECKING

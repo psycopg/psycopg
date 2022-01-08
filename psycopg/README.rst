@@ -28,4 +28,4 @@ For development information check out `the project readme`__.
 .. __: https://github.com/psycopg/psycopg#readme
 
 
-Copyright (C) 2020-2021 The Psycopg Team
+Copyright (C) 2020 The Psycopg Team

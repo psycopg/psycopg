@@ -2,7 +2,7 @@
 PQbuffer object implementation.
 """
 
-# Copyright (C) 2020-2021 The Psycopg Team
+# Copyright (C) 2020 The Psycopg Team
 
 cimport cython
 from cpython.bytes cimport PyBytes_AsStringAndSize

@@ -2,7 +2,7 @@
 Protocol objects representing different implementations of the same classes.
 """
 
-# Copyright (C) 2020-2021 The Psycopg Team
+# Copyright (C) 2020 The Psycopg Team
 
 from typing import Any, Callable, Generator, Mapping
 from typing import List, Optional, Sequence, Tuple, TypeVar, Union

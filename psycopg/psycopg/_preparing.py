@@ -2,7 +2,7 @@
 Support for prepared statements
 """
 
-# Copyright (C) 2020-2021 The Psycopg Team
+# Copyright (C) 2020 The Psycopg Team
 
 from enum import IntEnum, auto
 from typing import Iterator, Optional, Sequence, Tuple, TYPE_CHECKING

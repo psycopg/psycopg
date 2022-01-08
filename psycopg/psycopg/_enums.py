@@ -5,7 +5,7 @@ These values are defined by us and are not necessarily dependent on
 libpq-defined enums.
 """
 
-# Copyright (C) 2020-2021 The Psycopg Team
+# Copyright (C) 2020 The Psycopg Team
 
 from enum import Enum, IntEnum
 

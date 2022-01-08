@@ -2,7 +2,7 @@
 Protocol objects to represent objects exposed by different pq implementations.
 """
 
-# Copyright (C) 2020-2021 The Psycopg Team
+# Copyright (C) 2020 The Psycopg Team
 
 from typing import Any, Callable, List, Optional, Sequence, Tuple
 from typing import Union, TYPE_CHECKING
