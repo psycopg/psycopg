@@ -7,8 +7,11 @@
 ``psycopg`` release notes
 =========================
 
+Future releases
+---------------
+
 Psycopg 3.1 (unreleased)
-------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^
 
 - Add :ref:`Two-Phase Commit <two-phase-commit>` support (:ticket:`#72`).
 - Return results from all queries run through `~Cursor.executemany()`; each
@@ -20,8 +23,8 @@ Psycopg 3.1 (unreleased)
 Current release
 ---------------
 
-Psycopg 3.0.8 (unreleased)
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+Psycopg 3.0.8
+^^^^^^^^^^^^^
 
 - Decode connection errors in the ``client_encoding`` specified in the
   connection string, if available (:ticket:`#194`).
