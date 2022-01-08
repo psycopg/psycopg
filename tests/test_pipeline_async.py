@@ -10,6 +10,7 @@ import psycopg
 from psycopg import pq
 from psycopg import errors as e
 
+from .conftest import asyncio_backend
 from .test_pipeline import pipeline_aborted
 
 pytestmark = [
@@ -544,6 +545,7 @@ async def test_transaction_state_implicit_begin(aconn, trace):
     ] == [b' "" "BEGIN" 0']
 
 
+@asyncio_backend
 async def test_concurrency(aconn):
     async with aconn.transaction():
         await aconn.execute("drop table if exists pipeline_concurrency")

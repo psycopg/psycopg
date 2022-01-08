@@ -18,6 +18,7 @@ from psycopg.adapt import PyFormat
 from psycopg.types.hstore import register_hstore
 from psycopg.types.numeric import Int4
 
+from .conftest import asyncio_backend
 from .utils import alist, eur, gc_collect, gc_count
 from .test_copy import sample_text, sample_binary, sample_binary_rows  # noqa
 from .test_copy import sample_values, sample_records, sample_tabledef
@@ -642,6 +643,7 @@ async def test_description(aconn):
 @pytest.mark.parametrize(
     "format, buffer", [(Format.TEXT, "sample_text"), (Format.BINARY, "sample_binary")]
 )
+@asyncio_backend
 async def test_worker_life(aconn, format, buffer):
     cur = aconn.cursor()
     await ensure_table(cur, sample_tabledef)
@@ -659,6 +661,7 @@ async def test_worker_life(aconn, format, buffer):
     assert data == sample_records
 
 
+@asyncio_backend
 async def test_worker_error_propagated(aconn, monkeypatch):
     def copy_to_broken(pgconn, buffer):
         raise ZeroDivisionError

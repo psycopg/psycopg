@@ -8,6 +8,7 @@ from psycopg import pq, errors as e
 from psycopg.rows import namedtuple_row
 from psycopg._compat import create_task
 
+from ..conftest import asyncio_backend
 from .test_cursor import testfeed
 
 testfeed  # fixture
@@ -17,6 +18,7 @@ pytestmark = [pytest.mark.crdb, pytest.mark.anyio]
 
 @pytest.mark.slow
 @pytest.mark.parametrize("fmt_out", pq.Format)
+@asyncio_backend
 async def test_changefeed(aconn_cls, dsn, aconn, testfeed, fmt_out):
     await aconn.set_autocommit(True)
     q: "Queue[Any]" = Queue()

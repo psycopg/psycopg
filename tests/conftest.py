@@ -73,7 +73,10 @@ if sys.platform == "win32" and sys.version_info >= (3, 8):
 
 
 @pytest.fixture(
-    params=[pytest.param(("asyncio", asyncio_options.copy()), id="asyncio")],
+    params=[
+        pytest.param(("asyncio", asyncio_options.copy()), id="asyncio"),
+        pytest.param(("trio", {}), id="trio"),
+    ],
     scope="session",
 )
 def anyio_backend(request):
@@ -81,6 +84,20 @@ def anyio_backend(request):
     if request.config.option.loop == "uvloop":
         options["use_uvloop"] = True
     return backend, options
+
+
+@pytest.fixture(scope="session")
+def anyio_backend_name(anyio_backend):
+    # Redefined because 'anyio_backend' is session-scoped for us.
+    if isinstance(anyio_backend, str):
+        return anyio_backend
+    else:
+        return anyio_backend[0]
+
+
+asyncio_backend = pytest.mark.parametrize(
+    "anyio_backend", [("asyncio", asyncio_options)], ids=["asyncio"], scope="session"
+)
 
 
 allow_fail_messages: List[str] = []

@@ -12,8 +12,11 @@ import psycopg
 from psycopg import errors as e
 from psycopg._compat import create_task
 
+from .conftest import asyncio_backend
+
 
 @pytest.mark.slow
+@asyncio_backend
 async def test_commit_concurrency(aconn):
     # Check the condition reported in psycopg2#103
     # Because of bad status check, we commit even when a commit is already on
@@ -43,6 +46,7 @@ async def test_commit_concurrency(aconn):
 
 
 @pytest.mark.slow
+@asyncio_backend
 async def test_concurrent_execution(aconn_cls, dsn):
     async def worker():
         cnn = await aconn_cls.connect(dsn)
@@ -60,6 +64,7 @@ async def test_concurrent_execution(aconn_cls, dsn):
 @pytest.mark.slow
 @pytest.mark.timing
 @pytest.mark.crdb_skip("notify")
+@asyncio_backend
 async def test_notifies(aconn_cls, aconn, dsn):
     nconn = await aconn_cls.connect(dsn, autocommit=True)
     npid = nconn.pgconn.backend_pid
@@ -111,6 +116,7 @@ async def canceller(aconn, errors):
 
 @pytest.mark.slow
 @pytest.mark.crdb_skip("cancel")
+@asyncio_backend
 async def test_cancel(aconn):
     async def worker():
         cur = aconn.cursor()
@@ -136,6 +142,7 @@ async def test_cancel(aconn):
 
 @pytest.mark.slow
 @pytest.mark.crdb_skip("cancel")
+@asyncio_backend
 async def test_cancel_stream(aconn):
     async def worker():
         cur = aconn.cursor()
@@ -162,6 +169,7 @@ async def test_cancel_stream(aconn):
 
 @pytest.mark.slow
 @pytest.mark.crdb_skip("pg_terminate_backend")
+@asyncio_backend
 async def test_identify_closure(aconn_cls, dsn):
     async def closer():
         await asyncio.sleep(0.2)

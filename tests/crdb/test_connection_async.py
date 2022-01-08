@@ -3,38 +3,39 @@ import asyncio
 
 import psycopg.crdb
 from psycopg import errors as e
-from psycopg.crdb import AsyncCrdbConnection
 from psycopg._compat import create_task
 
 import pytest
 
+from ..conftest import asyncio_backend
+
 pytestmark = [pytest.mark.crdb, pytest.mark.anyio]
 
 
-async def test_is_crdb(aconn):
-    assert AsyncCrdbConnection.is_crdb(aconn)
-    assert AsyncCrdbConnection.is_crdb(aconn.pgconn)
+async def test_is_crdb(aconn_cls, aconn):
+    assert aconn_cls.is_crdb(aconn)
+    assert aconn_cls.is_crdb(aconn.pgconn)
 
 
-async def test_connect(dsn):
-    async with await AsyncCrdbConnection.connect(dsn) as conn:
-        assert isinstance(conn, psycopg.crdb.AsyncCrdbConnection)
+async def test_connect(dsn, aconn_cls):
+    async with await aconn_cls.connect(dsn) as conn:
+        assert conn.__class__.__module__ == "psycopg.crdb"
 
 
-async def test_xid(dsn):
-    async with await AsyncCrdbConnection.connect(dsn) as conn:
+async def test_xid(dsn, aconn_cls):
+    async with await aconn_cls.connect(dsn) as conn:
         with pytest.raises(e.NotSupportedError):
             conn.xid(1, "gtrid", "bqual")
 
 
-async def test_tpc_begin(dsn):
-    async with await AsyncCrdbConnection.connect(dsn) as conn:
+async def test_tpc_begin(dsn, aconn_cls):
+    async with await aconn_cls.connect(dsn) as conn:
         with pytest.raises(e.NotSupportedError):
             await conn.tpc_begin("foo")
 
 
-async def test_tpc_recover(dsn):
-    async with await AsyncCrdbConnection.connect(dsn) as conn:
+async def test_tpc_recover(dsn, aconn_cls):
+    async with await aconn_cls.connect(dsn) as conn:
         with pytest.raises(e.NotSupportedError):
             await conn.tpc_recover()
 
@@ -64,6 +65,7 @@ async def test_broken(aconn):
 
 
 @pytest.mark.slow
+@asyncio_backend
 async def test_identify_closure(aconn_cls, dsn):
     async with await aconn_cls.connect(dsn) as conn:
         async with await aconn_cls.connect(dsn) as conn2:

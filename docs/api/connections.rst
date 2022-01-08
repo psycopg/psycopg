@@ -401,8 +401,8 @@ The `!Connection` class
         .. _pg_prepared_xacts: https://www.postgresql.org/docs/current/static/view-pg-prepared-xacts.html
 
 
-The `!AsyncConnection` class
-----------------------------
+The `!AsyncConnection` classes
+------------------------------
 
 .. autoclass:: AsyncConnection()
 
@@ -487,3 +487,14 @@ The `!AsyncConnection` class
     .. automethod:: tpc_commit
     .. automethod:: tpc_rollback
     .. automethod:: tpc_recover
+
+
+.. autoclass:: AnyIOConnection()
+
+    This is class is similar to `AsyncConnection` but uses anyio_ as an
+    asynchronous library instead of `asyncio`.
+
+    To use this class, run ``pip install "psycopg[anyio]"`` to install
+    required dependencies.
+
+.. _anyio: https://anyio.readthedocs.io/

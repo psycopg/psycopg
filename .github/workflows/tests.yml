@@ -77,7 +77,7 @@ jobs:
       - name: Include dnspython to the packages to install
         if: ${{ matrix.ext == 'dns' }}
         run: |
-          echo "DEPS=$DEPS dnspython" >> $GITHUB_ENV
+          echo "DEPS=$DEPS anyio[trio] dnspython" >> $GITHUB_ENV
           echo "MARKERS=$MARKERS dns" >> $GITHUB_ENV
 
       - name: Include shapely to the packages to install

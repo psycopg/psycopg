@@ -53,6 +53,7 @@ class AsyncConnection(BaseConnection[Row]):
     row_factory: AsyncRowFactory[Row]
     _pipeline: Optional[AsyncPipeline]
     _Self = TypeVar("_Self", bound="AsyncConnection[Any]")
+    _lockcls = asyncio.Lock
 
     def __init__(
         self,
@@ -61,9 +62,13 @@ class AsyncConnection(BaseConnection[Row]):
     ):
         super().__init__(pgconn)
         self.row_factory = row_factory
-        self.lock = asyncio.Lock()
+        self.lock = self._lockcls()
         self.cursor_factory = AsyncCursor
         self.server_cursor_factory = AsyncServerCursor
+
+    @staticmethod
+    def _async_library() -> str:
+        return "asyncio"
 
     @overload
     @classmethod
@@ -107,7 +112,7 @@ class AsyncConnection(BaseConnection[Row]):
         cursor_factory: Optional[Type[AsyncCursor[Row]]] = None,
         **kwargs: Any,
     ) -> "AsyncConnection[Any]":
-        if sys.platform == "win32":
+        if sys.platform == "win32" and cls._async_library() == "asyncio":
             loop = asyncio.get_running_loop()
             if isinstance(loop, asyncio.ProactorEventLoop):
                 raise e.InterfaceError(
@@ -167,6 +172,11 @@ class AsyncConnection(BaseConnection[Row]):
         if not getattr(self, "_pool", None):
             await self.close()
 
+    @staticmethod
+    def _getaddrinfo() -> Any:
+        loop = asyncio.get_running_loop()
+        return loop.getaddrinfo
+
     @classmethod
     async def _get_connection_params(
         cls, conninfo: str, **kwargs: Any
@@ -189,8 +199,7 @@ class AsyncConnection(BaseConnection[Row]):
             params["connect_timeout"] = None
 
         # Resolve host addresses in non-blocking way
-        loop = asyncio.get_running_loop()
-        params = await resolve_hostaddr_async(params, getaddrinfo=loop.getaddrinfo)
+        params = await resolve_hostaddr_async(params, getaddrinfo=cls._getaddrinfo())
 
         return params
 

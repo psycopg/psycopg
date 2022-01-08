@@ -1,6 +1,7 @@
 import asyncio
 import socket
 import time
+import anyio
 import pytest
 import logging
 import weakref
@@ -736,8 +737,7 @@ async def test_cancel_closed(aconn):
 
 
 @pytest.fixture
-@pytest.mark.parametrize("anyio_backend", ["asyncio"])
-async def fake_resolve(monkeypatch, anyio_backend):
+async def fake_resolve(monkeypatch, anyio_backend_name):
     fake_hosts = {"foo.com": "1.1.1.1"}
 
     async def fake_getaddrinfo(host, port, **kwargs):
@@ -748,20 +748,25 @@ async def fake_resolve(monkeypatch, anyio_backend):
         else:
             return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", (addr, 432))]
 
-    monkeypatch.setattr(asyncio.get_running_loop(), "getaddrinfo", fake_getaddrinfo)
+    if anyio_backend_name == "asyncio":
+        monkeypatch.setattr(asyncio.get_running_loop(), "getaddrinfo", fake_getaddrinfo)
+    else:
+        monkeypatch.setattr(anyio, "getaddrinfo", fake_getaddrinfo)
 
 
-async def test_resolve_hostaddr_conn(monkeypatch, fake_resolve):  # noqa: F811
+async def test_resolve_hostaddr_conn(
+    aconn_cls, monkeypatch, fake_resolve
+):  # noqa: F811
     got = []
 
     def fake_connect_gen(conninfo, **kwargs):
         got.append(conninfo)
         1 / 0
 
-    monkeypatch.setattr(psycopg.AsyncConnection, "_connect_gen", fake_connect_gen)
+    monkeypatch.setattr(aconn_cls, "_connect_gen", fake_connect_gen)
 
     with pytest.raises(ZeroDivisionError):
-        await psycopg.AsyncConnection.connect("host=foo.com")
+        await aconn_cls.connect("host=foo.com")
 
     assert len(got) == 1
     want = {"host": "foo.com", "hostaddr": "1.1.1.1"}

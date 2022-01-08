@@ -3,10 +3,12 @@ import pytest
 import psycopg
 from psycopg.conninfo import conninfo_to_dict
 
+from .conftest import asyncio_backend
+
 pytestmark = [pytest.mark.dns]
 
 
-@pytest.mark.parametrize("anyio_backend", ["asyncio"])
+@asyncio_backend
 async def test_resolve_hostaddr_async_warning(recwarn, anyio_backend):
     import_dnspython()
     conninfo = "dbname=foo"

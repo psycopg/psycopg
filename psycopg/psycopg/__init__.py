@@ -25,6 +25,7 @@ from .cursor_async import AsyncCursor
 from .server_cursor import AsyncServerCursor, ServerCursor
 from .client_cursor import AsyncClientCursor, ClientCursor
 from .connection_async import AsyncConnection
+from ._anyio.connection import AnyIOConnection
 
 from . import dbapi20
 from .dbapi20 import BINARY, DATETIME, NUMBER, ROWID, STRING
@@ -59,6 +60,7 @@ types.array.register_all_arrays(adapters)
 # this is the canonical place to obtain them and should be used by MyPy too,
 # so that function signatures are consistent with the documentation.
 __all__ = [
+    "AnyIOConnection",
     "AsyncClientCursor",
     "AsyncConnection",
     "AsyncCopy",

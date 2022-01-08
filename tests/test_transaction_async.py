@@ -7,6 +7,7 @@ from psycopg import Rollback
 from psycopg import errors as e
 from psycopg._compat import create_task
 
+from .conftest import asyncio_backend
 from .test_transaction import in_transaction, insert_row, inserted, get_exc_info
 from .test_transaction import ExpectedException, crdb_skip_external_observer
 from .test_transaction import create_test_table  # noqa  # autouse fixture
@@ -700,6 +701,7 @@ async def test_out_of_order_exit_same_name(aconn, exit_error):
 
 
 @pytest.mark.parametrize("what", ["commit", "rollback", "error"])
+@asyncio_backend
 async def test_concurrency(aconn, what):
     await aconn.set_autocommit(True)
 

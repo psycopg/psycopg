@@ -5,6 +5,10 @@ build-backend = "setuptools.build_meta"
 [tool.pytest.ini_options]
 filterwarnings = [
     "error",
+    # Workaround for Python 3.9.7 (see https://bugs.python.org/issue45097)
+    "ignore:The loop argument is deprecated since Python 3\\.8, and scheduled for removal in Python 3\\.10\\.:DeprecationWarning:asyncio",
+    # Ignore warning about custom excepthook from 'exceptiongroup', pulled by pytest.
+    "ignore:You seem to already have a custom sys.excepthook handler installed. I'll skip installing Trio's custom handler, but this means MultiErrors will not show full tracebacks.:RuntimeWarning:trio[.*]",
 ]
 testpaths=[
     "tests",
