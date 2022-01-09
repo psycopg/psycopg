@@ -150,7 +150,6 @@ The `!ConnectionPool` class
         you don't use the pool as a context manager) you might want to specify
         this parameter explicitly.
 
-   .. automethod:: wait
    .. automethod:: connection
 
       .. code:: python
@@ -176,6 +175,8 @@ The `!ConnectionPool` class
 
           with ConnectionPool(...) as pool:
               # code using the pool
+
+   .. automethod:: wait
 
    .. attribute:: name
       :type: str
@@ -244,7 +245,6 @@ listed here.
                  the pool.
    :type reset: `async Callable[[AsyncConnection], None]`
 
-   .. automethod:: wait
    .. automethod:: connection
 
       .. code:: python
@@ -255,7 +255,6 @@ listed here.
           # the connection is now back in the pool
 
    .. automethod:: open
-
    .. automethod:: close
 
    .. note::
@@ -269,6 +268,7 @@ listed here.
           async with AsyncConnectionPool(...) as pool:
               # code using the pool
 
+   .. automethod:: wait
    .. automethod:: resize
    .. automethod:: check
    .. automethod:: getconn

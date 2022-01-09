@@ -179,9 +179,12 @@ class AsyncConnectionPool(BasePool[AsyncConnection[Any]]):
         else:
             await self._return_connection(conn)
 
-    async def open(self) -> None:
+    async def open(self, wait: bool = False, timeout: float = 30.0) -> None:
         async with self._lock:
             self._open()
+
+        if wait:
+            await self.wait(timeout=timeout)
 
     def _open(self) -> None:
         if not self._closed:

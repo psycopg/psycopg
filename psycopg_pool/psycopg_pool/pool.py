@@ -218,24 +218,36 @@ class ConnectionPool(BasePool[Connection[Any]]):
         else:
             self._return_connection(conn)
 
-    def open(self) -> None:
+    def open(self, wait: bool = False, timeout: float = 30.0) -> None:
         """Open the pool by starting connecting and and accepting clients.
 
-        The method is no-op if the pool is already opened (because the method
-        was already called, or because the pool context was entered, or because
-        the pool was initialized with ``open=true``.
+        If *wait* is `!False`, return immediately and let the background worker
+        fill the pool if `min_size` > 0. Otherwise wait up to *timeout* seconds
+        for the requested number of connections to be ready (see `wait()` for
+        details).
+
+        It is safe to call `!open()` again on a pool already open (because the
+        method was already called, or because the pool context was entered, or
+        because the pool was initialized with *open* = `!True`) but you cannot
+        currently re-open a closed pool.
         """
         with self._lock:
-            if not self._closed:
-                return
+            self._open()
 
-            self._check_open()
+        if wait:
+            self.wait(timeout=timeout)
 
-            self._start_workers()
-            self._start_initial_tasks()
+    def _open(self) -> None:
+        if not self._closed:
+            return
 
-            self._closed = False
-            self._opened = True
+        self._check_open()
+
+        self._start_workers()
+        self._start_initial_tasks()
+
+        self._closed = False
+        self._opened = True
 
     def _start_workers(self) -> None:
         self._sched_runner = threading.Thread(

@@ -744,6 +744,36 @@ def test_open_no_op(dsn):
         p.close()
 
 
+@pytest.mark.slow
+@pytest.mark.timing
+def test_open_wait(dsn, monkeypatch):
+    delay_connection(monkeypatch, 0.1)
+    with pytest.raises(pool.PoolTimeout):
+        p = pool.ConnectionPool(dsn, min_size=4, num_workers=1, open=False)
+        try:
+            p.open(wait=True, timeout=0.3)
+        finally:
+            p.close()
+
+    p = pool.ConnectionPool(dsn, min_size=4, num_workers=1, open=False)
+    try:
+        p.open(wait=True, timeout=0.5)
+    finally:
+        p.close()
+
+
+@pytest.mark.slow
+@pytest.mark.timing
+def test_open_as_wait(dsn, monkeypatch):
+    delay_connection(monkeypatch, 0.1)
+    with pytest.raises(pool.PoolTimeout):
+        with pool.ConnectionPool(dsn, min_size=4, num_workers=1) as p:
+            p.open(wait=True, timeout=0.3)
+
+    with pool.ConnectionPool(dsn, min_size=4, num_workers=1) as p:
+        p.open(wait=True, timeout=0.5)
+
+
 def test_reopen(dsn):
     p = pool.ConnectionPool(dsn)
     with p.connection() as conn:

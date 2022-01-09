@@ -719,6 +719,40 @@ async def test_open_no_op(dsn):
         await p.close()
 
 
+@pytest.mark.slow
+@pytest.mark.timing
+async def test_open_wait(dsn, monkeypatch):
+    delay_connection(monkeypatch, 0.1)
+    with pytest.raises(pool.PoolTimeout):
+        p = pool.AsyncConnectionPool(
+            dsn, min_size=4, num_workers=1, open=False
+        )
+        try:
+            await p.open(wait=True, timeout=0.3)
+        finally:
+            await p.close()
+
+    p = pool.AsyncConnectionPool(dsn, min_size=4, num_workers=1, open=False)
+    try:
+        await p.open(wait=True, timeout=0.5)
+    finally:
+        await p.close()
+
+
+@pytest.mark.slow
+@pytest.mark.timing
+async def test_open_as_wait(dsn, monkeypatch):
+    delay_connection(monkeypatch, 0.1)
+    with pytest.raises(pool.PoolTimeout):
+        async with pool.AsyncConnectionPool(
+            dsn, min_size=4, num_workers=1
+        ) as p:
+            await p.open(wait=True, timeout=0.3)
+
+    async with pool.AsyncConnectionPool(dsn, min_size=4, num_workers=1) as p:
+        await p.open(wait=True, timeout=0.5)
+
+
 async def test_reopen(dsn):
     p = pool.AsyncConnectionPool(dsn)
     async with p.connection() as conn:
