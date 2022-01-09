@@ -17,10 +17,10 @@ This sections is a reference for all the public objects exposed by the
     sql
     rows
     errors
+    pool
     conninfo
     adapt
     types
     abc
     pq
-    pool
     dns

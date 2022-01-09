@@ -46,7 +46,7 @@ The `!ConnectionPool` class
    :param min_size: The minimum number of connection the pool will hold. The
                    pool will actively try to create new connections if some
                    are lost (closed, broken) and will try to never go below
-                   *min_size*
+                   *min_size*.
    :type min_size: `!int`, default: 4
 
    :param max_size: The maximum number of connections the pool will hold. If
@@ -223,16 +223,14 @@ The `!AsyncConnectionPool` class
 --------------------------------
 
 `!AsyncConnectionPool` has a very similar interface to the `ConnectionPool`
-class but its blocking method are implemented as `async` coroutines. It
-returns `~psycopg.AsyncConnection` instances, or its subclasses if specified
-so in the *connection_class* parameter.
+class but its blocking methods are implemented as ``async`` coroutines. It
+returns instances of `~psycopg.AsyncConnection`, or of its subclass if
+specified so in the *connection_class* parameter.
 
-Only the function with different signature from `!ConnectionPool` are
+Only the functions with different signature from `!ConnectionPool` are
 listed here.
 
 .. autoclass:: AsyncConnectionPool
-
-   All the other parameters are the same.
 
    :param connection_class: The class of the connections to serve. It should
                             be an `!AsyncConnection` subclass.
@@ -267,6 +265,8 @@ listed here.
 
           async with AsyncConnectionPool(...) as pool:
               # code using the pool
+
+   All the other constructor parameters are the same of `!ConnectionPool`.
 
    .. automethod:: wait
    .. automethod:: resize

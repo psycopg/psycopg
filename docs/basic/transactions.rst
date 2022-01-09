@@ -21,7 +21,7 @@ a `~rollback()` is called.
 
 If the cursor is closed with a transaction open, no COMMIT command is sent to
 the server, which will then discard the connection. Certain middleware (such
-as pgbouncer) will also discard a connection left in transaction state, so, if
+as PgBouncer) will also discard a connection left in transaction state, so, if
 possible you will want to commit or rollback a connection before finishing
 working with it.
 

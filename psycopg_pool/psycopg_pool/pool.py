@@ -70,7 +70,8 @@ class ConnectionPool(BasePool[Connection[Any]]):
         """
         Wait for the pool to be full (with `min_size` connections) after creation.
 
-        Raise `PoolTimeout` if not ready within *timeout* sec.
+        Close the pool, and raise `PoolTimeout`, if not ready within *timeout*
+        sec.
 
         Calling this method is not mandatory: you can try and use the pool
         immediately after its creation. The first client will be served as soon
@@ -125,7 +126,7 @@ class ConnectionPool(BasePool[Connection[Any]]):
             self.putconn(conn)
 
     def getconn(self, timeout: Optional[float] = None) -> Connection[Any]:
-        """Obtain a contection from the pool.
+        """Obtain a connection from the pool.
 
         You should preferrably use `connection()`. Use this function only if
         it is not possible to use the connection as context manager.
