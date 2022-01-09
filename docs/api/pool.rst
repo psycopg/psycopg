@@ -6,7 +6,7 @@
 
 .. module:: psycopg_pool
 
-A connection pool is an object to create and maintain a specified amount of
+A connection pool is an object used to create and maintain a limited amount of
 PostgreSQL connections, reducing the time requested by the program to obtain a
 working connection and allowing an arbitrary large number of concurrent
 threads or tasks to use a controlled amount of resources on the server. See
@@ -18,14 +18,12 @@ used by multithread applications. `AsyncConnectionPool` has a similar
 interface, but with `asyncio` functions replacing blocking functions, and
 yields `~psycopg.AsyncConnection` instances.
 
-The intended (but not mandatory) use is to create a single connection pool, as
-a global object exposed by a module in your application, and use the same
-instance from the rest of the code (especially the
-`ConnectionPool.connection()` method).
-
 .. note:: The `!psycopg_pool` package is distributed separately from the main
-   `psycopg` package: use ``pip install psycopg[pool]`` or ``pip install
-   psycopg_pool`` to make it available. See :ref:`pool-installation`.
+   `psycopg` package: use ``pip install psycopg[pool]``, or ``pip install
+   psycopg_pool``, to make it available. See :ref:`pool-installation`.
+
+   The version numbers indicated in this page refer to the `!psycopg_pool`
+   package, not to `psycopg`.
 
 
 The `!ConnectionPool` class
@@ -67,11 +65,11 @@ The `!ConnectionPool` class
                             be a `!Connection` subclass.
    :type connection_class: `!type`, default: `~psycopg.Connection`
 
-   :param open: If `!true`, open the pool, creating the required connections,
-                on init. If `!false`, open the pool when `!open()` is called or
+   :param open: If `!True`, open the pool, creating the required connections,
+                on init. If `!False`, open the pool when `!open()` is called or
                 when the pool context is entered. See the `open()` method
                 documentation for more details.
-   :type open: `!bool`, default: `!true`
+   :type open: `!bool`, default: `!True`
 
    :param configure: A callback to configure a connection after creation.
                      Useful, for instance, to configure its adapters. If the
@@ -141,12 +139,12 @@ The `!ConnectionPool` class
                        they are returned to the pool.
    :type num_workers: `!int`, default: 3
 
-   .. versionchanged:: psycopg_pool 3.1
+   .. versionchanged:: 3.1
 
-        Added `!open` parameter to init method.
+        Added *open* parameter to init method.
 
-   .. note:: In a future version, the deafult value for the `!open` parameter
-        might be changed to `!false`. If you rely on this behaviour (e.g. if
+   .. note:: In a future version, the deafult value for the *open* parameter
+        might be changed to `!False`. If you rely on this behaviour (e.g. if
         you don't use the pool as a context manager) you might want to specify
         this parameter explicitly.
 
@@ -161,7 +159,7 @@ The `!ConnectionPool` class
 
    .. automethod:: open
 
-      .. versionadded:: psycopg_pool 3.1
+      .. versionadded:: 3.1
 
 
    .. automethod:: close
