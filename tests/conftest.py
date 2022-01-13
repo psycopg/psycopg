@@ -62,13 +62,9 @@ def retries(request):
         )
 
 
-@pytest.fixture
-def event_loop(request):
-    """Return the event loop to test asyncio-marked tests."""
-    # pytest-asyncio reset the the loop config after each test, so set
-    # set them each time
-
-    loop = request.config.getoption("--loop")
+def pytest_sessionstart(session):
+    # Configure the async loop.
+    loop = session.config.getoption("--loop")
     if loop == "uvloop":
         import uvloop
 
@@ -76,10 +72,5 @@ def event_loop(request):
     else:
         assert loop == "default"
 
-    loop = None
     if sys.platform == "win32":
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-    if not loop:
-        loop = asyncio.get_event_loop_policy().new_event_loop()
-    yield loop
-    loop.close()
