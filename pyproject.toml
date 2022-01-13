@@ -6,6 +6,7 @@ build-backend = "setuptools.build_meta"
 line-length = 79
 
 [tool.pytest.ini_options]
+asyncio_mode = "auto"
 filterwarnings = [
     "error",
 ]
