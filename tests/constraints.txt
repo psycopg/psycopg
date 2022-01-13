@@ -12,7 +12,7 @@ typing_extensions == 3.10.0.0
 mypy == 0.920
 pproxy == 2.7.0
 pytest == 6.2.5
-pytest-asyncio == 0.16.0
+pytest-asyncio == 0.17.0
 pytest-cov == 3.0.0
 pytest-randomly == 3.10.0
 tenacity == 8.0.0
@@ -22,7 +22,6 @@ black == 21.12b0
 dnspython == 2.1.0
 flake8 == 4.0.0
 mypy == 0.920
-pytest-mypy == 0.8.0
 types-setuptools == 57.4.0
 wheel == 0.36.0
 
