@@ -21,7 +21,6 @@ black == 21.12b0
 dnspython == 2.1.0
 flake8 == 4.0.0
 mypy == 0.920
-pytest-mypy == 0.8.0
 types-setuptools == 57.4.0
 wheel == 0.36.0
 

@@ -40,7 +40,11 @@ extras_require = {
         "mypy >= 0.920, != 0.930, != 0.931",
         "pproxy >= 2.7",
         "pytest >= 6.2.5",
-        "pytest-asyncio >= 0.16",
+        # 0.16 is still needed to support Python 3.6.
+        # Only pinned in Psycopg 3.0.x as Psycopg 3.1.x is Py >= 3.7 only.
+        # - 0.17 requires asyncio_mode in config or it fails with a warning.
+        # - 0.16 fails if asyncio_mode is in the config.
+        "pytest-asyncio >= 0.16, < 0.17",
         "pytest-cov >= 3.0",
         "pytest-randomly >= 3.10",
         "tenacity >= 8.0",
