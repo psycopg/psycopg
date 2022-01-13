@@ -102,7 +102,7 @@ def test_connection_not_lost(dsn):
 
 @pytest.mark.slow
 @pytest.mark.timing
-def test_concurrent_filling(dsn, monkeypatch, retries):
+def test_concurrent_filling(dsn, monkeypatch):
     delay_connection(monkeypatch, 0.1)
 
     def add_time(self, conn):
@@ -112,17 +112,15 @@ def test_concurrent_filling(dsn, monkeypatch, retries):
     add_orig = pool.ConnectionPool._add_to_pool
     monkeypatch.setattr(pool.ConnectionPool, "_add_to_pool", add_time)
 
-    for retry in retries:
-        with retry:
-            times: List[float] = []
-            t0 = time()
+    times: List[float] = []
+    t0 = time()
 
-            with pool.ConnectionPool(dsn, min_size=5, num_workers=2) as p:
-                p.wait(1.0)
-                want_times = [0.1, 0.1, 0.2, 0.2, 0.3]
-                assert len(times) == len(want_times)
-                for got, want in zip(times, want_times):
-                    assert got == pytest.approx(want, 0.1), times
+    with pool.ConnectionPool(dsn, min_size=5, num_workers=2) as p:
+        p.wait(1.0)
+        want_times = [0.1, 0.1, 0.2, 0.2, 0.3]
+        assert len(times) == len(want_times)
+        for got, want in zip(times, want_times):
+            assert got == pytest.approx(want, 0.1), times
 
 
 @pytest.mark.slow
@@ -297,7 +295,7 @@ def test_reset_broken(dsn, caplog):
 
 @pytest.mark.slow
 @pytest.mark.timing
-def test_queue(dsn, retries):
+def test_queue(dsn):
     def worker(n):
         t0 = time()
         with p.connection() as conn:
@@ -307,23 +305,21 @@ def test_queue(dsn, retries):
         t1 = time()
         results.append((n, t1 - t0, pid))
 
-    for retry in retries:
-        with retry:
-            results: List[Tuple[int, float, int]] = []
-            with pool.ConnectionPool(dsn, min_size=2) as p:
-                p.wait()
-                ts = [Thread(target=worker, args=(i,)) for i in range(6)]
-                for t in ts:
-                    t.start()
-                for t in ts:
-                    t.join()
+    results: List[Tuple[int, float, int]] = []
+    with pool.ConnectionPool(dsn, min_size=2) as p:
+        p.wait()
+        ts = [Thread(target=worker, args=(i,)) for i in range(6)]
+        for t in ts:
+            t.start()
+        for t in ts:
+            t.join()
 
-            times = [item[1] for item in results]
-            want_times = [0.2, 0.2, 0.4, 0.4, 0.6, 0.6]
-            for got, want in zip(times, want_times):
-                assert got == pytest.approx(want, 0.1), times
+    times = [item[1] for item in results]
+    want_times = [0.2, 0.2, 0.4, 0.4, 0.6, 0.6]
+    for got, want in zip(times, want_times):
+        assert got == pytest.approx(want, 0.1), times
 
-            assert len(set(r[2] for r in results)) == 2, results
+    assert len(set(r[2] for r in results)) == 2, results
 
 
 @pytest.mark.slow
@@ -365,7 +361,7 @@ def test_queue_size(dsn):
 
 @pytest.mark.slow
 @pytest.mark.timing
-def test_queue_timeout(dsn, retries):
+def test_queue_timeout(dsn):
     def worker(n):
         t0 = time()
         try:
@@ -380,22 +376,20 @@ def test_queue_timeout(dsn, retries):
             t1 = time()
             results.append((n, t1 - t0, pid))
 
-    for retry in retries:
-        with retry:
-            results: List[Tuple[int, float, int]] = []
-            errors: List[Tuple[int, float, Exception]] = []
+    results: List[Tuple[int, float, int]] = []
+    errors: List[Tuple[int, float, Exception]] = []
 
-            with pool.ConnectionPool(dsn, min_size=2, timeout=0.1) as p:
-                ts = [Thread(target=worker, args=(i,)) for i in range(4)]
-                for t in ts:
-                    t.start()
-                for t in ts:
-                    t.join()
+    with pool.ConnectionPool(dsn, min_size=2, timeout=0.1) as p:
+        ts = [Thread(target=worker, args=(i,)) for i in range(4)]
+        for t in ts:
+            t.start()
+        for t in ts:
+            t.join()
 
-            assert len(results) == 2
-            assert len(errors) == 2
-            for e in errors:
-                assert 0.1 < e[1] < 0.15
+    assert len(results) == 2
+    assert len(errors) == 2
+    for e in errors:
+        assert 0.1 < e[1] < 0.15
 
 
 @pytest.mark.slow
@@ -428,7 +422,7 @@ def test_dead_client(dsn):
 
 @pytest.mark.slow
 @pytest.mark.timing
-def test_queue_timeout_override(dsn, retries):
+def test_queue_timeout_override(dsn):
     def worker(n):
         t0 = time()
         timeout = 0.25 if n == 3 else None
@@ -444,22 +438,20 @@ def test_queue_timeout_override(dsn, retries):
             t1 = time()
             results.append((n, t1 - t0, pid))
 
-    for retry in retries:
-        with retry:
-            results: List[Tuple[int, float, int]] = []
-            errors: List[Tuple[int, float, Exception]] = []
+    results: List[Tuple[int, float, int]] = []
+    errors: List[Tuple[int, float, Exception]] = []
 
-            with pool.ConnectionPool(dsn, min_size=2, timeout=0.1) as p:
-                ts = [Thread(target=worker, args=(i,)) for i in range(4)]
-                for t in ts:
-                    t.start()
-                for t in ts:
-                    t.join()
+    with pool.ConnectionPool(dsn, min_size=2, timeout=0.1) as p:
+        ts = [Thread(target=worker, args=(i,)) for i in range(4)]
+        for t in ts:
+            t.start()
+        for t in ts:
+            t.join()
 
-            assert len(results) == 3
-            assert len(errors) == 1
-            for e in errors:
-                assert 0.1 < e[1] < 0.15
+    assert len(results) == 3
+    assert len(errors) == 1
+    for e in errors:
+        assert 0.1 < e[1] < 0.15
 
 
 def test_broken_reconnect(dsn):
@@ -696,7 +688,7 @@ def test_closed_queue(dsn):
         (0, [0.35, 0.45, 0.55, 0.60, 0.65, 0.70, 0.80, 0.85]),
     ],
 )
-def test_grow(dsn, monkeypatch, retries, min_size, want_times):
+def test_grow(dsn, monkeypatch, min_size, want_times):
     delay_connection(monkeypatch, 0.1)
 
     def worker(n):
@@ -706,26 +698,21 @@ def test_grow(dsn, monkeypatch, retries, min_size, want_times):
         t1 = time()
         results.append((n, t1 - t0))
 
-    for retry in retries:
-        with retry:
-            with pool.ConnectionPool(
-                dsn, min_size=min_size, max_size=4, num_workers=3
-            ) as p:
-                p.wait(1.0)
-                results: List[Tuple[int, float]] = []
+    with pool.ConnectionPool(
+        dsn, min_size=min_size, max_size=4, num_workers=3
+    ) as p:
+        p.wait(1.0)
+        results: List[Tuple[int, float]] = []
 
-                ts = [
-                    Thread(target=worker, args=(i,))
-                    for i in range(len(want_times))
-                ]
-                for t in ts:
-                    t.start()
-                for t in ts:
-                    t.join()
+        ts = [Thread(target=worker, args=(i,)) for i in range(len(want_times))]
+        for t in ts:
+            t.start()
+        for t in ts:
+            t.join()
 
-            times = [item[1] for item in results]
-            for got, want in zip(times, want_times):
-                assert got == pytest.approx(want, 0.1), times
+    times = [item[1] for item in results]
+    for got, want in zip(times, want_times):
+        assert got == pytest.approx(want, 0.1), times
 
 
 @pytest.mark.slow
@@ -764,7 +751,7 @@ def test_shrink(dsn, monkeypatch):
 
 
 @pytest.mark.slow
-def test_reconnect(proxy, caplog, monkeypatch, retries):
+def test_reconnect(proxy, caplog, monkeypatch):
     caplog.set_level(logging.WARNING, logger="psycopg.pool")
 
     assert pool.base.ConnectionAttempt.INITIAL_DELAY == 1.0
@@ -772,36 +759,32 @@ def test_reconnect(proxy, caplog, monkeypatch, retries):
     monkeypatch.setattr(pool.base.ConnectionAttempt, "INITIAL_DELAY", 0.1)
     monkeypatch.setattr(pool.base.ConnectionAttempt, "DELAY_JITTER", 0.0)
 
-    for retry in retries:
-        with retry:
-            caplog.clear()
-            proxy.start()
-            with pool.ConnectionPool(proxy.client_dsn, min_size=1) as p:
-                p.wait(2.0)
-                proxy.stop()
+    caplog.clear()
+    proxy.start()
+    with pool.ConnectionPool(proxy.client_dsn, min_size=1) as p:
+        p.wait(2.0)
+        proxy.stop()
 
-                with pytest.raises(psycopg.OperationalError):
-                    with p.connection() as conn:
-                        conn.execute("select 1")
+        with pytest.raises(psycopg.OperationalError):
+            with p.connection() as conn:
+                conn.execute("select 1")
 
-                sleep(1.0)
-                proxy.start()
-                p.wait()
+        sleep(1.0)
+        proxy.start()
+        p.wait()
 
-                with p.connection() as conn:
-                    conn.execute("select 1")
+        with p.connection() as conn:
+            conn.execute("select 1")
 
-            assert "BAD" in caplog.messages[0]
-            times = [rec.created for rec in caplog.records]
-            assert times[1] - times[0] < 0.05
-            deltas = [
-                times[i + 1] - times[i] for i in range(1, len(times) - 1)
-            ]
-            assert len(deltas) == 3
-            want = 0.1
-            for delta in deltas:
-                assert delta == pytest.approx(want, 0.05), deltas
-                want *= 2
+    assert "BAD" in caplog.messages[0]
+    times = [rec.created for rec in caplog.records]
+    assert times[1] - times[0] < 0.05
+    deltas = [times[i + 1] - times[i] for i in range(1, len(times) - 1)]
+    assert len(deltas) == 3
+    want = 0.1
+    for delta in deltas:
+        assert delta == pytest.approx(want, 0.05), deltas
+        want *= 2
 
 
 @pytest.mark.slow
@@ -845,18 +828,16 @@ def test_reconnect_failure(proxy):
 
 
 @pytest.mark.slow
-def test_uniform_use(dsn, retries):
-    for retry in retries:
-        with retry:
-            with pool.ConnectionPool(dsn, min_size=4) as p:
-                counts = Counter[int]()
-                for i in range(8):
-                    with p.connection() as conn:
-                        sleep(0.1)
-                        counts[id(conn)] += 1
+def test_uniform_use(dsn):
+    with pool.ConnectionPool(dsn, min_size=4) as p:
+        counts = Counter[int]()
+        for i in range(8):
+            with p.connection() as conn:
+                sleep(0.1)
+                counts[id(conn)] += 1
 
-            assert len(counts) == 4
-            assert set(counts.values()) == set([2])
+    assert len(counts) == 4
+    assert set(counts.values()) == set([2])
 
 
 @pytest.mark.slow
@@ -1014,7 +995,7 @@ def test_stats_measures(dsn):
 
 @pytest.mark.slow
 @pytest.mark.timing
-def test_stats_usage(dsn, retries):
+def test_stats_usage(dsn):
     def worker(n):
         try:
             with p.connection(timeout=0.3) as conn:
@@ -1022,33 +1003,31 @@ def test_stats_usage(dsn, retries):
         except pool.PoolTimeout:
             pass
 
-    for retry in retries:
-        with retry:
-            with pool.ConnectionPool(dsn, min_size=3) as p:
-                p.wait(2.0)
+    with pool.ConnectionPool(dsn, min_size=3) as p:
+        p.wait(2.0)
 
-                ts = [Thread(target=worker, args=(i,)) for i in range(7)]
-                for t in ts:
-                    t.start()
-                for t in ts:
-                    t.join()
-                stats = p.get_stats()
-                assert stats["requests_num"] == 7
-                assert stats["requests_queued"] == 4
-                assert 850 <= stats["requests_wait_ms"] <= 950
-                assert stats["requests_errors"] == 1
-                assert 1150 <= stats["usage_ms"] <= 1250
-                assert stats.get("returns_bad", 0) == 0
+        ts = [Thread(target=worker, args=(i,)) for i in range(7)]
+        for t in ts:
+            t.start()
+        for t in ts:
+            t.join()
+        stats = p.get_stats()
+        assert stats["requests_num"] == 7
+        assert stats["requests_queued"] == 4
+        assert 850 <= stats["requests_wait_ms"] <= 950
+        assert stats["requests_errors"] == 1
+        assert 1150 <= stats["usage_ms"] <= 1250
+        assert stats.get("returns_bad", 0) == 0
 
-                with p.connection() as conn:
-                    conn.close()
-                p.wait()
-                stats = p.pop_stats()
-                assert stats["requests_num"] == 8
-                assert stats["returns_bad"] == 1
-                with p.connection():
-                    pass
-                assert p.get_stats()["requests_num"] == 1
+        with p.connection() as conn:
+            conn.close()
+        p.wait()
+        stats = p.pop_stats()
+        assert stats["requests_num"] == 8
+        assert stats["returns_bad"] == 1
+        with p.connection():
+            pass
+        assert p.get_stats()["requests_num"] == 1
 
 
 @pytest.mark.slow

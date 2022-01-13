@@ -28,12 +28,10 @@ skip_if_not_linux = pytest.mark.skipif(
 
 
 @pytest.mark.parametrize("timeout", timeouts)
-def test_wait_conn(dsn, timeout, retries):
-    for retry in retries:
-        with retry:
-            gen = generators.connect(dsn)
-            conn = waiting.wait_conn(gen, **timeout)
-            assert conn.status == ConnStatus.OK
+def test_wait_conn(dsn, timeout):
+    gen = generators.connect(dsn)
+    conn = waiting.wait_conn(gen, **timeout)
+    assert conn.status == ConnStatus.OK
 
 
 def test_wait_conn_bad(dsn):

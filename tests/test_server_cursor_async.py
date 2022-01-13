@@ -105,28 +105,21 @@ async def test_binary_cursor_text_override(aconn):
     await cur.close()
 
 
-async def test_close(aconn, recwarn, retries):
-    async for retry in retries:
-        with retry:
-            if (
-                aconn.info.transaction_status
-                == aconn.TransactionStatus.INTRANS
-            ):
-                # connection dirty from previous failure
-                await aconn.execute("close foo")
-            recwarn.clear()
-            cur = aconn.cursor("foo")
-            await cur.execute("select generate_series(1, 10) as bar")
-            await cur.close()
-            assert cur.closed
+async def test_close(aconn, recwarn):
+    if aconn.info.transaction_status == aconn.TransactionStatus.INTRANS:
+        # connection dirty from previous failure
+        await aconn.execute("close foo")
+    recwarn.clear()
+    cur = aconn.cursor("foo")
+    await cur.execute("select generate_series(1, 10) as bar")
+    await cur.close()
+    assert cur.closed
 
-            assert not await (
-                await aconn.execute(
-                    "select * from pg_cursors where name = 'foo'"
-                )
-            ).fetchone()
-            del cur
-            assert not recwarn, [str(w.message) for w in recwarn.list]
+    assert not await (
+        await aconn.execute("select * from pg_cursors where name = 'foo'")
+    ).fetchone()
+    del cur
+    assert not recwarn, [str(w.message) for w in recwarn.list]
 
 
 async def test_close_idempotent(aconn):
@@ -190,13 +183,11 @@ async def test_cursor_close_fetchall(aconn):
         await cur.fetchall()
 
 
-async def test_close_noop(aconn, recwarn, retries):
-    async for retry in retries:
-        with retry:
-            recwarn.clear()
-            cur = aconn.cursor("foo")
-            await cur.close()
-            assert not recwarn, [str(w.message) for w in recwarn.list]
+async def test_close_noop(aconn, recwarn):
+    recwarn.clear()
+    cur = aconn.cursor("foo")
+    await cur.close()
+    assert not recwarn, [str(w.message) for w in recwarn.list]
 
 
 async def test_close_on_error(aconn):
@@ -216,21 +207,17 @@ async def test_pgresult(aconn):
     assert not cur.pgresult
 
 
-async def test_context(aconn, recwarn, retries):
-    async for retry in retries:
-        with retry:
-            recwarn.clear()
-            async with aconn.cursor("foo") as cur:
-                await cur.execute("select generate_series(1, 10) as bar")
+async def test_context(aconn, recwarn):
+    recwarn.clear()
+    async with aconn.cursor("foo") as cur:
+        await cur.execute("select generate_series(1, 10) as bar")
 
-            assert cur.closed
-            assert not await (
-                await aconn.execute(
-                    "select * from pg_cursors where name = 'foo'"
-                )
-            ).fetchone()
-            del cur
-            assert not recwarn, [str(w.message) for w in recwarn.list]
+    assert cur.closed
+    assert not await (
+        await aconn.execute("select * from pg_cursors where name = 'foo'")
+    ).fetchone()
+    del cur
+    assert not recwarn, [str(w.message) for w in recwarn.list]
 
 
 async def test_close_no_clobber(aconn):
@@ -239,14 +226,12 @@ async def test_close_no_clobber(aconn):
             await cur.execute("select 1 / %s", (0,))
 
 
-async def test_warn_close(aconn, recwarn, retries):
-    async for retry in retries:
-        with retry:
-            recwarn.clear()
-            cur = aconn.cursor("foo")
-            await cur.execute("select generate_series(1, 10) as bar")
-            del cur
-            assert ".close()" in str(recwarn.pop(ResourceWarning).message)
+async def test_warn_close(aconn, recwarn):
+    recwarn.clear()
+    cur = aconn.cursor("foo")
+    await cur.execute("select generate_series(1, 10) as bar")
+    del cur
+    assert ".close()" in str(recwarn.pop(ResourceWarning).message)
 
 
 async def test_execute_reuse(aconn):

@@ -42,7 +42,7 @@ async def test_commit_concurrency(aconn):
 
 
 @pytest.mark.slow
-async def test_concurrent_execution(dsn, retries):
+async def test_concurrent_execution(dsn):
     async def worker():
         cnn = await psycopg.AsyncConnection.connect(dsn)
         cur = cnn.cursor()
@@ -50,12 +50,10 @@ async def test_concurrent_execution(dsn, retries):
         await cur.close()
         await cnn.close()
 
-    async for retry in retries:
-        with retry:
-            workers = [worker(), worker()]
-            t0 = time.time()
-            await asyncio.gather(*workers)
-            assert time.time() - t0 < 0.8, "something broken in concurrency"
+    workers = [worker(), worker()]
+    t0 = time.time()
+    await asyncio.gather(*workers)
+    assert time.time() - t0 < 0.8, "something broken in concurrency"
 
 
 @pytest.mark.slow
@@ -102,7 +100,7 @@ async def test_notifies(aconn, dsn):
 
 
 @pytest.mark.slow
-async def test_cancel(aconn, retries):
+async def test_cancel(aconn):
     async def canceller():
         try:
             await asyncio.sleep(0.5)
@@ -115,47 +113,43 @@ async def test_cancel(aconn, retries):
         with pytest.raises(psycopg.DatabaseError):
             await cur.execute("select pg_sleep(2)")
 
-    async for retry in retries:
-        with retry:
-            errors: List[Exception] = []
-            workers = [worker(), canceller()]
+    errors: List[Exception] = []
+    workers = [worker(), canceller()]
 
-            t0 = time.time()
-            await asyncio.gather(*workers)
+    t0 = time.time()
+    await asyncio.gather(*workers)
 
-            t1 = time.time()
-            assert not errors
-            assert 0.0 < t1 - t0 < 1.0
+    t1 = time.time()
+    assert not errors
+    assert 0.0 < t1 - t0 < 1.0
 
-            # still working
-            await aconn.rollback()
-            cur = aconn.cursor()
-            await cur.execute("select 1")
-            assert await cur.fetchone() == (1,)
+    # still working
+    await aconn.rollback()
+    cur = aconn.cursor()
+    await cur.execute("select 1")
+    assert await cur.fetchone() == (1,)
 
 
 @pytest.mark.slow
-async def test_identify_closure(dsn, retries):
+async def test_identify_closure(dsn):
     async def closer():
         await asyncio.sleep(0.2)
         await conn2.execute(
             "select pg_terminate_backend(%s)", [aconn.pgconn.backend_pid]
         )
 
-    async for retry in retries:
-        with retry:
-            aconn = await psycopg.AsyncConnection.connect(dsn)
-            conn2 = await psycopg.AsyncConnection.connect(dsn)
-            try:
-                t = create_task(closer())
-                t0 = time.time()
-                try:
-                    with pytest.raises(psycopg.OperationalError):
-                        await aconn.execute("select pg_sleep(1.0)")
-                    t1 = time.time()
-                    assert 0.2 < t1 - t0 < 0.4
-                finally:
-                    await asyncio.gather(t)
-            finally:
-                await aconn.close()
-                await conn2.close()
+    aconn = await psycopg.AsyncConnection.connect(dsn)
+    conn2 = await psycopg.AsyncConnection.connect(dsn)
+    try:
+        t = create_task(closer())
+        t0 = time.time()
+        try:
+            with pytest.raises(psycopg.OperationalError):
+                await aconn.execute("select pg_sleep(1.0)")
+            t1 = time.time()
+            assert 0.2 < t1 - t0 < 0.4
+        finally:
+            await asyncio.gather(t)
+    finally:
+        await aconn.close()
+        await conn2.close()

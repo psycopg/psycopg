@@ -47,10 +47,6 @@ module = [
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
-module = "tenacity.*"
-implicit_reexport = true
-
-[[tool.mypy.overrides]]
 module = "uvloop"
 ignore_missing_imports = true
 
