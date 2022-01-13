@@ -46,34 +46,28 @@ samples_ok = [
 
 
 @pytest.mark.parametrize("conninfo, want, env", samples_ok)
-def test_srv(conninfo, want, env, fake_srv, retries, monkeypatch):
+def test_srv(conninfo, want, env, fake_srv, monkeypatch):
     if env:
         for k, v in env.items():
             monkeypatch.setenv(k, v)
-    # retries are needed because weight order is random, although wrong order
-    # is unlikely.
-    for retry in retries:
-        with retry:
-            params = conninfo_to_dict(conninfo)
-            params = psycopg._dns.resolve_srv(params)  # type: ignore[attr-defined]
-            assert conninfo_to_dict(want) == params
+    # Note: This test is flakey because weight order is random, although wrong
+    # order is unlikely.
+    params = conninfo_to_dict(conninfo)
+    params = psycopg._dns.resolve_srv(params)  # type: ignore[attr-defined]
+    assert conninfo_to_dict(want) == params
 
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("conninfo, want, env", samples_ok)
-async def test_srv_async(conninfo, want, env, afake_srv, retries, monkeypatch):
+async def test_srv_async(conninfo, want, env, afake_srv, monkeypatch):
     if env:
         for k, v in env.items():
             monkeypatch.setenv(k, v)
-    async for retry in retries:
-        with retry:
-            params = conninfo_to_dict(conninfo)
-            params = await (
-                psycopg._dns.resolve_srv_async(  # type: ignore[attr-defined]
-                    params
-                )
-            )
-            assert conninfo_to_dict(want) == params
+    params = conninfo_to_dict(conninfo)
+    params = await (
+        psycopg._dns.resolve_srv_async(params)  # type: ignore[attr-defined]
+    )
+    assert conninfo_to_dict(want) == params
 
 
 samples_bad = [

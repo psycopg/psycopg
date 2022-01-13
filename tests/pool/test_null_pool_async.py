@@ -293,7 +293,7 @@ async def test_no_queue_timeout(deaf_port):
 
 @pytest.mark.slow
 @pytest.mark.timing
-async def test_queue(dsn, retries):
+async def test_queue(dsn):
     async def worker(n):
         t0 = time()
         async with p.connection() as conn:
@@ -304,20 +304,18 @@ async def test_queue(dsn, retries):
         t1 = time()
         results.append((n, t1 - t0, pid))
 
-    async for retry in retries:
-        with retry:
-            results: List[Tuple[int, float, int]] = []
-            async with AsyncNullConnectionPool(dsn, max_size=2) as p:
-                await p.wait()
-                ts = [create_task(worker(i)) for i in range(6)]
-                await asyncio.gather(*ts)
+    results: List[Tuple[int, float, int]] = []
+    async with AsyncNullConnectionPool(dsn, max_size=2) as p:
+        await p.wait()
+        ts = [create_task(worker(i)) for i in range(6)]
+        await asyncio.gather(*ts)
 
-            times = [item[1] for item in results]
-            want_times = [0.2, 0.2, 0.4, 0.4, 0.6, 0.6]
-            for got, want in zip(times, want_times):
-                assert got == pytest.approx(want, 0.2), times
+    times = [item[1] for item in results]
+    want_times = [0.2, 0.2, 0.4, 0.4, 0.6, 0.6]
+    for got, want in zip(times, want_times):
+        assert got == pytest.approx(want, 0.2), times
 
-            assert len(set(r[2] for r in results)) == 2, results
+    assert len(set(r[2] for r in results)) == 2, results
 
 
 @pytest.mark.slow
@@ -355,7 +353,7 @@ async def test_queue_size(dsn):
 
 @pytest.mark.slow
 @pytest.mark.timing
-async def test_queue_timeout(dsn, retries):
+async def test_queue_timeout(dsn):
     async def worker(n):
         t0 = time()
         try:
@@ -371,21 +369,17 @@ async def test_queue_timeout(dsn, retries):
             t1 = time()
             results.append((n, t1 - t0, pid))
 
-    async for retry in retries:
-        with retry:
-            results: List[Tuple[int, float, int]] = []
-            errors: List[Tuple[int, float, Exception]] = []
+    results: List[Tuple[int, float, int]] = []
+    errors: List[Tuple[int, float, Exception]] = []
 
-            async with AsyncNullConnectionPool(
-                dsn, max_size=2, timeout=0.1
-            ) as p:
-                ts = [create_task(worker(i)) for i in range(4)]
-                await asyncio.gather(*ts)
+    async with AsyncNullConnectionPool(dsn, max_size=2, timeout=0.1) as p:
+        ts = [create_task(worker(i)) for i in range(4)]
+        await asyncio.gather(*ts)
 
-            assert len(results) == 2
-            assert len(errors) == 2
-            for e in errors:
-                assert 0.1 < e[1] < 0.15
+    assert len(results) == 2
+    assert len(errors) == 2
+    for e in errors:
+        assert 0.1 < e[1] < 0.15
 
 
 @pytest.mark.slow
@@ -414,7 +408,7 @@ async def test_dead_client(dsn):
 
 @pytest.mark.slow
 @pytest.mark.timing
-async def test_queue_timeout_override(dsn, retries):
+async def test_queue_timeout_override(dsn):
     async def worker(n):
         t0 = time()
         timeout = 0.25 if n == 3 else None
@@ -431,21 +425,17 @@ async def test_queue_timeout_override(dsn, retries):
             t1 = time()
             results.append((n, t1 - t0, pid))
 
-    async for retry in retries:
-        with retry:
-            results: List[Tuple[int, float, int]] = []
-            errors: List[Tuple[int, float, Exception]] = []
+    results: List[Tuple[int, float, int]] = []
+    errors: List[Tuple[int, float, Exception]] = []
 
-            async with AsyncNullConnectionPool(
-                dsn, max_size=2, timeout=0.1
-            ) as p:
-                ts = [create_task(worker(i)) for i in range(4)]
-                await asyncio.gather(*ts)
+    async with AsyncNullConnectionPool(dsn, max_size=2, timeout=0.1) as p:
+        ts = [create_task(worker(i)) for i in range(4)]
+        await asyncio.gather(*ts)
 
-            assert len(results) == 3
-            assert len(errors) == 1
-            for e in errors:
-                assert 0.1 < e[1] < 0.15
+    assert len(results) == 3
+    assert len(errors) == 1
+    for e in errors:
+        assert 0.1 < e[1] < 0.15
 
 
 async def test_broken_reconnect(dsn):
@@ -820,7 +810,7 @@ async def test_stats_measures(dsn):
 
 @pytest.mark.slow
 @pytest.mark.timing
-async def test_stats_usage(dsn, retries):
+async def test_stats_usage(dsn):
     async def worker(n):
         try:
             async with p.connection(timeout=0.3) as conn:
@@ -828,30 +818,28 @@ async def test_stats_usage(dsn, retries):
         except PoolTimeout:
             pass
 
-    async for retry in retries:
-        with retry:
-            async with AsyncNullConnectionPool(dsn, max_size=3) as p:
-                await p.wait(2.0)
+    async with AsyncNullConnectionPool(dsn, max_size=3) as p:
+        await p.wait(2.0)
 
-                ts = [create_task(worker(i)) for i in range(7)]
-                await asyncio.gather(*ts)
-                stats = p.get_stats()
-                assert stats["requests_num"] == 7
-                assert stats["requests_queued"] == 4
-                assert 850 <= stats["requests_wait_ms"] <= 950
-                assert stats["requests_errors"] == 1
-                assert 1150 <= stats["usage_ms"] <= 1250
-                assert stats.get("returns_bad", 0) == 0
+        ts = [create_task(worker(i)) for i in range(7)]
+        await asyncio.gather(*ts)
+        stats = p.get_stats()
+        assert stats["requests_num"] == 7
+        assert stats["requests_queued"] == 4
+        assert 850 <= stats["requests_wait_ms"] <= 950
+        assert stats["requests_errors"] == 1
+        assert 1150 <= stats["usage_ms"] <= 1250
+        assert stats.get("returns_bad", 0) == 0
 
-                async with p.connection() as conn:
-                    await conn.close()
-                await p.wait()
-                stats = p.pop_stats()
-                assert stats["requests_num"] == 8
-                assert stats["returns_bad"] == 1
-                async with p.connection():
-                    pass
-                assert p.get_stats()["requests_num"] == 1
+        async with p.connection() as conn:
+            await conn.close()
+        await p.wait()
+        stats = p.pop_stats()
+        assert stats["requests_num"] == 8
+        assert stats["returns_bad"] == 1
+        async with p.connection():
+            pass
+        assert p.get_stats()["requests_num"] == 1
 
 
 @pytest.mark.slow

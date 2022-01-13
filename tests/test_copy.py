@@ -581,7 +581,7 @@ def test_worker_life(conn, format, buffer):
     [(Format.TEXT, True), (Format.TEXT, False), (Format.BINARY, True)],
 )
 @pytest.mark.parametrize("method", ["read", "iter", "row", "rows"])
-def test_copy_to_leaks(dsn, faker, fmt, set_types, method, retries):
+def test_copy_to_leaks(dsn, faker, fmt, set_types, method):
     faker.format = PyFormat.from_pq(fmt)
     faker.choose_schema(ncols=20)
     faker.make_records(20)
@@ -622,17 +622,15 @@ def test_copy_to_leaks(dsn, faker, fmt, set_types, method, retries):
                         list(copy.rows())
 
     gc_collect()
-    for retry in retries:
-        with retry:
-            n = []
-            for i in range(3):
-                work()
-                gc_collect()
-                n.append(len(gc.get_objects()))
+    n = []
+    for i in range(3):
+        work()
+        gc_collect()
+        n.append(len(gc.get_objects()))
 
-            assert (
-                n[0] == n[1] == n[2]
-            ), f"objects leaked: {n[1] - n[0]}, {n[2] - n[1]}"
+    assert (
+        n[0] == n[1] == n[2]
+    ), f"objects leaked: {n[1] - n[0]}, {n[2] - n[1]}"
 
 
 @pytest.mark.slow
@@ -640,7 +638,7 @@ def test_copy_to_leaks(dsn, faker, fmt, set_types, method, retries):
     "fmt, set_types",
     [(Format.TEXT, True), (Format.TEXT, False), (Format.BINARY, True)],
 )
-def test_copy_from_leaks(dsn, faker, fmt, set_types, retries):
+def test_copy_from_leaks(dsn, faker, fmt, set_types):
     faker.format = PyFormat.from_pq(fmt)
     faker.choose_schema(ncols=20)
     faker.make_records(20)
@@ -669,17 +667,15 @@ def test_copy_from_leaks(dsn, faker, fmt, set_types, retries):
                     faker.assert_record(got, want)
 
     gc_collect()
-    for retry in retries:
-        with retry:
-            n = []
-            for i in range(3):
-                work()
-                gc_collect()
-                n.append(len(gc.get_objects()))
+    n = []
+    for i in range(3):
+        work()
+        gc_collect()
+        n.append(len(gc.get_objects()))
 
-            assert (
-                n[0] == n[1] == n[2]
-            ), f"objects leaked: {n[1] - n[0]}, {n[2] - n[1]}"
+    assert (
+        n[0] == n[1] == n[2]
+    ), f"objects leaked: {n[1] - n[0]}, {n[2] - n[1]}"
 
 
 def py_to_raw(item, fmt):

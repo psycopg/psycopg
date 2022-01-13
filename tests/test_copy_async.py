@@ -574,7 +574,7 @@ async def test_worker_life(aconn, format, buffer):
     [(Format.TEXT, True), (Format.TEXT, False), (Format.BINARY, True)],
 )
 @pytest.mark.parametrize("method", ["read", "iter", "row", "rows"])
-async def test_copy_to_leaks(dsn, faker, fmt, set_types, method, retries):
+async def test_copy_to_leaks(dsn, faker, fmt, set_types, method):
     faker.format = PyFormat.from_pq(fmt)
     faker.choose_schema(ncols=20)
     faker.make_records(20)
@@ -615,17 +615,15 @@ async def test_copy_to_leaks(dsn, faker, fmt, set_types, method, retries):
                         await alist(copy.rows())
 
     gc_collect()
-    async for retry in retries:
-        with retry:
-            n = []
-            for i in range(3):
-                await work()
-                gc_collect()
-                n.append(len(gc.get_objects()))
+    n = []
+    for i in range(3):
+        await work()
+        gc_collect()
+        n.append(len(gc.get_objects()))
 
-            assert (
-                n[0] == n[1] == n[2]
-            ), f"objects leaked: {n[1] - n[0]}, {n[2] - n[1]}"
+    assert (
+        n[0] == n[1] == n[2]
+    ), f"objects leaked: {n[1] - n[0]}, {n[2] - n[1]}"
 
 
 @pytest.mark.slow
@@ -633,7 +631,7 @@ async def test_copy_to_leaks(dsn, faker, fmt, set_types, method, retries):
     "fmt, set_types",
     [(Format.TEXT, True), (Format.TEXT, False), (Format.BINARY, True)],
 )
-async def test_copy_from_leaks(dsn, faker, fmt, set_types, retries):
+async def test_copy_from_leaks(dsn, faker, fmt, set_types):
     faker.format = PyFormat.from_pq(fmt)
     faker.choose_schema(ncols=20)
     faker.make_records(20)
@@ -662,17 +660,15 @@ async def test_copy_from_leaks(dsn, faker, fmt, set_types, retries):
                     faker.assert_record(got, want)
 
     gc_collect()
-    async for retry in retries:
-        with retry:
-            n = []
-            for i in range(3):
-                await work()
-                gc_collect()
-                n.append(len(gc.get_objects()))
+    n = []
+    for i in range(3):
+        await work()
+        gc_collect()
+        n.append(len(gc.get_objects()))
 
-            assert (
-                n[0] == n[1] == n[2]
-            ), f"objects leaked: {n[1] - n[0]}, {n[2] - n[1]}"
+    assert (
+        n[0] == n[1] == n[2]
+    ), f"objects leaked: {n[1] - n[0]}, {n[2] - n[1]}"
 
 
 async def ensure_table(cur, tabledef, name="copy_in"):

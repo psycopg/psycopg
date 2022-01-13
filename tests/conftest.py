@@ -1,6 +1,5 @@
 import sys
 import asyncio
-import inspect
 
 import pytest
 
@@ -52,21 +51,6 @@ def pytest_report_header(config):
         return []
 
     return [f"asyncio loop: {loop}"]
-
-
-@pytest.fixture
-def retries(request):
-    """Retry a block in a test a few times before giving up."""
-    import tenacity
-
-    if inspect.iscoroutinefunction(request.function):
-        return tenacity.AsyncRetrying(
-            reraise=True, stop=tenacity.stop_after_attempt(3)
-        )
-    else:
-        return tenacity.Retrying(
-            reraise=True, stop=tenacity.stop_after_attempt(3)
-        )
 
 
 def pytest_sessionstart(session):

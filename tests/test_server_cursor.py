@@ -103,23 +103,21 @@ def test_binary_cursor_text_override(conn):
     cur.close()
 
 
-def test_close(conn, recwarn, retries):
-    for retry in retries:
-        with retry:
-            if conn.info.transaction_status == conn.TransactionStatus.INTRANS:
-                # connection dirty from previous failure
-                conn.execute("close foo")
-            recwarn.clear()
-            cur = conn.cursor("foo")
-            cur.execute("select generate_series(1, 10) as bar")
-            cur.close()
-            assert cur.closed
+def test_close(conn, recwarn):
+    if conn.info.transaction_status == conn.TransactionStatus.INTRANS:
+        # connection dirty from previous failure
+        conn.execute("close foo")
+    recwarn.clear()
+    cur = conn.cursor("foo")
+    cur.execute("select generate_series(1, 10) as bar")
+    cur.close()
+    assert cur.closed
 
-            assert not conn.execute(
-                "select * from pg_cursors where name = 'foo'"
-            ).fetchone()
-            del cur
-            assert not recwarn, [str(w.message) for w in recwarn.list]
+    assert not conn.execute(
+        "select * from pg_cursors where name = 'foo'"
+    ).fetchone()
+    del cur
+    assert not recwarn, [str(w.message) for w in recwarn.list]
 
 
 def test_close_idempotent(conn):
@@ -183,13 +181,11 @@ def test_cursor_close_fetchall(conn):
         cur.fetchall()
 
 
-def test_close_noop(conn, recwarn, retries):
-    for retry in retries:
-        with retry:
-            recwarn.clear()
-            cur = conn.cursor("foo")
-            cur.close()
-            assert not recwarn, [str(w.message) for w in recwarn.list]
+def test_close_noop(conn, recwarn):
+    recwarn.clear()
+    cur = conn.cursor("foo")
+    cur.close()
+    assert not recwarn, [str(w.message) for w in recwarn.list]
 
 
 def test_close_on_error(conn):
@@ -209,19 +205,17 @@ def test_pgresult(conn):
     assert not cur.pgresult
 
 
-def test_context(conn, recwarn, retries):
-    for retry in retries:
-        with retry:
-            recwarn.clear()
-            with conn.cursor("foo") as cur:
-                cur.execute("select generate_series(1, 10) as bar")
+def test_context(conn, recwarn):
+    recwarn.clear()
+    with conn.cursor("foo") as cur:
+        cur.execute("select generate_series(1, 10) as bar")
 
-            assert cur.closed
-            assert not conn.execute(
-                "select * from pg_cursors where name = 'foo'"
-            ).fetchone()
-            del cur
-            assert not recwarn, [str(w.message) for w in recwarn.list]
+    assert cur.closed
+    assert not conn.execute(
+        "select * from pg_cursors where name = 'foo'"
+    ).fetchone()
+    del cur
+    assert not recwarn, [str(w.message) for w in recwarn.list]
 
 
 def test_close_no_clobber(conn):
@@ -230,14 +224,12 @@ def test_close_no_clobber(conn):
             cur.execute("select 1 / %s", (0,))
 
 
-def test_warn_close(conn, recwarn, retries):
-    for retry in retries:
-        with retry:
-            recwarn.clear()
-            cur = conn.cursor("foo")
-            cur.execute("select generate_series(1, 10) as bar")
-            del cur
-            assert ".close()" in str(recwarn.pop(ResourceWarning).message)
+def test_warn_close(conn, recwarn):
+    recwarn.clear()
+    cur = conn.cursor("foo")
+    cur.execute("select generate_series(1, 10) as bar")
+    del cur
+    assert ".close()" in str(recwarn.pop(ResourceWarning).message)
 
 
 def test_execute_reuse(conn):

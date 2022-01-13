@@ -43,7 +43,6 @@ extras_require = {
         "pytest-asyncio >= 0.17",
         "pytest-cov >= 3.0",
         "pytest-randomly >= 3.10",
-        "tenacity >= 8.0",
     ],
     # Requirements needed for development
     "dev": [

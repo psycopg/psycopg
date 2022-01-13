@@ -640,7 +640,7 @@ async def test_str(aconn):
 @pytest.mark.parametrize(
     "row_factory", ["tuple_row", "dict_row", "namedtuple_row"]
 )
-async def test_leak(dsn, faker, fmt, fmt_out, fetch, row_factory, retries):
+async def test_leak(dsn, faker, fmt, fmt_out, fetch, row_factory):
     faker.format = fmt
     faker.choose_schema(ncols=5)
     faker.make_records(10)
@@ -673,15 +673,13 @@ async def test_leak(dsn, faker, fmt, fmt_out, fetch, row_factory, retries):
                     async for rec in cur:
                         pass
 
-    async for retry in retries:
-        with retry:
-            n = []
-            gc_collect()
-            for i in range(3):
-                await work()
-                gc_collect()
-                n.append(len(gc.get_objects()))
+    n = []
+    gc_collect()
+    for i in range(3):
+        await work()
+        gc_collect()
+        n.append(len(gc.get_objects()))
 
-            assert (
-                n[0] == n[1] == n[2]
-            ), f"objects leaked: {n[1] - n[0]}, {n[2] - n[1]}"
+    assert (
+        n[0] == n[1] == n[2]
+    ), f"objects leaked: {n[1] - n[0]}, {n[2] - n[1]}"

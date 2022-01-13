@@ -15,7 +15,7 @@ import psycopg
 
 
 @pytest.mark.slow
-def test_concurrent_execution(dsn, retries):
+def test_concurrent_execution(dsn):
     def worker():
         cnn = psycopg.connect(dsn)
         cur = cnn.cursor()
@@ -23,16 +23,14 @@ def test_concurrent_execution(dsn, retries):
         cur.close()
         cnn.close()
 
-    for retry in retries:
-        with retry:
-            t1 = threading.Thread(target=worker)
-            t2 = threading.Thread(target=worker)
-            t0 = time.time()
-            t1.start()
-            t2.start()
-            t1.join()
-            t2.join()
-            assert time.time() - t0 < 0.8, "something broken in concurrency"
+    t1 = threading.Thread(target=worker)
+    t2 = threading.Thread(target=worker)
+    t0 = time.time()
+    t1.start()
+    t2.start()
+    t1.join()
+    t2.join()
+    assert time.time() - t0 < 0.8, "something broken in concurrency"
 
 
 @pytest.mark.slow
@@ -152,7 +150,7 @@ def test_notifies(conn, dsn):
 
 
 @pytest.mark.slow
-def test_cancel(conn, retries):
+def test_cancel(conn):
     def canceller():
         try:
             time.sleep(0.5)
@@ -160,52 +158,48 @@ def test_cancel(conn, retries):
         except Exception as exc:
             errors.append(exc)
 
-    for retry in retries:
-        with retry:
-            errors: List[Exception] = []
+    errors: List[Exception] = []
 
-            cur = conn.cursor()
-            t = threading.Thread(target=canceller)
-            t0 = time.time()
-            t.start()
+    cur = conn.cursor()
+    t = threading.Thread(target=canceller)
+    t0 = time.time()
+    t.start()
 
-            with pytest.raises(psycopg.DatabaseError):
-                cur.execute("select pg_sleep(2)")
+    with pytest.raises(psycopg.DatabaseError):
+        cur.execute("select pg_sleep(2)")
 
-            t1 = time.time()
-            assert not errors
-            assert 0.0 < t1 - t0 < 1.0
+    t1 = time.time()
+    assert not errors
+    assert 0.0 < t1 - t0 < 1.0
 
-            # still working
-            conn.rollback()
-            assert cur.execute("select 1").fetchone()[0] == 1
+    # still working
+    conn.rollback()
+    assert cur.execute("select 1").fetchone()[0] == 1
 
-            t.join()
+    t.join()
 
 
 @pytest.mark.slow
-def test_identify_closure(dsn, retries):
+def test_identify_closure(dsn):
     def closer():
         time.sleep(0.2)
         conn2.execute(
             "select pg_terminate_backend(%s)", [conn.pgconn.backend_pid]
         )
 
-    for retry in retries:
-        with retry:
-            conn = psycopg.connect(dsn)
-            conn2 = psycopg.connect(dsn)
-            try:
-                t = threading.Thread(target=closer)
-                t.start()
-                t0 = time.time()
-                try:
-                    with pytest.raises(psycopg.OperationalError):
-                        conn.execute("select pg_sleep(1.0)")
-                    t1 = time.time()
-                    assert 0.2 < t1 - t0 < 0.4
-                finally:
-                    t.join()
-            finally:
-                conn.close()
-                conn2.close()
+    conn = psycopg.connect(dsn)
+    conn2 = psycopg.connect(dsn)
+    try:
+        t = threading.Thread(target=closer)
+        t.start()
+        t0 = time.time()
+        try:
+            with pytest.raises(psycopg.OperationalError):
+                conn.execute("select pg_sleep(1.0)")
+            t1 = time.time()
+            assert 0.2 < t1 - t0 < 0.4
+        finally:
+            t.join()
+    finally:
+        conn.close()
+        conn2.close()
