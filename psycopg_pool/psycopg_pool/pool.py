@@ -142,21 +142,8 @@ class ConnectionPool(BasePool[Connection[Any]]):
         # or if the client needs to wait.
         with self._lock:
             self._check_open_getconn()
-
-            pos: Optional[WaitingClient] = None
-            if self._pool:
-                # Take a connection ready out of the pool
-                conn = self._pool.popleft()
-                if len(self._pool) < self._nconns_min:
-                    self._nconns_min = len(self._pool)
-            else:
-                if self.max_waiting and len(self._waiting) >= self.max_waiting:
-                    self._stats[self._REQUESTS_ERRORS] += 1
-                    raise TooManyRequests(
-                        f"the pool {self.name!r} has aleady"
-                        f" {len(self._waiting)} requests waiting"
-                    )
-
+            conn = self._get_ready_connection(timeout)
+            if not conn:
                 # No connection available: put the client in the waiting queue
                 t0 = monotonic()
                 pos = WaitingClient()
@@ -164,19 +151,11 @@ class ConnectionPool(BasePool[Connection[Any]]):
                 self._stats[self._REQUESTS_QUEUED] += 1
 
                 # If there is space for the pool to grow, let's do it
-                # Allow only one thread at time to grow the pool (or returning
-                # connections might be starved).
-                if self._nconns < self._max_size and not self._growing:
-                    self._nconns += 1
-                    logger.info(
-                        "growing pool %r to %s", self.name, self._nconns
-                    )
-                    self._growing = True
-                    self.run_task(AddConnection(self, growing=True))
+                self._maybe_grow_pool()
 
         # If we are in the waiting queue, wait to be assigned a connection
         # (outside the critical section, so only the waiting client is locked)
-        if pos:
+        if not conn:
             if timeout is None:
                 timeout = self.timeout
             try:
@@ -195,6 +174,34 @@ class ConnectionPool(BasePool[Connection[Any]]):
         logger.info("connection given by %r", self.name)
         return conn
 
+    def _get_ready_connection(
+        self, timeout: Optional[float]
+    ) -> Optional[Connection[Any]]:
+        """Return a connection, if the client deserves one."""
+        conn: Optional[Connection[Any]] = None
+        if self._pool:
+            # Take a connection ready out of the pool
+            conn = self._pool.popleft()
+            if len(self._pool) < self._nconns_min:
+                self._nconns_min = len(self._pool)
+        elif self.max_waiting and len(self._waiting) >= self.max_waiting:
+            self._stats[self._REQUESTS_ERRORS] += 1
+            raise TooManyRequests(
+                f"the pool {self.name!r} has aleady"
+                f" {len(self._waiting)} requests waiting"
+            )
+        return conn
+
+    def _maybe_grow_pool(self) -> None:
+        # Allow only one thread at time to grow the pool (or returning
+        # connections might be starved).
+        if self._nconns >= self._max_size or self._growing:
+            return
+        self._nconns += 1
+        logger.info("growing pool %r to %s", self.name, self._nconns)
+        self._growing = True
+        self.run_task(AddConnection(self, growing=True))
+
     def putconn(self, conn: Connection[Any]) -> None:
         """Return a connection to the loving hands of its pool.
 
@@ -206,11 +213,7 @@ class ConnectionPool(BasePool[Connection[Any]]):
 
         logger.info("returning connection to %r", self.name)
 
-        # If the pool is closed just close the connection instead of returning
-        # it to the pool. For extra refcare remove the pool reference from it.
-        if self._closed:
-            conn._pool = None
-            conn.close()
+        if self._maybe_close_connection(conn):
             return
 
         # Use a worker to perform eventual maintenance work in a separate thread
@@ -218,6 +221,20 @@ class ConnectionPool(BasePool[Connection[Any]]):
             self.run_task(ReturnConnection(self, conn))
         else:
             self._return_connection(conn)
+
+    def _maybe_close_connection(self, conn: Connection[Any]) -> bool:
+        """Close a returned connection if necessary.
+
+        Return `!True if the connection was closed.
+        """
+        # If the pool is closed just close the connection instead of returning
+        # it to the pool. For extra refcare remove the pool reference from it.
+        if not self._closed:
+            return False
+
+        conn._pool = None
+        conn.close()
+        return True
 
     def open(self, wait: bool = False, timeout: float = 30.0) -> None:
         """Open the pool by starting connecting and and accepting clients.
@@ -454,13 +471,17 @@ class ConnectionPool(BasePool[Connection[Any]]):
                     ex,
                 )
 
-    def _connect(self) -> Connection[Any]:
+    def _connect(self, timeout: Optional[float] = None) -> Connection[Any]:
         """Return a new connection configured for the pool."""
         self._stats[self._CONNECTIONS_NUM] += 1
+        kwargs = self.kwargs
+        if timeout:
+            kwargs = kwargs.copy()
+            kwargs["connect_timeout"] = max(round(timeout), 1)
         t0 = monotonic()
         try:
             conn: Connection[Any]
-            conn = self.connection_class.connect(self.conninfo, **self.kwargs)
+            conn = self.connection_class.connect(self.conninfo, **kwargs)
         except Exception:
             self._stats[self._CONNECTIONS_ERRORS] += 1
             raise

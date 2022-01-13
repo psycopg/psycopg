@@ -74,7 +74,7 @@ async def test_its_really_a_pool(dsn):
                 (pid2,) = await cur.fetchone()  # type: ignore[misc]
 
         async with p.connection() as conn:
-            assert conn.pgconn.backend_pid in (pid1, pid2)
+            assert conn.info.backend_pid in (pid1, pid2)
 
 
 async def test_context(dsn):
@@ -87,11 +87,11 @@ async def test_connection_not_lost(dsn):
     async with pool.AsyncConnectionPool(dsn, min_size=1) as p:
         with pytest.raises(ZeroDivisionError):
             async with p.connection() as conn:
-                pid = conn.pgconn.backend_pid
+                pid = conn.info.backend_pid
                 1 / 0
 
         async with p.connection() as conn2:
-            assert conn2.pgconn.backend_pid == pid
+            assert conn2.info.backend_pid == pid
 
 
 @pytest.mark.slow
@@ -269,11 +269,11 @@ async def test_reset_badstate(dsn, caplog):
     async with pool.AsyncConnectionPool(dsn, min_size=1, reset=reset) as p:
         async with p.connection() as conn:
             await conn.execute("select 1")
-            pid1 = conn.pgconn.backend_pid
+            pid1 = conn.info.backend_pid
 
         async with p.connection() as conn:
             await conn.execute("select 1")
-            pid2 = conn.pgconn.backend_pid
+            pid2 = conn.info.backend_pid
 
     assert pid1 != pid2
     assert caplog.records
@@ -290,11 +290,11 @@ async def test_reset_broken(dsn, caplog):
     async with pool.AsyncConnectionPool(dsn, min_size=1, reset=reset) as p:
         async with p.connection() as conn:
             await conn.execute("select 1")
-            pid1 = conn.pgconn.backend_pid
+            pid1 = conn.info.backend_pid
 
         async with p.connection() as conn:
             await conn.execute("select 1")
-            pid2 = conn.pgconn.backend_pid
+            pid2 = conn.info.backend_pid
 
     assert pid1 != pid2
     assert caplog.records
@@ -478,14 +478,14 @@ async def test_intrans_rollback(dsn, caplog):
 
     async with pool.AsyncConnectionPool(dsn, min_size=1) as p:
         conn = await p.getconn()
-        pid = conn.pgconn.backend_pid
+        pid = conn.info.backend_pid
         await conn.execute("create table test_intrans_rollback ()")
-        assert conn.pgconn.transaction_status == TransactionStatus.INTRANS
+        assert conn.info.transaction_status == TransactionStatus.INTRANS
         await p.putconn(conn)
 
         async with p.connection() as conn2:
-            assert conn2.pgconn.backend_pid == pid
-            assert conn2.pgconn.transaction_status == TransactionStatus.IDLE
+            assert conn2.info.backend_pid == pid
+            assert conn2.info.transaction_status == TransactionStatus.IDLE
             cur = await conn2.execute(
                 "select 1 from pg_class where relname = 'test_intrans_rollback'"
             )
@@ -500,15 +500,15 @@ async def test_inerror_rollback(dsn, caplog):
 
     async with pool.AsyncConnectionPool(dsn, min_size=1) as p:
         conn = await p.getconn()
-        pid = conn.pgconn.backend_pid
+        pid = conn.info.backend_pid
         with pytest.raises(psycopg.ProgrammingError):
             await conn.execute("wat")
-        assert conn.pgconn.transaction_status == TransactionStatus.INERROR
+        assert conn.info.transaction_status == TransactionStatus.INERROR
         await p.putconn(conn)
 
         async with p.connection() as conn2:
-            assert conn2.pgconn.backend_pid == pid
-            assert conn2.pgconn.transaction_status == TransactionStatus.IDLE
+            assert conn2.info.backend_pid == pid
+            assert conn2.info.transaction_status == TransactionStatus.IDLE
 
     assert len(caplog.records) == 1
     assert "INERROR" in caplog.records[0].message
@@ -519,18 +519,16 @@ async def test_active_close(dsn, caplog):
 
     async with pool.AsyncConnectionPool(dsn, min_size=1) as p:
         conn = await p.getconn()
-        pid = conn.pgconn.backend_pid
-        cur = conn.cursor()
-        async with cur.copy(
-            "copy (select * from generate_series(1, 10)) to stdout"
-        ):
-            pass
-        assert conn.pgconn.transaction_status == TransactionStatus.ACTIVE
+        pid = conn.info.backend_pid
+        conn.pgconn.exec_(
+            b"copy (select * from generate_series(1, 10)) to stdout"
+        )
+        assert conn.info.transaction_status == TransactionStatus.ACTIVE
         await p.putconn(conn)
 
         async with p.connection() as conn2:
-            assert conn2.pgconn.backend_pid != pid
-            assert conn2.pgconn.transaction_status == TransactionStatus.IDLE
+            assert conn2.info.backend_pid != pid
+            assert conn2.info.transaction_status == TransactionStatus.IDLE
 
     assert len(caplog.records) == 2
     assert "ACTIVE" in caplog.records[0].message
@@ -551,15 +549,15 @@ async def test_fail_rollback_close(dsn, caplog, monkeypatch):
         orig_rollback = conn.rollback
         monkeypatch.setattr(conn, "rollback", bad_rollback)
 
-        pid = conn.pgconn.backend_pid
+        pid = conn.info.backend_pid
         with pytest.raises(psycopg.ProgrammingError):
             await conn.execute("wat")
-        assert conn.pgconn.transaction_status == TransactionStatus.INERROR
+        assert conn.info.transaction_status == TransactionStatus.INERROR
         await p.putconn(conn)
 
         async with p.connection() as conn2:
-            assert conn2.pgconn.backend_pid != pid
-            assert conn2.pgconn.transaction_status == TransactionStatus.IDLE
+            assert conn2.info.backend_pid != pid
+            assert conn2.info.transaction_status == TransactionStatus.IDLE
 
     assert len(caplog.records) == 3
     assert "INERROR" in caplog.records[0].message
@@ -654,9 +652,7 @@ async def test_closed_queue(dsn):
 
     t2 = create_task(w2())
     # Wait until w2 is in the queue
-    while not p._waiting:
-        await asyncio.sleep(0)
-
+    await ensure_waiting(p)
     await p.close()
 
     # Wait for the workers to finish
@@ -998,7 +994,7 @@ async def test_max_lifetime(dsn):
         pids = []
         for i in range(5):
             async with p.connection() as conn:
-                pids.append(conn.pgconn.backend_pid)
+                pids.append(conn.info.backend_pid)
             await asyncio.sleep(0.2)
 
     assert pids[0] == pids[1] != pids[4], pids
@@ -1009,10 +1005,10 @@ async def test_check(dsn, caplog):
     async with pool.AsyncConnectionPool(dsn, min_size=4) as p:
         await p.wait(1.0)
         async with p.connection() as conn:
-            pid = conn.pgconn.backend_pid
+            pid = conn.info.backend_pid
 
         await p.wait(1.0)
-        pids = set(conn.pgconn.backend_pid for conn in p._pool)
+        pids = set(conn.info.backend_pid for conn in p._pool)
         assert pid in pids
         await conn.close()
 
@@ -1020,7 +1016,7 @@ async def test_check(dsn, caplog):
         await p.check()
         assert len(caplog.records) == 1
         await p.wait(1.0)
-        pids2 = set(conn.pgconn.backend_pid for conn in p._pool)
+        pids2 = set(conn.info.backend_pid for conn in p._pool)
         assert len(pids & pids2) == 3
         assert pid not in pids2
 
@@ -1163,3 +1159,8 @@ def delay_connection(monkeypatch, sec):
 
     connect_orig = psycopg.AsyncConnection.connect
     monkeypatch.setattr(psycopg.AsyncConnection, "connect", connect_delay)
+
+
+async def ensure_waiting(p, num=1):
+    while len(p._waiting) < num:
+        await asyncio.sleep(0)

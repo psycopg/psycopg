@@ -12,11 +12,22 @@ working connection and allowing an arbitrary large number of concurrent
 threads or tasks to use a controlled amount of resources on the server. See
 :ref:`connection-pools` for more details and usage pattern.
 
-This module implement two connection pools: `ConnectionPool` is a
-synchronous connection pool yielding `~psycopg.Connection` objects and can be
-used by multithread applications. `AsyncConnectionPool` has a similar
-interface, but with `asyncio` functions replacing blocking functions, and
-yields `~psycopg.AsyncConnection` instances.
+This package exposes a few connection pool classes:
+
+- `ConnectionPool` is a synchronous connection pool yielding
+  `~psycopg.Connection` objects and can be used by multithread applications.
+
+- `AsyncConnectionPool` has an interface similar to `!ConnectionPool`, but
+  with `asyncio` functions replacing blocking functions, and yields
+  `~psycopg.AsyncConnection` instances.
+
+- `NullConnectionPool` is a `!ConnectionPool` subclass exposing the same
+  interface of its parent, but not keeping any unused connection in its state.
+  See :ref:`null-pool` for details about related use cases.
+
+- `AsyncNullConnectionPool` has the same behaviour of the
+  `!NullConnectionPool`, but with the same async interface of the
+  `!AsyncConnectionPool`.
 
 .. note:: The `!psycopg_pool` package is distributed separately from the main
    `psycopg` package: use ``pip install psycopg[pool]``, or ``pip install
@@ -271,3 +282,50 @@ listed here.
    .. automethod:: check
    .. automethod:: getconn
    .. automethod:: putconn
+
+
+Null connection pools
+---------------------
+
+.. versionadded:: 3.1
+
+The `NullConnectionPool` is a `ConnectionPool` subclass which doesn't create
+connections preemptively and doesn't keep unused connections in its state. See
+:ref:`null-pool` for further details.
+
+The interface of the object is entirely compatible with its parent class. Its
+behaviour is similar, with the following differences:
+
+.. autoclass:: NullConnectionPool
+
+   All the other constructor parameters are the same as in `ConnectionPool`.
+
+   :param min_size: Always 0, cannot be changed.
+   :type min_size: `!int`, default: 0
+
+   :param max_size: If None or 0, create a new connection at every request,
+                    without a maximum. If greater than 0, don't create more
+                    than *max_size* connections and queue the waiting clients.
+   :type max_size: `!int`, default: None
+
+   :param reset: It is only called when there are waiting clients in the
+                 queue, before giving them a connection already nopen. If no
+                 client is waiting, the connection is closed and discarded
+                 without a fuss.
+   :type reset: `Callable[[Connection], None]`
+
+   :param max_idle: Ignored, as null pools don't leave idle connections
+                    sitting around.
+
+   .. automethod:: wait
+   .. automethod:: resize
+   .. automethod:: check
+
+
+The `AsyncNullConnectionPool` is, similarly, an `AsyncConnectionPool` subclass
+with the same behaviour of the `NullConnectionPool`.
+
+.. autoclass:: AsyncNullConnectionPool
+
+    The interface is the same of its parent class `AsyncConnectionPool`. The
+    behaviour is different in the same way described for `NullConnectionPool`.

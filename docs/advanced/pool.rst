@@ -188,6 +188,52 @@ to tune the configuration parameters. The size of the pool can also be changed
 at runtime using the `~ConnectionPool.resize()` method.
 
 
+.. _null-pool:
+
+Null connection pools
+---------------------
+
+.. versionadded:: 3.1
+
+Sometimes you may want leave the choice of using or not using a connection
+pool as a configuration parameter of your application. For instance, you might
+want to use a pool if you are deploying a "large instance" of your application
+and can dedicate it a handful of connections; conversely you might not want to
+use it if you deploy the application in several instances, behind a load
+balancer, and/or using an external connection pool process such as PgBouncer.
+
+Switching between using or not using a pool requires some code change, because
+the `ConnectionPool` API is different from the normal `~psycopg.connect()`
+function and because the pool can perform additional connection configuration
+(in the *configure* parameter) that, if the pool is removed, should be
+performed in some different code path of your application.
+
+The `!psycopg_pool` 3.1 package introduces the `NullConnectionPool` class.
+This class has the same interface, and largely the same behaviour, of the
+`!ConnectionPool`, but doesn't create any connection beforehand. When a
+connection is returned, unless there are other clients already waiting, it
+is closed immediately and not kept in the pool state.
+
+A null pool is not only a configuration convenience, but can also be used to
+regulate the access to the server by a client program. If *max_size* is set to
+a value greater than 0, the pool will make sure that no more than *max_size*
+connections are created at any given time. If more clients ask for further
+connections, they will be queued and served a connection as soon as a previous
+client has finished using it, like for the basic pool. Other mechanisms to
+throttle client requests (such as *timeout* or *max_waiting*) are respected
+too.
+
+.. note::
+
+    Queued clients will be handed an already established connection, as soon
+    as a previous client has finished using it (and after the pool has
+    returned it to idle state and called *reset()* on it, if necessary).
+
+Because normally (i.e. unless queued) every client will be served a new
+connection, the time to obtain the connection is paid by the waiting client;
+background workers are not normally involved in obtaining new connections.
+
+
 Connection quality
 ------------------
 

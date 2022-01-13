@@ -8,10 +8,10 @@ from time import monotonic
 from random import random
 from typing import Any, Callable, Dict, Generic, Optional, Tuple
 
-from psycopg.abc import ConnectionType
 from psycopg import errors as e
-from .errors import PoolClosed
+from psycopg.abc import ConnectionType
 
+from .errors import PoolClosed
 from ._compat import Counter, Deque
 
 
@@ -121,11 +121,11 @@ class BasePool(Generic[ConnectionType]):
     def _check_size(
         self, min_size: int, max_size: Optional[int]
     ) -> Tuple[int, int]:
-        if min_size < 0:
-            raise ValueError("min_size cannot be negative")
-
         if max_size is None:
             max_size = min_size
+
+        if min_size < 0:
+            raise ValueError("min_size cannot be negative")
         if max_size < min_size:
             raise ValueError("max_size must be greater or equal than min_size")
         if min_size == max_size == 0:
