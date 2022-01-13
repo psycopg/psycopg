@@ -38,6 +38,13 @@ def pytest_addoption(parser):
         help="The asyncio loop to use for async tests.",
     )
 
+    parser.addoption(
+        "--no-collect-ok",
+        action="store_true",
+        help="If no test is collected, exit with 0 instead of 5"
+        " (useful with --lfnf=none).",
+    )
+
 
 def pytest_report_header(config):
     loop = config.getoption("--loop")
@@ -89,3 +96,9 @@ def event_loop(request):
         loop = asyncio.get_event_loop_policy().new_event_loop()
     yield loop
     loop.close()
+
+
+def pytest_sessionfinish(session, exitstatus):
+    no_collect_ok = session.config.getoption("--no-collect-ok")
+    if exitstatus == pytest.ExitCode.NO_TESTS_COLLECTED and no_collect_ok:
+        session.exitstatus = pytest.ExitCode.OK
