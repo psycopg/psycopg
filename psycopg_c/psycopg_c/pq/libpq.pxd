@@ -301,10 +301,10 @@ typedef enum {
     PQ_PIPELINE_ON,
     PQ_PIPELINE_ABORTED
 } PGpipelineStatus;
-#define PQpipelineStatus(conn) NULL
-#define PQenterPipelineMode(conn) NULL
-#define PQexitPipelineMode(conn) NULL
-#define PQpipelineSync(conn) NULL
-#define PQsendFlushRequest(conn) NULL
+#define PQpipelineStatus(conn) PQ_PIPELINE_OFF
+#define PQenterPipelineMode(conn) 0
+#define PQexitPipelineMode(conn) 1
+#define PQpipelineSync(conn) 0
+#define PQsendFlushRequest(conn) 0
 #endif
 """
