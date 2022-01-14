@@ -1,5 +1,6 @@
 import sys
 import asyncio
+from typing import List
 
 import pytest
 
@@ -44,6 +45,14 @@ def pytest_addoption(parser):
         " (useful with --lfnf=none).",
     )
 
+    parser.addoption(
+        "--allow-fail",
+        metavar="NUM",
+        type=int,
+        default=0,
+        help="Tolerate up to NUM failures. Use carefully.",
+    )
+
 
 def pytest_report_header(config):
     loop = config.getoption("--loop")
@@ -82,7 +91,24 @@ def event_loop(request):
     loop.close()
 
 
+allow_fail_messages: List[str] = []
+
+
 def pytest_sessionfinish(session, exitstatus):
     no_collect_ok = session.config.getoption("--no-collect-ok")
     if exitstatus == pytest.ExitCode.NO_TESTS_COLLECTED and no_collect_ok:
         session.exitstatus = pytest.ExitCode.OK
+
+    allow_fail = session.config.getoption("--allow-fail")
+    if exitstatus == pytest.ExitCode.TESTS_FAILED:
+        if session.testsfailed <= allow_fail:
+            allow_fail_messages.append(f"Tests failed: {session.testsfailed}")
+            allow_fail_messages.append(f"Failures allowed: {allow_fail}")
+            session.exitstatus = pytest.ExitCode.OK
+
+
+def pytest_terminal_summary(terminalreporter, exitstatus, config):
+    if allow_fail_messages:
+        terminalreporter.section("failed tests ignored")
+        for msg in allow_fail_messages:
+            terminalreporter.line(msg)

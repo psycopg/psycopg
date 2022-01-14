@@ -230,7 +230,11 @@ jobs:
           &"pip" install @(Get-ChildItem wheelhouse\*.whl)
           # Fix the path for the tests using ctypes
           $env:Path = "C:\Program Files\PostgreSQL\14\bin\;$env:Path"
-          pytest
+          # We don't repeat failed tests as tox does. So allow one failure,
+          # typically reserved to a flakey test.
+          # We may hide a regular failure, yes, but then maybe a flakey test
+          # would allow us to find it...
+          pytest --allow-fail=1
 
 
   # }}}
