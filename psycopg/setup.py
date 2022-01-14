@@ -55,7 +55,7 @@ extras_require = {
         "flake8 >= 4.0",
         "mypy >= 0.920, != 0.930, != 0.931",
         "types-setuptools >= 57.4",
-        "wheel >= 0.36",
+        "wheel >= 0.37",
     ],
     # Requirements needed to build the documentation
     "docs": [

@@ -21,7 +21,7 @@ dnspython == 2.1.0
 flake8 == 4.0.0
 mypy == 0.920
 types-setuptools == 57.4.0
-wheel == 0.36.0
+wheel == 0.37
 
 # From the 'docs' extra
 Sphinx == 4.2.0
