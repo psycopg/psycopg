@@ -316,5 +316,6 @@ typedef enum {
 #define PQexitPipelineMode(conn) 1
 #define PQpipelineSync(conn) 0
 #define PQsendFlushRequest(conn) 0
+#define PQsetTraceFlags(conn, stream) do {} while (0)
 #endif
 """
