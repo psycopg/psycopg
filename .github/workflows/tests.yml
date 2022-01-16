@@ -9,6 +9,7 @@ on:
   pull_request:
   schedule:
     - cron: '48 6 * * *'
+    - cron: '19 18 * * 0'
 
 jobs:
 
@@ -36,11 +37,15 @@ jobs:
       PSYCOPG_TEST_DSN: "host=127.0.0.1 user=postgres"
       PGPASSWORD: password
       PYTEST_ADDOPTS: --color yes
-      # Enable to run tests using the minumum version of dependencies.
-      # PIP_CONSTRAINT: ${{ github.workspace }}/tests/constraints.txt
 
     steps:
       - uses: actions/checkout@v2
+
+      - name: "Set pip constraints"
+        if: github.event.schedule == '19 18 * * 0'
+        run: echo "Running with oldest version of dependencies (Pip constraints)"
+        env:
+          PIP_CONSTRAINT: ${{ github.workspace }}/tests/constraints.txt
 
       - uses: actions/setup-python@v2
         with:
@@ -132,7 +137,6 @@ jobs:
       # Don't run timing-based tests as they regularly fail.
       # pproxy-based tests fail too, with the proxy not coming up in 2s.
       PYTEST_ADDOPTS: -m 'not timing and not proxy and not mypy' --color yes
-      # PIP_CONSTRAINT: ${{ github.workspace }}/tests/constraints.txt
 
     steps:
       - uses: actions/checkout@v2
@@ -142,6 +146,12 @@ jobs:
 
       - name: Start PostgreSQL service for test
         run: brew services start postgresql
+
+      - name: "Set pip constraints"
+        if: github.event.schedule == '19 18 * * 0'
+        run: echo "Running with oldest version of dependencies (Pip constraints)"
+        env:
+          PIP_CONSTRAINT: ${{ github.workspace }}/tests/constraints.txt
 
       - uses: actions/setup-python@v2
         with:
@@ -182,10 +192,15 @@ jobs:
       PSYCOPG_TEST_DSN: "host=127.0.0.1 dbname=postgres"
       # On windows pproxy doesn't seem very happy. Also a few timing test fail.
       PYTEST_ADDOPTS: -m 'not timing and not proxy and not mypy' --color yes
-      # PIP_CONSTRAINT: ${{ github.workspace }}/tests/constraints.txt
 
     steps:
       - uses: actions/checkout@v2
+
+      - name: "Set pip constraints"
+        if: github.event.schedule == '19 18 * * 0'
+        run: echo "Running with oldest version of dependencies (Pip constraints)"
+        env:
+          PIP_CONSTRAINT: ${{ github.workspace }}/tests/constraints.txt
 
       - name: Start PostgreSQL service for test
         run: |
