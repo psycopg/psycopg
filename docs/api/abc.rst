@@ -15,7 +15,7 @@ checking.
         be possible to know the connection encoding or the server date format.
     :type context: `AdaptContext` or None
 
-    A partial implementation of this protocol (implementing everyting except
+    A partial implementation of this protocol (implementing everything except
     `dump()`) is available as `psycopg.adapt.Dumper`.
 
     .. autoattribute:: format
@@ -60,7 +60,7 @@ checking.
         be possible to know the connection encoding or the server date format.
     :type context: `AdaptContext` or None
 
-    A partial implementation of this protocol (implementing everyting except
+    A partial implementation of this protocol (implementing everything except
     `load()`) is available as `psycopg.adapt.Loader`.
 
     .. autoattribute:: format
