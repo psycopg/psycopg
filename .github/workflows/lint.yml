@@ -16,7 +16,7 @@ jobs:
       - uses: actions/checkout@v2
       - uses: codespell-project/actions-codespell@master
         with:
-          ignore_words_list: ans,ba,fo,noe,te
+          ignore_words_list: alot,ans,ba,fo,noe,te
           skip: "*.pyx"
 
   lint:

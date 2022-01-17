@@ -43,7 +43,7 @@ The `!ConnectionPool` class
 .. autoclass:: ConnectionPool
 
    This class implements a connection pool serving `~psycopg.Connection`
-   instances (or subclasses). The constructor has *a lot* of arguments, but
+   instances (or subclasses). The constructor has *alot* of arguments, but
    only *conninfo* and *min_size* are the fundamental ones, all the other
    arguments have meaningful defaults and can probably be tweaked later, if
    required.
