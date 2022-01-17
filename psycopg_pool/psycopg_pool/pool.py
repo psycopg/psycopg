@@ -128,7 +128,7 @@ class ConnectionPool(BasePool[Connection[Any]]):
     def getconn(self, timeout: Optional[float] = None) -> Connection[Any]:
         """Obtain a connection from the pool.
 
-        You should preferrably use `connection()`. Use this function only if
+        You should preferably use `connection()`. Use this function only if
         it is not possible to use the connection as context manager.
 
         After using this function you *must* call a corresponding `putconn()`:
@@ -187,7 +187,7 @@ class ConnectionPool(BasePool[Connection[Any]]):
         elif self.max_waiting and len(self._waiting) >= self.max_waiting:
             self._stats[self._REQUESTS_ERRORS] += 1
             raise TooManyRequests(
-                f"the pool {self.name!r} has aleady"
+                f"the pool {self.name!r} has already"
                 f" {len(self._waiting)} requests waiting"
             )
         return conn
@@ -447,7 +447,7 @@ class ConnectionPool(BasePool[Connection[Any]]):
         # Don't make all the workers time out at the same moment
         timeout = cls._jitter(cls._WORKER_TIMEOUT, -0.1, 0.1)
         while True:
-            # Use a timeout to make the wait interruptable
+            # Use a timeout to make the wait interruptible
             try:
                 task = q.get(timeout=timeout)
             except Empty:

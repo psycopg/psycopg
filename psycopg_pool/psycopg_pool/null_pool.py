@@ -96,7 +96,7 @@ class NullConnectionPool(_BaseNullConnectionPool, ConnectionPool):
         elif self.max_waiting and len(self._waiting) >= self.max_waiting:
             self._stats[self._REQUESTS_ERRORS] += 1
             raise TooManyRequests(
-                f"the pool {self.name!r} has aleady"
+                f"the pool {self.name!r} has already"
                 f" {len(self._waiting)} requests waiting"
             )
         return conn
@@ -158,6 +158,6 @@ class NullConnectionPool(_BaseNullConnectionPool, ConnectionPool):
                 if self._pool_full_event:
                     self._pool_full_event.set()
                 else:
-                    # The connection created by wait shoudn't decrease the
+                    # The connection created by wait shouldn't decrease the
                     # count of the number of connection used.
                     self._nconns -= 1

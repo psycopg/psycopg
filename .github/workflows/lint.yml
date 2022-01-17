@@ -9,6 +9,16 @@ on:
   pull_request:
 
 jobs:
+  codespell:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: codespell-project/actions-codespell@master
+        with:
+          ignore_words_list: ans,ba,fo,noe,te
+          skip: "*.pyx"
+
   lint:
     runs-on: ubuntu-20.04
 

@@ -437,7 +437,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
         self._iresult = i
         res = self.pgresult = self._results[i]
 
-        # Note: the only reason to override format is to correclty set
+        # Note: the only reason to override format is to correctly set
         # binary loaders on server-side cursors, because send_describe_portal
         # only returns a text result.
         self._tx.set_pgresult(res, format=format)

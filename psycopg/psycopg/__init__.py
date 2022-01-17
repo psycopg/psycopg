@@ -36,7 +36,7 @@ logger = logging.getLogger("psycopg")
 if logger.level == logging.NOTSET:
     logger.setLevel(logging.WARNING)
 
-# DBAPI compliancy
+# DBAPI compliance
 connect = Connection.connect
 apilevel = "2.0"
 threadsafety = 2

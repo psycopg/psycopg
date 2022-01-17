@@ -43,7 +43,7 @@ The `!ConnectionPool` class
 .. autoclass:: ConnectionPool
 
    This class implements a connection pool serving `~psycopg.Connection`
-   instances (or subclasses). The constructor has *alot* of arguments, but
+   instances (or subclasses). The constructor has *a lot* of arguments, but
    only *conninfo* and *min_size* are the fundamental ones, all the other
    arguments have meaningful defaults and can probably be tweaked later, if
    required.
@@ -102,7 +102,7 @@ The `!ConnectionPool` class
                 ``pool-2``, etc.
    :type name: `!str`
 
-   :param timeout: The default maximum time in seconts that a client can wait
+   :param timeout: The default maximum time in seconds that a client can wait
                    to receive a connection from the pool (using `connection()`
                    or `getconn()`). Note that these methods allow to override
                    the *timeout* default.
@@ -154,7 +154,7 @@ The `!ConnectionPool` class
 
         Added *open* parameter to init method.
 
-   .. note:: In a future version, the deafult value for the *open* parameter
+   .. note:: In a future version, the default value for the *open* parameter
         might be changed to `!False`. If you rely on this behaviour (e.g. if
         you don't use the pool as a context manager) you might want to specify
         this parameter explicitly.

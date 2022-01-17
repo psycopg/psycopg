@@ -143,7 +143,7 @@ class Faker:
 
     @contextmanager
     def find_insert_problem(self, conn):
-        """Context manager to help finding a problematic vaule."""
+        """Context manager to help finding a problematic value."""
         try:
             yield
         except psycopg.DatabaseError:

@@ -61,7 +61,7 @@ def parse_errors_txt(url):
         )
         if m:
             sqlstate, macro, spec = m.groups()
-            # skip sqlstates without specs as they are not publically visible
+            # skip sqlstates without specs as they are not publicly visible
             if not spec:
                 continue
             errlabel = spec.upper()

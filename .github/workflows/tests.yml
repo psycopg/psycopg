@@ -36,7 +36,7 @@ jobs:
       PSYCOPG_TEST_DSN: "host=127.0.0.1 user=postgres"
       PGPASSWORD: password
       PYTEST_ADDOPTS: --color yes
-      # Enable to run tests using the minumum version of dependencies.
+      # Enable to run tests using the minimum version of dependencies.
       # PIP_CONSTRAINT: ${{ github.workspace }}/tests/constraints.txt
 
     steps:
