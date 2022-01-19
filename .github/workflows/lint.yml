@@ -23,6 +23,8 @@ jobs:
         run: tox -e flake8
       - name: Run mypy
         run: tox -e mypy
+      - name: Check spelling
+        run: tox -e codespell
       - name: Install requirements to generate docs
         run: sudo apt-get install -y libgeos-dev
       - name: Check documentation
