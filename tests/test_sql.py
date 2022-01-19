@@ -315,7 +315,7 @@ class TestLiteral:
 
     def test_as_string(self, conn):
         assert sql.Literal(None).as_string(conn) == "NULL"
-        assert noe(sql.Literal("foo").as_string(conn)) == "'foo'"
+        assert no_e(sql.Literal("foo").as_string(conn)) == "'foo'"
         assert sql.Literal(42).as_string(conn) == "42"
         assert (
             sql.Literal(dt.date(2017, 1, 1)).as_string(conn) == "'2017-01-01'"
@@ -323,7 +323,7 @@ class TestLiteral:
 
     def test_as_bytes(self, conn):
         assert sql.Literal(None).as_bytes(conn) == b"NULL"
-        assert noe(sql.Literal("foo").as_bytes(conn)) == b"'foo'"
+        assert no_e(sql.Literal("foo").as_bytes(conn)) == b"'foo'"
         assert sql.Literal(42).as_bytes(conn) == b"42"
         assert (
             sql.Literal(dt.date(2017, 1, 1)).as_bytes(conn) == b"'2017-01-01'"
@@ -440,30 +440,30 @@ class TestComposed:
         obj = sql.Composed([sql.Literal("foo"), sql.Identifier("b'ar")])
         obj = obj.join(", ")
         assert isinstance(obj, sql.Composed)
-        assert noe(obj.as_string(conn)) == "'foo', \"b'ar\""
+        assert no_e(obj.as_string(conn)) == "'foo', \"b'ar\""
 
     def test_auto_literal(self, conn):
         obj = sql.Composed(["fo'o", dt.date(2020, 1, 1)])
         obj = obj.join(", ")
         assert isinstance(obj, sql.Composed)
-        assert noe(obj.as_string(conn)) == "'fo''o', '2020-01-01'"
+        assert no_e(obj.as_string(conn)) == "'fo''o', '2020-01-01'"
 
     def test_sum(self, conn):
         obj = sql.Composed([sql.SQL("foo ")])
         obj = obj + sql.Literal("bar")
         assert isinstance(obj, sql.Composed)
-        assert noe(obj.as_string(conn)) == "foo 'bar'"
+        assert no_e(obj.as_string(conn)) == "foo 'bar'"
 
     def test_sum_inplace(self, conn):
         obj = sql.Composed([sql.SQL("foo ")])
         obj += sql.Literal("bar")
         assert isinstance(obj, sql.Composed)
-        assert noe(obj.as_string(conn)) == "foo 'bar'"
+        assert no_e(obj.as_string(conn)) == "foo 'bar'"
 
         obj = sql.Composed([sql.SQL("foo ")])
         obj += sql.Composed([sql.Literal("bar")])
         assert isinstance(obj, sql.Composed)
-        assert noe(obj.as_string(conn)) == "foo 'bar'"
+        assert no_e(obj.as_string(conn)) == "foo 'bar'"
 
     def test_iter(self):
         obj = sql.Composed([sql.SQL("foo"), sql.SQL("bar")])
@@ -547,7 +547,7 @@ class TestValues:
         assert sql.DEFAULT.as_string(conn) == "DEFAULT"
 
 
-def noe(s):
+def no_e(s):
     """Drop an eventual E from E'' quotes"""
     if isinstance(s, memoryview):
         s = bytes(s)
