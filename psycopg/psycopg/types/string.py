@@ -55,7 +55,7 @@ class StrDumper(_StrDumper):
     """
     Dumper for strings in text format to the text oid.
 
-    Note that this dumper is not used by deafult because the type is too strict
+    Note that this dumper is not used by default because the type is too strict
     and PostgreSQL would require an explicit casts to everything that is not a
     text field. However it is useful where the unknown oid is ambiguous and the
     text oid is required, for instance with variadic functions.

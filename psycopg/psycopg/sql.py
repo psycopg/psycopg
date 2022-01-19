@@ -21,7 +21,7 @@ def quote(obj: Any, context: Optional[AdaptContext] = None) -> str:
 
     Use this function only if you absolutely want to convert a Python string to
     an SQL quoted literal to use e.g. to generate batch SQL and you won't have
-    a connection avaliable when you will need to use it.
+    a connection available when you will need to use it.
 
     This function is relatively inefficient, because it doesn't cache the
     adaptation rules. If you pass a *context* you can adapt the adaptation

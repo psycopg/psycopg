@@ -362,7 +362,7 @@ async def test_named_savepoints_successful_exit(aconn, acommands):
     commands = acommands
 
     # Case 1
-    # Using Transaction explicitly becase conn.transaction() enters the contetx
+    # Using Transaction explicitly because conn.transaction() enters the contetx
     async with aconn.transaction() as tx:
         assert commands.popall() == ["BEGIN"]
         assert not tx.savepoint_name

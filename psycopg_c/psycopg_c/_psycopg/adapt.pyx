@@ -55,7 +55,7 @@ cdef class CDumper:
         The function interface allows C code to use this method automatically
         to create larger buffers, e.g. for copy, composite objects, etc.
 
-        Implementation note: as you will alway need to make sure that rv
+        Implementation note: as you will always need to make sure that rv
         has enough space to include what you want to dump, `ensure_size()`
         might probably come handy.
         """

@@ -3,7 +3,7 @@
 
 .. module:: psycopg._dns
 
-This module contains a few experimental utilities to interact wit the DNS
+This module contains a few experimental utilities to interact with the DNS
 server before performing a connection.
 
 .. warning::

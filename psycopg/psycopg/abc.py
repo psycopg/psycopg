@@ -140,7 +140,7 @@ class Dumper(Protocol):
           size of int?...)
 
         In these cases, a dumper can implement `!get_key()` and return a new
-        class, or sequence of classes, that can be used to indentify the same
+        class, or sequence of classes, that can be used to identify the same
         dumper again. If the mechanism is not needed, the method should return
         the same *cls* object passed in the constructor.
 

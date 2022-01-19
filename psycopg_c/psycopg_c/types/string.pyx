@@ -157,7 +157,7 @@ cdef class BytesDumper(CDumper):
     format = PQ_TEXT
     oid = oids.BYTEA_OID
 
-    # 0: not set, 1: just  single "'" quote, 3: " E'" qoute
+    # 0: not set, 1: just  single "'" quote, 3: " E'" quote
     cdef int _qplen
 
     def __cinit__(self):

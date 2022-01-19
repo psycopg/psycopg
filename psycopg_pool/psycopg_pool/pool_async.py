@@ -153,7 +153,7 @@ class AsyncConnectionPool(BasePool[AsyncConnection[Any]]):
         elif self.max_waiting and len(self._waiting) >= self.max_waiting:
             self._stats[self._REQUESTS_ERRORS] += 1
             raise TooManyRequests(
-                f"the pool {self.name!r} has aleady"
+                f"the pool {self.name!r} has already"
                 f" {len(self._waiting)} requests waiting"
             )
         return conn

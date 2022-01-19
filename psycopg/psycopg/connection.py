@@ -384,7 +384,7 @@ class BaseConnection(Generic[Row]):
     # to the connections subclass, which might wait either in blocking mode
     # or through asyncio.
     #
-    # All these generators assume exclusive acces to the connection: subclasses
+    # All these generators assume exclusive access to the connection: subclasses
     # should have a lock and hold it before calling and consuming them.
 
     @classmethod

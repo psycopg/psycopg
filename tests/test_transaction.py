@@ -409,7 +409,7 @@ def test_named_savepoints_successful_exit(conn, commands):
     ...and exiting the context successfully will "commit" the same.
     """
     # Case 1
-    # Using Transaction explicitly becase conn.transaction() enters the contetx
+    # Using Transaction explicitly because conn.transaction() enters the contetx
     assert not commands
     with conn.transaction() as tx:
         assert commands.popall() == ["BEGIN"]
