@@ -105,7 +105,7 @@ class Column(Sequence[Any]):
 
     @property
     def internal_size(self) -> Optional[int]:
-        """The interal field size for fixed-size types, None otherwise."""
+        """The internal field size for fixed-size types, None otherwise."""
         fsize = self._data.fsize
         return fsize if fsize >= 0 else None
 

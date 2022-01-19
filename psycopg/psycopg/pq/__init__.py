@@ -100,7 +100,7 @@ def import_from_libpq() -> None:
         PGcancel = module.PGcancel
         __build_version__ = getattr(module, "__build_version__", None)
     elif impl:
-        raise ImportError(f"requested psycopg impementation '{impl}' unknown")
+        raise ImportError(f"requested psycopg implementation '{impl}' unknown")
     else:
         sattempts = "\n".join(f"- {attempt}" for attempt in attempts)
         raise ImportError(

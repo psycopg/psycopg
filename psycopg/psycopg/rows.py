@@ -96,7 +96,7 @@ def tuple_row(cursor: "BaseCursor[Any, TupleRow]") -> "RowMaker[TupleRow]":
     r"""Row factory to represent rows as simple tuples.
 
     This is the default factory, used when `~psycopg.Connection.connect()` or
-    `~psycopg.Connection.cursor()` are called withouth a `!row_factory`
+    `~psycopg.Connection.cursor()` are called without a `!row_factory`
     parameter.
 
     """

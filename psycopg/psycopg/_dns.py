@@ -117,7 +117,7 @@ async def resolve_hostaddr_async(params: Dict[str, Any]) -> Dict[str, Any]:
             ans = await async_resolver.resolve(host)
         except DNSException as ex:
             # Special case localhost: on MacOS it doesn't get resolved.
-            # I assue it is just resolved by /etc/hosts, which is not handled
+            # I assume it is just resolved by /etc/hosts, which is not handled
             # by dnspython.
             if host == "localhost":
                 hosts_out.append(host)

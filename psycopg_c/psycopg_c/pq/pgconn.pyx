@@ -672,7 +672,7 @@ cdef (Py_ssize_t, libpq.Oid *, char * const*, int *, int *) _query_params_args(
 ) except *:
     cdef int i
 
-    # the PostgresQuery convers the param_types to tuple, so this operation
+    # the PostgresQuery converts the param_types to tuple, so this operation
     # is most often no-op
     cdef tuple tparam_types
     if param_types is not None and not isinstance(param_types, tuple):

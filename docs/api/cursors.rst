@@ -257,12 +257,12 @@ The `!ServerCursor` class
     .. autoattribute:: name
     .. autoattribute:: scrollable
 
-       .. seealso:: The PostgreSQL DECLARE_ statement documetation
+       .. seealso:: The PostgreSQL DECLARE_ statement documentation
           for the description of :sql:`[NO] SCROLL`.
 
     .. autoattribute:: withhold
 
-       .. seealso:: The PostgreSQL DECLARE_ statement documetation
+       .. seealso:: The PostgreSQL DECLARE_ statement documentation
           for the description of :sql:`{WITH|WITHOUT} HOLD`.
 
     .. _DECLARE: https://www.postgresql.org/docs/current/sql-declare.html
