@@ -47,8 +47,8 @@ class psycopg_build_ext(build_ext):
     def _setup_ext_build(self) -> None:
         cythonize = None
 
-        # In the sdist there are not .pyx, only c, so we don't need Cython
-        # Otherwise Cython is a requirement and is be used to compile pyx to c
+        # In the sdist there are not .pyx, only c, so we don't need Cython.
+        # Otherwise Cython is a requirement and it is used to compile pyx to c.
         if os.path.exists("psycopg_c/_psycopg.pyx"):
             from Cython.Build import cythonize
 
