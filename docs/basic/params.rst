@@ -167,7 +167,7 @@ and reliable. We must stress this point:
 
     - If you use ``+`` to merge a textual value to a string, bad guys in
       balaclava will find their way to your fridge, drink all your beer, and
-      leave your toilet sit up and your toilet paper in the wrong orientation.
+      leave your toilet seat up and your toilet paper in the wrong orientation.
 
     - You don't want to manually merge values to a query: :ref:`use the
       provided methods <query-parameters>` instead.
