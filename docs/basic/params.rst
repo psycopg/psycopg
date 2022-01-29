@@ -30,7 +30,7 @@ example the Python function call:
 .. code:: python
 
     cur.execute("""
-        INSERT INTO some_table (an_int, a_date, a_string)
+        INSERT INTO some_table (id, created_at, last_name)
         VALUES (%s, %s, %s);
         """,
         (10, datetime.date(2020, 11, 18), "O'Reilly"))
@@ -39,7 +39,7 @@ is *roughly* equivalent to the SQL command:
 
 .. code-block:: sql
 
-    INSERT INTO some_table (an_int, a_date, a_string)
+    INSERT INTO some_table (id, created_at, last_name)
     VALUES (10, '2020-11-18', 'O''Reilly');
 
 Note that the parameters will not be really merged to the query: query and the
@@ -52,10 +52,10 @@ to specify the values in any order and to repeat the same value in several
 places in the query::
 
     cur.execute("""
-        INSERT INTO some_table (an_int, a_date, another_date, a_string)
-        VALUES (%(int)s, %(date)s, %(date)s, %(str)s);
+        INSERT INTO some_table (id, created_at, updated_at, last_name)
+        VALUES (%(id)s, %(created)s, %(created)s, %(name)s);
         """,
-        {'int': 10, 'str': "O'Reilly", 'date': datetime.date(2020, 11, 18)})
+        {'id': 10, 'name': "O'Reilly", 'created': datetime.date(2020, 11, 18)})
 
 Using characters ``%``, ``(``, ``)`` in the argument names is not supported.
 
