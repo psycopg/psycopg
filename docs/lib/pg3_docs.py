@@ -24,9 +24,7 @@ def before_process_signature(app, obj, bound_method):
             del ann["return"]
 
 
-def process_signature(
-    app, what, name, obj, options, signature, return_annotation
-):
+def process_signature(app, what, name, obj, options, signature, return_annotation):
     pass
 
 

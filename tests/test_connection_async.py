@@ -185,9 +185,7 @@ async def test_context_active_rollback_no_clobber(dsn, caplog):
 
     with pytest.raises(ZeroDivisionError):
         async with await psycopg.AsyncConnection.connect(dsn) as conn:
-            conn.pgconn.exec_(
-                b"copy (select generate_series(1, 10)) to stdout"
-            )
+            conn.pgconn.exec_(b"copy (select generate_series(1, 10)) to stdout")
             status = conn.info.transaction_status
             assert status == conn.TransactionStatus.ACTIVE
             1 / 0
@@ -400,15 +398,11 @@ async def test_notice_handlers(aconn, caplog):
     aconn.add_notice_handler(cb1)
     aconn.add_notice_handler(cb2)
     aconn.add_notice_handler("the wrong thing")
-    aconn.add_notice_handler(
-        lambda diag: severities.append(diag.severity_nonlocalized)
-    )
+    aconn.add_notice_handler(lambda diag: severities.append(diag.severity_nonlocalized))
 
     aconn.pgconn.exec_(b"set client_min_messages to notice")
     cur = aconn.cursor()
-    await cur.execute(
-        "do $$begin raise notice 'hello notice'; end$$ language plpgsql"
-    )
+    await cur.execute("do $$begin raise notice 'hello notice'; end$$ language plpgsql")
     assert messages == ["hello notice"]
     assert severities == ["NOTICE"]
 
@@ -641,9 +635,7 @@ async def test_set_transaction_param_all(aconn):
 
     for attr in tx_params:
         guc = tx_params[attr]["guc"]
-        cur = await aconn.execute(
-            "select current_setting(%s)", [f"transaction_{guc}"]
-        )
+        cur = await aconn.execute("select current_setting(%s)", [f"transaction_{guc}"])
         pgval = (await cur.fetchone())[0]
         assert tx_values_map[pgval] == value
 

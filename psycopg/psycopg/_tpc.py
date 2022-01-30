@@ -68,9 +68,7 @@ class Xid:
             if bqual is None:
                 raise TypeError("if format_id is specified, bqual must be too")
             if not 0 <= format_id < 0x80000000:
-                raise ValueError(
-                    "format_id must be a non-negative 32-bit integer"
-                )
+                raise ValueError("format_id must be a non-negative 32-bit integer")
             if len(bqual) > 64:
                 raise ValueError("bqual must be not longer than 64 chars")
             if len(gtrid) > 64:

@@ -63,9 +63,7 @@ async def test_do_prepare_conn(aconn):
 async def test_auto_prepare_conn(aconn):
     res = []
     for i in range(10):
-        cur = await aconn.execute(
-            "select count(*) from pg_prepared_statements"
-        )
+        cur = await aconn.execute("select count(*) from pg_prepared_statements")
         res.append((await cur.fetchone())[0])
 
     assert res == [0] * 5 + [1] * 5
@@ -75,9 +73,7 @@ async def test_prepare_disable(aconn):
     aconn.prepare_threshold = None
     res = []
     for i in range(10):
-        cur = await aconn.execute(
-            "select count(*) from pg_prepared_statements"
-        )
+        cur = await aconn.execute("select count(*) from pg_prepared_statements")
         res.append((await cur.fetchone())[0])
 
     assert res == [0] * 10
@@ -134,9 +130,7 @@ async def test_params_types(aconn):
         [dt.date(2020, 12, 10), 42, Decimal(42)],
         prepare=True,
     )
-    cur = await aconn.execute(
-        "select parameter_types from pg_prepared_statements"
-    )
+    cur = await aconn.execute("select parameter_types from pg_prepared_statements")
     (rec,) = await cur.fetchall()
     assert rec[0] == ["date", "smallint", "numeric"]
 
@@ -172,9 +166,7 @@ async def test_evict_lru_deallocate(aconn):
         "select statement from pg_prepared_statements order by prepare_time",
         prepare=False,
     )
-    assert await cur.fetchall() == [
-        (f"select {i}",) for i in ["'a'", 6, 7, 8, 9]
-    ]
+    assert await cur.fetchall() == [(f"select {i}",) for i in ["'a'", 6, 7, 8, 9]]
 
 
 async def test_different_types(aconn):
@@ -197,7 +189,5 @@ async def test_untyped_json(aconn):
     for i in range(2):
         await aconn.execute("insert into testjson (data) values (%s)", ["{}"])
 
-    cur = await aconn.execute(
-        "select parameter_types from pg_prepared_statements"
-    )
+    cur = await aconn.execute("select parameter_types from pg_prepared_statements")
     assert await cur.fetchall() == [(["jsonb"],)]

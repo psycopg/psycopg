@@ -9,8 +9,6 @@ import sys
 # This package shouldn't be imported before psycopg itself, or weird things
 # will happen
 if "psycopg" not in sys.modules:
-    raise ImportError(
-        "the psycopg package should be imported before psycopg_c"
-    )
+    raise ImportError("the psycopg package should be imported before psycopg_c")
 
 from .version import __version__ as __version__  # noqa

@@ -89,9 +89,7 @@ def maybe_trace(pgconn, tracefile, function):
 
     pgconn.trace(tracefile.fileno())
     try:
-        pgconn.set_trace_flags(
-            pq.Trace.SUPPRESS_TIMESTAMPS | pq.Trace.REGRESS_MODE
-        )
+        pgconn.set_trace_flags(pq.Trace.SUPPRESS_TIMESTAMPS | pq.Trace.REGRESS_MODE)
     except psycopg.NotSupportedError:
         pass
     try:
@@ -107,9 +105,7 @@ def pgconn(dsn, request, tracefile):
 
     conn = pq.PGconn.connect(dsn.encode())
     if conn.status != pq.ConnStatus.OK:
-        pytest.fail(
-            f"bad connection: {conn.error_message.decode('utf8', 'replace')}"
-        )
+        pytest.fail(f"bad connection: {conn.error_message.decode('utf8', 'replace')}")
     msg = check_connection_version(conn.server_version, request.function)
     if msg:
         conn.finish()
@@ -222,9 +218,7 @@ def hstore(svcconn):
         pytest.skip(str(e))
 
 
-def warm_up_database(
-    dsn: str, __first_connection: List[bool] = [True]
-) -> None:
+def warm_up_database(dsn: str, __first_connection: List[bool] = [True]) -> None:
     """Connect to the database before returning a connection.
 
     In the CI sometimes, the first test fails with a timeout, probably because

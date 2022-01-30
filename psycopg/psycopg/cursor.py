@@ -340,9 +340,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
         self._execute_send(query, binary=False)
         results = yield from execute(self._pgconn)
         if len(results) != 1:
-            raise e.ProgrammingError(
-                "COPY cannot be mixed with other operations"
-            )
+            raise e.ProgrammingError("COPY cannot be mixed with other operations")
 
         result = results[0]
         self._check_copy_result(result)
@@ -428,9 +426,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
                 f" {ExecStatus(result.status).name}"
             )
 
-    def _set_current_result(
-        self, i: int, format: Optional[Format] = None
-    ) -> None:
+    def _set_current_result(self, i: int, format: Optional[Format] = None) -> None:
         """
         Select one of the results in the cursor as the active one.
         """
@@ -469,9 +465,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
         if not res:
             raise e.ProgrammingError("no result available")
         elif res.status != ExecStatus.TUPLES_OK:
-            raise e.ProgrammingError(
-                "the last operation didn't produce a result"
-            )
+            raise e.ProgrammingError("the last operation didn't produce a result")
 
     def _check_copy_result(self, result: "PGresult") -> None:
         """
@@ -496,9 +490,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
         elif mode == "absolute":
             newpos = value
         else:
-            raise ValueError(
-                f"bad mode: {mode}. It should be 'relative' or 'absolute'"
-            )
+            raise ValueError(f"bad mode: {mode}. It should be 'relative' or 'absolute'")
         if not 0 <= newpos < self.pgresult.ntuples:
             raise IndexError("position out of bound")
         self._pos = newpos
@@ -515,9 +507,7 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
     __module__ = "psycopg"
     __slots__ = ()
 
-    def __init__(
-        self, connection: "Connection[Any]", *, row_factory: RowFactory[Row]
-    ):
+    def __init__(self, connection: "Connection[Any]", *, row_factory: RowFactory[Row]):
         super().__init__(connection)
         self._row_factory = row_factory
 
@@ -566,9 +556,7 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
         try:
             with self._conn.lock:
                 self._conn.wait(
-                    self._execute_gen(
-                        query, params, prepare=prepare, binary=binary
-                    )
+                    self._execute_gen(query, params, prepare=prepare, binary=binary)
                 )
         except e.Error as ex:
             raise ex.with_traceback(None)
@@ -586,9 +574,7 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
         """
         try:
             with self._conn.lock:
-                self._conn.wait(
-                    self._executemany_gen(query, params_seq, returning)
-                )
+                self._conn.wait(self._executemany_gen(query, params_seq, returning))
         except e.Error as ex:
             raise ex.with_traceback(None)
 
@@ -603,9 +589,7 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
         Iterate row-by-row on a result from the database.
         """
         with self._conn.lock:
-            self._conn.wait(
-                self._stream_send_gen(query, params, binary=binary)
-            )
+            self._conn.wait(self._stream_send_gen(query, params, binary=binary))
             first = True
             while self._conn.wait(self._stream_fetchone_gen(first)):
                 rec = self._tx.load_row(0, self._make_row)
@@ -656,9 +640,7 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
         """
         self._check_result_for_fetch()
         assert self.pgresult
-        records = self._tx.load_rows(
-            self._pos, self.pgresult.ntuples, self._make_row
-        )
+        records = self._tx.load_rows(self._pos, self.pgresult.ntuples, self._make_row)
         self._pos = self.pgresult.ntuples
         return records
 

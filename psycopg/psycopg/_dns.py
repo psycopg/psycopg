@@ -187,9 +187,7 @@ class Rfc2782Resolver:
     the async paths.
     """
 
-    re_srv_rr = re.compile(
-        r"^(?P<service>_[^\.]+)\.(?P<proto>_[^\.]+)\.(?P<target>.+)"
-    )
+    re_srv_rr = re.compile(r"^(?P<service>_[^\.]+)\.(?P<proto>_[^\.]+)\.(?P<target>.+)")
 
     def resolve(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """Update the parameters host and port after SRV lookup."""

@@ -16,9 +16,7 @@ async def test_commit_concurrency(aconn):
     # Because of bad status check, we commit even when a commit is already on
     # its way. We can detect this condition by the warnings.
     notices = Queue()  # type: ignore[var-annotated]
-    aconn.add_notice_handler(
-        lambda diag: notices.put_nowait(diag.message_primary)
-    )
+    aconn.add_notice_handler(lambda diag: notices.put_nowait(diag.message_primary))
     stop = False
 
     async def committer():

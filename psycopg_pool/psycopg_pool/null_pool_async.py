@@ -62,9 +62,7 @@ class AsyncNullConnectionPool(_BaseNullConnectionPool, AsyncConnectionPool):
             )
         return conn
 
-    async def _maybe_close_connection(
-        self, conn: AsyncConnection[Any]
-    ) -> bool:
+    async def _maybe_close_connection(self, conn: AsyncConnection[Any]) -> bool:
         # Close the connection if no client is waiting for it, or if the pool
         # is closed. For extra refcare remove the pool reference from it.
         # Maintain the stats.
@@ -79,9 +77,7 @@ class AsyncNullConnectionPool(_BaseNullConnectionPool, AsyncConnectionPool):
             self._nconns -= 1
             return True
 
-    async def resize(
-        self, min_size: int, max_size: Optional[int] = None
-    ) -> None:
+    async def resize(self, min_size: int, max_size: Optional[int] = None) -> None:
         min_size, max_size = self._check_size(min_size, max_size)
 
         logger.info(

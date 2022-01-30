@@ -38,9 +38,7 @@ async def test_copy_out_read(aconn, format):
         for row in want:
             got = await copy.read()
             assert got == row
-            assert (
-                aconn.info.transaction_status == aconn.TransactionStatus.ACTIVE
-            )
+            assert aconn.info.transaction_status == aconn.TransactionStatus.ACTIVE
 
         assert await copy.read() == b""
         assert await copy.read() == b""
@@ -118,9 +116,9 @@ async def test_copy_out_allchars(aconn, format):
     chars = list(map(chr, range(1, 256))) + [eur]
     await aconn.execute("set client_encoding to utf8")
     rows = []
-    query = sql.SQL(
-        "copy (select unnest({}::text[])) to stdout (format {})"
-    ).format(chars, sql.SQL(format.name))
+    query = sql.SQL("copy (select unnest({}::text[])) to stdout (format {})").format(
+        chars, sql.SQL(format.name)
+    )
     async with cur.copy(query) as copy:
         copy.set_types(["text"])
         while 1:
@@ -146,10 +144,7 @@ async def test_read_row_notypes(aconn, format):
                 break
             rows.append(row)
 
-    ref = [
-        tuple(py_to_raw(i, format) for i in record)
-        for record in sample_records
-    ]
+    ref = [tuple(py_to_raw(i, format) for i in record) for record in sample_records]
     assert rows == ref
 
 
@@ -160,10 +155,7 @@ async def test_rows_notypes(aconn, format):
         f"copy ({sample_values}) to stdout (format {format.name})"
     ) as copy:
         rows = await alist(copy.rows())
-    ref = [
-        tuple(py_to_raw(i, format) for i in record)
-        for record in sample_records
-    ]
+    ref = [tuple(py_to_raw(i, format) for i in record) for record in sample_records]
     assert rows == ref
 
 
@@ -186,9 +178,7 @@ async def test_copy_out_badntypes(aconn, format, err):
 async def test_copy_in_buffers(aconn, format, buffer):
     cur = aconn.cursor()
     await ensure_table(cur, sample_tabledef)
-    async with cur.copy(
-        f"copy copy_in from stdin (format {format.name})"
-    ) as copy:
+    async with cur.copy(f"copy copy_in from stdin (format {format.name})") as copy:
         await copy.write(globals()[buffer])
 
     await cur.execute("select * from copy_in order by 1")
@@ -330,9 +320,7 @@ async def test_copy_in_buffers_with_py_error(aconn):
 async def test_copy_out_error_with_copy_finished(aconn):
     cur = aconn.cursor()
     with pytest.raises(ZeroDivisionError):
-        async with cur.copy(
-            "copy (select generate_series(1, 2)) to stdout"
-        ) as copy:
+        async with cur.copy("copy (select generate_series(1, 2)) to stdout") as copy:
             await copy.read_row()
             1 / 0
 
@@ -368,9 +356,7 @@ async def test_copy_in_records(aconn, format):
     cur = aconn.cursor()
     await ensure_table(cur, sample_tabledef)
 
-    async with cur.copy(
-        f"copy copy_in from stdin (format {format.name})"
-    ) as copy:
+    async with cur.copy(f"copy copy_in from stdin (format {format.name})") as copy:
         for row in sample_records:
             if format == Format.BINARY:
                 row = tuple(
@@ -388,9 +374,7 @@ async def test_copy_in_records_set_types(aconn, format):
     cur = aconn.cursor()
     await ensure_table(cur, sample_tabledef)
 
-    async with cur.copy(
-        f"copy copy_in from stdin (format {format.name})"
-    ) as copy:
+    async with cur.copy(f"copy copy_in from stdin (format {format.name})") as copy:
         copy.set_types(["int4", "int4", "text"])
         for row in sample_records:
             await copy.write_row(row)
@@ -555,9 +539,7 @@ async def test_str(aconn):
 async def test_worker_life(aconn, format, buffer):
     cur = aconn.cursor()
     await ensure_table(cur, sample_tabledef)
-    async with cur.copy(
-        f"copy copy_in from stdin (format {format.name})"
-    ) as copy:
+    async with cur.copy(f"copy copy_in from stdin (format {format.name})") as copy:
         assert not copy._worker
         await copy.write(globals()[buffer])
         assert copy._worker
@@ -621,9 +603,7 @@ async def test_copy_to_leaks(dsn, faker, fmt, set_types, method):
         gc_collect()
         n.append(len(gc.get_objects()))
 
-    assert (
-        n[0] == n[1] == n[2]
-    ), f"objects leaked: {n[1] - n[0]}, {n[2] - n[1]}"
+    assert n[0] == n[1] == n[2], f"objects leaked: {n[1] - n[0]}, {n[2] - n[1]}"
 
 
 @pytest.mark.slow
@@ -666,9 +646,7 @@ async def test_copy_from_leaks(dsn, faker, fmt, set_types):
         gc_collect()
         n.append(len(gc.get_objects()))
 
-    assert (
-        n[0] == n[1] == n[2]
-    ), f"objects leaked: {n[1] - n[0]}, {n[2] - n[1]}"
+    assert n[0] == n[1] == n[2], f"objects leaked: {n[1] - n[0]}, {n[2] - n[1]}"
 
 
 async def ensure_table(cur, tabledef, name="copy_in"):

@@ -19,9 +19,7 @@ from collections import defaultdict, namedtuple
 from psycopg.errors import get_base_exception
 
 logger = logging.getLogger()
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
 
 def main():
@@ -56,9 +54,7 @@ def parse_errors_txt(url):
             continue
 
         # Parse an error
-        m = re.match(
-            r"(.....)\s+(?:E|W|S)\s+ERRCODE_(\S+)(?:\s+(\S+))?$", line
-        )
+        m = re.match(r"(.....)\s+(?:E|W|S)\s+ERRCODE_(\S+)(?:\s+(\S+))?$", line)
         if m:
             sqlstate, macro, spec = m.groups()
             # skip sqlstates without specs as they are not publically visible

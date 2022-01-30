@@ -134,9 +134,7 @@ async def test_execute_many_results(aconn):
 
 async def test_execute_sequence(aconn):
     cur = aconn.cursor()
-    rv = await cur.execute(
-        "select %s::int, %s::text, %s::text", [1, "foo", None]
-    )
+    rv = await cur.execute("select %s::int, %s::text, %s::text", [1, "foo", None])
     assert rv is cur
     assert len(cur._results) == 1
     assert cur.pgresult.get_value(0, 0) == b"1"
@@ -259,9 +257,7 @@ async def test_executemany_name(aconn, execmany):
 
 async def test_executemany_no_data(aconn, execmany):
     cur = aconn.cursor()
-    await cur.executemany(
-        "insert into execmany(num, data) values (%s, %s)", []
-    )
+    await cur.executemany("insert into execmany(num, data) values (%s, %s)", [])
     assert cur.rowcount == 0
 
 
@@ -362,9 +358,7 @@ async def test_rowcount(aconn):
     await cur.execute("select 1 from generate_series(1, 42)")
     assert cur.rowcount == 42
 
-    await cur.execute(
-        "create table test_rowcount_notuples (id int primary key)"
-    )
+    await cur.execute("create table test_rowcount_notuples (id int primary key)")
     assert cur.rowcount == -1
 
     await cur.execute(
@@ -637,9 +631,7 @@ async def test_str(aconn):
 @pytest.mark.parametrize("fmt", PyFormat)
 @pytest.mark.parametrize("fmt_out", pq.Format)
 @pytest.mark.parametrize("fetch", ["one", "many", "all", "iter"])
-@pytest.mark.parametrize(
-    "row_factory", ["tuple_row", "dict_row", "namedtuple_row"]
-)
+@pytest.mark.parametrize("row_factory", ["tuple_row", "dict_row", "namedtuple_row"])
 async def test_leak(dsn, faker, fmt, fmt_out, fetch, row_factory):
     faker.format = fmt
     faker.choose_schema(ncols=5)
@@ -648,9 +640,7 @@ async def test_leak(dsn, faker, fmt, fmt_out, fetch, row_factory):
 
     async def work():
         async with await psycopg.AsyncConnection.connect(dsn) as conn:
-            async with conn.cursor(
-                binary=fmt_out, row_factory=row_factory
-            ) as cur:
+            async with conn.cursor(binary=fmt_out, row_factory=row_factory) as cur:
                 await cur.execute(faker.drop_stmt)
                 await cur.execute(faker.create_stmt)
                 async with faker.find_insert_problem_async(conn):
@@ -680,6 +670,4 @@ async def test_leak(dsn, faker, fmt, fmt_out, fetch, row_factory):
         gc_collect()
         n.append(len(gc.get_objects()))
 
-    assert (
-        n[0] == n[1] == n[2]
-    ), f"objects leaked: {n[1] - n[0]}, {n[2] - n[1]}"
+    assert n[0] == n[1] == n[2], f"objects leaked: {n[1] - n[0]}, {n[2] - n[1]}"

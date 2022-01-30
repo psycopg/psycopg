@@ -88,9 +88,7 @@ def PQsendQueryPrepared(
     arg6: Optional[Array[c_int]],
     arg7: int,
 ) -> int: ...
-def PQcancel(
-    arg1: Optional[PGcancel_struct], arg2: c_char_p, arg3: int
-) -> int: ...
+def PQcancel(arg1: Optional[PGcancel_struct], arg2: c_char_p, arg3: int) -> int: ...
 def PQsetNoticeReceiver(
     arg1: PGconn_struct, arg2: Callable[[Any], PGresult_struct], arg3: Any
 ) -> Callable[[Any], PGresult_struct]: ...
@@ -101,14 +99,10 @@ def PQsetNoticeReceiver(
 def PQnotifies(
     arg1: Optional[PGconn_struct],
 ) -> Optional[pointer[PGnotify_struct]]: ...  # type: ignore
-def PQputCopyEnd(
-    arg1: Optional[PGconn_struct], arg2: Optional[bytes]
-) -> int: ...
+def PQputCopyEnd(arg1: Optional[PGconn_struct], arg2: Optional[bytes]) -> int: ...
 
 # Arg 2 is a pointer, reported as _CArgObject by mypy
-def PQgetCopyData(
-    arg1: Optional[PGconn_struct], arg2: Any, arg3: int
-) -> int: ...
+def PQgetCopyData(arg1: Optional[PGconn_struct], arg2: Any, arg3: int) -> int: ...
 def PQsetResultAttrs(
     arg1: Optional[PGresult_struct],
     arg2: int,

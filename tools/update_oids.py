@@ -105,9 +105,7 @@ def update_file(fn: Path, queries: List[str]) -> None:
 
     new = []
     for query in queries:
-        out = sp.run(
-            ["psql", "-AXqt", "-c", query], stdout=sp.PIPE, check=True
-        )
+        out = sp.run(["psql", "-AXqt", "-c", query], stdout=sp.PIPE, check=True)
         new.extend(out.stdout.splitlines())
 
     new = [b" " * 4 + line if line else b"" for line in new]  # indent

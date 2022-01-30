@@ -26,9 +26,7 @@ class _BaseNullConnectionPool:
             conninfo, *args, min_size=min_size, **kwargs
         )
 
-    def _check_size(
-        self, min_size: int, max_size: Optional[int]
-    ) -> Tuple[int, int]:
+    def _check_size(self, min_size: int, max_size: Optional[int]) -> Tuple[int, int]:
         if max_size is None:
             max_size = min_size
 
@@ -71,9 +69,7 @@ class NullConnectionPool(_BaseNullConnectionPool, ConnectionPool):
         self.run_task(AddConnection(self))
         if not self._pool_full_event.wait(timeout):
             self.close()  # stop all the threads
-            raise PoolTimeout(
-                f"pool initialization incomplete after {timeout} sec"
-            )
+            raise PoolTimeout(f"pool initialization incomplete after {timeout} sec")
 
         with self._lock:
             assert self._pool_full_event

@@ -139,9 +139,7 @@ def namedtuple_row(
 
 
 # ascii except alnum and underscore
-_re_clean = re.compile(
-    "[" + re.escape(" !\"#$%&'()*+,-./:;<=>?@[\\]^`{|}~") + "]"
-)
+_re_clean = re.compile("[" + re.escape(" !\"#$%&'()*+,-./:;<=>?@[\\]^`{|}~") + "]")
 
 
 @functools.lru_cache(512)

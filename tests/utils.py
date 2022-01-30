@@ -41,9 +41,7 @@ def _check_version(got, want, whose_version):
         got = (got_maj, got_min, got_fix)
 
     # Parse a spec like "> 9.6"
-    m = re.match(
-        r"^\s*(>=|<=|>|<)\s*(?:(\d+)(?:\.(\d+)(?:\.(\d+))?)?)?\s*$", want
-    )
+    m = re.match(r"^\s*(>=|<=|>|<)\s*(?:(\d+)(?:\.(\d+)(?:\.(\d+))?)?)?\s*$", want)
     if m is None:
         pytest.fail(f"bad wanted version spec: {want}")
 
@@ -58,9 +56,7 @@ def _check_version(got, want, whose_version):
     else:
         want = (want_maj, want_min, want_fix)
 
-    op = getattr(
-        operator, {">=": "ge", "<=": "le", ">": "gt", "<": "lt"}[m.group(1)]
-    )
+    op = getattr(operator, {">=": "ge", "<=": "le", ">": "gt", "<": "lt"}[m.group(1)])
 
     if not op(got, want):
         revops = {">=": "<", "<=": ">", ">": "<=", "<": ">="}

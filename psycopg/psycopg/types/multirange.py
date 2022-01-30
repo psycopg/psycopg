@@ -52,9 +52,7 @@ class Multirange(MutableSequence[Range[T]]):
     def __getitem__(self, index: slice) -> "Multirange[T]":
         ...
 
-    def __getitem__(
-        self, index: Union[int, slice]
-    ) -> "Union[Range[T],Multirange[T]]":
+    def __getitem__(self, index: Union[int, slice]) -> "Union[Range[T],Multirange[T]]":
         if isinstance(index, int):
             return self._ranges[index]
         else:
@@ -160,9 +158,7 @@ class BaseMultirangeDumper(RecursiveDumper):
         else:
             return (self.cls,)
 
-    def upgrade(
-        self, obj: Multirange[Any], format: PyFormat
-    ) -> "BaseMultirangeDumper":
+    def upgrade(self, obj: Multirange[Any], format: PyFormat) -> "BaseMultirangeDumper":
         # If we are a subclass whose oid is specified we don't need upgrade
         if self.cls is not Multirange:
             return self
@@ -261,9 +257,7 @@ class BaseMultirangeLoader(RecursiveLoader, Generic[T]):
 
     def __init__(self, oid: int, context: Optional[AdaptContext] = None):
         super().__init__(oid, context)
-        self._load = self._tx.get_loader(
-            self.subtype_oid, format=self.format
-        ).load
+        self._load = self._tx.get_loader(self.subtype_oid, format=self.format).load
 
 
 class MultirangeLoader(BaseMultirangeLoader[T]):
@@ -354,9 +348,7 @@ def register_multirange(
     # A friendly error warning instead of an AttributeError in case fetch()
     # failed and it wasn't noticed.
     if not info:
-        raise TypeError(
-            "no info passed. Is the requested multirange available?"
-        )
+        raise TypeError("no info passed. Is the requested multirange available?")
 
     # Register arrays and type info
     info.register(context)
@@ -501,19 +493,13 @@ def register_default_adapters(context: AdaptContext) -> None:
     adapters.register_dumper(NumericMultirange, NumericMultirangeDumper)
     adapters.register_dumper(DateMultirange, DateMultirangeDumper)
     adapters.register_dumper(TimestampMultirange, TimestampMultirangeDumper)
-    adapters.register_dumper(
-        TimestamptzMultirange, TimestamptzMultirangeDumper
-    )
+    adapters.register_dumper(TimestamptzMultirange, TimestamptzMultirangeDumper)
     adapters.register_dumper(Int4Multirange, Int4MultirangeBinaryDumper)
     adapters.register_dumper(Int8Multirange, Int8MultirangeBinaryDumper)
     adapters.register_dumper(NumericMultirange, NumericMultirangeBinaryDumper)
     adapters.register_dumper(DateMultirange, DateMultirangeBinaryDumper)
-    adapters.register_dumper(
-        TimestampMultirange, TimestampMultirangeBinaryDumper
-    )
-    adapters.register_dumper(
-        TimestamptzMultirange, TimestamptzMultirangeBinaryDumper
-    )
+    adapters.register_dumper(TimestampMultirange, TimestampMultirangeBinaryDumper)
+    adapters.register_dumper(TimestamptzMultirange, TimestamptzMultirangeBinaryDumper)
     adapters.register_loader("int4multirange", Int4MultirangeLoader)
     adapters.register_loader("int8multirange", Int8MultirangeLoader)
     adapters.register_loader("nummultirange", NumericMultirangeLoader)
@@ -525,6 +511,4 @@ def register_default_adapters(context: AdaptContext) -> None:
     adapters.register_loader("nummultirange", NumericMultirangeBinaryLoader)
     adapters.register_loader("datemultirange", DateMultirangeBinaryLoader)
     adapters.register_loader("tsmultirange", TimestampMultirangeBinaryLoader)
-    adapters.register_loader(
-        "tstzmultirange", TimestampTZMultirangeBinaryLoader
-    )
+    adapters.register_loader("tstzmultirange", TimestampTZMultirangeBinaryLoader)

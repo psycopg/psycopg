@@ -23,9 +23,7 @@ def test_work_in_progress(pgconn):
     assert pgconn.pipeline_status == pq.PipelineStatus.OFF
     pgconn.enter_pipeline_mode()
     pgconn.send_query_params(b"select $1", [b"1"])
-    with pytest.raises(
-        psycopg.OperationalError, match="cannot exit pipeline mode"
-    ):
+    with pytest.raises(psycopg.OperationalError, match="cannot exit pipeline mode"):
         pgconn.exit_pipeline_mode()
 
 

@@ -778,9 +778,7 @@ def generate_stub() -> None:
     )
 
     known = {
-        line[4:].split("(", 1)[0]
-        for line in lines[:istart]
-        if line.startswith("def ")
+        line[4:].split("(", 1)[0] for line in lines[:istart] if line.startswith("def ")
     }
 
     signatures = []

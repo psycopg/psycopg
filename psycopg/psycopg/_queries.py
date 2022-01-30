@@ -90,9 +90,7 @@ class PostgresQuery:
         This method updates `params` and `types`.
         """
         if vars is not None:
-            params = _validate_and_reorder_params(
-                self._parts, vars, self._order
-            )
+            params = _validate_and_reorder_params(self._parts, vars, self._order)
             assert self._want_formats is not None
             self.params = self._tx.dump_sequence(params, self._want_formats)
             self.types = self._tx.types or ()
@@ -144,8 +142,7 @@ def _query2pg(
             else:
                 if seen[part.item][1] != part.format:
                     raise e.ProgrammingError(
-                        f"placeholder '{part.item}' cannot have"
-                        f" different formats"
+                        f"placeholder '{part.item}' cannot have different formats"
                     )
                 chunks.append(seen[part.item][0])
 
@@ -184,9 +181,7 @@ def _validate_and_reorder_params(
                 f" {len(vars)} parameters were passed"
             )
         if vars and not isinstance(parts[0].item, int):
-            raise TypeError(
-                "named placeholders require a mapping of parameters"
-            )
+            raise TypeError("named placeholders require a mapping of parameters")
         return vars  # type: ignore[return-value]
 
     else:
@@ -195,9 +190,7 @@ def _validate_and_reorder_params(
                 "positional placeholders (%s) require a sequence of parameters"
             )
         try:
-            return [
-                vars[item] for item in order or ()  # type: ignore[call-overload]
-            ]
+            return [vars[item] for item in order or ()]  # type: ignore[call-overload]
         except KeyError:
             raise e.ProgrammingError(
                 f"query parameter missing:"

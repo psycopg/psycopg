@@ -341,9 +341,7 @@ class NumericBinaryLoader(Loader):
             try:
                 return _decimal_special[sign]
             except KeyError:
-                raise e.DataError(
-                    f"bad value for numeric sign: 0x{sign:X}"
-                ) from None
+                raise e.DataError(f"bad value for numeric sign: 0x{sign:X}") from None
 
 
 NUMERIC_NAN_BIN = _pack_numeric_head(0, 0, NUMERIC_NAN, 0)

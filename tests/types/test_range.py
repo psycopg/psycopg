@@ -118,9 +118,7 @@ def test_dump_builtin_array_wrapper(conn, wrapper, fmt_in):
     wrapper = getattr(range_module, wrapper)
     r1 = wrapper(empty=True)
     r2 = wrapper(bounds="()")
-    cur = conn.execute(
-        f"""select '{{empty,"(,)"}}' = %{fmt_in}""", ([r1, r2],)
-    )
+    cur = conn.execute(f"""select '{{empty,"(,)"}}' = %{fmt_in}""", ([r1, r2],))
     assert cur.fetchone()[0] is True
 
 
@@ -168,9 +166,7 @@ def test_load_builtin_array(conn, pgtype, fmt_out):
     r1 = Range(empty=True)  # type: ignore[var-annotated]
     r2 = Range(bounds="()")  # type: ignore[var-annotated]
     cur = conn.cursor(binary=fmt_out)
-    (got,) = cur.execute(
-        f"select array['empty'::{pgtype}, '(,)'::{pgtype}]"
-    ).fetchone()
+    (got,) = cur.execute(f"select array['empty'::{pgtype}, '(,)'::{pgtype}]").fetchone()
     assert got == [r1, r2]
 
 
@@ -180,9 +176,7 @@ def test_load_builtin_range(conn, pgtype, min, max, bounds, fmt_out):
     r = Range(min, max, bounds)  # type: ignore[var-annotated]
     sub = type2sub[pgtype]
     cur = conn.cursor(binary=fmt_out)
-    cur.execute(
-        f"select {pgtype}(%s::{sub}, %s::{sub}, %s)", (min, max, bounds)
-    )
+    cur.execute(f"select {pgtype}(%s::{sub}, %s::{sub}, %s)", (min, max, bounds))
     # normalise discrete ranges
     if r.upper_inc and isinstance(r.upper, int):
         bounds = "[)" if r.lower_inc else "()"
@@ -213,15 +207,11 @@ def test_copy_in(conn, min, max, bounds, format):
         r = Range(empty=True)
 
     try:
-        with cur.copy(
-            f"copy copyrange (r) from stdin (format {format.name})"
-        ) as copy:
+        with cur.copy(f"copy copyrange (r) from stdin (format {format.name})") as copy:
             copy.write_row([r])
     except e.ProtocolViolation:
         if not min and not max and format == pq.Format.BINARY:
-            pytest.xfail(
-                "TODO: add annotation to dump ranges with no type info"
-            )
+            pytest.xfail("TODO: add annotation to dump ranges with no type info")
         else:
             raise
 
@@ -239,9 +229,7 @@ def test_copy_in_empty_wrappers(conn, bounds, wrapper, format):
     cls = getattr(range_module, wrapper)
     r = cls(empty=True) if bounds == "empty" else cls(None, None, bounds)
 
-    with cur.copy(
-        f"copy copyrange (r) from stdin (format {format.name})"
-    ) as copy:
+    with cur.copy(f"copy copyrange (r) from stdin (format {format.name})") as copy:
         copy.write_row([r])
 
     rec = cur.execute("select r from copyrange order by id").fetchone()
@@ -260,9 +248,7 @@ def test_copy_in_empty_set_type(conn, bounds, pgtype, format):
     else:
         r = Range(None, None, bounds)
 
-    with cur.copy(
-        f"copy copyrange (r) from stdin (format {format.name})"
-    ) as copy:
+    with cur.copy(f"copy copyrange (r) from stdin (format {format.name})") as copy:
         copy.set_types([pgtype])
         copy.write_row([r])
 

@@ -53,10 +53,7 @@ class Error(Exception):
     sqlstate: Optional[str] = None
 
     def __init__(
-        self,
-        *args: Sequence[Any],
-        info: ErrorInfo = None,
-        encoding: str = "utf-8"
+        self, *args: Sequence[Any], info: ErrorInfo = None, encoding: str = "utf-8"
     ):
         super().__init__(*args)
         self._info = info
@@ -347,9 +344,7 @@ _base_exc_map = {
 }
 
 
-def sqlcode(
-    const_name: str, code: str
-) -> Callable[[Type[Error]], Type[Error]]:
+def sqlcode(const_name: str, code: str) -> Callable[[Type[Error]], Type[Error]]:
     """
     Decorator to associate an exception class to a sqlstate.
     """

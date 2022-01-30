@@ -227,9 +227,7 @@ def register_composite(
     # A friendly error warning instead of an AttributeError in case fetch()
     # failed and it wasn't noticed.
     if not info:
-        raise TypeError(
-            "no info passed. Is the requested composite available?"
-        )
+        raise TypeError("no info passed. Is the requested composite available?")
 
     # Register arrays and type info
     info.register(context)
@@ -268,9 +266,7 @@ def register_composite(
         adapters.register_dumper(factory, dumper)
 
         # Default to the text dumper because it is more flexible
-        dumper = type(
-            f"{info.name.title()}Dumper", (TupleDumper,), {"oid": info.oid}
-        )
+        dumper = type(f"{info.name.title()}Dumper", (TupleDumper,), {"oid": info.oid})
         adapters.register_dumper(factory, dumper)
 
         info.python_type = factory

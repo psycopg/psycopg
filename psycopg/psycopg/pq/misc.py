@@ -70,9 +70,7 @@ def error_message(obj: Union[PGconn, PGresult], encoding: str = "utf8") -> str:
             bmsg = bmsg.split(b":", 1)[-1].strip()
 
     else:
-        raise TypeError(
-            f"PGconn or PGresult expected, got {type(obj).__name__}"
-        )
+        raise TypeError(f"PGconn or PGresult expected, got {type(obj).__name__}")
 
     if bmsg:
         msg = bmsg.decode(encoding, "replace")

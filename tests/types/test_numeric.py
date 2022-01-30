@@ -216,14 +216,10 @@ def test_quote_float(conn, val, expr):
 def test_dump_float_approx(conn, val, expr):
     assert isinstance(val, float)
     cur = conn.cursor()
-    cur.execute(
-        f"select abs(({expr}::float8 - %s) / {expr}::float8) <= 1e-15", (val,)
-    )
+    cur.execute(f"select abs(({expr}::float8 - %s) / {expr}::float8) <= 1e-15", (val,))
     assert cur.fetchone()[0] is True
 
-    cur.execute(
-        f"select abs(({expr}::float4 - %s) / {expr}::float4) <= 1e-6", (val,)
-    )
+    cur.execute(f"select abs(({expr}::float4 - %s) / {expr}::float4) <= 1e-6", (val,))
     assert cur.fetchone()[0] is True
 
 
@@ -417,9 +413,7 @@ def test_dump_numeric_exhaustive(conn, fmt_in):
         for f in funcs:
             expr = f(i)
             val = Decimal(expr)
-            cur.execute(
-                f"select %{fmt_in}::text, %s::decimal::text", [val, expr]
-            )
+            cur.execute(f"select %{fmt_in}::text, %s::decimal::text", [val, expr])
             want, got = cur.fetchone()
             assert got == want
 

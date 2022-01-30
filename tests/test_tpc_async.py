@@ -66,9 +66,7 @@ class TestTPC:
         assert aconn.info.transaction_status == TransactionStatus.INTRANS
 
         cur = aconn.cursor()
-        await cur.execute(
-            "insert into test_tpc values ('test_tpc_commit_rec')"
-        )
+        await cur.execute("insert into test_tpc values ('test_tpc_commit_rec')")
         assert tpc.count_xacts() == 0
         assert tpc.count_test_records() == 0
 
@@ -115,9 +113,7 @@ class TestTPC:
         assert aconn.info.transaction_status == TransactionStatus.INTRANS
 
         cur = aconn.cursor()
-        await cur.execute(
-            "insert into test_tpc values ('test_tpc_rollback_1p')"
-        )
+        await cur.execute("insert into test_tpc values ('test_tpc_rollback_1p')")
         assert tpc.count_xacts() == 0
         assert tpc.count_test_records() == 0
 
@@ -134,9 +130,7 @@ class TestTPC:
         assert aconn.info.transaction_status == TransactionStatus.INTRANS
 
         cur = aconn.cursor()
-        await cur.execute(
-            "insert into test_tpc values ('test_tpc_commit_rec')"
-        )
+        await cur.execute("insert into test_tpc values ('test_tpc_commit_rec')")
         assert tpc.count_xacts() == 0
         assert tpc.count_test_records() == 0
 
@@ -222,9 +216,7 @@ class TestTPC:
 
         async with await psycopg.AsyncConnection.connect(dsn) as aconn:
             xids = [
-                x
-                for x in await aconn.tpc_recover()
-                if x.database == aconn.info.dbname
+                x for x in await aconn.tpc_recover() if x.database == aconn.info.dbname
             ]
             assert len(xids) == 1
             xid = xids[0]
@@ -249,9 +241,7 @@ class TestTPC:
 
         async with await psycopg.AsyncConnection.connect(dsn) as aconn:
             xids = [
-                x
-                for x in await aconn.tpc_recover()
-                if x.database == aconn.info.dbname
+                x for x in await aconn.tpc_recover() if x.database == aconn.info.dbname
             ]
             assert len(xids) == 1
             xid = xids[0]
@@ -269,9 +259,7 @@ class TestTPC:
 
         async with await psycopg.AsyncConnection.connect(dsn) as aconn:
             xid = [
-                x
-                for x in await aconn.tpc_recover()
-                if x.database == aconn.info.dbname
+                x for x in await aconn.tpc_recover() if x.database == aconn.info.dbname
             ][0]
 
         assert 10 == xid.format_id
@@ -291,9 +279,7 @@ class TestTPC:
 
         async with await psycopg.AsyncConnection.connect(dsn) as aconn:
             xid = [
-                x
-                for x in await aconn.tpc_recover()
-                if x.database == aconn.info.dbname
+                x for x in await aconn.tpc_recover() if x.database == aconn.info.dbname
             ][0]
 
         assert xid.format_id is None

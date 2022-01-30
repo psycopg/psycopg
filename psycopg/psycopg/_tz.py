@@ -29,9 +29,7 @@ def get_tzinfo(pgconn: Optional[PGconn]) -> tzinfo:
         try:
             zi: tzinfo = ZoneInfo(sname)
         except KeyError:
-            logger.warning(
-                "unknown PostgreSQL timezone: %r; will use UTC", sname
-            )
+            logger.warning("unknown PostgreSQL timezone: %r; will use UTC", sname)
             zi = timezone.utc
 
         _timezones[tzname] = zi

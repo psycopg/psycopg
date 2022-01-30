@@ -153,9 +153,7 @@ def get_fake_srv_function(monkeypatch):
         else:
             for entry in ans:
                 pri, w, port, target = entry.split()
-                rv.append(
-                    SRV("IN", "SRV", int(pri), int(w), int(port), target)
-                )
+                rv.append(SRV("IN", "SRV", int(pri), int(w), int(port), target))
 
         return rv
 

@@ -15,8 +15,7 @@ def test_send_query(pgconn):
 
     # Long query to make sure we have to wait on send
     pgconn.send_query(
-        b"/* %s */ select pg_sleep(0.01); select 1 as foo;"
-        % (b"x" * 1_000_000)
+        b"/* %s */ select pg_sleep(0.01); select 1 as foo;" % (b"x" * 1_000_000)
     )
 
     # send loop
@@ -64,8 +63,7 @@ def test_send_query(pgconn):
 def test_send_query_compact_test(pgconn):
     # Like the above test but use psycopg facilities for compactness
     pgconn.send_query(
-        b"/* %s */ select pg_sleep(0.01); select 1 as foo;"
-        % (b"x" * 1_000_000)
+        b"/* %s */ select pg_sleep(0.01); select 1 as foo;" % (b"x" * 1_000_000)
     )
     results = execute_wait(pgconn)
 
@@ -157,18 +155,14 @@ def test_send_prepared_binary_in(pgconn):
         pgconn.exec_params(b"select $1::bytea", [val], param_formats=[1, 1])
 
 
-@pytest.mark.parametrize(
-    "fmt, out", [(0, b"\\x666f6f00626172"), (1, b"foo\00bar")]
-)
+@pytest.mark.parametrize("fmt, out", [(0, b"\\x666f6f00626172"), (1, b"foo\00bar")])
 def test_send_prepared_binary_out(pgconn, fmt, out):
     val = b"foo\00bar"
     pgconn.send_prepare(b"", b"select $1::bytea")
     (res,) = execute_wait(pgconn)
     assert res.status == pq.ExecStatus.COMMAND_OK, res.error_message
 
-    pgconn.send_query_prepared(
-        b"", [val], param_formats=[1], result_format=fmt
-    )
+    pgconn.send_query_prepared(b"", [val], param_formats=[1], result_format=fmt)
     (res,) = execute_wait(pgconn)
     assert res.status == pq.ExecStatus.TUPLES_OK
     assert res.get_value(0, 0) == out

@@ -295,9 +295,7 @@ class MyCursor(psycopg.{cur_base_class}[Row]):
 
 
 def _test_reveal(stmts, type, mypy):
-    ignore = (
-        "" if type.startswith("Optional") else "# type: ignore[assignment]"
-    )
+    ignore = "" if type.startswith("Optional") else "# type: ignore[assignment]"
     stmts = "\n".join(f"    {line}" for line in stmts.splitlines())
 
     src = f"""\

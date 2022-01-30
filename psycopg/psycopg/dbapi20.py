@@ -39,9 +39,7 @@ BINARY = DBAPITypeObject("BINARY", ("bytea",))
 DATETIME = DBAPITypeObject(
     "DATETIME", "timestamp timestamptz date time timetz interval".split()
 )
-NUMBER = DBAPITypeObject(
-    "NUMBER", "int2 int4 int8 float4 float8 numeric".split()
-)
+NUMBER = DBAPITypeObject("NUMBER", "int2 int4 int8 float4 float8 numeric".split())
 ROWID = DBAPITypeObject("ROWID", ("oid",))
 STRING = DBAPITypeObject("STRING", "text varchar bpchar".split())
 

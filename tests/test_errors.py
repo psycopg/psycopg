@@ -78,9 +78,7 @@ def test_diag_encoding(conn, enc):
     conn.add_notice_handler(lambda diag: msgs.append(diag.message_primary))
     conn.execute(f"set client_encoding to {enc}")
     cur = conn.cursor()
-    cur.execute(
-        "do $$begin raise notice 'hello %', chr(8364); end$$ language plpgsql"
-    )
+    cur.execute("do $$begin raise notice 'hello %', chr(8364); end$$ language plpgsql")
     assert msgs == [f"hello {eur}"]
 
 

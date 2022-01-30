@@ -48,9 +48,7 @@ def make_conninfo(conninfo: str = "", **kwargs: Any) -> str:
         tmp.update(kwargs)
         kwargs = tmp
 
-    conninfo = " ".join(
-        f"{k}={_param_escape(str(v))}" for (k, v) in kwargs.items()
-    )
+    conninfo = " ".join(f"{k}={_param_escape(str(v))}" for (k, v) in kwargs.items())
 
     # Verify the result is valid
     _parse_conninfo(conninfo)
@@ -74,11 +72,7 @@ def conninfo_to_dict(conninfo: str = "", **kwargs: Any) -> Dict[str, Any]:
            #LIBPQ-CONNSTRING
     """
     opts = _parse_conninfo(conninfo)
-    rv = {
-        opt.keyword.decode(): opt.val.decode()
-        for opt in opts
-        if opt.val is not None
-    }
+    rv = {opt.keyword.decode(): opt.val.decode() for opt in opts if opt.val is not None}
     for k, v in kwargs.items():
         if v is not None:
             rv[k] = v

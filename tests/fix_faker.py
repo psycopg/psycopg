@@ -87,10 +87,7 @@ class Faker:
 
     @property
     def types_names(self):
-        types = [
-            t.as_string(self.conn).replace('"', "")
-            for t in self.types_names_sql
-        ]
+        types = [t.as_string(self.conn).replace('"', "") for t in self.types_names_sql]
         return types
 
     def _get_type_name(self, tx, schema, value):
@@ -118,16 +115,13 @@ class Faker:
             field_values.append(sql.SQL("{} {}").format(name, type))
 
         fields = sql.SQL(", ").join(field_values)
-        return sql.SQL(
-            "create table {table} (id serial primary key, {fields})"
-        ).format(table=self.table_name, fields=fields)
+        return sql.SQL("create table {table} (id serial primary key, {fields})").format(
+            table=self.table_name, fields=fields
+        )
 
     @property
     def insert_stmt(self):
-        phs = [
-            sql.Placeholder(format=self.format)
-            for i in range(len(self.schema))
-        ]
+        phs = [sql.Placeholder(format=self.format) for i in range(len(self.schema))]
         return sql.SQL("insert into {} ({}) values ({})").format(
             self.table_name,
             sql.SQL(", ").join(self.fields_names),
@@ -137,9 +131,7 @@ class Faker:
     @property
     def select_stmt(self):
         fields = sql.SQL(", ").join(self.fields_names)
-        return sql.SQL("select {} from {} order by id").format(
-            fields, self.table_name
-        )
+        return sql.SQL("select {} from {} order by id").format(fields, self.table_name)
 
     @contextmanager
     def find_insert_problem(self, conn):
@@ -216,8 +208,7 @@ class Faker:
             return tuple(self.example(spec) for spec in self.schema)
         else:
             return tuple(
-                self.make(spec) if random() > nulls else None
-                for spec in self.schema
+                self.make(spec) if random() > nulls else None for spec in self.schema
             )
 
     def assert_record(self, got, want):
@@ -233,10 +224,7 @@ class Faker:
         for cls in dumpers.keys():
             if isinstance(cls, str):
                 cls = deep_import(cls)
-            if (
-                issubclass(cls, Multirange)
-                and self.conn.info.server_version < 140000
-            ):
+            if issubclass(cls, Multirange) and self.conn.info.server_version < 140000:
                 continue
 
             rv.add(cls)
@@ -276,9 +264,7 @@ class Faker:
             self._makers[cls] = meth
             return meth
         else:
-            raise NotImplementedError(
-                f"cannot make fake objects of class {cls}"
-            )
+            raise NotImplementedError(f"cannot make fake objects of class {cls}")
 
     def get_matcher(self, spec):
         cls = spec if isinstance(spec, type) else spec[0]
@@ -393,9 +379,7 @@ class Faker:
                 else f"{choice('-+')}0.{randrange(1 << 22)}e{randrange(-37,38)}"
             )
         else:
-            return choice(
-                (0.0, -0.0, float("-inf"), float("inf"), float("nan"))
-            )
+            return choice((0.0, -0.0, float("-inf"), float("inf"), float("nan")))
 
     def match_float(self, spec, got, want, approx=False, rel=None):
         if got is not None and isnan(got):
@@ -476,9 +460,7 @@ class Faker:
     def make_JsonFloat(self, spec):
         # A float limited to what json accepts
         # this exponent should generate no inf
-        return float(
-            f"{choice('-+')}0.{randrange(1 << 20)}e{randrange(-15,15)}"
-        )
+        return float(f"{choice('-+')}0.{randrange(1 << 20)}e{randrange(-15,15)}")
 
     def schema_list(self, cls):
         while True:
@@ -566,9 +548,7 @@ class Faker:
         return spec[0](sorted(out))
 
     def example_Multirange(self, spec):
-        return self.make_Multirange(
-            spec, length=1, empty_chance=0, no_bound_chance=0
-        )
+        return self.make_Multirange(spec, length=1, empty_chance=0, no_bound_chance=0)
 
     def make_Int4Multirange(self, spec):
         return self.make_Multirange((spec, Int4))
@@ -714,13 +694,9 @@ class Faker:
 
         if unit is not None:
             if want.lower is not None and not want.lower_inc:
-                want = type(want)(
-                    want.lower + unit, want.upper, "[" + want.bounds[1]
-                )
+                want = type(want)(want.lower + unit, want.upper, "[" + want.bounds[1])
             if want.upper_inc:
-                want = type(want)(
-                    want.lower, want.upper + unit, want.bounds[0] + ")"
-                )
+                want = type(want)(want.lower, want.upper + unit, want.bounds[0] + ")")
 
         if spec[1] == (dt.datetime, True) and not want.isempty:
             # work around https://bugs.python.org/issue45347
