@@ -139,7 +139,7 @@ class ListDumper(BaseListDumper):
 
     # Double quotes and backslashes embedded in element values will be
     # backslash-escaped.
-    _re_esc = re.compile(br'(["\\])')
+    _re_esc = re.compile(rb'(["\\])')
 
     def dump(self, obj: List[Any]) -> bytes:
         tokens: List[bytes] = []
@@ -159,7 +159,7 @@ class ListDumper(BaseListDumper):
                     if needs_quotes(ad):
                         if not isinstance(ad, bytes):
                             ad = bytes(ad)
-                        ad = b'"' + self._re_esc.sub(br"\\\1", ad) + b'"'
+                        ad = b'"' + self._re_esc.sub(rb"\\\1", ad) + b'"'
                     tokens.append(ad)
                 else:
                     tokens.append(b"NULL")
@@ -190,7 +190,7 @@ def _get_needs_quotes_regexp(delimiter: bytes) -> Pattern[bytes]:
     double quotes, backslashes, or white space, or match the word NULL.
     """
     return re.compile(
-        br"""(?xi)
+        rb"""(?xi)
           ^$              # the empty string
         | ["{}%s\\\s]      # or a char to escape
         | ^null$          # or the word NULL
@@ -359,7 +359,7 @@ class ArrayLoader(BaseArrayLoader):
                     v = None
                 else:
                     if t.startswith(b'"'):
-                        t = self._re_unescape.sub(br"\1", t[1:-1])
+                        t = self._re_unescape.sub(rb"\1", t[1:-1])
                     v = cast(t)
 
                 stack[-1].append(v)
@@ -367,7 +367,7 @@ class ArrayLoader(BaseArrayLoader):
         assert rv is not None
         return rv
 
-    _re_unescape = re.compile(br"\\(.)")
+    _re_unescape = re.compile(rb"\\(.)")
 
 
 @lru_cache()
@@ -376,7 +376,7 @@ def _get_array_parse_regexp(delimiter: bytes) -> Pattern[bytes]:
     Return a regexp to tokenize an array representation into item and brackets
     """
     return re.compile(
-        br"""(?xi)
+        rb"""(?xi)
         (     [{}]                        # open or closed bracket
             | " (?: [^"\\] | \\. )* "     # or a quoted string
             | [^"{}%s\\]+                 # or an unquoted non-empty string

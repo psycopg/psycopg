@@ -639,7 +639,7 @@ class TimestamptzBinaryLoader(Loader):
 class IntervalLoader(Loader):
 
     _re_interval = re.compile(
-        br"""
+        rb"""
         (?: ([-+]?\d+) \s+ years? \s* )?                # Years
         (?: ([-+]?\d+) \s+ mons? \s* )?                 # Months
         (?: ([-+]?\d+) \s+ days? \s* )?                 # Days

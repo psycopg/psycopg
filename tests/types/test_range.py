@@ -26,10 +26,10 @@ tzinfo = dt.timezone(dt.timedelta(hours=2))
 samples = [
     ("int4range", None, None, "()"),
     ("int4range", 10, 20, "[]"),
-    ("int4range", -(2 ** 31), (2 ** 31) - 1, "[)"),
+    ("int4range", -(2**31), (2**31) - 1, "[)"),
     ("int8range", None, None, "()"),
     ("int8range", 10, 20, "[)"),
-    ("int8range", -(2 ** 63), (2 ** 63) - 1, "[)"),
+    ("int8range", -(2**63), (2**63) - 1, "[)"),
     ("numrange", Decimal(-100), Decimal("100.123"), "(]"),
     ("numrange", Decimal(100), None, "()"),
     ("numrange", None, Decimal(100), "()"),

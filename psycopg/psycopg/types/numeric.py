@@ -139,13 +139,13 @@ class IntDumper(Dumper):
     _int_numeric_dumper = IntNumericDumper(IntNumeric)
 
     def upgrade(self, obj: int, format: PyFormat) -> Dumper:
-        if -(2 ** 31) <= obj < 2 ** 31:
-            if -(2 ** 15) <= obj < 2 ** 15:
+        if -(2**31) <= obj < 2**31:
+            if -(2**15) <= obj < 2**15:
                 return self._int2_dumper
             else:
                 return self._int4_dumper
         else:
-            if -(2 ** 63) <= obj < 2 ** 63:
+            if -(2**63) <= obj < 2**63:
                 return self._int8_dumper
             else:
                 return self._int_numeric_dumper

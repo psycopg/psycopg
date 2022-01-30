@@ -576,7 +576,7 @@ def _format_row_text(
             b = dumper.dump(item)
             out += _dump_re.sub(_dump_sub, b)
         else:
-            out += br"\N"
+            out += rb"\N"
         out += b"\t"
 
     out[-1:] = b"\n"

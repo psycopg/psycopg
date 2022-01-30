@@ -338,7 +338,7 @@ def dump_range_text(obj: Range[Any], dump: Callable[[Any], Buffer]) -> Buffer:
         if not ad:
             return b'""'
         elif _re_needs_quotes.search(ad):
-            return b'"' + _re_esc.sub(br"\1\1", ad) + b'"'
+            return b'"' + _re_esc.sub(rb"\1\1", ad) + b'"'
         else:
             return ad
 
@@ -355,8 +355,8 @@ def dump_range_text(obj: Range[Any], dump: Callable[[Any], Buffer]) -> Buffer:
     return b"".join(parts)
 
 
-_re_needs_quotes = re.compile(br'[",\\\s()\[\]]')
-_re_esc = re.compile(br"([\\\"])")
+_re_needs_quotes = re.compile(rb'[",\\\s()\[\]]')
+_re_esc = re.compile(rb"([\\\"])")
 
 
 class RangeBinaryDumper(BaseRangeDumper):
