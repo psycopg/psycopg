@@ -145,7 +145,7 @@ def test_escape_string_badenc(pgconn):
         esc.escape_string(data)
 
 
-@pytest.mark.parametrize("data", [(b"hello\00world"), (b"\00\00\00\00")])
+@pytest.mark.parametrize("data", [b"hello\00world", b"\00\00\00\00"])
 def test_escape_bytea(pgconn, data):
     exp = rb"\x" + b"".join(b"%02x" % c for c in data)
     esc = pq.Escaping(pgconn)
@@ -174,7 +174,7 @@ def test_escape_1char(pgconn):
         assert rv == exp
 
 
-@pytest.mark.parametrize("data", [(b"hello\00world"), (b"\00\00\00\00")])
+@pytest.mark.parametrize("data", [b"hello\00world", b"\00\00\00\00"])
 def test_unescape_bytea(pgconn, data):
     enc = rb"\x" + b"".join(b"%02x" % c for c in data)
     esc = pq.Escaping(pgconn)

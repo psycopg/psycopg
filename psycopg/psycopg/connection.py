@@ -148,7 +148,7 @@ class BaseConnection(Generic[Row]):
 
         warn(
             f"connection {self} was deleted while still open."
-            f" Please use 'with' or '.close()' to close the connection",
+            " Please use 'with' or '.close()' to close the connection",
             ResourceWarning,
         )
 
@@ -435,7 +435,7 @@ class BaseConnection(Generic[Row]):
         if self.pgconn.status == ConnStatus.BAD:
             raise e.OperationalError("the connection is closed")
         raise e.InterfaceError(
-            f"cannot execute operations: the connection is"
+            "cannot execute operations: the connection is"
             f" in status {self.pgconn.status}"
         )
 
@@ -524,7 +524,7 @@ class BaseConnection(Generic[Row]):
 
         if self.pgconn.transaction_status != TransactionStatus.IDLE:
             raise e.ProgrammingError(
-                f"can't start two-phase transaction: connection in status"
+                "can't start two-phase transaction: connection in status"
                 f" {TransactionStatus(self.pgconn.transaction_status).name}"
             )
 
@@ -543,8 +543,7 @@ class BaseConnection(Generic[Row]):
             )
         if self._tpc[1]:
             raise e.ProgrammingError(
-                "'tpc_prepare()' cannot be used during a prepared"
-                " two-phase transaction"
+                "'tpc_prepare()' cannot be used during a prepared two-phase transaction"
             )
         xid = self._tpc[0]
         self._tpc = (xid, True)

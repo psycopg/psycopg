@@ -14,8 +14,10 @@ def pytest_addoption(parser):
         "--test-dsn",
         metavar="DSN",
         default=os.environ.get("PSYCOPG_TEST_DSN"),
-        help="Connection string to run database tests requiring a connection"
-        " [you can also use the PSYCOPG_TEST_DSN env var].",
+        help=(
+            "Connection string to run database tests requiring a connection"
+            " [you can also use the PSYCOPG_TEST_DSN env var]."
+        ),
     )
     parser.addoption(
         "--pq-tracefile",

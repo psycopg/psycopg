@@ -618,10 +618,9 @@ _unpack_int2 = struct.Struct("!h").unpack_from
 _unpack_int4 = struct.Struct("!i").unpack_from
 
 _binary_signature = (
-    # Signature, flags, extra length
-    b"PGCOPY\n\xff\r\n\0"
-    b"\x00\x00\x00\x00"
-    b"\x00\x00\x00\x00"
+    b"PGCOPY\n\xff\r\n\0"  # Signature
+    b"\x00\x00\x00\x00"  # flags
+    b"\x00\x00\x00\x00"  # extra length
 )
 _binary_trailer = b"\xff\xff"
 _binary_null = b"\xff\xff\xff\xff"

@@ -264,7 +264,7 @@ class MultirangeLoader(BaseMultirangeLoader[T]):
     def load(self, data: Buffer) -> Multirange[T]:
         if not data or data[0] != _START_INT:
             raise e.DataError(
-                f"malformed multirange starting with"
+                "malformed multirange starting with"
                 f" {bytes(data[:1]).decode('utf8', 'replace')}"
             )
 

@@ -374,7 +374,7 @@ def test_itersize(conn, commands):
         cmds = commands.popall()
         assert len(cmds) == 2
         for cmd in cmds:
-            assert ("fetch forward 2") in cmd.lower()
+            assert "fetch forward 2" in cmd.lower()
 
 
 def test_cant_scroll_by_default(conn):

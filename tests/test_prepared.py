@@ -249,8 +249,7 @@ def test_change_type_savepoint(conn):
                     conn.execute("CREATE TYPE prepenum AS ENUM ('foo', 'bar', 'baz')")
                     conn.execute("CREATE TABLE preptable(id integer, bar prepenum[])")
                     conn.cursor().execute(
-                        "INSERT INTO preptable (bar) "
-                        "VALUES (%(enum_col)s::prepenum[])",
+                        "INSERT INTO preptable (bar) VALUES (%(enum_col)s::prepenum[])",
                         {"enum_col": ["foo"]},
                     )
                     raise ZeroDivisionError()

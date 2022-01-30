@@ -160,7 +160,7 @@ class Composed(Composable):
             joiner = SQL(joiner)
         elif not isinstance(joiner, SQL):
             raise TypeError(
-                f"Composed.join() argument must be strings or SQL,"
+                "Composed.join() argument must be strings or SQL,"
                 f" got {joiner!r} instead"
             )
 

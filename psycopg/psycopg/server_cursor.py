@@ -196,7 +196,7 @@ class ServerCursor(Cursor[Row]):
         if not self.closed:
             warn(
                 f"the server-side cursor {self} was deleted while still open."
-                f" Please use 'with' or '.close()' to close the cursor properly",
+                " Please use 'with' or '.close()' to close the cursor properly",
                 ResourceWarning,
             )
 
@@ -333,7 +333,7 @@ class AsyncServerCursor(AsyncCursor[Row]):
         if not self.closed:
             warn(
                 f"the server-side cursor {self} was deleted while still open."
-                f" Please use 'with' or '.close()' to close the cursor properly",
+                " Please use 'with' or '.close()' to close the cursor properly",
                 ResourceWarning,
             )
 

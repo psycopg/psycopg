@@ -385,7 +385,7 @@ async def test_itersize(aconn, acommands):
         cmds = acommands.popall()
         assert len(cmds) == 2
         for cmd in cmds:
-            assert ("fetch forward 2") in cmd.lower()
+            assert "fetch forward 2" in cmd.lower()
 
 
 async def test_cant_scroll_by_default(aconn):

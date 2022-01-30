@@ -170,7 +170,7 @@ def _validate_and_reorder_params(
         sequence = False
     else:
         raise TypeError(
-            f"query parameters should be a sequence or a mapping,"
+            "query parameters should be a sequence or a mapping,"
             f" got {type(vars).__name__}"
         )
 
@@ -193,7 +193,7 @@ def _validate_and_reorder_params(
             return [vars[item] for item in order or ()]  # type: ignore[call-overload]
         except KeyError:
             raise e.ProgrammingError(
-                f"query parameter missing:"
+                "query parameter missing:"
                 f" {', '.join(sorted(i for i in order or () if i not in vars))}"
             )
 
@@ -250,7 +250,7 @@ def _split_query(query: bytes, encoding: str = "ascii") -> List[QueryPart]:
 
         if ph == b"%(":
             raise e.ProgrammingError(
-                f"incomplete placeholder:"
+                "incomplete placeholder:"
                 f" '{query[m.span(0)[0]:].split()[0].decode(encoding)}'"
             )
         elif ph == b"% ":
@@ -261,7 +261,7 @@ def _split_query(query: bytes, encoding: str = "ascii") -> List[QueryPart]:
             )
         elif ph[-1:] not in b"sbt":
             raise e.ProgrammingError(
-                f"only '%s', '%b', '%t' are allowed as placeholders, got"
+                "only '%s', '%b', '%t' are allowed as placeholders, got"
                 f" '{m.group(0).decode(encoding)}'"
             )
 

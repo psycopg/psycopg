@@ -153,8 +153,7 @@ class Faker:
                         if len(r) > 200:
                             r = f"{r[:200]}... ({len(r)} chars)"
                         raise Exception(
-                            f"value {r!r} at record {i} column0 {j}"
-                            f" failed insert: {e}"
+                            f"value {r!r} at record {i} column0 {j} failed insert: {e}"
                         ) from None
 
             # just in case, but hopefully we should have triggered the problem
@@ -179,8 +178,7 @@ class Faker:
                         if len(r) > 200:
                             r = f"{r[:200]}... ({len(r)} chars)"
                         raise Exception(
-                            f"value {r!r} at record {i} column0 {j}"
-                            f" failed insert: {e}"
+                            f"value {r!r} at record {i} column0 {j} failed insert: {e}"
                         ) from None
 
             # just in case, but hopefully we should have triggered the problem
