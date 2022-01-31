@@ -87,9 +87,7 @@ class Proxy:
             raise ValueError("pproxy program not found")
         cmdline = [pproxy, "--reuse"]
         cmdline.extend(["-l", f"tunnel://:{self.client_port}"])
-        cmdline.extend(
-            ["-r", f"tunnel://{self.server_host}:{self.server_port}"]
-        )
+        cmdline.extend(["-r", f"tunnel://{self.server_host}:{self.server_port}"])
 
         self.proc = sp.Popen(cmdline, stdout=sp.DEVNULL)
         logging.info("proxy started")

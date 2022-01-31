@@ -33,12 +33,8 @@ class AsyncConnectionPool(BasePool[AsyncConnection[Any]]):
         *,
         open: bool = True,
         connection_class: Type[AsyncConnection[Any]] = AsyncConnection,
-        configure: Optional[
-            Callable[[AsyncConnection[Any]], Awaitable[None]]
-        ] = None,
-        reset: Optional[
-            Callable[[AsyncConnection[Any]], Awaitable[None]]
-        ] = None,
+        configure: Optional[Callable[[AsyncConnection[Any]], Awaitable[None]]] = None,
+        reset: Optional[Callable[[AsyncConnection[Any]], Awaitable[None]]] = None,
         **kwargs: Any,
     ):
         self.connection_class = connection_class
@@ -99,9 +95,7 @@ class AsyncConnectionPool(BasePool[AsyncConnection[Any]]):
             self._stats[self._USAGE_MS] += int(1000.0 * (t1 - t0))
             await self.putconn(conn)
 
-    async def getconn(
-        self, timeout: Optional[float] = None
-    ) -> AsyncConnection[Any]:
+    async def getconn(self, timeout: Optional[float] = None) -> AsyncConnection[Any]:
         logger.info("connection requested from %r", self.name)
         self._stats[self._REQUESTS_NUM] += 1
 
@@ -180,9 +174,7 @@ class AsyncConnectionPool(BasePool[AsyncConnection[Any]]):
         else:
             await self._return_connection(conn)
 
-    async def _maybe_close_connection(
-        self, conn: AsyncConnection[Any]
-    ) -> bool:
+    async def _maybe_close_connection(self, conn: AsyncConnection[Any]) -> bool:
         # If the pool is closed just close the connection instead of returning
         # it to the pool. For extra refcare remove the pool reference from it.
         if not self._closed:
@@ -299,9 +291,7 @@ class AsyncConnectionPool(BasePool[AsyncConnection[Any]]):
     ) -> None:
         await self.close()
 
-    async def resize(
-        self, min_size: int, max_size: Optional[int] = None
-    ) -> None:
+    async def resize(self, min_size: int, max_size: Optional[int] = None) -> None:
         min_size, max_size = self._check_size(min_size, max_size)
 
         ngrow = max(0, min_size - self._min_size)
@@ -348,9 +338,7 @@ class AsyncConnectionPool(BasePool[AsyncConnection[Any]]):
         """Run a maintenance task in a worker."""
         self._tasks.put_nowait(task)
 
-    async def schedule_task(
-        self, task: "MaintenanceTask", delay: float
-    ) -> None:
+    async def schedule_task(self, task: "MaintenanceTask", delay: float) -> None:
         """Run a maintenance task in a worker in the future."""
         await self._sched.enter(delay, task.tick)
 
@@ -381,9 +369,7 @@ class AsyncConnectionPool(BasePool[AsyncConnection[Any]]):
                     ex,
                 )
 
-    async def _connect(
-        self, timeout: Optional[float] = None
-    ) -> AsyncConnection[Any]:
+    async def _connect(self, timeout: Optional[float] = None) -> AsyncConnection[Any]:
         self._stats[self._CONNECTIONS_NUM] += 1
         kwargs = self.kwargs
         if timeout:
@@ -428,9 +414,7 @@ class AsyncConnectionPool(BasePool[AsyncConnection[Any]]):
         """
         now = monotonic()
         if not attempt:
-            attempt = ConnectionAttempt(
-                reconnect_timeout=self.reconnect_timeout
-            )
+            attempt = ConnectionAttempt(reconnect_timeout=self.reconnect_timeout)
 
         try:
             conn = await self._connect()
@@ -459,9 +443,7 @@ class AsyncConnectionPool(BasePool[AsyncConnection[Any]]):
             async with self._lock:
                 if self._nconns < self._max_size and self._waiting:
                     self._nconns += 1
-                    logger.info(
-                        "growing pool %r to %s", self.name, self._nconns
-                    )
+                    logger.info("growing pool %r to %s", self.name, self._nconns)
                     self.run_task(AddConnection(self, growing=True))
                 else:
                     self._growing = False
@@ -723,9 +705,7 @@ class AddConnection(MaintenanceTask):
 class ReturnConnection(MaintenanceTask):
     """Clean up and return a connection to the pool."""
 
-    def __init__(
-        self, pool: "AsyncConnectionPool", conn: "AsyncConnection[Any]"
-    ):
+    def __init__(self, pool: "AsyncConnectionPool", conn: "AsyncConnection[Any]"):
         super().__init__(pool)
         self.conn = conn
 

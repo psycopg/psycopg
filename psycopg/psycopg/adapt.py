@@ -91,9 +91,7 @@ class Dumper(abc.Dumper, ABC):
             rv = rv.replace(b"\\", b"\\\\")
         return rv
 
-    def get_key(
-        self, obj: Any, format: PyFormat
-    ) -> Union[type, Tuple[type, ...]]:
+    def get_key(self, obj: Any, format: PyFormat) -> Union[type, Tuple[type, ...]]:
         """
         Implementation of the `~psycopg.abc.Dumper.get_key()` member of the
         `~psycopg.abc.Dumper` protocol. Look at its definition for details.

@@ -160,9 +160,7 @@ class AdaptersMap:
 
             self._dumpers_by_oid[dumper.format][dumper.oid] = dumper
 
-    def register_loader(
-        self, oid: Union[int, str], loader: Type["Loader"]
-    ) -> None:
+    def register_loader(self, oid: Union[int, str], loader: Type["Loader"]) -> None:
         """
         Configure the context to use *loader* to convert data of oid *oid*.
 
@@ -176,9 +174,7 @@ class AdaptersMap:
         if isinstance(oid, str):
             oid = self.types[oid].oid
         if not isinstance(oid, int):
-            raise TypeError(
-                f"loaders should be registered on oid, got {oid} instead"
-            )
+            raise TypeError(f"loaders should be registered on oid, got {oid} instead")
 
         if _psycopg:
             loader = self._get_optimised(loader)
@@ -252,9 +248,7 @@ class AdaptersMap:
                 )
             raise e.ProgrammingError(msg)
 
-    def get_loader(
-        self, oid: int, format: pq.Format
-    ) -> Optional[Type["Loader"]]:
+    def get_loader(self, oid: int, format: pq.Format) -> Optional[Type["Loader"]]:
         """
         Return the loader class for the given oid and format.
 

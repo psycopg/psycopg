@@ -21,9 +21,7 @@ def test_escape_literal(pgconn, data, want):
 
 @pytest.mark.parametrize("scs", ["on", "off"])
 def test_escape_literal_1char(pgconn, scs):
-    res = pgconn.exec_(
-        f"set standard_conforming_strings to {scs}".encode("ascii")
-    )
+    res = pgconn.exec_(f"set standard_conforming_strings to {scs}".encode("ascii"))
     assert res.status == pq.ExecStatus.COMMAND_OK
     esc = pq.Escaping(pgconn)
     special = {b"'": b"''''", b"\\": b" E'\\\\'"}
@@ -62,9 +60,7 @@ def test_escape_identifier(pgconn, data, want):
 
 @pytest.mark.parametrize("scs", ["on", "off"])
 def test_escape_identifier_1char(pgconn, scs):
-    res = pgconn.exec_(
-        f"set standard_conforming_strings to {scs}".encode("ascii")
-    )
+    res = pgconn.exec_(f"set standard_conforming_strings to {scs}".encode("ascii"))
     assert res.status == pq.ExecStatus.COMMAND_OK
     esc = pq.Escaping(pgconn)
     special = {b'"': b'""""', b"\\": b'"\\"'}
@@ -104,9 +100,7 @@ def test_escape_string(pgconn, data, want):
 @pytest.mark.parametrize("scs", ["on", "off"])
 def test_escape_string_1char(pgconn, scs):
     esc = pq.Escaping(pgconn)
-    res = pgconn.exec_(
-        f"set standard_conforming_strings to {scs}".encode("ascii")
-    )
+    res = pgconn.exec_(f"set standard_conforming_strings to {scs}".encode("ascii"))
     assert res.status == pq.ExecStatus.COMMAND_OK
     special = {b"'": b"''", b"\\": b"\\" if scs == "on" else b"\\\\"}
     for c in range(1, 128):
@@ -151,9 +145,9 @@ def test_escape_string_badenc(pgconn):
         esc.escape_string(data)
 
 
-@pytest.mark.parametrize("data", [(b"hello\00world"), (b"\00\00\00\00")])
+@pytest.mark.parametrize("data", [b"hello\00world", b"\00\00\00\00"])
 def test_escape_bytea(pgconn, data):
-    exp = br"\x" + b"".join(b"%02x" % c for c in data)
+    exp = rb"\x" + b"".join(b"%02x" % c for c in data)
     esc = pq.Escaping(pgconn)
     rv = esc.escape_bytea(data)
     assert rv == exp
@@ -167,9 +161,7 @@ def test_escape_noconn(pgconn):
     data = bytes(range(256))
     esc = pq.Escaping()
     escdata = esc.escape_bytea(data)
-    res = pgconn.exec_params(
-        b"select '%s'::bytea" % escdata, [], result_format=1
-    )
+    res = pgconn.exec_params(b"select '%s'::bytea" % escdata, [], result_format=1)
     assert res.status == pq.ExecStatus.TUPLES_OK
     assert res.get_value(0, 0) == data
 
@@ -178,13 +170,13 @@ def test_escape_1char(pgconn):
     esc = pq.Escaping(pgconn)
     for c in range(256):
         rv = esc.escape_bytea(bytes([c]))
-        exp = br"\x%02x" % c
+        exp = rb"\x%02x" % c
         assert rv == exp
 
 
-@pytest.mark.parametrize("data", [(b"hello\00world"), (b"\00\00\00\00")])
+@pytest.mark.parametrize("data", [b"hello\00world", b"\00\00\00\00"])
 def test_unescape_bytea(pgconn, data):
-    enc = br"\x" + b"".join(b"%02x" % c for c in data)
+    enc = rb"\x" + b"".join(b"%02x" % c for c in data)
     esc = pq.Escaping(pgconn)
     rv = esc.unescape_bytea(enc)
     assert rv == data

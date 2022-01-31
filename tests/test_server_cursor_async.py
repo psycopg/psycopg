@@ -239,9 +239,7 @@ async def test_execute_reuse(aconn):
         await cur.execute("select generate_series(1, %s) as foo", (3,))
         assert await cur.fetchone() == (1,)
 
-        await cur.execute(
-            "select %s::text as bar, %s::text as baz", ("hello", "world")
-        )
+        await cur.execute("select %s::text as bar, %s::text as baz", ("hello", "world"))
         assert await cur.fetchone() == ("hello", "world")
         assert cur.description[0].name == "bar"
         assert cur.description[0].type_code == cur.adapters.types["text"].oid
@@ -303,9 +301,7 @@ async def test_nextset(aconn):
 
 async def test_no_result(aconn):
     async with aconn.cursor("foo") as cur:
-        await cur.execute(
-            "select generate_series(1, %s) as bar where false", (3,)
-        )
+        await cur.execute("select generate_series(1, %s) as bar where false", (3,))
         assert len(cur.description) == 1
         assert (await cur.fetchall()) == []
 
@@ -389,7 +385,7 @@ async def test_itersize(aconn, acommands):
         cmds = acommands.popall()
         assert len(cmds) == 2
         for cmd in cmds:
-            assert ("fetch forward 2") in cmd.lower()
+            assert "fetch forward 2" in cmd.lower()
 
 
 async def test_cant_scroll_by_default(aconn):

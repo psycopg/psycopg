@@ -112,17 +112,13 @@ async def test_resolve_hostaddr_async(conninfo, want, env, fake_resolve):
     ],
 )
 @pytest.mark.asyncio
-async def test_resolve_hostaddr_async_bad(
-    monkeypatch, conninfo, env, fake_resolve
-):
+async def test_resolve_hostaddr_async_bad(monkeypatch, conninfo, env, fake_resolve):
     if env:
         for k, v in env.items():
             monkeypatch.setenv(k, v)
     params = conninfo_to_dict(conninfo)
     with pytest.raises(psycopg.Error):
-        await psycopg._dns.resolve_hostaddr_async(  # type: ignore[attr-defined]
-            params
-        )
+        await psycopg._dns.resolve_hostaddr_async(params)  # type: ignore[attr-defined]
 
 
 @pytest.mark.asyncio
@@ -133,9 +129,7 @@ async def test_resolve_hostaddr_conn(monkeypatch, fake_resolve):
         got.append(conninfo)
         1 / 0
 
-    monkeypatch.setattr(
-        psycopg.AsyncConnection, "_connect_gen", fake_connect_gen
-    )
+    monkeypatch.setattr(psycopg.AsyncConnection, "_connect_gen", fake_connect_gen)
 
     # TODO: not enabled by default, but should be usable to make a subclass
     class AsyncDnsConnection(psycopg.AsyncConnection[Row]):

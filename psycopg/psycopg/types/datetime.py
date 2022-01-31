@@ -22,9 +22,7 @@ if TYPE_CHECKING:
 
 _struct_timetz = struct.Struct("!qi")  # microseconds, sec tz offset
 _pack_timetz = cast(Callable[[int, int], bytes], _struct_timetz.pack)
-_unpack_timetz = cast(
-    Callable[[bytes], Tuple[int, int]], _struct_timetz.unpack
-)
+_unpack_timetz = cast(Callable[[bytes], Tuple[int, int]], _struct_timetz.unpack)
 
 _struct_interval = struct.Struct("!qii")  # microseconds, days, months
 _pack_interval = cast(Callable[[int, int, int], bytes], _struct_interval.pack)
@@ -168,9 +166,7 @@ class DatetimeBinaryDumper(_BaseDatetimeDumper):
 
     def dump(self, obj: datetime) -> bytes:
         delta = obj - _pg_datetimetz_epoch
-        micros = delta.microseconds + 1_000_000 * (
-            86_400 * delta.days + delta.seconds
-        )
+        micros = delta.microseconds + 1_000_000 * (86_400 * delta.days + delta.seconds)
         return pack_int8(micros)
 
     def upgrade(self, obj: datetime, format: PyFormat) -> Dumper:
@@ -187,9 +183,7 @@ class DatetimeNoTzBinaryDumper(_BaseDatetimeDumper):
 
     def dump(self, obj: datetime) -> bytes:
         delta = obj - _pg_datetime_epoch
-        micros = delta.microseconds + 1_000_000 * (
-            86_400 * delta.days + delta.seconds
-        )
+        micros = delta.microseconds + 1_000_000 * (86_400 * delta.days + delta.seconds)
         return pack_int8(micros)
 
 
@@ -243,9 +237,7 @@ class DateLoader(Loader):
         elif ds.startswith(b"G"):  # German
             self._order = self._ORDER_DMY
         elif ds.startswith(b"S") or ds.startswith(b"P"):  # SQL or Postgres
-            self._order = (
-                self._ORDER_DMY if ds.endswith(b"DMY") else self._ORDER_MDY
-            )
+            self._order = self._ORDER_DMY if ds.endswith(b"DMY") else self._ORDER_MDY
         else:
             raise InterfaceError(f"unexpected DateStyle: {ds.decode('ascii')}")
 
@@ -326,9 +318,7 @@ class TimeBinaryLoader(Loader):
         try:
             return time(h, m, s, us)
         except ValueError:
-            raise DataError(
-                f"time not supported by Python: hour={h}"
-            ) from None
+            raise DataError(f"time not supported by Python: hour={h}") from None
 
 
 class TimetzLoader(Loader):
@@ -387,9 +377,7 @@ class TimetzBinaryLoader(Loader):
         try:
             return time(h, m, s, us, timezone(timedelta(seconds=-off)))
         except ValueError:
-            raise DataError(
-                f"time not supported by Python: hour={h}"
-            ) from None
+            raise DataError(f"time not supported by Python: hour={h}") from None
 
 
 class TimestampLoader(Loader):
@@ -432,13 +420,9 @@ class TimestampLoader(Loader):
         elif ds.startswith(b"G"):  # German
             self._order = self._ORDER_DMY
         elif ds.startswith(b"S"):  # SQL
-            self._order = (
-                self._ORDER_DMY if ds.endswith(b"DMY") else self._ORDER_MDY
-            )
+            self._order = self._ORDER_DMY if ds.endswith(b"DMY") else self._ORDER_MDY
         elif ds.startswith(b"P"):  # Postgres
-            self._order = (
-                self._ORDER_PGDM if ds.endswith(b"DMY") else self._ORDER_PGMD
-            )
+            self._order = self._ORDER_PGDM if ds.endswith(b"DMY") else self._ORDER_PGMD
             self._re_format = self._re_format_pg
         else:
             raise InterfaceError(f"unexpected DateStyle: {ds.decode('ascii')}")
@@ -480,9 +464,7 @@ class TimestampLoader(Loader):
             us = 0
 
         try:
-            return datetime(
-                int(ye), imo, int(da), int(ho), int(mi), int(se), us
-            )
+            return datetime(int(ye), imo, int(da), int(ho), int(mi), int(se), us)
         except ValueError as e:
             s = bytes(data).decode("utf8", "replace")
             raise DataError(f"can't parse timestamp {s!r}: {e}") from None
@@ -498,13 +480,9 @@ class TimestampBinaryLoader(Loader):
             return _pg_datetime_epoch + timedelta(microseconds=micros)
         except OverflowError:
             if micros <= 0:
-                raise DataError(
-                    "timestamp too small (before year 1)"
-                ) from None
+                raise DataError("timestamp too small (before year 1)") from None
             else:
-                raise DataError(
-                    "timestamp too large (after year 10K)"
-                ) from None
+                raise DataError("timestamp too large (after year 10K)") from None
 
 
 class TimestamptzLoader(Loader):
@@ -523,9 +501,7 @@ class TimestamptzLoader(Loader):
 
     def __init__(self, oid: int, context: Optional[AdaptContext] = None):
         super().__init__(oid, context)
-        self._timezone = get_tzinfo(
-            self.connection.pgconn if self.connection else None
-        )
+        self._timezone = get_tzinfo(self.connection.pgconn if self.connection else None)
 
         ds = _get_datestyle(self.connection)
         if not ds.startswith(b"I"):  # not ISO
@@ -565,9 +541,7 @@ class TimestamptzLoader(Loader):
         dt = None
         ex: Exception
         try:
-            dt = datetime(
-                int(ye), int(mo), int(da), int(ho), int(mi), int(se), us, utc
-            )
+            dt = datetime(int(ye), int(mo), int(da), int(ho), int(mi), int(se), us, utc)
             return (dt - tzoff).astimezone(self._timezone)
         except OverflowError as e:
             # If we have created the temporary 'dt' it means that we have a
@@ -597,9 +571,7 @@ class TimestamptzBinaryLoader(Loader):
 
     def __init__(self, oid: int, context: Optional[AdaptContext] = None):
         super().__init__(oid, context)
-        self._timezone = get_tzinfo(
-            self.connection.pgconn if self.connection else None
-        )
+        self._timezone = get_tzinfo(self.connection.pgconn if self.connection else None)
 
     def load(self, data: Buffer) -> datetime:
         micros = unpack_int8(data)[0]
@@ -618,28 +590,22 @@ class TimestamptzBinaryLoader(Loader):
                 if utcoff:
                     usoff = 1_000_000 * int(utcoff.total_seconds())
                     try:
-                        ts = _pg_datetime_epoch + timedelta(
-                            microseconds=micros + usoff
-                        )
+                        ts = _pg_datetime_epoch + timedelta(microseconds=micros + usoff)
                     except OverflowError:
                         pass  # will raise downstream
                     else:
                         return ts.replace(tzinfo=self._timezone)
 
             if micros <= 0:
-                raise DataError(
-                    "timestamp too small (before year 1)"
-                ) from None
+                raise DataError("timestamp too small (before year 1)") from None
             else:
-                raise DataError(
-                    "timestamp too large (after year 10K)"
-                ) from None
+                raise DataError("timestamp too large (after year 10K)") from None
 
 
 class IntervalLoader(Loader):
 
     _re_interval = re.compile(
-        br"""
+        rb"""
         (?: ([-+]?\d+) \s+ years? \s* )?                # Years
         (?: ([-+]?\d+) \s+ mons? \s* )?                 # Months
         (?: ([-+]?\d+) \s+ days? \s* )?                 # Days
@@ -722,9 +688,7 @@ def _get_datestyle(conn: Optional["BaseConnection[Any]"]) -> bytes:
 
 _month_abbr = {
     n: i
-    for i, n in enumerate(
-        b"Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split(), 1
-    )
+    for i, n in enumerate(b"Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split(), 1)
 }
 
 # Pad to get microseconds from a fraction of seconds

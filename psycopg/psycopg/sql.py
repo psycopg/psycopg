@@ -125,9 +125,7 @@ class Composed(Composable):
     _obj: List[Composable]
 
     def __init__(self, seq: Sequence[Any]):
-        seq = [
-            obj if isinstance(obj, Composable) else Literal(obj) for obj in seq
-        ]
+        seq = [obj if isinstance(obj, Composable) else Literal(obj) for obj in seq]
         super().__init__(seq)
 
     def as_bytes(self, context: Optional[AdaptContext]) -> bytes:
@@ -162,7 +160,7 @@ class Composed(Composable):
             joiner = SQL(joiner)
         elif not isinstance(joiner, SQL):
             raise TypeError(
-                f"Composed.join() argument must be strings or SQL,"
+                "Composed.join() argument must be strings or SQL,"
                 f" got {joiner!r} instead"
             )
 

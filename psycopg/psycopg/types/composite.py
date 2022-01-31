@@ -44,7 +44,7 @@ class SequenceDumper(RecursiveDumper):
             if not ad:
                 ad = b'""'
             elif self._re_needs_quotes.search(ad):
-                ad = b'"' + self._re_esc.sub(br"\1\1", ad) + b'"'
+                ad = b'"' + self._re_esc.sub(rb"\1\1", ad) + b'"'
 
             parts.append(ad)
             parts.append(sep)
@@ -53,8 +53,8 @@ class SequenceDumper(RecursiveDumper):
 
         return b"".join(parts)
 
-    _re_needs_quotes = re.compile(br'[",\\\s()]')
-    _re_esc = re.compile(br"([\\\"])")
+    _re_needs_quotes = re.compile(rb'[",\\\s()]')
+    _re_esc = re.compile(rb"([\\\"])")
 
 
 class TupleDumper(SequenceDumper):
@@ -106,7 +106,7 @@ class BaseCompositeLoader(RecursiveLoader):
             if m.group(1):
                 yield None
             elif m.group(2) is not None:
-                yield self._re_undouble.sub(br"\1", m.group(2))
+                yield self._re_undouble.sub(rb"\1", m.group(2))
             else:
                 yield m.group(3)
 
@@ -116,14 +116,14 @@ class BaseCompositeLoader(RecursiveLoader):
             yield None
 
     _re_tokenize = re.compile(
-        br"""(?x)
+        rb"""(?x)
           (,)                       # an empty token, representing NULL
         | " ((?: [^"] | "")*) " ,?  # or a quoted string
         | ([^",)]+) ,?              # or an unquoted string
         """
     )
 
-    _re_undouble = re.compile(br'(["\\])\1')
+    _re_undouble = re.compile(rb'(["\\])\1')
 
 
 class RecordLoader(BaseCompositeLoader):
@@ -227,9 +227,7 @@ def register_composite(
     # A friendly error warning instead of an AttributeError in case fetch()
     # failed and it wasn't noticed.
     if not info:
-        raise TypeError(
-            "no info passed. Is the requested composite available?"
-        )
+        raise TypeError("no info passed. Is the requested composite available?")
 
     # Register arrays and type info
     info.register(context)
@@ -268,9 +266,7 @@ def register_composite(
         adapters.register_dumper(factory, dumper)
 
         # Default to the text dumper because it is more flexible
-        dumper = type(
-            f"{info.name.title()}Dumper", (TupleDumper,), {"oid": info.oid}
-        )
+        dumper = type(f"{info.name.title()}Dumper", (TupleDumper,), {"oid": info.oid})
         adapters.register_dumper(factory, dumper)
 
         info.python_type = factory

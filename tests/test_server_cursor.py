@@ -113,9 +113,7 @@ def test_close(conn, recwarn):
     cur.close()
     assert cur.closed
 
-    assert not conn.execute(
-        "select * from pg_cursors where name = 'foo'"
-    ).fetchone()
+    assert not conn.execute("select * from pg_cursors where name = 'foo'").fetchone()
     del cur
     assert not recwarn, [str(w.message) for w in recwarn.list]
 
@@ -211,9 +209,7 @@ def test_context(conn, recwarn):
         cur.execute("select generate_series(1, 10) as bar")
 
     assert cur.closed
-    assert not conn.execute(
-        "select * from pg_cursors where name = 'foo'"
-    ).fetchone()
+    assert not conn.execute("select * from pg_cursors where name = 'foo'").fetchone()
     del cur
     assert not recwarn, [str(w.message) for w in recwarn.list]
 
@@ -237,9 +233,7 @@ def test_execute_reuse(conn):
         cur.execute("select generate_series(1, %s) as foo", (3,))
         assert cur.fetchone() == (1,)
 
-        cur.execute(
-            "select %s::text as bar, %s::text as baz", ("hello", "world")
-        )
+        cur.execute("select %s::text as bar, %s::text as baz", ("hello", "world"))
         assert cur.fetchone() == ("hello", "world")
         assert cur.description[0].name == "bar"
         assert cur.description[0].type_code == cur.adapters.types["text"].oid
@@ -380,7 +374,7 @@ def test_itersize(conn, commands):
         cmds = commands.popall()
         assert len(cmds) == 2
         for cmd in cmds:
-            assert ("fetch forward 2") in cmd.lower()
+            assert "fetch forward 2" in cmd.lower()
 
 
 def test_cant_scroll_by_default(conn):

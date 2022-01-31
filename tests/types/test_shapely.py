@@ -71,9 +71,7 @@ def shapely_conn(conn, svcconn):
 
 def test_no_adapter(conn):
     point = Point(1.2, 3.4)
-    with pytest.raises(
-        psycopg.ProgrammingError, match="cannot adapt type 'Point'"
-    ):
+    with pytest.raises(psycopg.ProgrammingError, match="cannot adapt type 'Point'"):
         conn.execute("SELECT pg_typeof(%s)", [point]).fetchone()[0]
 
 
@@ -89,16 +87,12 @@ def test_with_adapter(shapely_conn):
     SAMPLE_POLYGON = Polygon([(0, 0), (1, 1), (1, 0)])
 
     assert (
-        shapely_conn.execute(
-            "SELECT pg_typeof(%s)", [SAMPLE_POINT]
-        ).fetchone()[0]
+        shapely_conn.execute("SELECT pg_typeof(%s)", [SAMPLE_POINT]).fetchone()[0]
         == "geometry"
     )
 
     assert (
-        shapely_conn.execute(
-            "SELECT pg_typeof(%s)", [SAMPLE_POLYGON]
-        ).fetchone()[0]
+        shapely_conn.execute("SELECT pg_typeof(%s)", [SAMPLE_POLYGON]).fetchone()[0]
         == "geometry"
     )
 

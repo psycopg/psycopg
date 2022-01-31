@@ -42,9 +42,7 @@ async def test_min_size_max_size(dsn):
         assert p.max_size == 2
 
 
-@pytest.mark.parametrize(
-    "min_size, max_size", [(1, None), (-1, None), (0, -2)]
-)
+@pytest.mark.parametrize("min_size, max_size", [(1, None), (-1, None), (0, -2)])
 async def test_bad_size(dsn, min_size, max_size):
     with pytest.raises(ValueError):
         AsyncNullConnectionPool(min_size=min_size, max_size=max_size)
@@ -108,9 +106,7 @@ async def test_wait_closed(dsn):
 @pytest.mark.slow
 async def test_setup_no_timeout(dsn, proxy):
     with pytest.raises(PoolTimeout):
-        async with AsyncNullConnectionPool(
-            proxy.client_dsn, num_workers=1
-        ) as p:
+        async with AsyncNullConnectionPool(proxy.client_dsn, num_workers=1) as p:
             await p.wait(0.2)
 
     async with AsyncNullConnectionPool(proxy.client_dsn, num_workers=1) as p:
@@ -297,9 +293,7 @@ async def test_queue(dsn):
     async def worker(n):
         t0 = time()
         async with p.connection() as conn:
-            cur = await conn.execute(
-                "select pg_backend_pid() from pg_sleep(0.2)"
-            )
+            cur = await conn.execute("select pg_backend_pid() from pg_sleep(0.2)")
             (pid,) = await cur.fetchone()  # type: ignore[misc]
         t1 = time()
         results.append((n, t1 - t0, pid))
@@ -358,9 +352,7 @@ async def test_queue_timeout(dsn):
         t0 = time()
         try:
             async with p.connection() as conn:
-                cur = await conn.execute(
-                    "select pg_backend_pid() from pg_sleep(0.2)"
-                )
+                cur = await conn.execute("select pg_backend_pid() from pg_sleep(0.2)")
                 (pid,) = await cur.fetchone()  # type: ignore[misc]
         except PoolTimeout as e:
             t1 = time()
@@ -414,9 +406,7 @@ async def test_queue_timeout_override(dsn):
         timeout = 0.25 if n == 3 else None
         try:
             async with p.connection(timeout=timeout) as conn:
-                cur = await conn.execute(
-                    "select pg_backend_pid() from pg_sleep(0.2)"
-                )
+                cur = await conn.execute("select pg_backend_pid() from pg_sleep(0.2)")
                 (pid,) = await cur.fetchone()  # type: ignore[misc]
         except PoolTimeout as e:
             t1 = time()
@@ -527,9 +517,7 @@ async def test_active_close(dsn, caplog):
         await ensure_waiting(p)
 
         pids.append(conn.info.backend_pid)
-        conn.pgconn.exec_(
-            b"copy (select * from generate_series(1, 10)) to stdout"
-        )
+        conn.pgconn.exec_(b"copy (select * from generate_series(1, 10)) to stdout")
         assert conn.info.transaction_status == TransactionStatus.ACTIVE
         await p.putconn(conn)
         await asyncio.gather(t)
@@ -737,9 +725,7 @@ async def test_reopen(dsn):
         await p.open()
 
 
-@pytest.mark.parametrize(
-    "min_size, max_size", [(1, None), (-1, None), (0, -2)]
-)
+@pytest.mark.parametrize("min_size, max_size", [(1, None), (-1, None), (0, -2)])
 async def test_bad_resize(dsn, min_size, max_size):
     async with AsyncNullConnectionPool() as p:
         with pytest.raises(ValueError):

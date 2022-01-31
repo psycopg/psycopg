@@ -89,8 +89,7 @@ async def resolve_hostaddr_async(params: Dict[str, Any]) -> Dict[str, Any]:
             # ProgrammingError would have been more appropriate, but this is
             # what the raise if the libpq fails connect in the same case.
             raise e.OperationalError(
-                f"cannot match {len(hosts_in)} hosts with {len(ports_in)}"
-                " port numbers"
+                f"cannot match {len(hosts_in)} hosts with {len(ports_in)} port numbers"
             )
         ports_out = []
 
@@ -187,9 +186,7 @@ class Rfc2782Resolver:
     the async paths.
     """
 
-    re_srv_rr = re.compile(
-        r"^(?P<service>_[^\.]+)\.(?P<proto>_[^\.]+)\.(?P<target>.+)"
-    )
+    re_srv_rr = re.compile(r"^(?P<service>_[^\.]+)\.(?P<proto>_[^\.]+)\.(?P<target>.+)")
 
     def resolve(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """Update the parameters host and port after SRV lookup."""
@@ -243,8 +240,7 @@ class Rfc2782Resolver:
             # ProgrammingError would have been more appropriate, but this is
             # what the raise if the libpq fails connect in the same case.
             raise e.OperationalError(
-                f"cannot match {len(hosts_in)} hosts with {len(ports_in)}"
-                " port numbers"
+                f"cannot match {len(hosts_in)} hosts with {len(ports_in)} port numbers"
             )
 
         out = []

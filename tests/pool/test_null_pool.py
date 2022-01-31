@@ -33,9 +33,7 @@ def test_min_size_max_size(dsn):
         assert p.max_size == 2
 
 
-@pytest.mark.parametrize(
-    "min_size, max_size", [(1, None), (-1, None), (0, -2)]
-)
+@pytest.mark.parametrize("min_size, max_size", [(1, None), (-1, None), (0, -2)])
 def test_bad_size(dsn, min_size, max_size):
     with pytest.raises(ValueError):
         NullConnectionPool(min_size=min_size, max_size=max_size)
@@ -275,9 +273,7 @@ def test_reset_broken(dsn, caplog):
 @pytest.mark.slow
 @pytest.mark.skipif("ver(psycopg.__version__) < ver('3.0.8')")
 def test_no_queue_timeout(deaf_port):
-    with NullConnectionPool(
-        kwargs={"host": "localhost", "port": deaf_port}
-    ) as p:
+    with NullConnectionPool(kwargs={"host": "localhost", "port": deaf_port}) as p:
         with pytest.raises(PoolTimeout):
             with p.connection(timeout=1):
                 pass
@@ -536,9 +532,7 @@ def test_active_close(dsn, caplog):
         ensure_waiting(p)
 
         pids.append(conn.info.backend_pid)
-        conn.pgconn.exec_(
-            b"copy (select * from generate_series(1, 10)) to stdout"
-        )
+        conn.pgconn.exec_(b"copy (select * from generate_series(1, 10)) to stdout")
         assert conn.info.transaction_status == TransactionStatus.ACTIVE
         p.putconn(conn)
         t.join()
@@ -764,9 +758,7 @@ def test_reopen(dsn):
         p.open()
 
 
-@pytest.mark.parametrize(
-    "min_size, max_size", [(1, None), (-1, None), (0, -2)]
-)
+@pytest.mark.parametrize("min_size, max_size", [(1, None), (-1, None), (0, -2)])
 def test_bad_resize(dsn, min_size, max_size):
     with NullConnectionPool() as p:
         with pytest.raises(ValueError):

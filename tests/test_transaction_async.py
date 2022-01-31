@@ -101,9 +101,7 @@ async def test_context_active_rollback_no_clobber(dsn, caplog):
     try:
         with pytest.raises(ZeroDivisionError):
             async with conn.transaction():
-                conn.pgconn.exec_(
-                    b"copy (select generate_series(1, 10)) to stdout"
-                )
+                conn.pgconn.exec_(b"copy (select generate_series(1, 10)) to stdout")
                 status = conn.info.transaction_status
                 assert status == conn.TransactionStatus.ACTIVE
                 1 / 0
@@ -165,9 +163,7 @@ async def test_preserves_autocommit(aconn, autocommit):
     assert aconn.autocommit is autocommit
 
 
-async def test_autocommit_off_but_no_tx_started_successful_exit(
-    aconn, svcconn
-):
+async def test_autocommit_off_but_no_tx_started_successful_exit(aconn, svcconn):
     """
     Scenario:
     * Connection has autocommit off but no transaction has been initiated
@@ -211,9 +207,7 @@ async def test_autocommit_off_but_no_tx_started_exception_exit(aconn, svcconn):
     assert not inserted(svcconn)
 
 
-async def test_autocommit_off_and_tx_in_progress_successful_exit(
-    aconn, svcconn
-):
+async def test_autocommit_off_and_tx_in_progress_successful_exit(aconn, svcconn):
     """
     Scenario:
     * Connection has autocommit off but and a transaction is already in
@@ -236,9 +230,7 @@ async def test_autocommit_off_and_tx_in_progress_successful_exit(
     assert not inserted(svcconn)
 
 
-async def test_autocommit_off_and_tx_in_progress_exception_exit(
-    aconn, svcconn
-):
+async def test_autocommit_off_and_tx_in_progress_exception_exit(aconn, svcconn):
     """
     Scenario:
     * Connection has autocommit off but and a transaction is already in
@@ -308,9 +300,7 @@ async def test_nested_all_changes_discarded_on_inner_exception(aconn, svcconn):
     assert not inserted(svcconn)
 
 
-async def test_nested_inner_scope_exception_handled_in_outer_scope(
-    aconn, svcconn
-):
+async def test_nested_inner_scope_exception_handled_in_outer_scope(aconn, svcconn):
     """
     An exception escaping the inner transaction context causes changes made
     within that inner context to be discarded, but the error can then be
@@ -578,9 +568,7 @@ async def test_explicit_rollback_of_outer_transaction(aconn):
     assert not await inserted(aconn)
 
 
-async def test_explicit_rollback_of_enclosing_tx_outer_tx_unaffected(
-    aconn, svcconn
-):
+async def test_explicit_rollback_of_enclosing_tx_outer_tx_unaffected(aconn, svcconn):
     """
     Rolling-back an enclosing transaction does not impact an outer transaction.
     """

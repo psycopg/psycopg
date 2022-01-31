@@ -42,8 +42,7 @@ ff ff
 """
 
 sample_binary_rows = [
-    bytes.fromhex("".join(row.split()))
-    for row in sample_binary_str.split("\n\n")
+    bytes.fromhex("".join(row.split())) for row in sample_binary_str.split("\n\n")
 ]
 
 sample_binary = b"".join(sample_binary_rows)
@@ -57,15 +56,11 @@ def test_copy_out_read(conn, format):
         want = sample_binary_rows
 
     cur = conn.cursor()
-    with cur.copy(
-        f"copy ({sample_values}) to stdout (format {format.name})"
-    ) as copy:
+    with cur.copy(f"copy ({sample_values}) to stdout (format {format.name})") as copy:
         for row in want:
             got = copy.read()
             assert got == row
-            assert (
-                conn.info.transaction_status == conn.TransactionStatus.ACTIVE
-            )
+            assert conn.info.transaction_status == conn.TransactionStatus.ACTIVE
 
         assert copy.read() == b""
         assert copy.read() == b""
@@ -82,9 +77,7 @@ def test_copy_out_iter(conn, format):
         want = sample_binary_rows
 
     cur = conn.cursor()
-    with cur.copy(
-        f"copy ({sample_values}) to stdout (format {format.name})"
-    ) as copy:
+    with cur.copy(f"copy ({sample_values}) to stdout (format {format.name})") as copy:
         assert list(copy) == want
 
     assert conn.info.transaction_status == conn.TransactionStatus.INTRANS
@@ -110,9 +103,7 @@ def test_read_rows(conn, format, typetype):
 @pytest.mark.parametrize("format", Format)
 def test_rows(conn, format):
     cur = conn.cursor()
-    with cur.copy(
-        f"copy ({sample_values}) to stdout (format {format.name})"
-    ) as copy:
+    with cur.copy(f"copy ({sample_values}) to stdout (format {format.name})") as copy:
         copy.set_types(["int4", "int4", "text"])
         rows = list(copy.rows())
 
@@ -143,9 +134,9 @@ def test_copy_out_allchars(conn, format):
     chars = list(map(chr, range(1, 256))) + [eur]
     conn.execute("set client_encoding to utf8")
     rows = []
-    query = sql.SQL(
-        "copy (select unnest({}::text[])) to stdout (format {})"
-    ).format(chars, sql.SQL(format.name))
+    query = sql.SQL("copy (select unnest({}::text[])) to stdout (format {})").format(
+        chars, sql.SQL(format.name)
+    )
     with cur.copy(query) as copy:
         copy.set_types(["text"])
         while 1:
@@ -161,9 +152,7 @@ def test_copy_out_allchars(conn, format):
 @pytest.mark.parametrize("format", Format)
 def test_read_row_notypes(conn, format):
     cur = conn.cursor()
-    with cur.copy(
-        f"copy ({sample_values}) to stdout (format {format.name})"
-    ) as copy:
+    with cur.copy(f"copy ({sample_values}) to stdout (format {format.name})") as copy:
         rows = []
         while 1:
             row = copy.read_row()
@@ -171,24 +160,16 @@ def test_read_row_notypes(conn, format):
                 break
             rows.append(row)
 
-    ref = [
-        tuple(py_to_raw(i, format) for i in record)
-        for record in sample_records
-    ]
+    ref = [tuple(py_to_raw(i, format) for i in record) for record in sample_records]
     assert rows == ref
 
 
 @pytest.mark.parametrize("format", Format)
 def test_rows_notypes(conn, format):
     cur = conn.cursor()
-    with cur.copy(
-        f"copy ({sample_values}) to stdout (format {format.name})"
-    ) as copy:
+    with cur.copy(f"copy ({sample_values}) to stdout (format {format.name})") as copy:
         rows = list(copy.rows())
-    ref = [
-        tuple(py_to_raw(i, format) for i in record)
-        for record in sample_records
-    ]
+    ref = [tuple(py_to_raw(i, format) for i in record) for record in sample_records]
     assert rows == ref
 
 
@@ -196,9 +177,7 @@ def test_rows_notypes(conn, format):
 @pytest.mark.parametrize("format", Format)
 def test_copy_out_badntypes(conn, format, err):
     cur = conn.cursor()
-    with cur.copy(
-        f"copy ({sample_values}) to stdout (format {format.name})"
-    ) as copy:
+    with cur.copy(f"copy ({sample_values}) to stdout (format {format.name})") as copy:
         copy.set_types([0] * (len(sample_records[0]) + err))
         with pytest.raises(e.ProgrammingError):
             copy.read_row()
@@ -303,9 +282,7 @@ def test_subclass_adapter(conn, format):
     cur = conn.cursor()
     ensure_table(cur, sample_tabledef)
 
-    with cur.copy(
-        f"copy copy_in (data) from stdin (format {format.name})"
-    ) as copy:
+    with cur.copy(f"copy copy_in (data) from stdin (format {format.name})") as copy:
         copy.write_row(("hello",))
 
     rec = cur.execute("select data from copy_in").fetchone()
@@ -360,9 +337,7 @@ def test_copy_out_error_with_copy_finished(conn):
 def test_copy_out_error_with_copy_not_finished(conn):
     cur = conn.cursor()
     with pytest.raises(ZeroDivisionError):
-        with cur.copy(
-            "copy (select generate_series(1, 1000000)) to stdout"
-        ) as copy:
+        with cur.copy("copy (select generate_series(1, 1000000)) to stdout") as copy:
             copy.read_row()
             1 / 0
 
@@ -628,9 +603,7 @@ def test_copy_to_leaks(dsn, faker, fmt, set_types, method):
         gc_collect()
         n.append(len(gc.get_objects()))
 
-    assert (
-        n[0] == n[1] == n[2]
-    ), f"objects leaked: {n[1] - n[0]}, {n[2] - n[1]}"
+    assert n[0] == n[1] == n[2], f"objects leaked: {n[1] - n[0]}, {n[2] - n[1]}"
 
 
 @pytest.mark.slow
@@ -673,9 +646,7 @@ def test_copy_from_leaks(dsn, faker, fmt, set_types):
         gc_collect()
         n.append(len(gc.get_objects()))
 
-    assert (
-        n[0] == n[1] == n[2]
-    ), f"objects leaked: {n[1] - n[0]}, {n[2] - n[1]}"
+    assert n[0] == n[1] == n[2], f"objects leaked: {n[1] - n[0]}, {n[2] - n[1]}"
 
 
 def py_to_raw(item, fmt):

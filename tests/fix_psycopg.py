@@ -41,9 +41,7 @@ class Tpc:
         self.conn = conn
 
     def check_tpc(self):
-        val = int(
-            self.conn.execute("show max_prepared_transactions").fetchone()[0]
-        )
+        val = int(self.conn.execute("show max_prepared_transactions").fetchone()[0])
         if not val:
             pytest.skip("prepared transactions disabled in the database")
 

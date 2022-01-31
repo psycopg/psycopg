@@ -52,9 +52,7 @@ def test_connect_async(dsn):
 
 
 def test_connect_async_bad(dsn):
-    parsed_dsn = {
-        e.keyword: e.val for e in pq.Conninfo.parse(dsn.encode()) if e.val
-    }
+    parsed_dsn = {e.keyword: e.val for e in pq.Conninfo.parse(dsn.encode()) if e.val}
     parsed_dsn[b"dbname"] = b"psycopg_test_not_for_real"
     dsn = b" ".join(b"%s='%s'" % item for item in parsed_dsn.items())
     conn = pq.PGconn.connect_start(dsn)
@@ -493,9 +491,7 @@ def test_trace(pgconn, tmp_path):
     tracef = tmp_path / "trace"
     with tracef.open("w") as f:
         pgconn.trace(f.fileno())
-        pgconn.set_trace_flags(
-            pq.Trace.SUPPRESS_TIMESTAMPS | pq.Trace.REGRESS_MODE
-        )
+        pgconn.set_trace_flags(pq.Trace.SUPPRESS_TIMESTAMPS | pq.Trace.REGRESS_MODE)
         pgconn.exec_(b"select 1")
         pgconn.untrace()
         pgconn.exec_(b"select 2")

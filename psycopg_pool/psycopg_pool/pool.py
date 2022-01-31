@@ -90,9 +90,7 @@ class ConnectionPool(BasePool[Connection[Any]]):
         logger.info("waiting for pool %r initialization", self.name)
         if not self._pool_full_event.wait(timeout):
             self.close()  # stop all the threads
-            raise PoolTimeout(
-                f"pool initialization incomplete after {timeout} sec"
-            )
+            raise PoolTimeout(f"pool initialization incomplete after {timeout} sec")
 
         with self._lock:
             assert self._pool_full_event
@@ -101,9 +99,7 @@ class ConnectionPool(BasePool[Connection[Any]]):
         logger.info("pool %r is ready to use", self.name)
 
     @contextmanager
-    def connection(
-        self, timeout: Optional[float] = None
-    ) -> Iterator[Connection[Any]]:
+    def connection(self, timeout: Optional[float] = None) -> Iterator[Connection[Any]]:
         """Context manager to obtain a connection from the pool.
 
         Return the connection immediately if available, otherwise wait up to
@@ -517,9 +513,7 @@ class ConnectionPool(BasePool[Connection[Any]]):
         """
         now = monotonic()
         if not attempt:
-            attempt = ConnectionAttempt(
-                reconnect_timeout=self.reconnect_timeout
-            )
+            attempt = ConnectionAttempt(reconnect_timeout=self.reconnect_timeout)
 
         try:
             conn = self._connect()
@@ -548,9 +542,7 @@ class ConnectionPool(BasePool[Connection[Any]]):
             with self._lock:
                 if self._nconns < self._max_size and self._waiting:
                     self._nconns += 1
-                    logger.info(
-                        "growing pool %r to %s", self.name, self._nconns
-                    )
+                    logger.info("growing pool %r to %s", self.name, self._nconns)
                     self.run_task(AddConnection(self, growing=True))
                 else:
                     self._growing = False
@@ -748,9 +740,7 @@ class MaintenanceTask(ABC):
 
     def __init__(self, pool: "ConnectionPool"):
         self.pool = ref(pool)
-        logger.debug(
-            "task created in %s: %s", threading.current_thread().name, self
-        )
+        logger.debug("task created in %s: %s", threading.current_thread().name, self)
 
     def __repr__(self) -> str:
         pool = self.pool()
@@ -768,9 +758,7 @@ class MaintenanceTask(ABC):
             # Pool is no more working. Quietly discard the operation.
             return
 
-        logger.debug(
-            "task running in %s: %s", threading.current_thread().name, self
-        )
+        logger.debug("task running in %s: %s", threading.current_thread().name, self)
         self._run(pool)
 
     def tick(self) -> None:

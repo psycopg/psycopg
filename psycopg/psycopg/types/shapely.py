@@ -51,9 +51,7 @@ class BaseGeometryDumper(Dumper):
         return dumps(obj, hex=True).encode()  # type: ignore
 
 
-def register_shapely(
-    info: TypeInfo, context: Optional[AdaptContext] = None
-) -> None:
+def register_shapely(info: TypeInfo, context: Optional[AdaptContext] = None) -> None:
     """Register Shapely dumper and loaders.
 
     After invoking this function on an adapter, the queries retrieving

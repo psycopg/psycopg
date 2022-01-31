@@ -91,16 +91,12 @@ class HstoreLoader(RecursiveLoader):
             start = m.end()
 
         if start < len(s):
-            raise e.DataError(
-                f"error parsing hstore: unparsed data after char {start}"
-            )
+            raise e.DataError(f"error parsing hstore: unparsed data after char {start}")
 
         return rv
 
 
-def register_hstore(
-    info: TypeInfo, context: Optional[AdaptContext] = None
-) -> None:
+def register_hstore(info: TypeInfo, context: Optional[AdaptContext] = None) -> None:
     """Register the adapters to load and dump hstore.
 
     :param info: The object with the information about the hstore type.

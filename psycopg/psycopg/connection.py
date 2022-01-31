@@ -148,7 +148,7 @@ class BaseConnection(Generic[Row]):
 
         warn(
             f"connection {self} was deleted while still open."
-            f" Please use 'with' or '.close()' to close the connection",
+            " Please use 'with' or '.close()' to close the connection",
             ResourceWarning,
         )
 
@@ -202,9 +202,7 @@ class BaseConnection(Generic[Row]):
         # Base implementation, not thread safe.
         # Subclasses must call it holding a lock
         self._check_intrans("isolation_level")
-        self._isolation_level = (
-            IsolationLevel(value) if value is not None else None
-        )
+        self._isolation_level = IsolationLevel(value) if value is not None else None
         self._begin_statement = b""
 
     @property
@@ -317,9 +315,7 @@ class BaseConnection(Generic[Row]):
             try:
                 cb(diag)
             except Exception as ex:
-                logger.exception(
-                    "error processing notice callback '%s': %s", cb, ex
-                )
+                logger.exception("error processing notice callback '%s': %s", cb, ex)
 
     def add_notify_handler(self, callback: NotifyHandler) -> None:
         """
@@ -419,16 +415,12 @@ class BaseConnection(Generic[Row]):
         if result_format == Format.TEXT:
             self.pgconn.send_query(command)
         else:
-            self.pgconn.send_query_params(
-                command, None, result_format=result_format
-            )
+            self.pgconn.send_query_params(command, None, result_format=result_format)
 
         result = (yield from execute(self.pgconn))[-1]
         if result.status not in (ExecStatus.COMMAND_OK, ExecStatus.TUPLES_OK):
             if result.status == ExecStatus.FATAL_ERROR:
-                raise e.error_from_result(
-                    result, encoding=pgconn_encoding(self.pgconn)
-                )
+                raise e.error_from_result(result, encoding=pgconn_encoding(self.pgconn))
             else:
                 raise e.InterfaceError(
                     f"unexpected result {ExecStatus(result.status).name}"
@@ -443,7 +435,7 @@ class BaseConnection(Generic[Row]):
         if self.pgconn.status == ConnStatus.BAD:
             raise e.OperationalError("the connection is closed")
         raise e.InterfaceError(
-            f"cannot execute operations: the connection is"
+            "cannot execute operations: the connection is"
             f" in status {self.pgconn.status}"
         )
 
@@ -472,9 +464,7 @@ class BaseConnection(Generic[Row]):
             parts.append(b"READ ONLY" if self.read_only else b"READ WRITE")
 
         if self.deferrable is not None:
-            parts.append(
-                b"DEFERRABLE" if self.deferrable else b"NOT DEFERRABLE"
-            )
+            parts.append(b"DEFERRABLE" if self.deferrable else b"NOT DEFERRABLE")
 
         self._begin_statement = b" ".join(parts)
         return self._begin_statement
@@ -534,7 +524,7 @@ class BaseConnection(Generic[Row]):
 
         if self.pgconn.transaction_status != TransactionStatus.IDLE:
             raise e.ProgrammingError(
-                f"can't start two-phase transaction: connection in status"
+                "can't start two-phase transaction: connection in status"
                 f" {TransactionStatus(self.pgconn.transaction_status).name}"
             )
 
@@ -553,18 +543,13 @@ class BaseConnection(Generic[Row]):
             )
         if self._tpc[1]:
             raise e.ProgrammingError(
-                "'tpc_prepare()' cannot be used during a prepared"
-                " two-phase transaction"
+                "'tpc_prepare()' cannot be used during a prepared two-phase transaction"
             )
         xid = self._tpc[0]
         self._tpc = (xid, True)
-        yield from self._exec_command(
-            SQL("PREPARE TRANSACTION {}").format(str(xid))
-        )
+        yield from self._exec_command(SQL("PREPARE TRANSACTION {}").format(str(xid)))
 
-    def _tpc_finish_gen(
-        self, action: str, xid: Union[Xid, str, None]
-    ) -> PQGen[None]:
+    def _tpc_finish_gen(self, action: str, xid: Union[Xid, str, None]) -> PQGen[None]:
         fname = f"tpc_{action}()"
         if xid is None:
             if not self._tpc:
@@ -605,9 +590,7 @@ class Connection(BaseConnection[Row]):
     server_cursor_factory: Type[ServerCursor[Row]]
     row_factory: RowFactory[Row]
 
-    def __init__(
-        self, pgconn: "PGconn", row_factory: Optional[RowFactory[Row]] = None
-    ):
+    def __init__(self, pgconn: "PGconn", row_factory: Optional[RowFactory[Row]] = None):
         super().__init__(pgconn)
         self.row_factory = row_factory or cast(RowFactory[Row], tuple_row)
         self.lock = threading.Lock()
@@ -704,9 +687,7 @@ class Connection(BaseConnection[Row]):
             self.close()
 
     @classmethod
-    def _get_connection_params(
-        cls, conninfo: str, **kwargs: Any
-    ) -> Dict[str, Any]:
+    def _get_connection_params(cls, conninfo: str, **kwargs: Any) -> Dict[str, Any]:
         """Manipulate connection parameters before connecting.
 
         :param conninfo: Connection string as received by `~Connection.connect()`.
@@ -854,9 +835,7 @@ class Connection(BaseConnection[Row]):
                 ns = self.wait(notifies(self.pgconn))
             enc = pgconn_encoding(self.pgconn)
             for pgn in ns:
-                n = Notify(
-                    pgn.relname.decode(enc), pgn.extra.decode(enc), pgn.be_pid
-                )
+                n = Notify(pgn.relname.decode(enc), pgn.extra.decode(enc), pgn.be_pid)
                 yield n
 
     def wait(self, gen: PQGen[RV], timeout: Optional[float] = 0.1) -> RV:

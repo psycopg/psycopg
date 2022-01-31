@@ -22,14 +22,10 @@ from .._typeinfo import TypeInfo
 
 _struct_head = struct.Struct("!III")  # ndims, hasnull, elem oid
 _pack_head = cast(Callable[[int, int, int], bytes], _struct_head.pack)
-_unpack_head = cast(
-    Callable[[bytes], Tuple[int, int, int]], _struct_head.unpack_from
-)
+_unpack_head = cast(Callable[[bytes], Tuple[int, int, int]], _struct_head.unpack_from)
 _struct_dim = struct.Struct("!II")  # dim, lower bound
 _pack_dim = cast(Callable[[int, int], bytes], _struct_dim.pack)
-_unpack_dim = cast(
-    Callable[[bytes, int], Tuple[int, int]], _struct_dim.unpack_from
-)
+_unpack_dim = cast(Callable[[bytes, int], Tuple[int, int]], _struct_dim.unpack_from)
 
 TEXT_ARRAY_OID = postgres.types["text"].array_oid
 NoneType: type = type(None)
@@ -45,9 +41,7 @@ class BaseListDumper(RecursiveDumper):
         super().__init__(cls, context)
         self.sub_dumper: Optional[Dumper] = None
         if self.element_oid and context:
-            sdclass = context.adapters.get_dumper_by_oid(
-                self.element_oid, self.format
-            )
+            sdclass = context.adapters.get_dumper_by_oid(self.element_oid, self.format)
             self.sub_dumper = sdclass(NoneType, context)
 
     def _find_list_element(self, L: List[Any]) -> Any:
@@ -139,7 +133,7 @@ class ListDumper(BaseListDumper):
 
     # Double quotes and backslashes embedded in element values will be
     # backslash-escaped.
-    _re_esc = re.compile(br'(["\\])')
+    _re_esc = re.compile(rb'(["\\])')
 
     def dump(self, obj: List[Any]) -> bytes:
         tokens: List[bytes] = []
@@ -159,7 +153,7 @@ class ListDumper(BaseListDumper):
                     if needs_quotes(ad):
                         if not isinstance(ad, bytes):
                             ad = bytes(ad)
-                        ad = b'"' + self._re_esc.sub(br"\\\1", ad) + b'"'
+                        ad = b'"' + self._re_esc.sub(rb"\\\1", ad) + b'"'
                     tokens.append(ad)
                 else:
                     tokens.append(b"NULL")
@@ -190,7 +184,7 @@ def _get_needs_quotes_regexp(delimiter: bytes) -> Pattern[bytes]:
     double quotes, backslashes, or white space, or match the word NULL.
     """
     return re.compile(
-        br"""(?xi)
+        rb"""(?xi)
           ^$              # the empty string
         | ["{}%s\\\s]      # or a char to escape
         | ^null$          # or the word NULL
@@ -295,9 +289,7 @@ class ListBinaryDumper(BaseListDumper):
             else:
                 for item in L:
                     if not isinstance(item, self.cls):
-                        raise e.DataError(
-                            "nested lists have inconsistent depths"
-                        )
+                        raise e.DataError("nested lists have inconsistent depths")
                     dump_list(item, dim + 1)  # type: ignore
 
         dump_list(obj, 0)
@@ -350,16 +342,14 @@ class ArrayLoader(BaseArrayLoader):
             else:
                 if not stack:
                     wat = (
-                        t[:10].decode("utf8", "replace") + "..."
-                        if len(t) > 10
-                        else ""
+                        t[:10].decode("utf8", "replace") + "..." if len(t) > 10 else ""
                     )
                     raise e.DataError(f"malformed array, unexpected '{wat}'")
                 if t == b"NULL":
                     v = None
                 else:
                     if t.startswith(b'"'):
-                        t = self._re_unescape.sub(br"\1", t[1:-1])
+                        t = self._re_unescape.sub(rb"\1", t[1:-1])
                     v = cast(t)
 
                 stack[-1].append(v)
@@ -367,7 +357,7 @@ class ArrayLoader(BaseArrayLoader):
         assert rv is not None
         return rv
 
-    _re_unescape = re.compile(br"\\(.)")
+    _re_unescape = re.compile(rb"\\(.)")
 
 
 @lru_cache()
@@ -376,7 +366,7 @@ def _get_array_parse_regexp(delimiter: bytes) -> Pattern[bytes]:
     Return a regexp to tokenize an array representation into item and brackets
     """
     return re.compile(
-        br"""(?xi)
+        rb"""(?xi)
         (     [{}]                        # open or closed bracket
             | " (?: [^"\\] | \\. )* "     # or a quoted string
             | [^"{}%s\\]+                 # or an unquoted non-empty string
@@ -422,9 +412,7 @@ class ArrayBinaryLoader(BaseArrayLoader):
         return agg(dims)
 
 
-def register_array(
-    info: TypeInfo, context: Optional[AdaptContext] = None
-) -> None:
+def register_array(info: TypeInfo, context: Optional[AdaptContext] = None) -> None:
     if not info.array_oid:
         raise ValueError(f"the type info {info} doesn't describe an array")
 

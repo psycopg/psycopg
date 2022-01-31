@@ -23,8 +23,7 @@ ff ff
 """
 
 sample_binary_rows = [
-    bytes.fromhex("".join(row.split()))
-    for row in sample_binary_value.split("\n\n")
+    bytes.fromhex("".join(row.split())) for row in sample_binary_value.split("\n\n")
 ]
 
 sample_binary = b"".join(sample_binary_rows)

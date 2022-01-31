@@ -117,21 +117,13 @@ class Transformer(AdaptContext):
             self.get_loader(result.ftype(i), fmt).load for i in range(nf)
         ]
 
-    def set_dumper_types(
-        self, types: Sequence[int], format: pq.Format
-    ) -> None:
-        self._row_dumpers = [
-            self.get_dumper_by_oid(oid, format) for oid in types
-        ]
+    def set_dumper_types(self, types: Sequence[int], format: pq.Format) -> None:
+        self._row_dumpers = [self.get_dumper_by_oid(oid, format) for oid in types]
         self.types = tuple(types)
         self.formats = [format] * len(types)
 
-    def set_loader_types(
-        self, types: Sequence[int], format: pq.Format
-    ) -> None:
-        self._row_loaders = [
-            self.get_loader(oid, format).load for oid in types
-        ]
+    def set_loader_types(self, types: Sequence[int], format: pq.Format) -> None:
+        self._row_loaders = [self.get_loader(oid, format).load for oid in types]
 
     def dump_sequence(
         self, params: Sequence[Any], formats: Sequence[PyFormat]
@@ -214,9 +206,7 @@ class Transformer(AdaptContext):
 
         return dumper
 
-    def load_rows(
-        self, row0: int, row1: int, make_row: RowMaker[Row]
-    ) -> List[Row]:
+    def load_rows(self, row0: int, row1: int, make_row: RowMaker[Row]) -> List[Row]:
         res = self._pgresult
         if not res:
             raise e.InterfaceError("result not set")
@@ -253,9 +243,7 @@ class Transformer(AdaptContext):
 
         return make_row(record)
 
-    def load_sequence(
-        self, record: Sequence[Optional[bytes]]
-    ) -> Tuple[Any, ...]:
+    def load_sequence(self, record: Sequence[Optional[bytes]]) -> Tuple[Any, ...]:
         if len(self._row_loaders) != len(record):
             raise e.ProgrammingError(
                 f"cannot load sequence of {len(record)} items:"

@@ -23,8 +23,8 @@ from psycopg.types.numeric import FloatLoader
         (-1, "'-1'::int"),
         (42, "'42'::smallint"),
         (-42, "'-42'::smallint"),
-        (int(2 ** 63 - 1), "'9223372036854775807'::bigint"),
-        (int(-(2 ** 63)), "'-9223372036854775808'::bigint"),
+        (int(2**63 - 1), "'9223372036854775807'::bigint"),
+        (int(-(2**63)), "'-9223372036854775808'::bigint"),
     ],
 )
 @pytest.mark.parametrize("fmt_in", PyFormat)
@@ -43,18 +43,18 @@ def test_dump_int(conn, val, expr, fmt_in):
         (-1, "'-1'::smallint"),
         (42, "'42'::smallint"),
         (-42, "'-42'::smallint"),
-        (int(2 ** 15 - 1), f"'{2 ** 15 - 1}'::smallint"),
-        (int(-(2 ** 15)), f"'{-2 ** 15}'::smallint"),
-        (int(2 ** 15), f"'{2 ** 15}'::integer"),
-        (int(-(2 ** 15) - 1), f"'{-2 ** 15 - 1}'::integer"),
-        (int(2 ** 31 - 1), f"'{2 ** 31 - 1}'::integer"),
-        (int(-(2 ** 31)), f"'{-2 ** 31}'::integer"),
-        (int(2 ** 31), f"'{2 ** 31}'::bigint"),
-        (int(-(2 ** 31) - 1), f"'{-2 ** 31 - 1}'::bigint"),
-        (int(2 ** 63 - 1), f"'{2 ** 63 - 1}'::bigint"),
-        (int(-(2 ** 63)), f"'{-2 ** 63}'::bigint"),
-        (int(2 ** 63), f"'{2 ** 63}'::numeric"),
-        (int(-(2 ** 63) - 1), f"'{-2 ** 63 - 1}'::numeric"),
+        (int(2**15 - 1), f"'{2 ** 15 - 1}'::smallint"),
+        (int(-(2**15)), f"'{-2 ** 15}'::smallint"),
+        (int(2**15), f"'{2 ** 15}'::integer"),
+        (int(-(2**15) - 1), f"'{-2 ** 15 - 1}'::integer"),
+        (int(2**31 - 1), f"'{2 ** 31 - 1}'::integer"),
+        (int(-(2**31)), f"'{-2 ** 31}'::integer"),
+        (int(2**31), f"'{2 ** 31}'::bigint"),
+        (int(-(2**31) - 1), f"'{-2 ** 31 - 1}'::bigint"),
+        (int(2**63 - 1), f"'{2 ** 63 - 1}'::bigint"),
+        (int(-(2**63)), f"'{-2 ** 63}'::bigint"),
+        (int(2**63), f"'{2 ** 63}'::numeric"),
+        (int(-(2**63) - 1), f"'{-2 ** 63 - 1}'::numeric"),
     ],
 )
 @pytest.mark.parametrize("fmt_in", PyFormat)
@@ -91,12 +91,12 @@ def test_dump_enum(conn, fmt_in):
         (-1, b" -1"),
         (42, b"42"),
         (-42, b" -42"),
-        (int(2 ** 63 - 1), b"9223372036854775807"),
-        (int(-(2 ** 63)), b" -9223372036854775808"),
-        (int(2 ** 63), b"9223372036854775808"),
-        (int(-(2 ** 63 + 1)), b" -9223372036854775809"),
-        (int(2 ** 100), b"1267650600228229401496703205376"),
-        (int(-(2 ** 100)), b" -1267650600228229401496703205376"),
+        (int(2**63 - 1), b"9223372036854775807"),
+        (int(-(2**63)), b" -9223372036854775808"),
+        (int(2**63), b"9223372036854775808"),
+        (int(-(2**63 + 1)), b" -9223372036854775809"),
+        (int(2**100), b"1267650600228229401496703205376"),
+        (int(-(2**100)), b" -1267650600228229401496703205376"),
     ],
 )
 def test_quote_int(conn, val, expr):
@@ -216,14 +216,10 @@ def test_quote_float(conn, val, expr):
 def test_dump_float_approx(conn, val, expr):
     assert isinstance(val, float)
     cur = conn.cursor()
-    cur.execute(
-        f"select abs(({expr}::float8 - %s) / {expr}::float8) <= 1e-15", (val,)
-    )
+    cur.execute(f"select abs(({expr}::float8 - %s) / {expr}::float8) <= 1e-15", (val,))
     assert cur.fetchone()[0] is True
 
-    cur.execute(
-        f"select abs(({expr}::float4 - %s) / {expr}::float4) <= 1e-6", (val,)
-    )
+    cur.execute(f"select abs(({expr}::float4 - %s) / {expr}::float4) <= 1e-6", (val,))
     assert cur.fetchone()[0] is True
 
 
@@ -417,9 +413,7 @@ def test_dump_numeric_exhaustive(conn, fmt_in):
         for f in funcs:
             expr = f(i)
             val = Decimal(expr)
-            cur.execute(
-                f"select %{fmt_in}::text, %s::decimal::text", [val, expr]
-            )
+            cur.execute(f"select %{fmt_in}::text, %s::decimal::text", [val, expr])
             want, got = cur.fetchone()
             assert got == want
 

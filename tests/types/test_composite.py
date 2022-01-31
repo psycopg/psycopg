@@ -53,9 +53,7 @@ def test_load_all_chars(conn, fmt_out):
         res = cur.execute("select row(chr(%s::int))", (i,)).fetchone()[0]
         assert res == (chr(i),)
 
-    cur.execute(
-        "select row(%s)" % ",".join(f"chr({i}::int)" for i in range(1, 256))
-    )
+    cur.execute("select row(%s)" % ",".join(f"chr({i}::int)" for i in range(1, 256)))
     res = cur.fetchone()[0]
     assert res == tuple(map(chr, range(1, 256)))
 
@@ -98,8 +96,7 @@ def test_dump_builtin_empty_range(conn, fmt_in):
             (b"foo'", b"'foo", b'"bar', b'bar"'),
         ),
         (
-            "10::int, null::text, 20::float,"
-            " null::text, 'foo'::text, 'bar'::bytea ",
+            "10::int, null::text, 20::float, null::text, 'foo'::text, 'bar'::bytea ",
             (10, None, 20.0, None, "foo", b"bar"),
         ),
     ],
@@ -228,9 +225,7 @@ def test_load_composite(conn, testcomp, fmt_out):
     assert res.baz == 20.0
     assert isinstance(res.baz, float)
 
-    res = cur.execute(
-        "select array[row('hello', 10, 30)::testcomp]"
-    ).fetchone()[0]
+    res = cur.execute("select array[row('hello', 10, 30)::testcomp]").fetchone()[0]
     assert len(res) == 1
     assert res[0].baz == 30.0
     assert isinstance(res[0].baz, float)
@@ -253,9 +248,7 @@ def test_load_composite_factory(conn, testcomp, fmt_out):
     assert res.baz == 20.0
     assert isinstance(res.baz, float)
 
-    res = cur.execute(
-        "select array[row('hello', 10, 30)::testcomp]"
-    ).fetchone()[0]
+    res = cur.execute("select array[row('hello', 10, 30)::testcomp]").fetchone()[0]
     assert len(res) == 1
     assert res[0].baz == 30.0
     assert isinstance(res[0].baz, float)

@@ -113,12 +113,8 @@ class TypeInfo:
 
         try:
             async with conn.transaction():
-                async with conn.cursor(
-                    binary=True, row_factory=dict_row
-                ) as cur:
-                    await cur.execute(
-                        cls._get_info_query(conn), {"name": name}
-                    )
+                async with conn.cursor(binary=True, row_factory=dict_row) as cur:
+                    await cur.execute(cls._get_info_query(conn), {"name": name})
                     recs = await cur.fetchall()
         except e.UndefinedObject:
             return None
@@ -134,9 +130,7 @@ class TypeInfo:
         elif not recs:
             return None
         else:
-            raise e.ProgrammingError(
-                f"found {len(recs)} different types named {name}"
-            )
+            raise e.ProgrammingError(f"found {len(recs)} different types named {name}")
 
     def register(self, context: Optional[AdaptContext] = None) -> None:
         """
@@ -356,15 +350,11 @@ class TypesRegistry:
             if key.endswith("[]"):
                 key = key[:-2]
         elif not isinstance(key, (int, tuple)):
-            raise TypeError(
-                f"the key must be an oid or a name, got {type(key)}"
-            )
+            raise TypeError(f"the key must be an oid or a name, got {type(key)}")
         try:
             return self._registry[key]
         except KeyError:
-            raise KeyError(
-                f"couldn't find the type {key!r} in the types registry"
-            )
+            raise KeyError(f"couldn't find the type {key!r} in the types registry")
 
     @overload
     def get(self, key: Union[str, int]) -> Optional[TypeInfo]:
@@ -403,9 +393,7 @@ class TypesRegistry:
         else:
             return t.oid
 
-    def get_by_subtype(
-        self, cls: Type[T], subtype: Union[int, str]
-    ) -> Optional[T]:
+    def get_by_subtype(self, cls: Type[T], subtype: Union[int, str]) -> Optional[T]:
         """
         Return info about a `TypeInfo` subclass by its element name or oid.
 

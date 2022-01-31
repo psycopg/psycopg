@@ -74,9 +74,7 @@ def test_close(conn):
 
 def test_broken(conn):
     with pytest.raises(psycopg.OperationalError):
-        conn.execute(
-            "select pg_terminate_backend(%s)", [conn.pgconn.backend_pid]
-        )
+        conn.execute("select pg_terminate_backend(%s)", [conn.pgconn.backend_pid])
     assert conn.closed
     assert conn.broken
     conn.close()
@@ -186,9 +184,7 @@ def test_context_active_rollback_no_clobber(dsn, caplog):
 
     with pytest.raises(ZeroDivisionError):
         with psycopg.connect(dsn) as conn:
-            conn.pgconn.exec_(
-                b"copy (select generate_series(1, 10)) to stdout"
-            )
+            conn.pgconn.exec_(b"copy (select generate_series(1, 10)) to stdout")
             status = conn.info.transaction_status
             assert status == conn.TransactionStatus.ACTIVE
             1 / 0
@@ -396,15 +392,11 @@ def test_notice_handlers(conn, caplog):
     conn.add_notice_handler(cb1)
     conn.add_notice_handler(cb2)
     conn.add_notice_handler("the wrong thing")
-    conn.add_notice_handler(
-        lambda diag: severities.append(diag.severity_nonlocalized)
-    )
+    conn.add_notice_handler(lambda diag: severities.append(diag.severity_nonlocalized))
 
     conn.pgconn.exec_(b"set client_min_messages to notice")
     cur = conn.cursor()
-    cur.execute(
-        "do $$begin raise notice 'hello notice'; end$$ language plpgsql"
-    )
+    cur.execute("do $$begin raise notice 'hello notice'; end$$ language plpgsql")
     assert messages == ["hello notice"]
     assert severities == ["NOTICE"]
 
@@ -418,9 +410,7 @@ def test_notice_handlers(conn, caplog):
 
     conn.remove_notice_handler(cb1)
     conn.remove_notice_handler("the wrong thing")
-    cur.execute(
-        "do $$begin raise warning 'hello warning'; end$$ language plpgsql"
-    )
+    cur.execute("do $$begin raise warning 'hello warning'; end$$ language plpgsql")
     assert len(caplog.records) == 3
     assert messages == ["hello notice"]
     assert severities == ["NOTICE", "WARNING"]

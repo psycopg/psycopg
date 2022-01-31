@@ -32,9 +32,7 @@ class Ready(IntEnum):
     RW = EVENT_READ | EVENT_WRITE
 
 
-def wait_selector(
-    gen: PQGen[RV], fileno: int, timeout: Optional[float] = None
-) -> RV:
+def wait_selector(gen: PQGen[RV], fileno: int, timeout: Optional[float] = None) -> RV:
     """
     Wait for a generator using the best strategy available.
 
@@ -150,9 +148,7 @@ async def wait_async(gen: PQGen[RV], fileno: int) -> RV:
         return rv
 
 
-async def wait_conn_async(
-    gen: PQGenConn[RV], timeout: Optional[float] = None
-) -> RV:
+async def wait_conn_async(gen: PQGenConn[RV], timeout: Optional[float] = None) -> RV:
     """
     Coroutine waiting for a connection generator to complete.
 
@@ -208,9 +204,7 @@ async def wait_conn_async(
         return rv
 
 
-def wait_epoll(
-    gen: PQGen[RV], fileno: int, timeout: Optional[float] = None
-) -> RV:
+def wait_epoll(gen: PQGen[RV], fileno: int, timeout: Optional[float] = None) -> RV:
     """
     Wait for a generator using epoll where supported.
 

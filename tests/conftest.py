@@ -41,8 +41,9 @@ def pytest_addoption(parser):
     parser.addoption(
         "--no-collect-ok",
         action="store_true",
-        help="If no test is collected, exit with 0 instead of 5"
-        " (useful with --lfnf=none).",
+        help=(
+            "If no test collected, exit with 0 instead of 5 (useful with --lfnf=none)."
+        ),
     )
 
     parser.addoption(

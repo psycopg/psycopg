@@ -160,9 +160,7 @@ class TestSqlFormat:
             s.as_string(conn)
 
     def test_auto_literal(self, conn):
-        s = sql.SQL("select {}, {}, {}").format(
-            "he'lo", 10, dt.date(2020, 1, 1)
-        )
+        s = sql.SQL("select {}, {}, {}").format("he'lo", 10, dt.date(2020, 1, 1))
         assert s.as_string(conn) == "select 'he''lo', 10, '2020-01-01'"
 
     def test_execute(self, conn):
@@ -177,9 +175,7 @@ class TestSqlFormat:
         cur.execute(
             sql.SQL("insert into {0} (id, {1}) values (%s, {2})").format(
                 sql.Identifier("test_compose"),
-                sql.SQL(", ").join(
-                    map(sql.Identifier, ["foo", "bar", "ba'z"])
-                ),
+                sql.SQL(", ").join(map(sql.Identifier, ["foo", "bar", "ba'z"])),
                 (sql.Placeholder() * 3).join(", "),
             ),
             (10, "a", "b", "c"),
@@ -200,9 +196,7 @@ class TestSqlFormat:
         cur.executemany(
             sql.SQL("insert into {0} (id, {1}) values (%s, {2})").format(
                 sql.Identifier("test_compose"),
-                sql.SQL(", ").join(
-                    map(sql.Identifier, ["foo", "bar", "ba'z"])
-                ),
+                sql.SQL(", ").join(map(sql.Identifier, ["foo", "bar", "ba'z"])),
                 (sql.Placeholder() * 3).join(", "),
             ),
             [(10, "a", "b", "c"), (20, "d", "e", "f")],
@@ -317,17 +311,13 @@ class TestLiteral:
         assert sql.Literal(None).as_string(conn) == "NULL"
         assert no_e(sql.Literal("foo").as_string(conn)) == "'foo'"
         assert sql.Literal(42).as_string(conn) == "42"
-        assert (
-            sql.Literal(dt.date(2017, 1, 1)).as_string(conn) == "'2017-01-01'"
-        )
+        assert sql.Literal(dt.date(2017, 1, 1)).as_string(conn) == "'2017-01-01'"
 
     def test_as_bytes(self, conn):
         assert sql.Literal(None).as_bytes(conn) == b"NULL"
         assert no_e(sql.Literal("foo").as_bytes(conn)) == b"'foo'"
         assert sql.Literal(42).as_bytes(conn) == b"42"
-        assert (
-            sql.Literal(dt.date(2017, 1, 1)).as_bytes(conn) == b"'2017-01-01'"
-        )
+        assert sql.Literal(dt.date(2017, 1, 1)).as_bytes(conn) == b"'2017-01-01'"
 
         conn.execute("set client_encoding to utf8")
         assert sql.Literal(eur).as_bytes(conn) == f"'{eur}'".encode()
@@ -395,9 +385,7 @@ class TestSQL:
         assert obj.as_string(conn) == '"foo", bar, 42'
 
         obj = sql.SQL(", ").join(
-            sql.Composed(
-                [sql.Identifier("foo"), sql.SQL("bar"), sql.Literal(42)]
-            )
+            sql.Composed([sql.Identifier("foo"), sql.SQL("bar"), sql.Literal(42)])
         )
         assert isinstance(obj, sql.Composed)
         assert obj.as_string(conn) == '"foo", bar, 42'
@@ -424,9 +412,7 @@ class TestComposed:
 
     def test_repr(self):
         obj = sql.Composed([sql.Literal("foo"), sql.Identifier("b'ar")])
-        assert (
-            repr(obj) == """Composed([Literal('foo'), Identifier("b'ar")])"""
-        )
+        assert repr(obj) == """Composed([Literal('foo'), Identifier("b'ar")])"""
         assert str(obj) == repr(obj)
 
     def test_eq(self):

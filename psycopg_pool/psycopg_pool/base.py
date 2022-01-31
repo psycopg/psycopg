@@ -51,9 +51,7 @@ class BasePool(Generic[ConnectionType]):
         max_lifetime: float = 60 * 60.0,
         max_idle: float = 10 * 60.0,
         reconnect_timeout: float = 5 * 60.0,
-        reconnect_failed: Optional[
-            Callable[["BasePool[ConnectionType]"], None]
-        ] = None,
+        reconnect_failed: Optional[Callable[["BasePool[ConnectionType]"], None]] = None,
         num_workers: int = 3,
     ):
         min_size, max_size = self._check_size(min_size, max_size)
@@ -118,9 +116,7 @@ class BasePool(Generic[ConnectionType]):
         """`!True` if the pool is closed."""
         return self._closed
 
-    def _check_size(
-        self, min_size: int, max_size: Optional[int]
-    ) -> Tuple[int, int]:
+    def _check_size(self, min_size: int, max_size: Optional[int]) -> Tuple[int, int]:
         if max_size is None:
             max_size = min_size
 
@@ -129,9 +125,7 @@ class BasePool(Generic[ConnectionType]):
         if max_size < min_size:
             raise ValueError("max_size must be greater or equal than min_size")
         if min_size == max_size == 0:
-            raise ValueError(
-                "if min_size is 0 max_size must be greater or than 0"
-            )
+            raise ValueError("if min_size is 0 max_size must be greater or than 0")
 
         return min_size, max_size
 
@@ -203,9 +197,7 @@ class BasePool(Generic[ConnectionType]):
 
         Add some randomness to avoid mass reconnection.
         """
-        conn._expire_at = monotonic() + self._jitter(
-            self.max_lifetime, -0.05, 0.0
-        )
+        conn._expire_at = monotonic() + self._jitter(self.max_lifetime, -0.05, 0.0)
 
 
 class ConnectionAttempt:

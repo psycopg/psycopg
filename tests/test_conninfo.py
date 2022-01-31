@@ -149,9 +149,7 @@ class TestConnectionInfo:
 
         monkeypatch.setenv("PGAPPNAME", "hello test")
         with psycopg.connect(**dsn) as conn:
-            assert (
-                conn.info.get_parameters()["application_name"] == "hello test"
-            )
+            assert conn.info.get_parameters()["application_name"] == "hello test"
 
     def test_dsn_env(self, dsn, monkeypatch):
         dsn = conninfo_to_dict(dsn)
@@ -220,9 +218,7 @@ class TestConnectionInfo:
         with pytest.raises(psycopg.OperationalError):
             conn.info.backend_pid
 
-    @pytest.mark.skipif(
-        sys.platform == "win32", reason="no IANA db on Windows"
-    )
+    @pytest.mark.skipif(sys.platform == "win32", reason="no IANA db on Windows")
     def test_timezone(self, conn):
         conn.execute("set timezone to 'Europe/Rome'")
         tz = conn.info.timezone

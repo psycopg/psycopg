@@ -158,9 +158,7 @@ def test_context_active_rollback_no_clobber(dsn, caplog):
     try:
         with pytest.raises(ZeroDivisionError):
             with conn.transaction():
-                conn.pgconn.exec_(
-                    b"copy (select generate_series(1, 10)) to stdout"
-                )
+                conn.pgconn.exec_(b"copy (select generate_series(1, 10)) to stdout")
                 status = conn.info.transaction_status
                 assert status == conn.TransactionStatus.ACTIVE
                 1 / 0

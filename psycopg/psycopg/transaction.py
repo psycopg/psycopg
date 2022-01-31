@@ -116,9 +116,7 @@ class BaseTransaction(Generic[ConnectionType]):
                 # operational error that might arise in the block.
                 raise
             except Exception as exc2:
-                logger.warning(
-                    "error ignored in rollback of %s: %s", self, exc2
-                )
+                logger.warning("error ignored in rollback of %s: %s", self, exc2)
                 return False
 
     def _commit_gen(self) -> PQGen[PGresult]:
@@ -132,9 +130,7 @@ class BaseTransaction(Generic[ConnectionType]):
 
     def _rollback_gen(self, exc_val: Optional[BaseException]) -> PQGen[bool]:
         if isinstance(exc_val, Rollback):
-            logger.debug(
-                f"{self._conn}: Explicit rollback from: ", exc_info=True
-            )
+            logger.debug(f"{self._conn}: Explicit rollback from: ", exc_info=True)
 
         ex = self._pop_savepoint("rollback")
         self._exited = True
@@ -214,9 +210,7 @@ class BaseTransaction(Generic[ConnectionType]):
         else:
             # inner transaction: it always has a name
             if not self._savepoint_name:
-                self._savepoint_name = (
-                    f"_pg3_{self._conn._num_transactions + 1}"
-                )
+                self._savepoint_name = f"_pg3_{self._conn._num_transactions + 1}"
 
         self._stack_index = self._conn._num_transactions
         self._conn._num_transactions += 1
@@ -261,9 +255,7 @@ class Transaction(BaseTransaction["Connection[Any]"]):
     ) -> bool:
         if self._conn.pgconn.status == ConnStatus.OK:
             with self._conn.lock:
-                return self._conn.wait(
-                    self._exit_gen(exc_type, exc_val, exc_tb)
-                )
+                return self._conn.wait(self._exit_gen(exc_type, exc_val, exc_tb))
         else:
             return False
 
@@ -292,8 +284,6 @@ class AsyncTransaction(BaseTransaction["AsyncConnection[Any]"]):
     ) -> bool:
         if self._conn.pgconn.status == ConnStatus.OK:
             async with self._conn.lock:
-                return await self._conn.wait(
-                    self._exit_gen(exc_type, exc_val, exc_tb)
-                )
+                return await self._conn.wait(self._exit_gen(exc_type, exc_val, exc_tb))
         else:
             return False

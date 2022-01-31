@@ -264,9 +264,7 @@ class PGconn:
             raise TypeError(f"bytes expected, got {type(command)} instead")
         self._ensure_pgconn()
         if not impl.PQsendQuery(self._pgconn_ptr, command):
-            raise e.OperationalError(
-                f"sending query failed: {error_message(self)}"
-            )
+            raise e.OperationalError(f"sending query failed: {error_message(self)}")
 
     def exec_params(
         self,
@@ -317,9 +315,7 @@ class PGconn:
             atypes = (impl.Oid * nparams)(*param_types)
 
         self._ensure_pgconn()
-        if not impl.PQsendPrepare(
-            self._pgconn_ptr, name, command, nparams, atypes
-        ):
+        if not impl.PQsendPrepare(self._pgconn_ptr, name, command, nparams, atypes):
             raise e.OperationalError(
                 f"sending query and params failed: {error_message(self)}"
             )
@@ -369,9 +365,7 @@ class PGconn:
                     for b in param_values
                 )
             )
-            alenghts = (c_int * nparams)(
-                *(len(p) if p else 0 for p in param_values)
-            )
+            alenghts = (c_int * nparams)(*(len(p) if p else 0 for p in param_values))
         else:
             nparams = 0
             aparams = alenghts = None
@@ -418,9 +412,7 @@ class PGconn:
             raise TypeError(f"'name' must be bytes, got {type(name)} instead")
 
         if not isinstance(command, bytes):
-            raise TypeError(
-                f"'command' must be bytes, got {type(command)} instead"
-            )
+            raise TypeError(f"'command' must be bytes, got {type(command)} instead")
 
         if not param_types:
             nparams = 0
@@ -450,9 +442,7 @@ class PGconn:
         if param_values:
             nparams = len(param_values)
             aparams = (c_char_p * nparams)(*param_values)
-            alenghts = (c_int * nparams)(
-                *(len(p) if p else 0 for p in param_values)
-            )
+            alenghts = (c_int * nparams)(*(len(p) if p else 0 for p in param_values))
         else:
             nparams = 0
             aparams = alenghts = None
@@ -523,9 +513,7 @@ class PGconn:
 
     def consume_input(self) -> None:
         if 1 != impl.PQconsumeInput(self._pgconn_ptr):
-            raise e.OperationalError(
-                f"consuming input failed: {error_message(self)}"
-            )
+            raise e.OperationalError(f"consuming input failed: {error_message(self)}")
 
     def is_busy(self) -> int:
         return impl.PQisBusy(self._pgconn_ptr)
@@ -543,9 +531,7 @@ class PGconn:
 
     def flush(self) -> int:
         if not self._pgconn_ptr:
-            raise e.OperationalError(
-                "flushing failed: the connection is closed"
-            )
+            raise e.OperationalError("flushing failed: the connection is closed")
         rv: int = impl.PQflush(self._pgconn_ptr)
         if rv < 0:
             raise e.OperationalError(f"flushing failed: {error_message(self)}")
@@ -581,24 +567,18 @@ class PGconn:
             buffer = bytes(buffer)
         rv = impl.PQputCopyData(self._pgconn_ptr, buffer, len(buffer))
         if rv < 0:
-            raise e.OperationalError(
-                f"sending copy data failed: {error_message(self)}"
-            )
+            raise e.OperationalError(f"sending copy data failed: {error_message(self)}")
         return rv
 
     def put_copy_end(self, error: Optional[bytes] = None) -> int:
         rv = impl.PQputCopyEnd(self._pgconn_ptr, error)
         if rv < 0:
-            raise e.OperationalError(
-                f"sending copy end failed: {error_message(self)}"
-            )
+            raise e.OperationalError(f"sending copy end failed: {error_message(self)}")
         return rv
 
     def get_copy_data(self, async_: int) -> Tuple[int, memoryview]:
         buffer_ptr = c_char_p()
-        nbytes = impl.PQgetCopyData(
-            self._pgconn_ptr, byref(buffer_ptr), async_
-        )
+        nbytes = impl.PQgetCopyData(self._pgconn_ptr, byref(buffer_ptr), async_)
         if nbytes == -2:
             raise e.OperationalError(
                 f"receiving copy data failed: {error_message(self)}"
@@ -626,9 +606,7 @@ class PGconn:
     def encrypt_password(
         self, passwd: bytes, user: bytes, algorithm: Optional[bytes] = None
     ) -> bytes:
-        out = impl.PQencryptPasswordConn(
-            self._pgconn_ptr, passwd, user, algorithm
-        )
+        out = impl.PQencryptPasswordConn(self._pgconn_ptr, passwd, user, algorithm)
         if not out:
             raise e.OperationalError(
                 f"password encryption failed: {error_message(self)}"
@@ -686,9 +664,7 @@ class PGconn:
         :raises ~e.OperationalError: if the flush request failed.
         """
         if impl.PQsendFlushRequest(self._pgconn_ptr) == 0:
-            raise e.OperationalError(
-                f"flush request failed: {error_message(self)}"
-            )
+            raise e.OperationalError(f"flush request failed: {error_message(self)}")
 
     def _call_bytes(
         self, func: Callable[[impl.PGconn_struct], Optional[bytes]]
@@ -805,12 +781,8 @@ class PGresult:
     def binary_tuples(self) -> int:
         return impl.PQbinaryTuples(self._pgresult_ptr)
 
-    def get_value(
-        self, row_number: int, column_number: int
-    ) -> Optional[bytes]:
-        length: int = impl.PQgetlength(
-            self._pgresult_ptr, row_number, column_number
-        )
+    def get_value(self, row_number: int, column_number: int) -> Optional[bytes]:
+        length: int = impl.PQgetlength(self._pgresult_ptr, row_number, column_number)
         if length:
             v = impl.PQgetvalue(self._pgresult_ptr, row_number, column_number)
             return string_at(v, length)
@@ -842,8 +814,7 @@ class PGresult:
 
     def set_attributes(self, descriptions: List[PGresAttDesc]) -> None:
         structs = [
-            impl.PGresAttDesc_struct(*desc)  # type: ignore
-            for desc in descriptions
+            impl.PGresAttDesc_struct(*desc) for desc in descriptions  # type: ignore
         ]
         array = (impl.PGresAttDesc_struct * len(structs))(*structs)  # type: ignore
         rv = impl.PQsetResultAttrs(self._pgresult_ptr, len(structs), array)
@@ -884,9 +855,7 @@ class PGcancel:
         See :pq:`PQcancel()` for details.
         """
         buf = create_string_buffer(256)
-        res = impl.PQcancel(
-            self.pgcancel_ptr, pointer(buf), len(buf)  # type: ignore
-        )
+        res = impl.PQcancel(self.pgcancel_ptr, pointer(buf), len(buf))  # type: ignore
         if not res:
             raise e.OperationalError(
                 f"cancel failed: {buf.value.decode('utf8', 'ignore')}"
@@ -956,9 +925,7 @@ class Escaping:
 
     def escape_literal(self, data: "abc.Buffer") -> memoryview:
         if not self.conn:
-            raise e.OperationalError(
-                "escape_literal failed: no connection provided"
-            )
+            raise e.OperationalError("escape_literal failed: no connection provided")
 
         self.conn._ensure_pgconn()
         # TODO: might be done without copy (however C does that)
@@ -975,9 +942,7 @@ class Escaping:
 
     def escape_identifier(self, data: "abc.Buffer") -> memoryview:
         if not self.conn:
-            raise e.OperationalError(
-                "escape_identifier failed: no connection provided"
-            )
+            raise e.OperationalError("escape_identifier failed: no connection provided")
 
         self.conn._ensure_pgconn()
 
@@ -1039,9 +1004,7 @@ class Escaping:
                 pointer(t_cast(c_ulong, len_out)),
             )
         else:
-            out = impl.PQescapeBytea(
-                data, len(data), pointer(t_cast(c_ulong, len_out))
-            )
+            out = impl.PQescapeBytea(data, len(data), pointer(t_cast(c_ulong, len_out)))
         if not out:
             raise MemoryError(
                 f"couldn't allocate for escape_bytea of {len(data)} bytes"

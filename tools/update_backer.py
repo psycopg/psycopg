@@ -9,9 +9,7 @@ from pathlib import Path
 from ruamel.yaml import YAML  # pip install ruamel.yaml
 
 logger = logging.getLogger()
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
 
 def fetch_user(username):

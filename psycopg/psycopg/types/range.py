@@ -209,9 +209,7 @@ class Range(Generic[T]):
 
     def __getstate__(self) -> Dict[str, Any]:
         return {
-            slot: getattr(self, slot)
-            for slot in self.__slots__
-            if hasattr(self, slot)
+            slot: getattr(self, slot) for slot in self.__slots__ if hasattr(self, slot)
         }
 
     def __setstate__(self, state: Dict[str, Any]) -> None:
@@ -338,7 +336,7 @@ def dump_range_text(obj: Range[Any], dump: Callable[[Any], Buffer]) -> Buffer:
         if not ad:
             return b'""'
         elif _re_needs_quotes.search(ad):
-            return b'"' + _re_esc.sub(br"\1\1", ad) + b'"'
+            return b'"' + _re_esc.sub(rb"\1\1", ad) + b'"'
         else:
             return ad
 
@@ -355,8 +353,8 @@ def dump_range_text(obj: Range[Any], dump: Callable[[Any], Buffer]) -> Buffer:
     return b"".join(parts)
 
 
-_re_needs_quotes = re.compile(br'[",\\\s()\[\]]')
-_re_esc = re.compile(br"([\\\"])")
+_re_needs_quotes = re.compile(rb'[",\\\s()\[\]]')
+_re_esc = re.compile(rb"([\\\"])")
 
 
 class RangeBinaryDumper(BaseRangeDumper):
@@ -373,9 +371,7 @@ class RangeBinaryDumper(BaseRangeDumper):
         return dump_range_binary(obj, dump)
 
 
-def dump_range_binary(
-    obj: Range[Any], dump: Callable[[Any], Buffer]
-) -> Buffer:
+def dump_range_binary(obj: Range[Any], dump: Callable[[Any], Buffer]) -> Buffer:
     if not obj:
         return _EMPTY_HEAD
 
@@ -419,9 +415,7 @@ class BaseRangeLoader(RecursiveLoader, Generic[T]):
 
     def __init__(self, oid: int, context: Optional[AdaptContext] = None):
         super().__init__(oid, context)
-        self._load = self._tx.get_loader(
-            self.subtype_oid, format=self.format
-        ).load
+        self._load = self._tx.get_loader(self.subtype_oid, format=self.format).load
 
 
 class RangeLoader(BaseRangeLoader[T]):
@@ -492,9 +486,7 @@ class RangeBinaryLoader(BaseRangeLoader[T]):
         return load_range_binary(data, self._load)
 
 
-def load_range_binary(
-    data: Buffer, load: Callable[[Buffer], Any]
-) -> Range[Any]:
+def load_range_binary(data: Buffer, load: Callable[[Buffer], Any]) -> Range[Any]:
     head = data[0]
     if head & RANGE_EMPTY:
         return Range(empty=True)
@@ -522,9 +514,7 @@ def load_range_binary(
     return Range(min, max, lb + ub)
 
 
-def register_range(
-    info: RangeInfo, context: Optional[AdaptContext] = None
-) -> None:
+def register_range(info: RangeInfo, context: Optional[AdaptContext] = None) -> None:
     """Register the adapters to load and dump a range type.
 
     :param info: The object with the information about the range to register.

@@ -212,9 +212,7 @@ class TestTPC:
         conn.close()
 
         with psycopg.connect(dsn) as conn:
-            xids = [
-                x for x in conn.tpc_recover() if x.database == conn.info.dbname
-            ]
+            xids = [x for x in conn.tpc_recover() if x.database == conn.info.dbname]
 
             assert len(xids) == 1
             xid = xids[0]
@@ -238,9 +236,7 @@ class TestTPC:
         conn.close()
 
         with psycopg.connect(dsn) as conn:
-            xids = [
-                x for x in conn.tpc_recover() if x.database == conn.info.dbname
-            ]
+            xids = [x for x in conn.tpc_recover() if x.database == conn.info.dbname]
 
             assert len(xids) == 1
             xid = xids[0]
@@ -257,9 +253,7 @@ class TestTPC:
         conn.close()
 
         with psycopg.connect(dsn) as conn:
-            xid = [
-                x for x in conn.tpc_recover() if x.database == conn.info.dbname
-            ][0]
+            xid = [x for x in conn.tpc_recover() if x.database == conn.info.dbname][0]
         assert 10 == xid.format_id
         assert "uni" == xid.gtrid
         assert "code" == xid.bqual
@@ -276,9 +270,7 @@ class TestTPC:
         conn.close()
 
         with psycopg.connect(dsn) as conn:
-            xid = [
-                x for x in conn.tpc_recover() if x.database == conn.info.dbname
-            ][0]
+            xid = [x for x in conn.tpc_recover() if x.database == conn.info.dbname][0]
 
         assert xid.format_id is None
         assert xid.gtrid == "transaction-id"

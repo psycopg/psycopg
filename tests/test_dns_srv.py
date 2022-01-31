@@ -25,15 +25,13 @@ samples_ok = [
     ),
     (
         "host=_pg._tcp.bar.com",
-        (
-            "host=db1.example.com,db4.example.com,db3.example.com,db2.example.com"
-            " port=5432,5432,5433,5432"
-        ),
+        "host=db1.example.com,db4.example.com,db3.example.com,db2.example.com"
+        " port=5432,5432,5433,5432",
         None,
     ),
     (
         "host=service.foo.com port=srv",
-        ("host=service.example.com port=15432"),
+        "host=service.example.com port=15432",
         None,
     ),
     # No resolution
@@ -153,9 +151,7 @@ def get_fake_srv_function(monkeypatch):
         else:
             for entry in ans:
                 pri, w, port, target = entry.split()
-                rv.append(
-                    SRV("IN", "SRV", int(pri), int(w), int(port), target)
-                )
+                rv.append(SRV("IN", "SRV", int(pri), int(w), int(port), target))
 
         return rv
 
