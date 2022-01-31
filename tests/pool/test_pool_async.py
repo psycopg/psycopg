@@ -36,16 +36,12 @@ async def test_defaults(dsn):
 
 @pytest.mark.parametrize("min_size, max_size", [(2, None), (0, 2), (2, 4)])
 async def test_min_size_max_size(dsn, min_size, max_size):
-    async with pool.AsyncConnectionPool(
-        dsn, min_size=min_size, max_size=max_size
-    ) as p:
+    async with pool.AsyncConnectionPool(dsn, min_size=min_size, max_size=max_size) as p:
         assert p.min_size == min_size
         assert p.max_size == max_size if max_size is not None else min_size
 
 
-@pytest.mark.parametrize(
-    "min_size, max_size", [(0, 0), (0, None), (-1, None), (4, 2)]
-)
+@pytest.mark.parametrize("min_size, max_size", [(0, 0), (0, None), (-1, None), (4, 2)])
 async def test_bad_size(dsn, min_size, max_size):
     with pytest.raises(ValueError):
         pool.AsyncConnectionPool(min_size=min_size, max_size=max_size)
@@ -55,9 +51,7 @@ async def test_connection_class(dsn):
     class MyConn(psycopg.AsyncConnection[Any]):
         pass
 
-    async with pool.AsyncConnectionPool(
-        dsn, connection_class=MyConn, min_size=1
-    ) as p:
+    async with pool.AsyncConnectionPool(dsn, connection_class=MyConn, min_size=1) as p:
         async with p.connection() as conn:
             assert isinstance(conn, MyConn)
 
@@ -129,9 +123,7 @@ async def test_concurrent_filling(dsn, monkeypatch):
 async def test_wait_ready(dsn, monkeypatch):
     delay_connection(monkeypatch, 0.1)
     with pytest.raises(pool.PoolTimeout):
-        async with pool.AsyncConnectionPool(
-            dsn, min_size=4, num_workers=1
-        ) as p:
+        async with pool.AsyncConnectionPool(dsn, min_size=4, num_workers=1) as p:
             await p.wait(0.3)
 
     async with pool.AsyncConnectionPool(dsn, min_size=4, num_workers=1) as p:
@@ -178,9 +170,7 @@ async def test_configure(dsn):
         async with conn.transaction():
             await conn.execute("set default_transaction_read_only to on")
 
-    async with pool.AsyncConnectionPool(
-        dsn, min_size=1, configure=configure
-    ) as p:
+    async with pool.AsyncConnectionPool(dsn, min_size=1, configure=configure) as p:
         await p.wait(timeout=1.0)
         async with p.connection() as conn:
             assert inits == 1
@@ -206,9 +196,7 @@ async def test_configure_badstate(dsn, caplog):
     async def configure(conn):
         await conn.execute("select 1")
 
-    async with pool.AsyncConnectionPool(
-        dsn, min_size=1, configure=configure
-    ) as p:
+    async with pool.AsyncConnectionPool(dsn, min_size=1, configure=configure) as p:
         with pytest.raises(pool.PoolTimeout):
             await p.wait(timeout=0.5)
 
@@ -224,9 +212,7 @@ async def test_configure_broken(dsn, caplog):
         async with conn.transaction():
             await conn.execute("WAT")
 
-    async with pool.AsyncConnectionPool(
-        dsn, min_size=1, configure=configure
-    ) as p:
+    async with pool.AsyncConnectionPool(dsn, min_size=1, configure=configure) as p:
         with pytest.raises(pool.PoolTimeout):
             await p.wait(timeout=0.5)
 
@@ -310,9 +296,7 @@ async def test_queue(dsn):
     async def worker(n):
         t0 = time()
         async with p.connection() as conn:
-            cur = await conn.execute(
-                "select pg_backend_pid() from pg_sleep(0.2)"
-            )
+            cur = await conn.execute("select pg_backend_pid() from pg_sleep(0.2)")
             (pid,) = await cur.fetchone()  # type: ignore[misc]
         t1 = time()
         results.append((n, t1 - t0, pid))
@@ -371,9 +355,7 @@ async def test_queue_timeout(dsn):
         t0 = time()
         try:
             async with p.connection() as conn:
-                cur = await conn.execute(
-                    "select pg_backend_pid() from pg_sleep(0.2)"
-                )
+                cur = await conn.execute("select pg_backend_pid() from pg_sleep(0.2)")
                 (pid,) = await cur.fetchone()  # type: ignore[misc]
         except pool.PoolTimeout as e:
             t1 = time()
@@ -428,9 +410,7 @@ async def test_queue_timeout_override(dsn):
         timeout = 0.25 if n == 3 else None
         try:
             async with p.connection(timeout=timeout) as conn:
-                cur = await conn.execute(
-                    "select pg_backend_pid() from pg_sleep(0.2)"
-                )
+                cur = await conn.execute("select pg_backend_pid() from pg_sleep(0.2)")
                 (pid,) = await cur.fetchone()  # type: ignore[misc]
         except pool.PoolTimeout as e:
             t1 = time()
@@ -514,9 +494,7 @@ async def test_active_close(dsn, caplog):
         conn = await p.getconn()
         pid = conn.pgconn.backend_pid
         cur = conn.cursor()
-        async with cur.copy(
-            "copy (select * from generate_series(1, 10)) to stdout"
-        ):
+        async with cur.copy("copy (select * from generate_series(1, 10)) to stdout"):
             pass
         assert conn.pgconn.transaction_status == TransactionStatus.ACTIVE
         await p.putconn(conn)
@@ -710,9 +688,7 @@ async def test_shrink(dsn, monkeypatch):
         async with p.connection() as conn:
             await conn.execute("select pg_sleep(0.1)")
 
-    async with pool.AsyncConnectionPool(
-        dsn, min_size=2, max_size=4, max_idle=0.2
-    ) as p:
+    async with pool.AsyncConnectionPool(dsn, min_size=2, max_size=4, max_idle=0.2) as p:
         await p.wait(5.0)
         assert p.max_idle == 0.2
 
@@ -862,9 +838,7 @@ async def test_bad_resize(dsn, min_size, max_size):
 
 
 def test_jitter():
-    rnds = [
-        pool.AsyncConnectionPool._jitter(30, -0.1, +0.2) for i in range(100)
-    ]
+    rnds = [pool.AsyncConnectionPool._jitter(30, -0.1, +0.2) for i in range(100)]
     rnds.sort()
     assert 27 <= min(rnds) <= 28
     assert 35 < max(rnds) < 36
@@ -873,9 +847,7 @@ def test_jitter():
 @pytest.mark.slow
 @pytest.mark.timing
 async def test_max_lifetime(dsn):
-    async with pool.AsyncConnectionPool(
-        dsn, min_size=1, max_lifetime=0.2
-    ) as p:
+    async with pool.AsyncConnectionPool(dsn, min_size=1, max_lifetime=0.2) as p:
         await asyncio.sleep(0.1)
         pids = []
         for i in range(5):

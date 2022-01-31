@@ -180,7 +180,7 @@ if libpq_version >= 120000:
 def PQhostaddr(pgconn: PGconn_struct) -> bytes:
     if not _PQhostaddr:
         raise NotSupportedError(
-            f"PQhostaddr requires libpq from PostgreSQL 12,"
+            "PQhostaddr requires libpq from PostgreSQL 12,"
             f" {libpq_version} available instead"
         )
 
@@ -573,7 +573,7 @@ def PQencryptPasswordConn(
 ) -> Optional[bytes]:
     if not _PQencryptPasswordConn:
         raise NotSupportedError(
-            f"PQencryptPasswordConn requires libpq from PostgreSQL 10,"
+            "PQencryptPasswordConn requires libpq from PostgreSQL 10,"
             f" {libpq_version} available instead"
         )
 
@@ -630,7 +630,7 @@ if libpq_version >= 140000:
 def PQpipelineStatus(pgconn: PGconn_struct) -> int:
     if not _PQpipelineStatus:
         raise NotSupportedError(
-            f"PQpipelineStatus requires libpq from PostgreSQL 14,"
+            "PQpipelineStatus requires libpq from PostgreSQL 14,"
             f" {libpq_version} available instead"
         )
     return _PQpipelineStatus(pgconn)
@@ -639,7 +639,7 @@ def PQpipelineStatus(pgconn: PGconn_struct) -> int:
 def PQenterPipelineMode(pgconn: PGconn_struct) -> int:
     if not _PQenterPipelineMode:
         raise NotSupportedError(
-            f"PQenterPipelineMode requires libpq from PostgreSQL 14,"
+            "PQenterPipelineMode requires libpq from PostgreSQL 14,"
             f" {libpq_version} available instead"
         )
     return _PQenterPipelineMode(pgconn)
@@ -648,7 +648,7 @@ def PQenterPipelineMode(pgconn: PGconn_struct) -> int:
 def PQexitPipelineMode(pgconn: PGconn_struct) -> int:
     if not _PQexitPipelineMode:
         raise NotSupportedError(
-            f"PQexitPipelineMode requires libpq from PostgreSQL 14,"
+            "PQexitPipelineMode requires libpq from PostgreSQL 14,"
             f" {libpq_version} available instead"
         )
     return _PQexitPipelineMode(pgconn)
@@ -657,7 +657,7 @@ def PQexitPipelineMode(pgconn: PGconn_struct) -> int:
 def PQpipelineSync(pgconn: PGconn_struct) -> int:
     if not _PQpipelineSync:
         raise NotSupportedError(
-            f"PQpipelineSync requires libpq from PostgreSQL 14,"
+            "PQpipelineSync requires libpq from PostgreSQL 14,"
             f" {libpq_version} available instead"
         )
     return _PQpipelineSync(pgconn)
@@ -666,7 +666,7 @@ def PQpipelineSync(pgconn: PGconn_struct) -> int:
 def PQsendFlushRequest(pgconn: PGconn_struct) -> int:
     if not _PQsendFlushRequest:
         raise NotSupportedError(
-            f"PQsendFlushRequest requires libpq from PostgreSQL 14,"
+            "PQsendFlushRequest requires libpq from PostgreSQL 14,"
             f" {libpq_version} available instead"
         )
     return _PQsendFlushRequest(pgconn)
@@ -732,9 +732,7 @@ def generate_stub() -> None:
     )
 
     known = {
-        line[4:].split("(", 1)[0]
-        for line in lines[:istart]
-        if line.startswith("def ")
+        line[4:].split("(", 1)[0] for line in lines[:istart] if line.startswith("def ")
     }
 
     signatures = []

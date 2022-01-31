@@ -21,6 +21,4 @@ elif pq.__impl__ == "binary":
 elif pq.__impl__ == "python":
     _psycopg = None  # type: ignore
 else:
-    raise ImportError(
-        f"can't find _psycopg optimised module in {pq.__impl__!r}"
-    )
+    raise ImportError(f"can't find _psycopg optimised module in {pq.__impl__!r}")

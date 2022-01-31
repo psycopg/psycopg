@@ -13,9 +13,7 @@ from psycopg.adapt import PyFormat
 @pytest.mark.parametrize("val", ["192.168.0.1", "2001:db8::"])
 def test_address_dump(conn, fmt_in, val):
     cur = conn.cursor()
-    cur.execute(
-        f"select %{fmt_in} = %s::inet", (ipaddress.ip_address(val), val)
-    )
+    cur.execute(f"select %{fmt_in} = %s::inet", (ipaddress.ip_address(val), val))
     assert cur.fetchone()[0] is True
     cur.execute(
         f"select %{fmt_in} = array[null, %s]::inet[]",
@@ -44,9 +42,7 @@ def test_interface_dump(conn, fmt_in, val):
 @pytest.mark.parametrize("val", ["127.0.0.0/24", "::ffff:102:300/128"])
 def test_network_dump(conn, fmt_in, val):
     cur = conn.cursor()
-    cur.execute(
-        f"select %{fmt_in} = %s::cidr", (ipaddress.ip_network(val), val)
-    )
+    cur.execute(f"select %{fmt_in} = %s::cidr", (ipaddress.ip_network(val), val))
     assert cur.fetchone()[0] is True
     cur.execute(
         f"select %{fmt_in} = array[NULL, %s]::cidr[]",

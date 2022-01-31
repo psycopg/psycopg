@@ -59,9 +59,7 @@ class Scheduler:
         time = monotonic() + delay
         return self.enterabs(time, action)
 
-    def enterabs(
-        self, time: float, action: Optional[Callable[[], Any]]
-    ) -> Task:
+    def enterabs(self, time: float, action: Optional[Callable[[], Any]]) -> Task:
         """Enter a new task in the queue at an absolute time.
 
         Schedule a `!None` to stop the execution.
@@ -119,9 +117,7 @@ class AsyncScheduler:
 
     EMPTY_QUEUE_TIMEOUT = 600.0
 
-    async def enter(
-        self, delay: float, action: Optional[Callable[[], Any]]
-    ) -> Task:
+    async def enter(self, delay: float, action: Optional[Callable[[], Any]]) -> Task:
         """Enter a new task in the queue delayed in the future.
 
         Schedule a `!None` to stop the execution.
@@ -129,9 +125,7 @@ class AsyncScheduler:
         time = monotonic() + delay
         return await self.enterabs(time, action)
 
-    async def enterabs(
-        self, time: float, action: Optional[Callable[[], Any]]
-    ) -> Task:
+    async def enterabs(self, time: float, action: Optional[Callable[[], Any]]) -> Task:
         """Enter a new task in the queue at an absolute time.
 
         Schedule a `!None` to stop the execution.

@@ -66,9 +66,7 @@ class BaseCopy(Generic[ConnectionType]):
         self._pgresult: "PGresult" = tx.pgresult
 
         if self._pgresult.binary_tuples == pq.Format.TEXT:
-            self.formatter = TextFormatter(
-                tx, encoding=pgconn_encoding(self._pgconn)
-            )
+            self.formatter = TextFormatter(tx, encoding=pgconn_encoding(self._pgconn))
         else:
             self.formatter = BinaryFormatter(tx)
 
@@ -103,18 +101,12 @@ class BaseCopy(Generic[ConnectionType]):
 
         """
         registry = self.cursor.adapters.types
-        oids = [
-            t if isinstance(t, int) else registry.get_oid(t) for t in types
-        ]
+        oids = [t if isinstance(t, int) else registry.get_oid(t) for t in types]
 
         if self._pgresult.status == ExecStatus.COPY_IN:
-            self.formatter.transformer.set_dumper_types(
-                oids, self.formatter.format
-            )
+            self.formatter.transformer.set_dumper_types(oids, self.formatter.format)
         else:
-            self.formatter.transformer.set_loader_types(
-                oids, self.formatter.format
-            )
+            self.formatter.transformer.set_loader_types(oids, self.formatter.format)
 
     # High level copy protocol generators (state change of the Copy object)
 
@@ -164,10 +156,7 @@ class BaseCopy(Generic[ConnectionType]):
         if not exc:
             return
 
-        if (
-            self.connection.pgconn.transaction_status
-            != pq.TransactionStatus.ACTIVE
-        ):
+        if self.connection.pgconn.transaction_status != pq.TransactionStatus.ACTIVE:
             # The server has already finished to send copy data. The connection
             # is already in a good state.
             return
@@ -320,9 +309,7 @@ class AsyncCopy(BaseCopy["AsyncConnection[Any]"]):
 
     def __init__(self, cursor: "AsyncCursor[Any]"):
         super().__init__(cursor)
-        self._queue: asyncio.Queue[bytes] = asyncio.Queue(
-            maxsize=self.QUEUE_SIZE
-        )
+        self._queue: asyncio.Queue[bytes] = asyncio.Queue(maxsize=self.QUEUE_SIZE)
         self._worker: Optional[asyncio.Future[None]] = None
 
     async def __aenter__(self) -> "AsyncCopy":
@@ -551,9 +538,7 @@ class BinaryFormatter(Formatter):
             return data
 
         elif isinstance(data, str):
-            raise TypeError(
-                "cannot copy str data in binary mode: use bytes instead"
-            )
+            raise TypeError("cannot copy str data in binary mode: use bytes instead")
 
         else:
             raise TypeError(f"can't write {type(data).__name__}")
@@ -576,7 +561,7 @@ def _format_row_text(
             b = dumper.dump(item)
             out += _dump_re.sub(_dump_sub, b)
         else:
-            out += br"\N"
+            out += rb"\N"
         out += b"\t"
 
     out[-1:] = b"\n"
@@ -633,10 +618,9 @@ _unpack_int2 = struct.Struct("!h").unpack_from
 _unpack_int4 = struct.Struct("!i").unpack_from
 
 _binary_signature = (
-    # Signature, flags, extra length
-    b"PGCOPY\n\xff\r\n\0"
-    b"\x00\x00\x00\x00"
-    b"\x00\x00\x00\x00"
+    b"PGCOPY\n\xff\r\n\0"  # Signature
+    b"\x00\x00\x00\x00"  # flags
+    b"\x00\x00\x00\x00"  # extra length
 )
 _binary_trailer = b"\xff\xff"
 _binary_null = b"\xff\xff\xff\xff"
@@ -653,9 +637,7 @@ _dump_repl = {
 }
 
 
-def _dump_sub(
-    m: Match[bytes], __map: Dict[bytes, bytes] = _dump_repl
-) -> bytes:
+def _dump_sub(m: Match[bytes], __map: Dict[bytes, bytes] = _dump_repl) -> bytes:
     return __map[m.group(0)]
 
 
@@ -663,9 +645,7 @@ _load_re = re.compile(b"\\\\[btnvfr\\\\]")
 _load_repl = {v: k for k, v in _dump_repl.items()}
 
 
-def _load_sub(
-    m: Match[bytes], __map: Dict[bytes, bytes] = _load_repl
-) -> bytes:
+def _load_sub(m: Match[bytes], __map: Dict[bytes, bytes] = _load_repl) -> bytes:
     return __map[m.group(0)]
 
 

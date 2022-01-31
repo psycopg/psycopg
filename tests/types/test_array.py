@@ -139,9 +139,7 @@ def test_array_of_unknown_builtin(conn):
     assert res[1] == [val]
 
 
-@pytest.mark.parametrize(
-    "array, type", [([1, 32767], "int2"), ([1, 32768], "int4")]
-)
+@pytest.mark.parametrize("array, type", [([1, 32767], "int2"), ([1, 32768], "int4")])
 def test_array_mixed_numbers(array, type):
     tx = Transformer()
     dumper = tx.get_dumper(array, PyFormat.BINARY)
@@ -149,9 +147,7 @@ def test_array_mixed_numbers(array, type):
     assert dumper.oid == builtins[type].array_oid
 
 
-@pytest.mark.parametrize(
-    "wrapper", "Int2 Int4 Int8 Float4 Float8 Decimal".split()
-)
+@pytest.mark.parametrize("wrapper", "Int2 Int4 Int8 Float4 Float8 Decimal".split())
 @pytest.mark.parametrize("fmt_in", PyFormat)
 @pytest.mark.parametrize("fmt_out", pq.Format)
 def test_list_number_wrapper(conn, wrapper, fmt_in, fmt_out):
@@ -213,9 +209,7 @@ def test_empty_list(conn, fmt_in):
 def test_empty_list_after_choice(conn, fmt_in):
     cur = conn.cursor()
     cur.execute("create table test (id serial primary key, data float[])")
-    cur.executemany(
-        f"insert into test (data) values (%{fmt_in})", [([1.0],), ([],)]
-    )
+    cur.executemany(f"insert into test (data) values (%{fmt_in})", [([1.0],), ([],)])
     cur.execute("select data from test order by id")
     assert cur.fetchall() == [([1.0],), ([],)]
 

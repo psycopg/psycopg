@@ -28,9 +28,9 @@ def test_roundtrip_bool(conn, b, fmt_in, fmt_out):
 def test_quote_bool(conn, val):
 
     tx = Transformer()
-    assert tx.get_dumper(val, PyFormat.TEXT).quote(val) == str(
-        val
-    ).lower().encode("ascii")
+    assert tx.get_dumper(val, PyFormat.TEXT).quote(val) == str(val).lower().encode(
+        "ascii"
+    )
 
     cur = conn.cursor()
     cur.execute(sql.SQL("select {v}").format(v=sql.Literal(val)))

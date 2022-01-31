@@ -57,9 +57,7 @@ def test_register_dumper_by_class(conn):
 def test_register_dumper_by_class_name(conn):
     dumper = make_dumper("x")
     assert conn.adapters.get_dumper(MyStr, PyFormat.TEXT) is not dumper
-    conn.adapters.register_dumper(
-        f"{MyStr.__module__}.{MyStr.__qualname__}", dumper
-    )
+    conn.adapters.register_dumper(f"{MyStr.__module__}.{MyStr.__qualname__}", dumper)
     assert conn.adapters.get_dumper(MyStr, PyFormat.TEXT) is dumper
 
 
@@ -118,9 +116,7 @@ def test_dump_subclass(conn):
         pass
 
     cur = conn.cursor()
-    cur.execute(
-        "select %s::text, %b::text", [MyString("hello"), MyString("world")]
-    )
+    cur.execute("select %s::text, %b::text", [MyString("hello"), MyString("world")])
     assert cur.fetchone() == ("hello", "world")
 
 
@@ -352,9 +348,7 @@ def test_last_dumper_registered_ctx(conn):
 def test_none_type_argument(conn, fmt_in):
     cur = conn.cursor()
     cur.execute("create table none_args (id serial primary key, num integer)")
-    cur.execute(
-        "insert into none_args (num) values (%s) returning id", (None,)
-    )
+    cur.execute("insert into none_args (num) values (%s) returning id", (None,))
     assert cur.fetchone()[0]
 
 
@@ -375,9 +369,7 @@ def test_return_untyped(conn, fmt_in):
     else:
         # Binary types cannot be passed as unknown oids.
         with pytest.raises(e.DatatypeMismatch):
-            cur.execute(
-                f"insert into testjson (data) values (%{fmt_in})", ["{}"]
-            )
+            cur.execute(f"insert into testjson (data) values (%{fmt_in})", ["{}"])
 
 
 @pytest.mark.parametrize("fmt_in", PyFormat.AUTO)

@@ -28,15 +28,10 @@ def main() -> None:
     cur = cnn.cursor()
 
     if test == "copy":
-        with cur.copy(
-            f"copy testdec from stdin (format {format.name})"
-        ) as copy:
+        with cur.copy(f"copy testdec from stdin (format {format.name})") as copy:
             for j in range(nrows):
                 copy.write_row(
-                    [
-                        Decimal(randrange(10000000000)) / 100
-                        for i in range(ncols)
-                    ]
+                    [Decimal(randrange(10000000000)) / 100 for i in range(ncols)]
                 )
 
     elif test == "insert":

@@ -87,9 +87,7 @@ class PrepareManager:
                 if result.status != ExecStatus.COMMAND_OK:
                     continue
                 cmdstat = result.command_status
-                if cmdstat and (
-                    cmdstat.startswith(b"DROP ") or cmdstat == b"ROLLBACK"
-                ):
+                if cmdstat and (cmdstat.startswith(b"DROP ") or cmdstat == b"ROLLBACK"):
                     self._prepared.clear()
                     return b"DEALLOCATE ALL"
 

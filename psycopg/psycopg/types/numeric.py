@@ -139,13 +139,13 @@ class IntDumper(Dumper):
     _int_numeric_dumper = IntNumericDumper(IntNumeric)
 
     def upgrade(self, obj: int, format: PyFormat) -> Dumper:
-        if -(2 ** 31) <= obj < 2 ** 31:
-            if -(2 ** 15) <= obj < 2 ** 15:
+        if -(2**31) <= obj < 2**31:
+            if -(2**15) <= obj < 2**15:
                 return self._int2_dumper
             else:
                 return self._int4_dumper
         else:
-            if -(2 ** 63) <= obj < 2 ** 63:
+            if -(2**63) <= obj < 2**63:
                 return self._int8_dumper
             else:
                 return self._int_numeric_dumper
@@ -341,9 +341,7 @@ class NumericBinaryLoader(Loader):
             try:
                 return _decimal_special[sign]
             except KeyError:
-                raise e.DataError(
-                    f"bad value for numeric sign: 0x{sign:X}"
-                ) from None
+                raise e.DataError(f"bad value for numeric sign: 0x{sign:X}") from None
 
 
 NUMERIC_NAN_BIN = _pack_numeric_head(0, 0, NUMERIC_NAN, 0)

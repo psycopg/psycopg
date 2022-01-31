@@ -44,9 +44,7 @@ def main() -> None:
         # Create and start all the thread: they will get stuck on the event
         ev = threading.Event()
         threads = [
-            threading.Thread(
-                target=worker, args=(pool, 0.002, ev), daemon=True
-            )
+            threading.Thread(target=worker, args=(pool, 0.002, ev), daemon=True)
             for i in range(opt.num_clients)
         ]
         for t in threads:
@@ -90,9 +88,7 @@ class Measurer:
         self.measures = []
 
     def start(self, interval):
-        self.worker = threading.Thread(
-            target=self._run, args=(interval,), daemon=True
-        )
+        self.worker = threading.Thread(target=self._run, args=(interval,), daemon=True)
         self.worker.start()
 
     def stop(self):
@@ -125,9 +121,7 @@ def parse_cmdline():
     from argparse import ArgumentParser
 
     parser = ArgumentParser(description=__doc__)
-    parser.add_argument(
-        "--dsn", default="", help="connection string to the database"
-    )
+    parser.add_argument("--dsn", default="", help="connection string to the database")
     parser.add_argument(
         "--min_size",
         default=5,

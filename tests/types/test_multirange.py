@@ -238,9 +238,7 @@ def test_dump_builtin_array_wrapper(conn, wrapper, fmt_in):
     wrapper = getattr(multirange, wrapper)
     mr1 = Multirange()  # type: ignore[var-annotated]
     mr2 = Multirange([Range(bounds="()")])  # type: ignore[var-annotated]
-    cur = conn.execute(
-        f"""select '{{"{{}}","{{(,)}}"}}' = %{fmt_in}""", ([mr1, mr2],)
-    )
+    cur = conn.execute(f"""select '{{"{{}}","{{(,)}}"}}' = %{fmt_in}""", ([mr1, mr2],))
     assert cur.fetchone()[0] is True
 
 
@@ -300,9 +298,7 @@ def test_load_builtin_range(conn, pgtype, ranges, fmt_out):
 @pytest.mark.parametrize("format", pq.Format)
 def test_copy_in(conn, min, max, bounds, format):
     cur = conn.cursor()
-    cur.execute(
-        "create table copymr (id serial primary key, mr datemultirange)"
-    )
+    cur.execute("create table copymr (id serial primary key, mr datemultirange)")
 
     if bounds != "empty":
         min = dt.date(*map(int, min.split(","))) if min else None
@@ -313,15 +309,11 @@ def test_copy_in(conn, min, max, bounds, format):
 
     mr = Multirange([r])
     try:
-        with cur.copy(
-            f"copy copymr (mr) from stdin (format {format.name})"
-        ) as copy:
+        with cur.copy(f"copy copymr (mr) from stdin (format {format.name})") as copy:
             copy.write_row([mr])
     except e.InternalError_:
         if not min and not max and format == pq.Format.BINARY:
-            pytest.xfail(
-                "TODO: add annotation to dump multirange with no type info"
-            )
+            pytest.xfail("TODO: add annotation to dump multirange with no type info")
         else:
             raise
 
@@ -336,15 +328,11 @@ def test_copy_in(conn, min, max, bounds, format):
 @pytest.mark.parametrize("format", pq.Format)
 def test_copy_in_empty_wrappers(conn, wrapper, format):
     cur = conn.cursor()
-    cur.execute(
-        "create table copymr (id serial primary key, mr datemultirange)"
-    )
+    cur.execute("create table copymr (id serial primary key, mr datemultirange)")
 
     mr = getattr(multirange, wrapper)()
 
-    with cur.copy(
-        f"copy copymr (mr) from stdin (format {format.name})"
-    ) as copy:
+    with cur.copy(f"copy copymr (mr) from stdin (format {format.name})") as copy:
         copy.write_row([mr])
 
     rec = cur.execute("select mr from copymr order by id").fetchone()
@@ -359,9 +347,7 @@ def test_copy_in_empty_set_type(conn, pgtype, format):
 
     mr = Multirange()  # type: ignore[var-annotated]
 
-    with cur.copy(
-        f"copy copymr (mr) from stdin (format {format.name})"
-    ) as copy:
+    with cur.copy(f"copy copymr (mr) from stdin (format {format.name})") as copy:
         copy.set_types([pgtype])
         copy.write_row([mr])
 

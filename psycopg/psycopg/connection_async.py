@@ -284,18 +284,14 @@ class AsyncConnection(BaseConnection[Row]):
                 ns = await self.wait(notifies(self.pgconn))
             enc = pgconn_encoding(self.pgconn)
             for pgn in ns:
-                n = Notify(
-                    pgn.relname.decode(enc), pgn.extra.decode(enc), pgn.be_pid
-                )
+                n = Notify(pgn.relname.decode(enc), pgn.extra.decode(enc), pgn.be_pid)
                 yield n
 
     async def wait(self, gen: PQGen[RV]) -> RV:
         return await waiting.wait_async(gen, self.pgconn.socket)
 
     @classmethod
-    async def _wait_conn(
-        cls, gen: PQGenConn[RV], timeout: Optional[int]
-    ) -> RV:
+    async def _wait_conn(cls, gen: PQGenConn[RV], timeout: Optional[int]) -> RV:
         return await waiting.wait_conn_async(gen, timeout)
 
     def _set_autocommit(self, value: bool) -> None:
@@ -309,9 +305,7 @@ class AsyncConnection(BaseConnection[Row]):
     def _set_isolation_level(self, value: Optional[IsolationLevel]) -> None:
         self._no_set_async("isolation_level")
 
-    async def set_isolation_level(
-        self, value: Optional[IsolationLevel]
-    ) -> None:
+    async def set_isolation_level(self, value: Optional[IsolationLevel]) -> None:
         """Async version of the `~Connection.isolation_level` setter."""
         async with self.lock:
             super()._set_isolation_level(value)

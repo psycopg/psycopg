@@ -80,9 +80,7 @@ class LibpqParser(HTMLParser):
             func_id=self.varlist_id.upper(),
         )
 
-    _url_pattern = (
-        "https://www.postgresql.org/docs/{version}/{section}.html#{func_id}"
-    )
+    _url_pattern = "https://www.postgresql.org/docs/{version}/{section}.html#{func_id}"
 
 
 class LibpqReader:

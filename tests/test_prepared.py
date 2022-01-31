@@ -71,9 +71,7 @@ def test_prepare_disable(conn):
 def test_no_prepare_multi(conn):
     res = []
     for i in range(10):
-        cur = conn.execute(
-            "select count(*) from pg_prepared_statements; select 1"
-        )
+        cur = conn.execute("select count(*) from pg_prepared_statements; select 1")
         res.append(cur.fetchone()[0])
 
     assert res == [0] * 10
@@ -105,9 +103,7 @@ def test_misc_statement(conn, query):
     conn.execute("create table prepared_test (num int)", prepare=False)
     conn.prepare_threshold = 0
     conn.execute(query)
-    cur = conn.execute(
-        "select count(*) from pg_prepared_statements", prepare=False
-    )
+    cur = conn.execute("select count(*) from pg_prepared_statements", prepare=False)
     assert cur.fetchone() == (1,)
 
 
@@ -221,9 +217,7 @@ def test_change_type(conn):
         {"enum_col": ["foo"]},
     )
 
-    cur = conn.execute(
-        "select count(*) from pg_prepared_statements", prepare=False
-    )
+    cur = conn.execute("select count(*) from pg_prepared_statements", prepare=False)
     assert cur.fetchone()[0] == 3
 
 
@@ -233,15 +227,10 @@ def test_change_type_savepoint(conn):
         for i in range(3):
             with pytest.raises(ZeroDivisionError):
                 with conn.transaction():
-                    conn.execute(
-                        "CREATE TYPE prepenum AS ENUM ('foo', 'bar', 'baz')"
-                    )
-                    conn.execute(
-                        "CREATE TABLE preptable(id integer, bar prepenum[])"
-                    )
+                    conn.execute("CREATE TYPE prepenum AS ENUM ('foo', 'bar', 'baz')")
+                    conn.execute("CREATE TABLE preptable(id integer, bar prepenum[])")
                     conn.cursor().execute(
-                        "INSERT INTO preptable (bar) "
-                        "VALUES (%(enum_col)s::prepenum[])",
+                        "INSERT INTO preptable (bar) VALUES (%(enum_col)s::prepenum[])",
                         {"enum_col": ["foo"]},
                     )
                     raise ZeroDivisionError()

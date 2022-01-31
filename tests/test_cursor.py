@@ -297,9 +297,7 @@ def test_executemany_rowcount_no_hit(conn, execmany):
     assert cur.rowcount == 0
     cur.executemany("delete from execmany where id = %s", [])
     assert cur.rowcount == 0
-    cur.executemany(
-        "delete from execmany where id = %s returning num", [(-1,), (-2,)]
-    )
+    cur.executemany("delete from execmany where id = %s returning num", [(-1,), (-2,)])
     assert cur.rowcount == 0
 
 
@@ -344,9 +342,7 @@ def test_rowcount(conn):
     cur.execute("create table test_rowcount_notuples (id int primary key)")
     assert cur.rowcount == -1
 
-    cur.execute(
-        "insert into test_rowcount_notuples select generate_series(1, 42)"
-    )
+    cur.execute("insert into test_rowcount_notuples select generate_series(1, 42)")
     assert cur.rowcount == 42
 
 
@@ -727,9 +723,7 @@ def test_str(conn):
 @pytest.mark.parametrize("fmt", PyFormat)
 @pytest.mark.parametrize("fmt_out", pq.Format)
 @pytest.mark.parametrize("fetch", ["one", "many", "all", "iter"])
-@pytest.mark.parametrize(
-    "row_factory", ["tuple_row", "dict_row", "namedtuple_row"]
-)
+@pytest.mark.parametrize("row_factory", ["tuple_row", "dict_row", "namedtuple_row"])
 def test_leak(dsn, faker, fmt, fmt_out, fetch, row_factory):
     faker.format = fmt
     faker.choose_schema(ncols=5)
@@ -768,9 +762,7 @@ def test_leak(dsn, faker, fmt, fmt_out, fetch, row_factory):
         work()
         gc_collect()
         n.append(len(gc.get_objects()))
-    assert (
-        n[0] == n[1] == n[2]
-    ), f"objects leaked: {n[1] - n[0]}, {n[2] - n[1]}"
+    assert n[0] == n[1] == n[2], f"objects leaked: {n[1] - n[0]}, {n[2] - n[1]}"
 
 
 def my_row_factory(
@@ -780,10 +772,7 @@ def my_row_factory(
         titles = [c.name for c in cursor.description]
 
         def mkrow(values):
-            return [
-                f"{value.upper()}{title}"
-                for title, value in zip(titles, values)
-            ]
+            return [f"{value.upper()}{title}" for title, value in zip(titles, values)]
 
         return mkrow
     else:

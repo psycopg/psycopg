@@ -17,9 +17,7 @@ else:
 
     def asynccontextmanager(func):
         def helper(*args, **kwds):
-            raise NotImplementedError(
-                "async pool not implemented on Python 3.6"
-            )
+            raise NotImplementedError("async pool not implemented on Python 3.6")
 
         return helper
 

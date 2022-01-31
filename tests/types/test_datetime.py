@@ -58,9 +58,7 @@ class TestDate:
         cur.execute(f"select '{expr}'::date")
         assert cur.fetchone()[0] == as_date(val)
 
-    @pytest.mark.parametrize(
-        "datestyle_out", ["ISO", "Postgres", "SQL", "German"]
-    )
+    @pytest.mark.parametrize("datestyle_out", ["ISO", "Postgres", "SQL", "German"])
     def test_load_date_datestyle(self, conn, datestyle_out):
         cur = conn.cursor(binary=False)
         cur.execute(f"set datestyle = {datestyle_out}, YMD")
@@ -68,24 +66,18 @@ class TestDate:
         assert cur.fetchone()[0] == dt.date(2000, 1, 2)
 
     @pytest.mark.parametrize("val", ["min", "max"])
-    @pytest.mark.parametrize(
-        "datestyle_out", ["ISO", "Postgres", "SQL", "German"]
-    )
+    @pytest.mark.parametrize("datestyle_out", ["ISO", "Postgres", "SQL", "German"])
     def test_load_date_overflow(self, conn, val, datestyle_out):
         cur = conn.cursor(binary=False)
         cur.execute(f"set datestyle = {datestyle_out}, YMD")
-        cur.execute(
-            "select %t + %s::int", (as_date(val), -1 if val == "min" else 1)
-        )
+        cur.execute("select %t + %s::int", (as_date(val), -1 if val == "min" else 1))
         with pytest.raises(DataError):
             cur.fetchone()[0]
 
     @pytest.mark.parametrize("val", ["min", "max"])
     def test_load_date_overflow_binary(self, conn, val):
         cur = conn.cursor(binary=True)
-        cur.execute(
-            "select %s + %s::int", (as_date(val), -1 if val == "min" else 1)
-        )
+        cur.execute("select %s + %s::int", (as_date(val), -1 if val == "min" else 1))
         with pytest.raises(DataError):
             cur.fetchone()[0]
 
@@ -148,9 +140,7 @@ class TestDatetime:
     ]
 
     @pytest.mark.parametrize("val, expr", load_datetime_samples)
-    @pytest.mark.parametrize(
-        "datestyle_out", ["ISO", "Postgres", "SQL", "German"]
-    )
+    @pytest.mark.parametrize("datestyle_out", ["ISO", "Postgres", "SQL", "German"])
     @pytest.mark.parametrize("datestyle_in", ["DMY", "MDY", "YMD"])
     def test_load_datetime(self, conn, val, expr, datestyle_in, datestyle_out):
         cur = conn.cursor(binary=False)
@@ -167,9 +157,7 @@ class TestDatetime:
         assert cur.fetchone()[0] == as_dt(val)
 
     @pytest.mark.parametrize("val", ["min", "max"])
-    @pytest.mark.parametrize(
-        "datestyle_out", ["ISO", "Postgres", "SQL", "German"]
-    )
+    @pytest.mark.parametrize("datestyle_out", ["ISO", "Postgres", "SQL", "German"])
     def test_load_datetime_overflow(self, conn, val, datestyle_out):
         cur = conn.cursor(binary=False)
         cur.execute(f"set datestyle = {datestyle_out}, YMD")
@@ -283,9 +271,7 @@ class TestDateTimeTz:
     @pytest.mark.parametrize("val, expr", [("2000,1,1~2", "2000-01-01")])
     @pytest.mark.parametrize("datestyle_out", ["SQL", "Postgres", "German"])
     @pytest.mark.parametrize("datestyle_in", ["DMY", "MDY", "YMD"])
-    def test_load_datetimetz_tzname(
-        self, conn, val, expr, datestyle_in, datestyle_out
-    ):
+    def test_load_datetimetz_tzname(self, conn, val, expr, datestyle_in, datestyle_out):
         cur = conn.cursor(binary=False)
         cur.execute(f"set datestyle = {datestyle_out}, {datestyle_in}")
         cur.execute("set timezone to '-02:00'")
@@ -631,9 +617,7 @@ class TestInterval:
             "SELECT %s::text, %s::text", [date(2020, 12, 31), date.max]
         ).fetchone()
         assert rec == ("2020-12-31", "infinity")
-        rec = cur.execute(
-            "select '2020-12-31'::date, 'infinity'::date"
-        ).fetchone()
+        rec = cur.execute("select '2020-12-31'::date, 'infinity'::date").fetchone()
         assert rec == (date(2020, 12, 31), date(9999, 12, 31))
 
     def test_load_copy(self, conn):
@@ -661,9 +645,7 @@ class TestInterval:
 
 
 def as_date(s):
-    return (
-        dt.date(*map(int, s.split(","))) if "," in s else getattr(dt.date, s)
-    )
+    return dt.date(*map(int, s.split(","))) if "," in s else getattr(dt.date, s)
 
 
 def as_time(s):

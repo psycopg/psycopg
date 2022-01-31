@@ -72,9 +72,7 @@ def test_quote_percent(conn):
     assert cur.fetchone()[0] is True
 
 
-@pytest.mark.parametrize(
-    "typename", ["text", "varchar", "name", "bpchar", '"char"']
-)
+@pytest.mark.parametrize("typename", ["text", "varchar", "name", "bpchar", '"char"'])
 @pytest.mark.parametrize("fmt_out", pq.Format)
 def test_load_1char(conn, typename, fmt_out):
     cur = conn.cursor(binary=fmt_out)

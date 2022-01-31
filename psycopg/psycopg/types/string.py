@@ -44,9 +44,7 @@ class StrBinaryDumper(_BaseStrDumper):
 class _StrDumper(_BaseStrDumper):
     def dump(self, obj: str) -> bytes:
         if "\x00" in obj:
-            raise DataError(
-                "PostgreSQL text fields cannot contain NUL (0x00) bytes"
-            )
+            raise DataError("PostgreSQL text fields cannot contain NUL (0x00) bytes")
         else:
             return obj.encode(self._encoding)
 
@@ -112,9 +110,7 @@ class BytesDumper(Dumper):
 
     def __init__(self, cls: type, context: Optional[AdaptContext] = None):
         super().__init__(cls, context)
-        self._esc = Escaping(
-            self.connection.pgconn if self.connection else None
-        )
+        self._esc = Escaping(self.connection.pgconn if self.connection else None)
 
     def dump(self, obj: bytes) -> Buffer:
         return self._esc.escape_bytea(obj)

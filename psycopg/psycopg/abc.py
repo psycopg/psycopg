@@ -219,14 +219,10 @@ class Transformer(Protocol):
     ) -> None:
         ...
 
-    def set_dumper_types(
-        self, types: Sequence[int], format: pq.Format
-    ) -> None:
+    def set_dumper_types(self, types: Sequence[int], format: pq.Format) -> None:
         ...
 
-    def set_loader_types(
-        self, types: Sequence[int], format: pq.Format
-    ) -> None:
+    def set_loader_types(self, types: Sequence[int], format: pq.Format) -> None:
         ...
 
     def dump_sequence(
@@ -237,17 +233,13 @@ class Transformer(Protocol):
     def get_dumper(self, obj: Any, format: PyFormat) -> Dumper:
         ...
 
-    def load_rows(
-        self, row0: int, row1: int, make_row: "RowMaker[Row]"
-    ) -> List["Row"]:
+    def load_rows(self, row0: int, row1: int, make_row: "RowMaker[Row]") -> List["Row"]:
         ...
 
     def load_row(self, row: int, make_row: "RowMaker[Row]") -> Optional["Row"]:
         ...
 
-    def load_sequence(
-        self, record: Sequence[Optional[bytes]]
-    ) -> Tuple[Any, ...]:
+    def load_sequence(self, record: Sequence[Optional[bytes]]) -> Tuple[Any, ...]:
         ...
 
     def get_loader(self, oid: int, format: pq.Format) -> Loader:

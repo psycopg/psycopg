@@ -52,9 +52,7 @@ def test_error_message(pgconn):
 
 def test_error_field(pgconn):
     res = pgconn.exec_(b"select wat")
-    assert (
-        res.error_field(pq.DiagnosticField.SEVERITY_NONLOCALIZED) == b"ERROR"
-    )
+    assert res.error_field(pq.DiagnosticField.SEVERITY_NONLOCALIZED) == b"ERROR"
     assert res.error_field(pq.DiagnosticField.SQLSTATE) == b"42703"
     assert b"wat" in res.error_field(pq.DiagnosticField.MESSAGE_PRIMARY)
     res.clear()
@@ -63,9 +61,7 @@ def test_error_field(pgconn):
 
 @pytest.mark.parametrize("n", range(4))
 def test_ntuples(pgconn, n):
-    res = pgconn.exec_params(
-        b"select generate_series(1, $1)", [str(n).encode("ascii")]
-    )
+    res = pgconn.exec_params(b"select generate_series(1, $1)", [str(n).encode("ascii")])
     assert res.ntuples == n
     res.clear()
     assert res.ntuples == 0

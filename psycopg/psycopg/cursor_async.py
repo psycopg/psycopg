@@ -73,17 +73,13 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
         try:
             async with self._conn.lock:
                 await self._conn.wait(
-                    self._execute_gen(
-                        query, params, prepare=prepare, binary=binary
-                    )
+                    self._execute_gen(query, params, prepare=prepare, binary=binary)
                 )
         except e.Error as ex:
             raise ex.with_traceback(None)
         return self
 
-    async def executemany(
-        self, query: Query, params_seq: Iterable[Params]
-    ) -> None:
+    async def executemany(self, query: Query, params_seq: Iterable[Params]) -> None:
         try:
             async with self._conn.lock:
                 await self._conn.wait(self._executemany_gen(query, params_seq))
@@ -98,9 +94,7 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
         binary: Optional[bool] = None,
     ) -> AsyncIterator[Row]:
         async with self._conn.lock:
-            await self._conn.wait(
-                self._stream_send_gen(query, params, binary=binary)
-            )
+            await self._conn.wait(self._stream_send_gen(query, params, binary=binary))
             first = True
             while await self._conn.wait(self._stream_fetchone_gen(first)):
                 rec = self._tx.load_row(0, self._make_row)
@@ -132,9 +126,7 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
     async def fetchall(self) -> List[Row]:
         self._check_result_for_fetch()
         assert self.pgresult
-        records = self._tx.load_rows(
-            self._pos, self.pgresult.ntuples, self._make_row
-        )
+        records = self._tx.load_rows(self._pos, self.pgresult.ntuples, self._make_row)
         self._pos = self.pgresult.ntuples
         return records
 

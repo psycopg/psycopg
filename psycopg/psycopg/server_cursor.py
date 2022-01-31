@@ -81,9 +81,7 @@ class ServerCursorHelper(Generic[ConnectionType, Row]):
         # The above result only returned COMMAND_OK. Get the cursor shape
         yield from self._describe_gen(cur)
 
-    def _describe_gen(
-        self, cur: BaseCursor[ConnectionType, Row]
-    ) -> PQGen[None]:
+    def _describe_gen(self, cur: BaseCursor[ConnectionType, Row]) -> PQGen[None]:
         conn = cur._conn
         conn.pgconn.send_describe_portal(self.name.encode(cur._encoding))
         results = yield from execute(conn.pgconn)
@@ -130,9 +128,7 @@ class ServerCursorHelper(Generic[ConnectionType, Row]):
             sql.SQL("ALL") if num is None else sql.Literal(num),
             sql.Identifier(self.name),
         )
-        res = yield from cur._conn._exec_command(
-            query, result_format=self._format
-        )
+        res = yield from cur._conn._exec_command(query, result_format=self._format)
 
         cur.pgresult = res
         cur._tx.set_pgresult(res, set_loaders=False)
@@ -142,9 +138,7 @@ class ServerCursorHelper(Generic[ConnectionType, Row]):
         self, cur: BaseCursor[ConnectionType, Row], value: int, mode: str
     ) -> PQGen[None]:
         if mode not in ("relative", "absolute"):
-            raise ValueError(
-                f"bad mode: {mode}. It should be 'relative' or 'absolute'"
-            )
+            raise ValueError(f"bad mode: {mode}. It should be 'relative' or 'absolute'")
         query = sql.SQL("MOVE{} {} FROM {}").format(
             sql.SQL(" ABSOLUTE" if mode == "absolute" else ""),
             sql.Literal(value),
@@ -202,7 +196,7 @@ class ServerCursor(Cursor[Row]):
         if not self.closed:
             warn(
                 f"the server-side cursor {self} was deleted while still open."
-                f" Please use 'with' or '.close()' to close the cursor properly",
+                " Please use 'with' or '.close()' to close the cursor properly",
                 ResourceWarning,
             )
 
@@ -258,9 +252,7 @@ class ServerCursor(Cursor[Row]):
 
         try:
             with self._conn.lock:
-                self._conn.wait(
-                    self._helper._declare_gen(self, query, params, binary)
-                )
+                self._conn.wait(self._helper._declare_gen(self, query, params, binary))
         except e.Error as ex:
             raise ex.with_traceback(None)
 
@@ -268,9 +260,7 @@ class ServerCursor(Cursor[Row]):
 
     def executemany(self, query: Query, params_seq: Iterable[Params]) -> None:
         """Method not implemented for server-side cursors."""
-        raise e.NotSupportedError(
-            "executemany not supported on server-side cursors"
-        )
+        raise e.NotSupportedError("executemany not supported on server-side cursors")
 
     def fetchone(self) -> Optional[Row]:
         with self._conn.lock:
@@ -298,9 +288,7 @@ class ServerCursor(Cursor[Row]):
     def __iter__(self) -> Iterator[Row]:
         while True:
             with self._conn.lock:
-                recs = self._conn.wait(
-                    self._helper._fetch_gen(self, self.itersize)
-                )
+                recs = self._conn.wait(self._helper._fetch_gen(self, self.itersize))
             for rec in recs:
                 self._pos += 1
                 yield rec
@@ -339,7 +327,7 @@ class AsyncServerCursor(AsyncCursor[Row]):
         if not self.closed:
             warn(
                 f"the server-side cursor {self} was deleted while still open."
-                f" Please use 'with' or '.close()' to close the cursor properly",
+                " Please use 'with' or '.close()' to close the cursor properly",
                 ResourceWarning,
             )
 
@@ -386,12 +374,8 @@ class AsyncServerCursor(AsyncCursor[Row]):
 
         return self
 
-    async def executemany(
-        self, query: Query, params_seq: Iterable[Params]
-    ) -> None:
-        raise e.NotSupportedError(
-            "executemany not supported on server-side cursors"
-        )
+    async def executemany(self, query: Query, params_seq: Iterable[Params]) -> None:
+        raise e.NotSupportedError("executemany not supported on server-side cursors")
 
     async def fetchone(self) -> Optional[Row]:
         async with self._conn.lock:

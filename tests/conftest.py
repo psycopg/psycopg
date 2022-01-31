@@ -41,8 +41,10 @@ def pytest_addoption(parser):
     parser.addoption(
         "--no-collect-ok",
         action="store_true",
-        help="If no test is collected, exit with 0 instead of 5"
-        " (useful with --lfnf=none).",
+        help=(
+            "If no test is collected, exit with 0 instead of 5"
+            " (useful with --lfnf=none)."
+        ),
     )
 
     parser.addoption(
@@ -82,9 +84,7 @@ def event_loop(request):
             loop = asyncio.SelectorEventLoop()
             asyncio.set_event_loop(loop)
         else:
-            asyncio.set_event_loop_policy(
-                asyncio.WindowsSelectorEventLoopPolicy()
-            )
+            asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     if not loop:
         loop = asyncio.get_event_loop_policy().new_event_loop()
     yield loop

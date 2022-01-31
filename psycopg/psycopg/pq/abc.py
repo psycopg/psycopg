@@ -307,9 +307,7 @@ class PGresult(Protocol):
     def binary_tuples(self) -> int:
         ...
 
-    def get_value(
-        self, row_number: int, column_number: int
-    ) -> Optional[bytes]:
+    def get_value(self, row_number: int, column_number: int) -> Optional[bytes]:
         ...
 
     @property
@@ -353,9 +351,7 @@ class Conninfo(Protocol):
         ...
 
     @classmethod
-    def _options_from_array(
-        cls, opts: Sequence[Any]
-    ) -> List["ConninfoOption"]:
+    def _options_from_array(cls, opts: Sequence[Any]) -> List["ConninfoOption"]:
         ...
 
 

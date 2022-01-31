@@ -44,9 +44,7 @@ def test_min_size_max_size(dsn, min_size, max_size):
         assert p.max_size == max_size if max_size is not None else min_size
 
 
-@pytest.mark.parametrize(
-    "min_size, max_size", [(0, 0), (0, None), (-1, None), (4, 2)]
-)
+@pytest.mark.parametrize("min_size, max_size", [(0, 0), (0, None), (-1, None), (4, 2)])
 def test_bad_size(dsn, min_size, max_size):
     with pytest.raises(ValueError):
         pool.ConnectionPool(min_size=min_size, max_size=max_size)
@@ -62,9 +60,7 @@ def test_connection_class(dsn):
 
 
 def test_kwargs(dsn):
-    with pool.ConnectionPool(
-        dsn, kwargs={"autocommit": True}, min_size=1
-    ) as p:
+    with pool.ConnectionPool(dsn, kwargs={"autocommit": True}, min_size=1) as p:
         with p.connection() as conn:
             assert conn.autocommit
 
@@ -150,9 +146,7 @@ def test_wait_closed(dsn):
 @pytest.mark.slow
 def test_setup_no_timeout(dsn, proxy):
     with pytest.raises(pool.PoolTimeout):
-        with pool.ConnectionPool(
-            proxy.client_dsn, min_size=1, num_workers=1
-        ) as p:
+        with pool.ConnectionPool(proxy.client_dsn, min_size=1, num_workers=1) as p:
             p.wait(0.2)
 
     with pool.ConnectionPool(proxy.client_dsn, min_size=1, num_workers=1) as p:
@@ -698,9 +692,7 @@ def test_grow(dsn, monkeypatch, min_size, want_times):
         t1 = time()
         results.append((n, t1 - t0))
 
-    with pool.ConnectionPool(
-        dsn, min_size=min_size, max_size=4, num_workers=3
-    ) as p:
+    with pool.ConnectionPool(dsn, min_size=min_size, max_size=4, num_workers=3) as p:
         p.wait(1.0)
         results: List[Tuple[int, float]] = []
 

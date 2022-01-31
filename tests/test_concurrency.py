@@ -183,9 +183,7 @@ def test_cancel(conn):
 def test_identify_closure(dsn):
     def closer():
         time.sleep(0.2)
-        conn2.execute(
-            "select pg_terminate_backend(%s)", [conn.pgconn.backend_pid]
-        )
+        conn2.execute("select pg_terminate_backend(%s)", [conn.pgconn.backend_pid])
 
     conn = psycopg.connect(dsn)
     conn2 = psycopg.connect(dsn)
