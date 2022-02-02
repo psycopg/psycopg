@@ -38,7 +38,7 @@ other functions, modules, threads to use it::
     from .db import pool
 
     def my_function():
-        with poolconnection() as conn:
+        with pool.connection() as conn:
             conn.execute(...)
 
 Ideally you may want to call `~ConnectionPool.close()` when the use of the
