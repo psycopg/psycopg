@@ -53,5 +53,5 @@ Statement preparation can be controlled in several ways:
     Using external connection poolers, such as PgBouncer, is not compatible
     with prepared statements, because the same client connection may change
     the server session it refers to. If such middleware is used you should
-    disable connection pooling, by setting the `Connection.prepare_threshold`
+    disable prepared statements, by setting the `Connection.prepare_threshold`
     attribute to `!None`.
