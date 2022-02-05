@@ -46,7 +46,7 @@ These classes are exposed both by this module and the root `psycopg` module.
         The code of the error, if defined.
 
         This is a class attribute defined for all the
-        :ref:`sqlstate-exceptions` classed, `None` for the base classes.
+        :ref:`sqlstate-exceptions` classes, `!None` for the base classes.
 
 .. autoexception:: Warning()
 .. autoexception:: InterfaceError()
@@ -70,8 +70,8 @@ Error diagnostics
 
 .. autoclass:: Diagnostic()
 
-    The object is returned by the `Error.diag` attribute and is passed to the
-    callback functions registered with
+    The object is available as the `~psycopg.Error`.\ `~psycopg.Error.diag`
+    attribute and is passed to the callback functions registered with
     `~psycopg.Connection.add_notice_handler()`.
 
     All the information available from the :pq:`PQresultErrorField()` function
