@@ -560,9 +560,9 @@ def test_close_no_threads(dsn):
         assert t.is_alive()
 
     p.close()
-    assert not p._sched_runner.is_alive()
+    assert not (p._sched_runner and p._sched_runner.is_alive())
     for t in p._workers:
-        assert not t.is_alive()
+        assert not (t and t.is_alive())
 
 
 def test_putconn_no_pool(dsn):

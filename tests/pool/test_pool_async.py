@@ -545,7 +545,7 @@ async def test_close_no_tasks(dsn):
         assert not t.done()
 
     await p.close()
-    assert p._sched_runner.done()
+    assert not p._sched_runner or p._sched_runner.done()
     for t in p._workers:
         assert t.done()
 
