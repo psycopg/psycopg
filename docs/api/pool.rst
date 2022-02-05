@@ -309,7 +309,7 @@ behaviour is similar, with the following differences:
    :type max_size: `!int`, default: None
 
    :param reset: It is only called when there are waiting clients in the
-                 queue, before giving them a connection already nopen. If no
+                 queue, before giving them a connection already open. If no
                  client is waiting, the connection is closed and discarded
                  without a fuss.
    :type reset: `Callable[[Connection], None]`
