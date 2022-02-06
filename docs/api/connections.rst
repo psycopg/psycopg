@@ -249,16 +249,13 @@ The `!Connection` class
 
     .. automethod:: add_notify_handler
 
-        :param callback: a callable taking a `Notify` parameter.
+        See :ref:`async-notify` for details.
 
     .. automethod:: remove_notify_handler
 
-    See :ref:`async-notify` for details.
-
     .. automethod:: add_notice_handler
 
-        :param callback: a callable taking a `~psycopg.errors.Diagnostic`
-            object containing all the details about the notice.
+        See :ref:`async-messages` for details.
 
     .. automethod:: remove_notice_handler
 
