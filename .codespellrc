@@ -1,0 +1,3 @@
+[codespell]
+ignore-words-list = alot,ans,ba,fo,te
+skip = docs/_build,.tox,.mypy_cache,.venv,pq.c
