@@ -111,6 +111,72 @@ you can use the normal `async with` context manager.
     pair: LISTEN; SQL command
     pair: NOTIFY; SQL command
 
+.. _async-messages:
+
+Server messages
+---------------
+
+PostgreSQL can send, together with the query results, `informative messages`__
+about the operation just performed, such as warnings or debug information.
+Notices may be raised even if the operations are successful and don't indicate
+an error. You are probably familiar with some of them, because they are
+reported by :program:`psql`::
+
+    $ psql
+    =# ROLLBACK;
+    WARNING:  there is no transaction in progress
+    ROLLBACK
+
+.. __: https://www.postgresql.org/docs/current/runtime-config-logging.html
+    #RUNTIME-CONFIG-SEVERITY-LEVELS
+
+Messages can be also sent by the `PL/pgSQL 'RAISE' statement`__ (at a level
+lower than EXCEPTION, otherwise the appropriate `DatabaseError` will be
+raised). The level of the messages received can be controlled using the
+client_min_messages__ setting.
+
+.. __: https://www.postgresql.org/docs/current/plpgsql-errors-and-messages.html
+.. __: https://www.postgresql.org/docs/current/runtime-config-client.html
+    #GUC-CLIENT-MIN-MESSAGES
+
+
+By default, the messages received are ignored. If you want to process them on
+the client you can use the `Connection.add_notice_handler()` function to
+register a function that will be invoked whenever a message is received. The
+message is passed to the callback as a `~errors.Diagnostic` instance,
+containing all the information passed by the server, such as the message text
+and the severity. The object is the same found on the `~psycopg.Error.diag`
+attribute of the errors raised by the server:
+
+.. code:: python
+
+    >>> import psycopg
+
+    >>> def log_notice(diag):
+    ...     print(f"The server says: {diag.severity} - {diag.message_primary}")
+
+    >>> conn = psycopg.connect(autocommit=True)
+    >>> conn.add_notice_handler(log_notice)
+
+    >>> cur = conn.execute("ROLLBACK")
+    The server says: WARNING - there is no transaction in progress
+    >>> print(cur.statusmessage)
+    ROLLBACK
+
+.. warning::
+
+    The `!Diagnostic` object received by the callback should not be used after
+    the callback function terminates, because its data is deallocated after
+    the callbacks have been processed. If you need to use the information
+    later please extract the attributes requested and forward them instead of
+    forwarding the whole `!Diagnostic` object.
+
+
+.. index::
+    pair: Asynchronous; Notifications
+    pair: LISTEN; SQL command
+    pair: NOTIFY; SQL command
+
 .. _async-notify:
 
 Asynchronous notifications

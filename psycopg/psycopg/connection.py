@@ -293,12 +293,18 @@ class BaseConnection(Generic[Row]):
     def add_notice_handler(self, callback: NoticeHandler) -> None:
         """
         Register a callable to be invoked when a notice message is received.
+
+        :param callback: the callback to call upon message received.
+        :type callback: Callable[[~psycopg.errors.Diagnostic], None]
         """
         self._notice_handlers.append(callback)
 
     def remove_notice_handler(self, callback: NoticeHandler) -> None:
         """
         Unregister a notice message callable previously registered.
+
+        :param callback: the callback to remove.
+        :type callback: Callable[[~psycopg.errors.Diagnostic], None]
         """
         self._notice_handlers.remove(callback)
 
@@ -320,12 +326,18 @@ class BaseConnection(Generic[Row]):
     def add_notify_handler(self, callback: NotifyHandler) -> None:
         """
         Register a callable to be invoked whenever a notification is received.
+
+        :param callback: the callback to call upon notification received.
+        :type callback: Callable[[~psycopg.Notify], None]
         """
         self._notify_handlers.append(callback)
 
     def remove_notify_handler(self, callback: NotifyHandler) -> None:
         """
         Unregister a notification callable previously registered.
+
+        :param callback: the callback to remove.
+        :type callback: Callable[[~psycopg.Notify], None]
         """
         self._notify_handlers.remove(callback)
 
