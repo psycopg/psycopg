@@ -7,6 +7,16 @@
 ``psycopg`` release notes
 =========================
 
+Future releases
+---------------
+
+Psycopg 3.0.9
+^^^^^^^^^^^^^
+
+- Add the `!tzdata` package as a dependency on Windows in order to handle time
+  zones (:ticket:`#223`).
+
+
 Current release
 ---------------
 

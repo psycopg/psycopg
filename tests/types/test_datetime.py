@@ -291,8 +291,6 @@ class TestDateTimeTz:
     )
     @pytest.mark.parametrize("fmt_out", pq.Format)
     def test_load_datetimetz_tz(self, conn, fmt_out, tzname, expr, tzoff):
-        if "/" in tzname and sys.platform == "win32":
-            pytest.skip("no IANA db on Windows")
         conn.execute("select set_config('TimeZone', %s, true)", [tzname])
         cur = conn.cursor(binary=fmt_out)
         ts = cur.execute("select %s::timestamptz", [expr]).fetchone()[0]
@@ -341,7 +339,6 @@ class TestDateTimeTz:
         sys.version_info < (3, 7), reason="no seconds in tz offset"
     )
 
-    @pytest.mark.xfail(sys.platform == "win32", reason="no IANA db on Windows")
     @pytest.mark.parametrize(
         "valname, tzval, tzname",
         [
