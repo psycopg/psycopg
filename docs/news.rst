@@ -21,6 +21,13 @@ Psycopg 3.1 (unreleased)
 - Drop support for Python 3.6.
 
 
+Psycopg 3.0.9 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Add the `!tzdata` package as a dependency on Windows in order to handle time
+  zones (:ticket:`#223`).
+
+
 Current release
 ---------------
 

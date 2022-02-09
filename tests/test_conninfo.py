@@ -1,4 +1,3 @@
-import sys
 import datetime as dt
 
 import pytest
@@ -218,7 +217,6 @@ class TestConnectionInfo:
         with pytest.raises(psycopg.OperationalError):
             conn.info.backend_pid
 
-    @pytest.mark.skipif(sys.platform == "win32", reason="no IANA db on Windows")
     def test_timezone(self, conn):
         conn.execute("set timezone to 'Europe/Rome'")
         tz = conn.info.timezone
