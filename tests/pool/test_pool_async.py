@@ -924,7 +924,7 @@ async def test_bad_resize(dsn, min_size, max_size):
             await p.resize(min_size=min_size, max_size=max_size)
 
 
-def test_jitter():
+async def test_jitter():
     rnds = [pool.AsyncConnectionPool._jitter(30, -0.1, +0.2) for i in range(100)]
     assert 27 <= min(rnds) <= 28
     assert 35 < max(rnds) < 36
