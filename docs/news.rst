@@ -13,6 +13,7 @@ Future releases
 Psycopg 3.0.9
 ^^^^^^^^^^^^^
 
+- Set `Error.sqlstate` when an unknown code is received (:ticket:`#225`).
 - Add the `!tzdata` package as a dependency on Windows in order to handle time
   zones (:ticket:`#223`).
 
