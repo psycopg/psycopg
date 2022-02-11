@@ -137,8 +137,7 @@ def fetch_errors(versions):
 
 def generate_module_data(classes, errors):
     tmpl = """
-@sqlcode(%(errlabel)r, %(sqlstate)r)
-class %(clsname)s(%(basename)s):
+class %(clsname)s(%(basename)s, code=%(sqlstate)r, name=%(errlabel)r):
     pass
 """
     for clscode, clslabel in sorted(classes.items()):
