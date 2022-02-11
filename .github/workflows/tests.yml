@@ -10,6 +10,11 @@ on:
   schedule:
     - cron: '48 6 * * *'
 
+concurrency:
+  # Cancel older requests of the same workflow in the same branch.
+  group: ${{ github.workflow }}-${{ github.ref_name }}
+  cancel-in-progress: true
+
 jobs:
 
   linux:  # {{{

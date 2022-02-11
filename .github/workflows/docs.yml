@@ -6,6 +6,10 @@ on:
       # This should match the DOC3_BRANCH value in the psycopg-website Makefile
       - master
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref_name }}
+  cancel-in-progress: true
+
 jobs:
   docs:
     runs-on: ubuntu-latest
