@@ -59,6 +59,10 @@ class Error(Exception):
         self._info = info
         self._encoding = encoding
 
+        # Handle sqlstate codes for which we don't have a class.
+        if not self.sqlstate and info:
+            self.sqlstate = self.diag.sqlstate
+
     @property
     def diag(self) -> "Diagnostic":
         """
