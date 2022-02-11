@@ -239,3 +239,24 @@ def test_query_context(conn):
     assert exc.value.diag.message_primary in s
     assert "ERROR" not in s
     assert not s.endswith("\n")
+
+
+def test_unknown_sqlstate(conn):
+    code = "PXX99"
+    with pytest.raises(KeyError):
+        e.lookup(code)
+
+    with pytest.raises(e.ProgrammingError) as excinfo:
+        conn.execute(
+            f"""
+            do $$begin
+            raise exception 'made up code' using errcode = '{code}';
+            end$$ language plpgsql
+            """
+        )
+    exc = excinfo.value
+    assert exc.diag.sqlstate == code
+    assert exc.sqlstate == code
+    # Survives pickling too
+    pexc = pickle.loads(pickle.dumps(exc))
+    assert pexc.sqlstate == code
