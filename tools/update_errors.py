@@ -12,7 +12,6 @@ import os
 import re
 import sys
 import logging
-import subprocess as sp
 from urllib.request import urlopen
 from collections import defaultdict, namedtuple
 
@@ -27,9 +26,6 @@ def main():
 
     fn = os.path.dirname(__file__) + "/../psycopg/psycopg/errors.py"
     update_file(fn, generate_module_data(classes, errors))
-
-    logger.info("running black on the resulting module")
-    sp.check_call(["black", fn])
 
     fn = os.path.dirname(__file__) + "/../docs/api/errors.rst"
     update_file(fn, generate_docs_data(classes, errors))
@@ -136,15 +132,19 @@ def fetch_errors(versions):
 
 
 def generate_module_data(classes, errors):
-    tmpl = """
-class %(clsname)s(%(basename)s, code=%(sqlstate)r, name=%(errlabel)r):
+    yield ""
+
+    for clscode, clslabel in sorted(classes.items()):
+        yield f"""
+# {clslabel}
+"""
+        for _, e in sorted(errors[clscode].items()):
+            yield f"""\
+class {e.clsname}({e.basename},
+    code={e.sqlstate!r}, name={e.errlabel!r}):
     pass
 """
-    for clscode, clslabel in sorted(classes.items()):
-        yield f"\n# {clslabel}"
-
-        for _, error in sorted(errors[clscode].items()):
-            yield tmpl % error._asdict()
+    yield ""
 
 
 def generate_docs_data(classes, errors):
