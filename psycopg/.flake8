@@ -1,4 +1,0 @@
-# Used for Vim ALE integration, which doesn't honur the top-level config file
-[flake8]
-per-file-ignores =
-    psycopg/__init__.py: F401
