@@ -7,7 +7,7 @@
 ``psycopg`` release notes
 =========================
 
-Future releases
+Current release
 ---------------
 
 Psycopg 3.0.9
@@ -17,9 +17,6 @@ Psycopg 3.0.9
 - Add the `!tzdata` package as a dependency on Windows in order to handle time
   zones (:ticket:`#223`).
 
-
-Current release
----------------
 
 Psycopg 3.0.8
 ^^^^^^^^^^^^^
@@ -92,6 +89,7 @@ Psycopg 3.0.2
 - Fix call to `MultiRange.__setitem__()` with a non-iterable value and a
   slice, now raising a `TypeError` (:ticket:`#129`).
 - Fix disable cursors methods after close() (:ticket:`#125`).
+
 
 Psycopg 3.0.1
 ^^^^^^^^^^^^^
