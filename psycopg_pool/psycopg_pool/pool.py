@@ -740,7 +740,6 @@ class MaintenanceTask(ABC):
 
     def __init__(self, pool: "ConnectionPool"):
         self.pool = ref(pool)
-        logger.debug("task created in %s: %s", threading.current_thread().name, self)
 
     def __repr__(self) -> str:
         pool = self.pool()
@@ -756,6 +755,7 @@ class MaintenanceTask(ABC):
         pool = self.pool()
         if not pool or pool.closed:
             # Pool is no more working. Quietly discard the operation.
+            logger.debug("task run discarded: %s", self)
             return
 
         logger.debug("task running in %s: %s", threading.current_thread().name, self)
@@ -770,6 +770,7 @@ class MaintenanceTask(ABC):
         pool = self.pool()
         if not pool or pool.closed:
             # Pool is no more working. Quietly discard the operation.
+            logger.debug("task tick discarded: %s", self)
             return
 
         pool.run_task(self)

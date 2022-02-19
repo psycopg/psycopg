@@ -658,6 +658,7 @@ class MaintenanceTask(ABC):
         pool = self.pool()
         if not pool or pool.closed:
             # Pool is no more working. Quietly discard the operation.
+            logger.debug("task run discarded: %s", self)
             return
 
         await self._run(pool)
@@ -671,6 +672,7 @@ class MaintenanceTask(ABC):
         pool = self.pool()
         if not pool or pool.closed:
             # Pool is no more working. Quietly discard the operation.
+            logger.debug("task tick discarded: %s", self)
             return
 
         pool.run_task(self)
