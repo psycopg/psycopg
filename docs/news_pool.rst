@@ -7,6 +7,16 @@
 ``psycopg_pool`` release notes
 ==============================
 
+Future releases
+---------------
+
+psycopg_pool 3.1.1 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Fix race condition on pool creation which might result in the pool not
+  filling (:ticket:`#230`).
+
+
 Current release
 ---------------
 
@@ -25,6 +35,7 @@ psycopg_pool 3.0.3
 - Raise `!ValueError` if `ConnectionPool` `!min_size` and `!max_size` are both
   set to 0 (instead of hanging).
 - Raise `PoolClosed` calling `~ConnectionPool.wait()` on a closed pool.
+
 
 psycopg_pool 3.0.2
 ^^^^^^^^^^^^^^^^^^

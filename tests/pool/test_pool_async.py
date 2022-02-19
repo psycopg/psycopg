@@ -1087,6 +1087,22 @@ async def test_spike(dsn, monkeypatch):
         assert len(p._pool) < 7
 
 
+async def test_debug_deadlock(dsn):
+    # https://github.com/psycopg/psycopg/issues/230
+    logger = logging.getLogger("psycopg")
+    handler = logging.StreamHandler()
+    old_level = logger.level
+    logger.setLevel(logging.DEBUG)
+    handler.setLevel(logging.DEBUG)
+    logger.addHandler(handler)
+    try:
+        async with pool.AsyncConnectionPool(dsn, min_size=4, open=True) as p:
+            await p.wait(timeout=2)
+    finally:
+        logger.removeHandler(handler)
+        logger.setLevel(old_level)
+
+
 def delay_connection(monkeypatch, sec):
     """
     Return a _connect_gen function delayed by the amount of seconds
