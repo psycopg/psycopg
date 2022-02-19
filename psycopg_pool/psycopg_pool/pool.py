@@ -257,11 +257,11 @@ class ConnectionPool(BasePool[Connection[Any]]):
 
         self._check_open()
 
-        self._start_workers()
-        self._start_initial_tasks()
-
         self._closed = False
         self._opened = True
+
+        self._start_workers()
+        self._start_initial_tasks()
 
     def _start_workers(self) -> None:
         self._sched_runner = threading.Thread(
