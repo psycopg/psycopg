@@ -7,18 +7,15 @@
 ``psycopg_pool`` release notes
 ==============================
 
-Future releases
+Current release
 ---------------
 
-psycopg_pool 3.1.1 (unreleased)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg_pool 3.1.1
+^^^^^^^^^^^^^^^^^^
 
 - Fix race condition on pool creation which might result in the pool not
   filling (:ticket:`#230`).
 
-
-Current release
----------------
 
 psycopg_pool 3.1.0
 ------------------
