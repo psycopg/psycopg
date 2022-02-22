@@ -1,8 +1,12 @@
+import sys
 import time
-import pytest
+import signal
 import asyncio
+import subprocess as sp
 from asyncio.queues import Queue
 from typing import List, Tuple
+
+import pytest
 
 import psycopg
 from psycopg._compat import create_task
@@ -151,3 +155,52 @@ async def test_identify_closure(dsn):
     finally:
         await aconn.close()
         await conn2.close()
+
+
+@pytest.mark.xfail(reason="fix #231 for async connection")
+@pytest.mark.slow
+@pytest.mark.subprocess
+async def test_ctrl_c(dsn):
+    script = f"""\
+import asyncio
+import psycopg
+
+ctrl_c = False
+
+async def main():
+    async with await psycopg.AsyncConnection.connect({dsn!r}) as conn:
+        cur = conn.cursor()
+        try:
+            await cur.execute("select pg_sleep(2)")
+        except KeyboardInterrupt:
+            ctrl_c = True
+
+        assert ctrl_c, "ctrl-c not received"
+        assert (
+            conn.info.transaction_status == psycopg.pq.TransactionStatus.INERROR
+        ), f"transaction status: {{conn.info.transaction_status!r}}"
+
+        await conn.rollback()
+        assert (
+            conn.info.transaction_status == psycopg.pq.TransactionStatus.IDLE
+        ), f"transaction status: {{conn.info.transaction_status!r}}"
+
+        await cur.execute("select 1")
+        assert (await cur.fetchone()) == (1,)
+
+asyncio.run(main())
+"""
+    if sys.platform == "win32":
+        creationflags = sp.CREATE_NEW_PROCESS_GROUP
+        sig = signal.CTRL_C_EVENT
+    else:
+        creationflags = 0
+        sig = signal.SIGINT
+
+    proc = sp.Popen([sys.executable, "-s", "-c", script], creationflags=creationflags)
+    with pytest.raises(sp.TimeoutExpired):
+        outs, errs = proc.communicate(timeout=1)
+
+    proc.send_signal(sig)
+    proc.communicate()
+    assert proc.returncode == 0

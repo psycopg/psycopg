@@ -7,6 +7,16 @@
 ``psycopg`` release notes
 =========================
 
+Future releases
+---------------
+
+Psycopg 3.0.10 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Leave the connection working after interrupting a query with Ctrl-C
+  (currently only for sync connections, :ticket:`#231`).
+
+
 Current release
 ---------------
 
