@@ -21,6 +21,13 @@ Psycopg 3.1 (unreleased)
 - Drop support for Python 3.6.
 
 
+Psycopg 3.0.10 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Leave the connection working after interrupting a query with Ctrl-C
+  (currently only for sync connections, :ticket:`#231`).
+
+
 Current release
 ---------------
 
