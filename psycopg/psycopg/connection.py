@@ -861,7 +861,7 @@ class Connection(BaseConnection[Row]):
             return waiting.wait(gen, self.pgconn.socket, timeout=timeout)
         except KeyboardInterrupt:
             # On Ctrl-C, try to cancel the query in the server, otherwise
-            # otherwise the connection will be stuck in ACTIVE state
+            # the connection will remain stuck in ACTIVE state.
             c = self.pgconn.get_cancel()
             c.cancel()
             try:
