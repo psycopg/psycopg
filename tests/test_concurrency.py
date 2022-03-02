@@ -207,6 +207,9 @@ def test_identify_closure(dsn):
 
 @pytest.mark.slow
 @pytest.mark.subprocess
+@pytest.mark.skipif(
+    sys.platform == "win32", reason="don't know how to Ctrl-C on Windows"
+)
 def test_ctrl_c(dsn):
     if sys.platform == "win32":
         sig = int(signal.CTRL_C_EVENT)
