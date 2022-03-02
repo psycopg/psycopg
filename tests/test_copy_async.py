@@ -532,6 +532,19 @@ async def test_str(aconn):
     assert "[INTRANS]" in str(copy)
 
 
+async def test_description(aconn):
+    async with aconn.cursor() as cur:
+        async with cur.copy("copy (select 'This', 'Is', 'Text') to stdout") as copy:
+            len(cur.description) == 3
+            assert cur.description[0].name == "column_1"
+            assert cur.description[2].name == "column_3"
+            await alist(copy.rows())
+
+        len(cur.description) == 3
+        assert cur.description[0].name == "column_1"
+        assert cur.description[2].name == "column_3"
+
+
 @pytest.mark.parametrize(
     "format, buffer",
     [(Format.TEXT, "sample_text"), (Format.BINARY, "sample_binary")],
