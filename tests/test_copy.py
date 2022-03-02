@@ -533,6 +533,19 @@ def test_str(conn):
     assert "[INTRANS]" in str(copy)
 
 
+def test_description(conn):
+    with conn.cursor() as cur:
+        with cur.copy("copy (select 'This', 'Is', 'Text') to stdout") as copy:
+            len(cur.description) == 3
+            assert cur.description[0].name == "column_1"
+            assert cur.description[2].name == "column_3"
+            list(copy.rows())
+
+        len(cur.description) == 3
+        assert cur.description[0].name == "column_1"
+        assert cur.description[2].name == "column_3"
+
+
 @pytest.mark.parametrize(
     "format, buffer",
     [(Format.TEXT, "sample_text"), (Format.BINARY, "sample_binary")],

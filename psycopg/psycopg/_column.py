@@ -7,8 +7,6 @@ The Column object in Cursor.description
 from typing import Any, NamedTuple, Optional, Sequence, TYPE_CHECKING
 from operator import attrgetter
 
-from . import errors as e
-
 if TYPE_CHECKING:
     from .cursor import BaseCursor
 
@@ -28,10 +26,11 @@ class Column(Sequence[Any]):
         assert res
 
         fname = res.fname(index)
-        if not fname:
-            raise e.InterfaceError(f"no name available for column {index}")
-
-        self._name = fname.decode(cursor._encoding)
+        if fname:
+            self._name = fname.decode(cursor._encoding)
+        else:
+            # COPY_OUT results have columns but no name
+            self._name = f"column_{index + 1}"
 
         self._data = ColumnData(
             ftype=res.ftype(index),
