@@ -766,7 +766,18 @@ class Connection(BaseConnection[Row]):
         The function must be used on generators that don't change connection
         fd (i.e. not on connect and reset).
         """
-        return waiting.wait(gen, self.pgconn.socket, timeout=timeout)
+        try:
+            return waiting.wait(gen, self.pgconn.socket, timeout=timeout)
+        except KeyboardInterrupt:
+            # On Ctrl-C, try to cancel the query in the server, otherwise
+            # otherwise the connection will be stuck in ACTIVE state
+            c = self.pgconn.get_cancel()
+            c.cancel()
+            try:
+                waiting.wait(gen, self.pgconn.socket, timeout=timeout)
+            except e.QueryCanceled:
+                pass  # as expected
+            raise
 
     @classmethod
     def _wait_conn(cls, gen: PQGenConn[RV], timeout: Optional[int]) -> RV:
