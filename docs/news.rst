@@ -7,7 +7,7 @@
 ``psycopg`` release notes
 =========================
 
-Future releases
+Current release
 ---------------
 
 Psycopg 3.1 (unreleased)
@@ -21,17 +21,14 @@ Psycopg 3.1 (unreleased)
 - Drop support for Python 3.6.
 
 
-Psycopg 3.0.10 (unreleased)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Psycopg 3.0.10
+^^^^^^^^^^^^^^
 
-- Leave the connection working after interrupting a query with Ctrl-C
+- Leave the connection in working state after interrupting a query with Ctrl-C
   (currently only for sync connections, :ticket:`#231`).
 - Fix `Cursor.description` after a COPY ... TO STDOUT operation
   (:ticket:`#235`).
 
-
-Current release
----------------
 
 Psycopg 3.0.9
 ^^^^^^^^^^^^^
