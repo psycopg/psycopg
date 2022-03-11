@@ -17,6 +17,7 @@ Psycopg 3.0.10
   (currently only for sync connections, :ticket:`#231`).
 - Fix `Cursor.description` after a COPY ... TO STDOUT operation
   (:ticket:`#235`).
+- Fix building on FreeBSD and likely other BSD flavours (:ticket:`#241`).
 
 
 Psycopg 3.0.9

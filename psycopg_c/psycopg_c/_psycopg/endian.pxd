@@ -8,6 +8,8 @@ from libc.stdint cimport uint16_t, uint32_t, uint64_t
 
 cdef extern from * nogil:
     # from https://gist.github.com/panzi/6856583
+    # Improved in:
+    # https://github.com/linux-sunxi/sunxi-tools/blob/master/include/portable_endian.h
     """
 // "License": Public Domain
 // I, Mathias Panzenböck, place this file hereby into the public domain. Use it at your own risk for whatever you like.
@@ -52,22 +54,29 @@ cdef extern from * nogil:
 #	define __LITTLE_ENDIAN LITTLE_ENDIAN
 #	define __PDP_ENDIAN    PDP_ENDIAN
 
-#elif defined(__OpenBSD__)
+#elif defined(__OpenBSD__) ||  defined(__NetBSD__) || defined(__FreeBSD__) || defined(__DragonFly__)
 
 #	include <sys/endian.h>
 
-#elif defined(__NetBSD__) || defined(__FreeBSD__) || defined(__DragonFly__)
-
-#	include <sys/endian.h>
-
+/* For functions still missing, try to substitute 'historic' OpenBSD names */
+#ifndef be16toh
 #	define be16toh(x) betoh16(x)
+#endif
+#ifndef le16toh
 #	define le16toh(x) letoh16(x)
-
+#endif
+#ifndef be32toh
 #	define be32toh(x) betoh32(x)
+#endif
+#ifndef le32toh
 #	define le32toh(x) letoh32(x)
-
+#endif
+#ifndef be64toh
 #	define be64toh(x) betoh64(x)
+#endif
+#ifndef le64toh
 #	define le64toh(x) letoh64(x)
+#endif
 
 #elif defined(__WINDOWS__)
 
