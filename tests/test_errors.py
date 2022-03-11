@@ -4,6 +4,7 @@ from weakref import ref
 
 import pytest
 
+import psycopg
 from psycopg import pq
 from psycopg import errors as e
 
@@ -260,3 +261,20 @@ def test_unknown_sqlstate(conn):
     # Survives pickling too
     pexc = pickle.loads(pickle.dumps(exc))
     assert pexc.sqlstate == code
+
+
+def test_pgconn_error():
+    with pytest.raises(psycopg.OperationalError) as excinfo:
+        psycopg.connect("dbname=nosuchdb")
+
+    exc = excinfo.value
+    assert exc.pgconn
+    assert exc.pgconn.db == b"nosuchdb"
+
+
+def test_pgconn_error_pickle():
+    with pytest.raises(psycopg.OperationalError) as excinfo:
+        psycopg.connect("dbname=nosuchdb")
+
+    exc = pickle.loads(pickle.dumps(excinfo.value))
+    assert not exc.pgconn

@@ -35,7 +35,8 @@ def connect(conninfo: str) -> PQGenConn[abc.PGconn]:
         if conn_status == libpq.CONNECTION_BAD:
             encoding = conninfo_encoding(conninfo)
             raise e.OperationalError(
-                f"connection is bad: {error_message(conn, encoding=encoding)}"
+                f"connection is bad: {error_message(conn, encoding=encoding)}",
+                pgconn=conn
             )
 
         poll_status = libpq.PQconnectPoll(pgconn_ptr)
@@ -49,10 +50,13 @@ def connect(conninfo: str) -> PQGenConn[abc.PGconn]:
         elif poll_status == libpq.PGRES_POLLING_FAILED:
             encoding = conninfo_encoding(conninfo)
             raise e.OperationalError(
-                f"connection failed: {error_message(conn, encoding=encoding)}"
+                f"connection failed: {error_message(conn, encoding=encoding)}",
+                pgconn=conn
             )
         else:
-            raise e.InternalError(f"unexpected poll status: {poll_status}")
+            raise e.InternalError(
+                f"unexpected poll status: {poll_status}", pgconn=conn
+            )
 
     conn.nonblocking = 1
     return conn

@@ -21,7 +21,7 @@ DBAPI-defined Exceptions are defined in the following hierarchy::
 from typing import Any, Dict, Optional, Sequence, Tuple, Type, Union
 from typing import cast
 
-from psycopg.pq.abc import PGresult
+from psycopg.pq.abc import PGconn, PGresult
 from psycopg.pq._enums import DiagnosticField
 
 ErrorInfo = Union[None, PGresult, Dict[int, Optional[bytes]]]
@@ -52,13 +52,19 @@ class Error(Exception):
     __module__ = "psycopg"
 
     sqlstate: Optional[str] = None
+    pgconn: Optional[PGconn] = None
 
     def __init__(
-        self, *args: Sequence[Any], info: ErrorInfo = None, encoding: str = "utf-8"
+        self,
+        *args: Sequence[Any],
+        info: ErrorInfo = None,
+        encoding: str = "utf-8",
+        pgconn: Optional[PGconn] = None
     ):
         super().__init__(*args)
         self._info = info
         self._encoding = encoding
+        self.pgconn = pgconn
 
         # Handle sqlstate codes for which we don't have a class.
         if not self.sqlstate and info:
@@ -75,6 +81,8 @@ class Error(Exception):
         res = super().__reduce__()
         if isinstance(res, tuple) and len(res) >= 3:
             res[2]["_info"] = self._info_to_dict(self._info)
+            # To make the exception picklable
+            res[2]["pgconn"] = None
 
         return res
 
