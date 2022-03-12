@@ -277,4 +277,22 @@ def test_pgconn_error_pickle():
         psycopg.connect("dbname=nosuchdb")
 
     exc = pickle.loads(pickle.dumps(excinfo.value))
-    assert not exc.pgconn
+    assert exc.pgconn is None
+
+
+def test_pgresult(conn):
+    with pytest.raises(e.DatabaseError) as excinfo:
+        conn.execute("select 1 from wat")
+
+    exc = excinfo.value
+    assert exc.pgresult
+    assert exc.pgresult.error_field(pq.DiagnosticField.SQLSTATE) == b"42P01"
+
+
+def test_pgresult_pickle(conn):
+    with pytest.raises(e.DatabaseError) as excinfo:
+        conn.execute("select 1 from wat")
+
+    exc = pickle.loads(pickle.dumps(excinfo.value))
+    assert exc.pgresult is None
+    assert exc.diag.sqlstate == "42P01"
