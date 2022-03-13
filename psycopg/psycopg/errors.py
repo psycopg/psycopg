@@ -71,10 +71,18 @@ class Error(Exception):
 
     @property
     def pgconn(self) -> Optional[PGconn]:
+        """The connection object, if the error was raised from a connection attempt.
+
+        :rtype: Optional[psycopg.pq.PGconn]
+        """
         return self._pgconn if self._pgconn else None
 
     @property
     def pgresult(self) -> Optional[PGresult]:
+        """The result object, if the exception was raised after a failed query.
+
+        :rtype: Optional[psycopg.pq.PGresult]
+        """
         return self._info if _is_pgresult(self._info) else None
 
     @property
