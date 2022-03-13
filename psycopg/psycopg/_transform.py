@@ -15,6 +15,7 @@ from .abc import Buffer, LoadFunc, AdaptContext, PyFormat, DumperKey
 from .rows import Row, RowMaker
 from ._compat import TypeAlias
 from .postgres import INVALID_OID
+from ._encodings import pgconn_encoding
 
 if TYPE_CHECKING:
     from .abc import Dumper, Loader
@@ -75,6 +76,8 @@ class Transformer(AdaptContext):
         # the length of the result columns
         self._row_loaders: List[LoadFunc] = []
 
+        self._encoding = ""
+
     @classmethod
     def from_context(cls, context: Optional[AdaptContext]) -> "Transformer":
         """
@@ -90,6 +93,13 @@ class Transformer(AdaptContext):
     @property
     def connection(self) -> Optional["BaseConnection[Any]"]:
         return self._conn
+
+    @property
+    def encoding(self) -> str:
+        if not self._encoding:
+            conn = self.connection
+            self._encoding = pgconn_encoding(conn.pgconn) if conn else "utf-8"
+        return self._encoding
 
     @property
     def adapters(self) -> "AdaptersMap":

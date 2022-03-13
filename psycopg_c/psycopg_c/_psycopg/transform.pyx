@@ -24,6 +24,7 @@ from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 from psycopg import errors as e
 from psycopg.pq import Format as PqFormat
 from psycopg.rows import Row, RowMaker
+from psycopg._encodings import pgconn_encoding
 
 NoneType = type(None)
 
@@ -74,6 +75,7 @@ cdef class Transformer:
     cdef readonly object adapters
     cdef readonly object types
     cdef readonly object formats
+    cdef str _encoding
 
     # mapping class -> Dumper instance (auto, text, binary)
     cdef dict _auto_dumpers
@@ -115,6 +117,13 @@ cdef class Transformer:
             return context
         else:
             return cls(context)
+
+    @property
+    def encoding(self) -> str:
+        if not self._encoding:
+            conn = self.connection
+            self._encoding = pgconn_encoding(conn.pgconn) if conn else "utf-8"
+        return self._encoding
 
     @property
     def pgresult(self) -> Optional[PGresult]:
