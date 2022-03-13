@@ -171,14 +171,14 @@ module, together with the base DBAPI exception they derive from.
 ========= ================================================== ====================
 SQLSTATE  Exception                                          Base exception
 ========= ================================================== ====================
-**Class 02**: Class 02 - No Data (this is also a warning class per the SQL standard)
+**Class 02** - No Data (this is also a warning class per the SQL standard)
 ---------------------------------------------------------------------------------
 ``02000`` `!NoData`                                          `!DatabaseError`
 ``02001`` `!NoAdditionalDynamicResultSetsReturned`           `!DatabaseError`
-**Class 03**: Class 03 - SQL Statement Not Yet Complete
+**Class 03** - SQL Statement Not Yet Complete
 ---------------------------------------------------------------------------------
 ``03000`` `!SqlStatementNotYetComplete`                      `!DatabaseError`
-**Class 08**: Class 08 - Connection Exception
+**Class 08** - Connection Exception
 ---------------------------------------------------------------------------------
 ``08000`` `!ConnectionException`                             `!OperationalError`
 ``08001`` `!SqlclientUnableToEstablishSqlconnection`         `!OperationalError`
@@ -187,37 +187,37 @@ SQLSTATE  Exception                                          Base exception
 ``08006`` `!ConnectionFailure`                               `!OperationalError`
 ``08007`` `!TransactionResolutionUnknown`                    `!OperationalError`
 ``08P01`` `!ProtocolViolation`                               `!OperationalError`
-**Class 09**: Class 09 - Triggered Action Exception
+**Class 09** - Triggered Action Exception
 ---------------------------------------------------------------------------------
 ``09000`` `!TriggeredActionException`                        `!DatabaseError`
-**Class 0A**: Class 0A - Feature Not Supported
+**Class 0A** - Feature Not Supported
 ---------------------------------------------------------------------------------
 ``0A000`` `!FeatureNotSupported`                             `!NotSupportedError`
-**Class 0B**: Class 0B - Invalid Transaction Initiation
+**Class 0B** - Invalid Transaction Initiation
 ---------------------------------------------------------------------------------
 ``0B000`` `!InvalidTransactionInitiation`                    `!DatabaseError`
-**Class 0F**: Class 0F - Locator Exception
+**Class 0F** - Locator Exception
 ---------------------------------------------------------------------------------
 ``0F000`` `!LocatorException`                                `!DatabaseError`
 ``0F001`` `!InvalidLocatorSpecification`                     `!DatabaseError`
-**Class 0L**: Class 0L - Invalid Grantor
+**Class 0L** - Invalid Grantor
 ---------------------------------------------------------------------------------
 ``0L000`` `!InvalidGrantor`                                  `!DatabaseError`
 ``0LP01`` `!InvalidGrantOperation`                           `!DatabaseError`
-**Class 0P**: Class 0P - Invalid Role Specification
+**Class 0P** - Invalid Role Specification
 ---------------------------------------------------------------------------------
 ``0P000`` `!InvalidRoleSpecification`                        `!DatabaseError`
-**Class 0Z**: Class 0Z - Diagnostics Exception
+**Class 0Z** - Diagnostics Exception
 ---------------------------------------------------------------------------------
 ``0Z000`` `!DiagnosticsException`                            `!DatabaseError`
 ``0Z002`` `!StackedDiagnosticsAccessedWithoutActiveHandler`  `!DatabaseError`
-**Class 20**: Class 20 - Case Not Found
+**Class 20** - Case Not Found
 ---------------------------------------------------------------------------------
 ``20000`` `!CaseNotFound`                                    `!ProgrammingError`
-**Class 21**: Class 21 - Cardinality Violation
+**Class 21** - Cardinality Violation
 ---------------------------------------------------------------------------------
 ``21000`` `!CardinalityViolation`                            `!ProgrammingError`
-**Class 22**: Class 22 - Data Exception
+**Class 22** - Data Exception
 ---------------------------------------------------------------------------------
 ``22000`` `!DataException`                                   `!DataError`
 ``22001`` `!StringDataRightTruncation`                       `!DataError`
@@ -286,7 +286,7 @@ SQLSTATE  Exception                                          Base exception
 ``22P04`` `!BadCopyFileFormat`                               `!DataError`
 ``22P05`` `!UntranslatableCharacter`                         `!DataError`
 ``22P06`` `!NonstandardUseOfEscapeCharacter`                 `!DataError`
-**Class 23**: Class 23 - Integrity Constraint Violation
+**Class 23** - Integrity Constraint Violation
 ---------------------------------------------------------------------------------
 ``23000`` `!IntegrityConstraintViolation`                    `!IntegrityError`
 ``23001`` `!RestrictViolation`                               `!IntegrityError`
@@ -295,10 +295,10 @@ SQLSTATE  Exception                                          Base exception
 ``23505`` `!UniqueViolation`                                 `!IntegrityError`
 ``23514`` `!CheckViolation`                                  `!IntegrityError`
 ``23P01`` `!ExclusionViolation`                              `!IntegrityError`
-**Class 24**: Class 24 - Invalid Cursor State
+**Class 24** - Invalid Cursor State
 ---------------------------------------------------------------------------------
 ``24000`` `!InvalidCursorState`                              `!InternalError`
-**Class 25**: Class 25 - Invalid Transaction State
+**Class 25** - Invalid Transaction State
 ---------------------------------------------------------------------------------
 ``25000`` `!InvalidTransactionState`                         `!InternalError`
 ``25001`` `!ActiveSqlTransaction`                            `!InternalError`
@@ -312,41 +312,41 @@ SQLSTATE  Exception                                          Base exception
 ``25P01`` `!NoActiveSqlTransaction`                          `!InternalError`
 ``25P02`` `!InFailedSqlTransaction`                          `!InternalError`
 ``25P03`` `!IdleInTransactionSessionTimeout`                 `!InternalError`
-**Class 26**: Class 26 - Invalid SQL Statement Name
+**Class 26** - Invalid SQL Statement Name
 ---------------------------------------------------------------------------------
 ``26000`` `!InvalidSqlStatementName`                         `!ProgrammingError`
-**Class 27**: Class 27 - Triggered Data Change Violation
+**Class 27** - Triggered Data Change Violation
 ---------------------------------------------------------------------------------
 ``27000`` `!TriggeredDataChangeViolation`                    `!OperationalError`
-**Class 28**: Class 28 - Invalid Authorization Specification
+**Class 28** - Invalid Authorization Specification
 ---------------------------------------------------------------------------------
 ``28000`` `!InvalidAuthorizationSpecification`               `!OperationalError`
 ``28P01`` `!InvalidPassword`                                 `!OperationalError`
-**Class 2B**: Class 2B - Dependent Privilege Descriptors Still Exist
+**Class 2B** - Dependent Privilege Descriptors Still Exist
 ---------------------------------------------------------------------------------
 ``2B000`` `!DependentPrivilegeDescriptorsStillExist`         `!InternalError`
 ``2BP01`` `!DependentObjectsStillExist`                      `!InternalError`
-**Class 2D**: Class 2D - Invalid Transaction Termination
+**Class 2D** - Invalid Transaction Termination
 ---------------------------------------------------------------------------------
 ``2D000`` `!InvalidTransactionTermination`                   `!InternalError`
-**Class 2F**: Class 2F - SQL Routine Exception
+**Class 2F** - SQL Routine Exception
 ---------------------------------------------------------------------------------
 ``2F000`` `!SqlRoutineException`                             `!OperationalError`
 ``2F002`` `!ModifyingSqlDataNotPermitted`                    `!OperationalError`
 ``2F003`` `!ProhibitedSqlStatementAttempted`                 `!OperationalError`
 ``2F004`` `!ReadingSqlDataNotPermitted`                      `!OperationalError`
 ``2F005`` `!FunctionExecutedNoReturnStatement`               `!OperationalError`
-**Class 34**: Class 34 - Invalid Cursor Name
+**Class 34** - Invalid Cursor Name
 ---------------------------------------------------------------------------------
 ``34000`` `!InvalidCursorName`                               `!ProgrammingError`
-**Class 38**: Class 38 - External Routine Exception
+**Class 38** - External Routine Exception
 ---------------------------------------------------------------------------------
 ``38000`` `!ExternalRoutineException`                        `!OperationalError`
 ``38001`` `!ContainingSqlNotPermitted`                       `!OperationalError`
 ``38002`` `!ModifyingSqlDataNotPermittedExt`                 `!OperationalError`
 ``38003`` `!ProhibitedSqlStatementAttemptedExt`              `!OperationalError`
 ``38004`` `!ReadingSqlDataNotPermittedExt`                   `!OperationalError`
-**Class 39**: Class 39 - External Routine Invocation Exception
+**Class 39** - External Routine Invocation Exception
 ---------------------------------------------------------------------------------
 ``39000`` `!ExternalRoutineInvocationException`              `!OperationalError`
 ``39001`` `!InvalidSqlstateReturned`                         `!OperationalError`
@@ -354,24 +354,24 @@ SQLSTATE  Exception                                          Base exception
 ``39P01`` `!TriggerProtocolViolated`                         `!OperationalError`
 ``39P02`` `!SrfProtocolViolated`                             `!OperationalError`
 ``39P03`` `!EventTriggerProtocolViolated`                    `!OperationalError`
-**Class 3B**: Class 3B - Savepoint Exception
+**Class 3B** - Savepoint Exception
 ---------------------------------------------------------------------------------
 ``3B000`` `!SavepointException`                              `!OperationalError`
 ``3B001`` `!InvalidSavepointSpecification`                   `!OperationalError`
-**Class 3D**: Class 3D - Invalid Catalog Name
+**Class 3D** - Invalid Catalog Name
 ---------------------------------------------------------------------------------
 ``3D000`` `!InvalidCatalogName`                              `!ProgrammingError`
-**Class 3F**: Class 3F - Invalid Schema Name
+**Class 3F** - Invalid Schema Name
 ---------------------------------------------------------------------------------
 ``3F000`` `!InvalidSchemaName`                               `!ProgrammingError`
-**Class 40**: Class 40 - Transaction Rollback
+**Class 40** - Transaction Rollback
 ---------------------------------------------------------------------------------
 ``40000`` `!TransactionRollback`                             `!OperationalError`
 ``40001`` `!SerializationFailure`                            `!OperationalError`
 ``40002`` `!TransactionIntegrityConstraintViolation`         `!OperationalError`
 ``40003`` `!StatementCompletionUnknown`                      `!OperationalError`
 ``40P01`` `!DeadlockDetected`                                `!OperationalError`
-**Class 42**: Class 42 - Syntax Error or Access Rule Violation
+**Class 42** - Syntax Error or Access Rule Violation
 ---------------------------------------------------------------------------------
 ``42000`` `!SyntaxErrorOrAccessRuleViolation`                `!ProgrammingError`
 ``42501`` `!InsufficientPrivilege`                           `!ProgrammingError`
@@ -417,30 +417,30 @@ SQLSTATE  Exception                                          Base exception
 ``42P20`` `!WindowingError`                                  `!ProgrammingError`
 ``42P21`` `!CollationMismatch`                               `!ProgrammingError`
 ``42P22`` `!IndeterminateCollation`                          `!ProgrammingError`
-**Class 44**: Class 44 - WITH CHECK OPTION Violation
+**Class 44** - WITH CHECK OPTION Violation
 ---------------------------------------------------------------------------------
 ``44000`` `!WithCheckOptionViolation`                        `!ProgrammingError`
-**Class 53**: Class 53 - Insufficient Resources
+**Class 53** - Insufficient Resources
 ---------------------------------------------------------------------------------
 ``53000`` `!InsufficientResources`                           `!OperationalError`
 ``53100`` `!DiskFull`                                        `!OperationalError`
 ``53200`` `!OutOfMemory`                                     `!OperationalError`
 ``53300`` `!TooManyConnections`                              `!OperationalError`
 ``53400`` `!ConfigurationLimitExceeded`                      `!OperationalError`
-**Class 54**: Class 54 - Program Limit Exceeded
+**Class 54** - Program Limit Exceeded
 ---------------------------------------------------------------------------------
 ``54000`` `!ProgramLimitExceeded`                            `!OperationalError`
 ``54001`` `!StatementTooComplex`                             `!OperationalError`
 ``54011`` `!TooManyColumns`                                  `!OperationalError`
 ``54023`` `!TooManyArguments`                                `!OperationalError`
-**Class 55**: Class 55 - Object Not In Prerequisite State
+**Class 55** - Object Not In Prerequisite State
 ---------------------------------------------------------------------------------
 ``55000`` `!ObjectNotInPrerequisiteState`                    `!OperationalError`
 ``55006`` `!ObjectInUse`                                     `!OperationalError`
 ``55P02`` `!CantChangeRuntimeParam`                          `!OperationalError`
 ``55P03`` `!LockNotAvailable`                                `!OperationalError`
 ``55P04`` `!UnsafeNewEnumValueUsage`                         `!OperationalError`
-**Class 57**: Class 57 - Operator Intervention
+**Class 57** - Operator Intervention
 ---------------------------------------------------------------------------------
 ``57000`` `!OperatorIntervention`                            `!OperationalError`
 ``57014`` `!QueryCanceled`                                   `!OperationalError`
@@ -449,20 +449,20 @@ SQLSTATE  Exception                                          Base exception
 ``57P03`` `!CannotConnectNow`                                `!OperationalError`
 ``57P04`` `!DatabaseDropped`                                 `!OperationalError`
 ``57P05`` `!IdleSessionTimeout`                              `!OperationalError`
-**Class 58**: Class 58 - System Error (errors external to PostgreSQL itself)
+**Class 58** - System Error (errors external to PostgreSQL itself)
 ---------------------------------------------------------------------------------
 ``58000`` `!SystemError`                                     `!OperationalError`
 ``58030`` `!IoError`                                         `!OperationalError`
 ``58P01`` `!UndefinedFile`                                   `!OperationalError`
 ``58P02`` `!DuplicateFile`                                   `!OperationalError`
-**Class 72**: Class 72 - Snapshot Failure
+**Class 72** - Snapshot Failure
 ---------------------------------------------------------------------------------
 ``72000`` `!SnapshotTooOld`                                  `!DatabaseError`
-**Class F0**: Class F0 - Configuration File Error
+**Class F0** - Configuration File Error
 ---------------------------------------------------------------------------------
 ``F0000`` `!ConfigFileError`                                 `!OperationalError`
 ``F0001`` `!LockFileExists`                                  `!OperationalError`
-**Class HV**: Class HV - Foreign Data Wrapper Error (SQL/MED)
+**Class HV** - Foreign Data Wrapper Error (SQL/MED)
 ---------------------------------------------------------------------------------
 ``HV000`` `!FdwError`                                        `!OperationalError`
 ``HV001`` `!FdwOutOfMemory`                                  `!OperationalError`
@@ -491,14 +491,14 @@ SQLSTATE  Exception                                          Base exception
 ``HV024`` `!FdwInvalidAttributeValue`                        `!OperationalError`
 ``HV090`` `!FdwInvalidStringLengthOrBufferLength`            `!OperationalError`
 ``HV091`` `!FdwInvalidDescriptorFieldIdentifier`             `!OperationalError`
-**Class P0**: Class P0 - PL/pgSQL Error
+**Class P0** - PL/pgSQL Error
 ---------------------------------------------------------------------------------
 ``P0000`` `!PlpgsqlError`                                    `!ProgrammingError`
 ``P0001`` `!RaiseException`                                  `!ProgrammingError`
 ``P0002`` `!NoDataFound`                                     `!ProgrammingError`
 ``P0003`` `!TooManyRows`                                     `!ProgrammingError`
 ``P0004`` `!AssertFailure`                                   `!ProgrammingError`
-**Class XX**: Class XX - Internal Error
+**Class XX** - Internal Error
 ---------------------------------------------------------------------------------
 ``XX000`` `!InternalError_`                                  `!InternalError`
 ``XX001`` `!DataCorrupted`                                   `!InternalError`

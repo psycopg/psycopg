@@ -175,7 +175,7 @@ def generate_docs_data(classes, errors):
     for line in lines:
         cls = line.sqlstate[:2] if line.sqlstate else None
         if cls and cls != sqlclass:
-            yield "**Class %s**: %s" % (cls, classes[cls])
+            yield re.sub(r"(Class\s+[^\s]+)", r"**\1**", classes[cls])
             yield h1
             sqlclass = cls
 
