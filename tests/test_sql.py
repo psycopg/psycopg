@@ -48,7 +48,7 @@ def test_quote_stable_despite_deranged_libpq(conn):
     # Verify the libpq behaviour of PQescapeString using the last setting seen.
     # Check that we are not affected by it.
     good_str = " E'\\\\'"
-    good_bytes = " E'\\\\000'"
+    good_bytes = " E'\\\\000'::bytea"
     conn.execute("set standard_conforming_strings to on")
     assert pq.Escaping().escape_string(b"\\") == b"\\"
     assert sql.quote("\\") == good_str
@@ -109,7 +109,7 @@ class TestSqlFormat:
     def test_compose_literal(self, conn):
         s = sql.SQL("select {0};").format(sql.Literal(dt.date(2016, 12, 31)))
         s1 = s.as_string(conn)
-        assert s1 == "select '2016-12-31';"
+        assert s1 == "select '2016-12-31'::date;"
 
     def test_compose_empty(self, conn):
         s = sql.SQL("select foo;").format()
@@ -161,7 +161,7 @@ class TestSqlFormat:
 
     def test_auto_literal(self, conn):
         s = sql.SQL("select {}, {}, {}").format("he'lo", 10, dt.date(2020, 1, 1))
-        assert s.as_string(conn) == "select 'he''lo', 10, '2020-01-01'"
+        assert s.as_string(conn) == "select 'he''lo', 10, '2020-01-01'::date"
 
     def test_execute(self, conn):
         cur = conn.cursor()
@@ -311,13 +311,13 @@ class TestLiteral:
         assert sql.Literal(None).as_string(conn) == "NULL"
         assert no_e(sql.Literal("foo").as_string(conn)) == "'foo'"
         assert sql.Literal(42).as_string(conn) == "42"
-        assert sql.Literal(dt.date(2017, 1, 1)).as_string(conn) == "'2017-01-01'"
+        assert sql.Literal(dt.date(2017, 1, 1)).as_string(conn) == "'2017-01-01'::date"
 
     def test_as_bytes(self, conn):
         assert sql.Literal(None).as_bytes(conn) == b"NULL"
         assert no_e(sql.Literal("foo").as_bytes(conn)) == b"'foo'"
         assert sql.Literal(42).as_bytes(conn) == b"42"
-        assert sql.Literal(dt.date(2017, 1, 1)).as_bytes(conn) == b"'2017-01-01'"
+        assert sql.Literal(dt.date(2017, 1, 1)).as_bytes(conn) == b"'2017-01-01'::date"
 
         conn.execute("set client_encoding to utf8")
         assert sql.Literal(eur).as_bytes(conn) == f"'{eur}'".encode()
@@ -432,7 +432,7 @@ class TestComposed:
         obj = sql.Composed(["fo'o", dt.date(2020, 1, 1)])
         obj = obj.join(", ")
         assert isinstance(obj, sql.Composed)
-        assert no_e(obj.as_string(conn)) == "'fo''o', '2020-01-01'"
+        assert no_e(obj.as_string(conn)) == "'fo''o', '2020-01-01'::date"
 
     def test_sum(self, conn):
         obj = sql.Composed([sql.SQL("foo ")])

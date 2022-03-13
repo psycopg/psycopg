@@ -142,7 +142,7 @@ def test_dumper_protocol(conn):
     assert cur.fetchone()[0] == "hellohello"
     cur = conn.execute("select %s", [["hi", "ha"]])
     assert cur.fetchone()[0] == ["hihi", "haha"]
-    assert sql.Literal("hello").as_string(conn) == "'qelloqello'"
+    assert sql.Literal("hello").as_string(conn) == "'qelloqello'::text"
 
 
 def test_loader_protocol(conn):

@@ -123,6 +123,10 @@ The `!sql` objects are in the following inheritance hierarchy:
 
 .. autoclass:: Literal
 
+    .. versionchanged:: 3.1
+        Add a type cast to the representation if useful in ambiguous context
+        (e.g. ``'2000-01-01'::date``)
+
 .. autoclass:: Placeholder
 
 .. autoclass:: Composed
