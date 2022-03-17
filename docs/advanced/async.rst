@@ -272,11 +272,11 @@ out of fashion. Besides, it is inefficient (unless what you really want is a
 client-server generator of ones), it generates useless traffic and will only
 detect a disconnection with an average delay of half the polling time.
 
-A more efficient and timely way to detect a server disconnection is to get a
-notification from the OS that the connection has something to say: only then
-you can test the connection. You can dedicate a thread (or an asyncio task) to
-wait on a connection: such thread will perform no activity until awaken by the
-OS.
+A more efficient and timely way to detect a server disconnection is to create
+an additional connection and wait for a notification from the OS that this
+connection has something to say: only then you can run some checks. You
+can dedicate a thread (or an asyncio task) to wait on this connection: such
+thread will perform no activity until awaken by the OS.
 
 In a normal (non asyncio) program you can use the `selectors` module. Because
 the `!Connection` implements a `~Connection.fileno()` method you can just
