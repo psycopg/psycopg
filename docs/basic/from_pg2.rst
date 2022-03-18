@@ -160,8 +160,9 @@ array::
 
     >>> conn.execute("SELECT * FROM foo WHERE id = ANY(%s)", [[10,20,30]])
 
-Note that this variant is also superior because, unlike :sql:`IN`, it works
-with an empty list of values.
+Note that `ANY()` can be used with ``psycopg2`` too, and has the advantage of
+accepting an empty list of values too as argument, which is not supported by
+the :sql:`IN` operator instead.
 
 .. __: https://www.postgresql.org/docs/current/functions-comparisons.html
     #id-1.5.8.30.16
