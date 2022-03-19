@@ -47,7 +47,7 @@ async def resolve_hostaddr_async(params: Dict[str, Any]) -> Dict[str, Any]:
     addresses dynamically.
 
     The function may change the input ``host``, ``hostname``, ``port`` to allow
-    to connect without further DNS lookups, eventually removing hosts that are
+    connecting without further DNS lookups, eventually removing hosts that are
     not resolved, keeping the lists of hosts and ports consistent.
 
     Raise `~psycopg.OperationalError` if connection is not possible (e.g. no
@@ -95,13 +95,13 @@ async def resolve_hostaddr_async(params: Dict[str, Any]) -> Dict[str, Any]:
 
     hosts_out = []
     hostaddr_out = []
-    for i, host in enumerate(hosts_in):
+    for index, host in enumerate(hosts_in):
         if not host or host.startswith("/") or host[1:2] == ":":
             # Local path
             hosts_out.append(host)
             hostaddr_out.append("")
             if ports_in:
-                ports_out.append(ports_in[i])
+                ports_out.append(ports_in[index])
             continue
 
         # If the host is already an ip address don't try to resolve it
@@ -109,7 +109,7 @@ async def resolve_hostaddr_async(params: Dict[str, Any]) -> Dict[str, Any]:
             hosts_out.append(host)
             hostaddr_out.append(host)
             if ports_in:
-                ports_out.append(ports_in[i])
+                ports_out.append(ports_in[index])
             continue
 
         try:
@@ -122,7 +122,7 @@ async def resolve_hostaddr_async(params: Dict[str, Any]) -> Dict[str, Any]:
                 hosts_out.append(host)
                 hostaddr_out.append("127.0.0.1")
                 if ports_in:
-                    ports_out.append(ports_in[i])
+                    ports_out.append(ports_in[index])
             else:
                 last_exc = ex
         else:
@@ -130,7 +130,7 @@ async def resolve_hostaddr_async(params: Dict[str, Any]) -> Dict[str, Any]:
                 hosts_out.append(host)
                 hostaddr_out.append(rdata.address)
                 if ports_in:
-                    ports_out.append(ports_in[i])
+                    ports_out.append(ports_in[index])
 
     # Throw an exception if no host could be resolved
     if not hosts_out:
@@ -175,7 +175,7 @@ async def resolve_srv_async(params: Dict[str, Any]) -> Dict[str, Any]:
 class HostPort(NamedTuple):
     host: str
     port: str
-    totry: bool = False
+    to_try: bool = False
     target: Optional[str] = None
 
 
@@ -194,14 +194,14 @@ class Rfc2782Resolver:
         if not attempts:
             return params
 
-        hps = []
-        for hp in attempts:
-            if hp.totry:
-                hps.extend(self._resolve_srv(hp))
+        host_ports = []
+        for host_port in attempts:
+            if host_port.to_try:
+                host_ports.extend(self._resolve_srv(host_port))
             else:
-                hps.append(hp)
+                host_ports.append(host_port)
 
-        return self._return_params(params, hps)
+        return self._return_params(params, host_ports)
 
     async def resolve_async(self, params: Dict[str, Any]) -> Dict[str, Any]:
         """Update the parameters host and port after SRV lookup."""
@@ -211,7 +211,7 @@ class Rfc2782Resolver:
 
         hps = []
         for hp in attempts:
-            if hp.totry:
+            if hp.to_try:
                 hps.extend(await self._resolve_srv_async(hp))
             else:
                 hps.append(hp)
@@ -250,7 +250,7 @@ class Rfc2782Resolver:
             if m or port.lower() == "srv":
                 srv_found = True
                 target = m.group("target") if m else None
-                hp = HostPort(host=host, port=port, totry=True, target=target)
+                hp = HostPort(host=host, port=port, to_try=True, target=target)
             else:
                 hp = HostPort(host=host, port=port)
             out.append(hp)
@@ -272,7 +272,7 @@ class Rfc2782Resolver:
         return self._get_solved_entries(hp, ans)
 
     def _get_solved_entries(
-        self, hp: HostPort, entries: "Sequence[SRV]"
+            self, hp: HostPort, entries: "Sequence[SRV]"
     ) -> List[HostPort]:
         if not entries:
             # No SRV entry found. Delegate the libpq a QNAME=target lookup
@@ -291,19 +291,21 @@ class Rfc2782Resolver:
             for entry in self.sort_rfc2782(entries)
         ]
 
+    @staticmethod
     def _return_params(
-        self, params: Dict[str, Any], hps: List[HostPort]
+            params: Dict[str, Any], host_ports: List[HostPort]
     ) -> Dict[str, Any]:
-        if not hps:
+        if not host_ports:
             # Nothing found, we ended up with an empty list
             raise e.OperationalError("no host found after SRV RR lookup")
 
         out = params.copy()
-        out["host"] = ",".join(hp.host for hp in hps)
-        out["port"] = ",".join(str(hp.port) for hp in hps)
+        out["host"] = ",".join(host_port.host for host_port in host_ports)
+        out["port"] = ",".join(str(hp.port) for hp in host_ports)
         return out
 
-    def sort_rfc2782(self, ans: "Sequence[SRV]") -> "List[SRV]":
+    @staticmethod
+    def sort_rfc2782(ans: "Sequence[SRV]") -> "List[SRV]":
         """
         Implement the priority/weight ordering defined in RFC 2782.
         """
@@ -323,22 +325,23 @@ class Rfc2782Resolver:
             while entries:
                 r = randint(0, total_weight)
                 csum = 0
-                for i, ent in enumerate(entries):
+                index = 0
+                for index, ent in enumerate(entries):
                     csum += ent.weight
                     if csum >= r:
                         break
                 out.append(ent)
                 total_weight -= ent.weight
-                del entries[i]
+                del entries[index]
 
         return out
 
 
 @lru_cache()
-def is_ip_address(s: str) -> bool:
+def is_ip_address(ip: str) -> bool:
     """Return True if the string represent a valid ip address."""
     try:
-        ip_address(s)
+        ip_address(ip)
     except ValueError:
         return False
     return True
