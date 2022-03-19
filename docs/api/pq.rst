@@ -88,6 +88,8 @@ Objects wrapping libpq structures and functions
 
     .. autoattribute:: pgconn_ptr
     .. automethod:: get_cancel
+    .. autoattribute:: needs_password
+    .. autoattribute:: used_password
 
 
 .. autoclass:: PGresult()

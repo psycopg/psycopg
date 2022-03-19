@@ -19,10 +19,10 @@ DBAPI-defined Exceptions are defined in the following hierarchy::
 # Copyright (C) 2020 The Psycopg Team
 
 from typing import Any, Dict, Optional, Sequence, Tuple, Type, Union
-from typing import cast
 
-from psycopg.pq.abc import PGresult
-from psycopg.pq._enums import DiagnosticField
+from .pq.abc import PGconn, PGresult
+from .pq._enums import DiagnosticField
+from ._compat import TypeGuard
 
 ErrorInfo = Union[None, PGresult, Dict[int, Optional[bytes]]]
 
@@ -54,15 +54,36 @@ class Error(Exception):
     sqlstate: Optional[str] = None
 
     def __init__(
-        self, *args: Sequence[Any], info: ErrorInfo = None, encoding: str = "utf-8"
+        self,
+        *args: Sequence[Any],
+        info: ErrorInfo = None,
+        encoding: str = "utf-8",
+        pgconn: Optional[PGconn] = None
     ):
         super().__init__(*args)
         self._info = info
         self._encoding = encoding
+        self._pgconn = pgconn
 
         # Handle sqlstate codes for which we don't have a class.
         if not self.sqlstate and info:
             self.sqlstate = self.diag.sqlstate
+
+    @property
+    def pgconn(self) -> Optional[PGconn]:
+        """The connection object, if the error was raised from a connection attempt.
+
+        :rtype: Optional[psycopg.pq.PGconn]
+        """
+        return self._pgconn if self._pgconn else None
+
+    @property
+    def pgresult(self) -> Optional[PGresult]:
+        """The result object, if the exception was raised after a failed query.
+
+        :rtype: Optional[psycopg.pq.PGresult]
+        """
+        return self._info if _is_pgresult(self._info) else None
 
     @property
     def diag(self) -> "Diagnostic":
@@ -74,21 +95,11 @@ class Error(Exception):
     def __reduce__(self) -> Union[str, Tuple[Any, ...]]:
         res = super().__reduce__()
         if isinstance(res, tuple) and len(res) >= 3:
-            res[2]["_info"] = self._info_to_dict(self._info)
+            # To make the exception picklable
+            res[2]["_info"] = _info_to_dict(self._info)
+            res[2]["_pgconn"] = None
 
         return res
-
-    @classmethod
-    def _info_to_dict(cls, info: ErrorInfo) -> ErrorInfo:
-        """
-        Convert a PGresult to a dictionary to make the info picklable.
-        """
-        # PGresult is a protocol, can't use isinstance
-        if hasattr(info, "error_field"):
-            info = cast(PGresult, info)
-            return {v: info.error_field(v) for v in DiagnosticField}
-        else:
-            return info
 
 
 class InterfaceError(Error):
@@ -277,9 +288,20 @@ class Diagnostic:
     def __reduce__(self) -> Union[str, Tuple[Any, ...]]:
         res = super().__reduce__()
         if isinstance(res, tuple) and len(res) >= 3:
-            res[2]["_info"] = Error._info_to_dict(self._info)
+            res[2]["_info"] = _info_to_dict(self._info)
 
         return res
+
+
+def _info_to_dict(info: ErrorInfo) -> ErrorInfo:
+    """
+    Convert a PGresult to a dictionary to make the info picklable.
+    """
+    # PGresult is a protocol, can't use isinstance
+    if _is_pgresult(info):
+        return {v: info.error_field(v) for v in DiagnosticField}
+    else:
+        return info
 
 
 def lookup(sqlstate: str) -> Type[Error]:
@@ -303,6 +325,12 @@ def error_from_result(result: PGresult, encoding: str = "utf-8") -> Error:
         info=result,
         encoding=encoding,
     )
+
+
+def _is_pgresult(info: ErrorInfo) -> TypeGuard[PGresult]:
+    """Return True if an ErrorInfo is a PGresult instance."""
+    # PGresult is a protocol, can't use isinstance
+    return hasattr(info, "error_field")
 
 
 def _class_for_state(sqlstate: str) -> Type[Error]:

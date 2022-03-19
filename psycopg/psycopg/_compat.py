@@ -34,10 +34,16 @@ else:
     from backports.zoneinfo import ZoneInfo
     from typing import Counter, Deque
 
+if sys.version_info >= (3, 10):
+    from typing import TypeGuard
+else:
+    from typing_extensions import TypeGuard
+
 __all__ = [
     "Counter",
     "Deque",
     "Protocol",
+    "TypeGuard",
     "ZoneInfo",
     "create_task",
 ]
