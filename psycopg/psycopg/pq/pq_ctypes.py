@@ -240,10 +240,19 @@ class PGconn:
 
     @property
     def needs_password(self) -> bool:
+        """True if the connection authentication method required a password,
+        but none was available.
+
+        See :pq:`PQconnectionNeedsPassword` for details.
+        """
         return bool(impl.PQconnectionNeedsPassword(self._pgconn_ptr))
 
     @property
     def used_password(self) -> bool:
+        """True if the connection authentication method used a password.
+
+        See :pq:`PQconnectionUsedPassword` for details.
+        """
         return bool(impl.PQconnectionUsedPassword(self._pgconn_ptr))
 
     @property
