@@ -176,8 +176,16 @@ class RangeInfo(TypeInfo):
 
     __module__ = "psycopg.types.range"
 
-    def __init__(self, name: str, oid: int, array_oid: int, subtype_oid: int):
-        super().__init__(name, oid, array_oid)
+    def __init__(
+        self,
+        name: str,
+        oid: int,
+        array_oid: int,
+        *,
+        alt_name: str = "",
+        subtype_oid: int,
+    ):
+        super().__init__(name, oid, array_oid, alt_name=alt_name)
         self.subtype_oid = subtype_oid
 
     @classmethod
@@ -186,6 +194,7 @@ class RangeInfo(TypeInfo):
     ) -> str:
         return """\
 SELECT t.typname AS name, t.oid AS oid, t.typarray AS array_oid,
+    t.oid::regtype::text AS alt_name,
     r.rngsubtype AS subtype_oid
 FROM pg_type t
 JOIN pg_range r ON t.oid = r.rngtypid
@@ -208,10 +217,12 @@ class MultirangeInfo(TypeInfo):
         name: str,
         oid: int,
         array_oid: int,
+        *,
+        alt_name: str = "",
         range_oid: int,
         subtype_oid: int,
     ):
-        super().__init__(name, oid, array_oid)
+        super().__init__(name, oid, array_oid, alt_name=alt_name)
         self.range_oid = range_oid
         self.subtype_oid = subtype_oid
 
@@ -225,6 +236,7 @@ class MultirangeInfo(TypeInfo):
             )
         return """\
 SELECT t.typname AS name, t.oid AS oid, t.typarray AS array_oid,
+    t.oid::regtype::text AS alt_name,
     r.rngtypid AS range_oid, r.rngsubtype AS subtype_oid
 FROM pg_type t
 JOIN pg_range r ON t.oid = r.rngmultitypid
@@ -247,10 +259,12 @@ class CompositeInfo(TypeInfo):
         name: str,
         oid: int,
         array_oid: int,
+        *,
+        alt_name: str = "",
         field_names: Sequence[str],
         field_types: Sequence[int],
     ):
-        super().__init__(name, oid, array_oid)
+        super().__init__(name, oid, array_oid, alt_name=alt_name)
         self.field_names = field_names
         self.field_types = field_types
         # Will be set by register() if the `factory` is a type
@@ -263,6 +277,7 @@ class CompositeInfo(TypeInfo):
         return """\
 SELECT
     t.typname AS name, t.oid AS oid, t.typarray AS array_oid,
+    t.oid::regtype::text AS alt_name,
     coalesce(a.fnames, '{}') AS field_names,
     coalesce(a.ftypes, '{}') AS field_types
 FROM pg_type t
