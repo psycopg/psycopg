@@ -236,6 +236,9 @@ class Transformer(Protocol):
     ) -> Sequence[Optional[Buffer]]:
         ...
 
+    def as_literal(self, obj: Any) -> Buffer:
+        ...
+
     def get_dumper(self, obj: Any, format: PyFormat) -> Dumper:
         ...
 

@@ -95,6 +95,8 @@ cdef class Transformer:
     cdef list _row_dumpers
     cdef list _row_loaders
 
+    cdef dict _oid_types
+
     def __cinit__(self, context: Optional["AdaptContext"] = None):
         if context is not None:
             self.adapters = context.adapters
@@ -201,6 +203,40 @@ cdef class Transformer:
             PyList_SET_ITEM(loaders, i, <object>row_loader)
 
         self._row_loaders = loaders
+
+    cpdef as_literal(self, obj):
+        cdef PyObject *row_dumper = self.get_row_dumper(
+            <PyObject *>obj, <PyObject *>PG_TEXT)
+
+        if (<RowDumper>row_dumper).cdumper is not None:
+            dumper = (<RowDumper>row_dumper).cdumper
+        else:
+            dumper = (<RowDumper>row_dumper).pydumper
+
+        rv = dumper.quote(obj)
+        oid = dumper.oid
+        # If the result is quoted and the oid not unknown,
+        # add an explicit type cast.
+        # Check the last char because the first one might be 'E'.
+        if oid and rv and rv[-1] == 39:
+            if self._oid_types is None:
+                self._oid_types = {}
+            type_ptr = PyDict_GetItem(<object>self._oid_types, oid)
+            if type_ptr == NULL:
+                type_sql = b""
+                ti = self.adapters.types.get(oid)
+                if ti is not None:
+                    type_sql = ti.regtype.encode(self.encoding)
+                    if oid == ti.array_oid:
+                        type_sql += b"[]"
+
+                type_ptr = <PyObject *>type_sql
+                PyDict_SetItem(<object>self._oid_types, oid, type_sql)
+
+            if <object>type_ptr:
+                rv = b"%s::%s" % (rv, <object>type_ptr)
+
+        return rv
 
     def get_dumper(self, obj, format) -> "Dumper":
         cdef PyObject *row_dumper = self.get_row_dumper(

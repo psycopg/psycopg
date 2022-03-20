@@ -76,6 +76,9 @@ class Transformer(AdaptContext):
         # the length of the result columns
         self._row_loaders: List[LoadFunc] = []
 
+        # mapping oid -> type sql representation
+        self._oid_types: Dict[int, bytes] = {}
+
         self._encoding = ""
 
     @classmethod
@@ -180,6 +183,30 @@ class Transformer(AdaptContext):
         self.formats = pqformats
 
         return out
+
+    def as_literal(self, obj: Any) -> Buffer:
+        dumper = self.get_dumper(obj, PyFormat.TEXT)
+        rv = dumper.quote(obj)
+        # If the result is quoted, and the oid not unknown,
+        # add an explicit type cast.
+        # Check the last char because the first one might be 'E'.
+        if dumper.oid and rv and rv[-1] == b"'"[0]:
+            try:
+                type_sql = self._oid_types[dumper.oid]
+            except KeyError:
+                ti = self.adapters.types.get(dumper.oid)
+                if ti:
+                    type_sql = ti.regtype.encode(self.encoding)
+                    if dumper.oid == ti.array_oid:
+                        type_sql += b"[]"
+                else:
+                    type_sql = b""
+                self._oid_types[dumper.oid] = type_sql
+
+            if type_sql:
+                rv = b"%s::%s" % (rv, type_sql)
+
+        return rv
 
     def get_dumper(self, obj: Any, format: PyFormat) -> "Dumper":
         """

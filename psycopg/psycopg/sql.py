@@ -7,8 +7,7 @@ SQL composition utility module
 import codecs
 import string
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Iterator, Iterable, List
-from typing import Optional, Sequence, Union, Tuple
+from typing import Any, Iterator, Iterable, List, Optional, Sequence, Union
 
 from .pq import Escaping
 from .abc import AdaptContext
@@ -390,26 +389,9 @@ class Literal(Composable):
 
     """
 
-    _names_cache: Dict[Tuple[str, str], bytes] = {}
-
     def as_bytes(self, context: Optional[AdaptContext]) -> bytes:
         tx = Transformer.from_context(context)
-        dumper = tx.get_dumper(self._obj, PyFormat.TEXT)
-        rv = dumper.quote(self._obj)
-        # If the result is quoted and the oid not unknown,
-        # add an explicit type cast.
-        if rv[-1] == b"'"[0] and dumper.oid:
-            ti = tx.adapters.types.get(dumper.oid)
-            if ti:
-                try:
-                    type_name = self._names_cache[ti.regtype, tx.encoding]
-                except KeyError:
-                    type_name = ti.regtype.encode(tx.encoding)
-                    self._names_cache[ti.regtype, tx.encoding] = type_name
-                if dumper.oid == ti.array_oid:
-                    type_name += b"[]"
-                rv = b"%s::%s" % (rv, type_name)
-        return rv
+        return tx.as_literal(self._obj)
 
 
 class Placeholder(Composable):
