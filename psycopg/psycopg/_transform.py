@@ -190,18 +190,23 @@ class Transformer(AdaptContext):
         # If the result is quoted, and the oid not unknown,
         # add an explicit type cast.
         # Check the last char because the first one might be 'E'.
-        if dumper.oid and rv and rv[-1] == b"'"[0]:
+        oid = dumper.oid
+        if oid and rv and rv[-1] == b"'"[0]:
             try:
-                type_sql = self._oid_types[dumper.oid]
+                type_sql = self._oid_types[oid]
             except KeyError:
-                ti = self.adapters.types.get(dumper.oid)
+                ti = self.adapters.types.get(oid)
                 if ti:
-                    type_sql = ti.regtype.encode(self.encoding)
-                    if dumper.oid == ti.array_oid:
+                    if oid < 8192:
+                        # builtin: prefer "timestamptz" to "timestamp with time zone"
+                        type_sql = ti.name.encode(self.encoding)
+                    else:
+                        type_sql = ti.regtype.encode(self.encoding)
+                    if oid == ti.array_oid:
                         type_sql += b"[]"
                 else:
                     type_sql = b""
-                self._oid_types[dumper.oid] = type_sql
+                self._oid_types[oid] = type_sql
 
             if type_sql:
                 rv = b"%s::%s" % (rv, type_sql)

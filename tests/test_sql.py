@@ -345,7 +345,18 @@ class TestLiteral:
             == "'{2000-01-01}'::date[]"
         )
 
-    @pytest.mark.parametrize("name", ["a-b", f"{eur}", "order"])
+    def test_short_name_builtin(self, conn):
+        assert sql.Literal(dt.time(0, 0)).as_string(conn) == "'00:00:00'::time"
+        assert (
+            sql.Literal(dt.datetime(2000, 1, 1)).as_string(conn)
+            == "'2000-01-01 00:00:00'::timestamp"
+        )
+        assert (
+            sql.Literal([dt.datetime(2000, 1, 1)]).as_string(conn)
+            == "'{\"2000-01-01 00:00:00\"}'::timestamp[]"
+        )
+
+    @pytest.mark.parametrize("name", ["a-b", f"{eur}", "order", "foo bar"])
     def test_invalid_name(self, conn, name):
         conn.execute(
             f"""

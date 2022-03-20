@@ -226,7 +226,11 @@ cdef class Transformer:
                 type_sql = b""
                 ti = self.adapters.types.get(oid)
                 if ti is not None:
-                    type_sql = ti.regtype.encode(self.encoding)
+                    if oid < 8192:
+                        # builtin: prefer "timestamptz" to "timestamp with time zone"
+                        type_sql = ti.name.encode(self.encoding)
+                    else:
+                        type_sql = ti.regtype.encode(self.encoding)
                     if oid == ti.array_oid:
                         type_sql += b"[]"
 
