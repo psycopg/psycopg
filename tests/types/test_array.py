@@ -244,3 +244,34 @@ def test_load_array_no_comma_separator(conn):
     cur = conn.execute("select '{(2,2),(1,1);(5,6),(3,4)}'::box[]")
     # Not parsed at the moment, but split ok on ; separator
     assert cur.fetchone()[0] == ["(2,2),(1,1)", "(5,6),(3,4)"]
+
+
+@pytest.mark.parametrize("fmt_out", pq.Format)
+@pytest.mark.parametrize(
+    "obj, want",
+    [
+        ("'[0:1]={a,b}'::text[]", ["a", "b"]),
+        ("'[1:1][-2:-1][3:5]={{{1,2,3},{4,5,6}}}'::int[]", [[[1, 2, 3], [4, 5, 6]]]),
+    ],
+)
+def test_array_with_bounds(conn, obj, want, fmt_out):
+    got = conn.execute(f"select {obj}", binary=fmt_out).fetchone()[0]
+    assert got == want
+
+
+@pytest.mark.parametrize("fmt_out", pq.Format)
+def test_all_chars_with_bounds(conn, fmt_out):
+    cur = conn.cursor(binary=fmt_out)
+    for i in range(1, 256):
+        c = chr(i)
+        cur.execute("select '[0:1]={a,b}'::text[] || %s::text[]", ([c],))
+        assert cur.fetchone()[0] == ["a", "b", c]
+
+    a = list(map(chr, range(1, 256)))
+    a.append("\u20ac")
+    cur.execute("select '[0:1]={a,b}'::text[] || %s::text[]", (a,))
+    assert cur.fetchone()[0] == ["a", "b"] + a
+
+    s = "".join(a)
+    cur.execute("select '[0:1]={a,b}'::text[] || %s::text[]", ([s],))
+    assert cur.fetchone()[0] == ["a", "b", s]

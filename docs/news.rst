@@ -7,6 +7,15 @@
 ``psycopg`` release notes
 =========================
 
+Future releases
+---------------
+
+Psycopg 3.0.11
+^^^^^^^^^^^^^^
+
+- Fix `DataError` loading arrays with dimensions information (:ticket:`#253`).
+
+
 Current release
 ---------------
 

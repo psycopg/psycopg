@@ -323,6 +323,15 @@ class ArrayLoader(BaseArrayLoader):
         stack: List[Any] = []
         cast = self._tx.get_loader(self.base_oid, self.format).load
 
+        # Remove the dimensions information prefix (``[...]=``)
+        if data and data[0] == b"["[0]:
+            if isinstance(data, memoryview):
+                data = bytes(data)
+            idx = data.find(b"=")
+            if idx == -1:
+                raise e.DataError("malformed array, no '=' after dimension information")
+            data = data[idx + 1 :]
+
         re_parse = _get_array_parse_regexp(self.delimiter)
         for m in re_parse.finditer(data):
             t = m.group(1)
