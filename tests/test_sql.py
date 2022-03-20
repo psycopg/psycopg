@@ -339,6 +339,12 @@ class TestLiteral:
         with pytest.raises(ProgrammingError):
             sql.Literal(Foo()).as_string(conn)
 
+    def test_array(self, conn):
+        assert (
+            sql.Literal([dt.date(2000, 1, 1)]).as_string(conn)
+            == "'{2000-01-01}'::date[]"
+        )
+
     @pytest.mark.parametrize("name", ["a-b", f"{eur}", "order"])
     def test_invalid_name(self, conn, name):
         conn.execute(
@@ -367,6 +373,12 @@ class TestLiteral:
         assert sql.Literal("hello").as_string(conn) == f"'hello-inv'::\"{name}\""
         cur = conn.execute(sql.SQL("select {}").format("hello"))
         assert cur.fetchone()[0] == "hello-inv"
+
+        assert (
+            sql.Literal(["hello"]).as_string(conn) == f"'{{hello-inv}}'::\"{name}\"[]"
+        )
+        cur = conn.execute(sql.SQL("select {}").format(["hello"]))
+        assert cur.fetchone()[0] == ["hello-inv"]
 
 
 class TestSQL:

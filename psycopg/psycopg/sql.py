@@ -406,6 +406,8 @@ class Literal(Composable):
                 except KeyError:
                     type_name = ti.regtype.encode(tx.encoding)
                     self._names_cache[ti.regtype, tx.encoding] = type_name
+                if dumper.oid == ti.array_oid:
+                    type_name += b"[]"
                 rv = b"%s::%s" % (rv, type_name)
         return rv
 
