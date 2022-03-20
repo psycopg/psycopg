@@ -8,6 +8,8 @@ from psycopg.types.range import Range
 from psycopg.types.composite import CompositeInfo, register_composite
 from psycopg.types.composite import TupleDumper, TupleBinaryDumper
 
+eur = "\u20ac"
+
 tests_str = [
     ("", ()),
     # Funnily enough there's no way to represent (None,) in Postgres
@@ -324,3 +326,22 @@ def test_callable_dumper_not_registered(conn, testcomp):
 def test_no_info_error(conn):
     with pytest.raises(TypeError, match="composite"):
         register_composite(None, conn)  # type: ignore[arg-type]
+
+
+def test_invalid_fields_names(conn):
+    conn.execute("set client_encoding to utf8")
+    conn.execute(
+        f"""
+        create type "a-b" as ("c-d" text, "{eur}" int);
+        create type "-x-{eur}" as ("w-ww" "a-b", "0" int);
+        """
+    )
+    ab = CompositeInfo.fetch(conn, '"a-b"')
+    x = CompositeInfo.fetch(conn, f'"-x-{eur}"')
+    register_composite(ab, conn)
+    register_composite(x, conn)
+    obj = x.python_type(ab.python_type("foo", 10), 20)
+    conn.execute(f"""create table meh (wat "-x-{eur}")""")
+    conn.execute("insert into meh values (%s)", [obj])
+    got = conn.execute("select wat from meh").fetchone()[0]
+    assert obj == got
