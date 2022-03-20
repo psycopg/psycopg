@@ -32,7 +32,7 @@ select
         oid::text,
         typarray::text,
         case when oid::regtype::text != typname
-            then format('alt_name=%L', oid::regtype)
+            then format('regtype=%L', oid::regtype)
         end,
         case when typdelim != ','
             then format('delimiter=%L', typdelim)

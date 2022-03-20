@@ -402,10 +402,10 @@ class Literal(Composable):
             ti = tx.adapters.types.get(dumper.oid)
             if ti:
                 try:
-                    type_name = self._names_cache[ti.alt_name, tx.encoding]
+                    type_name = self._names_cache[ti.regtype, tx.encoding]
                 except KeyError:
-                    type_name = ti.alt_name.encode(tx.encoding)
-                    self._names_cache[ti.alt_name, tx.encoding] = type_name
+                    type_name = ti.regtype.encode(tx.encoding)
+                    self._names_cache[ti.regtype, tx.encoding] = type_name
                 rv = b"%s::%s" % (rv, type_name)
         return rv
 
