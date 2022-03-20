@@ -4,7 +4,6 @@ psycopg row factories
 
 # Copyright (C) 2021 The Psycopg Team
 
-import re
 import functools
 from typing import Any, Callable, Dict, NamedTuple, NoReturn, Sequence, Tuple
 from typing import TYPE_CHECKING, Type, TypeVar
@@ -12,6 +11,7 @@ from collections import namedtuple
 
 from . import errors as e
 from ._compat import Protocol, TypeAlias
+from ._encodings import _as_python_identifier
 
 if TYPE_CHECKING:
     from .cursor import BaseCursor, Cursor
@@ -138,20 +138,11 @@ def namedtuple_row(
     return nt._make
 
 
-# ascii except alnum and underscore
-_re_clean = re.compile("[" + re.escape(" !\"#$%&'()*+,-./:;<=>?@[\\]^`{|}~") + "]")
-
-
 @functools.lru_cache(512)
 def _make_nt(*key: str) -> Type[NamedTuple]:
     fields = []
     for s in key:
-        s = _re_clean.sub("_", s)
-        # Python identifier cannot start with numbers, namedtuple fields
-        # cannot start with underscore. So...
-        if s[0] == "_" or "0" <= s[0] <= "9":
-            s = "f" + s
-        fields.append(s)
+        fields.append(_as_python_identifier(s))
     return namedtuple("Row", fields)  # type: ignore[return-value]
 
 
