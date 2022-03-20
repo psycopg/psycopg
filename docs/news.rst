@@ -7,7 +7,7 @@
 ``psycopg`` release notes
 =========================
 
-Current release
+Future releases
 ---------------
 
 Psycopg 3.1 (unreleased)
@@ -21,6 +21,15 @@ Psycopg 3.1 (unreleased)
 - Add `Error.pgconn` and `Error.pgresult` attributes (:ticket:`#242`).
 - Drop support for Python 3.6.
 
+
+Psycopg 3.0.11 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Fix `DataError` loading arrays with dimensions information (:ticket:`#253`).
+
+
+Current release
+---------------
 
 Psycopg 3.0.10
 ^^^^^^^^^^^^^^
