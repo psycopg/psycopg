@@ -395,7 +395,7 @@ class Literal(Composable):
         rv = dumper.quote(self._obj)
         # If the result is quoted and the oid not unknown,
         # add an explicit type cast.
-        if rv[-1] == 39 and dumper.oid:
+        if rv[-1] == b"'"[0] and dumper.oid:
             ti = tx.adapters.types.get(dumper.oid)
             if ti:
                 # TODO: ugly encoding just to be decoded by as_string()
