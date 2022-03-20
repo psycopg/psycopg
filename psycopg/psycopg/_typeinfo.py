@@ -36,13 +36,14 @@ class TypeInfo:
         name: str,
         oid: int,
         array_oid: int,
+        *,
         alt_name: str = "",
         delimiter: str = ",",
     ):
         self.name = name
         self.oid = oid
         self.array_oid = array_oid
-        self.alt_name = alt_name
+        self.alt_name = alt_name or name
         self.delimiter = delimiter
 
     def __repr__(self) -> str:

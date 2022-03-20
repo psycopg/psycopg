@@ -10,6 +10,8 @@ import pytest
 from psycopg import pq, sql, ProgrammingError
 from psycopg.adapt import PyFormat
 from psycopg._encodings import py2pgenc
+from psycopg.types import TypeInfo
+from psycopg.types.string import StrDumper
 
 eur = "\u20ac"
 
@@ -336,6 +338,35 @@ class TestLiteral:
 
         with pytest.raises(ProgrammingError):
             sql.Literal(Foo()).as_string(conn)
+
+    @pytest.mark.parametrize("name", ["a-b", f"{eur}", "order"])
+    def test_invalid_name(self, conn, name):
+        conn.execute(
+            f"""
+            set client_encoding to utf8;
+            create type "{name}";
+            create function invin(cstring) returns "{name}"
+                language internal immutable strict as 'textin';
+            create function invout("{name}") returns cstring
+                language internal immutable strict as 'textout';
+            create type "{name}" (input=invin, output=invout, like=text);
+            """
+        )
+        info = TypeInfo.fetch(conn, f'"{name}"')
+
+        class InvDumper(StrDumper):
+            oid = info.oid
+
+            def dump(self, obj):
+                rv = super().dump(obj)
+                return b"%s-inv" % rv
+
+        info.register(conn)
+        conn.adapters.register_dumper(str, InvDumper)
+
+        assert sql.Literal("hello").as_string(conn) == f"'hello-inv'::\"{name}\""
+        cur = conn.execute(sql.SQL("select {}").format("hello"))
+        assert cur.fetchone()[0] == "hello-inv"
 
 
 class TestSQL:

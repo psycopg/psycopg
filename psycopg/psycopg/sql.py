@@ -7,7 +7,8 @@ SQL composition utility module
 import codecs
 import string
 from abc import ABC, abstractmethod
-from typing import Any, Iterator, Iterable, List, Optional, Sequence, Union
+from typing import Any, Dict, Iterator, Iterable, List
+from typing import Optional, Sequence, Union, Tuple
 
 from .pq import Escaping
 from .abc import AdaptContext
@@ -389,6 +390,8 @@ class Literal(Composable):
 
     """
 
+    _names_cache: Dict[Tuple[str, str], bytes] = {}
+
     def as_bytes(self, context: Optional[AdaptContext]) -> bytes:
         tx = Transformer.from_context(context)
         dumper = tx.get_dumper(self._obj, PyFormat.TEXT)
@@ -398,8 +401,12 @@ class Literal(Composable):
         if rv[-1] == b"'"[0] and dumper.oid:
             ti = tx.adapters.types.get(dumper.oid)
             if ti:
-                # TODO: ugly encoding just to be decoded by as_string()
-                rv = b"%s::%s" % (rv, ti.name.encode(tx.encoding))
+                try:
+                    type_name = self._names_cache[ti.alt_name, tx.encoding]
+                except KeyError:
+                    type_name = ti.alt_name.encode(tx.encoding)
+                    self._names_cache[ti.alt_name, tx.encoding] = type_name
+                rv = b"%s::%s" % (rv, type_name)
         return rv
 
 
