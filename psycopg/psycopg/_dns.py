@@ -272,7 +272,7 @@ class Rfc2782Resolver:
         return self._get_solved_entries(hp, ans)
 
     def _get_solved_entries(
-            self, hp: HostPort, entries: "Sequence[SRV]"
+        self, hp: HostPort, entries: "Sequence[SRV]"
     ) -> List[HostPort]:
         if not entries:
             # No SRV entry found. Delegate the libpq a QNAME=target lookup
@@ -293,7 +293,7 @@ class Rfc2782Resolver:
 
     @staticmethod
     def _return_params(
-            params: Dict[str, Any], host_ports: List[HostPort]
+        params: Dict[str, Any], host_ports: List[HostPort]
     ) -> Dict[str, Any]:
         if not host_ports:
             # Nothing found, we ended up with an empty list
