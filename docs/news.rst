@@ -26,6 +26,7 @@ Psycopg 3.0.11 (unreleased)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 - Fix `DataError` loading arrays with dimensions information (:ticket:`#253`).
+- Fix error propagation from COPY worker thread (mentioned in :ticket:`#255`).
 
 
 Current release

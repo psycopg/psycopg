@@ -182,6 +182,7 @@ class Copy(BaseCopy["Connection[Any]"]):
         super().__init__(cursor)
         self._queue: queue.Queue[bytes] = queue.Queue(maxsize=self.QUEUE_SIZE)
         self._worker: Optional[threading.Thread] = None
+        self._worker_error: Optional[BaseException] = None
 
     def __enter__(self) -> "Copy":
         self._enter()
@@ -270,15 +271,20 @@ class Copy(BaseCopy["Connection[Any]"]):
     def worker(self) -> None:
         """Push data to the server when available from the copy queue.
 
-        Terminate reading when the queue receives a None.
+        Terminate reading when the queue receives a false-y value, or in case
+        of error.
 
         The function is designed to be run in a separate thread.
         """
-        while True:
-            data = self._queue.get(block=True, timeout=24 * 60 * 60)
-            if not data:
-                break
-            self.connection.wait(copy_to(self._pgconn, data))
+        try:
+            while True:
+                data = self._queue.get(block=True, timeout=24 * 60 * 60)
+                if not data:
+                    break
+                self.connection.wait(copy_to(self._pgconn, data))
+        except BaseException as ex:
+            # Propagate the error to the main thread.
+            self._worker_error = ex
 
     def _write(self, data: bytes) -> None:
         if not data:
@@ -290,6 +296,10 @@ class Copy(BaseCopy["Connection[Any]"]):
             self._worker.daemon = True
             self._worker.start()
 
+        # If the worker thread raies an exception, re-raise it to the caller.
+        if self._worker_error:
+            raise self._worker_error
+
         self._queue.put(data)
 
     def _write_end(self) -> None:
@@ -300,6 +310,10 @@ class Copy(BaseCopy["Connection[Any]"]):
         if self._worker:
             self._worker.join()
             self._worker = None  # break the loop
+
+        # Check if the worker thread raised any exception before terminating.
+        if self._worker_error:
+            raise self._worker_error
 
 
 class AsyncCopy(BaseCopy["AsyncConnection[Any]"]):
@@ -364,7 +378,7 @@ class AsyncCopy(BaseCopy["AsyncConnection[Any]"]):
     async def worker(self) -> None:
         """Push data to the server when available from the copy queue.
 
-        Terminate reading when the queue receives a None.
+        Terminate reading when the queue receives a false-y value.
 
         The function is designed to be run in a separate thread.
         """

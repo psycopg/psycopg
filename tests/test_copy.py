@@ -563,6 +563,19 @@ def test_worker_life(conn, format, buffer):
     assert data == sample_records
 
 
+def test_worker_error_propagated(conn, monkeypatch):
+    def copy_to_broken(pgconn, buffer):
+        raise ZeroDivisionError
+        yield
+
+    monkeypatch.setattr(psycopg.copy, "copy_to", copy_to_broken)
+    cur = conn.cursor()
+    cur.execute("create temp table wat (a text, b text)")
+    with pytest.raises(ZeroDivisionError):
+        with cur.copy("copy wat from stdin") as copy:
+            copy.write("a,b")
+
+
 @pytest.mark.slow
 @pytest.mark.parametrize(
     "fmt, set_types",
