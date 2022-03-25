@@ -51,8 +51,22 @@ class BaseCopy(Generic[ConnectionType]):
     """
 
     # Max size of the write queue of buffers. More than that copy will block
-    # Each buffer around Formatter.BUFFER_SIZE size
+    # Each buffer should be around BUFFER_SIZE size.
     QUEUE_SIZE = 1024
+
+    # Size of data to accumulate before sending it down the network. We fill a
+    # buffer this size field by field, and when it passes the threshold size
+    # wee ship it, so it may end up being bigger than this.
+    BUFFER_SIZE = 32 * 1024
+
+    # Maximum data size we want to queue to send to the libpq copy. Sending a
+    # buffer too big to be handled can cause an infinite loop in the libpq
+    # (#255) so we want to split it in more digestable chunks.
+    MAX_BUFFER_SIZE = 4 * BUFFER_SIZE
+    # Note: making this buffer too large, e.g.
+    # MAX_BUFFER_SIZE = 1024 * 1024
+    # makes operations *way* slower! Probably triggering some quadraticity
+    # in the libpq memory management and data sending.
 
     formatter: "Formatter"
 
@@ -300,7 +314,15 @@ class Copy(BaseCopy["Connection[Any]"]):
         if self._worker_error:
             raise self._worker_error
 
-        self._queue.put(data)
+        if len(data) <= self.MAX_BUFFER_SIZE:
+            # Most used path: we don't need to split the buffer in smaller
+            # bits, so don't make a copy.
+            self._queue.put(data)
+        else:
+            # Copy a buffer too large in chunks to avoid causing a memory
+            # error in the libpq, which may cause an infinite loop (#255).
+            for i in range(0, len(data), self.MAX_BUFFER_SIZE):
+                self._queue.put(data[i : i + self.MAX_BUFFER_SIZE])
 
     def _write_end(self) -> None:
         data = self.formatter.end()
@@ -395,7 +417,15 @@ class AsyncCopy(BaseCopy["AsyncConnection[Any]"]):
         if not self._worker:
             self._worker = create_task(self.worker())
 
-        await self._queue.put(data)
+        if len(data) <= self.MAX_BUFFER_SIZE:
+            # Most used path: we don't need to split the buffer in smaller
+            # bits, so don't make a copy.
+            await self._queue.put(data)
+        else:
+            # Copy a buffer too large in chunks to avoid causing a memory
+            # error in the libpq, which may cause an infinite loop (#255).
+            for i in range(0, len(data), self.MAX_BUFFER_SIZE):
+                await self._queue.put(data[i : i + self.MAX_BUFFER_SIZE])
 
     async def _write_end(self) -> None:
         data = self.formatter.end()
@@ -413,9 +443,7 @@ class Formatter(ABC):
     """
 
     format: pq.Format
-
-    # Size of data to accumulate before sending it down the network
-    BUFFER_SIZE = 32 * 1024
+    BUFFER_SIZE = BaseCopy.BUFFER_SIZE
 
     def __init__(self, transformer: Transformer):
         self.transformer = transformer

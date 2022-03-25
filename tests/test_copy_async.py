@@ -2,6 +2,7 @@ import gc
 import string
 import hashlib
 from io import BytesIO, StringIO
+from random import choice, randrange
 from itertools import cycle
 
 import pytest
@@ -252,6 +253,30 @@ async def test_copy_in_empty(aconn, format):
 
     assert aconn.info.transaction_status == aconn.TransactionStatus.INTRANS
     assert cur.rowcount == 0
+
+
+@pytest.mark.slow
+async def test_copy_big_size_record(aconn):
+    cur = aconn.cursor()
+    await ensure_table(cur, sample_tabledef)
+    data = "".join(chr(randrange(1, 256)) for i in range(10 * 1024 * 1024))
+    async with cur.copy("copy copy_in (data) from stdin") as copy:
+        await copy.write_row([data])
+
+    await cur.execute("select data from copy_in limit 1")
+    assert await cur.fetchone() == (data,)
+
+
+@pytest.mark.slow
+async def test_copy_big_size_block(aconn):
+    cur = aconn.cursor()
+    await ensure_table(cur, sample_tabledef)
+    data = "".join(choice(string.ascii_letters) for i in range(10 * 1024 * 1024))
+    async with cur.copy("copy copy_in (data) from stdin") as copy:
+        await copy.write(data + "\n")
+
+    await cur.execute("select data from copy_in limit 1")
+    assert await cur.fetchone() == (data,)
 
 
 @pytest.mark.parametrize("format", Format)

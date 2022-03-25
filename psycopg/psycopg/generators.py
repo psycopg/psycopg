@@ -201,16 +201,8 @@ def copy_from(pgconn: PGconn) -> PQGen[Union[memoryview, PGresult]]:
 
 
 def copy_to(pgconn: PGconn, buffer: bytes) -> PQGen[None]:
-    # Split the data to send in chunks not larger than 1Mb.
-    #
-    # The libpq docs say to retry on 0. What they don't say is that they return
-    # 0 pretty much only on palloc error, not on socket EWOULDBLOCK. Passing a
-    # block too big will always fail and create an infinite loop (See #255).
-    COPY_BUFFER_SIZE = 2**20
-    for i in range(0, len(buffer), COPY_BUFFER_SIZE):
-        # Retry enqueuing data until successful
-        while pgconn.put_copy_data(buffer[i : i + COPY_BUFFER_SIZE]) == 0:
-            yield Wait.W
+    while pgconn.put_copy_data(buffer) == 0:
+        yield Wait.W
 
 
 def copy_end(pgconn: PGconn, error: Optional[bytes]) -> PQGen[PGresult]:
