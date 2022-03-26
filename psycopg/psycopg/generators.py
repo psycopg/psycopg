@@ -203,7 +203,6 @@ def copy_from(pgconn: PGconn) -> PQGen[Union[memoryview, PGresult]]:
 
 
 def copy_to(pgconn: PGconn, buffer: bytes) -> PQGen[None]:
-    # Retry enqueuing data until successful
     while pgconn.put_copy_data(buffer) == 0:
         yield Wait.W
 

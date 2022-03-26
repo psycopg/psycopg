@@ -51,8 +51,22 @@ class BaseCopy(Generic[ConnectionType]):
     """
 
     # Max size of the write queue of buffers. More than that copy will block
-    # Each buffer around Formatter.BUFFER_SIZE size
+    # Each buffer should be around BUFFER_SIZE size.
     QUEUE_SIZE = 1024
+
+    # Size of data to accumulate before sending it down the network. We fill a
+    # buffer this size field by field, and when it passes the threshold size
+    # wee ship it, so it may end up being bigger than this.
+    BUFFER_SIZE = 32 * 1024
+
+    # Maximum data size we want to queue to send to the libpq copy. Sending a
+    # buffer too big to be handled can cause an infinite loop in the libpq
+    # (#255) so we want to split it in more digestable chunks.
+    MAX_BUFFER_SIZE = 4 * BUFFER_SIZE
+    # Note: making this buffer too large, e.g.
+    # MAX_BUFFER_SIZE = 1024 * 1024
+    # makes operations *way* slower! Probably triggering some quadraticity
+    # in the libpq memory management and data sending.
 
     formatter: "Formatter"
 
@@ -182,6 +196,7 @@ class Copy(BaseCopy["Connection[Any]"]):
         super().__init__(cursor)
         self._queue: queue.Queue[bytes] = queue.Queue(maxsize=self.QUEUE_SIZE)
         self._worker: Optional[threading.Thread] = None
+        self._worker_error: Optional[BaseException] = None
 
     def __enter__(self) -> "Copy":
         self._enter()
@@ -270,15 +285,20 @@ class Copy(BaseCopy["Connection[Any]"]):
     def worker(self) -> None:
         """Push data to the server when available from the copy queue.
 
-        Terminate reading when the queue receives a None.
+        Terminate reading when the queue receives a false-y value, or in case
+        of error.
 
         The function is designed to be run in a separate thread.
         """
-        while True:
-            data = self._queue.get(block=True, timeout=24 * 60 * 60)
-            if not data:
-                break
-            self.connection.wait(copy_to(self._pgconn, data))
+        try:
+            while True:
+                data = self._queue.get(block=True, timeout=24 * 60 * 60)
+                if not data:
+                    break
+                self.connection.wait(copy_to(self._pgconn, data))
+        except BaseException as ex:
+            # Propagate the error to the main thread.
+            self._worker_error = ex
 
     def _write(self, data: bytes) -> None:
         if not data:
@@ -290,7 +310,19 @@ class Copy(BaseCopy["Connection[Any]"]):
             self._worker.daemon = True
             self._worker.start()
 
-        self._queue.put(data)
+        # If the worker thread raies an exception, re-raise it to the caller.
+        if self._worker_error:
+            raise self._worker_error
+
+        if len(data) <= self.MAX_BUFFER_SIZE:
+            # Most used path: we don't need to split the buffer in smaller
+            # bits, so don't make a copy.
+            self._queue.put(data)
+        else:
+            # Copy a buffer too large in chunks to avoid causing a memory
+            # error in the libpq, which may cause an infinite loop (#255).
+            for i in range(0, len(data), self.MAX_BUFFER_SIZE):
+                self._queue.put(data[i : i + self.MAX_BUFFER_SIZE])
 
     def _write_end(self) -> None:
         data = self.formatter.end()
@@ -300,6 +332,10 @@ class Copy(BaseCopy["Connection[Any]"]):
         if self._worker:
             self._worker.join()
             self._worker = None  # break the loop
+
+        # Check if the worker thread raised any exception before terminating.
+        if self._worker_error:
+            raise self._worker_error
 
 
 class AsyncCopy(BaseCopy["AsyncConnection[Any]"]):
@@ -364,7 +400,7 @@ class AsyncCopy(BaseCopy["AsyncConnection[Any]"]):
     async def worker(self) -> None:
         """Push data to the server when available from the copy queue.
 
-        Terminate reading when the queue receives a None.
+        Terminate reading when the queue receives a false-y value.
 
         The function is designed to be run in a separate thread.
         """
@@ -381,7 +417,15 @@ class AsyncCopy(BaseCopy["AsyncConnection[Any]"]):
         if not self._worker:
             self._worker = create_task(self.worker())
 
-        await self._queue.put(data)
+        if len(data) <= self.MAX_BUFFER_SIZE:
+            # Most used path: we don't need to split the buffer in smaller
+            # bits, so don't make a copy.
+            await self._queue.put(data)
+        else:
+            # Copy a buffer too large in chunks to avoid causing a memory
+            # error in the libpq, which may cause an infinite loop (#255).
+            for i in range(0, len(data), self.MAX_BUFFER_SIZE):
+                await self._queue.put(data[i : i + self.MAX_BUFFER_SIZE])
 
     async def _write_end(self) -> None:
         data = self.formatter.end()
@@ -399,9 +443,7 @@ class Formatter(ABC):
     """
 
     format: pq.Format
-
-    # Size of data to accumulate before sending it down the network
-    BUFFER_SIZE = 32 * 1024
+    BUFFER_SIZE = BaseCopy.BUFFER_SIZE
 
     def __init__(self, transformer: Transformer):
         self.transformer = transformer
