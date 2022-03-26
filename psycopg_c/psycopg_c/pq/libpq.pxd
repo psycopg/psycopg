@@ -253,9 +253,9 @@ cdef extern from "libpq-fe.h":
     PGnotify *PQnotifies(PGconn *conn) nogil
 
     # 33.9. Functions Associated with the COPY Command
-    int PQputCopyData(PGconn *conn, const char *buffer, int nbytes)
-    int PQputCopyEnd(PGconn *conn, const char *errormsg)
-    int PQgetCopyData(PGconn *conn, char **buffer, int async)
+    int PQputCopyData(PGconn *conn, const char *buffer, int nbytes) nogil
+    int PQputCopyEnd(PGconn *conn, const char *errormsg) nogil
+    int PQgetCopyData(PGconn *conn, char **buffer, int async) nogil
 
     # 33.10. Control Functions
     void PQtrace(PGconn *conn, FILE *stream);
