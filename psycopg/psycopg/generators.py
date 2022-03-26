@@ -201,6 +201,12 @@ def copy_from(pgconn: PGconn) -> PQGen[Union[memoryview, PGresult]]:
 
 
 def copy_to(pgconn: PGconn, buffer: bytes) -> PQGen[None]:
+    # Retry enqueuing data until successful.
+    #
+    # WARNING! This can cause an infinite loop if the buffer is too large. (see
+    # ticket #255). We avoid it in the Copy object by splitting a large buffer
+    # into smaller ones. We prefer to do it there instead of here in order to
+    # do it upstream the queue decoupling the writer task from the producer one.
     while pgconn.put_copy_data(buffer) == 0:
         yield Wait.W
 
