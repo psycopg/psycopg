@@ -10,7 +10,6 @@ from typing import Optional, Type, TypeVar, TYPE_CHECKING
 from contextlib import asynccontextmanager
 
 from . import errors as e
-
 from .abc import Query, Params
 from .copy import AsyncCopy
 from .rows import Row, RowMaker, AsyncRowFactory

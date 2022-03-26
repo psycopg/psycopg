@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 
 from . import pq
 from ._enums import PyFormat as PyFormat
-from ._compat import Protocol
+from ._compat import Protocol, TypeAlias
 
 if TYPE_CHECKING:
     from .sql import Composable
@@ -21,35 +21,35 @@ if TYPE_CHECKING:
     from ._adapters_map import AdaptersMap
 
 # An object implementing the buffer protocol
-Buffer = Union[bytes, bytearray, memoryview]
+Buffer: TypeAlias = Union[bytes, bytearray, memoryview]
 
-Query = Union[str, bytes, "Composable"]
-Params = Union[Sequence[Any], Mapping[str, Any]]
+Query: TypeAlias = Union[str, bytes, "Composable"]
+Params: TypeAlias = Union[Sequence[Any], Mapping[str, Any]]
 ConnectionType = TypeVar("ConnectionType", bound="BaseConnection[Any]")
 
 # TODO: make it recursive when mypy will support it
-# DumperKey = Union[type, Tuple[Union[type, "DumperKey"]]]
-DumperKey = Union[type, Tuple[type, ...]]
+# DumperKey: TypeAlias = Union[type, Tuple[Union[type, "DumperKey"]]]
+DumperKey: TypeAlias = Union[type, Tuple[type, ...]]
 
 # Waiting protocol types
 
 RV = TypeVar("RV")
 
-PQGenConn = Generator[Tuple[int, "Wait"], "Ready", RV]
+PQGenConn: TypeAlias = Generator[Tuple[int, "Wait"], "Ready", RV]
 """Generator for processes where the connection file number can change.
 
 This can happen in connection and reset, but not in normal querying.
 """
 
-PQGen = Generator["Wait", "Ready", RV]
+PQGen: TypeAlias = Generator["Wait", "Ready", RV]
 """Generator for processes where the connection file number won't change.
 """
 
 
 # Adaptation types
 
-DumpFunc = Callable[[Any], bytes]
-LoadFunc = Callable[[bytes], Any]
+DumpFunc: TypeAlias = Callable[[Any], bytes]
+LoadFunc: TypeAlias = Callable[[bytes], Any]
 
 
 class AdaptContext(Protocol):

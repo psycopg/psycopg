@@ -22,9 +22,9 @@ from typing import Any, Dict, Optional, Sequence, Tuple, Type, Union
 
 from .pq.abc import PGconn, PGresult
 from .pq._enums import DiagnosticField
-from ._compat import TypeGuard
+from ._compat import TypeAlias, TypeGuard
 
-ErrorInfo = Union[None, PGresult, Dict[int, Optional[bytes]]]
+ErrorInfo: TypeAlias = Union[None, PGresult, Dict[int, Optional[bytes]]]
 
 _sqlcodes: Dict[str, "Type[Error]"] = {}
 

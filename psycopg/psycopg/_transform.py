@@ -13,6 +13,7 @@ from . import postgres
 from . import errors as e
 from .abc import Buffer, LoadFunc, AdaptContext, PyFormat, DumperKey
 from .rows import Row, RowMaker
+from ._compat import TypeAlias
 from .postgres import INVALID_OID
 
 if TYPE_CHECKING:
@@ -22,9 +23,9 @@ if TYPE_CHECKING:
     from .connection import BaseConnection
 
 NoneType: Type[None] = type(None)
-DumperCache = Dict[DumperKey, "Dumper"]
-OidDumperCache = Dict[int, "Dumper"]
-LoaderCache = Dict[int, "Loader"]
+DumperCache: TypeAlias = Dict[DumperKey, "Dumper"]
+OidDumperCache: TypeAlias = Dict[int, "Dumper"]
+LoaderCache: TypeAlias = Dict[int, "Loader"]
 
 
 class Transformer(AdaptContext):

@@ -11,6 +11,7 @@ from .. import errors as e
 from .. import postgres
 from ..abc import Buffer, AdaptContext
 from ..adapt import PyFormat, RecursiveDumper, RecursiveLoader
+from .._compat import TypeAlias
 from ..postgres import TEXT_OID
 from .._typeinfo import TypeInfo
 
@@ -34,7 +35,7 @@ _re_hstore = re.compile(
 )
 
 
-Hstore = Dict[str, Optional[str]]
+Hstore: TypeAlias = Dict[str, Optional[str]]
 
 
 class BaseHstoreDumper(RecursiveDumper):

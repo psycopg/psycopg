@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Type, TypeVar
 from collections import namedtuple
 
 from . import errors as e
-from ._compat import Protocol
+from ._compat import Protocol, TypeAlias
 
 if TYPE_CHECKING:
     from .cursor import BaseCursor, Cursor
@@ -77,13 +77,13 @@ class BaseRowFactory(Protocol[Row]):
         ...
 
 
-TupleRow = Tuple[Any, ...]
+TupleRow: TypeAlias = Tuple[Any, ...]
 """
 An alias for the type returned by `tuple_row()` (i.e. a tuple of any content).
 """
 
 
-DictRow = Dict[str, Any]
+DictRow: TypeAlias = Dict[str, Any]
 """
 An alias for the type returned by `dict_row()`
 

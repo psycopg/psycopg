@@ -8,12 +8,12 @@ import struct
 from typing import Callable, cast, Optional, Tuple
 
 from .abc import Buffer
-from ._compat import Protocol
+from ._compat import Protocol, TypeAlias
 
-PackInt = Callable[[int], bytes]
-UnpackInt = Callable[[bytes], Tuple[int]]
-PackFloat = Callable[[float], bytes]
-UnpackFloat = Callable[[bytes], Tuple[float]]
+PackInt: TypeAlias = Callable[[int], bytes]
+UnpackInt: TypeAlias = Callable[[bytes], Tuple[int]]
+PackFloat: TypeAlias = Callable[[float], bytes]
+UnpackFloat: TypeAlias = Callable[[bytes], Tuple[float]]
 
 
 class UnpackLen(Protocol):

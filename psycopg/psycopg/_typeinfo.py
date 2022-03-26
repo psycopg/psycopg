@@ -13,6 +13,7 @@ from typing import Sequence, Tuple, Type, TypeVar, Union, TYPE_CHECKING
 from . import errors as e
 from .abc import AdaptContext
 from .rows import dict_row
+from ._compat import TypeAlias
 
 if TYPE_CHECKING:
     from .connection import Connection
@@ -20,6 +21,7 @@ if TYPE_CHECKING:
     from .sql import Identifier
 
 T = TypeVar("T", bound="TypeInfo")
+RegistryKey: TypeAlias = Union[str, int, Tuple[type, int]]
 
 
 class TypeInfo:
@@ -281,9 +283,6 @@ LEFT JOIN (
 ) a ON a.attrelid = t.typrelid
 WHERE t.oid = %(name)s::regtype
 """
-
-
-RegistryKey = Union[str, int, Tuple[type, int]]
 
 
 class TypesRegistry:

@@ -11,7 +11,7 @@ from typing import Any, Awaitable, Generator, Optional, Union, Type, TypeVar
 import psycopg.errors as e
 
 T = TypeVar("T")
-FutureT = Union["asyncio.Future[T]", Generator[Any, None, T], Awaitable[T]]
+FutureT: "TypeAlias" = Union["asyncio.Future[T]", Generator[Any, None, T], Awaitable[T]]
 
 if sys.version_info >= (3, 8):
     create_task = asyncio.create_task
@@ -31,10 +31,16 @@ if sys.version_info >= (3, 9):
 else:
     from typing import Counter, Deque
 
+if sys.version_info >= (3, 10):
+    from typing import TypeAlias
+else:
+    from typing_extensions import TypeAlias
+
 __all__ = [
     "Counter",
     "Deque",
     "Task",
+    "TypeAlias",
     "create_task",
 ]
 

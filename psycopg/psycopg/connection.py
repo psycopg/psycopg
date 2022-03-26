@@ -28,6 +28,7 @@ from .rows import Row, RowFactory, tuple_row, TupleRow, args_row
 from .adapt import AdaptersMap
 from ._enums import IsolationLevel
 from .cursor import Cursor
+from ._compat import TypeAlias
 from ._cmodule import _psycopg
 from .conninfo import make_conninfo, conninfo_to_dict, ConnectionInfo
 from .generators import notifies
@@ -75,8 +76,8 @@ class Notify(NamedTuple):
 
 Notify.__module__ = "psycopg"
 
-NoticeHandler = Callable[[e.Diagnostic], None]
-NotifyHandler = Callable[[Notify], None]
+NoticeHandler: TypeAlias = Callable[[e.Diagnostic], None]
+NotifyHandler: TypeAlias = Callable[[Notify], None]
 
 
 class BaseConnection(Generic[Row]):

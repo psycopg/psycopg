@@ -9,20 +9,19 @@ from typing import Iterator, Optional, Sequence, Tuple, TYPE_CHECKING
 from collections import OrderedDict
 
 from .pq import ExecStatus
-from ._compat import Deque
+from ._compat import Deque, TypeAlias
 from ._queries import PostgresQuery
 
 if TYPE_CHECKING:
     from .pq.abc import PGresult
+
+Key: TypeAlias = Tuple[bytes, Tuple[int, ...]]
 
 
 class Prepare(IntEnum):
     NO = auto()
     YES = auto()
     SHOULD = auto()
-
-
-Key = Tuple[bytes, Tuple[int, ...]]
 
 
 class PrepareManager:

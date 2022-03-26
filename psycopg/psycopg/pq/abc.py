@@ -8,13 +8,13 @@ from typing import Any, Callable, List, Optional, Sequence, Tuple
 from typing import Union, TYPE_CHECKING
 
 from ._enums import Format, Trace
-from .._compat import Protocol
+from .._compat import Protocol, TypeAlias
 
 if TYPE_CHECKING:
     from .misc import PGnotify, ConninfoOption, PGresAttDesc
 
 # An object implementing the buffer protocol (ish)
-Buffer = Union[bytes, bytearray, memoryview]
+Buffer: TypeAlias = Union[bytes, bytearray, memoryview]
 
 
 class PGconn(Protocol):

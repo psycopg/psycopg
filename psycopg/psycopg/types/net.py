@@ -10,13 +10,14 @@ from .. import postgres
 from ..pq import Format
 from ..abc import AdaptContext
 from ..adapt import Buffer, Dumper, Loader
+from .._compat import TypeAlias
 
 if TYPE_CHECKING:
     import ipaddress
 
-Address = Union["ipaddress.IPv4Address", "ipaddress.IPv6Address"]
-Interface = Union["ipaddress.IPv4Interface", "ipaddress.IPv6Interface"]
-Network = Union["ipaddress.IPv4Network", "ipaddress.IPv6Network"]
+Address: TypeAlias = Union["ipaddress.IPv4Address", "ipaddress.IPv6Address"]
+Interface: TypeAlias = Union["ipaddress.IPv4Interface", "ipaddress.IPv6Interface"]
+Network: TypeAlias = Union["ipaddress.IPv4Network", "ipaddress.IPv6Network"]
 
 # These objects will be imported lazily
 ip_address: Callable[[str], Address] = None  # type: ignore[assignment]

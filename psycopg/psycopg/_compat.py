@@ -14,7 +14,7 @@ else:
     from typing_extensions import Protocol
 
 T = TypeVar("T")
-FutureT = Union["asyncio.Future[T]", Generator[Any, None, T], Awaitable[T]]
+FutureT: "TypeAlias" = Union["asyncio.Future[T]", Generator[Any, None, T], Awaitable[T]]
 
 if sys.version_info >= (3, 8):
     create_task = asyncio.create_task
@@ -35,14 +35,15 @@ else:
     from typing import Counter, Deque
 
 if sys.version_info >= (3, 10):
-    from typing import TypeGuard
+    from typing import TypeAlias, TypeGuard
 else:
-    from typing_extensions import TypeGuard
+    from typing_extensions import TypeAlias, TypeGuard
 
 __all__ = [
     "Counter",
     "Deque",
     "Protocol",
+    "TypeAlias",
     "TypeGuard",
     "ZoneInfo",
     "create_task",
