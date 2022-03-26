@@ -22,6 +22,10 @@ from psycopg.generators import pipeline_communicate
 from psycopg.pq._enums import Format
 from psycopg._compat import Deque
 
+psycopg_logger = logging.getLogger("psycopg")
+pipeline_logger = logging.getLogger("pipeline")
+args: argparse.Namespace
+
 
 class LoggingPGconn:
     """Wrapper for PGconn that logs fetched results."""
@@ -29,6 +33,15 @@ class LoggingPGconn:
     def __init__(self, pgconn: pq.abc.PGconn, logger: logging.Logger):
         self._pgconn = pgconn
         self._logger = logger
+
+        if args.trace:
+            self._trace_file = open(args.trace, "w")
+            pgconn.trace(self._trace_file.fileno())
+
+    def __del__(self) -> None:
+        if hasattr(self, "_trace_file"):
+            self._pgconn.untrace()
+            self._trace_file.close()
 
     def __getattr__(self, name: str) -> Any:
         return getattr(self._pgconn, name)
@@ -265,18 +278,21 @@ def main() -> None:
     parser.add_argument(
         "--async", dest="async_", action="store_true", help="use async API"
     )
+    parser.add_argument("--trace", help="write trace info into TRACE file")
     parser.add_argument("-l", "--log", help="log file (stderr by default)")
+
+    global args
     args = parser.parse_args()
-    logger = logging.getLogger("psycopg")
-    logger.setLevel(logging.DEBUG)
-    pipeline_logger = logging.getLogger("pipeline")
+
+    psycopg_logger.setLevel(logging.DEBUG)
     pipeline_logger.setLevel(logging.DEBUG)
     if args.log:
-        logger.addHandler(logging.FileHandler(args.log))
+        psycopg_logger.addHandler(logging.FileHandler(args.log))
         pipeline_logger.addHandler(logging.FileHandler(args.log))
     else:
-        logger.addHandler(logging.StreamHandler())
+        psycopg_logger.addHandler(logging.StreamHandler())
         pipeline_logger.addHandler(logging.StreamHandler())
+
     if args.pq:
         if args.async_:
             asyncio.run(pipeline_demo_pq_async(args.nrows, pipeline_logger))
