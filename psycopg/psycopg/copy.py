@@ -17,7 +17,7 @@ from typing import Any, Dict, List, Match, Optional, Sequence, Type, Tuple
 from . import pq
 from . import errors as e
 from .pq import ExecStatus
-from .abc import ConnectionType, PQGen, Transformer
+from .abc import Buffer, ConnectionType, PQGen, Transformer
 from .adapt import PyFormat
 from ._compat import create_task
 from ._cmodule import _psycopg
@@ -252,7 +252,7 @@ class Copy(BaseCopy["Connection[Any]"]):
         """
         return self.connection.wait(self._read_row_gen())
 
-    def write(self, buffer: Union[str, bytes]) -> None:
+    def write(self, buffer: Union[Buffer, str]) -> None:
         """
         Write a block of data to a table after a :sql:`COPY FROM` operation.
 
@@ -300,7 +300,7 @@ class Copy(BaseCopy["Connection[Any]"]):
             # Propagate the error to the main thread.
             self._worker_error = ex
 
-    def _write(self, data: bytes) -> None:
+    def _write(self, data: Buffer) -> None:
         if not data:
             return
 
@@ -380,7 +380,7 @@ class AsyncCopy(BaseCopy["AsyncConnection[Any]"]):
     async def read_row(self) -> Optional[Tuple[Any, ...]]:
         return await self.connection.wait(self._read_row_gen())
 
-    async def write(self, buffer: Union[str, bytes]) -> None:
+    async def write(self, buffer: Union[Buffer, str]) -> None:
         data = self.formatter.write(buffer)
         await self._write(data)
 
@@ -410,7 +410,7 @@ class AsyncCopy(BaseCopy["AsyncConnection[Any]"]):
                 break
             await self.connection.wait(copy_to(self._pgconn, data))
 
-    async def _write(self, data: bytes) -> None:
+    async def _write(self, data: Buffer) -> None:
         if not data:
             return
 
@@ -455,7 +455,7 @@ class Formatter(ABC):
         ...
 
     @abstractmethod
-    def write(self, buffer: Union[str, bytes]) -> bytes:
+    def write(self, buffer: Union[Buffer, str]) -> bytes:
         ...
 
     @abstractmethod
@@ -481,7 +481,7 @@ class TextFormatter(Formatter):
         else:
             return None
 
-    def write(self, buffer: Union[str, bytes]) -> bytes:
+    def write(self, buffer: Union[Buffer, str]) -> Buffer:
         data = self._ensure_bytes(buffer)
         self._signature_sent = True
         return data
@@ -502,15 +502,14 @@ class TextFormatter(Formatter):
         buffer, self._write_buffer = self._write_buffer, bytearray()
         return buffer
 
-    def _ensure_bytes(self, data: Union[bytes, str]) -> bytes:
-        if isinstance(data, bytes):
-            return data
-
-        elif isinstance(data, str):
+    def _ensure_bytes(self, data: Union[Buffer, str]) -> Buffer:
+        if isinstance(data, str):
             return data.encode(self._encoding)
-
         else:
-            raise TypeError(f"can't write {type(data).__name__}")
+            # Assume, for simplicity, that the user is not passing stupid
+            # things to the write function. If that's the case, things
+            # will fail downstream.
+            return data
 
 
 class BinaryFormatter(Formatter):
@@ -535,7 +534,7 @@ class BinaryFormatter(Formatter):
 
         return parse_row_binary(data, self.transformer)
 
-    def write(self, buffer: Union[str, bytes]) -> bytes:
+    def write(self, buffer: Union[Buffer, str]) -> Buffer:
         data = self._ensure_bytes(buffer)
         self._signature_sent = True
         return data
@@ -575,15 +574,14 @@ class BinaryFormatter(Formatter):
         buffer, self._write_buffer = self._write_buffer, bytearray()
         return buffer
 
-    def _ensure_bytes(self, data: Union[bytes, str]) -> bytes:
-        if isinstance(data, bytes):
-            return data
-
-        elif isinstance(data, str):
+    def _ensure_bytes(self, data: Union[Buffer, str]) -> Buffer:
+        if isinstance(data, str):
             raise TypeError("cannot copy str data in binary mode: use bytes instead")
-
         else:
-            raise TypeError(f"can't write {type(data).__name__}")
+            # Assume, for simplicity, that the user is not passing stupid
+            # things to the write function. If that's the case, things
+            # will fail downstream.
+            return data
 
 
 def _format_row_text(
