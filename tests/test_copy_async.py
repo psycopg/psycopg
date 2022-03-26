@@ -268,12 +268,14 @@ async def test_copy_big_size_record(aconn):
 
 
 @pytest.mark.slow
-async def test_copy_big_size_block(aconn):
+@pytest.mark.parametrize("pytype", [str, bytes, bytearray, memoryview])
+async def test_copy_big_size_block(aconn, pytype):
     cur = aconn.cursor()
     await ensure_table(cur, sample_tabledef)
     data = "".join(choice(string.ascii_letters) for i in range(10 * 1024 * 1024))
+    copy_data = data + "\n" if pytype is str else pytype(data.encode() + b"\n")
     async with cur.copy("copy copy_in (data) from stdin") as copy:
-        await copy.write(data + "\n")
+        await copy.write(copy_data)
 
     await cur.execute("select data from copy_in limit 1")
     assert await cur.fetchone() == (data,)
@@ -467,14 +469,15 @@ async def test_copy_from_to(aconn):
 
 
 @pytest.mark.slow
-async def test_copy_from_to_bytes(aconn):
+@pytest.mark.parametrize("pytype", [bytes, bytearray, memoryview])
+async def test_copy_from_to_bytes(aconn, pytype):
     # Roundtrip from file to database to file blockwise
     gen = DataGenerator(aconn, nrecs=1024, srec=10 * 1024)
     await gen.ensure_table()
     cur = aconn.cursor()
     async with cur.copy("copy copy_in from stdin") as copy:
         for block in gen.blocks():
-            await copy.write(block.encode())
+            await copy.write(pytype(block.encode()))
 
     await gen.assert_data()
 

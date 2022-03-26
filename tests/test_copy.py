@@ -278,12 +278,14 @@ def test_copy_big_size_record(conn):
 
 
 @pytest.mark.slow
-def test_copy_big_size_block(conn):
+@pytest.mark.parametrize("pytype", [str, bytes, bytearray, memoryview])
+def test_copy_big_size_block(conn, pytype):
     cur = conn.cursor()
     ensure_table(cur, sample_tabledef)
     data = "".join(choice(string.ascii_letters) for i in range(10 * 1024 * 1024))
+    copy_data = data + "\n" if pytype is str else pytype(data.encode() + b"\n")
     with cur.copy("copy copy_in (data) from stdin") as copy:
-        copy.write(data + "\n")
+        copy.write(copy_data)
 
     cur.execute("select data from copy_in limit 1")
     assert cur.fetchone()[0] == data
@@ -468,14 +470,15 @@ def test_copy_from_to(conn):
 
 
 @pytest.mark.slow
-def test_copy_from_to_bytes(conn):
+@pytest.mark.parametrize("pytype", [bytes, bytearray, memoryview])
+def test_copy_from_to_bytes(conn, pytype):
     # Roundtrip from file to database to file blockwise
     gen = DataGenerator(conn, nrecs=1024, srec=10 * 1024)
     gen.ensure_table()
     cur = conn.cursor()
     with cur.copy("copy copy_in from stdin") as copy:
         for block in gen.blocks():
-            copy.write(block.encode())
+            copy.write(pytype(block.encode()))
 
     gen.assert_data()
 
