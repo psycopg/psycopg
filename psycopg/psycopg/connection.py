@@ -871,7 +871,9 @@ class Connection(BaseConnection[Row]):
     def pipeline(self) -> Iterator[None]:
         """Context manager to switch the connection into pipeline mode."""
         if self._pipeline is not None:
-            raise e.ProgrammingError("already in pipeline mode")
+            # calling pipeline recursively is no-op.
+            yield
+            return
 
         pipeline = self._pipeline = Pipeline(self.pgconn)
         try:

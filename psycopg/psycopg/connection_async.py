@@ -299,7 +299,9 @@ class AsyncConnection(BaseConnection[Row]):
     async def pipeline(self) -> AsyncIterator[None]:
         """Context manager to switch the connection into pipeline mode."""
         if self._pipeline is not None:
-            raise e.ProgrammingError("already in pipeline mode")
+            # calling pipeline recursively is no-op.
+            yield
+            return
 
         pipeline = self._pipeline = AsyncPipeline(self.pgconn)
         try:

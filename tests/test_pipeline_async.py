@@ -4,12 +4,7 @@ import pytest
 
 import psycopg
 from psycopg import pq
-from psycopg.errors import (
-    OperationalError,
-    ProgrammingError,
-    UndefinedColumn,
-    UndefinedTable,
-)
+from psycopg import errors as e
 
 pytestmark = [
     pytest.mark.libpq(">= 14"),
@@ -18,15 +13,25 @@ pytestmark = [
 
 
 async def test_pipeline_status(aconn):
+    assert aconn._pipeline is None
     async with aconn.pipeline():
         p = aconn._pipeline
         assert p is not None
         assert p.status == pq.PipelineStatus.ON
-        with pytest.raises(ProgrammingError):
-            async with aconn.pipeline():
-                pass
     assert p.status == pq.PipelineStatus.OFF
     assert not aconn._pipeline
+
+
+async def test_pipeline_reenter(aconn):
+    async with aconn.pipeline():
+        p = aconn._pipeline
+        async with aconn.pipeline():
+            assert aconn._pipeline is p
+            assert p.status == pq.PipelineStatus.ON
+        assert aconn._pipeline is p
+        assert p.status == pq.PipelineStatus.ON
+    assert aconn._pipeline is None
+    assert p.status == pq.PipelineStatus.OFF
 
 
 async def test_cursor_stream(aconn):
@@ -61,7 +66,7 @@ async def test_pipeline_processed_at_exit(aconn):
 
 async def test_pipeline_errors_processed_at_exit(aconn):
     await aconn.set_autocommit(True)
-    with pytest.raises((OperationalError, UndefinedTable)):
+    with pytest.raises((e.OperationalError, e.UndefinedTable)):
         async with aconn.pipeline():
             await aconn.execute("select * from nosuchtable")
             await aconn.execute("create table voila ()")
@@ -102,9 +107,9 @@ async def test_pipeline_aborted(aconn):
     await aconn.set_autocommit(True)
     async with aconn.pipeline():
         c1 = await aconn.execute("select 1")
-        with pytest.raises(UndefinedTable):
+        with pytest.raises(e.UndefinedTable):
             await (await aconn.execute("select * from doesnotexist")).fetchone()
-        with pytest.raises(OperationalError, match="pipeline aborted"):
+        with pytest.raises(e.OperationalError, match="pipeline aborted"):
             await (await aconn.execute("select 'aborted'")).fetchone()
         # Sync restore the connection in usable state.
         aconn._pipeline.sync()
@@ -118,7 +123,7 @@ async def test_pipeline_aborted(aconn):
 
 
 async def test_pipeline_commit_aborted(aconn):
-    with pytest.raises((UndefinedColumn, OperationalError)):
+    with pytest.raises((e.UndefinedColumn, e.OperationalError)):
         async with aconn.pipeline():
             await aconn.execute("select error")
             await aconn.execute("create table voila ()")
@@ -217,7 +222,7 @@ async def test_outer_transaction(aconn):
 
 async def test_outer_transaction_error(aconn):
     async with aconn.transaction():
-        with pytest.raises((UndefinedColumn, OperationalError)):
+        with pytest.raises((e.UndefinedColumn, e.OperationalError)):
             async with aconn.pipeline():
                 await aconn.execute("select error")
                 await aconn.execute("create table voila ()")
