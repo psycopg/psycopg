@@ -4,26 +4,31 @@ import pytest
 
 import psycopg
 from psycopg import pq
-from psycopg.errors import (
-    OperationalError,
-    ProgrammingError,
-    UndefinedColumn,
-    UndefinedTable,
-)
+from psycopg import errors as e
 
 pytestmark = pytest.mark.libpq(">= 14")
 
 
 def test_pipeline_status(conn):
+    assert conn._pipeline is None
     with conn.pipeline():
         p = conn._pipeline
         assert p is not None
         assert p.status == pq.PipelineStatus.ON
-        with pytest.raises(ProgrammingError):
-            with conn.pipeline():
-                pass
     assert p.status == pq.PipelineStatus.OFF
     assert not conn._pipeline
+
+
+def test_pipeline_reenter(conn):
+    with conn.pipeline():
+        p = conn._pipeline
+        with conn.pipeline():
+            assert conn._pipeline is p
+            assert p.status == pq.PipelineStatus.ON
+        assert conn._pipeline is p
+        assert p.status == pq.PipelineStatus.ON
+    assert conn._pipeline is None
+    assert p.status == pq.PipelineStatus.OFF
 
 
 def test_cursor_stream(conn):
@@ -58,7 +63,7 @@ def test_pipeline_processed_at_exit(conn):
 
 def test_pipeline_errors_processed_at_exit(conn):
     conn.autocommit = True
-    with pytest.raises((OperationalError, UndefinedTable)):
+    with pytest.raises((e.OperationalError, e.UndefinedTable)):
         with conn.pipeline():
             conn.execute("select * from nosuchtable")
             conn.execute("create table voila ()")
@@ -99,9 +104,9 @@ def test_pipeline_aborted(conn):
     conn.autocommit = True
     with conn.pipeline():
         c1 = conn.execute("select 1")
-        with pytest.raises(UndefinedTable):
+        with pytest.raises(e.UndefinedTable):
             conn.execute("select * from doesnotexist").fetchone()
-        with pytest.raises(OperationalError, match="pipeline aborted"):
+        with pytest.raises(e.OperationalError, match="pipeline aborted"):
             conn.execute("select 'aborted'").fetchone()
         # Sync restore the connection in usable state.
         conn._pipeline.sync()
@@ -115,7 +120,7 @@ def test_pipeline_aborted(conn):
 
 
 def test_pipeline_commit_aborted(conn):
-    with pytest.raises((UndefinedColumn, OperationalError)):
+    with pytest.raises((e.UndefinedColumn, e.OperationalError)):
         with conn.pipeline():
             conn.execute("select error")
             conn.execute("create table voila ()")
@@ -213,7 +218,7 @@ def test_outer_transaction(conn):
 
 def test_outer_transaction_error(conn):
     with conn.transaction():
-        with pytest.raises((UndefinedColumn, OperationalError)):
+        with pytest.raises((e.UndefinedColumn, e.OperationalError)):
             with conn.pipeline():
                 conn.execute("select error")
                 conn.execute("create table voila ()")
