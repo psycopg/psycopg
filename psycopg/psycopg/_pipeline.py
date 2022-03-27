@@ -17,8 +17,10 @@ from ._encodings import pgconn_encoding
 from ._preparing import Key, Prepare
 
 if TYPE_CHECKING:
-    from .pq.abc import PGconn, PGresult
+    from .pq.abc import PGresult
     from .cursor import BaseCursor
+    from .connection import BaseConnection, Connection
+    from .connection_async import AsyncConnection
 
 if _psycopg:
     pipeline_communicate = _psycopg.pipeline_communicate
@@ -38,8 +40,13 @@ PendingResult: TypeAlias = Union[
 
 
 class BasePipeline:
-    def __init__(self, pgconn: "PGconn") -> None:
-        self.pgconn = pgconn
+
+    command_queue: Deque[PipelineCommand]
+    result_queue: Deque[PendingResult]
+
+    def __init__(self, conn: "BaseConnection[Any]") -> None:
+        self._conn = conn
+        self.pgconn = conn.pgconn
         self.command_queue = Deque[PipelineCommand]()
         self.result_queue = Deque[PendingResult]()
 
@@ -124,6 +131,11 @@ class BasePipeline:
 class Pipeline(BasePipeline):
     """Handler for connection in pipeline mode."""
 
+    _conn: "Connection[Any]"
+
+    def __init__(self, conn: "Connection[Any]") -> None:
+        super().__init__(conn)
+
     def __enter__(self) -> "Pipeline":
         self._enter()
         return self
@@ -134,11 +146,28 @@ class Pipeline(BasePipeline):
         exc_val: Optional[BaseException],
         exc_tb: Optional[TracebackType],
     ) -> None:
-        self._exit()
+        try:
+            with self._conn.lock:
+                self.sync()
+                try:
+                    # Send an pending commands (e.g. COMMIT or Sync);
+                    # while processing results, we might get errors...
+                    self._conn.wait(self._communicate_gen())
+                finally:
+                    # then fetch all remaining results but without forcing
+                    # flush since we emitted a sync just before.
+                    self._conn.wait(self._fetch_gen(flush=False))
+        finally:
+            self._exit()
 
 
 class AsyncPipeline(BasePipeline):
     """Handler for async connection in pipeline mode."""
+
+    _conn: "AsyncConnection[Any]"
+
+    def __init__(self, conn: "AsyncConnection[Any]") -> None:
+        super().__init__(conn)
 
     async def __aenter__(self) -> "AsyncPipeline":
         self._enter()
@@ -150,4 +179,16 @@ class AsyncPipeline(BasePipeline):
         exc_val: Optional[BaseException],
         exc_tb: Optional[TracebackType],
     ) -> None:
-        self._exit()
+        try:
+            async with self._conn.lock:
+                self.sync()
+                try:
+                    # Send an pending commands (e.g. COMMIT or Sync);
+                    # while processing results, we might get errors...
+                    await self._conn.wait(self._communicate_gen())
+                finally:
+                    # then fetch all remaining results but without forcing
+                    # flush since we emitted a sync just before.
+                    await self._conn.wait(self._fetch_gen(flush=False))
+        finally:
+            self._exit()

@@ -301,7 +301,8 @@ class AsyncConnection(BaseConnection[Row]):
         async with self.lock:
             if self._pipeline is None:
                 # We must enter pipeline mode: create a new one
-                pipeline = self._pipeline = AsyncPipeline(self.pgconn)
+                # WARNING: reference loop, broken ahead.
+                pipeline = self._pipeline = AsyncPipeline(self)
             else:
                 # we are already in pipeline mode: bail out as soon as we
                 # leave the lock block.
@@ -314,19 +315,7 @@ class AsyncConnection(BaseConnection[Row]):
 
         try:
             async with pipeline:
-                try:
-                    yield pipeline
-                finally:
-                    async with self.lock:
-                        pipeline.sync()
-                        try:
-                            # Send an pending commands (e.g. COMMIT or Sync);
-                            # while processing results, we might get errors...
-                            await self.wait(pipeline._communicate_gen())
-                        finally:
-                            # then fetch all remaining results but without forcing
-                            # flush since we emitted a sync just before.
-                            await self.wait(pipeline._fetch_gen(flush=False))
+                yield pipeline
         finally:
             assert pipeline.status == PipelineStatus.OFF, pipeline.status
             self._pipeline = None
