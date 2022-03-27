@@ -14,6 +14,7 @@ from .abc import Query, Params
 from .copy import AsyncCopy
 from .rows import Row, RowMaker, AsyncRowFactory
 from .cursor import BaseCursor
+from ._pipeline import Pipeline
 
 if TYPE_CHECKING:
     from .connection_async import AsyncConnection
@@ -86,13 +87,17 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
         returning: bool = False,
     ) -> None:
         try:
-            async with self._conn.pipeline():
-                async with self._conn.lock:
+            if Pipeline.is_supported():
+                async with self._conn.pipeline(), self._conn.lock:
                     assert self._execmany_returning is None
                     self._execmany_returning = returning
                     await self._conn.wait(
-                        self._executemany_gen(query, params_seq, returning)
+                        self._executemany_gen_pipeline(query, params_seq)
                     )
+            else:
+                await self._conn.wait(
+                    self._executemany_gen_no_pipeline(query, params_seq, returning)
+                )
         except e.Error as ex:
             raise ex.with_traceback(None)
         finally:
