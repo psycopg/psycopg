@@ -47,7 +47,7 @@ async def resolve_hostaddr_async(params: Dict[str, Any]) -> Dict[str, Any]:
     addresses dynamically.
 
     The function may change the input ``host``, ``hostname``, ``port`` to allow
-    to connect without further DNS lookups, eventually removing hosts that are
+    connecting without further DNS lookups, eventually removing hosts that are
     not resolved, keeping the lists of hosts and ports consistent.
 
     Raise `~psycopg.OperationalError` if connection is not possible (e.g. no
