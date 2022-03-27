@@ -10,6 +10,15 @@ from psycopg import errors as e
 pytestmark = pytest.mark.libpq(">= 14")
 
 
+def test_repr(conn):
+    with conn.pipeline() as p:
+        assert "psycopg.Pipeline" in repr(p)
+        assert "[IDLE]" in repr(p)
+
+    conn.close()
+    assert "[BAD]" in repr(p)
+
+
 def test_pipeline_status(conn: psycopg.Connection[Any]) -> None:
     assert conn._pipeline is None
     with conn.pipeline() as p:
