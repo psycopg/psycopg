@@ -12,7 +12,7 @@ from typing import Any, Iterable, List, Optional, Sequence, Tuple
 from psycopg import pq
 from psycopg import abc
 from psycopg.rows import Row, RowMaker
-from psycopg.abc import Command
+from psycopg.abc import PipelineCommand
 from psycopg.adapt import AdaptersMap, PyFormat
 from psycopg.pq.abc import PGconn, PGresult
 from psycopg.connection import BaseConnection
@@ -53,7 +53,7 @@ def send(pgconn: PGconn) -> abc.PQGen[None]: ...
 def fetch_many(pgconn: PGconn) -> abc.PQGen[List[PGresult]]: ...
 def fetch(pgconn: PGconn) -> abc.PQGen[Optional[PGresult]]: ...
 def pipeline_communicate(
-    pgconn: PGconn, commands: Deque[Command]
+    pgconn: PGconn, commands: Deque[PipelineCommand]
 ) -> abc.PQGen[List[List[PGresult]]]: ...
 
 # Copy support

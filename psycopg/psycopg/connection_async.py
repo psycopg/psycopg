@@ -21,8 +21,9 @@ from .rows import Row, AsyncRowFactory, tuple_row, TupleRow, args_row
 from .adapt import AdaptersMap
 from ._enums import IsolationLevel
 from .conninfo import make_conninfo, conninfo_to_dict
+from ._pipeline import AsyncPipeline
 from ._encodings import pgconn_encoding
-from .connection import BaseConnection, BasePipeline, CursorRow, Notify
+from .connection import BaseConnection, CursorRow, Notify
 from .generators import notifies
 from .transaction import AsyncTransaction
 from .cursor_async import AsyncCursor
@@ -33,22 +34,6 @@ if TYPE_CHECKING:
 
 
 logger = logging.getLogger("psycopg")
-
-
-class AsyncPipeline(BasePipeline):
-    """Handler for async connection in pipeline mode."""
-
-    async def __aenter__(self) -> "AsyncPipeline":
-        self._enter()
-        return self
-
-    async def __aexit__(
-        self,
-        exc_type: Optional[Type[BaseException]],
-        exc_val: Optional[BaseException],
-        exc_tb: Optional[TracebackType],
-    ) -> None:
-        self._exit()
 
 
 class AsyncConnection(BaseConnection[Row]):
@@ -62,7 +47,7 @@ class AsyncConnection(BaseConnection[Row]):
     server_cursor_factory: Type[AsyncServerCursor[Row]]
     row_factory: AsyncRowFactory[Row]
 
-    _pipeline: Optional[AsyncPipeline]
+    _pipeline: "Optional[AsyncPipeline]"
 
     def __init__(
         self,

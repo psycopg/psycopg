@@ -11,7 +11,7 @@ from typing import List
 
 from psycopg import errors as e
 from psycopg.pq import abc, error_message
-from psycopg.abc import Command, PQGen
+from psycopg.abc import PipelineCommand, PQGen
 from psycopg.waiting import Wait, Ready
 from psycopg._compat import Deque
 from psycopg._encodings import conninfo_encoding
@@ -196,7 +196,9 @@ def fetch(pq.PGconn pgconn) -> PQGen[Optional[PGresult]]:
     return pq.PGresult._from_ptr(pgres)
 
 
-def pipeline_communicate(pq.PGconn pgconn, commands: Deque[Command]) -> PQGen[List[List[PGresult]]]:
+def pipeline_communicate(
+    pq.PGconn pgconn, commands: Deque[PipelineCommand]
+) -> PQGen[List[List[PGresult]]]:
     """Generator to send queries from a connection in pipeline mode while also
     receiving results.
 

@@ -17,7 +17,7 @@ from typing import Any, Iterator, Optional, Sequence, Tuple
 from psycopg import AsyncConnection, Connection
 from psycopg import pq, waiting
 from psycopg import errors as e
-from psycopg.abc import Command
+from psycopg.abc import PipelineCommand
 from psycopg.generators import pipeline_communicate
 from psycopg.pq._enums import Format
 from psycopg._compat import Deque
@@ -94,7 +94,7 @@ class LoggingPGconn:
 @contextmanager
 def prepare_pipeline_demo_pq(
     pgconn: LoggingPGconn, rows_to_send: int, logger: logging.Logger
-) -> Iterator[Tuple[Deque[Command], Deque[str]]]:
+) -> Iterator[Tuple[Deque[PipelineCommand], Deque[str]]]:
     """Set up pipeline demo with initial queries and yield commands and
     results queue for pipeline_communicate().
     """
@@ -120,7 +120,7 @@ def prepare_pipeline_demo_pq(
         ),
     ]
 
-    commands = Deque[Command]()
+    commands = Deque[PipelineCommand]()
     results_queue = Deque[str]()
 
     for qname, query in setup_queries:
