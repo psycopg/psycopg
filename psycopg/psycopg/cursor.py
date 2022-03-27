@@ -481,6 +481,14 @@ class BaseCursor(Generic[ConnectionType, Row]):
         nrows = self.pgresult.command_tuples
         self._rowcount = nrows if nrows is not None else -1
 
+    def _set_results_from_pipeline(self, results: List["PGresult"]) -> None:
+        self._check_results(results)
+        if not self._results:
+            self._results = results
+            self._set_current_result(0)
+        else:
+            self._results.extend(results)
+
     def _send_prepare(self, name: bytes, query: PostgresQuery) -> None:
         if self._conn._pipeline:
             self._conn._pipeline.command_queue.append(
