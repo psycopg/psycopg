@@ -4,6 +4,7 @@ commands pipeline management
 
 # Copyright (C) 2021 The Psycopg Team
 
+import logging
 from types import TracebackType
 from typing import Any, List, Optional, Union, Tuple, Type, TYPE_CHECKING
 
@@ -37,6 +38,8 @@ else:
 PendingResult: TypeAlias = Union[
     None, Tuple["BaseCursor[Any, Any]", Optional[Tuple[Key, Prepare, bytes]]]
 ]
+
+logger = logging.getLogger("psycopg")
 
 
 class BasePipeline:
@@ -168,13 +171,19 @@ class Pipeline(BasePipeline):
             with self._conn.lock:
                 self.sync()
                 try:
-                    # Send an pending commands (e.g. COMMIT or Sync);
+                    # Send any pending commands (e.g. COMMIT or Sync);
                     # while processing results, we might get errors...
                     self._conn.wait(self._communicate_gen())
                 finally:
                     # then fetch all remaining results but without forcing
                     # flush since we emitted a sync just before.
                     self._conn.wait(self._fetch_gen(flush=False))
+        except Exception as exc2:
+            # Don't clobber an exception raised in the block with this one
+            if exc_val:
+                logger.warning("error ignored exiting %r: %s", self, exc2)
+            else:
+                raise
         finally:
             self._exit()
 
@@ -202,12 +211,18 @@ class AsyncPipeline(BasePipeline):
             async with self._conn.lock:
                 self.sync()
                 try:
-                    # Send an pending commands (e.g. COMMIT or Sync);
+                    # Send any pending commands (e.g. COMMIT or Sync);
                     # while processing results, we might get errors...
                     await self._conn.wait(self._communicate_gen())
                 finally:
                     # then fetch all remaining results but without forcing
                     # flush since we emitted a sync just before.
                     await self._conn.wait(self._fetch_gen(flush=False))
+        except Exception as exc2:
+            # Don't clobber an exception raised in the block with this one
+            if exc_val:
+                logger.warning("error ignored exiting %r: %s", self, exc2)
+            else:
+                raise
         finally:
             self._exit()

@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from typing import Any
 
 import pytest
@@ -50,6 +51,16 @@ async def test_pipeline_broken_conn_exit(aconn: psycopg.AsyncConnection[Any]) ->
             closed = True
 
     assert closed
+
+
+async def test_pipeline_exit_error_noclobber(aconn, caplog):
+    caplog.set_level(logging.WARNING, logger="psycopg")
+    with pytest.raises(ZeroDivisionError):
+        async with aconn.pipeline():
+            await aconn.close()
+            1 / 0
+
+    assert len(caplog.records) == 1
 
 
 async def test_cursor_stream(aconn):

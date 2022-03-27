@@ -1,3 +1,4 @@
+import logging
 from typing import Any
 import concurrent.futures
 
@@ -47,6 +48,16 @@ def test_pipeline_broken_conn_exit(conn: psycopg.Connection[Any]) -> None:
             closed = True
 
     assert closed
+
+
+def test_pipeline_exit_error_noclobber(conn, caplog):
+    caplog.set_level(logging.WARNING, logger="psycopg")
+    with pytest.raises(ZeroDivisionError):
+        with conn.pipeline():
+            conn.close()
+            1 / 0
+
+    assert len(caplog.records) == 1
 
 
 def test_cursor_stream(conn):
