@@ -21,7 +21,7 @@ from typing import List, Optional, Union
 from . import pq
 from . import errors as e
 from .pq import ConnStatus, PollingStatus, ExecStatus
-from .abc import Command, PQGen, PQGenConn
+from .abc import PipelineCommand, PQGen, PQGenConn
 from .pq.abc import PGconn, PGresult
 from .waiting import Wait, Ready
 from ._compat import Deque
@@ -161,7 +161,7 @@ def fetch(pgconn: PGconn) -> PQGen[Optional[PGresult]]:
 
 
 def pipeline_communicate(
-    pgconn: PGconn, commands: Deque[Command]
+    pgconn: PGconn, commands: Deque[PipelineCommand]
 ) -> PQGen[List[List[PGresult]]]:
     """Generator to send queries from a connection in pipeline mode while also
     receiving results.
