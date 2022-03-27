@@ -75,7 +75,7 @@ async def test_pipeline_processed_at_exit(aconn):
 
 async def test_pipeline_errors_processed_at_exit(aconn):
     await aconn.set_autocommit(True)
-    with pytest.raises((e.OperationalError, e.UndefinedTable)):
+    with pytest.raises(e.UndefinedTable):
         async with aconn.pipeline():
             await aconn.execute("select * from nosuchtable")
             await aconn.execute("create table voila ()")
