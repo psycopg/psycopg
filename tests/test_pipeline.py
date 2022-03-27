@@ -30,6 +30,16 @@ def test_pipeline_reenter(conn: psycopg.Connection[Any]) -> None:
     assert p1.status == pq.PipelineStatus.OFF
 
 
+def test_pipeline_broken_conn_exit(conn: psycopg.Connection[Any]) -> None:
+    with pytest.raises(e.OperationalError):
+        with conn.pipeline():
+            conn.execute("select 1")
+            conn.close()
+            closed = True
+
+    assert closed
+
+
 def test_cursor_stream(conn):
     with conn.pipeline(), conn.cursor() as cur:
         with pytest.raises(psycopg.ProgrammingError):
