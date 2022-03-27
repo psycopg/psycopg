@@ -27,6 +27,22 @@ def pytest_addoption(parser):
     )
 
 
+def pytest_report_header(config):
+    dsn = config.getoption("--test-dsn")
+    if dsn is None:
+        return []
+
+    try:
+        with psycopg.connect(dsn, connect_timeout=10) as conn:
+            server_version = conn.execute("select version()").fetchall()[0][0]
+    except Exception as ex:
+        server_version = f"unknown ({ex})"
+
+    return [
+        f"Server version: {server_version}",
+    ]
+
+
 def pytest_configure(config):
     # register pg marker
     config.addinivalue_line(
