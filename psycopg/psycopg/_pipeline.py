@@ -107,8 +107,7 @@ class BasePipeline:
             return
 
         if flush:
-            self.pgconn.send_flush_request()
-            yield from send(self.pgconn)
+            yield from self._flush_gen()
 
         to_process = []
         while self.result_queue:
@@ -122,6 +121,10 @@ class BasePipeline:
 
         for queued, results in to_process:
             self._process_results(queued, results)
+
+    def _flush_gen(self) -> PQGen[None]:
+        self.pgconn.send_flush_request()
+        yield from send(self.pgconn)
 
     def _process_results(
         self, queued: PendingResult, results: List["PGresult"]

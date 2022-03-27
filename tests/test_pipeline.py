@@ -168,6 +168,12 @@ def test_executemany(conn):
             "insert into execmanypipeline(num) values (%s) returning id",
             [(10,), (20,)],
         )
+
+        # TODO: this is a bug, it should be 2. It is caused by reentering the
+        # pipeline mode in executemany(). Leaving it here to monitor how it
+        # changes. The snag is in Cursor._set_results_from_pipeline()
+        assert cur.rowcount == 0
+
         assert cur.fetchone() == (1,)
         assert cur.nextset()
         assert cur.fetchone() == (2,)

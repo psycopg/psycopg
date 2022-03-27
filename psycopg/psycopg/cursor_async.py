@@ -86,12 +86,17 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
         returning: bool = False,
     ) -> None:
         try:
-            async with self._conn.lock:
-                await self._conn.wait(
-                    self._executemany_gen(query, params_seq, returning)
-                )
+            async with self._conn.pipeline():
+                async with self._conn.lock:
+                    assert self._execmany_returning is None
+                    self._execmany_returning = returning
+                    await self._conn.wait(
+                        self._executemany_gen(query, params_seq, returning)
+                    )
         except e.Error as ex:
             raise ex.with_traceback(None)
+        finally:
+            self._execmany_returning = None
 
     async def stream(
         self,
