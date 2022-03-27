@@ -296,7 +296,7 @@ class AsyncConnection(BaseConnection[Row]):
                 yield n
 
     @asynccontextmanager
-    async def pipeline(self) -> AsyncIterator[None]:
+    async def pipeline(self) -> AsyncIterator[AsyncPipeline]:
         """Context manager to switch the connection into pipeline mode."""
         async with self.lock:
             if self._pipeline is None:
@@ -309,13 +309,13 @@ class AsyncConnection(BaseConnection[Row]):
 
         if not pipeline:
             # No-op re-entered inner pipeline block.
-            yield
+            yield self._pipeline
             return
 
         try:
             async with pipeline:
                 try:
-                    yield
+                    yield pipeline
                 finally:
                     async with self.lock:
                         pipeline.sync()
