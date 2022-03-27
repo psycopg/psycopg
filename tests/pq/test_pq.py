@@ -1,3 +1,4 @@
+import psycopg
 from psycopg import pq
 
 
@@ -14,3 +15,12 @@ def test_build_version():
         assert pq.__build_version__ and pq.__build_version__ >= 70400
     else:
         assert False, f"unexpected libpq implementation: {pq.__impl__}"
+
+
+def test_pipeline_supported():
+    # Note: This test is here because pipeline tests are skipped on libpq < 14
+    if pq.__impl__ == "python":
+        assert psycopg.Pipeline.is_supported() == (pq.version() >= 140000)
+    else:
+        assert pq.__build_version__ is not None
+        assert psycopg.Pipeline.is_supported() == (pq.__build_version__ >= 140000)

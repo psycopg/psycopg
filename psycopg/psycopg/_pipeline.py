@@ -43,6 +43,7 @@ class BasePipeline:
 
     command_queue: Deque[PipelineCommand]
     result_queue: Deque[PendingResult]
+    _is_supported: Optional[bool] = None
 
     def __init__(self, conn: "BaseConnection[Any]") -> None:
         self._conn = conn
@@ -58,6 +59,16 @@ class BasePipeline:
         """Enqueue a PQpipelineSync() command."""
         self.command_queue.append(self.pgconn.pipeline_sync)
         self.result_queue.append(None)
+
+    @staticmethod
+    def is_supported() -> bool:
+        """Return `True` if the psycopg libpq wrapper suports pipeline mode."""
+        if BasePipeline._is_supported is None:
+            # Support only depends on the libpq functions available in the pq
+            # wrapper, not on the database version.
+            pq_version = pq.__build_version__ or pq.version()
+            BasePipeline._is_supported = pq_version >= 140000
+        return BasePipeline._is_supported
 
     def _enter(self) -> None:
         self.pgconn.enter_pipeline_mode()
