@@ -9,7 +9,7 @@ from typing import Any, List, Optional, Union, Tuple, Type, TYPE_CHECKING
 
 from . import pq
 from . import errors as e
-from .pq import ExecStatus
+from .pq import ConnStatus, ExecStatus
 from .abc import PipelineCommand, PQGen
 from ._compat import Deque, TypeAlias
 from ._cmodule import _psycopg
@@ -63,7 +63,8 @@ class BasePipeline:
         self.pgconn.enter_pipeline_mode()
 
     def _exit(self) -> None:
-        self.pgconn.exit_pipeline_mode()
+        if self.pgconn.status != ConnStatus.BAD:
+            self.pgconn.exit_pipeline_mode()
 
     def _communicate_gen(self) -> PQGen[None]:
         """Communicate with pipeline to send commands and possibly fetch

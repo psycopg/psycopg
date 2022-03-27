@@ -33,6 +33,16 @@ async def test_pipeline_reenter(aconn: psycopg.AsyncConnection[Any]) -> None:
     assert p1.status == pq.PipelineStatus.OFF
 
 
+async def test_pipeline_broken_conn_exit(aconn: psycopg.AsyncConnection[Any]) -> None:
+    with pytest.raises(e.OperationalError):
+        async with aconn.pipeline():
+            await aconn.execute("select 1")
+            await aconn.close()
+            closed = True
+
+    assert closed
+
+
 async def test_cursor_stream(aconn):
     async with aconn.pipeline(), aconn.cursor() as cur:
         with pytest.raises(psycopg.ProgrammingError):
