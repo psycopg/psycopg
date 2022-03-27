@@ -13,6 +13,15 @@ pytestmark = [
 ]
 
 
+async def test_repr(aconn):
+    async with aconn.pipeline() as p:
+        assert "psycopg.AsyncPipeline" in repr(p)
+        assert "[IDLE]" in repr(p)
+
+    await aconn.close()
+    assert "[BAD]" in repr(p)
+
+
 async def test_pipeline_status(aconn: psycopg.AsyncConnection[Any]) -> None:
     assert aconn._pipeline is None
     async with aconn.pipeline() as p:

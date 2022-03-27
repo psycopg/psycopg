@@ -51,6 +51,11 @@ class BasePipeline:
         self.command_queue = Deque[PipelineCommand]()
         self.result_queue = Deque[PendingResult]()
 
+    def __repr__(self) -> str:
+        cls = f"{self.__class__.__module__}.{self.__class__.__qualname__}"
+        info = pq.misc.connection_summary(self._conn.pgconn)
+        return f"<{cls} {info} at 0x{id(self):x}>"
+
     @property
     def status(self) -> pq.PipelineStatus:
         return pq.PipelineStatus(self.pgconn.pipeline_status)
@@ -143,6 +148,7 @@ class BasePipeline:
 class Pipeline(BasePipeline):
     """Handler for connection in pipeline mode."""
 
+    __module__ = "psycopg"
     _conn: "Connection[Any]"
 
     def __init__(self, conn: "Connection[Any]") -> None:
@@ -176,6 +182,7 @@ class Pipeline(BasePipeline):
 class AsyncPipeline(BasePipeline):
     """Handler for async connection in pipeline mode."""
 
+    __module__ = "psycopg"
     _conn: "AsyncConnection[Any]"
 
     def __init__(self, conn: "AsyncConnection[Any]") -> None:
