@@ -216,7 +216,7 @@ async def pipeline_demo_pq_async(rows_to_send: int, logger: logging.Logger) -> N
                         raise e.error_from_result(r)
 
 
-def pipeline_demo(rows_to_send: int, logger: logging.Logger) -> None:
+def pipeline_demo(rows_to_send: int, many: bool, logger: logging.Logger) -> None:
     """Pipeline demo using sync API."""
     conn = Connection.connect()
     conn.autocommit = True
@@ -231,15 +231,19 @@ def pipeline_demo(rows_to_send: int, logger: logging.Logger) -> None:
                 " int8filler int8"
                 ")"
             )
-            for r in range(rows_to_send, 0, -1):
-                conn.execute(
-                    "INSERT INTO pq_pipeline_demo(itemno, int8filler)"
-                    " VALUES (%s, %s)",
-                    (r, 1 << 62),
-                )
+            query = "INSERT INTO pq_pipeline_demo(itemno, int8filler) VALUES (%s, %s)"
+            params = ((r, 1 << 62) for r in range(rows_to_send, 0, -1))
+            if many:
+                cur = conn.cursor()
+                cur.executemany(query, list(params))
+            else:
+                for p in params:
+                    conn.execute(query, p)
 
 
-async def pipeline_demo_async(rows_to_send: int, logger: logging.Logger) -> None:
+async def pipeline_demo_async(
+    rows_to_send: int, many: bool, logger: logging.Logger
+) -> None:
     """Pipeline demo using async API."""
     aconn = await AsyncConnection.connect()
     await aconn.set_autocommit(True)
@@ -254,12 +258,14 @@ async def pipeline_demo_async(rows_to_send: int, logger: logging.Logger) -> None
                 " int8filler int8"
                 ")"
             )
-            for r in range(rows_to_send, 0, -1):
-                await aconn.execute(
-                    "INSERT INTO pq_pipeline_demo(itemno, int8filler)"
-                    " VALUES (%s, %s)",
-                    (r, 1 << 62),
-                )
+            query = "INSERT INTO pq_pipeline_demo(itemno, int8filler) VALUES (%s, %s)"
+            params = ((r, 1 << 62) for r in range(rows_to_send, 0, -1))
+            if many:
+                cur = aconn.cursor()
+                await cur.executemany(query, list(params))
+            else:
+                for p in params:
+                    await aconn.execute(query, p)
 
 
 def main() -> None:
@@ -278,6 +284,11 @@ def main() -> None:
     parser.add_argument(
         "--async", dest="async_", action="store_true", help="use async API"
     )
+    parser.add_argument(
+        "--many",
+        action="store_true",
+        help="use executemany() (not applicable for --pq)",
+    )
     parser.add_argument("--trace", help="write trace info into TRACE file")
     parser.add_argument("-l", "--log", help="log file (stderr by default)")
 
@@ -294,6 +305,8 @@ def main() -> None:
         pipeline_logger.addHandler(logging.StreamHandler())
 
     if args.pq:
+        if args.many:
+            parser.error("--many cannot be used with --pq")
         if args.async_:
             asyncio.run(pipeline_demo_pq_async(args.nrows, pipeline_logger))
         else:
@@ -304,9 +317,9 @@ def main() -> None:
                 "only supported for Python implementation (set PSYCOPG_IMPL=python)"
             )
         if args.async_:
-            asyncio.run(pipeline_demo_async(args.nrows, pipeline_logger))
+            asyncio.run(pipeline_demo_async(args.nrows, args.many, pipeline_logger))
         else:
-            pipeline_demo(args.nrows, pipeline_logger)
+            pipeline_demo(args.nrows, args.many, pipeline_logger)
 
 
 if __name__ == "__main__":
