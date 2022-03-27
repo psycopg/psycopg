@@ -868,7 +868,7 @@ class Connection(BaseConnection[Row]):
                 yield n
 
     @contextmanager
-    def pipeline(self) -> Iterator[None]:
+    def pipeline(self) -> Iterator[Pipeline]:
         """Context manager to switch the connection into pipeline mode."""
         with self.lock:
             if self._pipeline is None:
@@ -881,13 +881,13 @@ class Connection(BaseConnection[Row]):
 
         if not pipeline:
             # No-op re-entered inner pipeline block.
-            yield
+            yield self._pipeline
             return
 
         try:
             with pipeline:
                 try:
-                    yield
+                    yield pipeline
                 finally:
                     with self.lock:
                         pipeline.sync()
