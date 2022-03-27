@@ -72,7 +72,7 @@ def test_pipeline_processed_at_exit(conn):
 
 def test_pipeline_errors_processed_at_exit(conn):
     conn.autocommit = True
-    with pytest.raises((e.OperationalError, e.UndefinedTable)):
+    with pytest.raises(e.UndefinedTable):
         with conn.pipeline():
             conn.execute("select * from nosuchtable")
             conn.execute("create table voila ()")
