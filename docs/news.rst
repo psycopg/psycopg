@@ -17,7 +17,7 @@ Psycopg 3.1 (unreleased)
 - Return results from all queries run through `~Cursor.executemany()`; each
   result set can be accessed by calling `~Cursor.nextset()` (:ticket:`#164`).
 - Add `pq.PGconn.trace()` and related trace functions (:ticket:`#167`).
-- Add *prepare_threshold* parameter to `Connection` init (:ticket:`#200`).
+- Add ``prepare_threshold`` parameter to `Connection` init (:ticket:`#200`).
 - Add `Error.pgconn` and `Error.pgresult` attributes (:ticket:`#242`).
 - Allow `bytearray`/`memoryview` data too as `Copy.write()` input
   (:ticket:`#254`).
@@ -142,7 +142,7 @@ First stable release. Changed from 3.0b1:
 - Add :ref:`adapt-multirange` (:ticket:`#75`).
 - Add `pq.__build_version__` constant.
 - Don't use the extended protocol with COPY, (:tickets:`#78, #82`).
-- Add *context* parameter to `~Connection.connect()` (:ticket:`#83`).
+- Add ``context`` parameter to `~Connection.connect()` (:ticket:`#83`).
 - Fix selection of dumper by oid after `~Copy.set_types()`.
 - Drop `!Connection.client_encoding`. Use `ConnectionInfo.encoding` to read
   it, and a :sql:`SET` statement to change it.

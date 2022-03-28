@@ -28,7 +28,7 @@ returned.
   By default, connections obtain an adapters map from the global map
   exposed as `psycopg.adapters`: changing the content of this object will
   affect every connection created afterwards. You may specify a different
-  template adapters map using the *context* parameter on
+  template adapters map using the ``context`` parameter on
   `~psycopg.Connection.connect()`.
 
   .. image:: ../pictures/adapt.svg

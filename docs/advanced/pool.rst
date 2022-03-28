@@ -49,7 +49,7 @@ have `!close()` called at the end of the program.
 
 If you want to avoid starting to connect to the database at import time, and
 want to wait for the application to be ready, you can create the pool using
-*open* = `!False`, and call the `~ConnectionPool.open()` and
+``open=False``, and call the `~ConnectionPool.open()` and
 `~ConnectionPool.close()` methods when the conditions are right. Certain
 frameworks provide callbacks triggered when the program is started and stopped
 (for instance `FastAPI startup/shutdown events`__): they are perfect to
@@ -82,7 +82,7 @@ entering and exiting the context block::
     # the pool is now closed
 
 When the pool is open, the pool's background workers start creating the
-requested *min_size* connections, while the constructor (or the `!open()`
+requested ``min_size`` connections, while the constructor (or the `!open()`
 method) returns immediately. This allows the program some leeway to start
 before the target database is up and running.  However, if your application is
 misconfigured, or the network is down, it means that the program will be able
@@ -100,13 +100,13 @@ Connections life cycle
 ----------------------
 
 The pool background workers create connections according to the parameters
-*conninfo*, *kwargs*, and *connection_class* passed to `ConnectionPool`
+``conninfo``, ``kwargs``, and ``connection_class`` passed to `ConnectionPool`
 constructor, invoking something like :samp:`{connection_class}({conninfo},
 **{kwargs})`. Once a connection is created it is also passed to the
-*configure()* callback, if provided, after which it is put in the pool (or
+``configure()`` callback, if provided, after which it is put in the pool (or
 passed to a client requesting it, if someone is already knocking at the door).
 
-If a connection expires (it passes *max_lifetime*), or is returned to the pool
+If a connection expires (it passes ``max_lifetime``), or is returned to the pool
 in broken state, or is found closed by `~ConnectionPool.check()`), then the
 pool will dispose of it and will start a new connection attempt in the
 background.
@@ -120,7 +120,7 @@ concurrent tasks - it is hardly useful otherwise! If more connections than the
 ones available in the pool are requested, the requesting threads are queued
 and are served a connection as soon as one is available, either because
 another client has finished using it or because the pool is allowed to grow
-(when *max_size* > *min_size*) and a new connection is ready.
+(when ``max_size`` > ``min_size``) and a new connection is ready.
 
 The main way to use the pool is to obtain a connection using the
 `~ConnectionPool.connection()` context, which returns a `~psycopg.Connection`
@@ -134,9 +134,9 @@ context: at the end of the block, if there is a transaction open, it will be
 committed, or rolled back if the context is exited with as exception.
 
 At the end of the block the connection is returned to the pool and shouldn't
-be used anymore by the code which obtained it. If a *reset()* function is
+be used anymore by the code which obtained it. If a ``reset()`` function is
 specified in the pool constructor, it is called on the connection before
-returning it to the pool. Note that the *reset()* function is called in a
+returning it to the pool. Note that the ``reset()`` function is called in a
 worker thread, so that the thread which used the connection can keep its
 execution without being slowed down by it.
 
@@ -144,21 +144,21 @@ execution without being slowed down by it.
 Pool connection and sizing
 --------------------------
 
-A pool can have a fixed size (specifying no *max_size* or *max_size* =
-*min_size*) or a dynamic size (when *max_size* > *min_size*). In both cases, as
-soon as the pool is created, it will try to acquire *min_size* connections in
-the background.
+A pool can have a fixed size (specifying no ``max_size`` or ``max_size`` =
+``min_size``) or a dynamic size (when ``max_size`` > ``min_size``). In both
+cases, as soon as the pool is created, it will try to acquire ``min_size``
+connections in the background.
 
 If an attempt to create a connection fails, a new attempt will be made soon
 after, using an exponential backoff to increase the time between attempts,
-until a maximum of *reconnect_timeout* is reached. When that happens, the pool
-will call the *reconnect_failed()* function, if provided to the pool, and just
+until a maximum of ``reconnect_timeout`` is reached. When that happens, the pool
+will call the ``reconnect_failed()`` function, if provided to the pool, and just
 start a new connection attempt. You can use this function either to send
 alerts or to interrupt the program and allow the rest of your infrastructure
 to restart it.
 
-If more than *min_size* connections are requested concurrently, new ones are
-created, up to *max_size*. Note that the connections are always created by the
+If more than ``min_size`` connections are requested concurrently, new ones are
+created, up to ``max_size``. Note that the connections are always created by the
 background workers, not by the thread asking for the connection: if a client
 requests a new connection, and a previous client terminates its job before the
 new connection is ready, the waiting client will be served the existing
@@ -169,9 +169,9 @@ analysis`__, for instance).
 .. __: https://github.com/brettwooldridge/HikariCP/blob/dev/documents/
        Welcome-To-The-Jungle.md
 
-If a pool grows above *min_size*, but its usage decreases afterwards, a number
+If a pool grows above ``min_size``, but its usage decreases afterwards, a number
 of connections are eventually closed: one every time a connection is unused
-after the *max_idle* time specified in the pool constructor.
+after the ``max_idle`` time specified in the pool constructor.
 
 
 What's the right size for the pool?
@@ -205,7 +205,7 @@ balancer, and/or using an external connection pool process such as PgBouncer.
 Switching between using or not using a pool requires some code change, because
 the `ConnectionPool` API is different from the normal `~psycopg.connect()`
 function and because the pool can perform additional connection configuration
-(in the *configure* parameter) that, if the pool is removed, should be
+(in the ``configure`` parameter) that, if the pool is removed, should be
 performed in some different code path of your application.
 
 The `!psycopg_pool` 3.1 package introduces the `NullConnectionPool` class.
@@ -215,19 +215,19 @@ connection is returned, unless there are other clients already waiting, it
 is closed immediately and not kept in the pool state.
 
 A null pool is not only a configuration convenience, but can also be used to
-regulate the access to the server by a client program. If *max_size* is set to
-a value greater than 0, the pool will make sure that no more than *max_size*
+regulate the access to the server by a client program. If ``max_size`` is set to
+a value greater than 0, the pool will make sure that no more than ``max_size``
 connections are created at any given time. If more clients ask for further
 connections, they will be queued and served a connection as soon as a previous
 client has finished using it, like for the basic pool. Other mechanisms to
-throttle client requests (such as *timeout* or *max_waiting*) are respected
+throttle client requests (such as ``timeout`` or ``max_waiting``) are respected
 too.
 
 .. note::
 
     Queued clients will be handed an already established connection, as soon
     as a previous client has finished using it (and after the pool has
-    returned it to idle state and called *reset()* on it, if necessary).
+    returned it to idle state and called ``reset()`` on it, if necessary).
 
 Because normally (i.e. unless queued) every client will be served a new
 connection, the time to obtain the connection is paid by the waiting client;

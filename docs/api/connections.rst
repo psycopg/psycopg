@@ -32,10 +32,10 @@ The `!Connection` class
     .. automethod:: connect
 
         :param conninfo: The `connection string`__ (a ``postgresql://`` url or
-                         a list of ``key=value pairs``) to specify where and
+                         a list of ``key=value`` pairs) to specify where and
                          how to connect.
         :param kwargs: Further parameters specifying the connection string.
-                       They override the ones specified in *conninfo*.
+                       They override the ones specified in ``conninfo``.
         :param autocommit: If `!True` don't start transactions automatically.
                            See :ref:`transactions` for details.
         :param row_factory: The row factory specifying what type of records
@@ -67,7 +67,7 @@ The `!Connection` class
             .. __: https://www.postgresql.org/docs/current/libpq-envars.html
 
         .. versionchanged:: 3.1
-            Added *prepare_threshold* parameter.
+            added ``prepare_threshold`` parameter.
 
     .. automethod:: close
 
@@ -106,7 +106,7 @@ The `!Connection` class
         :param withhold: Specify the `~ServerCursor.withhold` property of
                          the server-side cursor created.
         :return: A cursor of the class specified by `cursor_factory` (or
-                 `server_cursor_factory` if *name* is specified).
+                 `server_cursor_factory` if ``name`` is specified).
 
         .. note::
 
@@ -291,7 +291,7 @@ The `!Connection` class
         within the TPC transaction: in this case a `ProgrammingError`
         is raised.
 
-        The *xid* may be either an object returned by the `xid()` method or a
+        The ``xid`` may be either an object returned by the `xid()` method or a
         plain string: the latter allows to create a transaction using the
         provided string as PostgreSQL transaction id. See also
         `tpc_recover()`.
@@ -324,7 +324,7 @@ The `!Connection` class
         commit is performed.  A transaction manager may choose to do this if
         only a single resource is participating in the global transaction.
 
-        When called with a transaction ID *xid*, the database commits the
+        When called with a transaction ID ``xid``, the database commits the
         given transaction.  If an invalid transaction ID is provided, a
         `ProgrammingError` will be raised.  This form should be called outside
         of a transaction, and is intended for use in recovery.
@@ -345,7 +345,7 @@ The `!Connection` class
         When called with no arguments, `!tpc_rollback()` rolls back a TPC
         transaction.  It may be called before or after `tpc_prepare()`.
 
-        When called with a transaction ID *xid*, it rolls back the given
+        When called with a transaction ID ``xid``, it rolls back the given
         transaction.  If an invalid transaction ID is provided, a
         `ProgrammingError` is raised.  This form should be called outside of a
         transaction, and is intended for use in recovery.
@@ -594,9 +594,9 @@ Connection support objects
     - ``raise Rollback()``: same effect as above
 
     - :samp:`raise Rollback({tx})`: roll back any operation that happened in
-      the `Transaction` *tx* (returned by a statement such as :samp:`with
+      the `Transaction` ``tx`` (returned by a statement such as :samp:`with
       conn.transaction() as {tx}:` and all the blocks nested within. The
-      program will continue after the *tx* block.
+      program will continue after the ``tx`` block.
 
 
 .. autoclass:: Xid()

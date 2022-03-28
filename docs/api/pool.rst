@@ -44,7 +44,7 @@ The `!ConnectionPool` class
 
    This class implements a connection pool serving `~psycopg.Connection`
    instances (or subclasses). The constructor has *alot* of arguments, but
-   only *conninfo* and *min_size* are the fundamental ones, all the other
+   only ``conninfo`` and ``min_size`` are the fundamental ones, all the other
    arguments have meaningful defaults and can probably be tweaked later, if
    required.
 
@@ -55,15 +55,15 @@ The `!ConnectionPool` class
    :param min_size: The minimum number of connection the pool will hold. The
                    pool will actively try to create new connections if some
                    are lost (closed, broken) and will try to never go below
-                   *min_size*.
+                   ``min_size``.
    :type min_size: `!int`, default: 4
 
    :param max_size: The maximum number of connections the pool will hold. If
-                   `!None`, or equal to *min_size*, the pool will not grow or
-                   shrink. If larger than *min_size*, the pool can grow if
-                   more than *min_size* connections are requested at the same
+                   `!None`, or equal to ``min_size``, the pool will not grow or
+                   shrink. If larger than ``min_size``, the pool can grow if
+                   more than ``min_size`` connections are requested at the same
                    time and will shrink back after the extra connections have
-                   been unused for more than *max_idle* seconds.
+                   been unused for more than ``max_idle`` seconds.
    :type max_size: `!int`, default: `!None`
 
    :param kwargs: Extra arguments to pass to `!connect()`. Note that this is
@@ -91,8 +91,8 @@ The `!ConnectionPool` class
 
    :param reset: A callback to reset a function after it has been returned to
                  the pool. The connection is guaranteed to be passed to the
-                 *reset()* function in "idle" state (no transaction). When
-                 leaving the *reset()* function the connection must be left in
+                 ``reset()`` function in "idle" state (no transaction). When
+                 leaving the ``reset()`` function the connection must be left in
                  *idle* state, otherwise it is discarded.
    :type reset: `Callable[[Connection], None]`
 
@@ -121,8 +121,8 @@ The `!ConnectionPool` class
 
    :param max_idle: Maximum time, in seconds, that a connection can stay unused
                     in the pool before being closed, and the pool shrunk. This
-                    only happens to connections more than *min_size*, if
-                    *max_size* allowed the pool to grow.
+                    only happens to connections more than ``min_size``, if
+                    ``max_size`` allowed the pool to grow.
    :type max_idle: `!float`, default: 10 minutes
 
    :param reconnect_timeout: Maximum time, in seconds, the pool will try to
@@ -130,18 +130,18 @@ The `!ConnectionPool` class
                              fails, the pool will try to reconnect a few
                              times, using an exponential backoff and some
                              random factor to avoid mass attempts. If repeated
-                             attempts fail, after *reconnect_timeout* second
+                             attempts fail, after ``reconnect_timeout`` second
                              the connection attempt is aborted and the
-                             *reconnect_failed* callback invoked.
+                             ``reconnect_failed()`` callback invoked.
    :type reconnect_timeout: `!float`, default: 5 minutes
 
    :param reconnect_failed: Callback invoked if an attempt to create a new
-                            connection fails for more than *reconnect_timeout*
+                            connection fails for more than ``reconnect_timeout``
                             seconds. The user may decide, for instance, to
                             terminate the program (executing `sys.exit()`).
                             By default don't do anything: restart a new
                             connection attempt (if the number of connection
-                            fell below *min_size*).
+                            fell below ``min_size``).
    :type reconnect_failed: ``Callable[[ConnectionPool], None]``
 
    :param num_workers: Number of background worker threads used to maintain the
@@ -152,9 +152,9 @@ The `!ConnectionPool` class
 
    .. versionchanged:: 3.1
 
-        Added *open* parameter to init method.
+        added ``open`` parameter to init method.
 
-   .. note:: In a future version, the default value for the *open* parameter
+   .. note:: In a future version, the default value for the ``open`` parameter
         might be changed to `!False`. If you rely on this behaviour (e.g. if
         you don't use the pool as a context manager) you might want to specify
         this parameter explicitly.
@@ -234,7 +234,7 @@ The `!AsyncConnectionPool` class
 `!AsyncConnectionPool` has a very similar interface to the `ConnectionPool`
 class but its blocking methods are implemented as ``async`` coroutines. It
 returns instances of `~psycopg.AsyncConnection`, or of its subclass if
-specified so in the *connection_class* parameter.
+specified so in the ``connection_class`` parameter.
 
 Only the functions with different signature from `!ConnectionPool` are
 listed here.
@@ -305,7 +305,7 @@ behaviour is similar, with the following differences:
 
    :param max_size: If None or 0, create a new connection at every request,
                     without a maximum. If greater than 0, don't create more
-                    than *max_size* connections and queue the waiting clients.
+                    than ``max_size`` connections and queue the waiting clients.
    :type max_size: `!int`, default: None
 
    :param reset: It is only called when there are waiting clients in the

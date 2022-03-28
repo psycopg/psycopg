@@ -155,11 +155,11 @@ See :ref:`adapt-json` for details.
 .. autoclass:: Json
 .. autoclass:: Jsonb
 
-Wrappers to signal to convert *obj* to a json or jsonb PostgreSQL value.
+Wrappers to signal to convert ``obj`` to a json or jsonb PostgreSQL value.
 
 Any object supported by the underlying `!dumps()` function can be wrapped.
 
-If a *dumps* function is passed to the wrapper, use it to dump the wrapped
+If a ``dumps`` function is passed to the wrapper, use it to dump the wrapped
 object. Otherwise use the function specified by `set_json_dumps()`.
 
 
