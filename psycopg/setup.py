@@ -47,6 +47,7 @@ extras_require = {
     # Requirements needed for development
     "dev": [
         "black >= 22.1.0",
+        "click == 8.0.4",  # https://github.com/psf/black/issues/2964
         "dnspython >= 2.1",
         "flake8 >= 4.0",
         "mypy >= 0.940",
