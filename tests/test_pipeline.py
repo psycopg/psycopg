@@ -187,7 +187,7 @@ def test_executemany_rowcount(conn):
             [(10,), (20,)],
         )
 
-        # TODO: this is a bug. It is caused by reentering the pipeline mode in
+        # TODO: failing. It is caused by reentering the pipeline mode in
         # executemany(). Leaving it here to monitor how it changes. The snag is
         # in Cursor._set_results_from_pipeline()
         assert cur.rowcount == 2
