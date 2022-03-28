@@ -275,6 +275,7 @@ async def test_executemany_returning(aconn, execmany):
     await cur.executemany(
         "insert into execmany(num, data) values (%s, %s) returning num",
         [(10, "hello"), (20, "world")],
+        returning=True,
     )
     assert cur.rowcount == 2
     assert (await cur.fetchone()) == (10,)
@@ -288,7 +289,6 @@ async def test_executemany_returning_discard(aconn, execmany):
     await cur.executemany(
         "insert into execmany(num, data) values (%s, %s) returning num",
         [(10, "hello"), (20, "world")],
-        returning=False,
     )
     assert cur.rowcount == 2
     with pytest.raises(psycopg.ProgrammingError):
@@ -301,6 +301,7 @@ async def test_executemany_no_result(aconn, execmany):
     await cur.executemany(
         "insert into execmany(num, data) values (%s, %s)",
         [(10, "hello"), (20, "world")],
+        returning=True,
     )
     assert cur.rowcount == 2
     with pytest.raises(psycopg.ProgrammingError):

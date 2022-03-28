@@ -83,7 +83,7 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
         query: Query,
         params_seq: Iterable[Params],
         *,
-        returning: bool = True,
+        returning: bool = False,
     ) -> None:
         try:
             async with self._conn.lock:

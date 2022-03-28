@@ -14,8 +14,8 @@ Psycopg 3.1 (unreleased)
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
 - Add :ref:`Two-Phase Commit <two-phase-commit>` support (:ticket:`#72`).
-- Return results from all queries run through `~Cursor.executemany()`; each
-  result set can be accessed by calling `~Cursor.nextset()` (:ticket:`#164`).
+- Add ``returning`` parameter to `~Cursor.executemany()` to retrieve query
+  results (:ticket:`#164`).
 - Add `pq.PGconn.trace()` and related trace functions (:ticket:`#167`).
 - Add ``prepare_threshold`` parameter to `Connection` init (:ticket:`#200`).
 - Add `Error.pgconn` and `Error.pgresult` attributes (:ticket:`#242`).

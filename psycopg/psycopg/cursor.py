@@ -566,7 +566,7 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
         query: Query,
         params_seq: Iterable[Params],
         *,
-        returning: bool = True,
+        returning: bool = False,
     ) -> None:
         """
         Execute the same command with a sequence of input data.
