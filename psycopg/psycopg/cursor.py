@@ -240,8 +240,6 @@ class BaseCursor(Generic[ConnectionType, Row]):
         for cmd in self._conn._prepared.get_maintenance_commands():
             yield from self._conn._exec_command(cmd)
 
-        yield from pipeline._flush_gen()
-
     def _executemany_gen_no_pipeline(
         self, query: Query, params_seq: Iterable[Params], returning: bool
     ) -> PQGen[None]:
