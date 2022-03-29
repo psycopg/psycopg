@@ -169,29 +169,11 @@ def test_executemany(conn):
             [(10,), (20,)],
             returning=True,
         )
+        assert cur.rowcount == 2
         assert cur.fetchone() == (1,)
         assert cur.nextset()
         assert cur.fetchone() == (2,)
         assert cur.nextset() is None
-
-
-@pytest.mark.xfail
-def test_executemany_rowcount(conn):
-    conn.autocommit = True
-    conn.execute(
-        "create temp table test_executemany_rowcount ("
-        " id serial primary key, num integer)"
-    )
-    with conn.pipeline(), conn.cursor() as cur:
-        cur.executemany(
-            "insert into test_executemany_rowcount (num) values (%s) returning id",
-            [(10,), (20,)],
-        )
-
-        # TODO: failing. It is caused by reentering the pipeline mode in
-        # executemany(). Leaving it here to monitor how it changes. The snag is
-        # in Cursor._set_results_from_pipeline()
-        assert cur.rowcount == 2
 
 
 def test_prepared(conn):
