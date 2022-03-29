@@ -170,6 +170,7 @@ async def test_executemany(aconn):
         await cur.executemany(
             "insert into execmanypipeline(num) values (%s) returning id",
             [(10,), (20,)],
+            returning=True,
         )
         assert (await cur.fetchone()) == (1,)
         assert cur.nextset()
