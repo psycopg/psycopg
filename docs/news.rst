@@ -7,7 +7,7 @@
 ``psycopg`` release notes
 =========================
 
-Future releases
+Current release
 ---------------
 
 Psycopg 3.0.11
@@ -17,9 +17,6 @@ Psycopg 3.0.11
 - Fix hanging during COPY in case of memory error (:ticket:`#255`).
 - Fix error propagation from COPY worker thread (mentioned in :ticket:`#255`).
 
-
-Current release
----------------
 
 Psycopg 3.0.10
 ^^^^^^^^^^^^^^
