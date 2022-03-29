@@ -24,16 +24,16 @@ Psycopg 3.1 (unreleased)
 - Drop support for Python 3.6.
 
 
-Psycopg 3.0.11 (unreleased)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Current release
+---------------
+
+Psycopg 3.0.11
+^^^^^^^^^^^^^^
 
 - Fix `DataError` loading arrays with dimensions information (:ticket:`#253`).
 - Fix hanging during COPY in case of memory error (:ticket:`#255`).
 - Fix error propagation from COPY worker thread (mentioned in :ticket:`#255`).
 
-
-Current release
----------------
 
 Psycopg 3.0.10
 ^^^^^^^^^^^^^^
