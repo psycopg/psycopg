@@ -88,10 +88,20 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
     ) -> None:
         try:
             if Pipeline.is_supported():
-                async with self._conn.pipeline(), self._conn.lock:
-                    await self._conn.wait(
-                        self._executemany_gen_pipeline(query, params_seq, returning)
-                    )
+                # If there is already a pipeline, ride it, in order to avoid
+                # sending unnecessary Sync.
+                async with self._conn.lock:
+                    p = self._conn._pipeline
+                    if p:
+                        await self._conn.wait(
+                            self._executemany_gen_pipeline(query, params_seq, returning)
+                        )
+                # Otherwise, make a new one
+                if not p:
+                    async with self._conn.pipeline(), self._conn.lock:
+                        await self._conn.wait(
+                            self._executemany_gen_pipeline(query, params_seq, returning)
+                        )
             else:
                 await self._conn.wait(
                     self._executemany_gen_no_pipeline(query, params_seq, returning)

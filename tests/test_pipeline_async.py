@@ -65,6 +65,23 @@ async def test_pipeline_exit_error_noclobber(aconn, caplog):
     assert len(caplog.records) == 1
 
 
+async def test_pipeline_exit_sync_trace(aconn, trace):
+    t = trace.trace(aconn)
+    async with aconn.pipeline():
+        pass
+    await aconn.close()
+    assert len([i for i in t if i.type == "Sync"]) == 1
+
+
+async def test_pipeline_nested_sync_trace(aconn, trace):
+    t = trace.trace(aconn)
+    async with aconn.pipeline():
+        async with aconn.pipeline():
+            pass
+    await aconn.close()
+    assert len([i for i in t if i.type == "Sync"]) == 2
+
+
 async def test_cursor_stream(aconn):
     async with aconn.pipeline(), aconn.cursor() as cur:
         with pytest.raises(psycopg.ProgrammingError):

@@ -310,7 +310,10 @@ class AsyncConnection(BaseConnection[Row]):
 
         if not pipeline:
             # No-op re-entered inner pipeline block.
-            yield self._pipeline
+            try:
+                yield self._pipeline
+            finally:
+                await self._pipeline.sync()
             return
 
         try:

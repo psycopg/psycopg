@@ -698,10 +698,20 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
         """
         try:
             if Pipeline.is_supported():
-                with self._conn.pipeline(), self._conn.lock:
-                    self._conn.wait(
-                        self._executemany_gen_pipeline(query, params_seq, returning)
-                    )
+                # If there is already a pipeline, ride it, in order to avoid
+                # sending unnecessary Sync.
+                with self._conn.lock:
+                    p = self._conn._pipeline
+                    if p:
+                        self._conn.wait(
+                            self._executemany_gen_pipeline(query, params_seq, returning)
+                        )
+                # Otherwise, make a new one
+                if not p:
+                    with self._conn.pipeline(), self._conn.lock:
+                        self._conn.wait(
+                            self._executemany_gen_pipeline(query, params_seq, returning)
+                        )
             else:
                 with self._conn.lock:
                     self._conn.wait(
