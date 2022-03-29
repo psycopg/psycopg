@@ -266,7 +266,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
             results = yield from self._maybe_prepare_gen(pgq, prepare=True)
             assert results is not None
             self._check_results(results)
-            if returning and results[0].status == ExecStatus.TUPLES_OK:
+            if returning:
                 self._results.extend(results)
 
             for res in results:
@@ -526,7 +526,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
 
         else:
             # Received from executemany()
-            if self._execmany_returning and results[0].status == ExecStatus.TUPLES_OK:
+            if self._execmany_returning:
                 self._results.extend(results)
                 if first_batch:
                     self._set_current_result(0)
