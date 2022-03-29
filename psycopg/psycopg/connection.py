@@ -885,7 +885,7 @@ class Connection(BaseConnection[Row]):
             try:
                 yield self._pipeline
             finally:
-                self._pipeline.communicate()
+                self._pipeline.sync()
             return
 
         try:

@@ -141,7 +141,7 @@ async def test_pipeline_aborted(aconn):
         with pytest.raises(e.OperationalError, match="pipeline aborted"):
             await (await aconn.execute("select 'aborted'")).fetchone()
         # Sync restore the connection in usable state.
-        p.sync()
+        await p.sync()
         c2 = await aconn.execute("select 2")
 
     (r,) = await c1.fetchone()

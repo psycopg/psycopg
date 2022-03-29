@@ -313,7 +313,7 @@ class AsyncConnection(BaseConnection[Row]):
             try:
                 yield self._pipeline
             finally:
-                await self._pipeline.communicate()
+                await self._pipeline.sync()
             return
 
         try:
