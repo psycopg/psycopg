@@ -68,8 +68,6 @@ class BaseCursor(Generic[ConnectionType, Row]):
         self._closed = False
         self._last_query: Optional[Query] = None
         self._reset()
-        # None if executemany() not executing, True/False according to returning state
-        self._execmany_returning: Optional[bool] = None
 
     def _reset(self, reset_query: bool = True) -> None:
         self._results: List["PGresult"] = []
@@ -79,6 +77,8 @@ class BaseCursor(Generic[ConnectionType, Row]):
         self._rowcount = -1
         self._query: Optional[PostgresQuery]
         self._encoding = "utf-8"
+        # None if executemany() not executing, True/False according to returning state
+        self._execmany_returning: Optional[bool] = None
         if reset_query:
             self._query = None
 
@@ -212,7 +212,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
             yield from self._conn._exec_command(cmd)
 
     def _executemany_gen_pipeline(
-        self, query: Query, params_seq: Iterable[Params]
+        self, query: Query, params_seq: Iterable[Params], returning: bool
     ) -> PQGen[None]:
         """
         Generator implementing `Cursor.executemany()` with pipelines available.
@@ -222,6 +222,9 @@ class BaseCursor(Generic[ConnectionType, Row]):
 
         yield from self._start_query(query)
         self._rowcount = 0
+
+        assert self._execmany_returning is None
+        self._execmany_returning = returning
 
         first = True
         for params in params_seq:
@@ -693,9 +696,9 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
         try:
             if Pipeline.is_supported():
                 with self._conn.pipeline(), self._conn.lock:
-                    assert self._execmany_returning is None
-                    self._execmany_returning = returning
-                    self._conn.wait(self._executemany_gen_pipeline(query, params_seq))
+                    self._conn.wait(
+                        self._executemany_gen_pipeline(query, params_seq, returning)
+                    )
             else:
                 with self._conn.lock:
                     self._conn.wait(
@@ -703,8 +706,6 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
                     )
         except e.Error as ex:
             raise ex.with_traceback(None)
-        finally:
-            self._execmany_returning = None
 
     def stream(
         self,
@@ -820,7 +821,11 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
             yield copy
 
     def _fetch_pipeline(self) -> None:
-        if not self.pgresult and self._conn._pipeline:
+        if (
+            self._execmany_returning is not False
+            and not self.pgresult
+            and self._conn._pipeline
+        ):
             with self._conn.lock:
                 self._conn.wait(self._conn._pipeline._fetch_gen(flush=True))
             assert self.pgresult

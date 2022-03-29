@@ -179,6 +179,28 @@ async def test_executemany(aconn):
         assert cur.nextset() is None
 
 
+async def test_executemany_no_returning(aconn):
+    await aconn.set_autocommit(True)
+    await aconn.execute("drop table if exists execmanypipelinenoreturning")
+    await aconn.execute(
+        "create unlogged table execmanypipelinenoreturning ("
+        " id serial primary key, num integer)"
+    )
+    async with aconn.pipeline(), aconn.cursor() as cur:
+        await cur.executemany(
+            "insert into execmanypipelinenoreturning(num) values (%s)",
+            [(10,), (20,)],
+            returning=False,
+        )
+        assert cur.rowcount == 2
+        with pytest.raises(e.ProgrammingError, match="no result available"):
+            await cur.fetchone()
+        assert cur.nextset() is None
+        with pytest.raises(e.ProgrammingError, match="no result available"):
+            await cur.fetchone()
+        assert cur.nextset() is None
+
+
 async def test_prepared(aconn):
     await aconn.set_autocommit(True)
     async with aconn.pipeline():

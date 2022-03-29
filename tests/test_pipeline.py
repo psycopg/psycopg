@@ -176,6 +176,28 @@ def test_executemany(conn):
         assert cur.nextset() is None
 
 
+def test_executemany_no_returning(conn):
+    conn.autocommit = True
+    conn.execute("drop table if exists execmanypipelinenoreturning")
+    conn.execute(
+        "create unlogged table execmanypipelinenoreturning ("
+        " id serial primary key, num integer)"
+    )
+    with conn.pipeline(), conn.cursor() as cur:
+        cur.executemany(
+            "insert into execmanypipelinenoreturning(num) values (%s)",
+            [(10,), (20,)],
+            returning=False,
+        )
+        assert cur.rowcount == 2
+        with pytest.raises(e.ProgrammingError, match="no result available"):
+            cur.fetchone()
+        assert cur.nextset() is None
+        with pytest.raises(e.ProgrammingError, match="no result available"):
+            cur.fetchone()
+        assert cur.nextset() is None
+
+
 def test_prepared(conn):
     conn.autocommit = True
     with conn.pipeline():

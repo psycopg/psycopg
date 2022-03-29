@@ -89,10 +89,8 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
         try:
             if Pipeline.is_supported():
                 async with self._conn.pipeline(), self._conn.lock:
-                    assert self._execmany_returning is None
-                    self._execmany_returning = returning
                     await self._conn.wait(
-                        self._executemany_gen_pipeline(query, params_seq)
+                        self._executemany_gen_pipeline(query, params_seq, returning)
                     )
             else:
                 await self._conn.wait(
@@ -100,8 +98,6 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
                 )
         except e.Error as ex:
             raise ex.with_traceback(None)
-        finally:
-            self._execmany_returning = None
 
     async def stream(
         self,
@@ -182,7 +178,11 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
             yield copy
 
     async def _fetch_pipeline(self) -> None:
-        if not self.pgresult and self._conn._pipeline:
+        if (
+            self._execmany_returning is not False
+            and not self.pgresult
+            and self._conn._pipeline
+        ):
             async with self._conn.lock:
                 await self._conn.wait(self._conn._pipeline._fetch_gen(flush=True))
             assert self.pgresult
