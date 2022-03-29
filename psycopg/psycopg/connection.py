@@ -882,10 +882,7 @@ class Connection(BaseConnection[Row]):
 
         if not pipeline:
             # No-op re-entered inner pipeline block.
-            try:
-                yield self._pipeline
-            finally:
-                self._pipeline.sync()
+            yield self._pipeline
             return
 
         try:

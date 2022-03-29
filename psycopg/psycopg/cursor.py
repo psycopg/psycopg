@@ -240,6 +240,9 @@ class BaseCursor(Generic[ConnectionType, Row]):
 
         self._last_query = query
 
+        if returning:
+            yield from pipeline._sync_gen()
+
         for cmd in self._conn._prepared.get_maintenance_commands():
             yield from self._conn._exec_command(cmd)
 

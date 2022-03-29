@@ -189,7 +189,6 @@ def test_executemany_no_returning(conn):
             [(10,), (20,)],
             returning=False,
         )
-        assert cur.rowcount == 2
         with pytest.raises(e.ProgrammingError, match="no result available"):
             cur.fetchone()
         assert cur.nextset() is None
