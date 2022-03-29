@@ -98,6 +98,14 @@ def test_cannot_insert_multiple_commands(conn):
     assert cm.value.sqlstate == "42601"
 
 
+def test_copy(conn):
+    with conn.pipeline():
+        cur = conn.cursor()
+        with pytest.raises(e.NotSupportedError):
+            with cur.copy("copy (select 1) to stdout"):
+                pass
+
+
 def test_pipeline_processed_at_exit(conn):
     with conn.cursor() as cur:
         with conn.pipeline() as p:

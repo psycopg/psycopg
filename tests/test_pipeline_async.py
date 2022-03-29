@@ -101,6 +101,14 @@ async def test_cannot_insert_multiple_commands(aconn):
     assert cm.value.sqlstate == "42601"
 
 
+async def test_copy(aconn):
+    async with aconn.pipeline():
+        cur = aconn.cursor()
+        with pytest.raises(e.NotSupportedError):
+            async with cur.copy("copy (select 1) to stdout") as copy:
+                await copy.read()
+
+
 async def test_pipeline_processed_at_exit(aconn):
     async with aconn.cursor() as cur:
         async with aconn.pipeline() as p:

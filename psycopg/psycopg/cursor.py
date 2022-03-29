@@ -387,6 +387,12 @@ class BaseCursor(Generic[ConnectionType, Row]):
 
     def _start_copy_gen(self, statement: Query) -> PQGen[None]:
         """Generator implementing sending a command for `Cursor.copy()."""
+
+        # The connection gets in an unrecoverable state if we attempt COPY in
+        # pipeline mode. Forbid it explicitly.
+        if self._conn._pipeline:
+            raise e.NotSupportedError("COPY cannot be used in pipeline mode")
+
         yield from self._start_query()
         query = self._convert_query(statement)
 
