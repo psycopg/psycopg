@@ -514,9 +514,6 @@ class BaseCursor(Generic[ConnectionType, Row]):
 
         if self._execmany_returning is None:
             # Received from execute()
-            # TODO: bug we also end up here on executemany() if run from inside
-            # a pipeline block. This causes a wrong rowcount. As it isn't so
-            # serious, currently leaving it this way.
             self._results.extend(results)
             if first_batch:
                 self._set_current_result(0)
