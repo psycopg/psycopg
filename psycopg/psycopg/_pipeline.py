@@ -53,6 +53,7 @@ class BasePipeline:
         self.pgconn = conn.pgconn
         self.command_queue = Deque[PipelineCommand]()
         self.result_queue = Deque[PendingResult]()
+        self.level = 0
 
     def __repr__(self) -> str:
         cls = f"{self.__class__.__module__}.{self.__class__.__qualname__}"
@@ -74,10 +75,13 @@ class BasePipeline:
         return BasePipeline._is_supported
 
     def _enter(self) -> None:
-        self.pgconn.enter_pipeline_mode()
+        if self.level == 0:
+            self.pgconn.enter_pipeline_mode()
+        self.level += 1
 
     def _exit(self) -> None:
-        if self.pgconn.status != ConnStatus.BAD:
+        self.level -= 1
+        if self.level == 0 and self.pgconn.status != ConnStatus.BAD:
             self.pgconn.exit_pipeline_mode()
 
     def _sync_gen(self) -> PQGen[None]:
@@ -193,11 +197,20 @@ class Pipeline(BasePipeline):
         except Exception as exc2:
             # Don't clobber an exception raised in the block with this one
             if exc_val:
-                logger.warning("error ignored exiting %r: %s", self, exc2)
+                logger.warning("error ignored syncing %r: %s", self, exc2)
             else:
                 raise
         finally:
-            self._exit()
+            try:
+                self._exit()
+            except Exception as exc2:
+                # Notice that this error might be pretty irrecoverable. It
+                # happens on COPY, for insance: even if sync succeeds, exiting
+                # fails with "cannot exit pipeline mode with uncollected results"
+                if exc_val:
+                    logger.warning("error ignored exiting %r: %s", self, exc2)
+                else:
+                    raise
 
 
 class AsyncPipeline(BasePipeline):
@@ -234,8 +247,14 @@ class AsyncPipeline(BasePipeline):
         except Exception as exc2:
             # Don't clobber an exception raised in the block with this one
             if exc_val:
-                logger.warning("error ignored exiting %r: %s", self, exc2)
+                logger.warning("error ignored syncing %r: %s", self, exc2)
             else:
                 raise
         finally:
-            self._exit()
+            try:
+                self._exit()
+            except Exception as exc2:
+                if exc_val:
+                    logger.warning("error ignored exiting %r: %s", self, exc2)
+                else:
+                    raise

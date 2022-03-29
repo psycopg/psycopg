@@ -65,6 +65,17 @@ async def test_pipeline_exit_error_noclobber(aconn, caplog):
     assert len(caplog.records) == 1
 
 
+async def test_pipeline_exit_error_noclobber_nested(aconn, caplog):
+    caplog.set_level(logging.WARNING, logger="psycopg")
+    with pytest.raises(ZeroDivisionError):
+        async with aconn.pipeline():
+            async with aconn.pipeline():
+                await aconn.close()
+                1 / 0
+
+    assert len(caplog.records) == 2
+
+
 async def test_pipeline_exit_sync_trace(aconn, trace):
     t = trace.trace(aconn)
     async with aconn.pipeline():
