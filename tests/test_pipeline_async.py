@@ -1,6 +1,8 @@
 import asyncio
 import logging
 from typing import Any
+from operator import attrgetter
+from itertools import groupby
 
 import pytest
 
@@ -198,6 +200,45 @@ async def test_executemany_no_returning(aconn):
         with pytest.raises(e.ProgrammingError, match="no result available"):
             await cur.fetchone()
         assert cur.nextset() is None
+
+
+async def test_executemany_trace(aconn, trace):
+    await aconn.set_autocommit(True)
+    cur = aconn.cursor()
+    await cur.execute("create temp table trace (id int)")
+    t = trace.trace(aconn)
+    async with aconn.pipeline():
+        await cur.executemany("insert into trace (id) values (%s)", [(10,), (20,)])
+        await cur.executemany("insert into trace (id) values (%s)", [(10,), (20,)])
+    await aconn.close()
+    items = list(t)
+    assert items[-1].type == "Terminate"
+    del items[-1]
+    roundtrips = [k for k, g in groupby(items, key=attrgetter("direction"))]
+    assert roundtrips == ["F", "B"]
+    assert len([i for i in items if i.type == "Sync"]) == 1
+
+
+async def test_executemany_trace_returning(aconn, trace):
+    await aconn.set_autocommit(True)
+    cur = aconn.cursor()
+    await cur.execute("create temp table trace (id int)")
+    t = trace.trace(aconn)
+    async with aconn.pipeline():
+        await cur.executemany(
+            "insert into trace (id) values (%s)", [(10,), (20,)], returning=True
+        )
+        await cur.executemany(
+            "insert into trace (id) values (%s)", [(10,), (20,)], returning=True
+        )
+    await aconn.close()
+    items = list(t)
+    assert items[-1].type == "Terminate"
+    del items[-1]
+    roundtrips = [k for k, g in groupby(items, key=attrgetter("direction"))]
+    assert roundtrips == ["F", "B"] * 3
+    assert items[-2].direction == "F"  # last 2 items are F B
+    assert len([i for i in items if i.type == "Sync"]) == 3
 
 
 async def test_prepared(aconn):

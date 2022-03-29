@@ -1,6 +1,8 @@
 import logging
-from typing import Any
 import concurrent.futures
+from typing import Any
+from operator import attrgetter
+from itertools import groupby
 
 import pytest
 
@@ -195,6 +197,45 @@ def test_executemany_no_returning(conn):
         with pytest.raises(e.ProgrammingError, match="no result available"):
             cur.fetchone()
         assert cur.nextset() is None
+
+
+def test_executemany_trace(conn, trace):
+    conn.autocommit = True
+    cur = conn.cursor()
+    cur.execute("create temp table trace (id int)")
+    t = trace.trace(conn)
+    with conn.pipeline():
+        cur.executemany("insert into trace (id) values (%s)", [(10,), (20,)])
+        cur.executemany("insert into trace (id) values (%s)", [(10,), (20,)])
+    conn.close()
+    items = list(t)
+    assert items[-1].type == "Terminate"
+    del items[-1]
+    roundtrips = [k for k, g in groupby(items, key=attrgetter("direction"))]
+    assert roundtrips == ["F", "B"]
+    assert len([i for i in items if i.type == "Sync"]) == 1
+
+
+def test_executemany_trace_returning(conn, trace):
+    conn.autocommit = True
+    cur = conn.cursor()
+    cur.execute("create temp table trace (id int)")
+    t = trace.trace(conn)
+    with conn.pipeline():
+        cur.executemany(
+            "insert into trace (id) values (%s)", [(10,), (20,)], returning=True
+        )
+        cur.executemany(
+            "insert into trace (id) values (%s)", [(10,), (20,)], returning=True
+        )
+    conn.close()
+    items = list(t)
+    assert items[-1].type == "Terminate"
+    del items[-1]
+    roundtrips = [k for k, g in groupby(items, key=attrgetter("direction"))]
+    assert roundtrips == ["F", "B"] * 3
+    assert items[-2].direction == "F"  # last 2 items are F B
+    assert len([i for i in items if i.type == "Sync"]) == 3
 
 
 def test_prepared(conn):
