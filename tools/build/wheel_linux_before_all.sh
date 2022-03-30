@@ -29,6 +29,7 @@ case "$ID" in
                 > /etc/apt/trusted.gpg.d/postgresql.asc
         fi
         apt-get update
+        apt-get -y upgrade
         apt-get -y install libpq-dev
         ;;
 
