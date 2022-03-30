@@ -7,6 +7,13 @@
 ``psycopg`` release notes
 =========================
 
+Future releases
+---------------
+
+Psycopg 3.0.12 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+
 Current release
 ---------------
 
