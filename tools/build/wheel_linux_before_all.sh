@@ -6,7 +6,7 @@
 set -euo pipefail
 set -x
 
-. /etc/os-release
+source /etc/os-release
 
 # Install PostgreSQL development files.
 case "$ID" in
@@ -28,13 +28,14 @@ case "$ID" in
             curl -skf https://www.postgresql.org/media/keys/ACCC4CF8.asc \
                 > /etc/apt/trusted.gpg.d/postgresql.asc
         fi
+
         apt-get update
         apt-get -y upgrade
         apt-get -y install libpq-dev
         ;;
 
     *)
-        echo "Unexpected Linux distribution: '$ID'" >&2
+        echo "$0: unexpected Linux distribution: '$ID'" >&2
         exit 1
         ;;
 esac
