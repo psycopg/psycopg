@@ -173,7 +173,7 @@ def test_pipeline_aborted(conn):
         c1 = conn.execute("select 1")
         with pytest.raises(e.UndefinedTable):
             conn.execute("select * from doesnotexist").fetchone()
-        with pytest.raises(e.OperationalError, match="pipeline aborted"):
+        with pytest.raises(e.PipelineAborted):
             conn.execute("select 'aborted'").fetchone()
         # Sync restore the connection in usable state.
         p.sync()

@@ -176,7 +176,7 @@ async def test_pipeline_aborted(aconn):
         c1 = await aconn.execute("select 1")
         with pytest.raises(e.UndefinedTable):
             await (await aconn.execute("select * from doesnotexist")).fetchone()
-        with pytest.raises(e.OperationalError, match="pipeline aborted"):
+        with pytest.raises(e.PipelineAborted):
             await (await aconn.execute("select 'aborted'")).fetchone()
         # Sync restore the connection in usable state.
         await p.sync()

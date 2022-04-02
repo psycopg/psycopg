@@ -493,7 +493,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
         if result.status == ExecStatus.FATAL_ERROR:
             raise e.error_from_result(result, encoding=self._encoding)
         elif result.status == ExecStatus.PIPELINE_ABORTED:
-            raise e.OperationalError("pipeline aborted")
+            raise e.PipelineAborted("pipeline aborted")
         elif result.status in self._status_copy:
             raise e.ProgrammingError(
                 "COPY cannot be used with this method; use copy() insead"
@@ -593,7 +593,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
         elif res.status == ExecStatus.FATAL_ERROR:
             raise e.error_from_result(res, encoding=pgconn_encoding(self._pgconn))
         elif res.status == ExecStatus.PIPELINE_ABORTED:
-            raise e.OperationalError("pipeline aborted")
+            raise e.PipelineAborted("pipeline aborted")
         elif res.status != ExecStatus.TUPLES_OK:
             raise e.ProgrammingError("the last operation didn't produce a result")
 

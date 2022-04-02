@@ -148,7 +148,7 @@ class BasePipeline:
             if result.status == ExecStatus.FATAL_ERROR:
                 raise e.error_from_result(result, encoding=pgconn_encoding(self.pgconn))
             elif result.status == ExecStatus.PIPELINE_ABORTED:
-                raise e.OperationalError("pipeline aborted")
+                raise e.PipelineAborted("pipeline aborted")
         else:
             cursor, prepinfo = queued
             cursor._set_results_from_pipeline(results)
