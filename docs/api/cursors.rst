@@ -30,6 +30,8 @@ The `!Cursor` class
     ``await`` keywords to operate.
 
     .. __: dbapi-cursor_
+    .. _dbapi-cursor: https://www.python.org/dev/peps/pep-0249/#cursor-objects
+
 
     Cursors behave as context managers: on block exit they are closed and
     further operation will not be possible. Closing a cursor will not
@@ -434,79 +436,3 @@ The `!AsyncServerCursor` class
                     ...
 
     .. automethod:: scroll
-
-
-The description `Column` object
--------------------------------
-
-.. autoclass:: Column()
-
-    An object describing a column of data from a database result, `as described
-    by the DBAPI`__, so it can also be unpacked as a 7-items tuple.
-
-    The object is returned by `Cursor.description`.
-
-    .. __: https://www.python.org/dev/peps/pep-0249/#description
-
-    .. autoattribute:: name
-    .. autoattribute:: type_code
-    .. autoattribute:: display_size
-    .. autoattribute:: internal_size
-    .. autoattribute:: precision
-    .. autoattribute:: scale
-
-
-COPY-related objects
---------------------
-
-.. autoclass:: Copy()
-
-    The object is normally returned by ``with`` `Cursor.copy()`.
-
-    See :ref:`copy` for details.
-
-    .. automethod:: write_row
-
-        The data in the tuple will be converted as configured on the cursor;
-        see :ref:`adaptation` for details.
-
-    .. automethod:: write
-
-        .. versionchanged:: 3.1
-
-            accept `bytearray` and `memoryview` data as input too.
-
-    .. automethod:: read
-
-        Instead of using `!read()` you can iterate on the `!Copy` object to
-        read its data row by row, using ``for row in copy: ...``.
-
-    .. automethod:: rows
-
-        Equivalent of iterating on `read_row()` until it returns `!None`
-
-    .. automethod:: read_row
-    .. automethod:: set_types
-
-
-.. autoclass:: AsyncCopy()
-
-    The object is normally returned by ``async with`` `AsyncCursor.copy()`.
-    Its methods are similar to the ones of the `Copy` object but offering an
-    `asyncio` interface (`await`, `async for`, `async with`).
-
-    .. automethod:: write_row
-    .. automethod:: write
-    .. automethod:: read
-
-        Instead of using `!read()` you can iterate on the `!AsyncCopy` object
-        to read its data row by row, using ``async for row in copy: ...``.
-
-    .. automethod:: rows
-
-        Use it as `async for record in copy.rows():` ...
-
-    .. automethod:: read_row
-
-
-.. _dbapi-cursor: https://www.python.org/dev/peps/pep-0249/#cursor-objects
