@@ -194,6 +194,13 @@ def test_pipeline_commit_aborted(conn):
             conn.commit()
 
 
+def test_fetch_no_result(conn):
+    with conn.pipeline():
+        cur = conn.cursor()
+        with pytest.raises(e.ProgrammingError):
+            cur.fetchone()
+
+
 def test_executemany(conn):
     conn.autocommit = True
     conn.execute("drop table if exists execmanypipeline")

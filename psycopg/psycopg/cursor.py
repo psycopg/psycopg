@@ -847,4 +847,3 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
         ):
             with self._conn.lock:
                 self._conn.wait(self._conn._pipeline._fetch_gen(flush=True))
-            assert self.pgresult

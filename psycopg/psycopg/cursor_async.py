@@ -195,4 +195,3 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
         ):
             async with self._conn.lock:
                 await self._conn.wait(self._conn._pipeline._fetch_gen(flush=True))
-            assert self.pgresult

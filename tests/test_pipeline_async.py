@@ -197,6 +197,13 @@ async def test_pipeline_commit_aborted(aconn):
             await aconn.commit()
 
 
+async def test_fetch_no_result(aconn):
+    async with aconn.pipeline():
+        cur = aconn.cursor()
+        with pytest.raises(e.ProgrammingError):
+            await cur.fetchone()
+
+
 async def test_executemany(aconn):
     await aconn.set_autocommit(True)
     await aconn.execute("drop table if exists execmanypipeline")
