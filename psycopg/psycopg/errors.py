@@ -182,7 +182,7 @@ class ProgrammingError(DatabaseError):
 
 class NotSupportedError(DatabaseError):
     """
-    A method or database API was used which is not supported by the database,
+    A method or database API was used which is not supported by the database.
     """
 
     __module__ = "psycopg"
@@ -190,7 +190,12 @@ class NotSupportedError(DatabaseError):
 
 class ConnectionTimeout(OperationalError):
     """
-    Exception raised on timeout connection.
+    Exception raised on timeout of the `~psycopg.Connection.connect()` method.
+
+    The error is raised if the ``connect_timeout`` is specified and a
+    connection is not obtained in useful time.
+
+    Subclass of `~psycopg.OperationalError`.
     """
 
 

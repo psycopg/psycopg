@@ -73,11 +73,21 @@ These classes are exposed both by this module and the root `psycopg` module.
 .. autoexception:: NotSupportedError()
 
 
+Other Psycopg errors
+^^^^^^^^^^^^^^^^^^^^
+
 .. currentmodule:: psycopg.errors
+
+
+In addition to the standard DB-API errors, Psycopg defines a few more specific
+ones.
+
+.. autoexception:: ConnectionTimeout()
+
+
 
 .. index::
     single: Exceptions; PostgreSQL
-
 
 Error diagnostics
 -----------------
