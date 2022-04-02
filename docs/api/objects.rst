@@ -193,6 +193,26 @@ Notifications
         The PID of the backend process which sent the notification.
 
 
+Pipeline-related objects
+------------------------
+
+See :ref:`pipeline-mode` for details.
+
+.. autoclass:: Pipeline
+
+    This objects is returned by `Connection.pipeline()`.
+
+    .. automethod:: sync
+    .. automethod:: is_supported
+
+
+.. autoclass:: AsyncPipeline
+
+    This objects is returned by `AsyncConnection.pipeline()`.
+
+    .. automethod:: sync
+
+
 Transaction-related objects
 ---------------------------
 

@@ -18,3 +18,4 @@ usages.
     cursors
     adapt
     prepare
+    pipeline

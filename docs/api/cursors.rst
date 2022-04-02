@@ -102,7 +102,9 @@ The `!Cursor` class
 
         .. versionchanged:: 3.1
 
-            added ``returning`` parameter to receive query results.
+            - Added ``returning`` parameter to receive query results.
+            - Preformance optimised by making use of the pipeline mode, when
+              using libpq 14 or newer.
 
     .. automethod:: copy
 
