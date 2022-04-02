@@ -871,26 +871,19 @@ class Connection(BaseConnection[Row]):
     def pipeline(self) -> Iterator[Pipeline]:
         """Context manager to switch the connection into pipeline mode."""
         with self.lock:
-            if self._pipeline is None:
-                # We must enter pipeline mode: create a new one
+            pipeline = self._pipeline
+            if pipeline is None:
                 # WARNING: reference loop, broken ahead.
                 pipeline = self._pipeline = Pipeline(self)
-            else:
-                # we are already in pipeline mode: bail out as soon as we
-                # leave the lock block.
-                pipeline = None
-
-        if not pipeline:
-            # No-op re-entered inner pipeline block.
-            yield self._pipeline
-            return
 
         try:
             with pipeline:
                 yield pipeline
         finally:
-            assert pipeline.status == pq.PipelineStatus.OFF, pipeline.status
-            self._pipeline = None
+            if pipeline.level == 0:
+                with self.lock:
+                    assert pipeline is self._pipeline
+                    self._pipeline = None
 
     def wait(self, gen: PQGen[RV], timeout: Optional[float] = 0.1) -> RV:
         """

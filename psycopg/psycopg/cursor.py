@@ -21,6 +21,7 @@ from .rows import Row, RowMaker, RowFactory
 from ._column import Column
 from ._cmodule import _psycopg
 from ._queries import PostgresQuery
+from ._pipeline import Pipeline
 from ._encodings import pgconn_encoding
 from ._preparing import Prepare
 
@@ -48,7 +49,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
     __slots__ = """
         _conn format _adapters arraysize _closed _results pgresult _pos
         _iresult _rowcount _query _tx _last_query _row_factory _make_row
-        _pgconn _encoding
+        _pgconn _encoding _execmany_returning
         __weakref__
         """.split()
 
@@ -76,6 +77,8 @@ class BaseCursor(Generic[ConnectionType, Row]):
         self._rowcount = -1
         self._query: Optional[PostgresQuery]
         self._encoding = "utf-8"
+        # None if executemany() not executing, True/False according to returning state
+        self._execmany_returning: Optional[bool] = None
         if reset_query:
             self._query = None
 
@@ -208,10 +211,47 @@ class BaseCursor(Generic[ConnectionType, Row]):
         for cmd in self._conn._prepared.get_maintenance_commands():
             yield from self._conn._exec_command(cmd)
 
-    def _executemany_gen(
+    def _executemany_gen_pipeline(
         self, query: Query, params_seq: Iterable[Params], returning: bool
     ) -> PQGen[None]:
-        """Generator implementing `Cursor.executemany()`."""
+        """
+        Generator implementing `Cursor.executemany()` with pipelines available.
+        """
+        pipeline = self._conn._pipeline
+        assert pipeline
+
+        yield from self._start_query(query)
+        self._rowcount = 0
+
+        assert self._execmany_returning is None
+        self._execmany_returning = returning
+
+        first = True
+        for params in params_seq:
+            if first:
+                pgq = self._convert_query(query, params)
+                self._query = pgq
+                first = False
+            else:
+                pgq.dump(params)
+
+            yield from self._maybe_prepare_gen(pgq, prepare=True)
+            yield from pipeline._communicate_gen()
+
+        self._last_query = query
+
+        if returning:
+            yield from pipeline._sync_gen()
+
+        for cmd in self._conn._prepared.get_maintenance_commands():
+            yield from self._conn._exec_command(cmd)
+
+    def _executemany_gen_no_pipeline(
+        self, query: Query, params_seq: Iterable[Params], returning: bool
+    ) -> PQGen[None]:
+        """
+        Generator implementing `Cursor.executemany()` with pipelines not available.
+        """
         yield from self._start_query(query)
         first = True
         nrows = 0
@@ -224,28 +264,21 @@ class BaseCursor(Generic[ConnectionType, Row]):
                 pgq.dump(params)
 
             results = yield from self._maybe_prepare_gen(pgq, prepare=True)
+            assert results is not None
+            self._check_results(results)
+            if returning:
+                self._results.extend(results)
 
-            if self._conn._pipeline:
-                yield from self._conn._pipeline._communicate_gen()
-            else:
-                assert results is not None
-                self._check_results(results)
-                if returning and results[0].status == ExecStatus.TUPLES_OK:
-                    self._results.extend(results)
+            for res in results:
+                nrows += res.command_tuples or 0
 
-                for res in results:
-                    nrows += res.command_tuples or 0
+        if self._results:
+            self._set_current_result(0)
 
-        if not self._conn._pipeline:
-            if self._results:
-                self._set_current_result(0)
-
-            # Override rowcount for the first result. Calls to nextset() will
-            # change it to the value of that result only, but we hope nobody
-            # will notice.
-            # You haven't read this comment.
-            self._rowcount = nrows
-
+        # Override rowcount for the first result. Calls to nextset() will change
+        # it to the value of that result only, but we hope nobody will notice.
+        # You haven't read this comment.
+        self._rowcount = nrows
         self._last_query = query
 
         for cmd in self._conn._prepared.get_maintenance_commands():
@@ -354,6 +387,12 @@ class BaseCursor(Generic[ConnectionType, Row]):
 
     def _start_copy_gen(self, statement: Query) -> PQGen[None]:
         """Generator implementing sending a command for `Cursor.copy()."""
+
+        # The connection gets in an unrecoverable state if we attempt COPY in
+        # pipeline mode. Forbid it explicitly.
+        if self._conn._pipeline:
+            raise e.NotSupportedError("COPY cannot be used in pipeline mode")
+
         yield from self._start_query()
         query = self._convert_query(statement)
 
@@ -454,7 +493,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
         if result.status == ExecStatus.FATAL_ERROR:
             raise e.error_from_result(result, encoding=self._encoding)
         elif result.status == ExecStatus.PIPELINE_ABORTED:
-            raise e.OperationalError("pipeline aborted")
+            raise e.PipelineAborted("pipeline aborted")
         elif result.status in self._status_copy:
             raise e.ProgrammingError(
                 "COPY cannot be used with this method; use copy() insead"
@@ -483,11 +522,30 @@ class BaseCursor(Generic[ConnectionType, Row]):
 
     def _set_results_from_pipeline(self, results: List["PGresult"]) -> None:
         self._check_results(results)
-        if not self._results:
-            self._results = results
-            self._set_current_result(0)
-        else:
+        first_batch = not self._results
+
+        if self._execmany_returning is None:
+            # Received from execute()
             self._results.extend(results)
+            if first_batch:
+                self._set_current_result(0)
+
+        else:
+            # Received from executemany()
+            if self._execmany_returning:
+                self._results.extend(results)
+                if first_batch:
+                    self._set_current_result(0)
+                    self._rowcount = 0
+
+            # Override rowcount for the first result. Calls to nextset() will
+            # change it to the value of that result only, but we hope nobody
+            # will notice.
+            # You haven't read this comment.
+            if self._rowcount < 0:
+                self._rowcount = 0
+            for res in results:
+                self._rowcount += res.command_tuples or 0
 
     def _send_prepare(self, name: bytes, query: PostgresQuery) -> None:
         if self._conn._pipeline:
@@ -535,7 +593,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
         elif res.status == ExecStatus.FATAL_ERROR:
             raise e.error_from_result(res, encoding=pgconn_encoding(self._pgconn))
         elif res.status == ExecStatus.PIPELINE_ABORTED:
-            raise e.OperationalError("pipeline aborted")
+            raise e.PipelineAborted("pipeline aborted")
         elif res.status != ExecStatus.TUPLES_OK:
             raise e.ProgrammingError("the last operation didn't produce a result")
 
@@ -645,8 +703,26 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
         Execute the same command with a sequence of input data.
         """
         try:
-            with self._conn.lock:
-                self._conn.wait(self._executemany_gen(query, params_seq, returning))
+            if Pipeline.is_supported():
+                # If there is already a pipeline, ride it, in order to avoid
+                # sending unnecessary Sync.
+                with self._conn.lock:
+                    p = self._conn._pipeline
+                    if p:
+                        self._conn.wait(
+                            self._executemany_gen_pipeline(query, params_seq, returning)
+                        )
+                # Otherwise, make a new one
+                if not p:
+                    with self._conn.pipeline(), self._conn.lock:
+                        self._conn.wait(
+                            self._executemany_gen_pipeline(query, params_seq, returning)
+                        )
+            else:
+                with self._conn.lock:
+                    self._conn.wait(
+                        self._executemany_gen_no_pipeline(query, params_seq, returning)
+                    )
         except e.Error as ex:
             raise ex.with_traceback(None)
 
@@ -764,7 +840,10 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
             yield copy
 
     def _fetch_pipeline(self) -> None:
-        if not self.pgresult and self._conn._pipeline:
+        if (
+            self._execmany_returning is not False
+            and not self.pgresult
+            and self._conn._pipeline
+        ):
             with self._conn.lock:
                 self._conn.wait(self._conn._pipeline._fetch_gen(flush=True))
-            assert self.pgresult

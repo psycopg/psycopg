@@ -199,6 +199,14 @@ class ConnectionTimeout(OperationalError):
     """
 
 
+class PipelineAborted(OperationalError):
+    """
+    Raised when a operation fails because the current pipeline is in aborted state.
+
+    Subclass of `~psycopg.OperationalError`.
+    """
+
+
 class Diagnostic:
     """Details from a database error report."""
 

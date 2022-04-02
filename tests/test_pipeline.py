@@ -1,6 +1,8 @@
 import logging
-from typing import Any
 import concurrent.futures
+from typing import Any
+from operator import attrgetter
+from itertools import groupby
 
 import pytest
 
@@ -60,6 +62,34 @@ def test_pipeline_exit_error_noclobber(conn, caplog):
     assert len(caplog.records) == 1
 
 
+def test_pipeline_exit_error_noclobber_nested(conn, caplog):
+    caplog.set_level(logging.WARNING, logger="psycopg")
+    with pytest.raises(ZeroDivisionError):
+        with conn.pipeline():
+            with conn.pipeline():
+                conn.close()
+                1 / 0
+
+    assert len(caplog.records) == 2
+
+
+def test_pipeline_exit_sync_trace(conn, trace):
+    t = trace.trace(conn)
+    with conn.pipeline():
+        pass
+    conn.close()
+    assert len([i for i in t if i.type == "Sync"]) == 1
+
+
+def test_pipeline_nested_sync_trace(conn, trace):
+    t = trace.trace(conn)
+    with conn.pipeline():
+        with conn.pipeline():
+            pass
+    conn.close()
+    assert len([i for i in t if i.type == "Sync"]) == 2
+
+
 def test_cursor_stream(conn):
     with conn.pipeline(), conn.cursor() as cur:
         with pytest.raises(psycopg.ProgrammingError):
@@ -77,6 +107,14 @@ def test_cannot_insert_multiple_commands(conn):
         with conn.pipeline():
             conn.execute("select 1; select 2")
     assert cm.value.sqlstate == "42601"
+
+
+def test_copy(conn):
+    with conn.pipeline():
+        cur = conn.cursor()
+        with pytest.raises(e.NotSupportedError):
+            with cur.copy("copy (select 1) to stdout"):
+                pass
 
 
 def test_pipeline_processed_at_exit(conn):
@@ -135,7 +173,7 @@ def test_pipeline_aborted(conn):
         c1 = conn.execute("select 1")
         with pytest.raises(e.UndefinedTable):
             conn.execute("select * from doesnotexist").fetchone()
-        with pytest.raises(e.OperationalError, match="pipeline aborted"):
+        with pytest.raises(e.PipelineAborted):
             conn.execute("select 'aborted'").fetchone()
         # Sync restore the connection in usable state.
         p.sync()
@@ -156,6 +194,13 @@ def test_pipeline_commit_aborted(conn):
             conn.commit()
 
 
+def test_fetch_no_result(conn):
+    with conn.pipeline():
+        cur = conn.cursor()
+        with pytest.raises(e.ProgrammingError):
+            cur.fetchone()
+
+
 def test_executemany(conn):
     conn.autocommit = True
     conn.execute("drop table if exists execmanypipeline")
@@ -167,11 +212,73 @@ def test_executemany(conn):
         cur.executemany(
             "insert into execmanypipeline(num) values (%s) returning id",
             [(10,), (20,)],
+            returning=True,
         )
+        assert cur.rowcount == 2
         assert cur.fetchone() == (1,)
         assert cur.nextset()
         assert cur.fetchone() == (2,)
         assert cur.nextset() is None
+
+
+def test_executemany_no_returning(conn):
+    conn.autocommit = True
+    conn.execute("drop table if exists execmanypipelinenoreturning")
+    conn.execute(
+        "create unlogged table execmanypipelinenoreturning ("
+        " id serial primary key, num integer)"
+    )
+    with conn.pipeline(), conn.cursor() as cur:
+        cur.executemany(
+            "insert into execmanypipelinenoreturning(num) values (%s)",
+            [(10,), (20,)],
+            returning=False,
+        )
+        with pytest.raises(e.ProgrammingError, match="no result available"):
+            cur.fetchone()
+        assert cur.nextset() is None
+        with pytest.raises(e.ProgrammingError, match="no result available"):
+            cur.fetchone()
+        assert cur.nextset() is None
+
+
+def test_executemany_trace(conn, trace):
+    conn.autocommit = True
+    cur = conn.cursor()
+    cur.execute("create temp table trace (id int)")
+    t = trace.trace(conn)
+    with conn.pipeline():
+        cur.executemany("insert into trace (id) values (%s)", [(10,), (20,)])
+        cur.executemany("insert into trace (id) values (%s)", [(10,), (20,)])
+    conn.close()
+    items = list(t)
+    assert items[-1].type == "Terminate"
+    del items[-1]
+    roundtrips = [k for k, g in groupby(items, key=attrgetter("direction"))]
+    assert roundtrips == ["F", "B"]
+    assert len([i for i in items if i.type == "Sync"]) == 1
+
+
+def test_executemany_trace_returning(conn, trace):
+    conn.autocommit = True
+    cur = conn.cursor()
+    cur.execute("create temp table trace (id int)")
+    t = trace.trace(conn)
+    with conn.pipeline():
+        cur.executemany(
+            "insert into trace (id) values (%s)", [(10,), (20,)], returning=True
+        )
+        cur.executemany(
+            "insert into trace (id) values (%s)", [(10,), (20,)], returning=True
+        )
+    conn.close()
+    items = list(t)
+    assert items[-1].type == "Terminate"
+    del items[-1]
+    roundtrips = [k for k, g in groupby(items, key=attrgetter("direction"))]
+    assert roundtrips == ["F", "B"] * 3
+    assert items[-2].direction == "F"  # last 2 items are F B
+    assert len([i for i in items if i.type == "Sync"]) == 3
 
 
 def test_prepared(conn):

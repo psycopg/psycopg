@@ -53,6 +53,7 @@ class BasePipeline:
         self.pgconn = conn.pgconn
         self.command_queue = Deque[PipelineCommand]()
         self.result_queue = Deque[PendingResult]()
+        self.level = 0
 
     def __repr__(self) -> str:
         cls = f"{self.__class__.__module__}.{self.__class__.__qualname__}"
@@ -62,11 +63,6 @@ class BasePipeline:
     @property
     def status(self) -> pq.PipelineStatus:
         return pq.PipelineStatus(self.pgconn.pipeline_status)
-
-    def sync(self) -> None:
-        """Enqueue a PQpipelineSync() command."""
-        self.command_queue.append(self.pgconn.pipeline_sync)
-        self.result_queue.append(None)
 
     @staticmethod
     def is_supported() -> bool:
@@ -79,11 +75,25 @@ class BasePipeline:
         return BasePipeline._is_supported
 
     def _enter(self) -> None:
-        self.pgconn.enter_pipeline_mode()
+        if self.level == 0:
+            self.pgconn.enter_pipeline_mode()
+        self.level += 1
 
     def _exit(self) -> None:
-        if self.pgconn.status != ConnStatus.BAD:
+        self.level -= 1
+        if self.level == 0 and self.pgconn.status != ConnStatus.BAD:
             self.pgconn.exit_pipeline_mode()
+
+    def _sync_gen(self) -> PQGen[None]:
+        self._enqueue_sync()
+        try:
+            # Send any pending commands (e.g. COMMIT or Sync);
+            # while processing results, we might get errors...
+            yield from self._communicate_gen()
+        finally:
+            # then fetch all remaining results but without forcing
+            # flush since we emitted a sync just before.
+            yield from self._fetch_gen(flush=False)
 
     def _communicate_gen(self) -> PQGen[None]:
         """Communicate with pipeline to send commands and possibly fetch
@@ -138,7 +148,7 @@ class BasePipeline:
             if result.status == ExecStatus.FATAL_ERROR:
                 raise e.error_from_result(result, encoding=pgconn_encoding(self.pgconn))
             elif result.status == ExecStatus.PIPELINE_ABORTED:
-                raise e.OperationalError("pipeline aborted")
+                raise e.PipelineAborted("pipeline aborted")
         else:
             cursor, prepinfo = queued
             cursor._set_results_from_pipeline(results)
@@ -146,6 +156,11 @@ class BasePipeline:
                 key, prep, name = prepinfo
                 # Update the prepare state of the query.
                 cursor._conn._prepared.validate(key, prep, name, results)
+
+    def _enqueue_sync(self) -> None:
+        """Enqueue a PQpipelineSync() command."""
+        self.command_queue.append(self.pgconn.pipeline_sync)
+        self.result_queue.append(None)
 
 
 class Pipeline(BasePipeline):
@@ -156,6 +171,16 @@ class Pipeline(BasePipeline):
 
     def __init__(self, conn: "Connection[Any]") -> None:
         super().__init__(conn)
+
+    def sync(self) -> None:
+        """Sync the pipeline, send any pending command and fetch and process
+        all available results.
+
+        This is called when exiting the pipeline, but can be used for other
+        purposes (e.g. in nested pipelines).
+        """
+        with self._conn.lock:
+            self._conn.wait(self._sync_gen())
 
     def __enter__(self) -> "Pipeline":
         self._enter()
@@ -168,24 +193,24 @@ class Pipeline(BasePipeline):
         exc_tb: Optional[TracebackType],
     ) -> None:
         try:
-            with self._conn.lock:
-                self.sync()
-                try:
-                    # Send any pending commands (e.g. COMMIT or Sync);
-                    # while processing results, we might get errors...
-                    self._conn.wait(self._communicate_gen())
-                finally:
-                    # then fetch all remaining results but without forcing
-                    # flush since we emitted a sync just before.
-                    self._conn.wait(self._fetch_gen(flush=False))
+            self.sync()
         except Exception as exc2:
             # Don't clobber an exception raised in the block with this one
             if exc_val:
-                logger.warning("error ignored exiting %r: %s", self, exc2)
+                logger.warning("error ignored syncing %r: %s", self, exc2)
             else:
                 raise
         finally:
-            self._exit()
+            try:
+                self._exit()
+            except Exception as exc2:
+                # Notice that this error might be pretty irrecoverable. It
+                # happens on COPY, for insance: even if sync succeeds, exiting
+                # fails with "cannot exit pipeline mode with uncollected results"
+                if exc_val:
+                    logger.warning("error ignored exiting %r: %s", self, exc2)
+                else:
+                    raise
 
 
 class AsyncPipeline(BasePipeline):
@@ -196,6 +221,16 @@ class AsyncPipeline(BasePipeline):
 
     def __init__(self, conn: "AsyncConnection[Any]") -> None:
         super().__init__(conn)
+
+    async def sync(self) -> None:
+        """Sync the pipeline, send any pending command and fetch and process
+        all available results.
+
+        This is called when exiting the pipeline, but can be used for other
+        purposes (e.g. in nested pipelines).
+        """
+        async with self._conn.lock:
+            await self._conn.wait(self._sync_gen())
 
     async def __aenter__(self) -> "AsyncPipeline":
         self._enter()
@@ -208,21 +243,18 @@ class AsyncPipeline(BasePipeline):
         exc_tb: Optional[TracebackType],
     ) -> None:
         try:
-            async with self._conn.lock:
-                self.sync()
-                try:
-                    # Send any pending commands (e.g. COMMIT or Sync);
-                    # while processing results, we might get errors...
-                    await self._conn.wait(self._communicate_gen())
-                finally:
-                    # then fetch all remaining results but without forcing
-                    # flush since we emitted a sync just before.
-                    await self._conn.wait(self._fetch_gen(flush=False))
+            await self.sync()
         except Exception as exc2:
             # Don't clobber an exception raised in the block with this one
             if exc_val:
-                logger.warning("error ignored exiting %r: %s", self, exc2)
+                logger.warning("error ignored syncing %r: %s", self, exc2)
             else:
                 raise
         finally:
-            self._exit()
+            try:
+                self._exit()
+            except Exception as exc2:
+                if exc_val:
+                    logger.warning("error ignored exiting %r: %s", self, exc2)
+                else:
+                    raise

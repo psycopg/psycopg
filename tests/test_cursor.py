@@ -316,8 +316,13 @@ def test_executemany_no_result(conn, execmany):
         returning=True,
     )
     assert cur.rowcount == 2
+    assert cur.statusmessage.startswith("INSERT")
     with pytest.raises(psycopg.ProgrammingError):
         cur.fetchone()
+    pgresult = cur.pgresult
+    assert cur.nextset()
+    assert cur.statusmessage.startswith("INSERT")
+    assert pgresult is not cur.pgresult
     assert cur.nextset() is None
 
 

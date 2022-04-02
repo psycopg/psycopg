@@ -1,6 +1,8 @@
 import asyncio
 import logging
 from typing import Any
+from operator import attrgetter
+from itertools import groupby
 
 import pytest
 
@@ -63,6 +65,34 @@ async def test_pipeline_exit_error_noclobber(aconn, caplog):
     assert len(caplog.records) == 1
 
 
+async def test_pipeline_exit_error_noclobber_nested(aconn, caplog):
+    caplog.set_level(logging.WARNING, logger="psycopg")
+    with pytest.raises(ZeroDivisionError):
+        async with aconn.pipeline():
+            async with aconn.pipeline():
+                await aconn.close()
+                1 / 0
+
+    assert len(caplog.records) == 2
+
+
+async def test_pipeline_exit_sync_trace(aconn, trace):
+    t = trace.trace(aconn)
+    async with aconn.pipeline():
+        pass
+    await aconn.close()
+    assert len([i for i in t if i.type == "Sync"]) == 1
+
+
+async def test_pipeline_nested_sync_trace(aconn, trace):
+    t = trace.trace(aconn)
+    async with aconn.pipeline():
+        async with aconn.pipeline():
+            pass
+    await aconn.close()
+    assert len([i for i in t if i.type == "Sync"]) == 2
+
+
 async def test_cursor_stream(aconn):
     async with aconn.pipeline(), aconn.cursor() as cur:
         with pytest.raises(psycopg.ProgrammingError):
@@ -80,6 +110,14 @@ async def test_cannot_insert_multiple_commands(aconn):
         async with aconn.pipeline():
             await aconn.execute("select 1; select 2")
     assert cm.value.sqlstate == "42601"
+
+
+async def test_copy(aconn):
+    async with aconn.pipeline():
+        cur = aconn.cursor()
+        with pytest.raises(e.NotSupportedError):
+            async with cur.copy("copy (select 1) to stdout") as copy:
+                await copy.read()
 
 
 async def test_pipeline_processed_at_exit(aconn):
@@ -138,10 +176,10 @@ async def test_pipeline_aborted(aconn):
         c1 = await aconn.execute("select 1")
         with pytest.raises(e.UndefinedTable):
             await (await aconn.execute("select * from doesnotexist")).fetchone()
-        with pytest.raises(e.OperationalError, match="pipeline aborted"):
+        with pytest.raises(e.PipelineAborted):
             await (await aconn.execute("select 'aborted'")).fetchone()
         # Sync restore the connection in usable state.
-        p.sync()
+        await p.sync()
         c2 = await aconn.execute("select 2")
 
     (r,) = await c1.fetchone()
@@ -159,6 +197,13 @@ async def test_pipeline_commit_aborted(aconn):
             await aconn.commit()
 
 
+async def test_fetch_no_result(aconn):
+    async with aconn.pipeline():
+        cur = aconn.cursor()
+        with pytest.raises(e.ProgrammingError):
+            await cur.fetchone()
+
+
 async def test_executemany(aconn):
     await aconn.set_autocommit(True)
     await aconn.execute("drop table if exists execmanypipeline")
@@ -170,11 +215,73 @@ async def test_executemany(aconn):
         await cur.executemany(
             "insert into execmanypipeline(num) values (%s) returning id",
             [(10,), (20,)],
+            returning=True,
         )
+        assert cur.rowcount == 2
         assert (await cur.fetchone()) == (1,)
         assert cur.nextset()
         assert (await cur.fetchone()) == (2,)
         assert cur.nextset() is None
+
+
+async def test_executemany_no_returning(aconn):
+    await aconn.set_autocommit(True)
+    await aconn.execute("drop table if exists execmanypipelinenoreturning")
+    await aconn.execute(
+        "create unlogged table execmanypipelinenoreturning ("
+        " id serial primary key, num integer)"
+    )
+    async with aconn.pipeline(), aconn.cursor() as cur:
+        await cur.executemany(
+            "insert into execmanypipelinenoreturning(num) values (%s)",
+            [(10,), (20,)],
+            returning=False,
+        )
+        with pytest.raises(e.ProgrammingError, match="no result available"):
+            await cur.fetchone()
+        assert cur.nextset() is None
+        with pytest.raises(e.ProgrammingError, match="no result available"):
+            await cur.fetchone()
+        assert cur.nextset() is None
+
+
+async def test_executemany_trace(aconn, trace):
+    await aconn.set_autocommit(True)
+    cur = aconn.cursor()
+    await cur.execute("create temp table trace (id int)")
+    t = trace.trace(aconn)
+    async with aconn.pipeline():
+        await cur.executemany("insert into trace (id) values (%s)", [(10,), (20,)])
+        await cur.executemany("insert into trace (id) values (%s)", [(10,), (20,)])
+    await aconn.close()
+    items = list(t)
+    assert items[-1].type == "Terminate"
+    del items[-1]
+    roundtrips = [k for k, g in groupby(items, key=attrgetter("direction"))]
+    assert roundtrips == ["F", "B"]
+    assert len([i for i in items if i.type == "Sync"]) == 1
+
+
+async def test_executemany_trace_returning(aconn, trace):
+    await aconn.set_autocommit(True)
+    cur = aconn.cursor()
+    await cur.execute("create temp table trace (id int)")
+    t = trace.trace(aconn)
+    async with aconn.pipeline():
+        await cur.executemany(
+            "insert into trace (id) values (%s)", [(10,), (20,)], returning=True
+        )
+        await cur.executemany(
+            "insert into trace (id) values (%s)", [(10,), (20,)], returning=True
+        )
+    await aconn.close()
+    items = list(t)
+    assert items[-1].type == "Terminate"
+    del items[-1]
+    roundtrips = [k for k, g in groupby(items, key=attrgetter("direction"))]
+    assert roundtrips == ["F", "B"] * 3
+    assert items[-2].direction == "F"  # last 2 items are F B
+    assert len([i for i in items if i.type == "Sync"]) == 3
 
 
 async def test_prepared(aconn):
