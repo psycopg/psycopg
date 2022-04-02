@@ -18,6 +18,7 @@ from .errors import DataError, OperationalError, IntegrityError
 from .errors import InternalError, ProgrammingError, NotSupportedError
 from ._column import Column
 from .conninfo import ConnectionInfo
+from ._pipeline import Pipeline, AsyncPipeline
 from .connection import BaseConnection, Connection, Notify
 from .transaction import Rollback, Transaction, AsyncTransaction
 from .cursor_async import AsyncCursor
@@ -59,6 +60,7 @@ __all__ = [
     "AsyncConnection",
     "AsyncCopy",
     "AsyncCursor",
+    "AsyncPipeline",
     "AsyncServerCursor",
     "AsyncTransaction",
     "BaseConnection",
@@ -69,6 +71,7 @@ __all__ = [
     "Cursor",
     "IsolationLevel",
     "Notify",
+    "Pipeline",
     "Rollback",
     "ServerCursor",
     "Transaction",

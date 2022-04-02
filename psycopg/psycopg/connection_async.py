@@ -14,13 +14,14 @@ from contextlib import asynccontextmanager
 
 from . import errors as e
 from . import waiting
-from .pq import Format, TransactionStatus
+from .pq import Format, PipelineStatus, TransactionStatus
 from .abc import AdaptContext, Params, PQGen, PQGenConn, Query, RV
 from ._tpc import Xid
 from .rows import Row, AsyncRowFactory, tuple_row, TupleRow, args_row
 from .adapt import AdaptersMap
 from ._enums import IsolationLevel
 from .conninfo import make_conninfo, conninfo_to_dict
+from ._pipeline import AsyncPipeline
 from ._encodings import pgconn_encoding
 from .connection import BaseConnection, CursorRow, Notify
 from .generators import notifies
@@ -45,6 +46,8 @@ class AsyncConnection(BaseConnection[Row]):
     cursor_factory: Type[AsyncCursor[Row]]
     server_cursor_factory: Type[AsyncServerCursor[Row]]
     row_factory: AsyncRowFactory[Row]
+
+    _pipeline: "Optional[AsyncPipeline]"
 
     def __init__(
         self,
@@ -291,6 +294,31 @@ class AsyncConnection(BaseConnection[Row]):
             for pgn in ns:
                 n = Notify(pgn.relname.decode(enc), pgn.extra.decode(enc), pgn.be_pid)
                 yield n
+
+    @asynccontextmanager
+    async def pipeline(self) -> AsyncIterator[AsyncPipeline]:
+        """Context manager to switch the connection into pipeline mode."""
+        async with self.lock:
+            if self._pipeline is None:
+                # We must enter pipeline mode: create a new one
+                # WARNING: reference loop, broken ahead.
+                pipeline = self._pipeline = AsyncPipeline(self)
+            else:
+                # we are already in pipeline mode: bail out as soon as we
+                # leave the lock block.
+                pipeline = None
+
+        if not pipeline:
+            # No-op re-entered inner pipeline block.
+            yield self._pipeline
+            return
+
+        try:
+            async with pipeline:
+                yield pipeline
+        finally:
+            assert pipeline.status == PipelineStatus.OFF, pipeline.status
+            self._pipeline = None
 
     async def wait(self, gen: PQGen[RV]) -> RV:
         try:

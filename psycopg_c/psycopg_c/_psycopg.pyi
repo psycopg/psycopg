@@ -12,9 +12,11 @@ from typing import Any, Iterable, List, Optional, Sequence, Tuple
 from psycopg import pq
 from psycopg import abc
 from psycopg.rows import Row, RowMaker
+from psycopg.abc import PipelineCommand
 from psycopg.adapt import AdaptersMap, PyFormat
 from psycopg.pq.abc import PGconn, PGresult
 from psycopg.connection import BaseConnection
+from psycopg._compat import Deque
 
 class Transformer(abc.AdaptContext):
     types: Optional[Tuple[int, ...]]
@@ -50,6 +52,9 @@ def execute(pgconn: PGconn) -> abc.PQGen[List[PGresult]]: ...
 def send(pgconn: PGconn) -> abc.PQGen[None]: ...
 def fetch_many(pgconn: PGconn) -> abc.PQGen[List[PGresult]]: ...
 def fetch(pgconn: PGconn) -> abc.PQGen[Optional[PGresult]]: ...
+def pipeline_communicate(
+    pgconn: PGconn, commands: Deque[PipelineCommand]
+) -> abc.PQGen[List[List[PGresult]]]: ...
 
 # Copy support
 def format_row_text(

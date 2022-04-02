@@ -4,6 +4,7 @@ psycopg cursor objects
 
 # Copyright (C) 2020 The Psycopg Team
 
+from functools import partial
 from types import TracebackType
 from typing import Any, Generic, Iterable, Iterator, List
 from typing import Optional, NoReturn, Sequence, Type, TypeVar, TYPE_CHECKING
@@ -194,9 +195,14 @@ class BaseCursor(Generic[ConnectionType, Row]):
         results = yield from self._maybe_prepare_gen(
             pgq, prepare=prepare, binary=binary
         )
-        self._check_results(results)
-        self._results = results
-        self._set_current_result(0)
+        if self._conn._pipeline:
+            yield from self._conn._pipeline._communicate_gen()
+        else:
+            assert results is not None
+            self._check_results(results)
+            self._results = results
+            self._set_current_result(0)
+
         self._last_query = query
 
         for cmd in self._conn._prepared.get_maintenance_commands():
@@ -218,20 +224,28 @@ class BaseCursor(Generic[ConnectionType, Row]):
                 pgq.dump(params)
 
             results = yield from self._maybe_prepare_gen(pgq, prepare=True)
-            self._check_results(results)
-            if returning and results[0].status == ExecStatus.TUPLES_OK:
-                self._results.extend(results)
 
-            for res in results:
-                nrows += res.command_tuples or 0
+            if self._conn._pipeline:
+                yield from self._conn._pipeline._communicate_gen()
+            else:
+                assert results is not None
+                self._check_results(results)
+                if returning and results[0].status == ExecStatus.TUPLES_OK:
+                    self._results.extend(results)
 
-        if self._results:
-            self._set_current_result(0)
+                for res in results:
+                    nrows += res.command_tuples or 0
 
-        # Override rowcount for the first result. Calls to nextset() will change
-        # it to the value of that result only, but we hope nobody will notice.
-        # You haven't read this comment.
-        self._rowcount = nrows
+        if not self._conn._pipeline:
+            if self._results:
+                self._set_current_result(0)
+
+            # Override rowcount for the first result. Calls to nextset() will
+            # change it to the value of that result only, but we hope nobody
+            # will notice.
+            # You haven't read this comment.
+            self._rowcount = nrows
+
         self._last_query = query
 
         for cmd in self._conn._prepared.get_maintenance_commands():
@@ -243,32 +257,38 @@ class BaseCursor(Generic[ConnectionType, Row]):
         *,
         prepare: Optional[bool] = None,
         binary: Optional[bool] = None,
-    ) -> PQGen[List["PGresult"]]:
+    ) -> PQGen[Optional[List["PGresult"]]]:
         # Check if the query is prepared or needs preparing
         prep, name = self._conn._prepared.get(pgq, prepare)
-        if prep is Prepare.YES:
-            # The query is already prepared
-            self._send_query_prepared(name, pgq, binary=binary)
-
-        elif prep is Prepare.NO:
+        if prep is Prepare.NO:
             # The query must be executed without preparing
             self._execute_send(pgq, binary=binary)
-
         else:
-            # The query must be prepared and executed
-            self._send_prepare(name, pgq)
-            (result,) = yield from execute(self._pgconn)
-            if result.status == ExecStatus.FATAL_ERROR:
-                raise e.error_from_result(result, encoding=self._encoding)
+            # If the query is not already prepared, prepare it.
+            if prep is Prepare.SHOULD:
+                self._send_prepare(name, pgq)
+                if not self._conn._pipeline:
+                    (result,) = yield from execute(self._pgconn)
+                    if result.status == ExecStatus.FATAL_ERROR:
+                        raise e.error_from_result(result, encoding=self._encoding)
+            # Then execute it.
             self._send_query_prepared(name, pgq, binary=binary)
-
-        # run the query
-        results = yield from execute(self._pgconn)
 
         # Update the prepare state of the query.
         # If an operation requires to flush our prepared statements cache,
         # it will be added to the maintenance commands to execute later.
         key = self._conn._prepared.maybe_add_to_cache(pgq, prep, name)
+
+        if self._conn._pipeline:
+            queued = None
+            if key is not None:
+                queued = (key, prep, name)
+            self._conn._pipeline.result_queue.append((self, queued))
+            return None
+
+        # run the query
+        results = yield from execute(self._pgconn)
+
         if key is not None:
             self._conn._prepared.validate(key, prep, name, results)
 
@@ -366,17 +386,34 @@ class BaseCursor(Generic[ConnectionType, Row]):
 
         self._query = query
         if query.params or no_pqexec or fmt == Format.BINARY:
-            self._pgconn.send_query_params(
-                query.query,
-                query.params,
-                param_formats=query.formats,
-                param_types=query.types,
-                result_format=fmt,
-            )
+            if self._conn._pipeline:
+                self._conn._pipeline.command_queue.append(
+                    partial(
+                        self._pgconn.send_query_params,
+                        query.query,
+                        query.params,
+                        param_formats=query.formats,
+                        param_types=query.types,
+                        result_format=fmt,
+                    )
+                )
+            else:
+                self._pgconn.send_query_params(
+                    query.query,
+                    query.params,
+                    param_formats=query.formats,
+                    param_types=query.types,
+                    result_format=fmt,
+                )
         else:
             # if we don't have to, let's use exec_ as it can run more than
             # one query in one go
-            self._pgconn.send_query(query.query)
+            if self._conn._pipeline:
+                self._conn._pipeline.command_queue.append(
+                    partial(self._pgconn.send_query, query.query)
+                )
+            else:
+                self._pgconn.send_query(query.query)
 
     def _convert_query(
         self, query: Query, params: Optional[Params] = None
@@ -416,6 +453,8 @@ class BaseCursor(Generic[ConnectionType, Row]):
         """
         if result.status == ExecStatus.FATAL_ERROR:
             raise e.error_from_result(result, encoding=self._encoding)
+        elif result.status == ExecStatus.PIPELINE_ABORTED:
+            raise e.OperationalError("pipeline aborted")
         elif result.status in self._status_copy:
             raise e.ProgrammingError(
                 "COPY cannot be used with this method; use copy() insead"
@@ -442,8 +481,27 @@ class BaseCursor(Generic[ConnectionType, Row]):
         nrows = self.pgresult.command_tuples
         self._rowcount = nrows if nrows is not None else -1
 
+    def _set_results_from_pipeline(self, results: List["PGresult"]) -> None:
+        self._check_results(results)
+        if not self._results:
+            self._results = results
+            self._set_current_result(0)
+        else:
+            self._results.extend(results)
+
     def _send_prepare(self, name: bytes, query: PostgresQuery) -> None:
-        self._pgconn.send_prepare(name, query.query, param_types=query.types)
+        if self._conn._pipeline:
+            self._conn._pipeline.command_queue.append(
+                partial(
+                    self._pgconn.send_prepare,
+                    name,
+                    query.query,
+                    param_types=query.types,
+                )
+            )
+            self._conn._pipeline.result_queue.append(None)
+        else:
+            self._pgconn.send_prepare(name, query.query, param_types=query.types)
 
     def _send_query_prepared(
         self, name: bytes, pgq: PostgresQuery, *, binary: Optional[bool] = None
@@ -453,9 +511,20 @@ class BaseCursor(Generic[ConnectionType, Row]):
         else:
             fmt = Format.BINARY if binary else Format.TEXT
 
-        self._pgconn.send_query_prepared(
-            name, pgq.params, param_formats=pgq.formats, result_format=fmt
-        )
+        if self._conn._pipeline:
+            self._conn._pipeline.command_queue.append(
+                partial(
+                    self._pgconn.send_query_prepared,
+                    name,
+                    pgq.params,
+                    param_formats=pgq.formats,
+                    result_format=fmt,
+                )
+            )
+        else:
+            self._pgconn.send_query_prepared(
+                name, pgq.params, param_formats=pgq.formats, result_format=fmt
+            )
 
     def _check_result_for_fetch(self) -> None:
         if self.closed:
@@ -463,6 +532,10 @@ class BaseCursor(Generic[ConnectionType, Row]):
         res = self.pgresult
         if not res:
             raise e.ProgrammingError("no result available")
+        elif res.status == ExecStatus.FATAL_ERROR:
+            raise e.error_from_result(res, encoding=pgconn_encoding(self._pgconn))
+        elif res.status == ExecStatus.PIPELINE_ABORTED:
+            raise e.OperationalError("pipeline aborted")
         elif res.status != ExecStatus.TUPLES_OK:
             raise e.ProgrammingError("the last operation didn't produce a result")
 
@@ -587,6 +660,9 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
         """
         Iterate row-by-row on a result from the database.
         """
+        if self._pgconn.pipeline_status:
+            raise e.ProgrammingError("stream() cannot be used in pipeline mode")
+
         with self._conn.lock:
             self._conn.wait(self._stream_send_gen(query, params, binary=binary))
             first = True
@@ -604,6 +680,7 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
 
         :rtype: Optional[Row], with Row defined by `row_factory`
         """
+        self._fetch_pipeline()
         self._check_result_for_fetch()
         record = self._tx.load_row(self._pos, self._make_row)
         if record is not None:
@@ -618,6 +695,7 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
 
         :rtype: Sequence[Row], with Row defined by `row_factory`
         """
+        self._fetch_pipeline()
         self._check_result_for_fetch()
         assert self.pgresult
 
@@ -637,6 +715,7 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
 
         :rtype: Sequence[Row], with Row defined by `row_factory`
         """
+        self._fetch_pipeline()
         self._check_result_for_fetch()
         assert self.pgresult
         records = self._tx.load_rows(self._pos, self.pgresult.ntuples, self._make_row)
@@ -644,6 +723,7 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
         return records
 
     def __iter__(self) -> Iterator[Row]:
+        self._fetch_pipeline()
         self._check_result_for_fetch()
 
         def load(pos: int) -> Optional[Row]:
@@ -667,6 +747,7 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
         Raise `!IndexError` in case a scroll operation would leave the result
         set. In this case the position will not change.
         """
+        self._fetch_pipeline()
         self._scroll(value, mode)
 
     @contextmanager
@@ -681,3 +762,9 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
 
         with Copy(self) as copy:
             yield copy
+
+    def _fetch_pipeline(self) -> None:
+        if not self.pgresult and self._conn._pipeline:
+            with self._conn.lock:
+                self._conn.wait(self._conn._pipeline._fetch_gen(flush=True))
+            assert self.pgresult

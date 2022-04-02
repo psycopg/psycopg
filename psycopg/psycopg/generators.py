@@ -21,9 +21,10 @@ from typing import List, Optional, Union
 from . import pq
 from . import errors as e
 from .pq import ConnStatus, PollingStatus, ExecStatus
-from .abc import PQGen, PQGenConn
+from .abc import PipelineCommand, PQGen, PQGenConn
 from .pq.abc import PGconn, PGresult
 from .waiting import Wait, Ready
+from ._compat import Deque
 from ._encodings import pgconn_encoding, conninfo_encoding
 
 logger = logging.getLogger(__name__)
@@ -124,6 +125,12 @@ def fetch_many(pgconn: PGconn) -> PQGen[List[PGresult]]:
             # for every request so let's break the endless loop.
             break
 
+        if res.status == pq.ExecStatus.PIPELINE_SYNC:
+            # PIPELINE_SYNC is not followed by a NULL, but we return it alone
+            # similarly to other result sets.
+            assert len(results) == 1, results
+            break
+
     return results
 
 
@@ -151,6 +158,51 @@ def fetch(pgconn: PGconn) -> PQGen[Optional[PGresult]]:
             pgconn.notify_handler(n)
 
     return pgconn.get_result()
+
+
+def pipeline_communicate(
+    pgconn: PGconn, commands: Deque[PipelineCommand]
+) -> PQGen[List[List[PGresult]]]:
+    """Generator to send queries from a connection in pipeline mode while also
+    receiving results.
+
+    Return a list results, including single PIPELINE_SYNC elements.
+    """
+    results = []
+
+    while True:
+        ready = yield Wait.RW
+
+        if ready & Ready.R:
+            pgconn.consume_input()
+            while True:
+                n = pgconn.notifies()
+                if not n:
+                    break
+                if pgconn.notify_handler:
+                    pgconn.notify_handler(n)
+
+            res: List[PGresult] = []
+            while not pgconn.is_busy():
+                r = pgconn.get_result()
+                if r is None:
+                    if not res:
+                        break
+                    results.append(res)
+                    res = []
+                elif r.status == pq.ExecStatus.PIPELINE_SYNC:
+                    assert not res
+                    results.append([r])
+                else:
+                    res.append(r)
+
+        if ready & Ready.W:
+            pgconn.flush()
+            if not commands:
+                break
+            commands.popleft()()
+
+    return results
 
 
 _copy_statuses = (

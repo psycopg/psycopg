@@ -203,7 +203,7 @@ def patch_exec(conn, monkeypatch):
         elif isinstance(cmdcopy, sql.Composable):
             cmdcopy = cmdcopy.as_string(conn)
 
-        L.insert(0, cmdcopy)
+        L.append(cmdcopy)
         return _orig_exec_command(command, *args, **kwargs)
 
     monkeypatch.setattr(conn, "_exec_command", _exec_command)

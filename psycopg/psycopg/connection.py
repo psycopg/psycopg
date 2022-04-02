@@ -31,6 +31,7 @@ from .cursor import Cursor
 from ._compat import TypeAlias
 from ._cmodule import _psycopg
 from .conninfo import make_conninfo, conninfo_to_dict, ConnectionInfo
+from ._pipeline import BasePipeline, Pipeline
 from .generators import notifies
 from ._encodings import pgconn_encoding
 from ._preparing import PrepareManager
@@ -42,9 +43,6 @@ if TYPE_CHECKING:
     from psycopg_pool.base import BasePool
 
 logger = logging.getLogger("psycopg")
-
-connect: Callable[[str], PQGenConn["PGconn"]]
-execute: Callable[["PGconn"], PQGen[List["PGresult"]]]
 
 # Row Type variable for Cursor (when it needs to be distinguished from the
 # connection's one)
@@ -125,6 +123,8 @@ class BaseConnection(Generic[Row]):
         # Attribute is only set if the connection is from a pool so we can tell
         # apart a connection in the pool too (when _pool = None)
         self._pool: Optional["BasePool[Any]"]
+
+        self._pipeline: Optional[BasePipeline] = None
 
         # Time after which the connection should be closed
         self._expire_at: float
@@ -411,7 +411,7 @@ class BaseConnection(Generic[Row]):
 
     def _exec_command(
         self, command: Query, result_format: Format = Format.TEXT
-    ) -> PQGen["PGresult"]:
+    ) -> PQGen[Optional["PGresult"]]:
         """
         Generator to send a command and receive the result to the backend.
 
@@ -424,6 +424,20 @@ class BaseConnection(Generic[Row]):
             command = command.encode(pgconn_encoding(self.pgconn))
         elif isinstance(command, Composable):
             command = command.as_bytes(self)
+
+        if self._pipeline:
+            if result_format == Format.TEXT:
+                cmd = partial(self.pgconn.send_query, command)
+            else:
+                cmd = partial(
+                    self.pgconn.send_query_params,
+                    command,
+                    None,
+                    result_format=result_format,
+                )
+            self._pipeline.command_queue.append(cmd)
+            self._pipeline.result_queue.append(None)
+            return None
 
         if result_format == Format.TEXT:
             self.pgconn.send_query(command)
@@ -602,6 +616,8 @@ class Connection(BaseConnection[Row]):
     cursor_factory: Type[Cursor[Row]]
     server_cursor_factory: Type[ServerCursor[Row]]
     row_factory: RowFactory[Row]
+
+    _pipeline: Optional[Pipeline]
 
     def __init__(self, pgconn: "PGconn", row_factory: Optional[RowFactory[Row]] = None):
         super().__init__(pgconn)
@@ -850,6 +866,31 @@ class Connection(BaseConnection[Row]):
             for pgn in ns:
                 n = Notify(pgn.relname.decode(enc), pgn.extra.decode(enc), pgn.be_pid)
                 yield n
+
+    @contextmanager
+    def pipeline(self) -> Iterator[Pipeline]:
+        """Context manager to switch the connection into pipeline mode."""
+        with self.lock:
+            if self._pipeline is None:
+                # We must enter pipeline mode: create a new one
+                # WARNING: reference loop, broken ahead.
+                pipeline = self._pipeline = Pipeline(self)
+            else:
+                # we are already in pipeline mode: bail out as soon as we
+                # leave the lock block.
+                pipeline = None
+
+        if not pipeline:
+            # No-op re-entered inner pipeline block.
+            yield self._pipeline
+            return
+
+        try:
+            with pipeline:
+                yield pipeline
+        finally:
+            assert pipeline.status == pq.PipelineStatus.OFF, pipeline.status
+            self._pipeline = None
 
     def wait(self, gen: PQGen[RV], timeout: Optional[float] = 0.1) -> RV:
         """
