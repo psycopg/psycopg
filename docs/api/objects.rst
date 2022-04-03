@@ -34,6 +34,8 @@ Connection information
         is bad. `!ACTIVE` is reported only when a query has been sent to the
         server and not yet completed.
 
+    .. autoattribute:: pipeline_status
+
     .. autoattribute:: backend_pid
     .. autoattribute:: server_version
     .. autoattribute:: error_message

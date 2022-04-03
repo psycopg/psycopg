@@ -172,6 +172,19 @@ class TestConnectionInfo:
         conn.close()
         assert conn.info.transaction_status.name == "UNKNOWN"
 
+    @pytest.mark.libpq(">= 14")
+    def test_pipeline_status(self, conn):
+        assert not conn.info.pipeline_status
+        assert conn.info.pipeline_status.name == "OFF"
+        with conn.pipeline():
+            assert conn.info.pipeline_status
+            assert conn.info.pipeline_status.name == "ON"
+
+    @pytest.mark.libpq("< 14")
+    def test_pipeline_status_no_pipeline(self, conn):
+        assert not conn.info.pipeline_status
+        assert conn.info.pipeline_status.name == "OFF"
+
     def test_no_password(self, dsn):
         dsn2 = make_conninfo(dsn, password="the-pass-word")
         pgconn = psycopg.pq.PGconn.connect_start(dsn2.encode())
