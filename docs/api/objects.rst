@@ -36,6 +36,13 @@ Connection information
 
     .. autoattribute:: backend_pid
     .. autoattribute:: server_version
+
+        The number is formed by converting the major, minor, and revision
+        numbers into two-decimal-digit numbers and appending them together.
+        Starting from PostgreSQL 10 the minor version was dropped, so the
+        second group of digits is always 00. For example, version 9.3.5 is
+        returned as 90305, version 10.2 as 100002.
+
     .. autoattribute:: error_message
 
     .. automethod:: get_parameters

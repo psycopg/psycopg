@@ -205,7 +205,7 @@ class ConnectionInfo:
     @property
     def transaction_status(self) -> pq.TransactionStatus:
         """
-        The current in-transaction status of the server.
+        The current in-transaction status of the session.
         See :pq:`PQtransactionStatus()`.
         """
         return pq.TransactionStatus(self.pgconn.transaction_status)
@@ -223,12 +223,6 @@ class ConnectionInfo:
     def server_version(self) -> int:
         """
         An integer representing the server version. See :pq:`PQserverVersion()`.
-
-        The number is formed by converting the major, minor, and revision
-        numbers into two-decimal-digit numbers and appending them together.
-        After PostgreSQL 10 the minor version was dropped, so the second group
-        of digits is always 00. For example, version 9.3.5 is returned as
-        90305, version 10.2 as 100002.
         """
         return self.pgconn.server_version
 
