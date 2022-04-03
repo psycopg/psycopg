@@ -10,7 +10,7 @@ Pipeline mode support
 The *pipeline mode* allows PostgreSQL client applications to send a query
 without having to read the result of the previously sent query. Taking
 advantage of the pipeline mode, a client will wait less for the server, since
-multiple queries/results can be sent/received in a single network transaction.
+multiple queries/results can be sent/received in a single network roundtrip.
 Pipeline mode can provide a significant performance boost to the application.
 
 The server executes statements, and returns results, in the order the client
@@ -42,7 +42,7 @@ has the right library.
     details around when it is most useful to use the pipeline mode and about
     errors management and interaction with transactions.
 
-    .. __: https://www.postgresql.org/docs/14/libpq-pipeline-mode.html
+    .. __: https://www.postgresql.org/docs/current/libpq-pipeline-mode.html
 
 Psycopg supports the pipeline mode via the `Connection.pipeline()` method. The
 method is a context manager: at the end of the ``with`` block, the connection
@@ -54,14 +54,14 @@ normal mode, Psycopg will not wait for the server to receive the result of
 each query, which will be received in batches when a synchronization point is
 established.
 
-Psycopg can establish a synchronization points:
+Psycopg can establish a synchronization point:
 
 - using the `Pipeline.sync()` method;
 - at the end of a `!Pipeline` block;
 - using a fetch method such as `Cursor.fetchone()`.
 
 The server might perform a sync on its own initiative, for instance when the
-query buffer is full.
+output buffer is full.
 
 When a sync is performed, all the pending results are sent back to the cursors
 which executed them. If a cursor had run more than one query, it will receive
@@ -69,7 +69,7 @@ more than one result; results after the first will be available, in their
 execution order, using `~Cursor.nextset()`.
 
 .. warning::
-    Certanin features are not available in pipeline mode, including:
+    Certain features are not available in pipeline mode, including:
 
     - COPY is not supported in pipeline mode by PostgreSQL.
     - `Cursor.stream()` doesn't make sense in pipeline mode (its job is the
