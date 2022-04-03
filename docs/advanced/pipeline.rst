@@ -51,22 +51,27 @@ resumes the normal operation mode.
 Within the pipeline block, you can use one or more cursors to execute several
 operations, using `~Cursor.execute()` and `~Cursor.executemany()`. Unlike in
 normal mode, Psycopg will not wait for the server to receive the result of
-each query, which will be received in batches when a synchronization point is
-established.
+each query, which will be received in batches when the server flushes it
+output buffer.
 
-Psycopg can establish a synchronization point:
+This flush can happen either when a synchronization point is established by
+Psycopg:
 
-- using the `Pipeline.sync()` method;
+- using the `Pipeline.sync()` method, or,
 - at the end of a `!Pipeline` block;
-- using a fetch method such as `Cursor.fetchone()`.
 
-The server might perform a sync on its own initiative, for instance when the
+or using a fetch method such as `Cursor.fetchone()`.
+
+The server might perform a flush on its own initiative, for instance when the
 output buffer is full.
 
-When a sync is performed, all the pending results are sent back to the cursors
-which executed them. If a cursor had run more than one query, it will receive
-more than one result; results after the first will be available, in their
-execution order, using `~Cursor.nextset()`.
+In contrast with a synchronization point, a flush request (i.e. calling a
+fetch method) will not reset the pipeline error state.
+
+When a flush (or a sync) is performed, all pending results are sent back to
+the cursors which executed them. If a cursor had run more than one query, it
+will receive more than one result; results after the first will be available,
+in their execution order, using `~Cursor.nextset()`.
 
 .. warning::
     Certain features are not available in pipeline mode, including:
