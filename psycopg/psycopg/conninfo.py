@@ -210,6 +210,14 @@ class ConnectionInfo:
         """
         return pq.TransactionStatus(self.pgconn.transaction_status)
 
+    @property
+    def pipeline_status(self) -> pq.PipelineStatus:
+        """
+        The current pipeline status of the client.
+        See :pq:`PQpipelineStatus()`.
+        """
+        return pq.PipelineStatus(self.pgconn.pipeline_status)
+
     def parameter_status(self, param_name: str) -> Optional[str]:
         """
         Return a parameter setting of the connection.
