@@ -68,6 +68,14 @@ which executed them. If a cursor had run more than one query, it will receive
 more than one result; results after the first will be available, in their
 execution order, using `~Cursor.nextset()`.
 
+.. warning::
+    Certanin features are not available in pipeline mode, including:
+
+    - COPY is not supported in pipeline mode by PostgreSQL.
+    - `Cursor.stream()` doesn't make sense in pipeline mode (its job is the
+      opposite of batching!)
+    - `ServerCursor` are currently not implemented in pipeline mode.
+
 .. note::
     Starting from Psycopg 3.1, `Cursor.executemany()` is optimised to make use
     of pipeline mode.
