@@ -135,6 +135,12 @@ Enumerations
     .. seealso:: :pq:`PQresultStatus` for a description of these states.
 
 
+.. autoclass:: PipelineStatus
+    :members:
+
+    .. seealso:: :pq:`PQpipelineStatus` for a description of these states.
+
+
 .. autoclass:: Format
     :members:
 
