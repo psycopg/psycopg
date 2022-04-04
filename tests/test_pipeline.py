@@ -360,6 +360,26 @@ def test_outer_transaction_error(conn):
                 conn.execute("create table voila ()")
 
 
+def test_rollback_explicit(conn):
+    conn.autocommit = True
+    with conn.pipeline():
+        with pytest.raises(e.DivisionByZero):
+            cur = conn.execute("select 1 / %s", [0])
+            cur.fetchone()
+        conn.rollback()
+        conn.execute("select 1")
+
+
+def test_rollback_transaction(conn):
+    conn.autocommit = True
+    with pytest.raises(e.DivisionByZero):
+        with conn.pipeline():
+            with conn.transaction():
+                cur = conn.execute("select 1 / %s", [0])
+                cur.fetchone()
+    conn.execute("select 1")
+
+
 def test_concurrency(conn):
     with conn.transaction():
         conn.execute("drop table if exists pipeline_concurrency")

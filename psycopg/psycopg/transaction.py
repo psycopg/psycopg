@@ -56,6 +56,7 @@ class BaseTransaction(Generic[ConnectionType]):
         force_rollback: bool = False,
     ):
         self._conn = connection
+        self.pgconn = self._conn.pgconn
         self._savepoint_name = savepoint_name or ""
         self.force_rollback = force_rollback
         self._entered = self._exited = False
@@ -73,7 +74,7 @@ class BaseTransaction(Generic[ConnectionType]):
 
     def __repr__(self) -> str:
         cls = f"{self.__class__.__module__}.{self.__class__.__qualname__}"
-        info = pq.misc.connection_summary(self._conn.pgconn)
+        info = pq.misc.connection_summary(self.pgconn)
         if not self._entered:
             status = "inactive"
         elif not self._exited:
@@ -136,6 +137,13 @@ class BaseTransaction(Generic[ConnectionType]):
         if ex:
             raise ex
 
+        # Get out of a "pipeline aborted" state
+        if (
+            self._conn._pipeline
+            and self.pgconn.pipeline_status == pq.PipelineStatus.ABORTED
+        ):
+            yield from self._conn._pipeline._sync_gen()
+
         for command in self._get_rollback_commands():
             yield from self._conn._exec_command(command)
 
@@ -196,7 +204,7 @@ class BaseTransaction(Generic[ConnectionType]):
         Also set the internal state of the object and verify consistency.
         """
         self._outer_transaction = (
-            self._conn.pgconn.transaction_status == TransactionStatus.IDLE
+            self.pgconn.transaction_status == TransactionStatus.IDLE
         )
         if self._outer_transaction:
             # outer transaction: if no name it's only a begin, else
@@ -248,7 +256,7 @@ class Transaction(BaseTransaction["Connection[Any]"]):
         exc_val: Optional[BaseException],
         exc_tb: Optional[TracebackType],
     ) -> bool:
-        if self._conn.pgconn.status == ConnStatus.OK:
+        if self.pgconn.status == ConnStatus.OK:
             with self._conn.lock:
                 return self._conn.wait(self._exit_gen(exc_type, exc_val, exc_tb))
         else:
@@ -277,7 +285,7 @@ class AsyncTransaction(BaseTransaction["AsyncConnection[Any]"]):
         exc_val: Optional[BaseException],
         exc_tb: Optional[TracebackType],
     ) -> bool:
-        if self._conn.pgconn.status == ConnStatus.OK:
+        if self.pgconn.status == ConnStatus.OK:
             async with self._conn.lock:
                 return await self._conn.wait(self._exit_gen(exc_type, exc_val, exc_tb))
         else:

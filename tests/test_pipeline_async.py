@@ -364,6 +364,26 @@ async def test_outer_transaction_error(aconn):
                 await aconn.execute("create table voila ()")
 
 
+async def test_rollback_explicit(aconn):
+    await aconn.set_autocommit(True)
+    async with aconn.pipeline():
+        with pytest.raises(e.DivisionByZero):
+            cur = await aconn.execute("select 1 / %s", [0])
+            await cur.fetchone()
+        await aconn.rollback()
+        await aconn.execute("select 1")
+
+
+async def test_rollback_transaction(aconn):
+    await aconn.set_autocommit(True)
+    with pytest.raises(e.DivisionByZero):
+        async with aconn.pipeline():
+            async with aconn.transaction():
+                cur = await aconn.execute("select 1 / %s", [0])
+                await cur.fetchone()
+    await aconn.execute("select 1")
+
+
 async def test_concurrency(aconn):
     async with aconn.transaction():
         await aconn.execute("drop table if exists pipeline_concurrency")

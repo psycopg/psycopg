@@ -531,6 +531,11 @@ class BaseConnection(Generic[Row]):
             raise e.ProgrammingError(
                 "rollback() cannot be used during a two-phase transaction"
             )
+
+        # Get out of a "pipeline aborted" state
+        if self._pipeline and self.pgconn.pipeline_status == pq.PipelineStatus.ABORTED:
+            yield from self._pipeline._sync_gen()
+
         if self.pgconn.transaction_status == TransactionStatus.IDLE:
             return
 
@@ -538,6 +543,9 @@ class BaseConnection(Generic[Row]):
         self._prepared.clear()
         for cmd in self._prepared.get_maintenance_commands():
             yield from self._exec_command(cmd)
+
+        if self._pipeline:
+            yield from self._pipeline._sync_gen()
 
     def xid(self, format_id: int, gtrid: str, bqual: str) -> Xid:
         """
