@@ -278,7 +278,7 @@ def test_executemany_trace_returning(conn, trace):
     roundtrips = [k for k, g in groupby(items, key=attrgetter("direction"))]
     assert roundtrips == ["F", "B"] * 3
     assert items[-2].direction == "F"  # last 2 items are F B
-    assert len([i for i in items if i.type == "Sync"]) == 3
+    assert len([i for i in items if i.type == "Sync"]) == 1
 
 
 def test_prepared(conn):
