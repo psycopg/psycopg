@@ -179,8 +179,11 @@ class Pipeline(BasePipeline):
         This is called when exiting the pipeline, but can be used for other
         purposes (e.g. in nested pipelines).
         """
-        with self._conn.lock:
-            self._conn.wait(self._sync_gen())
+        try:
+            with self._conn.lock:
+                self._conn.wait(self._sync_gen())
+        except e.Error as ex:
+            raise ex.with_traceback(None)
 
     def __enter__(self) -> "Pipeline":
         self._enter()
@@ -199,7 +202,7 @@ class Pipeline(BasePipeline):
             if exc_val:
                 logger.warning("error ignored syncing %r: %s", self, exc2)
             else:
-                raise
+                raise exc2.with_traceback(None)
         finally:
             try:
                 self._exit()
@@ -210,7 +213,7 @@ class Pipeline(BasePipeline):
                 if exc_val:
                     logger.warning("error ignored exiting %r: %s", self, exc2)
                 else:
-                    raise
+                    raise exc2.with_traceback(None)
 
 
 class AsyncPipeline(BasePipeline):
@@ -229,8 +232,11 @@ class AsyncPipeline(BasePipeline):
         This is called when exiting the pipeline, but can be used for other
         purposes (e.g. in nested pipelines).
         """
-        async with self._conn.lock:
-            await self._conn.wait(self._sync_gen())
+        try:
+            async with self._conn.lock:
+                await self._conn.wait(self._sync_gen())
+        except e.Error as ex:
+            raise ex.with_traceback(None)
 
     async def __aenter__(self) -> "AsyncPipeline":
         self._enter()
@@ -249,7 +255,7 @@ class AsyncPipeline(BasePipeline):
             if exc_val:
                 logger.warning("error ignored syncing %r: %s", self, exc2)
             else:
-                raise
+                raise exc2.with_traceback(None)
         finally:
             try:
                 self._exit()
@@ -257,4 +263,4 @@ class AsyncPipeline(BasePipeline):
                 if exc_val:
                     logger.warning("error ignored exiting %r: %s", self, exc2)
                 else:
-                    raise
+                    raise exc2.with_traceback(None)
