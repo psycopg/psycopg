@@ -13,7 +13,7 @@ from typing import overload, TYPE_CHECKING
 from weakref import ref, ReferenceType
 from warnings import warn
 from functools import partial
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 
 from . import pq
 from . import errors as e
@@ -28,7 +28,7 @@ from .rows import Row, RowFactory, tuple_row, TupleRow, args_row
 from .adapt import AdaptersMap
 from ._enums import IsolationLevel
 from .cursor import Cursor
-from ._compat import TypeAlias
+from ._compat import AbstractContextManager, TypeAlias
 from ._cmodule import _psycopg
 from .conninfo import make_conninfo, conninfo_to_dict, ConnectionInfo
 from ._pipeline import BasePipeline, Pipeline
@@ -858,7 +858,13 @@ class Connection(BaseConnection[Row]):
             block even if there were no error (e.g. to try a no-op process).
         :rtype: Transaction
         """
-        with Transaction(self, savepoint_name, force_rollback) as tx:
+        pipeline: Callable[[], AbstractContextManager[Any]]
+        if self._pipeline:
+            pipeline = self.pipeline
+        else:
+            pipeline = nullcontext
+        tx = Transaction(self, savepoint_name, force_rollback)
+        with pipeline(), tx, pipeline():
             yield tx
 
     def notifies(self) -> Generator[Notify, None, None]:

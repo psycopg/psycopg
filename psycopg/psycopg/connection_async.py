@@ -8,7 +8,7 @@ import sys
 import asyncio
 import logging
 from types import TracebackType
-from typing import Any, AsyncGenerator, AsyncIterator, Dict, List, Optional
+from typing import Any, AsyncGenerator, AsyncIterator, Callable, Dict, List, Optional
 from typing import Type, Union, cast, overload, TYPE_CHECKING
 from contextlib import asynccontextmanager
 
@@ -19,6 +19,7 @@ from .abc import AdaptContext, Params, PQGen, PQGenConn, Query, RV
 from ._tpc import Xid
 from .rows import Row, AsyncRowFactory, tuple_row, TupleRow, args_row
 from .adapt import AdaptersMap
+from ._compat import AbstractAsyncContextManager, nullcontext
 from ._enums import IsolationLevel
 from .conninfo import make_conninfo, conninfo_to_dict
 from ._pipeline import AsyncPipeline
@@ -281,8 +282,13 @@ class AsyncConnection(BaseConnection[Row]):
 
         :rtype: AsyncTransaction
         """
+        pipeline: Callable[[], AbstractAsyncContextManager[Any]]
+        if self._pipeline:
+            pipeline = self.pipeline
+        else:
+            pipeline = nullcontext
         tx = AsyncTransaction(self, savepoint_name, force_rollback)
-        async with tx:
+        async with pipeline(), tx, pipeline():
             yield tx
 
     async def notifies(self) -> AsyncGenerator[Notify, None]:

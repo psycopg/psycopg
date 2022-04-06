@@ -30,16 +30,45 @@ else:
 if sys.version_info >= (3, 9):
     from zoneinfo import ZoneInfo
     from collections import Counter, deque as Deque
+    from contextlib import AbstractAsyncContextManager, AbstractContextManager
 else:
     from backports.zoneinfo import ZoneInfo
-    from typing import Counter, Deque
+    from typing import (
+        Counter,
+        Deque,
+        AsyncContextManager as AbstractAsyncContextManager,
+        ContextManager as AbstractContextManager,
+    )
 
 if sys.version_info >= (3, 10):
+    from contextlib import nullcontext
     from typing import TypeAlias, TypeGuard
 else:
+    from contextlib import nullcontext as _nullcontext
     from typing_extensions import TypeAlias, TypeGuard
 
+    if sys.version_info >= (3, 9):
+
+        class nullcontext(_nullcontext[T]):
+            async def __aenter__(self) -> T:
+                return self.enter_result
+
+            async def __aexit__(self, *excinfo: Any) -> None:
+                pass
+
+    else:
+
+        class nullcontext(_nullcontext):
+            async def __aenter__(self) -> Any:
+                return self.enter_result
+
+            async def __aexit__(self, *excinfo: Any) -> None:
+                pass
+
+
 __all__ = [
+    "AbstractAsyncContextManager",
+    "AbstractContextManager",
     "Counter",
     "Deque",
     "Protocol",
@@ -47,4 +76,5 @@ __all__ = [
     "TypeGuard",
     "ZoneInfo",
     "create_task",
+    "nullcontext",
 ]
