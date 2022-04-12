@@ -26,7 +26,8 @@ Composite types casting
 
 Psycopg can adapt PostgreSQL composite types (either created with the |CREATE
 TYPE|_ command or implicitly defined after a table row type) to and from
-Python tuples or `~collections.namedtuple`.
+Python tuples, `~collections.namedtuple`, or any other suitable object
+configured.
 
 .. |CREATE TYPE| replace:: :sql:`CREATE TYPE`
 .. _CREATE TYPE: https://www.postgresql.org/docs/current/static/sql-createtype.html
@@ -38,7 +39,8 @@ using `~psycopg.types.composite.register_composite()`.
 .. autoclass:: psycopg.types.composite.CompositeInfo
 
    `!CompositeInfo` is a `~psycopg.types.TypeInfo` subclass: check its
-   documentation for generic details.
+   documentation for the generic usage, especially the
+   `~psycopg.types.TypeInfo.fetch()` method.
 
    .. attribute:: python_type
 
@@ -149,7 +151,8 @@ its subtype and make it work like the builtin ones.
 .. autoclass:: psycopg.types.range.RangeInfo
 
    `!RangeInfo` is a `~psycopg.types.TypeInfo` subclass: check its
-   documentation for generic details.
+   documentation for generic details, especially the
+   `~psycopg.types.TypeInfo.fetch()` method.
 
 .. autofunction:: psycopg.types.range.register_range
 
@@ -219,7 +222,8 @@ multirange type with its subtype and make it work like the builtin ones.
 .. autoclass:: psycopg.types.multirange.MultirangeInfo
 
    `!MultirangeInfo` is a `~psycopg.types.TypeInfo` subclass: check its
-   documentation for generic details.
+   documentation for generic details, especially the
+   `~psycopg.types.TypeInfo.fetch()` method.
 
 .. autofunction:: psycopg.types.multirange.register_multirange
 
