@@ -365,3 +365,73 @@ connection or cursor), other connections and cursors will be unaffected::
     ...     "coordinates":[-48.23456,20.12345]}')
     ... """).fetchone()[0]
     '0101000020E61000009279E40F061E48C0F2B0506B9A1F3440'
+
+.. _adapt-enum:
+
+Enum types casting
+------------------
+
+Psycopg can adapt PostgreSQL enum types (created with the
+|CREATE TYPE AS ENUM|_ command)
+
+.. |CREATE TYPE AS ENUM| replace:: :sql:`CREATE TYPE ... AS ENUM (...)`
+.. _CREATE TYPE AS ENUM: https://www.postgresql.org/docs/current/static/datatype-enum.html
+
+Before using a enum type it is necessary to get information about it
+using the `~psycopg.types.enum.EnumInfo` class and to register it
+using `~psycopg.types.enum.register_enum()`.
+
+.. autoclass:: psycopg.types.enum.EnumInfo
+
+   `!EnumInfo` is a `~psycopg.types.TypeInfo` subclass: check its
+   documentation for the generic usage, especially the
+   `~psycopg.types.TypeInfo.fetch()` method.
+
+   .. attribute:: enum_labels
+
+       Contains labels available in the PostgreSQL enum type.
+
+   .. attribute:: python_type
+
+       After `register_composite()` is called, it will contain the python type
+       mapping to the registered enum.
+
+.. autofunction:: psycopg.types.enum.register_enum
+
+   After registering, fetching data of the registered enum will cast
+   PostgreSQL enum labels into corresponding Python enum labels.
+
+   If no ``python_type`` is specified, a `Enum` is created based on
+   PostgreSQL enum labels.
+
+Example::
+
+    >>> from enum import Enum
+    >>> from psycopg.types.enum import EnumInfo, register_enum
+
+    >>> class UserRole(str, Enum):
+    ...     ADMIN = "ADMIN"
+    ...     EDITOR = "EDITOR"
+    ...     GUEST = "GUEST"
+
+    >>> conn.execute("CREATE TYPE user_role AS ('ADMIN', 'EDITOR', 'GUEST')")
+
+    >>> info = EnumInfo.fetch(conn, "user_role")
+    >>> register_enum(info, UserRole, conn)
+
+    >>> some_editor = info.python_type("EDITOR")
+    >>> some_editor
+    <UserRole.EDITOR: 'EDITOR'>
+
+    >>> conn.execute(
+    ...     "SELECT pg_typeof(%(editor)s), %(editor)s",
+    ...     { "editor": some_editor }
+    ... ).fetchone()
+    ('user_role', <UserRole.EDITOR: 'EDITOR'>)
+
+    >>> conn.execute(
+    ...     "SELECT (%s, %s)::user_role[]",
+    ...     [UserRole.ADMIN, UserRole.GUEST]
+    ... ).fetchone()
+    [<UserRole.ADMIN: 'ADMIN'>, <UserRole.GUEST: 'GUEST'>]
+

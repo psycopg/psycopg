@@ -285,6 +285,42 @@ WHERE t.oid = %(name)s::regtype
 """
 
 
+class EnumInfo(TypeInfo):
+    """Manage information about a enum type"""
+
+    __module__ = "psycopg.types.enum"
+
+    def __init__(
+        self,
+        name: str,
+        oid: int,
+        array_oid: int,
+        enum_labels: Sequence[str],
+    ):
+        super().__init__(name, oid, array_oid)
+        self.enum_labels = enum_labels
+        # Will be set by register() if the `python_type` is a type
+        self.python_type: Optional[type] = None
+
+    @classmethod
+    def _get_info_query(
+        cls, conn: "Union[Connection[Any], AsyncConnection[Any]]"
+    ) -> str:
+        return """\
+SELECT
+    t.typname AS name, t.oid AS oid, t.typarray AS array_oid,
+    array_agg(x.enumlabel) AS enum_labels
+FROM pg_type t
+LEFT JOIN (
+    SELECT e.enumtypid, e.enumlabel
+    FROM pg_enum e
+    ORDER BY e.enumsortorder
+) x ON x.enumtypid = t.oid
+WHERE t.oid = %(name)s::regtype
+GROUP BY t.typname, t.oid, t.typarray
+"""
+
+
 class TypesRegistry:
     """
     Container for the information about types in a database.
