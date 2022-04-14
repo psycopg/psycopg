@@ -133,3 +133,34 @@ def test_generic_enum_array_loader(conn, testenum, encoding, fmt_in, fmt_out):
 
     cur = conn.execute(f"select %{fmt_in}::{name}[]", [labels], binary=fmt_out)
     assert cur.fetchone()[0] == list(info.python_type)
+
+
+@pytest.mark.asyncio
+async def test_fetch_info_async(aconn, testenum):
+    name, enum, labels = testenum
+
+    info = await EnumInfo.fetch(aconn, name)
+    assert info.name == name
+    assert info.oid > 0
+    assert info.oid != info.array_oid > 0
+    assert len(info.enum_labels) == len(labels)
+    assert info.enum_labels == labels
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("encoding", encodings)
+@pytest.mark.parametrize("fmt_in", PyFormat)
+@pytest.mark.parametrize("fmt_out", pq.Format)
+async def test_enum_async(aconn, testenum, encoding, fmt_in, fmt_out):
+    await aconn.execute(f"set client_encoding to {encoding}")
+
+    name, enum, labels = testenum
+    register_enum(await EnumInfo.fetch(aconn, name), enum, aconn)
+
+    async with aconn.cursor(binary=fmt_out) as cur:
+        for label in labels:
+            cur = await cur.execute(f"select %{fmt_in}::{name}", [label])
+            assert (await cur.fetchone())[0] == enum(label)
+
+        cur = await cur.execute(f"select %{fmt_in}", [list(enum)])
+        assert (await cur.fetchone())[0] == list(enum)
