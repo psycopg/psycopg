@@ -42,8 +42,7 @@ class EnumBinaryLoader(EnumLoader[E]):
 
 
 class EnumDumper(StrDumper):
-    def dump(self, obj: str) -> bytes:
-        return super().dump(obj)
+    pass
 
 
 class EnumBinaryDumper(StrBinaryDumper):
