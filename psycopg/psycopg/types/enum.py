@@ -2,29 +2,39 @@
 Adapters for the enum type.
 """
 from enum import Enum
-from typing import Optional, TypeVar, Generic, Type
+from typing import Optional, TypeVar, Generic, Type, Dict, Any
 
+from ..adapt import Dumper, Loader
 from .string import StrBinaryDumper, StrDumper
 from .. import postgres
+from .._encodings import pgconn_encoding
 from .._typeinfo import EnumInfo as EnumInfo  # exported here
 from ..abc import AdaptContext
-from ..adapt import Buffer, Loader
+from ..adapt import Buffer
 from ..pq import Format
+
 
 E = TypeVar("E", bound=Enum)
 
 
 class EnumLoader(Loader, Generic[E]):
     format = Format.TEXT
+    _encoding = "utf-8"
     python_type: Type[E]
 
     def __init__(self, oid: int, context: Optional[AdaptContext] = None):
         super().__init__(oid, context)
+        conn = self.connection
+        if conn:
+            self._encoding = pgconn_encoding(conn.pgconn)
 
     def load(self, data: Buffer) -> E:
         if isinstance(data, memoryview):
-            data = bytes(data)
-        return self.python_type(data.decode())
+            label = bytes(data).decode(self._encoding)
+        else:
+            label = data.decode(self._encoding)
+
+        return self.python_type(label)
 
 
 class EnumBinaryLoader(EnumLoader[E]):
@@ -32,7 +42,8 @@ class EnumBinaryLoader(EnumLoader[E]):
 
 
 class EnumDumper(StrDumper):
-    pass
+    def dump(self, obj: str) -> bytes:
+        return super().dump(obj)
 
 
 class EnumBinaryDumper(StrBinaryDumper):
@@ -55,7 +66,7 @@ def register_enum(
     .. note::
         Only string enums are supported.
 
-        Use binary format if any of your enum labels contains comma:
+        Use binary format if you use enum array and enum labels contains comma:
             connection.execute(..., binary=True)
     """
 
@@ -77,17 +88,29 @@ def register_enum(
 
     info.register(context)
 
-    base = EnumLoader
-    name = f"{info.name.title()}{base.__name__}"
-    attribs = {"python_type": info.python_type}
-    loader = type(name, (base,), attribs)
+    attribs: Dict[str, Any] = {"python_type": info.python_type}
+
+    loader_base = EnumLoader
+    name = f"{info.name.title()}{loader_base.__name__}"
+    loader = type(name, (loader_base,), attribs)
     adapters.register_loader(info.oid, loader)
 
-    base = EnumBinaryLoader
-    name = f"{info.name.title()}{base.__name__}"
-    attribs = {"python_type": info.python_type}
-    loader = type(name, (base,), attribs)
+    loader_base = EnumBinaryLoader
+    name = f"{info.name.title()}{loader_base.__name__}"
+    loader = type(name, (loader_base,), attribs)
     adapters.register_loader(info.oid, loader)
+
+    attribs = {"oid": info.oid}
+
+    dumper_base: Type[Dumper] = EnumBinaryDumper
+    name = f"{info.name.title()}{dumper_base.__name__}"
+    dumper = type(name, (dumper_base,), attribs)
+    adapters.register_dumper(info.python_type, dumper)
+
+    dumper_base = EnumDumper
+    name = f"{info.name.title()}{dumper_base.__name__}"
+    dumper = type(name, (dumper_base,), attribs)
+    adapters.register_dumper(info.python_type, dumper)
 
 
 def register_default_adapters(context: AdaptContext) -> None:

@@ -6,7 +6,7 @@ information to the adapters if needed.
 """
 
 # Copyright (C) 2020 The Psycopg Team
-
+from enum import Enum
 from typing import Any, Dict, Iterator, Optional, overload
 from typing import Sequence, Tuple, Type, TypeVar, Union, TYPE_CHECKING
 
@@ -299,8 +299,8 @@ class EnumInfo(TypeInfo):
     ):
         super().__init__(name, oid, array_oid)
         self.enum_labels = enum_labels
-        # Will be set by register() if the `python_type` is a type
-        self.python_type: Optional[type] = None
+        # Will be set by register_enum()
+        self.python_type: Optional[Type[Enum]] = None
 
     @classmethod
     def _get_info_query(

@@ -24,6 +24,7 @@ Psycopg 3.1 (unreleased)
 - Allow `bytearray`/`memoryview` data too as `Copy.write()` input
   (:ticket:`#254`).
 - Drop support for Python 3.6.
+- Add `enum` support (:ticket:`#274`).
 
 
 Psycopg 3.0.12 (unreleased)
