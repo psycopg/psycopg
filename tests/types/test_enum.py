@@ -29,14 +29,14 @@ encodings = ["utf8", "latin1"]
 @pytest.fixture(scope="session", params=enum_cases)
 def testenum(request, svcconn):
     name, enum, labels = request.param
-    quoted_labels = [sql.quote(label) for label in labels]
-
     cur = svcconn.cursor()
     cur.execute(
-        f"""
-        drop type if exists {name} cascade;
-        create type {name} as enum({','.join(quoted_labels)});
-        """
+        sql.SQL(
+            """
+            drop type if exists {name} cascade;
+            create type {name} as enum ({labels});
+            """
+        ).format(name=sql.Identifier(name), labels=sql.SQL(",").join(labels))
     )
     return name, enum, labels
 
