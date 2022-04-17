@@ -66,6 +66,21 @@ def test_enum_loader(conn, testenum, encoding, fmt_in, fmt_out):
         assert cur.fetchone()[0] == enum(label)
 
 
+@pytest.mark.parametrize("fmt_in", PyFormat)
+@pytest.mark.parametrize("fmt_out", pq.Format)
+def test_enum_loader_sqlascii(conn, testenum, fmt_in, fmt_out):
+    name, enum, labels = testenum
+    if name == "nonasciienum":
+        pytest.skip("ascii-only test")
+
+    register_enum(EnumInfo.fetch(conn, name), enum, conn)
+    conn.execute("set client_encoding to sql_ascii")
+
+    for label in labels:
+        cur = conn.execute(f"select %{fmt_in}::{name}", [label], binary=fmt_out)
+        assert cur.fetchone()[0] == enum(label)
+
+
 @pytest.mark.parametrize("encoding", encodings)
 @pytest.mark.parametrize("fmt_in", PyFormat)
 @pytest.mark.parametrize("fmt_out", pq.Format)
@@ -74,6 +89,21 @@ def test_enum_dumper(conn, testenum, encoding, fmt_in, fmt_out):
 
     name, enum, labels = testenum
     register_enum(EnumInfo.fetch(conn, name), enum, conn)
+
+    for item in enum:
+        cur = conn.execute(f"select %{fmt_in}", [item], binary=fmt_out)
+        assert cur.fetchone()[0] == item
+
+
+@pytest.mark.parametrize("fmt_in", PyFormat)
+@pytest.mark.parametrize("fmt_out", pq.Format)
+def test_enum_dumper_sqlascii(conn, testenum, fmt_in, fmt_out):
+    name, enum, labels = testenum
+    if name == "nonasciienum":
+        pytest.skip("ascii-only test")
+
+    register_enum(EnumInfo.fetch(conn, name), enum, conn)
+    conn.execute("set client_encoding to sql_ascii")
 
     for item in enum:
         cur = conn.execute(f"select %{fmt_in}", [item], binary=fmt_out)
