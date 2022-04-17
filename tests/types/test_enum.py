@@ -13,14 +13,14 @@ class StrTestEnum(str, Enum):
     THREE = "THREE"
 
 
-class NonAscciEnum(str, Enum):
+class NonAsciiEnum(str, Enum):
     XE0 = "x\xe0"
     XE1 = "x\xe1"
 
 
 enum_cases = [
     ("strtestenum", StrTestEnum, [item.value for item in StrTestEnum]),
-    ("nonasccienum", NonAscciEnum, [item.value for item in NonAscciEnum]),
+    ("nonasciienum", NonAsciiEnum, [item.value for item in NonAsciiEnum]),
 ]
 
 encodings = ["utf8", "latin1"]
