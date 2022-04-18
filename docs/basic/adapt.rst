@@ -389,9 +389,6 @@ Before using a enum type it is necessary to get information about it
 using the `~psycopg.types.enum.EnumInfo` class and to register it
 using `~psycopg.types.enum.register_enum()`.
 
-If you use enum array and your enum labels contains comma, you should use
-the binary format to return values. See :ref:`binary-data` for details.
-
 .. autoclass:: psycopg.types.enum.EnumInfo
 
    `!EnumInfo` is a `~psycopg.types.TypeInfo` subclass: check its
@@ -417,31 +414,31 @@ the binary format to return values. See :ref:`binary-data` for details.
 
 Example::
 
-    >>> from enum import Enum
+    >>> from enum import Enum, auto
     >>> from psycopg.types.enum import EnumInfo, register_enum
 
-    >>> class UserRole(str, Enum):
-    ...     ADMIN = "ADMIN"
-    ...     EDITOR = "EDITOR"
-    ...     GUEST = "GUEST"
+    >>> class UserRole(Enum):
+    ...     ADMIN = auto()
+    ...     EDITOR = auto()
+    ...     GUEST = auto()
 
-    >>> conn.execute("CREATE TYPE user_role AS ('ADMIN', 'EDITOR', 'GUEST')")
+    >>> conn.execute("CREATE TYPE user_role AS ENUM ('ADMIN', 'EDITOR', 'GUEST')")
 
     >>> info = EnumInfo.fetch(conn, "user_role")
     >>> register_enum(info, UserRole, conn)
 
-    >>> some_editor = info.python_type("EDITOR")
+    >>> some_editor = info.python_type.EDITOR
     >>> some_editor
-    <UserRole.EDITOR: 'EDITOR'>
+    <UserRole.EDITOR: 2>
 
     >>> conn.execute(
     ...     "SELECT pg_typeof(%(editor)s), %(editor)s",
-    ...     { "editor": some_editor }
+    ...     {"editor": some_editor}
     ... ).fetchone()
-    ('user_role', <UserRole.EDITOR: 'EDITOR'>)
+    ('user_role', <UserRole.EDITOR: 2>)
 
     >>> conn.execute(
-    ...     "SELECT (%s, %s)::user_role[]",
+    ...     "SELECT ARRAY[%s, %s]",
     ...     [UserRole.ADMIN, UserRole.GUEST]
     ... ).fetchone()
-    [<UserRole.ADMIN: 'ADMIN'>, <UserRole.GUEST: 'GUEST'>]
+    [<UserRole.ADMIN: 1>, <UserRole.GUEST: 3>]

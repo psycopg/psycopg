@@ -2,10 +2,9 @@
 Adapters for the enum type.
 """
 from enum import Enum
-from typing import Optional, TypeVar, Generic, Type, Dict, Any
+from typing import Type, Any, Dict, Generic, Optional, TypeVar, cast
 
 from ..adapt import Dumper, Loader
-from .string import StrBinaryDumper, StrDumper
 from .. import postgres
 from .._encodings import pgconn_encoding
 from .._typeinfo import EnumInfo as EnumInfo  # exported here
@@ -18,7 +17,6 @@ E = TypeVar("E", bound=Enum)
 
 
 class EnumLoader(Loader, Generic[E]):
-    format = Format.TEXT
     _encoding = "utf-8"
     python_type: Type[E]
 
@@ -34,19 +32,29 @@ class EnumLoader(Loader, Generic[E]):
         else:
             label = data.decode(self._encoding)
 
-        return self.python_type(label)
+        return self.python_type[label]
 
 
 class EnumBinaryLoader(EnumLoader[E]):
     format = Format.BINARY
 
 
-class EnumDumper(StrDumper):
-    pass
+class EnumDumper(Dumper):
+    _encoding = "utf-8"
+
+    def __init__(self, cls: type, context: Optional[AdaptContext] = None):
+        super().__init__(cls, context)
+
+        conn = self.connection
+        if conn:
+            self._encoding = pgconn_encoding(conn.pgconn)
+
+    def dump(self, value: E) -> Buffer:
+        return value.name.encode(self._encoding)
 
 
-class EnumBinaryDumper(StrBinaryDumper):
-    pass
+class EnumBinaryDumper(EnumDumper):
+    format = Format.BINARY
 
 
 def register_enum(
@@ -61,30 +69,19 @@ def register_enum(
         the type will be generated and put into info.python_type.
     :param context: The context where to register the adapters. If `!None`,
         register it globally.
-
-    .. note::
-        Only string enums are supported.
-
-        Use binary format if you use enum array and enum labels contains comma:
-            connection.execute(..., binary=True)
     """
 
     if not info:
         raise TypeError("no info passed. Is the requested enum available?")
 
-    if python_type is not None:
-        if {type(item.value) for item in python_type} != {str}:
-            raise TypeError("invalid enum value type (string is the only supported)")
-
-        info.python_type = python_type
-    else:
-        info.python_type = Enum(  # type: ignore
-            info.name.title(),
-            {label: label for label in info.enum_labels},
+    if python_type is None:
+        python_type = cast(
+            Type[E],
+            Enum(info.name.title(), {label: label for label in info.enum_labels}),
         )
 
+    info.python_type = python_type
     adapters = context.adapters if context else postgres.adapters
-
     info.register(context)
 
     attribs: Dict[str, Any] = {"python_type": info.python_type}

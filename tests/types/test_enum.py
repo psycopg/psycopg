@@ -1,4 +1,4 @@
-from enum import Enum
+from enum import Enum, auto
 
 import pytest
 
@@ -7,28 +7,39 @@ from psycopg.adapt import PyFormat
 from psycopg.types.enum import EnumInfo, register_enum
 
 
+class PureTestEnum(Enum):
+    FOO = auto()
+    BAR = auto()
+    BAZ = auto()
+
+
 class StrTestEnum(str, Enum):
     ONE = "ONE"
     TWO = "TWO"
     THREE = "THREE"
 
 
-class NonAsciiEnum(str, Enum):
-    XE0 = "x\xe0"
-    XE1 = "x\xe1"
+NonAsciiEnum = Enum(
+    "NonAsciiEnum", {"X\xe0": "x\xe0", "X\xe1": "x\xe1", "COMMA": "foo,bar"}, type=str
+)
 
 
-enum_cases = [
-    ("strtestenum", StrTestEnum, [item.value for item in StrTestEnum]),
-    ("nonasciienum", NonAsciiEnum, [item.value for item in NonAsciiEnum]),
-]
+class IntTestEnum(int, Enum):
+    ONE = 1
+    TWO = 2
+    THREE = 3
+
+
+enum_cases = [PureTestEnum, StrTestEnum, NonAsciiEnum, IntTestEnum]
 
 encodings = ["utf8", "latin1"]
 
 
 @pytest.fixture(scope="session", params=enum_cases)
 def testenum(request, svcconn):
-    name, enum, labels = request.param
+    enum = request.param
+    name = enum.__name__.lower()
+    labels = list(enum.__members__.keys())
     cur = svcconn.cursor()
     cur.execute(
         sql.SQL(
@@ -52,6 +63,16 @@ def test_fetch_info(conn, testenum):
     assert info.enum_labels == labels
 
 
+def test_register_makes_a_type(conn, testenum):
+    name, enum, labels = testenum
+    info = EnumInfo.fetch(conn, name)
+    assert info
+    assert info.python_type is None
+    register_enum(info, context=conn)
+    assert info.python_type is not None
+    assert [e.name for e in info.python_type] == [e.name for e in enum]
+
+
 @pytest.mark.parametrize("encoding", encodings)
 @pytest.mark.parametrize("fmt_in", PyFormat)
 @pytest.mark.parametrize("fmt_out", pq.Format)
@@ -63,7 +84,7 @@ def test_enum_loader(conn, testenum, encoding, fmt_in, fmt_out):
 
     for label in labels:
         cur = conn.execute(f"select %{fmt_in}::{name}", [label], binary=fmt_out)
-        assert cur.fetchone()[0] == enum(label)
+        assert cur.fetchone()[0] == enum[label]
 
 
 @pytest.mark.parametrize("fmt_in", PyFormat)
@@ -78,7 +99,7 @@ def test_enum_loader_sqlascii(conn, testenum, fmt_in, fmt_out):
 
     for label in labels:
         cur = conn.execute(f"select %{fmt_in}::{name}", [label], binary=fmt_out)
-        assert cur.fetchone()[0] == enum(label)
+        assert cur.fetchone()[0] == enum[label]
 
 
 @pytest.mark.parametrize("encoding", encodings)
@@ -190,7 +211,7 @@ async def test_enum_async(aconn, testenum, encoding, fmt_in, fmt_out):
     async with aconn.cursor(binary=fmt_out) as cur:
         for label in labels:
             cur = await cur.execute(f"select %{fmt_in}::{name}", [label])
-            assert (await cur.fetchone())[0] == enum(label)
+            assert (await cur.fetchone())[0] == enum[label]
 
         cur = await cur.execute(f"select %{fmt_in}", [list(enum)])
         assert (await cur.fetchone())[0] == list(enum)
