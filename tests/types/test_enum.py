@@ -59,18 +59,18 @@ def test_fetch_info(conn, testenum):
     assert info.name == name
     assert info.oid > 0
     assert info.oid != info.array_oid > 0
-    assert len(info.enum_labels) == len(labels)
-    assert info.enum_labels == labels
+    assert len(info.labels) == len(labels)
+    assert info.labels == labels
 
 
 def test_register_makes_a_type(conn, testenum):
     name, enum, labels = testenum
     info = EnumInfo.fetch(conn, name)
     assert info
-    assert info.python_type is None
+    assert info.enum is None
     register_enum(info, context=conn)
-    assert info.python_type is not None
-    assert [e.name for e in info.python_type] == [e.name for e in enum]
+    assert info.enum is not None
+    assert [e.name for e in info.enum] == [e.name for e in enum]
 
 
 @pytest.mark.parametrize("encoding", encodings)
@@ -143,7 +143,7 @@ def test_generic_enum_loader(conn, testenum, encoding, fmt_in, fmt_out):
 
     for label in labels:
         cur = conn.execute(f"select %{fmt_in}::{name}", [label], binary=fmt_out)
-        assert cur.fetchone()[0] == info.python_type(label)
+        assert cur.fetchone()[0] == info.enum(label)
 
 
 @pytest.mark.parametrize("encoding", encodings)
@@ -183,7 +183,7 @@ def test_generic_enum_array_loader(conn, testenum, encoding, fmt_in, fmt_out):
     register_enum(info, enum, conn)
 
     cur = conn.execute(f"select %{fmt_in}::{name}[]", [labels], binary=fmt_out)
-    assert cur.fetchone()[0] == list(info.python_type)
+    assert cur.fetchone()[0] == list(info.enum)
 
 
 @pytest.mark.asyncio
@@ -194,8 +194,8 @@ async def test_fetch_info_async(aconn, testenum):
     assert info.name == name
     assert info.oid > 0
     assert info.oid != info.array_oid > 0
-    assert len(info.enum_labels) == len(labels)
-    assert info.enum_labels == labels
+    assert len(info.labels) == len(labels)
+    assert info.labels == labels
 
 
 @pytest.mark.asyncio

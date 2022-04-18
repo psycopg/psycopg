@@ -295,12 +295,12 @@ class EnumInfo(TypeInfo):
         name: str,
         oid: int,
         array_oid: int,
-        enum_labels: Sequence[str],
+        labels: Sequence[str],
     ):
         super().__init__(name, oid, array_oid)
-        self.enum_labels = enum_labels
+        self.labels = labels
         # Will be set by register_enum()
-        self.python_type: Optional[Type[Enum]] = None
+        self.enum: Optional[Type[Enum]] = None
 
     @classmethod
     def _get_info_query(
@@ -309,7 +309,7 @@ class EnumInfo(TypeInfo):
         return """\
 SELECT
     t.typname AS name, t.oid AS oid, t.typarray AS array_oid,
-    array_agg(x.enumlabel) AS enum_labels
+    array_agg(x.enumlabel) AS labels
 FROM pg_type t
 LEFT JOIN (
     SELECT e.enumtypid, e.enumlabel

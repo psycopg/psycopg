@@ -395,11 +395,11 @@ using `~psycopg.types.enum.register_enum()`.
    documentation for the generic usage, especially the
    `~psycopg.types.TypeInfo.fetch()` method.
 
-   .. attribute:: enum_labels
+   .. attribute:: labels
 
        Contains labels available in the PostgreSQL enum type.
 
-   .. attribute:: python_type
+   .. attribute:: enum
 
        After `register_enum()` is called, it will contain the python type
        mapping to the registered enum.
@@ -409,7 +409,7 @@ using `~psycopg.types.enum.register_enum()`.
    After registering, fetching data of the registered enum will cast
    PostgreSQL enum labels into corresponding Python enum labels.
 
-   If no ``python_type`` is specified, a `Enum` is created based on
+   If no `!enum` is specified, a new `Enum` is created based on
    PostgreSQL enum labels.
 
 Example::
@@ -427,7 +427,7 @@ Example::
     >>> info = EnumInfo.fetch(conn, "user_role")
     >>> register_enum(info, UserRole, conn)
 
-    >>> some_editor = info.python_type.EDITOR
+    >>> some_editor = info.enum.EDITOR
     >>> some_editor
     <UserRole.EDITOR: 2>
 

@@ -18,7 +18,7 @@ E = TypeVar("E", bound=Enum)
 
 class EnumLoader(Loader, Generic[E]):
     _encoding = "utf-8"
-    python_type: Type[E]
+    enum: Type[E]
 
     def __init__(self, oid: int, context: Optional[AdaptContext] = None):
         super().__init__(oid, context)
@@ -32,7 +32,7 @@ class EnumLoader(Loader, Generic[E]):
         else:
             label = data.decode(self._encoding)
 
-        return self.python_type[label]
+        return self.enum[label]
 
 
 class EnumBinaryLoader(EnumLoader[E]):
@@ -59,14 +59,14 @@ class EnumBinaryDumper(EnumDumper):
 
 def register_enum(
     info: EnumInfo,
-    python_type: Optional[Type[E]] = None,
+    enum: Optional[Type[E]] = None,
     context: Optional[AdaptContext] = None,
 ) -> None:
     """Register the adapters to load and dump a enum type.
 
     :param info: The object with the information about the enum to register.
-    :param python_type: Python enum type matching to the Postgres one. If `!None`,
-        the type will be generated and put into info.python_type.
+    :param enum: Python enum type matching to the Postgres one. If `!None`,
+        a new enum will be generated and exposed as `EnumInfo.enum`.
     :param context: The context where to register the adapters. If `!None`,
         register it globally.
     """
@@ -74,39 +74,34 @@ def register_enum(
     if not info:
         raise TypeError("no info passed. Is the requested enum available?")
 
-    if python_type is None:
-        python_type = cast(
-            Type[E],
-            Enum(info.name.title(), {label: label for label in info.enum_labels}),
-        )
+    if enum is None:
+        enum = cast(Type[E], Enum(info.name.title(), info.labels, module=__name__))
 
-    info.python_type = python_type
+    info.enum = enum
     adapters = context.adapters if context else postgres.adapters
     info.register(context)
 
-    attribs: Dict[str, Any] = {"python_type": info.python_type}
+    attribs: Dict[str, Any] = {"enum": info.enum}
 
     loader_base = EnumLoader
-    name = f"{info.name.title()}{loader_base.__name__}"
+    name = f"{info.name.title()}Loader"
     loader = type(name, (loader_base,), attribs)
     adapters.register_loader(info.oid, loader)
 
     loader_base = EnumBinaryLoader
-    name = f"{info.name.title()}{loader_base.__name__}"
+    name = f"{info.name.title()}BinaryLoader"
     loader = type(name, (loader_base,), attribs)
     adapters.register_loader(info.oid, loader)
 
     attribs = {"oid": info.oid}
 
-    dumper_base: Type[Dumper] = EnumBinaryDumper
-    name = f"{info.name.title()}{dumper_base.__name__}"
-    dumper = type(name, (dumper_base,), attribs)
-    adapters.register_dumper(info.python_type, dumper)
+    name = f"{enum.__name__}BinaryDumper"
+    dumper = type(name, (EnumBinaryDumper,), attribs)
+    adapters.register_dumper(info.enum, dumper)
 
-    dumper_base = EnumDumper
-    name = f"{info.name.title()}{dumper_base.__name__}"
-    dumper = type(name, (dumper_base,), attribs)
-    adapters.register_dumper(info.python_type, dumper)
+    name = f"{enum.__name__}Dumper"
+    dumper = type(name, (EnumDumper,), attribs)
+    adapters.register_dumper(info.enum, dumper)
 
 
 def register_default_adapters(context: AdaptContext) -> None:
