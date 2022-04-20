@@ -286,7 +286,7 @@ WHERE t.oid = %(name)s::regtype
 
 
 class EnumInfo(TypeInfo):
-    """Manage information about a enum type"""
+    """Manage information about an enum type."""
 
     __module__ = "psycopg.types.enum"
 

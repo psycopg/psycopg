@@ -65,7 +65,7 @@ def register_enum(
     """Register the adapters to load and dump a enum type.
 
     :param info: The object with the information about the enum to register.
-    :param enum: Python enum type matching to the Postgres one. If `!None`,
+    :param enum: Python enum type matching to the PostgreSQL one. If `!None`,
         a new enum will be generated and exposed as `EnumInfo.enum`.
     :param context: The context where to register the adapters. If `!None`,
         register it globally.

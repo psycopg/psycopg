@@ -372,6 +372,7 @@ address types`__:
     >>> conn.execute("select '::ffff:1.2.3.0/120'::cidr").fetchone()[0]
     IPv6Network('::ffff:102:300/120')
 
+
 .. _adapt-enum:
 
 Enum adaptation
@@ -379,15 +380,37 @@ Enum adaptation
 
 .. versionadded:: 3.1
 
-Psycopg can adapt PostgreSQL enum types (created with the
-|CREATE TYPE AS ENUM|_ command)
+Psycopg can adapt Python `~enum.Enum` subclasses into PostgreSQL enum types
+(created with the |CREATE TYPE AS ENUM|_ command).
 
 .. |CREATE TYPE AS ENUM| replace:: :sql:`CREATE TYPE ... AS ENUM (...)`
 .. _CREATE TYPE AS ENUM: https://www.postgresql.org/docs/current/static/datatype-enum.html
 
-Before using a enum type it is necessary to get information about it
-using the `~psycopg.types.enum.EnumInfo` class and to register it
-using `~psycopg.types.enum.register_enum()`.
+In order to set up a bidirectional enum mapping, you should get information
+about the PostgreSQL enum using the `~types.enum.EnumInfo` class and to
+register it using `~types.enum.register_enum()`. The behaviour of unregistered
+and registered enums is different.
+
+- If the enum is not registered with `register_enum()`:
+
+  - Pure `!Enum` classes are dumped as normal strings, using their member
+    names as value. The unknown oid is used, so PostgreSQL should be able to
+    use this string is most contexts (such as an enum or a text field).
+
+  - Mix-in enums are dumped according to their mix-in type (because a `class
+    MyIntEnum(int, Enum)` is more specifically an `!int` than an `!Enum`, so
+    it's dumped by default according to `!int` rules).
+
+  - PostgreSQL enums are loaded as Python strings. If you want to load arrays
+    of such enums you will have to find their ids using
+    `types.TypeInfo.fetch()` and `~types.TypeInfo.register()`.
+
+- If the enum is registered (using `~types.enum.EnumInfo`\ `!.fetch()` and
+  `~types.enum.register_enum()`):
+
+  - Enums classes, both pure and mixed-in, are dumped by name.
+
+  - The registered PostgreSQL enum is loaded back as the registered Python enum members.
 
 .. autoclass:: psycopg.types.enum.EnumInfo
 
@@ -397,11 +420,12 @@ using `~psycopg.types.enum.register_enum()`.
 
    .. attribute:: labels
 
-       Contains labels available in the PostgreSQL enum type.
+       After `~psycopg.types.TypeInfo.fetch()`, it contains the labels defined
+       in the PostgreSQL enum type.
 
    .. attribute:: enum
 
-       After `register_enum()` is called, it will contain the python type
+       After `register_enum()` is called, it will contain the Python type
        mapping to the registered enum.
 
 .. autofunction:: psycopg.types.enum.register_enum
