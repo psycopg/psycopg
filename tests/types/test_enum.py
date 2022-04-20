@@ -4,6 +4,7 @@ import pytest
 
 from psycopg import pq, sql
 from psycopg.adapt import PyFormat
+from psycopg.types import TypeInfo
 from psycopg.types.enum import EnumInfo, register_enum
 
 
@@ -134,16 +135,34 @@ def test_enum_dumper_sqlascii(conn, testenum, fmt_in, fmt_out):
 @pytest.mark.parametrize("encoding", encodings)
 @pytest.mark.parametrize("fmt_in", PyFormat)
 @pytest.mark.parametrize("fmt_out", pq.Format)
+def test_generic_enum_dumper(conn, testenum, encoding, fmt_in, fmt_out):
+    conn.execute(f"set client_encoding to {encoding}")
+
+    name, enum, labels = testenum
+
+    for item in enum:
+        if enum is PureTestEnum:
+            want = item.name
+        else:
+            want = item.value
+
+        cur = conn.execute(f"select %{fmt_in}", [item], binary=fmt_out)
+        assert cur.fetchone()[0] == want
+
+
+@pytest.mark.parametrize("encoding", encodings)
+@pytest.mark.parametrize("fmt_in", PyFormat)
+@pytest.mark.parametrize("fmt_out", pq.Format)
 def test_generic_enum_loader(conn, testenum, encoding, fmt_in, fmt_out):
     conn.execute(f"set client_encoding to {encoding}")
 
     name, enum, labels = testenum
-    info = EnumInfo.fetch(conn, name)
-    register_enum(info, None, conn)
-
     for label in labels:
         cur = conn.execute(f"select %{fmt_in}::{name}", [label], binary=fmt_out)
-        assert cur.fetchone()[0] == info.enum(label)
+        want = enum[label].name
+        if fmt_out == pq.Format.BINARY:
+            want = want.encode(encoding)
+        assert cur.fetchone()[0] == want
 
 
 @pytest.mark.parametrize("encoding", encodings)
@@ -179,11 +198,13 @@ def test_generic_enum_array_loader(conn, testenum, encoding, fmt_in, fmt_out):
     conn.execute(f"set client_encoding to {encoding}")
 
     name, enum, labels = testenum
-    info = EnumInfo.fetch(conn, name)
-    register_enum(info, enum, conn)
-
+    info = TypeInfo.fetch(conn, name)
+    info.register(conn)
+    want = [member.name for member in enum]
+    if fmt_out == pq.Format.BINARY:
+        want = [item.encode(encoding) for item in want]
     cur = conn.execute(f"select %{fmt_in}::{name}[]", [labels], binary=fmt_out)
-    assert cur.fetchone()[0] == list(info.enum)
+    assert cur.fetchone()[0] == want
 
 
 @pytest.mark.asyncio
