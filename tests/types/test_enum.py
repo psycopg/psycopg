@@ -2,7 +2,7 @@ from enum import Enum, auto
 
 import pytest
 
-from psycopg import pq, sql
+from psycopg import pq, sql, errors as e
 from psycopg.adapt import PyFormat
 from psycopg.types import TypeInfo
 from psycopg.types.enum import EnumInfo, register_enum
@@ -241,3 +241,17 @@ async def test_enum_async(aconn, testenum, encoding, fmt_in, fmt_out):
 
     cur = await cur.execute(f"select %{fmt_in}", [list(enum)])
     assert (await cur.fetchone())[0] == list(enum)
+
+
+@pytest.mark.parametrize("fmt_in", PyFormat)
+@pytest.mark.parametrize("fmt_out", pq.Format)
+def test_enum_error(conn, fmt_in, fmt_out):
+    conn.autocommit = True
+
+    info = EnumInfo.fetch(conn, "puretestenum")
+    register_enum(info, conn, StrTestEnum)
+
+    with pytest.raises(e.DataError):
+        conn.execute("select %s::text", [StrTestEnum.ONE]).fetchone()
+    with pytest.raises(e.DataError):
+        conn.execute("select 'BAR'::puretestenum").fetchone()

@@ -4,13 +4,13 @@ Adapters for the enum type.
 from enum import Enum
 from typing import Type, Any, Dict, Generic, Optional, TypeVar, cast
 
-from ..adapt import Dumper, Loader
 from .. import postgres
-from .._encodings import pgconn_encoding
-from .._typeinfo import EnumInfo as EnumInfo  # exported here
-from ..abc import AdaptContext
-from ..adapt import Buffer
+from .. import errors as e
 from ..pq import Format
+from ..abc import AdaptContext
+from ..adapt import Buffer, Dumper, Loader
+from .._typeinfo import EnumInfo as EnumInfo  # exported here
+from .._encodings import pgconn_encoding
 
 
 E = TypeVar("E", bound=Enum)
@@ -32,7 +32,12 @@ class EnumLoader(Loader, Generic[E]):
         else:
             label = data.decode(self._encoding)
 
-        return self.enum[label]
+        try:
+            return self.enum[label]
+        except KeyError:
+            raise e.DataError(
+                f"bad memeber for enum {self.enum.__qualname__}: {label!r}"
+            )
 
 
 class EnumBinaryLoader(EnumLoader[E]):
