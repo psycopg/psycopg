@@ -229,10 +229,9 @@ async def test_enum_async(aconn, testenum, encoding, fmt_in, fmt_out):
     name, enum, labels = testenum
     register_enum(await EnumInfo.fetch(aconn, name), enum, aconn)
 
-    async with aconn.cursor(binary=fmt_out) as cur:
-        for label in labels:
-            cur = await cur.execute(f"select %{fmt_in}::{name}", [label])
-            assert (await cur.fetchone())[0] == enum[label]
+    for label in labels:
+        cur = await aconn.execute(f"select %{fmt_in}::{name}", [label], binary=fmt_out)
+        assert (await cur.fetchone())[0] == enum[label]
 
-        cur = await cur.execute(f"select %{fmt_in}", [list(enum)])
-        assert (await cur.fetchone())[0] == list(enum)
+    cur = await cur.execute(f"select %{fmt_in}", [list(enum)])
+    assert (await cur.fetchone())[0] == list(enum)
