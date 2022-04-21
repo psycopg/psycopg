@@ -5,12 +5,13 @@ Mappings between PostgreSQL and Python encodings.
 # Copyright (C) 2020 The Psycopg Team
 
 import codecs
-from typing import Dict, TYPE_CHECKING
+from typing import Any, Dict, Optional, TYPE_CHECKING
 
 from .errors import NotSupportedError
 
 if TYPE_CHECKING:
     from .pq.abc import PGconn
+    from .connection import BaseConnection
 
 _py_codecs = {
     "BIG5": "big5",
@@ -70,9 +71,21 @@ py_codecs.update(
 pg_codecs = {v: k.encode() for k, v in _py_codecs.items()}
 
 
+def conn_encoding(conn: "Optional[BaseConnection[Any]]") -> str:
+    """
+    Return the Python encoding name of a psycopg connection.
+
+    Default to utf8 if the connection has no encoding info.
+    """
+    if not conn:
+        return "utf-8"
+    pgenc = conn.pgconn.parameter_status(b"client_encoding") or b"UTF8"
+    return pg2pyenc(pgenc)
+
+
 def pgconn_encoding(pgconn: "PGconn") -> str:
     """
-    Return the Python encoding name of a connection.
+    Return the Python encoding name of a libpq connection.
 
     Default to utf8 if the connection has no encoding info.
     """

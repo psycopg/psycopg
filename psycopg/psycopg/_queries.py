@@ -14,7 +14,7 @@ from . import errors as e
 from .sql import Composable
 from .abc import Buffer, Query, Params
 from ._enums import PyFormat
-from ._encodings import pgconn_encoding
+from ._encodings import conn_encoding
 
 if TYPE_CHECKING:
     from .abc import Transformer
@@ -47,14 +47,10 @@ class PostgresQuery:
         self._want_formats: Optional[List[PyFormat]] = None
         self.formats: Optional[Sequence[pq.Format]] = None
 
+        self._encoding = conn_encoding(transformer.connection)
         self._parts: List[QueryPart]
         self.query = b""
-        self._encoding = "utf-8"
         self._order: Optional[List[str]] = None
-
-        conn = transformer.connection
-        if conn:
-            self._encoding = pgconn_encoding(conn.pgconn)
 
     def convert(self, query: Query, vars: Optional[Params]) -> None:
         """

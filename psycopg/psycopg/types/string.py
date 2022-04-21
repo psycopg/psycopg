@@ -11,24 +11,17 @@ from ..pq import Format, Escaping
 from ..abc import AdaptContext
 from ..adapt import Buffer, Dumper, Loader
 from ..errors import DataError
-from .._encodings import pgconn_encoding
+from .._encodings import conn_encoding
 
 if TYPE_CHECKING:
     from ..pq.abc import Escaping as EscapingProto
 
 
 class _BaseStrDumper(Dumper):
-
-    _encoding = "utf-8"
-
     def __init__(self, cls: type, context: Optional[AdaptContext] = None):
         super().__init__(cls, context)
-
-        conn = self.connection
-        if conn:
-            enc = pgconn_encoding(conn.pgconn)
-            if enc != "ascii":
-                self._encoding = enc
+        enc = conn_encoding(self.connection)
+        self._encoding = enc if enc != "ascii" else "utf-8"
 
 
 class StrBinaryDumper(_BaseStrDumper):
@@ -77,15 +70,10 @@ class StrDumperUnknown(_StrDumper):
 
 
 class TextLoader(Loader):
-
-    _encoding = "utf-8"
-
     def __init__(self, oid: int, context: Optional[AdaptContext] = None):
         super().__init__(oid, context)
-        conn = self.connection
-        if conn:
-            enc = pgconn_encoding(conn.pgconn)
-            self._encoding = enc if enc != "ascii" else ""
+        enc = conn_encoding(self.connection)
+        self._encoding = enc if enc != "ascii" else ""
 
     def load(self, data: Buffer) -> Union[bytes, str]:
         if self._encoding:
