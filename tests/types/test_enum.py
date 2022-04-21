@@ -91,7 +91,7 @@ def test_enum_loader(conn, testenum, encoding, fmt_in, fmt_out):
     conn.execute(f"set client_encoding to {encoding}")
 
     name, enum, labels = testenum
-    register_enum(EnumInfo.fetch(conn, name), enum, conn)
+    register_enum(EnumInfo.fetch(conn, name), conn, enum=enum)
 
     for label in labels:
         cur = conn.execute(f"select %{fmt_in}::{name}", [label], binary=fmt_out)
@@ -103,7 +103,7 @@ def test_enum_loader(conn, testenum, encoding, fmt_in, fmt_out):
 @pytest.mark.parametrize("enum", ascii_cases)
 def test_enum_loader_sqlascii(conn, enum, fmt_in, fmt_out):
     info = EnumInfo.fetch(conn, enum.__name__.lower())
-    register_enum(info, enum, conn)
+    register_enum(info, conn, enum)
     conn.execute("set client_encoding to sql_ascii")
 
     for label in info.labels:
@@ -118,7 +118,7 @@ def test_enum_dumper(conn, testenum, encoding, fmt_in, fmt_out):
     conn.execute(f"set client_encoding to {encoding}")
 
     name, enum, labels = testenum
-    register_enum(EnumInfo.fetch(conn, name), enum, conn)
+    register_enum(EnumInfo.fetch(conn, name), conn, enum)
 
     for item in enum:
         cur = conn.execute(f"select %{fmt_in}", [item], binary=fmt_out)
@@ -130,7 +130,7 @@ def test_enum_dumper(conn, testenum, encoding, fmt_in, fmt_out):
 @pytest.mark.parametrize("enum", ascii_cases)
 def test_enum_dumper_sqlascii(conn, enum, fmt_in, fmt_out):
     info = EnumInfo.fetch(conn, enum.__name__.lower())
-    register_enum(info, enum, conn)
+    register_enum(info, conn, enum)
     conn.execute("set client_encoding to sql_ascii")
 
     for item in enum:
@@ -178,7 +178,7 @@ def test_enum_array_loader(conn, testenum, encoding, fmt_in, fmt_out):
     conn.execute(f"set client_encoding to {encoding}")
 
     name, enum, labels = testenum
-    register_enum(EnumInfo.fetch(conn, name), enum, conn)
+    register_enum(EnumInfo.fetch(conn, name), conn, enum)
 
     cur = conn.execute(f"select %{fmt_in}::{name}[]", [labels], binary=fmt_out)
     assert cur.fetchone()[0] == list(enum)
@@ -191,7 +191,7 @@ def test_enum_array_dumper(conn, testenum, encoding, fmt_in, fmt_out):
     conn.execute(f"set client_encoding to {encoding}")
 
     name, enum, labels = testenum
-    register_enum(EnumInfo.fetch(conn, name), enum, conn)
+    register_enum(EnumInfo.fetch(conn, name), conn, enum)
 
     cur = conn.execute(f"select %{fmt_in}", [list(enum)], binary=fmt_out)
     assert cur.fetchone()[0] == list(enum)
@@ -233,7 +233,7 @@ async def test_enum_async(aconn, testenum, encoding, fmt_in, fmt_out):
     await aconn.execute(f"set client_encoding to {encoding}")
 
     name, enum, labels = testenum
-    register_enum(await EnumInfo.fetch(aconn, name), enum, aconn)
+    register_enum(await EnumInfo.fetch(aconn, name), aconn, enum)
 
     for label in labels:
         cur = await aconn.execute(f"select %{fmt_in}::{name}", [label], binary=fmt_out)

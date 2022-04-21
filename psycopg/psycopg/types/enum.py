@@ -59,16 +59,16 @@ class EnumBinaryDumper(EnumDumper):
 
 def register_enum(
     info: EnumInfo,
-    enum: Optional[Type[E]] = None,
     context: Optional[AdaptContext] = None,
+    enum: Optional[Type[E]] = None,
 ) -> None:
     """Register the adapters to load and dump a enum type.
 
     :param info: The object with the information about the enum to register.
-    :param enum: Python enum type matching to the PostgreSQL one. If `!None`,
-        a new enum will be generated and exposed as `EnumInfo.enum`.
     :param context: The context where to register the adapters. If `!None`,
         register it globally.
+    :param enum: Python enum type matching to the PostgreSQL one. If `!None`,
+        a new enum will be generated and exposed as `EnumInfo.enum`.
     """
 
     if not info:

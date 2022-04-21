@@ -449,7 +449,7 @@ Example::
     >>> conn.execute("CREATE TYPE user_role AS ENUM ('ADMIN', 'EDITOR', 'GUEST')")
 
     >>> info = EnumInfo.fetch(conn, "user_role")
-    >>> register_enum(info, UserRole, conn)
+    >>> register_enum(info, conn, UserRole)
 
     >>> some_editor = info.enum.EDITOR
     >>> some_editor
