@@ -13,6 +13,8 @@ Future releases
 Psycopg 3.0.12 (unreleased)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Fix dumping `~enum.IntEnum` in text mode, Python implementation.
+
 
 Current release
 ---------------
