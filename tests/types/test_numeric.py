@@ -1,3 +1,4 @@
+import enum
 from decimal import Decimal
 from math import isnan, isinf, exp
 
@@ -71,16 +72,21 @@ def test_dump_int_subtypes(conn, val, expr, fmt_in):
     assert ok
 
 
+class MyEnum(enum.IntEnum):
+    foo = 42
+
+
+class MyMixinEnum(enum.IntEnum):
+    foo = 42000000
+
+
 @pytest.mark.parametrize("fmt_in", PyFormat)
-def test_dump_enum(conn, fmt_in):
-    import enum
-
-    class MyEnum(enum.IntEnum):
-        foo = 42
-
+@pytest.mark.parametrize("enum", [MyEnum, MyMixinEnum])
+def test_dump_enum(conn, fmt_in, enum):
     cur = conn.cursor()
-    (res,) = cur.execute("select %s", (MyEnum.foo,)).fetchone()
-    assert res == 42
+    cur.execute(f"select %{fmt_in}", (enum.foo,))
+    (res,) = cur.fetchone()
+    assert res == enum.foo.value
 
 
 @pytest.mark.parametrize(

@@ -31,18 +31,22 @@ from .._wrappers import (
 )
 
 
-class _NumberDumper(Dumper):
+class _IntDumper(Dumper):
     def dump(self, obj: Any) -> bytes:
-        return str(obj).encode()
+        # Convert to int in order to dump IntEnum correctly
+        return str(int(obj)).encode()
 
     def quote(self, obj: Any) -> bytes:
         value = self.dump(obj)
         return value if obj >= 0 else b" " + value
 
 
-class _SpecialValuesDumper(_NumberDumper):
+class _SpecialValuesDumper(Dumper):
 
     _special: Dict[bytes, bytes] = {}
+
+    def dump(self, obj: Any) -> bytes:
+        return str(obj).encode()
 
     def quote(self, obj: Any) -> bytes:
         value = self.dump(obj)
@@ -103,23 +107,23 @@ class DecimalDumper(_SpecialValuesDumper):
     }
 
 
-class Int2Dumper(_NumberDumper):
+class Int2Dumper(_IntDumper):
     oid = postgres.types["int2"].oid
 
 
-class Int4Dumper(_NumberDumper):
+class Int4Dumper(_IntDumper):
     oid = postgres.types["int4"].oid
 
 
-class Int8Dumper(_NumberDumper):
+class Int8Dumper(_IntDumper):
     oid = postgres.types["int8"].oid
 
 
-class IntNumericDumper(_NumberDumper):
+class IntNumericDumper(_IntDumper):
     oid = postgres.types["numeric"].oid
 
 
-class OidDumper(_NumberDumper):
+class OidDumper(_IntDumper):
     oid = postgres.types["oid"].oid
 
 
