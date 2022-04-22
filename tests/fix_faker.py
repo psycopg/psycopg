@@ -368,6 +368,13 @@ class Faker:
         else:
             assert got == want
 
+    def schema_Enum(self, cls):
+        # TODO: can't fake those as we would need to create temporary types
+        return None
+
+    def make_Enum(self, spec):
+        return None
+
     def make_float(self, spec, double=True):
         if random() <= 0.99:
             # These exponents should generate no inf

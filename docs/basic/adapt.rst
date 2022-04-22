@@ -371,3 +371,147 @@ address types`__:
 
     >>> conn.execute("select '::ffff:1.2.3.0/120'::cidr").fetchone()[0]
     IPv6Network('::ffff:102:300/120')
+
+
+.. _adapt-enum:
+
+Enum adaptation
+---------------
+
+.. versionadded:: 3.1
+
+Psycopg can adapt Python `~enum.Enum` subclasses into PostgreSQL enum types
+(created with the |CREATE TYPE AS ENUM|_ command).
+
+.. |CREATE TYPE AS ENUM| replace:: :sql:`CREATE TYPE ... AS ENUM (...)`
+.. _CREATE TYPE AS ENUM: https://www.postgresql.org/docs/current/static/datatype-enum.html
+
+In order to set up a bidirectional enum mapping, you should get information
+about the PostgreSQL enum using the `~types.enum.EnumInfo` class and
+register it using `~types.enum.register_enum()`. The behaviour of unregistered
+and registered enums is different.
+
+- If the enum is not registered with `register_enum()`:
+
+  - Pure `!Enum` classes are dumped as normal strings, using their member
+    names as value. The unknown oid is used, so PostgreSQL should be able to
+    use this string in most contexts (such as an enum or a text field).
+
+  - Mix-in enums are dumped according to their mix-in type (because a `class
+    MyIntEnum(int, Enum)` is more specifically an `!int` than an `!Enum`, so
+    it's dumped by default according to `!int` rules).
+
+  - PostgreSQL enums are loaded as Python strings. If you want to load arrays
+    of such enums you will have to find their ids using
+    `types.TypeInfo.fetch()` and `~types.TypeInfo.register()`.
+
+- If the enum is registered (using `~types.enum.EnumInfo`\ `!.fetch()` and
+  `~types.enum.register_enum()`):
+
+  - Enums classes, both pure and mixed-in, are dumped by name.
+
+  - The registered PostgreSQL enum is loaded back as the registered Python enum members.
+
+.. autoclass:: psycopg.types.enum.EnumInfo
+
+   `!EnumInfo` is a subclass of `~psycopg.types.TypeInfo`: refer to the
+   latter's documentation for generic usage, especially the
+   `~psycopg.types.TypeInfo.fetch()` method.
+
+   .. attribute:: labels
+
+       After `~psycopg.types.TypeInfo.fetch()`, it contains the labels defined
+       in the PostgreSQL enum type.
+
+   .. attribute:: enum
+
+       After `register_enum()` is called, it will contain the Python type
+       mapping to the registered enum.
+
+.. autofunction:: psycopg.types.enum.register_enum
+
+   After registering, fetching data of the registered enum will cast
+   PostgreSQL enum labels into corresponding Python enum labels.
+
+   If no `!enum` is specified, a new `Enum` is created based on
+   PostgreSQL enum labels.
+
+Example::
+
+    >>> from enum import Enum, auto
+    >>> from psycopg.types.enum import EnumInfo, register_enum
+
+    >>> class UserRole(Enum):
+    ...     ADMIN = auto()
+    ...     EDITOR = auto()
+    ...     GUEST = auto()
+
+    >>> conn.execute("CREATE TYPE user_role AS ENUM ('ADMIN', 'EDITOR', 'GUEST')")
+
+    >>> info = EnumInfo.fetch(conn, "user_role")
+    >>> register_enum(info, conn, UserRole)
+
+    >>> some_editor = info.enum.EDITOR
+    >>> some_editor
+    <UserRole.EDITOR: 2>
+
+    >>> conn.execute(
+    ...     "SELECT pg_typeof(%(editor)s), %(editor)s",
+    ...     {"editor": some_editor}
+    ... ).fetchone()
+    ('user_role', <UserRole.EDITOR: 2>)
+
+    >>> conn.execute(
+    ...     "SELECT ARRAY[%s, %s]",
+    ...     [UserRole.ADMIN, UserRole.GUEST]
+    ... ).fetchone()
+    [<UserRole.ADMIN: 1>, <UserRole.GUEST: 3>]
+
+If the Python and the PostgreSQL enum don't match 1:1 (for instance if members
+have a different name, or if more than one Python enum should map to the same
+PostgreSQL enum, or vice versa), you can specify the exceptions using the
+`!mapping` parameter.
+
+`!mapping` should be a dictionary with Python enum members as keys and the
+matching PostgreSQL enum labels as values, or a list of `(member, label)`
+pairs with the same meaning (useful when some members are repeated). Order
+matters: if an element on either side is specified more than once, the last
+pair in the sequence will take precedence::
+
+    # Legacy roles, defined in medieval times.
+    >>> conn.execute(
+    ...     "CREATE TYPE abbey_role AS ENUM ('ABBOT', 'SCRIBE', 'MONK', 'GUEST')")
+
+    >>> info = EnumInfo.fetch(conn, "abbey_role")
+    >>> register_enum(info, conn, UserRole, mapping=[
+    ...     (UserRole.ADMIN, "ABBOT"),
+    ...     (UserRole.EDITOR, "SCRIBE"),
+    ...     (UserRole.EDITOR, "MONK")])
+
+    >>> conn.execute("SELECT '{ABBOT,SCRIBE,MONK,GUEST}'::abbey_role[]").fetchone()[0]
+    [<UserRole.ADMIN: 1>,
+     <UserRole.EDITOR: 2>,
+     <UserRole.EDITOR: 2>,
+     <UserRole.GUEST: 3>]
+
+    >>> conn.execute("SELECT %s::text[]", [list(UserRole)]).fetchone()[0]
+    ['ABBOT', 'MONK', 'GUEST']
+
+A particularly useful case is when the PostgreSQL labels match the *values* of
+a `!str`\-based Enum. In this case it is possible to use something like ``{m:
+m.value for m in enum}`` as mapping::
+
+    >>> class LowercaseRole(str, Enum):
+    ...     ADMIN = "admin"
+    ...     EDITOR = "editor"
+    ...     GUEST = "guest"
+
+    >>> conn.execute(
+    ...     "CREATE TYPE lowercase_role AS ENUM ('admin', 'editor', 'guest')")
+
+    >>> info = EnumInfo.fetch(conn, "lowercase_role")
+    >>> register_enum(
+    ...     info, conn, LowercaseRole, mapping={m: m.value for m in LowercaseRole})
+
+    >>> conn.execute("SELECT 'editor'::lowercase_role").fetchone()[0]
+    <LowercaseRole.EDITOR: 'editor'>

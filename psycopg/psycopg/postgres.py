@@ -107,13 +107,14 @@ TEXT_ARRAY_OID = types["text"].array_oid
 
 def register_default_adapters(context: AdaptContext) -> None:
 
-    from .types import array, bool, composite, datetime, json, multirange
+    from .types import array, bool, composite, datetime, enum, json, multirange
     from .types import net, none, numeric, range, string, uuid
 
     array.register_default_adapters(context)
     bool.register_default_adapters(context)
     composite.register_default_adapters(context)
     datetime.register_default_adapters(context)
+    enum.register_default_adapters(context)
     json.register_default_adapters(context)
     multirange.register_default_adapters(context)
     net.register_default_adapters(context)

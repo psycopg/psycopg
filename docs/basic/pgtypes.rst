@@ -365,3 +365,4 @@ connection or cursor), other connections and cursors will be unaffected::
     ...     "coordinates":[-48.23456,20.12345]}')
     ... """).fetchone()[0]
     '0101000020E61000009279E40F061E48C0F2B0506B9A1F3440'
+

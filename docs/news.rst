@@ -14,6 +14,7 @@ Psycopg 3.1 (unreleased)
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
 - Add :ref:`Two-Phase Commit <two-phase-commit>` support (:ticket:`#72`).
+- Add :ref:`adapt-enum` (:ticket:`#274`).
 - Add ``returning`` parameter to `~Cursor.executemany()` to retrieve query
   results (:ticket:`#164`).
 - `~Cursor.executemany()` performance improved by using batch mode internally
