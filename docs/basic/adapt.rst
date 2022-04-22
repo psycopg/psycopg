@@ -387,7 +387,7 @@ Psycopg can adapt Python `~enum.Enum` subclasses into PostgreSQL enum types
 .. _CREATE TYPE AS ENUM: https://www.postgresql.org/docs/current/static/datatype-enum.html
 
 In order to set up a bidirectional enum mapping, you should get information
-about the PostgreSQL enum using the `~types.enum.EnumInfo` class and to
+about the PostgreSQL enum using the `~types.enum.EnumInfo` class and
 register it using `~types.enum.register_enum()`. The behaviour of unregistered
 and registered enums is different.
 
@@ -395,7 +395,7 @@ and registered enums is different.
 
   - Pure `!Enum` classes are dumped as normal strings, using their member
     names as value. The unknown oid is used, so PostgreSQL should be able to
-    use this string is most contexts (such as an enum or a text field).
+    use this string in most contexts (such as an enum or a text field).
 
   - Mix-in enums are dumped according to their mix-in type (because a `class
     MyIntEnum(int, Enum)` is more specifically an `!int` than an `!Enum`, so
@@ -414,8 +414,8 @@ and registered enums is different.
 
 .. autoclass:: psycopg.types.enum.EnumInfo
 
-   `!EnumInfo` is a `~psycopg.types.TypeInfo` subclass: check its
-   documentation for the generic usage, especially the
+   `!EnumInfo` is a subclass of `~psycopg.types.TypeInfo`: refer to the
+   latter's documentation for generic usage, especially the
    `~psycopg.types.TypeInfo.fetch()` method.
 
    .. attribute:: labels
