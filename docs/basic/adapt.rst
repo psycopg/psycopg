@@ -466,3 +466,52 @@ Example::
     ...     [UserRole.ADMIN, UserRole.GUEST]
     ... ).fetchone()
     [<UserRole.ADMIN: 1>, <UserRole.GUEST: 3>]
+
+If the Python and the PostgreSQL enum don't match 1:1 (for instance if members
+have a different name, or if more than one Python enum should map to the same
+PostgreSQL enum, or vice versa), you can specify the exceptions using the
+`!mapping` parameter.
+
+`!mapping` should be a dictionary with Python enum members as keys and the
+matching PostgreSQL enum labels as values, or a list of `(member, label)`
+pairs with the same meaning (useful when some members are repeated). Order
+matters: if an element on either side is specified more than once, the last
+pair in the sequence will take precedence::
+
+    # Legacy roles, defined in medieval times.
+    >>> conn.execute(
+    ...     "CREATE TYPE abbey_role AS ENUM ('ABBOT', 'SCRIBE', 'MONK', 'GUEST')")
+
+    >>> info = EnumInfo.fetch(conn, "abbey_role")
+    >>> register_enum(info, conn, UserRole, mapping=[
+    ...     (UserRole.ADMIN, "ABBOT"),
+    ...     (UserRole.EDITOR, "SCRIBE"),
+    ...     (UserRole.EDITOR, "MONK")])
+
+    >>> conn.execute("SELECT '{ABBOT,SCRIBE,MONK,GUEST}'::abbey_role[]").fetchone()[0]
+    [<UserRole.ADMIN: 1>,
+     <UserRole.EDITOR: 2>,
+     <UserRole.EDITOR: 2>,
+     <UserRole.GUEST: 3>]
+
+    >>> conn.execute("SELECT %s::text[]", [list(UserRole)]).fetchone()[0]
+    ['ABBOT', 'MONK', 'GUEST']
+
+A particularly useful case is when the PostgreSQL labels match the *values* of
+a `!str`\-based Enum. In this case it is possible to use something like ``{m:
+m.value for m in enum}`` as mapping::
+
+    >>> class LowercaseRole(str, Enum):
+    ...     ADMIN = "admin"
+    ...     EDITOR = "editor"
+    ...     GUEST = "guest"
+
+    >>> conn.execute(
+    ...     "CREATE TYPE lowercase_role AS ENUM ('admin', 'editor', 'guest')")
+
+    >>> info = EnumInfo.fetch(conn, "lowercase_role")
+    >>> register_enum(
+    ...     info, conn, LowercaseRole, mapping={m: m.value for m in LowercaseRole})
+
+    >>> conn.execute("SELECT 'editor'::lowercase_role").fetchone()[0]
+    <LowercaseRole.EDITOR: 'editor'>

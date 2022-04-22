@@ -266,3 +266,84 @@ def test_enum_error(conn):
         conn.execute("select %s::text", [StrTestEnum.ONE]).fetchone()
     with pytest.raises(e.DataError):
         conn.execute("select 'BAR'::puretestenum").fetchone()
+
+
+@pytest.mark.parametrize("fmt_in", PyFormat)
+@pytest.mark.parametrize("fmt_out", pq.Format)
+@pytest.mark.parametrize(
+    "mapping",
+    [
+        {StrTestEnum.ONE: "FOO", StrTestEnum.TWO: "BAR", StrTestEnum.THREE: "BAZ"},
+        [
+            (StrTestEnum.ONE, "FOO"),
+            (StrTestEnum.TWO, "BAR"),
+            (StrTestEnum.THREE, "BAZ"),
+        ],
+    ],
+)
+def test_remap(conn, fmt_in, fmt_out, mapping):
+    info = EnumInfo.fetch(conn, "puretestenum")
+    register_enum(info, conn, StrTestEnum, mapping=mapping)
+
+    for member, label in [("ONE", "FOO"), ("TWO", "BAR"), ("THREE", "BAZ")]:
+        cur = conn.execute(f"select %{fmt_in}::text", [StrTestEnum[member]])
+        assert cur.fetchone()[0] == label
+        cur = conn.execute(f"select '{label}'::puretestenum", binary=fmt_out)
+        assert cur.fetchone()[0] is StrTestEnum[member]
+
+
+def test_remap_rename(conn):
+    enum = Enum("RenamedEnum", "FOO BAR QUX")
+    info = EnumInfo.fetch(conn, "puretestenum")
+    register_enum(info, conn, enum, mapping={enum.QUX: "BAZ"})
+
+    for member, label in [("FOO", "FOO"), ("BAR", "BAR"), ("QUX", "BAZ")]:
+        cur = conn.execute("select %s::text", [enum[member]])
+        assert cur.fetchone()[0] == label
+        cur = conn.execute(f"select '{label}'::puretestenum")
+        assert cur.fetchone()[0] is enum[member]
+
+
+def test_remap_more_python(conn):
+    enum = Enum("LargerEnum", "FOO BAR BAZ QUX QUUX QUUUX")
+    info = EnumInfo.fetch(conn, "puretestenum")
+    mapping = {enum[m]: "BAZ" for m in ["QUX", "QUUX", "QUUUX"]}
+    register_enum(info, conn, enum, mapping=mapping)
+
+    for member, label in [("FOO", "FOO"), ("BAZ", "BAZ"), ("QUUUX", "BAZ")]:
+        cur = conn.execute("select %s::text", [enum[member]])
+        assert cur.fetchone()[0] == label
+
+    for member, label in [("FOO", "FOO"), ("QUUUX", "BAZ")]:
+        cur = conn.execute(f"select '{label}'::puretestenum")
+        assert cur.fetchone()[0] is enum[member]
+
+
+def test_remap_more_postgres(conn):
+    enum = Enum("SmallerEnum", "FOO")
+    info = EnumInfo.fetch(conn, "puretestenum")
+    mapping = [(enum.FOO, "BAR"), (enum.FOO, "BAZ")]
+    register_enum(info, conn, enum, mapping=mapping)
+
+    cur = conn.execute("select %s::text", [enum.FOO])
+    assert cur.fetchone()[0] == "BAZ"
+
+    for label in PureTestEnum.__members__:
+        cur = conn.execute(f"select '{label}'::puretestenum")
+        assert cur.fetchone()[0] is enum.FOO
+
+
+def test_remap_by_value(conn):
+    enum = Enum(  # type: ignore
+        "ByValue",
+        {m.lower(): m for m in PureTestEnum.__members__},
+    )
+    info = EnumInfo.fetch(conn, "puretestenum")
+    register_enum(info, conn, enum, mapping={m: m.value for m in enum})
+
+    for label in PureTestEnum.__members__:
+        cur = conn.execute("select %s::text", [enum[label.lower()]])
+        assert cur.fetchone()[0] == label
+
+        cur = conn.execute(f"select '{label}'::puretestenum")
+        assert cur.fetchone()[0] is enum[label.lower()]
