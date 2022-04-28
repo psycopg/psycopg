@@ -23,7 +23,7 @@ EnumMapping: TypeAlias = Union[Mapping[E, str], Sequence[Tuple[E, str]], None]
 
 class _BaseEnumLoader(Loader, Generic[E]):
     """
-    Dumper for a specific Enum class
+    Loader for a specific Enum class
     """
 
     enum: Type[E]
@@ -45,7 +45,7 @@ class _BaseEnumLoader(Loader, Generic[E]):
 
 class _BaseEnumDumper(Dumper, Generic[E]):
     """
-    Loader for a specific Enum class
+    Dumper for a specific Enum class
     """
 
     enum: Type[E]
