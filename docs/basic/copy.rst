@@ -67,22 +67,6 @@ In order to read or write from `!Copy` row-by-row you must not specify
 please leave these details alone, thank you :)
 
 
-.. _copy-binary:
-
-Binary copy
------------
-
-Binary copy is supported by specifying :sql:`FORMAT BINARY` in the :sql:`COPY`
-statement. In order to load binary data, all the types passed to the database
-must have a binary dumper registered (see :ref:`binary-data`).
-
-Note that PostgreSQL is particularly finicky when loading data in binary mode
-and will apply *no cast rules*. This means that e.g. passing the value 100 to
-an `integer` column will fail because Psycopg will pass it as a `smallint`
-value. You can work around the problem using the `~Copy.set_types()` method of
-the `!Copy` object and specify carefully the types to dump.
-
-
 .. _copy-out-row:
 
 Reading data row-by-row
@@ -131,13 +115,13 @@ be loaded into the database using `Copy.write()` instead.
                 copy.write(data)
 
 In this case you can use any :sql:`COPY` option and format, as long as the
-input data is compatible. Data can be passed as `!str`, if the copy is in
-:sql:`FORMAT TEXT`, or as `!bytes`, which works with both :sql:`FORMAT TEXT`
-and :sql:`FORMAT BINARY`.
+input data is compatible with what the operation in `!copy()` expects. Data
+can be passed as `!str`, if the copy is in :sql:`FORMAT TEXT`, or as `!bytes`,
+which works with both :sql:`FORMAT TEXT` and :sql:`FORMAT BINARY`.
 
 In order to produce data in :sql:`COPY` format you can use a :sql:`COPY ... TO
 STDOUT` statement and iterate over the resulting `Copy` object, which will
-produce a stream of `!bytes`:
+produce a stream of `!bytes` objects:
 
 .. code:: python
 
@@ -145,6 +129,26 @@ produce a stream of `!bytes`:
         with cursor.copy("COPY table_name TO STDOUT") as copy:
             for data in copy:
                 f.write(data)
+
+
+.. _copy-binary:
+
+Binary copy
+-----------
+
+Binary copy is supported by specifying :sql:`FORMAT BINARY` in the :sql:`COPY`
+statement. In order to import binary data using `~Copy.write_row()`, all the
+types passed to the database must have a binary dumper registered; this is not
+necessary if the data is copied :ref:`block-by-block <copy-block>` using
+`~Copy.write()`.
+
+Note that PostgreSQL is particularly finicky when loading data in binary mode
+and will apply *no cast rules*. This means that e.g. passing the value 100 to
+an `integer` column will fail because Psycopg will pass it as a `smallint`
+value. You can work around the problem using the `~Copy.set_types()` method of
+the `!Copy` object and specify carefully the types to dump.
+
+.. seealso:: See :ref:`binary-data` for further info about binary querying.
 
 
 .. _copy-async:
@@ -166,6 +170,7 @@ a fully-async copy operation could be:
 The `AsyncCopy` object documentation describes the signature of the
 asynchronous methods and the differences from its sync `Copy` counterpart.
 
+.. seealso:: See :ref:`async` for further info about using async objects.
 
 
 Example: copying a table across servers
