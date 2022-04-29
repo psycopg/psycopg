@@ -83,8 +83,8 @@ as a subtype.
         :return: a `!TypeInfo` object (or subclass) populated with the type
             information, `!None` if not found.
 
-        If the connection is async the function will behave as a coroutine and
-        the caller will need to `await` on it to get the result::
+        If the connection is async, `!fetch()` will behave as a coroutine and
+        the caller will need to `!await` on it to get the result::
 
             t = await TypeInfo.fetch(aconn, "mytype")
 
@@ -101,10 +101,11 @@ as a subtype.
         database as a list of the base type.
 
 
-For recursive types, Psycopg offers a few `!TypeInfo` subclasses which can be
-used to extract more complete information, such as
-`~psycopg.types.composite.CompositeInfo`, `~psycopg.types.range.RangeInfo`,
-`~psycopg.types.multirange.MultirangeInfo`.
+In order to get information about dynamic PostgreSQL types, Psycopg offers a
+few `!TypeInfo` subclasses, whose `!fetch()` method can extract more complete
+information about the type, such as `~psycopg.types.composite.CompositeInfo`,
+`~psycopg.types.range.RangeInfo`, `~psycopg.types.multirange.MultirangeInfo`,
+`~psycopg.types.enum.EnumInfo`.
 
 `!TypeInfo` objects are collected in `TypesRegistry` instances, which help type
 information lookup. Every `~psycopg.adapt.AdaptersMap` exposes its type map on

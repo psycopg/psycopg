@@ -397,20 +397,25 @@ and registered enums is different.
     names as value. The unknown oid is used, so PostgreSQL should be able to
     use this string in most contexts (such as an enum or a text field).
 
+    .. versionchanged:: 3.1
+        In previous version dumping pure enums is not supported and raise a
+        "cannot adapt" error.
+
   - Mix-in enums are dumped according to their mix-in type (because a `class
     MyIntEnum(int, Enum)` is more specifically an `!int` than an `!Enum`, so
     it's dumped by default according to `!int` rules).
 
   - PostgreSQL enums are loaded as Python strings. If you want to load arrays
-    of such enums you will have to find their ids using
-    `types.TypeInfo.fetch()` and `~types.TypeInfo.register()`.
+    of such enums you will have to find their OIDs using `types.TypeInfo.fetch()`
+    and register them using `~types.TypeInfo.register()`.
 
 - If the enum is registered (using `~types.enum.EnumInfo`\ `!.fetch()` and
   `~types.enum.register_enum()`):
 
   - Enums classes, both pure and mixed-in, are dumped by name.
 
-  - The registered PostgreSQL enum is loaded back as the registered Python enum members.
+  - The registered PostgreSQL enum is loaded back as the registered Python
+    enum members.
 
 .. autoclass:: psycopg.types.enum.EnumInfo
 
