@@ -1,4 +1,3 @@
-import sys
 import asyncio
 import logging
 from time import time
@@ -12,13 +11,7 @@ from psycopg.pq import TransactionStatus
 from psycopg._compat import create_task
 from .test_pool_async import delay_connection, ensure_waiting
 
-pytestmark = [
-    pytest.mark.asyncio,
-    pytest.mark.skipif(
-        sys.version_info < (3, 7),
-        reason="async pool not supported before Python 3.7",
-    ),
-]
+pytestmark = [pytest.mark.asyncio]
 
 try:
     from psycopg_pool import AsyncNullConnectionPool  # noqa: F401
