@@ -137,11 +137,6 @@ COPY-related objects
         see :ref:`adaptation` for details.
 
     .. automethod:: write
-
-        .. versionchanged:: 3.1
-
-            accept `bytearray` and `memoryview` data as input too.
-
     .. automethod:: read
 
         Instead of using `!read()` you can iterate on the `!Copy` object to

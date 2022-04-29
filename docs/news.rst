@@ -22,14 +22,14 @@ Psycopg 3.1 (unreleased)
 - Add `pq.PGconn.trace()` and related trace functions (:ticket:`#167`).
 - Add ``prepare_threshold`` parameter to `Connection` init (:ticket:`#200`).
 - Add `Error.pgconn` and `Error.pgresult` attributes (:ticket:`#242`).
-- Allow `bytearray`/`memoryview` data too as `Copy.write()` input
-  (:ticket:`#254`).
 - Drop support for Python 3.6.
 
 
 Psycopg 3.0.12 (unreleased)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Allow `bytearray`/`memoryview` data too as `Copy.write()` input
+  (:ticket:`#254`).
 - Fix dumping `~enum.IntEnum` in text mode, Python implementation.
 
 
