@@ -278,12 +278,14 @@ def test_copy_big_size_record(conn):
 
 
 @pytest.mark.slow
-def test_copy_big_size_block(conn):
+@pytest.mark.parametrize("pytype", [str, bytes, bytearray, memoryview])
+def test_copy_big_size_block(conn, pytype):
     cur = conn.cursor()
     ensure_table(cur, sample_tabledef)
     data = "".join(choice(string.ascii_letters) for i in range(10 * 1024 * 1024))
+    copy_data = data + "\n" if pytype is str else pytype(data.encode() + b"\n")
     with cur.copy("copy copy_in (data) from stdin") as copy:
-        copy.write(data + "\n")
+        copy.write(copy_data)
 
     cur.execute("select data from copy_in limit 1")
     assert cur.fetchone()[0] == data
@@ -468,14 +470,15 @@ def test_copy_from_to(conn):
 
 
 @pytest.mark.slow
-def test_copy_from_to_bytes(conn):
+@pytest.mark.parametrize("pytype", [bytes, bytearray, memoryview])
+def test_copy_from_to_bytes(conn, pytype):
     # Roundtrip from file to database to file blockwise
     gen = DataGenerator(conn, nrecs=1024, srec=10 * 1024)
     gen.ensure_table()
     cur = conn.cursor()
     with cur.copy("copy copy_in from stdin") as copy:
         for block in gen.blocks():
-            copy.write(block.encode())
+            copy.write(pytype(block.encode()))
 
     gen.assert_data()
 
@@ -698,6 +701,37 @@ def test_copy_from_leaks(dsn, faker, fmt, set_types):
         n.append(len(gc.get_objects()))
 
     assert n[0] == n[1] == n[2], f"objects leaked: {n[1] - n[0]}, {n[2] - n[1]}"
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize("mode", ["row", "block", "binary"])
+def test_copy_table_across(dsn, faker, mode):
+    faker.choose_schema(ncols=20)
+    faker.make_records(20)
+
+    with psycopg.connect(dsn) as conn1, psycopg.connect(dsn) as conn2:
+        faker.table_name = sql.Identifier("copy_src")
+        conn1.execute(faker.drop_stmt)
+        conn1.execute(faker.create_stmt)
+        conn1.cursor().executemany(faker.insert_stmt, faker.records)
+
+        faker.table_name = sql.Identifier("copy_tgt")
+        conn2.execute(faker.drop_stmt)
+        conn2.execute(faker.create_stmt)
+
+        fmt = "(format binary)" if mode == "binary" else ""
+        with conn1.cursor().copy(f"copy copy_src to stdout {fmt}") as copy1:
+            with conn2.cursor().copy(f"copy copy_tgt from stdin {fmt}") as copy2:
+                if mode == "row":
+                    for row in copy1.rows():
+                        copy2.write_row(row)
+                else:
+                    for data in copy1:
+                        copy2.write(data)
+
+        recs = conn2.execute(faker.select_stmt).fetchall()
+        for got, want in zip(recs, faker.records):
+            faker.assert_record(got, want)
 
 
 def py_to_raw(item, fmt):

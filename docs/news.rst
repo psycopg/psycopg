@@ -13,6 +13,8 @@ Future releases
 Psycopg 3.0.12 (unreleased)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Allow `bytearray`/`memoryview` data too as `Copy.write()` input
+  (:ticket:`#254`).
 - Fix dumping `~enum.IntEnum` in text mode, Python implementation.
 
 

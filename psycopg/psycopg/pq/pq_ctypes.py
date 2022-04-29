@@ -560,8 +560,7 @@ class PGconn:
         else:
             return None
 
-    def put_copy_data(self, buffer: bytes) -> int:
-        # TODO: should be done without copy
+    def put_copy_data(self, buffer: "abc.Buffer") -> int:
         if not isinstance(buffer, bytes):
             buffer = bytes(buffer)
         rv = impl.PQputCopyData(self._pgconn_ptr, buffer, len(buffer))
