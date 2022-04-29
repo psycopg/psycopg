@@ -104,7 +104,7 @@ according to the format.
             print(row)  # return unparsed data: ('10', '2046-12-24')
 
 You can improve the results by using `~Copy.set_types()` before reading, but
-you have to specify them yourselves.
+you have to specify them yourself.
 
 .. code:: python
 
@@ -165,3 +165,29 @@ a fully-async copy operation could be:
 
 The `AsyncCopy` object documentation describes the signature of the
 asynchronous methods and the differences from its sync `Copy` counterpart.
+
+
+
+Example: copying a table across servers
+---------------------------------------
+
+In order to copy a table, or a portion of a table, across servers, you can use
+two COPY operations on two different connections, reading from the first and
+writing to the second.
+
+.. code:: python
+
+    with psycopg.connect(dsn_src) as conn1, psycopg.connect(dsn_tgt) as conn2:
+        with conn1.cursor().copy("COPY src TO STDOUT (FORMAT BINARY)") as copy1:
+            with conn2.cursor().copy("COPY tgt FROM STDIN (FORMAT BINARY)") as copy2:
+                for data in copy1:
+                    copy2.write(data)
+
+Using :sql:`FORMAT BINARY` usually gives a performance boost, but it only
+works if the source and target schema are *perfectly identical*. If the tables
+are only *compatible* (for example, if you are copying an :sql:`integer` field
+into a :sql:`bigint` destination field) you should omit the `BINARY` option and
+perform a text-based copy. See :ref:`copy-binary` for details.
+
+The same pattern can be adapted to use :ref:`async objects <async>` in order
+to perform an :ref:`async copy <copy-async>`.
