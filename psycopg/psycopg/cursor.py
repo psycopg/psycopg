@@ -579,8 +579,8 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
             self._conn.wait(self._stream_send_gen(query, params, binary=binary))
             first = True
             while self._conn.wait(self._stream_fetchone_gen(first)):
-                rec = self._tx.load_row(0, self._make_row)
-                assert rec is not None
+                # We know that, if we got a result, it has a single row.
+                rec: Row = self._tx.load_row(0, self._make_row)  # type: ignore
                 yield rec
                 first = False
 
