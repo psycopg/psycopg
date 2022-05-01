@@ -570,6 +570,18 @@ async def test_stream_row_factory(aconn):
     assert (await ait.__anext__()).a == 2
 
 
+async def test_stream_no_row(aconn):
+    cur = aconn.cursor()
+    recs = [rec async for rec in cur.stream("select generate_series(2,1) as a")]
+    assert recs == []
+
+
+async def test_stream_no_col(aconn):
+    cur = aconn.cursor()
+    recs = [rec async for rec in cur.stream("select")]
+    assert recs == [()]
+
+
 @pytest.mark.parametrize(
     "query",
     [
