@@ -7,6 +7,15 @@
 ``psycopg`` release notes
 =========================
 
+Future releases
+---------------
+
+Psycopg 3.0.13 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Fix `Cursor.stream()` slowness (:ticket:`#286`).
+
+
 Current release
 ---------------
 
