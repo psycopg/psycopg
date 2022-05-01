@@ -25,6 +25,12 @@ Psycopg 3.1 (unreleased)
 - Drop support for Python 3.6.
 
 
+Psycopg 3.0.13 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Fix `Cursor.stream()` slowness (:ticket:`#286`).
+
+
 Current release
 ---------------
 
