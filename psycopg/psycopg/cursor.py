@@ -281,9 +281,9 @@ class BaseCursor(Generic[ConnectionType, Row]):
         self._execute_send(pgq, binary=binary, no_pqexec=True)
         self._pgconn.set_single_row_mode()
         self._last_query = query
+        yield from send(self._pgconn)
 
     def _stream_fetchone_gen(self, first: bool) -> PQGen[Optional["PGresult"]]:
-        yield from send(self._pgconn)
         res = yield from fetch(self._pgconn)
         if res is None:
             return None
