@@ -80,9 +80,10 @@ def wait_conn(gen: PQGenConn[RV], timeout: Optional[float] = None) -> RV:
     Behave like in `wait()`, but take the fileno to wait from the generator
     itself, which might change during processing.
     """
-    timeout = timeout or None
     try:
         fileno, s = next(gen)
+        if not timeout:
+            timeout = None
         with DefaultSelector() as sel:
             while 1:
                 sel.register(fileno, s)
@@ -173,9 +174,10 @@ async def wait_conn_async(gen: PQGenConn[RV], timeout: Optional[float] = None) -
         ready = state
         ev.set()
 
-    timeout = timeout or None
     try:
         fileno, s = next(gen)
+        if not timeout:
+            timeout = None
         while 1:
             reader = s & Wait.R
             writer = s & Wait.W
@@ -213,13 +215,14 @@ def wait_epoll(gen: PQGen[RV], fileno: int, timeout: Optional[float] = None) -> 
 
     See also: https://linux.die.net/man/2/epoll_ctl
     """
-    if timeout is None or timeout < 0:
-        timeout = 0
-    else:
-        timeout = int(timeout * 1000.0)
-
     try:
         s = next(gen)
+
+        if timeout is None or timeout < 0:
+            timeout = 0
+        else:
+            timeout = int(timeout * 1000.0)
+
         with select.epoll() as epoll:
             evmask = poll_evmasks[s]
             epoll.register(fileno, evmask)
