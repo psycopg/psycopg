@@ -686,3 +686,8 @@ async def test_connect_context_copy(dsn, aconn):
     cur = await aconn2.execute("select %b", ["hello"])
     assert (await cur.fetchone())[0] == "hellob"  # type: ignore[index]
     await aconn2.close()
+
+
+async def test_cancel_closed(aconn):
+    await aconn.close()
+    aconn.cancel()

@@ -737,3 +737,8 @@ def test_connect_context_copy(dsn, conn):
     cur = conn2.execute("select %b", ["hello"])
     assert cur.fetchone()[0] == "hellob"  # type: ignore[index]
     conn2.close()
+
+
+def test_cancel_closed(conn):
+    conn.close()
+    conn.cancel()

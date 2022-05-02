@@ -29,6 +29,8 @@ Psycopg 3.0.13 (unreleased)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 - Fix `Cursor.stream()` slowness (:ticket:`#286`).
+- Make `Connection.cancel()` on a closed connection a no-op instead of an
+  error.
 
 
 Current release
