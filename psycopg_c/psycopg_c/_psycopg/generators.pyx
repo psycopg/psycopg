@@ -148,18 +148,20 @@ def fetch(pq.PGconn pgconn) -> PQGen[Optional[PGresult]]:
     cdef object notify_handler = pgconn.notify_handler
     cdef libpq.PGresult *pgres
 
-    while 1:
-        with nogil:
-            cires = libpq.PQconsumeInput(pgconn_ptr)
-            if cires == 1:
-                ibres = libpq.PQisBusy(pgconn_ptr)
-
-        if 1 != cires:
-            raise e.OperationalError(
-                f"consuming input failed: {error_message(pgconn)}")
-        if not ibres:
-            break
+    if libpq.PQisBusy(pgconn_ptr):
         yield WAIT_R
+        while 1:
+            with nogil:
+                cires = libpq.PQconsumeInput(pgconn_ptr)
+                if cires == 1:
+                    ibres = libpq.PQisBusy(pgconn_ptr)
+
+            if 1 != cires:
+                raise e.OperationalError(
+                    f"consuming input failed: {error_message(pgconn)}")
+            if not ibres:
+                break
+            yield WAIT_R
 
     # Consume notifies
     if notify_handler is not None:

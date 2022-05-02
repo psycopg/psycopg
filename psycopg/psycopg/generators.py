@@ -134,14 +134,16 @@ def fetch(pgconn: PGconn) -> PQGen[Optional[PGresult]]:
 
     Return a result from the database (whether success or error).
     """
-    while 1:
-        pgconn.consume_input()
-        if not pgconn.is_busy():
-            break
+    if pgconn.is_busy():
         yield Wait.R
+        while True:
+            pgconn.consume_input()
+            if not pgconn.is_busy():
+                break
+            yield Wait.R
 
     # Consume notifies
-    while 1:
+    while True:
         n = pgconn.notifies()
         if not n:
             break

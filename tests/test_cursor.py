@@ -543,10 +543,16 @@ def test_stream_row_factory(conn):
     assert next(it).a == 2
 
 
+def test_stream_no_row(conn):
+    cur = conn.cursor()
+    recs = list(cur.stream("select generate_series(2,1) as a"))
+    assert recs == []
+
+
 def test_stream_no_col(conn):
     cur = conn.cursor()
-    it = iter(cur.stream("select"))
-    assert list(it) == [()]
+    recs = list(cur.stream("select"))
+    assert recs == [()]
 
 
 @pytest.mark.parametrize(
