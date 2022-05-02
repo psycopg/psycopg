@@ -39,7 +39,7 @@ Psycopg 3.0.10
 ^^^^^^^^^^^^^^
 
 - Leave the connection in working state after interrupting a query with Ctrl-C
-  (currently only for sync connections, :ticket:`#231`).
+  (:ticket:`#231`).
 - Fix `Cursor.description` after a COPY ... TO STDOUT operation
   (:ticket:`#235`).
 - Fix building on FreeBSD and likely other BSD flavours (:ticket:`#241`).

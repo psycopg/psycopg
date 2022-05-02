@@ -106,6 +106,36 @@ Note that the `AsyncConnection.cursor()` function is not an `!async` function
 you can use the normal `async with` context manager.
 
 
+.. index:: Ctrl-C
+
+.. _async-ctrl-c:
+
+Interrupting async operations using Ctrl-C
+------------------------------------------
+
+If a long running operation is interrupted by a Ctrl-C on a normal connection
+running in the main thread, the operation will be cancelled and the connection
+will be put in error state, from which can be recovered with a normal
+`~Connection.rollback()`.
+
+If the query is running in an async connection, a Ctrl-C will be likely
+intercepted by the async loop and interrupt the whole program. In order to
+emulate what normally happens with blocking connections, you can use
+`asyncio's add_signal_handler()`__, to call `Connection.cancel()`:
+
+.. code:: python
+
+    import asyncio
+    import signal
+
+    async with await psycopg.AsyncConnection.connect() as conn:
+        loop.add_signal_handler(signal.SIGINT, conn.cancel)
+        ...
+
+
+.. __: https://docs.python.org/3/library/asyncio-eventloop.html#asyncio.loop.add_signal_handler
+
+
 .. index::
     pair: Asynchronous; Notifications
     pair: LISTEN; SQL command
