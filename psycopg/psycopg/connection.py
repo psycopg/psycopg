@@ -280,6 +280,12 @@ class BaseConnection(Generic[Row]):
 
     def cancel(self) -> None:
         """Cancel the current operation on the connection."""
+        # No-op if the connection is closed
+        # this allows to use the method as callback handler without caring
+        # about its life.
+        if self.closed:
+            return
+
         c = self.pgconn.get_cancel()
         c.cancel()
 
