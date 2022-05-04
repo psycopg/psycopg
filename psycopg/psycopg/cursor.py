@@ -7,7 +7,8 @@ psycopg cursor objects
 from functools import partial
 from types import TracebackType
 from typing import Any, Generic, Iterable, Iterator, List
-from typing import Optional, NoReturn, Sequence, Type, TypeVar, TYPE_CHECKING
+from typing import Optional, NoReturn, Sequence, Type, TypeVar
+from typing import overload, TYPE_CHECKING
 from contextlib import contextmanager
 
 from . import pq
@@ -637,9 +638,27 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
     __module__ = "psycopg"
     __slots__ = ()
 
-    def __init__(self, connection: "Connection[Any]", *, row_factory: RowFactory[Row]):
+    @overload
+    def __init__(self: "Cursor[Row]", connection: "Connection[Row]"):
+        ...
+
+    @overload
+    def __init__(
+        self: "Cursor[Row]",
+        connection: "Connection[Any]",
+        *,
+        row_factory: RowFactory[Row],
+    ):
+        ...
+
+    def __init__(
+        self,
+        connection: "Connection[Any]",
+        *,
+        row_factory: Optional[RowFactory[Row]] = None,
+    ):
         super().__init__(connection)
-        self._row_factory = row_factory
+        self._row_factory = row_factory or connection.row_factory
 
     def __enter__(self: _C) -> _C:
         return self

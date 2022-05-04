@@ -138,13 +138,89 @@ def test_connection_type(conn, type, mypy):
             "psycopg.AsyncServerCursor[Dict[str, Any]]",
         ),
         (
-            "psycopg.connect()",
+            "await psycopg.AsyncConnection.connect()",
             "conn.cursor(name='foo', row_factory=rows.dict_row)",
-            "psycopg.ServerCursor[Dict[str, Any]]",
+            "psycopg.AsyncServerCursor[Dict[str, Any]]",
         ),
     ],
 )
 def test_cursor_type(conn, curs, type, mypy):
+    stmts = f"""\
+conn = {conn}
+obj = {curs}
+"""
+    _test_reveal(stmts, type, mypy)
+
+
+@pytest.mark.parametrize(
+    "conn, curs, type",
+    [
+        (
+            "psycopg.connect()",
+            "psycopg.Cursor(conn)",
+            "psycopg.Cursor[Tuple[Any, ...]]",
+        ),
+        (
+            "psycopg.connect(row_factory=rows.dict_row)",
+            "psycopg.Cursor(conn)",
+            "psycopg.Cursor[Dict[str, Any]]",
+        ),
+        (
+            "psycopg.connect(row_factory=rows.dict_row)",
+            "psycopg.Cursor(conn, row_factory=rows.namedtuple_row)",
+            "psycopg.Cursor[NamedTuple]",
+        ),
+        # Async cursors
+        (
+            "await psycopg.AsyncConnection.connect()",
+            "psycopg.AsyncCursor(conn)",
+            "psycopg.AsyncCursor[Tuple[Any, ...]]",
+        ),
+        (
+            "await psycopg.AsyncConnection.connect(row_factory=rows.dict_row)",
+            "psycopg.AsyncCursor(conn)",
+            "psycopg.AsyncCursor[Dict[str, Any]]",
+        ),
+        (
+            "await psycopg.AsyncConnection.connect()",
+            "psycopg.AsyncCursor(conn, row_factory=thing_row)",
+            "psycopg.AsyncCursor[Thing]",
+        ),
+        # Server-side cursors
+        (
+            "psycopg.connect()",
+            "psycopg.ServerCursor(conn, 'foo')",
+            "psycopg.ServerCursor[Tuple[Any, ...]]",
+        ),
+        (
+            "psycopg.connect(row_factory=rows.dict_row)",
+            "psycopg.ServerCursor(conn, name='foo')",
+            "psycopg.ServerCursor[Dict[str, Any]]",
+        ),
+        (
+            "psycopg.connect(row_factory=rows.dict_row)",
+            "psycopg.ServerCursor(conn, 'foo', row_factory=rows.namedtuple_row)",
+            "psycopg.ServerCursor[NamedTuple]",
+        ),
+        # Async server-side cursors
+        (
+            "await psycopg.AsyncConnection.connect()",
+            "psycopg.AsyncServerCursor(conn, name='foo')",
+            "psycopg.AsyncServerCursor[Tuple[Any, ...]]",
+        ),
+        (
+            "await psycopg.AsyncConnection.connect(row_factory=rows.dict_row)",
+            "psycopg.AsyncServerCursor(conn, name='foo')",
+            "psycopg.AsyncServerCursor[Dict[str, Any]]",
+        ),
+        (
+            "await psycopg.AsyncConnection.connect()",
+            "psycopg.AsyncServerCursor(conn, name='foo', row_factory=rows.dict_row)",
+            "psycopg.AsyncServerCursor[Dict[str, Any]]",
+        ),
+    ],
+)
+def test_cursor_type_init(conn, curs, type, mypy):
     stmts = f"""\
 conn = {conn}
 obj = {curs}

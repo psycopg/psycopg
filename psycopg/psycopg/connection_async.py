@@ -51,12 +51,12 @@ class AsyncConnection(BaseConnection[Row]):
     def __init__(
         self,
         pgconn: "PGconn",
-        row_factory: Optional[AsyncRowFactory[Row]] = None,
+        row_factory: AsyncRowFactory[Row] = cast(AsyncRowFactory[Row], tuple_row),
     ):
         super().__init__(pgconn)
-        self.row_factory = row_factory or cast(AsyncRowFactory[Row], tuple_row)
+        self.row_factory = row_factory
         self.lock = asyncio.Lock()
-        self.cursor_factory = AsyncCursor
+        self.cursor_factory = cast("Type[AsyncCursor[Row]]", AsyncCursor)
         self.server_cursor_factory = AsyncServerCursor
 
     @overload

@@ -1,10 +1,41 @@
 import pytest
 
-from psycopg import errors as e
-from psycopg.rows import dict_row
+import psycopg
+from psycopg import rows, errors as e
 from psycopg.pq import Format
 
 pytestmark = pytest.mark.asyncio
+
+
+async def test_init_row_factory(aconn):
+    async with psycopg.AsyncServerCursor(aconn, "foo") as cur:
+        assert cur.name == "foo"
+        assert cur.connection is aconn
+        assert cur.row_factory is aconn.row_factory
+
+    aconn.row_factory = rows.dict_row
+
+    async with psycopg.AsyncServerCursor(aconn, "bar") as cur:
+        assert cur.name == "bar"
+        assert cur.row_factory is rows.dict_row  # type: ignore
+
+    async with psycopg.AsyncServerCursor(
+        aconn, "baz", row_factory=rows.namedtuple_row
+    ) as cur:
+        assert cur.name == "baz"
+        assert cur.row_factory is rows.namedtuple_row  # type: ignore
+
+
+async def test_init_params(aconn):
+    async with psycopg.AsyncServerCursor(aconn, "foo") as cur:
+        assert cur.scrollable is None
+        assert cur.withhold is False
+
+    async with psycopg.AsyncServerCursor(
+        aconn, "bar", withhold=True, scrollable=False
+    ) as cur:
+        assert cur.scrollable is False
+        assert cur.withhold is True
 
 
 async def test_funny_name(aconn):
@@ -316,17 +347,17 @@ async def test_row_factory(aconn):
 
     cur = aconn.cursor("foo", row_factory=my_row_factory, scrollable=True)
     await cur.execute("select generate_series(1, 3) as x")
-    rows = await cur.fetchall()
+    recs = await cur.fetchall()
     await cur.scroll(0, "absolute")
     while 1:
-        row = await cur.fetchone()
-        if not row:
+        rec = await cur.fetchone()
+        if not rec:
             break
-        rows.append(row)
-    assert rows == [[1, -1], [1, -2], [1, -3]] * 2
+        recs.append(rec)
+    assert recs == [[1, -1], [1, -2], [1, -3]] * 2
 
     await cur.scroll(0, "absolute")
-    cur.row_factory = dict_row
+    cur.row_factory = rows.dict_row
     assert await cur.fetchone() == {"x": 1}
     await cur.close()
 

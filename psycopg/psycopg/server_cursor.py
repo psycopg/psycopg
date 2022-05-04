@@ -5,7 +5,7 @@ psycopg server-side cursor objects.
 # Copyright (C) 2020 The Psycopg Team
 
 from typing import Any, AsyncIterator, Generic, List, Iterable, Iterator
-from typing import Optional, TypeVar, TYPE_CHECKING
+from typing import Optional, TypeVar, TYPE_CHECKING, overload
 from warnings import warn
 
 from . import pq
@@ -182,8 +182,20 @@ class ServerCursor(Cursor[Row]):
     __module__ = "psycopg"
     __slots__ = ("_helper", "itersize")
 
+    @overload
     def __init__(
-        self,
+        self: "ServerCursor[Row]",
+        connection: "Connection[Row]",
+        name: str,
+        *,
+        scrollable: Optional[bool] = None,
+        withhold: bool = False,
+    ):
+        ...
+
+    @overload
+    def __init__(
+        self: "ServerCursor[Row]",
         connection: "Connection[Any]",
         name: str,
         *,
@@ -191,7 +203,18 @@ class ServerCursor(Cursor[Row]):
         scrollable: Optional[bool] = None,
         withhold: bool = False,
     ):
-        super().__init__(connection, row_factory=row_factory)
+        ...
+
+    def __init__(
+        self,
+        connection: "Connection[Any]",
+        name: str,
+        *,
+        row_factory: Optional[RowFactory[Row]] = None,
+        scrollable: Optional[bool] = None,
+        withhold: bool = False,
+    ):
+        super().__init__(connection, row_factory=row_factory or connection.row_factory)
         self._helper: ServerCursorHelper["Connection[Any]", Row]
         self._helper = ServerCursorHelper(name, scrollable, withhold)
         self.itersize: int = DEFAULT_ITERSIZE
@@ -323,8 +346,20 @@ class AsyncServerCursor(AsyncCursor[Row]):
     __module__ = "psycopg"
     __slots__ = ("_helper", "itersize")
 
+    @overload
     def __init__(
-        self,
+        self: "AsyncServerCursor[Row]",
+        connection: "AsyncConnection[Row]",
+        name: str,
+        *,
+        scrollable: Optional[bool] = None,
+        withhold: bool = False,
+    ):
+        ...
+
+    @overload
+    def __init__(
+        self: "AsyncServerCursor[Row]",
         connection: "AsyncConnection[Any]",
         name: str,
         *,
@@ -332,7 +367,18 @@ class AsyncServerCursor(AsyncCursor[Row]):
         scrollable: Optional[bool] = None,
         withhold: bool = False,
     ):
-        super().__init__(connection, row_factory=row_factory)
+        ...
+
+    def __init__(
+        self,
+        connection: "AsyncConnection[Any]",
+        name: str,
+        *,
+        row_factory: Optional[AsyncRowFactory[Row]] = None,
+        scrollable: Optional[bool] = None,
+        withhold: bool = False,
+    ):
+        super().__init__(connection, row_factory=row_factory or connection.row_factory)
         self._helper: ServerCursorHelper["AsyncConnection[Any]", Row]
         self._helper = ServerCursorHelper(name, scrollable, withhold)
         self.itersize: int = DEFAULT_ITERSIZE

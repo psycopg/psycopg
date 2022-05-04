@@ -15,6 +15,23 @@ from psycopg.rows import RowMaker
 from .utils import gc_collect
 
 
+def test_init(conn):
+    cur = psycopg.Cursor(conn)
+    cur.execute("select 1")
+    assert cur.fetchone() == (1,)
+
+    conn.row_factory = rows.dict_row
+    cur = psycopg.Cursor(conn)
+    cur.execute("select 1 as a")
+    assert cur.fetchone() == {"a": 1}
+
+
+def test_init_factory(conn):
+    cur = psycopg.Cursor(conn, row_factory=rows.dict_row)
+    cur.execute("select 1 as a")
+    assert cur.fetchone() == {"a": 1}
+
+
 def test_close(conn):
     cur = conn.cursor()
     assert not cur.closed

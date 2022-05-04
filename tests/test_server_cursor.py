@@ -1,8 +1,35 @@
 import pytest
 
-from psycopg import errors as e
+import psycopg
+from psycopg import rows, errors as e
 from psycopg.pq import Format
-from psycopg.rows import dict_row
+
+
+def test_init_row_factory(conn):
+    with psycopg.ServerCursor(conn, "foo") as cur:
+        assert cur.name == "foo"
+        assert cur.connection is conn
+        assert cur.row_factory is conn.row_factory
+
+    conn.row_factory = rows.dict_row
+
+    with psycopg.ServerCursor(conn, "bar") as cur:
+        assert cur.name == "bar"
+        assert cur.row_factory is rows.dict_row  # type: ignore
+
+    with psycopg.ServerCursor(conn, "baz", row_factory=rows.namedtuple_row) as cur:
+        assert cur.name == "baz"
+        assert cur.row_factory is rows.namedtuple_row  # type: ignore
+
+
+def test_init_params(conn):
+    with psycopg.ServerCursor(conn, "foo") as cur:
+        assert cur.scrollable is None
+        assert cur.withhold is False
+
+    with psycopg.ServerCursor(conn, "bar", withhold=True, scrollable=False) as cur:
+        assert cur.scrollable is False
+        assert cur.withhold is True
 
 
 def test_funny_name(conn):
@@ -310,17 +337,17 @@ def test_row_factory(conn):
 
     cur = conn.cursor("foo", row_factory=my_row_factory, scrollable=True)
     cur.execute("select generate_series(1, 3) as x")
-    rows = cur.fetchall()
+    recs = cur.fetchall()
     cur.scroll(0, "absolute")
     while 1:
-        row = cur.fetchone()
-        if not row:
+        rec = cur.fetchone()
+        if not rec:
             break
-        rows.append(row)
-    assert rows == [[1, -1], [1, -2], [1, -3]] * 2
+        recs.append(rec)
+    assert recs == [[1, -1], [1, -2], [1, -3]] * 2
 
     cur.scroll(0, "absolute")
-    cur.row_factory = dict_row
+    cur.row_factory = rows.dict_row
     assert cur.fetchone() == {"x": 1}
     cur.close()
 

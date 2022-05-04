@@ -6,7 +6,7 @@ psycopg async cursor objects
 
 from types import TracebackType
 from typing import Any, AsyncIterator, Iterable, List
-from typing import Optional, Type, TypeVar, TYPE_CHECKING
+from typing import Optional, Type, TypeVar, TYPE_CHECKING, overload
 from contextlib import asynccontextmanager
 
 from . import errors as e
@@ -26,14 +26,27 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
     __module__ = "psycopg"
     __slots__ = ()
 
+    @overload
+    def __init__(self: "AsyncCursor[Row]", connection: "AsyncConnection[Row]"):
+        ...
+
+    @overload
     def __init__(
-        self,
+        self: "AsyncCursor[Row]",
         connection: "AsyncConnection[Any]",
         *,
         row_factory: AsyncRowFactory[Row],
     ):
+        ...
+
+    def __init__(
+        self,
+        connection: "AsyncConnection[Any]",
+        *,
+        row_factory: Optional[AsyncRowFactory[Row]] = None,
+    ):
         super().__init__(connection)
-        self._row_factory = row_factory
+        self._row_factory = row_factory or connection.row_factory
 
     async def __aenter__(self: _C) -> _C:
         return self

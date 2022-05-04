@@ -643,11 +643,15 @@ class Connection(BaseConnection[Row]):
 
     _pipeline: Optional[Pipeline]
 
-    def __init__(self, pgconn: "PGconn", row_factory: Optional[RowFactory[Row]] = None):
+    def __init__(
+        self,
+        pgconn: "PGconn",
+        row_factory: RowFactory[Row] = cast(RowFactory[Row], tuple_row),
+    ):
         super().__init__(pgconn)
-        self.row_factory = row_factory or cast(RowFactory[Row], tuple_row)
+        self.row_factory = row_factory
         self.lock = threading.Lock()
-        self.cursor_factory = Cursor
+        self.cursor_factory = cast("Type[Cursor[Row]]", Cursor)
         self.server_cursor_factory = ServerCursor
 
     @overload

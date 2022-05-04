@@ -16,6 +16,23 @@ execmany = execmany  # avoid F811 underneath
 pytestmark = pytest.mark.asyncio
 
 
+async def test_init(aconn):
+    cur = psycopg.AsyncCursor(aconn)
+    await cur.execute("select 1")
+    assert (await cur.fetchone()) == (1,)
+
+    aconn.row_factory = rows.dict_row
+    cur = psycopg.AsyncCursor(aconn)
+    await cur.execute("select 1 as a")
+    assert (await cur.fetchone()) == {"a": 1}
+
+
+async def test_init_factory(aconn):
+    cur = psycopg.AsyncCursor(aconn, row_factory=rows.dict_row)
+    await cur.execute("select 1 as a")
+    assert (await cur.fetchone()) == {"a": 1}
+
+
 async def test_close(aconn):
     cur = aconn.cursor()
     assert not cur.closed
