@@ -74,6 +74,17 @@ will receive more than one result; results after the first will be available,
 in their execution order, using `~Cursor.nextset()`.
 
 .. warning::
+    The Pipeline mode is an experimental feature.
+
+    Its behaviour, especially around error condtions, hasn't been explored as
+    much as the normal request-response messages pattern, and its async nature
+    makes it inherently more complex.
+
+    As we gain more experience and feedback (which is welcome), we might find
+    bugs and shortcomings forcing us to change the current interface or
+    behaviour.
+
+.. warning::
     Certain features are not available in pipeline mode, including:
 
     - COPY is not supported in pipeline mode by PostgreSQL.
