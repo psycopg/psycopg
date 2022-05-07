@@ -290,7 +290,7 @@ The fine prints
 
     The Pipeline mode is an experimental feature.
 
-    Its behaviour, especially around error condtions, hasn't been explored as
+    Its behaviour, especially around error conditions, hasn't been explored as
     much as the normal request-response messages pattern, and its async nature
     makes it inherently more complex.
 
