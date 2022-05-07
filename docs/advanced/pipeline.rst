@@ -48,8 +48,8 @@ Pipeline mode usage
 -------------------
 
 Psycopg supports the pipeline mode via the `Connection.pipeline()` method. The
-method is a context manager: at the end of the ``with`` block, the connection
-resumes the normal operation mode.
+method is a context manager: entering the ``with`` block yields a `Pipeline`
+object, at the end of block, the connection resumes the normal operation mode.
 
 Within the pipeline block, you can use one or more cursors to execute several
 operations, using `~Cursor.execute()` and `~Cursor.executemany()`. Unlike in
