@@ -86,14 +86,18 @@ class BasePipeline:
 
     def _sync_gen(self) -> PQGen[None]:
         self._enqueue_sync()
+        yield from self._communicate_gen()
+
+    def _exit_gen(self) -> PQGen[None]:
+        """Exit current pipeline by sending a Sync and, unless within a nested
+        pipeline, also fetch back all remaining results.
+        """
         try:
-            # Send any pending commands (e.g. COMMIT or Sync);
-            # while processing results, we might get errors...
-            yield from self._communicate_gen()
+            yield from self._sync_gen()
         finally:
-            # then fetch all remaining results but without forcing
-            # flush since we emitted a sync just before.
-            yield from self._fetch_gen(flush=False)
+            if self.level == 1:
+                # No need to force flush since we emitted a sync just before.
+                yield from self._fetch_gen(flush=False)
 
     def _communicate_gen(self) -> PQGen[None]:
         """Communicate with pipeline to send commands and possibly fetch
@@ -173,14 +177,14 @@ class Pipeline(BasePipeline):
         super().__init__(conn)
 
     def sync(self) -> None:
-        """Sync the pipeline, send any pending command and fetch and process
+        """Sync the pipeline, send any pending command and receive and process
         all available results.
-
-        This is called when exiting the pipeline, but can be used for other
-        purposes (e.g. in nested pipelines).
         """
-        with self._conn.lock:
-            self._conn.wait(self._sync_gen())
+        try:
+            with self._conn.lock:
+                self._conn.wait(self._sync_gen())
+        except e.Error as ex:
+            raise ex.with_traceback(None)
 
     def __enter__(self) -> "Pipeline":
         self._enter()
@@ -193,13 +197,14 @@ class Pipeline(BasePipeline):
         exc_tb: Optional[TracebackType],
     ) -> None:
         try:
-            self.sync()
+            with self._conn.lock:
+                self._conn.wait(self._exit_gen())
         except Exception as exc2:
             # Don't clobber an exception raised in the block with this one
             if exc_val:
-                logger.warning("error ignored syncing %r: %s", self, exc2)
+                logger.warning("error ignored terminating %r: %s", self, exc2)
             else:
-                raise
+                raise exc2.with_traceback(None)
         finally:
             try:
                 self._exit()
@@ -210,7 +215,7 @@ class Pipeline(BasePipeline):
                 if exc_val:
                     logger.warning("error ignored exiting %r: %s", self, exc2)
                 else:
-                    raise
+                    raise exc2.with_traceback(None)
 
 
 class AsyncPipeline(BasePipeline):
@@ -229,8 +234,11 @@ class AsyncPipeline(BasePipeline):
         This is called when exiting the pipeline, but can be used for other
         purposes (e.g. in nested pipelines).
         """
-        async with self._conn.lock:
-            await self._conn.wait(self._sync_gen())
+        try:
+            async with self._conn.lock:
+                await self._conn.wait(self._sync_gen())
+        except e.Error as ex:
+            raise ex.with_traceback(None)
 
     async def __aenter__(self) -> "AsyncPipeline":
         self._enter()
@@ -243,13 +251,14 @@ class AsyncPipeline(BasePipeline):
         exc_tb: Optional[TracebackType],
     ) -> None:
         try:
-            await self.sync()
+            async with self._conn.lock:
+                await self._conn.wait(self._exit_gen())
         except Exception as exc2:
             # Don't clobber an exception raised in the block with this one
             if exc_val:
-                logger.warning("error ignored syncing %r: %s", self, exc2)
+                logger.warning("error ignored terminating %r: %s", self, exc2)
             else:
-                raise
+                raise exc2.with_traceback(None)
         finally:
             try:
                 self._exit()
@@ -257,4 +266,4 @@ class AsyncPipeline(BasePipeline):
                 if exc_val:
                     logger.warning("error ignored exiting %r: %s", self, exc2)
                 else:
-                    raise
+                    raise exc2.with_traceback(None)
