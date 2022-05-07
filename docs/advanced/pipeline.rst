@@ -28,11 +28,18 @@ immediately, not waiting for the end of the pipeline. Note that results are
 buffered on the server side; the server flushes that buffer when a
 :ref:`synchronization point <pipeline-sync>` is established.
 
-.. seealso:: The `PostgreSQL pipeline mode documentation`__ contains many
-    details around when it is most useful to use the pipeline mode and about
-    errors management and interaction with transactions.
+.. seealso::
+
+    The PostgreSQL documentation about:
+
+    - `pipeline mode`__
+    - `extended query message flow`__
+
+    contains many details around when it is most useful to use the pipeline
+    mode and about errors management and interaction with transactions.
 
     .. __: https://www.postgresql.org/docs/current/libpq-pipeline-mode.html
+    .. __: https://www.postgresql.org/docs/current/protocol-flow.html#PROTOCOL-FLOW-EXT-QUERY
 
 
 .. _pipeline-usage:
@@ -60,6 +67,12 @@ transaction and does not execute any subsequent command in the queue until the
 next :ref:`synchronization point <pipeline-sync>`; a `~errors.PipelineAborted`
 exception is raised for each such command. Query processing resumes after the
 synchronization point.
+
+Note that, even in :ref:`autocommit <autocommit>`, the server wraps the
+statements sent in pipeline mode in an implicit transaction, which will be
+only committed when the sync is received. As such, a failure in a group of
+statement will probably invalidate the effect of statements executed after the
+previous sync.
 
 .. warning::
 
