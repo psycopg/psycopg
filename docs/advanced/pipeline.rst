@@ -114,8 +114,7 @@ results in the exchange:
 
 The pipeline mode allows to combine several operation in a longer stream of
 messages sent to the server, then to receive more than one response in a
-single batch. If we combine the two operations above in a pipeline.
-If we execute the two operations above in a pipeline:
+single batch. If we execute the two operations above in a pipeline:
 
 .. code:: python
 
