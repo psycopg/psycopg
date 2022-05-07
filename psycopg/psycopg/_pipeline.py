@@ -66,7 +66,7 @@ class BasePipeline:
 
     @staticmethod
     def is_supported() -> bool:
-        """Return `True` if the psycopg libpq wrapper suports pipeline mode."""
+        """Return `!True` if the psycopg libpq wrapper suports pipeline mode."""
         if BasePipeline._is_supported is None:
             # Support only depends on the libpq functions available in the pq
             # wrapper, not on the database version.

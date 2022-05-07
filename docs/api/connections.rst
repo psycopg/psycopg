@@ -160,6 +160,25 @@ The `!Connection` class
         See :ref:`query-parameters` for all the details about executing
         queries.
 
+    .. automethod:: pipeline
+
+        The method is a context manager: you should call it using::
+
+            with conn.pipeline() as p:
+                ...
+
+        At the end of the block, a synchronization point is established and
+        the connection returns in normal mode.
+
+        You can call the method recursively from within a pipeline block.
+        Innermost blocks will establish a synchronization point on exit, but
+        pipeline mode will be kept until the outermost block exits.
+
+        See :ref:`pipeline-mode` for details.
+
+        .. versionadded:: 3.1
+
+
     .. rubric:: Transaction management methods
 
     For details see :ref:`transactions`.
@@ -265,8 +284,6 @@ The `!Connection` class
     .. automethod:: remove_notice_handler
 
     .. automethod:: fileno
-
-    .. automethod:: pipeline
 
 
     .. _tpc-methods:
@@ -431,6 +448,16 @@ The `!AsyncConnection` class
     .. autoattribute:: row_factory
 
     .. automethod:: execute
+
+    .. automethod:: pipeline
+
+        .. note::
+
+            It must be called as::
+
+                async with conn.pipeline() as p:
+                    ...
+
     .. automethod:: commit
     .. automethod:: rollback
 
@@ -448,15 +475,6 @@ The `!AsyncConnection` class
     .. automethod:: set_isolation_level
     .. automethod:: set_read_only
     .. automethod:: set_deferrable
-
-    .. automethod:: pipeline
-
-        .. note::
-
-            It must be called as::
-
-                async with conn.pipeline():
-                    ...
 
     .. automethod:: tpc_prepare
     .. automethod:: tpc_commit

@@ -883,7 +883,7 @@ class Connection(BaseConnection[Row]):
 
     @contextmanager
     def pipeline(self) -> Iterator[Pipeline]:
-        """Context manager to switch the connection into pipeline mode."""
+        """Switch the connection into pipeline mode."""
         with self.lock:
             pipeline = self._pipeline
             if pipeline is None:
