@@ -20,9 +20,8 @@ buffered on the server side; the server flushes that buffer when a
 *synchronization point* is established. If any statement encounters an error,
 the server aborts the current transaction and does not execute any subsequent
 command in the queue until the next synchronization point; a
-`~errors.PipelineAborted` exception is raised for each such command (including
-a `~Connection.rollback()`). Query processing resumes after the
-synchronization point.
+`~errors.PipelineAborted` exception is raised for each such command. Query
+processing resumes after the synchronization point.
 
 Pipeline mode is most useful when the server is distant, i.e., network latency
 (“ping time”) is high, and also when many small operations are being performed
@@ -57,7 +56,8 @@ output buffer.
 This flush can happen either when a synchronization point is established by
 Psycopg:
 
-- using the `Pipeline.sync()` method, or,
+- using the `Pipeline.sync()` method,
+- on `~Connection.rollback()`,
 - at the end of a `!Pipeline` block;
 
 or using a fetch method such as `Cursor.fetchone()`.
