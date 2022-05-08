@@ -25,6 +25,13 @@ async def test_repr(aconn):
     assert "[BAD]" in repr(p)
 
 
+async def test_connection_closed(aconn):
+    await aconn.close()
+    with pytest.raises(e.OperationalError):
+        async with aconn.pipeline():
+            pass
+
+
 async def test_pipeline_status(aconn: psycopg.AsyncConnection[Any]) -> None:
     assert aconn._pipeline is None
     async with aconn.pipeline() as p:

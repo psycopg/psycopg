@@ -22,6 +22,13 @@ def test_repr(conn):
     assert "[BAD]" in repr(p)
 
 
+def test_connection_closed(conn):
+    conn.close()
+    with pytest.raises(e.OperationalError):
+        with conn.pipeline():
+            pass
+
+
 def test_pipeline_status(conn: psycopg.Connection[Any]) -> None:
     assert conn._pipeline is None
     with conn.pipeline() as p:

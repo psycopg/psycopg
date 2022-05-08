@@ -298,6 +298,8 @@ class AsyncConnection(BaseConnection[Row]):
     async def pipeline(self) -> AsyncIterator[AsyncPipeline]:
         """Context manager to switch the connection into pipeline mode."""
         async with self.lock:
+            self._check_connection_ok()
+
             pipeline = self._pipeline
             if pipeline is None:
                 # WARNING: reference loop, broken ahead.
