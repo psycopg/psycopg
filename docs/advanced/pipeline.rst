@@ -285,6 +285,18 @@ because:
 - the statement ``four`` is executed with
   success after the Sync has terminated the failed transaction.
 
+.. warning::
+
+    The exact Python statement where the exception is raised is somewhat
+    arbitrary: it depends on when the server returns the error message. In the
+    above example, the `!execute()` of the statement ``two`` is not the one
+    expected to raise the exception. The exception might be raised by the
+    `!sync()`, or when leaving the `!Pipeline` block.
+
+    Do not rely on expectations of a precise point where the exception is
+    raised; make sure to use transactions if you want to guarantee that a set
+    of statements is handled atomically by the server.
+
 
 The fine prints
 ---------------
