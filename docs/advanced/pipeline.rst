@@ -45,24 +45,23 @@ buffered on the server side; the server flushes that buffer when a
 Client-server messages flow
 ---------------------------
 
-During normal querying, each statement consists in a stream of request
-messages sent by the client to the server, followed by a stream of response
-messages in the opposite direction.
+In order to understand better how the pipeline mode works, we should take a
+closer look at the `PostgreSQL client-server message flow`__.
 
-The client sends commands to parse a query, bind it to parameters, execute it,
-and terminates with a ``Sync`` to communicate the server that it should
-process the commands sent so far. The server will process the query and send
-back the results, terminating the stream of message with a ``ReadyForQuery``
-message, telling the client that it can now send a new query. The messages are
-described in the `PostgreSQL message flow documentation`__.
+During normal querying, each statement is transmitted by the client to the
+server as a stream of request messages, terminating with a *Sync* message to
+tell it that it should process the messages sent so far. The server will
+execute the statement and describe the results back as a stream of messages,
+terminating with a *ReadyForQuery*, telling the client that it may now send a
+new query.
 
-For example the statement:
+For example, the statement (returning no result):
 
 .. code:: python
 
     conn.execute("INSERT INTO mytable (data) VALUES (%s)", ["hello"])
 
-results in a complete back-and-forth of the messages:
+results in the following two groups of messages:
 
 .. table::
     :align: left
@@ -90,7 +89,7 @@ and the query:
 
     conn.execute("SELECT data FROM mytable WHERE id = %s", [1])
 
-results in the exchange:
+results in the two groups of messages:
 
 .. table::
     :align: left
@@ -112,8 +111,11 @@ results in the exchange:
     |               | - ReadyForQuery                                           |
     +---------------+-----------------------------------------------------------+
 
-The pipeline mode allows to combine several operation in a longer stream of
-messages sent to the server, then to receive more than one response in a
+The two statements, sent consecutively, pay the communication overhead four
+times, once per leg.
+
+The pipeline mode allows the client to combine several operations in longer
+streams of messages to the server, then to receive more than one response in a
 single batch. If we execute the two operations above in a pipeline:
 
 .. code:: python
@@ -138,7 +140,7 @@ they will result in a single roundtrip between the client and the server:
     |               | - Bind ``1``                                              |
     |               | - Describe                                                |
     |               | - Execute                                                 |
-    |               | - Sync                                                    |
+    |               | - Sync (sent only once)                                   |
     +---------------+-----------------------------------------------------------+
     | PostgreSQL    | - ParseComplete                                           |
     |               | - BindComplete                                            |
@@ -149,7 +151,7 @@ they will result in a single roundtrip between the client and the server:
     |               | - RowDescription    ``data``                              |
     |               | - DataRow           ``hello``                             |
     |               | - CommandComplete ``SELECT 1``                            |
-    |               | - ReadyForQuery                                           |
+    |               | - ReadyForQuery (sent only once)                          |
     +---------------+-----------------------------------------------------------+
 
 .. |<| unicode:: U+25C0
@@ -165,13 +167,11 @@ Pipeline mode usage
 
 Psycopg supports the pipeline mode via the `Connection.pipeline()` method. The
 method is a context manager: entering the ``with`` block yields a `Pipeline`
-object, at the end of block, the connection resumes the normal operation mode.
+object. At the end of block, the connection resumes the normal operation mode.
 
-Within the pipeline block, you can use one or more cursors to execute several
-operations, using `~Cursor.execute()` and `~Cursor.executemany()`. Unlike in
-normal mode, Psycopg will not wait for the server to receive the result of
-each query, which will be received in batches when the server flushes it
-output buffer.
+Within the pipeline block, you can use normally one or more cursors to execute
+several operations, using `Connection.execute()`, `Cursor.execute()` and
+`~Cursor.executemany()`.
 
 .. code:: python
 
@@ -182,6 +182,10 @@ output buffer.
     ...         cur.executemany(
     ...             "INSERT INTO elsewhere VALUES (%s)",
     ...             [("one",), ("two",), ("four",)])
+
+Unlike in normal mode, Psycopg will not wait for the server to receive the
+result of each query; the client will receive results in batches when the
+server flushes it output buffer.
 
 When a flush (or a sync) is performed, all pending results are sent back to
 the cursors which executed them. If a cursor had run more than one query, it
@@ -203,7 +207,7 @@ in their execution order, using `~Cursor.nextset()`:
     [(2, 'world')]
 
 If any statement encounters an error, the server aborts the current
-transaction and does not execute any subsequent command in the queue until the
+transaction and will not execute any subsequent command in the queue until the
 next :ref:`synchronization point <pipeline-sync>`; a `~errors.PipelineAborted`
 exception is raised for each such command. Query processing resumes after the
 synchronization point.
@@ -232,21 +236,18 @@ Synchronization points
 Flushing query results to the client can happen either when a synchronization
 point is established by Psycopg:
 
-- using the `Pipeline.sync()` method,
-- on `~Connection.rollback()`,
+- using the `Pipeline.sync()` method;
+- on `Connection.rollback()`;
 - at the end of a `!Pipeline` block;
-
-or using a fetch method such as `Cursor.fetchone()`.
+- using a fetch method such as `Cursor.fetchone()` (which only flushes the
+  query but doesn't issue a Sync and doesn't reset a pipeline state error).
 
 The server might perform a flush on its own initiative, for instance when the
 output buffer is full.
 
-In contrast with a synchronization point, a flush request (i.e. calling a
-fetch method) will not reset the pipeline error state.
-
 Note that, even in :ref:`autocommit <autocommit>`, the server wraps the
 statements sent in pipeline mode in an implicit transaction, which will be
-only committed when the sync is received. As such, a failure in a group of
+only committed when the Sync is received. As such, a failure in a group of
 statements will probably invalidate the effect of statements executed after
 the previous Sync, and will propagate to the following Sync.
 
@@ -254,7 +255,7 @@ For example, the following block:
 
 .. code:: python
 
-    >>> with psycopg.connect("", autocommit=True) as conn:
+    >>> with psycopg.connect(autocommit=True) as conn:
     ...     with conn.pipeline() as p, conn.cursor() as cur:
     ...         cur.execute("INSERT INTO mytable (data) VALUES (%s)", ["one"])
     ...         cur.execute("INSERT INTO no_such_table (data) VALUES (%s)", ["two"])
@@ -262,24 +263,27 @@ For example, the following block:
     ...         p.sync()
     ...         cur.execute("INSERT INTO mytable (data) VALUES (%s)", ["four"])
 
-fails with the error ``relation "no_such_table" does not exist``; and, at the
+fails with the error ``relation "no_such_table" does not exist`` and, at the
 end of the block, the table will contain:
 
 .. code:: text
 
     =# SELECT * FROM mytable;
-    ┌────┬──────┐
-    │ id │ data │
-    ├────┼──────┤
-    │  2 │ four │
-    └────┴──────┘
+    +----+------+
+    | id | data |
+    +----+------+
+    |  2 | four |
+    +----+------+
     (1 row)
 
-because the value 1 of the sequence is consumed by the statement ``one``, but
-the record discarded because of the error in the same implicit transaction;
-the statement ``three`` is not executed (so it doesn't consume a sequence
-item), the statement ``four`` is executed with success after the Sync has
-terminated the failed transaction.
+because:
+
+- the value 1 of the sequence is consumed by the statement ``one``, but
+  the record discarded because of the error in the same implicit transaction;
+- the statement ``three`` is not executed because the pipeline is aborted (so
+  it doesn't consume a sequence item);
+- the statement ``four`` is executed with
+  success after the Sync has terminated the failed transaction.
 
 
 The fine prints
@@ -289,9 +293,9 @@ The fine prints
 
     The Pipeline mode is an experimental feature.
 
-    Its behaviour, especially around error conditions, hasn't been explored as
-    much as the normal request-response messages pattern, and its async nature
-    makes it inherently more complex.
+    Its behaviour, especially around error conditions and concurrency, hasn't
+    been explored as much as the normal request-response messages pattern, and
+    its async nature makes it inherently more complex.
 
     As we gain more experience and feedback (which is welcome), we might find
     bugs and shortcomings forcing us to change the current interface or
