@@ -6,7 +6,6 @@ Adapters for arrays
 
 import re
 import struct
-from decimal import Decimal
 from typing import Any, cast, Callable, Iterator, List
 from typing import Optional, Pattern, Set, Tuple, Type
 from functools import lru_cache
@@ -50,9 +49,21 @@ class BaseListDumper(RecursiveDumper):
         """
         it = self._flatiter(L, set())
         try:
-            return next(it)
+            item = next(it)
         except StopIteration:
             return None
+
+        # Checking for precise type. If the type is a subclass (e.g. Int4)
+        # we assume the user knows what type they are passing.
+        if type(item) is not int:
+            return item
+
+        # If we got an int, let's see what is the biggest one in order to
+        # choose the smallest OID and allow Postgres to do the right cast.
+        it = self._flatiter(L, set())
+        imax = max((i if i >= 0 else -i - 1 for i in it), default=0)
+        imax = max(item if item >= 0 else -item - 1, imax)
+        return imax
 
     def _flatiter(self, L: List[Any], seen: Set[int]) -> Any:
         if id(L) in seen:
@@ -94,12 +105,6 @@ class ListDumper(BaseListDumper):
         if item is None:
             return self.cls
 
-        # If we got a number, let's dump them as numeric text array.
-        # Don't check for subclasses because if someone has used Int2 etc
-        # they probably know better what they want.
-        if type(item) in MixedNumbersListDumper.NUMBERS_TYPES:
-            return MixedNumbersListDumper
-
         sd = self._tx.get_dumper(item, format)
         return (self.cls, sd.get_key(item, format))  # type: ignore
 
@@ -112,9 +117,6 @@ class ListDumper(BaseListDumper):
         if item is None:
             # Empty lists can only be dumped as text if the type is unknown.
             return self
-
-        if type(item) in MixedNumbersListDumper.NUMBERS_TYPES:
-            return MixedNumbersListDumper(self.cls, self._tx)
 
         sd = self._tx.get_dumper(item, format.from_pq(self.format))
         dumper = type(self)(self.cls, self._tx)
@@ -191,32 +193,6 @@ def _get_needs_quotes_regexp(delimiter: bytes) -> Pattern[bytes]:
         """
         % delimiter
     )
-
-
-class MixedItemsListDumper(ListDumper):
-    """
-    An array dumper that doesn't assume that all the items are the same type.
-
-    Such dumper can be only textual and return either unknown oid or something
-    that work for every type contained.
-    """
-
-    def get_key(self, obj: List[Any], format: PyFormat) -> DumperKey:
-        return self.cls
-
-    def _dump_item(self, item: Any) -> Buffer:
-        # If we get here, the sub_dumper must have been set
-        return self._tx.get_dumper(item, PyFormat.TEXT).dump(item)
-
-
-class MixedNumbersListDumper(MixedItemsListDumper):
-    """
-    A text dumper to dump lists containing any number as numeric array.
-    """
-
-    NUMBERS_TYPES = (int, float, Decimal)
-
-    oid = postgres.types["numeric"].array_oid
 
 
 class ListBinaryDumper(BaseListDumper):
@@ -297,17 +273,6 @@ class ListBinaryDumper(BaseListDumper):
         data[0] = _pack_head(len(dims), hasnull, sub_oid)
         data[1] = b"".join(_pack_dim(dim, 1) for dim in dims)
         return b"".join(data)
-
-    def _find_list_element(self, L: List[Any]) -> Any:
-        item = super()._find_list_element(L)
-        if not isinstance(item, int):
-            return item
-
-        # If we got an int, let's see what is the biggest onw
-        it = self._flatiter(L, set())
-        imax = max((i if i >= 0 else -i - 1 for i in it), default=0)
-        imax = max(item if item >= 0 else -item, imax)
-        return imax
 
 
 class BaseArrayLoader(RecursiveLoader):
