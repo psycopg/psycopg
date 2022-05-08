@@ -140,26 +140,27 @@ def test_array_of_unknown_builtin(conn):
 
 
 @pytest.mark.parametrize(
-    "array, type",
+    "num, type",
     [
-        ([0], "int2"),
-        ([1, 2**15 - 1], "int2"),
-        ([1, -(2**15)], "int2"),
-        ([1, 2**15], "int4"),
-        ([1, 2**31 - 1], "int4"),
-        ([1, -(2**31)], "int4"),
-        ([1, 2**31], "int8"),
-        ([1, 2**63 - 1], "int8"),
-        ([1, -(2**63)], "int8"),
-        ([1, 2**63], "numeric"),
+        (0, "int2"),
+        (2**15 - 1, "int2"),
+        (-(2**15), "int2"),
+        (2**15, "int4"),
+        (2**31 - 1, "int4"),
+        (-(2**31), "int4"),
+        (2**31, "int8"),
+        (2**63 - 1, "int8"),
+        (-(2**63), "int8"),
+        (2**63, "numeric"),
     ],
 )
 @pytest.mark.parametrize("fmt_in", PyFormat)
-def test_numbers_array(array, type, fmt_in):
-    tx = Transformer()
-    dumper = tx.get_dumper(array, fmt_in)
-    dumper.dump(array)
-    assert dumper.oid == builtins[type].array_oid
+def test_numbers_array(num, type, fmt_in):
+    for array in ([num], [1, num]):
+        tx = Transformer()
+        dumper = tx.get_dumper(array, fmt_in)
+        dumper.dump(array)
+        assert dumper.oid == builtins[type].array_oid
 
 
 @pytest.mark.parametrize("wrapper", "Int2 Int4 Int8 Float4 Float8 Decimal".split())
@@ -180,15 +181,6 @@ def test_list_number_wrapper(conn, wrapper, fmt_in, fmt_out):
     for i in got:
         if i is not None:
             assert type(i) is want_cls
-
-
-def test_mix_types(conn):
-    cur = conn.cursor()
-    cur.execute("create table test (id serial primary key, data numeric[])")
-    cur.execute("insert into test (data) values (%s)", ([1, 2, 0.5],))
-    cur.execute("select data from test")
-    assert cur.fetchone()[0] == [1, 2, Decimal("0.5")]
-    assert cur.description[0].type_code == builtins["numeric"].array_oid
 
 
 @pytest.mark.parametrize("fmt_in", PyFormat)
