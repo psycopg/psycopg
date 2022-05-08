@@ -293,14 +293,9 @@ def test_array_dumper(conn, fmt_out):
     t = Transformer(conn)
     fmt_in = PyFormat.from_pq(fmt_out)
     dint = t.get_dumper([0], fmt_in)
-    if fmt_out == pq.Format.BINARY:
-        assert isinstance(dint, ListBinaryDumper)
-        assert dint.oid == builtins["int2"].array_oid
-        assert dint.sub_dumper and dint.sub_dumper.oid == builtins["int2"].oid
-    else:
-        assert isinstance(dint, ListDumper)
-        assert dint.oid == builtins["numeric"].array_oid
-        assert dint.sub_dumper is None
+    assert isinstance(dint, (ListDumper, ListBinaryDumper))
+    assert dint.oid == builtins["int2"].array_oid
+    assert dint.sub_dumper and dint.sub_dumper.oid == builtins["int2"].oid
 
     dstr = t.get_dumper([""], fmt_in)
     if fmt_in == PyFormat.BINARY:

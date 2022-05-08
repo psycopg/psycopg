@@ -14,6 +14,8 @@ Psycopg 3.0.13 (unreleased)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 - Fix `Cursor.stream()` slowness (:ticket:`#286`).
+- Fix oid for lists of integers, which might cause the server choosing
+  bad plans (:ticket:`#293`).
 - Make `Connection.cancel()` on a closed connection a no-op instead of an
   error.
 
