@@ -90,16 +90,6 @@ class BaseTransaction(Generic[ConnectionType]):
             raise TypeError("transaction blocks can be used only once")
         self._entered = True
 
-        # If we are in pipeline mode and connection idle, we might be in a
-        # nested statement but we haven't received yet the result to go
-        # INTRANS. This would make _push_savepoint() fail. If so, synchronize
-        # with the server.
-        if (
-            self._conn._pipeline
-            and self.pgconn.transaction_status == TransactionStatus.IDLE
-        ):
-            yield from self._conn._pipeline._sync_gen()
-
         self._push_savepoint()
         for command in self._get_enter_commands():
             yield from self._conn._exec_command(command)
@@ -138,9 +128,6 @@ class BaseTransaction(Generic[ConnectionType]):
         for command in self._get_commit_commands():
             yield from self._conn._exec_command(command)
 
-        if self._conn._pipeline:
-            yield from self._conn._pipeline._sync_gen()
-
     def _rollback_gen(self, exc_val: Optional[BaseException]) -> PQGen[bool]:
         if isinstance(exc_val, Rollback):
             logger.debug(f"{self._conn}: Explicit rollback from: ", exc_info=True)
@@ -149,13 +136,6 @@ class BaseTransaction(Generic[ConnectionType]):
         self._exited = True
         if ex:
             raise ex
-
-        # Get out of a "pipeline aborted" state
-        if (
-            self._conn._pipeline
-            and self.pgconn.pipeline_status == pq.PipelineStatus.ABORTED
-        ):
-            yield from self._conn._pipeline._sync_gen()
 
         for command in self._get_rollback_commands():
             yield from self._conn._exec_command(command)

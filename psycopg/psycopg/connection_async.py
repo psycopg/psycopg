@@ -283,6 +283,7 @@ class AsyncConnection(BaseConnection[Row]):
         """
         tx = AsyncTransaction(self, savepoint_name, force_rollback)
         if self._pipeline:
+            await self._pipeline.sync()
             async with tx, self.pipeline():
                 yield tx
         else:

@@ -90,16 +90,15 @@ class BasePipeline:
         yield from self._fetch_gen(flush=False)
 
     def _exit_gen(self) -> PQGen[None]:
-        """Exit current pipeline by sending a Sync and, unless within a nested
-        pipeline, also fetch back all remaining results.
+        """
+        Exit current pipeline by sending a Sync and fetch back all remaining results.
         """
         try:
             self._enqueue_sync()
             yield from self._communicate_gen()
         finally:
-            if self.level == 1:
-                # No need to force flush since we emitted a sync just before.
-                yield from self._fetch_gen(flush=False)
+            # No need to force flush since we emitted a sync just before.
+            yield from self._fetch_gen(flush=False)
 
     def _communicate_gen(self) -> PQGen[None]:
         """Communicate with pipeline to send commands and possibly fetch
