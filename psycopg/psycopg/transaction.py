@@ -138,6 +138,9 @@ class BaseTransaction(Generic[ConnectionType]):
         for command in self._get_commit_commands():
             yield from self._conn._exec_command(command)
 
+        if self._conn._pipeline:
+            yield from self._conn._pipeline._sync_gen()
+
     def _rollback_gen(self, exc_val: Optional[BaseException]) -> PQGen[bool]:
         if isinstance(exc_val, Rollback):
             logger.debug(f"{self._conn}: Explicit rollback from: ", exc_info=True)
