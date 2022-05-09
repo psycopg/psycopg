@@ -90,6 +90,16 @@ class BaseTransaction(Generic[ConnectionType]):
             raise TypeError("transaction blocks can be used only once")
         self._entered = True
 
+        # If we are in pipeline mode and connection idle, we might be in a
+        # nested statement but we haven't received yet the result to go
+        # INTRANS. This would make _push_savepoint() fail. If so, synchronize
+        # with the server.
+        if (
+            self._conn._pipeline
+            and self.pgconn.transaction_status == TransactionStatus.IDLE
+        ):
+            yield from self._conn._pipeline._sync_gen()
+
         self._push_savepoint()
         for command in self._get_enter_commands():
             yield from self._conn._exec_command(command)

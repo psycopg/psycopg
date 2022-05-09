@@ -398,6 +398,16 @@ def test_transaction_nested(conn):
         assert r == "inner"
 
 
+def test_transaction_nested_no_statement(conn):
+    with conn.pipeline():
+        with conn.transaction():
+            with conn.transaction():
+                cur = conn.execute("select 1")
+
+        (r,) = cur.fetchone()
+        assert r == 1
+
+
 def test_outer_transaction(conn):
     with conn.transaction():
         with conn.pipeline():

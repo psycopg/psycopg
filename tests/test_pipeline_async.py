@@ -400,6 +400,16 @@ async def test_transaction_nested(aconn):
         assert r == "inner"
 
 
+async def test_transaction_nested_no_statement(aconn):
+    async with aconn.pipeline():
+        async with aconn.transaction():
+            async with aconn.transaction():
+                cur = await aconn.execute("select 1")
+
+        (r,) = await cur.fetchone()
+        assert r == 1
+
+
 async def test_outer_transaction(aconn):
     async with aconn.transaction():
         async with aconn.pipeline():
