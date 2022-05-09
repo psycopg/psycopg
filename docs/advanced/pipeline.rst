@@ -251,7 +251,7 @@ only committed when the Sync is received. As such, a failure in a group of
 statements will probably invalidate the effect of statements executed after
 the previous Sync, and will propagate to the following Sync.
 
-For example, the following block:
+For example, in the following block:
 
 .. code:: python
 
@@ -266,8 +266,9 @@ For example, the following block:
     ...             pass
     ...         cur.execute("INSERT INTO mytable (data) VALUES (%s)", ["four"])
 
-fails with the error ``relation "no_such_table" does not exist`` and, at the
-end of the block, the table will contain:
+there will be an error in the block, ``relation "no_such_table" does not
+exist`` caused by the insert ``two``, but probably raised by the `!sync()`
+call. At at the end of the block, the table will contain:
 
 .. code:: text
 
@@ -290,15 +291,15 @@ because:
 
 .. warning::
 
-    The exact Python statement where the exception is raised is somewhat
-    arbitrary: it depends on when the server returns the error message. In the
-    above example, the `!execute()` of the statement ``two`` is not the one
-    expected to raise the exception. The exception might be raised by the
-    `!sync()`, or when leaving the `!Pipeline` block.
+    The exact Python statement where an exception caused by a server error is
+    raised is somewhat arbitrary: it depends on when the server flushes its
+    buffered result.
 
-    Do not rely on expectations of a precise point where the exception is
-    raised; make sure to use transactions if you want to guarantee that a set
-    of statements is handled atomically by the server.
+    If you want to make sure that a group of statements is applied atomically
+    by the server, do make use of transaction methods such as
+    `~Connection.commit()` or `~Connection.transaction()`: these methods will
+    also sync the pipeline and raise an exception if there was any error in
+    the commands executed so far.
 
 
 The fine prints
