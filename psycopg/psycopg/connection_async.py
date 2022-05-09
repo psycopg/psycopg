@@ -282,8 +282,12 @@ class AsyncConnection(BaseConnection[Row]):
         :rtype: AsyncTransaction
         """
         tx = AsyncTransaction(self, savepoint_name, force_rollback)
-        async with tx:
-            yield tx
+        if self._pipeline:
+            async with tx, self.pipeline():
+                yield tx
+        else:
+            async with tx:
+                yield tx
 
     async def notifies(self) -> AsyncGenerator[Notify, None]:
         while 1:

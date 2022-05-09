@@ -240,7 +240,6 @@ async def test_errors_raised_on_transaction_exit(aconn):
             async with aconn.transaction():
                 await aconn.execute("select 1 from nosuchtable")
                 here = True
-        await aconn.rollback()  # TODO: inconsistent with non-pipeline.
         cur1 = await aconn.execute("select 1")
     assert here
     cur2 = await aconn.execute("select 2")

@@ -869,8 +869,13 @@ class Connection(BaseConnection[Row]):
             block even if there were no error (e.g. to try a no-op process).
         :rtype: Transaction
         """
-        with Transaction(self, savepoint_name, force_rollback) as tx:
-            yield tx
+        tx = Transaction(self, savepoint_name, force_rollback)
+        if self._pipeline:
+            with tx, self.pipeline():
+                yield tx
+        else:
+            with tx:
+                yield tx
 
     def notifies(self) -> Generator[Notify, None, None]:
         """
