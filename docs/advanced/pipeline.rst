@@ -237,7 +237,7 @@ Flushing query results to the client can happen either when a synchronization
 point is established by Psycopg:
 
 - using the `Pipeline.sync()` method;
-- on `Connection.rollback()`;
+- on `Connection.commit()` or `~Connection.rollback()`;
 - at the end of a `!Pipeline` block;
 - using a fetch method such as `Cursor.fetchone()` (which only flushes the
   query but doesn't issue a Sync and doesn't reset a pipeline state error).

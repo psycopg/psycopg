@@ -519,6 +519,9 @@ class BaseConnection(Generic[Row]):
 
         yield from self._exec_command(b"COMMIT")
 
+        if self._pipeline:
+            yield from self._pipeline._sync_gen()
+
     def _rollback_gen(self) -> PQGen[None]:
         """Generator implementing `Connection.rollback()`."""
         if self._num_transactions:

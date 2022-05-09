@@ -220,6 +220,41 @@ async def test_sync_syncs_errors(aconn):
             await p.sync()
 
 
+async def test_errors_raised_on_commit(aconn):
+    async with aconn.pipeline():
+        await aconn.execute("select 1 from nosuchtable")
+        with pytest.raises(e.UndefinedTable):
+            await aconn.commit()
+        await aconn.rollback()
+        cur1 = await aconn.execute("select 1")
+    cur2 = await aconn.execute("select 2")
+
+    assert await cur1.fetchone() == (1,)
+    assert await cur2.fetchone() == (2,)
+
+
+async def test_error_on_commit(aconn):
+    await aconn.execute(
+        """
+        drop table if exists selfref;
+        create table selfref (
+            x serial primary key,
+            y int references selfref (x) deferrable initially deferred)
+        """
+    )
+    await aconn.commit()
+
+    async with aconn.pipeline():
+        await aconn.execute("insert into selfref (y) values (-1)")
+        with pytest.raises(e.ForeignKeyViolation):
+            await aconn.commit()
+        cur1 = await aconn.execute("select 1")
+    cur2 = await aconn.execute("select 2")
+
+    assert (await cur1.fetchone()) == (1,)
+    assert (await cur2.fetchone()) == (2,)
+
+
 async def test_fetch_no_result(aconn):
     async with aconn.pipeline():
         cur = aconn.cursor()

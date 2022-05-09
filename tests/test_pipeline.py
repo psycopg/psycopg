@@ -217,6 +217,41 @@ def test_sync_syncs_errors(conn):
             p.sync()
 
 
+def test_errors_raised_on_commit(conn):
+    with conn.pipeline():
+        conn.execute("select 1 from nosuchtable")
+        with pytest.raises(e.UndefinedTable):
+            conn.commit()
+        conn.rollback()
+        cur1 = conn.execute("select 1")
+    cur2 = conn.execute("select 2")
+
+    assert cur1.fetchone() == (1,)
+    assert cur2.fetchone() == (2,)
+
+
+def test_error_on_commit(conn):
+    conn.execute(
+        """
+        drop table if exists selfref;
+        create table selfref (
+            x serial primary key,
+            y int references selfref (x) deferrable initially deferred)
+        """
+    )
+    conn.commit()
+
+    with conn.pipeline():
+        conn.execute("insert into selfref (y) values (-1)")
+        with pytest.raises(e.ForeignKeyViolation):
+            conn.commit()
+        cur1 = conn.execute("select 1")
+    cur2 = conn.execute("select 2")
+
+    assert cur1.fetchone() == (1,)
+    assert cur2.fetchone() == (2,)
+
+
 def test_fetch_no_result(conn):
     with conn.pipeline():
         cur = conn.cursor()
