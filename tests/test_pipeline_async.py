@@ -251,12 +251,12 @@ async def test_errors_raised_on_transaction_exit(aconn):
 async def test_errors_raised_on_nested_transaction_exit(aconn):
     here = False
     async with aconn.pipeline():
-        with pytest.raises(e.UndefinedTable):
-            async with aconn.transaction():
+        async with aconn.transaction():
+            with pytest.raises(e.UndefinedTable):
                 async with aconn.transaction():
                     await aconn.execute("select 1 from nosuchtable")
                     here = True
-        cur1 = await aconn.execute("select 1")
+            cur1 = await aconn.execute("select 1")
     assert here
     cur2 = await aconn.execute("select 2")
 

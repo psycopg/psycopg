@@ -248,12 +248,12 @@ def test_errors_raised_on_transaction_exit(conn):
 def test_errors_raised_on_nested_transaction_exit(conn):
     here = False
     with conn.pipeline():
-        with pytest.raises(e.UndefinedTable):
-            with conn.transaction():
+        with conn.transaction():
+            with pytest.raises(e.UndefinedTable):
                 with conn.transaction():
                     conn.execute("select 1 from nosuchtable")
                     here = True
-        cur1 = conn.execute("select 1")
+            cur1 = conn.execute("select 1")
     assert here
     cur2 = conn.execute("select 2")
 
