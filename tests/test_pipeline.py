@@ -201,6 +201,22 @@ def test_pipeline_commit_aborted(conn):
             conn.commit()
 
 
+def test_sync_syncs_results(conn):
+    with conn.pipeline() as p:
+        cur = conn.execute("select 1")
+        assert cur.statusmessage is None
+        p.sync()
+        assert cur.statusmessage == "SELECT 1"
+
+
+def test_sync_syncs_errors(conn):
+    conn.autocommit = True
+    with conn.pipeline() as p:
+        conn.execute("select 1 from nosuchtable")
+        with pytest.raises(e.UndefinedTable):
+            p.sync()
+
+
 def test_fetch_no_result(conn):
     with conn.pipeline():
         cur = conn.cursor()

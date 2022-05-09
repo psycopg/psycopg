@@ -257,10 +257,13 @@ For example, the following block:
 
     >>> with psycopg.connect(autocommit=True) as conn:
     ...     with conn.pipeline() as p, conn.cursor() as cur:
-    ...         cur.execute("INSERT INTO mytable (data) VALUES (%s)", ["one"])
-    ...         cur.execute("INSERT INTO no_such_table (data) VALUES (%s)", ["two"])
-    ...         conn.execute("INSERT INTO mytable (data) VALUES (%s)", ["three"])
-    ...         p.sync()
+    ...         try:
+    ...             cur.execute("INSERT INTO mytable (data) VALUES (%s)", ["one"])
+    ...             cur.execute("INSERT INTO no_such_table (data) VALUES (%s)", ["two"])
+    ...             conn.execute("INSERT INTO mytable (data) VALUES (%s)", ["three"])
+    ...             p.sync()
+    ...         except psycopg.errors.UndefinedTable:
+    ...             pass
     ...         cur.execute("INSERT INTO mytable (data) VALUES (%s)", ["four"])
 
 fails with the error ``relation "no_such_table" does not exist`` and, at the

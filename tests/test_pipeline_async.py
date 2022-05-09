@@ -204,6 +204,22 @@ async def test_pipeline_commit_aborted(aconn):
             await aconn.commit()
 
 
+async def test_sync_syncs_results(aconn):
+    async with aconn.pipeline() as p:
+        cur = await aconn.execute("select 1")
+        assert cur.statusmessage is None
+        await p.sync()
+        assert cur.statusmessage == "SELECT 1"
+
+
+async def test_sync_syncs_errors(aconn):
+    await aconn.set_autocommit(True)
+    async with aconn.pipeline() as p:
+        await aconn.execute("select 1 from nosuchtable")
+        with pytest.raises(e.UndefinedTable):
+            await p.sync()
+
+
 async def test_fetch_no_result(aconn):
     async with aconn.pipeline():
         cur = aconn.cursor()
