@@ -225,7 +225,7 @@ async def test_errors_raised_on_commit(aconn):
         await aconn.execute("select 1 from nosuchtable")
         with pytest.raises(e.UndefinedTable):
             await aconn.commit()
-        await aconn.rollback()  # TODO: inconsistent with non-pipeline.
+        await aconn.rollback()
         cur1 = await aconn.execute("select 1")
     cur2 = await aconn.execute("select 2")
 
@@ -256,7 +256,6 @@ async def test_errors_raised_on_nested_transaction_exit(aconn):
                 async with aconn.transaction():
                     await aconn.execute("select 1 from nosuchtable")
                     here = True
-        await aconn.rollback()  # TODO: inconsistent with non-pipeline.
         cur1 = await aconn.execute("select 1")
     assert here
     cur2 = await aconn.execute("select 2")

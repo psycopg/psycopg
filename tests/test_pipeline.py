@@ -222,7 +222,7 @@ def test_errors_raised_on_commit(conn):
         conn.execute("select 1 from nosuchtable")
         with pytest.raises(e.UndefinedTable):
             conn.commit()
-        conn.rollback()  # TODO: inconsistent with non-pipeline.
+        conn.rollback()
         cur1 = conn.execute("select 1")
     cur2 = conn.execute("select 2")
 
@@ -253,7 +253,6 @@ def test_errors_raised_on_nested_transaction_exit(conn):
                 with conn.transaction():
                     conn.execute("select 1 from nosuchtable")
                     here = True
-        conn.rollback()  # TODO: inconsistent with non-pipeline.
         cur1 = conn.execute("select 1")
     assert here
     cur2 = conn.execute("select 2")
