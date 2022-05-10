@@ -19,7 +19,7 @@ pytestmark = [
 async def test_repr(aconn):
     async with aconn.pipeline() as p:
         assert "psycopg.AsyncPipeline" in repr(p)
-        assert "[IDLE]" in repr(p)
+        assert "[IDLE, pipeline=ON]" in repr(p)
 
     await aconn.close()
     assert "[BAD]" in repr(p)

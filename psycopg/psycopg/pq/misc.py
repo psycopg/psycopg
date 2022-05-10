@@ -7,7 +7,7 @@ Various functionalities to make easier to work with the libpq.
 from typing import cast, NamedTuple, Optional, Union
 
 from .abc import PGconn, PGresult
-from ._enums import ConnStatus, TransactionStatus
+from ._enums import ConnStatus, TransactionStatus, PipelineStatus
 from .._encodings import pgconn_encoding
 
 
@@ -88,8 +88,12 @@ def connection_summary(pgconn: PGconn) -> str:
     """
     parts = []
     if pgconn.status == ConnStatus.OK:
-
+        # Put together the [STATUS]
         status = TransactionStatus(pgconn.transaction_status).name
+        if pgconn.pipeline_status:
+            status += f", pipeline={PipelineStatus(pgconn.pipeline_status).name}"
+
+        # Put together the (CONNECTION)
         if not pgconn.host.startswith(b"/"):
             parts.append(("host", pgconn.host.decode()))
         if pgconn.port != b"5432":
@@ -97,6 +101,7 @@ def connection_summary(pgconn: PGconn) -> str:
         if pgconn.user != pgconn.db:
             parts.append(("user", pgconn.user.decode()))
         parts.append(("database", pgconn.db.decode()))
+
     else:
         status = ConnStatus(pgconn.status).name
 

@@ -16,7 +16,7 @@ pytestmark = pytest.mark.libpq(">= 14")
 def test_repr(conn):
     with conn.pipeline() as p:
         assert "psycopg.Pipeline" in repr(p)
-        assert "[IDLE]" in repr(p)
+        assert "[IDLE, pipeline=ON]" in repr(p)
 
     conn.close()
     assert "[BAD]" in repr(p)
