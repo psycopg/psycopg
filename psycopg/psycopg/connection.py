@@ -613,6 +613,8 @@ class BaseConnection(Generic[Row]):
         xid = self._tpc[0]
         self._tpc = (xid, True)
         yield from self._exec_command(SQL("PREPARE TRANSACTION {}").format(str(xid)))
+        if self._pipeline:
+            yield from self._pipeline._sync_gen()
 
     def _tpc_finish_gen(self, action: str, xid: Union[Xid, str, None]) -> PQGen[None]:
         fname = f"tpc_{action}()"
