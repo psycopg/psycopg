@@ -7,11 +7,11 @@
 ``psycopg`` release notes
 =========================
 
-Future releases
+Current release
 ---------------
 
-Psycopg 3.0.13 (unreleased)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Psycopg 3.0.13
+^^^^^^^^^^^^^^
 
 - Fix `Cursor.stream()` slowness (:ticket:`#286`).
 - Fix oid for lists of integers, which might cause the server choosing
@@ -19,9 +19,6 @@ Psycopg 3.0.13 (unreleased)
 - Make `Connection.cancel()` on a closed connection a no-op instead of an
   error.
 
-
-Current release
----------------
 
 Psycopg 3.0.12
 ^^^^^^^^^^^^^^
