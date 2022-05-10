@@ -336,7 +336,7 @@ def test_autocommit_inerror(conn):
 def test_autocommit_unknown(conn):
     conn.close()
     assert conn.pgconn.transaction_status == conn.TransactionStatus.UNKNOWN
-    with pytest.raises(psycopg.ProgrammingError):
+    with pytest.raises(psycopg.OperationalError):
         conn.autocommit = True
     assert not conn.autocommit
 

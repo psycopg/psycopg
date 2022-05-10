@@ -340,7 +340,7 @@ async def test_autocommit_inerror(aconn):
 async def test_autocommit_unknown(aconn):
     await aconn.close()
     assert aconn.pgconn.transaction_status == aconn.TransactionStatus.UNKNOWN
-    with pytest.raises(psycopg.ProgrammingError):
+    with pytest.raises(psycopg.OperationalError):
         await aconn.set_autocommit(True)
     assert not aconn.autocommit
 

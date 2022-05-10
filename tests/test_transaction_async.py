@@ -13,10 +13,17 @@ from .test_transaction import create_test_table  # noqa  # autouse fixture
 pytestmark = pytest.mark.asyncio
 
 
-async def test_basic(aconn):
+@pytest.fixture
+async def aconn(aconn, apipeline):
+    return aconn
+
+
+async def test_basic(aconn, apipeline):
     """Basic use of transaction() to BEGIN and COMMIT a transaction."""
     assert not in_transaction(aconn)
     async with aconn.transaction():
+        if apipeline:
+            await apipeline.sync()
         assert in_transaction(aconn)
     assert not in_transaction(aconn)
 
@@ -46,11 +53,13 @@ async def test_cant_reenter(aconn):
             pass
 
 
-async def test_begins_on_enter(aconn):
+async def test_begins_on_enter(aconn, apipeline):
     """Transaction does not begin until __enter__() is called."""
     tx = aconn.transaction()
     assert not in_transaction(aconn)
     async with tx:
+        if apipeline:
+            await apipeline.sync()
         assert in_transaction(aconn)
     assert not in_transaction(aconn)
 
@@ -75,7 +84,11 @@ async def test_rollback_on_exception_exit(aconn):
     assert not await inserted(aconn)
 
 
-async def test_context_inerror_rollback_no_clobber(aconn, dsn, caplog):
+async def test_context_inerror_rollback_no_clobber(aconn, apipeline, dsn, caplog):
+    if apipeline:
+        # Only 'aconn' is possibly in pipeline mode, but the transaction and
+        # checks are on 'conn2'.
+        pytest.skip("not applicable")
     caplog.set_level(logging.WARNING, logger="psycopg")
 
     with pytest.raises(ZeroDivisionError):
@@ -207,7 +220,9 @@ async def test_autocommit_off_but_no_tx_started_exception_exit(aconn, svcconn):
     assert not inserted(svcconn)
 
 
-async def test_autocommit_off_and_tx_in_progress_successful_exit(aconn, svcconn):
+async def test_autocommit_off_and_tx_in_progress_successful_exit(
+    aconn, apipeline, svcconn
+):
     """
     Scenario:
     * Connection has autocommit off but and a transaction is already in
@@ -221,6 +236,8 @@ async def test_autocommit_off_and_tx_in_progress_successful_exit(aconn, svcconn)
     """
     await aconn.set_autocommit(False)
     await insert_row(aconn, "prior")
+    if apipeline:
+        await apipeline.sync()
     assert in_transaction(aconn)
     async with aconn.transaction():
         await insert_row(aconn, "new")
@@ -230,7 +247,9 @@ async def test_autocommit_off_and_tx_in_progress_successful_exit(aconn, svcconn)
     assert not inserted(svcconn)
 
 
-async def test_autocommit_off_and_tx_in_progress_exception_exit(aconn, svcconn):
+async def test_autocommit_off_and_tx_in_progress_exception_exit(
+    aconn, apipeline, svcconn
+):
     """
     Scenario:
     * Connection has autocommit off but and a transaction is already in
@@ -245,6 +264,8 @@ async def test_autocommit_off_and_tx_in_progress_exception_exit(aconn, svcconn):
     """
     await aconn.set_autocommit(False)
     await insert_row(aconn, "prior")
+    if apipeline:
+        await apipeline.sync()
     assert in_transaction(aconn)
     with pytest.raises(ExpectedException):
         async with aconn.transaction():
@@ -590,16 +611,27 @@ async def test_explicit_rollback_of_enclosing_tx_outer_tx_unaffected(aconn, svcc
     assert inserted(svcconn) == {"outer-before", "outer-after"}
 
 
-async def test_str(aconn):
+async def test_str(aconn, apipeline):
     async with aconn.transaction() as tx:
-        assert "[INTRANS]" in str(tx)
+        if apipeline:
+            assert "[INTRANS]" not in str(tx)
+            await apipeline.sync()
+            assert "[INTRANS, pipeline=ON]" in str(tx)
+        else:
+            assert "[INTRANS]" in str(tx)
         assert "(active)" in str(tx)
         assert "'" not in str(tx)
         async with aconn.transaction("wat") as tx2:
-            assert "[INTRANS]" in str(tx2)
+            if apipeline:
+                assert "[INTRANS, pipeline=ON]" in str(tx2)
+            else:
+                assert "[INTRANS]" in str(tx2)
             assert "'wat'" in str(tx2)
 
-    assert "[IDLE]" in str(tx)
+    if apipeline:
+        assert "[IDLE, pipeline=ON]" in str(tx)
+    else:
+        assert "[IDLE]" in str(tx)
     assert "(terminated)" in str(tx)
 
     with pytest.raises(ZeroDivisionError):

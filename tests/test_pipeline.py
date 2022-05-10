@@ -10,7 +10,10 @@ import psycopg
 from psycopg import pq
 from psycopg import errors as e
 
-pytestmark = pytest.mark.libpq(">= 14")
+pytestmark = [
+    pytest.mark.libpq(">= 14"),
+    pytest.mark.pipeline,
+]
 
 
 def test_repr(conn):

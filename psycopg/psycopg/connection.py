@@ -183,9 +183,10 @@ class BaseConnection(Generic[Row]):
         self._set_autocommit(value)
 
     def _set_autocommit(self, value: bool) -> None:
-        # Base implementation, not thread safe.
-        # Subclasses must call it holding a lock
-        self._check_intrans("autocommit")
+        raise NotImplementedError
+
+    def _set_autocommit_gen(self, value: bool) -> PQGen[None]:
+        yield from self._check_intrans_gen("autocommit")
         self._autocommit = bool(value)
 
     @property
@@ -200,9 +201,10 @@ class BaseConnection(Generic[Row]):
         self._set_isolation_level(value)
 
     def _set_isolation_level(self, value: Optional[IsolationLevel]) -> None:
-        # Base implementation, not thread safe.
-        # Subclasses must call it holding a lock
-        self._check_intrans("isolation_level")
+        raise NotImplementedError
+
+    def _set_isolation_level_gen(self, value: Optional[IsolationLevel]) -> PQGen[None]:
+        yield from self._check_intrans_gen("isolation_level")
         self._isolation_level = IsolationLevel(value) if value is not None else None
         self._begin_statement = b""
 
@@ -218,9 +220,10 @@ class BaseConnection(Generic[Row]):
         self._set_read_only(value)
 
     def _set_read_only(self, value: Optional[bool]) -> None:
-        # Base implementation, not thread safe.
-        # Subclasses must call it holding a lock
-        self._check_intrans("read_only")
+        raise NotImplementedError
+
+    def _set_read_only_gen(self, value: Optional[bool]) -> PQGen[None]:
+        yield from self._check_intrans_gen("read_only")
         self._read_only = bool(value)
         self._begin_statement = b""
 
@@ -236,15 +239,19 @@ class BaseConnection(Generic[Row]):
         self._set_deferrable(value)
 
     def _set_deferrable(self, value: Optional[bool]) -> None:
-        # Base implementation, not thread safe.
-        # Subclasses must call it holding a lock
-        self._check_intrans("deferrable")
+        raise NotImplementedError
+
+    def _set_deferrable_gen(self, value: Optional[bool]) -> PQGen[None]:
+        yield from self._check_intrans_gen("deferrable")
         self._deferrable = bool(value)
         self._begin_statement = b""
 
-    def _check_intrans(self, attribute: str) -> None:
+    def _check_intrans_gen(self, attribute: str) -> PQGen[None]:
         # Raise an exception if we are in a transaction
         status = self.pgconn.transaction_status
+        if status == TransactionStatus.IDLE and self._pipeline:
+            yield from self._pipeline._sync_gen()
+            status = self.pgconn.transaction_status
         if status != TransactionStatus.IDLE:
             if self._num_transactions:
                 raise e.ProgrammingError(
@@ -872,7 +879,7 @@ class Connection(BaseConnection[Row]):
         tx = Transaction(self, savepoint_name, force_rollback)
         if self._pipeline:
             self._pipeline.sync()
-            with tx, self.pipeline():
+            with self.pipeline(), tx, self.pipeline():
                 yield tx
         else:
             with tx:
@@ -937,19 +944,19 @@ class Connection(BaseConnection[Row]):
 
     def _set_autocommit(self, value: bool) -> None:
         with self.lock:
-            super()._set_autocommit(value)
+            self.wait(self._set_autocommit_gen(value))
 
     def _set_isolation_level(self, value: Optional[IsolationLevel]) -> None:
         with self.lock:
-            super()._set_isolation_level(value)
+            self.wait(self._set_isolation_level_gen(value))
 
     def _set_read_only(self, value: Optional[bool]) -> None:
         with self.lock:
-            super()._set_read_only(value)
+            self.wait(self._set_read_only_gen(value))
 
     def _set_deferrable(self, value: Optional[bool]) -> None:
         with self.lock:
-            super()._set_deferrable(value)
+            self.wait(self._set_deferrable_gen(value))
 
     def tpc_begin(self, xid: Union[Xid, str]) -> None:
         """

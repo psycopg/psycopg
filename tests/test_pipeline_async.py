@@ -11,8 +11,9 @@ from psycopg import pq
 from psycopg import errors as e
 
 pytestmark = [
-    pytest.mark.libpq(">= 14"),
     pytest.mark.asyncio,
+    pytest.mark.libpq(">= 14"),
+    pytest.mark.pipeline,
 ]
 
 
