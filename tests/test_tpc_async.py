@@ -6,7 +6,7 @@ from psycopg.pq import TransactionStatus
 pytestmark = [pytest.mark.asyncio]
 
 
-async def test_tpc_disabled(aconn):
+async def test_tpc_disabled(aconn, apipeline):
     cur = await aconn.execute("show max_prepared_transactions")
     val = int((await cur.fetchone())[0])
     if val:

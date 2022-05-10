@@ -4,7 +4,7 @@ import psycopg
 from psycopg.pq import TransactionStatus
 
 
-def test_tpc_disabled(conn):
+def test_tpc_disabled(conn, pipeline):
     val = int(conn.execute("show max_prepared_transactions").fetchone()[0])
     if val:
         pytest.skip("prepared transactions enabled")
