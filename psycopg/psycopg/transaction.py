@@ -137,13 +137,6 @@ class BaseTransaction(Generic[ConnectionType]):
         if ex:
             raise ex
 
-        # Get out of a "pipeline aborted" state
-        if (
-            self._conn._pipeline
-            and self.pgconn.pipeline_status == pq.PipelineStatus.ABORTED
-        ):
-            yield from self._conn._pipeline._sync_gen()
-
         for command in self._get_rollback_commands():
             yield from self._conn._exec_command(command)
 

@@ -11,9 +11,8 @@ else:
     from typing_extensions import TypedDict
 
 import psycopg
-from psycopg import Connection, Notify
+from psycopg import Connection, Notify, errors as e
 from psycopg.rows import tuple_row
-from psycopg.errors import UndefinedTable
 from psycopg.conninfo import conninfo_to_dict, make_conninfo
 
 from .utils import gc_collect
@@ -151,7 +150,7 @@ def test_context_rollback(conn, dsn):
 
     with psycopg.connect(dsn) as conn:
         with conn.cursor() as cur:
-            with pytest.raises(UndefinedTable):
+            with pytest.raises(e.UndefinedTable):
                 cur.execute("select * from textctx")
 
 
@@ -219,6 +218,25 @@ def test_commit(conn):
     conn.close()
     with pytest.raises(psycopg.OperationalError):
         conn.commit()
+
+
+def test_commit_error(conn):
+    conn.execute(
+        """
+        drop table if exists selfref;
+        create table selfref (
+            x serial primary key,
+            y int references selfref (x) deferrable initially deferred)
+        """
+    )
+    conn.commit()
+
+    conn.execute("insert into selfref (y) values (-1)")
+    with pytest.raises(e.ForeignKeyViolation):
+        conn.commit()
+    assert conn.pgconn.transaction_status == conn.TransactionStatus.IDLE
+    cur = conn.execute("select 1")
+    assert cur.fetchone() == (1,)
 
 
 def test_rollback(conn):

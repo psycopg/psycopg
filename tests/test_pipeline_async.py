@@ -204,6 +204,88 @@ async def test_pipeline_commit_aborted(aconn):
             await aconn.commit()
 
 
+async def test_sync_syncs_results(aconn):
+    async with aconn.pipeline() as p:
+        cur = await aconn.execute("select 1")
+        assert cur.statusmessage is None
+        await p.sync()
+        assert cur.statusmessage == "SELECT 1"
+
+
+async def test_sync_syncs_errors(aconn):
+    await aconn.set_autocommit(True)
+    async with aconn.pipeline() as p:
+        await aconn.execute("select 1 from nosuchtable")
+        with pytest.raises(e.UndefinedTable):
+            await p.sync()
+
+
+async def test_errors_raised_on_commit(aconn):
+    async with aconn.pipeline():
+        await aconn.execute("select 1 from nosuchtable")
+        with pytest.raises(e.UndefinedTable):
+            await aconn.commit()
+        await aconn.rollback()
+        cur1 = await aconn.execute("select 1")
+    cur2 = await aconn.execute("select 2")
+
+    assert await cur1.fetchone() == (1,)
+    assert await cur2.fetchone() == (2,)
+
+
+async def test_errors_raised_on_transaction_exit(aconn):
+    here = False
+    async with aconn.pipeline():
+        with pytest.raises(e.UndefinedTable):
+            async with aconn.transaction():
+                await aconn.execute("select 1 from nosuchtable")
+                here = True
+        cur1 = await aconn.execute("select 1")
+    assert here
+    cur2 = await aconn.execute("select 2")
+
+    assert await cur1.fetchone() == (1,)
+    assert await cur2.fetchone() == (2,)
+
+
+async def test_errors_raised_on_nested_transaction_exit(aconn):
+    here = False
+    async with aconn.pipeline():
+        async with aconn.transaction():
+            with pytest.raises(e.UndefinedTable):
+                async with aconn.transaction():
+                    await aconn.execute("select 1 from nosuchtable")
+                    here = True
+            cur1 = await aconn.execute("select 1")
+    assert here
+    cur2 = await aconn.execute("select 2")
+
+    assert await cur1.fetchone() == (1,)
+    assert await cur2.fetchone() == (2,)
+
+
+async def test_error_on_commit(aconn):
+    await aconn.execute(
+        """
+        drop table if exists selfref;
+        create table selfref (
+            x serial primary key,
+            y int references selfref (x) deferrable initially deferred)
+        """
+    )
+    await aconn.commit()
+
+    async with aconn.pipeline():
+        await aconn.execute("insert into selfref (y) values (-1)")
+        with pytest.raises(e.ForeignKeyViolation):
+            await aconn.commit()
+        cur1 = await aconn.execute("select 1")
+    cur2 = await aconn.execute("select 2")
+
+    assert (await cur1.fetchone()) == (1,)
+    assert (await cur2.fetchone()) == (2,)
+
+
 async def test_fetch_no_result(aconn):
     async with aconn.pipeline():
         cur = aconn.cursor()
@@ -347,6 +429,16 @@ async def test_transaction_nested(aconn):
         assert r == "outer"
         (r,) = await inner.fetchone()
         assert r == "inner"
+
+
+async def test_transaction_nested_no_statement(aconn):
+    async with aconn.pipeline():
+        async with aconn.transaction():
+            async with aconn.transaction():
+                cur = await aconn.execute("select 1")
+
+        (r,) = await cur.fetchone()
+        assert r == 1
 
 
 async def test_outer_transaction(aconn):

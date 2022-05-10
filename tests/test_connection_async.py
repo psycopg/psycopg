@@ -4,9 +4,8 @@ import logging
 import weakref
 
 import psycopg
-from psycopg import AsyncConnection, Notify
+from psycopg import AsyncConnection, Notify, errors as e
 from psycopg.rows import tuple_row
-from psycopg.errors import UndefinedTable
 from psycopg.conninfo import conninfo_to_dict, make_conninfo
 
 from .utils import gc_collect
@@ -152,7 +151,7 @@ async def test_context_rollback(aconn, dsn):
 
     async with await psycopg.AsyncConnection.connect(dsn) as aconn:
         async with aconn.cursor() as cur:
-            with pytest.raises(UndefinedTable):
+            with pytest.raises(e.UndefinedTable):
                 await cur.execute("select * from textctx")
 
 
@@ -218,6 +217,25 @@ async def test_commit(aconn):
     await aconn.close()
     with pytest.raises(psycopg.OperationalError):
         await aconn.commit()
+
+
+async def test_commit_error(aconn):
+    await aconn.execute(
+        """
+        drop table if exists selfref;
+        create table selfref (
+            x serial primary key,
+            y int references selfref (x) deferrable initially deferred)
+        """
+    )
+    await aconn.commit()
+
+    await aconn.execute("insert into selfref (y) values (-1)")
+    with pytest.raises(e.ForeignKeyViolation):
+        await aconn.commit()
+    assert aconn.pgconn.transaction_status == aconn.TransactionStatus.IDLE
+    cur = await aconn.execute("select 1")
+    assert await cur.fetchone() == (1,)
 
 
 async def test_rollback(aconn):

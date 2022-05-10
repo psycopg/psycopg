@@ -519,6 +519,9 @@ class BaseConnection(Generic[Row]):
 
         yield from self._exec_command(b"COMMIT")
 
+        if self._pipeline:
+            yield from self._pipeline._sync_gen()
+
     def _rollback_gen(self) -> PQGen[None]:
         """Generator implementing `Connection.rollback()`."""
         if self._num_transactions:
@@ -866,8 +869,14 @@ class Connection(BaseConnection[Row]):
             block even if there were no error (e.g. to try a no-op process).
         :rtype: Transaction
         """
-        with Transaction(self, savepoint_name, force_rollback) as tx:
-            yield tx
+        tx = Transaction(self, savepoint_name, force_rollback)
+        if self._pipeline:
+            self._pipeline.sync()
+            with tx, self.pipeline():
+                yield tx
+        else:
+            with tx:
+                yield tx
 
     def notifies(self) -> Generator[Notify, None, None]:
         """

@@ -201,6 +201,88 @@ def test_pipeline_commit_aborted(conn):
             conn.commit()
 
 
+def test_sync_syncs_results(conn):
+    with conn.pipeline() as p:
+        cur = conn.execute("select 1")
+        assert cur.statusmessage is None
+        p.sync()
+        assert cur.statusmessage == "SELECT 1"
+
+
+def test_sync_syncs_errors(conn):
+    conn.autocommit = True
+    with conn.pipeline() as p:
+        conn.execute("select 1 from nosuchtable")
+        with pytest.raises(e.UndefinedTable):
+            p.sync()
+
+
+def test_errors_raised_on_commit(conn):
+    with conn.pipeline():
+        conn.execute("select 1 from nosuchtable")
+        with pytest.raises(e.UndefinedTable):
+            conn.commit()
+        conn.rollback()
+        cur1 = conn.execute("select 1")
+    cur2 = conn.execute("select 2")
+
+    assert cur1.fetchone() == (1,)
+    assert cur2.fetchone() == (2,)
+
+
+def test_errors_raised_on_transaction_exit(conn):
+    here = False
+    with conn.pipeline():
+        with pytest.raises(e.UndefinedTable):
+            with conn.transaction():
+                conn.execute("select 1 from nosuchtable")
+                here = True
+        cur1 = conn.execute("select 1")
+    assert here
+    cur2 = conn.execute("select 2")
+
+    assert cur1.fetchone() == (1,)
+    assert cur2.fetchone() == (2,)
+
+
+def test_errors_raised_on_nested_transaction_exit(conn):
+    here = False
+    with conn.pipeline():
+        with conn.transaction():
+            with pytest.raises(e.UndefinedTable):
+                with conn.transaction():
+                    conn.execute("select 1 from nosuchtable")
+                    here = True
+            cur1 = conn.execute("select 1")
+    assert here
+    cur2 = conn.execute("select 2")
+
+    assert cur1.fetchone() == (1,)
+    assert cur2.fetchone() == (2,)
+
+
+def test_error_on_commit(conn):
+    conn.execute(
+        """
+        drop table if exists selfref;
+        create table selfref (
+            x serial primary key,
+            y int references selfref (x) deferrable initially deferred)
+        """
+    )
+    conn.commit()
+
+    with conn.pipeline():
+        conn.execute("insert into selfref (y) values (-1)")
+        with pytest.raises(e.ForeignKeyViolation):
+            conn.commit()
+        cur1 = conn.execute("select 1")
+    cur2 = conn.execute("select 2")
+
+    assert cur1.fetchone() == (1,)
+    assert cur2.fetchone() == (2,)
+
+
 def test_fetch_no_result(conn):
     with conn.pipeline():
         cur = conn.cursor()
@@ -345,6 +427,16 @@ def test_transaction_nested(conn):
         assert r == "outer"
         (r,) = inner.fetchone()
         assert r == "inner"
+
+
+def test_transaction_nested_no_statement(conn):
+    with conn.pipeline():
+        with conn.transaction():
+            with conn.transaction():
+                cur = conn.execute("select 1")
+
+        (r,) = cur.fetchone()
+        assert r == 1
 
 
 def test_outer_transaction(conn):
