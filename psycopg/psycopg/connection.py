@@ -872,7 +872,7 @@ class Connection(BaseConnection[Row]):
         tx = Transaction(self, savepoint_name, force_rollback)
         if self._pipeline:
             self._pipeline.sync()
-            with tx, self.pipeline():
+            with self.pipeline(), tx, self.pipeline():
                 yield tx
         else:
             with tx:
