@@ -199,17 +199,12 @@ def test_interaction_dbapi_transaction(conn):
     assert inserted(conn) == {"foo", "baz"}
 
 
-def test_prohibits_use_of_commit_rollback_autocommit(conn, pipeline):
+def test_prohibits_use_of_commit_rollback_autocommit(conn):
     """
     Within a Transaction block, it is forbidden to touch commit, rollback,
     or the autocommit setting on the connection, as this would interfere
     with the transaction scope being managed by the Transaction block.
     """
-    if pipeline:
-        # TODO: Fixing Connection._check_intrans() would require calling
-        # conn._pipeline.sync(), which implies turning _check_intrans() into a
-        # generator method.
-        pytest.xfail("Connection._check_intrans() does not account for pipeline mode")
     conn.autocommit = False
     conn.commit()
     conn.rollback()

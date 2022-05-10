@@ -347,7 +347,7 @@ class AsyncConnection(BaseConnection[Row]):
     async def set_autocommit(self, value: bool) -> None:
         """Async version of the `~Connection.autocommit` setter."""
         async with self.lock:
-            super()._set_autocommit(value)
+            await self.wait(self._set_autocommit_gen(value))
 
     def _set_isolation_level(self, value: Optional[IsolationLevel]) -> None:
         self._no_set_async("isolation_level")
@@ -355,7 +355,7 @@ class AsyncConnection(BaseConnection[Row]):
     async def set_isolation_level(self, value: Optional[IsolationLevel]) -> None:
         """Async version of the `~Connection.isolation_level` setter."""
         async with self.lock:
-            super()._set_isolation_level(value)
+            await self.wait(self._set_isolation_level_gen(value))
 
     def _set_read_only(self, value: Optional[bool]) -> None:
         self._no_set_async("read_only")
@@ -363,7 +363,7 @@ class AsyncConnection(BaseConnection[Row]):
     async def set_read_only(self, value: Optional[bool]) -> None:
         """Async version of the `~Connection.read_only` setter."""
         async with self.lock:
-            super()._set_read_only(value)
+            await self.wait(self._set_read_only_gen(value))
 
     def _set_deferrable(self, value: Optional[bool]) -> None:
         self._no_set_async("deferrable")
@@ -371,7 +371,7 @@ class AsyncConnection(BaseConnection[Row]):
     async def set_deferrable(self, value: Optional[bool]) -> None:
         """Async version of the `~Connection.deferrable` setter."""
         async with self.lock:
-            super()._set_deferrable(value)
+            await self.wait(self._set_deferrable_gen(value))
 
     def _no_set_async(self, attribute: str) -> None:
         raise AttributeError(
