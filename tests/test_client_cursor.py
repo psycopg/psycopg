@@ -583,12 +583,14 @@ def test_query_params_executemany(conn):
 
 def test_stream(conn):
     cur = conn.cursor()
-    with pytest.raises(psycopg.NotSupportedError):
-        for rec in cur.stream(
-            "select i, '2021-01-01'::date + i from generate_series(1, %s) as i",
-            [2],
-        ):
-            pass
+    recs = []
+    for rec in cur.stream(
+        "select i, '2021-01-01'::date + i from generate_series(1, %s) as i",
+        [2],
+    ):
+        recs.append(rec)
+
+    assert recs == [(1, dt.date(2021, 1, 2)), (2, dt.date(2021, 1, 3))]
 
 
 class TestColumn:

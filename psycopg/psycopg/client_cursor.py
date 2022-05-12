@@ -49,20 +49,23 @@ class ClientCursorMixin(BaseCursor[ConnectionType, Row]):
                 "client-side cursors don't support binary results"
             )
 
-        if no_pqexec:
-            raise e.NotSupportedError(
-                "PQexec operations not supported by client-side cursors"
-            )
-
         self._query = query
-        # if we don't have to, let's use exec_ as it can run more than
-        # one query in one go
-        if self._conn._pipeline:
-            self._conn._pipeline.command_queue.append(
-                partial(self._pgconn.send_query, query.query)
-            )
+        if no_pqexec:
+            if self._conn._pipeline:
+                self._conn._pipeline.command_queue.append(
+                    partial(self._pgconn.send_query_params, None)
+                )
+            else:
+                self._pgconn.send_query_params(query.query, None)
         else:
-            self._pgconn.send_query(query.query)
+            # if we don't have to, let's use exec_ as it can run more than
+            # one query in one go
+            if self._conn._pipeline:
+                self._conn._pipeline.command_queue.append(
+                    partial(self._pgconn.send_query, query.query)
+                )
+            else:
+                self._pgconn.send_query(query.query)
 
     def _convert_query(
         self, query: Query, params: Optional[Params] = None
@@ -75,9 +78,6 @@ class ClientCursorMixin(BaseCursor[ConnectionType, Row]):
         self, pgq: PostgresQuery, prepare: Optional[bool] = None
     ) -> Tuple[Prepare, bytes]:
         return (Prepare.NO, b"")
-
-    def _is_pipeline_supported(self) -> bool:
-        return False
 
 
 class ClientCursor(ClientCursorMixin["Connection[Row]", Row], Cursor[Row]):

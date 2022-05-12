@@ -726,7 +726,7 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
         Execute the same command with a sequence of input data.
         """
         try:
-            if self._is_pipeline_supported():
+            if Pipeline.is_supported():
                 # If there is already a pipeline, ride it, in order to avoid
                 # sending unnecessary Sync.
                 with self._conn.lock:
@@ -748,9 +748,6 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
                     )
         except e.Error as ex:
             raise ex.with_traceback(None)
-
-    def _is_pipeline_supported(self) -> bool:
-        return Pipeline.is_supported()
 
     def stream(
         self,

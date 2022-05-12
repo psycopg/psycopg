@@ -577,12 +577,14 @@ async def test_query_params_executemany(aconn):
 
 async def test_stream(aconn):
     cur = aconn.cursor()
-    with pytest.raises(psycopg.NotSupportedError):
-        async for rec in cur.stream(
-            "select i, '2021-01-01'::date + i from generate_series(1, %s) as i",
-            [2],
-        ):
-            pass
+    recs = []
+    async for rec in cur.stream(
+        "select i, '2021-01-01'::date + i from generate_series(1, %s) as i",
+        [2],
+    ):
+        recs.append(rec)
+
+    assert recs == [(1, dt.date(2021, 1, 2)), (2, dt.date(2021, 1, 3))]
 
 
 async def test_str(aconn):
