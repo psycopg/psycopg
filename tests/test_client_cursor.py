@@ -1,6 +1,7 @@
 import gc
 import pickle
 import weakref
+import datetime as dt
 from typing import List
 
 import pytest
@@ -767,3 +768,24 @@ def test_leak(dsn, faker, fetch, row_factory):
         gc_collect()
         n.append(len(gc.get_objects()))
     assert n[0] == n[1] == n[2], f"objects leaked: {n[1] - n[0]}, {n[2] - n[1]}"
+
+
+def test_mogrify(conn):
+    cur = conn.cursor()
+    q = cur.mogrify("select 'hello'")
+    assert q == "select 'hello'"
+
+    q = cur.mogrify("select %s, %s", [1, dt.date(2020, 1, 1)])
+    assert q == "select 1, '2020-01-01'::date"
+
+    conn.execute("set client_encoding to utf8")
+    q = cur.mogrify("select %(s)s", {"s": "\u20ac"})
+    assert q == "select '\u20ac'"
+
+    conn.execute("set client_encoding to latin9")
+    q = cur.mogrify("select %(s)s", {"s": "\u20ac"})
+    assert q == "select '\u20ac'"
+
+    conn.execute("set client_encoding to latin1")
+    with pytest.raises(UnicodeEncodeError):
+        cur.mogrify("select %(s)s", {"s": "\u20ac"})

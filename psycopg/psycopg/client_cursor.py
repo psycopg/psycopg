@@ -9,6 +9,7 @@ from functools import partial
 
 from ._queries import PostgresQuery, PostgresClientQuery
 
+from . import adapt
 from . import errors as e
 from .pq import Format
 from .abc import ConnectionType, Query, Params
@@ -23,6 +24,14 @@ if TYPE_CHECKING:
 
 
 class ClientCursorMixin(BaseCursor[ConnectionType, Row]):
+    def mogrify(self, query: Query, params: Optional[Params] = None) -> str:
+        """
+        Return the query to be executed with parameters merged.
+        """
+        self._tx = adapt.Transformer(self)
+        pgq = self._convert_query(query, params)
+        return pgq.query.decode(self._tx.encoding)
+
     def _execute_send(
         self,
         query: PostgresQuery,
