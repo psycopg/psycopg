@@ -436,7 +436,7 @@ and registered enums is different.
 .. autofunction:: psycopg.types.enum.register_enum
 
    After registering, fetching data of the registered enum will cast
-   PostgreSQL enum labels into corresponding Python enum labels.
+   PostgreSQL enum labels into corresponding Python enum members.
 
    If no `!enum` is specified, a new `Enum` is created based on
    PostgreSQL enum labels.
