@@ -229,12 +229,6 @@ class AsyncPipeline(BasePipeline):
         super().__init__(conn)
 
     async def sync(self) -> None:
-        """Sync the pipeline, send any pending command and fetch and process
-        all available results.
-
-        This is called when exiting the pipeline, but can be used for other
-        purposes (e.g. in nested pipelines).
-        """
         try:
             async with self._conn.lock:
                 await self._conn.wait(self._sync_gen())
