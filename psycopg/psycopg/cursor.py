@@ -7,14 +7,13 @@ psycopg cursor objects
 from functools import partial
 from types import TracebackType
 from typing import Any, Generic, Iterable, Iterator, List
-from typing import Optional, NoReturn, Sequence, Type, TypeVar
+from typing import Optional, NoReturn, Sequence, Tuple, Type, TypeVar
 from typing import overload, TYPE_CHECKING
 from contextlib import contextmanager
 
 from . import pq
 from . import adapt
 from . import errors as e
-
 from .pq import ExecStatus, Format
 from .abc import ConnectionType, Query, Params, PQGen
 from .copy import Copy
@@ -293,7 +292,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
         binary: Optional[bool] = None,
     ) -> PQGen[Optional[List["PGresult"]]]:
         # Check if the query is prepared or needs preparing
-        prep, name = self._conn._prepared.get(pgq, prepare)
+        prep, name = self._get_prepared(pgq, prepare)
         if prep is Prepare.NO:
             # The query must be executed without preparing
             self._execute_send(pgq, binary=binary)
@@ -327,6 +326,11 @@ class BaseCursor(Generic[ConnectionType, Row]):
             self._conn._prepared.validate(key, prep, name, results)
 
         return results
+
+    def _get_prepared(
+        self, pgq: PostgresQuery, prepare: Optional[bool] = None
+    ) -> Tuple[Prepare, bytes]:
+        return self._conn._prepared.get(pgq, prepare)
 
     def _stream_send_gen(
         self,
@@ -722,7 +726,7 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
         Execute the same command with a sequence of input data.
         """
         try:
-            if Pipeline.is_supported():
+            if self._is_pipeline_supported():
                 # If there is already a pipeline, ride it, in order to avoid
                 # sending unnecessary Sync.
                 with self._conn.lock:
@@ -744,6 +748,9 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
                     )
         except e.Error as ex:
             raise ex.with_traceback(None)
+
+    def _is_pipeline_supported(self) -> bool:
+        return Pipeline.is_supported()
 
     def stream(
         self,
