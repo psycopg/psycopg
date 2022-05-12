@@ -368,7 +368,11 @@ async def test_executemany_rowcount_no_hit(aconn, execmany):
     "query",
     [
         "insert into nosuchtable values (%s, %s)",
-        "copy (select %s, %s) to stdout",
+        # This fails because we end up trying to copy in pipeline mode.
+        # However, sometimes (and pretty regularly if we enable pgconn.trace())
+        # something goes in a loop and only terminates by OOM. Strace shows
+        # an allocation loop. I think it's in the libpq.
+        # "copy (select %s, %s) to stdout",
         "wat (%s, %s)",
     ],
 )
