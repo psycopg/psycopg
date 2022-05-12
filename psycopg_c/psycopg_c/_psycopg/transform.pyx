@@ -24,6 +24,7 @@ from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 from psycopg import errors as e
 from psycopg.pq import Format as PqFormat
 from psycopg.rows import Row, RowMaker
+from psycopg._encodings import pgconn_encoding
 
 NoneType = type(None)
 
@@ -74,6 +75,7 @@ cdef class Transformer:
     cdef readonly object adapters
     cdef readonly object types
     cdef readonly object formats
+    cdef str _encoding
 
     # mapping class -> Dumper instance (auto, text, binary)
     cdef dict _auto_dumpers
@@ -93,6 +95,8 @@ cdef class Transformer:
     cdef list _row_dumpers
     cdef list _row_loaders
 
+    cdef dict _oid_types
+
     def __cinit__(self, context: Optional["AdaptContext"] = None):
         if context is not None:
             self.adapters = context.adapters
@@ -103,6 +107,25 @@ cdef class Transformer:
             self.connection = None
 
         self.types = self.formats = None
+
+    @classmethod
+    def from_context(cls, context: Optional["AdaptContext"]):
+        """
+        Return a Transformer from an AdaptContext.
+
+        If the context is a Transformer instance, just return it.
+        """
+        if isinstance(context, Transformer):
+            return context
+        else:
+            return cls(context)
+
+    @property
+    def encoding(self) -> str:
+        if not self._encoding:
+            conn = self.connection
+            self._encoding = pgconn_encoding(conn.pgconn) if conn else "utf-8"
+        return self._encoding
 
     @property
     def pgresult(self) -> Optional[PGresult]:
@@ -180,6 +203,44 @@ cdef class Transformer:
             PyList_SET_ITEM(loaders, i, <object>row_loader)
 
         self._row_loaders = loaders
+
+    cpdef as_literal(self, obj):
+        cdef PyObject *row_dumper = self.get_row_dumper(
+            <PyObject *>obj, <PyObject *>PG_TEXT)
+
+        if (<RowDumper>row_dumper).cdumper is not None:
+            dumper = (<RowDumper>row_dumper).cdumper
+        else:
+            dumper = (<RowDumper>row_dumper).pydumper
+
+        rv = dumper.quote(obj)
+        oid = dumper.oid
+        # If the result is quoted and the oid not unknown,
+        # add an explicit type cast.
+        # Check the last char because the first one might be 'E'.
+        if oid and rv and rv[-1] == 39:
+            if self._oid_types is None:
+                self._oid_types = {}
+            type_ptr = PyDict_GetItem(<object>self._oid_types, oid)
+            if type_ptr == NULL:
+                type_sql = b""
+                ti = self.adapters.types.get(oid)
+                if ti is not None:
+                    if oid < 8192:
+                        # builtin: prefer "timestamptz" to "timestamp with time zone"
+                        type_sql = ti.name.encode(self.encoding)
+                    else:
+                        type_sql = ti.regtype.encode(self.encoding)
+                    if oid == ti.array_oid:
+                        type_sql += b"[]"
+
+                type_ptr = <PyObject *>type_sql
+                PyDict_SetItem(<object>self._oid_types, oid, type_sql)
+
+            if <object>type_ptr:
+                rv = b"%s::%s" % (rv, <object>type_ptr)
+
+        return rv
 
     def get_dumper(self, obj, format) -> "Dumper":
         cdef PyObject *row_dumper = self.get_row_dumper(

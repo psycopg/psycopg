@@ -15,6 +15,7 @@ from .abc import Buffer, LoadFunc, AdaptContext, PyFormat, DumperKey
 from .rows import Row, RowMaker
 from ._compat import TypeAlias
 from .postgres import INVALID_OID
+from ._encodings import pgconn_encoding
 
 if TYPE_CHECKING:
     from .abc import Dumper, Loader
@@ -75,9 +76,33 @@ class Transformer(AdaptContext):
         # the length of the result columns
         self._row_loaders: List[LoadFunc] = []
 
+        # mapping oid -> type sql representation
+        self._oid_types: Dict[int, bytes] = {}
+
+        self._encoding = ""
+
+    @classmethod
+    def from_context(cls, context: Optional[AdaptContext]) -> "Transformer":
+        """
+        Return a Transformer from an AdaptContext.
+
+        If the context is a Transformer instance, just return it.
+        """
+        if isinstance(context, Transformer):
+            return context
+        else:
+            return cls(context)
+
     @property
     def connection(self) -> Optional["BaseConnection[Any]"]:
         return self._conn
+
+    @property
+    def encoding(self) -> str:
+        if not self._encoding:
+            conn = self.connection
+            self._encoding = pgconn_encoding(conn.pgconn) if conn else "utf-8"
+        return self._encoding
 
     @property
     def adapters(self) -> "AdaptersMap":
@@ -158,6 +183,35 @@ class Transformer(AdaptContext):
         self.formats = pqformats
 
         return out
+
+    def as_literal(self, obj: Any) -> Buffer:
+        dumper = self.get_dumper(obj, PyFormat.TEXT)
+        rv = dumper.quote(obj)
+        # If the result is quoted, and the oid not unknown,
+        # add an explicit type cast.
+        # Check the last char because the first one might be 'E'.
+        oid = dumper.oid
+        if oid and rv and rv[-1] == b"'"[0]:
+            try:
+                type_sql = self._oid_types[oid]
+            except KeyError:
+                ti = self.adapters.types.get(oid)
+                if ti:
+                    if oid < 8192:
+                        # builtin: prefer "timestamptz" to "timestamp with time zone"
+                        type_sql = ti.name.encode(self.encoding)
+                    else:
+                        type_sql = ti.regtype.encode(self.encoding)
+                    if oid == ti.array_oid:
+                        type_sql += b"[]"
+                else:
+                    type_sql = b""
+                self._oid_types[oid] = type_sql
+
+            if type_sql:
+                rv = b"%s::%s" % (rv, type_sql)
+
+        return rv
 
     def get_dumper(self, obj: Any, format: PyFormat) -> "Dumper":
         """

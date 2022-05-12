@@ -196,8 +196,16 @@ class Transformer(Protocol):
     def __init__(self, context: Optional[AdaptContext] = None):
         ...
 
+    @classmethod
+    def from_context(cls, context: Optional[AdaptContext]) -> "Transformer":
+        ...
+
     @property
     def connection(self) -> Optional["BaseConnection[Any]"]:
+        ...
+
+    @property
+    def encoding(self) -> str:
         ...
 
     @property
@@ -226,6 +234,9 @@ class Transformer(Protocol):
     def dump_sequence(
         self, params: Sequence[Any], formats: Sequence[PyFormat]
     ) -> Sequence[Optional[Buffer]]:
+        ...
+
+    def as_literal(self, obj: Any) -> Buffer:
         ...
 
     def get_dumper(self, obj: Any, format: PyFormat) -> Dumper:

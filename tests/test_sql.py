@@ -10,6 +10,8 @@ import pytest
 from psycopg import pq, sql, ProgrammingError
 from psycopg.adapt import PyFormat
 from psycopg._encodings import py2pgenc
+from psycopg.types import TypeInfo
+from psycopg.types.string import StrDumper
 
 eur = "\u20ac"
 
@@ -48,7 +50,7 @@ def test_quote_stable_despite_deranged_libpq(conn):
     # Verify the libpq behaviour of PQescapeString using the last setting seen.
     # Check that we are not affected by it.
     good_str = " E'\\\\'"
-    good_bytes = " E'\\\\000'"
+    good_bytes = " E'\\\\000'::bytea"
     conn.execute("set standard_conforming_strings to on")
     assert pq.Escaping().escape_string(b"\\") == b"\\"
     assert sql.quote("\\") == good_str
@@ -109,7 +111,7 @@ class TestSqlFormat:
     def test_compose_literal(self, conn):
         s = sql.SQL("select {0};").format(sql.Literal(dt.date(2016, 12, 31)))
         s1 = s.as_string(conn)
-        assert s1 == "select '2016-12-31';"
+        assert s1 == "select '2016-12-31'::date;"
 
     def test_compose_empty(self, conn):
         s = sql.SQL("select foo;").format()
@@ -161,7 +163,7 @@ class TestSqlFormat:
 
     def test_auto_literal(self, conn):
         s = sql.SQL("select {}, {}, {}").format("he'lo", 10, dt.date(2020, 1, 1))
-        assert s.as_string(conn) == "select 'he''lo', 10, '2020-01-01'"
+        assert s.as_string(conn) == "select 'he''lo', 10, '2020-01-01'::date"
 
     def test_execute(self, conn):
         cur = conn.cursor()
@@ -311,13 +313,13 @@ class TestLiteral:
         assert sql.Literal(None).as_string(conn) == "NULL"
         assert no_e(sql.Literal("foo").as_string(conn)) == "'foo'"
         assert sql.Literal(42).as_string(conn) == "42"
-        assert sql.Literal(dt.date(2017, 1, 1)).as_string(conn) == "'2017-01-01'"
+        assert sql.Literal(dt.date(2017, 1, 1)).as_string(conn) == "'2017-01-01'::date"
 
     def test_as_bytes(self, conn):
         assert sql.Literal(None).as_bytes(conn) == b"NULL"
         assert no_e(sql.Literal("foo").as_bytes(conn)) == b"'foo'"
         assert sql.Literal(42).as_bytes(conn) == b"42"
-        assert sql.Literal(dt.date(2017, 1, 1)).as_bytes(conn) == b"'2017-01-01'"
+        assert sql.Literal(dt.date(2017, 1, 1)).as_bytes(conn) == b"'2017-01-01'::date"
 
         conn.execute("set client_encoding to utf8")
         assert sql.Literal(eur).as_bytes(conn) == f"'{eur}'".encode()
@@ -336,6 +338,58 @@ class TestLiteral:
 
         with pytest.raises(ProgrammingError):
             sql.Literal(Foo()).as_string(conn)
+
+    def test_array(self, conn):
+        assert (
+            sql.Literal([dt.date(2000, 1, 1)]).as_string(conn)
+            == "'{2000-01-01}'::date[]"
+        )
+
+    def test_short_name_builtin(self, conn):
+        assert sql.Literal(dt.time(0, 0)).as_string(conn) == "'00:00:00'::time"
+        assert (
+            sql.Literal(dt.datetime(2000, 1, 1)).as_string(conn)
+            == "'2000-01-01 00:00:00'::timestamp"
+        )
+        assert (
+            sql.Literal([dt.datetime(2000, 1, 1)]).as_string(conn)
+            == "'{\"2000-01-01 00:00:00\"}'::timestamp[]"
+        )
+
+    @pytest.mark.parametrize("name", ["a-b", f"{eur}", "order", "foo bar"])
+    def test_invalid_name(self, conn, name):
+        conn.execute(
+            f"""
+            set client_encoding to utf8;
+            create type "{name}";
+            create function invin(cstring) returns "{name}"
+                language internal immutable strict as 'textin';
+            create function invout("{name}") returns cstring
+                language internal immutable strict as 'textout';
+            create type "{name}" (input=invin, output=invout, like=text);
+            """
+        )
+        info = TypeInfo.fetch(conn, f'"{name}"')
+
+        class InvDumper(StrDumper):
+            oid = info.oid
+
+            def dump(self, obj):
+                rv = super().dump(obj)
+                return b"%s-inv" % rv
+
+        info.register(conn)
+        conn.adapters.register_dumper(str, InvDumper)
+
+        assert sql.Literal("hello").as_string(conn) == f"'hello-inv'::\"{name}\""
+        cur = conn.execute(sql.SQL("select {}").format("hello"))
+        assert cur.fetchone()[0] == "hello-inv"
+
+        assert (
+            sql.Literal(["hello"]).as_string(conn) == f"'{{hello-inv}}'::\"{name}\"[]"
+        )
+        cur = conn.execute(sql.SQL("select {}").format(["hello"]))
+        assert cur.fetchone()[0] == ["hello-inv"]
 
 
 class TestSQL:
@@ -432,7 +486,7 @@ class TestComposed:
         obj = sql.Composed(["fo'o", dt.date(2020, 1, 1)])
         obj = obj.join(", ")
         assert isinstance(obj, sql.Composed)
-        assert no_e(obj.as_string(conn)) == "'fo''o', '2020-01-01'"
+        assert no_e(obj.as_string(conn)) == "'fo''o', '2020-01-01'::date"
 
     def test_sum(self, conn):
         obj = sql.Composed([sql.SQL("foo ")])

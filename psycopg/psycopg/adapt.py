@@ -151,7 +151,7 @@ class RecursiveDumper(Dumper):
 
     def __init__(self, cls: type, context: Optional[abc.AdaptContext] = None):
         super().__init__(cls, context)
-        self._tx = Transformer(context)
+        self._tx = Transformer.from_context(context)
 
 
 class RecursiveLoader(Loader):
@@ -159,4 +159,4 @@ class RecursiveLoader(Loader):
 
     def __init__(self, oid: int, context: Optional[abc.AdaptContext] = None):
         super().__init__(oid, context)
-        self._tx = Transformer(context)
+        self._tx = Transformer.from_context(context)

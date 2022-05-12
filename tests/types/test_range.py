@@ -4,13 +4,13 @@ from decimal import Decimal
 
 import pytest
 
-from psycopg import pq
+from psycopg import pq, sql
 from psycopg import errors as e
-from psycopg.sql import Identifier
 from psycopg.adapt import PyFormat
 from psycopg.types import range as range_module
 from psycopg.types.range import Range, RangeInfo, register_range
 
+eur = "\u20ac"
 
 type2sub = {
     "int4range": "int4",
@@ -278,8 +278,8 @@ def create_test_range(conn):
 fetch_cases = [
     ("testrange", "text"),
     ("testschema.testrange", "float8"),
-    (Identifier("testrange"), "text"),
-    (Identifier("testschema", "testrange"), "float8"),
+    (sql.Identifier("testrange"), "text"),
+    (sql.Identifier("testschema", "testrange"), "float8"),
 ]
 
 
@@ -656,3 +656,15 @@ class TestRangeObject:
 def test_no_info_error(conn):
     with pytest.raises(TypeError, match="range"):
         register_range(None, conn)  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize("name", ["a-b", f"{eur}", "order"])
+def test_literal_invalid_name(conn, name):
+    conn.execute("set client_encoding to utf8")
+    conn.execute(f'create type "{name}" as range (subtype = text)')
+    info = RangeInfo.fetch(conn, f'"{name}"')
+    register_range(info, conn)
+    obj = Range("a", "z", "[]")
+    assert sql.Literal(obj).as_string(conn) == f"'[a,z]'::\"{name}\""
+    cur = conn.execute(sql.SQL("select {}").format(obj))
+    assert cur.fetchone()[0] == obj

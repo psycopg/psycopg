@@ -4,16 +4,15 @@ from decimal import Decimal
 
 import pytest
 
-from psycopg import pq
+from psycopg import pq, sql
 from psycopg import errors as e
-from psycopg.sql import Identifier
 from psycopg.adapt import PyFormat
 from psycopg.types.range import Range
 from psycopg.types import multirange
 from psycopg.types.multirange import Multirange, MultirangeInfo
 from psycopg.types.multirange import register_multirange
 
-from .test_range import create_test_range
+from .test_range import create_test_range, eur
 
 pytestmark = pytest.mark.pg(">= 14")
 
@@ -363,8 +362,8 @@ def testmr(svcconn):
 fetch_cases = [
     ("testmultirange", "text"),
     ("testschema.testmultirange", "float8"),
-    (Identifier("testmultirange"), "text"),
-    (Identifier("testschema", "testmultirange"), "float8"),
+    (sql.Identifier("testmultirange"), "text"),
+    (sql.Identifier("testschema", "testmultirange"), "float8"),
 ]
 
 
@@ -414,3 +413,15 @@ def test_load_custom_empty(conn, testmr, fmt_out):
     (got,) = cur.execute("select '{}'::testmultirange").fetchone()
     assert isinstance(got, Multirange)
     assert not got
+
+
+@pytest.mark.parametrize("name", ["a-b", f"{eur}"])
+def test_literal_invalid_name(conn, name):
+    conn.execute("set client_encoding to utf8")
+    conn.execute(f'create type "{name}" as range (subtype = text)')
+    info = MultirangeInfo.fetch(conn, f'"{name}_multirange"')
+    register_multirange(info, conn)
+    obj = Multirange([Range("a", "z", "[]")])
+    assert sql.Literal(obj).as_string(conn) == f"'{{[a,z]}}'::\"{name}_multirange\""
+    cur = conn.execute(sql.SQL("select {}").format(obj))
+    assert cur.fetchone()[0] == obj

@@ -381,18 +381,17 @@ class Literal(Composable):
 
     Example::
 
-        >>> s1 = sql.Literal("foo")
-        >>> s2 = sql.Literal("ba'r")
-        >>> s3 = sql.Literal(42)
+        >>> s1 = sql.Literal("fo'o")
+        >>> s2 = sql.Literal(42)
+        >>> s3 = sql.Literal(date(2000, 1, 1))
         >>> print(sql.SQL(', ').join([s1, s2, s3]).as_string(conn))
-        'foo', 'ba''r', 42
+        'fo''o', 42, '2000-01-01'::date
 
     """
 
     def as_bytes(self, context: Optional[AdaptContext]) -> bytes:
-        tx = Transformer(context)
-        dumper = tx.get_dumper(self._obj, PyFormat.TEXT)
-        return dumper.quote(self._obj)
+        tx = Transformer.from_context(context)
+        return tx.as_literal(self._obj)
 
 
 class Placeholder(Composable):

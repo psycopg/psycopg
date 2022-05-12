@@ -4,6 +4,8 @@ Mappings between PostgreSQL and Python encodings.
 
 # Copyright (C) 2020 The Psycopg Team
 
+import re
+import string
 import codecs
 from typing import Any, Dict, Optional, TYPE_CHECKING
 
@@ -131,3 +133,23 @@ def pg2pyenc(name: bytes) -> str:
     except KeyError:
         sname = name.decode("utf8", "replace")
         raise NotSupportedError(f"codec not available in Python: {sname!r}")
+
+
+def _as_python_identifier(s: str, prefix: str = "f") -> str:
+    """
+    Reduce a string to a valid Python identifier.
+
+    Replace all non-valid chars with '_' and prefix the value with *prefix* if
+    the first letter is an '_'.
+    """
+    s = _re_clean.sub("_", s)
+    # Python identifier cannot start with numbers, namedtuple fields
+    # cannot start with underscore. So...
+    if s[0] == "_" or "0" <= s[0] <= "9":
+        s = prefix + s
+    return s
+
+
+_re_clean = re.compile(
+    f"[^{string.ascii_lowercase}{string.ascii_uppercase}{string.digits}_]"
+)

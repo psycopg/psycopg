@@ -1,12 +1,13 @@
 import pytest
 
-from psycopg import pq, postgres
-from psycopg.sql import Identifier
+from psycopg import pq, postgres, sql
 from psycopg.adapt import PyFormat
 from psycopg.postgres import types as builtins
 from psycopg.types.range import Range
 from psycopg.types.composite import CompositeInfo, register_composite
 from psycopg.types.composite import TupleDumper, TupleBinaryDumper
+
+eur = "\u20ac"
 
 tests_str = [
     ("", ()),
@@ -136,11 +137,11 @@ fetch_cases = [
         [("foo", "text"), ("bar", "int8"), ("qux", "bool")],
     ),
     (
-        Identifier("testcomp"),
+        sql.Identifier("testcomp"),
         [("foo", "text"), ("bar", "int8"), ("baz", "float8")],
     ),
     (
-        Identifier("testschema", "testcomp"),
+        sql.Identifier("testschema", "testcomp"),
         [("foo", "text"), ("bar", "int8"), ("qux", "bool")],
     ),
 ]
@@ -324,3 +325,36 @@ def test_callable_dumper_not_registered(conn, testcomp):
 def test_no_info_error(conn):
     with pytest.raises(TypeError, match="composite"):
         register_composite(None, conn)  # type: ignore[arg-type]
+
+
+def test_invalid_fields_names(conn):
+    conn.execute("set client_encoding to utf8")
+    conn.execute(
+        f"""
+        create type "a-b" as ("c-d" text, "{eur}" int);
+        create type "-x-{eur}" as ("w-ww" "a-b", "0" int);
+        """
+    )
+    ab = CompositeInfo.fetch(conn, '"a-b"')
+    x = CompositeInfo.fetch(conn, f'"-x-{eur}"')
+    register_composite(ab, conn)
+    register_composite(x, conn)
+    obj = x.python_type(ab.python_type("foo", 10), 20)
+    conn.execute(f"""create table meh (wat "-x-{eur}")""")
+    conn.execute("insert into meh values (%s)", [obj])
+    got = conn.execute("select wat from meh").fetchone()[0]
+    assert obj == got
+
+
+@pytest.mark.parametrize("name", ["a-b", f"{eur}", "order"])
+def test_literal_invalid_name(conn, name):
+    conn.execute("set client_encoding to utf8")
+    conn.execute(f'create type "{name}" as (foo text)')
+    info = CompositeInfo.fetch(conn, f'"{name}"')
+    register_composite(info, conn)
+    obj = info.python_type("hello")
+    assert sql.Literal(obj).as_string(conn) == f"'(hello)'::\"{name}\""
+    cur = conn.execute(sql.SQL("select {}").format(obj))
+    got = cur.fetchone()[0]
+    assert got == obj
+    assert type(got) is type(obj)

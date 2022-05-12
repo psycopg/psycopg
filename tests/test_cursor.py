@@ -744,6 +744,20 @@ class TestColumn:
         assert col.name == "foo"
         assert col.type_code == 23
 
+    def test_name_not_a_name(self, conn):
+        cur = conn.cursor()
+        (res,) = cur.execute("""select 'x' as "foo-bar" """).fetchone()
+        assert res == "x"
+        assert cur.description[0].name == "foo-bar"
+
+    @pytest.mark.parametrize("encoding", ["utf8", "latin9"])
+    def test_name_encode(self, conn, encoding):
+        conn.execute(f"set client_encoding to {encoding}")
+        cur = conn.cursor()
+        (res,) = cur.execute("""select 'x' as "\u20ac" """).fetchone()
+        assert res == "x"
+        assert cur.description[0].name == "\u20ac"
+
 
 def test_str(conn):
     cur = conn.cursor()

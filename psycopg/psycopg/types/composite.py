@@ -13,10 +13,11 @@ from typing import Sequence, Tuple, Type
 from .. import pq
 from .. import postgres
 from ..abc import AdaptContext, Buffer
-from ..adapt import PyFormat, RecursiveDumper, RecursiveLoader
+from ..adapt import Transformer, PyFormat, RecursiveDumper, Loader
 from .._struct import pack_len, unpack_len
 from ..postgres import TEXT_OID
 from .._typeinfo import CompositeInfo as CompositeInfo  # exported here
+from .._encodings import _as_python_identifier
 
 _struct_oidlen = struct.Struct("!Ii")
 _pack_oidlen = cast(Callable[[int, int], bytes], _struct_oidlen.pack)
@@ -94,7 +95,11 @@ class TupleBinaryDumper(RecursiveDumper):
         return out
 
 
-class BaseCompositeLoader(RecursiveLoader):
+class BaseCompositeLoader(Loader):
+    def __init__(self, oid: int, context: Optional[AdaptContext] = None):
+        super().__init__(oid, context)
+        self._tx = Transformer(context)
+
     def _parse_record(self, data: bytes) -> Iterator[Optional[bytes]]:
         """
         Split a non-empty representation of a composite type into components.
@@ -138,10 +143,13 @@ class RecordLoader(BaseCompositeLoader):
         )
 
 
-class RecordBinaryLoader(RecursiveLoader):
-
+class RecordBinaryLoader(Loader):
     format = pq.Format.BINARY
     _types_set = False
+
+    def __init__(self, oid: int, context: Optional[AdaptContext] = None):
+        super().__init__(oid, context)
+        self._tx = Transformer(context)
 
     def load(self, data: Buffer) -> Tuple[Any, ...]:
         if not self._types_set:
@@ -233,7 +241,10 @@ def register_composite(
     info.register(context)
 
     if not factory:
-        factory = namedtuple(info.name, info.field_names)  # type: ignore
+        factory = namedtuple(  # type: ignore
+            _as_python_identifier(info.name),
+            [_as_python_identifier(n) for n in info.field_names],
+        )
 
     adapters = context.adapters if context else postgres.adapters
 
