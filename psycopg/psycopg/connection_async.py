@@ -56,7 +56,7 @@ class AsyncConnection(BaseConnection[Row]):
         super().__init__(pgconn)
         self.row_factory = row_factory
         self.lock = asyncio.Lock()
-        self.cursor_factory = cast("Type[AsyncCursor[Row]]", AsyncCursor)
+        self.cursor_factory = AsyncCursor
         self.server_cursor_factory = AsyncServerCursor
 
     @overload
@@ -68,6 +68,7 @@ class AsyncConnection(BaseConnection[Row]):
         autocommit: bool = False,
         prepare_threshold: Optional[int] = 5,
         row_factory: AsyncRowFactory[Row],
+        cursor_factory: Optional[Type[AsyncCursor[Row]]] = None,
         context: Optional[AdaptContext] = None,
         **kwargs: Union[None, int, str],
     ) -> "AsyncConnection[Row]":
@@ -81,6 +82,7 @@ class AsyncConnection(BaseConnection[Row]):
         *,
         autocommit: bool = False,
         prepare_threshold: Optional[int] = 5,
+        cursor_factory: Optional[Type[AsyncCursor[Any]]] = None,
         context: Optional[AdaptContext] = None,
         **kwargs: Union[None, int, str],
     ) -> "AsyncConnection[TupleRow]":
@@ -95,6 +97,7 @@ class AsyncConnection(BaseConnection[Row]):
         prepare_threshold: Optional[int] = 5,
         context: Optional[AdaptContext] = None,
         row_factory: Optional[AsyncRowFactory[Row]] = None,
+        cursor_factory: Optional[Type[AsyncCursor[Row]]] = None,
         **kwargs: Any,
     ) -> "AsyncConnection[Any]":
 
@@ -121,6 +124,8 @@ class AsyncConnection(BaseConnection[Row]):
 
         if row_factory:
             rv.row_factory = row_factory
+        if cursor_factory:
+            rv.cursor_factory = cursor_factory
         if context:
             rv._adapters = AdaptersMap(context.adapters)
         rv.prepare_threshold = prepare_threshold

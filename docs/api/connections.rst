@@ -32,26 +32,25 @@ The `!Connection` class
     .. automethod:: connect
 
         :param conninfo: The `connection string`__ (a ``postgresql://`` url or
-                         a list of ``key=value`` pairs) to specify where and
-                         how to connect.
+            a list of ``key=value`` pairs) to specify where and how to connect.
         :param kwargs: Further parameters specifying the connection string.
-                       They override the ones specified in ``conninfo``.
+            They override the ones specified in ``conninfo``.
         :param autocommit: If `!True` don't start transactions automatically.
-                           See :ref:`transactions` for details.
+            See :ref:`transactions` for details.
         :param row_factory: The row factory specifying what type of records
-                            to create fetching data (default:
-                            `~psycopg.rows.tuple_row()`). See
-                            :ref:`row-factories` for details.
-        :param prepare_threshold: Set the `prepare_threshold` attribute of the
-                                  connection.
+            to create fetching data (default: `~psycopg.rows.tuple_row()`). See
+            :ref:`row-factories` for details.
+        :param cursor_factory: Initial value for the `cursor_factory` attribute
+            of the connection (new in Psycopg 3.1).
+        :param prepare_threshold: Initial value for the `prepare_threshold`
+            attribute of the connection (new in Psycopg 3.1).
 
         More specialized use:
 
         :param context: A context to copy the initial adapters configuration
-                        from. It might be an `~psycopg.adapt.AdaptersMap` with
-                        customized loaders and dumpers, used as a template to
-                        create several connections. See :ref:`adaptation` for
-                        further details.
+            from. It might be an `~psycopg.adapt.AdaptersMap` with customized
+            loaders and dumpers, used as a template to create several connections.
+            See :ref:`adaptation` for further details.
 
         .. __: https://www.postgresql.org/docs/current/libpq-connect.html
             #LIBPQ-CONNSTRING
@@ -67,7 +66,7 @@ The `!Connection` class
             .. __: https://www.postgresql.org/docs/current/libpq-envars.html
 
         .. versionchanged:: 3.1
-            added ``prepare_threshold`` parameter.
+            added ``prepare_threshold`` and ``cursor_factory`` parameters.
 
     .. automethod:: close
 

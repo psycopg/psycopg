@@ -556,6 +556,18 @@ async def test_cursor_factory(aconn):
         assert isinstance(cur, MyCursor)
 
 
+async def test_cursor_factory_connect(dsn):
+    class MyCursor(psycopg.AsyncCursor[psycopg.rows.Row]):
+        pass
+
+    async with await psycopg.AsyncConnection.connect(
+        dsn, cursor_factory=MyCursor
+    ) as conn:
+        assert conn.cursor_factory is MyCursor
+        cur = conn.cursor()
+        assert type(cur) is MyCursor
+
+
 async def test_server_cursor_factory(aconn):
     assert aconn.server_cursor_factory is psycopg.AsyncServerCursor
 

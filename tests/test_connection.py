@@ -551,6 +551,16 @@ def test_cursor_factory(conn):
         assert isinstance(cur, MyCursor)
 
 
+def test_cursor_factory_connect(dsn):
+    class MyCursor(psycopg.Cursor[psycopg.rows.Row]):
+        pass
+
+    with psycopg.connect(dsn, cursor_factory=MyCursor) as conn:
+        assert conn.cursor_factory is MyCursor
+        cur = conn.cursor()
+        assert type(cur) is MyCursor
+
+
 def test_server_cursor_factory(conn):
     assert conn.server_cursor_factory is psycopg.ServerCursor
 

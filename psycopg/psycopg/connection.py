@@ -651,7 +651,7 @@ class Connection(BaseConnection[Row]):
         super().__init__(pgconn)
         self.row_factory = row_factory
         self.lock = threading.Lock()
-        self.cursor_factory = cast("Type[Cursor[Row]]", Cursor)
+        self.cursor_factory = Cursor
         self.server_cursor_factory = ServerCursor
 
     @overload
@@ -663,6 +663,7 @@ class Connection(BaseConnection[Row]):
         autocommit: bool = False,
         row_factory: RowFactory[Row],
         prepare_threshold: Optional[int] = 5,
+        cursor_factory: Optional[Type[Cursor[Row]]] = None,
         context: Optional[AdaptContext] = None,
         **kwargs: Union[None, int, str],
     ) -> "Connection[Row]":
@@ -676,6 +677,7 @@ class Connection(BaseConnection[Row]):
         *,
         autocommit: bool = False,
         prepare_threshold: Optional[int] = 5,
+        cursor_factory: Optional[Type[Cursor[Any]]] = None,
         context: Optional[AdaptContext] = None,
         **kwargs: Union[None, int, str],
     ) -> "Connection[TupleRow]":
@@ -689,6 +691,7 @@ class Connection(BaseConnection[Row]):
         autocommit: bool = False,
         prepare_threshold: Optional[int] = 5,
         row_factory: Optional[RowFactory[Row]] = None,
+        cursor_factory: Optional[Type[Cursor[Row]]] = None,
         context: Optional[AdaptContext] = None,
         **kwargs: Any,
     ) -> "Connection[Any]":
@@ -708,6 +711,8 @@ class Connection(BaseConnection[Row]):
 
         if row_factory:
             rv.row_factory = row_factory
+        if cursor_factory:
+            rv.cursor_factory = cursor_factory
         if context:
             rv._adapters = AdaptersMap(context.adapters)
         rv.prepare_threshold = prepare_threshold

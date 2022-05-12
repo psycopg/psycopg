@@ -22,6 +22,7 @@ Psycopg 3.1 (unreleased)
   (:ticket:`#145`).
 - Add `pq.PGconn.trace()` and related trace functions (:ticket:`#167`).
 - Add ``prepare_threshold`` parameter to `Connection` init (:ticket:`#200`).
+- Add ``cursor_factory`` parameter to `Connection` init.
 - Add `Error.pgconn` and `Error.pgresult` attributes (:ticket:`#242`).
 - Add explicit type cast to values converted by `sql.Literal` (:ticket:`#205`).
 - Drop support for Python 3.6.
