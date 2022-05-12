@@ -20,7 +20,7 @@ from .copy import Copy
 from .rows import Row, RowMaker, RowFactory
 from ._column import Column
 from ._cmodule import _psycopg
-from ._queries import PostgresQuery
+from ._queries import PostgresQuery, PostgresClientQuery
 from ._pipeline import Pipeline
 from ._encodings import pgconn_encoding
 from ._preparing import Prepare
@@ -390,7 +390,9 @@ class BaseCursor(Generic[ConnectionType, Row]):
             self._tx = adapt.Transformer(self)
         yield from self._conn._start_query()
 
-    def _start_copy_gen(self, statement: Query) -> PQGen[None]:
+    def _start_copy_gen(
+        self, statement: Query, params: Optional[Params] = None
+    ) -> PQGen[None]:
         """Generator implementing sending a command for `Cursor.copy()."""
 
         # The connection gets in an unrecoverable state if we attempt COPY in
@@ -399,6 +401,13 @@ class BaseCursor(Generic[ConnectionType, Row]):
             raise e.NotSupportedError("COPY cannot be used in pipeline mode")
 
         yield from self._start_query()
+
+        # Merge the params client-side
+        if params:
+            pgq = PostgresClientQuery(self._tx)
+            pgq.convert(statement, params)
+            statement = pgq.query
+
         query = self._convert_query(statement)
 
         self._execute_send(query, binary=False)
@@ -850,14 +859,14 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
         self._scroll(value, mode)
 
     @contextmanager
-    def copy(self, statement: Query) -> Iterator[Copy]:
+    def copy(self, statement: Query, params: Optional[Params] = None) -> Iterator[Copy]:
         """
         Initiate a :sql:`COPY` operation and return an object to manage it.
 
         :rtype: Copy
         """
         with self._conn.lock:
-            self._conn.wait(self._start_copy_gen(statement))
+            self._conn.wait(self._start_copy_gen(statement, params))
 
         with Copy(self) as copy:
             yield copy

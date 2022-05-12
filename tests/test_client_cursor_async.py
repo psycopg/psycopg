@@ -8,7 +8,7 @@ import psycopg
 from psycopg import sql, rows
 from psycopg.adapt import PyFormat
 
-from .utils import gc_collect
+from .utils import alist, gc_collect
 from .test_cursor import my_row_factory
 from .test_cursor import execmany, _execmany  # noqa: F401
 
@@ -577,6 +577,18 @@ async def test_query_params_executemany(aconn):
     await cur.executemany("select %t, %t", [[1, 2], [3, 4]])
     assert cur._query.query == b"select 3, 4"
     assert cur._query.params == (b"3", b"4")
+
+
+@pytest.mark.parametrize("ph, params", [("%s", (10,)), ("%(n)s", {"n": 10})])
+async def test_copy_out_param(aconn, ph, params):
+    cur = aconn.cursor()
+    async with cur.copy(
+        f"copy (select * from generate_series(1, {ph})) to stdout", params
+    ) as copy:
+        copy.set_types(["int4"])
+        assert await alist(copy.rows()) == [(i + 1,) for i in range(10)]
+
+    assert aconn.info.transaction_status == aconn.TransactionStatus.INTRANS
 
 
 async def test_stream(aconn):

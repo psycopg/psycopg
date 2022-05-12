@@ -110,6 +110,8 @@ The `!Cursor` class
 
         :param statement: The copy operation to execute
         :type statement: `!str`, `!bytes`, or `sql.Composable`
+        :param params: The parameters to pass to the statement, if any.
+        :type params: Sequence or Mapping
 
         .. note::
 
@@ -119,6 +121,9 @@ The `!Cursor` class
                     ...
 
         See :ref:`copy` for information about :sql:`COPY`.
+
+        .. versionchanged:: 3.1
+            Added parameters support.
 
     .. automethod:: stream
 

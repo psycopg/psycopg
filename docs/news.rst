@@ -20,6 +20,7 @@ Psycopg 3.1 (unreleased)
   results (:ticket:`#164`).
 - `~Cursor.executemany()` performance improved by using batch mode internally
   (:ticket:`#145`).
+- Add parameters to `~Cursor.copy()`.
 - Add `pq.PGconn.trace()` and related trace functions (:ticket:`#167`).
 - Add ``prepare_threshold`` parameter to `Connection` init (:ticket:`#200`).
 - Add ``cursor_factory`` parameter to `Connection` init.

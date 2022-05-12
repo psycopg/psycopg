@@ -33,6 +33,15 @@ You can compose a COPY statement dynamically by using objects from the
     ) as copy:
         # read data from the 'copy' object using read()/read_row()
 
+.. versionchanged:: 3.1
+
+    You can also pass parameters to `!copy()`, like in `~Cursor.execute()`:
+
+    .. code:: python
+
+        with cur.copy("COPY (SELECT * FROM table_name LIMIT %s) TO STDOUT", (3,)) as copy:
+            # expect no more than three records
+
 The connection is subject to the usual transaction behaviour, so, unless the
 connection is in autocommit, at the end of the COPY operation you will still
 have to commit the pending changes and you can still roll them back. See

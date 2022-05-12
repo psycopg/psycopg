@@ -584,6 +584,18 @@ def test_query_params_executemany(conn):
     assert cur._query.params == (b"3", b"4")
 
 
+@pytest.mark.parametrize("ph, params", [("%s", (10,)), ("%(n)s", {"n": 10})])
+def test_copy_out_param(conn, ph, params):
+    cur = conn.cursor()
+    with cur.copy(
+        f"copy (select * from generate_series(1, {ph})) to stdout", params
+    ) as copy:
+        copy.set_types(["int4"])
+        assert list(copy.rows()) == [(i + 1,) for i in range(10)]
+
+    assert conn.info.transaction_status == conn.TransactionStatus.INTRANS
+
+
 def test_stream(conn):
     cur = conn.cursor()
     recs = []
