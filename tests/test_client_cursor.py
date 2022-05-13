@@ -158,7 +158,7 @@ def test_execute_many_results(conn):
     cur = conn.cursor()
     assert cur.nextset() is None
 
-    rv = cur.execute("select 'foo'; select generate_series(1,3)")
+    rv = cur.execute("select %s; select generate_series(1,%s)", ("foo", 3))
     assert rv is cur
     assert cur.fetchall() == [("foo",)]
     assert cur.rowcount == 1

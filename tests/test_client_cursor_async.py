@@ -161,7 +161,7 @@ async def test_execute_many_results(aconn):
     cur = aconn.cursor()
     assert cur.nextset() is None
 
-    rv = await cur.execute("select 'foo'; select generate_series(1,3)")
+    rv = await cur.execute("select %s; select generate_series(1,%s)", ("foo", 3))
     assert rv is cur
     assert (await cur.fetchall()) == [("foo",)]
     assert cur.rowcount == 1
