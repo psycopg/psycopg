@@ -47,23 +47,30 @@ class BaseListDumper(RecursiveDumper):
         """
         Find the first non-null element of an eventually nested list
         """
-        it = self._flatiter(L, set())
-        try:
-            item = next(it)
-        except StopIteration:
+        items = list(self._flatiter(L, set()))
+        types = set(map(type, items))
+        if not types:
             return None
+        if len(types) > 1:
+            raise e.DataError(
+                "cannot dump lists of mixed types;"
+                f" got: {', '.join(sorted(t.__name__ for t in types))}"
+            )
+        t = types.pop()
 
         # Checking for precise type. If the type is a subclass (e.g. Int4)
         # we assume the user knows what type they are passing.
-        if type(item) is not int:
-            return item
+        if t is not int:
+            return items[0]
 
         # If we got an int, let's see what is the biggest one in order to
         # choose the smallest OID and allow Postgres to do the right cast.
-        it = self._flatiter(L, set())
-        imax = max((i if i >= 0 else -i - 1 for i in it), default=0)
-        imax = max(item if item >= 0 else -item - 1, imax)
-        return imax
+        imax: int = max(items)
+        imin: int = min(items)
+        if imin >= 0:
+            return imax
+        else:
+            return max(imax, -imin - 1)
 
     def _flatiter(self, L: List[Any], seen: Set[int]) -> Any:
         if id(L) in seen:
@@ -118,7 +125,7 @@ class ListDumper(BaseListDumper):
             # Empty lists can only be dumped as text if the type is unknown.
             return self
 
-        sd = self._tx.get_dumper(item, format.from_pq(self.format))
+        sd = self._tx.get_dumper(item, PyFormat.from_pq(self.format))
         dumper = type(self)(self.cls, self._tx)
         dumper.sub_dumper = sd
 
