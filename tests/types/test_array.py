@@ -183,6 +183,14 @@ def test_list_number_wrapper(conn, wrapper, fmt_in, fmt_out):
             assert type(i) is want_cls
 
 
+def test_mix_types(conn):
+    with pytest.raises(psycopg.DataError):
+        conn.execute("select %s", ([1, 0.5],))
+
+    with pytest.raises(psycopg.DataError):
+        conn.execute("select %s", ([1, Decimal("0.5")],))
+
+
 @pytest.mark.parametrize("fmt_in", PyFormat)
 def test_empty_list_mix(conn, fmt_in):
     objs = list(range(3))
