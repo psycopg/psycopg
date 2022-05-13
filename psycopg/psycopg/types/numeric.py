@@ -33,8 +33,15 @@ from .._wrappers import (
 
 class _IntDumper(Dumper):
     def dump(self, obj: Any) -> bytes:
-        # Convert to int in order to dump IntEnum correctly
-        return str(int(obj)).encode()
+        t = type(obj)
+        if t is not int:
+            # Convert to int in order to dump IntEnum correctly
+            if issubclass(t, int):
+                obj = int(obj)
+            else:
+                raise e.DataError(f"ingeger expected, got {type(obj).__name__!r}")
+
+        return str(obj).encode()
 
     def quote(self, obj: Any) -> bytes:
         value = self.dump(obj)
