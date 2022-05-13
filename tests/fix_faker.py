@@ -49,7 +49,7 @@ class Faker:
     @property
     def schema(self):
         if not self._schema:
-            self._schema = self.choose_schema()
+            self.schema = self.choose_schema()
         return self._schema
 
     @schema.setter
@@ -196,6 +196,7 @@ class Faker:
             s = self.make_schema(choice(self.types))
             if s is not None:
                 schema.append(s)
+        self.schema = schema
         return schema
 
     def make_records(self, nrecords):
@@ -765,7 +766,7 @@ class Faker:
         # TODO: this is a complicated matter as it would involve creating
         # temporary composite types.
         # length = randrange(1, self.tuple_max_length)
-        # return (cls, self.choose_schema(ncols=length))
+        # return (cls, self.make_random_schema(ncols=length))
         return None
 
     def make_tuple(self, spec):
