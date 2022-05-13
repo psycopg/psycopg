@@ -31,7 +31,7 @@ Psycopg 3.1 (unreleased)
 Psycopg 3.0.14 (unreleased)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-- Fail dumping arrays of mixed numbers with DataError (:ticket:`#301`).
+- Raise `DataError` dumping arrays of mixed types (:ticket:`#301`).
 
 
 Current release

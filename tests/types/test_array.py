@@ -1,4 +1,3 @@
-from enum import Enum
 from decimal import Decimal
 
 import pytest
@@ -185,17 +184,6 @@ def test_list_number_wrapper(conn, wrapper, fmt_in, fmt_out):
 
 
 def test_mix_types(conn):
-    class MyEnum(int, Enum):
-        ONE = 2**30
-
-    cur = conn.execute("select %s", ([1, MyEnum.ONE],))
-    assert cur.fetchone() == ([1, 2**30],)
-    assert cur.description[0].type_code == cur.adapters.types["int4"].array_oid
-
-    cur = conn.execute("select %s", ([1, psycopg.types.numeric.Int8(2**60)],))
-    assert cur.fetchone() == ([1, 2**60],)
-    assert cur.description[0].type_code == cur.adapters.types["int8"].array_oid
-
     with pytest.raises(psycopg.DataError):
         conn.execute("select %s", ([1, 0.5],))
 
