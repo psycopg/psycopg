@@ -176,7 +176,7 @@ def test_list_number_wrapper(conn, wrapper, fmt_in, fmt_out):
 
     obj = [wrapper(1), wrapper(0), wrapper(-1), None]
     cur = conn.cursor(binary=fmt_out)
-    got = cur.execute("select %s", [obj]).fetchone()[0]
+    got = cur.execute(f"select %{fmt_in}", [obj]).fetchone()[0]
     assert got == obj
     for i in got:
         if i is not None:
