@@ -26,7 +26,11 @@ if TYPE_CHECKING:
 class ClientCursorMixin(BaseCursor[ConnectionType, Row]):
     def mogrify(self, query: Query, params: Optional[Params] = None) -> str:
         """
-        Return the query to be executed with parameters merged.
+        Return the query and parameters merged.
+
+        Parameters are adapted and merged to the query the same way that
+        `!execute()` would do.
+
         """
         self._tx = adapt.Transformer(self)
         pgq = self._convert_query(query, params)

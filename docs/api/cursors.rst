@@ -21,7 +21,7 @@ uncommitted data.
 The `!Cursor` class
 -------------------
 
-.. autoclass:: Cursor()
+.. autoclass:: Cursor
 
     This class implements a `DBAPI-compliant interface`__. It is what the
     classic `Connection.cursor()` method returns. `AsyncConnection.cursor()`
@@ -243,10 +243,35 @@ The `!Cursor` class
           is text or binary.
 
 
+The `!ClientCursor` class
+-------------------------
+
+.. seealso:: See :ref:`client-side-binding-cursors` for details.
+
+.. autoclass:: ClientCursor
+
+    This `Cursor` subclass has exactly the same interface of its parent class,
+    but, instead of sending query and parameters separately to the server, it
+    merges them on the client and sends them as a non-parametric query on the
+    server. This allows, for instance, to execute parametrized data definition
+    statements and other :ref:`problematic queries <server-side-binding>`.
+
+    .. versionadded:: 3.1
+
+    .. automethod:: mogrify
+
+        :param query: The query to execute.
+        :type query: `!str`, `!bytes`, or `sql.Composable`
+        :param params: The parameters to pass to the query, if any.
+        :type params: Sequence or Mapping
+
+
 The `!ServerCursor` class
 --------------------------
 
-.. autoclass:: ServerCursor()
+.. seealso:: See :ref:`server-side-cursors` for details.
+
+.. autoclass:: ServerCursor
 
     This class also implements a `DBAPI-compliant interface`__. It is created
     by `Connection.cursor()` specifying the ``name`` parameter. Using this
@@ -351,7 +376,7 @@ The `!ServerCursor` class
 The `!AsyncCursor` class
 ------------------------
 
-.. autoclass:: AsyncCursor()
+.. autoclass:: AsyncCursor
 
     This class implements a DBAPI-inspired interface, with all the blocking
     methods implemented as coroutines. Unless specified otherwise,
@@ -409,10 +434,22 @@ The `!AsyncCursor` class
         to iterate on the async cursor results.
 
 
+The `!AsyncClientCursor` class
+------------------------------
+
+.. autoclass:: AsyncClientCursor
+
+    This class is the `!async` equivalent of the `ClientCursor`. The
+    difference are the same shown in `AsyncCursor`.
+
+    .. versionadded:: 3.1
+
+
+
 The `!AsyncServerCursor` class
 ------------------------------
 
-.. autoclass:: AsyncServerCursor()
+.. autoclass:: AsyncServerCursor
 
     This class implements a DBAPI-inspired interface as the `AsyncCursor`
     does, but wraps a server-side cursor like the `ServerCursor` class. It is
