@@ -48,7 +48,7 @@ async def test_funny_name(aconn):
 
 async def test_repr(aconn):
     cur = aconn.cursor("my-name")
-    assert "AsyncServerCursor" in repr(cur)
+    assert "psycopg.AsyncServerCursor" in str(cur)
     assert "my-name" in repr(cur)
     await cur.close()
 

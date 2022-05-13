@@ -605,6 +605,7 @@ async def test_stream(aconn):
 
 async def test_str(aconn):
     cur = aconn.cursor()
+    assert "psycopg.AsyncClientCursor" in str(cur)
     assert "[IDLE]" in str(cur)
     assert "[closed]" not in str(cur)
     assert "[no result]" in str(cur)

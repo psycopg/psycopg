@@ -81,10 +81,10 @@ class ClientCursorMixin(BaseCursor[ConnectionType, Row]):
 
 
 class ClientCursor(ClientCursorMixin["Connection[Row]", Row], Cursor[Row]):
-    pass
+    __module__ = "psycopg"
 
 
 class AsyncClientCursor(
     ClientCursorMixin["AsyncConnection[Row]", Row], AsyncCursor[Row]
 ):
-    pass
+    __module__ = "psycopg"

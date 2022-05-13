@@ -778,6 +778,7 @@ class TestColumn:
 
 def test_str(conn):
     cur = conn.cursor()
+    assert "psycopg.Cursor" in str(cur)
     assert "[IDLE]" in str(cur)
     assert "[closed]" not in str(cur)
     assert "[no result]" in str(cur)

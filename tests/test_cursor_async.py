@@ -649,6 +649,7 @@ async def test_stream_binary_cursor_text_override(aconn):
 
 async def test_str(aconn):
     cur = aconn.cursor()
+    assert "psycopg.AsyncCursor" in str(cur)
     assert "[IDLE]" in str(cur)
     assert "[closed]" not in str(cur)
     assert "[no result]" in str(cur)
