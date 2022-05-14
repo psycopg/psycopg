@@ -491,10 +491,10 @@ class Faker:
         while 1:
             rv = [self.make(spec) for i in range(length)]
 
-            # TODO multirange lists fail binary dump if the first element is
+            # TODO multirange lists fail binary dump if the last element is
             # empty and there is no type annotation. See xfail in
             # test_multirange::test_dump_builtin_array
-            if rv and isinstance(rv[0], Multirange) and not rv[0]:
+            if rv and isinstance(rv[-1], Multirange) and not rv[-1]:
                 continue
 
             return rv
