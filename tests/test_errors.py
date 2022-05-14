@@ -260,3 +260,7 @@ def test_unknown_sqlstate(conn):
     # Survives pickling too
     pexc = pickle.loads(pickle.dumps(exc))
     assert pexc.sqlstate == code
+
+
+def test_blank_sqlstate(conn):
+    assert e.get_base_exception("") is e.DatabaseError
