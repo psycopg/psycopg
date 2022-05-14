@@ -28,6 +28,12 @@ Psycopg 3.1 (unreleased)
 - Drop support for Python 3.6.
 
 
+Psycopg 3.0.14 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Raise `DataError` dumping arrays of mixed types (:ticket:`#301`).
+
+
 Current release
 ---------------
 
