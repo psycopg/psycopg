@@ -296,3 +296,7 @@ def test_pgresult_pickle(conn):
     exc = pickle.loads(pickle.dumps(excinfo.value))
     assert exc.pgresult is None
     assert exc.diag.sqlstate == "42P01"
+
+
+def test_blank_sqlstate(conn):
+    assert e.get_base_exception("") is e.DatabaseError
