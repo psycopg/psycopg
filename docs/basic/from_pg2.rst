@@ -66,19 +66,25 @@ function can be used instead of :sql:`NOTIFY`::
     #id-1.9.3.157.7.5
 
 If this is not possible, you must merge the query and the parameter on the
-client side. You can do so using a :ref:`client-side binding cursor
-<client-side-binding-cursors>` such as `ClientCursor`::
+client side. You can do so using the `psycopg.sql` objects::
+
+    >>> from psycopg import sql
+
+    >>> cur.execute(sql.SQL("CREATE TABLE foo (id int DEFAULT {})").format(42)
+
+or creating a :ref:`client-side binding cursor <client-side-binding-cursors>`
+such as `ClientCursor`::
 
     >>> cur = ClientCursor(conn)
     >>> cur.execute("CREATE TABLE foo (id int DEFAULT %s)", [42])
 
-if you need `!ClientCursor` often you can set the `Connection.cursor_factory`
+if you need `!ClientCursor` often, you can set the `Connection.cursor_factory`
 to have them created by default by `Connection.cursor()`. This way, Psycopg 3
 will behave largely the same way of Psycopg 2.
 
-Note that, using parameters, you can only specify values. If you need to
-parametrize different parts of a statement (aka *the ones that don't go in
-single quotes*) you can use the objects from the `psycopg.sql` module::
+Note that, using `!ClientCursor` parameters, you can only specify query values
+(aka *the string that go in single quotes*). If you need to parametrize
+different parts of a statement, you must use the `!psycopg.sql` module::
 
     >>> from psycopg import sql
 
@@ -113,15 +119,15 @@ the `psycopg.sql` objects to compose a multiple query on the client side and
 run them in the same `!execute()` call::
 
 
-    >>> cur = psycopg.ClientCursor(conn)
-    >>> cur.execute(
-    ...     "INSERT INTO foo VALUES (%s); INSERT INTO foo VALUES (%s)",
-    ...     (10, 20))
-
     >>> from psycopg import sql
     >>> conn.execute(
     ...     sql.SQL("INSERT INTO foo VALUES ({}); INSERT INTO foo values ({})"
     ...     .format(10, 20))
+
+    >>> psycopg.ClientCursor(conn)
+    >>> cur.execute(
+    ...     "INSERT INTO foo VALUES (%s); INSERT INTO foo VALUES (%s)",
+    ...     (10, 20))
 
 Note that statements that must be run outside a transaction (such as
 :sql:`CREATE DATABASE`) can never be executed in batch with other statements,
