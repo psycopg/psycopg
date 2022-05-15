@@ -422,7 +422,7 @@ class Placeholder(Composable):
 
     """
 
-    def __init__(self, name: str = "", format: PyFormat = PyFormat.AUTO):
+    def __init__(self, name: str = "", format: Union[str, PyFormat] = PyFormat.AUTO):
         super().__init__(name)
         if not isinstance(name, str):
             raise TypeError(f"expected string as name, got {name!r}")
@@ -430,19 +430,26 @@ class Placeholder(Composable):
         if ")" in name:
             raise ValueError(f"invalid name: {name!r}")
 
-        self._format = format
+        if type(format) is str:
+            format = PyFormat(format)
+        if not isinstance(format, PyFormat):
+            raise TypeError(
+                f"expected PyFormat as format, got {type(format).__name__!r}"
+            )
+
+        self._format: PyFormat = format
 
     def __repr__(self) -> str:
         parts = []
         if self._obj:
             parts.append(repr(self._obj))
-        if self._format != PyFormat.AUTO:
-            parts.append(f"format={PyFormat(self._format).name}")
+        if self._format is not PyFormat.AUTO:
+            parts.append(f"format={self._format.name}")
 
         return f"{self.__class__.__name__}({', '.join(parts)})"
 
     def as_string(self, context: Optional[AdaptContext]) -> str:
-        code = self._format
+        code = self._format.value
         return f"%({self._obj}){code}" if self._obj else f"%{code}"
 
     def as_bytes(self, context: Optional[AdaptContext]) -> bytes:
