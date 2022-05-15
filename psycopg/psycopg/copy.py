@@ -33,6 +33,8 @@ if TYPE_CHECKING:
 
 TEXT = pq.Format.TEXT
 BINARY = pq.Format.BINARY
+PY_TEXT = PyFormat.TEXT
+PY_BINARY = PyFormat.BINARY
 
 
 class BaseCopy(Generic[ConnectionType]):
@@ -79,7 +81,7 @@ class BaseCopy(Generic[ConnectionType]):
         assert tx.pgresult, "The Transformer doesn't have a PGresult set"
         self._pgresult: "PGresult" = tx.pgresult
 
-        if self._pgresult.binary_tuples == pq.Format.TEXT:
+        if self._pgresult.binary_tuples == TEXT:
             self.formatter = TextFormatter(tx, encoding=pgconn_encoding(self._pgconn))
         else:
             self.formatter = BinaryFormatter(tx)
@@ -469,7 +471,7 @@ class Formatter(ABC):
 
 class TextFormatter(Formatter):
 
-    format = pq.Format.TEXT
+    format = TEXT
 
     def __init__(self, transformer: Transformer, encoding: str = "utf-8"):
         super().__init__(transformer)
@@ -514,7 +516,7 @@ class TextFormatter(Formatter):
 
 class BinaryFormatter(Formatter):
 
-    format = pq.Format.BINARY
+    format = BINARY
 
     def __init__(self, transformer: Transformer):
         super().__init__(transformer)
@@ -597,7 +599,7 @@ def _format_row_text(
 
     for item in row:
         if item is not None:
-            dumper = tx.get_dumper(item, PyFormat.TEXT)
+            dumper = tx.get_dumper(item, PY_TEXT)
             b = dumper.dump(item)
             out += _dump_re.sub(_dump_sub, b)
         else:
@@ -616,7 +618,7 @@ def _format_row_binary(
         out = bytearray()
 
     out += _pack_int2(len(row))
-    adapted = tx.dump_sequence(row, [PyFormat.BINARY] * len(row))
+    adapted = tx.dump_sequence(row, [PY_BINARY] * len(row))
     for b in adapted:
         if b is not None:
             out += _pack_int4(len(b))

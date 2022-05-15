@@ -14,7 +14,7 @@ from contextlib import contextmanager
 from . import pq
 from . import adapt
 from . import errors as e
-from .pq import ExecStatus, Format
+from .pq import ExecStatus
 from .abc import ConnectionType, Query, Params, PQGen
 from .copy import Copy
 from .rows import Row, RowMaker, RowFactory
@@ -44,6 +44,9 @@ else:
 
 _C = TypeVar("_C", bound="Cursor[Any]")
 
+TEXT = pq.Format.TEXT
+BINARY = pq.Format.BINARY
+
 
 class BaseCursor(Generic[ConnectionType, Row]):
     __slots__ = """
@@ -61,7 +64,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
 
     def __init__(self, connection: ConnectionType):
         self._conn = connection
-        self.format = Format.TEXT
+        self.format = TEXT
         self._pgconn = connection.pgconn
         self._adapters = adapt.AdaptersMap(connection.adapters)
         self.arraysize = 1
@@ -435,10 +438,10 @@ class BaseCursor(Generic[ConnectionType, Row]):
         if binary is None:
             fmt = self.format
         else:
-            fmt = Format.BINARY if binary else Format.TEXT
+            fmt = BINARY if binary else TEXT
 
         self._query = query
-        if query.params or no_pqexec or fmt == Format.BINARY:
+        if query.params or no_pqexec or fmt == BINARY:
             if self._conn._pipeline:
                 self._conn._pipeline.command_queue.append(
                     partial(
@@ -517,7 +520,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
                 f"unexpected result status from query: {ExecStatus(result.status).name}"
             )
 
-    def _set_current_result(self, i: int, format: Optional[Format] = None) -> None:
+    def _set_current_result(self, i: int, format: Optional[pq.Format] = None) -> None:
         """
         Select one of the results in the cursor as the active one.
         """
@@ -581,7 +584,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
         if binary is None:
             fmt = self.format
         else:
-            fmt = Format.BINARY if binary else Format.TEXT
+            fmt = BINARY if binary else TEXT
 
         if self._conn._pipeline:
             self._conn._pipeline.command_queue.append(

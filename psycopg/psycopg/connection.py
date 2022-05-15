@@ -19,7 +19,7 @@ from . import pq
 from . import errors as e
 from . import waiting
 from . import postgres
-from .pq import ConnStatus, ExecStatus, TransactionStatus, Format
+from .pq import ConnStatus, ExecStatus, TransactionStatus
 from .abc import AdaptContext, ConnectionType, Params, Query, RV
 from .abc import PQGen, PQGenConn
 from .sql import Composable, SQL
@@ -42,12 +42,6 @@ if TYPE_CHECKING:
     from .pq.abc import PGconn, PGresult
     from psycopg_pool.base import BasePool
 
-logger = logging.getLogger("psycopg")
-
-# Row Type variable for Cursor (when it needs to be distinguished from the
-# connection's one)
-CursorRow = TypeVar("CursorRow")
-
 if _psycopg:
     connect = _psycopg.connect
     execute = _psycopg.execute
@@ -57,6 +51,15 @@ else:
 
     connect = generators.connect
     execute = generators.execute
+
+logger = logging.getLogger("psycopg")
+
+# Row Type variable for Cursor (when it needs to be distinguished from the
+# connection's one)
+CursorRow = TypeVar("CursorRow")
+
+TEXT = pq.Format.TEXT
+BINARY = pq.Format.BINARY
 
 
 class Notify(NamedTuple):
@@ -423,7 +426,7 @@ class BaseConnection(Generic[Row]):
         return conn
 
     def _exec_command(
-        self, command: Query, result_format: Format = Format.TEXT
+        self, command: Query, result_format: pq.Format = TEXT
     ) -> PQGen[Optional["PGresult"]]:
         """
         Generator to send a command and receive the result to the backend.
@@ -439,7 +442,7 @@ class BaseConnection(Generic[Row]):
             command = command.as_bytes(self)
 
         if self._pipeline:
-            if result_format == Format.TEXT:
+            if result_format == TEXT:
                 cmd = partial(self.pgconn.send_query, command)
             else:
                 cmd = partial(
@@ -452,7 +455,7 @@ class BaseConnection(Generic[Row]):
             self._pipeline.result_queue.append(None)
             return None
 
-        if result_format == Format.TEXT:
+        if result_format == TEXT:
             self.pgconn.send_query(command)
         else:
             self.pgconn.send_query_params(command, None, result_format=result_format)
@@ -837,7 +840,7 @@ class Connection(BaseConnection[Row]):
             cur = self.cursor_factory(self, row_factory=row_factory)
 
         if binary:
-            cur.format = Format.BINARY
+            cur.format = BINARY
 
         return cur
 
@@ -853,7 +856,7 @@ class Connection(BaseConnection[Row]):
         try:
             cur = self.cursor()
             if binary:
-                cur.format = Format.BINARY
+                cur.format = BINARY
 
             return cur.execute(query, params, prepare=prepare)
 

@@ -22,6 +22,9 @@ if TYPE_CHECKING:
 
 DEFAULT_ITERSIZE = 100
 
+TEXT = pq.Format.TEXT
+BINARY = pq.Format.BINARY
+
 
 class ServerCursorMixin(BaseCursor[ConnectionType, Row]):
     """Mixin to add ServerCursor behaviour and implementation a BaseCursor."""
@@ -39,7 +42,7 @@ class ServerCursorMixin(BaseCursor[ConnectionType, Row]):
         self._withhold = withhold
         self._described = False
         self.itersize: int = DEFAULT_ITERSIZE
-        self._format = pq.Format.TEXT
+        self._format = TEXT
 
     def __repr__(self) -> str:
         # Insert the name as the second word
@@ -95,7 +98,7 @@ class ServerCursorMixin(BaseCursor[ConnectionType, Row]):
         if binary is None:
             self._format = self.format
         else:
-            self._format = pq.Format.BINARY if binary else pq.Format.TEXT
+            self._format = BINARY if binary else TEXT
 
         # The above result only returned COMMAND_OK. Get the cursor shape
         yield from self._describe_gen()

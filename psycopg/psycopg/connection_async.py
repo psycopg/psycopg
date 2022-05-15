@@ -12,9 +12,10 @@ from typing import Any, AsyncGenerator, AsyncIterator, Dict, List, Optional
 from typing import Type, Union, cast, overload, TYPE_CHECKING
 from contextlib import asynccontextmanager
 
+from . import pq
 from . import errors as e
 from . import waiting
-from .pq import Format, TransactionStatus
+from .pq import TransactionStatus
 from .abc import AdaptContext, Params, PQGen, PQGenConn, Query, RV
 from ._tpc import Xid
 from .rows import Row, AsyncRowFactory, tuple_row, TupleRow, args_row
@@ -32,6 +33,8 @@ from .server_cursor import AsyncServerCursor
 if TYPE_CHECKING:
     from .pq.abc import PGconn
 
+TEXT = pq.Format.TEXT
+BINARY = pq.Format.BINARY
 
 logger = logging.getLogger("psycopg")
 
@@ -245,7 +248,7 @@ class AsyncConnection(BaseConnection[Row]):
             cur = self.cursor_factory(self, row_factory=row_factory)
 
         if binary:
-            cur.format = Format.BINARY
+            cur.format = BINARY
 
         return cur
 
@@ -260,7 +263,7 @@ class AsyncConnection(BaseConnection[Row]):
         try:
             cur = self.cursor()
             if binary:
-                cur.format = Format.BINARY
+                cur.format = BINARY
 
             return await cur.execute(query, params, prepare=prepare)
 

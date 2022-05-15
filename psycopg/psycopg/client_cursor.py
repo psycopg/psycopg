@@ -9,9 +9,9 @@ from functools import partial
 
 from ._queries import PostgresQuery, PostgresClientQuery
 
+from . import pq
 from . import adapt
 from . import errors as e
-from .pq import Format
 from .abc import ConnectionType, Query, Params
 from .rows import Row
 from .cursor import BaseCursor, Cursor
@@ -21,6 +21,9 @@ from .cursor_async import AsyncCursor
 if TYPE_CHECKING:
     from .connection import Connection  # noqa: F401
     from .connection_async import AsyncConnection  # noqa: F401
+
+TEXT = pq.Format.TEXT
+BINARY = pq.Format.BINARY
 
 
 class ClientCursorMixin(BaseCursor[ConnectionType, Row]):
@@ -46,9 +49,9 @@ class ClientCursorMixin(BaseCursor[ConnectionType, Row]):
         if binary is None:
             fmt = self.format
         else:
-            fmt = Format.BINARY if binary else Format.TEXT
+            fmt = BINARY if binary else TEXT
 
-        if fmt == Format.BINARY:
+        if fmt == BINARY:
             raise e.NotSupportedError(
                 "client-side cursors don't support binary results"
             )

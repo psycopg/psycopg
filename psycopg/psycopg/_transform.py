@@ -28,6 +28,8 @@ DumperCache: TypeAlias = Dict[DumperKey, "Dumper"]
 OidDumperCache: TypeAlias = Dict[int, "Dumper"]
 LoaderCache: TypeAlias = Dict[int, "Loader"]
 
+TEXT = pq.Format.TEXT
+
 
 class Transformer(AdaptContext):
     """
@@ -168,7 +170,7 @@ class Transformer(AdaptContext):
             return out
 
         types = [INVALID_OID] * nparams
-        pqformats = [pq.Format.TEXT] * nparams
+        pqformats = [TEXT] * nparams
 
         for i in range(nparams):
             param = params[i]
