@@ -72,3 +72,7 @@ def gc_collect():
     """
     for i in range(3):
         gc.collect()
+
+
+async def alist(it):
+    return [i async for i in it]

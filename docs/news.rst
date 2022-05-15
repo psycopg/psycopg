@@ -14,12 +14,14 @@ Psycopg 3.1 (unreleased)
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
 - Add :ref:`Pipeline mode <pipeline-mode>` (:ticket:`#74`).
+- Add :ref:`client-side-binding-cursors` (:ticket:`#101`).
 - Add :ref:`Two-Phase Commit <two-phase-commit>` support (:ticket:`#72`).
 - Add :ref:`adapt-enum` (:ticket:`#274`).
 - Add ``returning`` parameter to `~Cursor.executemany()` to retrieve query
   results (:ticket:`#164`).
 - `~Cursor.executemany()` performance improved by using batch mode internally
   (:ticket:`#145`).
+- Add parameters to `~Cursor.copy()`.
 - Add `pq.PGconn.trace()` and related trace functions (:ticket:`#167`).
 - Add ``prepare_threshold`` parameter to `Connection` init (:ticket:`#200`).
 - Add ``cursor_factory`` parameter to `Connection` init.

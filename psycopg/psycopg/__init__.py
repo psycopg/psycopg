@@ -23,6 +23,7 @@ from .connection import BaseConnection, Connection, Notify
 from .transaction import Rollback, Transaction, AsyncTransaction
 from .cursor_async import AsyncCursor
 from .server_cursor import AsyncServerCursor, ServerCursor
+from .client_cursor import AsyncClientCursor, ClientCursor
 from .connection_async import AsyncConnection
 
 from . import dbapi20
@@ -57,6 +58,7 @@ types.array.register_all_arrays(adapters)
 # this is the canonical place to obtain them and should be used by MyPy too,
 # so that function signatures are consistent with the documentation.
 __all__ = [
+    "AsyncClientCursor",
     "AsyncConnection",
     "AsyncCopy",
     "AsyncCursor",
@@ -64,6 +66,7 @@ __all__ = [
     "AsyncServerCursor",
     "AsyncTransaction",
     "BaseConnection",
+    "ClientCursor",
     "Column",
     "Connection",
     "ConnectionInfo",

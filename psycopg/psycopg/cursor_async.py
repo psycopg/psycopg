@@ -190,12 +190,14 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
         self._scroll(value, mode)
 
     @asynccontextmanager
-    async def copy(self, statement: Query) -> AsyncIterator[AsyncCopy]:
+    async def copy(
+        self, statement: Query, params: Optional[Params] = None
+    ) -> AsyncIterator[AsyncCopy]:
         """
         :rtype: AsyncCopy
         """
         async with self._conn.lock:
-            await self._conn.wait(self._start_copy_gen(statement))
+            await self._conn.wait(self._start_copy_gen(statement, params))
 
         async with AsyncCopy(self) as copy:
             yield copy

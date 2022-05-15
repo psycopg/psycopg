@@ -5,10 +5,10 @@ import datetime as dt
 from typing import List
 
 import psycopg
-from psycopg import pq, sql, rows
+from psycopg import sql, rows
 from psycopg.adapt import PyFormat
 
-from .utils import gc_collect
+from .utils import alist, gc_collect
 from .test_cursor import my_row_factory
 from .test_cursor import execmany, _execmany  # noqa: F401
 
@@ -16,21 +16,40 @@ execmany = execmany  # avoid F811 underneath
 pytestmark = pytest.mark.asyncio
 
 
+@pytest.fixture
+async def aconn(aconn):
+    aconn.cursor_factory = psycopg.AsyncClientCursor
+    return aconn
+
+
 async def test_init(aconn):
-    cur = psycopg.AsyncCursor(aconn)
+    cur = psycopg.AsyncClientCursor(aconn)
     await cur.execute("select 1")
     assert (await cur.fetchone()) == (1,)
 
     aconn.row_factory = rows.dict_row
-    cur = psycopg.AsyncCursor(aconn)
+    cur = psycopg.AsyncClientCursor(aconn)
     await cur.execute("select 1 as a")
     assert (await cur.fetchone()) == {"a": 1}
 
 
 async def test_init_factory(aconn):
-    cur = psycopg.AsyncCursor(aconn, row_factory=rows.dict_row)
+    cur = psycopg.AsyncClientCursor(aconn, row_factory=rows.dict_row)
     await cur.execute("select 1 as a")
     assert (await cur.fetchone()) == {"a": 1}
+
+
+async def test_from_cursor_factory(dsn):
+    async with await psycopg.AsyncConnection.connect(
+        dsn, cursor_factory=psycopg.AsyncClientCursor
+    ) as aconn:
+        cur = aconn.cursor()
+        assert type(cur) is psycopg.AsyncClientCursor
+
+        await cur.execute("select %s", (1,))
+        assert await cur.fetchone() == (1,)
+        assert cur._query
+        assert cur._query.query == b"select 1"
 
 
 async def test_close(aconn):
@@ -132,11 +151,17 @@ async def test_statusmessage(aconn):
     assert cur.statusmessage is None
 
 
+async def test_execute_sql(aconn):
+    cur = aconn.cursor()
+    await cur.execute(sql.SQL("select {value}").format(value="hello"))
+    assert await cur.fetchone() == ("hello",)
+
+
 async def test_execute_many_results(aconn):
     cur = aconn.cursor()
     assert cur.nextset() is None
 
-    rv = await cur.execute("select 'foo'; select generate_series(1,3)")
+    rv = await cur.execute("select %s; select generate_series(1,%s)", ("foo", 3))
     assert rv is cur
     assert (await cur.fetchall()) == [("foo",)]
     assert cur.rowcount == 1
@@ -211,19 +236,15 @@ async def test_fetchone(aconn):
 
 
 async def test_binary_cursor_execute(aconn):
-    cur = aconn.cursor(binary=True)
-    await cur.execute("select %s, %s", [1, None])
-    assert (await cur.fetchone()) == (1, None)
-    assert cur.pgresult.fformat(0) == 1
-    assert cur.pgresult.get_value(0, 0) == b"\x00\x01"
+    with pytest.raises(psycopg.NotSupportedError):
+        cur = aconn.cursor(binary=True)
+        await cur.execute("select %s, %s", [1, None])
 
 
 async def test_execute_binary(aconn):
-    cur = aconn.cursor()
-    await cur.execute("select %s, %s", [1, None], binary=True)
-    assert (await cur.fetchone()) == (1, None)
-    assert cur.pgresult.fformat(0) == 1
-    assert cur.pgresult.get_value(0, 0) == b"\x00\x01"
+    with pytest.raises(psycopg.NotSupportedError):
+        cur = aconn.cursor()
+        await cur.execute("select %s, %s", [1, None], binary=True)
 
 
 async def test_binary_cursor_text_override(aconn):
@@ -347,7 +368,11 @@ async def test_executemany_rowcount_no_hit(aconn, execmany):
     "query",
     [
         "insert into nosuchtable values (%s, %s)",
-        "copy (select %s, %s) to stdout",
+        # This fails because we end up trying to copy in pipeline mode.
+        # However, sometimes (and pretty regularly if we enable pgconn.trace())
+        # something goes in a loop and only terminates by OOM. Strace shows
+        # an allocation loop. I think it's in the libpq.
+        # "copy (select %s, %s) to stdout",
         "wat (%s, %s)",
     ],
 )
@@ -532,8 +557,8 @@ async def test_query_params_execute(aconn):
 
     await cur.execute("select %t, %s::text", [1, None])
     assert cur._query is not None
-    assert cur._query.query == b"select $1, $2::text"
-    assert cur._query.params == [b"1", None]
+    assert cur._query.query == b"select 1, NULL::text"
+    assert cur._query.params == (b"1", b"NULL")
 
     await cur.execute("select 1")
     assert cur._query.query == b"select 1"
@@ -542,16 +567,28 @@ async def test_query_params_execute(aconn):
     with pytest.raises(psycopg.DataError):
         await cur.execute("select %t::int", ["wat"])
 
-    assert cur._query.query == b"select $1::int"
-    assert cur._query.params == [b"wat"]
+    assert cur._query.query == b"select 'wat'::int"
+    assert cur._query.params == (b"'wat'",)
 
 
 async def test_query_params_executemany(aconn):
     cur = aconn.cursor()
 
     await cur.executemany("select %t, %t", [[1, 2], [3, 4]])
-    assert cur._query.query == b"select $1, $2"
-    assert cur._query.params == [b"3", b"4"]
+    assert cur._query.query == b"select 3, 4"
+    assert cur._query.params == (b"3", b"4")
+
+
+@pytest.mark.parametrize("ph, params", [("%s", (10,)), ("%(n)s", {"n": 10})])
+async def test_copy_out_param(aconn, ph, params):
+    cur = aconn.cursor()
+    async with cur.copy(
+        f"copy (select * from generate_series(1, {ph})) to stdout", params
+    ) as copy:
+        copy.set_types(["int4"])
+        assert await alist(copy.rows()) == [(i + 1,) for i in range(10)]
+
+    assert aconn.info.transaction_status == aconn.TransactionStatus.INTRANS
 
 
 async def test_stream(aconn):
@@ -566,90 +603,9 @@ async def test_stream(aconn):
     assert recs == [(1, dt.date(2021, 1, 2)), (2, dt.date(2021, 1, 3))]
 
 
-async def test_stream_sql(aconn):
-    cur = aconn.cursor()
-    recs = []
-    async for rec in cur.stream(
-        sql.SQL(
-            "select i, '2021-01-01'::date + i from generate_series(1, {}) as i"
-        ).format(2)
-    ):
-        recs.append(rec)
-
-    assert recs == [(1, dt.date(2021, 1, 2)), (2, dt.date(2021, 1, 3))]
-
-
-async def test_stream_row_factory(aconn):
-    cur = aconn.cursor(row_factory=rows.dict_row)
-    ait = cur.stream("select generate_series(1,2) as a")
-    assert (await ait.__anext__())["a"] == 1
-    cur.row_factory = rows.namedtuple_row
-    assert (await ait.__anext__()).a == 2
-
-
-async def test_stream_no_row(aconn):
-    cur = aconn.cursor()
-    recs = [rec async for rec in cur.stream("select generate_series(2,1) as a")]
-    assert recs == []
-
-
-async def test_stream_no_col(aconn):
-    cur = aconn.cursor()
-    recs = [rec async for rec in cur.stream("select")]
-    assert recs == [()]
-
-
-@pytest.mark.parametrize(
-    "query",
-    [
-        "create table test_stream_badq ()",
-        "copy (select 1) to stdout",
-        "wat?",
-    ],
-)
-async def test_stream_badquery(aconn, query):
-    cur = aconn.cursor()
-    with pytest.raises(psycopg.ProgrammingError):
-        async for rec in cur.stream(query):
-            pass
-
-
-async def test_stream_binary_cursor(aconn):
-    cur = aconn.cursor(binary=True)
-    recs = []
-    async for rec in cur.stream("select generate_series(1, 2)"):
-        recs.append(rec)
-        assert cur.pgresult.fformat(0) == 1
-        assert cur.pgresult.get_value(0, 0) == bytes([0, 0, 0, rec[0]])
-
-    assert recs == [(1,), (2,)]
-
-
-async def test_stream_execute_binary(aconn):
-    cur = aconn.cursor()
-    recs = []
-    async for rec in cur.stream("select generate_series(1, 2)", binary=True):
-        recs.append(rec)
-        assert cur.pgresult.fformat(0) == 1
-        assert cur.pgresult.get_value(0, 0) == bytes([0, 0, 0, rec[0]])
-
-    assert recs == [(1,), (2,)]
-
-
-async def test_stream_binary_cursor_text_override(aconn):
-    cur = aconn.cursor(binary=True)
-    recs = []
-    async for rec in cur.stream("select generate_series(1, 2)", binary=False):
-        recs.append(rec)
-        assert cur.pgresult.fformat(0) == 0
-        assert cur.pgresult.get_value(0, 0) == str(rec[0]).encode()
-
-    assert recs == [(1,), (2,)]
-
-
 async def test_str(aconn):
     cur = aconn.cursor()
-    assert "psycopg.AsyncCursor" in str(cur)
+    assert "psycopg.AsyncClientCursor" in str(cur)
     assert "[IDLE]" in str(cur)
     assert "[closed]" not in str(cur)
     assert "[no result]" in str(cur)
@@ -664,19 +620,16 @@ async def test_str(aconn):
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize("fmt", PyFormat)
-@pytest.mark.parametrize("fmt_out", pq.Format)
 @pytest.mark.parametrize("fetch", ["one", "many", "all", "iter"])
 @pytest.mark.parametrize("row_factory", ["tuple_row", "dict_row", "namedtuple_row"])
-async def test_leak(dsn, faker, fmt, fmt_out, fetch, row_factory):
-    faker.format = fmt
+async def test_leak(dsn, faker, fetch, row_factory):
     faker.choose_schema(ncols=5)
     faker.make_records(10)
     row_factory = getattr(rows, row_factory)
 
     async def work():
         async with await psycopg.AsyncConnection.connect(dsn) as conn:
-            async with conn.cursor(binary=fmt_out, row_factory=row_factory) as cur:
+            async with psycopg.AsyncClientCursor(conn, row_factory=row_factory) as cur:
                 await cur.execute(faker.drop_stmt)
                 await cur.execute(faker.create_stmt)
                 async with faker.find_insert_problem_async(conn):
@@ -707,3 +660,24 @@ async def test_leak(dsn, faker, fmt, fmt_out, fetch, row_factory):
         n.append(len(gc.get_objects()))
 
     assert n[0] == n[1] == n[2], f"objects leaked: {n[1] - n[0]}, {n[2] - n[1]}"
+
+
+async def test_mogrify(aconn):
+    cur = aconn.cursor()
+    q = cur.mogrify("select 'hello'")
+    assert q == "select 'hello'"
+
+    q = cur.mogrify("select %s, %s", [1, dt.date(2020, 1, 1)])
+    assert q == "select 1, '2020-01-01'::date"
+
+    await aconn.execute("set client_encoding to utf8")
+    q = cur.mogrify("select %(s)s", {"s": "\u20ac"})
+    assert q == "select '\u20ac'"
+
+    await aconn.execute("set client_encoding to latin9")
+    q = cur.mogrify("select %(s)s", {"s": "\u20ac"})
+    assert q == "select '\u20ac'"
+
+    await aconn.execute("set client_encoding to latin1")
+    with pytest.raises(UnicodeEncodeError):
+        cur.mogrify("select %(s)s", {"s": "\u20ac"})

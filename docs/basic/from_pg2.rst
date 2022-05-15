@@ -65,15 +65,33 @@ function can be used instead of :sql:`NOTIFY`::
 .. __: https://www.postgresql.org/docs/current/sql-notify.html
     #id-1.9.3.157.7.5
 
-If this is not possible, you can use client-side binding using the objects
-from the `sql` module::
+If this is not possible, you must merge the query and the parameter on the
+client side. You can do so using the `psycopg.sql` objects::
 
     >>> from psycopg import sql
 
-    >>> conn.execute(sql.SQL("CREATE TABLE foo (id int DEFAULT {})").format(42))
+    >>> cur.execute(sql.SQL("CREATE TABLE foo (id int DEFAULT {})").format(42)
 
-    # This will correctly quote the password
-    >>> conn.execute(sql.SQL("ALTER USER john SET PASSWORD {}").format(password))
+or creating a :ref:`client-side binding cursor <client-side-binding-cursors>`
+such as `ClientCursor`::
+
+    >>> cur = ClientCursor(conn)
+    >>> cur.execute("CREATE TABLE foo (id int DEFAULT %s)", [42])
+
+if you need `!ClientCursor` often, you can set the `Connection.cursor_factory`
+to have them created by default by `Connection.cursor()`. This way, Psycopg 3
+will behave largely the same way of Psycopg 2.
+
+Note that, using `!ClientCursor` parameters, you can only specify query values
+(aka *the string that go in single quotes*). If you need to parametrize
+different parts of a statement, you must use the `!psycopg.sql` module::
+
+    >>> from psycopg import sql
+
+    # This will quote the user and the password using the right quotes
+    >>> conn.execute(
+    ...     sql.SQL("ALTER USER {} SET PASSWORD {}")
+    ...     .format(sql.Identifier(username), password))
 
 
 .. _multi-statements:
@@ -86,7 +104,7 @@ when parameters are used, it is not possible to execute several statements in
 the same `!execute()` call, separating them with a semicolon::
 
     >>> conn.execute(
-    ...     "insert into foo values (%s); insert into foo values (%s)",
+    ...     "INSERT INTO foo VALUES (%s); INSERT INTO foo VALUES (%s)",
     ...     (10, 20))
     Traceback (most recent call last):
     ...
@@ -95,22 +113,28 @@ the same `!execute()` call, separating them with a semicolon::
 One obvious way to work around the problem is to use several `!execute()`
 calls.
 
-There is no such limitation if no parameters are used. This allows one to generate
-batches of statements entirely on the client side (for instance using the
-`psycopg.sql` objects) and to run them in the same `!execute()` call::
+There is no such limitation if no parameters are used. As a consequence, you
+can use a :ref:`client-side binding cursor <client-side-binding-cursors>` or
+the `psycopg.sql` objects to compose a multiple query on the client side and
+run them in the same `!execute()` call::
+
 
     >>> from psycopg import sql
-    >>> query = sql.SQL(
-    ...     "insert into foo values ({}); insert into foo values ({})"
-    ... ).format(10, 20))
-    >>> conn.execute(query)
+    >>> conn.execute(
+    ...     sql.SQL("INSERT INTO foo VALUES ({}); INSERT INTO foo values ({})"
+    ...     .format(10, 20))
+
+    >>> psycopg.ClientCursor(conn)
+    >>> cur.execute(
+    ...     "INSERT INTO foo VALUES (%s); INSERT INTO foo VALUES (%s)",
+    ...     (10, 20))
 
 Note that statements that must be run outside a transaction (such as
 :sql:`CREATE DATABASE`) can never be executed in batch with other statements,
 even if the connection is in autocommit mode::
 
     >>> conn.autocommit = True
-    >>> conn.execute("create database foo; select 1")
+    >>> conn.execute("CREATE DATABASE foo; SELECT 1")
     Traceback (most recent call last):
     ...
     psycopg.errors.ActiveSqlTransaction: CREATE DATABASE cannot run inside a transaction block

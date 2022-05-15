@@ -17,7 +17,7 @@ from psycopg.adapt import PyFormat
 from psycopg.types.hstore import register_hstore
 from psycopg.types.numeric import Int4
 
-from .utils import gc_collect
+from .utils import alist, gc_collect
 from .test_copy import sample_text, sample_binary, sample_binary_rows  # noqa
 from .test_copy import eur, sample_values, sample_records, sample_tabledef
 from .test_copy import py_to_raw
@@ -60,6 +60,18 @@ async def test_copy_out_iter(aconn, format):
         f"copy ({sample_values}) to stdout (format {format.name})"
     ) as copy:
         assert await alist(copy) == want
+
+    assert aconn.info.transaction_status == aconn.TransactionStatus.INTRANS
+
+
+@pytest.mark.parametrize("ph, params", [("%s", (10,)), ("%(n)s", {"n": 10})])
+async def test_copy_out_param(aconn, ph, params):
+    cur = aconn.cursor()
+    async with cur.copy(
+        f"copy (select * from generate_series(1, {ph})) to stdout", params
+    ) as copy:
+        copy.set_types(["int4"])
+        assert await alist(copy.rows()) == [(i + 1,) for i in range(10)]
 
     assert aconn.info.transaction_status == aconn.TransactionStatus.INTRANS
 
@@ -792,7 +804,3 @@ class DataGenerator:
                 block = block.encode()
             m.update(block)
         return m.hexdigest()
-
-
-async def alist(it):
-    return [i async for i in it]

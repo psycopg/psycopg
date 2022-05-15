@@ -39,6 +39,74 @@ reasonably small result sets.
 
 
 .. index::
+    double: Cursor; Client-binding
+
+.. _client-side-binding-cursors:
+
+Client-side-binding cursors
+---------------------------
+
+.. versionadded:: 3.1
+
+The previously described :ref:`client-side cursors <client-side-cursors>` send
+the query and the parameters separately to the server. This is the most
+efficient way to process parametrised queries and allows to build several
+features and optimizations. However, not all types of queries can be bound
+server-side; in particular no Data Definition Language query can. See
+:ref:`server-side-binding` for the description of these problems.
+
+The `ClientCursor` (and its `AsyncClientCursor` async counterpart) merge the
+query on the client and send the query and the parameters merged together to
+the server. This allows to parametrize any type of PostgreSQL statement, not
+only queries (:sql:`SELECT`) and Data Manipulation statements (:sql:`INSERT`,
+:sql:`UPDATE`, :sql:`DELETE`).
+
+Using `!ClientCursor`, Psycopg 3 behaviour will be more similar to `psycopg2`
+(which only implements client-side binding) and could be useful to port
+Psycopg 2 programs more easily to Psycopg 3. The objects in the `sql` module
+allow for greater flexibility (for instance to parametrize a table name too,
+not only values); however, for simple cases, a `!ClientCursor` could be the
+right object.
+
+In order to obtain `!ClientCursor` from a connection, you can set its
+`~Connection.cursor_factory` (at init time or changing its attribute
+afterwards):
+
+.. code:: python
+
+    from psycopg import connect, ClientCursor
+
+    conn = psycopg.connect(DSN, cursor_factory=ClientCursor)
+    cur = conn.cursor()
+    # <psycopg.ClientCursor [no result] [IDLE] (database=piro) at 0x7fd977ae2880>
+
+If you need to create a one-off client-side-binding cursor out of a normal
+connection, you can just use the `~ClientCursor` class passing the connection
+as argument.
+
+.. code:: python
+
+    conn = psycopg.connect(DSN)
+    cur = psycopg.ClientCursor(conn)
+
+.. warning::
+
+    Client-side cursors don't support :ref:`binary parameters and return
+    values <binary-data>` and don't support :ref:`prepared statements
+    <prepared-statements>`.
+
+.. tip::
+
+    The best use for client-side binding cursors is probably to port large
+    Psycopg 2 code to Psycopg 3, especially for programs making wide use of
+    Data Definition Language statements.
+
+    The `psycopg.sql` module allows for more generic client-side query
+    composition, to mix client- and server-side parameters binding, and allows
+    to parametrize tables and fields names too, or entirely generic SQL
+    snippets.
+
+.. index::
     double: Cursor; Server-side
     single: Portal
     double: Cursor; Named
@@ -48,7 +116,7 @@ reasonably small result sets.
 Server-side cursors
 -------------------
 
-PostgreSQL also has its own concept of *cursor* (sometimes also called
+PostgreSQL has its own concept of *cursor* too (sometimes also called
 *portal*). When a database cursor is created, the query is not necessarily
 completely processed: the server might be able to produce results only as they
 are needed. Only the results requested are transmitted to the client: if the
@@ -87,7 +155,7 @@ result is needed.
 .. _cursor-steal:
 
 "Stealing" an existing cursor
------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 A Psycopg `ServerCursor` can be also used to consume a cursor which was
 created in other ways than the :sql:`DECLARE` that `ServerCursor.execute()`

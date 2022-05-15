@@ -42,7 +42,7 @@ def test_funny_name(conn):
 
 def test_repr(conn):
     cur = conn.cursor("my-name")
-    assert "ServerCursor" in repr(cur)
+    assert "psycopg.ServerCursor" in str(cur)
     assert "my-name" in repr(cur)
     cur.close()
 

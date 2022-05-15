@@ -97,6 +97,53 @@ class PostgresQuery:
             self.formats = None
 
 
+class PostgresClientQuery(PostgresQuery):
+    """
+    PostgresQuery subclass merging query and arguments client-side.
+    """
+
+    __slots__ = ("template",)
+
+    def convert(self, query: Query, vars: Optional[Params]) -> None:
+        """
+        Set up the query and parameters to convert.
+
+        The results of this function can be obtained accessing the object
+        attributes (`query`, `params`, `types`, `formats`).
+        """
+        if isinstance(query, str):
+            bquery = query.encode(self._encoding)
+        elif isinstance(query, Composable):
+            bquery = query.as_bytes(self._tx)
+        else:
+            bquery = query
+
+        if vars is not None:
+            (self.template, self._order, self._parts) = _query2pg_client(
+                bquery, self._encoding
+            )
+        else:
+            self.query = bquery
+            self._order = None
+
+        self.dump(vars)
+
+    def dump(self, vars: Optional[Params]) -> None:
+        """
+        Process a new set of variables on the query processed by `convert()`.
+
+        This method updates `params` and `types`.
+        """
+        if vars is not None:
+            params = _validate_and_reorder_params(self._parts, vars, self._order)
+            self.params = tuple(
+                self._tx.as_literal(p) if p is not None else b"NULL" for p in params
+            )
+            self.query = self.template % self.params
+        else:
+            self.params = None
+
+
 @lru_cache()
 def _query2pg(
     query: bytes, encoding: str
@@ -106,7 +153,7 @@ def _query2pg(
 
     - Convert Python placeholders (``%s``, ``%(name)s``) into Postgres
       format (``$1``, ``$2``)
-    - placeholders can be %s or %b (text or binary)
+    - placeholders can be %s, %t, or %b (auto, text or binary)
     - return ``query`` (bytes), ``formats`` (list of formats) ``order``
       (sequence of names used in the query, in the position they appear)
       ``parts`` (splits of queries and placeholders).
@@ -146,6 +193,43 @@ def _query2pg(
     chunks.append(parts[-1].pre)
 
     return b"".join(chunks), formats, order, parts
+
+
+@lru_cache()
+def _query2pg_client(
+    query: bytes, encoding: str
+) -> Tuple[bytes, Optional[List[str]], List[QueryPart]]:
+    """
+    Convert Python query and params into a template to perform client-side binding
+    """
+    parts = _split_query(query, encoding)
+    order: Optional[List[str]] = None
+    chunks: List[bytes] = []
+
+    if isinstance(parts[0].item, int):
+        for part in parts[:-1]:
+            assert isinstance(part.item, int)
+            chunks.append(part.pre)
+            chunks.append(b"%s")
+
+    elif isinstance(parts[0].item, str):
+        seen: Dict[str, Tuple[bytes, PyFormat]] = {}
+        order = []
+        for part in parts[:-1]:
+            assert isinstance(part.item, str)
+            chunks.append(part.pre)
+            if part.item not in seen:
+                ph = b"%s"
+                seen[part.item] = (ph, part.format)
+                order.append(part.item)
+                chunks.append(ph)
+            else:
+                chunks.append(seen[part.item][0])
+
+    # last part
+    chunks.append(parts[-1].pre)
+
+    return b"".join(chunks), order, parts
 
 
 def _validate_and_reorder_params(
