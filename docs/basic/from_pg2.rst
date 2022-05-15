@@ -239,7 +239,7 @@ only the transaction is closed, not the connection. This behaviour is
 surprising for people used to several other Python classes wrapping resources,
 such as files.
 
-In psycopg3, using :ref:`with connection <with-connection>` will close the
+In Psycopg 3, using :ref:`with connection <with-connection>` will close the
 connection at the end of the `!with` block, making handling the connection
 resources more familiar.
 
