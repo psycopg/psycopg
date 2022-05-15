@@ -26,9 +26,9 @@ samples = [
 def test_json_dump(conn, val, fmt_in):
     obj = json.loads(val)
     cur = conn.cursor()
-    cur.execute(f"select pg_typeof(%{fmt_in}) = 'json'::regtype", (Json(obj),))
+    cur.execute(f"select pg_typeof(%{fmt_in.value}) = 'json'::regtype", (Json(obj),))
     assert cur.fetchone()[0] is True
-    cur.execute(f"select %{fmt_in}::text = %s::json::text", (Json(obj), val))
+    cur.execute(f"select %{fmt_in.value}::text = %s::json::text", (Json(obj), val))
     assert cur.fetchone()[0] is True
 
 
@@ -37,7 +37,7 @@ def test_json_dump(conn, val, fmt_in):
 def test_jsonb_dump(conn, val, fmt_in):
     obj = json.loads(val)
     cur = conn.cursor()
-    cur.execute(f"select %{fmt_in} = %s::jsonb", (Jsonb(obj), val))
+    cur.execute(f"select %{fmt_in.value} = %s::jsonb", (Jsonb(obj), val))
     assert cur.fetchone()[0] is True
 
 
@@ -74,7 +74,7 @@ def test_json_dump_customise(conn, wrapper, fmt_in):
 
     set_json_dumps(my_dumps)
     try:
-        cur.execute(f"select %{fmt_in}->>'baz' = 'qux'", (wrapper(obj),))
+        cur.execute(f"select %{fmt_in.value}->>'baz' = 'qux'", (wrapper(obj),))
         assert cur.fetchone()[0] is True
     finally:
         set_json_dumps(json.dumps)
@@ -89,9 +89,9 @@ def test_json_dump_customise_context(conn, wrapper, fmt_in):
     cur2 = conn.cursor()
 
     set_json_dumps(my_dumps, cur2)
-    cur1.execute(f"select %{fmt_in}->>'baz'", (wrapper(obj),))
+    cur1.execute(f"select %{fmt_in.value}->>'baz'", (wrapper(obj),))
     assert cur1.fetchone()[0] is None
-    cur2.execute(f"select %{fmt_in}->>'baz'", (wrapper(obj),))
+    cur2.execute(f"select %{fmt_in.value}->>'baz'", (wrapper(obj),))
     assert cur2.fetchone()[0] == "qux"
 
 
@@ -101,7 +101,7 @@ def test_json_dump_customise_wrapper(conn, wrapper, fmt_in):
     wrapper = getattr(psycopg.types.json, wrapper)
     obj = {"foo": "bar"}
     cur = conn.cursor()
-    cur.execute(f"select %{fmt_in}->>'baz' = 'qux'", (wrapper(obj, my_dumps),))
+    cur.execute(f"select %{fmt_in.value}->>'baz' = 'qux'", (wrapper(obj, my_dumps),))
     assert cur.fetchone()[0] is True
 
 

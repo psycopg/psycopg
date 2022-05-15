@@ -61,7 +61,7 @@ range_classes = """
 @pytest.mark.parametrize("fmt_in", PyFormat)
 def test_dump_builtin_empty(conn, pgtype, fmt_in):
     r = Range(empty=True)  # type: ignore[var-annotated]
-    cur = conn.execute(f"select 'empty'::{pgtype} = %{fmt_in}", (r,))
+    cur = conn.execute(f"select 'empty'::{pgtype} = %{fmt_in.value}", (r,))
     assert cur.fetchone()[0] is True
 
 
@@ -70,7 +70,7 @@ def test_dump_builtin_empty(conn, pgtype, fmt_in):
 def test_dump_builtin_empty_wrapper(conn, wrapper, fmt_in):
     wrapper = getattr(range_module, wrapper)
     r = wrapper(empty=True)
-    cur = conn.execute(f"select 'empty' = %{fmt_in}", (r,))
+    cur = conn.execute(f"select 'empty' = %{fmt_in.value}", (r,))
     assert cur.fetchone()[0] is True
 
 
@@ -94,7 +94,7 @@ def test_dump_builtin_array(conn, pgtype, fmt_in):
     r1 = Range(empty=True)  # type: ignore[var-annotated]
     r2 = Range(bounds="()")  # type: ignore[var-annotated]
     cur = conn.execute(
-        f"select array['empty'::{pgtype}, '(,)'::{pgtype}] = %{fmt_in}",
+        f"select array['empty'::{pgtype}, '(,)'::{pgtype}] = %{fmt_in.value}",
         ([r1, r2],),
     )
     assert cur.fetchone()[0] is True
@@ -106,7 +106,8 @@ def test_dump_builtin_array_with_cast(conn, pgtype, fmt_in):
     r1 = Range(empty=True)  # type: ignore[var-annotated]
     r2 = Range(bounds="()")  # type: ignore[var-annotated]
     cur = conn.execute(
-        f"select array['empty'::{pgtype}, '(,)'::{pgtype}] = %{fmt_in}::{pgtype}[]",
+        f"select array['empty'::{pgtype}, '(,)'::{pgtype}] "
+        f"= %{fmt_in.value}::{pgtype}[]",
         ([r1, r2],),
     )
     assert cur.fetchone()[0] is True
@@ -118,7 +119,7 @@ def test_dump_builtin_array_wrapper(conn, wrapper, fmt_in):
     wrapper = getattr(range_module, wrapper)
     r1 = wrapper(empty=True)
     r2 = wrapper(bounds="()")
-    cur = conn.execute(f"""select '{{empty,"(,)"}}' = %{fmt_in}""", ([r1, r2],))
+    cur = conn.execute(f"""select '{{empty,"(,)"}}' = %{fmt_in.value}""", ([r1, r2],))
     assert cur.fetchone()[0] is True
 
 
@@ -128,7 +129,7 @@ def test_dump_builtin_range(conn, pgtype, min, max, bounds, fmt_in):
     r = Range(min, max, bounds)  # type: ignore[var-annotated]
     sub = type2sub[pgtype]
     cur = conn.execute(
-        f"select {pgtype}(%s::{sub}, %s::{sub}, %s) = %{fmt_in}",
+        f"select {pgtype}(%s::{sub}, %s::{sub}, %s) = %{fmt_in.value}",
         (min, max, bounds, r),
     )
     assert cur.fetchone()[0] is True

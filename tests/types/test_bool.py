@@ -11,13 +11,13 @@ from psycopg.postgres import types as builtins
 @pytest.mark.parametrize("b", [True, False])
 def test_roundtrip_bool(conn, b, fmt_in, fmt_out):
     cur = conn.cursor(binary=fmt_out)
-    result = cur.execute(f"select %{fmt_in}", (b,)).fetchone()[0]
+    result = cur.execute(f"select %{fmt_in.value}", (b,)).fetchone()[0]
     assert cur.pgresult.fformat(0) == fmt_out
     if b is not None:
         assert cur.pgresult.ftype(0) == builtins["bool"].oid
     assert result is b
 
-    result = cur.execute(f"select %{fmt_in}", ([b],)).fetchone()[0]
+    result = cur.execute(f"select %{fmt_in.value}", ([b],)).fetchone()[0]
     assert cur.pgresult.fformat(0) == fmt_out
     if b is not None:
         assert cur.pgresult.ftype(0) == builtins["bool"].array_oid

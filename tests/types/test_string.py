@@ -18,7 +18,7 @@ eur = "\u20ac"
 def test_dump_1char(conn, fmt_in):
     cur = conn.cursor()
     for i in range(1, 256):
-        cur.execute(f"select %{fmt_in} = chr(%s)", (chr(i), i))
+        cur.execute(f"select %{fmt_in.value} = chr(%s)", (chr(i), i))
         assert cur.fetchone()[0] is True, chr(i)
 
 
@@ -46,7 +46,7 @@ def test_dump_zero(conn, fmt_in):
     cur = conn.cursor()
     s = "foo\x00bar"
     with pytest.raises(psycopg.DataError):
-        cur.execute(f"select %{fmt_in}::text", (s,))
+        cur.execute(f"select %{fmt_in.value}::text", (s,))
 
 
 def test_quote_zero(conn):
@@ -94,7 +94,7 @@ def test_dump_enc(conn, fmt_in, encoding):
     cur = conn.cursor()
 
     conn.execute(f"set client_encoding to {encoding}")
-    (res,) = cur.execute(f"select ascii(%{fmt_in})", (eur,)).fetchone()
+    (res,) = cur.execute(f"select ascii(%{fmt_in.value})", (eur,)).fetchone()
     assert res == ord(eur)
 
 
@@ -104,7 +104,7 @@ def test_dump_badenc(conn, fmt_in):
 
     conn.execute("set client_encoding to latin1")
     with pytest.raises(UnicodeEncodeError):
-        cur.execute(f"select %{fmt_in}::bytea", (eur,))
+        cur.execute(f"select %{fmt_in.value}::bytea", (eur,))
 
 
 @pytest.mark.parametrize("fmt_in", PyFormat)
@@ -113,7 +113,7 @@ def test_dump_utf8_badenc(conn, fmt_in):
 
     conn.execute("set client_encoding to utf8")
     with pytest.raises(UnicodeEncodeError):
-        cur.execute(f"select %{fmt_in}", ("\uddf8",))
+        cur.execute(f"select %{fmt_in.value}", ("\uddf8",))
 
 
 @pytest.mark.parametrize("fmt_in", [PyFormat.AUTO, PyFormat.TEXT])
@@ -127,7 +127,7 @@ def test_dump_enum(conn, fmt_in):
     cur = conn.cursor()
     cur.execute("create type myenum as enum ('foo', 'bar')")
     cur.execute("create table with_enum (e myenum)")
-    cur.execute(f"insert into with_enum (e) values (%{fmt_in})", (MyEnum.foo,))
+    cur.execute(f"insert into with_enum (e) values (%{fmt_in.value})", (MyEnum.foo,))
     (res,) = cur.execute("select e from with_enum").fetchone()
     assert res == "foo"
 
@@ -137,9 +137,11 @@ def test_dump_text_oid(conn, fmt_in):
     conn.autocommit = True
 
     with pytest.raises(e.IndeterminateDatatype):
-        conn.execute(f"select concat(%{fmt_in}, %{fmt_in})", ["foo", "bar"])
+        conn.execute(f"select concat(%{fmt_in.value}, %{fmt_in.value})", ["foo", "bar"])
     conn.adapters.register_dumper(str, psycopg.types.string.StrDumper)
-    cur = conn.execute(f"select concat(%{fmt_in}, %{fmt_in})", ["foo", "bar"])
+    cur = conn.execute(
+        f"select concat(%{fmt_in.value}, %{fmt_in.value})", ["foo", "bar"]
+    )
     assert cur.fetchone()[0] == "foobar"
 
 
@@ -208,7 +210,7 @@ def test_text_array(conn, typename, fmt_in, fmt_out):
     cur = conn.cursor(binary=fmt_out)
     a = list(map(chr, range(1, 256))) + [eur]
 
-    (res,) = cur.execute(f"select %{fmt_in}::{typename}[]", (a,)).fetchone()
+    (res,) = cur.execute(f"select %{fmt_in.value}::{typename}[]", (a,)).fetchone()
     assert res == a
 
 
@@ -219,7 +221,7 @@ def test_text_array_ascii(conn, fmt_in, fmt_out):
     cur = conn.cursor(binary=fmt_out)
     a = list(map(chr, range(1, 256))) + [eur]
     exp = [s.encode() for s in a]
-    (res,) = cur.execute(f"select %{fmt_in}::text[]", (a,)).fetchone()
+    (res,) = cur.execute(f"select %{fmt_in.value}::text[]", (a,)).fetchone()
     assert res == exp
 
 
@@ -234,10 +236,10 @@ def test_dump_1byte(conn, fmt_in, pytype):
     cur = conn.cursor()
     for i in range(0, 256):
         obj = pytype(bytes([i]))
-        cur.execute(f"select %{fmt_in} = set_byte('x', 0, %s)", (obj, i))
+        cur.execute(f"select %{fmt_in.value} = set_byte('x', 0, %s)", (obj, i))
         assert cur.fetchone()[0] is True, i
 
-    cur.execute(f"select %{fmt_in} = array[set_byte('x', 0, %s)]", ([obj], i))
+    cur.execute(f"select %{fmt_in.value} = array[set_byte('x', 0, %s)]", ([obj], i))
     assert cur.fetchone()[0] is True
 
 
@@ -275,5 +277,5 @@ def test_load_1byte(conn, fmt_out):
 def test_bytea_array(conn, fmt_in, fmt_out):
     cur = conn.cursor(binary=fmt_out)
     a = [bytes(range(0, 256))]
-    (res,) = cur.execute(f"select %{fmt_in}::bytea[]", (a,)).fetchone()
+    (res,) = cur.execute(f"select %{fmt_in.value}::bytea[]", (a,)).fetchone()
     assert res == a

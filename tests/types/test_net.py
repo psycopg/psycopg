@@ -13,10 +13,10 @@ from psycopg.adapt import PyFormat
 @pytest.mark.parametrize("val", ["192.168.0.1", "2001:db8::"])
 def test_address_dump(conn, fmt_in, val):
     cur = conn.cursor()
-    cur.execute(f"select %{fmt_in} = %s::inet", (ipaddress.ip_address(val), val))
+    cur.execute(f"select %{fmt_in.value} = %s::inet", (ipaddress.ip_address(val), val))
     assert cur.fetchone()[0] is True
     cur.execute(
-        f"select %{fmt_in} = array[null, %s]::inet[]",
+        f"select %{fmt_in.value} = array[null, %s]::inet[]",
         ([None, ipaddress.ip_interface(val)], val),
     )
     assert cur.fetchone()[0] is True
@@ -27,12 +27,13 @@ def test_address_dump(conn, fmt_in, val):
 def test_interface_dump(conn, fmt_in, val):
     cur = conn.cursor()
     rec = cur.execute(
-        f"select %(val){fmt_in} = %(repr)s::inet, %(val){fmt_in}, %(repr)s::inet",
+        f"select %(val){fmt_in.value} = %(repr)s::inet,"
+        f" %(val){fmt_in.value}, %(repr)s::inet",
         {"val": ipaddress.ip_interface(val), "repr": val},
     ).fetchone()
     assert rec[0] is True, f"{rec[1]} != {rec[2]}"
     cur.execute(
-        f"select %{fmt_in} = array[null, %s]::inet[]",
+        f"select %{fmt_in.value} = array[null, %s]::inet[]",
         ([None, ipaddress.ip_interface(val)], val),
     )
     assert cur.fetchone()[0] is True
@@ -42,10 +43,10 @@ def test_interface_dump(conn, fmt_in, val):
 @pytest.mark.parametrize("val", ["127.0.0.0/24", "::ffff:102:300/128"])
 def test_network_dump(conn, fmt_in, val):
     cur = conn.cursor()
-    cur.execute(f"select %{fmt_in} = %s::cidr", (ipaddress.ip_network(val), val))
+    cur.execute(f"select %{fmt_in.value} = %s::cidr", (ipaddress.ip_network(val), val))
     assert cur.fetchone()[0] is True
     cur.execute(
-        f"select %{fmt_in} = array[NULL, %s]::cidr[]",
+        f"select %{fmt_in.value} = array[NULL, %s]::cidr[]",
         ([None, ipaddress.ip_network(val)], val),
     )
     assert cur.fetchone()[0] is True
@@ -58,7 +59,7 @@ def test_network_mixed_size_array(conn, fmt_in):
         ipaddress.IPv6Network("::1/128"),
     ]
     cur = conn.cursor()
-    cur.execute(f"select %{fmt_in}", (val,))
+    cur.execute(f"select %{fmt_in.value}", (val,))
     got = cur.fetchone()[0]
     assert val == got
 

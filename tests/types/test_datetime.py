@@ -22,7 +22,7 @@ class TestDate:
     def test_dump_date(self, conn, val, expr, fmt_in):
         val = as_date(val)
         cur = conn.cursor()
-        cur.execute(f"select '{expr}'::date = %{fmt_in}", (val,))
+        cur.execute(f"select '{expr}'::date = %{fmt_in.value}", (val,))
         assert cur.fetchone()[0] is True
 
         cur.execute(
@@ -104,12 +104,12 @@ class TestDatetime:
     def test_dump_datetime(self, conn, val, expr, fmt_in):
         cur = conn.cursor()
         cur.execute("set timezone to '+02:00'")
-        cur.execute(f"select %{fmt_in}", (as_dt(val),))
-        cur.execute(f"select '{expr}'::timestamp = %{fmt_in}", (as_dt(val),))
+        cur.execute(f"select %{fmt_in.value}", (as_dt(val),))
+        cur.execute(f"select '{expr}'::timestamp = %{fmt_in.value}", (as_dt(val),))
         cur.execute(
             f"""
-            select '{expr}'::timestamp = %(val){fmt_in},
-            '{expr}', %(val){fmt_in}::text
+            select '{expr}'::timestamp = %(val){fmt_in.value},
+            '{expr}', %(val){fmt_in.value}::text
             """,
             {"val": as_dt(val)},
         )
@@ -219,8 +219,8 @@ class TestDateTimeTz:
         cur.execute("set timezone to '-02:00'")
         cur.execute(
             f"""
-            select '{expr}'::timestamptz = %(val){fmt_in},
-            '{expr}', %(val){fmt_in}::text
+            select '{expr}'::timestamptz = %(val){fmt_in.value},
+            '{expr}', %(val){fmt_in.value}::text
             """,
             {"val": as_dt(val)},
         )
@@ -308,7 +308,7 @@ class TestDateTimeTz:
         val = as_dt(val)
         cur = conn.cursor()
         cur.execute(
-            f"select pg_typeof(%{fmt_in}) = %s::regtype, %{fmt_in}",
+            f"select pg_typeof(%{fmt_in.value}) = %s::regtype, %{fmt_in.value}",
             [val, type, val],
         )
         rec = cur.fetchone()
@@ -379,8 +379,8 @@ class TestTime:
         cur = conn.cursor()
         cur.execute(
             f"""
-            select '{expr}'::time = %(val){fmt_in},
-                '{expr}'::time::text, %(val){fmt_in}::text
+            select '{expr}'::time = %(val){fmt_in.value},
+                '{expr}'::time::text, %(val){fmt_in.value}::text
             """,
             {"val": as_time(val)},
         )
@@ -429,7 +429,7 @@ class TestTimeTz:
     def test_dump_timetz(self, conn, val, expr, fmt_in):
         cur = conn.cursor()
         cur.execute("set timezone to '-02:00'")
-        cur.execute(f"select '{expr}'::timetz = %{fmt_in}", (as_time(val),))
+        cur.execute(f"select '{expr}'::timetz = %{fmt_in.value}", (as_time(val),))
         assert cur.fetchone()[0] is True
 
     @pytest.mark.parametrize(
@@ -470,7 +470,7 @@ class TestTimeTz:
         val = as_time(val)
         cur = conn.cursor()
         cur.execute(
-            f"select pg_typeof(%{fmt_in}) = %s::regtype, %{fmt_in}",
+            f"select pg_typeof(%{fmt_in.value}) = %s::regtype, %{fmt_in.value}",
             [val, type, val],
         )
         rec = cur.fetchone()

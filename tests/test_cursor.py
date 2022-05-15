@@ -372,12 +372,12 @@ def test_executemany_null_first(conn, fmt_in):
     cur = conn.cursor()
     cur.execute("create table testmany (a bigint, b bigint)")
     cur.executemany(
-        f"insert into testmany values (%{fmt_in}, %{fmt_in})",
+        f"insert into testmany values (%{fmt_in.value}, %{fmt_in.value})",
         [[1, None], [3, 4]],
     )
     with pytest.raises((psycopg.DataError, psycopg.ProgrammingError)):
         cur.executemany(
-            f"insert into testmany values (%{fmt_in}, %{fmt_in})",
+            f"insert into testmany values (%{fmt_in.value}, %{fmt_in.value})",
             [[1, ""], [3, 4]],
         )
 

@@ -32,7 +32,7 @@ tests_str = [
 @pytest.mark.parametrize("obj, want", tests_str)
 def test_dump_list_str(conn, obj, want, fmt_in):
     cur = conn.cursor()
-    cur.execute(f"select %{fmt_in}::text[] = %s::text[]", (obj, want))
+    cur.execute(f"select %{fmt_in.value}::text[] = %s::text[]", (obj, want))
     assert cur.fetchone()[0]
 
 
@@ -50,16 +50,16 @@ def test_all_chars(conn, fmt_in, fmt_out):
     cur = conn.cursor(binary=fmt_out)
     for i in range(1, 256):
         c = chr(i)
-        cur.execute(f"select %{fmt_in}::text[]", ([c],))
+        cur.execute(f"select %{fmt_in.value}::text[]", ([c],))
         assert cur.fetchone()[0] == [c]
 
     a = list(map(chr, range(1, 256)))
     a.append("\u20ac")
-    cur.execute(f"select %{fmt_in}::text[]", (a,))
+    cur.execute(f"select %{fmt_in.value}::text[]", (a,))
     assert cur.fetchone()[0] == a
 
     s = "".join(a)
-    cur.execute(f"select %{fmt_in}::text[]", ([s],))
+    cur.execute(f"select %{fmt_in.value}::text[]", ([s],))
     assert cur.fetchone()[0] == [s]
 
 
@@ -176,7 +176,7 @@ def test_list_number_wrapper(conn, wrapper, fmt_in, fmt_out):
 
     obj = [wrapper(1), wrapper(0), wrapper(-1), None]
     cur = conn.cursor(binary=fmt_out)
-    got = cur.execute(f"select %{fmt_in}", [obj]).fetchone()[0]
+    got = cur.execute(f"select %{fmt_in.value}", [obj]).fetchone()[0]
     assert got == obj
     for i in got:
         if i is not None:
@@ -197,7 +197,7 @@ def test_empty_list_mix(conn, fmt_in):
     conn.execute("create table testarrays (col1 bigint[], col2 bigint[])")
     # pro tip: don't get confused with the types
     f1, f2 = conn.execute(
-        f"insert into testarrays values (%{fmt_in}, %{fmt_in}) returning *",
+        f"insert into testarrays values (%{fmt_in.value}, %{fmt_in.value}) returning *",
         (objs, []),
     ).fetchone()
     assert f1 == objs
@@ -209,14 +209,14 @@ def test_empty_list(conn, fmt_in):
     cur = conn.cursor()
     cur.execute("create table test (id serial primary key, data date[])")
     with conn.transaction():
-        cur.execute(f"insert into test (data) values (%{fmt_in})", ([],))
+        cur.execute(f"insert into test (data) values (%{fmt_in.value})", ([],))
     cur.execute("select data from test")
     assert cur.fetchone() == ([],)
 
     # test untyped list in a filter
-    cur.execute(f"select data from test where id = any(%{fmt_in})", ([1],))
+    cur.execute(f"select data from test where id = any(%{fmt_in.value})", ([1],))
     assert cur.fetchone()
-    cur.execute(f"select data from test where id = any(%{fmt_in})", ([],))
+    cur.execute(f"select data from test where id = any(%{fmt_in.value})", ([],))
     assert not cur.fetchone()
 
 
@@ -224,7 +224,9 @@ def test_empty_list(conn, fmt_in):
 def test_empty_list_after_choice(conn, fmt_in):
     cur = conn.cursor()
     cur.execute("create table test (id serial primary key, data float[])")
-    cur.executemany(f"insert into test (data) values (%{fmt_in})", [([1.0],), ([],)])
+    cur.executemany(
+        f"insert into test (data) values (%{fmt_in.value})", [([1.0],), ([],)]
+    )
     cur.execute("select data from test order by id")
     assert cur.fetchall() == [([1.0],), ([],)]
 
