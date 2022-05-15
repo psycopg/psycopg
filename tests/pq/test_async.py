@@ -20,7 +20,7 @@ def test_send_query(pgconn):
 
     # send loop
     waited_on_send = 0
-    while 1:
+    while True:
         f = pgconn.flush()
         if f == 0:
             break
@@ -40,7 +40,7 @@ def test_send_query(pgconn):
 
     # read loop
     results = []
-    while 1:
+    while True:
         pgconn.consume_input()
         if pgconn.is_busy():
             select([pgconn.socket], [], [])

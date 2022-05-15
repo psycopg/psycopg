@@ -32,7 +32,7 @@ def test_connectdb_badtype(baddsn):
 def test_connect_async(dsn):
     conn = pq.PGconn.connect_start(dsn.encode())
     conn.nonblocking = 1
-    while 1:
+    while True:
         assert conn.status != pq.ConnStatus.BAD
         rv = conn.connect_poll()
         if rv == pq.PollingStatus.OK:
@@ -56,7 +56,7 @@ def test_connect_async_bad(dsn):
     parsed_dsn[b"dbname"] = b"psycopg_test_not_for_real"
     dsn = b" ".join(b"%s='%s'" % item for item in parsed_dsn.items())
     conn = pq.PGconn.connect_start(dsn)
-    while 1:
+    while True:
         assert conn.status != pq.ConnStatus.BAD, conn.error_message
         rv = conn.connect_poll()
         if rv == pq.PollingStatus.FAILED:
@@ -149,7 +149,7 @@ def test_reset_async(pgconn):
     pgconn.exec_(b"select pg_terminate_backend(pg_backend_pid())")
     assert pgconn.status == pq.ConnStatus.BAD
     pgconn.reset_start()
-    while 1:
+    while True:
         rv = pgconn.reset_poll()
         if rv == pq.PollingStatus.READING:
             select([pgconn.socket], [], [])

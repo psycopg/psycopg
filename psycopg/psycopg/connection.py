@@ -898,7 +898,7 @@ class Connection(BaseConnection[Row]):
         """
         Yield `Notify` objects as soon as they are received from the database.
         """
-        while 1:
+        while True:
             with self.lock:
                 ns = self.wait(notifies(self.pgconn))
             enc = pgconn_encoding(self.pgconn)

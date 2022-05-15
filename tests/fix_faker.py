@@ -488,7 +488,7 @@ class Faker:
         # don't make empty lists because they regularly fail cast
         length = randrange(1, self.list_max_length)
         spec = spec[1]
-        while 1:
+        while True:
             rv = [self.make(spec) for i in range(length)]
 
             # TODO multirange lists fail binary dump if the last element is

@@ -31,7 +31,7 @@ def connect(conninfo: str) -> PQGenConn[abc.PGconn]:
     cdef int conn_status = libpq.PQstatus(pgconn_ptr)
     cdef int poll_status
 
-    while 1:
+    while True:
         if conn_status == libpq.CONNECTION_BAD:
             encoding = conninfo_encoding(conninfo)
             raise e.OperationalError(
@@ -92,7 +92,7 @@ def send(pq.PGconn pgconn) -> PQGen[None]:
     cdef int status
     cdef int cires
 
-    while 1:
+    while True:
         if libpq.PQflush(pgconn_ptr) == 0:
             break
 
@@ -122,7 +122,7 @@ def fetch_many(pq.PGconn pgconn) -> PQGen[List[PGresult]]:
     cdef pq.PGresult result
     cdef libpq.PGresult *pgres
 
-    while 1:
+    while True:
         result = yield from fetch(pgconn)
         if result is None:
             break
@@ -161,7 +161,7 @@ def fetch(pq.PGconn pgconn) -> PQGen[Optional[PGresult]]:
 
     if libpq.PQisBusy(pgconn_ptr):
         yield WAIT_R
-        while 1:
+        while True:
             with nogil:
                 cires = libpq.PQconsumeInput(pgconn_ptr)
                 if cires == 1:
@@ -176,7 +176,7 @@ def fetch(pq.PGconn pgconn) -> PQGen[Optional[PGresult]]:
 
     # Consume notifies
     if notify_handler is not None:
-        while 1:
+        while True:
             pynotify = pgconn.notifies()
             if pynotify is None:
                 break
@@ -184,7 +184,7 @@ def fetch(pq.PGconn pgconn) -> PQGen[Optional[PGresult]]:
                 notify_handler, <PyObject *>pynotify, NULL
             )
     else:
-        while 1:
+        while True:
             notify = libpq.PQnotifies(pgconn_ptr)
             if notify is NULL:
                 break

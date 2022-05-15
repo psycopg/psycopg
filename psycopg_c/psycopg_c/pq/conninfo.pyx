@@ -41,7 +41,7 @@ cdef _options_from_array(libpq.PQconninfoOption *opts):
     rv = []
     cdef int i = 0
     cdef libpq.PQconninfoOption* opt
-    while 1:
+    while True:
         opt = opts + i
         if opt.keyword is NULL:
             break

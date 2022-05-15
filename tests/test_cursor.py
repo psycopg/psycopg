@@ -814,12 +814,12 @@ def test_leak(dsn, faker, fmt, fmt_out, fetch, row_factory):
                 cur.execute(faker.select_stmt)
 
                 if fetch == "one":
-                    while 1:
+                    while True:
                         tmp = cur.fetchone()
                         if tmp is None:
                             break
                 elif fetch == "many":
-                    while 1:
+                    while True:
                         tmp = cur.fetchmany(3)
                         if not tmp:
                             break

@@ -381,7 +381,7 @@ class ArrayBinaryLoader(BaseArrayLoader):
         dims = [_unpack_dim(data, i)[0] for i in list(range(12, p, 8))]
 
         def consume(p: int) -> Iterator[Any]:
-            while 1:
+            while True:
                 size = unpack_len(data, p)[0]
                 p += 4
                 if size != -1:

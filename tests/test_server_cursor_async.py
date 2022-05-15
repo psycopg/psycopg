@@ -349,7 +349,7 @@ async def test_row_factory(aconn):
     await cur.execute("select generate_series(1, 3) as x")
     recs = await cur.fetchall()
     await cur.scroll(0, "absolute")
-    while 1:
+    while True:
         rec = await cur.fetchone()
         if not rec:
             break

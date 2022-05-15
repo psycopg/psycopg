@@ -637,12 +637,12 @@ async def test_leak(dsn, faker, fetch, row_factory):
                 await cur.execute(faker.select_stmt)
 
                 if fetch == "one":
-                    while 1:
+                    while True:
                         tmp = await cur.fetchone()
                         if tmp is None:
                             break
                 elif fetch == "many":
-                    while 1:
+                    while True:
                         tmp = await cur.fetchmany(3)
                         if not tmp:
                             break

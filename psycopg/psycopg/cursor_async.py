@@ -179,7 +179,7 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
         def load(pos: int) -> Optional[Row]:
             return self._tx.load_row(pos, self._make_row)
 
-        while 1:
+        while True:
             row = load(self._pos)
             if row is None:
                 break

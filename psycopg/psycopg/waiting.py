@@ -50,7 +50,7 @@ def wait_selector(gen: PQGen[RV], fileno: int, timeout: Optional[float] = None) 
     try:
         s = next(gen)
         with DefaultSelector() as sel:
-            while 1:
+            while True:
                 sel.register(fileno, s)
                 rlist = None
                 while not rlist:
@@ -85,7 +85,7 @@ def wait_conn(gen: PQGenConn[RV], timeout: Optional[float] = None) -> RV:
         if not timeout:
             timeout = None
         with DefaultSelector() as sel:
-            while 1:
+            while True:
                 sel.register(fileno, s)
                 rlist = sel.select(timeout=timeout)
                 sel.unregister(fileno)
@@ -124,7 +124,7 @@ async def wait_async(gen: PQGen[RV], fileno: int) -> RV:
 
     try:
         s = next(gen)
-        while 1:
+        while True:
             reader = s & Wait.R
             writer = s & Wait.W
             if not reader and not writer:
@@ -178,7 +178,7 @@ async def wait_conn_async(gen: PQGenConn[RV], timeout: Optional[float] = None) -
         fileno, s = next(gen)
         if not timeout:
             timeout = None
-        while 1:
+        while True:
             reader = s & Wait.R
             writer = s & Wait.W
             if not reader and not writer:
@@ -226,7 +226,7 @@ def wait_epoll(gen: PQGen[RV], fileno: int, timeout: Optional[float] = None) -> 
         with select.epoll() as epoll:
             evmask = poll_evmasks[s]
             epoll.register(fileno, evmask)
-            while 1:
+            while True:
                 fileevs = None
                 while not fileevs:
                     fileevs = epoll.poll(timeout)

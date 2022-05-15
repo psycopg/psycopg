@@ -152,7 +152,7 @@ def test_copy_out_allchars(conn, format):
     )
     with cur.copy(query) as copy:
         copy.set_types(["text"])
-        while 1:
+        while True:
             row = copy.read_row()
             if not row:
                 break
@@ -167,7 +167,7 @@ def test_read_row_notypes(conn, format):
     cur = conn.cursor()
     with cur.copy(f"copy ({sample_values}) to stdout (format {format.name})") as copy:
         rows = []
-        while 1:
+        while True:
             row = copy.read_row()
             if not row:
                 break
@@ -648,14 +648,14 @@ def test_copy_to_leaks(dsn, faker, fmt, set_types, method):
                         copy.set_types(faker.types_names)
 
                     if method == "read":
-                        while 1:
+                        while True:
                             tmp = copy.read()
                             if not tmp:
                                 break
                     elif method == "iter":
                         list(copy)
                     elif method == "row":
-                        while 1:
+                        while True:
                             tmp = copy.read_row()  # type: ignore[assignment]
                             if tmp is None:
                                 break
@@ -807,7 +807,7 @@ class DataGenerator:
 
     def sha(self, f):
         m = hashlib.sha256()
-        while 1:
+        while True:
             block = f.read()
             if not block:
                 break

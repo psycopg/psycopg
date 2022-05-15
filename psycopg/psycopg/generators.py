@@ -36,7 +36,7 @@ def connect(conninfo: str) -> PQGenConn[PGconn]:
 
     """
     conn = pq.PGconn.connect_start(conninfo.encode())
-    while 1:
+    while True:
         if conn.status == ConnStatus.BAD:
             encoding = conninfo_encoding(conninfo)
             raise e.OperationalError(
@@ -91,7 +91,7 @@ def send(pgconn: PGconn) -> PQGen[None]:
     After this generator has finished you may want to cycle using `fetch()`
     to retrieve the results available.
     """
-    while 1:
+    while True:
         f = pgconn.flush()
         if f == 0:
             break
@@ -114,7 +114,7 @@ def fetch_many(pgconn: PGconn) -> PQGen[List[PGresult]]:
     or error).
     """
     results: List[PGresult] = []
-    while 1:
+    while True:
         res = yield from fetch(pgconn)
         if not res:
             break
@@ -219,7 +219,7 @@ def notifies(pgconn: PGconn) -> PQGen[List[pq.PGnotify]]:
     pgconn.consume_input()
 
     ns = []
-    while 1:
+    while True:
         n = pgconn.notifies()
         if n:
             ns.append(n)
@@ -230,7 +230,7 @@ def notifies(pgconn: PGconn) -> PQGen[List[pq.PGnotify]]:
 
 
 def copy_from(pgconn: PGconn) -> PQGen[Union[memoryview, PGresult]]:
-    while 1:
+    while True:
         nbytes, data = pgconn.get_copy_data(1)
         if nbytes != 0:
             break
@@ -273,7 +273,7 @@ def copy_end(pgconn: PGconn, error: Optional[bytes]) -> PQGen[PGresult]:
         yield Wait.W
 
     # Repeat until it the message is flushed to the server
-    while 1:
+    while True:
         yield Wait.W
         f = pgconn.flush()
         if f == 0:

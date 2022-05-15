@@ -296,7 +296,7 @@ class AsyncConnection(BaseConnection[Row]):
                 yield tx
 
     async def notifies(self) -> AsyncGenerator[Notify, None]:
-        while 1:
+        while True:
             async with self.lock:
                 ns = await self.wait(notifies(self.pgconn))
             enc = pgconn_encoding(self.pgconn)
