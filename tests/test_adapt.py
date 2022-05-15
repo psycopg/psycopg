@@ -354,26 +354,26 @@ def test_return_untyped(conn, fmt_in):
     # Currently string are passed as unknown oid to libpq. This is because
     # unknown is more easily cast by postgres to different types (see jsonb
     # later).
-    cur.execute(f"select %{fmt_in}, %{fmt_in}", ["hello", 10])
+    cur.execute(f"select %{fmt_in.value}, %{fmt_in.value}", ["hello", 10])
     assert cur.fetchone() == ("hello", 10)
 
     cur.execute("create table testjson(data jsonb)")
     if fmt_in != PyFormat.BINARY:
-        cur.execute(f"insert into testjson (data) values (%{fmt_in})", ["{}"])
+        cur.execute(f"insert into testjson (data) values (%{fmt_in.value})", ["{}"])
         assert cur.execute("select data from testjson").fetchone() == ({},)
     else:
         # Binary types cannot be passed as unknown oids.
         with pytest.raises(e.DatatypeMismatch):
-            cur.execute(f"insert into testjson (data) values (%{fmt_in})", ["{}"])
+            cur.execute(f"insert into testjson (data) values (%{fmt_in.value})", ["{}"])
 
 
-@pytest.mark.parametrize("fmt_in", PyFormat.AUTO)
+@pytest.mark.parametrize("fmt_in", PyFormat)
 def test_no_cast_needed(conn, fmt_in):
     # Verify that there is no need of cast in certain common scenario
-    cur = conn.execute("select '2021-01-01'::date + %s", [3])
+    cur = conn.execute(f"select '2021-01-01'::date + %{fmt_in.value}", [3])
     assert cur.fetchone()[0] == dt.date(2021, 1, 4)
 
-    cur = conn.execute("select '[10, 20, 30]'::jsonb -> %s", [1])
+    cur = conn.execute(f"select '[10, 20, 30]'::jsonb -> %{fmt_in.value}", [1])
     assert cur.fetchone()[0] == 20
 
 

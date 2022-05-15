@@ -170,7 +170,7 @@ mr_classes = """
 @pytest.mark.parametrize("fmt_in", PyFormat)
 def test_dump_builtin_empty(conn, pgtype, fmt_in):
     mr = Multirange()  # type: ignore[var-annotated]
-    cur = conn.execute(f"select '{{}}'::{pgtype} = %{fmt_in}", (mr,))
+    cur = conn.execute(f"select '{{}}'::{pgtype} = %{fmt_in.value}", (mr,))
     assert cur.fetchone()[0] is True
 
 
@@ -182,9 +182,9 @@ def test_dump_builtin_empty_wrapper(conn, wrapper, fmt_in):
     mr = wrapper()
     rec = conn.execute(
         f"""
-        select '{{}}' = %(mr){fmt_in},
-            %(mr){fmt_in}::text,
-            pg_typeof(%(mr){fmt_in})::oid
+        select '{{}}' = %(mr){fmt_in.value},
+            %(mr){fmt_in.value}::text,
+            pg_typeof(%(mr){fmt_in.value})::oid
         """,
         {"mr": mr},
     ).fetchone()
@@ -212,7 +212,7 @@ def test_dump_builtin_array(conn, pgtype, fmt_in):
     mr1 = Multirange()  # type: ignore[var-annotated]
     mr2 = Multirange([Range(bounds="()")])  # type: ignore[var-annotated]
     cur = conn.execute(
-        f"select array['{{}}'::{pgtype}, '{{(,)}}'::{pgtype}] = %{fmt_in}",
+        f"select array['{{}}'::{pgtype}, '{{(,)}}'::{pgtype}] = %{fmt_in.value}",
         ([mr1, mr2],),
     )
     assert cur.fetchone()[0] is True
@@ -225,7 +225,8 @@ def test_dump_builtin_array_with_cast(conn, pgtype, fmt_in):
     mr2 = Multirange([Range(bounds="()")])  # type: ignore[var-annotated]
     cur = conn.execute(
         f"""
-        select array['{{}}'::{pgtype}, '{{(,)}}'::{pgtype}] = %{fmt_in}::{pgtype}[]
+        select array['{{}}'::{pgtype},
+            '{{(,)}}'::{pgtype}] = %{fmt_in.value}::{pgtype}[]
         """,
         ([mr1, mr2],),
     )
@@ -238,7 +239,9 @@ def test_dump_builtin_array_wrapper(conn, wrapper, fmt_in):
     wrapper = getattr(multirange, wrapper)
     mr1 = Multirange()  # type: ignore[var-annotated]
     mr2 = Multirange([Range(bounds="()")])  # type: ignore[var-annotated]
-    cur = conn.execute(f"""select '{{"{{}}","{{(,)}}"}}' = %{fmt_in}""", ([mr1, mr2],))
+    cur = conn.execute(
+        f"""select '{{"{{}}","{{(,)}}"}}' = %{fmt_in.value}""", ([mr1, mr2],)
+    )
     assert cur.fetchone()[0] is True
 
 
@@ -248,7 +251,7 @@ def test_dump_builtin_multirange(conn, pgtype, ranges, fmt_in):
     mr = Multirange(ranges)
     rname = pgtype.replace("multi", "")
     phs = ", ".join([f"%s::{rname}"] * len(ranges))
-    cur = conn.execute(f"select {pgtype}({phs}) = %{fmt_in}", ranges + [mr])
+    cur = conn.execute(f"select {pgtype}({phs}) = %{fmt_in.value}", ranges + [mr])
     assert cur.fetchone()[0] is True
 
 

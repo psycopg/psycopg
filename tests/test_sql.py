@@ -509,18 +509,18 @@ class TestPlaceholder:
     @pytest.mark.parametrize("format", PyFormat)
     def test_as_string(self, conn, format):
         ph = sql.Placeholder(format=format)
-        assert ph.as_string(conn) == f"%{format}"
+        assert ph.as_string(conn) == f"%{format.value}"
 
         ph = sql.Placeholder(name="foo", format=format)
-        assert ph.as_string(conn) == f"%(foo){format}"
+        assert ph.as_string(conn) == f"%(foo){format.value}"
 
     @pytest.mark.parametrize("format", PyFormat)
     def test_as_bytes(self, conn, format):
         ph = sql.Placeholder(format=format)
-        assert ph.as_bytes(conn) == f"%{format}".encode("ascii")
+        assert ph.as_bytes(conn) == f"%{format.value}".encode("ascii")
 
         ph = sql.Placeholder(name="foo", format=format)
-        assert ph.as_bytes(conn) == f"%(foo){format}".encode("ascii")
+        assert ph.as_bytes(conn) == f"%(foo){format.value}".encode("ascii")
 
 
 class TestValues:

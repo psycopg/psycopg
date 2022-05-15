@@ -32,7 +32,7 @@ from psycopg.types.numeric import FloatLoader
 def test_dump_int(conn, val, expr, fmt_in):
     assert isinstance(val, int)
     cur = conn.cursor()
-    cur.execute(f"select {expr} = %{fmt_in}", (val,))
+    cur.execute(f"select {expr} = %{fmt_in.value}", (val,))
     assert cur.fetchone()[0] is True
 
 
@@ -61,10 +61,10 @@ def test_dump_int(conn, val, expr, fmt_in):
 @pytest.mark.parametrize("fmt_in", PyFormat)
 def test_dump_int_subtypes(conn, val, expr, fmt_in):
     cur = conn.cursor()
-    cur.execute(f"select pg_typeof({expr}) = pg_typeof(%{fmt_in})", (val,))
+    cur.execute(f"select pg_typeof({expr}) = pg_typeof(%{fmt_in.value})", (val,))
     assert cur.fetchone()[0] is True
     cur.execute(
-        f"select {expr} = %(v){fmt_in}, {expr}::text, %(v){fmt_in}::text",
+        f"select {expr} = %(v){fmt_in.value}, {expr}::text, %(v){fmt_in.value}::text",
         {"v": val},
     )
     ok, want, got = cur.fetchone()
@@ -84,7 +84,7 @@ class MyMixinEnum(enum.IntEnum):
 @pytest.mark.parametrize("enum", [MyEnum, MyMixinEnum])
 def test_dump_enum(conn, fmt_in, enum):
     cur = conn.cursor()
-    cur.execute(f"select %{fmt_in}", (enum.foo,))
+    cur.execute(f"select %{fmt_in.value}", (enum.foo,))
     (res,) = cur.fetchone()
     assert res == enum.foo.value
 
@@ -174,7 +174,7 @@ def test_load_int(conn, val, pgtype, want, fmt_out):
 def test_dump_float(conn, val, expr, fmt_in):
     assert isinstance(val, float)
     cur = conn.cursor()
-    cur.execute(f"select %{fmt_in} = {expr}::float8", (val,))
+    cur.execute(f"select %{fmt_in.value} = {expr}::float8", (val,))
     assert cur.fetchone()[0] is True
 
 
@@ -330,7 +330,7 @@ def test_load_float_copy(conn):
 def test_roundtrip_numeric(conn, val, fmt_in, fmt_out):
     cur = conn.cursor(binary=fmt_out)
     val = Decimal(val)
-    cur.execute(f"select %{fmt_in}", (val,))
+    cur.execute(f"select %{fmt_in.value}", (val,))
     result = cur.fetchone()[0]
     assert isinstance(result, Decimal)
     if val.is_nan():
@@ -419,7 +419,7 @@ def test_dump_numeric_exhaustive(conn, fmt_in):
         for f in funcs:
             expr = f(i)
             val = Decimal(expr)
-            cur.execute(f"select %{fmt_in}::text, %s::decimal::text", [val, expr])
+            cur.execute(f"select %{fmt_in.value}::text, %s::decimal::text", [val, expr])
             want, got = cur.fetchone()
             assert got == want
 
@@ -583,6 +583,6 @@ def test_dump_wrapper_oid(wrapper):
 @pytest.mark.parametrize("fmt_in", PyFormat)
 def test_repr_wrapper(conn, wrapper, fmt_in):
     wrapper = getattr(psycopg.types.numeric, wrapper)
-    cur = conn.execute(f"select pg_typeof(%{fmt_in})::oid", [wrapper(0)])
+    cur = conn.execute(f"select pg_typeof(%{fmt_in.value})::oid", [wrapper(0)])
     oid = cur.fetchone()[0]
     assert oid == psycopg.postgres.types[wrapper.__name__.lower()].oid

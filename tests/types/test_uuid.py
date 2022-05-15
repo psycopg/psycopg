@@ -13,7 +13,7 @@ from psycopg.adapt import PyFormat
 def test_uuid_dump(conn, fmt_in):
     val = "12345678123456781234567812345679"
     cur = conn.cursor()
-    cur.execute(f"select %{fmt_in} = %s::uuid", (UUID(val), val))
+    cur.execute(f"select %{fmt_in.value} = %s::uuid", (UUID(val), val))
     assert cur.fetchone()[0] is True
 
 

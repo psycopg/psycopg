@@ -74,7 +74,7 @@ def test_dump_builtin_empty_range(conn, fmt_in):
     register_composite(info, conn)
 
     cur = conn.execute(
-        f"select pg_typeof(%{fmt_in})",
+        f"select pg_typeof(%{fmt_in.value})",
         [info.python_type(10, Range(empty=True), [])],
     )
     assert cur.fetchone()[0] == "tmptype"
@@ -178,7 +178,7 @@ def test_dump_tuple_all_chars(conn, fmt_in, testcomp):
     cur = conn.cursor()
     for i in range(1, 256):
         (res,) = cur.execute(
-            f"select row(chr(%s::int), 1, 1.0)::testcomp = %{fmt_in}::testcomp",
+            f"select row(chr(%s::int), 1, 1.0)::testcomp = %{fmt_in.value}::testcomp",
             (i, (chr(i), 1, 1.0)),
         ).fetchone()
         assert res is True
@@ -192,7 +192,7 @@ def test_dump_composite_all_chars(conn, fmt_in, testcomp):
     for i in range(1, 256):
         obj = factory(chr(i), 1, 1.0)
         (res,) = cur.execute(
-            f"select row(chr(%s::int), 1, 1.0)::testcomp = %{fmt_in}", (i, obj)
+            f"select row(chr(%s::int), 1, 1.0)::testcomp = %{fmt_in.value}", (i, obj)
         ).fetchone()
         assert res is True
 
@@ -206,7 +206,8 @@ def test_dump_composite_null(conn, fmt_in, testcomp):
     obj = factory("foo", 1, None)
     rec = cur.execute(
         f"""
-        select row('foo', 1, NULL)::testcomp = %(obj){fmt_in}, %(obj){fmt_in}::text
+        select row('foo', 1, NULL)::testcomp = %(obj){fmt_in.value},
+            %(obj){fmt_in.value}::text
         """,
         {"obj": obj},
     ).fetchone()
