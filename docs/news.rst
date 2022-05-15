@@ -7,18 +7,15 @@
 ``psycopg`` release notes
 =========================
 
-Future releases
+Current release
 ---------------
 
-Psycopg 3.0.14 (unreleased)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Psycopg 3.0.14
+^^^^^^^^^^^^^^
 
 - Raise `DataError` dumping arrays of mixed types (:ticket:`#301`).
 - Fix handling of incorrect server results, with blank sqlstate (:ticket:`#303`).
 
-
-Current release
----------------
 
 Psycopg 3.0.13
 ^^^^^^^^^^^^^^
