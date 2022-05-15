@@ -19,6 +19,7 @@ from ._preparing import Prepare
 from .cursor_async import AsyncCursor
 
 if TYPE_CHECKING:
+    from typing import Any  # noqa: F401
     from .connection import Connection  # noqa: F401
     from .connection_async import AsyncConnection  # noqa: F401
 
@@ -87,11 +88,11 @@ class ClientCursorMixin(BaseCursor[ConnectionType, Row]):
         return (Prepare.NO, b"")
 
 
-class ClientCursor(ClientCursorMixin["Connection[Row]", Row], Cursor[Row]):
+class ClientCursor(ClientCursorMixin["Connection[Any]", Row], Cursor[Row]):
     __module__ = "psycopg"
 
 
 class AsyncClientCursor(
-    ClientCursorMixin["AsyncConnection[Row]", Row], AsyncCursor[Row]
+    ClientCursorMixin["AsyncConnection[Any]", Row], AsyncCursor[Row]
 ):
     __module__ = "psycopg"
