@@ -329,6 +329,21 @@ cdef class FloatBinaryDumper(CDumper):
 
 
 @cython.final
+cdef class Float4BinaryDumper(CDumper):
+
+    format = PQ_BINARY
+    oid = oids.FLOAT4_OID
+
+    cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
+        cdef float f = <float>PyFloat_AsDouble(obj)
+        cdef uint32_t *intptr = <uint32_t *>&f
+        cdef uint32_t *buf = <uint32_t *>CDumper.ensure_size(
+            rv, offset, sizeof(uint32_t))
+        buf[0] = endian.htobe32(intptr[0])
+        return sizeof(uint32_t)
+
+
+@cython.final
 cdef class FloatLoader(CLoader):
 
     format = PQ_TEXT

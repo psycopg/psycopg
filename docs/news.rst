@@ -38,6 +38,7 @@ Psycopg 3.0.14
 
 - Raise `DataError` dumping arrays of mixed types (:ticket:`#301`).
 - Fix handling of incorrect server results, with blank sqlstate (:ticket:`#303`).
+- Fix bad Float4 conversion on ppc64le/musllinux (:ticket:`#304`).
 
 
 Psycopg 3.0.13
