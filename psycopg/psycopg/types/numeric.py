@@ -39,7 +39,7 @@ class _IntDumper(Dumper):
             if issubclass(t, int):
                 obj = int(obj)
             else:
-                raise e.DataError(f"ingeger expected, got {type(obj).__name__!r}")
+                raise e.DataError(f"integer expected, got {type(obj).__name__!r}")
 
         return str(obj).encode()
 

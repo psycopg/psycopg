@@ -629,7 +629,7 @@ cdef Py_ssize_t dump_int_to_text(obj, bytearray rv, Py_ssize_t offset) except -1
     # Ensure an int or a subclass. The 'is' type check is fast.
     # Passing a float must give an error, but passing an Enum should work.
     if type(obj) is not int and not isinstance(obj, int):
-        raise e.DataError(f"ingeger expected, got {type(obj).__name__!r}")
+        raise e.DataError(f"integer expected, got {type(obj).__name__!r}")
 
     val = PyLong_AsLongLongAndOverflow(obj, &overflow)
     if not overflow:
