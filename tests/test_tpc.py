@@ -3,6 +3,8 @@ import pytest
 import psycopg
 from psycopg.pq import TransactionStatus
 
+pytestmark = pytest.mark.crdb("skip", reason="2-phase commit")
+
 
 def test_tpc_disabled(conn, pipeline):
     val = int(conn.execute("show max_prepared_transactions").fetchone()[0])

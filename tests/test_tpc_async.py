@@ -3,7 +3,10 @@ import pytest
 import psycopg
 from psycopg.pq import TransactionStatus
 
-pytestmark = [pytest.mark.asyncio]
+pytestmark = [
+    pytest.mark.asyncio,
+    pytest.mark.crdb("skip", reason="2-phase commit"),
+]
 
 
 async def test_tpc_disabled(aconn, apipeline):
