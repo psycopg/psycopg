@@ -45,8 +45,9 @@ unpack_len = cast(UnpackLen, _struct_len.unpack_from)
 
 def pack_float4_bug_304(x: float) -> bytes:
     raise e.InterfaceError(
-        "cannot dump Float4: Python affected by bug #304,"
-        " see https://github.com/psycopg/psycopg/issues/304"
+        "cannot dump Float4: Python affected by bug #304. Note that the psycopg-c"
+        " and psycopg-binary packages are not affected by this issue."
+        " See https://github.com/psycopg/psycopg/issues/304"
     )
 
 
