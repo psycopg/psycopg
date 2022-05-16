@@ -94,7 +94,7 @@ def test_enum_loader(conn, enum, fmt_in, fmt_out):
 
     for label in info.labels:
         cur = conn.execute(
-            f"select %{fmt_in}::{enum.__name__}", [label], binary=fmt_out
+            f"select %{fmt_in.value}::{enum.__name__}", [label], binary=fmt_out
         )
         assert cur.fetchone()[0] == enum[label]
 
@@ -110,7 +110,9 @@ def test_enum_loader_nonascii(conn, encoding, fmt_in, fmt_out):
     register_enum(info, conn, enum=enum)
 
     for label in info.labels:
-        cur = conn.execute(f"select %{fmt_in}::{info.name}", [label], binary=fmt_out)
+        cur = conn.execute(
+            f"select %{fmt_in.value}::{info.name}", [label], binary=fmt_out
+        )
         assert cur.fetchone()[0] == enum[label]
 
 
@@ -123,7 +125,9 @@ def test_enum_loader_sqlascii(conn, enum, fmt_in, fmt_out):
     conn.execute("set client_encoding to sql_ascii")
 
     for label in info.labels:
-        cur = conn.execute(f"select %{fmt_in}::{info.name}", [label], binary=fmt_out)
+        cur = conn.execute(
+            f"select %{fmt_in.value}::{info.name}", [label], binary=fmt_out
+        )
         assert cur.fetchone()[0] == enum[label]
 
 
@@ -135,7 +139,7 @@ def test_enum_dumper(conn, enum, fmt_in, fmt_out):
     register_enum(info, conn, enum)
 
     for item in enum:
-        cur = conn.execute(f"select %{fmt_in}", [item], binary=fmt_out)
+        cur = conn.execute(f"select %{fmt_in.value}", [item], binary=fmt_out)
         assert cur.fetchone()[0] == item
 
 
@@ -150,7 +154,7 @@ def test_enum_dumper_nonascii(conn, encoding, fmt_in, fmt_out):
     register_enum(info, conn, enum)
 
     for item in enum:
-        cur = conn.execute(f"select %{fmt_in}", [item], binary=fmt_out)
+        cur = conn.execute(f"select %{fmt_in.value}", [item], binary=fmt_out)
         assert cur.fetchone()[0] == item
 
 
@@ -163,7 +167,7 @@ def test_enum_dumper_sqlascii(conn, enum, fmt_in, fmt_out):
     conn.execute("set client_encoding to sql_ascii")
 
     for item in enum:
-        cur = conn.execute(f"select %{fmt_in}", [item], binary=fmt_out)
+        cur = conn.execute(f"select %{fmt_in.value}", [item], binary=fmt_out)
         assert cur.fetchone()[0] == item
 
 
@@ -177,7 +181,7 @@ def test_generic_enum_dumper(conn, enum, fmt_in, fmt_out):
         else:
             want = item.value
 
-        cur = conn.execute(f"select %{fmt_in}", [item], binary=fmt_out)
+        cur = conn.execute(f"select %{fmt_in.value}", [item], binary=fmt_out)
         assert cur.fetchone()[0] == want
 
 
@@ -187,7 +191,7 @@ def test_generic_enum_dumper(conn, enum, fmt_in, fmt_out):
 def test_generic_enum_dumper_nonascii(conn, encoding, fmt_in, fmt_out):
     conn.execute(f"set client_encoding to {encoding}")
     for item in NonAsciiEnum:
-        cur = conn.execute(f"select %{fmt_in}", [item.value], binary=fmt_out)
+        cur = conn.execute(f"select %{fmt_in.value}", [item.value], binary=fmt_out)
         assert cur.fetchone()[0] == item.value
 
 
@@ -197,7 +201,7 @@ def test_generic_enum_dumper_nonascii(conn, encoding, fmt_in, fmt_out):
 def test_generic_enum_loader(conn, enum, fmt_in, fmt_out):
     for label in enum.__members__:
         cur = conn.execute(
-            f"select %{fmt_in}::{enum.__name__}", [label], binary=fmt_out
+            f"select %{fmt_in.value}::{enum.__name__}", [label], binary=fmt_out
         )
         want = enum[label].name
         if fmt_out == pq.Format.BINARY:
@@ -212,7 +216,9 @@ def test_generic_enum_loader_nonascii(conn, encoding, fmt_in, fmt_out):
     conn.execute(f"set client_encoding to {encoding}")
 
     for label in NonAsciiEnum.__members__:
-        cur = conn.execute(f"select %{fmt_in}::nonasciienum", [label], binary=fmt_out)
+        cur = conn.execute(
+            f"select %{fmt_in.value}::nonasciienum", [label], binary=fmt_out
+        )
         if fmt_out == pq.Format.TEXT:
             assert cur.fetchone()[0] == label
         else:
@@ -227,7 +233,9 @@ def test_enum_array_loader(conn, fmt_in, fmt_out):
     register_enum(info, conn, enum)
 
     labels = list(enum.__members__)
-    cur = conn.execute(f"select %{fmt_in}::{info.name}[]", [labels], binary=fmt_out)
+    cur = conn.execute(
+        f"select %{fmt_in.value}::{info.name}[]", [labels], binary=fmt_out
+    )
     assert cur.fetchone()[0] == list(enum)
 
 
@@ -238,7 +246,7 @@ def test_enum_array_dumper(conn, fmt_in, fmt_out):
     info = EnumInfo.fetch(conn, enum.__name__)
     register_enum(info, conn, enum)
 
-    cur = conn.execute(f"select %{fmt_in}::text[]", [list(enum)], binary=fmt_out)
+    cur = conn.execute(f"select %{fmt_in.value}::text[]", [list(enum)], binary=fmt_out)
     assert cur.fetchone()[0] == list(enum.__members__)
 
 
@@ -249,7 +257,9 @@ def test_generic_enum_array_loader(conn, fmt_in, fmt_out):
     info = TypeInfo.fetch(conn, enum.__name__)
     info.register(conn)
     labels = list(enum.__members__)
-    cur = conn.execute(f"select %{fmt_in}::{info.name}[]", [labels], binary=fmt_out)
+    cur = conn.execute(
+        f"select %{fmt_in.value}::{info.name}[]", [labels], binary=fmt_out
+    )
     if fmt_out == pq.Format.TEXT:
         assert cur.fetchone()[0] == labels
     else:
@@ -286,7 +296,7 @@ def test_remap(conn, fmt_in, fmt_out, mapping):
     register_enum(info, conn, StrTestEnum, mapping=mapping)
 
     for member, label in [("ONE", "FOO"), ("TWO", "BAR"), ("THREE", "BAZ")]:
-        cur = conn.execute(f"select %{fmt_in}::text", [StrTestEnum[member]])
+        cur = conn.execute(f"select %{fmt_in.value}::text", [StrTestEnum[member]])
         assert cur.fetchone()[0] == label
         cur = conn.execute(f"select '{label}'::puretestenum", binary=fmt_out)
         assert cur.fetchone()[0] is StrTestEnum[member]
