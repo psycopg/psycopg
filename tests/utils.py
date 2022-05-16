@@ -17,10 +17,10 @@ def check_libpq_version(got, want):
 
     and skips the test if the requested version doesn't match what's loaded.
     """
-    return _check_version(got, want, "libpq")
+    return check_version(got, want, "libpq")
 
 
-def check_server_version(got, want):
+def check_server_version(pgconn, want):
     """
     Verify if the server version is a version accepted.
 
@@ -30,10 +30,11 @@ def check_server_version(got, want):
 
     and skips the test if the server version doesn't match what expected.
     """
-    return _check_version(got, want, "server")
+    got = pgconn.server_version
+    return check_version(got, want, "server")
 
 
-def _check_version(got, want, whose_version):
+def check_version(got, want, whose_version):
     """Check that a postgres-style version matches a desired spec.
 
     - The postgres-style version is a number such as 90603 for 9.6.3.

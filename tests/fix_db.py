@@ -6,6 +6,7 @@ from typing import List
 
 import psycopg
 from psycopg import pq
+
 from .utils import check_libpq_version, check_server_version
 
 
@@ -132,7 +133,7 @@ def pgconn(dsn, request, tracefile):
     conn = pq.PGconn.connect(dsn.encode())
     if conn.status != pq.ConnStatus.OK:
         pytest.fail(f"bad connection: {conn.error_message.decode('utf8', 'replace')}")
-    msg = check_connection_version(conn.server_version, request.function)
+    msg = check_connection_version(conn, request.function)
     if msg:
         conn.finish()
         pytest.skip(msg)
@@ -149,7 +150,7 @@ def conn(dsn, request, tracefile):
     from psycopg import Connection
 
     conn = Connection.connect(dsn)
-    msg = check_connection_version(conn.info.server_version, request.function)
+    msg = check_connection_version(conn.pgconn, request.function)
     if msg:
         conn.close()
         pytest.skip(msg)
@@ -177,7 +178,7 @@ async def aconn(dsn, request, tracefile):
     from psycopg import AsyncConnection
 
     conn = await AsyncConnection.connect(dsn)
-    msg = check_connection_version(conn.info.server_version, request.function)
+    msg = check_connection_version(conn.pgconn, request.function)
     if msg:
         await conn.close()
         pytest.skip(msg)
@@ -253,10 +254,20 @@ class ListPopAll(list):  # type: ignore[type-arg]
         return out
 
 
-def check_connection_version(got, function):
-    if not hasattr(function, "want_pg_version"):
-        return
-    return check_server_version(got, function.want_pg_version)
+def check_connection_version(pgconn, function):
+    if hasattr(function, "want_pg_version"):
+        rv = check_server_version(pgconn, function.want_pg_version)
+        if rv:
+            return rv
+
+    if hasattr(function, "want_crdb"):
+        from .fix_crdb import check_crdb_version
+
+        rv = check_crdb_version(pgconn, function)
+        if rv:
+            return rv
+
+    return None
 
 
 @pytest.fixture
