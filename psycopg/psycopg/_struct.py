@@ -8,6 +8,7 @@ import struct
 from typing import Callable, cast, Optional, Tuple
 
 from .abc import Buffer
+from . import errors as e
 from ._compat import Protocol
 
 PackInt = Callable[[int], bytes]
@@ -40,3 +41,16 @@ unpack_float8 = cast(UnpackFloat, struct.Struct("!d").unpack)
 _struct_len = struct.Struct("!i")
 pack_len = cast(Callable[[int], bytes], _struct_len.pack)
 unpack_len = cast(UnpackLen, _struct_len.unpack_from)
+
+
+def pack_float4_bug_304(x: float) -> bytes:
+    raise e.InterfaceError(
+        "cannot dump Float4: Python affected by bug #304. Note that the psycopg-c"
+        " and psycopg-binary packages are not affected by this issue."
+        " See https://github.com/psycopg/psycopg/issues/304"
+    )
+
+
+# If issue #304 is detected, raise an error instead of dumping wrong data.
+if struct.Struct("!f").pack(1.0) != bytes.fromhex("3f800000"):
+    pack_float4 = pack_float4_bug_304

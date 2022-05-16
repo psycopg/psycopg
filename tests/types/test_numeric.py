@@ -570,6 +570,18 @@ def test_minus_minus_quote(conn, pgtype):
 
 
 @pytest.mark.parametrize("wrapper", "Int2 Int4 Int8 Oid Float4 Float8".split())
+@pytest.mark.parametrize("fmt_in", PyFormat)
+def test_dump_wrapper(conn, wrapper, fmt_in):
+    wrapper = getattr(psycopg.types.numeric, wrapper)
+    obj = wrapper(1)
+    cur = conn.execute(
+        f"select %(obj){fmt_in.value} = 1, %(obj){fmt_in.value}", {"obj": obj}
+    )
+    rec = cur.fetchone()
+    assert rec[0], rec[1]
+
+
+@pytest.mark.parametrize("wrapper", "Int2 Int4 Int8 Oid Float4 Float8".split())
 def test_dump_wrapper_oid(wrapper):
     wrapper = getattr(psycopg.types.numeric, wrapper)
     base = wrapper.__mro__[1]
