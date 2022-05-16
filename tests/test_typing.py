@@ -385,7 +385,7 @@ class Thing:
         self.kwargs = kwargs
 
 def thing_row(
-    cur: Union[psycopg.Cursor[Thing], psycopg.AsyncCursor[Thing]],
+    cur: Union[psycopg.Cursor[Any], psycopg.AsyncCursor[Any]],
 ) -> Callable[[Sequence[Any]], Thing]:
     assert cur.description
     names = [d.name for d in cur.description]
