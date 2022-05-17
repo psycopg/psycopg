@@ -68,6 +68,7 @@ FATAL_ERROR = pq.ExecStatus.FATAL_ERROR
 IDLE = pq.TransactionStatus.IDLE
 INTRANS = pq.TransactionStatus.INTRANS
 
+ABORTED = pq.PipelineStatus.ABORTED
 
 logger = logging.getLogger("psycopg")
 
@@ -556,7 +557,7 @@ class BaseConnection(Generic[Row]):
             )
 
         # Get out of a "pipeline aborted" state
-        if self._pipeline and self.pgconn.pipeline_status == pq.PipelineStatus.ABORTED:
+        if self._pipeline and self.pgconn.pipeline_status == ABORTED:
             yield from self._pipeline._sync_gen()
 
         if self.pgconn.transaction_status == IDLE:
