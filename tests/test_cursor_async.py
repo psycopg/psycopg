@@ -11,6 +11,7 @@ from psycopg.adapt import PyFormat
 from .utils import gc_collect
 from .test_cursor import my_row_factory
 from .test_cursor import execmany, _execmany  # noqa: F401
+from .fix_crdb import crdb_encoding
 
 execmany = execmany  # avoid F811 underneath
 pytestmark = pytest.mark.asyncio
@@ -234,7 +235,7 @@ async def test_binary_cursor_text_override(aconn):
     assert cur.pgresult.get_value(0, 0) == b"1"
 
 
-@pytest.mark.parametrize("encoding", ["utf8", "latin9"])
+@pytest.mark.parametrize("encoding", ["utf8", crdb_encoding("latin9")])
 async def test_query_encode(aconn, encoding):
     await aconn.execute(f"set client_encoding to {encoding}")
     cur = aconn.cursor()
@@ -243,8 +244,9 @@ async def test_query_encode(aconn, encoding):
     assert res == "\u20ac"
 
 
-async def test_query_badenc(aconn):
-    await aconn.execute("set client_encoding to latin1")
+@pytest.mark.parametrize("encoding", [crdb_encoding("latin1")])
+async def test_query_badenc(aconn, encoding):
+    await aconn.execute(f"set client_encoding to {encoding}")
     cur = aconn.cursor()
     with pytest.raises(UnicodeEncodeError):
         await cur.execute("select '\u20ac'")

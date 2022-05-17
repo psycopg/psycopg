@@ -10,11 +10,9 @@ from psycopg.conninfo import make_conninfo, conninfo_to_dict, ConnectionInfo
 from psycopg.conninfo import resolve_hostaddr_async
 from psycopg._encodings import pg2pyenc
 
+from .fix_crdb import crdb_encoding
+
 snowman = "\u2603"
-
-
-def skip_crdb(*args, reason=None):
-    return pytest.param(*args, marks=pytest.mark.crdb("skip", reason=reason))
 
 
 class MyString(str):
@@ -230,7 +228,7 @@ class TestConnectionInfo:
         with pytest.raises(psycopg.OperationalError):
             conn.info.error_message
 
-    @pytest.mark.crdb("skip", reason="always 0 on crdb")
+    @pytest.mark.crdb("skip", reason="backend pid")
     def test_backend_pid(self, conn):
         assert conn.info.backend_pid
         assert conn.info.backend_pid == conn.pgconn.backend_pid
@@ -292,8 +290,8 @@ class TestConnectionInfo:
             ("utf8", "UTF8", "utf-8"),
             ("utf-8", "UTF8", "utf-8"),
             ("utf_8", "UTF8", "utf-8"),
-            skip_crdb("eucjp", "EUC_JP", "euc_jp", reason="encoding"),
-            skip_crdb("euc-jp", "EUC_JP", "euc_jp", reason="encoding"),
+            crdb_encoding("eucjp", "EUC_JP", "euc_jp"),
+            crdb_encoding("euc-jp", "EUC_JP", "euc_jp"),
         ],
     )
     def test_encoding_env_var(self, dsn, monkeypatch, enc, out, codec):

@@ -1,3 +1,5 @@
+import pytest
+
 from .utils import check_version
 
 
@@ -61,6 +63,30 @@ def check_crdb_version(got, func):
                 rv = f"{rv} ({url})"
 
     return rv
+
+
+# Utility functions which can be imported in the test suite
+
+
+def is_crdb(conn):
+    if hasattr(conn, "pgconn"):
+        conn = conn.pgconn
+
+    return bool(conn.parameter_status(b"crdb_version"))
+
+
+def skip_crdb(*args, reason=None):
+    return pytest.param(*args, marks=pytest.mark.crdb("skip", reason=reason))
+
+
+def crdb_encoding(*args):
+    """Mark tests that fail on CockroachDB because of missing encodings"""
+    return skip_crdb(*args, reason="encoding")
+
+
+def crdb_time_precision(*args):
+    """Mark tests that fail on CockroachDB because time doesn't support precision"""
+    return skip_crdb(*args, reason="time precision")
 
 
 # mapping from reason description to ticket number
