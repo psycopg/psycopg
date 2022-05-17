@@ -20,7 +20,6 @@ from typing import List, Optional, Union
 
 from . import pq
 from . import errors as e
-from .pq import PollingStatus
 from .abc import PipelineCommand, PQGen, PQGenConn
 from .pq.abc import PGconn, PGresult
 from .waiting import Wait, Ready
@@ -29,6 +28,11 @@ from ._encodings import pgconn_encoding, conninfo_encoding
 
 OK = pq.ConnStatus.OK
 BAD = pq.ConnStatus.BAD
+
+POLL_OK = pq.PollingStatus.OK
+POLL_READING = pq.PollingStatus.READING
+POLL_WRITING = pq.PollingStatus.WRITING
+POLL_FAILED = pq.PollingStatus.FAILED
 
 COMMAND_OK = pq.ExecStatus.COMMAND_OK
 COPY_OUT = pq.ExecStatus.COPY_OUT
@@ -54,13 +58,13 @@ def connect(conninfo: str) -> PQGenConn[PGconn]:
             )
 
         status = conn.connect_poll()
-        if status == PollingStatus.OK:
+        if status == POLL_OK:
             break
-        elif status == PollingStatus.READING:
+        elif status == POLL_READING:
             yield conn.socket, Wait.R
-        elif status == PollingStatus.WRITING:
+        elif status == POLL_WRITING:
             yield conn.socket, Wait.W
-        elif status == PollingStatus.FAILED:
+        elif status == POLL_FAILED:
             encoding = conninfo_encoding(conninfo)
             raise e.OperationalError(
                 f"connection failed: {pq.error_message(conn, encoding=encoding)}",
