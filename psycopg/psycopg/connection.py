@@ -19,7 +19,7 @@ from . import pq
 from . import errors as e
 from . import waiting
 from . import postgres
-from .pq import ConnStatus, TransactionStatus
+from .pq import ConnStatus
 from .abc import AdaptContext, ConnectionType, Params, Query, RV
 from .abc import PQGen, PQGenConn
 from .sql import Composable, SQL
@@ -62,6 +62,10 @@ BINARY = pq.Format.BINARY
 COMMAND_OK = pq.ExecStatus.COMMAND_OK
 TUPLES_OK = pq.ExecStatus.TUPLES_OK
 FATAL_ERROR = pq.ExecStatus.FATAL_ERROR
+
+IDLE = pq.TransactionStatus.IDLE
+INTRANS = pq.TransactionStatus.INTRANS
+
 
 logger = logging.getLogger("psycopg")
 
@@ -256,10 +260,10 @@ class BaseConnection(Generic[Row]):
     def _check_intrans_gen(self, attribute: str) -> PQGen[None]:
         # Raise an exception if we are in a transaction
         status = self.pgconn.transaction_status
-        if status == TransactionStatus.IDLE and self._pipeline:
+        if status == IDLE and self._pipeline:
             yield from self._pipeline._sync_gen()
             status = self.pgconn.transaction_status
-        if status != TransactionStatus.IDLE:
+        if status != IDLE:
             if self._num_transactions:
                 raise e.ProgrammingError(
                     f"can't change {attribute!r} now: "
@@ -269,7 +273,7 @@ class BaseConnection(Generic[Row]):
                 raise e.ProgrammingError(
                     f"can't change {attribute!r} now: "
                     "connection in transaction status "
-                    f"{TransactionStatus(status).name}"
+                    f"{pq.TransactionStatus(status).name}"
                 )
 
     @property
@@ -491,7 +495,7 @@ class BaseConnection(Generic[Row]):
         if self._autocommit:
             return
 
-        if self.pgconn.transaction_status != TransactionStatus.IDLE:
+        if self.pgconn.transaction_status != IDLE:
             return
 
         yield from self._exec_command(self._get_tx_start_command())
@@ -528,7 +532,7 @@ class BaseConnection(Generic[Row]):
             raise e.ProgrammingError(
                 "commit() cannot be used during a two-phase transaction"
             )
-        if self.pgconn.transaction_status == TransactionStatus.IDLE:
+        if self.pgconn.transaction_status == IDLE:
             return
 
         yield from self._exec_command(b"COMMIT")
@@ -553,7 +557,7 @@ class BaseConnection(Generic[Row]):
         if self._pipeline and self.pgconn.pipeline_status == pq.PipelineStatus.ABORTED:
             yield from self._pipeline._sync_gen()
 
-        if self.pgconn.transaction_status == TransactionStatus.IDLE:
+        if self.pgconn.transaction_status == IDLE:
             return
 
         yield from self._exec_command(b"ROLLBACK")
@@ -580,10 +584,10 @@ class BaseConnection(Generic[Row]):
         if not isinstance(xid, Xid):
             xid = Xid.from_string(xid)
 
-        if self.pgconn.transaction_status != TransactionStatus.IDLE:
+        if self.pgconn.transaction_status != IDLE:
             raise e.ProgrammingError(
                 "can't start two-phase transaction: connection in status"
-                f" {TransactionStatus(self.pgconn.transaction_status).name}"
+                f" {pq.TransactionStatus(self.pgconn.transaction_status).name}"
             )
 
         if self._autocommit:
@@ -1011,10 +1015,7 @@ class Connection(BaseConnection[Row]):
             cur.execute(Xid._get_recover_query())
             res = cur.fetchall()
 
-        if (
-            status == TransactionStatus.IDLE
-            and self.info.transaction_status == TransactionStatus.INTRANS
-        ):
+        if status == IDLE and self.info.transaction_status == INTRANS:
             self.rollback()
 
         return res

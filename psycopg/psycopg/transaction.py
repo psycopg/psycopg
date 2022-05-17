@@ -12,13 +12,15 @@ from typing import Generic, Iterator, Optional, Type, Union, TYPE_CHECKING
 from . import pq
 from . import sql
 from . import errors as e
-from .pq import TransactionStatus, ConnStatus
+from .pq import ConnStatus
 from .abc import ConnectionType, PQGen
 
 if TYPE_CHECKING:
     from typing import Any
     from .connection import Connection
     from .connection_async import AsyncConnection
+
+IDLE = pq.TransactionStatus.IDLE
 
 logger = logging.getLogger(__name__)
 
@@ -196,9 +198,7 @@ class BaseTransaction(Generic[ConnectionType]):
 
         Also set the internal state of the object and verify consistency.
         """
-        self._outer_transaction = (
-            self.pgconn.transaction_status == TransactionStatus.IDLE
-        )
+        self._outer_transaction = self.pgconn.transaction_status == IDLE
         if self._outer_transaction:
             # outer transaction: if no name it's only a begin, else
             # there will be an additional savepoint

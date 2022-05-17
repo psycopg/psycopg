@@ -515,8 +515,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
             )
         else:
             raise e.InternalError(
-                "unexpected result status from query:"
-                f" {pq.ExecStatus(status).name}"
+                "unexpected result status from query:" f" {pq.ExecStatus(status).name}"
             )
 
     def _set_current_result(self, i: int, format: Optional[pq.Format] = None) -> None:

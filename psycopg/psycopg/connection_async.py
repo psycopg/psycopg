@@ -15,7 +15,6 @@ from contextlib import asynccontextmanager
 from . import pq
 from . import errors as e
 from . import waiting
-from .pq import TransactionStatus
 from .abc import AdaptContext, Params, PQGen, PQGenConn, Query, RV
 from ._tpc import Xid
 from .rows import Row, AsyncRowFactory, tuple_row, TupleRow, args_row
@@ -35,6 +34,9 @@ if TYPE_CHECKING:
 
 TEXT = pq.Format.TEXT
 BINARY = pq.Format.BINARY
+
+IDLE = pq.TransactionStatus.IDLE
+INTRANS = pq.TransactionStatus.INTRANS
 
 logger = logging.getLogger("psycopg")
 
@@ -412,10 +414,7 @@ class AsyncConnection(BaseConnection[Row]):
             await cur.execute(Xid._get_recover_query())
             res = await cur.fetchall()
 
-        if (
-            status == TransactionStatus.IDLE
-            and self.info.transaction_status == TransactionStatus.INTRANS
-        ):
+        if status == IDLE and self.info.transaction_status == INTRANS:
             await self.rollback()
 
         return res

@@ -38,6 +38,8 @@ BINARY = pq.Format.BINARY
 
 COPY_IN = pq.ExecStatus.COPY_IN
 
+ACTIVE = pq.TransactionStatus.ACTIVE
+
 
 class BaseCopy(Generic[ConnectionType]):
     """
@@ -174,7 +176,7 @@ class BaseCopy(Generic[ConnectionType]):
         if not exc:
             return
 
-        if self.connection.pgconn.transaction_status != pq.TransactionStatus.ACTIVE:
+        if self.connection.pgconn.transaction_status != ACTIVE:
             # The server has already finished to send copy data. The connection
             # is already in a good state.
             return

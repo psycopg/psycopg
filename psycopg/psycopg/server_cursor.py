@@ -27,6 +27,9 @@ BINARY = pq.Format.BINARY
 
 COMMAND_OK = pq.ExecStatus.COMMAND_OK
 
+IDLE = pq.TransactionStatus.IDLE
+INTRANS = pq.TransactionStatus.INTRANS
+
 
 class ServerCursorMixin(BaseCursor[ConnectionType, Row]):
     """Mixin to add ServerCursor behaviour and implementation a BaseCursor."""
@@ -117,11 +120,11 @@ class ServerCursorMixin(BaseCursor[ConnectionType, Row]):
         ts = self._conn.pgconn.transaction_status
 
         # if the connection is not in a sane state, don't even try
-        if ts not in (pq.TransactionStatus.IDLE, pq.TransactionStatus.INTRANS):
+        if ts != IDLE and ts != INTRANS:
             return
 
         # If we are IDLE, a WITHOUT HOLD cursor will surely have gone already.
-        if not self._withhold and ts == pq.TransactionStatus.IDLE:
+        if not self._withhold and ts == IDLE:
             return
 
         # if we didn't declare the cursor ourselves we still have to close it
