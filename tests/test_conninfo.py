@@ -302,6 +302,9 @@ class TestConnectionInfo:
         with pytest.raises(psycopg.NotSupportedError):
             cur.execute("select 'x'")
 
+    def test_vendor(self, conn):
+        assert conn.info.vendor
+
 
 @pytest.mark.parametrize(
     "conninfo, want, env",

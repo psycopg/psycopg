@@ -20,7 +20,7 @@ def check_libpq_version(got, want):
     return check_version(got, want, "libpq")
 
 
-def check_server_version(pgconn, want):
+def check_server_version(got, function):
     """
     Verify if the server version is a version accepted.
 
@@ -30,7 +30,7 @@ def check_server_version(pgconn, want):
 
     and skips the test if the server version doesn't match what expected.
     """
-    got = pgconn.server_version
+    want = function.want_pg_version
     return check_version(got, want, "server")
 
 

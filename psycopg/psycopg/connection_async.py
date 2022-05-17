@@ -136,6 +136,13 @@ class AsyncConnection(BaseConnection[Row]):
         if context:
             rv._adapters = AdaptersMap(context.adapters)
         rv.prepare_threshold = prepare_threshold
+
+        # TODOCRDB find the right place for this operation
+        if rv.pgconn.parameter_status(b"crdb_version"):
+            from .crdb import customize_crdb_connection
+
+            customize_crdb_connection(rv)
+
         return rv
 
     async def __aenter__(self: _Self) -> _Self:

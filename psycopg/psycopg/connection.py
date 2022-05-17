@@ -114,10 +114,15 @@ class BaseConnection(Generic[Row]):
     ConnStatus = pq.ConnStatus
     TransactionStatus = pq.TransactionStatus
 
+    _info_class: Type[ConnectionInfo] = ConnectionInfo
+
     def __init__(self, pgconn: "PGconn"):
         self.pgconn = pgconn
         self._autocommit = False
-        self._adapters = AdaptersMap(postgres.adapters)
+
+        # None, but set to a copy of the global adapters map as soon as requested.
+        self._adapters: Optional[AdaptersMap] = None
+
         self._notice_handlers: List[NoticeHandler] = []
         self._notify_handlers: List[NotifyHandler] = []
 
@@ -280,10 +285,13 @@ class BaseConnection(Generic[Row]):
     @property
     def info(self) -> ConnectionInfo:
         """A `ConnectionInfo` attribute to inspect connection properties."""
-        return ConnectionInfo(self.pgconn)
+        return self._info_class(self.pgconn)
 
     @property
     def adapters(self) -> AdaptersMap:
+        if not self._adapters:
+            self._adapters = AdaptersMap(postgres.adapters)
+
         return self._adapters
 
     @property
@@ -732,7 +740,15 @@ class Connection(BaseConnection[Row]):
             rv.cursor_factory = cursor_factory
         if context:
             rv._adapters = AdaptersMap(context.adapters)
+
         rv.prepare_threshold = prepare_threshold
+
+        # TODOCRDB find the right place for this operation
+        if rv.pgconn.parameter_status(b"crdb_version"):
+            from .crdb import customize_crdb_connection
+
+            customize_crdb_connection(rv)
+
         return rv
 
     def __enter__(self: _Self) -> _Self:

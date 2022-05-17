@@ -61,17 +61,17 @@ def test_register_dumper_by_class_name(conn):
     assert conn.adapters.get_dumper(MyStr, PyFormat.TEXT) is dumper
 
 
-def test_dump_global_ctx(dsn, global_adapters):
+@pytest.mark.crdb("skip", reason="global adapters don't affect crdb")
+def test_dump_global_ctx(dsn, global_adapters, pgconn):
     psycopg.adapters.register_dumper(MyStr, make_bin_dumper("gb"))
     psycopg.adapters.register_dumper(MyStr, make_dumper("gt"))
-    conn = psycopg.connect(dsn)
-    cur = conn.execute("select %s", [MyStr("hello")])
-    assert cur.fetchone() == ("hellogt",)
-    cur = conn.execute("select %b", [MyStr("hello")])
-    assert cur.fetchone() == ("hellogb",)
-    cur = conn.execute("select %t", [MyStr("hello")])
-    assert cur.fetchone() == ("hellogt",)
-    conn.close()
+    with psycopg.connect(dsn) as conn:
+        cur = conn.execute("select %s", [MyStr("hello")])
+        assert cur.fetchone() == ("hellogt",)
+        cur = conn.execute("select %b", [MyStr("hello")])
+        assert cur.fetchone() == ("hellogb",)
+        cur = conn.execute("select %t", [MyStr("hello")])
+        assert cur.fetchone() == ("hellogt",)
 
 
 def test_dump_connection_ctx(conn):
@@ -198,15 +198,15 @@ def test_register_loader_by_type_name(conn):
     assert conn.adapters.get_loader(TEXT_OID, pq.Format.TEXT) is loader
 
 
+@pytest.mark.crdb("skip", reason="global adapters don't affect crdb")
 def test_load_global_ctx(dsn, global_adapters):
     psycopg.adapters.register_loader("text", make_loader("gt"))
     psycopg.adapters.register_loader("text", make_bin_loader("gb"))
-    conn = psycopg.connect(dsn)
-    cur = conn.cursor(binary=False).execute("select 'hello'::text")
-    assert cur.fetchone() == ("hellogt",)
-    cur = conn.cursor(binary=True).execute("select 'hello'::text")
-    assert cur.fetchone() == ("hellogb",)
-    conn.close()
+    with psycopg.connect(dsn) as conn:
+        cur = conn.cursor(binary=False).execute("select 'hello'::text")
+        assert cur.fetchone() == ("hellogt",)
+        cur = conn.cursor(binary=True).execute("select 'hello'::text")
+        assert cur.fetchone() == ("hellogb",)
 
 
 def test_load_connection_ctx(conn):
@@ -289,7 +289,7 @@ def test_load_cursor_ctx_nested(conn, sql, obj, fmt_out):
 
 
 @pytest.mark.parametrize("fmt_out", pq.Format)
-def test_array_dumper(conn, fmt_out):
+def test_list_dumper(conn, fmt_out):
     t = Transformer(conn)
     fmt_in = PyFormat.from_pq(fmt_out)
     dint = t.get_dumper([0], fmt_in)
@@ -298,15 +298,6 @@ def test_array_dumper(conn, fmt_out):
     assert dint.sub_dumper and dint.sub_dumper.oid == builtins["int2"].oid
 
     dstr = t.get_dumper([""], fmt_in)
-    if fmt_in == PyFormat.BINARY:
-        assert isinstance(dstr, ListBinaryDumper)
-        assert dstr.oid == builtins["text"].array_oid
-        assert dstr.sub_dumper and dstr.sub_dumper.oid == builtins["text"].oid
-    else:
-        assert isinstance(dstr, ListDumper)
-        assert dstr.oid == 0
-        assert dstr.sub_dumper and dstr.sub_dumper.oid == 0
-
     assert dstr is not dint
 
     assert t.get_dumper([1], fmt_in) is dint
@@ -321,6 +312,23 @@ def test_array_dumper(conn, fmt_out):
     L.append(L)
     with pytest.raises(psycopg.DataError):
         assert t.get_dumper(L, fmt_in)
+
+
+@pytest.mark.crdb("skip", reason="test in crdb test suite")
+def test_str_list_dumper_text(conn):
+    t = Transformer(conn)
+    dstr = t.get_dumper([""], PyFormat.TEXT)
+    assert isinstance(dstr, ListDumper)
+    assert dstr.oid == 0
+    assert dstr.sub_dumper and dstr.sub_dumper.oid == 0
+
+
+def test_str_list_dumper_binary(conn):
+    t = Transformer(conn)
+    dstr = t.get_dumper([""], PyFormat.BINARY)
+    assert isinstance(dstr, ListBinaryDumper)
+    assert dstr.oid == builtins["text"].array_oid
+    assert dstr.sub_dumper and dstr.sub_dumper.oid == builtins["text"].oid
 
 
 def test_last_dumper_registered_ctx(conn):
@@ -347,6 +355,7 @@ def test_none_type_argument(conn, fmt_in):
     assert cur.fetchone()[0]
 
 
+@pytest.mark.crdb("skip", reason="test in crdb test suite")
 @pytest.mark.parametrize("fmt_in", PyFormat)
 def test_return_untyped(conn, fmt_in):
     # Analyze and check for changes using strings in untyped/typed contexts

@@ -2,12 +2,16 @@ import os
 import pytest
 import logging
 from contextlib import contextmanager
-from typing import List
+from typing import List, Optional
 
 import psycopg
 from psycopg import pq
 
 from .utils import check_libpq_version, check_server_version
+
+# Set by warm_up_database() the first time the dsn fixture is used
+pg_version: int
+crdb_version: Optional[int]
 
 
 def pytest_addoption(parser):
@@ -70,8 +74,10 @@ def pytest_runtest_setup(item):
 
 
 @pytest.fixture(scope="session")
-def dsn(request):
-    """Return the dsn used to connect to the `--test-dsn` database."""
+def session_dsn(request):
+    """
+    Return the dsn used to connect to the `--test-dsn` database (session-wide).
+    """
     dsn = request.config.getoption("--test-dsn")
     if dsn is None:
         pytest.skip("skipping test as no --test-dsn")
@@ -85,6 +91,16 @@ def dsn(request):
         logging.exception("error warming up database")
 
     return dsn
+
+
+@pytest.fixture
+def dsn(session_dsn, request):
+    """Return the dsn used to connect to the `--test-dsn` database."""
+    msg = check_connection_version(request.function)
+    if msg:
+        pytest.skip(msg)
+
+    return session_dsn
 
 
 @pytest.fixture(scope="session")
@@ -128,15 +144,15 @@ def maybe_trace(pgconn, tracefile, function):
 @pytest.fixture
 def pgconn(dsn, request, tracefile):
     """Return a PGconn connection open to `--test-dsn`."""
+    msg = check_connection_version(request.function)
+    if msg:
+        pytest.skip(msg)
+
     from psycopg import pq
 
     conn = pq.PGconn.connect(dsn.encode())
     if conn.status != pq.ConnStatus.OK:
         pytest.fail(f"bad connection: {conn.error_message.decode('utf8', 'replace')}")
-    msg = check_connection_version(conn, request.function)
-    if msg:
-        conn.finish()
-        pytest.skip(msg)
 
     with maybe_trace(conn, tracefile, request.function):
         yield conn
@@ -147,13 +163,13 @@ def pgconn(dsn, request, tracefile):
 @pytest.fixture
 def conn(dsn, request, tracefile):
     """Return a `Connection` connected to the ``--test-dsn`` database."""
+    msg = check_connection_version(request.function)
+    if msg:
+        pytest.skip(msg)
+
     from psycopg import Connection
 
     conn = Connection.connect(dsn)
-    msg = check_connection_version(conn.pgconn, request.function)
-    if msg:
-        conn.close()
-        pytest.skip(msg)
     with maybe_trace(conn.pgconn, tracefile, request.function):
         yield conn
     conn.close()
@@ -175,13 +191,13 @@ def pipeline(request, conn):
 @pytest.fixture
 async def aconn(dsn, request, tracefile):
     """Return an `AsyncConnection` connected to the ``--test-dsn`` database."""
+    msg = check_connection_version(request.function)
+    if msg:
+        pytest.skip(msg)
+
     from psycopg import AsyncConnection
 
     conn = await AsyncConnection.connect(dsn)
-    msg = check_connection_version(conn.pgconn, request.function)
-    if msg:
-        await conn.close()
-        pytest.skip(msg)
     with maybe_trace(conn.pgconn, tracefile, request.function):
         yield conn
     await conn.close()
@@ -201,13 +217,13 @@ async def apipeline(request, aconn):
 
 
 @pytest.fixture(scope="session")
-def svcconn(dsn):
+def svcconn(session_dsn):
     """
     Return a session `Connection` connected to the ``--test-dsn`` database.
     """
     from psycopg import Connection
 
-    conn = Connection.connect(dsn, autocommit=True)
+    conn = Connection.connect(session_dsn, autocommit=True)
     yield conn
     conn.close()
 
@@ -254,16 +270,22 @@ class ListPopAll(list):  # type: ignore[type-arg]
         return out
 
 
-def check_connection_version(pgconn, function):
+def check_connection_version(function):
+    try:
+        pg_version
+    except NameError:
+        # First connection creation failed. Let the tests fail.
+        return None
+
     if hasattr(function, "want_pg_version"):
-        rv = check_server_version(pgconn, function.want_pg_version)
+        rv = check_server_version(pg_version, function)
         if rv:
             return rv
 
     if hasattr(function, "want_crdb"):
         from .fix_crdb import check_crdb_version
 
-        rv = check_crdb_version(pgconn, function)
+        rv = check_crdb_version(crdb_version, function)
         if rv:
             return rv
 
@@ -294,7 +316,15 @@ def warm_up_database(dsn: str, __first_connection: List[bool] = [True]) -> None:
         return
     del __first_connection[:]
 
+    global pg_version, crdb_version
+
     import psycopg
 
     with psycopg.connect(dsn, connect_timeout=10) as conn:
         conn.execute("select 1")
+
+        pg_version = conn.info.server_version
+        if conn.info.vendor == "CockroachDB":
+            crdb_version = conn.info.crdb_version  # type: ignore
+        else:
+            crdb_version = None

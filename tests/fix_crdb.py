@@ -1,5 +1,3 @@
-import re
-
 from .utils import check_version
 
 
@@ -26,7 +24,7 @@ def pytest_runtest_setup(item):
         item.function.crdb_reason = m.kwargs.get("reason")
 
 
-def check_crdb_version(pgconn, func):
+def check_crdb_version(got, func):
     """
     Verify if the CockroachDB version is a version accepted.
 
@@ -39,13 +37,14 @@ def check_crdb_version(pgconn, func):
     and skips the test if the server version doesn't match what expected.
     """
     want = func.want_crdb
-    got = get_crdb_version(pgconn)
+    rv = None
+
     if got is None:
         if want == "only":
             return "skipping test: CockroachDB only"
     else:
         if want == "only":
-            rv = None
+            pass
         elif want == "skip":
             rv = "skipping test: not supported on CockroachDB"
         else:
@@ -60,37 +59,8 @@ def check_crdb_version(pgconn, func):
                     f"issues/{crdb_reasons[func.crdb_reason]}"
                 )
                 rv = f"{rv} ({url})"
-        return rv
 
-
-def get_crdb_version(pgconn, __crdb_version=[]):
-    """
-    Return the CockroachDB server version connected.
-
-    Return None if the server is not CockroachDB, else return a number in
-    the PostgreSQL format (e.g. 21.2.10 -> 200210)
-
-    Assume all the connections are on the same db: return a cached result on
-    following calls.
-    """
-    if __crdb_version:
-        return __crdb_version[0]
-
-    bver = pgconn.parameter_status(b"crdb_version")
-    if bver:
-        sver = bver.decode()
-        m = re.search(r"\bv(\d+)\.(\d+)\.(\d+)", sver)
-        if not m:
-            raise ValueError(f"can't parse CockroachDB version from {sver}")
-
-        ver = int(m.group(1)) * 10000 + int(m.group(2)) * 100 + int(m.group(3))
-
-    else:
-        ver = None
-
-    __crdb_version.append(ver)
-
-    return __crdb_version[0]
+    return rv
 
 
 # mapping from reason description to ticket number

@@ -125,6 +125,10 @@ class ConnectionInfo:
         self.pgconn = pgconn
 
     @property
+    def vendor(self) -> str:
+        return "PostgreSQL"
+
+    @property
     def host(self) -> str:
         """The server host name of the active connection. See :pq:`PQhost()`."""
         return self._get_pgconn_attr("host")
