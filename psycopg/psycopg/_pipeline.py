@@ -10,7 +10,6 @@ from typing import Any, List, Optional, Union, Tuple, Type, TYPE_CHECKING
 
 from . import pq
 from . import errors as e
-from .pq import ConnStatus
 from .abc import PipelineCommand, PQGen
 from ._compat import Deque, TypeAlias
 from ._cmodule import _psycopg
@@ -41,6 +40,7 @@ PendingResult: TypeAlias = Union[
 
 FATAL_ERROR = pq.ExecStatus.FATAL_ERROR
 PIPELINE_ABORTED = pq.ExecStatus.PIPELINE_ABORTED
+BAD = pq.ConnStatus.BAD
 
 logger = logging.getLogger("psycopg")
 
@@ -84,7 +84,7 @@ class BasePipeline:
 
     def _exit(self) -> None:
         self.level -= 1
-        if self.level == 0 and self.pgconn.status != ConnStatus.BAD:
+        if self.level == 0 and self.pgconn.status != BAD:
             self.pgconn.exit_pipeline_mode()
 
     def _sync_gen(self) -> PQGen[None]:

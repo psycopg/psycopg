@@ -20,12 +20,15 @@ from typing import List, Optional, Union
 
 from . import pq
 from . import errors as e
-from .pq import ConnStatus, PollingStatus
+from .pq import PollingStatus
 from .abc import PipelineCommand, PQGen, PQGenConn
 from .pq.abc import PGconn, PGresult
 from .waiting import Wait, Ready
 from ._compat import Deque
 from ._encodings import pgconn_encoding, conninfo_encoding
+
+OK = pq.ConnStatus.OK
+BAD = pq.ConnStatus.BAD
 
 COMMAND_OK = pq.ExecStatus.COMMAND_OK
 COPY_OUT = pq.ExecStatus.COPY_OUT
@@ -43,7 +46,7 @@ def connect(conninfo: str) -> PQGenConn[PGconn]:
     """
     conn = pq.PGconn.connect_start(conninfo.encode())
     while True:
-        if conn.status == ConnStatus.BAD:
+        if conn.status == BAD:
             encoding = conninfo_encoding(conninfo)
             raise e.OperationalError(
                 f"connection is bad: {pq.error_message(conn, encoding=encoding)}",

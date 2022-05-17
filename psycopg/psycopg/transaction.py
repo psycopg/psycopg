@@ -12,7 +12,6 @@ from typing import Generic, Iterator, Optional, Type, Union, TYPE_CHECKING
 from . import pq
 from . import sql
 from . import errors as e
-from .pq import ConnStatus
 from .abc import ConnectionType, PQGen
 
 if TYPE_CHECKING:
@@ -21,6 +20,8 @@ if TYPE_CHECKING:
     from .connection_async import AsyncConnection
 
 IDLE = pq.TransactionStatus.IDLE
+
+OK = pq.ConnStatus.OK
 
 logger = logging.getLogger(__name__)
 
@@ -249,7 +250,7 @@ class Transaction(BaseTransaction["Connection[Any]"]):
         exc_val: Optional[BaseException],
         exc_tb: Optional[TracebackType],
     ) -> bool:
-        if self.pgconn.status == ConnStatus.OK:
+        if self.pgconn.status == OK:
             with self._conn.lock:
                 return self._conn.wait(self._exit_gen(exc_type, exc_val, exc_tb))
         else:
@@ -278,7 +279,7 @@ class AsyncTransaction(BaseTransaction["AsyncConnection[Any]"]):
         exc_val: Optional[BaseException],
         exc_tb: Optional[TracebackType],
     ) -> bool:
-        if self.pgconn.status == ConnStatus.OK:
+        if self.pgconn.status == OK:
             async with self._conn.lock:
                 return await self._conn.wait(self._exit_gen(exc_type, exc_val, exc_tb))
         else:

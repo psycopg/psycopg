@@ -10,6 +10,8 @@ from .abc import PGconn, PGresult
 from ._enums import ConnStatus, TransactionStatus, PipelineStatus
 from .._encodings import pgconn_encoding
 
+OK = ConnStatus.OK
+
 
 class PGnotify(NamedTuple):
     relname: bytes
@@ -61,7 +63,7 @@ def error_message(obj: Union[PGconn, PGresult], encoding: str = "utf8") -> str:
     elif hasattr(obj, "error_message"):
         # obj is a PGconn
         obj = cast(PGconn, obj)
-        if obj.status == ConnStatus.OK:
+        if obj.status == OK:
             encoding = pgconn_encoding(obj)
         bmsg = obj.error_message
 
@@ -87,7 +89,7 @@ def connection_summary(pgconn: PGconn) -> str:
     Useful for __repr__
     """
     parts = []
-    if pgconn.status == ConnStatus.OK:
+    if pgconn.status == OK:
         # Put together the [STATUS]
         status = TransactionStatus(pgconn.transaction_status).name
         if pgconn.pipeline_status:

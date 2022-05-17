@@ -19,7 +19,6 @@ from . import pq
 from . import errors as e
 from . import waiting
 from . import postgres
-from .pq import ConnStatus
 from .abc import AdaptContext, ConnectionType, Params, Query, RV
 from .abc import PQGen, PQGenConn
 from .sql import Composable, SQL
@@ -58,6 +57,9 @@ CursorRow = TypeVar("CursorRow")
 
 TEXT = pq.Format.TEXT
 BINARY = pq.Format.BINARY
+
+OK = pq.ConnStatus.OK
+BAD = pq.ConnStatus.BAD
 
 COMMAND_OK = pq.ExecStatus.COMMAND_OK
 TUPLES_OK = pq.ExecStatus.TUPLES_OK
@@ -172,7 +174,7 @@ class BaseConnection(Generic[Row]):
     @property
     def closed(self) -> bool:
         """`!True` if the connection is closed."""
-        return self.pgconn.status == ConnStatus.BAD
+        return self.pgconn.status == BAD
 
     @property
     def broken(self) -> bool:
@@ -182,7 +184,7 @@ class BaseConnection(Generic[Row]):
         A broken connection is always `closed`, but wasn't closed in a clean
         way, such as using `close()` or a ``with`` block.
         """
-        return self.pgconn.status == ConnStatus.BAD and not self._closed
+        return self.pgconn.status == BAD and not self._closed
 
     @property
     def autocommit(self) -> bool:
@@ -480,10 +482,10 @@ class BaseConnection(Generic[Row]):
         return result
 
     def _check_connection_ok(self) -> None:
-        if self.pgconn.status == ConnStatus.OK:
+        if self.pgconn.status == OK:
             return
 
-        if self.pgconn.status == ConnStatus.BAD:
+        if self.pgconn.status == BAD:
             raise e.OperationalError("the connection is closed")
         raise e.InterfaceError(
             "cannot execute operations: the connection is"
