@@ -20,12 +20,18 @@ from typing import List, Optional, Union
 
 from . import pq
 from . import errors as e
-from .pq import ConnStatus, PollingStatus, ExecStatus
+from .pq import ConnStatus, PollingStatus
 from .abc import PipelineCommand, PQGen, PQGenConn
 from .pq.abc import PGconn, PGresult
 from .waiting import Wait, Ready
 from ._compat import Deque
 from ._encodings import pgconn_encoding, conninfo_encoding
+
+COMMAND_OK = pq.ExecStatus.COMMAND_OK
+COPY_OUT = pq.ExecStatus.COPY_OUT
+COPY_IN = pq.ExecStatus.COPY_IN
+COPY_BOTH = pq.ExecStatus.COPY_BOTH
+PIPELINE_SYNC = pq.ExecStatus.PIPELINE_SYNC
 
 logger = logging.getLogger(__name__)
 
@@ -120,12 +126,13 @@ def fetch_many(pgconn: PGconn) -> PQGen[List[PGresult]]:
             break
 
         results.append(res)
-        if res.status in _copy_statuses:
+        status = res.status
+        if status == COPY_IN or status == COPY_OUT or status == COPY_BOTH:
             # After entering copy mode the libpq will create a phony result
             # for every request so let's break the endless loop.
             break
 
-        if res.status == pq.ExecStatus.PIPELINE_SYNC:
+        if status == PIPELINE_SYNC:
             # PIPELINE_SYNC is not followed by a NULL, but we return it alone
             # similarly to other result sets.
             assert len(results) == 1, results
@@ -192,7 +199,7 @@ def pipeline_communicate(
                         break
                     results.append(res)
                     res = []
-                elif r.status == pq.ExecStatus.PIPELINE_SYNC:
+                elif r.status == PIPELINE_SYNC:
                     assert not res
                     results.append([r])
                 else:
@@ -205,13 +212,6 @@ def pipeline_communicate(
             commands.popleft()()
 
     return results
-
-
-_copy_statuses = (
-    ExecStatus.COPY_IN,
-    ExecStatus.COPY_OUT,
-    ExecStatus.COPY_BOTH,
-)
 
 
 def notifies(pgconn: PGconn) -> PQGen[List[pq.PGnotify]]:
@@ -249,7 +249,7 @@ def copy_from(pgconn: PGconn) -> PQGen[Union[memoryview, PGresult]]:
         # TODO: too brutal? Copy worked.
         raise e.ProgrammingError("you cannot mix COPY with other operations")
     result = results[0]
-    if result.status != ExecStatus.COMMAND_OK:
+    if result.status != COMMAND_OK:
         encoding = pgconn_encoding(pgconn)
         raise e.error_from_result(result, encoding=encoding)
 
@@ -281,7 +281,7 @@ def copy_end(pgconn: PGconn, error: Optional[bytes]) -> PQGen[PGresult]:
 
     # Retrieve the final result of copy
     (result,) = yield from fetch_many(pgconn)
-    if result.status != ExecStatus.COMMAND_OK:
+    if result.status != COMMAND_OK:
         encoding = pgconn_encoding(pgconn)
         raise e.error_from_result(result, encoding=encoding)
 

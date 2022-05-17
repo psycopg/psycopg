@@ -16,7 +16,6 @@ from typing import Any, Dict, List, Match, Optional, Sequence, Type, Tuple
 
 from . import pq
 from . import errors as e
-from .pq import ExecStatus
 from .abc import Buffer, ConnectionType, PQGen, Transformer
 from .adapt import PyFormat
 from ._compat import create_task
@@ -31,10 +30,13 @@ if TYPE_CHECKING:
     from .connection import Connection  # noqa: F401
     from .connection_async import AsyncConnection  # noqa: F401
 
-TEXT = pq.Format.TEXT
-BINARY = pq.Format.BINARY
 PY_TEXT = PyFormat.TEXT
 PY_BINARY = PyFormat.BINARY
+
+TEXT = pq.Format.TEXT
+BINARY = pq.Format.BINARY
+
+COPY_IN = pq.ExecStatus.COPY_IN
 
 
 class BaseCopy(Generic[ConnectionType]):
@@ -119,7 +121,7 @@ class BaseCopy(Generic[ConnectionType]):
         registry = self.cursor.adapters.types
         oids = [t if isinstance(t, int) else registry.get_oid(t) for t in types]
 
-        if self._pgresult.status == ExecStatus.COPY_IN:
+        if self._pgresult.status == COPY_IN:
             self.formatter.transformer.set_dumper_types(oids, self.formatter.format)
         else:
             self.formatter.transformer.set_loader_types(oids, self.formatter.format)
@@ -276,7 +278,7 @@ class Copy(BaseCopy["Connection[Any]"]):
         by exit. It is available if, despite what is documented, you end up
         using the `Copy` object outside a block.
         """
-        if self._pgresult.status == ExecStatus.COPY_IN:
+        if self._pgresult.status == COPY_IN:
             self._write_end()
             self.connection.wait(self._end_copy_in_gen(exc))
         else:
@@ -391,7 +393,7 @@ class AsyncCopy(BaseCopy["AsyncConnection[Any]"]):
         await self._write(data)
 
     async def finish(self, exc: Optional[BaseException]) -> None:
-        if self._pgresult.status == ExecStatus.COPY_IN:
+        if self._pgresult.status == COPY_IN:
             await self._write_end()
             await self.connection.wait(self._end_copy_in_gen(exc))
         else:

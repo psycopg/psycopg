@@ -14,7 +14,6 @@ from contextlib import contextmanager
 from . import pq
 from . import adapt
 from . import errors as e
-from .pq import ExecStatus
 from .abc import ConnectionType, Query, Params, PQGen
 from .copy import Copy
 from .rows import Row, RowMaker, RowFactory
@@ -46,6 +45,16 @@ _C = TypeVar("_C", bound="Cursor[Any]")
 
 TEXT = pq.Format.TEXT
 BINARY = pq.Format.BINARY
+
+EMPTY_QUERY = pq.ExecStatus.EMPTY_QUERY
+COMMAND_OK = pq.ExecStatus.COMMAND_OK
+TUPLES_OK = pq.ExecStatus.TUPLES_OK
+COPY_OUT = pq.ExecStatus.COPY_OUT
+COPY_IN = pq.ExecStatus.COPY_IN
+COPY_BOTH = pq.ExecStatus.COPY_BOTH
+FATAL_ERROR = pq.ExecStatus.FATAL_ERROR
+SINGLE_TUPLE = pq.ExecStatus.SINGLE_TUPLE
+PIPELINE_ABORTED = pq.ExecStatus.PIPELINE_ABORTED
 
 
 class BaseCursor(Generic[ConnectionType, Row]):
@@ -123,9 +132,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
         # the query said we got tuples (mostly to handle the super useful
         # query "SELECT ;"
         if res and (
-            res.nfields
-            or res.status == ExecStatus.TUPLES_OK
-            or res.status == ExecStatus.SINGLE_TUPLE
+            res.nfields or res.status == TUPLES_OK or res.status == SINGLE_TUPLE
         ):
             return [Column(self, i) for i in range(res.nfields)]
         else:
@@ -305,7 +312,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
                 self._send_prepare(name, pgq)
                 if not self._conn._pipeline:
                     (result,) = yield from execute(self._pgconn)
-                    if result.status == ExecStatus.FATAL_ERROR:
+                    if result.status == FATAL_ERROR:
                         raise e.error_from_result(result, encoding=self._encoding)
             # Then execute it.
             self._send_query_prepared(name, pgq, binary=binary)
@@ -355,19 +362,19 @@ class BaseCursor(Generic[ConnectionType, Row]):
         if res is None:
             return None
 
-        elif res.status == ExecStatus.SINGLE_TUPLE:
+        status = res.status
+        if status == SINGLE_TUPLE:
             self.pgresult = res
             self._tx.set_pgresult(res, set_loaders=first)
             if first:
                 self._make_row = self._make_row_maker()
             return res
 
-        elif res.status in (ExecStatus.TUPLES_OK, ExecStatus.COMMAND_OK):
+        elif status == TUPLES_OK or status == COMMAND_OK:
             # End of single row results
-            status = res.status
             while res:
                 res = yield from fetch(self._pgconn)
-            if status != ExecStatus.TUPLES_OK:
+            if status != TUPLES_OK:
                 raise e.ProgrammingError(
                     "the operation in stream() didn't produce a result"
                 )
@@ -478,17 +485,6 @@ class BaseCursor(Generic[ConnectionType, Row]):
         pgq.convert(query, params)
         return pgq
 
-    _status_ok = (
-        ExecStatus.TUPLES_OK,
-        ExecStatus.COMMAND_OK,
-        ExecStatus.EMPTY_QUERY,
-    )
-    _status_copy = (
-        ExecStatus.COPY_IN,
-        ExecStatus.COPY_OUT,
-        ExecStatus.COPY_BOTH,
-    )
-
     def _check_results(self, results: List["PGresult"]) -> None:
         """
         Verify that the results of a query are valid.
@@ -500,24 +496,27 @@ class BaseCursor(Generic[ConnectionType, Row]):
             raise e.InternalError("got no result from the query")
 
         for res in results:
-            if res.status not in self._status_ok:
+            status = res.status
+            if status != TUPLES_OK and status != COMMAND_OK and status != EMPTY_QUERY:
                 self._raise_for_result(res)
 
     def _raise_for_result(self, result: "PGresult") -> NoReturn:
         """
         Raise an appropriate error message for an unexpected database result
         """
-        if result.status == ExecStatus.FATAL_ERROR:
+        status = result.status
+        if status == FATAL_ERROR:
             raise e.error_from_result(result, encoding=self._encoding)
-        elif result.status == ExecStatus.PIPELINE_ABORTED:
+        elif status == PIPELINE_ABORTED:
             raise e.PipelineAborted("pipeline aborted")
-        elif result.status in self._status_copy:
+        elif status == COPY_IN or status == COPY_OUT or status == COPY_BOTH:
             raise e.ProgrammingError(
                 "COPY cannot be used with this method; use copy() insead"
             )
         else:
             raise e.InternalError(
-                f"unexpected result status from query: {ExecStatus(result.status).name}"
+                "unexpected result status from query:"
+                f" {pq.ExecStatus(status).name}"
             )
 
     def _set_current_result(self, i: int, format: Optional[pq.Format] = None) -> None:
@@ -607,11 +606,15 @@ class BaseCursor(Generic[ConnectionType, Row]):
         res = self.pgresult
         if not res:
             raise e.ProgrammingError("no result available")
-        elif res.status == ExecStatus.FATAL_ERROR:
+
+        status = res.status
+        if status == TUPLES_OK:
+            return
+        elif status == FATAL_ERROR:
             raise e.error_from_result(res, encoding=pgconn_encoding(self._pgconn))
-        elif res.status == ExecStatus.PIPELINE_ABORTED:
+        elif status == PIPELINE_ABORTED:
             raise e.PipelineAborted("pipeline aborted")
-        elif res.status != ExecStatus.TUPLES_OK:
+        else:
             raise e.ProgrammingError("the last operation didn't produce a result")
 
     def _check_copy_result(self, result: "PGresult") -> None:
@@ -619,14 +622,14 @@ class BaseCursor(Generic[ConnectionType, Row]):
         Check that the value returned in a copy() operation is a legit COPY.
         """
         status = result.status
-        if status in (ExecStatus.COPY_IN, ExecStatus.COPY_OUT):
+        if status == COPY_IN or status == COPY_OUT:
             return
-        elif status == ExecStatus.FATAL_ERROR:
+        elif status == FATAL_ERROR:
             raise e.error_from_result(result, encoding=self._encoding)
         else:
             raise e.ProgrammingError(
                 "copy() should be used only with COPY ... TO STDOUT or COPY ..."
-                f" FROM STDIN statements, got {ExecStatus(status).name}"
+                f" FROM STDIN statements, got {pq.ExecStatus(status).name}"
             )
 
     def _scroll(self, value: int, mode: str) -> None:

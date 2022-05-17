@@ -10,7 +10,7 @@ from typing import Any, List, Optional, Union, Tuple, Type, TYPE_CHECKING
 
 from . import pq
 from . import errors as e
-from .pq import ConnStatus, ExecStatus
+from .pq import ConnStatus
 from .abc import PipelineCommand, PQGen
 from ._compat import Deque, TypeAlias
 from ._cmodule import _psycopg
@@ -38,6 +38,9 @@ else:
 PendingResult: TypeAlias = Union[
     None, Tuple["BaseCursor[Any, Any]", Optional[Tuple[Key, Prepare, bytes]]]
 ]
+
+FATAL_ERROR = pq.ExecStatus.FATAL_ERROR
+PIPELINE_ABORTED = pq.ExecStatus.PIPELINE_ABORTED
 
 logger = logging.getLogger("psycopg")
 
@@ -150,9 +153,9 @@ class BasePipeline:
         """
         if queued is None:
             (result,) = results
-            if result.status == ExecStatus.FATAL_ERROR:
+            if result.status == FATAL_ERROR:
                 raise e.error_from_result(result, encoding=pgconn_encoding(self.pgconn))
-            elif result.status == ExecStatus.PIPELINE_ABORTED:
+            elif result.status == PIPELINE_ABORTED:
                 raise e.PipelineAborted("pipeline aborted")
         else:
             cursor, prepinfo = queued

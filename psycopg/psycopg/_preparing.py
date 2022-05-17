@@ -8,7 +8,7 @@ from enum import IntEnum, auto
 from typing import Iterator, Optional, Sequence, Tuple, TYPE_CHECKING
 from collections import OrderedDict
 
-from .pq import ExecStatus
+from . import pq
 from ._compat import Deque, TypeAlias
 from ._queries import PostgresQuery
 
@@ -16,6 +16,9 @@ if TYPE_CHECKING:
     from .pq.abc import PGresult
 
 Key: TypeAlias = Tuple[bytes, Tuple[int, ...]]
+
+COMMAND_OK = pq.ExecStatus.COMMAND_OK
+TUPLES_OK = pq.ExecStatus.TUPLES_OK
 
 
 class Prepare(IntEnum):
@@ -80,7 +83,7 @@ class PrepareManager:
         """
         if self._names or prep == Prepare.SHOULD:
             for result in results:
-                if result.status != ExecStatus.COMMAND_OK:
+                if result.status != COMMAND_OK:
                     continue
                 cmdstat = result.command_status
                 if cmdstat and (cmdstat.startswith(b"DROP ") or cmdstat == b"ROLLBACK"):
@@ -95,7 +98,7 @@ class PrepareManager:
             return False
 
         status = results[0].status
-        if ExecStatus.COMMAND_OK != status != ExecStatus.TUPLES_OK:
+        if COMMAND_OK != status != TUPLES_OK:
             # We don't prepare failed queries or other weird results
             return False
 

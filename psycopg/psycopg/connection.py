@@ -19,7 +19,7 @@ from . import pq
 from . import errors as e
 from . import waiting
 from . import postgres
-from .pq import ConnStatus, ExecStatus, TransactionStatus
+from .pq import ConnStatus, TransactionStatus
 from .abc import AdaptContext, ConnectionType, Params, Query, RV
 from .abc import PQGen, PQGenConn
 from .sql import Composable, SQL
@@ -52,14 +52,18 @@ else:
     connect = generators.connect
     execute = generators.execute
 
-logger = logging.getLogger("psycopg")
-
 # Row Type variable for Cursor (when it needs to be distinguished from the
 # connection's one)
 CursorRow = TypeVar("CursorRow")
 
 TEXT = pq.Format.TEXT
 BINARY = pq.Format.BINARY
+
+COMMAND_OK = pq.ExecStatus.COMMAND_OK
+TUPLES_OK = pq.ExecStatus.TUPLES_OK
+FATAL_ERROR = pq.ExecStatus.FATAL_ERROR
+
+logger = logging.getLogger("psycopg")
 
 
 class Notify(NamedTuple):
@@ -461,12 +465,12 @@ class BaseConnection(Generic[Row]):
             self.pgconn.send_query_params(command, None, result_format=result_format)
 
         result = (yield from execute(self.pgconn))[-1]
-        if result.status not in (ExecStatus.COMMAND_OK, ExecStatus.TUPLES_OK):
-            if result.status == ExecStatus.FATAL_ERROR:
+        if result.status != COMMAND_OK and result.status != TUPLES_OK:
+            if result.status == FATAL_ERROR:
                 raise e.error_from_result(result, encoding=pgconn_encoding(self.pgconn))
             else:
                 raise e.InterfaceError(
-                    f"unexpected result {ExecStatus(result.status).name}"
+                    f"unexpected result {pq.ExecStatus(result.status).name}"
                     f" from command {command.decode()!r}"
                 )
         return result

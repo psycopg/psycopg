@@ -25,6 +25,8 @@ DEFAULT_ITERSIZE = 100
 TEXT = pq.Format.TEXT
 BINARY = pq.Format.BINARY
 
+COMMAND_OK = pq.ExecStatus.COMMAND_OK
+
 
 class ServerCursorMixin(BaseCursor[ConnectionType, Row]):
     """Mixin to add ServerCursor behaviour and implementation a BaseCursor."""
@@ -91,7 +93,7 @@ class ServerCursorMixin(BaseCursor[ConnectionType, Row]):
         pgq = self._convert_query(query, params)
         self._execute_send(pgq, no_pqexec=True)
         results = yield from execute(self._conn.pgconn)
-        if results[-1].status != pq.ExecStatus.COMMAND_OK:
+        if results[-1].status != COMMAND_OK:
             self._raise_for_result(results[-1])
 
         # Set the format, which will be used by describe and fetch operations
