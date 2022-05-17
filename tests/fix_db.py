@@ -96,10 +96,7 @@ def session_dsn(request):
 @pytest.fixture
 def dsn(session_dsn, request):
     """Return the dsn used to connect to the `--test-dsn` database."""
-    msg = check_connection_version(request.function)
-    if msg:
-        pytest.skip(msg)
-
+    check_connection_version(request.function)
     return session_dsn
 
 
@@ -144,9 +141,7 @@ def maybe_trace(pgconn, tracefile, function):
 @pytest.fixture
 def pgconn(dsn, request, tracefile):
     """Return a PGconn connection open to `--test-dsn`."""
-    msg = check_connection_version(request.function)
-    if msg:
-        pytest.skip(msg)
+    check_connection_version(request.function)
 
     from psycopg import pq
 
@@ -163,9 +158,7 @@ def pgconn(dsn, request, tracefile):
 @pytest.fixture
 def conn(dsn, request, tracefile):
     """Return a `Connection` connected to the ``--test-dsn`` database."""
-    msg = check_connection_version(request.function)
-    if msg:
-        pytest.skip(msg)
+    check_connection_version(request.function)
 
     from psycopg import Connection
 
@@ -191,9 +184,7 @@ def pipeline(request, conn):
 @pytest.fixture
 async def aconn(dsn, request, tracefile):
     """Return an `AsyncConnection` connected to the ``--test-dsn`` database."""
-    msg = check_connection_version(request.function)
-    if msg:
-        pytest.skip(msg)
+    check_connection_version(request.function)
 
     from psycopg import AsyncConnection
 
@@ -278,16 +269,16 @@ def check_connection_version(function):
         return None
 
     if hasattr(function, "want_pg_version"):
-        rv = check_server_version(pg_version, function)
-        if rv:
-            return rv
+        msg = check_server_version(pg_version, function)
+        if msg:
+            pytest.skip(msg)
 
     if hasattr(function, "want_crdb"):
         from .fix_crdb import check_crdb_version
 
-        rv = check_crdb_version(crdb_version, function)
-        if rv:
-            return rv
+        msg = check_crdb_version(crdb_version, function)
+        if msg:
+            pytest.skip(msg)
 
     return None
 
