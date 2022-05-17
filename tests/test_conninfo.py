@@ -13,6 +13,10 @@ from psycopg._encodings import pg2pyenc
 snowman = "\u2603"
 
 
+def skip_crdb(*args, reason=None):
+    return pytest.param(*args, marks=pytest.mark.crdb("skip", reason=reason))
+
+
 class MyString(str):
     pass
 
@@ -226,6 +230,7 @@ class TestConnectionInfo:
         with pytest.raises(psycopg.OperationalError):
             conn.info.error_message
 
+    @pytest.mark.crdb("skip", reason="always 0 on crdb")
     def test_backend_pid(self, conn):
         assert conn.info.backend_pid
         assert conn.info.backend_pid == conn.pgconn.backend_pid
@@ -242,6 +247,7 @@ class TestConnectionInfo:
         offset = tz.utcoffset(dt.datetime(2000, 7, 1))
         assert offset and offset.total_seconds() == 7200
 
+    @pytest.mark.crdb("skip", reason="crdb doesn't allow invalid timezones")
     def test_timezone_warn(self, conn, caplog):
         conn.execute("set timezone to 'FOOBAR0'")
         assert len(caplog.records) == 0
@@ -263,6 +269,7 @@ class TestConnectionInfo:
         enc = conn.execute("show client_encoding").fetchone()[0]
         assert conn.info.encoding == pg2pyenc(enc.encode())
 
+    @pytest.mark.crdb("skip", reason="encoding not normalized")
     @pytest.mark.parametrize(
         "enc, out, codec",
         [
@@ -285,17 +292,22 @@ class TestConnectionInfo:
             ("utf8", "UTF8", "utf-8"),
             ("utf-8", "UTF8", "utf-8"),
             ("utf_8", "UTF8", "utf-8"),
-            ("eucjp", "EUC_JP", "euc_jp"),
-            ("euc-jp", "EUC_JP", "euc_jp"),
+            skip_crdb("eucjp", "EUC_JP", "euc_jp", reason="encoding"),
+            skip_crdb("euc-jp", "EUC_JP", "euc_jp", reason="encoding"),
         ],
     )
     def test_encoding_env_var(self, dsn, monkeypatch, enc, out, codec):
         monkeypatch.setenv("PGCLIENTENCODING", enc)
-        conn = psycopg.connect(dsn)
-        assert conn.info.parameter_status("client_encoding") == out
-        assert conn.info.encoding == codec
-        conn.close()
+        with psycopg.connect(dsn) as conn:
+            clienc = conn.info.parameter_status("client_encoding")
+            assert clienc
+            if conn.info.vendor == "PostgreSQL":
+                assert clienc == out
+            else:
+                assert clienc.replace("-", "").replace("_", "").upper() == out
+            assert conn.info.encoding == codec
 
+    @pytest.mark.crdb("skip", reason="encoding")
     def test_set_encoding_unsupported(self, conn):
         cur = conn.cursor()
         cur.execute("set client_encoding to EUC_TW")
