@@ -759,7 +759,10 @@ class Connection(BaseConnection[Row]):
         """
         while 1:
             with self.lock:
-                ns = self.wait(notifies(self.pgconn))
+                try:
+                    ns = self.wait(notifies(self.pgconn))
+                except e.Error as ex:
+                    raise ex.with_traceback(None)
             enc = pgconn_encoding(self.pgconn)
             for pgn in ns:
                 n = Notify(pgn.relname.decode(enc), pgn.extra.decode(enc), pgn.be_pid)

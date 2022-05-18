@@ -281,7 +281,10 @@ class AsyncConnection(BaseConnection[Row]):
     async def notifies(self) -> AsyncGenerator[Notify, None]:
         while 1:
             async with self.lock:
-                ns = await self.wait(notifies(self.pgconn))
+                try:
+                    ns = await self.wait(notifies(self.pgconn))
+                except e.Error as ex:
+                    raise ex.with_traceback(None)
             enc = pgconn_encoding(self.pgconn)
             for pgn in ns:
                 n = Notify(pgn.relname.decode(enc), pgn.extra.decode(enc), pgn.be_pid)
