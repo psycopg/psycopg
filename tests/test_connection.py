@@ -1,14 +1,9 @@
-import sys
 import time
 import pytest
 import logging
 import weakref
 from typing import Any, List
-
-if sys.version_info >= (3, 8):
-    from typing import TypedDict
-else:
-    from typing_extensions import TypedDict
+from dataclasses import dataclass
 
 import psycopg
 from psycopg import Connection, Notify, errors as e
@@ -71,6 +66,7 @@ def test_close(conn):
         cur.execute("select 1")
 
 
+@pytest.mark.crdb("skip", reason="pg_terminate_backend")
 def test_broken(conn):
     with pytest.raises(psycopg.OperationalError):
         conn.execute("select pg_terminate_backend(%s)", [conn.pgconn.backend_pid])
@@ -160,6 +156,7 @@ def test_context_close(conn):
         conn.close()
 
 
+@pytest.mark.crdb("skip", reason="pg_terminate_backend")
 def test_context_inerror_rollback_no_clobber(conn, dsn, caplog):
     caplog.set_level(logging.WARNING, logger="psycopg")
 
@@ -178,12 +175,14 @@ def test_context_inerror_rollback_no_clobber(conn, dsn, caplog):
     assert "in rollback" in rec.message
 
 
+@pytest.mark.crdb("skip", reason="copy")
 def test_context_active_rollback_no_clobber(dsn, caplog):
     caplog.set_level(logging.WARNING, logger="psycopg")
 
     with pytest.raises(ZeroDivisionError):
         with psycopg.connect(dsn) as conn:
             conn.pgconn.exec_(b"copy (select generate_series(1, 10)) to stdout")
+            assert not conn.pgconn.error_message
             status = conn.info.transaction_status
             assert status == conn.TransactionStatus.ACTIVE
             1 / 0
@@ -220,6 +219,7 @@ def test_commit(conn):
         conn.commit()
 
 
+@pytest.mark.crdb("skip", reason="deferrable")
 def test_commit_error(conn):
     conn.execute(
         """
@@ -389,6 +389,7 @@ def test_connect_badargs(monkeypatch, pgconn, args, kwargs, exctype):
         psycopg.Connection.connect(*args, **kwargs)
 
 
+@pytest.mark.crdb("skip", reason="pg_terminate_backend")
 def test_broken_connection(conn):
     cur = conn.cursor()
     with pytest.raises(psycopg.DatabaseError):
@@ -396,6 +397,7 @@ def test_broken_connection(conn):
     assert conn.closed
 
 
+@pytest.mark.crdb("skip", reason="do")
 def test_notice_handlers(conn, caplog):
     caplog.set_level(logging.WARNING, logger="psycopg")
     messages = []
@@ -437,6 +439,7 @@ def test_notice_handlers(conn, caplog):
         conn.remove_notice_handler(cb1)
 
 
+@pytest.mark.crdb("skip", reason="notify")
 def test_notify_handlers(conn):
     nots1 = []
     nots2 = []
@@ -572,35 +575,28 @@ def test_server_cursor_factory(conn):
         assert isinstance(cur, MyServerCursor)
 
 
-class ParamDef(TypedDict):
+@dataclass
+class ParamDef:
+    name: str
     guc: str
     values: List[Any]
-    set_method: str
 
 
-tx_params = {
-    "isolation_level": ParamDef(
-        {
-            "guc": "isolation",
-            "values": list(psycopg.IsolationLevel),
-            "set_method": "set_isolation_level",
-        }
-    ),
-    "read_only": ParamDef(
-        {
-            "guc": "read_only",
-            "values": [True, False],
-            "set_method": "set_read_only",
-        }
-    ),
-    "deferrable": ParamDef(
-        {
-            "guc": "deferrable",
-            "values": [True, False],
-            "set_method": "set_deferrable",
-        }
-    ),
-}
+param_isolation = ParamDef(
+    name="isolation_level",
+    guc="isolation",
+    values=list(psycopg.IsolationLevel),
+)
+param_read_only = ParamDef(
+    name="read_only",
+    guc="read_only",
+    values=[True, False],
+)
+param_deferrable = ParamDef(
+    name="deferrable",
+    guc="deferrable",
+    values=[True, False],
+)
 
 # Map Python values to Postgres values for the tx_params possible values
 tx_values_map = {
@@ -610,27 +606,40 @@ tx_values_map["on"] = True
 tx_values_map["off"] = False
 
 
-@pytest.mark.parametrize("attr", list(tx_params))
-def test_transaction_param_default(conn, attr):
-    assert getattr(conn, attr) is None
-    guc = tx_params[attr]["guc"]
+tx_params = [
+    param_isolation,
+    param_read_only,
+    pytest.param(param_deferrable, marks=pytest.mark.crdb("skip", reason="deferrable")),
+]
+tx_params_isolation = [
+    pytest.param(
+        param_isolation,
+        marks=pytest.mark.crdb("skip", reason="transaction isolation"),
+    ),
+    param_read_only,
+    pytest.param(param_deferrable, marks=pytest.mark.crdb("skip", reason="deferrable")),
+]
+
+
+@pytest.mark.parametrize("param", tx_params)
+def test_transaction_param_default(conn, param):
+    assert getattr(conn, param.name) is None
     current, default = conn.execute(
         "select current_setting(%s), current_setting(%s)",
-        [f"transaction_{guc}", f"default_transaction_{guc}"],
+        [f"transaction_{param.guc}", f"default_transaction_{param.guc}"],
     ).fetchone()
     assert current == default
 
 
 @pytest.mark.parametrize("autocommit", [True, False])
-@pytest.mark.parametrize("attr", list(tx_params))
-def test_set_transaction_param_implicit(conn, attr, autocommit):
-    guc = tx_params[attr]["guc"]
+@pytest.mark.parametrize("param", tx_params_isolation)
+def test_set_transaction_param_implicit(conn, param, autocommit):
     conn.autocommit = autocommit
-    for value in tx_params[attr]["values"]:
-        setattr(conn, attr, value)
+    for value in param.values:
+        setattr(conn, param.name, value)
         pgval, default = conn.execute(
             "select current_setting(%s), current_setting(%s)",
-            [f"transaction_{guc}", f"default_transaction_{guc}"],
+            [f"transaction_{param.guc}", f"default_transaction_{param.guc}"],
         ).fetchone()
         if autocommit:
             assert pgval == default
@@ -640,50 +649,52 @@ def test_set_transaction_param_implicit(conn, attr, autocommit):
 
 
 @pytest.mark.parametrize("autocommit", [True, False])
-@pytest.mark.parametrize("attr", list(tx_params))
-def test_set_transaction_param_block(conn, attr, autocommit):
-    guc = tx_params[attr]["guc"]
+@pytest.mark.parametrize("param", tx_params_isolation)
+def test_set_transaction_param_block(conn, param, autocommit):
     conn.autocommit = autocommit
-    for value in tx_params[attr]["values"]:
-        setattr(conn, attr, value)
+    for value in param.values:
+        setattr(conn, param.name, value)
         with conn.transaction():
             pgval = conn.execute(
-                "select current_setting(%s)", [f"transaction_{guc}"]
+                "select current_setting(%s)", [f"transaction_{param.guc}"]
             ).fetchone()[0]
         assert tx_values_map[pgval] == value
 
 
-@pytest.mark.parametrize("attr", list(tx_params))
-def test_set_transaction_param_not_intrans_implicit(conn, attr):
+@pytest.mark.parametrize("param", tx_params)
+def test_set_transaction_param_not_intrans_implicit(conn, param):
     conn.execute("select 1")
     with pytest.raises(psycopg.ProgrammingError):
-        setattr(conn, attr, tx_params[attr]["values"][0])
+        setattr(conn, param.name, param.values[0])
 
 
-@pytest.mark.parametrize("attr", list(tx_params))
-def test_set_transaction_param_not_intrans_block(conn, attr):
+@pytest.mark.parametrize("param", tx_params)
+def test_set_transaction_param_not_intrans_block(conn, param):
     with conn.transaction():
         with pytest.raises(psycopg.ProgrammingError):
-            setattr(conn, attr, tx_params[attr]["values"][0])
+            setattr(conn, param.name, param.values[0])
 
 
-@pytest.mark.parametrize("attr", list(tx_params))
-def test_set_transaction_param_not_intrans_external(conn, attr):
+@pytest.mark.parametrize("param", tx_params)
+def test_set_transaction_param_not_intrans_external(conn, param):
     conn.autocommit = True
     conn.execute("begin")
     with pytest.raises(psycopg.ProgrammingError):
-        setattr(conn, attr, tx_params[attr]["values"][0])
+        setattr(conn, param.name, param.values[0])
 
 
+@pytest.mark.crdb("skip", reason="transaction isolation")
 def test_set_transaction_param_all(conn):
-    for attr in tx_params:
-        value = tx_params[attr]["values"][0]
-        setattr(conn, attr, value)
+    params: List[Any] = tx_params[:]
+    params[2] = params[2].values[0]
 
-    for attr in tx_params:
-        guc = tx_params[attr]["guc"]
+    for param in params:
+        value = param.values[0]
+        setattr(conn, param.name, value)
+
+    for param in params:
         pgval = conn.execute(
-            "select current_setting(%s)", [f"transaction_{guc}"]
+            "select current_setting(%s)", [f"transaction_{param.guc}"]
         ).fetchone()[0]
         assert tx_values_map[pgval] == value
 
