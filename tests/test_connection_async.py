@@ -513,7 +513,7 @@ async def test_row_factory(dsn):
     cur = await conn.execute("select 'a' as ve")
     assert await cur.fetchone() == ["Ave"]
 
-    async with conn.cursor(row_factory=lambda c: set) as cur1:
+    async with conn.cursor(row_factory=lambda c: lambda t: set(t)) as cur1:
         await cur1.execute("select 1, 1, 2")
         assert await cur1.fetchall() == [{1, 2}]
 

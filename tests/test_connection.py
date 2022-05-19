@@ -508,7 +508,7 @@ def test_row_factory(dsn):
     cur = conn.execute("select 'a' as ve")
     assert cur.fetchone() == ["Ave"]
 
-    with conn.cursor(row_factory=lambda c: set) as cur1:
+    with conn.cursor(row_factory=lambda c: lambda t: set(t)) as cur1:
         cur1.execute("select 1, 1, 2")
         assert cur1.fetchall() == [{1, 2}]
 
