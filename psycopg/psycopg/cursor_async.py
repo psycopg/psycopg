@@ -199,8 +199,11 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
         async with self._conn.lock:
             await self._conn.wait(self._start_copy_gen(statement, params))
 
-        async with AsyncCopy(self) as copy:
-            yield copy
+        try:
+            async with AsyncCopy(self) as copy:
+                yield copy
+        except e.Error as ex:
+            raise ex.with_traceback(None)
 
     async def _fetch_pipeline(self) -> None:
         if (
