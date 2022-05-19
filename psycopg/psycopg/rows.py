@@ -17,15 +17,14 @@ if TYPE_CHECKING:
     from .cursor import BaseCursor, Cursor
     from .cursor_async import AsyncCursor
 
-T = TypeVar("T")
+T = TypeVar("T", covariant=True)
 
 # Row factories
 
-Row = TypeVar("Row")
-Row_co = TypeVar("Row_co", covariant=True)
+Row = TypeVar("Row", covariant=True)
 
 
-class RowMaker(Protocol[Row_co]):
+class RowMaker(Protocol[Row]):
     """
     Callable protocol taking a sequence of value and returning an object.
 
@@ -37,7 +36,7 @@ class RowMaker(Protocol[Row_co]):
     Typically, `!RowMaker` functions are returned by `RowFactory`.
     """
 
-    def __call__(self, __values: Sequence[Any]) -> Row_co:
+    def __call__(self, __values: Sequence[Any]) -> Row:
         ...
 
 
@@ -55,7 +54,7 @@ class RowFactory(Protocol[Row]):
     use the values to create a dictionary for each record.
     """
 
-    def __call__(self, __cursor: "Cursor[Row]") -> RowMaker[Row]:
+    def __call__(self, __cursor: "Cursor[Any]") -> RowMaker[Row]:
         ...
 
 
@@ -64,7 +63,7 @@ class AsyncRowFactory(Protocol[Row]):
     Like `RowFactory`, taking an async cursor as argument.
     """
 
-    def __call__(self, __cursor: "AsyncCursor[Row]") -> RowMaker[Row]:
+    def __call__(self, __cursor: "AsyncCursor[Any]") -> RowMaker[Row]:
         ...
 
 
@@ -73,7 +72,7 @@ class BaseRowFactory(Protocol[Row]):
     Like `RowFactory`, taking either type of cursor as argument.
     """
 
-    def __call__(self, __cursor: "BaseCursor[Any, Row]") -> RowMaker[Row]:
+    def __call__(self, __cursor: "BaseCursor[Any, Any]") -> RowMaker[Row]:
         ...
 
 
@@ -92,7 +91,7 @@ database.
 """
 
 
-def tuple_row(cursor: "BaseCursor[Any, TupleRow]") -> "RowMaker[TupleRow]":
+def tuple_row(cursor: "BaseCursor[Any, Any]") -> "RowMaker[TupleRow]":
     r"""Row factory to represent rows as simple tuples.
 
     This is the default factory, used when `~psycopg.Connection.connect()` or
@@ -105,7 +104,7 @@ def tuple_row(cursor: "BaseCursor[Any, TupleRow]") -> "RowMaker[TupleRow]":
     return tuple
 
 
-def dict_row(cursor: "BaseCursor[Any, DictRow]") -> "RowMaker[DictRow]":
+def dict_row(cursor: "BaseCursor[Any, Any]") -> "RowMaker[DictRow]":
     """Row factory to represent rows as dictionaries.
 
     The dictionary keys are taken from the column names of the returned columns.
@@ -123,7 +122,7 @@ def dict_row(cursor: "BaseCursor[Any, DictRow]") -> "RowMaker[DictRow]":
 
 
 def namedtuple_row(
-    cursor: "BaseCursor[Any, NamedTuple]",
+    cursor: "BaseCursor[Any, Any]",
 ) -> "RowMaker[NamedTuple]":
     """Row factory to represent rows as `~collections.namedtuple`.
 
@@ -156,7 +155,7 @@ def class_row(cls: Type[T]) -> BaseRowFactory[T]:
     :rtype: `!Callable[[Cursor],` `RowMaker`\[~T]]
     """
 
-    def class_row_(cur: "BaseCursor[Any, T]") -> "RowMaker[T]":
+    def class_row_(cur: "BaseCursor[Any, Any]") -> "RowMaker[T]":
         desc = cur.description
         if desc is None:
             return no_result
