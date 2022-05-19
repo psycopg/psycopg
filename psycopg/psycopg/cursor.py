@@ -667,5 +667,8 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
         with self._conn.lock:
             self._conn.wait(self._start_copy_gen(statement))
 
-        with Copy(self) as copy:
-            yield copy
+        try:
+            with Copy(self) as copy:
+                yield copy
+        except e.Error as ex:
+            raise ex.with_traceback(None)
