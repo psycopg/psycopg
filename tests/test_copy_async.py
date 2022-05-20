@@ -22,7 +22,10 @@ from .test_copy import sample_text, sample_binary, sample_binary_rows  # noqa
 from .test_copy import sample_values, sample_records, sample_tabledef
 from .test_copy import py_to_raw
 
-pytestmark = pytest.mark.asyncio
+pytestmark = [
+    pytest.mark.asyncio,
+    pytest.mark.crdb("skip", reason="copy"),
+]
 
 
 @pytest.mark.parametrize("format", Format)
@@ -246,7 +249,7 @@ async def test_copy_in_str(aconn):
     assert data == sample_records
 
 
-async def test_copy_in_str_binary(aconn):
+async def test_copy_in_error(aconn):
     cur = aconn.cursor()
     await ensure_table(cur, sample_tabledef)
     with pytest.raises(e.QueryCanceled):

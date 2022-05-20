@@ -19,10 +19,10 @@ from psycopg.types.numeric import Int4
 
 from .utils import eur, gc_collect
 
+pytestmark = pytest.mark.crdb("skip", reason="copy")
+
 sample_records = [(10, 20, "hello"), (40, None, "world")]
-
 sample_values = "values (10::int, 20::int, 'hello'::text), (40, NULL, 'world')"
-
 sample_tabledef = "col1 serial primary key, col2 int, data text"
 
 sample_text = b"""\
@@ -254,7 +254,7 @@ def test_copy_in_str(conn):
     assert data == sample_records
 
 
-def test_copy_in_str_binary(conn):
+def test_copy_in_error(conn):
     cur = conn.cursor()
     ensure_table(cur, sample_tabledef)
     with pytest.raises(e.QueryCanceled):

@@ -99,6 +99,7 @@ crdb_reasons = {
     "cidr": 18846,
     "composite": 27792,
     "copy": 41608,
+    "copy canceled": 81559,
     "cursor with hold": 77101,
     "deferrable": 48307,
     "do": 17511,
