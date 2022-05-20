@@ -202,7 +202,9 @@ class TimedeltaDumper(Dumper):
                 setattr(self, "dump", self._dump_sql)
 
     def dump(self, obj: timedelta) -> bytes:
-        return str(obj).encode()
+        # The comma is parsed ok by PostgreSQL but it's not documented
+        # and it seems brittle to rely on it. CRDB doesn't consume it well.
+        return str(obj).encode().replace(b",", b"")
 
     def _dump_sql(self, obj: timedelta) -> bytes:
         # sql_standard format needs explicit signs
@@ -730,6 +732,7 @@ def register_default_adapters(context: AdaptContext) -> None:
 
     adapters.register_dumper("datetime.timedelta", TimedeltaDumper)
     adapters.register_dumper("datetime.timedelta", TimedeltaBinaryDumper)
+
     adapters.register_loader("date", DateLoader)
     adapters.register_loader("date", DateBinaryLoader)
     adapters.register_loader("time", TimeLoader)
