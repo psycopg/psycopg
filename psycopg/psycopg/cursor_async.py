@@ -151,10 +151,10 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
         """
         :rtype: AsyncCopy
         """
-        async with self._conn.lock:
-            await self._conn.wait(self._start_copy_gen(statement))
-
         try:
+            async with self._conn.lock:
+                await self._conn.wait(self._start_copy_gen(statement))
+
             async with AsyncCopy(self) as copy:
                 yield copy
         except e.Error as ex:

@@ -664,10 +664,10 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
 
         :rtype: Copy
         """
-        with self._conn.lock:
-            self._conn.wait(self._start_copy_gen(statement))
-
         try:
+            with self._conn.lock:
+                self._conn.wait(self._start_copy_gen(statement))
+
             with Copy(self) as copy:
                 yield copy
         except e.Error as ex:
