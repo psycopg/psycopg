@@ -4,6 +4,8 @@ import operator
 
 import pytest
 
+eur = "\u20ac"
+
 
 def check_libpq_version(got, want):
     """

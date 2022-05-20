@@ -8,9 +8,7 @@ import psycopg
 from psycopg import pq
 from psycopg import errors as e
 
-from .utils import gc_collect
-
-eur = "\u20ac"
+from .utils import eur, gc_collect
 
 
 def test_error_diag(conn):

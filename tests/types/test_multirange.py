@@ -12,7 +12,8 @@ from psycopg.types import multirange
 from psycopg.types.multirange import Multirange, MultirangeInfo
 from psycopg.types.multirange import register_multirange
 
-from .test_range import create_test_range, eur
+from ..utils import eur
+from .test_range import create_test_range
 
 pytestmark = pytest.mark.pg(">= 14")
 

@@ -7,7 +7,7 @@ from psycopg import errors as e
 from psycopg.adapt import PyFormat
 from psycopg import Binary
 
-eur = "\u20ac"
+from ..utils import eur
 
 #
 # tests with text

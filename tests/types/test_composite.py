@@ -7,7 +7,7 @@ from psycopg.types.range import Range
 from psycopg.types.composite import CompositeInfo, register_composite
 from psycopg.types.composite import TupleDumper, TupleBinaryDumper
 
-eur = "\u20ac"
+from ..utils import eur
 
 tests_str = [
     ("", ()),

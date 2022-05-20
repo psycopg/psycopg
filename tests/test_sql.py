@@ -13,7 +13,7 @@ from psycopg._encodings import py2pgenc
 from psycopg.types import TypeInfo
 from psycopg.types.string import StrDumper
 
-eur = "\u20ac"
+from .utils import eur
 
 
 @pytest.mark.parametrize(

@@ -10,7 +10,7 @@ from psycopg.adapt import PyFormat
 from psycopg.types import range as range_module
 from psycopg.types.range import Range, RangeInfo, register_range
 
-eur = "\u20ac"
+from ..utils import eur
 
 type2sub = {
     "int4range": "int4",

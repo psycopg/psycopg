@@ -17,9 +17,7 @@ from psycopg.types import TypeInfo
 from psycopg.types.hstore import register_hstore
 from psycopg.types.numeric import Int4
 
-from .utils import gc_collect
-
-eur = "\u20ac"
+from .utils import eur, gc_collect
 
 sample_records = [(10, 20, "hello"), (40, None, "world")]
 

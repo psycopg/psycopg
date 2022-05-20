@@ -17,9 +17,9 @@ from psycopg.adapt import PyFormat
 from psycopg.types.hstore import register_hstore
 from psycopg.types.numeric import Int4
 
-from .utils import alist, gc_collect
+from .utils import alist, eur, gc_collect
 from .test_copy import sample_text, sample_binary, sample_binary_rows  # noqa
-from .test_copy import eur, sample_values, sample_records, sample_tabledef
+from .test_copy import sample_values, sample_records, sample_tabledef
 from .test_copy import py_to_raw
 
 pytestmark = pytest.mark.asyncio
