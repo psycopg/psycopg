@@ -515,15 +515,15 @@ class TestInterval:
         ["sql_standard", "postgres", "postgres_verbose", "iso_8601"],
     )
     def test_dump_interval(self, conn, val, expr, intervalstyle):
-        cur = conn.cursor(binary=False)
+        cur = conn.cursor()
         cur.execute(f"set IntervalStyle to '{intervalstyle}'")
         cur.execute(f"select '{expr}'::interval = %t", (as_td(val),))
         assert cur.fetchone()[0] is True
 
     @pytest.mark.parametrize("val, expr", dump_timedelta_samples)
     def test_dump_interval_binary(self, conn, val, expr):
-        cur = conn.cursor(binary=True)
-        cur.execute(f"select '{expr}'::interval = %t", (as_td(val),))
+        cur = conn.cursor()
+        cur.execute(f"select '{expr}'::interval = %b", (as_td(val),))
         assert cur.fetchone()[0] is True
 
     @pytest.mark.parametrize(
