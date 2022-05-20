@@ -8,10 +8,11 @@ from psycopg.types.numeric import Int4
 
 from ..utils import eur
 from ..test_copy import sample_text, sample_binary  # noqa
-from ..test_copy import ensure_table, sample_tabledef, sample_records
+from ..test_copy import ensure_table, sample_records
+from ..test_copy import sample_tabledef as sample_tabledef_pg
 
 # CRDB int/serial are int8
-sample_tabledef = sample_tabledef.replace("int", "int4").replace("serial", "int4")
+sample_tabledef = sample_tabledef_pg.replace("int", "int4").replace("serial", "int4")
 
 pytestmark = pytest.mark.crdb
 
@@ -172,3 +173,6 @@ from copy_in group by 1, 2, 3
 
 def copyopt(format):
     return "with binary" if format == Format.BINARY else ""
+
+
+# TODOCRDB: random tests
