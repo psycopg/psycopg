@@ -307,7 +307,9 @@ cdef class TimedeltaDumper(CDumper):
 
         cdef str s
         if self._style == INTERVALSTYLE_OTHERS:
-            s = str(obj)
+            # The comma is parsed ok by PostgreSQL but it's not documented
+            # and it seems brittle to rely on it. CRDB doesn't consume it well.
+            s = str(obj).replace(",", "")
         else:
             # sql_standard format needs explicit signs
             # otherwise -1 day 1 sec will mean -1 sec
