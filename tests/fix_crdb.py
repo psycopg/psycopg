@@ -39,7 +39,7 @@ def check_crdb_version(got, func):
     and skips the test if the server version doesn't match what expected.
     """
     want = func.want_crdb
-    rv = None
+    msg = None
 
     if got is None:
         if want == "only":
@@ -48,21 +48,11 @@ def check_crdb_version(got, func):
         if want == "only":
             pass
         elif want == "skip":
-            rv = "skipping test: not supported on CockroachDB"
+            msg = crdb_skip_message(func.crdb_reason)
         else:
-            rv = check_version(got, want, "CockroachDB")
+            msg = check_version(got, want, "CockroachDB")
 
-    if rv:
-        if func.crdb_reason:
-            rv = f"{rv}: {func.crdb_reason}"
-            if func.crdb_reason in crdb_reasons:
-                url = (
-                    "https://github.com/cockroachdb/cockroach/"
-                    f"issues/{crdb_reasons[func.crdb_reason]}"
-                )
-                rv = f"{rv} ({url})"
-
-    return rv
+    return msg
 
 
 # Utility functions which can be imported in the test suite
@@ -73,6 +63,20 @@ def is_crdb(conn):
         conn = conn.pgconn
 
     return bool(conn.parameter_status(b"crdb_version"))
+
+
+def crdb_skip_message(reason):
+    msg = "skipping test on CockroachDB"
+    if reason:
+        msg = f"{msg}: {reason}"
+        if reason in _crdb_reasons:
+            url = (
+                "https://github.com/cockroachdb/cockroach/"
+                f"issues/{_crdb_reasons[reason]}"
+            )
+            msg = f"{msg} ({url})"
+
+    return msg
 
 
 def skip_crdb(*args, reason=None):
@@ -90,7 +94,7 @@ def crdb_time_precision(*args):
 
 
 # mapping from reason description to ticket number
-crdb_reasons = {
+_crdb_reasons = {
     "2-phase commit": 22329,
     "backend pid": 35897,
     "batch statements": 44803,
@@ -109,6 +113,7 @@ crdb_reasons = {
     "interval style": 35807,
     "large objects": 243,
     "named cursor": 41412,
+    "negative interval": 81577,
     "nested array": 32552,
     "notify": 41522,
     "password_encryption": 42519,

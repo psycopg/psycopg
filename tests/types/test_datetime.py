@@ -5,6 +5,26 @@ import pytest
 from psycopg import DataError, pq, sql
 from psycopg.adapt import PyFormat
 
+crdb_skip_datestyle = pytest.mark.crdb("skip", reason="set datestyle/intervalstyle")
+crdb_skip_negative_interval = pytest.mark.crdb("skip", reason="negative interval")
+crdb_skip_invalid_tz = pytest.mark.crdb(
+    "skip", reason="crdb doesn't allow invalid timezones"
+)
+
+datestyles_in = [
+    pytest.param(datestyle, marks=crdb_skip_datestyle)
+    for datestyle in ["DMY", "MDY", "YMD"]
+]
+datestyles_out = [
+    pytest.param(datestyle, marks=crdb_skip_datestyle)
+    for datestyle in ["ISO", "Postgres", "SQL", "German"]
+]
+
+intervalstyles = [
+    pytest.param(datestyle, marks=crdb_skip_datestyle)
+    for datestyle in ["sql_standard", "postgres", "postgres_verbose", "iso_8601"]
+]
+
 
 class TestDate:
     @pytest.mark.parametrize(
@@ -33,10 +53,10 @@ class TestDate:
         )
         assert cur.fetchone()[0] is True
 
-    @pytest.mark.parametrize("datestyle_in", ["DMY", "MDY", "YMD"])
+    @pytest.mark.parametrize("datestyle_in", datestyles_in)
     def test_dump_date_datestyle(self, conn, datestyle_in):
         cur = conn.cursor(binary=False)
-        cur.execute(f"set datestyle = ISO, {datestyle_in}")
+        cur.execute(f"set datestyle = ISO,{datestyle_in}")
         cur.execute("select 'epoch'::date + 1 = %t", (dt.date(1970, 1, 2),))
         assert cur.fetchone()[0] is True
 
@@ -57,7 +77,7 @@ class TestDate:
         cur.execute(f"select '{expr}'::date")
         assert cur.fetchone()[0] == as_date(val)
 
-    @pytest.mark.parametrize("datestyle_out", ["ISO", "Postgres", "SQL", "German"])
+    @pytest.mark.parametrize("datestyle_out", datestyles_out)
     def test_load_date_datestyle(self, conn, datestyle_out):
         cur = conn.cursor(binary=False)
         cur.execute(f"set datestyle = {datestyle_out}, YMD")
@@ -65,7 +85,7 @@ class TestDate:
         assert cur.fetchone()[0] == dt.date(2000, 1, 2)
 
     @pytest.mark.parametrize("val", ["min", "max"])
-    @pytest.mark.parametrize("datestyle_out", ["ISO", "Postgres", "SQL", "German"])
+    @pytest.mark.parametrize("datestyle_out", datestyles_out)
     def test_load_date_overflow(self, conn, val, datestyle_out):
         cur = conn.cursor(binary=False)
         cur.execute(f"set datestyle = {datestyle_out}, YMD")
@@ -87,7 +107,7 @@ class TestDate:
         ("infinity", "date too large"),
     ]
 
-    @pytest.mark.parametrize("datestyle_out", ["ISO", "Postgres", "SQL", "German"])
+    @pytest.mark.parametrize("datestyle_out", datestyles_out)
     @pytest.mark.parametrize("val, msg", overflow_samples)
     def test_load_overflow_message(self, conn, datestyle_out, val, msg):
         cur = conn.cursor()
@@ -172,7 +192,7 @@ class TestDatetime:
         ok, want, got = cur.fetchone()
         assert ok, (want, got)
 
-    @pytest.mark.parametrize("datestyle_in", ["DMY", "MDY", "YMD"])
+    @pytest.mark.parametrize("datestyle_in", datestyles_in)
     def test_dump_datetime_datestyle(self, conn, datestyle_in):
         cur = conn.cursor(binary=False)
         cur.execute(f"set datestyle = ISO, {datestyle_in}")
@@ -195,8 +215,8 @@ class TestDatetime:
     ]
 
     @pytest.mark.parametrize("val, expr", load_datetime_samples)
-    @pytest.mark.parametrize("datestyle_out", ["ISO", "Postgres", "SQL", "German"])
-    @pytest.mark.parametrize("datestyle_in", ["DMY", "MDY", "YMD"])
+    @pytest.mark.parametrize("datestyle_out", datestyles_out)
+    @pytest.mark.parametrize("datestyle_in", datestyles_in)
     def test_load_datetime(self, conn, val, expr, datestyle_in, datestyle_out):
         cur = conn.cursor(binary=False)
         cur.execute(f"set datestyle = {datestyle_out}, {datestyle_in}")
@@ -212,7 +232,7 @@ class TestDatetime:
         assert cur.fetchone()[0] == as_dt(val)
 
     @pytest.mark.parametrize("val", ["min", "max"])
-    @pytest.mark.parametrize("datestyle_out", ["ISO", "Postgres", "SQL", "German"])
+    @pytest.mark.parametrize("datestyle_out", datestyles_out)
     def test_load_datetime_overflow(self, conn, val, datestyle_out):
         cur = conn.cursor(binary=False)
         cur.execute(f"set datestyle = {datestyle_out}, YMD")
@@ -240,7 +260,7 @@ class TestDatetime:
         ("infinity", "timestamp too large"),
     ]
 
-    @pytest.mark.parametrize("datestyle_out", ["ISO", "Postgres", "SQL", "German"])
+    @pytest.mark.parametrize("datestyle_out", datestyles_out)
     @pytest.mark.parametrize("val, msg", overflow_samples)
     def test_overflow_message(self, conn, datestyle_out, val, msg):
         cur = conn.cursor()
@@ -258,6 +278,7 @@ class TestDatetime:
             cur.fetchone()[0]
         assert msg in str(excinfo.value)
 
+    @crdb_skip_datestyle
     def test_load_all_month_names(self, conn):
         cur = conn.cursor(binary=False)
         cur.execute("set datestyle = 'Postgres'")
@@ -308,7 +329,7 @@ class TestDateTimeTz:
         ok, want, got = cur.fetchone()
         assert ok, (want, got)
 
-    @pytest.mark.parametrize("datestyle_in", ["DMY", "MDY", "YMD"])
+    @pytest.mark.parametrize("datestyle_in", datestyles_in)
     def test_dump_datetimetz_datestyle(self, conn, datestyle_in):
         tzinfo = dt.timezone(dt.timedelta(hours=2))
         cur = conn.cursor(binary=False)
@@ -331,6 +352,7 @@ class TestDateTimeTz:
         ("1900,1,1~05:21:10", "1900-01-01", "Asia/Calcutta"),
     ]
 
+    @crdb_skip_datestyle
     @pytest.mark.parametrize("val, expr, timezone", load_datetimetz_samples)
     @pytest.mark.parametrize("datestyle_out", ["ISO"])
     def test_load_datetimetz(self, conn, val, expr, timezone, datestyle_out):
@@ -348,9 +370,10 @@ class TestDateTimeTz:
         assert got == as_dt(val)
 
     @pytest.mark.xfail  # parse timezone names
+    @crdb_skip_datestyle
     @pytest.mark.parametrize("val, expr", [("2000,1,1~2", "2000-01-01")])
     @pytest.mark.parametrize("datestyle_out", ["SQL", "Postgres", "German"])
-    @pytest.mark.parametrize("datestyle_in", ["DMY", "MDY", "YMD"])
+    @pytest.mark.parametrize("datestyle_in", datestyles_in)
     def test_load_datetimetz_tzname(self, conn, val, expr, datestyle_in, datestyle_out):
         cur = conn.cursor(binary=False)
         cur.execute(f"set datestyle = {datestyle_out}, {datestyle_in}")
@@ -366,7 +389,7 @@ class TestDateTimeTz:
             ("Europe/Rome", "2000-1-1", 3600),
             ("Europe/Rome", "2000-7-1", 7200),
             ("Europe/Rome", "1000-1-1", 2996),
-            ("NOSUCH0", "2000-1-1", 0),
+            pytest.param("NOSUCH0", "2000-1-1", 0, marks=crdb_skip_invalid_tz),
         ],
     )
     @pytest.mark.parametrize("fmt_out", pq.Format)
@@ -389,13 +412,16 @@ class TestDateTimeTz:
         val = as_dt(val)
         cur = conn.cursor()
         cur.execute(
-            f"select pg_typeof(%{fmt_in.value}) = %s::regtype, %{fmt_in.value}",
+            f"""
+            select pg_typeof(%{fmt_in.value})::regtype = %s::regtype, %{fmt_in.value}
+            """,
             [val, type, val],
         )
         rec = cur.fetchone()
         assert rec[0] is True, type
         assert rec[1] == val
 
+    @pytest.mark.crdb("skip", reason="copy")
     def test_load_copy(self, conn):
         cur = conn.cursor(binary=False)
         with cur.copy(
@@ -422,7 +448,7 @@ class TestDateTimeTz:
         ("infinity", "timestamp too large"),
     ]
 
-    @pytest.mark.parametrize("datestyle_out", ["ISO", "Postgres", "SQL", "German"])
+    @pytest.mark.parametrize("datestyle_out", datestyles_out)
     @pytest.mark.parametrize("val, msg", overflow_samples)
     def test_overflow_message(self, conn, datestyle_out, val, msg):
         cur = conn.cursor()
@@ -580,13 +606,16 @@ class TestTimeTz:
         val = as_time(val)
         cur = conn.cursor()
         cur.execute(
-            f"select pg_typeof(%{fmt_in.value}) = %s::regtype, %{fmt_in.value}",
+            f"""
+            select pg_typeof(%{fmt_in.value})::regtype = %s::regtype, %{fmt_in.value}
+            """,
             [val, type, val],
         )
         rec = cur.fetchone()
         assert rec[0] is True, type
         assert rec[1] == val
 
+    @pytest.mark.crdb("skip", reason="copy")
     def test_load_copy(self, conn):
         cur = conn.cursor(binary=False)
         with cur.copy(
@@ -611,19 +640,16 @@ class TestInterval:
     dump_timedelta_samples = [
         ("min", "-999999999 days"),
         ("1d", "1 day"),
-        ("-1d", "-1 day"),
+        pytest.param("-1d", "-1 day", marks=crdb_skip_negative_interval),
         ("1s", "1 s"),
-        ("-1s", "-1 s"),
-        ("-1m", "-0.000001 s"),
+        pytest.param("-1s", "-1 s", marks=crdb_skip_negative_interval),
+        pytest.param("-1m", "-0.000001 s", marks=crdb_skip_negative_interval),
         ("1m", "0.000001 s"),
         ("max", "999999999 days 23:59:59.999999"),
     ]
 
     @pytest.mark.parametrize("val, expr", dump_timedelta_samples)
-    @pytest.mark.parametrize(
-        "intervalstyle",
-        ["sql_standard", "postgres", "postgres_verbose", "iso_8601"],
-    )
+    @pytest.mark.parametrize("intervalstyle", intervalstyles)
     def test_dump_interval(self, conn, val, expr, intervalstyle):
         cur = conn.cursor()
         cur.execute(f"set IntervalStyle to '{intervalstyle}'")
@@ -669,6 +695,7 @@ class TestInterval:
         cur.execute(f"select '{expr}'::interval")
         assert cur.fetchone()[0] == as_td(val)
 
+    @crdb_skip_datestyle
     @pytest.mark.xfail  # weird interval outputs
     @pytest.mark.parametrize("val, expr", [("1d,1s", "1 day 1 sec")])
     @pytest.mark.parametrize(
@@ -692,6 +719,7 @@ class TestInterval:
         with pytest.raises(DataError):
             cur.fetchone()[0]
 
+    @pytest.mark.crdb("skip", reason="copy")
     def test_load_copy(self, conn):
         cur = conn.cursor(binary=False)
         with cur.copy(
