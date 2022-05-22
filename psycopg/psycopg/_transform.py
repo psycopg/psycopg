@@ -14,7 +14,7 @@ from . import errors as e
 from .abc import Buffer, LoadFunc, AdaptContext, PyFormat, DumperKey
 from .rows import Row, RowMaker
 from ._compat import TypeAlias
-from .postgres import INVALID_OID
+from .postgres import INVALID_OID, TEXT_OID
 from ._encodings import pgconn_encoding
 
 if TYPE_CHECKING:
@@ -189,11 +189,11 @@ class Transformer(AdaptContext):
     def as_literal(self, obj: Any) -> Buffer:
         dumper = self.get_dumper(obj, PyFormat.TEXT)
         rv = dumper.quote(obj)
-        # If the result is quoted, and the oid not unknown,
+        # If the result is quoted, and the oid not unknown or text,
         # add an explicit type cast.
         # Check the last char because the first one might be 'E'.
         oid = dumper.oid
-        if oid and rv and rv[-1] == b"'"[0]:
+        if oid and rv and rv[-1] == b"'"[0] and oid != TEXT_OID:
             try:
                 type_sql = self._oid_types[oid]
             except KeyError:

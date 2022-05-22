@@ -356,6 +356,10 @@ class TestLiteral:
             == "'{\"2000-01-01 00:00:00\"}'::timestamp[]"
         )
 
+    def test_text_literal(self, conn):
+        conn.adapters.register_dumper(str, StrDumper)
+        assert sql.Literal("foo").as_string(conn) == "'foo'"
+
     @pytest.mark.parametrize("name", ["a-b", f"{eur}", "order", "foo bar"])
     def test_invalid_name(self, conn, name):
         conn.execute(

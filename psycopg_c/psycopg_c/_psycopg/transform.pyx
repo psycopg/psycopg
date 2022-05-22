@@ -215,10 +215,10 @@ cdef class Transformer:
 
         rv = dumper.quote(obj)
         oid = dumper.oid
-        # If the result is quoted and the oid not unknown,
+        # If the result is quoted and the oid not unknown or text,
         # add an explicit type cast.
         # Check the last char because the first one might be 'E'.
-        if oid and rv and rv[-1] == 39:
+        if oid and oid != oids.TEXT_OID and rv and rv[-1] == 39:
             if self._oid_types is None:
                 self._oid_types = {}
             type_ptr = PyDict_GetItem(<object>self._oid_types, oid)
