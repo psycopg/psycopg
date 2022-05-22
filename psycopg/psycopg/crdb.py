@@ -5,13 +5,15 @@ Types configuration specific for CockroachDB.
 # Copyright (C) 2022 The Psycopg Team
 
 import re
+from enum import Enum
 from typing import Any, Optional, Union, TYPE_CHECKING
 
 from . import errors as e
 from .abc import AdaptContext
-from .postgres import adapters as pg_adapters
-from ._adapters_map import AdaptersMap
+from .postgres import adapters as pg_adapters, TEXT_OID
 from .conninfo import ConnectionInfo
+from ._adapters_map import AdaptersMap
+from .types.enum import EnumDumper, EnumBinaryDumper
 
 adapters = AdaptersMap(pg_adapters)
 
@@ -55,6 +57,14 @@ class CrdbConnectionInfo(ConnectionInfo):
         return int(m.group(1)) * 10000 + int(m.group(2)) * 100 + int(m.group(3))
 
 
+class CrdbEnumDumper(EnumDumper):
+    oid = TEXT_OID
+
+
+class CrdbEnumBinaryDumper(EnumBinaryDumper):
+    oid = TEXT_OID
+
+
 def register_crdb_adapters(context: AdaptContext) -> None:
     from .types import string
 
@@ -63,6 +73,8 @@ def register_crdb_adapters(context: AdaptContext) -> None:
     # Dump strings with text oid instead of unknown.
     # Unlike PostgreSQL, CRDB seems able to cast text to most types.
     adapters.register_dumper(str, string.StrDumper)
+    adapters.register_dumper(Enum, CrdbEnumBinaryDumper)
+    adapters.register_dumper(Enum, CrdbEnumDumper)
 
 
 register_crdb_adapters(adapters)
