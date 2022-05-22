@@ -323,17 +323,18 @@ class EnumInfo(TypeInfo):
         cls, conn: "Union[Connection[Any], AsyncConnection[Any]]"
     ) -> str:
         return """\
-SELECT
-    t.typname AS name, t.oid AS oid, t.typarray AS array_oid,
-    array_agg(x.enumlabel) AS labels
-FROM pg_type t
-LEFT JOIN (
-    SELECT e.enumtypid, e.enumlabel
-    FROM pg_enum e
+SELECT name, oid, array_oid, array_agg(label) AS labels
+FROM (
+    SELECT
+        t.typname AS name, t.oid AS oid, t.typarray AS array_oid,
+        e.enumlabel AS label
+    FROM pg_type t
+    LEFT JOIN  pg_enum e
+    ON e.enumtypid = t.oid
+    WHERE t.oid = %(name)s::regtype
     ORDER BY e.enumsortorder
-) x ON x.enumtypid = t.oid
-WHERE t.oid = %(name)s::regtype
-GROUP BY t.typname, t.oid, t.typarray
+) x
+GROUP BY name, oid, array_oid
 """
 
 
