@@ -66,7 +66,7 @@ class CrdbEnumBinaryDumper(EnumBinaryDumper):
 
 
 def register_crdb_adapters(context: AdaptContext) -> None:
-    from .types import string
+    from .types import string, json
 
     adapters = context.adapters
 
@@ -75,6 +75,10 @@ def register_crdb_adapters(context: AdaptContext) -> None:
     adapters.register_dumper(str, string.StrDumper)
     adapters.register_dumper(Enum, CrdbEnumBinaryDumper)
     adapters.register_dumper(Enum, CrdbEnumDumper)
+
+    # CRDB doesn't have json/jsonb: both dump as the jsonb oid
+    adapters.register_dumper(json.Json, json.JsonbBinaryDumper)
+    adapters.register_dumper(json.Json, json.JsonbDumper)
 
 
 register_crdb_adapters(adapters)

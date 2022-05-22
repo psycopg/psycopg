@@ -26,7 +26,9 @@ samples = [
 def test_json_dump(conn, val, fmt_in):
     obj = json.loads(val)
     cur = conn.cursor()
-    cur.execute(f"select pg_typeof(%{fmt_in.value}) = 'json'::regtype", (Json(obj),))
+    cur.execute(
+        f"select pg_typeof(%{fmt_in.value})::regtype = 'json'::regtype", (Json(obj),)
+    )
     assert cur.fetchone()[0] is True
     cur.execute(f"select %{fmt_in.value}::text = %s::json::text", (Json(obj), val))
     assert cur.fetchone()[0] is True
@@ -50,6 +52,7 @@ def test_json_load(conn, val, jtype, fmt_out):
     assert cur.fetchone()[0] == json.loads(val)
 
 
+@pytest.mark.crdb("skip", reason="copy")
 @pytest.mark.parametrize("val", samples)
 @pytest.mark.parametrize("jtype", ["json", "jsonb"])
 @pytest.mark.parametrize("fmt_out", pq.Format)
