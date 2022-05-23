@@ -17,6 +17,7 @@ def test_uuid_dump(conn, fmt_in):
     assert cur.fetchone()[0] is True
 
 
+@pytest.mark.crdb("skip", reason="copy")
 @pytest.mark.parametrize("fmt_out", pq.Format)
 def test_uuid_load(conn, fmt_out):
     cur = conn.cursor(binary=fmt_out)

@@ -15,7 +15,10 @@ from psycopg.types.multirange import register_multirange
 from ..utils import eur
 from .test_range import create_test_range
 
-pytestmark = pytest.mark.pg(">= 14")
+pytestmark = [
+    pytest.mark.pg(">= 14"),
+    pytest.mark.crdb("skip", reason="range"),
+]
 
 
 class TestMultirangeObject:
