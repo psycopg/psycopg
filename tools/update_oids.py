@@ -24,6 +24,7 @@ $$,
 
 # Note: "record" is a pseudotype but still a useful one to have.
 # "pg_lsn" is a documented public type and useful in streaming replication
+# treat "char" (with quotes) separately.
 py_types_sql = """
 select
     'TypeInfo('
@@ -42,6 +43,7 @@ select
 from pg_type t
 where
     oid < 10000
+    and oid != '"char"'::regtype
     and (typtype = 'b' or typname = 'record')
     and (typname !~ '^(_|pg_)' or typname = 'pg_lsn')
 order by typname
