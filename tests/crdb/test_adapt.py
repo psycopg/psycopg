@@ -2,7 +2,8 @@ from copy import deepcopy
 
 import pytest
 
-import psycopg.crdb
+from psycopg.crdb import adapters, CrdbConnection
+
 from psycopg.adapt import PyFormat, Transformer
 from psycopg.types.array import ListDumper
 from psycopg.postgres import types as builtins
@@ -40,8 +41,6 @@ def test_str_list_dumper_text(conn):
 @pytest.fixture
 def crdb_adapters():
     """Restore the crdb adapters after a test has changed them."""
-    from psycopg.crdb import adapters
-
     dumpers = deepcopy(adapters._dumpers)
     dumpers_by_oid = deepcopy(adapters._dumpers_by_oid)
     loaders = deepcopy(adapters._loaders)
@@ -58,9 +57,9 @@ def crdb_adapters():
 
 
 def test_dump_global_ctx(dsn, crdb_adapters, pgconn):
-    psycopg.crdb.adapters.register_dumper(MyStr, make_bin_dumper("gb"))
-    psycopg.crdb.adapters.register_dumper(MyStr, make_dumper("gt"))
-    with psycopg.connect(dsn) as conn:
+    adapters.register_dumper(MyStr, make_bin_dumper("gb"))
+    adapters.register_dumper(MyStr, make_dumper("gt"))
+    with CrdbConnection.connect(dsn) as conn:
         cur = conn.execute("select %s", [MyStr("hello")])
         assert cur.fetchone() == ("hellogt",)
         cur = conn.execute("select %b", [MyStr("hello")])
@@ -70,9 +69,9 @@ def test_dump_global_ctx(dsn, crdb_adapters, pgconn):
 
 
 def test_load_global_ctx(dsn, crdb_adapters):
-    psycopg.crdb.adapters.register_loader("text", make_loader("gt"))
-    psycopg.crdb.adapters.register_loader("text", make_bin_loader("gb"))
-    with psycopg.connect(dsn) as conn:
+    adapters.register_loader("text", make_loader("gt"))
+    adapters.register_loader("text", make_bin_loader("gb"))
+    with CrdbConnection.connect(dsn) as conn:
         cur = conn.cursor(binary=False).execute("select 'hello'::text")
         assert cur.fetchone() == ("hellogt",)
         cur = conn.cursor(binary=True).execute("select 'hello'::text")

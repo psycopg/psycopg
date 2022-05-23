@@ -7,19 +7,63 @@ Types configuration specific for CockroachDB.
 import re
 from enum import Enum
 from typing import Any, Optional, Union, TYPE_CHECKING
+from ._typeinfo import TypeInfo, TypesRegistry
 
 from . import errors as e
 from .abc import AdaptContext
-from .postgres import adapters as pg_adapters, TEXT_OID
+from .rows import Row
+from .postgres import TEXT_OID
 from .conninfo import ConnectionInfo
+from .connection import Connection
 from ._adapters_map import AdaptersMap
+from .connection_async import AsyncConnection
 from .types.enum import EnumDumper, EnumBinaryDumper
 
-adapters = AdaptersMap(pg_adapters)
-
 if TYPE_CHECKING:
-    from .connection import Connection
-    from .connection_async import AsyncConnection
+    from .pq.abc import PGconn
+
+types = TypesRegistry()
+
+# Global adapter maps with PostgreSQL types configuration
+adapters = AdaptersMap(types=types)
+
+
+class _CrdbConnectionMixin:
+
+    _adapters: Optional[AdaptersMap]
+    pgconn: "PGconn"
+
+    @classmethod
+    def is_crdb(
+        cls, conn: Union[Connection[Any], AsyncConnection[Any], "PGconn"]
+    ) -> bool:
+        """
+        Return True if the server connected to ``conn`` is CockroachDB.
+        """
+        if isinstance(conn, (Connection, AsyncConnection)):
+            conn = conn.pgconn
+
+        return bool(conn.parameter_status(b"crdb_version"))
+
+    @property
+    def adapters(self) -> AdaptersMap:
+        if not self._adapters:
+            # By default, use CockroachDB adapters map
+            self._adapters = AdaptersMap(adapters)
+
+        return self._adapters
+
+    @property
+    def info(self) -> "CrdbConnectionInfo":
+        return CrdbConnectionInfo(self.pgconn)
+
+
+class CrdbConnection(_CrdbConnectionMixin, Connection[Row]):
+    pass
+
+
+class AsyncCrdbConnection(_CrdbConnectionMixin, AsyncConnection[Row]):
+    pass
 
 
 class CrdbConnectionInfo(ConnectionInfo):
@@ -65,33 +109,120 @@ class CrdbEnumBinaryDumper(EnumBinaryDumper):
     oid = TEXT_OID
 
 
-def register_crdb_adapters(context: AdaptContext) -> None:
-    from .types import string, json
+def register_postgres_adapters(context: AdaptContext) -> None:
+    # Same adapters used by PostgreSQL, or a good starting point for customization
 
-    adapters = context.adapters
+    from .types import array, bool, datetime, json, none, numeric, string, uuid
+
+    array.register_default_adapters(context)
+    bool.register_default_adapters(context)
+    datetime.register_default_adapters(context)
+    json.register_default_adapters(context)
+    none.register_default_adapters(context)
+    numeric.register_default_adapters(context)
+    string.register_default_adapters(context)
+    uuid.register_default_adapters(context)
+
+
+def register_crdb_adapters(context: AdaptContext) -> None:
+    from .types import array
+
+    register_postgres_adapters(context)
+
+    # String must come after enum to map text oid -> string dumper
+    register_crdb_enum_adapters(context)
+    register_crdb_string_adapters(context)
+    register_crdb_json_adapters(context)
+    register_crdb_net_adapters(context)
+
+    array.register_all_arrays(adapters)
+
+
+def register_crdb_string_adapters(context: AdaptContext) -> None:
+    from .types import string
 
     # Dump strings with text oid instead of unknown.
     # Unlike PostgreSQL, CRDB seems able to cast text to most types.
-    adapters.register_dumper(str, string.StrDumper)
-    adapters.register_dumper(Enum, CrdbEnumBinaryDumper)
-    adapters.register_dumper(Enum, CrdbEnumDumper)
+    context.adapters.register_dumper(str, string.StrDumper)
+    context.adapters.register_dumper(str, string.StrBinaryDumper)
+
+
+def register_crdb_enum_adapters(context: AdaptContext) -> None:
+    context.adapters.register_dumper(Enum, CrdbEnumBinaryDumper)
+    context.adapters.register_dumper(Enum, CrdbEnumDumper)
+
+
+def register_crdb_json_adapters(context: AdaptContext) -> None:
+    from .types import json
 
     # CRDB doesn't have json/jsonb: both dump as the jsonb oid
-    adapters.register_dumper(json.Json, json.JsonbBinaryDumper)
-    adapters.register_dumper(json.Json, json.JsonbDumper)
+    context.adapters.register_dumper(json.Json, json.JsonbBinaryDumper)
+    context.adapters.register_dumper(json.Json, json.JsonbDumper)
+
+
+def register_crdb_net_adapters(context: AdaptContext) -> None:
+    from psycopg.types import net
+
+    context.adapters.register_dumper("ipaddress.IPv4Address", net.InterfaceDumper)
+    context.adapters.register_dumper("ipaddress.IPv6Address", net.InterfaceDumper)
+    context.adapters.register_dumper("ipaddress.IPv4Interface", net.InterfaceDumper)
+    context.adapters.register_dumper("ipaddress.IPv6Interface", net.InterfaceDumper)
+    context.adapters.register_dumper("ipaddress.IPv4Address", net.AddressBinaryDumper)
+    context.adapters.register_dumper("ipaddress.IPv6Address", net.AddressBinaryDumper)
+    context.adapters.register_dumper(
+        "ipaddress.IPv4Interface", net.InterfaceBinaryDumper
+    )
+    context.adapters.register_dumper(
+        "ipaddress.IPv6Interface", net.InterfaceBinaryDumper
+    )
+    context.adapters.register_dumper(None, net.InetBinaryDumper)
+    context.adapters.register_loader("inet", net.InetLoader)
+    context.adapters.register_loader("inet", net.InetBinaryLoader)
+
+
+for t in [
+    TypeInfo("json", 3802, 3807, regtype="jsonb"),  # Alias json -> jsonb.
+    TypeInfo("int8", 20, 1016, regtype="integer"),  # Alias integer -> int8
+    TypeInfo('"char"', 18, 1002),  # special case, not generated
+    # autogenerated: start
+    # Generated from CockroachDB 22.1.0
+    TypeInfo("bit", 1560, 1561),
+    TypeInfo("bool", 16, 1000, regtype="boolean"),
+    TypeInfo("bpchar", 1042, 1014, regtype="character"),
+    TypeInfo("bytea", 17, 1001),
+    TypeInfo("date", 1082, 1182),
+    TypeInfo("float4", 700, 1021, regtype="real"),
+    TypeInfo("float8", 701, 1022, regtype="'double precision'"),
+    TypeInfo("inet", 869, 1041),
+    TypeInfo("int2", 21, 1005, regtype="smallint"),
+    TypeInfo("int2vector", 22, 1006),
+    TypeInfo("int4", 23, 1007),
+    TypeInfo("int8", 20, 1016, regtype="bigint"),
+    TypeInfo("interval", 1186, 1187),
+    TypeInfo("jsonb", 3802, 3807),
+    TypeInfo("name", 19, 1003),
+    TypeInfo("numeric", 1700, 1231),
+    TypeInfo("oid", 26, 1028),
+    TypeInfo("oidvector", 30, 1013),
+    TypeInfo("record", 2249, 2287),
+    TypeInfo("regclass", 2205, 2210),
+    TypeInfo("regnamespace", 4089, 4090),
+    TypeInfo("regproc", 24, 1008),
+    TypeInfo("regprocedure", 2202, 2207),
+    TypeInfo("regrole", 4096, 4097),
+    TypeInfo("regtype", 2206, 2211),
+    TypeInfo("text", 25, 1009),
+    TypeInfo("time", 1083, 1183, regtype="'time without time zone'"),
+    TypeInfo("timestamp", 1114, 1115, regtype="'timestamp without time zone'"),
+    TypeInfo("timestamptz", 1184, 1185, regtype="'timestamp with time zone'"),
+    TypeInfo("timetz", 1266, 1270, regtype="'time with time zone'"),
+    TypeInfo("unknown", 705, 0),
+    TypeInfo("uuid", 2950, 2951),
+    TypeInfo("varbit", 1562, 1563, regtype="'bit varying'"),
+    TypeInfo("varchar", 1043, 1015, regtype="'character varying'"),
+    # autogenerated: end
+]:
+    types.add(t)
 
 
 register_crdb_adapters(adapters)
-
-
-def customize_crdb_connection(
-    conn: "Union[Connection[Any], AsyncConnection[Any]]",
-) -> None:
-    conn._info_class = CrdbConnectionInfo
-
-    # TODOCRDB: what if someone is passing context? they will have
-    # customised the postgres adapters, so those changes wouldn't apply
-    # to crdb (e.g. the Django backend in preparation).
-    if conn._adapters is None:
-        # Not customized by connect()
-        conn._adapters = AdaptersMap(adapters)

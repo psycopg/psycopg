@@ -1,6 +1,7 @@
 import pytest
 
 from .utils import check_version
+from psycopg.crdb import CrdbConnection
 
 
 def pytest_configure(config):
@@ -57,12 +58,7 @@ def check_crdb_version(got, func):
 
 # Utility functions which can be imported in the test suite
 
-
-def is_crdb(conn):
-    if hasattr(conn, "pgconn"):
-        conn = conn.pgconn
-
-    return bool(conn.parameter_status(b"crdb_version"))
+is_crdb = CrdbConnection.is_crdb
 
 
 def crdb_skip_message(reason):

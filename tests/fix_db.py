@@ -6,6 +6,8 @@ from typing import List, Optional
 
 import psycopg
 from psycopg import pq
+from psycopg import sql
+from psycopg.crdb import CrdbConnection
 
 from .utils import check_libpq_version, check_server_version
 
@@ -143,8 +145,6 @@ def pgconn(dsn, request, tracefile):
     """Return a PGconn connection open to `--test-dsn`."""
     check_connection_version(request.function)
 
-    from psycopg import pq
-
     conn = pq.PGconn.connect(dsn.encode())
     if conn.status != pq.ConnStatus.OK:
         pytest.fail(f"bad connection: {conn.error_message.decode('utf8', 'replace')}")
@@ -160,9 +160,11 @@ def conn(dsn, request, tracefile):
     """Return a `Connection` connected to the ``--test-dsn`` database."""
     check_connection_version(request.function)
 
-    from psycopg import Connection
+    cls = psycopg.Connection
+    if crdb_version:
+        cls = CrdbConnection
 
-    conn = Connection.connect(dsn)
+    conn = cls.connect(dsn)
     with maybe_trace(conn.pgconn, tracefile, request.function):
         yield conn
     conn.close()
@@ -186,9 +188,13 @@ async def aconn(dsn, request, tracefile):
     """Return an `AsyncConnection` connected to the ``--test-dsn`` database."""
     check_connection_version(request.function)
 
-    from psycopg import AsyncConnection
+    cls = psycopg.AsyncConnection
+    if crdb_version:
+        from psycopg.crdb import AsyncCrdbConnection
 
-    conn = await AsyncConnection.connect(dsn)
+        cls = AsyncCrdbConnection
+
+    conn = await cls.connect(dsn)
     with maybe_trace(conn.pgconn, tracefile, request.function):
         yield conn
     await conn.close()
@@ -212,9 +218,7 @@ def svcconn(session_dsn):
     """
     Return a session `Connection` connected to the ``--test-dsn`` database.
     """
-    from psycopg import Connection
-
-    conn = Connection.connect(session_dsn, autocommit=True)
+    conn = psycopg.Connection.connect(session_dsn, autocommit=True)
     yield conn
     conn.close()
 
@@ -233,8 +237,6 @@ def acommands(aconn, monkeypatch):
 
 def patch_exec(conn, monkeypatch):
     """Helper to implement the commands fixture both sync and async."""
-    from psycopg import sql
-
     _orig_exec_command = conn._exec_command
     L = ListPopAll()
 
@@ -285,12 +287,10 @@ def check_connection_version(function):
 
 @pytest.fixture
 def hstore(svcconn):
-    from psycopg import Error
-
     try:
         with svcconn.transaction():
             svcconn.execute("create extension if not exists hstore")
-    except Error as e:
+    except psycopg.Error as e:
         pytest.skip(str(e))
 
 
@@ -309,13 +309,14 @@ def warm_up_database(dsn: str, __first_connection: List[bool] = [True]) -> None:
 
     global pg_version, crdb_version
 
-    import psycopg
-
     with psycopg.connect(dsn, connect_timeout=10) as conn:
         conn.execute("select 1")
 
         pg_version = conn.info.server_version
-        if conn.info.vendor == "CockroachDB":
-            crdb_version = conn.info.crdb_version  # type: ignore
-        else:
-            crdb_version = None
+
+        crdb_version = None
+        param = conn.info.parameter_status("crdb_version")
+        if param:
+            from psycopg.crdb import CrdbConnectionInfo
+
+            crdb_version = CrdbConnectionInfo.parse_crdb_version(param)
