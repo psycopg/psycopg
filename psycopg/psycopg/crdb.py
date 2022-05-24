@@ -187,10 +187,12 @@ class CrdbEnumBinaryDumper(EnumBinaryDumper):
 def register_postgres_adapters(context: AdaptContext) -> None:
     # Same adapters used by PostgreSQL, or a good starting point for customization
 
-    from .types import array, bool, datetime, json, none, numeric, string, uuid
+    from .types import array, bool, composite, datetime
+    from .types import json, none, numeric, string, uuid
 
     array.register_default_adapters(context)
     bool.register_default_adapters(context)
+    composite.register_default_adapters(context)
     datetime.register_default_adapters(context)
     json.register_default_adapters(context)
     none.register_default_adapters(context)
