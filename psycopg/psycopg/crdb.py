@@ -66,6 +66,9 @@ class AsyncCrdbConnection(_CrdbConnectionMixin, AsyncConnection[Row]):
     pass
 
 
+connect = CrdbConnection.connect
+
+
 class CrdbConnectionInfo(ConnectionInfo):
     @property
     def vendor(self) -> str:
