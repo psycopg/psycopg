@@ -152,11 +152,7 @@ def conn(dsn, request, tracefile):
     """Return a `Connection` connected to the ``--test-dsn`` database."""
     check_connection_version(request.node)
 
-    cls = psycopg.Connection
-    if crdb_version:
-        cls = CrdbConnection
-
-    conn = cls.connect(dsn)
+    conn = connection_class().connect(dsn)
     with maybe_trace(conn.pgconn, tracefile, request.function):
         yield conn
     conn.close()
@@ -203,6 +199,14 @@ async def apipeline(request, aconn):
         return
     else:
         yield None
+
+
+def connection_class():
+    cls = psycopg.Connection
+    if crdb_version:
+        cls = CrdbConnection
+
+    return cls
 
 
 @pytest.fixture(scope="session")

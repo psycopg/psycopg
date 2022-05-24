@@ -10,6 +10,7 @@ from psycopg.conninfo import make_conninfo, conninfo_to_dict, ConnectionInfo
 from psycopg.conninfo import resolve_hostaddr_async
 from psycopg._encodings import pg2pyenc
 
+from .fix_db import connection_class
 from .fix_crdb import crdb_encoding
 
 snowman = "\u2603"
@@ -148,11 +149,11 @@ class TestConnectionInfo:
         dsn.pop("application_name", None)
 
         monkeypatch.delenv("PGAPPNAME", raising=False)
-        with psycopg.connect(**dsn) as conn:
+        with connection_class().connect(**dsn) as conn:
             assert "application_name" not in conn.info.get_parameters()
 
         monkeypatch.setenv("PGAPPNAME", "hello test")
-        with psycopg.connect(**dsn) as conn:
+        with connection_class().connect(**dsn) as conn:
             assert conn.info.get_parameters()["application_name"] == "hello test"
 
     def test_dsn_env(self, dsn, monkeypatch):
@@ -160,11 +161,11 @@ class TestConnectionInfo:
         dsn.pop("application_name", None)
 
         monkeypatch.delenv("PGAPPNAME", raising=False)
-        with psycopg.connect(**dsn) as conn:
+        with connection_class().connect(**dsn) as conn:
             assert "application_name=" not in conn.info.dsn
 
         monkeypatch.setenv("PGAPPNAME", "hello test")
-        with psycopg.connect(**dsn) as conn:
+        with connection_class().connect(**dsn) as conn:
             assert "application_name='hello test'" in conn.info.dsn
 
     def test_status(self, conn):
@@ -296,7 +297,7 @@ class TestConnectionInfo:
     )
     def test_encoding_env_var(self, dsn, monkeypatch, enc, out, codec):
         monkeypatch.setenv("PGCLIENTENCODING", enc)
-        with psycopg.connect(dsn) as conn:
+        with connection_class().connect(dsn) as conn:
             clienc = conn.info.parameter_status("client_encoding")
             assert clienc
             if conn.info.vendor == "PostgreSQL":
