@@ -9,6 +9,7 @@ from psycopg import pq
 from psycopg import errors as e
 
 from .utils import eur, gc_collect
+from .fix_crdb import is_crdb
 
 
 def test_error_diag(conn):
@@ -19,7 +20,8 @@ def test_error_diag(conn):
     exc = excinfo.value
     diag = exc.diag
     assert diag.sqlstate == "42P01"
-    assert diag.severity_nonlocalized == "ERROR"
+    # https://github.com/cockroachdb/cockroach/issues/81794
+    assert (diag.severity_nonlocalized or diag.severity) == "ERROR"
 
 
 def test_diag_all_attrs(pgconn):
@@ -52,24 +54,26 @@ def test_diag_right_attr(pgconn, monkeypatch):
 
 
 def test_diag_attr_values(conn):
-    cur = conn.cursor()
-    cur.execute(
+    if is_crdb(conn):
+        conn.execute("set experimental_enable_temp_tables = 'on'")
+    conn.execute(
         """
         create temp table test_exc (
             data int constraint chk_eq1 check (data = 1)
         )"""
     )
     with pytest.raises(e.Error) as exc:
-        cur.execute("insert into test_exc values(2)")
+        conn.execute("insert into test_exc values(2)")
     diag = exc.value.diag
     assert diag.sqlstate == "23514"
-    assert diag.schema_name and diag.schema_name[:7] == "pg_temp"
-    assert diag.table_name == "test_exc"
     assert diag.constraint_name == "chk_eq1"
-    if conn.pgconn.server_version >= 90600:
+    if not is_crdb(conn):
+        assert diag.table_name == "test_exc"
+        assert diag.schema_name and diag.schema_name[:7] == "pg_temp"
         assert diag.severity_nonlocalized == "ERROR"
 
 
+@pytest.mark.crdb("skip", reason="do")
 @pytest.mark.parametrize("enc", ["utf8", "latin9"])
 def test_diag_encoding(conn, enc):
     msgs = []
@@ -81,6 +85,7 @@ def test_diag_encoding(conn, enc):
     assert msgs == [f"hello {eur}"]
 
 
+@pytest.mark.crdb("skip", reason="do")
 @pytest.mark.parametrize("enc", ["utf8", "latin9"])
 def test_error_encoding(conn, enc):
     with conn.transaction():
@@ -193,6 +198,7 @@ def test_diag_independent(conn):
     assert exc2.value.diag.sqlstate == "42P01"
 
 
+@pytest.mark.crdb("skip", reason="deferrable")
 def test_diag_from_commit(conn):
     cur = conn.cursor()
     cur.execute(
@@ -211,6 +217,7 @@ def test_diag_from_commit(conn):
 
 
 @pytest.mark.asyncio
+@pytest.mark.crdb("skip", reason="deferrable")
 async def test_diag_from_commit_async(aconn):
     cur = aconn.cursor()
     await cur.execute(
@@ -233,13 +240,15 @@ def test_query_context(conn):
         conn.execute("select * from wat")
 
     s = str(exc.value)
-    assert "from wat" in s, s
+    if not is_crdb(conn):
+        assert "from wat" in s, s
     assert exc.value.diag.message_primary
     assert exc.value.diag.message_primary in s
     assert "ERROR" not in s
     assert not s.endswith("\n")
 
 
+@pytest.mark.crdb("skip", reason="do")
 def test_unknown_sqlstate(conn):
     code = "PXX99"
     with pytest.raises(KeyError):

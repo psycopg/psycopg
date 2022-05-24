@@ -210,25 +210,28 @@ def test_fetchone(conn):
 
 
 def test_binary_cursor_execute(conn):
+    unk = "foo" if is_crdb(conn) else None
     cur = conn.cursor(binary=True)
-    cur.execute("select %s, %s", [1, None])
-    assert cur.fetchone() == (1, None)
+    cur.execute("select %s, %s", [1, unk])
+    assert cur.fetchone() == (1, unk)
     assert cur.pgresult.fformat(0) == 1
     assert cur.pgresult.get_value(0, 0) == b"\x00\x01"
 
 
 def test_execute_binary(conn):
     cur = conn.cursor()
-    cur.execute("select %s, %s", [1, None], binary=True)
-    assert cur.fetchone() == (1, None)
+    unk = "foo" if is_crdb(conn) else None
+    cur.execute("select %s, %s", [1, unk], binary=True)
+    assert cur.fetchone() == (1, unk)
     assert cur.pgresult.fformat(0) == 1
     assert cur.pgresult.get_value(0, 0) == b"\x00\x01"
 
 
 def test_binary_cursor_text_override(conn):
     cur = conn.cursor(binary=True)
-    cur.execute("select %s, %s", [1, None], binary=False)
-    assert cur.fetchone() == (1, None)
+    unk = "foo" if is_crdb(conn) else None
+    cur.execute("select %s, %s", [1, unk], binary=False)
+    assert cur.fetchone() == (1, unk)
     assert cur.pgresult.fformat(0) == 0
     assert cur.pgresult.get_value(0, 0) == b"1"
 
@@ -657,7 +660,7 @@ def test_stream_close(conn):
 def test_stream_binary_cursor(conn):
     cur = conn.cursor(binary=True)
     recs = []
-    for rec in cur.stream("select generate_series(1, 2)"):
+    for rec in cur.stream("select x::int4 from generate_series(1, 2) x"):
         recs.append(rec)
         assert cur.pgresult.fformat(0) == 1
         assert cur.pgresult.get_value(0, 0) == bytes([0, 0, 0, rec[0]])
@@ -668,7 +671,7 @@ def test_stream_binary_cursor(conn):
 def test_stream_execute_binary(conn):
     cur = conn.cursor()
     recs = []
-    for rec in cur.stream("select generate_series(1, 2)", binary=True):
+    for rec in cur.stream("select x::int4 from generate_series(1, 2) x", binary=True):
         recs.append(rec)
         assert cur.pgresult.fformat(0) == 1
         assert cur.pgresult.get_value(0, 0) == bytes([0, 0, 0, rec[0]])
