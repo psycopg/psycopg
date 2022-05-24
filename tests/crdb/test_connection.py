@@ -12,5 +12,8 @@ def test_is_crdb(conn):
 
 
 def test_connect(dsn):
+    with psycopg.crdb.CrdbConnection.connect(dsn) as conn:
+        assert isinstance(conn, CrdbConnection)
+
     with psycopg.crdb.connect(dsn) as conn:
         assert isinstance(conn, CrdbConnection)
