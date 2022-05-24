@@ -407,3 +407,43 @@ reveal_type(ref)
     assert len(out) == 2, "\n".join(out)
     got, want = [mypy.get_revealed(line) for line in out]
     assert got == want
+
+
+@pytest.mark.xfail(reason="https://github.com/psycopg/psycopg/issues/308")
+@pytest.mark.parametrize(
+    "conn, type",
+    [
+        (
+            "MyConnection.connect()",
+            "MyConnection[Tuple[Any, ...]]",
+        ),
+        (
+            "MyConnection.connect(row_factory=rows.tuple_row)",
+            "MyConnection[Tuple[Any, ...]]",
+        ),
+        (
+            "MyConnection.connect(row_factory=rows.dict_row)",
+            "MyConnection[Dict[str, Any]]",
+        ),
+    ],
+)
+def test_generic_connect(conn, type, mypy):
+    src = f"""
+from typing import Any, Dict, Tuple
+import psycopg
+from psycopg import rows
+
+class MyConnection(psycopg.Connection[rows.Row]):
+    pass
+
+obj = {conn}
+reveal_type(obj)
+
+ref: {type} = None  # type: ignore[assignment]
+reveal_type(ref)
+"""
+    cp = mypy.run_on_source(src)
+    out = cp.stdout.decode("utf8", "replace").splitlines()
+    assert len(out) == 2, "\n".join(out)
+    got, want = [mypy.get_revealed(line) for line in out]
+    assert got == want
