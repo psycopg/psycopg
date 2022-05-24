@@ -13,21 +13,7 @@ def pytest_configure(config):
     )
 
 
-def pytest_runtest_setup(item):
-    for m in item.iter_markers(name="crdb"):
-        if len(m.args) > 1:
-            raise TypeError("max one argument expected")
-        kwargs_unk = set(m.kwargs) - {"reason"}
-        if kwargs_unk:
-            raise TypeError(f"unknown keyword arguments: {kwargs_unk}")
-
-        # Copy the want marker on the function so we can check the version
-        # after the connection has been created.
-        item.function.want_crdb = m.args[0] if m.args else "only"
-        item.function.crdb_reason = m.kwargs.get("reason")
-
-
-def check_crdb_version(got, func):
+def check_crdb_version(got, mark):
     """
     Verify if the CockroachDB version is a version accepted.
 
@@ -39,17 +25,19 @@ def check_crdb_version(got, func):
 
     and skips the test if the server version doesn't match what expected.
     """
-    want = func.want_crdb
+    assert len(mark.args) <= 1
+    assert not (set(mark.kwargs) - {"reason"})
+    want = mark.args[0] if mark.args else "only"
     msg = None
 
     if got is None:
         if want == "only":
-            return "skipping test: CockroachDB only"
+            msg = "skipping test: CockroachDB only"
     else:
         if want == "only":
             pass
         elif want == "skip":
-            msg = crdb_skip_message(func.crdb_reason)
+            msg = crdb_skip_message(mark.kwargs.get("reason"))
         else:
             msg = check_version(got, want, "CockroachDB")
 

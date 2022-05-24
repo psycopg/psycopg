@@ -67,14 +67,6 @@ def pytest_configure(config):
     )
 
 
-def pytest_runtest_setup(item):
-    # Copy the want marker on the function so we can check the version
-    # after the connection has been created.
-    want_ver = [m.args[0] for m in item.iter_markers() if m.name == "pg"]
-    if want_ver:
-        item.function.want_pg_version = want_ver[0]
-
-
 @pytest.fixture(scope="session")
 def session_dsn(request):
     """
@@ -98,7 +90,7 @@ def session_dsn(request):
 @pytest.fixture
 def dsn(session_dsn, request):
     """Return the dsn used to connect to the `--test-dsn` database."""
-    check_connection_version(request.function)
+    check_connection_version(request.node)
     return session_dsn
 
 
@@ -143,7 +135,7 @@ def maybe_trace(pgconn, tracefile, function):
 @pytest.fixture
 def pgconn(dsn, request, tracefile):
     """Return a PGconn connection open to `--test-dsn`."""
-    check_connection_version(request.function)
+    check_connection_version(request.node)
 
     conn = pq.PGconn.connect(dsn.encode())
     if conn.status != pq.ConnStatus.OK:
@@ -158,7 +150,7 @@ def pgconn(dsn, request, tracefile):
 @pytest.fixture
 def conn(dsn, request, tracefile):
     """Return a `Connection` connected to the ``--test-dsn`` database."""
-    check_connection_version(request.function)
+    check_connection_version(request.node)
 
     cls = psycopg.Connection
     if crdb_version:
@@ -186,7 +178,7 @@ def pipeline(request, conn):
 @pytest.fixture
 async def aconn(dsn, request, tracefile):
     """Return an `AsyncConnection` connected to the ``--test-dsn`` database."""
-    check_connection_version(request.function)
+    check_connection_version(request.node)
 
     cls = psycopg.AsyncConnection
     if crdb_version:
@@ -263,26 +255,26 @@ class ListPopAll(list):  # type: ignore[type-arg]
         return out
 
 
-def check_connection_version(function):
+def check_connection_version(node):
     try:
         pg_version
     except NameError:
         # First connection creation failed. Let the tests fail.
-        return None
+        pytest.fail("server version not available")
 
-    if hasattr(function, "want_pg_version"):
-        msg = check_server_version(pg_version, function)
-        if msg:
-            pytest.skip(msg)
+    for mark in node.iter_markers():
+        if mark.name == "pg":
+            assert len(mark.args) == 1
+            msg = check_server_version(pg_version, mark.args[0])
+            if msg:
+                pytest.skip(msg)
 
-    if hasattr(function, "want_crdb"):
-        from .fix_crdb import check_crdb_version
+        elif mark.name == "crdb":
+            from .fix_crdb import check_crdb_version
 
-        msg = check_crdb_version(crdb_version, function)
-        if msg:
-            pytest.skip(msg)
-
-    return None
+            msg = check_crdb_version(crdb_version, mark)
+            if msg:
+                pytest.skip(msg)
 
 
 @pytest.fixture
