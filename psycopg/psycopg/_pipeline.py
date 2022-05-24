@@ -6,7 +6,7 @@ commands pipeline management
 
 import logging
 from types import TracebackType
-from typing import Any, List, Optional, Union, Tuple, Type, TYPE_CHECKING
+from typing import Any, List, Optional, Union, Tuple, Type, TypeVar, TYPE_CHECKING
 
 from . import pq
 from . import errors as e
@@ -178,6 +178,7 @@ class Pipeline(BasePipeline):
 
     __module__ = "psycopg"
     _conn: "Connection[Any]"
+    _Self = TypeVar("_Self", bound="Pipeline")
 
     def __init__(self, conn: "Connection[Any]") -> None:
         super().__init__(conn)
@@ -192,7 +193,7 @@ class Pipeline(BasePipeline):
         except e.Error as ex:
             raise ex.with_traceback(None)
 
-    def __enter__(self) -> "Pipeline":
+    def __enter__(self: _Self) -> _Self:
         with self._conn.lock:
             self._conn.wait(self._enter_gen())
         return self
@@ -230,6 +231,7 @@ class AsyncPipeline(BasePipeline):
 
     __module__ = "psycopg"
     _conn: "AsyncConnection[Any]"
+    _Self = TypeVar("_Self", bound="AsyncPipeline")
 
     def __init__(self, conn: "AsyncConnection[Any]") -> None:
         super().__init__(conn)
@@ -241,7 +243,7 @@ class AsyncPipeline(BasePipeline):
         except e.Error as ex:
             raise ex.with_traceback(None)
 
-    async def __aenter__(self) -> "AsyncPipeline":
+    async def __aenter__(self: _Self) -> _Self:
         async with self._conn.lock:
             await self._conn.wait(self._enter_gen())
         return self

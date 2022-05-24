@@ -194,13 +194,10 @@ class ServerCursorMixin(BaseCursor[ConnectionType, Row]):
         return sql.SQL(" ").join(parts)
 
 
-_C = TypeVar("_C", bound="ServerCursor[Any]")
-_AC = TypeVar("_AC", bound="AsyncServerCursor[Any]")
-
-
 class ServerCursor(ServerCursorMixin["Connection[Any]", Row], Cursor[Row]):
     __module__ = "psycopg"
     __slots__ = ()
+    _Self = TypeVar("_Self", bound="ServerCursor[Row]")
 
     @overload
     def __init__(
@@ -259,13 +256,13 @@ class ServerCursor(ServerCursorMixin["Connection[Any]", Row], Cursor[Row]):
             super().close()
 
     def execute(
-        self: _C,
+        self: _Self,
         query: Query,
         params: Optional[Params] = None,
         *,
         binary: Optional[bool] = None,
         **kwargs: Any,
-    ) -> _C:
+    ) -> _Self:
         """
         Open a cursor to execute a query to the database.
         """
@@ -342,6 +339,7 @@ class AsyncServerCursor(
 ):
     __module__ = "psycopg"
     __slots__ = ()
+    _Self = TypeVar("_Self", bound="AsyncServerCursor[Row]")
 
     @overload
     def __init__(
@@ -397,13 +395,13 @@ class AsyncServerCursor(
             await super().close()
 
     async def execute(
-        self: _AC,
+        self: _Self,
         query: Query,
         params: Optional[Params] = None,
         *,
         binary: Optional[bool] = None,
         **kwargs: Any,
-    ) -> _AC:
+    ) -> _Self:
         if kwargs:
             raise TypeError(f"keyword not supported: {list(kwargs)[0]}")
         if self._pgconn.pipeline_status:

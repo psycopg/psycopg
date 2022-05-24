@@ -41,8 +41,6 @@ else:
     fetch = generators.fetch
     send = generators.send
 
-_C = TypeVar("_C", bound="Cursor[Any]")
-
 TEXT = pq.Format.TEXT
 BINARY = pq.Format.BINARY
 
@@ -657,6 +655,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
 class Cursor(BaseCursor["Connection[Any]", Row]):
     __module__ = "psycopg"
     __slots__ = ()
+    _Self = TypeVar("_Self", bound="Cursor[Row]")
 
     @overload
     def __init__(self: "Cursor[Row]", connection: "Connection[Row]"):
@@ -680,7 +679,7 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
         super().__init__(connection)
         self._row_factory = row_factory or connection.row_factory
 
-    def __enter__(self: _C) -> _C:
+    def __enter__(self: _Self) -> _Self:
         return self
 
     def __exit__(
@@ -712,13 +711,13 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
         return self._row_factory(self)
 
     def execute(
-        self: _C,
+        self: _Self,
         query: Query,
         params: Optional[Params] = None,
         *,
         prepare: Optional[bool] = None,
         binary: Optional[bool] = None,
-    ) -> _C:
+    ) -> _Self:
         """
         Execute a query or command to the database.
         """

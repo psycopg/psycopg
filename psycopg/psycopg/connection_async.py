@@ -9,7 +9,7 @@ import asyncio
 import logging
 from types import TracebackType
 from typing import Any, AsyncGenerator, AsyncIterator, Dict, List, Optional
-from typing import Type, Union, cast, overload, TYPE_CHECKING
+from typing import Type, TypeVar, Union, cast, overload, TYPE_CHECKING
 from contextlib import asynccontextmanager
 
 from . import pq
@@ -52,6 +52,7 @@ class AsyncConnection(BaseConnection[Row]):
     server_cursor_factory: Type[AsyncServerCursor[Row]]
     row_factory: AsyncRowFactory[Row]
     _pipeline: Optional[AsyncPipeline]
+    _Self = TypeVar("_Self", bound="AsyncConnection[Row]")
 
     def __init__(
         self,
@@ -77,6 +78,7 @@ class AsyncConnection(BaseConnection[Row]):
         context: Optional[AdaptContext] = None,
         **kwargs: Union[None, int, str],
     ) -> "AsyncConnection[Row]":
+        # TODO: returned type should be _Self. See #308.
         ...
 
     @overload
@@ -136,7 +138,7 @@ class AsyncConnection(BaseConnection[Row]):
         rv.prepare_threshold = prepare_threshold
         return rv
 
-    async def __aenter__(self) -> "AsyncConnection[Row]":
+    async def __aenter__(self: _Self) -> _Self:
         return self
 
     async def __aexit__(

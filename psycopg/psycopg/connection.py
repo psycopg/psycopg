@@ -656,8 +656,8 @@ class Connection(BaseConnection[Row]):
     cursor_factory: Type[Cursor[Row]]
     server_cursor_factory: Type[ServerCursor[Row]]
     row_factory: RowFactory[Row]
-
     _pipeline: Optional[Pipeline]
+    _Self = TypeVar("_Self", bound="Connection[Row]")
 
     def __init__(
         self,
@@ -683,6 +683,7 @@ class Connection(BaseConnection[Row]):
         context: Optional[AdaptContext] = None,
         **kwargs: Union[None, int, str],
     ) -> "Connection[Row]":
+        # TODO: returned type should be _Self. See #308.
         ...
 
     @overload
@@ -734,7 +735,7 @@ class Connection(BaseConnection[Row]):
         rv.prepare_threshold = prepare_threshold
         return rv
 
-    def __enter__(self) -> "Connection[Row]":
+    def __enter__(self: _Self) -> _Self:
         return self
 
     def __exit__(

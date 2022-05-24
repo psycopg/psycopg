@@ -20,12 +20,11 @@ from ._pipeline import Pipeline
 if TYPE_CHECKING:
     from .connection_async import AsyncConnection
 
-_C = TypeVar("_C", bound="AsyncCursor[Any]")
-
 
 class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
     __module__ = "psycopg"
     __slots__ = ()
+    _Self = TypeVar("_Self", bound="AsyncCursor[Row]")
 
     @overload
     def __init__(self: "AsyncCursor[Row]", connection: "AsyncConnection[Row]"):
@@ -49,7 +48,7 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
         super().__init__(connection)
         self._row_factory = row_factory or connection.row_factory
 
-    async def __aenter__(self: _C) -> _C:
+    async def __aenter__(self: _Self) -> _Self:
         return self
 
     async def __aexit__(
@@ -77,13 +76,13 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
         return self._row_factory(self)
 
     async def execute(
-        self: _C,
+        self: _Self,
         query: Query,
         params: Optional[Params] = None,
         *,
         prepare: Optional[bool] = None,
         binary: Optional[bool] = None,
-    ) -> _C:
+    ) -> _Self:
         try:
             async with self._conn.lock:
                 await self._conn.wait(

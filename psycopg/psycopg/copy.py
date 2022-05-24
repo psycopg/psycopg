@@ -11,8 +11,8 @@ import asyncio
 import threading
 from abc import ABC, abstractmethod
 from types import TracebackType
-from typing import TYPE_CHECKING, AsyncIterator, Iterator, Generic, Union
-from typing import Any, Dict, List, Match, Optional, Sequence, Type, Tuple
+from typing import Any, AsyncIterator, Dict, Generic, Iterator, List, Match
+from typing import Optional, Sequence, Tuple, Type, TypeVar, Union, TYPE_CHECKING
 
 from . import pq
 from . import errors as e
@@ -55,6 +55,8 @@ class BaseCopy(Generic[ConnectionType]):
     the correct format from a queue, while the main thread is concerned with
     formatting the data in copy format and adding it to the queue.
     """
+
+    _Self = TypeVar("_Self", bound="BaseCopy[ConnectionType]")
 
     # Max size of the write queue of buffers. More than that copy will block
     # Each buffer should be around BUFFER_SIZE size.
@@ -204,7 +206,7 @@ class Copy(BaseCopy["Connection[Any]"]):
         self._worker: Optional[threading.Thread] = None
         self._worker_error: Optional[BaseException] = None
 
-    def __enter__(self) -> "Copy":
+    def __enter__(self: BaseCopy._Self) -> BaseCopy._Self:
         self._enter()
         return self
 
@@ -354,7 +356,7 @@ class AsyncCopy(BaseCopy["AsyncConnection[Any]"]):
         self._queue: asyncio.Queue[bytes] = asyncio.Queue(maxsize=self.QUEUE_SIZE)
         self._worker: Optional[asyncio.Future[None]] = None
 
-    async def __aenter__(self) -> "AsyncCopy":
+    async def __aenter__(self: BaseCopy._Self) -> BaseCopy._Self:
         self._enter()
         return self
 
