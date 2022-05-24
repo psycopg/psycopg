@@ -8,6 +8,9 @@ from decimal import Decimal
 import pytest
 
 import psycopg
+from psycopg.rows import namedtuple_row
+
+from .fix_crdb import is_crdb
 
 pytestmark = pytest.mark.asyncio
 
@@ -25,23 +28,23 @@ async def test_dont_prepare(aconn):
     for i in range(10):
         await cur.execute("select %s::int", [i], prepare=False)
 
-    await cur.execute("select count(*) from pg_prepared_statements")
-    assert await cur.fetchone() == (0,)
+    stmts = await get_prepared_statements(aconn)
+    assert len(stmts) == 0
 
 
 async def test_do_prepare(aconn):
     cur = aconn.cursor()
     await cur.execute("select %s::int", [10], prepare=True)
-    await cur.execute("select count(*) from pg_prepared_statements")
-    assert await cur.fetchone() == (1,)
+    stmts = await get_prepared_statements(aconn)
+    assert len(stmts) == 1
 
 
 async def test_auto_prepare(aconn):
-    cur = aconn.cursor()
     res = []
     for i in range(10):
-        await cur.execute("select count(*) from pg_prepared_statements")
-        res.append((await cur.fetchone())[0])
+        await aconn.execute("select %s::int", [0])
+        stmts = await get_prepared_statements(aconn)
+        res.append(len(stmts))
 
     assert res == [0] * 5 + [1] * 5
 
@@ -50,21 +53,22 @@ async def test_dont_prepare_conn(aconn):
     for i in range(10):
         await aconn.execute("select %s::int", [i], prepare=False)
 
-    cur = await aconn.execute("select count(*) from pg_prepared_statements")
-    assert await cur.fetchone() == (0,)
+    stmts = await get_prepared_statements(aconn)
+    assert len(stmts) == 0
 
 
 async def test_do_prepare_conn(aconn):
     await aconn.execute("select %s::int", [10], prepare=True)
-    cur = await aconn.execute("select count(*) from pg_prepared_statements")
-    assert await cur.fetchone() == (1,)
+    stmts = await get_prepared_statements(aconn)
+    assert len(stmts) == 1
 
 
 async def test_auto_prepare_conn(aconn):
     res = []
     for i in range(10):
-        cur = await aconn.execute("select count(*) from pg_prepared_statements")
-        res.append((await cur.fetchone())[0])
+        await aconn.execute("select %s", [0])
+        stmts = await get_prepared_statements(aconn)
+        res.append(len(stmts))
 
     assert res == [0] * 5 + [1] * 5
 
@@ -73,8 +77,9 @@ async def test_prepare_disable(aconn):
     aconn.prepare_threshold = None
     res = []
     for i in range(10):
-        cur = await aconn.execute("select count(*) from pg_prepared_statements")
-        res.append((await cur.fetchone())[0])
+        await aconn.execute("select %s", [0])
+        stmts = await get_prepared_statements(aconn)
+        res.append(len(stmts))
 
     assert res == [0] * 10
     assert not aconn._prepared._names
@@ -84,10 +89,9 @@ async def test_prepare_disable(aconn):
 async def test_no_prepare_multi(aconn):
     res = []
     for i in range(10):
-        cur = await aconn.execute(
-            "select count(*) from pg_prepared_statements; select 1"
-        )
-        res.append((await cur.fetchone())[0])
+        await aconn.execute("select 1; select 2")
+        stmts = await get_prepared_statements(aconn)
+        res.append(len(stmts))
 
     assert res == [0] * 10
 
@@ -98,15 +102,17 @@ async def test_no_prepare_error(aconn):
         with pytest.raises(aconn.ProgrammingError):
             await aconn.execute("select wat")
 
-    cur = await aconn.execute("select count(*) from pg_prepared_statements")
-    assert await cur.fetchone() == (0,)
+    stmts = await get_prepared_statements(aconn)
+    assert len(stmts) == 0
 
 
 @pytest.mark.parametrize(
     "query",
     [
         "create table test_no_prepare ()",
-        "notify foo, 'bar'",
+        pytest.param(
+            "notify foo, 'bar'", marks=pytest.mark.crdb("skip", reason="notify")
+        ),
         "set timezone = utc",
         "select num from prepared_test",
         "insert into prepared_test (num) values (1)",
@@ -118,10 +124,8 @@ async def test_misc_statement(aconn, query):
     await aconn.execute("create table prepared_test (num int)", prepare=False)
     aconn.prepare_threshold = 0
     await aconn.execute(query)
-    cur = await aconn.execute(
-        "select count(*) from pg_prepared_statements", prepare=False
-    )
-    assert await cur.fetchone() == (1,)
+    stmts = await get_prepared_statements(aconn)
+    assert len(stmts) == 1
 
 
 async def test_params_types(aconn):
@@ -130,9 +134,9 @@ async def test_params_types(aconn):
         [dt.date(2020, 12, 10), 42, Decimal(42)],
         prepare=True,
     )
-    cur = await aconn.execute("select parameter_types from pg_prepared_statements")
-    (rec,) = await cur.fetchall()
-    assert rec[0] == ["date", "smallint", "numeric"]
+    stmts = await get_prepared_statements(aconn)
+    want = [stmt.parameter_types for stmt in stmts]
+    assert want == [["date", "smallint", "numeric"]]
 
 
 async def test_evict_lru(aconn):
@@ -146,8 +150,9 @@ async def test_evict_lru(aconn):
     for i in [9, 8, 7, 6]:
         assert aconn._prepared._counts[f"select {i}".encode(), ()] == 1
 
-    cur = await aconn.execute("select statement from pg_prepared_statements")
-    assert await cur.fetchall() == [("select 'a'",)]
+    stmts = await get_prepared_statements(aconn)
+    assert len(stmts) == 1
+    assert stmts[0].statement == "select 'a'"
 
 
 async def test_evict_lru_deallocate(aconn):
@@ -162,25 +167,26 @@ async def test_evict_lru_deallocate(aconn):
         name = aconn._prepared._names[f"select {j}".encode(), ()]
         assert name.startswith(b"_pg3_")
 
-    cur = await aconn.execute(
-        "select statement from pg_prepared_statements order by prepare_time",
-        prepare=False,
-    )
-    assert await cur.fetchall() == [(f"select {i}",) for i in ["'a'", 6, 7, 8, 9]]
+    stmts = await get_prepared_statements(aconn)
+    stmts.sort(key=lambda rec: rec.prepare_time)
+    got = [stmt.statement for stmt in stmts]
+    assert got == [f"select {i}" for i in ["'a'", 6, 7, 8, 9]]
 
 
 async def test_different_types(aconn):
     aconn.prepare_threshold = 0
-    await aconn.execute("select %s", [None])
+    # CRDB can't roundtrip None
+    unk = "foo" if is_crdb(aconn) else None
+    await aconn.execute("select %s", [unk])
     await aconn.execute("select %s", [dt.date(2000, 1, 1)])
     await aconn.execute("select %s", [42])
     await aconn.execute("select %s", [41])
     await aconn.execute("select %s", [dt.date(2000, 1, 2)])
-    cur = await aconn.execute(
-        "select parameter_types from pg_prepared_statements order by prepare_time",
-        prepare=False,
-    )
-    assert await cur.fetchall() == [(["text"],), (["date"],), (["smallint"],)]
+
+    stmts = await get_prepared_statements(aconn)
+    stmts.sort(key=lambda rec: rec.prepare_time)
+    got = [stmt.parameter_types for stmt in stmts]
+    assert got == [["text"], ["date"], ["smallint"]]
 
 
 async def test_untyped_json(aconn):
@@ -189,5 +195,22 @@ async def test_untyped_json(aconn):
     for i in range(2):
         await aconn.execute("insert into testjson (data) values (%s)", ["{}"])
 
-    cur = await aconn.execute("select parameter_types from pg_prepared_statements")
-    assert await cur.fetchall() == [(["jsonb"],)]
+    stmts = await get_prepared_statements(aconn)
+    got = [stmt.parameter_types for stmt in stmts]
+    assert got == [["jsonb"]]
+
+
+async def get_prepared_statements(aconn):
+    cur = aconn.cursor(row_factory=namedtuple_row)
+    await cur.execute(
+        r"""
+select name,
+    regexp_replace(statement, 'prepare _pg3_\d+ as ', '', 'i') as statement,
+    prepare_time,
+    parameter_types
+from pg_prepared_statements
+where name != ''
+        """,
+        prepare=False,
+    )
+    return await cur.fetchall()
