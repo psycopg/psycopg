@@ -76,6 +76,7 @@ cdef class Transformer:
     cdef readonly object types
     cdef readonly object formats
     cdef str _encoding
+    cdef int _none_oid
 
     # mapping class -> Dumper instance (auto, text, binary)
     cdef dict _auto_dumpers
@@ -107,6 +108,7 @@ cdef class Transformer:
             self.connection = None
 
         self.types = self.formats = None
+        self._none_oid = -1
 
     @classmethod
     def from_context(cls, context: Optional["AdaptContext"]):
@@ -361,6 +363,9 @@ cdef class Transformer:
         cdef object dumped
         cdef Py_ssize_t size
 
+        if self._none_oid < 0:
+            self._none_oid = self.adapters.get_dumper(NoneType, "s").oid
+
         dumpers = self._row_dumpers
 
         if dumpers:
@@ -406,7 +411,7 @@ cdef class Transformer:
                 fmt = (<RowDumper>dumper_ptr).format
             else:
                 dumped = None
-                oid = oids.INVALID_OID
+                oid = self._none_oid
                 fmt = PQ_TEXT
 
             Py_INCREF(dumped)

@@ -29,6 +29,7 @@ OidDumperCache: TypeAlias = Dict[int, "Dumper"]
 LoaderCache: TypeAlias = Dict[int, "Loader"]
 
 TEXT = pq.Format.TEXT
+PY_TEXT = PyFormat.TEXT
 
 
 class Transformer(AdaptContext):
@@ -169,7 +170,7 @@ class Transformer(AdaptContext):
                     out[i] = self._row_dumpers[i].dump(param)
             return out
 
-        types = [INVALID_OID] * nparams
+        types = [self._get_none_oid()] * nparams
         pqformats = [TEXT] * nparams
 
         for i in range(nparams):
@@ -187,7 +188,7 @@ class Transformer(AdaptContext):
         return out
 
     def as_literal(self, obj: Any) -> Buffer:
-        dumper = self.get_dumper(obj, PyFormat.TEXT)
+        dumper = self.get_dumper(obj, PY_TEXT)
         rv = dumper.quote(obj)
         # If the result is quoted, and the oid not unknown or text,
         # add an explicit type cast.
@@ -243,6 +244,19 @@ class Transformer(AdaptContext):
         except KeyError:
             dumper = cache[key1] = dumper.upgrade(obj, format)
             return dumper
+
+    def _get_none_oid(self):
+        try:
+            return self._none_oid
+        except AttributeError:
+            pass
+
+        try:
+            rv = self._none_oid = self._adapters.get_dumper(NoneType, PY_TEXT).oid
+        except KeyError:
+            raise e.InterfaceError("None dumper not found")
+
+        return rv
 
     def get_dumper_by_oid(self, oid: int, format: pq.Format) -> "Dumper":
         """
