@@ -51,10 +51,12 @@ class Transformer(AdaptContext):
         _oid_dumpers _oid_types _row_dumpers _row_loaders
         """.split()
 
-    _adapters: "AdaptersMap"
-    _pgresult: Optional["PGresult"]
     types: Optional[Tuple[int, ...]]
     formats: Optional[List[pq.Format]]
+
+    _adapters: "AdaptersMap"
+    _pgresult: Optional["PGresult"]
+    _none_oid: int
 
     def __init__(self, context: Optional[AdaptContext] = None):
         self._pgresult = self.types = self.formats = None
@@ -251,7 +253,7 @@ class Transformer(AdaptContext):
             dumper = cache[key1] = dumper.upgrade(obj, format)
             return dumper
 
-    def _get_none_oid(self):
+    def _get_none_oid(self) -> int:
         try:
             return self._none_oid
         except AttributeError:

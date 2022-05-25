@@ -11,7 +11,7 @@ from psycopg.adapt import PyFormat
 from .utils import gc_collect
 from .test_cursor import my_row_factory
 from .test_cursor import execmany, _execmany  # noqa: F401
-from .fix_crdb import is_crdb, crdb_encoding
+from .fix_crdb import crdb_encoding
 
 execmany = execmany  # avoid F811 underneath
 pytestmark = pytest.mark.asyncio
@@ -212,28 +212,25 @@ async def test_fetchone(aconn):
 
 
 async def test_binary_cursor_execute(aconn):
-    unk = "foo" if is_crdb(aconn) else None
     cur = aconn.cursor(binary=True)
-    await cur.execute("select %s, %s", [1, unk])
-    assert (await cur.fetchone()) == (1, unk)
+    await cur.execute("select %s, %s", [1, None])
+    assert (await cur.fetchone()) == (1, None)
     assert cur.pgresult.fformat(0) == 1
     assert cur.pgresult.get_value(0, 0) == b"\x00\x01"
 
 
 async def test_execute_binary(aconn):
-    unk = "foo" if is_crdb(aconn) else None
     cur = aconn.cursor()
-    await cur.execute("select %s, %s", [1, unk], binary=True)
-    assert (await cur.fetchone()) == (1, unk)
+    await cur.execute("select %s, %s", [1, None], binary=True)
+    assert (await cur.fetchone()) == (1, None)
     assert cur.pgresult.fformat(0) == 1
     assert cur.pgresult.get_value(0, 0) == b"\x00\x01"
 
 
 async def test_binary_cursor_text_override(aconn):
-    unk = "foo" if is_crdb(aconn) else None
     cur = aconn.cursor(binary=True)
-    await cur.execute("select %s, %s", [1, unk], binary=False)
-    assert (await cur.fetchone()) == (1, unk)
+    await cur.execute("select %s, %s", [1, None], binary=False)
+    assert (await cur.fetchone()) == (1, None)
     assert cur.pgresult.fformat(0) == 0
     assert cur.pgresult.get_value(0, 0) == b"1"
 

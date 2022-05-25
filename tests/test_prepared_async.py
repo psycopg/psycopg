@@ -10,8 +10,6 @@ import pytest
 import psycopg
 from psycopg.rows import namedtuple_row
 
-from .fix_crdb import is_crdb
-
 pytestmark = pytest.mark.asyncio
 
 
@@ -175,9 +173,7 @@ async def test_evict_lru_deallocate(aconn):
 
 async def test_different_types(aconn):
     aconn.prepare_threshold = 0
-    # CRDB can't roundtrip None
-    unk = "foo" if is_crdb(aconn) else None
-    await aconn.execute("select %s", [unk])
+    await aconn.execute("select %s", [None])
     await aconn.execute("select %s", [dt.date(2000, 1, 1)])
     await aconn.execute("select %s", [42])
     await aconn.execute("select %s", [41])

@@ -10,8 +10,6 @@ import pytest
 import psycopg
 from psycopg.rows import namedtuple_row
 
-from .fix_crdb import is_crdb
-
 
 @pytest.mark.parametrize("value", [None, 0, 3])
 def test_prepare_threshold_init(dsn, value):
@@ -181,9 +179,7 @@ def test_evict_lru_deallocate(conn):
 
 def test_different_types(conn):
     conn.prepare_threshold = 0
-    # CRDB can't roundtrip None
-    unk = "foo" if is_crdb(conn) else None
-    conn.execute("select %s", [unk])
+    conn.execute("select %s", [None])
     conn.execute("select %s", [dt.date(2000, 1, 1)])
     conn.execute("select %s", [42])
     conn.execute("select %s", [41])

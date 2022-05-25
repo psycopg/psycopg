@@ -18,6 +18,7 @@ from .connection import Connection
 from ._adapters_map import AdaptersMap
 from .connection_async import AsyncConnection
 from .types.enum import EnumDumper, EnumBinaryDumper
+from .types.none import NoneDumper
 
 if TYPE_CHECKING:
     from .pq.abc import PGconn
@@ -184,18 +185,21 @@ class CrdbEnumBinaryDumper(EnumBinaryDumper):
     oid = TEXT_OID
 
 
+class CrdbNoneDumper(NoneDumper):
+    oid = TEXT_OID
+
+
 def register_postgres_adapters(context: AdaptContext) -> None:
     # Same adapters used by PostgreSQL, or a good starting point for customization
 
     from .types import array, bool, composite, datetime
-    from .types import json, none, numeric, string, uuid
+    from .types import json, numeric, string, uuid
 
     array.register_default_adapters(context)
     bool.register_default_adapters(context)
     composite.register_default_adapters(context)
     datetime.register_default_adapters(context)
     json.register_default_adapters(context)
-    none.register_default_adapters(context)
     numeric.register_default_adapters(context)
     string.register_default_adapters(context)
     uuid.register_default_adapters(context)
@@ -211,6 +215,7 @@ def register_crdb_adapters(context: AdaptContext) -> None:
     register_crdb_string_adapters(context)
     register_crdb_json_adapters(context)
     register_crdb_net_adapters(context)
+    register_crdb_none_adapters(context)
 
     array.register_all_arrays(adapters)
 
@@ -255,6 +260,10 @@ def register_crdb_net_adapters(context: AdaptContext) -> None:
     context.adapters.register_dumper(None, net.InetBinaryDumper)
     context.adapters.register_loader("inet", net.InetLoader)
     context.adapters.register_loader("inet", net.InetBinaryLoader)
+
+
+def register_crdb_none_adapters(context: AdaptContext) -> None:
+    context.adapters.register_dumper(type(None), CrdbNoneDumper)
 
 
 for t in [
