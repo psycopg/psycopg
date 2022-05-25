@@ -10,7 +10,7 @@ from psycopg import AsyncConnection, AsyncCursor, AsyncServerCursor
 
 
 def int_row_factory(
-    cursor: Union[Cursor[int], AsyncCursor[int]]
+    cursor: Union[Cursor[Any], AsyncCursor[Any]]
 ) -> Callable[[Sequence[int]], int]:
     return lambda values: values[0] if values else 42
 
@@ -22,7 +22,7 @@ class Person:
 
     @classmethod
     def row_factory(
-        cls, cursor: Union[Cursor[Person], AsyncCursor[Person]]
+        cls, cursor: Union[Cursor[Any], AsyncCursor[Any]]
     ) -> Callable[[Sequence[str]], Person]:
         def mkrow(values: Sequence[str]) -> Person:
             name, address = values
