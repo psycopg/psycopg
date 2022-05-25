@@ -176,8 +176,8 @@ several operations, using `Connection.execute()`, `Cursor.execute()` and
 .. code:: python
 
     >>> with conn.pipeline():
-    ...     cnn.execute("INSERT INTO mytable VALUES (%s)", ["hello"])
-    ...     with cnn.cursor() as cur:
+    ...     conn.execute("INSERT INTO mytable VALUES (%s)", ["hello"])
+    ...     with conn.cursor() as cur:
     ...         cur.execute("INSERT INTO othertable VALUES (%s)", ["world"])
     ...         cur.executemany(
     ...             "INSERT INTO elsewhere VALUES (%s)",
