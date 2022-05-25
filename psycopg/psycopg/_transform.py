@@ -44,14 +44,20 @@ class Transformer(AdaptContext):
     """
 
     __module__ = "psycopg.adapt"
-    _adapters: "AdaptersMap"
-    _pgresult: Optional["PGresult"] = None
 
+    __slots__ = """
+        types formats
+        _conn _adapters _pgresult _dumpers _loaders _encoding _none_oid
+        _oid_dumpers _oid_types _row_dumpers _row_loaders
+        """.split()
+
+    _adapters: "AdaptersMap"
+    _pgresult: Optional["PGresult"]
     types: Optional[Tuple[int, ...]]
     formats: Optional[List[pq.Format]]
 
     def __init__(self, context: Optional[AdaptContext] = None):
-        self.types = self.formats = None
+        self._pgresult = self.types = self.formats = None
 
         # WARNING: don't store context, or you'll create a loop with the Cursor
         if context:
