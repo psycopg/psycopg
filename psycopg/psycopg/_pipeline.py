@@ -77,9 +77,11 @@ class BasePipeline:
             BasePipeline._is_supported = pq_version >= 140000
         return BasePipeline._is_supported
 
-    def _enter(self) -> None:
+    def _enter_gen(self) -> PQGen[None]:
         if self.level == 0:
             self.pgconn.enter_pipeline_mode()
+        elif self.command_queue:
+            yield from self._sync_gen()
         self.level += 1
 
     def _exit(self) -> None:
@@ -191,7 +193,8 @@ class Pipeline(BasePipeline):
             raise ex.with_traceback(None)
 
     def __enter__(self) -> "Pipeline":
-        self._enter()
+        with self._conn.lock:
+            self._conn.wait(self._enter_gen())
         return self
 
     def __exit__(
@@ -239,7 +242,8 @@ class AsyncPipeline(BasePipeline):
             raise ex.with_traceback(None)
 
     async def __aenter__(self) -> "AsyncPipeline":
-        self._enter()
+        async with self._conn.lock:
+            await self._conn.wait(self._enter_gen())
         return self
 
     async def __aexit__(

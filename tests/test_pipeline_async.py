@@ -402,6 +402,9 @@ async def test_auto_prepare(aconn):
 
 
 async def test_transaction(aconn):
+    notices = []
+    aconn.add_notice_handler(lambda diag: notices.append(diag.message_primary))
+
     async with aconn.pipeline():
         async with aconn.transaction():
             cur = await aconn.execute("select 'tx'")
@@ -415,6 +418,8 @@ async def test_transaction(aconn):
 
         (r,) = await cur.fetchone()
         assert r == "rb"
+
+    assert not notices
 
 
 async def test_transaction_nested(aconn):
