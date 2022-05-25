@@ -141,6 +141,7 @@ def test_rollback_on_exception_exit(conn):
     assert not inserted(conn)
 
 
+@pytest.mark.crdb("skip", reason="pg_terminate_backend")
 def test_context_inerror_rollback_no_clobber(conn, pipeline, dsn, caplog):
     if pipeline:
         # Only 'conn' is possibly in pipeline mode, but the transaction and
@@ -164,6 +165,7 @@ def test_context_inerror_rollback_no_clobber(conn, pipeline, dsn, caplog):
     assert "in rollback" in rec.message
 
 
+@pytest.mark.crdb("skip", reason="copy")
 def test_context_active_rollback_no_clobber(dsn, caplog):
     caplog.set_level(logging.WARNING, logger="psycopg")
 

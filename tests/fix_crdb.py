@@ -96,7 +96,7 @@ _crdb_reasons = {
     "infinity date": 41564,
     "interval style": 35807,
     "large objects": 243,
-    "named cursor": 41412,
+    "server-side cursor": 41412,
     "negative interval": 81577,
     "nested array": 32552,
     "notify": 41522,

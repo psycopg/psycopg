@@ -4,7 +4,10 @@ import psycopg
 from psycopg import rows, errors as e
 from psycopg.pq import Format
 
-pytestmark = pytest.mark.asyncio
+pytestmark = [
+    pytest.mark.asyncio,
+    pytest.mark.crdb("skip", reason="server-side cursor"),
+]
 
 
 async def test_init_row_factory(aconn):

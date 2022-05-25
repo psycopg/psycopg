@@ -31,9 +31,9 @@ def test_work_in_progress(pgconn):
 def test_multi_pipelines(pgconn):
     assert pgconn.pipeline_status == pq.PipelineStatus.OFF
     pgconn.enter_pipeline_mode()
-    pgconn.send_query_params(b"select $1", [b"1"])
+    pgconn.send_query_params(b"select $1", [b"1"], param_types=[25])
     pgconn.pipeline_sync()
-    pgconn.send_query_params(b"select $1", [b"2"])
+    pgconn.send_query_params(b"select $1", [b"2"], param_types=[25])
     pgconn.pipeline_sync()
 
     # result from first query
@@ -77,7 +77,7 @@ def test_multi_pipelines(pgconn):
 def test_flush_request(pgconn):
     assert pgconn.pipeline_status == pq.PipelineStatus.OFF
     pgconn.enter_pipeline_mode()
-    pgconn.send_query_params(b"select $1", [b"1"])
+    pgconn.send_query_params(b"select $1", [b"1"], param_types=[25])
     pgconn.send_flush_request()
     r = pgconn.get_result()
     assert r.status == pq.ExecStatus.TUPLES_OK

@@ -14,6 +14,9 @@ from psycopg.types import TypeInfo
 from psycopg.types.string import StrDumper
 
 from .utils import eur
+from .fix_crdb import crdb_encoding
+
+crdb_skip_scs = pytest.mark.crdb("skip", reason="standard_conforming_strings=off")
 
 
 @pytest.mark.parametrize(
@@ -30,7 +33,7 @@ def test_quote(obj, quoted):
     assert sql.quote(obj) == quoted
 
 
-@pytest.mark.parametrize("scs", ["on", "off"])
+@pytest.mark.parametrize("scs", ["on", pytest.param("off", marks=crdb_skip_scs)])
 def test_quote_roundtrip(conn, scs):
     messages = []
     conn.add_notice_handler(lambda msg: messages.append(msg.message_primary))
@@ -46,6 +49,7 @@ def test_quote_roundtrip(conn, scs):
         assert not messages, f"error with {want!r}"
 
 
+@crdb_skip_scs
 def test_quote_stable_despite_deranged_libpq(conn):
     # Verify the libpq behaviour of PQescapeString using the last setting seen.
     # Check that we are not affected by it.
@@ -207,6 +211,7 @@ class TestSqlFormat:
         cur.execute("select * from test_compose")
         assert cur.fetchall() == [(10, "a", "b", "c"), (20, "d", "e", "f")]
 
+    @pytest.mark.crdb("skip", reason="copy")
     def test_copy(self, conn):
         cur = conn.cursor()
         cur.execute(
@@ -278,11 +283,11 @@ class TestIdentifier:
     @pytest.mark.parametrize(
         "args, want, enc",
         [
-            (("foo",), '"foo"', "ascii"),
-            (("foo", "bar"), '"foo"."bar"', "ascii"),
-            (("fo'o", 'ba"r'), '"fo\'o"."ba""r"', "ascii"),
+            crdb_encoding(("foo",), '"foo"', "ascii"),
+            crdb_encoding(("foo", "bar"), '"foo"."bar"', "ascii"),
+            crdb_encoding(("fo'o", 'ba"r'), '"fo\'o"."ba""r"', "ascii"),
             (("foo", eur), f'"foo"."{eur}"', "utf8"),
-            (("foo", eur), f'"foo"."{eur}"', "latin9"),
+            crdb_encoding(("foo", eur), f'"foo"."{eur}"', "latin9"),
         ],
     )
     def test_as_bytes(self, conn, args, want, enc):
@@ -321,10 +326,10 @@ class TestLiteral:
         assert sql.Literal(42).as_bytes(conn) == b"42"
         assert sql.Literal(dt.date(2017, 1, 1)).as_bytes(conn) == b"'2017-01-01'::date"
 
-        conn.execute("set client_encoding to utf8")
-        assert sql.Literal(eur).as_bytes(conn) == f"'{eur}'".encode()
-        conn.execute("set client_encoding to latin9")
-        assert sql.Literal(eur).as_bytes(conn) == f"'{eur}'".encode("latin9")
+    @pytest.mark.parametrize("encoding", ["utf8", crdb_encoding("latin9")])
+    def test_as_bytes_encoding(self, conn, encoding):
+        conn.execute(f"set client_encoding to {encoding}")
+        assert sql.Literal(eur).as_bytes(conn) == f"'{eur}'".encode(encoding)
 
     def test_eq(self):
         assert sql.Literal("foo") == sql.Literal("foo")
@@ -360,6 +365,7 @@ class TestLiteral:
         conn.adapters.register_dumper(str, StrDumper)
         assert sql.Literal("foo").as_string(conn) == "'foo'"
 
+    @pytest.mark.crdb("skip", reason="composite")  # create type, actually
     @pytest.mark.parametrize("name", ["a-b", f"{eur}", "order", "foo bar"])
     def test_invalid_name(self, conn, name):
         conn.execute(
@@ -454,14 +460,12 @@ class TestSQL:
     def test_as_string(self, conn):
         assert sql.SQL("foo").as_string(conn) == "foo"
 
-    def test_as_bytes(self, conn):
-        assert sql.SQL("foo").as_bytes(conn) == b"foo"
+    @pytest.mark.parametrize("encoding", ["utf8", crdb_encoding("latin9")])
+    def test_as_bytes(self, conn, encoding):
+        if encoding:
+            conn.execute(f"set client_encoding to {encoding}")
 
-        conn.execute("set client_encoding to utf8")
-        assert sql.SQL(eur).as_bytes(conn) == eur.encode()
-
-        conn.execute("set client_encoding to latin9")
-        assert sql.SQL(eur).as_bytes(conn) == eur.encode("latin9")
+        assert sql.SQL(eur).as_bytes(conn) == eur.encode(encoding)
 
 
 class TestComposed:
@@ -527,13 +531,11 @@ class TestComposed:
         obj = sql.Composed([sql.SQL("foo"), sql.SQL("bar")])
         assert obj.as_bytes(conn) == b"foobar"
 
+    @pytest.mark.parametrize("encoding", ["utf8", crdb_encoding("latin9")])
+    def test_as_bytes_encoding(self, conn, encoding):
         obj = sql.Composed([sql.SQL("foo"), sql.SQL(eur)])
-
-        conn.execute("set client_encoding to utf8")
-        assert obj.as_bytes(conn) == ("foo" + eur).encode()
-
-        conn.execute("set client_encoding to latin9")
-        assert obj.as_bytes(conn) == ("foo" + eur).encode("latin9")
+        conn.execute(f"set client_encoding to {encoding}")
+        assert obj.as_bytes(conn) == ("foo" + eur).encode(encoding)
 
 
 class TestPlaceholder:
