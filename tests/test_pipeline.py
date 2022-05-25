@@ -115,10 +115,9 @@ def test_server_cursor(conn):
 
 
 def test_cannot_insert_multiple_commands(conn):
-    with pytest.raises(psycopg.errors.SyntaxError) as cm:
+    with pytest.raises((e.SyntaxError, e.InvalidPreparedStatementDefinition)):
         with conn.pipeline():
             conn.execute("select 1; select 2")
-    assert cm.value.sqlstate == "42601"
 
 
 def test_copy(conn):
@@ -267,6 +266,7 @@ def test_errors_raised_on_nested_transaction_exit(conn):
     assert cur2.fetchone() == (2,)
 
 
+@pytest.mark.crdb("skip", reason="deferrable")
 def test_error_on_commit(conn):
     conn.execute(
         """
@@ -305,14 +305,14 @@ def test_executemany(conn):
     )
     with conn.pipeline(), conn.cursor() as cur:
         cur.executemany(
-            "insert into execmanypipeline(num) values (%s) returning id",
+            "insert into execmanypipeline(num) values (%s) returning num",
             [(10,), (20,)],
             returning=True,
         )
         assert cur.rowcount == 2
-        assert cur.fetchone() == (1,)
+        assert cur.fetchone() == (10,)
         assert cur.nextset()
-        assert cur.fetchone() == (2,)
+        assert cur.fetchone() == (20,)
         assert cur.nextset() is None
 
 
@@ -337,6 +337,7 @@ def test_executemany_no_returning(conn):
         assert cur.nextset() is None
 
 
+@pytest.mark.crdb("skip", reason="temp tables")
 def test_executemany_trace(conn, trace):
     conn.autocommit = True
     cur = conn.cursor()
@@ -354,6 +355,7 @@ def test_executemany_trace(conn, trace):
     assert len([i for i in items if i.type == "Sync"]) == 1
 
 
+@pytest.mark.crdb("skip", reason="temp tables")
 def test_executemany_trace_returning(conn, trace):
     conn.autocommit = True
     cur = conn.cursor()
@@ -380,7 +382,9 @@ def test_prepared(conn):
     conn.autocommit = True
     with conn.pipeline():
         c1 = conn.execute("select %s::int", [10], prepare=True)
-        c2 = conn.execute("select count(*) from pg_prepared_statements")
+        c2 = conn.execute(
+            "select count(*) from pg_prepared_statements where name != ''"
+        )
 
         (r,) = c1.fetchone()
         assert r == 10
@@ -394,7 +398,7 @@ def test_auto_prepare(conn):
     conn.prepared_threshold = 5
     with conn.pipeline():
         cursors = [
-            conn.execute("select count(*) from pg_prepared_statements")
+            conn.execute("select count(*) from pg_prepared_statements where name != ''")
             for i in range(10)
         ]
 
@@ -452,8 +456,9 @@ def test_transaction_nested_no_statement(conn):
 
 def test_outer_transaction(conn):
     with conn.transaction():
+        conn.execute("drop table if exists outertx")
+    with conn.transaction():
         with conn.pipeline():
-            conn.execute("drop table if exists outertx")
             conn.execute("create table outertx as (select 1)")
             cur = conn.execute("select * from outertx")
     (r,) = cur.fetchone()
@@ -506,18 +511,19 @@ def test_message_0x33(conn):
 def test_concurrency(conn):
     with conn.transaction():
         conn.execute("drop table if exists pipeline_concurrency")
+        conn.execute("drop table if exists accessed")
+    with conn.transaction():
         conn.execute(
             "create unlogged table pipeline_concurrency ("
             " id serial primary key,"
             " value integer"
             ")"
         )
-        conn.execute("drop table if exists accessed")
         conn.execute("create unlogged table accessed as (select now() as value)")
 
     def update(value):
         cur = conn.execute(
-            "insert into pipeline_concurrency(value) values (%s) returning id",
+            "insert into pipeline_concurrency(value) values (%s) returning value",
             (value,),
         )
         conn.execute("update accessed set value = now()")
