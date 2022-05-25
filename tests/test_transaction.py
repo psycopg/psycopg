@@ -663,8 +663,6 @@ def test_explicit_rollback_of_enclosing_tx_outer_tx_unaffected(conn, svcconn):
 def test_str(conn, pipeline):
     with conn.transaction() as tx:
         if pipeline:
-            assert "INTRANS" not in str(tx)
-            pipeline.sync()
             assert "[INTRANS, pipeline=ON]" in str(tx)
         else:
             assert "[INTRANS]" in str(tx)
