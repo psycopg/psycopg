@@ -402,6 +402,9 @@ def test_auto_prepare(conn):
 
 
 def test_transaction(conn):
+    notices = []
+    conn.add_notice_handler(lambda diag: notices.append(diag.message_primary))
+
     with conn.pipeline():
         with conn.transaction():
             cur = conn.execute("select 'tx'")
@@ -415,6 +418,8 @@ def test_transaction(conn):
 
         (r,) = cur.fetchone()
         assert r == "rb"
+
+    assert not notices
 
 
 def test_transaction_nested(conn):
