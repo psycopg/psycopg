@@ -30,6 +30,13 @@ Psycopg 3.1 (unreleased)
 - Drop support for Python 3.6.
 
 
+Psycopg 3.0.15 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Fix wrong escaping of unprintable chars in COPY (nonetheless correctly
+  interpreted by PostgreSQL).
+
+
 Current release
 ---------------
 
