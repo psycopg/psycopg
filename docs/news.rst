@@ -7,6 +7,16 @@
 ``psycopg`` release notes
 =========================
 
+Future releases
+---------------
+
+Psycopg 3.0.15 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Fix wrong escaping of unprintable chars in COPY (nonetheless correctly
+  interpreted by PostgreSQL).
+
+
 Current release
 ---------------
 
