@@ -487,6 +487,18 @@ def test_rollback_transaction(conn):
     conn.execute("select 1")
 
 
+def test_message_0x33(conn):
+    notices = []
+    conn.add_notice_handler(lambda diag: notices.append(diag.message_primary))
+
+    conn.autocommit = True
+    with conn.pipeline():
+        cur = conn.execute("select 'test'")
+        cur.fetchone() == ("test",)
+
+    assert not notices
+
+
 def test_concurrency(conn):
     with conn.transaction():
         conn.execute("drop table if exists pipeline_concurrency")

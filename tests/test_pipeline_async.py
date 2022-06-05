@@ -489,6 +489,18 @@ async def test_rollback_transaction(aconn):
     await aconn.execute("select 1")
 
 
+async def test_message_0x33(aconn):
+    notices = []
+    aconn.add_notice_handler(lambda diag: notices.append(diag.message_primary))
+
+    await aconn.set_autocommit(True)
+    async with aconn.pipeline():
+        cur = await aconn.execute("select 'test'")
+        await cur.fetchone() == ("test",)
+
+    assert not notices
+
+
 async def test_concurrency(aconn):
     async with aconn.transaction():
         await aconn.execute("drop table if exists pipeline_concurrency")
