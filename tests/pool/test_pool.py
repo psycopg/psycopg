@@ -64,6 +64,7 @@ def test_kwargs(dsn):
             assert conn.autocommit
 
 
+@pytest.mark.crdb("skip", reason="backend pid")
 def test_its_really_a_pool(dsn):
     with pool.ConnectionPool(dsn, min_size=2) as p:
         with p.connection() as conn:
@@ -84,6 +85,7 @@ def test_context(dsn):
     assert p.closed
 
 
+@pytest.mark.crdb("skip", reason="backend pid")
 def test_connection_not_lost(dsn):
     with pool.ConnectionPool(dsn, min_size=1) as p:
         with pytest.raises(ZeroDivisionError):
@@ -245,6 +247,7 @@ def test_reset(dsn):
         assert resets == 2
 
 
+@pytest.mark.crdb("skip", reason="backend pid")
 def test_reset_badstate(dsn, caplog):
     caplog.set_level(logging.WARNING, logger="psycopg.pool")
 
@@ -265,6 +268,7 @@ def test_reset_badstate(dsn, caplog):
     assert "INTRANS" in caplog.records[0].message
 
 
+@pytest.mark.crdb("skip", reason="backend pid")
 def test_reset_broken(dsn, caplog):
     caplog.set_level(logging.WARNING, logger="psycopg.pool")
 
@@ -447,6 +451,7 @@ def test_queue_timeout_override(dsn):
         assert 0.1 < e[1] < 0.15
 
 
+@pytest.mark.crdb("skip", reason="backend pid")
 def test_broken_reconnect(dsn):
     with pool.ConnectionPool(dsn, min_size=1) as p:
         with p.connection() as conn:
@@ -461,6 +466,7 @@ def test_broken_reconnect(dsn):
     assert pid1 != pid2
 
 
+@pytest.mark.crdb("skip", reason="backend pid")
 def test_intrans_rollback(dsn, caplog):
     caplog.set_level(logging.WARNING, logger="psycopg.pool")
 
@@ -482,6 +488,7 @@ def test_intrans_rollback(dsn, caplog):
     assert "INTRANS" in caplog.records[0].message
 
 
+@pytest.mark.crdb("skip", reason="backend pid")
 def test_inerror_rollback(dsn, caplog):
     caplog.set_level(logging.WARNING, logger="psycopg.pool")
 
@@ -501,6 +508,7 @@ def test_inerror_rollback(dsn, caplog):
     assert "INERROR" in caplog.records[0].message
 
 
+@pytest.mark.crdb("skip", reason="backend pid")
 def test_active_close(dsn, caplog):
     caplog.set_level(logging.WARNING, logger="psycopg.pool")
 
@@ -520,6 +528,7 @@ def test_active_close(dsn, caplog):
     assert "BAD" in caplog.records[1].message
 
 
+@pytest.mark.crdb("skip", reason="backend pid")
 def test_fail_rollback_close(dsn, caplog, monkeypatch):
     caplog.set_level(logging.WARNING, logger="psycopg.pool")
 
@@ -996,6 +1005,7 @@ def test_max_lifetime(dsn):
     assert pids[0] == pids[1] != pids[4], pids
 
 
+@pytest.mark.crdb("skip", reason="backend pid")
 def test_check(dsn, caplog):
     caplog.set_level(logging.WARNING, logger="psycopg.pool")
     with pool.ConnectionPool(dsn, min_size=4) as p:
