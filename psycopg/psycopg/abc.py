@@ -20,6 +20,8 @@ if TYPE_CHECKING:
     from .connection import BaseConnection
     from ._adapters_map import AdaptersMap
 
+NoneType: type = type(None)
+
 # An object implementing the buffer protocol
 Buffer: TypeAlias = Union[bytes, bytearray, memoryview]
 

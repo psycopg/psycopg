@@ -13,7 +13,7 @@ from functools import lru_cache
 from .. import pq
 from .. import errors as e
 from .. import postgres
-from ..abc import AdaptContext, Buffer, Dumper, DumperKey
+from ..abc import AdaptContext, Buffer, Dumper, DumperKey, NoneType
 from ..adapt import RecursiveDumper, RecursiveLoader, PyFormat
 from .._struct import pack_len, unpack_len
 from ..postgres import TEXT_OID, INVALID_OID
@@ -27,7 +27,6 @@ _pack_dim = cast(Callable[[int, int], bytes], _struct_dim.pack)
 _unpack_dim = cast(Callable[[bytes, int], Tuple[int, int]], _struct_dim.unpack_from)
 
 TEXT_ARRAY_OID = postgres.types["text"].array_oid
-NoneType: type = type(None)
 
 
 class BaseListDumper(RecursiveDumper):

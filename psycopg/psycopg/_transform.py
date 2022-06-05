@@ -5,13 +5,13 @@ Helper object to transform values between Python and PostgreSQL
 # Copyright (C) 2020 The Psycopg Team
 
 from typing import Any, Dict, List, Optional, Sequence, Tuple
-from typing import DefaultDict, Type, TYPE_CHECKING
+from typing import DefaultDict, TYPE_CHECKING
 from collections import defaultdict
 
 from . import pq
 from . import postgres
 from . import errors as e
-from .abc import Buffer, LoadFunc, AdaptContext, PyFormat, DumperKey
+from .abc import Buffer, LoadFunc, AdaptContext, PyFormat, DumperKey, NoneType
 from .rows import Row, RowMaker
 from ._compat import TypeAlias
 from .postgres import INVALID_OID, TEXT_OID
@@ -23,7 +23,6 @@ if TYPE_CHECKING:
     from .pq.abc import PGresult
     from .connection import BaseConnection
 
-NoneType: Type[None] = type(None)
 DumperCache: TypeAlias = Dict[DumperKey, "Dumper"]
 OidDumperCache: TypeAlias = Dict[int, "Dumper"]
 LoaderCache: TypeAlias = Dict[int, "Loader"]

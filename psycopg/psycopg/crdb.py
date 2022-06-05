@@ -10,7 +10,7 @@ from typing import Any, Optional, Type, Union, overload, TYPE_CHECKING
 from ._typeinfo import TypeInfo, TypesRegistry
 
 from . import errors as e
-from .abc import AdaptContext
+from .abc import AdaptContext, NoneType
 from .rows import Row, RowFactory, AsyncRowFactory, TupleRow
 from .postgres import TEXT_OID
 from .conninfo import ConnectionInfo
@@ -263,7 +263,7 @@ def register_crdb_net_adapters(context: AdaptContext) -> None:
 
 
 def register_crdb_none_adapters(context: AdaptContext) -> None:
-    context.adapters.register_dumper(type(None), CrdbNoneDumper)
+    context.adapters.register_dumper(NoneType, CrdbNoneDumper)
 
 
 for t in [
