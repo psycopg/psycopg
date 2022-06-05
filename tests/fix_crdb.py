@@ -96,6 +96,7 @@ _crdb_reasons = {
     "deferrable": 48307,
     "do": 17511,
     "encoding": 35882,
+    "geometric types": 21286,
     "hstore": 41284,
     "infinity date": 41564,
     "interval style": 35807,
