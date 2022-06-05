@@ -6,8 +6,8 @@ import pytest
 from psycopg import AsyncConnection, ProgrammingError, Rollback
 from psycopg._compat import create_task
 
-from .test_transaction import in_transaction, insert_row, inserted
-from .test_transaction import ExpectedException, get_exc_info
+from .test_transaction import in_transaction, insert_row, inserted, get_exc_info
+from .test_transaction import ExpectedException, crdb_skip_external_observer
 from .test_transaction import create_test_table  # noqa  # autouse fixture
 
 pytestmark = pytest.mark.asyncio
@@ -84,6 +84,7 @@ async def test_rollback_on_exception_exit(aconn):
     assert not await inserted(aconn)
 
 
+@pytest.mark.crdb("skip", reason="pg_terminate_backend")
 async def test_context_inerror_rollback_no_clobber(aconn, apipeline, dsn, caplog):
     if apipeline:
         # Only 'aconn' is possibly in pipeline mode, but the transaction and
@@ -107,6 +108,7 @@ async def test_context_inerror_rollback_no_clobber(aconn, apipeline, dsn, caplog
     assert "in rollback" in rec.message
 
 
+@pytest.mark.crdb("skip", reason="copy")
 async def test_context_active_rollback_no_clobber(dsn, caplog):
     caplog.set_level(logging.WARNING, logger="psycopg")
 
@@ -220,6 +222,7 @@ async def test_autocommit_off_but_no_tx_started_exception_exit(aconn, svcconn):
     assert not inserted(svcconn)
 
 
+@crdb_skip_external_observer
 async def test_autocommit_off_and_tx_in_progress_successful_exit(
     aconn, apipeline, svcconn
 ):
@@ -247,6 +250,7 @@ async def test_autocommit_off_and_tx_in_progress_successful_exit(
     assert not inserted(svcconn)
 
 
+@crdb_skip_external_observer
 async def test_autocommit_off_and_tx_in_progress_exception_exit(
     aconn, apipeline, svcconn
 ):
@@ -529,6 +533,7 @@ async def test_force_rollback_exception_exit(aconn, svcconn):
     assert not inserted(svcconn)
 
 
+@crdb_skip_external_observer
 async def test_explicit_rollback_discards_changes(aconn, svcconn):
     """
     Raising a Rollback exception in the middle of a block exits the block and
@@ -561,6 +566,7 @@ async def test_explicit_rollback_discards_changes(aconn, svcconn):
     await assert_no_rows()
 
 
+@crdb_skip_external_observer
 async def test_explicit_rollback_outer_tx_unaffected(aconn, svcconn):
     """
     Raising a Rollback exception in the middle of a block does not impact an
@@ -592,6 +598,7 @@ async def test_explicit_rollback_of_outer_transaction(aconn):
     assert not await inserted(aconn)
 
 
+@crdb_skip_external_observer
 async def test_explicit_rollback_of_enclosing_tx_outer_tx_unaffected(aconn, svcconn):
     """
     Rolling-back an enclosing transaction does not impact an outer transaction.

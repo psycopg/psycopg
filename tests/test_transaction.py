@@ -6,6 +6,11 @@ import pytest
 
 from psycopg import Connection, ProgrammingError, Rollback
 
+# TODOCRDB: is this the expected behaviour?
+crdb_skip_external_observer = pytest.mark.crdb(
+    "skip", reason="deadlock on observer connection"
+)
+
 
 @pytest.fixture
 def conn(conn, pipeline):
@@ -279,6 +284,7 @@ def test_autocommit_off_but_no_tx_started_exception_exit(conn, svcconn):
     assert not inserted(svcconn)
 
 
+@crdb_skip_external_observer
 def test_autocommit_off_and_tx_in_progress_successful_exit(conn, pipeline, svcconn):
     """
     Scenario:
@@ -304,6 +310,7 @@ def test_autocommit_off_and_tx_in_progress_successful_exit(conn, pipeline, svcco
     assert not inserted(svcconn)
 
 
+@crdb_skip_external_observer
 def test_autocommit_off_and_tx_in_progress_exception_exit(conn, pipeline, svcconn):
     """
     Scenario:
@@ -580,6 +587,7 @@ def test_force_rollback_exception_exit(conn, svcconn):
     assert not inserted(svcconn)
 
 
+@crdb_skip_external_observer
 def test_explicit_rollback_discards_changes(conn, svcconn):
     """
     Raising a Rollback exception in the middle of a block exits the block and
@@ -612,6 +620,7 @@ def test_explicit_rollback_discards_changes(conn, svcconn):
     assert_no_rows()
 
 
+@crdb_skip_external_observer
 def test_explicit_rollback_outer_tx_unaffected(conn, svcconn):
     """
     Raising a Rollback exception in the middle of a block does not impact an
@@ -643,6 +652,7 @@ def test_explicit_rollback_of_outer_transaction(conn):
     assert not inserted(conn)
 
 
+@crdb_skip_external_observer
 def test_explicit_rollback_of_enclosing_tx_outer_tx_unaffected(conn, svcconn):
     """
     Rolling-back an enclosing transaction does not impact an outer transaction.
