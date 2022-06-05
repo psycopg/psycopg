@@ -51,6 +51,7 @@ def test_connect_async(dsn):
         conn.connect_poll()
 
 
+@pytest.mark.crdb("skip", reason="connects to any db name")
 def test_connect_async_bad(dsn):
     parsed_dsn = {e.keyword: e.val for e in pq.Conninfo.parse(dsn.encode()) if e.val}
     parsed_dsn[b"dbname"] = b"psycopg_test_not_for_real"
@@ -130,6 +131,7 @@ def test_info(dsn, pgconn):
         pgconn.info
 
 
+@pytest.mark.crdb("skip", reason="pg_terminate_backend")
 def test_reset(pgconn):
     assert pgconn.status == pq.ConnStatus.OK
     pgconn.exec_(b"select pg_terminate_backend(pg_backend_pid())")
@@ -144,6 +146,7 @@ def test_reset(pgconn):
     assert pgconn.status == pq.ConnStatus.BAD
 
 
+@pytest.mark.crdb("skip", reason="pg_terminate_backend")
 def test_reset_async(pgconn):
     assert pgconn.status == pq.ConnStatus.OK
     pgconn.exec_(b"select pg_terminate_backend(pg_backend_pid())")
@@ -269,6 +272,7 @@ def test_parameter_status(dsn, monkeypatch):
         pgconn.parameter_status(b"application_name")
 
 
+@pytest.mark.crdb("skip", reason="encoding")
 def test_encoding(pgconn):
     res = pgconn.exec_(b"set client_encoding to latin1")
     assert res.status == pq.ExecStatus.COMMAND_OK
@@ -398,6 +402,7 @@ def test_cancel_free(pgconn):
     cancel.free()
 
 
+@pytest.mark.crdb("skip", reason="notify")
 def test_notify(pgconn):
     assert pgconn.notifies() is None
 
@@ -425,6 +430,7 @@ def test_notify(pgconn):
     assert pgconn.notifies() is None
 
 
+@pytest.mark.crdb("skip", reason="do")
 def test_notice_nohandler(pgconn):
     pgconn.exec_(b"set client_min_messages to notice")
     res = pgconn.exec_(
@@ -433,6 +439,7 @@ def test_notice_nohandler(pgconn):
     assert res.status == pq.ExecStatus.COMMAND_OK
 
 
+@pytest.mark.crdb("skip", reason="do")
 def test_notice(pgconn):
     msgs = []
 
@@ -450,6 +457,7 @@ def test_notice(pgconn):
     assert msgs and msgs[0] == b"hello notice"
 
 
+@pytest.mark.crdb("skip", reason="do")
 def test_notice_error(pgconn, caplog):
     caplog.set_level(logging.WARNING, logger="psycopg")
 
@@ -492,13 +500,13 @@ def test_trace(pgconn, tmp_path):
     with tracef.open("w") as f:
         pgconn.trace(f.fileno())
         pgconn.set_trace_flags(pq.Trace.SUPPRESS_TIMESTAMPS | pq.Trace.REGRESS_MODE)
-        pgconn.exec_(b"select 1")
+        pgconn.exec_(b"select 1::int4 as foo")
         pgconn.untrace()
-        pgconn.exec_(b"select 2")
+        pgconn.exec_(b"select 2::int4 as foo")
     traces = [line.split("\t") for line in tracef.read_text().splitlines()]
     assert traces == [
-        ["F", "13", "Query", ' "select 1"'],
-        ["B", "33", "RowDescription", ' 1 "?column?" NNNN 0 NNNN 4 -1 0'],
+        ["F", "26", "Query", ' "select 1::int4 as foo"'],
+        ["B", "28", "RowDescription", ' 1 "foo" NNNN 0 NNNN 4 -1 0'],
         ["B", "11", "DataRow", " 1 1 '1'"],
         ["B", "13", "CommandComplete", ' "SELECT 1"'],
         ["B", "5", "ReadyForQuery", " I"],
@@ -530,9 +538,10 @@ def test_encrypt_password_badalgo(pgconn):
 
 
 @pytest.mark.libpq(">= 10")
+@pytest.mark.crdb("skip", reason="password_encryption")
 def test_encrypt_password_query(pgconn):
     res = pgconn.exec_(b"set password_encryption to 'md5'")
-    assert res.status == pq.ExecStatus.COMMAND_OK
+    assert res.status == pq.ExecStatus.COMMAND_OK, pgconn.error_message.decode()
     enc = pgconn.encrypt_password(b"psycopg2", b"ashesh")
     assert enc == b"md594839d658c28a357126f105b9cb14cfc"
 

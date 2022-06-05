@@ -14,9 +14,7 @@ from psycopg.types import TypeInfo
 from psycopg.types.string import StrDumper
 
 from .utils import eur
-from .fix_crdb import crdb_encoding
-
-crdb_skip_scs = pytest.mark.crdb("skip", reason="standard_conforming_strings=off")
+from .fix_crdb import crdb_encoding, crdb_scs_off
 
 
 @pytest.mark.parametrize(
@@ -33,7 +31,7 @@ def test_quote(obj, quoted):
     assert sql.quote(obj) == quoted
 
 
-@pytest.mark.parametrize("scs", ["on", pytest.param("off", marks=crdb_skip_scs)])
+@pytest.mark.parametrize("scs", ["on", crdb_scs_off("off")])
 def test_quote_roundtrip(conn, scs):
     messages = []
     conn.add_notice_handler(lambda msg: messages.append(msg.message_primary))
@@ -49,8 +47,8 @@ def test_quote_roundtrip(conn, scs):
         assert not messages, f"error with {want!r}"
 
 
-@crdb_skip_scs
-def test_quote_stable_despite_deranged_libpq(conn):
+@pytest.mark.parametrize("dummy", [crdb_scs_off("off")])
+def test_quote_stable_despite_deranged_libpq(conn, dummy):
     # Verify the libpq behaviour of PQescapeString using the last setting seen.
     # Check that we are not affected by it.
     good_str = " E'\\\\'"

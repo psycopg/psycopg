@@ -77,6 +77,10 @@ def crdb_time_precision(*args):
     return skip_crdb(*args, reason="time precision")
 
 
+def crdb_scs_off(*args):
+    return skip_crdb(*args, reason="standard_conforming_strings=off")
+
+
 # mapping from reason description to ticket number
 _crdb_reasons = {
     "2-phase commit": 22329,
@@ -86,8 +90,8 @@ _crdb_reasons = {
     "cast adds tz": 51692,
     "cidr": 18846,
     "composite": 27792,
-    "copy": 41608,
     "copy canceled": 81559,
+    "copy": 41608,
     "cursor with hold": 77101,
     "deferrable": 48307,
     "do": 17511,
@@ -96,13 +100,14 @@ _crdb_reasons = {
     "infinity date": 41564,
     "interval style": 35807,
     "large objects": 243,
-    "server-side cursor": 41412,
     "negative interval": 81577,
     "nested array": 32552,
     "notify": 41522,
     "password_encryption": 42519,
     "pg_terminate_backend": 35897,
     "range": 41282,
+    "severity_nonlocalized": 81794,
     "scroll cursor": 77102,
+    "server-side cursor": 41412,
     "stored procedure": 1751,
 }

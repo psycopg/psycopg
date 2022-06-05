@@ -52,7 +52,11 @@ def test_error_message(pgconn):
 
 def test_error_field(pgconn):
     res = pgconn.exec_(b"select wat")
-    assert res.error_field(pq.DiagnosticField.SEVERITY_NONLOCALIZED) == b"ERROR"
+    # https://github.com/cockroachdb/cockroach/issues/81794
+    assert (
+        res.error_field(pq.DiagnosticField.SEVERITY_NONLOCALIZED)
+        or res.error_field(pq.DiagnosticField.SEVERITY)
+    ) == b"ERROR"
     assert res.error_field(pq.DiagnosticField.SQLSTATE) == b"42703"
     assert b"wat" in res.error_field(pq.DiagnosticField.MESSAGE_PRIMARY)
     res.clear()
@@ -86,6 +90,7 @@ def test_fname(pgconn):
     assert res.fname(0) is None
 
 
+@pytest.mark.crdb("skip", reason="ftable")
 def test_ftable_and_col(pgconn):
     res = pgconn.exec_(
         b"""
@@ -122,7 +127,7 @@ def test_fformat(pgconn, fmt):
 
 
 def test_ftype(pgconn):
-    res = pgconn.exec_(b"select 1::int, 1::numeric, 1::text")
+    res = pgconn.exec_(b"select 1::int4, 1::numeric, 1::text")
     assert res.status == pq.ExecStatus.TUPLES_OK, res.error_message
     assert res.ftype(0) == 23
     assert res.ftype(1) == 1700
@@ -142,7 +147,7 @@ def test_fmod(pgconn):
 
 
 def test_fsize(pgconn):
-    res = pgconn.exec_(b"select 1::int, 1::bigint, 1::text")
+    res = pgconn.exec_(b"select 1::int4, 1::bigint, 1::text")
     assert res.status == pq.ExecStatus.TUPLES_OK, res.error_message
     assert res.fsize(0) == 4
     assert res.fsize(1) == 8
@@ -162,7 +167,7 @@ def test_get_value(pgconn):
 
 
 def test_nparams_types(pgconn):
-    res = pgconn.prepare(b"", b"select $1::int, $2::text")
+    res = pgconn.prepare(b"", b"select $1::int4, $2::text")
     assert res.status == pq.ExecStatus.COMMAND_OK, res.error_message
 
     res = pgconn.describe_prepared(b"")
@@ -180,7 +185,7 @@ def test_nparams_types(pgconn):
 def test_command_status(pgconn):
     res = pgconn.exec_(b"select 1")
     assert res.command_status == b"SELECT 1"
-    res = pgconn.exec_(b"set timezone to utf8")
+    res = pgconn.exec_(b"set timezone to utc")
     assert res.command_status == b"SET"
     res.clear()
     assert res.command_status is None
