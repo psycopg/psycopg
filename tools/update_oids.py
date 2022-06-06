@@ -88,7 +88,10 @@ def get_py_types(conn: Connection) -> List[str]:
     lines = []
     for (typname, oid, typarray, regtype, typdelim) in conn.execute(
         """
-select typname, oid, typarray, typname::regtype::text as regtype, typdelim
+select typname, oid, typarray,
+    -- CRDB might have quotes in the regtype representation
+    replace(typname::regtype::text, '''', '') as regtype,
+    typdelim
 from pg_type t
 where
     oid < 10000
