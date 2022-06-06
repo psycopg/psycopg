@@ -61,6 +61,7 @@ async def test_concurrent_execution(dsn):
 
 @pytest.mark.slow
 @pytest.mark.timing
+@pytest.mark.crdb("skip", reason="notify")
 async def test_notifies(aconn, dsn):
     nconn = await psycopg.AsyncConnection.connect(dsn, autocommit=True)
     npid = nconn.pgconn.backend_pid
@@ -111,6 +112,7 @@ async def canceller(aconn, errors):
 
 
 @pytest.mark.slow
+@pytest.mark.crdb("skip", reason="cancel")
 async def test_cancel(aconn):
     async def worker():
         cur = aconn.cursor()
@@ -160,6 +162,7 @@ async def test_cancel_stream(aconn):
 
 
 @pytest.mark.slow
+@pytest.mark.crdb("skip", reason="pg_terminate_backend")
 async def test_identify_closure(dsn):
     async def closer():
         await asyncio.sleep(0.2)
@@ -189,6 +192,7 @@ async def test_identify_closure(dsn):
 @pytest.mark.skipif(
     sys.platform == "win32", reason="don't know how to Ctrl-C on Windows"
 )
+@pytest.mark.crdb("skip", reason="cancel")
 async def test_ctrl_c(dsn):
     script = f"""\
 import signal

@@ -109,6 +109,7 @@ t.join()
 
 @pytest.mark.slow
 @pytest.mark.timing
+@pytest.mark.crdb("skip", reason="notify")
 def test_notifies(conn, dsn):
     nconn = psycopg.connect(dsn, autocommit=True)
     npid = nconn.pgconn.backend_pid
@@ -161,6 +162,7 @@ def canceller(conn, errors):
 
 
 @pytest.mark.slow
+@pytest.mark.crdb("skip", reason="cancel")
 def test_cancel(conn):
     errors: List[Exception] = []
 
@@ -183,6 +185,7 @@ def test_cancel(conn):
     t.join()
 
 
+@pytest.mark.crdb("skip", reason="pg_terminate_backend")
 @pytest.mark.slow
 def test_cancel_stream(conn):
     errors: List[Exception] = []
@@ -236,6 +239,7 @@ def test_identify_closure(dsn):
 @pytest.mark.skipif(
     sys.platform == "win32", reason="don't know how to Ctrl-C on Windows"
 )
+@pytest.mark.crdb("skip", reason="cancel")
 def test_ctrl_c(dsn):
     if sys.platform == "win32":
         sig = int(signal.CTRL_C_EVENT)

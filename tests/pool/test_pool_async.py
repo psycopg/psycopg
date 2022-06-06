@@ -289,6 +289,7 @@ async def test_reset_broken(dsn, caplog):
 
 @pytest.mark.slow
 @pytest.mark.timing
+@pytest.mark.crdb("skip", reason="backend pid")
 async def test_queue(dsn):
     async def worker(n):
         t0 = time()
@@ -347,6 +348,7 @@ async def test_queue_size(dsn):
 
 @pytest.mark.slow
 @pytest.mark.timing
+@pytest.mark.crdb("skip", reason="backend pid")
 async def test_queue_timeout(dsn):
     async def worker(n):
         t0 = time()
@@ -401,6 +403,7 @@ async def test_dead_client(dsn):
 
 @pytest.mark.slow
 @pytest.mark.timing
+@pytest.mark.crdb("skip", reason="backend pid")
 async def test_queue_timeout_override(dsn):
     async def worker(n):
         t0 = time()
@@ -941,6 +944,7 @@ async def test_jitter():
 
 @pytest.mark.slow
 @pytest.mark.timing
+@pytest.mark.crdb("skip", reason="backend pid")
 async def test_max_lifetime(dsn):
     async with pool.AsyncConnectionPool(dsn, min_size=1, max_lifetime=0.2) as p:
         await asyncio.sleep(0.1)

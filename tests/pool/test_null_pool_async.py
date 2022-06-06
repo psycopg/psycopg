@@ -286,6 +286,7 @@ async def test_no_queue_timeout(deaf_port):
 
 @pytest.mark.slow
 @pytest.mark.timing
+@pytest.mark.crdb("skip", reason="backend pid")
 async def test_queue(dsn):
     async def worker(n):
         t0 = time()
@@ -344,6 +345,7 @@ async def test_queue_size(dsn):
 
 @pytest.mark.slow
 @pytest.mark.timing
+@pytest.mark.crdb("skip", reason="backend pid")
 async def test_queue_timeout(dsn):
     async def worker(n):
         t0 = time()
@@ -397,6 +399,7 @@ async def test_dead_client(dsn):
 
 @pytest.mark.slow
 @pytest.mark.timing
+@pytest.mark.crdb("skip", reason="backend pid")
 async def test_queue_timeout_override(dsn):
     async def worker(n):
         t0 = time()
@@ -736,6 +739,7 @@ async def test_bad_resize(dsn, min_size, max_size):
 
 @pytest.mark.slow
 @pytest.mark.timing
+@pytest.mark.crdb("skip", reason="backend pid")
 async def test_max_lifetime(dsn):
     pids: List[int] = []
 
