@@ -101,6 +101,7 @@ _crdb_reasons = {
     "hstore": 41284,
     "infinity date": 41564,
     "interval style": 35807,
+    "json array": 23468,
     "large objects": 243,
     "negative interval": 81577,
     "nested array": 32552,

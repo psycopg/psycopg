@@ -47,6 +47,7 @@ def test_dump(conn, val, wrapper, fmt_in):
     assert cur.fetchone()[0] is True
 
 
+@pytest.mark.crdb("skip", reason="json array")
 @pytest.mark.parametrize("val", samples)
 @pytest.mark.parametrize("wrapper", ["Json", "Jsonb"])
 @pytest.mark.parametrize("fmt_in", PyFormat)
@@ -70,6 +71,7 @@ def test_load(conn, val, jtype, fmt_out):
     assert cur.fetchone()[0] == json.loads(val)
 
 
+@pytest.mark.crdb("skip", reason="json array")
 @pytest.mark.parametrize("val", samples)
 @pytest.mark.parametrize("jtype", ["json", "jsonb"])
 @pytest.mark.parametrize("fmt_out", pq.Format)

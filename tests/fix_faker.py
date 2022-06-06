@@ -15,6 +15,7 @@ from psycopg import sql
 from psycopg.adapt import PyFormat
 from psycopg._compat import Deque
 from psycopg.types.range import Range
+from psycopg.types.json import Json, Jsonb
 from psycopg.types.numeric import Int4, Int8
 from psycopg.types.multirange import Multirange
 
@@ -483,6 +484,11 @@ class Faker:
             if scls is float:
                 # TODO: float lists are currently adapted as decimal.
                 # There may be rounding errors or problems with inf.
+                continue
+
+            # CRDB doesn't support arrays of json
+            # https://github.com/cockroachdb/cockroach/issues/23468
+            if self.conn.info.vendor == "CockroachDB" and scls in (Json, Jsonb):
                 continue
 
             schema = self.make_schema(scls)
