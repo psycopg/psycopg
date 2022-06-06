@@ -399,7 +399,15 @@ def test_dump_numeric_binary(conn, expr):
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize("fmt_in", PyFormat)
+@pytest.mark.parametrize(
+    "fmt_in",
+    [
+        f
+        if f != PyFormat.BINARY
+        else pytest.param(f, marks=pytest.mark.crdb("skip", reason="binary decimal"))
+        for f in PyFormat
+    ],
+)
 def test_dump_numeric_exhaustive(conn, fmt_in):
     cur = conn.cursor()
 
@@ -425,7 +433,7 @@ def test_dump_numeric_exhaustive(conn, fmt_in):
             expr = f(i)
             val = Decimal(expr)
             cur.execute(f"select %{fmt_in.value}::text, %s::decimal::text", [val, expr])
-            want, got = cur.fetchone()
+            got, want = cur.fetchone()
             assert got == want
 
 
