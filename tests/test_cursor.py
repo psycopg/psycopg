@@ -840,7 +840,7 @@ def test_leak(dsn, faker, fmt, fmt_out, fetch, row_factory):
     row_factory = getattr(rows, row_factory)
 
     def work():
-        with psycopg.connect(dsn) as conn:
+        with psycopg.connect(dsn) as conn, conn.transaction(force_rollback=True):
             with conn.cursor(binary=fmt_out, row_factory=row_factory) as cur:
                 cur.execute(faker.drop_stmt)
                 cur.execute(faker.create_stmt)

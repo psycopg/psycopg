@@ -710,7 +710,9 @@ async def test_leak(dsn, faker, fmt, fmt_out, fetch, row_factory):
     row_factory = getattr(rows, row_factory)
 
     async def work():
-        async with await psycopg.AsyncConnection.connect(dsn) as conn:
+        async with await psycopg.AsyncConnection.connect(dsn) as conn, conn.transaction(
+            force_rollback=True
+        ):
             async with conn.cursor(binary=fmt_out, row_factory=row_factory) as cur:
                 await cur.execute(faker.drop_stmt)
                 await cur.execute(faker.create_stmt)
