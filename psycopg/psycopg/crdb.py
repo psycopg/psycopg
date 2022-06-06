@@ -206,6 +206,7 @@ def register_postgres_adapters(context: AdaptContext) -> None:
 
 
 def register_crdb_adapters(context: AdaptContext) -> None:
+    from . import dbapi20
     from .types import array
 
     register_postgres_adapters(context)
@@ -216,6 +217,8 @@ def register_crdb_adapters(context: AdaptContext) -> None:
     register_crdb_json_adapters(context)
     register_crdb_net_adapters(context)
     register_crdb_none_adapters(context)
+
+    dbapi20.register_dbapi20_adapters(adapters)
 
     array.register_all_arrays(adapters)
 
