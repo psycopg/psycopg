@@ -115,30 +115,32 @@ def test_connection_warn_close(dsn, recwarn):
     assert not recwarn, [str(w.message) for w in recwarn.list]
 
 
-def test_context_commit(conn, dsn):
+@pytest.fixture
+def testctx(svcconn):
+    svcconn.execute("create table if not exists testctx (id int primary key)")
+    svcconn.execute("delete from testctx")
+    return None
+
+
+def test_context_commit(testctx, conn, dsn):
     with conn:
         with conn.cursor() as cur:
-            cur.execute("drop table if exists textctx")
-            cur.execute("create table textctx ()")
+            cur.execute("insert into testctx values (42)")
 
     assert conn.closed
     assert not conn.broken
 
     with psycopg.connect(dsn) as conn:
         with conn.cursor() as cur:
-            cur.execute("select * from textctx")
-            assert cur.fetchall() == []
+            cur.execute("select * from testctx")
+            assert cur.fetchall() == [(42,)]
 
 
-def test_context_rollback(conn, dsn):
-    with conn.cursor() as cur:
-        cur.execute("drop table if exists textctx")
-    conn.commit()
-
+def test_context_rollback(testctx, conn, dsn):
     with pytest.raises(ZeroDivisionError):
         with conn:
             with conn.cursor() as cur:
-                cur.execute("create table textctx ()")
+                cur.execute("insert into testctx values (42)")
                 1 / 0
 
     assert conn.closed
@@ -146,8 +148,8 @@ def test_context_rollback(conn, dsn):
 
     with psycopg.connect(dsn) as conn:
         with conn.cursor() as cur:
-            with pytest.raises(e.UndefinedTable):
-                cur.execute("select * from textctx")
+            cur.execute("select * from testctx")
+            assert cur.fetchall() == []
 
 
 def test_context_close(conn):
