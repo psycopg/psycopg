@@ -212,6 +212,7 @@ class TestConnectionInfo:
         assert tz and isinstance(tz, str)
         assert tz == conn.execute("show timezone").fetchone()[0]
 
+    @pytest.mark.crdb("skip")
     def test_server_version(self, conn):
         assert conn.info.server_version == conn.pgconn.server_version
 

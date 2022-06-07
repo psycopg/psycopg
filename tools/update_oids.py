@@ -75,7 +75,7 @@ def get_version_comment(conn: Connection) -> List[str]:
         version = f"{num // 10000}.{num % 100}"
     elif conn.info.vendor == "CockroachDB":
         assert isinstance(conn, CrdbConnection)
-        num = conn.info.crdb_version
+        num = conn.info.server_version
         version = f"{num // 10000}.{num % 10000 // 100}.{num % 100}"
     else:
         raise NotImplementedError(f"unexpected vendor: {conn.info.vendor}")

@@ -157,15 +157,11 @@ class CrdbConnectionInfo(ConnectionInfo):
         return "CockroachDB"
 
     @property
-    def crdb_version(self) -> int:
+    def server_version(self) -> int:
         """
         Return the CockroachDB server version connected.
 
-        Return None if the server is not CockroachDB, else return a number in
-        the PostgreSQL format (e.g. 21.2.10 -> 200210)
-
-        Assume all the connections are on the same db: return a cached result on
-        following calls.
+        Return a number in the PostgreSQL format (e.g. 21.2.10 -> 200210)
         """
         sver = self.parameter_status("crdb_version")
         if not sver:

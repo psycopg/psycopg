@@ -7,8 +7,8 @@ def test_vendor(conn):
     assert conn.info.vendor == "CockroachDB"
 
 
-def test_crdb_version(conn):
-    assert conn.info.crdb_version > 200000
+def test_server_version(conn):
+    assert conn.info.server_version > 200000
 
 
 def test_backend_pid(conn):
