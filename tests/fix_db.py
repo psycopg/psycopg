@@ -8,7 +8,7 @@ import psycopg
 from psycopg import pq
 from psycopg import sql
 
-from .utils import check_libpq_version, check_server_version
+from .utils import check_libpq_version, check_postgres_version
 
 # Set by warm_up_database() the first time the dsn fixture is used
 pg_version: int
@@ -276,7 +276,7 @@ def check_connection_version(node):
     for mark in node.iter_markers():
         if mark.name == "pg":
             assert len(mark.args) == 1
-            msg = check_server_version(pg_version, mark.args[0])
+            msg = check_postgres_version(pg_version, mark.args[0])
             if msg:
                 pytest.skip(msg)
 

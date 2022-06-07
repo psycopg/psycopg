@@ -1,6 +1,8 @@
+from typing import Optional
+
 import pytest
 
-from .utils import check_version
+from .utils import VersionCheck
 from psycopg.crdb import CrdbConnection
 
 
@@ -8,8 +10,8 @@ def pytest_configure(config):
     # register libpq marker
     config.addinivalue_line(
         "markers",
-        "crdb(version_expr, reason=detail): run the test only with matching CockroachDB"
-        " (e.g. '>= 21.2.10', '< 22.1', 'skip')",
+        "crdb(version_expr, reason=detail): run/skip the test with matching CockroachDB"
+        " (e.g. '>= 21.2.10', '< 22.1', 'skip < 22')",
     )
 
 
@@ -19,27 +21,27 @@ def check_crdb_version(got, mark):
 
     This function is called on the tests marked with something like::
 
-        @pytest.mark.crdb(">= 21.1")
-        @pytest.mark.crdb("only")
-        @pytest.mark.crdb("skip")
+        @pytest.mark.crdb("only")           # run on CRDB only, any version
+        @pytest.mark.crdb                   # same as above
+        @pytest.mark.crdb("only >= 21.1")   # run on CRDB only >= 21.1 (not on PG)
+        @pytest.mark.crdb(">= 21.1")        # same as above
+        @pytest.mark.crdb("skip")           # don't run on CRDB, any version
+        @pytest.mark.crdb("skip < 22")      # don't run on CRDB < 22 (run on PG)
 
     and skips the test if the server version doesn't match what expected.
     """
     assert len(mark.args) <= 1
     assert not (set(mark.kwargs) - {"reason"})
-    want = mark.args[0] if mark.args else "only"
-    msg = None
+    pred = VersionCheck.parse(mark.args[0] if mark.args else "only")
+    pred.whose = "CockroachDB"
 
-    if got is None:
-        if want == "only":
-            msg = "skipping test: CockroachDB only"
-    else:
-        if want == "only":
-            pass
-        elif want == "skip":
-            msg = crdb_skip_message(mark.kwargs.get("reason"))
-        else:
-            msg = check_version(got, want, "CockroachDB")
+    msg = pred.get_skip_message(got)
+    if not msg:
+        return None
+
+    reason = crdb_skip_message(mark.kwargs.get("reason"))
+    if reason:
+        msg = f"{msg}: {reason}"
 
     return msg
 
@@ -49,10 +51,10 @@ def check_crdb_version(got, mark):
 is_crdb = CrdbConnection.is_crdb
 
 
-def crdb_skip_message(reason):
-    msg = "skipping test on CockroachDB"
+def crdb_skip_message(reason: Optional[str]) -> str:
+    msg = ""
     if reason:
-        msg = f"{msg}: {reason}"
+        msg = reason
         if reason in _crdb_reasons:
             url = (
                 "https://github.com/cockroachdb/cockroach/"
