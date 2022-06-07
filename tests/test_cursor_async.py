@@ -562,6 +562,23 @@ async def test_stream_badquery(aconn, query):
             pass
 
 
+async def test_stream_error_tx(aconn):
+    cur = aconn.cursor()
+    with pytest.raises(psycopg.ProgrammingError):
+        async for rec in cur.stream("wat"):
+            pass
+    assert aconn.info.transaction_status == aconn.TransactionStatus.INERROR
+
+
+async def test_stream_error_notx(aconn):
+    await aconn.set_autocommit(True)
+    cur = aconn.cursor()
+    with pytest.raises(psycopg.ProgrammingError):
+        async for rec in cur.stream("wat"):
+            pass
+    assert aconn.info.transaction_status == aconn.TransactionStatus.IDLE
+
+
 async def test_stream_binary_cursor(aconn):
     cur = aconn.cursor(binary=True)
     recs = []
