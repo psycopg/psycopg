@@ -329,6 +329,7 @@ def test_no_result(conn):
         assert cur.fetchall() == []
 
 
+@pytest.mark.crdb_skip("scroll cursor")
 def test_row_factory(conn):
     n = 0
 
@@ -414,6 +415,7 @@ def test_cant_scroll_by_default(conn):
     cur.close()
 
 
+@pytest.mark.crdb_skip("scroll cursor")
 def test_scroll(conn):
     cur = conn.cursor("tmp", scrollable=True)
     cur.execute("select generate_series(0,9)")
@@ -431,6 +433,7 @@ def test_scroll(conn):
     cur.close()
 
 
+@pytest.mark.crdb_skip("scroll cursor")
 def test_scrollable(conn):
     curs = conn.cursor("foo", scrollable=True)
     assert curs.scrollable is True
@@ -464,6 +467,7 @@ def test_no_hold(conn, kwargs):
             curs.fetchone()
 
 
+@pytest.mark.crdb_skip("cursor with hold")
 def test_hold(conn):
     with conn.cursor("foo", withhold=True) as curs:
         assert curs.withhold is True
