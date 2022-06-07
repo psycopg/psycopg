@@ -39,9 +39,9 @@ def test_init_factory(conn):
     assert cur.fetchone() == {"a": 1}
 
 
-def test_from_cursor_factory(dsn):
-    with psycopg.connect(dsn, cursor_factory=psycopg.ClientCursor) as aconn:
-        cur = aconn.cursor()
+def test_from_cursor_factory(conn_cls, dsn):
+    with conn_cls.connect(dsn, cursor_factory=psycopg.ClientCursor) as conn:
+        cur = conn.cursor()
         assert type(cur) is psycopg.ClientCursor
 
         cur.execute("select %s", (1,))
@@ -755,13 +755,13 @@ def test_str(conn):
 @pytest.mark.slow
 @pytest.mark.parametrize("fetch", ["one", "many", "all", "iter"])
 @pytest.mark.parametrize("row_factory", ["tuple_row", "dict_row", "namedtuple_row"])
-def test_leak(dsn, faker, fetch, row_factory):
+def test_leak(conn_cls, dsn, faker, fetch, row_factory):
     faker.choose_schema(ncols=5)
     faker.make_records(10)
     row_factory = getattr(rows, row_factory)
 
     def work():
-        with psycopg.connect(dsn) as conn, conn.transaction(force_rollback=True):
+        with conn_cls.connect(dsn) as conn, conn.transaction(force_rollback=True):
             with psycopg.ClientCursor(conn, row_factory=row_factory) as cur:
                 cur.execute(faker.drop_stmt)
                 cur.execute(faker.create_stmt)

@@ -703,14 +703,14 @@ async def test_str(aconn):
 @pytest.mark.parametrize("fmt_out", pq.Format)
 @pytest.mark.parametrize("fetch", ["one", "many", "all", "iter"])
 @pytest.mark.parametrize("row_factory", ["tuple_row", "dict_row", "namedtuple_row"])
-async def test_leak(dsn, faker, fmt, fmt_out, fetch, row_factory):
+async def test_leak(aconn_cls, dsn, faker, fmt, fmt_out, fetch, row_factory):
     faker.format = fmt
     faker.choose_schema(ncols=5)
     faker.make_records(10)
     row_factory = getattr(rows, row_factory)
 
     async def work():
-        async with await psycopg.AsyncConnection.connect(dsn) as conn, conn.transaction(
+        async with await aconn_cls.connect(dsn) as conn, conn.transaction(
             force_rollback=True
         ):
             async with conn.cursor(binary=fmt_out, row_factory=row_factory) as cur:

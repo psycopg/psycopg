@@ -270,18 +270,18 @@ def test_unknown_sqlstate(conn):
     assert pexc.sqlstate == code
 
 
-def test_pgconn_error():
+def test_pgconn_error(conn_cls):
     with pytest.raises(psycopg.OperationalError) as excinfo:
-        psycopg.connect("dbname=nosuchdb")
+        conn_cls.connect("dbname=nosuchdb")
 
     exc = excinfo.value
     assert exc.pgconn
     assert exc.pgconn.db == b"nosuchdb"
 
 
-def test_pgconn_error_pickle():
+def test_pgconn_error_pickle(conn_cls):
     with pytest.raises(psycopg.OperationalError) as excinfo:
-        psycopg.connect("dbname=nosuchdb")
+        conn_cls.connect("dbname=nosuchdb")
 
     exc = pickle.loads(pickle.dumps(excinfo.value))
     assert exc.pgconn is None

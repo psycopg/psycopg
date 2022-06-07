@@ -40,8 +40,8 @@ async def test_init_factory(aconn):
     assert (await cur.fetchone()) == {"a": 1}
 
 
-async def test_from_cursor_factory(dsn):
-    async with await psycopg.AsyncConnection.connect(
+async def test_from_cursor_factory(aconn_cls, dsn):
+    async with await aconn_cls.connect(
         dsn, cursor_factory=psycopg.AsyncClientCursor
     ) as aconn:
         cur = aconn.cursor()
@@ -625,13 +625,13 @@ async def test_str(aconn):
 @pytest.mark.slow
 @pytest.mark.parametrize("fetch", ["one", "many", "all", "iter"])
 @pytest.mark.parametrize("row_factory", ["tuple_row", "dict_row", "namedtuple_row"])
-async def test_leak(dsn, faker, fetch, row_factory):
+async def test_leak(aconn_cls, dsn, faker, fetch, row_factory):
     faker.choose_schema(ncols=5)
     faker.make_records(10)
     row_factory = getattr(rows, row_factory)
 
     async def work():
-        async with await psycopg.AsyncConnection.connect(dsn) as conn, conn.transaction(
+        async with await aconn_cls.connect(dsn) as conn, conn.transaction(
             force_rollback=True
         ):
             async with psycopg.AsyncClientCursor(conn, row_factory=row_factory) as cur:

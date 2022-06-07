@@ -61,7 +61,7 @@ class TestTPC:
         assert tpc.count_xacts() == 0
         assert tpc.count_test_records() == 1
 
-    async def test_tpc_commit_recovered(self, aconn, dsn, tpc):
+    async def test_tpc_commit_recovered(self, aconn_cls, aconn, dsn, tpc):
         xid = aconn.xid(1, "gtrid", "bqual")
         assert aconn.info.transaction_status == TransactionStatus.IDLE
 
@@ -78,7 +78,7 @@ class TestTPC:
         assert tpc.count_xacts() == 1
         assert tpc.count_test_records() == 0
 
-        async with await psycopg.AsyncConnection.connect(dsn) as aconn:
+        async with await aconn_cls.connect(dsn) as aconn:
             xid = aconn.xid(1, "gtrid", "bqual")
             await aconn.tpc_commit(xid)
             assert aconn.info.transaction_status == TransactionStatus.IDLE
@@ -125,7 +125,7 @@ class TestTPC:
         assert tpc.count_xacts() == 0
         assert tpc.count_test_records() == 0
 
-    async def test_tpc_rollback_recovered(self, aconn, dsn, tpc):
+    async def test_tpc_rollback_recovered(self, aconn_cls, aconn, dsn, tpc):
         xid = aconn.xid(1, "gtrid", "bqual")
         assert aconn.info.transaction_status == TransactionStatus.IDLE
 
@@ -142,7 +142,7 @@ class TestTPC:
         assert tpc.count_xacts() == 1
         assert tpc.count_test_records() == 0
 
-        async with await psycopg.AsyncConnection.connect(dsn) as aconn:
+        async with await aconn_cls.connect(dsn) as aconn:
             xid = aconn.xid(1, "gtrid", "bqual")
             await aconn.tpc_rollback(xid)
             assert aconn.info.transaction_status == TransactionStatus.IDLE
@@ -211,13 +211,13 @@ class TestTPC:
             (0x7FFFFFFF, "x" * 64, "y" * 64),
         ],
     )
-    async def test_xid_roundtrip(self, aconn, dsn, tpc, fid, gtrid, bqual):
+    async def test_xid_roundtrip(self, aconn_cls, aconn, dsn, tpc, fid, gtrid, bqual):
         xid = aconn.xid(fid, gtrid, bqual)
         await aconn.tpc_begin(xid)
         await aconn.tpc_prepare()
         await aconn.close()
 
-        async with await psycopg.AsyncConnection.connect(dsn) as aconn:
+        async with await aconn_cls.connect(dsn) as aconn:
             xids = [
                 x for x in await aconn.tpc_recover() if x.database == aconn.info.dbname
             ]
@@ -237,12 +237,12 @@ class TestTPC:
             "x" * 199,  # PostgreSQL's limit in transaction id length
         ],
     )
-    async def test_unparsed_roundtrip(self, aconn, dsn, tpc, tid):
+    async def test_unparsed_roundtrip(self, aconn_cls, aconn, dsn, tpc, tid):
         await aconn.tpc_begin(tid)
         await aconn.tpc_prepare()
         await aconn.close()
 
-        async with await psycopg.AsyncConnection.connect(dsn) as aconn:
+        async with await aconn_cls.connect(dsn) as aconn:
             xids = [
                 x for x in await aconn.tpc_recover() if x.database == aconn.info.dbname
             ]
@@ -254,13 +254,13 @@ class TestTPC:
         assert xid.gtrid == tid
         assert xid.bqual is None
 
-    async def test_xid_unicode(self, aconn, dsn, tpc):
+    async def test_xid_unicode(self, aconn_cls, aconn, dsn, tpc):
         x1 = aconn.xid(10, "uni", "code")
         await aconn.tpc_begin(x1)
         await aconn.tpc_prepare()
         await aconn.close()
 
-        async with await psycopg.AsyncConnection.connect(dsn) as aconn:
+        async with await aconn_cls.connect(dsn) as aconn:
             xid = [
                 x for x in await aconn.tpc_recover() if x.database == aconn.info.dbname
             ][0]
@@ -269,7 +269,7 @@ class TestTPC:
         assert "uni" == xid.gtrid
         assert "code" == xid.bqual
 
-    async def test_xid_unicode_unparsed(self, aconn, dsn, tpc):
+    async def test_xid_unicode_unparsed(self, aconn_cls, aconn, dsn, tpc):
         # We don't expect people shooting snowmen as transaction ids,
         # so if something explodes in an encode error I don't mind.
         # Let's just check unicode is accepted as type.
@@ -280,7 +280,7 @@ class TestTPC:
         await aconn.tpc_prepare()
         await aconn.close()
 
-        async with await psycopg.AsyncConnection.connect(dsn) as aconn:
+        async with await aconn_cls.connect(dsn) as aconn:
             xid = [
                 x for x in await aconn.tpc_recover() if x.database == aconn.info.dbname
             ][0]
@@ -295,13 +295,13 @@ class TestTPC:
         with pytest.raises(psycopg.ProgrammingError):
             aconn.cancel()
 
-    async def test_tpc_recover_non_dbapi_connection(self, aconn, dsn, tpc):
+    async def test_tpc_recover_non_dbapi_connection(self, aconn_cls, aconn, dsn, tpc):
         aconn.row_factory = psycopg.rows.dict_row
         await aconn.tpc_begin("dict-connection")
         await aconn.tpc_prepare()
         await aconn.close()
 
-        async with await psycopg.AsyncConnection.connect(dsn) as aconn:
+        async with await aconn_cls.connect(dsn) as aconn:
             xids = await aconn.tpc_recover()
             xid = [x for x in xids if x.database == aconn.info.dbname][0]
 

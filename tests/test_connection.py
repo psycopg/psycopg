@@ -6,7 +6,7 @@ from typing import Any, List
 from dataclasses import dataclass
 
 import psycopg
-from psycopg import Connection, Notify, errors as e
+from psycopg import Notify, errors as e
 from psycopg.rows import tuple_row
 from psycopg.conninfo import conninfo_to_dict, make_conninfo
 
@@ -15,34 +15,34 @@ from .test_cursor import my_row_factory
 from .test_adapt import make_bin_dumper, make_dumper
 
 
-def test_connect(dsn):
-    conn = Connection.connect(dsn)
+def test_connect(conn_cls, dsn):
+    conn = conn_cls.connect(dsn)
     assert not conn.closed
     assert conn.pgconn.status == conn.ConnStatus.OK
     conn.close()
 
 
-def test_connect_str_subclass(dsn):
+def test_connect_str_subclass(conn_cls, dsn):
     class MyString(str):
         pass
 
-    conn = Connection.connect(MyString(dsn))
+    conn = conn_cls.connect(MyString(dsn))
     assert not conn.closed
     assert conn.pgconn.status == conn.ConnStatus.OK
     conn.close()
 
 
-def test_connect_bad():
+def test_connect_bad(conn_cls):
     with pytest.raises(psycopg.OperationalError):
-        Connection.connect("dbname=nosuchdb")
+        conn_cls.connect("dbname=nosuchdb")
 
 
 @pytest.mark.slow
 @pytest.mark.timing
-def test_connect_timeout(deaf_port):
+def test_connect_timeout(conn_cls, deaf_port):
     t0 = time.time()
     with pytest.raises(psycopg.OperationalError, match="timeout expired"):
-        Connection.connect(host="localhost", port=deaf_port, connect_timeout=1)
+        conn_cls.connect(host="localhost", port=deaf_port, connect_timeout=1)
     elapsed = time.time() - t0
     assert elapsed == pytest.approx(1.0, abs=0.05)
 
@@ -86,22 +86,22 @@ def test_cursor_closed(conn):
         conn.cursor()
 
 
-def test_connection_warn_close(dsn, recwarn):
-    conn = Connection.connect(dsn)
+def test_connection_warn_close(conn_cls, dsn, recwarn):
+    conn = conn_cls.connect(dsn)
     conn.close()
     del conn
     assert not recwarn, [str(w.message) for w in recwarn.list]
 
-    conn = Connection.connect(dsn)
+    conn = conn_cls.connect(dsn)
     del conn
     assert "IDLE" in str(recwarn.pop(ResourceWarning).message)
 
-    conn = Connection.connect(dsn)
+    conn = conn_cls.connect(dsn)
     conn.execute("select 1")
     del conn
     assert "INTRANS" in str(recwarn.pop(ResourceWarning).message)
 
-    conn = Connection.connect(dsn)
+    conn = conn_cls.connect(dsn)
     try:
         conn.execute("select wat")
     except Exception:
@@ -109,7 +109,7 @@ def test_connection_warn_close(dsn, recwarn):
     del conn
     assert "INERROR" in str(recwarn.pop(ResourceWarning).message)
 
-    with Connection.connect(dsn) as conn:
+    with conn_cls.connect(dsn) as conn:
         pass
     del conn
     assert not recwarn, [str(w.message) for w in recwarn.list]
@@ -122,7 +122,7 @@ def testctx(svcconn):
     return None
 
 
-def test_context_commit(testctx, conn, dsn):
+def test_context_commit(conn_cls, testctx, conn, dsn):
     with conn:
         with conn.cursor() as cur:
             cur.execute("insert into testctx values (42)")
@@ -130,13 +130,13 @@ def test_context_commit(testctx, conn, dsn):
     assert conn.closed
     assert not conn.broken
 
-    with psycopg.connect(dsn) as conn:
+    with conn_cls.connect(dsn) as conn:
         with conn.cursor() as cur:
             cur.execute("select * from testctx")
             assert cur.fetchall() == [(42,)]
 
 
-def test_context_rollback(testctx, conn, dsn):
+def test_context_rollback(conn_cls, testctx, conn, dsn):
     with pytest.raises(ZeroDivisionError):
         with conn:
             with conn.cursor() as cur:
@@ -146,7 +146,7 @@ def test_context_rollback(testctx, conn, dsn):
     assert conn.closed
     assert not conn.broken
 
-    with psycopg.connect(dsn) as conn:
+    with conn_cls.connect(dsn) as conn:
         with conn.cursor() as cur:
             cur.execute("select * from testctx")
             assert cur.fetchall() == []
@@ -159,11 +159,11 @@ def test_context_close(conn):
 
 
 @pytest.mark.crdb("skip", reason="pg_terminate_backend")
-def test_context_inerror_rollback_no_clobber(conn, dsn, caplog):
+def test_context_inerror_rollback_no_clobber(conn_cls, conn, dsn, caplog):
     caplog.set_level(logging.WARNING, logger="psycopg")
 
     with pytest.raises(ZeroDivisionError):
-        with psycopg.connect(dsn) as conn2:
+        with conn_cls.connect(dsn) as conn2:
             conn2.execute("select 1")
             conn.execute(
                 "select pg_terminate_backend(%s::int)",
@@ -178,11 +178,11 @@ def test_context_inerror_rollback_no_clobber(conn, dsn, caplog):
 
 
 @pytest.mark.crdb("skip", reason="copy")
-def test_context_active_rollback_no_clobber(dsn, caplog):
+def test_context_active_rollback_no_clobber(conn_cls, dsn, caplog):
     caplog.set_level(logging.WARNING, logger="psycopg")
 
     with pytest.raises(ZeroDivisionError):
-        with psycopg.connect(dsn) as conn:
+        with conn_cls.connect(dsn) as conn:
             conn.pgconn.exec_(b"copy (select generate_series(1, 10)) to stdout")
             assert not conn.pgconn.error_message
             status = conn.info.transaction_status
@@ -196,8 +196,8 @@ def test_context_active_rollback_no_clobber(dsn, caplog):
 
 
 @pytest.mark.slow
-def test_weakref(dsn):
-    conn = psycopg.connect(dsn)
+def test_weakref(conn_cls, dsn):
+    conn = conn_cls.connect(dsn)
     w = weakref.ref(conn)
     conn.close()
     del conn
@@ -310,8 +310,8 @@ def test_autocommit(conn):
     assert conn.autocommit is True
 
 
-def test_autocommit_connect(dsn):
-    conn = Connection.connect(dsn, autocommit=True)
+def test_autocommit_connect(conn_cls, dsn):
+    conn = conn_cls.connect(dsn, autocommit=True)
     assert conn.autocommit
     conn.close()
 
@@ -358,7 +358,7 @@ def test_autocommit_unknown(conn):
         (("host=foo",), {"user": None}, "host=foo"),
     ],
 )
-def test_connect_args(monkeypatch, pgconn, args, kwargs, want):
+def test_connect_args(conn_cls, monkeypatch, pgconn, args, kwargs, want):
     the_conninfo: str
 
     def fake_connect(conninfo):
@@ -368,7 +368,7 @@ def test_connect_args(monkeypatch, pgconn, args, kwargs, want):
         yield
 
     monkeypatch.setattr(psycopg.connection, "connect", fake_connect)
-    conn = psycopg.Connection.connect(*args, **kwargs)
+    conn = conn_cls.connect(*args, **kwargs)
     assert conninfo_to_dict(the_conninfo) == conninfo_to_dict(want)
     conn.close()
 
@@ -381,14 +381,14 @@ def test_connect_args(monkeypatch, pgconn, args, kwargs, want):
         ((), {"nosuchparam": 42}, psycopg.ProgrammingError),
     ],
 )
-def test_connect_badargs(monkeypatch, pgconn, args, kwargs, exctype):
+def test_connect_badargs(conn_cls, monkeypatch, pgconn, args, kwargs, exctype):
     def fake_connect(conninfo):
         return pgconn
         yield
 
     monkeypatch.setattr(psycopg.connection, "connect", fake_connect)
     with pytest.raises(exctype):
-        psycopg.Connection.connect(*args, **kwargs)
+        conn_cls.connect(*args, **kwargs)
 
 
 @pytest.mark.crdb("skip", reason="pg_terminate_backend")
@@ -502,13 +502,13 @@ def test_execute_binary(conn):
     assert cur.pgresult.fformat(0) == 1
 
 
-def test_row_factory(dsn):
-    defaultconn = Connection.connect(dsn)
-    assert defaultconn.row_factory is tuple_row  # type: ignore[comparison-overlap]
+def test_row_factory(conn_cls, dsn):
+    defaultconn = conn_cls.connect(dsn)
+    assert defaultconn.row_factory is tuple_row
     defaultconn.close()
 
-    conn = Connection.connect(dsn, row_factory=my_row_factory)
-    assert conn.row_factory is my_row_factory  # type: ignore[comparison-overlap]
+    conn = conn_cls.connect(dsn, row_factory=my_row_factory)
+    assert conn.row_factory is my_row_factory
 
     cur = conn.execute("select 'a' as ve")
     assert cur.fetchone() == ["Ave"]
@@ -522,10 +522,10 @@ def test_row_factory(dsn):
         assert cur2.fetchall() == [(1, 1, 2)]
 
     # TODO: maybe fix something to get rid of 'type: ignore' below.
-    conn.row_factory = tuple_row  # type: ignore[assignment]
+    conn.row_factory = tuple_row
     cur3 = conn.execute("select 'vale'")
     r = cur3.fetchone()
-    assert r and r == ("vale",)  # type: ignore[comparison-overlap]
+    assert r and r == ("vale",)
     conn.close()
 
 
@@ -556,11 +556,11 @@ def test_cursor_factory(conn):
         assert isinstance(cur, MyCursor)
 
 
-def test_cursor_factory_connect(dsn):
+def test_cursor_factory_connect(conn_cls, dsn):
     class MyCursor(psycopg.Cursor[psycopg.rows.Row]):
         pass
 
-    with psycopg.connect(dsn, cursor_factory=MyCursor) as conn:
+    with conn_cls.connect(dsn, cursor_factory=MyCursor) as conn:
         assert conn.cursor_factory is MyCursor
         cur = conn.cursor()
         assert type(cur) is MyCursor
@@ -746,37 +746,37 @@ conninfo_params_timeout = [
 
 
 @pytest.mark.parametrize("dsn, kwargs, exp", conninfo_params_timeout)
-def test_get_connection_params(dsn, kwargs, exp):
-    params = Connection._get_connection_params(dsn, **kwargs)
+def test_get_connection_params(conn_cls, dsn, kwargs, exp):
+    params = conn_cls._get_connection_params(dsn, **kwargs)
     conninfo = make_conninfo(**params)
     assert conninfo_to_dict(conninfo) == exp[0]
     assert params.get("connect_timeout") == exp[1]
 
 
-def test_connect_context(dsn):
+def test_connect_context(conn_cls, dsn):
     ctx = psycopg.adapt.AdaptersMap(psycopg.adapters)
     ctx.register_dumper(str, make_bin_dumper("b"))
     ctx.register_dumper(str, make_dumper("t"))
 
-    conn = psycopg.connect(dsn, context=ctx)
+    conn = conn_cls.connect(dsn, context=ctx)
 
     cur = conn.execute("select %s", ["hello"])
-    assert cur.fetchone()[0] == "hellot"  # type: ignore[index]
+    assert cur.fetchone()[0] == "hellot"
     cur = conn.execute("select %b", ["hello"])
-    assert cur.fetchone()[0] == "hellob"  # type: ignore[index]
+    assert cur.fetchone()[0] == "hellob"
     conn.close()
 
 
-def test_connect_context_copy(dsn, conn):
+def test_connect_context_copy(conn_cls, dsn, conn):
     conn.adapters.register_dumper(str, make_bin_dumper("b"))
     conn.adapters.register_dumper(str, make_dumper("t"))
 
-    conn2 = psycopg.connect(dsn, context=conn)
+    conn2 = conn_cls.connect(dsn, context=conn)
 
     cur = conn2.execute("select %s", ["hello"])
-    assert cur.fetchone()[0] == "hellot"  # type: ignore[index]
+    assert cur.fetchone()[0] == "hellot"
     cur = conn2.execute("select %b", ["hello"])
-    assert cur.fetchone()[0] == "hellob"  # type: ignore[index]
+    assert cur.fetchone()[0] == "hellob"
     conn2.close()
 
 

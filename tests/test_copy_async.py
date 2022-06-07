@@ -625,13 +625,13 @@ async def test_worker_error_propagated(aconn, monkeypatch):
     [(Format.TEXT, True), (Format.TEXT, False), (Format.BINARY, True)],
 )
 @pytest.mark.parametrize("method", ["read", "iter", "row", "rows"])
-async def test_copy_to_leaks(dsn, faker, fmt, set_types, method):
+async def test_copy_to_leaks(aconn_cls, dsn, faker, fmt, set_types, method):
     faker.format = PyFormat.from_pq(fmt)
     faker.choose_schema(ncols=20)
     faker.make_records(20)
 
     async def work():
-        async with await psycopg.AsyncConnection.connect(dsn) as conn:
+        async with await aconn_cls.connect(dsn) as conn:
             async with conn.cursor(binary=fmt) as cur:
                 await cur.execute(faker.drop_stmt)
                 await cur.execute(faker.create_stmt)
@@ -659,7 +659,7 @@ async def test_copy_to_leaks(dsn, faker, fmt, set_types, method):
                         await alist(copy)
                     elif method == "row":
                         while True:
-                            tmp = await copy.read_row()  # type: ignore[assignment]
+                            tmp = await copy.read_row()
                             if tmp is None:
                                 break
                     elif method == "rows":
@@ -680,13 +680,13 @@ async def test_copy_to_leaks(dsn, faker, fmt, set_types, method):
     "fmt, set_types",
     [(Format.TEXT, True), (Format.TEXT, False), (Format.BINARY, True)],
 )
-async def test_copy_from_leaks(dsn, faker, fmt, set_types):
+async def test_copy_from_leaks(aconn_cls, dsn, faker, fmt, set_types):
     faker.format = PyFormat.from_pq(fmt)
     faker.choose_schema(ncols=20)
     faker.make_records(20)
 
     async def work():
-        async with await psycopg.AsyncConnection.connect(dsn) as conn:
+        async with await aconn_cls.connect(dsn) as conn:
             async with conn.cursor(binary=fmt) as cur:
                 await cur.execute(faker.drop_stmt)
                 await cur.execute(faker.create_stmt)
@@ -720,11 +720,11 @@ async def test_copy_from_leaks(dsn, faker, fmt, set_types):
 
 @pytest.mark.slow
 @pytest.mark.parametrize("mode", ["row", "block", "binary"])
-async def test_copy_table_across(dsn, faker, mode):
+async def test_copy_table_across(aconn_cls, dsn, faker, mode):
     faker.choose_schema(ncols=20)
     faker.make_records(20)
 
-    connect = psycopg.AsyncConnection.connect
+    connect = aconn_cls.connect
     async with await connect(dsn) as conn1, await connect(dsn) as conn2:
         faker.table_name = sql.Identifier("copy_src")
         await conn1.execute(faker.drop_stmt)

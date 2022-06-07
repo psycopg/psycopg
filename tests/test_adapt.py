@@ -62,10 +62,10 @@ def test_register_dumper_by_class_name(conn):
 
 
 @pytest.mark.crdb("skip", reason="global adapters don't affect crdb")
-def test_dump_global_ctx(dsn, global_adapters, pgconn):
+def test_dump_global_ctx(conn_cls, dsn, global_adapters, pgconn):
     psycopg.adapters.register_dumper(MyStr, make_bin_dumper("gb"))
     psycopg.adapters.register_dumper(MyStr, make_dumper("gt"))
-    with psycopg.connect(dsn) as conn:
+    with conn_cls.connect(dsn) as conn:
         cur = conn.execute("select %s", [MyStr("hello")])
         assert cur.fetchone() == ("hellogt",)
         cur = conn.execute("select %b", [MyStr("hello")])
@@ -199,10 +199,10 @@ def test_register_loader_by_type_name(conn):
 
 
 @pytest.mark.crdb("skip", reason="global adapters don't affect crdb")
-def test_load_global_ctx(dsn, global_adapters):
+def test_load_global_ctx(conn_cls, dsn, global_adapters):
     psycopg.adapters.register_loader("text", make_loader("gt"))
     psycopg.adapters.register_loader("text", make_bin_loader("gb"))
-    with psycopg.connect(dsn) as conn:
+    with conn_cls.connect(dsn) as conn:
         cur = conn.cursor(binary=False).execute("select 'hello'::text")
         assert cur.fetchone() == ("hellogt",)
         cur = conn.cursor(binary=True).execute("select 'hello'::text")

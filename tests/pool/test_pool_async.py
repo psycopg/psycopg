@@ -556,9 +556,9 @@ async def test_close_no_tasks(dsn):
         assert t.done()
 
 
-async def test_putconn_no_pool(dsn):
+async def test_putconn_no_pool(aconn_cls, dsn):
     async with pool.AsyncConnectionPool(dsn, min_size=1) as p:
-        conn = await psycopg.AsyncConnection.connect(dsn)
+        conn = await aconn_cls.connect(dsn)
         with pytest.raises(ValueError):
             await p.putconn(conn)
 

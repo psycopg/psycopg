@@ -577,9 +577,9 @@ def test_close_no_threads(dsn):
         assert not t.is_alive()
 
 
-def test_putconn_no_pool(dsn):
+def test_putconn_no_pool(conn_cls, dsn):
     with pool.ConnectionPool(dsn, min_size=1) as p:
-        conn = psycopg.connect(dsn)
+        conn = conn_cls.connect(dsn)
         with pytest.raises(ValueError):
             p.putconn(conn)
 

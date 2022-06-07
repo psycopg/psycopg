@@ -4,7 +4,9 @@ from threading import Thread, Event
 
 import pytest
 
-from psycopg import Connection, ProgrammingError, Rollback
+import psycopg
+from psycopg import Rollback
+from psycopg import errors as e
 
 # TODOCRDB: is this the expected behaviour?
 crdb_skip_external_observer = pytest.mark.crdb(
@@ -29,7 +31,7 @@ def create_test_table(svcconn):
 
 def insert_row(conn, value):
     sql = "INSERT INTO test_table VALUES (%s)"
-    if isinstance(conn, Connection):
+    if isinstance(conn, psycopg.Connection):
         conn.cursor().execute(sql, (value,))
     else:
 
@@ -43,7 +45,7 @@ def insert_row(conn, value):
 def inserted(conn):
     """Return the values inserted in the test table."""
     sql = "SELECT * FROM test_table"
-    if isinstance(conn, Connection):
+    if isinstance(conn, psycopg.Connection):
         rows = conn.cursor().execute(sql).fetchall()
         return set(v for (v,) in rows)
     else:
@@ -147,7 +149,7 @@ def test_rollback_on_exception_exit(conn):
 
 
 @pytest.mark.crdb("skip", reason="pg_terminate_backend")
-def test_context_inerror_rollback_no_clobber(conn, pipeline, dsn, caplog):
+def test_context_inerror_rollback_no_clobber(conn_cls, conn, pipeline, dsn, caplog):
     if pipeline:
         # Only 'conn' is possibly in pipeline mode, but the transaction and
         # checks are on 'conn2'.
@@ -155,7 +157,7 @@ def test_context_inerror_rollback_no_clobber(conn, pipeline, dsn, caplog):
     caplog.set_level(logging.WARNING, logger="psycopg")
 
     with pytest.raises(ZeroDivisionError):
-        with Connection.connect(dsn) as conn2:
+        with conn_cls.connect(dsn) as conn2:
             with conn2.transaction():
                 conn2.execute("select 1")
                 conn.execute(
@@ -171,10 +173,10 @@ def test_context_inerror_rollback_no_clobber(conn, pipeline, dsn, caplog):
 
 
 @pytest.mark.crdb("skip", reason="copy")
-def test_context_active_rollback_no_clobber(dsn, caplog):
+def test_context_active_rollback_no_clobber(conn_cls, dsn, caplog):
     caplog.set_level(logging.WARNING, logger="psycopg")
 
-    conn = Connection.connect(dsn)
+    conn = conn_cls.connect(dsn)
     try:
         with pytest.raises(ZeroDivisionError):
             with conn.transaction():
@@ -217,11 +219,11 @@ def test_prohibits_use_of_commit_rollback_autocommit(conn):
     conn.rollback()
 
     with conn.transaction():
-        with pytest.raises(ProgrammingError):
+        with pytest.raises(e.ProgrammingError):
             conn.autocommit = False
-        with pytest.raises(ProgrammingError):
+        with pytest.raises(e.ProgrammingError):
             conn.commit()
-        with pytest.raises(ProgrammingError):
+        with pytest.raises(e.ProgrammingError):
             conn.rollback()
 
     conn.autocommit = False
@@ -710,10 +712,10 @@ def test_out_of_order_exit(conn, exit_error):
     t2 = conn.transaction()
     t2.__enter__()
 
-    with pytest.raises(ProgrammingError):
+    with pytest.raises(e.ProgrammingError):
         t1.__exit__(*get_exc_info(exit_error))
 
-    with pytest.raises(ProgrammingError):
+    with pytest.raises(e.ProgrammingError):
         t2.__exit__(*get_exc_info(exit_error))
 
 
@@ -727,10 +729,10 @@ def test_out_of_order_implicit_begin(conn, exit_error):
     t2 = conn.transaction()
     t2.__enter__()
 
-    with pytest.raises(ProgrammingError):
+    with pytest.raises(e.ProgrammingError):
         t1.__exit__(*get_exc_info(exit_error))
 
-    with pytest.raises(ProgrammingError):
+    with pytest.raises(e.ProgrammingError):
         t2.__exit__(*get_exc_info(exit_error))
 
 
@@ -743,10 +745,10 @@ def test_out_of_order_exit_same_name(conn, exit_error):
     t2 = conn.transaction("save")
     t2.__enter__()
 
-    with pytest.raises(ProgrammingError):
+    with pytest.raises(e.ProgrammingError):
         t1.__exit__(*get_exc_info(exit_error))
 
-    with pytest.raises(ProgrammingError):
+    with pytest.raises(e.ProgrammingError):
         t2.__exit__(*get_exc_info(exit_error))
 
 
@@ -754,10 +756,10 @@ def test_out_of_order_exit_same_name(conn, exit_error):
 def test_concurrency(conn, what):
     conn.autocommit = True
 
-    e = [Event() for i in range(3)]
+    evs = [Event() for i in range(3)]
 
     def worker(unlock, wait_on):
-        with pytest.raises(ProgrammingError) as ex:
+        with pytest.raises(e.ProgrammingError) as ex:
             with conn.transaction():
                 unlock.set()
                 wait_on.wait()
@@ -780,15 +782,15 @@ def test_concurrency(conn, what):
             assert "transaction commit" in str(ex.value)
 
     # Start a first transaction in a thread
-    t1 = Thread(target=worker, kwargs={"unlock": e[0], "wait_on": e[1]})
+    t1 = Thread(target=worker, kwargs={"unlock": evs[0], "wait_on": evs[1]})
     t1.start()
-    e[0].wait()
+    evs[0].wait()
 
     # Start a nested transaction in a thread
-    t2 = Thread(target=worker, kwargs={"unlock": e[1], "wait_on": e[2]})
+    t2 = Thread(target=worker, kwargs={"unlock": evs[1], "wait_on": evs[2]})
     t2.start()
 
     # Terminate the first transaction before the second does
     t1.join()
-    e[2].set()
+    evs[2].set()
     t2.join()

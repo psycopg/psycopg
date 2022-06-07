@@ -7,13 +7,12 @@ from decimal import Decimal
 
 import pytest
 
-import psycopg
 from psycopg.rows import namedtuple_row
 
 
 @pytest.mark.parametrize("value", [None, 0, 3])
-def test_prepare_threshold_init(dsn, value):
-    with psycopg.connect(dsn, prepare_threshold=value) as conn:
+def test_prepare_threshold_init(conn_cls, dsn, value):
+    with conn_cls.connect(dsn, prepare_threshold=value) as conn:
         assert conn.prepare_threshold == value
 
 

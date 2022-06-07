@@ -18,9 +18,9 @@ from psycopg import errors as e
 
 
 @pytest.mark.slow
-def test_concurrent_execution(dsn):
+def test_concurrent_execution(conn_cls, dsn):
     def worker():
-        cnn = psycopg.connect(dsn)
+        cnn = conn_cls.connect(dsn)
         cur = cnn.cursor()
         cur.execute("select pg_sleep(0.5)")
         cur.close()
@@ -110,8 +110,8 @@ t.join()
 @pytest.mark.slow
 @pytest.mark.timing
 @pytest.mark.crdb("skip", reason="notify")
-def test_notifies(conn, dsn):
-    nconn = psycopg.connect(dsn, autocommit=True)
+def test_notifies(conn_cls, conn, dsn):
+    nconn = conn_cls.connect(dsn, autocommit=True)
     npid = nconn.pgconn.backend_pid
 
     def notifier():
@@ -185,8 +185,8 @@ def test_cancel(conn):
     t.join()
 
 
-@pytest.mark.crdb("skip", reason="pg_terminate_backend")
 @pytest.mark.slow
+@pytest.mark.crdb("skip", reason="cancel")
 def test_cancel_stream(conn):
     errors: List[Exception] = []
 
@@ -210,14 +210,15 @@ def test_cancel_stream(conn):
     t.join()
 
 
+@pytest.mark.crdb("skip", reason="pg_terminate_backend")
 @pytest.mark.slow
-def test_identify_closure(dsn):
+def test_identify_closure(conn_cls, dsn):
     def closer():
         time.sleep(0.2)
         conn2.execute("select pg_terminate_backend(%s)", [conn.pgconn.backend_pid])
 
-    conn = psycopg.connect(dsn)
-    conn2 = psycopg.connect(dsn)
+    conn = conn_cls.connect(dsn)
+    conn2 = conn_cls.connect(dsn)
     try:
         t = threading.Thread(target=closer)
         t.start()

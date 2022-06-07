@@ -7,7 +7,6 @@ from typing import List, Optional
 import psycopg
 from psycopg import pq
 from psycopg import sql
-from psycopg.crdb import CrdbConnection
 
 from .utils import check_libpq_version, check_server_version
 
@@ -148,11 +147,11 @@ def pgconn(dsn, request, tracefile):
 
 
 @pytest.fixture
-def conn(dsn, request, tracefile):
+def conn(conn_cls, dsn, request, tracefile):
     """Return a `Connection` connected to the ``--test-dsn`` database."""
     check_connection_version(request.node)
 
-    conn = connection_class().connect(dsn)
+    conn = conn_cls.connect(dsn)
     with maybe_trace(conn.pgconn, tracefile, request.function):
         yield conn
     conn.close()
@@ -172,17 +171,11 @@ def pipeline(request, conn):
 
 
 @pytest.fixture
-async def aconn(dsn, request, tracefile):
+async def aconn(dsn, aconn_cls, request, tracefile):
     """Return an `AsyncConnection` connected to the ``--test-dsn`` database."""
     check_connection_version(request.node)
 
-    cls = psycopg.AsyncConnection
-    if crdb_version:
-        from psycopg.crdb import AsyncCrdbConnection
-
-        cls = AsyncCrdbConnection
-
-    conn = await cls.connect(dsn)
+    conn = await aconn_cls.connect(dsn)
     with maybe_trace(conn.pgconn, tracefile, request.function):
         yield conn
     await conn.close()
@@ -201,20 +194,34 @@ async def apipeline(request, aconn):
         yield None
 
 
-def connection_class():
+@pytest.fixture(scope="session")
+def conn_cls(session_dsn):
     cls = psycopg.Connection
     if crdb_version:
+        from psycopg.crdb import CrdbConnection
+
         cls = CrdbConnection
 
     return cls
 
 
 @pytest.fixture(scope="session")
-def svcconn(session_dsn):
+def aconn_cls(session_dsn):
+    cls = psycopg.AsyncConnection
+    if crdb_version:
+        from psycopg.crdb import AsyncCrdbConnection
+
+        cls = AsyncCrdbConnection
+
+    return cls
+
+
+@pytest.fixture(scope="session")
+def svcconn(conn_cls, session_dsn):
     """
     Return a session `Connection` connected to the ``--test-dsn`` database.
     """
-    conn = psycopg.Connection.connect(session_dsn, autocommit=True)
+    conn = conn_cls.connect(session_dsn, autocommit=True)
     yield conn
     conn.close()
 
