@@ -13,33 +13,35 @@ def pytest_configure(config):
         "crdb(version_expr, reason=detail): run/skip the test with matching CockroachDB"
         " (e.g. '>= 21.2.10', '< 22.1', 'skip < 22')",
     )
+    config.addinivalue_line(
+        "markers",
+        "crdb_skip(reason): skip the test for known CockroachDB reasons",
+    )
 
 
 def check_crdb_version(got, mark):
-    """
-    Verify if the CockroachDB version is a version accepted.
+    if mark.name == "crdb":
+        assert len(mark.args) <= 1
+        assert not (set(mark.kwargs) - {"reason"})
+        spec = mark.args[0] if mark.args else "only"
+        reason = mark.kwargs.get("reason")
+    elif mark.name == "crdb_skip":
+        assert len(mark.args) == 1
+        assert not mark.kwargs
+        reason = mark.args[0]
+        assert reason in _crdb_reasons, reason
+        spec = _crdb_reason_version.get(reason, "skip")
+    else:
+        assert False, mark.name
 
-    This function is called on the tests marked with something like::
-
-        @pytest.mark.crdb("only")           # run on CRDB only, any version
-        @pytest.mark.crdb                   # same as above
-        @pytest.mark.crdb("only >= 21.1")   # run on CRDB only >= 21.1 (not on PG)
-        @pytest.mark.crdb(">= 21.1")        # same as above
-        @pytest.mark.crdb("skip")           # don't run on CRDB, any version
-        @pytest.mark.crdb("skip < 22")      # don't run on CRDB < 22 (run on PG)
-
-    and skips the test if the server version doesn't match what expected.
-    """
-    assert len(mark.args) <= 1
-    assert not (set(mark.kwargs) - {"reason"})
-    pred = VersionCheck.parse(mark.args[0] if mark.args else "only")
+    pred = VersionCheck.parse(spec)
     pred.whose = "CockroachDB"
 
     msg = pred.get_skip_message(got)
     if not msg:
         return None
 
-    reason = crdb_skip_message(mark.kwargs.get("reason"))
+    reason = crdb_skip_message(reason)
     if reason:
         msg = f"{msg}: {reason}"
 
@@ -55,7 +57,7 @@ def crdb_skip_message(reason: Optional[str]) -> str:
     msg = ""
     if reason:
         msg = reason
-        if reason in _crdb_reasons:
+        if _crdb_reasons.get(reason):
             url = (
                 "https://github.com/cockroachdb/cockroach/"
                 f"issues/{_crdb_reasons[reason]}"
@@ -115,4 +117,8 @@ _crdb_reasons = {
     "scroll cursor": 77102,
     "server-side cursor": 41412,
     "stored procedure": 1751,
+}
+
+_crdb_reason_version = {
+    "cancel": "skip < 22",
 }

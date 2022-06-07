@@ -280,7 +280,7 @@ def check_connection_version(node):
             if msg:
                 pytest.skip(msg)
 
-        elif mark.name == "crdb":
+        elif mark.name in ("crdb", "crdb_skip"):
             from .fix_crdb import check_crdb_version
 
             msg = check_crdb_version(crdb_version, mark)
