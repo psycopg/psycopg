@@ -51,6 +51,10 @@ class _CrdbConnectionMixin:
     def info(self) -> "CrdbConnectionInfo":
         return CrdbConnectionInfo(self.pgconn)
 
+    def _check_tpc(self) -> None:
+        if self.is_crdb(self.pgconn):
+            raise e.NotSupportedError("CockroachDB doesn't support prepared statements")
+
 
 class CrdbConnection(_CrdbConnectionMixin, Connection[Row]):
     """

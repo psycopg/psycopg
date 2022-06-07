@@ -585,9 +585,12 @@ class BaseConnection(Generic[Row]):
         The values passed to the method will be available on the returned
         object as the members `~Xid.format_id`, `~Xid.gtrid`, `~Xid.bqual`.
         """
+        self._check_tpc()
         return Xid.from_parts(format_id, gtrid, bqual)
 
     def _tpc_begin_gen(self, xid: Union[Xid, str]) -> PQGen[None]:
+        self._check_tpc()
+
         if not isinstance(xid, Xid):
             xid = Xid.from_string(xid)
 
@@ -650,6 +653,11 @@ class BaseConnection(Generic[Row]):
                 SQL("{} PREPARED {}").format(SQL(action), str(xid))
             )
             self._tpc = None
+
+    def _check_tpc(self) -> None:
+        """Raise NotSupportedError if TPC is not supported."""
+        # TPC supported on every supported PostgreSQL version.
+        pass
 
 
 class Connection(BaseConnection[Row]):
@@ -1024,6 +1032,7 @@ class Connection(BaseConnection[Row]):
             self.wait(self._tpc_finish_gen("ROLLBACK", xid))
 
     def tpc_recover(self) -> List[Xid]:
+        self._check_tpc()
         status = self.info.transaction_status
         with self.cursor(row_factory=args_row(Xid._from_record)) as cur:
             cur.execute(Xid._get_recover_query())
