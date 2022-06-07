@@ -575,14 +575,17 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
         """
         Iterate row-by-row on a result from the database.
         """
-        with self._conn.lock:
-            self._conn.wait(self._stream_send_gen(query, params, binary=binary))
-            first = True
-            while self._conn.wait(self._stream_fetchone_gen(first)):
-                # We know that, if we got a result, it has a single row.
-                rec: Row = self._tx.load_row(0, self._make_row)  # type: ignore
-                yield rec
-                first = False
+        try:
+            with self._conn.lock:
+                self._conn.wait(self._stream_send_gen(query, params, binary=binary))
+                first = True
+                while self._conn.wait(self._stream_fetchone_gen(first)):
+                    # We know that, if we got a result, it has a single row.
+                    rec: Row = self._tx.load_row(0, self._make_row)  # type: ignore
+                    yield rec
+                    first = False
+        except e.Error as ex:
+            raise ex.with_traceback(None)
 
     def fetchone(self) -> Optional[Row]:
         """

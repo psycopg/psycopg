@@ -93,14 +93,19 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
         *,
         binary: Optional[bool] = None,
     ) -> AsyncIterator[Row]:
-        async with self._conn.lock:
-            await self._conn.wait(self._stream_send_gen(query, params, binary=binary))
-            first = True
-            while await self._conn.wait(self._stream_fetchone_gen(first)):
-                # We know that, if we got a result, it has a single row.
-                rec: Row = self._tx.load_row(0, self._make_row)  # type: ignore
-                yield rec
-                first = False
+        try:
+            async with self._conn.lock:
+                await self._conn.wait(
+                    self._stream_send_gen(query, params, binary=binary)
+                )
+                first = True
+                while await self._conn.wait(self._stream_fetchone_gen(first)):
+                    # We know that, if we got a result, it has a single row.
+                    rec: Row = self._tx.load_row(0, self._make_row)  # type: ignore
+                    yield rec
+                    first = False
+        except e.Error as ex:
+            raise ex.with_traceback(None)
 
     async def fetchone(self) -> Optional[Row]:
         self._check_result_for_fetch()
