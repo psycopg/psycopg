@@ -587,6 +587,18 @@ def test_stream_error_notx(conn):
     assert conn.info.transaction_status == conn.TransactionStatus.IDLE
 
 
+def test_stream_close(conn):
+    cur = conn.cursor()
+    with pytest.raises(psycopg.OperationalError):
+        for rec in cur.stream("select generate_series(1, 3)"):
+            if rec[0] == 1:
+                conn.close()
+            else:
+                assert False
+
+    assert conn.closed
+
+
 def test_stream_binary_cursor(conn):
     cur = conn.cursor(binary=True)
     recs = []
