@@ -9,6 +9,7 @@ from typing import List, Tuple
 import pytest
 
 import psycopg
+from psycopg import errors as e
 from psycopg._compat import create_task
 
 pytestmark = pytest.mark.asyncio
@@ -101,22 +102,48 @@ async def test_notifies(aconn, dsn):
     assert t1 - t0 == pytest.approx(0.5, abs=0.05)
 
 
+async def canceller(aconn, errors):
+    try:
+        await asyncio.sleep(0.5)
+        aconn.cancel()
+    except Exception as exc:
+        errors.append(exc)
+
+
 @pytest.mark.slow
 async def test_cancel(aconn):
-    async def canceller():
-        try:
-            await asyncio.sleep(0.5)
-            aconn.cancel()
-        except Exception as exc:
-            errors.append(exc)
-
     async def worker():
         cur = aconn.cursor()
-        with pytest.raises(psycopg.DatabaseError):
+        with pytest.raises(e.QueryCanceled):
             await cur.execute("select pg_sleep(2)")
 
     errors: List[Exception] = []
-    workers = [worker(), canceller()]
+    workers = [worker(), canceller(aconn, errors)]
+
+    t0 = time.time()
+    await asyncio.gather(*workers)
+
+    t1 = time.time()
+    assert not errors
+    assert 0.0 < t1 - t0 < 1.0
+
+    # still working
+    await aconn.rollback()
+    cur = aconn.cursor()
+    await cur.execute("select 1")
+    assert await cur.fetchone() == (1,)
+
+
+@pytest.mark.slow
+async def test_cancel_stream(aconn):
+    async def worker():
+        cur = aconn.cursor()
+        with pytest.raises(e.QueryCanceled):
+            async for row in cur.stream("select pg_sleep(2)"):
+                pass
+
+    errors: List[Exception] = []
+    workers = [worker(), canceller(aconn, errors)]
 
     t0 = time.time()
     await asyncio.gather(*workers)

@@ -14,6 +14,7 @@ from typing import List
 import pytest
 
 import psycopg
+from psycopg import errors as e
 
 
 @pytest.mark.slow
@@ -151,24 +152,49 @@ def test_notifies(conn, dsn):
     t.join()
 
 
+def canceller(conn, errors):
+    try:
+        time.sleep(0.5)
+        conn.cancel()
+    except Exception as exc:
+        errors.append(exc)
+
+
 @pytest.mark.slow
 def test_cancel(conn):
-    def canceller():
-        try:
-            time.sleep(0.5)
-            conn.cancel()
-        except Exception as exc:
-            errors.append(exc)
-
     errors: List[Exception] = []
 
     cur = conn.cursor()
-    t = threading.Thread(target=canceller)
+    t = threading.Thread(target=canceller, args=(conn, errors))
     t0 = time.time()
     t.start()
 
-    with pytest.raises(psycopg.DatabaseError):
+    with pytest.raises(e.QueryCanceled):
         cur.execute("select pg_sleep(2)")
+
+    t1 = time.time()
+    assert not errors
+    assert 0.0 < t1 - t0 < 1.0
+
+    # still working
+    conn.rollback()
+    assert cur.execute("select 1").fetchone()[0] == 1
+
+    t.join()
+
+
+@pytest.mark.slow
+def test_cancel_stream(conn):
+    errors: List[Exception] = []
+
+    cur = conn.cursor()
+    t = threading.Thread(target=canceller, args=(conn, errors))
+    t0 = time.time()
+    t.start()
+
+    with pytest.raises(e.QueryCanceled):
+        for row in cur.stream("select pg_sleep(2)"):
+            pass
 
     t1 = time.time()
     assert not errors

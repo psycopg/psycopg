@@ -622,6 +622,23 @@ def test_stream_badquery(conn, query):
             pass
 
 
+def test_stream_error_tx(conn):
+    cur = conn.cursor()
+    with pytest.raises(psycopg.ProgrammingError):
+        for rec in cur.stream("wat"):
+            pass
+    assert conn.info.transaction_status == conn.TransactionStatus.INERROR
+
+
+def test_stream_error_notx(conn):
+    conn.autocommit = True
+    cur = conn.cursor()
+    with pytest.raises(psycopg.ProgrammingError):
+        for rec in cur.stream("wat"):
+            pass
+    assert conn.info.transaction_status == conn.TransactionStatus.IDLE
+
+
 def test_stream_binary_cursor(conn):
     cur = conn.cursor(binary=True)
     recs = []
