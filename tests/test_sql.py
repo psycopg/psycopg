@@ -209,7 +209,7 @@ class TestSqlFormat:
         cur.execute("select * from test_compose")
         assert cur.fetchall() == [(10, "a", "b", "c"), (20, "d", "e", "f")]
 
-    @pytest.mark.crdb("skip", reason="copy")
+    @pytest.mark.crdb_skip("copy")
     def test_copy(self, conn):
         cur = conn.cursor()
         cur.execute(
@@ -363,7 +363,7 @@ class TestLiteral:
         conn.adapters.register_dumper(str, StrDumper)
         assert sql.Literal("foo").as_string(conn) == "'foo'"
 
-    @pytest.mark.crdb("skip", reason="composite")  # create type, actually
+    @pytest.mark.crdb_skip("composite")  # create type, actually
     @pytest.mark.parametrize("name", ["a-b", f"{eur}", "order", "foo bar"])
     def test_invalid_name(self, conn, name):
         conn.execute(

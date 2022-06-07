@@ -11,7 +11,7 @@ from ..utils import eur
 from ..fix_crdb import is_crdb, crdb_skip_message
 
 
-pytestmark = pytest.mark.crdb("skip", reason="composite")
+pytestmark = pytest.mark.crdb_skip("composite")
 
 tests_str = [
     ("", ()),

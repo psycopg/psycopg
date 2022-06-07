@@ -54,7 +54,7 @@ def test_kwargs(dsn):
             assert conn.autocommit
 
 
-@pytest.mark.crdb("skip", reason="backend pid")
+@pytest.mark.crdb_skip("backend pid")
 def test_its_no_pool_at_all(dsn):
     with NullConnectionPool(dsn, max_size=2) as p:
         with p.connection() as conn:
@@ -168,7 +168,7 @@ def test_configure_broken(dsn, caplog):
     assert "WAT" in caplog.records[0].message
 
 
-@pytest.mark.crdb("skip", reason="backend pid")
+@pytest.mark.crdb_skip("backend pid")
 def test_reset(dsn):
     resets = 0
 
@@ -211,7 +211,7 @@ def test_reset(dsn):
     assert pids[0] == pids[1]
 
 
-@pytest.mark.crdb("skip", reason="backend pid")
+@pytest.mark.crdb_skip("backend pid")
 def test_reset_badstate(dsn, caplog):
     caplog.set_level(logging.WARNING, logger="psycopg.pool")
 
@@ -242,7 +242,7 @@ def test_reset_badstate(dsn, caplog):
     assert "INTRANS" in caplog.records[0].message
 
 
-@pytest.mark.crdb("skip", reason="backend pid")
+@pytest.mark.crdb_skip("backend pid")
 def test_reset_broken(dsn, caplog):
     caplog.set_level(logging.WARNING, logger="psycopg.pool")
 
@@ -285,7 +285,7 @@ def test_no_queue_timeout(deaf_port):
 
 @pytest.mark.slow
 @pytest.mark.timing
-@pytest.mark.crdb("skip", reason="backend pid")
+@pytest.mark.crdb_skip("backend pid")
 def test_queue(dsn):
     def worker(n):
         t0 = time()
@@ -352,7 +352,7 @@ def test_queue_size(dsn):
 
 @pytest.mark.slow
 @pytest.mark.timing
-@pytest.mark.crdb("skip", reason="backend pid")
+@pytest.mark.crdb_skip("backend pid")
 def test_queue_timeout(dsn):
     def worker(n):
         t0 = time()
@@ -413,7 +413,7 @@ def test_dead_client(dsn):
 
 @pytest.mark.slow
 @pytest.mark.timing
-@pytest.mark.crdb("skip", reason="backend pid")
+@pytest.mark.crdb_skip("backend pid")
 def test_queue_timeout_override(dsn):
     def worker(n):
         t0 = time()
@@ -446,7 +446,7 @@ def test_queue_timeout_override(dsn):
         assert 0.1 < e[1] < 0.15
 
 
-@pytest.mark.crdb("skip", reason="backend pid")
+@pytest.mark.crdb_skip("backend pid")
 def test_broken_reconnect(dsn):
     with NullConnectionPool(dsn, max_size=1) as p:
         with p.connection() as conn:
@@ -461,7 +461,7 @@ def test_broken_reconnect(dsn):
     assert pid1 != pid2
 
 
-@pytest.mark.crdb("skip", reason="backend pid")
+@pytest.mark.crdb_skip("backend pid")
 def test_intrans_rollback(dsn, caplog):
     caplog.set_level(logging.WARNING, logger="psycopg.pool")
     pids = []
@@ -494,7 +494,7 @@ def test_intrans_rollback(dsn, caplog):
     assert "INTRANS" in caplog.records[0].message
 
 
-@pytest.mark.crdb("skip", reason="backend pid")
+@pytest.mark.crdb_skip("backend pid")
 def test_inerror_rollback(dsn, caplog):
     caplog.set_level(logging.WARNING, logger="psycopg.pool")
     pids = []
@@ -525,7 +525,7 @@ def test_inerror_rollback(dsn, caplog):
     assert "INERROR" in caplog.records[0].message
 
 
-@pytest.mark.crdb("skip", reason="backend pid")
+@pytest.mark.crdb_skip("backend pid")
 def test_active_close(dsn, caplog):
     caplog.set_level(logging.WARNING, logger="psycopg.pool")
     pids = []
@@ -554,7 +554,7 @@ def test_active_close(dsn, caplog):
     assert "BAD" in caplog.records[1].message
 
 
-@pytest.mark.crdb("skip", reason="backend pid")
+@pytest.mark.crdb_skip("backend pid")
 def test_fail_rollback_close(dsn, caplog, monkeypatch):
     caplog.set_level(logging.WARNING, logger="psycopg.pool")
     pids = []
@@ -779,7 +779,7 @@ def test_bad_resize(dsn, min_size, max_size):
 
 @pytest.mark.slow
 @pytest.mark.timing
-@pytest.mark.crdb("skip", reason="backend pid")
+@pytest.mark.crdb_skip("backend pid")
 def test_max_lifetime(dsn):
     pids = []
 

@@ -586,7 +586,7 @@ def test_query_params_executemany(conn):
     assert cur._query.params == (b"3", b"4")
 
 
-@pytest.mark.crdb("skip", reason="copy")
+@pytest.mark.crdb_skip("copy")
 @pytest.mark.parametrize("ph, params", [("%s", (10,)), ("%(n)s", {"n": 10})])
 def test_copy_out_param(conn, ph, params):
     cur = conn.cursor()
@@ -705,7 +705,7 @@ class TestColumn:
         unpickled = pickle.loads(pickled)
         assert [tuple(d) for d in description] == [tuple(d) for d in unpickled]
 
-    @pytest.mark.crdb("skip", reason="no col query")
+    @pytest.mark.crdb_skip("no col query")
     def test_no_col_query(self, conn):
         cur = conn.execute("select")
         assert cur.description == []

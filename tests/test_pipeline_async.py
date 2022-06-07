@@ -267,7 +267,7 @@ async def test_errors_raised_on_nested_transaction_exit(aconn):
     assert await cur2.fetchone() == (2,)
 
 
-@pytest.mark.crdb("skip", reason="deferrable")
+@pytest.mark.crdb_skip("deferrable")
 async def test_error_on_commit(aconn):
     await aconn.execute(
         """

@@ -72,7 +72,7 @@ async def test_fetch_not_found_async(aconn, name, status):
     assert info is None
 
 
-@pytest.mark.crdb("skip", reason="composite")
+@pytest.mark.crdb_skip("composite")
 @pytest.mark.parametrize(
     "name", ["testschema.testtype", sql.Identifier("testschema", "testtype")]
 )

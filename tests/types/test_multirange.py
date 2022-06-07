@@ -17,7 +17,7 @@ from .test_range import create_test_range
 
 pytestmark = [
     pytest.mark.pg(">= 14"),
-    pytest.mark.crdb("skip", reason="range"),
+    pytest.mark.crdb_skip("range"),
 ]
 
 

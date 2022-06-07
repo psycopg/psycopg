@@ -189,7 +189,7 @@ def test_send_describe_prepared(pgconn):
         pgconn.send_describe_prepared(b"prep")
 
 
-@pytest.mark.crdb("skip", reason="server-side cursor")
+@pytest.mark.crdb_skip("server-side cursor")
 def test_send_describe_portal(pgconn):
     res = pgconn.exec_(
         b"""

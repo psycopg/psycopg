@@ -603,7 +603,7 @@ def test_stream_no_row(conn):
     assert recs == []
 
 
-@pytest.mark.crdb("skip", reason="no col query")
+@pytest.mark.crdb_skip("no col query")
 def test_stream_no_col(conn):
     cur = conn.cursor()
     recs = list(cur.stream("select"))
@@ -781,7 +781,7 @@ class TestColumn:
         unpickled = pickle.loads(pickled)
         assert [tuple(d) for d in description] == [tuple(d) for d in unpickled]
 
-    @pytest.mark.crdb("skip", reason="no col query")
+    @pytest.mark.crdb_skip("no col query")
     def test_no_col_query(self, conn):
         cur = conn.execute("select")
         assert cur.description == []

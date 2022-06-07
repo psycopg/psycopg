@@ -66,7 +66,7 @@ def test_close(conn):
         cur.execute("select 1")
 
 
-@pytest.mark.crdb("skip", reason="pg_terminate_backend")
+@pytest.mark.crdb_skip("pg_terminate_backend")
 def test_broken(conn):
     with pytest.raises(psycopg.OperationalError):
         conn.execute("select pg_terminate_backend(%s)", [conn.pgconn.backend_pid])
@@ -158,7 +158,7 @@ def test_context_close(conn):
         conn.close()
 
 
-@pytest.mark.crdb("skip", reason="pg_terminate_backend")
+@pytest.mark.crdb_skip("pg_terminate_backend")
 def test_context_inerror_rollback_no_clobber(conn_cls, conn, dsn, caplog):
     caplog.set_level(logging.WARNING, logger="psycopg")
 
@@ -177,7 +177,7 @@ def test_context_inerror_rollback_no_clobber(conn_cls, conn, dsn, caplog):
     assert "in rollback" in rec.message
 
 
-@pytest.mark.crdb("skip", reason="copy")
+@pytest.mark.crdb_skip("copy")
 def test_context_active_rollback_no_clobber(conn_cls, dsn, caplog):
     caplog.set_level(logging.WARNING, logger="psycopg")
 
@@ -221,7 +221,7 @@ def test_commit(conn):
         conn.commit()
 
 
-@pytest.mark.crdb("skip", reason="deferrable")
+@pytest.mark.crdb_skip("deferrable")
 def test_commit_error(conn):
     conn.execute(
         """
@@ -391,7 +391,7 @@ def test_connect_badargs(conn_cls, monkeypatch, pgconn, args, kwargs, exctype):
         conn_cls.connect(*args, **kwargs)
 
 
-@pytest.mark.crdb("skip", reason="pg_terminate_backend")
+@pytest.mark.crdb_skip("pg_terminate_backend")
 def test_broken_connection(conn):
     cur = conn.cursor()
     with pytest.raises(psycopg.DatabaseError):
@@ -399,7 +399,7 @@ def test_broken_connection(conn):
     assert conn.closed
 
 
-@pytest.mark.crdb("skip", reason="do")
+@pytest.mark.crdb_skip("do")
 def test_notice_handlers(conn, caplog):
     caplog.set_level(logging.WARNING, logger="psycopg")
     messages = []
@@ -441,7 +441,7 @@ def test_notice_handlers(conn, caplog):
         conn.remove_notice_handler(cb1)
 
 
-@pytest.mark.crdb("skip", reason="notify")
+@pytest.mark.crdb_skip("notify")
 def test_notify_handlers(conn):
     nots1 = []
     nots2 = []
@@ -611,7 +611,7 @@ tx_values_map["off"] = False
 tx_params = [
     param_isolation,
     param_read_only,
-    pytest.param(param_deferrable, marks=pytest.mark.crdb("skip", reason="deferrable")),
+    pytest.param(param_deferrable, marks=pytest.mark.crdb_skip("deferrable")),
 ]
 tx_params_isolation = [
     pytest.param(
@@ -619,7 +619,7 @@ tx_params_isolation = [
         marks=pytest.mark.crdb("skip", reason="transaction isolation"),
     ),
     param_read_only,
-    pytest.param(param_deferrable, marks=pytest.mark.crdb("skip", reason="deferrable")),
+    pytest.param(param_deferrable, marks=pytest.mark.crdb_skip("deferrable")),
 ]
 
 

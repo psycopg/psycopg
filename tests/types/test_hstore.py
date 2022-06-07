@@ -4,7 +4,7 @@ import psycopg
 from psycopg.types import TypeInfo
 from psycopg.types.hstore import HstoreLoader, register_hstore
 
-pytestmark = pytest.mark.crdb("skip", reason="hstore")
+pytestmark = pytest.mark.crdb_skip("hstore")
 
 
 @pytest.mark.parametrize(

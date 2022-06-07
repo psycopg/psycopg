@@ -73,7 +73,7 @@ def test_diag_attr_values(conn):
         assert diag.severity_nonlocalized == "ERROR"
 
 
-@pytest.mark.crdb("skip", reason="do")
+@pytest.mark.crdb_skip("do")
 @pytest.mark.parametrize("enc", ["utf8", "latin9"])
 def test_diag_encoding(conn, enc):
     msgs = []
@@ -85,7 +85,7 @@ def test_diag_encoding(conn, enc):
     assert msgs == [f"hello {eur}"]
 
 
-@pytest.mark.crdb("skip", reason="do")
+@pytest.mark.crdb_skip("do")
 @pytest.mark.parametrize("enc", ["utf8", "latin9"])
 def test_error_encoding(conn, enc):
     with conn.transaction():
@@ -198,7 +198,7 @@ def test_diag_independent(conn):
     assert exc2.value.diag.sqlstate == "42P01"
 
 
-@pytest.mark.crdb("skip", reason="deferrable")
+@pytest.mark.crdb_skip("deferrable")
 def test_diag_from_commit(conn):
     cur = conn.cursor()
     cur.execute(
@@ -217,7 +217,7 @@ def test_diag_from_commit(conn):
 
 
 @pytest.mark.asyncio
-@pytest.mark.crdb("skip", reason="deferrable")
+@pytest.mark.crdb_skip("deferrable")
 async def test_diag_from_commit_async(aconn):
     cur = aconn.cursor()
     await cur.execute(
@@ -248,7 +248,7 @@ def test_query_context(conn):
     assert not s.endswith("\n")
 
 
-@pytest.mark.crdb("skip", reason="do")
+@pytest.mark.crdb_skip("do")
 def test_unknown_sqlstate(conn):
     code = "PXX99"
     with pytest.raises(KeyError):

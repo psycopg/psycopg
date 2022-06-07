@@ -71,7 +71,7 @@ async def test_close(aconn):
         await cur.execute("select 1")
 
 
-@pytest.mark.crdb("skip", reason="pg_terminate_backend")
+@pytest.mark.crdb_skip("pg_terminate_backend")
 async def test_broken(aconn):
     with pytest.raises(psycopg.OperationalError):
         await aconn.execute(
@@ -161,7 +161,7 @@ async def test_context_close(aconn):
         await aconn.close()
 
 
-@pytest.mark.crdb("skip", reason="pg_terminate_backend")
+@pytest.mark.crdb_skip("pg_terminate_backend")
 async def test_context_inerror_rollback_no_clobber(aconn_cls, conn, dsn, caplog):
     with pytest.raises(ZeroDivisionError):
         async with await aconn_cls.connect(dsn) as conn2:
@@ -178,7 +178,7 @@ async def test_context_inerror_rollback_no_clobber(aconn_cls, conn, dsn, caplog)
     assert "in rollback" in rec.message
 
 
-@pytest.mark.crdb("skip", reason="copy")
+@pytest.mark.crdb_skip("copy")
 async def test_context_active_rollback_no_clobber(aconn_cls, dsn, caplog):
     caplog.set_level(logging.WARNING, logger="psycopg")
 
@@ -222,7 +222,7 @@ async def test_commit(aconn):
         await aconn.commit()
 
 
-@pytest.mark.crdb("skip", reason="deferrable")
+@pytest.mark.crdb_skip("deferrable")
 async def test_commit_error(aconn):
     await aconn.execute(
         """
@@ -397,7 +397,7 @@ async def test_connect_badargs(aconn_cls, monkeypatch, pgconn, args, kwargs, exc
         await aconn_cls.connect(*args, **kwargs)
 
 
-@pytest.mark.crdb("skip", reason="pg_terminate_backend")
+@pytest.mark.crdb_skip("pg_terminate_backend")
 async def test_broken_connection(aconn):
     cur = aconn.cursor()
     with pytest.raises(psycopg.DatabaseError):
@@ -405,7 +405,7 @@ async def test_broken_connection(aconn):
     assert aconn.closed
 
 
-@pytest.mark.crdb("skip", reason="do")
+@pytest.mark.crdb_skip("do")
 async def test_notice_handlers(aconn, caplog):
     caplog.set_level(logging.WARNING, logger="psycopg")
     messages = []
@@ -449,7 +449,7 @@ async def test_notice_handlers(aconn, caplog):
         aconn.remove_notice_handler(cb1)
 
 
-@pytest.mark.crdb("skip", reason="notify")
+@pytest.mark.crdb_skip("notify")
 async def test_notify_handlers(aconn):
     nots1 = []
     nots2 = []

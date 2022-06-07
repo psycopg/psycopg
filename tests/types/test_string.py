@@ -108,7 +108,7 @@ def test_dump_enc(conn, fmt_in, encoding):
     assert res == ord(eur)
 
 
-@pytest.mark.crdb("skip", reason="encoding")
+@pytest.mark.crdb_skip("encoding")
 @pytest.mark.parametrize("fmt_in", PyFormat)
 def test_dump_badenc(conn, fmt_in):
     cur = conn.cursor()
@@ -157,7 +157,7 @@ def test_dump_text_oid(conn, fmt_in):
     assert cur.fetchone()[0] == "foobar"
 
 
-@pytest.mark.crdb("skip", reason="copy")
+@pytest.mark.crdb_skip("copy")
 @pytest.mark.parametrize("fmt_out", pq.Format)
 @pytest.mark.parametrize("encoding", ["utf8", crdb_encoding("latin9")])
 @pytest.mark.parametrize("typename", ["text", "varchar", "name", "bpchar"])
@@ -178,7 +178,7 @@ def test_load_enc(conn, typename, encoding, fmt_out):
     assert res == eur
 
 
-@pytest.mark.crdb("skip", reason="encoding")
+@pytest.mark.crdb_skip("encoding")
 @pytest.mark.parametrize("fmt_out", pq.Format)
 @pytest.mark.parametrize("typename", ["text", "varchar", "name", "bpchar"])
 def test_load_badenc(conn, typename, fmt_out):
@@ -198,7 +198,7 @@ def test_load_badenc(conn, typename, fmt_out):
             copy.read_row()
 
 
-@pytest.mark.crdb("skip", reason="encoding")
+@pytest.mark.crdb_skip("encoding")
 @pytest.mark.parametrize("fmt_out", pq.Format)
 @pytest.mark.parametrize("typename", ["text", "varchar", "name", "bpchar"])
 def test_load_ascii(conn, typename, fmt_out):
@@ -229,7 +229,7 @@ def test_text_array(conn, typename, fmt_in, fmt_out):
     assert res == a
 
 
-@pytest.mark.crdb("skip", reason="encoding")
+@pytest.mark.crdb_skip("encoding")
 @pytest.mark.parametrize("fmt_in", PyFormat)
 @pytest.mark.parametrize("fmt_out", pq.Format)
 def test_text_array_ascii(conn, fmt_in, fmt_out):

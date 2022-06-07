@@ -229,7 +229,7 @@ class TestConnectionInfo:
         with pytest.raises(psycopg.OperationalError):
             conn.info.error_message
 
-    @pytest.mark.crdb("skip", reason="backend pid")
+    @pytest.mark.crdb_skip("backend pid")
     def test_backend_pid(self, conn):
         assert conn.info.backend_pid
         assert conn.info.backend_pid == conn.pgconn.backend_pid
@@ -306,7 +306,7 @@ class TestConnectionInfo:
                 assert clienc.replace("-", "").replace("_", "").upper() == out
             assert conn.info.encoding == codec
 
-    @pytest.mark.crdb("skip", reason="encoding")
+    @pytest.mark.crdb_skip("encoding")
     def test_set_encoding_unsupported(self, conn):
         cur = conn.cursor()
         cur.execute("set client_encoding to EUC_TW")

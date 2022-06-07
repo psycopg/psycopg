@@ -3,7 +3,7 @@ import pytest
 import psycopg
 from psycopg.pq import TransactionStatus
 
-pytestmark = pytest.mark.crdb("skip", reason="2-phase commit")
+pytestmark = pytest.mark.crdb_skip("2-phase commit")
 
 
 def test_tpc_disabled(conn, pipeline):

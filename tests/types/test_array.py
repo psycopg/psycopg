@@ -35,7 +35,7 @@ def test_dump_empty_list(conn, fmt_in, type):
     assert cur.fetchone()[0]
 
 
-@pytest.mark.crdb("skip", reason="nested array")
+@pytest.mark.crdb_skip("nested array")
 @pytest.mark.parametrize("fmt_in", PyFormat)
 @pytest.mark.parametrize("obj, want", tests_str)
 def test_dump_list_str(conn, obj, want, fmt_in):
@@ -51,7 +51,7 @@ def test_load_empty_list_str(conn, fmt_out):
     assert cur.fetchone()[0] == []
 
 
-@pytest.mark.crdb("skip", reason="nested array")
+@pytest.mark.crdb_skip("nested array")
 @pytest.mark.parametrize("fmt_out", pq.Format)
 @pytest.mark.parametrize("want, obj", tests_str)
 def test_load_list_str(conn, obj, want, fmt_out):
@@ -86,7 +86,7 @@ tests_int = [
 ]
 
 
-@pytest.mark.crdb("skip", reason="nested array")
+@pytest.mark.crdb_skip("nested array")
 @pytest.mark.parametrize("obj, want", tests_int)
 def test_dump_list_int(conn, obj, want):
     cur = conn.cursor()
@@ -110,7 +110,7 @@ def test_bad_binary_array(input):
         tx.get_dumper(input, PyFormat.BINARY).dump(input)
 
 
-@pytest.mark.crdb("skip", reason="nested array")
+@pytest.mark.crdb_skip("nested array")
 @pytest.mark.parametrize("fmt_out", pq.Format)
 @pytest.mark.parametrize("want, obj", tests_int)
 def test_load_list_int(conn, obj, want, fmt_out):
@@ -128,7 +128,7 @@ def test_load_list_int(conn, obj, want, fmt_out):
     assert got == want
 
 
-@pytest.mark.crdb("skip", reason="composite")
+@pytest.mark.crdb_skip("composite")
 def test_array_register(conn):
     conn.execute("create table mytype (data text)")
     cur = conn.execute("""select '(foo)'::mytype, '{"(foo)"}'::mytype[]""")
@@ -253,7 +253,7 @@ def test_empty_list_after_choice(conn, fmt_in):
     assert cur.fetchall() == [([1.0],), ([],)]
 
 
-@pytest.mark.crdb("skip", reason="geometric types")
+@pytest.mark.crdb_skip("geometric types")
 def test_dump_list_no_comma_separator(conn):
     class Box:
         def __init__(self, x1, y1, x2, y2):
@@ -280,14 +280,14 @@ def test_dump_list_no_comma_separator(conn):
     assert got == "{(3,4),(1,2);(5,4),(3,2)}"
 
 
-@pytest.mark.crdb("skip", reason="geometric types")
+@pytest.mark.crdb_skip("geometric types")
 def test_load_array_no_comma_separator(conn):
     cur = conn.execute("select '{(2,2),(1,1);(5,6),(3,4)}'::box[]")
     # Not parsed at the moment, but split ok on ; separator
     assert cur.fetchone()[0] == ["(2,2),(1,1)", "(5,6),(3,4)"]
 
 
-@pytest.mark.crdb("skip", reason="array with bounds")
+@pytest.mark.crdb_skip("nested array")
 @pytest.mark.parametrize("fmt_out", pq.Format)
 @pytest.mark.parametrize(
     "obj, want",
@@ -301,7 +301,7 @@ def test_array_with_bounds(conn, obj, want, fmt_out):
     assert got == want
 
 
-@pytest.mark.crdb("skip", reason="array with bounds")
+@pytest.mark.crdb_skip("nested array")
 @pytest.mark.parametrize("fmt_out", pq.Format)
 def test_all_chars_with_bounds(conn, fmt_out):
     cur = conn.cursor(binary=fmt_out)

@@ -581,7 +581,7 @@ async def test_query_params_executemany(aconn):
     assert cur._query.params == (b"3", b"4")
 
 
-@pytest.mark.crdb("skip", reason="copy")
+@pytest.mark.crdb_skip("copy")
 @pytest.mark.parametrize("ph, params", [("%s", (10,)), ("%(n)s", {"n": 10})])
 async def test_copy_out_param(aconn, ph, params):
     cur = aconn.cursor()

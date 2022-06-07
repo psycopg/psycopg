@@ -103,7 +103,7 @@ def test_no_result(factory, conn):
         cur.fetchone()
 
 
-@pytest.mark.crdb("skip", reason="no col query")
+@pytest.mark.crdb_skip("no col query")
 @pytest.mark.parametrize(
     "factory", "tuple_row dict_row namedtuple_row args_row".split()
 )

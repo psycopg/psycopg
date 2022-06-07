@@ -6,7 +6,7 @@ from psycopg.pq import Format
 
 pytestmark = [
     pytest.mark.asyncio,
-    pytest.mark.crdb("skip", reason="server-side cursor"),
+    pytest.mark.crdb_skip("server-side cursor"),
 ]
 
 

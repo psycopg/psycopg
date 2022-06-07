@@ -109,6 +109,7 @@ _crdb_reasons = {
     "large objects": 243,
     "negative interval": 81577,
     "nested array": 32552,
+    "no col query": None,
     "notify": 41522,
     "password_encryption": 42519,
     "pg_terminate_backend": 35897,

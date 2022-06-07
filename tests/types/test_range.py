@@ -13,7 +13,7 @@ from psycopg.types.range import Range, RangeInfo, register_range
 from ..utils import eur
 from ..fix_crdb import is_crdb, crdb_skip_message
 
-pytestmark = pytest.mark.crdb("skip", reason="range")
+pytestmark = pytest.mark.crdb_skip("range")
 
 type2sub = {
     "int4range": "int4",

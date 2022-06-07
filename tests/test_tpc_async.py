@@ -5,7 +5,7 @@ from psycopg.pq import TransactionStatus
 
 pytestmark = [
     pytest.mark.asyncio,
-    pytest.mark.crdb("skip", reason="2-phase commit"),
+    pytest.mark.crdb_skip("2-phase commit"),
 ]
 
 

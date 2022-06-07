@@ -118,7 +118,7 @@ def test_enum_loader_nonascii(conn, encoding, fmt_in, fmt_out):
         assert cur.fetchone()[0] == enum[label]
 
 
-@pytest.mark.crdb("skip", reason="encoding")
+@pytest.mark.crdb_skip("encoding")
 @pytest.mark.parametrize("enum", enum_cases)
 @pytest.mark.parametrize("fmt_in", PyFormat)
 @pytest.mark.parametrize("fmt_out", pq.Format)
@@ -161,7 +161,7 @@ def test_enum_dumper_nonascii(conn, encoding, fmt_in, fmt_out):
         assert cur.fetchone()[0] == item
 
 
-@pytest.mark.crdb("skip", reason="encoding")
+@pytest.mark.crdb_skip("encoding")
 @pytest.mark.parametrize("enum", enum_cases)
 @pytest.mark.parametrize("fmt_in", PyFormat)
 @pytest.mark.parametrize("fmt_out", pq.Format)

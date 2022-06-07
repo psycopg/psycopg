@@ -595,7 +595,7 @@ async def test_stream_no_row(aconn):
     assert recs == []
 
 
-@pytest.mark.crdb("skip", reason="no col query")
+@pytest.mark.crdb_skip("no col query")
 async def test_stream_no_col(aconn):
     cur = aconn.cursor()
     recs = [rec async for rec in cur.stream("select")]

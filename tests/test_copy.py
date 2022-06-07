@@ -19,7 +19,7 @@ from psycopg.types.numeric import Int4
 
 from .utils import eur, gc_collect
 
-pytestmark = pytest.mark.crdb("skip", reason="copy")
+pytestmark = pytest.mark.crdb_skip("copy")
 
 sample_records = [(10, 20, "hello"), (40, None, "world")]
 sample_values = "values (10::int, 20::int, 'hello'::text), (40, NULL, 'world')"

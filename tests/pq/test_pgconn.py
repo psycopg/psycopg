@@ -131,7 +131,7 @@ def test_info(dsn, pgconn):
         pgconn.info
 
 
-@pytest.mark.crdb("skip", reason="pg_terminate_backend")
+@pytest.mark.crdb_skip("pg_terminate_backend")
 def test_reset(pgconn):
     assert pgconn.status == pq.ConnStatus.OK
     pgconn.exec_(b"select pg_terminate_backend(pg_backend_pid())")
@@ -146,7 +146,7 @@ def test_reset(pgconn):
     assert pgconn.status == pq.ConnStatus.BAD
 
 
-@pytest.mark.crdb("skip", reason="pg_terminate_backend")
+@pytest.mark.crdb_skip("pg_terminate_backend")
 def test_reset_async(pgconn):
     assert pgconn.status == pq.ConnStatus.OK
     pgconn.exec_(b"select pg_terminate_backend(pg_backend_pid())")
@@ -272,7 +272,7 @@ def test_parameter_status(dsn, monkeypatch):
         pgconn.parameter_status(b"application_name")
 
 
-@pytest.mark.crdb("skip", reason="encoding")
+@pytest.mark.crdb_skip("encoding")
 def test_encoding(pgconn):
     res = pgconn.exec_(b"set client_encoding to latin1")
     assert res.status == pq.ExecStatus.COMMAND_OK
@@ -402,7 +402,7 @@ def test_cancel_free(pgconn):
     cancel.free()
 
 
-@pytest.mark.crdb("skip", reason="notify")
+@pytest.mark.crdb_skip("notify")
 def test_notify(pgconn):
     assert pgconn.notifies() is None
 
@@ -430,7 +430,7 @@ def test_notify(pgconn):
     assert pgconn.notifies() is None
 
 
-@pytest.mark.crdb("skip", reason="do")
+@pytest.mark.crdb_skip("do")
 def test_notice_nohandler(pgconn):
     pgconn.exec_(b"set client_min_messages to notice")
     res = pgconn.exec_(
@@ -439,7 +439,7 @@ def test_notice_nohandler(pgconn):
     assert res.status == pq.ExecStatus.COMMAND_OK
 
 
-@pytest.mark.crdb("skip", reason="do")
+@pytest.mark.crdb_skip("do")
 def test_notice(pgconn):
     msgs = []
 
@@ -457,7 +457,7 @@ def test_notice(pgconn):
     assert msgs and msgs[0] == b"hello notice"
 
 
-@pytest.mark.crdb("skip", reason="do")
+@pytest.mark.crdb_skip("do")
 def test_notice_error(pgconn, caplog):
     caplog.set_level(logging.WARNING, logger="psycopg")
 
@@ -538,7 +538,7 @@ def test_encrypt_password_badalgo(pgconn):
 
 
 @pytest.mark.libpq(">= 10")
-@pytest.mark.crdb("skip", reason="password_encryption")
+@pytest.mark.crdb_skip("password_encryption")
 def test_encrypt_password_query(pgconn):
     res = pgconn.exec_(b"set password_encryption to 'md5'")
     assert res.status == pq.ExecStatus.COMMAND_OK, pgconn.error_message.decode()

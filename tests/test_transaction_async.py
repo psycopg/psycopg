@@ -85,7 +85,7 @@ async def test_rollback_on_exception_exit(aconn):
     assert not await inserted(aconn)
 
 
-@pytest.mark.crdb("skip", reason="pg_terminate_backend")
+@pytest.mark.crdb_skip("pg_terminate_backend")
 async def test_context_inerror_rollback_no_clobber(
     aconn_cls, aconn, apipeline, dsn, caplog
 ):
@@ -111,7 +111,7 @@ async def test_context_inerror_rollback_no_clobber(
     assert "in rollback" in rec.message
 
 
-@pytest.mark.crdb("skip", reason="copy")
+@pytest.mark.crdb_skip("copy")
 async def test_context_active_rollback_no_clobber(aconn_cls, dsn, caplog):
     caplog.set_level(logging.WARNING, logger="psycopg")
 

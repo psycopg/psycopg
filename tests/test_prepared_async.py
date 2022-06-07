@@ -105,9 +105,7 @@ async def test_no_prepare_error(aconn):
     "query",
     [
         "create table test_no_prepare ()",
-        pytest.param(
-            "notify foo, 'bar'", marks=pytest.mark.crdb("skip", reason="notify")
-        ),
+        pytest.param("notify foo, 'bar'", marks=pytest.mark.crdb_skip("notify")),
         "set timezone = utc",
         "select num from prepared_test",
         "insert into prepared_test (num) values (1)",

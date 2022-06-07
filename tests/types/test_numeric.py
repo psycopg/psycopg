@@ -301,7 +301,7 @@ def test_load_float_approx(conn, expr, pgtype, want, fmt_out):
     assert result == pytest.approx(want)
 
 
-@pytest.mark.crdb("skip", reason="copy")
+@pytest.mark.crdb_skip("copy")
 def test_load_float_copy(conn):
     cur = conn.cursor(binary=False)
     with cur.copy("copy (select 3.14::float8, 'hi'::text) to stdout;") as copy:
@@ -369,7 +369,7 @@ def test_quote_numeric(conn, val, expr):
         assert r == (val, -val)
 
 
-@pytest.mark.crdb("skip", reason="numeric precision not maintained? TODOCRDB")
+@pytest.mark.crdb_skip("binary decimal")
 @pytest.mark.parametrize(
     "expr",
     ["NaN", "1", "1.0", "-1", "0.0", "0.01", "11", "1.1", "1.01", "0", "0.00"]
@@ -404,7 +404,7 @@ def test_dump_numeric_binary(conn, expr):
     [
         f
         if f != PyFormat.BINARY
-        else pytest.param(f, marks=pytest.mark.crdb("skip", reason="binary decimal"))
+        else pytest.param(f, marks=pytest.mark.crdb_skip("binary decimal"))
         for f in PyFormat
     ],
 )

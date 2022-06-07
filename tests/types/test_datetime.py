@@ -421,7 +421,7 @@ class TestDateTimeTz:
         assert rec[0] is True, type
         assert rec[1] == val
 
-    @pytest.mark.crdb("skip", reason="copy")
+    @pytest.mark.crdb_skip("copy")
     def test_load_copy(self, conn):
         cur = conn.cursor(binary=False)
         with cur.copy(
@@ -615,7 +615,7 @@ class TestTimeTz:
         assert rec[0] is True, type
         assert rec[1] == val
 
-    @pytest.mark.crdb("skip", reason="copy")
+    @pytest.mark.crdb_skip("copy")
     def test_load_copy(self, conn):
         cur = conn.cursor(binary=False)
         with cur.copy(
@@ -719,7 +719,7 @@ class TestInterval:
         with pytest.raises(DataError):
             cur.fetchone()[0]
 
-    @pytest.mark.crdb("skip", reason="copy")
+    @pytest.mark.crdb_skip("copy")
     def test_load_copy(self, conn):
         cur = conn.cursor(binary=False)
         with cur.copy(

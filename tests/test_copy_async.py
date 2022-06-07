@@ -24,7 +24,7 @@ from .test_copy import py_to_raw
 
 pytestmark = [
     pytest.mark.asyncio,
-    pytest.mark.crdb("skip", reason="copy"),
+    pytest.mark.crdb_skip("copy"),
 ]
 
 

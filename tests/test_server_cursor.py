@@ -4,7 +4,7 @@ import psycopg
 from psycopg import rows, errors as e
 from psycopg.pq import Format
 
-pytestmark = pytest.mark.crdb("skip", reason="server-side cursor")
+pytestmark = pytest.mark.crdb_skip("server-side cursor")
 
 
 def test_init_row_factory(conn):
