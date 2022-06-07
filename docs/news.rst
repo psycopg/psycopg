@@ -15,6 +15,8 @@ Psycopg 3.1 (unreleased)
 
 - Add :ref:`Pipeline mode <pipeline-mode>` (:ticket:`#74`).
 - Add :ref:`client-side-binding-cursors` (:ticket:`#101`).
+- Add `CockroachDB <https://www.cockroachlabs.com/>`__ support in `psycopg.crdb`
+  (:ticket:`#313`).
 - Add :ref:`Two-Phase Commit <two-phase-commit>` support (:ticket:`#72`).
 - Add :ref:`adapt-enum` (:ticket:`#274`).
 - Add ``returning`` parameter to `~Cursor.executemany()` to retrieve query
