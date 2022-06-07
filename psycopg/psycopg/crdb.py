@@ -193,13 +193,12 @@ def register_postgres_adapters(context: AdaptContext) -> None:
     # Same adapters used by PostgreSQL, or a good starting point for customization
 
     from .types import array, bool, composite, datetime
-    from .types import json, numeric, string, uuid
+    from .types import numeric, string, uuid
 
     array.register_default_adapters(context)
     bool.register_default_adapters(context)
     composite.register_default_adapters(context)
     datetime.register_default_adapters(context)
-    json.register_default_adapters(context)
     numeric.register_default_adapters(context)
     string.register_default_adapters(context)
     uuid.register_default_adapters(context)
@@ -240,29 +239,37 @@ def register_crdb_enum_adapters(context: AdaptContext) -> None:
 def register_crdb_json_adapters(context: AdaptContext) -> None:
     from .types import json
 
-    # CRDB doesn't have json/jsonb: both dump as the jsonb oid
-    context.adapters.register_dumper(json.Json, json.JsonbBinaryDumper)
-    context.adapters.register_dumper(json.Json, json.JsonbDumper)
+    adapters = context.adapters
+
+    # CRDB doesn't have json/jsonb: both names map to the jsonb oid
+    adapters.register_dumper(json.Json, json.JsonbBinaryDumper)
+    adapters.register_dumper(json.Json, json.JsonbDumper)
+
+    adapters.register_dumper(json.Jsonb, json.JsonbBinaryDumper)
+    adapters.register_dumper(json.Jsonb, json.JsonbDumper)
+
+    adapters.register_loader("json", json.JsonLoader)
+    adapters.register_loader("jsonb", json.JsonbLoader)
+    adapters.register_loader("json", json.JsonBinaryLoader)
+    adapters.register_loader("jsonb", json.JsonbBinaryLoader)
 
 
 def register_crdb_net_adapters(context: AdaptContext) -> None:
     from psycopg.types import net
 
-    context.adapters.register_dumper("ipaddress.IPv4Address", net.InterfaceDumper)
-    context.adapters.register_dumper("ipaddress.IPv6Address", net.InterfaceDumper)
-    context.adapters.register_dumper("ipaddress.IPv4Interface", net.InterfaceDumper)
-    context.adapters.register_dumper("ipaddress.IPv6Interface", net.InterfaceDumper)
-    context.adapters.register_dumper("ipaddress.IPv4Address", net.AddressBinaryDumper)
-    context.adapters.register_dumper("ipaddress.IPv6Address", net.AddressBinaryDumper)
-    context.adapters.register_dumper(
-        "ipaddress.IPv4Interface", net.InterfaceBinaryDumper
-    )
-    context.adapters.register_dumper(
-        "ipaddress.IPv6Interface", net.InterfaceBinaryDumper
-    )
-    context.adapters.register_dumper(None, net.InetBinaryDumper)
-    context.adapters.register_loader("inet", net.InetLoader)
-    context.adapters.register_loader("inet", net.InetBinaryLoader)
+    adapters = context.adapters
+
+    adapters.register_dumper("ipaddress.IPv4Address", net.InterfaceDumper)
+    adapters.register_dumper("ipaddress.IPv6Address", net.InterfaceDumper)
+    adapters.register_dumper("ipaddress.IPv4Interface", net.InterfaceDumper)
+    adapters.register_dumper("ipaddress.IPv6Interface", net.InterfaceDumper)
+    adapters.register_dumper("ipaddress.IPv4Address", net.AddressBinaryDumper)
+    adapters.register_dumper("ipaddress.IPv6Address", net.AddressBinaryDumper)
+    adapters.register_dumper("ipaddress.IPv4Interface", net.InterfaceBinaryDumper)
+    adapters.register_dumper("ipaddress.IPv6Interface", net.InterfaceBinaryDumper)
+    adapters.register_dumper(None, net.InetBinaryDumper)
+    adapters.register_loader("inet", net.InetLoader)
+    adapters.register_loader("inet", net.InetBinaryLoader)
 
 
 def register_crdb_none_adapters(context: AdaptContext) -> None:
