@@ -8,6 +8,7 @@ from types import TracebackType
 from typing import Any, AsyncIterator, Iterable, List
 from typing import Optional, Type, TypeVar, TYPE_CHECKING
 
+from . import pq
 from . import errors as e
 
 from .abc import Query, Params
@@ -93,14 +94,27 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
         *,
         binary: Optional[bool] = None,
     ) -> AsyncIterator[Row]:
-        async with self._conn.lock:
-            await self._conn.wait(self._stream_send_gen(query, params, binary=binary))
-            first = True
-            while await self._conn.wait(self._stream_fetchone_gen(first)):
-                # We know that, if we got a result, it has a single row.
-                rec: Row = self._tx.load_row(0, self._make_row)  # type: ignore
-                yield rec
-                first = False
+        try:
+            async with self._conn.lock:
+                await self._conn.wait(
+                    self._stream_send_gen(query, params, binary=binary)
+                )
+                first = True
+                while await self._conn.wait(self._stream_fetchone_gen(first)):
+                    # We know that, if we got a result, it has a single row.
+                    rec: Row = self._tx.load_row(0, self._make_row)  # type: ignore
+                    yield rec
+                    first = False
+        except e.Error as ex:
+            # try to get out of ACTIVE state. Just do a single attempt, which
+            # shoud work to recover from an error or query cancelled.
+            if self._pgconn.transaction_status == pq.TransactionStatus.ACTIVE:
+                try:
+                    await self._conn.wait(self._stream_fetchone_gen(first))
+                except Exception:
+                    pass
+
+            raise ex.with_traceback(None)
 
     async def fetchone(self) -> Optional[Row]:
         self._check_result_for_fetch()

@@ -43,6 +43,8 @@ else:
 
 _C = TypeVar("_C", bound="Cursor[Any]")
 
+ACTIVE = pq.TransactionStatus.ACTIVE
+
 
 class BaseCursor(Generic[ConnectionType, Row]):
     # Slots with __weakref__ and generic bases don't work on Py 3.6
@@ -575,14 +577,25 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
         """
         Iterate row-by-row on a result from the database.
         """
-        with self._conn.lock:
-            self._conn.wait(self._stream_send_gen(query, params, binary=binary))
-            first = True
-            while self._conn.wait(self._stream_fetchone_gen(first)):
-                # We know that, if we got a result, it has a single row.
-                rec: Row = self._tx.load_row(0, self._make_row)  # type: ignore
-                yield rec
-                first = False
+        try:
+            with self._conn.lock:
+                self._conn.wait(self._stream_send_gen(query, params, binary=binary))
+                first = True
+                while self._conn.wait(self._stream_fetchone_gen(first)):
+                    # We know that, if we got a result, it has a single row.
+                    rec: Row = self._tx.load_row(0, self._make_row)  # type: ignore
+                    yield rec
+                    first = False
+        except e.Error as ex:
+            # try to get out of ACTIVE state. Just do a single attempt, which
+            # shoud work to recover from an error or query cancelled.
+            if self._pgconn.transaction_status == ACTIVE:
+                try:
+                    self._conn.wait(self._stream_fetchone_gen(first))
+                except Exception:
+                    pass
+
+            raise ex.with_traceback(None)
 
     def fetchone(self) -> Optional[Row]:
         """
