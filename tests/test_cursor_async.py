@@ -631,6 +631,19 @@ async def test_stream_error_notx(aconn):
     assert aconn.info.transaction_status == aconn.TransactionStatus.IDLE
 
 
+async def test_stream_close(aconn):
+    await aconn.set_autocommit(True)
+    cur = aconn.cursor()
+    with pytest.raises(psycopg.OperationalError):
+        async for rec in cur.stream("select generate_series(1, 3)"):
+            if rec[0] == 1:
+                await aconn.close()
+            else:
+                assert False
+
+    assert aconn.closed
+
+
 async def test_stream_binary_cursor(aconn):
     cur = aconn.cursor(binary=True)
     recs = []
