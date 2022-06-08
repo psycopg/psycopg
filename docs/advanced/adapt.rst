@@ -172,10 +172,10 @@ PostgreSQL but not handled by Python:
 
 .. code:: python
 
-    >>> conn.execute("'infinity'::date").fetchone()
+    >>> conn.execute("SELECT 'infinity'::date").fetchone()
     Traceback (most recent call last):
        ...
-    psycopg.DataError: Python date doesn't support years after 9999: got infinity
+    DataError: date too large (after year 10K): 'infinity'
 
 One possibility would be to store Python's `datetime.date.max` as PostgreSQL
 infinity. For this, let's create a subclass for the dumper and the loader and
@@ -193,6 +193,8 @@ cursor):
         def dump(self, obj):
             if obj == date.max:
                 return b"infinity"
+            elif obj == date.min:
+                return b"-infinity"
             else:
                 return super().dump(obj)
 
@@ -200,6 +202,8 @@ cursor):
         def load(self, data):
             if data == b"infinity":
                 return date.max
+            elif data == b"-infinity":
+                return date.min
             else:
                 return super().load(data)
 
