@@ -28,21 +28,26 @@ affecting Psycopg behaviour:
 
 .. __: https://www.cockroachlabs.com/docs/stable/postgresql-compatibility.html
 
+- `~psycopg.Connection.cancel()` doesn't work before CockroachDB 22.1. On
+  older versions, you can use `CANCEL QUERY`_ instead (but from a different
+  connection).
 
-- `~psycopg.Connection.cancel()` doesn't work. You can use `CANCEL QUERY`_
-  instead (from a different connection). TODOCRDB: possibly supported in 22.1.
-- `~psycopg.ConnectionInfo.backend_pid` doesn't return useful info. You can
-  use `SHOW SESSIONS`_ to find a session id which you may use with `CANCEL
-  SESSION`_ in lieu of PostgreSQL's :sql:`pg_terminate_backend()`.
+- `~psycopg.ConnectionInfo.backend_pid` is only populated from CockroachDB
+  22.1. Note however that you cannot use the PID to terminate the session; use
+  `SHOW session_id`_ to find the id of a session, which you may terminate with
+  `CANCEL SESSION`_ in lieu of PostgreSQL's :sql:`pg_terminate_backend()`.
+
 - Several data types are missing or slightly different from PostgreSQL (see
   `adapters` for an overview of the differences).
+
 - The :ref:`two-phase commit protocol <two-phase-commit>` is not supported.
+
 - :sql:`LISTEN` and :sql:`NOTIFY` are not supported. However the `CHANGEFEED`_
   command, in conjunction with `~psycopg.Cursor.stream()`, can provide push
   notifications.
 
 .. _CANCEL QUERY: https://www.cockroachlabs.com/docs/stable/cancel-query.html
-.. _SHOW SESSIONS: https://www.cockroachlabs.com/docs/stable/show-sessions.html
+.. _SHOW session_id: https://www.cockroachlabs.com/docs/stable/show-vars.html
 .. _CANCEL SESSION: https://www.cockroachlabs.com/docs/stable/cancel-session.html
 .. _CHANGEFEED: https://www.cockroachlabs.com/docs/stable/changefeed-for.html
 
