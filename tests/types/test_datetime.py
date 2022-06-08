@@ -234,6 +234,31 @@ class TestDatetime:
         with pytest.raises(DataError):
             cur.fetchone()[0]
 
+    overflow_samples = [
+        ("-infinity", "timestamp too small"),
+        ("1000-01-01 12:00 BC", "timestamp too small"),
+        ("10000-01-01 12:00", "timestamp too large"),
+        ("infinity", "timestamp too large"),
+    ]
+
+    @pytest.mark.parametrize("datestyle_out", ["ISO", "Postgres", "SQL", "German"])
+    @pytest.mark.parametrize("val, msg", overflow_samples)
+    def test_overflow_message(self, conn, datestyle_out, val, msg):
+        cur = conn.cursor()
+        cur.execute(f"set datestyle = {datestyle_out}, YMD")
+        cur.execute("select %s::timestamp", (val,))
+        with pytest.raises(DataError) as excinfo:
+            cur.fetchone()[0]
+        assert msg in str(excinfo.value)
+
+    @pytest.mark.parametrize("val, msg", overflow_samples)
+    def test_overflow_message_binary(self, conn, val, msg):
+        cur = conn.cursor(binary=True)
+        cur.execute("select %s::timestamp", (val,))
+        with pytest.raises(DataError) as excinfo:
+            cur.fetchone()[0]
+        assert msg in str(excinfo.value)
+
     def test_load_all_month_names(self, conn):
         cur = conn.cursor(binary=False)
         cur.execute("set datestyle = 'Postgres'")
@@ -390,6 +415,35 @@ class TestDateTimeTz:
         want = dt.datetime(2000, 1, 1, 1, 2, 3, 123456, tzinfo=tz)
         assert rec[0] == want
         assert rec[1] == 11111111
+
+    overflow_samples = [
+        ("-infinity", "timestamp too small"),
+        ("1000-01-01 12:00+00 BC", "timestamp too small"),
+        ("10000-01-01 12:00+00", "timestamp too large"),
+        ("infinity", "timestamp too large"),
+    ]
+
+    @pytest.mark.parametrize("datestyle_out", ["ISO", "Postgres", "SQL", "German"])
+    @pytest.mark.parametrize("val, msg", overflow_samples)
+    def test_overflow_message(self, conn, datestyle_out, val, msg):
+        cur = conn.cursor()
+        cur.execute(f"set datestyle = {datestyle_out}, YMD")
+        cur.execute("select %s::timestamptz", (val,))
+        if datestyle_out == "ISO":
+            with pytest.raises(DataError) as excinfo:
+                cur.fetchone()[0]
+            assert msg in str(excinfo.value)
+        else:
+            with pytest.raises(NotImplementedError):
+                cur.fetchone()[0]
+
+    @pytest.mark.parametrize("val, msg", overflow_samples)
+    def test_overflow_message_binary(self, conn, val, msg):
+        cur = conn.cursor(binary=True)
+        cur.execute("select %s::timestamptz", (val,))
+        with pytest.raises(DataError) as excinfo:
+            cur.fetchone()[0]
+        assert msg in str(excinfo.value)
 
     tz_sec = pytest.mark.skipif(
         sys.version_info < (3, 7), reason="no seconds in tz offset"
