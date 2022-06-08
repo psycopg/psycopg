@@ -56,16 +56,14 @@ async def test_kwargs(dsn):
             assert conn.autocommit
 
 
-@pytest.mark.crdb_skip("pg_backend_pid")
+@pytest.mark.crdb_skip("backend pid")
 async def test_its_no_pool_at_all(dsn):
     async with AsyncNullConnectionPool(dsn, max_size=2) as p:
         async with p.connection() as conn:
-            cur = await conn.execute("select pg_backend_pid()")
-            (pid1,) = await cur.fetchone()  # type: ignore[misc]
+            pid1 = conn.info.backend_pid
 
             async with p.connection() as conn2:
-                cur = await conn2.execute("select pg_backend_pid()")
-                (pid2,) = await cur.fetchone()  # type: ignore[misc]
+                pid2 = conn2.info.backend_pid
 
         async with p.connection() as conn:
             assert conn.info.backend_pid not in (pid1, pid2)
@@ -286,13 +284,13 @@ async def test_no_queue_timeout(deaf_port):
 
 @pytest.mark.slow
 @pytest.mark.timing
-@pytest.mark.crdb_skip("pg_backend_pid")
+@pytest.mark.crdb_skip("backend pid")
 async def test_queue(dsn):
     async def worker(n):
         t0 = time()
         async with p.connection() as conn:
-            cur = await conn.execute("select pg_backend_pid() from pg_sleep(0.2)")
-            (pid,) = await cur.fetchone()  # type: ignore[misc]
+            await conn.execute("select pg_sleep(0.2)")
+            pid = conn.info.backend_pid
         t1 = time()
         results.append((n, t1 - t0, pid))
 
@@ -345,14 +343,14 @@ async def test_queue_size(dsn):
 
 @pytest.mark.slow
 @pytest.mark.timing
-@pytest.mark.crdb_skip("pg_backend_pid")
+@pytest.mark.crdb_skip("backend pid")
 async def test_queue_timeout(dsn):
     async def worker(n):
         t0 = time()
         try:
             async with p.connection() as conn:
-                cur = await conn.execute("select pg_backend_pid() from pg_sleep(0.2)")
-                (pid,) = await cur.fetchone()  # type: ignore[misc]
+                await conn.execute("select pg_sleep(0.2)")
+                pid = conn.info.backend_pid
         except PoolTimeout as e:
             t1 = time()
             errors.append((n, t1 - t0, e))
@@ -399,15 +397,15 @@ async def test_dead_client(dsn):
 
 @pytest.mark.slow
 @pytest.mark.timing
-@pytest.mark.crdb_skip("pg_backend_pid")
+@pytest.mark.crdb_skip("backend pid")
 async def test_queue_timeout_override(dsn):
     async def worker(n):
         t0 = time()
         timeout = 0.25 if n == 3 else None
         try:
             async with p.connection(timeout=timeout) as conn:
-                cur = await conn.execute("select pg_backend_pid() from pg_sleep(0.2)")
-                (pid,) = await cur.fetchone()  # type: ignore[misc]
+                await conn.execute("select pg_sleep(0.2)")
+                pid = conn.info.backend_pid
         except PoolTimeout as e:
             t1 = time()
             errors.append((n, t1 - t0, e))
@@ -428,17 +426,15 @@ async def test_queue_timeout_override(dsn):
         assert 0.1 < e[1] < 0.15
 
 
-@pytest.mark.crdb_skip("pg_backend_pid")
+@pytest.mark.crdb_skip("backend pid")
 async def test_broken_reconnect(dsn):
     async with AsyncNullConnectionPool(dsn, max_size=1) as p:
         async with p.connection() as conn:
-            cur = await conn.execute("select pg_backend_pid()")
-            (pid1,) = await cur.fetchone()  # type: ignore[misc]
+            pid1 = conn.info.backend_pid
             await conn.close()
 
         async with p.connection() as conn2:
-            cur = await conn2.execute("select pg_backend_pid()")
-            (pid2,) = await cur.fetchone()  # type: ignore[misc]
+            pid2 = conn2.info.backend_pid
 
     assert pid1 != pid2
 

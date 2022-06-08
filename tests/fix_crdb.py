@@ -112,7 +112,6 @@ _crdb_reasons = {
     "no col query": None,
     "notify": 41522,
     "password_encryption": 42519,
-    "pg_backend_pid": 35897,
     "pg_terminate_backend": 35897,
     "range": 41282,
     "scroll cursor": 77102,
