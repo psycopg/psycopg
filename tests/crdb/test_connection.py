@@ -41,6 +41,13 @@ def test_tpc_recover(dsn):
             conn.tpc_recover()
 
 
+def test_broken_connection(conn):
+    cur = conn.cursor()
+    with pytest.raises(psycopg.DatabaseError):
+        cur.execute("cancel session (select session_id from [show session_id])")
+    assert conn.closed
+
+
 def test_broken(conn):
     (session_id,) = conn.execute("show session_id").fetchone()
     with pytest.raises(psycopg.OperationalError):
