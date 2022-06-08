@@ -56,7 +56,7 @@ async def test_kwargs(dsn):
             assert conn.autocommit
 
 
-@pytest.mark.crdb_skip("backend pid")
+@pytest.mark.crdb_skip("pg_backend_pid")
 async def test_its_no_pool_at_all(dsn):
     async with AsyncNullConnectionPool(dsn, max_size=2) as p:
         async with p.connection() as conn:
@@ -286,7 +286,7 @@ async def test_no_queue_timeout(deaf_port):
 
 @pytest.mark.slow
 @pytest.mark.timing
-@pytest.mark.crdb_skip("backend pid")
+@pytest.mark.crdb_skip("pg_backend_pid")
 async def test_queue(dsn):
     async def worker(n):
         t0 = time()
@@ -345,7 +345,7 @@ async def test_queue_size(dsn):
 
 @pytest.mark.slow
 @pytest.mark.timing
-@pytest.mark.crdb_skip("backend pid")
+@pytest.mark.crdb_skip("pg_backend_pid")
 async def test_queue_timeout(dsn):
     async def worker(n):
         t0 = time()
@@ -399,7 +399,7 @@ async def test_dead_client(dsn):
 
 @pytest.mark.slow
 @pytest.mark.timing
-@pytest.mark.crdb_skip("backend pid")
+@pytest.mark.crdb_skip("pg_backend_pid")
 async def test_queue_timeout_override(dsn):
     async def worker(n):
         t0 = time()
@@ -428,7 +428,7 @@ async def test_queue_timeout_override(dsn):
         assert 0.1 < e[1] < 0.15
 
 
-@pytest.mark.crdb_skip("backend pid")
+@pytest.mark.crdb_skip("pg_backend_pid")
 async def test_broken_reconnect(dsn):
     async with AsyncNullConnectionPool(dsn, max_size=1) as p:
         async with p.connection() as conn:
@@ -505,6 +505,7 @@ async def test_inerror_rollback(dsn, caplog):
 
 
 @pytest.mark.crdb_skip("backend pid")
+@pytest.mark.crdb_skip("copy")
 async def test_active_close(dsn, caplog):
     caplog.set_level(logging.WARNING, logger="psycopg.pool")
     pids = []

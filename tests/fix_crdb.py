@@ -112,14 +112,16 @@ _crdb_reasons = {
     "no col query": None,
     "notify": 41522,
     "password_encryption": 42519,
+    "pg_backend_pid": 35897,
     "pg_terminate_backend": 35897,
     "range": 41282,
-    "severity_nonlocalized": 81794,
     "scroll cursor": 77102,
     "server-side cursor": 41412,
+    "severity_nonlocalized": 81794,
     "stored procedure": 1751,
 }
 
 _crdb_reason_version = {
+    "backend pid": "skip < 22",
     "cancel": "skip < 22",
 }

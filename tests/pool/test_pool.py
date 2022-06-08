@@ -64,7 +64,7 @@ def test_kwargs(dsn):
             assert conn.autocommit
 
 
-@pytest.mark.crdb_skip("backend pid")
+@pytest.mark.crdb_skip("pg_backend_pid")
 def test_its_really_a_pool(dsn):
     with pool.ConnectionPool(dsn, min_size=2) as p:
         with p.connection() as conn:
@@ -292,7 +292,7 @@ def test_reset_broken(dsn, caplog):
 
 @pytest.mark.slow
 @pytest.mark.timing
-@pytest.mark.crdb_skip("backend pid")
+@pytest.mark.crdb_skip("pg_backend_pid")
 def test_queue(dsn):
     def worker(n):
         t0 = time()
@@ -359,7 +359,7 @@ def test_queue_size(dsn):
 
 @pytest.mark.slow
 @pytest.mark.timing
-@pytest.mark.crdb_skip("backend pid")
+@pytest.mark.crdb_skip("pg_backend_pid")
 def test_queue_timeout(dsn):
     def worker(n):
         t0 = time()
@@ -421,7 +421,7 @@ def test_dead_client(dsn):
 
 @pytest.mark.slow
 @pytest.mark.timing
-@pytest.mark.crdb_skip("backend pid")
+@pytest.mark.crdb_skip("pg_backend_pid")
 def test_queue_timeout_override(dsn):
     def worker(n):
         t0 = time()
@@ -454,7 +454,7 @@ def test_queue_timeout_override(dsn):
         assert 0.1 < e[1] < 0.15
 
 
-@pytest.mark.crdb_skip("backend pid")
+@pytest.mark.crdb_skip("pg_backend_pid")
 def test_broken_reconnect(dsn):
     with pool.ConnectionPool(dsn, min_size=1) as p:
         with p.connection() as conn:
@@ -512,6 +512,7 @@ def test_inerror_rollback(dsn, caplog):
 
 
 @pytest.mark.crdb_skip("backend pid")
+@pytest.mark.crdb_skip("copy")
 def test_active_close(dsn, caplog):
     caplog.set_level(logging.WARNING, logger="psycopg.pool")
 
