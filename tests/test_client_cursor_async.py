@@ -681,3 +681,18 @@ async def test_mogrify(aconn):
     await aconn.execute("set client_encoding to latin1")
     with pytest.raises(UnicodeEncodeError):
         cur.mogrify("select %(s)s", {"s": "\u20ac"})
+
+
+@pytest.mark.libpq(">= 14")
+@pytest.mark.pipeline
+async def test_message_0x33(aconn):
+    # https://github.com/psycopg/psycopg/issues/314
+    notices = []
+    aconn.add_notice_handler(lambda diag: notices.append(diag.message_primary))
+
+    await aconn.set_autocommit(True)
+    async with aconn.pipeline():
+        cur = await aconn.execute("select 'test'")
+        await cur.fetchone() == ("test",)
+
+    assert not notices

@@ -19,7 +19,7 @@ from psycopg import pq, waiting
 from psycopg import errors as e
 from psycopg.abc import PipelineCommand
 from psycopg.generators import pipeline_communicate
-from psycopg.pq._enums import Format
+from psycopg.pq import Format, DiagnosticField
 from psycopg._compat import Deque
 
 psycopg_logger = logging.getLogger("psycopg")
@@ -33,6 +33,19 @@ class LoggingPGconn:
     def __init__(self, pgconn: pq.abc.PGconn, logger: logging.Logger):
         self._pgconn = pgconn
         self._logger = logger
+
+        def log_notice(result: pq.abc.PGresult) -> None:
+            def get_field(field: DiagnosticField) -> Optional[str]:
+                value = result.error_field(field)
+                return value.decode("utf-8", "replace") if value else None
+
+            logger.info(
+                "notice %s %s",
+                get_field(DiagnosticField.SEVERITY),
+                get_field(DiagnosticField.MESSAGE_PRIMARY),
+            )
+
+        pgconn.notice_handler = log_notice
 
         if args.trace:
             self._trace_file = open(args.trace, "w")

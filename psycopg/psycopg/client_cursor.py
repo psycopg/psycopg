@@ -58,22 +58,19 @@ class ClientCursorMixin(BaseCursor[ConnectionType, Row]):
             )
 
         self._query = query
-        if no_pqexec:
-            if self._conn._pipeline:
-                self._conn._pipeline.command_queue.append(
-                    partial(self._pgconn.send_query_params, None)
-                )
-            else:
-                self._pgconn.send_query_params(query.query, None)
+
+        if self._conn._pipeline:
+            # In pipeline mode always use PQsendQueryParams - see #314
+            # Multiple statements in the same query are not allowed anyway.
+            self._conn._pipeline.command_queue.append(
+                partial(self._pgconn.send_query_params, query.query, None)
+            )
+        elif no_pqexec:
+            self._pgconn.send_query_params(query.query, None)
         else:
             # if we don't have to, let's use exec_ as it can run more than
             # one query in one go
-            if self._conn._pipeline:
-                self._conn._pipeline.command_queue.append(
-                    partial(self._pgconn.send_query, query.query)
-                )
-            else:
-                self._pgconn.send_query(query.query)
+            self._pgconn.send_query(query.query)
 
     def _convert_query(
         self, query: Query, params: Optional[Params] = None
