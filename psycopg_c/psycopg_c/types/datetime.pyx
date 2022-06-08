@@ -371,10 +371,18 @@ cdef class DateLoader(CLoader):
         else:
             raise e.InterfaceError(f"unexpected DateStyle: {ds.decode('ascii')}")
 
+    cdef object _error_date(self, const char *data, str msg):
+        s = bytes(data).decode("utf8", "replace")
+        if s == "infinity" or len(s.split()[0]) > 10:
+            raise e.DataError(f"date too large (after year 10K): {s!r}") from None
+        elif s == "-infinity" or "BC" in s:
+            raise e.DataError(f"date too small (before year 1): {s!r}") from None
+        else:
+            raise e.DataError(f"can't parse date {s!r}: {msg}") from None
+
     cdef object cload(self, const char *data, size_t length):
         if length != 10:
-            s = bytes(data).decode("utf8", "replace")
-            raise e.DataError(f"date not supported: {s!r}")
+            self._error_date(data, "unexpected length")
 
         DEF NVALUES = 3
         cdef int vals[NVALUES]
@@ -395,8 +403,7 @@ cdef class DateLoader(CLoader):
             else:
                 return cdt.date_new(vals[2], vals[0], vals[1])
         except ValueError as ex:
-            s = bytes(data).decode("utf8", "replace")
-            raise e.DataError(f"can't parse date {s!r}: {ex}") from None
+            self._error_date(data, str(ex))
 
 
 @cython.final
