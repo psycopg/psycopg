@@ -1006,7 +1006,10 @@ cdef class IntervalBinaryLoader(CLoader):
             usdays = -usdays
             us = -us
 
-        return cdt.timedelta_new(days + usdays, ussecs, us)
+        try:
+            return cdt.timedelta_new(days + usdays, ussecs, us)
+        except OverflowError as ex:
+            raise e.DataError(f"can't parse interval: {ex}")
 
 
 cdef const char *_parse_date_values(

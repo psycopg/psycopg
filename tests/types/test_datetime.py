@@ -686,9 +686,10 @@ class TestInterval:
         cur.execute(f"select '{expr}'::interval")
         assert cur.fetchone()[0] == as_td(val)
 
+    @pytest.mark.parametrize("fmt_out", pq.Format)
     @pytest.mark.parametrize("val", ["min", "max"])
-    def test_load_interval_overflow(self, conn, val):
-        cur = conn.cursor()
+    def test_load_interval_overflow(self, conn, val, fmt_out):
+        cur = conn.cursor(binary=fmt_out)
         cur.execute(
             "select %s + %s * '1s'::interval",
             (as_td(val), -1 if val == "min" else 1),
