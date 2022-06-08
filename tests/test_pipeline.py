@@ -488,6 +488,7 @@ def test_rollback_transaction(conn):
 
 
 def test_message_0x33(conn):
+    # https://github.com/psycopg/psycopg/issues/314
     notices = []
     conn.add_notice_handler(lambda diag: notices.append(diag.message_primary))
 

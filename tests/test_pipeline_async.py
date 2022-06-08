@@ -490,6 +490,7 @@ async def test_rollback_transaction(aconn):
 
 
 async def test_message_0x33(aconn):
+    # https://github.com/psycopg/psycopg/issues/314
     notices = []
     aconn.add_notice_handler(lambda diag: notices.append(diag.message_primary))
 

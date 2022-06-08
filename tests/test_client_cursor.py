@@ -807,3 +807,18 @@ def test_mogrify(conn):
     conn.execute("set client_encoding to latin1")
     with pytest.raises(UnicodeEncodeError):
         cur.mogrify("select %(s)s", {"s": "\u20ac"})
+
+
+@pytest.mark.libpq(">= 14")
+@pytest.mark.pipeline
+def test_message_0x33(conn):
+    # https://github.com/psycopg/psycopg/issues/314
+    notices = []
+    conn.add_notice_handler(lambda diag: notices.append(diag.message_primary))
+
+    conn.autocommit = True
+    with conn.pipeline():
+        cur = conn.execute("select 'test'")
+        cur.fetchone() == ("test",)
+
+    assert not notices

@@ -448,35 +448,32 @@ class BaseCursor(Generic[ConnectionType, Row]):
             fmt = BINARY if binary else TEXT
 
         self._query = query
-        if query.params or no_pqexec or fmt == BINARY:
-            if self._conn._pipeline:
-                self._conn._pipeline.command_queue.append(
-                    partial(
-                        self._pgconn.send_query_params,
-                        query.query,
-                        query.params,
-                        param_formats=query.formats,
-                        param_types=query.types,
-                        result_format=fmt,
-                    )
-                )
-            else:
-                self._pgconn.send_query_params(
+
+        if self._conn._pipeline:
+            # In pipeline mode always use PQsendQueryParams - see #314
+            # Multiple statements in the same query are not allowed anyway.
+            self._conn._pipeline.command_queue.append(
+                partial(
+                    self._pgconn.send_query_params,
                     query.query,
                     query.params,
                     param_formats=query.formats,
                     param_types=query.types,
                     result_format=fmt,
                 )
+            )
+        elif no_pqexec or query.params or fmt == BINARY:
+            self._pgconn.send_query_params(
+                query.query,
+                query.params,
+                param_formats=query.formats,
+                param_types=query.types,
+                result_format=fmt,
+            )
         else:
             # if we don't have to, let's use exec_ as it can run more than
             # one query in one go
-            if self._conn._pipeline:
-                self._conn._pipeline.command_queue.append(
-                    partial(self._pgconn.send_query, query.query)
-                )
-            else:
-                self._pgconn.send_query(query.query)
+            self._pgconn.send_query(query.query)
 
     def _convert_query(
         self, query: Query, params: Optional[Params] = None
