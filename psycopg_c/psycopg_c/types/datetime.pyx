@@ -365,10 +365,18 @@ cdef class DateLoader(CLoader):
         else:
             raise e.InterfaceError(f"unexpected DateStyle: {ds.decode('ascii')}")
 
+    cdef object _error_date(self, const char *data, str msg):
+        s = bytes(data).decode("utf8", "replace")
+        if s == "infinity" or len(s.split()[0]) > 10:
+            raise e.DataError(f"date too large (after year 10K): {s!r}") from None
+        elif s == "-infinity" or "BC" in s:
+            raise e.DataError(f"date too small (before year 1): {s!r}") from None
+        else:
+            raise e.DataError(f"can't parse date {s!r}: {msg}") from None
+
     cdef object cload(self, const char *data, size_t length):
         if length != 10:
-            s = bytes(data).decode("utf8", "replace")
-            raise e.DataError(f"date not supported: {s!r}")
+            self._error_date(data, "unexpected length")
 
         DEF NVALUES = 3
         cdef int vals[NVALUES]
@@ -389,8 +397,7 @@ cdef class DateLoader(CLoader):
             else:
                 return cdt.date_new(vals[2], vals[0], vals[1])
         except ValueError as ex:
-            s = bytes(data).decode("utf8", "replace")
-            raise e.DataError(f"can't parse date {s!r}: {ex}") from None
+            self._error_date(data, str(ex))
 
 
 @cython.final
@@ -559,8 +566,7 @@ cdef class TimestampLoader(CLoader):
     cdef object cload(self, const char *data, size_t length):
         cdef const char *end = data + length
         if end[-1] == b'C':  # ends with BC
-            s = bytes(data).decode("utf8", "replace")
-            raise e.DataError(f"BC timestamp not supported, got {s!r}")
+            raise _get_timestamp_load_error(self._pgconn, data) from None
 
         if self._order == ORDER_PGDM or self._order == ORDER_PGMD:
             return self._cload_pg(data, end)
@@ -578,8 +584,7 @@ cdef class TimestampLoader(CLoader):
         # Parse the first 6 groups of digits (date and time)
         ptr = _parse_date_values(data, end, vals, 6)
         if ptr == NULL:
-            s = bytes(data).decode("utf8", "replace")
-            raise e.DataError(f"can't parse timetz {s!r}")
+            raise _get_timestamp_load_error(self._pgconn, data) from None
 
         # Parse the microseconds
         cdef int us = 0
@@ -599,8 +604,7 @@ cdef class TimestampLoader(CLoader):
             return cdt.datetime_new(
                 y, m, d, vals[HO], vals[MI], vals[SE], us, None)
         except ValueError as ex:
-            s = bytes(data).decode("utf8", "replace")
-            raise e.DataError(f"can't parse timestamp {s!r}: {ex}") from None
+            raise _get_timestamp_load_error(self._pgconn, data, ex) from None
 
     cdef object _cload_pg(self, const char *data, const char *end):
         DEF HO = 0
@@ -618,14 +622,12 @@ cdef class TimestampLoader(CLoader):
         seps[1] = strchr(seps[0] + 1, b' ') if seps[0] != NULL else NULL
         seps[2] = strchr(seps[1] + 1, b' ') if seps[1] != NULL else NULL
         if seps[2] == NULL:
-            s = bytes(data).decode("utf8", "replace")
-            raise e.DataError(f"can't parse timestamp {s!r}")
+            raise _get_timestamp_load_error(self._pgconn, data) from None
 
         # Parse the following 3 groups of digits (time)
         ptr = _parse_date_values(seps[2] + 1, end, vals, 3)
         if ptr == NULL:
-            s = bytes(data).decode("utf8", "replace")
-            raise e.DataError(f"can't parse timestamp {s!r}")
+            raise _get_timestamp_load_error(self._pgconn, data) from None
 
         # Parse the microseconds
         cdef int us = 0
@@ -635,8 +637,7 @@ cdef class TimestampLoader(CLoader):
         # Parse the year
         ptr = _parse_date_values(ptr + 1, end, vals + 3, 1)
         if ptr == NULL:
-            s = bytes(data).decode("utf8", "replace")
-            raise e.DataError(f"can't parse timestamp {s!r}")
+            raise _get_timestamp_load_error(self._pgconn, data) from None
 
         # Resolve the MD order
         cdef int m, d
@@ -647,16 +648,14 @@ cdef class TimestampLoader(CLoader):
             else: # self._order == ORDER_PGMD
                 m = _month_abbr[seps[0][1 : seps[1] - seps[0]]]
                 d = int(seps[1][1 : seps[2] - seps[1]])
-        except (KeyError, ValueError):
-            s = data.decode("utf8", "replace")
-            raise e.DataError(f"can't parse timestamp: {s!r}") from None
+        except (KeyError, ValueError) as ex:
+            raise _get_timestamp_load_error(self._pgconn, data, ex) from None
 
         try:
             return cdt.datetime_new(
                 vals[YE], m, d, vals[HO], vals[MI], vals[SE], us, None)
         except ValueError as ex:
-            s = bytes(data).decode("utf8", "replace")
-            raise e.DataError(f"can't parse timestamp {s!r}: {ex}") from None
+            raise _get_timestamp_load_error(self._pgconn, data, ex) from None
 
 
 @cython.final
@@ -689,13 +688,9 @@ cdef class TimestampBinaryLoader(CLoader):
 
         except OverflowError:
             if val <= 0:
-                raise e.DataError(
-                    "timestamp too small (before year 1)"
-                ) from None
+                raise e.DataError("timestamp too small (before year 1)") from None
             else:
-                raise e.DataError(
-                    "timestamp too large (after year 10K)"
-                ) from None
+                raise e.DataError("timestamp too large (after year 10K)") from None
 
 
 cdef class _BaseTimestamptzLoader(CLoader):
@@ -722,13 +717,12 @@ cdef class TimestamptzLoader(_BaseTimestamptzLoader):
             self._order = ORDER_DMY
 
     cdef object cload(self, const char *data, size_t length):
-        cdef const char *end = data + length
-        if end[-1] == b'C':  # ends with BC
-            s = bytes(data).decode("utf8", "replace")
-            raise e.DataError(f"BC timestamptz not supported, got {s!r}")
-
         if self._order != ORDER_YMD:
             return self._cload_notimpl(data, length)
+
+        cdef const char *end = data + length
+        if end[-1] == b'C':  # ends with BC
+            raise _get_timestamp_load_error(self._pgconn, data) from None
 
         DEF D1 = 0
         DEF D2 = 1
@@ -743,8 +737,7 @@ cdef class TimestamptzLoader(_BaseTimestamptzLoader):
         cdef const char *ptr
         ptr = _parse_date_values(data, end, vals, 6)
         if ptr == NULL:
-            s = bytes(data).decode("utf8", "replace")
-            raise e.DataError(f"can't parse timestamptz {s!r}")
+            raise _get_timestamp_load_error(self._pgconn, data) from None
 
         # Parse the microseconds
         cdef int us = 0
@@ -763,8 +756,7 @@ cdef class TimestamptzLoader(_BaseTimestamptzLoader):
         # Parse the timezone
         cdef int offsecs = _parse_timezone_to_seconds(&ptr, end)
         if ptr == NULL:
-            s = bytes(data).decode("utf8", "replace")
-            raise e.DataError(f"can't parse timestamptz {s!r}")
+            raise _get_timestamp_load_error(self._pgconn, data) from None
 
         tzoff = cdt.timedelta_new(0, offsecs, 0)
 
@@ -791,8 +783,7 @@ cdef class TimestamptzLoader(_BaseTimestamptzLoader):
         except ValueError as ex:
             ex1 = ex
 
-        s = bytes(data).decode("utf8", "replace")
-        raise e.DataError(f"can't parse timestamptz {s!r}: {ex1}") from None
+        raise _get_timestamp_load_error(self._pgconn, data, ex1) from None
 
     cdef object _cload_notimpl(self, const char *data, size_t length):
         s = bytes(data)[:length].decode("utf8", "replace")
@@ -1001,7 +992,10 @@ cdef class IntervalBinaryLoader(CLoader):
             usdays = -usdays
             us = -us
 
-        return cdt.timedelta_new(days + usdays, ussecs, us)
+        try:
+            return cdt.timedelta_new(days + usdays, ussecs, us)
+        except OverflowError as ex:
+            raise e.DataError(f"can't parse interval: {ex}")
 
 
 cdef const char *_parse_date_values(
@@ -1090,9 +1084,33 @@ cdef object _timezone_from_seconds(int sec, __cache={}):
     return tz
 
 
+cdef object _get_timestamp_load_error(
+    pq.PGconn pgconn, const char *data, ex: Optional[Exception] = None
+):
+    s = bytes(data).decode("utf8", "replace")
+
+    def is_overflow(s):
+        if not s:
+            return False
+
+        ds = _get_datestyle(pgconn)
+        if not ds.startswith(b"P"):  # Postgres
+            return len(s.split()[0]) > 10  # date is first token
+        else:
+            return len(s.split()[-1]) > 4  # year is last token
+
+    if s == "-infinity" or s.endswith("BC"):
+        return e.DataError("timestamp too small (before year 1): {s!r}")
+    elif s == "infinity" or is_overflow(s):
+        return e.DataError(f"timestamp too large (after year 10K): {s!r}")
+    else:
+        return e.DataError(f"can't parse timestamp {s!r}: {ex or '(unknown)'}")
+
+
 cdef _timezones = {}
 _timezones[None] = timezone_utc
 _timezones[b"UTC"] = timezone_utc
+
 
 cdef object _timezone_from_connection(pq.PGconn pgconn):
     """Return the Python timezone info of the connection's timezone."""

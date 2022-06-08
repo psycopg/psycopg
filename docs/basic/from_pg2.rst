@@ -274,6 +274,36 @@ connection by running a :sql:`SET client_encoding` statement... But why would
 you?
 
 
+.. _infinity-datetime:
+
+No default infinity dates handling
+----------------------------------
+
+PostgreSQL can represent has a much wider range of dates and timestamps than
+Python. While Python dates are limited to the years between 1 and 9999
+(represented by constants such as `datetime.date.min` and
+`~datetime.date.max`), PostgreSQL dates extend to BC dates and past the year
+10K. Furthermore PostgreSQL can also represent symbolic dates "infinity", in
+both directions.
+
+In psycopg2, by default, `infinity dates and timestamps map to 'date.max'`__
+and similar constants. This has the problem of creating a non-bijective
+mapping (two Postgres dates, infinity and 9999-12-31, both map to the same
+Python date). There is also the perversity that valid Postgres dates, greater
+than Python `!date.max` but arguably lesser than infinity, will still
+overflow.
+
+In Psycopg 3, every date greater than year 9999 will overflow, including
+infinity. If you would like to customize this mapping (for instance flattening
+every date past Y10K on `!date.max`) you can subclass and adapt the
+appropriate loaders: take a look at :ref:`this example
+<adapt-example-inf-date>` to see how.
+
+.. __: https://www.psycopg.org/docs/usage.html#infinite-dates-handling
+
+
+.. _whats-new:
+
 What's new in Psycopg 3
 -----------------------
 

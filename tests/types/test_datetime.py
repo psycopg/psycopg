@@ -80,6 +80,62 @@ class TestDate:
         with pytest.raises(DataError):
             cur.fetchone()[0]
 
+    overflow_samples = [
+        ("-infinity", "date too small"),
+        ("1000-01-01 BC", "date too small"),
+        ("10000-01-01", "date too large"),
+        ("infinity", "date too large"),
+    ]
+
+    @pytest.mark.parametrize("datestyle_out", ["ISO", "Postgres", "SQL", "German"])
+    @pytest.mark.parametrize("val, msg", overflow_samples)
+    def test_load_overflow_message(self, conn, datestyle_out, val, msg):
+        cur = conn.cursor()
+        cur.execute(f"set datestyle = {datestyle_out}, YMD")
+        cur.execute("select %s::date", (val,))
+        with pytest.raises(DataError) as excinfo:
+            cur.fetchone()[0]
+        assert msg in str(excinfo.value)
+
+    @pytest.mark.parametrize("val, msg", overflow_samples)
+    def test_load_overflow_message_binary(self, conn, val, msg):
+        cur = conn.cursor(binary=True)
+        cur.execute("select %s::date", (val,))
+        with pytest.raises(DataError) as excinfo:
+            cur.fetchone()[0]
+        assert msg in str(excinfo.value)
+
+    def test_infinity_date_example(self, conn):
+        # NOTE: this is an example in the docs. Make sure it doesn't regress when
+        # adding binary datetime adapters
+        from datetime import date
+        from psycopg.types.datetime import DateLoader, DateDumper
+
+        class InfDateDumper(DateDumper):
+            def dump(self, obj):
+                if obj == date.max:
+                    return b"infinity"
+                else:
+                    return super().dump(obj)
+
+        class InfDateLoader(DateLoader):
+            def load(self, data):
+                if data == b"infinity":
+                    return date.max
+                else:
+                    return super().load(data)
+
+        cur = conn.cursor()
+        cur.adapters.register_dumper(date, InfDateDumper)
+        cur.adapters.register_loader("date", InfDateLoader)
+
+        rec = cur.execute(
+            "SELECT %s::text, %s::text", [date(2020, 12, 31), date.max]
+        ).fetchone()
+        assert rec == ("2020-12-31", "infinity")
+        rec = cur.execute("select '2020-12-31'::date, 'infinity'::date").fetchone()
+        assert rec == (date(2020, 12, 31), date(9999, 12, 31))
+
 
 class TestDatetime:
     @pytest.mark.parametrize(
@@ -176,6 +232,31 @@ class TestDatetime:
         )
         with pytest.raises(DataError):
             cur.fetchone()[0]
+
+    overflow_samples = [
+        ("-infinity", "timestamp too small"),
+        ("1000-01-01 12:00 BC", "timestamp too small"),
+        ("10000-01-01 12:00", "timestamp too large"),
+        ("infinity", "timestamp too large"),
+    ]
+
+    @pytest.mark.parametrize("datestyle_out", ["ISO", "Postgres", "SQL", "German"])
+    @pytest.mark.parametrize("val, msg", overflow_samples)
+    def test_overflow_message(self, conn, datestyle_out, val, msg):
+        cur = conn.cursor()
+        cur.execute(f"set datestyle = {datestyle_out}, YMD")
+        cur.execute("select %s::timestamp", (val,))
+        with pytest.raises(DataError) as excinfo:
+            cur.fetchone()[0]
+        assert msg in str(excinfo.value)
+
+    @pytest.mark.parametrize("val, msg", overflow_samples)
+    def test_overflow_message_binary(self, conn, val, msg):
+        cur = conn.cursor(binary=True)
+        cur.execute("select %s::timestamp", (val,))
+        with pytest.raises(DataError) as excinfo:
+            cur.fetchone()[0]
+        assert msg in str(excinfo.value)
 
     def test_load_all_month_names(self, conn):
         cur = conn.cursor(binary=False)
@@ -333,6 +414,35 @@ class TestDateTimeTz:
         want = dt.datetime(2000, 1, 1, 1, 2, 3, 123456, tzinfo=tz)
         assert rec[0] == want
         assert rec[1] == 11111111
+
+    overflow_samples = [
+        ("-infinity", "timestamp too small"),
+        ("1000-01-01 12:00+00 BC", "timestamp too small"),
+        ("10000-01-01 12:00+00", "timestamp too large"),
+        ("infinity", "timestamp too large"),
+    ]
+
+    @pytest.mark.parametrize("datestyle_out", ["ISO", "Postgres", "SQL", "German"])
+    @pytest.mark.parametrize("val, msg", overflow_samples)
+    def test_overflow_message(self, conn, datestyle_out, val, msg):
+        cur = conn.cursor()
+        cur.execute(f"set datestyle = {datestyle_out}, YMD")
+        cur.execute("select %s::timestamptz", (val,))
+        if datestyle_out == "ISO":
+            with pytest.raises(DataError) as excinfo:
+                cur.fetchone()[0]
+            assert msg in str(excinfo.value)
+        else:
+            with pytest.raises(NotImplementedError):
+                cur.fetchone()[0]
+
+    @pytest.mark.parametrize("val, msg", overflow_samples)
+    def test_overflow_message_binary(self, conn, val, msg):
+        cur = conn.cursor(binary=True)
+        cur.execute("select %s::timestamptz", (val,))
+        with pytest.raises(DataError) as excinfo:
+            cur.fetchone()[0]
+        assert msg in str(excinfo.value)
 
     @pytest.mark.parametrize(
         "valname, tzval, tzname",
@@ -571,46 +681,16 @@ class TestInterval:
         cur.execute(f"select '{expr}'::interval")
         assert cur.fetchone()[0] == as_td(val)
 
+    @pytest.mark.parametrize("fmt_out", pq.Format)
     @pytest.mark.parametrize("val", ["min", "max"])
-    def test_load_interval_overflow(self, conn, val):
-        cur = conn.cursor()
+    def test_load_interval_overflow(self, conn, val, fmt_out):
+        cur = conn.cursor(binary=fmt_out)
         cur.execute(
             "select %s + %s * '1s'::interval",
             (as_td(val), -1 if val == "min" else 1),
         )
         with pytest.raises(DataError):
             cur.fetchone()[0]
-
-    def test_infinity_date_example(self, conn):
-        # NOTE: this is an example in the docs. Make sure it doesn't regress when
-        # adding binary datetime adapters
-        from datetime import date
-        from psycopg.types.datetime import DateLoader, DateDumper
-
-        class InfDateDumper(DateDumper):
-            def dump(self, obj):
-                if obj == date.max:
-                    return b"infinity"
-                else:
-                    return super().dump(obj)
-
-        class InfDateLoader(DateLoader):
-            def load(self, data):
-                if data == b"infinity":
-                    return date.max
-                else:
-                    return super().load(data)
-
-        cur = conn.cursor()
-        cur.adapters.register_dumper(date, InfDateDumper)
-        cur.adapters.register_loader("date", InfDateLoader)
-
-        rec = cur.execute(
-            "SELECT %s::text, %s::text", [date(2020, 12, 31), date.max]
-        ).fetchone()
-        assert rec == ("2020-12-31", "infinity")
-        rec = cur.execute("select '2020-12-31'::date, 'infinity'::date").fetchone()
-        assert rec == (date(2020, 12, 31), date(9999, 12, 31))
 
     def test_load_copy(self, conn):
         cur = conn.cursor(binary=False)

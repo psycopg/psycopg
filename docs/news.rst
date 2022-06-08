@@ -36,6 +36,8 @@ Psycopg 3.0.15 (unreleased)
 - Fix wrong escaping of unprintable chars in COPY (nonetheless correctly
   interpreted by PostgreSQL).
 - Restore the connection to usable state after an error in `~Cursor.stream()`.
+- Raise `DataError` instead of `OverflowError` loading binary intervals
+  out-of-range.
 
 
 Current release

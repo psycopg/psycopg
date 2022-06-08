@@ -259,11 +259,14 @@ class DateLoader(Loader):
 
         try:
             return date(int(ye), int(mo), int(da))
-        except ValueError as e:
+        except ValueError as ex:
             s = bytes(data).decode("utf8", "replace")
-            if len(s) != 10:
-                raise DataError(f"date not supported: {s!r}") from None
-            raise DataError(f"can't parse date {s!r}: {e}") from None
+            if s == "infinity" or (s and len(s.split()[0]) > 10):
+                raise DataError(f"date too large (after year 10K): {s!r}") from None
+            elif s == "-infinity" or "BC" in s:
+                raise DataError(f"date too small (before year 1): {s!r}") from None
+            else:
+                raise DataError(f"can't parse date {s!r}: {ex}") from None
 
 
 class DateBinaryLoader(Loader):
@@ -274,7 +277,7 @@ class DateBinaryLoader(Loader):
         days = unpack_int4(data)[0] + _pg_date_epoch_days
         try:
             return date.fromordinal(days)
-        except ValueError:
+        except (ValueError, OverflowError):
             if days < _py_date_min_days:
                 raise DataError("date too small (before year 1)") from None
             else:
@@ -432,10 +435,7 @@ class TimestampLoader(Loader):
     def load(self, data: Buffer) -> datetime:
         m = self._re_format.match(data)
         if not m:
-            s = bytes(data).decode("utf8", "replace")
-            if s.endswith("BC"):
-                raise DataError(f"BC timestamps not supported, got {s!r}")
-            raise DataError(f"can't parse timestamp {s!r}")
+            raise _get_timestamp_load_error(self.connection, data) from None
 
         if self._order == self._ORDER_YMD:
             ye, mo, da, ho, mi, se, fr = m.groups()
@@ -467,9 +467,8 @@ class TimestampLoader(Loader):
 
         try:
             return datetime(int(ye), imo, int(da), int(ho), int(mi), int(se), us)
-        except ValueError as e:
-            s = bytes(data).decode("utf8", "replace")
-            raise DataError(f"can't parse timestamp {s!r}: {e}") from None
+        except ValueError as ex:
+            raise _get_timestamp_load_error(self.connection, data, ex) from None
 
 
 class TimestampBinaryLoader(Loader):
@@ -512,10 +511,7 @@ class TimestamptzLoader(Loader):
     def load(self, data: Buffer) -> datetime:
         m = self._re_format.match(data)
         if not m:
-            s = bytes(data).decode("utf8", "replace")
-            if s.endswith("BC"):
-                raise DataError(f"BC timestamps not supported, got {s!r}")
-            raise DataError(f"can't parse timestamp {s!r}")
+            raise _get_timestamp_load_error(self.connection, data) from None
 
         ye, mo, da, ho, mi, se, fr, sgn, oh, om, os = m.groups()
 
@@ -556,8 +552,7 @@ class TimestamptzLoader(Loader):
         except ValueError as e:
             ex = e
 
-        s = bytes(data).decode("utf8", "replace")
-        raise DataError(f"can't parse timestamptz {s!r}: {ex}") from None
+        raise _get_timestamp_load_error(self.connection, data, ex) from None
 
     def _load_notimpl(self, data: Buffer) -> datetime:
         s = bytes(data).decode("utf8", "replace")
@@ -676,7 +671,11 @@ class IntervalBinaryLoader(Loader):
         elif months < 0:
             years, months = divmod(-months, 12)
             days = days - 30 * months - 365 * years
-        return timedelta(days=days, microseconds=micros)
+
+        try:
+            return timedelta(days=days, microseconds=micros)
+        except OverflowError as e:
+            raise DataError(f"can't parse interval: {e}") from None
 
 
 def _get_datestyle(conn: Optional["BaseConnection[Any]"]) -> bytes:
@@ -686,6 +685,29 @@ def _get_datestyle(conn: Optional["BaseConnection[Any]"]) -> bytes:
             return ds
 
     return b"ISO, DMY"
+
+
+def _get_timestamp_load_error(
+    conn: Optional["BaseConnection[Any]"], data: Buffer, ex: Optional[Exception] = None
+) -> Exception:
+    s = bytes(data).decode("utf8", "replace")
+
+    def is_overflow(s: str) -> bool:
+        if not s:
+            return False
+
+        ds = _get_datestyle(conn)
+        if not ds.startswith(b"P"):  # Postgres
+            return len(s.split()[0]) > 10  # date is first token
+        else:
+            return len(s.split()[-1]) > 4  # year is last token
+
+    if s == "-infinity" or s.endswith("BC"):
+        return DataError("timestamp too small (before year 1): {s!r}")
+    elif s == "infinity" or is_overflow(s):
+        return DataError(f"timestamp too large (after year 10K): {s!r}")
+    else:
+        return DataError(f"can't parse timestamp {s!r}: {ex or '(unknown)'}")
 
 
 _month_abbr = {
