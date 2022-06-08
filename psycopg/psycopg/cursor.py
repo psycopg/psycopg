@@ -352,7 +352,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
         """Generator to send the query for `Cursor.stream()`."""
         yield from self._start_query(query)
         pgq = self._convert_query(query, params)
-        self._execute_send(pgq, binary=binary, no_pqexec=True)
+        self._execute_send(pgq, binary=binary, force_extended=True)
         self._pgconn.set_single_row_mode()
         self._last_query = query
         yield from send(self._pgconn)
@@ -434,7 +434,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
         self,
         query: PostgresQuery,
         *,
-        no_pqexec: bool = False,
+        force_extended: bool = False,
         binary: Optional[bool] = None,
     ) -> None:
         """
@@ -462,7 +462,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
                     result_format=fmt,
                 )
             )
-        elif no_pqexec or query.params or fmt == BINARY:
+        elif force_extended or query.params or fmt == BINARY:
             self._pgconn.send_query_params(
                 query.query,
                 query.params,
@@ -471,8 +471,8 @@ class BaseCursor(Generic[ConnectionType, Row]):
                 result_format=fmt,
             )
         else:
-            # if we don't have to, let's use exec_ as it can run more than
-            # one query in one go
+            # If we can, let's use simple query protocol,
+            # as it can execute more than one statement in a single query.
             self._pgconn.send_query(query.query)
 
     def _convert_query(

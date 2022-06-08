@@ -94,7 +94,7 @@ class ServerCursorMixin(BaseCursor[ConnectionType, Row]):
 
         yield from self._start_query(query)
         pgq = self._convert_query(query, params)
-        self._execute_send(pgq, no_pqexec=True)
+        self._execute_send(pgq, force_extended=True)
         results = yield from execute(self._conn.pgconn)
         if results[-1].status != COMMAND_OK:
             self._raise_for_result(results[-1])

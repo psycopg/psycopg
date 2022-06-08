@@ -44,7 +44,7 @@ class ClientCursorMixin(BaseCursor[ConnectionType, Row]):
         self,
         query: PostgresQuery,
         *,
-        no_pqexec: bool = False,
+        force_extended: bool = False,
         binary: Optional[bool] = None,
     ) -> None:
         if binary is None:
@@ -65,11 +65,11 @@ class ClientCursorMixin(BaseCursor[ConnectionType, Row]):
             self._conn._pipeline.command_queue.append(
                 partial(self._pgconn.send_query_params, query.query, None)
             )
-        elif no_pqexec:
+        elif force_extended:
             self._pgconn.send_query_params(query.query, None)
         else:
-            # if we don't have to, let's use exec_ as it can run more than
-            # one query in one go
+            # If we can, let's use simple query protocol,
+            # as it can execute more than one statement in a single query.
             self._pgconn.send_query(query.query)
 
     def _convert_query(
