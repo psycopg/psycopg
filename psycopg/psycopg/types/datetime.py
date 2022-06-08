@@ -671,7 +671,11 @@ class IntervalBinaryLoader(Loader):
         elif months < 0:
             years, months = divmod(-months, 12)
             days = days - 30 * months - 365 * years
-        return timedelta(days=days, microseconds=micros)
+
+        try:
+            return timedelta(days=days, microseconds=micros)
+        except OverflowError as e:
+            raise DataError(f"can't parse interval: {e}") from None
 
 
 def _get_datestyle(conn: Optional["BaseConnection[Any]"]) -> bytes:
