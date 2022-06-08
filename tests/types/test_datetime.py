@@ -80,6 +80,31 @@ class TestDate:
         with pytest.raises(DataError):
             cur.fetchone()[0]
 
+    overflow_samples = [
+        ("-infinity", "date too small"),
+        ("1000-01-01 BC", "date too small"),
+        ("10000-01-01", "date too large"),
+        ("infinity", "date too large"),
+    ]
+
+    @pytest.mark.parametrize("datestyle_out", ["ISO", "Postgres", "SQL", "German"])
+    @pytest.mark.parametrize("val, msg", overflow_samples)
+    def test_load_overflow_message(self, conn, datestyle_out, val, msg):
+        cur = conn.cursor()
+        cur.execute(f"set datestyle = {datestyle_out}, YMD")
+        cur.execute("select %s::date", (val,))
+        with pytest.raises(DataError) as excinfo:
+            cur.fetchone()[0]
+        assert msg in str(excinfo.value)
+
+    @pytest.mark.parametrize("val, msg", overflow_samples)
+    def test_load_overflow_message_binary(self, conn, val, msg):
+        cur = conn.cursor(binary=True)
+        cur.execute("select %s::date", (val,))
+        with pytest.raises(DataError) as excinfo:
+            cur.fetchone()[0]
+        assert msg in str(excinfo.value)
+
     def test_infinity_date_example(self, conn):
         # NOTE: this is an example in the docs. Make sure it doesn't regress when
         # adding binary datetime adapters

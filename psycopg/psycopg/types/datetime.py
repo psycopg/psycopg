@@ -259,11 +259,14 @@ class DateLoader(Loader):
 
         try:
             return date(int(ye), int(mo), int(da))
-        except ValueError as e:
+        except ValueError as ex:
             s = bytes(data).decode("utf8", "replace")
-            if len(s) != 10:
-                raise DataError(f"date not supported: {s!r}") from None
-            raise DataError(f"can't parse date {s!r}: {e}") from None
+            if s == "infinity" or (s and len(s.split()[0]) > 10):
+                raise DataError(f"date too large (after year 10K): {s!r}") from None
+            elif s == "-infinity" or "BC" in s:
+                raise DataError(f"date too small (before year 1): {s!r}") from None
+            else:
+                raise DataError(f"can't parse date {s!r}: {ex}") from None
 
 
 class DateBinaryLoader(Loader):
@@ -274,7 +277,7 @@ class DateBinaryLoader(Loader):
         days = unpack_int4(data)[0] + _pg_date_epoch_days
         try:
             return date.fromordinal(days)
-        except ValueError:
+        except (ValueError, OverflowError):
             if days < _py_date_min_days:
                 raise DataError("date too small (before year 1)") from None
             else:
