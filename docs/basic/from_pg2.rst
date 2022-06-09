@@ -279,7 +279,7 @@ you?
 No default infinity dates handling
 ----------------------------------
 
-PostgreSQL can represent has a much wider range of dates and timestamps than
+PostgreSQL can represent a much wider range of dates and timestamps than
 Python. While Python dates are limited to the years between 1 and 9999
 (represented by constants such as `datetime.date.min` and
 `~datetime.date.max`), PostgreSQL dates extend to BC dates and past the year
