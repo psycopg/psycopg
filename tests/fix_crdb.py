@@ -95,6 +95,7 @@ _crdb_reasons = {
     "cast adds tz": 51692,
     "cidr": 18846,
     "composite": 27792,
+    "copy array": 82792,
     "copy canceled": 81559,
     "copy": 41608,
     "cursor with hold": 77101,
