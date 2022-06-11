@@ -178,7 +178,7 @@ class BaseCopy(Generic[ConnectionType]):
         if not exc:
             return
 
-        if self.connection.pgconn.transaction_status != ACTIVE:
+        if self._pgconn.transaction_status != ACTIVE:
             # The server has already finished to send copy data. The connection
             # is already in a good state.
             return
