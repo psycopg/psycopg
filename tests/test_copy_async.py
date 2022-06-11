@@ -596,11 +596,11 @@ async def test_worker_life(aconn, format, buffer):
     cur = aconn.cursor()
     await ensure_table(cur, sample_tabledef)
     async with cur.copy(f"copy copy_in from stdin (format {format.name})") as copy:
-        assert not copy._worker
+        assert not copy.writer._worker
         await copy.write(globals()[buffer])
-        assert copy._worker
+        assert copy.writer._worker
 
-    assert not copy._worker
+    assert not copy.writer._worker
     await cur.execute("select * from copy_in order by 1")
     data = await cur.fetchall()
     assert data == sample_records
@@ -617,6 +617,26 @@ async def test_worker_error_propagated(aconn, monkeypatch):
     with pytest.raises(ZeroDivisionError):
         async with cur.copy("copy wat from stdin") as copy:
             await copy.write("a,b")
+
+
+@pytest.mark.parametrize(
+    "format, buffer",
+    [(Format.TEXT, "sample_text"), (Format.BINARY, "sample_binary")],
+)
+async def test_connection_writer(aconn, format, buffer):
+    cur = aconn.cursor()
+    writer = psycopg.copy.AsyncConnectionWriter(aconn)
+
+    await ensure_table(cur, sample_tabledef)
+    async with cur.copy(
+        f"copy copy_in from stdin (format {format.name})", writer=writer
+    ) as copy:
+        assert copy.writer is writer
+        await copy.write(globals()[buffer])
+
+    await cur.execute("select * from copy_in order by 1")
+    data = await cur.fetchall()
+    assert data == sample_records
 
 
 @pytest.mark.slow

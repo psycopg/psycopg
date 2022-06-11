@@ -878,7 +878,7 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
         statement: Query,
         params: Optional[Params] = None,
         *,
-        writer: Optional[CopyWriter[Any]] = None,
+        writer: Optional[CopyWriter] = None,
     ) -> Iterator[Copy]:
         """
         Initiate a :sql:`COPY` operation and return an object to manage it.

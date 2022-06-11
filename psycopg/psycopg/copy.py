@@ -77,7 +77,6 @@ class BaseCopy(Generic[ConnectionType]):
     _Self = TypeVar("_Self", bound="BaseCopy[ConnectionType]")
 
     formatter: "Formatter"
-    writer: "Writer[ConnectionType]"
 
     def __init__(self, cursor: "BaseCursor[ConnectionType, Any]"):
         self.cursor = cursor
@@ -201,12 +200,9 @@ class Copy(BaseCopy["Connection[Any]"]):
 
     __module__ = "psycopg"
 
-    def __init__(
-        self,
-        cursor: "Cursor[Any]",
-        *,
-        writer: Optional["Writer[Connection[Any]]"] = None,
-    ):
+    writer: "Writer"
+
+    def __init__(self, cursor: "Cursor[Any]", *, writer: Optional["Writer"] = None):
         super().__init__(cursor)
         if not writer:
             writer = QueueWriter(cursor.connection)
@@ -302,106 +298,7 @@ class Copy(BaseCopy["Connection[Any]"]):
             self.connection.wait(self._end_copy_out_gen(exc))
 
 
-class AsyncCopy(BaseCopy["AsyncConnection[Any]"]):
-    """Manage an asynchronous :sql:`COPY` operation."""
-
-    __module__ = "psycopg"
-
-    def __init__(self, cursor: "AsyncCursor[Any]"):
-        super().__init__(cursor)
-        self._queue: asyncio.Queue[bytes] = asyncio.Queue(maxsize=QUEUE_SIZE)
-        self._worker: Optional[asyncio.Future[None]] = None
-
-    async def __aenter__(self: BaseCopy._Self) -> BaseCopy._Self:
-        self._enter()
-        return self
-
-    async def __aexit__(
-        self,
-        exc_type: Optional[Type[BaseException]],
-        exc_val: Optional[BaseException],
-        exc_tb: Optional[TracebackType],
-    ) -> None:
-        await self.finish(exc_val)
-
-    async def __aiter__(self) -> AsyncIterator[memoryview]:
-        while True:
-            data = await self.read()
-            if not data:
-                break
-            yield data
-
-    async def read(self) -> memoryview:
-        return await self.connection.wait(self._read_gen())
-
-    async def rows(self) -> AsyncIterator[Tuple[Any, ...]]:
-        while True:
-            record = await self.read_row()
-            if record is None:
-                break
-            yield record
-
-    async def read_row(self) -> Optional[Tuple[Any, ...]]:
-        return await self.connection.wait(self._read_row_gen())
-
-    async def write(self, buffer: Union[Buffer, str]) -> None:
-        data = self.formatter.write(buffer)
-        if data:
-            await self._write(data)
-
-    async def write_row(self, row: Sequence[Any]) -> None:
-        data = self.formatter.write_row(row)
-        if data:
-            await self._write(data)
-
-    async def finish(self, exc: Optional[BaseException]) -> None:
-        if self._pgresult.status == COPY_IN:
-            await self._write_end()
-            await self.connection.wait(self._end_copy_in_gen(exc))
-        else:
-            await self.connection.wait(self._end_copy_out_gen(exc))
-
-    # Concurrent copy support
-
-    async def worker(self) -> None:
-        """Push data to the server when available from the copy queue.
-
-        Terminate reading when the queue receives a false-y value.
-
-        The function is designed to be run in a separate thread.
-        """
-        while True:
-            data = await self._queue.get()
-            if not data:
-                break
-            await self.connection.wait(copy_to(self._pgconn, data))
-
-    async def _write(self, data: Buffer) -> None:
-        if not self._worker:
-            self._worker = create_task(self.worker())
-
-        if len(data) <= MAX_BUFFER_SIZE:
-            # Most used path: we don't need to split the buffer in smaller
-            # bits, so don't make a copy.
-            await self._queue.put(data)
-        else:
-            # Copy a buffer too large in chunks to avoid causing a memory
-            # error in the libpq, which may cause an infinite loop (#255).
-            for i in range(0, len(data), MAX_BUFFER_SIZE):
-                await self._queue.put(data[i : i + MAX_BUFFER_SIZE])
-
-    async def _write_end(self) -> None:
-        data = self.formatter.end()
-        if data:
-            await self._write(data)
-        await self._queue.put(b"")
-
-        if self._worker:
-            await asyncio.gather(self._worker)
-            self._worker = None  # break reference loops if any
-
-
-class Writer(Generic[ConnectionType], ABC):
+class Writer(ABC):
     """
     A class to write copy data somewhere.
     """
@@ -420,7 +317,7 @@ class Writer(Generic[ConnectionType], ABC):
         pass
 
 
-class ConnectionWriter(Writer["Connection[Any]"]):
+class ConnectionWriter(Writer):
     def __init__(self, connection: "Connection[Any]"):
         self.connection = connection
         self._pgconn = self.connection.pgconn
@@ -504,6 +401,165 @@ class QueueWriter(ConnectionWriter):
         # Check if the worker thread raised any exception before terminating.
         if self._worker_error:
             raise self._worker_error
+
+
+class AsyncCopy(BaseCopy["AsyncConnection[Any]"]):
+    """Manage an asynchronous :sql:`COPY` operation."""
+
+    __module__ = "psycopg"
+
+    writer: "AsyncWriter"
+
+    def __init__(
+        self, cursor: "AsyncCursor[Any]", *, writer: Optional["AsyncWriter"] = None
+    ):
+        super().__init__(cursor)
+
+        if not writer:
+            writer = AsyncQueueWriter(cursor.connection)
+
+        self.writer = writer
+        self._write = writer.write
+
+    async def __aenter__(self: BaseCopy._Self) -> BaseCopy._Self:
+        self._enter()
+        return self
+
+    async def __aexit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc_val: Optional[BaseException],
+        exc_tb: Optional[TracebackType],
+    ) -> None:
+        await self.finish(exc_val)
+
+    async def __aiter__(self) -> AsyncIterator[memoryview]:
+        while True:
+            data = await self.read()
+            if not data:
+                break
+            yield data
+
+    async def read(self) -> memoryview:
+        return await self.connection.wait(self._read_gen())
+
+    async def rows(self) -> AsyncIterator[Tuple[Any, ...]]:
+        while True:
+            record = await self.read_row()
+            if record is None:
+                break
+            yield record
+
+    async def read_row(self) -> Optional[Tuple[Any, ...]]:
+        return await self.connection.wait(self._read_row_gen())
+
+    async def write(self, buffer: Union[Buffer, str]) -> None:
+        data = self.formatter.write(buffer)
+        if data:
+            await self._write(data)
+
+    async def write_row(self, row: Sequence[Any]) -> None:
+        data = self.formatter.write_row(row)
+        if data:
+            await self._write(data)
+
+    async def finish(self, exc: Optional[BaseException]) -> None:
+        if self._pgresult.status == COPY_IN:
+            data = self.formatter.end()
+            if data:
+                await self._write(data)
+            await self.writer.finish()
+            await self.connection.wait(self._end_copy_in_gen(exc))
+        else:
+            await self.connection.wait(self._end_copy_out_gen(exc))
+
+
+class AsyncWriter(ABC):
+    """
+    A class to write copy data somewhere.
+    """
+
+    @abstractmethod
+    async def write(self, data: Buffer) -> None:
+        """
+        Write some data to destination.
+        """
+        ...
+
+    async def finish(self) -> None:
+        """
+        Called when write operations are finished.
+        """
+        pass
+
+
+class AsyncConnectionWriter(AsyncWriter):
+    def __init__(self, connection: "AsyncConnection[Any]"):
+        self.connection = connection
+        self._pgconn = self.connection.pgconn
+
+    async def write(self, data: Buffer) -> None:
+        if len(data) <= MAX_BUFFER_SIZE:
+            # Most used path: we don't need to split the buffer in smaller
+            # bits, so don't make a copy.
+            await self.connection.wait(copy_to(self._pgconn, data))
+        else:
+            # Copy a buffer too large in chunks to avoid causing a memory
+            # error in the libpq, which may cause an infinite loop (#255).
+            for i in range(0, len(data), MAX_BUFFER_SIZE):
+                await self.connection.wait(
+                    copy_to(self._pgconn, data[i : i + MAX_BUFFER_SIZE])
+                )
+
+
+class AsyncQueueWriter(AsyncConnectionWriter):
+    """
+    A writer using a buffer to queue data to write.
+
+    `write()` returns immediately, so that the main thread can be CPU-bound
+    formatting messages, while a worker thread can be IO-bound waiting to write
+    on the connection.
+    """
+
+    def __init__(self, connection: "AsyncConnection[Any]"):
+        super().__init__(connection)
+
+        self._queue: asyncio.Queue[bytes] = asyncio.Queue(maxsize=QUEUE_SIZE)
+        self._worker: Optional[asyncio.Future[None]] = None
+
+    async def worker(self) -> None:
+        """Push data to the server when available from the copy queue.
+
+        Terminate reading when the queue receives a false-y value.
+
+        The function is designed to be run in a separate task.
+        """
+        while True:
+            data = await self._queue.get()
+            if not data:
+                break
+            await self.connection.wait(copy_to(self._pgconn, data))
+
+    async def write(self, data: Buffer) -> None:
+        if not self._worker:
+            self._worker = create_task(self.worker())
+
+        if len(data) <= MAX_BUFFER_SIZE:
+            # Most used path: we don't need to split the buffer in smaller
+            # bits, so don't make a copy.
+            await self._queue.put(data)
+        else:
+            # Copy a buffer too large in chunks to avoid causing a memory
+            # error in the libpq, which may cause an infinite loop (#255).
+            for i in range(0, len(data), MAX_BUFFER_SIZE):
+                await self._queue.put(data[i : i + MAX_BUFFER_SIZE])
+
+    async def finish(self) -> None:
+        await self._queue.put(b"")
+
+        if self._worker:
+            await asyncio.gather(self._worker)
+            self._worker = None  # break reference loops if any
 
 
 class Formatter(ABC):
