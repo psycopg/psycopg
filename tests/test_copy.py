@@ -592,11 +592,11 @@ def test_worker_life(conn, format, buffer):
     cur = conn.cursor()
     ensure_table(cur, sample_tabledef)
     with cur.copy(f"copy copy_in from stdin (format {format.name})") as copy:
-        assert not copy._worker
+        assert not copy.writer._worker
         copy.write(globals()[buffer])
-        assert copy._worker
+        assert copy.writer._worker
 
-    assert not copy._worker
+    assert not copy.writer._worker
     data = cur.execute("select * from copy_in order by 1").fetchall()
     assert data == sample_records
 
