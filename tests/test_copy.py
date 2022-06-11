@@ -614,6 +614,25 @@ def test_worker_error_propagated(conn, monkeypatch):
             copy.write("a,b")
 
 
+@pytest.mark.parametrize(
+    "format, buffer",
+    [(Format.TEXT, "sample_text"), (Format.BINARY, "sample_binary")],
+)
+def test_connection_writer(conn, format, buffer):
+    cur = conn.cursor()
+    writer = psycopg.copy.ConnectionWriter(conn)
+
+    ensure_table(cur, sample_tabledef)
+    with cur.copy(
+        f"copy copy_in from stdin (format {format.name})", writer=writer
+    ) as copy:
+        assert copy.writer is writer
+        copy.write(globals()[buffer])
+
+    data = cur.execute("select * from copy_in order by 1").fetchall()
+    assert data == sample_records
+
+
 @pytest.mark.slow
 @pytest.mark.parametrize(
     "fmt, set_types",
