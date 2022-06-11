@@ -20,7 +20,7 @@ from psycopg.types.numeric import Int4
 from .utils import alist, eur, gc_collect
 from .test_copy import sample_text, sample_binary, sample_binary_rows  # noqa
 from .test_copy import sample_values, sample_records, sample_tabledef
-from .test_copy import py_to_raw
+from .test_copy import py_to_raw, special_chars
 
 pytestmark = [
     pytest.mark.asyncio,
@@ -462,6 +462,29 @@ from copy_in group by 1, 2, 3
     assert data == [(True, True, 1, 256)]
 
 
+async def test_copy_in_format(aconn):
+    writer = AsyncBytesWriter()
+    await aconn.execute("set client_encoding to utf8")
+    cur = aconn.cursor()
+    async with psycopg.copy.AsyncCopy(cur, writer=writer) as copy:
+        for i in range(1, 256):
+            await copy.write_row((i, chr(i)))
+
+    writer.file.seek(0)
+    rows = writer.file.read().split(b"\n")
+    assert not rows[-1]
+    del rows[-1]
+
+    for i, row in enumerate(rows, start=1):
+        fields = row.split(b"\t")
+        assert len(fields) == 2
+        assert int(fields[0].decode()) == i
+        if i in special_chars:
+            assert fields[1].decode() == f"\\{special_chars[i]}"
+        else:
+            assert fields[1].decode() == chr(i)
+
+
 @pytest.mark.slow
 async def test_copy_from_to(aconn):
     # Roundtrip from file to database to file blockwise
@@ -625,7 +648,7 @@ async def test_worker_error_propagated(aconn, monkeypatch):
 )
 async def test_connection_writer(aconn, format, buffer):
     cur = aconn.cursor()
-    writer = psycopg.copy.AsyncConnectionWriter(aconn)
+    writer = psycopg.copy.AsyncConnectionWriter(cur)
 
     await ensure_table(cur, sample_tabledef)
     async with cur.copy(
@@ -827,3 +850,11 @@ class DataGenerator:
                 block = block.encode()
             m.update(block)
         return m.hexdigest()
+
+
+class AsyncBytesWriter(psycopg.copy.AsyncWriter):
+    def __init__(self):
+        self.file = BytesIO()
+
+    async def write(self, data):
+        self.file.write(data)

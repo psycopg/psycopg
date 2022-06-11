@@ -46,6 +46,8 @@ sample_binary_rows = [
 
 sample_binary = b"".join(sample_binary_rows)
 
+special_chars = {8: "b", 9: "t", 10: "n", 11: "v", 12: "f", 13: "r", ord("\\"): "\\"}
+
 
 @pytest.mark.parametrize("format", Format)
 def test_copy_out_read(conn, format):
@@ -458,6 +460,29 @@ from copy_in group by 1, 2, 3
     assert data == [(True, True, 1, 256)]
 
 
+def test_copy_in_format(conn):
+    writer = BytesWriter()
+    conn.execute("set client_encoding to utf8")
+    cur = conn.cursor()
+    with psycopg.copy.Copy(cur, writer=writer) as copy:
+        for i in range(1, 256):
+            copy.write_row((i, chr(i)))
+
+    writer.file.seek(0)
+    rows = writer.file.read().split(b"\n")
+    assert not rows[-1]
+    del rows[-1]
+
+    for i, row in enumerate(rows, start=1):
+        fields = row.split(b"\t")
+        assert len(fields) == 2
+        assert int(fields[0].decode()) == i
+        if i in special_chars:
+            assert fields[1].decode() == f"\\{special_chars[i]}"
+        else:
+            assert fields[1].decode() == chr(i)
+
+
 @pytest.mark.slow
 def test_copy_from_to(conn):
     # Roundtrip from file to database to file blockwise
@@ -620,7 +645,7 @@ def test_worker_error_propagated(conn, monkeypatch):
 )
 def test_connection_writer(conn, format, buffer):
     cur = conn.cursor()
-    writer = psycopg.copy.ConnectionWriter(conn)
+    writer = psycopg.copy.ConnectionWriter(cur)
 
     ensure_table(cur, sample_tabledef)
     with cur.copy(
@@ -832,3 +857,11 @@ class DataGenerator:
                 block = block.encode()
             m.update(block)
         return m.hexdigest()
+
+
+class BytesWriter(psycopg.copy.Writer):
+    def __init__(self):
+        self.file = BytesIO()
+
+    def write(self, data):
+        self.file.write(data)

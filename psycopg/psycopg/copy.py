@@ -15,28 +15,28 @@ from typing import Any, AsyncIterator, Dict, Generic, Iterator, List, Match
 from typing import Optional, Sequence, Tuple, Type, TypeVar, Union, TYPE_CHECKING
 
 from . import pq
+from . import adapt
 from . import errors as e
 from .abc import Buffer, ConnectionType, PQGen, Transformer
-from .adapt import PyFormat
 from ._compat import create_task
 from ._cmodule import _psycopg
 from ._encodings import pgconn_encoding
 from .generators import copy_from, copy_to, copy_end
 
 if TYPE_CHECKING:
-    from .pq.abc import PGresult
     from .cursor import BaseCursor, Cursor
     from .cursor_async import AsyncCursor
     from .connection import Connection  # noqa: F401
     from .connection_async import AsyncConnection  # noqa: F401
 
-PY_TEXT = PyFormat.TEXT
-PY_BINARY = PyFormat.BINARY
+PY_TEXT = adapt.PyFormat.TEXT
+PY_BINARY = adapt.PyFormat.BINARY
 
 TEXT = pq.Format.TEXT
 BINARY = pq.Format.BINARY
 
 COPY_IN = pq.ExecStatus.COPY_IN
+COPY_OUT = pq.ExecStatus.COPY_OUT
 
 ACTIVE = pq.TransactionStatus.ACTIVE
 
@@ -83,14 +83,22 @@ class BaseCopy(Generic[ConnectionType]):
         self.connection = cursor.connection
         self._pgconn = self.connection.pgconn
 
-        tx = cursor._tx
-        assert tx.pgresult, "The Transformer doesn't have a PGresult set"
-        self._pgresult: "PGresult" = tx.pgresult
-
-        if self._pgresult.binary_tuples == TEXT:
-            self.formatter = TextFormatter(tx, encoding=pgconn_encoding(self._pgconn))
+        result = cursor.pgresult
+        if result:
+            self._direction = result.status
+            if self._direction != COPY_IN and self._direction != COPY_OUT:
+                raise e.ProgrammingError(
+                    "the cursor should have performed a COPY operation;"
+                    f" its status is {pq.ExecStatus(self._direction).name} instead"
+                )
         else:
+            self._direction = COPY_IN
+
+        tx: Transformer = getattr(cursor, "_tx", None) or adapt.Transformer(cursor)
+        if result and result.binary_tuples:
             self.formatter = BinaryFormatter(tx)
+        else:
+            self.formatter = TextFormatter(tx, encoding=pgconn_encoding(self._pgconn))
 
         self._finished = False
 
@@ -125,7 +133,7 @@ class BaseCopy(Generic[ConnectionType]):
         registry = self.cursor.adapters.types
         oids = [t if isinstance(t, int) else registry.get_oid(t) for t in types]
 
-        if self._pgresult.status == COPY_IN:
+        if self._direction == COPY_IN:
             self.formatter.transformer.set_dumper_types(oids, self.formatter.format)
         else:
             self.formatter.transformer.set_loader_types(oids, self.formatter.format)
@@ -160,20 +168,6 @@ class BaseCopy(Generic[ConnectionType]):
 
         return row
 
-    def _end_copy_in_gen(self, exc: Optional[BaseException]) -> PQGen[None]:
-        bmsg: Optional[bytes]
-        if exc:
-            msg = f"error from Python: {type(exc).__qualname__} - {exc}"
-            bmsg = msg.encode(pgconn_encoding(self._pgconn), "replace")
-        else:
-            bmsg = None
-
-        res = yield from copy_end(self._pgconn, bmsg)
-
-        nrows = res.command_tuples
-        self.cursor._rowcount = nrows if nrows is not None else -1
-        self._finished = True
-
     def _end_copy_out_gen(self, exc: Optional[BaseException]) -> PQGen[None]:
         if not exc:
             return
@@ -205,7 +199,7 @@ class Copy(BaseCopy["Connection[Any]"]):
     def __init__(self, cursor: "Cursor[Any]", *, writer: Optional["Writer"] = None):
         super().__init__(cursor)
         if not writer:
-            writer = QueueWriter(cursor.connection)
+            writer = QueueWriter(cursor)
 
         self.writer = writer
         self._write = writer.write
@@ -288,12 +282,12 @@ class Copy(BaseCopy["Connection[Any]"]):
         by exit. It is available if, despite what is documented, you end up
         using the `Copy` object outside a block.
         """
-        if self._pgresult.status == COPY_IN:
+        if self._direction == COPY_IN:
             data = self.formatter.end()
             if data:
                 self._write(data)
-            self.writer.finish()
-            self.connection.wait(self._end_copy_in_gen(exc))
+            self.writer.finish(exc)
+            self._finished = True
         else:
             self.connection.wait(self._end_copy_out_gen(exc))
 
@@ -310,7 +304,7 @@ class Writer(ABC):
         """
         ...
 
-    def finish(self) -> None:
+    def finish(self, exc: Optional[BaseException] = None) -> None:
         """
         Called when write operations are finished.
         """
@@ -318,8 +312,9 @@ class Writer(ABC):
 
 
 class ConnectionWriter(Writer):
-    def __init__(self, connection: "Connection[Any]"):
-        self.connection = connection
+    def __init__(self, cursor: "Cursor[Any]"):
+        self.cursor = cursor
+        self.connection = cursor.connection
         self._pgconn = self.connection.pgconn
 
     def write(self, data: Buffer) -> None:
@@ -335,6 +330,18 @@ class ConnectionWriter(Writer):
                     copy_to(self._pgconn, data[i : i + MAX_BUFFER_SIZE])
                 )
 
+    def finish(self, exc: Optional[BaseException] = None) -> None:
+        bmsg: Optional[bytes]
+        if exc:
+            msg = f"error from Python: {type(exc).__qualname__} - {exc}"
+            bmsg = msg.encode(pgconn_encoding(self._pgconn), "replace")
+        else:
+            bmsg = None
+
+        res = self.connection.wait(copy_end(self._pgconn, bmsg))
+        nrows = res.command_tuples
+        self.cursor._rowcount = nrows if nrows is not None else -1
+
 
 class QueueWriter(ConnectionWriter):
     """
@@ -345,8 +352,8 @@ class QueueWriter(ConnectionWriter):
     on the connection.
     """
 
-    def __init__(self, connection: "Connection[Any]"):
-        super().__init__(connection)
+    def __init__(self, cursor: "Cursor[Any]"):
+        super().__init__(cursor)
 
         self._queue: queue.Queue[bytes] = queue.Queue(maxsize=QUEUE_SIZE)
         self._worker: Optional[threading.Thread] = None
@@ -391,7 +398,7 @@ class QueueWriter(ConnectionWriter):
             for i in range(0, len(data), MAX_BUFFER_SIZE):
                 self._queue.put(data[i : i + MAX_BUFFER_SIZE])
 
-    def finish(self) -> None:
+    def finish(self, exc: Optional[BaseException] = None) -> None:
         self._queue.put(b"")
 
         if self._worker:
@@ -401,6 +408,8 @@ class QueueWriter(ConnectionWriter):
         # Check if the worker thread raised any exception before terminating.
         if self._worker_error:
             raise self._worker_error
+
+        super().finish(exc)
 
 
 class AsyncCopy(BaseCopy["AsyncConnection[Any]"]):
@@ -416,7 +425,7 @@ class AsyncCopy(BaseCopy["AsyncConnection[Any]"]):
         super().__init__(cursor)
 
         if not writer:
-            writer = AsyncQueueWriter(cursor.connection)
+            writer = AsyncQueueWriter(cursor)
 
         self.writer = writer
         self._write = writer.write
@@ -464,12 +473,12 @@ class AsyncCopy(BaseCopy["AsyncConnection[Any]"]):
             await self._write(data)
 
     async def finish(self, exc: Optional[BaseException]) -> None:
-        if self._pgresult.status == COPY_IN:
+        if self._direction == COPY_IN:
             data = self.formatter.end()
             if data:
                 await self._write(data)
-            await self.writer.finish()
-            await self.connection.wait(self._end_copy_in_gen(exc))
+            await self.writer.finish(exc)
+            self._finished = True
         else:
             await self.connection.wait(self._end_copy_out_gen(exc))
 
@@ -486,7 +495,7 @@ class AsyncWriter(ABC):
         """
         ...
 
-    async def finish(self) -> None:
+    async def finish(self, exc: Optional[BaseException] = None) -> None:
         """
         Called when write operations are finished.
         """
@@ -494,8 +503,9 @@ class AsyncWriter(ABC):
 
 
 class AsyncConnectionWriter(AsyncWriter):
-    def __init__(self, connection: "AsyncConnection[Any]"):
-        self.connection = connection
+    def __init__(self, cursor: "AsyncCursor[Any]"):
+        self.cursor = cursor
+        self.connection = cursor.connection
         self._pgconn = self.connection.pgconn
 
     async def write(self, data: Buffer) -> None:
@@ -511,6 +521,18 @@ class AsyncConnectionWriter(AsyncWriter):
                     copy_to(self._pgconn, data[i : i + MAX_BUFFER_SIZE])
                 )
 
+    async def finish(self, exc: Optional[BaseException] = None) -> None:
+        bmsg: Optional[bytes]
+        if exc:
+            msg = f"error from Python: {type(exc).__qualname__} - {exc}"
+            bmsg = msg.encode(pgconn_encoding(self._pgconn), "replace")
+        else:
+            bmsg = None
+
+        res = await self.connection.wait(copy_end(self._pgconn, bmsg))
+        nrows = res.command_tuples
+        self.cursor._rowcount = nrows if nrows is not None else -1
+
 
 class AsyncQueueWriter(AsyncConnectionWriter):
     """
@@ -521,8 +543,8 @@ class AsyncQueueWriter(AsyncConnectionWriter):
     on the connection.
     """
 
-    def __init__(self, connection: "AsyncConnection[Any]"):
-        super().__init__(connection)
+    def __init__(self, cursor: "AsyncCursor[Any]"):
+        super().__init__(cursor)
 
         self._queue: asyncio.Queue[bytes] = asyncio.Queue(maxsize=QUEUE_SIZE)
         self._worker: Optional[asyncio.Future[None]] = None
@@ -554,12 +576,14 @@ class AsyncQueueWriter(AsyncConnectionWriter):
             for i in range(0, len(data), MAX_BUFFER_SIZE):
                 await self._queue.put(data[i : i + MAX_BUFFER_SIZE])
 
-    async def finish(self) -> None:
+    async def finish(self, exc: Optional[BaseException] = None) -> None:
         await self._queue.put(b"")
 
         if self._worker:
             await asyncio.gather(self._worker)
             self._worker = None  # break reference loops if any
+
+        await super().finish(exc)
 
 
 class Formatter(ABC):
