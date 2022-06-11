@@ -15,7 +15,7 @@ from . import pq
 from . import adapt
 from . import errors as e
 from .abc import ConnectionType, Query, Params, PQGen
-from .copy import Copy
+from .copy import Copy, Writer as CopyWriter
 from .rows import Row, RowMaker, RowFactory
 from ._column import Column
 from ._cmodule import _psycopg
@@ -873,7 +873,13 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
         self._scroll(value, mode)
 
     @contextmanager
-    def copy(self, statement: Query, params: Optional[Params] = None) -> Iterator[Copy]:
+    def copy(
+        self,
+        statement: Query,
+        params: Optional[Params] = None,
+        *,
+        writer: Optional[CopyWriter[Any]] = None,
+    ) -> Iterator[Copy]:
         """
         Initiate a :sql:`COPY` operation and return an object to manage it.
 
@@ -883,7 +889,7 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
             with self._conn.lock:
                 self._conn.wait(self._start_copy_gen(statement, params))
 
-            with Copy(self) as copy:
+            with Copy(self, writer=writer) as copy:
                 yield copy
         except e.Error as ex:
             raise ex.with_traceback(None)
