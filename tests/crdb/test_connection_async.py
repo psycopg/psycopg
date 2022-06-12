@@ -39,6 +39,7 @@ async def test_tpc_recover(dsn):
             await conn.tpc_recover()
 
 
+@pytest.mark.slow
 async def test_broken_connection(aconn):
     cur = aconn.cursor()
     with pytest.raises(psycopg.DatabaseError):
@@ -46,6 +47,7 @@ async def test_broken_connection(aconn):
     assert aconn.closed
 
 
+@pytest.mark.slow
 async def test_broken(aconn):
     cur = await aconn.execute("show session_id")
     (session_id,) = await cur.fetchone()
