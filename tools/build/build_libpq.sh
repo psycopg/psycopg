@@ -5,10 +5,10 @@
 set -euo pipefail
 set -x
 
-openssl_version="1.1.1l"
-ldap_version="2.4.59"
-sasl_version="2.1.27"
-postgres_version="14.1"
+openssl_version="1.1.1o"
+ldap_version="2.6.2"
+sasl_version="2.1.28"
+postgres_version="14.3"
 
 yum install -y zlib-devel krb5-devel pam-devel
 
@@ -77,7 +77,6 @@ if [ ! -d "${ldap_dir}" ]; then
     make -C libraries/liblutil/
     make -C libraries/liblber/
     make -C libraries/libldap/
-    make -C libraries/libldap_r/
 else
     cd "${ldap_dir}"
 fi
@@ -85,7 +84,6 @@ fi
 # Install openldap
 make -C libraries/liblber/ install
 make -C libraries/libldap/ install
-make -C libraries/libldap_r/ install
 make -C include/ install
 chmod +x /usr/local/lib/{libldap,liblber}*.so*
 cd ..
