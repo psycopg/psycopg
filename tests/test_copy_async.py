@@ -648,7 +648,7 @@ async def test_worker_error_propagated(aconn, monkeypatch):
 )
 async def test_connection_writer(aconn, format, buffer):
     cur = aconn.cursor()
-    writer = psycopg.copy.AsyncConnectionWriter(cur)
+    writer = psycopg.copy.AsyncLibpqWriter(cur)
 
     await ensure_table(cur, sample_tabledef)
     async with cur.copy(

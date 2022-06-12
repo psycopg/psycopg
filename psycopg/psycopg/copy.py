@@ -311,7 +311,7 @@ class Writer(ABC):
         pass
 
 
-class ConnectionWriter(Writer):
+class LibpqWriter(Writer):
     def __init__(self, cursor: "Cursor[Any]"):
         self.cursor = cursor
         self.connection = cursor.connection
@@ -343,7 +343,7 @@ class ConnectionWriter(Writer):
         self.cursor._rowcount = nrows if nrows is not None else -1
 
 
-class QueueWriter(ConnectionWriter):
+class QueueWriter(LibpqWriter):
     """
     A writer using a buffer to queue data to write.
 
@@ -502,7 +502,7 @@ class AsyncWriter(ABC):
         pass
 
 
-class AsyncConnectionWriter(AsyncWriter):
+class AsyncLibpqWriter(AsyncWriter):
     def __init__(self, cursor: "AsyncCursor[Any]"):
         self.cursor = cursor
         self.connection = cursor.connection
@@ -534,7 +534,7 @@ class AsyncConnectionWriter(AsyncWriter):
         self.cursor._rowcount = nrows if nrows is not None else -1
 
 
-class AsyncQueueWriter(AsyncConnectionWriter):
+class AsyncQueueWriter(AsyncLibpqWriter):
     """
     A writer using a buffer to queue data to write.
 

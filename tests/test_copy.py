@@ -645,7 +645,7 @@ def test_worker_error_propagated(conn, monkeypatch):
 )
 def test_connection_writer(conn, format, buffer):
     cur = conn.cursor()
-    writer = psycopg.copy.ConnectionWriter(cur)
+    writer = psycopg.copy.LibpqWriter(cur)
 
     ensure_table(cur, sample_tabledef)
     with cur.copy(
