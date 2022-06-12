@@ -110,8 +110,8 @@ if [ ! -d "${postgres_dir}" ]; then
         export LD_LIBRARY_PATH=/usr/local/lib
     fi
 
-    ./configure --prefix=/usr/local --without-readline \
-        --with-gssapi --with-openssl --with-pam --with-ldap
+    ./configure --prefix=/usr/local --sysconfdir=/etc/postgresql-common \
+        --without-readline --with-gssapi --with-openssl --with-pam --with-ldap
     make -C src/interfaces/libpq
     make -C src/bin/pg_config
     make -C src/include
