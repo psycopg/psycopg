@@ -557,7 +557,7 @@ class BaseConnection(Generic[Row]):
             )
 
         # Get out of a "pipeline aborted" state
-        if self._pipeline and self.pgconn.pipeline_status == ABORTED:
+        if self._pipeline:
             yield from self._pipeline._sync_gen()
 
         if self.pgconn.transaction_status == IDLE:
