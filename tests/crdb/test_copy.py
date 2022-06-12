@@ -155,6 +155,19 @@ def test_copy_in_records_binary(conn, format):
     assert data == [(None, "hello"), (None, "world")]
 
 
+@pytest.mark.crdb_skip("copy canceled")
+def test_copy_in_buffers_with_py_error(conn):
+    cur = conn.cursor()
+    ensure_table(cur, sample_tabledef)
+    with pytest.raises(e.QueryCanceled) as exc:
+        with cur.copy("copy copy_in from stdin") as copy:
+            copy.write(sample_text)
+            raise Exception("nuttengoggenio")
+
+    assert "nuttengoggenio" in str(exc.value)
+    assert conn.info.transaction_status == conn.TransactionStatus.INERROR
+
+
 def test_copy_in_allchars(conn):
     cur = conn.cursor()
     ensure_table(cur, "col1 int primary key, col2 int, data text")

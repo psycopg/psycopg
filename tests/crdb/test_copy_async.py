@@ -160,6 +160,19 @@ async def test_copy_in_records_binary(aconn, format):
     assert data == [(None, "hello"), (None, "world")]
 
 
+@pytest.mark.crdb_skip("copy canceled")
+async def test_copy_in_buffers_with_py_error(aconn):
+    cur = aconn.cursor()
+    await ensure_table(cur, sample_tabledef)
+    with pytest.raises(e.QueryCanceled) as exc:
+        async with cur.copy("copy copy_in from stdin") as copy:
+            await copy.write(sample_text)
+            raise Exception("nuttengoggenio")
+
+    assert "nuttengoggenio" in str(exc.value)
+    assert aconn.info.transaction_status == aconn.TransactionStatus.INERROR
+
+
 async def test_copy_in_allchars(aconn):
     cur = aconn.cursor()
     await ensure_table(cur, "col1 int primary key, col2 int, data text")
