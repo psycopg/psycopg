@@ -18,6 +18,7 @@ pytest_plugins = (
 def pytest_configure(config):
     markers = [
         "slow: this test is kinda slow (skip with -m 'not slow')",
+        "flakey(reason): this test may fail unpredictably')",
         # There are troubles on travis with these kind of tests and I cannot
         # catch the exception for my life.
         "subprocess: the test import psycopg after subprocess",

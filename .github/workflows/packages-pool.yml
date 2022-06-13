@@ -41,7 +41,7 @@ jobs:
           pip install -e ./psycopg[test]
 
       - name: Test the sdist package
-        run: pytest -m 'not slow' --color yes
+        run: pytest -m 'not slow and not flakey' --color yes
         env:
           PSYCOPG_IMPL: ${{ matrix.impl }}
           PSYCOPG_TEST_DSN: "host=127.0.0.1 user=postgres"

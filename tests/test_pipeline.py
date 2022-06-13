@@ -15,6 +15,8 @@ pytestmark = [
     pytest.mark.pipeline,
 ]
 
+pipeline_aborted = pytest.mark.flakey("the server might get in pipeline aborted")
+
 
 def test_repr(conn):
     with conn.pipeline() as p:
@@ -220,6 +222,7 @@ def test_sync_syncs_errors(conn):
             p.sync()
 
 
+@pipeline_aborted
 def test_errors_raised_on_commit(conn):
     with conn.pipeline():
         conn.execute("select 1 from nosuchtable")

@@ -10,6 +10,8 @@ import psycopg
 from psycopg import pq
 from psycopg import errors as e
 
+from .test_pipeline import pipeline_aborted
+
 pytestmark = [
     pytest.mark.asyncio,
     pytest.mark.libpq(">= 14"),
@@ -221,6 +223,7 @@ async def test_sync_syncs_errors(aconn):
             await p.sync()
 
 
+@pipeline_aborted
 async def test_errors_raised_on_commit(aconn):
     async with aconn.pipeline():
         await aconn.execute("select 1 from nosuchtable")
