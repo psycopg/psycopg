@@ -68,8 +68,6 @@ FATAL_ERROR = pq.ExecStatus.FATAL_ERROR
 IDLE = pq.TransactionStatus.IDLE
 INTRANS = pq.TransactionStatus.INTRANS
 
-ABORTED = pq.PipelineStatus.ABORTED
-
 logger = logging.getLogger("psycopg")
 
 
