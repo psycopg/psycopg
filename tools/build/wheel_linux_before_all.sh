@@ -15,7 +15,8 @@ case "$ID" in
     alpine)
         # tzdata is required for datetime tests.
         apk update
-        apk add --no-cache postgresql-dev tzdata
+        apk add --no-cache tzdata
+        "${dir}/build_libpq.sh" > /dev/null
         ;;
 
     debian)

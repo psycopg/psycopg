@@ -10,83 +10,109 @@ ldap_version="2.6.2"
 sasl_version="2.1.28"
 postgres_version="14.3"
 
-yum install -y zlib-devel krb5-devel pam-devel
+source /etc/os-release
 
+case "$ID" in
+    centos)
+        yum install -y zlib-devel krb5-devel pam-devel
+        ;;
 
-# Build openssl if needed
-openssl_tag="OpenSSL_${openssl_version//./_}"
-openssl_dir="openssl-${openssl_tag}"
-if [ ! -d "${openssl_dir}" ]; then curl -sL \
-        https://github.com/openssl/openssl/archive/${openssl_tag}.tar.gz \
-        | tar xzf -
+    alpine)
+        apk add --no-cache zlib-dev krb5-dev linux-pam-dev openldap-dev
+        ;;
 
-    cd "${openssl_dir}"
+    *)
+        echo "$0: unexpected Linux distribution: '$ID'" >&2
+        exit 1
+        ;;
+esac
 
-    ./config --prefix=/usr/local/ --openssldir=/usr/local/ \
-        zlib -fPIC shared
-    make depend
-    make
-else
-    cd "${openssl_dir}"
+if [ "$ID" == "centos" ]; then
+
+    # Build openssl if needed
+    openssl_tag="OpenSSL_${openssl_version//./_}"
+    openssl_dir="openssl-${openssl_tag}"
+    if [ ! -d "${openssl_dir}" ]; then curl -sL \
+            https://github.com/openssl/openssl/archive/${openssl_tag}.tar.gz \
+            | tar xzf -
+
+        cd "${openssl_dir}"
+
+        ./config --prefix=/usr/local/ --openssldir=/usr/local/ \
+            zlib -fPIC shared
+        make depend
+        make
+    else
+        cd "${openssl_dir}"
+    fi
+
+    # Install openssl
+    make install_sw
+    cd ..
+
 fi
 
-# Install openssl
-make install_sw
-cd ..
 
+if [ "$ID" == "centos" ]; then
 
-# Build libsasl2 if needed
-# The system package (cyrus-sasl-devel) causes an amazing error on i686:
-# "unsupported version 0 of Verneed record"
-# https://github.com/pypa/manylinux/issues/376
-sasl_tag="cyrus-sasl-${sasl_version}"
-sasl_dir="cyrus-sasl-${sasl_tag}"
-if [ ! -d "${sasl_dir}" ]; then
-    curl -sL \
-        https://github.com/cyrusimap/cyrus-sasl/archive/${sasl_tag}.tar.gz \
-        | tar xzf -
+    # Build libsasl2 if needed
+    # The system package (cyrus-sasl-devel) causes an amazing error on i686:
+    # "unsupported version 0 of Verneed record"
+    # https://github.com/pypa/manylinux/issues/376
+    sasl_tag="cyrus-sasl-${sasl_version}"
+    sasl_dir="cyrus-sasl-${sasl_tag}"
+    if [ ! -d "${sasl_dir}" ]; then
+        curl -sL \
+            https://github.com/cyrusimap/cyrus-sasl/archive/${sasl_tag}.tar.gz \
+            | tar xzf -
 
-    cd "${sasl_dir}"
+        cd "${sasl_dir}"
 
-    autoreconf -i
-    ./configure
-    make
-else
-    cd "${sasl_dir}"
+        autoreconf -i
+        ./configure
+        make
+    else
+        cd "${sasl_dir}"
+    fi
+
+    # Install libsasl2
+    # requires missing nroff to build
+    touch saslauthd/saslauthd.8
+    make install
+    cd ..
+
 fi
 
-# Install libsasl2
-# requires missing nroff to build
-touch saslauthd/saslauthd.8
-make install
-cd ..
 
+if [ "$ID" == "centos" ]; then
 
-# Build openldap if needed
-ldap_tag="${ldap_version}"
-ldap_dir="openldap-${ldap_tag}"
-if [ ! -d "${ldap_dir}" ]; then
-    curl -sL \
-        https://www.openldap.org/software/download/OpenLDAP/openldap-release/openldap-${ldap_tag}.tgz \
-        | tar xzf -
+    # Build openldap if needed
+    ldap_tag="${ldap_version}"
+    ldap_dir="openldap-${ldap_tag}"
+    if [ ! -d "${ldap_dir}" ]; then
+        curl -sL \
+            https://www.openldap.org/software/download/OpenLDAP/openldap-release/openldap-${ldap_tag}.tgz \
+            | tar xzf -
 
-    cd "${ldap_dir}"
+        cd "${ldap_dir}"
 
-    ./configure --enable-backends=no --enable-null
-    make depend
-    make -C libraries/liblutil/
-    make -C libraries/liblber/
-    make -C libraries/libldap/
-else
-    cd "${ldap_dir}"
+        ./configure --enable-backends=no --enable-null
+        make depend
+        make -C libraries/liblutil/
+        make -C libraries/liblber/
+        make -C libraries/libldap/
+    else
+        cd "${ldap_dir}"
+    fi
+
+    # Install openldap
+    make -C libraries/liblber/ install
+    make -C libraries/libldap/ install
+    make -C include/ install
+    chmod +x /usr/local/lib/{libldap,liblber}*.so*
+    cd ..
+
 fi
-
-# Install openldap
-make -C libraries/liblber/ install
-make -C libraries/libldap/ install
-make -C include/ install
-chmod +x /usr/local/lib/{libldap,liblber}*.so*
-cd ..
 
 
 # Build libpq if needed
@@ -106,7 +132,7 @@ if [ ! -d "${postgres_dir}" ]; then
         src/include/pg_config_manual.h
 
     # Without this, libpq ./configure fails on i686
-    if [[ "$(uname -m)" == "i686" ]]; then
+    if [[ "$(uname -m)" != "x86_64" ]]; then
         export LD_LIBRARY_PATH=/usr/local/lib
     fi
 
