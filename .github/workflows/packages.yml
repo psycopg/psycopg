@@ -91,6 +91,12 @@ jobs:
       - name: Set up QEMU for multi-arch build
         uses: docker/setup-qemu-action@v1
 
+      - name: Cache libpq build
+        uses: actions/cache@v3
+        with:
+          path: /tmp/libpq.build
+          key: libpq-14.3-${{ matrix.platform }}-${{ matrix.arch }}-1
+
       - name: Create the binary package source tree
         run: python3 ./tools/build/copy_to_binary.py
 
@@ -115,6 +121,9 @@ jobs:
             PSYCOPG_IMPL=binary
             PSYCOPG_TEST_DSN='host=172.17.0.1 user=postgres'
             PGPASSWORD=password
+            LIBPQ_BUILD_PREFIX=/host/tmp/libpq.build
+            PATH="$LIBPQ_BUILD_PREFIX/bin:$PATH"
+            LD_LIBRARY_PATH="$LIBPQ_BUILD_PREFIX/lib"
 
       - uses: actions/upload-artifact@v2
         with:

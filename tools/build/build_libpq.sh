@@ -5,10 +5,18 @@
 set -euo pipefail
 set -x
 
+# IMPORTANT! Change the cache key in packages.yml when upgrading libraries
+postgres_version="14.3"
 openssl_version="1.1.1o"
 ldap_version="2.6.2"
 sasl_version="2.1.28"
-postgres_version="14.3"
+
+export LIBPQ_BUILD_PREFIX=${LIBPQ_BUILD_PREFIX:-/tmp/libpq.build}
+
+if [[ -f "${LIBPQ_BUILD_PREFIX}/lib/libpq.so" ]]; then
+    echo "libpq already available: build skipped" >&2
+    exit 0
+fi
 
 source /etc/os-release
 
@@ -38,7 +46,7 @@ if [ "$ID" == "centos" ]; then
 
         cd "${openssl_dir}"
 
-        ./config --prefix=/usr/local/ --openssldir=/usr/local/ \
+        ./config --prefix=${LIBPQ_BUILD_PREFIX} --openssldir=${LIBPQ_BUILD_PREFIX} \
             zlib -fPIC shared
         make depend
         make
@@ -69,7 +77,7 @@ if [ "$ID" == "centos" ]; then
         cd "${sasl_dir}"
 
         autoreconf -i
-        ./configure
+        ./configure --prefix=${LIBPQ_BUILD_PREFIX}
         make
     else
         cd "${sasl_dir}"
@@ -96,7 +104,7 @@ if [ "$ID" == "centos" ]; then
 
         cd "${ldap_dir}"
 
-        ./configure --enable-backends=no --enable-null
+        ./configure --prefix=${LIBPQ_BUILD_PREFIX} --enable-backends=no --enable-null
         make depend
         make -C libraries/liblutil/
         make -C libraries/liblber/
@@ -109,7 +117,7 @@ if [ "$ID" == "centos" ]; then
     make -C libraries/liblber/ install
     make -C libraries/libldap/ install
     make -C include/ install
-    chmod +x /usr/local/lib/{libldap,liblber}*.so*
+    chmod +x ${LIBPQ_BUILD_PREFIX}/lib/{libldap,liblber}*.so*
     cd ..
 
 fi
@@ -131,13 +139,12 @@ if [ ! -d "${postgres_dir}" ]; then
 '|#define DEFAULT_PGSOCKET_DIR "/var/run/postgresql"|' \
         src/include/pg_config_manual.h
 
-    # Without this, libpq ./configure fails on i686
-    if [[ "$(uname -m)" != "x86_64" ]]; then
-        export LD_LIBRARY_PATH=/usr/local/lib
-    fi
+    # Often needed, but currently set by the workflow
+    # export LD_LIBRARY_PATH="${LIBPQ_BUILD_PREFIX}/lib"
 
-    ./configure --prefix=/usr/local --sysconfdir=/etc/postgresql-common \
-        --without-readline --with-gssapi --with-openssl --with-pam --with-ldap
+    ./configure --prefix=${LIBPQ_BUILD_PREFIX} --sysconfdir=/etc/postgresql-common \
+        --without-readline --with-gssapi --with-openssl --with-pam --with-ldap \
+        CPPFLAGS=-I${LIBPQ_BUILD_PREFIX}/include/ LDFLAGS=-L${LIBPQ_BUILD_PREFIX}/lib
     make -C src/interfaces/libpq
     make -C src/bin/pg_config
     make -C src/include
@@ -151,4 +158,4 @@ make -C src/bin/pg_config install
 make -C src/include install
 cd ..
 
-find /usr/local/ -name \*.so.\* -type f -exec strip --strip-unneeded {} \;
+find ${LIBPQ_BUILD_PREFIX} -name \*.so.\* -type f -exec strip --strip-unneeded {} \;
