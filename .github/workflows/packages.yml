@@ -80,6 +80,10 @@ jobs:
   linux:  # {{{
     runs-on: ubuntu-20.04
 
+    env:
+      LIBPQ_VERSION: "14.3"
+      OPENSSL_VERSION: "1.1.1o"
+
     strategy:
       fail-fast: false
       matrix:
@@ -97,7 +101,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: /tmp/libpq.build
-          key: libpq-14.3-${{ matrix.platform }}-${{ matrix.arch }}-1
+          key: libpq-${{ env.LIBPQ_VERSION }}-${{ matrix.platform }}-${{ matrix.arch }}-1
 
       - name: Create the binary package source tree
         run: python3 ./tools/build/copy_to_binary.py
@@ -120,6 +124,7 @@ jobs:
           CIBW_TEST_REQUIRES: ./psycopg[test] ./psycopg_pool
           CIBW_TEST_COMMAND: >-
             pytest {project}/tests -m 'not slow and not flakey' --color yes
+          CIBW_ENVIRONMENT_PASS_LINUX: LIBPQ_VERSION OPENSSL_VERSION
           CIBW_ENVIRONMENT: >-
             PSYCOPG_IMPL=binary
             PSYCOPG_TEST_DSN='host=172.17.0.1 user=postgres'
@@ -127,6 +132,8 @@ jobs:
             LIBPQ_BUILD_PREFIX=/host/tmp/libpq.build
             PATH="$LIBPQ_BUILD_PREFIX/bin:$PATH"
             LD_LIBRARY_PATH="$LIBPQ_BUILD_PREFIX/lib"
+            PSYCOPG_TEST_WANT_LIBPQ_BUILD=${{ env.LIBPQ_VERSION }}
+            PSYCOPG_TEST_WANT_LIBPQ_IMPORT=${{ env.LIBPQ_VERSION }}
 
       - uses: actions/upload-artifact@v2
         with:
@@ -182,6 +189,8 @@ jobs:
           CIBW_ENVIRONMENT: >-
             PSYCOPG_IMPL=binary
             PSYCOPG_TEST_DSN='dbname=postgres'
+            PSYCOPG_TEST_WANT_LIBPQ_BUILD=">= 14"
+            PSYCOPG_TEST_WANT_LIBPQ_IMPORT=">= 14"
 
       - uses: actions/upload-artifact@v2
         with:
@@ -230,6 +239,8 @@ jobs:
             PSYCOPG_IMPL=binary
             PATH="C:\\Program Files\\PostgreSQL\\14\\bin;$PATH"
             PSYCOPG_TEST_DSN="host=127.0.0.1 user=postgres"
+            PSYCOPG_TEST_WANT_LIBPQ_BUILD=">= 14"
+            PSYCOPG_TEST_WANT_LIBPQ_IMPORT=">= 14"
 
       - uses: actions/upload-artifact@v2
         with:
