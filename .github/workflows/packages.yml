@@ -78,6 +78,10 @@ jobs:
   linux:  # {{{
     runs-on: ubuntu-20.04
 
+    env:
+      LIBPQ_VERSION: "14.3"
+      OPENSSL_VERSION: "1.1.1o"
+
     strategy:
       fail-fast: false
       matrix:
@@ -91,18 +95,24 @@ jobs:
       - name: Set up QEMU for multi-arch build
         uses: docker/setup-qemu-action@v1
 
+      - name: Cache libpq build
+        uses: actions/cache@v3
+        with:
+          path: /tmp/libpq.build
+          key: libpq-${{ env.LIBPQ_VERSION }}-${{ matrix.platform }}-${{ matrix.arch }}-1
+
       - name: Create the binary package source tree
         run: python3 ./tools/build/copy_to_binary.py
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.5.0
+        uses: pypa/cibuildwheel@v2.6.1
         with:
           package-dir: psycopg_binary
         env:
-          CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_24
-          CIBW_MANYLINUX_I686_IMAGE: manylinux_2_24
-          CIBW_MANYLINUX_AARCH64_IMAGE: manylinux_2_24
-          CIBW_MANYLINUX_PPC64LE_IMAGE: manylinux_2_24
+          CIBW_MANYLINUX_X86_64_IMAGE: manylinux2014
+          CIBW_MANYLINUX_I686_IMAGE: manylinux2014
+          CIBW_MANYLINUX_AARCH64_IMAGE: manylinux2014
+          CIBW_MANYLINUX_PPC64LE_IMAGE: manylinux2014
           CIBW_BUILD: ${{matrix.pyver}}-${{matrix.platform}}_${{matrix.arch}}
           CIBW_ARCHS_LINUX: auto aarch64 ppc64le
           CIBW_BEFORE_ALL_LINUX: ./tools/build/wheel_linux_before_all.sh
@@ -111,10 +121,16 @@ jobs:
             && auditwheel repair -w {dest_dir} {wheel}
           CIBW_TEST_REQUIRES: ./psycopg[test] ./psycopg_pool
           CIBW_TEST_COMMAND: pytest {project}/tests -m 'not slow' --color yes
+          CIBW_ENVIRONMENT_PASS_LINUX: LIBPQ_VERSION OPENSSL_VERSION
           CIBW_ENVIRONMENT: >-
             PSYCOPG_IMPL=binary
             PSYCOPG_TEST_DSN='host=172.17.0.1 user=postgres'
             PGPASSWORD=password
+            LIBPQ_BUILD_PREFIX=/host/tmp/libpq.build
+            PATH="$LIBPQ_BUILD_PREFIX/bin:$PATH"
+            LD_LIBRARY_PATH="$LIBPQ_BUILD_PREFIX/lib"
+            PSYCOPG_TEST_WANT_LIBPQ_BUILD=${{ env.LIBPQ_VERSION }}
+            PSYCOPG_TEST_WANT_LIBPQ_IMPORT=${{ env.LIBPQ_VERSION }}
 
       - uses: actions/upload-artifact@v2
         with:
@@ -122,10 +138,7 @@ jobs:
 
     services:
       postgresql:
-        # Can update to 14 only after aarch64 will be able to build with libpq
-        # > 10 or if we reconfigure the server to use md5 instead of SCRAM
-        # authentication.
-        image: postgres:13
+        image: postgres:14
         env:
           POSTGRES_PASSWORD: password
         ports:
@@ -157,7 +170,7 @@ jobs:
         run: python3 ./tools/build/copy_to_binary.py
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.5.0
+        uses: pypa/cibuildwheel@v2.6.1
         with:
           package-dir: psycopg_binary
         env:
@@ -169,6 +182,8 @@ jobs:
           CIBW_ENVIRONMENT: >-
             PSYCOPG_IMPL=binary
             PSYCOPG_TEST_DSN='dbname=postgres'
+            PSYCOPG_TEST_WANT_LIBPQ_BUILD=">= 14"
+            PSYCOPG_TEST_WANT_LIBPQ_IMPORT=">= 14"
 
       - uses: actions/upload-artifact@v2
         with:
@@ -200,7 +215,7 @@ jobs:
         run: python3 ./tools/build/copy_to_binary.py
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.5.0
+        uses: pypa/cibuildwheel@v2.6.1
         with:
           package-dir: psycopg_binary
         env:
@@ -216,6 +231,8 @@ jobs:
             PSYCOPG_IMPL=binary
             PATH="C:\\Program Files\\PostgreSQL\\14\\bin;$PATH"
             PSYCOPG_TEST_DSN="host=127.0.0.1 user=postgres"
+            PSYCOPG_TEST_WANT_LIBPQ_BUILD=">= 14"
+            PSYCOPG_TEST_WANT_LIBPQ_IMPORT=">= 14"
 
       - uses: actions/upload-artifact@v2
         with:

@@ -32,6 +32,11 @@ def check_server_version(got, want):
 
 
 def _check_version(got, want, whose_version):
+    """Check that a postgres-style version matches a desired spec.
+
+    - The postgres-style version is a number such as 90603 for 9.6.3.
+    - The want version is a spec string such as "> 9.6"
+    """
     # convert 90603 to (9, 6, 3), 120003 to (12, 3)
     got, got_fix = divmod(got, 100)
     got_maj, got_min = divmod(got, 100)
@@ -41,7 +46,10 @@ def _check_version(got, want, whose_version):
         got = (got_maj, got_min, got_fix)
 
     # Parse a spec like "> 9.6"
-    m = re.match(r"^\s*(>=|<=|>|<)\s*(?:(\d+)(?:\.(\d+)(?:\.(\d+))?)?)?\s*$", want)
+    m = re.match(
+        r"^\s*(>=|<=|>|<|==)?\s*(?:(\d+)(?:\.(\d+)(?:\.(\d+))?)?)?\s*$",
+        want,
+    )
     if m is None:
         pytest.fail(f"bad wanted version spec: {want}")
 
@@ -56,12 +64,13 @@ def _check_version(got, want, whose_version):
     else:
         want = (want_maj, want_min, want_fix)
 
-    op = getattr(operator, {">=": "ge", "<=": "le", ">": "gt", "<": "lt"}[m.group(1)])
+    opnames = {">=": "ge", "<=": "le", ">": "gt", "<": "lt", "==": "eq"}
+    op = getattr(operator, opnames[m.group(1) or "=="])
 
     if not op(got, want):
-        revops = {">=": "<", "<=": ">", ">": "<=", "<": ">="}
+        revops = {">=": "<", "<=": ">", ">": "<=", "<": ">=", "==": "!="}
         return (
-            f"skipping test: {whose_version} version is {'.'.join(map(str, got))}"
+            f"{whose_version} version is {'.'.join(map(str, got))}"
             f" {revops[m.group(1)]} {'.'.join(map(str, want))}"
         )
 

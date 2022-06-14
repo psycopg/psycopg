@@ -18,6 +18,7 @@ Psycopg 3.0.15 (unreleased)
 - Restore the connection to usable state after an error in `~Cursor.stream()`.
 - Raise `DataError` instead of `OverflowError` loading binary intervals
   out-of-range.
+- Distribute ``manylinux2014`` wheel packages (:ticket:`#124`).
 
 
 Current release
