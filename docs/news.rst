@@ -7,11 +7,11 @@
 ``psycopg`` release notes
 =========================
 
-Future releases
+Current release
 ---------------
 
-Psycopg 3.0.15 (unreleased)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Psycopg 3.0.15
+^^^^^^^^^^^^^^
 
 - Fix wrong escaping of unprintable chars in COPY (nonetheless correctly
   interpreted by PostgreSQL).
@@ -20,9 +20,6 @@ Psycopg 3.0.15 (unreleased)
   out-of-range.
 - Distribute ``manylinux2014`` wheel packages (:ticket:`#124`).
 
-
-Current release
----------------
 
 Psycopg 3.0.14
 ^^^^^^^^^^^^^^
