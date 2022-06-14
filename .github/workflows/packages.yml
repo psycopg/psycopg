@@ -141,10 +141,7 @@ jobs:
 
     services:
       postgresql:
-        # Can update to 14 only after aarch64 will be able to build with libpq
-        # > 10 or if we reconfigure the server to use md5 instead of SCRAM
-        # authentication.
-        image: postgres:13
+        image: postgres:14
         env:
           POSTGRES_PASSWORD: password
         ports:
