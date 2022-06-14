@@ -6,6 +6,8 @@
 set -euo pipefail
 set -x
 
+dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
 source /etc/os-release
 
 # Install PostgreSQL development files.
@@ -13,7 +15,8 @@ case "$ID" in
     alpine)
         # tzdata is required for datetime tests.
         apk update
-        apk add --no-cache postgresql-dev tzdata
+        apk add --no-cache tzdata
+        "${dir}/build_libpq.sh" > /dev/null
         ;;
 
     debian)
@@ -32,6 +35,10 @@ case "$ID" in
         apt-get update
         apt-get -y upgrade
         apt-get -y install libpq-dev
+        ;;
+
+    centos)
+        "${dir}/build_libpq.sh" > /dev/null
         ;;
 
     *)
