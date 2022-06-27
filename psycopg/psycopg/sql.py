@@ -12,6 +12,7 @@ from typing import Any, Iterator, Iterable, List, Optional, Sequence, Union
 from .pq import Escaping
 from .abc import AdaptContext
 from .adapt import Transformer, PyFormat
+from ._compat import LiteralString
 from ._encodings import conn_encoding
 
 
@@ -193,7 +194,7 @@ class SQL(Composable):
     _obj: str
     _formatter = string.Formatter()
 
-    def __init__(self, obj: str):
+    def __init__(self, obj: LiteralString):
         super().__init__(obj)
         if not isinstance(obj, str):
             raise TypeError(f"SQL values must be strings, got {obj!r} instead")
