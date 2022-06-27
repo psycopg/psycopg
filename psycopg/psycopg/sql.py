@@ -143,7 +143,7 @@ class Composed(Composable):
         else:
             return NotImplemented
 
-    def join(self, joiner: Union["SQL", str]) -> "Composed":
+    def join(self, joiner: Union["SQL", LiteralString]) -> "Composed":
         """
         Return a new `!Composed` interposing the *joiner* with the `!Composed` items.
 
@@ -191,7 +191,7 @@ class SQL(Composable):
         SELECT "foo", "bar" FROM "table"
     """
 
-    _obj: str
+    _obj: LiteralString
     _formatter = string.Formatter()
 
     def __init__(self, obj: LiteralString):
@@ -245,6 +245,9 @@ class SQL(Composable):
         """
         rv: List[Composable] = []
         autonum: Optional[int] = 0
+        # TODO: this is probably not the right way to whitelist pre
+        # pyre complains. Will wait for mypy to complain too to fix.
+        pre: LiteralString
         for pre, name, spec, conv in self._formatter.parse(self._obj):
             if spec:
                 raise ValueError("no format specification supported by SQL")

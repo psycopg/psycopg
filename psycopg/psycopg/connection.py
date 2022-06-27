@@ -27,7 +27,7 @@ from .rows import Row, RowFactory, tuple_row, TupleRow, args_row
 from .adapt import AdaptersMap
 from ._enums import IsolationLevel
 from .cursor import Cursor
-from ._compat import TypeAlias
+from ._compat import TypeAlias, LiteralString
 from ._cmodule import _psycopg
 from .conninfo import make_conninfo, conninfo_to_dict, ConnectionInfo
 from ._pipeline import BasePipeline, Pipeline
@@ -614,8 +614,10 @@ class BaseConnection(Generic[Row]):
         if self._pipeline:
             yield from self._pipeline._sync_gen()
 
-    def _tpc_finish_gen(self, action: str, xid: Union[Xid, str, None]) -> PQGen[None]:
-        fname = f"tpc_{action}()"
+    def _tpc_finish_gen(
+        self, action: LiteralString, xid: Union[Xid, str, None]
+    ) -> PQGen[None]:
+        fname = f"tpc_{action.lower()}()"
         if xid is None:
             if not self._tpc:
                 raise e.ProgrammingError(
@@ -634,12 +636,12 @@ class BaseConnection(Generic[Row]):
 
         if self._tpc and not self._tpc[1]:
             meth: Callable[[], PQGen[None]]
-            meth = getattr(self, f"_{action}_gen")
+            meth = getattr(self, f"_{action.lower()}_gen")
             self._tpc = None
             yield from meth()
         else:
             yield from self._exec_command(
-                SQL("{} PREPARED {}").format(SQL(action.upper()), str(xid))
+                SQL("{} PREPARED {}").format(SQL(action), str(xid))
             )
             self._tpc = None
 
@@ -1006,14 +1008,14 @@ class Connection(BaseConnection[Row]):
         Commit a prepared two-phase transaction.
         """
         with self.lock:
-            self.wait(self._tpc_finish_gen("commit", xid))
+            self.wait(self._tpc_finish_gen("COMMIT", xid))
 
     def tpc_rollback(self, xid: Union[Xid, str, None] = None) -> None:
         """
         Roll back a prepared two-phase transaction.
         """
         with self.lock:
-            self.wait(self._tpc_finish_gen("rollback", xid))
+            self.wait(self._tpc_finish_gen("ROLLBACK", xid))
 
     def tpc_recover(self) -> List[Xid]:
         status = self.info.transaction_status
