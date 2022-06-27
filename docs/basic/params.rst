@@ -186,6 +186,21 @@ argument of the `Cursor.execute()` method::
     at :ref:`how Psycopg converts data types <types-adaptation>`.
 
 
+Using `LiteralString` in queries
+--------------------------------
+
+The `~Cursor.execute()` method and similar should only receive a literal
+string as input, according to :pep:`675`.
+
+If you need to compose a query dynamically you should use `sql.SQL` and
+similar methods.
+
+At the time of writing the feature is experimental and only checked by the
+Pyre_ checker.
+
+.. _Pyre: https://pyre-check.org/
+
+
 .. index::
     pair: Binary; Parameters
 
