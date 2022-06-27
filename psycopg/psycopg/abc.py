@@ -13,7 +13,7 @@ from ._enums import PyFormat as PyFormat
 from ._compat import Protocol, TypeAlias, LiteralString
 
 if TYPE_CHECKING:
-    from .sql import Composable
+    from . import sql
     from .rows import Row, RowMaker
     from .pq.abc import PGresult
     from .waiting import Wait, Ready
@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 # An object implementing the buffer protocol
 Buffer: TypeAlias = Union[bytes, bytearray, memoryview]
 
-Query: TypeAlias = Union[LiteralString, bytes, "Composable"]
+Query: TypeAlias = Union[LiteralString, bytes, "sql.SQL", "sql.Composed"]
 Params: TypeAlias = Union[Sequence[Any], Mapping[str, Any]]
 ConnectionType = TypeVar("ConnectionType", bound="BaseConnection[Any]")
 PipelineCommand: TypeAlias = Callable[[], None]
