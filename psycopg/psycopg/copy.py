@@ -64,7 +64,7 @@ class BaseCopy(Generic[ConnectionType]):
 
     # Size of data to accumulate before sending it down the network. We fill a
     # buffer this size field by field, and when it passes the threshold size
-    # wee ship it, so it may end up being bigger than this.
+    # we ship it, so it may end up being bigger than this.
     BUFFER_SIZE = 32 * 1024
 
     # Maximum data size we want to queue to send to the libpq copy. Sending a
