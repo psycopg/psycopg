@@ -49,6 +49,7 @@ extras_require = {
         "black >= 22.3.0",
         "dnspython >= 2.1",
         "flake8 >= 4.0",
+        "flake8-bugbear >= 22.6.22",
         "mypy >= 0.940",
         "types-setuptools >= 57.4",
         "wheel >= 0.37",
