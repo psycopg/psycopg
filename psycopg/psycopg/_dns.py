@@ -23,7 +23,6 @@ except ImportError:
         "the module psycopg._dns requires the package 'dnspython' installed"
     )
 
-from . import pq
 from . import errors as e
 
 if TYPE_CHECKING:
@@ -65,10 +64,6 @@ async def resolve_hostaddr_async(params: Dict[str, Any]) -> Dict[str, Any]:
     hostaddr_arg = params.get("hostaddr", os.environ.get("PGHOSTADDR", ""))
     if hostaddr_arg:
         # Already resolved
-        return params
-
-    if pq.version() < 100000:
-        # hostaddr not supported
         return params
 
     host_arg: str = params.get("host", os.environ.get("PGHOST", ""))
