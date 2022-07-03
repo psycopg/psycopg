@@ -38,6 +38,11 @@ async def resolve_hostaddr_async(params: Dict[str, Any]) -> Dict[str, Any]:
     """
     Perform async DNS lookup of the hosts and return a new params dict.
 
+    .. deprecated:: 3.1
+        The use of this function is not necessary anymore, because
+        `psycopg.AsyncConnection.connect()` performs non-blocking name
+        resolution automatically.
+
     :param params: The input parameters, for instance as returned by
         `~psycopg.conninfo.conninfo_to_dict()`.
 

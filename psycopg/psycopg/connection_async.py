@@ -172,7 +172,15 @@ class AsyncConnection(BaseConnection[Row]):
     async def _get_connection_params(
         cls, conninfo: str, **kwargs: Any
     ) -> Dict[str, Any]:
-        """Manipulate connection parameters before connecting."""
+        """Manipulate connection parameters before connecting.
+
+        .. versionchanged:: 3.1
+            Unlike the sync counterpart, perform non-blocking address
+            resolution and populate the ``hostaddr`` connection parameter,
+            unless the user has provided one themselves. See
+            `~psycopg._dns.resolve_hostaddr_async()` for details.
+
+        """
         params = conninfo_to_dict(conninfo, **kwargs)
 
         # Make sure there is an usable connect_timeout

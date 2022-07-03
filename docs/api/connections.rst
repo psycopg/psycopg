@@ -414,6 +414,14 @@ The `!AsyncConnection` class
     methods, but should be called using the `await` keyword.
 
     .. automethod:: connect
+
+        .. versionchanged:: 3.1
+
+            Automatically resolve domain names asynchronously. In previous
+            versions, name resolution blocks, unless the ``hostaddr``
+            parameter is specified, or the `~psycopg._dns.resolve_hostaddr_async()`
+            function is used.
+
     .. automethod:: close
 
         .. note:: You can use ``async with`` to close the connection
