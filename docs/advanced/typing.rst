@@ -134,7 +134,7 @@ Checking literal strings in queries
 -----------------------------------
 
 The `~Cursor.execute()` method and similar should only receive a literal
-string as input, according to :pep:`675`. This mean that the query should
+string as input, according to :pep:`675`. This means that the query should
 come from a literal string in your code, not from an arbitrary string
 expression.
 
