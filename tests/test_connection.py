@@ -706,13 +706,13 @@ def test_set_transaction_param_strange(conn):
 conninfo_params_timeout = [
     (
         "",
-        {"host": "localhost", "connect_timeout": None},
-        ({"host": "localhost"}, None),
+        {"dbname": "mydb", "connect_timeout": None},
+        ({"dbname": "mydb"}, None),
     ),
     (
         "",
-        {"host": "localhost", "connect_timeout": 1},
-        ({"host": "localhost", "connect_timeout": "1"}, 1),
+        {"dbname": "mydb", "connect_timeout": 1},
+        ({"dbname": "mydb", "connect_timeout": "1"}, 1),
     ),
     (
         "dbname=postgres",

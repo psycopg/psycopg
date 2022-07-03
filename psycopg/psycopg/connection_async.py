@@ -20,7 +20,7 @@ from ._tpc import Xid
 from .rows import Row, AsyncRowFactory, tuple_row, TupleRow, args_row
 from .adapt import AdaptersMap
 from ._enums import IsolationLevel
-from .conninfo import make_conninfo, conninfo_to_dict
+from .conninfo import make_conninfo, conninfo_to_dict, resolve_hostaddr_async
 from ._pipeline import AsyncPipeline
 from ._encodings import pgconn_encoding
 from .connection import BaseConnection, CursorRow, Notify
@@ -180,6 +180,9 @@ class AsyncConnection(BaseConnection[Row]):
             params["connect_timeout"] = int(params["connect_timeout"])
         else:
             params["connect_timeout"] = None
+
+        # Resolve host addresses in non-blocking way
+        params = await resolve_hostaddr_async(params)
 
         return params
 

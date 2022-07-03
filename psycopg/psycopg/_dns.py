@@ -10,8 +10,6 @@ import re
 from random import randint
 from typing import Any, DefaultDict, Dict, List, NamedTuple, Optional, Sequence
 from typing import TYPE_CHECKING
-from functools import lru_cache
-from ipaddress import ip_address
 from collections import defaultdict
 
 try:
@@ -24,6 +22,7 @@ except ImportError:
     )
 
 from . import errors as e
+from .conninfo import is_ip_address
 
 if TYPE_CHECKING:
     from dns.rdtypes.IN.SRV import SRV
@@ -327,13 +326,3 @@ class Rfc2782Resolver:
                 del entries[i]
 
         return out
-
-
-@lru_cache()
-def is_ip_address(s: str) -> bool:
-    """Return True if the string represent a valid ip address."""
-    try:
-        ip_address(s)
-    except ValueError:
-        return False
-    return True

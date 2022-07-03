@@ -2,7 +2,6 @@ import pytest
 
 import psycopg
 from psycopg.conninfo import conninfo_to_dict
-from psycopg.rows import Row
 
 pytestmark = [pytest.mark.dns]
 
@@ -119,36 +118,6 @@ async def test_resolve_hostaddr_async_bad(monkeypatch, conninfo, env, fake_resol
     params = conninfo_to_dict(conninfo)
     with pytest.raises(psycopg.Error):
         await psycopg._dns.resolve_hostaddr_async(params)  # type: ignore[attr-defined]
-
-
-@pytest.mark.asyncio
-async def test_resolve_hostaddr_conn(monkeypatch, fake_resolve):
-    got = []
-
-    def fake_connect_gen(conninfo, **kwargs):
-        got.append(conninfo)
-        1 / 0
-
-    monkeypatch.setattr(psycopg.AsyncConnection, "_connect_gen", fake_connect_gen)
-
-    # TODO: not enabled by default, but should be usable to make a subclass
-    class AsyncDnsConnection(psycopg.AsyncConnection[Row]):
-        @classmethod
-        async def _get_connection_params(cls, conninfo, **kwargs):
-            params = await super()._get_connection_params(conninfo, **kwargs)
-            params = await (
-                psycopg._dns.resolve_hostaddr_async(  # type: ignore[attr-defined]
-                    params
-                )
-            )
-            return params
-
-    with pytest.raises(ZeroDivisionError):
-        await AsyncDnsConnection.connect("host=foo.com")
-
-    assert len(got) == 1
-    want = {"host": "foo.com", "hostaddr": "1.1.1.1"}
-    assert conninfo_to_dict(got[0]) == want
 
 
 @pytest.fixture

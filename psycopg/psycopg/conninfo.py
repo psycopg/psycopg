@@ -4,10 +4,15 @@ Functions to manipulate conninfo strings
 
 # Copyright (C) 2020 The Psycopg Team
 
+import os
 import re
+import socket
+import asyncio
 from typing import Any, Dict, List, Optional
 from pathlib import Path
 from datetime import tzinfo
+from functools import lru_cache
+from ipaddress import ip_address
 
 from . import pq
 from . import errors as e
@@ -263,3 +268,106 @@ class ConnectionInfo:
     def _get_pgconn_attr(self, name: str) -> str:
         value: bytes = getattr(self.pgconn, name)
         return value.decode(self.encoding)
+
+
+async def resolve_hostaddr_async(params: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Perform async DNS lookup of the hosts and return a new params dict.
+
+    :param params: The input parameters, for instance as returned by
+        `~psycopg.conninfo.conninfo_to_dict()`.
+
+    If a ``host`` param is present but not ``hostname``, resolve the host
+    addresses dynamically.
+
+    The function may change the input ``host``, ``hostname``, ``port`` to allow
+    connecting without further DNS lookups, eventually removing hosts that are
+    not resolved, keeping the lists of hosts and ports consistent.
+
+    Raise `~psycopg.OperationalError` if connection is not possible (e.g. no
+    host resolve, inconsistent lists length).
+    """
+    hostaddr_arg = params.get("hostaddr", os.environ.get("PGHOSTADDR", ""))
+    if hostaddr_arg:
+        # Already resolved
+        return params
+
+    host_arg: str = params.get("host", os.environ.get("PGHOST", ""))
+    if not host_arg:
+        # Nothing to resolve
+        return params
+
+    hosts_in = host_arg.split(",")
+    port_arg: str = str(params.get("port", os.environ.get("PGPORT", "")))
+    ports_in = port_arg.split(",")
+    default_port = "5432"
+
+    if len(ports_in) == 1:
+        # If only one port is specified, the libpq will apply it to all
+        # the hosts, so don't mangle it.
+        default_port = ports_in.pop()
+
+    elif len(ports_in) > 1:
+        if len(ports_in) != len(hosts_in):
+            # ProgrammingError would have been more appropriate, but this is
+            # what the raise if the libpq fails connect in the same case.
+            raise e.OperationalError(
+                f"cannot match {len(hosts_in)} hosts with {len(ports_in)} port numbers"
+            )
+        ports_out = []
+
+    hosts_out = []
+    hostaddr_out = []
+    loop = asyncio.get_running_loop()
+    for i, host in enumerate(hosts_in):
+        if not host or host.startswith("/") or host[1:2] == ":":
+            # Local path
+            hosts_out.append(host)
+            hostaddr_out.append("")
+            if ports_in:
+                ports_out.append(ports_in[i])
+            continue
+
+        # If the host is already an ip address don't try to resolve it
+        if is_ip_address(host):
+            hosts_out.append(host)
+            hostaddr_out.append(host)
+            if ports_in:
+                ports_out.append(ports_in[i])
+            continue
+
+        try:
+            port = ports_in[i] if ports_in else default_port
+            ans = await loop.getaddrinfo(
+                host, port, proto=socket.IPPROTO_TCP, type=socket.SOCK_STREAM
+            )
+        except OSError as ex:
+            last_exc = ex
+        else:
+            for item in ans:
+                hosts_out.append(host)
+                hostaddr_out.append(item[4][0])
+                if ports_in:
+                    ports_out.append(ports_in[i])
+
+    # Throw an exception if no host could be resolved
+    if not hosts_out:
+        raise e.OperationalError(str(last_exc))
+
+    out = params.copy()
+    out["host"] = ",".join(hosts_out)
+    out["hostaddr"] = ",".join(hostaddr_out)
+    if ports_in:
+        out["port"] = ",".join(ports_out)
+
+    return out
+
+
+@lru_cache()
+def is_ip_address(s: str) -> bool:
+    """Return True if the string represent a valid ip address."""
+    try:
+        ip_address(s)
+    except ValueError:
+        return False
+    return True
