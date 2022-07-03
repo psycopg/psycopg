@@ -126,3 +126,55 @@ any issue. Pydantic will also raise a runtime error in case the
             print(f"{p.first_name} was born in {p.dob.year}")
         else:
             print(f"Who knows when {p.first_name} was born")
+
+
+.. _literal-string:
+
+Checking literal strings in queries
+-----------------------------------
+
+The `~Cursor.execute()` method and similar should only receive a literal
+string as input, according to :pep:`675`. This mean that the query should
+come from a literal string in your code, not from an arbitrary string
+expression.
+
+For instance, passing an argument to the query should be done via the second
+argument to `!execute()`, not by string composition:
+
+.. code:: python
+
+    def get_record(conn: psycopg.Connection[Any], id: int) -> Any:
+        cur = conn.execute("SELECT * FROM my_table WHERE id = %s" % id)  # BAD!
+        return cur.fetchone()
+
+    # the function should be implemented as:
+
+    def get_record(conn: psycopg.Connection[Any], id: int) -> Any:
+        cur = conn.execute("select * FROM my_table WHERE id = %s", (id,))
+        return cur.fetchone()
+
+If you are composing a query dynamically you should use the `sql.SQL` object
+and similar to escape safely table and field names. The parameter of the
+`!SQL()` object should be a literal string:
+
+.. code:: python
+
+    def count_records(conn: psycopg.Connection[Any], table: str) -> int:
+        query = "SELECT count(*) FROM %s" % table  # BAD!
+        return conn.execute(query).fetchone()[0]
+
+    # the function should be implemented as:
+
+    def count_records(conn: psycopg.Connection[Any], table: str) -> int:
+        query = sql.SQL("SELECT count(*) FROM {}").format(sql.Identifier(table))
+        return conn.execute(query).fetchone()[0]
+
+At the time of writing, no Python static analyzer implements this check (`mypy
+doesn't implement it`__, Pyre_ does, but `doesn't work with psycopg yet`__).
+Once the type checkers support will be complete, the above bad statements
+should be reported as errors.
+
+.. __: https://github.com/python/mypy/issues/12554
+.. __: https://github.com/facebook/pyre-check/issues/636
+
+.. _Pyre: https://pyre-check.org/

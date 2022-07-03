@@ -179,26 +179,16 @@ argument of the `Cursor.execute()` method::
     data = ("O'Reilly", )
     cur.execute(SQL, data)  # Note: no % operator
 
+.. note::
+
+    Python static code checkers are not quite there yet, but, in the future,
+    it will be possible to check your code for improper use of string
+    expressions in queries. See :ref:`literal-string` for details.
 
 .. seealso::
 
     Now that you know how to pass parameters to queries, you can take a look
     at :ref:`how Psycopg converts data types <types-adaptation>`.
-
-
-Using `LiteralString` in queries
---------------------------------
-
-The `~Cursor.execute()` method and similar should only receive a literal
-string as input, according to :pep:`675`.
-
-If you need to compose a query dynamically you should use `sql.SQL` and
-similar methods.
-
-At the time of writing the feature is experimental and only checked by the
-Pyre_ checker.
-
-.. _Pyre: https://pyre-check.org/
 
 
 .. index::
@@ -248,5 +238,5 @@ requesting binary results is a clear winner is when you have large binary data
 in the database, such as images::
 
     cur.execute(
-        "select image_data from images where id = %s", [image_id], binary=True)
+        "SELECT image_data FROM images WHERE id = %s", [image_id], binary=True)
     data = cur.fetchone()[0]
