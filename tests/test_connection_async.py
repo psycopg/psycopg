@@ -12,6 +12,7 @@ from .utils import gc_collect
 from .test_cursor import my_row_factory
 from .test_connection import tx_params, tx_values_map, conninfo_params_timeout
 from .test_adapt import make_bin_dumper, make_dumper
+from .test_conninfo import fake_resolve  # noqa: F401
 
 pytestmark = pytest.mark.asyncio
 
@@ -350,14 +351,14 @@ async def test_autocommit_unknown(aconn):
     [
         ((), {}, ""),
         (("",), {}, ""),
-        (("host=foo user=bar",), {}, "host=foo user=bar"),
-        (("host=foo",), {"user": "baz"}, "host=foo user=baz"),
+        (("dbname=foo user=bar",), {}, "dbname=foo user=bar"),
+        (("dbname=foo",), {"user": "baz"}, "dbname=foo user=baz"),
         (
-            ("host=foo port=5432",),
-            {"host": "qux", "user": "joe"},
-            "host=qux user=joe port=5432",
+            ("dbname=foo port=5432",),
+            {"dbname": "qux", "user": "joe"},
+            "dbname=qux user=joe port=5432",
         ),
-        (("host=foo",), {"user": None}, "host=foo"),
+        (("dbname=foo",), {"user": None}, "dbname=foo"),
     ],
 )
 async def test_connect_args(monkeypatch, pgconn, args, kwargs, want):
@@ -721,3 +722,20 @@ async def test_connect_context_copy(dsn, aconn):
 async def test_cancel_closed(aconn):
     await aconn.close()
     aconn.cancel()
+
+
+async def test_resolve_hostaddr_conn(monkeypatch, fake_resolve):  # noqa: F811
+    got = []
+
+    def fake_connect_gen(conninfo, **kwargs):
+        got.append(conninfo)
+        1 / 0
+
+    monkeypatch.setattr(psycopg.AsyncConnection, "_connect_gen", fake_connect_gen)
+
+    with pytest.raises(ZeroDivisionError):
+        await psycopg.AsyncConnection.connect("host=foo.com")
+
+    assert len(got) == 1
+    want = {"host": "foo.com", "hostaddr": "1.1.1.1"}
+    assert conninfo_to_dict(got[0]) == want

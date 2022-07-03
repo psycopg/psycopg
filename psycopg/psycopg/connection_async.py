@@ -20,7 +20,7 @@ from ._tpc import Xid
 from .rows import Row, AsyncRowFactory, tuple_row, TupleRow, args_row
 from .adapt import AdaptersMap
 from ._enums import IsolationLevel
-from .conninfo import make_conninfo, conninfo_to_dict
+from .conninfo import make_conninfo, conninfo_to_dict, resolve_hostaddr_async
 from ._pipeline import AsyncPipeline
 from ._encodings import pgconn_encoding
 from .connection import BaseConnection, CursorRow, Notify
@@ -172,7 +172,15 @@ class AsyncConnection(BaseConnection[Row]):
     async def _get_connection_params(
         cls, conninfo: str, **kwargs: Any
     ) -> Dict[str, Any]:
-        """Manipulate connection parameters before connecting."""
+        """Manipulate connection parameters before connecting.
+
+        .. versionchanged:: 3.1
+            Unlike the sync counterpart, perform non-blocking address
+            resolution and populate the ``hostaddr`` connection parameter,
+            unless the user has provided one themselves. See
+            `~psycopg._dns.resolve_hostaddr_async()` for details.
+
+        """
         params = conninfo_to_dict(conninfo, **kwargs)
 
         # Make sure there is an usable connect_timeout
@@ -180,6 +188,9 @@ class AsyncConnection(BaseConnection[Row]):
             params["connect_timeout"] = int(params["connect_timeout"])
         else:
             params["connect_timeout"] = None
+
+        # Resolve host addresses in non-blocking way
+        params = await resolve_hostaddr_async(params)
 
         return params
 

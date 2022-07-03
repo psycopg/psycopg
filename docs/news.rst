@@ -22,6 +22,8 @@ Psycopg 3.1 (unreleased)
 - `~Cursor.executemany()` performance improved by using batch mode internally
   (:ticket:`#145`).
 - Add parameters to `~Cursor.copy()`.
+- Resolve domain names asynchronously in `AsyncConnection.connect()`
+  (:ticket:`#259`).
 - Add `pq.PGconn.trace()` and related trace functions (:ticket:`#167`).
 - Add ``prepare_threshold`` parameter to `Connection` init (:ticket:`#200`).
 - Add ``cursor_factory`` parameter to `Connection` init.

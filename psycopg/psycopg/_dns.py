@@ -7,11 +7,10 @@ DNS query support
 
 import os
 import re
+import warnings
 from random import randint
 from typing import Any, DefaultDict, Dict, List, NamedTuple, Optional, Sequence
 from typing import TYPE_CHECKING
-from functools import lru_cache
-from ipaddress import ip_address
 from collections import defaultdict
 
 try:
@@ -23,8 +22,8 @@ except ImportError:
         "the module psycopg._dns requires the package 'dnspython' installed"
     )
 
-from . import pq
 from . import errors as e
+from .conninfo import resolve_hostaddr_async as resolve_hostaddr_async_
 
 if TYPE_CHECKING:
     from dns.rdtypes.IN.SRV import SRV
@@ -39,6 +38,11 @@ async_resolver.cache = Cache()
 async def resolve_hostaddr_async(params: Dict[str, Any]) -> Dict[str, Any]:
     """
     Perform async DNS lookup of the hosts and return a new params dict.
+
+    .. deprecated:: 3.1
+        The use of this function is not necessary anymore, because
+        `psycopg.AsyncConnection.connect()` performs non-blocking name
+        resolution automatically.
 
     :param params: The input parameters, for instance as returned by
         `~psycopg.conninfo.conninfo_to_dict()`.
@@ -60,89 +64,13 @@ async def resolve_hostaddr_async(params: Dict[str, Any]) -> Dict[str, Any]:
            #LIBPQ-PARAMKEYWORDS
 
     .. warning::
-        This function currently doesn't handle the ``/etc/hosts`` file.
+        Before psycopg 3.1, this function doesn't handle the ``/etc/hosts`` file.
     """
-    hostaddr_arg = params.get("hostaddr", os.environ.get("PGHOSTADDR", ""))
-    if hostaddr_arg:
-        # Already resolved
-        return params
-
-    if pq.version() < 100000:
-        # hostaddr not supported
-        return params
-
-    host_arg: str = params.get("host", os.environ.get("PGHOST", ""))
-    if not host_arg:
-        # Nothing to resolve
-        return params
-
-    hosts_in = host_arg.split(",")
-    port_arg: str = str(params.get("port", os.environ.get("PGPORT", "")))
-    ports_in = port_arg.split(",")
-
-    if len(ports_in) == 1:
-        # If only one port is specified, the libpq will apply it to all
-        # the hosts, so don't mangle it.
-        del ports_in[:]
-    elif len(ports_in) > 1:
-        if len(ports_in) != len(hosts_in):
-            # ProgrammingError would have been more appropriate, but this is
-            # what the raise if the libpq fails connect in the same case.
-            raise e.OperationalError(
-                f"cannot match {len(hosts_in)} hosts with {len(ports_in)} port numbers"
-            )
-        ports_out = []
-
-    hosts_out = []
-    hostaddr_out = []
-    for i, host in enumerate(hosts_in):
-        if not host or host.startswith("/") or host[1:2] == ":":
-            # Local path
-            hosts_out.append(host)
-            hostaddr_out.append("")
-            if ports_in:
-                ports_out.append(ports_in[i])
-            continue
-
-        # If the host is already an ip address don't try to resolve it
-        if is_ip_address(host):
-            hosts_out.append(host)
-            hostaddr_out.append(host)
-            if ports_in:
-                ports_out.append(ports_in[i])
-            continue
-
-        try:
-            ans = await async_resolver.resolve(host)
-        except DNSException as ex:
-            # Special case localhost: on MacOS it doesn't get resolved.
-            # I assume it is just resolved by /etc/hosts, which is not handled
-            # by dnspython.
-            if host == "localhost":
-                hosts_out.append(host)
-                hostaddr_out.append("127.0.0.1")
-                if ports_in:
-                    ports_out.append(ports_in[i])
-            else:
-                last_exc = ex
-        else:
-            for rdata in ans:
-                hosts_out.append(host)
-                hostaddr_out.append(rdata.address)
-                if ports_in:
-                    ports_out.append(ports_in[i])
-
-    # Throw an exception if no host could be resolved
-    if not hosts_out:
-        raise e.OperationalError(str(last_exc))
-
-    out = params.copy()
-    out["host"] = ",".join(hosts_out)
-    out["hostaddr"] = ",".join(hostaddr_out)
-    if ports_in:
-        out["port"] = ",".join(ports_out)
-
-    return out
+    warnings.warn(
+        "from psycopg 3.1, resolve_hostaddr_async() is not needed anymore",
+        DeprecationWarning,
+    )
+    return await resolve_hostaddr_async_(params)
 
 
 def resolve_srv(params: Dict[str, Any]) -> Dict[str, Any]:
@@ -332,13 +260,3 @@ class Rfc2782Resolver:
                 del entries[i]
 
         return out
-
-
-@lru_cache()
-def is_ip_address(s: str) -> bool:
-    """Return True if the string represent a valid ip address."""
-    try:
-        ip_address(s)
-    except ValueError:
-        return False
-    return True

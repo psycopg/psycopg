@@ -1,3 +1,5 @@
+import socket
+import asyncio
 import datetime as dt
 
 import pytest
@@ -5,6 +7,7 @@ import pytest
 import psycopg
 from psycopg import ProgrammingError
 from psycopg.conninfo import make_conninfo, conninfo_to_dict, ConnectionInfo
+from psycopg.conninfo import resolve_hostaddr_async
 from psycopg._encodings import pg2pyenc
 
 snowman = "\u2603"
@@ -298,3 +301,140 @@ class TestConnectionInfo:
         cur.execute("set client_encoding to EUC_TW")
         with pytest.raises(psycopg.NotSupportedError):
             cur.execute("select 'x'")
+
+
+@pytest.mark.parametrize(
+    "conninfo, want, env",
+    [
+        ("", "", None),
+        ("host='' user=bar", "host='' user=bar", None),
+        (
+            "host=127.0.0.1 user=bar",
+            "host=127.0.0.1 user=bar hostaddr=127.0.0.1",
+            None,
+        ),
+        (
+            "host=1.1.1.1,2.2.2.2 user=bar",
+            "host=1.1.1.1,2.2.2.2 user=bar hostaddr=1.1.1.1,2.2.2.2",
+            None,
+        ),
+        (
+            "host=1.1.1.1,2.2.2.2 port=5432",
+            "host=1.1.1.1,2.2.2.2 port=5432 hostaddr=1.1.1.1,2.2.2.2",
+            None,
+        ),
+        (
+            "port=5432",
+            "host=1.1.1.1,2.2.2.2 port=5432 hostaddr=1.1.1.1,2.2.2.2",
+            {"PGHOST": "1.1.1.1,2.2.2.2"},
+        ),
+        (
+            "host=foo.com port=5432",
+            "host=foo.com port=5432",
+            {"PGHOSTADDR": "1.2.3.4"},
+        ),
+    ],
+)
+@pytest.mark.asyncio
+async def test_resolve_hostaddr_async_no_resolve(
+    monkeypatch, conninfo, want, env, fail_resolve
+):
+    if env:
+        for k, v in env.items():
+            monkeypatch.setenv(k, v)
+    params = conninfo_to_dict(conninfo)
+    params = await resolve_hostaddr_async(params)
+    assert conninfo_to_dict(want) == params
+
+
+@pytest.mark.parametrize(
+    "conninfo, want, env",
+    [
+        (
+            "host=foo.com,qux.com",
+            "host=foo.com,qux.com hostaddr=1.1.1.1,2.2.2.2",
+            None,
+        ),
+        (
+            "host=foo.com,qux.com port=5433",
+            "host=foo.com,qux.com hostaddr=1.1.1.1,2.2.2.2 port=5433",
+            None,
+        ),
+        (
+            "host=foo.com,qux.com port=5432,5433",
+            "host=foo.com,qux.com hostaddr=1.1.1.1,2.2.2.2 port=5432,5433",
+            None,
+        ),
+        (
+            "host=foo.com,nosuchhost.com",
+            "host=foo.com hostaddr=1.1.1.1",
+            None,
+        ),
+        (
+            "host=foo.com, port=5432,5433",
+            "host=foo.com, hostaddr=1.1.1.1, port=5432,5433",
+            None,
+        ),
+        (
+            "host=nosuchhost.com,foo.com",
+            "host=foo.com hostaddr=1.1.1.1",
+            None,
+        ),
+        (
+            "host=foo.com,qux.com",
+            "host=foo.com,qux.com hostaddr=1.1.1.1,2.2.2.2",
+            {},
+        ),
+    ],
+)
+@pytest.mark.asyncio
+async def test_resolve_hostaddr_async(conninfo, want, env, fake_resolve):
+    params = conninfo_to_dict(conninfo)
+    params = await resolve_hostaddr_async(params)
+    assert conninfo_to_dict(want) == params
+
+
+@pytest.mark.parametrize(
+    "conninfo, env",
+    [
+        ("host=bad1.com,bad2.com", None),
+        ("host=foo.com port=1,2", None),
+        ("host=1.1.1.1,2.2.2.2 port=5432,5433,5434", None),
+        ("host=1.1.1.1,2.2.2.2", {"PGPORT": "1,2,3"}),
+    ],
+)
+@pytest.mark.asyncio
+async def test_resolve_hostaddr_async_bad(monkeypatch, conninfo, env, fake_resolve):
+    if env:
+        for k, v in env.items():
+            monkeypatch.setenv(k, v)
+    params = conninfo_to_dict(conninfo)
+    with pytest.raises(psycopg.Error):
+        await resolve_hostaddr_async(params)
+
+
+@pytest.fixture
+async def fake_resolve(monkeypatch):
+    fake_hosts = {
+        "localhost": "127.0.0.1",
+        "foo.com": "1.1.1.1",
+        "qux.com": "2.2.2.2",
+    }
+
+    async def fake_getaddrinfo(host, port, **kwargs):
+        try:
+            addr = fake_hosts[host]
+        except KeyError:
+            raise OSError(f"unknown test host: {host}")
+        else:
+            return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", (addr, 432))]
+
+    monkeypatch.setattr(asyncio.get_running_loop(), "getaddrinfo", fake_getaddrinfo)
+
+
+@pytest.fixture
+async def fail_resolve(monkeypatch):
+    async def fail_getaddrinfo(host, port, **kwargs):
+        pytest.fail(f"shouldn't try to resolve {host}")
+
+    monkeypatch.setattr(asyncio.get_running_loop(), "getaddrinfo", fail_getaddrinfo)

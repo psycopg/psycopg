@@ -1,6 +1,4 @@
-import sys
 import ipaddress
-import subprocess as sp
 
 import pytest
 
@@ -128,24 +126,3 @@ def test_cidr_load(conn, fmt_out, val):
         (got,) = copy.read_row()
 
     assert got == pyval
-
-
-@pytest.mark.slow
-@pytest.mark.subprocess
-def test_lazy_load(dsn):
-    script = f"""\
-import sys
-import psycopg
-
-assert 'ipaddress' not in sys.modules
-
-conn = psycopg.connect({dsn!r})
-with conn.cursor() as cur:
-    cur.execute("select '127.0.0.1'::inet")
-    cur.fetchone()
-
-conn.close()
-assert 'ipaddress' in sys.modules
-"""
-
-    sp.check_call([sys.executable, "-s", "-c", script])
