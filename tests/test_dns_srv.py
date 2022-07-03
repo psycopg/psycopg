@@ -43,13 +43,12 @@ samples_ok = [
 ]
 
 
+@pytest.mark.flakey("random weight order, might cause wrong order")
 @pytest.mark.parametrize("conninfo, want, env", samples_ok)
 def test_srv(conninfo, want, env, fake_srv, monkeypatch):
     if env:
         for k, v in env.items():
             monkeypatch.setenv(k, v)
-    # Note: This test is flakey because weight order is random, although wrong
-    # order is unlikely.
     params = conninfo_to_dict(conninfo)
     params = psycopg._dns.resolve_srv(params)  # type: ignore[attr-defined]
     assert conninfo_to_dict(want) == params
