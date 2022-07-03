@@ -179,6 +179,11 @@ argument of the `Cursor.execute()` method::
     data = ("O'Reilly", )
     cur.execute(SQL, data)  # Note: no % operator
 
+.. note::
+
+    Python static code checkers are not quite there yet, but, in the future,
+    it will be possible to check your code for improper use of string
+    expressions in queries. See :ref:`literal-string` for details.
 
 .. seealso::
 
@@ -233,5 +238,5 @@ requesting binary results is a clear winner is when you have large binary data
 in the database, such as images::
 
     cur.execute(
-        "select image_data from images where id = %s", [image_id], binary=True)
+        "SELECT image_data FROM images WHERE id = %s", [image_id], binary=True)
     data = cur.fetchone()[0]

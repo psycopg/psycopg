@@ -143,7 +143,7 @@ The `!Connection` class
     .. automethod:: execute
 
         :param query: The query to execute.
-        :type query: `!str`, `!bytes`, or `sql.Composable`
+        :type query: `!str`, `!bytes`, `sql.SQL`, or `sql.Composed`
         :param params: The parameters to pass to the query, if any.
         :type params: Sequence or Mapping
         :param prepare: Force (`!True`) or disallow (`!False`) preparation of

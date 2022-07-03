@@ -12,6 +12,7 @@ from typing import Any, Iterator, Iterable, List, Optional, Sequence, Union
 from .pq import Escaping
 from .abc import AdaptContext
 from .adapt import Transformer, PyFormat
+from ._compat import LiteralString
 from ._encodings import conn_encoding
 
 
@@ -142,7 +143,7 @@ class Composed(Composable):
         else:
             return NotImplemented
 
-    def join(self, joiner: Union["SQL", str]) -> "Composed":
+    def join(self, joiner: Union["SQL", LiteralString]) -> "Composed":
         """
         Return a new `!Composed` interposing the *joiner* with the `!Composed` items.
 
@@ -190,10 +191,10 @@ class SQL(Composable):
         SELECT "foo", "bar" FROM "table"
     """
 
-    _obj: str
+    _obj: LiteralString
     _formatter = string.Formatter()
 
-    def __init__(self, obj: str):
+    def __init__(self, obj: LiteralString):
         super().__init__(obj)
         if not isinstance(obj, str):
             raise TypeError(f"SQL values must be strings, got {obj!r} instead")
@@ -244,6 +245,9 @@ class SQL(Composable):
         """
         rv: List[Composable] = []
         autonum: Optional[int] = 0
+        # TODO: this is probably not the right way to whitelist pre
+        # pyre complains. Will wait for mypy to complain too to fix.
+        pre: LiteralString
         for pre, name, spec, conv in self._formatter.parse(self._obj):
             if spec:
                 raise ValueError("no format specification supported by SQL")

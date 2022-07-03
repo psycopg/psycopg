@@ -61,7 +61,7 @@ The `!Cursor` class
     .. automethod:: execute
 
         :param query: The query to execute.
-        :type query: `!str`, `!bytes`, or `sql.Composable`
+        :type query: `!str`, `!bytes`, `sql.SQL`, or `sql.Composed`
         :param params: The parameters to pass to the query, if any.
         :type params: Sequence or Mapping
         :param prepare: Force (`!True`) or disallow (`!False`) preparation of
@@ -77,10 +77,18 @@ The `!Cursor` class
         See :ref:`query-parameters` for all the details about executing
         queries.
 
+        .. versionchanged:: 3.1
+
+            The `query` argument must be a `~typing.StringLiteral`. If you
+            need to compose a query dynamically, please use `sql.SQL` and
+            related objects.
+
+            See :pep:`675` for details.
+
     .. automethod:: executemany
 
         :param query: The query to execute
-        :type query: `!str`, `!bytes`, or `sql.Composable`
+        :type query: `!str`, `!bytes`, `sql.SQL`, or `sql.Composed`
         :param params_seq: The parameters to pass to the query
         :type params_seq: Sequence of Sequences or Mappings
         :param returning: If `!True`, fetch the results of the queries executed
@@ -109,7 +117,7 @@ The `!Cursor` class
     .. automethod:: copy
 
         :param statement: The copy operation to execute
-        :type statement: `!str`, `!bytes`, or `sql.Composable`
+        :type statement: `!str`, `!bytes`, `sql.SQL`, or `sql.Composed`
         :param params: The parameters to pass to the statement, if any.
         :type params: Sequence or Mapping
 
@@ -261,7 +269,7 @@ The `!ClientCursor` class
     .. automethod:: mogrify
 
         :param query: The query to execute.
-        :type query: `!str`, `!bytes`, or `sql.Composable`
+        :type query: `!str`, `!bytes`, `sql.SQL`, or `sql.Composed`
         :param params: The parameters to pass to the query, if any.
         :type params: Sequence or Mapping
 
@@ -315,7 +323,7 @@ The `!ServerCursor` class
     .. automethod:: execute
 
         :param query: The query to execute.
-        :type query: `!str`, `!bytes`, or `sql.Composable`
+        :type query: `!str`, `!bytes`, `sql.SQL`, or `sql.Composed`
         :param params: The parameters to pass to the query, if any.
         :type params: Sequence or Mapping
         :param binary: Specify whether the server shoul return data in binary

@@ -114,6 +114,11 @@ The `!sql` objects are in the following inheritance hierarchy:
 
 .. autoclass:: SQL
 
+    .. versionchanged:: 3.1
+
+        The input object should be a `~typing.LiteralString`. See :pep:`675`
+        for details.
+
     .. automethod:: format
 
     .. automethod:: join

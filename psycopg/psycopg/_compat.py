@@ -39,9 +39,15 @@ if sys.version_info >= (3, 10):
 else:
     from typing_extensions import TypeAlias, TypeGuard
 
+if sys.version_info >= (3, 11):
+    from typing import LiteralString
+else:
+    from typing_extensions import LiteralString
+
 __all__ = [
     "Counter",
     "Deque",
+    "LiteralString",
     "Protocol",
     "TypeAlias",
     "TypeGuard",

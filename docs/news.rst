@@ -28,6 +28,8 @@ Psycopg 3.1 (unreleased)
 - Add ``prepare_threshold`` parameter to `Connection` init (:ticket:`#200`).
 - Add ``cursor_factory`` parameter to `Connection` init.
 - Add `Error.pgconn` and `Error.pgresult` attributes (:ticket:`#242`).
+- Restrict queries to be `~typing.LiteralString` as per :pep:`675`
+  (:ticket:`#323`).
 - Add explicit type cast to values converted by `sql.Literal` (:ticket:`#205`).
 - Drop support for Python 3.6.
 
