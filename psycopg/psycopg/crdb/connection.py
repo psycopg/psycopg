@@ -32,7 +32,7 @@ class _CrdbConnectionMixin:
         cls, conn: Union[Connection[Any], AsyncConnection[Any], "PGconn"]
     ) -> bool:
         """
-        Return True if the server connected to ``conn`` is CockroachDB.
+        Return `!True` if the server connected to ``conn`` is CockroachDB.
         """
         if isinstance(conn, (Connection, AsyncConnection)):
             conn = conn.pgconn
@@ -151,7 +151,7 @@ class AsyncCrdbConnection(_CrdbConnectionMixin, AsyncConnection[Row]):
 
 class CrdbConnectionInfo(ConnectionInfo):
     """
-    `~psycopg.ConnectionInfo` subclass to get specific info on a CockroachDB database.
+    `~psycopg.ConnectionInfo` subclass to get info about a CockroachDB database.
     """
 
     __module__ = "psycopg.crdb"
@@ -165,7 +165,7 @@ class CrdbConnectionInfo(ConnectionInfo):
         """
         Return the CockroachDB server version connected.
 
-        Return a number in the PostgreSQL format (e.g. 21.2.10 -> 210210)
+        Return a number in the PostgreSQL format (e.g. 21.2.10 -> 210210).
         """
         sver = self.parameter_status("crdb_version")
         if not sver:

@@ -69,6 +69,11 @@ CockroachDB-specific objects
 
     `psycopg.Connection` subclass.
 
+    .. automethod:: is_crdb
+
+        :param conn: the connection to check
+        :type conn: `~psycopg.Connection`, `~psycopg.AsyncConnection`, `~psycopg.pq.PGconn`
+
 
 .. autoclass:: AsyncCrdbConnection
 
@@ -77,21 +82,16 @@ CockroachDB-specific objects
 
 .. autoclass:: CrdbConnectionInfo
 
-    The object is returned by the `!info` attribute of `CrdbConnection` and
-    `AsyncCrdbConnection`.
+    The object is returned by the `~psycopg.Connection.info` attribute of
+    `CrdbConnection` and `AsyncCrdbConnection`.
 
-    The object behaves like the `!ConnectionInfo`, with the following
-    differences:
+    The object behaves like `!ConnectionInfo`, with the following differences:
 
     .. autoattribute:: vendor
 
         The `CockroachDB` string.
 
     .. autoattribute:: server_version
-
-    .. attribute:: backend_pid
-
-        Always 0 as not reported by CockroachDB.
 
 
 .. data:: adapters
