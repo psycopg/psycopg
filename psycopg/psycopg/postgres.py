@@ -106,7 +106,7 @@ def register_default_types(types: TypesRegistry) -> None:
 
 def register_default_adapters(context: AdaptContext) -> None:
     from .types import array, bool, composite, datetime, enum, json, multirange
-    from .types import net, none, numeric, range, string, uuid
+    from .types import net, none, numeric, numpy, range, string, uuid
 
     array.register_default_adapters(context)
     bool.register_default_adapters(context)
@@ -118,6 +118,7 @@ def register_default_adapters(context: AdaptContext) -> None:
     net.register_default_adapters(context)
     none.register_default_adapters(context)
     numeric.register_default_adapters(context)
+    numpy.register_default_adapters(context)
     range.register_default_adapters(context)
     string.register_default_adapters(context)
     uuid.register_default_adapters(context)
