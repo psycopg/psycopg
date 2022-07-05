@@ -100,7 +100,8 @@ CockroachDB-specific objects
     converted into each other.
  
     The map is used as a template when new connections are created, using
-    `psycopg.crdb.connect()`.
+    `psycopg.crdb.connect()` (similarly to the way `psycopg.adapters` is used
+    as template for new PostgreSQL connections).
 
     This registry contains only the types and adapters supported by
     CockroachDB. Several PostgreSQL types and adapters are missing or
