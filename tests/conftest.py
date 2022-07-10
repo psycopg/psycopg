@@ -25,15 +25,11 @@ def pytest_configure(config):
         "timing: the test is timing based and can fail on cheese hardware",
         "dns: the test requires dnspython to run",
         "postgis: the test requires the PostGIS extension to run",
+        "pipeline: the test runs with connection in pipeline mode",
     ]
 
     for marker in markers:
         config.addinivalue_line("markers", marker)
-
-    config.addinivalue_line(
-        "markers",
-        "pipeline: the test runs with connection in pipeline mode",
-    )
 
 
 def pytest_addoption(parser):
