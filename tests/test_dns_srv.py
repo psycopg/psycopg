@@ -44,10 +44,8 @@ samples_ok = [
 
 
 @pytest.mark.parametrize("conninfo, want, env", samples_ok)
-def test_srv(conninfo, want, env, fake_srv, monkeypatch):
-    if env:
-        for k, v in env.items():
-            monkeypatch.setenv(k, v)
+def test_srv(conninfo, want, env, fake_srv, setpgenv):
+    setpgenv(env)
     # Note: This test is flakey because weight order is random, although wrong
     # order is unlikely.
     params = conninfo_to_dict(conninfo)
@@ -57,10 +55,8 @@ def test_srv(conninfo, want, env, fake_srv, monkeypatch):
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("conninfo, want, env", samples_ok)
-async def test_srv_async(conninfo, want, env, afake_srv, monkeypatch):
-    if env:
-        for k, v in env.items():
-            monkeypatch.setenv(k, v)
+async def test_srv_async(conninfo, want, env, afake_srv, setpgenv):
+    setpgenv(env)
     params = conninfo_to_dict(conninfo)
     params = await (
         psycopg._dns.resolve_srv_async(params)  # type: ignore[attr-defined]
@@ -75,10 +71,8 @@ samples_bad = [
 
 
 @pytest.mark.parametrize("conninfo,  env", samples_bad)
-def test_srv_bad(conninfo, env, fake_srv, monkeypatch):
-    if env:
-        for k, v in env.items():
-            monkeypatch.setenv(k, v)
+def test_srv_bad(conninfo, env, fake_srv, setpgenv):
+    setpgenv(env)
     params = conninfo_to_dict(conninfo)
     with pytest.raises(psycopg.OperationalError):
         psycopg._dns.resolve_srv(params)  # type: ignore[attr-defined]
@@ -86,10 +80,8 @@ def test_srv_bad(conninfo, env, fake_srv, monkeypatch):
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("conninfo,  env", samples_bad)
-async def test_srv_bad_async(conninfo, env, afake_srv, monkeypatch):
-    if env:
-        for k, v in env.items():
-            monkeypatch.setenv(k, v)
+async def test_srv_bad_async(conninfo, env, afake_srv, setpgenv):
+    setpgenv(env)
     params = conninfo_to_dict(conninfo)
     with pytest.raises(psycopg.OperationalError):
         await psycopg._dns.resolve_srv_async(params)  # type: ignore[attr-defined]

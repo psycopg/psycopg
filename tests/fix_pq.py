@@ -1,3 +1,4 @@
+import os
 import sys
 
 import pytest
@@ -57,3 +58,19 @@ def libpq():
             pytest.skip(f"can't load libpq for testing: {e}")
         else:
             raise
+
+
+@pytest.fixture
+def setpgenv(monkeypatch):
+    """Replace the PG* env vars with the vars provided."""
+
+    def setpgenv_(env):
+        ks = [k for k in os.environ if k.startswith("PG")]
+        for k in ks:
+            monkeypatch.delenv(k)
+
+        if env:
+            for k, v in env.items():
+                monkeypatch.setenv(k, v)
+
+    return setpgenv_
