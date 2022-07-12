@@ -69,7 +69,7 @@ a set of env vars working for your setup::
       -e PSYCOPG_TEST_DSN -e PGHOST=172.17.0.1 -e PGUSER=`whoami` \
       python:3.7 bash
 
-    # pip install -e ./psycopg[test] ./psycopg_c
+    # pip install -e ./psycopg[test] ./psycopg_pool ./psycopg_c
     # pytest
 
 
