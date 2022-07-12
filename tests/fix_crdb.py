@@ -126,4 +126,5 @@ _crdb_reason_version = {
     "backend pid": "skip < 22",
     "cancel": "skip < 22",
     "server-side cursor": "skip < 22.1.3",
+    "severity_nonlocalized": "skip < 22.1.3",
 }

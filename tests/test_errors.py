@@ -12,6 +12,7 @@ from .utils import eur, gc_collect
 from .fix_crdb import is_crdb
 
 
+@pytest.mark.crdb_skip("severity_nonlocalized")
 def test_error_diag(conn):
     cur = conn.cursor()
     with pytest.raises(e.DatabaseError) as excinfo:
@@ -20,8 +21,7 @@ def test_error_diag(conn):
     exc = excinfo.value
     diag = exc.diag
     assert diag.sqlstate == "42P01"
-    # https://github.com/cockroachdb/cockroach/issues/81794
-    assert (diag.severity_nonlocalized or diag.severity) == "ERROR"
+    assert diag.severity_nonlocalized == "ERROR"
 
 
 def test_diag_all_attrs(pgconn):
