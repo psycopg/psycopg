@@ -37,6 +37,13 @@ Connection information
     .. autoattribute:: pipeline_status
 
     .. autoattribute:: backend_pid
+    .. autoattribute:: vendor
+
+        Normally it is `PostgreSQL`; it may be different if connected to
+        a different database.
+
+        .. versionadded:: 3.1
+
     .. autoattribute:: server_version
 
         The number is formed by converting the major, minor, and revision

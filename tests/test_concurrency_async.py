@@ -45,9 +45,9 @@ async def test_commit_concurrency(aconn):
 
 
 @pytest.mark.slow
-async def test_concurrent_execution(dsn):
+async def test_concurrent_execution(aconn_cls, dsn):
     async def worker():
-        cnn = await psycopg.AsyncConnection.connect(dsn)
+        cnn = await aconn_cls.connect(dsn)
         cur = cnn.cursor()
         await cur.execute("select pg_sleep(0.5)")
         await cur.close()
@@ -61,8 +61,9 @@ async def test_concurrent_execution(dsn):
 
 @pytest.mark.slow
 @pytest.mark.timing
-async def test_notifies(aconn, dsn):
-    nconn = await psycopg.AsyncConnection.connect(dsn, autocommit=True)
+@pytest.mark.crdb_skip("notify")
+async def test_notifies(aconn_cls, aconn, dsn):
+    nconn = await aconn_cls.connect(dsn, autocommit=True)
     npid = nconn.pgconn.backend_pid
 
     async def notifier():
@@ -111,6 +112,7 @@ async def canceller(aconn, errors):
 
 
 @pytest.mark.slow
+@pytest.mark.crdb_skip("cancel")
 async def test_cancel(aconn):
     async def worker():
         cur = aconn.cursor()
@@ -135,6 +137,7 @@ async def test_cancel(aconn):
 
 
 @pytest.mark.slow
+@pytest.mark.crdb_skip("cancel")
 async def test_cancel_stream(aconn):
     async def worker():
         cur = aconn.cursor()
@@ -160,15 +163,16 @@ async def test_cancel_stream(aconn):
 
 
 @pytest.mark.slow
-async def test_identify_closure(dsn):
+@pytest.mark.crdb_skip("pg_terminate_backend")
+async def test_identify_closure(aconn_cls, dsn):
     async def closer():
         await asyncio.sleep(0.2)
         await conn2.execute(
             "select pg_terminate_backend(%s)", [aconn.pgconn.backend_pid]
         )
 
-    aconn = await psycopg.AsyncConnection.connect(dsn)
-    conn2 = await psycopg.AsyncConnection.connect(dsn)
+    aconn = await aconn_cls.connect(dsn)
+    conn2 = await aconn_cls.connect(dsn)
     try:
         t = create_task(closer())
         t0 = time.time()
@@ -189,6 +193,7 @@ async def test_identify_closure(dsn):
 @pytest.mark.skipif(
     sys.platform == "win32", reason="don't know how to Ctrl-C on Windows"
 )
+@pytest.mark.crdb_skip("cancel")
 async def test_ctrl_c(dsn):
     script = f"""\
 import signal

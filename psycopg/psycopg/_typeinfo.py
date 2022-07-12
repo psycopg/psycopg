@@ -378,8 +378,8 @@ class TypesRegistry:
     def __iter__(self) -> Iterator[TypeInfo]:
         seen = set()
         for t in self._registry.values():
-            if t.oid not in seen:
-                seen.add(t.oid)
+            if id(t) not in seen:
+                seen.add(id(t))
                 yield t
 
     @overload

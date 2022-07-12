@@ -10,7 +10,10 @@ pytest.importorskip("shapely")
 from shapely.geometry import Point, Polygon, MultiPolygon  # noqa: E402
 from psycopg.types.shapely import register_shapely  # noqa: E402
 
-pytestmark = [pytest.mark.postgis]
+pytestmark = [
+    pytest.mark.postgis,
+    pytest.mark.crdb("skip"),
+]
 
 # real example, with CRS and "holes"
 MULTIPOLYGON_GEOJSON = """

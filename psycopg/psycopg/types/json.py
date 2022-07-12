@@ -5,12 +5,13 @@ Adapers for JSON types.
 # Copyright (C) 2020 The Psycopg Team
 
 import json
-from typing import Any, Callable, Optional, Type, Union
+from typing import Any, Callable, Dict, Optional, Tuple, Type, Union
 
+from .. import abc
+from .. import errors as e
 from .. import postgres
 from ..pq import Format
-from ..abc import AdaptContext
-from ..adapt import Buffer, Dumper, Loader
+from ..adapt import Buffer, Dumper, Loader, PyFormat, AdaptersMap
 from ..errors import DataError
 
 JsonDumpsFunction = Callable[[Any], str]
@@ -18,7 +19,7 @@ JsonLoadsFunction = Callable[[Union[str, bytes, bytearray]], Any]
 
 
 def set_json_dumps(
-    dumps: JsonDumpsFunction, context: Optional[AdaptContext] = None
+    dumps: JsonDumpsFunction, context: Optional[abc.AdaptContext] = None
 ) -> None:
     """
     Set the JSON serialisation function to store JSON objects in the database.
@@ -40,22 +41,28 @@ def set_json_dumps(
         # global class
         _JsonDumper._dumps = dumps
     else:
+        adapters = context.adapters
+
         # If the scope is smaller than global, create subclassess and register
         # them in the appropriate scope.
         grid = [
-            (Json, JsonDumper),
-            (Json, JsonBinaryDumper),
-            (Jsonb, JsonbDumper),
-            (Jsonb, JsonbBinaryDumper),
+            (Json, PyFormat.BINARY),
+            (Json, PyFormat.TEXT),
+            (Jsonb, PyFormat.BINARY),
+            (Jsonb, PyFormat.TEXT),
         ]
         dumper: Type[_JsonDumper]
-        for wrapper, base in grid:
-            dumper = type(f"Custom{base.__name__}", (base,), {"_dumps": dumps})
-            context.adapters.register_dumper(wrapper, dumper)
+        for wrapper, format in grid:
+            base = _get_current_dumper(adapters, wrapper, format)
+            name = base.__name__
+            if not base.__name__.startswith("Custom"):
+                name = f"Custom{name}"
+            dumper = type(name, (base,), {"_dumps": dumps})
+            adapters.register_dumper(wrapper, dumper)
 
 
 def set_json_loads(
-    loads: JsonLoadsFunction, context: Optional[AdaptContext] = None
+    loads: JsonLoadsFunction, context: Optional[abc.AdaptContext] = None
 ) -> None:
     """
     Set the JSON parsing function to fetch JSON objects from the database.
@@ -116,7 +123,7 @@ class _JsonDumper(Dumper):
     # set_json_dumps) or by a subclass.
     _dumps: JsonDumpsFunction = json.dumps
 
-    def __init__(self, cls: type, context: Optional[AdaptContext] = None):
+    def __init__(self, cls: type, context: Optional[abc.AdaptContext] = None):
         super().__init__(cls, context)
         self.dumps = self.__class__._dumps
 
@@ -157,7 +164,7 @@ class _JsonLoader(Loader):
     # set_json_loads) or by a subclass.
     _loads: JsonLoadsFunction = json.loads
 
-    def __init__(self, oid: int, context: Optional[AdaptContext] = None):
+    def __init__(self, oid: int, context: Optional[abc.AdaptContext] = None):
         super().__init__(oid, context)
         self.loads = self.__class__._loads
 
@@ -193,7 +200,24 @@ class JsonbBinaryLoader(_JsonLoader):
         return self.loads(data)
 
 
-def register_default_adapters(context: AdaptContext) -> None:
+def _get_current_dumper(
+    adapters: AdaptersMap, cls: type, format: PyFormat
+) -> Type[abc.Dumper]:
+    try:
+        return adapters.get_dumper(cls, format)
+    except e.ProgrammingError:
+        return _default_dumpers[cls, format]
+
+
+_default_dumpers: Dict[Tuple[Type[_JsonWrapper], PyFormat], Type[Dumper]] = {
+    (Json, PyFormat.BINARY): JsonBinaryDumper,
+    (Json, PyFormat.TEXT): JsonDumper,
+    (Jsonb, PyFormat.BINARY): JsonbBinaryDumper,
+    (Jsonb, PyFormat.TEXT): JsonDumper,
+}
+
+
+def register_default_adapters(context: abc.AdaptContext) -> None:
     adapters = context.adapters
 
     # Currently json binary format is nothing different than text, maybe with

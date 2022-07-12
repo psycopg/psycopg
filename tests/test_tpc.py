@@ -3,6 +3,8 @@ import pytest
 import psycopg
 from psycopg.pq import TransactionStatus
 
+pytestmark = pytest.mark.crdb_skip("2-phase commit")
+
 
 def test_tpc_disabled(conn, pipeline):
     val = int(conn.execute("show max_prepared_transactions").fetchone()[0])
@@ -55,7 +57,7 @@ class TestTPC:
         assert tpc.count_xacts() == 0
         assert tpc.count_test_records() == 1
 
-    def test_tpc_commit_recovered(self, conn, dsn, tpc):
+    def test_tpc_commit_recovered(self, conn_cls, conn, dsn, tpc):
         xid = conn.xid(1, "gtrid", "bqual")
         assert conn.info.transaction_status == TransactionStatus.IDLE
 
@@ -72,7 +74,7 @@ class TestTPC:
         assert tpc.count_xacts() == 1
         assert tpc.count_test_records() == 0
 
-        with psycopg.connect(dsn) as conn:
+        with conn_cls.connect(dsn) as conn:
             xid = conn.xid(1, "gtrid", "bqual")
             conn.tpc_commit(xid)
             assert conn.info.transaction_status == TransactionStatus.IDLE
@@ -119,7 +121,7 @@ class TestTPC:
         assert tpc.count_xacts() == 0
         assert tpc.count_test_records() == 0
 
-    def test_tpc_rollback_recovered(self, conn, dsn, tpc):
+    def test_tpc_rollback_recovered(self, conn_cls, conn, dsn, tpc):
         xid = conn.xid(1, "gtrid", "bqual")
         assert conn.info.transaction_status == TransactionStatus.IDLE
 
@@ -136,7 +138,7 @@ class TestTPC:
         assert tpc.count_xacts() == 1
         assert tpc.count_test_records() == 0
 
-        with psycopg.connect(dsn) as conn:
+        with conn_cls.connect(dsn) as conn:
             xid = conn.xid(1, "gtrid", "bqual")
             conn.tpc_rollback(xid)
             assert conn.info.transaction_status == TransactionStatus.IDLE
@@ -205,13 +207,13 @@ class TestTPC:
             (0x7FFFFFFF, "x" * 64, "y" * 64),
         ],
     )
-    def test_xid_roundtrip(self, conn, dsn, tpc, fid, gtrid, bqual):
+    def test_xid_roundtrip(self, conn_cls, conn, dsn, tpc, fid, gtrid, bqual):
         xid = conn.xid(fid, gtrid, bqual)
         conn.tpc_begin(xid)
         conn.tpc_prepare()
         conn.close()
 
-        with psycopg.connect(dsn) as conn:
+        with conn_cls.connect(dsn) as conn:
             xids = [x for x in conn.tpc_recover() if x.database == conn.info.dbname]
 
             assert len(xids) == 1
@@ -230,12 +232,12 @@ class TestTPC:
             "x" * 199,  # PostgreSQL's limit in transaction id length
         ],
     )
-    def test_unparsed_roundtrip(self, conn, dsn, tpc, tid):
+    def test_unparsed_roundtrip(self, conn_cls, conn, dsn, tpc, tid):
         conn.tpc_begin(tid)
         conn.tpc_prepare()
         conn.close()
 
-        with psycopg.connect(dsn) as conn:
+        with conn_cls.connect(dsn) as conn:
             xids = [x for x in conn.tpc_recover() if x.database == conn.info.dbname]
 
             assert len(xids) == 1
@@ -246,19 +248,19 @@ class TestTPC:
         assert xid.gtrid == tid
         assert xid.bqual is None
 
-    def test_xid_unicode(self, conn, dsn, tpc):
+    def test_xid_unicode(self, conn_cls, conn, dsn, tpc):
         x1 = conn.xid(10, "uni", "code")
         conn.tpc_begin(x1)
         conn.tpc_prepare()
         conn.close()
 
-        with psycopg.connect(dsn) as conn:
+        with conn_cls.connect(dsn) as conn:
             xid = [x for x in conn.tpc_recover() if x.database == conn.info.dbname][0]
         assert 10 == xid.format_id
         assert "uni" == xid.gtrid
         assert "code" == xid.bqual
 
-    def test_xid_unicode_unparsed(self, conn, dsn, tpc):
+    def test_xid_unicode_unparsed(self, conn_cls, conn, dsn, tpc):
         # We don't expect people shooting snowmen as transaction ids,
         # so if something explodes in an encode error I don't mind.
         # Let's just check unicode is accepted as type.
@@ -269,7 +271,7 @@ class TestTPC:
         conn.tpc_prepare()
         conn.close()
 
-        with psycopg.connect(dsn) as conn:
+        with conn_cls.connect(dsn) as conn:
             xid = [x for x in conn.tpc_recover() if x.database == conn.info.dbname][0]
 
         assert xid.format_id is None
@@ -282,13 +284,13 @@ class TestTPC:
         with pytest.raises(psycopg.ProgrammingError):
             conn.cancel()
 
-    def test_tpc_recover_non_dbapi_connection(self, conn, dsn, tpc):
+    def test_tpc_recover_non_dbapi_connection(self, conn_cls, conn, dsn, tpc):
         conn.row_factory = psycopg.rows.dict_row
         conn.tpc_begin("dict-connection")
         conn.tpc_prepare()
         conn.close()
 
-        with psycopg.connect(dsn) as conn:
+        with conn_cls.connect(dsn) as conn:
             xids = conn.tpc_recover()
             xid = [x for x in xids if x.database == conn.info.dbname][0]
 

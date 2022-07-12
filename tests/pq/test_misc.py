@@ -22,6 +22,7 @@ def test_error_message(pgconn):
     assert "NULL" in pq.error_message(pgconn)
 
 
+@pytest.mark.crdb_skip("encoding")
 def test_error_message_encoding(pgconn):
     res = pgconn.exec_(b"set client_encoding to latin9")
     assert res.status == pq.ExecStatus.COMMAND_OK

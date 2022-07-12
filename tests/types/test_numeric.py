@@ -10,6 +10,7 @@ from psycopg import sql
 from psycopg.adapt import Transformer, PyFormat
 from psycopg.types.numeric import FloatLoader
 
+from ..fix_crdb import is_crdb
 
 #
 # Tests with int
@@ -137,6 +138,8 @@ def test_quote_int(conn, val, expr):
 )
 @pytest.mark.parametrize("fmt_out", pq.Format)
 def test_load_int(conn, val, pgtype, want, fmt_out):
+    if pgtype == "integer" and is_crdb(conn):
+        pgtype = "int4"  # "integer" is "int8" on crdb
     cur = conn.cursor(binary=fmt_out)
     cur.execute(f"select %s::{pgtype}", (val,))
     assert cur.pgresult.fformat(0) == fmt_out
@@ -211,8 +214,8 @@ def test_quote_float(conn, val, expr):
 @pytest.mark.parametrize(
     "val, expr",
     [
-        (exp(1), "exp(1)"),
-        (-exp(1), "-exp(1)"),
+        (exp(1), "exp(1.0)"),
+        (-exp(1), "-exp(1.0)"),
         (1e30, "'1e30'"),
         (1e-30, "1e-30"),
         (-1e30, "'-1e30'"),
@@ -279,10 +282,10 @@ def test_load_float(conn, val, pgtype, want, fmt_out):
 @pytest.mark.parametrize(
     "expr, pgtype, want",
     [
-        ("exp(1)", "float4", 2.71828),
-        ("-exp(1)", "float4", -2.71828),
-        ("exp(1)", "float8", 2.71828182845905),
-        ("-exp(1)", "float8", -2.71828182845905),
+        ("exp(1.0)", "float4", 2.71828),
+        ("-exp(1.0)", "float4", -2.71828),
+        ("exp(1.0)", "float8", 2.71828182845905),
+        ("-exp(1.0)", "float8", -2.71828182845905),
         ("1.42e10", "float4", 1.42e10),
         ("-1.42e10", "float4", -1.42e10),
         ("1.42e40", "float8", 1.42e40),
@@ -298,6 +301,7 @@ def test_load_float_approx(conn, expr, pgtype, want, fmt_out):
     assert result == pytest.approx(want)
 
 
+@pytest.mark.crdb_skip("copy")
 def test_load_float_copy(conn):
     cur = conn.cursor(binary=False)
     with cur.copy("copy (select 3.14::float8, 'hi'::text) to stdout;") as copy:
@@ -365,6 +369,7 @@ def test_quote_numeric(conn, val, expr):
         assert r == (val, -val)
 
 
+@pytest.mark.crdb_skip("binary decimal")
 @pytest.mark.parametrize(
     "expr",
     ["NaN", "1", "1.0", "-1", "0.0", "0.01", "11", "1.1", "1.01", "0", "0.00"]
@@ -394,7 +399,15 @@ def test_dump_numeric_binary(conn, expr):
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize("fmt_in", PyFormat)
+@pytest.mark.parametrize(
+    "fmt_in",
+    [
+        f
+        if f != PyFormat.BINARY
+        else pytest.param(f, marks=pytest.mark.crdb_skip("binary decimal"))
+        for f in PyFormat
+    ],
+)
 def test_dump_numeric_exhaustive(conn, fmt_in):
     cur = conn.cursor()
 
@@ -420,7 +433,7 @@ def test_dump_numeric_exhaustive(conn, fmt_in):
             expr = f(i)
             val = Decimal(expr)
             cur.execute(f"select %{fmt_in.value}::text, %s::decimal::text", [val, expr])
-            want, got = cur.fetchone()
+            got, want = cur.fetchone()
             assert got == want
 
 
@@ -591,6 +604,7 @@ def test_dump_wrapper_oid(wrapper):
     assert repr(wrapper(n)) == f"{wrapper.__name__}({n})"
 
 
+@pytest.mark.crdb("skip", reason="all types returned as bigint? TODOCRDB")
 @pytest.mark.parametrize("wrapper", "Int2 Int4 Int8 Oid Float4 Float8".split())
 @pytest.mark.parametrize("fmt_in", PyFormat)
 def test_repr_wrapper(conn, wrapper, fmt_in):

@@ -84,6 +84,8 @@ def pipeline_demo(pgconn):
     assert res.status == pq.ExecStatus.COMMAND_OK, res.error_message
 
 
+# TODOCRDB: 1 doesn't get rolled back. Open a ticket?
+@pytest.mark.crdb("skip", reason="pipeline aborted")
 def test_pipeline_communicate_abort(pgconn, pipeline_demo, pipeline, generators):
     insert_sql = b"insert into pg_pipeline(itemno) values ($1)"
     commands = deque(

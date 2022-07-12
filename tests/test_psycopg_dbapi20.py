@@ -10,8 +10,8 @@ from . import dbapi20_tpc
 
 
 @pytest.fixture(scope="class")
-def with_dsn(request, dsn):
-    request.cls.connect_args = (dsn,)
+def with_dsn(request, session_dsn):
+    request.cls.connect_args = (session_dsn,)
 
 
 @pytest.mark.usefixtures("with_dsn")

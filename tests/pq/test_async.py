@@ -1,5 +1,7 @@
-import pytest
 from select import select
+
+import pytest
+
 import psycopg
 from psycopg import pq
 from psycopg.generators import execute
@@ -15,7 +17,8 @@ def test_send_query(pgconn):
 
     # Long query to make sure we have to wait on send
     pgconn.send_query(
-        b"/* %s */ select pg_sleep(0.01); select 1 as foo;" % (b"x" * 1_000_000)
+        b"/* %s */ select 'x' as f from pg_sleep(0.01); select 1 as foo;"
+        % (b"x" * 1_000_000)
     )
 
     # send loop
@@ -53,8 +56,8 @@ def test_send_query(pgconn):
 
     assert len(results) == 2
     assert results[0].nfields == 1
-    assert results[0].fname(0) == b"pg_sleep"
-    assert results[0].get_value(0, 0) == b""
+    assert results[0].fname(0) == b"f"
+    assert results[0].get_value(0, 0) == b"x"
     assert results[1].nfields == 1
     assert results[1].fname(0) == b"foo"
     assert results[1].get_value(0, 0) == b"1"
@@ -63,14 +66,15 @@ def test_send_query(pgconn):
 def test_send_query_compact_test(pgconn):
     # Like the above test but use psycopg facilities for compactness
     pgconn.send_query(
-        b"/* %s */ select pg_sleep(0.01); select 1 as foo;" % (b"x" * 1_000_000)
+        b"/* %s */ select 'x' as f from pg_sleep(0.01); select 1 as foo;"
+        % (b"x" * 1_000_000)
     )
     results = execute_wait(pgconn)
 
     assert len(results) == 2
     assert results[0].nfields == 1
-    assert results[0].fname(0) == b"pg_sleep"
-    assert results[0].get_value(0, 0) == b""
+    assert results[0].fname(0) == b"f"
+    assert results[0].get_value(0, 0) == b"x"
     assert results[1].nfields == 1
     assert results[1].fname(0) == b"foo"
     assert results[1].get_value(0, 0) == b"1"
@@ -169,7 +173,7 @@ def test_send_prepared_binary_out(pgconn, fmt, out):
 
 
 def test_send_describe_prepared(pgconn):
-    pgconn.send_prepare(b"prep", b"select $1::int + $2::int as fld")
+    pgconn.send_prepare(b"prep", b"select $1::int8 + $2::int8 as fld")
     (res,) = execute_wait(pgconn)
     assert res.status == pq.ExecStatus.COMMAND_OK, res.error_message
 
@@ -178,13 +182,14 @@ def test_send_describe_prepared(pgconn):
     assert res.nfields == 1
     assert res.ntuples == 0
     assert res.fname(0) == b"fld"
-    assert res.ftype(0) == 23
+    assert res.ftype(0) == 20
 
     pgconn.finish()
     with pytest.raises(psycopg.OperationalError):
         pgconn.send_describe_prepared(b"prep")
 
 
+@pytest.mark.crdb_skip("server-side cursor")
 def test_send_describe_portal(pgconn):
     res = pgconn.exec_(
         b"""

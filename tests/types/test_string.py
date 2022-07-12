@@ -8,10 +8,15 @@ from psycopg.adapt import PyFormat
 from psycopg import Binary
 
 from ..utils import eur
+from ..fix_crdb import crdb_encoding, crdb_scs_off
 
 #
 # tests with text
 #
+
+
+def crdb_bpchar(*args):
+    return pytest.param(*args, marks=pytest.mark.crdb("skip", reason="bpchar"))
 
 
 @pytest.mark.parametrize("fmt_in", PyFormat)
@@ -22,7 +27,7 @@ def test_dump_1char(conn, fmt_in):
         assert cur.fetchone()[0] is True, chr(i)
 
 
-@pytest.mark.parametrize("scs", ["on", "off"])
+@pytest.mark.parametrize("scs", ["on", crdb_scs_off("off")])
 def test_quote_1char(conn, scs):
     messages = []
     conn.add_notice_handler(lambda msg: messages.append(msg.message_primary))
@@ -41,6 +46,7 @@ def test_quote_1char(conn, scs):
     assert not messages
 
 
+@pytest.mark.crdb("skip", reason="can deal with 0 strings")
 @pytest.mark.parametrize("fmt_in", PyFormat)
 def test_dump_zero(conn, fmt_in):
     cur = conn.cursor()
@@ -72,7 +78,9 @@ def test_quote_percent(conn):
     assert cur.fetchone()[0] is True
 
 
-@pytest.mark.parametrize("typename", ["text", "varchar", "name", "bpchar", '"char"'])
+@pytest.mark.parametrize(
+    "typename", ["text", "varchar", "name", crdb_bpchar("bpchar"), '"char"']
+)
 @pytest.mark.parametrize("fmt_out", pq.Format)
 def test_load_1char(conn, typename, fmt_out):
     cur = conn.cursor(binary=fmt_out)
@@ -89,7 +97,9 @@ def test_load_1char(conn, typename, fmt_out):
 
 
 @pytest.mark.parametrize("fmt_in", PyFormat)
-@pytest.mark.parametrize("encoding", ["utf8", "latin9", "sql_ascii"])
+@pytest.mark.parametrize(
+    "encoding", ["utf8", crdb_encoding("latin9"), crdb_encoding("sql_ascii")]
+)
 def test_dump_enc(conn, fmt_in, encoding):
     cur = conn.cursor()
 
@@ -98,6 +108,7 @@ def test_dump_enc(conn, fmt_in, encoding):
     assert res == ord(eur)
 
 
+@pytest.mark.crdb_skip("encoding")
 @pytest.mark.parametrize("fmt_in", PyFormat)
 def test_dump_badenc(conn, fmt_in):
     cur = conn.cursor()
@@ -132,6 +143,7 @@ def test_dump_enum(conn, fmt_in):
     assert res == "foo"
 
 
+@pytest.mark.crdb("skip")
 @pytest.mark.parametrize("fmt_in", [PyFormat.AUTO, PyFormat.TEXT])
 def test_dump_text_oid(conn, fmt_in):
     conn.autocommit = True
@@ -145,8 +157,9 @@ def test_dump_text_oid(conn, fmt_in):
     assert cur.fetchone()[0] == "foobar"
 
 
+@pytest.mark.crdb_skip("copy")
 @pytest.mark.parametrize("fmt_out", pq.Format)
-@pytest.mark.parametrize("encoding", ["utf8", "latin9"])
+@pytest.mark.parametrize("encoding", ["utf8", crdb_encoding("latin9")])
 @pytest.mark.parametrize("typename", ["text", "varchar", "name", "bpchar"])
 def test_load_enc(conn, typename, encoding, fmt_out):
     cur = conn.cursor(binary=fmt_out)
@@ -165,6 +178,7 @@ def test_load_enc(conn, typename, encoding, fmt_out):
     assert res == eur
 
 
+@pytest.mark.crdb_skip("encoding")
 @pytest.mark.parametrize("fmt_out", pq.Format)
 @pytest.mark.parametrize("typename", ["text", "varchar", "name", "bpchar"])
 def test_load_badenc(conn, typename, fmt_out):
@@ -184,6 +198,7 @@ def test_load_badenc(conn, typename, fmt_out):
             copy.read_row()
 
 
+@pytest.mark.crdb_skip("encoding")
 @pytest.mark.parametrize("fmt_out", pq.Format)
 @pytest.mark.parametrize("typename", ["text", "varchar", "name", "bpchar"])
 def test_load_ascii(conn, typename, fmt_out):
@@ -205,7 +220,7 @@ def test_load_ascii(conn, typename, fmt_out):
 
 @pytest.mark.parametrize("fmt_in", PyFormat)
 @pytest.mark.parametrize("fmt_out", pq.Format)
-@pytest.mark.parametrize("typename", ["text", "varchar", "name", "bpchar"])
+@pytest.mark.parametrize("typename", ["text", "varchar", "name", crdb_bpchar("bpchar")])
 def test_text_array(conn, typename, fmt_in, fmt_out):
     cur = conn.cursor(binary=fmt_out)
     a = list(map(chr, range(1, 256))) + [eur]
@@ -214,6 +229,7 @@ def test_text_array(conn, typename, fmt_in, fmt_out):
     assert res == a
 
 
+@pytest.mark.crdb_skip("encoding")
 @pytest.mark.parametrize("fmt_in", PyFormat)
 @pytest.mark.parametrize("fmt_out", pq.Format)
 def test_text_array_ascii(conn, fmt_in, fmt_out):
@@ -243,7 +259,7 @@ def test_dump_1byte(conn, fmt_in, pytype):
     assert cur.fetchone()[0] is True
 
 
-@pytest.mark.parametrize("scs", ["on", "off"])
+@pytest.mark.parametrize("scs", ["on", crdb_scs_off("off")])
 @pytest.mark.parametrize("pytype", [bytes, bytearray, memoryview, Binary])
 def test_quote_1byte(conn, scs, pytype):
     messages = []

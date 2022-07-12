@@ -8,6 +8,10 @@ from psycopg.types.composite import CompositeInfo, register_composite
 from psycopg.types.composite import TupleDumper, TupleBinaryDumper
 
 from ..utils import eur
+from ..fix_crdb import is_crdb, crdb_skip_message
+
+
+pytestmark = pytest.mark.crdb_skip("composite")
 
 tests_str = [
     ("", ()),
@@ -112,6 +116,8 @@ def test_load_record_binary(conn, want, rec):
 
 @pytest.fixture(scope="session")
 def testcomp(svcconn):
+    if is_crdb(svcconn):
+        pytest.skip(crdb_skip_message("composite"))
     cur = svcconn.cursor()
     cur.execute(
         """

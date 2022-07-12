@@ -11,6 +11,7 @@ from psycopg.adapt import PyFormat
 from .utils import gc_collect
 from .test_cursor import my_row_factory
 from .test_cursor import execmany, _execmany  # noqa: F401
+from .fix_crdb import crdb_encoding
 
 execmany = execmany  # avoid F811 underneath
 pytestmark = pytest.mark.asyncio
@@ -234,7 +235,7 @@ async def test_binary_cursor_text_override(aconn):
     assert cur.pgresult.get_value(0, 0) == b"1"
 
 
-@pytest.mark.parametrize("encoding", ["utf8", "latin9"])
+@pytest.mark.parametrize("encoding", ["utf8", crdb_encoding("latin9")])
 async def test_query_encode(aconn, encoding):
     await aconn.execute(f"set client_encoding to {encoding}")
     cur = aconn.cursor()
@@ -243,8 +244,9 @@ async def test_query_encode(aconn, encoding):
     assert res == "\u20ac"
 
 
-async def test_query_badenc(aconn):
-    await aconn.execute("set client_encoding to latin1")
+@pytest.mark.parametrize("encoding", [crdb_encoding("latin1")])
+async def test_query_badenc(aconn, encoding):
+    await aconn.execute(f"set client_encoding to {encoding}")
     cur = aconn.cursor()
     with pytest.raises(UnicodeEncodeError):
         await cur.execute("select '\u20ac'")
@@ -593,6 +595,7 @@ async def test_stream_no_row(aconn):
     assert recs == []
 
 
+@pytest.mark.crdb_skip("no col query")
 async def test_stream_no_col(aconn):
     cur = aconn.cursor()
     recs = [rec async for rec in cur.stream("select")]
@@ -647,7 +650,7 @@ async def test_stream_close(aconn):
 async def test_stream_binary_cursor(aconn):
     cur = aconn.cursor(binary=True)
     recs = []
-    async for rec in cur.stream("select generate_series(1, 2)"):
+    async for rec in cur.stream("select x::int4 from generate_series(1, 2) x"):
         recs.append(rec)
         assert cur.pgresult.fformat(0) == 1
         assert cur.pgresult.get_value(0, 0) == bytes([0, 0, 0, rec[0]])
@@ -658,7 +661,9 @@ async def test_stream_binary_cursor(aconn):
 async def test_stream_execute_binary(aconn):
     cur = aconn.cursor()
     recs = []
-    async for rec in cur.stream("select generate_series(1, 2)", binary=True):
+    async for rec in cur.stream(
+        "select x::int4 from generate_series(1, 2) x", binary=True
+    ):
         recs.append(rec)
         assert cur.pgresult.fformat(0) == 1
         assert cur.pgresult.get_value(0, 0) == bytes([0, 0, 0, rec[0]])
@@ -698,14 +703,16 @@ async def test_str(aconn):
 @pytest.mark.parametrize("fmt_out", pq.Format)
 @pytest.mark.parametrize("fetch", ["one", "many", "all", "iter"])
 @pytest.mark.parametrize("row_factory", ["tuple_row", "dict_row", "namedtuple_row"])
-async def test_leak(dsn, faker, fmt, fmt_out, fetch, row_factory):
+async def test_leak(aconn_cls, dsn, faker, fmt, fmt_out, fetch, row_factory):
     faker.format = fmt
     faker.choose_schema(ncols=5)
     faker.make_records(10)
     row_factory = getattr(rows, row_factory)
 
     async def work():
-        async with await psycopg.AsyncConnection.connect(dsn) as conn:
+        async with await aconn_cls.connect(dsn) as conn, conn.transaction(
+            force_rollback=True
+        ):
             async with conn.cursor(binary=fmt_out, row_factory=row_factory) as cur:
                 await cur.execute(faker.drop_stmt)
                 await cur.execute(faker.create_stmt)

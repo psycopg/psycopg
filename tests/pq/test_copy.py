@@ -3,6 +3,8 @@ import pytest
 import psycopg
 from psycopg import pq
 
+pytestmark = pytest.mark.crdb_skip("copy")
+
 sample_values = "values (10::int, 20::int, 'hello'::text), (40, NULL, 'world')"
 
 sample_tabledef = "col1 int primary key, col2 int, data text"

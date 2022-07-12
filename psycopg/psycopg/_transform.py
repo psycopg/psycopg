@@ -5,13 +5,13 @@ Helper object to transform values between Python and PostgreSQL
 # Copyright (C) 2020 The Psycopg Team
 
 from typing import Any, Dict, List, Optional, Sequence, Tuple
-from typing import DefaultDict, Type, TYPE_CHECKING
+from typing import DefaultDict, TYPE_CHECKING
 from collections import defaultdict
 
 from . import pq
 from . import postgres
 from . import errors as e
-from .abc import Buffer, LoadFunc, AdaptContext, PyFormat, DumperKey
+from .abc import Buffer, LoadFunc, AdaptContext, PyFormat, DumperKey, NoneType
 from .rows import Row, RowMaker
 from ._compat import TypeAlias
 from .postgres import INVALID_OID, TEXT_OID
@@ -23,12 +23,12 @@ if TYPE_CHECKING:
     from .pq.abc import PGresult
     from .connection import BaseConnection
 
-NoneType: Type[None] = type(None)
 DumperCache: TypeAlias = Dict[DumperKey, "Dumper"]
 OidDumperCache: TypeAlias = Dict[int, "Dumper"]
 LoaderCache: TypeAlias = Dict[int, "Loader"]
 
 TEXT = pq.Format.TEXT
+PY_TEXT = PyFormat.TEXT
 
 
 class Transformer(AdaptContext):
@@ -43,14 +43,22 @@ class Transformer(AdaptContext):
     """
 
     __module__ = "psycopg.adapt"
-    _adapters: "AdaptersMap"
-    _pgresult: Optional["PGresult"] = None
+
+    __slots__ = """
+        types formats
+        _conn _adapters _pgresult _dumpers _loaders _encoding _none_oid
+        _oid_dumpers _oid_types _row_dumpers _row_loaders
+        """.split()
 
     types: Optional[Tuple[int, ...]]
     formats: Optional[List[pq.Format]]
 
+    _adapters: "AdaptersMap"
+    _pgresult: Optional["PGresult"]
+    _none_oid: int
+
     def __init__(self, context: Optional[AdaptContext] = None):
-        self.types = self.formats = None
+        self._pgresult = self.types = self.formats = None
 
         # WARNING: don't store context, or you'll create a loop with the Cursor
         if context:
@@ -169,7 +177,7 @@ class Transformer(AdaptContext):
                     out[i] = self._row_dumpers[i].dump(param)
             return out
 
-        types = [INVALID_OID] * nparams
+        types = [self._get_none_oid()] * nparams
         pqformats = [TEXT] * nparams
 
         for i in range(nparams):
@@ -187,7 +195,7 @@ class Transformer(AdaptContext):
         return out
 
     def as_literal(self, obj: Any) -> Buffer:
-        dumper = self.get_dumper(obj, PyFormat.TEXT)
+        dumper = self.get_dumper(obj, PY_TEXT)
         rv = dumper.quote(obj)
         # If the result is quoted, and the oid not unknown or text,
         # add an explicit type cast.
@@ -243,6 +251,19 @@ class Transformer(AdaptContext):
         except KeyError:
             dumper = cache[key1] = dumper.upgrade(obj, format)
             return dumper
+
+    def _get_none_oid(self) -> int:
+        try:
+            return self._none_oid
+        except AttributeError:
+            pass
+
+        try:
+            rv = self._none_oid = self._adapters.get_dumper(NoneType, PY_TEXT).oid
+        except KeyError:
+            raise e.InterfaceError("None dumper not found")
+
+        return rv
 
     def get_dumper_by_oid(self, oid: int, format: pq.Format) -> "Dumper":
         """

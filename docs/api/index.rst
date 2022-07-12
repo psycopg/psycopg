@@ -24,4 +24,5 @@ This sections is a reference for all the public objects exposed by the
     types
     abc
     pq
+    crdb
     dns

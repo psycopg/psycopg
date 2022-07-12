@@ -11,6 +11,7 @@ from psycopg.adapt import PyFormat
 from .utils import alist, gc_collect
 from .test_cursor import my_row_factory
 from .test_cursor import execmany, _execmany  # noqa: F401
+from .fix_crdb import crdb_encoding
 
 execmany = execmany  # avoid F811 underneath
 pytestmark = pytest.mark.asyncio
@@ -39,8 +40,8 @@ async def test_init_factory(aconn):
     assert (await cur.fetchone()) == {"a": 1}
 
 
-async def test_from_cursor_factory(dsn):
-    async with await psycopg.AsyncConnection.connect(
+async def test_from_cursor_factory(aconn_cls, dsn):
+    async with await aconn_cls.connect(
         dsn, cursor_factory=psycopg.AsyncClientCursor
     ) as aconn:
         cur = aconn.cursor()
@@ -255,7 +256,7 @@ async def test_binary_cursor_text_override(aconn):
     assert cur.pgresult.get_value(0, 0) == b"1"
 
 
-@pytest.mark.parametrize("encoding", ["utf8", "latin9"])
+@pytest.mark.parametrize("encoding", ["utf8", crdb_encoding("latin9")])
 async def test_query_encode(aconn, encoding):
     await aconn.execute(f"set client_encoding to {encoding}")
     cur = aconn.cursor()
@@ -264,8 +265,9 @@ async def test_query_encode(aconn, encoding):
     assert res == "\u20ac"
 
 
-async def test_query_badenc(aconn):
-    await aconn.execute("set client_encoding to latin1")
+@pytest.mark.parametrize("encoding", [crdb_encoding("latin1")])
+async def test_query_badenc(aconn, encoding):
+    await aconn.execute(f"set client_encoding to {encoding}")
     cur = aconn.cursor()
     with pytest.raises(UnicodeEncodeError):
         await cur.execute("select '\u20ac'")
@@ -579,6 +581,7 @@ async def test_query_params_executemany(aconn):
     assert cur._query.params == (b"3", b"4")
 
 
+@pytest.mark.crdb_skip("copy")
 @pytest.mark.parametrize("ph, params", [("%s", (10,)), ("%(n)s", {"n": 10})])
 async def test_copy_out_param(aconn, ph, params):
     cur = aconn.cursor()
@@ -622,13 +625,15 @@ async def test_str(aconn):
 @pytest.mark.slow
 @pytest.mark.parametrize("fetch", ["one", "many", "all", "iter"])
 @pytest.mark.parametrize("row_factory", ["tuple_row", "dict_row", "namedtuple_row"])
-async def test_leak(dsn, faker, fetch, row_factory):
+async def test_leak(aconn_cls, dsn, faker, fetch, row_factory):
     faker.choose_schema(ncols=5)
     faker.make_records(10)
     row_factory = getattr(rows, row_factory)
 
     async def work():
-        async with await psycopg.AsyncConnection.connect(dsn) as conn:
+        async with await aconn_cls.connect(dsn) as conn, conn.transaction(
+            force_rollback=True
+        ):
             async with psycopg.AsyncClientCursor(conn, row_factory=row_factory) as cur:
                 await cur.execute(faker.drop_stmt)
                 await cur.execute(faker.create_stmt)
@@ -670,17 +675,19 @@ async def test_mogrify(aconn):
     q = cur.mogrify("select %s, %s", [1, dt.date(2020, 1, 1)])
     assert q == "select 1, '2020-01-01'::date"
 
-    await aconn.execute("set client_encoding to utf8")
-    q = cur.mogrify("select %(s)s", {"s": "\u20ac"})
+
+@pytest.mark.parametrize("encoding", ["utf8", crdb_encoding("latin9")])
+async def test_mogrify_encoding(aconn, encoding):
+    await aconn.execute(f"set client_encoding to {encoding}")
+    q = aconn.cursor().mogrify("select %(s)s", {"s": "\u20ac"})
     assert q == "select '\u20ac'"
 
-    await aconn.execute("set client_encoding to latin9")
-    q = cur.mogrify("select %(s)s", {"s": "\u20ac"})
-    assert q == "select '\u20ac'"
 
-    await aconn.execute("set client_encoding to latin1")
+@pytest.mark.parametrize("encoding", [crdb_encoding("latin1")])
+async def test_mogrify_badenc(aconn, encoding):
+    await aconn.execute(f"set client_encoding to {encoding}")
     with pytest.raises(UnicodeEncodeError):
-        cur.mogrify("select %(s)s", {"s": "\u20ac"})
+        aconn.cursor().mogrify("select %(s)s", {"s": "\u20ac"})
 
 
 @pytest.mark.libpq(">= 14")

@@ -13,6 +13,7 @@ from psycopg.postgres import types as builtins
 from psycopg.rows import RowMaker
 
 from .utils import gc_collect
+from .fix_crdb import is_crdb, crdb_encoding, crdb_time_precision
 
 
 def test_init(conn):
@@ -232,7 +233,7 @@ def test_binary_cursor_text_override(conn):
     assert cur.pgresult.get_value(0, 0) == b"1"
 
 
-@pytest.mark.parametrize("encoding", ["utf8", "latin9"])
+@pytest.mark.parametrize("encoding", ["utf8", crdb_encoding("latin9")])
 def test_query_encode(conn, encoding):
     conn.execute(f"set client_encoding to {encoding}")
     cur = conn.cursor()
@@ -240,8 +241,9 @@ def test_query_encode(conn, encoding):
     assert res == "\u20ac"
 
 
-def test_query_badenc(conn):
-    conn.execute("set client_encoding to latin1")
+@pytest.mark.parametrize("encoding", [crdb_encoding("latin1")])
+def test_query_badenc(conn, encoding):
+    conn.execute(f"set client_encoding to {encoding}")
     cur = conn.cursor()
     with pytest.raises(UnicodeEncodeError):
         cur.execute("select '\u20ac'")
@@ -601,6 +603,7 @@ def test_stream_no_row(conn):
     assert recs == []
 
 
+@pytest.mark.crdb_skip("no col query")
 def test_stream_no_col(conn):
     cur = conn.cursor()
     recs = list(cur.stream("select"))
@@ -654,7 +657,7 @@ def test_stream_close(conn):
 def test_stream_binary_cursor(conn):
     cur = conn.cursor(binary=True)
     recs = []
-    for rec in cur.stream("select generate_series(1, 2)"):
+    for rec in cur.stream("select x::int4 from generate_series(1, 2) x"):
         recs.append(rec)
         assert cur.pgresult.fformat(0) == 1
         assert cur.pgresult.get_value(0, 0) == bytes([0, 0, 0, rec[0]])
@@ -665,7 +668,7 @@ def test_stream_binary_cursor(conn):
 def test_stream_execute_binary(conn):
     cur = conn.cursor()
     recs = []
-    for rec in cur.stream("select generate_series(1, 2)", binary=True):
+    for rec in cur.stream("select x::int4 from generate_series(1, 2) x", binary=True):
         recs.append(rec)
         assert cur.pgresult.fformat(0) == 1
         assert cur.pgresult.get_value(0, 0) == bytes([0, 0, 0, rec[0]])
@@ -727,7 +730,10 @@ class TestColumn:
         assert c.name == "now"
         assert c.type_code == builtins["date"].oid
         assert c.display_size is None
-        assert c.internal_size == 4
+        if is_crdb(conn):
+            assert c.internal_size == 16
+        else:
+            assert c.internal_size == 4
         assert c.precision is None
         assert c.scale is None
 
@@ -747,8 +753,8 @@ class TestColumn:
             ("numeric(10)", 10, 0, None, None),
             ("numeric(10, 3)", 10, 3, None, None),
             ("time", None, None, None, 8),
-            ("time(4)", 4, None, None, 8),
-            ("time(10)", 6, None, None, 8),
+            crdb_time_precision("time(4)", 4, None, None, 8),
+            crdb_time_precision("time(10)", 6, None, None, 8),
         ],
     )
     def test_details(self, conn, type, precision, scale, dsize, isize):
@@ -775,6 +781,7 @@ class TestColumn:
         unpickled = pickle.loads(pickled)
         assert [tuple(d) for d in description] == [tuple(d) for d in unpickled]
 
+    @pytest.mark.crdb_skip("no col query")
     def test_no_col_query(self, conn):
         cur = conn.execute("select")
         assert cur.description == []
@@ -796,7 +803,7 @@ class TestColumn:
         assert res == "x"
         assert cur.description[0].name == "foo-bar"
 
-    @pytest.mark.parametrize("encoding", ["utf8", "latin9"])
+    @pytest.mark.parametrize("encoding", ["utf8", crdb_encoding("latin9")])
     def test_name_encode(self, conn, encoding):
         conn.execute(f"set client_encoding to {encoding}")
         cur = conn.cursor()
@@ -826,14 +833,14 @@ def test_str(conn):
 @pytest.mark.parametrize("fmt_out", pq.Format)
 @pytest.mark.parametrize("fetch", ["one", "many", "all", "iter"])
 @pytest.mark.parametrize("row_factory", ["tuple_row", "dict_row", "namedtuple_row"])
-def test_leak(dsn, faker, fmt, fmt_out, fetch, row_factory):
+def test_leak(conn_cls, dsn, faker, fmt, fmt_out, fetch, row_factory):
     faker.format = fmt
     faker.choose_schema(ncols=5)
     faker.make_records(10)
     row_factory = getattr(rows, row_factory)
 
     def work():
-        with psycopg.connect(dsn) as conn:
+        with conn_cls.connect(dsn) as conn, conn.transaction(force_rollback=True):
             with conn.cursor(binary=fmt_out, row_factory=row_factory) as cur:
                 cur.execute(faker.drop_stmt)
                 cur.execute(faker.create_stmt)

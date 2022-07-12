@@ -3,11 +3,12 @@ import logging
 
 import pytest
 
-from psycopg import AsyncConnection, ProgrammingError, Rollback
+from psycopg import Rollback
+from psycopg import errors as e
 from psycopg._compat import create_task
 
-from .test_transaction import in_transaction, insert_row, inserted
-from .test_transaction import ExpectedException, get_exc_info
+from .test_transaction import in_transaction, insert_row, inserted, get_exc_info
+from .test_transaction import ExpectedException, crdb_skip_external_observer
 from .test_transaction import create_test_table  # noqa  # autouse fixture
 
 pytestmark = pytest.mark.asyncio
@@ -84,7 +85,10 @@ async def test_rollback_on_exception_exit(aconn):
     assert not await inserted(aconn)
 
 
-async def test_context_inerror_rollback_no_clobber(aconn, apipeline, dsn, caplog):
+@pytest.mark.crdb_skip("pg_terminate_backend")
+async def test_context_inerror_rollback_no_clobber(
+    aconn_cls, aconn, apipeline, dsn, caplog
+):
     if apipeline:
         # Only 'aconn' is possibly in pipeline mode, but the transaction and
         # checks are on 'conn2'.
@@ -92,7 +96,7 @@ async def test_context_inerror_rollback_no_clobber(aconn, apipeline, dsn, caplog
     caplog.set_level(logging.WARNING, logger="psycopg")
 
     with pytest.raises(ZeroDivisionError):
-        async with await AsyncConnection.connect(dsn) as conn2:
+        async with await aconn_cls.connect(dsn) as conn2:
             async with conn2.transaction():
                 await conn2.execute("select 1")
                 await aconn.execute(
@@ -107,10 +111,11 @@ async def test_context_inerror_rollback_no_clobber(aconn, apipeline, dsn, caplog
     assert "in rollback" in rec.message
 
 
-async def test_context_active_rollback_no_clobber(dsn, caplog):
+@pytest.mark.crdb_skip("copy")
+async def test_context_active_rollback_no_clobber(aconn_cls, dsn, caplog):
     caplog.set_level(logging.WARNING, logger="psycopg")
 
-    conn = await AsyncConnection.connect(dsn)
+    conn = await aconn_cls.connect(dsn)
     try:
         with pytest.raises(ZeroDivisionError):
             async with conn.transaction():
@@ -153,11 +158,11 @@ async def test_prohibits_use_of_commit_rollback_autocommit(aconn):
     await aconn.rollback()
 
     async with aconn.transaction():
-        with pytest.raises(ProgrammingError):
+        with pytest.raises(e.ProgrammingError):
             await aconn.set_autocommit(False)
-        with pytest.raises(ProgrammingError):
+        with pytest.raises(e.ProgrammingError):
             await aconn.commit()
-        with pytest.raises(ProgrammingError):
+        with pytest.raises(e.ProgrammingError):
             await aconn.rollback()
 
     await aconn.set_autocommit(False)
@@ -220,6 +225,7 @@ async def test_autocommit_off_but_no_tx_started_exception_exit(aconn, svcconn):
     assert not inserted(svcconn)
 
 
+@crdb_skip_external_observer
 async def test_autocommit_off_and_tx_in_progress_successful_exit(
     aconn, apipeline, svcconn
 ):
@@ -247,6 +253,7 @@ async def test_autocommit_off_and_tx_in_progress_successful_exit(
     assert not inserted(svcconn)
 
 
+@crdb_skip_external_observer
 async def test_autocommit_off_and_tx_in_progress_exception_exit(
     aconn, apipeline, svcconn
 ):
@@ -529,6 +536,7 @@ async def test_force_rollback_exception_exit(aconn, svcconn):
     assert not inserted(svcconn)
 
 
+@crdb_skip_external_observer
 async def test_explicit_rollback_discards_changes(aconn, svcconn):
     """
     Raising a Rollback exception in the middle of a block exits the block and
@@ -561,6 +569,7 @@ async def test_explicit_rollback_discards_changes(aconn, svcconn):
     await assert_no_rows()
 
 
+@crdb_skip_external_observer
 async def test_explicit_rollback_outer_tx_unaffected(aconn, svcconn):
     """
     Raising a Rollback exception in the middle of a block does not impact an
@@ -592,6 +601,7 @@ async def test_explicit_rollback_of_outer_transaction(aconn):
     assert not await inserted(aconn)
 
 
+@crdb_skip_external_observer
 async def test_explicit_rollback_of_enclosing_tx_outer_tx_unaffected(aconn, svcconn):
     """
     Rolling-back an enclosing transaction does not impact an outer transaction.
@@ -651,10 +661,10 @@ async def test_out_of_order_exit(aconn, exit_error):
     t2 = aconn.transaction()
     await t2.__aenter__()
 
-    with pytest.raises(ProgrammingError):
+    with pytest.raises(e.ProgrammingError):
         await t1.__aexit__(*get_exc_info(exit_error))
 
-    with pytest.raises(ProgrammingError):
+    with pytest.raises(e.ProgrammingError):
         await t2.__aexit__(*get_exc_info(exit_error))
 
 
@@ -668,10 +678,10 @@ async def test_out_of_order_implicit_begin(aconn, exit_error):
     t2 = aconn.transaction()
     await t2.__aenter__()
 
-    with pytest.raises(ProgrammingError):
+    with pytest.raises(e.ProgrammingError):
         await t1.__aexit__(*get_exc_info(exit_error))
 
-    with pytest.raises(ProgrammingError):
+    with pytest.raises(e.ProgrammingError):
         await t2.__aexit__(*get_exc_info(exit_error))
 
 
@@ -684,10 +694,10 @@ async def test_out_of_order_exit_same_name(aconn, exit_error):
     t2 = aconn.transaction("save")
     await t2.__aenter__()
 
-    with pytest.raises(ProgrammingError):
+    with pytest.raises(e.ProgrammingError):
         await t1.__aexit__(*get_exc_info(exit_error))
 
-    with pytest.raises(ProgrammingError):
+    with pytest.raises(e.ProgrammingError):
         await t2.__aexit__(*get_exc_info(exit_error))
 
 
@@ -695,10 +705,10 @@ async def test_out_of_order_exit_same_name(aconn, exit_error):
 async def test_concurrency(aconn, what):
     await aconn.set_autocommit(True)
 
-    e = [asyncio.Event() for i in range(3)]
+    evs = [asyncio.Event() for i in range(3)]
 
     async def worker(unlock, wait_on):
-        with pytest.raises(ProgrammingError) as ex:
+        with pytest.raises(e.ProgrammingError) as ex:
             async with aconn.transaction():
                 unlock.set()
                 await wait_on.wait()
@@ -721,13 +731,13 @@ async def test_concurrency(aconn, what):
             assert "transaction commit" in str(ex.value)
 
     # Start a first transaction in a task
-    t1 = create_task(worker(unlock=e[0], wait_on=e[1]))
-    await e[0].wait()
+    t1 = create_task(worker(unlock=evs[0], wait_on=evs[1]))
+    await evs[0].wait()
 
     # Start a nested transaction in a task
-    t2 = create_task(worker(unlock=e[1], wait_on=e[2]))
+    t2 = create_task(worker(unlock=evs[1], wait_on=evs[2]))
 
     # Terminate the first transaction before the second does
     await asyncio.gather(t1)
-    e[2].set()
+    evs[2].set()
     await asyncio.gather(t2)

@@ -424,6 +424,7 @@ class AsyncConnection(BaseConnection[Row]):
             await self.wait(self._tpc_finish_gen("rollback", xid))
 
     async def tpc_recover(self) -> List[Xid]:
+        self._check_tpc()
         status = self.info.transaction_status
         async with self.cursor(row_factory=args_row(Xid._from_record)) as cur:
             await cur.execute(Xid._get_recover_query())

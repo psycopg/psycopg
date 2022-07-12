@@ -19,10 +19,10 @@ from psycopg.types.numeric import Int4
 
 from .utils import eur, gc_collect
 
+pytestmark = pytest.mark.crdb_skip("copy")
+
 sample_records = [(10, 20, "hello"), (40, None, "world")]
-
 sample_values = "values (10::int, 20::int, 'hello'::text), (40, NULL, 'world')"
-
 sample_tabledef = "col1 serial primary key, col2 int, data text"
 
 sample_text = b"""\
@@ -254,7 +254,7 @@ def test_copy_in_str(conn):
     assert data == sample_records
 
 
-def test_copy_in_str_binary(conn):
+def test_copy_in_error(conn):
     cur = conn.cursor()
     ensure_table(cur, sample_tabledef)
     with pytest.raises(e.QueryCanceled):
@@ -620,13 +620,13 @@ def test_worker_error_propagated(conn, monkeypatch):
     [(Format.TEXT, True), (Format.TEXT, False), (Format.BINARY, True)],
 )
 @pytest.mark.parametrize("method", ["read", "iter", "row", "rows"])
-def test_copy_to_leaks(dsn, faker, fmt, set_types, method):
+def test_copy_to_leaks(conn_cls, dsn, faker, fmt, set_types, method):
     faker.format = PyFormat.from_pq(fmt)
     faker.choose_schema(ncols=20)
     faker.make_records(20)
 
     def work():
-        with psycopg.connect(dsn) as conn:
+        with conn_cls.connect(dsn) as conn:
             with conn.cursor(binary=fmt) as cur:
                 cur.execute(faker.drop_stmt)
                 cur.execute(faker.create_stmt)
@@ -654,7 +654,7 @@ def test_copy_to_leaks(dsn, faker, fmt, set_types, method):
                         list(copy)
                     elif method == "row":
                         while True:
-                            tmp = copy.read_row()  # type: ignore[assignment]
+                            tmp = copy.read_row()
                             if tmp is None:
                                 break
                     elif method == "rows":
@@ -675,13 +675,13 @@ def test_copy_to_leaks(dsn, faker, fmt, set_types, method):
     "fmt, set_types",
     [(Format.TEXT, True), (Format.TEXT, False), (Format.BINARY, True)],
 )
-def test_copy_from_leaks(dsn, faker, fmt, set_types):
+def test_copy_from_leaks(conn_cls, dsn, faker, fmt, set_types):
     faker.format = PyFormat.from_pq(fmt)
     faker.choose_schema(ncols=20)
     faker.make_records(20)
 
     def work():
-        with psycopg.connect(dsn) as conn:
+        with conn_cls.connect(dsn) as conn:
             with conn.cursor(binary=fmt) as cur:
                 cur.execute(faker.drop_stmt)
                 cur.execute(faker.create_stmt)
@@ -715,11 +715,11 @@ def test_copy_from_leaks(dsn, faker, fmt, set_types):
 
 @pytest.mark.slow
 @pytest.mark.parametrize("mode", ["row", "block", "binary"])
-def test_copy_table_across(dsn, faker, mode):
+def test_copy_table_across(conn_cls, dsn, faker, mode):
     faker.choose_schema(ncols=20)
     faker.make_records(20)
 
-    with psycopg.connect(dsn) as conn1, psycopg.connect(dsn) as conn2:
+    with conn_cls.connect(dsn) as conn1, conn_cls.connect(dsn) as conn2:
         faker.table_name = sql.Identifier("copy_src")
         conn1.execute(faker.drop_stmt)
         conn1.execute(faker.create_stmt)

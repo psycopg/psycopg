@@ -103,6 +103,7 @@ def test_no_result(factory, conn):
         cur.fetchone()
 
 
+@pytest.mark.crdb_skip("no col query")
 @pytest.mark.parametrize(
     "factory", "tuple_row dict_row namedtuple_row args_row".split()
 )
@@ -114,6 +115,7 @@ def test_no_column(factory, conn):
     assert not recs[0]
 
 
+@pytest.mark.crdb("skip")
 def test_no_column_class_row(conn):
     class Empty:
         def __init__(self, x=10, y=20):

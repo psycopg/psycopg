@@ -4,6 +4,8 @@ import psycopg
 from psycopg.types import TypeInfo
 from psycopg.types.hstore import HstoreLoader, register_hstore
 
+pytestmark = pytest.mark.crdb_skip("hstore")
+
 
 @pytest.mark.parametrize(
     "s, d",
@@ -64,13 +66,13 @@ def test_register_curs(hstore, conn):
     assert cur.fetchone() == (None, {}, {"a": "b"})
 
 
-def test_register_globally(hstore, dsn, svcconn, global_adapters):
+def test_register_globally(conn_cls, hstore, dsn, svcconn, global_adapters):
     info = TypeInfo.fetch(svcconn, "hstore")
     register_hstore(info)
     assert psycopg.adapters.types[info.oid].name == "hstore"
 
     assert svcconn.adapters.types.get(info.oid) is None
-    conn = psycopg.connect(dsn)
+    conn = conn_cls.connect(dsn)
     assert conn.adapters.types[info.oid].name == "hstore"
 
     cur = conn.execute("select null::hstore, ''::hstore, 'a => b'::hstore")

@@ -2,11 +2,17 @@ import os
 import pytest
 import logging
 from contextlib import contextmanager
-from typing import List
+from typing import List, Optional
 
 import psycopg
 from psycopg import pq
-from .utils import check_libpq_version, check_server_version
+from psycopg import sql
+
+from .utils import check_libpq_version, check_postgres_version
+
+# Set by warm_up_database() the first time the dsn fixture is used
+pg_version: int
+crdb_version: Optional[int]
 
 
 def pytest_addoption(parser):
@@ -60,17 +66,11 @@ def pytest_configure(config):
     )
 
 
-def pytest_runtest_setup(item):
-    # Copy the want marker on the function so we can check the version
-    # after the connection has been created.
-    want_ver = [m.args[0] for m in item.iter_markers() if m.name == "pg"]
-    if want_ver:
-        item.function.want_pg_version = want_ver[0]
-
-
 @pytest.fixture(scope="session")
-def dsn(request):
-    """Return the dsn used to connect to the `--test-dsn` database."""
+def session_dsn(request):
+    """
+    Return the dsn used to connect to the `--test-dsn` database (session-wide).
+    """
     dsn = request.config.getoption("--test-dsn")
     if dsn is None:
         pytest.skip("skipping test as no --test-dsn")
@@ -84,6 +84,13 @@ def dsn(request):
         logging.exception("error warming up database")
 
     return dsn
+
+
+@pytest.fixture
+def dsn(session_dsn, request):
+    """Return the dsn used to connect to the `--test-dsn` database."""
+    check_connection_version(request.node)
+    return session_dsn
 
 
 @pytest.fixture(scope="session")
@@ -127,15 +134,11 @@ def maybe_trace(pgconn, tracefile, function):
 @pytest.fixture
 def pgconn(dsn, request, tracefile):
     """Return a PGconn connection open to `--test-dsn`."""
-    from psycopg import pq
+    check_connection_version(request.node)
 
     conn = pq.PGconn.connect(dsn.encode())
     if conn.status != pq.ConnStatus.OK:
         pytest.fail(f"bad connection: {conn.error_message.decode('utf8', 'replace')}")
-    msg = check_connection_version(conn.server_version, request.function)
-    if msg:
-        conn.finish()
-        pytest.skip(msg)
 
     with maybe_trace(conn, tracefile, request.function):
         yield conn
@@ -144,15 +147,11 @@ def pgconn(dsn, request, tracefile):
 
 
 @pytest.fixture
-def conn(dsn, request, tracefile):
+def conn(conn_cls, dsn, request, tracefile):
     """Return a `Connection` connected to the ``--test-dsn`` database."""
-    from psycopg import Connection
+    check_connection_version(request.node)
 
-    conn = Connection.connect(dsn)
-    msg = check_connection_version(conn.info.server_version, request.function)
-    if msg:
-        conn.close()
-        pytest.skip(msg)
+    conn = conn_cls.connect(dsn)
     with maybe_trace(conn.pgconn, tracefile, request.function):
         yield conn
     conn.close()
@@ -172,15 +171,11 @@ def pipeline(request, conn):
 
 
 @pytest.fixture
-async def aconn(dsn, request, tracefile):
+async def aconn(dsn, aconn_cls, request, tracefile):
     """Return an `AsyncConnection` connected to the ``--test-dsn`` database."""
-    from psycopg import AsyncConnection
+    check_connection_version(request.node)
 
-    conn = await AsyncConnection.connect(dsn)
-    msg = check_connection_version(conn.info.server_version, request.function)
-    if msg:
-        await conn.close()
-        pytest.skip(msg)
+    conn = await aconn_cls.connect(dsn)
     with maybe_trace(conn.pgconn, tracefile, request.function):
         yield conn
     await conn.close()
@@ -200,13 +195,33 @@ async def apipeline(request, aconn):
 
 
 @pytest.fixture(scope="session")
-def svcconn(dsn):
+def conn_cls(session_dsn):
+    cls = psycopg.Connection
+    if crdb_version:
+        from psycopg.crdb import CrdbConnection
+
+        cls = CrdbConnection
+
+    return cls
+
+
+@pytest.fixture(scope="session")
+def aconn_cls(session_dsn):
+    cls = psycopg.AsyncConnection
+    if crdb_version:
+        from psycopg.crdb import AsyncCrdbConnection
+
+        cls = AsyncCrdbConnection
+
+    return cls
+
+
+@pytest.fixture(scope="session")
+def svcconn(conn_cls, session_dsn):
     """
     Return a session `Connection` connected to the ``--test-dsn`` database.
     """
-    from psycopg import Connection
-
-    conn = Connection.connect(dsn, autocommit=True)
+    conn = conn_cls.connect(session_dsn, autocommit=True)
     yield conn
     conn.close()
 
@@ -225,8 +240,6 @@ def acommands(aconn, monkeypatch):
 
 def patch_exec(conn, monkeypatch):
     """Helper to implement the commands fixture both sync and async."""
-    from psycopg import sql
-
     _orig_exec_command = conn._exec_command
     L = ListPopAll()
 
@@ -253,20 +266,34 @@ class ListPopAll(list):  # type: ignore[type-arg]
         return out
 
 
-def check_connection_version(got, function):
-    if not hasattr(function, "want_pg_version"):
-        return
-    return check_server_version(got, function.want_pg_version)
+def check_connection_version(node):
+    try:
+        pg_version
+    except NameError:
+        # First connection creation failed. Let the tests fail.
+        pytest.fail("server version not available")
+
+    for mark in node.iter_markers():
+        if mark.name == "pg":
+            assert len(mark.args) == 1
+            msg = check_postgres_version(pg_version, mark.args[0])
+            if msg:
+                pytest.skip(msg)
+
+        elif mark.name in ("crdb", "crdb_skip"):
+            from .fix_crdb import check_crdb_version
+
+            msg = check_crdb_version(crdb_version, mark)
+            if msg:
+                pytest.skip(msg)
 
 
 @pytest.fixture
 def hstore(svcconn):
-    from psycopg import Error
-
     try:
         with svcconn.transaction():
             svcconn.execute("create extension if not exists hstore")
-    except Error as e:
+    except psycopg.Error as e:
         pytest.skip(str(e))
 
 
@@ -283,7 +310,16 @@ def warm_up_database(dsn: str, __first_connection: List[bool] = [True]) -> None:
         return
     del __first_connection[:]
 
-    import psycopg
+    global pg_version, crdb_version
 
     with psycopg.connect(dsn, connect_timeout=10) as conn:
         conn.execute("select 1")
+
+        pg_version = conn.info.server_version
+
+        crdb_version = None
+        param = conn.info.parameter_status("crdb_version")
+        if param:
+            from psycopg.crdb import CrdbConnectionInfo
+
+            crdb_version = CrdbConnectionInfo.parse_crdb_version(param)

@@ -18,9 +18,9 @@ from psycopg import errors as e
 
 
 @pytest.mark.slow
-def test_concurrent_execution(dsn):
+def test_concurrent_execution(conn_cls, dsn):
     def worker():
-        cnn = psycopg.connect(dsn)
+        cnn = conn_cls.connect(dsn)
         cur = cnn.cursor()
         cur.execute("select pg_sleep(0.5)")
         cur.close()
@@ -109,8 +109,9 @@ t.join()
 
 @pytest.mark.slow
 @pytest.mark.timing
-def test_notifies(conn, dsn):
-    nconn = psycopg.connect(dsn, autocommit=True)
+@pytest.mark.crdb_skip("notify")
+def test_notifies(conn_cls, conn, dsn):
+    nconn = conn_cls.connect(dsn, autocommit=True)
     npid = nconn.pgconn.backend_pid
 
     def notifier():
@@ -161,6 +162,7 @@ def canceller(conn, errors):
 
 
 @pytest.mark.slow
+@pytest.mark.crdb_skip("cancel")
 def test_cancel(conn):
     errors: List[Exception] = []
 
@@ -184,6 +186,7 @@ def test_cancel(conn):
 
 
 @pytest.mark.slow
+@pytest.mark.crdb_skip("cancel")
 def test_cancel_stream(conn):
     errors: List[Exception] = []
 
@@ -207,14 +210,15 @@ def test_cancel_stream(conn):
     t.join()
 
 
+@pytest.mark.crdb_skip("pg_terminate_backend")
 @pytest.mark.slow
-def test_identify_closure(dsn):
+def test_identify_closure(conn_cls, dsn):
     def closer():
         time.sleep(0.2)
         conn2.execute("select pg_terminate_backend(%s)", [conn.pgconn.backend_pid])
 
-    conn = psycopg.connect(dsn)
-    conn2 = psycopg.connect(dsn)
+    conn = conn_cls.connect(dsn)
+    conn2 = conn_cls.connect(dsn)
     try:
         t = threading.Thread(target=closer)
         t.start()
@@ -236,6 +240,7 @@ def test_identify_closure(dsn):
 @pytest.mark.skipif(
     sys.platform == "win32", reason="don't know how to Ctrl-C on Windows"
 )
+@pytest.mark.crdb_skip("cancel")
 def test_ctrl_c(dsn):
     if sys.platform == "win32":
         sig = int(signal.CTRL_C_EVENT)

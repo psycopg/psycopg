@@ -4,6 +4,8 @@ import psycopg
 from psycopg import rows, errors as e
 from psycopg.pq import Format
 
+pytestmark = pytest.mark.crdb_skip("server-side cursor")
+
 
 def test_init_row_factory(conn):
     with psycopg.ServerCursor(conn, "foo") as cur:
@@ -32,6 +34,7 @@ def test_init_params(conn):
         assert cur.withhold is True
 
 
+@pytest.mark.crdb_skip("cursor invalid name")
 def test_funny_name(conn):
     cur = conn.cursor("1-2-3")
     cur.execute("select generate_series(1, 3) as bar")
@@ -56,7 +59,7 @@ def test_connection(conn):
 def test_description(conn):
     cur = conn.cursor("foo")
     assert cur.name == "foo"
-    cur.execute("select generate_series(1, 10) as bar")
+    cur.execute("select generate_series(1, 10)::int4 as bar")
     assert len(cur.description) == 1
     assert cur.description[0].name == "bar"
     assert cur.description[0].type_code == cur.adapters.types["int4"].oid
@@ -86,7 +89,7 @@ def test_query_params(conn):
 
 def test_binary_cursor_execute(conn):
     cur = conn.cursor("foo", binary=True)
-    cur.execute("select generate_series(1, 2)")
+    cur.execute("select generate_series(1, 2)::int4")
     assert cur.fetchone() == (1,)
     assert cur.pgresult.fformat(0) == 1
     assert cur.pgresult.get_value(0, 0) == b"\x00\x00\x00\x01"
@@ -98,7 +101,7 @@ def test_binary_cursor_execute(conn):
 
 def test_execute_binary(conn):
     cur = conn.cursor("foo")
-    cur.execute("select generate_series(1, 2)", binary=True)
+    cur.execute("select generate_series(1, 2)::int4", binary=True)
     assert cur.fetchone() == (1,)
     assert cur.pgresult.fformat(0) == 1
     assert cur.pgresult.get_value(0, 0) == b"\x00\x00\x00\x01"
@@ -106,7 +109,7 @@ def test_execute_binary(conn):
     assert cur.pgresult.fformat(0) == 1
     assert cur.pgresult.get_value(0, 0) == b"\x00\x00\x00\x02"
 
-    cur.execute("select generate_series(1, 1)")
+    cur.execute("select generate_series(1, 1)::int4")
     assert cur.fetchone() == (1,)
     assert cur.pgresult.fformat(0) == 0
     assert cur.pgresult.get_value(0, 0) == b"1"
@@ -123,7 +126,7 @@ def test_binary_cursor_text_override(conn):
     assert cur.pgresult.fformat(0) == 0
     assert cur.pgresult.get_value(0, 0) == b"2"
 
-    cur.execute("select generate_series(1, 2)")
+    cur.execute("select generate_series(1, 2)::int4")
     assert cur.fetchone() == (1,)
     assert cur.pgresult.fformat(0) == 1
     assert cur.pgresult.get_value(0, 0) == b"\x00\x00\x00\x01"
@@ -245,6 +248,7 @@ def test_close_no_clobber(conn):
     with pytest.raises(e.DivisionByZero):
         with conn.cursor("foo") as cur:
             cur.execute("select 1 / %s", (0,))
+            cur.fetchall()
 
 
 def test_warn_close(conn, recwarn):
@@ -327,6 +331,7 @@ def test_no_result(conn):
         assert cur.fetchall() == []
 
 
+@pytest.mark.crdb_skip("scroll cursor")
 def test_row_factory(conn):
     n = 0
 
@@ -412,6 +417,7 @@ def test_cant_scroll_by_default(conn):
     cur.close()
 
 
+@pytest.mark.crdb_skip("scroll cursor")
 def test_scroll(conn):
     cur = conn.cursor("tmp", scrollable=True)
     cur.execute("select generate_series(0,9)")
@@ -429,6 +435,7 @@ def test_scroll(conn):
     cur.close()
 
 
+@pytest.mark.crdb_skip("scroll cursor")
 def test_scrollable(conn):
     curs = conn.cursor("foo", scrollable=True)
     assert curs.scrollable is True
@@ -462,6 +469,7 @@ def test_no_hold(conn, kwargs):
             curs.fetchone()
 
 
+@pytest.mark.crdb_skip("cursor with hold")
 def test_hold(conn):
     with conn.cursor("foo", withhold=True) as curs:
         assert curs.withhold is True

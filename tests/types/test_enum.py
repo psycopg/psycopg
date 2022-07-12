@@ -7,6 +7,8 @@ from psycopg.adapt import PyFormat
 from psycopg.types import TypeInfo
 from psycopg.types.enum import EnumInfo, register_enum
 
+from ..fix_crdb import crdb_encoding
+
 
 class PureTestEnum(Enum):
     FOO = auto()
@@ -34,7 +36,7 @@ class IntTestEnum(int, Enum):
 
 
 enum_cases = [PureTestEnum, StrTestEnum, IntTestEnum]
-encodings = ["utf8", "latin1"]
+encodings = ["utf8", crdb_encoding("latin1")]
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -49,7 +51,7 @@ def ensure_enum(enum, conn):
     conn.execute(
         sql.SQL(
             """
-            drop type if exists {name} cascade;
+            drop type if exists {name};
             create type {name} as enum ({labels});
             """
         ).format(name=sql.Identifier(name), labels=sql.SQL(",").join(labels))
@@ -116,6 +118,7 @@ def test_enum_loader_nonascii(conn, encoding, fmt_in, fmt_out):
         assert cur.fetchone()[0] == enum[label]
 
 
+@pytest.mark.crdb_skip("encoding")
 @pytest.mark.parametrize("enum", enum_cases)
 @pytest.mark.parametrize("fmt_in", PyFormat)
 @pytest.mark.parametrize("fmt_out", pq.Format)
@@ -158,6 +161,7 @@ def test_enum_dumper_nonascii(conn, encoding, fmt_in, fmt_out):
         assert cur.fetchone()[0] == item
 
 
+@pytest.mark.crdb_skip("encoding")
 @pytest.mark.parametrize("enum", enum_cases)
 @pytest.mark.parametrize("fmt_in", PyFormat)
 @pytest.mark.parametrize("fmt_out", pq.Format)

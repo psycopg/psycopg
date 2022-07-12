@@ -13,6 +13,7 @@ from psycopg.postgres import types as builtins
 
 from .utils import gc_collect
 from .test_cursor import my_row_factory
+from .fix_crdb import is_crdb, crdb_encoding, crdb_time_precision
 
 
 @pytest.fixture
@@ -38,9 +39,9 @@ def test_init_factory(conn):
     assert cur.fetchone() == {"a": 1}
 
 
-def test_from_cursor_factory(dsn):
-    with psycopg.connect(dsn, cursor_factory=psycopg.ClientCursor) as aconn:
-        cur = aconn.cursor()
+def test_from_cursor_factory(conn_cls, dsn):
+    with conn_cls.connect(dsn, cursor_factory=psycopg.ClientCursor) as conn:
+        cur = conn.cursor()
         assert type(cur) is psycopg.ClientCursor
 
         cur.execute("select %s", (1,))
@@ -251,7 +252,7 @@ def test_binary_cursor_text_override(conn):
     assert cur.pgresult.get_value(0, 0) == b"1"
 
 
-@pytest.mark.parametrize("encoding", ["utf8", "latin9"])
+@pytest.mark.parametrize("encoding", ["utf8", crdb_encoding("latin9")])
 def test_query_encode(conn, encoding):
     conn.execute(f"set client_encoding to {encoding}")
     cur = conn.cursor()
@@ -259,8 +260,9 @@ def test_query_encode(conn, encoding):
     assert res == "\u20ac"
 
 
-def test_query_badenc(conn):
-    conn.execute("set client_encoding to latin1")
+@pytest.mark.parametrize("encoding", [crdb_encoding("latin1")])
+def test_query_badenc(conn, encoding):
+    conn.execute(f"set client_encoding to {encoding}")
     cur = conn.cursor()
     with pytest.raises(UnicodeEncodeError):
         cur.execute("select '\u20ac'")
@@ -584,6 +586,7 @@ def test_query_params_executemany(conn):
     assert cur._query.params == (b"3", b"4")
 
 
+@pytest.mark.crdb_skip("copy")
 @pytest.mark.parametrize("ph, params", [("%s", (10,)), ("%(n)s", {"n": 10})])
 def test_copy_out_param(conn, ph, params):
     cur = conn.cursor()
@@ -651,7 +654,10 @@ class TestColumn:
         assert c.name == "now"
         assert c.type_code == builtins["date"].oid
         assert c.display_size is None
-        assert c.internal_size == 4
+        if is_crdb(conn):
+            assert c.internal_size == 16
+        else:
+            assert c.internal_size == 4
         assert c.precision is None
         assert c.scale is None
 
@@ -671,8 +677,8 @@ class TestColumn:
             ("numeric(10)", 10, 0, None, None),
             ("numeric(10, 3)", 10, 3, None, None),
             ("time", None, None, None, 8),
-            ("time(4)", 4, None, None, 8),
-            ("time(10)", 6, None, None, 8),
+            crdb_time_precision("time(4)", 4, None, None, 8),
+            crdb_time_precision("time(10)", 6, None, None, 8),
         ],
     )
     def test_details(self, conn, type, precision, scale, dsize, isize):
@@ -699,6 +705,7 @@ class TestColumn:
         unpickled = pickle.loads(pickled)
         assert [tuple(d) for d in description] == [tuple(d) for d in unpickled]
 
+    @pytest.mark.crdb_skip("no col query")
     def test_no_col_query(self, conn):
         cur = conn.execute("select")
         assert cur.description == []
@@ -720,7 +727,7 @@ class TestColumn:
         assert res == "x"
         assert cur.description[0].name == "foo-bar"
 
-    @pytest.mark.parametrize("encoding", ["utf8", "latin9"])
+    @pytest.mark.parametrize("encoding", ["utf8", crdb_encoding("latin9")])
     def test_name_encode(self, conn, encoding):
         conn.execute(f"set client_encoding to {encoding}")
         cur = conn.cursor()
@@ -748,13 +755,13 @@ def test_str(conn):
 @pytest.mark.slow
 @pytest.mark.parametrize("fetch", ["one", "many", "all", "iter"])
 @pytest.mark.parametrize("row_factory", ["tuple_row", "dict_row", "namedtuple_row"])
-def test_leak(dsn, faker, fetch, row_factory):
+def test_leak(conn_cls, dsn, faker, fetch, row_factory):
     faker.choose_schema(ncols=5)
     faker.make_records(10)
     row_factory = getattr(rows, row_factory)
 
     def work():
-        with psycopg.connect(dsn) as conn:
+        with conn_cls.connect(dsn) as conn, conn.transaction(force_rollback=True):
             with psycopg.ClientCursor(conn, row_factory=row_factory) as cur:
                 cur.execute(faker.drop_stmt)
                 cur.execute(faker.create_stmt)
@@ -796,17 +803,19 @@ def test_mogrify(conn):
     q = cur.mogrify("select %s, %s", [1, dt.date(2020, 1, 1)])
     assert q == "select 1, '2020-01-01'::date"
 
-    conn.execute("set client_encoding to utf8")
-    q = cur.mogrify("select %(s)s", {"s": "\u20ac"})
+
+@pytest.mark.parametrize("encoding", ["utf8", crdb_encoding("latin9")])
+def test_mogrify_encoding(conn, encoding):
+    conn.execute(f"set client_encoding to {encoding}")
+    q = conn.cursor().mogrify("select %(s)s", {"s": "\u20ac"})
     assert q == "select '\u20ac'"
 
-    conn.execute("set client_encoding to latin9")
-    q = cur.mogrify("select %(s)s", {"s": "\u20ac"})
-    assert q == "select '\u20ac'"
 
-    conn.execute("set client_encoding to latin1")
+@pytest.mark.parametrize("encoding", [crdb_encoding("latin1")])
+def test_mogrify_badenc(conn, encoding):
+    conn.execute(f"set client_encoding to {encoding}")
     with pytest.raises(UnicodeEncodeError):
-        cur.mogrify("select %(s)s", {"s": "\u20ac"})
+        conn.cursor().mogrify("select %(s)s", {"s": "\u20ac"})
 
 
 @pytest.mark.libpq(">= 14")

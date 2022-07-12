@@ -6,6 +6,8 @@ from psycopg import pq
 from psycopg import sql
 from psycopg.adapt import PyFormat
 
+crdb_skip_cidr = pytest.mark.crdb_skip("cidr")
+
 
 @pytest.mark.parametrize("fmt_in", PyFormat)
 @pytest.mark.parametrize("val", ["192.168.0.1", "2001:db8::"])
@@ -37,6 +39,7 @@ def test_interface_dump(conn, fmt_in, val):
     assert cur.fetchone()[0] is True
 
 
+@crdb_skip_cidr
 @pytest.mark.parametrize("fmt_in", PyFormat)
 @pytest.mark.parametrize("val", ["127.0.0.0/24", "::ffff:102:300/128"])
 def test_network_dump(conn, fmt_in, val):
@@ -50,6 +53,7 @@ def test_network_dump(conn, fmt_in, val):
     assert cur.fetchone()[0] is True
 
 
+@crdb_skip_cidr
 @pytest.mark.parametrize("fmt_in", PyFormat)
 def test_network_mixed_size_array(conn, fmt_in):
     val = [
@@ -62,6 +66,7 @@ def test_network_mixed_size_array(conn, fmt_in):
     assert val == got
 
 
+@pytest.mark.crdb_skip("copy")
 @pytest.mark.parametrize("fmt_out", pq.Format)
 @pytest.mark.parametrize("val", ["127.0.0.1/32", "::ffff:102:300/128"])
 def test_inet_load_address(conn, fmt_out, val):
@@ -84,6 +89,7 @@ def test_inet_load_address(conn, fmt_out, val):
     assert got == addr
 
 
+@pytest.mark.crdb_skip("copy")
 @pytest.mark.parametrize("fmt_out", pq.Format)
 @pytest.mark.parametrize("val", ["127.0.0.1/24", "::ffff:102:300/127"])
 def test_inet_load_network(conn, fmt_out, val):
@@ -106,6 +112,7 @@ def test_inet_load_network(conn, fmt_out, val):
     assert got == pyval
 
 
+@crdb_skip_cidr
 @pytest.mark.parametrize("fmt_out", pq.Format)
 @pytest.mark.parametrize("val", ["127.0.0.0/24", "::ffff:102:300/128"])
 def test_cidr_load(conn, fmt_out, val):

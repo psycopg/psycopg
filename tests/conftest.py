@@ -11,6 +11,7 @@ pytest_plugins = (
     "tests.fix_faker",
     "tests.fix_proxy",
     "tests.fix_psycopg",
+    "tests.fix_crdb",
     "tests.pool.fix_pool",
 )
 

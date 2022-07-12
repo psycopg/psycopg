@@ -11,6 +11,9 @@ from psycopg.types import range as range_module
 from psycopg.types.range import Range, RangeInfo, register_range
 
 from ..utils import eur
+from ..fix_crdb import is_crdb, crdb_skip_message
+
+pytestmark = pytest.mark.crdb_skip("range")
 
 type2sub = {
     "int4range": "int4",
@@ -263,6 +266,9 @@ def testrange(svcconn):
 
 
 def create_test_range(conn):
+    if is_crdb(conn):
+        pytest.skip(crdb_skip_message("range"))
+
     conn.execute(
         """
         create schema if not exists testschema;

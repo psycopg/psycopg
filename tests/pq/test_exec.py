@@ -126,6 +126,7 @@ def test_exec_prepared_binary_out(pgconn, fmt, out):
     assert res.get_value(0, 0) == out
 
 
+@pytest.mark.crdb_skip("server-side cursor")
 def test_describe_portal(pgconn):
     res = pgconn.exec_(
         b"""

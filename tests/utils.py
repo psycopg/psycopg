@@ -1,6 +1,7 @@
 import gc
 import re
 import operator
+from typing import Callable, Optional, Tuple
 
 import pytest
 
@@ -17,10 +18,10 @@ def check_libpq_version(got, want):
 
     and skips the test if the requested version doesn't match what's loaded.
     """
-    return _check_version(got, want, "libpq")
+    return check_version(got, want, "libpq", postgres_rule=True)
 
 
-def check_server_version(got, want):
+def check_postgres_version(got, want):
     """
     Verify if the server version is a version accepted.
 
@@ -30,51 +31,107 @@ def check_server_version(got, want):
 
     and skips the test if the server version doesn't match what expected.
     """
-    return _check_version(got, want, "server")
+    return check_version(got, want, "PostgreSQL", postgres_rule=True)
 
 
-def _check_version(got, want, whose_version):
-    """Check that a postgres-style version matches a desired spec.
+def check_version(got, want, whose_version, postgres_rule=True):
+    pred = VersionCheck.parse(want, postgres_rule=postgres_rule)
+    pred.whose = whose_version
+    return pred.get_skip_message(got)
 
-    - The postgres-style version is a number such as 90603 for 9.6.3.
-    - The want version is a spec string such as "> 9.6"
+
+class VersionCheck:
     """
-    # convert 90603 to (9, 6, 3), 120003 to (12, 3)
-    got, got_fix = divmod(got, 100)
-    got_maj, got_min = divmod(got, 100)
-    if got_maj >= 10:
-        got = (got_maj, got_fix)
-    else:
-        got = (got_maj, got_min, got_fix)
+    Helper to compare a version number with a test spec.
+    """
 
-    # Parse a spec like "> 9.6"
-    m = re.match(
-        r"^\s*(>=|<=|>|<|==)?\s*(?:(\d+)(?:\.(\d+)(?:\.(\d+))?)?)?\s*$",
-        want,
-    )
-    if m is None:
-        pytest.fail(f"bad wanted version spec: {want}")
+    def __init__(
+        self,
+        *,
+        skip: bool = False,
+        op: Optional[str] = None,
+        version_tuple: Tuple[int, ...] = (),
+        whose: str = "(wanted)",
+        postgres_rule: bool = False,
+    ):
+        self.skip = skip
+        self.op = op or "=="
+        self.version_tuple = version_tuple
+        self.whose = whose
+        # Treat 10.1 as 10.0.1
+        self.postgres_rule = postgres_rule
 
-    # convert "9.6" into (9, 6, 0), "10.3" into (10, 3)
-    want_maj = int(m.group(2))
-    want_min = int(m.group(3) or "0")
-    want_fix = int(m.group(4) or "0")
-    if want_maj >= 10:
-        if want_fix:
-            pytest.fail(f"bad version in {want}")
-        want = (want_maj, want_min)
-    else:
-        want = (want_maj, want_min, want_fix)
-
-    opnames = {">=": "ge", "<=": "le", ">": "gt", "<": "lt", "==": "eq"}
-    op = getattr(operator, opnames[m.group(1) or "=="])
-
-    if not op(got, want):
-        revops = {">=": "<", "<=": ">", ">": "<=", "<": ">=", "==": "!="}
-        return (
-            f"{whose_version} version is {'.'.join(map(str, got))}"
-            f" {revops[m.group(1)]} {'.'.join(map(str, want))}"
+    @classmethod
+    def parse(cls, spec: str, *, postgres_rule: bool = False) -> "VersionCheck":
+        # Parse a spec like "> 9.6", "skip < 21.2.0"
+        m = re.match(
+            r"""(?ix)
+            ^\s* (skip|only)?
+            \s* (>=|<=|>|<)?
+            \s* (?:(\d+)(?:\.(\d+)(?:\.(\d+))?)?)?
+            \s* $
+            """,
+            spec,
         )
+        if m is None:
+            pytest.fail(f"bad wanted version spec: {spec}")
+
+        skip = (m.group(1) or "only").lower() == "skip"
+        op = m.group(2)
+        version_tuple = tuple(int(n) for n in m.groups()[2:] if n)
+
+        return cls(
+            skip=skip, op=op, version_tuple=version_tuple, postgres_rule=postgres_rule
+        )
+
+    def get_skip_message(self, version: Optional[int]) -> Optional[str]:
+        got_tuple = self._parse_int_version(version)
+
+        msg: Optional[str] = None
+        if self.skip:
+            if got_tuple:
+                if not self.version_tuple:
+                    msg = f"skip on {self.whose}"
+                elif self._match_version(got_tuple):
+                    msg = (
+                        f"skip on {self.whose} {self.op}"
+                        f" {'.'.join(map(str, self.version_tuple))}"
+                    )
+        else:
+            if not got_tuple:
+                msg = f"only for {self.whose}"
+            elif not self._match_version(got_tuple):
+                if self.version_tuple:
+                    msg = (
+                        f"only for {self.whose} {self.op}"
+                        f" {'.'.join(map(str, self.version_tuple))}"
+                    )
+                else:
+                    msg = f"only for {self.whose}"
+
+        return msg
+
+    _OP_NAMES = {">=": "ge", "<=": "le", ">": "gt", "<": "lt", "==": "eq"}
+
+    def _match_version(self, got_tuple: Tuple[int, ...]) -> bool:
+        if not self.version_tuple:
+            return True
+
+        version_tuple = self.version_tuple
+        if self.postgres_rule and version_tuple and version_tuple[0] >= 10:
+            assert len(version_tuple) <= 2
+            version_tuple = version_tuple[:1] + (0,) + version_tuple[1:]
+
+        op: Callable[[Tuple[int, ...], Tuple[int, ...]], bool]
+        op = getattr(operator, self._OP_NAMES[self.op])
+        return op(got_tuple, version_tuple)
+
+    def _parse_int_version(self, version: Optional[int]) -> Tuple[int, ...]:
+        if version is None:
+            return ()
+        version, ver_fix = divmod(version, 100)
+        ver_maj, ver_min = divmod(version, 100)
+        return (ver_maj, ver_min, ver_fix)
 
 
 def gc_collect():
