@@ -1,3 +1,4 @@
+import os
 import time
 import socket
 import logging
@@ -57,11 +58,9 @@ class Proxy:
         cdict = conninfo.conninfo_to_dict(server_dsn)
 
         # Get server params
+        host = cdict.get("host") or os.environ.get("PGHOST")
+        self.server_host = host if host and not host.startswith("/") else "localhost"
         self.server_port = cdict.get("port", "5432")
-        if "host" not in cdict or cdict["host"].startswith("/"):
-            self.server_host = "localhost"
-        else:
-            self.server_host = cdict["host"]
 
         # Get client params
         self.client_host = "localhost"
