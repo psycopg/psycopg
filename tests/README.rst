@@ -71,3 +71,17 @@ a set of env vars working for your setup::
 
     # pip install -e ./psycopg[test] ./psycopg_c
     # pytest
+
+
+Testing with CockroachDB
+========================
+
+You can run CRDB in a docker container using::
+
+    docker run -p 26257:26257 --name crdb --rm \
+        cockroachdb/cockroach:v22.1.3 start-single-node --insecure
+
+And use the following connection string to run the tests::
+
+    export PSYCOPG_TEST_DSN="host=localhost port=26257 user=root dbname=defaultdb"
+    pytest ...
