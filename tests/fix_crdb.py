@@ -98,6 +98,7 @@ _crdb_reasons = {
     "copy array": 82792,
     "copy canceled": 81559,
     "copy": 41608,
+    "cursor invalid name": 84261,
     "cursor with hold": 77101,
     "deferrable": 48307,
     "do": 17511,
@@ -124,4 +125,5 @@ _crdb_reasons = {
 _crdb_reason_version = {
     "backend pid": "skip < 22",
     "cancel": "skip < 22",
+    "server-side cursor": "skip < 22.1.3",
 }

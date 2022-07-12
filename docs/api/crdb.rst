@@ -32,6 +32,8 @@ affecting Psycopg behaviour:
   older versions, you can use `CANCEL QUERY`_ instead (but from a different
   connection).
 
+- :ref:`server-side-cursors` are well supported only from CockroachDB 22.1.3.
+
 - `~psycopg.ConnectionInfo.backend_pid` is only populated from CockroachDB
   22.1. Note however that you cannot use the PID to terminate the session; use
   `SHOW session_id`_ to find the id of a session, which you may terminate with
