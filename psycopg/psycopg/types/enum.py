@@ -39,7 +39,7 @@ class _BaseEnumLoader(Loader, Generic[E]):
             enc = conn_encoding(self.connection)
             label = data.decode(enc, "replace")  # type: ignore[union-attr]
             raise e.DataError(
-                f"bad memeber for enum {self.enum.__qualname__}: {label!r}"
+                f"bad member for enum {self.enum.__qualname__}: {label!r}"
             )
 
 

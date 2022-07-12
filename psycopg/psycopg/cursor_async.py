@@ -145,7 +145,7 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
                     first = False
         except e.Error as ex:
             # try to get out of ACTIVE state. Just do a single attempt, which
-            # shoud work to recover from an error or query cancelled.
+            # should work to recover from an error or query cancelled.
             if self._pgconn.transaction_status == pq.TransactionStatus.ACTIVE:
                 try:
                     await self._conn.wait(self._stream_fetchone_gen(first))

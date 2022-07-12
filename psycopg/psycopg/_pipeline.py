@@ -69,7 +69,7 @@ class BasePipeline:
 
     @staticmethod
     def is_supported() -> bool:
-        """Return `!True` if the psycopg libpq wrapper suports pipeline mode."""
+        """Return `!True` if the psycopg libpq wrapper supports pipeline mode."""
         if BasePipeline._is_supported is None:
             # Support only depends on the libpq functions available in the pq
             # wrapper, not on the database version.
@@ -148,7 +148,7 @@ class BasePipeline:
     ) -> None:
         """Process a results set fetched from the current pipeline.
 
-        This matchs 'results' with its respective element in the pipeline
+        This matches 'results' with its respective element in the pipeline
         queue. For commands (None value in the pipeline queue), results are
         checked directly. For prepare statement creation requests, update the
         cache. Otherwise, results are attached to their respective cursor.
@@ -218,7 +218,7 @@ class Pipeline(BasePipeline):
                 self._exit()
             except Exception as exc2:
                 # Notice that this error might be pretty irrecoverable. It
-                # happens on COPY, for insance: even if sync succeeds, exiting
+                # happens on COPY, for instance: even if sync succeeds, exiting
                 # fails with "cannot exit pipeline mode with uncollected results"
                 if exc_val:
                     logger.warning("error ignored exiting %r: %s", self, exc2)
