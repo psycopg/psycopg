@@ -351,11 +351,9 @@ class TestConnectionInfo:
 )
 @pytest.mark.asyncio
 async def test_resolve_hostaddr_async_no_resolve(
-    monkeypatch, conninfo, want, env, fail_resolve
+    setpgenv, conninfo, want, env, fail_resolve
 ):
-    if env:
-        for k, v in env.items():
-            monkeypatch.setenv(k, v)
+    setpgenv(env)
     params = conninfo_to_dict(conninfo)
     params = await resolve_hostaddr_async(params)
     assert conninfo_to_dict(want) == params
@@ -418,10 +416,8 @@ async def test_resolve_hostaddr_async(conninfo, want, env, fake_resolve):
     ],
 )
 @pytest.mark.asyncio
-async def test_resolve_hostaddr_async_bad(monkeypatch, conninfo, env, fake_resolve):
-    if env:
-        for k, v in env.items():
-            monkeypatch.setenv(k, v)
+async def test_resolve_hostaddr_async_bad(setpgenv, conninfo, env, fake_resolve):
+    setpgenv(env)
     params = conninfo_to_dict(conninfo)
     with pytest.raises(psycopg.Error):
         await resolve_hostaddr_async(params)

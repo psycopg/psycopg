@@ -364,7 +364,9 @@ async def test_autocommit_unknown(aconn):
         (("dbname=foo",), {"user": None}, "dbname=foo"),
     ],
 )
-async def test_connect_args(aconn_cls, monkeypatch, pgconn, args, kwargs, want):
+async def test_connect_args(
+    aconn_cls, monkeypatch, setpgenv, pgconn, args, kwargs, want
+):
     the_conninfo: str
 
     def fake_connect(conninfo):
@@ -373,6 +375,7 @@ async def test_connect_args(aconn_cls, monkeypatch, pgconn, args, kwargs, want):
         return pgconn
         yield
 
+    setpgenv({})
     monkeypatch.setattr(psycopg.connection, "connect", fake_connect)
     conn = await aconn_cls.connect(*args, **kwargs)
     assert conninfo_to_dict(the_conninfo) == conninfo_to_dict(want)
@@ -691,7 +694,8 @@ async def test_set_transaction_param_strange(aconn):
 
 
 @pytest.mark.parametrize("dsn, kwargs, exp", conninfo_params_timeout)
-async def test_get_connection_params(aconn_cls, dsn, kwargs, exp):
+async def test_get_connection_params(aconn_cls, dsn, kwargs, exp, setpgenv):
+    setpgenv({})
     params = await aconn_cls._get_connection_params(dsn, **kwargs)
     conninfo = make_conninfo(**params)
     assert conninfo_to_dict(conninfo) == exp[0]
