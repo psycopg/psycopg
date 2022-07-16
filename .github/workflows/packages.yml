@@ -175,7 +175,7 @@ jobs:
           package-dir: psycopg_binary
         env:
           CIBW_BUILD: ${{matrix.pyver}}-macosx_${{matrix.arch}}
-          CIBW_ARCHS_MACOS: x86_64 arm64 universal2
+          CIBW_ARCHS_MACOS: x86_64
           CIBW_BEFORE_ALL_MACOS: ./tools/build/wheel_macos_before_all.sh
           CIBW_TEST_REQUIRES: ./psycopg[test] ./psycopg_pool
           CIBW_TEST_COMMAND: pytest {project}/tests -m 'not slow' --color yes
