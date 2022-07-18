@@ -35,7 +35,9 @@ def setup(app):
 
     import psycopg  # type: ignore
 
-    recover_defined_module(psycopg)
+    recover_defined_module(
+        psycopg, skip_modules=["psycopg._dns", "psycopg.types.shapely"]
+    )
     monkeypatch_autodoc()
 
     # Disable warnings in sphinx_autodoc_typehints because it doesn't seem that
@@ -49,7 +51,7 @@ def setup(app):
 recovered_classes: Dict[type, str] = {}
 
 
-def recover_defined_module(m):
+def recover_defined_module(m, skip_modules=()):
     """
     Find the module where classes with __module__ attribute hacked were defined.
 
@@ -65,6 +67,8 @@ def recover_defined_module(m):
         assert fn.startswith(mdir)
         modname = os.path.splitext(fn[len(mdir) + 1 :])[0].replace("/", ".")
         modname = f"{m.__name__}.{modname}"
+        if modname in skip_modules:
+            continue
         with open(fn) as f:
             classnames = re.findall(r"^class\s+([^(:]+)", f.read(), re.M)
             for cls in classnames:
@@ -93,7 +97,7 @@ def monkeypatch_autodoc():
             return recovered_classes[self.parent]
         return orig_attr_get_real_modname(self)
 
-    def fixed_attr_add_content(self, more_content, no_docstring=False):
+    def fixed_attr_add_content(self, more_content):
         """
         Replace a docstring such as::
 
@@ -115,7 +119,7 @@ def monkeypatch_autodoc():
         which creates a more compact representation of a property.
 
         """
-        orig_attr_add_content(self, more_content, no_docstring)
+        orig_attr_add_content(self, more_content)
         if not isinstance(self.object, property):
             return
         iret, mret = match_in_lines(r"\s*:rtype: (.*)", self.directive.result)
