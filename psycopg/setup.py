@@ -59,9 +59,6 @@ extras_require = {
         "furo == 2021.11.23",
         "sphinx-autobuild >= 2021.3.14",
         "sphinx-autodoc-typehints >= 1.12",
-        # to document optional modules
-        "dnspython >= 2.1",
-        "shapely >= 1.7",
     ],
 }
 
