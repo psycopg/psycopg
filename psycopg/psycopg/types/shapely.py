@@ -52,27 +52,7 @@ class BaseGeometryDumper(Dumper):
 
 
 def register_shapely(info: TypeInfo, context: Optional[AdaptContext] = None) -> None:
-    """Register Shapely dumper and loaders.
-
-    After invoking this function on an adapter, the queries retrieving
-    PostGIS geometry objects will return Shapely's shape object instances
-    both in text and binary mode.
-
-    Similarly, shape objects can be sent to the database.
-
-    This requires the Shapely library to be installed.
-
-    :param info: The object with the information about the geometry type.
-    :param context: The context where to register the adapters. If `!None`,
-        register it globally.
-
-    .. note::
-
-        Registering the adapters doesn't affect objects already created, even
-        if they are children of the registered context. For instance,
-        registering the adapter globally doesn't affect already existing
-        connections.
-    """
+    """Register Shapely dumper and loaders."""
 
     # A friendly error warning instead of an AttributeError in case fetch()
     # failed and it wasn't noticed.
