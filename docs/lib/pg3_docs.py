@@ -93,7 +93,7 @@ def monkeypatch_autodoc():
             return recovered_classes[self.parent]
         return orig_attr_get_real_modname(self)
 
-    def fixed_attr_add_content(self, more_content, no_docstring=False):
+    def fixed_attr_add_content(self, more_content):
         """
         Replace a docstring such as::
 
@@ -115,7 +115,7 @@ def monkeypatch_autodoc():
         which creates a more compact representation of a property.
 
         """
-        orig_attr_add_content(self, more_content, no_docstring)
+        orig_attr_add_content(self, more_content)
         if not isinstance(self.object, property):
             return
         iret, mret = match_in_lines(r"\s*:rtype: (.*)", self.directive.result)
