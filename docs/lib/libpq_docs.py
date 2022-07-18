@@ -13,6 +13,7 @@ will link to::
 
 # Copyright (C) 2020 The Psycopg Team
 
+import os
 import logging
 import urllib.request
 from pathlib import Path
@@ -111,8 +112,15 @@ class LibpqReader:
             parser.feed(f.read())
 
     def download(self):
-        logger.info("downloading postgres libpq docs from %s", self.sgml_url)
-        data = urllib.request.urlopen(self.sgml_url).read()
+        filename = os.environ.get("LIBPQ_DOCS_FILE")
+        if filename:
+            logger.info("reading postgres libpq docs from %s", filename)
+            with open(filename, "rb") as f:
+                data = f.read()
+        else:
+            logger.info("downloading postgres libpq docs from %s", self.sgml_url)
+            data = urllib.request.urlopen(self.sgml_url).read()
+
         with self.local_file.open("wb") as f:
             f.write(data)
 
