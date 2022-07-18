@@ -39,28 +39,6 @@ async_resolver.cache = Cache()
 async def resolve_hostaddr_async(params: Dict[str, Any]) -> Dict[str, Any]:
     """
     Perform async DNS lookup of the hosts and return a new params dict.
-
-    :param params: The input parameters, for instance as returned by
-        `~psycopg.conninfo.conninfo_to_dict()`.
-
-    If a ``host`` param is present but not ``hostname``, resolve the host
-    addresses dynamically.
-
-    The function may change the input ``host``, ``hostname``, ``port`` to allow
-    to connect without further DNS lookups, eventually removing hosts that are
-    not resolved, keeping the lists of hosts and ports consistent.
-
-    Raise `~psycopg.OperationalError` if connection is not possible (e.g. no
-    host resolve, inconsistent lists length).
-
-    See `the PostgreSQL docs`__ for explanation of how these params are used,
-    and how they support multiple entries.
-
-    .. __: https://www.postgresql.org/docs/current/libpq-connect.html
-           #LIBPQ-PARAMKEYWORDS
-
-    .. warning::
-        This function currently doesn't handle the ``/etc/hosts`` file.
     """
     hostaddr_arg = params.get("hostaddr", os.environ.get("PGHOSTADDR", ""))
     if hostaddr_arg:
@@ -146,24 +124,7 @@ async def resolve_hostaddr_async(params: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def resolve_srv(params: Dict[str, Any]) -> Dict[str, Any]:
-    """Apply SRV DNS lookup as defined in :RFC:`2782`.
-
-    :param params: The input parameters, for instance as returned by
-        `~psycopg.conninfo.conninfo_to_dict()`.
-    :return: An updated list of connection parameters.
-
-    For every host defined in the ``params["host"]`` list (comma-separated),
-    perform SRV lookup if the host is in the form ``_Service._Proto.Target``.
-    If lookup is successful, return a params dict with hosts and ports replaced
-    with the looked-up entries.
-
-    Raise `~psycopg.OperationalError` if no lookup is successful and no host
-    (looked up or unchanged) could be returned.
-
-    In addition to the rules defined by RFC 2782 about the host name pattern,
-    perform SRV lookup also if the the port is the string ``SRV`` (case
-    insensitive).
-    """
+    """Apply SRV DNS lookup as defined in :RFC:`2782`."""
     return Rfc2782Resolver().resolve(params)
 
 
