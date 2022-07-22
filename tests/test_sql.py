@@ -209,6 +209,27 @@ class TestSqlFormat:
         cur.execute("select * from test_compose")
         assert cur.fetchall() == [(10, "a", "b", "c"), (20, "d", "e", "f")]
 
+    def test_executemany_betterjoin(self, conn):
+        cur = conn.cursor()
+        cur.execute(
+            """
+            create table test_compose (
+                id serial primary key,
+                foo text, bar text, "ba'z" text)
+            """
+        )
+        cur.executemany(
+            sql.SQL("insert into {0} (id, {1}) values (%s, {2})").format(
+                sql.Identifier("test_compose"),
+                sql.SQL(", ").join(map(sql.Identifier, ["foo", "bar", "ba'z"])),
+                sql.SQL(", ").join([sql.Placeholder()] * 3),
+            ),
+            [(10, "a", "b", "c"), (20, "d", "e", "f")],
+        )
+
+        cur.execute("select * from test_compose")
+        assert cur.fetchall() == [(10, "a", "b", "c"), (20, "d", "e", "f")]
+
     @pytest.mark.crdb_skip("copy")
     def test_copy(self, conn):
         cur = conn.cursor()
@@ -234,6 +255,33 @@ class TestSqlFormat:
             )
         ) as copy:
             assert list(copy) == [b"c\n", b"f\n"]
+
+    def test_format_preserve_params(self, conn):
+        """Using format should preserve the params."""
+        assert sql.SQL("select * from {t} where x = %(a)s", {"a": 1}).format(
+            t=sql.Identifier("t")
+        ).params() == {"a": 1}
+
+    def test_format_combine_params(self, conn):
+        """Using format should combine params."""
+        additional_filters = {"b": 2, "c": 3}
+        assert sql.SQL(
+            "select * from {t} where x = %(a)s and {filters}", {"a": 1}
+        ).format(
+            t=sql.Identifier("t"),
+            filters=sql.SQL(" and ").join(
+                [
+                    sql.SQL(" = ").join(
+                        [sql.Identifier(k), sql.Placeholder(k, value=v)]
+                    )
+                    for k, v in additional_filters
+                ]
+            ),
+        ).params() == {
+            "a": 1,
+            "b": 2,
+            "c": 3,
+        }
 
 
 class TestIdentifier:
@@ -465,6 +513,16 @@ class TestSQL:
 
         assert sql.SQL(eur).as_bytes(conn) == eur.encode(encoding)
 
+    def test_default_params(self, conn):
+        """Params are returned as `None` by default."""
+        assert sql.SQL("select * from mytable").params() is None
+
+    def test_named_params(self, conn):
+        """Accept and return named parameters."""
+        assert sql.SQL(
+            "select * from mytable where id = %(id)s", {"id": 1}
+        ).params() == {"id": 1}
+
 
 class TestComposed:
     def test_class(self):
@@ -535,6 +593,19 @@ class TestComposed:
         conn.execute(f"set client_encoding to {encoding}")
         assert obj.as_bytes(conn) == ("foo" + eur).encode(encoding)
 
+    def test_default_params(self, conn):
+        """Params are returned as `None` by default."""
+        assert sql.Composed(
+            [sql.SQL("foo "), sql.SQL("%(p)s")]
+        ).params() is None
+
+    def test_named_params(self, conn):
+        """Accept and return named parameters."""
+        assert sql.Composed(
+            [sql.SQL("foo "), sql.SQL("%(p)s")],
+            {'p': 5}
+        ).params() == {'p': 5}
+
 
 class TestPlaceholder:
     def test_class(self):
@@ -579,6 +650,67 @@ class TestPlaceholder:
 
         ph = sql.Placeholder(name="foo", format=format)
         assert ph.as_bytes(conn) == f"%(foo){format.value}".encode("ascii")
+
+    def test_default_params(self, conn):
+        """Params are returned as `None` by default."""
+        assert sql.Placeholder('a').params() is None
+
+    def test_named_params(self, conn):
+        """Return named parameters."""
+        assert sql.Placeholder('a', value=7).params() == {'a': 7}
+
+
+class TestParam:
+    def test_class(self):
+        assert issubclass(sql.Param, sql.Composable)
+
+    @pytest.mark.parametrize("format", PyFormat)
+    def test_repr_format(self, conn, format):
+        ph = sql.Param(format=format)
+        add = f"format={format.name}" if format != PyFormat.AUTO else ""
+        assert str(ph) == repr(ph) == f"Param({add})"
+
+    @pytest.mark.parametrize("format", PyFormat)
+    def test_repr_name_format(self, conn, format):
+        ph = sql.Param("foo", format=format)
+        add = f", format={format.name}" if format != PyFormat.AUTO else ""
+        assert str(ph) == repr(ph) == f"Param('foo'{add})"
+
+    def test_bad_name(self):
+        with pytest.raises(ValueError):
+            sql.Param(")")
+
+    def test_eq(self):
+        assert sql.Param("foo") == sql.Param("foo")
+        assert sql.Param("foo") != sql.Param("bar")
+        assert sql.Param("foo") != "foo"
+        assert sql.Param() == sql.Param()
+        assert sql.Param("foo") != sql.Param()
+        assert sql.Param("foo") != sql.Literal("foo")
+
+    @pytest.mark.parametrize("format", PyFormat)
+    def test_as_string(self, conn, format):
+        ph = sql.Param(format=format)
+        assert ph.as_string(conn) == f"%{format.value}"
+
+        ph = sql.Param(name="foo", format=format)
+        assert ph.as_string(conn) == f"%(foo){format.value}"
+
+    @pytest.mark.parametrize("format", PyFormat)
+    def test_as_bytes(self, conn, format):
+        ph = sql.Param(format=format)
+        assert ph.as_bytes(conn) == f"%{format.value}".encode("ascii")
+
+        ph = sql.Param(name="foo", format=format)
+        assert ph.as_bytes(conn) == f"%(foo){format.value}".encode("ascii")
+
+    def test_default_params(self, conn):
+        """Params are returned as `None` by default."""
+        assert sql.Param('a').params() is None
+
+    def test_named_params(self, conn):
+        """Return named parameters."""
+        assert sql.Param('a', 7).params() == {'a': 7}
 
 
 class TestValues:
