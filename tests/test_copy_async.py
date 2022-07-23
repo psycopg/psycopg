@@ -12,6 +12,7 @@ from psycopg import pq
 from psycopg import sql
 from psycopg import errors as e
 from psycopg.pq import Format
+from psycopg.copy import AsyncCopy, AsyncWriter, AsyncLibpqWriter, AsyncQueueWriter
 from psycopg.types import TypeInfo
 from psycopg.adapt import PyFormat
 from psycopg.types.hstore import register_hstore
@@ -466,7 +467,7 @@ async def test_copy_in_format(aconn):
     writer = AsyncBytesWriter()
     await aconn.execute("set client_encoding to utf8")
     cur = aconn.cursor()
-    async with psycopg.copy.AsyncCopy(cur, writer=writer) as copy:
+    async with AsyncCopy(cur, writer=writer) as copy:
         for i in range(1, 256):
             await copy.write_row((i, chr(i)))
 
@@ -618,7 +619,9 @@ async def test_description(aconn):
 async def test_worker_life(aconn, format, buffer):
     cur = aconn.cursor()
     await ensure_table(cur, sample_tabledef)
-    async with cur.copy(f"copy copy_in from stdin (format {format.name})") as copy:
+    async with cur.copy(
+        f"copy copy_in from stdin (format {format.name})", writer=AsyncQueueWriter(cur)
+    ) as copy:
         assert not copy.writer._worker
         await copy.write(globals()[buffer])
         assert copy.writer._worker
@@ -638,7 +641,9 @@ async def test_worker_error_propagated(aconn, monkeypatch):
     cur = aconn.cursor()
     await cur.execute("create temp table wat (a text, b text)")
     with pytest.raises(ZeroDivisionError):
-        async with cur.copy("copy wat from stdin") as copy:
+        async with cur.copy(
+            "copy wat from stdin", writer=AsyncQueueWriter(cur)
+        ) as copy:
             await copy.write("a,b")
 
 
@@ -648,7 +653,7 @@ async def test_worker_error_propagated(aconn, monkeypatch):
 )
 async def test_connection_writer(aconn, format, buffer):
     cur = aconn.cursor()
-    writer = psycopg.copy.AsyncLibpqWriter(cur)
+    writer = AsyncLibpqWriter(cur)
 
     await ensure_table(cur, sample_tabledef)
     async with cur.copy(
@@ -852,7 +857,7 @@ class DataGenerator:
         return m.hexdigest()
 
 
-class AsyncBytesWriter(psycopg.copy.AsyncWriter):
+class AsyncBytesWriter(AsyncWriter):
     def __init__(self):
         self.file = BytesIO()
 

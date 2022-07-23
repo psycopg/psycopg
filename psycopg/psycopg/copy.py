@@ -199,7 +199,7 @@ class Copy(BaseCopy["Connection[Any]"]):
     def __init__(self, cursor: "Cursor[Any]", *, writer: Optional["Writer"] = None):
         super().__init__(cursor)
         if not writer:
-            writer = QueueWriter(cursor)
+            writer = LibpqWriter(cursor)
 
         self.writer = writer
         self._write = writer.write
@@ -429,7 +429,7 @@ class AsyncCopy(BaseCopy["AsyncConnection[Any]"]):
         super().__init__(cursor)
 
         if not writer:
-            writer = AsyncQueueWriter(cursor)
+            writer = AsyncLibpqWriter(cursor)
 
         self.writer = writer
         self._write = writer.write

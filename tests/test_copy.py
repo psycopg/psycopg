@@ -12,6 +12,7 @@ from psycopg import pq
 from psycopg import sql
 from psycopg import errors as e
 from psycopg.pq import Format
+from psycopg.copy import Copy, Writer, LibpqWriter, QueueWriter
 from psycopg.adapt import PyFormat
 from psycopg.types import TypeInfo
 from psycopg.types.hstore import register_hstore
@@ -464,7 +465,7 @@ def test_copy_in_format(conn):
     writer = BytesWriter()
     conn.execute("set client_encoding to utf8")
     cur = conn.cursor()
-    with psycopg.copy.Copy(cur, writer=writer) as copy:
+    with Copy(cur, writer=writer) as copy:
         for i in range(1, 256):
             copy.write_row((i, chr(i)))
 
@@ -616,7 +617,9 @@ def test_description(conn):
 def test_worker_life(conn, format, buffer):
     cur = conn.cursor()
     ensure_table(cur, sample_tabledef)
-    with cur.copy(f"copy copy_in from stdin (format {format.name})") as copy:
+    with cur.copy(
+        f"copy copy_in from stdin (format {format.name})", writer=QueueWriter(cur)
+    ) as copy:
         assert not copy.writer._worker
         copy.write(globals()[buffer])
         assert copy.writer._worker
@@ -635,7 +638,7 @@ def test_worker_error_propagated(conn, monkeypatch):
     cur = conn.cursor()
     cur.execute("create temp table wat (a text, b text)")
     with pytest.raises(ZeroDivisionError):
-        with cur.copy("copy wat from stdin") as copy:
+        with cur.copy("copy wat from stdin", writer=QueueWriter(cur)) as copy:
             copy.write("a,b")
 
 
@@ -645,7 +648,7 @@ def test_worker_error_propagated(conn, monkeypatch):
 )
 def test_connection_writer(conn, format, buffer):
     cur = conn.cursor()
-    writer = psycopg.copy.LibpqWriter(cur)
+    writer = LibpqWriter(cur)
 
     ensure_table(cur, sample_tabledef)
     with cur.copy(
@@ -859,7 +862,7 @@ class DataGenerator:
         return m.hexdigest()
 
 
-class BytesWriter(psycopg.copy.Writer):
+class BytesWriter(Writer):
     def __init__(self):
         self.file = BytesIO()
 
