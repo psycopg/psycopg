@@ -12,7 +12,7 @@ from psycopg import pq
 from psycopg import sql
 from psycopg import errors as e
 from psycopg.pq import Format
-from psycopg.copy import Copy, Writer, LibpqWriter, QueueWriter
+from psycopg.copy import Copy, Writer, LibpqWriter, QueuedLibpqDriver
 from psycopg.adapt import PyFormat
 from psycopg.types import TypeInfo
 from psycopg.types.hstore import register_hstore
@@ -618,7 +618,7 @@ def test_worker_life(conn, format, buffer):
     cur = conn.cursor()
     ensure_table(cur, sample_tabledef)
     with cur.copy(
-        f"copy copy_in from stdin (format {format.name})", writer=QueueWriter(cur)
+        f"copy copy_in from stdin (format {format.name})", writer=QueuedLibpqDriver(cur)
     ) as copy:
         assert not copy.writer._worker
         copy.write(globals()[buffer])
@@ -638,7 +638,7 @@ def test_worker_error_propagated(conn, monkeypatch):
     cur = conn.cursor()
     cur.execute("create temp table wat (a text, b text)")
     with pytest.raises(ZeroDivisionError):
-        with cur.copy("copy wat from stdin", writer=QueueWriter(cur)) as copy:
+        with cur.copy("copy wat from stdin", writer=QueuedLibpqDriver(cur)) as copy:
             copy.write("a,b")
 
 

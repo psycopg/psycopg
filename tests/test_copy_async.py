@@ -12,7 +12,8 @@ from psycopg import pq
 from psycopg import sql
 from psycopg import errors as e
 from psycopg.pq import Format
-from psycopg.copy import AsyncCopy, AsyncWriter, AsyncLibpqWriter, AsyncQueueWriter
+from psycopg.copy import AsyncCopy
+from psycopg.copy import AsyncWriter, AsyncLibpqWriter, AsyncQueuedLibpqWriter
 from psycopg.types import TypeInfo
 from psycopg.adapt import PyFormat
 from psycopg.types.hstore import register_hstore
@@ -620,7 +621,8 @@ async def test_worker_life(aconn, format, buffer):
     cur = aconn.cursor()
     await ensure_table(cur, sample_tabledef)
     async with cur.copy(
-        f"copy copy_in from stdin (format {format.name})", writer=AsyncQueueWriter(cur)
+        f"copy copy_in from stdin (format {format.name})",
+        writer=AsyncQueuedLibpqWriter(cur),
     ) as copy:
         assert not copy.writer._worker
         await copy.write(globals()[buffer])
@@ -642,7 +644,7 @@ async def test_worker_error_propagated(aconn, monkeypatch):
     await cur.execute("create temp table wat (a text, b text)")
     with pytest.raises(ZeroDivisionError):
         async with cur.copy(
-            "copy wat from stdin", writer=AsyncQueueWriter(cur)
+            "copy wat from stdin", writer=AsyncQueuedLibpqWriter(cur)
         ) as copy:
             await copy.write("a,b")
 

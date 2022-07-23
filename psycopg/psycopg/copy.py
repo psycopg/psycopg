@@ -347,7 +347,7 @@ class LibpqWriter(Writer):
         self.cursor._rowcount = nrows if nrows is not None else -1
 
 
-class QueueWriter(LibpqWriter):
+class QueuedLibpqDriver(LibpqWriter):
     """
     A writer using a buffer to queue data to write to a Postgres database.
 
@@ -542,7 +542,7 @@ class AsyncLibpqWriter(AsyncWriter):
         self.cursor._rowcount = nrows if nrows is not None else -1
 
 
-class AsyncQueueWriter(AsyncLibpqWriter):
+class AsyncQueuedLibpqWriter(AsyncLibpqWriter):
     """
     An `AsyncWriter` using a buffer to queue data to write.
 
