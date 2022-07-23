@@ -61,17 +61,17 @@ QUEUE_SIZE = 1024
 
 class BaseCopy(Generic[ConnectionType]):
     """
-    Base implementation for copy user interface
+    Base implementation for the copy user interface.
 
     Two subclasses expose real methods with the sync/async differences.
 
     The difference between the text and binary format is managed by two
     different `Formatter` subclasses.
 
-    While the interface doesn't dictate it, both subclasses are implemented
-    with a worker to perform I/O related work, consuming the data provided in
-    the correct format from a queue, while the main thread is concerned with
-    formatting the data in copy format and adding it to the queue.
+    Writing (the I/O part) is implemented in the subclasses by a `Writer` or
+    `AsyncWriter` instance. Normally writing implies sending copy data to a
+    database, but a different writer might be chosen, e.g. to stream data into
+    a file for later use.
     """
 
     _Self = TypeVar("_Self", bound="BaseCopy[ConnectionType]")
@@ -312,6 +312,10 @@ class Writer(ABC):
 
 
 class LibpqWriter(Writer):
+    """
+    A `Writer` to write copy data to a Postgres database.
+    """
+
     def __init__(self, cursor: "Cursor[Any]"):
         self.cursor = cursor
         self.connection = cursor.connection
@@ -345,7 +349,7 @@ class LibpqWriter(Writer):
 
 class QueueWriter(LibpqWriter):
     """
-    A writer using a buffer to queue data to write.
+    A writer using a buffer to queue data to write to a Postgres database.
 
     `write()` returns immediately, so that the main thread can be CPU-bound
     formatting messages, while a worker thread can be IO-bound waiting to write
@@ -503,6 +507,10 @@ class AsyncWriter(ABC):
 
 
 class AsyncLibpqWriter(AsyncWriter):
+    """
+    An `AsyncWriter` to write copy data to a Postgres database.
+    """
+
     def __init__(self, cursor: "AsyncCursor[Any]"):
         self.cursor = cursor
         self.connection = cursor.connection
@@ -536,7 +544,7 @@ class AsyncLibpqWriter(AsyncWriter):
 
 class AsyncQueueWriter(AsyncLibpqWriter):
     """
-    A writer using a buffer to queue data to write.
+    An `AsyncWriter` using a buffer to queue data to write.
 
     `write()` returns immediately, so that the main thread can be CPU-bound
     formatting messages, while a worker thread can be IO-bound waiting to write
