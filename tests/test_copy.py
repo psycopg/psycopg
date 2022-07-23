@@ -12,7 +12,7 @@ from psycopg import pq
 from psycopg import sql
 from psycopg import errors as e
 from psycopg.pq import Format
-from psycopg.copy import Copy, Writer, LibpqWriter, QueuedLibpqDriver
+from psycopg.copy import Copy, LibpqWriter, QueuedLibpqDriver, FileWriter
 from psycopg.adapt import PyFormat
 from psycopg.types import TypeInfo
 from psycopg.types.hstore import register_hstore
@@ -462,15 +462,15 @@ from copy_in group by 1, 2, 3
 
 
 def test_copy_in_format(conn):
-    writer = BytesWriter()
+    file = BytesIO()
     conn.execute("set client_encoding to utf8")
     cur = conn.cursor()
-    with Copy(cur, writer=writer) as copy:
+    with Copy(cur, writer=FileWriter(file)) as copy:
         for i in range(1, 256):
             copy.write_row((i, chr(i)))
 
-    writer.file.seek(0)
-    rows = writer.file.read().split(b"\n")
+    file.seek(0)
+    rows = file.read().split(b"\n")
     assert not rows[-1]
     del rows[-1]
 
@@ -860,11 +860,3 @@ class DataGenerator:
                 block = block.encode()
             m.update(block)
         return m.hexdigest()
-
-
-class BytesWriter(Writer):
-    def __init__(self):
-        self.file = BytesIO()
-
-    def write(self, data):
-        self.file.write(data)
