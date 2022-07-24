@@ -190,8 +190,7 @@ async def test_copy_out_badntypes(aconn, format, err):
 
 
 @pytest.mark.parametrize(
-    "format, buffer",
-    [(Format.TEXT, "sample_text"), (Format.BINARY, "sample_binary")],
+    "format, buffer", [(Format.TEXT, "sample_text"), (Format.BINARY, "sample_binary")]
 )
 async def test_copy_in_buffers(aconn, format, buffer):
     cur = aconn.cursor()
@@ -465,15 +464,15 @@ from copy_in group by 1, 2, 3
 
 
 async def test_copy_in_format(aconn):
-    writer = AsyncBytesWriter()
+    file = BytesIO()
     await aconn.execute("set client_encoding to utf8")
     cur = aconn.cursor()
-    async with AsyncCopy(cur, writer=writer) as copy:
+    async with AsyncCopy(cur, writer=AsyncFileWriter(file)) as copy:
         for i in range(1, 256):
             await copy.write_row((i, chr(i)))
 
-    writer.file.seek(0)
-    rows = writer.file.read().split(b"\n")
+    file.seek(0)
+    rows = file.read().split(b"\n")
     assert not rows[-1]
     del rows[-1]
 
@@ -485,6 +484,23 @@ async def test_copy_in_format(aconn):
             assert fields[1].decode() == f"\\{special_chars[i]}"
         else:
             assert fields[1].decode() == chr(i)
+
+
+@pytest.mark.parametrize(
+    "format, buffer", [(Format.TEXT, "sample_text"), (Format.BINARY, "sample_binary")]
+)
+async def test_file_writer(aconn, format, buffer):
+    file = BytesIO()
+    await aconn.execute("set client_encoding to utf8")
+    cur = aconn.cursor()
+    async with AsyncCopy(cur, binary=format, writer=AsyncFileWriter(file)) as copy:
+        for record in sample_records:
+            await copy.write_row(record)
+
+    file.seek(0)
+    want = globals()[buffer]
+    got = file.read()
+    assert got == want
 
 
 @pytest.mark.slow
@@ -614,8 +630,7 @@ async def test_description(aconn):
 
 
 @pytest.mark.parametrize(
-    "format, buffer",
-    [(Format.TEXT, "sample_text"), (Format.BINARY, "sample_binary")],
+    "format, buffer", [(Format.TEXT, "sample_text"), (Format.BINARY, "sample_binary")]
 )
 async def test_worker_life(aconn, format, buffer):
     cur = aconn.cursor()
@@ -650,8 +665,7 @@ async def test_worker_error_propagated(aconn, monkeypatch):
 
 
 @pytest.mark.parametrize(
-    "format, buffer",
-    [(Format.TEXT, "sample_text"), (Format.BINARY, "sample_binary")],
+    "format, buffer", [(Format.TEXT, "sample_text"), (Format.BINARY, "sample_binary")]
 )
 async def test_connection_writer(aconn, format, buffer):
     cur = aconn.cursor()
@@ -859,9 +873,9 @@ class DataGenerator:
         return m.hexdigest()
 
 
-class AsyncBytesWriter(AsyncWriter):
-    def __init__(self):
-        self.file = BytesIO()
+class AsyncFileWriter(AsyncWriter):
+    def __init__(self, file):
+        self.file = file
 
     async def write(self, data):
         self.file.write(data)

@@ -78,7 +78,12 @@ class BaseCopy(Generic[ConnectionType]):
 
     formatter: "Formatter"
 
-    def __init__(self, cursor: "BaseCursor[ConnectionType, Any]"):
+    def __init__(
+        self,
+        cursor: "BaseCursor[ConnectionType, Any]",
+        *,
+        binary: Optional[bool] = None,
+    ):
         self.cursor = cursor
         self.connection = cursor.connection
         self._pgconn = self.connection.pgconn
@@ -94,8 +99,11 @@ class BaseCopy(Generic[ConnectionType]):
         else:
             self._direction = COPY_IN
 
+        if binary is None:
+            binary = bool(result and result.binary_tuples)
+
         tx: Transformer = getattr(cursor, "_tx", None) or adapt.Transformer(cursor)
-        if result and result.binary_tuples:
+        if binary:
             self.formatter = BinaryFormatter(tx)
         else:
             self.formatter = TextFormatter(tx, encoding=pgconn_encoding(self._pgconn))
@@ -196,8 +204,14 @@ class Copy(BaseCopy["Connection[Any]"]):
 
     writer: "Writer"
 
-    def __init__(self, cursor: "Cursor[Any]", *, writer: Optional["Writer"] = None):
-        super().__init__(cursor)
+    def __init__(
+        self,
+        cursor: "Cursor[Any]",
+        *,
+        binary: Optional[bool] = None,
+        writer: Optional["Writer"] = None,
+    ):
+        super().__init__(cursor, binary=binary)
         if not writer:
             writer = LibpqWriter(cursor)
 
@@ -438,9 +452,13 @@ class AsyncCopy(BaseCopy["AsyncConnection[Any]"]):
     writer: "AsyncWriter"
 
     def __init__(
-        self, cursor: "AsyncCursor[Any]", *, writer: Optional["AsyncWriter"] = None
+        self,
+        cursor: "AsyncCursor[Any]",
+        *,
+        binary: Optional[bool] = None,
+        writer: Optional["AsyncWriter"] = None,
     ):
-        super().__init__(cursor)
+        super().__init__(cursor, binary=binary)
 
         if not writer:
             writer = AsyncLibpqWriter(cursor)
