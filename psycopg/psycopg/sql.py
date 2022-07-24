@@ -56,11 +56,15 @@ class Composable(ABC):
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self._obj!r})"
 
-    def params(self) -> Optional[Dict[str, Any]]:
+    def params(
+        self, params: Optional[Dict[str, Any]] = None, /
+    ) -> Optional[Dict[str, Any]]:
         """
         Return the parameters attached to this composable.
+
+        :param params: Parameters that should augment the gathered parameters.
         """
-        return None
+        return params
 
     @abstractmethod
     def as_bytes(self, context: Optional[AdaptContext]) -> bytes:
@@ -139,8 +143,10 @@ class Composed(Composable):
         super().__init__(seq)
         self._params = params and dict(params)
 
-    def params(self) -> Optional[Dict[str, Any]]:
-        gathered = [self._params] + [c.params() for c in self._obj]
+    def params(
+        self, params: Optional[Dict[str, Any]] = None, /
+    ) -> Optional[Dict[str, Any]]:
+        gathered = [params, self._params] + [c.params() for c in self._obj]
         filtered = [params for params in gathered if params]
 
         # Raise an error if there are duplicate parameter names
@@ -224,8 +230,21 @@ class SQL(Composable):
             raise TypeError(f"SQL values must be strings, got {obj!r} instead")
         self._params = params and dict(params)
 
-    def params(self) -> Optional[Dict[str, Any]]:
-        return self._params
+    def params(
+        self, params: Optional[Dict[str, Any]] = None, /
+    ) -> Optional[Dict[str, Any]]:
+        gathered = [params, self._params]
+        filtered = [params for params in gathered if params]
+
+        # Raise an error if there are duplicate parameter names
+        counter = collections.Counter()
+        for d in filtered:
+            for k in d:
+                counter[k] += 1
+        if any(v > 1 for v in counter.values()):
+            raise ValueError("duplicate parameter names")
+
+        return {k: v for d in filtered for k, v in d.items() if d}
 
     def as_string(self, context: Optional[AdaptContext]) -> str:
         return self._obj
@@ -488,11 +507,25 @@ class Placeholder(Composable):
 
         return f"{self.__class__.__name__}({', '.join(parts)})"
 
-    def params(self) -> Optional[Dict[str, Any]]:
+    def params(
+        self, params: Optional[Dict[str, Any]] = None, /
+    ) -> Optional[Dict[str, Any]]:
         if not self._obj:
             raise ValueError("Only named placeholders are supported.")
-        if self._value is not _MISSING:
-            return {self._obj: self._value}
+        if self._value is _MISSING:
+            return params
+        gathered = [params, {self._obj: self._value}]
+        filtered = [params for params in gathered if params]
+
+        # Raise an error if there are duplicate parameter names
+        counter = collections.Counter()
+        for d in filtered:
+            for k in d:
+                counter[k] += 1
+        if any(v > 1 for v in counter.values()):
+            raise ValueError("duplicate parameter names")
+
+        return {k: v for d in filtered for k, v in d.items() if d}
 
     def as_string(self, context: Optional[AdaptContext]) -> str:
         code = self._format.value

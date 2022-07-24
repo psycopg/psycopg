@@ -517,11 +517,21 @@ class TestSQL:
         """Params are returned as `None` by default."""
         assert sql.SQL("select * from mytable").params() is None
 
+    def test_passthrough_params(self, conn):
+        """Params are returned as-is by default."""
+        assert sql.SQL("select * from mytable").params({"x": 1}) == {"x": 1}
+
     def test_named_params(self, conn):
         """Accept and return named parameters."""
         assert sql.SQL(
             "select * from mytable where id = %(id)s", {"id": 1}
         ).params() == {"id": 1}
+
+    def test_combined_params(self, conn):
+        """Passed in params are combined with gathered params."""
+        assert sql.SQL(
+            "select * from mytable where id = %(id)s and crow = %(crow)s", {"id": 1}
+        ).params({"crow": 2}) == {"id": 1, "crow": 2}
 
 
 class TestComposed:
@@ -595,16 +605,25 @@ class TestComposed:
 
     def test_default_params(self, conn):
         """Params are returned as `None` by default."""
-        assert sql.Composed(
-            [sql.SQL("foo "), sql.SQL("%(p)s")]
-        ).params() is None
+        assert sql.Composed([sql.SQL("foo "), sql.SQL("%(p)s")]).params() is None
+
+    def test_passthrough_params(self, conn):
+        """Params are returned as-is by default."""
+        assert sql.Composed([sql.SQL("foo "), sql.SQL("%(p)s")]).params({"p": 5}) == {
+            "x": 1
+        }
 
     def test_named_params(self, conn):
         """Accept and return named parameters."""
-        assert sql.Composed(
-            [sql.SQL("foo "), sql.SQL("%(p)s")],
-            {'p': 5}
-        ).params() == {'p': 5}
+        assert sql.Composed([sql.SQL("foo "), sql.SQL("%(p)s")], {"p": 5}).params() == {
+            "p": 5
+        }
+
+    def test_combined_params(self, conn):
+        """Passed in params are combined with gathered params."""
+        assert sql.SQL(
+            [sql.SQL("foo "), sql.SQL("%(p)s "), sql.SQL("%(p)s ")], {"p": 5}
+        ).params({"crow": 2}) == {"id": 1, "crow": 2}
 
 
 class TestPlaceholder:
@@ -653,11 +672,15 @@ class TestPlaceholder:
 
     def test_default_params(self, conn):
         """Params are returned as `None` by default."""
-        assert sql.Placeholder('a').params() is None
+        assert sql.Placeholder("a").params() is None
+
+    def test_passthrough_params(self, conn):
+        """Params are returned as-is by default."""
+        assert sql.Placeholder("a").params({"a": 5}) == {"a": 5}
 
     def test_named_params(self, conn):
         """Return named parameters."""
-        assert sql.Placeholder('a', value=7).params() == {'a': 7}
+        assert sql.Placeholder("a", value=7).params() == {"a": 7}
 
 
 class TestParam:
@@ -706,11 +729,15 @@ class TestParam:
 
     def test_default_params(self, conn):
         """Params are returned as `None` by default."""
-        assert sql.Param('a').params() is None
+        assert sql.Param("a").params() is None
+
+    def test_passthrough_params(self, conn):
+        """Params are returned as-is by default."""
+        assert sql.Param("a").params({"a": 5}) == {"a": 5}
 
     def test_named_params(self, conn):
         """Return named parameters."""
-        assert sql.Param('a', 7).params() == {'a': 7}
+        assert sql.Param("a", 7).params() == {"a": 7}
 
 
 class TestValues:
