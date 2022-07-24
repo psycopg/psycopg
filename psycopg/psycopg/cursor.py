@@ -168,7 +168,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
         methods `!fetch*()` will operate on.
         """
         if self._iresult < len(self._results) - 1:
-            self._set_current_result(self._iresult + 1)
+            self._select_current_result(self._iresult + 1)
             return True
         else:
             return None
@@ -214,7 +214,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
             assert results is not None
             self._check_results(results)
             self._results = results
-            self._set_current_result(0)
+            self._select_current_result(0)
 
         self._last_query = query
 
@@ -283,7 +283,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
                 nrows += res.command_tuples or 0
 
         if self._results:
-            self._set_current_result(0)
+            self._select_current_result(0)
 
         # Override rowcount for the first result. Calls to nextset() will change
         # it to the value of that result only, but we hope nobody will notice.
@@ -515,7 +515,9 @@ class BaseCursor(Generic[ConnectionType, Row]):
                 "unexpected result status from query:" f" {pq.ExecStatus(status).name}"
             )
 
-    def _set_current_result(self, i: int, format: Optional[pq.Format] = None) -> None:
+    def _select_current_result(
+        self, i: int, format: Optional[pq.Format] = None
+    ) -> None:
         """
         Select one of the results in the cursor as the active one.
         """
@@ -540,14 +542,14 @@ class BaseCursor(Generic[ConnectionType, Row]):
             # Received from execute()
             self._results.extend(results)
             if first_batch:
-                self._set_current_result(0)
+                self._select_current_result(0)
 
         else:
             # Received from executemany()
             if self._execmany_returning:
                 self._results.extend(results)
                 if first_batch:
-                    self._set_current_result(0)
+                    self._select_current_result(0)
                     self._rowcount = 0
 
             # Override rowcount for the first result. Calls to nextset() will
