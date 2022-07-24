@@ -425,10 +425,9 @@ class BaseCursor(Generic[ConnectionType, Row]):
         if len(results) != 1:
             raise e.ProgrammingError("COPY cannot be mixed with other operations")
 
-        result = results[0]
-        self._check_copy_result(result)
-        self.pgresult = result
-        self._tx.set_pgresult(result)
+        self._check_copy_result(results[0])
+        self._results = results
+        self._select_current_result(0)
 
     def _execute_send(
         self,
@@ -529,10 +528,16 @@ class BaseCursor(Generic[ConnectionType, Row]):
         # only returns a text result.
         self._tx.set_pgresult(res, format=format)
 
-        self._make_row = self._make_row_maker()
         self._pos = 0
-        nrows = self.pgresult.command_tuples
-        self._rowcount = nrows if nrows is not None else -1
+
+        # COPY_OUT has never info about nrows. We need such result for the
+        # columns in order to return a `description`, but not overwrite the
+        # cursor rowcount (which was set by the Copy object).
+        if res.status != COPY_OUT:
+            nrows = self.pgresult.command_tuples
+            self._rowcount = nrows if nrows is not None else -1
+
+        self._make_row = self._make_row_maker()
 
     def _set_results_from_pipeline(self, results: List["PGresult"]) -> None:
         self._check_results(results)
@@ -895,6 +900,10 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
                 yield copy
         except e.Error as ex:
             raise ex.with_traceback(None)
+
+        # If a fresher result has been set on the cursor by the Copy object,
+        # read its properties (especially rowcount).
+        self._select_current_result(0)
 
     def _fetch_pipeline(self) -> None:
         if (

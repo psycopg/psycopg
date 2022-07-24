@@ -158,6 +158,11 @@ class BaseCopy(Generic[ConnectionType]):
 
         # res is the final PGresult
         self._finished = True
+
+        # This result is a COMMAND_OK which has info about the number of rows
+        # returned, but not about the columns, which is instead an information
+        # that was received on the COPY_OUT result at the beginning of COPY.
+        # So, don't replace the results in the cursor, just update the rowcount.
         nrows = res.command_tuples
         self.cursor._rowcount = nrows if nrows is not None else -1
         return memoryview(b"")
@@ -357,8 +362,7 @@ class LibpqWriter(Writer):
             bmsg = None
 
         res = self.connection.wait(copy_end(self._pgconn, bmsg))
-        nrows = res.command_tuples
-        self.cursor._rowcount = nrows if nrows is not None else -1
+        self.cursor._results = [res]
 
 
 class QueuedLibpqDriver(LibpqWriter):
@@ -570,8 +574,7 @@ class AsyncLibpqWriter(AsyncWriter):
             bmsg = None
 
         res = await self.connection.wait(copy_end(self._pgconn, bmsg))
-        nrows = res.command_tuples
-        self.cursor._rowcount = nrows if nrows is not None else -1
+        self.cursor._results = [res]
 
 
 class AsyncQueuedLibpqWriter(AsyncLibpqWriter):

@@ -222,6 +222,8 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
         except e.Error as ex:
             raise ex.with_traceback(None)
 
+        self._select_current_result(0)
+
     async def _fetch_pipeline(self) -> None:
         if (
             self._execmany_returning is not False
