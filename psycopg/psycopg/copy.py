@@ -203,7 +203,20 @@ class BaseCopy(Generic[ConnectionType]):
 
 
 class Copy(BaseCopy["Connection[Any]"]):
-    """Manage a :sql:`COPY` operation."""
+    """Manage a :sql:`COPY` operation.
+
+    :param cursor: the cursor where the operation is performed.
+    :param binary: if `!True`, write binary format.
+    :param writer: the object to write to destination. If not specified, write
+        to the `!cursor` connection.
+
+    Choosing `!binary` is not necessary if the cursor has executed a
+    :sql:`COPY` operation, because the operation result describes the format
+    too. The parameter is useful when a `!Copy` object is created manually and
+    no operation is performed on the cursor, such as when using ``writer=``\\
+    `~psycopg.copy.FileWriter`.
+
+    """
 
     __module__ = "psycopg"
 
@@ -326,6 +339,8 @@ class Writer(ABC):
     def finish(self, exc: Optional[BaseException] = None) -> None:
         """
         Called when write operations are finished.
+
+        If operations finished with an error, it will be passed to ``exc``.
         """
         pass
 
@@ -438,7 +453,8 @@ class FileWriter(Writer):
     """
     A `Writer` to write copy data to a file-like object.
 
-    The file must be open for writing in binary mode.
+    :param file: the file where to write copy data. It muse be open for writing
+        in binary mode.
     """
 
     def __init__(self, file: IO[bytes]):
@@ -525,20 +541,14 @@ class AsyncCopy(BaseCopy["AsyncConnection[Any]"]):
 
 class AsyncWriter(ABC):
     """
-    A class to write copy data somewhere.
+    A class to write copy data somewhere (for async connections).
     """
 
     @abstractmethod
     async def write(self, data: Buffer) -> None:
-        """
-        Write some data to destination.
-        """
         ...
 
     async def finish(self, exc: Optional[BaseException] = None) -> None:
-        """
-        Called when write operations are finished.
-        """
         pass
 
 

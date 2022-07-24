@@ -14,6 +14,7 @@ This sections is a reference for all the public objects exposed by the
     module
     connections
     cursors
+    copy
     objects
     sql
     rows
