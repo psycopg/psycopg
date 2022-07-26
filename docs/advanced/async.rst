@@ -255,11 +255,11 @@ If you run some :sql:`NOTIFY` in a :program:`psql` session:
 
 .. code:: psql
 
-    =# notify mychan, 'hello';
+    =# NOTIFY mychan, 'hello';
     NOTIFY
-    =# notify mychan, 'hey';
+    =# NOTIFY mychan, 'hey';
     NOTIFY
-    =# notify mychan, 'stop';
+    =# NOTIFY mychan, 'stop';
     NOTIFY
 
 You may get output from the Python process such as::
@@ -280,7 +280,7 @@ received immediately, but only during a connection operation, such as a query.
     conn.add_notify_handler(lambda n: print(f"got this: {n}"))
 
     # meanwhile in psql...
-    # =# notify mychan, 'hey';
+    # =# NOTIFY mychan, 'hey';
     # NOTIFY
 
     print(conn.execute("SELECT 1").fetchone())
