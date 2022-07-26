@@ -28,17 +28,20 @@ here and there.
             async for record in acur:
                 print(record)
 
+.. versionchanged:: 3.1
 
-.. warning::
+    `AsyncConnection.connect()` performs DNS name resolution in a non-blocking
+    way.
 
-    `AsyncConnection.connect()` may still block on DNS name resolution.
-    To avoid that you should `set the hostaddr connection parameter`__.
+    .. warning::
 
-    The `~psycopg._dns.resolve_hostaddr_async()` is an experimental solution
-    to help to do that. Feedback about the feature is welcome!
+        Before version 3.1, `AsyncConnection.connect()` may still block on DNS
+        name resolution. To avoid that you should `set the hostaddr connection
+        parameter`__, or use the `~psycopg._dns.resolve_hostaddr_async()` to
+        do it automatically.
 
-    .. __: https://www.postgresql.org/docs/current/libpq-connect.html
-           #LIBPQ-PARAMKEYWORDS
+        .. __: https://www.postgresql.org/docs/current/libpq-connect.html
+               #LIBPQ-PARAMKEYWORDS
 
 .. warning::
 
