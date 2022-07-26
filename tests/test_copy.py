@@ -1,5 +1,6 @@
 import gc
 import string
+import struct
 import hashlib
 from io import BytesIO, StringIO
 from random import choice, randrange
@@ -12,6 +13,7 @@ from psycopg import pq
 from psycopg import sql
 from psycopg import errors as e
 from psycopg.pq import Format
+from psycopg.copy import Copy, LibpqWriter, QueuedLibpqDriver, FileWriter
 from psycopg.adapt import PyFormat
 from psycopg.types import TypeInfo
 from psycopg.types.hstore import register_hstore
@@ -21,21 +23,21 @@ from .utils import eur, gc_collect
 
 pytestmark = pytest.mark.crdb_skip("copy")
 
-sample_records = [(10, 20, "hello"), (40, None, "world")]
-sample_values = "values (10::int, 20::int, 'hello'::text), (40, NULL, 'world')"
+sample_records = [(40010, 40020, "hello"), (40040, None, "world")]
+sample_values = "values (40010::int, 40020::int, 'hello'::text), (40040, NULL, 'world')"
 sample_tabledef = "col1 serial primary key, col2 int, data text"
 
 sample_text = b"""\
-10\t20\thello
-40\t\\N\tworld
+40010\t40020\thello
+40040\t\\N\tworld
 """
 
 sample_binary_str = """
 5047 434f 5059 0aff 0d0a 00
 00 0000 0000 0000 00
-00 0300 0000 0400 0000 0a00 0000 0400 0000 1400 0000 0568 656c 6c6f
+00 0300 0000 0400 009c 4a00 0000 0400 009c 5400 0000 0568 656c 6c6f
 
-0003 0000 0004 0000 0028 ffff ffff 0000 0005 776f 726c 64
+0003 0000 0004 0000 9c68 ffff ffff 0000 0005 776f 726c 64
 
 ff ff
 """
@@ -43,8 +45,9 @@ ff ff
 sample_binary_rows = [
     bytes.fromhex("".join(row.split())) for row in sample_binary_str.split("\n\n")
 ]
-
 sample_binary = b"".join(sample_binary_rows)
+
+special_chars = {8: "b", 9: "t", 10: "n", 11: "v", 12: "f", 13: "r", ord("\\"): "\\"}
 
 
 @pytest.mark.parametrize("format", Format)
@@ -458,6 +461,46 @@ from copy_in group by 1, 2, 3
     assert data == [(True, True, 1, 256)]
 
 
+def test_copy_in_format(conn):
+    file = BytesIO()
+    conn.execute("set client_encoding to utf8")
+    cur = conn.cursor()
+    with Copy(cur, writer=FileWriter(file)) as copy:
+        for i in range(1, 256):
+            copy.write_row((i, chr(i)))
+
+    file.seek(0)
+    rows = file.read().split(b"\n")
+    assert not rows[-1]
+    del rows[-1]
+
+    for i, row in enumerate(rows, start=1):
+        fields = row.split(b"\t")
+        assert len(fields) == 2
+        assert int(fields[0].decode()) == i
+        if i in special_chars:
+            assert fields[1].decode() == f"\\{special_chars[i]}"
+        else:
+            assert fields[1].decode() == chr(i)
+
+
+@pytest.mark.parametrize(
+    "format, buffer", [(Format.TEXT, "sample_text"), (Format.BINARY, "sample_binary")]
+)
+def test_file_writer(conn, format, buffer):
+    file = BytesIO()
+    conn.execute("set client_encoding to utf8")
+    cur = conn.cursor()
+    with Copy(cur, binary=format, writer=FileWriter(file)) as copy:
+        for record in sample_records:
+            copy.write_row(record)
+
+    file.seek(0)
+    want = globals()[buffer]
+    got = file.read()
+    assert got == want
+
+
 @pytest.mark.slow
 def test_copy_from_to(conn):
     # Roundtrip from file to database to file blockwise
@@ -585,18 +628,19 @@ def test_description(conn):
 
 
 @pytest.mark.parametrize(
-    "format, buffer",
-    [(Format.TEXT, "sample_text"), (Format.BINARY, "sample_binary")],
+    "format, buffer", [(Format.TEXT, "sample_text"), (Format.BINARY, "sample_binary")]
 )
 def test_worker_life(conn, format, buffer):
     cur = conn.cursor()
     ensure_table(cur, sample_tabledef)
-    with cur.copy(f"copy copy_in from stdin (format {format.name})") as copy:
-        assert not copy._worker
+    with cur.copy(
+        f"copy copy_in from stdin (format {format.name})", writer=QueuedLibpqDriver(cur)
+    ) as copy:
+        assert not copy.writer._worker
         copy.write(globals()[buffer])
-        assert copy._worker
+        assert copy.writer._worker
 
-    assert not copy._worker
+    assert not copy.writer._worker
     data = cur.execute("select * from copy_in order by 1").fetchall()
     assert data == sample_records
 
@@ -610,8 +654,26 @@ def test_worker_error_propagated(conn, monkeypatch):
     cur = conn.cursor()
     cur.execute("create temp table wat (a text, b text)")
     with pytest.raises(ZeroDivisionError):
-        with cur.copy("copy wat from stdin") as copy:
+        with cur.copy("copy wat from stdin", writer=QueuedLibpqDriver(cur)) as copy:
             copy.write("a,b")
+
+
+@pytest.mark.parametrize(
+    "format, buffer", [(Format.TEXT, "sample_text"), (Format.BINARY, "sample_binary")]
+)
+def test_connection_writer(conn, format, buffer):
+    cur = conn.cursor()
+    writer = LibpqWriter(cur)
+
+    ensure_table(cur, sample_tabledef)
+    with cur.copy(
+        f"copy copy_in from stdin (format {format.name})", writer=writer
+    ) as copy:
+        assert copy.writer is writer
+        copy.write(globals()[buffer])
+
+    data = cur.execute("select * from copy_in order by 1").fetchall()
+    assert data == sample_records
 
 
 @pytest.mark.slow
@@ -751,7 +813,8 @@ def py_to_raw(item, fmt):
             return str(item)
     else:
         if isinstance(item, int):
-            return bytes([0, 0, 0, item])
+            # Assume int4
+            return struct.pack("!i", item)
         elif isinstance(item, str):
             return item.encode()
     return item

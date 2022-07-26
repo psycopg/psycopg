@@ -12,7 +12,7 @@ from contextlib import asynccontextmanager
 from . import pq
 from . import errors as e
 from .abc import Query, Params
-from .copy import AsyncCopy
+from .copy import AsyncCopy, AsyncWriter as AsyncCopyWriter
 from .rows import Row, RowMaker, AsyncRowFactory
 from .cursor import BaseCursor
 from ._pipeline import Pipeline
@@ -204,7 +204,11 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
 
     @asynccontextmanager
     async def copy(
-        self, statement: Query, params: Optional[Params] = None
+        self,
+        statement: Query,
+        params: Optional[Params] = None,
+        *,
+        writer: Optional[AsyncCopyWriter] = None,
     ) -> AsyncIterator[AsyncCopy]:
         """
         :rtype: AsyncCopy
@@ -213,10 +217,12 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
             async with self._conn.lock:
                 await self._conn.wait(self._start_copy_gen(statement, params))
 
-            async with AsyncCopy(self) as copy:
+            async with AsyncCopy(self, writer=writer) as copy:
                 yield copy
         except e.Error as ex:
             raise ex.with_traceback(None)
+
+        self._select_current_result(0)
 
     async def _fetch_pipeline(self) -> None:
         if (

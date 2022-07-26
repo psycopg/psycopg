@@ -15,7 +15,7 @@ from . import pq
 from . import adapt
 from . import errors as e
 from .abc import ConnectionType, Query, Params, PQGen
-from .copy import Copy
+from .copy import Copy, Writer as CopyWriter
 from .rows import Row, RowMaker, RowFactory
 from ._column import Column
 from ._cmodule import _psycopg
@@ -168,7 +168,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
         methods `!fetch*()` will operate on.
         """
         if self._iresult < len(self._results) - 1:
-            self._set_current_result(self._iresult + 1)
+            self._select_current_result(self._iresult + 1)
             return True
         else:
             return None
@@ -214,7 +214,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
             assert results is not None
             self._check_results(results)
             self._results = results
-            self._set_current_result(0)
+            self._select_current_result(0)
 
         self._last_query = query
 
@@ -283,7 +283,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
                 nrows += res.command_tuples or 0
 
         if self._results:
-            self._set_current_result(0)
+            self._select_current_result(0)
 
         # Override rowcount for the first result. Calls to nextset() will change
         # it to the value of that result only, but we hope nobody will notice.
@@ -425,10 +425,9 @@ class BaseCursor(Generic[ConnectionType, Row]):
         if len(results) != 1:
             raise e.ProgrammingError("COPY cannot be mixed with other operations")
 
-        result = results[0]
-        self._check_copy_result(result)
-        self.pgresult = result
-        self._tx.set_pgresult(result)
+        self._check_copy_result(results[0])
+        self._results = results
+        self._select_current_result(0)
 
     def _execute_send(
         self,
@@ -515,7 +514,9 @@ class BaseCursor(Generic[ConnectionType, Row]):
                 "unexpected result status from query:" f" {pq.ExecStatus(status).name}"
             )
 
-    def _set_current_result(self, i: int, format: Optional[pq.Format] = None) -> None:
+    def _select_current_result(
+        self, i: int, format: Optional[pq.Format] = None
+    ) -> None:
         """
         Select one of the results in the cursor as the active one.
         """
@@ -527,10 +528,16 @@ class BaseCursor(Generic[ConnectionType, Row]):
         # only returns a text result.
         self._tx.set_pgresult(res, format=format)
 
-        self._make_row = self._make_row_maker()
         self._pos = 0
-        nrows = self.pgresult.command_tuples
-        self._rowcount = nrows if nrows is not None else -1
+
+        # COPY_OUT has never info about nrows. We need such result for the
+        # columns in order to return a `description`, but not overwrite the
+        # cursor rowcount (which was set by the Copy object).
+        if res.status != COPY_OUT:
+            nrows = self.pgresult.command_tuples
+            self._rowcount = nrows if nrows is not None else -1
+
+        self._make_row = self._make_row_maker()
 
     def _set_results_from_pipeline(self, results: List["PGresult"]) -> None:
         self._check_results(results)
@@ -540,14 +547,14 @@ class BaseCursor(Generic[ConnectionType, Row]):
             # Received from execute()
             self._results.extend(results)
             if first_batch:
-                self._set_current_result(0)
+                self._select_current_result(0)
 
         else:
             # Received from executemany()
             if self._execmany_returning:
                 self._results.extend(results)
                 if first_batch:
-                    self._set_current_result(0)
+                    self._select_current_result(0)
                     self._rowcount = 0
 
             # Override rowcount for the first result. Calls to nextset() will
@@ -873,7 +880,13 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
         self._scroll(value, mode)
 
     @contextmanager
-    def copy(self, statement: Query, params: Optional[Params] = None) -> Iterator[Copy]:
+    def copy(
+        self,
+        statement: Query,
+        params: Optional[Params] = None,
+        *,
+        writer: Optional[CopyWriter] = None,
+    ) -> Iterator[Copy]:
         """
         Initiate a :sql:`COPY` operation and return an object to manage it.
 
@@ -883,10 +896,14 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
             with self._conn.lock:
                 self._conn.wait(self._start_copy_gen(statement, params))
 
-            with Copy(self) as copy:
+            with Copy(self, writer=writer) as copy:
                 yield copy
         except e.Error as ex:
             raise ex.with_traceback(None)
+
+        # If a fresher result has been set on the cursor by the Copy object,
+        # read its properties (especially rowcount).
+        self._select_current_result(0)
 
     def _fetch_pipeline(self) -> None:
         if (

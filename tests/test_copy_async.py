@@ -12,6 +12,8 @@ from psycopg import pq
 from psycopg import sql
 from psycopg import errors as e
 from psycopg.pq import Format
+from psycopg.copy import AsyncCopy
+from psycopg.copy import AsyncWriter, AsyncLibpqWriter, AsyncQueuedLibpqWriter
 from psycopg.types import TypeInfo
 from psycopg.adapt import PyFormat
 from psycopg.types.hstore import register_hstore
@@ -20,7 +22,7 @@ from psycopg.types.numeric import Int4
 from .utils import alist, eur, gc_collect
 from .test_copy import sample_text, sample_binary, sample_binary_rows  # noqa
 from .test_copy import sample_values, sample_records, sample_tabledef
-from .test_copy import py_to_raw
+from .test_copy import py_to_raw, special_chars
 
 pytestmark = [
     pytest.mark.asyncio,
@@ -188,8 +190,7 @@ async def test_copy_out_badntypes(aconn, format, err):
 
 
 @pytest.mark.parametrize(
-    "format, buffer",
-    [(Format.TEXT, "sample_text"), (Format.BINARY, "sample_binary")],
+    "format, buffer", [(Format.TEXT, "sample_text"), (Format.BINARY, "sample_binary")]
 )
 async def test_copy_in_buffers(aconn, format, buffer):
     cur = aconn.cursor()
@@ -462,6 +463,46 @@ from copy_in group by 1, 2, 3
     assert data == [(True, True, 1, 256)]
 
 
+async def test_copy_in_format(aconn):
+    file = BytesIO()
+    await aconn.execute("set client_encoding to utf8")
+    cur = aconn.cursor()
+    async with AsyncCopy(cur, writer=AsyncFileWriter(file)) as copy:
+        for i in range(1, 256):
+            await copy.write_row((i, chr(i)))
+
+    file.seek(0)
+    rows = file.read().split(b"\n")
+    assert not rows[-1]
+    del rows[-1]
+
+    for i, row in enumerate(rows, start=1):
+        fields = row.split(b"\t")
+        assert len(fields) == 2
+        assert int(fields[0].decode()) == i
+        if i in special_chars:
+            assert fields[1].decode() == f"\\{special_chars[i]}"
+        else:
+            assert fields[1].decode() == chr(i)
+
+
+@pytest.mark.parametrize(
+    "format, buffer", [(Format.TEXT, "sample_text"), (Format.BINARY, "sample_binary")]
+)
+async def test_file_writer(aconn, format, buffer):
+    file = BytesIO()
+    await aconn.execute("set client_encoding to utf8")
+    cur = aconn.cursor()
+    async with AsyncCopy(cur, binary=format, writer=AsyncFileWriter(file)) as copy:
+        for record in sample_records:
+            await copy.write_row(record)
+
+    file.seek(0)
+    want = globals()[buffer]
+    got = file.read()
+    assert got == want
+
+
 @pytest.mark.slow
 async def test_copy_from_to(aconn):
     # Roundtrip from file to database to file blockwise
@@ -589,18 +630,20 @@ async def test_description(aconn):
 
 
 @pytest.mark.parametrize(
-    "format, buffer",
-    [(Format.TEXT, "sample_text"), (Format.BINARY, "sample_binary")],
+    "format, buffer", [(Format.TEXT, "sample_text"), (Format.BINARY, "sample_binary")]
 )
 async def test_worker_life(aconn, format, buffer):
     cur = aconn.cursor()
     await ensure_table(cur, sample_tabledef)
-    async with cur.copy(f"copy copy_in from stdin (format {format.name})") as copy:
-        assert not copy._worker
+    async with cur.copy(
+        f"copy copy_in from stdin (format {format.name})",
+        writer=AsyncQueuedLibpqWriter(cur),
+    ) as copy:
+        assert not copy.writer._worker
         await copy.write(globals()[buffer])
-        assert copy._worker
+        assert copy.writer._worker
 
-    assert not copy._worker
+    assert not copy.writer._worker
     await cur.execute("select * from copy_in order by 1")
     data = await cur.fetchall()
     assert data == sample_records
@@ -615,8 +658,29 @@ async def test_worker_error_propagated(aconn, monkeypatch):
     cur = aconn.cursor()
     await cur.execute("create temp table wat (a text, b text)")
     with pytest.raises(ZeroDivisionError):
-        async with cur.copy("copy wat from stdin") as copy:
+        async with cur.copy(
+            "copy wat from stdin", writer=AsyncQueuedLibpqWriter(cur)
+        ) as copy:
             await copy.write("a,b")
+
+
+@pytest.mark.parametrize(
+    "format, buffer", [(Format.TEXT, "sample_text"), (Format.BINARY, "sample_binary")]
+)
+async def test_connection_writer(aconn, format, buffer):
+    cur = aconn.cursor()
+    writer = AsyncLibpqWriter(cur)
+
+    await ensure_table(cur, sample_tabledef)
+    async with cur.copy(
+        f"copy copy_in from stdin (format {format.name})", writer=writer
+    ) as copy:
+        assert copy.writer is writer
+        await copy.write(globals()[buffer])
+
+    await cur.execute("select * from copy_in order by 1")
+    data = await cur.fetchall()
+    assert data == sample_records
 
 
 @pytest.mark.slow
@@ -807,3 +871,11 @@ class DataGenerator:
                 block = block.encode()
             m.update(block)
         return m.hexdigest()
+
+
+class AsyncFileWriter(AsyncWriter):
+    def __init__(self, file):
+        self.file = file
+
+    async def write(self, data):
+        self.file.write(data)

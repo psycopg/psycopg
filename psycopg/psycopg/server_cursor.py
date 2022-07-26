@@ -113,7 +113,7 @@ class ServerCursorMixin(BaseCursor[ConnectionType, Row]):
         results = yield from execute(self._pgconn)
         self._check_results(results)
         self._results = results
-        self._set_current_result(0, format=self._format)
+        self._select_current_result(0, format=self._format)
         self._described = True
 
     def _close_gen(self) -> PQGen[None]:
