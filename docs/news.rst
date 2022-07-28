@@ -37,14 +37,14 @@ Psycopg 3.1 (unreleased)
 - Drop support for Python 3.6.
 
 
-Psycopg 3.0.16 (unreleased)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Current release
+---------------
+
+Psycopg 3.0.16
+^^^^^^^^^^^^^^
 
 - Fix missing `~Cursor.rowcount` after SHOW (:ticket:`#343`).
 
-
-Current release
----------------
 
 Psycopg 3.0.15
 ^^^^^^^^^^^^^^
