@@ -530,10 +530,13 @@ class BaseCursor(Generic[ConnectionType, Row]):
 
         self._pos = 0
 
+        if res.status == TUPLES_OK:
+            self._rowcount = self.pgresult.ntuples
+
         # COPY_OUT has never info about nrows. We need such result for the
         # columns in order to return a `description`, but not overwrite the
         # cursor rowcount (which was set by the Copy object).
-        if res.status != COPY_OUT:
+        elif res.status != COPY_OUT:
             nrows = self.pgresult.command_tuples
             self._rowcount = nrows if nrows is not None else -1
 
