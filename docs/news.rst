@@ -44,6 +44,7 @@ Psycopg 3.0.16
 ^^^^^^^^^^^^^^
 
 - Fix missing `~Cursor.rowcount` after SHOW (:ticket:`#343`).
+- Add scripts to build macOS arm64 packages (:ticket:`#162`).
 
 
 Psycopg 3.0.15
