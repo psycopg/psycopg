@@ -7,17 +7,14 @@
 ``psycopg`` release notes
 =========================
 
-Future releases
+Current release
 ---------------
 
-Psycopg 3.0.16 (unreleased)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Psycopg 3.0.16
+^^^^^^^^^^^^^^
 
 - Fix missing `~Cursor.rowcount` after SHOW (:ticket:`#343`).
 
-
-Current release
----------------
 
 Psycopg 3.0.15
 ^^^^^^^^^^^^^^
