@@ -329,6 +329,9 @@ async def test_rowcount(aconn):
     await cur.execute("select 1 from generate_series(1, 42)")
     assert cur.rowcount == 42
 
+    await cur.execute("show timezone")
+    assert cur.rowcount == 1
+
     await cur.execute("create table test_rowcount_notuples (id int primary key)")
     assert cur.rowcount == -1
 
