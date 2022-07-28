@@ -435,8 +435,11 @@ class BaseCursor(Generic[ConnectionType, Row]):
 
         self._make_row = self._make_row_maker()
         self._pos = 0
-        nrows = self.pgresult.command_tuples
-        self._rowcount = nrows if nrows is not None else -1
+        if res.status == ExecStatus.TUPLES_OK:
+            self._rowcount = self.pgresult.ntuples
+        else:
+            nrows = self.pgresult.command_tuples
+            self._rowcount = nrows if nrows is not None else -1
 
     def _send_prepare(self, name: bytes, query: PostgresQuery) -> None:
         self._pgconn.send_prepare(name, query.query, param_types=query.types)
