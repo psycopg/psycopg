@@ -18,7 +18,7 @@ concurrency:
 jobs:
 
   linux:  # {{{
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
 
     strategy:
       fail-fast: false
@@ -115,7 +115,7 @@ jobs:
   # }}}
 
   macos:  # {{{
-    runs-on: macos-10.15
+    runs-on: macos-latest
 
     strategy:
       fail-fast: false
@@ -167,7 +167,7 @@ jobs:
   # }}}
 
   windows:  # {{{
-    runs-on: windows-2019
+    runs-on: windows-latest
 
     strategy:
       fail-fast: false
