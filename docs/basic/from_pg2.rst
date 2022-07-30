@@ -70,7 +70,7 @@ client side. You can do so using the `psycopg.sql` objects::
 
     >>> from psycopg import sql
 
-    >>> cur.execute(sql.SQL("CREATE TABLE foo (id int DEFAULT {})").format(42)
+    >>> cur.execute(sql.SQL("CREATE TABLE foo (id int DEFAULT {})").format(42))
 
 or creating a :ref:`client-side binding cursor <client-side-binding-cursors>`
 such as `ClientCursor`::
