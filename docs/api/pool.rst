@@ -30,7 +30,7 @@ This package exposes a few connection pool classes:
   `!AsyncConnectionPool`.
 
 .. note:: The `!psycopg_pool` package is distributed separately from the main
-   `psycopg` package: use ``pip install psycopg[pool]``, or ``pip install
+   `psycopg` package: use ``pip install "psycopg[pool]"``, or ``pip install
    psycopg_pool``, to make it available. See :ref:`pool-installation`.
 
    The version numbers indicated in this page refer to the `!psycopg_pool`

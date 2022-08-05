@@ -34,13 +34,13 @@ same interface. Current implementations are:
   in Cython_). It is much better performing than the ``python``
   implementation, however it requires development packages installed on the
   client machine. It can be installed using the ``c`` extra, i.e. running
-  ``pip install psycopg[c]``.
+  ``pip install "psycopg[c]"``.
 
 - ``binary``: a pre-compiled C implementation, bundled with all the required
   libraries. It is the easiest option to deal with, fast to install and it
   should require no development tool or client library, however it may be not
   available for every platform. You can install it using the ``binary`` extra,
-  i.e. running ``pip install psycopg[binary]``.
+  i.e. running ``pip install "psycopg[binary]"``.
 
 .. _Cython: https://cython.org/
 

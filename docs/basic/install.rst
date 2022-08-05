@@ -6,7 +6,7 @@ Installation
 In short, if you use a :ref:`supported system<supported-systems>`::
 
     pip install --upgrade pip           # upgrade pip to at least 20.3
-    pip install psycopg[binary]
+    pip install "psycopg[binary]"
 
 and you should be :ref:`ready to start <module-usage>`. Read further for
 alternative ways to install.
@@ -48,7 +48,7 @@ Binary installation
 The quickest way to start developing with Psycopg 3 is to install the binary
 packages by running::
 
-    pip install psycopg[binary]
+    pip install "psycopg[binary]"
 
 This will install a self-contained package with all the libraries needed.
 **You will need pip 20.3 at least**: please run ``pip install --upgrade pip``
@@ -101,7 +101,7 @@ try this and follow the `binary installation`_ instead.
 
 If your build prerequisites are in place you can run::
 
-    pip install psycopg[c]
+    pip install "psycopg[c]"
 
 
 .. _pure-python-installation:
@@ -145,7 +145,7 @@ separate package from the `!psycopg` package itself, in order to allow a
 different release cycle.
 
 In order to use the pool you must install the ``pool`` extra, using ``pip
-install psycopg[pool]``, or install the `psycopg_pool` package separately,
+install "psycopg[pool]"``, or install the `psycopg_pool` package separately,
 which would allow to specify the release to install more precisely.
 
 

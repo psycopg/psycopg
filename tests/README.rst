@@ -8,7 +8,7 @@ To run tests on the current code you can install the `test` extra of the
 package, specify a connection string  in the `PSYCOPG_TEST_DSN` env var to
 connect to a test database, and run ``pytest``::
 
-    $ pip install -e psycopg[test]
+    $ pip install -e "psycopg[test]"
     $ export PSYCOPG_TEST_DSN="host=localhost dbname=psycopg_test"
     $ pytest
 
@@ -69,7 +69,7 @@ a set of env vars working for your setup::
       -e PSYCOPG_TEST_DSN -e PGHOST=172.17.0.1 -e PGUSER=`whoami` \
       python:3.7 bash
 
-    # pip install -e ./psycopg[test] ./psycopg_pool ./psycopg_c
+    # pip install -e "./psycopg[test]" ./psycopg_pool ./psycopg_c
     # pytest
 
 

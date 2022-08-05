@@ -10,7 +10,7 @@ Installation
 Quick version::
 
     pip install --upgrade pip               # upgrade pip to at least 20.3
-    pip install psycopg[binary,pool]        # install binary dependencies
+    pip install "psycopg[binary,pool]"      # install binary dependencies
 
 For further information about installation please check `the documentation`__.
 
@@ -57,7 +57,7 @@ requirements::
 
     python -m venv .venv
     source .venv/bin/activate
-    pip install -e ./psycopg[dev,test]      # for the base Python package
+    pip install -e "./psycopg[dev,test]"    # for the base Python package
     pip install -e ./psycopg_c              # for the C extension module
     pip install -e ./psycopg_pool           # for the connection pool
 

@@ -11,7 +11,7 @@ likely that it will follow a different release cycle.
 
 You can also install this package using::
 
-    pip install psycopg[pool]
+    pip install "psycopg[pool]"
 
 Please read `the project readme`__ and `the installation documentation`__ for
 more details.

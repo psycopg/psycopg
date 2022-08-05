@@ -16,7 +16,7 @@ behaviour. Please refer to the `ConnectionPool` object API for details about
 the pool operations.
 
 .. note:: The connection pool objects are distributed in a package separate
-   from the main `psycopg` package: use ``pip install psycopg[pool]`` or ``pip
+   from the main `psycopg` package: use ``pip install "psycopg[pool]"`` or ``pip
    install psycopg_pool`` to make the `psycopg_pool` package available. See
    :ref:`pool-installation`.
 

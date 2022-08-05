@@ -5,7 +5,7 @@ This distribution contains the optional optimization package ``psycopg_c``.
 
 You shouldn't install this package directly: use instead ::
 
-    pip install psycopg[c]
+    pip install "psycopg[c]"
 
 to install a version of the optimization package matching the ``psycopg``
 version installed.

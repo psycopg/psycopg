@@ -6,7 +6,7 @@ This distribution contains the precompiled optimization package
 
 You shouldn't install this package directly: use instead ::
 
-    pip install psycopg[binary]
+    pip install "psycopg[binary]"
 
 to install a version of the optimization package matching the ``psycopg``
 version installed.
