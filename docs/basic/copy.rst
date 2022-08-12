@@ -151,11 +151,16 @@ types passed to the database must have a binary dumper registered; this is not
 necessary if the data is copied :ref:`block-by-block <copy-block>` using
 `~Copy.write()`.
 
-Note that PostgreSQL is particularly finicky when loading data in binary mode
-and will apply *no cast rules*. This means that e.g. passing the value 100 to
-an `integer` column will fail because Psycopg will pass it as a `smallint`
-value. You can work around the problem using the `~Copy.set_types()` method of
-the `!Copy` object and specify carefully the types to dump.
+.. warning::
+
+    PostgreSQL is particularly finicky when loading data in binary mode and
+    will apply **no cast rules**. This means, for example, that passing the
+    value 100 to an `integer` column **will fail**, because Psycopg will pass
+    it as a `smallint` value, and the server will reject it because its size
+    doesn't match what expected.
+
+    You can work around the problem using the `~Copy.set_types()` method of
+    the `!Copy` object and specifying carefully the types to load.
 
 .. seealso:: See :ref:`binary-data` for further info about binary querying.
 
