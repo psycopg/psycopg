@@ -116,17 +116,17 @@ One obvious way to work around the problem is to use several `!execute()`
 calls.
 
 There is no such limitation if no parameters are used. As a consequence, you
-can use a :ref:`client-side binding cursor <client-side-binding-cursors>` or
-the `psycopg.sql` objects to compose a multiple query on the client side and
-run them in the same `!execute()` call::
-
+can compose a multiple query on the client side and run them all in the same
+`!execute()` call, using the `psycopg.sql` objects::
 
     >>> from psycopg import sql
     >>> conn.execute(
     ...     sql.SQL("INSERT INTO foo VALUES ({}); INSERT INTO foo values ({})"
     ...     .format(10, 20))
 
-    >>> psycopg.ClientCursor(conn)
+or a :ref:`client-side binding cursor <client-side-binding-cursors>`::
+
+    >>> cur = psycopg.ClientCursor(conn)
     >>> cur.execute(
     ...     "INSERT INTO foo VALUES (%s); INSERT INTO foo VALUES (%s)",
     ...     (10, 20))
