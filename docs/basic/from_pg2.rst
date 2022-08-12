@@ -3,6 +3,8 @@
 
 .. currentmodule:: psycopg
 
+.. _from-psycopg2:
+
 
 Differences from ``psycopg2``
 =============================
