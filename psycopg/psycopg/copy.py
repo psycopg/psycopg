@@ -131,7 +131,7 @@ class BaseCopy(Generic[ConnectionType]):
 
         - On :sql:`COPY TO`, `!set_types()` allows to specify what types the
           operation returns. If `!set_types()` is not used, the data will be
-          reurned as unparsed strings or bytes instead of Python objects.
+          returned as unparsed strings or bytes instead of Python objects.
 
         - On :sql:`COPY FROM`, `!set_types()` allows to choose what type the
           database expects. This is especially useful in binary copy, because
