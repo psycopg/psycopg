@@ -63,7 +63,7 @@ Numbers adaptation
 
 - Python `~decimal.Decimal` values are converted to PostgreSQL :sql:`numeric`.
 
-On the way back, smaller types (:sql:`int2`, :sql:`int4`, :sql:`flaot4`) are
+On the way back, smaller types (:sql:`int2`, :sql:`int4`, :sql:`float4`) are
 promoted to the larger Python counterpart.
 
 .. note::
