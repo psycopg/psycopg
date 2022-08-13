@@ -507,7 +507,7 @@ async def test_message_0x33(aconn):
     await aconn.set_autocommit(True)
     async with aconn.pipeline():
         cur = await aconn.execute("select 'test'")
-        await cur.fetchone() == ("test",)
+        assert (await cur.fetchone()) == ("test",)
 
     assert not notices
 

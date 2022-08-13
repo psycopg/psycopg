@@ -503,7 +503,7 @@ def test_message_0x33(conn):
     conn.autocommit = True
     with conn.pipeline():
         cur = conn.execute("select 'test'")
-        cur.fetchone() == ("test",)
+        assert cur.fetchone() == ("test",)
 
     assert not notices
 
