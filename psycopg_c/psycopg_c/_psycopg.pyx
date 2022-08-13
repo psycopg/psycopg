@@ -22,6 +22,15 @@ PG_TEXT = _py_Format.TEXT
 PG_BINARY = _py_Format.BINARY
 
 
+cdef extern from *:
+    """
+#ifndef ARRAYSIZE
+#define ARRAYSIZE(a) ((sizeof(a) / sizeof(*(a))))
+#endif
+    """
+    int ARRAYSIZE(void *array)
+
+
 include "_psycopg/adapt.pyx"
 include "_psycopg/copy.pyx"
 include "_psycopg/generators.pyx"
