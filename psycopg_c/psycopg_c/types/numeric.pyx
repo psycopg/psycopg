@@ -41,10 +41,10 @@ cdef extern from "Python.h":
 cdef extern from *:
     """
 int pg_lltoa(int64_t value, char *a);
+#define MAXINT8LEN 20
     """
     int pg_lltoa(int64_t value, char *a)
-
-DEF MAXINT8LEN = 20
+    const int MAXINT8LEN
 
 
 cdef class _NumberDumper(CDumper):
@@ -141,16 +141,30 @@ cdef class Int8BinaryDumper(CDumper):
         return sizeof(int64_t)
 
 
-# Ratio between number of bits required to store a number and number of pg
-# decimal digits required.
-DEF BIT_PER_PGDIGIT = 0.07525749891599529  # log(2) / log(10_000)
+cdef extern from *:
+    """
+/* Ratio between number of bits required to store a number and number of pg
+ * decimal digits required (log(2) / log(10_000)).
+ */
+#define BIT_PER_PGDIGIT 0.07525749891599529
 
-DEF DEC_DIGITS = 4  # decimal digits per Postgres "digit"
-DEF NUMERIC_POS = 0x0000
-DEF NUMERIC_NEG = 0x4000
-DEF NUMERIC_NAN = 0xC000
-DEF NUMERIC_PINF = 0xD000
-DEF NUMERIC_NINF = 0xF000
+/* decimal digits per Postgres "digit" */
+#define DEC_DIGITS 4
+
+#define NUMERIC_POS 0x0000
+#define NUMERIC_NEG 0x4000
+#define NUMERIC_NAN 0xC000
+#define NUMERIC_PINF 0xD000
+#define NUMERIC_NINF 0xF000
+"""
+    const double BIT_PER_PGDIGIT
+    const int DEC_DIGITS
+    const int NUMERIC_POS
+    const int NUMERIC_NEG
+    const int NUMERIC_NAN
+    const int NUMERIC_PINF
+    const int NUMERIC_NINF
+
 
 @cython.final
 cdef class IntNumericBinaryDumper(CDumper):

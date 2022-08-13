@@ -37,18 +37,21 @@ from psycopg._compat import ZoneInfo
 # Initialise the datetime C API
 cdt.import_datetime()
 
-DEF ORDER_YMD = 0
-DEF ORDER_DMY = 1
-DEF ORDER_MDY = 2
-DEF ORDER_PGDM = 3
-DEF ORDER_PGMD = 4
+cdef enum:
+    ORDER_YMD = 0
+    ORDER_DMY = 1
+    ORDER_MDY = 2
+    ORDER_PGDM = 3
+    ORDER_PGMD = 4
 
-DEF INTERVALSTYLE_OTHERS = 0
-DEF INTERVALSTYLE_SQL_STANDARD = 1
-DEF INTERVALSTYLE_POSTGRES = 2
+cdef enum:
+    INTERVALSTYLE_OTHERS = 0
+    INTERVALSTYLE_SQL_STANDARD = 1
+    INTERVALSTYLE_POSTGRES = 2
 
-DEF PG_DATE_EPOCH_DAYS = 730120  # date(2000, 1, 1).toordinal()
-DEF PY_DATE_MIN_DAYS = 1  # date.min.toordinal()
+cdef enum:
+    PG_DATE_EPOCH_DAYS = 730120  # date(2000, 1, 1).toordinal()
+    PY_DATE_MIN_DAYS = 1  # date.min.toordinal()
 
 cdef object date_toordinal = date.toordinal
 cdef object date_fromordinal = date.fromordinal
@@ -384,13 +387,12 @@ cdef class DateLoader(CLoader):
         if length != 10:
             self._error_date(data, "unexpected length")
 
-        DEF NVALUES = 3
-        cdef int vals[NVALUES]
+        cdef int vals[3]
         memset(vals, 0, sizeof(vals))
 
         cdef const char *ptr
         cdef const char *end = data + length
-        ptr = _parse_date_values(data, end, vals, NVALUES)
+        ptr = _parse_date_values(data, end, vals, sizeof(vals) // sizeof(vals[0]))
         if ptr == NULL:
             s = bytes(data).decode("utf8", "replace")
             raise e.DataError(f"can't parse date {s!r}")
@@ -431,14 +433,13 @@ cdef class TimeLoader(CLoader):
 
     cdef object cload(self, const char *data, size_t length):
 
-        DEF NVALUES = 3
-        cdef int vals[NVALUES]
+        cdef int vals[3]
         memset(vals, 0, sizeof(vals))
         cdef const char *ptr
         cdef const char *end = data + length
 
         # Parse the first 3 groups of digits
-        ptr = _parse_date_values(data, end, vals, NVALUES)
+        ptr = _parse_date_values(data, end, vals, sizeof(vals) // sizeof(vals[0]))
         if ptr == NULL:
             s = bytes(data).decode("utf8", "replace")
             raise e.DataError(f"can't parse time {s!r}")
@@ -585,18 +586,12 @@ cdef class TimestampLoader(CLoader):
         if self._order == ORDER_PGDM or self._order == ORDER_PGMD:
             return self._cload_pg(data, end)
 
-        DEF D1 = 0
-        DEF D2 = 1
-        DEF D3 = 2
-        DEF HO = 3
-        DEF MI = 4
-        DEF SE = 5
         cdef int vals[6]
         memset(vals, 0, sizeof(vals))
         cdef const char *ptr
 
         # Parse the first 6 groups of digits (date and time)
-        ptr = _parse_date_values(data, end, vals, 6)
+        ptr = _parse_date_values(data, end, vals, sizeof(vals) // sizeof(vals[0]))
         if ptr == NULL:
             raise _get_timestamp_load_error(self._pgconn, data) from None
 
@@ -608,25 +603,20 @@ cdef class TimestampLoader(CLoader):
         # Resolve the YMD order
         cdef int y, m, d
         if self._order == ORDER_YMD:
-            y, m, d = vals[D1], vals[D2], vals[D3]
+            y, m, d = vals[0], vals[1], vals[2]
         elif self._order == ORDER_DMY:
-            d, m, y = vals[D1], vals[D2], vals[D3]
+            d, m, y = vals[0], vals[1], vals[2]
         else: # self._order == ORDER_MDY
-            m, d, y = vals[D1], vals[D2], vals[D3]
+            m, d, y = vals[0], vals[1], vals[2]
 
         try:
             return cdt.datetime_new(
-                y, m, d, vals[HO], vals[MI], vals[SE], us, None)
+                y, m, d, vals[3], vals[4], vals[5], us, None)
         except ValueError as ex:
             raise _get_timestamp_load_error(self._pgconn, data, ex) from None
 
     cdef object _cload_pg(self, const char *data, const char *end):
-        DEF HO = 0
-        DEF MI = 1
-        DEF SE = 2
-        DEF YE = 3
-        DEF NVALS = 4
-        cdef int vals[NVALS]
+        cdef int vals[4]
         memset(vals, 0, sizeof(vals))
         cdef const char *ptr
 
@@ -667,7 +657,7 @@ cdef class TimestampLoader(CLoader):
 
         try:
             return cdt.datetime_new(
-                vals[YE], m, d, vals[HO], vals[MI], vals[SE], us, None)
+                vals[3], m, d, vals[0], vals[1], vals[2], us, None)
         except ValueError as ex:
             raise _get_timestamp_load_error(self._pgconn, data, ex) from None
 
@@ -738,18 +728,12 @@ cdef class TimestamptzLoader(_BaseTimestamptzLoader):
         if end[-1] == b'C':  # ends with BC
             raise _get_timestamp_load_error(self._pgconn, data) from None
 
-        DEF D1 = 0
-        DEF D2 = 1
-        DEF D3 = 2
-        DEF HO = 3
-        DEF MI = 4
-        DEF SE = 5
         cdef int vals[6]
         memset(vals, 0, sizeof(vals))
 
         # Parse the first 6 groups of digits (date and time)
         cdef const char *ptr
-        ptr = _parse_date_values(data, end, vals, 6)
+        ptr = _parse_date_values(data, end, vals, sizeof(vals) // sizeof(vals[0]))
         if ptr == NULL:
             raise _get_timestamp_load_error(self._pgconn, data) from None
 
@@ -761,11 +745,11 @@ cdef class TimestamptzLoader(_BaseTimestamptzLoader):
         # Resolve the YMD order
         cdef int y, m, d
         if self._order == ORDER_YMD:
-            y, m, d = vals[D1], vals[D2], vals[D3]
+            y, m, d = vals[0], vals[1], vals[2]
         elif self._order == ORDER_DMY:
-            d, m, y = vals[D1], vals[D2], vals[D3]
+            d, m, y = vals[0], vals[1], vals[2]
         else: # self._order == ORDER_MDY
-            m, d, y = vals[D1], vals[D2], vals[D3]
+            m, d, y = vals[0], vals[1], vals[2]
 
         # Parse the timezone
         cdef int offsecs = _parse_timezone_to_seconds(&ptr, end)
@@ -782,7 +766,7 @@ cdef class TimestamptzLoader(_BaseTimestamptzLoader):
         dt = None
         try:
             dt = cdt.datetime_new(
-                y, m, d, vals[HO], vals[MI], vals[SE], us, timezone_utc)
+                y, m, d, vals[3], vals[4], vals[5], us, timezone_utc)
             dt -= tzoff
             return PyObject_CallFunctionObjArgs(datetime_astimezone,
                 <PyObject *>dt, <PyObject *>self._time_zone, NULL)
@@ -932,11 +916,10 @@ cdef class IntervalLoader(CLoader):
                 break
 
         # Parse the time part. An eventual sign was already consumed in the loop
-        DEF NVALS = 3
-        cdef int vals[NVALS]
+        cdef int vals[3]
         memset(vals, 0, sizeof(vals))
         if ptr != NULL:
-            ptr = _parse_date_values(ptr, end, vals, NVALS)
+            ptr = _parse_date_values(ptr, end, vals, sizeof(vals) // sizeof(vals[0]))
             if ptr == NULL:
                 s = bytes(data).decode("utf8", "replace")
                 raise e.DataError(f"can't parse interval {s!r}")
@@ -1071,18 +1054,14 @@ cdef int _parse_timezone_to_seconds(const char **bufptr, const char *end):
     cdef char sgn = ptr[0]
 
     # Parse at most three groups of digits
-    DEF OH = 0
-    DEF OM = 1
-    DEF OS = 2
-    DEF NVALS = 3
-    cdef int vals[NVALS]
+    cdef int vals[3]
     memset(vals, 0, sizeof(vals))
 
-    ptr = _parse_date_values(ptr + 1, end, vals, NVALS)
+    ptr = _parse_date_values(ptr + 1, end, vals, sizeof(vals) // sizeof(vals[0]))
     if ptr == NULL:
         return 0
 
-    cdef int off = 60 * (60 * vals[OH] + vals[OM]) + vals[OS]
+    cdef int off = 60 * (60 * vals[0] + vals[1]) + vals[2]
     return -off if sgn == b"-" else off
 
 
