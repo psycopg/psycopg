@@ -392,7 +392,7 @@ cdef class DateLoader(CLoader):
 
         cdef const char *ptr
         cdef const char *end = data + length
-        ptr = _parse_date_values(data, end, vals, sizeof(vals) // sizeof(vals[0]))
+        ptr = _parse_date_values(data, end, vals, ARRAYSIZE(vals))
         if ptr == NULL:
             s = bytes(data).decode("utf8", "replace")
             raise e.DataError(f"can't parse date {s!r}")
@@ -439,7 +439,7 @@ cdef class TimeLoader(CLoader):
         cdef const char *end = data + length
 
         # Parse the first 3 groups of digits
-        ptr = _parse_date_values(data, end, vals, sizeof(vals) // sizeof(vals[0]))
+        ptr = _parse_date_values(data, end, vals, ARRAYSIZE(vals))
         if ptr == NULL:
             s = bytes(data).decode("utf8", "replace")
             raise e.DataError(f"can't parse time {s!r}")
@@ -496,7 +496,7 @@ cdef class TimetzLoader(CLoader):
         cdef const char *end = data + length
 
         # Parse the first 3 groups of digits (time)
-        ptr = _parse_date_values(data, end, vals, 3)
+        ptr = _parse_date_values(data, end, vals, ARRAYSIZE(vals))
         if ptr == NULL:
             s = bytes(data).decode("utf8", "replace")
             raise e.DataError(f"can't parse timetz {s!r}")
@@ -591,7 +591,7 @@ cdef class TimestampLoader(CLoader):
         cdef const char *ptr
 
         # Parse the first 6 groups of digits (date and time)
-        ptr = _parse_date_values(data, end, vals, sizeof(vals) // sizeof(vals[0]))
+        ptr = _parse_date_values(data, end, vals, ARRAYSIZE(vals))
         if ptr == NULL:
             raise _get_timestamp_load_error(self._pgconn, data) from None
 
@@ -733,7 +733,7 @@ cdef class TimestamptzLoader(_BaseTimestamptzLoader):
 
         # Parse the first 6 groups of digits (date and time)
         cdef const char *ptr
-        ptr = _parse_date_values(data, end, vals, sizeof(vals) // sizeof(vals[0]))
+        ptr = _parse_date_values(data, end, vals, ARRAYSIZE(vals))
         if ptr == NULL:
             raise _get_timestamp_load_error(self._pgconn, data) from None
 
@@ -919,7 +919,7 @@ cdef class IntervalLoader(CLoader):
         cdef int vals[3]
         memset(vals, 0, sizeof(vals))
         if ptr != NULL:
-            ptr = _parse_date_values(ptr, end, vals, sizeof(vals) // sizeof(vals[0]))
+            ptr = _parse_date_values(ptr, end, vals, ARRAYSIZE(vals))
             if ptr == NULL:
                 s = bytes(data).decode("utf8", "replace")
                 raise e.DataError(f"can't parse interval {s!r}")
@@ -1057,7 +1057,7 @@ cdef int _parse_timezone_to_seconds(const char **bufptr, const char *end):
     cdef int vals[3]
     memset(vals, 0, sizeof(vals))
 
-    ptr = _parse_date_values(ptr + 1, end, vals, sizeof(vals) // sizeof(vals[0]))
+    ptr = _parse_date_values(ptr + 1, end, vals, ARRAYSIZE(vals))
     if ptr == NULL:
         return 0
 
