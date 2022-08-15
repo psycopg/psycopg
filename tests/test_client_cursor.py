@@ -818,7 +818,6 @@ def test_mogrify_badenc(conn, encoding):
         conn.cursor().mogrify("select %(s)s", {"s": "\u20ac"})
 
 
-@pytest.mark.libpq(">= 14")
 @pytest.mark.pipeline
 def test_message_0x33(conn):
     # https://github.com/psycopg/psycopg/issues/314

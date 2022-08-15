@@ -14,8 +14,8 @@ from .test_pipeline import pipeline_aborted
 
 pytestmark = [
     pytest.mark.asyncio,
-    pytest.mark.libpq(">= 14"),
     pytest.mark.pipeline,
+    pytest.mark.skipif("not psycopg.AsyncPipeline.is_supported()"),
 ]
 
 

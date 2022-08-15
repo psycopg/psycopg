@@ -690,7 +690,6 @@ async def test_mogrify_badenc(aconn, encoding):
         aconn.cursor().mogrify("select %(s)s", {"s": "\u20ac"})
 
 
-@pytest.mark.libpq(">= 14")
 @pytest.mark.pipeline
 async def test_message_0x33(aconn):
     # https://github.com/psycopg/psycopg/issues/314

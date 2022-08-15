@@ -177,7 +177,7 @@ class TestConnectionInfo:
         conn.close()
         assert conn.info.transaction_status.name == "UNKNOWN"
 
-    @pytest.mark.libpq(">= 14")
+    @pytest.mark.pipeline
     def test_pipeline_status(self, conn):
         assert not conn.info.pipeline_status
         assert conn.info.pipeline_status.name == "OFF"

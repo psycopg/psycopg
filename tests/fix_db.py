@@ -8,7 +8,7 @@ import psycopg
 from psycopg import pq
 from psycopg import sql
 
-from .utils import check_libpq_version, check_postgres_version
+from .utils import check_postgres_version
 
 # Set by warm_up_database() the first time the dsn fixture is used
 pg_version: int
@@ -57,13 +57,21 @@ def pytest_collection_modifyitems(items):
                 break
 
 
+def pytest_runtest_setup(item):
+    for m in item.iter_markers(name="pipeline"):
+        if not psycopg.Pipeline.is_supported():
+            pytest.skip(psycopg.Pipeline._not_supported_reason())
+
+
 def pytest_configure(config):
     # register pg marker
-    config.addinivalue_line(
-        "markers",
+    markers = [
         "pg(version_expr): run the test only with matching server version"
         " (e.g. '>= 10', '< 9.6')",
-    )
+        "pipeline: the test runs with connection in pipeline mode",
+    ]
+    for marker in markers:
+        config.addinivalue_line("markers", marker)
 
 
 @pytest.fixture(scope="session")
@@ -160,9 +168,8 @@ def conn(conn_cls, dsn, request, tracefile):
 @pytest.fixture(params=[True, False], ids=["pipeline=on", "pipeline=off"])
 def pipeline(request, conn):
     if request.param:
-        msg = check_libpq_version(pq.version(), ">= 14")
-        if msg:
-            pytest.skip(msg)
+        if not psycopg.Pipeline.is_supported():
+            pytest.skip(psycopg.Pipeline._not_supported_reason())
         with conn.pipeline() as p:
             yield p
         return
@@ -184,9 +191,8 @@ async def aconn(dsn, aconn_cls, request, tracefile):
 @pytest.fixture(params=[True, False], ids=["pipeline=on", "pipeline=off"])
 async def apipeline(request, aconn):
     if request.param:
-        msg = check_libpq_version(pq.version(), ">= 14")
-        if msg:
-            pytest.skip(msg)
+        if not psycopg.Pipeline.is_supported():
+            pytest.skip(psycopg.Pipeline._not_supported_reason())
         async with aconn.pipeline() as p:
             yield p
         return

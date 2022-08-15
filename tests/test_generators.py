@@ -4,16 +4,13 @@ from typing import List
 
 import pytest
 
+import psycopg
 from psycopg import waiting
 from psycopg import pq
-
-from .utils import check_libpq_version
 
 
 @pytest.fixture
 def pipeline(pgconn):
-    if check_libpq_version(pq.version(), ">= 14"):
-        pytest.skip("require libpq >= 14")
     nb, pgconn.nonblocking = pgconn.nonblocking, True
     assert pgconn.nonblocking
     pgconn.enter_pipeline_mode()
@@ -40,6 +37,7 @@ def _run_pipeline_communicate(pgconn, generators, commands, expected_statuses):
     assert actual_statuses == expected_statuses
 
 
+@pytest.mark.pipeline
 def test_pipeline_communicate_multi_pipeline(pgconn, pipeline, generators):
     commands = deque(
         [
@@ -58,6 +56,7 @@ def test_pipeline_communicate_multi_pipeline(pgconn, pipeline, generators):
     _run_pipeline_communicate(pgconn, generators, commands, expected_statuses)
 
 
+@pytest.mark.pipeline
 def test_pipeline_communicate_no_sync(pgconn, pipeline, generators):
     numqueries = 10
     commands = deque(
@@ -70,8 +69,6 @@ def test_pipeline_communicate_no_sync(pgconn, pipeline, generators):
 
 @pytest.fixture
 def pipeline_demo(pgconn):
-    if check_libpq_version(pq.version(), ">= 14"):
-        pytest.skip("require libpq >= 14")
     assert pgconn.pipeline_status == 0
     res = pgconn.exec_(b"DROP TABLE IF EXISTS pg_pipeline")
     assert res.status == pq.ExecStatus.COMMAND_OK, res.error_message
@@ -85,6 +82,7 @@ def pipeline_demo(pgconn):
 
 
 # TODOCRDB: 1 doesn't get rolled back. Open a ticket?
+@pytest.mark.pipeline
 @pytest.mark.crdb("skip", reason="pipeline aborted")
 def test_pipeline_communicate_abort(pgconn, pipeline_demo, pipeline, generators):
     insert_sql = b"insert into pg_pipeline(itemno) values ($1)"
@@ -115,8 +113,8 @@ def test_pipeline_communicate_abort(pgconn, pipeline_demo, pipeline, generators)
 
 @pytest.fixture
 def pipeline_uniqviol(pgconn):
-    if check_libpq_version(pq.version(), ">= 14"):
-        pytest.skip("require libpq >= 14")
+    if not psycopg.Pipeline.is_supported():
+        pytest.skip(psycopg.Pipeline._not_supported_reason())
     assert pgconn.pipeline_status == 0
     res = pgconn.exec_(b"DROP TABLE IF EXISTS pg_pipeline_uniqviol")
     assert res.status == pq.ExecStatus.COMMAND_OK, res.error_message

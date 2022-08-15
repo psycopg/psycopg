@@ -11,8 +11,8 @@ from psycopg import pq
 from psycopg import errors as e
 
 pytestmark = [
-    pytest.mark.libpq(">= 14"),
     pytest.mark.pipeline,
+    pytest.mark.skipif("not psycopg.Pipeline.is_supported()"),
 ]
 
 pipeline_aborted = pytest.mark.flakey("the server might get in pipeline aborted")
