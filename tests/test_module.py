@@ -17,7 +17,7 @@ def test_connect(monkeypatch, dsn, args, kwargs, want_conninfo):
     # Details of the params manipulation are in test_conninfo.
     import psycopg.connection
 
-    orig_connect = psycopg.connection.connect
+    orig_connect = psycopg.connection.connect  # type: ignore
 
     got_conninfo = None
 

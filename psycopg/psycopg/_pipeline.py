@@ -12,9 +12,9 @@ from . import pq
 from . import errors as e
 from .abc import PipelineCommand, PQGen
 from ._compat import Deque, TypeAlias
-from ._cmodule import _psycopg
 from ._encodings import pgconn_encoding
 from ._preparing import Key, Prepare
+from .generators import pipeline_communicate, fetch_many, send
 
 if TYPE_CHECKING:
     from .pq.abc import PGresult
@@ -22,17 +22,6 @@ if TYPE_CHECKING:
     from .connection import BaseConnection, Connection
     from .connection_async import AsyncConnection
 
-if _psycopg:
-    pipeline_communicate = _psycopg.pipeline_communicate
-    fetch_many = _psycopg.fetch_many
-    send = _psycopg.send
-
-else:
-    from . import generators
-
-    pipeline_communicate = generators.pipeline_communicate
-    fetch_many = generators.fetch_many
-    send = generators.send
 
 PendingResult: TypeAlias = Union[
     None, Tuple["BaseCursor[Any, Any]", Optional[Tuple[Key, Prepare, bytes]]]
