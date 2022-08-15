@@ -130,7 +130,11 @@ def fetch_many(pq.PGconn pgconn) -> PQGen[List[PGresult]]:
         pgres = result._pgresult_ptr
 
         status = libpq.PQresultStatus(pgres)
-        if status in (libpq.PGRES_COPY_IN, libpq.PGRES_COPY_OUT, libpq.PGRES_COPY_BOTH):
+        if (
+            status == libpq.PGRES_COPY_IN
+            or status == libpq.PGRES_COPY_OUT
+            or status == libpq.PGRES_COPY_BOTH
+        ):
             # After entering copy mode the libpq will create a phony result
             # for every request so let's break the endless loop.
             break
