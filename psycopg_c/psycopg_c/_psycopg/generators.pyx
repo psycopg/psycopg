@@ -88,7 +88,7 @@ def send(pq.PGconn pgconn) -> PQGen[None]:
     cdef int cires
 
     while 1:
-        if libpq.PQflush(pgconn_ptr) == 0:
+        if pgconn.flush() == 0:
             break
 
         status = yield WAIT_RW
