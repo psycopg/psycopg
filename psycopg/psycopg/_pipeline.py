@@ -63,7 +63,8 @@ class BasePipeline:
             # Support only depends on the libpq functions available in the pq
             # wrapper, not on the database version.
             pq_version = pq.__build_version__ or pq.version()
-            BasePipeline._is_supported = pq_version >= 140000
+            # Pipeline support broken in libpq 14.5 (#350)
+            BasePipeline._is_supported = pq_version >= 140000 and pq_version != 140005
         return BasePipeline._is_supported
 
     def _enter_gen(self) -> PQGen[None]:

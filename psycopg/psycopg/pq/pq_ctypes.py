@@ -1047,3 +1047,5 @@ import ssl  # noqa
 # disable libcrypto setup in libpq, so it won't stomp on the callbacks
 # that have already been set up
 impl.PQinitOpenSSL(1, 0)
+
+__build_version__ = version()

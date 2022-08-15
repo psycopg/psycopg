@@ -11,7 +11,7 @@ implementation-dependant but all the implementations share the same interface.
 
 import os
 import logging
-from typing import Callable, List, Optional, Type
+from typing import Callable, List, Type
 
 from . import abc
 from .misc import ConninfoOption, PGnotify, PGresAttDesc
@@ -27,12 +27,12 @@ __impl__: str
 Possible values include ``python``, ``c``, ``binary``.
 """
 
-__build_version__: Optional[int]
+__build_version__: int
 """The libpq version the C package was built with.
 
 A number in the same format of `~psycopg.ConnectionInfo.server_version`
 representing the libpq used to build the speedup module (``c``, ``binary``) if
-available. `!None` if `__impl__` is ``python``.
+available.
 
 Certain features might not be available if the built version is too old.
 """
@@ -98,7 +98,7 @@ def import_from_libpq() -> None:
         Conninfo = module.Conninfo
         Escaping = module.Escaping
         PGcancel = module.PGcancel
-        __build_version__ = getattr(module, "__build_version__", None)
+        __build_version__ = module.__build_version__
     elif impl:
         raise ImportError(f"requested psycopg implementation '{impl}' unknown")
     else:

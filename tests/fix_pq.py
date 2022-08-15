@@ -81,7 +81,7 @@ def setpgenv(monkeypatch):
 
 @pytest.fixture
 def trace(libpq):
-    pqver = pq.__build_version__ or pq.version()
+    pqver = pq.__build_version__
     if pqver < 140000:
         pytest.skip(f"trace not available on libpq {pqver}")
     if sys.platform != "linux":

@@ -15,12 +15,7 @@ def test_version():
 
 
 def test_build_version():
-    if pq.__impl__ == "python":
-        assert pq.__build_version__ is None
-    elif pq.__impl__ in ["c", "binary"]:
-        assert pq.__build_version__ and pq.__build_version__ >= 70400
-    else:
-        assert False, f"unexpected libpq implementation: {pq.__impl__}"
+    assert pq.__build_version__ and pq.__build_version__ >= 70400
 
 
 @pytest.mark.skipif("not os.environ.get('PSYCOPG_TEST_WANT_LIBPQ_BUILD')")
