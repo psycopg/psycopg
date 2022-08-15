@@ -93,7 +93,7 @@ def send(pq.PGconn pgconn) -> PQGen[None]:
     cdef int cires
 
     while True:
-        if libpq.PQflush(pgconn_ptr) == 0:
+        if pgconn.flush() == 0:
             break
 
         status = yield WAIT_RW
@@ -259,7 +259,7 @@ def pipeline_communicate(
 
 
         if ready & Ready.W:
-            libpq.PQflush(pgconn_ptr)
+            pgconn.flush()
             if not commands:
                 break
             commands.popleft()()

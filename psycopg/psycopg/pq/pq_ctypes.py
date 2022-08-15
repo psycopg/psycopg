@@ -539,6 +539,7 @@ class PGconn:
             )
 
     def flush(self) -> int:
+        # PQflush segfaults if it receives a NULL connection
         if not self._pgconn_ptr:
             raise e.OperationalError("flushing failed: the connection is closed")
         rv: int = impl.PQflush(self._pgconn_ptr)
