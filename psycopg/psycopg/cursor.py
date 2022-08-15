@@ -19,27 +19,15 @@ from .abc import ConnectionType, Query, Params, PQGen
 from .copy import Copy
 from .rows import Row, RowMaker, RowFactory
 from ._column import Column
-from ._cmodule import _psycopg
 from ._queries import PostgresQuery
 from ._encodings import pgconn_encoding
 from ._preparing import Prepare
+from .generators import execute, fetch, send
 
 if TYPE_CHECKING:
     from .abc import Transformer
     from .pq.abc import PGconn, PGresult
     from .connection import Connection
-
-if _psycopg:
-    execute = _psycopg.execute
-    fetch = _psycopg.fetch
-    send = _psycopg.send
-
-else:
-    from . import generators
-
-    execute = generators.execute
-    fetch = generators.fetch
-    send = generators.send
 
 _C = TypeVar("_C", bound="Cursor[Any]")
 

@@ -24,12 +24,13 @@ from .pq import ConnStatus, PollingStatus, ExecStatus
 from .abc import PQGen, PQGenConn
 from .pq.abc import PGconn, PGresult
 from .waiting import Wait, Ready
+from ._cmodule import _psycopg
 from ._encodings import pgconn_encoding, conninfo_encoding
 
 logger = logging.getLogger(__name__)
 
 
-def connect(conninfo: str) -> PQGenConn[PGconn]:
+def _connect(conninfo: str) -> PQGenConn[PGconn]:
     """
     Generator to create a database connection without blocking.
 
@@ -61,7 +62,7 @@ def connect(conninfo: str) -> PQGenConn[PGconn]:
     return conn
 
 
-def execute(pgconn: PGconn) -> PQGen[List[PGresult]]:
+def _execute(pgconn: PGconn) -> PQGen[List[PGresult]]:
     """
     Generator sending a query and returning results without blocking.
 
@@ -72,12 +73,12 @@ def execute(pgconn: PGconn) -> PQGen[List[PGresult]]:
     Return the list of results returned by the database (whether success
     or error).
     """
-    yield from send(pgconn)
-    rv = yield from fetch_many(pgconn)
+    yield from _send(pgconn)
+    rv = yield from _fetch_many(pgconn)
     return rv
 
 
-def send(pgconn: PGconn) -> PQGen[None]:
+def _send(pgconn: PGconn) -> PQGen[None]:
     """
     Generator to send a query to the server without blocking.
 
@@ -100,7 +101,7 @@ def send(pgconn: PGconn) -> PQGen[None]:
             pgconn.consume_input()
 
 
-def fetch_many(pgconn: PGconn) -> PQGen[List[PGresult]]:
+def _fetch_many(pgconn: PGconn) -> PQGen[List[PGresult]]:
     """
     Generator retrieving results from the database without blocking.
 
@@ -112,7 +113,7 @@ def fetch_many(pgconn: PGconn) -> PQGen[List[PGresult]]:
     """
     results: List[PGresult] = []
     while 1:
-        res = yield from fetch(pgconn)
+        res = yield from _fetch(pgconn)
         if not res:
             break
 
@@ -125,7 +126,7 @@ def fetch_many(pgconn: PGconn) -> PQGen[List[PGresult]]:
     return results
 
 
-def fetch(pgconn: PGconn) -> PQGen[Optional[PGresult]]:
+def _fetch(pgconn: PGconn) -> PQGen[Optional[PGresult]]:
     """
     Generator retrieving a single result from the database without blocking.
 
@@ -190,7 +191,7 @@ def copy_from(pgconn: PGconn) -> PQGen[Union[memoryview, PGresult]]:
         return data
 
     # Retrieve the final result of copy
-    results = yield from fetch_many(pgconn)
+    results = yield from _fetch_many(pgconn)
     if len(results) > 1:
         # TODO: too brutal? Copy worked.
         raise e.ProgrammingError("you cannot mix COPY with other operations")
@@ -226,9 +227,25 @@ def copy_end(pgconn: PGconn, error: Optional[bytes]) -> PQGen[PGresult]:
             break
 
     # Retrieve the final result of copy
-    (result,) = yield from fetch_many(pgconn)
+    (result,) = yield from _fetch_many(pgconn)
     if result.status != ExecStatus.COMMAND_OK:
         encoding = pgconn_encoding(pgconn)
         raise e.error_from_result(result, encoding=encoding)
 
     return result
+
+
+# Override functions with fast versions if available
+if _psycopg:
+    connect = _psycopg.connect
+    execute = _psycopg.execute
+    send = _psycopg.send
+    fetch_many = _psycopg.fetch_many
+    fetch = _psycopg.fetch
+
+else:
+    connect = _connect
+    execute = _execute
+    send = _send
+    fetch_many = _fetch_many
+    fetch = _fetch

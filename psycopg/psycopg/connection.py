@@ -27,9 +27,8 @@ from .rows import Row, RowFactory, tuple_row, TupleRow
 from .adapt import AdaptersMap
 from ._enums import IsolationLevel
 from .cursor import Cursor
-from ._cmodule import _psycopg
 from .conninfo import make_conninfo, conninfo_to_dict, ConnectionInfo
-from .generators import notifies
+from .generators import connect, execute, notifies
 from ._encodings import pgconn_encoding
 from ._preparing import PrepareManager
 from .transaction import Transaction
@@ -41,22 +40,9 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger("psycopg")
 
-connect: Callable[[str], PQGenConn["PGconn"]]
-execute: Callable[["PGconn"], PQGen[List["PGresult"]]]
-
 # Row Type variable for Cursor (when it needs to be distinguished from the
 # connection's one)
 CursorRow = TypeVar("CursorRow")
-
-if _psycopg:
-    connect = _psycopg.connect
-    execute = _psycopg.execute
-
-else:
-    from . import generators
-
-    connect = generators.connect
-    execute = generators.execute
 
 
 class Notify(NamedTuple):
