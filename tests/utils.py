@@ -67,7 +67,7 @@ class VersionCheck:
         m = re.match(
             r"""(?ix)
             ^\s* (skip|only)?
-            \s* (>=|<=|>|<)?
+            \s* (==|!=|>=|<=|>|<)?
             \s* (?:(\d+)(?:\.(\d+)(?:\.(\d+))?)?)?
             \s* $
             """,
@@ -111,7 +111,7 @@ class VersionCheck:
 
         return msg
 
-    _OP_NAMES = {">=": "ge", "<=": "le", ">": "gt", "<": "lt", "==": "eq"}
+    _OP_NAMES = {">=": "ge", "<=": "le", ">": "gt", "<": "lt", "==": "eq", "!=": "ne"}
 
     def _match_version(self, got_tuple: Tuple[int, ...]) -> bool:
         if not self.version_tuple:
