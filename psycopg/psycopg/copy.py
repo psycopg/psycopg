@@ -453,7 +453,7 @@ class FileWriter(Writer):
     """
     A `Writer` to write copy data to a file-like object.
 
-    :param file: the file where to write copy data. It muse be open for writing
+    :param file: the file where to write copy data. It must be open for writing
         in binary mode.
     """
 
