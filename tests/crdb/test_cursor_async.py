@@ -12,7 +12,7 @@ from .test_cursor import testfeed
 
 testfeed  # fixture
 
-pytestmark = [pytest.mark.crdb, pytest.mark.asyncio]
+pytestmark = [pytest.mark.crdb, pytest.mark.anyio]
 
 
 @pytest.mark.slow

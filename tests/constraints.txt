@@ -9,10 +9,10 @@ typing-extensions == 4.1.0
 importlib-metadata == 1.4
 
 # From the 'test' extra
+anyio == 3.6.2
 mypy == 0.990
 pproxy == 2.7.0
 pytest == 6.2.5
-pytest-asyncio == 0.17.0
 pytest-cov == 3.0.0
 pytest-randomly == 3.5.0
 

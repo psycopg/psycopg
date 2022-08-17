@@ -13,7 +13,6 @@ from psycopg import errors as e
 from .test_pipeline import pipeline_aborted
 
 pytestmark = [
-    pytest.mark.asyncio,
     pytest.mark.pipeline,
     pytest.mark.skipif("not psycopg.AsyncPipeline.is_supported()"),
 ]

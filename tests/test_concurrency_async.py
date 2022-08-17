@@ -12,8 +12,6 @@ import psycopg
 from psycopg import errors as e
 from psycopg._compat import create_task
 
-pytestmark = pytest.mark.asyncio
-
 
 @pytest.mark.slow
 async def test_commit_concurrency(aconn):
@@ -194,7 +192,7 @@ async def test_identify_closure(aconn_cls, dsn):
     sys.platform == "win32", reason="don't know how to Ctrl-C on Windows"
 )
 @pytest.mark.crdb_skip("cancel")
-async def test_ctrl_c(dsn):
+def test_ctrl_c(dsn):
     script = f"""\
 import signal
 import asyncio

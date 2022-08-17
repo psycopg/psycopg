@@ -303,7 +303,6 @@ def test_fetch_info_not_found(conn):
     assert RangeInfo.fetch(conn, "nosuchrange") is None
 
 
-@pytest.mark.asyncio
 @pytest.mark.parametrize("name, subtype", fetch_cases)
 async def test_fetch_info_async(aconn, testrange, name, subtype):
     info = await RangeInfo.fetch(aconn, name)
@@ -313,7 +312,6 @@ async def test_fetch_info_async(aconn, testrange, name, subtype):
     assert info.subtype_oid == aconn.adapters.types[subtype].oid
 
 
-@pytest.mark.asyncio
 async def test_fetch_info_not_found_async(aconn):
     assert await RangeInfo.fetch(aconn, "nosuchrange") is None
 

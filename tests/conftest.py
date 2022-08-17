@@ -1,7 +1,9 @@
 import sys
 import asyncio
 import selectors
-from typing import List
+from typing import Any, Dict, List
+
+import pytest
 
 pytest_plugins = (
     "tests.fix_db",
@@ -64,17 +66,21 @@ def pytest_sessionstart(session):
         raise session.Failed
     cache.set("segfault", True)
 
-    # Configure the async loop.
-    loop = session.config.getoption("--loop")
-    if loop == "uvloop":
-        import uvloop
 
-        uvloop.install()
-    else:
-        assert loop == "default"
+asyncio_options: Dict[str, Any] = {}
+if sys.platform == "win32" and sys.version_info >= (3, 8):
+    asyncio_options["policy"] = asyncio.WindowsSelectorEventLoopPolicy()
 
-    if sys.platform == "win32":
-        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
+@pytest.fixture(
+    params=[pytest.param(("asyncio", asyncio_options.copy()), id="asyncio")],
+    scope="session",
+)
+def anyio_backend(request):
+    backend, options = request.param
+    if request.config.option.loop == "uvloop":
+        options["use_uvloop"] = True
+    return backend, options
 
 
 allow_fail_messages: List[str] = []

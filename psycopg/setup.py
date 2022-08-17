@@ -37,10 +37,10 @@ extras_require = {
     ],
     # Requirements to run the test suite
     "test": [
+        "anyio >= 3.6.2",
         "mypy >= 0.990",
         "pproxy >= 2.7",
         "pytest >= 6.2.5",
-        "pytest-asyncio >= 0.17",
         "pytest-cov >= 3.0",
         "pytest-randomly >= 3.5",
     ],

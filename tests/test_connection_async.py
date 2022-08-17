@@ -17,7 +17,7 @@ from .test_connection import testctx  # noqa: F401  # fixture
 from .test_adapt import make_bin_dumper, make_dumper
 from .test_conninfo import fake_resolve  # noqa: F401
 
-pytestmark = pytest.mark.asyncio
+pytestmark = pytest.mark.anyio
 
 
 async def test_connect(aconn_cls, dsn):
