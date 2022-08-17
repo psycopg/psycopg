@@ -348,7 +348,7 @@ class TestConnectionInfo:
         ),
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_resolve_hostaddr_async_no_resolve(
     setpgenv, conninfo, want, env, fail_resolve
 ):
@@ -398,7 +398,7 @@ async def test_resolve_hostaddr_async_no_resolve(
         ),
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_resolve_hostaddr_async(conninfo, want, env, fake_resolve):
     params = conninfo_to_dict(conninfo)
     params = await resolve_hostaddr_async(params)
@@ -414,7 +414,7 @@ async def test_resolve_hostaddr_async(conninfo, want, env, fake_resolve):
         ("host=1.1.1.1,2.2.2.2", {"PGPORT": "1,2,3"}),
     ],
 )
-@pytest.mark.asyncio
+@pytest.mark.anyio
 async def test_resolve_hostaddr_async_bad(setpgenv, conninfo, env, fake_resolve):
     setpgenv(env)
     params = conninfo_to_dict(conninfo)

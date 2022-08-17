@@ -13,7 +13,7 @@ from ..test_copy import sample_records
 from ..test_copy_async import ensure_table
 from .test_copy import sample_tabledef, copyopt
 
-pytestmark = [pytest.mark.crdb, pytest.mark.asyncio]
+pytestmark = [pytest.mark.crdb, pytest.mark.anyio]
 
 
 @pytest.mark.parametrize(

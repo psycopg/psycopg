@@ -216,7 +216,6 @@ def test_diag_from_commit(conn):
     assert exc.value.diag.sqlstate == "23503"
 
 
-@pytest.mark.asyncio
 @pytest.mark.crdb_skip("deferrable")
 async def test_diag_from_commit_async(aconn):
     cur = aconn.cursor()

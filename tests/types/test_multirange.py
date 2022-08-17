@@ -387,7 +387,6 @@ def test_fetch_info_not_found(conn):
     assert MultirangeInfo.fetch(conn, "nosuchrange") is None
 
 
-@pytest.mark.asyncio
 @pytest.mark.parametrize("name, subtype", fetch_cases)
 async def test_fetch_info_async(aconn, testmr, name, subtype):  # noqa: F811
     info = await MultirangeInfo.fetch(aconn, name)
@@ -397,7 +396,6 @@ async def test_fetch_info_async(aconn, testmr, name, subtype):  # noqa: F811
     assert info.subtype_oid == aconn.adapters.types[subtype].oid
 
 
-@pytest.mark.asyncio
 async def test_fetch_info_not_found_async(aconn):
     assert await MultirangeInfo.fetch(aconn, "nosuchrange") is None
 

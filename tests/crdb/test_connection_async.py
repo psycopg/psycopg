@@ -8,7 +8,7 @@ from psycopg._compat import create_task
 
 import pytest
 
-pytestmark = [pytest.mark.crdb, pytest.mark.asyncio]
+pytestmark = [pytest.mark.crdb, pytest.mark.anyio]
 
 
 async def test_is_crdb(aconn):

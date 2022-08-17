@@ -11,11 +11,9 @@ from .test_transaction import in_transaction, insert_row, inserted, get_exc_info
 from .test_transaction import ExpectedException, crdb_skip_external_observer
 from .test_transaction import create_test_table  # noqa  # autouse fixture
 
-pytestmark = pytest.mark.asyncio
-
 
 @pytest.fixture
-async def aconn(aconn, apipeline):
+async def aconn(aconn, apipeline, anyio_backend):
     return aconn
 
 
