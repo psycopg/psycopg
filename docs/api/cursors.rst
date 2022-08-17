@@ -67,7 +67,7 @@ The `!Cursor` class
         :param prepare: Force (`!True`) or disallow (`!False`) preparation of
             the query. By default (`!None`) prepare automatically. See
             :ref:`prepared-statements`.
-        :param binary: Specify whether the server shoul return data in binary
+        :param binary: Specify whether the server should return data in binary
             format (`!True`) or in text format (`!False`). By default
             (`!None`) return data as requested by the cursor's `~Cursor.format`.
 
@@ -326,7 +326,7 @@ The `!ServerCursor` class
         :type query: `!str`, `!bytes`, `sql.SQL`, or `sql.Composed`
         :param params: The parameters to pass to the query, if any.
         :type params: Sequence or Mapping
-        :param binary: Specify whether the server shoul return data in binary
+        :param binary: Specify whether the server should return data in binary
             format (`!True`) or in text format (`!False`). By default
             (`!None`) return data as requested by the cursor's `~Cursor.format`.
 
