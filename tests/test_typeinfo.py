@@ -42,7 +42,6 @@ def test_fetch(conn, name, status, encoding):
     assert info.regtype == "text"
 
 
-@pytest.mark.asyncio
 @pytest.mark.parametrize("name", ["text", sql.Identifier("text")])
 @pytest.mark.parametrize("status", ["IDLE", "INTRANS", None])
 @pytest.mark.parametrize(
@@ -111,7 +110,6 @@ def test_fetch_not_found(conn, name, status, info_cls, monkeypatch):
     assert info is None
 
 
-@pytest.mark.asyncio
 @_name
 @_status
 @_info_cls

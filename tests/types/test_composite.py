@@ -166,7 +166,6 @@ def test_fetch_info(conn, testcomp, name, fields):
         assert info.field_types[i] == builtins[t].oid
 
 
-@pytest.mark.asyncio
 @pytest.mark.parametrize("name, fields", fetch_cases)
 async def test_fetch_info_async(aconn, testcomp, name, fields):
     info = await CompositeInfo.fetch(aconn, name)

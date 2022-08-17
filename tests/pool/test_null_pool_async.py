@@ -11,7 +11,7 @@ from psycopg.pq import TransactionStatus
 from psycopg._compat import create_task
 from .test_pool_async import delay_connection, ensure_waiting
 
-pytestmark = [pytest.mark.asyncio]
+pytestmark = [pytest.mark.anyio]
 
 try:
     from psycopg_pool import AsyncNullConnectionPool  # noqa: F401

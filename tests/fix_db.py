@@ -239,7 +239,7 @@ def conn_cls(session_dsn):
 
 
 @pytest.fixture(scope="session")
-def aconn_cls(session_dsn):
+def aconn_cls(session_dsn, anyio_backend):
     cls = psycopg.AsyncConnection
     if crdb_version:
         from psycopg.crdb import AsyncCrdbConnection

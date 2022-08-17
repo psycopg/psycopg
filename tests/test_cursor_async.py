@@ -13,7 +13,6 @@ from .test_cursor import execmany, _execmany  # noqa: F401
 from .fix_crdb import crdb_encoding
 
 execmany = execmany  # avoid F811 underneath
-pytestmark = pytest.mark.asyncio
 
 
 async def test_init(aconn):

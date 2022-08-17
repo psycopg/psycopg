@@ -9,8 +9,6 @@ import pytest
 
 from psycopg.rows import namedtuple_row
 
-pytestmark = pytest.mark.asyncio
-
 
 @pytest.mark.parametrize("value", [None, 0, 3])
 async def test_prepare_threshold_init(aconn_cls, dsn, value):

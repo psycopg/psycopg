@@ -68,7 +68,6 @@ def test_fetch_info(conn):
     assert info.labels == list(StrTestEnum.__members__)
 
 
-@pytest.mark.asyncio
 async def test_fetch_info_async(aconn):
     info = await EnumInfo.fetch(aconn, "PureTestEnum")
     assert info.name == "puretestenum"

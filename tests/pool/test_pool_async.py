@@ -15,7 +15,7 @@ except ImportError:
     # Tests should have been skipped if the package is not available
     pass
 
-pytestmark = [pytest.mark.asyncio]
+pytestmark = [pytest.mark.anyio]
 
 
 async def test_defaults(dsn):

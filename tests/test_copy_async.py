@@ -24,7 +24,6 @@ from .test_copy import sample_values, sample_records, sample_tabledef
 from .test_copy import py_to_raw, special_chars
 
 pytestmark = [
-    pytest.mark.asyncio,
     pytest.mark.crdb_skip("copy"),
 ]
 

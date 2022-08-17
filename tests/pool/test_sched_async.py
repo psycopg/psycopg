@@ -13,7 +13,7 @@ except ImportError:
     # Tests should have been skipped if the package is not available
     pass
 
-pytestmark = [pytest.mark.asyncio, pytest.mark.timing]
+pytestmark = [pytest.mark.anyio, pytest.mark.timing]
 
 
 @pytest.mark.slow

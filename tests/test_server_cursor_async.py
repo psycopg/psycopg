@@ -5,7 +5,6 @@ from psycopg import rows, errors as e
 from psycopg.pq import Format
 
 pytestmark = [
-    pytest.mark.asyncio,
     pytest.mark.crdb_skip("server-side cursor"),
 ]
 
