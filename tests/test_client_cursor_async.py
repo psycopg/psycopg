@@ -433,11 +433,13 @@ async def test_rownumber(aconn):
     await cur.fetchmany(10)
     assert cur.rownumber == 12
     rns: List[int] = []
-    async for i in cur:
+    itcur = cur.__aiter__()
+    async for i in itcur:
         assert cur.rownumber
         rns.append(cur.rownumber)
         if len(rns) >= 3:
             break
+    await itcur.aclose()
     assert rns == [13, 14, 15]
     assert len(await cur.fetchall()) == 42 - rns[-1]
     assert cur.rownumber == 42
@@ -455,13 +457,17 @@ async def test_iter(aconn):
 async def test_iter_stop(aconn):
     cur = aconn.cursor()
     await cur.execute("select generate_series(1, 3)")
-    async for rec in cur:
+    itcur = cur.__aiter__()
+    async for rec in itcur:
         assert rec == (1,)
         break
+    await itcur.aclose()
 
-    async for rec in cur:
+    itcur = cur.__aiter__()
+    async for rec in itcur:
         assert rec == (2,)
         break
+    await itcur.aclose()
 
     assert (await cur.fetchone()) == (3,)
     async for rec in cur:
