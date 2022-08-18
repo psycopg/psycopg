@@ -1,3 +1,5 @@
+import asyncio
+import socket
 import time
 import pytest
 import logging
@@ -15,7 +17,6 @@ from .test_connection import tx_params, tx_params_isolation, tx_values_map
 from .test_connection import conninfo_params_timeout
 from .test_connection import testctx  # noqa: F401  # fixture
 from .test_adapt import make_bin_dumper, make_dumper
-from .test_conninfo import fake_resolve  # noqa: F401
 
 pytestmark = pytest.mark.anyio
 
@@ -732,6 +733,22 @@ async def test_connect_context_copy(aconn_cls, dsn, aconn):
 async def test_cancel_closed(aconn):
     await aconn.close()
     aconn.cancel()
+
+
+@pytest.fixture
+@pytest.mark.parametrize("anyio_backend", ["asyncio"])
+async def fake_resolve(monkeypatch, anyio_backend):
+    fake_hosts = {"foo.com": "1.1.1.1"}
+
+    async def fake_getaddrinfo(host, port, **kwargs):
+        try:
+            addr = fake_hosts[host]
+        except KeyError:
+            raise OSError(f"unknown test host: {host}")
+        else:
+            return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", (addr, 432))]
+
+    monkeypatch.setattr(asyncio.get_running_loop(), "getaddrinfo", fake_getaddrinfo)
 
 
 async def test_resolve_hostaddr_conn(monkeypatch, fake_resolve):  # noqa: F811

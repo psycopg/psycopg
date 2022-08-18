@@ -1,5 +1,4 @@
 import socket
-import asyncio
 import datetime as dt
 
 import pytest
@@ -349,12 +348,10 @@ class TestConnectionInfo:
     ],
 )
 @pytest.mark.anyio
-async def test_resolve_hostaddr_async_no_resolve(
-    setpgenv, conninfo, want, env, fail_resolve
-):
+async def test_resolve_hostaddr_async_no_resolve(setpgenv, conninfo, want, env):
     setpgenv(env)
     params = conninfo_to_dict(conninfo)
-    params = await resolve_hostaddr_async(params)
+    params = await resolve_hostaddr_async(params, getaddrinfo=fail_resolve)
     assert conninfo_to_dict(want) == params
 
 
@@ -399,9 +396,9 @@ async def test_resolve_hostaddr_async_no_resolve(
     ],
 )
 @pytest.mark.anyio
-async def test_resolve_hostaddr_async(conninfo, want, env, fake_resolve):
+async def test_resolve_hostaddr_async(conninfo, want, env):
     params = conninfo_to_dict(conninfo)
-    params = await resolve_hostaddr_async(params)
+    params = await resolve_hostaddr_async(params, getaddrinfo=fake_resolve)
     assert conninfo_to_dict(want) == params
 
 
@@ -415,36 +412,27 @@ async def test_resolve_hostaddr_async(conninfo, want, env, fake_resolve):
     ],
 )
 @pytest.mark.anyio
-async def test_resolve_hostaddr_async_bad(setpgenv, conninfo, env, fake_resolve):
+async def test_resolve_hostaddr_async_bad(setpgenv, conninfo, env):
     setpgenv(env)
     params = conninfo_to_dict(conninfo)
     with pytest.raises(psycopg.Error):
-        await resolve_hostaddr_async(params)
+        await resolve_hostaddr_async(params, getaddrinfo=fake_resolve)
 
 
-@pytest.fixture
-async def fake_resolve(monkeypatch):
+async def fake_resolve(host, port, **kwargs):
     fake_hosts = {
         "localhost": "127.0.0.1",
         "foo.com": "1.1.1.1",
         "qux.com": "2.2.2.2",
     }
-
-    async def fake_getaddrinfo(host, port, **kwargs):
-        assert isinstance(port, int) or (isinstance(port, str) and port.isdigit())
-        try:
-            addr = fake_hosts[host]
-        except KeyError:
-            raise OSError(f"unknown test host: {host}")
-        else:
-            return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", (addr, 432))]
-
-    monkeypatch.setattr(asyncio.get_running_loop(), "getaddrinfo", fake_getaddrinfo)
+    assert isinstance(port, int) or (isinstance(port, str) and port.isdigit())
+    try:
+        addr = fake_hosts[host]
+    except KeyError:
+        raise OSError(f"unknown test host: {host}")
+    else:
+        return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", (addr, 432))]
 
 
-@pytest.fixture
-async def fail_resolve(monkeypatch):
-    async def fail_getaddrinfo(host, port, **kwargs):
-        pytest.fail(f"shouldn't try to resolve {host}")
-
-    monkeypatch.setattr(asyncio.get_running_loop(), "getaddrinfo", fail_getaddrinfo)
+async def fail_resolve(host, port, **kwargs):
+    pytest.fail(f"shouldn't try to resolve {host}")

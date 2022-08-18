@@ -7,7 +7,6 @@ Functions to manipulate conninfo strings
 import os
 import re
 import socket
-import asyncio
 from typing import Any, Dict, List, Optional
 from pathlib import Path
 from datetime import tzinfo
@@ -275,7 +274,9 @@ class ConnectionInfo:
         return value.decode(self.encoding)
 
 
-async def resolve_hostaddr_async(params: Dict[str, Any]) -> Dict[str, Any]:
+async def resolve_hostaddr_async(
+    params: Dict[str, Any], *, getaddrinfo: Any
+) -> Dict[str, Any]:
     """
     Perform async DNS lookup of the hosts and return a new params dict.
 
@@ -323,7 +324,6 @@ async def resolve_hostaddr_async(params: Dict[str, Any]) -> Dict[str, Any]:
 
     hosts_out = []
     hostaddr_out = []
-    loop = asyncio.get_running_loop()
     for i, host in enumerate(hosts_in):
         if not host or host.startswith("/") or host[1:2] == ":":
             # Local path
@@ -343,7 +343,7 @@ async def resolve_hostaddr_async(params: Dict[str, Any]) -> Dict[str, Any]:
 
         try:
             port = ports_in[i] if ports_in else default_port
-            ans = await loop.getaddrinfo(
+            ans = await getaddrinfo(
                 host, port, proto=socket.IPPROTO_TCP, type=socket.SOCK_STREAM
             )
         except OSError as ex:

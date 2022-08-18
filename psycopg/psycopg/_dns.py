@@ -5,6 +5,7 @@ DNS query support
 
 # Copyright (C) 2021 The Psycopg Team
 
+import asyncio
 import os
 import re
 import warnings
@@ -48,7 +49,8 @@ async def resolve_hostaddr_async(params: Dict[str, Any]) -> Dict[str, Any]:
         "from psycopg 3.1, resolve_hostaddr_async() is not needed anymore",
         DeprecationWarning,
     )
-    return await resolve_hostaddr_async_(params)
+    loop = asyncio.get_running_loop()
+    return await resolve_hostaddr_async_(params, getaddrinfo=loop.getaddrinfo)
 
 
 def resolve_srv(params: Dict[str, Any]) -> Dict[str, Any]:

@@ -189,7 +189,8 @@ class AsyncConnection(BaseConnection[Row]):
             params["connect_timeout"] = None
 
         # Resolve host addresses in non-blocking way
-        params = await resolve_hostaddr_async(params)
+        loop = asyncio.get_running_loop()
+        params = await resolve_hostaddr_async(params, getaddrinfo=loop.getaddrinfo)
 
         return params
 
