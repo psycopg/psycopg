@@ -592,7 +592,7 @@ class BaseConnection(Generic[Row]):
 
         if self._autocommit:
             raise e.ProgrammingError(
-                "can't use two-phase transctions in autocommit mode"
+                "can't use two-phase transactions in autocommit mode"
             )
 
         self._tpc = (xid, False)

@@ -495,7 +495,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
             raise e.PipelineAborted("pipeline aborted")
         elif status == COPY_IN or status == COPY_OUT or status == COPY_BOTH:
             raise e.ProgrammingError(
-                "COPY cannot be used with this method; use copy() insead"
+                "COPY cannot be used with this method; use copy() instead"
             )
         else:
             raise e.InternalError(
