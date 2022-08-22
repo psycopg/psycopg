@@ -37,14 +37,14 @@ jobs:
       - name: Install the Python package and test requirements
         run: |-
           pip install `ls dist/*`[test]
-          pip install -e ./psycopg_pool
+          pip install ./psycopg_pool
         if: ${{ matrix.package == 'psycopg' }}
 
       - name: Install the C package and test requirements
         run: |-
           pip install dist/*
-          pip install -e ./psycopg[test]
-          pip install -e ./psycopg_pool
+          pip install ./psycopg[test]
+          pip install ./psycopg_pool
         if: ${{ matrix.package == 'psycopg_c' }}
 
       - name: Test the sdist package
