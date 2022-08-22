@@ -38,7 +38,7 @@ jobs:
       - name: Install the Python pool package and test requirements
         run: |-
           pip install dist/*
-          pip install -e ./psycopg[test]
+          pip install ./psycopg[test]
 
       - name: Test the sdist package
         run: pytest -m 'not slow and not flakey' --color yes
