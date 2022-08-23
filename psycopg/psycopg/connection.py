@@ -447,23 +447,17 @@ class BaseConnection(Generic[Row]):
             command = command.as_bytes(self)
 
         if self._pipeline:
-            if result_format == TEXT:
-                cmd = partial(self.pgconn.send_query, command)
-            else:
-                cmd = partial(
-                    self.pgconn.send_query_params,
-                    command,
-                    None,
-                    result_format=result_format,
-                )
+            cmd = partial(
+                self.pgconn.send_query_params,
+                command,
+                None,
+                result_format=result_format,
+            )
             self._pipeline.command_queue.append(cmd)
             self._pipeline.result_queue.append(None)
             return None
 
-        if result_format == TEXT:
-            self.pgconn.send_query(command)
-        else:
-            self.pgconn.send_query_params(command, None, result_format=result_format)
+        self.pgconn.send_query_params(command, None, result_format=result_format)
 
         result = (yield from execute(self.pgconn))[-1]
         if result.status != COMMAND_OK and result.status != TUPLES_OK:

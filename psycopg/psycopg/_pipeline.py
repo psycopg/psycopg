@@ -83,10 +83,6 @@ class BasePipeline:
                 " v14 or greater required for pipeline mode"
             )
 
-        # Bug #350
-        if pq.version() == 140005:
-            return f"pipeline mode broken in libpq version {pq.version()}"
-
         return ""
 
     def _enter_gen(self) -> PQGen[None]:

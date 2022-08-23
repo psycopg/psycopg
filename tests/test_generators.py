@@ -41,9 +41,9 @@ def _run_pipeline_communicate(pgconn, generators, commands, expected_statuses):
 def test_pipeline_communicate_multi_pipeline(pgconn, pipeline, generators):
     commands = deque(
         [
-            partial(pgconn.send_query, b"select 1"),
+            partial(pgconn.send_query_params, b"select 1", None),
             pgconn.pipeline_sync,
-            partial(pgconn.send_query, b"select 2"),
+            partial(pgconn.send_query_params, b"select 2", None),
             pgconn.pipeline_sync,
         ]
     )
@@ -60,7 +60,8 @@ def test_pipeline_communicate_multi_pipeline(pgconn, pipeline, generators):
 def test_pipeline_communicate_no_sync(pgconn, pipeline, generators):
     numqueries = 10
     commands = deque(
-        [partial(pgconn.send_query, b"select repeat('xyzxz', 12)")] * numqueries
+        [partial(pgconn.send_query_params, b"select repeat('xyzxz', 12)", None)]
+        * numqueries
         + [pgconn.send_flush_request]
     )
     expected_statuses = [pq.ExecStatus.TUPLES_OK] * numqueries
@@ -89,7 +90,7 @@ def test_pipeline_communicate_abort(pgconn, pipeline_demo, pipeline, generators)
     commands = deque(
         [
             partial(pgconn.send_query_params, insert_sql, [b"1"]),
-            partial(pgconn.send_query, b"select no_such_function(1)"),
+            partial(pgconn.send_query_params, b"select no_such_function(1)", None),
             partial(pgconn.send_query_params, insert_sql, [b"2"]),
             pgconn.pipeline_sync,
             partial(pgconn.send_query_params, insert_sql, [b"3"]),
@@ -141,7 +142,7 @@ def test_pipeline_communicate_uniqviol(pgconn, pipeline_uniqviol, pipeline, gene
             partial(pgconn.send_query_prepared, b"insertion", [b"1", b"2"]),
             partial(pgconn.send_query_prepared, b"insertion", [b"3", b"2"]),
             partial(pgconn.send_query_prepared, b"insertion", [b"4", b"2"]),
-            partial(pgconn.send_query, b"commit"),
+            partial(pgconn.send_query_params, b"commit", None),
         ]
     )
     expected_statuses = [

@@ -37,7 +37,6 @@ def test_want_import_version():
 
 
 @pytest.mark.libpq(">= 14")
-@pytest.mark.libpq("!= 14.5")
 def test_pipeline_supported(conn):
     assert psycopg.Pipeline.is_supported()
     assert psycopg.AsyncPipeline.is_supported()
@@ -56,17 +55,3 @@ def test_pipeline_not_supported(conn):
             pass
 
     assert "too old" in str(exc.value)
-
-
-@pytest.mark.libpq("14.5")
-def test_pipeline_not_supported_14_5(conn):
-    # Affected by #350
-    # NOTE: we might support it in binary using a patched libpq version.
-    assert not psycopg.Pipeline.is_supported()
-    assert not psycopg.AsyncPipeline.is_supported()
-
-    with pytest.raises(psycopg.NotSupportedError) as exc:
-        with conn.pipeline():
-            pass
-
-    assert "broken" in str(exc.value)

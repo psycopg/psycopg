@@ -60,6 +60,7 @@ class LoggingPGconn:
         return getattr(self._pgconn, name)
 
     def send_query(self, command: bytes) -> None:
+        self._logger.warning("PQsendQuery broken in libpq 14.5")
         self._pgconn.send_query(command)
         self._logger.info("sent %s", command.decode())
 
@@ -140,7 +141,7 @@ def prepare_pipeline_demo_pq(
         if qname == "prepare":
             pgconn.send_prepare(qname.encode(), query.encode())
         else:
-            pgconn.send_query(query.encode())
+            pgconn.send_query_params(query.encode(), None)
         results_queue.append(qname)
 
     committed = False
@@ -155,7 +156,7 @@ def prepare_pipeline_demo_pq(
 
         elif not committed:
             committed = True
-            commands.append(partial(pgconn.send_query, b"COMMIT"))
+            commands.append(partial(pgconn.send_query_params, b"COMMIT", None))
             results_queue.append("commit")
 
         elif not synced:
