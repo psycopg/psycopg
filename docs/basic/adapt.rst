@@ -70,8 +70,8 @@ promoted to the larger Python counterpart.
 
     Sometimes you may prefer to receive :sql:`numeric` data as `!float`
     instead, for performance reason or ease of manipulation: you can configure
-    an adapter to :ref:`cast PostgreSQL numeric to Python float <faq-float>`.
-    This of course may imply a loss of precision.
+    an adapter to :ref:`cast PostgreSQL numeric to Python float
+    <adapt-example-float>`. This of course may imply a loss of precision.
 
 
 .. index::
