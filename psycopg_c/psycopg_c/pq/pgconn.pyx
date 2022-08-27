@@ -661,8 +661,8 @@ cdef void notice_receiver(void *arg, const libpq.PGresult *res_ptr) with gil:
         pgconn.notice_handler(res)
     except Exception as e:
         logger.exception("error in notice receiver: %s", e)
-
-    res._pgresult_ptr = NULL  # avoid destroying the pgresult_ptr
+    finally:
+        res._pgresult_ptr = NULL  # avoid destroying the pgresult_ptr
 
 
 cdef (Py_ssize_t, libpq.Oid *, char * const*, int *, int *) _query_params_args(
