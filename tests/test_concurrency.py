@@ -8,6 +8,7 @@ import time
 import queue
 import signal
 import threading
+import multiprocessing
 import subprocess as sp
 from typing import List
 
@@ -285,3 +286,37 @@ with psycopg.connect({dsn!r}) as conn:
     t = time.time() - t0
     assert proc.returncode == 0
     assert 1 < t < 2
+
+
+@pytest.mark.slow
+@pytest.mark.subprocess
+@pytest.mark.skipif(
+    multiprocessing.get_all_start_methods()[0] != "fork",
+    reason="problematic behavior only exhibited via fork",
+)
+def test_segfault_on_fork_close(dsn):
+    # https://github.com/psycopg/psycopg/issues/300
+    script = f"""\
+import gc
+import psycopg
+from multiprocessing import Pool
+
+def test(arg):
+    conn1 = psycopg.connect({dsn!r})
+    conn1.close()
+    conn1 = None
+    gc.collect()
+    return 1
+
+if __name__ == '__main__':
+    conn = psycopg.connect({dsn!r})
+    with Pool(2) as p:
+        pool_result = p.map_async(test, [1, 2])
+        pool_result.wait(timeout=5)
+        if pool_result.ready():
+            print(pool_result.get(timeout=1))
+"""
+    env = dict(os.environ)
+    env["PYTHONFAULTHANDLER"] = "1"
+    out = sp.check_output([sys.executable, "-s", "-c", script], env=env)
+    assert out.decode().rstrip() == "[1, 1]"

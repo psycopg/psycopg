@@ -11,10 +11,9 @@ implementation.
 import logging
 from os import getpid
 from weakref import ref
-from functools import partial
 
-from ctypes import Array, pointer, string_at, create_string_buffer, byref
-from ctypes import addressof, c_char_p, c_int, c_size_t, c_ulong
+from ctypes import Array, POINTER, cast, pointer, string_at, create_string_buffer, byref
+from ctypes import addressof, c_char_p, c_int, c_size_t, c_ulong, c_void_p, py_object
 from typing import Any, Callable, List, Optional, Sequence, Tuple
 from typing import cast as t_cast, TYPE_CHECKING
 
@@ -45,10 +44,9 @@ def version() -> int:
     return impl.PQlibVersion()
 
 
-def notice_receiver(
-    arg: Any, result_ptr: impl.PGresult_struct, wconn: "ref[PGconn]"
-) -> None:
-    pgconn = wconn()
+@impl.PQnoticeReceiver  # type: ignore
+def notice_receiver(arg: c_void_p, result_ptr: impl.PGresult_struct) -> None:
+    pgconn = cast(arg, POINTER(py_object)).contents.value()
     if not (pgconn and pgconn.notice_handler):
         return
 
@@ -70,7 +68,7 @@ class PGconn:
         "_pgconn_ptr",
         "notice_handler",
         "notify_handler",
-        "_notice_receiver",
+        "_self_ptr",
         "_procpid",
         "__weakref__",
     )
@@ -80,10 +78,9 @@ class PGconn:
         self.notice_handler: Optional[Callable[["abc.PGresult"], None]] = None
         self.notify_handler: Optional[Callable[[PGnotify], None]] = None
 
-        self._notice_receiver = impl.PQnoticeReceiver(  # type: ignore
-            partial(notice_receiver, wconn=ref(self))
-        )
-        impl.PQsetNoticeReceiver(pgconn_ptr, self._notice_receiver, None)
+        # Keep alive for the lifetime of PGconn
+        self._self_ptr = py_object(ref(self))
+        impl.PQsetNoticeReceiver(pgconn_ptr, notice_receiver, byref(self._self_ptr))
 
         self._procpid = getpid()
 
