@@ -55,8 +55,8 @@ def notice_receiver(arg: c_void_p, result_ptr: impl.PGresult_struct) -> None:
         pgconn.notice_handler(res)
     except Exception as exc:
         logger.exception("error in notice receiver: %s", exc)
-
-    res._pgresult_ptr = None  # avoid destroying the pgresult_ptr
+    finally:
+        res._pgresult_ptr = None  # avoid destroying the pgresult_ptr
 
 
 class PGconn:
