@@ -86,7 +86,8 @@ if [ "$ID" == "centos" ]; then
         cd "${sasl_dir}"
 
         autoreconf -i
-        ./configure --prefix=${LIBPQ_BUILD_PREFIX}
+        ./configure --prefix=${LIBPQ_BUILD_PREFIX} \
+            CPPFLAGS=-I${LIBPQ_BUILD_PREFIX}/include/ LDFLAGS=-L${LIBPQ_BUILD_PREFIX}/lib
         make
     else
         cd "${sasl_dir}"
@@ -113,7 +114,9 @@ if [ "$ID" == "centos" ]; then
 
         cd "${ldap_dir}"
 
-        ./configure --prefix=${LIBPQ_BUILD_PREFIX} --enable-backends=no --enable-null
+        ./configure --prefix=${LIBPQ_BUILD_PREFIX} --enable-backends=no --enable-null \
+            CPPFLAGS=-I${LIBPQ_BUILD_PREFIX}/include/ LDFLAGS=-L${LIBPQ_BUILD_PREFIX}/lib
+
         make depend
         make -C libraries/liblutil/
         make -C libraries/liblber/
