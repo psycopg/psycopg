@@ -29,10 +29,12 @@ source /etc/os-release
 
 case "$ID" in
     centos)
+        yum update -y
         yum install -y zlib-devel krb5-devel pam-devel
         ;;
 
     alpine)
+        apk upgrade
         apk add --no-cache zlib-dev krb5-dev linux-pam-dev openldap-dev
         ;;
 
