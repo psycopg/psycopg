@@ -58,7 +58,7 @@ def update_cython_oids(conn: Connection) -> None:
 
 
 def update_crdb_python_oids(conn: Connection) -> None:
-    fn = ROOT / "psycopg/psycopg/crdb.py"
+    fn = ROOT / "psycopg/psycopg/crdb/_types.py"
 
     lines = []
     lines.extend(get_version_comment(conn))
