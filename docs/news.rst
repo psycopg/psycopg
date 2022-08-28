@@ -7,6 +7,16 @@
 ``psycopg`` release notes
 =========================
 
+Future releases
+---------------
+
+Psycopg 3.0.17 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Fix segfaults on fork on some Linux systems using `ctypes` implementation
+  (:ticket:`#300`).
+
+
 Current release
 ---------------
 
