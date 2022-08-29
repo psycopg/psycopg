@@ -90,6 +90,7 @@ _crdb_reasons = {
     "2-phase commit": 22329,
     "backend pid": 35897,
     "batch statements": 44803,
+    "begin_read_only": 87012,
     "binary decimal": 82492,
     "cancel": 41335,
     "cast adds tz": 51692,
