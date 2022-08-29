@@ -616,10 +616,15 @@ tx_params = [
 tx_params_isolation = [
     pytest.param(
         param_isolation,
+        id="isolation_level",
         marks=pytest.mark.crdb("skip", reason="transaction isolation"),
     ),
-    param_read_only,
-    pytest.param(param_deferrable, marks=pytest.mark.crdb_skip("deferrable")),
+    pytest.param(
+        param_read_only, id="read_only", marks=pytest.mark.crdb_skip("begin_read_only")
+    ),
+    pytest.param(
+        param_deferrable, id="deferrable", marks=pytest.mark.crdb_skip("deferrable")
+    ),
 ]
 
 
