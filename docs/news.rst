@@ -37,16 +37,16 @@ Psycopg 3.1 (unreleased)
 - Drop support for Python 3.6.
 
 
-Psycopg 3.0.17 (unreleased)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Current release
+---------------
+
+Psycopg 3.0.17
+^^^^^^^^^^^^^^
 
 - Fix segfaults on fork on some Linux systems using `ctypes` implementation
   (:ticket:`#300`).
 - Load bytea as bytes, not memoryview, using `ctypes` implementation.
 
-
-Current release
----------------
 
 Psycopg 3.0.16
 ^^^^^^^^^^^^^^
