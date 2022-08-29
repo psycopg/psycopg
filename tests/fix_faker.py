@@ -344,10 +344,7 @@ class Faker:
 
     def make_Decimal(self, spec):
         if random() >= 0.99:
-            if self.conn.info.server_version >= 140000:
-                return Decimal(choice(["NaN", "sNaN", "Inf", "-Inf"]))
-            else:
-                return Decimal(choice(["NaN", "sNaN"]))
+            return Decimal(choice(self._decimal_special_values()))
 
         sign = choice("+-")
         num = choice(["0.zd", "d", "d.d"])
@@ -369,6 +366,20 @@ class Faker:
             assert want.is_nan()
         else:
             assert got == want
+
+    def _decimal_special_values(self):
+        values = ["NaN", "sNaN"]
+
+        if self.conn.info.vendor == "PostgreSQL":
+            if self.conn.info.server_version >= 140000:
+                values.extend(["Inf", "-Inf"])
+        elif self.conn.info.vendor == "CockroachDB":
+            if self.conn.info.server_version >= 220100:
+                values.extend(["Inf", "-Inf"])
+        else:
+            pytest.fail(f"unexpected vendor: {self.conn.info.vendor}")
+
+        return values
 
     def schema_Enum(self, cls):
         # TODO: can't fake those as we would need to create temporary types
