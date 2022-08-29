@@ -7,11 +7,11 @@
 ``psycopg`` release notes
 =========================
 
-Future releases
+Current release
 ---------------
 
-Psycopg 3.1 (unreleased)
-^^^^^^^^^^^^^^^^^^^^^^^^
+Psycopg 3.1
+^^^^^^^^^^^
 
 - Add :ref:`Pipeline mode <pipeline-mode>` (:ticket:`#74`).
 - Add :ref:`client-side-binding-cursors` (:ticket:`#101`).
@@ -36,9 +36,6 @@ Psycopg 3.1 (unreleased)
 - Add explicit type cast to values converted by `sql.Literal` (:ticket:`#205`).
 - Drop support for Python 3.6.
 
-
-Current release
----------------
 
 Psycopg 3.0.17
 ^^^^^^^^^^^^^^
