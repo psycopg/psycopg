@@ -148,7 +148,7 @@ class ByteaLoader(Loader):
             self.__class__._escaping = Escaping()
 
     def load(self, data: Buffer) -> bytes:
-        return self._escaping.unescape_bytea(data)
+        return bytes(self._escaping.unescape_bytea(data))
 
 
 class ByteaBinaryLoader(Loader):

@@ -283,8 +283,10 @@ def test_load_1byte(conn, fmt_out):
     cur = conn.cursor(binary=fmt_out)
     for i in range(0, 256):
         cur.execute("select set_byte('x', 0, %s)", (i,))
-        assert cur.fetchone()[0] == bytes([i])
+        val = cur.fetchone()[0]
+        assert val == bytes([i])
 
+    assert isinstance(val, bytes)
     assert cur.pgresult.fformat(0) == fmt_out
 
 
