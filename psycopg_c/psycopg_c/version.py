@@ -6,6 +6,6 @@ psycopg-c distribution version file.
 
 # Use a versioning scheme as defined in
 # https://www.python.org/dev/peps/pep-0440/
-__version__ = "3.0.17.dev0"
+__version__ = "3.0.17"
 
 # also change psycopg/psycopg/version.py accordingly.
