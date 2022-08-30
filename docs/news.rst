@@ -11,7 +11,7 @@ Current release
 ---------------
 
 Psycopg 3.1
-^^^^^^^^^^^
+-----------
 
 - Add :ref:`Pipeline mode <pipeline-mode>` (:ticket:`#74`).
 - Add :ref:`client-side-binding-cursors` (:ticket:`#101`).
