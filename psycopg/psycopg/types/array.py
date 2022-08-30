@@ -6,8 +6,8 @@ Adapters for arrays
 
 import re
 import struct
-from typing import Any, cast, Callable, Iterator, List
-from typing import Optional, Pattern, Set, Tuple, Type
+from math import prod
+from typing import Any, cast, Callable, List, Optional, Pattern, Set, Tuple, Type
 
 from .. import pq
 from .. import errors as e
@@ -441,29 +441,25 @@ def _get_array_parse_regexp(delimiter: bytes) -> Pattern[bytes]:
 
 def load_binary(data: Buffer, load: LoadFunc) -> List[Any]:
     ndims, hasnull, oid = _unpack_head(data)
+
     if not ndims:
         return []
 
     p = 12 + 8 * ndims
-    dims = [_unpack_dim(data, i)[0] for i in list(range(12, p, 8))]
+    dims = [_unpack_dim(data, i)[0] for i in range(12, p, 8)]
+    nelems = prod(dims)
 
-    def consume(p: int) -> Iterator[Any]:
-        while True:
-            size = unpack_len(data, p)[0]
-            p += 4
-            if size != -1:
-                yield load(data[p : p + size])
-                p += size
-            else:
-                yield None
+    out: List[Any] = [None] * nelems
+    for i in range(nelems):
+        size = unpack_len(data, p)[0]
+        p += 4
+        if size == -1:
+            continue
+        out[i] = load(data[p : p + size])
+        p += size
 
-    items = consume(p)
+    # fon ndims > 1 we have to aggregate the array into sub-arrays
+    for dim in dims[-1:0:-1]:
+        out = [out[i : i + dim] for i in range(0, len(out), dim)]
 
-    def agg(dims: List[int]) -> List[Any]:
-        if not dims:
-            return next(items)
-        else:
-            dim, dims = dims[0], dims[1:]
-            return [agg(dims) for _ in range(dim)]
-
-    return agg(dims)
+    return out
