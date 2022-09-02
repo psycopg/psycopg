@@ -56,7 +56,7 @@ async def resolve_hostaddr_async(params: Dict[str, Any]) -> Dict[str, Any]:
 
     hosts_in = host_arg.split(",")
     port_arg: str = str(params.get("port", os.environ.get("PGPORT", "")))
-    ports_in = port_arg.split(",")
+    ports_in = port_arg.split(",") if port_arg else []
 
     if len(ports_in) == 1:
         # If only one port is specified, the libpq will apply it to all
