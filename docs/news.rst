@@ -7,6 +7,16 @@
 ``psycopg`` release notes
 =========================
 
+Future releases
+---------------
+
+Psycopg 3.1.1
+^^^^^^^^^^^^^
+
+- Fix possible "unrecognized service" error in async connection when no port
+  is specified (:ticket:`#366`).
+
+
 Current release
 ---------------
 

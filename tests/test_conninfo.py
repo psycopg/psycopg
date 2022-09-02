@@ -432,6 +432,7 @@ async def fake_resolve(monkeypatch):
     }
 
     async def fake_getaddrinfo(host, port, **kwargs):
+        assert isinstance(port, int) or (isinstance(port, str) and port.isdigit())
         try:
             addr = fake_hosts[host]
         except KeyError:
