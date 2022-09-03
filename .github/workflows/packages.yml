@@ -93,7 +93,12 @@ jobs:
       - uses: actions/checkout@v2
 
       - name: Set up QEMU for multi-arch build
-        uses: docker/setup-qemu-action@v1
+        # Check https://github.com/docker/setup-qemu-action for newer versions.
+        uses: docker/setup-qemu-action@v2
+        with:
+          # Note: 6.2.0 is buggy: make sure to avoid it.
+          # See https://github.com/pypa/cibuildwheel/issues/1250
+          image: tonistiigi/binfmt:qemu-v7.0.0
 
       - name: Cache libpq build
         uses: actions/cache@v3
