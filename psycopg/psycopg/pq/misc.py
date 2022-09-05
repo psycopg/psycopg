@@ -4,11 +4,18 @@ Various functionalities to make easier to work with the libpq.
 
 # Copyright (C) 2020 The Psycopg Team
 
+import os
+import sys
+import logging
+import ctypes.util
 from typing import cast, NamedTuple, Optional, Union
+from functools import lru_cache
 
 from .abc import PGconn, PGresult
 from ._enums import ConnStatus, TransactionStatus
 from .._encodings import pgconn_encoding
+
+logger = logging.getLogger("psycopg.pq")
 
 
 class PGnotify(NamedTuple):
@@ -35,6 +42,33 @@ class PGresAttDesc(NamedTuple):
     typid: int
     typlen: int
     atttypmod: int
+
+
+@lru_cache()
+def find_libpq_full_path() -> Optional[str]:
+    if sys.platform == "win32":
+        libname = ctypes.util.find_library("libpq.dll")
+
+    elif sys.platform == "darwin":
+        libname = ctypes.util.find_library("libpq.dylib")
+        # (hopefully) temporary hack: libpq not in a standard place
+        # https://github.com/orgs/Homebrew/discussions/3595
+        # If pg_config is available and agrees, let's use its indications.
+        if not libname:
+            try:
+                import subprocess as sp
+
+                libdir = sp.check_output(["pg_config", "--libdir"]).strip().decode()
+                libname = os.path.join(libdir, "libpq.dylib")
+                if not os.path.exists(libname):
+                    libname = None
+            except Exception as ex:
+                logger.debug("couldn't use pg_config to find libpq: %s", ex)
+
+    else:
+        libname = ctypes.util.find_library("pq")
+
+    return libname
 
 
 def error_message(obj: Union[PGconn, PGresult], encoding: str = "utf8") -> str:

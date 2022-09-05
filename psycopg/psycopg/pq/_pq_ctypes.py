@@ -6,19 +6,14 @@ libpq access using ctypes
 
 import ctypes
 import ctypes.util
-import sys
 from ctypes import Structure, CFUNCTYPE, POINTER
 from ctypes import c_char, c_char_p, c_int, c_size_t, c_ubyte, c_uint, c_void_p
 from typing import List, Optional, Tuple
 
+from .misc import find_libpq_full_path
 from ..errors import NotSupportedError
 
-if sys.platform == "win32":
-    libname = ctypes.util.find_library("libpq.dll")
-elif sys.platform == "darwin":
-    libname = ctypes.util.find_library("libpq.dylib")
-else:
-    libname = ctypes.util.find_library("pq")
+libname = find_libpq_full_path()
 if not libname:
     raise ImportError("libpq library not found")
 
