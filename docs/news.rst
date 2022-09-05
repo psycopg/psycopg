@@ -13,6 +13,8 @@ Future releases
 Psycopg 3.1.1
 ^^^^^^^^^^^^^
 
+- Work around broken Homebrew installation of the libpq in a non-standard path
+  (:ticket:`#364`)
 - Fix possible "unrecognized service" error in async connection when no port
   is specified (:ticket:`#366`).
 
