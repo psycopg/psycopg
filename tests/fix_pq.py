@@ -1,5 +1,5 @@
 import os
-import sys
+import ctypes
 
 import pytest
 
@@ -41,14 +41,11 @@ def pytest_runtest_setup(item):
 @pytest.fixture
 def libpq():
     """Return a ctypes wrapper to access the libpq."""
-    import ctypes.util
-
     try:
+        from psycopg.pq.misc import find_libpq_full_path
+
         # Not available when testing the binary package
-        if sys.platform == "win32":
-            libname = ctypes.util.find_library("libpq.dll")
-        else:
-            libname = ctypes.util.find_library("pq")
+        libname = find_libpq_full_path()
         assert libname, "libpq libname not found"
         return ctypes.pydll.LoadLibrary(libname)
     except Exception as e:

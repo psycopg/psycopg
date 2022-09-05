@@ -4,43 +4,16 @@ libpq access using ctypes
 
 # Copyright (C) 2020 The Psycopg Team
 
-import os
 import ctypes
 import ctypes.util
-import sys
 from ctypes import Structure, CFUNCTYPE, POINTER
 from ctypes import c_char, c_char_p, c_int, c_size_t, c_ubyte, c_uint, c_void_p
 from typing import List, Optional, Tuple
 
+from .misc import find_libpq_full_path
 from ..errors import NotSupportedError
 
-import logging
-
-logger = logging.getLogger("psycopg")
-
-
-if sys.platform == "win32":
-    libname = ctypes.util.find_library("libpq.dll")
-
-elif sys.platform == "darwin":
-    libname = ctypes.util.find_library("libpq.dylib")
-    # (hopefully) temporary hack: libpq not in a standard place
-    # https://github.com/orgs/Homebrew/discussions/3595
-    # If pg_config is available and agrees, let's use its indications.
-    if not libname:
-        try:
-            import subprocess as sp
-
-            libdir = sp.check_output(["pg_config", "--libdir"]).strip().decode()
-            libname = os.path.join(libdir, "libpq.dylib")
-            if not os.path.exists(libname):
-                libname = None
-        except Exception as ex:
-            logger.debug("couldn't use pg_config to find libpq: %s", ex)
-
-else:
-    libname = ctypes.util.find_library("pq")
-
+libname = find_libpq_full_path()
 if not libname:
     raise ImportError("libpq library not found")
 
