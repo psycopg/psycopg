@@ -922,7 +922,9 @@ def test_reconnect_failure(proxy):
 
 
 @pytest.mark.slow
-def test_reconnect_retry(proxy):
+def test_reconnect_after_grow_failed(proxy):
+    # Retry reconnection after a failed connection attempt has put the pool
+    # in grow mode. See issue #370.
     proxy.stop()
 
     ev = Event()
@@ -931,7 +933,7 @@ def test_reconnect_retry(proxy):
         ev.set()
 
     with pool.ConnectionPool(
-        proxy.client_dsn, reconnect_timeout=1.0, reconnect_failed=failed
+        proxy.client_dsn, min_size=4, reconnect_timeout=1.0, reconnect_failed=failed
     ) as p:
         assert ev.wait(timeout=2)
 
@@ -946,6 +948,9 @@ def test_reconnect_retry(proxy):
 
         with p.connection(timeout=2) as conn:
             conn.execute("select 1")
+
+        p.wait(timeout=3.0)
+        assert len(p._pool) == p.min_size == 4
 
 
 @pytest.mark.slow
