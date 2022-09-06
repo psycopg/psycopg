@@ -922,6 +922,33 @@ def test_reconnect_failure(proxy):
 
 
 @pytest.mark.slow
+def test_reconnect_retry(proxy):
+    proxy.stop()
+
+    ev = Event()
+
+    def failed(pool):
+        ev.set()
+
+    with pool.ConnectionPool(
+        proxy.client_dsn, reconnect_timeout=1.0, reconnect_failed=failed
+    ) as p:
+        assert ev.wait(timeout=2)
+
+        with pytest.raises(pool.PoolTimeout):
+            with p.connection(timeout=0.5) as conn:
+                pass
+
+        ev.clear()
+        assert ev.wait(timeout=2)
+
+        proxy.start()
+
+        with p.connection(timeout=2) as conn:
+            conn.execute("select 1")
+
+
+@pytest.mark.slow
 def test_uniform_use(dsn):
     with pool.ConnectionPool(dsn, min_size=4) as p:
         counts = Counter[int]()

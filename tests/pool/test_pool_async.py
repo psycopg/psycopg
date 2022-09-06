@@ -874,6 +874,33 @@ async def test_reconnect_failure(proxy):
 
 
 @pytest.mark.slow
+async def test_reconnect_retry(proxy):
+    proxy.stop()
+
+    ev = asyncio.Event()
+
+    def failed(pool):
+        ev.set()
+
+    async with pool.AsyncConnectionPool(
+        proxy.client_dsn, reconnect_timeout=1.0, reconnect_failed=failed
+    ) as p:
+        await asyncio.wait_for(ev.wait(), 2.0)
+
+        with pytest.raises(pool.PoolTimeout):
+            async with p.connection(timeout=0.5) as conn:
+                pass
+
+        ev.clear()
+        await asyncio.wait_for(ev.wait(), 2.0)
+
+        proxy.start()
+
+        async with p.connection(timeout=2) as conn:
+            await conn.execute("select 1")
+
+
+@pytest.mark.slow
 async def test_uniform_use(dsn):
     async with pool.AsyncConnectionPool(dsn, min_size=4) as p:
         counts = Counter[int]()

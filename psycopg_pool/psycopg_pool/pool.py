@@ -527,6 +527,9 @@ class ConnectionPool(BasePool[Connection[Any]]):
                 )
                 with self._lock:
                     self._nconns -= 1
+                    # If we have given up with a growing attempt, allow a new one.
+                    if growing and self._growing:
+                        self._growing = False
                 self.reconnect_failed()
             else:
                 attempt.update_delay(now)
