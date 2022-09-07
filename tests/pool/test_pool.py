@@ -922,6 +922,38 @@ def test_reconnect_failure(proxy):
 
 
 @pytest.mark.slow
+def test_reconnect_after_grow_failed(proxy):
+    # Retry reconnection after a failed connection attempt has put the pool
+    # in grow mode. See issue #370.
+    proxy.stop()
+
+    ev = Event()
+
+    def failed(pool):
+        ev.set()
+
+    with pool.ConnectionPool(
+        proxy.client_dsn, min_size=4, reconnect_timeout=1.0, reconnect_failed=failed
+    ) as p:
+        assert ev.wait(timeout=2)
+
+        with pytest.raises(pool.PoolTimeout):
+            with p.connection(timeout=0.5) as conn:
+                pass
+
+        ev.clear()
+        assert ev.wait(timeout=2)
+
+        proxy.start()
+
+        with p.connection(timeout=2) as conn:
+            conn.execute("select 1")
+
+        p.wait(timeout=3.0)
+        assert len(p._pool) == p.min_size == 4
+
+
+@pytest.mark.slow
 def test_uniform_use(dsn):
     with pool.ConnectionPool(dsn, min_size=4) as p:
         counts = Counter[int]()

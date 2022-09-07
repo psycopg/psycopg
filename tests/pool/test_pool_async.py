@@ -874,6 +874,38 @@ async def test_reconnect_failure(proxy):
 
 
 @pytest.mark.slow
+async def test_reconnect_after_grow_failed(proxy):
+    # Retry reconnection after a failed connection attempt has put the pool
+    # in grow mode. See issue #370.
+    proxy.stop()
+
+    ev = asyncio.Event()
+
+    def failed(pool):
+        ev.set()
+
+    async with pool.AsyncConnectionPool(
+        proxy.client_dsn, min_size=4, reconnect_timeout=1.0, reconnect_failed=failed
+    ) as p:
+        await asyncio.wait_for(ev.wait(), 2.0)
+
+        with pytest.raises(pool.PoolTimeout):
+            async with p.connection(timeout=0.5) as conn:
+                pass
+
+        ev.clear()
+        await asyncio.wait_for(ev.wait(), 2.0)
+
+        proxy.start()
+
+        async with p.connection(timeout=2) as conn:
+            await conn.execute("select 1")
+
+        await p.wait(timeout=3.0)
+        assert len(p._pool) == p.min_size == 4
+
+
+@pytest.mark.slow
 async def test_uniform_use(dsn):
     async with pool.AsyncConnectionPool(dsn, min_size=4) as p:
         counts = Counter[int]()

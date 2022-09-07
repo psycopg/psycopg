@@ -83,7 +83,7 @@ class ConnectionPool(BasePool[Connection[Any]]):
 
         with self._lock:
             assert not self._pool_full_event
-            if len(self._pool) >= self._nconns:
+            if len(self._pool) >= self._min_size:
                 return
             self._pool_full_event = threading.Event()
 
@@ -527,6 +527,9 @@ class ConnectionPool(BasePool[Connection[Any]]):
                 )
                 with self._lock:
                     self._nconns -= 1
+                    # If we have given up with a growing attempt, allow a new one.
+                    if growing and self._growing:
+                        self._growing = False
                 self.reconnect_failed()
             else:
                 attempt.update_delay(now)
@@ -540,7 +543,11 @@ class ConnectionPool(BasePool[Connection[Any]]):
         self._add_to_pool(conn)
         if growing:
             with self._lock:
-                if self._nconns < self._max_size and self._waiting:
+                # Keep on growing if the pool is not full yet, or if there are
+                # clients waiting and the pool can extend.
+                if self._nconns < self._min_size or (
+                    self._nconns < self._max_size and self._waiting
+                ):
                     self._nconns += 1
                     logger.info("growing pool %r to %s", self.name, self._nconns)
                     self.run_task(AddConnection(self, growing=True))
@@ -597,7 +604,7 @@ class ConnectionPool(BasePool[Connection[Any]]):
 
                 # If we have been asked to wait for pool init, notify the
                 # waiter if the pool is full.
-                if self._pool_full_event and len(self._pool) >= self._nconns:
+                if self._pool_full_event and len(self._pool) >= self._min_size:
                     self._pool_full_event.set()
 
     def _reset_connection(self, conn: Connection[Any]) -> None:
