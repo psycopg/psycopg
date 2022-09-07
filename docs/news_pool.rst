@@ -7,18 +7,15 @@
 ``psycopg_pool`` release notes
 ==============================
 
-Future releases
+Current release
 ---------------
 
-psycopg_pool 3.1.2 (unreleased)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg_pool 3.1.2
+^^^^^^^^^^^^^^^^^^
 
 - Fix possible failure to reconnect after losing connection from the server
   (:ticket:`#370`).
 
-
-Current release
----------------
 
 psycopg_pool 3.1.1
 ^^^^^^^^^^^^^^^^^^
