@@ -737,7 +737,7 @@ async def test_cancel_closed(aconn):
 
 
 @pytest.fixture
-async def fake_resolve(monkeypatch, anyio_backend_name):
+async def fake_resolve(monkeypatch, use_anyio):
     fake_hosts = {"foo.com": "1.1.1.1"}
 
     async def fake_getaddrinfo(host, port, **kwargs):
@@ -748,7 +748,7 @@ async def fake_resolve(monkeypatch, anyio_backend_name):
         else:
             return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", (addr, 432))]
 
-    if anyio_backend_name == "asyncio":
+    if not use_anyio:
         monkeypatch.setattr(asyncio.get_running_loop(), "getaddrinfo", fake_getaddrinfo)
     else:
         monkeypatch.setattr(anyio, "getaddrinfo", fake_getaddrinfo)

@@ -239,21 +239,15 @@ def conn_cls(session_dsn):
 
 
 @pytest.fixture(scope="session")
-def aconn_cls(session_dsn, anyio_backend_name):
-    cls_by_backend = {
-        "asyncio": psycopg.AsyncConnection,
-        "trio": psycopg.AnyIOConnection,
-    }
+def aconn_cls(session_dsn, use_anyio):
+    cls = psycopg.AnyIOConnection if use_anyio else psycopg.AsyncConnection
 
     if crdb_version:
         from psycopg.crdb import AsyncCrdbConnection, AnyIOCrdbConnection
 
-        cls_by_backend = {
-            "asyncio": AsyncCrdbConnection,
-            "trio": AnyIOCrdbConnection,
-        }
+        cls = AnyIOCrdbConnection if use_anyio else AsyncCrdbConnection
 
-    return cls_by_backend[anyio_backend_name]
+    return cls
 
 
 @pytest.fixture(scope="session")

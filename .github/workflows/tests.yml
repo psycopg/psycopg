@@ -26,28 +26,29 @@ jobs:
       matrix:
         include:
           # Test different combinations of Python, Postgres, libpq.
-          - {impl: python, python: "3.7", postgres: "postgres:10", libpq: newest}
-          - {impl: python, python: "3.8", postgres: "postgres:12"}
-          - {impl: python, python: "3.9", postgres: "postgres:13"}
-          - {impl: python, python: "3.10", postgres: "postgres:14"}
-          - {impl: python, python: "3.11", postgres: "postgres:15", libpq: oldest}
+          - {impl: python, python: "3.7", postgres: "postgres:10", libpq: newest, pytest_opts: "--anyio=asyncio"}
+          - {impl: python, python: "3.8", postgres: "postgres:12", pytest_opts: ""}
+          - {impl: python, python: "3.9", postgres: "postgres:13", pytest_opts: "--anyio=trio"}
+          - {impl: python, python: "3.10", postgres: "postgres:14", pytest_opts: ""}
+          - {impl: python, python: "3.11", postgres: "postgres:15", libpq: oldest, pytest_opts: ""}
 
-          - {impl: c, python: "3.7", postgres: "postgres:15", libpq: newest}
-          - {impl: c, python: "3.8", postgres: "postgres:13"}
-          - {impl: c, python: "3.9", postgres: "postgres:14"}
-          - {impl: c, python: "3.10", postgres: "postgres:11", libpq: oldest}
-          - {impl: c, python: "3.11", postgres: "postgres:10", libpq: newest}
+          - {impl: c, python: "3.7", postgres: "postgres:15", libpq: newest, pytest_opts: ""}
+          - {impl: c, python: "3.8", postgres: "postgres:13", pytest_opts: "--anyio=asyncio"}
+          - {impl: c, python: "3.9", postgres: "postgres:14", pytest_opts: ""}
+          - {impl: c, python: "3.10", postgres: "postgres:11", libpq: oldest, pytest_opts: "--anyio=trio"}
+          - {impl: c, python: "3.11", postgres: "postgres:10", libpq: newest, pytest_opts: ""}
 
-          - {impl: python, python: "3.9", ext: dns, postgres: "postgres:14"}
-          - {impl: python, python: "3.9", ext: postgis, postgres: "postgis/postgis"}
+          - {impl: python, python: "3.9", ext: dns, postgres: "postgres:14", pytest_opts: ""}
+          - {impl: python, python: "3.9", ext: postgis, postgres: "postgis/postgis", pytest_opts: ""}
 
           # Test with minimum dependencies versions
-          - {impl: c, python: "3.7", ext: min, postgres: "postgres:15"}
+          - {impl: c, python: "3.7", ext: min, postgres: "postgres:15", pytest_opts: ""}
 
     env:
       PSYCOPG_IMPL: ${{ matrix.impl }}
       DEPS: ./psycopg[test] ./psycopg_pool
       PSYCOPG_TEST_DSN: "host=127.0.0.1 user=postgres password=password"
+      PYTEST_ADDOPTS: ${{ matrix.pytest_opts }}
       MARKERS: ""
 
     steps:
@@ -110,21 +111,22 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - {impl: python, python: "3.7"}
-          - {impl: python, python: "3.8"}
-          - {impl: python, python: "3.9"}
-          - {impl: python, python: "3.10"}
-          - {impl: python, python: "3.11"}
-          - {impl: c, python: "3.7"}
-          - {impl: c, python: "3.8"}
-          - {impl: c, python: "3.9"}
-          - {impl: c, python: "3.10"}
-          - {impl: c, python: "3.11"}
+          - {impl: python, python: "3.7", pytest_opts: ""}
+          - {impl: python, python: "3.8", pytest_opts: "--anyio=asyncio"}
+          - {impl: python, python: "3.9", pytest_opts: ""}
+          - {impl: python, python: "3.10", pytest_opts: "--anyio=trio"}
+          - {impl: python, python: "3.11", pytest_opts: ""}
+          - {impl: c, python: "3.7", pytest_opts: "--anyio=trio"}
+          - {impl: c, python: "3.8", pytest_opts: ""}
+          - {impl: c, python: "3.9", pytest_opts: "--anyio=asyncio"}
+          - {impl: c, python: "3.10", pytest_opts: ""}
+          - {impl: c, python: "3.11", pytest_opts: ""}
 
     env:
       PSYCOPG_IMPL: ${{ matrix.impl }}
       DEPS: ./psycopg[test] ./psycopg_pool
       PSYCOPG_TEST_DSN: "host=127.0.0.1 user=runner dbname=postgres"
+      PYTEST_ADDOPTS: ${{ matrix.pytest_opts }}
       # MacOS on GitHub Actions seems particularly slow.
       # Don't run timing-based tests as they regularly fail.
       # pproxy-based tests fail too, with the proxy not coming up in 2s.
@@ -165,21 +167,22 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - {impl: python, python: "3.7"}
-          - {impl: python, python: "3.8"}
-          - {impl: python, python: "3.9"}
-          - {impl: python, python: "3.10"}
-          - {impl: python, python: "3.11"}
-          - {impl: c, python: "3.7"}
-          - {impl: c, python: "3.8"}
-          - {impl: c, python: "3.9"}
-          - {impl: c, python: "3.10"}
-          - {impl: c, python: "3.11"}
+          - {impl: python, python: "3.7", pytest_opts: "--anyio=asyncio"}
+          - {impl: python, python: "3.8", pytest_opts: ""}
+          - {impl: python, python: "3.9", pytest_opts: "--anyio=trio"}
+          - {impl: python, python: "3.10", pytest_opts: ""}
+          - {impl: python, python: "3.11", pytest_opts: ""}
+          - {impl: c, python: "3.7", pytest_opts: ""}
+          - {impl: c, python: "3.8", pytest_opts: "--anyio=trio"}
+          - {impl: c, python: "3.9", pytest_opts: ""}
+          - {impl: c, python: "3.10", pytest_opts: "--anyio=asyncio"}
+          - {impl: c, python: "3.11", pytest_opts: ""}
 
     env:
       PSYCOPG_IMPL: ${{ matrix.impl }}
       DEPS: ./psycopg[test] ./psycopg_pool
       PSYCOPG_TEST_DSN: "host=127.0.0.1 dbname=postgres"
+      PYTEST_ADDOPTS: ${{ matrix.pytest_opts }}
       # On windows pproxy doesn't seem very happy. Also a few timing test fail.
       NOT_MARKERS: "timing proxy mypy"
 
@@ -235,12 +238,13 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - {impl: c, crdb: "latest-v22.1", python: "3.10", libpq: newest}
-          - {impl: python, crdb: "latest-v22.2", python: "3.11"}
+          - {impl: c, crdb: "latest-v22.1", python: "3.10", libpq: newest, pytest_opts: "--anyio=trio"}
+          - {impl: python, crdb: "latest-v22.2", python: "3.11", pytest_opts: ""}
     env:
       PSYCOPG_IMPL: ${{ matrix.impl }}
       DEPS: ./psycopg[test] ./psycopg_pool
       PSYCOPG_TEST_DSN: "host=127.0.0.1 port=26257 user=root dbname=defaultdb"
+      PYTEST_ADDOPTS: ${{ matrix.pytest_opts }}
 
     steps:
       - uses: actions/checkout@v3
