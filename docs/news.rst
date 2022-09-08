@@ -14,6 +14,7 @@ Psycopg 3.1.4 (unreleased)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 - Include :ref:`error classes <sqlstate-exceptions>` defined in PostgreSQL 15.
+- Add support for Python 3.11 (:ticket:`#305`).
 
 
 Current release

@@ -7,6 +7,15 @@
 ``psycopg_pool`` release notes
 ==============================
 
+Future releases
+---------------
+
+psycopg_pool 3.1.3 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Add support for Python 3.11 (:ticket:`#305`).
+
+
 Current release
 ---------------
 
