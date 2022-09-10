@@ -40,6 +40,7 @@ include "_psycopg/copy.pyx"
 include "_psycopg/generators.pyx"
 include "_psycopg/transform.pyx"
 
+include "types/array.pyx"
 include "types/datetime.pyx"
 include "types/numeric.pyx"
 include "types/bool.pyx"

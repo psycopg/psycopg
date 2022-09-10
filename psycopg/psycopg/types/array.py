@@ -15,6 +15,7 @@ from ..abc import AdaptContext, Buffer, Dumper, DumperKey, NoneType, LoadFunc
 from ..adapt import RecursiveDumper, RecursiveLoader, PyFormat
 from .._compat import cache, prod
 from .._struct import pack_len, unpack_len
+from .._cmodule import _psycopg
 from ..postgres import TEXT_OID, INVALID_OID
 from .._typeinfo import TypeInfo
 
@@ -371,7 +372,7 @@ def register_all_arrays(context: AdaptContext) -> None:
             t.register(context)
 
 
-def load_text(
+def _load_text(
     data: Buffer,
     load: LoadFunc,
     delimiter: bytes = b",",
@@ -438,7 +439,7 @@ def _get_array_parse_regexp(delimiter: bytes) -> Pattern[bytes]:
     )
 
 
-def load_binary(data: Buffer, load: LoadFunc) -> List[Any]:
+def _load_binary(data: Buffer, load: LoadFunc) -> List[Any]:
     ndims, hasnull, oid = _unpack_head(data)
 
     if not ndims:
@@ -462,3 +463,13 @@ def load_binary(data: Buffer, load: LoadFunc) -> List[Any]:
         out = [out[i : i + dim] for i in range(0, len(out), dim)]
 
     return out
+
+
+# Override functions with fast versions if available
+if _psycopg:
+    load_text = _psycopg.array_load_text
+    load_binary = _psycopg.array_load_binary
+
+else:
+    load_text = _load_text
+    load_binary = _load_binary
