@@ -1124,8 +1124,6 @@ cdef object _timezone_from_connection(pq.PGconn pgconn):
     # Usually KeyError, but might be a DeprecationWarning raised by -Werror
     # (experienced on Python 3.6.12, backport.zoneinfo 0.2.1).
     # https://github.com/pganssle/zoneinfo/issues/109
-    # Curiously, not trapping the latter, causes a segfault.
-    # In such case the error message is wrong, but hey.
     except Exception:
         logger.warning(
             "unknown PostgreSQL timezone: %r; will use UTC", sname
