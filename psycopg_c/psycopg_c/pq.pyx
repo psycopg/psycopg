@@ -6,9 +6,13 @@ libpq Python wrapper using cython bindings.
 
 from psycopg_c.pq cimport libpq
 
+import logging
+
 from psycopg import errors as e
 from psycopg.pq import Format
 from psycopg.pq.misc import error_message
+
+logger = logging.getLogger("psycopg")
 
 __impl__ = 'c'
 __build_version__ = libpq.PG_VERSION_NUM

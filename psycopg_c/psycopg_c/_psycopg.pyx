@@ -11,8 +11,12 @@ from psycopg_c cimport pq
 from psycopg_c.pq cimport libpq
 from psycopg_c._psycopg cimport oids
 
+import logging
+
 from psycopg.pq import Format as _pq_Format
 from psycopg._enums import PyFormat as _py_Format
+
+logger = logging.getLogger("psycopg")
 
 PQ_TEXT = _pq_Format.TEXT
 PQ_BINARY = _pq_Format.BINARY

@@ -22,14 +22,11 @@ from cpython.mem cimport PyMem_Malloc, PyMem_Free
 from cpython.bytes cimport PyBytes_AsString
 from cpython.memoryview cimport PyMemoryView_FromObject
 
-import logging
 import sys
 
 from psycopg.pq import Format as PqFormat, Trace
 from psycopg.pq.misc import PGnotify, connection_summary
 from psycopg_c.pq cimport PQBuffer
-
-logger = logging.getLogger('psycopg')
 
 
 cdef class PGconn:
