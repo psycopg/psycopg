@@ -1110,6 +1110,14 @@ cdef object _timezone_from_connection(pq.PGconn pgconn):
             "unknown PostgreSQL timezone: %r; will use UTC", sname
         )
         zi = timezone_utc
+    except Exception as ex:
+        logger.warning(
+            "error handling PostgreSQL timezone: %r; will use UTC (%s - %s)",
+            sname,
+            type(ex).__name__,
+            ex,
+        )
+        zi = timezone.utc
 
     _timezones[tzname] = zi
     return zi

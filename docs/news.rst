@@ -7,6 +7,16 @@
 ``psycopg`` release notes
 =========================
 
+Future releases
+---------------
+
+Psycopg 3.1.2 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Fix handling of certain invalid time zones causing problems on Windows
+  (:ticket:`#371`).
+
+
 Current release
 ---------------
 
