@@ -99,6 +99,33 @@ Objects wrapping libpq structures and functions
            >>> encrypted = conn.pgconn.encrypt_password(password.encode(enc), rolename.encode(enc))
            b'SCRAM-SHA-256$4096:...
 
+    .. automethod:: trace
+    .. automethod:: set_trace_flags
+    .. automethod:: untrace
+
+    .. code:: python
+
+        >>> conn.pgconn.trace(sys.stderr.fileno())
+        >>> conn.pgconn.set_trace_flags(pq.Trace.SUPPRESS_TIMESTAMPS | pq.Trace.REGRESS_MODE)
+        >>> conn.execute("select now()")
+        F	13	Parse	 "" "BEGIN" 0
+        F	14	Bind	 "" "" 0 0 1 0
+        F	6	Describe	 P ""
+        F	9	Execute	 "" 0
+        F	4	Sync
+        B	4	ParseComplete
+        B	4	BindComplete
+        B	4	NoData
+        B	10	CommandComplete	 "BEGIN"
+        B	5	ReadyForQuery	 T
+        F	17	Query	 "select now()"
+        B	28	RowDescription	 1 "now" NNNN 0 NNNN 8 -1 0
+        B	39	DataRow	 1 29 '2022-09-14 14:12:16.648035+02'
+        B	13	CommandComplete	 "SELECT 1"
+        B	5	ReadyForQuery	 T
+        <psycopg.Cursor [TUPLES_OK] [INTRANS] (database=postgres) at 0x7f18a18ba040>
+        >>> conn.pgconn.untrace()
+
 
 .. autoclass:: PGresult()
 
@@ -184,3 +211,8 @@ Enumerations
     :members:
 
     .. seealso:: :pq:`PQpingParams` for a description of these values.
+
+.. autoclass:: Trace
+    :members:
+
+    .. seealso:: :pq:`PQsetTraceFlags` for a description of these values.
