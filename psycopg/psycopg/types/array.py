@@ -387,7 +387,7 @@ def _load_text(
             data = bytes(data)
         idx = data.find(b"=")
         if idx == -1:
-            raise e.DataError("malformed array, no '=' after dimension information")
+            raise e.DataError("malformed array: no '=' after dimension information")
         data = data[idx + 1 :]
 
     re_parse = _get_array_parse_regexp(delimiter)
@@ -403,13 +403,13 @@ def _load_text(
 
         elif t == b"}":
             if not stack:
-                raise e.DataError("malformed array, unexpected '}'")
+                raise e.DataError("malformed array: unexpected '}'")
             rv = stack.pop()
 
         else:
             if not stack:
                 wat = t[:10].decode("utf8", "replace") + "..." if len(t) > 10 else ""
-                raise e.DataError(f"malformed array, unexpected '{wat}'")
+                raise e.DataError(f"malformed array: unexpected '{wat}'")
             if t == b"NULL":
                 v = None
             else:
