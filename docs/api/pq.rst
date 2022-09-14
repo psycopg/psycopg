@@ -91,6 +91,14 @@ Objects wrapping libpq structures and functions
     .. autoattribute:: needs_password
     .. autoattribute:: used_password
 
+    .. automethod:: encrypt_password
+
+       .. code:: python
+
+           >>> enc = conn.info.encoding
+           >>> encrypted = conn.pgconn.encrypt_password(password.encode(enc), rolename.encode(enc))
+           b'SCRAM-SHA-256$4096:...
+
 
 .. autoclass:: PGresult()
 

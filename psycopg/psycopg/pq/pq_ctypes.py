@@ -612,6 +612,11 @@ class PGconn:
     def encrypt_password(
         self, passwd: bytes, user: bytes, algorithm: Optional[bytes] = None
     ) -> bytes:
+        """
+        Return the encrypted form of a PostgreSQL password.
+
+        See :pq:`PQencryptPasswordConn` for details.
+        """
         out = impl.PQencryptPasswordConn(self._pgconn_ptr, passwd, user, algorithm)
         if not out:
             raise e.OperationalError(
