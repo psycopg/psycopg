@@ -7,6 +7,15 @@
 ``psycopg`` release notes
 =========================
 
+Future releases
+---------------
+
+Psycopg 3.0.19 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Fix segfault occurring when a loader fails initialization (:ticket:`#372`).
+
+
 Current release
 ---------------
 
