@@ -390,6 +390,7 @@ class TestDateTimeTz:
             ("Europe/Rome", "2000-7-1", 7200),
             ("Europe/Rome", "1000-1-1", 2996),
             pytest.param("NOSUCH0", "2000-1-1", 0, marks=crdb_skip_invalid_tz),
+            pytest.param("0", "2000-1-1", 0, marks=crdb_skip_invalid_tz),
         ],
     )
     @pytest.mark.parametrize("fmt_out", pq.Format)
