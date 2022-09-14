@@ -598,20 +598,42 @@ class PGconn:
             return nbytes, memoryview(b"")
 
     def trace(self, fileno: int) -> None:
+        """
+        Enable tracing of the client/server communication to a file stream.
+
+        See :pq:`PQtrace` for details.
+        """
         if sys.platform != "linux":
             raise e.NotSupportedError("currently only supported on Linux")
         stream = impl.fdopen(fileno, b"w")
         impl.PQtrace(self._pgconn_ptr, stream)
 
     def set_trace_flags(self, flags: Trace) -> None:
+        """
+        Configure tracing behavior of client/server communication.
+
+        :param flags: operating mode of tracing.
+
+        See :pq:`PQsetTraceFlags` for details.
+        """
         impl.PQsetTraceFlags(self._pgconn_ptr, flags)
 
     def untrace(self) -> None:
+        """
+        Disable tracing, previously enabled through `trace()`.
+
+        See :pq:`PQuntrace` for details.
+        """
         impl.PQuntrace(self._pgconn_ptr)
 
     def encrypt_password(
         self, passwd: bytes, user: bytes, algorithm: Optional[bytes] = None
     ) -> bytes:
+        """
+        Return the encrypted form of a PostgreSQL password.
+
+        See :pq:`PQencryptPasswordConn` for details.
+        """
         out = impl.PQencryptPasswordConn(self._pgconn_ptr, passwd, user, algorithm)
         if not out:
             raise e.OperationalError(
