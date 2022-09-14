@@ -1104,7 +1104,7 @@ cdef object _timezone_from_connection(pq.PGconn pgconn):
     sname = tzname.decode() if tzname else "UTC"
     try:
         zi = ZoneInfo(sname)
-    except KeyError:
+    except (KeyError, OSError):
         logger = logging.getLogger("psycopg")
         logger.warning(
             "unknown PostgreSQL timezone: %r; will use UTC", sname
