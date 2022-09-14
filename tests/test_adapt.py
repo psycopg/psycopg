@@ -440,6 +440,37 @@ def test_optimised_adapters():
     assert not c_adapters
 
 
+def test_dumper_init_error(conn):
+    class BadDumper(Dumper):
+        def __init__(self, cls, context):
+            super().__init__(cls, context)
+            1 / 0
+
+        def dump(self, obj):
+            return obj.encode()
+
+    cur = conn.cursor()
+    cur.adapters.register_dumper(str, BadDumper)
+    with pytest.raises(ZeroDivisionError):
+        cur.execute("select %s::text", ["hi"])
+
+
+def test_loader_init_error(conn):
+    class BadLoader(Loader):
+        def __init__(self, oid, context):
+            super().__init__(oid, context)
+            1 / 0
+
+        def load(self, data):
+            return data.decode()
+
+    cur = conn.cursor()
+    cur.adapters.register_loader("text", BadLoader)
+    with pytest.raises(ZeroDivisionError):
+        cur.execute("select 'hi'::text")
+        assert cur.fetchone() == ("hi",)
+
+
 @pytest.mark.slow
 @pytest.mark.parametrize("fmt", PyFormat)
 @pytest.mark.parametrize("fmt_out", [pq.Format.TEXT, pq.Format.BINARY])
