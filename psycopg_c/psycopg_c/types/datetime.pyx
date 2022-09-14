@@ -1111,6 +1111,7 @@ cdef object _timezone_from_connection(pq.PGconn pgconn):
         )
         zi = timezone_utc
     except Exception as ex:
+        logger = logging.getLogger("psycopg")
         logger.warning(
             "error handling PostgreSQL timezone: %r; will use UTC (%s - %s)",
             sname,
