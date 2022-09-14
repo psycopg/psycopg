@@ -133,7 +133,7 @@ cdef class Transformer:
     def pgresult(self) -> Optional[PGresult]:
         return self._pgresult
 
-    cpdef void set_pgresult(
+    cpdef set_pgresult(
         self,
         pq.PGresult result,
         object set_loaders = True,
