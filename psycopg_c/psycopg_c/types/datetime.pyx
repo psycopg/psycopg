@@ -1127,7 +1127,6 @@ cdef object _timezone_from_connection(pq.PGconn pgconn):
     # Curiously, not trapping the latter, causes a segfault.
     # In such case the error message is wrong, but hey.
     except Exception:
-        logger = logging.getLogger("psycopg")
         logger.warning(
             "unknown PostgreSQL timezone: %r; will use UTC", sname
         )

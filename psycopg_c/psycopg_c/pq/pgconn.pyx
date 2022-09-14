@@ -21,15 +21,9 @@ from cpython.mem cimport PyMem_Malloc, PyMem_Free
 from cpython.bytes cimport PyBytes_AsString, PyBytes_AsStringAndSize
 from cpython.memoryview cimport PyMemoryView_FromObject
 
-import ctypes
-import logging
-from typing import Iterator
-
 from psycopg.pq import Format as PqFormat, PipelineStatus
 from psycopg.pq.misc import PGnotify, connection_summary
 from psycopg_c.pq cimport PQBuffer
-
-logger = logging.getLogger('psycopg')
 
 
 cdef class PGconn:

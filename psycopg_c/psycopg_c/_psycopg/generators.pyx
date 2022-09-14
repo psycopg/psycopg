@@ -6,7 +6,6 @@ C implementation of generators for the communication protocols with the libpq
 
 from cpython.object cimport PyObject_CallFunctionObjArgs
 
-import logging
 from typing import List
 
 from psycopg import errors as e
