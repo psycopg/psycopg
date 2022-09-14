@@ -15,6 +15,7 @@ from psycopg.postgres import types as builtins
 tests_str = [
     ([[[[[["a"]]]]]], "{{{{{{a}}}}}}"),
     ([[[[[[None]]]]]], "{{{{{{NULL}}}}}}"),
+    ([[[[[["NULL"]]]]]], '{{{{{{"NULL"}}}}}}'),
     (["foo", "bar", "baz"], "{foo,bar,baz}"),
     (["foo", None, "baz"], "{foo,null,baz}"),
     (["foo", "null", "", "baz"], '{foo,"null","",baz}'),
