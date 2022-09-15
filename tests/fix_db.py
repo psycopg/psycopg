@@ -1,4 +1,6 @@
+import io
 import os
+import sys
 import pytest
 import logging
 from contextlib import contextmanager
@@ -26,10 +28,10 @@ def pytest_addoption(parser):
         ),
     )
     parser.addoption(
-        "--pq-tracefile",
-        metavar="TRACEFILE",
+        "--pq-trace",
+        metavar="{TRACEFILE,STDERR}",
         default=None,
-        help="Generate a libpq trace to TRACEFILE.",
+        help="Generate a libpq trace to TRACEFILE or STDERR.",
     )
 
 
@@ -106,9 +108,20 @@ def tracefile(request):
     """Open and yield a file for libpq client/server communication traces if
     --pq-tracefile option is set.
     """
-    tracefile = request.config.getoption("--pq-tracefile")
+    tracefile = request.config.getoption("--pq-trace")
     if not tracefile:
         yield None
+        return
+
+    if tracefile.lower() == "stderr":
+        try:
+            sys.stderr.fileno()
+        except io.UnsupportedOperation:
+            raise pytest.UsageError(
+                "cannot use stderr for --pq-trace (in-memory file?)"
+            ) from None
+
+        yield sys.stderr
         return
 
     with open(tracefile, "w") as f:
@@ -124,9 +137,10 @@ def maybe_trace(pgconn, tracefile, function):
         yield None
         return
 
-    title = f" {function.__module__}::{function.__qualname__} ".center(80, "=")
-    tracefile.write(title + "\n")
-    tracefile.flush()
+    if tracefile != sys.stderr:
+        title = f" {function.__module__}::{function.__qualname__} ".center(80, "=")
+        tracefile.write(title + "\n")
+        tracefile.flush()
 
     pgconn.trace(tracefile.fileno())
     try:
