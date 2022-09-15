@@ -31,6 +31,8 @@ FATAL_ERROR = pq.ExecStatus.FATAL_ERROR
 PIPELINE_ABORTED = pq.ExecStatus.PIPELINE_ABORTED
 BAD = pq.ConnStatus.BAD
 
+ACTIVE = pq.TransactionStatus.ACTIVE
+
 logger = logging.getLogger("psycopg")
 
 
@@ -92,7 +94,13 @@ class BasePipeline:
             )
         if self.level == 0:
             self.pgconn.enter_pipeline_mode()
-        elif self.command_queue:
+        elif self.command_queue or self.pgconn.transaction_status == ACTIVE:
+            # Nested pipeline case.
+            #  Transaction might be ACTIVE when the pipeline uses an "implicit
+            #  transaction", typically in autocommit mode. But when entering a
+            #  Psycopg transaction(), we expect the IDLE state. By sync()-ing,
+            #  we make sure all previous commands are completed and the
+            #  transaction gets back to IDLE.
             yield from self._sync_gen()
         self.level += 1
 

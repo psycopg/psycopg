@@ -16,6 +16,8 @@ Psycopg 3.1.2 (unreleased)
 - Fix handling of certain invalid time zones causing problems on Windows
   (:ticket:`#371`).
 - Fix segfault occurring when a loader fails initialization (:ticket:`#372`).
+- Fix invalid SAVEPOINT issued when entering `Connection.transaction()` within
+  a pipeline using an implicit transaction (:ticket:`#374`).
 
 
 Current release
