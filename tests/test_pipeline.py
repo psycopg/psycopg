@@ -266,6 +266,23 @@ def test_errors_raised_on_nested_transaction_exit(conn):
     assert cur2.fetchone() == (2,)
 
 
+def test_implicit_transaction(conn):
+    conn.autocommit = True
+    with conn.pipeline():
+        assert conn.pgconn.transaction_status == pq.TransactionStatus.IDLE
+        conn.execute("select 'before'")
+        # Transaction is ACTIVE because previous command is not completed
+        # since we have not fetched its results.
+        assert conn.pgconn.transaction_status == pq.TransactionStatus.ACTIVE
+        # Upon entering the nested pipeline through "with transaction():", a
+        # sync() is emitted to restore the transaction state to IDLE, as
+        # expected to emit a BEGIN.
+        with conn.transaction():
+            conn.execute("select 'tx'")
+        cur = conn.execute("select 'after'")
+    assert cur.fetchone() == ("after",)
+
+
 @pytest.mark.crdb_skip("deferrable")
 def test_error_on_commit(conn):
     conn.execute(

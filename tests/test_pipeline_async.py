@@ -267,6 +267,23 @@ async def test_errors_raised_on_nested_transaction_exit(aconn):
     assert await cur2.fetchone() == (2,)
 
 
+async def test_implicit_transaction(aconn):
+    await aconn.set_autocommit(True)
+    async with aconn.pipeline():
+        assert aconn.pgconn.transaction_status == pq.TransactionStatus.IDLE
+        await aconn.execute("select 'before'")
+        # Transaction is ACTIVE because previous command is not completed
+        # since we have not fetched its results.
+        assert aconn.pgconn.transaction_status == pq.TransactionStatus.ACTIVE
+        # Upon entering the nested pipeline through "with transaction():", a
+        # sync() is emitted to restore the transaction state to IDLE, as
+        # expected to emit a BEGIN.
+        async with aconn.transaction():
+            await aconn.execute("select 'tx'")
+        cur = await aconn.execute("select 'after'")
+    assert await cur.fetchone() == ("after",)
+
+
 @pytest.mark.crdb_skip("deferrable")
 async def test_error_on_commit(aconn):
     await aconn.execute(
