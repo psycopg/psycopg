@@ -573,6 +573,21 @@ async def test_query_params_execute(aconn):
     assert cur._query.params == (b"'wat'",)
 
 
+@pytest.mark.parametrize(
+    "query, params, want",
+    [
+        ("select %(x)s", {"x": 1}, (1,)),
+        ("select %(x)s, %(y)s", {"x": 1, "y": 2}, (1, 2)),
+        ("select %(x)s, %(x)s", {"x": 1}, (1, 1)),
+    ],
+)
+async def test_query_params_named(aconn, query, params, want):
+    cur = aconn.cursor()
+    await cur.execute(query, params)
+    rec = await cur.fetchone()
+    assert rec == want
+
+
 async def test_query_params_executemany(aconn):
     cur = aconn.cursor()
 
@@ -667,13 +682,18 @@ async def test_leak(aconn_cls, dsn, faker, fetch, row_factory):
     assert n[0] == n[1] == n[2], f"objects leaked: {n[1] - n[0]}, {n[2] - n[1]}"
 
 
-async def test_mogrify(aconn):
+@pytest.mark.parametrize(
+    "query, params, want",
+    [
+        ("select 'hello'", (), "select 'hello'"),
+        ("select %s, %s", ([1, dt.date(2020, 1, 1)],), "select 1, '2020-01-01'::date"),
+        ("select %(foo)s, %(foo)s", ({"foo": "x"},), "select 'x', 'x'"),
+    ],
+)
+async def test_mogrify(aconn, query, params, want):
     cur = aconn.cursor()
-    q = cur.mogrify("select 'hello'")
-    assert q == "select 'hello'"
-
-    q = cur.mogrify("select %s, %s", [1, dt.date(2020, 1, 1)])
-    assert q == "select 1, '2020-01-01'::date"
+    got = cur.mogrify(query, *params)
+    assert got == want
 
 
 @pytest.mark.parametrize("encoding", ["utf8", crdb_encoding("latin9")])

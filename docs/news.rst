@@ -18,6 +18,7 @@ Psycopg 3.1.2 (unreleased)
 - Fix segfault occurring when a loader fails initialization (:ticket:`#372`).
 - Fix invalid SAVEPOINT issued when entering `Connection.transaction()` within
   a pipeline using an implicit transaction (:ticket:`#374`).
+- Fix queries with repeated named parameters in `ClientCursor` (:ticket:`#378`).
 
 
 Current release

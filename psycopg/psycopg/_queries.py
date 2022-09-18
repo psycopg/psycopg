@@ -225,6 +225,7 @@ def _query2pg_client(
                 chunks.append(ph)
             else:
                 chunks.append(seen[part.item][0])
+                order.append(part.item)
 
     # last part
     chunks.append(parts[-1].pre)

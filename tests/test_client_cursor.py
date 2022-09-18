@@ -578,6 +578,21 @@ def test_query_params_execute(conn):
     assert cur._query.params == (b"'wat'",)
 
 
+@pytest.mark.parametrize(
+    "query, params, want",
+    [
+        ("select %(x)s", {"x": 1}, (1,)),
+        ("select %(x)s, %(y)s", {"x": 1, "y": 2}, (1, 2)),
+        ("select %(x)s, %(x)s", {"x": 1}, (1, 1)),
+    ],
+)
+def test_query_params_named(conn, query, params, want):
+    cur = conn.cursor()
+    cur.execute(query, params)
+    rec = cur.fetchone()
+    assert rec == want
+
+
 def test_query_params_executemany(conn):
     cur = conn.cursor()
 
@@ -795,13 +810,18 @@ def test_leak(conn_cls, dsn, faker, fetch, row_factory):
     assert n[0] == n[1] == n[2], f"objects leaked: {n[1] - n[0]}, {n[2] - n[1]}"
 
 
-def test_mogrify(conn):
+@pytest.mark.parametrize(
+    "query, params, want",
+    [
+        ("select 'hello'", (), "select 'hello'"),
+        ("select %s, %s", ([1, dt.date(2020, 1, 1)],), "select 1, '2020-01-01'::date"),
+        ("select %(foo)s, %(foo)s", ({"foo": "x"},), "select 'x', 'x'"),
+    ],
+)
+def test_mogrify(conn, query, params, want):
     cur = conn.cursor()
-    q = cur.mogrify("select 'hello'")
-    assert q == "select 'hello'"
-
-    q = cur.mogrify("select %s, %s", [1, dt.date(2020, 1, 1)])
-    assert q == "select 1, '2020-01-01'::date"
+    got = cur.mogrify(query, *params)
+    assert got == want
 
 
 @pytest.mark.parametrize("encoding", ["utf8", crdb_encoding("latin9")])
