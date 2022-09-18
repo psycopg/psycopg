@@ -46,7 +46,7 @@ class Dumper(abc.Dumper, ABC):
         )
 
     @abstractmethod
-    def dump(self, obj: Any) -> Buffer: ...
+    def dump(self, obj: Any) -> Optional[Buffer]: ...
 
     def quote(self, obj: Any) -> Buffer:
         """
