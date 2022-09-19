@@ -56,6 +56,8 @@ class Dumper(abc.Dumper, ABC):
         subclass.
         """
         value = self.dump(obj)
+        if value is None:
+            return b"NULL"
 
         if self.connection:
             esc = pq.Escaping(self.connection.pgconn)

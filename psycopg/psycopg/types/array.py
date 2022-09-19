@@ -168,11 +168,14 @@ class ListDumper(BaseListDumper):
                     dump_list(item)
                 elif item is not None:
                     ad = self._dump_item(item)
-                    if needs_quotes(ad):
-                        if not isinstance(ad, bytes):
-                            ad = bytes(ad)
-                        ad = b'"' + self._re_esc.sub(rb"\\\1", ad) + b'"'
-                    tokens.append(ad)
+                    if ad is None:
+                        tokens.append(b"NULL")
+                    else:
+                        if needs_quotes(ad):
+                            if not isinstance(ad, bytes):
+                                ad = bytes(ad)
+                            ad = b'"' + self._re_esc.sub(rb"\\\1", ad) + b'"'
+                        tokens.append(ad)
                 else:
                     tokens.append(b"NULL")
 
@@ -184,7 +187,7 @@ class ListDumper(BaseListDumper):
 
         return b"".join(tokens)
 
-    def _dump_item(self, item: Any) -> Buffer:
+    def _dump_item(self, item: Any) -> Optional[Buffer]:
         if self.sub_dumper:
             return self.sub_dumper.dump(item)
         else:
@@ -271,9 +274,10 @@ class ListBinaryDumper(BaseListDumper):
                 for item in L:
                     if item is not None:
                         # If we get here, the sub_dumper must have been set
-                        ad = self.sub_dumper.dump(item)  # type: ignore[union-attr]
-                        data.append(pack_len(len(ad)))
-                        data.append(ad)
+                        item = self.sub_dumper.dump(item)  # type: ignore[union-attr]
+                    if item is not None:
+                        data.append(pack_len(len(item)))
+                        data.append(item)
                     else:
                         hasnull = 1
                         data.append(b"\xff\xff\xff\xff")
