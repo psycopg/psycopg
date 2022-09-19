@@ -7,11 +7,11 @@
 ``psycopg`` release notes
 =========================
 
-Future releases
+Current release
 ---------------
 
-Psycopg 3.1.2 (unreleased)
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+Psycopg 3.1.2
+^^^^^^^^^^^^^
 
 - Fix handling of certain invalid time zones causing problems on Windows
   (:ticket:`#371`).
@@ -20,9 +20,6 @@ Psycopg 3.1.2 (unreleased)
   a pipeline using an implicit transaction (:ticket:`#374`).
 - Fix queries with repeated named parameters in `ClientCursor` (:ticket:`#378`).
 
-
-Current release
----------------
 
 Psycopg 3.1.1
 ^^^^^^^^^^^^^
