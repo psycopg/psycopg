@@ -172,7 +172,11 @@ class JsonbBinaryDumper(_JsonDumper):
     oid = _oids.JSONB_OID
 
     def dump(self, obj: Any) -> Optional[Buffer]:
-        return b"\x01" + super().dump(obj)
+        obj_bytes = super().dump(obj)
+        if obj_bytes is not None:
+            return b"\x01" + obj_bytes
+        else:
+            return None
 
 
 class _JsonLoader(Loader):

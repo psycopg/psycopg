@@ -9,6 +9,7 @@ from psycopg.types.composite import TupleDumper, TupleBinaryDumper
 
 from ..utils import eur
 from ..fix_crdb import is_crdb, crdb_skip_message
+from ..test_adapt import StrNoneDumper, StrNoneBinaryDumper
 
 
 pytestmark = pytest.mark.crdb_skip("composite")
@@ -67,6 +68,23 @@ def test_dump_tuple(conn, rec, obj):
 
     res = conn.execute("select %s::tmptype", [obj]).fetchone()[0]
     assert res == obj
+
+
+def test_dump_tuple_null(conn):
+    cur = conn.cursor()
+    cur.execute(
+        """
+        drop type if exists tmptype;
+        create type tmptype as (f1 text, f2 text);
+        """
+    )
+    info = CompositeInfo.fetch(conn, "tmptype")
+    register_composite(info, conn)
+    conn.adapters.register_dumper(str, StrNoneDumper)
+    conn.adapters.register_dumper(str, StrNoneBinaryDumper)
+
+    res = conn.execute("select %s::tmptype", [("foo", "")]).fetchone()[0]
+    assert res == ("foo", None)
 
 
 @pytest.mark.parametrize("fmt_out", pq.Format)

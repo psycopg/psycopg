@@ -12,6 +12,7 @@ from psycopg.types.range import Range, RangeInfo, register_range
 
 from ..utils import eur
 from ..fix_crdb import is_crdb, crdb_skip_message
+from ..test_adapt import StrNoneDumper, StrNoneBinaryDumper
 
 pytestmark = pytest.mark.crdb_skip("range")
 
@@ -323,6 +324,20 @@ def test_dump_custom_empty(conn, testrange):
     r = Range[str](empty=True)
     cur = conn.execute("select 'empty'::testrange = %s", (r,))
     assert cur.fetchone()[0] is True
+
+
+@pytest.mark.parametrize("fmt_in", PyFormat)
+def test_dump_custom_null(conn, testrange, fmt_in):
+    info = RangeInfo.fetch(conn, "testrange")
+    register_range(info, conn)
+    conn.adapters.register_dumper(str, StrNoneDumper)
+    conn.adapters.register_dumper(str, StrNoneBinaryDumper)
+
+    r = Range[str]("", "foo")
+    cur = conn.execute(f"select %{fmt_in.value}::testrange", (r,))
+    r1 = cur.fetchone()[0]
+    assert r1.lower is None
+    assert r1.upper == "foo"
 
 
 def test_dump_quoting(conn, testrange):

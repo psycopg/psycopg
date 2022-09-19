@@ -372,7 +372,9 @@ def dump_range_text(obj: Range[Any], dump: DumpFunc) -> Buffer:
 
     def dump_item(item: Any) -> Buffer:
         ad = dump(item)
-        if not ad:
+        if ad is None:
+            return b""
+        elif not ad:
             return b'""'
         elif _re_needs_quotes.search(ad):
             return b'"' + _re_esc.sub(rb"\1\1", ad) + b'"'

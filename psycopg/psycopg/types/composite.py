@@ -97,7 +97,9 @@ class SequenceDumper(RecursiveDumper):
 
             dumper = self._tx.get_dumper(item, PyFormat.from_pq(self.format))
             ad = dumper.dump(item)
-            if not ad:
+            if ad is None:
+                ad = b""
+            elif not ad:
                 ad = b'""'
             elif self._re_needs_quotes.search(ad):
                 ad = b'"' + self._re_esc.sub(rb"\1\1", ad) + b'"'
