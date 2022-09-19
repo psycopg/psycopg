@@ -1,16 +1,18 @@
 import datetime as dt
 from types import ModuleType
-from typing import Any, List
+from typing import Any, List, Optional
 
 import pytest
 
 import psycopg
 from psycopg import pq, sql, postgres
 from psycopg import errors as e
+from psycopg.abc import Buffer
 from psycopg.adapt import Transformer, PyFormat, Dumper, Loader
 from psycopg._cmodule import _psycopg
 from psycopg.postgres import types as builtins
 from psycopg.types.array import ListDumper, ListBinaryDumper
+from psycopg.types.string import StrDumper, StrBinaryDumper
 
 
 @pytest.mark.parametrize(
@@ -42,6 +44,20 @@ def test_dump(data, format, result, type):
     ],
 )
 def test_quote(data, result):
+    t = Transformer()
+    dumper = t.get_dumper(data, PyFormat.TEXT)
+    assert dumper.quote(data) == result
+
+
+@pytest.mark.parametrize(
+    "data, result",
+    [
+        ("hello", b"'hello'"),
+        ("", b"NULL"),
+    ],
+)
+def test_quote_none(data, result, global_adapters):
+    psycopg.adapters.register_dumper(str, StrNoneDumper)
     t = Transformer()
     dumper = t.get_dumper(data, PyFormat.TEXT)
     assert dumper.quote(data) == result
@@ -121,9 +137,6 @@ def test_dump_subclass(conn):
 
 
 def test_subclass_dumper(conn):
-    # This might be a C fast object: make sure that the Python code is called
-    from psycopg.types.string import StrDumper
-
     class MyStrDumper(StrDumper):
         def dump(self, obj):
             return (obj * 2).encode()
@@ -348,12 +361,26 @@ def test_last_dumper_registered_ctx(conn):
     assert cur.execute("select %s", ["hello"]).fetchone()[0] == "hellob"
 
 
-@pytest.mark.parametrize("fmt_in", [PyFormat.TEXT, PyFormat.BINARY])
+@pytest.mark.parametrize("fmt_in", PyFormat)
 def test_none_type_argument(conn, fmt_in):
     cur = conn.cursor()
     cur.execute("create table none_args (id serial primary key, num integer)")
-    cur.execute("insert into none_args (num) values (%s) returning id", (None,))
+    cur.execute(
+        f"insert into none_args (num) values (%{fmt_in.value}) returning id", (None,)
+    )
     assert cur.fetchone()[0]
+
+
+@pytest.mark.parametrize("fmt_in", [PyFormat.TEXT, PyFormat.BINARY])
+def test_dump_to_none(conn, fmt_in):
+    cur = conn.cursor()
+    dumper = StrNoneDumper if fmt_in == PyFormat.TEXT else StrNoneBinaryDumper
+    cur.adapters.register_dumper(str, dumper)
+    cur.execute("create table none_args (id serial primary key, data text)")
+    for s in ["foo", ""]:
+        cur.execute("insert into none_args (data) values (%s)", (s,))
+    cur.execute("select data from none_args order by id")
+    assert cur.fetchall() == [("foo",), (None,)]
 
 
 @pytest.mark.crdb("skip", reason="test in crdb test suite")
@@ -491,6 +518,16 @@ def test_random(conn, faker, fmt, fmt_out):
 
 class MyStr(str):
     pass
+
+
+class StrNoneDumper(StrDumper):
+    def dump(self, obj: str) -> Optional[Buffer]:
+        return super().dump(obj) if obj else None
+
+
+class StrNoneBinaryDumper(StrBinaryDumper):
+    def dump(self, obj: str) -> Optional[Buffer]:
+        return super().dump(obj) if obj else None
 
 
 def make_dumper(suffix):
