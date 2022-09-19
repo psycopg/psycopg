@@ -317,7 +317,9 @@ async def test_subclass_adapter(aconn, format):
 
     class MyStrDumper(BaseDumper):
         def dump(self, obj):
-            return super().dump(obj) * 2
+            rv = super().dump(obj)
+            assert rv
+            return bytes(rv) * 2
 
     aconn.adapters.register_dumper(str, MyStrDumper)
 

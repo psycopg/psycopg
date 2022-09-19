@@ -308,7 +308,9 @@ def test_subclass_adapter(conn, format):
     class MyStrDumper(BaseDumper):
 
         def dump(self, obj):
-            return super().dump(obj) * 2
+            rv = super().dump(obj)
+            assert rv
+            return bytes(rv) * 2
 
     conn.adapters.register_dumper(str, MyStrDumper)
 

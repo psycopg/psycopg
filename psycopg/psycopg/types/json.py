@@ -142,7 +142,7 @@ class _JsonDumper(Dumper):
         super().__init__(cls, context)
         self.dumps = self.__class__._dumps
 
-    def dump(self, obj: Any) -> bytes:
+    def dump(self, obj: Any) -> Optional[Buffer]:
         if isinstance(obj, _JsonWrapper):
             dumps = obj.dumps or self.dumps
             obj = obj.obj
@@ -171,7 +171,7 @@ class JsonbBinaryDumper(_JsonDumper):
     format = Format.BINARY
     oid = _oids.JSONB_OID
 
-    def dump(self, obj: Any) -> bytes:
+    def dump(self, obj: Any) -> Optional[Buffer]:
         return b"\x01" + super().dump(obj)
 
 

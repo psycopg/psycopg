@@ -153,7 +153,7 @@ class ListDumper(BaseListDumper):
     # backslash-escaped.
     _re_esc = re.compile(rb'(["\\])')
 
-    def dump(self, obj: List[Any]) -> bytes:
+    def dump(self, obj: List[Any]) -> Optional[Buffer]:
         tokens: List[Buffer] = []
         needs_quotes = _get_needs_quotes_regexp(self.delimiter).search
 
@@ -245,7 +245,7 @@ class ListBinaryDumper(BaseListDumper):
 
         return dumper
 
-    def dump(self, obj: List[Any]) -> bytes:
+    def dump(self, obj: List[Any]) -> Optional[Buffer]:
         # Postgres won't take unknown for element oid: fall back on text
         sub_oid = self.sub_dumper and self.sub_dumper.oid or TEXT_OID
 
