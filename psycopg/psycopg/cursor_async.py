@@ -20,6 +20,8 @@ from ._pipeline import Pipeline
 if TYPE_CHECKING:
     from .connection_async import AsyncConnection
 
+ACTIVE = pq.TransactionStatus.ACTIVE
+
 
 class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
     __module__ = "psycopg"
@@ -143,16 +145,26 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
                     rec: Row = self._tx.load_row(0, self._make_row)  # type: ignore
                     yield rec
                     first = False
+
         except e.Error as ex:
-            # try to get out of ACTIVE state. Just do a single attempt, which
-            # should work to recover from an error or query cancelled.
-            if self._pgconn.transaction_status == pq.TransactionStatus.ACTIVE:
+            raise ex.with_traceback(None)
+
+        finally:
+            if self._pgconn.transaction_status == ACTIVE:
+                # Try to cancel the query, then consume the results already received.
+                self._conn.cancel()
                 try:
-                    await self._conn.wait(self._stream_fetchone_gen(first))
+                    while await self._conn.wait(self._stream_fetchone_gen(first=False)):
+                        pass
                 except Exception:
                     pass
 
-            raise ex.with_traceback(None)
+                # Try to get out of ACTIVE state. Just do a single attempt, which
+                # should work to recover from an error or query cancelled.
+                try:
+                    await self._conn.wait(self._stream_fetchone_gen(first=False))
+                except Exception:
+                    pass
 
     async def fetchone(self) -> Optional[Row]:
         await self._fetch_pipeline()

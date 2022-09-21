@@ -3,6 +3,7 @@ import pickle
 import weakref
 import datetime as dt
 from typing import List, Union
+from contextlib import closing
 
 import pytest
 
@@ -643,6 +644,28 @@ def test_stream_error_notx(conn):
         for rec in cur.stream("wat"):
             pass
     assert conn.info.transaction_status == conn.TransactionStatus.IDLE
+
+
+def test_stream_error_python_to_consume(conn):
+    cur = conn.cursor()
+    with pytest.raises(ZeroDivisionError):
+        with closing(cur.stream("select generate_series(1, 10000)")) as gen:
+            for rec in gen:
+                1 / 0
+    assert conn.info.transaction_status in (
+        conn.TransactionStatus.INTRANS,
+        conn.TransactionStatus.INERROR,
+    )
+
+
+def test_stream_error_python_consumed(conn):
+    cur = conn.cursor()
+    with pytest.raises(ZeroDivisionError):
+        gen = cur.stream("select 1")
+        for rec in gen:
+            1 / 0
+    gen.close()
+    assert conn.info.transaction_status == conn.TransactionStatus.INTRANS
 
 
 def test_stream_close(conn):

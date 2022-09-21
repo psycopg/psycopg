@@ -637,6 +637,31 @@ async def test_stream_error_notx(aconn):
     assert aconn.info.transaction_status == aconn.TransactionStatus.IDLE
 
 
+async def test_stream_error_python_to_consume(aconn):
+    cur = aconn.cursor()
+    with pytest.raises(ZeroDivisionError):
+        gen = cur.stream("select generate_series(1, 10000)")
+        async for rec in gen:
+            1 / 0
+
+    await gen.aclose()
+    assert aconn.info.transaction_status in (
+        aconn.TransactionStatus.INTRANS,
+        aconn.TransactionStatus.INERROR,
+    )
+
+
+async def test_stream_error_python_consumed(aconn):
+    cur = aconn.cursor()
+    with pytest.raises(ZeroDivisionError):
+        gen = cur.stream("select 1")
+        async for rec in gen:
+            1 / 0
+
+    await gen.aclose()
+    assert aconn.info.transaction_status == aconn.TransactionStatus.INTRANS
+
+
 async def test_stream_close(aconn):
     await aconn.set_autocommit(True)
     cur = aconn.cursor()

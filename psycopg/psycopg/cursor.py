@@ -781,16 +781,26 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
                     rec: Row = self._tx.load_row(0, self._make_row)  # type: ignore
                     yield rec
                     first = False
+
         except e.Error as ex:
-            # try to get out of ACTIVE state. Just do a single attempt, which
-            # should work to recover from an error or query cancelled.
+            raise ex.with_traceback(None)
+
+        finally:
             if self._pgconn.transaction_status == ACTIVE:
+                # Try to cancel the query, then consume the results already received.
+                self._conn.cancel()
                 try:
-                    self._conn.wait(self._stream_fetchone_gen(first))
+                    while self._conn.wait(self._stream_fetchone_gen(first=False)):
+                        pass
                 except Exception:
                     pass
 
-            raise ex.with_traceback(None)
+                # Try to get out of ACTIVE state. Just do a single attempt, which
+                # should work to recover from an error or query cancelled.
+                try:
+                    self._conn.wait(self._stream_fetchone_gen(first=False))
+                except Exception:
+                    pass
 
     def fetchone(self) -> Optional[Row]:
         """
