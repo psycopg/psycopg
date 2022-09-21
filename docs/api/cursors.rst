@@ -153,7 +153,7 @@ The `!Cursor` class
             Failing to consume the iterator entirely will result in a
             connection left in `~psycopg.ConnectionInfo.transaction_status`
             `~pq.TransactionStatus.ACTIVE` state: this connection will refuse
-            to receive further commands (with a messge such as *another
+            to receive further commands (with a message such as *another
             command is already in progress*).
 
             You can restore the connection to a working state by consuming
