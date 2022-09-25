@@ -85,7 +85,7 @@ to have them created by default by `Connection.cursor()`. This way, Psycopg 3
 will behave largely the same way of Psycopg 2.
 
 Note that, using `!ClientCursor` parameters, you can only specify query values
-(aka *the string that go in single quotes*). If you need to parametrize
+(aka *the strings that go in single quotes*). If you need to parametrize
 different parts of a statement, you must use the `!psycopg.sql` module::
 
     >>> from psycopg import sql
