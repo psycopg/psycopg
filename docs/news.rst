@@ -19,6 +19,7 @@ Psycopg 3.1.2
 - Fix invalid SAVEPOINT issued when entering `Connection.transaction()` within
   a pipeline using an implicit transaction (:ticket:`#374`).
 - Fix queries with repeated named parameters in `ClientCursor` (:ticket:`#378`).
+- Distribute macOS arm64 (Apple M1) binary packages (:ticket:`#344`).
 
 
 Psycopg 3.1.1
