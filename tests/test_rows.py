@@ -56,6 +56,11 @@ def test_namedtuple_row(conn):
     assert r2.number == 1
     assert not cur.nextset()
     assert type(r1) is not type(r2)
+    cur.execute('select 1 as üåäö, 1 as _, 1 as "123"')
+    (r3,) = cur.fetchall()
+    assert "üåäö" in r3._fields
+    assert "f_" in r3._fields
+    assert "f123" in r3._fields
 
 
 def test_class_row(conn):
