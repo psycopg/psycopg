@@ -146,12 +146,16 @@ def _as_python_identifier(s: str, prefix: str = "f") -> str:
     Replace all non-valid chars with '_' and prefix the value with *prefix* if
     the first letter is an '_'.
     """
-    s = _re_clean.sub("_", s)
-    # Python identifier cannot start with numbers, namedtuple fields
-    # cannot start with underscore. So...
-    if s[0] == "_" or "0" <= s[0] <= "9":
+    if not s.isidentifier():
+        if s[0] in '1234567890':
+            s = prefix + s
+        if not s.isidentifier():
+            s = _re_clean.sub("_", s)
+    # namedtuple fields cannot start with underscore. So...
+    if s[0] == "_":
         s = prefix + s
     return s
+
 
 
 _re_clean = re.compile(
