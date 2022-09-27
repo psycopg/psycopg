@@ -74,7 +74,7 @@ class BaseCopy(Generic[ConnectionType]):
     a file for later use.
     """
 
-    _Self = TypeVar("_Self", bound="BaseCopy[ConnectionType]")
+    _Self = TypeVar("_Self", bound="BaseCopy[Any]")
 
     formatter: "Formatter"
 

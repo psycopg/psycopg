@@ -52,7 +52,7 @@ class AsyncConnection(BaseConnection[Row]):
     server_cursor_factory: Type[AsyncServerCursor[Row]]
     row_factory: AsyncRowFactory[Row]
     _pipeline: Optional[AsyncPipeline]
-    _Self = TypeVar("_Self", bound="AsyncConnection[Row]")
+    _Self = TypeVar("_Self", bound="AsyncConnection[Any]")
 
     def __init__(
         self,

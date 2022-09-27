@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
     __module__ = "psycopg"
     __slots__ = ()
-    _Self = TypeVar("_Self", bound="AsyncCursor[Row]")
+    _Self = TypeVar("_Self", bound="AsyncCursor[Any]")
 
     @overload
     def __init__(self: "AsyncCursor[Row]", connection: "AsyncConnection[Row]"):

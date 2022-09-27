@@ -198,7 +198,7 @@ class ServerCursorMixin(BaseCursor[ConnectionType, Row]):
 class ServerCursor(ServerCursorMixin["Connection[Any]", Row], Cursor[Row]):
     __module__ = "psycopg"
     __slots__ = ()
-    _Self = TypeVar("_Self", bound="ServerCursor[Row]")
+    _Self = TypeVar("_Self", bound="ServerCursor[Any]")
 
     @overload
     def __init__(
@@ -340,7 +340,7 @@ class AsyncServerCursor(
 ):
     __module__ = "psycopg"
     __slots__ = ()
-    _Self = TypeVar("_Self", bound="AsyncServerCursor[Row]")
+    _Self = TypeVar("_Self", bound="AsyncServerCursor[Any]")
 
     @overload
     def __init__(

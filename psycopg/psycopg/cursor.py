@@ -650,7 +650,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
 class Cursor(BaseCursor["Connection[Any]", Row]):
     __module__ = "psycopg"
     __slots__ = ()
-    _Self = TypeVar("_Self", bound="Cursor[Row]")
+    _Self = TypeVar("_Self", bound="Cursor[Any]")
 
     @overload
     def __init__(self: "Cursor[Row]", connection: "Connection[Row]"):

@@ -655,7 +655,7 @@ class Connection(BaseConnection[Row]):
     server_cursor_factory: Type[ServerCursor[Row]]
     row_factory: RowFactory[Row]
     _pipeline: Optional[Pipeline]
-    _Self = TypeVar("_Self", bound="Connection[Row]")
+    _Self = TypeVar("_Self", bound="Connection[Any]")
 
     def __init__(
         self,
