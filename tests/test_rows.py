@@ -3,6 +3,8 @@ import pytest
 import psycopg
 from psycopg import rows
 
+from .utils import eur
+
 
 def test_tuple_row(conn):
     conn.row_factory = rows.dict_row
@@ -56,11 +58,14 @@ def test_namedtuple_row(conn):
     assert r2.number == 1
     assert not cur.nextset()
     assert type(r1) is not type(r2)
-    cur.execute('select 1 as üåäö, 1 as _, 1 as "123"')
+
+    cur.execute(f'select 1 as üåäö, 2 as _, 3 as "123", 4 as "a-b", 5 as "{eur}eur"')
     (r3,) = cur.fetchall()
-    assert "üåäö" in r3._fields
-    assert "f_" in r3._fields
-    assert "f123" in r3._fields
+    assert r3.üåäö == 1
+    assert r3.f_ == 2
+    assert r3.f123 == 3
+    assert r3.a_b == 4
+    assert r3.f_eur == 5
 
 
 def test_class_row(conn):
