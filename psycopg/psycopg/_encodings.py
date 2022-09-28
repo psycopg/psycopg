@@ -7,10 +7,10 @@ Mappings between PostgreSQL and Python encodings.
 import re
 import string
 import codecs
-from functools import lru_cache
 from typing import Any, Dict, Optional, TYPE_CHECKING
 
 from .errors import NotSupportedError
+from ._compat import cache
 
 if TYPE_CHECKING:
     from .pq.abc import PGconn
@@ -116,7 +116,7 @@ def conninfo_encoding(conninfo: str) -> str:
     return "utf-8"
 
 
-@lru_cache()
+@cache
 def py2pgenc(name: str) -> bytes:
     """Convert a Python encoding name to PostgreSQL encoding name.
 
@@ -125,7 +125,7 @@ def py2pgenc(name: str) -> bytes:
     return pg_codecs[codecs.lookup(name).name]
 
 
-@lru_cache()
+@cache
 def pg2pyenc(name: bytes) -> str:
     """Convert a Python encoding name to PostgreSQL encoding name.
 

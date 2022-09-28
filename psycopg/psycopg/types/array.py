@@ -8,13 +8,13 @@ import re
 import struct
 from typing import Any, cast, Callable, Iterator, List
 from typing import Optional, Pattern, Set, Tuple, Type
-from functools import lru_cache
 
 from .. import pq
 from .. import errors as e
 from .. import postgres
 from ..abc import AdaptContext, Buffer, Dumper, DumperKey, NoneType
 from ..adapt import RecursiveDumper, RecursiveLoader, PyFormat
+from .._compat import cache
 from .._struct import pack_len, unpack_len
 from ..postgres import TEXT_OID, INVALID_OID
 from .._typeinfo import TypeInfo
@@ -190,7 +190,7 @@ class ListDumper(BaseListDumper):
             return self._tx.get_dumper(item, PyFormat.TEXT).dump(item)
 
 
-@lru_cache()
+@cache
 def _get_needs_quotes_regexp(delimiter: bytes) -> Pattern[bytes]:
     """Return a regexp to recognise when a value needs quotes
 
@@ -349,7 +349,7 @@ class ArrayLoader(BaseArrayLoader):
     _re_unescape = re.compile(rb"\\(.)")
 
 
-@lru_cache()
+@cache
 def _get_array_parse_regexp(delimiter: bytes) -> Pattern[bytes]:
     """
     Return a regexp to tokenize an array representation into item and brackets

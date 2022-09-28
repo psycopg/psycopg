@@ -29,10 +29,14 @@ else:
 
 if sys.version_info >= (3, 9):
     from zoneinfo import ZoneInfo
+    from functools import cache
     from collections import Counter, deque as Deque
 else:
-    from backports.zoneinfo import ZoneInfo
     from typing import Counter, Deque
+    from functools import lru_cache
+    from backports.zoneinfo import ZoneInfo
+
+    cache = lru_cache(maxsize=None)
 
 if sys.version_info >= (3, 10):
     from typing import TypeAlias, TypeGuard
@@ -52,5 +56,6 @@ __all__ = [
     "TypeAlias",
     "TypeGuard",
     "ZoneInfo",
+    "cache",
     "create_task",
 ]

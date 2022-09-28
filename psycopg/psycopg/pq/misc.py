@@ -9,10 +9,10 @@ import sys
 import logging
 import ctypes.util
 from typing import cast, NamedTuple, Optional, Union
-from functools import lru_cache
 
 from .abc import PGconn, PGresult
 from ._enums import ConnStatus, TransactionStatus, PipelineStatus
+from .._compat import cache
 from .._encodings import pgconn_encoding
 
 logger = logging.getLogger("psycopg.pq")
@@ -46,7 +46,7 @@ class PGresAttDesc(NamedTuple):
     atttypmod: int
 
 
-@lru_cache()
+@cache
 def find_libpq_full_path() -> Optional[str]:
     if sys.platform == "win32":
         libname = ctypes.util.find_library("libpq.dll")
