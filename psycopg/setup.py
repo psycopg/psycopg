@@ -37,7 +37,7 @@ extras_require = {
     ],
     # Requirements to run the test suite
     "test": [
-        "mypy >= 0.940",
+        "mypy >= 0.981",
         "pproxy >= 2.7",
         "pytest >= 6.2.5",
         "pytest-asyncio >= 0.17",
@@ -49,7 +49,7 @@ extras_require = {
         "black >= 22.3.0",
         "dnspython >= 2.1",
         "flake8 >= 4.0",
-        "mypy >= 0.940",
+        "mypy >= 0.981",
         "types-setuptools >= 57.4",
         "wheel >= 0.37",
     ],

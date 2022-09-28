@@ -40,8 +40,8 @@ class PsycopgTPCTests(dbapi20_tpc.TwoPhaseCommitTests):
 
 
 # Shut up warnings
-PsycopgTests.failUnless = PsycopgTests.assertTrue  # type: ignore[assignment]
-PsycopgTPCTests.assertEquals = PsycopgTPCTests.assertEqual  # type: ignore[assignment]
+PsycopgTests.failUnless = PsycopgTests.assertTrue
+PsycopgTPCTests.assertEquals = PsycopgTPCTests.assertEqual
 
 
 @pytest.mark.parametrize(

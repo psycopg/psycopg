@@ -758,7 +758,7 @@ def generate_stub() -> None:
             "LP_c_ulong",
             "LP_FILE",
         ):
-            return f"pointer[{t.__name__[3:]}]"
+            return f"_Pointer[{t.__name__[3:]}]"
 
         else:
             assert False, f"can't deal with {t} in {fname}"

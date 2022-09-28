@@ -407,10 +407,7 @@ def test_optimised_adapters():
 
     # All the registered adapters
     reg_adapters = set()
-    adapters = (
-        list(postgres.adapters._dumpers.values())
-        + postgres.adapters._loaders  # type: ignore[operator]
-    )
+    adapters = list(postgres.adapters._dumpers.values()) + postgres.adapters._loaders
     assert len(adapters) == 5
     for m in adapters:
         reg_adapters |= set(m.values())
