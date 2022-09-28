@@ -156,11 +156,23 @@ The `!Cursor` class
             to receive further commands (with a message such as *another
             command is already in progress*).
 
-            You can restore the connection to a working state by consuming
-            the generator entirely: see `this comment`__ to get a few ideas
-            about how to do it.
+            If there is a chance that the generator is not consumed entirely,
+            in order to restore the connection to a working state you can call
+            `~generator.close` on the generator object returned by `!stream()`. The
+            `contextlib.closing` function might be particularly useful to make
+            sure that `!close()` is called:
 
-            .. __: https://github.com/psycopg/psycopg/issues/382#issuecomment-1253582340
+            .. code::
+
+                with closing(cur.stream("select generate_series(1, 10000)")) as gen:
+                    for rec in gen:
+                        something(rec)  # might fail
+
+            Without calling `!close()`, in case of error, the connection will
+            be `!ACTIVE` and unusable. If `!close()` is called, the connection
+            might be `!INTRANS` or `!INERROR`, depending on whether the server
+            managed to send the entire resultset to the client. An autocommit
+            connection will be `!IDLE` instead.
 
 
     .. attribute:: format

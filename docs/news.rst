@@ -13,6 +13,8 @@ Future releases
 Psycopg 3.1.3 (unreleased)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Restore the state of the connection if `Cursor.stream()` is terminated
+  prematurely (:ticket:`#382`).
 - Fix regression introduced in 3.1 with different named tuples mangling rules
   for non-ascii attribute names (:ticket:`#386`).
 
