@@ -7,6 +7,16 @@
 ``psycopg`` release notes
 =========================
 
+Future releases
+---------------
+
+Psycopg 3.1.3 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Fix regression introduced in 3.1 with different named tuples mangling rules
+  for non-ascii attribute names (:ticket:`#386`).
+
+
 Current release
 ---------------
 

@@ -353,14 +353,43 @@ def test_invalid_fields_names(conn):
     assert obj == got
 
 
-@pytest.mark.parametrize("name", ["a-b", f"{eur}", "order"])
+@pytest.mark.parametrize("name", ["a-b", f"{eur}", "order", "1", "'"])
 def test_literal_invalid_name(conn, name):
     conn.execute("set client_encoding to utf8")
-    conn.execute(f'create type "{name}" as (foo text)')
-    info = CompositeInfo.fetch(conn, f'"{name}"')
+    conn.execute(
+        sql.SQL("create type {name} as (foo text)").format(name=sql.Identifier(name))
+    )
+    info = CompositeInfo.fetch(conn, sql.Identifier(name).as_string(conn))
     register_composite(info, conn)
     obj = info.python_type("hello")
     assert sql.Literal(obj).as_string(conn) == f"'(hello)'::\"{name}\""
+    cur = conn.execute(sql.SQL("select {}").format(obj))
+    got = cur.fetchone()[0]
+    assert got == obj
+    assert type(got) is type(obj)
+
+
+@pytest.mark.parametrize(
+    "name, attr",
+    [
+        ("a-b", "a_b"),
+        (f"{eur}", "f_"),
+        ("üåäö", "üåäö"),
+        ("order", "order"),
+        ("1", "f1"),
+    ],
+)
+def test_literal_invalid_attr(conn, name, attr):
+    conn.execute("set client_encoding to utf8")
+    conn.execute(
+        sql.SQL("create type test_attr as ({name} text)").format(
+            name=sql.Identifier(name)
+        )
+    )
+    info = CompositeInfo.fetch(conn, "test_attr")
+    register_composite(info, conn)
+    obj = info.python_type("hello")
+    assert getattr(obj, attr) == "hello"
     cur = conn.execute(sql.SQL("select {}").format(obj))
     got = cur.fetchone()[0]
     assert got == obj
