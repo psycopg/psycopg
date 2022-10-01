@@ -157,7 +157,7 @@ you should probably specify one of the following:
   interface and leaves the possibility of choosing a specific implementation
   to the end user of your library.
 
-- If your project if a final application (e.g. a service running on a server)
+- If your project is a final application (e.g. a service running on a server)
   you can require a specific implementation, for instance ``psycopg[c]``,
   after you have made sure that the prerequisites are met (e.g. the depending
   libraries and tools are installed in the host machine).
