@@ -688,6 +688,10 @@ async def test_leak(aconn_cls, dsn, faker, fetch, row_factory):
         ("select 'hello'", (), "select 'hello'"),
         ("select %s, %s", ([1, dt.date(2020, 1, 1)],), "select 1, '2020-01-01'::date"),
         ("select %(foo)s, %(foo)s", ({"foo": "x"},), "select 'x', 'x'"),
+        ("select %%", (), "select %%"),
+        ("select %%, %s", (["a"],), "select %, 'a'"),
+        ("select %%, %(foo)s", ({"foo": "x"},), "select %, 'x'"),
+        ("select %%s, %(foo)s", ({"foo": "x"},), "select %s, 'x'"),
     ],
 )
 async def test_mogrify(aconn, query, params, want):
