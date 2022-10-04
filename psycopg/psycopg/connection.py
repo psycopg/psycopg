@@ -490,6 +490,8 @@ class BaseConnection(Generic[Row]):
             return
 
         yield from self._exec_command(self._get_tx_start_command())
+        if self._pipeline:
+            yield from self._pipeline._sync_gen()
 
     def _get_tx_start_command(self) -> bytes:
         if self._begin_statement:
