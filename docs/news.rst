@@ -7,11 +7,11 @@
 ``psycopg`` release notes
 =========================
 
-Future releases
+Current release
 ---------------
 
-Psycopg 3.1.3 (unreleased)
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+Psycopg 3.1.3
+^^^^^^^^^^^^^
 
 - Restore the state of the connection if `Cursor.stream()` is terminated
   prematurely (:ticket:`#382`).
@@ -20,9 +20,6 @@ Psycopg 3.1.3 (unreleased)
 - Fix handling of queries with escaped percent signs (``%%``) in `ClientCursor`
   (:ticket:`#399`).
 
-
-Current release
----------------
 
 Psycopg 3.1.2
 ^^^^^^^^^^^^^
