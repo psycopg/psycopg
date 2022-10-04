@@ -202,7 +202,7 @@ def _query2pg_client(
     """
     Convert Python query and params into a template to perform client-side binding
     """
-    parts = _split_query(query, encoding)
+    parts = _split_query(query, encoding, collapse_double_percent=False)
     order: Optional[List[str]] = None
     chunks: List[bytes] = []
 
@@ -294,7 +294,9 @@ _re_placeholder = re.compile(
 )
 
 
-def _split_query(query: bytes, encoding: str = "ascii") -> List[QueryPart]:
+def _split_query(
+    query: bytes, encoding: str = "ascii", collapse_double_percent: bool = True
+) -> List[QueryPart]:
     parts: List[Tuple[bytes, Optional[Match[bytes]]]] = []
     cur = 0
 
@@ -323,9 +325,11 @@ def _split_query(query: bytes, encoding: str = "ascii") -> List[QueryPart]:
 
         ph = m.group(0)
         if ph == b"%%":
-            # unescape '%%' to '%' and merge the parts
+            # unescape '%%' to '%' if necessary, then merge the parts
+            if collapse_double_percent:
+                ph = b"%"
             pre1, m1 = parts[i + 1]
-            parts[i + 1] = (pre + b"%" + pre1, m1)
+            parts[i + 1] = (pre + ph + pre1, m1)
             del parts[i]
             continue
 

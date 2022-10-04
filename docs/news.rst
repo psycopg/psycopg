@@ -17,6 +17,8 @@ Psycopg 3.1.3 (unreleased)
   prematurely (:ticket:`#382`).
 - Fix regression introduced in 3.1 with different named tuples mangling rules
   for non-ascii attribute names (:ticket:`#386`).
+- Fix handling of queries with escaped percent signs (``%%``) in `ClientCursor`
+  (:ticket:`#399`).
 
 
 Current release
