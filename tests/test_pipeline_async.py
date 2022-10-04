@@ -134,8 +134,7 @@ async def test_pipeline_processed_at_exit(aconn):
         async with aconn.pipeline() as p:
             await cur.execute("select 1")
 
-            # PQsendQuery[BEGIN], PQsendQuery
-            assert len(p.result_queue) == 2
+            assert len(p.result_queue) == 1
 
         assert await cur.fetchone() == (1,)
 
@@ -160,8 +159,7 @@ async def test_pipeline(aconn):
         await c1.execute("select 1")
         await c2.execute("select 2")
 
-        # PQsendQuery[BEGIN], PQsendQuery(2)
-        assert len(p.result_queue) == 3
+        assert len(p.result_queue) == 2
 
         (r1,) = await c1.fetchone()
         assert r1 == 1
@@ -527,6 +525,21 @@ async def test_message_0x33(aconn):
         assert (await cur.fetchone()) == ("test",)
 
     assert not notices
+
+
+async def test_transaction_state_implicit_begin(aconn, trace):
+    # Regression test to ensure that the transaction state is correct after
+    # the implicit BEGIN statement (in non-autocommit mode).
+    notices = []
+    aconn.add_notice_handler(lambda diag: notices.append(diag.message_primary))
+    t = trace.trace(aconn)
+    async with aconn.pipeline():
+        await (await aconn.execute("select 'x'")).fetchone()
+        await aconn.execute("select 'y'")
+    assert not notices
+    assert [
+        e.content[0] for e in t if e.type == "Parse" and b"BEGIN" in e.content[0]
+    ] == [b' "" "BEGIN" 0']
 
 
 async def test_concurrency(aconn):

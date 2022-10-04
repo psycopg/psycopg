@@ -133,8 +133,7 @@ def test_pipeline_processed_at_exit(conn):
         with conn.pipeline() as p:
             cur.execute("select 1")
 
-            # PQsendQuery[BEGIN], PQsendQuery
-            assert len(p.result_queue) == 2
+            assert len(p.result_queue) == 1
 
         assert cur.fetchone() == (1,)
 
@@ -159,8 +158,7 @@ def test_pipeline(conn):
         c1.execute("select 1")
         c2.execute("select 2")
 
-        # PQsendQuery[BEGIN], PQsendQuery(2)
-        assert len(p.result_queue) == 3
+        assert len(p.result_queue) == 2
 
         (r1,) = c1.fetchone()
         assert r1 == 1
@@ -523,6 +521,21 @@ def test_message_0x33(conn):
         assert cur.fetchone() == ("test",)
 
     assert not notices
+
+
+def test_transaction_state_implicit_begin(conn, trace):
+    # Regression test to ensure that the transaction state is correct after
+    # the implicit BEGIN statement (in non-autocommit mode).
+    notices = []
+    conn.add_notice_handler(lambda diag: notices.append(diag.message_primary))
+    t = trace.trace(conn)
+    with conn.pipeline():
+        conn.execute("select 'x'").fetchone()
+        conn.execute("select 'y'")
+    assert not notices
+    assert [
+        e.content[0] for e in t if e.type == "Parse" and b"BEGIN" in e.content[0]
+    ] == [b' "" "BEGIN" 0']
 
 
 def test_concurrency(conn):
