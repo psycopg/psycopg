@@ -104,8 +104,21 @@ def test_pipeline_nested_sync_trace(conn, trace):
 
 def test_cursor_stream(conn):
     with conn.pipeline(), conn.cursor() as cur:
-        with pytest.raises(psycopg.ProgrammingError):
-            cur.stream("select 1").__next__()
+        c1 = conn.execute("select 1")
+        assert not c1.pgresult
+        cur.execute("select 2")  # results will be discarded by next stream()
+        series = [r for r, in cur.stream("select generate_series(1, 4)")]
+        assert c1.pgresult
+    assert series == [1, 2, 3, 4]
+    assert c1.fetchone() == (1,)
+
+
+@pytest.mark.xfail
+def test_cursor_stream_query_fetch_bug(conn):
+    # See tests/pq/test_pipeline.py::test_pipeline_single_row_query_fetch_bug
+    with conn.pipeline(), conn.cursor() as cur:
+        assert [r for r, in cur.stream("select generate_series(0, 1)")] == [0, 1]
+        assert conn.execute("select 1").fetchone() == (1,)
 
 
 def test_server_cursor(conn):

@@ -60,6 +60,9 @@ def fetch(pgconn: PGconn) -> abc.PQGen[Optional[PGresult]]: ...
 def pipeline_communicate(
     pgconn: PGconn, commands: Deque[PipelineCommand]
 ) -> abc.PQGen[List[List[PGresult]]]: ...
+def pipeline_send(
+    pgconn: PGconn, commands: Deque[PipelineCommand]
+) -> abc.PQGen[None]: ...
 
 # Copy support
 def format_row_text(

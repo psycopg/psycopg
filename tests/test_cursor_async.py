@@ -559,6 +559,7 @@ async def test_query_params_executemany(aconn):
     assert cur._query.params == [b"3", b"4"]
 
 
+@pytest.mark.usefixtures("apipeline")
 async def test_stream(aconn):
     cur = aconn.cursor()
     recs = []
@@ -571,6 +572,7 @@ async def test_stream(aconn):
     assert recs == [(1, dt.date(2021, 1, 2)), (2, dt.date(2021, 1, 3))]
 
 
+@pytest.mark.usefixtures("apipeline")
 async def test_stream_sql(aconn):
     cur = aconn.cursor()
     recs = []
@@ -584,6 +586,7 @@ async def test_stream_sql(aconn):
     assert recs == [(1, dt.date(2021, 1, 2)), (2, dt.date(2021, 1, 3))]
 
 
+@pytest.mark.usefixtures("apipeline")
 async def test_stream_row_factory(aconn):
     cur = aconn.cursor(row_factory=rows.dict_row)
     ait = cur.stream("select generate_series(1,2) as a")
@@ -592,6 +595,7 @@ async def test_stream_row_factory(aconn):
     assert (await ait.__anext__()).a == 2
 
 
+@pytest.mark.usefixtures("apipeline")
 async def test_stream_no_row(aconn):
     cur = aconn.cursor()
     recs = [rec async for rec in cur.stream("select generate_series(2,1) as a")]
@@ -599,6 +603,7 @@ async def test_stream_no_row(aconn):
 
 
 @pytest.mark.crdb_skip("no col query")
+@pytest.mark.usefixtures("apipeline")
 async def test_stream_no_col(aconn):
     cur = aconn.cursor()
     recs = [rec async for rec in cur.stream("select")]
@@ -620,14 +625,17 @@ async def test_stream_badquery(aconn, query):
             pass
 
 
-async def test_stream_error_tx(aconn):
+async def test_stream_error_tx(aconn, apipeline):
     cur = aconn.cursor()
     with pytest.raises(psycopg.ProgrammingError):
         async for rec in cur.stream("wat"):
             pass
+    if apipeline:
+        await apipeline.sync()
     assert aconn.info.transaction_status == aconn.TransactionStatus.INERROR
 
 
+@pytest.mark.usefixtures("apipeline")
 async def test_stream_error_notx(aconn):
     await aconn.set_autocommit(True)
     cur = aconn.cursor()
@@ -637,7 +645,7 @@ async def test_stream_error_notx(aconn):
     assert aconn.info.transaction_status == aconn.TransactionStatus.IDLE
 
 
-async def test_stream_error_python_to_consume(aconn):
+async def test_stream_error_python_to_consume(aconn, apipeline):
     cur = aconn.cursor()
     with pytest.raises(ZeroDivisionError):
         gen = cur.stream("select generate_series(1, 10000)")
@@ -645,12 +653,15 @@ async def test_stream_error_python_to_consume(aconn):
             1 / 0
 
     await gen.aclose()
+    if apipeline:
+        await apipeline.sync()
     assert aconn.info.transaction_status in (
         aconn.TransactionStatus.INTRANS,
         aconn.TransactionStatus.INERROR,
     )
 
 
+@pytest.mark.usefixtures("apipeline")
 async def test_stream_error_python_consumed(aconn):
     cur = aconn.cursor()
     with pytest.raises(ZeroDivisionError):
@@ -675,6 +686,7 @@ async def test_stream_close(aconn):
     assert aconn.closed
 
 
+@pytest.mark.usefixtures("apipeline")
 async def test_stream_binary_cursor(aconn):
     cur = aconn.cursor(binary=True)
     recs = []
@@ -686,6 +698,7 @@ async def test_stream_binary_cursor(aconn):
     assert recs == [(1,), (2,)]
 
 
+@pytest.mark.usefixtures("apipeline")
 async def test_stream_execute_binary(aconn):
     cur = aconn.cursor()
     recs = []
@@ -699,6 +712,7 @@ async def test_stream_execute_binary(aconn):
     assert recs == [(1,), (2,)]
 
 
+@pytest.mark.usefixtures("apipeline")
 async def test_stream_binary_cursor_text_override(aconn):
     cur = aconn.cursor(binary=True)
     recs = []

@@ -241,7 +241,8 @@ point is established by Psycopg:
 - at the end of a `!Pipeline` block;
 - possibly when opening a nested `!Pipeline` block;
 - using a fetch method such as `Cursor.fetchone()` (which only flushes the
-  query but doesn't issue a Sync and doesn't reset a pipeline state error).
+  query but doesn't issue a Sync and doesn't reset a pipeline state error);
+- similarly, when iterating through `Cursor.stream()`.
 
 The server might perform a flush on its own initiative, for instance when the
 output buffer is full.

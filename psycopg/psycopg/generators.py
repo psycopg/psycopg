@@ -177,6 +177,15 @@ def _fetch(pgconn: PGconn) -> PQGen[Optional[PGresult]]:
     return pgconn.get_result()
 
 
+def _pipeline_send(pgconn: PGconn, commands: Deque[PipelineCommand]) -> PQGen[None]:
+    """Generator to send queries from a connection in pipeline mode."""
+    while commands:
+        ready = yield Wait.W
+        if ready & Ready.W:
+            pgconn.flush()
+            commands.popleft()()
+
+
 def _pipeline_communicate(
     pgconn: PGconn, commands: Deque[PipelineCommand]
 ) -> PQGen[List[List[PGresult]]]:
@@ -304,6 +313,7 @@ if _psycopg:
     fetch_many = _psycopg.fetch_many
     fetch = _psycopg.fetch
     pipeline_communicate = _psycopg.pipeline_communicate
+    pipeline_send = _psycopg.pipeline_send
 
 else:
     connect = _connect
@@ -312,3 +322,4 @@ else:
     fetch_many = _fetch_many
     fetch = _fetch
     pipeline_communicate = _pipeline_communicate
+    pipeline_send = _pipeline_send

@@ -568,6 +568,7 @@ def test_query_params_executemany(conn):
     assert cur._query.params == [b"3", b"4"]
 
 
+@pytest.mark.usefixtures("pipeline")
 def test_stream(conn):
     cur = conn.cursor()
     recs = []
@@ -580,6 +581,7 @@ def test_stream(conn):
     assert recs == [(1, dt.date(2021, 1, 2)), (2, dt.date(2021, 1, 3))]
 
 
+@pytest.mark.usefixtures("pipeline")
 def test_stream_sql(conn):
     cur = conn.cursor()
     recs = list(
@@ -593,6 +595,7 @@ def test_stream_sql(conn):
     assert recs == [(1, dt.date(2021, 1, 2)), (2, dt.date(2021, 1, 3))]
 
 
+@pytest.mark.usefixtures("pipeline")
 def test_stream_row_factory(conn):
     cur = conn.cursor(row_factory=rows.dict_row)
     it = iter(cur.stream("select generate_series(1,2) as a"))
@@ -601,6 +604,7 @@ def test_stream_row_factory(conn):
     assert next(it).a == 2
 
 
+@pytest.mark.usefixtures("pipeline")
 def test_stream_no_row(conn):
     cur = conn.cursor()
     recs = list(cur.stream("select generate_series(2,1) as a"))
@@ -608,6 +612,7 @@ def test_stream_no_row(conn):
 
 
 @pytest.mark.crdb_skip("no col query")
+@pytest.mark.usefixtures("pipeline")
 def test_stream_no_col(conn):
     cur = conn.cursor()
     recs = list(cur.stream("select"))
@@ -629,14 +634,17 @@ def test_stream_badquery(conn, query):
             pass
 
 
-def test_stream_error_tx(conn):
+def test_stream_error_tx(conn, pipeline):
     cur = conn.cursor()
     with pytest.raises(psycopg.ProgrammingError):
         for rec in cur.stream("wat"):
             pass
+    if pipeline:
+        pipeline.sync()
     assert conn.info.transaction_status == conn.TransactionStatus.INERROR
 
 
+@pytest.mark.usefixtures("pipeline")
 def test_stream_error_notx(conn):
     conn.autocommit = True
     cur = conn.cursor()
@@ -646,12 +654,14 @@ def test_stream_error_notx(conn):
     assert conn.info.transaction_status == conn.TransactionStatus.IDLE
 
 
-def test_stream_error_python_to_consume(conn):
+def test_stream_error_python_to_consume(conn, pipeline):
     cur = conn.cursor()
     with pytest.raises(ZeroDivisionError):
         with closing(cur.stream("select generate_series(1, 10000)")) as gen:
             for rec in gen:
                 1 / 0
+    if pipeline:
+        pipeline.sync()
     assert conn.info.transaction_status in (
         conn.TransactionStatus.INTRANS,
         conn.TransactionStatus.INERROR,
@@ -680,6 +690,7 @@ def test_stream_close(conn):
     assert conn.closed
 
 
+@pytest.mark.usefixtures("pipeline")
 def test_stream_binary_cursor(conn):
     cur = conn.cursor(binary=True)
     recs = []
@@ -691,6 +702,7 @@ def test_stream_binary_cursor(conn):
     assert recs == [(1,), (2,)]
 
 
+@pytest.mark.usefixtures("pipeline")
 def test_stream_execute_binary(conn):
     cur = conn.cursor()
     recs = []
@@ -702,6 +714,7 @@ def test_stream_execute_binary(conn):
     assert recs == [(1,), (2,)]
 
 
+@pytest.mark.usefixtures("pipeline")
 def test_stream_binary_cursor_text_override(conn):
     cur = conn.cursor(binary=True)
     recs = []
