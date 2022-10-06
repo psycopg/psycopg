@@ -7,6 +7,15 @@
 ``psycopg`` release notes
 =========================
 
+Future releases
+---------------
+
+Psycopg 3.1.4 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Include :ref:`error classes <sqlstate-exceptions>` defined in PostgreSQL 15.
+
+
 Current release
 ---------------
 
