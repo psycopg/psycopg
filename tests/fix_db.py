@@ -8,6 +8,7 @@ from typing import List, Optional
 
 import psycopg
 from psycopg import pq
+from psycopg.pq._debug import PGconnDebug
 from psycopg import sql
 
 from .utils import check_postgres_version
@@ -32,6 +33,12 @@ def pytest_addoption(parser):
         metavar="{TRACEFILE,STDERR}",
         default=None,
         help="Generate a libpq trace to TRACEFILE or STDERR.",
+    )
+    parser.addoption(
+        "--pq-debug",
+        action="store_true",
+        default=False,
+        help="Log PGconn access. (Requires PSYCOPG_IMPL=python.)",
     )
 
 
@@ -151,6 +158,18 @@ def maybe_trace(pgconn, tracefile, function):
         yield None
     finally:
         pgconn.untrace()
+
+
+@pytest.fixture(autouse=True)
+def pgconn_debug(request):
+    if not request.config.getoption("--pq-debug"):
+        return
+    if pq.__impl__ != "python":
+        raise pytest.UsageError("set PSYCOPG_IMPL=python to use --pq-debug")
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
+    logger = logging.getLogger("psycopg.debug")
+    logger.setLevel(logging.INFO)
+    pq.PGconn = PGconnDebug
 
 
 @pytest.fixture
