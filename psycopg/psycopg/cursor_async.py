@@ -134,8 +134,9 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
         if self._pgconn.pipeline_status:
             raise e.ProgrammingError("stream() cannot be used in pipeline mode")
 
-        try:
-            async with self._conn.lock:
+        async with self._conn.lock:
+
+            try:
                 await self._conn.wait(
                     self._stream_send_gen(query, params, binary=binary)
                 )
@@ -146,25 +147,28 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
                     yield rec
                     first = False
 
-        except e.Error as ex:
-            raise ex.with_traceback(None)
+            except e.Error as ex:
+                raise ex.with_traceback(None)
 
-        finally:
-            if self._pgconn.transaction_status == ACTIVE:
-                # Try to cancel the query, then consume the results already received.
-                self._conn.cancel()
-                try:
-                    while await self._conn.wait(self._stream_fetchone_gen(first=False)):
+            finally:
+                if self._pgconn.transaction_status == ACTIVE:
+                    # Try to cancel the query, then consume the results
+                    # already received.
+                    self._conn.cancel()
+                    try:
+                        while await self._conn.wait(
+                            self._stream_fetchone_gen(first=False)
+                        ):
+                            pass
+                    except Exception:
                         pass
-                except Exception:
-                    pass
 
-                # Try to get out of ACTIVE state. Just do a single attempt, which
-                # should work to recover from an error or query cancelled.
-                try:
-                    await self._conn.wait(self._stream_fetchone_gen(first=False))
-                except Exception:
-                    pass
+                    # Try to get out of ACTIVE state. Just do a single attempt, which
+                    # should work to recover from an error or query cancelled.
+                    try:
+                        await self._conn.wait(self._stream_fetchone_gen(first=False))
+                    except Exception:
+                        pass
 
     async def fetchone(self) -> Optional[Row]:
         await self._fetch_pipeline()
