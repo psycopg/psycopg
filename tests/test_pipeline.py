@@ -113,9 +113,9 @@ def test_cursor_stream(conn):
     assert c1.fetchone() == (1,)
 
 
-@pytest.mark.xfail
 def test_cursor_stream_query_fetch_bug(conn):
     # See tests/pq/test_pipeline.py::test_pipeline_single_row_query_fetch_bug
+    # Worked around on Psycopg side by adding an extra sync().
     with conn.pipeline(), conn.cursor() as cur:
         assert [r for r, in cur.stream("select generate_series(0, 1)")] == [0, 1]
         assert conn.execute("select 1").fetchone() == (1,)

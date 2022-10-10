@@ -114,9 +114,9 @@ async def test_cursor_stream(aconn):
     assert (await c1.fetchone()) == (1,)
 
 
-@pytest.mark.xfail
 async def test_cursor_stream_query_fetch_bug(aconn):
     # See tests/pq/test_pipeline.py::test_pipeline_single_row_query_fetch_bug
+    # Worked around on Psycopg side by adding an extra sync().
     async with aconn.pipeline(), aconn.cursor() as cur:
         assert [r async for r, in cur.stream("select generate_series(0, 1)")] == [0, 1]
         assert await (await aconn.execute("select 1")).fetchone() == (1,)

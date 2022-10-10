@@ -346,6 +346,9 @@ class BaseCursor(Generic[ConnectionType, Row]):
             # _execute_send() does not fill pipeline results queue, so we need
             # to do it ourselves here; also pass the single-row mode flag.
             self._conn._pipeline.result_queue.append((self, None, True))
+            # XXX issue a Sync() to work around libpq issue
+            #   https://www.postgresql.org/message-id/flat/01af18c5-dacc-a8c8-07ee-aecc7650c3e8%40dalibo.com
+            self._conn._pipeline._enqueue_sync()
             yield from self._conn._pipeline._send_gen()
         else:
             self._pgconn.set_single_row_mode()
