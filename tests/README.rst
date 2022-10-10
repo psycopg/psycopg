@@ -55,6 +55,13 @@ Test options
       [...]
       ==== 1877 passed, 2 skipped, 169 deselected, 48 xfailed in 13.47s =====
 
+- ``pytest`` option ``--pq-trace={TRACEFILE,STDERR}`` can be used to capture
+  libpq trace. When using ``stderr``, the output will only be shown for
+  failing or in-error tests, unless ``-s/--capture=no`` option is used.
+
+- ``pytest`` option ``--pq-debug`` can be used to log access to libpq's
+  ``PGconn`` functions.
+
 
 Testing in docker
 -----------------
