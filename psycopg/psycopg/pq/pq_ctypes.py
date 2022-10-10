@@ -18,7 +18,7 @@ from ctypes import addressof, c_char_p, c_int, c_size_t, c_ulong, c_void_p, py_o
 from typing import Any, Callable, List, Optional, Sequence, Tuple
 from typing import cast as t_cast, TYPE_CHECKING
 
-from .. import errors as e
+from .. import errors as e, _encodings
 from . import _pq_ctypes as impl
 from .misc import PGnotify, ConninfoOption, PGresAttDesc
 from .misc import error_message, connection_summary
@@ -961,7 +961,9 @@ class Escaping:
 
         self.conn._ensure_pgconn()
         # TODO: might be done without copy (however C does that)
-        if not isinstance(data, bytes):
+        if isinstance(data, str):
+            data = bytes(data, encoding=_encodings.pgconn_encoding(self.conn))
+        elif not isinstance(data, bytes):
             data = bytes(data)
         out = impl.PQescapeLiteral(self.conn._pgconn_ptr, data, len(data))
         if not out:
