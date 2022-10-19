@@ -32,6 +32,14 @@ class Ready(IntEnum):
     RW = EVENT_READ | EVENT_WRITE
 
 
+WAIT_R = Wait.R
+WAIT_W = Wait.W
+WAIT_RW = Wait.RW
+READY_R = Ready.R
+READY_W = Ready.W
+READY_RW = Ready.RW
+
+
 def wait_selector(gen: PQGen[RV], fileno: int, timeout: Optional[float] = None) -> RV:
     """
     Wait for a generator using the best strategy available.
@@ -125,16 +133,16 @@ async def wait_async(gen: PQGen[RV], fileno: int) -> RV:
     try:
         s = next(gen)
         while True:
-            reader = s & Wait.R
-            writer = s & Wait.W
+            reader = s & WAIT_R
+            writer = s & WAIT_W
             if not reader and not writer:
                 raise e.InternalError(f"bad poll status: {s}")
             ev.clear()
             ready = 0  # type: ignore[assignment]
             if reader:
-                loop.add_reader(fileno, wakeup, Ready.R)
+                loop.add_reader(fileno, wakeup, READY_R)
             if writer:
-                loop.add_writer(fileno, wakeup, Ready.W)
+                loop.add_writer(fileno, wakeup, READY_W)
             try:
                 await ev.wait()
             finally:
@@ -179,16 +187,16 @@ async def wait_conn_async(gen: PQGenConn[RV], timeout: Optional[float] = None) -
         if not timeout:
             timeout = None
         while True:
-            reader = s & Wait.R
-            writer = s & Wait.W
+            reader = s & WAIT_R
+            writer = s & WAIT_W
             if not reader and not writer:
                 raise e.InternalError(f"bad poll status: {s}")
             ev.clear()
             ready = 0  # type: ignore[assignment]
             if reader:
-                loop.add_reader(fileno, wakeup, Ready.R)
+                loop.add_reader(fileno, wakeup, READY_R)
             if writer:
-                loop.add_writer(fileno, wakeup, Ready.W)
+                loop.add_writer(fileno, wakeup, READY_W)
             try:
                 await wait_for(ev.wait(), timeout)
             finally:
@@ -233,9 +241,9 @@ def wait_epoll(gen: PQGen[RV], fileno: int, timeout: Optional[float] = None) -> 
                 ev = fileevs[0][1]
                 ready = 0
                 if ev & ~select.EPOLLOUT:
-                    ready = Ready.R
+                    ready = READY_R
                 if ev & ~select.EPOLLIN:
-                    ready |= Ready.W
+                    ready |= READY_W
                 assert s & ready
                 s = gen.send(ready)
                 evmask = poll_evmasks[s]

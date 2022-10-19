@@ -19,6 +19,7 @@ cdef object WAIT_W = Wait.W
 cdef object WAIT_R = Wait.R
 cdef object WAIT_RW = Wait.RW
 cdef int READY_R = Ready.R
+cdef int READY_W = Ready.W
 
 def connect(conninfo: str) -> PQGenConn[abc.PGconn]:
     """
@@ -219,7 +220,7 @@ def pipeline_communicate(
     while True:
         ready = yield WAIT_RW
 
-        if ready & Ready.R:
+        if ready & READY_R:
             pgconn.consume_input()
             with nogil:
                 cires = libpq.PQconsumeInput(pgconn_ptr)
@@ -261,7 +262,7 @@ def pipeline_communicate(
                         res.append(r)
 
 
-        if ready & Ready.W:
+        if ready & READY_W:
             pgconn.flush()
             if not commands:
                 break

@@ -41,6 +41,13 @@ COPY_IN = pq.ExecStatus.COPY_IN
 COPY_BOTH = pq.ExecStatus.COPY_BOTH
 PIPELINE_SYNC = pq.ExecStatus.PIPELINE_SYNC
 
+WAIT_R = Wait.R
+WAIT_W = Wait.W
+WAIT_RW = Wait.RW
+READY_R = Ready.R
+READY_W = Ready.W
+READY_RW = Ready.RW
+
 logger = logging.getLogger(__name__)
 
 
@@ -62,9 +69,9 @@ def _connect(conninfo: str) -> PQGenConn[PGconn]:
         if status == POLL_OK:
             break
         elif status == POLL_READING:
-            yield conn.socket, Wait.R
+            yield conn.socket, WAIT_R
         elif status == POLL_WRITING:
-            yield conn.socket, Wait.W
+            yield conn.socket, WAIT_W
         elif status == POLL_FAILED:
             encoding = conninfo_encoding(conninfo)
             raise e.OperationalError(
@@ -110,8 +117,8 @@ def _send(pgconn: PGconn) -> PQGen[None]:
         if f == 0:
             break
 
-        ready = yield Wait.RW
-        if ready & Ready.R:
+        ready = yield WAIT_RW
+        if ready & READY_R:
             # This call may read notifies: they will be saved in the
             # PGconn buffer and passed to Python later, in `fetch()`.
             pgconn.consume_input()
@@ -159,12 +166,12 @@ def _fetch(pgconn: PGconn) -> PQGen[Optional[PGresult]]:
     Return a result from the database (whether success or error).
     """
     if pgconn.is_busy():
-        yield Wait.R
+        yield WAIT_R
         while True:
             pgconn.consume_input()
             if not pgconn.is_busy():
                 break
-            yield Wait.R
+            yield WAIT_R
 
     # Consume notifies
     while True:
@@ -188,9 +195,9 @@ def _pipeline_communicate(
     results = []
 
     while True:
-        ready = yield Wait.RW
+        ready = yield WAIT_RW
 
-        if ready & Ready.R:
+        if ready & READY_R:
             pgconn.consume_input()
             while True:
                 n = pgconn.notifies()
@@ -213,7 +220,7 @@ def _pipeline_communicate(
                 else:
                     res.append(r)
 
-        if ready & Ready.W:
+        if ready & READY_W:
             pgconn.flush()
             if not commands:
                 break
@@ -223,7 +230,7 @@ def _pipeline_communicate(
 
 
 def notifies(pgconn: PGconn) -> PQGen[List[pq.PGnotify]]:
-    yield Wait.R
+    yield WAIT_R
     pgconn.consume_input()
 
     ns = []
@@ -244,7 +251,7 @@ def copy_from(pgconn: PGconn) -> PQGen[Union[memoryview, PGresult]]:
             break
 
         # would block
-        yield Wait.R
+        yield WAIT_R
         pgconn.consume_input()
 
     if nbytes > 0:
@@ -272,17 +279,17 @@ def copy_to(pgconn: PGconn, buffer: bytes) -> PQGen[None]:
     # into smaller ones. We prefer to do it there instead of here in order to
     # do it upstream the queue decoupling the writer task from the producer one.
     while pgconn.put_copy_data(buffer) == 0:
-        yield Wait.W
+        yield WAIT_W
 
 
 def copy_end(pgconn: PGconn, error: Optional[bytes]) -> PQGen[PGresult]:
     # Retry enqueuing end copy message until successful
     while pgconn.put_copy_end(error) == 0:
-        yield Wait.W
+        yield WAIT_W
 
     # Repeat until it the message is flushed to the server
     while True:
-        yield Wait.W
+        yield WAIT_W
         f = pgconn.flush()
         if f == 0:
             break
