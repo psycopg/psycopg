@@ -28,8 +28,8 @@ jobs:
           - {impl: python, python: "3.7", postgres: "postgres:10", libpq: "newest"}
           - {impl: python, python: "3.8", postgres: "postgres:12", libpq: ""}
           - {impl: python, python: "3.9", postgres: "postgres:14", libpq: ""}
-          - {impl: python, python: "3.10", postgres: "postgres:15rc1", libpq: "oldest"}
-          - {impl: c, python: "3.7", postgres: "postgres:15rc1", libpq: "newest"}
+          - {impl: python, python: "3.10", postgres: "postgres:15", libpq: "oldest"}
+          - {impl: c, python: "3.7", postgres: "postgres:15", libpq: "newest"}
           - {impl: c, python: "3.8", postgres: "postgres:14", libpq: ""}
           - {impl: c, python: "3.9", postgres: "postgres:13", libpq: ""}
           - {impl: c, python: "3.10", postgres: "postgres:11", libpq: "oldest"}
@@ -56,8 +56,10 @@ jobs:
         run: |
           set -x
           rel=$(lsb_release -c -s)
-          # TODO: after PG 15 has been released, remove the 15 from below.
-          echo "deb http://apt.postgresql.org/pub/repos/apt ${rel}-pgdg main 15" \
+          # NOTE: in order to test with a preview release, add its number to
+          # the deb entry. For instance, to test on preview Postgres 16, use:
+          # "deb http://apt.postgresql.org/pub/repos/apt ${rel}-pgdg main 16"
+          echo "deb http://apt.postgresql.org/pub/repos/apt ${rel}-pgdg main" \
             | sudo tee -a /etc/apt/sources.list.d/pgdg.list
           sudo apt-get -qq update
           pqver=$(apt-cache show libpq5  | grep ^Version: | head -1 \
