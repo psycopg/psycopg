@@ -17,13 +17,15 @@ from psycopg import errors as e
 
 
 def array_load_text(
-    data: Buffer, load: LoadFunc, delimiter: bytes = b","
+    data: Buffer, loader: Loader, delimiter: bytes = b","
 ) -> List[Any]:
     cdef char cdelim = delimiter[0]
 
     cdef char *buf
     cdef Py_ssize_t length
     _buffer_as_string_and_size(data, &buf, &length)
+    load = loader.load
+
     if length == 0:
         raise e.DataError("malformed array: empty data")
 
@@ -132,7 +134,7 @@ cdef object parse_token(char **bufptr, char *bufend, char cdelim, object load):
             PyMem_Free(unesc)
 
 
-def array_load_binary(data: Buffer, load: LoadFunc) -> List[Any]:
+def array_load_binary(data: Buffer, tx: Transformer) -> List[Any]:
     cdef char *buf
     cdef Py_ssize_t length
     _buffer_as_string_and_size(data, &buf, &length)
@@ -140,6 +142,9 @@ def array_load_binary(data: Buffer, load: LoadFunc) -> List[Any]:
     # head is ndims, hasnull, elem oid
     cdef int32_t *buf32 = <int32_t *>buf
     cdef int ndims = endian.be32toh(buf32[0])
+    cdef int oid = endian.be32toh(buf32[2])
+
+    load = tx.get_loader(oid, PQ_BINARY).load
 
     if not ndims:
         return []

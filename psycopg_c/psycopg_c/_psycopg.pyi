@@ -74,8 +74,8 @@ def parse_row_binary(data: abc.Buffer, tx: abc.Transformer) -> Tuple[Any, ...]: 
 
 # Arrays optimization
 def array_load_text(
-    data: abc.Buffer, load: abc.LoadFunc, delimiter: bytes = b","
+    data: abc.Buffer, loader: abc.Loader, delimiter: bytes = b","
 ) -> List[Any]: ...
-def array_load_binary(data: abc.Buffer, load: abc.LoadFunc) -> List[Any]: ...
+def array_load_binary(data: abc.Buffer, tx: abc.Transformer) -> List[Any]: ...
 
 # vim: set syntax=python:

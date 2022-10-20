@@ -11,7 +11,7 @@ from typing import Any, cast, Callable, List, Optional, Pattern, Set, Tuple, Typ
 from .. import pq
 from .. import errors as e
 from .. import postgres
-from ..abc import AdaptContext, Buffer, Dumper, DumperKey, NoneType, LoadFunc
+from ..abc import AdaptContext, Buffer, Dumper, DumperKey, NoneType, Loader, Transformer
 from ..adapt import RecursiveDumper, RecursiveLoader, PyFormat
 from .._compat import cache, prod
 from .._struct import pack_len, unpack_len
@@ -27,6 +27,9 @@ _pack_dim = cast(Callable[[int, int], bytes], _struct_dim.pack)
 _unpack_dim = cast(Callable[[Buffer, int], Tuple[int, int]], _struct_dim.unpack_from)
 
 TEXT_ARRAY_OID = postgres.types["text"].array_oid
+
+PY_TEXT = PyFormat.TEXT
+PQ_BINARY = pq.Format.BINARY
 
 
 class BaseListDumper(RecursiveDumper):
@@ -187,7 +190,7 @@ class ListDumper(BaseListDumper):
         if self.sub_dumper:
             return self.sub_dumper.dump(item)
         else:
-            return self._tx.get_dumper(item, PyFormat.TEXT).dump(item)
+            return self._tx.get_dumper(item, PY_TEXT).dump(item)
 
 
 @cache
@@ -299,8 +302,8 @@ class ArrayLoader(BaseArrayLoader):
     delimiter = b","
 
     def load(self, data: Buffer) -> List[Any]:
-        load = self._tx.get_loader(self.base_oid, self.format).load
-        return load_text(data, load, self.delimiter)
+        loader = self._tx.get_loader(self.base_oid, self.format)
+        return load_text(data, loader, self.delimiter)
 
 
 class ArrayBinaryLoader(BaseArrayLoader):
@@ -308,8 +311,7 @@ class ArrayBinaryLoader(BaseArrayLoader):
     format = pq.Format.BINARY
 
     def load(self, data: Buffer) -> List[Any]:
-        load = self._tx.get_loader(self.base_oid, self.format).load
-        return load_binary(data, load)
+        return load_binary(data, self._tx)
 
 
 def register_array(info: TypeInfo, context: Optional[AdaptContext] = None) -> None:
@@ -374,12 +376,13 @@ def register_all_arrays(context: AdaptContext) -> None:
 
 def _load_text(
     data: Buffer,
-    load: LoadFunc,
+    loader: Loader,
     delimiter: bytes = b",",
     __re_unescape: Pattern[bytes] = re.compile(rb"\\(.)"),
 ) -> List[Any]:
     rv = None
     stack: List[Any] = []
+    load = loader.load
 
     # Remove the dimensions information prefix (``[...]=``)
     if data and data[0] == b"["[0]:
@@ -439,8 +442,9 @@ def _get_array_parse_regexp(delimiter: bytes) -> Pattern[bytes]:
     )
 
 
-def _load_binary(data: Buffer, load: LoadFunc) -> List[Any]:
+def _load_binary(data: Buffer, tx: Transformer) -> List[Any]:
     ndims, hasnull, oid = _unpack_head(data)
+    load = tx.get_loader(oid, PQ_BINARY).load
 
     if not ndims:
         return []
