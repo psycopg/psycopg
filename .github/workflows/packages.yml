@@ -19,9 +19,9 @@ jobs:
           - {package: psycopg_c, format: sdist, impl: c}
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
-      - uses: actions/setup-python@v2
+      - uses: actions/setup-python@v4
         with:
           python-version: 3.9
 
@@ -92,7 +92,7 @@ jobs:
         platform: [manylinux, musllinux]
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Set up QEMU for multi-arch build
         # Check https://github.com/docker/setup-qemu-action for newer versions.
@@ -172,7 +172,7 @@ jobs:
         pyver: [cp37, cp38, cp39, cp310]
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Create the binary package source tree
         run: python3 ./tools/build/copy_to_binary.py
@@ -212,7 +212,7 @@ jobs:
         pyver: [cp37, cp38, cp39, cp310]
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Start PostgreSQL service for test
         run: |

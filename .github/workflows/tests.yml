@@ -45,9 +45,9 @@ jobs:
       # PIP_CONSTRAINT: ${{ github.workspace }}/tests/constraints.txt
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
-      - uses: actions/setup-python@v2
+      - uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python }}
 
@@ -140,7 +140,7 @@ jobs:
       # PIP_CONSTRAINT: ${{ github.workspace }}/tests/constraints.txt
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Install PostgreSQL on the runner
         run: brew install postgresql@14
@@ -148,7 +148,7 @@ jobs:
       - name: Start PostgreSQL service for test
         run: brew services start postgresql
 
-      - uses: actions/setup-python@v2
+      - uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python }}
 
@@ -190,7 +190,7 @@ jobs:
       # PIP_CONSTRAINT: ${{ github.workspace }}/tests/constraints.txt
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Start PostgreSQL service for test
         run: |
@@ -198,7 +198,7 @@ jobs:
           Set-Service $PgSvc.Name -StartupType manual
           $PgSvc.Start()
 
-      - uses: actions/setup-python@v2
+      - uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python }}
 
@@ -256,9 +256,9 @@ jobs:
       PYTEST_ADDOPTS: --color yes
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
-      - uses: actions/setup-python@v2
+      - uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python }}
 
