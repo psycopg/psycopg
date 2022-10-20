@@ -76,6 +76,7 @@ def pytest_sessionstart(session):
     cache = session.config.cache
     if cache.get("segfault", False):
         session.warn(Warning("Previous run resulted in segfault! Not running any test"))
+        session.warn(Warning("(delete '.pytest_cache/v/segfault' to clear this state)"))
         raise session.Failed
     cache.set("segfault", True)
 
