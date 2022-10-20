@@ -27,12 +27,12 @@ jobs:
           # Test different combinations of Python, Postgres, libpq.
           - {impl: python, python: "3.7", postgres: "postgres:10", libpq: "newest"}
           - {impl: python, python: "3.8", postgres: "postgres:12", libpq: ""}
-          - {impl: python, python: "3.9", postgres: "postgres:13", libpq: "newest"}
-          - {impl: python, python: "3.10", postgres: "postgres:14", libpq: "oldest"}
-          - {impl: c, python: "3.7", postgres: "postgres:14", libpq: "oldest"}
-          - {impl: c, python: "3.8", postgres: "postgres:13", libpq: "newest"}
-          - {impl: c, python: "3.9", postgres: "postgres:12", libpq: ""}
-          - {impl: c, python: "3.10", postgres: "postgres:10", libpq: "oldest"}
+          - {impl: python, python: "3.9", postgres: "postgres:14", libpq: ""}
+          - {impl: python, python: "3.10", postgres: "postgres:15", libpq: "oldest"}
+          - {impl: c, python: "3.7", postgres: "postgres:15", libpq: "newest"}
+          - {impl: c, python: "3.8", postgres: "postgres:14", libpq: ""}
+          - {impl: c, python: "3.9", postgres: "postgres:13", libpq: ""}
+          - {impl: c, python: "3.10", postgres: "postgres:11", libpq: "oldest"}
           - {impl: dns, python: "3.9", postgres: "postgres:14", libpq: ""}
           - {impl: postgis, python: "3.9", postgres: "postgis/postgis", libpq: ""}
 
@@ -56,6 +56,9 @@ jobs:
         run: |
           set -x
           rel=$(lsb_release -c -s)
+          # NOTE: in order to test with a preview release, add its number to
+          # the deb entry. For instance, to test on preview Postgres 16, use:
+          # "deb http://apt.postgresql.org/pub/repos/apt ${rel}-pgdg main 16"
           echo "deb http://apt.postgresql.org/pub/repos/apt ${rel}-pgdg main" \
             | sudo tee -a /etc/apt/sources.list.d/pgdg.list
           sudo apt-get -qq update

@@ -4,6 +4,14 @@ Update the maps of builtin types and names.
 
 This script updates some of the files in psycopg source code with data read
 from a database catalog.
+
+Hint: use docker to upgrade types from a new version in isolation. Run:
+
+    docker run --rm -p 11111:5432 --name pg -e POSTGRES_PASSWORD=password postgres:TAG
+
+with a specified version tag, and then query it using:
+
+    %(prog)s "host=localhost port=11111 user=postgres password=password"
 """
 
 import re
@@ -197,7 +205,9 @@ def update_file(fn: Path, new: List[str]) -> None:
 
 
 def parse_cmdline() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     parser.add_argument("dsn", help="where to connect to")
     opt = parser.parse_args()
     return opt

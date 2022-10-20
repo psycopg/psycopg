@@ -773,6 +773,10 @@ class SqlJsonScalarRequired(DataError,
     code='2203F', name='SQL_JSON_SCALAR_REQUIRED'):
     pass
 
+class SqlJsonItemCannotBeCastToTargetType(DataError,
+    code='2203G', name='SQL_JSON_ITEM_CANNOT_BE_CAST_TO_TARGET_TYPE'):
+    pass
+
 class FloatingPointException(DataError,
     code='22P01', name='FLOATING_POINT_EXCEPTION'):
     pass

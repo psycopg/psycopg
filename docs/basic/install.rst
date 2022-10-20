@@ -23,7 +23,7 @@ The Psycopg version documented here has *official and tested* support for:
 
   - Python 3.6 supported before Psycopg 3.1
 
-- PostgreSQL: from version 10 to 14
+- PostgreSQL: from version 10 to 15
 - OS: Linux, macOS, Windows
 
 The tests to verify the supported systems run in `Github workflows`__:
@@ -35,7 +35,7 @@ anything that is not tested there is not officially supported. This includes:
 - Alternative PostgreSQL implementation;
 - macOS hardware and releases not available on Github workflows.
 
-If you use an unsupported system things may work (because, for instance, the
+If you use an unsupported system, things might work (because, for instance, the
 database may use the same wire protocol as PostgreSQL) but we cannot guarantee
 the correct working or a smooth ride.
 
