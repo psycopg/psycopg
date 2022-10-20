@@ -4,13 +4,14 @@ C optimized functions to manipulate arrays
 
 # Copyright (C) 2022 The Psycopg Team
 
-from libc.stdint cimport int32_t
+from libc.stdint cimport int32_t, uint32_t
 from libc.string cimport strchr
 from cpython.mem cimport PyMem_Malloc, PyMem_Free
 from cpython.ref cimport Py_INCREF
 from cpython.list cimport PyList_New, PyList_SET_ITEM
 
 from psycopg_c.pq cimport _buffer_as_string_and_size
+from psycopg_c.pq.libpq cimport Oid
 from psycopg_c._psycopg cimport endian
 
 from psycopg import errors as e
@@ -140,9 +141,9 @@ def array_load_binary(data: Buffer, tx: Transformer) -> List[Any]:
     _buffer_as_string_and_size(data, &buf, &length)
 
     # head is ndims, hasnull, elem oid
-    cdef int32_t *buf32 = <int32_t *>buf
+    cdef uint32_t *buf32 = <uint32_t *>buf
     cdef int ndims = endian.be32toh(buf32[0])
-    cdef int oid = endian.be32toh(buf32[2])
+    cdef Oid oid = <Oid>endian.be32toh(buf32[2])
 
     load = tx.get_loader(oid, PQ_BINARY).load
 
@@ -159,13 +160,13 @@ def array_load_binary(data: Buffer, tx: Transformer) -> List[Any]:
         nelems *= dim
         dims.append(dim)
 
-    buf += (3 + 2 * ndims) * sizeof(int32_t)
+    buf += (3 + 2 * ndims) * sizeof(uint32_t)
     cdef list out = PyList_New(nelems)
 
     cdef Py_ssize_t size
     for i in range(nelems):
-        size = <int32_t>endian.be32toh((<int32_t *>buf)[0])
-        buf += sizeof(int32_t)
+        size = <int32_t>endian.be32toh((<uint32_t *>buf)[0])
+        buf += sizeof(uint32_t)
         if size == -1:
             Py_INCREF(None)
             PyList_SET_ITEM(out, i, None)
