@@ -4,17 +4,26 @@ C optimized functions to manipulate arrays
 
 # Copyright (C) 2022 The Psycopg Team
 
+import cython
+
 from libc.stdint cimport int32_t, uint32_t
 from libc.string cimport strchr
 from cpython.mem cimport PyMem_Malloc, PyMem_Free
 from cpython.ref cimport Py_INCREF
-from cpython.list cimport PyList_New, PyList_SET_ITEM
+from cpython.list cimport PyList_New, PyList_SET_ITEM, PyList_GetSlice
 
 from psycopg_c.pq cimport _buffer_as_string_and_size
 from psycopg_c.pq.libpq cimport Oid
 from psycopg_c._psycopg cimport endian
 
 from psycopg import errors as e
+
+cdef extern from *:
+    """
+/* Defined in PostgreSQL in src/include/utils/array.h */
+#define MAXDIM 6
+    """
+    const int MAXDIM
 
 
 def array_load_text(
@@ -135,6 +144,7 @@ cdef object parse_token(char **bufptr, char *bufend, char cdelim, object load):
             PyMem_Free(unesc)
 
 
+@cython.cdivision(True)
 def array_load_binary(data: Buffer, tx: Transformer) -> List[Any]:
     cdef char *buf
     cdef Py_ssize_t length
@@ -143,22 +153,26 @@ def array_load_binary(data: Buffer, tx: Transformer) -> List[Any]:
     # head is ndims, hasnull, elem oid
     cdef uint32_t *buf32 = <uint32_t *>buf
     cdef int ndims = endian.be32toh(buf32[0])
-    cdef Oid oid = <Oid>endian.be32toh(buf32[2])
 
+    if ndims == 0:
+        return []
+    elif ndims > MAXDIM:
+        raise e.DataError(
+            r"unexpected number of dimensions %s exceeding the maximum allowed %s"
+            % (ndims, MAXDIM)
+        )
+
+    cdef Oid oid = <Oid>endian.be32toh(buf32[2])
     load = tx.get_loader(oid, PQ_BINARY).load
 
-    if not ndims:
-        return []
-
-    cdef long nelems = 1
-    cdef int dim
-    cdef long i
-    dims = []
-    for i in range(3, 3 + 2 * ndims, 2):
+    cdef Py_ssize_t dim
+    cdef Py_ssize_t[MAXDIM] dims
+    cdef Py_ssize_t nelems = 1
+    cdef Py_ssize_t i
+    for i in range(ndims):
         # Every dimension is dim, lower bound
-        dim = endian.be32toh(buf32[i])
+        dims[i] = dim = endian.be32toh(buf32[3 + 2 * i])
         nelems *= dim
-        dims.append(dim)
 
     buf += (3 + 2 * ndims) * sizeof(uint32_t)
     cdef list out = PyList_New(nelems)
@@ -178,7 +192,18 @@ def array_load_binary(data: Buffer, tx: Transformer) -> List[Any]:
             buf += size
 
     # fon ndims > 1 we have to aggregate the array into sub-arrays
-    for dim in dims[-1:0:-1]:
-        out = [out[i : i + dim] for i in range(0, len(out), dim)]
+    cdef list tmp, tmp2
+    cdef long j
+    if ndims > 1:
+        for i in range(ndims - 1, 0, -1):
+            dim = dims[i]
+            nelems //= dim
+            tmp = PyList_New(nelems)
+            for j in range(nelems):
+                tmp2 = PyList_GetSlice(out, j * dim, (j + 1) * dim)
+                Py_INCREF(tmp2)
+                PyList_SET_ITEM(tmp, j, tmp2)
+
+            out = tmp
 
     return out
