@@ -31,8 +31,8 @@ def array_load_text(
 ) -> List[Any]:
     cdef char cdelim = delimiter[0]
 
-    cdef char *buf
-    cdef Py_ssize_t length
+    cdef char *buf = NULL
+    cdef Py_ssize_t length = 0
     _buffer_as_string_and_size(data, &buf, &length)
     load = loader.load
 
@@ -146,15 +146,15 @@ cdef object parse_token(char **bufptr, char *bufend, char cdelim, object load):
 
 @cython.cdivision(True)
 def array_load_binary(data: Buffer, tx: Transformer) -> List[Any]:
-    cdef char *buf
-    cdef Py_ssize_t length
+    cdef char *buf = NULL
+    cdef Py_ssize_t length = 0
     _buffer_as_string_and_size(data, &buf, &length)
 
     # head is ndims, hasnull, elem oid
     cdef uint32_t *buf32 = <uint32_t *>buf
     cdef int ndims = endian.be32toh(buf32[0])
 
-    if ndims == 0:
+    if ndims <= 0:
         return []
     elif ndims > MAXDIM:
         raise e.DataError(
@@ -165,45 +165,47 @@ def array_load_binary(data: Buffer, tx: Transformer) -> List[Any]:
     cdef Oid oid = <Oid>endian.be32toh(buf32[2])
     load = tx.get_loader(oid, PQ_BINARY).load
 
-    cdef Py_ssize_t dim
     cdef Py_ssize_t[MAXDIM] dims
-    cdef Py_ssize_t nelems = 1
-    cdef Py_ssize_t i
+    cdef int i
     for i in range(ndims):
         # Every dimension is dim, lower bound
-        dims[i] = dim = endian.be32toh(buf32[3 + 2 * i])
-        nelems *= dim
+        dims[i] = endian.be32toh(buf32[3 + 2 * i])
 
     buf += (3 + 2 * ndims) * sizeof(uint32_t)
+    out = _array_load_binary_rec(ndims, dims, &buf, load)
+    return out
+
+
+cdef object _array_load_binary_rec(Py_ssize_t ndims, Py_ssize_t *dims, char **bufptr, object load):
+    cdef char *buf
+    cdef int i
+    cdef int32_t size
+    cdef object val
+
+    cdef Py_ssize_t nelems = dims[0]
     cdef list out = PyList_New(nelems)
 
-    cdef Py_ssize_t size
-    for i in range(nelems):
-        size = <int32_t>endian.be32toh((<uint32_t *>buf)[0])
-        buf += sizeof(uint32_t)
-        if size == -1:
-            Py_INCREF(None)
-            PyList_SET_ITEM(out, i, None)
-        else:
-            # TODO: do without copy for C loaders
-            val = load(buf[:size])
+    if ndims == 1:
+        buf = bufptr[0]
+        for i in range(nelems):
+            size = <int32_t>endian.be32toh((<uint32_t *>buf)[0])
+            buf += sizeof(uint32_t)
+            if size == -1:
+                val = None
+            else:
+                # TODO: do without copy for C loaders
+                val = load(buf[:size])
+                buf += size
+
             Py_INCREF(val)
             PyList_SET_ITEM(out, i, val)
-            buf += size
 
-    # fon ndims > 1 we have to aggregate the array into sub-arrays
-    cdef list tmp, tmp2
-    cdef long j
-    if ndims > 1:
-        for i in range(ndims - 1, 0, -1):
-            dim = dims[i]
-            nelems //= dim
-            tmp = PyList_New(nelems)
-            for j in range(nelems):
-                tmp2 = PyList_GetSlice(out, j * dim, (j + 1) * dim)
-                Py_INCREF(tmp2)
-                PyList_SET_ITEM(tmp, j, tmp2)
+        bufptr[0] = buf
 
-            out = tmp
+    else:
+        for i in range(nelems):
+            val = _array_load_binary_rec(ndims - 1, dims + 1, bufptr, load)
+            Py_INCREF(val)
+            PyList_SET_ITEM(out, i, val)
 
     return out
