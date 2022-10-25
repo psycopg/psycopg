@@ -7,19 +7,16 @@
 ``psycopg`` release notes
 =========================
 
-Future releases
+Current release
 ---------------
 
-Psycopg 3.1.4 (unreleased)
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+Psycopg 3.1.4
+^^^^^^^^^^^^^
 
 - Include :ref:`error classes <sqlstate-exceptions>` defined in PostgreSQL 15.
 - Add support for Python 3.11 (:ticket:`#305`).
 - Build binary packages with libpq from PostgreSQL 15.0.
 
-
-Current release
----------------
 
 Psycopg 3.1.3
 ^^^^^^^^^^^^^
