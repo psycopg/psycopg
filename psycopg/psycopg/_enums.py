@@ -8,8 +8,21 @@ libpq-defined enums.
 # Copyright (C) 2020 The Psycopg Team
 
 from enum import Enum, IntEnum
+from selectors import EVENT_READ, EVENT_WRITE
 
 from . import pq
+
+
+class Wait(IntEnum):
+    R = EVENT_READ
+    W = EVENT_WRITE
+    RW = EVENT_READ | EVENT_WRITE
+
+
+class Ready(IntEnum):
+    R = EVENT_READ
+    W = EVENT_WRITE
+    RW = EVENT_READ | EVENT_WRITE
 
 
 class PyFormat(str, Enum):

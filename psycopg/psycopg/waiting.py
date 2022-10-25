@@ -11,26 +11,14 @@ These functions are designed to consume the generators returned by the
 
 import select
 import selectors
-from enum import IntEnum
 from typing import Dict, Optional
 from asyncio import get_event_loop, wait_for, Event, TimeoutError
-from selectors import DefaultSelector, EVENT_READ, EVENT_WRITE
+from selectors import DefaultSelector
 
 from . import errors as e
 from .abc import PQGen, PQGenConn, RV
-
-
-class Wait(IntEnum):
-    R = EVENT_READ
-    W = EVENT_WRITE
-    RW = EVENT_READ | EVENT_WRITE
-
-
-class Ready(IntEnum):
-    R = EVENT_READ
-    W = EVENT_WRITE
-    RW = EVENT_READ | EVENT_WRITE
-
+from ._enums import Wait as Wait, Ready as Ready  # re-exported
+from ._cmodule import _psycopg
 
 WAIT_R = Wait.R
 WAIT_W = Wait.W
@@ -217,7 +205,7 @@ async def wait_conn_async(gen: PQGenConn[RV], timeout: Optional[float] = None) -
 # Specialised implementation of wait functions.
 
 
-def wait_select(gen: PQGen[RV], fileno: int, timeout: Optional[float] = None) -> RV:
+def _wait_select(gen: PQGen[RV], fileno: int, timeout: Optional[float] = None) -> RV:
     """
     Wait for a generator using select where supported.
     """
@@ -299,6 +287,8 @@ def wait_epoll(gen: PQGen[RV], fileno: int, timeout: Optional[float] = None) -> 
         rv: RV = ex.args[0] if ex.args else None
         return rv
 
+
+wait_select = _psycopg.wait_select if _psycopg else _wait_select
 
 # Choose the best wait strategy for the platform.
 #

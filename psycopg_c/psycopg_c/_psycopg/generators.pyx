@@ -11,7 +11,7 @@ from typing import List
 from psycopg import errors as e
 from psycopg.pq import abc, error_message
 from psycopg.abc import PipelineCommand, PQGen
-from psycopg.waiting import Wait, Ready
+from psycopg._enums import Wait, Ready
 from psycopg._compat import Deque
 from psycopg._encodings import conninfo_encoding
 

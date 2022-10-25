@@ -39,6 +39,7 @@ include "_psycopg/adapt.pyx"
 include "_psycopg/copy.pyx"
 include "_psycopg/generators.pyx"
 include "_psycopg/transform.pyx"
+include "_psycopg/waiting.pyx"
 
 include "types/array.pyx"
 include "types/datetime.pyx"
