@@ -72,7 +72,7 @@ python tools/build/copy_to_binary.py
 # Build the binary packages
 export CIBW_PLATFORM=macos
 export CIBW_ARCHS=arm64
-export CIBW_BUILD='cp{38,39,310}-*'
+export CIBW_BUILD='cp{38,39,310,311}-*'
 export CIBW_TEST_REQUIRES="./psycopg[test] ./psycopg_pool"
 export CIBW_TEST_COMMAND="pytest {project}/tests -m 'not slow and not flakey' --color yes"
 
