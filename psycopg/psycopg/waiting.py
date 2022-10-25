@@ -240,7 +240,7 @@ def wait_select(gen: PQGen[RV], fileno: int, timeout: Optional[float] = None) ->
                 ready |= READY_W
             if not ready:
                 continue
-            assert s & ready
+            # assert s & ready
             s = gen.send(ready)  # type: ignore
 
     except StopIteration as ex:
@@ -290,7 +290,7 @@ def wait_epoll(gen: PQGen[RV], fileno: int, timeout: Optional[float] = None) -> 
                     ready = READY_R
                 if ev & ~select.EPOLLIN:
                     ready |= READY_W
-                assert s & ready
+                # assert s & ready
                 s = gen.send(ready)
                 evmask = poll_evmasks[s]
                 epoll.modify(fileno, evmask)
@@ -313,10 +313,11 @@ elif selectors.DefaultSelector is getattr(selectors, "EpollSelector", None):
     # NOTE: select seems more performing than epoll. It is admittedly unlikely
     # that a platform has epoll but not select, so maybe we could kill
     # wait_epoll altogether(). More testing to do.
-    if hasattr(selectors, "SelectSelector"):
-        wait = wait_select
-    else:
-        wait = wait_epoll
+    wait = wait_select if hasattr(selectors, "SelectSelector") else wait_epoll
+
+elif selectors.DefaultSelector is getattr(selectors, "KqueueSelector", None):
+    # wait_select is faster than wait_selector, probably because of less overhead
+    wait = wait_select if hasattr(selectors, "SelectSelector") else wait_selector
 
 else:
     wait = wait_selector
