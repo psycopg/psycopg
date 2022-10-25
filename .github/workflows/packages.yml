@@ -81,8 +81,8 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      LIBPQ_VERSION: "14.4"
-      OPENSSL_VERSION: "1.1.1q"
+      LIBPQ_VERSION: "15.0"
+      OPENSSL_VERSION: "1.1.1r"
 
     strategy:
       fail-fast: false

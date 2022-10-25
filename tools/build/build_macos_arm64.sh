@@ -11,7 +11,7 @@ set -euo pipefail
 set -x
 
 python_versions="3.8.10 3.9.13 3.10.5 3.11.0"
-postgres_version=14
+pg_version=15
 
 # Move to the root of the project
 dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
@@ -35,16 +35,25 @@ else
     eval "$(/opt/homebrew/bin/brew shellenv)"
 fi
 
+export PGDATA=/opt/homebrew/var/postgresql@${pg_version}
+
 # Install PostgreSQL, if necessary
 command -v pg_config > /dev/null || (
-    brew install postgresql@${postgres_version}
-    # Currently not working
-    # brew services start postgresql@${postgres_version}
-    pg_ctl \
-        -D /opt/homebrew/var/postgresql@${postgres_version} \
-        -l /opt/homebrew/var/log/postgresql@${postgres_version}.log \
-        start
+    brew install postgresql@${pg_version}
 )
+
+# After PostgreSQL 15, the bin path is not in the path.
+export PATH=$(ls -d1 /opt/homebrew/Cellar/postgresql@${pg_version}/*/bin):$PATH
+
+# Make sure the server is running
+
+# Currently not working
+# brew services start postgresql@${pg_version}
+
+if ! pg_ctl status; then
+    pg_ctl -l /opt/homebrew/var/log/postgresql@${pg_version}.log start
+fi
+
 
 # Install the Python versions we want to build
 for ver3 in $python_versions; do
@@ -78,7 +87,7 @@ export CIBW_TEST_COMMAND="pytest {project}/tests -m 'not slow and not flakey' --
 
 export PSYCOPG_IMPL=binary
 export PSYCOPG_TEST_DSN="dbname=postgres"
-export PSYCOPG_TEST_WANT_LIBPQ_BUILD=">= ${postgres_version}"
-export PSYCOPG_TEST_WANT_LIBPQ_IMPORT=">= ${postgres_version}"
+export PSYCOPG_TEST_WANT_LIBPQ_BUILD=">= ${pg_version}"
+export PSYCOPG_TEST_WANT_LIBPQ_IMPORT=">= ${pg_version}"
 
 cibuildwheel psycopg_binary
