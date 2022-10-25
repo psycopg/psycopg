@@ -6,7 +6,11 @@ C implementation of waiting functions
 
 cdef extern from *:
     """
+#ifdef MS_WINDOWS
+#include <winsock2.h>
+#else
 #include <sys/select.h>
+#endif
 
 #define SELECT_EV_READ 1
 #define SELECT_EV_WRITE 2
