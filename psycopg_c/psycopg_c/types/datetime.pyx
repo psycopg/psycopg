@@ -295,8 +295,7 @@ cdef class TimedeltaDumper(CDumper):
     oid = oids.INTERVAL_OID
     cdef int _style
 
-    def __init__(self, cls, context: Optional[AdaptContext] = None):
-        super().__init__(cls, context)
+    def __cinit__(self, cls, context: Optional[AdaptContext] = None):
 
         cdef const char *ds = _get_intervalstyle(self._pgconn)
         if ds[0] == b's':  # sql_standard
@@ -353,8 +352,7 @@ cdef class DateLoader(CLoader):
     format = PQ_TEXT
     cdef int _order
 
-    def __init__(self, oid: int, context: Optional[AdaptContext] = None):
-        super().__init__(oid, context)
+    def __cinit__(self, oid: int, context: Optional[AdaptContext] = None):
 
         cdef const char *ds = _get_datestyle(self._pgconn)
         if ds[0] == b'I':  # ISO
@@ -549,8 +547,7 @@ cdef class TimestampLoader(CLoader):
     format = PQ_TEXT
     cdef int _order
 
-    def __init__(self, oid: int, context: Optional[AdaptContext] = None):
-        super().__init__(oid, context)
+    def __cinit__(self, oid: int, context: Optional[AdaptContext] = None):
 
         cdef const char *ds = _get_datestyle(self._pgconn)
         if ds[0] == b'I':  # ISO
@@ -686,8 +683,7 @@ cdef class TimestampBinaryLoader(CLoader):
 cdef class _BaseTimestamptzLoader(CLoader):
     cdef object _time_zone
 
-    def __init__(self, oid: int, context: Optional[AdaptContext] = None):
-        super().__init__(oid, context)
+    def __cinit__(self, oid: int, context: Optional[AdaptContext] = None):
         self._time_zone = _timezone_from_connection(self._pgconn)
 
 
@@ -697,8 +693,7 @@ cdef class TimestamptzLoader(_BaseTimestamptzLoader):
     format = PQ_TEXT
     cdef int _order
 
-    def __init__(self, oid: int, context: Optional[AdaptContext] = None):
-        super().__init__(oid, context)
+    def __cinit__(self, oid: int, context: Optional[AdaptContext] = None):
 
         cdef const char *ds = _get_datestyle(self._pgconn)
         if ds[0] == b'I':  # ISO
@@ -843,8 +838,7 @@ cdef class IntervalLoader(CLoader):
     format = PQ_TEXT
     cdef int _style
 
-    def __init__(self, oid: int, context: Optional[AdaptContext] = None):
-        super().__init__(oid, context)
+    def __cinit__(self, oid: int, context: Optional[AdaptContext] = None):
 
         cdef const char *ds = _get_intervalstyle(self._pgconn)
         if ds[0] == b'p' and ds[8] == 0:  # postgres

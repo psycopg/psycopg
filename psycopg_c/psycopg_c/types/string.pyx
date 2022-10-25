@@ -30,8 +30,7 @@ cdef class _BaseStrDumper(CDumper):
     cdef char *encoding
     cdef bytes _bytes_encoding  # needed to keep `encoding` alive
 
-    def __init__(self, cls, context: Optional[AdaptContext] = None):
-        super().__init__(cls, context)
+    def __cinit__(self, cls, context: Optional[AdaptContext] = None):
 
         self.is_utf8 = 0
         self.encoding = "utf-8"
@@ -111,8 +110,7 @@ cdef class _TextLoader(CLoader):
     cdef char *encoding
     cdef bytes _bytes_encoding  # needed to keep `encoding` alive
 
-    def __init__(self, oid: int, context: Optional[AdaptContext] = None):
-        super().__init__(oid, context)
+    def __cinit__(self, oid: int, context: Optional[AdaptContext] = None):
 
         self.is_utf8 = 0
         self.encoding = "utf-8"
