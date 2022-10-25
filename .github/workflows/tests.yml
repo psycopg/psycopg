@@ -132,12 +132,13 @@ jobs:
           - {impl: python, python: "3.8"}
           - {impl: python, python: "3.9"}
           - {impl: python, python: "3.10"}
-          - {impl: python, python: "3.11"}
+          # TODO: cp311 not available yet on Github runners. See #424
+          # - {impl: python, python: "3.11"}
           - {impl: c, python: "3.7"}
           - {impl: c, python: "3.8"}
           - {impl: c, python: "3.9"}
           - {impl: c, python: "3.10"}
-          - {impl: c, python: "3.11"}
+          # - {impl: c, python: "3.11"}
 
     env:
       PSYCOPG_IMPL: ${{ matrix.impl }}
