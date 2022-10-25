@@ -56,7 +56,7 @@ jobs:
           PSYCOPG_TEST_DSN: "host=127.0.0.1 user=postgres"
           PGPASSWORD: password
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           path: ./dist/*
 
@@ -140,7 +140,7 @@ jobs:
             PSYCOPG_TEST_WANT_LIBPQ_BUILD=${{ env.LIBPQ_VERSION }}
             PSYCOPG_TEST_WANT_LIBPQ_IMPORT=${{ env.LIBPQ_VERSION }}
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           path: ./wheelhouse/*.whl
 
@@ -194,7 +194,7 @@ jobs:
             PSYCOPG_TEST_WANT_LIBPQ_BUILD=">= 14"
             PSYCOPG_TEST_WANT_LIBPQ_IMPORT=">= 14"
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           path: ./wheelhouse/*.whl
 
@@ -244,7 +244,7 @@ jobs:
             PSYCOPG_TEST_WANT_LIBPQ_BUILD=">= 14"
             PSYCOPG_TEST_WANT_LIBPQ_IMPORT=">= 14"
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           path: ./wheelhouse/*.whl
 
