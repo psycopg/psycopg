@@ -88,7 +88,7 @@ jobs:
       fail-fast: false
       matrix:
         arch: [x86_64, i686, ppc64le, aarch64]
-        pyver: [cp37, cp38, cp39, cp310]
+        pyver: [cp37, cp38, cp39, cp310, cp311]
         platform: [manylinux, musllinux]
 
     steps:
@@ -112,7 +112,7 @@ jobs:
         run: python3 ./tools/build/copy_to_binary.py
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.6.1
+        uses: pypa/cibuildwheel@v2.9.0
         with:
           package-dir: psycopg_binary
         env:
@@ -169,6 +169,8 @@ jobs:
       matrix:
         # These archs require an Apple M1 runner: [arm64, universal2]
         arch: [x86_64]
+        # TODO: cp311 not available yet on Github runners. See #424
+        # pyver: [cp37, cp38, cp39, cp310, cp311]
         pyver: [cp37, cp38, cp39, cp310]
 
     steps:
@@ -178,7 +180,7 @@ jobs:
         run: python3 ./tools/build/copy_to_binary.py
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.6.1
+        uses: pypa/cibuildwheel@v2.9.0
         with:
           package-dir: psycopg_binary
         env:
@@ -209,7 +211,7 @@ jobs:
       matrix:
         # Might want to add win32, untested at the moment.
         arch: [win_amd64]
-        pyver: [cp37, cp38, cp39, cp310]
+        pyver: [cp37, cp38, cp39, cp310, cp311]
 
     steps:
       - uses: actions/checkout@v3
@@ -224,7 +226,7 @@ jobs:
         run: python3 ./tools/build/copy_to_binary.py
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.6.1
+        uses: pypa/cibuildwheel@v2.9.0
         with:
           package-dir: psycopg_binary
         env:

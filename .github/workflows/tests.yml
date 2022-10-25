@@ -27,12 +27,16 @@ jobs:
           # Test different combinations of Python, Postgres, libpq.
           - {impl: python, python: "3.7", postgres: "postgres:10", libpq: "newest"}
           - {impl: python, python: "3.8", postgres: "postgres:12", libpq: ""}
-          - {impl: python, python: "3.9", postgres: "postgres:14", libpq: ""}
-          - {impl: python, python: "3.10", postgres: "postgres:15", libpq: "oldest"}
+          - {impl: python, python: "3.9", postgres: "postgres:13", libpq: ""}
+          - {impl: python, python: "3.10", postgres: "postgres:14", libpq: ""}
+          - {impl: python, python: "3.11", postgres: "postgres:15", libpq: "oldest"}
+
           - {impl: c, python: "3.7", postgres: "postgres:15", libpq: "newest"}
-          - {impl: c, python: "3.8", postgres: "postgres:14", libpq: ""}
-          - {impl: c, python: "3.9", postgres: "postgres:13", libpq: ""}
-          - {impl: c, python: "3.10", postgres: "postgres:11", libpq: "oldest"}
+          - {impl: c, python: "3.8", postgres: "postgres:13", libpq: ""}
+          - {impl: c, python: "3.9", postgres: "postgres:14", libpq: ""}
+          - {impl: c, python: "3.10", postgres: "postgres:13", libpq: "oldest"}
+          - {impl: c, python: "3.11", postgres: "postgres:10", libpq: "newest"}
+
           - {impl: dns, python: "3.9", postgres: "postgres:14", libpq: ""}
           - {impl: postgis, python: "3.9", postgres: "postgis/postgis", libpq: ""}
 
@@ -128,10 +132,13 @@ jobs:
           - {impl: python, python: "3.8"}
           - {impl: python, python: "3.9"}
           - {impl: python, python: "3.10"}
+          # TODO: cp311 not available yet on Github runners. See #424
+          # - {impl: python, python: "3.11"}
           - {impl: c, python: "3.7"}
           - {impl: c, python: "3.8"}
           - {impl: c, python: "3.9"}
           - {impl: c, python: "3.10"}
+          # - {impl: c, python: "3.11"}
 
     env:
       PSYCOPG_IMPL: ${{ matrix.impl }}
@@ -180,10 +187,12 @@ jobs:
           - {impl: python, python: "3.8"}
           - {impl: python, python: "3.9"}
           - {impl: python, python: "3.10"}
+          - {impl: python, python: "3.11"}
           - {impl: c, python: "3.7"}
           - {impl: c, python: "3.8"}
           - {impl: c, python: "3.9"}
           - {impl: c, python: "3.10"}
+          - {impl: c, python: "3.11"}
 
     env:
       PSYCOPG_IMPL: ${{ matrix.impl }}
