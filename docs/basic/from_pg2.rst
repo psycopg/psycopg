@@ -147,6 +147,39 @@ split the queries on semicolons and send them separately). This is not new in
 Psycopg 3: the same limitation is present in `!psycopg2` too.
 
 
+.. _multi-results:
+
+Multiple results returned from multiple statements
+--------------------------------------------------
+
+If more than one statement returning results is executed in psycopg2, only the
+result of the last statement is returned::
+
+    >>> cur_pg2.execute("SELECT 1; SELECT 2")
+    >>> cur_pg2.fetchone()
+    (2,)
+
+In Psycopg 3 instead, all the results are available. After running the query,
+the first result will be readily available in the cursor and can be consumed
+using the usual ``fetch*()`` methods. In order to access the following
+results, you can use the `Cursor.nextset()` method::
+
+    >>> cur_pg3.execute("SELECT 1; SELECT 2")
+    >>> cur_pg3.fetchone()
+    (1,)
+
+    >>> cur_pg3.nextset()
+    True
+    >>> cur_pg3.fetchone()
+    (2,)
+
+    >>> cur_pg3.nextset()
+    None  # no more results
+
+Remember though that you cannot use server-side bindings to :ref:`execute more
+than one statement in the same query <multi-statements>`.
+
+
 .. _difference-cast-rules:
 
 Different cast rules
