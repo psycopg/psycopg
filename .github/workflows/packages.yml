@@ -9,7 +9,7 @@ jobs:
 
   sdist:  # {{{
     runs-on: ubuntu-latest
-    if: false
+    if: true
 
     strategy:
       fail-fast: false
@@ -80,7 +80,7 @@ jobs:
 
   linux:  # {{{
     runs-on: ubuntu-latest
-    if: false
+    if: true
 
     env:
       LIBPQ_VERSION: "15.0"
@@ -172,8 +172,7 @@ jobs:
       matrix:
         # These archs require an Apple M1 runner: [arm64, universal2]
         arch: [x86_64]
-        # pyver: [cp37, cp38, cp39, cp310]
-        pyver: [cp311]
+        pyver: [cp37, cp38, cp39, cp310, cp311]
 
     steps:
       - uses: actions/checkout@v3
@@ -207,7 +206,7 @@ jobs:
 
   windows:  # {{{
     runs-on: windows-latest
-    if: false
+    if: true
 
     strategy:
       fail-fast: false
