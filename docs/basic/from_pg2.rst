@@ -13,7 +13,7 @@ Psycopg 3 uses the common DBAPI structure of many other database adapters and
 tries to behave as close as possible to `!psycopg2`. There are however a few
 differences to be aware of.
 
-.. note::
+.. tip::
     Most of the times, the workarounds suggested here will work with both
     Psycopg 2 and 3, which could be useful if you are porting a program or
     writing a program that should work with both Psycopg 2 and 3.
@@ -80,17 +80,19 @@ such as `ClientCursor`::
     >>> cur = ClientCursor(conn)
     >>> cur.execute("CREATE TABLE foo (id int DEFAULT %s)", [42])
 
-if you need `!ClientCursor` often, you can set the `Connection.cursor_factory`
+If you need `!ClientCursor` often, you can set the `Connection.cursor_factory`
 to have them created by default by `Connection.cursor()`. This way, Psycopg 3
 will behave largely the same way of Psycopg 2.
 
-Note that, using `!ClientCursor` parameters, you can only specify query values
-(aka *the strings that go in single quotes*). If you need to parametrize
-different parts of a statement, you must use the `!psycopg.sql` module::
+Note that, both server-side and client-side, you can only specify **values**
+as parameters (i.e. *the strings that go in single quotes*). If you need to
+parametrize different parts of a statement (such as a table name), you must
+use the `psycopg.sql` module::
 
     >>> from psycopg import sql
 
     # This will quote the user and the password using the right quotes
+    # e.g.: ALTER USER "foo" SET PASSWORD 'bar'
     >>> conn.execute(
     ...     sql.SQL("ALTER USER {} SET PASSWORD {}")
     ...     .format(sql.Identifier(username), password))
@@ -103,7 +105,7 @@ Multiple statements in the same query
 
 As a consequence of using :ref:`server-side bindings <server-side-binding>`,
 when parameters are used, it is not possible to execute several statements in
-the same `!execute()` call, separating them with a semicolon::
+the same `!execute()` call, separating them by semicolon::
 
     >>> conn.execute(
     ...     "INSERT INTO foo VALUES (%s); INSERT INTO foo VALUES (%s)",
@@ -115,7 +117,7 @@ the same `!execute()` call, separating them with a semicolon::
 One obvious way to work around the problem is to use several `!execute()`
 calls.
 
-There is no such limitation if no parameters are used. As a consequence, you
+**There is no such limitation if no parameters are used**. As a consequence, you
 can compose a multiple query on the client side and run them all in the same
 `!execute()` call, using the `psycopg.sql` objects::
 
@@ -131,20 +133,25 @@ or a :ref:`client-side binding cursor <client-side-binding-cursors>`::
     ...     "INSERT INTO foo VALUES (%s); INSERT INTO foo VALUES (%s)",
     ...     (10, 20))
 
-Note that statements that must be run outside a transaction (such as
-:sql:`CREATE DATABASE`) can never be executed in batch with other statements,
-even if the connection is in autocommit mode::
+.. warning::
 
-    >>> conn.autocommit = True
-    >>> conn.execute("CREATE DATABASE foo; SELECT 1")
-    Traceback (most recent call last):
-    ...
-    psycopg.errors.ActiveSqlTransaction: CREATE DATABASE cannot run inside a transaction block
+    If a statements must be executed outside a transaction (such as
+    :sql:`CREATE DATABASE`), it cannot be executed in batch with other
+    statements, even if the connection is in autocommit mode::
 
-This happens because PostgreSQL will wrap multiple statements in a transaction
-itself and is different from how :program:`psql` behaves (:program:`psql` will
-split the queries on semicolons and send them separately). This is not new in
-Psycopg 3: the same limitation is present in `!psycopg2` too.
+        >>> conn.autocommit = True
+        >>> conn.execute("CREATE DATABASE foo; SELECT 1")
+        Traceback (most recent call last):
+        ...
+        psycopg.errors.ActiveSqlTransaction: CREATE DATABASE cannot run inside a transaction block
+
+    This happens because PostgreSQL itself will wrap multiple statements in a
+    transaction. Note that your will experience a different behaviour in
+    :program:`psql` (:program:`psql` will split the queries on semicolons and
+    send them to the server separately).
+
+    This is not new in Psycopg 3: the same limitation is present in
+    `!psycopg2` too.
 
 
 .. _multi-results:
