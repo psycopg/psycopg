@@ -314,7 +314,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
             queued = None
             if key is not None:
                 queued = (key, prep, name)
-            self._conn._pipeline.result_queue.append((self, queued))
+            self._conn._pipeline.result_queue.append((self, queued, False))
             return None
 
         # run the query
@@ -341,12 +341,24 @@ class BaseCursor(Generic[ConnectionType, Row]):
         yield from self._start_query(query)
         pgq = self._convert_query(query, params)
         self._execute_send(pgq, binary=binary, force_extended=True)
-        self._pgconn.set_single_row_mode()
         self._last_query = query
-        yield from send(self._pgconn)
+        if self._conn._pipeline:
+            # _execute_send() does not fill pipeline results queue, so we need
+            # to do it ourselves here; also pass the single-row mode flag.
+            self._conn._pipeline.result_queue.append((self, None, True))
+            # XXX issue a Sync() to work around libpq issue
+            #   https://www.postgresql.org/message-id/flat/01af18c5-dacc-a8c8-07ee-aecc7650c3e8%40dalibo.com
+            self._conn._pipeline._enqueue_sync()
+            yield from self._conn._pipeline._send_gen()
+        else:
+            self._pgconn.set_single_row_mode()
+            yield from send(self._pgconn)
 
     def _stream_fetchone_gen(self, first: bool) -> PQGen[Optional["PGresult"]]:
-        res = yield from fetch(self._pgconn)
+        if self._conn._pipeline:
+            res = yield from self._conn._pipeline._stream_fetchone_gen(first, self)
+        else:
+            res = yield from fetch(self._pgconn)
         if res is None:
             return None
 
@@ -360,8 +372,14 @@ class BaseCursor(Generic[ConnectionType, Row]):
 
         elif status == TUPLES_OK or status == COMMAND_OK:
             # End of single row results
-            while res:
-                res = yield from fetch(self._pgconn)
+            if self._conn._pipeline:
+                while res:
+                    res = yield from self._conn._pipeline._stream_fetchone_gen(
+                        False, self
+                    )
+            else:
+                while res:
+                    res = yield from fetch(self._pgconn)
             if status != TUPLES_OK:
                 raise e.ProgrammingError(
                     "the operation in stream() didn't produce a result"
@@ -769,9 +787,6 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
         """
         Iterate row-by-row on a result from the database.
         """
-        if self._pgconn.pipeline_status:
-            raise e.ProgrammingError("stream() cannot be used in pipeline mode")
-
         with self._conn.lock:
 
             try:

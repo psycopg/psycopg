@@ -7,6 +7,15 @@
 ``psycopg`` release notes
 =========================
 
+Future releases
+---------------
+
+Psycopg 3.2 (unrelease)
+^^^^^^^^^^^^^^^^^^^^^^^
+
+- Make `Cursor.stream()` work in pipeline mode (:ticket:`#406`).
+
+
 Current release
 ---------------
 

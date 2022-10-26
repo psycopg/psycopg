@@ -159,3 +159,53 @@ def test_pipeline_abort(pgconn, table):
     assert pgconn.get_result() is None
 
     pgconn.exit_pipeline_mode()
+
+
+@pytest.mark.libpq(">= 14")
+def test_pipeline_single_row_mode(pgconn):
+    assert pgconn.pipeline_status == pq.PipelineStatus.OFF
+    pgconn.enter_pipeline_mode()
+    for i in range(6):
+        pgconn.send_query_params(b"SELECT generate_series(0, $1)", [f"{i}".encode()])
+    pgconn.pipeline_sync()
+    for i, (sts, srm) in enumerate(
+        [
+            ([pq.ExecStatus.TUPLES_OK], False),
+            ([pq.ExecStatus.SINGLE_TUPLE] * 2 + [pq.ExecStatus.TUPLES_OK], True),
+            ([pq.ExecStatus.TUPLES_OK], False),
+            ([pq.ExecStatus.SINGLE_TUPLE] * 4 + [pq.ExecStatus.TUPLES_OK], True),
+            ([pq.ExecStatus.SINGLE_TUPLE] * 5 + [pq.ExecStatus.TUPLES_OK], True),
+            ([pq.ExecStatus.TUPLES_OK], False),
+            ([pq.ExecStatus.PIPELINE_SYNC], False),
+        ],
+        1,
+    ):
+        if srm:
+            pgconn.set_single_row_mode()
+        for st in sts:
+            r = pgconn.get_result()
+            assert r is not None
+            assert r.status == st, f"unexpected result for query #{i}"
+        assert pgconn.get_result() is None
+    pgconn.exit_pipeline_mode()
+
+
+@pytest.mark.libpq(">= 14")
+@pytest.mark.xfail
+def test_pipeline_single_row_query_fetch_bug(pgconn):
+    # Send a query, get its results in single-row mode, then send another one,
+    # and get its results in normal mode.
+    # https://www.postgresql.org/message-id/flat/01af18c5-dacc-a8c8-07ee-aecc7650c3e8%40dalibo.com
+    pgconn.enter_pipeline_mode()
+    pgconn.send_query_params(b"select generate_series(0, 1)", [])
+    pgconn.send_flush_request()
+    pgconn.set_single_row_mode()
+    assert pgconn.get_result().status == pq.ExecStatus.SINGLE_TUPLE
+    assert pgconn.get_result().status == pq.ExecStatus.SINGLE_TUPLE
+    assert pgconn.get_result().status == pq.ExecStatus.TUPLES_OK
+    assert pgconn.get_result() is None
+    pgconn.send_query_params(b"select 1", [])
+    pgconn.send_flush_request()
+    assert pgconn.get_result().status == pq.ExecStatus.TUPLES_OK
+    assert pgconn.get_result() is None
+    pgconn.exit_pipeline_mode()

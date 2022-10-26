@@ -14,7 +14,7 @@ from .abc import PipelineCommand, PQGen
 from ._compat import Deque, TypeAlias
 from ._encodings import pgconn_encoding
 from ._preparing import Key, Prepare
-from .generators import pipeline_communicate, fetch_many, send
+from .generators import pipeline_communicate, pipeline_send, fetch, fetch_many, send
 
 if TYPE_CHECKING:
     from .pq.abc import PGresult
@@ -24,7 +24,12 @@ if TYPE_CHECKING:
 
 
 PendingResult: TypeAlias = Union[
-    None, Tuple["BaseCursor[Any, Any]", Optional[Tuple[Key, Prepare, bytes]]]
+    None,
+    Tuple[
+        "BaseCursor[Any, Any]",
+        Optional[Tuple[Key, Prepare, bytes]],
+        bool,  # single-row mode
+    ],
 ]
 
 FATAL_ERROR = pq.ExecStatus.FATAL_ERROR
@@ -134,6 +139,10 @@ class BasePipeline:
             # No need to force flush since we emitted a sync just before.
             yield from self._fetch_gen(flush=False)
 
+    def _send_gen(self) -> PQGen[None]:
+        """Send pending commands in the pipeline."""
+        yield from pipeline_send(self.pgconn, self.command_queue)
+
     def _communicate_gen(self) -> PQGen[None]:
         """Communicate with pipeline to send commands and possibly fetch
         results, which are then processed.
@@ -172,6 +181,38 @@ class BasePipeline:
         for queued, results in to_process:
             self._process_results(queued, results)
 
+    def _stream_fetchone_gen(
+        self, first: bool, cursor: "BaseCursor[Any, Any]"
+    ) -> PQGen[Optional["PGresult"]]:
+        """Fetch pending results until one row from *cursor* is found, and
+        return it.
+
+        *cursor* is expected to have emitted a stream() query, so as *first*
+        fetch, we set single-row mode.
+
+        Any results not bound to *cursor* will be processed normally
+        (typically results from commands executed before *cursor*.stream()).
+        """
+        if first:
+            self.pgconn.send_flush_request()
+            yield from send(self.pgconn)
+        while self.result_queue:
+            queued = self.result_queue[0]
+            if queued is not None and queued[0] is cursor and queued[2]:
+                if first:
+                    self.pgconn.set_single_row_mode()
+                res = yield from fetch(self.pgconn)
+                if res is None:
+                    del self.result_queue[0]
+                return res
+            else:
+                del self.result_queue[0]
+                results = yield from fetch_many(self.pgconn)
+                assert results
+                self._process_results(queued, results)
+        else:
+            raise e.InternalError(f"{cursor} not found in pipeline results queue")
+
     def _process_results(
         self, queued: PendingResult, results: List["PGresult"]
     ) -> None:
@@ -189,7 +230,8 @@ class BasePipeline:
             elif result.status == PIPELINE_ABORTED:
                 raise e.PipelineAborted("pipeline aborted")
         else:
-            cursor, prepinfo = queued
+            cursor, prepinfo, srm = queued
+            assert not srm, f"unexpected single-row mode {cursor} in pipeline queue"
             cursor._set_results_from_pipeline(results)
             if prepinfo:
                 key, prep, name = prepinfo

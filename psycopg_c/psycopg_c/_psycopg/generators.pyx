@@ -198,6 +198,14 @@ def fetch(pq.PGconn pgconn) -> PQGen[Optional[PGresult]]:
         return None
     return pq.PGresult._from_ptr(pgres)
 
+def pipeline_send(pq.PGconn pgconn, commands: Deque[PipelineCommand]) -> PQGen[None]:
+    """Generator to send queries from a connection in pipeline mode."""
+    while commands:
+        ready = yield WAIT_W
+        if ready & Ready.W:
+            pgconn.flush()
+            commands.popleft()()
+
 
 def pipeline_communicate(
     pq.PGconn pgconn, commands: Deque[PipelineCommand]
