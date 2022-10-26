@@ -58,10 +58,15 @@ requirements::
     python -m venv .venv
     source .venv/bin/activate
     pip install -e "./psycopg[dev,test]"    # for the base Python package
-    pip install -e ./psycopg_c              # for the C extension module
     pip install -e ./psycopg_pool           # for the connection pool
+    pip install ./psycopg_c                 # for the C speedup module
 
 .. __: https://pip.pypa.io/en/stable/reference/pip_install/#install-editable
+
+Please add ``--config-settings editable_mode=strict`` to the ``pip install
+-e`` above if you experience `editable mode broken`__.
+
+.. __: https://github.com/pypa/setuptools/issues/3557?
 
 Now hack away! You can use tox to validate the code::
 
