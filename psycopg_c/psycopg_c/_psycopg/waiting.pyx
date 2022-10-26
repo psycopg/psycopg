@@ -16,6 +16,12 @@ cdef extern from *:
 #define SELECT_EV_WRITE 2
 #define SEC_TO_US (1000 * 1000)
 
+/* Use select to wait for readiness on fileno.
+ *
+ * - Return SELECT_EV_* if the file is ready
+ * - Return 0 on timeout
+ * - Return -1 (and set an exception) on error.
+ */
 static int
 select_impl(int fileno, int wait, float timeout)
 {
@@ -23,7 +29,7 @@ select_impl(int fileno, int wait, float timeout)
     fd_set ofds;
     fd_set efds;
     struct timeval tv, *tvptr;
-    int select_rv, rv = 0;
+    int select_rv;
 
     FD_ZERO(&ifds);
     FD_ZERO(&ofds);
@@ -53,44 +59,44 @@ select_impl(int fileno, int wait, float timeout)
     select_rv = select(fileno + 1, &ifds, &ofds, &efds, tvptr);
     Py_END_ALLOW_THREADS
 
-    if (select_rv <= 0) {
-        rv = select_rv;
+    if (PyErr_CheckSignals()) {
+        return -1;
+    }
+
+    if (select_rv < 0) {
+
+#ifdef MS_WINDOWS
+        if (select_rv == SOCKET_ERROR) {
+            PyErr_SetExcFromWindowsErr(PyExc_OSError, WSAGetLastError());
+        }
+#else
+        if (select_rv < 0) {
+            PyErr_SetFromErrno(PyExc_OSError);
+        }
+#endif
+        else {
+            PyErr_SetString(PyExc_OSError, "unexpected error from select()");
+        }
+        return -1;
     }
     else {
-        if (FD_ISSET(fileno, &ifds)) {
-            rv |= SELECT_EV_READ;
+        int rv = 0;
+
+        if (select_rv >= 0) {
+            if (FD_ISSET(fileno, &ifds)) {
+                rv = SELECT_EV_READ;
+            }
+            if (FD_ISSET(fileno, &ofds)) {
+                rv |= SELECT_EV_WRITE;
+            }
         }
-        if (FD_ISSET(fileno, &ofds)) {
-            rv |= SELECT_EV_WRITE;
-        }
+        return rv;
     }
-
-    return rv;
-}
-
-static int
-select_raise(int n)
-{
-#ifdef MS_WINDOWS
-    if (n == SOCKET_ERROR) {
-        PyErr_SetExcFromWindowsErr(PyExc_OSError, WSAGetLastError());
-        return -1;
-    }
-#else
-    if (n < 0) {
-        PyErr_SetFromErrno(PyExc_OSError);
-        return -1;
-    }
-#endif
-
-    PyErr_SetString(PyExc_OSError, "unexpected error from select()");
-    return -1;
 }
     """
     const int SELECT_EV_READ
     const int SELECT_EV_WRITE
-    cdef int select_impl(int fileno, int wait, float timeout)
-    cdef int select_raise(int e) except -1
+    cdef int select_impl(int fileno, int wait, float timeout) except -1
 
 
 def wait_select(gen: PQGen[RV], int fileno, timeout = None) -> RV:
@@ -112,8 +118,6 @@ def wait_select(gen: PQGen[RV], int fileno, timeout = None) -> RV:
             ready = select_impl(fileno, wait, ctimeout)
             if ready == 0:
                 continue
-            elif ready < 0:
-                select_raise(ready)
 
             wait = gen.send(ready)
 
