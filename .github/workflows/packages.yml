@@ -9,6 +9,7 @@ jobs:
 
   sdist:  # {{{
     runs-on: ubuntu-latest
+    if: false
 
     strategy:
       fail-fast: false
@@ -79,6 +80,7 @@ jobs:
 
   linux:  # {{{
     runs-on: ubuntu-latest
+    if: false
 
     env:
       LIBPQ_VERSION: "15.0"
@@ -163,15 +165,15 @@ jobs:
 
   macos:  # {{{
     runs-on: macos-latest
+    if: true
 
     strategy:
       fail-fast: false
       matrix:
         # These archs require an Apple M1 runner: [arm64, universal2]
         arch: [x86_64]
-        # TODO: cp311 not available yet on Github runners. See #424
-        # pyver: [cp37, cp38, cp39, cp310, cp311]
-        pyver: [cp37, cp38, cp39, cp310]
+        # pyver: [cp37, cp38, cp39, cp310]
+        pyver: [cp311]
 
     steps:
       - uses: actions/checkout@v3
@@ -205,6 +207,7 @@ jobs:
 
   windows:  # {{{
     runs-on: windows-latest
+    if: false
 
     strategy:
       fail-fast: false
