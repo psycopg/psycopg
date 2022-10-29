@@ -31,6 +31,15 @@ select_impl(int fileno, int wait, float timeout)
     struct timeval tv, *tvptr;
     int select_rv;
 
+#ifdef MS_WINDOWS
+    if (fileno >= 1024) {
+        PyErr_SetString(
+            PyExc_ValueError,  /* same exception of Python's 'select.select()' */
+            "connection file descriptor out of range for 'select()'");
+        return -1;
+    }
+#endif
+
     FD_ZERO(&ifds);
     FD_ZERO(&ofds);
     FD_ZERO(&efds);

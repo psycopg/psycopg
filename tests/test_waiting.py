@@ -76,6 +76,35 @@ def test_wait_bad(pgconn, waitfn):
         waitfn(gen, pgconn.socket)
 
 
+@pytest.mark.slow
+@pytest.mark.parametrize("waitfn", waitfns)
+def test_wait_large_fd(dsn, waitfn):
+    files = []
+    try:
+        try:
+            for i in range(1100):
+                files.append(open(__file__))
+        except OSError:
+            pytest.skip("can't open the number of files needed for the test")
+
+        pgconn = psycopg.pq.PGconn.connect(dsn.encode())
+        try:
+            assert pgconn.socket > 1024
+            pgconn.send_query(b"select 1")
+            gen = generators.execute(pgconn)
+            if waitfn is waiting.wait_select and sys.platform != "win32":
+                with pytest.raises(ValueError):
+                    waitfn(gen, pgconn.socket)
+            else:
+                (res,) = waitfn(gen, pgconn.socket)
+                assert res.status == ExecStatus.TUPLES_OK
+        finally:
+            pgconn.finish()
+    finally:
+        for f in files:
+            f.close()
+
+
 @pytest.mark.parametrize("timeout", timeouts)
 @pytest.mark.asyncio
 async def test_wait_conn_async(dsn, timeout):
