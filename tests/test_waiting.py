@@ -14,18 +14,15 @@ skip_if_not_linux = pytest.mark.skipif(
 )
 
 waitfns = [
-    pytest.param(waiting.wait, id="wait"),
-    pytest.param(waiting.wait_selector, id="wait_selector"),
+    "wait",
+    "wait_selector",
     pytest.param(
-        waiting.wait_select,
-        id="wait_select",
-        marks=pytest.mark.skipif("not hasattr(select, 'select')"),
+        "wait_select", marks=pytest.mark.skipif("not hasattr(select, 'select')")
     ),
     pytest.param(
-        waiting.wait_epoll,
-        id="wait_epoll",
-        marks=pytest.mark.skipif("not hasattr(select, 'epoll')"),
+        "wait_epoll", marks=pytest.mark.skipif("not hasattr(select, 'epoll')")
     ),
+    pytest.param("wait_c", marks=pytest.mark.skipif("not psycopg._cmodule._psycopg")),
 ]
 
 timeouts = [pytest.param({}, id="blank")]
@@ -49,6 +46,8 @@ def test_wait_conn_bad(dsn):
 @pytest.mark.parametrize("wait, ready", zip(waiting.Wait, waiting.Ready))
 @skip_if_not_linux
 def test_wait_ready(waitfn, wait, ready):
+    waitfn = getattr(waiting, waitfn)
+
     def gen():
         r = yield wait
         return r
@@ -61,6 +60,8 @@ def test_wait_ready(waitfn, wait, ready):
 @pytest.mark.parametrize("waitfn", waitfns)
 @pytest.mark.parametrize("timeout", timeouts)
 def test_wait(pgconn, waitfn, timeout):
+    waitfn = getattr(waiting, waitfn)
+
     pgconn.send_query(b"select 1")
     gen = generators.execute(pgconn)
     (res,) = waitfn(gen, pgconn.socket, **timeout)
@@ -69,6 +70,8 @@ def test_wait(pgconn, waitfn, timeout):
 
 @pytest.mark.parametrize("waitfn", waitfns)
 def test_wait_bad(pgconn, waitfn):
+    waitfn = getattr(waiting, waitfn)
+
     pgconn.send_query(b"select 1")
     gen = generators.execute(pgconn)
     pgconn.finish()
@@ -79,6 +82,8 @@ def test_wait_bad(pgconn, waitfn):
 @pytest.mark.slow
 @pytest.mark.parametrize("waitfn", waitfns)
 def test_wait_large_fd(dsn, waitfn):
+    waitfn = getattr(waiting, waitfn)
+
     files = []
     try:
         try:

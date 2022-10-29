@@ -205,7 +205,7 @@ async def wait_conn_async(gen: PQGenConn[RV], timeout: Optional[float] = None) -
 # Specialised implementation of wait functions.
 
 
-def _wait_select(gen: PQGen[RV], fileno: int, timeout: Optional[float] = None) -> RV:
+def wait_select(gen: PQGen[RV], fileno: int, timeout: Optional[float] = None) -> RV:
     """
     Wait for a generator using select where supported.
     """
@@ -288,14 +288,19 @@ def wait_epoll(gen: PQGen[RV], fileno: int, timeout: Optional[float] = None) -> 
         return rv
 
 
-wait_select = _psycopg.wait_select if _psycopg else _wait_select
+if _psycopg:
+    wait_c = _psycopg.wait_c
+
 
 # Choose the best wait strategy for the platform.
 #
 # the selectors objects have a generic interface but come with some overhead,
 # so we also offer more finely tuned implementations.
 
-if selectors.DefaultSelector is getattr(selectors, "SelectSelector", None):
+if _psycopg:
+    wait = wait_c
+
+elif selectors.DefaultSelector is getattr(selectors, "SelectSelector", None):
     # On Windows, SelectSelector should be the default.
     wait = wait_select
 
