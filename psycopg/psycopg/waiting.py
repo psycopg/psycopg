@@ -9,6 +9,7 @@ These functions are designed to consume the generators returned by the
 # Copyright (C) 2020 The Psycopg Team
 
 
+import os
 import select
 import selectors
 from typing import Dict, Optional
@@ -16,7 +17,7 @@ from asyncio import get_event_loop, wait_for, Event, TimeoutError
 from selectors import DefaultSelector
 
 from . import errors as e
-from .abc import PQGen, PQGenConn, RV
+from .abc import RV, PQGen, PQGenConn, WaitFunc
 from ._enums import Wait as Wait, Ready as Ready  # re-exported
 from ._cmodule import _psycopg
 
@@ -297,7 +298,19 @@ if _psycopg:
 # the selectors objects have a generic interface but come with some overhead,
 # so we also offer more finely tuned implementations.
 
-if _psycopg:
+wait: WaitFunc
+
+# Allow the user to choose a specific function for testing
+if "PSYCOPG_WAIT_FUNC" in os.environ:
+    fname = os.environ["PSYCOPG_WAIT_FUNC"]
+    if not fname.startswith("wait_") or fname not in globals():
+        raise ImportError(
+            "PSYCOPG_WAIT_FUNC should be the name of an available wait function;"
+            f" got {fname!r}"
+        )
+    wait = globals()[fname]
+
+elif _psycopg:
     wait = wait_c
 
 elif selectors.DefaultSelector is getattr(selectors, "SelectSelector", None):

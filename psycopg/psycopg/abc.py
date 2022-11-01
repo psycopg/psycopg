@@ -46,6 +46,17 @@ PQGen: TypeAlias = Generator["Wait", "Ready", RV]
 """
 
 
+class WaitFunc(Protocol):
+    """
+    Wait on the connection which generated `PQgen` and return its final result.
+    """
+
+    def __call__(
+        self, gen: PQGen[RV], fileno: int, timeout: Optional[float] = None
+    ) -> RV:
+        ...
+
+
 # Adaptation types
 
 DumpFunc: TypeAlias = Callable[[Any], Buffer]
