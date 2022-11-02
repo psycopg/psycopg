@@ -158,9 +158,7 @@ def fetch(pq.PGconn pgconn) -> PQGen[Optional[PGresult]]:
     Return a result from the database (whether success or error).
     """
     cdef libpq.PGconn *pgconn_ptr = pgconn._pgconn_ptr
-    cdef libpq.PGnotify *notify
     cdef int cires, ibres = 0
-    cdef object notify_handler = pgconn.notify_handler
     cdef libpq.PGresult *pgres
 
     if libpq.PQisBusy(pgconn_ptr):
@@ -178,21 +176,7 @@ def fetch(pq.PGconn pgconn) -> PQGen[Optional[PGresult]]:
                 break
             yield WAIT_R
 
-    # Consume notifies
-    if notify_handler is not None:
-        while True:
-            pynotify = pgconn.notifies()
-            if pynotify is None:
-                break
-            PyObject_CallFunctionObjArgs(
-                notify_handler, <PyObject *>pynotify, NULL
-            )
-    else:
-        while True:
-            notify = libpq.PQnotifies(pgconn_ptr)
-            if notify is NULL:
-                break
-            libpq.PQfreemem(notify)
+    _consume_notifies(pgconn)
 
     pgres = libpq.PQgetResult(pgconn_ptr)
     if pgres is NULL:
@@ -209,8 +193,6 @@ def pipeline_communicate(
     Return a list results, including single PIPELINE_SYNC elements.
     """
     cdef libpq.PGconn *pgconn_ptr = pgconn._pgconn_ptr
-    cdef object notify_handler = pgconn.notify_handler
-    cdef libpq.PGnotify *notify
     cdef int cires
     cdef int status
     cdef int ready
@@ -229,20 +211,7 @@ def pipeline_communicate(
                 raise e.OperationalError(
                     f"consuming input failed: {error_message(pgconn)}")
 
-            if notify_handler is not None:
-                while True:
-                    pynotify = pgconn.notifies()
-                    if pynotify is None:
-                        break
-                    PyObject_CallFunctionObjArgs(
-                        notify_handler, <PyObject *>pynotify, NULL
-                    )
-            else:
-                while True:
-                    notify = libpq.PQnotifies(pgconn_ptr)
-                    if notify is NULL:
-                        break
-                    libpq.PQfreemem(notify)
+            _consume_notifies(pgconn)
 
             res: List[PGresult] = []
             while not libpq.PQisBusy(pgconn_ptr):
@@ -270,3 +239,27 @@ def pipeline_communicate(
             commands.popleft()()
 
     return results
+
+
+cdef int _consume_notifies(pq.PGconn pgconn) except -1:
+    cdef object notify_handler = pgconn.notify_handler
+    cdef libpq.PGconn *pgconn_ptr
+    cdef libpq.PGnotify *notify
+
+    if notify_handler is not None:
+        while True:
+            pynotify = pgconn.notifies()
+            if pynotify is None:
+                break
+            PyObject_CallFunctionObjArgs(
+                notify_handler, <PyObject *>pynotify, NULL
+            )
+    else:
+        pgconn_ptr = pgconn._pgconn_ptr
+        while True:
+            notify = libpq.PQnotifies(pgconn_ptr)
+            if notify is NULL:
+                break
+            libpq.PQfreemem(notify)
+
+    return 0

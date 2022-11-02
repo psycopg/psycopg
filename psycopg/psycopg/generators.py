@@ -173,13 +173,7 @@ def _fetch(pgconn: PGconn) -> PQGen[Optional[PGresult]]:
                 break
             yield WAIT_R
 
-    # Consume notifies
-    while True:
-        n = pgconn.notifies()
-        if not n:
-            break
-        if pgconn.notify_handler:
-            pgconn.notify_handler(n)
+    _consume_notifies(pgconn)
 
     return pgconn.get_result()
 
@@ -199,12 +193,7 @@ def _pipeline_communicate(
 
         if ready & READY_R:
             pgconn.consume_input()
-            while True:
-                n = pgconn.notifies()
-                if not n:
-                    break
-                if pgconn.notify_handler:
-                    pgconn.notify_handler(n)
+            _consume_notifies(pgconn)
 
             res: List[PGresult] = []
             while not pgconn.is_busy():
@@ -227,6 +216,16 @@ def _pipeline_communicate(
             commands.popleft()()
 
     return results
+
+
+def _consume_notifies(pgconn: PGconn) -> None:
+    # Consume notifies
+    while True:
+        n = pgconn.notifies()
+        if not n:
+            break
+        if pgconn.notify_handler:
+            pgconn.notify_handler(n)
 
 
 def notifies(pgconn: PGconn) -> PQGen[List[pq.PGnotify]]:
