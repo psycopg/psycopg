@@ -39,7 +39,9 @@ def connect(conninfo: str) -> PQGenConn[abc.PGconn]:
                 pgconn=conn
             )
 
-        poll_status = libpq.PQconnectPoll(pgconn_ptr)
+        with nogil:
+            poll_status = libpq.PQconnectPoll(pgconn_ptr)
+
         if poll_status == libpq.PGRES_POLLING_OK:
             break
         elif poll_status == libpq.PGRES_POLLING_READING:
@@ -142,7 +144,6 @@ def fetch_many(pq.PGconn pgconn) -> PQGen[List[PGresult]]:
         if status == libpq.PGRES_PIPELINE_SYNC:
             # PIPELINE_SYNC is not followed by a NULL, but we return it alone
             # similarly to other result sets.
-            assert len(results) == 1, results
             break
 
     return results
@@ -158,10 +159,12 @@ def fetch(pq.PGconn pgconn) -> PQGen[Optional[PGresult]]:
     Return a result from the database (whether success or error).
     """
     cdef libpq.PGconn *pgconn_ptr = pgconn._pgconn_ptr
-    cdef int cires, ibres = 0
+    cdef int cires, ibres
     cdef libpq.PGresult *pgres
 
-    if libpq.PQisBusy(pgconn_ptr):
+    with nogil:
+        ibres = libpq.PQisBusy(pgconn_ptr)
+    if ibres:
         yield WAIT_R
         while True:
             with nogil:
@@ -178,7 +181,8 @@ def fetch(pq.PGconn pgconn) -> PQGen[Optional[PGresult]]:
 
     _consume_notifies(pgconn)
 
-    pgres = libpq.PQgetResult(pgconn_ptr)
+    with nogil:
+        pgres = libpq.PQgetResult(pgconn_ptr)
     if pgres is NULL:
         return None
     return pq.PGresult._from_ptr(pgres)
@@ -214,8 +218,13 @@ def pipeline_communicate(
             _consume_notifies(pgconn)
 
             res: List[PGresult] = []
-            while not libpq.PQisBusy(pgconn_ptr):
-                pgres = libpq.PQgetResult(pgconn_ptr)
+            while True:
+                with nogil:
+                    ibres = libpq.PQisBusy(pgconn_ptr)
+                    if ibres:
+                        break
+                    pgres = libpq.PQgetResult(pgconn_ptr)
+
                 if pgres is NULL:
                     if not res:
                         break
@@ -225,12 +234,10 @@ def pipeline_communicate(
                     status = libpq.PQresultStatus(pgres)
                     r = pq.PGresult._from_ptr(pgres)
                     if status == libpq.PGRES_PIPELINE_SYNC:
-                        assert not res
                         results.append([r])
                         break
                     else:
                         res.append(r)
-
 
         if ready & READY_W:
             pgconn.flush()

@@ -106,7 +106,7 @@ cdef extern from "libpq-fe.h":
     # 33.1. Database Connection Control Functions
     PGconn *PQconnectdb(const char *conninfo)
     PGconn *PQconnectStart(const char *conninfo)
-    PostgresPollingStatusType PQconnectPoll(PGconn *conn)
+    PostgresPollingStatusType PQconnectPoll(PGconn *conn) nogil
     PQconninfoOption *PQconndefaults()
     PQconninfoOption *PQconninfo(PGconn *conn)
     PQconninfoOption *PQconninfoParse(const char *conninfo, char **errmsg)
@@ -131,7 +131,7 @@ cdef extern from "libpq-fe.h":
     int PQprotocolVersion(const PGconn *conn)
     int PQserverVersion(const PGconn *conn)
     char *PQerrorMessage(const PGconn *conn)
-    int PQsocket(const PGconn *conn)
+    int PQsocket(const PGconn *conn) nogil
     int PQbackendPID(const PGconn *conn)
     int PQconnectionNeedsPassword(const PGconn *conn)
     int PQconnectionUsedPassword(const PGconn *conn)
@@ -160,14 +160,14 @@ cdef extern from "libpq-fe.h":
                              const int *paramLengths,
                              const int *paramFormats,
                              int resultFormat) nogil
-    PGresult *PQdescribePrepared(PGconn *conn, const char *stmtName)
-    PGresult *PQdescribePortal(PGconn *conn, const char *portalName)
-    ExecStatusType PQresultStatus(const PGresult *res)
+    PGresult *PQdescribePrepared(PGconn *conn, const char *stmtName) nogil
+    PGresult *PQdescribePortal(PGconn *conn, const char *portalName) nogil
+    ExecStatusType PQresultStatus(const PGresult *res) nogil
     # PQresStatus: not needed, we have pretty enums
-    char *PQresultErrorMessage(const PGresult *res)
+    char *PQresultErrorMessage(const PGresult *res) nogil
     # TODO: PQresultVerboseErrorMessage
-    char *PQresultErrorField(const PGresult *res, int fieldcode)
-    void PQclear(PGresult *res)
+    char *PQresultErrorField(const PGresult *res, int fieldcode) nogil
+    void PQclear(PGresult *res) nogil
 
     # 33.3.2. Retrieving Query Result Information
     int PQntuples(const PGresult *res)
@@ -232,14 +232,14 @@ cdef extern from "libpq-fe.h":
                             const int *paramLengths,
                             const int *paramFormats,
                             int resultFormat) nogil
-    int PQsendDescribePrepared(PGconn *conn, const char *stmtName)
-    int PQsendDescribePortal(PGconn *conn, const char *portalName)
-    PGresult *PQgetResult(PGconn *conn)
+    int PQsendDescribePrepared(PGconn *conn, const char *stmtName) nogil
+    int PQsendDescribePortal(PGconn *conn, const char *portalName) nogil
+    PGresult *PQgetResult(PGconn *conn) nogil
     int PQconsumeInput(PGconn *conn) nogil
     int PQisBusy(PGconn *conn) nogil
-    int PQsetnonblocking(PGconn *conn, int arg)
+    int PQsetnonblocking(PGconn *conn, int arg) nogil
     int PQisnonblocking(const PGconn *conn)
-    int PQflush(PGconn *conn)
+    int PQflush(PGconn *conn) nogil
 
     # 33.5. Retrieving Query Results Row-by-Row
     int PQsetSingleRowMode(PGconn *conn)
