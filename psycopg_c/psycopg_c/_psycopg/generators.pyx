@@ -212,6 +212,8 @@ def pipeline_communicate(
     cdef object notify_handler = pgconn.notify_handler
     cdef libpq.PGnotify *notify
     cdef int cires
+    cdef int status
+    cdef int ready
     cdef libpq.PGresult *pgres
     cdef list res = []
     cdef list results = []
@@ -221,7 +223,6 @@ def pipeline_communicate(
         ready = yield WAIT_RW
 
         if ready & READY_R:
-            pgconn.consume_input()
             with nogil:
                 cires = libpq.PQconsumeInput(pgconn_ptr)
             if 1 != cires:
