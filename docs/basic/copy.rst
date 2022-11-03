@@ -16,7 +16,7 @@ it, with some SQL creativity).
 
 Copy is supported using the `Cursor.copy()` method, passing it a query of the
 form :sql:`COPY ... FROM STDIN` or :sql:`COPY ... TO STDOUT`, and managing the
-resulting `Copy` object in a ``with`` block:
+resulting `Copy` object in a `!with` block:
 
 .. code:: python
 
@@ -57,7 +57,7 @@ Using a copy operation you can load data into the database from any Python
 iterable (a list of tuples, or any iterable of sequences): the Python values
 are adapted as they would be in normal querying. To perform such operation use
 a :sql:`COPY ... FROM STDIN` with `Cursor.copy()` and use `~Copy.write_row()`
-on the resulting object in a ``with`` block. On exiting the block the
+on the resulting object in a `!with` block. On exiting the block the
 operation will be concluded:
 
 .. code:: python

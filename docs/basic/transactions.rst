@@ -155,7 +155,7 @@ Transaction contexts
 --------------------
 
 A more transparent way to make sure that transactions are finalised at the
-right time is to use ``with`` `Connection.transaction()` to create a
+right time is to use `!with` `Connection.transaction()` to create a
 transaction context. When the context is entered, a transaction is started;
 when leaving the context the transaction is committed, or it is rolled back if
 an exception is raised inside the block.
@@ -231,7 +231,7 @@ context.
     developers is to:
 
     - use a connection block: ``with psycopg.connect(...) as conn``;
-    - use an autocommit connection, either passing ``autocommit=True`` as
+    - use an autocommit connection, either passing `!autocommit=True` as
       `!connect()` parameter or setting the attribute ``conn.autocommit =
       True``;
     - use `!with conn.transaction()` blocks to manage transactions only where
@@ -269,7 +269,7 @@ number of operations successfully processed.
 
 If `!unreliable_operation()` causes an error, including an operation causing a
 database error, all its changes will be reverted. The exception bubbles up
-outside the block: in the example it is intercepted by the ``try`` so that the
+outside the block: in the example it is intercepted by the `!try` so that the
 loop can complete. The outermost block is unaffected (unless other errors
 happen there).
 

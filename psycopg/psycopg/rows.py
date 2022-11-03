@@ -146,7 +146,7 @@ def _make_nt(*key: str) -> Type[NamedTuple]:
 
 
 def class_row(cls: Type[T]) -> BaseRowFactory[T]:
-    r"""Generate a row factory to represent rows as instances of the class *cls*.
+    r"""Generate a row factory to represent rows as instances of the class `!cls`.
 
     The class must support every output column name as a keyword parameter.
 
@@ -171,7 +171,7 @@ def class_row(cls: Type[T]) -> BaseRowFactory[T]:
 
 
 def args_row(func: Callable[..., T]) -> BaseRowFactory[T]:
-    """Generate a row factory calling *func* with positional parameters for every row.
+    """Generate a row factory calling `!func` with positional parameters for every row.
 
     :param func: The function to call for each row. It must support the fields
         returned by the query as positional arguments.
@@ -187,7 +187,7 @@ def args_row(func: Callable[..., T]) -> BaseRowFactory[T]:
 
 
 def kwargs_row(func: Callable[..., T]) -> BaseRowFactory[T]:
-    """Generate a row factory calling *func* with keyword parameters for every row.
+    """Generate a row factory calling `!func` with keyword parameters for every row.
 
     :param func: The function to call for each row. It must support the fields
         returned by the query as keyword arguments.

@@ -32,7 +32,7 @@ class _CrdbConnectionMixin:
         cls, conn: Union[Connection[Any], AsyncConnection[Any], "PGconn"]
     ) -> bool:
         """
-        Return `!True` if the server connected to ``conn`` is CockroachDB.
+        Return `!True` if the server connected to `!conn` is CockroachDB.
         """
         if isinstance(conn, (Connection, AsyncConnection)):
             conn = conn.pgconn

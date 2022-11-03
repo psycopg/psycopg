@@ -821,9 +821,9 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
 
     def fetchmany(self, size: int = 0) -> List[Row]:
         """
-        Return the next *size* records from the current recordset.
+        Return the next `!size` records from the current recordset.
 
-        *size* default to `!self.arraysize` if not specified.
+        `!size` default to `!self.arraysize` if not specified.
 
         :rtype: Sequence[Row], with Row defined by `row_factory`
         """
@@ -872,9 +872,9 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
         """
         Move the cursor in the result set to a new position according to mode.
 
-        If *mode* is ``relative`` (default), value is taken as offset to the
-        current position in the result set, if set to ``absolute``, *value*
-        states an absolute target position.
+        If `!mode` is ``'relative'`` (default), `!value` is taken as offset to
+        the current position in the result set; if set to ``'absolute'``,
+        `!value` states an absolute target position.
 
         Raise `!IndexError` in case a scroll operation would leave the result
         set. In this case the position will not change.

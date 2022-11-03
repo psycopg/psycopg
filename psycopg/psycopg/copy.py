@@ -294,7 +294,7 @@ class Copy(BaseCopy["Connection[Any]"]):
         """
         Write a block of data to a table after a :sql:`COPY FROM` operation.
 
-        If the :sql:`COPY` is in binary format *buffer* must be `!bytes`. In
+        If the :sql:`COPY` is in binary format `!buffer` must be `!bytes`. In
         text mode it can be either `!bytes` or `!str`.
         """
         data = self.formatter.write(buffer)

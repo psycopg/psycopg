@@ -21,11 +21,11 @@ the associated resources freed.
 
 Statement preparation can be controlled in several ways:
 
-- You can decide to prepare a query immediately by passing ``prepare=True`` to
+- You can decide to prepare a query immediately by passing `!prepare=True` to
   `Connection.execute()` or `Cursor.execute()`. The query is prepared, if it
   wasn't already, and executed as prepared from its first use.
 
-- Conversely, passing ``prepare=False`` to `!execute()` will avoid to prepare
+- Conversely, passing `!prepare=False` to `!execute()` will avoid to prepare
   the query, regardless of the number of times it is executed. The default for
   the parameter is `!None`, meaning that the query is prepared if the
   conditions described above are met.

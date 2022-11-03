@@ -143,7 +143,7 @@ def _as_python_identifier(s: str, prefix: str = "f") -> str:
     """
     Reduce a string to a valid Python identifier.
 
-    Replace all non-valid chars with '_' and prefix the value with *prefix* if
+    Replace all non-valid chars with '_' and prefix the value with `!prefix` if
     the first letter is an '_'.
     """
     if not s.isidentifier():

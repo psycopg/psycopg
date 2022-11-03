@@ -225,7 +225,7 @@ class Transformer(AdaptContext):
 
     def get_dumper(self, obj: Any, format: PyFormat) -> "Dumper":
         """
-        Return a Dumper instance to dump *obj*.
+        Return a Dumper instance to dump `!obj`.
         """
         # Normally, the type of the object dictates how to dump it
         key = type(obj)

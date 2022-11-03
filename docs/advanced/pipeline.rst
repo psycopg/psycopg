@@ -49,10 +49,10 @@ In order to understand better how the pipeline mode works, we should take a
 closer look at the `PostgreSQL client-server message flow`__.
 
 During normal querying, each statement is transmitted by the client to the
-server as a stream of request messages, terminating with a *Sync* message to
+server as a stream of request messages, terminating with a **Sync** message to
 tell it that it should process the messages sent so far. The server will
 execute the statement and describe the results back as a stream of messages,
-terminating with a *ReadyForQuery*, telling the client that it may now send a
+terminating with a **ReadyForQuery**, telling the client that it may now send a
 new query.
 
 For example, the statement (returning no result):

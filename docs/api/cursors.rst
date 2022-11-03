@@ -7,7 +7,7 @@ The `Cursor` and `AsyncCursor` classes are the main objects to send commands
 to a PostgreSQL database session. They are normally created by the
 connection's `~Connection.cursor()` method.
 
-Using the ``name`` parameter on `!cursor()` will create a `ServerCursor` or
+Using the `!name` parameter on `!cursor()` will create a `ServerCursor` or
 `AsyncServerCursor`, which can be used to retrieve partial results from a
 database.
 
@@ -26,8 +26,8 @@ The `!Cursor` class
     This class implements a `DBAPI-compliant interface`__. It is what the
     classic `Connection.cursor()` method returns. `AsyncConnection.cursor()`
     will create instead `AsyncCursor` objects, which have the same set of
-    method but expose an `asyncio` interface and require ``async`` and
-    ``await`` keywords to operate.
+    method but expose an `asyncio` interface and require `!async` and
+    `!await` keywords to operate.
 
     .. __: dbapi-cursor_
     .. _dbapi-cursor: https://www.python.org/dev/peps/pep-0249/#cursor-objects
@@ -100,7 +100,7 @@ The `!Cursor` class
 
         If the queries return data you want to read (e.g. when executing an
         :sql:`INSERT ... RETURNING` or a :sql:`SELECT` with a side-effect),
-        you can specify ``returning=True``; the results will be available in
+        you can specify `!returning=True`; the results will be available in
         the cursor's state and can be read using `fetchone()` and similar
         methods. Each input parameter will produce a separate result set: use
         `nextset()` to read the results of the queries after the first one.
@@ -110,7 +110,7 @@ The `!Cursor` class
 
         .. versionchanged:: 3.1
 
-            - Added ``returning`` parameter to receive query results.
+            - Added `!returning` parameter to receive query results.
             - Performance optimised by making use of the pipeline mode, when
               using libpq 14 or newer.
 
@@ -178,10 +178,10 @@ The `!Cursor` class
     .. attribute:: format
 
         The format of the data returned by the queries. It can be selected
-        initially e.g. specifying `Connection.cursor`\ ``(binary=True)`` and
+        initially e.g. specifying `Connection.cursor`\ `!(binary=True)` and
         changed during the cursor's lifetime. It is also possible  to override
         the value for single queries, e.g. specifying `execute`\
-        ``(binary=True)``.
+        `!(binary=True)`.
 
         :type: `pq.Format`
         :default: `~pq.Format.TEXT`
@@ -309,7 +309,7 @@ The `!ServerCursor` class
 .. autoclass:: ServerCursor
 
     This class also implements a `DBAPI-compliant interface`__. It is created
-    by `Connection.cursor()` specifying the ``name`` parameter. Using this
+    by `Connection.cursor()` specifying the `!name` parameter. Using this
     object results in the creation of an equivalent PostgreSQL cursor in the
     server. DBAPI-extension methods (such as `~Cursor.copy()` or
     `~Cursor.stream()`) are not implemented on this object: use a normal
@@ -357,7 +357,7 @@ The `!ServerCursor` class
             format (`!True`) or in text format (`!False`). By default
             (`!None`) return data as requested by the cursor's `~Cursor.format`.
 
-        Create a server cursor with given `name` and the ``query`` in argument.
+        Create a server cursor with given `!name` and the `!query` in argument.
 
         If using :sql:`DECLARE` is not appropriate (for instance because the
         cursor is returned by calling a stored procedure) you can avoid to use
@@ -488,7 +488,7 @@ The `!AsyncServerCursor` class
 
     This class implements a DBAPI-inspired interface as the `AsyncCursor`
     does, but wraps a server-side cursor like the `ServerCursor` class. It is
-    created by `AsyncConnection.cursor()` specifying the ``name`` parameter.
+    created by `AsyncConnection.cursor()` specifying the `!name` parameter.
 
     The following are the methods exposing a different (async) interface from
     the `ServerCursor` counterpart, but sharing the same semantics.

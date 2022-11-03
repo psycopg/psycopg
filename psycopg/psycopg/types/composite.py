@@ -104,7 +104,7 @@ class BaseCompositeLoader(Loader):
         """
         Split a non-empty representation of a composite type into components.
 
-        Terminators shouldn't be used in *data* (so that both record and range
+        Terminators shouldn't be used in `!data` (so that both record and range
         representations can be parsed).
         """
         for m in self._re_tokenize.finditer(data):

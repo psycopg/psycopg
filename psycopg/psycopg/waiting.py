@@ -50,10 +50,10 @@ def wait_selector(gen: PQGen[RV], fileno: int, timeout: Optional[float] = None) 
     :param timeout: timeout (in seconds) to check for other interrupt, e.g.
         to allow Ctrl-C.
     :type timeout: float
-    :return: whatever *gen* returns on completion.
+    :return: whatever `!gen` returns on completion.
 
-    Consume *gen*, scheduling `fileno` for completion when it is reported to
-    block. Once ready again send the ready state back to *gen*.
+    Consume `!gen`, scheduling `fileno` for completion when it is reported to
+    block. Once ready again send the ready state back to `!gen`.
     """
     try:
         s = next(gen)
@@ -83,7 +83,7 @@ def wait_conn(gen: PQGenConn[RV], timeout: Optional[float] = None) -> RV:
     :param timeout: timeout (in seconds) to check for other interrupt, e.g.
         to allow Ctrl-C. If zero or None, wait indefinitely.
     :type timeout: float
-    :return: whatever *gen* returns on completion.
+    :return: whatever `!gen` returns on completion.
 
     Behave like in `wait()`, but take the fileno to wait from the generator
     itself, which might change during processing.
@@ -114,7 +114,7 @@ async def wait_async(gen: PQGen[RV], fileno: int) -> RV:
     :param gen: a generator performing database operations and yielding
         `Ready` values when it would block.
     :param fileno: the file descriptor to wait on.
-    :return: whatever *gen* returns on completion.
+    :return: whatever `!gen` returns on completion.
 
     Behave like in `wait()`, but exposing an `asyncio` interface.
     """
@@ -165,7 +165,7 @@ async def wait_conn_async(gen: PQGenConn[RV], timeout: Optional[float] = None) -
         (fd, `Ready`) pairs when it would block.
     :param timeout: timeout (in seconds) to check for other interrupt, e.g.
         to allow Ctrl-C. If zero or None, wait indefinitely.
-    :return: whatever *gen* returns on completion.
+    :return: whatever `!gen` returns on completion.
 
     Behave like in `wait()`, but take the fileno to wait from the generator
     itself, which might change during processing.

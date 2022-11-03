@@ -25,7 +25,7 @@ def quote(obj: Any, context: Optional[AdaptContext] = None) -> str:
     a connection available when you will need to use it.
 
     This function is relatively inefficient, because it doesn't cache the
-    adaptation rules. If you pass a *context* you can adapt the adaptation
+    adaptation rules. If you pass a `!context` you can adapt the adaptation
     rules used, otherwise only global rules are used.
 
     """
@@ -145,9 +145,9 @@ class Composed(Composable):
 
     def join(self, joiner: Union["SQL", LiteralString]) -> "Composed":
         """
-        Return a new `!Composed` interposing the *joiner* with the `!Composed` items.
+        Return a new `!Composed` interposing the `!joiner` with the `!Composed` items.
 
-        The *joiner* must be a `SQL` or a string which will be interpreted as
+        The `!joiner` must be a `SQL` or a string which will be interpreted as
         an `SQL`.
 
         Example::
@@ -176,11 +176,11 @@ class SQL(Composable):
     where to merge variable parts of a query (for instance field or table
     names).
 
-    The *string* doesn't undergo any form of escaping, so it is not suitable to
-    represent variable identifiers or values: you should only use it to pass
-    constant strings representing templates or snippets of SQL statements; use
-    other objects such as `Identifier` or `Literal` to represent variable
-    parts.
+    The `!obj` string doesn't undergo any form of escaping, so it is not
+    suitable to represent variable identifiers or values: you should only use
+    it to pass constant strings representing templates or snippets of SQL
+    statements; use other objects such as `Identifier` or `Literal` to
+    represent variable parts.
 
     Example::
 
@@ -287,7 +287,7 @@ class SQL(Composable):
         :param seq: the elements to join.
         :type seq: iterable of `!Composable`
 
-        Use the `!SQL` object's *string* to separate the elements in *seq*.
+        Use the `!SQL` object's string to separate the elements in `!seq`.
         Note that `Composed` objects are iterable too, so they can be used as
         argument for this method.
 

@@ -23,7 +23,7 @@ ORD_BS = ord("\\")
 
 class Dumper(abc.Dumper, ABC):
     """
-    Convert Python object of the type *cls* to PostgreSQL representation.
+    Convert Python object of the type `!cls` to PostgreSQL representation.
     """
 
     oid: int = 0
@@ -96,7 +96,7 @@ class Dumper(abc.Dumper, ABC):
         Implementation of the `~psycopg.abc.Dumper.get_key()` member of the
         `~psycopg.abc.Dumper` protocol. Look at its definition for details.
 
-        This implementation returns the *cls* passed in the constructor.
+        This implementation returns the `!cls` passed in the constructor.
         Subclasses needing to specialise the PostgreSQL type according to the
         *value* of the object dumped (not only according to to its type)
         should override this class.
@@ -109,7 +109,7 @@ class Dumper(abc.Dumper, ABC):
         Implementation of the `~psycopg.abc.Dumper.upgrade()` member of the
         `~psycopg.abc.Dumper` protocol. Look at its definition for details.
 
-        This implementation just returns *self*. If a subclass implements
+        This implementation just returns `!self`. If a subclass implements
         `get_key()` it should probably override `!upgrade()` too.
         """
         return self
@@ -117,7 +117,7 @@ class Dumper(abc.Dumper, ABC):
 
 class Loader(abc.Loader, ABC):
     """
-    Convert PostgreSQL values with type OID *oid* to Python objects.
+    Convert PostgreSQL values with type OID `!oid` to Python objects.
     """
 
     format: pq.Format = pq.Format.TEXT

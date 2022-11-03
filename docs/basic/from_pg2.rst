@@ -6,8 +6,8 @@
 .. _from-psycopg2:
 
 
-Differences from ``psycopg2``
-=============================
+Differences from `!psycopg2`
+============================
 
 Psycopg 3 uses the common DBAPI structure of many other database adapters and
 tries to behave as close as possible to `!psycopg2`. There are however a few
@@ -168,7 +168,7 @@ result of the last statement is returned::
 
 In Psycopg 3 instead, all the results are available. After running the query,
 the first result will be readily available in the cursor and can be consumed
-using the usual ``fetch*()`` methods. In order to access the following
+using the usual `!fetch*()` methods. In order to access the following
 results, you can use the `Cursor.nextset()` method::
 
     >>> cur_pg3.execute("SELECT 1; SELECT 2")
@@ -226,7 +226,7 @@ array::
 
     >>> conn.execute("SELECT * FROM foo WHERE id = ANY(%s)", [[10,20,30]])
 
-Note that `ANY()` can be used with ``psycopg2`` too, and has the advantage of
+Note that `ANY()` can be used with `!psycopg2` too, and has the advantage of
 accepting an empty list of values too as argument, which is not supported by
 the :sql:`IN` operator instead.
 
@@ -273,8 +273,8 @@ usage pattern also enables :sql:`COPY` to be used in async interactions.
 
 .. _diff-with:
 
-``with`` connection
--------------------
+`!with` connection
+------------------
 
 In `!psycopg2`, using the syntax :ref:`with connection <pg2:with>`,
 only the transaction is closed, not the connection. This behaviour is
@@ -294,8 +294,8 @@ instance to use nested transactions.
 
 .. _diff-callproc:
 
-``callproc()`` is gone
-----------------------
+`!callproc()` is gone
+---------------------
 
 `cursor.callproc()` is not implemented. The method has a simplistic semantic
 which doesn't account for PostgreSQL positional parameters, procedures,
@@ -305,13 +305,13 @@ function_name(...)` or :sql:`CALL procedure_name(...)` instead.
 
 .. _diff-client-encoding:
 
-``client_encoding`` is gone
----------------------------
+`!client_encoding` is gone
+--------------------------
 
 Psycopg automatically uses the database client encoding to decode data to
 Unicode strings. Use `ConnectionInfo.encoding` if you need to read the
 encoding. You can select an encoding at connection time using the
-``client_encoding`` connection parameter and you can change the encoding of a
+`!client_encoding` connection parameter and you can change the encoding of a
 connection by running a :sql:`SET client_encoding` statement... But why would
 you?
 

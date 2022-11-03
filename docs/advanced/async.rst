@@ -11,7 +11,7 @@ Psycopg `~Connection` and `~Cursor` have counterparts `~AsyncConnection` and
 `~AsyncCursor` supporting an `asyncio` interface.
 
 The design of the asynchronous objects is pretty much the same of the sync
-ones: in order to use them you will only have to scatter the ``await`` keyword
+ones: in order to use them you will only have to scatter the `!await` keyword
 here and there.
 
 .. code:: python
@@ -63,8 +63,8 @@ here and there.
 
 .. _async-with:
 
-``with`` async connections
---------------------------
+`!with` async connections
+-------------------------
 
 As seen in :ref:`the basic usage <usage>`, connections and cursors can act as
 context managers, so you can run:
@@ -232,7 +232,7 @@ mode if you wish to receive or send notifications in a timely manner.
 Notifications are received as instances of `Notify`. If you are reserving a
 connection only to receive notifications, the simplest way is to consume the
 `Connection.notifies` generator. The generator can be stopped using
-``close()``.
+`!close()`.
 
 .. note::
 
@@ -240,7 +240,7 @@ connection only to receive notifications, the simplest way is to consume the
     blocking `Connection` is perfectly valid.
 
 The following example will print notifications and stop when one containing
-the ``stop`` message is received.
+the ``"stop"`` message is received.
 
 .. code:: python
 

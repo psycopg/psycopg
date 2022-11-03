@@ -17,7 +17,7 @@ Check out :ref:`row-factories` for information about how to use these objects.
 .. autofunction:: class_row
 
     This is not a row factory, but rather a factory of row factories.
-    Specifying ``row_factory=class_row(MyClass)`` will create connections and
+    Specifying `!row_factory=class_row(MyClass)` will create connections and
     cursors returning `!MyClass` objects on fetch.
 
     Example::

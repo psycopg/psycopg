@@ -17,7 +17,7 @@ Main Copy objects
 
 .. autoclass:: Copy()
 
-    The object is normally returned by ``with`` `Cursor.copy()`.
+    The object is normally returned by `!with` `Cursor.copy()`.
 
     .. automethod:: write_row
 
@@ -75,7 +75,7 @@ subclass.
 
 Writers instances can be used passing them to the cursor
 `~psycopg.Cursor.copy()` method or to the `~psycopg.Copy` constructor, as the
-``writer`` argument.
+`!writer` argument.
 
 .. autoclass:: Writer
 

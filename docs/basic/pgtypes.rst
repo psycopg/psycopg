@@ -50,12 +50,12 @@ using `~psycopg.types.composite.register_composite()`.
 .. autofunction:: psycopg.types.composite.register_composite
 
    After registering, fetching data of the registered composite will invoke
-   ``factory`` to create corresponding Python objects.
+   `!factory` to create corresponding Python objects.
 
    If no factory is specified, a `~collection.namedtuple` is created and used
    to return data.
 
-   If the ``factory`` is a type (and not a generic callable), then dumpers for
+   If the `!factory` is a type (and not a generic callable), then dumpers for
    that type are created and registered too, so that passing objects of that
    type to a query will adapt them to the registered type.
 
@@ -125,7 +125,7 @@ different types.
 
     .. __: https://www.postgresql.org/docs/current/static/functions-range.html#RANGE-OPERATORS-TABLE
 
-    `!Range` objects are immutable, hashable, and support the ``in`` operator
+    `!Range` objects are immutable, hashable, and support the `!in` operator
     (checking if an element is within the range). They can be tested for
     equivalence. Empty ranges evaluate to `!False` in a boolean context,
     nonempty ones evaluate to `!True`.

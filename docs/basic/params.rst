@@ -19,8 +19,8 @@ statements with values provided by the rest of the program:
 for.
 
 
-``execute()`` arguments
------------------------
+`!execute()` arguments
+----------------------
 
 Passing parameters to a SQL statement happens in functions such as
 `Cursor.execute()` by using ``%s`` placeholders in the SQL statement, and
@@ -232,8 +232,8 @@ results) or buffer (for binary results).
 
 Because not every PostgreSQL type supports binary output, by default, the data
 will be returned in text format. In order to return data in binary format you
-can create the cursor using `Connection.cursor`\ ``(binary=True)`` or execute
-the query using `Cursor.execute`\ ``(binary=True)``. A case in which
+can create the cursor using `Connection.cursor`\ `!(binary=True)` or execute
+the query using `Cursor.execute`\ `!(binary=True)`. A case in which
 requesting binary results is a clear winner is when you have large binary data
 in the database, such as images::
 

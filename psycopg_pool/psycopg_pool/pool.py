@@ -109,7 +109,7 @@ class ConnectionPool(BasePool[Connection[Any]]):
         Upon context exit, return the connection to the pool. Apply the normal
         :ref:`connection context behaviour <with-connection>` (commit/rollback
         the transaction in case of success/error). If the connection is no more
-        in working state replace it with a new one.
+        in working state, replace it with a new one.
         """
         conn = self.getconn(timeout=timeout)
         t0 = monotonic()

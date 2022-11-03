@@ -26,14 +26,14 @@ def set_json_dumps(
 
     :param dumps: The dump function to use.
     :type dumps: `!Callable[[Any], str]`
-    :param context: Where to use the *dumps* function. If not specified, use it
+    :param context: Where to use the `!dumps` function. If not specified, use it
         globally.
     :type context: `~psycopg.Connection` or `~psycopg.Cursor`
 
     By default dumping JSON uses the builtin `json.dumps`. You can override
     it to use a different JSON library or to use customised arguments.
 
-    If the `Json` wrapper specified a *dumps* function, use it in precedence
+    If the `Json` wrapper specified a `!dumps` function, use it in precedence
     of the one set by this function.
     """
     if context is None:
@@ -69,8 +69,8 @@ def set_json_loads(
 
     :param loads: The load function to use.
     :type loads: `!Callable[[bytes], Any]`
-    :param context: Where to use the *loads* function. If not specified, use it
-        globally.
+    :param context: Where to use the `!loads` function. If not specified, use
+        it globally.
     :type context: `~psycopg.Connection` or `~psycopg.Cursor`
 
     By default loading JSON uses the builtin `json.loads`. You can override

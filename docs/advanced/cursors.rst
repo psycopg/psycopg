@@ -127,7 +127,7 @@ The downside is that the server needs to keep track of the partially
 processed results, so it uses more memory and resources on the server.
 
 Psycopg allows the use of server-side cursors using the classes `ServerCursor`
-and `AsyncServerCursor`. They are usually created by passing the *name*
+and `AsyncServerCursor`. They are usually created by passing the `!name`
 parameter to the `~Connection.cursor()` method (reason for which, in
 `!psycopg2`, they are usually called *named cursors*). The use of these classes
 is similar to their client-side counterparts: their interface is the same, but

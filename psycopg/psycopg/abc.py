@@ -83,7 +83,7 @@ class AdaptContext(Protocol):
 
 class Dumper(Protocol):
     """
-    Convert Python objects of type *cls* to PostgreSQL representation.
+    Convert Python objects of type `!cls` to PostgreSQL representation.
     """
 
     format: pq.Format
@@ -101,21 +101,21 @@ class Dumper(Protocol):
         ...
 
     def dump(self, obj: Any) -> Buffer:
-        """Convert the object *obj* to PostgreSQL representation.
+        """Convert the object `!obj` to PostgreSQL representation.
 
         :param obj: the object to convert.
         """
         ...
 
     def quote(self, obj: Any) -> Buffer:
-        """Convert the object *obj* to escaped representation.
+        """Convert the object `!obj` to escaped representation.
 
         :param obj: the object to convert.
         """
         ...
 
     def get_key(self, obj: Any, format: PyFormat) -> DumperKey:
-        """Return an alternative key to upgrade the dumper to represent *obj*.
+        """Return an alternative key to upgrade the dumper to represent `!obj`.
 
         :param obj: The object to convert
         :param format: The format to convert to
@@ -142,7 +142,7 @@ class Dumper(Protocol):
         In these cases, a dumper can implement `!get_key()` and return a new
         class, or sequence of classes, that can be used to identify the same
         dumper again. If the mechanism is not needed, the method should return
-        the same *cls* object passed in the constructor.
+        the same `!cls` object passed in the constructor.
 
         If a dumper implements `get_key()` it should also implement
         `upgrade()`.
@@ -151,13 +151,13 @@ class Dumper(Protocol):
         ...
 
     def upgrade(self, obj: Any, format: PyFormat) -> "Dumper":
-        """Return a new dumper to manage *obj*.
+        """Return a new dumper to manage `!obj`.
 
         :param obj: The object to convert
         :param format: The format to convert to
 
         Once `Transformer.get_dumper()` has been notified by `get_key()` that
-        this Dumper class cannot handle *obj* itself, it will invoke
+        this Dumper class cannot handle `!obj` itself, it will invoke
         `!upgrade()`, which should return a new `Dumper` instance, which will
         be reused for every objects for which `!get_key()` returns the same
         result.
@@ -167,7 +167,7 @@ class Dumper(Protocol):
 
 class Loader(Protocol):
     """
-    Convert PostgreSQL values with type OID *oid* to Python objects.
+    Convert PostgreSQL values with type OID `!oid` to Python objects.
     """
 
     format: pq.Format

@@ -126,7 +126,7 @@ class PGconn:
 
     @property
     def pgconn_ptr(self) -> Optional[int]:
-        """The pointer to the underlying ``PGconn`` structure, as integer.
+        """The pointer to the underlying `!PGconn` structure, as integer.
 
         `!None` if the connection is closed.
 
@@ -752,7 +752,7 @@ class PGresult:
 
     @property
     def pgresult_ptr(self) -> Optional[int]:
-        """The pointer to the underlying ``PGresult`` structure, as integer.
+        """The pointer to the underlying `!PGresult` structure, as integer.
 
         `!None` if the result was cleared.
 

@@ -201,7 +201,7 @@ See :ref:`transactions` for details about these objects.
 
 .. autoexception:: Rollback
 
-    It can be used as
+    It can be used as:
 
     - ``raise Rollback``: roll back the operation that happened in the current
       transaction block and continue the program after the block.
@@ -209,9 +209,9 @@ See :ref:`transactions` for details about these objects.
     - ``raise Rollback()``: same effect as above
 
     - :samp:`raise Rollback({tx})`: roll back any operation that happened in
-      the `Transaction` ``tx`` (returned by a statement such as :samp:`with
+      the `Transaction` `!tx` (returned by a statement such as :samp:`with
       conn.transaction() as {tx}:` and all the blocks nested within. The
-      program will continue after the ``tx`` block.
+      program will continue after the `!tx` block.
 
 
 Two-Phase Commit related objects

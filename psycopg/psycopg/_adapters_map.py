@@ -111,7 +111,7 @@ class AdaptersMap:
         self, cls: Union[type, str, None], dumper: Type[Dumper]
     ) -> None:
         """
-        Configure the context to use *dumper* to convert object of type *cls*.
+        Configure the context to use `!dumper` to convert objects of type `!cls`.
 
         If two dumpers with different `~Dumper.format` are registered for the
         same type, the last one registered will be chosen when the query
@@ -119,14 +119,14 @@ class AdaptersMap:
         "`~PyFormat.AUTO`" placeholder).
 
         :param cls: The type to manage.
-        :param dumper: The dumper to register for *cls*.
+        :param dumper: The dumper to register for `!cls`.
 
-        If *cls* is specified as string it will be lazy-loaded, so that it
+        If `!cls` is specified as string it will be lazy-loaded, so that it
         will be possible to register it without importing it before. In this
         case it should be the fully qualified name of the object (e.g.
         ``"uuid.UUID"``).
 
-        If *cls* is None, only use the dumper when looking up using
+        If `!cls` is None, only use the dumper when looking up using
         `get_dumper_by_oid()`, which happens when we know the Postgres type to
         adapt to, but not the Python type that will be adapted (e.g. in COPY
         after using `~psycopg.Copy.set_types()`).
@@ -162,10 +162,10 @@ class AdaptersMap:
 
     def register_loader(self, oid: Union[int, str], loader: Type["Loader"]) -> None:
         """
-        Configure the context to use *loader* to convert data of oid *oid*.
+        Configure the context to use `!loader` to convert data of oid `!oid`.
 
         :param oid: The PostgreSQL OID or type name to manage.
-        :param loader: The loar to register for *oid*.
+        :param loader: The loar to register for `!oid`.
 
         If `oid` is specified as string, it refers to a type name, which is
         looked up in the `types` registry. `
@@ -194,7 +194,7 @@ class AdaptersMap:
 
         :param cls: The class to adapt.
         :param format: The format to dump to. If `~psycopg.adapt.PyFormat.AUTO`,
-            use the last one of the dumpers registered on *cls*.
+            use the last one of the dumpers registered on `!cls`.
         """
         try:
             dmap = self._dumpers[format]

@@ -84,7 +84,7 @@ relate to each other:
   - retrieve data from the database, iterating on the cursor or using methods
     such as `~Cursor.fetchone()`, `~Cursor.fetchmany()`, `~Cursor.fetchall()`.
 
-- Using these objects as context managers (i.e. using ``with``) will make sure
+- Using these objects as context managers (i.e. using `!with`) will make sure
   to close them and free their resources at the end of the block (notice that
   :ref:`this is different from psycopg2 <diff-with>`).
 
@@ -146,7 +146,7 @@ using a result in a single expression:
 
 
 .. index::
-    pair: Connection; ``with``
+    pair: Connection; `!with`
 
 .. _with-connection:
 
@@ -182,7 +182,7 @@ equivalent of:
 .. note::
     This behaviour is not what `!psycopg2` does: in `!psycopg2` :ref:`there is
     no final close() <pg2:with>` and the connection can be used in several
-    ``with`` statements to manage different transactions. This behaviour has
+    `!with` statements to manage different transactions. This behaviour has
     been considered non-standard and surprising so it has been replaced by the
     more explicit `~Connection.transaction()` block.
 
@@ -194,19 +194,19 @@ developer is free to use (and responsible for calling) `~Connection.commit()`,
 
 .. warning::
     If a connection is just left to go out of scope, the way it will behave
-    with or without the use of a ``with`` block is different:
+    with or without the use of a `!with` block is different:
 
-    - if the connection is used without a ``with`` block, the server will find
+    - if the connection is used without a `!with` block, the server will find
       a connection closed INTRANS and roll back the current transaction;
 
-    - if the connection is used with a ``with`` block, there will be an
+    - if the connection is used with a `!with` block, there will be an
       explicit COMMIT and the operations will be finalised.
 
-    You should use a ``with`` block when your intention is just to execute a
+    You should use a `!with` block when your intention is just to execute a
     set of operations and then committing the result, which is the most usual
     thing to do with a connection. If your connection life cycle and
     transaction pattern is different, and want more control on it, the use
-    without ``with`` might be more convenient.
+    without `!with` might be more convenient.
 
     See :ref:`transactions` for more information.
 

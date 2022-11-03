@@ -118,7 +118,7 @@ its `~psycopg.adapt.AdaptersMap.types` attribute.
    `~psycopg.Connection` or `~psycopg.Cursor` (e.g. `!conn.adapters.types`).
 
    The global registry, from which the others inherit from, is available as
-   `psycopg.adapters`\ ``.types``.
+   `psycopg.adapters`\ `!.types`.
 
    .. automethod:: __getitem__
 
@@ -156,11 +156,11 @@ See :ref:`adapt-json` for details.
 .. autoclass:: Json
 .. autoclass:: Jsonb
 
-Wrappers to signal to convert ``obj`` to a json or jsonb PostgreSQL value.
+Wrappers to signal to convert `!obj` to a json or jsonb PostgreSQL value.
 
 Any object supported by the underlying `!dumps()` function can be wrapped.
 
-If a ``dumps`` function is passed to the wrapper, use it to dump the wrapped
+If a `!dumps` function is passed to the wrapper, use it to dump the wrapped
 object. Otherwise use the function specified by `set_json_dumps()`.
 
 

@@ -174,7 +174,7 @@ class BaseConnection(Generic[Row]):
         `!True` if the connection was interrupted.
 
         A broken connection is always `closed`, but wasn't closed in a clean
-        way, such as using `close()` or a ``with`` block.
+        way, such as using `close()` or a `!with` block.
         """
         return self.pgconn.status == BAD and not self._closed
 
@@ -988,7 +988,7 @@ class Connection(BaseConnection[Row]):
 
     def tpc_begin(self, xid: Union[Xid, str]) -> None:
         """
-        Begin a TPC transaction with the given transaction ID *xid*.
+        Begin a TPC transaction with the given transaction ID `!xid`.
         """
         with self.lock:
             self.wait(self._tpc_begin_gen(xid))
