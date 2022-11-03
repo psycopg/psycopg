@@ -335,7 +335,7 @@ class BaseConnection(Generic[Row]):
         wself: "ReferenceType[BaseConnection[Row]]", res: "PGresult"
     ) -> None:
         self = wself()
-        if not (self and self._notice_handler):
+        if not (self and self._notice_handlers):
             return
 
         diag = e.Diagnostic(res, pgconn_encoding(self.pgconn))
