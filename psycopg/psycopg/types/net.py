@@ -42,7 +42,7 @@ class _LazyIpaddress:
         global IPv4Address, IPv6Address, IPv4Interface, IPv6Interface
         global IPv4Network, IPv6Network
 
-        if not ip_address:
+        if ip_address is None:
             from ipaddress import ip_address, ip_interface, ip_network
             from ipaddress import IPv4Address, IPv6Address
             from ipaddress import IPv4Interface, IPv6Interface

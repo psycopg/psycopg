@@ -38,7 +38,7 @@ class UUIDLoader(Loader):
     def __init__(self, oid: int, context: Optional[AdaptContext] = None):
         super().__init__(oid, context)
         global UUID
-        if not UUID:
+        if UUID is None:
             from uuid import UUID
 
     def load(self, data: Buffer) -> "uuid.UUID":

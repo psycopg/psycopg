@@ -461,7 +461,7 @@ class FileWriter(Writer):
         self.file = file
 
     def write(self, data: Buffer) -> None:
-        self.file.write(data)
+        self.file.write(data)  # type: ignore[arg-type]
 
 
 class AsyncCopy(BaseCopy["AsyncConnection[Any]"]):
@@ -831,8 +831,8 @@ def _format_row_binary(
 def _parse_row_text(data: Buffer, tx: Transformer) -> Tuple[Any, ...]:
     if not isinstance(data, bytes):
         data = bytes(data)
-    fields = data.split(b"\t")  # type: ignore
-    fields[-1] = fields[-1][:-1]  # type: ignore  # drop \n
+    fields = data.split(b"\t")
+    fields[-1] = fields[-1][:-1]  # drop \n
     row = [None if f == b"\\N" else _load_re.sub(_load_sub, f) for f in fields]
     return tx.load_sequence(row)
 

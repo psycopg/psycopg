@@ -37,7 +37,7 @@ class _BaseEnumLoader(Loader, Generic[E]):
             return self._load_map[data]
         except KeyError:
             enc = conn_encoding(self.connection)
-            label = data.decode(enc, "replace")  # type: ignore[union-attr]
+            label = data.decode(enc, "replace")
             raise e.DataError(
                 f"bad member for enum {self.enum.__qualname__}: {label!r}"
             )

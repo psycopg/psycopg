@@ -96,7 +96,6 @@ def error_message(obj: Union[PGconn, PGresult], encoding: str = "utf8") -> str:
 
     elif hasattr(obj, "error_message"):
         # obj is a PGconn
-        obj = cast(PGconn, obj)
         if obj.status == OK:
             encoding = pgconn_encoding(obj)
         bmsg = obj.error_message

@@ -364,9 +364,7 @@ class PGconn:
             aparams = (c_char_p * nparams)(
                 *(
                     # convert bytearray/memoryview to bytes
-                    b
-                    if b is None or isinstance(b, bytes)
-                    else bytes(b)  # type: ignore[arg-type]
+                    b if b is None or isinstance(b, bytes) else bytes(b)
                     for b in param_values
                 )
             )
