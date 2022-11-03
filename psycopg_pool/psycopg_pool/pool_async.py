@@ -41,15 +41,17 @@ class AsyncConnectionPool(BasePool[AsyncConnection[Any]]):
         self._configure = configure
         self._reset = reset
 
-        self._lock = asyncio.Lock()
+        # asyncio objects, created on open to attach them to the right loop.
+        self._lock: asyncio.Lock
+        self._sched: AsyncScheduler
+        self._tasks: "asyncio.Queue[MaintenanceTask]"
+
         self._waiting = Deque["AsyncClient"]()
 
         # to notify that the pool is full
         self._pool_full_event: Optional[asyncio.Event] = None
 
-        self._sched = AsyncScheduler()
         self._sched_runner: Optional[Task[None]] = None
-        self._tasks: "asyncio.Queue[MaintenanceTask]" = asyncio.Queue()
         self._workers: List[Task[None]] = []
 
         super().__init__(conninfo, **kwargs)
@@ -99,10 +101,11 @@ class AsyncConnectionPool(BasePool[AsyncConnection[Any]]):
         logger.info("connection requested from %r", self.name)
         self._stats[self._REQUESTS_NUM] += 1
 
+        self._check_open_getconn()
+
         # Critical section: decide here if there's a connection ready
         # or if the client needs to wait.
         async with self._lock:
-            self._check_open_getconn()
             conn = await self._get_ready_connection(timeout)
             if not conn:
                 # No connection available: put the client in the waiting queue
@@ -185,6 +188,12 @@ class AsyncConnectionPool(BasePool[AsyncConnection[Any]]):
         return True
 
     async def open(self, wait: bool = False, timeout: float = 30.0) -> None:
+        # Make sure the lock is created after there is an event loop
+        try:
+            self._lock
+        except AttributeError:
+            self._lock = asyncio.Lock()
+
         async with self._lock:
             self._open()
 
@@ -196,6 +205,16 @@ class AsyncConnectionPool(BasePool[AsyncConnection[Any]]):
             return
 
         self._check_open()
+
+        # Create these objects now to attach them to the right loop.
+        # See #219
+        self._tasks = asyncio.Queue()
+        self._sched = AsyncScheduler()
+        # This has been most likely, but not necessarily, created in `open()`.
+        try:
+            self._lock
+        except AttributeError:
+            self._lock = asyncio.Lock()
 
         self._closed = False
         self._opened = True
