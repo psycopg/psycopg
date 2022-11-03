@@ -5,9 +5,7 @@ psycopg_c.pq.Escaping object implementation.
 # Copyright (C) 2020 The Psycopg Team
 
 from libc.string cimport strlen
-from cpython.bytearray cimport PyByteArray_FromStringAndSize, PyByteArray_Resize
-from cpython.bytearray cimport PyByteArray_AS_STRING
-from cpython.memoryview cimport PyMemoryView_FromObject
+from cpython.mem cimport PyMem_Malloc, PyMem_Free
 
 
 cdef class Escaping:
@@ -16,7 +14,6 @@ cdef class Escaping:
 
     cpdef escape_literal(self, data):
         cdef char *out
-        cdef bytes rv
         cdef char *ptr
         cdef Py_ssize_t length
 
@@ -33,9 +30,9 @@ cdef class Escaping:
                 f"escape_literal failed: {error_message(self.conn)}"
             )
 
-        return PyMemoryView_FromObject(
-            PQBuffer._from_buffer(<unsigned char *>out, strlen(out))
-        )
+        rv = out[:strlen(out)]
+        libpq.PQfreemem(out)
+        return rv
 
     cpdef escape_identifier(self, data):
         cdef char *out
@@ -55,41 +52,40 @@ cdef class Escaping:
                 f"escape_identifier failed: {error_message(self.conn)}"
             )
 
-        return PyMemoryView_FromObject(
-            PQBuffer._from_buffer(<unsigned char *>out, strlen(out))
-        )
+        rv = out[:strlen(out)]
+        libpq.PQfreemem(out)
+        return rv
 
     cpdef escape_string(self, data):
         cdef int error
         cdef size_t len_out
         cdef char *ptr
+        cdef char *buf_out
         cdef Py_ssize_t length
-        cdef bytearray rv
 
         _buffer_as_string_and_size(data, &ptr, &length)
-
-        rv = PyByteArray_FromStringAndSize("", 0)
-        PyByteArray_Resize(rv, length * 2 + 1)
 
         if self.conn is not None:
             if self.conn._pgconn_ptr is NULL:
                 raise e.OperationalError("the connection is closed")
 
+            buf_out = <char *>PyMem_Malloc(length * 2 + 1)
             len_out = libpq.PQescapeStringConn(
-                self.conn._pgconn_ptr, PyByteArray_AS_STRING(rv),
-                ptr, length, &error
+                self.conn._pgconn_ptr, buf_out, ptr, length, &error
             )
             if error:
+                PyMem_Free(buf_out)
                 raise e.OperationalError(
                     f"escape_string failed: {error_message(self.conn)}"
                 )
 
         else:
-            len_out = libpq.PQescapeString(PyByteArray_AS_STRING(rv), ptr, length)
+            buf_out = <char *>PyMem_Malloc(length * 2 + 1)
+            len_out = libpq.PQescapeString(buf_out, ptr, length)
 
-        # shrink back or the length will be reported different
-        PyByteArray_Resize(rv, len_out)
-        return PyMemoryView_FromObject(rv)
+        rv = buf_out[:len_out]
+        PyMem_Free(buf_out)
+        return rv
 
     cpdef escape_bytea(self, data):
         cdef size_t len_out
@@ -113,9 +109,9 @@ cdef class Escaping:
                 f"couldn't allocate for escape_bytea of {len(data)} bytes"
             )
 
-        return PyMemoryView_FromObject(
-            PQBuffer._from_buffer(out, len_out - 1)  # out includes final 0
-        )
+        rv = out[:len_out - 1]  # out includes final 0
+        libpq.PQfreemem(out)
+        return rv
 
     cpdef unescape_bytea(self, const unsigned char *data):
         # not needed, but let's keep it symmetric with the escaping:
@@ -131,4 +127,6 @@ cdef class Escaping:
                 f"couldn't allocate for unescape_bytea of {len(data)} bytes"
             )
 
-        return PyMemoryView_FromObject(PQBuffer._from_buffer(out, len_out))
+        rv = out[:len_out]
+        libpq.PQfreemem(out)
+        return rv

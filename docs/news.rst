@@ -7,6 +7,16 @@
 ``psycopg`` release notes
 =========================
 
+Future releases
+---------------
+
+Psycopg 3.1.5 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Return `!bytes` instead of `!memoryview` from `pq.Encoding` methods
+  (:ticket:`#422`).
+
+
 Current release
 ---------------
 

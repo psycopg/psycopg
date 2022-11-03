@@ -368,17 +368,17 @@ class Escaping(Protocol):
     def __init__(self, conn: Optional[PGconn] = None):
         ...
 
-    def escape_literal(self, data: Buffer) -> memoryview:
+    def escape_literal(self, data: Buffer) -> bytes:
         ...
 
-    def escape_identifier(self, data: Buffer) -> memoryview:
+    def escape_identifier(self, data: Buffer) -> bytes:
         ...
 
-    def escape_string(self, data: Buffer) -> memoryview:
+    def escape_string(self, data: Buffer) -> bytes:
         ...
 
-    def escape_bytea(self, data: Buffer) -> memoryview:
+    def escape_bytea(self, data: Buffer) -> bytes:
         ...
 
-    def unescape_bytea(self, data: bytes) -> memoryview:
+    def unescape_bytea(self, data: bytes) -> bytes:
         ...

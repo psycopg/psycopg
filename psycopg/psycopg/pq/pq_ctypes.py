@@ -955,7 +955,7 @@ class Escaping:
     def __init__(self, conn: Optional[PGconn] = None):
         self.conn = conn
 
-    def escape_literal(self, data: "abc.Buffer") -> memoryview:
+    def escape_literal(self, data: "abc.Buffer") -> bytes:
         if not self.conn:
             raise e.OperationalError("escape_literal failed: no connection provided")
 
@@ -970,9 +970,9 @@ class Escaping:
             )
         rv = string_at(out)
         impl.PQfreemem(out)
-        return memoryview(rv)
+        return rv
 
-    def escape_identifier(self, data: "abc.Buffer") -> memoryview:
+    def escape_identifier(self, data: "abc.Buffer") -> bytes:
         if not self.conn:
             raise e.OperationalError("escape_identifier failed: no connection provided")
 
@@ -987,9 +987,9 @@ class Escaping:
             )
         rv = string_at(out)
         impl.PQfreemem(out)
-        return memoryview(rv)
+        return rv
 
-    def escape_string(self, data: "abc.Buffer") -> memoryview:
+    def escape_string(self, data: "abc.Buffer") -> bytes:
         if not isinstance(data, bytes):
             data = bytes(data)
 
@@ -1018,9 +1018,9 @@ class Escaping:
                 len(data),
             )
 
-        return memoryview(out.value)
+        return out.value
 
-    def escape_bytea(self, data: "abc.Buffer") -> memoryview:
+    def escape_bytea(self, data: "abc.Buffer") -> bytes:
         len_out = c_size_t()
         # TODO: might be able to do without a copy but it's a mess.
         # the C library does it better anyway, so maybe not worth optimising
@@ -1048,9 +1048,9 @@ class Escaping:
 
         rv = string_at(out, len_out.value - 1)  # out includes final 0
         impl.PQfreemem(out)
-        return memoryview(rv)
+        return rv
 
-    def unescape_bytea(self, data: bytes) -> memoryview:
+    def unescape_bytea(self, data: bytes) -> bytes:
         # not needed, but let's keep it symmetric with the escaping:
         # if a connection is passed in, it must be valid.
         if self.conn:
@@ -1068,7 +1068,7 @@ class Escaping:
 
         rv = string_at(out, len_out.value)
         impl.PQfreemem(out)
-        return memoryview(rv)
+        return rv
 
 
 # importing the ssl module sets up Python's libcrypto callbacks
