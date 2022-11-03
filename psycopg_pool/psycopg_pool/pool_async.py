@@ -204,6 +204,9 @@ class AsyncConnectionPool(BasePool[AsyncConnection[Any]]):
         if not self._closed:
             return
 
+        # Throw a RuntimeError if the pool is open outside a running loop.
+        asyncio.get_running_loop()
+
         self._check_open()
 
         # Create these objects now to attach them to the right loop.
