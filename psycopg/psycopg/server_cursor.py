@@ -12,7 +12,7 @@ from . import pq
 from . import sql
 from . import errors as e
 from . import generators
-from .abc import ConnectionType, Query, Params, PQGen
+from .abc import ConnectionType, Query, Params
 from .rows import Row, RowFactory, AsyncRowFactory
 from .cursor import BaseCursor, Cursor
 from .cursor_async import AsyncCursor
@@ -97,17 +97,19 @@ class ServerCursorMixin(BaseCursor[ConnectionType, Row]):
         query: Query,
         params: Optional[Params] = None,
         binary: Optional[bool] = None,
-    ) -> PQGen[None]:
+    ) -> None:
+        """Generator implementing `ServerCursor.execute()`."""
+
         query = self._make_declare_statement(query)
 
         # If the cursor is being reused, the previous one must be closed.
         if self._described:
-            yield from self._close_gen()
+            self._close_gen()
             self._described = False
 
-        yield from self._start_query(query)
+        self._start_query(query)
         pgq = self._convert_query(query, params)
-        results = yield from generators.execute_query(
+        results = generators.execute_query(
             self._pgconn, pgq, force_extended=True
         )
         if results[-1].status != COMMAND_OK:
@@ -117,10 +119,10 @@ class ServerCursorMixin(BaseCursor[ConnectionType, Row]):
         self._format = self._get_result_format(binary)
 
         # The above result only returned COMMAND_OK. Get the cursor shape
-        yield from self._describe_gen()
+        self._describe_gen()
 
-    def _describe_gen(self) -> PQGen[None]:
-        results = yield from generators.describe_portal(
+    def _describe_gen(self) -> None:
+        results = generators.describe_portal(
             self._pgconn, self._name.encode(self._encoding)
         )
         self._check_results(results)
@@ -128,7 +130,7 @@ class ServerCursorMixin(BaseCursor[ConnectionType, Row]):
         self._select_current_result(0, format=self._format)
         self._described = True
 
-    def _close_gen(self) -> PQGen[None]:
+    def _close_gen(self) -> None:
         ts = self._conn.pgconn.transaction_status
 
         # if the connection is not in a sane state, don't even try
@@ -145,28 +147,26 @@ class ServerCursorMixin(BaseCursor[ConnectionType, Row]):
             query = sql.SQL(
                 "SELECT 1 FROM pg_catalog.pg_cursors WHERE name = {}"
             ).format(sql.Literal(self._name))
-            res = yield from self._conn._exec_command_no_pipeline(query)
-            # pipeline mode otherwise, unsupported here.
-            assert res is not None
+            res = self._conn._exec_command_no_pipeline(query)
             if res.ntuples == 0:
                 return
 
         query = sql.SQL("CLOSE {}").format(sql.Identifier(self._name))
-        yield from self._conn._exec_command_no_pipeline(query)
+        self._conn._exec_command_no_pipeline(query)
 
-    def _fetch_gen(self, num: Optional[int]) -> PQGen[List[Row]]:
+    def _fetch_gen(self, num: Optional[int]) -> List[Row]:
         if self.closed:
             raise e.InterfaceError("the cursor is closed")
         # If we are stealing the cursor, make sure we know its shape
         if not self._described:
-            yield from self._start_query()
-            yield from self._describe_gen()
+            self._start_query()
+            self._describe_gen()
 
         query = sql.SQL("FETCH FORWARD {} FROM {}").format(
             sql.SQL("ALL") if num is None else sql.Literal(num),
             sql.Identifier(self._name),
         )
-        res = yield from self._conn._exec_command_no_pipeline(
+        res = self._conn._exec_command_no_pipeline(
             query, result_format=self._format
         )
         # pipeline mode otherwise, unsupported here.
@@ -176,7 +176,7 @@ class ServerCursorMixin(BaseCursor[ConnectionType, Row]):
         self._tx.set_pgresult(res, set_loaders=False)
         return self._tx.load_rows(0, res.ntuples, self._make_row)
 
-    def _scroll_gen(self, value: int, mode: str) -> PQGen[None]:
+    def _scroll_gen(self, value: int, mode: str) -> None:
         if mode not in ("relative", "absolute"):
             raise ValueError(f"bad mode: {mode}. It should be 'relative' or 'absolute'")
         query = sql.SQL("MOVE{} {} FROM {}").format(
@@ -184,7 +184,7 @@ class ServerCursorMixin(BaseCursor[ConnectionType, Row]):
             sql.Literal(value),
             sql.Identifier(self._name),
         )
-        yield from self._conn._exec_command_no_pipeline(query)
+        self._conn._exec_command_no_pipeline(query)
 
     def _make_declare_statement(self, query: Query) -> sql.Composed:
 
@@ -266,7 +266,7 @@ class ServerCursor(ServerCursorMixin["Connection[Any]", Row], Cursor[Row]):
             if self.closed:
                 return
             if not self._conn.closed:
-                self._conn.wait(self._close_gen())
+                self._close_gen()
             super().close()
 
     def execute(
@@ -289,7 +289,7 @@ class ServerCursor(ServerCursorMixin["Connection[Any]", Row], Cursor[Row]):
 
         try:
             with self._conn.lock:
-                self._conn.wait(self._declare_gen(query, params, binary))
+                self._declare_gen(query, params, binary)
         except e.Error as ex:
             raise ex.with_traceback(None)
 
@@ -307,7 +307,7 @@ class ServerCursor(ServerCursorMixin["Connection[Any]", Row], Cursor[Row]):
 
     def fetchone(self) -> Optional[Row]:
         with self._conn.lock:
-            recs = self._conn.wait(self._fetch_gen(1))
+            recs = self._fetch_gen(1)
         if recs:
             self._pos += 1
             return recs[0]
@@ -318,20 +318,20 @@ class ServerCursor(ServerCursorMixin["Connection[Any]", Row], Cursor[Row]):
         if not size:
             size = self.arraysize
         with self._conn.lock:
-            recs = self._conn.wait(self._fetch_gen(size))
+            recs = self._fetch_gen(size)
         self._pos += len(recs)
         return recs
 
     def fetchall(self) -> List[Row]:
         with self._conn.lock:
-            recs = self._conn.wait(self._fetch_gen(None))
+            recs = self._fetch_gen(None)
         self._pos += len(recs)
         return recs
 
     def __iter__(self) -> Iterator[Row]:
         while True:
             with self._conn.lock:
-                recs = self._conn.wait(self._fetch_gen(self.itersize))
+                recs = self._fetch_gen(self.itersize)
             for rec in recs:
                 self._pos += 1
                 yield rec
@@ -340,7 +340,7 @@ class ServerCursor(ServerCursorMixin["Connection[Any]", Row], Cursor[Row]):
 
     def scroll(self, value: int, mode: str = "relative") -> None:
         with self._conn.lock:
-            self._conn.wait(self._scroll_gen(value, mode))
+            self._scroll_gen(value, mode)
         # Postgres doesn't have a reliable way to report a cursor out of bound
         if mode == "relative":
             self._pos += value

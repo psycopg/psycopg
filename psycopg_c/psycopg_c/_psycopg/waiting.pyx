@@ -189,3 +189,16 @@ def wait_c(gen: PQGen[RV], int fileno, timeout = None) -> RV:
     except StopIteration as ex:
         rv: RV = ex.args[0] if ex.args else None
         return rv
+
+
+cdef int wait_ng(int fileno, int wait) except -1:
+    cdef int ready
+
+    while True:
+        ready = wait_c_impl(fileno, wait, 0.1)
+        if ready > 0:
+            return ready
+
+
+def wait_ng_c(int fileno, int wait) -> int:
+    return wait_ng(fileno, wait)

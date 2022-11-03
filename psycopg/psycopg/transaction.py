@@ -12,7 +12,7 @@ from typing import Generic, Iterator, Optional, Type, Union, TypeVar, TYPE_CHECK
 from . import pq
 from . import sql
 from . import errors as e
-from .abc import ConnectionType, PQGen
+from .abc import ConnectionType
 
 if TYPE_CHECKING:
     from typing import Any
@@ -88,29 +88,29 @@ class BaseTransaction(Generic[ConnectionType]):
         sp = f"{self.savepoint_name!r} " if self.savepoint_name else ""
         return f"<{cls} {sp}({status}) {info} at 0x{id(self):x}>"
 
-    def _enter_gen(self) -> PQGen[None]:
+    def _enter_gen(self) -> None:
         if self._entered:
             raise TypeError("transaction blocks can be used only once")
         self._entered = True
 
         self._push_savepoint()
         for command in self._get_enter_commands():
-            yield from self._exec_command(command)
+            self._exec_command(command)
 
     def _exit_gen(
         self,
         exc_type: Optional[Type[BaseException]],
         exc_val: Optional[BaseException],
         exc_tb: Optional[TracebackType],
-    ) -> PQGen[bool]:
+    ) -> bool:
         if not exc_val and not self.force_rollback:
-            yield from self._commit_gen()
+            self._commit_gen()
             return False
         else:
             # try to rollback, but if there are problems (connection in a bad
             # state) just warn without clobbering the exception bubbling up.
             try:
-                return (yield from self._rollback_gen(exc_val))
+                return self._rollback_gen(exc_val)
             except OutOfOrderTransactionNesting:
                 # Clobber an exception happened in the block with the exception
                 # caused by out-of-order transaction detected, so make the
@@ -122,16 +122,16 @@ class BaseTransaction(Generic[ConnectionType]):
                 logger.warning("error ignored in rollback of %s: %s", self, exc2)
                 return False
 
-    def _commit_gen(self) -> PQGen[None]:
+    def _commit_gen(self) -> None:
         ex = self._pop_savepoint("commit")
         self._exited = True
         if ex:
             raise ex
 
         for command in self._get_commit_commands():
-            yield from self._exec_command(command)
+            self._exec_command(command)
 
-    def _rollback_gen(self, exc_val: Optional[BaseException]) -> PQGen[bool]:
+    def _rollback_gen(self, exc_val: Optional[BaseException]) -> bool:
         if isinstance(exc_val, Rollback):
             logger.debug(f"{self._conn}: Explicit rollback from: ", exc_info=True)
 
@@ -141,7 +141,7 @@ class BaseTransaction(Generic[ConnectionType]):
             raise ex
 
         for command in self._get_rollback_commands():
-            yield from self._exec_command(command)
+            self._exec_command(command)
 
         if isinstance(exc_val, Rollback):
             if not exc_val.transaction or exc_val.transaction is self:
@@ -193,12 +193,12 @@ class BaseTransaction(Generic[ConnectionType]):
         if self._conn._prepared.clear():
             yield from self._conn._prepared.get_maintenance_commands()
 
-    def _exec_command(self, command: bytes) -> PQGen[None]:
+    def _exec_command(self, command: bytes) -> None:
         pipeline = self._conn._pipeline
         if pipeline:
             self._conn._exec_command_pipeline(pipeline, command)
         else:
-            yield from self._conn._exec_command_no_pipeline(command)
+            self._conn._exec_command_no_pipeline(command)
 
     def _push_savepoint(self) -> None:
         """
@@ -250,7 +250,7 @@ class Transaction(BaseTransaction["Connection[Any]"]):
 
     def __enter__(self: _Self) -> _Self:
         with self._conn.lock:
-            self._conn.wait(self._enter_gen())
+            self._enter_gen()
         return self
 
     def __exit__(
@@ -261,7 +261,7 @@ class Transaction(BaseTransaction["Connection[Any]"]):
     ) -> bool:
         if self.pgconn.status == OK:
             with self._conn.lock:
-                return self._conn.wait(self._exit_gen(exc_type, exc_val, exc_tb))
+                return self._exit_gen(exc_type, exc_val, exc_tb)
         else:
             return False
 

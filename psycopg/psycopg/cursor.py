@@ -15,7 +15,7 @@ from . import pq
 from . import adapt
 from . import errors as e
 from . import generators
-from .abc import ConnectionType, Query, Params, PQGen
+from .abc import ConnectionType, Query, Params
 from .copy import Copy, Writer as CopyWriter
 from .rows import Row, RowMaker, RowFactory
 from ._column import Column
@@ -189,13 +189,13 @@ class BaseCursor(Generic[ConnectionType, Row]):
         *,
         prepare: Optional[bool] = None,
         binary: Optional[bool] = None,
-    ) -> PQGen[None]:
+    ) -> None:
         """
         Generator implementing `Cursor.execute()` when not in pipeline mode.
         """
-        yield from self._start_query(query)
+        self._start_query(query)
         pgq = self._convert_query(query, params)
-        results = yield from self._maybe_prepare_gen_no_pipeline(
+        results = self._maybe_prepare_gen_no_pipeline(
             pgq, prepare=prepare, binary=binary
         )
         self._check_results(results)
@@ -204,7 +204,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
 
         self._last_query = query
 
-        yield from self._end_query_no_pipeline()
+        self._end_query_no_pipeline()
 
     def _execute_gen_pipeline(
         self,
@@ -214,25 +214,25 @@ class BaseCursor(Generic[ConnectionType, Row]):
         *,
         prepare: Optional[bool] = None,
         binary: Optional[bool] = None,
-    ) -> PQGen[None]:
+    ) -> None:
         """
         Generator implementing `Cursor.execute()` when in pipeline mode.
         """
-        yield from self._start_query(query)
+        self._start_query(query)
         pgq = self._convert_query(query, params)
         self._maybe_prepare_gen_pipeline(pipeline, pgq, prepare=prepare, binary=binary)
         self._end_query_pipeline(pipeline)
-        yield from pipeline._communicate_gen()
+        pipeline._communicate_gen()
 
         self._last_query = query
 
     def _executemany_gen_no_pipeline(
         self, query: Query, params_seq: Iterable[Params], returning: bool
-    ) -> PQGen[None]:
+    ) -> None:
         """
         Generator implementing `Cursor.executemany()` with pipelines not available.
         """
-        yield from self._start_query(query)
+        self._start_query(query)
         first = True
         nrows = 0
         for params in params_seq:
@@ -242,7 +242,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
             else:
                 pgq.dump(params)
 
-            results = yield from self._maybe_prepare_gen_no_pipeline(pgq, prepare=True)
+            results = self._maybe_prepare_gen_no_pipeline(pgq, prepare=True)
             self._check_results(results)
             if returning:
                 self._results.extend(results)
@@ -259,7 +259,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
         self._rowcount = nrows
         self._last_query = query
 
-        yield from self._end_query_no_pipeline()
+        self._end_query_no_pipeline()
 
     def _executemany_gen_pipeline(
         self,
@@ -267,11 +267,11 @@ class BaseCursor(Generic[ConnectionType, Row]):
         query: Query,
         params_seq: Iterable[Params],
         returning: bool,
-    ) -> PQGen[None]:
+    ) -> None:
         """
         Generator implementing `Cursor.executemany()` with pipelines available.
         """
-        yield from self._start_query(query)
+        self._start_query(query)
         self._rowcount = 0
 
         assert self._execmany_returning is None
@@ -286,12 +286,12 @@ class BaseCursor(Generic[ConnectionType, Row]):
                 pgq.dump(params)
 
             self._maybe_prepare_gen_pipeline(pipeline, pgq, prepare=True)
-            yield from pipeline._communicate_gen()
+            pipeline._communicate_gen()
 
         self._last_query = query
 
         if returning:
-            yield from pipeline._fetch_gen(flush=True)
+            pipeline._fetch_gen(flush=True)
 
         self._end_query_pipeline(pipeline)
 
@@ -301,22 +301,22 @@ class BaseCursor(Generic[ConnectionType, Row]):
         *,
         prepare: Optional[bool] = None,
         binary: Optional[bool] = None,
-    ) -> PQGen[List["PGresult"]]:
+    ) -> List["PGresult"]:
         # Check if the query is prepared or needs preparing
         fmt = self._get_result_format(binary)
         prep, name = self._get_prepared(pgq, prepare)
         if prep is Prepare.NO:
             # The query must be executed without preparing
-            results = yield from generators.execute_query(
+            results = generators.execute_query(
                 self._pgconn, pgq, result_format=fmt
             )
         else:
             # If the query is not already prepared, prepare it.
             if prep is Prepare.SHOULD:
-                yield from generators.prepare_query(self._pgconn, name, pgq)
+                generators.prepare_query(self._pgconn, name, pgq)
 
             # Then execute it.
-            results = yield from generators.execute_prepared_query(
+            results = generators.execute_prepared_query(
                 self._pgconn, name, pgq, result_format=fmt
             )
 
@@ -368,16 +368,16 @@ class BaseCursor(Generic[ConnectionType, Row]):
         params: Optional[Params] = None,
         *,
         binary: Optional[bool] = None,
-    ) -> PQGen[None]:
+    ) -> None:
         """Generator to send the query for `Cursor.stream()`."""
-        yield from self._start_query(query)
+        self._start_query(query)
         pgq = self._convert_query(query, params)
         fmt = self._get_result_format(binary)
-        yield from generators.send_single_row(self._pgconn, pgq, result_format=fmt)
+        generators.send_single_row(self._pgconn, pgq, result_format=fmt)
         self._last_query = query
 
-    def _stream_fetchone_gen(self, first: bool) -> PQGen[Optional["PGresult"]]:
-        res = yield from generators.fetch(self._pgconn)
+    def _stream_fetchone_gen(self, first: bool) -> Optional["PGresult"]:
+        res = generators.fetch(self._pgconn)
         if res is None:
             return None
 
@@ -392,7 +392,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
         elif status == TUPLES_OK or status == COMMAND_OK:
             # End of single row results
             while res:
-                res = yield from generators.fetch(self._pgconn)
+                res = generators.fetch_ng(self._pgconn)
             if status != TUPLES_OK:
                 raise e.ProgrammingError(
                     "the operation in stream() didn't produce a result"
@@ -403,7 +403,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
             # Errors, unexpected values
             return self._raise_for_result(res)
 
-    def _start_query(self, query: Optional[Query] = None) -> PQGen[None]:
+    def _start_query(self, query: Optional[Query] = None) -> None:
         """Generator to start the processing of a query.
 
         It is implemented as generator because it may send additional queries,
@@ -416,12 +416,12 @@ class BaseCursor(Generic[ConnectionType, Row]):
         if not self._last_query or (self._last_query is not query):
             self._last_query = None
             self._tx = adapt.Transformer(self)
-        yield from self._conn._start_query()
+        self._conn._start_query()
 
-    def _end_query_no_pipeline(self) -> PQGen[None]:
+    def _end_query_no_pipeline(self) -> None:
         """Generator to finish the processing of a query."""
         for cmd in self._conn._prepared.get_maintenance_commands():
-            yield from self._conn._exec_command_no_pipeline(cmd)
+            self._conn._exec_command_no_pipeline(cmd)
 
     def _end_query_pipeline(self, pipeline: BasePipeline) -> None:
         """Generator to finish the processing of a query."""
@@ -430,7 +430,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
 
     def _start_copy_gen(
         self, statement: Query, params: Optional[Params] = None
-    ) -> PQGen[None]:
+    ) -> None:
         """Generator implementing sending a command for `Cursor.copy()."""
 
         # The connection gets in an unrecoverable state if we attempt COPY in
@@ -438,14 +438,14 @@ class BaseCursor(Generic[ConnectionType, Row]):
         if self._conn._pipeline:
             raise e.NotSupportedError("COPY cannot be used in pipeline mode")
 
-        yield from self._start_query()
+        self._start_query()
 
         # Merge the params client-side
         pgq = PostgresClientQuery(self._tx)
         pgq.convert(statement, params)
         self._query = pgq
 
-        results = yield from generators.execute_query(self._pgconn, pgq)
+        results = generators.execute_query(self._pgconn, pgq)
         self._check_copy_result(results)
         self._results = results
         self._select_current_result(0)
@@ -743,14 +743,13 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
             with self._conn.lock:
                 p = self._conn._pipeline
                 if p:
-                    gen = self._execute_gen_pipeline(
+                    self._execute_gen_pipeline(
                         p, query, params, prepare=prepare, binary=binary
                     )
                 else:
-                    gen = self._execute_gen_no_pipeline(
+                    self._execute_gen_no_pipeline(
                         query, params, prepare=prepare, binary=binary
                     )
-                self._conn.wait(gen)
         except e.Error as ex:
             raise ex.with_traceback(None)
         return self
@@ -772,24 +771,18 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
                 with self._conn.lock:
                     p = self._conn._pipeline
                     if p:
-                        self._conn.wait(
-                            self._executemany_gen_pipeline(
-                                p, query, params_seq, returning
-                            )
+                        self._executemany_gen_pipeline(
+                            p, query, params_seq, returning
                         )
                 # Otherwise, make a new one
                 if not p:
                     with self._conn.pipeline() as p, self._conn.lock:
-                        self._conn.wait(
-                            self._executemany_gen_pipeline(
-                                p, query, params_seq, returning
-                            )
+                        self._executemany_gen_pipeline(
+                            p, query, params_seq, returning
                         )
             else:
                 with self._conn.lock:
-                    self._conn.wait(
-                        self._executemany_gen_no_pipeline(query, params_seq, returning)
-                    )
+                    self._executemany_gen_no_pipeline(query, params_seq, returning)
         except e.Error as ex:
             raise ex.with_traceback(None)
 
@@ -809,9 +802,9 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
         with self._conn.lock:
 
             try:
-                self._conn.wait(self._stream_send_gen(query, params, binary=binary))
+                self._stream_send_gen(query, params, binary=binary)
                 first = True
-                while self._conn.wait(self._stream_fetchone_gen(first)):
+                while self._stream_fetchone_gen(first):
                     # We know that, if we got a result, it has a single row.
                     rec: Row = self._tx.load_row(0, self._make_row)  # type: ignore
                     yield rec
@@ -826,7 +819,7 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
                     # already received.
                     self._conn.cancel()
                     try:
-                        while self._conn.wait(self._stream_fetchone_gen(first=False)):
+                        while self._stream_fetchone_gen(first=False):
                             pass
                     except Exception:
                         pass
@@ -834,7 +827,7 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
                     # Try to get out of ACTIVE state. Just do a single attempt, which
                     # should work to recover from an error or query cancelled.
                     try:
-                        self._conn.wait(self._stream_fetchone_gen(first=False))
+                        self._stream_fetchone_gen(first=False)
                     except Exception:
                         pass
 
@@ -931,7 +924,7 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
         """
         try:
             with self._conn.lock:
-                self._conn.wait(self._start_copy_gen(statement, params))
+                self._start_copy_gen(statement, params)
 
             with Copy(self, writer=writer) as copy:
                 yield copy
@@ -949,4 +942,4 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
             and self._conn._pipeline
         ):
             with self._conn.lock:
-                self._conn.wait(self._conn._pipeline._fetch_gen(flush=True))
+                self._conn._pipeline._fetch_gen(flush=True)

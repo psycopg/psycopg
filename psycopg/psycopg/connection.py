@@ -18,11 +18,9 @@ from typing_extensions import TypeAlias
 
 from . import pq
 from . import errors as e
-from . import waiting
 from . import postgres
 from . import generators
-from .abc import AdaptContext, ConnectionType, Params, Query, RV
-from .abc import PQGen, PQGenConn
+from .abc import AdaptContext, ConnectionType, Params, Query
 from .sql import Composable, SQL
 from ._tpc import Xid
 from .rows import Row, RowFactory, tuple_row, TupleRow, args_row
@@ -32,7 +30,6 @@ from .cursor import Cursor
 from ._compat import LiteralString
 from .conninfo import make_conninfo, conninfo_to_dict, ConnectionInfo
 from ._pipeline import BasePipeline, Pipeline
-from .generators import notifies, connect
 from ._encodings import pgconn_encoding
 from ._preparing import PrepareManager
 from .transaction import Transaction
@@ -192,8 +189,9 @@ class BaseConnection(Generic[Row]):
     def _set_autocommit(self, value: bool) -> None:
         raise NotImplementedError
 
-    def _set_autocommit_gen(self, value: bool) -> PQGen[None]:
-        yield from self._check_intrans_gen("autocommit")
+    # TODO: remove _gen suffix from these functions NOMERGE
+    def _set_autocommit_gen(self, value: bool) -> None:
+        self._check_intrans_gen("autocommit")
         self._autocommit = bool(value)
 
     @property
@@ -210,8 +208,8 @@ class BaseConnection(Generic[Row]):
     def _set_isolation_level(self, value: Optional[IsolationLevel]) -> None:
         raise NotImplementedError
 
-    def _set_isolation_level_gen(self, value: Optional[IsolationLevel]) -> PQGen[None]:
-        yield from self._check_intrans_gen("isolation_level")
+    def _set_isolation_level_gen(self, value: Optional[IsolationLevel]) -> None:
+        self._check_intrans_gen("isolation_level")
         self._isolation_level = IsolationLevel(value) if value is not None else None
         self._begin_statement = b""
 
@@ -229,8 +227,8 @@ class BaseConnection(Generic[Row]):
     def _set_read_only(self, value: Optional[bool]) -> None:
         raise NotImplementedError
 
-    def _set_read_only_gen(self, value: Optional[bool]) -> PQGen[None]:
-        yield from self._check_intrans_gen("read_only")
+    def _set_read_only_gen(self, value: Optional[bool]) -> None:
+        self._check_intrans_gen("read_only")
         self._read_only = bool(value)
         self._begin_statement = b""
 
@@ -248,16 +246,16 @@ class BaseConnection(Generic[Row]):
     def _set_deferrable(self, value: Optional[bool]) -> None:
         raise NotImplementedError
 
-    def _set_deferrable_gen(self, value: Optional[bool]) -> PQGen[None]:
-        yield from self._check_intrans_gen("deferrable")
+    def _set_deferrable_gen(self, value: Optional[bool]) -> None:
+        self._check_intrans_gen("deferrable")
         self._deferrable = bool(value)
         self._begin_statement = b""
 
-    def _check_intrans_gen(self, attribute: str) -> PQGen[None]:
+    def _check_intrans_gen(self, attribute: str) -> None:
         # Raise an exception if we are in a transaction
         status = self.pgconn.transaction_status
         if status == IDLE and self._pipeline:
-            yield from self._pipeline._sync_gen()
+            self._pipeline._sync_gen()
             status = self.pgconn.transaction_status
         if status != IDLE:
             if self._num_transactions:
@@ -409,6 +407,7 @@ class BaseConnection(Generic[Row]):
     def prepared_max(self, value: int) -> None:
         self._prepared.prepared_max = value
 
+    # TODO: review this comment NOMERGE
     # Generators to perform high-level operations on the connection
     #
     # These operations are expressed in terms of non-blocking generators
@@ -421,20 +420,17 @@ class BaseConnection(Generic[Row]):
 
     @classmethod
     def _connect_gen(
-        cls: Type[ConnectionType],
-        conninfo: str = "",
-        *,
-        autocommit: bool = False,
-    ) -> PQGenConn[ConnectionType]:
+        cls: Type[ConnectionType], conninfo: str = "", *, autocommit: bool = False
+    ) -> ConnectionType:
         """Generator to connect to the database and create a new instance."""
-        pgconn = yield from connect(conninfo)
+        pgconn = generators.connect_ng(conninfo)
         conn = cls(pgconn)
         conn._autocommit = bool(autocommit)
         return conn
 
     def _exec_command_no_pipeline(
         self, command: Query, result_format: pq.Format = TEXT
-    ) -> PQGen["PGresult"]:
+    ) -> "PGresult":
         """
         Generator to send a command and receive the result to the backend.
 
@@ -448,7 +444,7 @@ class BaseConnection(Generic[Row]):
         elif isinstance(command, Composable):
             command = command.as_bytes(self)
 
-        result = yield from generators.execute_command(
+        result = generators.execute_command_ng(
             self.pgconn, command, result_format=result_format
         )
         if result.status != COMMAND_OK and result.status != TUPLES_OK:
@@ -492,7 +488,7 @@ class BaseConnection(Generic[Row]):
             f" in status {self.pgconn.status}"
         )
 
-    def _start_query(self) -> PQGen[None]:
+    def _start_query(self) -> None:
         """Generator to start a transaction if necessary."""
         if self._autocommit:
             return
@@ -502,9 +498,9 @@ class BaseConnection(Generic[Row]):
 
         if self._pipeline:
             self._exec_command_pipeline(self._pipeline, self._get_tx_start_command())
-            yield from self._pipeline._sync_gen()
+            self._pipeline._sync_gen()
         else:
-            yield from self._exec_command_no_pipeline(self._get_tx_start_command())
+            self._exec_command_no_pipeline(self._get_tx_start_command())
 
     def _get_tx_start_command(self) -> bytes:
         if self._begin_statement:
@@ -526,7 +522,7 @@ class BaseConnection(Generic[Row]):
         self._begin_statement = b" ".join(parts)
         return self._begin_statement
 
-    def _commit_gen(self) -> PQGen[None]:
+    def _commit_gen(self) -> None:
         """Generator implementing `Connection.commit()`."""
         if self._num_transactions:
             raise e.ProgrammingError(
@@ -543,11 +539,11 @@ class BaseConnection(Generic[Row]):
 
         if self._pipeline:
             self._exec_command_pipeline(self._pipeline, b"COMMIT")
-            yield from self._pipeline._sync_gen()
+            self._pipeline._sync_gen()
         else:
-            yield from self._exec_command_no_pipeline(b"COMMIT")
+            self._exec_command_no_pipeline(b"COMMIT")
 
-    def _rollback_gen(self) -> PQGen[None]:
+    def _rollback_gen(self) -> None:
         """Generator implementing `Connection.rollback()`."""
         if self._num_transactions:
             raise e.ProgrammingError(
@@ -562,7 +558,7 @@ class BaseConnection(Generic[Row]):
 
         # Get out of a "pipeline aborted" state
         if self._pipeline:
-            yield from self._pipeline._sync_gen()
+            self._pipeline._sync_gen()
 
         if self.pgconn.transaction_status == IDLE:
             return
@@ -572,12 +568,12 @@ class BaseConnection(Generic[Row]):
             self._prepared.clear()
             for cmd in self._prepared.get_maintenance_commands():
                 self._exec_command_pipeline(self._pipeline, cmd)
-            yield from self._pipeline._sync_gen()
+            self._pipeline._sync_gen()
         else:
-            yield from self._exec_command_no_pipeline(b"ROLLBACK")
+            self._exec_command_no_pipeline(b"ROLLBACK")
             self._prepared.clear()
             for cmd in self._prepared.get_maintenance_commands():
-                yield from self._exec_command_no_pipeline(cmd)
+                self._exec_command_no_pipeline(cmd)
 
     def xid(self, format_id: int, gtrid: str, bqual: str) -> Xid:
         """
@@ -592,7 +588,7 @@ class BaseConnection(Generic[Row]):
         self._check_tpc()
         return Xid.from_parts(format_id, gtrid, bqual)
 
-    def _tpc_begin_gen(self, xid: Union[Xid, str]) -> PQGen[None]:
+    def _tpc_begin_gen(self, xid: Union[Xid, str]) -> None:
         self._check_tpc()
 
         if not isinstance(xid, Xid):
@@ -610,9 +606,9 @@ class BaseConnection(Generic[Row]):
             )
 
         self._tpc = (xid, False)
-        yield from self._exec_tpc_command(self._get_tx_start_command())
+        self._exec_tpc_command(self._get_tx_start_command())
 
-    def _tpc_prepare_gen(self) -> PQGen[None]:
+    def _tpc_prepare_gen(self) -> None:
         if not self._tpc:
             raise e.ProgrammingError(
                 "'tpc_prepare()' must be called inside a two-phase transaction"
@@ -623,13 +619,11 @@ class BaseConnection(Generic[Row]):
             )
         xid = self._tpc[0]
         self._tpc = (xid, True)
-        yield from self._exec_tpc_command(
-            SQL("PREPARE TRANSACTION {}").format(str(xid))
-        )
+        self._exec_tpc_command(SQL("PREPARE TRANSACTION {}").format(str(xid)))
 
     def _tpc_finish_gen(
         self, action: LiteralString, xid: Union[Xid, str, None]
-    ) -> PQGen[None]:
+    ) -> None:
         fname = f"tpc_{action.lower()}()"
         if xid is None:
             if not self._tpc:
@@ -648,22 +642,19 @@ class BaseConnection(Generic[Row]):
                 xid = Xid.from_string(xid)
 
         if self._tpc and not self._tpc[1]:
-            meth: Callable[[], PQGen[None]]
-            meth = getattr(self, f"_{action.lower()}_gen")
+            meth: Callable[[], None] = getattr(self, f"_{action.lower()}_gen")
             self._tpc = None
-            yield from meth()
+            meth()
         else:
-            yield from self._exec_tpc_command(
-                SQL("{} PREPARED {}").format(SQL(action), str(xid))
-            )
+            self._exec_tpc_command(SQL("{} PREPARED {}").format(SQL(action), str(xid)))
             self._tpc = None
 
-    def _exec_tpc_command(self, command: Query) -> PQGen[None]:
+    def _exec_tpc_command(self, command: Query) -> None:
         if self._pipeline:
             self._exec_command_pipeline(self._pipeline, command)
-            yield from self._pipeline._sync_gen()
+            self._pipeline._sync_gen()
         else:
-            yield from self._exec_command_no_pipeline(command)
+            self._exec_command_no_pipeline(command)
 
     def _check_tpc(self) -> None:
         """Raise NotSupportedError if TPC is not supported."""
@@ -744,10 +735,8 @@ class Connection(BaseConnection[Row]):
         conninfo = make_conninfo(**params)
 
         try:
-            rv = cls._wait_conn(
-                cls._connect_gen(conninfo, autocommit=autocommit),
-                timeout=params["connect_timeout"],
-            )
+            rv = cls._connect_gen(conninfo, autocommit=autocommit)
+            # timeout=params["connect_timeout"], # TODO NOMERGE
         except e.Error as ex:
             raise ex.with_traceback(None)
 
@@ -905,12 +894,12 @@ class Connection(BaseConnection[Row]):
     def commit(self) -> None:
         """Commit any pending transaction to the database."""
         with self.lock:
-            self.wait(self._commit_gen())
+            self._commit_gen()
 
     def rollback(self) -> None:
         """Roll back to the start of any pending transaction."""
         with self.lock:
-            self.wait(self._rollback_gen())
+            self._rollback_gen()
 
     @contextmanager
     def transaction(
@@ -942,7 +931,7 @@ class Connection(BaseConnection[Row]):
         while True:
             with self.lock:
                 try:
-                    ns = self.wait(notifies(self.pgconn))
+                    ns = generators.notifies_ng(self.pgconn)
                 except e.Error as ex:
                     raise ex.with_traceback(None)
             enc = pgconn_encoding(self.pgconn)
@@ -970,53 +959,54 @@ class Connection(BaseConnection[Row]):
                     assert pipeline is self._pipeline
                     self._pipeline = None
 
-    def wait(self, gen: PQGen[RV], timeout: Optional[float] = 0.1) -> RV:
-        """
-        Consume a generator operating on the connection.
+    # TODO: handle ctrl-c -- NOMERGE
+    # def wait(self, gen: PQGen[RV], timeout: Optional[float] = 0.1) -> RV:
+    #     """
+    #     Consume a generator operating on the connection.
 
-        The function must be used on generators that don't change connection
-        fd (i.e. not on connect and reset).
-        """
-        try:
-            return waiting.wait(gen, self.pgconn.socket, timeout=timeout)
-        except KeyboardInterrupt:
-            # On Ctrl-C, try to cancel the query in the server, otherwise
-            # the connection will remain stuck in ACTIVE state.
-            c = self.pgconn.get_cancel()
-            c.cancel()
-            try:
-                waiting.wait(gen, self.pgconn.socket, timeout=timeout)
-            except e.QueryCanceled:
-                pass  # as expected
-            raise
+    #     The function must be used on generators that don't change connection
+    #     fd (i.e. not on connect and reset).
+    #     """
+    #     try:
+    #         return waiting.wait(gen, self.pgconn.socket, timeout=timeout)
+    #     except KeyboardInterrupt:
+    #         # On Ctrl-C, try to cancel the query in the server, otherwise
+    #         # the connection will remain stuck in ACTIVE state.
+    #         c = self.pgconn.get_cancel()
+    #         c.cancel()
+    #         try:
+    #             waiting.wait(gen, self.pgconn.socket, timeout=timeout)
+    #         except e.QueryCanceled:
+    #             pass  # as expected
+    #         raise
 
-    @classmethod
-    def _wait_conn(cls, gen: PQGenConn[RV], timeout: Optional[int]) -> RV:
-        """Consume a connection generator."""
-        return waiting.wait_conn(gen, timeout=timeout)
+    # @classmethod
+    # def _wait_conn(cls, gen: PQGenConn[RV], timeout: Optional[int]) -> RV:
+    #     """Consume a connection generator."""
+    #     return waiting.wait_conn(gen, timeout=timeout)
 
     def _set_autocommit(self, value: bool) -> None:
         with self.lock:
-            self.wait(self._set_autocommit_gen(value))
+            self._set_autocommit_gen(value)
 
     def _set_isolation_level(self, value: Optional[IsolationLevel]) -> None:
         with self.lock:
-            self.wait(self._set_isolation_level_gen(value))
+            self._set_isolation_level_gen(value)
 
     def _set_read_only(self, value: Optional[bool]) -> None:
         with self.lock:
-            self.wait(self._set_read_only_gen(value))
+            self._set_read_only_gen(value)
 
     def _set_deferrable(self, value: Optional[bool]) -> None:
         with self.lock:
-            self.wait(self._set_deferrable_gen(value))
+            self._set_deferrable_gen(value)
 
     def tpc_begin(self, xid: Union[Xid, str]) -> None:
         """
         Begin a TPC transaction with the given transaction ID `!xid`.
         """
         with self.lock:
-            self.wait(self._tpc_begin_gen(xid))
+            self._tpc_begin_gen(xid)
 
     def tpc_prepare(self) -> None:
         """
@@ -1024,7 +1014,7 @@ class Connection(BaseConnection[Row]):
         """
         try:
             with self.lock:
-                self.wait(self._tpc_prepare_gen())
+                self._tpc_prepare_gen()
         except e.ObjectNotInPrerequisiteState as ex:
             raise e.NotSupportedError(str(ex)) from None
 
@@ -1033,14 +1023,14 @@ class Connection(BaseConnection[Row]):
         Commit a prepared two-phase transaction.
         """
         with self.lock:
-            self.wait(self._tpc_finish_gen("COMMIT", xid))
+            self._tpc_finish_gen("COMMIT", xid)
 
     def tpc_rollback(self, xid: Union[Xid, str, None] = None) -> None:
         """
         Roll back a prepared two-phase transaction.
         """
         with self.lock:
-            self.wait(self._tpc_finish_gen("ROLLBACK", xid))
+            self._tpc_finish_gen("ROLLBACK", xid)
 
     def tpc_recover(self) -> List[Xid]:
         self._check_tpc()
