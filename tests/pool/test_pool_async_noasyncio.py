@@ -51,3 +51,8 @@ def test_working_created_before_loop(dsn):
             await p.close()
 
     asyncio.run(asyncio.wait_for(test(), timeout=2.0))
+
+
+def test_cant_create_open_outside_loop(dsn):
+    with pytest.raises(RuntimeError):
+        pool.AsyncConnectionPool(dsn, open=True)
