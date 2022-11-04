@@ -392,7 +392,7 @@ class QueuedLibpqDriver(LibpqWriter):
     def __init__(self, cursor: "Cursor[Any]"):
         super().__init__(cursor)
 
-        self._queue: queue.Queue[bytes] = queue.Queue(maxsize=QUEUE_SIZE)
+        self._queue: queue.Queue[Buffer] = queue.Queue(maxsize=QUEUE_SIZE)
         self._worker: Optional[threading.Thread] = None
         self._worker_error: Optional[BaseException] = None
 
@@ -599,7 +599,7 @@ class AsyncQueuedLibpqWriter(AsyncLibpqWriter):
     def __init__(self, cursor: "AsyncCursor[Any]"):
         super().__init__(cursor)
 
-        self._queue: asyncio.Queue[bytes] = asyncio.Queue(maxsize=QUEUE_SIZE)
+        self._queue: asyncio.Queue[Buffer] = asyncio.Queue(maxsize=QUEUE_SIZE)
         self._worker: Optional[asyncio.Future[None]] = None
 
     async def worker(self) -> None:
@@ -652,19 +652,19 @@ class Formatter(ABC):
         self._row_mode = False  # true if the user is using write_row()
 
     @abstractmethod
-    def parse_row(self, data: bytes) -> Optional[Tuple[Any, ...]]:
+    def parse_row(self, data: Buffer) -> Optional[Tuple[Any, ...]]:
         ...
 
     @abstractmethod
-    def write(self, buffer: Union[Buffer, str]) -> bytes:
+    def write(self, buffer: Union[Buffer, str]) -> Buffer:
         ...
 
     @abstractmethod
-    def write_row(self, row: Sequence[Any]) -> bytes:
+    def write_row(self, row: Sequence[Any]) -> Buffer:
         ...
 
     @abstractmethod
-    def end(self) -> bytes:
+    def end(self) -> Buffer:
         ...
 
 
@@ -676,7 +676,7 @@ class TextFormatter(Formatter):
         super().__init__(transformer)
         self._encoding = encoding
 
-    def parse_row(self, data: bytes) -> Optional[Tuple[Any, ...]]:
+    def parse_row(self, data: Buffer) -> Optional[Tuple[Any, ...]]:
         if data:
             return parse_row_text(data, self.transformer)
         else:
@@ -687,7 +687,7 @@ class TextFormatter(Formatter):
         self._signature_sent = True
         return data
 
-    def write_row(self, row: Sequence[Any]) -> bytes:
+    def write_row(self, row: Sequence[Any]) -> Buffer:
         # Note down that we are writing in row mode: it means we will have
         # to take care of the end-of-copy marker too
         self._row_mode = True
@@ -699,7 +699,7 @@ class TextFormatter(Formatter):
         else:
             return b""
 
-    def end(self) -> bytes:
+    def end(self) -> Buffer:
         buffer, self._write_buffer = self._write_buffer, bytearray()
         return buffer
 
@@ -721,7 +721,7 @@ class BinaryFormatter(Formatter):
         super().__init__(transformer)
         self._signature_sent = False
 
-    def parse_row(self, data: bytes) -> Optional[Tuple[Any, ...]]:
+    def parse_row(self, data: Buffer) -> Optional[Tuple[Any, ...]]:
         if not self._signature_sent:
             if data[: len(_binary_signature)] != _binary_signature:
                 raise e.DataError(
@@ -740,7 +740,7 @@ class BinaryFormatter(Formatter):
         self._signature_sent = True
         return data
 
-    def write_row(self, row: Sequence[Any]) -> bytes:
+    def write_row(self, row: Sequence[Any]) -> Buffer:
         # Note down that we are writing in row mode: it means we will have
         # to take care of the end-of-copy marker too
         self._row_mode = True
@@ -756,7 +756,7 @@ class BinaryFormatter(Formatter):
         else:
             return b""
 
-    def end(self) -> bytes:
+    def end(self) -> Buffer:
         # If we have sent no data we need to send the signature
         # and the trailer
         if not self._signature_sent:
@@ -828,17 +828,17 @@ def _format_row_binary(
     return out
 
 
-def _parse_row_text(data: bytes, tx: Transformer) -> Tuple[Any, ...]:
+def _parse_row_text(data: Buffer, tx: Transformer) -> Tuple[Any, ...]:
     if not isinstance(data, bytes):
         data = bytes(data)
-    fields = data.split(b"\t")
-    fields[-1] = fields[-1][:-1]  # drop \n
+    fields = data.split(b"\t")  # type: ignore
+    fields[-1] = fields[-1][:-1]  # type: ignore  # drop \n
     row = [None if f == b"\\N" else _load_re.sub(_load_sub, f) for f in fields]
     return tx.load_sequence(row)
 
 
-def _parse_row_binary(data: bytes, tx: Transformer) -> Tuple[Any, ...]:
-    row: List[Optional[bytes]] = []
+def _parse_row_binary(data: Buffer, tx: Transformer) -> Tuple[Any, ...]:
+    row: List[Optional[Buffer]] = []
     nfields = _unpack_int2(data, 0)[0]
     pos = 2
     for i in range(nfields):

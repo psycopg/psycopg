@@ -51,8 +51,8 @@ PQGen: TypeAlias = Generator["Wait", "Ready", RV]
 
 # Adaptation types
 
-DumpFunc: TypeAlias = Callable[[Any], bytes]
-LoadFunc: TypeAlias = Callable[[bytes], Any]
+DumpFunc: TypeAlias = Callable[[Any], Buffer]
+LoadFunc: TypeAlias = Callable[[Buffer], Any]
 
 
 class AdaptContext(Protocol):
@@ -238,7 +238,7 @@ class Transformer(Protocol):
     ) -> Sequence[Optional[Buffer]]:
         ...
 
-    def as_literal(self, obj: Any) -> Buffer:
+    def as_literal(self, obj: Any) -> bytes:
         ...
 
     def get_dumper(self, obj: Any, format: PyFormat) -> Dumper:
@@ -250,7 +250,7 @@ class Transformer(Protocol):
     def load_row(self, row: int, make_row: "RowMaker[Row]") -> Optional["Row"]:
         ...
 
-    def load_sequence(self, record: Sequence[Optional[bytes]]) -> Tuple[Any, ...]:
+    def load_sequence(self, record: Sequence[Optional[Buffer]]) -> Tuple[Any, ...]:
         ...
 
     def get_loader(self, oid: int, format: pq.Format) -> Loader:

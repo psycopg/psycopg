@@ -20,7 +20,7 @@ from typing import List, Optional, Union
 
 from . import pq
 from . import errors as e
-from .abc import PipelineCommand, PQGen, PQGenConn
+from .abc import Buffer, PipelineCommand, PQGen, PQGenConn
 from .pq.abc import PGconn, PGresult
 from .waiting import Wait, Ready
 from ._compat import Deque
@@ -271,7 +271,7 @@ def copy_from(pgconn: PGconn) -> PQGen[Union[memoryview, PGresult]]:
     return result
 
 
-def copy_to(pgconn: PGconn, buffer: bytes) -> PQGen[None]:
+def copy_to(pgconn: PGconn, buffer: Buffer) -> PQGen[None]:
     # Retry enqueuing data until successful.
     #
     # WARNING! This can cause an infinite loop if the buffer is too large. (see

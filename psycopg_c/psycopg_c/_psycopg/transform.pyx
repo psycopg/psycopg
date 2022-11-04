@@ -541,7 +541,7 @@ cdef class Transformer:
                 make_row, <PyObject *>record, NULL)
         return record
 
-    cpdef object load_sequence(self, record: Sequence[Optional[bytes]]):
+    cpdef object load_sequence(self, record: Sequence[Optional[Buffer]]):
         cdef Py_ssize_t nfields = len(record)
         out = PyTuple_New(nfields)
         cdef PyObject *loader  # borrowed RowLoader

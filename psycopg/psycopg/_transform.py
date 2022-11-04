@@ -194,7 +194,7 @@ class Transformer(AdaptContext):
 
         return out
 
-    def as_literal(self, obj: Any) -> Buffer:
+    def as_literal(self, obj: Any) -> bytes:
         dumper = self.get_dumper(obj, PY_TEXT)
         rv = dumper.quote(obj)
         # If the result is quoted, and the oid not unknown or text,
@@ -221,6 +221,8 @@ class Transformer(AdaptContext):
             if type_sql:
                 rv = b"%s::%s" % (rv, type_sql)
 
+        if not isinstance(rv, bytes):
+            rv = bytes(rv)
         return rv
 
     def get_dumper(self, obj: Any, format: PyFormat) -> "Dumper":
@@ -321,7 +323,7 @@ class Transformer(AdaptContext):
 
         return make_row(record)
 
-    def load_sequence(self, record: Sequence[Optional[bytes]]) -> Tuple[Any, ...]:
+    def load_sequence(self, record: Sequence[Optional[Buffer]]) -> Tuple[Any, ...]:
         if len(self._row_loaders) != len(record):
             raise e.ProgrammingError(
                 f"cannot load sequence of {len(record)} items:"

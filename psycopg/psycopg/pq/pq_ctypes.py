@@ -275,7 +275,7 @@ class PGconn:
     def exec_params(
         self,
         command: bytes,
-        param_values: Optional[Sequence[Optional[bytes]]],
+        param_values: Optional[Sequence[Optional["abc.Buffer"]]],
         param_types: Optional[Sequence[int]] = None,
         param_formats: Optional[Sequence[int]] = None,
         result_format: int = Format.TEXT,
@@ -292,7 +292,7 @@ class PGconn:
     def send_query_params(
         self,
         command: bytes,
-        param_values: Optional[Sequence[Optional[bytes]]],
+        param_values: Optional[Sequence[Optional["abc.Buffer"]]],
         param_types: Optional[Sequence[int]] = None,
         param_formats: Optional[Sequence[int]] = None,
         result_format: int = Format.TEXT,
@@ -329,7 +329,7 @@ class PGconn:
     def send_query_prepared(
         self,
         name: bytes,
-        param_values: Optional[Sequence[Optional[bytes]]],
+        param_values: Optional[Sequence[Optional["abc.Buffer"]]],
         param_formats: Optional[Sequence[int]] = None,
         result_format: int = Format.TEXT,
     ) -> None:
@@ -349,7 +349,7 @@ class PGconn:
     def _query_params_args(
         self,
         command: bytes,
-        param_values: Optional[Sequence[Optional[bytes]]],
+        param_values: Optional[Sequence[Optional["abc.Buffer"]]],
         param_types: Optional[Sequence[int]] = None,
         param_formats: Optional[Sequence[int]] = None,
         result_format: int = Format.TEXT,
@@ -364,7 +364,6 @@ class PGconn:
             aparams = (c_char_p * nparams)(
                 *(
                     # convert bytearray/memoryview to bytes
-                    # TODO: avoid copy, at least in the C implementation.
                     b
                     if b is None or isinstance(b, bytes)
                     else bytes(b)  # type: ignore[arg-type]
@@ -436,7 +435,7 @@ class PGconn:
     def exec_prepared(
         self,
         name: bytes,
-        param_values: Optional[Sequence[bytes]],
+        param_values: Optional[Sequence["abc.Buffer"]],
         param_formats: Optional[Sequence[int]] = None,
         result_format: int = 0,
     ) -> "PGresult":
@@ -447,7 +446,13 @@ class PGconn:
         alenghts: Optional[Array[c_int]]
         if param_values:
             nparams = len(param_values)
-            aparams = (c_char_p * nparams)(*param_values)
+            aparams = (c_char_p * nparams)(
+                *(
+                    # convert bytearray/memoryview to bytes
+                    b if b is None or isinstance(b, bytes) else bytes(b)
+                    for b in param_values
+                )
+            )
             alenghts = (c_int * nparams)(*(len(p) if p else 0 for p in param_values))
         else:
             nparams = 0
@@ -1050,13 +1055,15 @@ class Escaping:
         impl.PQfreemem(out)
         return rv
 
-    def unescape_bytea(self, data: bytes) -> bytes:
+    def unescape_bytea(self, data: "abc.Buffer") -> bytes:
         # not needed, but let's keep it symmetric with the escaping:
         # if a connection is passed in, it must be valid.
         if self.conn:
             self.conn._ensure_pgconn()
 
         len_out = c_size_t()
+        if not isinstance(data, bytes):
+            data = bytes(data)
         out = impl.PQunescapeBytea(
             data,
             byref(t_cast(c_ulong, len_out)),  # type: ignore[arg-type]

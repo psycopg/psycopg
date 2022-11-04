@@ -133,7 +133,7 @@ class PGconn(Protocol):
     def exec_params(
         self,
         command: bytes,
-        param_values: Optional[Sequence[Optional[bytes]]],
+        param_values: Optional[Sequence[Optional[Buffer]]],
         param_types: Optional[Sequence[int]] = None,
         param_formats: Optional[Sequence[int]] = None,
         result_format: int = Format.TEXT,
@@ -143,7 +143,7 @@ class PGconn(Protocol):
     def send_query_params(
         self,
         command: bytes,
-        param_values: Optional[Sequence[Optional[bytes]]],
+        param_values: Optional[Sequence[Optional[Buffer]]],
         param_types: Optional[Sequence[int]] = None,
         param_formats: Optional[Sequence[int]] = None,
         result_format: int = Format.TEXT,
@@ -161,7 +161,7 @@ class PGconn(Protocol):
     def send_query_prepared(
         self,
         name: bytes,
-        param_values: Optional[Sequence[Optional[bytes]]],
+        param_values: Optional[Sequence[Optional[Buffer]]],
         param_formats: Optional[Sequence[int]] = None,
         result_format: int = Format.TEXT,
     ) -> None:
@@ -178,7 +178,7 @@ class PGconn(Protocol):
     def exec_prepared(
         self,
         name: bytes,
-        param_values: Optional[Sequence[bytes]],
+        param_values: Optional[Sequence[Buffer]],
         param_formats: Optional[Sequence[int]] = None,
         result_format: int = 0,
     ) -> "PGresult":
@@ -225,7 +225,7 @@ class PGconn(Protocol):
     def notifies(self) -> Optional["PGnotify"]:
         ...
 
-    def put_copy_data(self, buffer: bytes) -> int:
+    def put_copy_data(self, buffer: Buffer) -> int:
         ...
 
     def put_copy_end(self, error: Optional[bytes] = None) -> int:
@@ -380,5 +380,5 @@ class Escaping(Protocol):
     def escape_bytea(self, data: Buffer) -> bytes:
         ...
 
-    def unescape_bytea(self, data: bytes) -> bytes:
+    def unescape_bytea(self, data: Buffer) -> bytes:
         ...

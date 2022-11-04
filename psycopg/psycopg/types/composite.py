@@ -22,7 +22,7 @@ from .._encodings import _as_python_identifier
 _struct_oidlen = struct.Struct("!Ii")
 _pack_oidlen = cast(Callable[[int, int], bytes], _struct_oidlen.pack)
 _unpack_oidlen = cast(
-    Callable[[bytes, int], Tuple[int, int]], _struct_oidlen.unpack_from
+    Callable[[Buffer, int], Tuple[int, int]], _struct_oidlen.unpack_from
 )
 
 
@@ -33,7 +33,7 @@ class SequenceDumper(RecursiveDumper):
         if not obj:
             return start + end
 
-        parts = [start]
+        parts: List[Buffer] = [start]
 
         for item in obj:
             if item is None:
@@ -100,7 +100,7 @@ class BaseCompositeLoader(Loader):
         super().__init__(oid, context)
         self._tx = Transformer(context)
 
-    def _parse_record(self, data: bytes) -> Iterator[Optional[bytes]]:
+    def _parse_record(self, data: Buffer) -> Iterator[Optional[bytes]]:
         """
         Split a non-empty representation of a composite type into components.
 
@@ -163,7 +163,7 @@ class RecordBinaryLoader(Loader):
             )
         )
 
-    def _walk_record(self, data: bytes) -> Iterator[Tuple[int, int, int]]:
+    def _walk_record(self, data: Buffer) -> Iterator[Tuple[int, int, int]]:
         """
         Yield a sequence of (oid, offset, length) for the content of the record
         """
@@ -174,7 +174,7 @@ class RecordBinaryLoader(Loader):
             yield oid, i + 8, length
             i += (8 + length) if length > 0 else 8
 
-    def _config_types(self, data: bytes) -> None:
+    def _config_types(self, data: Buffer) -> None:
         oids = [r[0] for r in self._walk_record(data)]
         self._tx.set_loader_types(oids, self.format)
 
@@ -197,7 +197,7 @@ class CompositeLoader(RecordLoader):
             *self._tx.load_sequence(tuple(self._parse_record(data[1:-1])))
         )
 
-    def _config_types(self, data: bytes) -> None:
+    def _config_types(self, data: Buffer) -> None:
         self._tx.set_loader_types(self.fields_types, self.format)
 
 

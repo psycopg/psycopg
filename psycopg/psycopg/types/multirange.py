@@ -224,7 +224,7 @@ class MultirangeDumper(BaseMultirangeDumper):
         else:
             dump = fail_dump
 
-        out = [b"{"]
+        out: List[Buffer] = [b"{"]
         for r in obj:
             out.append(dump_range_text(r, dump))
             out.append(b",")
@@ -243,7 +243,7 @@ class MultirangeBinaryDumper(BaseMultirangeDumper):
         else:
             dump = fail_dump
 
-        out = [pack_len(len(obj))]
+        out: List[Buffer] = [pack_len(len(obj))]
         for r in obj:
             data = dump_range_binary(r, dump)
             out.append(pack_len(len(data)))

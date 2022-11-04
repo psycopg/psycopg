@@ -15,7 +15,7 @@ from ..adapt import Buffer, Dumper, Loader, PyFormat, AdaptersMap
 from ..errors import DataError
 
 JsonDumpsFunction = Callable[[Any], str]
-JsonLoadsFunction = Callable[[Union[str, bytes, bytearray]], Any]
+JsonLoadsFunction = Callable[[Union[str, bytes]], Any]
 
 
 def set_json_dumps(
@@ -170,7 +170,7 @@ class _JsonLoader(Loader):
 
     def load(self, data: Buffer) -> Any:
         # json.loads() cannot work on memoryview.
-        if isinstance(data, memoryview):
+        if not isinstance(data, bytes):
             data = bytes(data)
         return self.loads(data)
 
@@ -195,7 +195,7 @@ class JsonbBinaryLoader(_JsonLoader):
         if data and data[0] != 1:
             raise DataError("unknown jsonb binary format: {data[0]}")
         data = data[1:]
-        if isinstance(data, memoryview):
+        if not isinstance(data, bytes):
             data = bytes(data)
         return self.loads(data)
 

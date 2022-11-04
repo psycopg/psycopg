@@ -12,9 +12,9 @@ from . import errors as e
 from ._compat import Protocol, TypeAlias
 
 PackInt: TypeAlias = Callable[[int], bytes]
-UnpackInt: TypeAlias = Callable[[bytes], Tuple[int]]
+UnpackInt: TypeAlias = Callable[[Buffer], Tuple[int]]
 PackFloat: TypeAlias = Callable[[float], bytes]
-UnpackFloat: TypeAlias = Callable[[bytes], Tuple[float]]
+UnpackFloat: TypeAlias = Callable[[Buffer], Tuple[float]]
 
 
 class UnpackLen(Protocol):

@@ -32,7 +32,7 @@ from .._wrappers import (
 
 
 class _IntDumper(Dumper):
-    def dump(self, obj: Any) -> bytes:
+    def dump(self, obj: Any) -> Buffer:
         t = type(obj)
         if t is not int:
             # Convert to int in order to dump IntEnum correctly
@@ -43,7 +43,7 @@ class _IntDumper(Dumper):
 
         return str(obj).encode()
 
-    def quote(self, obj: Any) -> bytes:
+    def quote(self, obj: Any) -> Buffer:
         value = self.dump(obj)
         return value if obj >= 0 else b" " + value
 
@@ -321,7 +321,7 @@ for i in range(DefaultContext.prec):
     _contexts[i] = DefaultContext
 
 _unpack_numeric_head = cast(
-    Callable[[bytes], Tuple[int, int, int, int]],
+    Callable[[Buffer], Tuple[int, int, int, int]],
     struct.Struct("!HhHH").unpack_from,
 )
 _pack_numeric_head = cast(

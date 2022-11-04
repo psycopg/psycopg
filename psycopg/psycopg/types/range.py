@@ -5,7 +5,7 @@ Support for range types adaptation.
 # Copyright (C) 2020 The Psycopg Team
 
 import re
-from typing import Any, Callable, Dict, Generic, Optional, TypeVar, Type, Tuple
+from typing import Any, Callable, Dict, Generic, List, Optional, TypeVar, Type, Tuple
 from typing import cast
 from decimal import Decimal
 from datetime import date, datetime
@@ -329,7 +329,7 @@ def dump_range_text(obj: Range[Any], dump: Callable[[Any], Buffer]) -> Buffer:
     if obj.isempty:
         return b"empty"
 
-    parts = [b"[" if obj.lower_inc else b"("]
+    parts: List[Buffer] = [b"[" if obj.lower_inc else b"("]
 
     def dump_item(item: Any) -> Buffer:
         ad = dump(item)

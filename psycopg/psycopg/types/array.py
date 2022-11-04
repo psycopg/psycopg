@@ -21,10 +21,10 @@ from .._typeinfo import TypeInfo
 
 _struct_head = struct.Struct("!III")  # ndims, hasnull, elem oid
 _pack_head = cast(Callable[[int, int, int], bytes], _struct_head.pack)
-_unpack_head = cast(Callable[[bytes], Tuple[int, int, int]], _struct_head.unpack_from)
+_unpack_head = cast(Callable[[Buffer], Tuple[int, int, int]], _struct_head.unpack_from)
 _struct_dim = struct.Struct("!II")  # dim, lower bound
 _pack_dim = cast(Callable[[int, int], bytes], _struct_dim.pack)
-_unpack_dim = cast(Callable[[bytes, int], Tuple[int, int]], _struct_dim.unpack_from)
+_unpack_dim = cast(Callable[[Buffer, int], Tuple[int, int]], _struct_dim.unpack_from)
 
 TEXT_ARRAY_OID = postgres.types["text"].array_oid
 
@@ -153,7 +153,7 @@ class ListDumper(BaseListDumper):
     _re_esc = re.compile(rb'(["\\])')
 
     def dump(self, obj: List[Any]) -> bytes:
-        tokens: List[bytes] = []
+        tokens: List[Buffer] = []
         needs_quotes = _get_needs_quotes_regexp(self.delimiter).search
 
         def dump_list(obj: List[Any]) -> None:
@@ -249,7 +249,7 @@ class ListBinaryDumper(BaseListDumper):
         if not obj:
             return _pack_head(0, 0, sub_oid)
 
-        data: List[bytes] = [b"", b""]  # placeholders to avoid a resize
+        data: List[Buffer] = [b"", b""]  # placeholders to avoid a resize
         dims: List[int] = []
         hasnull = 0
 
