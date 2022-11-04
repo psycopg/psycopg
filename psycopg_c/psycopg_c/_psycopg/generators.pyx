@@ -240,7 +240,6 @@ def pipeline_communicate(
                     r = pq.PGresult._from_ptr(pgres)
                     if status == libpq.PGRES_PIPELINE_SYNC:
                         results.append([r])
-                        break
                     elif (
                         status == libpq.PGRES_COPY_IN
                         or status == libpq.PGRES_COPY_OUT
