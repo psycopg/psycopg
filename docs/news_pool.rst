@@ -7,18 +7,15 @@
 ``psycopg_pool`` release notes
 ==============================
 
-Future releases
+Current release
 ---------------
 
-psycopg_pool 3.1.4 (unreleased)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg_pool 3.1.4
+^^^^^^^^^^^^^^^^^^
 
 - Fix async pool exhausting connections, happening if the pool is created
   before the event loop is started (:ticket:`#219`).
 
-
-Current release
----------------
 
 psycopg_pool 3.1.3
 ^^^^^^^^^^^^^^^^^^
