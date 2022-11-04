@@ -29,10 +29,7 @@ Query: TypeAlias = Union[LiteralString, bytes, "sql.SQL", "sql.Composed"]
 Params: TypeAlias = Union[Sequence[Any], Mapping[str, Any]]
 ConnectionType = TypeVar("ConnectionType", bound="BaseConnection[Any]")
 PipelineCommand: TypeAlias = Callable[[], None]
-
-# TODO: make it recursive when mypy will support it
-# DumperKey: TypeAlias = Union[type, Tuple[Union[type, "DumperKey"]]]
-DumperKey: TypeAlias = Union[type, Tuple[type, ...]]
+DumperKey: TypeAlias = Union[type, Tuple["DumperKey", ...]]
 
 # Waiting protocol types
 

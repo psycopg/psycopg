@@ -1,4 +1,4 @@
-from typing import Optional, Tuple, Union
+from typing import Optional
 
 from psycopg import pq
 from psycopg.abc import Dumper, Loader, AdaptContext, PyFormat, Buffer
@@ -43,9 +43,3 @@ class MyTextLoader:
 
     def load(self, data: Buffer) -> str:
         return (bytes(data) * 2).decode()
-
-
-# This should be the definition of psycopg.adapt.DumperKey, but mypy doesn't
-# support recursive types. When it will, this statement will give an error
-# (unused type: ignore) so we can fix our definition.
-_DumperKey = Union[type, Tuple[Union[type, "_DumperKey"]]]  # type: ignore

@@ -35,6 +35,7 @@ files = [
 warn_unused_ignores = true
 show_error_codes = true
 strict = true
+enable_recursive_aliases = true
 
 [[tool.mypy.overrides]]
 module = [

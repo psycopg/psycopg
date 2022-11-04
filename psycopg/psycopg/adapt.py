@@ -5,7 +5,7 @@ Entry point into the adaptation system.
 # Copyright (C) 2020 The Psycopg Team
 
 from abc import ABC, abstractmethod
-from typing import Any, Optional, Type, Tuple, Union, TYPE_CHECKING
+from typing import Any, Optional, Type, TYPE_CHECKING
 
 from . import pq, abc
 from . import _adapters_map
@@ -91,7 +91,7 @@ class Dumper(abc.Dumper, ABC):
             rv = rv.replace(b"\\", b"\\\\")
         return rv
 
-    def get_key(self, obj: Any, format: PyFormat) -> Union[type, Tuple[type, ...]]:
+    def get_key(self, obj: Any, format: PyFormat) -> abc.DumperKey:
         """
         Implementation of the `~psycopg.abc.Dumper.get_key()` member of the
         `~psycopg.abc.Dumper` protocol. Look at its definition for details.

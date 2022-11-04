@@ -259,7 +259,7 @@ class BaseRangeDumper(RecursiveDumper):
         item = self._get_item(obj)
         if item is not None:
             sd = self._tx.get_dumper(item, self._adapt_format)
-            return (self.cls, sd.get_key(item, format))  # type: ignore
+            return (self.cls, sd.get_key(item, format))
         else:
             return (self.cls,)
 
