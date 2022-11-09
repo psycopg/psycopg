@@ -428,6 +428,35 @@ def test_rownumber(conn):
     assert cur.rownumber == 42
 
 
+@pytest.mark.parametrize("query", ["", "set timezone to utc"])
+def test_rownumber_none(conn, query):
+    cur = conn.cursor()
+    cur.execute(query)
+    assert cur.rownumber is None
+
+
+def test_rownumber_mixed(conn):
+    cur = conn.cursor()
+    cur.execute(
+        """
+select x from generate_series(1, 3) x;
+set timezone to utc;
+select x from generate_series(4, 6) x;
+"""
+    )
+    assert cur.rownumber == 0
+    assert cur.fetchone() == (1,)
+    assert cur.rownumber == 1
+    assert cur.fetchone() == (2,)
+    assert cur.rownumber == 2
+    cur.nextset()
+    assert cur.rownumber is None
+    cur.nextset()
+    assert cur.rownumber == 0
+    assert cur.fetchone() == (4,)
+    assert cur.rownumber == 1
+
+
 def test_iter(conn):
     cur = conn.cursor()
     cur.execute("select generate_series(1, 3)")

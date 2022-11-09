@@ -15,6 +15,8 @@ Psycopg 3.1.5 (unreleased)
 
 - Return `!bytes` instead of `!memoryview` from `pq.Encoding` methods
   (:ticket:`#422`).
+- Fix `Cursor.rownumber` to return `!None` when the result has no row to fetch
+  (:ticket:`#437`).
 
 
 Current release

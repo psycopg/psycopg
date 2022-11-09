@@ -419,6 +419,35 @@ async def test_rownumber(aconn):
     assert cur.rownumber == 42
 
 
+@pytest.mark.parametrize("query", ["", "set timezone to utc"])
+async def test_rownumber_none(aconn, query):
+    cur = aconn.cursor()
+    await cur.execute(query)
+    assert cur.rownumber is None
+
+
+async def test_rownumber_mixed(aconn):
+    cur = aconn.cursor()
+    await cur.execute(
+        """
+select x from generate_series(1, 3) x;
+set timezone to utc;
+select x from generate_series(4, 6) x;
+"""
+    )
+    assert cur.rownumber == 0
+    assert await cur.fetchone() == (1,)
+    assert cur.rownumber == 1
+    assert await cur.fetchone() == (2,)
+    assert cur.rownumber == 2
+    cur.nextset()
+    assert cur.rownumber is None
+    cur.nextset()
+    assert cur.rownumber == 0
+    assert await cur.fetchone() == (4,)
+    assert cur.rownumber == 1
+
+
 async def test_iter(aconn):
     cur = aconn.cursor()
     await cur.execute("select generate_series(1, 3)")

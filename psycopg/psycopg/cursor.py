@@ -137,7 +137,8 @@ class BaseCursor(Generic[ConnectionType, Row]):
 
         `!None` if there is no result to fetch.
         """
-        return self._pos if self.pgresult else None
+        tuples = self.pgresult and self.pgresult.status == TUPLES_OK
+        return self._pos if tuples else None
 
     def setinputsizes(self, sizes: Sequence[Any]) -> None:
         # no-op

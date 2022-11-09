@@ -27,6 +27,7 @@ TEXT = pq.Format.TEXT
 BINARY = pq.Format.BINARY
 
 COMMAND_OK = pq.ExecStatus.COMMAND_OK
+TUPLES_OK = pq.ExecStatus.TUPLES_OK
 
 IDLE = pq.TransactionStatus.IDLE
 INTRANS = pq.TransactionStatus.INTRANS
@@ -77,6 +78,19 @@ class ServerCursorMixin(BaseCursor[ConnectionType, Row]):
         If the cursor can be used after the creating transaction has committed.
         """
         return self._withhold
+
+    @property
+    def rownumber(self) -> Optional[int]:
+        """Index of the next row to fetch in the current result.
+
+        `!None` if there is no result to fetch.
+        """
+        res = self.pgresult
+        # command_status is empty if the result comes from
+        # describe_portal, which means that we have just executed the DECLARE,
+        # so we can assume we are at the first row.
+        tuples = res and (res.status == TUPLES_OK or res.command_status == b"")
+        return self._pos if tuples else None
 
     def _declare_gen(
         self,
