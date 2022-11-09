@@ -382,6 +382,8 @@ def _load_text(
 ) -> List[Any]:
     rv = None
     stack: List[Any] = []
+    a: List[Any] = []
+    rv = a
     load = loader.load
 
     # Remove the dimensions information prefix (``[...]=``)
@@ -397,12 +399,10 @@ def _load_text(
     for m in re_parse.finditer(data):
         t = m.group(1)
         if t == b"{":
-            a: List[Any] = []
-            if rv is None:
-                rv = a
             if stack:
                 stack[-1].append(a)
             stack.append(a)
+            a = []
 
         elif t == b"}":
             if not stack:

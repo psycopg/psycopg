@@ -10,7 +10,9 @@ from libc.stdint cimport int32_t, uint32_t
 from libc.string cimport strchr
 from cpython.mem cimport PyMem_Malloc, PyMem_Free
 from cpython.ref cimport Py_INCREF
-from cpython.list cimport PyList_New, PyList_SET_ITEM, PyList_GetSlice
+from cpython.list cimport PyList_New,PyList_Append, PyList_GetSlice
+from cpython.list cimport PyList_GET_ITEM, PyList_SET_ITEM, PyList_GET_SIZE
+from cpython.object cimport PyObject
 
 from psycopg_c.pq cimport _buffer_as_string_and_size
 from psycopg_c.pq.libpq cimport Oid
@@ -34,7 +36,14 @@ def array_load_text(
     cdef char *buf = NULL
     cdef Py_ssize_t length = 0
     _buffer_as_string_and_size(data, &buf, &length)
-    load = loader.load
+
+    cdef CLoader cloader = None
+    cdef object pyload = None
+
+    if isinstance(loader, CLoader):
+        cloader = <CLoader>loader
+    else:
+        pyload = loader.load
 
     if length == 0:
         raise e.DataError("malformed array: empty data")
@@ -48,17 +57,18 @@ def array_load_text(
             raise e.DataError("malformed array: no '=' after dimension information")
         buf += 1
 
-    rv = None
-    stack: List[Any] = []
+    cdef list stack = []
+    cdef list a = []
+    rv = a
+    cdef PyObject *tmp
 
     while buf < end:
         if buf[0] == b'{':
-            a = []
-            if rv is None:
-                rv = a
             if stack:
-                stack[-1].append(a)
-            stack.append(a)
+                tmp = PyList_GET_ITEM(stack, PyList_GET_SIZE(stack) - 1)
+                PyList_Append(<object>tmp, a)
+            PyList_Append(stack, a)
+            a = []
             buf += 1
 
         elif buf[0] == b'}':
@@ -71,16 +81,19 @@ def array_load_text(
             buf += 1
 
         else:
-            v = parse_token(&buf, end, cdelim, load)
+            v = parse_token(&buf, end, cdelim, cloader, pyload)
             if not stack:
                 raise e.DataError("malformed array: missing initial '{'")
-            stack[-1].append(v)
+            tmp = PyList_GET_ITEM(stack, PyList_GET_SIZE(stack) - 1)
+            PyList_Append(<object>tmp, v)
 
     assert rv is not None
     return rv
 
 
-cdef object parse_token(char **bufptr, char *bufend, char cdelim, object load):
+cdef object parse_token(
+    char **bufptr, char *bufend, char cdelim, CLoader cloader, object load
+):
     cdef char *start = bufptr[0]
     cdef int has_quotes = start[0] == b'"'
     cdef int quoted = has_quotes
@@ -122,9 +135,11 @@ cdef object parse_token(char **bufptr, char *bufend, char cdelim, object load):
     cdef char *tgt
 
     if not num_escapes:
-        # TODO: fast path for C dumpers and no copy
-        b = start[:length]
-        return load(b)
+        if cloader is not None:
+            return cloader.cload(start, length)
+        else:
+            b = start[:length]
+            return load(b)
 
     else:
         unesc = <char *>PyMem_Malloc(length - num_escapes)
@@ -138,14 +153,17 @@ cdef object parse_token(char **bufptr, char *bufend, char cdelim, object load):
             tgt += 1
 
         try:
-            b = unesc[:length - num_escapes]
-            return load(b)
+            if cloader is not None:
+                return cloader.cload(unesc, length - num_escapes)
+            else:
+                b = unesc[:length - num_escapes]
+                return load(b)
         finally:
             PyMem_Free(unesc)
 
 
 @cython.cdivision(True)
-def array_load_binary(data: Buffer, tx: Transformer) -> List[Any]:
+def array_load_binary(data: Buffer, Transformer tx) -> List[Any]:
     cdef char *buf = NULL
     cdef Py_ssize_t length = 0
     _buffer_as_string_and_size(data, &buf, &length)
@@ -162,8 +180,8 @@ def array_load_binary(data: Buffer, tx: Transformer) -> List[Any]:
             % (ndims, MAXDIM)
         )
 
-    cdef Oid oid = <Oid>endian.be32toh(buf32[2])
-    load = tx.get_loader(oid, PQ_BINARY).load
+    cdef object oid = <Oid>endian.be32toh(buf32[2])
+    cdef PyObject *row_loader = tx._c_get_loader(<PyObject *>oid, <PyObject *>PQ_BINARY)
 
     cdef Py_ssize_t[MAXDIM] dims
     cdef int i
@@ -172,11 +190,13 @@ def array_load_binary(data: Buffer, tx: Transformer) -> List[Any]:
         dims[i] = endian.be32toh(buf32[3 + 2 * i])
 
     buf += (3 + 2 * ndims) * sizeof(uint32_t)
-    out = _array_load_binary_rec(ndims, dims, &buf, load)
+    out = _array_load_binary_rec(ndims, dims, &buf, row_loader)
     return out
 
 
-cdef object _array_load_binary_rec(Py_ssize_t ndims, Py_ssize_t *dims, char **bufptr, object load):
+cdef object _array_load_binary_rec(
+    Py_ssize_t ndims, Py_ssize_t *dims, char **bufptr, PyObject *row_loader
+):
     cdef char *buf
     cdef int i
     cdef int32_t size
@@ -193,8 +213,10 @@ cdef object _array_load_binary_rec(Py_ssize_t ndims, Py_ssize_t *dims, char **bu
             if size == -1:
                 val = None
             else:
-                # TODO: do without copy for C loaders
-                val = load(buf[:size])
+                if (<RowLoader>row_loader).cloader is not None:
+                    val = (<RowLoader>row_loader).cloader.cload(buf, size)
+                else:
+                    val = (<RowLoader>row_loader).loadfunc(buf[:size])
                 buf += size
 
             Py_INCREF(val)
@@ -204,7 +226,7 @@ cdef object _array_load_binary_rec(Py_ssize_t ndims, Py_ssize_t *dims, char **bu
 
     else:
         for i in range(nelems):
-            val = _array_load_binary_rec(ndims - 1, dims + 1, bufptr, load)
+            val = _array_load_binary_rec(ndims - 1, dims + 1, bufptr, row_loader)
             Py_INCREF(val)
             PyList_SET_ITEM(out, i, val)
 
