@@ -280,7 +280,7 @@ def _validate_and_reorder_params(
 
 
 _re_placeholder = re.compile(
-    rb"""(?x)x
+    rb"""(?x)
         %                       # a literal %
         (?:
             (?:
