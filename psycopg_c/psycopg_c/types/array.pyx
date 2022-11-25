@@ -142,7 +142,7 @@ cdef object parse_token(
             return load(b)
 
     else:
-        unesc = <char *>PyMem_Malloc(length - num_escapes)
+        unesc = <char *>PyMem_Malloc(length - num_escapes + 1)
         src = start
         tgt = unesc
         while src < end:
@@ -151,6 +151,8 @@ cdef object parse_token(
             tgt[0] = src[0]
             src += 1
             tgt += 1
+
+        tgt[0] = b'\x00'
 
         try:
             if cloader is not None:
