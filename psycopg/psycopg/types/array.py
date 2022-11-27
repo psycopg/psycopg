@@ -293,34 +293,32 @@ class ListBinaryDumper(BaseListDumper):
         return b"".join(data)
 
 
-class BaseArrayLoader(RecursiveLoader):
-    base_oid: int
-
-
-class ArrayLoader(BaseArrayLoader):
+class ArrayLoader(RecursiveLoader):
 
     delimiter = b","
+    base_oid: int
 
     def load(self, data: Buffer) -> List[Any]:
         loader = self._tx.get_loader(self.base_oid, self.format)
-        return load_text(data, loader, self.delimiter)
+        return _load_text(data, loader, self.delimiter)
 
 
-class ArrayBinaryLoader(BaseArrayLoader):
+class ArrayBinaryLoader(RecursiveLoader):
 
     format = pq.Format.BINARY
 
     def load(self, data: Buffer) -> List[Any]:
-        return load_binary(data, self._tx)
+        return _load_binary(data, self._tx)
 
 
 def register_array(info: TypeInfo, context: Optional[AdaptContext] = None) -> None:
     if not info.array_oid:
         raise ValueError(f"the type info {info} doesn't describe an array")
 
+    base: Type[Any]
     adapters = context.adapters if context else postgres.adapters
 
-    base: Type[Any] = ArrayLoader
+    base = getattr(_psycopg, "ArrayLoader", ArrayLoader)
     name = f"{info.name.title()}{base.__name__}"
     attribs = {
         "base_oid": info.oid,
@@ -329,10 +327,7 @@ def register_array(info: TypeInfo, context: Optional[AdaptContext] = None) -> No
     loader = type(name, (base,), attribs)
     adapters.register_loader(info.array_oid, loader)
 
-    base = ArrayBinaryLoader
-    name = f"{info.name.title()}{base.__name__}"
-    attribs = {"base_oid": info.oid}
-    loader = type(name, (base,), attribs)
+    loader = getattr(_psycopg, "ArrayBinaryLoader", ArrayBinaryLoader)
     adapters.register_loader(info.array_oid, loader)
 
     base = ListDumper
@@ -467,13 +462,3 @@ def _load_binary(data: Buffer, tx: Transformer) -> List[Any]:
         out = [out[i : i + dim] for i in range(0, len(out), dim)]
 
     return out
-
-
-# Override functions with fast versions if available
-if _psycopg:
-    load_text = _psycopg.array_load_text
-    load_binary = _psycopg.array_load_binary
-
-else:
-    load_text = _load_text
-    load_binary = _load_binary
