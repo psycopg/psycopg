@@ -28,27 +28,36 @@ cdef extern from *:
     const int MAXDIM
 
 
-def array_load_text(
-    data: Buffer, loader: Loader, delimiter: bytes = b","
-) -> List[Any]:
-    cdef char cdelim = delimiter[0]
+cdef class ArrayLoader(_CRecursiveLoader):
 
-    cdef char *buf = NULL
-    cdef Py_ssize_t length = 0
-    _buffer_as_string_and_size(data, &buf, &length)
+    format = PQ_TEXT
+    base_oid = 0
+    delimiter = b","
 
-    cdef CLoader cloader = None
-    cdef object pyload = None
+    cdef object cload(self, const char *data, size_t length):
+        cdef PyObject *row_loader = self._tx._c_get_loader(
+            <PyObject *>self.base_oid, <PyObject *>PQ_TEXT)
 
-    if isinstance(loader, CLoader):
-        cloader = <CLoader>loader
-    else:
-        pyload = loader.load
+        cdef char cdelim = self.delimiter[0]
+        return _array_load_text(data, length, row_loader, cdelim)
 
+
+@cython.final
+cdef class ArrayBinaryLoader(_CRecursiveLoader):
+
+    format = PQ_BINARY
+
+    cdef object cload(self, const char *data, size_t length):
+        return _array_load_binary(data, length, self._tx)
+
+
+cdef object _array_load_text(
+    const char *buf, size_t length, PyObject *row_loader, char cdelim
+):
     if length == 0:
         raise e.DataError("malformed array: empty data")
 
-    cdef char *end = buf + length
+    cdef const char *end = buf + length
 
     # Keep and grow a buffer instead of malloc'ing at each element
     cdef char *scratch = NULL
@@ -65,6 +74,13 @@ def array_load_text(
     cdef list a = []
     rv = a
     cdef PyObject *tmp
+
+    cdef CLoader cloader = None
+    cdef object pyload = None
+    if (<RowLoader>row_loader).cloader is not None:
+        cloader = (<RowLoader>row_loader).cloader
+    else:
+        pyload = (<RowLoader>row_loader).loadfunc
 
     try:
         while buf < end:
@@ -100,10 +116,10 @@ def array_load_text(
 
 
 cdef object _parse_token(
-    char **bufptr, char *bufend, char cdelim,
+    const char **bufptr, const char *bufend, char cdelim,
     char **scratch, size_t *sclen, CLoader cloader, object load
 ):
-    cdef char *start = bufptr[0]
+    cdef const char *start = bufptr[0]
     cdef int has_quotes = start[0] == b'"'
     cdef int quoted = has_quotes
     cdef int num_escapes = 0
@@ -111,7 +127,7 @@ cdef object _parse_token(
 
     if has_quotes:
         start += 1
-    cdef char *end = start
+    cdef const char *end = start
 
     while end < bufend:
         if (end[0] == cdelim or end[0] == b'}') and not quoted:
@@ -139,7 +155,7 @@ cdef object _parse_token(
             and start[2] == b'L' and start[3] == b'L':
         return None
 
-    cdef char *src
+    cdef const char *src
     cdef char *tgt
     cdef size_t unesclen
 
@@ -175,11 +191,7 @@ cdef object _parse_token(
 
 
 @cython.cdivision(True)
-def array_load_binary(data: Buffer, Transformer tx) -> List[Any]:
-    cdef char *buf = NULL
-    cdef Py_ssize_t length = 0
-    _buffer_as_string_and_size(data, &buf, &length)
-
+cdef object _array_load_binary(const char *buf, size_t length, Transformer tx):
     # head is ndims, hasnull, elem oid
     cdef uint32_t *buf32 = <uint32_t *>buf
     cdef int ndims = endian.be32toh(buf32[0])
@@ -193,7 +205,8 @@ def array_load_binary(data: Buffer, Transformer tx) -> List[Any]:
         )
 
     cdef object oid = <Oid>endian.be32toh(buf32[2])
-    cdef PyObject *row_loader = tx._c_get_loader(<PyObject *>oid, <PyObject *>PQ_BINARY)
+    cdef PyObject *row_loader = tx._c_get_loader(
+        <PyObject *>oid, <PyObject *>PQ_BINARY)
 
     cdef Py_ssize_t[MAXDIM] dims
     cdef int i
@@ -207,9 +220,9 @@ def array_load_binary(data: Buffer, Transformer tx) -> List[Any]:
 
 
 cdef object _array_load_binary_rec(
-    Py_ssize_t ndims, Py_ssize_t *dims, char **bufptr, PyObject *row_loader
+    Py_ssize_t ndims, Py_ssize_t *dims, const char **bufptr, PyObject *row_loader
 ):
-    cdef char *buf
+    cdef const char *buf
     cdef int i
     cdef int32_t size
     cdef object val
