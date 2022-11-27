@@ -8,7 +8,7 @@ import cython
 
 from libc.stdint cimport int32_t, uint32_t
 from libc.string cimport strchr
-from cpython.mem cimport PyMem_Malloc, PyMem_Free
+from cpython.mem cimport PyMem_Realloc, PyMem_Free
 from cpython.ref cimport Py_INCREF
 from cpython.list cimport PyList_New,PyList_Append, PyList_GetSlice
 from cpython.list cimport PyList_GET_ITEM, PyList_SET_ITEM, PyList_GET_SIZE
@@ -50,6 +50,10 @@ def array_load_text(
 
     cdef char *end = buf + length
 
+    # Keep and grow a buffer instead of malloc'ing at each element
+    cdef char *scratch = NULL
+    cdef size_t sclen = 0
+
     # Remove the dimensions information prefix (``[...]=``)
     if buf[0] == b"[":
         buf = strchr(buf + 1, b'=')
@@ -62,37 +66,42 @@ def array_load_text(
     rv = a
     cdef PyObject *tmp
 
-    while buf < end:
-        if buf[0] == b'{':
-            if stack:
+    try:
+        while buf < end:
+            if buf[0] == b'{':
+                if stack:
+                    tmp = PyList_GET_ITEM(stack, PyList_GET_SIZE(stack) - 1)
+                    PyList_Append(<object>tmp, a)
+                PyList_Append(stack, a)
+                a = []
+                buf += 1
+
+            elif buf[0] == b'}':
+                if not stack:
+                    raise e.DataError("malformed array: unexpected '}'")
+                rv = stack.pop()
+                buf += 1
+
+            elif buf[0] == cdelim:
+                buf += 1
+
+            else:
+                v = _parse_token(
+                    &buf, end, cdelim, &scratch, &sclen, cloader, pyload)
+                if not stack:
+                    raise e.DataError("malformed array: missing initial '{'")
                 tmp = PyList_GET_ITEM(stack, PyList_GET_SIZE(stack) - 1)
-                PyList_Append(<object>tmp, a)
-            PyList_Append(stack, a)
-            a = []
-            buf += 1
+                PyList_Append(<object>tmp, v)
 
-        elif buf[0] == b'}':
-            if not stack:
-                raise e.DataError("malformed array: unexpected '}'")
-            rv = stack.pop()
-            buf += 1
+    finally:
+        PyMem_Free(scratch)
 
-        elif buf[0] == cdelim:
-            buf += 1
-
-        else:
-            v = parse_token(&buf, end, cdelim, cloader, pyload)
-            if not stack:
-                raise e.DataError("malformed array: missing initial '{'")
-            tmp = PyList_GET_ITEM(stack, PyList_GET_SIZE(stack) - 1)
-            PyList_Append(<object>tmp, v)
-
-    assert rv is not None
     return rv
 
 
-cdef object parse_token(
-    char **bufptr, char *bufend, char cdelim, CLoader cloader, object load
+cdef object _parse_token(
+    char **bufptr, char *bufend, char cdelim,
+    char **scratch, size_t *sclen, CLoader cloader, object load
 ):
     cdef char *start = bufptr[0]
     cdef int has_quotes = start[0] == b'"'
@@ -130,9 +139,9 @@ cdef object parse_token(
             and start[2] == b'L' and start[3] == b'L':
         return None
 
-    cdef char *unesc
     cdef char *src
     cdef char *tgt
+    cdef size_t unesclen
 
     if not num_escapes:
         if cloader is not None:
@@ -142,9 +151,13 @@ cdef object parse_token(
             return load(b)
 
     else:
-        unesc = <char *>PyMem_Malloc(length - num_escapes + 1)
+        unesclen = length - num_escapes + 1
+        if unesclen > sclen[0]:
+            scratch[0] = <char *>PyMem_Realloc(scratch[0], unesclen)
+            sclen[0] = unesclen
+
         src = start
-        tgt = unesc
+        tgt = scratch[0]
         while src < end:
             if src[0] == b'\\':
                 src += 1
@@ -154,14 +167,11 @@ cdef object parse_token(
 
         tgt[0] = b'\x00'
 
-        try:
-            if cloader is not None:
-                return cloader.cload(unesc, length - num_escapes)
-            else:
-                b = unesc[:length - num_escapes]
-                return load(b)
-        finally:
-            PyMem_Free(unesc)
+        if cloader is not None:
+            return cloader.cload(scratch[0], length - num_escapes)
+        else:
+            b = scratch[0][:length - num_escapes]
+            return load(b)
 
 
 @cython.cdivision(True)
