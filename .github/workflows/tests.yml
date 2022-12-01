@@ -59,13 +59,19 @@ jobs:
         if: ${{ matrix.libpq == 'newest' }}
         run: |
           set -x
-          rel=$(lsb_release -c -s)
+
+          curl -sL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+            | gpg --dearmor \
+            | sudo tee /etc/apt/trusted.gpg.d/apt.postgresql.org.gpg > /dev/null
+
           # NOTE: in order to test with a preview release, add its number to
           # the deb entry. For instance, to test on preview Postgres 16, use:
           # "deb http://apt.postgresql.org/pub/repos/apt ${rel}-pgdg main 16"
+          rel=$(lsb_release -c -s)
           echo "deb http://apt.postgresql.org/pub/repos/apt ${rel}-pgdg main" \
-            | sudo tee -a /etc/apt/sources.list.d/pgdg.list
+            | sudo tee -a /etc/apt/sources.list.d/pgdg.list > /dev/null
           sudo apt-get -qq update
+
           pqver=$(apt-cache show libpq5  | grep ^Version: | head -1 \
             | awk '{print $2}')
           sudo apt-get -qq -y install "libpq-dev=${pqver}" "libpq5=${pqver}"
@@ -286,11 +292,20 @@ jobs:
         if: ${{ matrix.libpq == 'newest' }}
         run: |
           set -x
+
+          curl -sL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+            | gpg --dearmor \
+            | sudo tee /etc/apt/trusted.gpg.d/apt.postgresql.org.gpg > /dev/null
+
+          # NOTE: in order to test with a preview release, add its number to
+          # the deb entry. For instance, to test on preview Postgres 16, use:
+          # "deb http://apt.postgresql.org/pub/repos/apt ${rel}-pgdg main 16"
           rel=$(lsb_release -c -s)
           echo "deb http://apt.postgresql.org/pub/repos/apt ${rel}-pgdg main" \
-            | sudo tee -a /etc/apt/sources.list.d/pgdg.list
+            | sudo tee -a /etc/apt/sources.list.d/pgdg.list > /dev/null
           sudo apt-get -qq update
-          pqver=$(apt-cache show libpq5 | grep ^Version: | head -1 \
+
+          pqver=$(apt-cache show libpq5  | grep ^Version: | head -1 \
             | awk '{print $2}')
           sudo apt-get -qq -y install "libpq-dev=${pqver}" "libpq5=${pqver}"
 
