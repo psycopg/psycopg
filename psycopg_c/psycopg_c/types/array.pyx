@@ -85,6 +85,10 @@ cdef object _array_load_text(
             raise e.DataError("malformed array: no '=' after dimension information")
         buf += 1
 
+    # TODO: further optimization: pre-scan the array to find the array
+    # dimensions, so that we can preallocate the list sized instead of calling
+    # append, which is the dominating operation
+
     cdef list stack = []
     cdef list a = []
     rv = a
