@@ -17,6 +17,7 @@ Psycopg 3.1.5 (unreleased)
   (:ticket:`#422`).
 - Fix `Cursor.rownumber` to return `!None` when the result has no row to fetch
   (:ticket:`#437`).
+- Fix array loading slowness compared to psycopg2 (:ticket:`#359`).
 
 
 Current release
