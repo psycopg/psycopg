@@ -34,12 +34,16 @@ cdef class ArrayLoader(_CRecursiveLoader):
     base_oid = 0
     delimiter = b","
 
-    cdef object cload(self, const char *data, size_t length):
-        cdef PyObject *row_loader = self._tx._c_get_loader(
-            <PyObject *>self.base_oid, <PyObject *>PQ_TEXT)
+    cdef PyObject *row_loader
+    cdef char cdelim
 
-        cdef char cdelim = self.delimiter[0]
-        return _array_load_text(data, length, row_loader, cdelim)
+    cdef object cload(self, const char *data, size_t length):
+        if self.cdelim == b"\x00":
+            self.row_loader = self._tx._c_get_loader(
+                <PyObject *>self.base_oid, <PyObject *>PQ_TEXT)
+            self.cdelim = self.delimiter[0]
+
+        return _array_load_text(data, length, self.row_loader, self.cdelim)
 
 
 @cython.final
@@ -47,8 +51,11 @@ cdef class ArrayBinaryLoader(_CRecursiveLoader):
 
     format = PQ_BINARY
 
+    cdef PyObject *row_loader
+
     cdef object cload(self, const char *data, size_t length):
-        return _array_load_binary(data, length, self._tx)
+        rv = _array_load_binary(data, length, self._tx, &(self.row_loader))
+        return rv
 
 
 cdef object _array_load_text(
@@ -191,7 +198,9 @@ cdef object _parse_token(
 
 
 @cython.cdivision(True)
-cdef object _array_load_binary(const char *buf, size_t length, Transformer tx):
+cdef object _array_load_binary(
+    const char *buf, size_t length, Transformer tx, PyObject **row_loader_ptr
+):
     # head is ndims, hasnull, elem oid
     cdef uint32_t *buf32 = <uint32_t *>buf
     cdef int ndims = endian.be32toh(buf32[0])
@@ -204,9 +213,10 @@ cdef object _array_load_binary(const char *buf, size_t length, Transformer tx):
             % (ndims, MAXDIM)
         )
 
-    cdef object oid = <Oid>endian.be32toh(buf32[2])
-    cdef PyObject *row_loader = tx._c_get_loader(
-        <PyObject *>oid, <PyObject *>PQ_BINARY)
+    cdef object oid
+    if row_loader_ptr[0] == NULL:
+        oid = <Oid>endian.be32toh(buf32[2])
+        row_loader_ptr[0] = tx._c_get_loader(<PyObject *>oid, <PyObject *>PQ_BINARY)
 
     cdef Py_ssize_t[MAXDIM] dims
     cdef int i
@@ -215,7 +225,7 @@ cdef object _array_load_binary(const char *buf, size_t length, Transformer tx):
         dims[i] = endian.be32toh(buf32[3 + 2 * i])
 
     buf += (3 + 2 * ndims) * sizeof(uint32_t)
-    out = _array_load_binary_rec(ndims, dims, &buf, row_loader)
+    out = _array_load_binary_rec(ndims, dims, &buf, row_loader_ptr[0])
     return out
 
 
