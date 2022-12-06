@@ -7,7 +7,7 @@ C optimized functions to manipulate arrays
 import cython
 
 from libc.stdint cimport int32_t, uint32_t
-from libc.string cimport strchr
+from libc.string cimport memset, strchr
 from cpython.mem cimport PyMem_Realloc, PyMem_Free
 from cpython.ref cimport Py_INCREF
 from cpython.list cimport PyList_New,PyList_Append, PyList_GetSlice
@@ -37,13 +37,24 @@ cdef class ArrayLoader(_CRecursiveLoader):
     cdef PyObject *row_loader
     cdef char cdelim
 
+    # A memory area which used to unescape elements.
+    # Keep it here to avoid a malloc per element and to set up exceptions
+    # to make sure to free it on error.
+    cdef char *scratch
+    cdef size_t sclen
+
     cdef object cload(self, const char *data, size_t length):
         if self.cdelim == b"\x00":
             self.row_loader = self._tx._c_get_loader(
                 <PyObject *>self.base_oid, <PyObject *>PQ_TEXT)
             self.cdelim = self.delimiter[0]
 
-        return _array_load_text(data, length, self.row_loader, self.cdelim)
+        return _array_load_text(
+            data, length, self.row_loader, self.cdelim,
+            &(self.scratch), &(self.sclen))
+
+    def __dealloc__(self):
+        PyMem_Free(self.scratch)
 
 
 @cython.final
@@ -59,16 +70,13 @@ cdef class ArrayBinaryLoader(_CRecursiveLoader):
 
 
 cdef object _array_load_text(
-    const char *buf, size_t length, PyObject *row_loader, char cdelim
+    const char *buf, size_t length, PyObject *row_loader, char cdelim,
+    char **scratch, size_t *sclen
 ):
     if length == 0:
         raise e.DataError("malformed array: empty data")
 
     cdef const char *end = buf + length
-
-    # Keep and grow a buffer instead of malloc'ing at each element
-    cdef char *scratch = NULL
-    cdef size_t sclen = 0
 
     # Remove the dimensions information prefix (``[...]=``)
     if buf[0] == b"[":
@@ -89,35 +97,31 @@ cdef object _array_load_text(
     else:
         pyload = (<RowLoader>row_loader).loadfunc
 
-    try:
-        while buf < end:
-            if buf[0] == b'{':
-                if stack:
-                    tmp = PyList_GET_ITEM(stack, PyList_GET_SIZE(stack) - 1)
-                    PyList_Append(<object>tmp, a)
-                PyList_Append(stack, a)
-                a = []
-                buf += 1
-
-            elif buf[0] == b'}':
-                if not stack:
-                    raise e.DataError("malformed array: unexpected '}'")
-                rv = stack.pop()
-                buf += 1
-
-            elif buf[0] == cdelim:
-                buf += 1
-
-            else:
-                v = _parse_token(
-                    &buf, end, cdelim, &scratch, &sclen, cloader, pyload)
-                if not stack:
-                    raise e.DataError("malformed array: missing initial '{'")
+    while buf < end:
+        if buf[0] == b'{':
+            if stack:
                 tmp = PyList_GET_ITEM(stack, PyList_GET_SIZE(stack) - 1)
-                PyList_Append(<object>tmp, v)
+                PyList_Append(<object>tmp, a)
+            PyList_Append(stack, a)
+            a = []
+            buf += 1
 
-    finally:
-        PyMem_Free(scratch)
+        elif buf[0] == b'}':
+            if not stack:
+                raise e.DataError("malformed array: unexpected '}'")
+            rv = stack.pop()
+            buf += 1
+
+        elif buf[0] == cdelim:
+            buf += 1
+
+        else:
+            v = _parse_token(
+                &buf, end, cdelim, scratch, sclen, cloader, pyload)
+            if not stack:
+                raise e.DataError("malformed array: missing initial '{'")
+            tmp = PyList_GET_ITEM(stack, PyList_GET_SIZE(stack) - 1)
+            PyList_Append(<object>tmp, v)
 
     return rv
 
