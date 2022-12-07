@@ -148,7 +148,7 @@ class BaseCopy(Generic[ConnectionType]):
 
     # High level copy protocol generators (state change of the Copy object)
 
-    def _read_gen(self) -> PQGen[memoryview]:
+    def _read_gen(self) -> PQGen[Buffer]:
         if self._finished:
             return memoryview(b"")
 
@@ -250,7 +250,7 @@ class Copy(BaseCopy["Connection[Any]"]):
 
     # End user sync interface
 
-    def __iter__(self) -> Iterator[memoryview]:
+    def __iter__(self) -> Iterator[Buffer]:
         """Implement block-by-block iteration on :sql:`COPY TO`."""
         while True:
             data = self.read()
@@ -258,7 +258,7 @@ class Copy(BaseCopy["Connection[Any]"]):
                 break
             yield data
 
-    def read(self) -> memoryview:
+    def read(self) -> Buffer:
         """
         Read an unparsed row after a :sql:`COPY TO` operation.
 
@@ -498,14 +498,14 @@ class AsyncCopy(BaseCopy["AsyncConnection[Any]"]):
     ) -> None:
         await self.finish(exc_val)
 
-    async def __aiter__(self) -> AsyncIterator[memoryview]:
+    async def __aiter__(self) -> AsyncIterator[Buffer]:
         while True:
             data = await self.read()
             if not data:
                 break
             yield data
 
-    async def read(self) -> memoryview:
+    async def read(self) -> Buffer:
         return await self.connection.wait(self._read_gen())
 
     async def rows(self) -> AsyncIterator[Tuple[Any, ...]]:
