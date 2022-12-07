@@ -70,7 +70,7 @@ Please add ``--config-settings editable_mode=strict`` to the ``pip install
 
 Now hack away! You can use tox to validate the code::
 
-    pip install tox
+    pip install "tox < 4"
     tox -p4
 
 and to run the tests::
