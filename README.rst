@@ -66,21 +66,10 @@ requirements::
 Please add ``--config-settings editable_mode=strict`` to the ``pip install
 -e`` above if you experience `editable mode broken`__.
 
-.. __: https://github.com/pypa/setuptools/issues/3557?
+.. __: https://github.com/pypa/setuptools/issues/3557
 
-Now hack away! You can use tox to validate the code::
-
-    pip install "tox < 4"
-    tox -p4
-
-and to run the tests::
+Now hack away! You can run the tests using::
 
     psql -c 'create database psycopg_test'
     export PSYCOPG_TEST_DSN="dbname=psycopg_test"
-    tox -c psycopg -s
-    tox -c psycopg_c -s
-
-Please look at the commands definitions in the ``tox.ini`` files if you want
-to run some of them interactively: the dependency should be already in your
-virtualenv. Feel free to adapt these recipes if you follow a different
-development pattern.
+    pytest
