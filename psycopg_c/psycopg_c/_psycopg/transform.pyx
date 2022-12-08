@@ -172,7 +172,7 @@ cdef class Transformer:
         self._row_loaders = loaders
 
     def set_dumper_types(self, types: Sequence[int], format: Format) -> None:
-        cdef int ntypes = len(types)
+        cdef Py_ssize_t ntypes = len(types)
         dumpers = PyList_New(ntypes)
         cdef int i
         for i in range(ntypes):
