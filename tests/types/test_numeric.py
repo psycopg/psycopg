@@ -612,3 +612,14 @@ def test_repr_wrapper(conn, wrapper, fmt_in):
     cur = conn.execute(f"select pg_typeof(%{fmt_in.value})::oid", [wrapper(0)])
     oid = cur.fetchone()[0]
     assert oid == psycopg.postgres.types[wrapper.__name__.lower()].oid
+
+
+@pytest.mark.parametrize("fmt_out", pq.Format)
+@pytest.mark.parametrize(
+    "typename",
+    "integer int2 int4 int8 float4 float8 numeric".split() + ["double precision"],
+)
+def test_oid_lookup(conn, typename, fmt_out):
+    dumper = conn.adapters.get_dumper_by_oid(conn.adapters.types[typename].oid, fmt_out)
+    assert dumper.oid == conn.adapters.types[typename].oid
+    assert dumper.format == fmt_out

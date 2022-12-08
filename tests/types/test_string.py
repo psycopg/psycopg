@@ -241,6 +241,14 @@ def test_text_array_ascii(conn, fmt_in, fmt_out):
     assert res == exp
 
 
+@pytest.mark.parametrize("fmt_out", pq.Format)
+@pytest.mark.parametrize("typename", ["text", "varchar", "name"])
+def test_oid_lookup(conn, typename, fmt_out):
+    dumper = conn.adapters.get_dumper_by_oid(conn.adapters.types[typename].oid, fmt_out)
+    assert dumper.oid == conn.adapters.types[typename].oid
+    assert dumper.format == fmt_out
+
+
 #
 # tests with bytea
 #
