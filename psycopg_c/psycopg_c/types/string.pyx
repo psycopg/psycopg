@@ -68,11 +68,27 @@ cdef class _BaseStrDumper(CDumper):
         return size
 
 
-@cython.final
-cdef class StrBinaryDumper(_BaseStrDumper):
+cdef class _StrBinaryDumper(_BaseStrDumper):
 
     format = PQ_BINARY
+
+
+@cython.final
+cdef class StrBinaryDumper(_StrBinaryDumper):
+
     oid = oids.TEXT_OID
+
+
+@cython.final
+cdef class StrBinaryDumperVarchar(_StrBinaryDumper):
+
+    oid = oids.VARCHAR_OID
+
+
+@cython.final
+cdef class StrBinaryDumperName(_StrBinaryDumper):
+
+    oid = oids.NAME_OID
 
 
 cdef class _StrDumper(_BaseStrDumper):
@@ -95,6 +111,18 @@ cdef class _StrDumper(_BaseStrDumper):
 cdef class StrDumper(_StrDumper):
 
     oid = oids.TEXT_OID
+
+
+@cython.final
+cdef class StrDumperVarchar(_StrDumper):
+
+    oid = oids.VARCHAR_OID
+
+
+@cython.final
+cdef class StrDumperName(_StrDumper):
+
+    oid = oids.NAME_OID
 
 
 @cython.final
