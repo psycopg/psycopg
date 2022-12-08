@@ -296,11 +296,9 @@ cdef class OidBinaryLoader(CLoader):
         return PyLong_FromUnsignedLong(endian.be32toh((<uint32_t *>data)[0]))
 
 
-@cython.final
-cdef class FloatDumper(CDumper):
+cdef class _FloatDumper(CDumper):
 
     format = PQ_TEXT
-    oid = oids.FLOAT8_OID
 
     cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
         cdef double d = PyFloat_AsDouble(obj)
@@ -325,6 +323,18 @@ cdef dict _special_float = {
     b"-inf": b"'-Infinity'::float8",
     b"nan": b"'NaN'::float8",
 }
+
+
+@cython.final
+cdef class FloatDumper(_FloatDumper):
+
+    oid = oids.FLOAT8_OID
+
+
+@cython.final
+cdef class Float4Dumper(_FloatDumper):
+
+    oid = oids.FLOAT4_OID
 
 
 @cython.final
