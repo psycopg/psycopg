@@ -73,10 +73,8 @@ def pytest_sessionstart(session):
     # Detect if there was a segfault in the previous run.
     #
     # In case of segfault, pytest doesn't get a chance to write failed tests
-    # in the cache. As a consequence, tox retries would find no test failed and
+    # in the cache. As a consequence, retries would find no test failed and
     # assume that all tests passed in the previous run, making the whole test pass.
-    #
-    # Note: The cache is in .pytest_cache/
     cache = session.config.cache
     if cache.get("segfault", False):
         session.warn(Warning("Previous run resulted in segfault! Not running any test"))
