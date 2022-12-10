@@ -24,10 +24,14 @@ class _BaseStrDumper(Dumper):
         self._encoding = enc if enc != "ascii" else "utf-8"
 
 
-class StrBinaryDumper(_BaseStrDumper):
+class _StrBinaryDumper(_BaseStrDumper):
+    """
+    Base class to dump a Python strings to a Postgres text type, in binary format.
+
+    Subclasses shall specify the oids of real types (text, varchar, name...).
+    """
 
     format = Format.BINARY
-    oid = postgres.types["text"].oid
 
     def dump(self, obj: str) -> bytes:
         # the server will raise DataError subclass if the string contains 0x00
@@ -35,11 +39,35 @@ class StrBinaryDumper(_BaseStrDumper):
 
 
 class _StrDumper(_BaseStrDumper):
+    """
+    Base class to dump a Python strings to a Postgres text type, in text format.
+
+    Subclasses shall specify the oids of real types (text, varchar, name...).
+    """
+
     def dump(self, obj: str) -> bytes:
         if "\x00" in obj:
             raise DataError("PostgreSQL text fields cannot contain NUL (0x00) bytes")
         else:
             return obj.encode(self._encoding)
+
+
+# The next are concrete dumpers, each one specifying the oid they dump to.
+
+
+class StrBinaryDumper(_StrBinaryDumper):
+
+    oid = postgres.types["text"].oid
+
+
+class StrBinaryDumperVarchar(_StrBinaryDumper):
+
+    oid = postgres.types["varchar"].oid
+
+
+class StrBinaryDumperName(_StrBinaryDumper):
+
+    oid = postgres.types["name"].oid
 
 
 class StrDumper(_StrDumper):
@@ -55,6 +83,16 @@ class StrDumper(_StrDumper):
     oid = postgres.types["text"].oid
 
 
+class StrDumperVarchar(_StrDumper):
+
+    oid = postgres.types["varchar"].oid
+
+
+class StrDumperName(_StrDumper):
+
+    oid = postgres.types["name"].oid
+
+
 class StrDumperUnknown(_StrDumper):
     """
     Dumper for strings in text format to the unknown oid.
@@ -62,7 +100,7 @@ class StrDumperUnknown(_StrDumper):
     This dumper is the default dumper for strings and allows to use Python
     strings to represent almost every data type. In a few places, however, the
     unknown oid is not accepted (for instance in variadic functions such as
-    'concat()'). In that case either a cast on the placeholder ('%s::text) or
+    'concat()'). In that case either a cast on the placeholder ('%s::text') or
     the StrTextDumper should be used.
     """
 
@@ -167,9 +205,13 @@ def register_default_adapters(context: AdaptContext) -> None:
     # registered becomes the default for each type. Usually, binary is the
     # default dumper. For text we use the text dumper as default because it
     # plays the role of unknown, and it can be cast automatically to other
-    # types. However, before that, we register a dumper with the text oid,
-    # which will be used when a text dumper is looked up by oid.
+    # types. However, before that, we register dumper with 'text', 'varchar',
+    # 'name' oids, which will be used when a text dumper is looked up by oid.
+    adapters.register_dumper(str, StrBinaryDumperName)
+    adapters.register_dumper(str, StrBinaryDumperVarchar)
     adapters.register_dumper(str, StrBinaryDumper)
+    adapters.register_dumper(str, StrDumperName)
+    adapters.register_dumper(str, StrDumperVarchar)
     adapters.register_dumper(str, StrDumper)
     adapters.register_dumper(str, StrDumperUnknown)
 
