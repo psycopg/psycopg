@@ -1,3 +1,4 @@
+from typing import List, Any
 from decimal import Decimal
 
 import pytest
@@ -7,12 +8,14 @@ from psycopg import pq
 from psycopg import sql
 from psycopg.adapt import PyFormat, Transformer, Dumper
 from psycopg.types import TypeInfo
+from psycopg._compat import prod
 from psycopg.postgres import types as builtins
 
 
 tests_str = [
     ([[[[[["a"]]]]]], "{{{{{{a}}}}}}"),
     ([[[[[[None]]]]]], "{{{{{{NULL}}}}}}"),
+    ([[[[[["NULL"]]]]]], '{{{{{{"NULL"}}}}}}'),
     (["foo", "bar", "baz"], "{foo,bar,baz}"),
     (["foo", None, "baz"], "{foo,null,baz}"),
     (["foo", "null", "", "baz"], '{foo,"null","",baz}'),
@@ -285,6 +288,21 @@ def test_load_array_no_comma_separator(conn):
     cur = conn.execute("select '{(2,2),(1,1);(5,6),(3,4)}'::box[]")
     # Not parsed at the moment, but split ok on ; separator
     assert cur.fetchone()[0] == ["(2,2),(1,1)", "(5,6),(3,4)"]
+
+
+@pytest.mark.crdb_skip("nested array")
+@pytest.mark.parametrize("fmt_out", pq.Format)
+def test_load_nested_array(conn, fmt_out):
+    dims = [3, 4, 5, 6]
+    a: List[Any] = list(range(prod(dims)))
+    for dim in dims[-1:0:-1]:
+        a = [a[i : i + dim] for i in range(0, len(a), dim)]
+
+    assert a[2][3][4][5] == prod(dims) - 1
+
+    sa = str(a).replace("[", "{").replace("]", "}")
+    got = conn.execute("select %s::int[][][][]", [sa], binary=fmt_out).fetchone()[0]
+    assert got == a
 
 
 @pytest.mark.crdb_skip("nested array")

@@ -161,3 +161,11 @@ cdef class CLoader:
         cdef Py_ssize_t length
         _buffer_as_string_and_size(data, &ptr, &length)
         return self.cload(ptr, length)
+
+
+cdef class _CRecursiveLoader(CLoader):
+
+    cdef Transformer _tx
+
+    def __cinit__(self, oid: int, context: Optional[AdaptContext] = None):
+        self._tx = Transformer.from_context(context)

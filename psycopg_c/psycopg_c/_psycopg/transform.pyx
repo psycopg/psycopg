@@ -117,10 +117,7 @@ cdef class Transformer:
 
         If the context is a Transformer instance, just return it.
         """
-        if isinstance(context, Transformer):
-            return context
-        else:
-            return cls(context)
+        return _tx_from_context(context)
 
     @property
     def encoding(self) -> str:
@@ -634,3 +631,10 @@ cdef object _as_row_dumper(object dumper):
         row_dumper.cdumper = <CDumper>dumper
 
     return row_dumper
+
+
+cdef Transformer _tx_from_context(object context):
+    if isinstance(context, Transformer):
+        return context
+    else:
+        return Transformer(context)

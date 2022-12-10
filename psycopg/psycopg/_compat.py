@@ -6,7 +6,7 @@ compatibility functions for different Python versions
 
 import sys
 import asyncio
-from typing import Any, Awaitable, Generator, Optional, Union, TypeVar
+from typing import Any, Awaitable, Generator, Optional, Sequence, Union, TypeVar
 
 if sys.version_info >= (3, 8):
     from typing import Protocol
@@ -18,6 +18,7 @@ FutureT: "TypeAlias" = Union["asyncio.Future[T]", Generator[Any, None, T], Await
 
 if sys.version_info >= (3, 8):
     create_task = asyncio.create_task
+    from math import prod
 
 else:
 
@@ -25,6 +26,11 @@ else:
         coro: FutureT[T], name: Optional[str] = None
     ) -> "asyncio.Future[T]":
         return asyncio.create_task(coro)
+
+    from functools import reduce
+
+    def prod(seq: Sequence[int]) -> int:
+        return reduce(int.__mul__, seq, 1)
 
 
 if sys.version_info >= (3, 9):
@@ -58,4 +64,5 @@ __all__ = [
     "ZoneInfo",
     "cache",
     "create_task",
+    "prod",
 ]
