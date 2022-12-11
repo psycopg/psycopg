@@ -18,8 +18,12 @@ from psycopg._encodings import conninfo_encoding
 cdef object WAIT_W = Wait.W
 cdef object WAIT_R = Wait.R
 cdef object WAIT_RW = Wait.RW
+cdef object PY_READY_R = Ready.R
+cdef object PY_READY_W = Ready.W
+cdef object PY_READY_RW = Ready.RW
 cdef int READY_R = Ready.R
 cdef int READY_W = Ready.W
+cdef int READY_RW = Ready.RW
 
 def connect(conninfo: str) -> PQGenConn[abc.PGconn]:
     """
