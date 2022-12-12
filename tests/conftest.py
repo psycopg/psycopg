@@ -1,5 +1,6 @@
 import sys
 import asyncio
+import selectors
 from typing import List
 
 import pytest
@@ -58,11 +59,14 @@ def pytest_addoption(parser):
 
 
 def pytest_report_header(config):
-    loop = config.getoption("--loop")
-    if loop == "default":
-        return []
+    rv = []
 
-    return [f"asyncio loop: {loop}"]
+    rv.append(f"default selector: {selectors.DefaultSelector.__name__}")
+    loop = config.getoption("--loop")
+    if loop != "default":
+        rv.append(f"asyncio loop: {loop}")
+
+    return rv
 
 
 def pytest_sessionstart(session):

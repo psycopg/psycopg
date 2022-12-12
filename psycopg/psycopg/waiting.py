@@ -9,28 +9,17 @@ These functions are designed to consume the generators returned by the
 # Copyright (C) 2020 The Psycopg Team
 
 
+import os
 import select
 import selectors
-from enum import IntEnum
-from typing import Optional
+from typing import Dict, Optional
 from asyncio import get_event_loop, wait_for, Event, TimeoutError
-from selectors import DefaultSelector, EVENT_READ, EVENT_WRITE
+from selectors import DefaultSelector
 
 from . import errors as e
-from .abc import PQGen, PQGenConn, RV
-
-
-class Wait(IntEnum):
-    R = EVENT_READ
-    W = EVENT_WRITE
-    RW = EVENT_READ | EVENT_WRITE
-
-
-class Ready(IntEnum):
-    R = EVENT_READ
-    W = EVENT_WRITE
-    RW = EVENT_READ | EVENT_WRITE
-
+from .abc import RV, PQGen, PQGenConn, WaitFunc
+from ._enums import Wait as Wait, Ready as Ready  # re-exported
+from ._cmodule import _psycopg
 
 WAIT_R = Wait.R
 WAIT_W = Wait.W
@@ -214,6 +203,52 @@ async def wait_conn_async(gen: PQGenConn[RV], timeout: Optional[float] = None) -
         return rv
 
 
+# Specialised implementation of wait functions.
+
+
+def wait_select(gen: PQGen[RV], fileno: int, timeout: Optional[float] = None) -> RV:
+    """
+    Wait for a generator using select where supported.
+    """
+    try:
+        s = next(gen)
+
+        empty = ()
+        fnlist = (fileno,)
+        while True:
+            rl, wl, xl = select.select(
+                fnlist if s & WAIT_R else empty,
+                fnlist if s & WAIT_W else empty,
+                fnlist,
+                timeout,
+            )
+            ready = 0
+            if rl:
+                ready = READY_R
+            if wl:
+                ready |= READY_W
+            if not ready:
+                continue
+            # assert s & ready
+            s = gen.send(ready)  # type: ignore
+
+    except StopIteration as ex:
+        rv: RV = ex.args[0] if ex.args else None
+        return rv
+
+
+poll_evmasks: Dict[Wait, int]
+
+if hasattr(selectors, "EpollSelector"):
+    poll_evmasks = {
+        WAIT_R: select.EPOLLONESHOT | select.EPOLLIN,
+        WAIT_W: select.EPOLLONESHOT | select.EPOLLOUT,
+        WAIT_RW: select.EPOLLONESHOT | select.EPOLLIN | select.EPOLLOUT,
+    }
+else:
+    poll_evmasks = {}
+
+
 def wait_epoll(gen: PQGen[RV], fileno: int, timeout: Optional[float] = None) -> RV:
     """
     Wait for a generator using epoll where supported.
@@ -244,7 +279,7 @@ def wait_epoll(gen: PQGen[RV], fileno: int, timeout: Optional[float] = None) -> 
                     ready = READY_R
                 if ev & ~select.EPOLLIN:
                     ready |= READY_W
-                assert s & ready
+                # assert s & ready
                 s = gen.send(ready)
                 evmask = poll_evmasks[s]
                 epoll.modify(fileno, evmask)
@@ -254,14 +289,43 @@ def wait_epoll(gen: PQGen[RV], fileno: int, timeout: Optional[float] = None) -> 
         return rv
 
 
-if selectors.DefaultSelector is getattr(selectors, "EpollSelector", None):
-    wait = wait_epoll
+if _psycopg:
+    wait_c = _psycopg.wait_c
 
-    poll_evmasks = {
-        Wait.R: select.EPOLLONESHOT | select.EPOLLIN,
-        Wait.W: select.EPOLLONESHOT | select.EPOLLOUT,
-        Wait.RW: select.EPOLLONESHOT | select.EPOLLIN | select.EPOLLOUT,
-    }
+
+# Choose the best wait strategy for the platform.
+#
+# the selectors objects have a generic interface but come with some overhead,
+# so we also offer more finely tuned implementations.
+
+wait: WaitFunc
+
+# Allow the user to choose a specific function for testing
+if "PSYCOPG_WAIT_FUNC" in os.environ:
+    fname = os.environ["PSYCOPG_WAIT_FUNC"]
+    if not fname.startswith("wait_") or fname not in globals():
+        raise ImportError(
+            "PSYCOPG_WAIT_FUNC should be the name of an available wait function;"
+            f" got {fname!r}"
+        )
+    wait = globals()[fname]
+
+elif _psycopg:
+    wait = wait_c
+
+elif selectors.DefaultSelector is getattr(selectors, "SelectSelector", None):
+    # On Windows, SelectSelector should be the default.
+    wait = wait_select
+
+elif selectors.DefaultSelector is getattr(selectors, "EpollSelector", None):
+    # NOTE: select seems more performing than epoll. It is admittedly unlikely
+    # that a platform has epoll but not select, so maybe we could kill
+    # wait_epoll altogether(). More testing to do.
+    wait = wait_select if hasattr(selectors, "SelectSelector") else wait_epoll
+
+elif selectors.DefaultSelector is getattr(selectors, "KqueueSelector", None):
+    # wait_select is faster than wait_selector, probably because of less overhead
+    wait = wait_select if hasattr(selectors, "SelectSelector") else wait_selector
 
 else:
     wait = wait_selector
