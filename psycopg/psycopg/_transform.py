@@ -7,13 +7,13 @@ Helper object to transform values between Python and PostgreSQL
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 from typing import DefaultDict, TYPE_CHECKING
 from collections import defaultdict
+from typing_extensions import TypeAlias
 
 from . import pq
 from . import postgres
 from . import errors as e
 from .abc import Buffer, LoadFunc, AdaptContext, PyFormat, DumperKey, NoneType
 from .rows import Row, RowMaker
-from ._compat import TypeAlias
 from .postgres import INVALID_OID, TEXT_OID
 from ._encodings import pgconn_encoding
 

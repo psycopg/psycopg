@@ -14,6 +14,7 @@ from weakref import ref, ReferenceType
 from warnings import warn
 from functools import partial
 from contextlib import contextmanager
+from typing_extensions import TypeAlias
 
 from . import pq
 from . import errors as e
@@ -27,7 +28,7 @@ from .rows import Row, RowFactory, tuple_row, TupleRow, args_row
 from .adapt import AdaptersMap
 from ._enums import IsolationLevel
 from .cursor import Cursor
-from ._compat import TypeAlias, LiteralString
+from ._compat import LiteralString
 from .conninfo import make_conninfo, conninfo_to_dict, ConnectionInfo
 from ._pipeline import BasePipeline, Pipeline
 from .generators import notifies, connect, execute

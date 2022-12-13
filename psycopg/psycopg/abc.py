@@ -7,10 +7,11 @@ Protocol objects representing different implementations of the same classes.
 from typing import Any, Callable, Generator, Mapping
 from typing import List, Optional, Sequence, Tuple, TypeVar, Union
 from typing import TYPE_CHECKING
+from typing_extensions import TypeAlias
 
 from . import pq
 from ._enums import PyFormat as PyFormat
-from ._compat import Protocol, TypeAlias, LiteralString
+from ._compat import Protocol, LiteralString
 
 if TYPE_CHECKING:
     from . import sql

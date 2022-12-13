@@ -7,6 +7,15 @@
 ``psycopg_pool`` release notes
 ==============================
 
+Future releases
+---------------
+
+psycopg_pool 3.1.5 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Avoid error in pyright caused by aliasing TypeAlias (:ticket:`#439`).
+
+
 Current release
 ---------------
 

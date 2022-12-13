@@ -8,13 +8,18 @@ import sys
 import asyncio
 from typing import Any, Awaitable, Generator, Optional, Sequence, Union, TypeVar
 
+# NOTE: TypeAlias cannot be exported by this module, as pyright special-cases it.
+# For this raisin it must be imported directly from typing_extension where used.
+# See https://github.com/microsoft/pyright/issues/4197
+from typing_extensions import TypeAlias
+
 if sys.version_info >= (3, 8):
     from typing import Protocol
 else:
     from typing_extensions import Protocol
 
 T = TypeVar("T")
-FutureT: "TypeAlias" = Union["asyncio.Future[T]", Generator[Any, None, T], Awaitable[T]]
+FutureT: TypeAlias = Union["asyncio.Future[T]", Generator[Any, None, T], Awaitable[T]]
 
 if sys.version_info >= (3, 8):
     create_task = asyncio.create_task
@@ -45,9 +50,9 @@ else:
     cache = lru_cache(maxsize=None)
 
 if sys.version_info >= (3, 10):
-    from typing import TypeAlias, TypeGuard
+    from typing import TypeGuard
 else:
-    from typing_extensions import TypeAlias, TypeGuard
+    from typing_extensions import TypeGuard
 
 if sys.version_info >= (3, 11):
     from typing import LiteralString
@@ -59,7 +64,6 @@ __all__ = [
     "Deque",
     "LiteralString",
     "Protocol",
-    "TypeAlias",
     "TypeGuard",
     "ZoneInfo",
     "cache",

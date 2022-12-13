@@ -19,10 +19,11 @@ DBAPI-defined Exceptions are defined in the following hierarchy::
 # Copyright (C) 2020 The Psycopg Team
 
 from typing import Any, Dict, Optional, Sequence, Tuple, Type, Union
+from typing_extensions import TypeAlias
 
 from .pq.abc import PGconn, PGresult
 from .pq._enums import DiagnosticField
-from ._compat import TypeAlias, TypeGuard
+from ._compat import TypeGuard
 
 ErrorInfo: TypeAlias = Union[None, PGresult, Dict[int, Optional[bytes]]]
 

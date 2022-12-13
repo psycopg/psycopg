@@ -6,12 +6,12 @@ Dict to hstore adaptation
 
 import re
 from typing import Dict, List, Optional
+from typing_extensions import TypeAlias
 
 from .. import errors as e
 from .. import postgres
 from ..abc import Buffer, AdaptContext
 from ..adapt import PyFormat, RecursiveDumper, RecursiveLoader
-from .._compat import TypeAlias
 from ..postgres import TEXT_OID
 from .._typeinfo import TypeInfo
 

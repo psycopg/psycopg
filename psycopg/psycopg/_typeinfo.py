@@ -9,11 +9,11 @@ information to the adapters if needed.
 from enum import Enum
 from typing import Any, Dict, Iterator, Optional, overload
 from typing import Sequence, Tuple, Type, TypeVar, Union, TYPE_CHECKING
+from typing_extensions import TypeAlias
 
 from . import errors as e
 from .abc import AdaptContext
 from .rows import dict_row
-from ._compat import TypeAlias
 
 if TYPE_CHECKING:
     from .connection import Connection

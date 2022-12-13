@@ -5,12 +5,12 @@ Adapters for network types.
 # Copyright (C) 2020 The Psycopg Team
 
 from typing import Callable, Optional, Type, Union, TYPE_CHECKING
+from typing_extensions import TypeAlias
 
 from .. import postgres
 from ..pq import Format
 from ..abc import AdaptContext
 from ..adapt import Buffer, Dumper, Loader
-from .._compat import TypeAlias
 
 if TYPE_CHECKING:
     import ipaddress

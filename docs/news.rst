@@ -19,6 +19,7 @@ Psycopg 3.1.5 (unreleased)
   (:ticket:`#422`).
 - Fix `Cursor.rownumber` to return `!None` when the result has no row to fetch
   (:ticket:`#437`).
+- Avoid error in pyright caused by aliasing TypeAlias (:ticket:`#439`).
 - Fix `Copy.set_types()` used with `varchar` and `name` types (:ticket:`#452`).
 
 

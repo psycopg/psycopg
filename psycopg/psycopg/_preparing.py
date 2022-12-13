@@ -7,9 +7,10 @@ Support for prepared statements
 from enum import IntEnum, auto
 from typing import Iterator, Optional, Sequence, Tuple, TYPE_CHECKING
 from collections import OrderedDict
+from typing_extensions import TypeAlias
 
 from . import pq
-from ._compat import Deque, TypeAlias
+from ._compat import Deque
 from ._queries import PostgresQuery
 
 if TYPE_CHECKING:

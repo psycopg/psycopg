@@ -6,9 +6,10 @@ Protocol objects to represent objects exposed by different pq implementations.
 
 from typing import Any, Callable, List, Optional, Sequence, Tuple
 from typing import Union, TYPE_CHECKING
+from typing_extensions import TypeAlias
 
 from ._enums import Format, Trace
-from .._compat import Protocol, TypeAlias
+from .._compat import Protocol
 
 if TYPE_CHECKING:
     from .misc import PGnotify, ConninfoOption, PGresAttDesc
