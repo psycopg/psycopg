@@ -14,13 +14,14 @@ Psycopg 3.1.5 (unreleased)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 - Fix array loading slowness compared to psycopg2 (:ticket:`#359`).
-- Performance around network communication improved (:ticket:`#414`).
+- Improve performance around network communication (:ticket:`#414`).
 - Return `!bytes` instead of `!memoryview` from `pq.Encoding` methods
   (:ticket:`#422`).
 - Fix `Cursor.rownumber` to return `!None` when the result has no row to fetch
   (:ticket:`#437`).
-- Avoid error in pyright caused by aliasing TypeAlias (:ticket:`#439`).
+- Avoid error in Pyright caused by aliasing `!TypeAlias` (:ticket:`#439`).
 - Fix `Copy.set_types()` used with `varchar` and `name` types (:ticket:`#452`).
+- Improve performance using :ref:`row-factories` (:ticket:`#457`).
 
 
 Current release
