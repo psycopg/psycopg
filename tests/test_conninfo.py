@@ -226,8 +226,7 @@ class TestConnectionInfo:
         assert ex.value.diag.severity in conn.info.error_message
 
         conn.close()
-        with pytest.raises(psycopg.OperationalError):
-            conn.info.error_message
+        assert "NULL" in conn.info.error_message
 
     @pytest.mark.crdb_skip("backend pid")
     def test_backend_pid(self, conn):

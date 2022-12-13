@@ -49,7 +49,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
     __slots__ = """
         _conn format _adapters arraysize _closed _results pgresult _pos
         _iresult _rowcount _query _tx _last_query _row_factory _make_row
-        _pgconn _encoding _execmany_returning
+        _pgconn _execmany_returning
         __weakref__
         """.split()
 
@@ -76,7 +76,6 @@ class BaseCursor(Generic[ConnectionType, Row]):
         self._iresult = 0
         self._rowcount = -1
         self._query: Optional[PostgresQuery]
-        self._encoding = "utf-8"
         # None if executemany() not executing, True/False according to returning state
         self._execmany_returning: Optional[bool] = None
         if reset_query:
@@ -383,7 +382,6 @@ class BaseCursor(Generic[ConnectionType, Row]):
             raise e.InterfaceError("the cursor is closed")
 
         self._reset()
-        self._encoding = pgconn_encoding(self._pgconn)
         if not self._last_query or (self._last_query is not query):
             self._last_query = None
             self._tx = adapt.Transformer(self)
@@ -606,7 +604,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
         if status == TUPLES_OK:
             return
         elif status == FATAL_ERROR:
-            raise e.error_from_result(res, encoding=pgconn_encoding(self._pgconn))
+            raise e.error_from_result(res, encoding=self._encoding)
         elif status == PIPELINE_ABORTED:
             raise e.PipelineAborted("pipeline aborted")
         else:
@@ -646,6 +644,10 @@ class BaseCursor(Generic[ConnectionType, Row]):
         # an error.
         self._reset(reset_query=False)
         self._closed = True
+
+    @property
+    def _encoding(self) -> str:
+        return pgconn_encoding(self._pgconn)
 
 
 class Cursor(BaseCursor["Connection[Any]", Row]):

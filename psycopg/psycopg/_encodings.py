@@ -9,12 +9,16 @@ import string
 import codecs
 from typing import Any, Dict, Optional, TYPE_CHECKING
 
+from .pq._enums import ConnStatus
 from .errors import NotSupportedError
 from ._compat import cache
 
 if TYPE_CHECKING:
     from .pq.abc import PGconn
     from .connection import BaseConnection
+
+OK = ConnStatus.OK
+
 
 _py_codecs = {
     "BIG5": "big5",
@@ -80,8 +84,9 @@ def conn_encoding(conn: "Optional[BaseConnection[Any]]") -> str:
 
     Default to utf8 if the connection has no encoding info.
     """
-    if not conn:
+    if not conn or conn.closed:
         return "utf-8"
+
     pgenc = conn.pgconn.parameter_status(b"client_encoding") or b"UTF8"
     return pg2pyenc(pgenc)
 
@@ -92,6 +97,9 @@ def pgconn_encoding(pgconn: "PGconn") -> str:
 
     Default to utf8 if the connection has no encoding info.
     """
+    if pgconn.status != OK:
+        return "utf-8"
+
     pgenc = pgconn.parameter_status(b"client_encoding") or b"UTF8"
     return pg2pyenc(pgenc)
 
