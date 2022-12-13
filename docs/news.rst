@@ -7,11 +7,11 @@
 ``psycopg`` release notes
 =========================
 
-Future releases
+Current release
 ---------------
 
-Psycopg 3.1.5 (unreleased)
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+Psycopg 3.1.5
+^^^^^^^^^^^^^
 
 - Fix array loading slowness compared to psycopg2 (:ticket:`#359`).
 - Improve performance around network communication (:ticket:`#414`).
@@ -23,9 +23,6 @@ Psycopg 3.1.5 (unreleased)
 - Fix `Copy.set_types()` used with `varchar` and `name` types (:ticket:`#452`).
 - Improve performance using :ref:`row-factories` (:ticket:`#457`).
 
-
-Current release
----------------
 
 Psycopg 3.1.4
 ^^^^^^^^^^^^^
