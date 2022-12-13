@@ -1,4 +1,3 @@
-import gc
 import pytest
 import string
 from random import randrange, choice
@@ -8,7 +7,7 @@ from psycopg.pq import Format
 from psycopg.adapt import PyFormat
 from psycopg.types.numeric import Int4
 
-from ..utils import eur, gc_collect
+from ..utils import eur, gc_collect, gc_count
 from ..test_copy import sample_text, sample_binary  # noqa
 from ..test_copy import ensure_table, sample_records
 from ..test_copy import sample_tabledef as sample_tabledef_pg
@@ -225,7 +224,7 @@ def test_copy_from_leaks(conn_cls, dsn, faker, fmt, set_types):
     for i in range(3):
         work()
         gc_collect()
-        n.append(len(gc.get_objects()))
+        n.append(gc_count())
 
     assert n[0] == n[1] == n[2], f"objects leaked: {n[1] - n[0]}, {n[2] - n[1]}"
 

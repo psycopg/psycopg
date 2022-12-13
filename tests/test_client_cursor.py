@@ -1,4 +1,3 @@
-import gc
 import pickle
 import weakref
 import datetime as dt
@@ -11,7 +10,7 @@ from psycopg import sql, rows
 from psycopg.adapt import PyFormat
 from psycopg.postgres import types as builtins
 
-from .utils import gc_collect
+from .utils import gc_collect, gc_count
 from .test_cursor import my_row_factory
 from .fix_crdb import is_crdb, crdb_encoding, crdb_time_precision
 
@@ -806,7 +805,7 @@ def test_leak(conn_cls, dsn, faker, fetch, row_factory):
     for i in range(3):
         work()
         gc_collect()
-        n.append(len(gc.get_objects()))
+        n.append(gc_count())
     assert n[0] == n[1] == n[2], f"objects leaked: {n[1] - n[0]}, {n[2] - n[1]}"
 
 

@@ -1,4 +1,3 @@
-import gc
 import pytest
 import weakref
 import datetime as dt
@@ -8,7 +7,7 @@ import psycopg
 from psycopg import pq, sql, rows
 from psycopg.adapt import PyFormat
 
-from .utils import gc_collect
+from .utils import gc_collect, gc_count
 from .test_cursor import my_row_factory
 from .test_cursor import execmany, _execmany  # noqa: F401
 from .fix_crdb import crdb_encoding
@@ -798,6 +797,6 @@ async def test_leak(aconn_cls, dsn, faker, fmt, fmt_out, fetch, row_factory):
     for i in range(3):
         await work()
         gc_collect()
-        n.append(len(gc.get_objects()))
+        n.append(gc_count())
 
     assert n[0] == n[1] == n[2], f"objects leaked: {n[1] - n[0]}, {n[2] - n[1]}"

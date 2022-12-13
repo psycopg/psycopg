@@ -1,4 +1,3 @@
-import gc
 import string
 import struct
 import hashlib
@@ -19,7 +18,7 @@ from psycopg.types import TypeInfo
 from psycopg.types.hstore import register_hstore
 from psycopg.types.numeric import Int4
 
-from .utils import eur, gc_collect
+from .utils import eur, gc_collect, gc_count
 
 pytestmark = pytest.mark.crdb_skip("copy")
 
@@ -727,7 +726,7 @@ def test_copy_to_leaks(conn_cls, dsn, faker, fmt, set_types, method):
     for i in range(3):
         work()
         gc_collect()
-        n.append(len(gc.get_objects()))
+        n.append(gc_count())
 
     assert n[0] == n[1] == n[2], f"objects leaked: {n[1] - n[0]}, {n[2] - n[1]}"
 
@@ -770,7 +769,7 @@ def test_copy_from_leaks(conn_cls, dsn, faker, fmt, set_types):
     for i in range(3):
         work()
         gc_collect()
-        n.append(len(gc.get_objects()))
+        n.append(gc_count())
 
     assert n[0] == n[1] == n[2], f"objects leaked: {n[1] - n[0]}, {n[2] - n[1]}"
 
