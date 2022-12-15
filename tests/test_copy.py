@@ -71,17 +71,29 @@ def test_copy_out_read(conn, format):
 
 
 @pytest.mark.parametrize("format", Format)
-def test_copy_out_iter(conn, format):
+@pytest.mark.parametrize("row_factory", ["tuple_row", "dict_row", "namedtuple_row"])
+def test_copy_out_iter(conn, format, row_factory):
     if format == pq.Format.TEXT:
         want = [row + b"\n" for row in sample_text.splitlines()]
     else:
         want = sample_binary_rows
 
-    cur = conn.cursor()
+    rf = getattr(psycopg.rows, row_factory)
+    cur = conn.cursor(row_factory=rf)
     with cur.copy(f"copy ({sample_values}) to stdout (format {format.name})") as copy:
         assert list(copy) == want
 
     assert conn.info.transaction_status == conn.TransactionStatus.INTRANS
+
+
+@pytest.mark.parametrize("format", Format)
+@pytest.mark.parametrize("row_factory", ["tuple_row", "dict_row", "namedtuple_row"])
+def test_copy_out_no_result(conn, format, row_factory):
+    rf = getattr(psycopg.rows, row_factory)
+    cur = conn.cursor(row_factory=rf)
+    with cur.copy(f"copy ({sample_values}) to stdout (format {format.name})"):
+        with pytest.raises(e.ProgrammingError):
+            cur.fetchone()
 
 
 @pytest.mark.parametrize("ph, params", [("%s", (10,)), ("%(n)s", {"n": 10})])

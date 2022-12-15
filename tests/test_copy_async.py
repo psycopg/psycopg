@@ -53,19 +53,31 @@ async def test_copy_out_read(aconn, format):
 
 
 @pytest.mark.parametrize("format", Format)
-async def test_copy_out_iter(aconn, format):
+@pytest.mark.parametrize("row_factory", ["tuple_row", "dict_row", "namedtuple_row"])
+async def test_copy_out_iter(aconn, format, row_factory):
     if format == pq.Format.TEXT:
         want = [row + b"\n" for row in sample_text.splitlines()]
     else:
         want = sample_binary_rows
 
-    cur = aconn.cursor()
+    rf = getattr(psycopg.rows, row_factory)
+    cur = aconn.cursor(row_factory=rf)
     async with cur.copy(
         f"copy ({sample_values}) to stdout (format {format.name})"
     ) as copy:
         assert await alist(copy) == want
 
     assert aconn.info.transaction_status == aconn.TransactionStatus.INTRANS
+
+
+@pytest.mark.parametrize("format", Format)
+@pytest.mark.parametrize("row_factory", ["tuple_row", "dict_row", "namedtuple_row"])
+async def test_copy_out_no_result(aconn, format, row_factory):
+    rf = getattr(psycopg.rows, row_factory)
+    cur = aconn.cursor(row_factory=rf)
+    async with cur.copy(f"copy ({sample_values}) to stdout (format {format.name})"):
+        with pytest.raises(e.ProgrammingError):
+            await cur.fetchone()
 
 
 @pytest.mark.parametrize("ph, params", [("%s", (10,)), ("%(n)s", {"n": 10})])
