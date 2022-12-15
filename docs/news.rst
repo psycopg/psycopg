@@ -7,14 +7,14 @@
 ``psycopg`` release notes
 =========================
 
-Psycopg 3.1.6 (unreleased)
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+Current release
+---------------
+
+Psycopg 3.1.6
+^^^^^^^^^^^^^
 
 - Fix `cursor.copy()` with cursors using row factories (:ticket:`#460`).
 
-
-Current release
----------------
 
 Psycopg 3.1.5
 ^^^^^^^^^^^^^
