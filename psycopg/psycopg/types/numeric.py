@@ -33,6 +33,15 @@ from .._wrappers import (
 
 class _IntDumper(Dumper):
     def dump(self, obj: Any) -> Buffer:
+        return str(obj).encode()
+
+    def quote(self, obj: Any) -> Buffer:
+        value = self.dump(obj)
+        return value if obj >= 0 else b" " + value
+
+
+class _IntOrSubclassDumper(_IntDumper):
+    def dump(self, obj: Any) -> Buffer:
         t = type(obj)
         if t is not int:
             # Convert to int in order to dump IntEnum correctly
@@ -42,10 +51,6 @@ class _IntDumper(Dumper):
                 raise e.DataError(f"integer expected, got {type(obj).__name__!r}")
 
         return str(obj).encode()
-
-    def quote(self, obj: Any) -> Buffer:
-        value = self.dump(obj)
-        return value if obj >= 0 else b" " + value
 
 
 class _SpecialValuesDumper(Dumper):
@@ -109,23 +114,23 @@ class DecimalDumper(_SpecialValuesDumper):
     }
 
 
-class Int2Dumper(_IntDumper):
+class Int2Dumper(_IntOrSubclassDumper):
     oid = _oids.INT2_OID
 
 
-class Int4Dumper(_IntDumper):
+class Int4Dumper(_IntOrSubclassDumper):
     oid = _oids.INT4_OID
 
 
-class Int8Dumper(_IntDumper):
+class Int8Dumper(_IntOrSubclassDumper):
     oid = _oids.INT8_OID
 
 
-class IntNumericDumper(_IntDumper):
+class IntNumericDumper(_IntOrSubclassDumper):
     oid = _oids.NUMERIC_OID
 
 
-class OidDumper(_IntDumper):
+class OidDumper(_IntOrSubclassDumper):
     oid = _oids.OID_OID
 
 
