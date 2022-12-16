@@ -1,11 +1,12 @@
 import pytest
 from psycopg.adapt import PyFormat
 
+try:
+    import numpy as np
+except ImportError:
+    pass
+
 pytest.importorskip("numpy")
-
-
-import numpy as np  # noqa: E402
-
 
 pytestmark = [pytest.mark.numpy]
 
