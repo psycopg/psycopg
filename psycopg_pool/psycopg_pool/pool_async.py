@@ -337,6 +337,11 @@ class AsyncConnectionPool(BasePool[AsyncConnection[Any]]):
             conns = list(self._pool)
             self._pool.clear()
 
+            # Give a chance to the pool to grow if it has no connection.
+            # In case there are enough connection, or the pool is already
+            # growing, this is a no-op.
+            self._maybe_grow_pool()
+
         while conns:
             conn = conns.pop()
             try:

@@ -13,7 +13,9 @@ Future releases
 psycopg_pool 3.1.5 (unreleased)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-- Avoid error in pyright caused by aliasing TypeAlias (:ticket:`#439`).
+- Make sure that `!ConnectionPool.check()` refills an empty pool
+  (:ticket:`#438`).
+- Avoid error in Pyright caused by aliasing `!TypeAlias` (:ticket:`#439`).
 
 
 Current release
