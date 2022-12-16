@@ -266,8 +266,7 @@ jobs:
       matrix:
         include:
           - {crdb: "latest-v22.1", python: "3.10", impl: "c", libpq: "newest"}
-          - {crdb: "latest-v21.2", python: "3.9", impl: "python", libpq: ""}
-
+          - {crdb: "latest-v22.2", python: "3.11", impl: "python", libpq: ""}
     env:
       PSYCOPG_IMPL: ${{ matrix.impl }}
       PSYCOPG_TEST_DSN: "host=127.0.0.1 port=26257 user=root dbname=defaultdb"
