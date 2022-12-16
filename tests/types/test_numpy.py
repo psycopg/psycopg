@@ -143,3 +143,24 @@ def test_dump_numpy_float64(conn, val, fmt_in):
 
     cur.execute(f"select {val}::float8 = %{fmt_in.value}", (val,))
     assert cur.fetchone()[0] is True
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize("fmt", PyFormat)
+def test_random(conn, faker, fmt):
+    faker.types = [t for t in faker.types if issubclass(t, np.generic)]
+    faker.format = fmt
+    faker.choose_schema(ncols=20)
+    faker.make_records(50)
+
+    with conn.cursor() as cur:
+        cur.execute(faker.drop_stmt)
+        cur.execute(faker.create_stmt)
+        with faker.find_insert_problem(conn):
+            cur.executemany(faker.insert_stmt, faker.records)
+
+        cur.execute(faker.select_stmt)
+        recs = cur.fetchall()
+
+    for got, want in zip(recs, faker.records):
+        faker.assert_record(got, want)

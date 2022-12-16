@@ -4,7 +4,7 @@ import ipaddress
 from math import isnan
 from uuid import UUID
 from random import choice, random, randrange
-from typing import Any, List, Set, Tuple, Union
+from typing import Any, List, Optional, Set, Tuple, Union
 from decimal import Decimal
 from contextlib import contextmanager, asynccontextmanager
 
@@ -42,7 +42,7 @@ class Faker:
         self.records = []
 
         self._schema = None
-        self._types = None
+        self._types: Optional[List[type]] = None
         self._types_names = None
         self._makers = {}
         self.table_name = sql.Identifier("fake_table")
@@ -63,14 +63,19 @@ class Faker:
         return [sql.Identifier(f"fld_{i}") for i in range(len(self.schema))]
 
     @property
-    def types(self):
+    def types(self) -> List[type]:
         if not self._types:
 
             def key(cls: type) -> str:
-                return cls.__name__
+                return f"{cls.__module__}.{cls.__qualname__}"
 
             self._types = sorted(self.get_supported_types(), key=key)
+
         return self._types
+
+    @types.setter
+    def types(self, types: List[type]) -> None:
+        self._types = types
 
     @property
     def types_names_sql(self):
@@ -280,7 +285,7 @@ class Faker:
             name = f"{cls.__module__}.{name}"
 
         parts = name.split(".")
-        for i in range(len(parts)):
+        for i in range(len(parts) - 1, -1, -1):
             mname = f"{prefix}_{'_'.join(parts[-(i + 1) :])}"
             meth = getattr(self, mname, None)
             if meth:
@@ -313,7 +318,7 @@ class Faker:
         return want.obj == got
 
     def make_bool(self, spec):
-        return choice((True, False))
+        return spec(choice((True, False)))
 
     def make_bytearray(self, spec):
         return self.make_bytes(spec)
@@ -394,13 +399,15 @@ class Faker:
     def make_float(self, spec, double=True):
         if random() <= 0.99:
             # These exponents should generate no inf
-            return float(
+            return spec(
                 f"{choice('-+')}0.{randrange(1 << 53)}e{randrange(-310,309)}"
                 if double
                 else f"{choice('-+')}0.{randrange(1 << 22)}e{randrange(-37,38)}"
             )
         else:
-            return choice((0.0, -0.0, float("-inf"), float("inf"), float("nan")))
+            return choice(
+                (spec(0.0), spec(-0.0), spec("-inf"), spec("inf"), spec("nan"))
+            )
 
     def match_float(self, spec, got, want, approx=False, rel=None):
         if got is not None and isnan(got):
@@ -845,6 +852,69 @@ class Faker:
     def _make_tz(self, spec):
         minutes = randrange(-12 * 60, 12 * 60 + 1)
         return dt.timezone(dt.timedelta(minutes=minutes))
+
+    # numpy types support
+
+    def make_numpy_bool_(self, spec):
+        return self.make_bool(spec)
+
+    def make_numpy_int8(self, spec):
+        return spec(randrange(-(1 << 7), 1 << 7))
+
+    def make_numpy_int16(self, spec):
+        return self.make_Int2(spec)
+
+    def make_numpy_int32(self, spec):
+        return self.make_Int4(spec)
+
+    def make_numpy_int64(self, spec):
+        return self.make_Int8(spec)
+
+    def make_numpy_longlong(self, spec):
+        return self.make_numpy_int64(spec)
+
+    def make_numpy_uint8(self, spec):
+        return spec(randrange(0, 1 << 8))
+
+    def make_numpy_uint16(self, spec):
+        return spec(randrange(0, 1 << 16))
+
+    def make_numpy_uint32(self, spec):
+        return spec(randrange(0, 1 << 32))
+
+    def make_numpy_uint64(self, spec):
+        return spec(randrange(0, 1 << 64))
+
+    def make_numpy_ulonglong(self, spec):
+        return self.make_numpy_uint64(spec)
+
+    def make_numpy_float16(self, spec):
+        return self.make_Float4(spec)
+
+    def make_numpy_float32(self, spec):
+        return self.make_Float4(spec)
+
+    def make_numpy_float64(self, spec):
+        return self.make_Float8(spec)
+
+    def match_numpy_ulonglong(self, spec, got, want):
+        return self._match_numpy_with_decimal(spec, got, want)
+
+    def match_numpy_uint64(self, spec, got, want):
+        return self._match_numpy_with_decimal(spec, got, want)
+
+    def _match_numpy_with_decimal(self, spec, got, want):
+        assert isinstance(got, Decimal)
+        return self.match_any(spec, int(got), want)
+
+    def match_numpy_float16(self, spec, got, want):
+        return self.match_numpy_float32(spec, got, want)
+
+    def match_numpy_float32(self, spec, got, want):
+        return self.match_Float4(spec, got, want)
+
+    def match_numpy_float64(self, spec, got, want):
+        return self.match_Float8(spec, got, want)
 
 
 class JsonFloat:
