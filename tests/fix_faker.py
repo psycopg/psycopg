@@ -223,7 +223,10 @@ class Faker:
         rv = set()
         for cls in dumpers.keys():
             if isinstance(cls, str):
-                cls = deep_import(cls)
+                try:
+                    cls = deep_import(cls)
+                except ImportError:
+                    continue
             if issubclass(cls, Multirange) and self.conn.info.server_version < 140000:
                 continue
 
