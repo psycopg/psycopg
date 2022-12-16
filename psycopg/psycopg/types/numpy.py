@@ -35,33 +35,20 @@ class _NPIntDumper(Dumper):
         return value if obj >= 0 else b" " + value
 
 
-class NPInt8Dumper(_NPIntDumper):
+class NPInt16Dumper(_NPIntDumper):
     oid = postgres.types["int2"].oid
-
-
-NPInt16Dumper = NPInt8Dumper
-NPUInt8Dumper = NPInt8Dumper
 
 
 class NPInt32Dumper(_NPIntDumper):
     oid = postgres.types["int4"].oid
 
 
-NPUInt16Dumper = NPInt32Dumper
-
-
 class NPInt64Dumper(_NPIntDumper):
     oid = postgres.types["int8"].oid
 
 
-NPUInt32Dumper = NPInt64Dumper
-
-
-class NPUInt64Dumper(_NPIntDumper):
+class NPNumericDumper(_NPIntDumper):
     oid = postgres.types["numeric"].oid
-
-
-NPULongLongDumper = NPUInt64Dumper
 
 
 class _NPFloatDumper(_SpecialValuesDumper):
@@ -73,15 +60,11 @@ class _NPFloatDumper(_SpecialValuesDumper):
     }
 
 
-class NPFloat16Dumper(_NPFloatDumper):
+class NPFloat32Dumper(_NPFloatDumper):
     oid = postgres.types["float4"].oid
 
 
-NPFloat32Dumper = NPFloat16Dumper
-
-
 class NPFloat64Dumper(_NPFloatDumper):
-
     oid = postgres.types["float8"].oid
 
 
@@ -112,16 +95,12 @@ class NPFloat64BinaryDumper(Dumper):
         return pack_float8(obj)
 
 
-class NPInt8BinaryDumper(NPInt8Dumper):
+class NPInt16BinaryDumper(NPInt16Dumper):
 
     format = Format.BINARY
 
     def dump(self, obj: "np.int8") -> bytes:
         return pack_int2(int(obj))
-
-
-NPInt16BinaryDumper = NPInt8BinaryDumper
-NPUInt8BinaryDumper = NPInt8BinaryDumper
 
 
 class NPInt32BinaryDumper(NPInt32Dumper):
@@ -132,9 +111,6 @@ class NPInt32BinaryDumper(NPInt32Dumper):
         return pack_int4(int(obj))
 
 
-NPUInt16BinaryDumper = NPInt32BinaryDumper
-
-
 class NPInt64BinaryDumper(NPInt64Dumper):
 
     format = Format.BINARY
@@ -143,10 +119,7 @@ class NPInt64BinaryDumper(NPInt64Dumper):
         return pack_int8(int(obj))
 
 
-NPUInt32BinaryDumper = NPInt64BinaryDumper
-
-
-class NPUInt64BinaryDumper(NPUInt64Dumper):
+class NPNumericBinaryDumper(NPNumericDumper):
 
     format = Format.BINARY
 
@@ -155,36 +128,33 @@ class NPUInt64BinaryDumper(NPUInt64Dumper):
         return dump_int_to_numeric_binary(int(obj))
 
 
-NPUlongLongBinaryDumper = NPUInt64BinaryDumper
-
-
 def register_default_adapters(context: Optional[AdaptContext] = None) -> None:
     adapters = context.adapters if context else postgres.adapters
 
-    adapters.register_dumper("numpy.int8", NPInt8Dumper)
+    adapters.register_dumper("numpy.int8", NPInt16Dumper)
     adapters.register_dumper("numpy.int16", NPInt16Dumper)
     adapters.register_dumper("numpy.int32", NPInt32Dumper)
     adapters.register_dumper("numpy.int64", NPInt64Dumper)
     adapters.register_dumper("numpy.bool_", BoolDumper)
-    adapters.register_dumper("numpy.uint8", NPUInt8Dumper)
-    adapters.register_dumper("numpy.uint16", NPUInt16Dumper)
-    adapters.register_dumper("numpy.uint32", NPUInt32Dumper)
-    adapters.register_dumper("numpy.uint64", NPUInt64Dumper)
-    adapters.register_dumper("numpy.ulonglong", NPULongLongDumper)
-    adapters.register_dumper("numpy.float16", NPFloat16Dumper)
+    adapters.register_dumper("numpy.uint8", NPInt16Dumper)
+    adapters.register_dumper("numpy.uint16", NPInt32Dumper)
+    adapters.register_dumper("numpy.uint32", NPInt64Dumper)
+    adapters.register_dumper("numpy.uint64", NPNumericDumper)
+    adapters.register_dumper("numpy.ulonglong", NPNumericDumper)
+    adapters.register_dumper("numpy.float16", NPFloat32Dumper)
     adapters.register_dumper("numpy.float32", NPFloat32Dumper)
     adapters.register_dumper("numpy.float64", NPFloat64Dumper)
 
-    adapters.register_dumper("numpy.int8", NPInt8BinaryDumper)
+    adapters.register_dumper("numpy.int8", NPInt16BinaryDumper)
     adapters.register_dumper("numpy.int16", NPInt16BinaryDumper)
     adapters.register_dumper("numpy.int32", NPInt32BinaryDumper)
     adapters.register_dumper("numpy.int64", NPInt64BinaryDumper)
     adapters.register_dumper("numpy.bool_", BoolBinaryDumper)
-    adapters.register_dumper("numpy.uint8", NPUInt8BinaryDumper)
-    adapters.register_dumper("numpy.uint16", NPUInt16BinaryDumper)
-    adapters.register_dumper("numpy.uint32", NPUInt32BinaryDumper)
-    adapters.register_dumper("numpy.uint64", NPUInt64BinaryDumper)
-    adapters.register_dumper("numpy.ulonglong", NPUlongLongBinaryDumper)
+    adapters.register_dumper("numpy.uint8", NPInt16BinaryDumper)
+    adapters.register_dumper("numpy.uint16", NPInt32BinaryDumper)
+    adapters.register_dumper("numpy.uint32", NPInt64BinaryDumper)
+    adapters.register_dumper("numpy.uint64", NPNumericBinaryDumper)
+    adapters.register_dumper("numpy.ulonglong", NPNumericBinaryDumper)
     adapters.register_dumper("numpy.float16", NPFloat16BinaryDumper)
     adapters.register_dumper("numpy.float32", NPFloat32BinaryDumper)
     adapters.register_dumper("numpy.float64", NPFloat64BinaryDumper)
