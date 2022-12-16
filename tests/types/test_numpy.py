@@ -11,221 +11,55 @@ pytest.importorskip("numpy")
 pytestmark = [pytest.mark.numpy]
 
 
-@pytest.mark.parametrize(
-    "val, expr",
-    [
-        (-128, "'-128'::int2"),
-        (127, "'127'::int2"),
-        (0, "'0'::int2"),
-        (45, "'45'::int2"),
-    ],
-)
-@pytest.mark.parametrize("fmt_in", PyFormat)
-def test_dump_numpy_int8(conn, val, expr, fmt_in):
-    val = np.byte(val)
-
-    assert isinstance(val, np.byte)
+def test_classes_identities():
+    # Check if we know the class identities correctly. Maybe on different
+    # platforms they are different.
+    assert np.bool_ is np.bool8
+    assert np.ubyte is np.uint8
+    assert np.ushort is np.uint16
+    assert np.uint is np.uint64
+    assert np.uintc is np.uint32
     assert np.byte is np.int8
-
-    cur = conn.cursor()
-
-    cur.execute(f"select pg_typeof({expr}) = pg_typeof(%{fmt_in.value})", (val,))
-    assert cur.fetchone()[0] is True
-
-    cur.execute(f"select {expr} = %{fmt_in.value}", (val,))
-    assert cur.fetchone()[0] is True
-
-
-@pytest.mark.parametrize(
-    "val, expr",
-    [
-        (-32_768, "'-32768'::int2"),
-        (32_767, "'32767'::int2"),
-        (0, "'0'::int2"),
-        (45, "'45'::int2"),
-    ],
-)
-@pytest.mark.parametrize("fmt_in", PyFormat)
-def test_dump_numpy_int16(conn, val, expr, fmt_in):
-
-    val = np.short(val)
-
-    assert isinstance(val, np.short)
     assert np.short is np.int16
-
-    cur = conn.cursor()
-
-    cur.execute(f"select pg_typeof({expr}) = pg_typeof(%{fmt_in.value})", (val,))
-    assert cur.fetchone()[0] is True
-
-    cur.execute(f"select {expr} = %{fmt_in.value}", (val,))
-    assert cur.fetchone()[0] is True
-
-
-@pytest.mark.parametrize(
-    "val, expr",
-    [
-        (-2_147_483_648, "'-2147483648'::int4"),
-        (2_147_483_647, "'2147483647'::int4"),
-        (0, "'0'::int4"),
-        (45, "'45'::int4"),
-    ],
-)
-@pytest.mark.parametrize("fmt_in", PyFormat)
-def test_dump_numpy_int32(conn, val, expr, fmt_in):
-
-    val = np.intc(val)
-
-    assert isinstance(val, np.intc)
     assert np.intc is np.int32
-
-    cur = conn.cursor()
-
-    cur.execute(f"select pg_typeof({expr}) = pg_typeof(%{fmt_in.value})", (val,))
-    assert cur.fetchone()[0] is True
-
-    cur.execute(f"select {expr} = %{fmt_in.value}", (val,))
-    assert cur.fetchone()[0] is True
-
-
-@pytest.mark.parametrize(
-    "val, expr",
-    [
-        (-9_223_372_036_854_775_808, "'-9223372036854775808'::int8"),
-        (9_223_372_036_854_775_807, "'9223372036854775807'::int8"),
-        (0, "'0'::int8"),
-        (45, "'45'::int8"),
-    ],
-)
-@pytest.mark.parametrize("fmt_in", PyFormat)
-def test_dump_numpy_int64(conn, val, expr, fmt_in):
-
-    val = np.int_(val)
-
-    assert isinstance(val, np.int_)
     assert np.int_ is np.int64
 
-    cur = conn.cursor()
-
-    cur.execute(f"select pg_typeof({expr}) = pg_typeof(%{fmt_in.value})", (val,))
-    assert cur.fetchone()[0] is True
-
-    cur.execute(f"select {expr} = %{fmt_in.value}", (val,))
-    assert cur.fetchone()[0] is True
-
-
-@pytest.mark.parametrize("val, expr", [(True, "'t'::bool"), (False, "'f'::bool")])
-@pytest.mark.parametrize("fmt_in", PyFormat)
-def test_dump_numpy_bool8(conn, val, expr, fmt_in):
-
-    val = np.bool_(val)
-
-    assert isinstance(val, np.bool_)
-    assert np.bool_ is np.bool8
-
-    cur = conn.cursor()
-
-    cur.execute(f"select pg_typeof({expr}) = pg_typeof(%{fmt_in.value})", (val,))
-    assert cur.fetchone()[0] is True
-
-    cur.execute(f"select {expr} = %{fmt_in.value}", (bool(val),))
-    assert cur.fetchone()[0] is True
-
-
-@pytest.mark.parametrize("val, expr", [(0, "'0'::int2"), (255, "'255'::int2")])
-@pytest.mark.parametrize("fmt_in", PyFormat)
-def test_dump_numpy_uint8(conn, val, expr, fmt_in):
-
-    val = np.ubyte(val)
-
-    assert isinstance(val, np.ubyte)
-    assert np.ubyte is np.uint8
-
-    cur = conn.cursor()
-
-    cur.execute(f"select pg_typeof({expr}) = pg_typeof(%{fmt_in.value})", (val,))
-    assert cur.fetchone()[0] is True
-
-    cur.execute(f"select {expr} = %{fmt_in.value}", (val,))
-    assert cur.fetchone()[0] is True
-
-
-@pytest.mark.parametrize("val, expr", [(0, "'0'::int4"), (65_535, "'65535'::int4")])
-@pytest.mark.parametrize("fmt_in", PyFormat)
-def test_dump_numpy_uint16(conn, val, expr, fmt_in):
-
-    val = np.ushort(val)
-
-    assert isinstance(val, np.ushort)
-    assert np.ushort is np.uint16
-
-    cur = conn.cursor()
-
-    cur.execute(f"select pg_typeof({expr}) = pg_typeof(%{fmt_in.value})", (val,))
-    assert cur.fetchone()[0] is True
-
-    cur.execute(f"select {expr} = %{fmt_in.value}", (val,))
-    assert cur.fetchone()[0] is True
-
 
 @pytest.mark.parametrize(
-    "val, expr", [(0, "'0'::int8"), (4_294_967_295, "'4294967295'::int8")]
-)
-@pytest.mark.parametrize("fmt_in", PyFormat)
-def test_dump_numpy_uint32(conn, val, expr, fmt_in):
-
-    val = np.uintc(val)
-
-    assert isinstance(val, np.uintc)
-    assert np.uintc is np.uint32
-
-    cur = conn.cursor()
-
-    cur.execute(f"select pg_typeof({expr}) = pg_typeof(%{fmt_in.value})", (val,))
-    assert cur.fetchone()[0] is True
-
-    cur.execute(f"select {expr} = %{fmt_in.value}", (val,))
-    assert cur.fetchone()[0] is True
-
-
-@pytest.mark.parametrize(
-    "val, expr",
+    "nptype, val, expr",
     [
-        (0, "'0'::numeric"),
-        (18_446_744_073_709_551_615, "'18446744073709551615'::numeric"),
+        ("int8", -128, "'-128'::int2"),
+        ("int8", 127, "'127'::int2"),
+        ("int8", 0, "'0'::int2"),
+        ("int16", -32_768, "'-32768'::int2"),
+        ("int16", 32_767, "'32767'::int2"),
+        ("int16", 0, "'0'::int2"),
+        ("int32", -(2**31), f"'{-(2**31)}'::int4"),
+        ("int32", 2**31 - 1, f"'{2**31 - 1}'::int4"),
+        ("int32", 0, "'0'::int4"),
+        ("int64", -(2**63), f"'{-(2**63)}'::int8"),
+        ("int64", 2**63 - 1, f"'{2**63 - 1}'::int8"),
+        ("int64", 0, "'0'::int8"),
+        ("longlong", -(2**63), f"'{-(2**63)}'::int8"),
+        ("longlong", 2**63 - 1, f"'{2**63 - 1}'::int8"),
+        ("bool_", True, "'t'::bool"),
+        ("bool_", False, "'f'::bool"),
+        ("uint8", 0, "'0'::int2"),
+        ("uint8", 255, "'255'::int2"),
+        ("uint16", 0, "'0'::int4"),
+        ("uint16", 65_535, "'65535'::int4"),
+        ("uint32", 0, "'0'::int8"),
+        ("uint32", (2**32 - 1), f"'{2**32 - 1}'::int8"),
+        ("uint64", 0, "'0'::numeric"),
+        ("uint64", (2**64 - 1), f"'{2**64 - 1}'::numeric"),
+        ("ulonglong", 0, "'0'::numeric"),
+        ("ulonglong", (2**64 - 1), f"'{2**64 - 1}'::numeric"),
     ],
 )
 @pytest.mark.parametrize("fmt_in", PyFormat)
-def test_dump_numpy_uint64(conn, val, expr, fmt_in):
-
-    val = np.uint(val)
-
-    assert isinstance(val, np.uint)
-    assert np.uint is np.uint64
-
-    cur = conn.cursor()
-
-    cur.execute(f"select pg_typeof({expr}) = pg_typeof(%{fmt_in.value})", (val,))
-    assert cur.fetchone()[0] is True
-
-    cur.execute(f"select {expr} = %{fmt_in.value}", (val,))
-    assert cur.fetchone()[0] is True
-
-
-@pytest.mark.parametrize(
-    "val, expr",
-    [
-        (0, "'0'::numeric"),
-        (18_446_744_073_709_551_615, "'18446744073709551615'::numeric"),
-    ],
-)
-@pytest.mark.parametrize("fmt_in", PyFormat)
-def test_dump_numpy_ulonglong(conn, val, expr, fmt_in):
-
-    val = np.ulonglong(val)
-
-    assert isinstance(val, np.ulonglong)
-
+def test_dump_int(conn, val, nptype, expr, fmt_in):
+    nptype = getattr(np, nptype)
+    val = nptype(val)
     cur = conn.cursor()
 
     cur.execute(f"select pg_typeof({expr}) = pg_typeof(%{fmt_in.value})", (val,))
