@@ -114,13 +114,7 @@ def test_dump_numpy_int64(conn, val, expr, fmt_in):
     assert cur.fetchone()[0] is True
 
 
-@pytest.mark.parametrize(
-    "val, expr",
-    [
-        (True, "'t'::bool"),
-        (False, "'f'::bool"),
-    ],
-)
+@pytest.mark.parametrize("val, expr", [(True, "'t'::bool"), (False, "'f'::bool")])
 @pytest.mark.parametrize("fmt_in", PyFormat)
 def test_dump_numpy_bool8(conn, val, expr, fmt_in):
 
@@ -138,10 +132,7 @@ def test_dump_numpy_bool8(conn, val, expr, fmt_in):
     assert cur.fetchone()[0] is True
 
 
-@pytest.mark.parametrize(
-    "val, expr",
-    [(0, "'0'::int2"), (255, "'255'::int2")],
-)
+@pytest.mark.parametrize("val, expr", [(0, "'0'::int2"), (255, "'255'::int2")])
 @pytest.mark.parametrize("fmt_in", PyFormat)
 def test_dump_numpy_uint8(conn, val, expr, fmt_in):
 
@@ -159,13 +150,7 @@ def test_dump_numpy_uint8(conn, val, expr, fmt_in):
     assert cur.fetchone()[0] is True
 
 
-@pytest.mark.parametrize(
-    "val, expr",
-    [
-        (0, "'0'::int4"),
-        (65_535, "'65535'::int4"),
-    ],
-)
+@pytest.mark.parametrize("val, expr", [(0, "'0'::int4"), (65_535, "'65535'::int4")])
 @pytest.mark.parametrize("fmt_in", PyFormat)
 def test_dump_numpy_uint16(conn, val, expr, fmt_in):
 
@@ -184,11 +169,7 @@ def test_dump_numpy_uint16(conn, val, expr, fmt_in):
 
 
 @pytest.mark.parametrize(
-    "val, expr",
-    [
-        (0, "'0'::int8"),
-        (4_294_967_295, "'4294967295'::int8"),
-    ],
+    "val, expr", [(0, "'0'::int8"), (4_294_967_295, "'4294967295'::int8")]
 )
 @pytest.mark.parametrize("fmt_in", PyFormat)
 def test_dump_numpy_uint32(conn, val, expr, fmt_in):
@@ -285,15 +266,7 @@ def test_dump_special_values(conn, val, expr, fmt_in):
     assert cur.fetchone()[0] is True
 
 
-@pytest.mark.parametrize(
-    "val",
-    [
-        "4e4",
-        # "4e-4",
-        "4000.0",
-        # "3.14",
-    ],
-)
+@pytest.mark.parametrize("val", ["4e4", "4e-4", "4000.0", "3.14"])
 @pytest.mark.parametrize("fmt_in", PyFormat)
 def test_dump_numpy_float16(conn, val, fmt_in):
 
@@ -303,20 +276,12 @@ def test_dump_numpy_float16(conn, val, fmt_in):
     cur.execute(f"select pg_typeof({val}::float4) = pg_typeof(%{fmt_in.value})", (val,))
     assert cur.fetchone()[0] is True
 
-    cur.execute(f"select {val}::float4 = %{fmt_in.value}", (val,))
+    cur.execute(f"select {val}::float4, %(obj){fmt_in.value}", {"obj": val})
+    rec = cur.fetchone()
+    assert rec[0] == pytest.approx(rec[1], 1e-3)
 
-    assert cur.fetchone()[0] is True
 
-
-@pytest.mark.parametrize(
-    "val",
-    [
-        "256e6",
-        "256e-6",
-        "2.7182817",
-        "3.1415927",
-    ],
-)
+@pytest.mark.parametrize("val", ["256e6", "256e-6", "2.7182817", "3.1415927"])
 @pytest.mark.parametrize("fmt_in", PyFormat)
 def test_dump_numpy_float32(conn, val, fmt_in):
 
@@ -331,13 +296,7 @@ def test_dump_numpy_float32(conn, val, fmt_in):
 
 
 @pytest.mark.parametrize(
-    "val",
-    [
-        "256e12",
-        "256e-12",
-        "2.718281828459045",
-        "3.141592653589793",
-    ],
+    "val", ["256e12", "256e-12", "2.718281828459045", "3.141592653589793"]
 )
 @pytest.mark.parametrize("fmt_in", PyFormat)
 def test_dump_numpy_float64(conn, val, fmt_in):
