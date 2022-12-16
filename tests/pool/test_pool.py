@@ -954,6 +954,37 @@ def test_reconnect_after_grow_failed(proxy):
 
 
 @pytest.mark.slow
+def test_refill_on_check(proxy):
+    proxy.start()
+    ev = Event()
+
+    def failed(pool):
+        ev.set()
+
+    with pool.ConnectionPool(
+        proxy.client_dsn, min_size=4, reconnect_timeout=1.0, reconnect_failed=failed
+    ) as p:
+        # The pool is full
+        p.wait(timeout=2)
+
+        # Break all the connection
+        proxy.stop()
+
+        # Checking the pool will empty it
+        p.check()
+        assert ev.wait(timeout=2)
+        assert len(p._pool) == 0
+
+        # Allow to connect again
+        proxy.start()
+
+        # Make sure that check has refilled the pool
+        p.check()
+        p.wait(timeout=2)
+        assert len(p._pool) == 4
+
+
+@pytest.mark.slow
 def test_uniform_use(dsn):
     with pool.ConnectionPool(dsn, min_size=4) as p:
         counts = Counter[int]()
