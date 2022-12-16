@@ -13,6 +13,7 @@ from ..adapt import Dumper
 from ..pq import Format
 from .. import _struct
 
+from .bool import BoolDumper, BoolBinaryDumper
 from .numeric import dump_int_to_numeric_binary, _SpecialValuesDumper
 
 if TYPE_CHECKING:
@@ -54,13 +55,6 @@ class NPInt64Dumper(_NPIntDumper):
 
 
 NPUInt32Dumper = NPInt64Dumper
-
-
-class NPBooleanDumper(_NPIntDumper):
-    oid = postgres.types["bool"].oid
-
-    def dump(self, obj: "np.bool_") -> bytes:
-        return "t".encode() if bool(obj) is True else "f".encode()
 
 
 class NPUInt64Dumper(_NPIntDumper):
@@ -152,14 +146,6 @@ class NPInt64BinaryDumper(NPInt64Dumper):
 NPUInt32BinaryDumper = NPInt64BinaryDumper
 
 
-class NPBooleanBinaryDumper(NPBooleanDumper):
-
-    format = Format.BINARY
-
-    def dump(self, obj: Any) -> bytes:
-        return b"\x01" if obj else b"\x00"
-
-
 class NPUInt64BinaryDumper(NPUInt64Dumper):
 
     format = Format.BINARY
@@ -179,7 +165,7 @@ def register_default_adapters(context: Optional[AdaptContext] = None) -> None:
     adapters.register_dumper("numpy.int16", NPInt16Dumper)
     adapters.register_dumper("numpy.int32", NPInt32Dumper)
     adapters.register_dumper("numpy.int64", NPInt64Dumper)
-    adapters.register_dumper("numpy.bool_", NPBooleanDumper)
+    adapters.register_dumper("numpy.bool_", BoolDumper)
     adapters.register_dumper("numpy.uint8", NPUInt8Dumper)
     adapters.register_dumper("numpy.uint16", NPUInt16Dumper)
     adapters.register_dumper("numpy.uint32", NPUInt32Dumper)
@@ -193,7 +179,7 @@ def register_default_adapters(context: Optional[AdaptContext] = None) -> None:
     adapters.register_dumper("numpy.int16", NPInt16BinaryDumper)
     adapters.register_dumper("numpy.int32", NPInt32BinaryDumper)
     adapters.register_dumper("numpy.int64", NPInt64BinaryDumper)
-    adapters.register_dumper("numpy.bool_", NPBooleanBinaryDumper)
+    adapters.register_dumper("numpy.bool_", BoolBinaryDumper)
     adapters.register_dumper("numpy.uint8", NPUInt8BinaryDumper)
     adapters.register_dumper("numpy.uint16", NPUInt16BinaryDumper)
     adapters.register_dumper("numpy.uint32", NPUInt32BinaryDumper)
