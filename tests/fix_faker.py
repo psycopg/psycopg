@@ -908,7 +908,7 @@ class Faker:
         return self.match_any(spec, int(got), want)
 
     def match_numpy_float16(self, spec, got, want):
-        return self.match_numpy_float32(spec, got, want)
+        return self.match_float(spec, got, want, approx=True, rel=1e-3)
 
     def match_numpy_float32(self, spec, got, want):
         return self.match_Float4(spec, got, want)
