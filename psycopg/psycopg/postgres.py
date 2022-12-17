@@ -109,7 +109,6 @@ def register_default_adapters(context: AdaptContext) -> None:
     from .types import net, none, numeric, numpy, range, string, uuid
 
     array.register_default_adapters(context)
-    bool.register_default_adapters(context)
     composite.register_default_adapters(context)
     datetime.register_default_adapters(context)
     enum.register_default_adapters(context)
@@ -117,8 +116,12 @@ def register_default_adapters(context: AdaptContext) -> None:
     multirange.register_default_adapters(context)
     net.register_default_adapters(context)
     none.register_default_adapters(context)
-    numeric.register_default_adapters(context)
-    numpy.register_default_adapters(context)
     range.register_default_adapters(context)
     string.register_default_adapters(context)
     uuid.register_default_adapters(context)
+
+    # Make sure to register dumpers to the standard types last, in order to
+    # pick them by default when looking up by oid.
+    numpy.register_default_adapters(context)
+    bool.register_default_adapters(context)
+    numeric.register_default_adapters(context)
