@@ -244,7 +244,4 @@ def _get_nfields(res: "PGresult") -> Optional[int]:
     """
     nfields = res.nfields
 
-    if res.status == TUPLES_OK or res.status == SINGLE_TUPLE:
-        return nfields
-    else:
-        return None
+    return nfields if res.status in [TUPLES_OK, SINGLE_TUPLE] else None
