@@ -99,12 +99,8 @@ jobs:
           echo "MARKERS=$MARKERS postgis" >> $GITHUB_ENV
 
       - if: ${{ matrix.impl == 'c' }}
-        # skip tests failing on importing psycopg_c.pq on subprocess
-        # they only fail on Travis, work ok locally under tox too.
-        # TODO: check the same on GitHub Actions
         run: |
           echo "DEPS=$DEPS ./psycopg_c" >> $GITHUB_ENV
-          echo "NOT_MARKERS=$NOT_MARKERS subprocess" >> $GITHUB_ENV
 
       - name: Install Python dependencies
         run: pip install $DEPS
@@ -302,12 +298,8 @@ jobs:
           sudo apt-get -qq -y install "libpq-dev=${pqver}" "libpq5=${pqver}"
 
       - if: ${{ matrix.impl == 'c' }}
-        # skip tests failing on importing psycopg_c.pq on subprocess
-        # they only fail on Travis, work ok locally under tox too.
-        # TODO: check the same on GitHub Actions
         run: |
           echo "DEPS=$DEPS ./psycopg_c" >> $GITHUB_ENV
-          echo "NOT_MARKERS=$NOT_MARKERS subprocess" >> $GITHUB_ENV
 
       - name: Install Python dependencies
         run: pip install $DEPS
