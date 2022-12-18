@@ -3,8 +3,6 @@ import asyncio
 import selectors
 from typing import List
 
-import pytest
-
 pytest_plugins = (
     "tests.fix_db",
     "tests.fix_pq",
@@ -39,22 +37,6 @@ def pytest_addoption(parser):
         choices=["default", "uvloop"],
         default="default",
         help="The asyncio loop to use for async tests.",
-    )
-
-    parser.addoption(
-        "--no-collect-ok",
-        action="store_true",
-        help=(
-            "If no test collected, exit with 0 instead of 5 (useful with --lfnf=none)."
-        ),
-    )
-
-    parser.addoption(
-        "--allow-fail",
-        metavar="NUM",
-        type=int,
-        default=0,
-        help="Tolerate up to NUM failures. Use carefully.",
     )
 
 
@@ -101,17 +83,6 @@ allow_fail_messages: List[str] = []
 def pytest_sessionfinish(session, exitstatus):
     # Mark the test run successful (in the sense -weak- that we didn't segfault).
     session.config.cache.set("segfault", False)
-
-    no_collect_ok = session.config.getoption("--no-collect-ok")
-    if exitstatus == pytest.ExitCode.NO_TESTS_COLLECTED and no_collect_ok:
-        session.exitstatus = pytest.ExitCode.OK
-
-    allow_fail = session.config.getoption("--allow-fail")
-    if exitstatus == pytest.ExitCode.TESTS_FAILED:
-        if session.testsfailed <= allow_fail:
-            allow_fail_messages.append(f"Tests failed: {session.testsfailed}")
-            allow_fail_messages.append(f"Failures allowed: {allow_fail}")
-            session.exitstatus = pytest.ExitCode.OK
 
 
 def pytest_terminal_summary(terminalreporter, exitstatus, config):
