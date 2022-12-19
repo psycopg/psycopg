@@ -396,24 +396,28 @@ class Faker:
     def make_Enum(self, spec):
         return None
 
-    def make_float(self, spec, double=True):
+    def make_float(self, spec, size=64):
         if random() <= 0.99:
-            # These exponents should generate no inf
-            return spec(
-                f"{choice('-+')}0.{randrange(1 << 53)}e{randrange(-310,309)}"
-                if double
-                else f"{choice('-+')}0.{randrange(1 << 22)}e{randrange(-37,38)}"
-            )
+            # These exponents should generate no inf/overflow
+            if size == 64:
+                s = f"{choice('-+')}0.{randrange(1 << 53)}e{randrange(-310,309)}"
+            elif size == 32:
+                s = f"{choice('-+')}0.{randrange(1 << 22)}e{randrange(-37,38)}"
+            elif size == 16:
+                s = f"{choice('-+')}0.{randrange(1 << 10)}e{randrange(-3,4)}"
+            else:
+                assert False, size
+            return spec(s)
         else:
             return choice(
                 (spec(0.0), spec(-0.0), spec("-inf"), spec("inf"), spec("nan"))
             )
 
-    def match_float(self, spec, got, want, approx=False, rel=None):
+    def match_float(self, spec, got, want, rel=None):
         if got is not None and isnan(got):
             assert isnan(want)
         else:
-            if approx or self._server_rounds():
+            if rel or self._server_rounds():
                 assert got == pytest.approx(want, rel=rel)
             else:
                 assert got == want
@@ -429,13 +433,13 @@ class Faker:
             return self.conn.info.server_version < 120000
 
     def make_Float4(self, spec):
-        return spec(self.make_float(spec, double=False))
+        return self.make_float(spec, size=32)
 
     def match_Float4(self, spec, got, want):
-        self.match_float(spec, got, want, approx=True, rel=1e-5)
+        self.match_float(spec, got, want, rel=1e-5)
 
     def make_Float8(self, spec):
-        return spec(self.make_float(spec))
+        return self.make_float(spec)
 
     match_Float8 = match_float
 
@@ -889,7 +893,7 @@ class Faker:
         return self.make_numpy_uint64(spec)
 
     def make_numpy_float16(self, spec):
-        return self.make_Float4(spec)
+        return self.make_float(spec, size=16)
 
     def make_numpy_float32(self, spec):
         return self.make_Float4(spec)
@@ -908,7 +912,7 @@ class Faker:
         return self.match_any(spec, int(got), want)
 
     def match_numpy_float16(self, spec, got, want):
-        return self.match_float(spec, got, want, approx=True, rel=1e-3)
+        return self.match_float(spec, got, want, rel=1e-3)
 
     def match_numpy_float32(self, spec, got, want):
         return self.match_Float4(spec, got, want)
