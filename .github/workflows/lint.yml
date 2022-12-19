@@ -18,18 +18,31 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
+
       - uses: actions/setup-python@v4
-      - name: Install tox
-        run: pip install "tox < 4"
+        with:
+          python-version: "3.10"
+
+      - name: install packages to tests
+        run: pip install ./psycopg[dev,test] codespell
+
       - name: Run black
-        run: tox -e black
+        run: black --check --diff .
+
       - name: Run flake8
-        run: tox -e flake8
+        run: flake8
+
       - name: Run mypy
-        run: tox -e mypy
+        run: mypy
+
       - name: Check spelling
-        run: tox -e codespell
+        run: codespell
+
       - name: Install requirements to generate docs
         run: sudo apt-get install -y libgeos-dev
+
+      - name: Install Python packages to generate docs
+        run: pip install ./psycopg[docs] ./psycopg_pool
+
       - name: Check documentation
-        run: tox -e docs
+        run: sphinx-build -W -T -b html docs docs/_build/html
