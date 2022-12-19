@@ -92,6 +92,9 @@ def test_dump_int(conn, val, nptype, expr, fmt_in):
     cur.execute(f"select {expr} = %{fmt_in.value}", (val,))
     assert cur.fetchone()[0] is True
 
+    cur.execute(f"select array[{expr}] = %{fmt_in.value}", ([val],))
+    assert cur.fetchone()[0] is True
+
 
 @pytest.mark.parametrize(
     "nptype, val, pgtype",
@@ -128,11 +131,20 @@ def test_dump_float(conn, nptype, val, pgtype, fmt_in):
     else:
         assert rec[0] == rec[1]
 
+    cur.execute(
+        f"select array['{val}']::{pgtype}[], %(obj){fmt_in.value}", {"obj": [val]}
+    )
+    rec = cur.fetchone()
+    if nptype is np.float16:
+        assert rec[0][0] == pytest.approx(rec[1][0], 1e-3)
+    else:
+        assert rec[0][0] == rec[1][0]
+
 
 @pytest.mark.slow
 @pytest.mark.parametrize("fmt", PyFormat)
 def test_random(conn, faker, fmt):
-    faker.types = [t for t in faker.types if issubclass(t, np.generic)]
+    faker.types = [t for t in faker.types if issubclass(t, (list, np.generic))]
     faker.format = fmt
     faker.choose_schema(ncols=20)
     faker.make_records(50)
