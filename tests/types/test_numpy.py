@@ -16,7 +16,6 @@ pytestmark = [pytest.mark.numpy]
 def test_classes_identities():
     # Check if we know the class identities correctly. Maybe on different
     # platforms they are different.
-    assert np.bool_ is np.bool8
     assert np.ubyte is np.uint8
     assert np.ushort is np.uint16
     assert np.uint is np.uint64
