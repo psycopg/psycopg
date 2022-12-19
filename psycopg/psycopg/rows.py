@@ -20,6 +20,7 @@ if TYPE_CHECKING:
     from .cursor_async import AsyncCursor
     from psycopg.pq.abc import PGresult
 
+COMMAND_OK = pq.ExecStatus.COMMAND_OK
 TUPLES_OK = pq.ExecStatus.TUPLES_OK
 SINGLE_TUPLE = pq.ExecStatus.SINGLE_TUPLE
 
@@ -244,7 +245,12 @@ def _get_nfields(res: "PGresult") -> Optional[int]:
     """
     nfields = res.nfields
 
-    if res.status == TUPLES_OK or res.status == SINGLE_TUPLE:
+    if (
+        res.status == TUPLES_OK
+        or res.status == SINGLE_TUPLE
+        # "describe" in named cursors
+        or (res.status == COMMAND_OK and nfields)
+    ):
         return nfields
     else:
         return None
