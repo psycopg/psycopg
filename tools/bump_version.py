@@ -27,6 +27,7 @@ class Package:
     name: str
     version_files: list[Path]
     history_file: Path
+    tag_format: str
 
     def __post_init__(self) -> None:
         packages[self.name] = self
@@ -41,12 +42,14 @@ Package(
         PROJECT_DIR / "psycopg_c/psycopg_c/version.py",
     ],
     history_file=PROJECT_DIR / "docs/news.rst",
+    tag_format="{version}",
 )
 
 Package(
-    name="pool",
+    name="psycopg_pool",
     version_files=[PROJECT_DIR / "psycopg_pool/psycopg_pool/version.py"],
     history_file=PROJECT_DIR / "docs/news_pool.rst",
+    tag_format="pool-{version}",
 )
 
 
@@ -120,9 +123,26 @@ class Bumper:
 
     def commit(self) -> None:
         logger.debug("committing version changes")
-        msg = f"chore: bump {self.package.name} package version to {self.want_version}"
+        msg = f"""\
+chore: bump {self.package.name} package version to {self.want_version}
+"""
         files = self.package.version_files + [self.package.history_file]
         cmdline = ["git", "commit", "-m", msg] + list(map(str, files))
+        sp.check_call(cmdline)
+
+    def create_tag(self) -> None:
+        logger.debug("tagging version %s", self.want_version)
+        tag_name = self.package.tag_format.format(version=self.want_version)
+        changes = self._get_changes_lines(
+            self.package.history_file,
+            self.want_version,
+        )
+        msg = f"""\
+{self.package.name} {self.want_version} released
+
+{''.join(changes)}
+"""
+        cmdline = ["git", "tag", "-a", "-s", "-m", msg, tag_name]
         sp.check_call(cmdline)
 
     def _parse_version_from_file(self, fp: Path) -> Version:
@@ -193,6 +213,18 @@ class Bumper:
                 if not line.endswith("\n"):
                     f.write("\n")
 
+    def _get_changes_lines(self, fp: Path, version: Version) -> list[str]:
+        with fp.open() as f:
+            lines = f.readlines()
+
+        lns = self._find_lines(r"^[^\s]+ " + re.escape(str(version)), lines)
+        assert len(lns) == 1
+        start = end = lns[0] + 3
+        while lines[end].rstrip():
+            end += 1
+
+        return lines[start:end]
+
     def _find_lines(self, pattern: str, lines: list[str]) -> list[int]:
         rv = []
         rex = re.compile(pattern)
@@ -212,6 +244,8 @@ def main() -> int | None:
     if not opt.dry_run:
         bumper.update_files()
         bumper.commit()
+        if opt.level != BumpLevel.DEV:
+            bumper.create_tag()
 
     return 0
 
