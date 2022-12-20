@@ -5,7 +5,6 @@ PostgreSQL database adapter for Python - pure Python package
 
 # Copyright (C) 2020 The Psycopg Team
 
-import re
 import os
 from setuptools import setup
 
@@ -15,21 +14,20 @@ here = os.path.abspath(os.path.dirname(__file__))
 if os.path.abspath(os.getcwd()) != here:
     os.chdir(here)
 
-with open("psycopg/version.py") as f:
-    data = f.read()
-    m = re.search(r"""(?m)^__version__\s*=\s*['"]([^'"]+)['"]""", data)
-    if not m:
-        raise Exception(f"cannot find version in {f.name}")
-    version = m.group(1)
+# Only for release 3.1.7. Not building binary packages because Scaleway
+# has no runner available, but psycopg-binary 3.1.6 should work as well
+# as the only change is in rows.py.
+version = "3.1.7"
+ext_versions = ">= 3.1.6, <= 3.1.7"
 
 extras_require = {
     # Install the C extension module (requires dev tools)
     "c": [
-        f"psycopg-c == {version}",
+        f"psycopg-c {ext_versions}",
     ],
     # Install the stand-alone C extension module
     "binary": [
-        f"psycopg-binary == {version}",
+        f"psycopg-binary {ext_versions}",
     ],
     # Install the connection pool
     "pool": [
