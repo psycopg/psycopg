@@ -7,19 +7,16 @@
 ``psycopg_pool`` release notes
 ==============================
 
-Future releases
+Current release
 ---------------
 
-psycopg_pool 3.1.5 (unreleased)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg_pool 3.1.5
+^^^^^^^^^^^^^^^^^^
 
 - Make sure that `!ConnectionPool.check()` refills an empty pool
   (:ticket:`#438`).
 - Avoid error in Pyright caused by aliasing `!TypeAlias` (:ticket:`#439`).
 
-
-Current release
----------------
 
 psycopg_pool 3.1.4
 ^^^^^^^^^^^^^^^^^^
