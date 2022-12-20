@@ -7,17 +7,14 @@
 ``psycopg`` release notes
 =========================
 
-Future releases
+Current release
 ---------------
 
-Psycopg 3.1.7 (unreleased)
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+Psycopg 3.1.7
+^^^^^^^^^^^^^
 
 - Fix server-side cursors using row factories (:ticket:`#464`).
 
-
-Current release
----------------
 
 Psycopg 3.1.6
 ^^^^^^^^^^^^^
