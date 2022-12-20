@@ -58,6 +58,15 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
 
+      - name: Run PostgreSQL
+        # Note: this would love to be a service, but I don't see a way to pass
+        # the args to the docker run command line.
+        run: |
+          docker pull ${{ matrix.postgres }}
+          docker run --rm -d --name postgres -p 5432:5432 \
+            -e POSTGRES_PASSWORD=password ${{ matrix.postgres }} \
+            -c max_prepared_transactions=10
+
       - name: Install the newest libpq version available
         if: ${{ matrix.libpq == 'newest' }}
         run: |
@@ -107,20 +116,6 @@ jobs:
 
       - name: Run tests
         run: ./tools/build/ci_test.sh
-
-    services:
-      postgresql:
-        image: ${{ matrix.postgres }}
-        env:
-          POSTGRES_PASSWORD: password
-        ports:
-          - 5432:5432
-        # Set health checks to wait until postgres has started
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
 
 
   # }}}
