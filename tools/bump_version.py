@@ -12,6 +12,7 @@ from enum import Enum
 from pathlib import Path
 from argparse import ArgumentParser, Namespace
 from functools import cached_property
+from dataclasses import dataclass
 
 from packaging.version import parse as parse_version, Version
 
@@ -21,14 +22,37 @@ logger = logging.getLogger()
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
 
+@dataclass
+class Package:
+    name: str
+    version_files: list[Path]
+    history_file: Path
+
+    def __post_init__(self) -> None:
+        packages[self.name] = self
+
+
+packages: dict[str, Package] = {}
+
+Package(
+    name="psycopg",
+    version_files=[
+        PROJECT_DIR / "psycopg/psycopg/version.py",
+        PROJECT_DIR / "psycopg_c/psycopg_c/version.py",
+    ],
+    history_file=PROJECT_DIR / "docs/news.rst",
+)
+
+Package(
+    name="pool",
+    version_files=[PROJECT_DIR / "psycopg_pool/psycopg_pool/version.py"],
+    history_file=PROJECT_DIR / "docs/news_pool.rst",
+)
+
+
 class Bumper:
-    def __init__(
-        self, *, package: str, version_files: list[Path], bump_level: str | BumpLevel
-    ):
-        if not version_files:
-            raise ValueError("at least one file required")
+    def __init__(self, package: Package, *, bump_level: str | BumpLevel):
         self.package = package
-        self.version_files = version_files
         self.bump_level = BumpLevel(bump_level)
 
         self._version_regex = re.compile(
@@ -43,11 +67,13 @@ class Bumper:
 
     @cached_property
     def current_version(self) -> Version:
-        versions = set(self._parse_version_from_file(f) for f in self.version_files)
+        versions = set(
+            self._parse_version_from_file(f) for f in self.package.version_files
+        )
         if len(versions) > 1:
             raise ValueError(
                 f"inconsistent versions ({', '.join(map(str, sorted(versions)))})"
-                f" in {self.version_files}"
+                f" in {self.package.version_files}"
             )
 
         return versions.pop()
@@ -86,13 +112,17 @@ class Bumper:
         return Version(".".join(sparts))
 
     def update_files(self) -> None:
-        for f in self.version_files:
+        for f in self.package.version_files:
             self._update_version_in_file(f, self.want_version)
+
+        if self.bump_level != BumpLevel.DEV:
+            self._update_history_file(self.package.history_file, self.want_version)
 
     def commit(self) -> None:
         logger.debug("committing version changes")
-        msg = f"chore: bump {self.package} package version to {self.want_version}"
-        cmdline = ["git", "commit", "-m", msg] + list(map(str, self.version_files))
+        msg = f"chore: bump {self.package.name} package version to {self.want_version}"
+        files = self.package.version_files + [self.package.history_file]
+        cmdline = ["git", "commit", "-m", msg] + list(map(str, files))
         sp.check_call(cmdline)
 
     def _parse_version_from_file(self, fp: Path) -> Version:
@@ -116,7 +146,7 @@ class Bumper:
     def _update_version_in_file(self, fp: Path, version: Version) -> None:
         logger.debug("upgrading version to %s in %s", version, fp)
         lines = []
-        with fp.open("r") as f:
+        with fp.open() as f:
             for line in f:
                 if self._version_regex.match(line):
                     line = self._version_regex.sub(f"\\g<pre>{version}\\g<post>", line)
@@ -126,25 +156,57 @@ class Bumper:
             for line in lines:
                 f.write(line)
 
+    def _update_history_file(self, fp: Path, version: Version) -> None:
+        logger.debug("upgrading history file %s", fp)
+        with fp.open() as f:
+            lines = f.readlines()
+
+        vln: int = -1
+        lns = self._find_lines(
+            r"^[^\s]+ " + re.escape(str(version)) + r"\s*\(unreleased\)?$", lines
+        )
+        assert len(lns) <= 1
+        if len(lns) == 1:
+            vln = lns[0]
+            lines[vln] = lines[vln].rsplit(None, 1)[0]
+            lines[vln + 1] = lines[vln + 1][0] * len(lines[lns[0]])
+
+        lns = self._find_lines("^Future", lines)
+        assert len(lns) <= 1
+        if len(lns) == 1:
+            del lines[lns[0] : lns[0] + 3]
+            if vln > lns[0]:
+                vln -= 3
+
+        lns = self._find_lines("^Current", lines)
+        assert len(lns) <= 1
+        if len(lns) == 1 and vln >= 0:
+            clines = lines[lns[0] : lns[0] + 3]
+            del lines[lns[0] : lns[0] + 3]
+            if vln > lns[0]:
+                vln -= 3
+            lines[vln:vln] = clines
+
+        with fp.open("w") as f:
+            for line in lines:
+                f.write(line)
+                if not line.endswith("\n"):
+                    f.write("\n")
+
+    def _find_lines(self, pattern: str, lines: list[str]) -> list[int]:
+        rv = []
+        rex = re.compile(pattern)
+        for i, line in enumerate(lines):
+            if rex.match(line):
+                rv.append(i)
+
+        return rv
+
 
 def main() -> int | None:
     opt = parse_cmdline()
     logger.setLevel(opt.loglevel)
-    match opt.package:
-        case "psycopg":
-            version_files = [
-                PROJECT_DIR / "psycopg/psycopg/version.py",
-                PROJECT_DIR / "psycopg_c/psycopg_c/version.py",
-            ]
-        case "pool":
-            version_files = [PROJECT_DIR / "psycopg_pool/psycopg_pool/version.py"]
-
-        case _:
-            raise ValueError(f"unexpected package: {opt.package!r}")
-
-    bumper = Bumper(
-        package=opt.package, version_files=version_files, bump_level=opt.level
-    )
+    bumper = Bumper(packages[opt.package], bump_level=opt.level)
     logger.info("current version: %s", bumper.current_version)
     logger.info("bumping to version: %s", bumper.want_version)
     if not opt.dry_run:
@@ -174,7 +236,7 @@ def parse_cmdline() -> Namespace:
 
     parser.add_argument(
         "--package",
-        choices="psycopg pool".split(),
+        choices=list(packages.keys()),
         default="psycopg",
         help="the package to bump version [default: %(default)s]",
     )
