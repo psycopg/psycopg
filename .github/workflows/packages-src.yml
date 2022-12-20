@@ -1,0 +1,76 @@
+name: Build source packages
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '37 6 * * sun'
+
+jobs:
+
+  sdist:
+    runs-on: ubuntu-latest
+    if: true
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {package: psycopg, format: sdist, impl: python}
+          - {package: psycopg, format: wheel, impl: python}
+          - {package: psycopg_c, format: sdist, impl: c}
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: 3.9
+
+      - name: Create the sdist packages
+        run: |-
+          python ${{ matrix.package }}/setup.py sdist -d `pwd`/dist/
+        if: ${{ matrix.format == 'sdist' }}
+
+      - name: Create the wheel packages
+        run: |-
+          pip install wheel
+          python ${{ matrix.package }}/setup.py bdist_wheel -d `pwd`/dist/
+        if: ${{ matrix.format == 'wheel' }}
+
+      - name: Install the Python package and test requirements
+        run: |-
+          pip install `ls dist/*`[test]
+          pip install ./psycopg_pool
+        if: ${{ matrix.package == 'psycopg' }}
+
+      - name: Install the C package and test requirements
+        run: |-
+          pip install dist/*
+          pip install ./psycopg[test]
+          pip install ./psycopg_pool
+        if: ${{ matrix.package == 'psycopg_c' }}
+
+      - name: Test the sdist package
+        run: pytest -m 'not slow and not flakey' --color yes
+        env:
+          PSYCOPG_IMPL: ${{ matrix.impl }}
+          PSYCOPG_TEST_DSN: "host=127.0.0.1 user=postgres"
+          PGPASSWORD: password
+
+      - uses: actions/upload-artifact@v3
+        with:
+          path: ./dist/*
+
+    services:
+      postgresql:
+        image: postgres:14
+        env:
+          POSTGRES_PASSWORD: password
+        ports:
+          - 5432:5432
+        # Set health checks to wait until postgres has started
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
