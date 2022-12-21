@@ -28,6 +28,7 @@ with open("psycopg_c/version.py") as f:
     version = m.group(1)
 
 
+
 def get_config(what: str) -> str:
     pg_config = "pg_config"
     try:
