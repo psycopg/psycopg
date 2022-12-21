@@ -197,9 +197,15 @@ class AdaptersMap:
             use the last one of the dumpers registered on `!cls`.
         """
         try:
-            dmap = self._dumpers[format]
+            # Fast path: the class has a known dumper.
+            return self._dumpers[format][cls]
         except KeyError:
-            raise ValueError(f"bad dumper format: {format}")
+            if format not in self._dumpers:
+                raise ValueError(f"bad dumper format: {format}")
+
+            # If the KeyError was caused by cls missing from dmap, let's
+            # look for different cases.
+            dmap = self._dumpers[format]
 
         # Look for the right class, including looking at superclasses
         for scls in cls.__mro__:
