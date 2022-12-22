@@ -7,13 +7,17 @@ SQL composition utility module
 import codecs
 import string
 from abc import ABC, abstractmethod
-from typing import Any, Iterator, Iterable, List, Optional, Sequence, Union
+from typing import Any, Iterator, Iterable, List, Optional, Sequence, Union, Mapping
+from functools import reduce
 
 from .pq import Escaping
-from .abc import AdaptContext
+from .abc import AdaptContext, Params
 from .adapt import Transformer, PyFormat
 from ._compat import LiteralString
 from ._encodings import conn_encoding
+from ._queries import _split_query
+
+_MISSING = object()
 
 
 def quote(obj: Any, context: Optional[AdaptContext] = None) -> str:
@@ -52,6 +56,63 @@ class Composable(ABC):
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self._obj!r})"
+
+    def params(self, params: Optional[Params] = None, /) -> Optional[Params]:
+        """
+        Return the parameters attached to this composable.
+
+        :param params: Parameters that should augment the gathered parameters.
+        """
+        return params
+
+    @staticmethod
+    def _append_params(params: Optional[Params], extra: Optional[Params]) -> Optional[Params]:
+        """Append the parameters with additional parameters.
+
+        Do not override parameters.
+        """
+        if not extra:
+            return params
+        if not params:
+            return extra
+
+        if type(params) != type(extra):
+            raise TypeError("cannot mix parameter types")
+
+        if isinstance(params, Mapping):
+            # Raise an error if there are duplicate parameter names
+            if set(params) & set(extra):
+                raise ValueError("duplicate parameter names")
+            return {**params, **extra}
+
+        return params + extra
+
+    @staticmethod
+    def _augment_params(params: Optional[Params], overrides: Optional[Params]) -> Optional[Params]:
+        """Augment the parameters with additional parameters.
+
+        Duplicate keys are overridden, and missing items are filled in.
+        """
+        if not overrides:
+            return params
+        if not params:
+            return overrides
+
+        if type(params) != type(overrides):
+            raise TypeError("cannot mix parameter types")
+
+        if isinstance(params, Mapping):
+            return {**params, **overrides}
+
+        # Combining params may itself have _MISSING params, so we need to
+        # make sure we know how far in the params we've already gotten.
+        start = 0
+        _params = list(params)
+        for param in overrides:
+            index = _params.index(_MISSING, start)
+            _params[index] = param
+            start = index + 1
+        return _params
 
     @abstractmethod
     def as_bytes(self, context: Optional[AdaptContext]) -> bytes:
@@ -125,9 +186,14 @@ class Composed(Composable):
 
     _obj: List[Composable]
 
-    def __init__(self, seq: Sequence[Any]):
+    def __init__(self, seq: Sequence[Any], params: Optional[Params] = None):
         seq = [obj if isinstance(obj, Composable) else Literal(obj) for obj in seq]
         super().__init__(seq)
+        self._params = params and dict(params)
+
+    def params(self, params: Optional[Params] = None, /) -> Optional[Params]:
+        _params = reduce(self._append_params, [c.params() for c in self._obj], None)
+        return self._augment_params(_params, params)
 
     def as_bytes(self, context: Optional[AdaptContext]) -> bytes:
         return b"".join(obj.as_bytes(context) for obj in self._obj)
@@ -137,9 +203,12 @@ class Composed(Composable):
 
     def __add__(self, other: Composable) -> "Composed":
         if isinstance(other, Composed):
-            return Composed(self._obj + other._obj)
+            return Composed(
+                self._obj + other._obj,
+                self._append_params(self._params, other._params)
+            )
         if isinstance(other, Composable):
-            return Composed(self._obj + [other])
+            return Composed(self._obj + [other], self._params)
         else:
             return NotImplemented
 
@@ -194,10 +263,23 @@ class SQL(Composable):
     _obj: LiteralString
     _formatter = string.Formatter()
 
-    def __init__(self, obj: LiteralString):
+    def __init__(self, obj: LiteralString, params: Optional[Params] = None):
         super().__init__(obj)
         if not isinstance(obj, str):
             raise TypeError(f"SQL values must be strings, got {obj!r} instead")
+        self._params = params
+
+    def params(self, params: Optional[Params] = None, /) -> Params:
+        # There is one more part than there are placeholders
+        parts = _split_query(self._obj.encode("utf-8"), encoding="utf-8")
+        if isinstance(parts[0].item, int):
+            _params = list(self._params or [])
+            _params + [_MISSING] * (len(parts) - 1 - len(_params))
+        else:
+            # Duplicate params are permitted
+            _params = {part.item: _MISSING for part in parts}
+
+        return self._augment_params(_params, params)
 
     def as_string(self, context: Optional[AdaptContext]) -> str:
         return self._obj
@@ -278,7 +360,7 @@ class SQL(Composable):
             else:
                 rv.append(kwargs[name])
 
-        return Composed(rv)
+        return Composed(rv, params=self._params)
 
     def join(self, seq: Iterable[Composable]) -> Composed:
         """
@@ -309,7 +391,7 @@ class SQL(Composable):
                 rv.append(self)
                 rv.append(i)
 
-        return Composed(rv)
+        return Composed(rv, self._params)
 
 
 class Identifier(Composable):
@@ -426,7 +508,12 @@ class Placeholder(Composable):
 
     """
 
-    def __init__(self, name: str = "", format: Union[str, PyFormat] = PyFormat.AUTO):
+    def __init__(
+        self,
+        name: str = "",
+        format: Union[str, PyFormat] = PyFormat.AUTO,
+        value: Any = _MISSING,
+    ):
         super().__init__(name)
         if not isinstance(name, str):
             raise TypeError(f"expected string as name, got {name!r}")
@@ -442,15 +529,26 @@ class Placeholder(Composable):
             )
 
         self._format: PyFormat = format
+        self._value: Any = value
 
     def __repr__(self) -> str:
         parts = []
         if self._obj:
             parts.append(repr(self._obj))
+        if self._value is not _MISSING:
+            parts.append(f"value={self._value!r}")
         if self._format is not PyFormat.AUTO:
             parts.append(f"format={self._format.name}")
 
         return f"{self.__class__.__name__}({', '.join(parts)})"
+
+    def params(self, params: Optional[Params] = None, /) -> Optional[Params]:
+        if self._obj:
+            _params = {self._obj: self._value}
+        else:
+            _params = [self._value]
+
+        return self._augment_params(params, _params)
 
     def as_string(self, context: Optional[AdaptContext]) -> str:
         code = self._format.value
@@ -460,6 +558,60 @@ class Placeholder(Composable):
         conn = context.connection if context else None
         enc = conn_encoding(conn)
         return self.as_string(context).encode(enc)
+
+
+class Param(Placeholder):
+    """A `Composable` representing a placeholder for query parameters.
+
+    This is identical to `Placeholder` except the format parameter is a
+    keyword-only argument and value is encouraged to be positional.
+
+    If the name is specified, generate a named placeholder (e.g. ``%(name)s``,
+    ``%(name)b``), otherwise generate a positional placeholder (e.g. ``%s``,
+    ``%b``).
+
+    The object is useful to generate SQL queries with a variable number of
+    arguments.
+
+    Examples::
+
+        >>> names = ['foo', 'bar', 'baz']
+
+        >>> q1 = sql.SQL("INSERT INTO my_table ({}) VALUES ({})").format(
+        ...     sql.SQL(', ').join(map(sql.Identifier, names)),
+        ...     sql.SQL(', ').join(sql.Param() * len(names)))
+        >>> print(q1.as_string(conn))
+        INSERT INTO my_table ("foo", "bar", "baz") VALUES (%s, %s, %s)
+
+        >>> q2 = sql.SQL("INSERT INTO my_table ({}) VALUES ({})").format(
+        ...     sql.SQL(', ').join(map(sql.Identifier, names)),
+        ...     sql.SQL(', ').join(map(sql.Param, names)))
+        >>> print(q2.as_string(conn))
+        INSERT INTO my_table ("foo", "bar", "baz") VALUES (%(foo)s, %(bar)s, %(baz)s)
+
+    """
+
+    def __init__(
+        self,
+        name: str = "",
+        value: Any = _MISSING,
+        *,
+        format: Union[str, PyFormat] = PyFormat.AUTO,
+    ):
+        # This is identical to `Placeholder` except the format parameter is a
+        # keyword-only argument and value is encouraged to be positional.
+        super().__init__(name, value=value, format=format)
+
+    def __repr__(self) -> str:
+        parts = []
+        if self._obj:
+            parts.append(repr(self._obj))
+        if self._value is not _MISSING:
+            parts.append(f"{self._value!r}")
+        if self._format is not PyFormat.AUTO:
+            parts.append(f"format={self._format.name}")
+
+        return f"{self.__class__.__name__}({', '.join(parts)})"
 
 
 # Literals
