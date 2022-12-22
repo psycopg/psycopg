@@ -6,9 +6,11 @@ from psycopg import pq
 from psycopg import sql
 from psycopg.adapt import PyFormat
 
+crdb_skip_inet = pytest.mark.crdb_skip("inet")
 crdb_skip_cidr = pytest.mark.crdb_skip("cidr")
 
 
+@crdb_skip_inet
 @pytest.mark.parametrize("fmt_in", PyFormat)
 @pytest.mark.parametrize("val", ["192.168.0.1", "2001:db8::"])
 def test_address_dump(conn, fmt_in, val):
@@ -22,6 +24,7 @@ def test_address_dump(conn, fmt_in, val):
     assert cur.fetchone()[0] is True
 
 
+@crdb_skip_inet
 @pytest.mark.parametrize("fmt_in", PyFormat)
 @pytest.mark.parametrize("val", ["127.0.0.1/24", "::ffff:102:300/128"])
 def test_interface_dump(conn, fmt_in, val):

@@ -106,6 +106,7 @@ _crdb_reasons = {
     "encoding": 35882,
     "geometric types": 21286,
     "hstore": 41284,
+    "inet": 94192,
     "infinity date": 41564,
     "interval style": 35807,
     "json array": 23468,
@@ -125,6 +126,7 @@ _crdb_reasons = {
 
 _crdb_reason_version = {
     "backend pid": "skip < 22",
+    "inet": "skip == 22.2.1",
     "cancel": "skip < 22",
     "server-side cursor": "skip < 22.1.3",
     "severity_nonlocalized": "skip < 22.1.3",
