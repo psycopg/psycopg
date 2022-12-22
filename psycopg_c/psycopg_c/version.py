@@ -1,11 +1,14 @@
 """
 psycopg-c distribution version file.
 """
+from ._compat import metadata
 
 # Copyright (C) 2020 The Psycopg Team
 
 # Use a versioning scheme as defined in
 # https://www.python.org/dev/peps/pep-0440/
-__version__ = "3.1.8.dev1"
 
-# also change psycopg/psycopg/version.py accordingly.
+try:
+    __version__ = metadata.version("psycopg-c")
+except metadata.PackageNotFoundError:
+    __version__ = "0.0.0.0"
