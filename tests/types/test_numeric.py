@@ -77,7 +77,7 @@ class MyEnum(enum.IntEnum):
     foo = 42
 
 
-class MyMixinEnum(enum.IntEnum):
+class MyMixinEnum(int, enum.Enum):
     foo = 42000000
 
 
