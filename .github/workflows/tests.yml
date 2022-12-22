@@ -35,7 +35,7 @@ jobs:
           - {impl: c, python: "3.7", postgres: "postgres:15", libpq: newest}
           - {impl: c, python: "3.8", postgres: "postgres:13"}
           - {impl: c, python: "3.9", postgres: "postgres:14"}
-          - {impl: c, python: "3.10", postgres: "postgres:13", libpq: oldest}
+          - {impl: c, python: "3.10", postgres: "postgres:11", libpq: oldest}
           - {impl: c, python: "3.11", postgres: "postgres:10", libpq: newest}
 
           - {impl: python, python: "3.9", ext: dns, postgres: "postgres:14"}
@@ -44,8 +44,7 @@ jobs:
     env:
       PSYCOPG_IMPL: ${{ matrix.impl }}
       DEPS: ./psycopg[test] ./psycopg_pool
-      PSYCOPG_TEST_DSN: "host=127.0.0.1 user=postgres"
-      PGPASSWORD: password
+      PSYCOPG_TEST_DSN: "host=127.0.0.1 user=postgres password=password"
       MARKERS: ""
 
       # Enable to run tests using the minimum version of dependencies.
@@ -58,7 +57,7 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
 
-      - name: Run PostgreSQL
+      - name: Start PostgreSQL service
         # Note: this would love to be a service, but I don't see a way to pass
         # the args to the docker run command line.
         run: |
@@ -67,51 +66,27 @@ jobs:
             -e POSTGRES_PASSWORD=password ${{ matrix.postgres }} \
             -c max_prepared_transactions=10
 
-      - name: Install the newest libpq version available
-        if: ${{ matrix.libpq == 'newest' }}
+      - name: Install the wanted libpq version
+        run: ./tools/build/ci_install_libpq.sh ${{ matrix.libpq }}
+
+      - name: Include psycopg-c to the packages to install
+        if: ${{ matrix.impl == 'c' }}
         run: |
-          set -x
+          echo "DEPS=$DEPS ./psycopg_c" >> $GITHUB_ENV
 
-          curl -sL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
-            | gpg --dearmor \
-            | sudo tee /etc/apt/trusted.gpg.d/apt.postgresql.org.gpg > /dev/null
-
-          # NOTE: in order to test with a preview release, add its number to
-          # the deb entry. For instance, to test on preview Postgres 16, use:
-          # "deb http://apt.postgresql.org/pub/repos/apt ${rel}-pgdg main 16"
-          rel=$(lsb_release -c -s)
-          echo "deb http://apt.postgresql.org/pub/repos/apt ${rel}-pgdg main" \
-            | sudo tee -a /etc/apt/sources.list.d/pgdg.list > /dev/null
-          sudo apt-get -qq update
-
-          pqver=$(apt-cache show libpq5  | grep ^Version: | head -1 \
-            | awk '{print $2}')
-          sudo apt-get -qq -y install "libpq-dev=${pqver}" "libpq5=${pqver}"
-
-      - name: Install the oldest libpq version available
-        if: ${{ matrix.libpq == 'oldest' }}
-        run: |
-          set -x
-          pqver=$(apt-cache show libpq5  | grep ^Version: | tail -1 \
-            | awk '{print $2}')
-          sudo apt-get -qq -y --allow-downgrades install \
-            "libpq-dev=${pqver}" "libpq5=${pqver}"
-
-      - if: ${{ matrix.ext == 'dns' }}
+      - name: Include dnspython to the packages to install
+        if: ${{ matrix.ext == 'dns' }}
         run: |
           echo "DEPS=$DEPS dnspython" >> $GITHUB_ENV
           echo "MARKERS=$MARKERS dns" >> $GITHUB_ENV
 
-      - if: ${{ matrix.ext == 'postgis' }}
+      - name: Include shapely to the packages to install
+        if: ${{ matrix.ext == 'postgis' }}
         run: |
           echo "DEPS=$DEPS shapely" >> $GITHUB_ENV
           echo "MARKERS=$MARKERS postgis" >> $GITHUB_ENV
 
-      - if: ${{ matrix.impl == 'c' }}
-        run: |
-          echo "DEPS=$DEPS ./psycopg_c" >> $GITHUB_ENV
-
-      - name: Install Python dependencies
+      - name: Install Python packages
         run: pip install $DEPS
 
       - name: Run tests
@@ -147,29 +122,29 @@ jobs:
       # Don't run timing-based tests as they regularly fail.
       # pproxy-based tests fail too, with the proxy not coming up in 2s.
       NOT_MARKERS: "timing proxy mypy"
+
+      # Enable to run tests using the minimum version of dependencies.
       # PIP_CONSTRAINT: ${{ github.workspace }}/tests/constraints.txt
 
     steps:
       - uses: actions/checkout@v3
 
-      - name: Install PostgreSQL on the runner
-        run: brew install postgresql@14
-
-      - name: Start PostgreSQL service for test
-        run: brew services start postgresql
-
       - uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python }}
 
-      - if: ${{ matrix.impl == 'c' }}
-        # skip tests failing on importing psycopg_c.pq on subprocess
-        # they only fail on Travis, work ok locally under tox too.
-        # TODO: check the same on GitHub Actions
+      - name: Install PostgreSQL on the runner
+        run: brew install postgresql@14
+
+      - name: Start PostgreSQL service
+        run: brew services start postgresql
+
+      - name: Include psycopg-c to the packages to install
+        if: ${{ matrix.impl == 'c' }}
         run: |
           echo "DEPS=$DEPS ./psycopg_c" >> $GITHUB_ENV
 
-      - name: Install Python dependencies
+      - name: Install Python packages
         run: pip install $DEPS
 
       - name: Run tests
@@ -203,40 +178,50 @@ jobs:
       PSYCOPG_TEST_DSN: "host=127.0.0.1 dbname=postgres"
       # On windows pproxy doesn't seem very happy. Also a few timing test fail.
       NOT_MARKERS: "timing proxy mypy"
+
+      # Enable to run tests using the minimum version of dependencies.
       # PIP_CONSTRAINT: ${{ github.workspace }}/tests/constraints.txt
+
+    defaults:
+      run:
+        shell: bash
 
     steps:
       - uses: actions/checkout@v3
-
-      - name: Start PostgreSQL service for test
-        run: |
-          $PgSvc = Get-Service "postgresql*"
-          Set-Service $PgSvc.Name -StartupType manual
-          $PgSvc.Start()
 
       - uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python }}
 
-      # Build a wheel package of the C extensions.
-      # If the wheel is not delocated, import fails with some dll not found
-      # (but it won't tell which one).
+      - name: Start PostgreSQL service
+        run: |
+          $PgSvc = Get-Service "postgresql*"
+          Set-Service $PgSvc.Name -StartupType manual
+          $PgSvc.Start()
+        shell: pwsh
+
       - name: Build the C wheel
         if: ${{ matrix.impl == 'c' }}
         run: |
           pip install delvewheel wheel
-          $env:Path = "C:\Program Files\PostgreSQL\14\bin\;$env:Path"
-          python ./psycopg_c/setup.py bdist_wheel
-          &"delvewheel" repair `
-            --no-mangle "libiconv-2.dll;libwinpthread-1.dll" `
-            @(Get-ChildItem psycopg_c\dist\*.whl)
-          &"pip" install @(Get-ChildItem wheelhouse\*.whl)
+
+          # The windows runner is a total mess, with random copies of the libpq
+          # scattered all over the places. Give precedence to the one under our
+          # control (or the illusion of it).
+          export PATH="/c/Program Files/PostgreSQL/14/bin/:$PATH"
+
+          # If the wheel is not delocated, import fails with some dll not found
+          # (but it won't tell which one).
+          pip wheel -v -w ./psycopg_c/dist/ ./psycopg_c/
+          delvewheel repair --no-mangle "libiconv-2.dll;libwinpthread-1.dll" \
+            -w ./wheelhouse/ psycopg_c/dist/*.whl
+          echo "DEPS=$DEPS $(ls ./wheelhouse/*.whl)" >> $GITHUB_ENV
+
+      - name: Install Python packages
+        run: pip install $DEPS
 
       - name: Run tests
-        run: |
-          pip install $DEPS
-          ./tools/build/ci_test.sh
-        shell: bash
+        run: ./tools/build/ci_test.sh
 
 
   # }}}
@@ -263,7 +248,7 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
 
-      - name: Run CockroachDB
+      - name: Start CockroachDB service
         # Note: this would love to be a service, but I don't see a way to pass
         # the args to the docker run command line.
         run: |
@@ -271,39 +256,19 @@ jobs:
           docker run --rm -d --name crdb -p 26257:26257 \
             cockroachdb/cockroach:${{ matrix.crdb }} start-single-node --insecure
 
-      - name: Install the newest libpq version available
-        if: ${{ matrix.libpq == 'newest' }}
-        run: |
-          set -x
+      - name: Install the wanted libpq version
+        run: ./tools/build/ci_install_libpq.sh ${{ matrix.libpq }}
 
-          curl -sL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
-            | gpg --dearmor \
-            | sudo tee /etc/apt/trusted.gpg.d/apt.postgresql.org.gpg > /dev/null
-
-          # NOTE: in order to test with a preview release, add its number to
-          # the deb entry. For instance, to test on preview Postgres 16, use:
-          # "deb http://apt.postgresql.org/pub/repos/apt ${rel}-pgdg main 16"
-          rel=$(lsb_release -c -s)
-          echo "deb http://apt.postgresql.org/pub/repos/apt ${rel}-pgdg main" \
-            | sudo tee -a /etc/apt/sources.list.d/pgdg.list > /dev/null
-          sudo apt-get -qq update
-
-          pqver=$(apt-cache show libpq5  | grep ^Version: | head -1 \
-            | awk '{print $2}')
-          sudo apt-get -qq -y install "libpq-dev=${pqver}" "libpq5=${pqver}"
-
-      - if: ${{ matrix.impl == 'c' }}
+      - name: Include psycopg-c to the packages to install
+        if: ${{ matrix.impl == 'c' }}
         run: |
           echo "DEPS=$DEPS ./psycopg_c" >> $GITHUB_ENV
 
-      - name: Install Python dependencies
+      - name: Install Python packages
         run: pip install $DEPS
 
       - name: Run tests
         run: ./tools/build/ci_test.sh
-
-      - name: Stop CockroachDB
-        run: docker kill crdb
 
 
   # }}}
