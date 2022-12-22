@@ -164,7 +164,7 @@ cdef object _parse_token(
     if has_quotes:
         end -= 1
 
-    cdef int length = (end - start)
+    cdef Py_ssize_t length = (end - start)
     if length == 4 and not has_quotes \
             and start[0] == b'N' and start[1] == b'U' \
             and start[2] == b'L' and start[3] == b'L':

@@ -168,7 +168,7 @@ def wait_c(gen: PQGen[RV], int fileno, timeout = None) -> RV:
     if timeout is None:
         ctimeout = -1.0
     else:
-        ctimeout = float(timeout)
+        ctimeout = <float>float(timeout)
         if ctimeout < 0.0:
             ctimeout = -1.0
 
