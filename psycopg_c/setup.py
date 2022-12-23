@@ -76,7 +76,7 @@ class psycopg_build_ext(build_ext):
                 compiler_directives={
                     "always_allow_keywords": False,
                 },
-                annotate=False,  # enable to get an html view of the C module
+                annotate=True,  # enable to get an html view of the C module
             )
         else:
             self.distribution.ext_modules = [pgext, pqext]
