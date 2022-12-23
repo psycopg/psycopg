@@ -150,6 +150,8 @@ def fetch_many(pq.PGconn pgconn) -> PQGen[List[PGresult]]:
             # similarly to other result sets.
             break
 
+    _consume_notifies(pgconn)
+
     return results
 
 
@@ -167,29 +169,22 @@ def fetch(pq.PGconn pgconn) -> PQGen[Optional[PGresult]]:
     cdef libpq.PGresult *pgres
 
     with nogil:
-        ibres = libpq.PQisBusy(pgconn_ptr)
-    if ibres:
-        yield WAIT_R
         while True:
-            with nogil:
-                cires = libpq.PQconsumeInput(pgconn_ptr)
-                if cires == 1:
-                    ibres = libpq.PQisBusy(pgconn_ptr)
+            ibres = libpq.PQisBusy(pgconn_ptr)
+            if not ibres:
+                break
 
+            with gil:
+                yield WAIT_R
+
+            cires = libpq.PQconsumeInput(pgconn_ptr)
             if 1 != cires:
                 raise e.OperationalError(
                     f"consuming input failed: {error_message(pgconn)}")
-            if not ibres:
-                break
-            yield WAIT_R
 
-    _consume_notifies(pgconn)
-
-    with nogil:
         pgres = libpq.PQgetResult(pgconn_ptr)
-    if pgres is NULL:
-        return None
-    return pq.PGresult._from_ptr(pgres)
+
+    return pq.PGresult._from_ptr(pgres) if pgres is not NULL else None
 
 
 def pipeline_communicate(

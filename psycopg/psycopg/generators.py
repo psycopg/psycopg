@@ -153,6 +153,8 @@ def _fetch_many(pgconn: PGconn) -> PQGen[List[PGresult]]:
             assert len(results) == 1, results
             break
 
+    _consume_notifies(pgconn)
+
     return results
 
 
@@ -165,15 +167,11 @@ def _fetch(pgconn: PGconn) -> PQGen[Optional[PGresult]]:
 
     Return a result from the database (whether success or error).
     """
-    if pgconn.is_busy():
+    while True:
+        if not pgconn.is_busy():
+            break
         yield WAIT_R
-        while True:
-            pgconn.consume_input()
-            if not pgconn.is_busy():
-                break
-            yield WAIT_R
-
-    _consume_notifies(pgconn)
+        pgconn.consume_input()
 
     return pgconn.get_result()
 
