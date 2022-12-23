@@ -19,7 +19,10 @@ cdef extern from * nogil:
 
 from libc.stdio cimport fdopen
 from cpython.mem cimport PyMem_Malloc, PyMem_Free
+from cpython.list cimport PyList_GET_SIZE, PyList_GET_ITEM
+from cpython.tuple cimport PyTuple_GET_SIZE, PyTuple_GET_ITEM
 from cpython.bytes cimport PyBytes_AsString
+from cpython.object cimport PyObject
 from cpython.memoryview cimport PyMemoryView_FromObject
 
 import sys
@@ -229,13 +232,13 @@ cdef class PGconn:
     ) -> PGresult:
         _ensure_pgconn(self)
 
-        cdef Py_ssize_t cnparams
-        cdef libpq.Oid *ctypes
-        cdef char *const *cvalues
-        cdef int *clengths
-        cdef int *cformats
-        cnparams, ctypes, cvalues, clengths, cformats = _query_params_args(
-            param_values, param_types, param_formats)
+        cdef libpq.Oid *ctypes = NULL
+        cdef char **cvalues = NULL
+        cdef int *clengths = NULL
+        cdef int *cformats = NULL
+        cdef Py_ssize_t cnparams = _query_params_args(
+            param_values, param_types, param_formats,
+            &ctypes, &cvalues, &clengths, &cformats)
 
         cdef libpq.PGresult *pgresult
         with nogil:
@@ -257,13 +260,13 @@ cdef class PGconn:
     ) -> None:
         _ensure_pgconn(self)
 
-        cdef Py_ssize_t cnparams
-        cdef libpq.Oid *ctypes
-        cdef char *const *cvalues
-        cdef int *clengths
-        cdef int *cformats
-        cnparams, ctypes, cvalues, clengths, cformats = _query_params_args(
-            param_values, param_types, param_formats)
+        cdef libpq.Oid *ctypes = NULL
+        cdef char **cvalues = NULL
+        cdef int *clengths = NULL
+        cdef int *cformats = NULL
+        cdef Py_ssize_t cnparams = _query_params_args(
+            param_values, param_types, param_formats,
+            &ctypes, &cvalues, &clengths, &cformats)
 
         cdef int rv
         with nogil:
@@ -312,13 +315,13 @@ cdef class PGconn:
     ) -> None:
         _ensure_pgconn(self)
 
-        cdef Py_ssize_t cnparams
-        cdef libpq.Oid *ctypes
-        cdef char *const *cvalues
-        cdef int *clengths
-        cdef int *cformats
-        cnparams, ctypes, cvalues, clengths, cformats = _query_params_args(
-            param_values, None, param_formats)
+        cdef libpq.Oid *ctypes = NULL
+        cdef char **cvalues = NULL
+        cdef int *clengths = NULL
+        cdef int *cformats = NULL
+        cdef Py_ssize_t cnparams = _query_params_args(
+            param_values, None, param_formats,
+            &ctypes, &cvalues, &clengths, &cformats)
 
         cdef int rv
         with nogil:
@@ -365,13 +368,13 @@ cdef class PGconn:
     ) -> PGresult:
         _ensure_pgconn(self)
 
-        cdef Py_ssize_t cnparams
-        cdef libpq.Oid *ctypes
-        cdef char *const *cvalues
-        cdef int *clengths
-        cdef int *cformats
-        cnparams, ctypes, cvalues, clengths, cformats = _query_params_args(
-            param_values, None, param_formats)
+        cdef libpq.Oid *ctypes = NULL
+        cdef char **cvalues = NULL
+        cdef int *clengths = NULL
+        cdef int *cformats = NULL
+        cdef Py_ssize_t cnparams = _query_params_args(
+            param_values, None, param_formats,
+            &ctypes, &cvalues, &clengths, &cformats)
 
         cdef libpq.PGresult *rv
         with nogil:
@@ -668,66 +671,76 @@ cdef void notice_receiver(void *arg, const libpq.PGresult *res_ptr) with gil:
         res._pgresult_ptr = NULL  # avoid destroying the pgresult_ptr
 
 
-cdef (Py_ssize_t, libpq.Oid *, char * const*, int *, int *) _query_params_args(
-    list param_values: Optional[Sequence[Optional[bytes]]],
+cdef int _query_params_args(
+    param_values: Optional[Sequence[Optional[bytes]]],
     param_types: Optional[Sequence[int]],
-    list param_formats: Optional[Sequence[int]],
-) except *:
-    cdef int i
+    param_formats: Optional[Sequence[int]],
+    libpq.Oid **ctypes,
+    char ***cvalues,
+    int **clengths,
+    int **cformats
+) except -1:
+    cdef Py_ssize_t nparams
 
-    # the PostgresQuery converts the param_types to tuple, so this operation
-    # is most often no-op
-    cdef tuple tparam_types
-    if param_types is not None and not isinstance(param_types, tuple):
-        tparam_types = tuple(param_types)
+    if param_values is None:
+        nparams = 0
     else:
-        tparam_types = param_types
+        if not isinstance(param_values, list):
+            param_values = list(param_values)
 
-    cdef Py_ssize_t nparams = len(param_values) if param_values else 0
-    if tparam_types is not None and len(tparam_types) != nparams:
-        raise ValueError(
-            "got %d param_values but %d param_types"
-            % (nparams, len(tparam_types))
-        )
-    if param_formats is not None and len(param_formats) != nparams:
-        raise ValueError(
-            "got %d param_values but %d param_formats"
-            % (nparams, len(param_formats))
-        )
+        nparams = PyList_GET_SIZE(param_values)
 
-    cdef char **aparams = NULL
-    cdef int *alenghts = NULL
+    if nparams == 0:
+        return nparams
+
+    if param_types is not None:
+        if not isinstance(param_types, tuple):
+            param_types = tuple(param_types)
+        if PyTuple_GET_SIZE(param_types) != nparams:
+            raise ValueError(
+                "got %d param_values but %d param_types"
+                % (nparams, len(param_types))
+            )
+
+    if param_formats is not None:
+        if not isinstance(param_formats, list):
+            param_types = list(param_formats)
+
+        if PyList_GET_SIZE(param_formats) != nparams:
+            raise ValueError(
+                "got %d param_values but %d param_formats"
+                % (nparams, len(param_formats))
+            )
+
+    cvalues[0] = <char **>PyMem_Malloc(nparams * sizeof(char *))
+    clengths[0] = <int *>PyMem_Malloc(nparams * sizeof(int))
+
+    cdef int i
+    cdef PyObject *obj
     cdef char *ptr
     cdef Py_ssize_t length
 
-    if nparams:
-        aparams = <char **>PyMem_Malloc(nparams * sizeof(char *))
-        alenghts = <int *>PyMem_Malloc(nparams * sizeof(int))
-        for i in range(nparams):
-            obj = param_values[i]
-            if obj is None:
-                aparams[i] = NULL
-                alenghts[i] = 0
-            else:
-                # TODO: it is a leak if this fails (but it should only fail
-                # on internal error, e.g. if obj is not a buffer)
-                _buffer_as_string_and_size(obj, &ptr, &length)
-                aparams[i] = ptr
-                alenghts[i] = <int>length
+    for i in range(nparams):
+        obj = PyList_GET_ITEM(param_values, i)
+        if <object>obj is None:
+            cvalues[0][i] = NULL
+            clengths[0][i] = 0
+        else:
+            _buffer_as_string_and_size(<object>obj, &ptr, &length)
+            cvalues[0][i] = ptr
+            clengths[0][i] = <int>length
 
-    cdef libpq.Oid *atypes = NULL
-    if tparam_types:
-        atypes = <libpq.Oid *>PyMem_Malloc(nparams * sizeof(libpq.Oid))
+    if param_types is not None:
+        ctypes[0] = <libpq.Oid *>PyMem_Malloc(nparams * sizeof(libpq.Oid))
         for i in range(nparams):
-            atypes[i] = tparam_types[i]
+            ctypes[0][i] = <libpq.Oid><object>PyTuple_GET_ITEM(param_types, i)
 
-    cdef int *aformats = NULL
     if param_formats is not None:
-        aformats = <int *>PyMem_Malloc(nparams * sizeof(int *))
+        cformats[0] = <int *>PyMem_Malloc(nparams * sizeof(int *))
         for i in range(nparams):
-            aformats[i] = param_formats[i]
+            cformats[0][i] = <int><object>PyList_GET_ITEM(param_formats, i)
 
-    return (nparams, atypes, aparams, alenghts, aformats)
+    return nparams
 
 
 cdef void _clear_query_params(
