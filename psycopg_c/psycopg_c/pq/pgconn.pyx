@@ -207,7 +207,7 @@ cdef class PGconn:
         with nogil:
             pgresult = libpq.PQexec(self._pgconn_ptr, command)
         if pgresult is NULL:
-            raise MemoryError("couldn't allocate PGresult")
+            raise e.OperationalError(f"executing query failed: {error_message(self)}")
 
         return PGresult._from_ptr(pgresult)
 
@@ -244,7 +244,7 @@ cdef class PGconn:
                 <const char *const *>cvalues, clengths, cformats, result_format)
         _clear_query_params(ctypes, cvalues, clengths, cformats)
         if pgresult is NULL:
-            raise MemoryError("couldn't allocate PGresult")
+            raise e.OperationalError(f"executing query failed: {error_message(self)}")
         return PGresult._from_ptr(pgresult)
 
     def send_query_params(
@@ -353,7 +353,7 @@ cdef class PGconn:
                 self._pgconn_ptr, name, command, <int>nparams, atypes)
         PyMem_Free(atypes)
         if rv is NULL:
-            raise MemoryError("couldn't allocate PGresult")
+            raise e.OperationalError(f"preparing query failed: {error_message(self)}")
         return PGresult._from_ptr(rv)
 
     def exec_prepared(
@@ -382,14 +382,18 @@ cdef class PGconn:
 
         _clear_query_params(ctypes, cvalues, clengths, cformats)
         if rv is NULL:
-            raise MemoryError("couldn't allocate PGresult")
+            raise e.OperationalError(
+                f"executing prepared query failed: {error_message(self)}"
+            )
         return PGresult._from_ptr(rv)
 
     def describe_prepared(self, const char *name) -> PGresult:
         _ensure_pgconn(self)
         cdef libpq.PGresult *rv = libpq.PQdescribePrepared(self._pgconn_ptr, name)
         if rv is NULL:
-            raise MemoryError("couldn't allocate PGresult")
+            raise e.OperationalError(
+                f"describe prepared failed: {error_message(self)}"
+            )
         return PGresult._from_ptr(rv)
 
     def send_describe_prepared(self, const char *name) -> None:
@@ -404,7 +408,9 @@ cdef class PGconn:
         _ensure_pgconn(self)
         cdef libpq.PGresult *rv = libpq.PQdescribePortal(self._pgconn_ptr, name)
         if rv is NULL:
-            raise MemoryError("couldn't allocate PGresult")
+            raise e.OperationalError(
+                f"describe prepared failed: {error_message(self)}"
+            )
         return PGresult._from_ptr(rv)
 
     def send_describe_portal(self, const char *name) -> None:

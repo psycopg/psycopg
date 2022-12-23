@@ -262,7 +262,7 @@ class PGconn:
         self._ensure_pgconn()
         rv = impl.PQexec(self._pgconn_ptr, command)
         if not rv:
-            raise MemoryError("couldn't allocate PGresult")
+            raise e.OperationalError(f"executing query failed: {error_message(self)}")
         return PGresult(rv)
 
     def send_query(self, command: bytes) -> None:
@@ -286,7 +286,7 @@ class PGconn:
         self._ensure_pgconn()
         rv = impl.PQexecParams(*args)
         if not rv:
-            raise MemoryError("couldn't allocate PGresult")
+            raise e.OperationalError(f"executing query failed: {error_message(self)}")
         return PGresult(rv)
 
     def send_query_params(
@@ -427,7 +427,7 @@ class PGconn:
         self._ensure_pgconn()
         rv = impl.PQprepare(self._pgconn_ptr, name, command, nparams, atypes)
         if not rv:
-            raise MemoryError("couldn't allocate PGresult")
+            raise e.OperationalError(f"preparing query failed: {error_message(self)}")
         return PGresult(rv)
 
     def exec_prepared(
@@ -477,7 +477,9 @@ class PGconn:
             result_format,
         )
         if not rv:
-            raise MemoryError("couldn't allocate PGresult")
+            raise e.OperationalError(
+                f"executing prepared query failed: {error_message(self)}"
+            )
         return PGresult(rv)
 
     def describe_prepared(self, name: bytes) -> "PGresult":
@@ -486,7 +488,7 @@ class PGconn:
         self._ensure_pgconn()
         rv = impl.PQdescribePrepared(self._pgconn_ptr, name)
         if not rv:
-            raise MemoryError("couldn't allocate PGresult")
+            raise e.OperationalError(f"describe prepared failed: {error_message(self)}")
         return PGresult(rv)
 
     def send_describe_prepared(self, name: bytes) -> None:
@@ -504,7 +506,7 @@ class PGconn:
         self._ensure_pgconn()
         rv = impl.PQdescribePortal(self._pgconn_ptr, name)
         if not rv:
-            raise MemoryError("couldn't allocate PGresult")
+            raise e.OperationalError(f"describe portal failed: {error_message(self)}")
         return PGresult(rv)
 
     def send_describe_portal(self, name: bytes) -> None:
