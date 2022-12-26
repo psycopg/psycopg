@@ -435,10 +435,7 @@ cdef class PGconn:
             raise e.OperationalError(f"consuming input failed: {error_message(self)}")
 
     def is_busy(self) -> int:
-        cdef int rv
-        with nogil:
-            rv = libpq.PQisBusy(self._pgconn_ptr)
-        return rv
+        return libpq.PQisBusy(self._pgconn_ptr)
 
     @property
     def nonblocking(self) -> int:
@@ -469,8 +466,7 @@ cdef class PGconn:
 
     cpdef object notifies(self):
         cdef libpq.PGnotify *ptr
-        with nogil:
-            ptr = libpq.PQnotifies(self._pgconn_ptr)
+        ptr = libpq.PQnotifies(self._pgconn_ptr)
         if ptr:
             ret = PGnotify(ptr.relname, ptr.be_pid, ptr.extra)
             libpq.PQfreemem(ptr)

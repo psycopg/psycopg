@@ -43,8 +43,7 @@ def connect(conninfo: str) -> PQGenConn[abc.PGconn]:
                 pgconn=conn
             )
 
-        with nogil:
-            poll_status = libpq.PQconnectPoll(pgconn_ptr)
+        poll_status = libpq.PQconnectPoll(pgconn_ptr)
 
         if poll_status == libpq.PGRES_POLLING_OK:
             break
@@ -95,20 +94,25 @@ def send(pq.PGconn pgconn) -> PQGen[None]:
     to retrieve the results available.
     """
     cdef libpq.PGconn *pgconn_ptr = pgconn._pgconn_ptr
+    cdef int frv
     cdef int status
-    cdef int cires
+
+    if pgconn_ptr == NULL:
+        raise e.OperationalError(f"sending failed: the connection is closed")
 
     while True:
-        if pgconn.flush() == 0:
-            break
+        with nogil:
+            frv = libpq.PQflush(pgconn_ptr)
+            if frv == 0:
+                break
+            elif frv < 0:
+                raise e.OperationalError(f"flushing failed: {error_message(pgconn)}")
 
         status = yield WAIT_RW
         if status & READY_R:
-            with nogil:
-                # This call may read notifies which will be saved in the
-                # PGconn buffer and passed to Python later.
-                cires = libpq.PQconsumeInput(pgconn_ptr)
-            if 1 != cires:
+            # This call may read notifies which will be saved in the
+            # PGconn buffer and passed to Python later.
+            if 1 != libpq.PQconsumeInput(pgconn_ptr):
                 raise e.OperationalError(
                     f"consuming input failed: {error_message(pgconn)}")
 
@@ -165,25 +169,19 @@ def fetch(pq.PGconn pgconn) -> PQGen[Optional[PGresult]]:
     Return a result from the database (whether success or error).
     """
     cdef libpq.PGconn *pgconn_ptr = pgconn._pgconn_ptr
-    cdef int cires, ibres
     cdef libpq.PGresult *pgres
 
-    with nogil:
-        while True:
-            ibres = libpq.PQisBusy(pgconn_ptr)
-            if not ibres:
-                break
+    while True:
+        if not libpq.PQisBusy(pgconn_ptr):
+            break
 
-            with gil:
-                yield WAIT_R
+        yield WAIT_R
 
-            cires = libpq.PQconsumeInput(pgconn_ptr)
-            if 1 != cires:
-                raise e.OperationalError(
-                    f"consuming input failed: {error_message(pgconn)}")
+        if 1 != libpq.PQconsumeInput(pgconn_ptr):
+            raise e.OperationalError(
+                f"consuming input failed: {error_message(pgconn)}")
 
-        pgres = libpq.PQgetResult(pgconn_ptr)
-
+    pgres = libpq.PQgetResult(pgconn_ptr)
     return pq.PGresult._from_ptr(pgres) if pgres is not NULL else None
 
 
@@ -196,7 +194,6 @@ def pipeline_communicate(
     Return a list results, including single PIPELINE_SYNC elements.
     """
     cdef libpq.PGconn *pgconn_ptr = pgconn._pgconn_ptr
-    cdef int cires
     cdef int status
     cdef int ready
     cdef libpq.PGresult *pgres
@@ -208,9 +205,7 @@ def pipeline_communicate(
         ready = yield WAIT_RW
 
         if ready & READY_R:
-            with nogil:
-                cires = libpq.PQconsumeInput(pgconn_ptr)
-            if 1 != cires:
+            if 1 != libpq.PQconsumeInput(pgconn_ptr):
                 raise e.OperationalError(
                     f"consuming input failed: {error_message(pgconn)}")
 
@@ -218,12 +213,10 @@ def pipeline_communicate(
 
             res: List[PGresult] = []
             while True:
-                with nogil:
-                    ibres = libpq.PQisBusy(pgconn_ptr)
-                    if ibres:
-                        break
-                    pgres = libpq.PQgetResult(pgconn_ptr)
+                if libpq.PQisBusy(pgconn_ptr):
+                    break
 
+                pgres = libpq.PQgetResult(pgconn_ptr)
                 if pgres is NULL:
                     if not res:
                         break
