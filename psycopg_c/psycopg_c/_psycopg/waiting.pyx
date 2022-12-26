@@ -72,11 +72,8 @@ wait_c_impl(int fileno, int wait, float timeout)
     select_rv = poll(&input_fd, 1, timeout_ms);
     Py_END_ALLOW_THREADS
 
+    if (select_rv < 0) { goto error; }
     if (PyErr_CheckSignals()) { goto finally; }
-
-    if (select_rv < 0) {
-        goto error;
-    }
 
     if (input_fd.events & POLLIN) { rv |= SELECT_EV_READ; }
     if (input_fd.events & POLLOUT) { rv |= SELECT_EV_WRITE; }
@@ -120,11 +117,8 @@ wait_c_impl(int fileno, int wait, float timeout)
     select_rv = select(fileno + 1, &ifds, &ofds, &efds, tvptr);
     Py_END_ALLOW_THREADS
 
+    if (select_rv < 0) { goto error; }
     if (PyErr_CheckSignals()) { goto finally; }
-
-    if (select_rv < 0) {
-        goto error;
-    }
 
     if (FD_ISSET(fileno, &ifds)) { rv |= SELECT_EV_READ; }
     if (FD_ISSET(fileno, &ofds)) { rv |= SELECT_EV_WRITE; }
