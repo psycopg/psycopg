@@ -19,7 +19,7 @@ from .copy import Copy, Writer as CopyWriter
 from .rows import Row, RowMaker, RowFactory
 from ._column import Column
 from ._queries import PostgresQuery, PostgresClientQuery
-from ._pipeline import Pipeline
+from ._pipeline import BasePipeline, Pipeline
 from ._encodings import pgconn_encoding
 from ._preparing import Prepare
 from .generators import execute, fetch, send
@@ -182,7 +182,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
     # own way of waiting (or better, `connection.wait()`).
     #
 
-    def _execute_gen(
+    def _execute_gen_no_pipeline(
         self,
         query: Query,
         params: Optional[Params] = None,
@@ -190,59 +190,43 @@ class BaseCursor(Generic[ConnectionType, Row]):
         prepare: Optional[bool] = None,
         binary: Optional[bool] = None,
     ) -> PQGen[None]:
-        """Generator implementing `Cursor.execute()`."""
+        """
+        Generator implementing `Cursor.execute()` when not in pipeline mode.
+        """
         yield from self._start_query(query)
         pgq = self._convert_query(query, params)
-        results = yield from self._maybe_prepare_gen(
+        results = yield from self._maybe_prepare_gen_no_pipeline(
             pgq, prepare=prepare, binary=binary
         )
-        if self._conn._pipeline:
-            yield from self._conn._pipeline._communicate_gen()
-        else:
-            assert results is not None
-            self._check_results(results)
-            self._results = results
-            self._select_current_result(0)
+        assert results is not None
+        self._check_results(results)
+        self._results = results
+        self._select_current_result(0)
 
         self._last_query = query
 
-        for cmd in self._conn._prepared.get_maintenance_commands():
-            yield from self._conn._exec_command(cmd)
+        yield from self._end_query()
 
-    def _executemany_gen_pipeline(
-        self, query: Query, params_seq: Iterable[Params], returning: bool
+    def _execute_gen_pipeline(
+        self,
+        pipeline: BasePipeline,
+        query: Query,
+        params: Optional[Params] = None,
+        *,
+        prepare: Optional[bool] = None,
+        binary: Optional[bool] = None,
     ) -> PQGen[None]:
         """
-        Generator implementing `Cursor.executemany()` with pipelines available.
+        Generator implementing `Cursor.execute()` when in pipeline mode.
         """
-        pipeline = self._conn._pipeline
-        assert pipeline
-
         yield from self._start_query(query)
-        self._rowcount = 0
-
-        assert self._execmany_returning is None
-        self._execmany_returning = returning
-
-        first = True
-        for params in params_seq:
-            if first:
-                pgq = self._convert_query(query, params)
-                self._query = pgq
-                first = False
-            else:
-                pgq.dump(params)
-
-            yield from self._maybe_prepare_gen(pgq, prepare=True)
-            yield from pipeline._communicate_gen()
+        pgq = self._convert_query(query, params)
+        self._maybe_prepare_gen_pipeline(pipeline, pgq, prepare=prepare, binary=binary)
+        yield from pipeline._communicate_gen()
 
         self._last_query = query
 
-        if returning:
-            yield from pipeline._fetch_gen(flush=True)
-
-        for cmd in self._conn._prepared.get_maintenance_commands():
-            yield from self._conn._exec_command(cmd)
+        yield from self._end_query()
 
     def _executemany_gen_no_pipeline(
         self, query: Query, params_seq: Iterable[Params], returning: bool
@@ -261,7 +245,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
             else:
                 pgq.dump(params)
 
-            results = yield from self._maybe_prepare_gen(pgq, prepare=True)
+            results = yield from self._maybe_prepare_gen_no_pipeline(pgq, prepare=True)
             assert results is not None
             self._check_results(results)
             if returning:
@@ -279,10 +263,44 @@ class BaseCursor(Generic[ConnectionType, Row]):
         self._rowcount = nrows
         self._last_query = query
 
-        for cmd in self._conn._prepared.get_maintenance_commands():
-            yield from self._conn._exec_command(cmd)
+        yield from self._end_query()
 
-    def _maybe_prepare_gen(
+    def _executemany_gen_pipeline(
+        self,
+        pipeline: BasePipeline,
+        query: Query,
+        params_seq: Iterable[Params],
+        returning: bool,
+    ) -> PQGen[None]:
+        """
+        Generator implementing `Cursor.executemany()` with pipelines available.
+        """
+        yield from self._start_query(query)
+        self._rowcount = 0
+
+        assert self._execmany_returning is None
+        self._execmany_returning = returning
+
+        first = True
+        for params in params_seq:
+            if first:
+                pgq = self._convert_query(query, params)
+                self._query = pgq
+                first = False
+            else:
+                pgq.dump(params)
+
+            self._maybe_prepare_gen_pipeline(pipeline, pgq, prepare=True)
+            yield from pipeline._communicate_gen()
+
+        self._last_query = query
+
+        if returning:
+            yield from pipeline._fetch_gen(flush=True)
+
+        yield from self._end_query()
+
+    def _maybe_prepare_gen_no_pipeline(
         self,
         pgq: PostgresQuery,
         *,
@@ -293,29 +311,22 @@ class BaseCursor(Generic[ConnectionType, Row]):
         prep, name = self._get_prepared(pgq, prepare)
         if prep is Prepare.NO:
             # The query must be executed without preparing
-            self._execute_send(pgq, binary=binary)
+            self._execute_send_no_pipeline(pgq, binary=binary)
         else:
             # If the query is not already prepared, prepare it.
             if prep is Prepare.SHOULD:
-                self._send_prepare(name, pgq)
-                if not self._conn._pipeline:
-                    (result,) = yield from execute(self._pgconn)
-                    if result.status == FATAL_ERROR:
-                        raise e.error_from_result(result, encoding=self._encoding)
+                self._send_prepare_no_pipeline(name, pgq)
+                (result,) = yield from execute(self._pgconn)
+                if result.status == FATAL_ERROR:
+                    raise e.error_from_result(result, encoding=self._encoding)
+
             # Then execute it.
-            self._send_query_prepared(name, pgq, binary=binary)
+            self._send_query_prepared_no_pipeline(name, pgq, binary=binary)
 
         # Update the prepare state of the query.
         # If an operation requires to flush our prepared statements cache,
         # it will be added to the maintenance commands to execute later.
         key = self._conn._prepared.maybe_add_to_cache(pgq, prep, name)
-
-        if self._conn._pipeline:
-            queued = None
-            if key is not None:
-                queued = (key, prep, name)
-            self._conn._pipeline.result_queue.append((self, queued))
-            return None
 
         # run the query
         results = yield from execute(self._pgconn)
@@ -324,6 +335,33 @@ class BaseCursor(Generic[ConnectionType, Row]):
             self._conn._prepared.validate(key, prep, name, results)
 
         return results
+
+    def _maybe_prepare_gen_pipeline(
+        self,
+        pipeline: BasePipeline,
+        pgq: PostgresQuery,
+        *,
+        prepare: Optional[bool] = None,
+        binary: Optional[bool] = None,
+    ) -> None:
+        # Check if the query is prepared or needs preparing
+        prep, name = self._get_prepared(pgq, prepare)
+        if prep is Prepare.NO:
+            # The query must be executed without preparing
+            self._execute_send_pipeline(pipeline, pgq, binary=binary)
+        else:
+            # If the query is not already prepared, prepare it.
+            if prep is Prepare.SHOULD:
+                self._send_prepare_pipeline(pipeline, name, pgq)
+            # Then execute it.
+            self._send_query_prepared_pipeline(pipeline, name, pgq, binary=binary)
+
+        # Update the prepare state of the query.
+        # If an operation requires to flush our prepared statements cache,
+        # it will be added to the maintenance commands to execute later.
+        key = self._conn._prepared.maybe_add_to_cache(pgq, prep, name)
+        queued = (key, prep, name) if key is not None else None
+        pipeline.result_queue.append((self, queued))
 
     def _get_prepared(
         self, pgq: PostgresQuery, prepare: Optional[bool] = None
@@ -340,7 +378,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
         """Generator to send the query for `Cursor.stream()`."""
         yield from self._start_query(query)
         pgq = self._convert_query(query, params)
-        self._execute_send(pgq, binary=binary, force_extended=True)
+        self._execute_send_no_pipeline(pgq, binary=binary, force_extended=True)
         self._pgconn.set_single_row_mode()
         self._last_query = query
         yield from send(self._pgconn)
@@ -387,6 +425,11 @@ class BaseCursor(Generic[ConnectionType, Row]):
             self._tx = adapt.Transformer(self)
         yield from self._conn._start_query()
 
+    def _end_query(self) -> PQGen[None]:
+        """Generator to finish the processing of a query."""
+        for cmd in self._conn._prepared.get_maintenance_commands():
+            yield from self._conn._exec_command(cmd)
+
     def _start_copy_gen(
         self, statement: Query, params: Optional[Params] = None
     ) -> PQGen[None]:
@@ -407,7 +450,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
 
         query = self._convert_query(statement)
 
-        self._execute_send(query, binary=False)
+        self._execute_send_no_pipeline(query, binary=False)
         results = yield from execute(self._pgconn)
         if len(results) != 1:
             raise e.ProgrammingError("COPY cannot be mixed with other operations")
@@ -416,7 +459,40 @@ class BaseCursor(Generic[ConnectionType, Row]):
         self._results = results
         self._select_current_result(0)
 
-    def _execute_send(
+    def _execute_send_pipeline(
+        self,
+        pipeline: BasePipeline,
+        query: PostgresQuery,
+        *,
+        force_extended: bool = False,
+        binary: Optional[bool] = None,
+    ) -> None:
+        """
+        Implement part of execute() before waiting common to sync and async.
+
+        This is not a generator, but a normal non-blocking function.
+        """
+        if binary is None:
+            fmt = self.format
+        else:
+            fmt = BINARY if binary else TEXT
+
+        self._query = query
+
+        # In pipeline mode always use PQsendQueryParams - see #314
+        # Multiple statements in the same query are not allowed anyway.
+        pipeline.command_queue.append(
+            partial(
+                self._pgconn.send_query_params,
+                query.query,
+                query.params,
+                param_formats=query.formats,
+                param_types=query.types,
+                result_format=fmt,
+            )
+        )
+
+    def _execute_send_no_pipeline(
         self,
         query: PostgresQuery,
         *,
@@ -435,20 +511,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
 
         self._query = query
 
-        if self._conn._pipeline:
-            # In pipeline mode always use PQsendQueryParams - see #314
-            # Multiple statements in the same query are not allowed anyway.
-            self._conn._pipeline.command_queue.append(
-                partial(
-                    self._pgconn.send_query_params,
-                    query.query,
-                    query.params,
-                    param_formats=query.formats,
-                    param_types=query.types,
-                    result_format=fmt,
-                )
-            )
-        elif force_extended or query.params or fmt == BINARY:
+        if force_extended or query.params or fmt == BINARY:
             self._pgconn.send_query_params(
                 query.query,
                 query.params,
@@ -556,21 +619,20 @@ class BaseCursor(Generic[ConnectionType, Row]):
             for res in results:
                 self._rowcount += res.command_tuples or 0
 
-    def _send_prepare(self, name: bytes, query: PostgresQuery) -> None:
-        if self._conn._pipeline:
-            self._conn._pipeline.command_queue.append(
-                partial(
-                    self._pgconn.send_prepare,
-                    name,
-                    query.query,
-                    param_types=query.types,
-                )
-            )
-            self._conn._pipeline.result_queue.append(None)
-        else:
-            self._pgconn.send_prepare(name, query.query, param_types=query.types)
+    def _send_prepare_no_pipeline(self, name: bytes, query: PostgresQuery) -> None:
+        self._pgconn.send_prepare(name, query.query, param_types=query.types)
 
-    def _send_query_prepared(
+    def _send_prepare_pipeline(
+        self, pipeline: BasePipeline, name: bytes, query: PostgresQuery
+    ) -> None:
+        pipeline.command_queue.append(
+            partial(
+                self._pgconn.send_prepare, name, query.query, param_types=query.types
+            )
+        )
+        pipeline.result_queue.append(None)
+
+    def _send_query_prepared_no_pipeline(
         self, name: bytes, pgq: PostgresQuery, *, binary: Optional[bool] = None
     ) -> None:
         if binary is None:
@@ -578,20 +640,32 @@ class BaseCursor(Generic[ConnectionType, Row]):
         else:
             fmt = BINARY if binary else TEXT
 
-        if self._conn._pipeline:
-            self._conn._pipeline.command_queue.append(
-                partial(
-                    self._pgconn.send_query_prepared,
-                    name,
-                    pgq.params,
-                    param_formats=pgq.formats,
-                    result_format=fmt,
-                )
-            )
+        self._pgconn.send_query_prepared(
+            name, pgq.params, param_formats=pgq.formats, result_format=fmt
+        )
+
+    def _send_query_prepared_pipeline(
+        self,
+        pipeline: BasePipeline,
+        name: bytes,
+        pgq: PostgresQuery,
+        *,
+        binary: Optional[bool] = None,
+    ) -> None:
+        if binary is None:
+            fmt = self.format
         else:
-            self._pgconn.send_query_prepared(
-                name, pgq.params, param_formats=pgq.formats, result_format=fmt
+            fmt = BINARY if binary else TEXT
+
+        pipeline.command_queue.append(
+            partial(
+                self._pgconn.send_query_prepared,
+                name,
+                pgq.params,
+                param_formats=pgq.formats,
+                result_format=fmt,
             )
+        )
 
     def _check_result_for_fetch(self) -> None:
         if self.closed:
@@ -721,9 +795,16 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
         """
         try:
             with self._conn.lock:
-                self._conn.wait(
-                    self._execute_gen(query, params, prepare=prepare, binary=binary)
-                )
+                p = self._conn._pipeline
+                if p:
+                    gen = self._execute_gen_pipeline(
+                        p, query, params, prepare=prepare, binary=binary
+                    )
+                else:
+                    gen = self._execute_gen_no_pipeline(
+                        query, params, prepare=prepare, binary=binary
+                    )
+                self._conn.wait(gen)
         except e.Error as ex:
             raise ex.with_traceback(None)
         return self
@@ -746,13 +827,17 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
                     p = self._conn._pipeline
                     if p:
                         self._conn.wait(
-                            self._executemany_gen_pipeline(query, params_seq, returning)
+                            self._executemany_gen_pipeline(
+                                p, query, params_seq, returning
+                            )
                         )
                 # Otherwise, make a new one
                 if not p:
-                    with self._conn.pipeline(), self._conn.lock:
+                    with self._conn.pipeline() as p, self._conn.lock:
                         self._conn.wait(
-                            self._executemany_gen_pipeline(query, params_seq, returning)
+                            self._executemany_gen_pipeline(
+                                p, query, params_seq, returning
+                            )
                         )
             else:
                 with self._conn.lock:
