@@ -1,12 +1,10 @@
 """
 psycopg-c distribution version file.
 """
-from ._compat import metadata
 
 # Copyright (C) 2020 The Psycopg Team
 
-# Use a versioning scheme as defined in
-# https://www.python.org/dev/peps/pep-0440/
+from ._compat import metadata
 
 try:
     __version__ = metadata.version("psycopg-c")
