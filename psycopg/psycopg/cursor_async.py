@@ -87,9 +87,16 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
     ) -> _Self:
         try:
             async with self._conn.lock:
-                await self._conn.wait(
-                    self._execute_gen(query, params, prepare=prepare, binary=binary)
-                )
+                p = self._conn._pipeline
+                if p:
+                    gen = self._execute_gen_pipeline(
+                        p, query, params, prepare=prepare, binary=binary
+                    )
+                else:
+                    gen = self._execute_gen_no_pipeline(
+                        query, params, prepare=prepare, binary=binary
+                    )
+                await self._conn.wait(gen)
         except e.Error as ex:
             raise ex.with_traceback(None)
         return self
@@ -109,18 +116,23 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
                     p = self._conn._pipeline
                     if p:
                         await self._conn.wait(
-                            self._executemany_gen_pipeline(query, params_seq, returning)
+                            self._executemany_gen_pipeline(
+                                p, query, params_seq, returning
+                            )
                         )
                 # Otherwise, make a new one
                 if not p:
-                    async with self._conn.pipeline(), self._conn.lock:
+                    async with self._conn.pipeline() as p, self._conn.lock:
                         await self._conn.wait(
-                            self._executemany_gen_pipeline(query, params_seq, returning)
+                            self._executemany_gen_pipeline(
+                                p, query, params_seq, returning
+                            )
                         )
             else:
-                await self._conn.wait(
-                    self._executemany_gen_no_pipeline(query, params_seq, returning)
-                )
+                async with self._conn.lock:
+                    await self._conn.wait(
+                        self._executemany_gen_no_pipeline(query, params_seq, returning)
+                    )
         except e.Error as ex:
             raise ex.with_traceback(None)
 

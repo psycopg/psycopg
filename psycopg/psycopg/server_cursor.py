@@ -11,10 +11,10 @@ from warnings import warn
 from . import pq
 from . import sql
 from . import errors as e
+from . import generators
 from .abc import ConnectionType, Query, Params, PQGen
 from .rows import Row, RowFactory, AsyncRowFactory
 from .cursor import BaseCursor, Cursor
-from .generators import execute
 from .cursor_async import AsyncCursor
 
 if TYPE_CHECKING:
@@ -98,8 +98,6 @@ class ServerCursorMixin(BaseCursor[ConnectionType, Row]):
         params: Optional[Params] = None,
         binary: Optional[bool] = None,
     ) -> PQGen[None]:
-        """Generator implementing `ServerCursor.execute()`."""
-
         query = self._make_declare_statement(query)
 
         # If the cursor is being reused, the previous one must be closed.
@@ -109,23 +107,22 @@ class ServerCursorMixin(BaseCursor[ConnectionType, Row]):
 
         yield from self._start_query(query)
         pgq = self._convert_query(query, params)
-        self._execute_send(pgq, force_extended=True)
-        results = yield from execute(self._conn.pgconn)
+        results = yield from generators.execute_query(
+            self._pgconn, pgq, force_extended=True
+        )
         if results[-1].status != COMMAND_OK:
             self._raise_for_result(results[-1])
 
         # Set the format, which will be used by describe and fetch operations
-        if binary is None:
-            self._format = self.format
-        else:
-            self._format = BINARY if binary else TEXT
+        self._format = self.format if binary is None else (BINARY if binary else TEXT)
 
         # The above result only returned COMMAND_OK. Get the cursor shape
         yield from self._describe_gen()
 
     def _describe_gen(self) -> PQGen[None]:
-        self._pgconn.send_describe_portal(self._name.encode(self._encoding))
-        results = yield from execute(self._pgconn)
+        results = yield from generators.describe_portal(
+            self._pgconn, self._name.encode(self._encoding)
+        )
         self._check_results(results)
         self._results = results
         self._select_current_result(0, format=self._format)

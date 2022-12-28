@@ -25,7 +25,11 @@ from .pq.abc import PGconn, PGresult
 from .waiting import Wait, Ready
 from ._compat import Deque
 from ._cmodule import _psycopg
+from ._queries import PostgresQuery
 from ._encodings import pgconn_encoding, conninfo_encoding
+
+TEXT = pq.Format.TEXT
+BINARY = pq.Format.BINARY
 
 OK = pq.ConnStatus.OK
 BAD = pq.ConnStatus.BAD
@@ -36,6 +40,7 @@ POLL_WRITING = pq.PollingStatus.WRITING
 POLL_FAILED = pq.PollingStatus.FAILED
 
 COMMAND_OK = pq.ExecStatus.COMMAND_OK
+FATAL_ERROR = pq.ExecStatus.FATAL_ERROR
 COPY_OUT = pq.ExecStatus.COPY_OUT
 COPY_IN = pq.ExecStatus.COPY_IN
 COPY_BOTH = pq.ExecStatus.COPY_BOTH
@@ -83,6 +88,84 @@ def _connect(conninfo: str) -> PQGenConn[PGconn]:
 
     conn.nonblocking = 1
     return conn
+
+
+def execute_query(
+    pgconn: PGconn,
+    query: PostgresQuery,
+    *,
+    result_format: pq.Format = TEXT,
+    force_extended: bool = False,
+) -> PQGen[List[PGresult]]:
+    """
+    Execute a query and fetch the results back from the server.
+    """
+    if force_extended or query.params or result_format == BINARY:
+        pgconn.send_query_params(
+            query.query,
+            query.params,
+            param_formats=query.formats,
+            param_types=query.types,
+            result_format=result_format,
+        )
+    else:
+        # If we can, let's use simple query protocol,
+        # as it can execute more than one statement in a single query.
+        pgconn.send_query(query.query)
+
+    return (yield from _execute(pgconn))
+
+
+def prepare_query(pgconn: PGconn, name: bytes, query: PostgresQuery) -> PQGen[None]:
+    """
+    Prepare a query for prepared statement execution.
+    """
+    pgconn.send_prepare(name, query.query, param_types=query.types)
+    (result,) = yield from _execute(pgconn)
+    if result.status == FATAL_ERROR:
+        encoding = pgconn_encoding(pgconn)
+        raise e.error_from_result(result, encoding=encoding)
+
+
+def execute_prepared_query(
+    pgconn: PGconn,
+    name: bytes,
+    query: PostgresQuery,
+    *,
+    result_format: pq.Format = TEXT,
+) -> PQGen[List[PGresult]]:
+    """
+    Execute a prepared statement with given parameters and fetch the results.
+    """
+    pgconn.send_query_prepared(
+        name, query.params, param_formats=query.formats, result_format=result_format
+    )
+    return (yield from _execute(pgconn))
+
+
+def describe_portal(pgconn: PGconn, name: bytes) -> PQGen[List[PGresult]]:
+    """
+    Describe a portal fetch the result from the server.
+    """
+    pgconn.send_describe_portal(name)
+    return (yield from _execute(pgconn))
+
+
+def send_single_row(
+    pgconn: PGconn, query: PostgresQuery, *, result_format: pq.Format = TEXT
+) -> PQGen[None]:
+    """
+    Send a query to the server for consumption in single-row mode.
+    """
+    pgconn.send_query_params(
+        query.query,
+        query.params,
+        param_formats=query.formats,
+        param_types=query.types,
+        result_format=result_format,
+    )
+    pgconn.set_single_row_mode()
+    yield from _send(pgconn)
 
 
 def _execute(pgconn: PGconn) -> PQGen[List[PGresult]]:
