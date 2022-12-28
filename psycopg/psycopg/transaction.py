@@ -95,7 +95,7 @@ class BaseTransaction(Generic[ConnectionType]):
 
         self._push_savepoint()
         for command in self._get_enter_commands():
-            yield from self._conn._exec_command(command)
+            yield from self._exec_command(command)
 
     def _exit_gen(
         self,
@@ -129,7 +129,7 @@ class BaseTransaction(Generic[ConnectionType]):
             raise ex
 
         for command in self._get_commit_commands():
-            yield from self._conn._exec_command(command)
+            yield from self._exec_command(command)
 
     def _rollback_gen(self, exc_val: Optional[BaseException]) -> PQGen[bool]:
         if isinstance(exc_val, Rollback):
@@ -141,7 +141,7 @@ class BaseTransaction(Generic[ConnectionType]):
             raise ex
 
         for command in self._get_rollback_commands():
-            yield from self._conn._exec_command(command)
+            yield from self._exec_command(command)
 
         if isinstance(exc_val, Rollback):
             if not exc_val.transaction or exc_val.transaction is self:
@@ -192,6 +192,13 @@ class BaseTransaction(Generic[ConnectionType]):
         # Also clear the prepared statements cache.
         if self._conn._prepared.clear():
             yield from self._conn._prepared.get_maintenance_commands()
+
+    def _exec_command(self, command: bytes) -> PQGen[None]:
+        pipeline = self._conn._pipeline
+        if pipeline:
+            self._conn._exec_command_pipeline(pipeline, command)
+        else:
+            yield from self._conn._exec_command_no_pipeline(command)
 
     def _push_savepoint(self) -> None:
         """

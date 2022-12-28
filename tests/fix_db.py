@@ -3,8 +3,8 @@ import os
 import sys
 import pytest
 import logging
-from contextlib import contextmanager
 from typing import Optional
+from contextlib import contextmanager
 
 import psycopg
 from psycopg import pq
@@ -273,10 +273,11 @@ def acommands(aconn, monkeypatch):
 
 def patch_exec(conn, monkeypatch):
     """Helper to implement the commands fixture both sync and async."""
-    _orig_exec_command = conn._exec_command
+    orig_p = conn._exec_command_pipeline
+    orig_np = conn._exec_command_no_pipeline
     L = ListPopAll()
 
-    def _exec_command(command, *args, **kwargs):
+    def append(command):
         cmdcopy = command
         if isinstance(cmdcopy, bytes):
             cmdcopy = cmdcopy.decode(conn.info.encoding)
@@ -284,9 +285,17 @@ def patch_exec(conn, monkeypatch):
             cmdcopy = cmdcopy.as_string(conn)
 
         L.append(cmdcopy)
-        return _orig_exec_command(command, *args, **kwargs)
 
-    monkeypatch.setattr(conn, "_exec_command", _exec_command)
+    def exec_p(pipeline, command, *args, **kwargs):
+        append(command)
+        return orig_p(pipeline, command, *args, **kwargs)
+
+    def exec_np(command, *args, **kwargs):
+        append(command)
+        return orig_np(command, *args, **kwargs)
+
+    monkeypatch.setattr(conn, "_exec_command_pipeline", exec_p)
+    monkeypatch.setattr(conn, "_exec_command_no_pipeline", exec_np)
     return L
 
 

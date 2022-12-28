@@ -204,7 +204,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
 
         self._last_query = query
 
-        yield from self._end_query()
+        yield from self._end_query_no_pipeline()
 
     def _execute_gen_pipeline(
         self,
@@ -221,11 +221,10 @@ class BaseCursor(Generic[ConnectionType, Row]):
         yield from self._start_query(query)
         pgq = self._convert_query(query, params)
         self._maybe_prepare_gen_pipeline(pipeline, pgq, prepare=prepare, binary=binary)
+        self._end_query_pipeline(pipeline)
         yield from pipeline._communicate_gen()
 
         self._last_query = query
-
-        yield from self._end_query()
 
     def _executemany_gen_no_pipeline(
         self, query: Query, params_seq: Iterable[Params], returning: bool
@@ -260,7 +259,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
         self._rowcount = nrows
         self._last_query = query
 
-        yield from self._end_query()
+        yield from self._end_query_no_pipeline()
 
     def _executemany_gen_pipeline(
         self,
@@ -294,7 +293,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
         if returning:
             yield from pipeline._fetch_gen(flush=True)
 
-        yield from self._end_query()
+        self._end_query_pipeline(pipeline)
 
     def _maybe_prepare_gen_no_pipeline(
         self,
@@ -419,10 +418,15 @@ class BaseCursor(Generic[ConnectionType, Row]):
             self._tx = adapt.Transformer(self)
         yield from self._conn._start_query()
 
-    def _end_query(self) -> PQGen[None]:
+    def _end_query_no_pipeline(self) -> PQGen[None]:
         """Generator to finish the processing of a query."""
         for cmd in self._conn._prepared.get_maintenance_commands():
-            yield from self._conn._exec_command(cmd)
+            yield from self._conn._exec_command_no_pipeline(cmd)
+
+    def _end_query_pipeline(self, pipeline: BasePipeline) -> None:
+        """Generator to finish the processing of a query."""
+        for cmd in self._conn._prepared.get_maintenance_commands():
+            self._conn._exec_command_pipeline(pipeline, cmd)
 
     def _start_copy_gen(
         self, statement: Query, params: Optional[Params] = None

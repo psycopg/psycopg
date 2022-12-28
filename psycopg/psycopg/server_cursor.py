@@ -145,14 +145,14 @@ class ServerCursorMixin(BaseCursor[ConnectionType, Row]):
             query = sql.SQL(
                 "SELECT 1 FROM pg_catalog.pg_cursors WHERE name = {}"
             ).format(sql.Literal(self._name))
-            res = yield from self._conn._exec_command(query)
+            res = yield from self._conn._exec_command_no_pipeline(query)
             # pipeline mode otherwise, unsupported here.
             assert res is not None
             if res.ntuples == 0:
                 return
 
         query = sql.SQL("CLOSE {}").format(sql.Identifier(self._name))
-        yield from self._conn._exec_command(query)
+        yield from self._conn._exec_command_no_pipeline(query)
 
     def _fetch_gen(self, num: Optional[int]) -> PQGen[List[Row]]:
         if self.closed:
@@ -166,7 +166,9 @@ class ServerCursorMixin(BaseCursor[ConnectionType, Row]):
             sql.SQL("ALL") if num is None else sql.Literal(num),
             sql.Identifier(self._name),
         )
-        res = yield from self._conn._exec_command(query, result_format=self._format)
+        res = yield from self._conn._exec_command_no_pipeline(
+            query, result_format=self._format
+        )
         # pipeline mode otherwise, unsupported here.
         assert res is not None
 
@@ -182,7 +184,7 @@ class ServerCursorMixin(BaseCursor[ConnectionType, Row]):
             sql.Literal(value),
             sql.Identifier(self._name),
         )
-        yield from self._conn._exec_command(query)
+        yield from self._conn._exec_command_no_pipeline(query)
 
     def _make_declare_statement(self, query: Query) -> sql.Composed:
 

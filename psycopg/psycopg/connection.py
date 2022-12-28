@@ -431,9 +431,9 @@ class BaseConnection(Generic[Row]):
         conn._autocommit = bool(autocommit)
         return conn
 
-    def _exec_command(
+    def _exec_command_no_pipeline(
         self, command: Query, result_format: pq.Format = TEXT
-    ) -> PQGen[Optional["PGresult"]]:
+    ) -> PQGen["PGresult"]:
         """
         Generator to send a command and receive the result to the backend.
 
@@ -447,17 +447,6 @@ class BaseConnection(Generic[Row]):
         elif isinstance(command, Composable):
             command = command.as_bytes(self)
 
-        if self._pipeline:
-            cmd = partial(
-                self.pgconn.send_query_params,
-                command,
-                None,
-                result_format=result_format,
-            )
-            self._pipeline.command_queue.append(cmd)
-            self._pipeline.result_queue.append(None)
-            return None
-
         self.pgconn.send_query_params(command, None, result_format=result_format)
 
         result = (yield from execute(self.pgconn))[-1]
@@ -470,6 +459,26 @@ class BaseConnection(Generic[Row]):
                     f" from command {command.decode()!r}"
                 )
         return result
+
+    def _exec_command_pipeline(
+        self, pipeline: BasePipeline, command: Query, result_format: pq.Format = TEXT
+    ) -> None:
+        """
+        Equivalent of _exec_command_no_pipeline(), but use the pipeline
+        """
+        self._check_connection_ok()
+
+        if isinstance(command, str):
+            command = command.encode(pgconn_encoding(self.pgconn))
+        elif isinstance(command, Composable):
+            command = command.as_bytes(self)
+
+        cmd = partial(
+            self.pgconn.send_query_params, command, None, result_format=result_format
+        )
+        pipeline.command_queue.append(cmd)
+        pipeline.result_queue.append(None)
+        return None
 
     def _check_connection_ok(self) -> None:
         if self.pgconn.status == OK:
@@ -490,9 +499,11 @@ class BaseConnection(Generic[Row]):
         if self.pgconn.transaction_status != IDLE:
             return
 
-        yield from self._exec_command(self._get_tx_start_command())
         if self._pipeline:
+            self._exec_command_pipeline(self._pipeline, self._get_tx_start_command())
             yield from self._pipeline._sync_gen()
+        else:
+            yield from self._exec_command_no_pipeline(self._get_tx_start_command())
 
     def _get_tx_start_command(self) -> bytes:
         if self._begin_statement:
@@ -529,10 +540,11 @@ class BaseConnection(Generic[Row]):
         if self.pgconn.transaction_status == IDLE:
             return
 
-        yield from self._exec_command(b"COMMIT")
-
         if self._pipeline:
+            self._exec_command_pipeline(self._pipeline, b"COMMIT")
             yield from self._pipeline._sync_gen()
+        else:
+            yield from self._exec_command_no_pipeline(b"COMMIT")
 
     def _rollback_gen(self) -> PQGen[None]:
         """Generator implementing `Connection.rollback()`."""
@@ -554,13 +566,17 @@ class BaseConnection(Generic[Row]):
         if self.pgconn.transaction_status == IDLE:
             return
 
-        yield from self._exec_command(b"ROLLBACK")
-        self._prepared.clear()
-        for cmd in self._prepared.get_maintenance_commands():
-            yield from self._exec_command(cmd)
-
         if self._pipeline:
+            self._exec_command_pipeline(self._pipeline, b"ROLLBACK")
+            self._prepared.clear()
+            for cmd in self._prepared.get_maintenance_commands():
+                self._exec_command_pipeline(self._pipeline, cmd)
             yield from self._pipeline._sync_gen()
+        else:
+            yield from self._exec_command_no_pipeline(b"ROLLBACK")
+            self._prepared.clear()
+            for cmd in self._prepared.get_maintenance_commands():
+                yield from self._exec_command_no_pipeline(cmd)
 
     def xid(self, format_id: int, gtrid: str, bqual: str) -> Xid:
         """
@@ -593,7 +609,7 @@ class BaseConnection(Generic[Row]):
             )
 
         self._tpc = (xid, False)
-        yield from self._exec_command(self._get_tx_start_command())
+        yield from self._exec_tpc_command(self._get_tx_start_command())
 
     def _tpc_prepare_gen(self) -> PQGen[None]:
         if not self._tpc:
@@ -606,9 +622,9 @@ class BaseConnection(Generic[Row]):
             )
         xid = self._tpc[0]
         self._tpc = (xid, True)
-        yield from self._exec_command(SQL("PREPARE TRANSACTION {}").format(str(xid)))
-        if self._pipeline:
-            yield from self._pipeline._sync_gen()
+        yield from self._exec_tpc_command(
+            SQL("PREPARE TRANSACTION {}").format(str(xid))
+        )
 
     def _tpc_finish_gen(
         self, action: LiteralString, xid: Union[Xid, str, None]
@@ -636,10 +652,17 @@ class BaseConnection(Generic[Row]):
             self._tpc = None
             yield from meth()
         else:
-            yield from self._exec_command(
+            yield from self._exec_tpc_command(
                 SQL("{} PREPARED {}").format(SQL(action), str(xid))
             )
             self._tpc = None
+
+    def _exec_tpc_command(self, command: Query) -> PQGen[None]:
+        if self._pipeline:
+            self._exec_command_pipeline(self._pipeline, command)
+            yield from self._pipeline._sync_gen()
+        else:
+            yield from self._exec_command_no_pipeline(command)
 
     def _check_tpc(self) -> None:
         """Raise NotSupportedError if TPC is not supported."""
