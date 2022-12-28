@@ -7,8 +7,7 @@ from psycopg import pq, generators
 
 
 def execute_wait(pgconn):
-    psycopg.waiting.wait(generators.send(pgconn), pgconn.socket)
-    return psycopg.waiting.wait(generators.fetch_many(pgconn), pgconn.socket)
+    return psycopg.waiting.wait(generators.flush_and_fetch(pgconn), pgconn.socket)
 
 
 def test_send_query(pgconn):

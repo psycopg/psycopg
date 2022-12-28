@@ -63,7 +63,7 @@ def test_wait(pgconn, waitfn, timeout):
     waitfn = getattr(waiting, waitfn)
 
     pgconn.send_query(b"select 1")
-    gen = generators.execute(pgconn)
+    gen = generators.flush_and_fetch(pgconn)
     (res,) = waitfn(gen, pgconn.socket, **timeout)
     assert res.status == ExecStatus.TUPLES_OK
 
@@ -73,7 +73,7 @@ def test_wait_bad(pgconn, waitfn):
     waitfn = getattr(waiting, waitfn)
 
     pgconn.send_query(b"select 1")
-    gen = generators.execute(pgconn)
+    gen = generators.flush_and_fetch(pgconn)
     pgconn.finish()
     with pytest.raises(psycopg.OperationalError):
         waitfn(gen, pgconn.socket)
@@ -99,7 +99,7 @@ def test_wait_large_fd(dsn, waitfn):
         try:
             assert pgconn.socket > 1024
             pgconn.send_query(b"select 1")
-            gen = generators.execute(pgconn)
+            gen = generators.flush_and_fetch(pgconn)
             if waitfn is waiting.wait_select:
                 with pytest.raises(ValueError):
                     waitfn(gen, pgconn.socket)
@@ -144,7 +144,7 @@ async def test_wait_ready_async(wait, ready):
 @pytest.mark.asyncio
 async def test_wait_async(pgconn):
     pgconn.send_query(b"select 1")
-    gen = generators.execute(pgconn)
+    gen = generators.flush_and_fetch(pgconn)
     (res,) = await waiting.wait_async(gen, pgconn.socket)
     assert res.status == ExecStatus.TUPLES_OK
 
@@ -152,7 +152,7 @@ async def test_wait_async(pgconn):
 @pytest.mark.asyncio
 async def test_wait_async_bad(pgconn):
     pgconn.send_query(b"select 1")
-    gen = generators.execute(pgconn)
+    gen = generators.flush_and_fetch(pgconn)
     socket = pgconn.socket
     pgconn.finish()
     with pytest.raises(psycopg.OperationalError):

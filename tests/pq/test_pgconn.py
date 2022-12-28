@@ -8,8 +8,7 @@ from select import select
 import pytest
 
 import psycopg
-from psycopg import pq
-import psycopg.generators
+from psycopg import pq, generators
 
 from ..utils import gc_collect
 
@@ -263,7 +262,7 @@ def test_transaction_status(pgconn):
     assert pgconn.transaction_status == pq.TransactionStatus.INTRANS
     pgconn.send_query(b"select 1")
     assert pgconn.transaction_status == pq.TransactionStatus.ACTIVE
-    psycopg.waiting.wait(psycopg.generators.execute(pgconn), pgconn.socket)
+    psycopg.waiting.wait(generators.flush_and_fetch(pgconn), pgconn.socket)
     assert pgconn.transaction_status == pq.TransactionStatus.INTRANS
     pgconn.finish()
     assert pgconn.transaction_status == pq.TransactionStatus.UNKNOWN

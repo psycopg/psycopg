@@ -100,7 +100,7 @@ def execute_command(
     parameter.
     """
     pgconn.send_query_params(command, None, result_format=result_format)
-    return (yield from _execute(pgconn))
+    return (yield from _flush_and_fetch(pgconn))
 
 
 def execute_query(
@@ -126,7 +126,7 @@ def execute_query(
         # as it can execute more than one statement in a single query.
         pgconn.send_query(query.query)
 
-    return (yield from _execute(pgconn))
+    return (yield from flush_and_fetch(pgconn))
 
 
 def prepare_query(pgconn: PGconn, name: bytes, query: PostgresQuery) -> PQGen[None]:
@@ -134,7 +134,7 @@ def prepare_query(pgconn: PGconn, name: bytes, query: PostgresQuery) -> PQGen[No
     Prepare a query for prepared statement execution.
     """
     pgconn.send_prepare(name, query.query, param_types=query.types)
-    (result,) = yield from _execute(pgconn)
+    (result,) = yield from flush_and_fetch(pgconn)
     if result.status == FATAL_ERROR:
         encoding = pgconn_encoding(pgconn)
         raise e.error_from_result(result, encoding=encoding)
@@ -153,7 +153,7 @@ def execute_prepared_query(
     pgconn.send_query_prepared(
         name, query.params, param_formats=query.formats, result_format=result_format
     )
-    return (yield from _execute(pgconn))
+    return (yield from flush_and_fetch(pgconn))
 
 
 def describe_portal(pgconn: PGconn, name: bytes) -> PQGen[List[PGresult]]:
@@ -161,7 +161,7 @@ def describe_portal(pgconn: PGconn, name: bytes) -> PQGen[List[PGresult]]:
     Describe a portal fetch the result from the server.
     """
     pgconn.send_describe_portal(name)
-    return (yield from _execute(pgconn))
+    return (yield from flush_and_fetch(pgconn))
 
 
 def send_single_row(
@@ -181,7 +181,7 @@ def send_single_row(
     yield from _flush(pgconn)
 
 
-def _execute(pgconn: PGconn) -> PQGen[List[PGresult]]:
+def flush_and_fetch(pgconn: PGconn) -> PQGen[List[PGresult]]:
     """
     Generator sending a query and returning results without blocking.
 
@@ -192,8 +192,8 @@ def _execute(pgconn: PGconn) -> PQGen[List[PGresult]]:
     Return the list of results returned by the database (whether success
     or error).
     """
-    yield from _flush(pgconn)
-    rv = yield from _fetch_many(pgconn)
+    yield from flush(pgconn)
+    rv = yield from fetch_many(pgconn)
     return rv
 
 
