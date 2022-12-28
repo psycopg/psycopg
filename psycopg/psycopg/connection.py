@@ -448,10 +448,9 @@ class BaseConnection(Generic[Row]):
         elif isinstance(command, Composable):
             command = command.as_bytes(self)
 
-        results = yield from generators.execute_command(
+        result = yield from generators.execute_command(
             self.pgconn, command, result_format=result_format
         )
-        result = results[-1]
         if result.status != COMMAND_OK and result.status != TUPLES_OK:
             if result.status == FATAL_ERROR:
                 raise e.error_from_result(result, encoding=pgconn_encoding(self.pgconn))
