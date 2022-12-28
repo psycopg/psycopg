@@ -114,7 +114,7 @@ class ServerCursorMixin(BaseCursor[ConnectionType, Row]):
             self._raise_for_result(results[-1])
 
         # Set the format, which will be used by describe and fetch operations
-        self._format = self.format if binary is None else (BINARY if binary else TEXT)
+        self._format = self._get_result_format(binary)
 
         # The above result only returned COMMAND_OK. Get the cursor shape
         yield from self._describe_gen()

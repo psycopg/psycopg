@@ -303,7 +303,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
         binary: Optional[bool] = None,
     ) -> PQGen[List["PGresult"]]:
         # Check if the query is prepared or needs preparing
-        fmt = self.format if binary is None else (BINARY if binary else TEXT)
+        fmt = self._get_result_format(binary)
         prep, name = self._get_prepared(pgq, prepare)
         if prep is Prepare.NO:
             # The query must be executed without preparing
@@ -372,7 +372,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
         """Generator to send the query for `Cursor.stream()`."""
         yield from self._start_query(query)
         pgq = self._convert_query(query, params)
-        fmt = self.format if binary is None else (BINARY if binary else TEXT)
+        fmt = self._get_result_format(binary)
         yield from generators.send_single_row(self._pgconn, pgq, result_format=fmt)
         self._last_query = query
 
@@ -463,10 +463,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
 
         This is not a generator, but a normal non-blocking function.
         """
-        if binary is None:
-            fmt = self.format
-        else:
-            fmt = BINARY if binary else TEXT
+        fmt = self._get_result_format(binary)
 
         # In pipeline mode always use PQsendQueryParams - see #314
         # Multiple statements in the same query are not allowed anyway.
@@ -595,11 +592,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
         *,
         binary: Optional[bool] = None,
     ) -> None:
-        if binary is None:
-            fmt = self.format
-        else:
-            fmt = BINARY if binary else TEXT
-
+        fmt = self._get_result_format(binary)
         pipeline.command_queue.append(
             partial(
                 self._pgconn.send_query_prepared,
@@ -669,6 +662,12 @@ class BaseCursor(Generic[ConnectionType, Row]):
     @property
     def _encoding(self) -> str:
         return pgconn_encoding(self._pgconn)
+
+    def _get_result_format(self, binary: Optional[bool] = None) -> pq.Format:
+        if binary is None:
+            return self.format
+        else:
+            return BINARY if binary else TEXT
 
 
 class Cursor(BaseCursor["Connection[Any]", Row]):
