@@ -20,6 +20,7 @@ from . import pq
 from . import errors as e
 from . import waiting
 from . import postgres
+from . import generators
 from .abc import AdaptContext, ConnectionType, Params, Query, RV
 from .abc import PQGen, PQGenConn
 from .sql import Composable, SQL
@@ -31,7 +32,7 @@ from .cursor import Cursor
 from ._compat import LiteralString
 from .conninfo import make_conninfo, conninfo_to_dict, ConnectionInfo
 from ._pipeline import BasePipeline, Pipeline
-from .generators import notifies, connect, execute
+from .generators import notifies, connect
 from ._encodings import pgconn_encoding
 from ._preparing import PrepareManager
 from .transaction import Transaction
@@ -447,9 +448,10 @@ class BaseConnection(Generic[Row]):
         elif isinstance(command, Composable):
             command = command.as_bytes(self)
 
-        self.pgconn.send_query_params(command, None, result_format=result_format)
-
-        result = (yield from execute(self.pgconn))[-1]
+        results = yield from generators.execute_command(
+            self.pgconn, command, result_format=result_format
+        )
+        result = results[-1]
         if result.status != COMMAND_OK and result.status != TUPLES_OK:
             if result.status == FATAL_ERROR:
                 raise e.error_from_result(result, encoding=pgconn_encoding(self.pgconn))

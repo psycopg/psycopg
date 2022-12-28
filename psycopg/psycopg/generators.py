@@ -90,6 +90,19 @@ def _connect(conninfo: str) -> PQGenConn[PGconn]:
     return conn
 
 
+def execute_command(
+    pgconn: PGconn, command: bytes, *, result_format: pq.Format = TEXT
+) -> PQGen[List[PGresult]]:
+    """
+    Execute a command as a string and fetch the results back from the server.
+
+    Always send the command using the extended protocol, even if it has no
+    parameter.
+    """
+    pgconn.send_query_params(command, None, result_format=result_format)
+    return (yield from _execute(pgconn))
+
+
 def execute_query(
     pgconn: PGconn,
     query: PostgresQuery,
