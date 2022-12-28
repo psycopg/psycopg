@@ -559,17 +559,17 @@ async def test_query_params_execute(aconn):
     await cur.execute("select %t, %s::text", [1, None])
     assert cur._query is not None
     assert cur._query.query == b"select 1, NULL::text"
-    assert cur._query.params == (b"1", b"NULL")
+    assert cur._query.params is None
 
     await cur.execute("select 1")
     assert cur._query.query == b"select 1"
-    assert not cur._query.params
+    assert cur._query.params is None
 
     with pytest.raises(psycopg.DataError):
         await cur.execute("select %t::int", ["wat"])
 
     assert cur._query.query == b"select 'wat'::int"
-    assert cur._query.params == (b"'wat'",)
+    assert cur._query.params is None
 
 
 @pytest.mark.parametrize(
@@ -592,7 +592,7 @@ async def test_query_params_executemany(aconn):
 
     await cur.executemany("select %t, %t", [[1, 2], [3, 4]])
     assert cur._query.query == b"select 3, 4"
-    assert cur._query.params == (b"3", b"4")
+    assert cur._query.params is None
 
 
 @pytest.mark.crdb_skip("copy")

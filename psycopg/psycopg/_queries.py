@@ -136,12 +136,10 @@ class PostgresClientQuery(PostgresQuery):
         """
         if vars is not None:
             params = _validate_and_reorder_params(self._parts, vars, self._order)
-            self.params = tuple(
+            params = tuple(
                 self._tx.as_literal(p) if p is not None else b"NULL" for p in params
             )
-            self.query = self.template % self.params
-        else:
-            self.params = None
+            self.query = self.template % params
 
 
 @lru_cache()
