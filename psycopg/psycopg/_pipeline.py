@@ -11,11 +11,11 @@ from typing_extensions import TypeAlias
 
 from . import pq
 from . import errors as e
+from . import generators
 from .abc import PipelineCommand, PQGen
 from ._compat import Deque
 from ._encodings import pgconn_encoding
 from ._preparing import Key, Prepare
-from .generators import pipeline_communicate, fetch_many, send
 
 if TYPE_CHECKING:
     from .pq.abc import PGresult
@@ -139,7 +139,9 @@ class BasePipeline:
         """Communicate with pipeline to send commands and possibly fetch
         results, which are then processed.
         """
-        fetched = yield from pipeline_communicate(self.pgconn, self.command_queue)
+        fetched = yield from generators.pipeline_communicate(
+            self.pgconn, self.command_queue
+        )
         to_process = [(self.result_queue.popleft(), results) for results in fetched]
         for queued, results in to_process:
             self._process_results(queued, results)
@@ -158,11 +160,11 @@ class BasePipeline:
 
         if flush:
             self.pgconn.send_flush_request()
-            yield from send(self.pgconn)
+            yield from generators.flush(self.pgconn)
 
         to_process = []
         while self.result_queue:
-            results = yield from fetch_many(self.pgconn)
+            results = yield from generators.fetch_many(self.pgconn)
             if not results:
                 # No more results to fetch, but there may still be pending
                 # commands.

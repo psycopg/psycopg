@@ -178,7 +178,7 @@ def send_single_row(
         result_format=result_format,
     )
     pgconn.set_single_row_mode()
-    yield from _send(pgconn)
+    yield from _flush(pgconn)
 
 
 def _execute(pgconn: PGconn) -> PQGen[List[PGresult]]:
@@ -192,12 +192,12 @@ def _execute(pgconn: PGconn) -> PQGen[List[PGresult]]:
     Return the list of results returned by the database (whether success
     or error).
     """
-    yield from _send(pgconn)
+    yield from _flush(pgconn)
     rv = yield from _fetch_many(pgconn)
     return rv
 
 
-def _send(pgconn: PGconn) -> PQGen[None]:
+def _flush(pgconn: PGconn) -> PQGen[None]:
     """
     Generator to send a query to the server without blocking.
 
@@ -209,8 +209,7 @@ def _send(pgconn: PGconn) -> PQGen[None]:
     to retrieve the results available.
     """
     while True:
-        f = pgconn.flush()
-        if f == 0:
+        if pgconn.flush() == 0:
             break
 
         ready = yield WAIT_RW
@@ -383,8 +382,7 @@ def copy_end(pgconn: PGconn, error: Optional[bytes]) -> PQGen[PGresult]:
     # Repeat until it the message is flushed to the server
     while True:
         yield WAIT_W
-        f = pgconn.flush()
-        if f == 0:
+        if pgconn.flush() == 0:
             break
 
     # Retrieve the final result of copy
@@ -399,14 +397,14 @@ def copy_end(pgconn: PGconn, error: Optional[bytes]) -> PQGen[PGresult]:
 # Override functions with fast versions if available
 if _psycopg:
     connect = _psycopg.connect
-    send = _psycopg.send
+    flush = _psycopg.send
     fetch_many = _psycopg.fetch_many
     fetch = _psycopg.fetch
     pipeline_communicate = _psycopg.pipeline_communicate
 
 else:
     connect = _connect
-    send = _send
+    flush = _flush
     fetch_many = _fetch_many
     fetch = _fetch
     pipeline_communicate = _pipeline_communicate
