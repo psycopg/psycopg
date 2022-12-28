@@ -3,12 +3,12 @@ from select import select
 import pytest
 
 import psycopg
-from psycopg import pq
-from psycopg.generators import execute
+from psycopg import pq, generators
 
 
 def execute_wait(pgconn):
-    return psycopg.waiting.wait(execute(pgconn), pgconn.socket)
+    psycopg.waiting.wait(generators.send(pgconn), pgconn.socket)
+    return psycopg.waiting.wait(generators.fetch_many(pgconn), pgconn.socket)
 
 
 def test_send_query(pgconn):

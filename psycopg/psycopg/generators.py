@@ -399,7 +399,6 @@ def copy_end(pgconn: PGconn, error: Optional[bytes]) -> PQGen[PGresult]:
 # Override functions with fast versions if available
 if _psycopg:
     connect = _psycopg.connect
-    execute = _psycopg.execute
     send = _psycopg.send
     fetch_many = _psycopg.fetch_many
     fetch = _psycopg.fetch
@@ -407,7 +406,6 @@ if _psycopg:
 
 else:
     connect = _connect
-    execute = _execute
     send = _send
     fetch_many = _fetch_many
     fetch = _fetch
