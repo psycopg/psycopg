@@ -173,10 +173,10 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
     async def fetchone(self) -> Optional[Row]:
         await self._fetch_pipeline()
         self._check_result_for_fetch()
-        rv = self._tx.load_row(self._pos, self._make_row)
-        if rv is not None:
+        record = self._tx.load_row(self._pos, self._make_row)
+        if record is not None:
             self._pos += 1
-        return rv
+        return record
 
     async def fetchmany(self, size: int = 0) -> List[Row]:
         await self._fetch_pipeline()
