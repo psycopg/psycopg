@@ -216,6 +216,7 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
             yield row
 
     async def scroll(self, value: int, mode: str = "relative") -> None:
+        await self._fetch_pipeline()
         self._scroll(value, mode)
 
     @asynccontextmanager
