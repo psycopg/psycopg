@@ -5,7 +5,6 @@ psycopg client-side binding cursors
 # Copyright (C) 2022 The Psycopg Team
 
 from typing import Optional, Tuple, TYPE_CHECKING
-from functools import partial
 
 from ._queries import PostgresQuery, PostgresClientQuery
 
@@ -40,49 +39,26 @@ class ClientCursorMixin(BaseCursor[ConnectionType, Row]):
         pgq = self._convert_query(query, params)
         return pgq.query.decode(self._tx.encoding)
 
-    def _execute_send(
-        self,
-        query: PostgresQuery,
-        *,
-        force_extended: bool = False,
-        binary: Optional[bool] = None,
-    ) -> None:
-        if binary is None:
-            fmt = self.format
-        else:
-            fmt = BINARY if binary else TEXT
-
-        if fmt == BINARY:
-            raise e.NotSupportedError(
-                "client-side cursors don't support binary results"
-            )
-
-        self._query = query
-
-        if self._conn._pipeline:
-            # In pipeline mode always use PQsendQueryParams - see #314
-            # Multiple statements in the same query are not allowed anyway.
-            self._conn._pipeline.command_queue.append(
-                partial(self._pgconn.send_query_params, query.query, None)
-            )
-        elif force_extended:
-            self._pgconn.send_query_params(query.query, None)
-        else:
-            # If we can, let's use simple query protocol,
-            # as it can execute more than one statement in a single query.
-            self._pgconn.send_query(query.query)
-
     def _convert_query(
         self, query: Query, params: Optional[Params] = None
     ) -> PostgresQuery:
         pgq = PostgresClientQuery(self._tx)
         pgq.convert(query, params)
+        self._query = pgq
         return pgq
 
     def _get_prepared(
         self, pgq: PostgresQuery, prepare: Optional[bool] = None
     ) -> Tuple[Prepare, bytes]:
         return (Prepare.NO, b"")
+
+    def _get_result_format(self, binary: Optional[bool] = None) -> pq.Format:
+        fmt = super()._get_result_format(binary)
+        if fmt == BINARY:
+            raise e.NotSupportedError(
+                "client-side cursors don't support binary results"
+            )
+        return fmt
 
 
 class ClientCursor(ClientCursorMixin["Connection[Any]", Row], Cursor[Row]):
