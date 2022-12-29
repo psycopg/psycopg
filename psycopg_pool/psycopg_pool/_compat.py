@@ -32,11 +32,17 @@ if sys.version_info >= (3, 9):
 else:
     from typing import Counter, Deque
 
+if sys.version_info < (3, 8):
+    import importlib_metadata as metadata
+else:
+    from importlib import metadata
+
 __all__ = [
     "Counter",
     "Deque",
     "Task",
     "create_task",
+    "metadata",
 ]
 
 # Workaround for psycopg < 3.0.8.

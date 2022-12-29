@@ -59,6 +59,11 @@ if sys.version_info >= (3, 11):
 else:
     from typing_extensions import LiteralString
 
+if sys.version_info < (3, 8):
+    import importlib_metadata as metadata
+else:
+    from importlib import metadata
+
 __all__ = [
     "Counter",
     "Deque",
@@ -69,4 +74,5 @@ __all__ = [
     "cache",
     "create_task",
     "prod",
+    "metadata",
 ]

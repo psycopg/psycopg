@@ -6,7 +6,6 @@ PostgreSQL database adapter for Python - optimisation package
 # Copyright (C) 2020 The Psycopg Team
 
 import os
-import re
 import sys
 import subprocess as sp
 
@@ -19,13 +18,6 @@ from distutils import log
 here = os.path.abspath(os.path.dirname(__file__))
 if os.path.abspath(os.getcwd()) != here:
     os.chdir(here)
-
-with open("psycopg_c/version.py") as f:
-    data = f.read()
-    m = re.search(r"""(?m)^__version__\s*=\s*['"]([^'"]+)['"]""", data)
-    if m is None:
-        raise Exception(f"cannot find version in {f.name}")
-    version = m.group(1)
 
 
 def get_config(what: str) -> str:
@@ -104,7 +96,6 @@ pqext = Extension(
 )
 
 setup(
-    version=version,
     ext_modules=[pgext, pqext],
     cmdclass={"build_ext": psycopg_build_ext},
 )
