@@ -241,9 +241,12 @@ def main() -> int | None:
     bumper = Bumper(packages[opt.package], bump_level=opt.level)
     logger.info("current version: %s", bumper.current_version)
     logger.info("bumping to version: %s", bumper.want_version)
-    if not opt.dry_run:
+
+    if opt.actions is None or Action.UPDATE in opt.actions:
         bumper.update_files()
+    if opt.actions is None or Action.COMMIT in opt.actions:
         bumper.commit()
+    if opt.actions is None or Action.TAG in opt.actions:
         if opt.level != BumpLevel.DEV:
             bumper.create_tag()
 
@@ -257,18 +260,26 @@ class BumpLevel(str, Enum):
     DEV = "dev"
 
 
+class Action(str, Enum):
+    UPDATE = "update"
+    COMMIT = "commit"
+    TAG = "tag"
+
+
 def parse_cmdline() -> Namespace:
     parser = ArgumentParser(description=__doc__)
 
     parser.add_argument(
+        "-l",
         "--level",
-        choices=[level.value for level in BumpLevel],
+        choices=[m.value for m in BumpLevel],
         default=BumpLevel.PATCH.value,
         type=BumpLevel,
         help="the level to bump [default: %(default)s]",
     )
 
     parser.add_argument(
+        "-p",
         "--package",
         choices=list(packages.keys()),
         default="psycopg",
@@ -276,10 +287,11 @@ def parse_cmdline() -> Namespace:
     )
 
     parser.add_argument(
-        "-n",
-        "--dry-run",
-        help="Just pretend",
-        action="store_true",
+        "-a",
+        "--actions",
+        help="The actions to perform [default: all]",
+        nargs="*",
+        choices=[m.value for m in Action],
     )
 
     g = parser.add_mutually_exclusive_group()
