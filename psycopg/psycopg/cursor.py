@@ -307,9 +307,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
         prep, name = self._get_prepared(pgq, prepare)
         if prep is Prepare.NO:
             # The query must be executed without preparing
-            results = generators.execute_query(
-                self._pgconn, pgq, result_format=fmt
-            )
+            results = generators.execute_query(self._pgconn, pgq, result_format=fmt)
         else:
             # If the query is not already prepared, prepare it.
             if prep is Prepare.SHOULD:
@@ -392,7 +390,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
         elif status == TUPLES_OK or status == COMMAND_OK:
             # End of single row results
             while res:
-                res = generators.fetch_ng(self._pgconn)
+                res = generators.fetch(self._pgconn)
             if status != TUPLES_OK:
                 raise e.ProgrammingError(
                     "the operation in stream() didn't produce a result"
@@ -771,15 +769,11 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
                 with self._conn.lock:
                     p = self._conn._pipeline
                     if p:
-                        self._executemany_gen_pipeline(
-                            p, query, params_seq, returning
-                        )
+                        self._executemany_gen_pipeline(p, query, params_seq, returning)
                 # Otherwise, make a new one
                 if not p:
                     with self._conn.pipeline() as p, self._conn.lock:
-                        self._executemany_gen_pipeline(
-                            p, query, params_seq, returning
-                        )
+                        self._executemany_gen_pipeline(p, query, params_seq, returning)
             else:
                 with self._conn.lock:
                     self._executemany_gen_no_pipeline(query, params_seq, returning)

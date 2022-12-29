@@ -338,21 +338,6 @@ def notifies(pgconn: PGconn) -> PQGen[List[pq.PGnotify]]:
     return ns
 
 
-def notifies_ng(pgconn: PGconn) -> List[pq.PGnotify]:
-    wait_ng_c(pgconn.socket, WAIT_R)
-    pgconn.consume_input()
-
-    ns = []
-    while True:
-        n = pgconn.notifies()
-        if n:
-            ns.append(n)
-        else:
-            break
-
-    return ns
-
-
 def copy_from(pgconn: PGconn) -> PQGen[Union[memoryview, PGresult]]:
     while True:
         nbytes, data = pgconn.get_copy_data(1)
@@ -435,12 +420,3 @@ else:
     fetch_many = _fetch_many
     fetch = _fetch
     pipeline_communicate = _pipeline_communicate
-
-assert _psycopg
-wait_ng_c = _psycopg.wait_ng_c
-connect_ng = _psycopg.connect_ng
-execute_ng = _psycopg.execute_ng
-send_ng = _psycopg.send_ng
-fetch_many_ng = _psycopg.fetch_many_ng
-fetch_ng = _psycopg.fetch_ng
-pipeline_communicate_ng = _psycopg.pipeline_communicate_ng

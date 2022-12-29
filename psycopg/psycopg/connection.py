@@ -423,7 +423,7 @@ class BaseConnection(Generic[Row]):
         cls: Type[ConnectionType], conninfo: str = "", *, autocommit: bool = False
     ) -> ConnectionType:
         """Generator to connect to the database and create a new instance."""
-        pgconn = generators.connect_ng(conninfo)
+        pgconn = generators.connect(conninfo)
         conn = cls(pgconn)
         conn._autocommit = bool(autocommit)
         return conn
@@ -444,7 +444,7 @@ class BaseConnection(Generic[Row]):
         elif isinstance(command, Composable):
             command = command.as_bytes(self)
 
-        result = generators.execute_command_ng(
+        result = generators.execute_command(
             self.pgconn, command, result_format=result_format
         )
         if result.status != COMMAND_OK and result.status != TUPLES_OK:
@@ -931,7 +931,7 @@ class Connection(BaseConnection[Row]):
         while True:
             with self.lock:
                 try:
-                    ns = generators.notifies_ng(self.pgconn)
+                    ns = generators.notifies(self.pgconn)
                 except e.Error as ex:
                     raise ex.with_traceback(None)
             enc = pgconn_encoding(self.pgconn)

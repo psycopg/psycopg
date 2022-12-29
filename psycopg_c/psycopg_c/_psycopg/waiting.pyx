@@ -151,46 +151,6 @@ finally:
     cdef int wait_c_impl(int fileno, int wait, float timeout) except -1
 
 
-def wait_c(gen: PQGen[RV], int fileno, timeout = None) -> RV:
-    """
-    Wait for a generator using poll or select.
-    """
-    cdef float ctimeout
-    cdef int wait, ready
-    cdef PyObject *pyready
-
-    if timeout is None:
-        ctimeout = -1.0
-    else:
-        ctimeout = <float>float(timeout)
-        if ctimeout < 0.0:
-            ctimeout = -1.0
-
-    send = gen.send
-
-    try:
-        wait = next(gen)
-
-        while True:
-            ready = wait_c_impl(fileno, wait, ctimeout)
-            if ready == 0:
-                continue
-            elif ready == READY_R:
-                pyready = <PyObject *>PY_READY_R
-            elif ready == READY_RW:
-                pyready = <PyObject *>PY_READY_RW
-            elif ready == READY_W:
-                pyready = <PyObject *>PY_READY_W
-            else:
-                raise AssertionError(f"unexpected ready value: {ready}")
-
-            wait = PyObject_CallFunctionObjArgs(send, pyready, NULL)
-
-    except StopIteration as ex:
-        rv: RV = ex.args[0] if ex.args else None
-        return rv
-
-
 cdef int wait_ng(int fileno, int wait) except -1:
     cdef int ready
 
@@ -200,5 +160,5 @@ cdef int wait_ng(int fileno, int wait) except -1:
             return ready
 
 
-def wait_ng_c(int fileno, int wait) -> int:
+def wait_c(int fileno, int wait) -> int:
     return wait_ng(fileno, wait)

@@ -15,6 +15,7 @@ from psycopg._enums import Wait, Ready
 from psycopg._compat import Deque
 from psycopg._encodings import conninfo_encoding
 
+# TODO: give this some order NOMERGE
 cdef object WAIT_W = Wait.W
 cdef object WAIT_R = Wait.R
 cdef object WAIT_RW = Wait.RW
@@ -24,8 +25,11 @@ cdef object PY_READY_RW = Ready.RW
 cdef int READY_R = Ready.R
 cdef int READY_W = Ready.W
 cdef int READY_RW = Ready.RW
+cdef int CWAIT_W = Wait.W
+cdef int CWAIT_R = Wait.R
+cdef int CWAIT_RW = Wait.RW
 
-def connect(conninfo: str) -> PQGenConn[abc.PGconn]:
+cpdef pq.PGconn connect(conninfo: str):
     """
     Generator to create a database connection without blocking.
 
@@ -48,9 +52,9 @@ def connect(conninfo: str) -> PQGenConn[abc.PGconn]:
         if poll_status == libpq.PGRES_POLLING_OK:
             break
         elif poll_status == libpq.PGRES_POLLING_READING:
-            yield (libpq.PQsocket(pgconn_ptr), WAIT_R)
+            wait_ng(libpq.PQsocket(pgconn_ptr), CWAIT_R)
         elif poll_status == libpq.PGRES_POLLING_WRITING:
-            yield (libpq.PQsocket(pgconn_ptr), WAIT_W)
+            wait_ng(libpq.PQsocket(pgconn_ptr), CWAIT_W)
         elif poll_status == libpq.PGRES_POLLING_FAILED:
             encoding = conninfo_encoding(conninfo)
             raise e.OperationalError(
@@ -66,9 +70,9 @@ def connect(conninfo: str) -> PQGenConn[abc.PGconn]:
     return conn
 
 
-def execute_command(
-    pq.PGconn pgconn, const char *command, *, int result_format = PQ_TEXT
-) -> PQGen[PGresult]:
+cpdef pq.PGresult execute_command(
+    pq.PGconn pgconn, const char *command, int result_format = PQ_TEXT
+):
     """
     Execute a command as a string and fetch the results back from the server.
 
@@ -76,18 +80,17 @@ def execute_command(
     parameter.
     """
     pgconn.send_query_params(command, None, None, None, result_format)
-    yield from flush(pgconn)
-    results = yield from fetch_many(pgconn)
+    flush(pgconn)
+    results = fetch_many(pgconn)
     return results[0]
 
 
-def execute_query(
+cpdef list execute_query(
     pq.PGconn pgconn,
     query: PostgresQuery,
-    *,
     int result_format = PQ_TEXT,
     force_extended: bool = False,
-) -> PQGen[List[PGresult]]:
+):
     """
     Execute a query and fetch the results back from the server.
     """
@@ -100,33 +103,33 @@ def execute_query(
         # as it can execute more than one statement in a single query.
         pgconn.send_query(query.query)
 
-    return (yield from flush_and_fetch(pgconn))
+    return flush_and_fetch(pgconn)
 
 
-def prepare_query(pq.PGconn pgconn, const char *name, query) -> PQGen[None]:
+cpdef object prepare_query(pq.PGconn pgconn, const char *name, query):
     """
     Prepare a query for prepared statement execution.
     """
 
     pgconn.send_prepare(name, query.query, param_types=query.types)
-    cdef list results = (yield from flush_and_fetch(pgconn))
+    cdef list results = flush_and_fetch(pgconn)
     cdef pq.PGresult result = results[0]
     if result.status == libpq.PGRES_FATAL_ERROR:
         encoding = pgconn_encoding(pgconn)
         raise e.error_from_result(result, encoding=encoding)
 
 
-def execute_prepared_query(
-    pq.PGconn pgconn, const char *name, query, *, int result_format = PQ_TEXT
-) -> PQGen[List[PGresult]]:
+cpdef list execute_prepared_query(
+    pq.PGconn pgconn, const char *name, query, int result_format = PQ_TEXT
+):
     """
     Execute a prepared statement with given parameters and fetch the results.
     """
     pgconn.send_query_prepared(name, query.params, query.formats, result_format)
-    return (yield from flush_and_fetch(pgconn))
+    return (flush_and_fetch(pgconn))
 
 
-def flush_and_fetch(pq.PGconn pgconn) -> PQGen[List[abc.PGresult]]:
+cpdef list flush_and_fetch(pq.PGconn pgconn):
     """
     Generator sending a query and returning results without blocking.
 
@@ -137,13 +140,12 @@ def flush_and_fetch(pq.PGconn pgconn) -> PQGen[List[abc.PGresult]]:
     Return the list of results returned by the database (whether success
     or error).
     """
-    yield from flush(pgconn)
-    rv = yield from fetch_many(pgconn)
+    flush(pgconn)
+    rv = fetch_many(pgconn)
     return rv
 
 
-# TODO: convert to cpdef or cdef once removed the yield
-def flush(pq.PGconn pgconn) -> PQGen[None]:
+cpdef object flush(pq.PGconn pgconn):
     """
     Generator to send a query to the server without blocking.
 
@@ -169,7 +171,7 @@ def flush(pq.PGconn pgconn) -> PQGen[None]:
             elif frv < 0:
                 raise e.OperationalError(f"flushing failed: {error_message(pgconn)}")
 
-        status = yield WAIT_RW
+        status = wait_ng(libpq.PQsocket(pgconn_ptr), CWAIT_RW)
         if status & READY_R:
             # This call may read notifies which will be saved in the
             # PGconn buffer and passed to Python later.
@@ -178,8 +180,7 @@ def flush(pq.PGconn pgconn) -> PQGen[None]:
                     f"consuming input failed: {error_message(pgconn)}")
 
 
-# TODO: convert to cpdef or cdef once removed the yield
-def fetch_many(pq.PGconn pgconn) -> PQGen[List[PGresult]]:
+cpdef list fetch_many(pq.PGconn pgconn):
     """
     Generator retrieving results from the database without blocking.
 
@@ -195,7 +196,7 @@ def fetch_many(pq.PGconn pgconn) -> PQGen[List[PGresult]]:
     cdef libpq.PGresult *pgres
 
     while True:
-        result = yield from fetch(pgconn)
+        result = fetch(pgconn)
         if result is None:
             break
         results.append(result)
@@ -221,7 +222,7 @@ def fetch_many(pq.PGconn pgconn) -> PQGen[List[PGresult]]:
     return results
 
 
-def fetch(pq.PGconn pgconn) -> PQGen[Optional[PGresult]]:
+cpdef pq.PGresult fetch(pq.PGconn pgconn):
     """
     Generator retrieving a single result from the database without blocking.
 
@@ -231,13 +232,14 @@ def fetch(pq.PGconn pgconn) -> PQGen[Optional[PGresult]]:
     Return a result from the database (whether success or error).
     """
     cdef libpq.PGconn *pgconn_ptr = pgconn._pgconn_ptr
+    cdef int fileno = libpq.PQsocket(pgconn_ptr)
     cdef libpq.PGresult *pgres
 
     while True:
         if not libpq.PQisBusy(pgconn_ptr):
             break
 
-        yield WAIT_R
+        wait_ng(fileno, CWAIT_R)
 
         if 1 != libpq.PQconsumeInput(pgconn_ptr):
             raise e.OperationalError(
@@ -247,15 +249,16 @@ def fetch(pq.PGconn pgconn) -> PQGen[Optional[PGresult]]:
     return pq.PGresult._from_ptr(pgres) if pgres is not NULL else None
 
 
-def pipeline_communicate(
+cpdef list pipeline_communicate(
     pq.PGconn pgconn, commands: Deque[PipelineCommand]
-) -> PQGen[List[List[PGresult]]]:
+):
     """Generator to send queries from a connection in pipeline mode while also
     receiving results.
 
     Return a list results, including single PIPELINE_SYNC elements.
     """
     cdef libpq.PGconn *pgconn_ptr = pgconn._pgconn_ptr
+    cdef int fileno = libpq.PQsocket(pgconn_ptr)
     cdef int status
     cdef int ready
     cdef libpq.PGresult *pgres
@@ -264,7 +267,7 @@ def pipeline_communicate(
     cdef pq.PGresult r
 
     while True:
-        ready = yield WAIT_RW
+        ready = wait_ng(fileno, CWAIT_RW)
 
         if ready & READY_R:
             if 1 != libpq.PQconsumeInput(pgconn_ptr):
