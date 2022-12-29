@@ -7,7 +7,7 @@ Transaction context managers returned by Connection.transaction()
 import logging
 
 from types import TracebackType
-from typing import Generic, Iterator, Optional, Type, Union, TypeVar, TYPE_CHECKING
+from typing import Generic, List, Optional, Type, Union, TypeVar, TYPE_CHECKING
 
 from . import pq
 from . import sql
@@ -149,20 +149,26 @@ class BaseTransaction(Generic[ConnectionType]):
 
         return False
 
-    def _get_enter_commands(self) -> Iterator[bytes]:
+    def _get_enter_commands(self) -> List[bytes]:
+        rv = []
+
         if self._outer_transaction:
-            yield self._conn._get_tx_start_command()
+            rv.append(self._conn._get_tx_start_command())
 
         if self._savepoint_name:
-            yield (
+            rv.append(
                 sql.SQL("SAVEPOINT {}")
                 .format(sql.Identifier(self._savepoint_name))
                 .as_bytes(self._conn)
             )
 
-    def _get_commit_commands(self) -> Iterator[bytes]:
+        return rv
+
+    def _get_commit_commands(self) -> List[bytes]:
+        rv = []
+
         if self._savepoint_name and not self._outer_transaction:
-            yield (
+            rv.append(
                 sql.SQL("RELEASE {}")
                 .format(sql.Identifier(self._savepoint_name))
                 .as_bytes(self._conn)
@@ -170,16 +176,20 @@ class BaseTransaction(Generic[ConnectionType]):
 
         if self._outer_transaction:
             assert not self._conn._num_transactions
-            yield b"COMMIT"
+            rv.append(b"COMMIT")
 
-    def _get_rollback_commands(self) -> Iterator[bytes]:
+        return rv
+
+    def _get_rollback_commands(self) -> List[bytes]:
+        rv = []
+
         if self._savepoint_name and not self._outer_transaction:
-            yield (
+            rv.append(
                 sql.SQL("ROLLBACK TO {n}")
                 .format(n=sql.Identifier(self._savepoint_name))
                 .as_bytes(self._conn)
             )
-            yield (
+            rv.append(
                 sql.SQL("RELEASE {n}")
                 .format(n=sql.Identifier(self._savepoint_name))
                 .as_bytes(self._conn)
@@ -187,11 +197,13 @@ class BaseTransaction(Generic[ConnectionType]):
 
         if self._outer_transaction:
             assert not self._conn._num_transactions
-            yield b"ROLLBACK"
+            rv.append(b"ROLLBACK")
 
         # Also clear the prepared statements cache.
         if self._conn._prepared.clear():
-            yield from self._conn._prepared.get_maintenance_commands()
+            rv.extend(self._conn._prepared.get_maintenance_commands())
+
+        return rv
 
     def _exec_command(self, command: bytes) -> None:
         pipeline = self._conn._pipeline
