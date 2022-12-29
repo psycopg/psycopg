@@ -17,7 +17,7 @@ from ._enums import PyFormat
 from ._encodings import conn_encoding
 
 if TYPE_CHECKING:
-    from .abc import Transformer
+    from transform import Transformer
 
 
 class QueryPart(NamedTuple):
@@ -25,18 +25,22 @@ class QueryPart(NamedTuple):
     item: Union[int, str]
     format: PyFormat
 
-
-class PostgresQuery:
+cdef class PostgresQuery:
     """
     Helper to convert a Python query and parameters into Postgres format.
     """
 
-    __slots__ = """
-        query params types formats
-        _tx _want_formats _parts _encoding _order
-        """.split()
+    cdef bytes query
+    cdef object params
+    cdef object _tx
+    cdef tuple types
+    cdef list _want_formats
+    cdef list formats
+    cdef list _parts
+    cdef object _encoding
+    cdef list _order
 
-    def __init__(self, transformer: "Transformer"):
+    def __cinit__(self, transformer: "Transformer"):
         self._tx = transformer
 
         self.params: Optional[Sequence[Optional[Buffer]]] = None
@@ -52,6 +56,7 @@ class PostgresQuery:
         self.query = b""
         self._order: Optional[List[str]] = None
 
+    @classmethod
     def convert(self, query: Query, vars: Optional[Params]) -> None:
         """
         Set up the query and parameters to convert.
@@ -79,6 +84,7 @@ class PostgresQuery:
 
         self.dump(vars)
 
+    @classmethod
     def dump(self, vars: Optional[Params]) -> None:
         """
         Process a new set of variables on the query processed by `convert()`.
@@ -97,13 +103,14 @@ class PostgresQuery:
             self.formats = None
 
 
-class PostgresClientQuery(PostgresQuery):
+cdef class PostgresClientQuery(PostgresQuery):
     """
     PostgresQuery subclass merging query and arguments client-side.
     """
 
-    __slots__ = ("template",)
+    cdef bytes template;
 
+    @classmethod
     def convert(self, query: Query, vars: Optional[Params]) -> None:
         """
         Set up the query and parameters to convert.
@@ -128,6 +135,7 @@ class PostgresClientQuery(PostgresQuery):
 
         self.dump(vars)
 
+    @classmethod
     def dump(self, vars: Optional[Params]) -> None:
         """
         Process a new set of variables on the query processed by `convert()`.
@@ -144,10 +152,11 @@ class PostgresClientQuery(PostgresQuery):
             self.params = None
 
 
-@lru_cache()
-def _query2pg(
+#@lru_cache()
+#Returns Tuple[bytes, List[PyFormat], Optional[List[str]], List[QueryPart]]:
+cdef tuple _query2pg(
     query: bytes, encoding: str
-) -> Tuple[bytes, List[PyFormat], Optional[List[str]], List[QueryPart]]:
+):
     """
     Convert Python query and params into something Postgres understands.
 
@@ -195,10 +204,11 @@ def _query2pg(
     return b"".join(chunks), formats, order, parts
 
 
-@lru_cache()
-def _query2pg_client(
+#Returns Tuple[bytes, Optional[List[str]], List[QueryPart]]
+#@lru_cache()
+cdef _query2pg_client(
     query: bytes, encoding: str
-) -> Tuple[bytes, Optional[List[str]], List[QueryPart]]:
+):
     """
     Convert Python query and params into a template to perform client-side binding
     """
@@ -232,10 +242,10 @@ def _query2pg_client(
 
     return b"".join(chunks), order, parts
 
-
-def _validate_and_reorder_params(
+#Returns Sequence[Any]
+cdef _validate_and_reorder_params(
     parts: List[QueryPart], vars: Params, order: Optional[List[str]]
-) -> Sequence[Any]:
+):
     """
     Verify the compatibility between a query and a set of params.
     """
@@ -278,7 +288,6 @@ def _validate_and_reorder_params(
                 f" {', '.join(sorted(i for i in order or () if i not in vars))}"
             )
 
-
 _re_placeholder = re.compile(
     rb"""(?x)
         %                       # a literal %
@@ -294,9 +303,10 @@ _re_placeholder = re.compile(
 )
 
 
-def _split_query(
+#Returns List[QueryPart]
+cdef list _split_query(
     query: bytes, encoding: str = "ascii", collapse_double_percent: bool = True
-) -> List[QueryPart]:
+):
     parts: List[Tuple[bytes, Optional[Match[bytes]]]] = []
     cur = 0
 
