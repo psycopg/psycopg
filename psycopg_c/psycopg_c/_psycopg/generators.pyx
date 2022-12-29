@@ -66,7 +66,67 @@ def connect(conninfo: str) -> PQGenConn[abc.PGconn]:
     return conn
 
 
-def execute(pq.PGconn pgconn) -> PQGen[List[abc.PGresult]]:
+def execute_command(
+    pq.PGconn pgconn, const char *command, *, int result_format = PQ_TEXT
+) -> PQGen[PGresult]:
+    """
+    Execute a command as a string and fetch the results back from the server.
+
+    Always send the command using the extended protocol, even if it has no
+    parameter.
+    """
+    pgconn.send_query_params(command, None, None, None, result_format)
+    yield from flush(pgconn)
+    results = yield from fetch_many(pgconn)
+    return results[0]
+
+
+def execute_query(
+    pq.PGconn pgconn,
+    query: PostgresQuery,
+    *,
+    int result_format = PQ_TEXT,
+    force_extended: bool = False,
+) -> PQGen[List[PGresult]]:
+    """
+    Execute a query and fetch the results back from the server.
+    """
+    if force_extended or query.params or result_format == PQ_BINARY:
+        pgconn.send_query_params(
+            query.query, query.params, query.types, query.formats, result_format
+        )
+    else:
+        # If we can, let's use simple query protocol,
+        # as it can execute more than one statement in a single query.
+        pgconn.send_query(query.query)
+
+    return (yield from flush_and_fetch(pgconn))
+
+
+def prepare_query(pq.PGconn pgconn, const char *name, query) -> PQGen[None]:
+    """
+    Prepare a query for prepared statement execution.
+    """
+
+    pgconn.send_prepare(name, query.query, param_types=query.types)
+    cdef list results = (yield from flush_and_fetch(pgconn))
+    cdef pq.PGresult result = results[0]
+    if result.status == libpq.PGRES_FATAL_ERROR:
+        encoding = pgconn_encoding(pgconn)
+        raise e.error_from_result(result, encoding=encoding)
+
+
+def execute_prepared_query(
+    pq.PGconn pgconn, const char *name, query, *, int result_format = PQ_TEXT
+) -> PQGen[List[PGresult]]:
+    """
+    Execute a prepared statement with given parameters and fetch the results.
+    """
+    pgconn.send_query_prepared(name, query.params, query.formats, result_format)
+    return (yield from flush_and_fetch(pgconn))
+
+
+def flush_and_fetch(pq.PGconn pgconn) -> PQGen[List[abc.PGresult]]:
     """
     Generator sending a query and returning results without blocking.
 
@@ -77,12 +137,13 @@ def execute(pq.PGconn pgconn) -> PQGen[List[abc.PGresult]]:
     Return the list of results returned by the database (whether success
     or error).
     """
-    yield from send(pgconn)
+    yield from flush(pgconn)
     rv = yield from fetch_many(pgconn)
     return rv
 
 
-def send(pq.PGconn pgconn) -> PQGen[None]:
+# TODO: convert to cpdef or cdef once removed the yield
+def flush(pq.PGconn pgconn) -> PQGen[None]:
     """
     Generator to send a query to the server without blocking.
 
@@ -117,6 +178,7 @@ def send(pq.PGconn pgconn) -> PQGen[None]:
                     f"consuming input failed: {error_message(pgconn)}")
 
 
+# TODO: convert to cpdef or cdef once removed the yield
 def fetch_many(pq.PGconn pgconn) -> PQGen[List[PGresult]]:
     """
     Generator retrieving results from the database without blocking.

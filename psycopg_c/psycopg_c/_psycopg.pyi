@@ -16,6 +16,7 @@ from psycopg.adapt import AdaptersMap, PyFormat
 from psycopg.pq.abc import PGconn, PGresult
 from psycopg.connection import BaseConnection
 from psycopg._compat import Deque
+from psycopg._queries import PostgresQuery
 
 class Transformer(abc.AdaptContext):
     types: Optional[Tuple[int, ...]]
@@ -54,8 +55,28 @@ class Transformer(abc.AdaptContext):
 
 # Generators
 def connect(conninfo: str) -> abc.PQGenConn[PGconn]: ...
-def execute(pgconn: PGconn) -> abc.PQGen[List[PGresult]]: ...
-def send(pgconn: PGconn) -> abc.PQGen[None]: ...
+def execute_command(
+    pgconn: PGconn, command: bytes, *, result_format: pq.Format = pq.Format.TEXT
+) -> abc.PQGen[PGresult]: ...
+def execute_query(
+    pgconn: PGconn,
+    query: PostgresQuery,
+    *,
+    result_format: pq.Format = pq.Format.TEXT,
+    force_extended: bool = False,
+) -> abc.PQGen[List[PGresult]]: ...
+def prepare_query(
+    pgconn: PGconn, name: bytes, query: PostgresQuery
+) -> abc.PQGen[None]: ...
+def execute_prepared_query(
+    pgconn: PGconn,
+    name: bytes,
+    query: PostgresQuery,
+    *,
+    result_format: pq.Format = pq.Format.TEXT,
+) -> abc.PQGen[List[PGresult]]: ...
+def flush_and_fetch(pgconn: PGconn) -> abc.PQGen[List[PGresult]]: ...
+def flush(pgconn: PGconn) -> abc.PQGen[None]: ...
 def fetch_many(pgconn: PGconn) -> abc.PQGen[List[PGresult]]: ...
 def fetch(pgconn: PGconn) -> abc.PQGen[Optional[PGresult]]: ...
 def pipeline_communicate(

@@ -27,6 +27,28 @@ cdef class PGconn:
     @staticmethod
     cdef PGconn _from_ptr(libpq.PGconn *ptr)
 
+    cpdef object send_query(self, const char *command)
+    cpdef object send_query_params(
+        self,
+        const char *command,
+        param_values: Optional[Sequence[Optional[bytes]]],
+        param_types: Optional[Sequence[int]] = *,
+        param_formats: Optional[Sequence[int]] = *,
+        int result_format = *,
+    )
+    cpdef object send_prepare(
+        self,
+        const char *name,
+        const char *command,
+        param_types: Optional[Sequence[int]] = *,
+    )
+    cpdef object send_query_prepared(
+        self,
+        const char *name,
+        param_values: Optional[Sequence[Optional[bytes]]],
+        param_formats: Optional[Sequence[int]] = *,
+        int result_format = *,
+    )
     cpdef int flush(self) except -1
     cpdef object notifies(self)
 

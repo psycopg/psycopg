@@ -90,7 +90,7 @@ def _connect(conninfo: str) -> PQGenConn[PGconn]:
     return conn
 
 
-def execute_command(
+def _execute_command(
     pgconn: PGconn, command: bytes, *, result_format: pq.Format = TEXT
 ) -> PQGen[PGresult]:
     """
@@ -105,7 +105,7 @@ def execute_command(
     return results[0]
 
 
-def execute_query(
+def _execute_query(
     pgconn: PGconn,
     query: PostgresQuery,
     *,
@@ -128,21 +128,21 @@ def execute_query(
         # as it can execute more than one statement in a single query.
         pgconn.send_query(query.query)
 
-    return (yield from flush_and_fetch(pgconn))
+    return (yield from _flush_and_fetch(pgconn))
 
 
-def prepare_query(pgconn: PGconn, name: bytes, query: PostgresQuery) -> PQGen[None]:
+def _prepare_query(pgconn: PGconn, name: bytes, query: PostgresQuery) -> PQGen[None]:
     """
     Prepare a query for prepared statement execution.
     """
     pgconn.send_prepare(name, query.query, param_types=query.types)
-    (result,) = yield from flush_and_fetch(pgconn)
+    (result,) = yield from _flush_and_fetch(pgconn)
     if result.status == FATAL_ERROR:
         encoding = pgconn_encoding(pgconn)
         raise e.error_from_result(result, encoding=encoding)
 
 
-def execute_prepared_query(
+def _execute_prepared_query(
     pgconn: PGconn,
     name: bytes,
     query: PostgresQuery,
@@ -155,7 +155,7 @@ def execute_prepared_query(
     pgconn.send_query_prepared(
         name, query.params, param_formats=query.formats, result_format=result_format
     )
-    return (yield from flush_and_fetch(pgconn))
+    return (yield from _flush_and_fetch(pgconn))
 
 
 def describe_portal(pgconn: PGconn, name: bytes) -> PQGen[List[PGresult]]:
@@ -163,7 +163,7 @@ def describe_portal(pgconn: PGconn, name: bytes) -> PQGen[List[PGresult]]:
     Describe a portal fetch the result from the server.
     """
     pgconn.send_describe_portal(name)
-    return (yield from flush_and_fetch(pgconn))
+    return (yield from _flush_and_fetch(pgconn))
 
 
 def send_single_row(
@@ -183,7 +183,7 @@ def send_single_row(
     yield from _flush(pgconn)
 
 
-def flush_and_fetch(pgconn: PGconn) -> PQGen[List[PGresult]]:
+def _flush_and_fetch(pgconn: PGconn) -> PQGen[List[PGresult]]:
     """
     Generator sending a query and returning results without blocking.
 
@@ -399,13 +399,23 @@ def copy_end(pgconn: PGconn, error: Optional[bytes]) -> PQGen[PGresult]:
 # Override functions with fast versions if available
 if _psycopg:
     connect = _psycopg.connect
-    flush = _psycopg.send
+    execute_command = _psycopg.execute_command
+    execute_query = _psycopg.execute_query
+    prepare_query = _psycopg.prepare_query
+    execute_prepared_query = _psycopg.execute_prepared_query
+    flush_and_fetch = _psycopg.flush_and_fetch
+    flush = _psycopg.flush
     fetch_many = _psycopg.fetch_many
     fetch = _psycopg.fetch
     pipeline_communicate = _psycopg.pipeline_communicate
 
 else:
     connect = _connect
+    execute_command = _execute_command
+    execute_query = _execute_query
+    prepare_query = _prepare_query
+    execute_prepared_query = _execute_prepared_query
+    flush_and_fetch = _flush_and_fetch
     flush = _flush
     fetch_many = _fetch_many
     fetch = _fetch

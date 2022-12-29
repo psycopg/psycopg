@@ -214,7 +214,7 @@ cdef class PGconn:
 
         return PGresult._from_ptr(pgresult)
 
-    def send_query(self, const char *command) -> None:
+    cpdef object send_query(self, const char *command):
         _ensure_pgconn(self)
         cdef int rv
         with nogil:
@@ -250,14 +250,14 @@ cdef class PGconn:
             raise e.OperationalError(f"executing query failed: {error_message(self)}")
         return PGresult._from_ptr(pgresult)
 
-    def send_query_params(
+    cpdef object send_query_params(
         self,
         const char *command,
         param_values: Optional[Sequence[Optional[bytes]]],
         param_types: Optional[Sequence[int]] = None,
         param_formats: Optional[Sequence[int]] = None,
         int result_format = PqFormat.TEXT,
-    ) -> None:
+    ):
         _ensure_pgconn(self)
 
         cdef libpq.Oid *ctypes = NULL
@@ -279,12 +279,12 @@ cdef class PGconn:
                 f"sending query and params failed: {error_message(self)}"
             )
 
-    def send_prepare(
+    cpdef object send_prepare(
         self,
         const char *name,
         const char *command,
         param_types: Optional[Sequence[int]] = None,
-    ) -> None:
+    ):
         _ensure_pgconn(self)
 
         cdef int i
@@ -306,13 +306,13 @@ cdef class PGconn:
                 f"sending query and params failed: {error_message(self)}"
             )
 
-    def send_query_prepared(
+    cpdef object send_query_prepared(
         self,
         const char *name,
         param_values: Optional[Sequence[Optional[bytes]]],
         param_formats: Optional[Sequence[int]] = None,
         int result_format = PqFormat.TEXT,
-    ) -> None:
+    ):
         _ensure_pgconn(self)
 
         cdef libpq.Oid *ctypes = NULL
