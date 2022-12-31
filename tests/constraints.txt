@@ -6,27 +6,33 @@
 # From install_requires
 backports.zoneinfo == 0.2.0
 typing-extensions == 4.1.0
+importlib-metadata == 1.4
 
 # From the 'test' extra
-mypy == 0.981
+mypy == 0.990
 pproxy == 2.7.0
 pytest == 6.2.5
 pytest-asyncio == 0.17.0
 pytest-cov == 3.0.0
-pytest-randomly == 3.10.0
+pytest-randomly == 3.5.0
 
 # From the 'dev' extra
 black == 22.3.0
 dnspython == 2.1.0
 flake8 == 4.0.0
-mypy == 0.981
 types-setuptools == 57.4.0
 wheel == 0.37
 
 # From the 'docs' extra
-Sphinx == 4.2.0
-furo == 2021.11.23
+Sphinx == 5.0
+furo == 2022.6.21
 sphinx-autobuild == 2021.3.14
 sphinx-autodoc-typehints == 1.12.0
-dnspython == 2.1.0
+
+# Build tools
+setuptools == 49.2.0
+wheel == 0.37
+Cython == 3.0.0a11
+
+# Undeclared extras to "unblock" extra features
 shapely == 1.7.0
