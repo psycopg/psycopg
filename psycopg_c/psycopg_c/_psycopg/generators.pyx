@@ -6,6 +6,9 @@ C implementation of generators for the communication protocols with the libpq
 
 from cpython.exc cimport PyErr_Occurred
 from cpython.object cimport PyObject_CallFunctionObjArgs
+from cpython.mem cimport PyMem_Malloc, PyMem_Free
+from cpython.list cimport PyList_GET_SIZE, PyList_GET_ITEM
+from cpython.tuple cimport PyTuple_GET_SIZE, PyTuple_GET_ITEM
 
 from typing import List
 
@@ -85,7 +88,8 @@ cpdef pq.PGresult execute_command(
     Always send the command using the extended protocol, even if it has no
     parameter.
     """
-    if pgconn._pgconn_ptr is NULL:
+    cdef libpq.PGconn *pgconn_ptr = pgconn._pgconn_ptr
+    if pgconn_ptr is NULL:
         raise e.OperationalError("the connection is closed")
 
     cdef int rv
@@ -94,15 +98,14 @@ cpdef pq.PGresult execute_command(
     with nogil:
         while True:  # poor man's goto
             if 0 == libpq.PQsendQueryParams(
-                pgconn._pgconn_ptr, command, 0, NULL, NULL, NULL, NULL, result_format
+                pgconn_ptr, command, 0, NULL, NULL, NULL, NULL, result_format
             ):
                 break
 
-            rv = _flush(pgconn._pgconn_ptr)
-            if rv < 0:
+            if 0 > _flush(pgconn_ptr):
                 break
 
-            pgres = fetch_last(pgconn._pgconn_ptr)
+            pgres = fetch_last(pgconn_ptr)
             break
 
     if pgres == NULL:
@@ -127,28 +130,98 @@ cpdef list execute_query(
     """
     Execute a query and fetch the results back from the server.
     """
-    if force_extended or query.params or result_format == PQ_BINARY:
-        pgconn.send_query_params(
-            query.query, query.params, query.types, query.formats, result_format
-        )
-    else:
-        # If we can, let's use simple query protocol,
-        # as it can execute more than one statement in a single query.
-        pgconn.send_query(query.query)
+    cdef libpq.PGconn *pgconn_ptr = pgconn._pgconn_ptr
+    if pgconn_ptr is NULL:
+        raise e.OperationalError("the connection is closed")
 
-    return flush_and_fetch(pgconn)
+    cdef const char *command = query.query
+    cdef int cnparams = -1
+    cdef libpq.Oid *ctypes = NULL
+    cdef const char *const *cvalues = NULL
+    cdef int *clengths = NULL
+    cdef int *cformats = NULL
+
+    cdef libpq.PGresult *pgres = NULL
+
+    # Choose whether to use the extended protocol or not.
+    if query.params or force_extended or result_format == PQ_BINARY:
+        cnparams = _query_params_args(
+            query.params, query.types, query.formats,
+            &ctypes, &cvalues, &clengths, &cformats)
+
+    with nogil:
+        while 1:
+            if cnparams >= 0:
+                if 0 == libpq.PQsendQueryParams(
+                    pgconn_ptr, command, cnparams, ctypes,
+                    cvalues, clengths, cformats, result_format
+                ):
+                    break
+            else:
+                if 0 == libpq.PQsendQuery(pgconn_ptr, command):
+                    break
+
+            if 0 > _flush(pgconn_ptr):
+                break
+
+            # TODO NOMERGE: handle more than one result
+            pgres = fetch_last(pgconn_ptr)
+            break
+
+    if cnparams > 0:
+        _clear_query_params(ctypes, cvalues, clengths, cformats)
+
+    if pgres == NULL:
+        _raise_current_or_from_conn(pgconn)
+    else:
+        return [pq.PGresult._from_ptr(pgres)]
 
 
 cpdef object prepare_query(pq.PGconn pgconn, const char *name, query):
     """
     Prepare a query for prepared statement execution.
     """
-    pgconn.send_prepare(name, query.query, param_types=query.types)
-    cdef list results = flush_and_fetch(pgconn)
-    cdef pq.PGresult result = results[0]
-    if result.status == libpq.PGRES_FATAL_ERROR:
+    cdef libpq.PGconn *pgconn_ptr = pgconn._pgconn_ptr
+    if pgconn_ptr is NULL:
+        raise e.OperationalError("the connection is closed")
+
+    cdef const char *command = query.query
+    cdef libpq.Oid *ctypes = NULL
+
+    cdef int cnparams = _query_types_args(query.types, &ctypes)
+
+    cdef libpq.PGresult *pgres = NULL
+    with nogil:
+        while 1:
+            if 0 == libpq.PQsendPrepare(
+                pgconn_ptr, name, command, cnparams, ctypes
+            ):
+                break
+
+            if 0 > _flush(pgconn_ptr):
+                break
+
+            pgres = fetch_last(pgconn_ptr)
+            break
+
+    if cnparams > 0:
+        PyMem_Free(ctypes)
+
+    if pgres == NULL:
+        _raise_current_or_from_conn(pgconn)
+
+    # Create a result only if needed to raise an exception.
+    cdef int status = libpq.PQresultStatus(pgres)
+    if status == libpq.PGRES_FATAL_ERROR:
+        # In this branch, ownership is passed to the `result` object, which
+        # will delete the `pgres` on de..
+        result = pq.PGresult._from_ptr(pgres)
         encoding = pgconn_encoding(pgconn)
         raise e.error_from_result(result, encoding=encoding)
+    else:
+        # In this branch, no Python wrapper is created, so just delete the
+        # result once we know there was no error.
+        libpq.PQclear(pgres)
 
 
 cpdef list execute_prepared_query(
@@ -157,8 +230,43 @@ cpdef list execute_prepared_query(
     """
     Execute a prepared statement with given parameters and fetch the results.
     """
-    pgconn.send_query_prepared(name, query.params, query.formats, result_format)
-    return (flush_and_fetch(pgconn))
+    cdef libpq.PGconn *pgconn_ptr = pgconn._pgconn_ptr
+    if pgconn_ptr is NULL:
+        raise e.OperationalError("the connection is closed")
+
+    cdef int cnparams = -1
+    cdef char *const *cvalues = NULL
+    cdef int *clengths = NULL
+    cdef int *cformats = NULL
+
+    cdef libpq.PGresult *pgres = NULL
+
+    # Choose whether to use the extended protocol or not.
+    cnparams = _query_params_args(
+        query.params, None, query.formats,
+        NULL, &cvalues, &clengths, &cformats)
+
+    with nogil:
+        while 1:
+            if 0 == libpq.PQsendQueryPrepared(
+                pgconn_ptr, name, cnparams,
+                cvalues, clengths, cformats, result_format
+            ):
+                break
+
+            if 0 > _flush(pgconn_ptr):
+                break
+
+            pgres = fetch_last(pgconn_ptr)
+            break
+
+    if cnparams > 0:
+        _clear_query_params(NULL, cvalues, clengths, cformats)
+
+    if pgres == NULL:
+        _raise_current_or_from_conn(pgconn)
+    else:
+        return [pq.PGresult._from_ptr(pgres)]
 
 
 cpdef list flush_and_fetch(pq.PGconn pgconn):
@@ -428,3 +536,105 @@ cdef int _consume_notifies(pq.PGconn pgconn) except -1:
             libpq.PQfreemem(notify)
 
     return 0
+
+
+cdef int _query_params_args(
+    param_values: Optional[Sequence[Optional[bytes]]],
+    param_types: Optional[Sequence[int]],
+    param_formats: Optional[Sequence[int]],
+    libpq.Oid **ctypes,
+    char ***cvalues,
+    int **clengths,
+    int **cformats
+) except -1:
+    cdef Py_ssize_t nparams
+
+    if param_values is None:
+        nparams = 0
+    else:
+        if not isinstance(param_values, list):
+            param_values = list(param_values)
+        nparams = PyList_GET_SIZE(param_values)
+
+    if nparams == 0:
+        return nparams
+
+    if param_types is not None:
+        if not isinstance(param_types, tuple):
+            param_types = tuple(param_types)
+        if PyTuple_GET_SIZE(param_types) != nparams:
+            raise ValueError(
+                "got %d param_values but %d param_types"
+                % (nparams, len(param_types))
+            )
+
+    if param_formats is not None:
+        if not isinstance(param_formats, list):
+            param_types = list(param_formats)
+
+        if PyList_GET_SIZE(param_formats) != nparams:
+            raise ValueError(
+                "got %d param_values but %d param_formats"
+                % (nparams, len(param_formats))
+            )
+
+    cvalues[0] = <char **>PyMem_Malloc(nparams * sizeof(char *))
+    clengths[0] = <int *>PyMem_Malloc(nparams * sizeof(int))
+
+    cdef int i
+    cdef PyObject *obj
+    cdef char *ptr
+    cdef Py_ssize_t length
+
+    for i in range(nparams):
+        obj = PyList_GET_ITEM(param_values, i)
+        if <object>obj is None:
+            cvalues[0][i] = NULL
+            clengths[0][i] = 0
+        else:
+            _buffer_as_string_and_size(<object>obj, &ptr, &length)
+            cvalues[0][i] = ptr
+            clengths[0][i] = <int>length
+
+    if param_types is not None:
+        ctypes[0] = <libpq.Oid *>PyMem_Malloc(nparams * sizeof(libpq.Oid))
+        for i in range(nparams):
+            ctypes[0][i] = <libpq.Oid><object>PyTuple_GET_ITEM(param_types, i)
+
+    if param_formats is not None:
+        cformats[0] = <int *>PyMem_Malloc(nparams * sizeof(int *))
+        for i in range(nparams):
+            cformats[0][i] = <int><object>PyList_GET_ITEM(param_formats, i)
+
+    return nparams
+
+
+cdef int _query_types_args(
+    param_types: Optional[Sequence[int]], libpq.Oid **ctypes
+) except -1:
+    cdef Py_ssize_t nparams
+
+    if param_types is None:
+        nparams = 0
+    else:
+        if not isinstance(param_types, tuple):
+            param_types = tuple(param_types)
+        nparams = PyTuple_GET_SIZE(param_types)
+
+    if nparams == 0:
+        return nparams
+
+    ctypes[0] = <libpq.Oid *>PyMem_Malloc(nparams * sizeof(libpq.Oid))
+    for i in range(nparams):
+        ctypes[0][i] = <libpq.Oid><object>PyTuple_GET_ITEM(param_types, i)
+
+    return nparams
+
+
+cdef void _clear_query_params(
+    libpq.Oid *ctypes, char *const *cvalues, int *clenghst, int *cformats
+):
+    PyMem_Free(ctypes)
+    PyMem_Free(<char **>cvalues)
+    PyMem_Free(clenghst)
+    PyMem_Free(cformats)
