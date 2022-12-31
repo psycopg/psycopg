@@ -18,7 +18,7 @@ cdef extern from * nogil:
     pid_t getpid()
 
 from libc.stdio cimport fdopen
-from cpython.mem cimport PyMem_Malloc, PyMem_Free
+from cpython.mem cimport PyMem_RawMalloc, PyMem_RawFree
 from cpython.list cimport PyList_GET_SIZE, PyList_GET_ITEM
 from cpython.tuple cimport PyTuple_GET_SIZE, PyTuple_GET_ITEM
 from cpython.bytes cimport PyBytes_AsString
@@ -236,7 +236,7 @@ cdef class PGconn:
         cdef char **cvalues = NULL
         cdef int *clengths = NULL
         cdef int *cformats = NULL
-        cdef Py_ssize_t cnparams = _query_params_args(
+        cdef Py_ssize_t cnparams = query_params_args(
             param_values, param_types, param_formats,
             &ctypes, &cvalues, &clengths, &cformats)
 
@@ -245,7 +245,7 @@ cdef class PGconn:
             pgresult = libpq.PQexecParams(
                 self._pgconn_ptr, command, <int>cnparams, ctypes,
                 <const char *const *>cvalues, clengths, cformats, result_format)
-        _clear_query_params(ctypes, cvalues, clengths, cformats)
+            clear_query_params(ctypes, cvalues, clengths, cformats)
         if pgresult is NULL:
             raise e.OperationalError(f"executing query failed: {error_message(self)}")
         return PGresult._from_ptr(pgresult)
@@ -264,7 +264,7 @@ cdef class PGconn:
         cdef char **cvalues = NULL
         cdef int *clengths = NULL
         cdef int *cformats = NULL
-        cdef Py_ssize_t cnparams = _query_params_args(
+        cdef Py_ssize_t cnparams = query_params_args(
             param_values, param_types, param_formats,
             &ctypes, &cvalues, &clengths, &cformats)
 
@@ -273,7 +273,7 @@ cdef class PGconn:
             rv = libpq.PQsendQueryParams(
                 self._pgconn_ptr, command, <int>cnparams, ctypes,
                 <const char *const *>cvalues, clengths, cformats, result_format)
-        _clear_query_params(ctypes, cvalues, clengths, cformats)
+            clear_query_params(ctypes, cvalues, clengths, cformats)
         if not rv:
             raise e.OperationalError(
                 f"sending query and params failed: {error_message(self)}"
@@ -291,7 +291,7 @@ cdef class PGconn:
         cdef Py_ssize_t nparams = len(param_types) if param_types else 0
         cdef libpq.Oid *atypes = NULL
         if nparams:
-            atypes = <libpq.Oid *>PyMem_Malloc(nparams * sizeof(libpq.Oid))
+            atypes = <libpq.Oid *>PyMem_RawMalloc(nparams * sizeof(libpq.Oid))
             for i in range(nparams):
                 atypes[i] = param_types[i]
 
@@ -300,7 +300,7 @@ cdef class PGconn:
             rv = libpq.PQsendPrepare(
                 self._pgconn_ptr, name, command, <int>nparams, atypes
             )
-        PyMem_Free(atypes)
+        PyMem_RawFree(atypes)
         if not rv:
             raise e.OperationalError(
                 f"sending query and params failed: {error_message(self)}"
@@ -319,7 +319,7 @@ cdef class PGconn:
         cdef char **cvalues = NULL
         cdef int *clengths = NULL
         cdef int *cformats = NULL
-        cdef Py_ssize_t cnparams = _query_params_args(
+        cdef Py_ssize_t cnparams = query_params_args(
             param_values, None, param_formats,
             &ctypes, &cvalues, &clengths, &cformats)
 
@@ -328,7 +328,7 @@ cdef class PGconn:
             rv = libpq.PQsendQueryPrepared(
                 self._pgconn_ptr, name, <int>cnparams, <const char *const *>cvalues,
                 clengths, cformats, result_format)
-        _clear_query_params(ctypes, cvalues, clengths, cformats)
+            clear_query_params(ctypes, cvalues, clengths, cformats)
         if not rv:
             raise e.OperationalError(
                 f"sending prepared query failed: {error_message(self)}"
@@ -346,7 +346,7 @@ cdef class PGconn:
         cdef Py_ssize_t nparams = len(param_types) if param_types else 0
         cdef libpq.Oid *atypes = NULL
         if nparams:
-            atypes = <libpq.Oid *>PyMem_Malloc(nparams * sizeof(libpq.Oid))
+            atypes = <libpq.Oid *>PyMem_RawMalloc(nparams * sizeof(libpq.Oid))
             for i in range(nparams):
                 atypes[i] = param_types[i]
 
@@ -354,7 +354,7 @@ cdef class PGconn:
         with nogil:
             rv = libpq.PQprepare(
                 self._pgconn_ptr, name, command, <int>nparams, atypes)
-        PyMem_Free(atypes)
+        PyMem_RawFree(atypes)
         if rv is NULL:
             raise e.OperationalError(f"preparing query failed: {error_message(self)}")
         return PGresult._from_ptr(rv)
@@ -372,7 +372,7 @@ cdef class PGconn:
         cdef char **cvalues = NULL
         cdef int *clengths = NULL
         cdef int *cformats = NULL
-        cdef Py_ssize_t cnparams = _query_params_args(
+        cdef Py_ssize_t cnparams = query_params_args(
             param_values, None, param_formats,
             &ctypes, &cvalues, &clengths, &cformats)
 
@@ -383,7 +383,7 @@ cdef class PGconn:
                 <const char *const *>cvalues,
                 clengths, cformats, result_format)
 
-        _clear_query_params(ctypes, cvalues, clengths, cformats)
+            clear_query_params(ctypes, cvalues, clengths, cformats)
         if rv is NULL:
             raise e.OperationalError(
                 f"executing prepared query failed: {error_message(self)}"
@@ -667,7 +667,7 @@ cdef void notice_receiver(void *arg, const libpq.PGresult *res_ptr) with gil:
         res._pgresult_ptr = NULL  # avoid destroying the pgresult_ptr
 
 
-cdef int _query_params_args(
+cdef int query_params_args(
     param_values: Optional[Sequence[Optional[bytes]]],
     param_types: Optional[Sequence[int]],
     param_formats: Optional[Sequence[int]],
@@ -708,8 +708,8 @@ cdef int _query_params_args(
                 % (nparams, len(param_formats))
             )
 
-    cvalues[0] = <char **>PyMem_Malloc(nparams * sizeof(char *))
-    clengths[0] = <int *>PyMem_Malloc(nparams * sizeof(int))
+    cvalues[0] = <char **>PyMem_RawMalloc(nparams * sizeof(char *))
+    clengths[0] = <int *>PyMem_RawMalloc(nparams * sizeof(int))
 
     cdef int i
     cdef PyObject *obj
@@ -727,22 +727,22 @@ cdef int _query_params_args(
             clengths[0][i] = <int>length
 
     if param_types is not None:
-        ctypes[0] = <libpq.Oid *>PyMem_Malloc(nparams * sizeof(libpq.Oid))
+        ctypes[0] = <libpq.Oid *>PyMem_RawMalloc(nparams * sizeof(libpq.Oid))
         for i in range(nparams):
             ctypes[0][i] = <libpq.Oid><object>PyTuple_GET_ITEM(param_types, i)
 
     if param_formats is not None:
-        cformats[0] = <int *>PyMem_Malloc(nparams * sizeof(int *))
+        cformats[0] = <int *>PyMem_RawMalloc(nparams * sizeof(int *))
         for i in range(nparams):
             cformats[0][i] = <int><object>PyList_GET_ITEM(param_formats, i)
 
     return nparams
 
 
-cdef void _clear_query_params(
+cdef void clear_query_params(
     libpq.Oid *ctypes, char *const *cvalues, int *clenghst, int *cformats
-):
-    PyMem_Free(ctypes)
-    PyMem_Free(<char **>cvalues)
-    PyMem_Free(clenghst)
-    PyMem_Free(cformats)
+) nogil:
+    PyMem_RawFree(ctypes)
+    PyMem_RawFree(<char **>cvalues)
+    PyMem_RawFree(clenghst)
+    PyMem_RawFree(cformats)
