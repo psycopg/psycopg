@@ -79,8 +79,23 @@ cpdef pq.PGresult execute_command(
     Always send the command using the extended protocol, even if it has no
     parameter.
     """
-    pgconn.send_query_params(command, None, None, None, result_format)
-    flush(pgconn)
+    if pgconn._pgconn_ptr is NULL:
+        raise e.OperationalError("the connection is closed")
+
+    cdef int rv
+    cdef libpq.PGresult *pgres
+
+    with nogil:
+        if 0 == libpq.PQsendQueryParams(
+            pgconn._pgconn_ptr, command, 0, NULL, NULL, NULL, NULL, result_format
+        ):
+            raise e.OperationalError(
+                f"sending query and params failed: {error_message(pgconn)}"
+            )
+
+        if 0 > _flush(pgconn._pgconn_ptr):
+            raise e.OperationalError(f"flushing failed: {error_message(pgconn)}")
+
     results = fetch_many(pgconn)
     return results[0]
 
@@ -110,7 +125,6 @@ cpdef object prepare_query(pq.PGconn pgconn, const char *name, query):
     """
     Prepare a query for prepared statement execution.
     """
-
     pgconn.send_prepare(name, query.query, param_types=query.types)
     cdef list results = flush_and_fetch(pgconn)
     cdef pq.PGresult result = results[0]
@@ -145,7 +159,7 @@ cpdef list flush_and_fetch(pq.PGconn pgconn):
     return rv
 
 
-cpdef object flush(pq.PGconn pgconn):
+def flush(pq.PGconn pgconn):
     """
     Generator to send a query to the server without blocking.
 
@@ -157,27 +171,42 @@ cpdef object flush(pq.PGconn pgconn):
     to retrieve the results available.
     """
     cdef libpq.PGconn *pgconn_ptr = pgconn._pgconn_ptr
-    cdef int frv
-    cdef int status
 
     if pgconn_ptr == NULL:
         raise e.OperationalError(f"sending failed: the connection is closed")
 
-    while True:
-        with nogil:
-            frv = libpq.PQflush(pgconn_ptr)
-            if frv == 0:
-                break
-            elif frv < 0:
-                raise e.OperationalError(f"flushing failed: {error_message(pgconn)}")
+    if 0 > _flush(pgconn_ptr):
+        raise e.OperationalError(f"flushing failed: {error_message(pgconn)}")
 
-        status = wait_ng(libpq.PQsocket(pgconn_ptr), CWAIT_RW)
+
+cdef int _flush(libpq.PGconn *pgconn_ptr) nogil:
+    """
+    Internal implementation of flush. Can be called without GIL.
+
+    Return 0 in case of success, otherwise < 0. You can find the error
+    on the connection.
+    """
+    cdef int frv
+    cdef int status
+
+    while True:
+        frv = libpq.PQflush(pgconn_ptr)
+        if frv == 0:
+            break
+        elif frv < 0:
+            return -1
+
+        # TODO NOMERGE remove
+        with gil:
+            status = wait_ng(libpq.PQsocket(pgconn_ptr), CWAIT_RW)
+
         if status & READY_R:
             # This call may read notifies which will be saved in the
             # PGconn buffer and passed to Python later.
             if 1 != libpq.PQconsumeInput(pgconn_ptr):
-                raise e.OperationalError(
-                    f"consuming input failed: {error_message(pgconn)}")
+                return -2
+
+    return 0
 
 
 cpdef list fetch_many(pq.PGconn pgconn):
