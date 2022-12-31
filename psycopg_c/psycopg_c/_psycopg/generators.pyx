@@ -4,6 +4,7 @@ C implementation of generators for the communication protocols with the libpq
 
 # Copyright (C) 2020 The Psycopg Team
 
+from cpython.exc cimport PyErr_Occurred
 from cpython.object cimport PyObject_CallFunctionObjArgs
 
 from typing import List
@@ -38,6 +39,7 @@ cpdef pq.PGconn connect(conninfo: str):
     cdef libpq.PGconn *pgconn_ptr = conn._pgconn_ptr
     cdef int conn_status = libpq.PQstatus(pgconn_ptr)
     cdef int poll_status
+    cdef int ready
 
     while True:
         if conn_status == libpq.CONNECTION_BAD:
@@ -48,13 +50,14 @@ cpdef pq.PGconn connect(conninfo: str):
             )
 
         poll_status = libpq.PQconnectPoll(pgconn_ptr)
+        ready = 0
 
         if poll_status == libpq.PGRES_POLLING_OK:
             break
         elif poll_status == libpq.PGRES_POLLING_READING:
-            wait_ng(libpq.PQsocket(pgconn_ptr), CWAIT_R)
+            ready = wait_ng(libpq.PQsocket(pgconn_ptr), CWAIT_R)
         elif poll_status == libpq.PGRES_POLLING_WRITING:
-            wait_ng(libpq.PQsocket(pgconn_ptr), CWAIT_W)
+            ready = wait_ng(libpq.PQsocket(pgconn_ptr), CWAIT_W)
         elif poll_status == libpq.PGRES_POLLING_FAILED:
             encoding = conninfo_encoding(conninfo)
             raise e.OperationalError(
@@ -65,6 +68,9 @@ cpdef pq.PGconn connect(conninfo: str):
             raise e.InternalError(
                 f"unexpected poll status: {poll_status}", pgconn=conn
             )
+
+        if ready < 0:
+            wait_dummy_raise()
 
     conn.nonblocking = 1
     return conn
@@ -83,21 +89,33 @@ cpdef pq.PGresult execute_command(
         raise e.OperationalError("the connection is closed")
 
     cdef int rv
-    cdef libpq.PGresult *pgres
+    cdef libpq.PGresult *pgres = NULL
 
     with nogil:
-        if 0 == libpq.PQsendQueryParams(
-            pgconn._pgconn_ptr, command, 0, NULL, NULL, NULL, NULL, result_format
-        ):
-            raise e.OperationalError(
-                f"sending query and params failed: {error_message(pgconn)}"
-            )
+        while True:  # poor man's goto
+            if 0 == libpq.PQsendQueryParams(
+                pgconn._pgconn_ptr, command, 0, NULL, NULL, NULL, NULL, result_format
+            ):
+                break
 
-        if 0 > _flush(pgconn._pgconn_ptr):
-            raise e.OperationalError(f"flushing failed: {error_message(pgconn)}")
+            rv = _flush(pgconn._pgconn_ptr)
+            if rv < 0:
+                break
 
-    results = fetch_many(pgconn)
-    return results[0]
+            pgres = fetch_last(pgconn._pgconn_ptr)
+            break
+
+    if pgres == NULL:
+        _raise_current_or_from_conn(pgconn)
+    else:
+        return pq.PGresult._from_ptr(pgres)
+
+
+cdef object _raise_current_or_from_conn(pq.PGconn pgconn):
+    if PyErr_Occurred() == NULL:
+        raise e.OperationalError(f"query: {error_message(pgconn)}")
+    else:
+        wait_dummy_raise()
 
 
 cpdef list execute_query(
@@ -187,7 +205,7 @@ cdef int _flush(libpq.PGconn *pgconn_ptr) nogil:
     on the connection.
     """
     cdef int frv
-    cdef int status
+    cdef int ready
 
     while True:
         frv = libpq.PQflush(pgconn_ptr)
@@ -196,15 +214,15 @@ cdef int _flush(libpq.PGconn *pgconn_ptr) nogil:
         elif frv < 0:
             return -1
 
-        # TODO NOMERGE remove
-        with gil:
-            status = wait_ng(libpq.PQsocket(pgconn_ptr), CWAIT_RW)
+        ready = wait_ng(libpq.PQsocket(pgconn_ptr), CWAIT_RW)
+        if ready < 0:
+            return ready
 
-        if status & READY_R:
+        if ready & READY_R:
             # This call may read notifies which will be saved in the
             # PGconn buffer and passed to Python later.
             if 1 != libpq.PQconsumeInput(pgconn_ptr):
-                return -2
+                return -1
 
     return 0
 
@@ -261,6 +279,19 @@ cpdef pq.PGresult fetch(pq.PGconn pgconn):
     Return a result from the database (whether success or error).
     """
     cdef libpq.PGconn *pgconn_ptr = pgconn._pgconn_ptr
+    cdef libpq.PGresult *pgres = NULL
+    cdef int rv
+
+    with nogil:
+        rv = _fetch(pgconn_ptr, &pgres)
+
+    if rv < 0:
+        _raise_current_or_from_conn(pgconn)
+
+    return pq.PGresult._from_ptr(pgres) if pgres is not NULL else None
+
+
+cdef int _fetch(libpq.PGconn *pgconn_ptr, libpq.PGresult **res) nogil:
     cdef int fileno = libpq.PQsocket(pgconn_ptr)
     cdef libpq.PGresult *pgres
 
@@ -268,14 +299,53 @@ cpdef pq.PGresult fetch(pq.PGconn pgconn):
         if not libpq.PQisBusy(pgconn_ptr):
             break
 
-        wait_ng(fileno, CWAIT_R)
+        if wait_ng(fileno, CWAIT_R) < 0:
+            return -1
 
         if 1 != libpq.PQconsumeInput(pgconn_ptr):
-            raise e.OperationalError(
-                f"consuming input failed: {error_message(pgconn)}")
+            return -1
 
-    pgres = libpq.PQgetResult(pgconn_ptr)
-    return pq.PGresult._from_ptr(pgres) if pgres is not NULL else None
+    res[0] = libpq.PQgetResult(pgconn_ptr)
+    return 0
+
+
+cdef libpq.PGresult *fetch_last(libpq.PGconn *pgconn_ptr) nogil:
+    """
+    Return the last result from a query.
+    """
+    cdef libpq.PGresult *pgres = NULL
+    cdef libpq.PGresult *rv = NULL
+
+    while True:
+        if _fetch(pgconn_ptr, &pgres) < 0:
+            if rv != NULL:
+                libpq.PQclear(rv)
+            return NULL
+
+        if pgres == NULL:
+            # All queries returned
+            break
+
+        if rv != NULL:
+            libpq.PQclear(rv)
+        rv = pgres
+        pgres = NULL
+
+        status = libpq.PQresultStatus(rv)
+        if (
+            # After entering copy mode the libpq will create a phony result
+            # for every request so let's break the endless loop.
+            status == libpq.PGRES_COPY_IN
+            or status == libpq.PGRES_COPY_OUT
+            or status == libpq.PGRES_COPY_BOTH
+            # PIPELINE_SYNC is not followed by a NULL, but we return it alone
+            # similarly to other result sets.
+            or status == libpq.PGRES_PIPELINE_SYNC
+        ):
+            break
+
+    return rv
+
 
 
 cpdef list pipeline_communicate(
@@ -297,6 +367,8 @@ cpdef list pipeline_communicate(
 
     while True:
         ready = wait_ng(fileno, CWAIT_RW)
+        if ready < 0:
+            wait_dummy_raise()
 
         if ready & READY_R:
             if 1 != libpq.PQconsumeInput(pgconn_ptr):
