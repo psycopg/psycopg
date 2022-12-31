@@ -41,14 +41,14 @@ jobs:
           - {impl: python, python: "3.9", ext: dns, postgres: "postgres:14"}
           - {impl: python, python: "3.9", ext: postgis, postgres: "postgis/postgis"}
 
+          # Test with minimum dependencies versions
+          - {impl: c, python: "3.7", ext: min, postgres: "postgres:15"}
+
     env:
       PSYCOPG_IMPL: ${{ matrix.impl }}
       DEPS: ./psycopg[test] ./psycopg_pool
       PSYCOPG_TEST_DSN: "host=127.0.0.1 user=postgres password=password"
       MARKERS: ""
-
-      # Enable to run tests using the minimum version of dependencies.
-      # PIP_CONSTRAINT: ${{ github.workspace }}/tests/constraints.txt
 
     steps:
       - uses: actions/checkout@v3
@@ -86,6 +86,13 @@ jobs:
           echo "DEPS=$DEPS shapely" >> $GITHUB_ENV
           echo "MARKERS=$MARKERS postgis" >> $GITHUB_ENV
 
+      - name: Configure to use the oldest dependencies
+        if: ${{ matrix.ext == 'min' }}
+        run: |
+          echo "DEPS=$DEPS dnspython shapely" >> $GITHUB_ENV
+          echo "PIP_CONSTRAINT=${{ github.workspace }}/tests/constraints.txt" \
+            >> $GITHUB_ENV
+
       - name: Install Python packages
         run: pip install $DEPS
 
@@ -122,9 +129,6 @@ jobs:
       # Don't run timing-based tests as they regularly fail.
       # pproxy-based tests fail too, with the proxy not coming up in 2s.
       NOT_MARKERS: "timing proxy mypy"
-
-      # Enable to run tests using the minimum version of dependencies.
-      # PIP_CONSTRAINT: ${{ github.workspace }}/tests/constraints.txt
 
     steps:
       - uses: actions/checkout@v3
@@ -178,9 +182,6 @@ jobs:
       PSYCOPG_TEST_DSN: "host=127.0.0.1 dbname=postgres"
       # On windows pproxy doesn't seem very happy. Also a few timing test fail.
       NOT_MARKERS: "timing proxy mypy"
-
-      # Enable to run tests using the minimum version of dependencies.
-      # PIP_CONSTRAINT: ${{ github.workspace }}/tests/constraints.txt
 
     defaults:
       run:
