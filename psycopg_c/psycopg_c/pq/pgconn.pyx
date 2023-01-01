@@ -233,18 +233,18 @@ cdef class PGconn:
         _ensure_pgconn(self)
 
         cdef libpq.Oid *ctypes = NULL
-        cdef char **cvalues = NULL
+        cdef const char *const *cvalues = NULL
         cdef int *clengths = NULL
         cdef int *cformats = NULL
-        cdef Py_ssize_t cnparams = query_params_args(
+        cdef int cnparams = query_params_args(
             param_values, param_types, param_formats,
             &ctypes, &cvalues, &clengths, &cformats)
 
         cdef libpq.PGresult *pgresult
         with nogil:
             pgresult = libpq.PQexecParams(
-                self._pgconn_ptr, command, <int>cnparams, ctypes,
-                <const char *const *>cvalues, clengths, cformats, result_format)
+                self._pgconn_ptr, command, cnparams, ctypes,
+                cvalues, clengths, cformats, result_format)
             clear_query_params(ctypes, cvalues, clengths, cformats)
         if pgresult is NULL:
             raise e.OperationalError(f"executing query failed: {error_message(self)}")
@@ -288,7 +288,7 @@ cdef class PGconn:
         _ensure_pgconn(self)
 
         cdef int i
-        cdef Py_ssize_t nparams = len(param_types) if param_types else 0
+        cdef Py_ssize_t nparams = len(param_types) if param_types is not None else 0
         cdef libpq.Oid *atypes = NULL
         if nparams:
             atypes = <libpq.Oid *>PyMem_RawMalloc(nparams * sizeof(libpq.Oid))
@@ -369,7 +369,7 @@ cdef class PGconn:
         _ensure_pgconn(self)
 
         cdef libpq.Oid *ctypes = NULL
-        cdef char **cvalues = NULL
+        cdef const char *const *cvalues = NULL
         cdef int *clengths = NULL
         cdef int *cformats = NULL
         cdef Py_ssize_t cnparams = query_params_args(
@@ -380,8 +380,7 @@ cdef class PGconn:
         with nogil:
             rv = libpq.PQexecPrepared(
                 self._pgconn_ptr, name, <int>cnparams,
-                <const char *const *>cvalues,
-                clengths, cformats, result_format)
+                cvalues, clengths, cformats, result_format)
 
             clear_query_params(ctypes, cvalues, clengths, cformats)
         if rv is NULL:
