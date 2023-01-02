@@ -27,14 +27,13 @@ jobs:
           python-version: 3.9
 
       - name: Create the sdist packages
-        run: |-
-          python ${{ matrix.package }}/setup.py sdist -d `pwd`/dist/
+        working-directory: ${{ matrix.package }}
+        run: python setup.py sdist -d ../dist
         if: ${{ matrix.format == 'sdist' }}
 
       - name: Create the wheel packages
-        run: |-
-          pip install wheel
-          python ${{ matrix.package }}/setup.py bdist_wheel -d `pwd`/dist/
+        working-directory: ${{ matrix.package }}
+        run: pip wheel -w ../dist .
         if: ${{ matrix.format == 'wheel' }}
 
       - name: Install the Python package and test requirements
