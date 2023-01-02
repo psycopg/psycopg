@@ -1,3 +1,13 @@
 [build-system]
-requires = ["setuptools>=49.2.0", "wheel>=0.37", "Cython>=3.0.0a11"]
-build-backend = "setuptools.build_meta"
+requires = ["setuptools >= 49.2.0", "wheel >= 0.37", "tomli >= 2.0.1"]
+
+# The cython_backend is a build backend adding a Cython dependency if the c
+# source must be build from pxd files (when building from git checkout), and
+# doesn't require Cython when needing to build from c files (when building
+# from the sdist bundle).
+build-backend = "cython_backend"
+backend-path = ["build_backend"]
+
+[cython-backend]
+# These packages are only installed if there are pyx files to compile.
+cython-requires = ["Cython >= 3.0.0a11"]
