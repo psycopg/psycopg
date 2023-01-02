@@ -26,28 +26,18 @@ jobs:
         with:
           python-version: 3.9
 
-      - name: Create the sdist packages
-        run: |-
-          python ${{ matrix.package }}/setup.py sdist -d `pwd`/dist/
-        if: ${{ matrix.format == 'sdist' }}
+      - name: Install the build package
+        run: pip install build
 
-      - name: Create the wheel packages
-        run: |-
-          pip install wheel
-          python ${{ matrix.package }}/setup.py bdist_wheel -d `pwd`/dist/
-        if: ${{ matrix.format == 'wheel' }}
+      - name: Create the package
+        run: python -m build -o dist --${{ matrix.format }} ${{ matrix.package }}
 
       - name: Install the Python package and test requirements
-        run: |-
-          pip install `ls dist/*`[test]
-          pip install ./psycopg_pool
+        run: pip install `ls dist/*`[test] ./psycopg_pool
         if: ${{ matrix.package == 'psycopg' }}
 
       - name: Install the C package and test requirements
-        run: |-
-          pip install dist/*
-          pip install ./psycopg[test]
-          pip install ./psycopg_pool
+        run: pip install dist/* ./psycopg[test] ./psycopg_pool
         if: ${{ matrix.package == 'psycopg_c' }}
 
       - name: Test the sdist package

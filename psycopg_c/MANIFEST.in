@@ -1,0 +1,3 @@
+# Include the build backend in the distributed files.
+# It doesn't seem it can be specified in setup.cfg
+include build_backend/*.py
