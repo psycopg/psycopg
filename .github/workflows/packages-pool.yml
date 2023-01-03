@@ -14,8 +14,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - {package: psycopg_pool, format: sdist, impl: python}
-          - {package: psycopg_pool, format: wheel, impl: python}
+          - {package: psycopg_pool, format: sdist}
+          - {package: psycopg_pool, format: wheel}
 
     steps:
       - uses: actions/checkout@v3
@@ -24,26 +24,18 @@ jobs:
         with:
           python-version: 3.9
 
-      - name: Create the sdist packages
-        run: |-
-          python ${{ matrix.package }}/setup.py sdist -d `pwd`/dist/
-        if: ${{ matrix.format == 'sdist' }}
+      - name: Install the build package
+        run: pip install build
 
-      - name: Create the wheel packages
-        run: |-
-          pip install wheel
-          python ${{ matrix.package }}/setup.py bdist_wheel -d `pwd`/dist/
-        if: ${{ matrix.format == 'wheel' }}
+      - name: Create the package
+        run: python -m build -o dist --${{ matrix.format }} ${{ matrix.package }}
 
       - name: Install the Python pool package and test requirements
-        run: |-
-          pip install dist/*
-          pip install ./psycopg[test]
+        run: pip install ./psycopg[test] dist/*
 
-      - name: Test the sdist package
-        run: pytest -m 'not slow and not flakey' --color yes
+      - name: Test the package
+        run: pytest -m 'pool and not slow and not flakey' --color yes
         env:
-          PSYCOPG_IMPL: ${{ matrix.impl }}
           PSYCOPG_TEST_DSN: "host=127.0.0.1 user=postgres"
           PGPASSWORD: password
 
