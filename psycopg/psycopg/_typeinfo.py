@@ -201,8 +201,7 @@ WHERE t.oid = %(name)s::regtype
 class MultirangeInfo(TypeInfo):
     """Manage information about a multirange type."""
 
-    # TODO: expose to multirange module once added
-    # __module__ = "psycopg.types.multirange"
+    __module__ = "psycopg.types.multirange"
 
     def __init__(
         self,
