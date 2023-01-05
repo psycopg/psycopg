@@ -122,6 +122,7 @@ _crdb_reasons = {
     "server-side cursor": 41412,
     "severity_nonlocalized": 81794,
     "stored procedure": 1751,
+    "to_regtype": None,
 }
 
 _crdb_reason_version = {
@@ -130,4 +131,5 @@ _crdb_reason_version = {
     "cancel": "skip < 22",
     "server-side cursor": "skip < 22.1.3",
     "severity_nonlocalized": "skip < 22.1.3",
+    "to_regtype": "skip < 22.2",
 }
