@@ -16,10 +16,6 @@ from .abc import Buffer, Query, Params
 from ._enums import PyFormat
 from ._encodings import conn_encoding
 
-if TYPE_CHECKING:
-    from transform import Transformer
-
-
 class QueryPart(NamedTuple):
     pre: bytes
     item: Union[int, str]
