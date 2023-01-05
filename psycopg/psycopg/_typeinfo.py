@@ -12,13 +12,14 @@ from typing import Sequence, Tuple, Type, TypeVar, Union, TYPE_CHECKING
 from typing_extensions import TypeAlias
 
 from . import errors as e
-from .abc import AdaptContext
+from .abc import AdaptContext, Query
 from .rows import dict_row
 
+
 if TYPE_CHECKING:
-    from .connection import Connection
+    from .connection import BaseConnection, Connection
     from .connection_async import AsyncConnection
-    from .sql import Identifier
+    from .sql import Identifier, SQL
 
 T = TypeVar("T", bound="TypeInfo")
 RegistryKey: TypeAlias = Union[str, int, Tuple[type, int]]
@@ -71,7 +72,7 @@ class TypeInfo:
     @classmethod
     def fetch(
         cls: Type[T],
-        conn: "Union[Connection[Any], AsyncConnection[Any]]",
+        conn: Union["Connection[Any]", "AsyncConnection[Any]"],
         name: Union[str, "Identifier"],
     ) -> Any:
         """Query a system catalog to read information about a type."""
@@ -146,17 +147,36 @@ class TypeInfo:
             register_array(self, context)
 
     @classmethod
-    def _get_info_query(
-        cls, conn: "Union[Connection[Any], AsyncConnection[Any]]"
-    ) -> str:
-        return """\
+    def _get_info_query(cls, conn: "BaseConnection[Any]") -> Query:
+        from .sql import SQL
+
+        return SQL(
+            """\
 SELECT
     typname AS name, oid, typarray AS array_oid,
     oid::regtype::text AS regtype, typdelim AS delimiter
 FROM pg_type t
-WHERE t.oid = %(name)s::regtype
+WHERE t.oid = {regtype}
 ORDER BY t.oid
 """
+        ).format(regtype=cls._to_regtype(conn))
+
+    @classmethod
+    def _has_to_regtype_function(cls, conn: "BaseConnection[Any]") -> bool:
+        # introduced in PostgreSQL 9.4 and CockroachDB 22.2
+        info = conn.info
+        return info.vendor == "PostgreSQL" or (
+            info.vendor == "CockroachDB" and info.server_version >= 220200
+        )
+
+    @classmethod
+    def _to_regtype(cls, conn: "BaseConnection[Any]") -> "SQL":
+        from .sql import SQL
+
+        if cls._has_to_regtype_function(conn):
+            return SQL("to_regtype(%(name)s)")
+        else:
+            return SQL("%(name)s::regtype")
 
     def _added(self, registry: "TypesRegistry") -> None:
         """Method called by the `!registry` when the object is added there."""
@@ -181,16 +201,15 @@ class RangeInfo(TypeInfo):
         self.subtype_oid = subtype_oid
 
     @classmethod
-    def _get_info_query(
-        cls, conn: "Union[Connection[Any], AsyncConnection[Any]]"
-    ) -> str:
+    def _get_info_query(cls, conn: "BaseConnection[Any]") -> Query:
+        # CockroachDB does not support range so no need to use _to_regtype
         return """\
 SELECT t.typname AS name, t.oid AS oid, t.typarray AS array_oid,
     t.oid::regtype::text AS regtype,
     r.rngsubtype AS subtype_oid
 FROM pg_type t
 JOIN pg_range r ON t.oid = r.rngtypid
-WHERE t.oid = %(name)s::regtype
+WHERE t.oid = to_regtype(%(name)s)
 """
 
     def _added(self, registry: "TypesRegistry") -> None:
@@ -218,20 +237,19 @@ class MultirangeInfo(TypeInfo):
         self.subtype_oid = subtype_oid
 
     @classmethod
-    def _get_info_query(
-        cls, conn: "Union[Connection[Any], AsyncConnection[Any]]"
-    ) -> str:
+    def _get_info_query(cls, conn: "BaseConnection[Any]") -> Query:
         if conn.info.server_version < 140000:
             raise e.NotSupportedError(
                 "multirange types are only available from PostgreSQL 14"
             )
+        # CockroachDB does not support multirange so no need to use _to_regtype
         return """\
 SELECT t.typname AS name, t.oid AS oid, t.typarray AS array_oid,
     t.oid::regtype::text AS regtype,
     r.rngtypid AS range_oid, r.rngsubtype AS subtype_oid
 FROM pg_type t
 JOIN pg_range r ON t.oid = r.rngmultitypid
-WHERE t.oid = %(name)s::regtype
+WHERE t.oid = to_regtype(%(name)s)
 """
 
     def _added(self, registry: "TypesRegistry") -> None:
@@ -262,9 +280,8 @@ class CompositeInfo(TypeInfo):
         self.python_type: Optional[type] = None
 
     @classmethod
-    def _get_info_query(
-        cls, conn: "Union[Connection[Any], AsyncConnection[Any]]"
-    ) -> str:
+    def _get_info_query(cls, conn: "BaseConnection[Any]") -> Query:
+        # CockroachDB does not support composite so no need to use _to_regtype
         return """\
 SELECT
     t.typname AS name, t.oid AS oid, t.typarray AS array_oid,
@@ -281,14 +298,14 @@ LEFT JOIN (
         SELECT a.attrelid, a.attname, a.atttypid
         FROM pg_attribute a
         JOIN pg_type t ON t.typrelid = a.attrelid
-        WHERE t.oid = %(name)s::regtype
+        WHERE t.oid = to_regtype(%(name)s)
         AND a.attnum > 0
         AND NOT a.attisdropped
         ORDER BY a.attnum
     ) x
     GROUP BY attrelid
 ) a ON a.attrelid = t.typrelid
-WHERE t.oid = %(name)s::regtype
+WHERE t.oid = to_regtype(%(name)s)
 """
 
 
@@ -310,10 +327,11 @@ class EnumInfo(TypeInfo):
         self.enum: Optional[Type[Enum]] = None
 
     @classmethod
-    def _get_info_query(
-        cls, conn: "Union[Connection[Any], AsyncConnection[Any]]"
-    ) -> str:
-        return """\
+    def _get_info_query(cls, conn: "BaseConnection[Any]") -> Query:
+        from .sql import SQL
+
+        return SQL(
+            """\
 SELECT name, oid, array_oid, array_agg(label) AS labels
 FROM (
     SELECT
@@ -322,11 +340,12 @@ FROM (
     FROM pg_type t
     LEFT JOIN  pg_enum e
     ON e.enumtypid = t.oid
-    WHERE t.oid = %(name)s::regtype
+    WHERE t.oid = {regtype}
     ORDER BY e.enumsortorder
 ) x
 GROUP BY name, oid, array_oid
 """
+        ).format(regtype=cls._to_regtype(conn))
 
 
 class TypesRegistry:
