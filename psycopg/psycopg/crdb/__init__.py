@@ -10,6 +10,7 @@ from .connection import CrdbConnection, AsyncCrdbConnection, CrdbConnectionInfo
 adapters = _types.adapters  # exposed by the package
 connect = CrdbConnection.connect
 
+_types.register_crdb_types(adapters.types)
 _types.register_crdb_adapters(adapters)
 
 __all__ = [

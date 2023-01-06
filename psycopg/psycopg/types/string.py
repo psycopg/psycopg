@@ -6,12 +6,11 @@ Adapters for textual types.
 
 from typing import Optional, Union, TYPE_CHECKING
 
-from .. import postgres
+from .. import _oids
 from ..pq import Format, Escaping
 from ..abc import AdaptContext
 from ..adapt import Buffer, Dumper, Loader
 from ..errors import DataError
-from .._oids import INVALID_OID
 from .._encodings import conn_encoding
 
 if TYPE_CHECKING:
@@ -58,17 +57,17 @@ class _StrDumper(_BaseStrDumper):
 
 class StrBinaryDumper(_StrBinaryDumper):
 
-    oid = postgres.types["text"].oid
+    oid = _oids.TEXT_OID
 
 
 class StrBinaryDumperVarchar(_StrBinaryDumper):
 
-    oid = postgres.types["varchar"].oid
+    oid = _oids.VARCHAR_OID
 
 
 class StrBinaryDumperName(_StrBinaryDumper):
 
-    oid = postgres.types["name"].oid
+    oid = _oids.NAME_OID
 
 
 class StrDumper(_StrDumper):
@@ -81,17 +80,17 @@ class StrDumper(_StrDumper):
     text oid is required, for instance with variadic functions.
     """
 
-    oid = postgres.types["text"].oid
+    oid = _oids.TEXT_OID
 
 
 class StrDumperVarchar(_StrDumper):
 
-    oid = postgres.types["varchar"].oid
+    oid = _oids.VARCHAR_OID
 
 
 class StrDumperName(_StrDumper):
 
-    oid = postgres.types["name"].oid
+    oid = _oids.NAME_OID
 
 
 class StrDumperUnknown(_StrDumper):
@@ -133,7 +132,7 @@ class TextBinaryLoader(TextLoader):
 
 class BytesDumper(Dumper):
 
-    oid = postgres.types["bytea"].oid
+    oid = _oids.BYTEA_OID
     _qprefix = b""
 
     def __init__(self, cls: type, context: Optional[AdaptContext] = None):
@@ -172,7 +171,7 @@ class BytesDumper(Dumper):
 class BytesBinaryDumper(Dumper):
 
     format = Format.BINARY
-    oid = postgres.types["bytea"].oid
+    oid = _oids.BYTEA_OID
 
     def dump(self, obj: Buffer) -> Buffer:
         return obj
@@ -216,7 +215,7 @@ def register_default_adapters(context: AdaptContext) -> None:
     adapters.register_dumper(str, StrDumper)
     adapters.register_dumper(str, StrDumperUnknown)
 
-    adapters.register_loader(INVALID_OID, TextLoader)
+    adapters.register_loader(_oids.INVALID_OID, TextLoader)
     adapters.register_loader("bpchar", TextLoader)
     adapters.register_loader("name", TextLoader)
     adapters.register_loader("text", TextLoader)
@@ -236,5 +235,5 @@ def register_default_adapters(context: AdaptContext) -> None:
     adapters.register_dumper(memoryview, BytesBinaryDumper)
 
     adapters.register_loader("bytea", ByteaLoader)
-    adapters.register_loader(INVALID_OID, ByteaBinaryLoader)
+    adapters.register_loader(_oids.INVALID_OID, ByteaBinaryLoader)
     adapters.register_loader("bytea", ByteaBinaryLoader)
