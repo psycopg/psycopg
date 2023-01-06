@@ -120,8 +120,11 @@ def register_default_adapters(context: AdaptContext) -> None:
     string.register_default_adapters(context)
     uuid.register_default_adapters(context)
 
-    # Make sure to register dumpers to the standard types last, in order to
-    # pick them by default when looking up by oid.
+    # Both numpy Decimal and uint64 dumpers use the numeric oid, but the former
+    # covers the entire numeric domain, whereas the latter only deals with
+    # integers. For this reason, if we specify dumpers by oid, we want to make
+    # sure to get the Decimal dumper. We enforce that by registering the
+    # numeric dumpers last.
     numpy.register_default_adapters(context)
     bool.register_default_adapters(context)
     numeric.register_default_adapters(context)
