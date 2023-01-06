@@ -15,7 +15,6 @@ from . import errors as e
 from .abc import AdaptContext, Query
 from .rows import dict_row
 
-
 if TYPE_CHECKING:
     from .connection import BaseConnection, Connection
     from .connection_async import AsyncConnection
@@ -163,14 +162,21 @@ ORDER BY t.oid
 
     @classmethod
     def _has_to_regtype_function(cls, conn: "BaseConnection[Any]") -> bool:
-        # introduced in PostgreSQL 9.4 and CockroachDB 22.2
+        # to_regtype() introduced in PostgreSQL 9.4 and CockroachDB 22.2
         info = conn.info
-        return info.vendor == "PostgreSQL" or (
-            info.vendor == "CockroachDB" and info.server_version >= 220200
-        )
+        if info.vendor == "PostgreSQL":
+            return info.server_version >= 90400
+        elif info.vendor == "CockroachDB":
+            return info.server_version >= 220200
+        else:
+            return False
 
     @classmethod
     def _to_regtype(cls, conn: "BaseConnection[Any]") -> "SQL":
+        # `to_regtype()` returns the type oid or NULL, unless the :: operator,
+        # which returns the type or raises an exception, which requires
+        # a transaction rollback and leaves traces in the server logs.
+
         from .sql import SQL
 
         if cls._has_to_regtype_function(conn):
@@ -202,15 +208,18 @@ class RangeInfo(TypeInfo):
 
     @classmethod
     def _get_info_query(cls, conn: "BaseConnection[Any]") -> Query:
-        # CockroachDB does not support range so no need to use _to_regtype
-        return """\
+        from .sql import SQL
+
+        return SQL(
+            """\
 SELECT t.typname AS name, t.oid AS oid, t.typarray AS array_oid,
     t.oid::regtype::text AS regtype,
     r.rngsubtype AS subtype_oid
 FROM pg_type t
 JOIN pg_range r ON t.oid = r.rngtypid
-WHERE t.oid = to_regtype(%(name)s)
+WHERE t.oid = {regtype}
 """
+        ).format(regtype=cls._to_regtype(conn))
 
     def _added(self, registry: "TypesRegistry") -> None:
         # Map ranges subtypes to info
@@ -238,19 +247,23 @@ class MultirangeInfo(TypeInfo):
 
     @classmethod
     def _get_info_query(cls, conn: "BaseConnection[Any]") -> Query:
+        from .sql import SQL
+
         if conn.info.server_version < 140000:
             raise e.NotSupportedError(
                 "multirange types are only available from PostgreSQL 14"
             )
-        # CockroachDB does not support multirange so no need to use _to_regtype
-        return """\
+
+        return SQL(
+            """\
 SELECT t.typname AS name, t.oid AS oid, t.typarray AS array_oid,
     t.oid::regtype::text AS regtype,
     r.rngtypid AS range_oid, r.rngsubtype AS subtype_oid
 FROM pg_type t
 JOIN pg_range r ON t.oid = r.rngmultitypid
-WHERE t.oid = to_regtype(%(name)s)
+WHERE t.oid = {regtype}
 """
+        ).format(regtype=cls._to_regtype(conn))
 
     def _added(self, registry: "TypesRegistry") -> None:
         # Map multiranges ranges and subtypes to info
@@ -281,13 +294,15 @@ class CompositeInfo(TypeInfo):
 
     @classmethod
     def _get_info_query(cls, conn: "BaseConnection[Any]") -> Query:
-        # CockroachDB does not support composite so no need to use _to_regtype
-        return """\
+        from .sql import SQL
+
+        return SQL(
+            """\
 SELECT
     t.typname AS name, t.oid AS oid, t.typarray AS array_oid,
     t.oid::regtype::text AS regtype,
-    coalesce(a.fnames, '{}') AS field_names,
-    coalesce(a.ftypes, '{}') AS field_types
+    coalesce(a.fnames, '{{}}') AS field_names,
+    coalesce(a.ftypes, '{{}}') AS field_types
 FROM pg_type t
 LEFT JOIN (
     SELECT
@@ -298,15 +313,16 @@ LEFT JOIN (
         SELECT a.attrelid, a.attname, a.atttypid
         FROM pg_attribute a
         JOIN pg_type t ON t.typrelid = a.attrelid
-        WHERE t.oid = to_regtype(%(name)s)
+        WHERE t.oid = {regtype}
         AND a.attnum > 0
         AND NOT a.attisdropped
         ORDER BY a.attnum
     ) x
     GROUP BY attrelid
 ) a ON a.attrelid = t.typrelid
-WHERE t.oid = to_regtype(%(name)s)
+WHERE t.oid = {regtype}
 """
+        ).format(regtype=cls._to_regtype(conn))
 
 
 class EnumInfo(TypeInfo):
