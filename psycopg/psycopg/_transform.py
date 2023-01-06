@@ -4,28 +4,28 @@ Helper object to transform values between Python and PostgreSQL
 
 # Copyright (C) 2020 The Psycopg Team
 
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Type
 from typing import DefaultDict, TYPE_CHECKING
 from collections import defaultdict
 from typing_extensions import TypeAlias
 
 from . import pq
-from . import postgres
 from . import errors as e
 from .abc import Buffer, LoadFunc, AdaptContext, PyFormat, DumperKey, NoneType
 from .rows import Row, RowMaker
 from ._oids import INVALID_OID, TEXT_OID
+from ._cmodule import _psycopg
 from ._encodings import pgconn_encoding
 
 if TYPE_CHECKING:
-    from .abc import Dumper, Loader
+    from . import abc
     from .adapt import AdaptersMap
     from .pq.abc import PGresult
     from .connection import BaseConnection
 
-DumperCache: TypeAlias = Dict[DumperKey, "Dumper"]
-OidDumperCache: TypeAlias = Dict[int, "Dumper"]
-LoaderCache: TypeAlias = Dict[int, "Loader"]
+DumperCache: TypeAlias = Dict[DumperKey, "abc.Dumper"]
+OidDumperCache: TypeAlias = Dict[int, "abc.Dumper"]
+LoaderCache: TypeAlias = Dict[int, "abc.Loader"]
 
 TEXT = pq.Format.TEXT
 PY_TEXT = PyFormat.TEXT
@@ -65,6 +65,8 @@ class Transformer(AdaptContext):
             self._adapters = context.adapters
             self._conn = context.connection
         else:
+            from . import postgres
+
             self._adapters = postgres.adapters
             self._conn = None
 
@@ -80,7 +82,7 @@ class Transformer(AdaptContext):
         # mapping fmt, oid -> Loader instance
         self._loaders: Tuple[LoaderCache, LoaderCache] = ({}, {})
 
-        self._row_dumpers: Optional[List["Dumper"]] = None
+        self._row_dumpers: Optional[List["abc.Dumper"]] = None
 
         # sequence of load functions from value to python
         # the length of the result columns
@@ -225,7 +227,7 @@ class Transformer(AdaptContext):
             rv = bytes(rv)
         return rv
 
-    def get_dumper(self, obj: Any, format: PyFormat) -> "Dumper":
+    def get_dumper(self, obj: Any, format: PyFormat) -> "abc.Dumper":
         """
         Return a Dumper instance to dump `!obj`.
         """
@@ -267,7 +269,7 @@ class Transformer(AdaptContext):
 
         return rv
 
-    def get_dumper_by_oid(self, oid: int, format: pq.Format) -> "Dumper":
+    def get_dumper_by_oid(self, oid: int, format: pq.Format) -> "abc.Dumper":
         """
         Return a Dumper to dump an object to the type with given oid.
         """
@@ -335,7 +337,7 @@ class Transformer(AdaptContext):
             for i, val in enumerate(record)
         )
 
-    def get_loader(self, oid: int, format: pq.Format) -> "Loader":
+    def get_loader(self, oid: int, format: pq.Format) -> "abc.Loader":
         try:
             return self._loaders[format][oid]
         except KeyError:
@@ -348,3 +350,11 @@ class Transformer(AdaptContext):
                 raise e.InterfaceError("unknown oid loader not found")
         loader = self._loaders[format][oid] = loader_cls(oid, self)
         return loader
+
+
+def _transformer_cls() -> Type["abc.Transformer"]:
+    # Return the fast object if available
+    if _psycopg:
+        return _psycopg.Transformer
+    else:
+        return Transformer
