@@ -57,5 +57,14 @@ async def test_changefeed(aconn_cls, dsn, aconn, testfeed, fmt_out):
     await cur.execute("cancel query %s", [qid])
     assert cur.statusmessage == "CANCEL QUERIES 1"
 
-    assert await asyncio.wait_for(q.get(), 1.0) is None
+    # We often find the record with {"after": null} at least another time
+    # in the queue. Let's tolerate an extra one.
+    for i in range(2):
+        row = await asyncio.wait_for(q.get(), 1.0)
+        if row is None:
+            break
+        assert json.loads(row.value)["after"] is None, json
+    else:
+        pytest.fail("keep on receiving messages")
+
     await asyncio.gather(t)
