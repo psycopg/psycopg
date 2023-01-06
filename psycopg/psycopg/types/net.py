@@ -7,7 +7,7 @@ Adapters for network types.
 from typing import Callable, Optional, Type, Union, TYPE_CHECKING
 from typing_extensions import TypeAlias
 
-from .. import postgres
+from .. import _oids
 from ..pq import Format
 from ..abc import AdaptContext
 from ..adapt import Buffer, Dumper, Loader
@@ -51,7 +51,7 @@ class _LazyIpaddress:
 
 class InterfaceDumper(Dumper):
 
-    oid = postgres.types["inet"].oid
+    oid = _oids.INET_OID
 
     def dump(self, obj: Interface) -> bytes:
         return str(obj).encode()
@@ -59,7 +59,7 @@ class InterfaceDumper(Dumper):
 
 class NetworkDumper(Dumper):
 
-    oid = postgres.types["cidr"].oid
+    oid = _oids.CIDR_OID
 
     def dump(self, obj: Network) -> bytes:
         return str(obj).encode()
@@ -67,7 +67,7 @@ class NetworkDumper(Dumper):
 
 class _AIBinaryDumper(Dumper):
     format = Format.BINARY
-    oid = postgres.types["inet"].oid
+    oid = _oids.INET_OID
 
 
 class AddressBinaryDumper(_AIBinaryDumper):
@@ -111,7 +111,7 @@ class InetBinaryDumper(_AIBinaryDumper, _LazyIpaddress):
 class NetworkBinaryDumper(Dumper):
 
     format = Format.BINARY
-    oid = postgres.types["cidr"].oid
+    oid = _oids.CIDR_OID
 
     def dump(self, obj: Network) -> bytes:
         packed = obj.network_address.packed

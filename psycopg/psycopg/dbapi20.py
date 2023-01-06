@@ -9,15 +9,15 @@ import datetime as dt
 from math import floor
 from typing import Any, Sequence, Union
 
-from . import postgres
+from . import _oids
 from .abc import AdaptContext, Buffer
 from .types.string import BytesDumper, BytesBinaryDumper
 
 
 class DBAPITypeObject:
-    def __init__(self, name: str, type_names: Sequence[str]):
+    def __init__(self, name: str, oids: Sequence[int]):
         self.name = name
-        self.values = tuple(postgres.types[n].oid for n in type_names)
+        self.values = tuple(oids)
 
     def __repr__(self) -> str:
         return f"psycopg.{self.name}"
@@ -35,13 +35,33 @@ class DBAPITypeObject:
             return NotImplemented
 
 
-BINARY = DBAPITypeObject("BINARY", ("bytea",))
+BINARY = DBAPITypeObject("BINARY", (_oids.BYTEA_OID,))
 DATETIME = DBAPITypeObject(
-    "DATETIME", "timestamp timestamptz date time timetz interval".split()
+    "DATETIME",
+    (
+        _oids.TIMESTAMP_OID,
+        _oids.TIMESTAMPTZ_OID,
+        _oids.DATE_OID,
+        _oids.TIME_OID,
+        _oids.TIMETZ_OID,
+        _oids.INTERVAL_OID,
+    ),
 )
-NUMBER = DBAPITypeObject("NUMBER", "int2 int4 int8 float4 float8 numeric".split())
-ROWID = DBAPITypeObject("ROWID", ("oid",))
-STRING = DBAPITypeObject("STRING", "text varchar bpchar".split())
+NUMBER = DBAPITypeObject(
+    "NUMBER",
+    (
+        _oids.INT2_OID,
+        _oids.INT4_OID,
+        _oids.INT8_OID,
+        _oids.FLOAT4_OID,
+        _oids.FLOAT8_OID,
+        _oids.NUMERIC_OID,
+    ),
+)
+ROWID = DBAPITypeObject("ROWID", (_oids.OID_OID,))
+STRING = DBAPITypeObject(
+    "STRING", (_oids.TEXT_OID, _oids.VARCHAR_OID, _oids.BPCHAR_OID)
+)
 
 
 class Binary:

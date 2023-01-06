@@ -10,6 +10,7 @@ from typing import cast
 from decimal import Decimal
 from datetime import date, datetime
 
+from .. import _oids
 from .. import errors as e
 from .. import postgres
 from ..pq import Format
@@ -564,27 +565,27 @@ def register_range(info: RangeInfo, context: Optional[AdaptContext] = None) -> N
 
 
 class Int4RangeDumper(RangeDumper):
-    oid = postgres.types["int4range"].oid
+    oid = _oids.INT4RANGE_OID
 
 
 class Int8RangeDumper(RangeDumper):
-    oid = postgres.types["int8range"].oid
+    oid = _oids.INT8RANGE_OID
 
 
 class NumericRangeDumper(RangeDumper):
-    oid = postgres.types["numrange"].oid
+    oid = _oids.NUMRANGE_OID
 
 
 class DateRangeDumper(RangeDumper):
-    oid = postgres.types["daterange"].oid
+    oid = _oids.DATERANGE_OID
 
 
 class TimestampRangeDumper(RangeDumper):
-    oid = postgres.types["tsrange"].oid
+    oid = _oids.TSRANGE_OID
 
 
 class TimestamptzRangeDumper(RangeDumper):
-    oid = postgres.types["tstzrange"].oid
+    oid = _oids.TSTZRANGE_OID
 
 
 # Binary dumpers for builtin range types wrappers
@@ -593,81 +594,81 @@ class TimestamptzRangeDumper(RangeDumper):
 
 
 class Int4RangeBinaryDumper(RangeBinaryDumper):
-    oid = postgres.types["int4range"].oid
+    oid = _oids.INT4RANGE_OID
 
 
 class Int8RangeBinaryDumper(RangeBinaryDumper):
-    oid = postgres.types["int8range"].oid
+    oid = _oids.INT8RANGE_OID
 
 
 class NumericRangeBinaryDumper(RangeBinaryDumper):
-    oid = postgres.types["numrange"].oid
+    oid = _oids.NUMRANGE_OID
 
 
 class DateRangeBinaryDumper(RangeBinaryDumper):
-    oid = postgres.types["daterange"].oid
+    oid = _oids.DATERANGE_OID
 
 
 class TimestampRangeBinaryDumper(RangeBinaryDumper):
-    oid = postgres.types["tsrange"].oid
+    oid = _oids.TSRANGE_OID
 
 
 class TimestamptzRangeBinaryDumper(RangeBinaryDumper):
-    oid = postgres.types["tstzrange"].oid
+    oid = _oids.TSTZRANGE_OID
 
 
 # Text loaders for builtin range types
 
 
 class Int4RangeLoader(RangeLoader[int]):
-    subtype_oid = postgres.types["int4"].oid
+    subtype_oid = _oids.INT4_OID
 
 
 class Int8RangeLoader(RangeLoader[int]):
-    subtype_oid = postgres.types["int8"].oid
+    subtype_oid = _oids.INT8_OID
 
 
 class NumericRangeLoader(RangeLoader[Decimal]):
-    subtype_oid = postgres.types["numeric"].oid
+    subtype_oid = _oids.NUMERIC_OID
 
 
 class DateRangeLoader(RangeLoader[date]):
-    subtype_oid = postgres.types["date"].oid
+    subtype_oid = _oids.DATE_OID
 
 
 class TimestampRangeLoader(RangeLoader[datetime]):
-    subtype_oid = postgres.types["timestamp"].oid
+    subtype_oid = _oids.TIMESTAMP_OID
 
 
 class TimestampTZRangeLoader(RangeLoader[datetime]):
-    subtype_oid = postgres.types["timestamptz"].oid
+    subtype_oid = _oids.TIMESTAMPTZ_OID
 
 
 # Binary loaders for builtin range types
 
 
 class Int4RangeBinaryLoader(RangeBinaryLoader[int]):
-    subtype_oid = postgres.types["int4"].oid
+    subtype_oid = _oids.INT4_OID
 
 
 class Int8RangeBinaryLoader(RangeBinaryLoader[int]):
-    subtype_oid = postgres.types["int8"].oid
+    subtype_oid = _oids.INT8_OID
 
 
 class NumericRangeBinaryLoader(RangeBinaryLoader[Decimal]):
-    subtype_oid = postgres.types["numeric"].oid
+    subtype_oid = _oids.NUMERIC_OID
 
 
 class DateRangeBinaryLoader(RangeBinaryLoader[date]):
-    subtype_oid = postgres.types["date"].oid
+    subtype_oid = _oids.DATE_OID
 
 
 class TimestampRangeBinaryLoader(RangeBinaryLoader[datetime]):
-    subtype_oid = postgres.types["timestamp"].oid
+    subtype_oid = _oids.TIMESTAMP_OID
 
 
 class TimestampTZRangeBinaryLoader(RangeBinaryLoader[datetime]):
-    subtype_oid = postgres.types["timestamptz"].oid
+    subtype_oid = _oids.TIMESTAMPTZ_OID
 
 
 def register_default_adapters(context: AdaptContext) -> None:

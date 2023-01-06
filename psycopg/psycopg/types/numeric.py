@@ -9,7 +9,7 @@ from math import log
 from typing import Any, Callable, DefaultDict, Dict, Tuple, Union, cast
 from decimal import Decimal, DefaultContext, Context
 
-from .. import postgres
+from .. import _oids
 from .. import errors as e
 from ..pq import Format
 from ..abc import AdaptContext
@@ -66,7 +66,7 @@ class _SpecialValuesDumper(Dumper):
 
 class FloatDumper(_SpecialValuesDumper):
 
-    oid = postgres.types["float8"].oid
+    oid = _oids.FLOAT8_OID
 
     _special = {
         b"inf": b"'Infinity'::float8",
@@ -76,13 +76,13 @@ class FloatDumper(_SpecialValuesDumper):
 
 
 class Float4Dumper(FloatDumper):
-    oid = postgres.types["float4"].oid
+    oid = _oids.FLOAT4_OID
 
 
 class FloatBinaryDumper(Dumper):
 
     format = Format.BINARY
-    oid = postgres.types["float8"].oid
+    oid = _oids.FLOAT8_OID
 
     def dump(self, obj: float) -> bytes:
         return pack_float8(obj)
@@ -90,7 +90,7 @@ class FloatBinaryDumper(Dumper):
 
 class Float4BinaryDumper(FloatBinaryDumper):
 
-    oid = postgres.types["float4"].oid
+    oid = _oids.FLOAT4_OID
 
     def dump(self, obj: float) -> bytes:
         return pack_float4(obj)
@@ -98,7 +98,7 @@ class Float4BinaryDumper(FloatBinaryDumper):
 
 class DecimalDumper(_SpecialValuesDumper):
 
-    oid = postgres.types["numeric"].oid
+    oid = _oids.NUMERIC_OID
 
     def dump(self, obj: Decimal) -> bytes:
         if obj.is_nan():
@@ -115,23 +115,23 @@ class DecimalDumper(_SpecialValuesDumper):
 
 
 class Int2Dumper(_IntDumper):
-    oid = postgres.types["int2"].oid
+    oid = _oids.INT2_OID
 
 
 class Int4Dumper(_IntDumper):
-    oid = postgres.types["int4"].oid
+    oid = _oids.INT4_OID
 
 
 class Int8Dumper(_IntDumper):
-    oid = postgres.types["int8"].oid
+    oid = _oids.INT8_OID
 
 
 class IntNumericDumper(_IntDumper):
-    oid = postgres.types["numeric"].oid
+    oid = _oids.NUMERIC_OID
 
 
 class OidDumper(_IntDumper):
-    oid = postgres.types["oid"].oid
+    oid = _oids.OID_OID
 
 
 class IntDumper(Dumper):
@@ -363,7 +363,7 @@ NUMERIC_NINF_BIN = _pack_numeric_head(0, 0, NUMERIC_NINF, 0)
 class DecimalBinaryDumper(Dumper):
 
     format = Format.BINARY
-    oid = postgres.types["numeric"].oid
+    oid = _oids.NUMERIC_OID
 
     def dump(self, obj: Decimal) -> Buffer:
         return dump_decimal_to_numeric_binary(obj)
@@ -380,7 +380,7 @@ class NumericDumper(DecimalDumper):
 class NumericBinaryDumper(Dumper):
 
     format = Format.BINARY
-    oid = postgres.types["numeric"].oid
+    oid = _oids.NUMERIC_OID
 
     def dump(self, obj: Union[Decimal, int]) -> Buffer:
         if isinstance(obj, int):

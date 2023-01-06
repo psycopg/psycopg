@@ -46,6 +46,7 @@ paramstyle = "pyformat"
 
 # register default adapters for PostgreSQL
 adapters = postgres.adapters  # exposed by the package
+postgres.register_default_types(adapters.types)
 postgres.register_default_adapters(adapters)
 
 # After the default ones, because these can deal with the bytea oid better
