@@ -108,13 +108,7 @@ cdef class Int2BinaryDumper(CDumper):
     oid = oids.INT2_OID
 
     cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
-        cdef int16_t *buf = <int16_t *>CDumper.ensure_size(
-            rv, offset, sizeof(int16_t))
-        cdef int16_t val = <int16_t>PyLong_AsLongLong(obj)
-        # swap bytes if needed
-        cdef uint16_t *ptvar = <uint16_t *>(&val)
-        buf[0] = endian.htobe16(ptvar[0])
-        return sizeof(int16_t)
+        return dump_int_to_int2_binary(obj, rv, offset)
 
 
 @cython.final
@@ -124,13 +118,7 @@ cdef class Int4BinaryDumper(CDumper):
     oid = oids.INT4_OID
 
     cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
-        cdef int32_t *buf = <int32_t *>CDumper.ensure_size(
-            rv, offset, sizeof(int32_t))
-        cdef int32_t val = <int32_t>PyLong_AsLongLong(obj)
-        # swap bytes if needed
-        cdef uint32_t *ptvar = <uint32_t *>(&val)
-        buf[0] = endian.htobe32(ptvar[0])
-        return sizeof(int32_t)
+        return dump_int_to_int4_binary(obj, rv, offset)
 
 
 @cython.final
@@ -140,13 +128,7 @@ cdef class Int8BinaryDumper(CDumper):
     oid = oids.INT8_OID
 
     cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
-        cdef int64_t *buf = <int64_t *>CDumper.ensure_size(
-            rv, offset, sizeof(int64_t))
-        cdef int64_t val = PyLong_AsLongLong(obj)
-        # swap bytes if needed
-        cdef uint64_t *ptvar = <uint64_t *>(&val)
-        buf[0] = endian.htobe64(ptvar[0])
-        return sizeof(int64_t)
+        return dump_int_to_int8_binary(obj, rv, offset)
 
 
 cdef extern from *:
@@ -185,6 +167,8 @@ cdef class IntNumericBinaryDumper(CDumper):
 
 
 cdef class IntDumper(CDumper):
+
+    format = PQ_TEXT
 
     cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
         raise TypeError(
@@ -711,6 +695,42 @@ cdef Py_ssize_t dump_int_or_sub_to_text(
         memcpy(buf, src, length)
 
     return length
+
+
+cdef Py_ssize_t dump_int_to_int2_binary(
+    obj, bytearray rv, Py_ssize_t offset
+) except -1:
+    cdef int16_t *buf = <int16_t *>CDumper.ensure_size(
+        rv, offset, sizeof(int16_t))
+    cdef int16_t val = <int16_t>PyLong_AsLongLong(obj)
+    # swap bytes if needed
+    cdef uint16_t *ptvar = <uint16_t *>(&val)
+    buf[0] = endian.htobe16(ptvar[0])
+    return sizeof(int16_t)
+
+
+cdef Py_ssize_t dump_int_to_int4_binary(
+    obj, bytearray rv, Py_ssize_t offset
+) except -1:
+    cdef int32_t *buf = <int32_t *>CDumper.ensure_size(
+        rv, offset, sizeof(int32_t))
+    cdef int32_t val = <int32_t>PyLong_AsLongLong(obj)
+    # swap bytes if needed
+    cdef uint32_t *ptvar = <uint32_t *>(&val)
+    buf[0] = endian.htobe32(ptvar[0])
+    return sizeof(int32_t)
+
+
+cdef Py_ssize_t dump_int_to_int8_binary(
+    obj, bytearray rv, Py_ssize_t offset
+) except -1:
+    cdef int64_t *buf = <int64_t *>CDumper.ensure_size(
+        rv, offset, sizeof(int64_t))
+    cdef int64_t val = PyLong_AsLongLong(obj)
+    # swap bytes if needed
+    cdef uint64_t *ptvar = <uint64_t *>(&val)
+    buf[0] = endian.htobe64(ptvar[0])
+    return sizeof(int64_t)
 
 
 cdef Py_ssize_t dump_int_to_numeric_binary(obj, bytearray rv, Py_ssize_t offset) except -1:
