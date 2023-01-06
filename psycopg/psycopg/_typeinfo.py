@@ -6,6 +6,7 @@ information to the adapters if needed.
 """
 
 # Copyright (C) 2020 The Psycopg Team
+
 from enum import Enum
 from typing import Any, Dict, Iterator, Optional, overload
 from typing import Sequence, Tuple, Type, TypeVar, Union, TYPE_CHECKING

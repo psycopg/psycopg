@@ -14,7 +14,7 @@ from . import postgres
 from . import errors as e
 from .abc import Buffer, LoadFunc, AdaptContext, PyFormat, DumperKey, NoneType
 from .rows import Row, RowMaker
-from .postgres import INVALID_OID, TEXT_OID
+from ._oids import INVALID_OID, TEXT_OID
 from ._encodings import pgconn_encoding
 
 if TYPE_CHECKING:

@@ -99,12 +99,6 @@ for t in [
     types.add(t)
 
 
-# A few oids used a bit everywhere
-INVALID_OID = 0
-TEXT_OID = types["text"].oid
-TEXT_ARRAY_OID = types["text"].array_oid
-
-
 def register_default_adapters(context: AdaptContext) -> None:
 
     from .types import array, bool, composite, datetime, enum, json, multirange
