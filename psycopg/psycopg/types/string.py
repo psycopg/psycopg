@@ -11,6 +11,7 @@ from ..pq import Format, Escaping
 from ..abc import AdaptContext
 from ..adapt import Buffer, Dumper, Loader
 from ..errors import DataError
+from .._oids import INVALID_OID
 from .._encodings import conn_encoding
 
 if TYPE_CHECKING:
@@ -215,7 +216,7 @@ def register_default_adapters(context: AdaptContext) -> None:
     adapters.register_dumper(str, StrDumper)
     adapters.register_dumper(str, StrDumperUnknown)
 
-    adapters.register_loader(postgres.INVALID_OID, TextLoader)
+    adapters.register_loader(INVALID_OID, TextLoader)
     adapters.register_loader("bpchar", TextLoader)
     adapters.register_loader("name", TextLoader)
     adapters.register_loader("text", TextLoader)
@@ -235,5 +236,5 @@ def register_default_adapters(context: AdaptContext) -> None:
     adapters.register_dumper(memoryview, BytesBinaryDumper)
 
     adapters.register_loader("bytea", ByteaLoader)
-    adapters.register_loader(postgres.INVALID_OID, ByteaBinaryLoader)
+    adapters.register_loader(INVALID_OID, ByteaBinaryLoader)
     adapters.register_loader("bytea", ByteaBinaryLoader)

@@ -15,8 +15,8 @@ from .. import postgres
 from ..pq import Format
 from ..abc import AdaptContext, Buffer, Dumper, DumperKey
 from ..adapt import RecursiveDumper, RecursiveLoader, PyFormat
+from .._oids import INVALID_OID, TEXT_OID
 from .._struct import pack_len, unpack_len
-from ..postgres import INVALID_OID, TEXT_OID
 from .._typeinfo import RangeInfo as RangeInfo  # exported here
 
 RANGE_EMPTY = 0x01  # range is empty

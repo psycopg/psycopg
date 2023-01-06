@@ -14,8 +14,8 @@ from .. import pq
 from .. import postgres
 from ..abc import AdaptContext, Buffer
 from ..adapt import Transformer, PyFormat, RecursiveDumper, Loader
+from .._oids import TEXT_OID
 from .._struct import pack_len, unpack_len
-from ..postgres import TEXT_OID
 from .._typeinfo import CompositeInfo as CompositeInfo  # exported here
 from .._encodings import _as_python_identifier
 

@@ -8,7 +8,7 @@ from enum import Enum
 from .._typeinfo import TypeInfo, TypesRegistry
 
 from ..abc import AdaptContext, NoneType
-from ..postgres import TEXT_OID
+from .._oids import TEXT_OID
 from .._adapters_map import AdaptersMap
 from ..types.enum import EnumDumper, EnumBinaryDumper
 from ..types.none import NoneDumper
