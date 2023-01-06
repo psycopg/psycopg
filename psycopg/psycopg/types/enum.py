@@ -3,22 +3,62 @@ Adapters for the enum type.
 """
 from enum import Enum
 from typing import Any, Dict, Generic, Optional, Mapping, Sequence
-from typing import Tuple, Type, TypeVar, Union, cast
+from typing import Tuple, Type, TypeVar, Union, cast, TYPE_CHECKING
 from typing_extensions import TypeAlias
 
 from .. import postgres
 from .. import errors as e
 from ..pq import Format
-from ..abc import AdaptContext
+from ..abc import AdaptContext, Query
 from ..adapt import Buffer, Dumper, Loader
 from .._encodings import conn_encoding
-from .._typeinfo import EnumInfo as EnumInfo  # exported here
+from .._typeinfo import TypeInfo
+
+if TYPE_CHECKING:
+    from ..connection import BaseConnection
 
 E = TypeVar("E", bound=Enum)
 
 EnumDumpMap: TypeAlias = Dict[E, bytes]
 EnumLoadMap: TypeAlias = Dict[bytes, E]
 EnumMapping: TypeAlias = Union[Mapping[E, str], Sequence[Tuple[E, str]], None]
+
+
+class EnumInfo(TypeInfo):
+    """Manage information about an enum type."""
+
+    def __init__(
+        self,
+        name: str,
+        oid: int,
+        array_oid: int,
+        labels: Sequence[str],
+    ):
+        super().__init__(name, oid, array_oid)
+        self.labels = labels
+        # Will be set by register_enum()
+        self.enum: Optional[Type[Enum]] = None
+
+    @classmethod
+    def _get_info_query(cls, conn: "BaseConnection[Any]") -> Query:
+        from ..sql import SQL
+
+        return SQL(
+            """\
+SELECT name, oid, array_oid, array_agg(label) AS labels
+FROM (
+    SELECT
+        t.typname AS name, t.oid AS oid, t.typarray AS array_oid,
+        e.enumlabel AS label
+    FROM pg_type t
+    LEFT JOIN  pg_enum e
+    ON e.enumtypid = t.oid
+    WHERE t.oid = {regtype}
+    ORDER BY e.enumsortorder
+) x
+GROUP BY name, oid, array_oid
+"""
+        ).format(regtype=cls._to_regtype(conn))
 
 
 class _BaseEnumLoader(Loader, Generic[E]):

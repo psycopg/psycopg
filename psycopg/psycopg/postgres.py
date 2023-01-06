@@ -4,7 +4,7 @@ Types configuration specific to PostgreSQL.
 
 # Copyright (C) 2020 The Psycopg Team
 
-from ._typeinfo import TypeInfo, RangeInfo, MultirangeInfo, TypesRegistry
+from ._typeinfo import TypeInfo, TypesRegistry
 from .abc import AdaptContext
 from ._adapters_map import AdaptersMap
 
@@ -16,6 +16,9 @@ adapters = AdaptersMap(types=types)
 
 
 def register_default_types(types: TypesRegistry) -> None:
+
+    from .types.range import RangeInfo
+    from .types.multirange import MultirangeInfo
 
     # Use tools/update_oids.py to update this data.
     for t in [

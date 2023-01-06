@@ -6,19 +6,23 @@ Support for range types adaptation.
 
 import re
 from typing import Any, Callable, Dict, Generic, List, Optional, TypeVar, Type, Tuple
-from typing import cast
+from typing import cast, TYPE_CHECKING
 from decimal import Decimal
 from datetime import date, datetime
 
+from .. import sql
 from .. import _oids
 from .. import errors as e
 from .. import postgres
 from ..pq import Format
-from ..abc import AdaptContext, Buffer, Dumper, DumperKey
+from ..abc import AdaptContext, Buffer, Dumper, DumperKey, Query
 from ..adapt import RecursiveDumper, RecursiveLoader, PyFormat
 from .._oids import INVALID_OID, TEXT_OID
 from .._struct import pack_len, unpack_len
-from .._typeinfo import RangeInfo as RangeInfo  # exported here
+from .._typeinfo import TypeInfo, TypesRegistry
+
+if TYPE_CHECKING:
+    from ..connection import BaseConnection
 
 RANGE_EMPTY = 0x01  # range is empty
 RANGE_LB_INC = 0x02  # lower bound is inclusive
@@ -29,6 +33,39 @@ RANGE_UB_INF = 0x10  # upper bound is +infinity
 _EMPTY_HEAD = bytes([RANGE_EMPTY])
 
 T = TypeVar("T")
+
+
+class RangeInfo(TypeInfo):
+    """Manage information about a range type."""
+
+    def __init__(
+        self,
+        name: str,
+        oid: int,
+        array_oid: int,
+        *,
+        regtype: str = "",
+        subtype_oid: int,
+    ):
+        super().__init__(name, oid, array_oid, regtype=regtype)
+        self.subtype_oid = subtype_oid
+
+    @classmethod
+    def _get_info_query(cls, conn: "BaseConnection[Any]") -> Query:
+        return sql.SQL(
+            """\
+SELECT t.typname AS name, t.oid AS oid, t.typarray AS array_oid,
+    t.oid::regtype::text AS regtype,
+    r.rngsubtype AS subtype_oid
+FROM pg_type t
+JOIN pg_range r ON t.oid = r.rngtypid
+WHERE t.oid = {regtype}
+"""
+        ).format(regtype=cls._to_regtype(conn))
+
+    def _added(self, registry: TypesRegistry) -> None:
+        # Map ranges subtypes to info
+        registry._registry[RangeInfo, self.subtype_oid] = self
 
 
 class Range(Generic[T]):
