@@ -47,7 +47,7 @@ int pg_lltoa(int64_t value, char *a);
     const int MAXINT8LEN
 
 
-cdef class _NumberDumper(CDumper):
+cdef class _IntDumper(CDumper):
 
     format = PQ_TEXT
 
@@ -69,26 +69,34 @@ cdef class _NumberDumper(CDumper):
         return rv
 
 
+cdef class _IntOrSubclassDumper(_IntDumper):
+
+    format = PQ_TEXT
+
+    cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
+        return dump_int_or_sub_to_text(obj, rv, offset)
+
+
 @cython.final
-cdef class Int2Dumper(_NumberDumper):
+cdef class Int2Dumper(_IntOrSubclassDumper):
 
     oid = oids.INT2_OID
 
 
 @cython.final
-cdef class Int4Dumper(_NumberDumper):
+cdef class Int4Dumper(_IntOrSubclassDumper):
 
     oid = oids.INT4_OID
 
 
 @cython.final
-cdef class Int8Dumper(_NumberDumper):
+cdef class Int8Dumper(_IntOrSubclassDumper):
 
     oid = oids.INT8_OID
 
 
 @cython.final
-cdef class IntNumericDumper(_NumberDumper):
+cdef class IntNumericDumper(_IntOrSubclassDumper):
 
     oid = oids.NUMERIC_OID
 
@@ -176,7 +184,7 @@ cdef class IntNumericBinaryDumper(CDumper):
         return dump_int_to_numeric_binary(obj, rv, offset)
 
 
-cdef class IntDumper(_NumberDumper):
+cdef class IntDumper(CDumper):
 
     cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
         raise TypeError(
@@ -659,6 +667,28 @@ cdef Py_ssize_t dump_decimal_to_numeric_binary(
 
 
 cdef Py_ssize_t dump_int_to_text(obj, bytearray rv, Py_ssize_t offset) except -1:
+    cdef long long val
+    cdef int overflow
+    cdef char *buf
+    cdef char *src
+    cdef Py_ssize_t length
+
+    val = PyLong_AsLongLongAndOverflow(obj, &overflow)
+    if not overflow:
+        buf = CDumper.ensure_size(rv, offset, MAXINT8LEN + 1)
+        length = pg_lltoa(val, buf)
+    else:
+        b = bytes(str(obj), "utf-8")
+        PyBytes_AsStringAndSize(b, &src, &length)
+        buf = CDumper.ensure_size(rv, offset, length)
+        memcpy(buf, src, length)
+
+    return length
+
+
+cdef Py_ssize_t dump_int_or_sub_to_text(
+    obj, bytearray rv, Py_ssize_t offset
+) except -1:
     cdef long long val
     cdef int overflow
     cdef char *buf
