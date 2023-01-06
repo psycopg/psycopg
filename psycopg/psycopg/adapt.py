@@ -5,17 +5,18 @@ Entry point into the adaptation system.
 # Copyright (C) 2020 The Psycopg Team
 
 from abc import ABC, abstractmethod
-from typing import Any, Optional, Type, TYPE_CHECKING
+from typing import Any, Optional, TYPE_CHECKING
 
 from . import pq, abc
-from . import _adapters_map
+
+# Objects exported here
 from ._enums import PyFormat as PyFormat
-from ._cmodule import _psycopg
+from ._transformer import Transformer as Transformer
+from ._adapters_map import AdaptersMap as AdaptersMap  # noqa: F401
 
 if TYPE_CHECKING:
     from .connection import BaseConnection
 
-AdaptersMap = _adapters_map.AdaptersMap
 Buffer = abc.Buffer
 
 ORD_BS = ord("\\")
@@ -133,17 +134,6 @@ class Loader(abc.Loader, ABC):
     def load(self, data: Buffer) -> Any:
         """Convert a PostgreSQL value to a Python object."""
         ...
-
-
-Transformer: Type["abc.Transformer"]
-
-# Override it with fast object if available
-if _psycopg:
-    Transformer = _psycopg.Transformer
-else:
-    from . import _transform
-
-    Transformer = _transform.Transformer
 
 
 class RecursiveDumper(Dumper):

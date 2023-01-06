@@ -11,6 +11,7 @@ from typing import Any, Dict, Iterator, Optional, overload
 from typing import Sequence, Tuple, Type, TypeVar, Union, TYPE_CHECKING
 from typing_extensions import TypeAlias
 
+from . import sql
 from . import errors as e
 from .abc import AdaptContext, Query
 from .rows import dict_row
@@ -18,7 +19,6 @@ from .rows import dict_row
 if TYPE_CHECKING:
     from .connection import BaseConnection, Connection
     from .connection_async import AsyncConnection
-    from .sql import Identifier, SQL
 
 T = TypeVar("T", bound="TypeInfo")
 RegistryKey: TypeAlias = Union[str, int, Tuple[type, int]]
@@ -55,27 +55,26 @@ class TypeInfo:
     @overload
     @classmethod
     def fetch(
-        cls: Type[T], conn: "Connection[Any]", name: Union[str, "Identifier"]
+        cls: Type[T], conn: "Connection[Any]", name: Union[str, sql.Identifier]
     ) -> Optional[T]:
         ...
 
     @overload
     @classmethod
     async def fetch(
-        cls: Type[T], conn: "AsyncConnection[Any]", name: Union[str, "Identifier"]
+        cls: Type[T], conn: "AsyncConnection[Any]", name: Union[str, sql.Identifier]
     ) -> Optional[T]:
         ...
 
     @classmethod
     def fetch(
-        cls: Type[T], conn: "BaseConnection[Any]", name: Union[str, "Identifier"]
+        cls: Type[T], conn: "BaseConnection[Any]", name: Union[str, sql.Identifier]
     ) -> Any:
         """Query a system catalog to read information about a type."""
-        from .sql import Composable
         from .connection import Connection
         from .connection_async import AsyncConnection
 
-        if isinstance(name, Composable):
+        if isinstance(name, sql.Composable):
             name = name.as_string(conn)
 
         if isinstance(conn, Connection):
@@ -147,9 +146,7 @@ class TypeInfo:
 
     @classmethod
     def _get_info_query(cls, conn: "BaseConnection[Any]") -> Query:
-        from .sql import SQL
-
-        return SQL(
+        return sql.SQL(
             """\
 SELECT
     typname AS name, oid, typarray AS array_oid,
@@ -172,17 +169,15 @@ ORDER BY t.oid
             return False
 
     @classmethod
-    def _to_regtype(cls, conn: "BaseConnection[Any]") -> "SQL":
+    def _to_regtype(cls, conn: "BaseConnection[Any]") -> sql.SQL:
         # `to_regtype()` returns the type oid or NULL, unlike the :: operator,
         # which returns the type or raises an exception, which requires
         # a transaction rollback and leaves traces in the server logs.
 
-        from .sql import SQL
-
         if cls._has_to_regtype_function(conn):
-            return SQL("to_regtype(%(name)s)")
+            return sql.SQL("to_regtype(%(name)s)")
         else:
-            return SQL("%(name)s::regtype")
+            return sql.SQL("%(name)s::regtype")
 
     def _added(self, registry: "TypesRegistry") -> None:
         """Method called by the `!registry` when the object is added there."""
