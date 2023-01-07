@@ -15,6 +15,8 @@ Psycopg 3.1.8 (unreleased)
 
 - Don't pollute server logs when types looked for by `TypeInfo.fetch()` 
   are not found (:ticket:`#473`).
+- Set `Cursor.rowcount` to the number of rows of each result set from
+  `~Cursor.executemany()` when called with `!returning=True` (:ticket:`#479`).
 
 Current release
 ---------------
