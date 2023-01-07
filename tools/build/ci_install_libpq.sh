@@ -18,9 +18,16 @@ case "$libpq" in
         ;;
 
     oldest)
+        curl -sL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+            | gpg --dearmor \
+            | sudo tee /etc/apt/trusted.gpg.d/apt.postgresql.org.gpg > /dev/null
+
+        rel=$(lsb_release -c -s)
+        echo "deb http://apt.postgresql.org/pub/repos/apt ${rel}-pgdg main 10" \
+            | sudo tee -a /etc/apt/sources.list.d/pgdg.list > /dev/null
+        sudo apt-get -qq update
         pqver=$(apt-cache show libpq5 | grep ^Version: | tail -1 | awk '{print $2}')
-        sudo apt-get -qq -y --allow-downgrades install \
-            "libpq-dev=${pqver}" "libpq5=${pqver}"
+        sudo apt-get -qq -y --allow-downgrades install "libpq-dev=${pqver}" "libpq5=${pqver}"
         ;;
 
     newest)
