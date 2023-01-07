@@ -62,6 +62,10 @@ Test options
 - ``pytest`` option ``--pq-debug`` can be used to log access to libpq's
   ``PGconn`` functions.
 
+- Some features, such as ``executemany()``, uses the pipeline mode
+  automatically when a recent libpq (>= 14) is used. To disable this, set
+  ``PSYCOPG_NO_PIPELINE`` environment variable.
+
 
 Testing in docker
 -----------------

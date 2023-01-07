@@ -5,6 +5,7 @@ commands pipeline management
 # Copyright (C) 2021 The Psycopg Team
 
 import logging
+import os
 from types import TracebackType
 from typing import Any, List, Optional, Union, Tuple, Type, TypeVar, TYPE_CHECKING
 from typing_extensions import TypeAlias
@@ -35,6 +36,7 @@ BAD = pq.ConnStatus.BAD
 ACTIVE = pq.TransactionStatus.ACTIVE
 
 logger = logging.getLogger("psycopg")
+disabled = "PSYCOPG_NO_PIPELINE" in os.environ
 
 
 class BasePipeline:
@@ -62,6 +64,8 @@ class BasePipeline:
     @classmethod
     def is_supported(cls) -> bool:
         """Return `!True` if the psycopg libpq wrapper supports pipeline mode."""
+        if disabled:
+            return False
         if BasePipeline._is_supported is None:
             BasePipeline._is_supported = not cls._not_supported_reason()
         return BasePipeline._is_supported
