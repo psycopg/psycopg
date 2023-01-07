@@ -173,7 +173,7 @@ ORDER BY t.oid
 
     @classmethod
     def _to_regtype(cls, conn: "BaseConnection[Any]") -> "SQL":
-        # `to_regtype()` returns the type oid or NULL, unless the :: operator,
+        # `to_regtype()` returns the type oid or NULL, unlike the :: operator,
         # which returns the type or raises an exception, which requires
         # a transaction rollback and leaves traces in the server logs.
 
