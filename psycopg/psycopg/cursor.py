@@ -201,8 +201,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
         else:
             assert results is not None
             self._check_results(results)
-            self._results = results
-            self._select_current_result(0)
+            self._set_results(results)
 
         self._last_query = query
 
@@ -413,8 +412,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
             raise e.ProgrammingError("COPY cannot be mixed with other operations")
 
         self._check_copy_result(results[0])
-        self._results = results
-        self._select_current_result(0)
+        self._set_results(results)
 
     def _execute_send(
         self,
@@ -528,6 +526,10 @@ class BaseCursor(Generic[ConnectionType, Row]):
             self._rowcount = nrows if nrows is not None else -1
 
         self._make_row = self._make_row_maker()
+
+    def _set_results(self, results: List["PGresult"]) -> None:
+        self._results = results
+        self._select_current_result(0)
 
     def _set_results_from_pipeline(self, results: List["PGresult"]) -> None:
         self._check_results(results)
