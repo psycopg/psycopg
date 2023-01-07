@@ -67,7 +67,7 @@ jobs:
             -c max_prepared_transactions=10
 
       - name: Install the wanted libpq version
-        run: ./tools/build/ci_install_libpq.sh ${{ matrix.libpq }}
+        run: sudo ./tools/build/ci_install_libpq.sh ${{ matrix.libpq }}
 
       - name: Include psycopg-c to the packages to install
         if: ${{ matrix.impl == 'c' }}
@@ -258,7 +258,7 @@ jobs:
             cockroachdb/cockroach:${{ matrix.crdb }} start-single-node --insecure
 
       - name: Install the wanted libpq version
-        run: ./tools/build/ci_install_libpq.sh ${{ matrix.libpq }}
+        run: sudo ./tools/build/ci_install_libpq.sh ${{ matrix.libpq }}
 
       - name: Include psycopg-c to the packages to install
         if: ${{ matrix.impl == 'c' }}
