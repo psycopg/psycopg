@@ -551,8 +551,6 @@ class BaseCursor(Generic[ConnectionType, Row]):
             # change it to the value of that result only, but we hope nobody
             # will notice.
             # You haven't read this comment.
-            if self._rowcount < 0:
-                self._rowcount = 0
             for res in results:
                 self._rowcount += res.command_tuples or 0
 
