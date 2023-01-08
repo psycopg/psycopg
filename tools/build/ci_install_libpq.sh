@@ -14,8 +14,7 @@ rel=$(lsb_release -c -s)
 setup_repo () {
     version=${1:-}
     curl -sL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
-        | gpg --dearmor \
-        | sudo tee /etc/apt/trusted.gpg.d/apt.postgresql.org.gpg > /dev/null
+        | sudo tee /etc/apt/trusted.gpg.d/apt.postgresql.org.asc > /dev/null
     echo "deb http://apt.postgresql.org/pub/repos/apt ${rel}-pgdg main ${version}" \
         | sudo tee -a /etc/apt/sources.list.d/pgdg.list > /dev/null
     sudo apt-get -qq update
