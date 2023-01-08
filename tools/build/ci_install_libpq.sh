@@ -13,11 +13,11 @@ rel=$(lsb_release -c -s)
 
 setup_repo () {
     version=${1:-}
-    curl -sL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
-        | sudo tee /etc/apt/trusted.gpg.d/apt.postgresql.org.asc > /dev/null
+    curl -sL -o /etc/apt/trusted.gpg.d/apt.postgresql.org.asc \
+        https://www.postgresql.org/media/keys/ACCC4CF8.asc
     echo "deb http://apt.postgresql.org/pub/repos/apt ${rel}-pgdg main ${version}" \
-        | sudo tee -a /etc/apt/sources.list.d/pgdg.list > /dev/null
-    sudo apt-get -qq update
+        >> /etc/apt/sources.list.d/pgdg.list
+    apt-get -qq update
 }
 
 case "$libpq" in
@@ -30,13 +30,13 @@ case "$libpq" in
     oldest)
         setup_repo 10
         pqver=$(apt-cache show libpq5 | grep ^Version: | tail -1 | awk '{print $2}')
-        sudo apt-get -qq -y --allow-downgrades install "libpq-dev=${pqver}" "libpq5=${pqver}"
+        apt-get -qq -y --allow-downgrades install "libpq-dev=${pqver}" "libpq5=${pqver}"
         ;;
 
     newest)
         setup_repo
         pqver=$(apt-cache show libpq5 | grep ^Version: | head -1 | awk '{print $2}')
-        sudo apt-get -qq -y install "libpq-dev=${pqver}" "libpq5=${pqver}"
+        apt-get -qq -y install "libpq-dev=${pqver}" "libpq5=${pqver}"
         ;;
 
     *)
