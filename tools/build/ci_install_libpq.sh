@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Install the desired libpw in github action (Linux runner)
+# Install the desired libpq in github action (Linux runner)
 #
 # Specify `oldest` or `newest` as first argument in order to choose the oldest
 # available to the debian distro or the newest available from the pgdg ppa.
@@ -9,6 +9,16 @@ set -euo pipefail
 set -x
 
 libpq=${1:-}
+rel=$(lsb_release -c -s)
+
+setup_repo () {
+    version=${1:-}
+    curl -sL -o /etc/apt/trusted.gpg.d/apt.postgresql.org.asc \
+        https://www.postgresql.org/media/keys/ACCC4CF8.asc
+    echo "deb http://apt.postgresql.org/pub/repos/apt ${rel}-pgdg main ${version}" \
+        >> /etc/apt/sources.list.d/pgdg.list
+    apt-get -qq update
+}
 
 case "$libpq" in
     "")
@@ -18,26 +28,15 @@ case "$libpq" in
         ;;
 
     oldest)
+        setup_repo 10
         pqver=$(apt-cache show libpq5 | grep ^Version: | tail -1 | awk '{print $2}')
-        sudo apt-get -qq -y --allow-downgrades install \
-            "libpq-dev=${pqver}" "libpq5=${pqver}"
+        apt-get -qq -y --allow-downgrades install "libpq-dev=${pqver}" "libpq5=${pqver}"
         ;;
 
     newest)
-        curl -sL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
-            | gpg --dearmor \
-            | sudo tee /etc/apt/trusted.gpg.d/apt.postgresql.org.gpg > /dev/null
-
-        # NOTE: in order to test with a preview release, add its number to
-        # the deb entry. For instance, to test on preview Postgres 16, use:
-        # "deb http://apt.postgresql.org/pub/repos/apt ${rel}-pgdg main 16"
-        rel=$(lsb_release -c -s)
-        echo "deb http://apt.postgresql.org/pub/repos/apt ${rel}-pgdg main" \
-            | sudo tee -a /etc/apt/sources.list.d/pgdg.list > /dev/null
-        sudo apt-get -qq update
-
+        setup_repo
         pqver=$(apt-cache show libpq5 | grep ^Version: | head -1 | awk '{print $2}')
-        sudo apt-get -qq -y install "libpq-dev=${pqver}" "libpq5=${pqver}"
+        apt-get -qq -y install "libpq-dev=${pqver}" "libpq5=${pqver}"
         ;;
 
     *)
