@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Install the desired libpw in github action (Linux runner)
+# Install the desired libpq in github action (Linux runner)
 #
 # Specify `oldest` or `newest` as first argument in order to choose the oldest
 # available to the debian distro or the newest available from the pgdg ppa.
