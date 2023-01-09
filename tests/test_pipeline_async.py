@@ -327,9 +327,10 @@ async def test_executemany(aconn):
             [(10,), (20,)],
             returning=True,
         )
-        assert cur.rowcount == 2
+        assert cur.rowcount == 1
         assert (await cur.fetchone()) == (10,)
         assert cur.nextset()
+        assert cur.rowcount == 1
         assert (await cur.fetchone()) == (20,)
         assert cur.nextset() is None
 

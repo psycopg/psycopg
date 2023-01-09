@@ -105,6 +105,11 @@ The `!Cursor` class
         methods. Each input parameter will produce a separate result set: use
         `nextset()` to read the results of the queries after the first one.
 
+        The value of `rowcount` is set to the cumulated number of rows
+        affected by queries; except when using `!returning=True`, in which
+        case it is set to the number of rows in the current result set (i.e.
+        the first one, until `nextset()` gets called).
+
         See :ref:`query-parameters` for all the details about executing
         queries.
 
@@ -239,6 +244,10 @@ The `!Cursor` class
         a successful command, such as ``CREATE TABLE`` or ``UPDATE 42``.
 
     .. autoattribute:: rowcount
+
+        From `executemany()`, unless called with `!returning=True`, this is
+        the cumulated number of rows affected by executed commands.
+
     .. autoattribute:: rownumber
 
     .. attribute:: _query

@@ -219,7 +219,8 @@ class BaseCursor(Generic[ConnectionType, Row]):
         assert pipeline
 
         yield from self._start_query(query)
-        self._rowcount = 0
+        if not returning:
+            self._rowcount = 0
 
         assert self._execmany_returning is None
         self._execmany_returning = returning
@@ -251,8 +252,9 @@ class BaseCursor(Generic[ConnectionType, Row]):
         Generator implementing `Cursor.executemany()` with pipelines not available.
         """
         yield from self._start_query(query)
+        if not returning:
+            self._rowcount = 0
         first = True
-        nrows = 0
         for params in params_seq:
             if first:
                 pgq = self._convert_query(query, params)
@@ -266,17 +268,15 @@ class BaseCursor(Generic[ConnectionType, Row]):
             self._check_results(results)
             if returning:
                 self._results.extend(results)
-
-            for res in results:
-                nrows += res.command_tuples or 0
+            else:
+                # In non-returning case, set rowcount to the cumulated number
+                # of rows of executed queries.
+                for res in results:
+                    self._rowcount += res.command_tuples or 0
 
         if self._results:
             self._select_current_result(0)
 
-        # Override rowcount for the first result. Calls to nextset() will change
-        # it to the value of that result only, but we hope nobody will notice.
-        # You haven't read this comment.
-        self._rowcount = nrows
         self._last_query = query
 
         for cmd in self._conn._prepared.get_maintenance_commands():
@@ -545,16 +545,11 @@ class BaseCursor(Generic[ConnectionType, Row]):
                 self._results.extend(results)
                 if first_batch:
                     self._select_current_result(0)
-                    self._rowcount = 0
-
-            # Override rowcount for the first result. Calls to nextset() will
-            # change it to the value of that result only, but we hope nobody
-            # will notice.
-            # You haven't read this comment.
-            if self._rowcount < 0:
-                self._rowcount = 0
-            for res in results:
-                self._rowcount += res.command_tuples or 0
+            else:
+                # In non-returning case, set rowcount to the cumulated number of
+                # rows of executed queries.
+                for res in results:
+                    self._rowcount += res.command_tuples or 0
 
     def _send_prepare(self, name: bytes, query: PostgresQuery) -> None:
         if self._conn._pipeline:
