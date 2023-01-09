@@ -52,8 +52,7 @@ cdef class PostgresQuery:
         self.query = b""
         self._order: Optional[List[str]] = None
 
-    @classmethod
-    def convert(self, query: Query, vars: Optional[Params]) -> None:
+    cpdef convert(self, query: Query, vars: Optional[Params]):
         """
         Set up the query and parameters to convert.
 
@@ -81,7 +80,7 @@ cdef class PostgresQuery:
         self.dump(vars)
 
     @classmethod
-    def dump(self, vars: Optional[Params]) -> None:
+    def dump(self, vars: Optional[Params]):
         """
         Process a new set of variables on the query processed by `convert()`.
 
@@ -98,7 +97,6 @@ cdef class PostgresQuery:
             self.types = ()
             self.formats = None
 
-
 cdef class PostgresClientQuery(PostgresQuery):
     """
     PostgresQuery subclass merging query and arguments client-side.
@@ -106,8 +104,7 @@ cdef class PostgresClientQuery(PostgresQuery):
 
     cdef bytes template;
 
-    @classmethod
-    def convert(self, query: Query, vars: Optional[Params]) -> None:
+    cpdef convert(self, query: Query, vars: Optional[Params]):
         """
         Set up the query and parameters to convert.
 
@@ -132,7 +129,7 @@ cdef class PostgresClientQuery(PostgresQuery):
         self.dump(vars)
 
     @classmethod
-    def dump(self, vars: Optional[Params]) -> None:
+    def dump(self, vars: Optional[Params]):
         """
         Process a new set of variables on the query processed by `convert()`.
 
@@ -141,8 +138,7 @@ cdef class PostgresClientQuery(PostgresQuery):
         if vars is not None:
             params = _validate_and_reorder_params(self._parts, vars, self._order)
             self.params = tuple(
-                self._tx.as_literal(p) if p is not None else b"NULL" for p in params
-            )
+                self._tx.as_literal(p) if p is not None else b"NULL" for p in params)
             self.query = self.template % self.params
         else:
             self.params = None
