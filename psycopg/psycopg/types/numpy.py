@@ -4,12 +4,12 @@ Adapters for numpy types.
 
 # Copyright (C) 2022 The Psycopg Team
 
-from typing import Any, Optional
+from typing import Any
 
-from .. import postgres
-from .._struct import pack_int2, pack_int4, pack_int8
-from ..abc import AdaptContext, Buffer
+from .. import _oids
 from ..pq import Format
+from ..abc import AdaptContext, Buffer
+from .._struct import pack_int2, pack_int4, pack_int8
 
 from .bool import BoolDumper, BoolBinaryDumper
 from .numeric import _IntDumper, dump_int_to_numeric_binary
@@ -17,26 +17,25 @@ from .numeric import FloatDumper, Float4Dumper, FloatBinaryDumper, Float4BinaryD
 
 
 class NPInt16Dumper(_IntDumper):
-    oid = postgres.types["int2"].oid
+    oid = _oids.INT2_OID
 
 
 class NPInt32Dumper(_IntDumper):
-    oid = postgres.types["int4"].oid
+    oid = _oids.INT4_OID
 
 
 class NPInt64Dumper(_IntDumper):
-    oid = postgres.types["int8"].oid
+    oid = _oids.INT8_OID
 
 
 class NPNumericDumper(_IntDumper):
-    oid = postgres.types["numeric"].oid
+    oid = _oids.NUMERIC_OID
 
 
 # Binary Dumpers
 
 
 class NPInt16BinaryDumper(NPInt16Dumper):
-
     format = Format.BINARY
 
     def dump(self, obj: Any) -> bytes:
@@ -44,7 +43,6 @@ class NPInt16BinaryDumper(NPInt16Dumper):
 
 
 class NPInt32BinaryDumper(NPInt32Dumper):
-
     format = Format.BINARY
 
     def dump(self, obj: Any) -> bytes:
@@ -52,7 +50,6 @@ class NPInt32BinaryDumper(NPInt32Dumper):
 
 
 class NPInt64BinaryDumper(NPInt64Dumper):
-
     format = Format.BINARY
 
     def dump(self, obj: Any) -> bytes:
@@ -60,15 +57,14 @@ class NPInt64BinaryDumper(NPInt64Dumper):
 
 
 class NPNumericBinaryDumper(NPNumericDumper):
-
     format = Format.BINARY
 
     def dump(self, obj: Any) -> Buffer:
         return dump_int_to_numeric_binary(int(obj))
 
 
-def register_default_adapters(context: Optional[AdaptContext] = None) -> None:
-    adapters = context.adapters if context else postgres.adapters
+def register_default_adapters(context: AdaptContext) -> None:
+    adapters = context.adapters
 
     adapters.register_dumper("numpy.int8", NPInt16Dumper)
     adapters.register_dumper("numpy.int16", NPInt16Dumper)
