@@ -295,9 +295,10 @@ async def test_executemany_returning(aconn, execmany):
         [(10, "hello"), (20, "world")],
         returning=True,
     )
-    assert cur.rowcount == 2
+    assert cur.rowcount == 1
     assert (await cur.fetchone()) == (10,)
     assert cur.nextset()
+    assert cur.rowcount == 1
     assert (await cur.fetchone()) == (20,)
     assert cur.nextset() is None
 
@@ -321,12 +322,13 @@ async def test_executemany_no_result(aconn, execmany):
         [(10, "hello"), (20, "world")],
         returning=True,
     )
-    assert cur.rowcount == 2
+    assert cur.rowcount == 1
     assert cur.statusmessage.startswith("INSERT")
     with pytest.raises(psycopg.ProgrammingError):
         await cur.fetchone()
     pgresult = cur.pgresult
     assert cur.nextset()
+    assert cur.rowcount == 1
     assert cur.statusmessage.startswith("INSERT")
     assert pgresult is not cur.pgresult
     assert cur.nextset() is None
