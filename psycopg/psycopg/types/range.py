@@ -6,18 +6,23 @@ Support for range types adaptation.
 
 import re
 from typing import Any, Callable, Dict, Generic, List, Optional, TypeVar, Type, Tuple
-from typing import cast
+from typing import cast, TYPE_CHECKING
 from decimal import Decimal
 from datetime import date, datetime
 
+from .. import sql
+from .. import _oids
 from .. import errors as e
 from .. import postgres
 from ..pq import Format
-from ..abc import AdaptContext, Buffer, Dumper, DumperKey
+from ..abc import AdaptContext, Buffer, Dumper, DumperKey, Query
 from ..adapt import RecursiveDumper, RecursiveLoader, PyFormat
+from .._oids import INVALID_OID, TEXT_OID
 from .._struct import pack_len, unpack_len
-from ..postgres import INVALID_OID, TEXT_OID
-from .._typeinfo import RangeInfo as RangeInfo  # exported here
+from .._typeinfo import TypeInfo, TypesRegistry
+
+if TYPE_CHECKING:
+    from ..connection import BaseConnection
 
 RANGE_EMPTY = 0x01  # range is empty
 RANGE_LB_INC = 0x02  # lower bound is inclusive
@@ -28,6 +33,39 @@ RANGE_UB_INF = 0x10  # upper bound is +infinity
 _EMPTY_HEAD = bytes([RANGE_EMPTY])
 
 T = TypeVar("T")
+
+
+class RangeInfo(TypeInfo):
+    """Manage information about a range type."""
+
+    def __init__(
+        self,
+        name: str,
+        oid: int,
+        array_oid: int,
+        *,
+        regtype: str = "",
+        subtype_oid: int,
+    ):
+        super().__init__(name, oid, array_oid, regtype=regtype)
+        self.subtype_oid = subtype_oid
+
+    @classmethod
+    def _get_info_query(cls, conn: "BaseConnection[Any]") -> Query:
+        return sql.SQL(
+            """\
+SELECT t.typname AS name, t.oid AS oid, t.typarray AS array_oid,
+    t.oid::regtype::text AS regtype,
+    r.rngsubtype AS subtype_oid
+FROM pg_type t
+JOIN pg_range r ON t.oid = r.rngtypid
+WHERE t.oid = {regtype}
+"""
+        ).format(regtype=cls._to_regtype(conn))
+
+    def _added(self, registry: TypesRegistry) -> None:
+        # Map ranges subtypes to info
+        registry._registry[RangeInfo, self.subtype_oid] = self
 
 
 class Range(Generic[T]):
@@ -564,27 +602,27 @@ def register_range(info: RangeInfo, context: Optional[AdaptContext] = None) -> N
 
 
 class Int4RangeDumper(RangeDumper):
-    oid = postgres.types["int4range"].oid
+    oid = _oids.INT4RANGE_OID
 
 
 class Int8RangeDumper(RangeDumper):
-    oid = postgres.types["int8range"].oid
+    oid = _oids.INT8RANGE_OID
 
 
 class NumericRangeDumper(RangeDumper):
-    oid = postgres.types["numrange"].oid
+    oid = _oids.NUMRANGE_OID
 
 
 class DateRangeDumper(RangeDumper):
-    oid = postgres.types["daterange"].oid
+    oid = _oids.DATERANGE_OID
 
 
 class TimestampRangeDumper(RangeDumper):
-    oid = postgres.types["tsrange"].oid
+    oid = _oids.TSRANGE_OID
 
 
 class TimestamptzRangeDumper(RangeDumper):
-    oid = postgres.types["tstzrange"].oid
+    oid = _oids.TSTZRANGE_OID
 
 
 # Binary dumpers for builtin range types wrappers
@@ -593,81 +631,81 @@ class TimestamptzRangeDumper(RangeDumper):
 
 
 class Int4RangeBinaryDumper(RangeBinaryDumper):
-    oid = postgres.types["int4range"].oid
+    oid = _oids.INT4RANGE_OID
 
 
 class Int8RangeBinaryDumper(RangeBinaryDumper):
-    oid = postgres.types["int8range"].oid
+    oid = _oids.INT8RANGE_OID
 
 
 class NumericRangeBinaryDumper(RangeBinaryDumper):
-    oid = postgres.types["numrange"].oid
+    oid = _oids.NUMRANGE_OID
 
 
 class DateRangeBinaryDumper(RangeBinaryDumper):
-    oid = postgres.types["daterange"].oid
+    oid = _oids.DATERANGE_OID
 
 
 class TimestampRangeBinaryDumper(RangeBinaryDumper):
-    oid = postgres.types["tsrange"].oid
+    oid = _oids.TSRANGE_OID
 
 
 class TimestamptzRangeBinaryDumper(RangeBinaryDumper):
-    oid = postgres.types["tstzrange"].oid
+    oid = _oids.TSTZRANGE_OID
 
 
 # Text loaders for builtin range types
 
 
 class Int4RangeLoader(RangeLoader[int]):
-    subtype_oid = postgres.types["int4"].oid
+    subtype_oid = _oids.INT4_OID
 
 
 class Int8RangeLoader(RangeLoader[int]):
-    subtype_oid = postgres.types["int8"].oid
+    subtype_oid = _oids.INT8_OID
 
 
 class NumericRangeLoader(RangeLoader[Decimal]):
-    subtype_oid = postgres.types["numeric"].oid
+    subtype_oid = _oids.NUMERIC_OID
 
 
 class DateRangeLoader(RangeLoader[date]):
-    subtype_oid = postgres.types["date"].oid
+    subtype_oid = _oids.DATE_OID
 
 
 class TimestampRangeLoader(RangeLoader[datetime]):
-    subtype_oid = postgres.types["timestamp"].oid
+    subtype_oid = _oids.TIMESTAMP_OID
 
 
 class TimestampTZRangeLoader(RangeLoader[datetime]):
-    subtype_oid = postgres.types["timestamptz"].oid
+    subtype_oid = _oids.TIMESTAMPTZ_OID
 
 
 # Binary loaders for builtin range types
 
 
 class Int4RangeBinaryLoader(RangeBinaryLoader[int]):
-    subtype_oid = postgres.types["int4"].oid
+    subtype_oid = _oids.INT4_OID
 
 
 class Int8RangeBinaryLoader(RangeBinaryLoader[int]):
-    subtype_oid = postgres.types["int8"].oid
+    subtype_oid = _oids.INT8_OID
 
 
 class NumericRangeBinaryLoader(RangeBinaryLoader[Decimal]):
-    subtype_oid = postgres.types["numeric"].oid
+    subtype_oid = _oids.NUMERIC_OID
 
 
 class DateRangeBinaryLoader(RangeBinaryLoader[date]):
-    subtype_oid = postgres.types["date"].oid
+    subtype_oid = _oids.DATE_OID
 
 
 class TimestampRangeBinaryLoader(RangeBinaryLoader[datetime]):
-    subtype_oid = postgres.types["timestamp"].oid
+    subtype_oid = _oids.TIMESTAMP_OID
 
 
 class TimestampTZRangeBinaryLoader(RangeBinaryLoader[datetime]):
-    subtype_oid = postgres.types["timestamptz"].oid
+    subtype_oid = _oids.TIMESTAMPTZ_OID
 
 
 def register_default_adapters(context: AdaptContext) -> None:

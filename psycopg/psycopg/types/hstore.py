@@ -11,8 +11,8 @@ from typing_extensions import TypeAlias
 from .. import errors as e
 from .. import postgres
 from ..abc import Buffer, AdaptContext
+from .._oids import TEXT_OID
 from ..adapt import PyFormat, RecursiveDumper, RecursiveLoader
-from ..postgres import TEXT_OID
 from .._typeinfo import TypeInfo
 
 _re_escape = re.compile(r'(["\\])')

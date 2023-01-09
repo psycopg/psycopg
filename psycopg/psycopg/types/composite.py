@@ -8,22 +8,76 @@ import re
 import struct
 from collections import namedtuple
 from typing import Any, Callable, cast, Iterator, List, Optional
-from typing import Sequence, Tuple, Type
+from typing import Sequence, Tuple, Type, TYPE_CHECKING
 
 from .. import pq
+from .. import sql
 from .. import postgres
-from ..abc import AdaptContext, Buffer
+from ..abc import AdaptContext, Buffer, Query
 from ..adapt import Transformer, PyFormat, RecursiveDumper, Loader
+from .._oids import TEXT_OID
 from .._struct import pack_len, unpack_len
-from ..postgres import TEXT_OID
-from .._typeinfo import CompositeInfo as CompositeInfo  # exported here
+from .._typeinfo import TypeInfo
 from .._encodings import _as_python_identifier
+
+if TYPE_CHECKING:
+    from ..connection import BaseConnection
 
 _struct_oidlen = struct.Struct("!Ii")
 _pack_oidlen = cast(Callable[[int, int], bytes], _struct_oidlen.pack)
 _unpack_oidlen = cast(
     Callable[[Buffer, int], Tuple[int, int]], _struct_oidlen.unpack_from
 )
+
+
+class CompositeInfo(TypeInfo):
+    """Manage information about a composite type."""
+
+    def __init__(
+        self,
+        name: str,
+        oid: int,
+        array_oid: int,
+        *,
+        regtype: str = "",
+        field_names: Sequence[str],
+        field_types: Sequence[int],
+    ):
+        super().__init__(name, oid, array_oid, regtype=regtype)
+        self.field_names = field_names
+        self.field_types = field_types
+        # Will be set by register() if the `factory` is a type
+        self.python_type: Optional[type] = None
+
+    @classmethod
+    def _get_info_query(cls, conn: "BaseConnection[Any]") -> Query:
+        return sql.SQL(
+            """\
+SELECT
+    t.typname AS name, t.oid AS oid, t.typarray AS array_oid,
+    t.oid::regtype::text AS regtype,
+    coalesce(a.fnames, '{{}}') AS field_names,
+    coalesce(a.ftypes, '{{}}') AS field_types
+FROM pg_type t
+LEFT JOIN (
+    SELECT
+        attrelid,
+        array_agg(attname) AS fnames,
+        array_agg(atttypid) AS ftypes
+    FROM (
+        SELECT a.attrelid, a.attname, a.atttypid
+        FROM pg_attribute a
+        JOIN pg_type t ON t.typrelid = a.attrelid
+        WHERE t.oid = {regtype}
+        AND a.attnum > 0
+        AND NOT a.attisdropped
+        ORDER BY a.attnum
+    ) x
+    GROUP BY attrelid
+) a ON a.attrelid = t.typrelid
+WHERE t.oid = {regtype}
+"""
+        ).format(regtype=cls._to_regtype(conn))
 
 
 class SequenceDumper(RecursiveDumper):
@@ -61,7 +115,7 @@ class SequenceDumper(RecursiveDumper):
 class TupleDumper(SequenceDumper):
 
     # Should be this, but it doesn't work
-    # oid = postgres_types["record"].oid
+    # oid = _oids.RECORD_OID
 
     def dump(self, obj: Tuple[Any, ...]) -> bytes:
         return self._dump_sequence(obj, b"(", b")", b",")

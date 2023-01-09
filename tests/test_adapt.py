@@ -9,7 +9,7 @@ from psycopg import pq, sql, postgres
 from psycopg import errors as e
 from psycopg.adapt import Transformer, PyFormat, Dumper, Loader
 from psycopg._cmodule import _psycopg
-from psycopg.postgres import types as builtins, TEXT_OID
+from psycopg.postgres import types as builtins
 from psycopg.types.array import ListDumper, ListBinaryDumper
 
 
@@ -184,18 +184,21 @@ def test_cast(data, format, type, result):
 
 
 def test_register_loader_by_oid(conn):
-    assert TEXT_OID == 25
+    oid = builtins["text"].oid
+    assert oid == 25
     loader = make_loader("x")
-    assert conn.adapters.get_loader(TEXT_OID, pq.Format.TEXT) is not loader
-    conn.adapters.register_loader(TEXT_OID, loader)
-    assert conn.adapters.get_loader(TEXT_OID, pq.Format.TEXT) is loader
+    assert conn.adapters.get_loader(oid, pq.Format.TEXT) is not loader
+    conn.adapters.register_loader(oid, loader)
+    assert conn.adapters.get_loader(oid, pq.Format.TEXT) is loader
 
 
 def test_register_loader_by_type_name(conn):
+    oid = builtins["text"].oid
+    assert oid == 25
     loader = make_loader("x")
-    assert conn.adapters.get_loader(TEXT_OID, pq.Format.TEXT) is not loader
+    assert conn.adapters.get_loader(oid, pq.Format.TEXT) is not loader
     conn.adapters.register_loader("text", loader)
-    assert conn.adapters.get_loader(TEXT_OID, pq.Format.TEXT) is loader
+    assert conn.adapters.get_loader(oid, pq.Format.TEXT) is loader
 
 
 @pytest.mark.crdb("skip", reason="global adapters don't affect crdb")
@@ -497,7 +500,7 @@ def make_dumper(suffix):
     """Create a test dumper appending a suffix to the bytes representation."""
 
     class TestDumper(Dumper):
-        oid = TEXT_OID
+        oid = builtins["text"].oid
         format = pq.Format.TEXT
 
         def dump(self, s):

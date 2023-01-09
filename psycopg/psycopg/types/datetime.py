@@ -9,7 +9,7 @@ import struct
 from datetime import date, datetime, time, timedelta, timezone
 from typing import Any, Callable, cast, Optional, Tuple, TYPE_CHECKING
 
-from .. import postgres
+from .. import _oids
 from ..pq import Format
 from .._tz import get_tzinfo
 from ..abc import AdaptContext, DumperKey
@@ -39,7 +39,7 @@ _py_date_min_days = date.min.toordinal()
 
 class DateDumper(Dumper):
 
-    oid = postgres.types["date"].oid
+    oid = _oids.DATE_OID
 
     def dump(self, obj: date) -> bytes:
         # NOTE: whatever the PostgreSQL DateStyle input format (DMY, MDY, YMD)
@@ -50,7 +50,7 @@ class DateDumper(Dumper):
 class DateBinaryDumper(Dumper):
 
     format = Format.BINARY
-    oid = postgres.types["date"].oid
+    oid = _oids.DATE_OID
 
     def dump(self, obj: date) -> bytes:
         days = obj.toordinal() - _pg_date_epoch_days
@@ -77,7 +77,7 @@ class _BaseTimeTextDumper(_BaseTimeDumper):
 
 class TimeDumper(_BaseTimeTextDumper):
 
-    oid = postgres.types["time"].oid
+    oid = _oids.TIME_OID
 
     def upgrade(self, obj: time, format: PyFormat) -> Dumper:
         if not obj.tzinfo:
@@ -88,13 +88,13 @@ class TimeDumper(_BaseTimeTextDumper):
 
 class TimeTzDumper(_BaseTimeTextDumper):
 
-    oid = postgres.types["timetz"].oid
+    oid = _oids.TIMETZ_OID
 
 
 class TimeBinaryDumper(_BaseTimeDumper):
 
     format = Format.BINARY
-    oid = postgres.types["time"].oid
+    oid = _oids.TIME_OID
 
     def dump(self, obj: time) -> bytes:
         us = obj.microsecond + 1_000_000 * (
@@ -112,7 +112,7 @@ class TimeBinaryDumper(_BaseTimeDumper):
 class TimeTzBinaryDumper(_BaseTimeDumper):
 
     format = Format.BINARY
-    oid = postgres.types["timetz"].oid
+    oid = _oids.TIMETZ_OID
 
     def dump(self, obj: time) -> bytes:
         us = obj.microsecond + 1_000_000 * (
@@ -145,7 +145,7 @@ class _BaseDatetimeTextDumper(_BaseDatetimeDumper):
 
 class DatetimeDumper(_BaseDatetimeTextDumper):
 
-    oid = postgres.types["timestamptz"].oid
+    oid = _oids.TIMESTAMPTZ_OID
 
     def upgrade(self, obj: datetime, format: PyFormat) -> Dumper:
         if obj.tzinfo:
@@ -156,13 +156,13 @@ class DatetimeDumper(_BaseDatetimeTextDumper):
 
 class DatetimeNoTzDumper(_BaseDatetimeTextDumper):
 
-    oid = postgres.types["timestamp"].oid
+    oid = _oids.TIMESTAMP_OID
 
 
 class DatetimeBinaryDumper(_BaseDatetimeDumper):
 
     format = Format.BINARY
-    oid = postgres.types["timestamptz"].oid
+    oid = _oids.TIMESTAMPTZ_OID
 
     def dump(self, obj: datetime) -> bytes:
         delta = obj - _pg_datetimetz_epoch
@@ -179,7 +179,7 @@ class DatetimeBinaryDumper(_BaseDatetimeDumper):
 class DatetimeNoTzBinaryDumper(_BaseDatetimeDumper):
 
     format = Format.BINARY
-    oid = postgres.types["timestamp"].oid
+    oid = _oids.TIMESTAMP_OID
 
     def dump(self, obj: datetime) -> bytes:
         delta = obj - _pg_datetime_epoch
@@ -189,7 +189,7 @@ class DatetimeNoTzBinaryDumper(_BaseDatetimeDumper):
 
 class TimedeltaDumper(Dumper):
 
-    oid = postgres.types["interval"].oid
+    oid = _oids.INTERVAL_OID
 
     def __init__(self, cls: type, context: Optional[AdaptContext] = None):
         super().__init__(cls, context)
@@ -218,7 +218,7 @@ class TimedeltaDumper(Dumper):
 class TimedeltaBinaryDumper(Dumper):
 
     format = Format.BINARY
-    oid = postgres.types["interval"].oid
+    oid = _oids.INTERVAL_OID
 
     def dump(self, obj: timedelta) -> bytes:
         micros = 1_000_000 * obj.seconds + obj.microseconds

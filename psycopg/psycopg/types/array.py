@@ -13,10 +13,10 @@ from .. import errors as e
 from .. import postgres
 from ..abc import AdaptContext, Buffer, Dumper, DumperKey, NoneType, Loader, Transformer
 from ..adapt import RecursiveDumper, RecursiveLoader, PyFormat
+from .._oids import TEXT_OID, INVALID_OID, TEXT_ARRAY_OID
 from .._compat import cache, prod
 from .._struct import pack_len, unpack_len
 from .._cmodule import _psycopg
-from ..postgres import TEXT_OID, INVALID_OID
 from .._typeinfo import TypeInfo
 
 _struct_head = struct.Struct("!III")  # ndims, hasnull, elem oid
@@ -26,14 +26,12 @@ _struct_dim = struct.Struct("!II")  # dim, lower bound
 _pack_dim = cast(Callable[[int, int], bytes], _struct_dim.pack)
 _unpack_dim = cast(Callable[[Buffer, int], Tuple[int, int]], _struct_dim.unpack_from)
 
-TEXT_ARRAY_OID = postgres.types["text"].array_oid
-
 PY_TEXT = PyFormat.TEXT
 PQ_BINARY = pq.Format.BINARY
 
 
 class BaseListDumper(RecursiveDumper):
-    element_oid = 0
+    element_oid = INVALID_OID
 
     def __init__(self, cls: type, context: Optional[AdaptContext] = None):
         if cls is NoneType:

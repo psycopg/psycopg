@@ -5,21 +5,66 @@ Support for multirange types adaptation.
 # Copyright (C) 2021 The Psycopg Team
 
 from decimal import Decimal
-from typing import Any, Generic, List, Iterable
-from typing import MutableSequence, Optional, Type, Union, overload
+from typing import Any, Generic, List, Iterable, MutableSequence
+from typing import Optional, Type, Union, overload, TYPE_CHECKING
 from datetime import date, datetime
 
+from .. import sql
+from .. import _oids
 from .. import errors as e
 from .. import postgres
 from ..pq import Format
-from ..abc import AdaptContext, Buffer, Dumper, DumperKey
+from ..abc import AdaptContext, Buffer, Dumper, DumperKey, Query
 from ..adapt import RecursiveDumper, RecursiveLoader, PyFormat
+from .._oids import INVALID_OID, TEXT_OID
 from .._struct import pack_len, unpack_len
-from ..postgres import INVALID_OID, TEXT_OID
-from .._typeinfo import MultirangeInfo as MultirangeInfo  # exported here
+from .._typeinfo import TypeInfo, TypesRegistry
 
 from .range import Range, T, load_range_text, load_range_binary
 from .range import dump_range_text, dump_range_binary, fail_dump
+
+if TYPE_CHECKING:
+    from ..connection import BaseConnection
+
+
+class MultirangeInfo(TypeInfo):
+    """Manage information about a multirange type."""
+
+    def __init__(
+        self,
+        name: str,
+        oid: int,
+        array_oid: int,
+        *,
+        regtype: str = "",
+        range_oid: int,
+        subtype_oid: int,
+    ):
+        super().__init__(name, oid, array_oid, regtype=regtype)
+        self.range_oid = range_oid
+        self.subtype_oid = subtype_oid
+
+    @classmethod
+    def _get_info_query(cls, conn: "BaseConnection[Any]") -> Query:
+        if conn.info.server_version < 140000:
+            raise e.NotSupportedError(
+                "multirange types are only available from PostgreSQL 14"
+            )
+        return sql.SQL(
+            """\
+SELECT t.typname AS name, t.oid AS oid, t.typarray AS array_oid,
+    t.oid::regtype::text AS regtype,
+    r.rngtypid AS range_oid, r.rngsubtype AS subtype_oid
+FROM pg_type t
+JOIN pg_range r ON t.oid = r.rngmultitypid
+WHERE t.oid = {regtype}
+"""
+        ).format(regtype=cls._to_regtype(conn))
+
+    def _added(self, registry: "TypesRegistry") -> None:
+        # Map multiranges ranges and subtypes to info
+        registry._registry[MultirangeInfo, self.range_oid] = self
+        registry._registry[MultirangeInfo, self.subtype_oid] = self
 
 
 class Multirange(MutableSequence[Range[T]]):
@@ -378,27 +423,27 @@ def register_multirange(
 
 
 class Int4MultirangeDumper(MultirangeDumper):
-    oid = postgres.types["int4multirange"].oid
+    oid = _oids.INT4MULTIRANGE_OID
 
 
 class Int8MultirangeDumper(MultirangeDumper):
-    oid = postgres.types["int8multirange"].oid
+    oid = _oids.INT8MULTIRANGE_OID
 
 
 class NumericMultirangeDumper(MultirangeDumper):
-    oid = postgres.types["nummultirange"].oid
+    oid = _oids.NUMMULTIRANGE_OID
 
 
 class DateMultirangeDumper(MultirangeDumper):
-    oid = postgres.types["datemultirange"].oid
+    oid = _oids.DATEMULTIRANGE_OID
 
 
 class TimestampMultirangeDumper(MultirangeDumper):
-    oid = postgres.types["tsmultirange"].oid
+    oid = _oids.TSMULTIRANGE_OID
 
 
 class TimestamptzMultirangeDumper(MultirangeDumper):
-    oid = postgres.types["tstzmultirange"].oid
+    oid = _oids.TSTZMULTIRANGE_OID
 
 
 # Binary dumpers for builtin multirange types wrappers
@@ -407,81 +452,81 @@ class TimestamptzMultirangeDumper(MultirangeDumper):
 
 
 class Int4MultirangeBinaryDumper(MultirangeBinaryDumper):
-    oid = postgres.types["int4multirange"].oid
+    oid = _oids.INT4MULTIRANGE_OID
 
 
 class Int8MultirangeBinaryDumper(MultirangeBinaryDumper):
-    oid = postgres.types["int8multirange"].oid
+    oid = _oids.INT8MULTIRANGE_OID
 
 
 class NumericMultirangeBinaryDumper(MultirangeBinaryDumper):
-    oid = postgres.types["nummultirange"].oid
+    oid = _oids.NUMMULTIRANGE_OID
 
 
 class DateMultirangeBinaryDumper(MultirangeBinaryDumper):
-    oid = postgres.types["datemultirange"].oid
+    oid = _oids.DATEMULTIRANGE_OID
 
 
 class TimestampMultirangeBinaryDumper(MultirangeBinaryDumper):
-    oid = postgres.types["tsmultirange"].oid
+    oid = _oids.TSMULTIRANGE_OID
 
 
 class TimestamptzMultirangeBinaryDumper(MultirangeBinaryDumper):
-    oid = postgres.types["tstzmultirange"].oid
+    oid = _oids.TSTZMULTIRANGE_OID
 
 
 # Text loaders for builtin multirange types
 
 
 class Int4MultirangeLoader(MultirangeLoader[int]):
-    subtype_oid = postgres.types["int4"].oid
+    subtype_oid = _oids.INT4_OID
 
 
 class Int8MultirangeLoader(MultirangeLoader[int]):
-    subtype_oid = postgres.types["int8"].oid
+    subtype_oid = _oids.INT8_OID
 
 
 class NumericMultirangeLoader(MultirangeLoader[Decimal]):
-    subtype_oid = postgres.types["numeric"].oid
+    subtype_oid = _oids.NUMERIC_OID
 
 
 class DateMultirangeLoader(MultirangeLoader[date]):
-    subtype_oid = postgres.types["date"].oid
+    subtype_oid = _oids.DATE_OID
 
 
 class TimestampMultirangeLoader(MultirangeLoader[datetime]):
-    subtype_oid = postgres.types["timestamp"].oid
+    subtype_oid = _oids.TIMESTAMP_OID
 
 
 class TimestampTZMultirangeLoader(MultirangeLoader[datetime]):
-    subtype_oid = postgres.types["timestamptz"].oid
+    subtype_oid = _oids.TIMESTAMPTZ_OID
 
 
 # Binary loaders for builtin multirange types
 
 
 class Int4MultirangeBinaryLoader(MultirangeBinaryLoader[int]):
-    subtype_oid = postgres.types["int4"].oid
+    subtype_oid = _oids.INT4_OID
 
 
 class Int8MultirangeBinaryLoader(MultirangeBinaryLoader[int]):
-    subtype_oid = postgres.types["int8"].oid
+    subtype_oid = _oids.INT8_OID
 
 
 class NumericMultirangeBinaryLoader(MultirangeBinaryLoader[Decimal]):
-    subtype_oid = postgres.types["numeric"].oid
+    subtype_oid = _oids.NUMERIC_OID
 
 
 class DateMultirangeBinaryLoader(MultirangeBinaryLoader[date]):
-    subtype_oid = postgres.types["date"].oid
+    subtype_oid = _oids.DATE_OID
 
 
 class TimestampMultirangeBinaryLoader(MultirangeBinaryLoader[datetime]):
-    subtype_oid = postgres.types["timestamp"].oid
+    subtype_oid = _oids.TIMESTAMP_OID
 
 
 class TimestampTZMultirangeBinaryLoader(MultirangeBinaryLoader[datetime]):
-    subtype_oid = postgres.types["timestamptz"].oid
+    subtype_oid = _oids.TIMESTAMPTZ_OID
 
 
 def register_default_adapters(context: AdaptContext) -> None:

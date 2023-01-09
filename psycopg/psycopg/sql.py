@@ -11,9 +11,10 @@ from typing import Any, Iterator, Iterable, List, Optional, Sequence, Union
 
 from .pq import Escaping
 from .abc import AdaptContext
-from .adapt import Transformer, PyFormat
+from ._enums import PyFormat
 from ._compat import LiteralString
 from ._encodings import conn_encoding
+from ._transformer import Transformer
 
 
 def quote(obj: Any, context: Optional[AdaptContext] = None) -> str:

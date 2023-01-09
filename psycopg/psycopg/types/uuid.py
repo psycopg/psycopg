@@ -6,7 +6,7 @@ Adapters for the UUID type.
 
 from typing import Callable, Optional, TYPE_CHECKING
 
-from .. import postgres
+from .. import _oids
 from ..pq import Format
 from ..abc import AdaptContext
 from ..adapt import Buffer, Dumper, Loader
@@ -20,7 +20,7 @@ UUID: Callable[..., "uuid.UUID"] = None  # type: ignore[assignment]
 
 class UUIDDumper(Dumper):
 
-    oid = postgres.types["uuid"].oid
+    oid = _oids.UUID_OID
 
     def dump(self, obj: "uuid.UUID") -> bytes:
         return obj.hex.encode()

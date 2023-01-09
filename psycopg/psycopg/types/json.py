@@ -8,8 +8,8 @@ import json
 from typing import Any, Callable, Dict, Optional, Tuple, Type, Union
 
 from .. import abc
+from .. import _oids
 from .. import errors as e
-from .. import postgres
 from ..pq import Format
 from ..adapt import Buffer, Dumper, Loader, PyFormat, AdaptersMap
 from ..errors import DataError
@@ -134,24 +134,24 @@ class _JsonDumper(Dumper):
 
 class JsonDumper(_JsonDumper):
 
-    oid = postgres.types["json"].oid
+    oid = _oids.JSON_OID
 
 
 class JsonBinaryDumper(_JsonDumper):
 
     format = Format.BINARY
-    oid = postgres.types["json"].oid
+    oid = _oids.JSON_OID
 
 
 class JsonbDumper(_JsonDumper):
 
-    oid = postgres.types["jsonb"].oid
+    oid = _oids.JSONB_OID
 
 
 class JsonbBinaryDumper(_JsonDumper):
 
     format = Format.BINARY
-    oid = postgres.types["jsonb"].oid
+    oid = _oids.JSONB_OID
 
     def dump(self, obj: _JsonWrapper) -> bytes:
         dumps = obj.dumps or self.dumps
