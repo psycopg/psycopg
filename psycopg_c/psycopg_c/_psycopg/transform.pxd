@@ -1,3 +1,5 @@
+from psycopg_c cimport pq
+
 cdef class Transformer:
     cdef readonly object connection
     cdef readonly object adapters
@@ -20,3 +22,4 @@ cdef class Transformer:
     cdef list _row_dumpers
     cdef list _row_loaders
     cdef dict _oid_types
+
