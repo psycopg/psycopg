@@ -294,13 +294,22 @@ _re_placeholder = re.compile(
         """
 )
 
+cdef union query_item:
+        int data_int;
+        void* data_str;
+        unsigned data_len;
+
+cdef struct query_part:
+        unsigned char* pre;
+        query_item item;
+        char format;
 
 #Returns List[QueryPart]
 cdef list _split_query(
     query: bytes, encoding: str = "ascii", collapse_double_percent: bool = True
 ):
     parts: List[Tuple[bytes, Optional[Match[bytes]]]] = []
-    cur = 0
+    cdef unsigned cur = 0
 
     # pairs [(fragment, match], with the last match None
     m = None
@@ -316,7 +325,7 @@ cdef list _split_query(
     rv = []
 
     # drop the "%%", validate
-    i = 0
+    cdef unsigned i = 0
     phtype = None
     while i < len(parts):
         pre, m = parts[i]
