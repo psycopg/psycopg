@@ -28,7 +28,7 @@ cdef class PostgresQuery:
 
     cdef bytes query
     cdef object params
-    cdef object _tx
+    cdef Transformer _tx
     cdef tuple types
     cdef list _want_formats
     cdef list formats
