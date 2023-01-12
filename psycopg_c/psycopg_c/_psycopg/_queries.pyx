@@ -15,13 +15,96 @@ from .sql import Composable
 from .abc import Buffer, Query, Params
 from ._enums import PyFormat
 from ._encodings import conn_encoding
+from libc.stdlib cimport malloc, free
 
+cdef union query_item:
+        int data_int
+        void* data_str
+        unsigned data_len
+
+cdef struct query_part:
+        void* pre
+        unsigned pre_len
+        query_item item
+        char format
+
+cdef struct c_list
+cdef struct c_list:
+        void* data
+        unsigned data_len
+        c_list* next
+
+cdef struct c_listIter:
+        c_list* ptr
+        unsigned idx
+                   
+cdef c_list* iterate_list(c_listIter self):
+    if not self.ptr:
+        raise MemoryError("Null-pointer dereference on c_listIter.ptr")
+    if not self.idx:
+        self.idx += 1
+        return self.ptr
+    if not self.ptr.next:
+        return NULL
+    self.ptr = self.ptr.next
+    self.idx += 1
+    return self.ptr
+
+cdef c_listIter* new_iterator(c_list* root):
+    cdef c_listIter* p = <c_listIter*>malloc(sizeof(c_listIter))
+    if not p:
+        raise MemoryError("Dynamic allocation failure")
+    p.ptr = root
+    p.idx = 0
+    return p
+
+cdef c_list* new_list():
+    cdef c_list* p = <c_list*>malloc(sizeof(c_list))
+    if not p:
+        raise MemoryError("Dynamic allocation failure")
+    return p
+
+cdef void list_append(c_list* self, void* data, unsigned data_len):
+    if not self:
+        raise MemoryError("Null-pointer dereference on c_list.ptr")
+    if not self.data:
+        self.data = <void*>malloc(data_len)
+        if not self.data:
+            raise MemoryError("Dynamic allocation failure")
+        memcpy(self.data, data, data_len)
+        self.data_len = data_len
+        return
+
+    cdef c_list* i = self
+    cdef c_list* newitem
+    newitem = <c_list*>malloc(sizeof(c_list))
+    if not newitem:
+        raise MemoryError("Dynamic allocation failure")
+    newitem.data = <void*>malloc(data_len)
+    if not newitem.data:
+        raise MemoryError("Dynamic allocation failure")
+    newitem.data_len = data_len
+    memcpy(newitem.data, data, data_len)
+    
+    while 1:
+        if not i.next:
+            break
+        i = i.next
+    i.next = newitem            
+        
+cdef void list_append_PyStr(c_list* root, PyObject* pystr):
+        cdef extern from "Python.h":
+            Py_ssize_t PyUnicode_GET_LENGTH(PyObject *o)
+            void *PyUnicode_DATA(PyObject *o)
+            cdef unsigned data_len = <unsigned>PyUnicode_GET_LENGTH(pystr)
+            cdef void* data = <void*>PyUnicode_DATA(pystr)
+        
 class QueryPart(NamedTuple):
     pre: bytes
     item: Union[int, str]
     format: PyFormat
 
-cdef class PostgresQuery:
+cdef class PostgresQuery():
     """
     Helper to convert a Python query and parameters into Postgres format.
     """
@@ -32,13 +115,18 @@ cdef class PostgresQuery:
     cdef tuple types
     cdef list _want_formats
     cdef list formats
-    cdef list _parts
     cdef object _encoding
     cdef list _order
 
+    #Old
+    cdef list _parts
+    #New
+    cdef c_list* parts
+    
     def __cinit__(self, transformer: "Transformer"):
         self._tx = transformer
-
+        self.parts = NULL
+        
         self.params: Optional[Sequence[Optional[Buffer]]] = None
         # these are tuples so they can be used as keys e.g. in prepared stmts
         self.types: Tuple[int, ...] = ()
@@ -294,16 +382,6 @@ _re_placeholder = re.compile(
         """
 )
 
-cdef union query_item:
-        int data_int;
-        void* data_str;
-        unsigned data_len;
-
-cdef struct query_part:
-        unsigned char* pre;
-        query_item item;
-        char format;
-
 #Returns List[QueryPart]
 cdef list _split_query(
     query: bytes, encoding: str = "ascii", collapse_double_percent: bool = True
@@ -311,6 +389,12 @@ cdef list _split_query(
     parts: List[Tuple[bytes, Optional[Match[bytes]]]] = []
     cdef unsigned cur = 0
 
+    # first, determine number of matches
+    cdef unsigned count = 0
+    for m in _re_placeholder.finditer(query):
+        count += 1
+    # allocate query_part array
+            
     # pairs [(fragment, match], with the last match None
     m = None
     for m in _re_placeholder.finditer(query):
