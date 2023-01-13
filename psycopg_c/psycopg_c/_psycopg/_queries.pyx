@@ -90,7 +90,7 @@ cdef c_list* new_list():
         raise MemoryError("Dynamic allocation failure")
     return p
 
-cdef void list_append(c_list* self, void* data, unsigned data_len):
+cdef void list_append(c_list* self, void* data, unsigned data_len, int copy):
     if not self:
         raise MemoryError("Null-pointer dereference on c_list.ptr")
     if not self.data:
@@ -102,22 +102,26 @@ cdef void list_append(c_list* self, void* data, unsigned data_len):
         return
 
     cdef c_list* i = self
+
     cdef c_list* newitem
     newitem = <c_list*>malloc(sizeof(c_list))
     if not newitem:
         raise MemoryError("Dynamic allocation failure")
-    newitem.data = <void*>malloc(data_len)
-    if not newitem.data:
-        raise MemoryError("Dynamic allocation failure")
-    newitem.data_len = data_len
-    memcpy(newitem.data, data, data_len)
-    
+    if copy:
+        newitem.data = <void*>malloc(data_len)
+        if not newitem.data:
+            raise MemoryError("Dynamic allocation failure")
+        newitem.data_len = data_len
+        memcpy(newitem.data, data, data_len)
+    else:
+        newitem.data = data
+        newitem.data_len = data_len
     while 1:
         if not i.next:
             break
         i = i.next
-    i.next = newitem            
-        
+    i.next = newitem
+
 cdef void list_append_PyStr(c_list* root, PyObject* pystr):
     cdef unsigned data_len = <unsigned>PyUnicode_GET_LENGTH(pystr)
     cdef void* data = <void*>PyUnicode_DATA(pystr)
@@ -288,12 +292,12 @@ cdef tuple _query2pg(
         return
     if qp.item_type == ITEM_INT:
         while qp.next:
-            list_append(chunks, qp.pre, qp.pre_len)
+            list_append(chunks, qp.pre, qp.pre_len, 0)
             cdef int len = snprintf(cbuf, 128, "$%d", (qp.item.data_int + 1))
             if len < 0:
                 fprintf(stderr, "%s", strerror(errno))
                 return TypeError("snprintf failed")
-            list_append(formats, &qp.format, 1)
+            list_append(formats, &qp.format, 1, 0)
             p = iterate_list(i)
             if not p.data:
                 break
