@@ -811,13 +811,9 @@ def _format_row_text(
         out += b"\n"
         return out
 
-    for item in row:
-        if item is not None:
-            dumper = tx.get_dumper(item, PY_TEXT)
-            b = dumper.dump(item)
-            out += _dump_re.sub(_dump_sub, b)
-        else:
-            out += rb"\N"
+    adapted = tx.dump_sequence(row, [PY_TEXT] * len(row))
+    for b in adapted:
+        out += _dump_re.sub(_dump_sub, b) if b is not None else rb"\N"
         out += b"\t"
 
     out[-1:] = b"\n"
