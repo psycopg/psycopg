@@ -24,6 +24,7 @@ cdef extern from "string.h":
     void *memset(void *s, int c, size_t n);
     char *strerror(int errnum);
 cdef extern from "stdio.h":
+    struct FILE
     int fprintf(FILE *stream, const char *format, ...);
     int snprintf(char *str, size_t size, const char *format, ...);
     FILE* stdout
@@ -91,6 +92,20 @@ cdef c_list* new_list():
         raise MemoryError("Dynamic allocation failure")
     return p
 
+cdef void free_list(c_list* l):
+    if not l:
+        return
+    cdef c_list* p = l
+    cdef c_list* t
+    while p:
+        t = p
+        if (p.data):
+            free(p.data)
+            p.data = NULL
+        p = p.next
+        p.prev = NULL
+        free(t)
+
 cdef void list_append(c_list* self, void* data, unsigned data_len, int copy):
     if not self:
         raise MemoryError("Null-pointer dereference on c_list.ptr")
@@ -127,7 +142,7 @@ cdef void list_append(c_list* self, void* data, unsigned data_len, int copy):
 cdef void list_append_PyStr(c_list* root, PyObject* pystr):
     cdef unsigned data_len = <unsigned>PyUnicode_GET_LENGTH(pystr)
     cdef void* data = <void*>PyUnicode_DATA(pystr)
-    list_append(root, data, data_len)
+    list_append(root, data, data_len, 1)
 
 class QueryPart(NamedTuple):
     pre: bytes
@@ -259,6 +274,12 @@ cdef class PostgresClientQuery(PostgresQuery):
         else:
             self.params = None
 
+cdef void free_lists(c_list** res, unsigned n):
+    cdef unsigned i;
+    if not res:
+        return
+    while i < n:
+        free_list(res[i])
 
 #@lru_cache()
 #Returns Tuple[bytes, List[PyFormat], Optional[List[str]], List[QueryPart]]:
@@ -280,14 +301,20 @@ cdef tuple _query2pg(
     cdef c_list* chunks = new_list()
     cdef c_list* formats = new_list()
 
+    cdef c_list* resources[3]
+    resources[:] = (order, chunks, formats)
+
     _split_query(parts, query, encoding)
         
     cdef c_list* i = parts;
 
-    cdef char cbuf[128] = 0 # Conversion buffer
-
+    cdef char cbuf[128] #Conversion buffer
+    memset(cbuf, 0, 128)
+    
     cdef query_part* qp
 
+    cdef int len
+    
     #First, advance the iterator to the end of the parts list
     while i.next:
         i = i.next
@@ -295,16 +322,16 @@ cdef tuple _query2pg(
     #Start from the second-to-last element
     i = i.prev
     if not i:
-        return
+        free_lists(resources, 3)
     
     #Now, assemble parts in reverse
-    qp = i.data
+    qp = <query_part*>i.data
     if not qp:
-        return
+        free_lists(resources, 3)
     if qp.item_type == ITEM_INT:
-        while qp.next:
+        while qp:
             list_append(chunks, qp.pre, qp.pre_len, 0)
-            cdef int len = snprintf(cbuf, 128, "$%d", (qp.item.data_int + 1))
+            len = snprintf(cbuf, 128, "$%d", (qp.item.data_int + 1))
             if len < 0:
                 fprintf(stderr, "%s", strerror(errno))
                 return TypeError("snprintf failed")
@@ -313,12 +340,11 @@ cdef tuple _query2pg(
             if not i:
                 break
             qp = i.data
-    elif qp.item_type == ITEM_STR
+    elif qp.item_type == ITEM_STR:
         seen: Dict[str, Tuple[bytes, PyFormat]] = {}
-        while qp.next:
+        while qp:
         #for part in parts[:-1]:
             list_append(chunks, qp.pre, qp.pre_len, 0)
-            chunks.append(qp.pre)
             if part.item not in seen:
                 ph = b"$%d" % (len(seen) + 1)
                 seen[part.item] = (ph, part.format)
