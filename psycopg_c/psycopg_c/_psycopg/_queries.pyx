@@ -126,7 +126,7 @@ cdef class PostgresQuery():
     
     def __cinit__(self, transformer: "Transformer"):
         self._tx = transformer
-        self.parts = NULL
+        self.parts = new_list()
         
         self.params: Optional[Sequence[Optional[Buffer]]] = None
         # these are tuples so they can be used as keys e.g. in prepared stmts
@@ -137,7 +137,6 @@ cdef class PostgresQuery():
         self.formats: Optional[Sequence[pq.Format]] = None
 
         self._encoding = conn_encoding(transformer.connection)
-        self._parts: List[QueryPart]
         self.query = b""
         self._order: Optional[List[str]] = None
 
