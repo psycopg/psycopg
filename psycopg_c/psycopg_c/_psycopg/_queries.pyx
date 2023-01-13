@@ -20,12 +20,12 @@ from libc.stdlib cimport malloc, free
 cdef union query_item:
         int data_int
         void* data_str
-        unsigned data_len
 
 cdef struct query_part:
         void* pre
         unsigned pre_len
         query_item item
+        unsigned data_len
         char format
 
 cdef struct c_list
@@ -98,7 +98,8 @@ cdef void list_append_PyStr(c_list* root, PyObject* pystr):
             void *PyUnicode_DATA(PyObject *o)
             cdef unsigned data_len = <unsigned>PyUnicode_GET_LENGTH(pystr)
             cdef void* data = <void*>PyUnicode_DATA(pystr)
-        
+        list_append(root, data, data_len)
+
 class QueryPart(NamedTuple):
     pre: bytes
     item: Union[int, str]
