@@ -17,6 +17,7 @@ from cpython.bytes cimport PyBytes_AsStringAndSize
 from cpython.float cimport PyFloat_FromDouble, PyFloat_AsDouble
 from cpython.unicode cimport PyUnicode_DecodeUTF8
 
+import sys
 from decimal import Decimal, Context, DefaultContext
 
 from psycopg_c._psycopg cimport endian
@@ -497,30 +498,55 @@ cdef class DecimalBinaryDumper(CDumper):
         return dump_decimal_to_numeric_binary(obj, rv, offset)
 
 
+cdef class _MixedNumericDumper(CDumper):
+
+    int_classes = None
+    oid = oids.NUMERIC_OID
+
+    def __cinit__(self, cls, context: Optional[AdaptContext] = None):
+        if _MixedNumericDumper.int_classes is None:
+            if "numpy" in sys.modules:
+                import numpy
+
+                _MixedNumericDumper.int_classes = (int, numpy.integer)
+            else:
+                _MixedNumericDumper.int_classes = int
+
+
 @cython.final
-cdef class NumericDumper(CDumper):
+cdef class NumericDumper(_MixedNumericDumper):
 
     format = PQ_TEXT
-    oid = oids.NUMERIC_OID
 
     cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
-        if isinstance(obj, int):
+        if type(obj) is int:  # fast path
+            return dump_int_to_text(obj, rv, offset)
+        elif isinstance(obj, Decimal):
+            return dump_decimal_to_text(obj, rv, offset)
+        elif isinstance(obj, self.int_classes):
             return dump_int_to_text(obj, rv, offset)
         else:
-            return dump_decimal_to_text(obj, rv, offset)
+            raise TypeError(
+                f"class {type(self).__name__} cannot dump {type(obj).__name__}"
+            )
 
 
 @cython.final
-cdef class NumericBinaryDumper(CDumper):
+cdef class NumericBinaryDumper(_MixedNumericDumper):
 
     format = PQ_BINARY
-    oid = oids.NUMERIC_OID
 
     cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
-        if isinstance(obj, int):
+        if type(obj) is int:
             return dump_int_to_numeric_binary(obj, rv, offset)
-        else:
+        elif isinstance(obj, Decimal):
             return dump_decimal_to_numeric_binary(obj, rv, offset)
+        elif isinstance(obj, self.int_classes):
+            return dump_int_to_numeric_binary(int(obj), rv, offset)
+        else:
+            raise TypeError(
+                f"class {type(self).__name__} cannot dump {type(obj).__name__}"
+            )
 
 
 cdef Py_ssize_t dump_decimal_to_text(obj, bytearray rv, Py_ssize_t offset) except -1:

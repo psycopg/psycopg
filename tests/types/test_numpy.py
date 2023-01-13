@@ -2,6 +2,7 @@ from math import isnan
 
 import pytest
 from psycopg.adapt import PyFormat
+from psycopg.pq import Format
 
 try:
     import numpy as np
@@ -138,6 +139,57 @@ def test_dump_float(conn, nptype, val, pgtype, fmt_in):
         assert rec[0][0] == pytest.approx(rec[1][0], 1e-3)
     else:
         assert rec[0][0] == rec[1][0]
+
+
+@pytest.mark.parametrize(
+    "nptype, val, pgtypes",
+    [
+        ("int8", -128, "int2 int4 int8 numeric"),
+        ("int8", 127, "int2 int4 int8 numeric"),
+        ("int16", -32_768, "int2 int4 int8 numeric"),
+        ("int16", 32_767, "int2 int4 int8 numeric"),
+        ("int32", -(2**31), "int4 int8 numeric"),
+        ("int32", 0, "int2 int4 int8 numeric"),
+        ("int32", 2**31 - 1, "int4 int8 numeric"),
+        ("int64", -(2**63), "int8 numeric"),
+        ("int64", 2**63 - 1, "int8 numeric"),
+        ("longlong", -(2**63), "int8"),
+        ("longlong", 2**63 - 1, "int8"),
+        ("bool_", True, "bool"),
+        ("bool_", False, "bool"),
+        ("uint8", 0, "int2 int4 int8 numeric"),
+        ("uint8", 255, "int2 int4 int8 numeric"),
+        ("uint16", 0, "int2 int4 int8 numeric"),
+        ("uint16", 65_535, "int4 int8 numeric"),
+        ("uint32", 0, "int4 int8 numeric"),
+        ("uint32", (2**32 - 1), "int8 numeric"),
+        ("uint64", 0, "int8 numeric"),
+        ("uint64", (2**64 - 1), "numeric"),
+        ("ulonglong", 0, "int8 numeric"),
+        ("ulonglong", (2**64 - 1), "numeric"),
+    ],
+)
+@pytest.mark.parametrize("fmt", Format)
+def test_copy_by_oid(conn, val, nptype, pgtypes, fmt):
+    nptype = getattr(np, nptype)
+    val = nptype(val)
+    pgtypes = pgtypes.split()
+    cur = conn.cursor()
+
+    fnames = [f"f{t}" for t in pgtypes]
+    fields = [f"f{t} {t}" for fname, t in zip(fnames, pgtypes)]
+    cur.execute(
+        f"create table numpyoid (id serial primary key, {', '.join(fields)})",
+    )
+    with cur.copy(
+        f"copy numpyoid ({', '.join(fnames)}) from stdin (format {fmt.name})"
+    ) as copy:
+        copy.set_types(pgtypes)
+        copy.write_row((val,) * len(fnames))
+
+    cur.execute(f"select {', '.join(fnames)} from numpyoid")
+    rec = cur.fetchone()
+    assert rec == (int(val),) * len(fnames)
 
 
 @pytest.mark.slow
