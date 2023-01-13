@@ -17,14 +17,30 @@ from ._enums import PyFormat
 from ._encodings import conn_encoding
 from libc.stdlib cimport malloc, free
 
+cdef extern from "Python.h":
+    Py_ssize_t PyUnicode_GET_LENGTH(PyObject *o)
+    void *PyUnicode_DATA(PyObject *o)
+cdef extern from "string.h":
+    void *memset(void *s, int c, size_t n);
+    char *strerror(int errnum);
+cdef extern from "stdio.h":
+    int fprintf(FILE *stream, const char *format, ...);
+    int snprintf(char *str, size_t size, const char *format, ...);
+    FILE* stdout
+
+cdef enum item_type_enum:
+    ITEM_INT = 0,
+    ITEM_STR = 1
+    
 cdef union query_item:
         int data_int
-        void* data_str
+        void* data_bytes
 
 cdef struct query_part:
         void* pre
         unsigned pre_len
         query_item item
+        item_type_enum item_type
         unsigned data_len
         char format
 
@@ -34,13 +50,16 @@ cdef struct c_list:
         unsigned data_len
         c_list* next
 
-cdef struct c_listIter:
+cdef struct c_list_iter:
+        c_list* root
         c_list* ptr
         unsigned idx
                    
-cdef c_list* iterate_list(c_listIter self):
+cdef c_list* iterate_list(c_list_iter* self):
+    if not self:
+        raise MemoryError("Null-pointer dereference on c_list_iter")
     if not self.ptr:
-        raise MemoryError("Null-pointer dereference on c_listIter.ptr")
+        raise MemoryError("Null-pointer dereference on c_list_iter.ptr")
     if not self.idx:
         self.idx += 1
         return self.ptr
@@ -50,10 +69,17 @@ cdef c_list* iterate_list(c_listIter self):
     self.idx += 1
     return self.ptr
 
-cdef c_listIter* new_iterator(c_list* root):
-    cdef c_listIter* p = <c_listIter*>malloc(sizeof(c_listIter))
+cdef void reset_iterator(c_list_iter* self):
+    if not self:
+        raise MemoryError("Null-pointer dereference on c_list_iter")
+    self.idx = 0
+    self.ptr = self.root
+
+cdef c_list_iter* new_iterator(c_list* root):
+    cdef c_list_iter* p = <c_list_iter*>malloc(sizeof(c_list_iter))
     if not p:
         raise MemoryError("Dynamic allocation failure")
+    p.root = root
     p.ptr = root
     p.idx = 0
     return p
@@ -93,12 +119,9 @@ cdef void list_append(c_list* self, void* data, unsigned data_len):
     i.next = newitem            
         
 cdef void list_append_PyStr(c_list* root, PyObject* pystr):
-        cdef extern from "Python.h":
-            Py_ssize_t PyUnicode_GET_LENGTH(PyObject *o)
-            void *PyUnicode_DATA(PyObject *o)
-            cdef unsigned data_len = <unsigned>PyUnicode_GET_LENGTH(pystr)
-            cdef void* data = <void*>PyUnicode_DATA(pystr)
-        list_append(root, data, data_len)
+    cdef unsigned data_len = <unsigned>PyUnicode_GET_LENGTH(pystr)
+    cdef void* data = <void*>PyUnicode_DATA(pystr)
+    list_append(root, data, data_len)
 
 class QueryPart(NamedTuple):
     pre: bytes
@@ -159,8 +182,7 @@ cdef class PostgresQuery():
                 self.query,
                 self._want_formats,
                 self._order,
-                self._parts,
-            ) = _query2pg(bquery, self._encoding)
+            ) = _query2pg(self.parts, bquery, self._encoding)
         else:
             self.query = bquery
             self._want_formats = self._order = None
@@ -235,7 +257,7 @@ cdef class PostgresClientQuery(PostgresQuery):
 #@lru_cache()
 #Returns Tuple[bytes, List[PyFormat], Optional[List[str]], List[QueryPart]]:
 cdef tuple _query2pg(
-    query: bytes, encoding: str
+    c_list* parts, query: bytes, encoding: str
 ):
     """
     Convert Python query and params into something Postgres understands.
@@ -247,28 +269,45 @@ cdef tuple _query2pg(
       (sequence of names used in the query, in the position they appear)
       ``parts`` (splits of queries and placeholders).
     """
-    parts = _split_query(query, encoding)
-    order: Optional[List[str]] = None
-    chunks: List[bytes] = []
-    formats = []
 
-    if isinstance(parts[0].item, int):
-        for part in parts[:-1]:
-            assert isinstance(part.item, int)
-            chunks.append(part.pre)
-            chunks.append(b"$%d" % (part.item + 1))
-            formats.append(part.format)
+    cdef c_list* order = new_list()
+    cdef c_list* chunks = new_list()
+    cdef c_list* formats = new_list()
 
-    elif isinstance(parts[0].item, str):
+    _split_query(parts, query, encoding)
+        
+    cdef c_list_iter* i = new_iterator(parts)
+    cdef c_list* p = iterate_list(i)
+
+    cdef char cbuf[128] = 0 # Conversion buffer
+
+    cdef query_part* qp
+    
+    qp = p.data
+    if not qp:
+        return
+    if qp.item_type == ITEM_INT:
+        while qp.next:
+            list_append(chunks, qp.pre, qp.pre_len)
+            cdef int len = snprintf(cbuf, 128, "$%d", (qp.item.data_int + 1))
+            if len < 0:
+                fprintf(stderr, "%s", strerror(errno))
+                return TypeError("snprintf failed")
+            list_append(formats, &qp.format, 1)
+            p = iterate_list(i)
+            if not p.data:
+                break
+            qp = p.data            
+    elif qp.item_type == ITEM_STR
         seen: Dict[str, Tuple[bytes, PyFormat]] = {}
         order = []
-        for part in parts[:-1]:
-            assert isinstance(part.item, str)
-            chunks.append(part.pre)
+        while qp.next:
+        #for part in parts[:-1]:
+            chunks.append(qp.pre)
             if part.item not in seen:
                 ph = b"$%d" % (len(seen) + 1)
                 seen[part.item] = (ph, part.format)
-                order.append(part.item)
+                order.append(qp.item.data_bytes)
                 chunks.append(ph)
                 formats.append(part.format)
             else:
@@ -384,17 +423,14 @@ _re_placeholder = re.compile(
 
 #Returns List[QueryPart]
 cdef list _split_query(
-    query: bytes, encoding: str = "ascii", collapse_double_percent: bool = True
+    c_list* out, 
+    query: bytes,
+    encoding: str = "ascii",
+    collapse_double_percent: bool = True
 ):
     parts: List[Tuple[bytes, Optional[Match[bytes]]]] = []
     cdef unsigned cur = 0
 
-    # first, determine number of matches
-    cdef unsigned count = 0
-    for m in _re_placeholder.finditer(query):
-        count += 1
-    # allocate query_part array
-            
     # pairs [(fragment, match], with the last match None
     m = None
     for m in _re_placeholder.finditer(query):
@@ -406,8 +442,8 @@ cdef list _split_query(
     else:
         parts.append((query, None))
 
-    rv = []
-
+    cdef query_part* qp;
+    
     # drop the "%%", validate
     cdef unsigned i = 0
     phtype = None
@@ -415,7 +451,16 @@ cdef list _split_query(
         pre, m = parts[i]
         if m is None:
             # last part
-            rv.append(QueryPart(pre, 0, PyFormat.AUTO))
+            qp = <query_part*>malloc(sizeof(query_part))
+            if not qp:
+                raise MemoryError("Dynamic allocation failure")
+            qp.pre = PyUnicode_DATA(pre)
+            qp.pre_len = PyUnicode_GET_LENGTH(pre)
+            qp.item.data_int = 0
+            #data_len only used when item.data_bytes is populated
+            qp.data_len = 0
+            qp.format = 's'
+            list_append(out, qp, sizeof(query_part))
             break
 
         ph = m.group(0)
