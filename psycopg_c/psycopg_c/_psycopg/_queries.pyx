@@ -49,7 +49,8 @@ cdef struct c_list:
         void* data
         unsigned data_len
         c_list* next
-
+        c_list* prev
+        
 cdef struct c_list_iter:
         c_list* root
         c_list* ptr
@@ -121,7 +122,8 @@ cdef void list_append(c_list* self, void* data, unsigned data_len, int copy):
             break
         i = i.next
     i.next = newitem
-
+    i.next.prev = i
+    
 cdef void list_append_PyStr(c_list* root, PyObject* pystr):
     cdef unsigned data_len = <unsigned>PyUnicode_GET_LENGTH(pystr)
     cdef void* data = <void*>PyUnicode_DATA(pystr)
@@ -280,14 +282,23 @@ cdef tuple _query2pg(
 
     _split_query(parts, query, encoding)
         
-    cdef c_list_iter* i = new_iterator(parts)
-    cdef c_list* p = iterate_list(i)
+    cdef c_list* i = parts;
 
     cdef char cbuf[128] = 0 # Conversion buffer
 
     cdef query_part* qp
+
+    #First, advance the iterator to the end of the parts list
+    while i.next:
+        i = i.next
+
+    #Start from the second-to-last element
+    i = i.prev
+    if not i:
+        return
     
-    qp = p.data
+    #Now, assemble parts in reverse
+    qp = i.data
     if not qp:
         return
     if qp.item_type == ITEM_INT:
@@ -298,15 +309,15 @@ cdef tuple _query2pg(
                 fprintf(stderr, "%s", strerror(errno))
                 return TypeError("snprintf failed")
             list_append(formats, &qp.format, 1, 0)
-            p = iterate_list(i)
-            if not p.data:
+            i = i.prev
+            if not i:
                 break
-            qp = p.data            
+            qp = i.data
     elif qp.item_type == ITEM_STR
         seen: Dict[str, Tuple[bytes, PyFormat]] = {}
-        order = []
         while qp.next:
         #for part in parts[:-1]:
+            list_append(chunks, qp.pre, qp.pre_len, 0)
             chunks.append(qp.pre)
             if part.item not in seen:
                 ph = b"$%d" % (len(seen) + 1)
