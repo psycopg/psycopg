@@ -27,8 +27,9 @@ cdef extern from "stdio.h":
     struct FILE
     int fprintf(FILE *stream, const char *format, ...);
     int snprintf(char *str, size_t size, const char *format, ...);
-    FILE* stdout
-
+    FILE* stderr    
+cdef extern from "errno.h":
+    int errno
 cdef enum item_type_enum:
     ITEM_INT = 0,
     ITEM_STR = 1
@@ -51,7 +52,8 @@ cdef struct c_list:
         unsigned data_len
         c_list* next
         c_list* prev
-        
+        int dynamic
+
 cdef struct c_list_iter:
         c_list* root
         c_list* ptr
@@ -99,7 +101,7 @@ cdef void free_list(c_list* l):
     cdef c_list* t
     while p:
         t = p
-        if (p.data):
+        if (p.data and p.dynamic):
             free(p.data)
             p.data = NULL
         p = p.next
@@ -128,10 +130,12 @@ cdef void list_append(c_list* self, void* data, unsigned data_len, int copy):
         if not newitem.data:
             raise MemoryError("Dynamic allocation failure")
         newitem.data_len = data_len
+        newitem.dynamic = 1
         memcpy(newitem.data, data, data_len)
     else:
         newitem.data = data
         newitem.data_len = data_len
+        newitem.dynamic = 0
     while 1:
         if not i.next:
             break
@@ -275,7 +279,7 @@ cdef class PostgresClientQuery(PostgresQuery):
             self.params = None
 
 cdef void free_lists(c_list** res, unsigned n):
-    cdef unsigned i;
+    cdef unsigned i = 0;
     if not res:
         return
     while i < n:
@@ -331,15 +335,16 @@ cdef tuple _query2pg(
     if qp.item_type == ITEM_INT:
         while qp:
             list_append(chunks, qp.pre, qp.pre_len, 0)
-            len = snprintf(cbuf, 128, "$%d", (qp.item.data_int + 1))
-            if len < 0:
+            slen = snprintf(cbuf, 128, "$%d", (qp.item.data_int + 1))
+            if slen < 0:
                 fprintf(stderr, "%s", strerror(errno))
                 return TypeError("snprintf failed")
+            list_append(chunks, cbuf, slen, 1)
             list_append(formats, &qp.format, 1, 0)
             i = i.prev
             if not i:
                 break
-            qp = i.data
+            qp = <query_part*>i.data
     elif qp.item_type == ITEM_STR:
         seen: Dict[str, Tuple[bytes, PyFormat]] = {}
         while qp:
