@@ -94,7 +94,7 @@ class TypeInfo:
         # or intrans)
         try:
             with conn.transaction():
-                with conn.cursor(binary=True, row_factory=dict_row) as cur:
+                with conn.cursor(row_factory=dict_row) as cur:
                     cur.execute(cls._get_info_query(conn), {"name": name})
                     recs = cur.fetchall()
         except e.UndefinedObject:
@@ -108,7 +108,7 @@ class TypeInfo:
     ) -> Optional[T]:
         try:
             async with conn.transaction():
-                async with conn.cursor(binary=True, row_factory=dict_row) as cur:
+                async with conn.cursor(row_factory=dict_row) as cur:
                     await cur.execute(cls._get_info_query(conn), {"name": name})
                     recs = await cur.fetchall()
         except e.UndefinedObject:

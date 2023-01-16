@@ -17,6 +17,7 @@ Psycopg 3.1.8 (unreleased)
   are not found (:ticket:`#473`).
 - Set `Cursor.rowcount` to the number of rows of each result set from
   `~Cursor.executemany()` when called with `!returning=True` (:ticket:`#479`).
+- Fix `TypeInfo.fetch()` when used with `ClientCursor` (:ticket:`#484`).
 
 Current release
 ---------------
