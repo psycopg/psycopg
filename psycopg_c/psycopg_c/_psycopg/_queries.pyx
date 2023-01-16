@@ -300,7 +300,8 @@ cdef tuple _query2pg(
       (sequence of names used in the query, in the position they appear)
       ``parts`` (splits of queries and placeholders).
     """
-
+    if not parts:
+        raise MemoryError("Null pointer dereference on 'parts'")
     cdef c_list* order = new_list()
     cdef c_list* chunks = new_list()
     cdef c_list* formats = new_list()
@@ -315,20 +316,13 @@ cdef tuple _query2pg(
     cdef char cbuf[128] #Conversion buffer
     memset(cbuf, 0, 128)
     
-    cdef query_part* qp
+    cdef query_part* qp = <query_part*>i.data
 
-    cdef int len
-    
-    #First, advance the iterator to the end of the parts list
-    while i.next:
-        i = i.next
-
-    #Start from the second-to-last element
-    i = i.prev
     if not i:
         free_lists(resources, 3)
     
-    #Now, assemble parts in reverse
+    cdef int slen
+    
     qp = <query_part*>i.data
     if not qp:
         free_lists(resources, 3)
@@ -341,8 +335,9 @@ cdef tuple _query2pg(
                 return TypeError("snprintf failed")
             list_append(chunks, cbuf, slen, 1)
             list_append(formats, &qp.format, 1, 0)
-            i = i.prev
-            if not i:
+            i = i.next
+            # Stop at second-to-last element
+            if not i.next:
                 break
             qp = <query_part*>i.data
     elif qp.item_type == ITEM_STR:
