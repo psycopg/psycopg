@@ -9,6 +9,7 @@ import psycopg
 from psycopg import sql, rows
 from psycopg.adapt import PyFormat
 from psycopg.postgres import types as builtins
+from psycopg.types import TypeInfo
 
 from .utils import gc_collect, gc_count
 from .test_cursor import my_row_factory
@@ -855,3 +856,8 @@ def test_message_0x33(conn):
         assert cur.fetchone() == ("test",)
 
     assert not notices
+
+
+def test_typeinfo(conn):
+    info = TypeInfo.fetch(conn, "jsonb")
+    assert info is not None
