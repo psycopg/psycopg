@@ -6,6 +6,7 @@ from typing import List
 import psycopg
 from psycopg import sql, rows
 from psycopg.adapt import PyFormat
+from psycopg.types import TypeInfo
 
 from .utils import alist, gc_collect, gc_count
 from .test_cursor import my_row_factory
@@ -727,3 +728,8 @@ async def test_message_0x33(aconn):
         assert (await cur.fetchone()) == ("test",)
 
     assert not notices
+
+
+async def test_typeinfo(aconn):
+    info = await TypeInfo.fetch(aconn, "jsonb")
+    assert info is not None
