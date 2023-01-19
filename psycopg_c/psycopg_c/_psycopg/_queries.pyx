@@ -46,108 +46,6 @@ cdef struct query_part:
         unsigned data_len
         char format
 
-cdef struct c_list
-cdef struct c_list:
-        void* data
-        unsigned data_len
-        c_list* next
-        c_list* prev
-        int dynamic
-
-cdef struct c_list_iter:
-        c_list* root
-        c_list* ptr
-        unsigned idx
-                   
-cdef c_list* iterate_list(c_list_iter* self):
-    if not self:
-        raise MemoryError("Null-pointer dereference on c_list_iter")
-    if not self.ptr:
-        raise MemoryError("Null-pointer dereference on c_list_iter.ptr")
-    if not self.idx:
-        self.idx += 1
-        return self.ptr
-    if not self.ptr.next:
-        return NULL
-    self.ptr = self.ptr.next
-    self.idx += 1
-    return self.ptr
-
-cdef void reset_iterator(c_list_iter* self):
-    if not self:
-        raise MemoryError("Null-pointer dereference on c_list_iter")
-    self.idx = 0
-    self.ptr = self.root
-
-cdef c_list_iter* new_iterator(c_list* root):
-    cdef c_list_iter* p = <c_list_iter*>malloc(sizeof(c_list_iter))
-    if not p:
-        raise MemoryError("Dynamic allocation failure")
-    p.root = root
-    p.ptr = root
-    p.idx = 0
-    return p
-
-cdef c_list* new_list():
-    cdef c_list* p = <c_list*>malloc(sizeof(c_list))
-    if not p:
-        raise MemoryError("Dynamic allocation failure")
-    return p
-
-cdef void free_list(c_list* l):
-    if not l:
-        return
-    cdef c_list* p = l
-    cdef c_list* t
-    while p:
-        t = p
-        if (p.data and p.dynamic):
-            free(p.data)
-            p.data = NULL
-        p = p.next
-        p.prev = NULL
-        free(t)
-
-cdef void list_append(c_list* self, void* data, unsigned data_len, int copy):
-    if not self:
-        raise MemoryError("Null-pointer dereference on c_list.ptr")
-    if not self.data:
-        self.data = <void*>malloc(data_len)
-        if not self.data:
-            raise MemoryError("Dynamic allocation failure")
-        memcpy(self.data, data, data_len)
-        self.data_len = data_len
-        return
-
-    cdef c_list* i = self
-
-    cdef c_list* newitem
-    newitem = <c_list*>malloc(sizeof(c_list))
-    if not newitem:
-        raise MemoryError("Dynamic allocation failure")
-    if copy:
-        newitem.data = <void*>malloc(data_len)
-        if not newitem.data:
-            raise MemoryError("Dynamic allocation failure")
-        newitem.data_len = data_len
-        newitem.dynamic = 1
-        memcpy(newitem.data, data, data_len)
-    else:
-        newitem.data = data
-        newitem.data_len = data_len
-        newitem.dynamic = 0
-    while 1:
-        if not i.next:
-            break
-        i = i.next
-    i.next = newitem
-    i.next.prev = i
-    
-cdef void list_append_PyStr(c_list* root, PyObject* pystr):
-    cdef unsigned data_len = <unsigned>PyUnicode_GET_LENGTH(pystr)
-    cdef void* data = <void*>PyUnicode_DATA(pystr)
-    list_append(root, data, data_len, 1)
-
 class QueryPart(NamedTuple):
     pre: bytes
     item: Union[int, str]
@@ -521,8 +419,8 @@ cdef list _split_query(
             )
         elif ph == b"% ":
             # explicit messasge for a typical error
-            raise e.ProgrammingError(
-                "incomplete placeholder: '%'; if you want to use '%' as an"
+            raise e.ProgrammingError( 
+               "incomplete placeholder: '%'; if you want to use '%' as an"
                 " operator you can double it up, i.e. use '%%'"
             )
         elif ph[-1:] not in b"sbt":
