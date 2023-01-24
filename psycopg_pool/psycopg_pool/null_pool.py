@@ -6,11 +6,12 @@ Psycopg null connection pools
 
 import logging
 import threading
-from typing import Any, Optional, Tuple
+from typing import Any, Callable, Dict, Optional, Tuple, Type
 
 from psycopg import Connection
 from psycopg.pq import TransactionStatus
 
+from .base import BasePool
 from .pool import ConnectionPool, AddConnection
 from .errors import PoolTimeout, TooManyRequests
 from ._compat import ConnectionTimeout
@@ -19,13 +20,6 @@ logger = logging.getLogger("psycopg.pool")
 
 
 class _BaseNullConnectionPool:
-    def __init__(
-        self, conninfo: str = "", min_size: int = 0, *args: Any, **kwargs: Any
-    ):
-        super().__init__(  # type: ignore[call-arg]
-            conninfo, *args, min_size=min_size, **kwargs
-        )
-
     def _check_size(self, min_size: int, max_size: Optional[int]) -> Tuple[int, int]:
         if max_size is None:
             max_size = min_size
@@ -48,6 +42,46 @@ class _BaseNullConnectionPool:
 
 
 class NullConnectionPool(_BaseNullConnectionPool, ConnectionPool):
+    def __init__(
+        self,
+        conninfo: str = "",
+        *,
+        open: bool = True,
+        connection_class: Type[Connection[Any]] = Connection,
+        configure: Optional[Callable[[Connection[Any]], None]] = None,
+        reset: Optional[Callable[[Connection[Any]], None]] = None,
+        kwargs: Optional[Dict[str, Any]] = None,
+        # Note: default value changed to 0.
+        min_size: int = 0,
+        max_size: Optional[int] = None,
+        name: Optional[str] = None,
+        timeout: float = 30.0,
+        max_waiting: int = 0,
+        max_lifetime: float = 60 * 60.0,
+        max_idle: float = 10 * 60.0,
+        reconnect_timeout: float = 5 * 60.0,
+        reconnect_failed: Optional[Callable[[BasePool[Connection[Any]]], None]] = None,
+        num_workers: int = 3,
+    ):
+        super().__init__(
+            conninfo,
+            open=open,
+            connection_class=connection_class,
+            configure=configure,
+            reset=reset,
+            kwargs=kwargs,
+            min_size=min_size,
+            max_size=max_size,
+            name=name,
+            timeout=timeout,
+            max_waiting=max_waiting,
+            max_lifetime=max_lifetime,
+            max_idle=max_idle,
+            reconnect_timeout=reconnect_timeout,
+            reconnect_failed=reconnect_failed,
+            num_workers=num_workers,
+        )
+
     def wait(self, timeout: float = 30.0) -> None:
         """
         Create a connection for test.

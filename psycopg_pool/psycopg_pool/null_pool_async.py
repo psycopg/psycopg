@@ -6,11 +6,12 @@ psycopg asynchronous null connection pool
 
 import asyncio
 import logging
-from typing import Any, Optional
+from typing import Any, Awaitable, Callable, Dict, Optional, Type
 
 from psycopg import AsyncConnection
 from psycopg.pq import TransactionStatus
 
+from .base import BasePool
 from .errors import PoolTimeout, TooManyRequests
 from ._compat import ConnectionTimeout
 from .null_pool import _BaseNullConnectionPool
@@ -20,6 +21,48 @@ logger = logging.getLogger("psycopg.pool")
 
 
 class AsyncNullConnectionPool(_BaseNullConnectionPool, AsyncConnectionPool):
+    def __init__(
+        self,
+        conninfo: str = "",
+        *,
+        open: bool = True,
+        connection_class: Type[AsyncConnection[Any]] = AsyncConnection,
+        configure: Optional[Callable[[AsyncConnection[Any]], Awaitable[None]]] = None,
+        reset: Optional[Callable[[AsyncConnection[Any]], Awaitable[None]]] = None,
+        kwargs: Optional[Dict[str, Any]] = None,
+        # Note: default value changed to 0.
+        min_size: int = 0,
+        max_size: Optional[int] = None,
+        name: Optional[str] = None,
+        timeout: float = 30.0,
+        max_waiting: int = 0,
+        max_lifetime: float = 60 * 60.0,
+        max_idle: float = 10 * 60.0,
+        reconnect_timeout: float = 5 * 60.0,
+        reconnect_failed: Optional[
+            Callable[[BasePool[AsyncConnection[None]]], None]
+        ] = None,
+        num_workers: int = 3,
+    ):
+        super().__init__(
+            conninfo,
+            open=open,
+            connection_class=connection_class,
+            configure=configure,
+            reset=reset,
+            kwargs=kwargs,
+            min_size=min_size,
+            max_size=max_size,
+            name=name,
+            timeout=timeout,
+            max_waiting=max_waiting,
+            max_lifetime=max_lifetime,
+            max_idle=max_idle,
+            reconnect_timeout=reconnect_timeout,
+            reconnect_failed=reconnect_failed,
+            num_workers=num_workers,
+        )
+
     async def wait(self, timeout: float = 30.0) -> None:
         self._check_open_getconn()
 

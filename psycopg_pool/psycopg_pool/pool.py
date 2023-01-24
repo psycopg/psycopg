@@ -36,7 +36,17 @@ class ConnectionPool(BasePool[Connection[Any]]):
         connection_class: Type[Connection[Any]] = Connection,
         configure: Optional[Callable[[Connection[Any]], None]] = None,
         reset: Optional[Callable[[Connection[Any]], None]] = None,
-        **kwargs: Any,
+        kwargs: Optional[Dict[str, Any]] = None,
+        min_size: int = 4,
+        max_size: Optional[int] = None,
+        name: Optional[str] = None,
+        timeout: float = 30.0,
+        max_waiting: int = 0,
+        max_lifetime: float = 60 * 60.0,
+        max_idle: float = 10 * 60.0,
+        reconnect_timeout: float = 5 * 60.0,
+        reconnect_failed: Optional[Callable[[BasePool[Connection[Any]]], None]] = None,
+        num_workers: int = 3,
     ):
         self.connection_class = connection_class
         self._configure = configure
@@ -53,7 +63,21 @@ class ConnectionPool(BasePool[Connection[Any]]):
         self._tasks: "Queue[MaintenanceTask]" = Queue()
         self._workers: List[threading.Thread] = []
 
-        super().__init__(conninfo, **kwargs)
+        super().__init__(
+            conninfo,
+            kwargs=kwargs,
+            min_size=min_size,
+            max_size=max_size,
+            open=open,
+            name=name,
+            timeout=timeout,
+            max_waiting=max_waiting,
+            max_lifetime=max_lifetime,
+            max_idle=max_idle,
+            reconnect_timeout=reconnect_timeout,
+            reconnect_failed=reconnect_failed,
+            num_workers=num_workers,
+        )
 
         if open:
             self.open()
