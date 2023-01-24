@@ -193,15 +193,9 @@ class BaseCursor(Generic[ConnectionType, Row]):
         """Generator implementing `Cursor.execute()`."""
         yield from self._start_query(query)
         pgq = self._convert_query(query, params)
-        results = yield from self._maybe_prepare_gen(
-            pgq, prepare=prepare, binary=binary
-        )
+        yield from self._maybe_prepare_gen(pgq, prepare=prepare, binary=binary)
         if self._conn._pipeline:
             yield from self._conn._pipeline._communicate_gen()
-        else:
-            assert results is not None
-            self._check_results(results)
-            self._set_results(results)
 
         self._last_query = query
 
@@ -266,10 +260,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
             else:
                 pgq.dump(params)
 
-            results = yield from self._maybe_prepare_gen(pgq, prepare=True)
-            assert results is not None
-            self._check_results(results)
-            self._set_results(results)
+            yield from self._maybe_prepare_gen(pgq, prepare=True)
 
         self._last_query = query
 
@@ -282,7 +273,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
         *,
         prepare: Optional[bool] = None,
         binary: Optional[bool] = None,
-    ) -> PQGen[Optional[List["PGresult"]]]:
+    ) -> PQGen[None]:
         # Check if the query is prepared or needs preparing
         prep, name = self._get_prepared(pgq, prepare)
         if prep is Prepare.NO:
@@ -309,7 +300,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
             if key is not None:
                 queued = (key, prep, name)
             self._conn._pipeline.result_queue.append((self, queued))
-            return None
+            return
 
         # run the query
         results = yield from execute(self._pgconn)
@@ -317,7 +308,8 @@ class BaseCursor(Generic[ConnectionType, Row]):
         if key is not None:
             self._conn._prepared.validate(key, prep, name, results)
 
-        return results
+        self._check_results(results)
+        self._set_results(results)
 
     def _get_prepared(
         self, pgq: PostgresQuery, prepare: Optional[bool] = None
