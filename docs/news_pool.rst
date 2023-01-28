@@ -7,6 +7,16 @@
 ``psycopg_pool`` release notes
 ==============================
 
+Future releases
+---------------
+
+psycopg_pool 3.1.6 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Declare all parameters in pools constructors, instead of using `!**kwargs`
+  (:ticket:`#493`).
+
+
 Current release
 ---------------
 
