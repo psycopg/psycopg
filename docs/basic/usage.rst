@@ -119,14 +119,14 @@ cursor attributes are available to obtain information on the status of
 the SQL statement just executed; such as `~Cursor.rowcount`, which
 contains the number of database rows the statement affected.
 
-.. index::
-    single: Adaptation
-            Data types; Adaptation
-
 Should an :ref:`error <dbapi-exceptions>` occur, at any time, `an
 exception`__ is raised.
 
 .. __: https://docs.python.org/3/tutorial/errors.html#exceptions
+
+.. index::
+    single: Adaptation
+            Data types; Adaptation
 
 :ref:`Adapters <types-adaptation>` are responsible for converting
 between PostgreSQL data types and Python data types, and between the
