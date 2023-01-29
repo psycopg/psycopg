@@ -238,7 +238,7 @@ Here is an interactive session showing some of the basic commands:
             # Make the changes to the database persistent.
             # Assuming this listing shows the entirety of this program,
             # this statement is unnecessary.  The transaction is
-            # automatically commited when the connection's `with`
+            # automatically committed when the connection's `with`
             # statement completes.  That said, it does not hurt to commit.
             conn.commit()
 
