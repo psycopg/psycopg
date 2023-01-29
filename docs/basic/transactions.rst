@@ -224,6 +224,8 @@ manage a proper transaction. In essence, a transaction context tries to leave
 a connection in the state it found it, and leaves you to deal with the wider
 context.
 
+.. _common-transaction-idiom:
+
 .. hint::
     The interaction between non-autocommit transactions and transaction
     contexts is probably surprising. Although the non-autocommit default is
