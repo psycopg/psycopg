@@ -1,13 +1,13 @@
 .. currentmodule:: psycopg
 
-.. index:: Transactions management
+.. index:: Transaction management
 .. index:: InFailedSqlTransaction
 .. index:: idle in transaction
 
 .. _transactions:
 
-Transactions management
-=======================
+Transaction management
+======================
 
 Psycopg has a behaviour that may seem surprising compared to
 :program:`psql`: by default, any database operation will start a new

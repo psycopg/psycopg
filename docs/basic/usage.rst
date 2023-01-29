@@ -135,7 +135,7 @@ data structures.
 Adapters may be customized.
 
 .. index::
-    single: Transactions management
+    single: Transaction management
     single: database changes are discarded
     single: failure to change database content
     single: updates fail
