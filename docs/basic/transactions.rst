@@ -1,6 +1,6 @@
 .. currentmodule:: psycopg
 
-.. index:: Transaction management
+.. index:: transaction management
 .. index:: InFailedSqlTransaction
 .. index:: idle in transaction
 

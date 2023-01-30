@@ -117,7 +117,8 @@ most common methods, and demonstrating how they relate.
     results.
     Cursors are iterables so, as is usual when an iterable is used in
     an iteration context, Python creates a new iterator from the
-    `~Cursor` iterable from `cur` when the `!for` loop is executed.
+    `~Cursor` iterable.
+    I.e. from `cur` when the `!for` loop is executed.
 
 - Using these objects as context managers ensures that they are closed
   and their resources freed when the `!with` block exits. (Notice that
