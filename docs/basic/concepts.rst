@@ -34,7 +34,7 @@ Someone who has read through all of this section should:
 
   - What adapters do
 
-  - How transactions might be managed
+  - How transactions might be managed in your Psycopg applications
 
   - Why context managers help with transaction management
 
@@ -242,9 +242,9 @@ Again, by default, closing the connection (or exiting your Python
 program without closing) does not commit an ongoing transaction;
 database content changes are lost unless the `~Connection.commit()`
 method is explicitly called.
-As shown in the :ref:`example below <usage>`, automatic commit upon
-connection close can be obtained by using a connection object as a
-context manager.
+As explained in the :ref:`example below <usage>`, automatic commit
+upon connection close can be obtained by using a connection object as
+a context manager.
 
 .. __: https://www.postgresql.org/docs/current/tutorial-transactions.html
 
