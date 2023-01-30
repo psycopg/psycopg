@@ -32,6 +32,8 @@ Someone who has read through all of this section should:
   - What happens when there is a problem performing a requested
     operation
 
+  - What row factories do
+
   - What adapters do
 
   - How transactions might be managed in your Psycopg applications
@@ -66,6 +68,8 @@ Someone who has read through all of this section should:
   - Options for freeing unused resources
 
 - Be aware:
+
+  - That static type checking is supported
 
   - Of the existence of a standardized Python API for database
     interaction
