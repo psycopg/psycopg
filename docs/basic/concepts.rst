@@ -15,9 +15,9 @@ features.
 
 The reader may not be interested in every concept or feature mentioned.
 Readers should feel free to skip or skim over the parts of this section
-which are inapplicable or not suited to the problem at-hand.
+which are not relevant or not suited to the problem at-hand.
 
-Someone who has read through the entirety of this section should:
+Someone who has read through all of this section should:
 
 - Have a minimal understanding of:
 

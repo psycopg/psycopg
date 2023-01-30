@@ -11,7 +11,8 @@ The example is simple, but useful -- omitting only error handling.
 The code walk-through explains how to
 perform basic interactions with a Postgres database.
 Tips and hints are provided to help with coding style and technique,
-common mistakes, error handling, and related matters.
+common mistakes and mis-understandings, error handling, and similar
+matters.
 
 After completing this section the reader should be able to:
 
