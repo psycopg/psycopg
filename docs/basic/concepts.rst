@@ -94,7 +94,7 @@ is available only in a particular database adapter.
 
 Psycopg has a number of advanced features which go beyond the DB-API
 standard.
-These can lead to: improvements in code clarity; improved efficency;
+These can lead to: improvements in code clarity; improved efficiency;
 support for alternate software design patterns, patterns better suited
 to your problem domain; etc.
 
