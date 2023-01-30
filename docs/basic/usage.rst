@@ -230,8 +230,8 @@ connection.  But in this case the developer must explicitly call
 
 .. warning::
     Altering database content always begins a transaction.
-    By default, this is transaction that is left open and must be
-    committed or the alterations are discarded!
+    By default, this is transaction is left open and must be committed
+    or the alterations are discarded!
 
     Psycopg does not always automatically commit your transactions!
 
