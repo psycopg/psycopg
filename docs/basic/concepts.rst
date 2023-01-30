@@ -102,8 +102,24 @@ to your problem domain; etc.
 
 .. _concepts:
 
-Concepts and Features
----------------------
+A Summary of DB-API Concepts and Psycopg Features
+-------------------------------------------------
+
+This sub-section provides an overview of Psycopg's features.
+It describes how these features interact with each other, utilizing
+the interface concepts defined in the Python Database API standard.
+
+The organization of this sub-section follows the control flow of a
+typical Psycopg-based application.
+Concepts, the objects which represent them, and Psycopg features are
+introduced in the order in which they typically appear during program
+execution.
+
+After sufficient explanation of the concepts and features already
+introduced, at points where program architecture decisions must be
+made, previously unmentioned concepts and features, those that could
+make sense to use, are introduced.
+So let's get started!
 
 .. index::
     single: connection; string
