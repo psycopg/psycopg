@@ -1,198 +1,45 @@
+
 .. currentmodule:: psycopg
 
-.. _module-usage:
+.. _module-example:
 
-Basic module usage
-==================
+A Psycopg Example
+=================
 
-The basic Psycopg usage is common to all the database adapters
-implementing the `DB-API`_ protocol.
-Other database adapters, such as the builtin `sqlite3` or `psycopg2`,
-have roughly the same pattern of interaction.
+This section provides model code showing how Psycopg is often used.
+The example is simple, but useful -- omitting only error handling.
+The code walk-through explains how to
+perform basic interactions with a Postgres database.
+Tips and hints are provided to help with coding style and technique,
+common mistakes, error handling, and related matters.
 
-.. _DB-API: https://www.python.org/dev/peps/pep-0249/
+After completing this section the reader should be able to:
 
-.. index:: concepts
+- Write a program that uses the basic features of Psycopg to read
+  data from and write data to a database
 
-.. _concepts:
+- Have some notion of common pitfalls
 
-Concepts and Vocabulary
------------------------
+- Simplify your code and transition from the style supported by
+  Psycopg 2
 
-.. index::
-    single: connection string
-            connection object
-            cursor
+- Work with transactions
 
-The parameters needed to interact with `Postgres`__ are
-:ref:`assembled <psycopg.conninfo>` into a `connection string`__\.
-This value is given to a connection method, typically the `~psycopg`
-module's `~psycopg.connect()` method, the `database server`__ is
-contacted, and a database `Connection` object is returned.
-Each connection object represents a communication channel to a
-Postgres database.
-Alternately, connections may be obtained from a :ref:`pool
-<connection-pools>` of pre-established connections, to mitigate
-connection startup delay.
-A connection's `~Connection.cursor()` method is used to obtain (one,
-often, or more) `~Cursor` objects, which are then used to interact
-with the connected database.
+- Take advantage of Psycopg's context manager related features
 
-.. __: https://www.postgresql.org
-.. __: https://www.postgresql.org/docs/current/
-       libpq-connect.html#LIBPQ-CONNSTRING
-.. __: https://www.postgresql.org/docs/current/tutorial-arch.html
+- Perform basic error handling
 
-.. index::
-    single: SQL
-            query parameters
-    pair: SQL; substituting data values
-          SQL; construction
-          SQL; escaping
-          SQL; quoting
-          SQL; dynamic
+- Have some idea of which advanced Psycopg features you might want
+  to use
 
-The `~psycopg.sql` module may be used to construct `~psycopg.sql.SQL`
-objects, which represent `SQL`__ statements into which data values can
-be substituted at run time.
-When properly constructed these are impervious to `SQL injection`__
-attacks.
-:ref:`Other techniques <query-parameters>`, which involve :ref:`less
-code <usage>`, are also available to safely put dynamic data into SQL.
-Relying on Psycopg, using `~psycopg.sql` in particular, for safe SQL
-construction means that the application need not concern itself with
-either quoting and escaping data values and `identifiers`__, or
-handling similar subtle aspects of SQL syntax and parsing.
-
-.. __: https://en.wikibooks.org/wiki/SQL
-.. __: https://en.wikipedia.org/wiki/Sql_injection
-.. __: https://www.postgresql.org/docs/current/
-       sql-syntax-lexical.html#SQL-SYNTAX-IDENTIFIERS
-
-.. index::
-    single: efficiency
-    single: performance
-    pair: SQL; execution
-
-The `~Cursor.execute()` cursor method takes SQL and sends it to the
-Postgres server for execution.
-It may optionally be given data values to be (safely) incorporated
-into the text of the SQL upon execution.
-For network efficiency, or for other reasons, the SQL supplied to
-`~Cursor.execute()` may consist of more than one SQL statement.
-In a similar vein, `~Cursor.executemany()` may be used to efficiently
-re-execute the same SQL, incorporating different data values into the
-SQL on each execution.
-
-Psycopg supports other features which improve performance.
-Among these are:
-:ref:`Prepared statements <prepared-statements>`, which reduce server parsing
-and planning load;
-:ref:`Pipeline mode <pipeline-mode>`, which mitigates problems with network
-latency;
-and :ref:`COPY <copy>` methods, for efficient bulk data transfer in
-and out of the database.
-
-.. index::
-    single: result set
-    pair: cursor; returning rows
-          SQL; returning rows
-
-SQL statements which produce results do so in `result sets`__\.
-Psycopg provides `~Cursor` methods to retrieve one or more rows from
-result sets but the usual approach is to retrieve rows by iterating on
-the cursor.
-This can be seen in the :ref:`usage <usage>` example below.
-After retrieving all of a result set's rows, calling the
-`~Cursor.nextset()` cursor method switches to the next result set.
-
-.. __: https://www.postgresql.org/docs/current/
-       glossary.html#GLOSSARY-RESULT-SET
-
-.. index::
-    pair:: SQL; result status
-           execution; result status
-
-Once all rows in a result set are retrieved from the Postgres server
-(which some kinds of cursors do automatically upon SQL execution)
-cursor attributes are available to obtain information on the status of
-the SQL statement just executed; such as `~Cursor.rowcount`, which
-contains the number of database rows the statement affected.
-
-Should an :ref:`error <dbapi-exceptions>` occur, at any time, `an
-exception`__ is raised.
-
-.. __: https://docs.python.org/3/tutorial/errors.html#exceptions
-
-.. index::
-    single: Adaptation
-            Data types; Adaptation
-
-:ref:`Adapters <types-adaptation>` are responsible for converting
-between PostgreSQL data types and Python data types, and between the
-data types used in the various communication protocols and related
-data structures.
-Adapters may be customized.
-
-.. index::
-    single: Transaction management
-    single: database changes are discarded
-    single: failure to change database content
-    single: updates fail
-    single: writes fail
-
-`Transactions`__ are, by default, :ref:`managed by Psycopg
-<transactions>`\.
-They are a property of database connections; a connection is either in
-a transaction or is not.
-The Python `DB-API`_ demands particular default behaviors.
-By default, any change made to database content begins a transaction.
-Absent transaction management on the part of your code, further
-content changes become part of the same transaction.
-Again, by default, closing the connection (or exiting your Python
-program without closing) does not commit an ongoing transaction;
-database content changes are lost unless the `~Connection.commit()`
-method is explicitly called.
-As shown in the :ref:`example below <usage>`, automatic commit upon
-connection close can be obtained by using a connection object as a
-context manager.
-
-.. __: https://www.postgresql.org/docs/current/tutorial-transactions.html
-
-.. index::
-    single: autocommit
-
-To obtain a more intuitive transaction handling, some experienced
-developers prefer using :ref:`a particular <common-transaction-idiom>`
-software design pattern employing the Psycopg :ref:`autocommit
-<autocommit>` feature.
-A variety of transaction design patterns are possible.
-
-.. index::
-   pair: context manager; cursor
-         context manager; connection
-         cursor; closing
-         connection; closing
-
-When the server has finished executing all the SQL statements sent to
-it and there are no more result sets available to a cursor, the cursor
-may be re-used.
-When a cursor, or a connection, is no longer needed it should be
-closed.
-This is usually accomplished, :ref:`as shown <usage>` below, by using
-the cursor or connection object as the context manager in a Python
-`!with` statement.
-
-There are various kinds of connection objects, cursor objects, SQL
-representations, and so forth, to be used as needed.
 
 .. index::
     pair: Example; Usage
 
 .. _usage:
 
-Main objects in Psycopg 3
--------------------------
+Psycopg 3's core objects
+------------------------
 
 Here is an interactive session showing some of the basic commands:
 
@@ -230,10 +77,7 @@ Here is an interactive session showing some of the basic commands:
             # of several records, or even iterate on the cursor.
             for record in cur:
                 print(record)
-            # As is usual when an iterable is used in an iteration context,
-            # Python creates a new iterator from the iterable.  In this
-            # case, from `cur`, the cursor object.  So the row inserted
-            # above is printed.
+            # The row previously inserted is printed
 
             # Make the changes to the database persistent.
             # Assuming this listing shows the entirety of this program,
@@ -243,32 +87,40 @@ Here is an interactive session showing some of the basic commands:
             conn.commit()
 
 
-In the example you can see some of the main objects and methods and how they
-relate to each other:
+This example uses some of the core Psycopg objects, exhibiting their
+most common methods, and demonstrating how they relate.
 
-- The function `~Connection.connect()` creates a new database session and
-  returns a new `Connection` instance. `AsyncConnection.connect()`
-  creates an `asyncio` connection instead.
+- The function `~Connection.connect()` creates a new database session
+  and returns a new `Connection` instance. (To create an `asyncio`
+  connection use `AsyncConnection.connect()`.)
 
-- The `~Connection` class encapsulates a database session. It allows to:
+- The `~Connection` class encapsulates a database session. Here we see
+  it:
 
-  - create new `~Cursor` instances using the `~Connection.cursor()` method to
-    execute database commands and queries,
+  - Create new `~Cursor` instances using the `~Connection.cursor()` method to
+    execute database commands and queries.
 
-  - terminate transactions using the methods `~Connection.commit()` or
-    `~Connection.rollback()`.
+  - Terminate an active transaction. The methods
+    `~Connection.commit()` or `~Connection.rollback()` may be used.
 
-- The class `~Cursor` allows interaction with the database:
+- The class `~Cursor` allows interaction with the database, in this
+  case to:
 
-  - send commands to the database using methods such as `~Cursor.execute()`
-    and `~Cursor.executemany()`,
+  - Send commands to the database using methods such as `~Cursor.execute()`
+    and `~Cursor.executemany()`.
 
-  - retrieve data from the database, iterating on the cursor or using methods
+  - Retrieve data from the database, iterating on the cursor or using methods
     such as `~Cursor.fetchone()`, `~Cursor.fetchmany()`, `~Cursor.fetchall()`.
 
-- Using these objects as context managers (i.e. using `!with`) will make sure
-  to close them and free their resources at the end of the block (notice that
-  :ref:`this is different from psycopg2 <diff-with>`).
+  - Obtain previously retrieved results, re-iterating over query
+    results.
+    Cursors are iterables so, as is usual when an iterable is used in
+    an iteration context, Python creates a new iterator from the
+    `~Cursor` iterable from `cur` when the `!for` loop is executed.
+
+- Using these objects as context managers ensures that they are closed
+  and their resources freed when the `!with` block exits. (Notice that
+  this differs from :ref:`psycopg2's behavior <diff-with>`.)
 
 
 .. seealso::
@@ -335,7 +187,7 @@ using a result in a single expression:
 Connection context
 ------------------
 
-Psycopg 3 `Connection` can be used as a context manager:
+In Psycopg 3 a `Connection` can be used as a context manager:
 
 .. code:: python
 
@@ -368,47 +220,62 @@ equivalent of:
     been considered non-standard and surprising so it has been replaced by the
     more explicit `~Connection.transaction()` block.
 
-Note that, while the above pattern is what most people would use, `connect()`
-doesn't enter a block itself, but returns an "un-entered" connection, so that
-it is still possible to use a connection regardless of the code scope and the
-developer is free to use (and responsible for calling) `~Connection.commit()`,
-`~Connection.rollback()`, `~Connection.close()` as and where needed.
+While the above pattern is what most people would use, there are other
+ways to use `connect()`.
+Calling `connect()` without using a `!with` still returns a
+connection.  But in this case the developer must explicitly call
+`~Connection.commit()`, `~Connection.rollback()`, and
+`~Connection.close()` as and where needed.
 
 .. warning::
-    If a connection is just left to go out of scope, the way it will behave
-    with or without the use of a `!with` block is different:
+    Altering database content always begins a transaction.
+    By default, this is transaction that is left open and must be
+    committed or the alterations are discarded!
 
-    - if the connection is used without a `!with` block, the server will find
-      a connection closed INTRANS and roll back the current transaction;
+    Psycopg does not always automatically commit your transactions!
 
-    - if the connection is used with a `!with` block, there will be an
-      explicit COMMIT and the operations will be finalised.
+    If a connection is left to go out of scope, and there are no calls
+    to the connection's transaction management methods, what happens
+    to an open transaction differs depending on whether a `!with` block
+    is in use:
 
-    You should use a `!with` block when your intention is just to execute a
-    set of operations and then committing the result, which is the most usual
-    thing to do with a connection. If your connection life cycle and
-    transaction pattern is different, and want more control on it, the use
-    without `!with` might be more convenient.
+    - If there is no `!with` block and the connection has an open
+      transaction and the program exits, the transaction is rolled
+      back before the connection is closed.
+      (This is also the behavior seen when a connection like this is
+      garbage collected.)
 
-    See :ref:`transactions` for more information.
+    - If the connection is used as a context manager in a `!with`
+      block and a transaction is open when the block is exited, the
+      transaction is committed before the connection is closed.
 
-`AsyncConnection` can be also used as context manager, using ``async with``,
-but be careful about its quirkiness: see :ref:`async-with` for details.
+Use a `!with` block when your intention is to execute a set of
+operations and commit the result.
+This is the usual case.
+But if your connection life cycle and transaction pattern is unusual,
+or you want more control, it may be more convenient to avoid using
+`!with`\.
+
+See :ref:`transactions` for more information.
+
+`AsyncConnection` can be also used as context manager, using ``async
+with``.
+But be careful because it is quirky: see :ref:`async-with` for details.
 
 
 Adapting pyscopg to your program
 --------------------------------
 
 The above :ref:`pattern of use <usage>` only shows the default behaviour of
-the adapter. Psycopg can be customised in several ways, to allow the smoothest
+the adapter. Psycopg can be customized in several ways, to allow the smoothest
 integration between your Python program and your PostgreSQL database:
 
 - If your program is concurrent and based on `asyncio` instead of on
   threads/processes, you can use :ref:`async connections and cursors <async>`.
 
-- If you want to customise the objects that the cursor returns, instead of
+- If you want to customize the objects that the cursor returns, instead of
   receiving tuples, you can specify your :ref:`row factories <row-factories>`.
 
-- If you want to customise how Python values and PostgreSQL types are mapped
+- If you want to customize how Python values and PostgreSQL types are mapped
   into each other, beside the :ref:`basic type mapping <types-adaptation>`,
   you can :ref:`configure your types <adaptation>`.

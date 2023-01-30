@@ -8,8 +8,10 @@ In short, if you use a :ref:`supported system<supported-systems>`::
     pip install --upgrade pip           # upgrade pip to at least 20.3
     pip install "psycopg[binary]"
 
-and you should be :ref:`ready to start <module-usage>`. Read further for
-alternative ways to install.
+and you should be ready to :ref:`learn how Psycopg works
+<module-concepts>`.
+Or just jump in and :ref:`dissect an example <module-example>`.
+Read further for alternative ways to install.
 
 
 .. _supported-systems:
@@ -63,8 +65,11 @@ installation <local-installation>` or a :ref:`pure Python installation
 
 .. seealso::
 
-    Did Psycopg 3 install ok? Great! You can now move on to the :ref:`basic
-    module usage <module-usage>` to learn how it works.
+    Did Psycopg 3 install ok?
+    Great!
+    You can now move on and :ref:`learn how Psycopg works
+    <module-concepts>`.
+    Or just jump in and :ref:`dissect an example <module-example>`.
 
     Keep on reading if the above method didn't work and you need a different
     way to install Psycopg 3.
