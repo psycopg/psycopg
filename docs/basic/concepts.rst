@@ -176,6 +176,9 @@ Among these are:
 and planning load;
 :ref:`Pipeline mode <pipeline-mode>`, which mitigates problems with network
 latency;
+:ref:`Asynchronous support <async>`, which minimizes total elapsed
+time by allowing all processes, whether on client or server, to run
+concurrently;
 and :ref:`COPY <copy>` methods, for efficient bulk data transfer in
 and out of the database.
 
