@@ -94,7 +94,7 @@ def get_py_types(conn: Connection) -> List[str]:
     # Note: "record" is a pseudotype but still a useful one to have.
     # "pg_lsn" is a documented public type and useful in streaming replication
     lines = []
-    for (typname, oid, typarray, regtype, typdelim) in conn.execute(
+    for typname, oid, typarray, regtype, typdelim in conn.execute(
         """
 select typname, oid, typarray,
     -- CRDB might have quotes in the regtype representation
@@ -129,7 +129,7 @@ order by typname
 
 def get_py_ranges(conn: Connection) -> List[str]:
     lines = []
-    for (typname, oid, typarray, rngsubtype) in conn.execute(
+    for typname, oid, typarray, rngsubtype in conn.execute(
         """
 select typname, oid, typarray, rngsubtype
 from
@@ -149,7 +149,7 @@ order by typname
 
 def get_py_multiranges(conn: Connection) -> List[str]:
     lines = []
-    for (typname, oid, typarray, rngtypid, rngsubtype) in conn.execute(
+    for typname, oid, typarray, rngtypid, rngsubtype in conn.execute(
         """
 select typname, oid, typarray, rngtypid, rngsubtype
 from
@@ -172,7 +172,7 @@ order by typname
 
 def get_cython_oids(conn: Connection) -> List[str]:
     lines = []
-    for (typname, oid) in conn.execute(
+    for typname, oid in conn.execute(
         """
 select typname, oid
 from pg_type

@@ -19,7 +19,6 @@ UUID: Callable[..., "uuid.UUID"] = None  # type: ignore[assignment]
 
 
 class UUIDDumper(Dumper):
-
     oid = postgres.types["uuid"].oid
 
     def dump(self, obj: "uuid.UUID") -> bytes:
@@ -27,7 +26,6 @@ class UUIDDumper(Dumper):
 
 
 class UUIDBinaryDumper(UUIDDumper):
-
     format = Format.BINARY
 
     def dump(self, obj: "uuid.UUID") -> bytes:
@@ -48,7 +46,6 @@ class UUIDLoader(Loader):
 
 
 class UUIDBinaryLoader(UUIDLoader):
-
     format = Format.BINARY
 
     def load(self, data: Buffer) -> "uuid.UUID":

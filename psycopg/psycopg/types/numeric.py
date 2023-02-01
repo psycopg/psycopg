@@ -49,7 +49,6 @@ class _IntDumper(Dumper):
 
 
 class _SpecialValuesDumper(Dumper):
-
     _special: Dict[bytes, bytes] = {}
 
     def dump(self, obj: Any) -> bytes:
@@ -65,7 +64,6 @@ class _SpecialValuesDumper(Dumper):
 
 
 class FloatDumper(_SpecialValuesDumper):
-
     oid = postgres.types["float8"].oid
 
     _special = {
@@ -80,7 +78,6 @@ class Float4Dumper(FloatDumper):
 
 
 class FloatBinaryDumper(Dumper):
-
     format = Format.BINARY
     oid = postgres.types["float8"].oid
 
@@ -89,7 +86,6 @@ class FloatBinaryDumper(Dumper):
 
 
 class Float4BinaryDumper(FloatBinaryDumper):
-
     oid = postgres.types["float4"].oid
 
     def dump(self, obj: float) -> bytes:
@@ -97,7 +93,6 @@ class Float4BinaryDumper(FloatBinaryDumper):
 
 
 class DecimalDumper(_SpecialValuesDumper):
-
     oid = postgres.types["numeric"].oid
 
     def dump(self, obj: Decimal) -> bytes:
@@ -163,7 +158,6 @@ class IntDumper(Dumper):
 
 
 class Int2BinaryDumper(Int2Dumper):
-
     format = Format.BINARY
 
     def dump(self, obj: int) -> bytes:
@@ -171,7 +165,6 @@ class Int2BinaryDumper(Int2Dumper):
 
 
 class Int4BinaryDumper(Int4Dumper):
-
     format = Format.BINARY
 
     def dump(self, obj: int) -> bytes:
@@ -179,7 +172,6 @@ class Int4BinaryDumper(Int4Dumper):
 
 
 class Int8BinaryDumper(Int8Dumper):
-
     format = Format.BINARY
 
     def dump(self, obj: int) -> bytes:
@@ -192,7 +184,6 @@ BIT_PER_PGDIGIT = log(2) / log(10_000)
 
 
 class IntNumericBinaryDumper(IntNumericDumper):
-
     format = Format.BINARY
 
     def dump(self, obj: int) -> Buffer:
@@ -200,7 +191,6 @@ class IntNumericBinaryDumper(IntNumericDumper):
 
 
 class OidBinaryDumper(OidDumper):
-
     format = Format.BINARY
 
     def dump(self, obj: int) -> bytes:
@@ -208,7 +198,6 @@ class OidBinaryDumper(OidDumper):
 
 
 class IntBinaryDumper(IntDumper):
-
     format = Format.BINARY
 
     _int2_dumper = Int2BinaryDumper(Int2)
@@ -224,7 +213,6 @@ class IntLoader(Loader):
 
 
 class Int2BinaryLoader(Loader):
-
     format = Format.BINARY
 
     def load(self, data: Buffer) -> int:
@@ -232,7 +220,6 @@ class Int2BinaryLoader(Loader):
 
 
 class Int4BinaryLoader(Loader):
-
     format = Format.BINARY
 
     def load(self, data: Buffer) -> int:
@@ -240,7 +227,6 @@ class Int4BinaryLoader(Loader):
 
 
 class Int8BinaryLoader(Loader):
-
     format = Format.BINARY
 
     def load(self, data: Buffer) -> int:
@@ -248,7 +234,6 @@ class Int8BinaryLoader(Loader):
 
 
 class OidBinaryLoader(Loader):
-
     format = Format.BINARY
 
     def load(self, data: Buffer) -> int:
@@ -262,7 +247,6 @@ class FloatLoader(Loader):
 
 
 class Float4BinaryLoader(Loader):
-
     format = Format.BINARY
 
     def load(self, data: Buffer) -> float:
@@ -270,7 +254,6 @@ class Float4BinaryLoader(Loader):
 
 
 class Float8BinaryLoader(Loader):
-
     format = Format.BINARY
 
     def load(self, data: Buffer) -> float:
@@ -331,7 +314,6 @@ _pack_numeric_head = cast(
 
 
 class NumericBinaryLoader(Loader):
-
     format = Format.BINARY
 
     def load(self, data: Buffer) -> Decimal:
@@ -361,7 +343,6 @@ NUMERIC_NINF_BIN = _pack_numeric_head(0, 0, NUMERIC_NINF, 0)
 
 
 class DecimalBinaryDumper(Dumper):
-
     format = Format.BINARY
     oid = postgres.types["numeric"].oid
 
@@ -378,7 +359,6 @@ class NumericDumper(DecimalDumper):
 
 
 class NumericBinaryDumper(Dumper):
-
     format = Format.BINARY
     oid = postgres.types["numeric"].oid
 

@@ -11,7 +11,6 @@ from ..adapt import Buffer, Dumper, Loader
 
 
 class BoolDumper(Dumper):
-
     oid = postgres.types["bool"].oid
 
     def dump(self, obj: bool) -> bytes:
@@ -22,7 +21,6 @@ class BoolDumper(Dumper):
 
 
 class BoolBinaryDumper(Dumper):
-
     format = Format.BINARY
     oid = postgres.types["bool"].oid
 
@@ -36,7 +34,6 @@ class BoolLoader(Loader):
 
 
 class BoolBinaryLoader(Loader):
-
     format = Format.BINARY
 
     def load(self, data: Buffer) -> bool:

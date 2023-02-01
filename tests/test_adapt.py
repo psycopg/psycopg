@@ -133,7 +133,6 @@ def test_subclass_dumper(conn):
 
 
 def test_dumper_protocol(conn):
-
     # This class doesn't inherit from adapt.Dumper but passes a mypy check
     from .adapters_example import MyStrDumper
 
@@ -146,7 +145,6 @@ def test_dumper_protocol(conn):
 
 
 def test_loader_protocol(conn):
-
     # This class doesn't inherit from adapt.Loader but passes a mypy check
     from .adapters_example import MyTextLoader
 
@@ -389,7 +387,6 @@ def test_no_cast_needed(conn, fmt_in):
 @pytest.mark.slow
 @pytest.mark.skipif(_psycopg is None, reason="C module test")
 def test_optimised_adapters():
-
     # All the optimised adapters available
     c_adapters = {}
     for n in dir(_psycopg):

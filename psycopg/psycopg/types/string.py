@@ -56,17 +56,14 @@ class _StrDumper(_BaseStrDumper):
 
 
 class StrBinaryDumper(_StrBinaryDumper):
-
     oid = postgres.types["text"].oid
 
 
 class StrBinaryDumperVarchar(_StrBinaryDumper):
-
     oid = postgres.types["varchar"].oid
 
 
 class StrBinaryDumperName(_StrBinaryDumper):
-
     oid = postgres.types["name"].oid
 
 
@@ -84,12 +81,10 @@ class StrDumper(_StrDumper):
 
 
 class StrDumperVarchar(_StrDumper):
-
     oid = postgres.types["varchar"].oid
 
 
 class StrDumperName(_StrDumper):
-
     oid = postgres.types["name"].oid
 
 
@@ -126,12 +121,10 @@ class TextLoader(Loader):
 
 
 class TextBinaryLoader(TextLoader):
-
     format = Format.BINARY
 
 
 class BytesDumper(Dumper):
-
     oid = postgres.types["bytea"].oid
     _qprefix = b""
 
@@ -169,7 +162,6 @@ class BytesDumper(Dumper):
 
 
 class BytesBinaryDumper(Dumper):
-
     format = Format.BINARY
     oid = postgres.types["bytea"].oid
 
@@ -178,7 +170,6 @@ class BytesBinaryDumper(Dumper):
 
 
 class ByteaLoader(Loader):
-
     _escaping: "EscapingProto"
 
     def __init__(self, oid: int, context: Optional[AdaptContext] = None):
@@ -191,7 +182,6 @@ class ByteaLoader(Loader):
 
 
 class ByteaBinaryLoader(Loader):
-
     format = Format.BINARY
 
     def load(self, data: Buffer) -> Buffer:

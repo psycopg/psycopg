@@ -358,7 +358,6 @@ _re_esc = re.compile(rb"([\\\"])")
 
 
 class RangeBinaryDumper(BaseRangeDumper):
-
     format = Format.BINARY
 
     def dump(self, obj: Range[Any]) -> Buffer:
@@ -479,7 +478,6 @@ _re_undouble = re.compile(rb'(["\\])\1')
 
 
 class RangeBinaryLoader(BaseRangeLoader[T]):
-
     format = Format.BINARY
 
     def load(self, data: Buffer) -> Range[T]:

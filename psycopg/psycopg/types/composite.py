@@ -59,7 +59,6 @@ class SequenceDumper(RecursiveDumper):
 
 
 class TupleDumper(SequenceDumper):
-
     # Should be this, but it doesn't work
     # oid = postgres_types["record"].oid
 
@@ -68,7 +67,6 @@ class TupleDumper(SequenceDumper):
 
 
 class TupleBinaryDumper(RecursiveDumper):
-
     format = pq.Format.BINARY
 
     # Subclasses must set an info
@@ -180,7 +178,6 @@ class RecordBinaryLoader(Loader):
 
 
 class CompositeLoader(RecordLoader):
-
     factory: Callable[..., Any]
     fields_types: List[int]
     _types_set = False
@@ -202,7 +199,6 @@ class CompositeLoader(RecordLoader):
 
 
 class CompositeBinaryLoader(RecordBinaryLoader):
-
     format = pq.Format.BINARY
     factory: Callable[..., Any]
 

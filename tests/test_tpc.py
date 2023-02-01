@@ -181,7 +181,7 @@ class TestTPC:
 
         # check the values returned
         assert len(okvals) == len(xids)
-        for (xid, (gid, prepared, owner, database)) in zip(xids, okvals):
+        for xid, (gid, prepared, owner, database) in zip(xids, okvals):
             assert xid.gtrid == gid
             assert xid.prepared == prepared
             assert xid.owner == owner

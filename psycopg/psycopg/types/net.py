@@ -50,7 +50,6 @@ class _LazyIpaddress:
 
 
 class InterfaceDumper(Dumper):
-
     oid = postgres.types["inet"].oid
 
     def dump(self, obj: Interface) -> bytes:
@@ -58,7 +57,6 @@ class InterfaceDumper(Dumper):
 
 
 class NetworkDumper(Dumper):
-
     oid = postgres.types["cidr"].oid
 
     def dump(self, obj: Network) -> bytes:
@@ -109,7 +107,6 @@ class InetBinaryDumper(_AIBinaryDumper, _LazyIpaddress):
 
 
 class NetworkBinaryDumper(Dumper):
-
     format = Format.BINARY
     oid = postgres.types["cidr"].oid
 
@@ -138,7 +135,6 @@ class InetLoader(_LazyIpaddressLoader):
 
 
 class InetBinaryLoader(_LazyIpaddressLoader):
-
     format = Format.BINARY
 
     def load(self, data: Buffer) -> Union[Address, Interface]:
@@ -168,7 +164,6 @@ class CidrLoader(_LazyIpaddressLoader):
 
 
 class CidrBinaryLoader(_LazyIpaddressLoader):
-
     format = Format.BINARY
 
     def load(self, data: Buffer) -> Network:

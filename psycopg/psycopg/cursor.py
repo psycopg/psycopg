@@ -771,7 +771,6 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
             raise e.ProgrammingError("stream() cannot be used in pipeline mode")
 
         with self._conn.lock:
-
             try:
                 self._conn.wait(self._stream_send_gen(query, params, binary=binary))
                 first = True

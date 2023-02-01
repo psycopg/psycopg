@@ -766,7 +766,6 @@ async def test_grow(dsn, monkeypatch, min_size, want_times):
 @pytest.mark.slow
 @pytest.mark.timing
 async def test_shrink(dsn, monkeypatch):
-
     from psycopg_pool.pool_async import ShrinkPool
 
     results: List[Tuple[int, int]] = []

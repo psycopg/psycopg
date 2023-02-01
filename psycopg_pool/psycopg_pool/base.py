@@ -16,7 +16,6 @@ from ._compat import Counter, Deque
 
 
 class BasePool(Generic[ConnectionType]):
-
     # Used to generate pool names
     _num_pool = 0
 

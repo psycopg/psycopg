@@ -23,7 +23,6 @@ if TYPE_CHECKING:
 
 
 class _CrdbConnectionMixin:
-
     _adapters: Optional[AdaptersMap]
     pgconn: "PGconn"
 
