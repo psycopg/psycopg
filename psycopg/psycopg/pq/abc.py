@@ -19,7 +19,6 @@ Buffer: TypeAlias = Union[bytes, bytearray, memoryview]
 
 
 class PGconn(Protocol):
-
     notice_handler: Optional[Callable[["PGresult"], None]]
     notify_handler: Optional[Callable[["PGnotify"], None]]
 

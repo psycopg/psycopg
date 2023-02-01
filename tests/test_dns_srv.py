@@ -57,9 +57,7 @@ def test_srv(conninfo, want, env, fake_srv, setpgenv):
 async def test_srv_async(conninfo, want, env, afake_srv, setpgenv):
     setpgenv(env)
     params = conninfo_to_dict(conninfo)
-    params = await (
-        psycopg._dns.resolve_srv_async(params)  # type: ignore[attr-defined]
-    )
+    params = await psycopg._dns.resolve_srv_async(params)  # type: ignore[attr-defined]
     assert conninfo_to_dict(want) == params
 
 

@@ -188,7 +188,6 @@ class ServerCursorMixin(BaseCursor[ConnectionType, Row]):
         yield from self._conn._exec_command(query)
 
     def _make_declare_statement(self, query: Query) -> sql.Composed:
-
         if isinstance(query, bytes):
             query = query.decode(self._encoding)
         if not isinstance(query, sql.Composable):

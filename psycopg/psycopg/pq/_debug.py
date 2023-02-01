@@ -91,7 +91,7 @@ def debugging(f: Func) -> Func:
         reprs = []
         for arg in args:
             reprs.append(f"{arg!r}")
-        for (k, v) in kwargs.items():
+        for k, v in kwargs.items():
             reprs.append(f"{k}={v!r}")
 
         logger.info("PGconn.%s(%s)", f.__name__, ", ".join(reprs))

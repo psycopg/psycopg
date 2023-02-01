@@ -3,7 +3,6 @@ from psycopg.adapt import Transformer, PyFormat
 
 
 def test_quote_none(conn):
-
     tx = Transformer()
     assert tx.get_dumper(None, PyFormat.TEXT).quote(None) == b"NULL"
 

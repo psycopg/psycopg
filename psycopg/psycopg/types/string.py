@@ -56,17 +56,14 @@ class _StrDumper(_BaseStrDumper):
 
 
 class StrBinaryDumper(_StrBinaryDumper):
-
     oid = _oids.TEXT_OID
 
 
 class StrBinaryDumperVarchar(_StrBinaryDumper):
-
     oid = _oids.VARCHAR_OID
 
 
 class StrBinaryDumperName(_StrBinaryDumper):
-
     oid = _oids.NAME_OID
 
 
@@ -84,12 +81,10 @@ class StrDumper(_StrDumper):
 
 
 class StrDumperVarchar(_StrDumper):
-
     oid = _oids.VARCHAR_OID
 
 
 class StrDumperName(_StrDumper):
-
     oid = _oids.NAME_OID
 
 
@@ -126,12 +121,10 @@ class TextLoader(Loader):
 
 
 class TextBinaryLoader(TextLoader):
-
     format = Format.BINARY
 
 
 class BytesDumper(Dumper):
-
     oid = _oids.BYTEA_OID
     _qprefix = b""
 
@@ -169,7 +162,6 @@ class BytesDumper(Dumper):
 
 
 class BytesBinaryDumper(Dumper):
-
     format = Format.BINARY
     oid = _oids.BYTEA_OID
 
@@ -178,7 +170,6 @@ class BytesBinaryDumper(Dumper):
 
 
 class ByteaLoader(Loader):
-
     _escaping: "EscapingProto"
 
     def __init__(self, oid: int, context: Optional[AdaptContext] = None):
@@ -191,7 +182,6 @@ class ByteaLoader(Loader):
 
 
 class ByteaBinaryLoader(Loader):
-
     format = Format.BINARY
 
     def load(self, data: Buffer) -> Buffer:

@@ -30,7 +30,6 @@ data: List[Dict[str, Any]] = []
 
 
 def main() -> None:
-
     args = parse_cmdline()
 
     ids[:] = range(args.ntests)

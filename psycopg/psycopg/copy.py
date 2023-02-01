@@ -669,7 +669,6 @@ class Formatter(ABC):
 
 
 class TextFormatter(Formatter):
-
     format = TEXT
 
     def __init__(self, transformer: Transformer, encoding: str = "utf-8"):
@@ -714,7 +713,6 @@ class TextFormatter(Formatter):
 
 
 class BinaryFormatter(Formatter):
-
     format = BINARY
 
     def __init__(self, transformer: Transformer):

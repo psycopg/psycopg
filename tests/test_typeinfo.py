@@ -69,7 +69,6 @@ _info_cls = pytest.mark.parametrize(
 @_status
 @_info_cls
 def test_fetch_not_found(conn, name, status, info_cls, monkeypatch):
-
     if TypeInfo._has_to_regtype_function(conn):
         exit_orig = psycopg.Transaction.__exit__
 
@@ -93,7 +92,6 @@ def test_fetch_not_found(conn, name, status, info_cls, monkeypatch):
 @_status
 @_info_cls
 async def test_fetch_not_found_async(aconn, name, status, info_cls, monkeypatch):
-
     if TypeInfo._has_to_regtype_function(aconn):
         exit_orig = psycopg.AsyncTransaction.__aexit__
 

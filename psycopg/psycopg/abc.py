@@ -200,7 +200,6 @@ class Loader(Protocol):
 
 
 class Transformer(Protocol):
-
     types: Optional[Tuple[int, ...]]
     formats: Optional[List[pq.Format]]
 

@@ -278,7 +278,6 @@ class MultirangeDumper(BaseMultirangeDumper):
 
 
 class MultirangeBinaryDumper(BaseMultirangeDumper):
-
     format = Format.BINARY
 
     def dump(self, obj: Multirange[Any]) -> Buffer:
@@ -297,7 +296,6 @@ class MultirangeBinaryDumper(BaseMultirangeDumper):
 
 
 class BaseMultirangeLoader(RecursiveLoader, Generic[T]):
-
     subtype_oid: int
 
     def __init__(self, oid: int, context: Optional[AdaptContext] = None):
@@ -352,7 +350,6 @@ _END_INT = ord("}")
 
 
 class MultirangeBinaryLoader(BaseMultirangeLoader[T]):
-
     format = Format.BINARY
 
     def load(self, data: Buffer) -> Multirange[T]:

@@ -38,7 +38,6 @@ _py_date_min_days = date.min.toordinal()
 
 
 class DateDumper(Dumper):
-
     oid = _oids.DATE_OID
 
     def dump(self, obj: date) -> bytes:
@@ -48,7 +47,6 @@ class DateDumper(Dumper):
 
 
 class DateBinaryDumper(Dumper):
-
     format = Format.BINARY
     oid = _oids.DATE_OID
 
@@ -76,7 +74,6 @@ class _BaseTimeTextDumper(_BaseTimeDumper):
 
 
 class TimeDumper(_BaseTimeTextDumper):
-
     oid = _oids.TIME_OID
 
     def upgrade(self, obj: time, format: PyFormat) -> Dumper:
@@ -87,12 +84,10 @@ class TimeDumper(_BaseTimeTextDumper):
 
 
 class TimeTzDumper(_BaseTimeTextDumper):
-
     oid = _oids.TIMETZ_OID
 
 
 class TimeBinaryDumper(_BaseTimeDumper):
-
     format = Format.BINARY
     oid = _oids.TIME_OID
 
@@ -110,7 +105,6 @@ class TimeBinaryDumper(_BaseTimeDumper):
 
 
 class TimeTzBinaryDumper(_BaseTimeDumper):
-
     format = Format.BINARY
     oid = _oids.TIMETZ_OID
 
@@ -144,7 +138,6 @@ class _BaseDatetimeTextDumper(_BaseDatetimeDumper):
 
 
 class DatetimeDumper(_BaseDatetimeTextDumper):
-
     oid = _oids.TIMESTAMPTZ_OID
 
     def upgrade(self, obj: datetime, format: PyFormat) -> Dumper:
@@ -155,12 +148,10 @@ class DatetimeDumper(_BaseDatetimeTextDumper):
 
 
 class DatetimeNoTzDumper(_BaseDatetimeTextDumper):
-
     oid = _oids.TIMESTAMP_OID
 
 
 class DatetimeBinaryDumper(_BaseDatetimeDumper):
-
     format = Format.BINARY
     oid = _oids.TIMESTAMPTZ_OID
 
@@ -177,7 +168,6 @@ class DatetimeBinaryDumper(_BaseDatetimeDumper):
 
 
 class DatetimeNoTzBinaryDumper(_BaseDatetimeDumper):
-
     format = Format.BINARY
     oid = _oids.TIMESTAMP_OID
 
@@ -188,7 +178,6 @@ class DatetimeNoTzBinaryDumper(_BaseDatetimeDumper):
 
 
 class TimedeltaDumper(Dumper):
-
     oid = _oids.INTERVAL_OID
 
     def __init__(self, cls: type, context: Optional[AdaptContext] = None):
@@ -216,7 +205,6 @@ class TimedeltaDumper(Dumper):
 
 
 class TimedeltaBinaryDumper(Dumper):
-
     format = Format.BINARY
     oid = _oids.INTERVAL_OID
 
@@ -226,7 +214,6 @@ class TimedeltaBinaryDumper(Dumper):
 
 
 class DateLoader(Loader):
-
     _ORDER_YMD = 0
     _ORDER_DMY = 1
     _ORDER_MDY = 2
@@ -270,7 +257,6 @@ class DateLoader(Loader):
 
 
 class DateBinaryLoader(Loader):
-
     format = Format.BINARY
 
     def load(self, data: Buffer) -> date:
@@ -285,7 +271,6 @@ class DateBinaryLoader(Loader):
 
 
 class TimeLoader(Loader):
-
     _re_format = re.compile(rb"^(\d+):(\d+):(\d+)(?:\.(\d+))?")
 
     def load(self, data: Buffer) -> time:
@@ -312,7 +297,6 @@ class TimeLoader(Loader):
 
 
 class TimeBinaryLoader(Loader):
-
     format = Format.BINARY
 
     def load(self, data: Buffer) -> time:
@@ -327,7 +311,6 @@ class TimeBinaryLoader(Loader):
 
 
 class TimetzLoader(Loader):
-
     _re_format = re.compile(
         rb"""(?ix)
         ^
@@ -369,7 +352,6 @@ class TimetzLoader(Loader):
 
 
 class TimetzBinaryLoader(Loader):
-
     format = Format.BINARY
 
     def load(self, data: Buffer) -> time:
@@ -386,7 +368,6 @@ class TimetzBinaryLoader(Loader):
 
 
 class TimestampLoader(Loader):
-
     _re_format = re.compile(
         rb"""(?ix)
         ^
@@ -472,7 +453,6 @@ class TimestampLoader(Loader):
 
 
 class TimestampBinaryLoader(Loader):
-
     format = Format.BINARY
 
     def load(self, data: Buffer) -> datetime:
@@ -487,7 +467,6 @@ class TimestampBinaryLoader(Loader):
 
 
 class TimestamptzLoader(Loader):
-
     _re_format = re.compile(
         rb"""(?ix)
         ^
@@ -563,7 +542,6 @@ class TimestamptzLoader(Loader):
 
 
 class TimestamptzBinaryLoader(Loader):
-
     format = Format.BINARY
 
     def __init__(self, oid: int, context: Optional[AdaptContext] = None):
@@ -600,7 +578,6 @@ class TimestamptzBinaryLoader(Loader):
 
 
 class IntervalLoader(Loader):
-
     _re_interval = re.compile(
         rb"""
         (?: ([-+]?\d+) \s+ years? \s* )?                # Years
@@ -660,7 +637,6 @@ class IntervalLoader(Loader):
 
 
 class IntervalBinaryLoader(Loader):
-
     format = Format.BINARY
 
     def load(self, data: Buffer) -> timedelta:

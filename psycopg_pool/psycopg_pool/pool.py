@@ -351,7 +351,6 @@ class ConnectionPool(BasePool[Connection[Any]]):
         connections: Sequence[Connection[Any]] = (),
         timeout: float = 0.0,
     ) -> None:
-
         # Stop the scheduler
         self._sched.enter(0, None)
 

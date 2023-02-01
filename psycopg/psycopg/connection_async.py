@@ -107,7 +107,6 @@ class AsyncConnection(BaseConnection[Row]):
         cursor_factory: Optional[Type[AsyncCursor[Row]]] = None,
         **kwargs: Any,
     ) -> "AsyncConnection[Any]":
-
         if sys.platform == "win32":
             loop = asyncio.get_running_loop()
             if isinstance(loop, asyncio.ProactorEventLoop):

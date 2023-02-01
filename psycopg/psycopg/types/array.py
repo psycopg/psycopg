@@ -110,7 +110,6 @@ class BaseListDumper(RecursiveDumper):
 
 
 class ListDumper(BaseListDumper):
-
     delimiter = b","
 
     def get_key(self, obj: List[Any], format: PyFormat) -> DumperKey:
@@ -212,7 +211,6 @@ def _get_needs_quotes_regexp(delimiter: bytes) -> Pattern[bytes]:
 
 
 class ListBinaryDumper(BaseListDumper):
-
     format = pq.Format.BINARY
 
     def get_key(self, obj: List[Any], format: PyFormat) -> DumperKey:
@@ -292,7 +290,6 @@ class ListBinaryDumper(BaseListDumper):
 
 
 class ArrayLoader(RecursiveLoader):
-
     delimiter = b","
     base_oid: int
 
@@ -302,7 +299,6 @@ class ArrayLoader(RecursiveLoader):
 
 
 class ArrayBinaryLoader(RecursiveLoader):
-
     format = pq.Format.BINARY
 
     def load(self, data: Buffer) -> List[Any]:

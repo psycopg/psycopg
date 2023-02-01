@@ -16,7 +16,6 @@ adapters = AdaptersMap(types=types)
 
 
 def register_default_types(types: TypesRegistry) -> None:
-
     from .types.range import RangeInfo
     from .types.multirange import MultirangeInfo
 
@@ -106,7 +105,6 @@ def register_default_types(types: TypesRegistry) -> None:
 
 
 def register_default_adapters(context: AdaptContext) -> None:
-
     from .types import array, bool, composite, datetime, enum, json, multirange
     from .types import net, none, numeric, range, string, uuid
 

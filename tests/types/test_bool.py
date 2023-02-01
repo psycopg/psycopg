@@ -26,7 +26,6 @@ def test_roundtrip_bool(conn, b, fmt_in, fmt_out):
 
 @pytest.mark.parametrize("val", [True, False])
 def test_quote_bool(conn, val):
-
     tx = Transformer()
     assert tx.get_dumper(val, PyFormat.TEXT).quote(val) == str(val).lower().encode(
         "ascii"
@@ -38,7 +37,6 @@ def test_quote_bool(conn, val):
 
 
 def test_quote_none(conn):
-
     tx = Transformer()
     assert tx.get_dumper(None, PyFormat.TEXT).quote(None) == b"NULL"
 

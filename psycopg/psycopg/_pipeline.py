@@ -38,7 +38,6 @@ logger = logging.getLogger("psycopg")
 
 
 class BasePipeline:
-
     command_queue: Deque[PipelineCommand]
     result_queue: Deque[PendingResult]
     _is_supported: Optional[bool] = None

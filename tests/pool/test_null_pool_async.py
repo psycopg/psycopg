@@ -193,7 +193,6 @@ async def test_reset(dsn):
 
     async with AsyncNullConnectionPool(dsn, max_size=1, reset=reset) as p:
         async with p.connection() as conn:
-
             # Queue the worker so it will take the same connection a second time
             # instead of making a new one.
             t = create_task(worker())
@@ -226,7 +225,6 @@ async def test_reset_badstate(dsn, caplog):
 
     async with AsyncNullConnectionPool(dsn, max_size=1, reset=reset) as p:
         async with p.connection() as conn:
-
             t = create_task(worker())
             await ensure_waiting(p)
 
@@ -257,7 +255,6 @@ async def test_reset_broken(dsn, caplog):
 
     async with AsyncNullConnectionPool(dsn, max_size=1, reset=reset) as p:
         async with p.connection() as conn:
-
             t = create_task(worker())
             await ensure_waiting(p)
 

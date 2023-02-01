@@ -11,7 +11,6 @@ from ..adapt import Buffer, Dumper, Loader
 
 
 class BoolDumper(Dumper):
-
     oid = _oids.BOOL_OID
 
     def dump(self, obj: bool) -> bytes:
@@ -22,7 +21,6 @@ class BoolDumper(Dumper):
 
 
 class BoolBinaryDumper(Dumper):
-
     format = Format.BINARY
     oid = _oids.BOOL_OID
 
@@ -36,7 +34,6 @@ class BoolLoader(Loader):
 
 
 class BoolBinaryLoader(Loader):
-
     format = Format.BINARY
 
     def load(self, data: Buffer) -> bool:

@@ -191,7 +191,6 @@ def test_reset(dsn):
 
     with NullConnectionPool(dsn, max_size=1, reset=reset) as p:
         with p.connection() as conn:
-
             # Queue the worker so it will take the same connection a second time
             # instead of making a new one.
             t = Thread(target=worker)
@@ -225,7 +224,6 @@ def test_reset_badstate(dsn, caplog):
 
     with NullConnectionPool(dsn, max_size=1, reset=reset) as p:
         with p.connection() as conn:
-
             t = Thread(target=worker)
             t.start()
             ensure_waiting(p)
@@ -257,7 +255,6 @@ def test_reset_broken(dsn, caplog):
 
     with NullConnectionPool(dsn, max_size=1, reset=reset) as p:
         with p.connection() as conn:
-
             t = Thread(target=worker)
             t.start()
             ensure_waiting(p)

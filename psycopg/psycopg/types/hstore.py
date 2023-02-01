@@ -51,7 +51,6 @@ class BaseHstoreDumper(RecursiveDumper):
             tokens.append('"')
 
         for k, v in obj.items():
-
             if not isinstance(k, str):
                 raise e.DataError("hstore keys can only be strings")
             add_token(k)
