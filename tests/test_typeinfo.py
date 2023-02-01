@@ -13,7 +13,7 @@ from .fix_crdb import crdb_encoding
 
 
 @pytest.mark.parametrize("name", ["text", sql.Identifier("text")])
-@pytest.mark.parametrize("status", ["IDLE", "INTRANS"])
+@pytest.mark.parametrize("status", ["IDLE", "INTRANS", None])
 @pytest.mark.parametrize(
     "encoding", ["utf8", crdb_encoding("latin1"), crdb_encoding("sql_ascii")]
 )
@@ -21,9 +21,13 @@ def test_fetch(conn, name, status, encoding):
     with conn.transaction():
         conn.execute("select set_config('client_encoding', %s, false)", [encoding])
 
-    status = getattr(TransactionStatus, status)
-    if status == TransactionStatus.INTRANS:
-        conn.execute("select 1")
+    if status:
+        status = getattr(TransactionStatus, status)
+        if status == TransactionStatus.INTRANS:
+            conn.execute("select 1")
+    else:
+        conn.autocommit = True
+        status = TransactionStatus.IDLE
 
     assert conn.info.transaction_status == status
     info = TypeInfo.fetch(conn, name)
@@ -40,7 +44,7 @@ def test_fetch(conn, name, status, encoding):
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("name", ["text", sql.Identifier("text")])
-@pytest.mark.parametrize("status", ["IDLE", "INTRANS"])
+@pytest.mark.parametrize("status", ["IDLE", "INTRANS", None])
 @pytest.mark.parametrize(
     "encoding", ["utf8", crdb_encoding("latin1"), crdb_encoding("sql_ascii")]
 )
@@ -50,9 +54,13 @@ async def test_fetch_async(aconn, name, status, encoding):
             "select set_config('client_encoding', %s, false)", [encoding]
         )
 
-    status = getattr(TransactionStatus, status)
-    if status == TransactionStatus.INTRANS:
-        await aconn.execute("select 1")
+    if status:
+        status = getattr(TransactionStatus, status)
+        if status == TransactionStatus.INTRANS:
+            await aconn.execute("select 1")
+    else:
+        await aconn.set_autocommit(True)
+        status = TransactionStatus.IDLE
 
     assert aconn.info.transaction_status == status
     info = await TypeInfo.fetch(aconn, name)
