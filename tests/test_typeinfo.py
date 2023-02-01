@@ -9,10 +9,18 @@ from psycopg.types.enum import EnumInfo
 from psycopg.types.multirange import MultirangeInfo
 from psycopg.types.range import RangeInfo
 
+from .fix_crdb import crdb_encoding
+
 
 @pytest.mark.parametrize("name", ["text", sql.Identifier("text")])
 @pytest.mark.parametrize("status", ["IDLE", "INTRANS"])
-def test_fetch(conn, name, status):
+@pytest.mark.parametrize(
+    "encoding", ["utf8", crdb_encoding("latin1"), crdb_encoding("sql_ascii")]
+)
+def test_fetch(conn, name, status, encoding):
+    with conn.transaction():
+        conn.execute("select set_config('client_encoding', %s, false)", [encoding])
+
     status = getattr(TransactionStatus, status)
     if status == TransactionStatus.INTRANS:
         conn.execute("select 1")
@@ -33,7 +41,15 @@ def test_fetch(conn, name, status):
 @pytest.mark.asyncio
 @pytest.mark.parametrize("name", ["text", sql.Identifier("text")])
 @pytest.mark.parametrize("status", ["IDLE", "INTRANS"])
-async def test_fetch_async(aconn, name, status):
+@pytest.mark.parametrize(
+    "encoding", ["utf8", crdb_encoding("latin1"), crdb_encoding("sql_ascii")]
+)
+async def test_fetch_async(aconn, name, status, encoding):
+    async with aconn.transaction():
+        await aconn.execute(
+            "select set_config('client_encoding', %s, false)", [encoding]
+        )
+
     status = getattr(TransactionStatus, status)
     if status == TransactionStatus.INTRANS:
         await aconn.execute("select 1")
