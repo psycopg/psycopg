@@ -46,7 +46,9 @@ def test_parse_bad(s):
         loader.load(s.encode())
 
 
-def test_register_conn(hstore, conn):
+@pytest.mark.parametrize("encoding", ["utf8", "latin1", "sql_ascii"])
+def test_register_conn(hstore, conn, encoding):
+    conn.execute("select set_config('client_encoding', %s, false)", [encoding])
     info = TypeInfo.fetch(conn, "hstore")
     register_hstore(info, conn)
     assert conn.adapters.types[info.oid].name == "hstore"
