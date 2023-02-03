@@ -61,7 +61,7 @@ requirements::
     pip install -e ./psycopg_pool           # for the connection pool
     pip install ./psycopg_c                 # for the C speedup module
 
-.. __: https://pip.pypa.io/en/stable/reference/pip_install/#install-editable
+.. __: https://pip.pypa.io/en/stable/topics/local-project-installs/#editable-installs
 
 Please add ``--config-settings editable_mode=strict`` to the ``pip install
 -e`` above if you experience `editable mode broken`__.
