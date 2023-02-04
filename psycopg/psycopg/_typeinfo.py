@@ -15,6 +15,7 @@ from . import sql
 from . import errors as e
 from .abc import AdaptContext, Query
 from .rows import dict_row
+from ._encodings import conn_encoding
 
 if TYPE_CHECKING:
     from .connection import BaseConnection, Connection
@@ -93,6 +94,8 @@ class TypeInfo:
         # or intrans)
         try:
             with conn.transaction():
+                if conn_encoding(conn) == "ascii":
+                    conn.execute("set local client_encoding to utf8")
                 with conn.cursor(row_factory=dict_row) as cur:
                     cur.execute(cls._get_info_query(conn), {"name": name})
                     recs = cur.fetchall()
@@ -107,6 +110,8 @@ class TypeInfo:
     ) -> Optional[T]:
         try:
             async with conn.transaction():
+                if conn_encoding(conn) == "ascii":
+                    await conn.execute("set local client_encoding to utf8")
                 async with conn.cursor(row_factory=dict_row) as cur:
                     await cur.execute(cls._get_info_query(conn), {"name": name})
                     recs = await cur.fetchall()
