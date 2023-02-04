@@ -1,4 +1,4 @@
-name: Test on 3rd party libraries
+name: 3rd party tests
 
 on:
   push:
@@ -17,7 +17,6 @@ concurrency:
 
 jobs:
   sqlalchemy:
-    name: sqlalchemy-${{ matrix.sqlalchemy_label }},psycopg-${{ matrix.impl }},py-${{ matrix.python-version }}
     # linux should be enough to test if everything works.
     runs-on: ubuntu-latest
     strategy:
