@@ -109,4 +109,4 @@ jobs:
         env:
           URL: postgresql+psycopg://postgres:password@127.0.0.1/test
         working-directory: sa_home/sa
-        run: pytest -n 2 -q --dburi $URL --backend-only --dropfirst
+        run: pytest -n 2 -q --dburi $URL --backend-only --dropfirst --color=yes
