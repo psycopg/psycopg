@@ -190,7 +190,8 @@ class BasePipeline:
                 raise e.PipelineAborted("pipeline aborted")
         else:
             cursor, prepinfo = queued
-            cursor._set_results_from_pipeline(results)
+            cursor._check_results(results)
+            cursor._set_results(results)
             if prepinfo:
                 key, prep, name = prepinfo
                 # Update the prepare state of the query.

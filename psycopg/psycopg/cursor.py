@@ -193,16 +193,9 @@ class BaseCursor(Generic[ConnectionType, Row]):
         """Generator implementing `Cursor.execute()`."""
         yield from self._start_query(query)
         pgq = self._convert_query(query, params)
-        results = yield from self._maybe_prepare_gen(
-            pgq, prepare=prepare, binary=binary
-        )
+        yield from self._maybe_prepare_gen(pgq, prepare=prepare, binary=binary)
         if self._conn._pipeline:
             yield from self._conn._pipeline._communicate_gen()
-        else:
-            assert results is not None
-            self._check_results(results)
-            self._results = results
-            self._select_current_result(0)
 
         self._last_query = query
 
@@ -254,6 +247,10 @@ class BaseCursor(Generic[ConnectionType, Row]):
         yield from self._start_query(query)
         if not returning:
             self._rowcount = 0
+
+        assert self._execmany_returning is None
+        self._execmany_returning = returning
+
         first = True
         for params in params_seq:
             if first:
@@ -263,19 +260,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
             else:
                 pgq.dump(params)
 
-            results = yield from self._maybe_prepare_gen(pgq, prepare=True)
-            assert results is not None
-            self._check_results(results)
-            if returning:
-                self._results.extend(results)
-            else:
-                # In non-returning case, set rowcount to the cumulated number
-                # of rows of executed queries.
-                for res in results:
-                    self._rowcount += res.command_tuples or 0
-
-        if self._results:
-            self._select_current_result(0)
+            yield from self._maybe_prepare_gen(pgq, prepare=True)
 
         self._last_query = query
 
@@ -288,7 +273,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
         *,
         prepare: Optional[bool] = None,
         binary: Optional[bool] = None,
-    ) -> PQGen[Optional[List["PGresult"]]]:
+    ) -> PQGen[None]:
         # Check if the query is prepared or needs preparing
         prep, name = self._get_prepared(pgq, prepare)
         if prep is Prepare.NO:
@@ -315,7 +300,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
             if key is not None:
                 queued = (key, prep, name)
             self._conn._pipeline.result_queue.append((self, queued))
-            return None
+            return
 
         # run the query
         results = yield from execute(self._pgconn)
@@ -323,7 +308,8 @@ class BaseCursor(Generic[ConnectionType, Row]):
         if key is not None:
             self._conn._prepared.validate(key, prep, name, results)
 
-        return results
+        self._check_results(results)
+        self._set_results(results)
 
     def _get_prepared(
         self, pgq: PostgresQuery, prepare: Optional[bool] = None
@@ -413,8 +399,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
             raise e.ProgrammingError("COPY cannot be mixed with other operations")
 
         self._check_copy_result(results[0])
-        self._results = results
-        self._select_current_result(0)
+        self._set_results(results)
 
     def _execute_send(
         self,
@@ -529,8 +514,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
 
         self._make_row = self._make_row_maker()
 
-    def _set_results_from_pipeline(self, results: List["PGresult"]) -> None:
-        self._check_results(results)
+    def _set_results(self, results: List["PGresult"]) -> None:
         first_batch = not self._results
 
         if self._execmany_returning is None:
