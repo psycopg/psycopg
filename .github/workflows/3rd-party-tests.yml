@@ -1,0 +1,112 @@
+name: 3rd party tests
+
+on:
+  push:
+    branches:
+      - "master"
+      - "sqlalchemy_pipeline"
+    paths-ignore:
+      - "docs/*"
+      - "tools/*"
+  workflow_dispatch:
+
+concurrency:
+  # Cancel older requests of the same workflow in the same branch.
+  group: ${{ github.workflow }}-${{ github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  sqlalchemy:
+    # linux should be enough to test if everything works.
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version:
+          - "3.11"
+          - "3.7"
+        sqlalchemy_label:
+          # what version of sqlalchemy to download is defined in the "include" section below,
+          # in the variable pip_sqlalchemy
+          - git_main
+          - release
+        impl:
+          - c
+          - python
+        include:
+          - sqlalchemy_label: git_main
+            pip_sqlalchemy: git+https://github.com/sqlalchemy/sqlalchemy.git#egg=SQLAlchemy
+          - sqlalchemy_label: release
+            # TODO: remove pre once v2 is stable
+            pip_sqlalchemy: --pre sqlalchemy>=2a
+
+    env:
+      PSYCOPG_IMPL: ${{ matrix.impl }}
+      DEPS: ./psycopg pytest pytest-xdist
+
+    services:
+      postgresql:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: test
+        ports:
+          - 5432:5432
+        # Wait until postgres has started
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Setup PG
+        env:
+          PGPASSWORD: password
+        run: |
+          psql -AXqte "host=127.0.0.1 dbname=test user=postgres" << HERE
+          SELECT version();
+          CREATE SCHEMA test_schema;
+          CREATE SCHEMA test_schema_2;
+          CREATE EXTENSION hstore;
+          HERE
+
+      - name: Include psycopg-c to the packages to install
+        if: ${{ matrix.impl == 'c' }}
+        run: |
+          echo "DEPS=$DEPS ./psycopg_c" >> $GITHUB_ENV
+
+      - name: Install pycopg packages
+        run: pip install $DEPS
+
+      - name: Setup and install sqlalchemy
+        run: |
+          pip download --no-deps --no-binary :all: ${{ matrix.pip_sqlalchemy }}
+          mkdir sa_home
+          case $(file --brief --mime-type SQLAlchemy*) in
+            application/gzip)
+              tar -C sa_home -xzf SQLAlchemy*
+              ;;
+            application/zip)
+              unzip -d sa_home -q SQLAlchemy*
+              ;;
+            *)
+              echo "Unexpected format for $(file --mime-type SQLAlchemy*)" >&2
+              exit 1
+              ;;
+          esac
+          mv sa_home/$( ls sa_home ) sa_home/sa
+          cd sa_home/sa
+          pip install .
+
+      - name: Run sqlalchemy tests
+        env:
+          URL: postgresql+psycopg://postgres:password@127.0.0.1/test
+        working-directory: sa_home/sa
+        run: pytest -n 2 -q --dburi $URL --backend-only --dropfirst --color=yes
