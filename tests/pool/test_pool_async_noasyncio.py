@@ -61,12 +61,18 @@ def test_cant_create_open_outside_loop(dsn):
 
 
 @pytest.fixture
-def asyncio_run(recwarn):
+def asyncio_run(anyio_backend_options, recwarn):
     """Fixture reuturning asyncio.run, but managing resources at exit.
 
     In certain runs, fd objects are leaked and the error will only be caught
     downstream, by some innocent test calling gc_collect().
     """
+    try:
+        policy = anyio_backend_options["policy"]
+    except KeyError:
+        pass
+    else:
+        asyncio.set_event_loop_policy(policy)
     recwarn.clear()
     try:
         yield asyncio.run
