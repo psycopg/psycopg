@@ -86,7 +86,7 @@ def import_from_libpq() -> None:
     # Pure Python implementation, slow and requires the system libpq installed.
     if not module and (not impl or impl == "python"):
         try:
-            from . import pq_ctypes as module  # type: ignore[no-redef]
+            from . import pq_ctypes as module  # type: ignore[assignment]
         except Exception as e:
             handle_error("python", e)
 
