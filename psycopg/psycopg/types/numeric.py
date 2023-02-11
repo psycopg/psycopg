@@ -371,9 +371,9 @@ class NumericBinaryDumper(Dumper):
 
 def dump_decimal_to_numeric_binary(obj: Decimal) -> Union[bytearray, bytes]:
     sign, digits, exp = obj.as_tuple()
-    if exp == "n" or exp == "N":  # type: ignore[comparison-overlap]
+    if exp == "n" or exp == "N":
         return NUMERIC_NAN_BIN
-    elif exp == "F":  # type: ignore[comparison-overlap]
+    elif exp == "F":
         return NUMERIC_NINF_BIN if sign else NUMERIC_PINF_BIN
 
     # Weights of py digits into a pg digit according to their positions.

@@ -17,7 +17,7 @@ def test_init_row_factory(conn):
 
     with psycopg.ServerCursor(conn, "bar") as cur:
         assert cur.name == "bar"
-        assert cur.row_factory is rows.dict_row  # type: ignore
+        assert cur.row_factory is rows.dict_row
 
     with psycopg.ServerCursor(conn, "baz", row_factory=rows.namedtuple_row) as cur:
         assert cur.name == "baz"

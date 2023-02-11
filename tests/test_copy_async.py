@@ -312,7 +312,7 @@ async def test_subclass_adapter(aconn, format):
     if format == Format.TEXT:
         from psycopg.types.string import StrDumper as BaseDumper
     else:
-        from psycopg.types.string import (  # type: ignore[no-redef]
+        from psycopg.types.string import (  # type: ignore[assignment]
             StrBinaryDumper as BaseDumper,
         )
 
