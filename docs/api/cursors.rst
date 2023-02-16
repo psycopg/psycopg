@@ -142,13 +142,13 @@ The `!Cursor` class
 
         This command is similar to execute + iter; however it supports endless
         data streams. The feature is not available in PostgreSQL, but some
-        implementations exist: Materialize `TAIL`__ and CockroachDB
+        implementations exist: Materialize `SUBSCRIBE`__ and CockroachDB
         `CHANGEFEED`__ for instance.
 
         The feature, and the API supporting it, are still experimental.
         Beware... 👀
 
-        .. __: https://materialize.com/docs/sql/tail/#main
+        .. __: https://materialize.com/docs/sql/subscribe/
         .. __: https://www.cockroachlabs.com/docs/stable/changefeed-for.html
 
         The parameters are the same of `execute()`.
