@@ -135,7 +135,7 @@ def py2pgenc(name: str) -> bytes:
 
 @cache
 def pg2pyenc(name: bytes) -> str:
-    """Convert a Python encoding name to PostgreSQL encoding name.
+    """Convert a PostgreSQL encoding name to Python encoding name.
 
     Raise NotSupportedError if the PostgreSQL encoding is not supported by
     Python.
