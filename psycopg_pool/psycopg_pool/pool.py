@@ -45,12 +45,15 @@ class ConnectionPool(BasePool[Connection[Any]]):
         max_lifetime: float = 60 * 60.0,
         max_idle: float = 10 * 60.0,
         reconnect_timeout: float = 5 * 60.0,
-        reconnect_failed: Optional[Callable[[BasePool[Connection[Any]]], None]] = None,
+        reconnect_failed: Optional[Callable[["ConnectionPool"], None]] = None,
         num_workers: int = 3,
     ):
         self.connection_class = connection_class
         self._configure = configure
         self._reset = reset
+
+        self._reconnect_failed: Callable[["ConnectionPool"], None]
+        self._reconnect_failed = reconnect_failed or (lambda pool: None)
 
         self._lock = threading.RLock()
         self._waiting = Deque["WaitingClient"]()
@@ -75,7 +78,6 @@ class ConnectionPool(BasePool[Connection[Any]]):
             max_lifetime=max_lifetime,
             max_idle=max_idle,
             reconnect_timeout=reconnect_timeout,
-            reconnect_failed=reconnect_failed,
             num_workers=num_workers,
         )
 
