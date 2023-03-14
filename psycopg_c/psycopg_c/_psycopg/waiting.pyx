@@ -5,6 +5,10 @@ C implementation of waiting functions
 # Copyright (C) 2022 The Psycopg Team
 
 from cpython.object cimport PyObject_CallFunctionObjArgs
+from typing import TypeVar
+
+RV = TypeVar("RV")
+
 
 cdef extern from *:
     """
