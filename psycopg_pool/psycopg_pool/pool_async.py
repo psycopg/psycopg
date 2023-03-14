@@ -11,6 +11,7 @@ from time import monotonic
 from types import TracebackType
 from typing import Any, AsyncIterator, Awaitable, Callable
 from typing import Dict, List, Optional, Sequence, Type, Union
+from typing_extensions import TypeAlias
 from weakref import ref
 from contextlib import asynccontextmanager
 
@@ -24,6 +25,11 @@ from .errors import PoolClosed, PoolTimeout, TooManyRequests
 from ._compat import Task, create_task, Deque
 
 logger = logging.getLogger("psycopg.pool")
+
+AsyncConnectFailedCB: TypeAlias = Union[
+    Callable[["AsyncConnectionPool"], None],
+    Callable[["AsyncConnectionPool"], Awaitable[None]],
+]
 
 
 class AsyncConnectionPool(BasePool[AsyncConnection[Any]]):
@@ -44,22 +50,14 @@ class AsyncConnectionPool(BasePool[AsyncConnection[Any]]):
         max_lifetime: float = 60 * 60.0,
         max_idle: float = 10 * 60.0,
         reconnect_timeout: float = 5 * 60.0,
-        reconnect_failed: Optional[
-            Union[
-                Callable[["AsyncConnectionPool"], None],
-                Callable[["AsyncConnectionPool"], Awaitable[None]],
-            ]
-        ] = None,
+        reconnect_failed: Optional[AsyncConnectFailedCB] = None,
         num_workers: int = 3,
     ):
         self.connection_class = connection_class
         self._configure = configure
         self._reset = reset
 
-        self._reconnect_failed: Union[
-            Callable[["AsyncConnectionPool"], None],
-            Callable[["AsyncConnectionPool"], Awaitable[None]],
-        ]
+        self._reconnect_failed: AsyncConnectFailedCB
         self._reconnect_failed = reconnect_failed or (lambda pool: None)
 
         # asyncio objects, created on open to attach them to the right loop.

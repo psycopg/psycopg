@@ -6,7 +6,7 @@ psycopg asynchronous null connection pool
 
 import asyncio
 import logging
-from typing import Any, Awaitable, Callable, Dict, Optional, Type, Union
+from typing import Any, Awaitable, Callable, Dict, Optional, Type
 
 from psycopg import AsyncConnection
 from psycopg.pq import TransactionStatus
@@ -14,7 +14,7 @@ from psycopg.pq import TransactionStatus
 from .errors import PoolTimeout, TooManyRequests
 from ._compat import ConnectionTimeout
 from .null_pool import _BaseNullConnectionPool
-from .pool_async import AsyncConnectionPool, AddConnection
+from .pool_async import AsyncConnectionPool, AddConnection, AsyncConnectFailedCB
 
 logger = logging.getLogger("psycopg.pool")
 
@@ -38,12 +38,7 @@ class AsyncNullConnectionPool(_BaseNullConnectionPool, AsyncConnectionPool):
         max_lifetime: float = 60 * 60.0,
         max_idle: float = 10 * 60.0,
         reconnect_timeout: float = 5 * 60.0,
-        reconnect_failed: Optional[
-            Union[
-                Callable[["AsyncNullConnectionPool"], None],
-                Callable[["AsyncNullConnectionPool"], Awaitable[None]],
-            ]
-        ] = None,
+        reconnect_failed: Optional[AsyncConnectFailedCB] = None,
         num_workers: int = 3,
     ):
         super().__init__(
