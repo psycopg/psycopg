@@ -35,7 +35,8 @@ cdef class PGconn:
         cdef PGconn rv = PGconn.__new__(PGconn)
         rv._pgconn_ptr = ptr
 
-        libpq.PQsetNoticeReceiver(ptr, notice_receiver, <void *>rv)
+        libpq.PQsetNoticeReceiver(
+            ptr, <libpq.PQnoticeReceiver>notice_receiver, <void *>rv)
         return rv
 
     def __cinit__(self):

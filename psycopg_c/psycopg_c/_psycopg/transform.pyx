@@ -171,7 +171,7 @@ cdef class Transformer:
 
         self._row_loaders = loaders
 
-    def set_dumper_types(self, types: Sequence[int], format: Format) -> None:
+    def set_dumper_types(self, types: Sequence[int], format: PqFormat) -> None:
         cdef Py_ssize_t ntypes = len(types)
         dumpers = PyList_New(ntypes)
         cdef int i
@@ -186,7 +186,7 @@ cdef class Transformer:
         self.types = tuple(types)
         self.formats = [format] * ntypes
 
-    def set_loader_types(self, types: Sequence[int], format: Format) -> None:
+    def set_loader_types(self, types: Sequence[int], format: PqFormat) -> None:
         self._c_loader_types(len(types), types, format)
 
     cdef void _c_loader_types(self, Py_ssize_t ntypes, list types, object format):
@@ -572,7 +572,7 @@ cdef class Transformer:
 
         return out
 
-    def get_loader(self, oid: int, format: pq.Format) -> "Loader":
+    def get_loader(self, oid: int, format: PqFormat) -> "Loader":
         cdef PyObject *row_loader = self._c_get_loader(
             <PyObject *>oid, <PyObject *>format)
         return (<RowLoader>row_loader).pyloader
