@@ -11,11 +11,10 @@ from typing import Any, Awaitable, Callable, Dict, Optional, Type
 from psycopg import AsyncConnection
 from psycopg.pq import TransactionStatus
 
-from .base import BasePool
 from .errors import PoolTimeout, TooManyRequests
 from ._compat import ConnectionTimeout
 from .null_pool import _BaseNullConnectionPool
-from .pool_async import AsyncConnectionPool, AddConnection
+from .pool_async import AsyncConnectionPool, AddConnection, AsyncConnectFailedCB
 
 logger = logging.getLogger("psycopg.pool")
 
@@ -39,9 +38,7 @@ class AsyncNullConnectionPool(_BaseNullConnectionPool, AsyncConnectionPool):
         max_lifetime: float = 60 * 60.0,
         max_idle: float = 10 * 60.0,
         reconnect_timeout: float = 5 * 60.0,
-        reconnect_failed: Optional[
-            Callable[[BasePool[AsyncConnection[None]]], None]
-        ] = None,
+        reconnect_failed: Optional[AsyncConnectFailedCB] = None,
         num_workers: int = 3,
     ):
         super().__init__(
@@ -59,7 +56,6 @@ class AsyncNullConnectionPool(_BaseNullConnectionPool, AsyncConnectionPool):
             max_lifetime=max_lifetime,
             max_idle=max_idle,
             reconnect_timeout=reconnect_timeout,
-            reconnect_failed=reconnect_failed,
             num_workers=num_workers,
         )
 

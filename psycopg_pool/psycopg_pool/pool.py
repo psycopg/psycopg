@@ -12,6 +12,7 @@ from queue import Queue, Empty
 from types import TracebackType
 from typing import Any, Callable, Dict, Iterator, List
 from typing import Optional, Sequence, Type
+from typing_extensions import TypeAlias
 from weakref import ref
 from contextlib import contextmanager
 
@@ -25,6 +26,8 @@ from .errors import PoolClosed, PoolTimeout, TooManyRequests
 from ._compat import Deque
 
 logger = logging.getLogger("psycopg.pool")
+
+ConnectFailedCB: TypeAlias = Callable[["ConnectionPool"], None]
 
 
 class ConnectionPool(BasePool[Connection[Any]]):
@@ -45,12 +48,15 @@ class ConnectionPool(BasePool[Connection[Any]]):
         max_lifetime: float = 60 * 60.0,
         max_idle: float = 10 * 60.0,
         reconnect_timeout: float = 5 * 60.0,
-        reconnect_failed: Optional[Callable[[BasePool[Connection[Any]]], None]] = None,
+        reconnect_failed: Optional[ConnectFailedCB] = None,
         num_workers: int = 3,
     ):
         self.connection_class = connection_class
         self._configure = configure
         self._reset = reset
+
+        self._reconnect_failed: ConnectFailedCB
+        self._reconnect_failed = reconnect_failed or (lambda pool: None)
 
         self._lock = threading.RLock()
         self._waiting = Deque["WaitingClient"]()
@@ -75,7 +81,6 @@ class ConnectionPool(BasePool[Connection[Any]]):
             max_lifetime=max_lifetime,
             max_idle=max_idle,
             reconnect_timeout=reconnect_timeout,
-            reconnect_failed=reconnect_failed,
             num_workers=num_workers,
         )
 

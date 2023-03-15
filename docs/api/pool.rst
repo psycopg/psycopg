@@ -252,6 +252,14 @@ listed here.
                  the pool.
    :type reset: `async Callable[[AsyncConnection], None]`
 
+   :param reconnect_failed: Callback invoked if an attempt to create a new
+        connection fails for more than `!reconnect_timeout` seconds.
+   :type reconnect_failed: `Callable[[AsyncConnectionPool], None]` or
+        `async Callable[[AsyncConnectionPool], None]`
+
+   .. versionchanged:: 3.2.0
+        The `!reconnect_failed` parameter can be `!async`.
+
    .. automethod:: connection
 
       .. code:: python

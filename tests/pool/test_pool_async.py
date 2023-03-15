@@ -834,15 +834,25 @@ async def test_reconnect(proxy, caplog, monkeypatch):
 
 @pytest.mark.slow
 @pytest.mark.timing
-async def test_reconnect_failure(proxy):
+@pytest.mark.parametrize("async_cb", [True, False])
+async def test_reconnect_failure(proxy, async_cb):
     proxy.start()
 
     t1 = None
 
-    def failed(pool):
-        assert pool.name == "this-one"
-        nonlocal t1
-        t1 = time()
+    if async_cb:
+
+        async def failed(pool):
+            assert pool.name == "this-one"
+            nonlocal t1
+            t1 = time()
+
+    else:
+
+        def failed(pool):
+            assert pool.name == "this-one"
+            nonlocal t1
+            t1 = time()
 
     async with pool.AsyncConnectionPool(
         proxy.client_dsn,

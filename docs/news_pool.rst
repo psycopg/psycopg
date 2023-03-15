@@ -7,6 +7,16 @@
 ``psycopg_pool`` release notes
 ==============================
 
+Future releases
+---------------
+
+psycopg_pool 3.2.0 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Add support for async `!reconnect_failed` callbacks in `AsyncConnectionPool`
+  (:ticket:`#520`).
+
+
 Current release
 ---------------
 

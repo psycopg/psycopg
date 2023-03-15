@@ -10,7 +10,8 @@ from abc import ABC, abstractmethod
 from time import monotonic
 from types import TracebackType
 from typing import Any, AsyncIterator, Awaitable, Callable
-from typing import Dict, List, Optional, Sequence, Type
+from typing import Dict, List, Optional, Sequence, Type, Union
+from typing_extensions import TypeAlias
 from weakref import ref
 from contextlib import asynccontextmanager
 
@@ -24,6 +25,11 @@ from .errors import PoolClosed, PoolTimeout, TooManyRequests
 from ._compat import Task, create_task, Deque
 
 logger = logging.getLogger("psycopg.pool")
+
+AsyncConnectFailedCB: TypeAlias = Union[
+    Callable[["AsyncConnectionPool"], None],
+    Callable[["AsyncConnectionPool"], Awaitable[None]],
+]
 
 
 class AsyncConnectionPool(BasePool[AsyncConnection[Any]]):
@@ -44,14 +50,15 @@ class AsyncConnectionPool(BasePool[AsyncConnection[Any]]):
         max_lifetime: float = 60 * 60.0,
         max_idle: float = 10 * 60.0,
         reconnect_timeout: float = 5 * 60.0,
-        reconnect_failed: Optional[
-            Callable[[BasePool[AsyncConnection[Any]]], None]
-        ] = None,
+        reconnect_failed: Optional[AsyncConnectFailedCB] = None,
         num_workers: int = 3,
     ):
         self.connection_class = connection_class
         self._configure = configure
         self._reset = reset
+
+        self._reconnect_failed: AsyncConnectFailedCB
+        self._reconnect_failed = reconnect_failed or (lambda pool: None)
 
         # asyncio objects, created on open to attach them to the right loop.
         self._lock: asyncio.Lock
@@ -78,7 +85,6 @@ class AsyncConnectionPool(BasePool[AsyncConnection[Any]]):
             max_lifetime=max_lifetime,
             max_idle=max_idle,
             reconnect_timeout=reconnect_timeout,
-            reconnect_failed=reconnect_failed,
             num_workers=num_workers,
         )
 
@@ -381,11 +387,14 @@ class AsyncConnectionPool(BasePool[AsyncConnection[Any]]):
             else:
                 await self._add_to_pool(conn)
 
-    def reconnect_failed(self) -> None:
+    async def reconnect_failed(self) -> None:
         """
         Called when reconnection failed for longer than `reconnect_timeout`.
         """
-        self._reconnect_failed(self)
+        if asyncio.iscoroutinefunction(self._reconnect_failed):
+            await self._reconnect_failed(self)
+        else:
+            self._reconnect_failed(self)
 
     def run_task(self, task: "MaintenanceTask") -> None:
         """Run a maintenance task in a worker."""
@@ -484,7 +493,7 @@ class AsyncConnectionPool(BasePool[AsyncConnection[Any]]):
                     # If we have given up with a growing attempt, allow a new one.
                     if growing and self._growing:
                         self._growing = False
-                self.reconnect_failed()
+                await self.reconnect_failed()
             else:
                 attempt.update_delay(now)
                 await self.schedule_task(

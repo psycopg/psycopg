@@ -11,8 +11,7 @@ from typing import Any, Callable, Dict, Optional, Tuple, Type
 from psycopg import Connection
 from psycopg.pq import TransactionStatus
 
-from .base import BasePool
-from .pool import ConnectionPool, AddConnection
+from .pool import ConnectionPool, AddConnection, ConnectFailedCB
 from .errors import PoolTimeout, TooManyRequests
 from ._compat import ConnectionTimeout
 
@@ -60,7 +59,7 @@ class NullConnectionPool(_BaseNullConnectionPool, ConnectionPool):
         max_lifetime: float = 60 * 60.0,
         max_idle: float = 10 * 60.0,
         reconnect_timeout: float = 5 * 60.0,
-        reconnect_failed: Optional[Callable[[BasePool[Connection[Any]]], None]] = None,
+        reconnect_failed: Optional[ConnectFailedCB] = None,
         num_workers: int = 3,
     ):
         super().__init__(
@@ -78,7 +77,6 @@ class NullConnectionPool(_BaseNullConnectionPool, ConnectionPool):
             max_lifetime=max_lifetime,
             max_idle=max_idle,
             reconnect_timeout=reconnect_timeout,
-            reconnect_failed=reconnect_failed,
             num_workers=num_workers,
         )
 

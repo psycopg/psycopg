@@ -6,7 +6,7 @@ psycopg connection pool base class and functionalities.
 
 from time import monotonic
 from random import random
-from typing import Any, Callable, Dict, Generic, Optional, Tuple
+from typing import Any, Dict, Generic, Optional, Tuple
 
 from psycopg import errors as e
 from psycopg.abc import ConnectionType
@@ -50,7 +50,6 @@ class BasePool(Generic[ConnectionType]):
         max_lifetime: float,
         max_idle: float,
         reconnect_timeout: float,
-        reconnect_failed: Optional[Callable[["BasePool[ConnectionType]"], None]],
         num_workers: int,
     ):
         min_size, max_size = self._check_size(min_size, max_size)
@@ -64,8 +63,6 @@ class BasePool(Generic[ConnectionType]):
 
         self.conninfo = conninfo
         self.kwargs: Dict[str, Any] = kwargs or {}
-        self._reconnect_failed: Callable[["BasePool[ConnectionType]"], None]
-        self._reconnect_failed = reconnect_failed or (lambda pool: None)
         self.name = name
         self._min_size = min_size
         self._max_size = max_size
