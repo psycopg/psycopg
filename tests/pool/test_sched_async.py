@@ -17,6 +17,7 @@ pytestmark = [pytest.mark.anyio, pytest.mark.timing]
 
 
 @pytest.mark.slow
+@pytest.mark.timing
 async def test_sched():
     s = AsyncScheduler()
     results = []
@@ -38,6 +39,7 @@ async def test_sched():
 
 
 @pytest.mark.slow
+@pytest.mark.timing
 async def test_sched_task():
     s = AsyncScheduler()
     t = create_task(s.run())
@@ -65,6 +67,7 @@ async def test_sched_task():
 
 
 @pytest.mark.slow
+@pytest.mark.timing
 async def test_sched_error(caplog):
     caplog.set_level(logging.WARNING, logger="psycopg")
     s = AsyncScheduler()
