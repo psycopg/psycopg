@@ -27,7 +27,7 @@ from ._compat import Deque
 
 logger = logging.getLogger("psycopg.pool")
 
-SyncConnectFailedCB: TypeAlias = Callable[["ConnectionPool"], None]
+ConnectFailedCB: TypeAlias = Callable[["ConnectionPool"], None]
 
 
 class ConnectionPool(BasePool[Connection[Any]]):
@@ -48,14 +48,14 @@ class ConnectionPool(BasePool[Connection[Any]]):
         max_lifetime: float = 60 * 60.0,
         max_idle: float = 10 * 60.0,
         reconnect_timeout: float = 5 * 60.0,
-        reconnect_failed: Optional[SyncConnectFailedCB] = None,
+        reconnect_failed: Optional[ConnectFailedCB] = None,
         num_workers: int = 3,
     ):
         self.connection_class = connection_class
         self._configure = configure
         self._reset = reset
 
-        self._reconnect_failed: SyncConnectFailedCB
+        self._reconnect_failed: ConnectFailedCB
         self._reconnect_failed = reconnect_failed or (lambda pool: None)
 
         self._lock = threading.RLock()
