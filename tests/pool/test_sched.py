@@ -15,6 +15,7 @@ pytestmark = [pytest.mark.timing]
 
 
 @pytest.mark.slow
+@pytest.mark.timing
 def test_sched():
     s = Scheduler()
     results = []
@@ -36,6 +37,7 @@ def test_sched():
 
 
 @pytest.mark.slow
+@pytest.mark.timing
 def test_sched_thread():
     s = Scheduler()
     t = Thread(target=s.run, daemon=True)
@@ -64,6 +66,7 @@ def test_sched_thread():
 
 
 @pytest.mark.slow
+@pytest.mark.timing
 def test_sched_error(caplog):
     caplog.set_level(logging.WARNING, logger="psycopg")
     s = Scheduler()
