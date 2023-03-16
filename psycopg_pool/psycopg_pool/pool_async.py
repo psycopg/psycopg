@@ -640,7 +640,7 @@ class AsyncClient:
 
     def __init__(self) -> None:
         self.conn: Optional[AsyncConnection[Any]] = None
-        self.error: Optional[Exception] = None
+        self.error: Optional[BaseException] = None
 
         # The AsyncClient behaves in a way similar to an Event, but we need
         # to notify reliably the flagger that the waiter has "accepted" the
@@ -662,6 +662,8 @@ class AsyncClient:
                     self.error = PoolTimeout(
                         f"couldn't get a connection after {timeout} sec"
                     )
+                except BaseException as ex:
+                    self.error = ex
 
         if self.conn:
             return self.conn
