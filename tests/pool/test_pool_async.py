@@ -1176,6 +1176,7 @@ async def test_debug_deadlock(dsn):
         logger.setLevel(old_level)
 
 
+@pytest.mark.skipif("sys.version_info < (3, 8)", reason="asyncio bug")
 async def test_cancellation_in_queue(dsn):
     # https://github.com/psycopg/psycopg/issues/509
 
@@ -1201,8 +1202,7 @@ async def test_cancellation_in_queue(dsn):
                     if len(got_conns) >= nconns:
                         ev.set()
 
-                    while True:
-                        await asyncio.sleep(10)
+                    await asyncio.sleep(5)
 
             except BaseException as ex:
                 logging.info("worker %s stopped: %r", i, ex)
@@ -1212,7 +1212,7 @@ async def test_cancellation_in_queue(dsn):
         tasks = [asyncio.ensure_future(worker(i)) for i in range(nconns * 3)]
 
         # wait until the pool has served all the connections and clients are queued.
-        await ev.wait()
+        await asyncio.wait_for(ev.wait(), 3.0)
         for i in range(10):
             if p.get_stats().get("requests_queued", 0):
                 break
@@ -1222,6 +1222,7 @@ async def test_cancellation_in_queue(dsn):
             pytest.fail("no client got in the queue")
 
         [task.cancel() for task in reversed(tasks)]
+        # Python 3.7 hangs on this statement, instead of timing out or returning
         await asyncio.wait_for(asyncio.gather(*tasks, return_exceptions=True), 1.0)
 
         stats = p.get_stats()
