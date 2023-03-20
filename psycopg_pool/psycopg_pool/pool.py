@@ -719,7 +719,7 @@ class WaitingClient:
 
     def __init__(self) -> None:
         self.conn: Optional[Connection[Any]] = None
-        self.error: Optional[Exception] = None
+        self.error: Optional[BaseException] = None
 
         # The WaitingClient behaves in a way similar to an Event, but we need
         # to notify reliably the flagger that the waiter has "accepted" the
@@ -735,10 +735,13 @@ class WaitingClient:
         """
         with self._cond:
             if not (self.conn or self.error):
-                if not self._cond.wait(timeout):
-                    self.error = PoolTimeout(
-                        f"couldn't get a connection after {timeout} sec"
-                    )
+                try:
+                    if not self._cond.wait(timeout):
+                        self.error = PoolTimeout(
+                            f"couldn't get a connection after {timeout} sec"
+                        )
+                except BaseException as ex:
+                    self.error = ex
 
         if self.conn:
             return self.conn
