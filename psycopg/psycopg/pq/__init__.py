@@ -43,6 +43,7 @@ PGresult: Type[abc.PGresult]
 Conninfo: Type[abc.Conninfo]
 Escaping: Type[abc.Escaping]
 PGcancel: Type[abc.PGcancel]
+PGcancelConn: Type[abc.PGcancelConn]
 
 
 def import_from_libpq() -> None:
@@ -54,7 +55,7 @@ def import_from_libpq() -> None:
     """
     # import these names into the module on success as side effect
     global __impl__, version, __build_version__
-    global PGconn, PGresult, Conninfo, Escaping, PGcancel
+    global PGconn, PGresult, Conninfo, Escaping, PGcancel, PGcancelConn
 
     impl = os.environ.get("PSYCOPG_IMPL", "").lower()
     module = None
@@ -98,6 +99,7 @@ def import_from_libpq() -> None:
         Conninfo = module.Conninfo
         Escaping = module.Escaping
         PGcancel = module.PGcancel
+        PGcancelConn = module.PGcancelConn
         __build_version__ = module.__build_version__
     elif impl:
         raise ImportError(f"requested psycopg implementation '{impl}' unknown")

@@ -38,6 +38,13 @@ cdef class PGresult:
     cdef PGresult _from_ptr(libpq.PGresult *ptr)
 
 
+cdef class PGcancelConn:
+    cdef libpq.PGcancelConn* pgcancelconn_ptr
+
+    @staticmethod
+    cdef PGcancelConn _from_ptr(libpq.PGcancelConn *ptr)
+
+
 cdef class PGcancel:
     cdef libpq.PGcancel* pgcancel_ptr
 

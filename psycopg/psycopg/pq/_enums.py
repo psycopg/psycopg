@@ -31,6 +31,7 @@ class ConnStatus(IntEnum):
     GSS_STARTUP = auto()
     CHECK_TARGET = auto()
     CHECK_STANDBY = auto()
+    ALLOCATED = auto()  # Only for cancel connections.
 
 
 class PollingStatus(IntEnum):

@@ -83,6 +83,10 @@ class PGnotify_struct(Structure):
     ]
 
 
+class PGcancelConn_struct(Structure):
+    _fields_: List[Tuple[str, type]] = []
+
+
 class PGcancel_struct(Structure):
     _fields_: List[Tuple[str, type]] = []
 
@@ -103,6 +107,7 @@ PGconn_ptr = POINTER(PGconn_struct)
 PGresult_ptr = POINTER(PGresult_struct)
 PQconninfoOption_ptr = POINTER(PQconninfoOption_struct)
 PGnotify_ptr = POINTER(PGnotify_struct)
+PGcancelConn_ptr = POINTER(PGcancelConn_struct)
 PGcancel_ptr = POINTER(PGcancel_struct)
 PGresAttDesc_ptr = POINTER(PGresAttDesc_struct)
 
@@ -557,6 +562,55 @@ PQsetSingleRowMode.restype = c_int
 
 # 33.6. Canceling Queries in Progress
 
+if libpq_version >= 170000:
+    PQcancelCreate = pq.PQcancelCreate
+    PQcancelCreate.argtypes = [PGconn_ptr]
+    PQcancelCreate.restype = PGcancelConn_ptr
+
+    PQcancelStart = pq.PQcancelStart
+    PQcancelStart.argtypes = [PGcancelConn_ptr]
+    PQcancelStart.restype = c_int
+
+    PQcancelBlocking = pq.PQcancelBlocking
+    PQcancelBlocking.argtypes = [PGcancelConn_ptr]
+    PQcancelBlocking.restype = c_int
+
+    PQcancelPoll = pq.PQcancelPoll
+    PQcancelPoll.argtypes = [PGcancelConn_ptr]
+    PQcancelPoll.restype = c_int
+
+    PQcancelStatus = pq.PQcancelStatus
+    PQcancelStatus.argtypes = [PGcancelConn_ptr]
+    PQcancelStatus.restype = c_int
+
+    PQcancelSocket = pq.PQcancelSocket
+    PQcancelSocket.argtypes = [PGcancelConn_ptr]
+    PQcancelSocket.restype = c_int
+
+    PQcancelErrorMessage = pq.PQcancelErrorMessage
+    PQcancelErrorMessage.argtypes = [PGcancelConn_ptr]
+    PQcancelErrorMessage.restype = c_char_p
+
+    PQcancelReset = pq.PQcancelReset
+    PQcancelReset.argtypes = [PGcancelConn_ptr]
+    PQcancelReset.restype = None
+
+    PQcancelFinish = pq.PQcancelFinish
+    PQcancelFinish.argtypes = [PGcancelConn_ptr]
+    PQcancelFinish.restype = None
+
+else:
+    PQcancelCreate = not_supported_before("PQcancelCreate", 17)
+    PQcancelStart = not_supported_before("PQcancelStart", 17)
+    PQcancelBlocking = not_supported_before("PQcancelBlocking", 17)
+    PQcancelPoll = not_supported_before("PQcancelPoll", 17)
+    PQcancelStatus = not_supported_before("PQcancelStatus", 17)
+    PQcancelSocket = not_supported_before("PQcancelSocket", 17)
+    PQcancelErrorMessage = not_supported_before("PQcancelErrorMessage", 17)
+    PQcancelReset = not_supported_before("PQcancelReset", 17)
+    PQcancelFinish = not_supported_before("PQcancelFinish", 17)
+
+
 PQgetCancel = pq.PQgetCancel
 PQgetCancel.argtypes = [PGconn_ptr]
 PQgetCancel.restype = PGcancel_ptr
@@ -703,6 +757,7 @@ def generate_stub() -> None:
         elif t.__name__ in (
             "LP_PGconn_struct",
             "LP_PGresult_struct",
+            "LP_PGcancelConn_struct",
             "LP_PGcancel_struct",
         ):
             if narg is not None:

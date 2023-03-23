@@ -24,6 +24,8 @@ Psycopg 3.2 (unreleased)
   transaction control methods available on the async connections.
 - Add support for libpq functions to close prepared statements and portals
   introduced in libpq v17 (:ticket:`#603`).
+- Add support for libpq encrypted and non-blocking query cancellation
+  functions introduced in libpq v17 (:ticket:`#754`).
 - The `!context` parameter of `sql` objects `~sql.Composable.as_string()` and
   `~sql.Composable.as_bytes()` methods is now optional (:ticket:`#716`).
 - Disable receiving more than one result on the same cursor in pipeline mode,

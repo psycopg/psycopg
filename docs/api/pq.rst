@@ -149,7 +149,7 @@ Enumerations
     after a connection has been established. Other statuses might only be seen
     during the connection phase and are considered internal.
 
-    .. seealso:: :pq:`PQstatus()` returns this value.
+    .. seealso:: :pq:`PQstatus()` and `PQcancelStatus()` return this value.
 
 
 .. autoclass:: PollingStatus
