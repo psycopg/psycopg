@@ -366,6 +366,8 @@ class TestLiteral:
     @pytest.mark.crdb_skip("composite")  # create type, actually
     @pytest.mark.parametrize("name", ["a-b", f"{eur}", "order", "foo bar"])
     def test_invalid_name(self, conn, name):
+        if conn.info.parameter_status("is_superuser") != "on":
+            pytest.skip("not a superuser")
         conn.execute(
             f"""
             set client_encoding to utf8;
