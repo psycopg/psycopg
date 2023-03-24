@@ -39,6 +39,8 @@ Psycopg 3.2 (unreleased)
   (:ticket:`#754`).
 - Possibly use non-blocking cancellation upon `KeyboardInterrupt`
   (:ticket:`#754`).
+- Possibly use non-blocking cancellation upon `Copy` termination
+  (:ticket:`#754`).
 
 .. __: https://numpy.org/doc/stable/reference/arrays.scalars.html#built-in-scalar-types
 
