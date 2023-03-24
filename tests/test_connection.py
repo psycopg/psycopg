@@ -817,6 +817,11 @@ def test_cancel_closed(conn):
     conn.cancel()
 
 
+def test_cancel_safe_closed(conn):
+    conn.close()
+    conn.cancel_safe()
+
+
 def test_resolve_hostaddr_conn(conn_cls, monkeypatch, fake_resolve):
     got = ""
 

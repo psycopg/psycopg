@@ -286,6 +286,7 @@ The `!Connection` class
     .. rubric:: Methods you can use to do something cool
 
     .. automethod:: cancel
+    .. automethod:: cancel_safe
 
     .. automethod:: notifies
 

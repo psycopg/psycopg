@@ -285,6 +285,8 @@ class TestTPC:
         await aconn.tpc_prepare()
         with pytest.raises(psycopg.ProgrammingError):
             aconn.cancel()
+        with pytest.raises(psycopg.ProgrammingError):
+            await aconn.cancel_safe()
 
     async def test_tpc_recover_non_dbapi_connection(self, aconn_cls, aconn, dsn, tpc):
         aconn.row_factory = psycopg.rows.dict_row

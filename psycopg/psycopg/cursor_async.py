@@ -164,7 +164,10 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
                 if self._pgconn.transaction_status == ACTIVE:
                     # Try to cancel the query, then consume the results
                     # already received.
-                    self._conn.cancel()
+                    try:
+                        await self._conn.cancel_safe()
+                    except e.NotSupportedError:
+                        self._conn.cancel()
                     try:
                         while await self._conn.wait(
                             self._stream_fetchone_gen(first=False)
