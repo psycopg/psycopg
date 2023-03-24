@@ -81,6 +81,26 @@ def connect(conninfo: str, *, timeout: float = 0.0) -> PQGenConn[abc.PGconn]:
     return conn
 
 
+def cancel(pq.PGcancelConn cancel_conn) -> PQGenConn[None]:
+    cdef libpq.PGcancelConn *pgcancelconn_ptr = cancel_conn.pgcancelconn_ptr
+    cdef int status
+    while True:
+        with nogil:
+            status = libpq.PQcancelPoll(pgcancelconn_ptr)
+        if status == libpq.PGRES_POLLING_OK:
+            break
+        elif status == libpq.PGRES_POLLING_READING:
+            yield libpq.PQcancelSocket(pgcancelconn_ptr), WAIT_R
+        elif status == libpq.PGRES_POLLING_WRITING:
+            yield libpq.PQcancelSocket(pgcancelconn_ptr), WAIT_W
+        elif status == libpq.PGRES_POLLING_FAILED:
+            raise e.OperationalError(
+                f"cancellation failed: {cancel_conn.error_message}"
+            )
+        else:
+            raise e.InternalError(f"unexpected poll status: {status}")
+
+
 def execute(pq.PGconn pgconn) -> PQGen[List[abc.PGresult]]:
     """
     Generator sending a query and returning results without blocking.
