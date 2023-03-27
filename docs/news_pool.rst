@@ -7,18 +7,15 @@
 ``psycopg_pool`` release notes
 ==============================
 
-Future releases
+Current release
 ---------------
 
-psycopg_pool 3.1.7 (unreleased)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg_pool 3.1.7
+^^^^^^^^^^^^^^^^^^
 
 - Fix handling of tasks cancelled while waiting in async pool queue
   (:ticket:`#503`).
 
-
-Current release
----------------
 
 psycopg_pool 3.1.6
 ^^^^^^^^^^^^^^^^^^
