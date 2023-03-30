@@ -146,7 +146,7 @@ or a :ref:`client-side binding cursor <client-side-binding-cursors>`::
         psycopg.errors.ActiveSqlTransaction: CREATE DATABASE cannot run inside a transaction block
 
     This happens because PostgreSQL itself will wrap multiple statements in a
-    transaction. Note that your will experience a different behaviour in
+    transaction. Note that you will experience a different behaviour in
     :program:`psql` (:program:`psql` will split the queries on semicolons and
     send them to the server separately).
 
