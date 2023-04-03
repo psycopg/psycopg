@@ -55,9 +55,9 @@ else:
     from typing_extensions import TypeGuard
 
 if sys.version_info >= (3, 11):
-    from typing import LiteralString
+    from typing import LiteralString, assert_type
 else:
-    from typing_extensions import LiteralString
+    from typing_extensions import LiteralString, assert_type
 
 if sys.version_info < (3, 8):
     import importlib_metadata as metadata
@@ -71,6 +71,7 @@ __all__ = [
     "Protocol",
     "TypeGuard",
     "ZoneInfo",
+    "assert_type",
     "cache",
     "create_task",
     "prod",

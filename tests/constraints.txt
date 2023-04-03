@@ -5,7 +5,7 @@
 
 # From install_requires
 backports.zoneinfo == 0.2.0
-typing-extensions == 4.1.0
+typing-extensions == 4.2.0
 importlib-metadata == 1.4
 
 # From the 'test' extra
