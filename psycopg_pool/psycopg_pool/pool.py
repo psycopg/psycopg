@@ -11,7 +11,7 @@ from time import monotonic
 from queue import Queue, Empty
 from types import TracebackType
 from typing import Any, Callable, Dict, Iterator, List
-from typing import Optional, Sequence, Type
+from typing import Optional, Sequence, Type, TypeVar
 from typing_extensions import TypeAlias
 from weakref import ref
 from contextlib import contextmanager
@@ -31,6 +31,8 @@ ConnectFailedCB: TypeAlias = Callable[["ConnectionPool"], None]
 
 
 class ConnectionPool(BasePool[Connection[Any]]):
+    _Self = TypeVar("_Self", bound="ConnectionPool")
+
     def __init__(
         self,
         conninfo: str = "",
@@ -388,7 +390,7 @@ class ConnectionPool(BasePool[Connection[Any]]):
                         timeout,
                     )
 
-    def __enter__(self) -> "ConnectionPool":
+    def __enter__(self: _Self) -> _Self:
         self.open()
         return self
 

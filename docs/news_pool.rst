@@ -15,6 +15,8 @@ psycopg_pool 3.2.0 (unreleased)
 
 - Add support for async `!reconnect_failed` callbacks in `AsyncConnectionPool`
   (:ticket:`#520`).
+- Fix the return type annotation of `!NullConnectionPool.__enter__()`
+  (:ticket:`#540`).
 
 
 Current release
