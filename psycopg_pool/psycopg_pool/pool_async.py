@@ -10,7 +10,7 @@ from abc import ABC, abstractmethod
 from time import monotonic
 from types import TracebackType
 from typing import Any, AsyncIterator, Awaitable, Callable
-from typing import Dict, List, Optional, Sequence, Type, Union
+from typing import Dict, List, Optional, Sequence, Type, TypeVar, Union
 from typing_extensions import TypeAlias
 from weakref import ref
 from contextlib import asynccontextmanager
@@ -33,6 +33,8 @@ AsyncConnectFailedCB: TypeAlias = Union[
 
 
 class AsyncConnectionPool(BasePool[AsyncConnection[Any]]):
+    _Self = TypeVar("_Self", bound="AsyncConnectionPool")
+
     def __init__(
         self,
         conninfo: str = "",
@@ -333,7 +335,7 @@ class AsyncConnectionPool(BasePool[AsyncConnection[Any]]):
                 timeout,
             )
 
-    async def __aenter__(self) -> "AsyncConnectionPool":
+    async def __aenter__(self: _Self) -> _Self:
         await self.open()
         return self
 
