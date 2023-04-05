@@ -72,6 +72,11 @@ The `!ConnectionPool` class
 
    :type kwargs: `!dict`
 
+   :param row_factory: The :ref:`row factory <row-factories>` used when
+                       configuring connections in the pool.
+                       `kwargs["row_factory"]` and this parameter are mutually
+                       exclusive, the latter should be preferred.
+
    :param connection_class: The class of the connections to serve. It should
                             be a `!Connection` subclass.
    :type connection_class: `!type`, default: `~psycopg.Connection`

@@ -6,10 +6,11 @@ Psycopg null connection pools
 
 import logging
 import threading
-from typing import Any, Callable, Dict, Optional, Tuple, Type
+from typing import Any, Callable, Dict, Optional, Tuple, Type, overload
 
 from psycopg import Connection
 from psycopg.pq import TransactionStatus
+from psycopg.rows import Row, RowFactory
 
 from .pool import ConnectionPool, AddConnection, ConnectFailedCB
 from .errors import PoolTimeout, TooManyRequests
@@ -40,7 +41,55 @@ class _BaseNullConnectionPool:
         pass
 
 
-class NullConnectionPool(_BaseNullConnectionPool, ConnectionPool):
+class NullConnectionPool(_BaseNullConnectionPool, ConnectionPool[Row]):
+    @overload
+    def __init__(
+        self: "NullConnectionPool[Row]",
+        conninfo: str = ...,
+        *,
+        open: bool = ...,
+        connection_class: Type[Connection[Any]] = ...,
+        configure: Optional[Callable[[Connection[Any]], None]] = ...,
+        reset: Optional[Callable[[Connection[Any]], None]] = ...,
+        kwargs: Optional[Dict[str, Any]] = ...,
+        row_factory: RowFactory[Row],
+        min_size: int = ...,
+        max_size: Optional[int] = ...,
+        name: Optional[str] = ...,
+        timeout: float = ...,
+        max_waiting: int = ...,
+        max_lifetime: float = ...,
+        max_idle: float = ...,
+        reconnect_timeout: float = ...,
+        reconnect_failed: Optional[ConnectFailedCB] = ...,
+        num_workers: int = ...,
+    ):
+        ...
+
+    @overload
+    def __init__(
+        self: "NullConnectionPool[Any]",
+        conninfo: str = ...,
+        *,
+        open: bool = ...,
+        connection_class: Type[Connection[Any]] = ...,
+        configure: Optional[Callable[[Connection[Any]], None]] = ...,
+        reset: Optional[Callable[[Connection[Any]], None]] = ...,
+        kwargs: Optional[Dict[str, Any]] = ...,
+        row_factory: None = ...,
+        min_size: int = ...,
+        max_size: Optional[int] = ...,
+        name: Optional[str] = ...,
+        timeout: float = ...,
+        max_waiting: int = ...,
+        max_lifetime: float = ...,
+        max_idle: float = ...,
+        reconnect_timeout: float = ...,
+        reconnect_failed: Optional[ConnectFailedCB] = ...,
+        num_workers: int = ...,
+    ):
+        ...
+
     def __init__(
         self,
         conninfo: str = "",
@@ -50,6 +99,7 @@ class NullConnectionPool(_BaseNullConnectionPool, ConnectionPool):
         configure: Optional[Callable[[Connection[Any]], None]] = None,
         reset: Optional[Callable[[Connection[Any]], None]] = None,
         kwargs: Optional[Dict[str, Any]] = None,
+        row_factory: Optional[RowFactory[Any]] = None,
         # Note: default value changed to 0.
         min_size: int = 0,
         max_size: Optional[int] = None,
@@ -69,6 +119,7 @@ class NullConnectionPool(_BaseNullConnectionPool, ConnectionPool):
             configure=configure,
             reset=reset,
             kwargs=kwargs,
+            row_factory=row_factory,
             min_size=min_size,
             max_size=max_size,
             name=name,

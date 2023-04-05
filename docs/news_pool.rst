@@ -17,6 +17,8 @@ psycopg_pool 3.2.0 (unreleased)
   (:ticket:`#520`).
 - Fix the return type annotation of `!NullConnectionPool.__enter__()`
   (:ticket:`#540`).
+- Make connection pool classes generic on row type and add a `!row_factory` to
+  configure connections' :ref:`row factory <row-factories>` (:ticket:`#540`).
 
 
 Current release

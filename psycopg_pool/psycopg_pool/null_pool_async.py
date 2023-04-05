@@ -6,10 +6,11 @@ psycopg asynchronous null connection pool
 
 import asyncio
 import logging
-from typing import Any, Awaitable, Callable, Dict, Optional, Type
+from typing import Any, Awaitable, Callable, Dict, Optional, Type, overload
 
 from psycopg import AsyncConnection
 from psycopg.pq import TransactionStatus
+from psycopg.rows import Row, RowFactory
 
 from .errors import PoolTimeout, TooManyRequests
 from ._compat import ConnectionTimeout
@@ -19,7 +20,55 @@ from .pool_async import AsyncConnectionPool, AddConnection, AsyncConnectFailedCB
 logger = logging.getLogger("psycopg.pool")
 
 
-class AsyncNullConnectionPool(_BaseNullConnectionPool, AsyncConnectionPool):
+class AsyncNullConnectionPool(_BaseNullConnectionPool, AsyncConnectionPool[Row]):
+    @overload
+    def __init__(
+        self: "AsyncNullConnectionPool[Row]",
+        conninfo: str = ...,
+        *,
+        open: bool = ...,
+        connection_class: Type[AsyncConnection[Any]] = ...,
+        configure: Optional[Callable[[AsyncConnection[Any]], Awaitable[None]]] = ...,
+        reset: Optional[Callable[[AsyncConnection[Any]], Awaitable[None]]] = ...,
+        kwargs: Optional[Dict[str, Any]] = ...,
+        row_factory: RowFactory[Row],
+        min_size: int = ...,
+        max_size: Optional[int] = ...,
+        name: Optional[str] = ...,
+        timeout: float = ...,
+        max_waiting: int = ...,
+        max_lifetime: float = ...,
+        max_idle: float = ...,
+        reconnect_timeout: float = ...,
+        reconnect_failed: Optional[AsyncConnectFailedCB] = ...,
+        num_workers: int = ...,
+    ):
+        ...
+
+    @overload
+    def __init__(
+        self: "AsyncNullConnectionPool[Any]",
+        conninfo: str = ...,
+        *,
+        open: bool = ...,
+        connection_class: Type[AsyncConnection[Any]] = ...,
+        configure: Optional[Callable[[AsyncConnection[Any]], Awaitable[None]]] = ...,
+        reset: Optional[Callable[[AsyncConnection[Any]], Awaitable[None]]] = ...,
+        kwargs: Optional[Dict[str, Any]] = ...,
+        row_factory: None = ...,
+        min_size: int = ...,
+        max_size: Optional[int] = ...,
+        name: Optional[str] = ...,
+        timeout: float = ...,
+        max_waiting: int = ...,
+        max_lifetime: float = ...,
+        max_idle: float = ...,
+        reconnect_timeout: float = ...,
+        reconnect_failed: Optional[AsyncConnectFailedCB] = ...,
+        num_workers: int = ...,
+    ):
+        ...
+
     def __init__(
         self,
         conninfo: str = "",
@@ -29,6 +78,7 @@ class AsyncNullConnectionPool(_BaseNullConnectionPool, AsyncConnectionPool):
         configure: Optional[Callable[[AsyncConnection[Any]], Awaitable[None]]] = None,
         reset: Optional[Callable[[AsyncConnection[Any]], Awaitable[None]]] = None,
         kwargs: Optional[Dict[str, Any]] = None,
+        row_factory: Optional[RowFactory[Any]] = None,
         # Note: default value changed to 0.
         min_size: int = 0,
         max_size: Optional[int] = None,
@@ -48,6 +98,7 @@ class AsyncNullConnectionPool(_BaseNullConnectionPool, AsyncConnectionPool):
             configure=configure,
             reset=reset,
             kwargs=kwargs,
+            row_factory=row_factory,
             min_size=min_size,
             max_size=max_size,
             name=name,

@@ -2,13 +2,14 @@ import logging
 import weakref
 from time import sleep, time
 from threading import Thread, Event
-from typing import Any, List, Tuple
+from typing import Any, Dict, List, Tuple
 
 import pytest
 
 import psycopg
 from psycopg.pq import TransactionStatus
-from psycopg._compat import Counter
+from psycopg.rows import class_row
+from psycopg._compat import Counter, assert_type
 
 try:
     import psycopg_pool as pool
@@ -62,6 +63,34 @@ def test_kwargs(dsn):
     with pool.ConnectionPool(dsn, kwargs={"autocommit": True}, min_size=1) as p:
         with p.connection() as conn:
             assert conn.autocommit
+
+
+class MyRow(Dict[str, Any]):
+    ...
+
+
+def test_row_factory(dsn):
+    with pool.ConnectionPool(
+        dsn, row_factory=class_row(MyRow), kwargs={"autocommit": True}
+    ) as p1, p1.connection() as conn1:
+        (row1,) = conn1.execute("select 1 as x").fetchall()
+    assert_type(p1, pool.ConnectionPool[MyRow])
+    assert_type(conn1, psycopg.connection.Connection[MyRow])
+    assert_type(row1, MyRow)
+    assert conn1.autocommit
+    assert row1 == {"x": 1}
+
+    with pool.ConnectionPool(dsn, name="test") as p2, p2.connection() as conn2:
+        (row2,) = conn2.execute("select 2 as y").fetchall()
+    assert_type(p2, pool.pool.ConnectionPool[Any])
+    assert_type(conn2, psycopg.connection.Connection[Any])
+    assert_type(row2, Any)
+    assert row2 == (2,)
+
+    with pytest.raises(ValueError, match="incompatible with 'row_factory' argument"):
+        pool.ConnectionPool(
+            dsn, kwargs={"row_factory": object}, row_factory=class_row(dict)
+        )
 
 
 @pytest.mark.crdb_skip("backend pid")
