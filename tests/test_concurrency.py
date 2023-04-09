@@ -242,7 +242,7 @@ def test_identify_closure(conn_cls, dsn):
     sys.platform == "win32", reason="don't know how to Ctrl-C on Windows"
 )
 @pytest.mark.crdb_skip("cancel")
-def test_ctrl_c(dsn):
+def test_ctrl_c_handler(dsn):
     if sys.platform == "win32":
         sig = int(signal.CTRL_C_EVENT)
         # Or pytest will receive the Ctrl-C too
@@ -291,6 +291,72 @@ with psycopg.connect({dsn!r}) as conn:
     t = time.time() - t0
     assert proc.returncode == 0
     assert 1 < t < 2
+
+
+@pytest.mark.slow
+@pytest.mark.subprocess
+@pytest.mark.skipif(
+    sys.platform == "win32", reason="don't know how to Ctrl-C on Windows"
+)
+@pytest.mark.crdb("skip")
+def test_ctrl_c(conn, dsn):
+    conn.autocommit = True
+
+    APPNAME = "test_ctrl_c"
+    script = f"""\
+import psycopg
+
+with psycopg.connect({dsn!r}, application_name={APPNAME!r}) as conn:
+    conn.execute("select pg_sleep(60)")
+"""
+
+    if sys.platform == "win32":
+        creationflags = sp.CREATE_NEW_PROCESS_GROUP
+        sig = signal.CTRL_C_EVENT
+    else:
+        creationflags = 0
+        sig = signal.SIGINT
+
+    proc = None
+
+    def run_process():
+        nonlocal proc
+        proc = sp.Popen(
+            [sys.executable, "-s", "-c", script],
+            creationflags=creationflags,
+        )
+        proc.communicate()
+
+    t = threading.Thread(target=run_process)
+    t.start()
+
+    for i in range(20):
+        cur = conn.execute(
+            "select pid from pg_stat_activity where application_name = %s", (APPNAME,)
+        )
+        rec = cur.fetchone()
+        if rec:
+            pid = rec[0]
+            break
+        time.sleep(0.1)
+    else:
+        assert False, "process didn't start?"
+
+    t0 = time.time()
+    assert proc
+    proc.send_signal(sig)
+    proc.wait()
+
+    for i in range(20):
+        cur = conn.execute("select 1 from pg_stat_activity where pid = %s", (pid,))
+        if not cur.fetchone():
+            break
+        time.sleep(0.1)
+    else:
+        assert False, "process didn't stop?"
+
+    t1 = time.time()
+    assert t1 - t0 < 1.0
 
 
 @pytest.mark.slow

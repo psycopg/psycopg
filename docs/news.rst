@@ -15,6 +15,8 @@ Psycopg 3.1.9 (unreleased)
 
 - Fix `TypeInfo.fetch()` using a connection in `!sql_ascii` encoding
   (:ticket:`#503`).
+- Fix canceling running queries on process interruption in async connections
+  (:ticket:`#543`).
 
 
 Current release
