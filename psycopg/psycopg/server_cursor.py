@@ -290,7 +290,7 @@ class ServerCursor(ServerCursorMixin["Connection[Any]", Row], Cursor[Row]):
         try:
             with self._conn.lock:
                 self._conn.wait(self._declare_gen(query, params, binary))
-        except e.Error as ex:
+        except e._NO_TRACEBACK as ex:
             raise ex.with_traceback(None)
 
         return self
@@ -426,7 +426,7 @@ class AsyncServerCursor(
         try:
             async with self._conn.lock:
                 await self._conn.wait(self._declare_gen(query, params, binary))
-        except e.Error as ex:
+        except e._NO_TRACEBACK as ex:
             raise ex.with_traceback(None)
 
         return self
