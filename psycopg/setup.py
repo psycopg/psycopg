@@ -38,7 +38,7 @@ extras_require = {
     # Requirements to run the test suite
     "test": [
         "anyio >= 3.6.2",
-        "mypy >= 1.0",
+        "mypy >= 1.2",
         "pproxy >= 2.7",
         "pytest >= 6.2.5",
         "pytest-cov >= 3.0",
@@ -49,7 +49,7 @@ extras_require = {
         "black >= 23.1.0",
         "dnspython >= 2.1",
         "flake8 >= 4.0",
-        "mypy >= 0.990",
+        "mypy >= 1.2",
         "types-setuptools >= 57.4",
         "wheel >= 0.37",
     ],
