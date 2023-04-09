@@ -83,9 +83,9 @@ def test_wait_bad(pgconn, waitfn):
 @pytest.mark.skipif(
     "sys.platform == 'win32'", reason="win32 works ok, but FDs are mysterious"
 )
-@pytest.mark.parametrize("waitfn", waitfns)
-def test_wait_large_fd(dsn, waitfn):
-    waitfn = getattr(waiting, waitfn)
+@pytest.mark.parametrize("fname", waitfns)
+def test_wait_large_fd(dsn, fname):
+    waitfn = getattr(waiting, fname)
 
     files = []
     try:
@@ -100,7 +100,7 @@ def test_wait_large_fd(dsn, waitfn):
             assert pgconn.socket > 1024
             pgconn.send_query(b"select 1")
             gen = generators.execute(pgconn)
-            if waitfn is waiting.wait_select:
+            if fname == "wait_select":
                 with pytest.raises(ValueError):
                     waitfn(gen, pgconn.socket)
             else:

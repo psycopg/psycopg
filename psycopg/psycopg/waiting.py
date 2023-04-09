@@ -318,14 +318,7 @@ elif selectors.DefaultSelector is getattr(selectors, "SelectSelector", None):
     wait = wait_select
 
 elif selectors.DefaultSelector is getattr(selectors, "EpollSelector", None):
-    # NOTE: select seems more performing than epoll. It is admittedly unlikely
-    # that a platform has epoll but not select, so maybe we could kill
-    # wait_epoll altogether(). More testing to do.
-    wait = wait_select if hasattr(selectors, "SelectSelector") else wait_epoll
-
-elif selectors.DefaultSelector is getattr(selectors, "KqueueSelector", None):
-    # wait_select is faster than wait_selector, probably because of less overhead
-    wait = wait_select if hasattr(selectors, "SelectSelector") else wait_selector
+    wait = wait_epoll
 
 else:
     wait = wait_selector
