@@ -346,13 +346,9 @@ class AsyncConnection(BaseConnection[Row]):
     async def wait(self, gen: PQGen[RV]) -> RV:
         try:
             return await waiting.wait_async(gen, self.pgconn.socket)
-        except KeyboardInterrupt:
-            # TODO: this doesn't seem to work as it does for sync connections
-            # see tests/test_concurrency_async.py::test_ctrl_c
-            # In the test, the code doesn't reach this branch.
-
+        except (asyncio.CancelledError, KeyboardInterrupt):
             # On Ctrl-C, try to cancel the query in the server, otherwise
-            # otherwise the connection will be stuck in ACTIVE state
+            # the connection will remain stuck in ACTIVE state.
             c = self.pgconn.get_cancel()
             c.cancel()
             try:
