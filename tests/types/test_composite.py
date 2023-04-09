@@ -34,6 +34,24 @@ def test_load_record(conn, want, rec):
     assert res == want
 
 
+@pytest.mark.parametrize("fmt_out", pq.Format)
+def test_load_different_records_cols(conn, fmt_out):
+    cur = conn.cursor(binary=fmt_out)
+    res = cur.execute(
+        "select row('foo'::text), row('bar'::text, 'baz'::text)"
+    ).fetchone()
+    assert res == (("foo",), ("bar", "baz"))
+
+
+@pytest.mark.parametrize("fmt_out", pq.Format)
+def test_load_different_records_rows(conn, fmt_out):
+    cur = conn.cursor(binary=fmt_out)
+    res = cur.execute(
+        "values (row('foo'::text)), (row('bar'::text, 'baz'::text))"
+    ).fetchall()
+    assert res == [(("foo",),), (("bar", "baz"),)]
+
+
 @pytest.mark.parametrize("rec, obj", tests_str)
 def test_dump_tuple(conn, rec, obj):
     cur = conn.cursor()

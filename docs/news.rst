@@ -17,6 +17,8 @@ Psycopg 3.1.9 (unreleased)
   (:ticket:`#503`).
 - Fix canceling running queries on process interruption in async connections
   (:ticket:`#543`).
+- Fix loading ROW values with different types in the same query using the
+  binary protocol (:ticket:`#545`).
 
 
 Current release
