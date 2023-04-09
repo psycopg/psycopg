@@ -719,7 +719,7 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
                 self._conn.wait(
                     self._execute_gen(query, params, prepare=prepare, binary=binary)
                 )
-        except e.Error as ex:
+        except e._NO_TRACEBACK as ex:
             raise ex.with_traceback(None)
         return self
 
@@ -754,7 +754,7 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
                     self._conn.wait(
                         self._executemany_gen_no_pipeline(query, params_seq, returning)
                     )
-        except e.Error as ex:
+        except e._NO_TRACEBACK as ex:
             raise ex.with_traceback(None)
 
     def stream(
@@ -780,7 +780,7 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
                     yield rec
                     first = False
 
-            except e.Error as ex:
+            except e._NO_TRACEBACK as ex:
                 raise ex.with_traceback(None)
 
             finally:
@@ -898,7 +898,7 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
 
             with Copy(self, writer=writer) as copy:
                 yield copy
-        except e.Error as ex:
+        except e._NO_TRACEBACK as ex:
             raise ex.with_traceback(None)
 
         # If a fresher result has been set on the cursor by the Copy object,

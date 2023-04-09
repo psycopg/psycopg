@@ -125,7 +125,7 @@ class AsyncConnection(BaseConnection[Row]):
                 cls._connect_gen(conninfo, autocommit=autocommit),
                 timeout=params["connect_timeout"],
             )
-        except e.Error as ex:
+        except e._NO_TRACEBACK as ex:
             raise ex.with_traceback(None)
 
         if row_factory:
@@ -281,7 +281,7 @@ class AsyncConnection(BaseConnection[Row]):
 
             return await cur.execute(query, params, prepare=prepare)
 
-        except e.Error as ex:
+        except e._NO_TRACEBACK as ex:
             raise ex.with_traceback(None)
 
     async def commit(self) -> None:
@@ -316,7 +316,7 @@ class AsyncConnection(BaseConnection[Row]):
             async with self.lock:
                 try:
                     ns = await self.wait(notifies(self.pgconn))
-                except e.Error as ex:
+                except e._NO_TRACEBACK as ex:
                     raise ex.with_traceback(None)
             enc = pgconn_encoding(self.pgconn)
             for pgn in ns:

@@ -724,7 +724,7 @@ class Connection(BaseConnection[Row]):
                 cls._connect_gen(conninfo, autocommit=autocommit),
                 timeout=params["connect_timeout"],
             )
-        except e.Error as ex:
+        except e._NO_TRACEBACK as ex:
             raise ex.with_traceback(None)
 
         if row_factory:
@@ -875,7 +875,7 @@ class Connection(BaseConnection[Row]):
 
             return cur.execute(query, params, prepare=prepare)
 
-        except e.Error as ex:
+        except e._NO_TRACEBACK as ex:
             raise ex.with_traceback(None)
 
     def commit(self) -> None:
@@ -919,7 +919,7 @@ class Connection(BaseConnection[Row]):
             with self.lock:
                 try:
                     ns = self.wait(notifies(self.pgconn))
-                except e.Error as ex:
+                except e._NO_TRACEBACK as ex:
                     raise ex.with_traceback(None)
             enc = pgconn_encoding(self.pgconn)
             for pgn in ns:

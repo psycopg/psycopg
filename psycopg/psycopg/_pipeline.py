@@ -219,7 +219,7 @@ class Pipeline(BasePipeline):
         try:
             with self._conn.lock:
                 self._conn.wait(self._sync_gen())
-        except e.Error as ex:
+        except e._NO_TRACEBACK as ex:
             raise ex.with_traceback(None)
 
     def __enter__(self: _Self) -> _Self:
@@ -260,7 +260,7 @@ class AsyncPipeline(BasePipeline):
         try:
             async with self._conn.lock:
                 await self._conn.wait(self._sync_gen())
-        except e.Error as ex:
+        except e._NO_TRACEBACK as ex:
             raise ex.with_traceback(None)
 
     async def __aenter__(self: _Self) -> _Self:
