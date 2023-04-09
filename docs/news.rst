@@ -15,6 +15,8 @@ Psycopg 3.1.9 (unreleased)
 
 - Fix `TypeInfo.fetch()` using a connection in `!sql_ascii` encoding
   (:ticket:`#503`).
+- Fix "filedescriptor out of range" using a large number of files open
+  in Python implementation (:ticket:`#532`).
 - Fix canceling running queries on process interruption in async connections
   (:ticket:`#543`).
 - Fix loading ROW values with different types in the same query using the
