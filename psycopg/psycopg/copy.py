@@ -461,7 +461,7 @@ class FileWriter(Writer):
         self.file = file
 
     def write(self, data: Buffer) -> None:
-        self.file.write(data)  # type: ignore[arg-type]
+        self.file.write(data)
 
 
 class AsyncCopy(BaseCopy["AsyncConnection[Any]"]):
