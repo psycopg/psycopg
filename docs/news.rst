@@ -17,6 +17,8 @@ Psycopg 3.1.9 (unreleased)
   (:ticket:`#503`).
 - Fix "filedescriptor out of range" using a large number of files open
   in Python implementation (:ticket:`#532`).
+- Allow JSON dumpers to be registered on `!dict` or any other object, as was
+  possible in psycopg2 (:ticket:`#541`).
 - Fix canceling running queries on process interruption in async connections
   (:ticket:`#543`).
 - Fix loading ROW values with different types in the same query using the
