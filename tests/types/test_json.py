@@ -47,6 +47,24 @@ def test_dump(conn, val, wrapper, fmt_in):
     assert cur.fetchone()[0] is True
 
 
+@pytest.mark.parametrize(
+    "fmt_in, type, dumper_name",
+    [
+        ("t", "json", "JsonDumper"),
+        ("b", "json", "JsonBinaryDumper"),
+        ("t", "jsonb", "JsonbDumper"),
+        ("b", "jsonb", "JsonbBinaryDumper"),
+    ],
+)
+def test_dump_dict(conn, fmt_in, type, dumper_name):
+    obj = {"foo": "bar"}
+    cur = conn.cursor()
+    cur.adapters.register_dumper(dict, getattr(psycopg.types.json, dumper_name))
+    cur.execute(f"select %{fmt_in}", (obj,))
+    assert cur.fetchone()[0] == obj
+    assert cur.description[0].type_code == conn.adapters.types[type].oid
+
+
 @pytest.mark.crdb_skip("json array")
 @pytest.mark.parametrize("val", samples)
 @pytest.mark.parametrize("wrapper", ["Json", "Jsonb"])
