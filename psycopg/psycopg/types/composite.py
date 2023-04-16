@@ -13,7 +13,7 @@ from typing import Sequence, Tuple, Type
 from .. import pq
 from .. import abc
 from .. import postgres
-from ..adapt import Transformer, PyFormat, RecursiveDumper, Loader
+from ..adapt import Transformer, PyFormat, RecursiveDumper, Loader, Dumper
 from .._struct import pack_len, unpack_len
 from ..postgres import TEXT_OID
 from .._typeinfo import CompositeInfo as CompositeInfo  # exported here
@@ -66,7 +66,7 @@ class TupleDumper(SequenceDumper):
         return self._dump_sequence(obj, b"(", b")", b",")
 
 
-class TupleBinaryDumper(RecursiveDumper):
+class TupleBinaryDumper(Dumper):
     format = pq.Format.BINARY
 
     # Subclasses must set an info
@@ -74,8 +74,15 @@ class TupleBinaryDumper(RecursiveDumper):
 
     def __init__(self, cls: type, context: Optional[abc.AdaptContext] = None):
         super().__init__(cls, context)
-        nfields = len(self.info.field_types)
+
+        # Note: this class is not a RecursiveDumper because it would use the
+        # same Transformer of the context, which would confuse dump_sequence()
+        # in case the composite contains another composite. Make sure to use
+        # a separate Transformer instance instead.
+        self._tx = Transformer(context)
         self._tx.set_dumper_types(self.info.field_types, self.format)
+
+        nfields = len(self.info.field_types)
         self._formats = (PyFormat.from_pq(self.format),) * nfields
 
     def dump(self, obj: Tuple[Any, ...]) -> bytearray:
