@@ -47,6 +47,35 @@ def test_dump(conn, val, wrapper, fmt_in):
     assert cur.fetchone()[0] is True
 
 
+@pytest.mark.parametrize(
+    "fmt_in, pgtype, dumper_name",
+    [
+        ("t", "json", "JsonDumper"),
+        ("b", "json", "JsonBinaryDumper"),
+        ("t", "jsonb", "JsonbDumper"),
+        ("b", "jsonb", "JsonbBinaryDumper"),
+    ],
+)
+def test_dump_dict(conn, fmt_in, pgtype, dumper_name):
+    obj = {"foo": "bar"}
+    cur = conn.cursor()
+    dumper = getattr(psycopg.types.json, dumper_name)
+
+    # Skip json on CRDB as the oid doesn't exist.
+    try:
+        conn.adapters.types[dumper.oid]
+    except KeyError:
+        pytest.skip(
+            f"{type(conn).__name__} doesn't have the oid {dumper.oid}"
+            f" used by {dumper.__name__}"
+        )
+
+    cur.adapters.register_dumper(dict, dumper)
+    cur.execute(f"select %{fmt_in}", (obj,))
+    assert cur.fetchone()[0] == obj
+    assert cur.description[0].type_code == conn.adapters.types[pgtype].oid
+
+
 @pytest.mark.crdb_skip("json array")
 @pytest.mark.parametrize("val", samples)
 @pytest.mark.parametrize("wrapper", ["Json", "Jsonb"])
