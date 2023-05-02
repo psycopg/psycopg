@@ -7,11 +7,11 @@
 ``psycopg`` release notes
 =========================
 
-Future releases
+Current release
 ---------------
 
-Psycopg 3.1.9 (unreleased)
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+Psycopg 3.1.9
+^^^^^^^^^^^^^
 
 - Fix `TypeInfo.fetch()` using a connection in `!sql_ascii` encoding
   (:ticket:`#503`).
@@ -25,9 +25,6 @@ Psycopg 3.1.9 (unreleased)
   binary protocol (:ticket:`#545`).
 - Fix dumping recursive composite types (:ticket:`#547`).
 
-
-Current release
----------------
 
 Psycopg 3.1.8
 ^^^^^^^^^^^^^
