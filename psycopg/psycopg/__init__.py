@@ -24,6 +24,7 @@ from .transaction import Rollback, Transaction, AsyncTransaction
 from .cursor_async import AsyncCursor
 from .server_cursor import AsyncServerCursor, ServerCursor
 from .client_cursor import AsyncClientCursor, ClientCursor
+from .raw_cursor import AsyncRawCursor, RawCursor
 from .connection_async import AsyncConnection
 
 from . import dbapi20
@@ -64,6 +65,7 @@ __all__ = [
     "AsyncCopy",
     "AsyncCursor",
     "AsyncPipeline",
+    "AsyncRawCursor",
     "AsyncServerCursor",
     "AsyncTransaction",
     "BaseConnection",
@@ -76,6 +78,7 @@ __all__ = [
     "IsolationLevel",
     "Notify",
     "Pipeline",
+    "RawCursor",
     "Rollback",
     "ServerCursor",
     "Transaction",

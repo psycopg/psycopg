@@ -16,7 +16,9 @@ from .fix_crdb import crdb_encoding
 execmany = execmany  # avoid F811 underneath
 
 
-@pytest.fixture(params=[psycopg.AsyncCursor, psycopg.AsyncClientCursor])
+@pytest.fixture(
+    params=[psycopg.AsyncCursor, psycopg.AsyncClientCursor, psycopg.AsyncRawCursor]
+)
 def aconn(aconn, request, anyio_backend):
     aconn.cursor_factory = request.param
     return aconn

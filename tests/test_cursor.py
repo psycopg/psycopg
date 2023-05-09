@@ -21,7 +21,7 @@ from .utils import gc_collect, raiseif
 from .fix_crdb import is_crdb, crdb_encoding, crdb_time_precision
 
 
-@pytest.fixture(params=[psycopg.Cursor, psycopg.ClientCursor])
+@pytest.fixture(params=[psycopg.Cursor, psycopg.ClientCursor, psycopg.RawCursor])
 def conn(conn, request):
     conn.cursor_factory = request.param
     return conn
