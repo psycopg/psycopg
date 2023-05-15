@@ -1,3 +1,7 @@
+"""
+Tests common to psycopg.Cursor and its subclasses.
+"""
+
 import pickle
 import weakref
 import datetime as dt
@@ -7,28 +11,35 @@ from contextlib import closing
 import pytest
 
 import psycopg
-from psycopg import pq, sql, rows
-from psycopg.adapt import PyFormat
-from psycopg.postgres import types as builtins
+from psycopg import sql, rows
 from psycopg.rows import RowMaker
+from psycopg.adapt import PyFormat
+from psycopg.types import TypeInfo
+from psycopg.postgres import types as builtins
 
-from .utils import gc_collect, gc_count
+from .utils import gc_collect, raiseif
 from .fix_crdb import is_crdb, crdb_encoding, crdb_time_precision
 
 
+@pytest.fixture(params=[psycopg.Cursor, psycopg.ClientCursor])
+def conn(conn, request):
+    conn.cursor_factory = request.param
+    return conn
+
+
 def test_init(conn):
-    cur = psycopg.Cursor(conn)
+    cur = conn.cursor_factory(conn)
     cur.execute("select 1")
     assert cur.fetchone() == (1,)
 
     conn.row_factory = rows.dict_row
-    cur = psycopg.Cursor(conn)
+    cur = conn.cursor_factory(conn)
     cur.execute("select 1 as a")
     assert cur.fetchone() == {"a": 1}
 
 
 def test_init_factory(conn):
-    cur = psycopg.Cursor(conn, row_factory=rows.dict_row)
+    cur = conn.cursor_factory(conn, row_factory=rows.dict_row)
     cur.execute("select 1 as a")
     assert cur.fetchone() == {"a": 1}
 
@@ -132,6 +143,12 @@ def test_statusmessage(conn):
     assert cur.statusmessage is None
 
 
+def test_execute_sql(conn):
+    cur = conn.cursor()
+    cur.execute(sql.SQL("select {value}").format(value="hello"))
+    assert cur.fetchone() == ("hello",)
+
+
 def test_execute_many_results(conn):
     cur = conn.cursor()
     assert cur.nextset() is None
@@ -210,8 +227,15 @@ def test_fetchone(conn):
 
 
 def test_binary_cursor_execute(conn):
-    cur = conn.cursor(binary=True)
-    cur.execute("select %s, %s", [1, None])
+    with raiseif(
+        conn.cursor_factory is psycopg.ClientCursor, psycopg.NotSupportedError
+    ) as ex:
+        cur = conn.cursor(binary=True)
+        cur.execute("select %s, %s", [1, None])
+
+    if ex:
+        return
+
     assert cur.fetchone() == (1, None)
     assert cur.pgresult.fformat(0) == 1
     assert cur.pgresult.get_value(0, 0) == b"\x00\x01"
@@ -219,7 +243,13 @@ def test_binary_cursor_execute(conn):
 
 def test_execute_binary(conn):
     cur = conn.cursor()
-    cur.execute("select %s, %s", [1, None], binary=True)
+    with raiseif(
+        conn.cursor_factory is psycopg.ClientCursor, psycopg.NotSupportedError
+    ) as ex:
+        cur.execute("select %s, %s", [1, None], binary=True)
+    if ex:
+        return
+
     assert cur.fetchone() == (1, None)
     assert cur.pgresult.fformat(0) == 1
     assert cur.pgresult.get_value(0, 0) == b"\x00\x01"
@@ -570,32 +600,19 @@ def test_scroll(conn):
         cur.scroll(1, "wat")
 
 
-def test_query_params_execute(conn):
+@pytest.mark.parametrize(
+    "query, params, want",
+    [
+        ("select %(x)s", {"x": 1}, (1,)),
+        ("select %(x)s, %(y)s", {"x": 1, "y": 2}, (1, 2)),
+        ("select %(x)s, %(x)s", {"x": 1}, (1, 1)),
+    ],
+)
+def test_execute_params_named(conn, query, params, want):
     cur = conn.cursor()
-    assert cur._query is None
-
-    cur.execute("select %t, %s::text", [1, None])
-    assert cur._query is not None
-    assert cur._query.query == b"select $1, $2::text"
-    assert cur._query.params == [b"1", None]
-
-    cur.execute("select 1")
-    assert cur._query.query == b"select 1"
-    assert not cur._query.params
-
-    with pytest.raises(psycopg.DataError):
-        cur.execute("select %t::int", ["wat"])
-
-    assert cur._query.query == b"select $1::int"
-    assert cur._query.params == [b"wat"]
-
-
-def test_query_params_executemany(conn):
-    cur = conn.cursor()
-
-    cur.executemany("select %t, %t", [[1, 2], [3, 4]])
-    assert cur._query.query == b"select $1, $2"
-    assert cur._query.params == [b"3", b"4"]
+    cur.execute(query, params)
+    rec = cur.fetchone()
+    assert rec == want
 
 
 def test_stream(conn):
@@ -711,25 +728,33 @@ def test_stream_close(conn):
 
 
 def test_stream_binary_cursor(conn):
-    cur = conn.cursor(binary=True)
-    recs = []
-    for rec in cur.stream("select x::int4 from generate_series(1, 2) x"):
-        recs.append(rec)
-        assert cur.pgresult.fformat(0) == 1
-        assert cur.pgresult.get_value(0, 0) == bytes([0, 0, 0, rec[0]])
+    with raiseif(
+        conn.cursor_factory is psycopg.ClientCursor, psycopg.NotSupportedError
+    ):
+        cur = conn.cursor(binary=True)
+        recs = []
+        for rec in cur.stream("select x::int4 from generate_series(1, 2) x"):
+            recs.append(rec)
+            assert cur.pgresult.fformat(0) == 1
+            assert cur.pgresult.get_value(0, 0) == bytes([0, 0, 0, rec[0]])
 
-    assert recs == [(1,), (2,)]
+        assert recs == [(1,), (2,)]
 
 
 def test_stream_execute_binary(conn):
     cur = conn.cursor()
     recs = []
-    for rec in cur.stream("select x::int4 from generate_series(1, 2) x", binary=True):
-        recs.append(rec)
-        assert cur.pgresult.fformat(0) == 1
-        assert cur.pgresult.get_value(0, 0) == bytes([0, 0, 0, rec[0]])
+    with raiseif(
+        conn.cursor_factory is psycopg.ClientCursor, psycopg.NotSupportedError
+    ):
+        for rec in cur.stream(
+            "select x::int4 from generate_series(1, 2) x", binary=True
+        ):
+            recs.append(rec)
+            assert cur.pgresult.fformat(0) == 1
+            assert cur.pgresult.get_value(0, 0) == bytes([0, 0, 0, rec[0]])
 
-    assert recs == [(1,), (2,)]
+        assert recs == [(1,), (2,)]
 
 
 def test_stream_binary_cursor_text_override(conn):
@@ -870,7 +895,6 @@ class TestColumn:
 
 def test_str(conn):
     cur = conn.cursor()
-    assert "psycopg.Cursor" in str(cur)
     assert "[IDLE]" in str(cur)
     assert "[closed]" not in str(cur)
     assert "[no result]" in str(cur)
@@ -884,50 +908,23 @@ def test_str(conn):
     assert "[INTRANS]" in str(cur)
 
 
-@pytest.mark.slow
-@pytest.mark.parametrize("fmt", PyFormat)
-@pytest.mark.parametrize("fmt_out", pq.Format)
-@pytest.mark.parametrize("fetch", ["one", "many", "all", "iter"])
-@pytest.mark.parametrize("row_factory", ["tuple_row", "dict_row", "namedtuple_row"])
-def test_leak(conn_cls, dsn, faker, fmt, fmt_out, fetch, row_factory):
-    faker.format = fmt
-    faker.choose_schema(ncols=5)
-    faker.make_records(10)
-    row_factory = getattr(rows, row_factory)
+@pytest.mark.pipeline
+def test_message_0x33(conn):
+    # https://github.com/psycopg/psycopg/issues/314
+    notices = []
+    conn.add_notice_handler(lambda diag: notices.append(diag.message_primary))
 
-    def work():
-        with conn_cls.connect(dsn) as conn, conn.transaction(force_rollback=True):
-            with conn.cursor(binary=fmt_out, row_factory=row_factory) as cur:
-                cur.execute(faker.drop_stmt)
-                cur.execute(faker.create_stmt)
-                with faker.find_insert_problem(conn):
-                    cur.executemany(faker.insert_stmt, faker.records)
+    conn.autocommit = True
+    with conn.pipeline():
+        cur = conn.execute("select 'test'")
+        assert cur.fetchone() == ("test",)
 
-                cur.execute(faker.select_stmt)
+    assert not notices
 
-                if fetch == "one":
-                    while True:
-                        tmp = cur.fetchone()
-                        if tmp is None:
-                            break
-                elif fetch == "many":
-                    while True:
-                        tmp = cur.fetchmany(3)
-                        if not tmp:
-                            break
-                elif fetch == "all":
-                    cur.fetchall()
-                elif fetch == "iter":
-                    for rec in cur:
-                        pass
 
-    n = []
-    gc_collect()
-    for i in range(3):
-        work()
-        gc_collect()
-        n.append(gc_count())
-    assert n[0] == n[1] == n[2], f"objects leaked: {n[1] - n[0]}, {n[2] - n[1]}"
+def test_typeinfo(conn):
+    info = TypeInfo.fetch(conn, "jsonb")
+    assert info is not None
 
 
 def my_row_factory(
