@@ -60,7 +60,7 @@ class Error(Exception):
         *args: Sequence[Any],
         info: ErrorInfo = None,
         encoding: str = "utf-8",
-        pgconn: Optional[PGconn] = None
+        pgconn: Optional[PGconn] = None,
     ):
         super().__init__(*args)
         self._info = info
