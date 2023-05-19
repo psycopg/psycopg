@@ -50,10 +50,12 @@ These classes are exposed both by this module and the root `psycopg` module.
 
     .. autoattribute:: pgconn
 
-        Most likely it will be in `~psycopg.pq.ConnStatus.BAD` state;
+        It has been closed and will be in `~psycopg.pq.ConnStatus.BAD` state;
         however it might be useful to verify precisely what went wrong, for
         instance checking the `~psycopg.pq.PGconn.needs_password` and
         `~psycopg.pq.PGconn.used_password` attributes.
+        Attempting to operate this connection will raise an
+        :exc:`OperationalError`.
 
         .. versionadded:: 3.1
 
