@@ -36,6 +36,12 @@ def test_connect_operationalerror_pgconn(generators, dsn, monkeypatch):
     pgconn = excinfo.value.pgconn
     assert pgconn is not None
     assert pgconn.needs_password
+    assert b"fe_sendauth: no password supplied" in pgconn.error_message
+    assert pgconn.status == pq.ConnStatus.BAD.value
+    assert pgconn.transaction_status == pq.TransactionStatus.UNKNOWN.value
+    assert pgconn.pipeline_status == pq.PipelineStatus.OFF.value
+    with pytest.raises(psycopg.OperationalError, match="connection is closed"):
+        pgconn.exec_(b"select 1")
 
 
 @pytest.fixture

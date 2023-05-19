@@ -12,6 +12,18 @@ from .utils import eur, gc_collect
 from .fix_crdb import is_crdb
 
 
+def test_finishedpgconn(pgconn):
+    with pytest.raises(TypeError):
+        e.FinishedPGconn.connect()
+
+    assert pgconn.socket
+    finished = e.finish_pgconn(pgconn)
+    with pytest.raises(e.OperationalError, match="connection is closed"):
+        finished.socket
+    with pytest.raises(e.OperationalError, match="connection is closed"):
+        pgconn.socket
+
+
 @pytest.mark.crdb_skip("severity_nonlocalized")
 def test_error_diag(conn):
     cur = conn.cursor()
