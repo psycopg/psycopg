@@ -14,7 +14,7 @@ from ..pq import Format
 from ..adapt import Buffer, Dumper, Loader, PyFormat, AdaptersMap
 from ..errors import DataError
 
-JsonDumpsFunction = Callable[[Any], str]
+JsonDumpsFunction = Callable[[Any], Union[str, bytes]]
 JsonLoadsFunction = Callable[[Union[str, bytes]], Any]
 
 
@@ -132,7 +132,10 @@ class _JsonDumper(Dumper):
             obj = obj.obj
         else:
             dumps = self.dumps
-        return dumps(obj).encode()
+        data = dumps(obj)
+        if isinstance(data, str):
+            return data.encode()
+        return data
 
 
 class JsonDumper(_JsonDumper):
