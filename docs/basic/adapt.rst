@@ -203,22 +203,6 @@ attribute::
     >>> conn.execute("select '2048-07-08 12:00'::timestamptz").fetchone()[0]
     datetime.datetime(2048, 7, 8, 12, 0, tzinfo=zoneinfo.ZoneInfo(key='Europe/London'))
 
-.. warning::
-    PostgreSQL date and time objects can represent values that cannot be
-    represented by the Python `datetime` objects:
-
-    - dates and timestamps after the year 9999, the special value "infinity";
-    - dates and timestamps before the year 1, the special value "-infinity";
-    - the time 24:00:00.
-
-    Loading these values will raise a `~psycopg.DataError`.
-
-    If you need to handle these values you can define your own mapping (for
-    instance mapping every value greater than `datetime.date.max` to
-    `!date.max`, or the time 24:00 to 00:00) and write a subclass of the
-    default loaders implementing the added capability; please see
-    :ref:`this example <adapt-example-inf-date>` for a reference.
-
 .. note::
     PostgreSQL :sql:`timestamptz` doesn't store "a timestamp with a timezone
     attached": it stores a timestamp always in UTC, which is converted, on
@@ -236,6 +220,61 @@ attribute::
            #DATATYPE-TIMEZONES
 
 .. __: https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-TIMEZONE
+
+
+.. _date-time-limits:
+
+Dates and times limits in Python
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+PostgreSQL date and time objects can represent values that cannot be
+represented by the Python `datetime` objects:
+
+- dates and timestamps after the year 9999, the special value "infinity";
+- dates and timestamps before the year 1, the special value "-infinity";
+- the time 24:00:00.
+
+Loading these values will raise a `~psycopg.DataError`.
+
+If you need to handle these values you can define your own mapping (for
+instance mapping every value greater than `datetime.date.max` to `!date.max`,
+or the time 24:00 to 00:00) and write a subclass of the default loaders
+implementing the added capability; please see :ref:`this example
+<adapt-example-inf-date>` for a reference.
+
+
+.. index::
+    single: DateStyle
+    single: IntervalStyle
+
+.. _datestyle:
+
+DateStyle and IntervalStyle limits
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Loading :sql:`timestamp with time zone` in text format is only supported if
+the connection DateStyle__ is set to `ISO` format; time and time zone
+representation in other formats is ambiguous.
+
+.. __: https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-DATESTYLE
+
+Furthermore, at the time of writing, the only supported value for
+IntervalStyle__ is ``postgres``; loading :sql:`interval` data in text format
+with a different setting is not supported.
+
+.. __: https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-INTERVALSTYLE
+
+If your server is configured with different settings by default, you can
+obtain a connection in a supported style using the ``options`` connection
+parameter; for example::
+
+   >>> conn = psycopg.connect(options="-c datestyle=ISO,YMD")
+   >>> conn.execute("show datestyle").fetchone()[0]
+   # 'ISO, YMD'
+
+These GUC parameters only affects loading in text format; loading timestamps
+or intervals in :ref:`binary format <binary-data>` is not affected by
+DateStyle or IntervalStyle.
 
 
 .. _adapt-json:
