@@ -1,3 +1,4 @@
+import sys
 import pickle
 from typing import List
 from weakref import ref
@@ -182,6 +183,10 @@ def test_diag_pickle(conn):
 
 
 @pytest.mark.slow
+@pytest.mark.xfail(
+    (pq.__impl__ in ("c", "binary") and sys.version_info[:2] == (3, 12)),
+    reason="Something with Exceptions, C, Python 3.12",
+)
 def test_diag_survives_cursor(conn):
     cur = conn.cursor()
     with pytest.raises(e.Error) as exc:
