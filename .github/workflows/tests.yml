@@ -27,16 +27,18 @@ jobs:
         include:
           # Test different combinations of Python, Postgres, libpq.
           - {impl: python, python: "3.7", postgres: "postgres:10", libpq: newest}
-          - {impl: python, python: "3.8", postgres: "postgres:12"}
-          - {impl: python, python: "3.9", postgres: "postgres:13"}
-          - {impl: python, python: "3.10", postgres: "postgres:14"}
-          - {impl: python, python: "3.11", postgres: "postgres:15", libpq: oldest}
+          - {impl: python, python: "3.8", postgres: "postgres:11"}
+          - {impl: python, python: "3.9", postgres: "postgres:12"}
+          - {impl: python, python: "3.10", postgres: "postgres:13"}
+          - {impl: python, python: "3.11", postgres: "postgres:14"}
+          - {impl: python, python: "3.12.0-alpha - 3.12", postgres: "postgres:15", libpq: oldest}
 
           - {impl: c, python: "3.7", postgres: "postgres:15", libpq: newest}
           - {impl: c, python: "3.8", postgres: "postgres:13"}
           - {impl: c, python: "3.9", postgres: "postgres:14"}
-          - {impl: c, python: "3.10", postgres: "postgres:11", libpq: oldest}
-          - {impl: c, python: "3.11", postgres: "postgres:10", libpq: newest}
+          - {impl: c, python: "3.10", postgres: "postgres:12"}
+          - {impl: c, python: "3.11", postgres: "postgres:11", libpq: oldest}
+          - {impl: c, python: "3.12.0-alpha - 3.12", postgres: "postgres:10", libpq: newest}
 
           - {impl: python, python: "3.9", ext: dns, postgres: "postgres:14"}
           - {impl: python, python: "3.9", ext: postgis, postgres: "postgis/postgis"}
