@@ -24,6 +24,8 @@ Psycopg 3.1.9
 - Fix loading ROW values with different types in the same query using the
   binary protocol (:ticket:`#545`).
 - Fix dumping recursive composite types (:ticket:`#547`).
+- Allow JSON dumpers to dump `bytes` directly instead of `str`,
+  for better compatibility with libraries like orjson and msgspec (:ticket:`#569`)
 
 
 Psycopg 3.1.8
