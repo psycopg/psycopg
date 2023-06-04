@@ -234,6 +234,43 @@ the :sql:`IN` operator instead.
     #id-1.5.8.30.16
 
 
+.. _is-null:
+
+You cannot use ``IS %s``
+------------------------
+
+You cannot use :sql:`IS %s` or :sql:`IS NOT %s`::
+
+    >>> conn.execute("SELECT * FROM foo WHERE field IS %s", [None])
+    Traceback (most recent call last):
+    ...
+    psycopg.errors.SyntaxError: syntax error at or near "$1"
+    LINE 1: SELECT * FROM foo WHERE field IS $1
+                                         ^
+
+This is probably caused by the fact that :sql:`IS` is not a binary operator in
+PostgreSQL; rather, :sql:`IS NULL` and :sql:`IS NOT NULL` are unary operators
+and you cannot use :sql:`IS` with anything else on the right hand side.
+Testing in psql:
+
+.. code:: text
+
+    =# SELECT 10 IS 10;
+    ERROR:  syntax error at or near "10"
+    LINE 1: select 10 is 10;
+                         ^
+
+What you can do instead is to use the `IS DISTINCT FROM operator`__, which
+will gladly accept a placeholder::
+
+    >>> conn.execute("SELECT * FROM foo WHERE field IS NOT DISTINCT FROM %s", [None])
+
+.. __: https://www.postgresql.org/docs/current/functions-comparison.html
+
+Analogously you can use :sql:`IS DISTINCT FROM %s` as a parametric version of
+:sql:`IS NOT %s`.
+
+
 .. _diff-adapt:
 
 Different adaptation system
