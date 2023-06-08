@@ -125,8 +125,6 @@ class PrepareManager:
 
         If a new entry has been added, return its key. Return None otherwise
         (meaning the query is already in cache or cache is not enabled).
-
-        Note: This method is only called in pipeline mode.
         """
         # don't do anything if prepared statements are disabled
         if self.prepare_threshold is None:
@@ -163,8 +161,6 @@ class PrepareManager:
         """Validate cached entry with 'key' by checking query 'results'.
 
         Possibly return a command to perform maintenance on database side.
-
-        Note: this method is only called in pipeline mode.
         """
         if self._should_discard(prep, results):
             return
