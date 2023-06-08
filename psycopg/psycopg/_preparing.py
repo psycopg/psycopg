@@ -160,7 +160,7 @@ class PrepareManager:
     ) -> None:
         """Validate cached entry with 'key' by checking query 'results'.
 
-        Possibly return a command to perform maintenance on database side.
+        Possibly record a command to perform maintenance on database side.
         """
         if self._should_discard(prep, results):
             return
