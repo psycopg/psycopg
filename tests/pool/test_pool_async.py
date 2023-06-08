@@ -1047,6 +1047,19 @@ async def test_check_idle(dsn):
 
 
 @pytest.mark.slow
+async def test_check_max_lifetime(dsn):
+    async with pool.AsyncConnectionPool(dsn, min_size=1, max_lifetime=0.2) as p:
+        async with p.connection() as conn:
+            pid = conn.info.backend_pid
+        async with p.connection() as conn:
+            assert conn.info.backend_pid == pid
+        await asyncio.sleep(0.3)
+        await p.check()
+        async with p.connection() as conn:
+            assert conn.info.backend_pid != pid
+
+
+@pytest.mark.slow
 @pytest.mark.timing
 async def test_stats_measures(dsn):
     async def worker(n):

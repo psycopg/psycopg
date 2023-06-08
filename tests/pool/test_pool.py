@@ -1096,6 +1096,19 @@ def test_check_idle(dsn):
 
 
 @pytest.mark.slow
+def test_check_max_lifetime(dsn):
+    with pool.ConnectionPool(dsn, min_size=1, max_lifetime=0.2) as p:
+        with p.connection() as conn:
+            pid = conn.info.backend_pid
+        with p.connection() as conn:
+            assert conn.info.backend_pid == pid
+        sleep(0.3)
+        p.check()
+        with p.connection() as conn:
+            assert conn.info.backend_pid != pid
+
+
+@pytest.mark.slow
 @pytest.mark.timing
 def test_stats_measures(dsn):
     def worker(n):

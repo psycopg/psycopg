@@ -7,6 +7,16 @@
 ``psycopg_pool`` release notes
 ==============================
 
+Future releases
+---------------
+
+psycopg_pool 3.1.8 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Enforce connections' ``max_lifetime`` on `~ConnectionPool.check()`
+  (:ticket:`#482`).
+
+
 Current release
 ---------------
 

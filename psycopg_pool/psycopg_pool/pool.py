@@ -432,6 +432,15 @@ class ConnectionPool(BasePool[Connection[Any]]):
 
         while conns:
             conn = conns.pop()
+
+            # Check for expired connections
+            if conn._expire_at <= monotonic():
+                logger.info("discarding expired connection %s", conn)
+                conn.close()
+                self.run_task(AddConnection(self))
+                continue
+
+            # Check for broken connections
             try:
                 conn.execute("SELECT 1")
                 if conn.pgconn.transaction_status == TransactionStatus.INTRANS:
