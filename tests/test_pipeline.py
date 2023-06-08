@@ -427,6 +427,22 @@ def test_auto_prepare(conn):
     assert res == [0] * 5 + [1] * 5
 
 
+def test_prepare_error(conn):
+    """Regression test for GH issue #585.
+
+    An invalid prepared statement, in a pipeline, should be discarded at exit
+    and not reused.
+    """
+    conn.autocommit = True
+    stmt = "INSERT INTO nosuchtable(data) VALUES (%s)"
+    with pytest.raises(psycopg.errors.UndefinedTable):
+        with conn.pipeline():
+            conn.execute(stmt, ["foo"], prepare=True)
+    assert not conn._prepared._names
+    with pytest.raises(psycopg.errors.UndefinedTable):
+        conn.execute(stmt, ["bar"])
+
+
 def test_transaction(conn):
     notices = []
     conn.add_notice_handler(lambda diag: notices.append(diag.message_primary))
