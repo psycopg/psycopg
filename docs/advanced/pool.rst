@@ -285,6 +285,36 @@ working connections, as soon as they are available.
 Faster than you can say poll. Or pool.
 
 
+.. _idle-session-timeout:
+
+Pool and ``idle_session_timeout`` setting
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Using a connection pool is fundamentally incompatible with setting an
+`idle_session_timeout`__ on the connection: the pool is designed precisely to
+keep connections idle and readily available.
+
+.. __: https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-IDLE-SESSION-TIMEOUT
+
+The current implementation doesn't keep ``idle_session_timeout`` into account,
+so, if this setting is used, clients might be served broken connections and
+fail with an error such as *terminating connection due to idle-session
+timeout*.
+
+In order to avoid the problem, please disable ``idle_session_timeout`` for the
+pool connections. Note that, even if your server is configured with a nonzero
+``idle_session_timeout`` default, you can still obtain pool connections
+without timeout, by using the `!options` keyword argument, for instance::
+
+    p = ConnectionPool(conninfo, kwargs={"options": "-c idle_session_timeout=0"})
+
+.. warning::
+
+    The `!max_idle` parameter is currently only used to shrink the pool if
+    there are unused connections; it is not designed to fight against a server
+    configured to close connections under its feet.
+
+
 .. _pool-stats:
 
 Pool stats
