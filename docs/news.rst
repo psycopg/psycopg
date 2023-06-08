@@ -7,6 +7,16 @@
 ``psycopg`` release notes
 =========================
 
+Future releases
+---------------
+
+Psycopg 3.1.10
+^^^^^^^^^^^^^^
+
+- Fix prepared statement cache validation when exiting pipeline mode (or
+  `~Cursor.executemany()`) in case an error occurred within the pipeline
+  (:ticket:`#585`).
+
 Current release
 ---------------
 
