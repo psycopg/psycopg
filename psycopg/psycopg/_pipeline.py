@@ -139,9 +139,16 @@ class BasePipeline:
         results, which are then processed.
         """
         fetched = yield from pipeline_communicate(self.pgconn, self.command_queue)
-        to_process = [(self.result_queue.popleft(), results) for results in fetched]
-        for queued, results in to_process:
-            self._process_results(queued, results)
+        exception = None
+        for results in fetched:
+            queued = self.result_queue.popleft()
+            try:
+                self._process_results(queued, results)
+            except e.Error as exc:
+                if exception is None:
+                    exception = exc
+        if exception is not None:
+            raise exception
 
     def _fetch_gen(self, *, flush: bool) -> PQGen[None]:
         """Fetch available results from the connection and process them with
@@ -159,7 +166,7 @@ class BasePipeline:
             self.pgconn.send_flush_request()
             yield from send(self.pgconn)
 
-        to_process = []
+        exception = None
         while self.result_queue:
             results = yield from fetch_many(self.pgconn)
             if not results:
@@ -167,10 +174,13 @@ class BasePipeline:
                 # commands.
                 break
             queued = self.result_queue.popleft()
-            to_process.append((queued, results))
-
-        for queued, results in to_process:
-            self._process_results(queued, results)
+            try:
+                self._process_results(queued, results)
+            except e.Error as exc:
+                if exception is None:
+                    exception = exc
+        if exception is not None:
+            raise exception
 
     def _process_results(
         self, queued: PendingResult, results: List["PGresult"]
@@ -190,11 +200,11 @@ class BasePipeline:
                 raise e.PipelineAborted("pipeline aborted")
         else:
             cursor, prepinfo = queued
-            cursor._set_results_from_pipeline(results)
             if prepinfo:
                 key, prep, name = prepinfo
                 # Update the prepare state of the query.
                 cursor._conn._prepared.validate(key, prep, name, results)
+            cursor._set_results_from_pipeline(results)
 
     def _enqueue_sync(self) -> None:
         """Enqueue a PQpipelineSync() command."""
