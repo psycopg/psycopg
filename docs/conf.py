@@ -39,7 +39,8 @@ release = psycopg.__version__
 extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.intersphinx",
-    "sphinx_autodoc_typehints",
+    # Currently breaking docs link (see #562)
+    # "sphinx_autodoc_typehints",
     "sql_role",
     "ticket_role",
     "pg3_docs",
