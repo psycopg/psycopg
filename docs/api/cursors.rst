@@ -100,15 +100,43 @@ The `!Cursor` class
 
         If the queries return data you want to read (e.g. when executing an
         :sql:`INSERT ... RETURNING` or a :sql:`SELECT` with a side-effect),
-        you can specify `!returning=True`; the results will be available in
-        the cursor's state and can be read using `fetchone()` and similar
-        methods. Each input parameter will produce a separate result set: use
-        `nextset()` to read the results of the queries after the first one.
+        you can specify `!returning=True`. This is equivalent of calling
+        `~Cursor.execute()` as many times as the number of items in
+        `!params_seq`, and to store all the results in the cursor's state.
 
-        The value of `rowcount` is set to the cumulated number of rows
-        affected by queries; except when using `!returning=True`, in which
-        case it is set to the number of rows in the current result set (i.e.
-        the first one, until `nextset()` gets called).
+        .. note::
+
+            Using the usual `~Cursor.fetchone()`, `~Cursor.fetchall()`, you
+            will be able to read the records returned *by the first query
+            executed only*. In order to read the results of the following
+            queries you can call `~Cursor.nextset()` to move to the following
+            result set.
+
+            A typical use case for `!executemany(returning=True)` might be to
+            insert a bunch of records and to retrieve the primary keys
+            inserted, taken from a PostgreSQL sequence. In order to do so, you
+            may execute a query such as :sql:`INSERT INTO table VALUES (...)
+            RETURNING id`. Because every :sql:`INSERT` is guaranteed to insert
+            exactly a single record, you can obtain the list of the new ids
+            using a pattern such as::
+
+                cur.executemany(query, records)
+                ids = []
+                while True:
+                    ids.append(cur.fetchone()[0])
+                    if not cur.nextset():
+                        break
+
+        .. warning::
+
+            More explicitly, `!fetchall()` alone will not return all the
+            values returned! You must iterate on the results using
+            `!nextset()`.
+
+        If `!returning=False`, the value of `rowcount` is set to the cumulated
+        number of rows affected by queries. If `!returning=True`, `!rowcount`
+        is set to the number of rows in the current result set (i.e. the first
+        one, until `nextset()` gets called).
 
         See :ref:`query-parameters` for all the details about executing
         queries.

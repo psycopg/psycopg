@@ -184,7 +184,8 @@ results, you can use the `Cursor.nextset()` method::
     None  # no more results
 
 Remember though that you cannot use server-side bindings to :ref:`execute more
-than one statement in the same query <multi-statements>`.
+than one statement in the same query <multi-statements>`, if you are passing
+parameters to the query.
 
 
 .. _difference-cast-rules:
