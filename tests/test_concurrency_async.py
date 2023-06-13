@@ -192,6 +192,7 @@ async def test_identify_closure(aconn_cls, dsn):
 @pytest.mark.skipif(
     sys.platform == "win32", reason="don't know how to Ctrl-C on Windows"
 )
+@pytest.mark.timing
 @pytest.mark.crdb_skip("cancel")
 def test_ctrl_c_handler(dsn):
     script = f"""\
