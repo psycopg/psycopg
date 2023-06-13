@@ -16,6 +16,10 @@ Psycopg 3.1.10
 - Fix prepared statement cache validation when exiting pipeline mode (or
   `~Cursor.executemany()`) in case an error occurred within the pipeline
   (:ticket:`#585`).
+- Fix `connect()` to avoid "leaking" an open `~pq.PGconn` attached to the
+  `OperationalError` in case of connection failure. `Error.pgconn` is now a
+  shallow copy of the real libpq connection, and the latter is closed before
+  the exception propagates (:ticket:`#565`).
 
 Current release
 ---------------

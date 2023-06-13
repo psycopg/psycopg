@@ -76,10 +76,12 @@ def _connect(conninfo: str) -> PQGenConn[PGconn]:
             encoding = conninfo_encoding(conninfo)
             raise e.OperationalError(
                 f"connection failed: {pq.error_message(conn, encoding=encoding)}",
-                pgconn=conn,
+                pgconn=e.finish_pgconn(conn),
             )
         else:
-            raise e.InternalError(f"unexpected poll status: {status}", pgconn=conn)
+            raise e.InternalError(
+                f"unexpected poll status: {status}", pgconn=e.finish_pgconn(conn)
+            )
 
     conn.nonblocking = 1
     return conn
