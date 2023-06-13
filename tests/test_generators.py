@@ -7,6 +7,41 @@ import pytest
 import psycopg
 from psycopg import waiting
 from psycopg import pq
+from psycopg.conninfo import conninfo_to_dict, make_conninfo
+
+
+def test_connect_operationalerror_pgconn(generators, dsn, monkeypatch):
+    """Check that when generators.connect() fails, the resulting
+    OperationalError has a pgconn attribute set with needs_password.
+    """
+    gen = generators.connect(dsn)
+    pgconn = waiting.wait_conn(gen)
+    if not pgconn.used_password:
+        pytest.skip("test connection needs no password")
+
+    with monkeypatch.context() as m:
+        try:
+            m.delenv("PGPASSWORD", raising=True)
+        except KeyError:
+            info = conninfo_to_dict(dsn)
+            del info["password"]  # should not raise per check above.
+            dsn = make_conninfo(**info)
+
+        gen = generators.connect(dsn)
+        with pytest.raises(
+            psycopg.OperationalError, match="connection failed:"
+        ) as excinfo:
+            waiting.wait_conn(gen)
+
+    pgconn = excinfo.value.pgconn
+    assert pgconn is not None
+    assert pgconn.needs_password
+    assert b"fe_sendauth: no password supplied" in pgconn.error_message
+    assert pgconn.status == pq.ConnStatus.BAD.value
+    assert pgconn.transaction_status == pq.TransactionStatus.UNKNOWN.value
+    assert pgconn.pipeline_status == pq.PipelineStatus.OFF.value
+    with pytest.raises(psycopg.OperationalError, match="connection is closed"):
+        pgconn.exec_(b"select 1")
 
 
 @pytest.fixture
