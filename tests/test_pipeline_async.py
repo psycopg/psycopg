@@ -51,7 +51,7 @@ async def test_pipeline_reenter(aconn: psycopg.AsyncConnection[Any]) -> None:
         assert p2 is p1
         assert p2.status == pq.PipelineStatus.ON
     assert aconn._pipeline is None
-    assert p1.status == pq.PipelineStatus.OFF
+    assert p1.status == pq.PipelineStatus.OFF  # type: ignore[comparison-overlap]
 
 
 async def test_pipeline_broken_conn_exit(aconn: psycopg.AsyncConnection[Any]) -> None:

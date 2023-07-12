@@ -121,8 +121,7 @@ def dict_row(cursor: "BaseCursor[Any, Any]") -> "RowMaker[DictRow]":
         return no_result
 
     def dict_row_(values: Sequence[Any]) -> Dict[str, Any]:
-        # https://github.com/python/mypy/issues/2608
-        return dict(zip(names, values))  # type: ignore[arg-type]
+        return dict(zip(names, values))
 
     return dict_row_
 
@@ -169,7 +168,7 @@ def class_row(cls: Type[T]) -> BaseRowFactory[T]:
             return no_result
 
         def class_row__(values: Sequence[Any]) -> T:
-            return cls(**dict(zip(names, values)))  # type: ignore[arg-type]
+            return cls(**dict(zip(names, values)))
 
         return class_row__
 
@@ -205,7 +204,7 @@ def kwargs_row(func: Callable[..., T]) -> BaseRowFactory[T]:
             return no_result
 
         def kwargs_row__(values: Sequence[Any]) -> T:
-            return func(**dict(zip(names, values)))  # type: ignore[arg-type]
+            return func(**dict(zip(names, values)))
 
         return kwargs_row__
 
