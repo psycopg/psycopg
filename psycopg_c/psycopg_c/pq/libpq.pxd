@@ -162,6 +162,8 @@ cdef extern from "libpq-fe.h":
                              int resultFormat) nogil
     PGresult *PQdescribePrepared(PGconn *conn, const char *stmtName) nogil
     PGresult *PQdescribePortal(PGconn *conn, const char *portalName) nogil
+    PGresult *PQclosePrepared(PGconn *conn, const char *stmtName) nogil
+    PGresult *PQclosePortal(PGconn *conn, const char *portalName) nogil
     ExecStatusType PQresultStatus(const PGresult *res) nogil
     # PQresStatus: not needed, we have pretty enums
     char *PQresultErrorMessage(const PGresult *res) nogil
@@ -234,6 +236,8 @@ cdef extern from "libpq-fe.h":
                             int resultFormat) nogil
     int PQsendDescribePrepared(PGconn *conn, const char *stmtName) nogil
     int PQsendDescribePortal(PGconn *conn, const char *portalName) nogil
+    int PQsendClosePrepared(PGconn *conn, const char *stmtName) nogil
+    int PQsendClosePortal(PGconn *conn, const char *portalName) nogil
     PGresult *PQgetResult(PGconn *conn) nogil
     int PQconsumeInput(PGconn *conn) nogil
     int PQisBusy(PGconn *conn) nogil
@@ -317,5 +321,12 @@ typedef enum {
 #define PQpipelineSync(conn) 0
 #define PQsendFlushRequest(conn) 0
 #define PQsetTraceFlags(conn, stream) do {} while (0)
+#endif
+
+#if PG_VERSION_NUM < 170000
+#define PQclosePrepared(conn, name) NULL
+#define PQclosePortal(conn, name) NULL
+#define PQsendClosePrepared(conn, name) 0
+#define PQsendClosePortal(conn, name) 0
 #endif
 """
