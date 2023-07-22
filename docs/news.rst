@@ -10,8 +10,8 @@
 Future releases
 ---------------
 
-Psycopg 3.1.10
-^^^^^^^^^^^^^^
+Psycopg 3.1.10 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 - Fix prepared statement cache validation when exiting pipeline mode (or
   `~Cursor.executemany()`) in case an error occurred within the pipeline
@@ -20,6 +20,9 @@ Psycopg 3.1.10
   `OperationalError` in case of connection failure. `Error.pgconn` is now a
   shallow copy of the real libpq connection, and the latter is closed before
   the exception propagates (:ticket:`#565`).
+- Don't clobber a Python exception raised during COPY FROM with the resulting
+  `!QueryCanceled` raised as a consequence (:ticket:`#593`).
+
 
 Current release
 ---------------

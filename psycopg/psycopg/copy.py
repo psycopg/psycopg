@@ -376,8 +376,16 @@ class LibpqWriter(Writer):
         else:
             bmsg = None
 
-        res = self.connection.wait(copy_end(self._pgconn, bmsg))
-        self.cursor._results = [res]
+        try:
+            res = self.connection.wait(copy_end(self._pgconn, bmsg))
+        # The QueryCanceled is expected if we sent an exception message to
+        # pgconn.put_copy_end(). The Python exception that generated that
+        # cancelling is more important, so don't clobber it.
+        except e.QueryCanceled:
+            if not bmsg:
+                raise
+        else:
+            self.cursor._results = [res]
 
 
 class QueuedLibpqDriver(LibpqWriter):
@@ -583,8 +591,16 @@ class AsyncLibpqWriter(AsyncWriter):
         else:
             bmsg = None
 
-        res = await self.connection.wait(copy_end(self._pgconn, bmsg))
-        self.cursor._results = [res]
+        try:
+            res = await self.connection.wait(copy_end(self._pgconn, bmsg))
+        # The QueryCanceled is expected if we sent an exception message to
+        # pgconn.put_copy_end(). The Python exception that generated that
+        # cancelling is more important, so don't clobber it.
+        except e.QueryCanceled:
+            if not bmsg:
+                raise
+        else:
+            self.cursor._results = [res]
 
 
 class AsyncQueuedLibpqWriter(AsyncLibpqWriter):

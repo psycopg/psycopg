@@ -271,7 +271,7 @@ def test_copy_in_str(conn):
 def test_copy_in_error(conn):
     cur = conn.cursor()
     ensure_table(cur, sample_tabledef)
-    with pytest.raises(e.QueryCanceled):
+    with pytest.raises(TypeError):
         with cur.copy("copy copy_in from stdin (format binary)") as copy:
             copy.write(sample_text.decode())
 
@@ -344,11 +344,10 @@ def test_subclass_adapter(conn, format):
 def test_copy_in_error_empty(conn, format):
     cur = conn.cursor()
     ensure_table(cur, sample_tabledef)
-    with pytest.raises(e.QueryCanceled) as exc:
+    with pytest.raises(ZeroDivisionError, match="mannaggiamiseria"):
         with cur.copy(f"copy copy_in from stdin (format {format.name})"):
-            raise Exception("mannaggiamiseria")
+            raise ZeroDivisionError("mannaggiamiseria")
 
-    assert "mannaggiamiseria" in str(exc.value)
     assert conn.info.transaction_status == conn.TransactionStatus.INERROR
 
 
@@ -366,12 +365,11 @@ def test_copy_in_buffers_with_pg_error(conn):
 def test_copy_in_buffers_with_py_error(conn):
     cur = conn.cursor()
     ensure_table(cur, sample_tabledef)
-    with pytest.raises(e.QueryCanceled) as exc:
+    with pytest.raises(ZeroDivisionError, match="nuttengoggenio"):
         with cur.copy("copy copy_in from stdin (format text)") as copy:
             copy.write(sample_text)
-            raise Exception("nuttengoggenio")
+            raise ZeroDivisionError("nuttengoggenio")
 
-    assert "nuttengoggenio" in str(exc.value)
     assert conn.info.transaction_status == conn.TransactionStatus.INERROR
 
 
