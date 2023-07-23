@@ -18,6 +18,7 @@ from .abc import ConnectionType, Query, Params, PQGen
 from .copy import Copy, Writer as CopyWriter
 from .rows import Row, RowMaker, RowFactory
 from ._column import Column
+from .pq.misc import connection_summary
 from ._queries import PostgresQuery, PostgresClientQuery
 from ._pipeline import Pipeline
 from ._encodings import pgconn_encoding
@@ -83,7 +84,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
 
     def __repr__(self) -> str:
         cls = f"{self.__class__.__module__}.{self.__class__.__qualname__}"
-        info = pq.misc.connection_summary(self._pgconn)
+        info = connection_summary(self._pgconn)
         if self._closed:
             status = "closed"
         elif self.pgresult:

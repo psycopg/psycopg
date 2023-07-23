@@ -20,6 +20,7 @@ Psycopg 3.1.10 (unreleased)
   `OperationalError` in case of connection failure. `Error.pgconn` is now a
   shallow copy of the real libpq connection, and the latter is closed before
   the exception propagates (:ticket:`#565`).
+- Fix possible (ignored) exception on objects deletion (:ticket:`#591`).
 - Don't clobber a Python exception raised during COPY FROM with the resulting
   `!QueryCanceled` raised as a consequence (:ticket:`#593`).
 

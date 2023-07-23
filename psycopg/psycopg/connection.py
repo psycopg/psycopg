@@ -29,6 +29,7 @@ from .adapt import AdaptersMap
 from ._enums import IsolationLevel
 from .cursor import Cursor
 from ._compat import LiteralString
+from .pq.misc import connection_summary
 from .conninfo import make_conninfo, conninfo_to_dict, ConnectionInfo
 from ._pipeline import BasePipeline, Pipeline
 from .generators import notifies, connect, execute
@@ -161,7 +162,7 @@ class BaseConnection(Generic[Row]):
 
     def __repr__(self) -> str:
         cls = f"{self.__class__.__module__}.{self.__class__.__qualname__}"
-        info = pq.misc.connection_summary(self.pgconn)
+        info = connection_summary(self.pgconn)
         return f"<{cls} {info} at 0x{id(self):x}>"
 
     @property
