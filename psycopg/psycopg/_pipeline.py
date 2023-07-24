@@ -13,6 +13,7 @@ from . import pq
 from . import errors as e
 from .abc import PipelineCommand, PQGen
 from ._compat import Deque
+from .pq.misc import connection_summary
 from ._encodings import pgconn_encoding
 from ._preparing import Key, Prepare
 from .generators import pipeline_communicate, fetch_many, send
@@ -51,7 +52,7 @@ class BasePipeline:
 
     def __repr__(self) -> str:
         cls = f"{self.__class__.__module__}.{self.__class__.__qualname__}"
-        info = pq.misc.connection_summary(self._conn.pgconn)
+        info = connection_summary(self._conn.pgconn)
         return f"<{cls} {info} at 0x{id(self):x}>"
 
     @property

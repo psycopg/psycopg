@@ -13,6 +13,7 @@ from . import pq
 from . import sql
 from . import errors as e
 from .abc import ConnectionType, PQGen
+from .pq.misc import connection_summary
 
 if TYPE_CHECKING:
     from typing import Any
@@ -77,7 +78,7 @@ class BaseTransaction(Generic[ConnectionType]):
 
     def __repr__(self) -> str:
         cls = f"{self.__class__.__module__}.{self.__class__.__qualname__}"
-        info = pq.misc.connection_summary(self.pgconn)
+        info = connection_summary(self.pgconn)
         if not self._entered:
             status = "inactive"
         elif not self._exited:
