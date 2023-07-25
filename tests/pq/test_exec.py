@@ -126,6 +126,19 @@ def test_exec_prepared_binary_out(pgconn, fmt, out):
     assert res.get_value(0, 0) == out
 
 
+@pytest.mark.libpq(">= 17")
+def test_close_prepared(pgconn):
+    res = pgconn.prepare(b"prep", b"select $1::int + $2::int")
+    assert res.status == pq.ExecStatus.COMMAND_OK, res.error_message
+
+    res = pgconn.close_prepared(b"prep")
+    assert res.status == pq.ExecStatus.COMMAND_OK, res.error_message
+
+    # Because we closed it, executing should not work
+    res = pgconn.exec_prepared(b"prep", [b"3", b"5"])
+    assert res.status == pq.ExecStatus.FATAL_ERROR
+
+
 @pytest.mark.crdb_skip("server-side cursor")
 def test_describe_portal(pgconn):
     res = pgconn.exec_(
@@ -144,3 +157,22 @@ def test_describe_portal(pgconn):
     pgconn.finish()
     with pytest.raises(psycopg.OperationalError):
         pgconn.describe_portal(b"cur")
+
+
+@pytest.mark.crdb_skip("server-side cursor")
+@pytest.mark.libpq(">= 17")
+def test_close_portal(pgconn):
+    res = pgconn.exec_(
+        b"""
+        begin;
+        declare cur cursor for select * from generate_series(1,10) foo;
+        """
+    )
+    assert res.status == pq.ExecStatus.COMMAND_OK, res.error_message
+
+    res = pgconn.close_portal(b"cur")
+    assert res.status == pq.ExecStatus.COMMAND_OK, res.error_message
+
+    # Because we closed it, describing should not work
+    res = pgconn.describe_portal(b"cur")
+    assert res.status == pq.ExecStatus.FATAL_ERROR
