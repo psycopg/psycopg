@@ -354,6 +354,25 @@ connection by running a :sql:`SET client_encoding` statement... But why would
 you?
 
 
+.. _transaction-characteristics-and-autocommit:
+
+Transaction characteristics attributes don't affect autocommit sessions
+-----------------------------------------------------------------------
+
+:ref:`Transactions characteristics attributes <transaction-characteristics>`
+such as `~Connection.read_only` don't affect automatically autocommit
+sessions: they only affect the implicit transactions started by non-autocommit
+sessions and the transactions created by the `~Connection.transaction()`
+block (for both autocommit and non-autocommit connections).
+
+If you want to put an autocommit transaction in read-only mode, please use the
+default_transaction_read_only__ GUC, for instance executing the statement
+:sql:`SET default_transaction_read_only TO true`.
+
+.. __: https://www.postgresql.org/docs/current/runtime-config-client.html
+       #GUC-DEFAULT-TRANSACTION-READ-ONLY
+
+
 .. _infinity-datetime:
 
 No default infinity dates handling
