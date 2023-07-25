@@ -145,6 +145,18 @@ class FinishedPGconn:
     def send_describe_portal(self, *args: Any) -> NoReturn:
         self._raise()
 
+    def close_prepared(self, *args: Any) -> NoReturn:
+        self._raise()
+
+    def send_close_prepared(self, *args: Any) -> NoReturn:
+        self._raise()
+
+    def close_portal(self, *args: Any) -> NoReturn:
+        self._raise()
+
+    def send_close_portal(self, *args: Any) -> NoReturn:
+        self._raise()
+
     def get_result(self) -> NoReturn:
         self._raise()
 
