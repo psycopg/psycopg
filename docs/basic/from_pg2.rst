@@ -135,7 +135,7 @@ or a :ref:`client-side binding cursor <client-side-binding-cursors>`::
 
 .. warning::
 
-    If a statements must be executed outside a transaction (such as
+    If a statement must be executed outside a transaction (such as
     :sql:`CREATE DATABASE`), it cannot be executed in batch with other
     statements, even if the connection is in autocommit mode::
 
