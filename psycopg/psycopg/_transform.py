@@ -239,8 +239,12 @@ class Transformer(AdaptContext):
         except KeyError:
             # If it's the first time we see this type, look for a dumper
             # configured for it.
-            dcls = self.adapters.get_dumper(key, format)
-            cache[key] = dumper = dcls(key, self)
+            try:
+                dcls = self.adapters.get_dumper(key, format)
+            except e.ProgrammingError as ex:
+                raise ex from None
+            else:
+                cache[key] = dumper = dcls(key, self)
 
         # Check if the dumper requires an upgrade to handle this specific value
         key1 = dumper.get_key(obj, format)
