@@ -231,7 +231,7 @@ class BaseConnection(Generic[Row]):
 
     def _set_read_only_gen(self, value: Optional[bool]) -> PQGen[None]:
         yield from self._check_intrans_gen("read_only")
-        self._read_only = bool(value)
+        self._read_only = bool(value) if value is not None else None
         self._begin_statement = b""
 
     @property
@@ -250,7 +250,7 @@ class BaseConnection(Generic[Row]):
 
     def _set_deferrable_gen(self, value: Optional[bool]) -> PQGen[None]:
         yield from self._check_intrans_gen("deferrable")
-        self._deferrable = bool(value)
+        self._deferrable = bool(value) if value is not None else None
         self._begin_statement = b""
 
     def _check_intrans_gen(self, attribute: str) -> PQGen[None]:
