@@ -622,6 +622,32 @@ async def test_set_transaction_param_implicit(aconn, param, autocommit):
         await aconn.rollback()
 
 
+@pytest.mark.parametrize("param", tx_params_isolation)
+async def test_set_transaction_param_reset(aconn, param):
+    await aconn.execute(
+        "select set_config(%s, %s, false)",
+        [f"default_transaction_{param.guc}", param.non_default],
+    )
+    await aconn.commit()
+
+    for value in param.values:
+        await getattr(aconn, f"set_{param.name}")(value)
+        cur = await aconn.execute(
+            "select current_setting(%s)", [f"transaction_{param.guc}"]
+        )
+        (pgval,) = await cur.fetchone()
+        assert tx_values_map[pgval] == value
+        await aconn.rollback()
+
+        await getattr(aconn, f"set_{param.name}")(None)
+        cur = await aconn.execute(
+            "select current_setting(%s)", [f"transaction_{param.guc}"]
+        )
+        (pgval,) = await cur.fetchone()
+        assert tx_values_map[pgval] == tx_values_map[param.non_default]
+        await aconn.rollback()
+
+
 @pytest.mark.parametrize("autocommit", [True, False])
 @pytest.mark.parametrize("param", tx_params_isolation)
 async def test_set_transaction_param_block(aconn, param, autocommit):

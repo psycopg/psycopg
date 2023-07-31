@@ -582,22 +582,26 @@ class ParamDef:
     name: str
     guc: str
     values: List[Any]
+    non_default: str
 
 
 param_isolation = ParamDef(
     name="isolation_level",
     guc="isolation",
     values=list(psycopg.IsolationLevel),
+    non_default="serializable",
 )
 param_read_only = ParamDef(
     name="read_only",
     guc="read_only",
     values=[True, False],
+    non_default="on",
 )
 param_deferrable = ParamDef(
     name="deferrable",
     guc="deferrable",
     values=[True, False],
+    non_default="on",
 )
 
 # Map Python values to Postgres values for the tx_params possible values
@@ -652,6 +656,30 @@ def test_set_transaction_param_implicit(conn, param, autocommit):
             assert pgval == default
         else:
             assert tx_values_map[pgval] == value
+        conn.rollback()
+
+
+@pytest.mark.parametrize("param", tx_params_isolation)
+def test_set_transaction_param_reset(conn, param):
+    conn.execute(
+        "select set_config(%s, %s, false)",
+        [f"default_transaction_{param.guc}", param.non_default],
+    )
+    conn.commit()
+
+    for value in param.values:
+        setattr(conn, param.name, value)
+        (pgval,) = conn.execute(
+            "select current_setting(%s)", [f"transaction_{param.guc}"]
+        ).fetchone()
+        assert tx_values_map[pgval] == value
+        conn.rollback()
+
+        setattr(conn, param.name, None)
+        (pgval,) = conn.execute(
+            "select current_setting(%s)", [f"transaction_{param.guc}"]
+        ).fetchone()
+        assert tx_values_map[pgval] == tx_values_map[param.non_default]
         conn.rollback()
 
 

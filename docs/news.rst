@@ -23,6 +23,8 @@ Psycopg 3.1.10 (unreleased)
 - Fix possible (ignored) exception on objects deletion (:ticket:`#591`).
 - Don't clobber a Python exception raised during COPY FROM with the resulting
   `!QueryCanceled` raised as a consequence (:ticket:`#593`).
+- Fix resetting `Connection.read_only` and `~Connection.deferrable` to their
+  default value using `!None` (:ticket:`#612`).
 
 
 Current release
