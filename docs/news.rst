@@ -25,6 +25,7 @@ Psycopg 3.1.10 (unreleased)
   `!QueryCanceled` raised as a consequence (:ticket:`#593`).
 - Fix resetting `Connection.read_only` and `~Connection.deferrable` to their
   default value using `!None` (:ticket:`#612`).
+- Add support for Python 3.12.
 
 
 Current release

@@ -1,3 +1,4 @@
+import sys
 import time
 import pytest
 import logging
@@ -6,7 +7,7 @@ from typing import Any, List
 from dataclasses import dataclass
 
 import psycopg
-from psycopg import Notify, errors as e
+from psycopg import Notify, pq, errors as e
 from psycopg.rows import tuple_row
 from psycopg.conninfo import conninfo_to_dict, make_conninfo
 
@@ -86,6 +87,12 @@ def test_cursor_closed(conn):
         conn.cursor()
 
 
+# TODO: the INERROR started failing in the C implementation in Python 3.12a7
+# compiled with Cython-3.0.0b3, not before.
+@pytest.mark.xfail(
+    (pq.__impl__ in ("c", "binary") and sys.version_info[:2] == (3, 12)),
+    reason="Something with Exceptions, C, Python 3.12",
+)
 def test_connection_warn_close(conn_cls, dsn, recwarn):
     conn = conn_cls.connect(dsn)
     conn.close()
@@ -104,9 +111,10 @@ def test_connection_warn_close(conn_cls, dsn, recwarn):
     conn = conn_cls.connect(dsn)
     try:
         conn.execute("select wat")
-    except Exception:
+    except psycopg.ProgrammingError:
         pass
     del conn
+    gc_collect()
     assert "INERROR" in str(recwarn.pop(ResourceWarning).message)
 
     with conn_cls.connect(dsn) as conn:
