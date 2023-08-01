@@ -518,6 +518,42 @@ class PGconn:
                 f"sending describe portal failed: {error_message(self)}"
             )
 
+    def close_prepared(self, name: bytes) -> "PGresult":
+        if not isinstance(name, bytes):
+            raise TypeError(f"'name' must be bytes, got {type(name)} instead")
+        self._ensure_pgconn()
+        rv = impl.PQclosePrepared(self._pgconn_ptr, name)
+        if not rv:
+            raise e.OperationalError(f"close prepared failed: {error_message(self)}")
+        return PGresult(rv)
+
+    def send_close_prepared(self, name: bytes) -> None:
+        if not isinstance(name, bytes):
+            raise TypeError(f"bytes expected, got {type(name)} instead")
+        self._ensure_pgconn()
+        if not impl.PQsendClosePrepared(self._pgconn_ptr, name):
+            raise e.OperationalError(
+                f"sending close prepared failed: {error_message(self)}"
+            )
+
+    def close_portal(self, name: bytes) -> "PGresult":
+        if not isinstance(name, bytes):
+            raise TypeError(f"'name' must be bytes, got {type(name)} instead")
+        self._ensure_pgconn()
+        rv = impl.PQclosePortal(self._pgconn_ptr, name)
+        if not rv:
+            raise e.OperationalError(f"close portal failed: {error_message(self)}")
+        return PGresult(rv)
+
+    def send_close_portal(self, name: bytes) -> None:
+        if not isinstance(name, bytes):
+            raise TypeError(f"bytes expected, got {type(name)} instead")
+        self._ensure_pgconn()
+        if not impl.PQsendClosePortal(self._pgconn_ptr, name):
+            raise e.OperationalError(
+                f"sending close portal failed: {error_message(self)}"
+            )
+
     def get_result(self) -> Optional["PGresult"]:
         rv = impl.PQgetResult(self._pgconn_ptr)
         return PGresult(rv) if rv else None

@@ -422,6 +422,60 @@ cdef class PGconn:
                 f"sending describe prepared failed: {error_message(self)}"
             )
 
+    def close_prepared(self, const char *name) -> PGresult:
+        if libpq.PG_VERSION_NUM < 170000:
+            raise e.NotSupportedError(
+                f"PQclosePrepared requires libpq from PostgreSQL 17,"
+                f" {libpq.PG_VERSION_NUM} available instead"
+            )
+        _ensure_pgconn(self)
+        cdef libpq.PGresult *rv = libpq.PQclosePrepared(self._pgconn_ptr, name)
+        if rv is NULL:
+            raise e.OperationalError(
+                f"close prepared failed: {error_message(self)}"
+            )
+        return PGresult._from_ptr(rv)
+
+    def send_close_prepared(self, const char *name) -> None:
+        if libpq.PG_VERSION_NUM < 170000:
+            raise e.NotSupportedError(
+                f"PQsendClosePrepared requires libpq from PostgreSQL 17,"
+                f" {libpq.PG_VERSION_NUM} available instead"
+            )
+        _ensure_pgconn(self)
+        cdef int rv = libpq.PQsendClosePrepared(self._pgconn_ptr, name)
+        if not rv:
+            raise e.OperationalError(
+                f"sending close prepared failed: {error_message(self)}"
+            )
+
+    def close_portal(self, const char *name) -> PGresult:
+        if libpq.PG_VERSION_NUM < 170000:
+            raise e.NotSupportedError(
+                f"PQclosePortal requires libpq from PostgreSQL 17,"
+                f" {libpq.PG_VERSION_NUM} available instead"
+            )
+        _ensure_pgconn(self)
+        cdef libpq.PGresult *rv = libpq.PQclosePortal(self._pgconn_ptr, name)
+        if rv is NULL:
+            raise e.OperationalError(
+                f"close prepared failed: {error_message(self)}"
+            )
+        return PGresult._from_ptr(rv)
+
+    def send_close_portal(self, const char *name) -> None:
+        if libpq.PG_VERSION_NUM < 170000:
+            raise e.NotSupportedError(
+                f"PQsendClosePortal requires libpq from PostgreSQL 17,"
+                f" {libpq.PG_VERSION_NUM} available instead"
+            )
+        _ensure_pgconn(self)
+        cdef int rv = libpq.PQsendClosePortal(self._pgconn_ptr, name)
+        if not rv:
+            raise e.OperationalError(
+                f"sending close prepared failed: {error_message(self)}"
+            )
+
     def get_result(self) -> Optional["PGresult"]:
         cdef libpq.PGresult *pgresult = libpq.PQgetResult(self._pgconn_ptr)
         if pgresult is NULL:

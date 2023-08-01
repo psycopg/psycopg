@@ -13,9 +13,10 @@ rel=$(lsb_release -c -s)
 
 setup_repo () {
     version=${1:-}
+    repo_suffix=${2:-pgdg}
     curl -sL -o /etc/apt/trusted.gpg.d/apt.postgresql.org.asc \
         https://www.postgresql.org/media/keys/ACCC4CF8.asc
-    echo "deb http://apt.postgresql.org/pub/repos/apt ${rel}-pgdg main ${version}" \
+    echo "deb http://apt.postgresql.org/pub/repos/apt ${rel}-${repo_suffix} main ${version}" \
         >> /etc/apt/sources.list.d/pgdg.list
     apt-get -qq update
 }
@@ -35,6 +36,12 @@ case "$libpq" in
 
     newest)
         setup_repo
+        pqver=$(apt-cache show libpq5 | grep ^Version: | head -1 | awk '{print $2}')
+        apt-get -qq -y install "libpq-dev=${pqver}" "libpq5=${pqver}"
+        ;;
+
+    master)
+        setup_repo 17 pgdg-snapshot
         pqver=$(apt-cache show libpq5 | grep ^Version: | head -1 | awk '{print $2}')
         apt-get -qq -y install "libpq-dev=${pqver}" "libpq5=${pqver}"
         ;;

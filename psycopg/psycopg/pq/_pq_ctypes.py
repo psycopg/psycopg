@@ -302,6 +302,37 @@ PQdescribePortal = pq.PQdescribePortal
 PQdescribePortal.argtypes = [PGconn_ptr, c_char_p]
 PQdescribePortal.restype = PGresult_ptr
 
+_PQclosePrepared = None
+_PQclosePortal = None
+
+if libpq_version >= 170000:
+    _PQclosePrepared = pq.PQclosePrepared
+    _PQclosePrepared.argtypes = [PGconn_ptr, c_char_p]
+    _PQclosePrepared.restype = PGresult_ptr
+
+    _PQclosePortal = pq.PQclosePortal
+    _PQclosePortal.argtypes = [PGconn_ptr, c_char_p]
+    _PQclosePortal.restype = PGresult_ptr
+
+
+def PQclosePrepared(pgconn: PGconn_struct, name: str) -> int:
+    if not _PQclosePrepared:
+        raise NotSupportedError(
+            "PQclosePrepared requires libpq from PostgreSQL 17,"
+            f" {libpq_version} available instead"
+        )
+    return _PQclosePrepared(pgconn, name)
+
+
+def PQclosePortal(pgconn: PGconn_struct, name: str) -> int:
+    if not _PQclosePortal:
+        raise NotSupportedError(
+            "PQclosePortal requires libpq from PostgreSQL 17,"
+            f" {libpq_version} available instead"
+        )
+    return _PQclosePortal(pgconn, name)
+
+
 PQresultStatus = pq.PQresultStatus
 PQresultStatus.argtypes = [PGresult_ptr]
 PQresultStatus.restype = c_int
@@ -494,6 +525,37 @@ PQsendDescribePrepared.restype = c_int
 PQsendDescribePortal = pq.PQsendDescribePortal
 PQsendDescribePortal.argtypes = [PGconn_ptr, c_char_p]
 PQsendDescribePortal.restype = c_int
+
+_PQsendClosePrepared = None
+_PQsendClosePortal = None
+
+if libpq_version >= 170000:
+    _PQsendClosePrepared = pq.PQsendClosePrepared
+    _PQsendClosePrepared.argtypes = [PGconn_ptr, c_char_p]
+    _PQsendClosePrepared.restype = c_int
+
+    _PQsendClosePortal = pq.PQsendClosePortal
+    _PQsendClosePortal.argtypes = [PGconn_ptr, c_char_p]
+    _PQsendClosePortal.restype = c_int
+
+
+def PQsendClosePrepared(pgconn: PGconn_struct, name: str) -> int:
+    if not _PQsendClosePrepared:
+        raise NotSupportedError(
+            "PQsendClosePrepared requires libpq from PostgreSQL 17,"
+            f" {libpq_version} available instead"
+        )
+    return _PQsendClosePrepared(pgconn, name)
+
+
+def PQsendClosePortal(pgconn: PGconn_struct, name: str) -> int:
+    if not _PQsendClosePortal:
+        raise NotSupportedError(
+            "PQsendClosePortal requires libpq from PostgreSQL 17,"
+            f" {libpq_version} available instead"
+        )
+    return _PQsendClosePortal(pgconn, name)
+
 
 PQgetResult = pq.PQgetResult
 PQgetResult.argtypes = [PGconn_ptr]
