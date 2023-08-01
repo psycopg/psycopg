@@ -13,6 +13,9 @@ Future releases
 Psycopg 3.1.10 (unreleased)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Allow JSON dumpers to dump `bytes` directly instead of `str`,
+  for better compatibility with libraries like orjson and msgspec
+  (:ticket:`#569`)
 - Fix prepared statement cache validation when exiting pipeline mode (or
   `~Cursor.executemany()`) in case an error occurred within the pipeline
   (:ticket:`#585`).
@@ -45,8 +48,6 @@ Psycopg 3.1.9
 - Fix loading ROW values with different types in the same query using the
   binary protocol (:ticket:`#545`).
 - Fix dumping recursive composite types (:ticket:`#547`).
-- Allow JSON dumpers to dump `bytes` directly instead of `str`,
-  for better compatibility with libraries like orjson and msgspec (:ticket:`#569`)
 
 
 Psycopg 3.1.8
