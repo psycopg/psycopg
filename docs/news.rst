@@ -10,6 +10,13 @@
 Future releases
 ---------------
 
+Psycopg 3.2 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Add support for libpq functions to close prepared statements and portals
+  introduced in libpq v17 (:ticket:`#603`).
+
+
 Psycopg 3.1.10 (unreleased)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
