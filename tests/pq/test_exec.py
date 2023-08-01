@@ -139,6 +139,12 @@ def test_close_prepared(pgconn):
     assert res.status == pq.ExecStatus.FATAL_ERROR
 
 
+@pytest.mark.libpq("< 17")
+def test_close_prepared_no_close(pgconn):
+    with pytest.raises(psycopg.NotSupportedError):
+        pgconn.close_prepared(b"cur")
+
+
 @pytest.mark.crdb_skip("server-side cursor")
 def test_describe_portal(pgconn):
     res = pgconn.exec_(
@@ -176,3 +182,9 @@ def test_close_portal(pgconn):
     # Because we closed it, describing should not work
     res = pgconn.describe_portal(b"cur")
     assert res.status == pq.ExecStatus.FATAL_ERROR
+
+
+@pytest.mark.libpq("< 17")
+def test_close_portal_no_close(pgconn):
+    with pytest.raises(psycopg.NotSupportedError):
+        pgconn.close_portal(b"cur")
