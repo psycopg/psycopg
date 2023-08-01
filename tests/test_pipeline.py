@@ -595,7 +595,7 @@ def test_concurrency(conn):
     assert after > before
 
 
-def test_execute_nextset_warning(conn):
+def test_execute_nextset_error(conn):
     cur = conn.cursor()
     cur.execute("select 1")
     cur.execute("select 2")
@@ -608,8 +608,6 @@ def test_execute_nextset_warning(conn):
         cur.execute("select 1")
         cur.execute("select 2")
 
-        # WARNING: this behavior is unintentional and will be changed in 3.2
-        assert cur.fetchall() == [(1,)]
-        with pytest.warns(DeprecationWarning, match="nextset"):
-            assert cur.nextset()
         assert cur.fetchall() == [(2,)]
+        with pytest.raises(psycopg.NotSupportedError, match="nextset"):
+            assert cur.nextset()

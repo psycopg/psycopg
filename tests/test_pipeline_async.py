@@ -603,7 +603,7 @@ async def test_concurrency(aconn):
     assert after > before
 
 
-async def test_execute_nextset_warning(aconn):
+async def test_execute_nextset_error(aconn):
     cur = aconn.cursor()
     await cur.execute("select 1")
     await cur.execute("select 2")
@@ -616,8 +616,6 @@ async def test_execute_nextset_warning(aconn):
         await cur.execute("select 1")
         await cur.execute("select 2")
 
-        # WARNING: this behavior is unintentional and will be changed in 3.2
-        assert (await cur.fetchall()) == [(1,)]
-        with pytest.warns(DeprecationWarning, match="nextset"):
-            assert cur.nextset()
         assert (await cur.fetchall()) == [(2,)]
+        with pytest.raises(psycopg.NotSupportedError, match="nextset"):
+            assert cur.nextset()

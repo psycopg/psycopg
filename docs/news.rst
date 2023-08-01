@@ -10,6 +10,14 @@
 Future releases
 ---------------
 
+Psycopg 3.2 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Disable receiving more than one result on the same cursor in pipeline mode,
+  to iterate through `~Cursor.nextset()`. The behaviour was different than
+  in non-pipeline mode and not totally reliable (:ticket:`#604`).
+
+
 Psycopg 3.1.10 (unreleased)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
