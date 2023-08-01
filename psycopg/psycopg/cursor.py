@@ -9,6 +9,7 @@ from types import TracebackType
 from typing import Any, Generic, Iterable, Iterator, List
 from typing import Optional, NoReturn, Sequence, Tuple, Type, TypeVar
 from typing import overload, TYPE_CHECKING
+from warnings import warn
 from contextlib import contextmanager
 
 from . import pq
@@ -156,6 +157,18 @@ class BaseCursor(Generic[ConnectionType, Row]):
         Return `!True` if a new result is available, which will be the one
         methods `!fetch*()` will operate on.
         """
+        # Raise a warning if people is calling nextset() in pipeline mode
+        # after a sequence of execute() in pipeline mode. Pipeline accumulating
+        # execute() results in the cursor is an unintended difference w.r.t.
+        # non-pipeline mode.
+        if self._execmany_returning is None and self._conn._pipeline:
+            warn(
+                "using nextset() in pipeline mode for several execute() is"
+                " deprecated and will be dropped in 3.2; please use different"
+                " cursors to receive more than one result",
+                DeprecationWarning,
+            )
+
         if self._iresult < len(self._results) - 1:
             self._select_current_result(self._iresult + 1)
             return True

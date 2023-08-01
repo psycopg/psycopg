@@ -601,3 +601,23 @@ async def test_concurrency(aconn):
     assert s == sum(values)
     (after,) = await (await aconn.execute("select value from accessed")).fetchone()
     assert after > before
+
+
+async def test_execute_nextset_warning(aconn):
+    cur = aconn.cursor()
+    await cur.execute("select 1")
+    await cur.execute("select 2")
+
+    assert (await cur.fetchall()) == [(2,)]
+    assert not cur.nextset()
+    assert (await cur.fetchall()) == []
+
+    async with aconn.pipeline():
+        await cur.execute("select 1")
+        await cur.execute("select 2")
+
+        # WARNING: this behavior is unintentional and will be changed in 3.2
+        assert (await cur.fetchall()) == [(1,)]
+        with pytest.warns(DeprecationWarning, match="nextset"):
+            assert cur.nextset()
+        assert (await cur.fetchall()) == [(2,)]
