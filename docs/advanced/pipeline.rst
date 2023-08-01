@@ -185,26 +185,8 @@ several operations, using `Connection.execute()`, `Cursor.execute()` and
 
 Unlike in normal mode, Psycopg will not wait for the server to receive the
 result of each query; the client will receive results in batches when the
-server flushes it output buffer.
-
-When a flush (or a sync) is performed, all pending results are sent back to
-the cursors which executed them. If a cursor had run more than one query, it
-will receive more than one result; results after the first will be available,
-in their execution order, using `~Cursor.nextset()`:
-
-.. code:: python
-
-    >>> with conn.pipeline():
-    ...     with conn.cursor() as cur:
-    ...        cur.execute("INSERT INTO mytable (data) VALUES (%s) RETURNING *", ["hello"])
-    ...        cur.execute("INSERT INTO mytable (data) VALUES (%s) RETURNING *", ["world"])
-    ...        while True:
-    ...            print(cur.fetchall())
-    ...            if not cur.nextset():
-    ...                break
-
-    [(1, 'hello')]
-    [(2, 'world')]
+server flushes it output buffer. You can receive more than a single result
+by using more than one cursor in the same pipeline.
 
 If any statement encounters an error, the server aborts the current
 transaction and will not execute any subsequent command in the queue until the
