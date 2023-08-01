@@ -593,3 +593,23 @@ def test_concurrency(conn):
     assert s == sum(values)
     (after,) = conn.execute("select value from accessed").fetchone()
     assert after > before
+
+
+def test_execute_nextset_warning(conn):
+    cur = conn.cursor()
+    cur.execute("select 1")
+    cur.execute("select 2")
+
+    assert cur.fetchall() == [(2,)]
+    assert not cur.nextset()
+    assert cur.fetchall() == []
+
+    with conn.pipeline():
+        cur.execute("select 1")
+        cur.execute("select 2")
+
+        # WARNING: this behavior is unintentional and will be changed in 3.2
+        assert cur.fetchall() == [(1,)]
+        with pytest.warns(DeprecationWarning, match="nextset"):
+            assert cur.nextset()
+        assert cur.fetchall() == [(2,)]
