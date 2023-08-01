@@ -10,4 +10,4 @@ backend-path = ["build_backend"]
 
 [cython-backend]
 # These packages are only installed if there are pyx files to compile.
-cython-requires = ["Cython >= 3.0.0a11"]
+cython-requires = ["Cython >= 3.0.0"]
