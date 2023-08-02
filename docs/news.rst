@@ -15,6 +15,11 @@ Psycopg 3.2 (unreleased)
 
 - Add support for libpq functions to close prepared statements and portals
   introduced in libpq v17 (:ticket:`#603`).
+- Disable receiving more than one result on the same cursor in pipeline mode,
+  to iterate through `~Cursor.nextset()`. The behaviour was different than
+  in non-pipeline mode and not totally reliable (:ticket:`#604`).
+  The `Cursor` now only preserves the results set of the last
+  `~Cursor.execute()`, consistently with non-pipeline mode.
 
 
 Psycopg 3.1.10 (unreleased)

@@ -593,3 +593,14 @@ def test_concurrency(conn):
     assert s == sum(values)
     (after,) = conn.execute("select value from accessed").fetchone()
     assert after > before
+
+
+def test_execute_nextset(conn):
+    cur = conn.cursor()
+    with conn.pipeline():
+        cur.execute("select 1")
+        cur.execute("select 2")
+
+        assert cur.fetchall() == [(2,)]
+        assert not cur.nextset()
+        assert cur.fetchall() == []

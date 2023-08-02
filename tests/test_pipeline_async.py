@@ -601,3 +601,14 @@ async def test_concurrency(aconn):
     assert s == sum(values)
     (after,) = await (await aconn.execute("select value from accessed")).fetchone()
     assert after > before
+
+
+async def test_execute_nextset(aconn):
+    cur = aconn.cursor()
+    async with aconn.pipeline():
+        await cur.execute("select 1")
+        await cur.execute("select 2")
+
+        assert (await cur.fetchall()) == [(2,)]
+        assert not cur.nextset()
+        assert (await cur.fetchall()) == []
