@@ -603,19 +603,12 @@ async def test_concurrency(aconn):
     assert after > before
 
 
-async def test_execute_nextset_error(aconn):
+async def test_execute_nextset(aconn):
     cur = aconn.cursor()
-    await cur.execute("select 1")
-    await cur.execute("select 2")
-
-    assert (await cur.fetchall()) == [(2,)]
-    assert not cur.nextset()
-    assert (await cur.fetchall()) == []
-
     async with aconn.pipeline():
         await cur.execute("select 1")
         await cur.execute("select 2")
 
         assert (await cur.fetchall()) == [(2,)]
-        with pytest.raises(psycopg.NotSupportedError, match="nextset"):
-            assert cur.nextset()
+        assert not cur.nextset()
+        assert (await cur.fetchall()) == []

@@ -156,19 +156,6 @@ class BaseCursor(Generic[ConnectionType, Row]):
         Return `!True` if a new result is available, which will be the one
         methods `!fetch*()` will operate on.
         """
-        # Python 3.1 would accumulate execute() results in the cursor, but it
-        # was an undesired difference with non-pipeline mode, so it was
-        # deprecated in 3.1.10; in 3.2 we moved to clobber previous execute()
-        # results and, because running multiple statements in the same
-        # execute() is not supported in pipeline mode, there is no reason to
-        # support nextset(). This error replaces the previous warning.
-        if self._execmany_returning is None and self._conn._pipeline:
-            raise e.NotSupportedError(
-                "using nextset() in pipeline mode for several execute() is"
-                " not supported. Please use several cursors to receive more"
-                " than one result"
-            )
-
         if self._iresult < len(self._results) - 1:
             self._select_current_result(self._iresult + 1)
             return True

@@ -595,19 +595,12 @@ def test_concurrency(conn):
     assert after > before
 
 
-def test_execute_nextset_error(conn):
+def test_execute_nextset(conn):
     cur = conn.cursor()
-    cur.execute("select 1")
-    cur.execute("select 2")
-
-    assert cur.fetchall() == [(2,)]
-    assert not cur.nextset()
-    assert cur.fetchall() == []
-
     with conn.pipeline():
         cur.execute("select 1")
         cur.execute("select 2")
 
         assert cur.fetchall() == [(2,)]
-        with pytest.raises(psycopg.NotSupportedError, match="nextset"):
-            assert cur.nextset()
+        assert not cur.nextset()
+        assert cur.fetchall() == []
