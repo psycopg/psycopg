@@ -797,6 +797,7 @@ async def test_shrink(dsn, monkeypatch):
 
 
 @pytest.mark.slow
+@pytest.mark.timing
 async def test_reconnect(proxy, caplog, monkeypatch):
     caplog.set_level(logging.WARNING, logger="psycopg.pool")
 
