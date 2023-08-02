@@ -498,19 +498,22 @@ cdef class DecimalBinaryDumper(CDumper):
         return dump_decimal_to_numeric_binary(obj, rv, offset)
 
 
+_int_classes = None
+
+
 cdef class _MixedNumericDumper(CDumper):
 
-    int_classes = None
     oid = oids.NUMERIC_OID
 
     def __cinit__(self, cls, context: Optional[AdaptContext] = None):
-        if _MixedNumericDumper.int_classes is None:
+        global _int_classes
+
+        if _int_classes is None:
             if "numpy" in sys.modules:
                 import numpy
-
-                _MixedNumericDumper.int_classes = (int, numpy.integer)
+                _int_classes = (int, numpy.integer)
             else:
-                _MixedNumericDumper.int_classes = int
+                _int_classes = int
 
 
 @cython.final
@@ -523,7 +526,7 @@ cdef class NumericDumper(_MixedNumericDumper):
             return dump_int_to_text(obj, rv, offset)
         elif isinstance(obj, Decimal):
             return dump_decimal_to_text(obj, rv, offset)
-        elif isinstance(obj, self.int_classes):
+        elif isinstance(obj, _int_classes):
             return dump_int_to_text(obj, rv, offset)
         else:
             raise TypeError(
@@ -541,7 +544,7 @@ cdef class NumericBinaryDumper(_MixedNumericDumper):
             return dump_int_to_numeric_binary(obj, rv, offset)
         elif isinstance(obj, Decimal):
             return dump_decimal_to_numeric_binary(obj, rv, offset)
-        elif isinstance(obj, self.int_classes):
+        elif isinstance(obj, _int_classes):
             return dump_int_to_numeric_binary(int(obj), rv, offset)
         else:
             raise TypeError(
