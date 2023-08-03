@@ -37,12 +37,12 @@ def register_crdb_adapters(context: AdaptContext) -> None:
 
     _register_postgres_adapters(context)
 
-    # String must come after enum to map text oid -> string dumper
+    # String must come after enum and none to map text oid -> string dumper
+    _register_crdb_none_adapters(context)
     _register_crdb_enum_adapters(context)
     _register_crdb_string_adapters(context)
     _register_crdb_json_adapters(context)
     _register_crdb_net_adapters(context)
-    _register_crdb_none_adapters(context)
 
     dbapi20.register_dbapi20_adapters(adapters)
 
@@ -53,15 +53,22 @@ def _register_postgres_adapters(context: AdaptContext) -> None:
     # Same adapters used by PostgreSQL, or a good starting point for customization
 
     from ..types import array, bool, composite, datetime
-    from ..types import numeric, string, uuid
+    from ..types import numeric, numpy, string, uuid
 
     array.register_default_adapters(context)
-    bool.register_default_adapters(context)
     composite.register_default_adapters(context)
     datetime.register_default_adapters(context)
-    numeric.register_default_adapters(context)
     string.register_default_adapters(context)
     uuid.register_default_adapters(context)
+
+    # Both numpy Decimal and uint64 dumpers use the numeric oid, but the former
+    # covers the entire numeric domain, whereas the latter only deals with
+    # integers. For this reason, if we specify dumpers by oid, we want to make
+    # sure to get the Decimal dumper. We enforce that by registering the
+    # numeric dumpers last.
+    numpy.register_default_adapters(context)
+    bool.register_default_adapters(context)
+    numeric.register_default_adapters(context)
 
 
 def _register_crdb_string_adapters(context: AdaptContext) -> None:

@@ -170,6 +170,7 @@ def test_dump_float(conn, nptype, val, pgtype, fmt_in):
     ],
 )
 @pytest.mark.parametrize("fmt", Format)
+@pytest.mark.crdb_skip("copy")
 def test_copy_by_oid(conn, val, nptype, pgtypes, fmt):
     nptype = getattr(np, nptype)
     val = nptype(val)
