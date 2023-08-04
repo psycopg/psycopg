@@ -22,8 +22,11 @@ Psycopg 3.2 (unreleased)
   `~Cursor.execute()`, consistently with non-pipeline mode.
 
 
-Psycopg 3.1.10 (unreleased)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Current release
+---------------
+
+Psycopg 3.1.10
+^^^^^^^^^^^^^^
 
 - Allow JSON dumpers to dump `bytes` directly instead of `str`,
   for better compatibility with libraries like orjson and msgspec
@@ -42,9 +45,6 @@ Psycopg 3.1.10 (unreleased)
   default value using `!None` (:ticket:`#612`).
 - Add support for Python 3.12.
 
-
-Current release
----------------
 
 Psycopg 3.1.9
 ^^^^^^^^^^^^^
