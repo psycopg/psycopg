@@ -205,11 +205,22 @@ def _pipeline_communicate(
                         break
                     results.append(res)
                     res = []
-                elif r.status == PIPELINE_SYNC:
-                    assert not res
-                    results.append([r])
                 else:
-                    res.append(r)
+                    status = r.status
+                    if status == PIPELINE_SYNC:
+                        assert not res
+                        results.append([r])
+                    elif status == COPY_IN or status == COPY_OUT or status == COPY_BOTH:
+                        # This shouldn't happen, but insisting hard enough, it will.
+                        # For instance, in test_executemany_badquery(), with the COPY
+                        # statement and the AsyncClientCursor, which disables
+                        # prepared statements).
+                        # Bail out from the resulting infinite loop.
+                        raise e.NotSupportedError(
+                            "COPY cannot be used in pipeline mode"
+                        )
+                    else:
+                        res.append(r)
 
         if ready & READY_W:
             pgconn.flush()

@@ -380,10 +380,7 @@ def test_executemany_rowcount_no_hit(conn, execmany):
     "query",
     [
         "insert into nosuchtable values (%s, %s)",
-        # This fails, but only because we try to copy in pipeline mode,
-        # crashing the connection. Which would be even fine, but with
-        # the async cursor it's worse... See test_client_cursor_async.py.
-        # "copy (select %s, %s) to stdout",
+        "copy (select %s, %s) to stdout",
         "wat (%s, %s)",
     ],
 )
