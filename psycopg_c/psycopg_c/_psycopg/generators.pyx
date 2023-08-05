@@ -241,6 +241,19 @@ def pipeline_communicate(
                     if status == libpq.PGRES_PIPELINE_SYNC:
                         results.append([r])
                         break
+                    elif (
+                        status == libpq.PGRES_COPY_IN
+                        or status == libpq.PGRES_COPY_OUT
+                        or status == libpq.PGRES_COPY_BOTH
+                    ):
+                        # This shouldn't happen, but insisting hard enough, it will.
+                        # For instance, in test_executemany_badquery(), with the COPY
+                        # statement and the AsyncClientCursor, which disables
+                        # prepared statements).
+                        # Bail out from the resulting infinite loop.
+                        raise e.NotSupportedError(
+                            "COPY cannot be used in pipeline mode"
+                        )
                     else:
                         res.append(r)
 
