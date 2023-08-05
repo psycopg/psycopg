@@ -4,7 +4,7 @@ Tests for psycopg.Cursor that are not supposed to pass for subclasses.
 
 import pytest
 import psycopg
-from psycopg import pq, rows
+from psycopg import pq, rows, errors as e
 from psycopg.adapt import PyFormat
 
 from .utils import gc_collect, gc_count
@@ -28,7 +28,8 @@ def test_str(conn):
 
 def test_execute_many_results_param(conn):
     cur = conn.cursor()
-    with pytest.raises(psycopg.errors.SyntaxError):
+    # Postgres raises SyntaxError, CRDB raises InvalidPreparedStatementDefinition
+    with pytest.raises((e.SyntaxError, e.InvalidPreparedStatementDefinition)):
         cur.execute("select %s; select generate_series(1, %s)", ("foo", 3))
 
 
