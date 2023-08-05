@@ -159,6 +159,7 @@ def test_execute_many_results(conn):
     assert cur.rowcount == 1
     assert cur.nextset()
     assert cur.fetchall() == [(1,), (2,), (3,)]
+    assert cur.rowcount == 3
     assert cur.nextset() is None
 
     cur.close()
@@ -232,7 +233,6 @@ def test_binary_cursor_execute(conn):
     ) as ex:
         cur = conn.cursor(binary=True)
         cur.execute("select %s, %s", [1, None])
-
     if ex:
         return
 
@@ -715,7 +715,9 @@ def test_stream_error_python_consumed(conn):
     assert conn.info.transaction_status == conn.TransactionStatus.INTRANS
 
 
-def test_stream_close(conn):
+@pytest.mark.parametrize("autocommit", [False, True])
+def test_stream_close(conn, autocommit):
+    conn.autocommit = autocommit
     cur = conn.cursor()
     with pytest.raises(psycopg.OperationalError):
         for rec in cur.stream("select generate_series(1, 3)"):

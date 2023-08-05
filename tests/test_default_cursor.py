@@ -78,7 +78,6 @@ def test_leak(conn_cls, dsn, faker, fmt, fmt_out, fetch, row_factory):
                 cur.execute(faker.create_stmt)
                 with faker.find_insert_problem(conn):
                     cur.executemany(faker.insert_stmt, faker.records)
-
                 cur.execute(faker.select_stmt)
 
                 if fetch == "one":

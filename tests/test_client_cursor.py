@@ -84,7 +84,6 @@ def test_leak(conn_cls, dsn, faker, fetch, row_factory):
                 cur.execute(faker.create_stmt)
                 with faker.find_insert_problem(conn):
                     cur.executemany(faker.insert_stmt, faker.records)
-
                 cur.execute(faker.select_stmt)
 
                 if fetch == "one":
@@ -109,6 +108,7 @@ def test_leak(conn_cls, dsn, faker, fetch, row_factory):
         work()
         gc_collect()
         n.append(gc_count())
+
     assert n[0] == n[1] == n[2], f"objects leaked: {n[1] - n[0]}, {n[2] - n[1]}"
 
 
