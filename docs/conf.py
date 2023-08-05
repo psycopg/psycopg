@@ -100,6 +100,7 @@ default_role = "obj"
 intersphinx_mapping = {
     "py": ("https://docs.python.org/3", None),
     "pg2": ("https://www.psycopg.org/docs/", None),
+    "numpy": ("https://numpy.org/doc/stable/", None),
 }
 
 autodoc_member_order = "bysource"

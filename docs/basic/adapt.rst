@@ -34,6 +34,9 @@ Python `bool` values `!True` and `!False` are converted to the equivalent
 
 .. __: https://www.postgresql.org/docs/current/datatype-boolean.html
 
+.. versionchanged:: 3.2
+    `numpy.bool_` values can be dumped too.
+
 
 .. index::
     single: Adaptation; numbers
@@ -72,6 +75,13 @@ promoted to the larger Python counterpart.
     instead, for performance reason or ease of manipulation: you can configure
     an adapter to :ref:`cast PostgreSQL numeric to Python float
     <adapt-example-float>`. This of course may imply a loss of precision.
+
+.. versionchanged:: 3.2
+
+   NumPy integer__ and `floating point`__ values can be dumped too.
+
+.. __: https://numpy.org/doc/stable/reference/arrays.scalars.html#integer-types
+.. __: https://numpy.org/doc/stable/reference/arrays.scalars.html#floating-point-types
 
 
 .. index::

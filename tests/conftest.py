@@ -27,6 +27,7 @@ def pytest_configure(config):
         "timing: the test is timing based and can fail on cheese hardware",
         "dns: the test requires dnspython to run",
         "postgis: the test requires the PostGIS extension to run",
+        "numpy: the test requires numpy module to be installed",
     ]
 
     for marker in markers:

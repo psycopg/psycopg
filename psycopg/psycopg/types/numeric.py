@@ -4,9 +4,12 @@ Adapers for numeric types.
 
 # Copyright (C) 2020 The Psycopg Team
 
+import sys
 import struct
+from abc import ABC, abstractmethod
 from math import log
-from typing import Any, Callable, DefaultDict, Dict, Tuple, Union, cast
+from typing import Any, Callable, DefaultDict, Dict, Optional, Tuple, Union
+from typing import cast, TYPE_CHECKING
 from decimal import Decimal, DefaultContext, Context
 
 from .. import _oids
@@ -30,22 +33,27 @@ from .._wrappers import (
     Float8 as Float8,
 )
 
+if TYPE_CHECKING:
+    import numpy
+
 
 class _IntDumper(Dumper):
     def dump(self, obj: Any) -> Buffer:
-        t = type(obj)
-        if t is not int:
-            # Convert to int in order to dump IntEnum correctly
-            if issubclass(t, int):
-                obj = int(obj)
-            else:
-                raise e.DataError(f"integer expected, got {type(obj).__name__!r}")
-
         return str(obj).encode()
 
     def quote(self, obj: Any) -> Buffer:
         value = self.dump(obj)
         return value if obj >= 0 else b" " + value
+
+
+class _IntOrSubclassDumper(_IntDumper):
+    def dump(self, obj: Any) -> Buffer:
+        t = type(obj)
+        # Convert to int in order to dump IntEnum or numpy.integer correctly
+        if t is not int:
+            obj = int(obj)
+
+        return str(obj).encode()
 
 
 class _SpecialValuesDumper(Dumper):
@@ -96,11 +104,7 @@ class DecimalDumper(_SpecialValuesDumper):
     oid = _oids.NUMERIC_OID
 
     def dump(self, obj: Decimal) -> bytes:
-        if obj.is_nan():
-            # cover NaN and sNaN
-            return b"NaN"
-        else:
-            return str(obj).encode()
+        return dump_decimal_to_text(obj)
 
     _special = {
         b"Infinity": b"'Infinity'::numeric",
@@ -109,23 +113,23 @@ class DecimalDumper(_SpecialValuesDumper):
     }
 
 
-class Int2Dumper(_IntDumper):
+class Int2Dumper(_IntOrSubclassDumper):
     oid = _oids.INT2_OID
 
 
-class Int4Dumper(_IntDumper):
+class Int4Dumper(_IntOrSubclassDumper):
     oid = _oids.INT4_OID
 
 
-class Int8Dumper(_IntDumper):
+class Int8Dumper(_IntOrSubclassDumper):
     oid = _oids.INT8_OID
 
 
-class IntNumericDumper(_IntDumper):
+class IntNumericDumper(_IntOrSubclassDumper):
     oid = _oids.NUMERIC_OID
 
 
-class OidDumper(_IntDumper):
+class OidDumper(_IntOrSubclassDumper):
     oid = _oids.OID_OID
 
 
@@ -350,23 +354,69 @@ class DecimalBinaryDumper(Dumper):
         return dump_decimal_to_numeric_binary(obj)
 
 
-class NumericDumper(DecimalDumper):
-    def dump(self, obj: Union[Decimal, int]) -> bytes:
-        if isinstance(obj, int):
-            return str(obj).encode()
-        else:
-            return super().dump(obj)
+class _MixedNumericDumper(Dumper, ABC):
+    """Base for dumper to dump int, decimal, numpy.integer to Postgres numeric
 
+    Only used when looking up by oid.
+    """
 
-class NumericBinaryDumper(Dumper):
-    format = Format.BINARY
     oid = _oids.NUMERIC_OID
 
-    def dump(self, obj: Union[Decimal, int]) -> Buffer:
-        if isinstance(obj, int):
-            return dump_int_to_numeric_binary(obj)
+    # If numpy is available, the dumped object might be a numpy integer too
+    int_classes: Union[type, Tuple[type, ...]] = ()
+
+    def __init__(self, cls: type, context: Optional[AdaptContext] = None):
+        super().__init__(cls, context)
+
+        # Verify if numpy is available. If it is, we might have to dump
+        # its integers too.
+        if not _MixedNumericDumper.int_classes:
+            if "numpy" in sys.modules:
+                import numpy
+
+                _MixedNumericDumper.int_classes = (int, numpy.integer)
+            else:
+                _MixedNumericDumper.int_classes = int
+
+    @abstractmethod
+    def dump(self, obj: Union[Decimal, int, "numpy.integer[Any]"]) -> Buffer:
+        ...
+
+
+class NumericDumper(_MixedNumericDumper):
+    def dump(self, obj: Union[Decimal, int, "numpy.integer[Any]"]) -> Buffer:
+        if isinstance(obj, self.int_classes):
+            return str(obj).encode()
+        elif isinstance(obj, Decimal):
+            return dump_decimal_to_text(obj)
         else:
+            raise TypeError(
+                f"class {type(self).__name__} cannot dump {type(obj).__name__}"
+            )
+
+
+class NumericBinaryDumper(_MixedNumericDumper):
+    format = Format.BINARY
+
+    def dump(self, obj: Union[Decimal, int, "numpy.integer[Any]"]) -> Buffer:
+        if type(obj) is int:
+            return dump_int_to_numeric_binary(obj)
+        elif isinstance(obj, Decimal):
             return dump_decimal_to_numeric_binary(obj)
+        elif isinstance(obj, self.int_classes):
+            return dump_int_to_numeric_binary(int(obj))
+        else:
+            raise TypeError(
+                f"class {type(self).__name__} cannot dump {type(obj).__name__}"
+            )
+
+
+def dump_decimal_to_text(obj: Decimal) -> bytes:
+    if obj.is_nan():
+        # cover NaN and sNaN
+        return b"NaN"
+    else:
+        return str(obj).encode()
 
 
 def dump_decimal_to_numeric_binary(obj: Decimal) -> Union[bytearray, bytes]:

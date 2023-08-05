@@ -106,10 +106,9 @@ def register_default_types(types: TypesRegistry) -> None:
 
 def register_default_adapters(context: AdaptContext) -> None:
     from .types import array, bool, composite, datetime, enum, json, multirange
-    from .types import net, none, numeric, range, string, uuid
+    from .types import net, none, numeric, numpy, range, string, uuid
 
     array.register_default_adapters(context)
-    bool.register_default_adapters(context)
     composite.register_default_adapters(context)
     datetime.register_default_adapters(context)
     enum.register_default_adapters(context)
@@ -117,7 +116,15 @@ def register_default_adapters(context: AdaptContext) -> None:
     multirange.register_default_adapters(context)
     net.register_default_adapters(context)
     none.register_default_adapters(context)
-    numeric.register_default_adapters(context)
     range.register_default_adapters(context)
     string.register_default_adapters(context)
     uuid.register_default_adapters(context)
+
+    # Both numpy Decimal and uint64 dumpers use the numeric oid, but the former
+    # covers the entire numeric domain, whereas the latter only deals with
+    # integers. For this reason, if we specify dumpers by oid, we want to make
+    # sure to get the Decimal dumper. We enforce that by registering the
+    # numeric dumpers last.
+    numpy.register_default_adapters(context)
+    bool.register_default_adapters(context)
+    numeric.register_default_adapters(context)

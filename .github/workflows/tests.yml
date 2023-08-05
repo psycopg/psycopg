@@ -42,6 +42,8 @@ jobs:
 
           - {impl: python, python: "3.9", ext: dns, postgres: "postgres:14"}
           - {impl: python, python: "3.9", ext: postgis, postgres: "postgis/postgis"}
+          - {impl: python, python: "3.10", ext: numpy, postgres: "postgres:14"}
+          - {impl: c, python: "3.11", ext: numpy, postgres: "postgres:15"}
 
           # Test with minimum dependencies versions
           - {impl: c, python: "3.7", ext: min, postgres: "postgres:15"}
@@ -88,10 +90,15 @@ jobs:
           echo "DEPS=$DEPS shapely" >> $GITHUB_ENV
           echo "MARKERS=$MARKERS postgis" >> $GITHUB_ENV
 
+      - if: ${{ matrix.ext == 'numpy' }}
+        run: |
+          echo "DEPS=$DEPS numpy" >> $GITHUB_ENV
+          echo "MARKERS=$MARKERS numpy" >> $GITHUB_ENV
+
       - name: Configure to use the oldest dependencies
         if: ${{ matrix.ext == 'min' }}
         run: |
-          echo "DEPS=$DEPS dnspython shapely" >> $GITHUB_ENV
+          echo "DEPS=$DEPS dnspython shapely numpy" >> $GITHUB_ENV
           echo "PIP_CONSTRAINT=${{ github.workspace }}/tests/constraints.txt" \
             >> $GITHUB_ENV
 
