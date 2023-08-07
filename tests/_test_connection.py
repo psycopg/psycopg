@@ -9,6 +9,22 @@ import pytest
 import psycopg
 
 
+async def aconn_set(conn, param, value):
+    """Equivalent of 'await conn.set_param(value)'
+
+    Converted to conn_set in sync tests.
+    """
+    await getattr(conn, f"set_{param}")(value)
+
+
+def conn_set(conn, param, value):
+    """Equivalent of 'conn.param = value'.
+
+    Converted from aconn_set in sync tests.
+    """
+    setattr(conn, param, value)
+
+
 @pytest.fixture
 def testctx(svcconn):
     svcconn.execute("create table if not exists testctx (id int primary key)")

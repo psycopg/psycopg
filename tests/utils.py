@@ -145,6 +145,17 @@ def gc_collect():
         gc.collect()
 
 
+def is_async(obj):
+    """Return true if obj is an async object (class, instance, module name)"""
+    if isinstance(obj, str):
+        # coming from is_async(__name__)
+        return "async" in obj
+
+    if not isinstance(obj, type):
+        obj = type(obj)
+    return "Async" in obj.__name__
+
+
 NO_COUNT_TYPES: Tuple[type, ...] = ()
 
 if sys.version_info[:2] == (3, 10):
