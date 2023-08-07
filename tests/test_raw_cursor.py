@@ -3,7 +3,7 @@ import psycopg
 from psycopg import pq, rows, errors as e
 from psycopg.adapt import PyFormat
 
-from .test_cursor import ph
+from ._test_cursor import ph
 from .utils import gc_collect, gc_count
 
 

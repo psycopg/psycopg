@@ -10,7 +10,7 @@ from psycopg.rows import tuple_row
 from psycopg.conninfo import conninfo_to_dict, make_conninfo
 
 from .utils import gc_collect
-from .test_cursor import my_row_factory
+from ._test_cursor import my_row_factory
 from .test_connection import tx_params, tx_params_isolation, tx_values_map
 from .test_connection import conninfo_params_timeout
 from .test_connection import testctx  # noqa: F401  # fixture

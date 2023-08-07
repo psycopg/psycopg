@@ -12,7 +12,7 @@ from psycopg.rows import tuple_row
 from psycopg.conninfo import conninfo_to_dict, make_conninfo
 
 from .utils import gc_collect
-from .test_cursor import my_row_factory
+from ._test_cursor import my_row_factory
 from .test_adapt import make_bin_dumper, make_dumper
 
 

@@ -180,6 +180,10 @@ async def alist(it):
     return [i async for i in it]
 
 
+async def anext(it):
+    return await it.__anext__()
+
+
 @contextmanager
 def raiseif(cond, *args, **kwargs):
     """
