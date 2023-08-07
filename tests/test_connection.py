@@ -4,7 +4,6 @@ import pytest
 import logging
 import weakref
 from typing import Any, List
-from dataclasses import dataclass
 
 import psycopg
 from psycopg import Notify, pq, errors as e
@@ -13,6 +12,9 @@ from psycopg.conninfo import conninfo_to_dict, make_conninfo
 
 from .utils import gc_collect
 from ._test_cursor import my_row_factory
+from ._test_connection import tx_params, tx_params_isolation, tx_values_map
+from ._test_connection import conninfo_params_timeout
+from ._test_connection import testctx  # noqa: F401  # fixture
 from .test_adapt import make_bin_dumper, make_dumper
 
 
@@ -23,6 +25,11 @@ def test_connect(conn_cls, dsn):
     conn.close()
 
 
+def test_connect_bad(conn_cls):
+    with pytest.raises(psycopg.OperationalError):
+        conn_cls.connect("dbname=nosuchdb")
+
+
 def test_connect_str_subclass(conn_cls, dsn):
     class MyString(str):
         pass
@@ -31,11 +38,6 @@ def test_connect_str_subclass(conn_cls, dsn):
     assert not conn.closed
     assert conn.pgconn.status == conn.ConnStatus.OK
     conn.close()
-
-
-def test_connect_bad(conn_cls):
-    with pytest.raises(psycopg.OperationalError):
-        conn_cls.connect("dbname=nosuchdb")
 
 
 @pytest.mark.slow
@@ -84,6 +86,8 @@ def test_cursor_closed(conn):
         with conn.cursor("foo"):
             pass
     with pytest.raises(psycopg.OperationalError):
+        conn.cursor("foo")
+    with pytest.raises(psycopg.OperationalError):
         conn.cursor()
 
 
@@ -123,14 +127,8 @@ def test_connection_warn_close(conn_cls, dsn, recwarn):
     assert not recwarn, [str(w.message) for w in recwarn.list]
 
 
-@pytest.fixture
-def testctx(svcconn):
-    svcconn.execute("create table if not exists testctx (id int primary key)")
-    svcconn.execute("delete from testctx")
-    return None
-
-
-def test_context_commit(conn_cls, testctx, conn, dsn):
+@pytest.mark.usefixtures("testctx")
+def test_context_commit(conn_cls, conn, dsn):
     with conn:
         with conn.cursor() as cur:
             cur.execute("insert into testctx values (42)")
@@ -144,7 +142,8 @@ def test_context_commit(conn_cls, testctx, conn, dsn):
             assert cur.fetchall() == [(42,)]
 
 
-def test_context_rollback(conn_cls, testctx, conn, dsn):
+@pytest.mark.usefixtures("testctx")
+def test_context_rollback(conn_cls, conn, dsn):
     with pytest.raises(ZeroDivisionError):
         with conn:
             with conn.cursor() as cur:
@@ -585,61 +584,6 @@ def test_server_cursor_factory(conn):
         assert isinstance(cur, MyServerCursor)
 
 
-@dataclass
-class ParamDef:
-    name: str
-    guc: str
-    values: List[Any]
-    non_default: str
-
-
-param_isolation = ParamDef(
-    name="isolation_level",
-    guc="isolation",
-    values=list(psycopg.IsolationLevel),
-    non_default="serializable",
-)
-param_read_only = ParamDef(
-    name="read_only",
-    guc="read_only",
-    values=[True, False],
-    non_default="on",
-)
-param_deferrable = ParamDef(
-    name="deferrable",
-    guc="deferrable",
-    values=[True, False],
-    non_default="on",
-)
-
-# Map Python values to Postgres values for the tx_params possible values
-tx_values_map = {
-    v.name.lower().replace("_", " "): v.value for v in psycopg.IsolationLevel
-}
-tx_values_map["on"] = True
-tx_values_map["off"] = False
-
-
-tx_params = [
-    param_isolation,
-    param_read_only,
-    pytest.param(param_deferrable, marks=pytest.mark.crdb_skip("deferrable")),
-]
-tx_params_isolation = [
-    pytest.param(
-        param_isolation,
-        id="isolation_level",
-        marks=pytest.mark.crdb("skip", reason="transaction isolation"),
-    ),
-    pytest.param(
-        param_read_only, id="read_only", marks=pytest.mark.crdb_skip("begin_read_only")
-    ),
-    pytest.param(
-        param_deferrable, id="deferrable", marks=pytest.mark.crdb_skip("deferrable")
-    ),
-]
-
-
 @pytest.mark.parametrize("param", tx_params)
 def test_transaction_param_default(conn, param):
     assert getattr(conn, param.name) is None
@@ -755,35 +699,6 @@ def test_set_transaction_param_strange(conn):
 
     conn.deferrable = 0
     assert conn.deferrable is False
-
-
-conninfo_params_timeout = [
-    (
-        "",
-        {"dbname": "mydb", "connect_timeout": None},
-        ({"dbname": "mydb"}, None),
-    ),
-    (
-        "",
-        {"dbname": "mydb", "connect_timeout": 1},
-        ({"dbname": "mydb", "connect_timeout": "1"}, 1),
-    ),
-    (
-        "dbname=postgres",
-        {},
-        ({"dbname": "postgres"}, None),
-    ),
-    (
-        "dbname=postgres connect_timeout=2",
-        {},
-        ({"dbname": "postgres", "connect_timeout": "2"}, 2),
-    ),
-    (
-        "postgresql:///postgres?connect_timeout=2",
-        {"connect_timeout": 10},
-        ({"dbname": "postgres", "connect_timeout": "10"}, 10),
-    ),
-]
 
 
 @pytest.mark.parametrize("dsn, kwargs, exp", conninfo_params_timeout)

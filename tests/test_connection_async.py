@@ -11,13 +11,11 @@ from psycopg.conninfo import conninfo_to_dict, make_conninfo
 
 from .utils import gc_collect
 from ._test_cursor import my_row_factory
-from .test_connection import tx_params, tx_params_isolation, tx_values_map
-from .test_connection import conninfo_params_timeout
-from .test_connection import testctx  # noqa: F401  # fixture
+from ._test_connection import tx_params, tx_params_isolation, tx_values_map
+from ._test_connection import conninfo_params_timeout
+from ._test_connection import testctx  # noqa: F401  # fixture
 from .test_adapt import make_bin_dumper, make_dumper
-from .test_conninfo import fake_resolve  # noqa: F401
-
-pytestmark = pytest.mark.anyio
+from .test_conninfo import fake_resolve  # noqa: F401  # fixture
 
 
 async def test_connect(aconn_cls, dsn):
@@ -89,6 +87,7 @@ async def test_cursor_closed(aconn):
     with pytest.raises(psycopg.OperationalError):
         async with aconn.cursor("foo"):
             pass
+    with pytest.raises(psycopg.OperationalError):
         aconn.cursor("foo")
     with pytest.raises(psycopg.OperationalError):
         aconn.cursor()
@@ -112,9 +111,10 @@ async def test_connection_warn_close(aconn_cls, dsn, recwarn):
     conn = await aconn_cls.connect(dsn)
     try:
         await conn.execute("select wat")
-    except Exception:
+    except psycopg.ProgrammingError:
         pass
     del conn
+    gc_collect()
     assert "INERROR" in str(recwarn.pop(ResourceWarning).message)
 
     async with await aconn_cls.connect(dsn) as conn:
@@ -163,6 +163,8 @@ async def test_context_close(aconn):
 
 @pytest.mark.crdb_skip("pg_terminate_backend")
 async def test_context_inerror_rollback_no_clobber(aconn_cls, conn, dsn, caplog):
+    caplog.set_level(logging.WARNING, logger="psycopg")
+
     with pytest.raises(ZeroDivisionError):
         async with await aconn_cls.connect(dsn) as conn2:
             await conn2.execute("select 1")
@@ -288,6 +290,9 @@ async def test_auto_transaction_fail(aconn):
     with pytest.raises(psycopg.DatabaseError):
         await cur.execute("meh")
     assert aconn.pgconn.transaction_status == aconn.TransactionStatus.INERROR
+
+    with pytest.raises(psycopg.errors.InFailedSqlTransaction):
+        await cur.execute("select 1")
 
     await aconn.commit()
     assert aconn.pgconn.transaction_status == aconn.TransactionStatus.IDLE
@@ -760,17 +765,18 @@ async def test_cancel_closed(aconn):
     aconn.cancel()
 
 
-async def test_resolve_hostaddr_conn(monkeypatch, fake_resolve):  # noqa: F811
+@pytest.mark.usefixtures("fake_resolve")
+async def test_resolve_hostaddr_conn(aconn_cls, monkeypatch):
     got = []
 
     def fake_connect_gen(conninfo, **kwargs):
         got.append(conninfo)
         1 / 0
 
-    monkeypatch.setattr(psycopg.AsyncConnection, "_connect_gen", fake_connect_gen)
+    monkeypatch.setattr(aconn_cls, "_connect_gen", fake_connect_gen)
 
     with pytest.raises(ZeroDivisionError):
-        await psycopg.AsyncConnection.connect("host=foo.com")
+        await aconn_cls.connect("host=foo.com")
 
     assert len(got) == 1
     want = {"host": "foo.com", "hostaddr": "1.1.1.1"}
