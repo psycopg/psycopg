@@ -8,7 +8,6 @@ Tests common to psycopg.Cursor and its subclasses.
 import weakref
 import datetime as dt
 from typing import Any, List
-from contextlib import closing
 
 import pytest
 
@@ -17,7 +16,7 @@ from psycopg import sql, rows
 from psycopg.adapt import PyFormat
 from psycopg.types import TypeInfo
 
-from .utils import gc_collect, raiseif
+from .utils import gc_collect, raiseif, closing
 from .fix_crdb import crdb_encoding
 from ._test_cursor import my_row_factory, ph
 from ._test_cursor import execmany, _execmany  # noqa: F401

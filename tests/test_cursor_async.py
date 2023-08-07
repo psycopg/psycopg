@@ -5,7 +5,6 @@ Tests common to psycopg.AsyncCursor and its subclasses.
 import weakref
 import datetime as dt
 from typing import Any, List
-from contextlib import aclosing
 
 import pytest
 
@@ -14,8 +13,7 @@ from psycopg import sql, rows
 from psycopg.adapt import PyFormat
 from psycopg.types import TypeInfo
 
-from .utils import alist, anext
-from .utils import gc_collect, raiseif
+from .utils import gc_collect, raiseif, aclosing, alist, anext
 from .fix_crdb import crdb_encoding
 from ._test_cursor import my_row_factory, ph
 from ._test_cursor import execmany, _execmany  # noqa: F401

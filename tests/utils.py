@@ -3,7 +3,8 @@ import re
 import sys
 import operator
 from typing import Callable, Optional, Tuple
-from contextlib import contextmanager
+from contextlib import contextmanager, asynccontextmanager
+from contextlib import closing as closing  # noqa: F401  - re-export
 
 import pytest
 
@@ -177,11 +178,25 @@ def gc_count() -> int:
 
 
 async def alist(it):
+    """Consume an async iterator into a list. Async equivalent of list(it)."""
     return [i async for i in it]
 
 
-async def anext(it):
-    return await it.__anext__()
+if sys.version_info >= (3, 10):
+    from builtins import anext as anext
+    from contextlib import aclosing as aclosing
+
+else:
+
+    async def anext(it):
+        return await it.__anext__()
+
+    @asynccontextmanager
+    async def aclosing(thing):
+        try:
+            yield thing
+        finally:
+            await thing.aclose()
 
 
 @contextmanager

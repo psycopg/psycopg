@@ -114,9 +114,10 @@ class RenameAsyncToSync(ast.NodeTransformer):
     _skip_imports = {"alist", "anext"}
 
     def visit_ImportFrom(self, node: ast.ImportFrom) -> ast.AST | None:
-        # Remove import of async utils eclypsing builtings
+        # Remove import of async utils eclypsing builtins
         if node.module == "utils":
-            if {n.name for n in node.names} <= self._skip_imports:
+            node.names = [n for n in node.names if n.name not in self._skip_imports]
+            if not node.names:
                 return None
 
         for n in node.names:
