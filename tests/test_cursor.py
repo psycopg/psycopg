@@ -495,12 +495,13 @@ def test_rownumber_none(conn, query):
 
 def test_rownumber_mixed(conn):
     cur = conn.cursor()
-    queries = [
-        "select x from generate_series(1, 3) x",
-        "set timezone to utc",
-        "select x from generate_series(4, 6) x",
-    ]
-    cur.execute(";\n".join(queries))
+    cur.execute(
+        """
+select x from generate_series(1, 3) x;
+set timezone to utc;
+select x from generate_series(4, 6) x;
+"""
+    )
     assert cur.rownumber == 0
     assert cur.fetchone() == (1,)
     assert cur.rownumber == 1

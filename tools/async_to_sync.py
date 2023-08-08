@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import os
 import sys
+from typing import Any
 from argparse import ArgumentParser, Namespace
 
 import ast_comments as ast
@@ -43,7 +44,7 @@ def tree_to_str(tree: ast.AST, filename: str) -> str:
 # from the original file '{os.path.basename(filename)}'
 # DO NOT CHANGE! Change the original file instead.
 """
-    rv += ast.unparse(tree)
+    rv += unparse(tree)
     return rv
 
 
@@ -206,6 +207,27 @@ class BlanksInserter(ast.NodeTransformer):
             before = after
 
         return new_body
+
+
+def unparse(tree: ast.AST) -> str:
+    rv: str = Unparser().visit(tree)
+    return rv
+
+
+class Unparser(ast._Unparser):
+    """
+    Try to emit long strings as multiline.
+
+    The normal class only tries to emit docstrings as multiline,
+    but the resulting source doesn't pass flake8.
+    """
+
+    # Beware: private method. Tested with in Python 3.10.
+    def _write_constant(self, value: Any) -> None:
+        if isinstance(value, str) and len(value) > 50:
+            self._write_str_avoiding_backslashes(value)
+        else:
+            super()._write_constant(value)
 
 
 def parse_cmdline() -> Namespace:

@@ -500,12 +500,13 @@ async def test_rownumber_none(aconn, query):
 
 async def test_rownumber_mixed(aconn):
     cur = aconn.cursor()
-    queries = [
-        "select x from generate_series(1, 3) x",
-        "set timezone to utc",
-        "select x from generate_series(4, 6) x",
-    ]
-    await cur.execute(";\n".join(queries))
+    await cur.execute(
+        """
+select x from generate_series(1, 3) x;
+set timezone to utc;
+select x from generate_series(4, 6) x;
+"""
+    )
     assert cur.rownumber == 0
     assert await cur.fetchone() == (1,)
     assert cur.rownumber == 1
