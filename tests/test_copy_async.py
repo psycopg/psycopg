@@ -93,9 +93,10 @@ async def test_copy_out_param(aconn, ph, params):
 async def test_read_rows(aconn, format, typetype):
     cur = aconn.cursor()
     async with cur.copy(
-        f"""copy (
-            select 10::int4, 'hello'::text, '{{0.0,1.0}}'::float8[]
-        ) to stdout (format {format.name})"""
+        """copy (
+            select 10::int4, 'hello'::text, '{0.0,1.0}'::float8[]
+        ) to stdout (format %s)"""
+        % format.name
     ) as copy:
         copy.set_types(["int4", "text", "float8[]"])
         row = await copy.read_row()

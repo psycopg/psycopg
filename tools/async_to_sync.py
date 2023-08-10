@@ -120,6 +120,7 @@ class RenameAsyncToSync(ast.NodeTransformer):
         "aconn_set": "conn_set",
         "alist": "list",
         "anext": "next",
+        "ensure_table_async": "ensure_table",
         "find_insert_problem_async": "find_insert_problem",
     }
 
