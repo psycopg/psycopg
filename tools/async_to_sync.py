@@ -32,8 +32,8 @@ def main() -> int:
 
 def async_to_sync(tree: ast.AST) -> ast.AST:
     tree = BlanksInserter().visit(tree)
-    tree = AsyncToSync().visit(tree)
     tree = RenameAsyncToSync().visit(tree)
+    tree = AsyncToSync().visit(tree)
     tree = FixAsyncSetters().visit(tree)
     return tree
 
@@ -80,10 +80,32 @@ class AsyncToSync(ast.NodeTransformer):
         self.visit(new_node)
         return new_node
 
+    def visit_If(self, node: ast.If) -> ast.AST:
+        # Drop `if is_async()` branch.
+        #
+        # Assume that the test guards an async object becoming sync and remove
+        # the async side, because it will likely contain `await` constructs
+        # illegal into a sync function.
+        if self._is_async_call(node.test):
+            for child in node.orelse:
+                self.visit(child)
+            return node.orelse
+
+        self.generic_visit(node)
+        return node
+
+    def _is_async_call(self, test: ast.AST) -> bool:
+        if not isinstance(test, ast.Call):
+            return False
+        if test.func.id != "is_async":
+            return False
+        return True
+
 
 class RenameAsyncToSync(ast.NodeTransformer):
     names_map = {
         "AsyncClientCursor": "ClientCursor",
+        "AsyncConnection": "Connection",
         "AsyncCursor": "Cursor",
         "AsyncRawCursor": "RawCursor",
         "AsyncServerCursor": "ServerCursor",
@@ -108,10 +130,20 @@ class RenameAsyncToSync(ast.NodeTransformer):
         self.generic_visit(node)
         return node
 
-    def visit_FunctionDef(self, node: ast.FunctionDef) -> ast.AST:
+    def visit_AsyncFunctionDef(self, node: ast.FunctionDef) -> ast.AST:
         node.name = self.names_map.get(node.name, node.name)
         for arg in node.args.args:
             arg.arg = self.names_map.get(arg.arg, arg.arg)
+        for arg in node.args.args:
+            ann = arg.annotation
+            if not ann:
+                continue
+            if isinstance(ann, ast.Subscript):
+                # Remove the [] from the type
+                ann = ann.value
+            if isinstance(ann, ast.Attribute):
+                ann.attr = self.names_map.get(ann.attr, ann.attr)
+
         self.generic_visit(node)
         return node
 
