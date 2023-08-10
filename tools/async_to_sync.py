@@ -116,6 +116,7 @@ class RenameAsyncToSync(ast.NodeTransformer):
         "aconn_set": "conn_set",
         "alist": "list",
         "anext": "next",
+        "find_insert_problem_async": "find_insert_problem",
     }
 
     def visit_Module(self, node: ast.Module) -> ast.AST:

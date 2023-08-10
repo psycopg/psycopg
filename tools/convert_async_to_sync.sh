@@ -8,6 +8,7 @@ dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "${dir}/.."
 
 for async in \
+    tests/test_client_cursor_async.py \
     tests/test_connection_async.py \
     tests/test_cursor_async.py \
     tests/test_pipeline_async.py
