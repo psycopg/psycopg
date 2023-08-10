@@ -8,9 +8,9 @@ from psycopg.adapt import PyFormat
 from psycopg.types.numeric import Int4
 
 from ..utils import eur, gc_collect, gc_count
-from ..test_copy import sample_text, sample_binary  # noqa
-from ..test_copy import ensure_table, sample_records
-from ..test_copy import sample_tabledef as sample_tabledef_pg
+from .._test_copy import sample_text, sample_binary  # noqa
+from .._test_copy import ensure_table, sample_records
+from .._test_copy import sample_tabledef as sample_tabledef_pg
 
 # CRDB int/serial are int8
 sample_tabledef = sample_tabledef_pg.replace("int", "int4").replace("serial", "int4")

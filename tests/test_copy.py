@@ -1,5 +1,4 @@
 import string
-import struct
 import hashlib
 from io import BytesIO, StringIO
 from random import choice, randrange
@@ -12,41 +11,18 @@ from psycopg import pq
 from psycopg import sql
 from psycopg import errors as e
 from psycopg.pq import Format
-from psycopg.copy import Copy, LibpqWriter, QueuedLibpqWriter, FileWriter
+from psycopg.copy import Copy, LibpqWriter, QueuedLibpqWriter
 from psycopg.adapt import PyFormat
 from psycopg.types import TypeInfo
 from psycopg.types.hstore import register_hstore
 from psycopg.types.numeric import Int4
 
 from .utils import eur, gc_collect, gc_count
+from ._test_copy import sample_text, sample_binary, sample_binary_rows  # noqa
+from ._test_copy import sample_values, sample_records, sample_tabledef
+from ._test_copy import ensure_table, py_to_raw, special_chars, FileWriter
 
 pytestmark = pytest.mark.crdb_skip("copy")
-
-sample_records = [(40010, 40020, "hello"), (40040, None, "world")]
-sample_values = "values (40010::int, 40020::int, 'hello'::text), (40040, NULL, 'world')"
-sample_tabledef = "col1 serial primary key, col2 int, data text"
-
-sample_text = b"""\
-40010\t40020\thello
-40040\t\\N\tworld
-"""
-
-sample_binary_str = """
-5047 434f 5059 0aff 0d0a 00
-00 0000 0000 0000 00
-00 0300 0000 0400 009c 4a00 0000 0400 009c 5400 0000 0568 656c 6c6f
-
-0003 0000 0004 0000 9c68 ffff ffff 0000 0005 776f 726c 64
-
-ff ff
-"""
-
-sample_binary_rows = [
-    bytes.fromhex("".join(row.split())) for row in sample_binary_str.split("\n\n")
-]
-sample_binary = b"".join(sample_binary_rows)
-
-special_chars = {8: "b", 9: "t", 10: "n", 11: "v", 12: "f", 13: "r", ord("\\"): "\\"}
 
 
 @pytest.mark.parametrize("format", Format)
@@ -320,9 +296,9 @@ def test_subclass_adapter(conn, format):
     if format == Format.TEXT:
         from psycopg.types.string import StrDumper as BaseDumper
     else:
-        from psycopg.types.string import (  # type: ignore[assignment]
-            StrBinaryDumper as BaseDumper,
-        )
+        from psycopg.types.string import StrBinaryDumper
+
+        BaseDumper = StrBinaryDumper  # type: ignore
 
     class MyStrDumper(BaseDumper):
         def dump(self, obj):
@@ -413,9 +389,8 @@ def test_copy_in_records(conn, format):
     with cur.copy(f"copy copy_in from stdin (format {format.name})") as copy:
         for row in sample_records:
             if format == Format.BINARY:
-                row = tuple(
-                    Int4(i) if isinstance(i, int) else i for i in row
-                )  # type: ignore[assignment]
+                row2 = tuple(Int4(i) if isinstance(i, int) else i for i in row)
+                row = row2  # type: ignore[assignment]
             copy.write_row(row)
 
     data = cur.execute("select * from copy_in order by 1").fetchall()
@@ -813,25 +788,6 @@ def test_copy_table_across(conn_cls, dsn, faker, mode):
         recs = conn2.execute(faker.select_stmt).fetchall()
         for got, want in zip(recs, faker.records):
             faker.assert_record(got, want)
-
-
-def py_to_raw(item, fmt):
-    """Convert from Python type to the expected result from the db"""
-    if fmt == Format.TEXT:
-        if isinstance(item, int):
-            return str(item)
-    else:
-        if isinstance(item, int):
-            # Assume int4
-            return struct.pack("!i", item)
-        elif isinstance(item, str):
-            return item.encode()
-    return item
-
-
-def ensure_table(cur, tabledef, name="copy_in"):
-    cur.execute(f"drop table if exists {name}")
-    cur.execute(f"create table {name} ({tabledef})")
 
 
 class DataGenerator:

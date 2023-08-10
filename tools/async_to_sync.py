@@ -106,7 +106,11 @@ class RenameAsyncToSync(ast.NodeTransformer):
     names_map = {
         "AsyncClientCursor": "ClientCursor",
         "AsyncConnection": "Connection",
+        "AsyncCopy": "Copy",
         "AsyncCursor": "Cursor",
+        "AsyncFileWriter": "FileWriter",
+        "AsyncLibpqWriter": "LibpqWriter",
+        "AsyncQueuedLibpqWriter": "QueuedLibpqWriter",
         "AsyncRawCursor": "RawCursor",
         "AsyncServerCursor": "ServerCursor",
         "aclose": "close",
