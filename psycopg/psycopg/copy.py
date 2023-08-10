@@ -389,7 +389,7 @@ class LibpqWriter(Writer):
             self.cursor._results = [res]
 
 
-class QueuedLibpqDriver(LibpqWriter):
+class QueuedLibpqWriter(LibpqWriter):
     """
     A writer using a buffer to queue data to write to a Postgres database.
 
