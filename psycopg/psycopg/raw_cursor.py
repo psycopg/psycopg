@@ -38,10 +38,9 @@ class RawPostgresQuery(PostgresQuery):
         """
         Verify the compatibility; params must be a sequence for raw query.
         """
-        sequence = PostgresQuery.is_params_sequence(vars)
-        if not sequence:
+        if not PostgresQuery.is_params_sequence(vars):
             raise TypeError("raw query require a sequence of parameters")
-        return vars  # type: ignore[return-value]
+        return vars
 
 
 class RawCursorMixin(BaseCursor[ConnectionType, Row]):

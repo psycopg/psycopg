@@ -14,6 +14,7 @@ from . import errors as e
 from .sql import Composable
 from .abc import Buffer, Query, Params
 from ._enums import PyFormat
+from ._compat import TypeGuard
 from ._encodings import conn_encoding
 
 if TYPE_CHECKING:
@@ -100,7 +101,7 @@ class PostgresQuery:
             self.formats = None
 
     @staticmethod
-    def is_params_sequence(vars: Params) -> bool:
+    def is_params_sequence(vars: Params) -> TypeGuard[Sequence[Any]]:
         # Try concrete types, then abstract types
         t = type(vars)
         if t is list or t is tuple:
@@ -125,9 +126,8 @@ class PostgresQuery:
         """
         Verify the compatibility between a query and a set of params.
         """
-        sequence = PostgresQuery.is_params_sequence(vars)
 
-        if sequence:
+        if PostgresQuery.is_params_sequence(vars):
             if len(vars) != len(parts) - 1:
                 raise e.ProgrammingError(
                     f"the query has {len(parts) - 1} placeholders but"
@@ -135,7 +135,7 @@ class PostgresQuery:
                 )
             if vars and not isinstance(parts[0].item, int):
                 raise TypeError("named placeholders require a mapping of parameters")
-            return vars  # type: ignore[return-value]
+            return vars
 
         else:
             if vars and len(parts) > 1 and not isinstance(parts[0][1], str):
@@ -143,9 +143,11 @@ class PostgresQuery:
                     "positional placeholders (%s) require a sequence of parameters"
                 )
             try:
-                return [
-                    vars[item] for item in order or ()  # type: ignore[call-overload]
-                ]
+                if order:
+                    return [vars[item] for item in order]  # type: ignore[call-overload]
+                else:
+                    return ()
+
             except KeyError:
                 raise e.ProgrammingError(
                     "query parameter missing:"
