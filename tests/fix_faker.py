@@ -146,7 +146,7 @@ class Faker:
             with conn.transaction():
                 yield
         except psycopg.DatabaseError:
-            cur = conn.cursor()
+            cur = psycopg.Cursor(conn)
             # Repeat insert one field at time, until finding the wrong one
             cur.execute(self.drop_stmt)
             cur.execute(self.create_stmt)
@@ -171,7 +171,7 @@ class Faker:
             async with aconn.transaction():
                 yield
         except psycopg.DatabaseError:
-            acur = aconn.cursor()
+            acur = psycopg.AsyncCursor(aconn)
             # Repeat insert one field at time, until finding the wrong one
             await acur.execute(self.drop_stmt)
             await acur.execute(self.create_stmt)
