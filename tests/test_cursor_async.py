@@ -9,14 +9,16 @@ from psycopg.adapt import PyFormat
 from psycopg.types import TypeInfo
 
 from .utils import alist, gc_collect, raiseif
-from .test_cursor import my_row_factory
+from .test_cursor import my_row_factory, ph
 from .test_cursor import execmany, _execmany  # noqa: F401
 from .fix_crdb import crdb_encoding
 
 execmany = execmany  # avoid F811 underneath
 
 
-@pytest.fixture(params=[psycopg.AsyncCursor, psycopg.AsyncClientCursor])
+@pytest.fixture(
+    params=[psycopg.AsyncCursor, psycopg.AsyncClientCursor, psycopg.AsyncRawCursor]
+)
 def aconn(aconn, request, anyio_backend):
     aconn.cursor_factory = request.param
     return aconn
@@ -163,7 +165,9 @@ async def test_execute_many_results(aconn):
 
 async def test_execute_sequence(aconn):
     cur = aconn.cursor()
-    rv = await cur.execute("select %s::int, %s::text, %s::text", [1, "foo", None])
+    rv = await cur.execute(
+        ph(cur, "select %s::int, %s::text, %s::text"), [1, "foo", None]
+    )
     assert rv is cur
     assert len(cur._results) == 1
     assert cur.pgresult.get_value(0, 0) == b"1"
@@ -184,8 +188,8 @@ async def test_execute_empty_query(aconn, query):
 async def test_execute_type_change(aconn):
     # issue #112
     await aconn.execute("create table bug_112 (num integer)")
-    sql = "insert into bug_112 (num) values (%s)"
     cur = aconn.cursor()
+    sql = ph(cur, "insert into bug_112 (num) values (%s)")
     await cur.execute(sql, (1,))
     await cur.execute(sql, (100_000,))
     await cur.execute("select num from bug_112 order by num")
@@ -194,8 +198,8 @@ async def test_execute_type_change(aconn):
 
 async def test_executemany_type_change(aconn):
     await aconn.execute("create table bug_112 (num integer)")
-    sql = "insert into bug_112 (num) values (%s)"
     cur = aconn.cursor()
+    sql = ph(cur, "insert into bug_112 (num) values (%s)")
     await cur.executemany(sql, [(1,), (100_000,)])
     await cur.execute("select num from bug_112 order by num")
     assert (await cur.fetchall()) == [(1,), (100_000,)]
@@ -213,7 +217,7 @@ async def test_execute_copy(aconn, query):
 
 async def test_fetchone(aconn):
     cur = aconn.cursor()
-    await cur.execute("select %s::int, %s::text, %s::text", [1, "foo", None])
+    await cur.execute(ph(cur, "select %s::int, %s::text, %s::text"), [1, "foo", None])
     assert cur.pgresult.fformat(0) == 0
 
     row = await cur.fetchone()
@@ -227,7 +231,7 @@ async def test_binary_cursor_execute(aconn):
         aconn.cursor_factory is psycopg.AsyncClientCursor, psycopg.NotSupportedError
     ) as ex:
         cur = aconn.cursor(binary=True)
-        await cur.execute("select %s, %s", [1, None])
+        await cur.execute(ph(cur, "select %s, %s"), [1, None])
     if ex:
         return
 
@@ -241,7 +245,7 @@ async def test_execute_binary(aconn):
     with raiseif(
         aconn.cursor_factory is psycopg.AsyncClientCursor, psycopg.NotSupportedError
     ) as ex:
-        await cur.execute("select %s, %s", [1, None], binary=True)
+        await cur.execute(ph(cur, "select %s, %s"), [1, None], binary=True)
     if ex:
         return
 
@@ -252,7 +256,7 @@ async def test_execute_binary(aconn):
 
 async def test_binary_cursor_text_override(aconn):
     cur = aconn.cursor(binary=True)
-    await cur.execute("select %s, %s", [1, None], binary=False)
+    await cur.execute(ph(cur, "select %s, %s"), [1, None], binary=False)
     assert (await cur.fetchone()) == (1, None)
     assert cur.pgresult.fformat(0) == 0
     assert cur.pgresult.get_value(0, 0) == b"1"
@@ -278,7 +282,7 @@ async def test_query_badenc(aconn, encoding):
 async def test_executemany(aconn, execmany):
     cur = aconn.cursor()
     await cur.executemany(
-        "insert into execmany(num, data) values (%s, %s)",
+        ph(cur, "insert into execmany(num, data) values (%s, %s)"),
         [(10, "hello"), (20, "world")],
     )
     await cur.execute("select num, data from execmany order by 1")
@@ -289,7 +293,7 @@ async def test_executemany(aconn, execmany):
 async def test_executemany_name(aconn, execmany):
     cur = aconn.cursor()
     await cur.executemany(
-        "insert into execmany(num, data) values (%(num)s, %(data)s)",
+        ph(cur, "insert into execmany(num, data) values (%(num)s, %(data)s)"),
         [{"num": 11, "data": "hello", "x": 1}, {"num": 21, "data": "world"}],
     )
     await cur.execute("select num, data from execmany order by 1")
@@ -299,14 +303,16 @@ async def test_executemany_name(aconn, execmany):
 
 async def test_executemany_no_data(aconn, execmany):
     cur = aconn.cursor()
-    await cur.executemany("insert into execmany(num, data) values (%s, %s)", [])
+    await cur.executemany(
+        ph(cur, "insert into execmany(num, data) values (%s, %s)"), []
+    )
     assert cur.rowcount == 0
 
 
 async def test_executemany_rowcount(aconn, execmany):
     cur = aconn.cursor()
     await cur.executemany(
-        "insert into execmany(num, data) values (%s, %s)",
+        ph(cur, "insert into execmany(num, data) values (%s, %s)"),
         [(10, "hello"), (20, "world")],
     )
     assert cur.rowcount == 2
@@ -315,7 +321,7 @@ async def test_executemany_rowcount(aconn, execmany):
 async def test_executemany_returning(aconn, execmany):
     cur = aconn.cursor()
     await cur.executemany(
-        "insert into execmany(num, data) values (%s, %s) returning num",
+        ph(cur, "insert into execmany(num, data) values (%s, %s) returning num"),
         [(10, "hello"), (20, "world")],
         returning=True,
     )
@@ -330,7 +336,7 @@ async def test_executemany_returning(aconn, execmany):
 async def test_executemany_returning_discard(aconn, execmany):
     cur = aconn.cursor()
     await cur.executemany(
-        "insert into execmany(num, data) values (%s, %s) returning num",
+        ph(cur, "insert into execmany(num, data) values (%s, %s) returning num"),
         [(10, "hello"), (20, "world")],
     )
     assert cur.rowcount == 2
@@ -342,7 +348,7 @@ async def test_executemany_returning_discard(aconn, execmany):
 async def test_executemany_no_result(aconn, execmany):
     cur = aconn.cursor()
     await cur.executemany(
-        "insert into execmany(num, data) values (%s, %s)",
+        ph(cur, "insert into execmany(num, data) values (%s, %s)"),
         [(10, "hello"), (20, "world")],
         returning=True,
     )
@@ -360,12 +366,12 @@ async def test_executemany_no_result(aconn, execmany):
 
 async def test_executemany_rowcount_no_hit(aconn, execmany):
     cur = aconn.cursor()
-    await cur.executemany("delete from execmany where id = %s", [(-1,), (-2,)])
+    await cur.executemany(ph(cur, "delete from execmany where id = %s"), [(-1,), (-2,)])
     assert cur.rowcount == 0
-    await cur.executemany("delete from execmany where id = %s", [])
+    await cur.executemany(ph(cur, "delete from execmany where id = %s"), [])
     assert cur.rowcount == 0
     await cur.executemany(
-        "delete from execmany where id = %s returning num", [(-1,), (-2,)]
+        ph(cur, "delete from execmany where id = %s returning num"), [(-1,), (-2,)]
     )
     assert cur.rowcount == 0
 
@@ -381,7 +387,7 @@ async def test_executemany_rowcount_no_hit(aconn, execmany):
 async def test_executemany_badquery(aconn, query):
     cur = aconn.cursor()
     with pytest.raises(psycopg.DatabaseError):
-        await cur.executemany(query, [(10, "hello"), (20, "world")])
+        await cur.executemany(ph(cur, query), [(10, "hello"), (20, "world")])
 
 
 @pytest.mark.parametrize("fmt_in", PyFormat)
@@ -389,12 +395,12 @@ async def test_executemany_null_first(aconn, fmt_in):
     cur = aconn.cursor()
     await cur.execute("create table testmany (a bigint, b bigint)")
     await cur.executemany(
-        f"insert into testmany values (%{fmt_in.value}, %{fmt_in.value})",
+        ph(cur, f"insert into testmany values (%{fmt_in.value}, %{fmt_in.value})"),
         [[1, None], [3, 4]],
     )
     with pytest.raises((psycopg.DataError, psycopg.ProgrammingError)):
         await cur.executemany(
-            f"insert into testmany values (%{fmt_in.value}, %{fmt_in.value})",
+            ph(cur, f"insert into testmany values (%{fmt_in.value}, %{fmt_in.value})"),
             [[1, ""], [3, 4]],
         )
 
@@ -597,7 +603,7 @@ async def test_scroll(aconn):
 )
 async def test_execute_params_named(aconn, query, params, want):
     cur = aconn.cursor()
-    await cur.execute(query, params)
+    await cur.execute(ph(cur, query), params)
     rec = await cur.fetchone()
     assert rec == want
 
@@ -606,7 +612,7 @@ async def test_stream(aconn):
     cur = aconn.cursor()
     recs = []
     async for rec in cur.stream(
-        "select i, '2021-01-01'::date + i from generate_series(1, %s) as i",
+        ph(cur, "select i, '2021-01-01'::date + i from generate_series(1, %s) as i"),
         [2],
     ):
         recs.append(rec)

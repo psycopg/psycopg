@@ -15,6 +15,8 @@ Psycopg 3.2 (unreleased)
 
 - Add support for integer, floating point, boolean `NumPy scalar types`__
   (:ticket:`#332`).
+- Add :ref:`raw-query-cursors` to execute queries using placeholders in
+  PostgreSQL format (`$1`, `$2`...) (:ticket:`#560`).
 - Add support for libpq functions to close prepared statements and portals
   introduced in libpq v17 (:ticket:`#603`).
 - Disable receiving more than one result on the same cursor in pipeline mode,

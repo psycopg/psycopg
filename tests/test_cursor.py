@@ -2,10 +2,11 @@
 Tests common to psycopg.Cursor and its subclasses.
 """
 
+import re
 import pickle
 import weakref
 import datetime as dt
-from typing import List, Union
+from typing import Any, List, Match, Union
 from contextlib import closing
 
 import pytest
@@ -21,10 +22,29 @@ from .utils import gc_collect, raiseif
 from .fix_crdb import is_crdb, crdb_encoding, crdb_time_precision
 
 
-@pytest.fixture(params=[psycopg.Cursor, psycopg.ClientCursor])
+@pytest.fixture(params=[psycopg.Cursor, psycopg.ClientCursor, psycopg.RawCursor])
 def conn(conn, request):
     conn.cursor_factory = request.param
     return conn
+
+
+def ph(cur: Any, query: str) -> str:
+    """Change placeholders in a query from %s to $n if testing  a raw cursor"""
+    if not isinstance(cur, (psycopg.RawCursor, psycopg.AsyncRawCursor)):
+        return query
+
+    if "%(" in query:
+        raise pytest.skip("RawCursor only supports positional placeholders")
+
+    n = 1
+
+    def s(m: Match[str]) -> str:
+        nonlocal n
+        rv = f"${n}"
+        n += 1
+        return rv
+
+    return re.sub(r"(?<!%)(%[bst])", s, query)
 
 
 def test_init(conn):
@@ -168,7 +188,7 @@ def test_execute_many_results(conn):
 
 def test_execute_sequence(conn):
     cur = conn.cursor()
-    rv = cur.execute("select %s::int, %s::text, %s::text", [1, "foo", None])
+    rv = cur.execute(ph(cur, "select %s::int, %s::text, %s::text"), [1, "foo", None])
     assert rv is cur
     assert len(cur._results) == 1
     assert cur.pgresult.get_value(0, 0) == b"1"
@@ -189,8 +209,8 @@ def test_execute_empty_query(conn, query):
 def test_execute_type_change(conn):
     # issue #112
     conn.execute("create table bug_112 (num integer)")
-    sql = "insert into bug_112 (num) values (%s)"
     cur = conn.cursor()
+    sql = ph(cur, "insert into bug_112 (num) values (%s)")
     cur.execute(sql, (1,))
     cur.execute(sql, (100_000,))
     cur.execute("select num from bug_112 order by num")
@@ -199,8 +219,8 @@ def test_execute_type_change(conn):
 
 def test_executemany_type_change(conn):
     conn.execute("create table bug_112 (num integer)")
-    sql = "insert into bug_112 (num) values (%s)"
     cur = conn.cursor()
+    sql = ph(cur, "insert into bug_112 (num) values (%s)")
     cur.executemany(sql, [(1,), (100_000,)])
     cur.execute("select num from bug_112 order by num")
     assert cur.fetchall() == [(1,), (100_000,)]
@@ -218,7 +238,7 @@ def test_execute_copy(conn, query):
 
 def test_fetchone(conn):
     cur = conn.cursor()
-    cur.execute("select %s::int, %s::text, %s::text", [1, "foo", None])
+    cur.execute(ph(cur, "select %s::int, %s::text, %s::text"), [1, "foo", None])
     assert cur.pgresult.fformat(0) == 0
 
     row = cur.fetchone()
@@ -232,7 +252,7 @@ def test_binary_cursor_execute(conn):
         conn.cursor_factory is psycopg.ClientCursor, psycopg.NotSupportedError
     ) as ex:
         cur = conn.cursor(binary=True)
-        cur.execute("select %s, %s", [1, None])
+        cur.execute(ph(cur, "select %s, %s"), [1, None])
     if ex:
         return
 
@@ -246,7 +266,7 @@ def test_execute_binary(conn):
     with raiseif(
         conn.cursor_factory is psycopg.ClientCursor, psycopg.NotSupportedError
     ) as ex:
-        cur.execute("select %s, %s", [1, None], binary=True)
+        cur.execute(ph(cur, "select %s, %s"), [1, None], binary=True)
     if ex:
         return
 
@@ -257,7 +277,7 @@ def test_execute_binary(conn):
 
 def test_binary_cursor_text_override(conn):
     cur = conn.cursor(binary=True)
-    cur.execute("select %s, %s", [1, None], binary=False)
+    cur.execute(ph(cur, "select %s, %s"), [1, None], binary=False)
     assert cur.fetchone() == (1, None)
     assert cur.pgresult.fformat(0) == 0
     assert cur.pgresult.get_value(0, 0) == b"1"
@@ -299,7 +319,7 @@ def execmany(svcconn, _execmany):
 def test_executemany(conn, execmany):
     cur = conn.cursor()
     cur.executemany(
-        "insert into execmany(num, data) values (%s, %s)",
+        ph(cur, "insert into execmany(num, data) values (%s, %s)"),
         [(10, "hello"), (20, "world")],
     )
     cur.execute("select num, data from execmany order by 1")
@@ -309,7 +329,7 @@ def test_executemany(conn, execmany):
 def test_executemany_name(conn, execmany):
     cur = conn.cursor()
     cur.executemany(
-        "insert into execmany(num, data) values (%(num)s, %(data)s)",
+        ph(cur, "insert into execmany(num, data) values (%(num)s, %(data)s)"),
         [{"num": 11, "data": "hello", "x": 1}, {"num": 21, "data": "world"}],
     )
     cur.execute("select num, data from execmany order by 1")
@@ -318,14 +338,14 @@ def test_executemany_name(conn, execmany):
 
 def test_executemany_no_data(conn, execmany):
     cur = conn.cursor()
-    cur.executemany("insert into execmany(num, data) values (%s, %s)", [])
+    cur.executemany(ph(cur, "insert into execmany(num, data) values (%s, %s)"), [])
     assert cur.rowcount == 0
 
 
 def test_executemany_rowcount(conn, execmany):
     cur = conn.cursor()
     cur.executemany(
-        "insert into execmany(num, data) values (%s, %s)",
+        ph(cur, "insert into execmany(num, data) values (%s, %s)"),
         [(10, "hello"), (20, "world")],
     )
     assert cur.rowcount == 2
@@ -334,7 +354,7 @@ def test_executemany_rowcount(conn, execmany):
 def test_executemany_returning(conn, execmany):
     cur = conn.cursor()
     cur.executemany(
-        "insert into execmany(num, data) values (%s, %s) returning num",
+        ph(cur, "insert into execmany(num, data) values (%s, %s) returning num"),
         [(10, "hello"), (20, "world")],
         returning=True,
     )
@@ -349,7 +369,7 @@ def test_executemany_returning(conn, execmany):
 def test_executemany_returning_discard(conn, execmany):
     cur = conn.cursor()
     cur.executemany(
-        "insert into execmany(num, data) values (%s, %s) returning num",
+        ph(cur, "insert into execmany(num, data) values (%s, %s) returning num"),
         [(10, "hello"), (20, "world")],
     )
     assert cur.rowcount == 2
@@ -361,7 +381,7 @@ def test_executemany_returning_discard(conn, execmany):
 def test_executemany_no_result(conn, execmany):
     cur = conn.cursor()
     cur.executemany(
-        "insert into execmany(num, data) values (%s, %s)",
+        ph(cur, "insert into execmany(num, data) values (%s, %s)"),
         [(10, "hello"), (20, "world")],
         returning=True,
     )
@@ -379,11 +399,13 @@ def test_executemany_no_result(conn, execmany):
 
 def test_executemany_rowcount_no_hit(conn, execmany):
     cur = conn.cursor()
-    cur.executemany("delete from execmany where id = %s", [(-1,), (-2,)])
+    cur.executemany(ph(cur, "delete from execmany where id = %s"), [(-1,), (-2,)])
     assert cur.rowcount == 0
-    cur.executemany("delete from execmany where id = %s", [])
+    cur.executemany(ph(cur, "delete from execmany where id = %s"), [])
     assert cur.rowcount == 0
-    cur.executemany("delete from execmany where id = %s returning num", [(-1,), (-2,)])
+    cur.executemany(
+        ph(cur, "delete from execmany where id = %s returning num"), [(-1,), (-2,)]
+    )
     assert cur.rowcount == 0
 
 
@@ -398,7 +420,7 @@ def test_executemany_rowcount_no_hit(conn, execmany):
 def test_executemany_badquery(conn, query):
     cur = conn.cursor()
     with pytest.raises(psycopg.DatabaseError):
-        cur.executemany(query, [(10, "hello"), (20, "world")])
+        cur.executemany(ph(cur, query), [(10, "hello"), (20, "world")])
 
 
 @pytest.mark.parametrize("fmt_in", PyFormat)
@@ -406,7 +428,7 @@ def test_executemany_null_first(conn, fmt_in):
     cur = conn.cursor()
     cur.execute("create table testmany (a bigint, b bigint)")
     cur.executemany(
-        f"insert into testmany values (%{fmt_in.value}, %{fmt_in.value})",
+        ph(cur, f"insert into testmany values (%{fmt_in.value}, %{fmt_in.value})"),
         [[1, None], [3, 4]],
     )
     with pytest.raises((psycopg.DataError, psycopg.ProgrammingError)):
@@ -610,7 +632,7 @@ def test_scroll(conn):
 )
 def test_execute_params_named(conn, query, params, want):
     cur = conn.cursor()
-    cur.execute(query, params)
+    cur.execute(ph(cur, query), params)
     rec = cur.fetchone()
     assert rec == want
 
@@ -619,7 +641,7 @@ def test_stream(conn):
     cur = conn.cursor()
     recs = []
     for rec in cur.stream(
-        "select i, '2021-01-01'::date + i from generate_series(1, %s) as i",
+        ph(cur, "select i, '2021-01-01'::date + i from generate_series(1, %s) as i"),
         [2],
     ):
         recs.append(rec)
