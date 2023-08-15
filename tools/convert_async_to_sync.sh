@@ -14,6 +14,7 @@ for async in \
     tests/test_cursor_async.py \
     tests/test_default_cursor_async.py \
     tests/test_pipeline_async.py \
+    tests/test_prepared_async.py \
     tests/test_raw_cursor_async.py \
     tests/test_server_cursor_async.py
 do
