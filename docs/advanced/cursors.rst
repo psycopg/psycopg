@@ -191,6 +191,7 @@ directly call the fetch methods, skipping the `~ServerCursor.execute()` call:
     for record in cur:  # or cur.fetchone(), cur.fetchmany()...
         # do something with record
 
+
 .. _raw-query-cursors:
 
 Raw Query Cursors
@@ -198,11 +199,12 @@ Raw Query Cursors
 
 .. versionadded:: 3.2
 
-Raw query cursors allow users to use PostgreSQL native placeholders ($1, $2,
-etc.) in their queries instead of the standard %s placeholder. This can be
-useful when it's desirable to pass the query unmodified to PostgreSQL and rely
-on PostgreSQL's placeholder functionality, such as when dealing with a very
-complex query containing %s inside strings, dollar-quoted strings or elsewhere.
+The `RawCursor` and `AsyncRawCursor` classes allow users to use PostgreSQL
+native placeholders (``$1``, ``$2``, etc.) in their queries instead of the
+standard ``%s`` placeholder. This can be useful when it's desirable to pass
+the query unmodified to PostgreSQL and rely on PostgreSQL's placeholder
+functionality, such as when dealing with a very complex query containing
+``%s`` inside strings, dollar-quoted strings or elsewhere.
 
 One important note is that raw query cursors only accept positional arguments
 in the form of a list or tuple. This means you cannot use named arguments

@@ -315,6 +315,20 @@ The `!Cursor` class
           is text or binary.
 
 
+The `!RawCursor` class
+----------------------
+
+.. seealso:: See :ref:`raw-query-cursors` for details.
+
+.. autoclass:: RawCursor
+
+    This `Cursor` subclass has the same interface of the parent class but
+    supports placeholders in PostgreSQL format (``$1``, ``$2``...) rather than
+    in Python format (``%s``). Only positional parameters are supported.
+
+    .. versionadded:: 3.2
+
+
 The `!ClientCursor` class
 -------------------------
 
@@ -445,8 +459,13 @@ The `!ServerCursor` class
         .. _MOVE: https://www.postgresql.org/docs/current/sql-fetch.html
 
 
-The `!AsyncCursor` class
-------------------------
+Async cursor classes
+--------------------
+
+Every `Cursor` class has an equivalent `!Async` version exposing the same
+semantic with an `!async` interface. The main interface is described in
+`AsyncCursor`.
+
 
 .. autoclass:: AsyncCursor
 
@@ -506,20 +525,23 @@ The `!AsyncCursor` class
         to iterate on the async cursor results.
 
 
-The `!AsyncClientCursor` class
-------------------------------
+
+.. autoclass:: AsyncRawCursor
+
+    This class is the `!async` equivalent of `RawCursor`. The differences 
+    w.r.t. the sync counterpart are the same described in `AsyncCursor`.
+
+    .. versionadded:: 3.2
+
 
 .. autoclass:: AsyncClientCursor
 
-    This class is the `!async` equivalent of the `ClientCursor`. The
-    difference are the same shown in `AsyncCursor`.
+    This class is the `!async` equivalent of `ClientCursor`. The differences
+    w.r.t. the sync counterpart are the same described in `AsyncCursor`.
 
     .. versionadded:: 3.1
 
 
-
-The `!AsyncServerCursor` class
-------------------------------
 
 .. autoclass:: AsyncServerCursor
 
