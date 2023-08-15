@@ -16,7 +16,9 @@ for async in \
     tests/test_pipeline_async.py \
     tests/test_prepared_async.py \
     tests/test_raw_cursor_async.py \
-    tests/test_server_cursor_async.py
+    tests/test_server_cursor_async.py \
+    tests/test_tpc_async.py \
+    tests/test_transaction_async.py
 do
     sync=${async/_async/}
     echo "converting '${async}' -> '${sync}'" >&2

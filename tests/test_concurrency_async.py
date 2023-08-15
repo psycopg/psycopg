@@ -357,3 +357,45 @@ async def test_concurrent_close(dsn, aconn):
             assert t - t0 < 2
 
     await asyncio.wait_for(test(), 5.0)
+
+
+@pytest.mark.parametrize("what", ["commit", "rollback", "error"])
+async def test_transaction_concurrency(aconn, what):
+    await aconn.set_autocommit(True)
+
+    evs = [asyncio.Event() for i in range(3)]
+
+    async def worker(unlock, wait_on):
+        with pytest.raises(e.ProgrammingError) as ex:
+            async with aconn.transaction():
+                unlock.set()
+                await wait_on.wait()
+                await aconn.execute("select 1")
+
+                if what == "error":
+                    1 / 0
+                elif what == "rollback":
+                    raise psycopg.Rollback()
+                else:
+                    assert what == "commit"
+
+        if what == "error":
+            assert "transaction rollback" in str(ex.value)
+            assert isinstance(ex.value.__context__, ZeroDivisionError)
+        elif what == "rollback":
+            assert "transaction rollback" in str(ex.value)
+            assert isinstance(ex.value.__context__, psycopg.Rollback)
+        else:
+            assert "transaction commit" in str(ex.value)
+
+    # Start a first transaction in a task
+    t1 = create_task(worker(unlock=evs[0], wait_on=evs[1]))
+    await evs[0].wait()
+
+    # Start a nested transaction in a task
+    t2 = create_task(worker(unlock=evs[1], wait_on=evs[2]))
+
+    # Terminate the first transaction before the second does
+    await asyncio.gather(t1)
+    evs[2].set()
+    await asyncio.gather(t2)

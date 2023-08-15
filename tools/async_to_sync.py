@@ -113,6 +113,8 @@ class RenameAsyncToSync(ast.NodeTransformer):
         "AsyncQueuedLibpqWriter": "QueuedLibpqWriter",
         "AsyncRawCursor": "RawCursor",
         "AsyncServerCursor": "ServerCursor",
+        "__aenter__": "__enter__",
+        "__aexit__": "__exit__",
         "aclose": "close",
         "aclosing": "closing",
         "acommands": "commands",
@@ -121,6 +123,7 @@ class RenameAsyncToSync(ast.NodeTransformer):
         "aconn_set": "conn_set",
         "alist": "list",
         "anext": "next",
+        "apipeline": "pipeline",
         "ensure_table_async": "ensure_table",
         "find_insert_problem_async": "find_insert_problem",
     }
