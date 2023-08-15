@@ -4,9 +4,9 @@ import psycopg
 from psycopg import rows, errors as e
 from psycopg.pq import Format
 
-pytestmark = [
-    pytest.mark.crdb_skip("server-side cursor"),
-]
+from .utils import alist
+
+pytestmark = pytest.mark.crdb_skip("server-side cursor")
 
 
 async def test_init_row_factory(aconn):
@@ -51,7 +51,7 @@ async def test_funny_name(aconn):
 
 async def test_repr(aconn):
     cur = aconn.cursor("my-name")
-    assert "psycopg.AsyncServerCursor" in str(cur)
+    assert "psycopg.%s" % psycopg.AsyncServerCursor.__name__ in str(cur)
     assert "my-name" in repr(cur)
     await cur.close()
 
@@ -115,7 +115,7 @@ async def test_execute_binary(aconn):
     assert cur.pgresult.fformat(0) == 1
     assert cur.pgresult.get_value(0, 0) == b"\x00\x00\x00\x02"
 
-    await cur.execute("select generate_series(1, 1)")
+    await cur.execute("select generate_series(1, 1)::int4")
     assert (await cur.fetchone()) == (1,)
     assert cur.pgresult.fformat(0) == 0
     assert cur.pgresult.get_value(0, 0) == b"1"
@@ -407,17 +407,13 @@ async def test_rownumber(aconn):
 async def test_iter(aconn):
     async with aconn.cursor("foo") as cur:
         await cur.execute("select generate_series(1, %s) as bar", (3,))
-        recs = []
-        async for rec in cur:
-            recs.append(rec)
+        recs = await alist(cur)
     assert recs == [(1,), (2,), (3,)]
 
     async with aconn.cursor("foo") as cur:
         await cur.execute("select generate_series(1, %s) as bar", (3,))
         assert await cur.fetchone() == (1,)
-        recs = []
-        async for rec in cur:
-            recs.append(rec)
+        recs = await alist(cur)
     assert recs == [(2,), (3,)]
 
 
@@ -435,8 +431,7 @@ async def test_itersize(aconn, acommands):
         await cur.execute("select generate_series(1, %s) as bar", (3,))
         acommands.popall()  # flush begin and other noise
 
-        async for rec in cur:
-            pass
+        await alist(cur)
         cmds = acommands.popall()
         assert len(cmds) == 2
         for cmd in cmds:
@@ -516,9 +511,7 @@ async def test_hold(aconn):
 @pytest.mark.parametrize("row_factory", ["tuple_row", "namedtuple_row"])
 async def test_steal_cursor(aconn, row_factory):
     cur1 = aconn.cursor()
-    await cur1.execute(
-        "declare test cursor without hold for select generate_series(1, 6) as s"
-    )
+    await cur1.execute("declare test cursor for select generate_series(1, 6) as s")
 
     cur2 = aconn.cursor("test", row_factory=getattr(rows, row_factory))
     # can call fetch without execute

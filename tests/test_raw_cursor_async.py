@@ -20,7 +20,7 @@ async def test_default_cursor(aconn):
 
 async def test_str(aconn):
     cur = aconn.cursor()
-    assert "psycopg.AsyncRawCursor" in str(cur)
+    assert "psycopg.%s" % psycopg.AsyncRawCursor.__name__ in str(cur)
 
 
 async def test_sequence_only(aconn):

@@ -19,6 +19,11 @@ async def test_default_cursor(aconn):
     assert type(cur) is psycopg.AsyncClientCursor
 
 
+async def test_str(aconn):
+    cur = aconn.cursor()
+    assert "psycopg.%s" % psycopg.AsyncClientCursor.__name__ in str(cur)
+
+
 async def test_from_cursor_factory(aconn_cls, dsn):
     async with await aconn_cls.connect(
         dsn, cursor_factory=psycopg.AsyncClientCursor

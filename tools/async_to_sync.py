@@ -115,6 +115,7 @@ class RenameAsyncToSync(ast.NodeTransformer):
         "AsyncServerCursor": "ServerCursor",
         "aclose": "close",
         "aclosing": "closing",
+        "acommands": "commands",
         "aconn": "conn",
         "aconn_cls": "conn_cls",
         "aconn_set": "conn_set",

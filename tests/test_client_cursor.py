@@ -22,6 +22,11 @@ def test_default_cursor(conn):
     assert type(cur) is psycopg.ClientCursor
 
 
+def test_str(conn):
+    cur = conn.cursor()
+    assert "psycopg.%s" % psycopg.ClientCursor.__name__ in str(cur)
+
+
 def test_from_cursor_factory(conn_cls, dsn):
     with conn_cls.connect(dsn, cursor_factory=psycopg.ClientCursor) as conn:
         cur = conn.cursor()

@@ -25,7 +25,7 @@ async def test_from_cursor_factory(aconn_cls, dsn):
 
 async def test_str(aconn):
     cur = aconn.cursor()
-    assert "psycopg.AsyncCursor" in str(cur)
+    assert "psycopg.%s" % psycopg.AsyncCursor.__name__ in str(cur)
 
 
 async def test_execute_many_results_param(aconn):
