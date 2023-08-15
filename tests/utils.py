@@ -3,6 +3,7 @@ import re
 import sys
 import operator
 from typing import Callable, Optional, Tuple
+from contextlib import contextmanager
 
 import pytest
 
@@ -177,3 +178,21 @@ def gc_count() -> int:
 
 async def alist(it):
     return [i async for i in it]
+
+
+@contextmanager
+def raiseif(cond, *args, **kwargs):
+    """
+    Context behaving like `pytest.raises` if cond is true, else no-op.
+
+    Return None if no error was thrown (i.e. condition is false), else
+    return what `pytest.raises` returns.
+    """
+    if not cond:
+        yield
+        return
+
+    else:
+        with pytest.raises(*args, **kwargs) as ex:
+            yield ex
+        return

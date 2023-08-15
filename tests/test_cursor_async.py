@@ -4,10 +4,11 @@ import datetime as dt
 from typing import List
 
 import psycopg
-from psycopg import pq, sql, rows
+from psycopg import sql, rows
 from psycopg.adapt import PyFormat
+from psycopg.types import TypeInfo
 
-from .utils import gc_collect, gc_count
+from .utils import alist, gc_collect, raiseif
 from .test_cursor import my_row_factory
 from .test_cursor import execmany, _execmany  # noqa: F401
 from .fix_crdb import crdb_encoding
@@ -15,19 +16,25 @@ from .fix_crdb import crdb_encoding
 execmany = execmany  # avoid F811 underneath
 
 
+@pytest.fixture(params=[psycopg.AsyncCursor, psycopg.AsyncClientCursor])
+def aconn(aconn, request, anyio_backend):
+    aconn.cursor_factory = request.param
+    return aconn
+
+
 async def test_init(aconn):
-    cur = psycopg.AsyncCursor(aconn)
+    cur = aconn.cursor_factory(aconn)
     await cur.execute("select 1")
     assert (await cur.fetchone()) == (1,)
 
     aconn.row_factory = rows.dict_row
-    cur = psycopg.AsyncCursor(aconn)
+    cur = aconn.cursor_factory(aconn)
     await cur.execute("select 1 as a")
     assert (await cur.fetchone()) == {"a": 1}
 
 
 async def test_init_factory(aconn):
-    cur = psycopg.AsyncCursor(aconn, row_factory=rows.dict_row)
+    cur = aconn.cursor_factory(aconn, row_factory=rows.dict_row)
     await cur.execute("select 1 as a")
     assert (await cur.fetchone()) == {"a": 1}
 
@@ -131,6 +138,12 @@ async def test_statusmessage(aconn):
     assert cur.statusmessage is None
 
 
+async def test_execute_sql(aconn):
+    cur = aconn.cursor()
+    await cur.execute(sql.SQL("select {value}").format(value="hello"))
+    assert (await cur.fetchone()) == ("hello",)
+
+
 async def test_execute_many_results(aconn):
     cur = aconn.cursor()
     assert cur.nextset() is None
@@ -210,8 +223,14 @@ async def test_fetchone(aconn):
 
 
 async def test_binary_cursor_execute(aconn):
-    cur = aconn.cursor(binary=True)
-    await cur.execute("select %s, %s", [1, None])
+    with raiseif(
+        aconn.cursor_factory is psycopg.AsyncClientCursor, psycopg.NotSupportedError
+    ) as ex:
+        cur = aconn.cursor(binary=True)
+        await cur.execute("select %s, %s", [1, None])
+    if ex:
+        return
+
     assert (await cur.fetchone()) == (1, None)
     assert cur.pgresult.fformat(0) == 1
     assert cur.pgresult.get_value(0, 0) == b"\x00\x01"
@@ -219,7 +238,13 @@ async def test_binary_cursor_execute(aconn):
 
 async def test_execute_binary(aconn):
     cur = aconn.cursor()
-    await cur.execute("select %s, %s", [1, None], binary=True)
+    with raiseif(
+        aconn.cursor_factory is psycopg.AsyncClientCursor, psycopg.NotSupportedError
+    ) as ex:
+        await cur.execute("select %s, %s", [1, None], binary=True)
+    if ex:
+        return
+
     assert (await cur.fetchone()) == (1, None)
     assert cur.pgresult.fformat(0) == 1
     assert cur.pgresult.get_value(0, 0) == b"\x00\x01"
@@ -451,10 +476,7 @@ select x from generate_series(4, 6) x;
 async def test_iter(aconn):
     cur = aconn.cursor()
     await cur.execute("select generate_series(1, 3)")
-    res = []
-    async for rec in cur:
-        res.append(rec)
-    assert res == [(1,), (2,), (3,)]
+    assert await alist(cur) == [(1,), (2,), (3,)]
 
 
 async def test_iter_stop(aconn):
@@ -475,6 +497,11 @@ async def test_iter_stop(aconn):
 
 async def test_row_factory(aconn):
     cur = aconn.cursor(row_factory=my_row_factory)
+
+    await cur.execute("reset search_path")
+    with pytest.raises(psycopg.ProgrammingError):
+        await cur.fetchone()
+
     await cur.execute("select 'foo' as bar")
     (r,) = await cur.fetchone()
     assert r == "FOObar"
@@ -560,32 +587,19 @@ async def test_scroll(aconn):
         await cur.scroll(1, "wat")
 
 
-async def test_query_params_execute(aconn):
+@pytest.mark.parametrize(
+    "query, params, want",
+    [
+        ("select %(x)s", {"x": 1}, (1,)),
+        ("select %(x)s, %(y)s", {"x": 1, "y": 2}, (1, 2)),
+        ("select %(x)s, %(x)s", {"x": 1}, (1, 1)),
+    ],
+)
+async def test_execute_params_named(aconn, query, params, want):
     cur = aconn.cursor()
-    assert cur._query is None
-
-    await cur.execute("select %t, %s::text", [1, None])
-    assert cur._query is not None
-    assert cur._query.query == b"select $1, $2::text"
-    assert cur._query.params == [b"1", None]
-
-    await cur.execute("select 1")
-    assert cur._query.query == b"select 1"
-    assert not cur._query.params
-
-    with pytest.raises(psycopg.DataError):
-        await cur.execute("select %t::int", ["wat"])
-
-    assert cur._query.query == b"select $1::int"
-    assert cur._query.params == [b"wat"]
-
-
-async def test_query_params_executemany(aconn):
-    cur = aconn.cursor()
-
-    await cur.executemany("select %t, %t", [[1, 2], [3, 4]])
-    assert cur._query.query == b"select $1, $2"
-    assert cur._query.params == [b"3", b"4"]
+    await cur.execute(query, params)
+    rec = await cur.fetchone()
+    assert rec == want
 
 
 async def test_stream(aconn):
@@ -602,13 +616,13 @@ async def test_stream(aconn):
 
 async def test_stream_sql(aconn):
     cur = aconn.cursor()
-    recs = []
-    async for rec in cur.stream(
-        sql.SQL(
-            "select i, '2021-01-01'::date + i from generate_series(1, {}) as i"
-        ).format(2)
-    ):
-        recs.append(rec)
+    recs = await alist(
+        cur.stream(
+            sql.SQL(
+                "select i, '2021-01-01'::date + i from generate_series(1, {}) as i"
+            ).format(2)
+        )
+    )
 
     assert recs == [(1, dt.date(2021, 1, 2)), (2, dt.date(2021, 1, 3))]
 
@@ -691,8 +705,9 @@ async def test_stream_error_python_consumed(aconn):
     assert aconn.info.transaction_status == aconn.TransactionStatus.INTRANS
 
 
-async def test_stream_close(aconn):
-    await aconn.set_autocommit(True)
+@pytest.mark.parametrize("autocommit", [False, True])
+async def test_stream_close(aconn, autocommit):
+    await aconn.set_autocommit(autocommit)
     cur = aconn.cursor()
     with pytest.raises(psycopg.OperationalError):
         async for rec in cur.stream("select generate_series(1, 3)"):
@@ -705,27 +720,33 @@ async def test_stream_close(aconn):
 
 
 async def test_stream_binary_cursor(aconn):
-    cur = aconn.cursor(binary=True)
-    recs = []
-    async for rec in cur.stream("select x::int4 from generate_series(1, 2) x"):
-        recs.append(rec)
-        assert cur.pgresult.fformat(0) == 1
-        assert cur.pgresult.get_value(0, 0) == bytes([0, 0, 0, rec[0]])
+    with raiseif(
+        aconn.cursor_factory is psycopg.AsyncClientCursor, psycopg.NotSupportedError
+    ):
+        cur = aconn.cursor(binary=True)
+        recs = []
+        async for rec in cur.stream("select x::int4 from generate_series(1, 2) x"):
+            recs.append(rec)
+            assert cur.pgresult.fformat(0) == 1
+            assert cur.pgresult.get_value(0, 0) == bytes([0, 0, 0, rec[0]])
 
-    assert recs == [(1,), (2,)]
+        assert recs == [(1,), (2,)]
 
 
 async def test_stream_execute_binary(aconn):
     cur = aconn.cursor()
     recs = []
-    async for rec in cur.stream(
-        "select x::int4 from generate_series(1, 2) x", binary=True
+    with raiseif(
+        aconn.cursor_factory is psycopg.AsyncClientCursor, psycopg.NotSupportedError
     ):
-        recs.append(rec)
-        assert cur.pgresult.fformat(0) == 1
-        assert cur.pgresult.get_value(0, 0) == bytes([0, 0, 0, rec[0]])
+        async for rec in cur.stream(
+            "select x::int4 from generate_series(1, 2) x", binary=True
+        ):
+            recs.append(rec)
+            assert cur.pgresult.fformat(0) == 1
+            assert cur.pgresult.get_value(0, 0) == bytes([0, 0, 0, rec[0]])
 
-    assert recs == [(1,), (2,)]
+        assert recs == [(1,), (2,)]
 
 
 async def test_stream_binary_cursor_text_override(aconn):
@@ -741,7 +762,6 @@ async def test_stream_binary_cursor_text_override(aconn):
 
 async def test_str(aconn):
     cur = aconn.cursor()
-    assert "psycopg.AsyncCursor" in str(cur)
     assert "[IDLE]" in str(cur)
     assert "[closed]" not in str(cur)
     assert "[no result]" in str(cur)
@@ -755,49 +775,20 @@ async def test_str(aconn):
     assert "[INTRANS]" in str(cur)
 
 
-@pytest.mark.slow
-@pytest.mark.parametrize("fmt", PyFormat)
-@pytest.mark.parametrize("fmt_out", pq.Format)
-@pytest.mark.parametrize("fetch", ["one", "many", "all", "iter"])
-@pytest.mark.parametrize("row_factory", ["tuple_row", "dict_row", "namedtuple_row"])
-async def test_leak(aconn_cls, dsn, faker, fmt, fmt_out, fetch, row_factory):
-    faker.format = fmt
-    faker.choose_schema(ncols=5)
-    faker.make_records(10)
-    row_factory = getattr(rows, row_factory)
+@pytest.mark.pipeline
+async def test_message_0x33(aconn):
+    # https://github.com/psycopg/psycopg/issues/314
+    notices = []
+    aconn.add_notice_handler(lambda diag: notices.append(diag.message_primary))
 
-    async def work():
-        async with await aconn_cls.connect(dsn) as conn, conn.transaction(
-            force_rollback=True
-        ):
-            async with conn.cursor(binary=fmt_out, row_factory=row_factory) as cur:
-                await cur.execute(faker.drop_stmt)
-                await cur.execute(faker.create_stmt)
-                async with faker.find_insert_problem_async(conn):
-                    await cur.executemany(faker.insert_stmt, faker.records)
-                await cur.execute(faker.select_stmt)
+    await aconn.set_autocommit(True)
+    async with aconn.pipeline():
+        cur = await aconn.execute("select 'test'")
+        assert (await cur.fetchone()) == ("test",)
 
-                if fetch == "one":
-                    while True:
-                        tmp = await cur.fetchone()
-                        if tmp is None:
-                            break
-                elif fetch == "many":
-                    while True:
-                        tmp = await cur.fetchmany(3)
-                        if not tmp:
-                            break
-                elif fetch == "all":
-                    await cur.fetchall()
-                elif fetch == "iter":
-                    async for rec in cur:
-                        pass
+    assert not notices
 
-    n = []
-    gc_collect()
-    for i in range(3):
-        await work()
-        gc_collect()
-        n.append(gc_count())
 
-    assert n[0] == n[1] == n[2], f"objects leaked: {n[1] - n[0]}, {n[2] - n[1]}"
+async def test_typeinfo(aconn):
+    info = await TypeInfo.fetch(aconn, "jsonb")
+    assert info is not None
