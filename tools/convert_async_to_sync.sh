@@ -7,6 +7,16 @@ set -euo pipefail
 dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "${dir}/.."
 
+check=
+
+# If --check is used, give an error if files are changed
+# (note: it's not a --dry-run)
+if [[ ${1:-} == '--check' ]]; then
+    check=1
+fi
+
+outputs=""
+
 for async in \
     tests/test_client_cursor_async.py \
     tests/test_connection_async.py \
@@ -24,4 +34,13 @@ do
     echo "converting '${async}' -> '${sync}'" >&2
     python "${dir}/async_to_sync.py" ${async} > ${sync}
     black -q ${sync}
+    outputs="$outputs ${sync}"
 done
+
+if [[ $check ]]; then
+    if ! git diff --exit-code $outputs; then
+        echo "
+ERROR: sync and async files out of sync!" >&2
+        exit 1
+    fi
+fi
