@@ -13,13 +13,13 @@
   avatar: https://avatars.githubusercontent.com/u/339156?v=4
   name: Command Prompt, Inc.
   website: https://www.commandprompt.com
+  class: square
 
 - username: bitdotioinc
   tier: top
   avatar: https://avatars.githubusercontent.com/u/56135630?v=4
   name: bit.io
   website: https://bit.io/?utm_campaign=sponsorship&utm_source=psycopg2&utm_medium=web
-  keep_website: true
 
 
 - username: yougov
@@ -59,6 +59,7 @@
   avatar: https://avatars.githubusercontent.com/u/7373189?v=4
   name: genropy
   website: http://www.genropy.org
+  class: square
 
 - username: svennek
   tier: mid
@@ -91,6 +92,7 @@
   avatar: https://avatars.githubusercontent.com/u/182275?v=4
   name: Dalibo
   website: http://www.dalibo.com
+  class: square
 
 - username: rafmagns-skepa-dreag
   avatar: https://avatars.githubusercontent.com/u/7447491?v=4
@@ -105,10 +107,12 @@
   avatar: https://avatars.githubusercontent.com/u/446566?v=4
   name: Logilab
   website: http://www.logilab.org
+  class: square
 
 - username: asqui
   avatar: https://avatars.githubusercontent.com/u/174182?v=4
   name: Daniel Fortunov
+  class: square
 
 - username: iqbalabd
   avatar: https://avatars.githubusercontent.com/u/14254614?v=4
@@ -119,6 +123,7 @@
   avatar: https://avatars.githubusercontent.com/u/13053880?v=4
   name: Healthchecks
   website: https://healthchecks.io
+  class: square
 
 - username: c-rindi
   avatar: https://avatars.githubusercontent.com/u/7826876?v=4
