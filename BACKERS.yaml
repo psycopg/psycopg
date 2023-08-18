@@ -138,3 +138,9 @@
   avatar: https://avatars.githubusercontent.com/u/6997008?v=4
   name: Ferpection
   website: https://ferpection.com
+
+- username: webisoftcom
+  avatar: /img/sponsors/webisoft.png
+  name: Webisoft
+  website: https://webisoft.com/django-development
+  class: square
