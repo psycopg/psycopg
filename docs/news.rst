@@ -32,6 +32,8 @@ Psycopg 3.1.11 (unreleased)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 - Fix integer overflow in C/binary extension with OID > 2^31 (:ticket:`#630`).
+- Fix possible lack of critical section guard in async
+  `~AsyncCursor.executemany()`.
 
 
 Current release
