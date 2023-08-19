@@ -10,9 +10,10 @@ from .abc import ConnectionType, Query, Params
 from .sql import Composable
 from .rows import Row
 from ._enums import PyFormat
-from .cursor import BaseCursor, Cursor
+from .cursor import Cursor
 from .cursor_async import AsyncCursor
 from ._queries import PostgresQuery
+from ._cursor_base import BaseCursor
 
 if TYPE_CHECKING:
     from typing import Any  # noqa: F401

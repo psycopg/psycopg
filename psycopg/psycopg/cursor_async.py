@@ -1,12 +1,12 @@
 """
-psycopg async cursor objects
+Psycopg AsyncCursor object
 """
 
 # Copyright (C) 2020 The Psycopg Team
 
 from types import TracebackType
-from typing import Any, AsyncIterator, Iterable, List
-from typing import Optional, Type, TypeVar, TYPE_CHECKING, overload
+from typing import Any, AsyncIterator, Iterable, List, Optional, Type, TypeVar
+from typing import TYPE_CHECKING, overload
 from contextlib import asynccontextmanager
 
 from . import pq
@@ -14,8 +14,8 @@ from . import errors as e
 from .abc import Query, Params
 from .copy import AsyncCopy, AsyncWriter as AsyncCopyWriter
 from .rows import Row, RowMaker, AsyncRowFactory
-from .cursor import BaseCursor
 from ._pipeline import Pipeline
+from ._cursor_base import BaseCursor
 
 if TYPE_CHECKING:
     from .connection_async import AsyncConnection

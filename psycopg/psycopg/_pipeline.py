@@ -20,7 +20,7 @@ from .generators import pipeline_communicate, fetch_many, send
 
 if TYPE_CHECKING:
     from .pq.abc import PGresult
-    from .cursor import BaseCursor
+    from ._cursor_base import BaseCursor
     from .connection import BaseConnection, Connection
     from .connection_async import AsyncConnection
 

@@ -15,7 +15,8 @@ from . import errors as e
 from ._encodings import _as_python_identifier
 
 if TYPE_CHECKING:
-    from .cursor import BaseCursor, Cursor
+    from .cursor import Cursor
+    from ._cursor_base import BaseCursor
     from .cursor_async import AsyncCursor
     from psycopg.pq.abc import PGresult
 

@@ -8,7 +8,7 @@ from typing import Any, NamedTuple, Optional, Sequence, TYPE_CHECKING
 from operator import attrgetter
 
 if TYPE_CHECKING:
-    from .cursor import BaseCursor
+    from ._cursor_base import BaseCursor
 
 
 class ColumnData(NamedTuple):

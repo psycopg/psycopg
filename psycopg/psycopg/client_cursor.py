@@ -14,8 +14,9 @@ from . import adapt
 from . import errors as e
 from .abc import ConnectionType, Query, Params
 from .rows import Row
-from .cursor import BaseCursor, Cursor
+from .cursor import Cursor
 from ._preparing import Prepare
+from ._cursor_base import BaseCursor
 from .cursor_async import AsyncCursor
 
 if TYPE_CHECKING:

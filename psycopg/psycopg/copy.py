@@ -24,7 +24,8 @@ from ._encodings import pgconn_encoding
 from .generators import copy_from, copy_to, copy_end
 
 if TYPE_CHECKING:
-    from .cursor import BaseCursor, Cursor
+    from .cursor import Cursor
+    from ._cursor_base import BaseCursor
     from .cursor_async import AsyncCursor
     from .connection import Connection  # noqa: F401
     from .connection_async import AsyncConnection  # noqa: F401
