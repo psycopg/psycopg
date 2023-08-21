@@ -97,6 +97,8 @@ class AsyncToSync(ast.NodeTransformer):
     def _is_async_call(self, test: ast.AST) -> bool:
         if not isinstance(test, ast.Call):
             return False
+        if not isinstance(test.func, ast.Name):
+            return False
         if test.func.id != "is_async":
             return False
         return True
@@ -107,14 +109,20 @@ class RenameAsyncToSync(ast.NodeTransformer):
         "AsyncClientCursor": "ClientCursor",
         "AsyncConnection": "Connection",
         "AsyncCopy": "Copy",
+        "AsyncCopyWriter": "CopyWriter",
+        "AsyncCursor": "Cursor",
         "AsyncCursor": "Cursor",
         "AsyncFileWriter": "FileWriter",
+        "AsyncIterator": "Iterator",
         "AsyncLibpqWriter": "LibpqWriter",
         "AsyncQueuedLibpqWriter": "QueuedLibpqWriter",
         "AsyncRawCursor": "RawCursor",
+        "AsyncRowFactory": "RowFactory",
         "AsyncServerCursor": "ServerCursor",
+        "AsyncWriter": "Writer",
         "__aenter__": "__enter__",
         "__aexit__": "__exit__",
+        "__aiter__": "__iter__",
         "aclose": "close",
         "aclosing": "closing",
         "acommands": "commands",
@@ -124,6 +132,8 @@ class RenameAsyncToSync(ast.NodeTransformer):
         "alist": "list",
         "anext": "next",
         "apipeline": "pipeline",
+        "asynccontextmanager": "contextmanager",
+        "connection_async": "connection",
         "ensure_table_async": "ensure_table",
         "find_insert_problem_async": "find_insert_problem",
     }
@@ -159,6 +169,56 @@ class RenameAsyncToSync(ast.NodeTransformer):
 
     _skip_imports = {"alist", "anext"}
 
+    def visit_Call(self, node: ast.Call) -> ast.AST:
+        if isinstance(node.func, ast.Name) and node.func.id == "TypeVar":
+            node = self._visit_Call_TypeVar(node)
+
+        self.generic_visit(node)
+        return node
+
+    def _visit_Call_TypeVar(self, node: ast.Call) -> ast.AST:
+        for kw in node.keywords:
+            if kw.arg != "bound":
+                continue
+            if not isinstance(kw.value, ast.Constant):
+                continue
+            if not isinstance(kw.value.value, str):
+                continue
+            kw.value.value = self._visit_type_string(kw.value.value)
+
+        return node
+
+    def _visit_type_string(self, source: str) -> str:
+        # Convert the string to tree, visit, and convert it back to string
+        tree = ast.parse(source)
+        tree = async_to_sync(tree)
+        rv = unparse(tree)
+        return rv
+
+    def visit_ClassDef(self, node: ast.ClassDef) -> ast.AST:
+        node.name = self.names_map.get(node.name, node.name)
+        node = self._fix_base_params(node)
+        self.generic_visit(node)
+        return node
+
+    def _fix_base_params(self, node: ast.ClassDef) -> ast.AST:
+        # Handle :
+        #   class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
+        # the base cannot be a token, even with __future__ annotation.
+        for base in node.bases:
+            if not isinstance(base, ast.Subscript):
+                continue
+            # if not isinstance(base.slice, ast.Tuple):
+            # ast.Tuple is typing.Tuple???
+            if type(base.slice).__name__ != "Tuple":
+                continue
+            for elt in base.slice.elts:
+                if not (isinstance(elt, ast.Constant) and isinstance(elt.value, str)):
+                    continue
+                elt.value = self._visit_type_string(elt.value)
+
+        return node
+
     def visit_ImportFrom(self, node: ast.ImportFrom) -> ast.AST | None:
         # Remove import of async utils eclypsing builtins
         if node.module == "utils":
@@ -166,6 +226,7 @@ class RenameAsyncToSync(ast.NodeTransformer):
             if not node.names:
                 return None
 
+        node.module = self.names_map.get(node.module, node.module)
         for n in node.names:
             n.name = self.names_map.get(n.name, n.name)
         return node

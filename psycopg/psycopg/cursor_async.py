@@ -1,8 +1,10 @@
 """
-Psycopg AsyncCursor object
+Psycopg AsyncCursor object.
 """
 
 # Copyright (C) 2020 The Psycopg Team
+
+from __future__ import annotations
 
 from types import TracebackType
 from typing import Any, AsyncIterator, Iterable, List, Optional, Type, TypeVar
@@ -12,7 +14,7 @@ from contextlib import asynccontextmanager
 from . import pq
 from . import errors as e
 from .abc import Query, Params
-from .copy import AsyncCopy, AsyncWriter as AsyncCopyWriter
+from .copy import AsyncCopy, AsyncWriter
 from .rows import Row, RowMaker, AsyncRowFactory
 from ._pipeline import Pipeline
 from ._cursor_base import BaseCursor
@@ -29,13 +31,13 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
     _Self = TypeVar("_Self", bound="AsyncCursor[Any]")
 
     @overload
-    def __init__(self: "AsyncCursor[Row]", connection: "AsyncConnection[Row]"):
+    def __init__(self: AsyncCursor[Row], connection: AsyncConnection[Row]):
         ...
 
     @overload
     def __init__(
-        self: "AsyncCursor[Row]",
-        connection: "AsyncConnection[Any]",
+        self: AsyncCursor[Row],
+        connection: AsyncConnection[Any],
         *,
         row_factory: AsyncRowFactory[Row],
     ):
@@ -43,7 +45,7 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
 
     def __init__(
         self,
-        connection: "AsyncConnection[Any]",
+        connection: AsyncConnection[Any],
         *,
         row_factory: Optional[AsyncRowFactory[Row]] = None,
     ):
@@ -267,12 +269,10 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
         statement: Query,
         params: Optional[Params] = None,
         *,
-        writer: Optional[AsyncCopyWriter] = None,
+        writer: Optional[AsyncWriter] = None,
     ) -> AsyncIterator[AsyncCopy]:
         """
         Initiate a :sql:`COPY` operation and return an object to manage it.
-
-        :rtype: AsyncCopy
         """
         try:
             async with self._conn.lock:
