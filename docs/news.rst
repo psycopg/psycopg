@@ -7,6 +7,15 @@
 ``psycopg`` release notes
 =========================
 
+Future releases
+---------------
+
+Psycopg 3.1.11 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Fix integer overflow in C/binary extension with OID > 2^31 (:ticket:`#630`).
+
+
 Current release
 ---------------
 
