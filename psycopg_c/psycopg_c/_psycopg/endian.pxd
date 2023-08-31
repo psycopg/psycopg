@@ -131,6 +131,8 @@ cdef extern from * nogil:
 #	define __LITTLE_ENDIAN LITTLE_ENDIAN
 #	define __PDP_ENDIAN    PDP_ENDIAN
 
+#elif defined(__sun)
+#	include <endian.h>
 #else
 
 #	error platform not supported
