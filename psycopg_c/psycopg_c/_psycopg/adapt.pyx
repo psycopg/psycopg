@@ -148,7 +148,7 @@ cdef class CLoader:
     cdef public libpq.Oid oid
     cdef pq.PGconn _pgconn
 
-    def __cinit__(self, int oid, context: Optional[AdaptContext] = None):
+    def __cinit__(self, libpq.Oid oid, context: Optional[AdaptContext] = None):
         self.oid = oid
         conn = context.connection if context is not None else None
         self._pgconn = conn.pgconn if conn is not None else None
