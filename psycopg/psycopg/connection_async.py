@@ -155,11 +155,7 @@ class AsyncConnection(BaseConnection[Row]):
             try:
                 await self.rollback()
             except Exception as exc2:
-                logger.warning(
-                    "error ignored in rollback on %s: %s",
-                    self,
-                    exc2,
-                )
+                logger.warning("error ignored in rollback on %s: %s", self, exc2)
         else:
             await self.commit()
 
@@ -299,9 +295,7 @@ class AsyncConnection(BaseConnection[Row]):
 
     @asynccontextmanager
     async def transaction(
-        self,
-        savepoint_name: Optional[str] = None,
-        force_rollback: bool = False,
+        self, savepoint_name: Optional[str] = None, force_rollback: bool = False
     ) -> AsyncIterator[AsyncTransaction]:
         """
         Start a context block with a new transaction or nested transaction.
@@ -439,14 +433,14 @@ class AsyncConnection(BaseConnection[Row]):
         Commit a prepared two-phase transaction.
         """
         async with self.lock:
-            await self.wait(self._tpc_finish_gen("commit", xid))
+            await self.wait(self._tpc_finish_gen("COMMIT", xid))
 
     async def tpc_rollback(self, xid: Union[Xid, str, None] = None) -> None:
         """
         Roll back a prepared two-phase transaction.
         """
         async with self.lock:
-            await self.wait(self._tpc_finish_gen("rollback", xid))
+            await self.wait(self._tpc_finish_gen("ROLLBACK", xid))
 
     async def tpc_recover(self) -> List[Xid]:
         self._check_tpc()
