@@ -4,8 +4,8 @@ psycopg async connection objects
 
 # Copyright (C) 2020 The Psycopg Team
 
-import sys
-import asyncio
+from __future__ import annotations
+
 import logging
 from types import TracebackType
 from typing import Any, AsyncGenerator, AsyncIterator, Dict, List, Optional
@@ -20,7 +20,7 @@ from ._tpc import Xid
 from .rows import Row, AsyncRowFactory, tuple_row, TupleRow, args_row
 from .adapt import AdaptersMap
 from ._enums import IsolationLevel
-from .conninfo import make_conninfo, conninfo_to_dict, resolve_hostaddr_async
+from .conninfo import make_conninfo, conninfo_to_dict
 from ._pipeline import AsyncPipeline
 from ._encodings import pgconn_encoding
 from .generators import notifies
@@ -28,6 +28,14 @@ from .transaction import AsyncTransaction
 from .cursor_async import AsyncCursor
 from .server_cursor import AsyncServerCursor
 from ._connection_base import BaseConnection, CursorRow, Notify
+
+if True:  # ASYNC
+    import sys
+    import asyncio
+    from asyncio import Lock
+    from .conninfo import resolve_hostaddr_async
+else:
+    from threading import Lock
 
 if TYPE_CHECKING:
     from .pq.abc import PGconn
@@ -38,12 +46,17 @@ BINARY = pq.Format.BINARY
 IDLE = pq.TransactionStatus.IDLE
 INTRANS = pq.TransactionStatus.INTRANS
 
+if True:  # ASYNC
+    _INTERRUPTED = (asyncio.CancelledError, KeyboardInterrupt)
+else:
+    _INTERRUPTED = KeyboardInterrupt
+
 logger = logging.getLogger("psycopg")
 
 
 class AsyncConnection(BaseConnection[Row]):
     """
-    Asynchronous wrapper for a connection to the database.
+    Wrapper for a connection to the database.
     """
 
     __module__ = "psycopg"
@@ -61,7 +74,7 @@ class AsyncConnection(BaseConnection[Row]):
     ):
         super().__init__(pgconn)
         self.row_factory = row_factory
-        self.lock = asyncio.Lock()
+        self.lock = Lock()
         self.cursor_factory = AsyncCursor
         self.server_cursor_factory = AsyncServerCursor
 
@@ -77,7 +90,7 @@ class AsyncConnection(BaseConnection[Row]):
         cursor_factory: Optional[Type[AsyncCursor[Row]]] = None,
         context: Optional[AdaptContext] = None,
         **kwargs: Union[None, int, str],
-    ) -> "AsyncConnection[Row]":
+    ) -> AsyncConnection[Row]:
         # TODO: returned type should be _Self. See #308.
         ...
 
@@ -92,7 +105,7 @@ class AsyncConnection(BaseConnection[Row]):
         cursor_factory: Optional[Type[AsyncCursor[Any]]] = None,
         context: Optional[AdaptContext] = None,
         **kwargs: Union[None, int, str],
-    ) -> "AsyncConnection[TupleRow]":
+    ) -> AsyncConnection[TupleRow]:
         ...
 
     @classmethod  # type: ignore[misc] # https://github.com/python/mypy/issues/11004
@@ -106,16 +119,20 @@ class AsyncConnection(BaseConnection[Row]):
         row_factory: Optional[AsyncRowFactory[Row]] = None,
         cursor_factory: Optional[Type[AsyncCursor[Row]]] = None,
         **kwargs: Any,
-    ) -> "AsyncConnection[Any]":
-        if sys.platform == "win32":
-            loop = asyncio.get_running_loop()
-            if isinstance(loop, asyncio.ProactorEventLoop):
-                raise e.InterfaceError(
-                    "Psycopg cannot use the 'ProactorEventLoop' to run in async"
-                    " mode. Please use a compatible event loop, for instance by"
-                    " setting 'asyncio.set_event_loop_policy"
-                    "(WindowsSelectorEventLoopPolicy())'"
-                )
+    ) -> AsyncConnection[Any]:
+        """
+        Connect to a database server and return a new `AsyncConnection` instance.
+        """
+        if True:  # ASYNC
+            if sys.platform == "win32":
+                loop = asyncio.get_running_loop()
+                if isinstance(loop, asyncio.ProactorEventLoop):
+                    raise e.InterfaceError(
+                        "Psycopg cannot use the 'ProactorEventLoop' to run in async"
+                        " mode. Please use a compatible event loop, for instance by"
+                        " setting 'asyncio.set_event_loop_policy"
+                        "(WindowsSelectorEventLoopPolicy())'"
+                    )
 
         params = await cls._get_connection_params(conninfo, **kwargs)
         conninfo = make_conninfo(**params)
@@ -182,8 +199,9 @@ class AsyncConnection(BaseConnection[Row]):
         else:
             params["connect_timeout"] = None
 
-        # Resolve host addresses in non-blocking way
-        params = await resolve_hostaddr_async(params)
+        if True:  # ASYNC
+            # Resolve host addresses in non-blocking way
+            params = await resolve_hostaddr_async(params)
 
         return params
 
@@ -358,7 +376,7 @@ class AsyncConnection(BaseConnection[Row]):
         """
         try:
             return await waiting.wait_async(gen, self.pgconn.socket, timeout=timeout)
-        except (asyncio.CancelledError, KeyboardInterrupt):
+        except _INTERRUPTED:
             # On Ctrl-C, try to cancel the query in the server, otherwise
             # the connection will remain stuck in ACTIVE state.
             self._try_cancel(self.pgconn)
@@ -374,7 +392,10 @@ class AsyncConnection(BaseConnection[Row]):
         return await waiting.wait_conn_async(gen, timeout)
 
     def _set_autocommit(self, value: bool) -> None:
-        self._no_set_async("autocommit")
+        if True:  # ASYNC
+            self._no_set_async("autocommit")
+        else:
+            self.set_autocommit(value)
 
     async def set_autocommit(self, value: bool) -> None:
         """Method version of the `~Connection.autocommit` setter."""
@@ -382,7 +403,10 @@ class AsyncConnection(BaseConnection[Row]):
             await self.wait(self._set_autocommit_gen(value))
 
     def _set_isolation_level(self, value: Optional[IsolationLevel]) -> None:
-        self._no_set_async("isolation_level")
+        if True:  # ASYNC
+            self._no_set_async("isolation_level")
+        else:
+            self.set_isolation_level(value)
 
     async def set_isolation_level(self, value: Optional[IsolationLevel]) -> None:
         """Method version of the `~Connection.isolation_level` setter."""
@@ -390,7 +414,10 @@ class AsyncConnection(BaseConnection[Row]):
             await self.wait(self._set_isolation_level_gen(value))
 
     def _set_read_only(self, value: Optional[bool]) -> None:
-        self._no_set_async("read_only")
+        if True:  # ASYNC
+            self._no_set_async("read_only")
+        else:
+            self.set_read_only(value)
 
     async def set_read_only(self, value: Optional[bool]) -> None:
         """Method version of the `~Connection.read_only` setter."""
@@ -398,18 +425,23 @@ class AsyncConnection(BaseConnection[Row]):
             await self.wait(self._set_read_only_gen(value))
 
     def _set_deferrable(self, value: Optional[bool]) -> None:
-        self._no_set_async("deferrable")
+        if True:  # ASYNC
+            self._no_set_async("deferrable")
+        else:
+            self.set_deferrable(value)
 
     async def set_deferrable(self, value: Optional[bool]) -> None:
         """Method version of the `~Connection.deferrable` setter."""
         async with self.lock:
             await self.wait(self._set_deferrable_gen(value))
 
-    def _no_set_async(self, attribute: str) -> None:
-        raise AttributeError(
-            f"'the {attribute!r} property is read-only on async connections:"
-            f" please use 'await .set_{attribute}()' instead."
-        )
+    if True:  # ASYNC
+
+        def _no_set_async(self, attribute: str) -> None:
+            raise AttributeError(
+                f"'the {attribute!r} property is read-only on async connections:"
+                f" please use 'await .set_{attribute}()' instead."
+            )
 
     async def tpc_begin(self, xid: Union[Xid, str]) -> None:
         """
