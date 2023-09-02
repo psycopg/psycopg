@@ -11,6 +11,19 @@ from argparse import ArgumentParser, Namespace
 
 import ast_comments as ast
 
+# The ast_comment has an import:
+#
+#   from typing import Dict, List, Tuple, Union
+#
+# which shadows some of the types defined in ast.
+#
+# TODO: report the issue upstream
+import ast as ast_orig
+
+ast.Dict = ast_orig.Dict
+ast.List = ast_orig.List
+ast.Tuple = ast_orig.Tuple
+
 
 def main() -> int:
     opt = parse_cmdline()
@@ -206,9 +219,7 @@ class RenameAsyncToSync(ast.NodeTransformer):
         for base in node.bases:
             if not isinstance(base, ast.Subscript):
                 continue
-            # if not isinstance(base.slice, ast.Tuple):
-            # ast.Tuple is typing.Tuple???
-            if type(base.slice).__name__ != "Tuple":
+            if not isinstance(base.slice, ast.Tuple):
                 continue
             for elt in base.slice.elts:
                 if not (isinstance(elt, ast.Constant) and isinstance(elt.value, str)):
