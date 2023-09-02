@@ -106,6 +106,8 @@ async def wait_async(
     :param gen: a generator performing database operations and yielding
         `Ready` values when it would block.
     :param fileno: the file descriptor to wait on.
+    :param timeout: timeout (in seconds) to check for other interrupt, e.g.
+        to allow Ctrl-C. If zero or None, wait indefinitely.
     :return: whatever `!gen` returns on completion.
 
     Behave like in `wait()`, but exposing an `asyncio` interface.
@@ -182,8 +184,6 @@ async def wait_conn_async(gen: PQGenConn[RV], timeout: Optional[float] = None) -
 
     try:
         fileno, s = next(gen)
-        if not timeout:
-            timeout = None
         while True:
             reader = s & WAIT_R
             writer = s & WAIT_W
@@ -196,7 +196,10 @@ async def wait_conn_async(gen: PQGenConn[RV], timeout: Optional[float] = None) -
             if writer:
                 loop.add_writer(fileno, wakeup, READY_W)
             try:
-                await wait_for(ev.wait(), timeout)
+                if timeout:
+                    await wait_for(ev.wait(), timeout)
+                else:
+                    await ev.wait()
             finally:
                 if reader:
                     loop.remove_reader(fileno)
