@@ -14,7 +14,7 @@ from argparse import ArgumentParser, Namespace
 from functools import cached_property
 from dataclasses import dataclass
 
-from packaging.version import parse as parse_version, Version
+from packaging.version import Version
 
 PROJECT_DIR = Path(__file__).parent.parent
 
@@ -171,8 +171,7 @@ chore: bump {self.package.name} package version to {self.want_version}
         elif len(matches) > 1:
             raise ValueError(f"more than one version found in {fp}")
 
-        vs = parse_version(matches[0].group("ver"))
-        assert isinstance(vs, Version)
+        vs = Version(matches[0].group("ver"))
         return vs
 
     def _update_version_in_file(self, fp: Path, version: Version) -> None:
@@ -236,6 +235,10 @@ chore: bump {self.package.name} package version to {self.want_version}
             lines = f.readlines()
 
         lns = self._find_lines(r"^[^\s]+ " + re.escape(str(version)), lines)
+        if not lns:
+            logger.warning("no change log line found")
+            return []
+
         assert len(lns) == 1
         start = end = lns[0] + 3
         while lines[end].rstrip():
