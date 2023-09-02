@@ -34,7 +34,6 @@ def async_to_sync(tree: ast.AST) -> ast.AST:
     tree = BlanksInserter().visit(tree)
     tree = RenameAsyncToSync().visit(tree)
     tree = AsyncToSync().visit(tree)
-    tree = FixAsyncSetters().visit(tree)
     return tree
 
 
@@ -128,7 +127,6 @@ class RenameAsyncToSync(ast.NodeTransformer):
         "acommands": "commands",
         "aconn": "conn",
         "aconn_cls": "conn_cls",
-        "aconn_set": "conn_set",
         "alist": "list",
         "anext": "next",
         "apipeline": "pipeline",
@@ -241,37 +239,6 @@ class RenameAsyncToSync(ast.NodeTransformer):
             node.attr = self.names_map[node.attr]
         self.generic_visit(node)
         return node
-
-
-class FixAsyncSetters(ast.NodeTransformer):
-    setters_map = {
-        "set_autocommit": "autocommit",
-        "set_read_only": "read_only",
-        "set_isolation_level": "isolation_level",
-        "set_deferrable": "deferrable",
-    }
-
-    def visit_Call(self, node: ast.Call) -> ast.AST:
-        new_node = self._fix_setter(node)
-        if new_node:
-            return new_node
-
-        self.generic_visit(node)
-        return node
-
-    def _fix_setter(self, node: ast.Call) -> ast.AST | None:
-        if not isinstance(node.func, ast.Attribute):
-            return None
-        if node.func.attr not in self.setters_map:
-            return None
-        obj = node.func.value
-        arg = node.args[0]
-        new_node = ast.Assign(
-            targets=[ast.Attribute(value=obj, attr=self.setters_map[node.func.attr])],
-            value=arg,
-        )
-        ast.copy_location(new_node, node)
-        return new_node
 
 
 class BlanksInserter(ast.NodeTransformer):

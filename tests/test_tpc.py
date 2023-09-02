@@ -163,8 +163,7 @@ class TestTPC:
 
     def test_recovered_xids(self, conn, tpc):
         # insert a few test xns
-
-        conn.autocommit = True
+        conn.set_autocommit(True)
         cur = conn.cursor()
         cur.execute("begin; prepare transaction '1-foo'")
         cur.execute("begin; prepare transaction '2-bar'")

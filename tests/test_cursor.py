@@ -708,7 +708,7 @@ def test_stream_error_tx(conn):
 
 
 def test_stream_error_notx(conn):
-    conn.autocommit = True
+    conn.set_autocommit(True)
     cur = conn.cursor()
     with pytest.raises(psycopg.ProgrammingError):
         for rec in cur.stream("wat"):
@@ -741,7 +741,7 @@ def test_stream_error_python_consumed(conn):
 
 @pytest.mark.parametrize("autocommit", [False, True])
 def test_stream_close(conn, autocommit):
-    conn.autocommit = autocommit
+    conn.set_autocommit(autocommit)
     cur = conn.cursor()
     with pytest.raises(psycopg.OperationalError):
         for rec in cur.stream("select generate_series(1, 3)"):
@@ -815,7 +815,7 @@ def test_message_0x33(conn):
     notices = []
     conn.add_notice_handler(lambda diag: notices.append(diag.message_primary))
 
-    conn.autocommit = True
+    conn.set_autocommit(True)
     with conn.pipeline():
         cur = conn.execute("select 'test'")
         assert cur.fetchone() == ("test",)

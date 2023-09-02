@@ -13,7 +13,7 @@ from psycopg.conninfo import conninfo_to_dict, make_conninfo
 from .utils import gc_collect, is_async
 from ._test_cursor import my_row_factory
 from ._test_connection import tx_params, tx_params_isolation, tx_values_map
-from ._test_connection import conninfo_params_timeout, aconn_set
+from ._test_connection import conninfo_params_timeout
 from ._test_connection import testctx  # noqa: F401  # fixture
 from .test_adapt import make_bin_dumper, make_dumper
 
@@ -334,6 +334,26 @@ async def test_autocommit(aconn):
     assert aconn.autocommit is True
 
 
+@pytest.mark.skipif(is_async(__name__), reason="sync test only")
+def test_autocommit_property(conn):
+    assert conn.autocommit is False
+
+    conn.autocommit = True
+    assert conn.autocommit
+    cur = conn.cursor()
+    cur.execute("select 1")
+    assert cur.fetchone() == (1,)
+    assert conn.pgconn.transaction_status == conn.TransactionStatus.IDLE
+
+    conn.autocommit = ""
+    assert isinstance(conn.autocommit, bool)
+    assert conn.autocommit is False
+
+    conn.autocommit = "yeah"
+    assert isinstance(conn.autocommit, bool)
+    assert conn.autocommit is True
+
+
 async def test_autocommit_connect(aconn_cls, dsn):
     aconn = await aconn_cls.connect(dsn, autocommit=True)
     assert aconn.autocommit
@@ -630,7 +650,7 @@ async def test_transaction_param_readonly_property(aconn, param):
 async def test_set_transaction_param_implicit(aconn, param, autocommit):
     await aconn.set_autocommit(autocommit)
     for value in param.values:
-        await aconn_set(aconn, param.name, value)
+        await getattr(aconn, f"set_{param.name}")(value)
         cur = await aconn.execute(
             "select current_setting(%s), current_setting(%s)",
             [f"transaction_{param.guc}", f"default_transaction_{param.guc}"],
@@ -652,7 +672,7 @@ async def test_set_transaction_param_reset(aconn, param):
     await aconn.commit()
 
     for value in param.values:
-        await aconn_set(aconn, param.name, value)
+        await getattr(aconn, f"set_{param.name}")(value)
         cur = await aconn.execute(
             "select current_setting(%s)", [f"transaction_{param.guc}"]
         )
@@ -660,7 +680,7 @@ async def test_set_transaction_param_reset(aconn, param):
         assert tx_values_map[pgval] == value
         await aconn.rollback()
 
-        await aconn_set(aconn, param.name, None)
+        await getattr(aconn, f"set_{param.name}")(None)
         cur = await aconn.execute(
             "select current_setting(%s)", [f"transaction_{param.guc}"]
         )
@@ -674,7 +694,7 @@ async def test_set_transaction_param_reset(aconn, param):
 async def test_set_transaction_param_block(aconn, param, autocommit):
     await aconn.set_autocommit(autocommit)
     for value in param.values:
-        await aconn_set(aconn, param.name, value)
+        await getattr(aconn, f"set_{param.name}")(value)
         async with aconn.transaction():
             cur = await aconn.execute(
                 "select current_setting(%s)", [f"transaction_{param.guc}"]
@@ -688,7 +708,7 @@ async def test_set_transaction_param_not_intrans_implicit(aconn, param):
     await aconn.execute("select 1")
     value = param.values[0]
     with pytest.raises(psycopg.ProgrammingError):
-        await aconn_set(aconn, param.name, value)
+        await getattr(aconn, f"set_{param.name}")(value)
 
 
 @pytest.mark.parametrize("param", tx_params)
@@ -696,7 +716,7 @@ async def test_set_transaction_param_not_intrans_block(aconn, param):
     value = param.values[0]
     async with aconn.transaction():
         with pytest.raises(psycopg.ProgrammingError):
-            await aconn_set(aconn, param.name, value)
+            await getattr(aconn, f"set_{param.name}")(value)
 
 
 @pytest.mark.parametrize("param", tx_params)
@@ -705,7 +725,23 @@ async def test_set_transaction_param_not_intrans_external(aconn, param):
     await aconn.set_autocommit(True)
     await aconn.execute("begin")
     with pytest.raises(psycopg.ProgrammingError):
-        await aconn_set(aconn, param.name, value)
+        await getattr(aconn, f"set_{param.name}")(value)
+
+
+@pytest.mark.skipif(is_async(__name__), reason="sync test only")
+@pytest.mark.crdb("skip", reason="transaction isolation")
+def test_set_transaction_param_all_property(conn):
+    params: List[Any] = tx_params[:]
+    params[2] = params[2].values[0]
+
+    for param in params:
+        value = param.values[0]
+        setattr(conn, param.name, value)
+
+    for param in params:
+        cur = conn.execute("select current_setting(%s)", [f"transaction_{param.guc}"])
+        pgval = cur.fetchone()[0]
+        assert tx_values_map[pgval] == value
 
 
 @pytest.mark.crdb("skip", reason="transaction isolation")
@@ -715,7 +751,7 @@ async def test_set_transaction_param_all(aconn):
 
     for param in params:
         value = param.values[0]
-        await aconn_set(aconn, param.name, value)
+        await getattr(aconn, f"set_{param.name}")(value)
 
     for param in params:
         cur = await aconn.execute(
@@ -738,6 +774,22 @@ async def test_set_transaction_param_strange(aconn):
 
     await aconn.set_deferrable(0)
     assert aconn.deferrable is False
+
+
+@pytest.mark.skipif(is_async(__name__), reason="sync test only")
+def test_set_transaction_param_strange_property(conn):
+    for val in ("asdf", 0, 5):
+        with pytest.raises(ValueError):
+            conn.isolation_level = val
+
+    conn.isolation_level = psycopg.IsolationLevel.SERIALIZABLE.value
+    assert conn.isolation_level is psycopg.IsolationLevel.SERIALIZABLE
+
+    conn.read_only = 1
+    assert conn.read_only is True
+
+    conn.deferrable = 0
+    assert conn.deferrable is False
 
 
 @pytest.mark.parametrize("dsn, kwargs, exp", conninfo_params_timeout)

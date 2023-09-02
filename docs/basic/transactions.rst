@@ -328,6 +328,10 @@ In order to set these parameters you can use the connection attributes
 can only be changed if there isn't a transaction already active on the
 connection.
 
+.. versionadded:: 3.2
+   Added methods equivalent to setting the properties (such as
+   `~Connection.set_isolation_level()`) on sync connections too.
+
 .. warning::
 
    Applications running at `~IsolationLevel.REPEATABLE_READ` or

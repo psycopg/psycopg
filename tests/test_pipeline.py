@@ -143,7 +143,7 @@ def test_pipeline_processed_at_exit(conn):
 
 
 def test_pipeline_errors_processed_at_exit(conn):
-    conn.autocommit = True
+    conn.set_autocommit(True)
     with pytest.raises(e.UndefinedTable):
         with conn.pipeline():
             conn.execute("select * from nosuchtable")
@@ -172,7 +172,7 @@ def test_pipeline(conn):
 
 
 def test_autocommit(conn):
-    conn.autocommit = True
+    conn.set_autocommit(True)
     with conn.pipeline(), conn.cursor() as c:
         c.execute("select 1")
 
@@ -181,7 +181,7 @@ def test_autocommit(conn):
 
 
 def test_pipeline_aborted(conn):
-    conn.autocommit = True
+    conn.set_autocommit(True)
     with conn.pipeline() as p:
         c1 = conn.execute("select 1")
         with pytest.raises(e.UndefinedTable):
@@ -217,7 +217,7 @@ def test_sync_syncs_results(conn):
 
 @pytest.mark.flakey("assert rarely fails randomly in CI blocking release")
 def test_sync_syncs_errors(conn):
-    conn.autocommit = True
+    conn.set_autocommit(True)
     with conn.pipeline() as p:
         conn.execute("select 1 from nosuchtable")
         with pytest.raises(e.UndefinedTable):
@@ -272,7 +272,7 @@ def test_errors_raised_on_nested_transaction_exit(conn):
 
 
 def test_implicit_transaction(conn):
-    conn.autocommit = True
+    conn.set_autocommit(True)
     with conn.pipeline():
         assert conn.pgconn.transaction_status == pq.TransactionStatus.IDLE
         conn.execute("select 'before'")
@@ -319,7 +319,7 @@ def test_fetch_no_result(conn):
 
 
 def test_executemany(conn):
-    conn.autocommit = True
+    conn.set_autocommit(True)
     conn.execute("drop table if exists execmanypipeline")
     conn.execute(
         "create unlogged table execmanypipeline (id serial primary key, num integer)"
@@ -339,7 +339,7 @@ def test_executemany(conn):
 
 
 def test_executemany_no_returning(conn):
-    conn.autocommit = True
+    conn.set_autocommit(True)
     conn.execute("drop table if exists execmanypipelinenoreturning")
     conn.execute(
         """create unlogged table execmanypipelinenoreturning
@@ -361,7 +361,7 @@ def test_executemany_no_returning(conn):
 
 @pytest.mark.crdb("skip", reason="temp tables")
 def test_executemany_trace(conn, trace):
-    conn.autocommit = True
+    conn.set_autocommit(True)
     cur = conn.cursor()
     cur.execute("create temp table trace (id int)")
     t = trace.trace(conn)
@@ -379,7 +379,7 @@ def test_executemany_trace(conn, trace):
 
 @pytest.mark.crdb("skip", reason="temp tables")
 def test_executemany_trace_returning(conn, trace):
-    conn.autocommit = True
+    conn.set_autocommit(True)
     cur = conn.cursor()
     cur.execute("create temp table trace (id int)")
     t = trace.trace(conn)
@@ -401,7 +401,7 @@ def test_executemany_trace_returning(conn, trace):
 
 
 def test_prepared(conn):
-    conn.autocommit = True
+    conn.set_autocommit(True)
     with conn.pipeline():
         c1 = conn.execute("select %s::int", [10], prepare=True)
         c2 = conn.execute(
@@ -435,8 +435,7 @@ def test_prepare_error(conn):
     An invalid prepared statement, in a pipeline, should be discarded at exit
     and not reused.
     """
-
-    conn.autocommit = True
+    conn.set_autocommit(True)
     stmt = "INSERT INTO nosuchtable(data) VALUES (%s)"
     with pytest.raises(psycopg.errors.UndefinedTable):
         with conn.pipeline():
@@ -514,7 +513,7 @@ def test_outer_transaction_error(conn):
 
 
 def test_rollback_explicit(conn):
-    conn.autocommit = True
+    conn.set_autocommit(True)
     with conn.pipeline():
         with pytest.raises(e.DivisionByZero):
             cur = conn.execute("select 1 / %s", [0])
@@ -524,7 +523,7 @@ def test_rollback_explicit(conn):
 
 
 def test_rollback_transaction(conn):
-    conn.autocommit = True
+    conn.set_autocommit(True)
     with pytest.raises(e.DivisionByZero):
         with conn.pipeline():
             with conn.transaction():
@@ -538,7 +537,7 @@ def test_message_0x33(conn):
     notices = []
     conn.add_notice_handler(lambda diag: notices.append(diag.message_primary))
 
-    conn.autocommit = True
+    conn.set_autocommit(True)
     with conn.pipeline():
         cur = conn.execute("select 'test'")
         assert cur.fetchone() == ("test",)
@@ -581,7 +580,7 @@ def test_concurrency(conn):
         conn.execute("update accessed set value = now()")
         return cur
 
-    conn.autocommit = True
+    conn.set_autocommit(True)
 
     (before,) = conn.execute("select value from accessed").fetchone()
 

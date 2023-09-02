@@ -208,6 +208,10 @@ The `!Connection` class
         ones: you should call `!await` `~AsyncConnection.set_autocommit`
         :samp:`({value})` instead.
 
+    .. automethod:: set_autocommit
+
+        .. versionadded:: 3.2
+
     The following three properties control the characteristics of new
     transactions. See :ref:`transaction-characteristics` for details.
 
@@ -219,6 +223,10 @@ The `!Connection` class
         .. __: https://www.postgresql.org/docs/current/runtime-config-client.html
                #GUC-DEFAULT-TRANSACTION-ISOLATION
 
+    .. automethod:: set_isolation_level
+
+        .. versionadded:: 3.2
+
     .. autoattribute:: read_only
 
         `!None` means use the default set in the default_transaction_read_only__
@@ -227,6 +235,10 @@ The `!Connection` class
         .. __: https://www.postgresql.org/docs/current/runtime-config-client.html
                #GUC-DEFAULT-TRANSACTION-READ-ONLY
 
+    .. automethod:: set_read_only
+
+        .. versionadded:: 3.2
+
     .. autoattribute:: deferrable
 
         `!None` means use the default set in the default_transaction_deferrable__
@@ -234,6 +246,10 @@ The `!Connection` class
 
         .. __: https://www.postgresql.org/docs/current/runtime-config-client.html
                #GUC-DEFAULT-TRANSACTION-DEFERRABLE
+
+    .. automethod:: set_deferrable
+
+        .. versionadded:: 3.2
 
 
     .. rubric:: Checking and configuring the connection state

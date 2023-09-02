@@ -369,18 +369,34 @@ class Connection(BaseConnection[Row]):
         return waiting.wait_conn(gen, timeout=timeout)
 
     def _set_autocommit(self, value: bool) -> None:
+        self.set_autocommit(value)
+
+    def set_autocommit(self, value: bool) -> None:
+        """Method version of the `~Connection.autocommit` setter."""
         with self.lock:
             self.wait(self._set_autocommit_gen(value))
 
     def _set_isolation_level(self, value: Optional[IsolationLevel]) -> None:
+        self.set_isolation_level(value)
+
+    def set_isolation_level(self, value: Optional[IsolationLevel]) -> None:
+        """Method version of the `~Connection.isolation_level` setter."""
         with self.lock:
             self.wait(self._set_isolation_level_gen(value))
 
     def _set_read_only(self, value: Optional[bool]) -> None:
+        self.set_read_only(value)
+
+    def set_read_only(self, value: Optional[bool]) -> None:
+        """Method version of the `~Connection.read_only` setter."""
         with self.lock:
             self.wait(self._set_read_only_gen(value))
 
     def _set_deferrable(self, value: Optional[bool]) -> None:
+        self.set_deferrable(value)
+
+    def set_deferrable(self, value: Optional[bool]) -> None:
+        """Method version of the `~Connection.deferrable` setter."""
         with self.lock:
             self.wait(self._set_deferrable_gen(value))
 

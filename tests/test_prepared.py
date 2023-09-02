@@ -103,7 +103,7 @@ def test_no_prepare_multi_with_drop(conn):
 
 
 def test_no_prepare_error(conn):
-    conn.autocommit = True
+    conn.set_autocommit(True)
     for i in range(10):
         with pytest.raises(conn.ProgrammingError):
             conn.execute("select wat")

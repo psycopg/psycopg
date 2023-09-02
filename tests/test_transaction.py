@@ -149,20 +149,19 @@ def test_prohibits_use_of_commit_rollback_autocommit(conn):
     or the autocommit setting on the connection, as this would interfere
     with the transaction scope being managed by the Transaction block.
     """
-
-    conn.autocommit = False
+    conn.set_autocommit(False)
     conn.commit()
     conn.rollback()
 
     with conn.transaction():
         with pytest.raises(e.ProgrammingError):
-            conn.autocommit = False
+            conn.set_autocommit(False)
         with pytest.raises(e.ProgrammingError):
             conn.commit()
         with pytest.raises(e.ProgrammingError):
             conn.rollback()
 
-    conn.autocommit = False
+    conn.set_autocommit(False)
     conn.commit()
     conn.rollback()
 
@@ -172,8 +171,7 @@ def test_preserves_autocommit(conn, autocommit):
     """
     Connection.autocommit is unchanged both during and after Transaction block.
     """
-
-    conn.autocommit = autocommit
+    conn.set_autocommit(autocommit)
     with conn.transaction():
         assert conn.autocommit is autocommit
     assert conn.autocommit is autocommit
@@ -189,8 +187,7 @@ def test_autocommit_off_but_no_tx_started_successful_exit(conn, svcconn):
     Outcome:
     * Changes made within Transaction context are committed
     """
-
-    conn.autocommit = False
+    conn.set_autocommit(False)
     assert not in_transaction(conn)
     with conn.transaction():
         insert_row(conn, "new")
@@ -211,8 +208,7 @@ def test_autocommit_off_but_no_tx_started_exception_exit(conn, svcconn):
     Outcome:
     * Changes made within Transaction context are discarded
     """
-
-    conn.autocommit = False
+    conn.set_autocommit(False)
     assert not in_transaction(conn)
     with pytest.raises(ExpectedException):
         with conn.transaction():
@@ -238,8 +234,7 @@ def test_autocommit_off_and_tx_in_progress_successful_exit(conn, pipeline, svcco
     * Outer transaction is left running, and no changes are visible to an
       outside observer from another connection.
     """
-
-    conn.autocommit = False
+    conn.set_autocommit(False)
     insert_row(conn, "prior")
     if pipeline:
         pipeline.sync()
@@ -266,8 +261,7 @@ def test_autocommit_off_and_tx_in_progress_exception_exit(conn, pipeline, svccon
     * Outer transaction is left running, and no changes are visible to an
       outside observer from another connection.
     """
-
-    conn.autocommit = False
+    conn.set_autocommit(False)
     insert_row(conn, "prior")
     if pipeline:
         pipeline.sync()
@@ -645,7 +639,7 @@ def test_str(conn, pipeline):
 
 @pytest.mark.parametrize("exit_error", [None, ZeroDivisionError, Rollback])
 def test_out_of_order_exit(conn, exit_error):
-    conn.autocommit = True
+    conn.set_autocommit(True)
 
     t1 = conn.transaction()
     t1.__enter__()
@@ -679,7 +673,7 @@ def test_out_of_order_implicit_begin(conn, exit_error):
 
 @pytest.mark.parametrize("exit_error", [None, ZeroDivisionError, Rollback])
 def test_out_of_order_exit_same_name(conn, exit_error):
-    conn.autocommit = True
+    conn.set_autocommit(True)
 
     t1 = conn.transaction("save")
     t1.__enter__()

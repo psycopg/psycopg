@@ -213,7 +213,7 @@ def test_copy_in_buffers_pg_error(conn):
 
 
 def test_copy_bad_result(conn):
-    conn.autocommit = True
+    conn.set_autocommit(True)
 
     cur = conn.cursor()
 
