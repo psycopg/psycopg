@@ -395,7 +395,7 @@ async def test_connect_args(
         yield
 
     setpgenv({})
-    monkeypatch.setattr(psycopg.connection, "connect", fake_connect)
+    monkeypatch.setattr(psycopg.generators, "connect", fake_connect)
     conn = await aconn_cls.connect(*args, **kwargs)
     assert conninfo_to_dict(the_conninfo) == conninfo_to_dict(want)
     await conn.close()
@@ -414,7 +414,7 @@ async def test_connect_badargs(aconn_cls, monkeypatch, pgconn, args, kwargs, exc
         return pgconn
         yield
 
-    monkeypatch.setattr(psycopg.connection, "connect", fake_connect)
+    monkeypatch.setattr(psycopg.generators, "connect", fake_connect)
     with pytest.raises(exctype):
         await aconn_cls.connect(*args, **kwargs)
 

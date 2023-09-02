@@ -18,8 +18,8 @@ if TYPE_CHECKING:
     from .rows import Row, RowMaker
     from .pq.abc import PGresult
     from .waiting import Wait, Ready
-    from .connection import BaseConnection
     from ._adapters_map import AdaptersMap
+    from ._connection_base import BaseConnection
 
 NoneType: type = type(None)
 

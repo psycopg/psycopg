@@ -15,7 +15,7 @@ from ._transformer import Transformer as Transformer
 from ._adapters_map import AdaptersMap as AdaptersMap  # noqa: F401
 
 if TYPE_CHECKING:
-    from .connection import BaseConnection
+    from ._connection_base import BaseConnection
 
 Buffer = abc.Buffer
 

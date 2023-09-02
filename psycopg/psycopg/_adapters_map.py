@@ -15,7 +15,7 @@ from ._cmodule import _psycopg
 from ._typeinfo import TypesRegistry
 
 if TYPE_CHECKING:
-    from .connection import BaseConnection
+    from ._connection_base import BaseConnection
 
 RV = TypeVar("RV")
 

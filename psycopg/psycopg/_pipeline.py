@@ -21,7 +21,8 @@ from .generators import pipeline_communicate, fetch_many, send
 if TYPE_CHECKING:
     from .pq.abc import PGresult
     from ._cursor_base import BaseCursor
-    from .connection import BaseConnection, Connection
+    from .connection import Connection
+    from ._connection_base import BaseConnection
     from .connection_async import AsyncConnection
 
 

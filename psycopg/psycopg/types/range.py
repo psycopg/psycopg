@@ -23,7 +23,7 @@ from .._struct import pack_len, unpack_len
 from .._typeinfo import TypeInfo, TypesRegistry
 
 if TYPE_CHECKING:
-    from ..connection import BaseConnection
+    from .._connection_base import BaseConnection
 
 RANGE_EMPTY = 0x01  # range is empty
 RANGE_LB_INC = 0x02  # lower bound is inclusive

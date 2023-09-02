@@ -14,7 +14,7 @@ from .errors import PoolClosed
 from ._compat import Counter, Deque
 
 if TYPE_CHECKING:
-    from psycopg.connection import BaseConnection
+    from psycopg._connection_base import BaseConnection
 
 
 class BasePool:

@@ -25,7 +25,7 @@ from .range import Range, T, load_range_text, load_range_binary
 from .range import dump_range_text, dump_range_binary, fail_dump
 
 if TYPE_CHECKING:
-    from ..connection import BaseConnection
+    from .._connection_base import BaseConnection
 
 
 class MultirangeInfo(TypeInfo):

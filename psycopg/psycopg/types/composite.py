@@ -22,7 +22,7 @@ from .._typeinfo import TypeInfo
 from .._encodings import _as_python_identifier
 
 if TYPE_CHECKING:
-    from ..connection import BaseConnection
+    from .._connection_base import BaseConnection
 
 _struct_oidlen = struct.Struct("!Ii")
 _pack_oidlen = cast(Callable[[int, int], bytes], _struct_oidlen.pack)

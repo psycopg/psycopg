@@ -25,7 +25,7 @@ from ._encodings import pgconn_encoding
 if TYPE_CHECKING:
     from .adapt import AdaptersMap
     from .pq.abc import PGresult
-    from .connection import BaseConnection
+    from ._connection_base import BaseConnection
 
 DumperCache: TypeAlias = Dict[DumperKey, abc.Dumper]
 OidDumperCache: TypeAlias = Dict[int, abc.Dumper]

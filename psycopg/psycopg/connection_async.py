@@ -23,11 +23,11 @@ from ._enums import IsolationLevel
 from .conninfo import make_conninfo, conninfo_to_dict, resolve_hostaddr_async
 from ._pipeline import AsyncPipeline
 from ._encodings import pgconn_encoding
-from .connection import BaseConnection, CursorRow, Notify
 from .generators import notifies
 from .transaction import AsyncTransaction
 from .cursor_async import AsyncCursor
 from .server_cursor import AsyncServerCursor
+from ._connection_base import BaseConnection, CursorRow, Notify
 
 if TYPE_CHECKING:
     from .pq.abc import PGconn

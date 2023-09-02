@@ -141,7 +141,7 @@ def test_connect_args(monkeypatch, pgconn, args, kwargs, want):
         return pgconn
         yield
 
-    monkeypatch.setattr(psycopg.connection, "connect", fake_connect)
+    monkeypatch.setattr(psycopg.generators, "connect", fake_connect)
     conn = psycopg.connect(*args, **kwargs)
     assert conninfo_to_dict(the_conninfo) == conninfo_to_dict(want)
     conn.close()
