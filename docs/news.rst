@@ -36,6 +36,8 @@ Psycopg 3.1.11 (unreleased)
 - Fix possible lack of critical section guard in async
   `~AsyncCursor.executemany()`.
 - Fix missing pipeline fetch in async `~AsyncCursor.scroll()`.
+- Build binary packages with libpq 15.4, which allows group-readable
+  permissions on the SSL certificate on the client (:ticket:`#528`).
 
 
 Current release
