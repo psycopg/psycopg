@@ -7,13 +7,13 @@ set -x
 
 # Last release: https://www.postgresql.org/ftp/source/
 # IMPORTANT! Change the cache key in packages.yml when upgrading libraries
-postgres_version="${LIBPQ_VERSION:-15.4}"
+postgres_version="${LIBPQ_VERSION:-15.0}"
 
 # last release: https://www.openssl.org/source/
-openssl_version="${OPENSSL_VERSION:-1.1.1v}"
+openssl_version="${OPENSSL_VERSION:-1.1.1r}"
 
 # last release: https://openldap.org/software/download/
-ldap_version="2.6.6"
+ldap_version="2.6.3"
 
 # last release: https://github.com/cyrusimap/cyrus-sasl/releases
 sasl_version="2.1.28"
