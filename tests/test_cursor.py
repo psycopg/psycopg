@@ -132,6 +132,30 @@ def test_statusmessage(conn):
     assert cur.statusmessage is None
 
 
+def test_query_parse_cache_size():
+    # Warning: testing internal structures. Test might need refactoring with the code.
+    cache = psycopg._queries._query2pg
+    cache.cache_clear()
+    ci = cache.cache_info()
+    h0, m0 = ci.hits, ci.misses
+    tests = [
+        (f"select 1 -- {'x' * 3500}", (), h0, m0 + 1),
+        (f"select 1 -- {'x' * 3500}", (), h0 + 1, m0 + 1),
+        (f"select 1 -- {'x' * 4500}", (), h0 + 1, m0 + 1),
+        (f"select 1 -- {'x' * 4500}", (), h0 + 1, m0 + 1),
+        (f"select 1 -- {'%s' * 40}", ("x",) * 40, h0 + 1, m0 + 2),
+        (f"select 1 -- {'%s' * 40}", ("x",) * 40, h0 + 2, m0 + 2),
+        (f"select 1 -- {'%s' * 60}", ("x",) * 60, h0 + 2, m0 + 2),
+        (f"select 1 -- {'%s' * 60}", ("x",) * 60, h0 + 2, m0 + 2),
+    ]
+    for i, (query, params, hits, misses) in enumerate(tests):
+        pq = psycopg._queries.PostgresQuery(psycopg.adapt.Transformer())
+        pq.convert(query, params)
+        ci = cache.cache_info()
+        assert ci.hits == hits, f"at {i}"
+        assert ci.misses == misses, f"at {i}"
+
+
 def test_execute_many_results(conn):
     cur = conn.cursor()
     assert cur.nextset() is None
