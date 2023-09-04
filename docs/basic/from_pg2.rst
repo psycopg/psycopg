@@ -272,6 +272,36 @@ Analogously you can use :sql:`IS DISTINCT FROM %s` as a parametric version of
 :sql:`IS NOT %s`.
 
 
+.. _diff-cursors:
+
+Cursors subclasses
+------------------
+
+In `!psycopg2`, a few cursor subclasses allowed to return data in different
+form than tuples. In Psycopg 3 the same can be achieved by setting a :ref:`row
+factory <row-factories>`:
+
+- instead of `~psycopg2.extras.RealDictCursor` you can use
+  `~psycopg.rows.dict_row`;
+
+- instead of `~psycopg2.extras.NamedTupleCursor` you can use
+  `~psycopg.rows.namedtuple_row`.
+
+Other row factories are available in the `psycopg.rows` module. There isn't an
+object behaving like `~psycopg2.extras.DictCursor` (whose results are
+indexable both by column position and by column name).
+
+.. code::
+
+    from psycopg.rows import dict_row, namedtuple_row
+
+    # By default, every cursor will return dicts.
+    conn = psycopg.connect(DSN, row_factory=dict_row)
+
+    # You can set a row factory on a single cursor too.
+    cur = conn.cursor(row_factory=namedtuple_row)
+
+
 .. _diff-adapt:
 
 Different adaptation system

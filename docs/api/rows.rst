@@ -9,7 +9,7 @@ The module exposes a few generic `~psycopg.RowFactory` implementation, which
 can be used to retrieve data from the database in more complex structures than
 the basic tuples.
 
-Check out :ref:`row-factories` for information about how to use these objects.
+Check out :ref:`row-factory-create` for information about how to use these objects.
 
 .. autofunction:: tuple_row
 .. autofunction:: dict_row

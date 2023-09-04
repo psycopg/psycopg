@@ -92,7 +92,7 @@ Formally, these objects are represented by the `~psycopg.rows.RowFactory` and
        def __call__(self, values: Sequence[Any]) -> dict[str, Any]:
            return dict(zip(self.fields, values))
 
-or as a plain function:
+or as nested functions:
 
 .. code:: python
 
