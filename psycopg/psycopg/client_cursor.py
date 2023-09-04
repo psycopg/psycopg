@@ -28,6 +28,8 @@ BINARY = pq.Format.BINARY
 
 
 class ClientCursorMixin(BaseCursor[ConnectionType, Row]):
+    _query_cls = PostgresClientQuery
+
     def mogrify(self, query: Query, params: Optional[Params] = None) -> str:
         """
         Return the query and parameters merged.
@@ -71,13 +73,6 @@ class ClientCursorMixin(BaseCursor[ConnectionType, Row]):
             # If we can, let's use simple query protocol,
             # as it can execute more than one statement in a single query.
             self._pgconn.send_query(query.query)
-
-    def _convert_query(
-        self, query: Query, params: Optional[Params] = None
-    ) -> PostgresQuery:
-        pgq = PostgresClientQuery(self._tx)
-        pgq.convert(query, params)
-        return pgq
 
     def _get_prepared(
         self, pgq: PostgresQuery, prepare: Optional[bool] = None

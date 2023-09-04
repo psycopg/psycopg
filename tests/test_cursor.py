@@ -169,6 +169,36 @@ def test_execute_sql(conn):
     assert cur.fetchone() == ("hello",)
 
 
+def test_query_parse_cache_size(conn):
+    cur = conn.cursor()
+    query_cls = cur._query_cls
+
+    # Warning: testing internal structures. Test have to be refactored.
+    query_cls.query2pg.cache_clear()
+    ci = query_cls.query2pg.cache_info()
+    h0, m0 = ci.hits, ci.misses
+    tests = [
+        (f"select 1 -- {'x' * 3500}", (), h0, m0 + 1),
+        (f"select 1 -- {'x' * 3500}", (), h0 + 1, m0 + 1),
+        (f"select 1 -- {'x' * 4500}", (), h0 + 1, m0 + 1),
+        (f"select 1 -- {'x' * 4500}", (), h0 + 1, m0 + 1),
+        (f"select 1 -- {'%s' * 40}", ("x",) * 40, h0 + 1, m0 + 2),
+        (f"select 1 -- {'%s' * 40}", ("x",) * 40, h0 + 2, m0 + 2),
+        (f"select 1 -- {'%s' * 60}", ("x",) * 60, h0 + 2, m0 + 2),
+        (f"select 1 -- {'%s' * 60}", ("x",) * 60, h0 + 2, m0 + 2),
+    ]
+    for i, (query, params, hits, misses) in enumerate(tests):
+        pq = query_cls(psycopg.adapt.Transformer())
+        pq.convert(query, params)
+        ci = query_cls.query2pg.cache_info()
+        if not isinstance(cur, psycopg.RawCursor):
+            assert ci.hits == hits, f"at {i}"
+            assert ci.misses == misses, f"at {i}"
+        else:
+            assert ci.hits == 0, f"at {i}"
+            assert ci.misses == 0, f"at {i}"
+
+
 def test_execute_many_results(conn):
     cur = conn.cursor()
     assert cur.nextset() is None

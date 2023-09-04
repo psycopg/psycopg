@@ -59,6 +59,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
     _tx: "Transformer"
     _make_row: RowMaker[Row]
     _pgconn: "PGconn"
+    _query_cls: Type[PostgresQuery] = PostgresQuery
 
     def __init__(self, connection: ConnectionType):
         self._conn = connection
@@ -450,7 +451,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
     def _convert_query(
         self, query: Query, params: Optional[Params] = None
     ) -> PostgresQuery:
-        pgq = PostgresQuery(self._tx)
+        pgq = self._query_cls(self._tx)
         pgq.convert(query, params)
         return pgq
 

@@ -4,52 +4,61 @@ psycopg raw queries cursors
 
 # Copyright (C) 2023 The Psycopg Team
 
-from typing import Any, Optional, Sequence, Tuple, List, TYPE_CHECKING
+from typing import Optional, List, Tuple, TYPE_CHECKING
 from functools import lru_cache
 
+from .abc import ConnectionType, Query, Params
+from .sql import Composable
+from .rows import Row
+from ._enums import PyFormat
+from .cursor import BaseCursor, Cursor
+from .cursor_async import AsyncCursor
 from ._queries import PostgresQuery, QueryPart
 
-from .abc import ConnectionType, Query, Params
-from .rows import Row
-from .cursor import BaseCursor, Cursor
-from ._enums import PyFormat
-from .cursor_async import AsyncCursor
-
 if TYPE_CHECKING:
+    from typing import Any  # noqa: F401
     from .connection import Connection  # noqa: F401
     from .connection_async import AsyncConnection  # noqa: F401
 
 
-class RawPostgresQuery(PostgresQuery):
-    @staticmethod
-    @lru_cache()
-    def query2pg(
-        query: bytes, encoding: str
-    ) -> Tuple[bytes, Optional[List[PyFormat]], Optional[List[str]], List[QueryPart]]:
-        """
-        Noop; Python raw query is already in the format Postgres understands.
-        """
-        return query, None, None, []
+class PostgresRawQuery(PostgresQuery):
+    def convert(self, query: Query, vars: Optional[Params]) -> None:
+        if isinstance(query, str):
+            bquery = query.encode(self._encoding)
+        elif isinstance(query, Composable):
+            bquery = query.as_bytes(self._tx)
+        else:
+            bquery = query
+
+        self.query = bquery
+        self._want_formats = self._order = None
+        self.dump(vars)
+
+    def dump(self, vars: Optional[Params]) -> None:
+        if vars is not None:
+            if not PostgresQuery.is_params_sequence(vars):
+                raise TypeError("raw queries require a sequence of parameters")
+            self._want_formats = [PyFormat.AUTO] * len(vars)
+
+            self.params = self._tx.dump_sequence(vars, self._want_formats)
+            self.types = self._tx.types or ()
+            self.formats = self._tx.formats
+        else:
+            self.params = None
+            self.types = ()
+            self.formats = None
 
     @staticmethod
-    def validate_and_reorder_params(
-        parts: List[QueryPart], vars: Params, order: Optional[List[str]]
-    ) -> Sequence[Any]:
-        """
-        Verify the compatibility; params must be a sequence for raw query.
-        """
-        if not PostgresQuery.is_params_sequence(vars):
-            raise TypeError("raw query require a sequence of parameters")
-        return vars
+    def query2pg_nocache(
+        query: bytes, encoding: str
+    ) -> Tuple[bytes, Optional[List[PyFormat]], Optional[List[str]], List[QueryPart]]:
+        raise NotImplementedError()
+
+    query2pg = lru_cache()(query2pg_nocache)
 
 
 class RawCursorMixin(BaseCursor[ConnectionType, Row]):
-    def _convert_query(
-        self, query: Query, params: Optional[Params] = None
-    ) -> PostgresQuery:
-        pgq = RawPostgresQuery(self._tx)
-        pgq.convert(query, params)
-        return pgq
+    _query_cls = PostgresRawQuery
 
 
 class RawCursor(RawCursorMixin["Connection[Any]", Row], Cursor[Row]):
