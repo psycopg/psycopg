@@ -22,9 +22,9 @@ from psycopg.pq import TransactionStatus
 from psycopg.rows import TupleRow
 
 from .base import ConnectionAttempt, BasePool
-from .sched import AsyncScheduler
 from .errors import PoolClosed, PoolTimeout, TooManyRequests
 from ._compat import Deque
+from .sched_async import AsyncScheduler
 
 logger = logging.getLogger("psycopg.pool")
 

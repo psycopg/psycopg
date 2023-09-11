@@ -165,6 +165,7 @@ class RenameAsyncToSync(ast.NodeTransformer):
         "AsyncQueuedLibpqWriter": "QueuedLibpqWriter",
         "AsyncRawCursor": "RawCursor",
         "AsyncRowFactory": "RowFactory",
+        "AsyncScheduler": "Scheduler",
         "AsyncServerCursor": "ServerCursor",
         "AsyncTransaction": "Transaction",
         "AsyncWriter": "Writer",

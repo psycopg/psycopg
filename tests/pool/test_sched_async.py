@@ -7,7 +7,7 @@ from functools import partial
 import pytest
 
 try:
-    from psycopg_pool.sched import AsyncScheduler
+    from psycopg_pool.sched_async import AsyncScheduler
 except ImportError:
     # Tests should have been skipped if the package is not available
     pass
