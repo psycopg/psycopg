@@ -4,11 +4,14 @@ import sys
 import asyncio
 import inspect
 import operator
-from time import sleep as sleep  # noqa: F401 -- re-export
-from typing import Callable, Optional, Tuple
+from typing import Any, Callable, Optional, Tuple
 from threading import Thread
 from contextlib import contextmanager, asynccontextmanager
-from contextlib import closing as closing  # noqa: F401 -- re-export
+
+# Re-exports
+from time import sleep as sleep  # noqa: F401
+from threading import Event as Event  # noqa: F401
+from contextlib import closing as closing  # noqa: F401
 
 import pytest
 
@@ -232,27 +235,34 @@ def raiseif(cond, *args, **kwargs):
         return
 
 
-def spawn(f):
+def spawn(f, args=None):
     """
     Equivalent to asyncio.create_task or creating and running a Thread.
     """
+    if not args:
+        args = ()
+
     if inspect.iscoroutinefunction(f):
-        return asyncio.create_task(f())
+        return asyncio.create_task(f(*args))
     else:
-        t = Thread(target=f, daemon=True)
+        t = Thread(target=f, args=args, daemon=True)
         t.start()
         return t
 
 
-def gather(*ts):
+def gather(*ts, return_exceptions=False, timeout=None):
     """
     Equivalent to asyncio.gather or Thread.join()
     """
     if ts and inspect.isawaitable(ts[0]):
-        return asyncio.gather(*ts)
+        rv: Any = asyncio.gather(*ts, return_exceptions=return_exceptions)
+        if timeout is None:
+            rv = asyncio.wait_for(rv, timeout)
+        return rv
     else:
         for t in ts:
-            t.join()
+            t.join(timeout)
+            assert not t.is_alive()
 
 
 def asleep(s):
@@ -260,3 +270,21 @@ def asleep(s):
     Equivalent to asyncio.sleep(), converted to time.sleep() by async_to_sync.
     """
     return asyncio.sleep(s)
+
+
+def is_alive(t):
+    """
+    Return true if an asyncio.Task or threading.Thread is alive.
+    """
+    return t.is_alive() if isinstance(t, Thread) else not t.done()
+
+
+class AEvent(asyncio.Event):
+    """
+    Subclass of asyncio.Event adding a wait with timeout like threading.Event.
+
+    wait_timeout() is converted to wait() by async_to_sync.
+    """
+
+    async def wait_timeout(self, timeout):
+        await asyncio.wait_for(self.wait(), timeout)

@@ -152,8 +152,10 @@ class AsyncToSync(ast.NodeTransformer):
 
 class RenameAsyncToSync(ast.NodeTransformer):
     names_map = {
+        "AEvent": "Event",
         "AsyncClientCursor": "ClientCursor",
         "AsyncConnection": "Connection",
+        "AsyncConnectionPool": "ConnectionPool",
         "AsyncCopy": "Copy",
         "AsyncCopyWriter": "CopyWriter",
         "AsyncCursor": "Cursor",
@@ -179,16 +181,18 @@ class RenameAsyncToSync(ast.NodeTransformer):
         "aconn_cls": "conn_cls",
         "alist": "list",
         "anext": "next",
-        "asleep": "sleep",
         "apipeline": "pipeline",
+        "asleep": "sleep",
         "asynccontextmanager": "contextmanager",
         "connection_async": "connection",
         "cursor_async": "cursor",
         "ensure_table_async": "ensure_table",
         "find_insert_problem_async": "find_insert_problem",
+        "psycopg_pool.pool_async": "psycopg_pool.pool",
         "psycopg_pool.sched_async": "psycopg_pool.sched",
         "wait_async": "wait",
         "wait_conn_async": "wait_conn",
+        "wait_timeout": "wait",
     }
     _skip_imports = {
         "utils": {"alist", "anext"},
