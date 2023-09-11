@@ -111,58 +111,7 @@ class PostgresQuery:
             self.formats = None
 
 
-class PostgresClientQuery(PostgresQuery):
-    """
-    PostgresQuery subclass merging query and arguments client-side.
-    """
-
-    __slots__ = ("template",)
-
-    def convert(self, query: Query, vars: Optional[Params]) -> None:
-        """
-        Set up the query and parameters to convert.
-
-        The results of this function can be obtained accessing the object
-        attributes (`query`, `params`, `types`, `formats`).
-        """
-        if isinstance(query, str):
-            bquery = query.encode(self._encoding)
-        elif isinstance(query, Composable):
-            bquery = query.as_bytes(self._tx)
-        else:
-            bquery = query
-
-        if vars is not None:
-            if (
-                len(bquery) <= MAX_CACHED_STATEMENT_LENGTH
-                and len(vars) <= MAX_CACHED_STATEMENT_PARAMS
-            ):
-                f: _Query2PgClient = _query2pg_client
-            else:
-                f = _query2pg_client_nocache
-            (self.template, self._order, self._parts) = f(bquery, self._encoding)
-        else:
-            self.query = bquery
-            self._order = None
-
-        self.dump(vars)
-
-    def dump(self, vars: Optional[Params]) -> None:
-        """
-        Process a new set of variables on the query processed by `convert()`.
-
-        This method updates `params` and `types`.
-        """
-        if vars is not None:
-            params = _validate_and_reorder_params(self._parts, vars, self._order)
-            self.params = tuple(
-                self._tx.as_literal(p) if p is not None else b"NULL" for p in params
-            )
-            self.query = self.template % self.params
-        else:
-            self.params = None
-
-
+# The type of the _query2pg() and _query2pg_nocache() methods
 _Query2Pg: TypeAlias = Callable[
     [bytes, str], Tuple[bytes, List[PyFormat], Optional[List[str]], List[QueryPart]]
 ]
@@ -224,6 +173,59 @@ def _query2pg_nocache(
 # large queries or queries with a large number of params. See
 # https://github.com/sqlalchemy/sqlalchemy/discussions/10270
 _query2pg = lru_cache()(_query2pg_nocache)
+
+
+class PostgresClientQuery(PostgresQuery):
+    """
+    PostgresQuery subclass merging query and arguments client-side.
+    """
+
+    __slots__ = ("template",)
+
+    def convert(self, query: Query, vars: Optional[Params]) -> None:
+        """
+        Set up the query and parameters to convert.
+
+        The results of this function can be obtained accessing the object
+        attributes (`query`, `params`, `types`, `formats`).
+        """
+        if isinstance(query, str):
+            bquery = query.encode(self._encoding)
+        elif isinstance(query, Composable):
+            bquery = query.as_bytes(self._tx)
+        else:
+            bquery = query
+
+        if vars is not None:
+            if (
+                len(bquery) <= MAX_CACHED_STATEMENT_LENGTH
+                and len(vars) <= MAX_CACHED_STATEMENT_PARAMS
+            ):
+                f: _Query2PgClient = _query2pg_client
+            else:
+                f = _query2pg_client_nocache
+
+            (self.template, self._order, self._parts) = f(bquery, self._encoding)
+        else:
+            self.query = bquery
+            self._order = None
+
+        self.dump(vars)
+
+    def dump(self, vars: Optional[Params]) -> None:
+        """
+        Process a new set of variables on the query processed by `convert()`.
+
+        This method updates `params` and `types`.
+        """
+        if vars is not None:
+            params = _validate_and_reorder_params(self._parts, vars, self._order)
+            self.params = tuple(
+                self._tx.as_literal(p) if p is not None else b"NULL" for p in params
+            )
+            self.query = self.template % self.params
+        else:
+            self.params = None
 
 
 _Query2PgClient: TypeAlias = Callable[
