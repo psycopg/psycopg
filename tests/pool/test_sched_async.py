@@ -1,10 +1,11 @@
-import asyncio
 import logging
 from time import time
-from asyncio import create_task
 from functools import partial
+from contextlib import asynccontextmanager
 
 import pytest
+
+from ..utils import spawn, gather, asleep
 
 try:
     from psycopg_pool.sched_async import AsyncScheduler
@@ -12,11 +13,12 @@ except ImportError:
     # Tests should have been skipped if the package is not available
     pass
 
-pytestmark = [pytest.mark.anyio, pytest.mark.timing]
+pytestmark = [pytest.mark.timing]
+if True:  # ASYNC:
+    pytestmark.append(pytest.mark.anyio)
 
 
 @pytest.mark.slow
-@pytest.mark.timing
 async def test_sched():
     s = AsyncScheduler()
     results = []
@@ -38,10 +40,9 @@ async def test_sched():
 
 
 @pytest.mark.slow
-@pytest.mark.timing
 async def test_sched_task():
     s = AsyncScheduler()
-    t = create_task(s.run())
+    t = spawn(s.run)
 
     results = []
 
@@ -54,7 +55,7 @@ async def test_sched_task():
     await s.enter(0.3, None)
     await s.enter(0.2, partial(worker, 2))
 
-    await asyncio.gather(t)
+    await gather(t)
     t1 = time()
     assert t1 - t0 == pytest.approx(0.3, 0.2)
 
@@ -66,11 +67,10 @@ async def test_sched_task():
 
 
 @pytest.mark.slow
-@pytest.mark.timing
 async def test_sched_error(caplog):
     caplog.set_level(logging.WARNING, logger="psycopg")
     s = AsyncScheduler()
-    t = create_task(s.run())
+    t = spawn(s.run)
 
     results = []
 
@@ -86,7 +86,7 @@ async def test_sched_error(caplog):
     await s.enter(0.3, partial(worker, 2))
     await s.enter(0.2, error)
 
-    await asyncio.gather(t)
+    await gather(t)
     t1 = time()
     assert t1 - t0 == pytest.approx(0.4, 0.1)
 
@@ -104,26 +104,14 @@ async def test_sched_error(caplog):
 async def test_empty_queue_timeout():
     s = AsyncScheduler()
 
-    t0 = time()
-    times = []
+    async with timed_wait(s) as times:
+        s.EMPTY_QUEUE_TIMEOUT = 0.2
 
-    wait_orig = s._event.wait
+        t = spawn(s.run)
+        await asleep(0.5)
+        await s.enter(0.5, None)
+        await gather(t)
 
-    async def wait_logging():
-        try:
-            rv = await wait_orig()
-        finally:
-            times.append(time() - t0)
-        return rv
-
-    setattr(s._event, "wait", wait_logging)
-    s.EMPTY_QUEUE_TIMEOUT = 0.2
-
-    t = create_task(s.run())
-    await asyncio.sleep(0.5)
-    await s.enter(0.5, None)
-    await asyncio.gather(t)
-    times.append(time() - t0)
     for got, want in zip(times, [0.2, 0.4, 0.5, 1.0]):
         assert got == pytest.approx(want, 0.2), times
 
@@ -132,30 +120,50 @@ async def test_empty_queue_timeout():
 async def test_first_task_rescheduling():
     s = AsyncScheduler()
 
+    async with timed_wait(s) as times:
+        s.EMPTY_QUEUE_TIMEOUT = 0.1
+
+        await s.enter(0.4, noop)
+        t = spawn(s.run)
+        await s.enter(0.6, None)  # this task doesn't trigger a reschedule
+        await asleep(0.1)
+        await s.enter(0.1, noop)  # this triggers a reschedule
+        await gather(t)
+
+    for got, want in zip(times, [0.1, 0.2, 0.4, 0.6, 0.6]):
+        assert got == pytest.approx(want, 0.2), times
+
+
+@asynccontextmanager
+async def timed_wait(s):
+    """
+    Hack the scheduler's Event.wait() function in order to log waited time.
+
+    The context is a list where the times are accumulated.
+    """
     t0 = time()
     times = []
 
     wait_orig = s._event.wait
 
-    async def wait_logging():
+    async def wait_logging(timeout=None):
+        if True:  # ASYNC
+            args = ()
+        else:
+            args = (timeout,)
+
         try:
-            rv = await wait_orig()
+            rv = await wait_orig(*args)
         finally:
             times.append(time() - t0)
         return rv
 
     setattr(s._event, "wait", wait_logging)
-    s.EMPTY_QUEUE_TIMEOUT = 0.1
 
-    async def noop():
-        pass
+    yield times
 
-    await s.enter(0.4, noop)
-    t = create_task(s.run())
-    await s.enter(0.6, None)  # this task doesn't trigger a reschedule
-    await asyncio.sleep(0.1)
-    await s.enter(0.1, noop)  # this triggers a reschedule
-    await asyncio.gather(t)
     times.append(time() - t0)
-    for got, want in zip(times, [0.1, 0.2, 0.4, 0.6, 0.6]):
-        assert got == pytest.approx(want, 0.2), times
+
+
+async def noop():
+    pass

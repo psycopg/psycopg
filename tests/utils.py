@@ -1,10 +1,14 @@
 import gc
 import re
 import sys
+import asyncio
+import inspect
 import operator
+from time import sleep as sleep  # noqa: F401 -- re-export
 from typing import Callable, Optional, Tuple
+from threading import Thread
 from contextlib import contextmanager, asynccontextmanager
-from contextlib import closing as closing  # noqa: F401  - re-export
+from contextlib import closing as closing  # noqa: F401 -- re-export
 
 import pytest
 
@@ -226,3 +230,33 @@ def raiseif(cond, *args, **kwargs):
         with pytest.raises(*args, **kwargs) as ex:
             yield ex
         return
+
+
+def spawn(f):
+    """
+    Equivalent to asyncio.create_task or creating and running a Thread.
+    """
+    if inspect.iscoroutinefunction(f):
+        return asyncio.create_task(f())
+    else:
+        t = Thread(target=f, daemon=True)
+        t.start()
+        return t
+
+
+def gather(*ts):
+    """
+    Equivalent to asyncio.gather or Thread.join()
+    """
+    if ts and inspect.isawaitable(ts[0]):
+        return asyncio.gather(*ts)
+    else:
+        for t in ts:
+            t.join()
+
+
+def asleep(s):
+    """
+    Equivalent to asyncio.sleep(), converted to time.sleep() by async_to_sync.
+    """
+    return asyncio.sleep(s)

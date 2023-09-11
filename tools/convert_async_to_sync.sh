@@ -21,6 +21,7 @@ for async in \
     psycopg/psycopg/connection_async.py \
     psycopg/psycopg/cursor_async.py \
     psycopg_pool/psycopg_pool/sched_async.py \
+    tests/pool/test_sched_async.py \
     tests/test_client_cursor_async.py \
     tests/test_connection_async.py \
     tests/test_copy_async.py \
