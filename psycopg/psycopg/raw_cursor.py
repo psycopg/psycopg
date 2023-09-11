@@ -4,8 +4,7 @@ psycopg raw queries cursors
 
 # Copyright (C) 2023 The Psycopg Team
 
-from typing import Optional, List, Tuple, TYPE_CHECKING
-from functools import lru_cache
+from typing import Optional, TYPE_CHECKING
 
 from .abc import ConnectionType, Query, Params
 from .sql import Composable
@@ -13,7 +12,7 @@ from .rows import Row
 from ._enums import PyFormat
 from .cursor import BaseCursor, Cursor
 from .cursor_async import AsyncCursor
-from ._queries import PostgresQuery, QueryPart
+from ._queries import PostgresQuery
 
 if TYPE_CHECKING:
     from typing import Any  # noqa: F401
@@ -47,14 +46,6 @@ class PostgresRawQuery(PostgresQuery):
             self.params = None
             self.types = ()
             self.formats = None
-
-    @staticmethod
-    def query2pg_nocache(
-        query: bytes, encoding: str
-    ) -> Tuple[bytes, Optional[List[PyFormat]], Optional[List[str]], List[QueryPart]]:
-        raise NotImplementedError()
-
-    query2pg = lru_cache()(query2pg_nocache)
 
 
 class RawCursorMixin(BaseCursor[ConnectionType, Row]):

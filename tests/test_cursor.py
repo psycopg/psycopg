@@ -171,11 +171,21 @@ def test_execute_sql(conn):
 
 def test_query_parse_cache_size(conn):
     cur = conn.cursor()
-    query_cls = cur._query_cls
+    cls = type(cur)
 
-    # Warning: testing internal structures. Test have to be refactored.
-    query_cls.query2pg.cache_clear()
-    ci = query_cls.query2pg.cache_info()
+    # Warning: testing internal structures. Test might need refactoring with the code.
+    cache: Any
+    if cls is psycopg.Cursor:
+        cache = psycopg._queries._query2pg
+    elif cls is psycopg.ClientCursor:
+        cache = psycopg._queries._query2pg_client
+    elif cls is psycopg.RawCursor:
+        pytest.skip("RawCursor has no query parse cache")
+    else:
+        assert False, cls
+
+    cache.cache_clear()
+    ci = cache.cache_info()
     h0, m0 = ci.hits, ci.misses
     tests = [
         (f"select 1 -- {'x' * 3500}", (), h0, m0 + 1),
@@ -188,15 +198,11 @@ def test_query_parse_cache_size(conn):
         (f"select 1 -- {'%s' * 60}", ("x",) * 60, h0 + 2, m0 + 2),
     ]
     for i, (query, params, hits, misses) in enumerate(tests):
-        pq = query_cls(psycopg.adapt.Transformer())
+        pq = cur._query_cls(psycopg.adapt.Transformer())
         pq.convert(query, params)
-        ci = query_cls.query2pg.cache_info()
-        if not isinstance(cur, psycopg.RawCursor):
-            assert ci.hits == hits, f"at {i}"
-            assert ci.misses == misses, f"at {i}"
-        else:
-            assert ci.hits == 0, f"at {i}"
-            assert ci.misses == 0, f"at {i}"
+        ci = cache.cache_info()
+        assert ci.hits == hits, f"at {i}"
+        assert ci.misses == misses, f"at {i}"
 
 
 def test_execute_many_results(conn):
