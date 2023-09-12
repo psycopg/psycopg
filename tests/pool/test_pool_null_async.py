@@ -1,8 +1,5 @@
-import asyncio
 import logging
-from time import time
-from typing import Any, Dict, List, Tuple
-from asyncio import create_task
+from typing import Any, Dict, List
 
 import pytest
 from packaging.version import parse as ver  # noqa: F401  # used in skipif
@@ -11,14 +8,18 @@ import psycopg
 from psycopg.pq import TransactionStatus
 from psycopg.rows import class_row, Row, TupleRow
 from psycopg._compat import assert_type
-from .test_pool_async import delay_connection, ensure_waiting
 
-pytestmark = [pytest.mark.anyio]
+from ..utils import AEvent, asleep, spawn, gather, is_async
+from .test_pool_common_async import delay_connection, ensure_waiting
 
 try:
     import psycopg_pool as pool
 except ImportError:
+    # Tests should have been skipped if the package is not available
     pass
+
+if True:  # ASYNC
+    pytestmark = [pytest.mark.anyio]
 
 
 async def test_default_sizes(dsn):
@@ -135,18 +136,18 @@ async def test_configure(dsn):
         async with p.connection() as conn:
             assert inits == 1
             res = await conn.execute("show default_transaction_read_only")
-            assert (await res.fetchone())[0] == "on"  # type: ignore[index]
+            assert (await res.fetchone()) == ("on",)
 
         async with p.connection() as conn:
             assert inits == 2
             res = await conn.execute("show default_transaction_read_only")
-            assert (await res.fetchone())[0] == "on"  # type: ignore[index]
+            assert (await res.fetchone()) == ("on",)
             await conn.close()
 
         async with p.connection() as conn:
             assert inits == 3
             res = await conn.execute("show default_transaction_read_only")
-            assert (await res.fetchone())[0] == "on"  # type: ignore[index]
+            assert (await res.fetchone()) == ("on",)
 
 
 @pytest.mark.crdb_skip("backend pid")
@@ -176,14 +177,14 @@ async def test_reset(dsn):
         async with p.connection() as conn:
             # Queue the worker so it will take the same connection a second time
             # instead of making a new one.
-            t = create_task(worker())
+            t = spawn(worker)
             await ensure_waiting(p)
 
             assert resets == 0
             await conn.execute("set timezone to '+2:00'")
             pids.append(conn.info.backend_pid)
 
-        await asyncio.gather(t)
+        await gather(t)
         await p.wait()
 
     assert resets == 1
@@ -206,13 +207,13 @@ async def test_reset_badstate(dsn, caplog):
 
     async with pool.AsyncNullConnectionPool(dsn, max_size=1, reset=reset) as p:
         async with p.connection() as conn:
-            t = create_task(worker())
+            t = spawn(worker)
             await ensure_waiting(p)
 
             await conn.execute("select 1")
             pids.append(conn.info.backend_pid)
 
-        await asyncio.gather(t)
+        await gather(t)
 
     assert pids[0] != pids[1]
     assert caplog.records
@@ -236,13 +237,13 @@ async def test_reset_broken(dsn, caplog):
 
     async with pool.AsyncNullConnectionPool(dsn, max_size=1, reset=reset) as p:
         async with p.connection() as conn:
-            t = create_task(worker())
+            t = spawn(worker)
             await ensure_waiting(p)
 
             await conn.execute("select 1")
             pids.append(conn.info.backend_pid)
 
-        await asyncio.gather(t)
+        await gather(t)
 
     assert pids[0] != pids[1]
     assert caplog.records
@@ -279,14 +280,14 @@ async def test_intrans_rollback(dsn, caplog):
 
         # Queue the worker so it will take the connection a second time instead
         # of making a new one.
-        t = create_task(worker())
+        t = spawn(worker)
         await ensure_waiting(p)
 
         pids.append(conn.info.backend_pid)
         await conn.execute("create table test_intrans_rollback ()")
         assert conn.info.transaction_status == TransactionStatus.INTRANS
         await p.putconn(conn)
-        await asyncio.gather(t)
+        await gather(t)
 
     assert pids[0] == pids[1]
     assert len(caplog.records) == 1
@@ -306,7 +307,9 @@ async def test_inerror_rollback(dsn, caplog):
     async with pool.AsyncNullConnectionPool(dsn, max_size=1) as p:
         conn = await p.getconn()
 
-        t = create_task(worker())
+        # Queue the worker so it will take the connection a second time instead
+        # of making a new one.
+        t = spawn(worker)
         await ensure_waiting(p)
 
         pids.append(conn.info.backend_pid)
@@ -314,7 +317,7 @@ async def test_inerror_rollback(dsn, caplog):
             await conn.execute("wat")
         assert conn.info.transaction_status == TransactionStatus.INERROR
         await p.putconn(conn)
-        await asyncio.gather(t)
+        await gather(t)
 
     assert pids[0] == pids[1]
     assert len(caplog.records) == 1
@@ -335,14 +338,14 @@ async def test_active_close(dsn, caplog):
     async with pool.AsyncNullConnectionPool(dsn, max_size=1) as p:
         conn = await p.getconn()
 
-        t = create_task(worker())
+        t = spawn(worker)
         await ensure_waiting(p)
 
         pids.append(conn.info.backend_pid)
         conn.pgconn.exec_(b"copy (select * from generate_series(1, 10)) to stdout")
         assert conn.info.transaction_status == TransactionStatus.ACTIVE
         await p.putconn(conn)
-        await asyncio.gather(t)
+        await gather(t)
 
     assert pids[0] != pids[1]
     assert len(caplog.records) == 2
@@ -362,7 +365,7 @@ async def test_fail_rollback_close(dsn, caplog, monkeypatch):
 
     async with pool.AsyncNullConnectionPool(dsn, max_size=1) as p:
         conn = await p.getconn()
-        t = create_task(worker())
+        t = spawn(worker)
         await ensure_waiting(p)
 
         async def bad_rollback():
@@ -378,7 +381,7 @@ async def test_fail_rollback_close(dsn, caplog, monkeypatch):
             await conn.execute("wat")
         assert conn.info.transaction_status == TransactionStatus.INERROR
         await p.putconn(conn)
-        await asyncio.gather(t)
+        await gather(t)
 
     assert pids[0] != pids[1]
     assert len(caplog.records) == 3
@@ -410,11 +413,11 @@ async def test_max_lifetime(dsn):
     async def worker():
         async with p.connection() as conn:
             pids.append(conn.info.backend_pid)
-            await asyncio.sleep(0.1)
+            await asleep(0.1)
 
     async with pool.AsyncNullConnectionPool(dsn, max_size=1, max_lifetime=0.2) as p:
-        ts = [create_task(worker()) for i in range(5)]
-        await asyncio.gather(*ts)
+        ts = [spawn(worker) for i in range(5)]
+        await gather(*ts)
 
     assert pids[0] == pids[1] != pids[4], pids
 
@@ -438,6 +441,7 @@ async def test_stats_connect(dsn, proxy, monkeypatch):
         assert 200 <= stats["connections_ms"] < 300
 
 
+@pytest.mark.skipif(not is_async(__name__), reason="async test only")
 async def test_cancellation_in_queue(dsn):
     # https://github.com/psycopg/psycopg/issues/509
 
@@ -449,7 +453,7 @@ async def test_cancellation_in_queue(dsn):
         await p.wait()
 
         got_conns = []
-        ev = asyncio.Event()
+        ev = AEvent()
 
         async def worker(i):
             try:
@@ -465,27 +469,27 @@ async def test_cancellation_in_queue(dsn):
                     if len(got_conns) >= nconns:
                         ev.set()
 
-                    await asyncio.sleep(5)
+                    await asleep(5)
 
             except BaseException as ex:
                 logging.info("worker %s stopped: %r", i, ex)
                 raise
 
         # Start tasks taking up all the connections and getting in the queue
-        tasks = [asyncio.ensure_future(worker(i)) for i in range(nconns * 3)]
+        tasks = [spawn(worker, (i,)) for i in range(nconns * 3)]
 
         # wait until the pool has served all the connections and clients are queued.
-        await asyncio.wait_for(ev.wait(), 3.0)
+        await ev.wait_timeout(3.0)
         for i in range(10):
             if p.get_stats().get("requests_queued", 0):
                 break
             else:
-                await asyncio.sleep(0.1)
+                await asleep(0.1)
         else:
             pytest.fail("no client got in the queue")
 
         [task.cancel() for task in reversed(tasks)]
-        await asyncio.wait_for(asyncio.gather(*tasks, return_exceptions=True), 1.0)
+        await gather(*tasks, return_exceptions=True, timeout=1.0)
 
         stats = p.get_stats()
         assert stats.get("requests_waiting", 0) == 0

@@ -191,6 +191,7 @@ class RenameAsyncToSync(ast.NodeTransformer):
         "find_insert_problem_async": "find_insert_problem",
         "psycopg_pool.pool_async": "psycopg_pool.pool",
         "psycopg_pool.sched_async": "psycopg_pool.sched",
+        "test_pool_common_async": "test_pool_common",
         "wait_async": "wait",
         "wait_conn_async": "wait_conn",
         "wait_timeout": "wait",

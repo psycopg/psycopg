@@ -11,6 +11,7 @@ from psycopg.rows import class_row, Row, TupleRow
 from psycopg._compat import assert_type, Counter
 
 from ..utils import AEvent, spawn, gather, asleep, is_async
+from .test_pool_common_async import delay_connection
 
 try:
     import psycopg_pool as pool
@@ -858,27 +859,3 @@ async def test_cancellation_in_queue(dsn):
         async with p.connection() as conn:
             cur = await conn.execute("select 1")
             assert await cur.fetchone() == (1,)
-
-
-def delay_connection(monkeypatch, sec):
-    """
-    Return a _connect_gen function delayed by the amount of seconds
-    """
-
-    async def connect_delay(*args, **kwargs):
-        t0 = time()
-        rv = await connect_orig(*args, **kwargs)
-        t1 = time()
-        await asleep(max(0, sec - (t1 - t0)))
-        return rv
-
-    connect_orig = psycopg.AsyncConnection.connect
-    monkeypatch.setattr(psycopg.AsyncConnection, "connect", connect_delay)
-
-
-async def ensure_waiting(p, num=1):
-    """
-    Wait until there are at least *num* clients waiting in the queue.
-    """
-    while len(p._waiting) < num:
-        await asleep(0)
