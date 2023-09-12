@@ -163,6 +163,7 @@ class RenameAsyncToSync(ast.NodeTransformer):
         "AsyncGenerator": "Generator",
         "AsyncIterator": "Iterator",
         "AsyncLibpqWriter": "LibpqWriter",
+        "AsyncNullConnectionPool": "NullConnectionPool",
         "AsyncPipeline": "Pipeline",
         "AsyncQueuedLibpqWriter": "QueuedLibpqWriter",
         "AsyncRawCursor": "RawCursor",

@@ -13,7 +13,7 @@ from psycopg.pq import TransactionStatus
 from psycopg.rows import class_row, Row, TupleRow
 from psycopg._compat import assert_type, Counter
 
-from ..utils import Event, spawn, gather, sleep, is_alive, is_async
+from ..utils import Event, spawn, gather, sleep, is_async
 
 try:
     import psycopg_pool as pool
@@ -22,13 +22,9 @@ except ImportError:
     pass
 
 
-def test_defaults(dsn):
+def test_default_sizes(dsn):
     with pool.ConnectionPool(dsn) as p:
         assert p.min_size == p.max_size == 4
-        assert p.timeout == 30
-        assert p.max_idle == 10 * 60
-        assert p.max_lifetime == 60 * 60
-        assert p.num_workers == 3
 
 
 @pytest.mark.parametrize("min_size, max_size", [(2, None), (0, 2), (2, 4)])
@@ -42,21 +38,6 @@ def test_min_size_max_size(dsn, min_size, max_size):
 def test_bad_size(dsn, min_size, max_size):
     with pytest.raises(ValueError):
         pool.ConnectionPool(min_size=min_size, max_size=max_size)
-
-
-def test_connection_class(dsn):
-    class MyConn(psycopg.Connection[Any]):
-        pass
-
-    with pool.ConnectionPool(dsn, connection_class=MyConn, min_size=1) as p:
-        with p.connection() as conn:
-            assert isinstance(conn, MyConn)
-
-
-def test_kwargs(dsn):
-    with pool.ConnectionPool(dsn, kwargs={"autocommit": True}, min_size=1) as p:
-        with p.connection() as conn:
-            assert conn.autocommit
 
 
 class MyRow(Dict[str, Any]):
@@ -130,12 +111,6 @@ def test_its_really_a_pool(dsn):
             assert conn.info.backend_pid in (pid1, pid2)
 
 
-def test_context(dsn):
-    with pool.ConnectionPool(dsn, min_size=1) as p:
-        assert not p.closed
-    assert p.closed
-
-
 @pytest.mark.crdb_skip("backend pid")
 def test_connection_not_lost(dsn):
     with pool.ConnectionPool(dsn, min_size=1) as p:
@@ -187,29 +162,6 @@ def test_wait_ready(dsn, monkeypatch):
         p.wait(0.0001)  # idempotent
 
 
-def test_wait_closed(dsn):
-    with pool.ConnectionPool(dsn) as p:
-        pass
-
-    with pytest.raises(pool.PoolClosed):
-        p.wait()
-
-
-@pytest.mark.slow
-def test_setup_no_timeout(dsn, proxy):
-    with pytest.raises(pool.PoolTimeout):
-        with pool.ConnectionPool(proxy.client_dsn, min_size=1, num_workers=1) as p:
-            p.wait(0.2)
-
-    with pool.ConnectionPool(proxy.client_dsn, min_size=1, num_workers=1) as p:
-        sleep(0.5)
-        assert not p._pool
-        proxy.start()
-
-        with p.connection() as conn:
-            conn.execute("select 1")
-
-
 def test_configure(dsn):
     inits = 0
 
@@ -236,37 +188,6 @@ def test_configure(dsn):
             assert inits == 2
             res = conn.execute("show default_transaction_read_only")
             assert res.fetchone()[0] == "on"  # type: ignore[index]
-
-
-@pytest.mark.slow
-def test_configure_badstate(dsn, caplog):
-    caplog.set_level(logging.WARNING, logger="psycopg.pool")
-
-    def configure(conn):
-        conn.execute("select 1")
-
-    with pool.ConnectionPool(dsn, min_size=1, configure=configure) as p:
-        with pytest.raises(pool.PoolTimeout):
-            p.wait(timeout=0.5)
-
-    assert caplog.records
-    assert "INTRANS" in caplog.records[0].message
-
-
-@pytest.mark.slow
-def test_configure_broken(dsn, caplog):
-    caplog.set_level(logging.WARNING, logger="psycopg.pool")
-
-    def configure(conn):
-        with conn.transaction():
-            conn.execute("WAT")
-
-    with pool.ConnectionPool(dsn, min_size=1, configure=configure) as p:
-        with pytest.raises(pool.PoolTimeout):
-            p.wait(timeout=0.5)
-
-    assert caplog.records
-    assert "WAT" in caplog.records[0].message
 
 
 def test_reset(dsn):
@@ -339,164 +260,6 @@ def test_reset_broken(dsn, caplog):
     assert pid1 != pid2
     assert caplog.records
     assert "WAT" in caplog.records[0].message
-
-
-@pytest.mark.slow
-@pytest.mark.timing
-@pytest.mark.crdb_skip("backend pid")
-def test_queue(dsn):
-    def worker(n):
-        t0 = time()
-        with p.connection() as conn:
-            conn.execute("select pg_sleep(0.2)")
-            pid = conn.info.backend_pid
-        t1 = time()
-        results.append((n, t1 - t0, pid))
-
-    results: List[Tuple[int, float, int]] = []
-    with pool.ConnectionPool(dsn, min_size=2) as p:
-        p.wait()
-        ts = [spawn(worker, args=(i,)) for i in range(6)]
-        gather(*ts)
-
-    times = [item[1] for item in results]
-    want_times = [0.2, 0.2, 0.4, 0.4, 0.6, 0.6]
-    for got, want in zip(times, want_times):
-        assert got == pytest.approx(want, 0.1), times
-
-    assert len(set((r[2] for r in results))) == 2, results
-
-
-@pytest.mark.slow
-def test_queue_size(dsn):
-    def worker(t, ev=None):
-        try:
-            with p.connection():
-                if ev:
-                    ev.set()
-                sleep(t)
-        except pool.TooManyRequests as e:
-            errors.append(e)
-        else:
-            success.append(True)
-
-    errors: List[Exception] = []
-    success: List[bool] = []
-
-    with pool.ConnectionPool(dsn, min_size=1, max_waiting=3) as p:
-        p.wait()
-        ev = Event()
-        spawn(worker, args=(0.3, ev))
-        ev.wait()
-
-        ts = [spawn(worker, args=(0.1,)) for i in range(4)]
-        gather(*ts)
-
-    assert len(success) == 4
-    assert len(errors) == 1
-    assert isinstance(errors[0], pool.TooManyRequests)
-    assert p.name in str(errors[0])
-    assert str(p.max_waiting) in str(errors[0])
-    assert p.get_stats()["requests_errors"] == 1
-
-
-@pytest.mark.slow
-@pytest.mark.timing
-@pytest.mark.crdb_skip("backend pid")
-def test_queue_timeout(dsn):
-    def worker(n):
-        t0 = time()
-        try:
-            with p.connection() as conn:
-                conn.execute("select pg_sleep(0.2)")
-                pid = conn.info.backend_pid
-        except pool.PoolTimeout as e:
-            t1 = time()
-            errors.append((n, t1 - t0, e))
-        else:
-            t1 = time()
-            results.append((n, t1 - t0, pid))
-
-    results: List[Tuple[int, float, int]] = []
-    errors: List[Tuple[int, float, Exception]] = []
-
-    with pool.ConnectionPool(dsn, min_size=2, timeout=0.1) as p:
-        ts = [spawn(worker, args=(i,)) for i in range(4)]
-        gather(*ts)
-
-    assert len(results) == 2
-    assert len(errors) == 2
-    for e in errors:
-        assert 0.1 < e[1] < 0.15
-
-
-@pytest.mark.slow
-@pytest.mark.timing
-def test_dead_client(dsn):
-    def worker(i, timeout):
-        try:
-            with p.connection(timeout=timeout) as conn:
-                conn.execute("select pg_sleep(0.3)")
-                results.append(i)
-        except pool.PoolTimeout:
-            if timeout > 0.2:
-                raise
-
-    with pool.ConnectionPool(dsn, min_size=2) as p:
-        results: List[int] = []
-        ts = [
-            spawn(worker, args=(i, timeout))
-            for (i, timeout) in enumerate([0.4, 0.4, 0.1, 0.4, 0.4])
-        ]
-        gather(*ts)
-
-        sleep(0.2)
-        assert set(results) == set([0, 1, 3, 4])
-        assert len(p._pool) == 2  # no connection was lost
-
-
-@pytest.mark.slow
-@pytest.mark.timing
-@pytest.mark.crdb_skip("backend pid")
-def test_queue_timeout_override(dsn):
-    def worker(n):
-        t0 = time()
-        timeout = 0.25 if n == 3 else None
-        try:
-            with p.connection(timeout=timeout) as conn:
-                conn.execute("select pg_sleep(0.2)")
-                pid = conn.info.backend_pid
-        except pool.PoolTimeout as e:
-            t1 = time()
-            errors.append((n, t1 - t0, e))
-        else:
-            t1 = time()
-            results.append((n, t1 - t0, pid))
-
-    results: List[Tuple[int, float, int]] = []
-    errors: List[Tuple[int, float, Exception]] = []
-
-    with pool.ConnectionPool(dsn, min_size=2, timeout=0.1) as p:
-        ts = [spawn(worker, args=(i,)) for i in range(4)]
-        gather(*ts)
-
-    assert len(results) == 3
-    assert len(errors) == 1
-    for e in errors:
-        assert 0.1 < e[1] < 0.15
-
-
-@pytest.mark.crdb_skip("backend pid")
-def test_broken_reconnect(dsn):
-    with pool.ConnectionPool(dsn, min_size=1) as p:
-        with p.connection() as conn:
-            pid1 = conn.info.backend_pid
-            conn.close()
-
-        with p.connection() as conn2:
-            pid2 = conn2.info.backend_pid
-
-    assert pid1 != pid2
 
 
 @pytest.mark.crdb_skip("backend pid")
@@ -594,38 +357,6 @@ def test_fail_rollback_close(dsn, caplog, monkeypatch):
     assert "BAD" in caplog.records[2].message
 
 
-def test_close_no_tasks(dsn):
-    p = pool.ConnectionPool(dsn)
-    assert p._sched_runner and is_alive(p._sched_runner)
-    workers = p._workers[:]
-    assert workers
-    for t in workers:
-        assert is_alive(t)
-
-    p.close()
-    assert p._sched_runner is None
-    assert not p._workers
-    for t in workers:
-        assert not is_alive(t)
-
-
-def test_putconn_no_pool(conn_cls, dsn):
-    with pool.ConnectionPool(dsn, min_size=1) as p:
-        conn = conn_cls.connect(dsn)
-        with pytest.raises(ValueError):
-            p.putconn(conn)
-
-    conn.close()
-
-
-def test_putconn_wrong_pool(dsn):
-    with pool.ConnectionPool(dsn, min_size=1) as p1:
-        with pool.ConnectionPool(dsn, min_size=1) as p2:
-            conn = p1.getconn()
-            with pytest.raises(ValueError):
-                p2.putconn(conn)
-
-
 def test_del_no_warning(dsn, recwarn):
     p = pool.ConnectionPool(dsn, min_size=2)
     with p.connection() as conn:
@@ -638,132 +369,11 @@ def test_del_no_warning(dsn, recwarn):
     assert not recwarn, [str(w.message) for w in recwarn.list]
 
 
-@pytest.mark.slow
-@pytest.mark.skipif(is_async(__name__), reason="sync test only")
-def test_del_stops_threads(dsn):
-    p = pool.ConnectionPool(dsn)
-    assert p._sched_runner is not None
-    ts = [p._sched_runner] + p._workers
-    del p
-    sleep(0.1)
-    for t in ts:
-        assert not is_alive(t), t
-
-
-def test_closed_getconn(dsn):
-    p = pool.ConnectionPool(dsn, min_size=1)
-    assert not p.closed
-    with p.connection():
-        pass
-
-    p.close()
-    assert p.closed
-
-    with pytest.raises(pool.PoolClosed):
-        with p.connection():
-            pass
-
-
 def test_closed_putconn(dsn):
-    p = pool.ConnectionPool(dsn, min_size=1)
-
-    with p.connection() as conn:
-        pass
-    assert not conn.closed
-
-    with p.connection() as conn:
-        p.close()
-    assert conn.closed
-
-
-def test_closed_queue(dsn):
-    def w1():
+    with pool.ConnectionPool(dsn, min_size=1) as p:
         with p.connection() as conn:
-            e1.set()  # Tell w0 that w1 got a connection
-            cur = conn.execute("select 1")
-            assert cur.fetchone() == (1,)
-            e2.wait()  # Wait until w0 has tested w2
-        success.append("w1")
-
-    def w2():
-        try:
-            with p.connection():
-                pass  # unexpected
-        except pool.PoolClosed:
-            success.append("w2")
-
-    e1 = Event()
-    e2 = Event()
-
-    p = pool.ConnectionPool(dsn, min_size=1)
-    p.wait()
-    success: List[str] = []
-
-    t1 = spawn(w1)
-    # Wait until w1 has received a connection
-    e1.wait()
-
-    t2 = spawn(w2)
-    # Wait until w2 is in the queue
-    ensure_waiting(p)
-    p.close()
-
-    # Wait for the workers to finish
-    e2.set()
-    gather(t1, t2)
-    assert len(success) == 2
-
-
-def test_open_explicit(dsn):
-    p = pool.ConnectionPool(dsn, open=False)
-    assert p.closed
-    with pytest.raises(pool.PoolClosed, match="is not open yet"):
-        p.getconn()
-
-    with pytest.raises(pool.PoolClosed, match="is not open yet"):
-        with p.connection():
             pass
-
-    p.open()
-    try:
-        assert not p.closed
-
-        with p.connection() as conn:
-            cur = conn.execute("select 1")
-            assert cur.fetchone() == (1,)
-    finally:
-        p.close()
-
-    with pytest.raises(pool.PoolClosed, match="is already closed"):
-        p.getconn()
-
-
-def test_open_context(dsn):
-    p = pool.ConnectionPool(dsn, open=False)
-    assert p.closed
-
-    with p:
-        assert not p.closed
-
-        with p.connection() as conn:
-            cur = conn.execute("select 1")
-            assert cur.fetchone() == (1,)
-
-    assert p.closed
-
-
-def test_open_no_op(dsn):
-    p = pool.ConnectionPool(dsn)
-    try:
-        assert not p.closed
-        p.open()
-        assert not p.closed
-
-        with p.connection() as conn:
-            cur = conn.execute("select 1")
-            assert cur.fetchone() == (1,)
-    finally:
-        p.close()
+        assert not conn.closed
 
 
 @pytest.mark.slow
@@ -794,18 +404,6 @@ def test_open_as_wait(dsn, monkeypatch):
 
     with pool.ConnectionPool(dsn, min_size=4, num_workers=1) as p:
         p.open(wait=True, timeout=0.5)
-
-
-def test_reopen(dsn):
-    p = pool.ConnectionPool(dsn)
-    with p.connection() as conn:
-        conn.execute("select 1")
-    p.close()
-    assert p._sched_runner is None
-    assert not p._workers
-
-    with pytest.raises(psycopg.OperationalError, match="cannot be reused"):
-        p.open()
 
 
 @pytest.mark.slow
@@ -1084,12 +682,6 @@ def test_bad_resize(dsn, min_size, max_size):
             p.resize(min_size=min_size, max_size=max_size)
 
 
-def test_jitter():
-    rnds = [pool.ConnectionPool._jitter(30, -0.1, +0.2) for i in range(100)]
-    assert 27 <= min(rnds) <= 28
-    assert 35 < max(rnds) < 36
-
-
 @pytest.mark.slow
 @pytest.mark.timing
 @pytest.mark.crdb_skip("backend pid")
@@ -1146,79 +738,6 @@ def test_check_max_lifetime(dsn):
         p.check()
         with p.connection() as conn:
             assert conn.info.backend_pid != pid
-
-
-@pytest.mark.slow
-@pytest.mark.timing
-def test_stats_measures(dsn):
-    def worker(n):
-        with p.connection() as conn:
-            conn.execute("select pg_sleep(0.2)")
-
-    with pool.ConnectionPool(dsn, min_size=2, max_size=4) as p:
-        p.wait(2.0)
-
-        stats = p.get_stats()
-        assert stats["pool_min"] == 2
-        assert stats["pool_max"] == 4
-        assert stats["pool_size"] == 2
-        assert stats["pool_available"] == 2
-        assert stats["requests_waiting"] == 0
-
-        ts = [spawn(worker, args=(i,)) for i in range(3)]
-        sleep(0.1)
-        stats = p.get_stats()
-        gather(*ts)
-        assert stats["pool_min"] == 2
-        assert stats["pool_max"] == 4
-        assert stats["pool_size"] == 3
-        assert stats["pool_available"] == 0
-        assert stats["requests_waiting"] == 0
-
-        p.wait(2.0)
-        ts = [spawn(worker, args=(i,)) for i in range(7)]
-        sleep(0.1)
-        stats = p.get_stats()
-        gather(*ts)
-        assert stats["pool_min"] == 2
-        assert stats["pool_max"] == 4
-        assert stats["pool_size"] == 4
-        assert stats["pool_available"] == 0
-        assert stats["requests_waiting"] == 3
-
-
-@pytest.mark.slow
-@pytest.mark.timing
-def test_stats_usage(dsn):
-    def worker(n):
-        try:
-            with p.connection(timeout=0.3) as conn:
-                conn.execute("select pg_sleep(0.2)")
-        except pool.PoolTimeout:
-            pass
-
-    with pool.ConnectionPool(dsn, min_size=3) as p:
-        p.wait(2.0)
-
-        ts = [spawn(worker, args=(i,)) for i in range(7)]
-        gather(*ts)
-        stats = p.get_stats()
-        assert stats["requests_num"] == 7
-        assert stats["requests_queued"] == 4
-        assert 850 <= stats["requests_wait_ms"] <= 950
-        assert stats["requests_errors"] == 1
-        assert 1150 <= stats["usage_ms"] <= 1250
-        assert stats.get("returns_bad", 0) == 0
-
-        with p.connection() as conn:
-            conn.close()
-        p.wait()
-        stats = p.pop_stats()
-        assert stats["requests_num"] == 8
-        assert stats["returns_bad"] == 1
-        with p.connection():
-            pass
-        assert p.get_stats()["requests_num"] == 1
 
 
 @pytest.mark.slow
