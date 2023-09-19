@@ -10,6 +10,7 @@ These functions are designed to consume the generators returned by the
 
 
 import os
+import sys
 import select
 import selectors
 from typing import Dict, Optional
@@ -310,7 +311,10 @@ if "PSYCOPG_WAIT_FUNC" in os.environ:
         )
     wait = globals()[fname]
 
-elif _psycopg:
+# On Windows, for the moment, avoid using wait_c, because it was reported to
+# use excessive CPU (see #645).
+# TODO: investigate why.
+elif _psycopg and sys.platform != "win32":
     wait = wait_c
 
 elif selectors.DefaultSelector is getattr(selectors, "SelectSelector", None):
