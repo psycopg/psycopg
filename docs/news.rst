@@ -16,6 +16,7 @@ Psycopg 3.1.11 (unreleased)
 - Avoid caching the parsing results of large queries to avoid excessive memory
   usage (:ticket:`#628`).
 - Fix integer overflow in C/binary extension with OID > 2^31 (:ticket:`#630`).
+- Fix loading of intervals with days and months or years (:ticket:`#643`).
 - Fix building on Solaris and derivatives (:ticket:`#632`).
 - Fix possible lack of critical section guard in async
   `~AsyncCursor.executemany()`.
