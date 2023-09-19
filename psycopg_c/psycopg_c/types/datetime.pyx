@@ -879,11 +879,11 @@ cdef class IntervalLoader(CLoader):
                 val = -val
 
             if ptr[1] == b'y':
-                days = 365 * val
+                days += 365 * val
             elif ptr[1] == b'm':
-                days = 30 * val
+                days += 30 * val
             elif ptr[1] == b'd':
-                days = val
+                days += val
             else:
                 s = bytes(data).decode("utf8", "replace")
                 raise e.DataError(f"can't parse interval {s!r}")
