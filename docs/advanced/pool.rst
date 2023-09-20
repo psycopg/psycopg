@@ -141,6 +141,72 @@ worker thread, so that the thread which used the connection can keep its
 execution without being slowed down by it.
 
 
+Debugging pool usage
+^^^^^^^^^^^^^^^^^^^^
+
+The pool uses the `logging` module to log some key operations to the
+``psycopg.pool`` logger. If you are trying to debug the pool behaviour you may
+try to log at least the ``INFO`` operations on that logger.
+
+For example, the script:
+
+.. code:: python
+
+    import time
+    import logging
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    from psycopg_pool import ConnectionPool
+
+    logging.basicConfig(
+        level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s"
+    )
+    logging.getLogger("psycopg.pool").setLevel(logging.INFO)
+
+    pool = ConnectionPool(min_size=2)
+    pool.wait()
+    logging.info("pool ready")
+
+    def square(n):
+        with pool.connection() as conn:
+            time.sleep(1)
+            rec = conn.execute("SELECT %s * %s", (n, n)).fetchone()
+            logging.info(f"The square of {n} is {rec[0]}.")
+
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        futures = [executor.submit(square, n) for n in range(4)]
+        for future in as_completed(futures):
+            future.result()
+
+might print something like:
+
+.. code:: text
+
+    2023-09-20 11:02:39,718 INFO psycopg.pool: waiting for pool 'pool-1' initialization
+    2023-09-20 11:02:39,720 INFO psycopg.pool: adding new connection to the pool
+    2023-09-20 11:02:39,720 INFO psycopg.pool: adding new connection to the pool
+    2023-09-20 11:02:39,720 INFO psycopg.pool: pool 'pool-1' is ready to use
+    2023-09-20 11:02:39,720 INFO root: pool ready
+    2023-09-20 11:02:39,721 INFO psycopg.pool: connection requested from 'pool-1'
+    2023-09-20 11:02:39,721 INFO psycopg.pool: connection given by 'pool-1'
+    2023-09-20 11:02:39,721 INFO psycopg.pool: connection requested from 'pool-1'
+    2023-09-20 11:02:39,721 INFO psycopg.pool: connection given by 'pool-1'
+    2023-09-20 11:02:39,721 INFO psycopg.pool: connection requested from 'pool-1'
+    2023-09-20 11:02:39,722 INFO psycopg.pool: connection requested from 'pool-1'
+    2023-09-20 11:02:40,724 INFO root: The square of 0 is 0.
+    2023-09-20 11:02:40,724 INFO root: The square of 1 is 1.
+    2023-09-20 11:02:40,725 INFO psycopg.pool: returning connection to 'pool-1'
+    2023-09-20 11:02:40,725 INFO psycopg.pool: connection given by 'pool-1'
+    2023-09-20 11:02:40,725 INFO psycopg.pool: returning connection to 'pool-1'
+    2023-09-20 11:02:40,726 INFO psycopg.pool: connection given by 'pool-1'
+    2023-09-20 11:02:41,728 INFO root: The square of 3 is 9.
+    2023-09-20 11:02:41,729 INFO root: The square of 2 is 4.
+    2023-09-20 11:02:41,729 INFO psycopg.pool: returning connection to 'pool-1'
+    2023-09-20 11:02:41,730 INFO psycopg.pool: returning connection to 'pool-1'
+
+Please do not rely on the messages generated to remain unchanged across
+versions: they don't constitute a stable interface.
+
+
 Pool connection and sizing
 --------------------------
 
