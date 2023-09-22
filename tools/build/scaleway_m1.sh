@@ -66,7 +66,7 @@ function delete {
 }
 
 function server_id {
-    # Return the id of the first server available, else the emtpy string
+    # Return the id of the first server available, else the empty string
     servers=$(get $servers_url || error "failed to request servers list")
     server_ids=$(echo "$servers" | jq -r ".servers[].id")
     for id in $server_ids; do
