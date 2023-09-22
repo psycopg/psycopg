@@ -2,13 +2,15 @@
 
 # Configure the environment needed to build wheel packages on Mac OS.
 # This script is designed to be used by cibuildwheel as CIBW_BEFORE_ALL_MACOS
+#
+# The PG_VERSION env var must be set to a Postgres major version (e.g. 16).
 
 set -euo pipefail
 set -x
 
 dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-brew install gnu-sed postgresql@15
+brew install gnu-sed postgresql@${PG_VERSION}
 
 # Start the database for testing
 brew services start postgresql

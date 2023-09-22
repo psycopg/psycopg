@@ -12,8 +12,8 @@ jobs:
     if: true
 
     env:
-      LIBPQ_VERSION: "15.3"
-      OPENSSL_VERSION: "1.1.1v"
+      LIBPQ_VERSION: "16.0"
+      OPENSSL_VERSION: "1.1.1w"
 
     strategy:
       fail-fast: false
@@ -37,7 +37,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: /tmp/libpq.build
-          key: libpq-${{ env.LIBPQ_VERSION }}-${{ matrix.platform }}-${{ matrix.arch }}-2
+          key: libpq-${{ matrix.platform }}-${{ matrix.arch }}-${{ env.LIBPQ_VERSION }}-${{ env.OPENSSL_VERSION }}
 
       - name: Create the binary package source tree
         run: python3 ./tools/build/copy_to_binary.py
@@ -121,10 +121,12 @@ jobs:
           CIBW_TEST_COMMAND: >-
             pytest {project}/tests -m 'not slow and not flakey' --color yes
           CIBW_ENVIRONMENT: >-
+            PG_VERSION=16
             PSYCOPG_IMPL=binary
             PSYCOPG_TEST_DSN='dbname=postgres'
-            PSYCOPG_TEST_WANT_LIBPQ_BUILD=">= 14"
-            PSYCOPG_TEST_WANT_LIBPQ_IMPORT=">= 14"
+            PATH="/usr/local/opt/postgresql@${PG_VERSION}/bin:$PATH"
+            PSYCOPG_TEST_WANT_LIBPQ_BUILD=">= $PG_VERSION"
+            PSYCOPG_TEST_WANT_LIBPQ_IMPORT=">= $PG_VERSION"
 
       - uses: actions/upload-artifact@v3
         with:

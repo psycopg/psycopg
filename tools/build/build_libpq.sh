@@ -9,7 +9,7 @@ set -x
 
 # Latest release: https://www.postgresql.org/ftp/source/
 # IMPORTANT! Change the cache key in packages.yml when upgrading libraries
-postgres_version="${LIBPQ_VERSION:-15.4}"
+postgres_version="${LIBPQ_VERSION:-16.0}"
 
 # Latest release: https://www.openssl.org/source/
 openssl_version="${OPENSSL_VERSION:-1.1.1v}"
@@ -157,7 +157,8 @@ if [ ! -d "${postgres_dir}" ]; then
     # export LD_LIBRARY_PATH="${LIBPQ_BUILD_PREFIX}/lib"
 
     ./configure --prefix=${LIBPQ_BUILD_PREFIX} --sysconfdir=/etc/postgresql-common \
-        --without-readline --with-gssapi --with-openssl --with-pam --with-ldap \
+        --without-readline --without-icu \
+        --with-gssapi --with-openssl --with-pam --with-ldap \
         CPPFLAGS=-I${LIBPQ_BUILD_PREFIX}/include/ LDFLAGS=-L${LIBPQ_BUILD_PREFIX}/lib
     make -C src/interfaces/libpq
     make -C src/bin/pg_config
