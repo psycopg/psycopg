@@ -57,9 +57,9 @@ Package(
 
 
 class Bumper:
-    def __init__(self, package: Package, *, bump_level: str | BumpLevel):
+    def __init__(self, package: Package, *, bump_level: str | BumpLevel | None):
         self.package = package
-        self.bump_level = BumpLevel(bump_level)
+        self.bump_level = BumpLevel(bump_level) if bump_level else None
 
         self._ini_regex = re.compile(
             r"""(?ix)
@@ -97,6 +97,9 @@ class Bumper:
     def want_version(self) -> Version:
         current = self.current_version
         parts = [current.major, current.minor, current.micro, current.dev or 0]
+
+        if not self.bump_level:
+            return self.current_version
 
         match self.bump_level:
             case BumpLevel.MAJOR:
@@ -259,7 +262,11 @@ chore: bump {self.package.name} package version to {self.want_version}
 def main() -> int | None:
     opt = parse_cmdline()
     logger.setLevel(opt.loglevel)
-    bumper = Bumper(packages[opt.package], bump_level=opt.level)
+    if opt.actions is None or Action.UPDATE in opt.actions:
+        bump_level = opt.level
+    else:
+        bump_level = None
+    bumper = Bumper(packages[opt.package], bump_level=bump_level)
     logger.info("current version: %s", bumper.current_version)
     logger.info("bumping to version: %s", bumper.want_version)
 
