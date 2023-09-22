@@ -7,11 +7,11 @@
 ``psycopg`` release notes
 =========================
 
-Future releases
+Current release
 ---------------
 
-Psycopg 3.1.11 (unreleased)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Psycopg 3.1.11
+^^^^^^^^^^^^^^
 
 - Avoid caching the parsing results of large queries to avoid excessive memory
   usage (:ticket:`#628`).
@@ -23,9 +23,6 @@ Psycopg 3.1.11 (unreleased)
   `~AsyncCursor.executemany()`.
 - Fix missing pipeline fetch in async `~AsyncCursor.scroll()`.
 
-
-Current release
----------------
 
 Psycopg 3.1.10
 ^^^^^^^^^^^^^^
