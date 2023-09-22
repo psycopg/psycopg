@@ -21,3 +21,6 @@ REM On https://community.chocolatey.org/packages/postgresql15/15.0.1#discussion
 REM I found the following command in a comment:
 choco install postgresql15 --version 15.0.1
 REM which I'm going to randomly try.
+
+REM See https://community.chocolatey.org/packages/postgresql15#install
+REM for the last package available (bump the version number in the url).
