@@ -12,8 +12,8 @@ jobs:
     if: true
 
     env:
-      LIBPQ_VERSION: "15.3"
-      OPENSSL_VERSION: "1.1.1v"
+      LIBPQ_VERSION: "16.0"
+      OPENSSL_VERSION: "1.1.1w"
 
     strategy:
       fail-fast: false
@@ -37,7 +37,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: /tmp/libpq.build
-          key: libpq-${{ env.LIBPQ_VERSION }}-${{ matrix.platform }}-${{ matrix.arch }}-2
+          key: libpq-${{ matrix.platform }}-${{ matrix.arch }}-${{ env.LIBPQ_VERSION }}-${{ env.OPENSSL_VERSION }}
 
       - name: Create the binary package source tree
         run: python3 ./tools/build/copy_to_binary.py
