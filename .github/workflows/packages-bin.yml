@@ -121,10 +121,12 @@ jobs:
           CIBW_TEST_COMMAND: >-
             pytest {project}/tests -m 'not slow and not flakey' --color yes
           CIBW_ENVIRONMENT: >-
+            PG_VERSION=16
             PSYCOPG_IMPL=binary
             PSYCOPG_TEST_DSN='dbname=postgres'
-            PSYCOPG_TEST_WANT_LIBPQ_BUILD=">= 14"
-            PSYCOPG_TEST_WANT_LIBPQ_IMPORT=">= 14"
+            PATH="/usr/local/opt/postgresql@${PG_VERSION}/bin:$PATH"
+            PSYCOPG_TEST_WANT_LIBPQ_BUILD=">= $PG_VERSION"
+            PSYCOPG_TEST_WANT_LIBPQ_IMPORT=">= $PG_VERSION"
 
       - uses: actions/upload-artifact@v3
         with:
