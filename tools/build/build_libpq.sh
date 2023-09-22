@@ -5,17 +5,19 @@
 set -euo pipefail
 set -x
 
-# Last release: https://www.postgresql.org/ftp/source/
+# WARNING: the version used in CI are defined in .github/workflows/packages-bin.yml
+
+# Latest release: https://www.postgresql.org/ftp/source/
 # IMPORTANT! Change the cache key in packages.yml when upgrading libraries
 postgres_version="${LIBPQ_VERSION:-15.4}"
 
-# last release: https://www.openssl.org/source/
+# Latest release: https://www.openssl.org/source/
 openssl_version="${OPENSSL_VERSION:-1.1.1v}"
 
-# last release: https://openldap.org/software/download/
+# Latest release: https://openldap.org/software/download/
 ldap_version="2.6.6"
 
-# last release: https://github.com/cyrusimap/cyrus-sasl/releases
+# Latest release: https://github.com/cyrusimap/cyrus-sasl/releases
 sasl_version="2.1.28"
 
 export LIBPQ_BUILD_PREFIX=${LIBPQ_BUILD_PREFIX:-/tmp/libpq.build}

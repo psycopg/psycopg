@@ -3,13 +3,17 @@
 How to make a psycopg release
 =============================
 
-- Change version number in:
+- Check if there is a new version or libpq_ or OpenSSL_; in such case
+  update ``LIBPQ_VERSION`` and/or ``OPENSSL_VERSION`` in
+  ``.github/workflows/packages-bin.yml``.
 
-  - ``psycopg_c/psycopg_c/version.py``
-  - ``psycopg/psycopg/version.py``
-  - ``psycopg_pool/psycopg_pool/version.py``
+    .. _libpq: https://www.postgresql.org/ftp/source/
 
-- Change docs/news.rst to drop the "unreleased" mark from the version
+    .. _OpenSSL: https://www.openssl.org/source/
+
+- Use ``tools/bump_version.py`` to upgrade package version numbers.
+
+- Change ``docs/news.rst`` to drop the "unreleased" mark from the version
 
 - Push to GitHub to run `the tests workflow`__.
 
@@ -19,21 +23,27 @@ How to make a psycopg release
 
   .. __: https://github.com/psycopg/psycopg/actions/workflows/packages.yml
 
-- If all went fine, create a tag named after the version::
+- Delete the ``wheelhouse`` directory there is one.
 
-    git tag -a -s 3.0.dev1
+- Build m1 packages by running ``./tools/build/run_build_macos_arm64.sh BRANCH``.
+  On successful completion it will save built packages in ``wheelhouse``
+
+- If all packages were built ok, push the new tag created by ``bump_version.py``::
+
     git push --tags
 
 - Download the ``artifacts.zip`` package from the last Packages workflow run.
 
-- Unpack the packages locally::
+- Unpack the packages in the wheelhouse dir::
 
-    mkdir tmp
-    cd tmp
+    mkdir -p wheelhouse
+    cd wheelhouse
     unzip ~/Downloads/artifact.zip
 
 - If the package is a testing one, upload it on TestPyPI with::
 
-    $ twine upload -s -r testpypi *
+    $ twine upload -r testpypi *
 
-- If the package is stable, omit ``-r testpypi``.
+- If the package is stable, omit ``-r testpypi``::
+
+    $ twine upload *
