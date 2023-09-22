@@ -17,15 +17,15 @@ psycopg_pool 3.2.0 (unreleased)
   (:ticket:`#520`).
 
 
-psycopg_pool 3.1.8 (unreleased)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Current release
+---------------
+
+psycopg_pool 3.1.8
+^^^^^^^^^^^^^^^^^^
 
 - Enforce connections' ``max_lifetime`` on `~ConnectionPool.check()`
   (:ticket:`#482`).
 
-
-Current release
----------------
 
 psycopg_pool 3.1.7
 ^^^^^^^^^^^^^^^^^^
