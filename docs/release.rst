@@ -11,6 +11,11 @@ How to make a psycopg release
 
     .. _OpenSSL: https://www.openssl.org/source/
 
+- Check if there is a new `cibuildwheel release`__; if so, upgrade it in
+``.github/workflows/packages-bin.yml``.
+
+  .. __: https://github.com/pypa/cibuildwheel/releases
+
 - Use ``tools/bump_version.py`` to upgrade package version numbers.
 
 - Change ``docs/news.rst`` to drop the "unreleased" mark from the version
