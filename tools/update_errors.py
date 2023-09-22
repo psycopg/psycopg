@@ -22,7 +22,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(mess
 
 
 def main():
-    classes, errors = fetch_errors("9.6 10 11 12 13 14 15".split())
+    classes, errors = fetch_errors("9.6 10 11 12 13 14 15 16".split())
 
     fn = os.path.dirname(__file__) + "/../psycopg/psycopg/errors.py"
     update_file(fn, generate_module_data(classes, errors))
