@@ -28,8 +28,11 @@ Psycopg 3.2 (unreleased)
 .. __: https://numpy.org/doc/stable/reference/arrays.scalars.html#built-in-scalar-types
 
 
-Psycopg 3.1.11 (unreleased)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Current release
+---------------
+
+Psycopg 3.1.11
+^^^^^^^^^^^^^^
 
 - Avoid caching the parsing results of large queries to avoid excessive memory
   usage (:ticket:`#628`).
@@ -43,9 +46,6 @@ Psycopg 3.1.11 (unreleased)
 - Build binary packages with libpq 15.4, which allows group-readable
   permissions on the SSL certificate on the client (:ticket:`#528`).
 
-
-Current release
----------------
 
 Psycopg 3.1.10
 ^^^^^^^^^^^^^^
