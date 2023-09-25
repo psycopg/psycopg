@@ -309,39 +309,48 @@ def register_array(info: TypeInfo, context: Optional[AdaptContext] = None) -> No
     if not info.array_oid:
         raise ValueError(f"the type info {info} doesn't describe an array")
 
-    base: Type[Any]
     adapters = context.adapters if context else postgres.adapters
 
-    base = getattr(_psycopg, "ArrayLoader", ArrayLoader)
-    name = f"{info.name.title()}{base.__name__}"
-    attribs = {
-        "base_oid": info.oid,
-        "delimiter": info.delimiter.encode(),
-    }
-    loader = type(name, (base,), attribs)
+    loader = _make_loader(info.name, info.oid, info.delimiter)
     adapters.register_loader(info.array_oid, loader)
 
+    # No need to make a new loader because the binary datum has all the info.
     loader = getattr(_psycopg, "ArrayBinaryLoader", ArrayBinaryLoader)
     adapters.register_loader(info.array_oid, loader)
 
-    base = ListDumper
-    name = f"{info.name.title()}{base.__name__}"
-    attribs = {
-        "oid": info.array_oid,
-        "element_oid": info.oid,
-        "delimiter": info.delimiter.encode(),
-    }
-    dumper = type(name, (base,), attribs)
+    dumper = _make_dumper(info.name, info.oid, info.array_oid, info.delimiter)
     adapters.register_dumper(None, dumper)
 
-    base = ListBinaryDumper
-    name = f"{info.name.title()}{base.__name__}"
-    attribs = {
-        "oid": info.array_oid,
-        "element_oid": info.oid,
-    }
-    dumper = type(name, (base,), attribs)
+    dumper = _make_binary_dumper(info.name, info.oid, info.array_oid)
     adapters.register_dumper(None, dumper)
+
+
+# Cache all dynamically-generated types to avoid leaks in case the types
+# cannot be GC'd.
+
+
+@cache
+def _make_loader(name: str, oid: int, delimiter: str) -> Type[Loader]:
+    # Note: caching this function is really needed because, if the C extension
+    # is available, the resulting type cannot be GC'd, so calling
+    # register_array() in a loop results in a leak. See #647.
+    base = getattr(_psycopg, "ArrayLoader", ArrayLoader)
+    attribs = {"base_oid": oid, "delimiter": delimiter.encode()}
+    return type(f"{name.title()}{base.__name__}", (base,), attribs)
+
+
+@cache
+def _make_dumper(
+    name: str, oid: int, array_oid: int, delimiter: str
+) -> Type[BaseListDumper]:
+    attribs = {"oid": array_oid, "element_oid": oid, "delimiter": delimiter.encode()}
+    return type(f"{name.title()}ListDumper", (ListDumper,), attribs)
+
+
+@cache
+def _make_binary_dumper(name: str, oid: int, array_oid: int) -> Type[BaseListDumper]:
+    attribs = {"oid": array_oid, "element_oid": oid}
+    return type(f"{name.title()}ListBinaryDumper", (ListBinaryDumper,), attribs)
 
 
 def register_default_adapters(context: AdaptContext) -> None:
