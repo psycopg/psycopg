@@ -8,7 +8,7 @@ import re
 import struct
 from collections import namedtuple
 from typing import Any, Callable, cast, Dict, Iterator, List, Optional
-from typing import Sequence, Tuple, Type, TYPE_CHECKING
+from typing import NamedTuple, Sequence, Tuple, Type, TYPE_CHECKING
 
 from .. import pq
 from .. import abc
@@ -16,6 +16,7 @@ from .. import sql
 from .. import postgres
 from ..adapt import Transformer, PyFormat, RecursiveDumper, Loader, Dumper
 from .._oids import TEXT_OID
+from .._compat import cache
 from .._struct import pack_len, unpack_len
 from .._typeinfo import TypeInfo
 from .._encodings import _as_python_identifier
@@ -123,8 +124,8 @@ class TupleDumper(SequenceDumper):
 class TupleBinaryDumper(Dumper):
     format = pq.Format.BINARY
 
-    # Subclasses must set an info
-    info: CompositeInfo
+    # Subclasses must set this info
+    _field_types: Tuple[int, ...]
 
     def __init__(self, cls: type, context: Optional[abc.AdaptContext] = None):
         super().__init__(cls, context)
@@ -134,9 +135,9 @@ class TupleBinaryDumper(Dumper):
         # in case the composite contains another composite. Make sure to use
         # a separate Transformer instance instead.
         self._tx = Transformer(context)
-        self._tx.set_dumper_types(self.info.field_types, self.format)
+        self._tx.set_dumper_types(self._field_types, self.format)
 
-        nfields = len(self.info.field_types)
+        nfields = len(self._field_types)
         self._formats = (PyFormat.from_pq(self.format),) * nfields
 
     def dump(self, obj: Tuple[Any, ...]) -> bytearray:
@@ -144,7 +145,7 @@ class TupleBinaryDumper(Dumper):
         adapted = self._tx.dump_sequence(obj, self._formats)
         for i in range(len(obj)):
             b = adapted[i]
-            oid = self.info.field_types[i]
+            oid = self._field_types[i]
             if b is not None:
                 out += _pack_oidlen(oid, len(b))
                 out += b
@@ -297,43 +298,27 @@ def register_composite(
     info.register(context)
 
     if not factory:
-        factory = namedtuple(  # type: ignore
-            _as_python_identifier(info.name),
-            [_as_python_identifier(n) for n in info.field_names],
-        )
+        factory = _nt_from_info(info)
 
     adapters = context.adapters if context else postgres.adapters
 
     # generate and register a customized text loader
-    loader: Type[BaseCompositeLoader] = type(
-        f"{info.name.title()}Loader",
-        (CompositeLoader,),
-        {
-            "factory": factory,
-            "fields_types": info.field_types,
-        },
-    )
+    loader: Type[BaseCompositeLoader]
+    loader = _make_loader(info.name, tuple(info.field_types), factory)
     adapters.register_loader(info.oid, loader)
 
     # generate and register a customized binary loader
-    loader = type(
-        f"{info.name.title()}BinaryLoader",
-        (CompositeBinaryLoader,),
-        {"factory": factory},
-    )
+    loader = _make_binary_loader(info.name, factory)
     adapters.register_loader(info.oid, loader)
 
     # If the factory is a type, create and register dumpers for it
     if isinstance(factory, type):
-        dumper = type(
-            f"{info.name.title()}BinaryDumper",
-            (TupleBinaryDumper,),
-            {"oid": info.oid, "info": info},
-        )
+        dumper: Type[Dumper]
+        dumper = _make_binary_dumper(info.name, info.oid, tuple(info.field_types))
         adapters.register_dumper(factory, dumper)
 
         # Default to the text dumper because it is more flexible
-        dumper = type(f"{info.name.title()}Dumper", (TupleDumper,), {"oid": info.oid})
+        dumper = _make_dumper(info.name, info.oid)
         adapters.register_dumper(factory, dumper)
 
         info.python_type = factory
@@ -344,3 +329,54 @@ def register_default_adapters(context: abc.AdaptContext) -> None:
     adapters.register_dumper(tuple, TupleDumper)
     adapters.register_loader("record", RecordLoader)
     adapters.register_loader("record", RecordBinaryLoader)
+
+
+def _nt_from_info(info: CompositeInfo) -> Type[NamedTuple]:
+    name = _as_python_identifier(info.name)
+    fields = tuple(_as_python_identifier(n) for n in info.field_names)
+    return _make_nt(name, fields)
+
+
+# Cache all dynamically-generated types to avoid leaks in case the types
+# cannot be GC'd.
+
+
+@cache
+def _make_nt(name: str, fields: Tuple[str, ...]) -> Type[NamedTuple]:
+    return namedtuple(name, fields)  # type: ignore[return-value]
+
+
+@cache
+def _make_loader(
+    name: str, types: Tuple[int, ...], factory: Callable[..., Any]
+) -> Type[BaseCompositeLoader]:
+    return type(
+        f"{name.title()}Loader",
+        (CompositeLoader,),
+        {"factory": factory, "fields_types": list(types)},
+    )
+
+
+@cache
+def _make_binary_loader(
+    name: str, factory: Callable[..., Any]
+) -> Type[BaseCompositeLoader]:
+    return type(
+        f"{name.title()}BinaryLoader", (CompositeBinaryLoader,), {"factory": factory}
+    )
+
+
+@cache
+def _make_dumper(name: str, oid: int) -> Type[TupleDumper]:
+    return type(f"{name.title()}Dumper", (TupleDumper,), {"oid": oid})
+
+
+@cache
+def _make_binary_dumper(
+    name: str, oid: int, field_types: Tuple[int, ...]
+) -> Type[TupleBinaryDumper]:
+    return type(
+        f"{name.title()}BinaryDumper",
+        (TupleBinaryDumper,),
+        {"oid": oid, "_field_types": field_types},
+    )
