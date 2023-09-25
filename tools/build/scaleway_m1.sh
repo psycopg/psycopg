@@ -75,13 +75,23 @@ function server_id {
     done
 }
 
-cmd=${1:-}
+function maybe_jq {
+    # Process the output via jq if displaying on console, otherwise leave
+    # it unprocessed.
+    if [ -t 1 ]; then
+        jq .
+    else
+        cat
+    fi
+}
+
+cmd=${1:-list}
 case $cmd in
     ensure)
         id=$(server_id)
         if [[ "$id" ]]; then
             log "You have servers."
-            get "$servers_url/$id"
+            get "$servers_url/$id" | maybe_jq
         else
             log "Creating new server."
             post $servers_url -d "
@@ -89,18 +99,21 @@ case $cmd in
                 \"name\": \"mac-m1-psycopg\",
                 \"project_id\": \"$project_id\",
                 \"type\": \"M1-M\"
-            }"
+            }" | maybe_jq
         fi
         ;;
     delete)
         id=$(server_id)
         if [[ "$id" ]]; then
             log "Deleting server $id."
-            delete "$servers_url/$id"
+            delete "$servers_url/$id" | maybe_jq
         else
             log "No server found."
         fi
         ;;
+    list)
+        get $servers_url | maybe_jq
+        ;;
     *)
-        error "Usage: $0 {ensure|delete}"
+        error "Usage: $(basename $0) [list|ensure|delete]"
 esac
