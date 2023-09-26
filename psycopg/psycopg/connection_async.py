@@ -349,8 +349,7 @@ class AsyncConnection(BaseConnection[Row]):
         except (asyncio.CancelledError, KeyboardInterrupt):
             # On Ctrl-C, try to cancel the query in the server, otherwise
             # the connection will remain stuck in ACTIVE state.
-            c = self.pgconn.get_cancel()
-            c.cancel()
+            self._try_cancel(self.pgconn)
             try:
                 await waiting.wait_async(gen, self.pgconn.socket)
             except e.QueryCanceled:
