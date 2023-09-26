@@ -7,16 +7,16 @@
 ``psycopg`` release notes
 =========================
 
-Psycopg 3.1.12 (unreleased)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Current release
+---------------
+
+Psycopg 3.1.12
+^^^^^^^^^^^^^^
 
 - Fix possible hanging if a connection is closed while querying (:ticket:`#608`).
 - Fix memory leak when `~register_*()` functions are called repeatedly
   (:ticket:`#647`).
 
-
-Current release
----------------
 
 Psycopg 3.1.11
 ^^^^^^^^^^^^^^
