@@ -97,7 +97,9 @@ def wait_conn(gen: PQGenConn[RV], timeout: Optional[float] = None) -> RV:
         return rv
 
 
-async def wait_async(gen: PQGen[RV], fileno: int) -> RV:
+async def wait_async(
+    gen: PQGen[RV], fileno: int, timeout: Optional[float] = None
+) -> RV:
     """
     Coroutine waiting for a generator to complete.
 
@@ -134,7 +136,13 @@ async def wait_async(gen: PQGen[RV], fileno: int) -> RV:
             if writer:
                 loop.add_writer(fileno, wakeup, READY_W)
             try:
-                await ev.wait()
+                if timeout is None:
+                    await ev.wait()
+                else:
+                    try:
+                        await wait_for(ev.wait(), timeout)
+                    except TimeoutError:
+                        pass
             finally:
                 if reader:
                     loop.remove_reader(fileno)

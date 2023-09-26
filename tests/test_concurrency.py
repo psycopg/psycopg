@@ -392,3 +392,42 @@ if __name__ == '__main__':
     env["PYTHONFAULTHANDLER"] = "1"
     out = sp.check_output([sys.executable, "-s", "-c", script], env=env)
     assert out.decode().rstrip() == "[1, 1]"
+
+
+@pytest.mark.slow
+@pytest.mark.crdb("skip")
+@pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="Fails with: An operation was attempted on something that is not a socket",
+)
+def test_concurrent_close(dsn, conn):
+    # Verify something similar to the problem in #608, which doesn't affect
+    # sync connections anyway.
+    pid = conn.info.backend_pid
+    conn.autocommit = True
+
+    def worker():
+        try:
+            conn.execute("select pg_sleep(3)")
+        except psycopg.OperationalError:
+            pass  # expected
+
+    t0 = time.time()
+    th = threading.Thread(target=worker)
+    th.start()
+    time.sleep(0.5)
+    with psycopg.connect(dsn, autocommit=True) as conn1:
+        cur = conn1.execute("select query from pg_stat_activity where pid = %s", [pid])
+        assert cur.fetchone()
+        conn.close()
+        th.join()
+        time.sleep(0.5)
+        t = time.time()
+        # TODO: this check can pass if we issue a cancel on close, which is
+        # a change in behaviour to be considered better.
+        # cur = conn1.execute(
+        #     "select query from pg_stat_activity where pid = %s",
+        #     [pid],
+        # )
+        # assert not cur.fetchone()
+        assert t - t0 < 2
