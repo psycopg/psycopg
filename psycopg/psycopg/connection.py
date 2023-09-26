@@ -311,8 +311,17 @@ class BaseConnection(Generic[Row]):
                 "cancel() cannot be used with a prepared two-phase transaction"
             )
 
-        c = self.pgconn.get_cancel()
-        c.cancel()
+        self._try_cancel(self.pgconn)
+
+    @classmethod
+    def _try_cancel(cls, pgconn: "PGconn") -> None:
+        try:
+            # Can fail if the connection is closed
+            c = pgconn.get_cancel()
+        except Exception as ex:
+            logger.warning("couldn't try to cancel query: %s", ex)
+        else:
+            c.cancel()
 
     def add_notice_handler(self, callback: NoticeHandler) -> None:
         """
@@ -791,6 +800,9 @@ class Connection(BaseConnection[Row]):
         if self.closed:
             return
         self._closed = True
+
+        # TODO: maybe send a cancel on close, if the connection is ACTIVE?
+
         self.pgconn.finish()
 
     @overload
@@ -959,8 +971,7 @@ class Connection(BaseConnection[Row]):
         except KeyboardInterrupt:
             # On Ctrl-C, try to cancel the query in the server, otherwise
             # the connection will remain stuck in ACTIVE state.
-            c = self.pgconn.get_cancel()
-            c.cancel()
+            self._try_cancel(self.pgconn)
             try:
                 waiting.wait(gen, self.pgconn.socket, timeout=timeout)
             except e.QueryCanceled:

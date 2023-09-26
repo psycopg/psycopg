@@ -197,6 +197,9 @@ class AsyncConnection(BaseConnection[Row]):
         if self.closed:
             return
         self._closed = True
+
+        # TODO: maybe send a cancel on close, if the connection is ACTIVE?
+
         self.pgconn.finish()
 
     @overload
@@ -343,16 +346,15 @@ class AsyncConnection(BaseConnection[Row]):
                     assert pipeline is self._pipeline
                     self._pipeline = None
 
-    async def wait(self, gen: PQGen[RV]) -> RV:
+    async def wait(self, gen: PQGen[RV], timeout: Optional[float] = 0.1) -> RV:
         try:
-            return await waiting.wait_async(gen, self.pgconn.socket)
+            return await waiting.wait_async(gen, self.pgconn.socket, timeout=timeout)
         except (asyncio.CancelledError, KeyboardInterrupt):
             # On Ctrl-C, try to cancel the query in the server, otherwise
             # the connection will remain stuck in ACTIVE state.
-            c = self.pgconn.get_cancel()
-            c.cancel()
+            self._try_cancel(self.pgconn)
             try:
-                await waiting.wait_async(gen, self.pgconn.socket)
+                await waiting.wait_async(gen, self.pgconn.socket, timeout=timeout)
             except e.QueryCanceled:
                 pass  # as expected
             raise

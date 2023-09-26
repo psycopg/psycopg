@@ -313,3 +313,47 @@ asyncio.run(main())
 
     t1 = time.time()
     assert t1 - t0 < 1.0
+
+
+@pytest.mark.slow
+@pytest.mark.crdb("skip")
+@pytest.mark.skipif(
+    sys.platform == "win32",
+    reason="Fails with: An operation was attempted on something that is not a socket",
+)
+async def test_concurrent_close(dsn, aconn):
+    # Test issue #608: concurrent closing shouldn't hang the server
+    # (although, at the moment, it doesn't cancel a running query).
+    pid = aconn.info.backend_pid
+    await aconn.set_autocommit(True)
+
+    async def worker():
+        try:
+            await aconn.execute("select pg_sleep(3)")
+        except psycopg.OperationalError:
+            pass  # expected
+
+    t0 = time.time()
+    task = create_task(worker())
+    await asyncio.sleep(0.5)
+
+    async def test():
+        async with await psycopg.AsyncConnection.connect(dsn, autocommit=True) as conn1:
+            cur = await conn1.execute(
+                "select query from pg_stat_activity where pid = %s", [pid]
+            )
+            assert await cur.fetchone()
+            await aconn.close()
+            await asyncio.gather(task)
+            await asyncio.sleep(0.5)
+            t = time.time()
+            # TODO: this statement can pass only if we send cancel on close
+            # but because async cancelling is not available in the libpq,
+            # we'd rather not do it.
+            # cur = await conn1.execute(
+            #     "select query from pg_stat_activity where pid = %s", [pid]
+            # )
+            # assert not await cur.fetchone()
+            assert t - t0 < 2
+
+    await asyncio.wait_for(test(), 5.0)
