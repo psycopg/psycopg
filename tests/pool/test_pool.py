@@ -2,13 +2,14 @@ import logging
 import weakref
 from time import sleep, time
 from threading import Thread, Event
-from typing import Any, List, Tuple
+from typing import Any, Dict, List, Tuple
 
 import pytest
 
 import psycopg
 from psycopg.pq import TransactionStatus
-from psycopg._compat import Counter
+from psycopg.rows import class_row, Row, TupleRow
+from psycopg._compat import Counter, assert_type
 
 try:
     import psycopg_pool as pool
@@ -62,6 +63,60 @@ def test_kwargs(dsn):
     with pool.ConnectionPool(dsn, kwargs={"autocommit": True}, min_size=1) as p:
         with p.connection() as conn:
             assert conn.autocommit
+
+
+class MyRow(Dict[str, Any]):
+    ...
+
+
+def test_generic_connection_type(dsn):
+    def set_autocommit(conn: psycopg.Connection[Any]) -> None:
+        conn.autocommit = True
+
+    class MyConnection(psycopg.Connection[Row]):
+        pass
+
+    with pool.ConnectionPool(
+        dsn,
+        connection_class=MyConnection[MyRow],
+        kwargs=dict(row_factory=class_row(MyRow)),
+        configure=set_autocommit,
+    ) as p1, p1.connection() as conn1:
+        (row1,) = conn1.execute("select 1 as x").fetchall()
+    assert_type(p1, pool.ConnectionPool[MyConnection[MyRow]])
+    assert_type(conn1, MyConnection[MyRow])
+    assert_type(row1, MyRow)
+    assert conn1.autocommit
+    assert row1 == {"x": 1}
+
+    with pool.ConnectionPool(dsn, connection_class=MyConnection[TupleRow]) as p2:
+        with p2.connection() as conn2:
+            (row2,) = conn2.execute("select 2 as y").fetchall()
+    assert_type(p2, pool.ConnectionPool[MyConnection[TupleRow]])
+    assert_type(conn2, MyConnection[TupleRow])
+    assert_type(row2, TupleRow)
+    assert row2 == (2,)
+
+
+def test_non_generic_connection_type(dsn):
+    def set_autocommit(conn: psycopg.Connection[Any]) -> None:
+        conn.autocommit = True
+
+    class MyConnection(psycopg.Connection[MyRow]):
+        def __init__(self, *args: Any, **kwargs: Any):
+            kwargs["row_factory"] = class_row(MyRow)
+            super().__init__(*args, **kwargs)
+
+    with pool.ConnectionPool(
+        dsn, connection_class=MyConnection, configure=set_autocommit
+    ) as p1:
+        with p1.connection() as conn1:
+            (row1,) = conn1.execute("select 1 as x").fetchall()
+    assert_type(p1, pool.ConnectionPool[MyConnection])
+    assert_type(conn1, MyConnection)
+    assert_type(row1, MyRow)
+    assert conn1.autocommit
+    assert row1 == {"x": 1}
 
 
 @pytest.mark.crdb_skip("backend pid")
