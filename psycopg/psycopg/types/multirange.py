@@ -17,6 +17,7 @@ from ..pq import Format
 from ..abc import AdaptContext, Buffer, Dumper, DumperKey, Query
 from ..adapt import RecursiveDumper, RecursiveLoader, PyFormat
 from .._oids import INVALID_OID, TEXT_OID
+from .._compat import cache
 from .._struct import pack_len, unpack_len
 from .._typeinfo import TypeInfo, TypesRegistry
 
@@ -398,20 +399,29 @@ def register_multirange(
     adapters = context.adapters if context else postgres.adapters
 
     # generate and register a customized text loader
-    loader: Type[MultirangeLoader[Any]] = type(
-        f"{info.name.title()}Loader",
-        (MultirangeLoader,),
-        {"subtype_oid": info.subtype_oid},
-    )
+    loader: Type[BaseMultirangeLoader[Any]]
+    loader = _make_loader(info.name, info.subtype_oid)
     adapters.register_loader(info.oid, loader)
 
     # generate and register a customized binary loader
-    bloader: Type[MultirangeBinaryLoader[Any]] = type(
-        f"{info.name.title()}BinaryLoader",
-        (MultirangeBinaryLoader,),
-        {"subtype_oid": info.subtype_oid},
+    loader = _make_binary_loader(info.name, info.subtype_oid)
+    adapters.register_loader(info.oid, loader)
+
+
+# Cache all dynamically-generated types to avoid leaks in case the types
+# cannot be GC'd.
+
+
+@cache
+def _make_loader(name: str, oid: int) -> Type[MultirangeLoader[Any]]:
+    return type(f"{name.title()}Loader", (MultirangeLoader,), {"subtype_oid": oid})
+
+
+@cache
+def _make_binary_loader(name: str, oid: int) -> Type[MultirangeBinaryLoader[Any]]:
+    return type(
+        f"{name.title()}BinaryLoader", (MultirangeBinaryLoader,), {"subtype_oid": oid}
     )
-    adapters.register_loader(info.oid, bloader)
 
 
 # Text dumpers for builtin multirange types wrappers

@@ -28,6 +28,13 @@ Psycopg 3.2 (unreleased)
 .. __: https://numpy.org/doc/stable/reference/arrays.scalars.html#built-in-scalar-types
 
 
+Psycopg 3.1.12 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Fix memory leak when `~register_*()` functions are called repeatedly
+  (:ticket:`#647`).
+
+
 Current release
 ---------------
 

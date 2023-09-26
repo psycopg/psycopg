@@ -13,6 +13,7 @@ from .. import errors as e
 from ..pq import Format
 from ..adapt import Buffer, Dumper, Loader, PyFormat, AdaptersMap
 from ..errors import DataError
+from .._compat import cache
 
 JsonDumpsFunction = Callable[[Any], Union[str, bytes]]
 JsonLoadsFunction = Callable[[Union[str, bytes]], Any]
@@ -51,13 +52,9 @@ def set_json_dumps(
             (Jsonb, PyFormat.BINARY),
             (Jsonb, PyFormat.TEXT),
         ]
-        dumper: Type[_JsonDumper]
         for wrapper, format in grid:
             base = _get_current_dumper(adapters, wrapper, format)
-            name = base.__name__
-            if not base.__name__.startswith("Custom"):
-                name = f"Custom{name}"
-            dumper = type(name, (base,), {"_dumps": dumps})
+            dumper = _make_dumper(base, dumps)
             adapters.register_dumper(wrapper, dumper)
 
 
@@ -89,10 +86,29 @@ def set_json_loads(
             ("jsonb", JsonbLoader),
             ("jsonb", JsonbBinaryLoader),
         ]
-        loader: Type[_JsonLoader]
         for tname, base in grid:
-            loader = type(f"Custom{base.__name__}", (base,), {"_loads": loads})
+            loader = _make_loader(base, loads)
             context.adapters.register_loader(tname, loader)
+
+
+# Cache all dynamically-generated types to avoid leaks in case the types
+# cannot be GC'd.
+
+
+@cache
+def _make_dumper(base: Type[abc.Dumper], dumps: JsonDumpsFunction) -> Type[abc.Dumper]:
+    name = base.__name__
+    if not name.startswith("Custom"):
+        name = f"Custom{name}"
+    return type(name, (base,), {"_dumps": dumps})
+
+
+@cache
+def _make_loader(base: Type[Loader], loads: JsonLoadsFunction) -> Type[Loader]:
+    name = base.__name__
+    if not name.startswith("Custom"):
+        name = f"Custom{name}"
+    return type(name, (base,), {"_loads": loads})
 
 
 class _JsonWrapper:

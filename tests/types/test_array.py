@@ -1,3 +1,4 @@
+import gc
 from typing import List, Any
 from decimal import Decimal
 
@@ -10,6 +11,9 @@ from psycopg.adapt import PyFormat, Transformer, Dumper
 from psycopg.types import TypeInfo
 from psycopg._compat import prod
 from psycopg.postgres import types as builtins
+from psycopg.types.array import register_array
+
+from ..utils import gc_collect
 
 
 tests_str = [
@@ -335,3 +339,23 @@ def test_all_chars_with_bounds(conn, fmt_out):
     s = "".join(a)
     cur.execute("select '[0:1]={a,b}'::text[] || %s::text[]", ([s],))
     assert cur.fetchone()[0] == ["a", "b", s]
+
+
+def test_register_array_leak(conn):
+    info = TypeInfo.fetch(conn, "date")
+    ntypes = []
+    for i in range(2):
+        cur = conn.cursor()
+        register_array(info, cur)
+        cur.close()
+        del cur
+        gc_collect()
+
+        objs = gc.get_objects()
+        n = 0
+        for obj in objs:
+            if isinstance(obj, type):
+                n += 1
+        ntypes.append(n)
+
+    assert ntypes[0] == ntypes[1]
