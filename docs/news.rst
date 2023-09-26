@@ -31,6 +31,7 @@ Psycopg 3.2 (unreleased)
 Psycopg 3.1.12 (unreleased)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Fix possible hanging if a connection is closed while querying (:ticket:`#608`).
 - Fix memory leak when `~register_*()` functions are called repeatedly
   (:ticket:`#647`).
 
