@@ -800,6 +800,9 @@ class Connection(BaseConnection[Row]):
         if self.closed:
             return
         self._closed = True
+
+        # TODO: maybe send a cancel on close, if the connection is ACTIVE?
+
         self.pgconn.finish()
 
     @overload
