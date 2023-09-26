@@ -871,7 +871,7 @@ class TestColumn:
         assert c.name == "now"
         assert c.type_code == builtins["date"].oid
         assert c.display_size is None
-        if is_crdb(conn):
+        if is_crdb(conn) and conn.info.server_version < 230000:
             assert c.internal_size == 16
         else:
             assert c.internal_size == 4
