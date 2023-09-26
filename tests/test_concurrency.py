@@ -401,8 +401,8 @@ if __name__ == '__main__':
     reason="Fails with: An operation was attempted on something that is not a socket",
 )
 def test_concurrent_close(dsn, conn):
-    # Verify something similar to the problem in #608, which doesn't affect
-    # sync connections anyway.
+    # Test issue #608: concurrent closing shouldn't hang the server
+    # (although, at the moment, it doesn't cancel a running query).
     pid = conn.info.backend_pid
     conn.autocommit = True
 
