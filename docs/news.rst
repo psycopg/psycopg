@@ -7,6 +7,13 @@
 ``psycopg`` release notes
 =========================
 
+Psycopg 3.1.12 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Fix memory leak when `~register_*()` functions are called repeatedly
+  (:ticket:`#647`).
+
+
 Current release
 ---------------
 

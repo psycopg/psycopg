@@ -15,6 +15,7 @@ from .. import postgres
 from ..pq import Format
 from ..abc import AdaptContext, Buffer, Dumper, DumperKey
 from ..adapt import RecursiveDumper, RecursiveLoader, PyFormat
+from .._compat import cache
 from .._struct import pack_len, unpack_len
 from ..postgres import INVALID_OID, TEXT_OID
 from .._typeinfo import RangeInfo as RangeInfo  # exported here
@@ -540,20 +541,29 @@ def register_range(info: RangeInfo, context: Optional[AdaptContext] = None) -> N
     adapters = context.adapters if context else postgres.adapters
 
     # generate and register a customized text loader
-    loader: Type[RangeLoader[Any]] = type(
-        f"{info.name.title()}Loader",
-        (RangeLoader,),
-        {"subtype_oid": info.subtype_oid},
-    )
+    loader: Type[BaseRangeLoader[Any]]
+    loader = _make_loader(info.name, info.subtype_oid)
     adapters.register_loader(info.oid, loader)
 
     # generate and register a customized binary loader
-    bloader: Type[RangeBinaryLoader[Any]] = type(
-        f"{info.name.title()}BinaryLoader",
-        (RangeBinaryLoader,),
-        {"subtype_oid": info.subtype_oid},
+    loader = _make_binary_loader(info.name, info.subtype_oid)
+    adapters.register_loader(info.oid, loader)
+
+
+# Cache all dynamically-generated types to avoid leaks in case the types
+# cannot be GC'd.
+
+
+@cache
+def _make_loader(name: str, oid: int) -> Type[RangeLoader[Any]]:
+    return type(f"{name.title()}Loader", (RangeLoader,), {"subtype_oid": oid})
+
+
+@cache
+def _make_binary_loader(name: str, oid: int) -> Type[RangeBinaryLoader[Any]]:
+    return type(
+        f"{name.title()}BinaryLoader", (RangeBinaryLoader,), {"subtype_oid": oid}
     )
-    adapters.register_loader(info.oid, bloader)
 
 
 # Text dumpers for builtin range types wrappers

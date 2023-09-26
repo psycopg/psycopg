@@ -2,12 +2,13 @@
 Adapters for PostGIS geometries
 """
 
-from typing import Optional
+from typing import Optional, Type
 
 from .. import postgres
 from ..abc import AdaptContext, Buffer
 from ..adapt import Dumper, Loader
 from ..pq import Format
+from .._compat import cache
 from .._typeinfo import TypeInfo
 
 
@@ -62,14 +63,28 @@ def register_shapely(info: TypeInfo, context: Optional[AdaptContext] = None) -> 
     info.register(context)
     adapters = context.adapters if context else postgres.adapters
 
-    class GeometryDumper(BaseGeometryDumper):
-        oid = info.oid
-
-    class GeometryBinaryDumper(BaseGeometryBinaryDumper):
-        oid = info.oid
-
     adapters.register_loader(info.oid, GeometryBinaryLoader)
     adapters.register_loader(info.oid, GeometryLoader)
     # Default binary dump
-    adapters.register_dumper(BaseGeometry, GeometryDumper)
-    adapters.register_dumper(BaseGeometry, GeometryBinaryDumper)
+    adapters.register_dumper(BaseGeometry, _make_dumper(info.oid))
+    adapters.register_dumper(BaseGeometry, _make_binary_dumper(info.oid))
+
+
+# Cache all dynamically-generated types to avoid leaks in case the types
+# cannot be GC'd.
+
+
+@cache
+def _make_dumper(oid_in: int) -> Type[BaseGeometryDumper]:
+    class GeometryDumper(BaseGeometryDumper):
+        oid = oid_in
+
+    return GeometryDumper
+
+
+@cache
+def _make_binary_dumper(oid_in: int) -> Type[BaseGeometryBinaryDumper]:
+    class GeometryBinaryDumper(BaseGeometryBinaryDumper):
+        oid = oid_in
+
+    return GeometryBinaryDumper

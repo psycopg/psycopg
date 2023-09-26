@@ -5,13 +5,14 @@ Dict to hstore adaptation
 # Copyright (C) 2021 The Psycopg Team
 
 import re
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Type
 from typing_extensions import TypeAlias
 
 from .. import errors as e
 from .. import postgres
 from ..abc import Buffer, AdaptContext
 from ..adapt import PyFormat, RecursiveDumper, RecursiveLoader
+from .._compat import cache
 from ..postgres import TEXT_OID
 from .._typeinfo import TypeInfo
 
@@ -121,10 +122,25 @@ def register_hstore(info: TypeInfo, context: Optional[AdaptContext] = None) -> N
     adapters = context.adapters if context else postgres.adapters
 
     # Generate and register a customized text dumper
-    class HstoreDumper(BaseHstoreDumper):
-        oid = info.oid
-
-    adapters.register_dumper(dict, HstoreDumper)
+    adapters.register_dumper(dict, _make_hstore_dumper(info.oid))
 
     # register the text loader on the oid
     adapters.register_loader(info.oid, HstoreLoader)
+
+
+# Cache all dynamically-generated types to avoid leaks in case the types
+# cannot be GC'd.
+
+
+@cache
+def _make_hstore_dumper(oid_in: int) -> Type[BaseHstoreDumper]:
+    """
+    Return an hstore dumper class configured using `oid_in`.
+
+    Avoid to create new classes if the oid configured is the same.
+    """
+
+    class HstoreDumper(BaseHstoreDumper):
+        oid = oid_in
+
+    return HstoreDumper
