@@ -154,6 +154,11 @@ The `!ConnectionPool` class
 
         added `!open` parameter to init method.
 
+   .. versionchanged:: 3.2
+
+        The class is generic and `!connection_class` provides types type
+        variable. See :ref:`pool-generic`.
+
    .. note:: In a future version, the default value for the `!open` parameter
         might be changed to `!False`. If you rely on this behaviour (e.g. if
         you don't use the pool as a context manager) you might want to specify
@@ -167,6 +172,10 @@ The `!ConnectionPool` class
               conn.execute(...)
 
           # the connection is now back in the pool
+
+      .. versionchanged:: 3.2
+        The connection returned is annotated as defined in `!connection_class`.
+        See :ref:`pool-generic`.
 
    .. automethod:: open
 

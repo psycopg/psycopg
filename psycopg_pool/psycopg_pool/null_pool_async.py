@@ -6,28 +6,74 @@ psycopg asynchronous null connection pool
 
 import asyncio
 import logging
-from typing import Any, Awaitable, Callable, Dict, Optional, Type
+from typing import Any, Awaitable, Callable, cast, Dict, Optional, overload, Type
 
 from psycopg import AsyncConnection
 from psycopg.pq import TransactionStatus
+from psycopg.rows import TupleRow
 
 from .errors import PoolTimeout, TooManyRequests
 from ._compat import ConnectionTimeout
 from .null_pool import _BaseNullConnectionPool
-from .pool_async import AsyncConnectionPool, AddConnection, AsyncConnectFailedCB
+from .pool_async import AsyncConnectionPool, ACT, AddConnection, AsyncConnectFailedCB
 
 logger = logging.getLogger("psycopg.pool")
 
 
-class AsyncNullConnectionPool(_BaseNullConnectionPool, AsyncConnectionPool):
+class AsyncNullConnectionPool(_BaseNullConnectionPool, AsyncConnectionPool[ACT]):
+    @overload
+    def __init__(
+        self: "AsyncNullConnectionPool[AsyncConnection[TupleRow]]",
+        conninfo: str = "",
+        *,
+        open: bool = ...,
+        configure: Optional[Callable[[ACT], Awaitable[None]]] = ...,
+        reset: Optional[Callable[[ACT], Awaitable[None]]] = ...,
+        kwargs: Optional[Dict[str, Any]] = ...,
+        min_size: int = ...,
+        max_size: Optional[int] = ...,
+        name: Optional[str] = ...,
+        timeout: float = ...,
+        max_waiting: int = ...,
+        max_lifetime: float = ...,
+        max_idle: float = ...,
+        reconnect_timeout: float = ...,
+        reconnect_failed: Optional[AsyncConnectFailedCB] = ...,
+        num_workers: int = ...,
+    ):
+        ...
+
+    @overload
+    def __init__(
+        self: "AsyncNullConnectionPool[ACT]",
+        conninfo: str = "",
+        *,
+        open: bool = ...,
+        connection_class: Type[ACT],
+        configure: Optional[Callable[[ACT], Awaitable[None]]] = ...,
+        reset: Optional[Callable[[ACT], Awaitable[None]]] = ...,
+        kwargs: Optional[Dict[str, Any]] = ...,
+        min_size: int = ...,
+        max_size: Optional[int] = ...,
+        name: Optional[str] = ...,
+        timeout: float = ...,
+        max_waiting: int = ...,
+        max_lifetime: float = ...,
+        max_idle: float = ...,
+        reconnect_timeout: float = ...,
+        reconnect_failed: Optional[AsyncConnectFailedCB] = ...,
+        num_workers: int = ...,
+    ):
+        ...
+
     def __init__(
         self,
         conninfo: str = "",
         *,
         open: bool = True,
-        connection_class: Type[AsyncConnection[Any]] = AsyncConnection,
-        configure: Optional[Callable[[AsyncConnection[Any]], Awaitable[None]]] = None,
-        reset: Optional[Callable[[AsyncConnection[Any]], Awaitable[None]]] = None,
+        connection_class: Type[ACT] = cast(Type[ACT], AsyncConnection),
+        configure: Optional[Callable[[ACT], Awaitable[None]]] = None,
+        reset: Optional[Callable[[ACT], Awaitable[None]]] = None,
         kwargs: Optional[Dict[str, Any]] = None,
         # Note: default value changed to 0.
         min_size: int = 0,
@@ -82,10 +128,8 @@ class AsyncNullConnectionPool(_BaseNullConnectionPool, AsyncConnectionPool):
 
         logger.info("pool %r is ready to use", self.name)
 
-    async def _get_ready_connection(
-        self, timeout: Optional[float]
-    ) -> Optional[AsyncConnection[Any]]:
-        conn: Optional[AsyncConnection[Any]] = None
+    async def _get_ready_connection(self, timeout: Optional[float]) -> Optional[ACT]:
+        conn: Optional[ACT] = None
         if self.max_size == 0 or self._nconns < self.max_size:
             # Create a new connection for the client
             try:
@@ -101,7 +145,7 @@ class AsyncNullConnectionPool(_BaseNullConnectionPool, AsyncConnectionPool):
             )
         return conn
 
-    async def _maybe_close_connection(self, conn: AsyncConnection[Any]) -> bool:
+    async def _maybe_close_connection(self, conn: ACT) -> bool:
         # Close the connection if no client is waiting for it, or if the pool
         # is closed. For extra refcare remove the pool reference from it.
         # Maintain the stats.
@@ -132,7 +176,7 @@ class AsyncNullConnectionPool(_BaseNullConnectionPool, AsyncConnectionPool):
     async def check(self) -> None:
         pass
 
-    async def _add_to_pool(self, conn: AsyncConnection[Any]) -> None:
+    async def _add_to_pool(self, conn: ACT) -> None:
         # Remove the pool reference from the connection before returning it
         # to the state, to avoid to create a reference loop.
         # Also disable the warning for open connection in conn.__del__

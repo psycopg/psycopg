@@ -6,12 +6,13 @@ Psycopg null connection pools
 
 import logging
 import threading
-from typing import Any, Callable, Dict, Optional, Tuple, Type
+from typing import Any, Callable, cast, Dict, Optional, overload, Tuple, Type
 
 from psycopg import Connection
 from psycopg.pq import TransactionStatus
+from psycopg.rows import TupleRow
 
-from .pool import ConnectionPool, AddConnection, ConnectFailedCB
+from .pool import ConnectionPool, CT, AddConnection, ConnectFailedCB
 from .errors import PoolTimeout, TooManyRequests
 from ._compat import ConnectionTimeout
 
@@ -40,15 +41,60 @@ class _BaseNullConnectionPool:
         pass
 
 
-class NullConnectionPool(_BaseNullConnectionPool, ConnectionPool):
+class NullConnectionPool(_BaseNullConnectionPool, ConnectionPool[CT]):
+    @overload
+    def __init__(
+        self: "NullConnectionPool[Connection[TupleRow]]",
+        conninfo: str = "",
+        *,
+        open: bool = ...,
+        configure: Optional[Callable[[CT], None]] = ...,
+        reset: Optional[Callable[[CT], None]] = ...,
+        kwargs: Optional[Dict[str, Any]] = ...,
+        min_size: int = ...,
+        max_size: Optional[int] = ...,
+        name: Optional[str] = ...,
+        timeout: float = ...,
+        max_waiting: int = ...,
+        max_lifetime: float = ...,
+        max_idle: float = ...,
+        reconnect_timeout: float = ...,
+        reconnect_failed: Optional[ConnectFailedCB] = ...,
+        num_workers: int = ...,
+    ):
+        ...
+
+    @overload
+    def __init__(
+        self: "NullConnectionPool[CT]",
+        conninfo: str = "",
+        *,
+        open: bool = ...,
+        connection_class: Type[CT],
+        configure: Optional[Callable[[CT], None]] = ...,
+        reset: Optional[Callable[[CT], None]] = ...,
+        kwargs: Optional[Dict[str, Any]] = ...,
+        min_size: int = ...,
+        max_size: Optional[int] = ...,
+        name: Optional[str] = ...,
+        timeout: float = ...,
+        max_waiting: int = ...,
+        max_lifetime: float = ...,
+        max_idle: float = ...,
+        reconnect_timeout: float = ...,
+        reconnect_failed: Optional[ConnectFailedCB] = ...,
+        num_workers: int = ...,
+    ):
+        ...
+
     def __init__(
         self,
         conninfo: str = "",
         *,
         open: bool = True,
-        connection_class: Type[Connection[Any]] = Connection,
-        configure: Optional[Callable[[Connection[Any]], None]] = None,
-        reset: Optional[Callable[[Connection[Any]], None]] = None,
+        connection_class: Type[CT] = cast(Type[CT], Connection),
+        configure: Optional[Callable[[CT], None]] = None,
+        reset: Optional[Callable[[CT], None]] = None,
         kwargs: Optional[Dict[str, Any]] = None,
         # Note: default value changed to 0.
         min_size: int = 0,
@@ -109,10 +155,8 @@ class NullConnectionPool(_BaseNullConnectionPool, ConnectionPool):
 
         logger.info("pool %r is ready to use", self.name)
 
-    def _get_ready_connection(
-        self, timeout: Optional[float]
-    ) -> Optional[Connection[Any]]:
-        conn: Optional[Connection[Any]] = None
+    def _get_ready_connection(self, timeout: Optional[float]) -> Optional[CT]:
+        conn: Optional[CT] = None
         if self.max_size == 0 or self._nconns < self.max_size:
             # Create a new connection for the client
             try:
@@ -129,7 +173,7 @@ class NullConnectionPool(_BaseNullConnectionPool, ConnectionPool):
             )
         return conn
 
-    def _maybe_close_connection(self, conn: Connection[Any]) -> bool:
+    def _maybe_close_connection(self, conn: CT) -> bool:
         with self._lock:
             if not self._closed and self._waiting:
                 return False
@@ -162,7 +206,7 @@ class NullConnectionPool(_BaseNullConnectionPool, ConnectionPool):
         """No-op, as the pool doesn't have connections in its state."""
         pass
 
-    def _add_to_pool(self, conn: Connection[Any]) -> None:
+    def _add_to_pool(self, conn: CT) -> None:
         # Remove the pool reference from the connection before returning it
         # to the state, to avoid to create a reference loop.
         # Also disable the warning for open connection in conn.__del__

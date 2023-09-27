@@ -22,6 +22,7 @@ psycopg_pool 3.1.9 (unreleased)
 
 - Fix the return type annotation of `!NullConnectionPool.__enter__()`
   (:ticket:`#540`).
+- Make connection pool classes generic on the connection type (:ticket:`#559`).
 
 
 Current release

@@ -6,16 +6,18 @@ psycopg connection pool base class and functionalities.
 
 from time import monotonic
 from random import random
-from typing import Any, Dict, Generic, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple, TYPE_CHECKING
 
 from psycopg import errors as e
-from psycopg.abc import ConnectionType
 
 from .errors import PoolClosed
 from ._compat import Counter, Deque
 
+if TYPE_CHECKING:
+    from psycopg.connection import BaseConnection
 
-class BasePool(Generic[ConnectionType]):
+
+class BasePool:
     # Used to generate pool names
     _num_pool = 0
 
@@ -35,6 +37,8 @@ class BasePool(Generic[ConnectionType]):
     _CONNECTIONS_MS = "connections_ms"
     _CONNECTIONS_ERRORS = "connections_errors"
     _CONNECTIONS_LOST = "connections_lost"
+
+    _pool: Deque["Any"]
 
     def __init__(
         self,
@@ -74,7 +78,7 @@ class BasePool(Generic[ConnectionType]):
         self.num_workers = num_workers
 
         self._nconns = min_size  # currently in the pool, out, being prepared
-        self._pool = Deque[ConnectionType]()
+        self._pool = Deque()
         self._stats = Counter[str]()
 
         # Min number of connections in the pool in a max_idle unit of time.
@@ -138,7 +142,7 @@ class BasePool(Generic[ConnectionType]):
             else:
                 raise PoolClosed(f"the pool {self.name!r} is not open yet")
 
-    def _check_pool_putconn(self, conn: ConnectionType) -> None:
+    def _check_pool_putconn(self, conn: "BaseConnection[Any]") -> None:
         pool = getattr(conn, "_pool", None)
         if pool is self:
             return
@@ -188,7 +192,7 @@ class BasePool(Generic[ConnectionType]):
         """
         return value * (1.0 + ((max_pc - min_pc) * random()) + min_pc)
 
-    def _set_connection_expiry_date(self, conn: ConnectionType) -> None:
+    def _set_connection_expiry_date(self, conn: "BaseConnection[Any]") -> None:
         """Set an expiry date on a connection.
 
         Add some randomness to avoid mass reconnection.

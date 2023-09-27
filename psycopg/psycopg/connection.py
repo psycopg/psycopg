@@ -129,7 +129,7 @@ class BaseConnection(Generic[Row]):
 
         # Attribute is only set if the connection is from a pool so we can tell
         # apart a connection in the pool too (when _pool = None)
-        self._pool: Optional["BasePool[Any]"]
+        self._pool: Optional["BasePool"]
 
         self._pipeline: Optional[BasePipeline] = None
 
