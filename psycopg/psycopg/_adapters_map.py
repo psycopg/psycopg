@@ -168,7 +168,7 @@ class AdaptersMap:
         :param loader: The loar to register for `!oid`.
 
         If `oid` is specified as string, it refers to a type name, which is
-        looked up in the `types` registry. `
+        looked up in the `types` registry.
 
         """
         if isinstance(oid, str):
