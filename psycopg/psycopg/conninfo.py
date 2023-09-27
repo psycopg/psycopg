@@ -95,7 +95,7 @@ def _parse_conninfo(conninfo: str) -> List[pq.ConninfoOption]:
     try:
         return pq.Conninfo.parse(conninfo.encode())
     except e.OperationalError as ex:
-        raise e.ProgrammingError(str(ex))
+        raise e.ProgrammingError(str(ex)) from None
 
 
 re_escape = re.compile(r"([\\'])")
