@@ -64,6 +64,63 @@ cursors and annotate the returned objects accordingly. See
    # drec type is Optional[Dict[str, Any]]
 
 
+.. _pool-generic:
+
+Generic pool types
+------------------
+
+.. versionadded:: 3.2
+
+The `~psycopg_pool.ConnectionPool` class and similar are generic on their
+`!connection_class` argument. The `~psycopg_pool.ConnectionPool.connection()`
+method is annotated as returning a connection of that type, and the record
+returned will follow the rule as in :ref:`row-factory-static`.
+
+Note that, at the moment, if you use a generic class as `!connection_class`,
+you will need to specify a `!row_factory` consistently in the `!kwargs`,
+otherwise the typing system and the runtime will not agree.
+
+.. code:: python
+
+    from psycopg import Connection
+    from psycopg.rows import DictRow, dict_row
+
+    with ConnectionPool(
+        connection_class=Connection[DictRow],   # provides type hinting
+        kwargs={"row_factory": dict_row},       # works at runtime
+    ) as pool:
+        # reveal_type(pool): ConnectionPool[Connection[dict[str, Any]]]
+
+        with pool.connection() as conn:
+            # reveal_type(conn): Connection[dict[str, Any]]
+
+            row = conn.execute("SELECT now()").fetchone()
+            # reveal_type(row): Optional[dict[str, Any]]
+
+            print(row)  # {"now": datetime.datetime(...)}
+
+If a non-generic `!Connection` subclass is used (one whose returned row
+type is not parametric) then it's not necessary to specify `!kwargs`:
+
+.. code:: python
+
+    class MyConnection(Connection[DictRow]):
+        def __init__(self, *args, **kwargs):
+            kwargs["row_factory"] = dict_row
+            super().__init__(*args, **kwargs)
+
+    with ConnectionPool(connection_class=MyConnection[DictRow]) as pool:
+        # reveal_type(pool): ConnectionPool[MyConnection]
+
+        with pool.connection() as conn:
+            # reveal_type(conn): MyConnection
+
+            row = conn.execute("SELECT now()").fetchone()
+            # reveal_type(row): Optional[dict[str, Any]]
+
+            print(row)  # {"now": datetime.datetime(...)}
+
+
 .. _example-pydantic:
 
 Example: returning records as Pydantic models
