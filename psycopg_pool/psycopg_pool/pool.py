@@ -169,7 +169,9 @@ class ConnectionPool(Generic[CT], BasePool):
         logger.info("waiting for pool %r initialization", self.name)
         if not self._pool_full_event.wait(timeout):
             self.close()  # stop all the threads
-            raise PoolTimeout(f"pool initialization incomplete after {timeout} sec")
+            raise PoolTimeout(
+                f"pool initialization incomplete after {timeout} sec"
+            ) from None
 
         with self._lock:
             assert self._pool_full_event
@@ -213,10 +215,11 @@ class ConnectionPool(Generic[CT], BasePool):
         logger.info("connection requested from %r", self.name)
         self._stats[self._REQUESTS_NUM] += 1
 
+        self._check_open_getconn()
+
         # Critical section: decide here if there's a connection ready
         # or if the client needs to wait.
         with self._lock:
-            self._check_open_getconn()
             conn = self._get_ready_connection(timeout)
             if not conn:
                 # No connection available: put the client in the waiting queue
@@ -285,7 +288,6 @@ class ConnectionPool(Generic[CT], BasePool):
         self._check_pool_putconn(conn)
 
         logger.info("returning connection to %r", self.name)
-
         if self._maybe_close_connection(conn):
             return
 
@@ -342,9 +344,7 @@ class ConnectionPool(Generic[CT], BasePool):
 
     def _start_workers(self) -> None:
         self._sched_runner = threading.Thread(
-            target=self._sched.run,
-            name=f"{self.name}-scheduler",
-            daemon=True,
+            target=self._sched.run, name=f"{self.name}-scheduler", daemon=True
         )
         assert not self._workers
         for i in range(self.num_workers):
@@ -544,8 +544,7 @@ class ConnectionPool(Generic[CT], BasePool):
 
             if isinstance(task, StopWorker):
                 logger.debug(
-                    "terminating working thread %s",
-                    threading.current_thread().name,
+                    "terminating working thread %s", threading.current_thread().name
                 )
                 return
 
@@ -569,9 +568,7 @@ class ConnectionPool(Generic[CT], BasePool):
             kwargs["connect_timeout"] = max(round(timeout), 1)
         t0 = monotonic()
         try:
-            conn: CT = self.connection_class.connect(  # type: ignore
-                self.conninfo, **kwargs
-            )
+            conn: CT = cast(CT, self.connection_class.connect(self.conninfo, **kwargs))
         except Exception:
             self._stats[self._CONNECTIONS_ERRORS] += 1
             raise
