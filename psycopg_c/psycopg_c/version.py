@@ -4,7 +4,7 @@ psycopg-c distribution version file.
 
 # Copyright (C) 2020 The Psycopg Team
 
-from ._compat import metadata
+from importlib import metadata
 
 try:
     __version__ = metadata.version("psycopg-c")

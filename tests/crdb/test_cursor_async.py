@@ -6,7 +6,6 @@ from asyncio.queues import Queue
 import pytest
 from psycopg import pq, errors as e
 from psycopg.rows import namedtuple_row
-from psycopg._compat import create_task
 
 from .test_cursor import testfeed
 
@@ -36,7 +35,7 @@ async def test_changefeed(aconn_cls, dsn, aconn, testfeed, fmt_out):
         except Exception as ex:
             q.put_nowait(ex)
 
-    t = create_task(worker())
+    t = asyncio.create_task(worker())
 
     cur = aconn.cursor()
     await cur.execute(f"insert into {testfeed} (data) values ('hello') returning id")

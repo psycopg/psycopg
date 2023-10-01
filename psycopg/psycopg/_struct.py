@@ -5,12 +5,11 @@ Utility functions to deal with binary structs.
 # Copyright (C) 2020 The Psycopg Team
 
 import struct
-from typing import Callable, cast, Optional, Tuple
+from typing import Callable, cast, Optional, Protocol, Tuple
 from typing_extensions import TypeAlias
 
 from .abc import Buffer
 from . import errors as e
-from ._compat import Protocol
 
 PackInt: TypeAlias = Callable[[int], bytes]
 UnpackInt: TypeAlias = Callable[[Buffer], Tuple[int]]

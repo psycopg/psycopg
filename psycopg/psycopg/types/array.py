@@ -6,6 +6,7 @@ Adapters for arrays
 
 import re
 import struct
+from math import prod
 from typing import Any, cast, Callable, List, Optional, Pattern, Set, Tuple, Type
 
 from .. import pq
@@ -14,7 +15,7 @@ from .. import postgres
 from ..abc import AdaptContext, Buffer, Dumper, DumperKey, NoneType, Loader, Transformer
 from ..adapt import RecursiveDumper, RecursiveLoader, PyFormat
 from .._oids import TEXT_OID, INVALID_OID, TEXT_ARRAY_OID
-from .._compat import cache, prod
+from .._compat import cache
 from .._struct import pack_len, unpack_len
 from .._cmodule import _psycopg
 from .._typeinfo import TypeInfo

@@ -4,12 +4,11 @@ Protocol objects to represent objects exposed by different pq implementations.
 
 # Copyright (C) 2020 The Psycopg Team
 
-from typing import Any, Callable, List, Optional, Sequence, Tuple
+from typing import Any, Callable, List, Optional, Protocol, Sequence, Tuple
 from typing import Union, TYPE_CHECKING
 from typing_extensions import TypeAlias
 
 from ._enums import Format, Trace
-from .._compat import Protocol
 
 if TYPE_CHECKING:
     from .misc import PGnotify, ConninfoOption, PGresAttDesc

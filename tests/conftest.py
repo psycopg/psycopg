@@ -69,7 +69,7 @@ def pytest_sessionstart(session):
 
 
 asyncio_options: Dict[str, Any] = {}
-if sys.platform == "win32" and sys.version_info >= (3, 8):
+if sys.platform == "win32":
     asyncio_options["policy"] = asyncio.WindowsSelectorEventLoopPolicy()
 
 

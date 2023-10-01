@@ -2,13 +2,14 @@ import asyncio
 import logging
 from time import time
 from typing import Any, Dict, List, Tuple
+from asyncio import create_task
 
 import pytest
 
 import psycopg
 from psycopg.pq import TransactionStatus
 from psycopg.rows import class_row, Row, TupleRow
-from psycopg._compat import assert_type, create_task, Counter
+from psycopg._compat import assert_type, Counter
 
 try:
     import psycopg_pool as pool
@@ -1263,7 +1264,6 @@ async def test_debug_deadlock(dsn):
         logger.setLevel(old_level)
 
 
-@pytest.mark.skipif("sys.version_info < (3, 8)", reason="asyncio bug")
 async def test_cancellation_in_queue(dsn):
     # https://github.com/psycopg/psycopg/issues/509
 
@@ -1309,7 +1309,6 @@ async def test_cancellation_in_queue(dsn):
             pytest.fail("no client got in the queue")
 
         [task.cancel() for task in reversed(tasks)]
-        # Python 3.7 hangs on this statement, instead of timing out or returning
         await asyncio.wait_for(asyncio.gather(*tasks, return_exceptions=True), 1.0)
 
         stats = p.get_stats()

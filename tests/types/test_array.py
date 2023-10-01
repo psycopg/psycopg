@@ -1,4 +1,5 @@
 import gc
+from math import prod
 from typing import List, Any
 from decimal import Decimal
 
@@ -9,7 +10,6 @@ from psycopg import pq
 from psycopg import sql
 from psycopg.adapt import PyFormat, Transformer, Dumper
 from psycopg.types import TypeInfo
-from psycopg._compat import prod
 from psycopg.postgres import types as builtins
 from psycopg.types.array import register_array
 

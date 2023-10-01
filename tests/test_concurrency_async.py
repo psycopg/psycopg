@@ -4,6 +4,7 @@ import signal
 import asyncio
 import threading
 import subprocess as sp
+from asyncio import create_task
 from asyncio.queues import Queue
 from typing import List, Tuple
 
@@ -11,7 +12,6 @@ import pytest
 
 import psycopg
 from psycopg import errors as e
-from psycopg._compat import create_task
 
 
 @pytest.mark.slow

@@ -1,11 +1,10 @@
 import asyncio
 import logging
 from time import time
+from asyncio import create_task
 from functools import partial
 
 import pytest
-
-from psycopg._compat import create_task
 
 try:
     from psycopg_pool.sched import AsyncScheduler

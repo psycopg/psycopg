@@ -4,7 +4,6 @@ import asyncio
 import psycopg.crdb
 from psycopg import errors as e
 from psycopg.crdb import AsyncCrdbConnection
-from psycopg._compat import create_task
 
 import pytest
 
@@ -74,7 +73,7 @@ async def test_identify_closure(aconn_cls, dsn):
                 await asyncio.sleep(0.2)
                 await conn2.execute("cancel session %s", [session_id])
 
-            t = create_task(closer())
+            t = asyncio.create_task(closer())
             t0 = time.time()
             try:
                 with pytest.raises(psycopg.OperationalError):

@@ -12,6 +12,7 @@ from types import TracebackType
 from typing import Any, AsyncIterator, Awaitable, Callable, cast, Generic
 from typing import Dict, List, Optional, overload, Sequence, Type, TypeVar, Union
 from typing_extensions import TypeAlias
+from asyncio import create_task, Task
 from weakref import ref
 from contextlib import asynccontextmanager
 
@@ -23,7 +24,7 @@ from psycopg.rows import TupleRow
 from .base import ConnectionAttempt, BasePool
 from .sched import AsyncScheduler
 from .errors import PoolClosed, PoolTimeout, TooManyRequests
-from ._compat import Task, create_task, Deque
+from ._compat import Deque
 
 logger = logging.getLogger("psycopg.pool")
 

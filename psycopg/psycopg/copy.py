@@ -18,7 +18,6 @@ from . import pq
 from . import adapt
 from . import errors as e
 from .abc import Buffer, ConnectionType, PQGen, Transformer
-from ._compat import create_task
 from .pq.misc import connection_summary
 from ._cmodule import _psycopg
 from ._encodings import pgconn_encoding
@@ -634,7 +633,7 @@ class AsyncQueuedLibpqWriter(AsyncLibpqWriter):
 
     async def write(self, data: Buffer) -> None:
         if not self._worker:
-            self._worker = create_task(self.worker())
+            self._worker = asyncio.create_task(self.worker())
 
         if len(data) <= MAX_BUFFER_SIZE:
             # Most used path: we don't need to split the buffer in smaller

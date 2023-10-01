@@ -4,7 +4,7 @@ psycopg pool version file.
 
 # Copyright (C) 2021 The Psycopg Team
 
-from ._compat import metadata
+from importlib import metadata
 
 try:
     __version__ = metadata.version("psycopg-pool")

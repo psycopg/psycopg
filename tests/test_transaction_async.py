@@ -5,7 +5,6 @@ import pytest
 
 from psycopg import Rollback
 from psycopg import errors as e
-from psycopg._compat import create_task
 
 from .test_transaction import in_transaction, insert_row, inserted, get_exc_info
 from .test_transaction import ExpectedException, crdb_skip_external_observer
@@ -729,11 +728,11 @@ async def test_concurrency(aconn, what):
             assert "transaction commit" in str(ex.value)
 
     # Start a first transaction in a task
-    t1 = create_task(worker(unlock=evs[0], wait_on=evs[1]))
+    t1 = asyncio.create_task(worker(unlock=evs[0], wait_on=evs[1]))
     await evs[0].wait()
 
     # Start a nested transaction in a task
-    t2 = create_task(worker(unlock=evs[1], wait_on=evs[2]))
+    t2 = asyncio.create_task(worker(unlock=evs[1], wait_on=evs[2]))
 
     # Terminate the first transaction before the second does
     await asyncio.gather(t1)

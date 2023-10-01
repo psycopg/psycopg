@@ -74,7 +74,7 @@ a set of env vars working for your setup::
 
     $ docker run -ti --rm --volume `pwd`:/src --workdir /src \
       -e PSYCOPG_TEST_DSN -e PGHOST=172.17.0.1 -e PGUSER=`whoami` \
-      python:3.7 bash
+      python:3.8 bash
 
     # pip install -e "./psycopg[test]" ./psycopg_pool ./psycopg_c
     # pytest
