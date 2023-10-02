@@ -13,13 +13,13 @@ from argparse import ArgumentParser, Namespace
 
 import ast_comments as ast
 
-# The ast_comment has an import:
+# ast_comment versions 1.1.0, 1.1.1 have an import:
 #
 #   from typing import Dict, List, Tuple, Union
 #
 # which shadows some of the types defined in ast.
 #
-# TODO: report the issue upstream
+# Reported in https://github.com/t3rn0/ast-comments/issues/22
 import ast as ast_orig
 
 ast.Dict = ast_orig.Dict
