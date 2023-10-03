@@ -67,6 +67,14 @@ class _BaseTimeDumper(Dumper):
     def upgrade(self, obj: time, format: PyFormat) -> Dumper:
         raise NotImplementedError
 
+    def _get_offset(self, obj: time) -> timedelta:
+        offset = obj.utcoffset()
+        if offset is None:
+            raise DataError(
+                f"cannot calculate the offset of tzinfo '{obj.tzinfo}' without a date"
+            )
+        return offset
+
 
 class _BaseTimeTextDumper(_BaseTimeDumper):
     def dump(self, obj: time) -> bytes:
@@ -85,6 +93,10 @@ class TimeDumper(_BaseTimeTextDumper):
 
 class TimeTzDumper(_BaseTimeTextDumper):
     oid = postgres.types["timetz"].oid
+
+    def dump(self, obj: time) -> bytes:
+        self._get_offset(obj)
+        return super().dump(obj)
 
 
 class TimeBinaryDumper(_BaseTimeDumper):
@@ -112,8 +124,7 @@ class TimeTzBinaryDumper(_BaseTimeDumper):
         us = obj.microsecond + 1_000_000 * (
             obj.second + 60 * (obj.minute + 60 * obj.hour)
         )
-        off = obj.utcoffset()
-        assert off is not None
+        off = self._get_offset(obj)
         return _pack_timetz(us, -int(off.total_seconds()))
 
 

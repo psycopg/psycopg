@@ -4,6 +4,7 @@ import pytest
 
 from psycopg import DataError, pq, sql
 from psycopg.adapt import PyFormat
+from psycopg._compat import ZoneInfo
 
 crdb_skip_datestyle = pytest.mark.crdb("skip", reason="set datestyle/intervalstyle")
 crdb_skip_negative_interval = pytest.mark.crdb("skip", reason="negative interval")
@@ -568,6 +569,12 @@ class TestTimeTz:
         cur.execute("set timezone to '-02:00'")
         cur.execute(f"select '{expr}'::timetz = %{fmt_in.value}", (as_time(val),))
         assert cur.fetchone()[0] is True
+
+    @pytest.mark.parametrize("fmt_in", PyFormat)
+    def test_dump_timetz_zoneinfo(self, conn, fmt_in):
+        t = dt.time(12, 0, tzinfo=ZoneInfo("Europe/Rome"))
+        with pytest.raises(DataError, match="Europe/Rome"):
+            conn.execute(f"select %{fmt_in.value}", (t,))
 
     @pytest.mark.parametrize(
         "val, expr, timezone",
