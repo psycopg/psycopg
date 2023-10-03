@@ -576,6 +576,22 @@ class TestTimeTz:
         with pytest.raises(DataError, match="Europe/Rome"):
             conn.execute(f"select %{fmt_in.value}", (t,))
 
+    @pytest.mark.parametrize("fmt_in", PyFormat)
+    def test_dump_timetz_overflow(self, conn, fmt_in):
+        class MyTimeZone(dt.tzinfo):
+            def dst(self, dt_):
+                return None
+
+            def utcoffset(self, dt_):
+                return dt.timedelta(hours=25)
+
+            def tzname(self, dt_):
+                return "lol"
+
+        t = dt.time(12, 0, tzinfo=MyTimeZone())
+        with pytest.raises(ValueError):
+            conn.execute(f"select %{fmt_in.value}", (t,))
+
     @pytest.mark.parametrize(
         "val, expr, timezone",
         [
