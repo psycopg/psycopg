@@ -113,6 +113,14 @@ cdef class _BaseTimeDumper(CDumper):
     cpdef upgrade(self, obj: time, format):
         raise NotImplementedError
 
+    cdef object _get_offset(self, obj):
+        off = PyObject_CallFunctionObjArgs(time_utcoffset, <PyObject *>obj, NULL)
+        if off is None:
+            raise e.DataError(
+                f"cannot calculate the offset of tzinfo '{obj.tzinfo}' without a date"
+            )
+        return off
+
 
 cdef class _BaseTimeTextDumper(_BaseTimeDumper):
 
@@ -146,6 +154,10 @@ cdef class TimeDumper(_BaseTimeTextDumper):
 cdef class TimeTzDumper(_BaseTimeTextDumper):
 
     oid = oids.TIMETZ_OID
+
+    cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
+        self._get_offset(obj)
+        return _BaseTimeTextDumper.cdump(self, obj, rv, offset)
 
 
 @cython.final
@@ -184,7 +196,7 @@ cdef class TimeTzBinaryDumper(_BaseTimeDumper):
             + 60 * (cdt.time_minute(obj) + 60 * <int64_t>cdt.time_hour(obj))
         )
 
-        off = PyObject_CallFunctionObjArgs(time_utcoffset, <PyObject *>obj, NULL)
+        off = self._get_offset(obj)
         cdef int32_t offsec = int(PyObject_CallFunctionObjArgs(
             timedelta_total_seconds, <PyObject *>off, NULL))
 
