@@ -10,7 +10,9 @@
 set -euo pipefail
 # set -x
 
-python_versions="3.8.10 3.9.13 3.10.5 3.11.0"
+# NOMERGE: one-off build of cp312 packages
+# python_versions="3.8.10 3.9.13 3.10.5 3.11.0"
+python_versions="3.12.0"
 pg_version=16
 
 function log {
@@ -93,7 +95,9 @@ python tools/build/copy_to_binary.py
 # Build the binary packages
 export CIBW_PLATFORM=macos
 export CIBW_ARCHS=arm64
-export CIBW_BUILD='cp{38,39,310,311}-*'
+# NOMERGE: one-off build of cp312 packages
+# export CIBW_BUILD='cp{38,39,310,311}-*'
+export CIBW_BUILD='cp312-*'
 export CIBW_TEST_REQUIRES="./psycopg[test] ./psycopg_pool"
 export CIBW_TEST_COMMAND="pytest {project}/tests -m 'not slow and not flakey' --color yes"
 
