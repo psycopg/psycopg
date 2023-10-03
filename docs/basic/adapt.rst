@@ -213,15 +213,18 @@ attribute::
     >>> conn.execute("select '2048-07-08 12:00'::timestamptz").fetchone()[0]
     datetime.datetime(2048, 7, 8, 12, 0, tzinfo=zoneinfo.ZoneInfo(key='Europe/London'))
 
+.. __: https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-TIMEZONE
+
 .. note::
+
     PostgreSQL :sql:`timestamptz` doesn't store "a timestamp with a timezone
     attached": it stores a timestamp always in UTC, which is converted, on
     output, to the connection TimeZone setting::
 
-    >>> conn.execute("SET TIMEZONE to 'Europe/Rome'")  # UTC+2 in summer
+        >>> conn.execute("SET TIMEZONE to 'Europe/Rome'")  # UTC+2 in summer
 
-    >>> conn.execute("SELECT '2042-07-01 12:00Z'::timestamptz").fetchone()[0]  # UTC input
-    datetime.datetime(2042, 7, 1, 14, 0, tzinfo=zoneinfo.ZoneInfo(key='Europe/Rome'))
+        >>> conn.execute("SELECT '2042-07-01 12:00Z'::timestamptz").fetchone()[0]  # UTC input
+        datetime.datetime(2042, 7, 1, 14, 0, tzinfo=zoneinfo.ZoneInfo(key='Europe/Rome'))
 
     Check out the `PostgreSQL documentation about timezones`__ for all the
     details.
@@ -229,7 +232,32 @@ attribute::
     .. __: https://www.postgresql.org/docs/current/datatype-datetime.html
            #DATATYPE-TIMEZONES
 
-.. __: https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-TIMEZONE
+.. warning::
+
+    Times with timezone are silly objects, because you cannot know the offset
+    of a timezone with daylight saving time rules without knowing the date
+    too.
+
+    Although silly, times with timezone are supported both by Python and by
+    PostgreSQL. However they are only supported with fixed offset timezones:
+    Postgres :sql:`timetz` values loaded from the database will result in
+    Python `!time` objects with `!tzinfo` attributes specified as fixed
+    offset, for instance by a `~datetime.timezone` value::
+
+        >>> conn.execute("SET TIMEZONE to 'Europe/Rome'")
+
+        # UTC+1 in winter
+        >>> conn.execute("SELECT '2042-01-01 12:00Z'::timestamptz::timetz").fetchone()[0]
+        datetime.time(13, 0, tzinfo=datetime.timezone(datetime.timedelta(seconds=3600)))
+
+        # UTC+2 in summer
+        >>> conn.execute("SELECT '2042-07-01 12:00Z'::timestamptz::timetz").fetchone()[0]
+        datetime.time(14, 0, tzinfo=datetime.timezone(datetime.timedelta(seconds=7200)))
+
+    Dumping Python `!time` objects is only supported with fixed offset
+    `!tzinfo`, such as the ones returned by Postgres, or by whatever
+    `~datetime.tzinfo` implementation resulting in the time's
+    `~datetime.time.utcoffset` returning a value.
 
 
 .. _date-time-limits:
