@@ -1,5 +1,5 @@
 """
-Adapers for numeric types.
+Adapters for numeric types.
 """
 
 # Copyright (C) 2020 The Psycopg Team
