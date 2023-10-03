@@ -1,5 +1,5 @@
 """
-Adapers for JSON types.
+Adapters for JSON types.
 """
 
 # Copyright (C) 2020 The Psycopg Team
