@@ -11,7 +11,7 @@ from time import monotonic
 from types import TracebackType
 from typing import Any, AsyncIterator, cast, Generic
 from typing import Dict, List, Optional, overload, Sequence, Type, TypeVar
-from asyncio import create_task, Task
+from asyncio import Task
 from weakref import ref
 from contextlib import asynccontextmanager
 
@@ -24,7 +24,7 @@ from .abc import ACT, AsyncConnectionCB, AsyncConnectFailedCB
 from .base import ConnectionAttempt, BasePool
 from .errors import PoolClosed, PoolTimeout, TooManyRequests
 from ._compat import Deque
-from ._acompat import ACondition, AEvent, ALock
+from ._acompat import ACondition, AEvent, ALock, aspawn, agather
 from .sched_async import AsyncScheduler
 
 logger = logging.getLogger("psycopg.pool")
@@ -351,14 +351,9 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         self._start_initial_tasks()
 
     def _start_workers(self) -> None:
-        self._sched_runner = create_task(
-            self._sched.run(), name=f"{self.name}-scheduler"
-        )
+        self._sched_runner = aspawn(self._sched.run, name=f"{self.name}-scheduler")
         for i in range(self.num_workers):
-            t = create_task(
-                self.worker(self._tasks),
-                name=f"{self.name}-worker-{i}",
-            )
+            t = aspawn(self.worker, args=(self._tasks,), name=f"{self.name}-worker-{i}")
             self._workers.append(t)
 
     def _start_initial_tasks(self) -> None:
@@ -402,7 +397,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         self,
         waiting_clients: Sequence["AsyncClient[ACT]"] = (),
         connections: Sequence[ACT] = (),
-        timeout: float = 0.0,
+        timeout: float | None = None,
     ) -> None:
         # Stop the scheduler
         await self._sched.enter(0, None)
@@ -423,18 +418,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         # Wait for the worker tasks to terminate
         assert self._sched_runner is not None
         sched_runner, self._sched_runner = self._sched_runner, None
-        wait = asyncio.gather(sched_runner, *workers)
-        try:
-            if timeout > 0:
-                await asyncio.wait_for(asyncio.shield(wait), timeout=timeout)
-            else:
-                await wait
-        except asyncio.TimeoutError:
-            logger.warning(
-                "couldn't stop pool %r tasks within %s seconds",
-                self.name,
-                timeout,
-            )
+        await agather(sched_runner, *workers, timeout=timeout)
 
     async def __aenter__(self: _Self) -> _Self:
         await self.open()

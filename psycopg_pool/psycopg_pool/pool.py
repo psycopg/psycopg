@@ -25,7 +25,7 @@ from .base import ConnectionAttempt, BasePool
 from .sched import Scheduler
 from .errors import PoolClosed, PoolTimeout, TooManyRequests
 from ._compat import Deque
-from ._acompat import Condition, Event, Lock
+from ._acompat import Condition, Event, Lock, spawn, gather
 
 logger = logging.getLogger("psycopg.pool")
 
@@ -340,23 +340,11 @@ class ConnectionPool(Generic[CT], BasePool):
         self._start_initial_tasks()
 
     def _start_workers(self) -> None:
-        self._sched_runner = threading.Thread(
-            target=self._sched.run, name=f"{self.name}-scheduler", daemon=True
-        )
+        self._sched_runner = spawn(self._sched.run, name=f"{self.name}-scheduler")
         assert not self._workers
         for i in range(self.num_workers):
-            t = threading.Thread(
-                target=self.worker,
-                args=(self._tasks,),
-                name=f"{self.name}-worker-{i}",
-                daemon=True,
-            )
+            t = spawn(self.worker, args=(self._tasks,), name=f"{self.name}-worker-{i}")
             self._workers.append(t)
-
-        # The object state is complete. Start the worker threads
-        self._sched_runner.start()
-        for t in self._workers:
-            t.start()
 
     def _start_initial_tasks(self) -> None:
         # populate the pool with initial min_size connections in background
@@ -399,7 +387,7 @@ class ConnectionPool(Generic[CT], BasePool):
         self,
         waiting_clients: Sequence["WaitingClient[CT]"] = (),
         connections: Sequence[CT] = (),
-        timeout: float = 0.0,
+        timeout: float | None = None,
     ) -> None:
         # Stop the scheduler
         self._sched.enter(0, None)
@@ -420,18 +408,7 @@ class ConnectionPool(Generic[CT], BasePool):
         # Wait for the worker threads to terminate
         assert self._sched_runner is not None
         sched_runner, self._sched_runner = self._sched_runner, None
-        if timeout > 0:
-            for t in [sched_runner] + workers:
-                if not t.is_alive():
-                    continue
-                t.join(timeout)
-                if t.is_alive():
-                    logger.warning(
-                        "couldn't stop thread %s in pool %r within %s seconds",
-                        t,
-                        self.name,
-                        timeout,
-                    )
+        gather(sched_runner, *workers, timeout=timeout)
 
     def __enter__(self: _Self) -> _Self:
         self.open()
