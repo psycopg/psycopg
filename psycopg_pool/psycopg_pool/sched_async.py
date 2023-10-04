@@ -17,13 +17,8 @@ from time import monotonic
 from heapq import heappush, heappop
 from typing import Any, Callable, List, Optional
 
-if True:  # ASYNC
-    from asyncio import Event, Lock, TimeoutError, wait_for
-else:
-    from threading import RLock as Lock, Event
-
-
 from ._task import Task
+from ._acompat import ALock, AEvent
 
 logger = logging.getLogger(__name__)
 
@@ -32,8 +27,8 @@ class AsyncScheduler:
     def __init__(self) -> None:
         """Initialize a new instance, passing the time and delay functions."""
         self._queue: List[Task] = []
-        self._lock = Lock()
-        self._event = Event()
+        self._lock = ALock()
+        self._event = AEvent()
 
     EMPTY_QUEUE_TIMEOUT = 600.0
 
@@ -91,10 +86,4 @@ class AsyncScheduler:
                     )
             else:
                 # Block for the expected timeout or until a new task scheduled
-                if True:  # ASYNC
-                    try:
-                        await wait_for(self._event.wait(), delay)
-                    except TimeoutError:
-                        pass
-                else:
-                    self._event.wait(timeout=delay)
+                await self._event.wait_timeout(delay)

@@ -153,6 +153,7 @@ class AsyncToSync(ast.NodeTransformer):
 class RenameAsyncToSync(ast.NodeTransformer):
     names_map = {
         "AEvent": "Event",
+        "ALock": "Lock",
         "AsyncClientCursor": "ClientCursor",
         "AsyncConnection": "Connection",
         "AsyncConnectionPool": "ConnectionPool",

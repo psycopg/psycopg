@@ -25,6 +25,7 @@ from .base import ConnectionAttempt, BasePool
 from .sched import Scheduler
 from .errors import PoolClosed, PoolTimeout, TooManyRequests
 from ._compat import Deque
+from ._acompat import Condition, Event, Lock
 
 logger = logging.getLogger("psycopg.pool")
 
@@ -104,11 +105,11 @@ class ConnectionPool(Generic[CT], BasePool):
 
         self._reconnect_failed = reconnect_failed
 
-        self._lock = threading.RLock()
+        self._lock = Lock()
         self._waiting = Deque["WaitingClient[CT]"]()
 
         # to notify that the pool is full
-        self._pool_full_event: Optional[threading.Event] = None
+        self._pool_full_event: Optional[Event] = None
 
         self._sched = Scheduler()
         self._sched_runner: Optional[threading.Thread] = None
@@ -160,7 +161,7 @@ class ConnectionPool(Generic[CT], BasePool):
             assert not self._pool_full_event
             if len(self._pool) >= self._min_size:
                 return
-            self._pool_full_event = threading.Event()
+            self._pool_full_event = Event()
 
         logger.info("waiting for pool %r initialization", self.name)
         if not self._pool_full_event.wait(timeout):
@@ -780,7 +781,7 @@ class WaitingClient(Generic[CT]):
         # message and it hasn't timed out yet, otherwise the pool may give a
         # connection to a client that has already timed out getconn(), which
         # will be lost.
-        self._cond = threading.Condition()
+        self._cond = Condition()
 
     def wait(self, timeout: float) -> CT:
         """Wait for a connection to be set and return it.

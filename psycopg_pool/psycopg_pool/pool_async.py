@@ -24,6 +24,7 @@ from .abc import ACT, AsyncConnectionCB, AsyncConnectFailedCB
 from .base import ConnectionAttempt, BasePool
 from .errors import PoolClosed, PoolTimeout, TooManyRequests
 from ._compat import Deque
+from ._acompat import ACondition, AEvent, ALock
 from .sched_async import AsyncScheduler
 
 logger = logging.getLogger("psycopg.pool")
@@ -105,14 +106,14 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         self._reconnect_failed = reconnect_failed
 
         # asyncio objects, created on open to attach them to the right loop.
-        self._lock: asyncio.Lock
+        self._lock: ALock
         self._sched: AsyncScheduler
         self._tasks: "asyncio.Queue[MaintenanceTask]"
 
         self._waiting = Deque["AsyncClient[ACT]"]()
 
         # to notify that the pool is full
-        self._pool_full_event: Optional[asyncio.Event] = None
+        self._pool_full_event: Optional[AEvent] = None
 
         self._sched_runner: Optional[Task[None]] = None
         self._workers: List[Task[None]] = []
@@ -154,16 +155,12 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
             assert not self._pool_full_event
             if len(self._pool) >= self._min_size:
                 return
-            self._pool_full_event = asyncio.Event()
+            self._pool_full_event = AEvent()
 
         logger.info("waiting for pool %r initialization", self.name)
-        try:
-            await asyncio.wait_for(self._pool_full_event.wait(), timeout)
-        except asyncio.TimeoutError:
+        if not await self._pool_full_event.wait_timeout(timeout):
             await self.close()  # stop all the tasks
-            raise PoolTimeout(
-                f"pool initialization incomplete after {timeout} sec"
-            ) from None
+            raise PoolTimeout(f"pool initialization incomplete after {timeout} sec")
 
         async with self._lock:
             assert self._pool_full_event
@@ -320,7 +317,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         try:
             self._lock
         except AttributeError:
-            self._lock = asyncio.Lock()
+            self._lock = ALock()
 
         async with self._lock:
             self._open()
@@ -345,7 +342,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         try:
             self._lock
         except AttributeError:
-            self._lock = asyncio.Lock()
+            self._lock = ALock()
 
         self._closed = False
         self._opened = True
@@ -782,7 +779,7 @@ class AsyncClient(Generic[ACT]):
         # message and it hasn't timed out yet, otherwise the pool may give a
         # connection to a client that has already timed out getconn(), which
         # will be lost.
-        self._cond = asyncio.Condition()
+        self._cond = ACondition()
 
     async def wait(self, timeout: float) -> ACT:
         """Wait for a connection to be set and return it.
@@ -792,11 +789,10 @@ class AsyncClient(Generic[ACT]):
         async with self._cond:
             if not (self.conn or self.error):
                 try:
-                    await asyncio.wait_for(self._cond.wait(), timeout)
-                except asyncio.TimeoutError:
-                    self.error = PoolTimeout(
-                        f"couldn't get a connection after {timeout:.2f} sec"
-                    )
+                    if not await self._cond.wait_timeout(timeout):
+                        self.error = PoolTimeout(
+                            f"couldn't get a connection after {timeout:.2f} sec"
+                        )
                 except BaseException as ex:
                     self.error = ex
 

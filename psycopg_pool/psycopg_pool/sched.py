@@ -20,9 +20,8 @@ from time import monotonic
 from heapq import heappush, heappop
 from typing import Any, Callable, List, Optional
 
-from threading import RLock as Lock, Event
-
 from ._task import Task
+from ._acompat import Lock, Event
 
 logger = logging.getLogger(__name__)
 
@@ -90,4 +89,4 @@ class Scheduler:
                     )
             else:
                 # Block for the expected timeout or until a new task scheduled
-                self._event.wait(timeout=delay)
+                self._event.wait(delay)

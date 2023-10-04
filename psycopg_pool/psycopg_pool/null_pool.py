@@ -5,7 +5,6 @@ Psycopg null connection pools
 # Copyright (C) 2022 The Psycopg Team
 
 import logging
-import threading
 from typing import Any, cast, Dict, Optional, overload, Tuple, Type
 
 from psycopg import Connection
@@ -16,6 +15,7 @@ from .abc import CT, ConnectionCB, ConnectFailedCB
 from .pool import ConnectionPool, AddConnection
 from .errors import PoolTimeout, TooManyRequests
 from ._compat import ConnectionTimeout
+from ._acompat import Event
 
 logger = logging.getLogger("psycopg.pool")
 
@@ -142,7 +142,7 @@ class NullConnectionPool(_BaseNullConnectionPool, ConnectionPool[CT]):
 
         with self._lock:
             assert not self._pool_full_event
-            self._pool_full_event = threading.Event()
+            self._pool_full_event = Event()
 
         logger.info("waiting for pool %r initialization", self.name)
         self.run_task(AddConnection(self))

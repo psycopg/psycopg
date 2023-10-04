@@ -4,7 +4,6 @@ psycopg asynchronous null connection pool
 
 # Copyright (C) 2022 The Psycopg Team
 
-import asyncio
 import logging
 from typing import Any, cast, Dict, Optional, overload, Type
 
@@ -15,6 +14,7 @@ from psycopg.rows import TupleRow
 from .abc import ACT, AsyncConnectionCB, AsyncConnectFailedCB
 from .errors import PoolTimeout, TooManyRequests
 from ._compat import ConnectionTimeout
+from ._acompat import AEvent
 from .null_pool import _BaseNullConnectionPool
 from .pool_async import AsyncConnectionPool, AddConnection
 
@@ -111,17 +111,13 @@ class AsyncNullConnectionPool(_BaseNullConnectionPool, AsyncConnectionPool[ACT])
 
         async with self._lock:
             assert not self._pool_full_event
-            self._pool_full_event = asyncio.Event()
+            self._pool_full_event = AEvent()
 
         logger.info("waiting for pool %r initialization", self.name)
         self.run_task(AddConnection(self))
-        try:
-            await asyncio.wait_for(self._pool_full_event.wait(), timeout)
-        except asyncio.TimeoutError:
+        if not await self._pool_full_event.wait_timeout(timeout):
             await self.close()  # stop all the tasks
-            raise PoolTimeout(
-                f"pool initialization incomplete after {timeout} sec"
-            ) from None
+            raise PoolTimeout(f"pool initialization incomplete after {timeout} sec")
 
         async with self._lock:
             assert self._pool_full_event
