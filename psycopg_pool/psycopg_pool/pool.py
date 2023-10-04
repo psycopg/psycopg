@@ -8,7 +8,6 @@ import logging
 import threading
 from abc import ABC, abstractmethod
 from time import monotonic
-from queue import Queue, Empty
 from types import TracebackType
 from typing import Any, cast, Dict, Generic, Iterator, List
 from typing import Optional, overload, Sequence, Type, TypeVar
@@ -25,7 +24,7 @@ from .base import ConnectionAttempt, BasePool
 from .sched import Scheduler
 from .errors import PoolClosed, PoolTimeout, TooManyRequests
 from ._compat import Deque
-from ._acompat import Condition, Event, Lock, spawn, gather
+from ._acompat import Condition, Event, Lock, Queue, spawn, gather
 
 logger = logging.getLogger("psycopg.pool")
 
@@ -496,8 +495,6 @@ class ConnectionPool(Generic[CT], BasePool):
         """Run a maintenance task in a worker thread in the future."""
         self._sched.enter(delay, task.tick)
 
-    _WORKER_TIMEOUT = 60.0
-
     @classmethod
     def worker(cls, q: "Queue[MaintenanceTask]") -> None:
         """Runner to execute pending maintenance task.
@@ -507,14 +504,8 @@ class ConnectionPool(Generic[CT], BasePool):
         Block on the queue *q*, run a task received. Finish running if a
         StopWorker is received.
         """
-        # Don't make all the workers time out at the same moment
-        timeout = cls._jitter(cls._WORKER_TIMEOUT, -0.1, 0.1)
         while True:
-            # Use a timeout to make the wait interruptible
-            try:
-                task = q.get(timeout=timeout)
-            except Empty:
-                continue
+            task = q.get()
 
             if isinstance(task, StopWorker):
                 logger.debug(

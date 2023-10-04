@@ -24,7 +24,7 @@ from .abc import ACT, AsyncConnectionCB, AsyncConnectFailedCB
 from .base import ConnectionAttempt, BasePool
 from .errors import PoolClosed, PoolTimeout, TooManyRequests
 from ._compat import Deque
-from ._acompat import ACondition, AEvent, ALock, aspawn, agather
+from ._acompat import ACondition, AEvent, ALock, AQueue, aspawn, agather
 from .sched_async import AsyncScheduler
 
 logger = logging.getLogger("psycopg.pool")
@@ -108,7 +108,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         # asyncio objects, created on open to attach them to the right loop.
         self._lock: ALock
         self._sched: AsyncScheduler
-        self._tasks: "asyncio.Queue[MaintenanceTask]"
+        self._tasks: AQueue["MaintenanceTask"]
 
         self._waiting = Deque["AsyncClient[ACT]"]()
 
@@ -336,7 +336,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
 
         # Create these objects now to attach them to the right loop.
         # See #219
-        self._tasks = asyncio.Queue()
+        self._tasks = AQueue()
         self._sched = AsyncScheduler()
         # This has been most likely, but not necessarily, created in `open()`.
         try:
@@ -510,7 +510,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         await self._sched.enter(delay, task.tick)
 
     @classmethod
-    async def worker(cls, q: "asyncio.Queue[MaintenanceTask]") -> None:
+    async def worker(cls, q: AQueue["MaintenanceTask"]) -> None:
         """Runner to execute pending maintenance task.
 
         The function is designed to run as a task.

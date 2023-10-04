@@ -8,17 +8,32 @@ when generating the sync version.
 
 # Copyright (C) 2023 The Psycopg Team
 
+import queue
 import asyncio
 import logging
 import threading
-from typing import Any, Callable, Coroutine
+from typing import Any, Callable, Coroutine, TypeVar
 
+logger = logging.getLogger("psycopg.pool")
+T = TypeVar("T")
+
+# Re-exports
 Event = threading.Event
 Condition = threading.Condition
 Lock = threading.RLock
 ALock = asyncio.Lock
 
-logger = logging.getLogger("psycopg.pool")
+
+class Queue(queue.Queue[T]):
+    """
+    A Queue subclass with an interruptible get() method.
+    """
+
+    def get(self, block: bool = True, timeout: float | None = None) -> T:
+        # Always specify a timeout to make the wait interruptible.
+        if timeout is None:
+            timeout = 24.0 * 60.0 * 60.0
+        return super().get(block, timeout)
 
 
 class AEvent(asyncio.Event):
@@ -49,6 +64,10 @@ class ACondition(asyncio.Condition):
             return True
         except asyncio.TimeoutError:
             return False
+
+
+class AQueue(asyncio.Queue[T]):
+    pass
 
 
 def aspawn(
