@@ -9,9 +9,8 @@ import logging
 from abc import ABC, abstractmethod
 from time import monotonic
 from types import TracebackType
-from typing import Any, AsyncIterator, Awaitable, Callable, cast, Generic
-from typing import Dict, List, Optional, overload, Sequence, Type, TypeVar, Union
-from typing_extensions import TypeAlias
+from typing import Any, AsyncIterator, cast, Generic
+from typing import Dict, List, Optional, overload, Sequence, Type, TypeVar
 from asyncio import create_task, Task
 from weakref import ref
 from contextlib import asynccontextmanager
@@ -21,19 +20,13 @@ from psycopg import AsyncConnection
 from psycopg.pq import TransactionStatus
 from psycopg.rows import TupleRow
 
+from .abc import ACT, AsyncConnectionCB, AsyncConnectFailedCB
 from .base import ConnectionAttempt, BasePool
 from .errors import PoolClosed, PoolTimeout, TooManyRequests
 from ._compat import Deque
 from .sched_async import AsyncScheduler
 
 logger = logging.getLogger("psycopg.pool")
-
-AsyncConnectFailedCB: TypeAlias = Union[
-    Callable[["AsyncConnectionPool"], None],
-    Callable[["AsyncConnectionPool"], Awaitable[None]],
-]
-
-ACT = TypeVar("ACT", bound="AsyncConnection[Any]")
 
 
 class AsyncConnectionPool(Generic[ACT], BasePool):
@@ -46,8 +39,8 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         conninfo: str = "",
         *,
         open: bool = ...,
-        configure: Optional[Callable[[ACT], Awaitable[None]]] = ...,
-        reset: Optional[Callable[[ACT], Awaitable[None]]] = ...,
+        configure: Optional[AsyncConnectionCB[ACT]] = ...,
+        reset: Optional[AsyncConnectionCB[ACT]] = ...,
         kwargs: Optional[Dict[str, Any]] = ...,
         min_size: int = ...,
         max_size: Optional[int] = ...,
@@ -69,8 +62,8 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         *,
         open: bool = ...,
         connection_class: Type[ACT],
-        configure: Optional[Callable[[ACT], Awaitable[None]]] = ...,
-        reset: Optional[Callable[[ACT], Awaitable[None]]] = ...,
+        configure: Optional[AsyncConnectionCB[ACT]] = ...,
+        reset: Optional[AsyncConnectionCB[ACT]] = ...,
         kwargs: Optional[Dict[str, Any]] = ...,
         min_size: int = ...,
         max_size: Optional[int] = ...,
@@ -91,8 +84,8 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         *,
         open: bool = True,
         connection_class: Type[ACT] = cast(Type[ACT], AsyncConnection),
-        configure: Optional[Callable[[ACT], Awaitable[None]]] = None,
-        reset: Optional[Callable[[ACT], Awaitable[None]]] = None,
+        configure: Optional[AsyncConnectionCB[ACT]] = None,
+        reset: Optional[AsyncConnectionCB[ACT]] = None,
         kwargs: Optional[Dict[str, Any]] = None,
         min_size: int = 4,
         max_size: Optional[int] = None,

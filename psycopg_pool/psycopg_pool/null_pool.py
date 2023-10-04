@@ -6,13 +6,14 @@ Psycopg null connection pools
 
 import logging
 import threading
-from typing import Any, Callable, cast, Dict, Optional, overload, Tuple, Type
+from typing import Any, cast, Dict, Optional, overload, Tuple, Type
 
 from psycopg import Connection
 from psycopg.pq import TransactionStatus
 from psycopg.rows import TupleRow
 
-from .pool import ConnectionPool, CT, AddConnection, ConnectFailedCB
+from .abc import CT, ConnectionCB, ConnectFailedCB
+from .pool import ConnectionPool, AddConnection
 from .errors import PoolTimeout, TooManyRequests
 from ._compat import ConnectionTimeout
 
@@ -48,8 +49,8 @@ class NullConnectionPool(_BaseNullConnectionPool, ConnectionPool[CT]):
         conninfo: str = "",
         *,
         open: bool = ...,
-        configure: Optional[Callable[[CT], None]] = ...,
-        reset: Optional[Callable[[CT], None]] = ...,
+        configure: Optional[ConnectionCB[CT]] = ...,
+        reset: Optional[ConnectionCB[CT]] = ...,
         kwargs: Optional[Dict[str, Any]] = ...,
         min_size: int = ...,
         max_size: Optional[int] = ...,
@@ -71,8 +72,8 @@ class NullConnectionPool(_BaseNullConnectionPool, ConnectionPool[CT]):
         *,
         open: bool = ...,
         connection_class: Type[CT],
-        configure: Optional[Callable[[CT], None]] = ...,
-        reset: Optional[Callable[[CT], None]] = ...,
+        configure: Optional[ConnectionCB[CT]] = ...,
+        reset: Optional[ConnectionCB[CT]] = ...,
         kwargs: Optional[Dict[str, Any]] = ...,
         min_size: int = ...,
         max_size: Optional[int] = ...,
@@ -93,8 +94,8 @@ class NullConnectionPool(_BaseNullConnectionPool, ConnectionPool[CT]):
         *,
         open: bool = True,
         connection_class: Type[CT] = cast(Type[CT], Connection),
-        configure: Optional[Callable[[CT], None]] = None,
-        reset: Optional[Callable[[CT], None]] = None,
+        configure: Optional[ConnectionCB[CT]] = None,
+        reset: Optional[ConnectionCB[CT]] = None,
         kwargs: Optional[Dict[str, Any]] = None,
         # Note: default value changed to 0.
         min_size: int = 0,

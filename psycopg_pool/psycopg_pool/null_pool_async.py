@@ -6,16 +6,17 @@ psycopg asynchronous null connection pool
 
 import asyncio
 import logging
-from typing import Any, Awaitable, Callable, cast, Dict, Optional, overload, Type
+from typing import Any, cast, Dict, Optional, overload, Type
 
 from psycopg import AsyncConnection
 from psycopg.pq import TransactionStatus
 from psycopg.rows import TupleRow
 
+from .abc import ACT, AsyncConnectionCB, AsyncConnectFailedCB
 from .errors import PoolTimeout, TooManyRequests
 from ._compat import ConnectionTimeout
 from .null_pool import _BaseNullConnectionPool
-from .pool_async import AsyncConnectionPool, ACT, AddConnection, AsyncConnectFailedCB
+from .pool_async import AsyncConnectionPool, AddConnection
 
 logger = logging.getLogger("psycopg.pool")
 
@@ -27,8 +28,8 @@ class AsyncNullConnectionPool(_BaseNullConnectionPool, AsyncConnectionPool[ACT])
         conninfo: str = "",
         *,
         open: bool = ...,
-        configure: Optional[Callable[[ACT], Awaitable[None]]] = ...,
-        reset: Optional[Callable[[ACT], Awaitable[None]]] = ...,
+        configure: Optional[AsyncConnectionCB[ACT]] = ...,
+        reset: Optional[AsyncConnectionCB[ACT]] = ...,
         kwargs: Optional[Dict[str, Any]] = ...,
         min_size: int = ...,
         max_size: Optional[int] = ...,
@@ -50,8 +51,8 @@ class AsyncNullConnectionPool(_BaseNullConnectionPool, AsyncConnectionPool[ACT])
         *,
         open: bool = ...,
         connection_class: Type[ACT],
-        configure: Optional[Callable[[ACT], Awaitable[None]]] = ...,
-        reset: Optional[Callable[[ACT], Awaitable[None]]] = ...,
+        configure: Optional[AsyncConnectionCB[ACT]] = ...,
+        reset: Optional[AsyncConnectionCB[ACT]] = ...,
         kwargs: Optional[Dict[str, Any]] = ...,
         min_size: int = ...,
         max_size: Optional[int] = ...,
@@ -72,8 +73,8 @@ class AsyncNullConnectionPool(_BaseNullConnectionPool, AsyncConnectionPool[ACT])
         *,
         open: bool = True,
         connection_class: Type[ACT] = cast(Type[ACT], AsyncConnection),
-        configure: Optional[Callable[[ACT], Awaitable[None]]] = None,
-        reset: Optional[Callable[[ACT], Awaitable[None]]] = None,
+        configure: Optional[AsyncConnectionCB[ACT]] = None,
+        reset: Optional[AsyncConnectionCB[ACT]] = None,
         kwargs: Optional[Dict[str, Any]] = None,
         # Note: default value changed to 0.
         min_size: int = 0,

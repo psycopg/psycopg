@@ -10,9 +10,8 @@ from abc import ABC, abstractmethod
 from time import monotonic
 from queue import Queue, Empty
 from types import TracebackType
-from typing import Any, Callable, cast, Dict, Generic, Iterator, List
+from typing import Any, cast, Dict, Generic, Iterator, List
 from typing import Optional, overload, Sequence, Type, TypeVar
-from typing_extensions import TypeAlias
 from weakref import ref
 from contextlib import contextmanager
 
@@ -21,16 +20,13 @@ from psycopg import Connection
 from psycopg.pq import TransactionStatus
 from psycopg.rows import TupleRow
 
+from .abc import CT, ConnectionCB, ConnectFailedCB
 from .base import ConnectionAttempt, BasePool
 from .sched import Scheduler
 from .errors import PoolClosed, PoolTimeout, TooManyRequests
 from ._compat import Deque
 
 logger = logging.getLogger("psycopg.pool")
-
-ConnectFailedCB: TypeAlias = Callable[["ConnectionPool"], None]
-
-CT = TypeVar("CT", bound="Connection[Any]")
 
 
 class ConnectionPool(Generic[CT], BasePool):
@@ -43,8 +39,8 @@ class ConnectionPool(Generic[CT], BasePool):
         conninfo: str = "",
         *,
         open: bool = ...,
-        configure: Optional[Callable[[CT], None]] = ...,
-        reset: Optional[Callable[[CT], None]] = ...,
+        configure: Optional[ConnectionCB[CT]] = ...,
+        reset: Optional[ConnectionCB[CT]] = ...,
         kwargs: Optional[Dict[str, Any]] = ...,
         min_size: int = ...,
         max_size: Optional[int] = ...,
@@ -66,8 +62,8 @@ class ConnectionPool(Generic[CT], BasePool):
         *,
         open: bool = ...,
         connection_class: Type[CT],
-        configure: Optional[Callable[[CT], None]] = ...,
-        reset: Optional[Callable[[CT], None]] = ...,
+        configure: Optional[ConnectionCB[CT]] = ...,
+        reset: Optional[ConnectionCB[CT]] = ...,
         kwargs: Optional[Dict[str, Any]] = ...,
         min_size: int = ...,
         max_size: Optional[int] = ...,
@@ -88,8 +84,8 @@ class ConnectionPool(Generic[CT], BasePool):
         *,
         open: bool = True,
         connection_class: Type[CT] = cast(Type[CT], Connection[TupleRow]),
-        configure: Optional[Callable[[CT], None]] = None,
-        reset: Optional[Callable[[CT], None]] = None,
+        configure: Optional[ConnectionCB[CT]] = None,
+        reset: Optional[ConnectionCB[CT]] = None,
         kwargs: Optional[Dict[str, Any]] = None,
         min_size: int = 4,
         max_size: Optional[int] = None,
