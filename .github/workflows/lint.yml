@@ -25,10 +25,7 @@ jobs:
           python-version: "3.10"
 
       - name: install packages to tests
-        # ast-comments version pinned beause of bug:
-        # https://github.com/t3rn0/ast-comments/issues/21
-        # TODO: unpin when fixed.
-        run: pip install ./psycopg[dev,test] codespell "ast-comments==1.1.0"
+        run: pip install ./psycopg[dev,test] codespell
 
       - name: Run black
         run: black --check --diff .
