@@ -14,6 +14,8 @@ import logging
 import threading
 from typing import Any, Callable, Coroutine, TypeVar
 
+from typing_extensions import TypeAlias
+
 logger = logging.getLogger("psycopg.pool")
 T = TypeVar("T")
 
@@ -22,6 +24,9 @@ Event = threading.Event
 Condition = threading.Condition
 Lock = threading.RLock
 ALock = asyncio.Lock
+
+Worker: TypeAlias = threading.Thread
+AWorker: TypeAlias = asyncio.Task[None]
 
 
 def current_thread_name() -> str:

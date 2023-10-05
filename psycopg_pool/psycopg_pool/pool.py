@@ -7,7 +7,6 @@ psycopg synchronous connection pool
 from __future__ import annotations
 
 import logging
-import threading
 from abc import ABC, abstractmethod
 from time import monotonic
 from types import TracebackType
@@ -26,7 +25,7 @@ from .base import ConnectionAttempt, BasePool
 from .sched import Scheduler
 from .errors import PoolClosed, PoolTimeout, TooManyRequests
 from ._compat import Deque
-from ._acompat import Condition, Event, Lock, Queue, spawn, gather
+from ._acompat import Condition, Event, Lock, Queue, Worker, spawn, gather
 from ._acompat import current_thread_name
 
 logger = logging.getLogger("psycopg.pool")
@@ -116,8 +115,8 @@ class ConnectionPool(Generic[CT], BasePool):
         # to notify that the pool is full
         self._pool_full_event: Optional[Event] = None
 
-        self._sched_runner: Optional[threading.Thread] = None
-        self._workers: List[threading.Thread] = []
+        self._sched_runner: Optional[Worker] = None
+        self._workers: List[Worker] = []
 
         super().__init__(
             conninfo,

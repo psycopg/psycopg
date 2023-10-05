@@ -13,7 +13,6 @@ from time import monotonic
 from types import TracebackType
 from typing import Any, AsyncIterator, cast, Generic
 from typing import Dict, List, Optional, overload, Sequence, Type, TypeVar
-from asyncio import Task
 from weakref import ref
 from contextlib import asynccontextmanager
 
@@ -26,7 +25,7 @@ from .abc import ACT, AsyncConnectionCB, AsyncConnectFailedCB
 from .base import ConnectionAttempt, BasePool
 from .errors import PoolClosed, PoolTimeout, TooManyRequests
 from ._compat import Deque
-from ._acompat import ACondition, AEvent, ALock, AQueue, aspawn, agather
+from ._acompat import ACondition, AEvent, ALock, AQueue, AWorker, aspawn, agather
 from ._acompat import current_task_name
 from .sched_async import AsyncScheduler
 
@@ -118,8 +117,8 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         # to notify that the pool is full
         self._pool_full_event: Optional[AEvent] = None
 
-        self._sched_runner: Optional[Task[None]] = None
-        self._workers: List[Task[None]] = []
+        self._sched_runner: Optional[AWorker] = None
+        self._workers: List[AWorker] = []
 
         super().__init__(
             conninfo,
