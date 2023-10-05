@@ -1,5 +1,5 @@
 """
-Psycopg null connection pools
+Psycopg null connection pool module.
 """
 
 # Copyright (C) 2022 The Psycopg Team
@@ -7,7 +7,7 @@ Psycopg null connection pools
 from __future__ import annotations
 
 import logging
-from typing import Any, cast, Dict, Optional, overload, Tuple, Type
+from typing import Any, cast, Dict, Optional, overload, Type
 
 from psycopg import Connection
 from psycopg.pq import TransactionStatus
@@ -18,30 +18,9 @@ from .pool import ConnectionPool, AddConnection
 from .errors import PoolTimeout, TooManyRequests
 from ._compat import ConnectionTimeout
 from ._acompat import Event
+from .base_null_pool import _BaseNullConnectionPool
 
 logger = logging.getLogger("psycopg.pool")
-
-
-class _BaseNullConnectionPool:
-    def _check_size(self, min_size: int, max_size: Optional[int]) -> Tuple[int, int]:
-        if max_size is None:
-            max_size = min_size
-
-        if min_size != 0:
-            raise ValueError("null pools must have min_size = 0")
-        if max_size < min_size:
-            raise ValueError("max_size must be greater or equal than min_size")
-
-        return min_size, max_size
-
-    def _start_initial_tasks(self) -> None:
-        # Null pools don't have background tasks to fill connections
-        # or to grow/shrink.
-        return
-
-    def _maybe_grow_pool(self) -> None:
-        # null pools don't grow
-        pass
 
 
 class NullConnectionPool(_BaseNullConnectionPool, ConnectionPool[CT]):
@@ -196,10 +175,7 @@ class NullConnectionPool(_BaseNullConnectionPool, ConnectionPool[CT]):
         min_size, max_size = self._check_size(min_size, max_size)
 
         logger.info(
-            "resizing %r to min_size=%s max_size=%s",
-            self.name,
-            min_size,
-            max_size,
+            "resizing %r to min_size=%s max_size=%s", self.name, min_size, max_size
         )
         with self._lock:
             self._min_size = min_size

@@ -1,5 +1,5 @@
 """
-psycopg asynchronous null connection pool
+Psycopg null connection pool module.
 """
 
 # Copyright (C) 2022 The Psycopg Team
@@ -17,7 +17,7 @@ from .abc import ACT, AsyncConnectionCB, AsyncConnectFailedCB
 from .errors import PoolTimeout, TooManyRequests
 from ._compat import ConnectionTimeout
 from ._acompat import AEvent
-from .null_pool import _BaseNullConnectionPool
+from .base_null_pool import _BaseNullConnectionPool
 from .pool_async import AsyncConnectionPool, AddConnection
 
 logger = logging.getLogger("psycopg.pool")
@@ -109,6 +109,16 @@ class AsyncNullConnectionPool(_BaseNullConnectionPool, AsyncConnectionPool[ACT])
         )
 
     async def wait(self, timeout: float = 30.0) -> None:
+        """
+        Create a connection for test.
+
+        Calling this function will verify that the connectivity with the
+        database works as expected. However the connection will not be stored
+        in the pool.
+
+        Close the pool, and raise `PoolTimeout`, if not ready within *timeout*
+        sec.
+        """
         self._check_open_getconn()
 
         async with self._lock:
@@ -136,6 +146,7 @@ class AsyncNullConnectionPool(_BaseNullConnectionPool, AsyncConnectionPool[ACT])
             except ConnectionTimeout as ex:
                 raise PoolTimeout(str(ex)) from None
             self._nconns += 1
+
         elif self.max_waiting and len(self._waiting) >= self.max_waiting:
             self._stats[self._REQUESTS_ERRORS] += 1
             raise TooManyRequests(
@@ -160,19 +171,21 @@ class AsyncNullConnectionPool(_BaseNullConnectionPool, AsyncConnectionPool[ACT])
             return True
 
     async def resize(self, min_size: int, max_size: Optional[int] = None) -> None:
+        """Change the size of the pool during runtime.
+
+        Only *max_size* can be changed; *min_size* must remain 0.
+        """
         min_size, max_size = self._check_size(min_size, max_size)
 
         logger.info(
-            "resizing %r to min_size=%s max_size=%s",
-            self.name,
-            min_size,
-            max_size,
+            "resizing %r to min_size=%s max_size=%s", self.name, min_size, max_size
         )
         async with self._lock:
             self._min_size = min_size
             self._max_size = max_size
 
     async def check(self) -> None:
+        """No-op, as the pool doesn't have connections in its state."""
         pass
 
     async def _add_to_pool(self, conn: ACT) -> None:
