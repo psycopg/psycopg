@@ -25,6 +25,7 @@ from .base import ConnectionAttempt, BasePool
 from .errors import PoolClosed, PoolTimeout, TooManyRequests
 from ._compat import Deque
 from ._acompat import ACondition, AEvent, ALock, AQueue, aspawn, agather
+from ._acompat import current_task_name
 from .sched_async import AsyncScheduler
 
 logger = logging.getLogger("psycopg.pool")
@@ -522,7 +523,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
             task = await q.get()
 
             if isinstance(task, StopWorker):
-                logger.debug("terminating working task")
+                logger.debug("terminating working task %s", current_task_name())
                 return
 
             # Run the task. Make sure don't die in the attempt.
@@ -838,6 +839,7 @@ class MaintenanceTask(ABC):
             logger.debug("task run discarded: %s", self)
             return
 
+        logger.debug("task running in %s: %s", current_task_name(), self)
         await self._run(pool)
 
     async def tick(self) -> None:

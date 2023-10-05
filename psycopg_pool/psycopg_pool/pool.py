@@ -25,6 +25,7 @@ from .sched import Scheduler
 from .errors import PoolClosed, PoolTimeout, TooManyRequests
 from ._compat import Deque
 from ._acompat import Condition, Event, Lock, Queue, spawn, gather
+from ._acompat import current_thread_name
 
 logger = logging.getLogger("psycopg.pool")
 
@@ -508,9 +509,7 @@ class ConnectionPool(Generic[CT], BasePool):
             task = q.get()
 
             if isinstance(task, StopWorker):
-                logger.debug(
-                    "terminating working thread %s", threading.current_thread().name
-                )
+                logger.debug("terminating working thread %s", current_thread_name())
                 return
 
             # Run the task. Make sure don't die in the attempt.
@@ -824,7 +823,7 @@ class MaintenanceTask(ABC):
             logger.debug("task run discarded: %s", self)
             return
 
-        logger.debug("task running in %s: %s", threading.current_thread().name, self)
+        logger.debug("task running in %s: %s", current_thread_name(), self)
         self._run(pool)
 
     def tick(self) -> None:

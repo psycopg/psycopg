@@ -24,6 +24,15 @@ Lock = threading.RLock
 ALock = asyncio.Lock
 
 
+def current_thread_name() -> str:
+    return threading.current_thread().name
+
+
+def current_task_name() -> str:
+    t = asyncio.current_task()
+    return t.get_name() if t else "<no task>"
+
+
 class Queue(queue.Queue[T]):
     """
     A Queue subclass with an interruptible get() method.
