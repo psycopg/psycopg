@@ -199,6 +199,7 @@ class RenameAsyncToSync(ast.NodeTransformer):
         "cursor_async": "cursor",
         "ensure_table_async": "ensure_table",
         "find_insert_problem_async": "find_insert_problem",
+        "pool_async": "pool",
         "psycopg_pool.pool_async": "psycopg_pool.pool",
         "psycopg_pool.sched_async": "psycopg_pool.sched",
         "sched_async": "sched",

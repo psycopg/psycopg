@@ -20,6 +20,7 @@ outputs=""
 for async in \
     psycopg/psycopg/connection_async.py \
     psycopg/psycopg/cursor_async.py \
+    psycopg_pool/psycopg_pool/null_pool_async.py \
     psycopg_pool/psycopg_pool/pool_async.py \
     psycopg_pool/psycopg_pool/sched_async.py \
     tests/pool/test_pool_async.py \

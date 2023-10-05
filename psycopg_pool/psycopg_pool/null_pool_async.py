@@ -78,8 +78,7 @@ class AsyncNullConnectionPool(_BaseNullConnectionPool, AsyncConnectionPool[ACT])
         configure: Optional[AsyncConnectionCB[ACT]] = None,
         reset: Optional[AsyncConnectionCB[ACT]] = None,
         kwargs: Optional[Dict[str, Any]] = None,
-        # Note: default value changed to 0.
-        min_size: int = 0,
+        min_size: int = 0,  # Note: min_size default value changed to 0.
         max_size: Optional[int] = None,
         name: Optional[str] = None,
         timeout: float = 30.0,
@@ -151,7 +150,7 @@ class AsyncNullConnectionPool(_BaseNullConnectionPool, AsyncConnectionPool[ACT])
             self._stats[self._REQUESTS_ERRORS] += 1
             raise TooManyRequests(
                 f"the pool {self.name!r} has already"
-                f" {len(self._waiting)} requests waiting"
+                + f" {len(self._waiting)} requests waiting"
             )
         return conn
 
