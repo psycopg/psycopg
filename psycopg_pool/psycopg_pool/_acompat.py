@@ -8,11 +8,13 @@ when generating the sync version.
 
 # Copyright (C) 2023 The Psycopg Team
 
+from __future__ import annotations
+
 import queue
 import asyncio
 import logging
 import threading
-from typing import Any, Callable, Coroutine, TypeVar
+from typing import Any, Callable, Coroutine, TypeVar, TYPE_CHECKING
 
 from typing_extensions import TypeAlias
 
@@ -26,7 +28,25 @@ Lock = threading.RLock
 ALock = asyncio.Lock
 
 Worker: TypeAlias = threading.Thread
-AWorker: TypeAlias = asyncio.Task[None]
+AWorker: TypeAlias = "asyncio.Task[None]"
+
+# Hack required on Python 3.8 because subclassing Queue[T] fails at runtime.
+# https://stackoverflow.com/questions/45414066/mypy-how-to-define-a-generic-subclass
+if TYPE_CHECKING:
+    _GQueue: TypeAlias = queue.Queue
+    _AGQueue: TypeAlias = asyncio.Queue
+
+else:
+
+    class FakeGenericMeta(type):
+        def __getitem__(self, item):
+            return self
+
+    class _GQueue(queue.Queue, metaclass=FakeGenericMeta):
+        pass
+
+    class _AGQueue(asyncio.Queue, metaclass=FakeGenericMeta):
+        pass
 
 
 def current_thread_name() -> str:
@@ -38,7 +58,7 @@ def current_task_name() -> str:
     return t.get_name() if t else "<no task>"
 
 
-class Queue(queue.Queue[T]):
+class Queue(_GQueue[T]):
     """
     A Queue subclass with an interruptible get() method.
     """
@@ -80,7 +100,7 @@ class ACondition(asyncio.Condition):
             return False
 
 
-class AQueue(asyncio.Queue[T]):
+class AQueue(_AGQueue[T]):
     pass
 
 
