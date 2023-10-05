@@ -4,6 +4,8 @@ psycopg synchronous connection pool
 
 # Copyright (C) 2021 The Psycopg Team
 
+from __future__ import annotations
+
 import logging
 import threading
 from abc import ABC, abstractmethod
@@ -36,7 +38,7 @@ class ConnectionPool(Generic[CT], BasePool):
 
     @overload
     def __init__(
-        self: "ConnectionPool[Connection[TupleRow]]",
+        self: ConnectionPool[Connection[TupleRow]],
         conninfo: str = "",
         *,
         open: bool = ...,
@@ -58,7 +60,7 @@ class ConnectionPool(Generic[CT], BasePool):
 
     @overload
     def __init__(
-        self: "ConnectionPool[CT]",
+        self: ConnectionPool[CT],
         conninfo: str = "",
         *,
         open: bool = ...,
@@ -106,14 +108,14 @@ class ConnectionPool(Generic[CT], BasePool):
         self._reconnect_failed = reconnect_failed
 
         self._lock = Lock()
-        self._waiting = Deque["WaitingClient[CT]"]()
+        self._waiting = Deque[WaitingClient[CT]]()
 
         # to notify that the pool is full
         self._pool_full_event: Optional[Event] = None
 
         self._sched = Scheduler()
         self._sched_runner: Optional[threading.Thread] = None
-        self._tasks: "Queue[MaintenanceTask]" = Queue()
+        self._tasks: Queue[MaintenanceTask] = Queue()
         self._workers: List[threading.Thread] = []
 
         super().__init__(
@@ -385,7 +387,7 @@ class ConnectionPool(Generic[CT], BasePool):
 
     def _stop_workers(
         self,
-        waiting_clients: Sequence["WaitingClient[CT]"] = (),
+        waiting_clients: Sequence[WaitingClient[CT]] = (),
         connections: Sequence[CT] = (),
         timeout: float | None = None,
     ) -> None:
@@ -488,16 +490,16 @@ class ConnectionPool(Generic[CT], BasePool):
 
         self._reconnect_failed(self)
 
-    def run_task(self, task: "MaintenanceTask") -> None:
+    def run_task(self, task: MaintenanceTask) -> None:
         """Run a maintenance task in a worker thread."""
         self._tasks.put_nowait(task)
 
-    def schedule_task(self, task: "MaintenanceTask", delay: float) -> None:
+    def schedule_task(self, task: MaintenanceTask, delay: float) -> None:
         """Run a maintenance task in a worker thread in the future."""
         self._sched.enter(delay, task.tick)
 
     @classmethod
-    def worker(cls, q: "Queue[MaintenanceTask]") -> None:
+    def worker(cls, q: Queue[MaintenanceTask]) -> None:
         """Runner to execute pending maintenance task.
 
         The function is designed to run as a separate thread.
@@ -803,7 +805,7 @@ class WaitingClient(Generic[CT]):
 class MaintenanceTask(ABC):
     """A task to run asynchronously to maintain the pool state."""
 
-    def __init__(self, pool: "ConnectionPool[Any]"):
+    def __init__(self, pool: ConnectionPool[Any]):
         self.pool = ref(pool)
 
     def __repr__(self) -> str:
@@ -841,40 +843,40 @@ class MaintenanceTask(ABC):
         pool.run_task(self)
 
     @abstractmethod
-    def _run(self, pool: "ConnectionPool[Any]") -> None:
+    def _run(self, pool: ConnectionPool[Any]) -> None:
         ...
 
 
 class StopWorker(MaintenanceTask):
     """Signal the maintenance thread to terminate."""
 
-    def _run(self, pool: "ConnectionPool[Any]") -> None:
+    def _run(self, pool: ConnectionPool[Any]) -> None:
         pass
 
 
 class AddConnection(MaintenanceTask):
     def __init__(
         self,
-        pool: "ConnectionPool[Any]",
-        attempt: Optional["ConnectionAttempt"] = None,
+        pool: ConnectionPool[Any],
+        attempt: Optional[ConnectionAttempt] = None,
         growing: bool = False,
     ):
         super().__init__(pool)
         self.attempt = attempt
         self.growing = growing
 
-    def _run(self, pool: "ConnectionPool[Any]") -> None:
+    def _run(self, pool: ConnectionPool[Any]) -> None:
         pool._add_connection(self.attempt, growing=self.growing)
 
 
 class ReturnConnection(MaintenanceTask):
     """Clean up and return a connection to the pool."""
 
-    def __init__(self, pool: "ConnectionPool[Any]", conn: CT):
+    def __init__(self, pool: ConnectionPool[Any], conn: CT):
         super().__init__(pool)
         self.conn = conn
 
-    def _run(self, pool: "ConnectionPool[Any]") -> None:
+    def _run(self, pool: ConnectionPool[Any]) -> None:
         pool._return_connection(self.conn)
 
 
@@ -885,7 +887,7 @@ class ShrinkPool(MaintenanceTask):
     in the pool.
     """
 
-    def _run(self, pool: "ConnectionPool[Any]") -> None:
+    def _run(self, pool: ConnectionPool[Any]) -> None:
         # Reschedule the task now so that in case of any error we don't lose
         # the periodic run.
         pool.schedule_task(self, pool.max_idle)

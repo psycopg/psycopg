@@ -4,6 +4,8 @@ Psycopg null connection pools
 
 # Copyright (C) 2022 The Psycopg Team
 
+from __future__ import annotations
+
 import logging
 from typing import Any, cast, Dict, Optional, overload, Tuple, Type
 
@@ -45,7 +47,7 @@ class _BaseNullConnectionPool:
 class NullConnectionPool(_BaseNullConnectionPool, ConnectionPool[CT]):
     @overload
     def __init__(
-        self: "NullConnectionPool[Connection[TupleRow]]",
+        self: NullConnectionPool[Connection[TupleRow]],
         conninfo: str = "",
         *,
         open: bool = ...,
@@ -67,7 +69,7 @@ class NullConnectionPool(_BaseNullConnectionPool, ConnectionPool[CT]):
 
     @overload
     def __init__(
-        self: "NullConnectionPool[CT]",
+        self: NullConnectionPool[CT],
         conninfo: str = "",
         *,
         open: bool = ...,

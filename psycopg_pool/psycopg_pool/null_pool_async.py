@@ -4,6 +4,8 @@ psycopg asynchronous null connection pool
 
 # Copyright (C) 2022 The Psycopg Team
 
+from __future__ import annotations
+
 import logging
 from typing import Any, cast, Dict, Optional, overload, Type
 
@@ -24,7 +26,7 @@ logger = logging.getLogger("psycopg.pool")
 class AsyncNullConnectionPool(_BaseNullConnectionPool, AsyncConnectionPool[ACT]):
     @overload
     def __init__(
-        self: "AsyncNullConnectionPool[AsyncConnection[TupleRow]]",
+        self: AsyncNullConnectionPool[AsyncConnection[TupleRow]],
         conninfo: str = "",
         *,
         open: bool = ...,
@@ -46,7 +48,7 @@ class AsyncNullConnectionPool(_BaseNullConnectionPool, AsyncConnectionPool[ACT])
 
     @overload
     def __init__(
-        self: "AsyncNullConnectionPool[ACT]",
+        self: AsyncNullConnectionPool[ACT],
         conninfo: str = "",
         *,
         open: bool = ...,
