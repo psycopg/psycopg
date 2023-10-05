@@ -16,7 +16,8 @@ from psycopg import sql, rows
 from psycopg.adapt import PyFormat
 from psycopg.types import TypeInfo
 
-from .utils import gc_collect, raiseif, closing
+from .utils import gc_collect, raiseif
+from .acompat import closing
 from .fix_crdb import crdb_encoding
 from ._test_cursor import my_row_factory, ph
 from ._test_cursor import execmany, _execmany  # noqa: F401

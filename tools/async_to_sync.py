@@ -209,7 +209,7 @@ class RenameAsyncToSync(ast.NodeTransformer):
         "wait_timeout": "wait",
     }
     _skip_imports = {
-        "utils": {"alist", "anext"},
+        "acompat": {"alist", "anext"},
     }
 
     def visit_Module(self, node: ast.Module) -> ast.AST:

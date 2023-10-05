@@ -12,7 +12,7 @@ import psycopg
 from psycopg import pq
 from psycopg import errors as e
 
-from .utils import is_async
+from .acompat import is_async
 
 pytestmark = [
     pytest.mark.pipeline,

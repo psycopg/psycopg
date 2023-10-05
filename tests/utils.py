@@ -1,17 +1,9 @@
 import gc
 import re
 import sys
-import asyncio
-import inspect
 import operator
-from typing import Any, Callable, Optional, Tuple
-from threading import Thread
-from contextlib import contextmanager, asynccontextmanager
-
-# Re-exports
-from time import sleep as sleep  # noqa: F401
-from threading import Event as Event  # noqa: F401
-from contextlib import closing as closing  # noqa: F401
+from typing import Callable, Optional, Tuple
+from contextlib import contextmanager
 
 import pytest
 
@@ -152,17 +144,6 @@ def gc_collect():
         gc.collect()
 
 
-def is_async(obj):
-    """Return true if obj is an async object (class, instance, module name)"""
-    if isinstance(obj, str):
-        # coming from is_async(__name__)
-        return "async" in obj
-
-    if not isinstance(obj, type):
-        obj = type(obj)
-    return "Async" in obj.__name__
-
-
 NO_COUNT_TYPES: Tuple[type, ...] = ()
 
 if sys.version_info[:2] == (3, 10):
@@ -195,28 +176,6 @@ def gc_count() -> int:
     return rv
 
 
-async def alist(it):
-    """Consume an async iterator into a list. Async equivalent of list(it)."""
-    return [i async for i in it]
-
-
-if sys.version_info >= (3, 10):
-    from builtins import anext as anext
-    from contextlib import aclosing as aclosing
-
-else:
-
-    async def anext(it):
-        return await it.__anext__()
-
-    @asynccontextmanager
-    async def aclosing(thing):
-        try:
-            yield thing
-        finally:
-            await thing.aclose()
-
-
 @contextmanager
 def raiseif(cond, *args, **kwargs):
     """
@@ -233,58 +192,3 @@ def raiseif(cond, *args, **kwargs):
         with pytest.raises(*args, **kwargs) as ex:
             yield ex
         return
-
-
-def spawn(f, args=None):
-    """
-    Equivalent to asyncio.create_task or creating and running a Thread.
-    """
-    if not args:
-        args = ()
-
-    if inspect.iscoroutinefunction(f):
-        return asyncio.create_task(f(*args))
-    else:
-        t = Thread(target=f, args=args, daemon=True)
-        t.start()
-        return t
-
-
-def gather(*ts, return_exceptions=False, timeout=None):
-    """
-    Equivalent to asyncio.gather or Thread.join()
-    """
-    if ts and inspect.isawaitable(ts[0]):
-        rv: Any = asyncio.gather(*ts, return_exceptions=return_exceptions)
-        if timeout is None:
-            rv = asyncio.wait_for(rv, timeout)
-        return rv
-    else:
-        for t in ts:
-            t.join(timeout)
-            assert not t.is_alive()
-
-
-def asleep(s):
-    """
-    Equivalent to asyncio.sleep(), converted to time.sleep() by async_to_sync.
-    """
-    return asyncio.sleep(s)
-
-
-def is_alive(t):
-    """
-    Return true if an asyncio.Task or threading.Thread is alive.
-    """
-    return t.is_alive() if isinstance(t, Thread) else not t.done()
-
-
-class AEvent(asyncio.Event):
-    """
-    Subclass of asyncio.Event adding a wait with timeout like threading.Event.
-
-    wait_timeout() is converted to wait() by async_to_sync.
-    """
-
-    async def wait_timeout(self, timeout):
-        await asyncio.wait_for(self.wait(), timeout)

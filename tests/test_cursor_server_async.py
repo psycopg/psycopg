@@ -4,7 +4,7 @@ import psycopg
 from psycopg import rows, errors as e
 from psycopg.pq import Format
 
-from .utils import alist
+from .acompat import alist
 
 pytestmark = pytest.mark.crdb_skip("server-side cursor")
 

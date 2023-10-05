@@ -17,7 +17,8 @@ from psycopg.types import TypeInfo
 from psycopg.types.hstore import register_hstore
 from psycopg.types.numeric import Int4
 
-from .utils import alist, eur, gc_collect, gc_count
+from .utils import eur, gc_collect, gc_count
+from .acompat import alist
 from ._test_copy import sample_text, sample_binary, sample_binary_rows  # noqa
 from ._test_copy import sample_values, sample_records, sample_tabledef
 from ._test_copy import ensure_table_async, py_to_raw, special_chars, AsyncFileWriter

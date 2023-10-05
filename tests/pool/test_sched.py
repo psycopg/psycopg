@@ -8,7 +8,7 @@ from contextlib import contextmanager
 
 import pytest
 
-from ..utils import spawn, gather, sleep
+from ..acompat import spawn, gather, sleep
 
 try:
     from psycopg_pool.sched import Scheduler

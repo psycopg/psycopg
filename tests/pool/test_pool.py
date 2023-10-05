@@ -13,7 +13,7 @@ from psycopg.pq import TransactionStatus
 from psycopg.rows import class_row, Row, TupleRow
 from psycopg._compat import assert_type, Counter
 
-from ..utils import Event, spawn, gather, sleep, is_async
+from ..acompat import Event, spawn, gather, sleep, is_async
 from .test_pool_common import delay_connection
 
 try:

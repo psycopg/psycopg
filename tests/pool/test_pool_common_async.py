@@ -6,7 +6,7 @@ import pytest
 
 import psycopg
 
-from ..utils import AEvent, spawn, gather, asleep, is_alive, is_async
+from ..acompat import AEvent, spawn, gather, asleep, is_alive, is_async
 
 try:
     import psycopg_pool as pool

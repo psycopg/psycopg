@@ -10,7 +10,8 @@ from psycopg import Notify, pq, errors as e
 from psycopg.rows import tuple_row
 from psycopg.conninfo import conninfo_to_dict, make_conninfo
 
-from .utils import gc_collect, is_async
+from .utils import gc_collect
+from .acompat import is_async
 from ._test_cursor import my_row_factory
 from ._test_connection import tx_params, tx_params_isolation, tx_values_map
 from ._test_connection import conninfo_params_timeout
