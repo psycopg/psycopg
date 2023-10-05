@@ -317,10 +317,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         currently re-open a closed pool.
         """
         # Make sure the lock is created after there is an event loop
-        try:
-            self._lock
-        except AttributeError:
-            self._lock = ALock()
+        self._ensure_lock()
 
         async with self._lock:
             self._open()
@@ -332,26 +329,35 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         if not self._closed:
             return
 
-        # Throw a RuntimeError if the pool is open outside a running loop.
-        asyncio.get_running_loop()
-
         self._check_open()
+
+        # A lock has been most likely, but not necessarily, created in `open()`.
+        self._ensure_lock()
 
         # Create these objects now to attach them to the right loop.
         # See #219
         self._tasks = AQueue()
         self._sched = AsyncScheduler()
-        # This has been most likely, but not necessarily, created in `open()`.
-        try:
-            self._lock
-        except AttributeError:
-            self._lock = ALock()
 
         self._closed = False
         self._opened = True
 
         self._start_workers()
         self._start_initial_tasks()
+
+    def _ensure_lock(self) -> None:
+        """Make sure the pool lock is created.
+
+        In async code, also make sure that the loop is running.
+        """
+
+        # Throw a RuntimeError if the pool is open outside a running loop.
+        asyncio.get_running_loop()
+
+        try:
+            self._lock
+        except AttributeError:
+            self._lock = ALock()
 
     def _start_workers(self) -> None:
         self._sched_runner = aspawn(self._sched.run, name=f"{self.name}-scheduler")

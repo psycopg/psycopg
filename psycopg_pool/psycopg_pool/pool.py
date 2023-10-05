@@ -107,15 +107,16 @@ class ConnectionPool(Generic[CT], BasePool):
 
         self._reconnect_failed = reconnect_failed
 
-        self._lock = Lock()
+        self._lock: Lock
+        self._sched: Scheduler
+        self._tasks: Queue[MaintenanceTask]
+
         self._waiting = Deque[WaitingClient[CT]]()
 
         # to notify that the pool is full
         self._pool_full_event: Optional[Event] = None
 
-        self._sched = Scheduler()
         self._sched_runner: Optional[threading.Thread] = None
-        self._tasks: Queue[MaintenanceTask] = Queue()
         self._workers: List[threading.Thread] = []
 
         super().__init__(
@@ -323,6 +324,8 @@ class ConnectionPool(Generic[CT], BasePool):
         because the pool was initialized with *open* = `!True`) but you cannot
         currently re-open a closed pool.
         """
+        self._ensure_lock()
+
         with self._lock:
             self._open()
 
@@ -335,11 +338,23 @@ class ConnectionPool(Generic[CT], BasePool):
 
         self._check_open()
 
+        # A lock has been most likely, but not necessarily, created in `open()`.
+        self._ensure_lock()
+
+        self._tasks = Queue()
+        self._sched = Scheduler()
+
         self._closed = False
         self._opened = True
 
         self._start_workers()
         self._start_initial_tasks()
+
+    def _ensure_lock(self) -> None:
+        try:
+            self._lock
+        except AttributeError:
+            self._lock = Lock()
 
     def _start_workers(self) -> None:
         self._sched_runner = spawn(self._sched.run, name=f"{self.name}-scheduler")
