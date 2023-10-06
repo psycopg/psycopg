@@ -535,15 +535,32 @@ class ConnectionPool(Generic[CT], BasePool):
 
             # Check for broken connections
             try:
-                conn.execute("SELECT 1")
-                if conn.pgconn.transaction_status == TransactionStatus.INTRANS:
-                    conn.rollback()
+                self.check_connection(conn)
             except Exception:
                 self._stats[self._CONNECTIONS_LOST] += 1
                 logger.warning("discarding broken connection: %s", conn)
                 self.run_task(AddConnection(self))
             else:
                 self._add_to_pool(conn)
+
+    @staticmethod
+    def check_connection(conn: CT) -> None:
+        """
+        A simple check to verify that a connection is still working.
+
+        Return quietly if the connection is still working, otherwise raise
+        an exception.
+
+        Used internally by `check()`, but also available for client usage.
+        """
+        if conn.autocommit:
+            conn.execute("SELECT 1")
+        else:
+            conn.autocommit = True
+            try:
+                conn.execute("SELECT 1")
+            finally:
+                conn.autocommit = False
 
     def reconnect_failed(self) -> None:
         """

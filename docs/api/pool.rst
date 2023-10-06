@@ -218,6 +218,10 @@ The `!ConnectionPool` class
 
    .. automethod:: resize
    .. automethod:: check
+   .. automethod:: check_connection
+
+      .. versionadded:: 3.2
+
    .. automethod:: get_stats
    .. automethod:: pop_stats
 
@@ -327,6 +331,10 @@ listed here.
    .. automethod:: wait
    .. automethod:: resize
    .. automethod:: check
+   .. automethod:: check_connection
+
+      .. versionadded:: 3.2
+
    .. automethod:: getconn
    .. automethod:: putconn
 

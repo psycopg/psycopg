@@ -15,6 +15,7 @@ psycopg_pool 3.2.0 (unreleased)
 
 - Add support for async `!reconnect_failed` callbacks in `AsyncConnectionPool`
   (:ticket:`#520`).
+- Add `ConnectionPool.check_connection()` method.
 - Make connection pool classes generic on the connection type (:ticket:`#559`).
 - Raise a warning if sync pools rely an implicit `!open=True` and the
   pool context is not used. In the future the default will become `!False`

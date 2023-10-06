@@ -563,15 +563,42 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
 
             # Check for broken connections
             try:
-                await conn.execute("SELECT 1")
-                if conn.pgconn.transaction_status == TransactionStatus.INTRANS:
-                    await conn.rollback()
+                await self.check_connection(conn)
             except Exception:
                 self._stats[self._CONNECTIONS_LOST] += 1
                 logger.warning("discarding broken connection: %s", conn)
                 self.run_task(AddConnection(self))
             else:
                 await self._add_to_pool(conn)
+
+    @staticmethod
+    async def check_connection(conn: ACT) -> None:
+        """
+        A simple check to verify that a connection is still working.
+
+        Return quietly if the connection is still working, otherwise raise
+        an exception.
+
+        Used internally by `check()`, but also available for client usage.
+        """
+        if conn.autocommit:
+            await conn.execute("SELECT 1")
+        else:
+            if True:  # ASYNC
+                # NOTE: with Psycopg 3.2 we could use conn.set_autocommit() in
+                # the sync code too, but we want the pool to be compatible with
+                # previous versions too.
+                await conn.set_autocommit(True)
+                try:
+                    await conn.execute("SELECT 1")
+                finally:
+                    await conn.set_autocommit(False)
+            else:
+                conn.autocommit = True
+                try:
+                    conn.execute("SELECT 1")
+                finally:
+                    conn.autocommit = False
 
     async def reconnect_failed(self) -> None:
         """

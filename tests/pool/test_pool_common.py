@@ -577,6 +577,24 @@ def test_debug_deadlock(pool_cls, dsn):
         logger.setLevel(old_level)
 
 
+@pytest.mark.crdb_skip("pg_terminate_backend")
+@pytest.mark.parametrize("autocommit", [True, False])
+def test_check_connection(pool_cls, conn_cls, dsn, autocommit):
+    conn = conn_cls.connect(dsn)
+    conn.set_autocommit(autocommit)
+    pool_cls.check_connection(conn)
+    assert not conn.closed
+    assert conn.info.transaction_status == psycopg.pq.TransactionStatus.IDLE
+
+    with conn_cls.connect(dsn) as conn2:
+        conn2.execute("select pg_terminate_backend(%s)", [conn.info.backend_pid])
+
+    with pytest.raises(psycopg.OperationalError):
+        pool_cls.check_connection(conn)
+
+    assert conn.closed
+
+
 @skip_sync
 def test_cancellation_in_queue(pool_cls, dsn):
     # https://github.com/psycopg/psycopg/issues/509
