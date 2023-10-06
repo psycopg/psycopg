@@ -595,6 +595,20 @@ def test_check_connection(pool_cls, conn_cls, dsn, autocommit):
     assert conn.closed
 
 
+def test_check_init(pool_cls, dsn):
+    checked = False
+
+    def check(conn):
+        nonlocal checked
+        checked = True
+
+    with pool_cls(dsn, check=check) as p:
+        with p.connection(timeout=1.0) as conn:
+            conn.execute("select 1")
+
+    assert checked
+
+
 @skip_sync
 def test_cancellation_in_queue(pool_cls, dsn):
     # https://github.com/psycopg/psycopg/issues/509

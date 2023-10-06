@@ -45,6 +45,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         conninfo: str = "",
         *,
         open: bool | None = ...,
+        check: Optional[AsyncConnectionCB[ACT]] = ...,
         configure: Optional[AsyncConnectionCB[ACT]] = ...,
         reset: Optional[AsyncConnectionCB[ACT]] = ...,
         kwargs: Optional[Dict[str, Any]] = ...,
@@ -68,6 +69,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         *,
         open: bool | None = ...,
         connection_class: Type[ACT],
+        check: Optional[AsyncConnectionCB[ACT]] = ...,
         configure: Optional[AsyncConnectionCB[ACT]] = ...,
         reset: Optional[AsyncConnectionCB[ACT]] = ...,
         kwargs: Optional[Dict[str, Any]] = ...,
@@ -90,6 +92,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         *,
         open: bool | None = None,
         connection_class: Type[ACT] = cast(Type[ACT], AsyncConnection),
+        check: Optional[AsyncConnectionCB[ACT]] = None,
         configure: Optional[AsyncConnectionCB[ACT]] = None,
         reset: Optional[AsyncConnectionCB[ACT]] = None,
         kwargs: Optional[Dict[str, Any]] = None,
@@ -105,6 +108,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         num_workers: int = 3,
     ):
         self.connection_class = connection_class
+        self._check = check
         self._configure = configure
         self._reset = reset
 
@@ -330,7 +334,13 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         return conn
 
     async def _check_connection(self, conn: ACT) -> None:
-        pass
+        if not self._check:
+            return
+        try:
+            await self._check(conn)
+        except Exception as e:
+            logger.info("connection failed check: %s", e)
+            raise
 
     def _maybe_grow_pool(self) -> None:
         # Allow only one task at time to grow the pool (or returning
@@ -579,7 +589,8 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         Return quietly if the connection is still working, otherwise raise
         an exception.
 
-        Used internally by `check()`, but also available for client usage.
+        Used internally by `check()`, but also available for client usage,
+        for instance as `!check` callback when a pool is created.
         """
         if conn.autocommit:
             await conn.execute("SELECT 1")

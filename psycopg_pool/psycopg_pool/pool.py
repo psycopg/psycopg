@@ -46,6 +46,7 @@ class ConnectionPool(Generic[CT], BasePool):
         conninfo: str = "",
         *,
         open: bool | None = ...,
+        check: Optional[ConnectionCB[CT]] = ...,
         configure: Optional[ConnectionCB[CT]] = ...,
         reset: Optional[ConnectionCB[CT]] = ...,
         kwargs: Optional[Dict[str, Any]] = ...,
@@ -69,6 +70,7 @@ class ConnectionPool(Generic[CT], BasePool):
         *,
         open: bool | None = ...,
         connection_class: Type[CT],
+        check: Optional[ConnectionCB[CT]] = ...,
         configure: Optional[ConnectionCB[CT]] = ...,
         reset: Optional[ConnectionCB[CT]] = ...,
         kwargs: Optional[Dict[str, Any]] = ...,
@@ -91,6 +93,7 @@ class ConnectionPool(Generic[CT], BasePool):
         *,
         open: bool | None = None,
         connection_class: Type[CT] = cast(Type[CT], Connection),
+        check: Optional[ConnectionCB[CT]] = None,
         configure: Optional[ConnectionCB[CT]] = None,
         reset: Optional[ConnectionCB[CT]] = None,
         kwargs: Optional[Dict[str, Any]] = None,
@@ -106,6 +109,7 @@ class ConnectionPool(Generic[CT], BasePool):
         num_workers: int = 3,
     ):
         self.connection_class = connection_class
+        self._check = check
         self._configure = configure
         self._reset = reset
 
@@ -309,7 +313,13 @@ class ConnectionPool(Generic[CT], BasePool):
         return conn
 
     def _check_connection(self, conn: CT) -> None:
-        pass
+        if not self._check:
+            return
+        try:
+            self._check(conn)
+        except Exception as e:
+            logger.info("connection failed check: %s", e)
+            raise
 
     def _maybe_grow_pool(self) -> None:
         # Allow only one task at time to grow the pool (or returning
@@ -551,7 +561,8 @@ class ConnectionPool(Generic[CT], BasePool):
         Return quietly if the connection is still working, otherwise raise
         an exception.
 
-        Used internally by `check()`, but also available for client usage.
+        Used internally by `check()`, but also available for client usage,
+        for instance as `!check` callback when a pool is created.
         """
         if conn.autocommit:
             conn.execute("SELECT 1")

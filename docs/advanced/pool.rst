@@ -460,5 +460,5 @@ Metric                  Meaning
                         server
  ``connections_errors`` Number of failed connection attempts
  ``connections_lost``   Number of connections lost identified by
-                        `~ConnectionPool.check()`
+                        `~ConnectionPool.check()` or by the `!check` callback
 ======================= =====================================================
