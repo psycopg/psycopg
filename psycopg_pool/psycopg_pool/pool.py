@@ -106,8 +106,7 @@ class ConnectionPool(Generic[CT], BasePool):
         self._configure = configure
         self._reset = reset
 
-        self._reconnect_failed: ConnectFailedCB
-        self._reconnect_failed = reconnect_failed or (lambda pool: None)
+        self._reconnect_failed = reconnect_failed
 
         self._lock = threading.RLock()
         self._waiting = Deque["WaitingClient[CT]"]()
@@ -510,6 +509,9 @@ class ConnectionPool(Generic[CT], BasePool):
         """
         Called when reconnection failed for longer than `reconnect_timeout`.
         """
+        if not self._reconnect_failed:
+            return
+
         self._reconnect_failed(self)
 
     def run_task(self, task: "MaintenanceTask") -> None:

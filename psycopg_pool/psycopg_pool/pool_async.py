@@ -109,8 +109,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         self._configure = configure
         self._reset = reset
 
-        self._reconnect_failed: AsyncConnectFailedCB
-        self._reconnect_failed = reconnect_failed or (lambda pool: None)
+        self._reconnect_failed = reconnect_failed
 
         # asyncio objects, created on open to attach them to the right loop.
         self._lock: asyncio.Lock
@@ -448,6 +447,9 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         """
         Called when reconnection failed for longer than `reconnect_timeout`.
         """
+        if not self._reconnect_failed:
+            return
+
         if asyncio.iscoroutinefunction(self._reconnect_failed):
             await self._reconnect_failed(self)
         else:
