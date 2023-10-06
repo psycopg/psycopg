@@ -797,7 +797,7 @@ class WaitingClient(Generic[CT]):
                 try:
                     if not self._cond.wait(timeout):
                         self.error = PoolTimeout(
-                            f"couldn't get a connection after {timeout} sec"
+                            f"couldn't get a connection after {timeout:.2f} sec"
                         )
                 except BaseException as ex:
                     self.error = ex

@@ -725,7 +725,7 @@ class AsyncClient(Generic[ACT]):
                     await asyncio.wait_for(self._cond.wait(), timeout)
                 except asyncio.TimeoutError:
                     self.error = PoolTimeout(
-                        f"couldn't get a connection after {timeout} sec"
+                        f"couldn't get a connection after {timeout:.2f} sec"
                     )
                 except BaseException as ex:
                     self.error = ex
