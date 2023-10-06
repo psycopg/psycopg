@@ -252,11 +252,35 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         failing to do so will deplete the pool. A depleted pool is a sad pool:
         you don't want a depleted pool.
         """
+        t0 = monotonic()
+        if timeout is None:
+            timeout = self.timeout
+        deadline = t0 + timeout
+
         logger.info("connection requested from %r", self.name)
         self._stats[self._REQUESTS_NUM] += 1
 
         self._check_open_getconn()
 
+        try:
+            while True:
+                conn = await self._getconn_unchecked(deadline - monotonic())
+                try:
+                    await self._check_connection(conn)
+                except Exception:
+                    await self.putconn(conn)
+                else:
+                    logger.info("connection given by %r", self.name)
+                    return conn
+
+        # Re-raise the timeout exception presenting the user the global
+        # timeout, not the per-attempt one.
+        except PoolTimeout:
+            raise PoolTimeout(
+                f"couldn't get a connection after {timeout:.2f} sec"
+            ) from None
+
+    async def _getconn_unchecked(self, timeout: float) -> ACT:
         # Critical section: decide here if there's a connection ready
         # or if the client needs to wait.
         async with self._lock:
@@ -274,8 +298,6 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         # If we are in the waiting queue, wait to be assigned a connection
         # (outside the critical section, so only the waiting client is locked)
         if not conn:
-            if timeout is None:
-                timeout = self.timeout
             try:
                 conn = await pos.wait(timeout=timeout)
             except Exception:
@@ -289,7 +311,6 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         # Note that this property shouldn't be set while the connection is in
         # the pool, to avoid to create a reference loop.
         conn._pool = self
-        logger.info("connection given by %r", self.name)
         return conn
 
     async def _get_ready_connection(self, timeout: Optional[float]) -> Optional[ACT]:
@@ -307,6 +328,9 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
                 + f" {len(self._waiting)} requests waiting"
             )
         return conn
+
+    async def _check_connection(self, conn: ACT) -> None:
+        pass
 
     def _maybe_grow_pool(self) -> None:
         # Allow only one task at time to grow the pool (or returning
