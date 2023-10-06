@@ -645,7 +645,7 @@ def test_worker_error_propagated(conn, monkeypatch):
         raise ZeroDivisionError
         yield
 
-    monkeypatch.setattr(psycopg.copy, "copy_to", copy_to_broken)
+    monkeypatch.setattr(psycopg._copy, "copy_to", copy_to_broken)
     cur = conn.cursor()
     cur.execute("create temp table wat (a text, b text)")
     with pytest.raises(ZeroDivisionError):

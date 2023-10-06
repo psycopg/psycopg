@@ -182,6 +182,7 @@ class RenameAsyncToSync(ast.NodeTransformer):
         "__aenter__": "__enter__",
         "__aexit__": "__exit__",
         "__aiter__": "__iter__",
+        "_copy_async": "_copy",
         "aclose": "close",
         "aclosing": "closing",
         "acommands": "commands",
@@ -289,12 +290,18 @@ class RenameAsyncToSync(ast.NodeTransformer):
         for base in node.bases:
             if not isinstance(base, ast.Subscript):
                 continue
-            if not isinstance(base.slice, ast.Tuple):
-                continue
-            for elt in base.slice.elts:
-                if not (isinstance(elt, ast.Constant) and isinstance(elt.value, str)):
+
+            if isinstance(base.slice, ast.Constant):
+                if not isinstance(base.slice.value, str):
                     continue
-                elt.value = self._visit_type_string(elt.value)
+                base.slice.value = self._visit_type_string(base.slice.value)
+            elif isinstance(base.slice, ast.Tuple):
+                for elt in base.slice.elts:
+                    if not (
+                        isinstance(elt, ast.Constant) and isinstance(elt.value, str)
+                    ):
+                        continue
+                    elt.value = self._visit_type_string(elt.value)
 
         return node
 

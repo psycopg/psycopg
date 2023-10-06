@@ -27,6 +27,7 @@ if [[ ${1:-} == '--check' ]]; then
 fi
 
 all_inputs="
+    psycopg/psycopg/_copy_async.py
     psycopg/psycopg/connection_async.py
     psycopg/psycopg/cursor_async.py
     psycopg_pool/psycopg_pool/null_pool_async.py
