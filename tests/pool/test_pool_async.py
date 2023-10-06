@@ -732,6 +732,116 @@ async def test_check_idle(dsn):
             assert conn.info.transaction_status == TransactionStatus.IDLE
 
 
+@pytest.mark.crdb_skip("pg_terminate_backend")
+async def test_connect_no_check(dsn):
+    async with pool.AsyncConnectionPool(dsn, min_size=2) as p:
+        await p.wait(1.0)
+        async with p.connection() as conn:
+            async with p.connection() as conn2:
+                pid2 = conn2.info.backend_pid
+            await conn.execute("select pg_terminate_backend(%s)", [pid2])
+
+        with pytest.raises(psycopg.OperationalError):
+            async with p.connection() as conn:
+                await conn.execute("select 1")
+                async with p.connection() as conn2:
+                    await conn2.execute("select 2")
+
+
+@pytest.mark.crdb_skip("pg_terminate_backend")
+@pytest.mark.parametrize("autocommit", [True, False])
+async def test_connect_check(dsn, caplog, autocommit):
+    caplog.set_level(logging.WARNING, logger="psycopg.pool")
+
+    async with pool.AsyncConnectionPool(
+        dsn,
+        min_size=2,
+        kwargs={"autocommit": autocommit},
+        check=pool.AsyncConnectionPool.check_connection,
+    ) as p:
+        await p.wait(1.0)
+        async with p.connection() as conn:
+            pid1 = conn.info.backend_pid
+            async with p.connection() as conn2:
+                pid2 = conn2.info.backend_pid
+            await conn.execute("select pg_terminate_backend(%s)", [pid2])
+
+        async with p.connection() as conn:
+            assert conn.info.transaction_status == TransactionStatus.IDLE
+            await conn.execute("select 1")
+            async with p.connection() as conn2:
+                assert conn2.info.transaction_status == TransactionStatus.IDLE
+                await conn2.execute("select 2")
+
+                pids = {c.info.backend_pid for c in [conn, conn2]}
+
+    assert pid1 in pids
+    assert pid2 not in pids
+    assert not caplog.records
+
+
+@pytest.mark.parametrize("autocommit", [True, False])
+@pytest.mark.crdb_skip("pg_terminate_backend")
+async def test_getconn_check(dsn, caplog, autocommit):
+    caplog.set_level(logging.WARNING, logger="psycopg.pool")
+
+    async with pool.AsyncConnectionPool(
+        dsn,
+        kwargs={"autocommit": autocommit},
+        min_size=2,
+        check=pool.AsyncConnectionPool.check_connection,
+    ) as p:
+        await p.wait(1.0)
+        async with p.connection() as conn:
+            pid1 = conn.info.backend_pid
+            async with p.connection() as conn2:
+                pid2 = conn2.info.backend_pid
+            await conn.execute("select pg_terminate_backend(%s)", [pid2])
+
+        conn = await p.getconn()
+        try:
+            assert conn.info.transaction_status == TransactionStatus.IDLE
+            await conn.execute("select 1")
+            await conn.rollback()
+            conn2 = await p.getconn()
+            try:
+                assert conn2.info.transaction_status == TransactionStatus.IDLE
+                await conn2.execute("select 1")
+                await conn2.rollback()
+                pids = {c.info.backend_pid for c in [conn, conn2]}
+            finally:
+                await p.putconn(conn2)
+        finally:
+            await p.putconn(conn)
+
+    assert pid1 in pids
+    assert pid2 not in pids
+    assert not caplog.records
+
+
+@pytest.mark.slow
+async def test_connect_check_timeout(dsn, proxy):
+    proxy.start()
+    async with pool.AsyncConnectionPool(
+        proxy.client_dsn,
+        min_size=1,
+        timeout=1.0,
+        check=pool.AsyncConnectionPool.check_connection,
+    ) as p:
+        await p.wait()
+
+        proxy.stop()
+        t0 = time()
+        with pytest.raises(pool.PoolTimeout):
+            async with p.connection():
+                pass
+        assert 1.0 <= (time() - t0) <= 1.1
+
+        proxy.start()
+        async with p.connection(timeout=10) as conn:
+            await conn.execute("select 1")
+
+
 @pytest.mark.slow
 async def test_check_max_lifetime(dsn):
     async with pool.AsyncConnectionPool(dsn, min_size=1, max_lifetime=0.2) as p:
@@ -746,7 +856,7 @@ async def test_check_max_lifetime(dsn):
 
 
 @pytest.mark.slow
-async def test_stats_connect(dsn, proxy, monkeypatch):
+async def test_stats_connect(proxy, monkeypatch):
     proxy.start()
     delay_connection(monkeypatch, 0.2)
     async with pool.AsyncConnectionPool(proxy.client_dsn, min_size=3) as p:
@@ -764,6 +874,25 @@ async def test_stats_connect(dsn, proxy, monkeypatch):
         assert stats["connections_num"] > 3
         assert stats["connections_errors"] > 0
         assert stats["connections_lost"] == 3
+
+
+@pytest.mark.crdb_skip("pg_terminate_backend")
+async def test_stats_check(dsn):
+    async with pool.AsyncConnectionPool(
+        dsn, min_size=1, check=pool.AsyncConnectionPool.check_connection
+    ) as p:
+        await p.wait()
+        async with p.connection() as conn:
+            pid = conn.info.backend_pid
+
+        async with await psycopg.AsyncConnection.connect(dsn) as conn:
+            await conn.execute("select pg_terminate_backend(%s)", [pid])
+
+        async with p.connection() as conn:
+            assert conn.info.backend_pid != pid
+
+        stats = p.get_stats()
+        assert stats["connections_lost"] == 1
 
 
 @pytest.mark.slow
