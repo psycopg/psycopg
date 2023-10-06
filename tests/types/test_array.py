@@ -341,6 +341,7 @@ def test_all_chars_with_bounds(conn, fmt_out):
     assert cur.fetchone()[0] == ["a", "b", s]
 
 
+@pytest.mark.slow
 def test_register_array_leak(conn):
     info = TypeInfo.fetch(conn, "date")
     ntypes = []

@@ -55,6 +55,12 @@ Test options
       [...]
       ==== 1877 passed, 2 skipped, 169 deselected, 48 xfailed in 13.47s =====
 
+  .. note::
+    In order to spot new slow tests you can run::
+
+        pytest -m "not slow" --durations-min=0.1 --durations=0
+
+
 - ``pytest`` option ``--pq-trace={TRACEFILE,STDERR}`` can be used to capture
   libpq trace. When using ``stderr``, the output will only be shown for
   failing or in-error tests, unless ``-s/--capture=no`` option is used.
