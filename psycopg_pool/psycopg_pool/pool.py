@@ -458,6 +458,9 @@ class ConnectionPool(BasePool[Connection[Any]]):
         """
         Called when reconnection failed for longer than `reconnect_timeout`.
         """
+        if not self._reconnect_failed:
+            return
+
         self._reconnect_failed(self)
 
     def run_task(self, task: "MaintenanceTask") -> None:

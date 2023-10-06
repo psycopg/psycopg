@@ -64,8 +64,7 @@ class BasePool(Generic[ConnectionType]):
 
         self.conninfo = conninfo
         self.kwargs: Dict[str, Any] = kwargs or {}
-        self._reconnect_failed: Callable[["BasePool[ConnectionType]"], None]
-        self._reconnect_failed = reconnect_failed or (lambda pool: None)
+        self._reconnect_failed = reconnect_failed
         self.name = name
         self._min_size = min_size
         self._max_size = max_size
