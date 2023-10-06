@@ -116,14 +116,14 @@ class AsyncConnectionPool(BasePool[AsyncConnection[Any]]):
         self, timeout: Optional[float] = None
     ) -> AsyncIterator[AsyncConnection[Any]]:
         conn = await self.getconn(timeout=timeout)
-        t0 = monotonic()
         try:
+            t0 = monotonic()
             async with conn:
                 yield conn
         finally:
+            await self.putconn(conn)
             t1 = monotonic()
             self._stats[self._USAGE_MS] += int(1000.0 * (t1 - t0))
-            await self.putconn(conn)
 
     async def getconn(self, timeout: Optional[float] = None) -> AsyncConnection[Any]:
         logger.info("connection requested from %r", self.name)

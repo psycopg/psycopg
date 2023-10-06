@@ -138,14 +138,14 @@ class ConnectionPool(BasePool[Connection[Any]]):
         in working state, replace it with a new one.
         """
         conn = self.getconn(timeout=timeout)
-        t0 = monotonic()
         try:
+            t0 = monotonic()
             with conn:
                 yield conn
         finally:
+            self.putconn(conn)
             t1 = monotonic()
             self._stats[self._USAGE_MS] += int(1000.0 * (t1 - t0))
-            self.putconn(conn)
 
     def getconn(self, timeout: Optional[float] = None) -> Connection[Any]:
         """Obtain a connection from the pool.
