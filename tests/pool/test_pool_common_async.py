@@ -25,6 +25,8 @@ def pool_cls(request):
 
 async def test_defaults(pool_cls, dsn):
     async with pool_cls(dsn) as p:
+        assert p.open
+        assert not p.closed
         assert p.timeout == 30
         assert p.max_idle == 10 * 60
         assert p.max_lifetime == 60 * 60
@@ -52,6 +54,49 @@ async def test_context(pool_cls, dsn):
     async with pool_cls(dsn, min_size=min_size(pool_cls)) as p:
         assert not p.closed
     assert p.closed
+
+
+async def test_create_warning(pool_cls, dsn):
+    # No warning on explicit open
+    p = pool_cls(dsn, open=True)
+    try:
+        async with p.connection():
+            pass
+    finally:
+        await p.close()
+
+    # No warning on explicit close
+    p = pool_cls(dsn, open=False)
+    await p.open()
+    try:
+        async with p.connection():
+            pass
+    finally:
+        await p.close()
+
+    # No warning on context manager
+    async with pool_cls(dsn) as p:
+        async with p.connection():
+            pass
+
+    # Warning on open not specified
+    with pytest.warns(DeprecationWarning):
+        p = pool_cls(dsn)
+        try:
+            async with p.connection():
+                pass
+        finally:
+            await p.close()
+
+    # Warning also if open is called explicitly on already implicitly open
+    with pytest.warns(DeprecationWarning):
+        p = pool_cls(dsn)
+        await p.open()
+        try:
+            async with p.connection():
+                pass
+        finally:
+            await p.close()
 
 
 async def test_wait_closed(pool_cls, dsn):
@@ -322,7 +367,7 @@ async def test_del_stops_threads(pool_cls, dsn):
 
 
 async def test_closed_getconn(pool_cls, dsn):
-    p = pool_cls(dsn, min_size=min_size(pool_cls))
+    p = pool_cls(dsn, min_size=min_size(pool_cls), open=True)
     assert not p.closed
     async with p.connection():
         pass
@@ -336,7 +381,7 @@ async def test_closed_getconn(pool_cls, dsn):
 
 
 async def test_close_connection_on_pool_close(pool_cls, dsn):
-    p = pool_cls(dsn, min_size=min_size(pool_cls))
+    p = pool_cls(dsn, min_size=min_size(pool_cls), open=True)
     async with p.connection() as conn:
         await p.close()
     assert conn.closed
@@ -361,7 +406,7 @@ async def test_closed_queue(pool_cls, dsn):
     e1 = AEvent()
     e2 = AEvent()
 
-    p = pool_cls(dsn, min_size=min_size(pool_cls), max_size=1)
+    p = pool_cls(dsn, min_size=min_size(pool_cls), max_size=1, open=True)
     await p.wait()
     success: List[str] = []
 
@@ -420,7 +465,7 @@ async def test_open_context(pool_cls, dsn):
 
 
 async def test_open_no_op(pool_cls, dsn):
-    p = pool_cls(dsn)
+    p = pool_cls(dsn, open=True)
     try:
         assert not p.closed
         await p.open()
@@ -435,7 +480,7 @@ async def test_open_no_op(pool_cls, dsn):
 
 
 async def test_reopen(pool_cls, dsn):
-    p = pool_cls(dsn)
+    p = pool_cls(dsn, open=True)
     async with p.connection() as conn:
         await conn.execute("select 1")
     await p.close()

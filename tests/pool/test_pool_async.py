@@ -363,7 +363,7 @@ async def test_fail_rollback_close(dsn, caplog, monkeypatch):
 
 
 async def test_del_no_warning(dsn, recwarn):
-    p = pool.AsyncConnectionPool(dsn, min_size=2)
+    p = pool.AsyncConnectionPool(dsn, min_size=2, open=True)
     async with p.connection() as conn:
         await conn.execute("select 1")
 

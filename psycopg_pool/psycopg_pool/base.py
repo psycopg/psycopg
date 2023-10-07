@@ -7,6 +7,7 @@ psycopg connection pool base class and functionalities.
 from time import monotonic
 from random import random
 from typing import Any, Dict, Optional, Tuple, TYPE_CHECKING
+import warnings
 
 from psycopg import errors as e
 
@@ -47,7 +48,6 @@ class BasePool:
         kwargs: Optional[Dict[str, Any]],
         min_size: int,
         max_size: Optional[int],
-        open: bool,
         name: Optional[str],
         timeout: float,
         max_waiting: int,
@@ -96,6 +96,7 @@ class BasePool:
 
         self._opened = False
         self._closed = True
+        self._open_implicit = False
 
     def __repr__(self) -> str:
         return (
@@ -141,6 +142,13 @@ class BasePool:
                 raise PoolClosed(f"the pool {self.name!r} is already closed")
             else:
                 raise PoolClosed(f"the pool {self.name!r} is not open yet")
+        elif self._open_implicit:
+            warnings.warn(
+                f"the default for the {type(self).__name__} 'open' parameter will"
+                " become 'False' in a future release; please use open={True|False}"
+                " explicitly or use the pool as context manager",
+                DeprecationWarning,
+            )
 
     def _check_pool_putconn(self, conn: "BaseConnection[Any]") -> None:
         pool = getattr(conn, "_pool", None)

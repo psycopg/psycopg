@@ -359,7 +359,7 @@ def test_fail_rollback_close(dsn, caplog, monkeypatch):
 
 
 def test_del_no_warning(dsn, recwarn):
-    p = pool.ConnectionPool(dsn, min_size=2)
+    p = pool.ConnectionPool(dsn, min_size=2, open=True)
     with p.connection() as conn:
         conn.execute("select 1")
 
