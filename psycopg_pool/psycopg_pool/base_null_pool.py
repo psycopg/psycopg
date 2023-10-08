@@ -22,7 +22,7 @@ class _BaseNullConnectionPool:
     def _start_initial_tasks(self) -> None:
         # Null pools don't have background tasks to fill connections
         # or to grow/shrink.
-        return
+        pass
 
     def _maybe_grow_pool(self) -> None:
         # null pools don't grow
