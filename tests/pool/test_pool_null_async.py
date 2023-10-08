@@ -9,7 +9,7 @@ from psycopg.pq import TransactionStatus
 from psycopg.rows import class_row, Row, TupleRow
 from psycopg._compat import assert_type
 
-from ..acompat import AEvent, asleep, spawn, gather, is_async
+from ..acompat import AEvent, asleep, spawn, gather, skip_sync
 from .test_pool_common_async import delay_connection, ensure_waiting
 
 try:
@@ -441,7 +441,7 @@ async def test_stats_connect(dsn, proxy, monkeypatch):
         assert 200 <= stats["connections_ms"] < 300
 
 
-@pytest.mark.skipif(not is_async(__name__), reason="async test only")
+@skip_sync
 async def test_cancellation_in_queue(dsn):
     # https://github.com/psycopg/psycopg/issues/509
 

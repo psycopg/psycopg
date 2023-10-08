@@ -15,10 +15,16 @@ import threading
 import contextlib
 from typing import Any
 
+import pytest
+
 # Re-exports
 sleep = time.sleep
 Event = threading.Event
 closing = contextlib.closing
+
+# Markers to decorate tests to run only in async or only in sync version.
+skip_sync = pytest.mark.skipif("'async' not in __name__", reason="async test only")
+skip_async = pytest.mark.skipif("'async' in __name__", reason="sync test only")
 
 
 def is_async(obj):

@@ -10,7 +10,7 @@ from psycopg.pq import TransactionStatus
 from psycopg.rows import class_row, Row, TupleRow
 from psycopg._compat import assert_type, Counter
 
-from ..acompat import AEvent, spawn, gather, asleep, is_async
+from ..acompat import AEvent, spawn, gather, asleep, skip_sync
 from .test_pool_common_async import delay_connection
 
 try:
@@ -515,11 +515,8 @@ async def test_reconnect(proxy, caplog, monkeypatch):
 
 @pytest.mark.slow
 @pytest.mark.timing
-@pytest.mark.parametrize("async_cb", [True, False])
+@pytest.mark.parametrize("async_cb", [pytest.param(True, marks=skip_sync), False])
 async def test_reconnect_failure(proxy, async_cb):
-    if async_cb and not is_async(__name__):
-        pytest.skip("async test only")
-
     proxy.start()
 
     t1 = None
@@ -804,7 +801,7 @@ async def test_debug_deadlock(dsn):
         logger.setLevel(old_level)
 
 
-@pytest.mark.skipif(not is_async(__name__), reason="async test only")
+@skip_sync
 async def test_cancellation_in_queue(dsn):
     # https://github.com/psycopg/psycopg/issues/509
 

@@ -9,7 +9,7 @@ import pytest
 
 import psycopg
 
-from ..acompat import Event, spawn, gather, sleep, is_alive, is_async
+from ..acompat import Event, spawn, gather, sleep, is_alive, skip_async, skip_sync
 
 try:
     import psycopg_pool as pool
@@ -299,8 +299,8 @@ def test_putconn_wrong_pool(pool_cls, dsn):
                 p2.putconn(conn)
 
 
+@skip_async
 @pytest.mark.slow
-@pytest.mark.skipif(is_async(__name__), reason="sync test only")
 def test_del_stops_threads(pool_cls, dsn):
     p = pool_cls(dsn)
     assert p._sched_runner is not None
@@ -529,7 +529,7 @@ def test_debug_deadlock(pool_cls, dsn):
         logger.setLevel(old_level)
 
 
-@pytest.mark.skipif(not is_async(__name__), reason="async test only")
+@skip_sync
 def test_cancellation_in_queue(pool_cls, dsn):
     # https://github.com/psycopg/psycopg/issues/509
 

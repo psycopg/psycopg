@@ -14,7 +14,7 @@ from psycopg.rows import tuple_row
 from psycopg.conninfo import conninfo_to_dict, make_conninfo
 
 from .utils import gc_collect
-from .acompat import is_async
+from .acompat import is_async, skip_sync, skip_async
 from ._test_cursor import my_row_factory
 from ._test_connection import tx_params, tx_params_isolation, tx_values_map
 from ._test_connection import conninfo_params_timeout
@@ -312,7 +312,7 @@ def test_auto_transaction_fail(conn):
     assert conn.pgconn.transaction_status == conn.TransactionStatus.INTRANS
 
 
-@pytest.mark.skipif(not is_async(__name__), reason="async test only")
+@skip_sync
 def test_autocommit_readonly_property(conn):
     with pytest.raises(AttributeError):
         conn.autocommit = True
@@ -337,7 +337,7 @@ def test_autocommit(conn):
     assert conn.autocommit is True
 
 
-@pytest.mark.skipif(is_async(__name__), reason="sync test only")
+@skip_async
 def test_autocommit_property(conn):
     assert conn.autocommit is False
 
@@ -637,7 +637,7 @@ def test_transaction_param_default(conn, param):
     assert current == default
 
 
-@pytest.mark.skipif(not is_async(__name__), reason="async test only")
+@skip_sync
 @pytest.mark.parametrize("param", tx_params)
 def test_transaction_param_readonly_property(conn, param):
     with pytest.raises(AttributeError):
@@ -723,7 +723,7 @@ def test_set_transaction_param_not_intrans_external(conn, param):
         getattr(conn, f"set_{param.name}")(value)
 
 
-@pytest.mark.skipif(is_async(__name__), reason="sync test only")
+@skip_async
 @pytest.mark.crdb("skip", reason="transaction isolation")
 def test_set_transaction_param_all_property(conn):
     params: List[Any] = tx_params[:]
@@ -769,7 +769,7 @@ def test_set_transaction_param_strange(conn):
     assert conn.deferrable is False
 
 
-@pytest.mark.skipif(is_async(__name__), reason="sync test only")
+@skip_async
 def test_set_transaction_param_strange_property(conn):
     for val in ("asdf", 0, 5):
         with pytest.raises(ValueError):
