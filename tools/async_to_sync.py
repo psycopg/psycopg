@@ -68,27 +68,19 @@ def tree_to_str(tree: ast.AST, filepath: Path) -> str:
 
 class AsyncToSync(ast.NodeTransformer):
     def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> ast.AST:
-        new_node = ast.FunctionDef(
-            name=node.name,
-            args=node.args,
-            body=node.body,
-            decorator_list=node.decorator_list,
-            returns=node.returns,
-        )
+        new_node = ast.FunctionDef(**node.__dict__)
         ast.copy_location(new_node, node)
         self.visit(new_node)
         return new_node
 
     def visit_AsyncFor(self, node: ast.AsyncFor) -> ast.AST:
-        new_node = ast.For(
-            target=node.target, iter=node.iter, body=node.body, orelse=node.orelse
-        )
+        new_node = ast.For(**node.__dict__)
         ast.copy_location(new_node, node)
         self.visit(new_node)
         return new_node
 
     def visit_AsyncWith(self, node: ast.AsyncWith) -> ast.AST:
-        new_node = ast.With(items=node.items, body=node.body)
+        new_node = ast.With(**node.__dict__)
         ast.copy_location(new_node, node)
         self.visit(new_node)
         return new_node
