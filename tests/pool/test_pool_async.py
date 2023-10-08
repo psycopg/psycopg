@@ -363,7 +363,8 @@ async def test_fail_rollback_close(dsn, caplog, monkeypatch):
 
 
 async def test_del_no_warning(dsn, recwarn):
-    p = pool.AsyncConnectionPool(dsn, min_size=2, open=True)
+    p = pool.AsyncConnectionPool(dsn, min_size=2, open=False)
+    await p.open()
     async with p.connection() as conn:
         await conn.execute("select 1")
 
@@ -794,7 +795,7 @@ async def test_debug_deadlock(dsn):
     handler.setLevel(logging.DEBUG)
     logger.addHandler(handler)
     try:
-        async with pool.AsyncConnectionPool(dsn, min_size=4, open=True) as p:
+        async with pool.AsyncConnectionPool(dsn, min_size=4) as p:
             await p.wait(timeout=2)
     finally:
         logger.removeHandler(handler)

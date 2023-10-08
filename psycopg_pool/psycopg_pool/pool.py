@@ -10,6 +10,7 @@ Psycopg connection pool module (sync version).
 from __future__ import annotations
 
 import logging
+import warnings
 from abc import ABC, abstractmethod
 from time import monotonic
 from types import TracebackType
@@ -151,6 +152,20 @@ class ConnectionPool(Generic[CT], BasePool):
             return
 
         self._stop_workers()
+
+    def _check_open_getconn(self) -> None:
+        super()._check_open_getconn()
+
+        if self._open_implicit:
+            self._open_implicit = False
+
+            warnings.warn(
+                f"the default for the {type(self).__name__} 'open' parameter"
+                + " will become 'False' in a future release. Please use"
+                + " open={True|False} explicitly, or use the pool as context"
+                + f" manager using: `with {type(self).__name__}(...) as pool: ...`",
+                DeprecationWarning,
+            )
 
     def wait(self, timeout: float = 30.0) -> None:
         """

@@ -55,7 +55,7 @@ def test_context(pool_cls, dsn):
 
 
 def test_create_warning(pool_cls, dsn):
-    # No warning on explicit open
+    # No warning on explicit open for sync pool
     p = pool_cls(dsn, open=True)
     try:
         with p.connection():
@@ -357,7 +357,8 @@ def test_del_stops_threads(pool_cls, dsn):
 
 
 def test_closed_getconn(pool_cls, dsn):
-    p = pool_cls(dsn, min_size=min_size(pool_cls), open=True)
+    p = pool_cls(dsn, min_size=min_size(pool_cls), open=False)
+    p.open()
     assert not p.closed
     with p.connection():
         pass
@@ -371,7 +372,8 @@ def test_closed_getconn(pool_cls, dsn):
 
 
 def test_close_connection_on_pool_close(pool_cls, dsn):
-    p = pool_cls(dsn, min_size=min_size(pool_cls), open=True)
+    p = pool_cls(dsn, min_size=min_size(pool_cls), open=False)
+    p.open()
     with p.connection() as conn:
         p.close()
     assert conn.closed
@@ -396,18 +398,17 @@ def test_closed_queue(pool_cls, dsn):
     e1 = Event()
     e2 = Event()
 
-    p = pool_cls(dsn, min_size=min_size(pool_cls), max_size=1, open=True)
-    p.wait()
-    success: List[str] = []
+    with pool_cls(dsn, min_size=min_size(pool_cls), max_size=1) as p:
+        p.wait()
+        success: List[str] = []
 
-    t1 = spawn(w1)
-    # Wait until w1 has received a connection
-    e1.wait()
+        t1 = spawn(w1)
+        # Wait until w1 has received a connection
+        e1.wait()
 
-    t2 = spawn(w2)
-    # Wait until w2 is in the queue
-    ensure_waiting(p)
-    p.close()
+        t2 = spawn(w2)
+        # Wait until w2 is in the queue
+        ensure_waiting(p)
 
     # Wait for the workers to finish
     e2.set()
@@ -454,7 +455,8 @@ def test_open_context(pool_cls, dsn):
 
 
 def test_open_no_op(pool_cls, dsn):
-    p = pool_cls(dsn, open=True)
+    p = pool_cls(dsn, open=False)
+    p.open()
     try:
         assert not p.closed
         p.open()
@@ -468,7 +470,8 @@ def test_open_no_op(pool_cls, dsn):
 
 
 def test_reopen(pool_cls, dsn):
-    p = pool_cls(dsn, open=True)
+    p = pool_cls(dsn, open=False)
+    p.open()
     with p.connection() as conn:
         conn.execute("select 1")
     p.close()
@@ -567,7 +570,7 @@ def test_debug_deadlock(pool_cls, dsn):
     handler.setLevel(logging.DEBUG)
     logger.addHandler(handler)
     try:
-        with pool_cls(dsn, min_size=min_size(pool_cls, 4), open=True) as p:
+        with pool_cls(dsn, min_size=min_size(pool_cls, 4)) as p:
             p.wait(timeout=2)
     finally:
         logger.removeHandler(handler)
