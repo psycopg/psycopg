@@ -2,12 +2,12 @@
 # from the original file 'sched_async.py'
 # DO NOT CHANGE! Change the original file instead.
 """
-A minimal scheduler to schedule tasks run in the future.
+A minimal scheduler to schedule tasks to run in the future.
 
 Inspired to the standard library `sched.scheduler`, but designed for
-multi-thread usage ground up, not as an afterthought. Tasks can be scheduled in
+multi-thread usage from the ground up, not as an afterthought. Tasks can be scheduled in
 front of the one currently running and `Scheduler.run()` can be left running
-without any task scheduled.
+without any tasks scheduled.
 
 Tasks are called "Task", not "Event", here, because we actually make use of
 `[threading/asyncio].Event` and the two would be confusing.
@@ -28,7 +28,6 @@ logger = logging.getLogger(__name__)
 
 class Scheduler:
     def __init__(self) -> None:
-        """Initialize a new instance, passing the time and delay functions."""
         self._queue: List[Task] = []
         self._lock = Lock()
         self._event = Event()

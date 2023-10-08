@@ -1,5 +1,5 @@
 """
-Psycopg mixin class null connection pools
+Psycopg mixin class for null connection pools
 """
 
 # Copyright (C) 2022 The Psycopg Team
