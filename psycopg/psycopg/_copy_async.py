@@ -1,5 +1,5 @@
 """
-Psycopg AsyncCopy and related objects.
+Objects to support the COPY protocol (async version).
 """
 
 # Copyright (C) 2023 The Psycopg Team

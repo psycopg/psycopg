@@ -2,7 +2,7 @@
 # from the original file 'pool_async.py'
 # DO NOT CHANGE! Change the original file instead.
 """
-Psycopg connection pool module.
+Psycopg connection pool module (sync version).
 """
 
 # Copyright (C) 2021 The Psycopg Team

@@ -2,7 +2,7 @@
 # from the original file 'null_pool_async.py'
 # DO NOT CHANGE! Change the original file instead.
 """
-Psycopg null connection pool module.
+Psycopg null connection pool module (sync version).
 """
 
 # Copyright (C) 2022 The Psycopg Team

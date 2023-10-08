@@ -2,7 +2,7 @@
 # from the original file 'connection_async.py'
 # DO NOT CHANGE! Change the original file instead.
 """
-psycopg async connection objects
+Psycopg connection object (sync version)
 """
 
 # Copyright (C) 2020 The Psycopg Team

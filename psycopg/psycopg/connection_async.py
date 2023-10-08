@@ -1,5 +1,5 @@
 """
-psycopg async connection objects
+Psycopg connection object (async version)
 """
 
 # Copyright (C) 2020 The Psycopg Team

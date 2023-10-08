@@ -2,7 +2,7 @@
 # from the original file '_copy_async.py'
 # DO NOT CHANGE! Change the original file instead.
 """
-Psycopg Copy and related objects.
+Objects to support the COPY protocol (sync version).
 """
 
 # Copyright (C) 2023 The Psycopg Team

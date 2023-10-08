@@ -1,5 +1,5 @@
 """
-Psycopg null connection pool module.
+Psycopg null connection pool module (async version).
 """
 
 # Copyright (C) 2022 The Psycopg Team

@@ -241,6 +241,7 @@ class RenameAsyncToSync(ast.NodeTransformer):
             and isinstance(body[0].value.value, str)
         ):
             body[0].value.value = body[0].value.value.replace("Async", "")
+            body[0].value.value = body[0].value.value.replace("(async", "(sync")
 
     def visit_Call(self, node: ast.Call) -> ast.AST:
         if isinstance(node.func, ast.Name) and node.func.id == "TypeVar":
