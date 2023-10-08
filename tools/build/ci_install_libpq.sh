@@ -6,7 +6,6 @@
 # available to the debian distro or the newest available from the pgdg ppa.
 
 set -euo pipefail
-set -x
 
 libpq=${1:-}
 rel=$(lsb_release -c -s)

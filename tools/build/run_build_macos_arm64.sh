@@ -10,7 +10,6 @@
 # It will use scaleway_m1.sh to provision a server and use it.
 
 set -euo pipefail
-# set -x
 
 function log {
     echo "$@" >&2

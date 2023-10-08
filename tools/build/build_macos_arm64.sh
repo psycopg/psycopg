@@ -8,7 +8,6 @@
 # so it can pretty much only be executed by a sudo user as it is.
 
 set -euo pipefail
-# set -x
 
 python_versions="3.8.10 3.9.13 3.10.5 3.11.0 3.12.0"
 pg_version=16

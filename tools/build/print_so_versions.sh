@@ -4,7 +4,6 @@
 # libraries it links.
 
 set -euo pipefail
-# set -x
 
 source /etc/os-release
 

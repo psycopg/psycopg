@@ -7,7 +7,6 @@
 # repeat the same result.
 
 set -euo pipefail
-set -x
 
 # Assemble a markers expression from the MARKERS and NOT_MARKERS env vars
 markers=""

@@ -6,7 +6,6 @@
 # The PG_VERSION env var must be set to a Postgres major version (e.g. 16).
 
 set -euo pipefail
-set -x
 
 dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 

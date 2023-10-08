@@ -3,7 +3,6 @@
 # Build a modern version of libpq and depending libs from source on Centos 5
 
 set -euo pipefail
-set -x
 
 # WARNING: the version used in CI are defined in .github/workflows/packages-bin.yml
 

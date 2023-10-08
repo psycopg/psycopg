@@ -13,7 +13,6 @@
 # This script is designed to run on a wheel archive before auditwheel.
 
 set -euo pipefail
-# set -x
 
 source /etc/os-release
 dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"

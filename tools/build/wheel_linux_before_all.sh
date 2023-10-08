@@ -4,7 +4,6 @@
 # This script is designed to be used by cibuildwheel as CIBW_BEFORE_ALL_LINUX
 
 set -euo pipefail
-set -x
 
 dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 

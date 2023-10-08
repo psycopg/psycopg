@@ -33,7 +33,6 @@
 # See https://www.scaleway.com/en/developers/api/apple-silicon/ for api docs.
 
 set -euo pipefail
-# set -x
 
 project_id="4cf7a85e-f21e-40d4-b758-21d1f4ad3dfb"
 zone=fr-par-3
