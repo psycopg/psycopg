@@ -1,7 +1,12 @@
 Psycopg 3: PostgreSQL database adapter for Python - optimisation package
 ========================================================================
 
-This distribution contains the optional optimization package ``psycopg_c``.
+This distribution package is an optional component of `Psycopg 3`__: it
+contains the optional optimization package `psycopg_c`__.
+
+.. __: https://pypi.org/project/psycopg/
+.. __: https://www.psycopg.org/psycopg3/docs/basic/install.html
+       #local-installation
 
 You shouldn't install this package directly: use instead ::
 

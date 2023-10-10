@@ -1,8 +1,12 @@
 Psycopg 3: PostgreSQL database adapter for Python - binary package
 ==================================================================
 
-This distribution contains the precompiled optimization package
-``psycopg_binary``.
+This distribution package is an optional component of `Psycopg 3`__: it
+contains the optional optimization package `psycopg_binary`__.
+
+.. __: https://pypi.org/project/psycopg/
+.. __: https://www.psycopg.org/psycopg3/docs/basic/install.html
+       #binary-installation
 
 You shouldn't install this package directly: use instead ::
 
