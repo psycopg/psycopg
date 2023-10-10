@@ -55,6 +55,17 @@ If you want to return objects of your choice you can use a row factory
     >>> cur.execute("select 'John Doe' as name, 33 as age").fetchone()
     Person(name='John Doe', age=33, weight=None)
 
+.. note::
+
+    The choice of a `!row_factory` in a `!Connection` or a `!Cursor`
+    constructor affects how the object is annotated for static type checking.
+
+    For instance, declaring a `!row_factory=dict_row` will result in the
+    cursors' `!executeany()` annotated as returning `list[dict[str, Any]]`
+    instead of `list[tuple[Any, ...]]`.
+
+    Please check :ref:`static-typing` for more details.
+
 
 .. index::
     single: Row Maker

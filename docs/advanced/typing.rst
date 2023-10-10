@@ -19,24 +19,26 @@ Generic types
 -------------
 
 Psycopg `Connection` and `Cursor` objects are `~typing.Generic` objects and
-support a `!Row` parameter which is the type of the records returned.
+support a `!Row` parameter which is the type of the records returned. The
+parameter can be configured by passing a `!row_factory` parameter to the
+constructor or to the `~Connection.cursor()` method.
 
-By default methods such as `Cursor.fetchall()` return normal tuples of unknown
-size and content. As such, the `connect()` function returns an object of type
-`!psycopg.Connection[Tuple[Any, ...]]` and `Connection.cursor()` returns an
-object of type `!psycopg.Cursor[Tuple[Any, ...]]`. If you are writing generic
-plumbing code it might be practical to use annotations such as
-`!Connection[Any]` and `!Cursor[Any]`.
+By default, methods producing records such as `Cursor.fetchall()` return
+normal tuples of unknown size and content. As such, the `connect()` function
+returns an object of type `!psycopg.Connection[tuple[Any, ...]]` and
+`Connection.cursor()` returns an object of type `!psycopg.Cursor[tuple[Any,
+...]]`. If you are writing generic plumbing code it might be practical to use
+annotations such as `!Connection[Any]` and `!Cursor[Any]`.
 
 .. code:: python
 
-   conn = psycopg.connect() # type is psycopg.Connection[Tuple[Any, ...]]
+   conn = psycopg.connect() # type is psycopg.Connection[tuple[Any, ...]]
 
-   cur = conn.cursor()      # type is psycopg.Cursor[Tuple[Any, ...]]
+   cur = conn.cursor()      # type is psycopg.Cursor[tuple[Any, ...]]
 
-   rec = cur.fetchone()     # type is Optional[Tuple[Any, ...]]
+   rec = cur.fetchone()     # type is Optional[tuple[Any, ...]]
 
-   recs = cur.fetchall()    # type is List[Tuple[Any, ...]]
+   recs = cur.fetchall()    # type is List[tuple[Any, ...]]
 
 
 .. _row-factory-static:
@@ -54,14 +56,14 @@ cursors and annotate the returned objects accordingly. See
 .. code:: python
 
    dconn = psycopg.connect(row_factory=dict_row)
-   # dconn type is psycopg.Connection[Dict[str, Any]]
+   # dconn type is psycopg.Connection[dict[str, Any]]
 
    dcur = conn.cursor(row_factory=dict_row)
    dcur = dconn.cursor()
-   # dcur type is psycopg.Cursor[Dict[str, Any]] in both cases
+   # dcur type is psycopg.Cursor[dict[str, Any]] in both cases
 
    drec = dcur.fetchone()
-   # drec type is Optional[Dict[str, Any]]
+   # drec type is Optional[dict[str, Any]]
 
 
 .. _pool-generic:
@@ -109,7 +111,7 @@ type is not parametric) then it's not necessary to specify `!kwargs`:
             kwargs["row_factory"] = dict_row
             super().__init__(*args, **kwargs)
 
-    with ConnectionPool(connection_class=MyConnection[DictRow]) as pool:
+    with ConnectionPool(connection_class=MyConnection) as pool:
         # reveal_type(pool): ConnectionPool[MyConnection]
 
         with pool.connection() as conn:
