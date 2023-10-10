@@ -5,6 +5,17 @@ Psycopg 3 is a modern implementation of a PostgreSQL adapter for Python.
 
 This distribution contains the pure Python package ``psycopg``.
 
+.. Note::
+
+    Despite the lack of number in the package name, this package is the
+    successor of psycopg2_.
+
+    Please use the psycopg2 package if you are maintaining an existing program
+    using psycopg2 as a dependency. If you are developing something new,
+    Psycopg 3 is the most current implementation of the adapter.
+
+    .. _psycopg2: https://pypi.org/project/psycopg2/
+
 
 Installation
 ------------
