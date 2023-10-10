@@ -11,6 +11,9 @@ In short, if you use a :ref:`supported system<supported-systems>`::
 and you should be :ref:`ready to start <module-usage>`. Read further for
 alternative ways to install.
 
+.. note::
+   Fun fact: there is no ``psycopg3`` package, only ``psycopg``!
+
 
 .. _supported-systems:
 
