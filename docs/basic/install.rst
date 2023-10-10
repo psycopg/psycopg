@@ -37,7 +37,7 @@ anything that is not tested there is not officially supported. This includes:
 
 - Unofficial Python distributions such as Conda;
 - Alternative PostgreSQL implementation;
-- macOS hardware and releases not available on Github workflows.
+- Other platforms such as BSD or Solaris.
 
 If you use an unsupported system, things might work (because, for instance, the
 database may use the same wire protocol as PostgreSQL) but we cannot guarantee
