@@ -169,7 +169,7 @@ you should probably specify one of the following:
 In both cases you can specify which version of Psycopg to use using
 `requirement specifiers`__.
 
-.. __: https://pip.pypa.io/en/stable/cli/pip_install/#requirement-specifiers
+.. __: https://pip.pypa.io/en/stable/reference/requirement-specifiers/
 
 If you want to make sure that a specific implementation is used you can
 specify the :envvar:`PSYCOPG_IMPL` environment variable: importing the library
