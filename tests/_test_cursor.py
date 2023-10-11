@@ -33,7 +33,7 @@ def ph(cur: Any, query: str) -> str:
         return query
 
     if "%(" in query:
-        raise pytest.skip("RawCursor only supports positional placeholders")
+        pytest.skip("RawCursor only supports positional placeholders")
 
     n = 1
 
