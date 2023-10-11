@@ -24,7 +24,7 @@ from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 from psycopg import errors as e
 from psycopg.pq import Format as PqFormat
 from psycopg.rows import Row, RowMaker
-from psycopg._encodings import pgconn_encoding
+from psycopg._encodings import conn_encoding
 
 NoneType = type(None)
 
@@ -122,8 +122,7 @@ cdef class Transformer:
     @property
     def encoding(self) -> str:
         if not self._encoding:
-            conn = self.connection
-            self._encoding = pgconn_encoding(conn.pgconn) if conn else "utf-8"
+            self._encoding = conn_encoding(self.connection)
         return self._encoding
 
     @property

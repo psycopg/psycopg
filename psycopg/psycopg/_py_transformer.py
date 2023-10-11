@@ -20,7 +20,7 @@ from . import errors as e
 from .abc import Buffer, LoadFunc, AdaptContext, PyFormat, DumperKey, NoneType
 from .rows import Row, RowMaker
 from ._oids import INVALID_OID, TEXT_OID
-from ._encodings import pgconn_encoding
+from ._encodings import conn_encoding
 
 if TYPE_CHECKING:
     from .adapt import AdaptersMap
@@ -116,8 +116,7 @@ class Transformer(AdaptContext):
     @property
     def encoding(self) -> str:
         if not self._encoding:
-            conn = self.connection
-            self._encoding = pgconn_encoding(conn.pgconn) if conn else "utf-8"
+            self._encoding = conn_encoding(self.connection)
         return self._encoding
 
     @property

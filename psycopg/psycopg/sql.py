@@ -204,9 +204,8 @@ class SQL(Composable):
         return self._obj
 
     def as_bytes(self, context: Optional[AdaptContext]) -> bytes:
-        enc = "utf-8"
-        if context:
-            enc = conn_encoding(context.connection)
+        conn = context.connection if context else None
+        enc = conn_encoding(conn)
         return self._obj.encode(enc)
 
     def format(self, *args: Any, **kwargs: Any) -> Composed:
