@@ -18,8 +18,9 @@ from .rows import dict_row
 from ._encodings import conn_encoding
 
 if TYPE_CHECKING:
-    from .connection import BaseConnection, Connection
+    from .connection import Connection
     from .connection_async import AsyncConnection
+    from ._connection_base import BaseConnection
 
 T = TypeVar("T", bound="TypeInfo")
 RegistryKey: TypeAlias = Union[str, int, Tuple[type, int]]

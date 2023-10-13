@@ -18,7 +18,7 @@ from ..errors import InterfaceError, DataError
 from .._struct import pack_int4, pack_int8, unpack_int4, unpack_int8
 
 if TYPE_CHECKING:
-    from ..connection import BaseConnection
+    from .._connection_base import BaseConnection
 
 _struct_timetz = struct.Struct("!qi")  # microseconds, sec tz offset
 _pack_timetz = cast(Callable[[int, int], bytes], _struct_timetz.pack)

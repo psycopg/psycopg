@@ -9,62 +9,69 @@ from .fix_crdb import crdb_encoding
 
 
 @pytest.fixture
-def conn(conn):
-    conn.cursor_factory = psycopg.ClientCursor
-    return conn
+async def aconn(aconn, anyio_backend):
+    aconn.cursor_factory = psycopg.AsyncClientCursor
+    return aconn
 
 
-def test_default_cursor(conn):
-    cur = conn.cursor()
-    assert type(cur) is psycopg.ClientCursor
+async def test_default_cursor(aconn):
+    cur = aconn.cursor()
+    assert type(cur) is psycopg.AsyncClientCursor
 
 
-def test_from_cursor_factory(conn_cls, dsn):
-    with conn_cls.connect(dsn, cursor_factory=psycopg.ClientCursor) as conn:
-        cur = conn.cursor()
-        assert type(cur) is psycopg.ClientCursor
+async def test_str(aconn):
+    cur = aconn.cursor()
+    assert "psycopg.%s" % psycopg.AsyncClientCursor.__name__ in str(cur)
 
 
-def test_execute_many_results_param(conn):
-    cur = conn.cursor()
+async def test_from_cursor_factory(aconn_cls, dsn):
+    async with await aconn_cls.connect(
+        dsn, cursor_factory=psycopg.AsyncClientCursor
+    ) as aconn:
+        cur = aconn.cursor()
+        assert type(cur) is psycopg.AsyncClientCursor
+
+
+async def test_execute_many_results_param(aconn):
+    cur = aconn.cursor()
     assert cur.nextset() is None
 
-    rv = cur.execute("select %s; select generate_series(1, %s)", ("foo", 3))
+    rv = await cur.execute("select %s; select generate_series(1, %s)", ("foo", 3))
     assert rv is cur
-    assert cur.fetchall() == [("foo",)]
+    assert (await cur.fetchall()) == [("foo",)]
     assert cur.rowcount == 1
     assert cur.nextset()
-    assert cur.fetchall() == [(1,), (2,), (3,)]
+    assert (await cur.fetchall()) == [(1,), (2,), (3,)]
     assert cur.nextset() is None
 
-    cur.close()
+    await cur.close()
     assert cur.nextset() is None
 
 
-def test_query_params_execute(conn):
-    cur = conn.cursor()
+async def test_query_params_execute(aconn):
+    cur = aconn.cursor()
     assert cur._query is None
 
-    cur.execute("select %t, %s::text", [1, None])
+    await cur.execute("select %t, %s::text", [1, None])
     assert cur._query is not None
     assert cur._query.query == b"select 1, NULL::text"
     assert cur._query.params == (b"1", b"NULL")
 
-    cur.execute("select 1")
+    await cur.execute("select 1")
     assert cur._query.query == b"select 1"
     assert not cur._query.params
 
     with pytest.raises(psycopg.DataError):
-        cur.execute("select %t::int", ["wat"])
+        await cur.execute("select %t::int", ["wat"])
 
     assert cur._query.query == b"select 'wat'::int"
     assert cur._query.params == (b"'wat'",)
 
 
-def test_query_params_executemany(conn):
-    cur = conn.cursor()
+async def test_query_params_executemany(aconn):
+    cur = aconn.cursor()
 
-    cur.executemany("select %t, %t", [[1, 2], [3, 4]])
+    await cur.executemany("select %t, %t", [[1, 2], [3, 4]])
     assert cur._query.query == b"select 3, 4"
     assert cur._query.params == (b"3", b"4")
 
@@ -72,40 +79,42 @@ def test_query_params_executemany(conn):
 @pytest.mark.slow
 @pytest.mark.parametrize("fetch", ["one", "many", "all", "iter"])
 @pytest.mark.parametrize("row_factory", ["tuple_row", "dict_row", "namedtuple_row"])
-def test_leak(conn_cls, dsn, faker, fetch, row_factory):
+async def test_leak(aconn_cls, dsn, faker, fetch, row_factory):
     faker.choose_schema(ncols=5)
     faker.make_records(10)
     row_factory = getattr(rows, row_factory)
 
-    def work():
-        with conn_cls.connect(dsn) as conn, conn.transaction(force_rollback=True):
-            with psycopg.ClientCursor(conn, row_factory=row_factory) as cur:
-                cur.execute(faker.drop_stmt)
-                cur.execute(faker.create_stmt)
-                with faker.find_insert_problem(conn):
-                    cur.executemany(faker.insert_stmt, faker.records)
-                cur.execute(faker.select_stmt)
+    async def work():
+        async with await aconn_cls.connect(dsn) as conn, conn.transaction(
+            force_rollback=True
+        ):
+            async with psycopg.AsyncClientCursor(conn, row_factory=row_factory) as cur:
+                await cur.execute(faker.drop_stmt)
+                await cur.execute(faker.create_stmt)
+                async with faker.find_insert_problem_async(conn):
+                    await cur.executemany(faker.insert_stmt, faker.records)
+                await cur.execute(faker.select_stmt)
 
                 if fetch == "one":
                     while True:
-                        tmp = cur.fetchone()
+                        tmp = await cur.fetchone()
                         if tmp is None:
                             break
                 elif fetch == "many":
                     while True:
-                        tmp = cur.fetchmany(3)
+                        tmp = await cur.fetchmany(3)
                         if not tmp:
                             break
                 elif fetch == "all":
-                    cur.fetchall()
+                    await cur.fetchall()
                 elif fetch == "iter":
-                    for rec in cur:
+                    async for rec in cur:
                         pass
 
     n = []
     gc_collect()
     for i in range(3):
-        work()
+        await work()
         gc_collect()
         n.append(gc_count())
 
@@ -124,21 +133,21 @@ def test_leak(conn_cls, dsn, faker, fetch, row_factory):
         ("select %%s, %(foo)s", ({"foo": "x"},), "select %s, 'x'"),
     ],
 )
-def test_mogrify(conn, query, params, want):
-    cur = conn.cursor()
+async def test_mogrify(aconn, query, params, want):
+    cur = aconn.cursor()
     got = cur.mogrify(query, *params)
     assert got == want
 
 
 @pytest.mark.parametrize("encoding", ["utf8", crdb_encoding("latin9")])
-def test_mogrify_encoding(conn, encoding):
-    conn.execute(f"set client_encoding to {encoding}")
-    q = conn.cursor().mogrify("select %(s)s", {"s": "\u20ac"})
+async def test_mogrify_encoding(aconn, encoding):
+    await aconn.execute(f"set client_encoding to {encoding}")
+    q = aconn.cursor().mogrify("select %(s)s", {"s": "\u20ac"})
     assert q == "select '\u20ac'"
 
 
 @pytest.mark.parametrize("encoding", [crdb_encoding("latin1")])
-def test_mogrify_badenc(conn, encoding):
-    conn.execute(f"set client_encoding to {encoding}")
+async def test_mogrify_badenc(aconn, encoding):
+    await aconn.execute(f"set client_encoding to {encoding}")
     with pytest.raises(UnicodeEncodeError):
-        conn.cursor().mogrify("select %(s)s", {"s": "\u20ac"})
+        aconn.cursor().mogrify("select %(s)s", {"s": "\u20ac"})

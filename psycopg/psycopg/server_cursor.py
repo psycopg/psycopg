@@ -13,8 +13,9 @@ from . import sql
 from . import errors as e
 from .abc import ConnectionType, Query, Params, PQGen
 from .rows import Row, RowFactory, AsyncRowFactory
-from .cursor import BaseCursor, Cursor
+from .cursor import Cursor
 from .generators import execute
+from ._cursor_base import BaseCursor
 from .cursor_async import AsyncCursor
 
 if TYPE_CHECKING:

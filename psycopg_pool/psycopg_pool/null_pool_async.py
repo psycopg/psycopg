@@ -1,21 +1,24 @@
 """
-psycopg asynchronous null connection pool
+Psycopg null connection pool module (async version).
 """
 
 # Copyright (C) 2022 The Psycopg Team
 
-import asyncio
+from __future__ import annotations
+
 import logging
-from typing import Any, Awaitable, Callable, cast, Dict, Optional, overload, Type
+from typing import Any, cast, Dict, Optional, overload, Type
 
 from psycopg import AsyncConnection
 from psycopg.pq import TransactionStatus
 from psycopg.rows import TupleRow
 
+from .abc import ACT, AsyncConnectionCB, AsyncConnectFailedCB
 from .errors import PoolTimeout, TooManyRequests
 from ._compat import ConnectionTimeout
-from .null_pool import _BaseNullConnectionPool
-from .pool_async import AsyncConnectionPool, ACT, AddConnection, AsyncConnectFailedCB
+from ._acompat import AEvent
+from .base_null_pool import _BaseNullConnectionPool
+from .pool_async import AsyncConnectionPool, AddConnection
 
 logger = logging.getLogger("psycopg.pool")
 
@@ -23,12 +26,12 @@ logger = logging.getLogger("psycopg.pool")
 class AsyncNullConnectionPool(_BaseNullConnectionPool, AsyncConnectionPool[ACT]):
     @overload
     def __init__(
-        self: "AsyncNullConnectionPool[AsyncConnection[TupleRow]]",
+        self: AsyncNullConnectionPool[AsyncConnection[TupleRow]],
         conninfo: str = "",
         *,
         open: bool = ...,
-        configure: Optional[Callable[[ACT], Awaitable[None]]] = ...,
-        reset: Optional[Callable[[ACT], Awaitable[None]]] = ...,
+        configure: Optional[AsyncConnectionCB[ACT]] = ...,
+        reset: Optional[AsyncConnectionCB[ACT]] = ...,
         kwargs: Optional[Dict[str, Any]] = ...,
         min_size: int = ...,
         max_size: Optional[int] = ...,
@@ -45,13 +48,13 @@ class AsyncNullConnectionPool(_BaseNullConnectionPool, AsyncConnectionPool[ACT])
 
     @overload
     def __init__(
-        self: "AsyncNullConnectionPool[ACT]",
+        self: AsyncNullConnectionPool[ACT],
         conninfo: str = "",
         *,
         open: bool = ...,
         connection_class: Type[ACT],
-        configure: Optional[Callable[[ACT], Awaitable[None]]] = ...,
-        reset: Optional[Callable[[ACT], Awaitable[None]]] = ...,
+        configure: Optional[AsyncConnectionCB[ACT]] = ...,
+        reset: Optional[AsyncConnectionCB[ACT]] = ...,
         kwargs: Optional[Dict[str, Any]] = ...,
         min_size: int = ...,
         max_size: Optional[int] = ...,
@@ -72,11 +75,10 @@ class AsyncNullConnectionPool(_BaseNullConnectionPool, AsyncConnectionPool[ACT])
         *,
         open: bool = True,
         connection_class: Type[ACT] = cast(Type[ACT], AsyncConnection),
-        configure: Optional[Callable[[ACT], Awaitable[None]]] = None,
-        reset: Optional[Callable[[ACT], Awaitable[None]]] = None,
+        configure: Optional[AsyncConnectionCB[ACT]] = None,
+        reset: Optional[AsyncConnectionCB[ACT]] = None,
         kwargs: Optional[Dict[str, Any]] = None,
-        # Note: default value changed to 0.
-        min_size: int = 0,
+        min_size: int = 0,  # Note: min_size default value changed to 0.
         max_size: Optional[int] = None,
         name: Optional[str] = None,
         timeout: float = 30.0,
@@ -106,21 +108,27 @@ class AsyncNullConnectionPool(_BaseNullConnectionPool, AsyncConnectionPool[ACT])
         )
 
     async def wait(self, timeout: float = 30.0) -> None:
+        """
+        Create a connection for test.
+
+        Calling this function will verify that the connectivity with the
+        database works as expected. However the connection will not be stored
+        in the pool.
+
+        Close the pool, and raise `PoolTimeout`, if not ready within *timeout*
+        sec.
+        """
         self._check_open_getconn()
 
         async with self._lock:
             assert not self._pool_full_event
-            self._pool_full_event = asyncio.Event()
+            self._pool_full_event = AEvent()
 
         logger.info("waiting for pool %r initialization", self.name)
         self.run_task(AddConnection(self))
-        try:
-            await asyncio.wait_for(self._pool_full_event.wait(), timeout)
-        except asyncio.TimeoutError:
+        if not await self._pool_full_event.wait_timeout(timeout):
             await self.close()  # stop all the tasks
-            raise PoolTimeout(
-                f"pool initialization incomplete after {timeout} sec"
-            ) from None
+            raise PoolTimeout(f"pool initialization incomplete after {timeout} sec")
 
         async with self._lock:
             assert self._pool_full_event
@@ -137,11 +145,12 @@ class AsyncNullConnectionPool(_BaseNullConnectionPool, AsyncConnectionPool[ACT])
             except ConnectionTimeout as ex:
                 raise PoolTimeout(str(ex)) from None
             self._nconns += 1
+
         elif self.max_waiting and len(self._waiting) >= self.max_waiting:
             self._stats[self._REQUESTS_ERRORS] += 1
             raise TooManyRequests(
                 f"the pool {self.name!r} has already"
-                f" {len(self._waiting)} requests waiting"
+                + f" {len(self._waiting)} requests waiting"
             )
         return conn
 
@@ -161,19 +170,21 @@ class AsyncNullConnectionPool(_BaseNullConnectionPool, AsyncConnectionPool[ACT])
             return True
 
     async def resize(self, min_size: int, max_size: Optional[int] = None) -> None:
+        """Change the size of the pool during runtime.
+
+        Only *max_size* can be changed; *min_size* must remain 0.
+        """
         min_size, max_size = self._check_size(min_size, max_size)
 
         logger.info(
-            "resizing %r to min_size=%s max_size=%s",
-            self.name,
-            min_size,
-            max_size,
+            "resizing %r to min_size=%s max_size=%s", self.name, min_size, max_size
         )
         async with self._lock:
             self._min_size = min_size
             self._max_size = max_size
 
     async def check(self) -> None:
+        """No-op, as the pool doesn't have connections in its state."""
         pass
 
     async def _add_to_pool(self, conn: ACT) -> None:

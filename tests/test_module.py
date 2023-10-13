@@ -17,7 +17,7 @@ def test_connect(monkeypatch, dsn, args, kwargs, want_conninfo):
     # Details of the params manipulation are in test_conninfo.
     import psycopg.connection
 
-    orig_connect = psycopg.connection.connect  # type: ignore
+    orig_connect = psycopg.generators.connect
 
     got_conninfo = None
 
@@ -26,7 +26,7 @@ def test_connect(monkeypatch, dsn, args, kwargs, want_conninfo):
         got_conninfo = conninfo
         return orig_connect(dsn)
 
-    monkeypatch.setattr(psycopg.connection, "connect", mock_connect)
+    monkeypatch.setattr(psycopg.generators, "connect", mock_connect)
 
     conn = psycopg.connect(*args, **kwargs)
     assert got_conninfo == want_conninfo

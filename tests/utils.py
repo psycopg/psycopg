@@ -176,10 +176,6 @@ def gc_count() -> int:
     return rv
 
 
-async def alist(it):
-    return [i async for i in it]
-
-
 @contextmanager
 def raiseif(cond, *args, **kwargs):
     """

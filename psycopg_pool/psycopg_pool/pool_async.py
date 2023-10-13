@@ -1,18 +1,17 @@
 """
-psycopg asynchronous connection pool
+Psycopg connection pool module (async version).
 """
 
 # Copyright (C) 2021 The Psycopg Team
 
-import asyncio
+from __future__ import annotations
+
 import logging
 from abc import ABC, abstractmethod
 from time import monotonic
 from types import TracebackType
-from typing import Any, AsyncIterator, Awaitable, Callable, cast, Generic
-from typing import Dict, List, Optional, overload, Sequence, Type, TypeVar, Union
-from typing_extensions import TypeAlias
-from asyncio import create_task, Task
+from typing import Any, AsyncIterator, cast, Dict, Generic, List
+from typing import Optional, overload, Sequence, Type, TypeVar
 from weakref import ref
 from contextlib import asynccontextmanager
 
@@ -21,19 +20,18 @@ from psycopg import AsyncConnection
 from psycopg.pq import TransactionStatus
 from psycopg.rows import TupleRow
 
+from .abc import ACT, AsyncConnectionCB, AsyncConnectFailedCB
 from .base import ConnectionAttempt, BasePool
-from .sched import AsyncScheduler
 from .errors import PoolClosed, PoolTimeout, TooManyRequests
 from ._compat import Deque
+from ._acompat import ACondition, AEvent, ALock, AQueue, AWorker, aspawn, agather
+from ._acompat import current_task_name
+from .sched_async import AsyncScheduler
+
+if True:  # ASYNC
+    import asyncio
 
 logger = logging.getLogger("psycopg.pool")
-
-AsyncConnectFailedCB: TypeAlias = Union[
-    Callable[["AsyncConnectionPool"], None],
-    Callable[["AsyncConnectionPool"], Awaitable[None]],
-]
-
-ACT = TypeVar("ACT", bound="AsyncConnection[Any]")
 
 
 class AsyncConnectionPool(Generic[ACT], BasePool):
@@ -42,12 +40,12 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
 
     @overload
     def __init__(
-        self: "AsyncConnectionPool[AsyncConnection[TupleRow]]",
+        self: AsyncConnectionPool[AsyncConnection[TupleRow]],
         conninfo: str = "",
         *,
         open: bool = ...,
-        configure: Optional[Callable[[ACT], Awaitable[None]]] = ...,
-        reset: Optional[Callable[[ACT], Awaitable[None]]] = ...,
+        configure: Optional[AsyncConnectionCB[ACT]] = ...,
+        reset: Optional[AsyncConnectionCB[ACT]] = ...,
         kwargs: Optional[Dict[str, Any]] = ...,
         min_size: int = ...,
         max_size: Optional[int] = ...,
@@ -64,13 +62,13 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
 
     @overload
     def __init__(
-        self: "AsyncConnectionPool[ACT]",
+        self: AsyncConnectionPool[ACT],
         conninfo: str = "",
         *,
         open: bool = ...,
         connection_class: Type[ACT],
-        configure: Optional[Callable[[ACT], Awaitable[None]]] = ...,
-        reset: Optional[Callable[[ACT], Awaitable[None]]] = ...,
+        configure: Optional[AsyncConnectionCB[ACT]] = ...,
+        reset: Optional[AsyncConnectionCB[ACT]] = ...,
         kwargs: Optional[Dict[str, Any]] = ...,
         min_size: int = ...,
         max_size: Optional[int] = ...,
@@ -91,8 +89,8 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         *,
         open: bool = True,
         connection_class: Type[ACT] = cast(Type[ACT], AsyncConnection),
-        configure: Optional[Callable[[ACT], Awaitable[None]]] = None,
-        reset: Optional[Callable[[ACT], Awaitable[None]]] = None,
+        configure: Optional[AsyncConnectionCB[ACT]] = None,
+        reset: Optional[AsyncConnectionCB[ACT]] = None,
         kwargs: Optional[Dict[str, Any]] = None,
         min_size: int = 4,
         max_size: Optional[int] = None,
@@ -111,18 +109,19 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
 
         self._reconnect_failed = reconnect_failed
 
-        # asyncio objects, created on open to attach them to the right loop.
-        self._lock: asyncio.Lock
+        # If these are asyncio objects, make sure to create them on open
+        # to attach them to the right loop.
+        self._lock: ALock
         self._sched: AsyncScheduler
-        self._tasks: "asyncio.Queue[MaintenanceTask]"
+        self._tasks: AQueue[MaintenanceTask]
 
-        self._waiting = Deque["AsyncClient[ACT]"]()
+        self._waiting = Deque[WaitingClient[ACT]]()
 
         # to notify that the pool is full
-        self._pool_full_event: Optional[asyncio.Event] = None
+        self._pool_full_event: Optional[AEvent] = None
 
-        self._sched_runner: Optional[Task[None]] = None
-        self._workers: List[Task[None]] = []
+        self._sched_runner: Optional[AWorker] = None
+        self._workers: List[AWorker] = []
 
         super().__init__(
             conninfo,
@@ -142,23 +141,41 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         if open:
             self._open()
 
+    if False:  # ASYNC
+
+        def __del__(self) -> None:
+            # If the '_closed' property is not set we probably failed in __init__.
+            # Don't try anything complicated as probably it won't work.
+            if getattr(self, "_closed", True):
+                return
+
+            self._stop_workers()
+
     async def wait(self, timeout: float = 30.0) -> None:
+        """
+        Wait for the pool to be full (with `min_size` connections) after creation.
+
+        Close the pool, and raise `PoolTimeout`, if not ready within *timeout*
+        sec.
+
+        Calling this method is not mandatory: you can try and use the pool
+        immediately after its creation. The first client will be served as soon
+        as a connection is ready. You can use this method if you prefer your
+        program to terminate in case the environment is not configured
+        properly, rather than trying to stay up the hardest it can.
+        """
         self._check_open_getconn()
 
         async with self._lock:
             assert not self._pool_full_event
             if len(self._pool) >= self._min_size:
                 return
-            self._pool_full_event = asyncio.Event()
+            self._pool_full_event = AEvent()
 
         logger.info("waiting for pool %r initialization", self.name)
-        try:
-            await asyncio.wait_for(self._pool_full_event.wait(), timeout)
-        except asyncio.TimeoutError:
+        if not await self._pool_full_event.wait_timeout(timeout):
             await self.close()  # stop all the tasks
-            raise PoolTimeout(
-                f"pool initialization incomplete after {timeout} sec"
-            ) from None
+            raise PoolTimeout(f"pool initialization incomplete after {timeout} sec")
 
         async with self._lock:
             assert self._pool_full_event
@@ -168,6 +185,17 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
 
     @asynccontextmanager
     async def connection(self, timeout: Optional[float] = None) -> AsyncIterator[ACT]:
+        """Context manager to obtain a connection from the pool.
+
+        Return the connection immediately if available, otherwise wait up to
+        *timeout* or `self.timeout` seconds and throw `PoolTimeout` if a
+        connection is not available in time.
+
+        Upon context exit, return the connection to the pool. Apply the normal
+        :ref:`connection context behaviour <with-connection>` (commit/rollback
+        the transaction in case of success/error). If the connection is no more
+        in working state, replace it with a new one.
+        """
         conn = await self.getconn(timeout=timeout)
         try:
             t0 = monotonic()
@@ -179,6 +207,15 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
             self._stats[self._USAGE_MS] += int(1000.0 * (t1 - t0))
 
     async def getconn(self, timeout: Optional[float] = None) -> ACT:
+        """Obtain a connection from the pool.
+
+        You should preferably use `connection()`. Use this function only if
+        it is not possible to use the connection as context manager.
+
+        After using this function you *must* call a corresponding `putconn()`:
+        failing to do so will deplete the pool. A depleted pool is a sad pool:
+        you don't want a depleted pool.
+        """
         logger.info("connection requested from %r", self.name)
         self._stats[self._REQUESTS_NUM] += 1
 
@@ -191,7 +228,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
             if not conn:
                 # No connection available: put the client in the waiting queue
                 t0 = monotonic()
-                pos: AsyncClient[ACT] = AsyncClient()
+                pos: WaitingClient[ACT] = WaitingClient()
                 self._waiting.append(pos)
                 self._stats[self._REQUESTS_QUEUED] += 1
 
@@ -220,6 +257,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         return conn
 
     async def _get_ready_connection(self, timeout: Optional[float]) -> Optional[ACT]:
+        """Return a connection, if the client deserves one."""
         conn: Optional[ACT] = None
         if self._pool:
             # Take a connection ready out of the pool
@@ -230,20 +268,27 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
             self._stats[self._REQUESTS_ERRORS] += 1
             raise TooManyRequests(
                 f"the pool {self.name!r} has already"
-                f" {len(self._waiting)} requests waiting"
+                + f" {len(self._waiting)} requests waiting"
             )
         return conn
 
     def _maybe_grow_pool(self) -> None:
         # Allow only one task at time to grow the pool (or returning
         # connections might be starved).
-        if self._nconns < self._max_size and not self._growing:
-            self._nconns += 1
-            logger.info("growing pool %r to %s", self.name, self._nconns)
-            self._growing = True
-            self.run_task(AddConnection(self, growing=True))
+        if self._nconns >= self._max_size or self._growing:
+            return
+        self._nconns += 1
+        logger.info("growing pool %r to %s", self.name, self._nconns)
+        self._growing = True
+        self.run_task(AddConnection(self, growing=True))
 
     async def putconn(self, conn: ACT) -> None:
+        """Return a connection to the loving hands of its pool.
+
+        Use this function only paired with a `getconn()`. You don't need to use
+        it if you use the much more comfortable `connection()` context manager.
+        """
+        # Quick check to discard the wrong connection
         self._check_pool_putconn(conn)
 
         logger.info("returning connection to %r", self.name)
@@ -257,6 +302,10 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
             await self._return_connection(conn)
 
     async def _maybe_close_connection(self, conn: ACT) -> bool:
+        """Close a returned connection if necessary.
+
+        Return `!True if the connection was closed.
+        """
         # If the pool is closed just close the connection instead of returning
         # it to the pool. For extra refcare remove the pool reference from it.
         if not self._closed:
@@ -267,11 +316,20 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         return True
 
     async def open(self, wait: bool = False, timeout: float = 30.0) -> None:
+        """Open the pool by starting connecting and and accepting clients.
+
+        If *wait* is `!False`, return immediately and let the background worker
+        fill the pool if `min_size` > 0. Otherwise wait up to *timeout* seconds
+        for the requested number of connections to be ready (see `wait()` for
+        details).
+
+        It is safe to call `!open()` again on a pool already open (because the
+        method was already called, or because the pool context was entered, or
+        because the pool was initialized with *open* = `!True`) but you cannot
+        currently re-open a closed pool.
+        """
         # Make sure the lock is created after there is an event loop
-        try:
-            self._lock
-        except AttributeError:
-            self._lock = asyncio.Lock()
+        self._ensure_lock()
 
         async with self._lock:
             self._open()
@@ -283,20 +341,15 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         if not self._closed:
             return
 
-        # Throw a RuntimeError if the pool is open outside a running loop.
-        asyncio.get_running_loop()
-
         self._check_open()
+
+        # A lock has been most likely, but not necessarily, created in `open()`.
+        self._ensure_lock()
 
         # Create these objects now to attach them to the right loop.
         # See #219
-        self._tasks = asyncio.Queue()
+        self._tasks = AQueue()
         self._sched = AsyncScheduler()
-        # This has been most likely, but not necessarily, created in `open()`.
-        try:
-            self._lock
-        except AttributeError:
-            self._lock = asyncio.Lock()
 
         self._closed = False
         self._opened = True
@@ -304,15 +357,25 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         self._start_workers()
         self._start_initial_tasks()
 
+    def _ensure_lock(self) -> None:
+        """Make sure the pool lock is created.
+
+        In async code, also make sure that the loop is running.
+        """
+        if True:  # ASYNC
+            # Throw a RuntimeError if the pool is open outside a running loop.
+            asyncio.get_running_loop()
+
+        try:
+            self._lock
+        except AttributeError:
+            self._lock = ALock()
+
     def _start_workers(self) -> None:
-        self._sched_runner = create_task(
-            self._sched.run(), name=f"{self.name}-scheduler"
-        )
+        self._sched_runner = aspawn(self._sched.run, name=f"{self.name}-scheduler")
+        assert not self._workers
         for i in range(self.num_workers):
-            t = create_task(
-                self.worker(self._tasks),
-                name=f"{self.name}-worker-{i}",
-            )
+            t = aspawn(self.worker, args=(self._tasks,), name=f"{self.name}-worker-{i}")
             self._workers.append(t)
 
     def _start_initial_tasks(self) -> None:
@@ -325,6 +388,16 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         self.run_task(Schedule(self, ShrinkPool(self), self.max_idle))
 
     async def close(self, timeout: float = 5.0) -> None:
+        """Close the pool and make it unavailable to new clients.
+
+        All the waiting and future clients will fail to acquire a connection
+        with a `PoolClosed` exception. Currently used connections will not be
+        closed until returned to the pool.
+
+        Wait *timeout* seconds for threads to terminate their job, if positive.
+        If the timeout expires the pool is closed anyway, although it may raise
+        some warnings on exit.
+        """
         if self._closed:
             return
 
@@ -344,16 +417,16 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
 
     async def _stop_workers(
         self,
-        waiting_clients: Sequence["AsyncClient[ACT]"] = (),
+        waiting_clients: Sequence[WaitingClient[ACT]] = (),
         connections: Sequence[ACT] = (),
-        timeout: float = 0.0,
+        timeout: float | None = None,
     ) -> None:
         # Stop the scheduler
         await self._sched.enter(0, None)
 
         # Stop the worker tasks
         workers, self._workers = self._workers[:], []
-        for w in workers:
+        for _ in workers:
             self.run_task(StopWorker(self))
 
         # Signal to eventual clients in the queue that business is closed.
@@ -367,18 +440,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         # Wait for the worker tasks to terminate
         assert self._sched_runner is not None
         sched_runner, self._sched_runner = self._sched_runner, None
-        wait = asyncio.gather(sched_runner, *workers)
-        try:
-            if timeout > 0:
-                await asyncio.wait_for(asyncio.shield(wait), timeout=timeout)
-            else:
-                await wait
-        except asyncio.TimeoutError:
-            logger.warning(
-                "couldn't stop pool %r tasks within %s seconds",
-                self.name,
-                timeout,
-            )
+        await agather(sched_runner, *workers, timeout=timeout)
 
     async def __aenter__(self: _Self) -> _Self:
         await self.open()
@@ -393,15 +455,13 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         await self.close()
 
     async def resize(self, min_size: int, max_size: Optional[int] = None) -> None:
+        """Change the size of the pool during runtime."""
         min_size, max_size = self._check_size(min_size, max_size)
 
         ngrow = max(0, min_size - self._min_size)
 
         logger.info(
-            "resizing %r to min_size=%s max_size=%s",
-            self.name,
-            min_size,
-            max_size,
+            "resizing %r to min_size=%s max_size=%s", self.name, min_size, max_size
         )
         async with self._lock:
             self._min_size = min_size
@@ -412,6 +472,11 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
             self.run_task(AddConnection(self))
 
     async def check(self) -> None:
+        """Verify the state of the connections currently in the pool.
+
+        Test each connection: if it works return it to the pool, otherwise
+        dispose of it and create a new one.
+        """
         async with self._lock:
             conns = list(self._pool)
             self._pool.clear()
@@ -450,21 +515,24 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         if not self._reconnect_failed:
             return
 
-        if asyncio.iscoroutinefunction(self._reconnect_failed):
-            await self._reconnect_failed(self)
+        if True:  # ASYNC
+            if asyncio.iscoroutinefunction(self._reconnect_failed):
+                await self._reconnect_failed(self)
+            else:
+                self._reconnect_failed(self)
         else:
             self._reconnect_failed(self)
 
-    def run_task(self, task: "MaintenanceTask") -> None:
+    def run_task(self, task: MaintenanceTask) -> None:
         """Run a maintenance task in a worker."""
         self._tasks.put_nowait(task)
 
-    async def schedule_task(self, task: "MaintenanceTask", delay: float) -> None:
+    async def schedule_task(self, task: MaintenanceTask, delay: float) -> None:
         """Run a maintenance task in a worker in the future."""
         await self._sched.enter(delay, task.tick)
 
     @classmethod
-    async def worker(cls, q: "asyncio.Queue[MaintenanceTask]") -> None:
+    async def worker(cls, q: AQueue[MaintenanceTask]) -> None:
         """Runner to execute pending maintenance task.
 
         The function is designed to run as a task.
@@ -476,7 +544,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
             task = await q.get()
 
             if isinstance(task, StopWorker):
-                logger.debug("terminating working task")
+                logger.debug("terminating working task %s", current_task_name())
                 return
 
             # Run the task. Make sure don't die in the attempt.
@@ -484,13 +552,11 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
                 await task.run()
             except Exception as ex:
                 logger.warning(
-                    "task run %s failed: %s: %s",
-                    task,
-                    ex.__class__.__name__,
-                    ex,
+                    "task run %s failed: %s: %s", task, ex.__class__.__name__, ex
                 )
 
     async def _connect(self, timeout: Optional[float] = None) -> ACT:
+        """Return a new connection configured for the pool."""
         self._stats[self._CONNECTIONS_NUM] += 1
         kwargs = self.kwargs
         if timeout:
@@ -498,7 +564,9 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
             kwargs["connect_timeout"] = max(round(timeout), 1)
         t0 = monotonic()
         try:
-            conn: ACT = await self.connection_class.connect(self.conninfo, **kwargs)
+            conn: ACT = cast(
+                ACT, await self.connection_class.connect(self.conninfo, **kwargs)
+            )
         except Exception:
             self._stats[self._CONNECTIONS_ERRORS] += 1
             raise
@@ -515,7 +583,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
                 sname = TransactionStatus(status).name
                 raise e.ProgrammingError(
                     f"connection left in status {sname} by configure function"
-                    f" {self._configure}: discarded"
+                    + f" {self._configure}: discarded"
                 )
 
         # Set an expiry date, with some randomness to avoid mass reconnection
@@ -555,8 +623,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
             else:
                 attempt.update_delay(now)
                 await self.schedule_task(
-                    AddConnection(self, attempt, growing=growing),
-                    attempt.delay,
+                    AddConnection(self, attempt, growing=growing), attempt.delay
                 )
             return
 
@@ -663,7 +730,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
                     sname = TransactionStatus(status).name
                     raise e.ProgrammingError(
                         f"connection left in status {sname} by reset function"
-                        f" {self._reset}: discarded"
+                        + f" {self._reset}: discarded"
                     )
             except Exception as ex:
                 logger.warning(f"error resetting connection: {ex}")
@@ -686,7 +753,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         if to_close:
             logger.info(
                 "shrinking pool %r to %s because %s unused connections"
-                " in the last %s sec",
+                + " in the last %s sec",
                 self.name,
                 self._nconns,
                 nconns_min,
@@ -700,7 +767,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         return rv
 
 
-class AsyncClient(Generic[ACT]):
+class WaitingClient(Generic[ACT]):
     """A position in a queue for a client waiting for a connection."""
 
     __slots__ = ("conn", "error", "_cond")
@@ -709,12 +776,12 @@ class AsyncClient(Generic[ACT]):
         self.conn: Optional[ACT] = None
         self.error: Optional[BaseException] = None
 
-        # The AsyncClient behaves in a way similar to an Event, but we need
+        # The WaitingClient behaves in a way similar to an Event, but we need
         # to notify reliably the flagger that the waiter has "accepted" the
         # message and it hasn't timed out yet, otherwise the pool may give a
         # connection to a client that has already timed out getconn(), which
         # will be lost.
-        self._cond = asyncio.Condition()
+        self._cond = ACondition()
 
     async def wait(self, timeout: float) -> ACT:
         """Wait for a connection to be set and return it.
@@ -724,11 +791,10 @@ class AsyncClient(Generic[ACT]):
         async with self._cond:
             if not (self.conn or self.error):
                 try:
-                    await asyncio.wait_for(self._cond.wait(), timeout)
-                except asyncio.TimeoutError:
-                    self.error = PoolTimeout(
-                        f"couldn't get a connection after {timeout:.2f} sec"
-                    )
+                    if not await self._cond.wait_timeout(timeout):
+                        self.error = PoolTimeout(
+                            f"couldn't get a connection after {timeout:.2f} sec"
+                        )
                 except BaseException as ex:
                     self.error = ex
 
@@ -770,7 +836,7 @@ class AsyncClient(Generic[ACT]):
 class MaintenanceTask(ABC):
     """A task to run asynchronously to maintain the pool state."""
 
-    def __init__(self, pool: "AsyncConnectionPool[Any]"):
+    def __init__(self, pool: AsyncConnectionPool[Any]):
         self.pool = ref(pool)
 
     def __repr__(self) -> str:
@@ -790,6 +856,7 @@ class MaintenanceTask(ABC):
             logger.debug("task run discarded: %s", self)
             return
 
+        logger.debug("task running in %s: %s", current_task_name(), self)
         await self._run(pool)
 
     async def tick(self) -> None:
@@ -807,40 +874,40 @@ class MaintenanceTask(ABC):
         pool.run_task(self)
 
     @abstractmethod
-    async def _run(self, pool: "AsyncConnectionPool[Any]") -> None:
+    async def _run(self, pool: AsyncConnectionPool[Any]) -> None:
         ...
 
 
 class StopWorker(MaintenanceTask):
     """Signal the maintenance worker to terminate."""
 
-    async def _run(self, pool: "AsyncConnectionPool[Any]") -> None:
+    async def _run(self, pool: AsyncConnectionPool[Any]) -> None:
         pass
 
 
 class AddConnection(MaintenanceTask):
     def __init__(
         self,
-        pool: "AsyncConnectionPool[Any]",
-        attempt: Optional["ConnectionAttempt"] = None,
+        pool: AsyncConnectionPool[Any],
+        attempt: Optional[ConnectionAttempt] = None,
         growing: bool = False,
     ):
         super().__init__(pool)
         self.attempt = attempt
         self.growing = growing
 
-    async def _run(self, pool: "AsyncConnectionPool[Any]") -> None:
+    async def _run(self, pool: AsyncConnectionPool[Any]) -> None:
         await pool._add_connection(self.attempt, growing=self.growing)
 
 
 class ReturnConnection(MaintenanceTask):
     """Clean up and return a connection to the pool."""
 
-    def __init__(self, pool: "AsyncConnectionPool[Any]", conn: ACT):
+    def __init__(self, pool: AsyncConnectionPool[Any], conn: ACT):
         super().__init__(pool)
         self.conn = conn
 
-    async def _run(self, pool: "AsyncConnectionPool[Any]") -> None:
+    async def _run(self, pool: AsyncConnectionPool[Any]) -> None:
         await pool._return_connection(self.conn)
 
 
@@ -851,7 +918,7 @@ class ShrinkPool(MaintenanceTask):
     in the pool.
     """
 
-    async def _run(self, pool: "AsyncConnectionPool[Any]") -> None:
+    async def _run(self, pool: AsyncConnectionPool[Any]) -> None:
         # Reschedule the task now so that in case of any error we don't lose
         # the periodic run.
         await pool.schedule_task(self, pool.max_idle)
@@ -862,18 +929,16 @@ class Schedule(MaintenanceTask):
     """Schedule a task in the pool scheduler.
 
     This task is a trampoline to allow to use a sync call (pool.run_task)
-    to execute an async one (pool.schedule_task).
+    to execute an async one (pool.schedule_task). It is pretty much no-op
+    in sync code.
     """
 
     def __init__(
-        self,
-        pool: "AsyncConnectionPool[Any]",
-        task: MaintenanceTask,
-        delay: float,
+        self, pool: AsyncConnectionPool[Any], task: MaintenanceTask, delay: float
     ):
         super().__init__(pool)
         self.task = task
         self.delay = delay
 
-    async def _run(self, pool: "AsyncConnectionPool[Any]") -> None:
+    async def _run(self, pool: AsyncConnectionPool[Any]) -> None:
         await pool.schedule_task(self.task, self.delay)

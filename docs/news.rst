@@ -17,6 +17,8 @@ Psycopg 3.2 (unreleased)
   (:ticket:`#332`).
 - Add :ref:`raw-query-cursors` to execute queries using placeholders in
   PostgreSQL format (`$1`, `$2`...) (:ticket:`#560`).
+- Add `~Connection.set_autocommit()` on sync connections, and similar
+  transaction control methods available on the async connections.
 - Add support for libpq functions to close prepared statements and portals
   introduced in libpq v17 (:ticket:`#603`).
 - Disable receiving more than one result on the same cursor in pipeline mode,

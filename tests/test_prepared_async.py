@@ -1,5 +1,5 @@
 """
-Prepared statements tests on async connections
+Prepared statements tests
 """
 
 import datetime as dt
@@ -87,6 +87,16 @@ async def test_no_prepare_multi(aconn):
         res.append(len(stmts))
 
     assert res == [0] * 10
+
+
+async def test_no_prepare_multi_with_drop(aconn):
+    await aconn.execute("select 1", prepare=True)
+
+    for i in range(10):
+        await aconn.execute("drop table if exists noprep; create table noprep()")
+
+    stmts = await get_prepared_statements(aconn)
+    assert len(stmts) == 0
 
 
 async def test_no_prepare_error(aconn):
@@ -189,12 +199,77 @@ async def test_untyped_json(aconn):
     assert got == [["jsonb"]]
 
 
+async def test_change_type_execute(aconn):
+    aconn.prepare_threshold = 0
+    for i in range(3):
+        await aconn.execute("CREATE TYPE prepenum AS ENUM ('foo', 'bar', 'baz')")
+        await aconn.execute("CREATE TABLE preptable(id integer, bar prepenum[])")
+        await aconn.cursor().execute(
+            "INSERT INTO preptable (bar) VALUES (%(enum_col)s::prepenum[])",
+            {"enum_col": ["foo"]},
+        )
+        await aconn.rollback()
+
+
+async def test_change_type_executemany(aconn):
+    for i in range(3):
+        await aconn.execute("CREATE TYPE prepenum AS ENUM ('foo', 'bar', 'baz')")
+        await aconn.execute("CREATE TABLE preptable(id integer, bar prepenum[])")
+        await aconn.cursor().executemany(
+            "INSERT INTO preptable (bar) VALUES (%(enum_col)s::prepenum[])",
+            [{"enum_col": ["foo"]}, {"enum_col": ["foo", "bar"]}],
+        )
+        await aconn.rollback()
+
+
+@pytest.mark.crdb("skip", reason="can't re-create a type")
+async def test_change_type(aconn):
+    aconn.prepare_threshold = 0
+    await aconn.execute("CREATE TYPE prepenum AS ENUM ('foo', 'bar', 'baz')")
+    await aconn.execute("CREATE TABLE preptable(id integer, bar prepenum[])")
+    await aconn.cursor().execute(
+        "INSERT INTO preptable (bar) VALUES (%(enum_col)s::prepenum[])",
+        {"enum_col": ["foo"]},
+    )
+    await aconn.execute("DROP TABLE preptable")
+    await aconn.execute("DROP TYPE prepenum")
+    await aconn.execute("CREATE TYPE prepenum AS ENUM ('foo', 'bar', 'baz')")
+    await aconn.execute("CREATE TABLE preptable(id integer, bar prepenum[])")
+    await aconn.cursor().execute(
+        "INSERT INTO preptable (bar) VALUES (%(enum_col)s::prepenum[])",
+        {"enum_col": ["foo"]},
+    )
+
+    stmts = await get_prepared_statements(aconn)
+    assert len(stmts) == 3
+
+
+async def test_change_type_savepoint(aconn):
+    aconn.prepare_threshold = 0
+    async with aconn.transaction():
+        for i in range(3):
+            with pytest.raises(ZeroDivisionError):
+                async with aconn.transaction():
+                    await aconn.execute(
+                        "CREATE TYPE prepenum AS ENUM ('foo', 'bar', 'baz')"
+                    )
+                    await aconn.execute(
+                        "CREATE TABLE preptable(id integer, bar prepenum[])"
+                    )
+                    await aconn.cursor().execute(
+                        "INSERT INTO preptable (bar) VALUES (%(enum_col)s::prepenum[])",
+                        {"enum_col": ["foo"]},
+                    )
+                    raise ZeroDivisionError()
+
+
 async def get_prepared_statements(aconn):
     cur = aconn.cursor(row_factory=namedtuple_row)
+    # CRDB has 'PREPARE name AS' in the statement.
     await cur.execute(
-        r"""
+        """
 select name,
-    regexp_replace(statement, 'prepare _pg3_\d+ as ', '', 'i') as statement,
+    regexp_replace(statement, 'prepare _pg3_\\d+ as ', '', 'i') as statement,
     prepare_time,
     parameter_types
 from pg_prepared_statements

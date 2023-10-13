@@ -9,12 +9,10 @@ information. Will submit a bug.
 
 from typing import Any, Iterable, List, Optional, Sequence, Tuple
 
-from psycopg import pq
-from psycopg import abc
+from psycopg import pq, abc, BaseConnection
 from psycopg.rows import Row, RowMaker
 from psycopg.adapt import AdaptersMap, PyFormat
 from psycopg.pq.abc import PGconn, PGresult
-from psycopg.connection import BaseConnection
 from psycopg._compat import Deque
 
 class Transformer(abc.AdaptContext):

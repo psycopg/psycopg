@@ -1,21 +1,23 @@
 """
-psycopg async cursor objects
+Psycopg AsyncCursor object.
 """
 
 # Copyright (C) 2020 The Psycopg Team
 
+from __future__ import annotations
+
 from types import TracebackType
-from typing import Any, AsyncIterator, Iterable, List
-from typing import Optional, Type, TypeVar, TYPE_CHECKING, overload
+from typing import Any, AsyncIterator, Iterable, List, Optional, Type, TypeVar
+from typing import TYPE_CHECKING, overload
 from contextlib import asynccontextmanager
 
 from . import pq
 from . import errors as e
 from .abc import Query, Params
-from .copy import AsyncCopy, AsyncWriter as AsyncCopyWriter
+from .copy import AsyncCopy, AsyncWriter
 from .rows import Row, RowMaker, AsyncRowFactory
-from .cursor import BaseCursor
 from ._pipeline import Pipeline
+from ._cursor_base import BaseCursor
 
 if TYPE_CHECKING:
     from .connection_async import AsyncConnection
@@ -29,13 +31,13 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
     _Self = TypeVar("_Self", bound="AsyncCursor[Any]")
 
     @overload
-    def __init__(self: "AsyncCursor[Row]", connection: "AsyncConnection[Row]"):
+    def __init__(self: AsyncCursor[Row], connection: AsyncConnection[Row]):
         ...
 
     @overload
     def __init__(
-        self: "AsyncCursor[Row]",
-        connection: "AsyncConnection[Any]",
+        self: AsyncCursor[Row],
+        connection: AsyncConnection[Any],
         *,
         row_factory: AsyncRowFactory[Row],
     ):
@@ -43,7 +45,7 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
 
     def __init__(
         self,
-        connection: "AsyncConnection[Any]",
+        connection: AsyncConnection[Any],
         *,
         row_factory: Optional[AsyncRowFactory[Row]] = None,
     ):
@@ -62,10 +64,14 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
         await self.close()
 
     async def close(self) -> None:
+        """
+        Close the current cursor and free associated resources.
+        """
         self._close()
 
     @property
     def row_factory(self) -> AsyncRowFactory[Row]:
+        """Writable attribute to control how result rows are formed."""
         return self._row_factory
 
     @row_factory.setter
@@ -85,6 +91,9 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
         prepare: Optional[bool] = None,
         binary: Optional[bool] = None,
     ) -> _Self:
+        """
+        Execute a query or command to the database.
+        """
         try:
             async with self._conn.lock:
                 await self._conn.wait(
@@ -101,6 +110,9 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
         *,
         returning: bool = False,
     ) -> None:
+        """
+        Execute the same command with a sequence of input data.
+        """
         try:
             if Pipeline.is_supported():
                 # If there is already a pipeline, ride it, in order to avoid
@@ -132,6 +144,9 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
         *,
         binary: Optional[bool] = None,
     ) -> AsyncIterator[Row]:
+        """
+        Iterate row-by-row on a result from the database.
+        """
         if self._pgconn.pipeline_status:
             raise e.ProgrammingError("stream() cannot be used in pipeline mode")
 
@@ -171,6 +186,13 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
                         pass
 
     async def fetchone(self) -> Optional[Row]:
+        """
+        Return the next record from the current recordset.
+
+        Return `!None` the recordset is finished.
+
+        :rtype: Optional[Row], with Row defined by `row_factory`
+        """
         await self._fetch_pipeline()
         self._check_result_for_fetch()
         record = self._tx.load_row(self._pos, self._make_row)
@@ -179,6 +201,13 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
         return record
 
     async def fetchmany(self, size: int = 0) -> List[Row]:
+        """
+        Return the next `!size` records from the current recordset.
+
+        `!size` default to `!self.arraysize` if not specified.
+
+        :rtype: Sequence[Row], with Row defined by `row_factory`
+        """
         await self._fetch_pipeline()
         self._check_result_for_fetch()
         assert self.pgresult
@@ -194,6 +223,11 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
         return records
 
     async def fetchall(self) -> List[Row]:
+        """
+        Return all the remaining records from the current recordset.
+
+        :rtype: Sequence[Row], with Row defined by `row_factory`
+        """
         await self._fetch_pipeline()
         self._check_result_for_fetch()
         assert self.pgresult
@@ -216,6 +250,16 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
             yield row
 
     async def scroll(self, value: int, mode: str = "relative") -> None:
+        """
+        Move the cursor in the result set to a new position according to mode.
+
+        If `!mode` is ``'relative'`` (default), `!value` is taken as offset to
+        the current position in the result set; if set to ``'absolute'``,
+        `!value` states an absolute target position.
+
+        Raise `!IndexError` in case a scroll operation would leave the result
+        set. In this case the position will not change.
+        """
         await self._fetch_pipeline()
         self._scroll(value, mode)
 
@@ -225,10 +269,10 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
         statement: Query,
         params: Optional[Params] = None,
         *,
-        writer: Optional[AsyncCopyWriter] = None,
+        writer: Optional[AsyncWriter] = None,
     ) -> AsyncIterator[AsyncCopy]:
         """
-        :rtype: AsyncCopy
+        Initiate a :sql:`COPY` operation and return an object to manage it.
         """
         try:
             async with self._conn.lock:
@@ -239,6 +283,8 @@ class AsyncCursor(BaseCursor["AsyncConnection[Any]", Row]):
         except e._NO_TRACEBACK as ex:
             raise ex.with_traceback(None)
 
+        # If a fresher result has been set on the cursor by the Copy object,
+        # read its properties (especially rowcount).
         self._select_current_result(0)
 
     async def _fetch_pipeline(self) -> None:

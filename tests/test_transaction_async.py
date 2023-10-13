@@ -1,4 +1,3 @@
-import asyncio
 import logging
 
 import pytest
@@ -6,9 +5,9 @@ import pytest
 from psycopg import Rollback
 from psycopg import errors as e
 
-from .test_transaction import in_transaction, insert_row, inserted, get_exc_info
-from .test_transaction import ExpectedException, crdb_skip_external_observer
-from .test_transaction import create_test_table  # noqa  # autouse fixture
+from ._test_transaction import in_transaction, insert_row, inserted, get_exc_info
+from ._test_transaction import ExpectedException, crdb_skip_external_observer
+from ._test_transaction import create_test_table  # noqa  # autouse fixture
 
 
 @pytest.fixture
@@ -374,49 +373,48 @@ async def test_named_savepoints_successful_exit(aconn, acommands):
 
     ...and exiting the context successfully will "commit" the same.
     """
-    commands = acommands
-
     # Case 1
     # Using Transaction explicitly because conn.transaction() enters the contetx
+    assert not acommands
     async with aconn.transaction() as tx:
-        assert commands.popall() == ["BEGIN"]
+        assert acommands.popall() == ["BEGIN"]
         assert not tx.savepoint_name
-    assert commands.popall() == ["COMMIT"]
+    assert acommands.popall() == ["COMMIT"]
 
     # Case 1 (with a transaction already started)
     await aconn.cursor().execute("select 1")
-    assert commands.popall() == ["BEGIN"]
+    assert acommands.popall() == ["BEGIN"]
     async with aconn.transaction() as tx:
-        assert commands.popall() == ['SAVEPOINT "_pg3_1"']
+        assert acommands.popall() == ['SAVEPOINT "_pg3_1"']
         assert tx.savepoint_name == "_pg3_1"
 
-    assert commands.popall() == ['RELEASE "_pg3_1"']
+    assert acommands.popall() == ['RELEASE "_pg3_1"']
     await aconn.rollback()
-    assert commands.popall() == ["ROLLBACK"]
+    assert acommands.popall() == ["ROLLBACK"]
 
     # Case 2
     async with aconn.transaction(savepoint_name="foo") as tx:
-        assert commands.popall() == ["BEGIN", 'SAVEPOINT "foo"']
+        assert acommands.popall() == ["BEGIN", 'SAVEPOINT "foo"']
         assert tx.savepoint_name == "foo"
-    assert commands.popall() == ["COMMIT"]
+    assert acommands.popall() == ["COMMIT"]
 
     # Case 3 (with savepoint name provided)
     async with aconn.transaction():
-        assert commands.popall() == ["BEGIN"]
+        assert acommands.popall() == ["BEGIN"]
         async with aconn.transaction(savepoint_name="bar") as tx:
-            assert commands.popall() == ['SAVEPOINT "bar"']
+            assert acommands.popall() == ['SAVEPOINT "bar"']
             assert tx.savepoint_name == "bar"
-        assert commands.popall() == ['RELEASE "bar"']
-    assert commands.popall() == ["COMMIT"]
+        assert acommands.popall() == ['RELEASE "bar"']
+    assert acommands.popall() == ["COMMIT"]
 
     # Case 3 (with savepoint name auto-generated)
     async with aconn.transaction():
-        assert commands.popall() == ["BEGIN"]
+        assert acommands.popall() == ["BEGIN"]
         async with aconn.transaction() as tx:
-            assert commands.popall() == ['SAVEPOINT "_pg3_2"']
+            assert acommands.popall() == ['SAVEPOINT "_pg3_2"']
             assert tx.savepoint_name == "_pg3_2"
-        assert commands.popall() == ['RELEASE "_pg3_2"']
-    assert commands.popall() == ["COMMIT"]
+        assert acommands.popall() == ['RELEASE "_pg3_2"']
+    assert acommands.popall() == ["COMMIT"]
 
 
 async def test_named_savepoints_exception_exit(aconn, acommands):
@@ -425,48 +423,46 @@ async def test_named_savepoints_exception_exit(aconn, acommands):
     exception, whatever transaction and/or savepoint was started on enter will
     be rolled-back as appropriate.
     """
-    commands = acommands
-
     # Case 1
     with pytest.raises(ExpectedException):
         async with aconn.transaction() as tx:
-            assert commands.popall() == ["BEGIN"]
+            assert acommands.popall() == ["BEGIN"]
             assert not tx.savepoint_name
             raise ExpectedException
-    assert commands.popall() == ["ROLLBACK"]
+    assert acommands.popall() == ["ROLLBACK"]
 
     # Case 2
     with pytest.raises(ExpectedException):
         async with aconn.transaction(savepoint_name="foo") as tx:
-            assert commands.popall() == ["BEGIN", 'SAVEPOINT "foo"']
+            assert acommands.popall() == ["BEGIN", 'SAVEPOINT "foo"']
             assert tx.savepoint_name == "foo"
             raise ExpectedException
-    assert commands.popall() == ["ROLLBACK"]
+    assert acommands.popall() == ["ROLLBACK"]
 
     # Case 3 (with savepoint name provided)
     async with aconn.transaction():
-        assert commands.popall() == ["BEGIN"]
+        assert acommands.popall() == ["BEGIN"]
         with pytest.raises(ExpectedException):
             async with aconn.transaction(savepoint_name="bar") as tx:
-                assert commands.popall() == ['SAVEPOINT "bar"']
+                assert acommands.popall() == ['SAVEPOINT "bar"']
                 assert tx.savepoint_name == "bar"
                 raise ExpectedException
-        assert commands.popall() == ['ROLLBACK TO "bar"', 'RELEASE "bar"']
-    assert commands.popall() == ["COMMIT"]
+        assert acommands.popall() == ['ROLLBACK TO "bar"', 'RELEASE "bar"']
+    assert acommands.popall() == ["COMMIT"]
 
     # Case 3 (with savepoint name auto-generated)
     async with aconn.transaction():
-        assert commands.popall() == ["BEGIN"]
+        assert acommands.popall() == ["BEGIN"]
         with pytest.raises(ExpectedException):
             async with aconn.transaction() as tx:
-                assert commands.popall() == ['SAVEPOINT "_pg3_2"']
+                assert acommands.popall() == ['SAVEPOINT "_pg3_2"']
                 assert tx.savepoint_name == "_pg3_2"
                 raise ExpectedException
-        assert commands.popall() == [
+        assert acommands.popall() == [
             'ROLLBACK TO "_pg3_2"',
             'RELEASE "_pg3_2"',
         ]
-    assert commands.popall() == ["COMMIT"]
+    assert acommands.popall() == ["COMMIT"]
 
 
 async def test_named_savepoints_with_repeated_names_works(aconn):
@@ -696,45 +692,3 @@ async def test_out_of_order_exit_same_name(aconn, exit_error):
 
     with pytest.raises(e.ProgrammingError):
         await t2.__aexit__(*get_exc_info(exit_error))
-
-
-@pytest.mark.parametrize("what", ["commit", "rollback", "error"])
-async def test_concurrency(aconn, what):
-    await aconn.set_autocommit(True)
-
-    evs = [asyncio.Event() for i in range(3)]
-
-    async def worker(unlock, wait_on):
-        with pytest.raises(e.ProgrammingError) as ex:
-            async with aconn.transaction():
-                unlock.set()
-                await wait_on.wait()
-                await aconn.execute("select 1")
-
-                if what == "error":
-                    1 / 0
-                elif what == "rollback":
-                    raise Rollback()
-                else:
-                    assert what == "commit"
-
-        if what == "error":
-            assert "transaction rollback" in str(ex.value)
-            assert isinstance(ex.value.__context__, ZeroDivisionError)
-        elif what == "rollback":
-            assert "transaction rollback" in str(ex.value)
-            assert isinstance(ex.value.__context__, Rollback)
-        else:
-            assert "transaction commit" in str(ex.value)
-
-    # Start a first transaction in a task
-    t1 = asyncio.create_task(worker(unlock=evs[0], wait_on=evs[1]))
-    await evs[0].wait()
-
-    # Start a nested transaction in a task
-    t2 = asyncio.create_task(worker(unlock=evs[1], wait_on=evs[2]))
-
-    # Terminate the first transaction before the second does
-    await asyncio.gather(t1)
-    evs[2].set()
-    await asyncio.gather(t2)

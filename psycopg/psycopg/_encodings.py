@@ -15,7 +15,7 @@ from ._compat import cache
 
 if TYPE_CHECKING:
     from .pq.abc import PGconn
-    from .connection import BaseConnection
+    from ._connection_base import BaseConnection
 
 OK = ConnStatus.OK
 

@@ -1,23 +1,22 @@
+import sys
 import time
 import pytest
 import logging
 import weakref
-from typing import List, Any
+from typing import Any, List
 
 import psycopg
-from psycopg import Notify, errors as e
+from psycopg import Notify, pq, errors as e
 from psycopg.rows import tuple_row
 from psycopg.conninfo import conninfo_to_dict, make_conninfo
 
 from .utils import gc_collect
-from .test_cursor import my_row_factory
-from .test_connection import tx_params, tx_params_isolation, tx_values_map
-from .test_connection import conninfo_params_timeout
-from .test_connection import testctx  # noqa: F401  # fixture
+from .acompat import is_async, skip_sync, skip_async
+from ._test_cursor import my_row_factory
+from ._test_connection import tx_params, tx_params_isolation, tx_values_map
+from ._test_connection import conninfo_params_timeout
+from ._test_connection import testctx  # noqa: F401  # fixture
 from .test_adapt import make_bin_dumper, make_dumper
-from .test_conninfo import fake_resolve  # noqa: F401
-
-pytestmark = pytest.mark.anyio
 
 
 async def test_connect(aconn_cls, dsn):
@@ -89,11 +88,20 @@ async def test_cursor_closed(aconn):
     with pytest.raises(psycopg.OperationalError):
         async with aconn.cursor("foo"):
             pass
+    with pytest.raises(psycopg.OperationalError):
         aconn.cursor("foo")
     with pytest.raises(psycopg.OperationalError):
         aconn.cursor()
 
 
+# TODO: the INERROR started failing in the C implementation in Python 3.12a7
+# compiled with Cython-3.0.0b3, not before.
+@pytest.mark.xfail(
+    pq.__impl__ in ("c", "binary")
+    and sys.version_info[:2] == (3, 12)
+    and not is_async(__name__),
+    reason="Something with Exceptions, C, Python 3.12",
+)
 async def test_connection_warn_close(aconn_cls, dsn, recwarn):
     conn = await aconn_cls.connect(dsn)
     await conn.close()
@@ -112,9 +120,10 @@ async def test_connection_warn_close(aconn_cls, dsn, recwarn):
     conn = await aconn_cls.connect(dsn)
     try:
         await conn.execute("select wat")
-    except Exception:
+    except psycopg.ProgrammingError:
         pass
     del conn
+    gc_collect()
     assert "INERROR" in str(recwarn.pop(ResourceWarning).message)
 
     async with await aconn_cls.connect(dsn) as conn:
@@ -163,6 +172,8 @@ async def test_context_close(aconn):
 
 @pytest.mark.crdb_skip("pg_terminate_backend")
 async def test_context_inerror_rollback_no_clobber(aconn_cls, conn, dsn, caplog):
+    caplog.set_level(logging.WARNING, logger="psycopg")
+
     with pytest.raises(ZeroDivisionError):
         async with await aconn_cls.connect(dsn) as conn2:
             await conn2.execute("select 1")
@@ -289,6 +300,9 @@ async def test_auto_transaction_fail(aconn):
         await cur.execute("meh")
     assert aconn.pgconn.transaction_status == aconn.TransactionStatus.INERROR
 
+    with pytest.raises(psycopg.errors.InFailedSqlTransaction):
+        await cur.execute("select 1")
+
     await aconn.commit()
     assert aconn.pgconn.transaction_status == aconn.TransactionStatus.IDLE
     await cur.execute("select * from foo")
@@ -296,12 +310,15 @@ async def test_auto_transaction_fail(aconn):
     assert aconn.pgconn.transaction_status == aconn.TransactionStatus.INTRANS
 
 
-async def test_autocommit(aconn):
-    assert aconn.autocommit is False
+@skip_sync
+async def test_autocommit_readonly_property(aconn):
     with pytest.raises(AttributeError):
         aconn.autocommit = True
     assert not aconn.autocommit
 
+
+async def test_autocommit(aconn):
+    assert aconn.autocommit is False
     await aconn.set_autocommit(True)
     assert aconn.autocommit
     cur = aconn.cursor()
@@ -310,9 +327,32 @@ async def test_autocommit(aconn):
     assert aconn.pgconn.transaction_status == aconn.TransactionStatus.IDLE
 
     await aconn.set_autocommit("")
+    assert isinstance(aconn.autocommit, bool)
     assert aconn.autocommit is False
+
     await aconn.set_autocommit("yeah")
+    assert isinstance(aconn.autocommit, bool)
     assert aconn.autocommit is True
+
+
+@skip_async
+def test_autocommit_property(conn):
+    assert conn.autocommit is False
+
+    conn.autocommit = True
+    assert conn.autocommit
+    cur = conn.cursor()
+    cur.execute("select 1")
+    assert cur.fetchone() == (1,)
+    assert conn.pgconn.transaction_status == conn.TransactionStatus.IDLE
+
+    conn.autocommit = ""
+    assert isinstance(conn.autocommit, bool)
+    assert conn.autocommit is False
+
+    conn.autocommit = "yeah"
+    assert isinstance(conn.autocommit, bool)
+    assert conn.autocommit is True
 
 
 async def test_autocommit_connect(aconn_cls, dsn):
@@ -376,7 +416,7 @@ async def test_connect_args(
         yield
 
     setpgenv({})
-    monkeypatch.setattr(psycopg.connection, "connect", fake_connect)
+    monkeypatch.setattr(psycopg.generators, "connect", fake_connect)
     conn = await aconn_cls.connect(*args, **kwargs)
     assert conninfo_to_dict(the_conninfo) == conninfo_to_dict(want)
     await conn.close()
@@ -395,7 +435,7 @@ async def test_connect_badargs(aconn_cls, monkeypatch, pgconn, args, kwargs, exc
         return pgconn
         yield
 
-    monkeypatch.setattr(psycopg.connection, "connect", fake_connect)
+    monkeypatch.setattr(psycopg.generators, "connect", fake_connect)
     with pytest.raises(exctype):
         await aconn_cls.connect(*args, **kwargs)
 
@@ -487,6 +527,7 @@ async def test_notify_handlers(aconn):
     assert n.channel == "foo"
     assert n.payload == "n2"
     assert n.pid == aconn.pgconn.backend_pid
+    assert hash(n)
 
     with pytest.raises(ValueError):
         aconn.remove_notify_handler(cb1)
@@ -598,6 +639,7 @@ async def test_transaction_param_default(aconn, param):
     assert current == default
 
 
+@skip_sync
 @pytest.mark.parametrize("param", tx_params)
 async def test_transaction_param_readonly_property(aconn, param):
     with pytest.raises(AttributeError):
@@ -687,6 +729,22 @@ async def test_set_transaction_param_not_intrans_external(aconn, param):
         await getattr(aconn, f"set_{param.name}")(value)
 
 
+@skip_async
+@pytest.mark.crdb("skip", reason="transaction isolation")
+def test_set_transaction_param_all_property(conn):
+    params: List[Any] = tx_params[:]
+    params[2] = params[2].values[0]
+
+    for param in params:
+        value = param.values[0]
+        setattr(conn, param.name, value)
+
+    for param in params:
+        cur = conn.execute("select current_setting(%s)", [f"transaction_{param.guc}"])
+        pgval = cur.fetchone()[0]
+        assert tx_values_map[pgval] == value
+
+
 @pytest.mark.crdb("skip", reason="transaction isolation")
 async def test_set_transaction_param_all(aconn):
     params: List[Any] = tx_params[:]
@@ -719,6 +777,22 @@ async def test_set_transaction_param_strange(aconn):
     assert aconn.deferrable is False
 
 
+@skip_async
+def test_set_transaction_param_strange_property(conn):
+    for val in ("asdf", 0, 5):
+        with pytest.raises(ValueError):
+            conn.isolation_level = val
+
+    conn.isolation_level = psycopg.IsolationLevel.SERIALIZABLE.value
+    assert conn.isolation_level is psycopg.IsolationLevel.SERIALIZABLE
+
+    conn.read_only = 1
+    assert conn.read_only is True
+
+    conn.deferrable = 0
+    assert conn.deferrable is False
+
+
 @pytest.mark.parametrize("dsn, kwargs, exp", conninfo_params_timeout)
 async def test_get_connection_params(aconn_cls, dsn, kwargs, exp, setpgenv):
     setpgenv({})
@@ -746,32 +820,15 @@ async def test_connect_context_copy(aconn_cls, dsn, aconn):
     aconn.adapters.register_dumper(str, make_bin_dumper("b"))
     aconn.adapters.register_dumper(str, make_dumper("t"))
 
-    aconn2 = await aconn_cls.connect(dsn, context=aconn)
+    conn2 = await aconn_cls.connect(dsn, context=aconn)
 
-    cur = await aconn2.execute("select %s", ["hello"])
+    cur = await conn2.execute("select %s", ["hello"])
     assert (await cur.fetchone())[0] == "hellot"
-    cur = await aconn2.execute("select %b", ["hello"])
+    cur = await conn2.execute("select %b", ["hello"])
     assert (await cur.fetchone())[0] == "hellob"
-    await aconn2.close()
+    await conn2.close()
 
 
 async def test_cancel_closed(aconn):
     await aconn.close()
     aconn.cancel()
-
-
-async def test_resolve_hostaddr_conn(monkeypatch, fake_resolve):  # noqa: F811
-    got = []
-
-    def fake_connect_gen(conninfo, **kwargs):
-        got.append(conninfo)
-        1 / 0
-
-    monkeypatch.setattr(psycopg.AsyncConnection, "_connect_gen", fake_connect_gen)
-
-    with pytest.raises(ZeroDivisionError):
-        await psycopg.AsyncConnection.connect("host=foo.com")
-
-    assert len(got) == 1
-    want = {"host": "foo.com", "hostaddr": "1.1.1.1"}
-    assert conninfo_to_dict(got[0]) == want

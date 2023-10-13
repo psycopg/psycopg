@@ -17,7 +17,7 @@ from .._encodings import conn_encoding
 from .._typeinfo import TypeInfo
 
 if TYPE_CHECKING:
-    from ..connection import BaseConnection
+    from .._connection_base import BaseConnection
 
 E = TypeVar("E", bound=Enum)
 
