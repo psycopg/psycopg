@@ -1,8 +1,7 @@
 #!/usr/bin/env python
 """Convert async code in the project to sync code.
 
-Note: the version of Python used to run this script affects the output. Please
-use the `async-to-sync.sh` wrapper to use a version consistent with CI checks.
+Note: the version of Python used to run this script affects the output.
 """
 
 from __future__ import annotations
