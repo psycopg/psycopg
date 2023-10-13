@@ -11,7 +11,7 @@ import sys
 import logging
 import subprocess as sp
 from copy import deepcopy
-from typing import Any
+from typing import Any, Literal
 from pathlib import Path
 from argparse import ArgumentParser, Namespace, RawDescriptionHelpFormatter
 
@@ -68,8 +68,8 @@ logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
 
 def main() -> int:
     opt = parse_cmdline()
-    if opt.docker:
-        return run_in_docker()
+    if opt.container:
+        return run_in_container(opt.container)
 
     outputs = []
     for fpin in opt.inputs:
@@ -121,19 +121,19 @@ def check(outputs: list[str]) -> int:
     return 0
 
 
-def run_in_docker() -> int:
+def run_in_container(engine: Literal["docker", "podman"]) -> int:
     """
-    Build a docker image and run the script in docker.
+    Build an image and run the script in a container.
     """
     tag = f"async-to-sync:{PYVER}"
 
     # Check if the image we want is present.
-    cmdline = ["docker", "inspect", tag, "-f", "{{ .Id }}"]
+    cmdline = [engine, "inspect", tag, "-f", "{{ .Id }}"]
     try:
         sp.check_call(cmdline, stdout=sp.DEVNULL, stderr=sp.DEVNULL)
     except sp.CalledProcessError:
-        logger.info("building docker image")
-        dockerfile = f"""\
+        logger.info("building container image with %s", engine)
+        containerfile = f"""\
 FROM python:{PYVER}
 
 WORKDIR /src
@@ -143,13 +143,13 @@ RUN pip install ./psycopg[dev]
 
 ENTRYPOINT ["tools/async_to_sync.py"]
 """
-        cmdline = ["docker", "build", "--tag", tag, "-f", "-", str(PROJECT_DIR)]
-        sp.run(cmdline, check=True, text=True, input=dockerfile)
+        cmdline = [engine, "build", "--tag", tag, "-f", "-", str(PROJECT_DIR)]
+        sp.run(cmdline, check=True, text=True, input=containerfile)
 
     cmdline = sys.argv[1:]
-    cmdline.remove("--docker")
-    cmdline = ["docker", "run", "--rm", "-v", f"{PROJECT_DIR}:/src", tag] + cmdline
-    logger.info("running in docker image %s", tag)
+    cmdline.remove(f"--{engine}")
+    cmdline = [engine, "run", "--rm", "-v", f"{PROJECT_DIR}:/src", tag] + cmdline
+    logger.info("running in container image %s (%s)", tag, engine)
     sp.check_call(cmdline)
     return 0
 
@@ -558,10 +558,20 @@ def parse_cmdline() -> Namespace:
     parser.add_argument(
         "--all", action="store_true", help="process all the files of the project"
     )
-    parser.add_argument(
+    container = parser.add_mutually_exclusive_group()
+    container.add_argument(
         "--docker",
-        action="store_true",
-        help=f"run in a docker image with Python {PYVER}",
+        action="store_const",
+        const="docker",
+        dest="container",
+        help=f"run in a docker container with Python {PYVER}",
+    )
+    container.add_argument(
+        "--podman",
+        action="store_const",
+        const="podman",
+        dest="container",
+        help=f"run in a podman container with Python {PYVER}",
     )
     parser.add_argument(
         "inputs",
