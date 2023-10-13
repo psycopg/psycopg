@@ -372,7 +372,7 @@ def test_executemany_trace(conn, trace):
     items = list(t)
     assert items[-1].type == "Terminate"
     del items[-1]
-    roundtrips = [k for (k, g) in groupby(items, key=attrgetter("direction"))]
+    roundtrips = [k for k, g in groupby(items, key=attrgetter("direction"))]
     assert roundtrips == ["F", "B"]
     assert len([i for i in items if i.type == "Sync"]) == 1
 
@@ -394,7 +394,7 @@ def test_executemany_trace_returning(conn, trace):
     items = list(t)
     assert items[-1].type == "Terminate"
     del items[-1]
-    roundtrips = [k for (k, g) in groupby(items, key=attrgetter("direction"))]
+    roundtrips = [k for k, g in groupby(items, key=attrgetter("direction"))]
     assert roundtrips == ["F", "B"] * 3
     assert items[-2].direction == "F"  # last 2 items are F B
     assert len([i for i in items if i.type == "Sync"]) == 1

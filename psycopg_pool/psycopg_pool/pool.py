@@ -421,7 +421,7 @@ class ConnectionPool(Generic[CT], BasePool):
         self._sched.enter(0, None)
 
         # Stop the worker tasks
-        (workers, self._workers) = (self._workers[:], [])
+        workers, self._workers = (self._workers[:], [])
         for _ in workers:
             self.run_task(StopWorker(self))
 
@@ -435,7 +435,7 @@ class ConnectionPool(Generic[CT], BasePool):
 
         # Wait for the worker tasks to terminate
         assert self._sched_runner is not None
-        (sched_runner, self._sched_runner) = (self._sched_runner, None)
+        sched_runner, self._sched_runner = (self._sched_runner, None)
         gather(sched_runner, *workers, timeout=timeout)
 
     def __enter__(self: _Self) -> _Self:
@@ -452,7 +452,7 @@ class ConnectionPool(Generic[CT], BasePool):
 
     def resize(self, min_size: int, max_size: Optional[int] = None) -> None:
         """Change the size of the pool during runtime."""
-        (min_size, max_size) = self._check_size(min_size, max_size)
+        min_size, max_size = self._check_size(min_size, max_size)
 
         ngrow = max(0, min_size - self._min_size)
 

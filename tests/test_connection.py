@@ -633,7 +633,7 @@ def test_transaction_param_default(conn, param):
         "select current_setting(%s), current_setting(%s)",
         [f"transaction_{param.guc}", f"default_transaction_{param.guc}"],
     )
-    (current, default) = cur.fetchone()
+    current, default = cur.fetchone()
     assert current == default
 
 
@@ -654,7 +654,7 @@ def test_set_transaction_param_implicit(conn, param, autocommit):
             "select current_setting(%s), current_setting(%s)",
             [f"transaction_{param.guc}", f"default_transaction_{param.guc}"],
         )
-        (pgval, default) = cur.fetchone()
+        pgval, default = cur.fetchone()
         if autocommit:
             assert pgval == default
         else:

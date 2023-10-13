@@ -213,7 +213,7 @@ def test_dead_client(pool_cls, dsn):
         results: List[int] = []
         ts = [
             spawn(worker, args=(i, timeout))
-            for (i, timeout) in enumerate([0.4, 0.4, 0.1, 0.4, 0.4])
+            for i, timeout in enumerate([0.4, 0.4, 0.1, 0.4, 0.4])
         ]
         gather(*ts)
 

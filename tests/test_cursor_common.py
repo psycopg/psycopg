@@ -170,7 +170,7 @@ def test_query_parse_cache_size(conn):
 
     cache.cache_clear()
     ci = cache.cache_info()
-    (h0, m0) = (ci.hits, ci.misses)
+    h0, m0 = (ci.hits, ci.misses)
     tests = [
         (f"select 1 -- {'x' * 3500}", (), h0, m0 + 1),
         (f"select 1 -- {'x' * 3500}", (), h0 + 1, m0 + 1),

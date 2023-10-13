@@ -176,7 +176,7 @@ class NullConnectionPool(_BaseNullConnectionPool, ConnectionPool[CT]):
 
         Only *max_size* can be changed; *min_size* must remain 0.
         """
-        (min_size, max_size) = self._check_size(min_size, max_size)
+        min_size, max_size = self._check_size(min_size, max_size)
 
         logger.info(
             "resizing %r to min_size=%s max_size=%s", self.name, min_size, max_size
