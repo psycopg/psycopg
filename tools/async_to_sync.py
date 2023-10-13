@@ -31,6 +31,11 @@ ast.Dict = ast_orig.Dict
 ast.List = ast_orig.List
 ast.Tuple = ast_orig.Tuple
 
+# The version of Python officially used for the conversion.
+# Output may differ in other versions.
+# Should be consistent with the Python version used in lint.yml
+PYVER = "3.11"
+
 ALL_INPUTS = """
     psycopg/psycopg/_copy_async.py
     psycopg/psycopg/connection_async.py
@@ -64,6 +69,9 @@ logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
 
 def main() -> int:
     opt = parse_cmdline()
+    if opt.docker:
+        return run_in_docker()
+
     outputs = []
     for fpin in opt.inputs:
         fpout = fpin.parent / fpin.name.replace("_async", "")
@@ -115,6 +123,39 @@ def check(outputs: list[str]) -> int:
         )
         return 1
 
+    return 0
+
+
+def run_in_docker() -> int:
+    """
+    Build a docker image and run the script in docker.
+    """
+    tag = f"async-to-sync:{PYVER}"
+
+    # Check if the image we want is present.
+    cmdline = ["docker", "inspect", tag, "-f", "{{ .Id }}"]
+    try:
+        sp.check_call(cmdline, stdout=sp.DEVNULL, stderr=sp.DEVNULL)
+    except sp.CalledProcessError:
+        logger.info("building docker image")
+        dockerfile = f"""\
+FROM python:{PYVER}
+
+WORKDIR /src
+
+ADD psycopg psycopg
+RUN pip install ./psycopg[dev]
+
+ENTRYPOINT ["tools/async_to_sync.py"]
+"""
+        cmdline = ["docker", "build", "--tag", tag, "-f", "-", str(PROJECT_DIR)]
+        sp.run(cmdline, check=True, text=True, input=dockerfile)
+
+    cmdline = sys.argv[1:]
+    cmdline.remove("--docker")
+    cmdline = ["docker", "run", "--rm", "-v", f"{PROJECT_DIR}:/src", tag] + cmdline
+    logger.info("running in docker image %s", tag)
+    sp.check_call(cmdline)
     return 0
 
 
@@ -503,7 +544,7 @@ class Unparser(ast._Unparser):
     but the resulting source doesn't pass flake8.
     """
 
-    # Beware: private method. Tested with in Python 3.10.
+    # Beware: private method. Tested with in Python 3.10, 3.11.
     def _write_constant(self, value: Any) -> None:
         if isinstance(value, str) and len(value) > 50:
             self._write_str_avoiding_backslashes(value)
@@ -521,6 +562,11 @@ def parse_cmdline() -> Namespace:
     )
     parser.add_argument(
         "--all", action="store_true", help="process all the files of the project"
+    )
+    parser.add_argument(
+        "--docker",
+        action="store_true",
+        help=f"run in a docker image with Python {PYVER}",
     )
     parser.add_argument(
         "inputs",
