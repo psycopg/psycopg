@@ -159,10 +159,18 @@ The `!ConnectionPool` class
         The class is generic and `!connection_class` provides types type
         variable. See :ref:`pool-generic`.
 
-   .. note:: In a future version, the default value for the `!open` parameter
-        might be changed to `!False`. If you rely on this behaviour (e.g. if
-        you don't use the pool as a context manager) you might want to specify
-        this parameter explicitly.
+   .. warning::
+
+        At the moment, the default value for the `!open` parameter is `!True`;
+        In a future version, the default will be changed to `!False`.
+
+        If you expect the pool to be open on creation even if you don't use
+        the pool as context manager, you should specify the parameter
+        `!open=True` explicitly.
+
+        Starting from psycopg_pool 3.2, a warning is raised if the pool is
+        used with the expectation of being implicitly opened in the
+        constructor and `!open` is not specified.
 
    .. automethod:: connection
 
@@ -266,8 +274,30 @@ listed here.
    :type reconnect_failed: `Callable[[AsyncConnectionPool], None]` or
         `async Callable[[AsyncConnectionPool], None]`
 
-   .. versionchanged:: 3.2.0
+   .. versionchanged:: 3.2
         The `!reconnect_failed` parameter can be `!async`.
+
+   .. warning::
+
+        Opening an async pool in the constructor (using `!open=True` on init)
+        will become an error in a future pool versions. Please note that,
+        currently, `!open=True` is the default; in a future version, the
+        default for the parameter will be changed to `!False`.
+
+        In order to make sure that your code will keep working as expected in
+        future versions, please specify `!open=False` in the constructor and
+        use an explicit `!await pool.open()`::
+
+            pool = AsyncConnectionPool(..., open=False)
+            await pool.open()
+
+        or use the pool context manager::
+
+            async with AsyncConnectionPool(..., open=False) as pool:
+                ...
+
+        Starting from psycopg_pool 3.2, opening an async pool in the
+        constructor raises a warning.
 
    .. automethod:: connection
 
