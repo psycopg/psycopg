@@ -10,6 +10,7 @@ Psycopg connection pool module (sync version).
 from __future__ import annotations
 
 import logging
+import warnings
 from abc import ABC, abstractmethod
 from time import monotonic
 from types import TracebackType
@@ -44,7 +45,7 @@ class ConnectionPool(Generic[CT], BasePool):
         self: ConnectionPool[Connection[TupleRow]],
         conninfo: str = "",
         *,
-        open: bool = ...,
+        open: bool | None = ...,
         configure: Optional[ConnectionCB[CT]] = ...,
         reset: Optional[ConnectionCB[CT]] = ...,
         kwargs: Optional[Dict[str, Any]] = ...,
@@ -66,7 +67,7 @@ class ConnectionPool(Generic[CT], BasePool):
         self: ConnectionPool[CT],
         conninfo: str = "",
         *,
-        open: bool = ...,
+        open: bool | None = ...,
         connection_class: Type[CT],
         configure: Optional[ConnectionCB[CT]] = ...,
         reset: Optional[ConnectionCB[CT]] = ...,
@@ -88,7 +89,7 @@ class ConnectionPool(Generic[CT], BasePool):
         self,
         conninfo: str = "",
         *,
-        open: bool = True,
+        open: bool | None = None,
         connection_class: Type[CT] = cast(Type[CT], Connection),
         configure: Optional[ConnectionCB[CT]] = None,
         reset: Optional[ConnectionCB[CT]] = None,
@@ -129,7 +130,6 @@ class ConnectionPool(Generic[CT], BasePool):
             kwargs=kwargs,
             min_size=min_size,
             max_size=max_size,
-            open=open,
             name=name,
             timeout=timeout,
             max_waiting=max_waiting,
@@ -138,6 +138,9 @@ class ConnectionPool(Generic[CT], BasePool):
             reconnect_timeout=reconnect_timeout,
             num_workers=num_workers,
         )
+
+        if open is None:
+            open = self._open_implicit = True
 
         if open:
             self._open()
@@ -149,6 +152,20 @@ class ConnectionPool(Generic[CT], BasePool):
             return
 
         self._stop_workers()
+
+    def _check_open_getconn(self) -> None:
+        super()._check_open_getconn()
+
+        if self._open_implicit:
+            self._open_implicit = False
+
+            warnings.warn(
+                f"the default for the {type(self).__name__} 'open' parameter"
+                + " will become 'False' in a future release. Please use"
+                + " open={True|False} explicitly, or use the pool as context"
+                + f" manager using: `with {type(self).__name__}(...) as pool: ...`",
+                DeprecationWarning,
+            )
 
     def wait(self, timeout: float = 30.0) -> None:
         """
@@ -439,6 +456,7 @@ class ConnectionPool(Generic[CT], BasePool):
         gather(sched_runner, *workers, timeout=timeout)
 
     def __enter__(self: _Self) -> _Self:
+        self._open_implicit = False
         self.open()
         return self
 

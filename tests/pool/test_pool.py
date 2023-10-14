@@ -359,7 +359,8 @@ def test_fail_rollback_close(dsn, caplog, monkeypatch):
 
 
 def test_del_no_warning(dsn, recwarn):
-    p = pool.ConnectionPool(dsn, min_size=2)
+    p = pool.ConnectionPool(dsn, min_size=2, open=False)
+    p.open()
     with p.connection() as conn:
         conn.execute("select 1")
 
@@ -788,7 +789,7 @@ def test_debug_deadlock(dsn):
     handler.setLevel(logging.DEBUG)
     logger.addHandler(handler)
     try:
-        with pool.ConnectionPool(dsn, min_size=4, open=True) as p:
+        with pool.ConnectionPool(dsn, min_size=4) as p:
             p.wait(timeout=2)
     finally:
         logger.removeHandler(handler)

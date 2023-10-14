@@ -47,7 +47,6 @@ class BasePool:
         kwargs: Optional[Dict[str, Any]],
         min_size: int,
         max_size: Optional[int],
-        open: bool,
         name: Optional[str],
         timeout: float,
         max_waiting: int,
@@ -96,6 +95,7 @@ class BasePool:
 
         self._opened = False
         self._closed = True
+        self._open_implicit = False
 
     def __repr__(self) -> str:
         return (

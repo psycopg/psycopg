@@ -7,6 +7,7 @@ Psycopg connection pool module (async version).
 from __future__ import annotations
 
 import logging
+import warnings
 from abc import ABC, abstractmethod
 from time import monotonic
 from types import TracebackType
@@ -43,7 +44,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         self: AsyncConnectionPool[AsyncConnection[TupleRow]],
         conninfo: str = "",
         *,
-        open: bool = ...,
+        open: bool | None = ...,
         configure: Optional[AsyncConnectionCB[ACT]] = ...,
         reset: Optional[AsyncConnectionCB[ACT]] = ...,
         kwargs: Optional[Dict[str, Any]] = ...,
@@ -65,7 +66,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         self: AsyncConnectionPool[ACT],
         conninfo: str = "",
         *,
-        open: bool = ...,
+        open: bool | None = ...,
         connection_class: Type[ACT],
         configure: Optional[AsyncConnectionCB[ACT]] = ...,
         reset: Optional[AsyncConnectionCB[ACT]] = ...,
@@ -87,7 +88,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         self,
         conninfo: str = "",
         *,
-        open: bool = True,
+        open: bool | None = None,
         connection_class: Type[ACT] = cast(Type[ACT], AsyncConnection),
         configure: Optional[AsyncConnectionCB[ACT]] = None,
         reset: Optional[AsyncConnectionCB[ACT]] = None,
@@ -128,7 +129,6 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
             kwargs=kwargs,
             min_size=min_size,
             max_size=max_size,
-            open=open,
             name=name,
             timeout=timeout,
             max_waiting=max_waiting,
@@ -137,6 +137,13 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
             reconnect_timeout=reconnect_timeout,
             num_workers=num_workers,
         )
+
+        if True:  # ASYNC
+            if open:
+                self._warn_open_async()
+
+        if open is None:
+            open = self._open_implicit = True
 
         if open:
             self._open()
@@ -150,6 +157,35 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
                 return
 
             self._stop_workers()
+
+    def _check_open_getconn(self) -> None:
+        super()._check_open_getconn()
+
+        if self._open_implicit:
+            self._open_implicit = False
+
+            if True:  # ASYNC
+                # If open was explicit, we already warned it in __init__
+                self._warn_open_async()
+            else:
+                warnings.warn(
+                    f"the default for the {type(self).__name__} 'open' parameter"
+                    + " will become 'False' in a future release. Please use"
+                    + " open={True|False} explicitly, or use the pool as context"
+                    + f" manager using: `with {type(self).__name__}(...) as pool: ...`",
+                    DeprecationWarning,
+                )
+
+    if True:  # ASYNC
+
+        def _warn_open_async(self) -> None:
+            warnings.warn(
+                f"opening the async pool {type(self).__name__} in the constructor"
+                " is deprecated and will not be supported anymore in a future"
+                " release. Please use `await pool.open()`, or use the pool as context"
+                f" manager using: `async with {type(self).__name__}(...) as pool: `...",
+                DeprecationWarning,
+            )
 
     async def wait(self, timeout: float = 30.0) -> None:
         """
@@ -447,6 +483,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         await agather(sched_runner, *workers, timeout=timeout)
 
     async def __aenter__(self: _Self) -> _Self:
+        self._open_implicit = False
         await self.open()
         return self
 

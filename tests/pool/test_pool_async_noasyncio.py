@@ -56,8 +56,9 @@ def test_working_created_before_loop(dsn, asyncio_run):
 
 
 def test_cant_create_open_outside_loop(dsn):
-    with pytest.raises(RuntimeError):
-        pool.AsyncConnectionPool(dsn, open=True)
+    with pytest.warns(DeprecationWarning):
+        with pytest.raises(RuntimeError):
+            pool.AsyncConnectionPool(dsn, open=True)
 
 
 @pytest.fixture
