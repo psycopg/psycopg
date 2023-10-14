@@ -52,6 +52,16 @@ The `!ConnectionPool` class
                     `~psycopg.Connection.connect()` for details.
    :type conninfo: `!str`
 
+   :param connection_class: The class of the connections to serve. It should
+                            be a `!Connection` subclass.
+   :type connection_class: `!type`, default: `~psycopg.Connection`
+
+   :param kwargs: Extra arguments to pass to `!connect()`. Note that this is
+                  *one dict argument* of the pool constructor, which is
+                  expanded as `connect()` keyword parameters.
+
+   :type kwargs: `!dict`
+
    :param min_size: The minimum number of connection the pool will hold. The
                    pool will actively try to create new connections if some
                    are lost (closed, broken) and will try to never go below
@@ -66,21 +76,18 @@ The `!ConnectionPool` class
                    been unused for more than `!max_idle` seconds.
    :type max_size: `!int`, default: `!None`
 
-   :param kwargs: Extra arguments to pass to `!connect()`. Note that this is
-                  *one dict argument* of the pool constructor, which is
-                  expanded as `connect()` keyword parameters.
-
-   :type kwargs: `!dict`
-
-   :param connection_class: The class of the connections to serve. It should
-                            be a `!Connection` subclass.
-   :type connection_class: `!type`, default: `~psycopg.Connection`
-
    :param open: If `!True`, open the pool, creating the required connections,
                 on init. If `!False`, open the pool when `!open()` is called or
                 when the pool context is entered. See the `open()` method
                 documentation for more details.
    :type open: `!bool`, default: `!True`
+
+   :param configure: A callback to configure a connection after creation.
+                     Useful, for instance, to configure its adapters. If the
+                     connection is used to run internal queries (to inspect the
+                     database) make sure to close an eventual transaction
+                     before leaving the function.
+   :type configure: `Callable[[Connection], None]`
 
    :param check: A callback to check that a connection is working correctly
                  when obtained by the pool. The callback is called at every
@@ -90,13 +97,6 @@ The `!ConnectionPool` class
                  provide the `check_connection()` pool static method if you
                  want to perform a simple check.
    :type check: `Callable[[Connection], None]`
-
-   :param configure: A callback to configure a connection after creation.
-                     Useful, for instance, to configure its adapters. If the
-                     connection is used to run internal queries (to inspect the
-                     database) make sure to close an eventual transaction
-                     before leaving the function.
-   :type configure: `Callable[[Connection], None]`
 
    :param reset: A callback to reset a function after it has been returned to
                  the pool. The connection is guaranteed to be passed to the
