@@ -108,7 +108,11 @@ When a client asks for a connection (typically entering a
 
 - if no connection is available, the client is put in a queue, and will be
   served a connection once one becomes available (because returned by another
-  client or because a new one is created).
+  client or because a new one is created);
+
+- if a `!check` callback was provided, it is called on the connection before
+  passing the connection to the client. If the check fails, a new connection
+  will be obtained.
 
 When a client has finished to use the connection (typically at the end of the
 context stared by `~ConnectionPool.connection()`):
@@ -240,6 +244,35 @@ to tune the configuration parameters. The size of the pool can also be changed
 at runtime using the `~ConnectionPool.resize()` method.
 
 
+Connection quality
+------------------
+
+.. versionadded:: 3.2
+
+The pool doesn't actively check the state of the connections held in its
+state. This means that, if communication with the server is lost, or if a
+connection is closed for other reasons (such as a server configured with an
+`idle_session_timeout`__ killing connections that haven't been used for some
+time), the application might be served a connection in broken state.
+
+.. __: https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-IDLE-SESSION-TIMEOUT
+
+If you want to configure the pool to check the state of the connection, and
+make sure that the application always receives a working connection, you can
+configure a `!check` callback. The callback can perform some operation to
+verify the quality of the connection and, if it completes without raising
+exception, the connection is passed to the client. This, of course, will imply
+some network time that the pool client will have to pay.
+
+A simple implementation is available as the static method
+`ConnectionPool.check_connection`, which can be used as::
+
+    with ConnectionPool(
+        ..., check=ConnectionPool.check_connection, ...
+    ) as pool:
+        ...
+
+
 Other ways to create a pool
 ---------------------------
 
@@ -336,87 +369,6 @@ connection, the time to obtain the connection is paid by the waiting client;
 background workers are not normally involved in obtaining new connections.
 
 
-Connection quality
-------------------
-
-The state of the connection is verified when a connection is returned to the
-pool: if a connection is broken during its usage it will be discarded on
-return and a new connection will be created.
-
-.. warning::
-
-    The health of the connection is not checked when the pool gives it to a
-    client.
-
-Why not? Because doing so would require an extra network roundtrip: we want to
-save you from its latency. Before getting too angry about it, just think that
-the connection can be lost any moment while your program is using it. As your
-program should already be able to cope with a loss of a connection during its
-process, it should be able to tolerate to be served a broken connection:
-unpleasant but not the end of the world.
-
-.. warning::
-
-    The health of the connection is not checked when the connection is in the
-    pool.
-
-Does the pool keep a watchful eye on the quality of the connections inside it?
-No, it doesn't. Why not? Because you will do it for us! Your program is only
-a big ruse to make sure the connections are still alive...
-
-Not (entirely) trolling: if you are using a connection pool, we assume that
-you are using and returning connections at a good pace. If the pool had to
-check for the quality of a broken connection before your program notices it,
-it should be polling each connection even faster than your program uses them.
-Your database server wouldn't be amused...
-
-Can you do something better than that? Of course you can, there is always a
-better way than polling. You can use the same recipe of :ref:`disconnections`,
-reserving a connection and using a thread to monitor for any activity
-happening on it. If any activity is detected, you can call the pool
-`~ConnectionPool.check()` method, which will run a quick check on each
-connection in the pool, removing the ones found in broken state, and using the
-background workers to replace them with fresh ones.
-
-If you set up a similar check in your program, in case the database connection
-is temporarily lost, we cannot do anything for the threads which had taken
-already a connection from the pool, but no other thread should be served a
-broken connection, because `!check()` would empty the pool and refill it with
-working connections, as soon as they are available.
-
-Faster than you can say poll. Or pool.
-
-
-.. _idle-session-timeout:
-
-Pool and ``idle_session_timeout`` setting
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Using a connection pool is fundamentally incompatible with setting an
-`idle_session_timeout`__ on the connection: the pool is designed precisely to
-keep connections idle and readily available.
-
-.. __: https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-IDLE-SESSION-TIMEOUT
-
-The current implementation doesn't keep ``idle_session_timeout`` into account,
-so, if this setting is used, clients might be served broken connections and
-fail with an error such as *terminating connection due to idle-session
-timeout*.
-
-In order to avoid the problem, please disable ``idle_session_timeout`` for the
-pool connections. Note that, even if your server is configured with a nonzero
-``idle_session_timeout`` default, you can still obtain pool connections
-without timeout, by using the `!options` keyword argument, for instance::
-
-    p = ConnectionPool(conninfo, kwargs={"options": "-c idle_session_timeout=0"})
-
-.. warning::
-
-    The `!max_idle` parameter is currently only used to shrink the pool if
-    there are unused connections; it is not designed to fight against a server
-    configured to close connections under its feet.
-
-
 .. _pool-stats:
 
 Pool stats
@@ -460,5 +412,5 @@ Metric                  Meaning
                         server
  ``connections_errors`` Number of failed connection attempts
  ``connections_lost``   Number of connections lost identified by
-                        `~ConnectionPool.check()`
+                        `~ConnectionPool.check()` or by the `!check` callback
 ======================= =====================================================

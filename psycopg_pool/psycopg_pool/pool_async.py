@@ -45,6 +45,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         conninfo: str = "",
         *,
         open: bool | None = ...,
+        check: Optional[AsyncConnectionCB[ACT]] = ...,
         configure: Optional[AsyncConnectionCB[ACT]] = ...,
         reset: Optional[AsyncConnectionCB[ACT]] = ...,
         kwargs: Optional[Dict[str, Any]] = ...,
@@ -68,6 +69,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         *,
         open: bool | None = ...,
         connection_class: Type[ACT],
+        check: Optional[AsyncConnectionCB[ACT]] = ...,
         configure: Optional[AsyncConnectionCB[ACT]] = ...,
         reset: Optional[AsyncConnectionCB[ACT]] = ...,
         kwargs: Optional[Dict[str, Any]] = ...,
@@ -90,6 +92,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         *,
         open: bool | None = None,
         connection_class: Type[ACT] = cast(Type[ACT], AsyncConnection),
+        check: Optional[AsyncConnectionCB[ACT]] = None,
         configure: Optional[AsyncConnectionCB[ACT]] = None,
         reset: Optional[AsyncConnectionCB[ACT]] = None,
         kwargs: Optional[Dict[str, Any]] = None,
@@ -105,6 +108,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         num_workers: int = 3,
     ):
         self.connection_class = connection_class
+        self._check = check
         self._configure = configure
         self._reset = reset
 
@@ -252,11 +256,35 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         failing to do so will deplete the pool. A depleted pool is a sad pool:
         you don't want a depleted pool.
         """
+        t0 = monotonic()
+        if timeout is None:
+            timeout = self.timeout
+        deadline = t0 + timeout
+
         logger.info("connection requested from %r", self.name)
         self._stats[self._REQUESTS_NUM] += 1
 
         self._check_open_getconn()
 
+        try:
+            while True:
+                conn = await self._getconn_unchecked(deadline - monotonic())
+                try:
+                    await self._check_connection(conn)
+                except Exception:
+                    await self._putconn(conn, from_getconn=True)
+                else:
+                    logger.info("connection given by %r", self.name)
+                    return conn
+
+        # Re-raise the timeout exception presenting the user the global
+        # timeout, not the per-attempt one.
+        except PoolTimeout:
+            raise PoolTimeout(
+                f"couldn't get a connection after {timeout:.2f} sec"
+            ) from None
+
+    async def _getconn_unchecked(self, timeout: float) -> ACT:
         # Critical section: decide here if there's a connection ready
         # or if the client needs to wait.
         async with self._lock:
@@ -274,8 +302,6 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         # If we are in the waiting queue, wait to be assigned a connection
         # (outside the critical section, so only the waiting client is locked)
         if not conn:
-            if timeout is None:
-                timeout = self.timeout
             try:
                 conn = await pos.wait(timeout=timeout)
             except Exception:
@@ -289,7 +315,6 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         # Note that this property shouldn't be set while the connection is in
         # the pool, to avoid to create a reference loop.
         conn._pool = self
-        logger.info("connection given by %r", self.name)
         return conn
 
     async def _get_ready_connection(self, timeout: Optional[float]) -> Optional[ACT]:
@@ -307,6 +332,15 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
                 + f" {len(self._waiting)} requests waiting"
             )
         return conn
+
+    async def _check_connection(self, conn: ACT) -> None:
+        if not self._check:
+            return
+        try:
+            await self._check(conn)
+        except Exception as e:
+            logger.info("connection failed check: %s", e)
+            raise
 
     def _maybe_grow_pool(self) -> None:
         # Allow only one task at time to grow the pool (or returning
@@ -331,11 +365,14 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         if await self._maybe_close_connection(conn):
             return
 
+        await self._putconn(conn, from_getconn=False)
+
+    async def _putconn(self, conn: ACT, from_getconn: bool) -> None:
         # Use a worker to perform eventual maintenance work in a separate task
         if self._reset:
-            self.run_task(ReturnConnection(self, conn))
+            self.run_task(ReturnConnection(self, conn, from_getconn=from_getconn))
         else:
-            await self._return_connection(conn)
+            await self._return_connection(conn, from_getconn=from_getconn)
 
     async def _maybe_close_connection(self, conn: ACT) -> bool:
         """Close a returned connection if necessary.
@@ -539,15 +576,43 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
 
             # Check for broken connections
             try:
-                await conn.execute("SELECT 1")
-                if conn.pgconn.transaction_status == TransactionStatus.INTRANS:
-                    await conn.rollback()
+                await self.check_connection(conn)
             except Exception:
                 self._stats[self._CONNECTIONS_LOST] += 1
                 logger.warning("discarding broken connection: %s", conn)
                 self.run_task(AddConnection(self))
             else:
                 await self._add_to_pool(conn)
+
+    @staticmethod
+    async def check_connection(conn: ACT) -> None:
+        """
+        A simple check to verify that a connection is still working.
+
+        Return quietly if the connection is still working, otherwise raise
+        an exception.
+
+        Used internally by `check()`, but also available for client usage,
+        for instance as `!check` callback when a pool is created.
+        """
+        if conn.autocommit:
+            await conn.execute("SELECT 1")
+        else:
+            if True:  # ASYNC
+                # NOTE: with Psycopg 3.2 we could use conn.set_autocommit() in
+                # the sync code too, but we want the pool to be compatible with
+                # previous versions too.
+                await conn.set_autocommit(True)
+                try:
+                    await conn.execute("SELECT 1")
+                finally:
+                    await conn.set_autocommit(False)
+            else:
+                conn.autocommit = True
+                try:
+                    conn.execute("SELECT 1")
+                finally:
+                    conn.autocommit = False
 
     async def reconnect_failed(self) -> None:
         """
@@ -683,17 +748,26 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
                 else:
                     self._growing = False
 
-    async def _return_connection(self, conn: ACT) -> None:
+    async def _return_connection(self, conn: ACT, from_getconn: bool) -> None:
         """
         Return a connection to the pool after usage.
         """
-        await self._reset_connection(conn)
-        if conn.pgconn.transaction_status == TransactionStatus.UNKNOWN:
-            self._stats[self._RETURNS_BAD] += 1
-            # Connection no more in working state: create a new one.
-            self.run_task(AddConnection(self))
-            logger.warning("discarding closed connection: %s", conn)
-            return
+        if from_getconn:
+            if conn.pgconn.transaction_status == TransactionStatus.UNKNOWN:
+                self._stats[self._CONNECTIONS_LOST] += 1
+                # Connection no more in working state: create a new one.
+                self.run_task(AddConnection(self))
+                logger.info("not serving connection found broken")
+                return
+
+        else:
+            await self._reset_connection(conn)
+            if conn.pgconn.transaction_status == TransactionStatus.UNKNOWN:
+                self._stats[self._RETURNS_BAD] += 1
+                # Connection no more in working state: create a new one.
+                self.run_task(AddConnection(self))
+                logger.warning("discarding closed connection: %s", conn)
+                return
 
         # Check if the connection is past its best before date
         if conn._expire_at <= monotonic():
@@ -744,7 +818,11 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
         if status == TransactionStatus.IDLE:
             pass
 
-        elif status in (TransactionStatus.INTRANS, TransactionStatus.INERROR):
+        elif status == TransactionStatus.UNKNOWN:
+            # Connection closed
+            return
+
+        elif status == TransactionStatus.INTRANS or status == TransactionStatus.INERROR:
             # Connection returned with an active transaction
             logger.warning("rolling back returned connection: %s", conn)
             try:
@@ -763,7 +841,7 @@ class AsyncConnectionPool(Generic[ACT], BasePool):
             logger.warning("closing returned connection: %s", conn)
             await conn.close()
 
-        if not conn.closed and self._reset:
+        if self._reset:
             try:
                 await self._reset(conn)
                 status = conn.pgconn.transaction_status
@@ -944,12 +1022,13 @@ class AddConnection(MaintenanceTask):
 class ReturnConnection(MaintenanceTask):
     """Clean up and return a connection to the pool."""
 
-    def __init__(self, pool: AsyncConnectionPool[Any], conn: ACT):
+    def __init__(self, pool: AsyncConnectionPool[Any], conn: ACT, from_getconn: bool):
         super().__init__(pool)
         self.conn = conn
+        self.from_getconn = from_getconn
 
     async def _run(self, pool: AsyncConnectionPool[Any]) -> None:
-        await pool._return_connection(self.conn)
+        await pool._return_connection(self.conn, from_getconn=self.from_getconn)
 
 
 class ShrinkPool(MaintenanceTask):

@@ -46,6 +46,7 @@ class ConnectionPool(Generic[CT], BasePool):
         conninfo: str = "",
         *,
         open: bool | None = ...,
+        check: Optional[ConnectionCB[CT]] = ...,
         configure: Optional[ConnectionCB[CT]] = ...,
         reset: Optional[ConnectionCB[CT]] = ...,
         kwargs: Optional[Dict[str, Any]] = ...,
@@ -69,6 +70,7 @@ class ConnectionPool(Generic[CT], BasePool):
         *,
         open: bool | None = ...,
         connection_class: Type[CT],
+        check: Optional[ConnectionCB[CT]] = ...,
         configure: Optional[ConnectionCB[CT]] = ...,
         reset: Optional[ConnectionCB[CT]] = ...,
         kwargs: Optional[Dict[str, Any]] = ...,
@@ -91,6 +93,7 @@ class ConnectionPool(Generic[CT], BasePool):
         *,
         open: bool | None = None,
         connection_class: Type[CT] = cast(Type[CT], Connection),
+        check: Optional[ConnectionCB[CT]] = None,
         configure: Optional[ConnectionCB[CT]] = None,
         reset: Optional[ConnectionCB[CT]] = None,
         kwargs: Optional[Dict[str, Any]] = None,
@@ -106,6 +109,7 @@ class ConnectionPool(Generic[CT], BasePool):
         num_workers: int = 3,
     ):
         self.connection_class = connection_class
+        self._check = check
         self._configure = configure
         self._reset = reset
 
@@ -232,11 +236,34 @@ class ConnectionPool(Generic[CT], BasePool):
         failing to do so will deplete the pool. A depleted pool is a sad pool:
         you don't want a depleted pool.
         """
+        t0 = monotonic()
+        if timeout is None:
+            timeout = self.timeout
+        deadline = t0 + timeout
+
         logger.info("connection requested from %r", self.name)
         self._stats[self._REQUESTS_NUM] += 1
 
         self._check_open_getconn()
 
+        try:
+            while True:
+                conn = self._getconn_unchecked(deadline - monotonic())
+                try:
+                    self._check_connection(conn)
+                except Exception:
+                    self._putconn(conn, from_getconn=True)
+                else:
+                    logger.info("connection given by %r", self.name)
+                    return conn
+        # Re-raise the timeout exception presenting the user the global
+        # timeout, not the per-attempt one.
+        except PoolTimeout:
+            raise PoolTimeout(
+                f"couldn't get a connection after {timeout:.2f} sec"
+            ) from None
+
+    def _getconn_unchecked(self, timeout: float) -> CT:
         # Critical section: decide here if there's a connection ready
         # or if the client needs to wait.
         with self._lock:
@@ -254,8 +281,6 @@ class ConnectionPool(Generic[CT], BasePool):
         # If we are in the waiting queue, wait to be assigned a connection
         # (outside the critical section, so only the waiting client is locked)
         if not conn:
-            if timeout is None:
-                timeout = self.timeout
             try:
                 conn = pos.wait(timeout=timeout)
             except Exception:
@@ -269,7 +294,6 @@ class ConnectionPool(Generic[CT], BasePool):
         # Note that this property shouldn't be set while the connection is in
         # the pool, to avoid to create a reference loop.
         conn._pool = self
-        logger.info("connection given by %r", self.name)
         return conn
 
     def _get_ready_connection(self, timeout: Optional[float]) -> Optional[CT]:
@@ -287,6 +311,15 @@ class ConnectionPool(Generic[CT], BasePool):
                 + f" {len(self._waiting)} requests waiting"
             )
         return conn
+
+    def _check_connection(self, conn: CT) -> None:
+        if not self._check:
+            return
+        try:
+            self._check(conn)
+        except Exception as e:
+            logger.info("connection failed check: %s", e)
+            raise
 
     def _maybe_grow_pool(self) -> None:
         # Allow only one task at time to grow the pool (or returning
@@ -311,11 +344,14 @@ class ConnectionPool(Generic[CT], BasePool):
         if self._maybe_close_connection(conn):
             return
 
+        self._putconn(conn, from_getconn=False)
+
+    def _putconn(self, conn: CT, from_getconn: bool) -> None:
         # Use a worker to perform eventual maintenance work in a separate task
         if self._reset:
-            self.run_task(ReturnConnection(self, conn))
+            self.run_task(ReturnConnection(self, conn, from_getconn=from_getconn))
         else:
-            self._return_connection(conn)
+            self._return_connection(conn, from_getconn=from_getconn)
 
     def _maybe_close_connection(self, conn: CT) -> bool:
         """Close a returned connection if necessary.
@@ -512,15 +548,33 @@ class ConnectionPool(Generic[CT], BasePool):
 
             # Check for broken connections
             try:
-                conn.execute("SELECT 1")
-                if conn.pgconn.transaction_status == TransactionStatus.INTRANS:
-                    conn.rollback()
+                self.check_connection(conn)
             except Exception:
                 self._stats[self._CONNECTIONS_LOST] += 1
                 logger.warning("discarding broken connection: %s", conn)
                 self.run_task(AddConnection(self))
             else:
                 self._add_to_pool(conn)
+
+    @staticmethod
+    def check_connection(conn: CT) -> None:
+        """
+        A simple check to verify that a connection is still working.
+
+        Return quietly if the connection is still working, otherwise raise
+        an exception.
+
+        Used internally by `check()`, but also available for client usage,
+        for instance as `!check` callback when a pool is created.
+        """
+        if conn.autocommit:
+            conn.execute("SELECT 1")
+        else:
+            conn.autocommit = True
+            try:
+                conn.execute("SELECT 1")
+            finally:
+                conn.autocommit = False
 
     def reconnect_failed(self) -> None:
         """
@@ -648,17 +702,25 @@ class ConnectionPool(Generic[CT], BasePool):
                 else:
                     self._growing = False
 
-    def _return_connection(self, conn: CT) -> None:
+    def _return_connection(self, conn: CT, from_getconn: bool) -> None:
         """
         Return a connection to the pool after usage.
         """
-        self._reset_connection(conn)
-        if conn.pgconn.transaction_status == TransactionStatus.UNKNOWN:
-            self._stats[self._RETURNS_BAD] += 1
-            # Connection no more in working state: create a new one.
-            self.run_task(AddConnection(self))
-            logger.warning("discarding closed connection: %s", conn)
-            return
+        if from_getconn:
+            if conn.pgconn.transaction_status == TransactionStatus.UNKNOWN:
+                self._stats[self._CONNECTIONS_LOST] += 1
+                # Connection no more in working state: create a new one.
+                self.run_task(AddConnection(self))
+                logger.info("not serving connection found broken")
+                return
+        else:
+            self._reset_connection(conn)
+            if conn.pgconn.transaction_status == TransactionStatus.UNKNOWN:
+                self._stats[self._RETURNS_BAD] += 1
+                # Connection no more in working state: create a new one.
+                self.run_task(AddConnection(self))
+                logger.warning("discarding closed connection: %s", conn)
+                return
 
         # Check if the connection is past its best before date
         if conn._expire_at <= monotonic():
@@ -707,7 +769,10 @@ class ConnectionPool(Generic[CT], BasePool):
         status = conn.pgconn.transaction_status
         if status == TransactionStatus.IDLE:
             pass
-        elif status in (TransactionStatus.INTRANS, TransactionStatus.INERROR):
+        elif status == TransactionStatus.UNKNOWN:
+            # Connection closed
+            return
+        elif status == TransactionStatus.INTRANS or status == TransactionStatus.INERROR:
             # Connection returned with an active transaction
             logger.warning("rolling back returned connection: %s", conn)
             try:
@@ -725,7 +790,7 @@ class ConnectionPool(Generic[CT], BasePool):
             logger.warning("closing returned connection: %s", conn)
             conn.close()
 
-        if not conn.closed and self._reset:
+        if self._reset:
             try:
                 self._reset(conn)
                 status = conn.pgconn.transaction_status
@@ -906,12 +971,13 @@ class AddConnection(MaintenanceTask):
 class ReturnConnection(MaintenanceTask):
     """Clean up and return a connection to the pool."""
 
-    def __init__(self, pool: ConnectionPool[Any], conn: CT):
+    def __init__(self, pool: ConnectionPool[Any], conn: CT, from_getconn: bool):
         super().__init__(pool)
         self.conn = conn
+        self.from_getconn = from_getconn
 
     def _run(self, pool: ConnectionPool[Any]) -> None:
-        pool._return_connection(self.conn)
+        pool._return_connection(self.conn, from_getconn=self.from_getconn)
 
 
 class ShrinkPool(MaintenanceTask):

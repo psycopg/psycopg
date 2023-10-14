@@ -82,6 +82,15 @@ The `!ConnectionPool` class
                 documentation for more details.
    :type open: `!bool`, default: `!True`
 
+   :param check: A callback to check that a connection is working correctly
+                 when obtained by the pool. The callback is called at every
+                 `getconn()` or `connection()`: the connection is only passed
+                 to the client if the callback doesn't throw an exception.
+                 By default no check is made on the connection. You can
+                 provide the `check_connection()` pool static method if you
+                 want to perform a simple check.
+   :type check: `Callable[[Connection], None]`
+
    :param configure: A callback to configure a connection after creation.
                      Useful, for instance, to configure its adapters. If the
                      connection is used to run internal queries (to inspect the
@@ -151,11 +160,12 @@ The `!ConnectionPool` class
    :type num_workers: `!int`, default: 3
 
    .. versionchanged:: 3.1
-
-        added `!open` parameter to init method.
+        added `!open` parameter to the constructor.
 
    .. versionchanged:: 3.2
+        added `!check` parameter to the constructor.
 
+   .. versionchanged:: 3.2
         The class is generic and `!connection_class` provides types type
         variable. See :ref:`pool-generic`.
 
@@ -218,6 +228,10 @@ The `!ConnectionPool` class
 
    .. automethod:: resize
    .. automethod:: check
+   .. automethod:: check_connection
+
+      .. versionadded:: 3.2
+
    .. automethod:: get_stats
    .. automethod:: pop_stats
 
@@ -253,14 +267,18 @@ class but its blocking methods are implemented as `!async` coroutines. It
 returns instances of `~psycopg.AsyncConnection`, or of its subclass if
 specified so in the `!connection_class` parameter.
 
-Only the functions with different signature from `!ConnectionPool` are
-listed here.
+Only the functions and parameters with different signature from
+`!ConnectionPool` are listed here.
 
 .. autoclass:: AsyncConnectionPool
 
    :param connection_class: The class of the connections to serve. It should
                             be an `!AsyncConnection` subclass.
    :type connection_class: `!type`, default: `~psycopg.AsyncConnection`
+
+   :param check: A callback to check that a connection is working correctly
+                 when obtained by the pool.
+   :type check: `async Callable[[Connection], None]`
 
    :param configure: A callback to configure a connection after creation.
    :type configure: `async Callable[[AsyncConnection], None]`
@@ -273,6 +291,9 @@ listed here.
         connection fails for more than `!reconnect_timeout` seconds.
    :type reconnect_failed: `Callable[[AsyncConnectionPool], None]` or
         `async Callable[[AsyncConnectionPool], None]`
+
+   .. versionchanged:: 3.2
+        added `!check` parameter to the constructor.
 
    .. versionchanged:: 3.2
         The `!reconnect_failed` parameter can be `!async`.
@@ -327,6 +348,10 @@ listed here.
    .. automethod:: wait
    .. automethod:: resize
    .. automethod:: check
+   .. automethod:: check_connection
+
+      .. versionadded:: 3.2
+
    .. automethod:: getconn
    .. automethod:: putconn
 
