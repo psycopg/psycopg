@@ -220,10 +220,9 @@ def test_execute_sequence(conn):
 @pytest.mark.parametrize("query", ["", " ", ";"])
 def test_execute_empty_query(conn, query):
     cur = conn.cursor()
-    cur.execute(query)
-    assert cur.pgresult.status == cur.ExecStatus.EMPTY_QUERY
     with pytest.raises(psycopg.ProgrammingError):
-        cur.fetchone()
+        cur.execute(query)
+        assert cur.pgresult.status == cur.ExecStatus.EMPTY_QUERY
 
 
 def test_execute_type_change(conn):
@@ -487,7 +486,7 @@ def test_rownumber(conn):
     assert cur.rownumber == 42
 
 
-@pytest.mark.parametrize("query", ["", "set timezone to utc"])
+@pytest.mark.parametrize("query", ["set timezone to utc"])
 def test_rownumber_none(conn, query):
     cur = conn.cursor()
     cur.execute(query)

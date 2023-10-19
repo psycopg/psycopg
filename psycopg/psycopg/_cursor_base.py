@@ -462,7 +462,7 @@ class BaseCursor(Generic[ConnectionType, Row]):
 
         for res in results:
             status = res.status
-            if status != TUPLES_OK and status != COMMAND_OK and status != EMPTY_QUERY:
+            if status != TUPLES_OK and status != COMMAND_OK:
                 self._raise_for_result(res)
 
     def _raise_for_result(self, result: "PGresult") -> NoReturn:
@@ -478,6 +478,8 @@ class BaseCursor(Generic[ConnectionType, Row]):
             raise e.ProgrammingError(
                 "COPY cannot be used with this method; use copy() instead"
             )
+        elif status == EMPTY_QUERY:
+            raise e.ProgrammingError("can't execute an empty query")
         else:
             raise e.InternalError(
                 "unexpected result status from query:" f" {pq.ExecStatus(status).name}"
