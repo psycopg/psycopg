@@ -64,6 +64,7 @@ def test_broken(conn):
 
 
 @pytest.mark.slow
+@pytest.mark.timing
 def test_identify_closure(conn_cls, dsn):
     with conn_cls.connect(dsn, autocommit=True) as conn:
         with conn_cls.connect(dsn, autocommit=True) as conn2:
