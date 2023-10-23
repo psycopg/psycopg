@@ -162,6 +162,7 @@ async def test_cancel_stream(aconn):
 
 
 @pytest.mark.slow
+@pytest.mark.timing
 @pytest.mark.crdb_skip("pg_terminate_backend")
 async def test_identify_closure(aconn_cls, dsn):
     async def closer():

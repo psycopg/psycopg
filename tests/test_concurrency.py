@@ -213,6 +213,7 @@ def test_cancel_stream(conn):
 
 @pytest.mark.crdb_skip("pg_terminate_backend")
 @pytest.mark.slow
+@pytest.mark.timing
 def test_identify_closure(conn_cls, dsn):
     def closer():
         time.sleep(0.2)

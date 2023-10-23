@@ -64,6 +64,7 @@ async def test_broken(aconn):
 
 
 @pytest.mark.slow
+@pytest.mark.timing
 async def test_identify_closure(aconn_cls, dsn):
     async with await aconn_cls.connect(dsn) as conn:
         async with await aconn_cls.connect(dsn) as conn2:
