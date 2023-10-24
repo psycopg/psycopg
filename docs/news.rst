@@ -30,16 +30,18 @@ Psycopg 3.2 (unreleased)
 .. __: https://numpy.org/doc/stable/reference/arrays.scalars.html#built-in-scalar-types
 
 
-Current release
----------------
-
 Psycopg 3.1.13 (unreleased)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 - Raise `DataError` instead of whatever internal failure trying to dump a
   `~datetime.time` object with with a `!tzinfo` specified as
   `~zoneinfo.ZoneInfo` (ambiguous offset, see :ticket:`#652`).
+- Handle gracefully EINTR on signals instead of raising `InterruptedError`,
+  consistently with :pep:`475` guideline (:ticket:`#667`).
 
+
+Current release
+---------------
 
 Psycopg 3.1.12
 ^^^^^^^^^^^^^^
