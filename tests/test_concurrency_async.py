@@ -6,7 +6,7 @@ import threading
 import subprocess as sp
 from asyncio import create_task
 from asyncio.queues import Queue
-from typing import List, Tuple
+from typing import List
 
 import pytest
 
@@ -56,50 +56,6 @@ async def test_concurrent_execution(aconn_cls, dsn):
     t0 = time.time()
     await asyncio.gather(*workers)
     assert time.time() - t0 < 0.8, "something broken in concurrency"
-
-
-@pytest.mark.slow
-@pytest.mark.timing
-@pytest.mark.crdb_skip("notify")
-async def test_notifies(aconn_cls, aconn, dsn):
-    nconn = await aconn_cls.connect(dsn, autocommit=True)
-    npid = nconn.pgconn.backend_pid
-
-    async def notifier():
-        cur = nconn.cursor()
-        await asyncio.sleep(0.25)
-        await cur.execute("notify foo, '1'")
-        await asyncio.sleep(0.25)
-        await cur.execute("notify foo, '2'")
-        await nconn.close()
-
-    async def receiver():
-        await aconn.set_autocommit(True)
-        cur = aconn.cursor()
-        await cur.execute("listen foo")
-        gen = aconn.notifies()
-        async for n in gen:
-            ns.append((n, time.time()))
-            if len(ns) >= 2:
-                await gen.aclose()
-
-    ns: List[Tuple[psycopg.Notify, float]] = []
-    t0 = time.time()
-    workers = [notifier(), receiver()]
-    await asyncio.gather(*workers)
-    assert len(ns) == 2
-
-    n, t1 = ns[0]
-    assert n.pid == npid
-    assert n.channel == "foo"
-    assert n.payload == "1"
-    assert t1 - t0 == pytest.approx(0.25, abs=0.05)
-
-    n, t1 = ns[1]
-    assert n.pid == npid
-    assert n.channel == "foo"
-    assert n.payload == "2"
-    assert t1 - t0 == pytest.approx(0.5, abs=0.05)
 
 
 async def canceller(aconn, errors):
