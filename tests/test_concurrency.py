@@ -363,6 +363,48 @@ with psycopg.connect({dsn!r}, application_name={APPNAME!r}) as conn:
 
 @pytest.mark.slow
 @pytest.mark.subprocess
+@pytest.mark.parametrize("itimername, signame", [("ITIMER_REAL", "SIGALRM")])
+def test_eintr(dsn, itimername, signame):
+    try:
+        itimer = int(getattr(signal, itimername))
+        sig = int(getattr(signal, signame))
+    except AttributeError:
+        pytest.skip(f"unknown interrupt timer: {itimername}")
+
+    script = f"""\
+import signal
+import psycopg
+
+def signal_handler(signum, frame):
+    assert signum == {sig!r}
+
+# Install a handler for the signal
+signal.signal({sig!r}, signal_handler)
+
+# Restart system calls interrupted by the signal
+signal.siginterrupt({sig!r}, False)
+
+
+with psycopg.connect({dsn!r}) as conn:
+    # Fire an interrupt signal every 0.25 seconds
+    signal.setitimer({itimer!r}, 0.25, 0.25)
+
+    cur = conn.cursor()
+    cur.execute("select 'ok' from pg_sleep(0.5)")
+    print(cur.fetchone()[0])
+"""
+    cp = sp.run(
+        [sys.executable, "-s"], input=script, text=True, stdout=sp.PIPE, stderr=sp.PIPE
+    )
+    assert "InterruptedError" not in cp.stderr
+    assert (
+        cp.returncode == 0
+    ), f"script terminated with {signal.Signals(abs(cp.returncode)).name}"
+    assert cp.stdout.rstrip() == "ok"
+
+
+@pytest.mark.slow
+@pytest.mark.subprocess
 @pytest.mark.skipif(
     multiprocessing.get_all_start_methods()[0] != "fork",
     reason="problematic behavior only exhibited via fork",

@@ -71,10 +71,17 @@ wait_c_impl(int fileno, int wait, float timeout)
         timeout_ms = (int)(timeout * SEC_TO_MS);
     }
 
+retry_eintr:
+
     Py_BEGIN_ALLOW_THREADS
     errno = 0;
     select_rv = poll(&input_fd, 1, timeout_ms);
     Py_END_ALLOW_THREADS
+
+    /* The grace of PEP 475 */
+    if (errno == EINTR) {
+        goto retry_eintr;
+    }
 
     if (select_rv < 0) { goto error; }
     if (PyErr_CheckSignals()) { goto finally; }
@@ -116,10 +123,17 @@ wait_c_impl(int fileno, int wait, float timeout)
         tvptr = &tv;
     }
 
+retry_eintr:
+
     Py_BEGIN_ALLOW_THREADS
     errno = 0;
     select_rv = select(fileno + 1, &ifds, &ofds, &efds, tvptr);
     Py_END_ALLOW_THREADS
+
+    /* The grace of PEP 475 */
+    if (errno == EINTR) {
+        goto retry_eintr;
+    }
 
     if (select_rv < 0) { goto error; }
     if (PyErr_CheckSignals()) { goto finally; }
