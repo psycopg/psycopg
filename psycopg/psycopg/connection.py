@@ -432,13 +432,10 @@ class BaseConnection(Generic[Row]):
     def _connect_gen(
         cls: Type[ConnectionType],
         conninfo: str = "",
-        *,
-        autocommit: bool = False,
     ) -> PQGenConn[ConnectionType]:
         """Generator to connect to the database and create a new instance."""
         pgconn = yield from connect(conninfo)
         conn = cls(pgconn)
-        conn._autocommit = bool(autocommit)
         return conn
 
     def _exec_command(
@@ -731,12 +728,12 @@ class Connection(BaseConnection[Row]):
 
         try:
             rv = cls._wait_conn(
-                cls._connect_gen(conninfo, autocommit=autocommit),
-                timeout=params["connect_timeout"],
+                cls._connect_gen(conninfo), timeout=params["connect_timeout"]
             )
         except e._NO_TRACEBACK as ex:
             raise ex.with_traceback(None)
 
+        rv._autocommit = bool(autocommit)
         if row_factory:
             rv.row_factory = row_factory
         if cursor_factory:
