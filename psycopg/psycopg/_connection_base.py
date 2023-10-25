@@ -423,13 +423,10 @@ class BaseConnection(Generic[Row]):
     def _connect_gen(
         cls: Type[ConnectionType],
         conninfo: str = "",
-        *,
-        autocommit: bool = False,
     ) -> PQGenConn[ConnectionType]:
         """Generator to connect to the database and create a new instance."""
         pgconn = yield from generators.connect(conninfo)
         conn = cls(pgconn)
-        conn._autocommit = bool(autocommit)
         return conn
 
     def _exec_command(

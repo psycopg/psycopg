@@ -139,12 +139,12 @@ class AsyncConnection(BaseConnection[Row]):
 
         try:
             rv = await cls._wait_conn(
-                cls._connect_gen(conninfo, autocommit=autocommit),
-                timeout=params["connect_timeout"],
+                cls._connect_gen(conninfo), timeout=params["connect_timeout"]
             )
         except e._NO_TRACEBACK as ex:
             raise ex.with_traceback(None)
 
+        rv._autocommit = bool(autocommit)
         if row_factory:
             rv.row_factory = row_factory
         if cursor_factory:
