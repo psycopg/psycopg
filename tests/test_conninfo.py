@@ -333,17 +333,17 @@ class TestConnectionInfo:
         ),
         (
             "host=1.1.1.1,2.2.2.2 port=5432",
-            "host=1.1.1.1,2.2.2.2 port=5432 hostaddr=1.1.1.1,2.2.2.2",
+            "host=1.1.1.1,2.2.2.2 port=5432,5432 hostaddr=1.1.1.1,2.2.2.2",
             None,
         ),
         (
             "port=5432",
-            "host=1.1.1.1,2.2.2.2 port=5432 hostaddr=1.1.1.1,2.2.2.2",
+            "host=1.1.1.1,2.2.2.2 port=5432,5432 hostaddr=1.1.1.1,2.2.2.2",
             {"PGHOST": "1.1.1.1,2.2.2.2"},
         ),
         (
             "host=foo.com port=5432",
-            "host=foo.com port=5432",
+            "host=foo.com port=5432 hostaddr=1.2.3.4",
             {"PGHOSTADDR": "1.2.3.4"},
         ),
     ],
@@ -368,7 +368,7 @@ async def test_resolve_hostaddr_async_no_resolve(
         ),
         (
             "host=foo.com,qux.com port=5433",
-            "host=foo.com,qux.com hostaddr=1.1.1.1,2.2.2.2 port=5433",
+            "host=foo.com,qux.com hostaddr=1.1.1.1,2.2.2.2 port=5433,5433",
             None,
         ),
         (
