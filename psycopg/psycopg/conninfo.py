@@ -330,6 +330,49 @@ async def resolve_hostaddr_async(params: ConnDict) -> ConnDict:
     return out
 
 
+def conninfo_attempts(params: ConnDict) -> Iterator[ConnDict]:
+    """Split a set of connection params on the single attempts to perforn.
+
+    A connection param can perform more than one attempt more than one ``host``
+    is provided.
+
+    Because the libpq async function doesn't honour the timeout, we need to
+    reimplement the repeated attempts.
+    """
+    for attempt in _split_attempts(_inject_defaults(params)):
+        yield attempt
+
+
+async def conninfo_attempts_async(params: ConnDict) -> AsyncIterator[ConnDict]:
+    """Split a set of connection params on the single attempts to perforn.
+
+    A connection param can perform more than one attempt more than one ``host``
+    is provided.
+
+    Also perform async resolution of the hostname into hostaddr in order to
+    avoid blocking. Because a host can resolve to more than one address, this
+    can lead to yield more attempts too. Raise `OperationalError` if no host
+    could be resolved.
+
+    Because the libpq async function doesn't honour the timeout, we need to
+    reimplement the repeated attempts.
+    """
+    yielded = False
+    last_exc = None
+    for attempt in _split_attempts(_inject_defaults(params)):
+        try:
+            async for a2 in _split_attempts_and_resolve(attempt):
+                yielded = True
+                yield a2
+        except OSError as ex:
+            last_exc = ex
+
+    if not yielded:
+        assert last_exc
+        # We couldn't resolve anything
+        raise e.OperationalError(str(last_exc))
+
+
 def _inject_defaults(params: ConnDict) -> ConnDict:
     """
     Add defaults to a dictionary of parameters.

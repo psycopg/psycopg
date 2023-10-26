@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import logging
 from types import TracebackType
-from typing import Any, AsyncGenerator, AsyncIterator, Dict, List, Optional
+from typing import Any, AsyncGenerator, AsyncIterator, List, Optional
 from typing import Type, TypeVar, Union, cast, overload, TYPE_CHECKING
 from contextlib import asynccontextmanager
 
@@ -20,7 +20,7 @@ from ._tpc import Xid
 from .rows import Row, AsyncRowFactory, tuple_row, TupleRow, args_row
 from .adapt import AdaptersMap
 from ._enums import IsolationLevel
-from .conninfo import make_conninfo, conninfo_to_dict
+from .conninfo import ConnDict, make_conninfo, conninfo_to_dict, conninfo_attempts_async
 from ._pipeline import AsyncPipeline
 from ._encodings import pgconn_encoding
 from .generators import notifies
@@ -33,7 +33,6 @@ if True:  # ASYNC
     import sys
     import asyncio
     from asyncio import Lock
-    from .conninfo import resolve_hostaddr_async
 else:
     from threading import Lock
 
@@ -135,14 +134,19 @@ class AsyncConnection(BaseConnection[Row]):
                     )
 
         params = await cls._get_connection_params(conninfo, **kwargs)
-        conninfo = make_conninfo(**params)
+        timeout = int(params["connect_timeout"])
+        rv = None
+        async for attempt in conninfo_attempts_async(params):
+            try:
+                conninfo = make_conninfo(**attempt)
+                rv = await cls._wait_conn(cls._connect_gen(conninfo), timeout=timeout)
+                break
+            except e._NO_TRACEBACK as ex:
+                last_ex = ex
 
-        try:
-            rv = await cls._wait_conn(
-                cls._connect_gen(conninfo), timeout=params["connect_timeout"]
-            )
-        except e._NO_TRACEBACK as ex:
-            raise ex.with_traceback(None)
+        if not rv:
+            assert last_ex
+            raise last_ex.with_traceback(None)
 
         rv._autocommit = bool(autocommit)
         if row_factory:
@@ -181,9 +185,7 @@ class AsyncConnection(BaseConnection[Row]):
             await self.close()
 
     @classmethod
-    async def _get_connection_params(
-        cls, conninfo: str, **kwargs: Any
-    ) -> Dict[str, Any]:
+    async def _get_connection_params(cls, conninfo: str, **kwargs: Any) -> ConnDict:
         """Manipulate connection parameters before connecting.
 
         :param conninfo: Connection string as received by `~Connection.connect()`.
@@ -197,11 +199,10 @@ class AsyncConnection(BaseConnection[Row]):
         if "connect_timeout" in params:
             params["connect_timeout"] = int(params["connect_timeout"])
         else:
-            params["connect_timeout"] = None
-
-        if True:  # ASYNC
-            # Resolve host addresses in non-blocking way
-            params = await resolve_hostaddr_async(params)
+            # The sync connect function will stop on the default socket timeout
+            # Because in async connection mode we need to enforce the timeout
+            # ourselves, we need a finite value.
+            params["connect_timeout"] = cls._DEFAULT_CONNECT_TIMEOUT
 
         return params
 

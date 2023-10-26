@@ -7,6 +7,10 @@ from dataclasses import dataclass
 
 import pytest
 import psycopg
+from psycopg.conninfo import conninfo_to_dict
+from psycopg._connection_base import BaseConnection
+
+DEFAULT_TIMEOUT = BaseConnection._DEFAULT_CONNECT_TIMEOUT
 
 
 @pytest.fixture
@@ -75,7 +79,7 @@ conninfo_params_timeout = [
     (
         "",
         {"dbname": "mydb", "connect_timeout": None},
-        ({"dbname": "mydb"}, None),
+        ({"dbname": "mydb"}, DEFAULT_TIMEOUT),
     ),
     (
         "",
@@ -85,7 +89,7 @@ conninfo_params_timeout = [
     (
         "dbname=postgres",
         {},
-        ({"dbname": "postgres"}, None),
+        ({"dbname": "postgres"}, DEFAULT_TIMEOUT),
     ),
     (
         "dbname=postgres connect_timeout=2",
@@ -98,3 +102,18 @@ conninfo_params_timeout = [
         ({"dbname": "postgres", "connect_timeout": "10"}, 10),
     ),
 ]
+
+
+def drop_default_args_from_conninfo(conninfo):
+    params = conninfo_to_dict(conninfo)
+
+    def removeif(key, value):
+        if params.get(key) == value:
+            params.pop(key)
+
+    removeif("host", "")
+    removeif("hostaddr", "")
+    removeif("port", "5432")
+    removeif("connect_timeout", str(DEFAULT_TIMEOUT))
+
+    return params
