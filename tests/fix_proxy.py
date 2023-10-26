@@ -60,7 +60,7 @@ class Proxy:
         # Get server params
         host = cdict.get("host") or os.environ.get("PGHOST")
         self.server_host = host if host and not host.startswith("/") else "localhost"
-        self.server_port = cdict.get("port", "5432")
+        self.server_port = cdict.get("port") or os.environ.get("PGPORT", "5432")
 
         # Get client params
         self.client_host = "localhost"

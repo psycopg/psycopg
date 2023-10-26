@@ -15,6 +15,8 @@ from .utils import gc_collect
 from .test_cursor import my_row_factory
 from .test_adapt import make_bin_dumper, make_dumper
 
+DEFAULT_TIMEOUT = psycopg.Connection._DEFAULT_CONNECT_TIMEOUT
+
 
 def test_connect(conn_cls, dsn):
     conn = conn_cls.connect(dsn)
@@ -359,25 +361,26 @@ def test_autocommit_unknown(conn):
         (("host=foo user=bar",), {}, "host=foo user=bar"),
         (("host=foo",), {"user": "baz"}, "host=foo user=baz"),
         (
-            ("host=foo port=5432",),
-            {"host": "qux", "user": "joe"},
-            "host=qux user=joe port=5432",
+            ("dbname=foo port=5433",),
+            {"dbname": "qux", "user": "joe"},
+            "dbname=qux user=joe port=5433",
         ),
         (("host=foo",), {"user": None}, "host=foo"),
     ],
 )
-def test_connect_args(conn_cls, monkeypatch, pgconn, args, kwargs, want):
-    the_conninfo: str
+def test_connect_args(conn_cls, monkeypatch, setpgenv, pgconn, args, kwargs, want):
+    got_conninfo: str
 
     def fake_connect(conninfo):
-        nonlocal the_conninfo
-        the_conninfo = conninfo
+        nonlocal got_conninfo
+        got_conninfo = conninfo
         return pgconn
         yield
 
     monkeypatch.setattr(psycopg.connection, "connect", fake_connect)
     conn = conn_cls.connect(*args, **kwargs)
-    assert conninfo_to_dict(the_conninfo) == conninfo_to_dict(want)
+    got_params = drop_default_args_from_conninfo(got_conninfo)
+    assert got_params == conninfo_to_dict(want)
     conn.close()
 
 
@@ -761,7 +764,7 @@ conninfo_params_timeout = [
     (
         "",
         {"dbname": "mydb", "connect_timeout": None},
-        ({"dbname": "mydb"}, None),
+        ({"dbname": "mydb"}, DEFAULT_TIMEOUT),
     ),
     (
         "",
@@ -771,7 +774,7 @@ conninfo_params_timeout = [
     (
         "dbname=postgres",
         {},
-        ({"dbname": "postgres"}, None),
+        ({"dbname": "postgres"}, DEFAULT_TIMEOUT),
     ),
     (
         "dbname=postgres connect_timeout=2",
@@ -790,8 +793,8 @@ conninfo_params_timeout = [
 def test_get_connection_params(conn_cls, dsn, kwargs, exp):
     params = conn_cls._get_connection_params(dsn, **kwargs)
     conninfo = make_conninfo(**params)
-    assert conninfo_to_dict(conninfo) == exp[0]
-    assert params.get("connect_timeout") == exp[1]
+    assert drop_default_args_from_conninfo(conninfo) == exp[0]
+    assert params["connect_timeout"] == exp[1]
 
 
 def test_connect_context(conn_cls, dsn):
@@ -824,3 +827,18 @@ def test_connect_context_copy(conn_cls, dsn, conn):
 def test_cancel_closed(conn):
     conn.close()
     conn.cancel()
+
+
+def drop_default_args_from_conninfo(conninfo):
+    params = conninfo_to_dict(conninfo)
+
+    def removeif(key, value):
+        if params.get(key) == value:
+            params.pop(key)
+
+    removeif("host", "")
+    removeif("hostaddr", "")
+    removeif("port", "5432")
+    removeif("connect_timeout", str(DEFAULT_TIMEOUT))
+
+    return params

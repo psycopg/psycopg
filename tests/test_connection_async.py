@@ -12,7 +12,7 @@ from psycopg.conninfo import conninfo_to_dict, make_conninfo
 from .utils import gc_collect
 from .test_cursor import my_row_factory
 from .test_connection import tx_params, tx_params_isolation, tx_values_map
-from .test_connection import conninfo_params_timeout
+from .test_connection import conninfo_params_timeout, drop_default_args_from_conninfo
 from .test_connection import testctx  # noqa: F401  # fixture
 from .test_adapt import make_bin_dumper, make_dumper
 from .test_conninfo import fake_resolve  # noqa: F401
@@ -357,9 +357,9 @@ async def test_autocommit_unknown(aconn):
         (("dbname=foo user=bar",), {}, "dbname=foo user=bar"),
         (("dbname=foo",), {"user": "baz"}, "dbname=foo user=baz"),
         (
-            ("dbname=foo port=5432",),
+            ("dbname=foo port=5433",),
             {"dbname": "qux", "user": "joe"},
-            "dbname=qux user=joe port=5432",
+            "dbname=qux user=joe port=5433",
         ),
         (("dbname=foo",), {"user": None}, "dbname=foo"),
     ],
@@ -367,18 +367,19 @@ async def test_autocommit_unknown(aconn):
 async def test_connect_args(
     aconn_cls, monkeypatch, setpgenv, pgconn, args, kwargs, want
 ):
-    the_conninfo: str
+    got_conninfo: str
 
     def fake_connect(conninfo):
-        nonlocal the_conninfo
-        the_conninfo = conninfo
+        nonlocal got_conninfo
+        got_conninfo = conninfo
         return pgconn
         yield
 
     setpgenv({})
     monkeypatch.setattr(psycopg.connection, "connect", fake_connect)
     conn = await aconn_cls.connect(*args, **kwargs)
-    assert conninfo_to_dict(the_conninfo) == conninfo_to_dict(want)
+    got_params = drop_default_args_from_conninfo(got_conninfo)
+    assert got_params == conninfo_to_dict(want)
     await conn.close()
 
 
@@ -724,7 +725,7 @@ async def test_get_connection_params(aconn_cls, dsn, kwargs, exp, setpgenv):
     setpgenv({})
     params = await aconn_cls._get_connection_params(dsn, **kwargs)
     conninfo = make_conninfo(**params)
-    assert conninfo_to_dict(conninfo) == exp[0]
+    assert drop_default_args_from_conninfo(conninfo) == exp[0]
     assert params["connect_timeout"] == exp[1]
 
 
@@ -774,4 +775,4 @@ async def test_resolve_hostaddr_conn(monkeypatch, fake_resolve):  # noqa: F811
 
     assert len(got) == 1
     want = {"host": "foo.com", "hostaddr": "1.1.1.1"}
-    assert conninfo_to_dict(got[0]) == want
+    assert drop_default_args_from_conninfo(got[0]) == want

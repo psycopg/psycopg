@@ -7,7 +7,7 @@ psycopg connection objects
 import logging
 import threading
 from types import TracebackType
-from typing import Any, Callable, cast, Dict, Generator, Generic, Iterator
+from typing import Any, Callable, cast, Generator, Generic, Iterator
 from typing import List, NamedTuple, Optional, Type, TypeVar, Tuple, Union
 from typing import overload, TYPE_CHECKING
 from weakref import ref, ReferenceType
@@ -31,6 +31,7 @@ from .cursor import Cursor
 from ._compat import LiteralString
 from .pq.misc import connection_summary
 from .conninfo import make_conninfo, conninfo_to_dict, ConnectionInfo
+from .conninfo import conninfo_attempts, ConnDict
 from ._pipeline import BasePipeline, Pipeline
 from .generators import notifies, connect, execute
 from ._encodings import pgconn_encoding
@@ -105,6 +106,11 @@ class BaseConnection(Generic[Row]):
     # Enums useful for the connection
     ConnStatus = pq.ConnStatus
     TransactionStatus = pq.TransactionStatus
+
+    # Default timeout for connection a attempt.
+    # Arbitrary timeout, what applied by the libpq on my computer.
+    # Your mileage won't vary.
+    _DEFAULT_CONNECT_TIMEOUT = 130
 
     def __init__(self, pgconn: "PGconn"):
         self.pgconn = pgconn
@@ -724,14 +730,19 @@ class Connection(BaseConnection[Row]):
         Connect to a database server and return a new `Connection` instance.
         """
         params = cls._get_connection_params(conninfo, **kwargs)
-        conninfo = make_conninfo(**params)
+        timeout = int(params["connect_timeout"])
+        rv = None
+        for attempt in conninfo_attempts(params):
+            try:
+                conninfo = make_conninfo(**attempt)
+                rv = cls._wait_conn(cls._connect_gen(conninfo), timeout=timeout)
+                break
+            except e._NO_TRACEBACK as ex:
+                last_ex = ex
 
-        try:
-            rv = cls._wait_conn(
-                cls._connect_gen(conninfo), timeout=params["connect_timeout"]
-            )
-        except e._NO_TRACEBACK as ex:
-            raise ex.with_traceback(None)
+        if not rv:
+            assert last_ex
+            raise last_ex.with_traceback(None)
 
         rv._autocommit = bool(autocommit)
         if row_factory:
@@ -774,7 +785,7 @@ class Connection(BaseConnection[Row]):
             self.close()
 
     @classmethod
-    def _get_connection_params(cls, conninfo: str, **kwargs: Any) -> Dict[str, Any]:
+    def _get_connection_params(cls, conninfo: str, **kwargs: Any) -> ConnDict:
         """Manipulate connection parameters before connecting.
 
         :param conninfo: Connection string as received by `~Connection.connect()`.
@@ -788,7 +799,10 @@ class Connection(BaseConnection[Row]):
         if "connect_timeout" in params:
             params["connect_timeout"] = int(params["connect_timeout"])
         else:
-            params["connect_timeout"] = None
+            # The sync connect function will stop on the default socket timeout
+            # Because in async connection mode we need to enforce the timeout
+            # ourselves, we need a finite value.
+            params["connect_timeout"] = cls._DEFAULT_CONNECT_TIMEOUT
 
         return params
 
