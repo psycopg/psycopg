@@ -9,7 +9,7 @@
 
 set -euo pipefail
 
-python_versions="3.8.10 3.9.13 3.10.5 3.11.0 3.12.0"
+python_versions="3.8.18 3.9.18 3.10.13 3.11.6 3.12.0"
 pg_version=16
 
 function log {
