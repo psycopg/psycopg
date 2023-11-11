@@ -23,9 +23,9 @@ else:
     from typing_extensions import TypeGuard
 
 if sys.version_info >= (3, 11):
-    from typing import LiteralString, assert_type
+    from typing import LiteralString
 else:
-    from typing_extensions import LiteralString, assert_type
+    from typing_extensions import LiteralString
 
 __all__ = [
     "Counter",
@@ -33,6 +33,5 @@ __all__ = [
     "LiteralString",
     "TypeGuard",
     "ZoneInfo",
-    "assert_type",
     "cache",
 ]
