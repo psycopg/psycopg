@@ -598,7 +598,7 @@ async def test_concurrency(aconn):
             from concurrent.futures import ThreadPoolExecutor
 
             with ThreadPoolExecutor() as e:
-                cursors = e.map(update, values, timeout=len(values))
+                cursors = list(e.map(update, values, timeout=len(values)))
 
         assert sum([(await cur.fetchone())[0] for cur in cursors]) == sum(values)
 
