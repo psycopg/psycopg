@@ -25,8 +25,8 @@ psycopg_pool 3.2.0
   it will become an error. (:ticket:`#659`).
 
 
-psycopg_pool 3.1.9 (unreleased)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg_pool 3.1.9
+^^^^^^^^^^^^^^^^^^
 
 - Fix the return type annotation of `!NullConnectionPool.__enter__()`
   (:ticket:`#540`).
