@@ -5,6 +5,7 @@ Tests common to psycopg.AsyncCursor and its subclasses.
 import weakref
 import datetime as dt
 from typing import Any, List
+from packaging.version import parse as ver
 
 import pytest
 
@@ -22,9 +23,15 @@ from ._test_cursor import execmany, _execmany  # noqa: F401
 execmany = execmany  # avoid F811 underneath
 
 
-@pytest.fixture(
-    params=[psycopg.AsyncCursor, psycopg.AsyncClientCursor, psycopg.AsyncRawCursor]
-)
+cursor_classes = [psycopg.AsyncCursor, psycopg.AsyncClientCursor]
+# Allow to import (not necessarily to run) the module with psycopg 3.1.
+# Needed to test psycopg_pool 3.2 tests with psycopg 3.1 imported, i.e. to run
+# `pytest -m pool`. (which might happen when releasing pool packages).
+if ver(psycopg.__version__) >= ver("3.2.0.dev0"):
+    cursor_classes.append(psycopg.AsyncRawCursor)
+
+
+@pytest.fixture(params=cursor_classes)
 async def aconn(aconn, request, anyio_backend):
     aconn.cursor_factory = request.param
     return aconn

@@ -6,6 +6,7 @@ import pytest
 
 import psycopg
 
+from ..utils import set_autocommit
 from ..acompat import AEvent, spawn, gather, asleep, is_alive, skip_async, skip_sync
 
 try:
@@ -600,7 +601,7 @@ async def test_debug_deadlock(pool_cls, dsn):
 @pytest.mark.parametrize("autocommit", [True, False])
 async def test_check_connection(pool_cls, aconn_cls, dsn, autocommit):
     conn = await aconn_cls.connect(dsn)
-    await conn.set_autocommit(autocommit)
+    await set_autocommit(conn, autocommit)
     await pool_cls.check_connection(conn)
     assert not conn.closed
     assert conn.info.transaction_status == psycopg.pq.TransactionStatus.IDLE

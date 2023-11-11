@@ -8,8 +8,8 @@ import pytest
 import psycopg
 from psycopg.pq import TransactionStatus
 from psycopg.rows import class_row, Row, TupleRow
-from psycopg._compat import assert_type, Counter
 
+from ..utils import assert_type, Counter, set_autocommit
 from ..acompat import AEvent, spawn, gather, asleep, skip_sync
 from .test_pool_common_async import delay_connection
 
@@ -46,8 +46,8 @@ class MyRow(Dict[str, Any]):
 
 
 async def test_generic_connection_type(dsn):
-    async def set_autocommit(conn: psycopg.AsyncConnection[Any]) -> None:
-        await conn.set_autocommit(True)
+    async def configure(conn: psycopg.AsyncConnection[Any]) -> None:
+        await set_autocommit(conn, True)
 
     class MyConnection(psycopg.AsyncConnection[Row]):
         pass
@@ -56,7 +56,7 @@ async def test_generic_connection_type(dsn):
         dsn,
         connection_class=MyConnection[MyRow],
         kwargs=dict(row_factory=class_row(MyRow)),
-        configure=set_autocommit,
+        configure=configure,
     ) as p1:
         async with p1.connection() as conn1:
             cur1 = await conn1.execute("select 1 as x")
@@ -80,8 +80,8 @@ async def test_generic_connection_type(dsn):
 
 
 async def test_non_generic_connection_type(dsn):
-    async def set_autocommit(conn: psycopg.AsyncConnection[Any]) -> None:
-        await conn.set_autocommit(True)
+    async def configure(conn: psycopg.AsyncConnection[Any]) -> None:
+        await set_autocommit(conn, True)
 
     class MyConnection(psycopg.AsyncConnection[MyRow]):
         def __init__(self, *args: Any, **kwargs: Any):
@@ -91,7 +91,7 @@ async def test_non_generic_connection_type(dsn):
     async with pool.AsyncConnectionPool(
         dsn,
         connection_class=MyConnection,
-        configure=set_autocommit,
+        configure=configure,
     ) as p1:
         async with p1.connection() as conn1:
             cur1 = await conn1.execute("select 1 as x")
