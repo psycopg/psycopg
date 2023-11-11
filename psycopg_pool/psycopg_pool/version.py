@@ -8,6 +8,6 @@ psycopg pool version file.
 # https://www.python.org/dev/peps/pep-0440/
 
 # STOP AND READ! if you change:
-__version__ = "3.1.9"
+__version__ = "3.1.10.dev1"
 # also change:
 # - `docs/news_pool.rst` to declare this version current or unreleased
