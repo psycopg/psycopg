@@ -7,18 +7,15 @@
 ``psycopg_pool`` release notes
 ==============================
 
-Future releases
+Current release
 ---------------
 
-psycopg_pool 3.1.9 (unreleased)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg_pool 3.1.9
+^^^^^^^^^^^^^^^^^^
 
 - Fix the return type annotation of `!NullConnectionPool.__enter__()`
   (part of :ticket:`#540`).
 
-
-Current release
----------------
 
 psycopg_pool 3.1.8
 ^^^^^^^^^^^^^^^^^^
