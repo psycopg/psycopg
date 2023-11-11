@@ -31,7 +31,7 @@ jobs:
         run: python -m build -o dist --${{ matrix.format }} ${{ matrix.package }}
 
       - name: Install the Python pool package and test requirements
-        run: pip install ./psycopg[test] dist/*
+        run: pip install psycopg[test] dist/*
 
       - name: Test the package
         run: pytest -m 'pool and not slow and not flakey' --color yes
