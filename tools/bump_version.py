@@ -108,8 +108,12 @@ class Bumper:
                 parts[1] = parts[2] = parts[3] = 0
             case BumpLevel.MINOR:
                 # 1.2.3 -> 1.3.0
-                parts[1] += 1
-                parts[2] = parts[3] = 0
+                # 1.2.0.dev1 -> 1.2.0
+                if parts[3] == 0:
+                    parts[1] += 1
+                    parts[2] = 0
+                else:
+                    parts[3] = 0
             case BumpLevel.PATCH:
                 # 1.2.3 -> 1.2.4
                 # 1.2.3.dev4 -> 1.2.3
