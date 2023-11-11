@@ -5,6 +5,26 @@ import operator
 from typing import Callable, Optional, Tuple
 from contextlib import contextmanager
 
+
+if sys.version_info >= (3, 9):
+    import collections
+
+    Counter = collections.Counter
+else:
+    import typing
+
+    Counter = typing.Counter
+
+if sys.version_info >= (3, 11):
+    import typing
+
+    assert_type = typing.assert_type
+else:
+    import typing_extensions
+
+    assert_type = typing_extensions.assert_type
+
+
 import pytest
 
 eur = "\u20ac"
@@ -192,3 +212,20 @@ def raiseif(cond, *args, **kwargs):
         with pytest.raises(*args, **kwargs) as ex:
             yield ex
         return
+
+
+def set_autocommit(conn, value):
+    """
+    Set autocommit on a connection.
+
+    Give an uniform interface to both sync and async connection for psycopg
+    < 3.2, in order to run psycopg_pool 3.2 tests using psycopg 3.1.
+    """
+    import psycopg
+
+    if isinstance(conn, psycopg.Connection):
+        conn.autocommit = value
+    elif isinstance(conn, psycopg.AsyncConnection):
+        return conn.set_autocommit(value)
+    else:
+        raise TypeError(f"not a connection: {conn}")

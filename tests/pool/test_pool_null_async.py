@@ -7,8 +7,8 @@ from packaging.version import parse as ver  # noqa: F401  # used in skipif
 import psycopg
 from psycopg.pq import TransactionStatus
 from psycopg.rows import class_row, Row, TupleRow
-from psycopg._compat import assert_type
 
+from ..utils import assert_type, set_autocommit
 from ..acompat import AEvent, asleep, spawn, gather, skip_sync
 from .test_pool_common_async import delay_connection, ensure_waiting
 
@@ -44,8 +44,8 @@ class MyRow(Dict[str, Any]):
 
 
 async def test_generic_connection_type(dsn):
-    async def set_autocommit(conn: psycopg.AsyncConnection[Any]) -> None:
-        await conn.set_autocommit(True)
+    async def configure(conn: psycopg.AsyncConnection[Any]) -> None:
+        await set_autocommit(conn, True)
 
     class MyConnection(psycopg.AsyncConnection[Row]):
         pass
@@ -54,7 +54,7 @@ async def test_generic_connection_type(dsn):
         dsn,
         connection_class=MyConnection[MyRow],
         kwargs={"row_factory": class_row(MyRow)},
-        configure=set_autocommit,
+        configure=configure,
     ) as p1:
         async with p1.connection() as conn1:
             cur1 = await conn1.execute("select 1 as x")
@@ -78,8 +78,8 @@ async def test_generic_connection_type(dsn):
 
 
 async def test_non_generic_connection_type(dsn):
-    async def set_autocommit(conn: psycopg.AsyncConnection[Any]) -> None:
-        await conn.set_autocommit(True)
+    async def configure(conn: psycopg.AsyncConnection[Any]) -> None:
+        await set_autocommit(conn, True)
 
     class MyConnection(psycopg.AsyncConnection[MyRow]):
         def __init__(self, *args: Any, **kwargs: Any):
@@ -87,7 +87,7 @@ async def test_non_generic_connection_type(dsn):
             super().__init__(*args, **kwargs)
 
     async with pool.AsyncNullConnectionPool(
-        dsn, connection_class=MyConnection, configure=set_autocommit
+        dsn, connection_class=MyConnection, configure=configure
     ) as p1:
         async with p1.connection() as conn1:
             (row1,) = await (await conn1.execute("select 1 as x")).fetchall()
