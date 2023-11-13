@@ -479,6 +479,23 @@ def test_conninfo_attempts_bad(setpgenv, conninfo, env):
         list(conninfo_attempts(params))
 
 
+def test_conninfo_random(dsn, conn_cls):
+    hosts = [f"host{n:02d}" for n in range(50)]
+    args = {"host": ",".join(hosts)}
+    ahosts = [att["host"] for att in conninfo_attempts(args)]
+    assert ahosts == hosts
+
+    args["load_balance_hosts"] = "disable"
+    ahosts = [att["host"] for att in conninfo_attempts(args)]
+    assert ahosts == hosts
+
+    args["load_balance_hosts"] = "random"
+    ahosts = [att["host"] for att in conninfo_attempts(args)]
+    assert ahosts != hosts
+    ahosts.sort()
+    assert ahosts == hosts
+
+
 @pytest.fixture
 async def fake_resolve(monkeypatch):
     fake_hosts = {

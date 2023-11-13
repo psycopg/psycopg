@@ -11,6 +11,7 @@ import re
 import socket
 import asyncio
 from typing import Any, Iterator, AsyncIterator
+from random import shuffle
 from pathlib import Path
 from datetime import tzinfo
 from functools import lru_cache
@@ -339,8 +340,14 @@ def conninfo_attempts(params: ConnDict) -> Iterator[ConnDict]:
     Because the libpq async function doesn't honour the timeout, we need to
     reimplement the repeated attempts.
     """
-    for attempt in _split_attempts(_inject_defaults(params)):
-        yield attempt
+    if params.get("load_balance_hosts", "disable") == "random":
+        attempts = list(_split_attempts(_inject_defaults(params)))
+        shuffle(attempts)
+        for attempt in attempts:
+            yield attempt
+    else:
+        for attempt in _split_attempts(_inject_defaults(params)):
+            yield attempt
 
 
 async def conninfo_attempts_async(params: ConnDict) -> AsyncIterator[ConnDict]:
