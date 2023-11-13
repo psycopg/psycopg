@@ -50,6 +50,38 @@ def test_connect_timeout(conn_cls, deaf_port):
     assert elapsed == pytest.approx(1.0, abs=0.05)
 
 
+@pytest.mark.slow
+@pytest.mark.timing
+def test_multi_hosts(conn_cls, proxy, dsn, deaf_port, monkeypatch):
+    args = conninfo_to_dict(dsn)
+    args["host"] = f"{proxy.client_host},{proxy.server_host}"
+    args["port"] = f"{deaf_port},{proxy.server_port}"
+    args.pop("hostaddr", None)
+    monkeypatch.setattr(conn_cls, "_DEFAULT_CONNECT_TIMEOUT", 2)
+    t0 = time.time()
+    with conn_cls.connect(**args) as conn:
+        elapsed = time.time() - t0
+        assert 2.0 < elapsed < 2.5
+        assert conn.info.port == int(proxy.server_port)
+        assert conn.info.host == proxy.server_host
+
+
+@pytest.mark.slow
+@pytest.mark.timing
+def test_multi_hosts_timeout(conn_cls, proxy, dsn, deaf_port):
+    args = conninfo_to_dict(dsn)
+    args["host"] = f"{proxy.client_host},{proxy.server_host}"
+    args["port"] = f"{deaf_port},{proxy.server_port}"
+    args.pop("hostaddr", None)
+    args["connect_timeout"] = "1"
+    t0 = time.time()
+    with conn_cls.connect(**args) as conn:
+        elapsed = time.time() - t0
+        assert 1.0 < elapsed < 1.5
+        assert conn.info.port == int(proxy.server_port)
+        assert conn.info.host == proxy.server_host
+
+
 def test_close(conn):
     assert not conn.closed
     assert not conn.broken
@@ -830,7 +862,10 @@ def test_cancel_closed(conn):
 
 
 def drop_default_args_from_conninfo(conninfo):
-    params = conninfo_to_dict(conninfo)
+    if isinstance(conninfo, str):
+        params = conninfo_to_dict(conninfo)
+    else:
+        params = conninfo.copy()
 
     def removeif(key, value):
         if params.get(key) == value:
@@ -839,6 +874,10 @@ def drop_default_args_from_conninfo(conninfo):
     removeif("host", "")
     removeif("hostaddr", "")
     removeif("port", "5432")
+    if "," in params.get("host", ""):
+        nhosts = len(params["host"].split(","))
+        removeif("port", ",".join(["5432"] * nhosts))
+        removeif("hostaddr", "," * (nhosts - 1))
     removeif("connect_timeout", str(DEFAULT_TIMEOUT))
 
     return params

@@ -1,16 +1,19 @@
 import socket
 import asyncio
 import datetime as dt
+from functools import reduce
 
 import pytest
 
 import psycopg
 from psycopg import ProgrammingError
 from psycopg.conninfo import make_conninfo, conninfo_to_dict, ConnectionInfo
-from psycopg.conninfo import resolve_hostaddr_async
+from psycopg.conninfo import conninfo_attempts, conninfo_attempts_async
 from psycopg._encodings import pg2pyenc
 
+from .utils import alist
 from .fix_crdb import crdb_encoding
+from .test_connection import drop_default_args_from_conninfo
 
 snowman = "\u2603"
 
@@ -323,6 +326,42 @@ class TestConnectionInfo:
         ("host='' user=bar", "host='' user=bar", None),
         (
             "host=127.0.0.1 user=bar",
+            "host=127.0.0.1 user=bar",
+            None,
+        ),
+        (
+            "host=1.1.1.1,2.2.2.2 user=bar",
+            "host=1.1.1.1,2.2.2.2 user=bar",
+            None,
+        ),
+        (
+            "host=1.1.1.1,2.2.2.2 port=5432",
+            "host=1.1.1.1,2.2.2.2 port=5432,5432",
+            None,
+        ),
+        (
+            "host=foo.com port=5432",
+            "host=foo.com port=5432 hostaddr=1.2.3.4",
+            {"PGHOSTADDR": "1.2.3.4"},
+        ),
+    ],
+)
+@pytest.mark.anyio
+def test_conninfo_attempts(setpgenv, conninfo, want, env):
+    setpgenv(env)
+    params = conninfo_to_dict(conninfo)
+    attempts = list(conninfo_attempts(params))
+    params = drop_default_args_from_conninfo(reduce(merge_conninfos, attempts))
+    assert drop_default_args_from_conninfo(conninfo_to_dict(want)) == params
+
+
+@pytest.mark.parametrize(
+    "conninfo, want, env",
+    [
+        ("", "", None),
+        ("host='' user=bar", "host='' user=bar", None),
+        (
+            "host=127.0.0.1 user=bar",
             "host=127.0.0.1 user=bar hostaddr=127.0.0.1",
             None,
         ),
@@ -349,13 +388,14 @@ class TestConnectionInfo:
     ],
 )
 @pytest.mark.anyio
-async def test_resolve_hostaddr_async_no_resolve(
+async def test_conninfo_attempts_async_no_resolve(
     setpgenv, conninfo, want, env, fail_resolve
 ):
     setpgenv(env)
     params = conninfo_to_dict(conninfo)
-    params = await resolve_hostaddr_async(params)
-    assert conninfo_to_dict(want) == params
+    attempts = await alist(conninfo_attempts_async(params))
+    params = drop_default_args_from_conninfo(reduce(merge_conninfos, attempts))
+    assert drop_default_args_from_conninfo(conninfo_to_dict(want)) == params
 
 
 @pytest.mark.parametrize(
@@ -399,10 +439,11 @@ async def test_resolve_hostaddr_async_no_resolve(
     ],
 )
 @pytest.mark.anyio
-async def test_resolve_hostaddr_async(conninfo, want, env, fake_resolve):
+async def test_conninfo_attempts_async(conninfo, want, env, fake_resolve):
     params = conninfo_to_dict(conninfo)
-    params = await resolve_hostaddr_async(params)
-    assert conninfo_to_dict(want) == params
+    attempts = await alist(conninfo_attempts_async(params))
+    params = drop_default_args_from_conninfo(reduce(merge_conninfos, attempts))
+    assert drop_default_args_from_conninfo(conninfo_to_dict(want)) == params
 
 
 @pytest.mark.parametrize(
@@ -415,11 +456,27 @@ async def test_resolve_hostaddr_async(conninfo, want, env, fake_resolve):
     ],
 )
 @pytest.mark.anyio
-async def test_resolve_hostaddr_async_bad(setpgenv, conninfo, env, fake_resolve):
+async def test_conninfo_attempts_async_bad(setpgenv, conninfo, env, fake_resolve):
     setpgenv(env)
     params = conninfo_to_dict(conninfo)
     with pytest.raises(psycopg.Error):
-        await resolve_hostaddr_async(params)
+        await alist(conninfo_attempts_async(params))
+
+
+@pytest.mark.parametrize(
+    "conninfo, env",
+    [
+        ("host=foo.com port=1,2", None),
+        ("host=1.1.1.1,2.2.2.2 port=5432,5433,5434", None),
+        ("host=1.1.1.1,2.2.2.2", {"PGPORT": "1,2,3"}),
+    ],
+)
+@pytest.mark.anyio
+def test_conninfo_attempts_bad(setpgenv, conninfo, env):
+    setpgenv(env)
+    params = conninfo_to_dict(conninfo)
+    with pytest.raises(psycopg.Error):
+        list(conninfo_attempts(params))
 
 
 @pytest.fixture
@@ -448,3 +505,18 @@ async def fail_resolve(monkeypatch):
         pytest.fail(f"shouldn't try to resolve {host}")
 
     monkeypatch.setattr(asyncio.get_running_loop(), "getaddrinfo", fail_getaddrinfo)
+
+
+def merge_conninfos(a1, a2):
+    """
+    merge conninfo attempts into a multi-host conninfo.
+    """
+    assert set(a1) == set(a2)
+    rv = {}
+    for k in a1:
+        if k in ("host", "hostaddr", "port"):
+            rv[k] = f"{a1[k]},{a2[k]}"
+        else:
+            assert a1[k] == a2[k]
+            rv[k] = a1[k]
+    return rv
