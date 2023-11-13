@@ -51,6 +51,38 @@ async def test_connect_timeout(aconn_cls, deaf_port):
     assert elapsed == pytest.approx(1.0, abs=0.05)
 
 
+@pytest.mark.slow
+@pytest.mark.timing
+async def test_multi_hosts(aconn_cls, proxy, dsn, deaf_port, monkeypatch):
+    args = conninfo_to_dict(dsn)
+    args["host"] = f"{proxy.client_host},{proxy.server_host}"
+    args["port"] = f"{deaf_port},{proxy.server_port}"
+    args.pop("hostaddr", None)
+    monkeypatch.setattr(aconn_cls, "_DEFAULT_CONNECT_TIMEOUT", 2)
+    t0 = time.time()
+    async with await aconn_cls.connect(**args) as conn:
+        elapsed = time.time() - t0
+        assert 2.0 < elapsed < 2.5
+        assert conn.info.port == int(proxy.server_port)
+        assert conn.info.host == proxy.server_host
+
+
+@pytest.mark.slow
+@pytest.mark.timing
+async def test_multi_hosts_timeout(aconn_cls, proxy, dsn, deaf_port):
+    args = conninfo_to_dict(dsn)
+    args["host"] = f"{proxy.client_host},{proxy.server_host}"
+    args["port"] = f"{deaf_port},{proxy.server_port}"
+    args.pop("hostaddr", None)
+    args["connect_timeout"] = "1"
+    t0 = time.time()
+    async with await aconn_cls.connect(**args) as conn:
+        elapsed = time.time() - t0
+        assert 1.0 < elapsed < 1.5
+        assert conn.info.port == int(proxy.server_port)
+        assert conn.info.host == proxy.server_host
+
+
 async def test_close(aconn):
     assert not aconn.closed
     assert not aconn.broken
