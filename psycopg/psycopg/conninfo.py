@@ -282,55 +282,6 @@ class ConnectionInfo:
         return value.decode(self.encoding)
 
 
-async def resolve_hostaddr_async(params: ConnDict) -> ConnDict:
-    """
-    Perform async DNS lookup of the hosts and return a new params dict.
-
-    :param params: The input parameters, for instance as returned by
-        `~psycopg.conninfo.conninfo_to_dict()`.
-
-    If a ``host`` param is present but not ``hostname``, resolve the host
-    addresses dynamically.
-
-    The function may change the input ``host``, ``hostname``, ``port`` to allow
-    connecting without further DNS lookups, eventually removing hosts that are
-    not resolved, keeping the lists of hosts and ports consistent.
-
-    Raise `~psycopg.OperationalError` if connection is not possible (e.g. no
-    host resolve, inconsistent lists length).
-    """
-    hosts: list[str] = []
-    hostaddrs: list[str] = []
-    ports: list[str] = []
-
-    for attempt in _split_attempts(_inject_defaults(params)):
-        try:
-            async for a2 in _split_attempts_and_resolve(attempt):
-                hosts.append(a2["host"])
-                hostaddrs.append(a2["hostaddr"])
-                if "port" in params:
-                    ports.append(a2["port"])
-        except OSError as ex:
-            last_exc = ex
-
-    if params.get("host") and not hosts:
-        # We couldn't resolve anything
-        raise e.OperationalError(str(last_exc))
-
-    out = params.copy()
-    shosts = ",".join(hosts)
-    if shosts:
-        out["host"] = shosts
-    shostaddrs = ",".join(hostaddrs)
-    if shostaddrs:
-        out["hostaddr"] = shostaddrs
-    sports = ",".join(ports)
-    if ports:
-        out["port"] = sports
-
-    return out
-
-
 def conninfo_attempts(params: ConnDict) -> Iterator[ConnDict]:
     """Split a set of connection params on the single attempts to perforn.
 
