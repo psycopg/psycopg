@@ -15,6 +15,8 @@ from .utils import gc_collect
 from .test_cursor import my_row_factory
 from .test_adapt import make_bin_dumper, make_dumper
 
+DEFAULT_TIMEOUT = psycopg.Connection._DEFAULT_CONNECT_TIMEOUT
+
 
 def test_connect(conn_cls, dsn):
     conn = conn_cls.connect(dsn)
@@ -46,6 +48,38 @@ def test_connect_timeout(conn_cls, deaf_port):
         conn_cls.connect(host="localhost", port=deaf_port, connect_timeout=1)
     elapsed = time.time() - t0
     assert elapsed == pytest.approx(1.0, abs=0.05)
+
+
+@pytest.mark.slow
+@pytest.mark.timing
+def test_multi_hosts(conn_cls, proxy, dsn, deaf_port, monkeypatch):
+    args = conninfo_to_dict(dsn)
+    args["host"] = f"{proxy.client_host},{proxy.server_host}"
+    args["port"] = f"{deaf_port},{proxy.server_port}"
+    args.pop("hostaddr", None)
+    monkeypatch.setattr(conn_cls, "_DEFAULT_CONNECT_TIMEOUT", 2)
+    t0 = time.time()
+    with conn_cls.connect(**args) as conn:
+        elapsed = time.time() - t0
+        assert 2.0 < elapsed < 2.5
+        assert conn.info.port == int(proxy.server_port)
+        assert conn.info.host == proxy.server_host
+
+
+@pytest.mark.slow
+@pytest.mark.timing
+def test_multi_hosts_timeout(conn_cls, proxy, dsn, deaf_port):
+    args = conninfo_to_dict(dsn)
+    args["host"] = f"{proxy.client_host},{proxy.server_host}"
+    args["port"] = f"{deaf_port},{proxy.server_port}"
+    args.pop("hostaddr", None)
+    args["connect_timeout"] = "1"
+    t0 = time.time()
+    with conn_cls.connect(**args) as conn:
+        elapsed = time.time() - t0
+        assert 1.0 < elapsed < 1.5
+        assert conn.info.port == int(proxy.server_port)
+        assert conn.info.host == proxy.server_host
 
 
 def test_close(conn):
@@ -359,25 +393,26 @@ def test_autocommit_unknown(conn):
         (("host=foo user=bar",), {}, "host=foo user=bar"),
         (("host=foo",), {"user": "baz"}, "host=foo user=baz"),
         (
-            ("host=foo port=5432",),
-            {"host": "qux", "user": "joe"},
-            "host=qux user=joe port=5432",
+            ("dbname=foo port=5433",),
+            {"dbname": "qux", "user": "joe"},
+            "dbname=qux user=joe port=5433",
         ),
         (("host=foo",), {"user": None}, "host=foo"),
     ],
 )
-def test_connect_args(conn_cls, monkeypatch, pgconn, args, kwargs, want):
-    the_conninfo: str
+def test_connect_args(conn_cls, monkeypatch, setpgenv, pgconn, args, kwargs, want):
+    got_conninfo: str
 
     def fake_connect(conninfo):
-        nonlocal the_conninfo
-        the_conninfo = conninfo
+        nonlocal got_conninfo
+        got_conninfo = conninfo
         return pgconn
         yield
 
     monkeypatch.setattr(psycopg.connection, "connect", fake_connect)
     conn = conn_cls.connect(*args, **kwargs)
-    assert conninfo_to_dict(the_conninfo) == conninfo_to_dict(want)
+    got_params = drop_default_args_from_conninfo(got_conninfo)
+    assert got_params == conninfo_to_dict(want)
     conn.close()
 
 
@@ -761,7 +796,7 @@ conninfo_params_timeout = [
     (
         "",
         {"dbname": "mydb", "connect_timeout": None},
-        ({"dbname": "mydb"}, None),
+        ({"dbname": "mydb"}, DEFAULT_TIMEOUT),
     ),
     (
         "",
@@ -771,7 +806,7 @@ conninfo_params_timeout = [
     (
         "dbname=postgres",
         {},
-        ({"dbname": "postgres"}, None),
+        ({"dbname": "postgres"}, DEFAULT_TIMEOUT),
     ),
     (
         "dbname=postgres connect_timeout=2",
@@ -790,8 +825,8 @@ conninfo_params_timeout = [
 def test_get_connection_params(conn_cls, dsn, kwargs, exp):
     params = conn_cls._get_connection_params(dsn, **kwargs)
     conninfo = make_conninfo(**params)
-    assert conninfo_to_dict(conninfo) == exp[0]
-    assert params.get("connect_timeout") == exp[1]
+    assert drop_default_args_from_conninfo(conninfo) == exp[0]
+    assert params["connect_timeout"] == exp[1]
 
 
 def test_connect_context(conn_cls, dsn):
@@ -824,3 +859,25 @@ def test_connect_context_copy(conn_cls, dsn, conn):
 def test_cancel_closed(conn):
     conn.close()
     conn.cancel()
+
+
+def drop_default_args_from_conninfo(conninfo):
+    if isinstance(conninfo, str):
+        params = conninfo_to_dict(conninfo)
+    else:
+        params = conninfo.copy()
+
+    def removeif(key, value):
+        if params.get(key) == value:
+            params.pop(key)
+
+    removeif("host", "")
+    removeif("hostaddr", "")
+    removeif("port", "5432")
+    if "," in params.get("host", ""):
+        nhosts = len(params["host"].split(","))
+        removeif("port", ",".join(["5432"] * nhosts))
+        removeif("hostaddr", "," * (nhosts - 1))
+    removeif("connect_timeout", str(DEFAULT_TIMEOUT))
+
+    return params

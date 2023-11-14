@@ -7,6 +7,7 @@ from psycopg.conninfo import conninfo_to_dict
 
 from . import dbapi20
 from . import dbapi20_tpc
+from .test_connection import drop_default_args_from_conninfo
 
 
 @pytest.fixture(scope="class")
@@ -125,25 +126,25 @@ def test_time_from_ticks(ticks, want):
         (("host=foo user=bar",), {}, "host=foo user=bar"),
         (("host=foo",), {"user": "baz"}, "host=foo user=baz"),
         (
-            ("host=foo port=5432",),
+            ("host=foo port=5433",),
             {"host": "qux", "user": "joe"},
-            "host=qux user=joe port=5432",
+            "host=qux user=joe port=5433",
         ),
         (("host=foo",), {"user": None}, "host=foo"),
     ],
 )
 def test_connect_args(monkeypatch, pgconn, args, kwargs, want):
-    the_conninfo: str
+    got_conninfo: str
 
     def fake_connect(conninfo):
-        nonlocal the_conninfo
-        the_conninfo = conninfo
+        nonlocal got_conninfo
+        got_conninfo = conninfo
         return pgconn
         yield
 
     monkeypatch.setattr(psycopg.connection, "connect", fake_connect)
     conn = psycopg.connect(*args, **kwargs)
-    assert conninfo_to_dict(the_conninfo) == conninfo_to_dict(want)
+    assert drop_default_args_from_conninfo(got_conninfo) == conninfo_to_dict(want)
     conn.close()
 
 
