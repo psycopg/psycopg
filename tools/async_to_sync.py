@@ -308,6 +308,7 @@ class RenameAsyncToSync(ast.NodeTransformer):
         "aspawn": "spawn",
         "asynccontextmanager": "contextmanager",
         "connection_async": "connection",
+        "conninfo_attempts_async": "conninfo_attempts",
         "current_task_name": "current_thread_name",
         "cursor_async": "cursor",
         "ensure_table_async": "ensure_table",

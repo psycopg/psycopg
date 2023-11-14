@@ -92,12 +92,6 @@ server before performing a connection.
     .. warning::
         This is an experimental method.
 
-    .. versionchanged:: 3.1
-        Unlike the sync counterpart, perform non-blocking address
-        resolution and populate the ``hostaddr`` connection parameter,
-        unless the user has provided one themselves. See
-        `resolve_hostaddr_async()` for details.
-
 
 .. function:: resolve_hostaddr_async(params)
     :async:

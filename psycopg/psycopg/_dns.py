@@ -23,7 +23,7 @@ except ImportError:
     )
 
 from . import errors as e
-from .conninfo import resolve_hostaddr_async as resolve_hostaddr_async_
+from . import conninfo
 
 if TYPE_CHECKING:
     from dns.rdtypes.IN.SRV import SRV
@@ -48,7 +48,36 @@ async def resolve_hostaddr_async(params: Dict[str, Any]) -> Dict[str, Any]:
         "from psycopg 3.1, resolve_hostaddr_async() is not needed anymore",
         DeprecationWarning,
     )
-    return await resolve_hostaddr_async_(params)
+    hosts: list[str] = []
+    hostaddrs: list[str] = []
+    ports: list[str] = []
+
+    for attempt in conninfo._split_attempts(conninfo._inject_defaults(params)):
+        try:
+            async for a2 in conninfo._split_attempts_and_resolve(attempt):
+                hosts.append(a2["host"])
+                hostaddrs.append(a2["hostaddr"])
+                if "port" in params:
+                    ports.append(a2["port"])
+        except OSError as ex:
+            last_exc = ex
+
+    if params.get("host") and not hosts:
+        # We couldn't resolve anything
+        raise e.OperationalError(str(last_exc))
+
+    out = params.copy()
+    shosts = ",".join(hosts)
+    if shosts:
+        out["host"] = shosts
+    shostaddrs = ",".join(hostaddrs)
+    if shostaddrs:
+        out["hostaddr"] = shostaddrs
+    sports = ",".join(ports)
+    if ports:
+        out["port"] = sports
+
+    return out
 
 
 def resolve_srv(params: Dict[str, Any]) -> Dict[str, Any]:

@@ -97,6 +97,11 @@ class BaseConnection(Generic[Row]):
     ConnStatus = pq.ConnStatus
     TransactionStatus = pq.TransactionStatus
 
+    # Default timeout for connection a attempt.
+    # Arbitrary timeout, what applied by the libpq on my computer.
+    # Your mileage won't vary.
+    _DEFAULT_CONNECT_TIMEOUT = 130
+
     def __init__(self, pgconn: "PGconn"):
         self.pgconn = pgconn
         self._autocommit = False
@@ -423,13 +428,10 @@ class BaseConnection(Generic[Row]):
     def _connect_gen(
         cls: Type[ConnectionType],
         conninfo: str = "",
-        *,
-        autocommit: bool = False,
     ) -> PQGenConn[ConnectionType]:
         """Generator to connect to the database and create a new instance."""
         pgconn = yield from generators.connect(conninfo)
         conn = cls(pgconn)
-        conn._autocommit = bool(autocommit)
         return conn
 
     def _exec_command(
