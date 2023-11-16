@@ -604,8 +604,9 @@ class PGconn:
         ptr = impl.PQnotifies(self._pgconn_ptr)
         if ptr:
             c = ptr.contents
-            return PGnotify(c.relname, c.be_pid, c.extra)
+            rv = PGnotify(c.relname, c.be_pid, c.extra)
             impl.PQfreemem(ptr)
+            return rv
         else:
             return None
 

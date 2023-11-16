@@ -40,6 +40,8 @@ Psycopg 3.1.13 (unreleased)
   consistently with :pep:`475` guideline (:ticket:`#667`).
 - Fix support for connection strings with multiple hosts/ports and for the
   ``load_balance_hosts`` connection parameter (:ticket:`#674`).
+- Fix memory leak receiving notifications in Python implementation
+  (:ticket:`#679`).
 
 
 Current release
