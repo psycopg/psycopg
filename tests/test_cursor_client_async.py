@@ -131,6 +131,7 @@ async def test_leak(aconn_cls, dsn, faker, fetch, row_factory):
         ("select %%, %s", (["a"],), "select %, 'a'"),
         ("select %%, %(foo)s", ({"foo": "x"},), "select %, 'x'"),
         ("select %%s, %(foo)s", ({"foo": "x"},), "select %s, 'x'"),
+        ("select %%s, ANY(%(foo)s)", ({"foo": ["x", "y"]},), "select %s, ANY({'x','y'})"),
     ],
 )
 async def test_mogrify(aconn, query, params, want):
