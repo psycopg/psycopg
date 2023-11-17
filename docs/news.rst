@@ -30,8 +30,11 @@ Psycopg 3.2 (unreleased)
 .. __: https://numpy.org/doc/stable/reference/arrays.scalars.html#built-in-scalar-types
 
 
-Psycopg 3.1.13 (unreleased)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Current release
+---------------
+
+Psycopg 3.1.13
+^^^^^^^^^^^^^^
 
 - Raise `DataError` instead of whatever internal failure trying to dump a
   `~datetime.time` object with with a `!tzinfo` specified as
@@ -43,9 +46,6 @@ Psycopg 3.1.13 (unreleased)
 - Fix memory leak receiving notifications in Python implementation
   (:ticket:`#679`).
 
-
-Current release
----------------
 
 Psycopg 3.1.12
 ^^^^^^^^^^^^^^
