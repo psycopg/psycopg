@@ -7,11 +7,11 @@
 ``psycopg`` release notes
 =========================
 
-Future releases
+Current release
 ---------------
 
-Psycopg 3.1.13 (unreleased)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Psycopg 3.1.13
+^^^^^^^^^^^^^^
 
 - Raise `DataError` instead of whatever internal failure trying to dump a
   `~datetime.time` object with with a `!tzinfo` specified as
@@ -23,9 +23,6 @@ Psycopg 3.1.13 (unreleased)
 - Fix memory leak receiving notifications in Python implementation
   (:ticket:`#679`).
 
-
-Current release
----------------
 
 Psycopg 3.1.12
 ^^^^^^^^^^^^^^
