@@ -8,9 +8,12 @@ from dataclasses import dataclass
 import pytest
 import psycopg
 from psycopg.conninfo import conninfo_to_dict
-from psycopg._connection_base import BaseConnection
 
-DEFAULT_TIMEOUT = BaseConnection._DEFAULT_CONNECT_TIMEOUT
+# Don't import this to allow tests to import (not necessarily to pass all)
+# if the psycopg module imported is not the one expected (e.g. running
+# psycopg pool tests on the master branch with psycopg 3.1.x imported).
+# psycopg._connection_base.BaseConnection._DEFAULT_CONNECT_TIMEOUT
+DEFAULT_TIMEOUT = 130
 
 
 @pytest.fixture
