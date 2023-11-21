@@ -409,6 +409,7 @@ def test_connect_args(conn_cls, monkeypatch, setpgenv, pgconn, args, kwargs, wan
         return pgconn
         yield
 
+    setpgenv({})
     monkeypatch.setattr(psycopg.connection, "connect", fake_connect)
     conn = conn_cls.connect(*args, **kwargs)
     got_params = drop_default_args_from_conninfo(got_conninfo)
