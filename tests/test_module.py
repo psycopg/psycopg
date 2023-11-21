@@ -15,7 +15,7 @@ from ._test_connection import drop_default_args_from_conninfo
         ((), {"user": "foo", "dbname": None}, "user=foo"),
     ],
 )
-def test_connect(monkeypatch, dsn, args, kwargs, want):
+def test_connect(monkeypatch, dsn, args, kwargs, want, setpgenv):
     # Check the main args passing from psycopg.connect to the conn generator
     # Details of the params manipulation are in test_conninfo.
     import psycopg.connection
@@ -29,6 +29,7 @@ def test_connect(monkeypatch, dsn, args, kwargs, want):
         got_conninfo = conninfo
         return orig_connect(dsn)
 
+    setpgenv({})
     monkeypatch.setattr(psycopg.generators, "connect", mock_connect)
 
     conn = psycopg.connect(*args, **kwargs)
