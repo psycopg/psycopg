@@ -133,7 +133,7 @@ def test_time_from_ticks(ticks, want):
         (("host=foo",), {"user": None}, "host=foo"),
     ],
 )
-def test_connect_args(monkeypatch, pgconn, args, kwargs, want):
+def test_connect_args(monkeypatch, pgconn, args, kwargs, want, setpgenv):
     got_conninfo: str
 
     def fake_connect(conninfo):
@@ -142,6 +142,7 @@ def test_connect_args(monkeypatch, pgconn, args, kwargs, want):
         return pgconn
         yield
 
+    setpgenv({})
     monkeypatch.setattr(psycopg.connection, "connect", fake_connect)
     conn = psycopg.connect(*args, **kwargs)
     assert drop_default_args_from_conninfo(got_conninfo) == conninfo_to_dict(want)

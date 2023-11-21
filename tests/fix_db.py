@@ -9,6 +9,7 @@ from typing import Optional
 import psycopg
 from psycopg import pq
 from psycopg import sql
+from psycopg.conninfo import conninfo_to_dict, make_conninfo
 from psycopg._compat import cache
 from psycopg.pq._debug import PGconnDebug
 
@@ -102,6 +103,23 @@ def dsn(session_dsn, request):
     """Return the dsn used to connect to the `--test-dsn` database."""
     check_connection_version(request.node)
     return session_dsn
+
+
+@pytest.fixture
+def dsn_env(dsn):
+    """Return a dsn including the connection parameters set in PG* env vars.
+
+    Provide a working conninfo even in tests that modify the env vars.
+    """
+    args = conninfo_to_dict(dsn)
+    for opt in pq.Conninfo.get_defaults():
+        if not (opt.envvar and opt.envvar.decode() in os.environ):
+            continue
+        if opt.keyword.decode() in args:
+            continue
+        args[opt.keyword.decode()] = os.environ[opt.envvar.decode()]
+
+    return make_conninfo(**args)
 
 
 @pytest.fixture(scope="session")
