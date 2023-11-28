@@ -7,6 +7,15 @@ from dataclasses import dataclass
 
 import pytest
 import psycopg
+from psycopg.conninfo import conninfo_to_dict
+
+try:
+    from psycopg.conninfo import _DEFAULT_CONNECT_TIMEOUT as DEFAULT_TIMEOUT
+except ImportError:
+    # Allow tests to import (not necessarily to pass all) if the psycopg module
+    # imported is not the one expected (e.g. running psycopg pool tests on the
+    # master branch with psycopg 3.1.x imported).
+    DEFAULT_TIMEOUT = 130
 
 
 @pytest.fixture
@@ -75,17 +84,17 @@ conninfo_params_timeout = [
     (
         "",
         {"dbname": "mydb", "connect_timeout": None},
-        ({"dbname": "mydb"}, None),
+        ({"dbname": "mydb"}, DEFAULT_TIMEOUT),
     ),
     (
         "",
         {"dbname": "mydb", "connect_timeout": 1},
-        ({"dbname": "mydb", "connect_timeout": "1"}, 1),
+        ({"dbname": "mydb", "connect_timeout": 1}, 2),
     ),
     (
         "dbname=postgres",
         {},
-        ({"dbname": "postgres"}, None),
+        ({"dbname": "postgres"}, DEFAULT_TIMEOUT),
     ),
     (
         "dbname=postgres connect_timeout=2",
@@ -95,6 +104,21 @@ conninfo_params_timeout = [
     (
         "postgresql:///postgres?connect_timeout=2",
         {"connect_timeout": 10},
-        ({"dbname": "postgres", "connect_timeout": "10"}, 10),
+        ({"dbname": "postgres", "connect_timeout": 10}, 10),
     ),
 ]
+
+
+def drop_default_args_from_conninfo(conninfo):
+    if isinstance(conninfo, str):
+        params = conninfo_to_dict(conninfo)
+    else:
+        params = conninfo.copy()
+
+    def removeif(key, value):
+        if params.get(key) == value:
+            params.pop(key)
+
+    removeif("connect_timeout", str(DEFAULT_TIMEOUT))
+
+    return params

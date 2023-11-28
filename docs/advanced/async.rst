@@ -1,14 +1,83 @@
 .. currentmodule:: psycopg
 
+
+.. index:: threads
+
+.. _concurrency:
+
+Concurrent operations
+=====================
+
+Psycopg allows to write *concurrent* code, executing more than one operation
+at time.
+
+- `Connection` objects *are thread-safe*: more than one thread at time can use
+  the same connection. Different thread can use the same connection by
+  creating different cursors.
+
+- `Cursor` objects *are not thread-safe*, and are not designed to be used by
+  several threads at the same time. However, cursors are lightweight objects:
+  different threads can create each one its own cursor to use independently
+  from other threads.
+
+.. note::
+
+    All the cursors that share the same connection *will also share the same
+    transaction*. This means that, if a thread starts a transaction, every
+    cursor on the same connection will execute their queries in the same
+    transaction and, if one thread causes a database server error, all the
+    other cursors will be in error state until transaction rollback.
+
+    It also means that every cursor will see changes made in the same session
+    by other cursors, even if the transaction is still uncommitted. This
+    effect might be desirable or not, and is something to consider when
+    deciding whether to share a connection or not.
+
+.. hint::
+
+    Should you use many cursors or many connections?
+
+    Query execution and results retrieval on a connection is serialized: only
+    one cursor at time will be able to run a query on the same connection (the
+    `!Connection` object will coordinate different cursors' access). If your
+    program runs a mix of database and non-database operations in several
+    threads, then these threads might be able to share the same connection.
+    However, if you expect to execute massively parallel operations on the
+    database, it might be useful to use more than one connection at time,
+    rather than many cursors on the same connection (or a mix of both).
+
+    Using several connections, however, has an impact on the server's
+    performance and usually the number of connections that a server can handle
+    is limited by grumpy sysadmins with long beards and a strict control on
+    the `max_connections`__ server setting.
+
+    If you want to use more than one connection at time, but still avoid to
+    create too many connections and starve the server, you might want to use a
+    :ref:`connection pool <connection-pools>`.
+
+    .. __: https://www.postgresql.org/docs/current/runtime-config-connection.html#GUC-MAX-CONNECTIONS
+
+.. warning::
+
+    *Connections are not process-safe* and cannot be shared across processes,
+    for instance using the facilities of the `multiprocessing` module.
+
+    If you are using Psycopg in a forking framework (for instance in a web
+    server that implements concurrency using multiprocessing), you should make
+    sure that the database connections are created after the worker process is
+    forked. Failing to do so you will probably find the connection in broken
+    state.
+
+
 .. index:: asyncio
 
 .. _async:
 
 Asynchronous operations
-=======================
+-----------------------
 
-Psycopg `~Connection` and `~Cursor` have counterparts `~AsyncConnection` and
-`~AsyncCursor` supporting an `asyncio` interface.
+Psycopg `Connection` and `Cursor` have counterparts `AsyncConnection` and
+`AsyncCursor` supporting an `asyncio` interface.
 
 The design of the asynchronous objects is pretty much the same of the sync
 ones: in order to use them you will only have to scatter the `!await` keyword
@@ -27,6 +96,12 @@ here and there.
             # will return (1, 100, "abc'def")
             async for record in acur:
                 print(record)
+
+An `!AsyncConnection` can be used by several `asyncio.Task` at the same time.
+However, as with threads, all the `AsyncCursor` on the same connection will
+share the same session and will have their access to the connection
+serialized.
+
 
 .. versionchanged:: 3.1
 
@@ -139,6 +214,31 @@ manually cancel connections.  This should no longer be necessary.
 
 
 .. __: https://docs.python.org/3/library/asyncio-task.html#task-cancellation
+
+
+.. index:: gevent
+
+.. _gevent:
+
+Gevent support
+--------------
+
+Psycopg 3 supports `gevent <https://www.gevent.org/>`__ out of the box. If the
+`select` module is found patched by functions such as
+`gevent.monkey.patch_select()`__ or `patch_all()`__, psycopg will behave in a
+collaborative way.
+
+Unlike with `!psycopg2`, using the `!psycogreen` module is not required.
+
+.. __: http://www.gevent.org/api/gevent.monkey.html#gevent.monkey.patch_select
+.. __: http://www.gevent.org/api/gevent.monkey.html#gevent.monkey.patch_all
+
+.. warning::
+
+    gevent support was initially accidental, and was accidentally broken in
+    psycopg 3.1.4.
+
+    gevent is officially supported only starting from psycopg 3.1.14.
 
 
 .. index::

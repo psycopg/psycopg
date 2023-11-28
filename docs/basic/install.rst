@@ -6,7 +6,7 @@ Installation
 In short, if you use a :ref:`supported system<supported-systems>`::
 
     pip install --upgrade pip           # upgrade pip to at least 20.3
-    pip install "psycopg[binary]"
+    pip install "psycopg[binary]"       # remove [binary] for PyPy
 
 and you should be :ref:`ready to start <module-usage>`. Read further for
 alternative ways to install.
@@ -26,6 +26,10 @@ The Psycopg version documented here has *official and tested* support for:
 
   - Python 3.6 supported before Psycopg 3.1
   - Python 3.7 supported before Psycopg 3.2
+
+- PyPy: from version 3.9 to 3.10
+
+  - **Note:** Only the pure Python version is supported.
 
 - PostgreSQL: from version 10 to 16
 - OS: Linux, macOS, Windows
@@ -76,6 +80,10 @@ installation <local-installation>` or a :ref:`pure Python installation
     For further information about the differences between the packages see
     :ref:`pq-impl`.
 
+.. warning::
+
+   The binary installation is not supported by PyPy.
+
 
 .. _local-installation:
 
@@ -102,6 +110,10 @@ try this and follow the `binary installation`_ instead.
 If your build prerequisites are in place you can run::
 
     pip install "psycopg[c]"
+
+.. warning::
+
+   The local installation is not supported by PyPy.
 
 
 .. _pure-python-installation:

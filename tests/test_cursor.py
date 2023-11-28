@@ -10,8 +10,6 @@ import psycopg
 from psycopg import pq, rows, errors as e
 from psycopg.adapt import PyFormat
 
-from .utils import gc_collect, gc_count
-
 
 def test_default_cursor(conn):
     cur = conn.cursor()
@@ -69,7 +67,7 @@ def test_query_params_executemany(conn):
 @pytest.mark.parametrize("fmt_out", pq.Format)
 @pytest.mark.parametrize("fetch", ["one", "many", "all", "iter"])
 @pytest.mark.parametrize("row_factory", ["tuple_row", "dict_row", "namedtuple_row"])
-def test_leak(conn_cls, dsn, faker, fmt, fmt_out, fetch, row_factory):
+def test_leak(conn_cls, dsn, faker, fmt, fmt_out, fetch, row_factory, gc):
     faker.format = fmt
     faker.choose_schema(ncols=5)
     faker.make_records(10)
@@ -101,10 +99,10 @@ def test_leak(conn_cls, dsn, faker, fmt, fmt_out, fetch, row_factory):
                         pass
 
     n = []
-    gc_collect()
+    gc.collect()
     for i in range(3):
         work()
-        gc_collect()
-        n.append(gc_count())
+        gc.collect()
+        n.append(gc.count())
 
     assert n[0] == n[1] == n[2], f"objects leaked: {n[1] - n[0]}, {n[2] - n[1]}"

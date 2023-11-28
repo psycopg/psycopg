@@ -1,6 +1,6 @@
-import sys
 import asyncio
 import selectors
+import sys
 from typing import Any, Dict, List
 
 import pytest
@@ -13,6 +13,7 @@ pytest_plugins = (
     "tests.fix_proxy",
     "tests.fix_psycopg",
     "tests.fix_crdb",
+    "tests.fix_gc",
     "tests.pool.fix_pool",
 )
 
@@ -25,6 +26,7 @@ def pytest_configure(config):
         # catch the exception for my life.
         "subprocess: the test import psycopg after subprocess",
         "timing: the test is timing based and can fail on cheese hardware",
+        "gevent: the test requires the gevent module to be installed",
         "dns: the test requires dnspython to run",
         "postgis: the test requires the PostGIS extension to run",
         "numpy: the test requires numpy module to be installed",

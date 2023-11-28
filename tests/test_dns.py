@@ -33,7 +33,6 @@ async def test_resolve_hostaddr_async_warning(recwarn):
     params = await psycopg._dns.resolve_hostaddr_async(  # type: ignore[attr-defined]
         params
     )
-    assert conninfo_to_dict(conninfo) == params
     assert "resolve_hostaddr_async" in str(recwarn.pop(DeprecationWarning).message)
 
 

@@ -1,10 +1,11 @@
 import pytest
 
 from psycopg._cmodule import _psycopg
+from psycopg.conninfo import conninfo_to_dict
 
 
 @pytest.mark.parametrize(
-    "args, kwargs, want_conninfo",
+    "args, kwargs, want",
     [
         ((), {}, ""),
         (("dbname=foo",), {"user": "bar"}, "dbname=foo user=bar"),
@@ -12,24 +13,25 @@ from psycopg._cmodule import _psycopg
         ((), {"user": "foo", "dbname": None}, "user=foo"),
     ],
 )
-def test_connect(monkeypatch, dsn, args, kwargs, want_conninfo):
+def test_connect(monkeypatch, dsn_env, args, kwargs, want, setpgenv):
     # Check the main args passing from psycopg.connect to the conn generator
     # Details of the params manipulation are in test_conninfo.
     import psycopg.connection
 
     orig_connect = psycopg.generators.connect
 
-    got_conninfo = None
+    got_conninfo: str
 
     def mock_connect(conninfo):
         nonlocal got_conninfo
         got_conninfo = conninfo
-        return orig_connect(dsn)
+        return orig_connect(dsn_env)
 
+    setpgenv({})
     monkeypatch.setattr(psycopg.generators, "connect", mock_connect)
 
     conn = psycopg.connect(*args, **kwargs)
-    assert got_conninfo == want_conninfo
+    assert conninfo_to_dict(got_conninfo) == conninfo_to_dict(want)
     conn.close()
 
 

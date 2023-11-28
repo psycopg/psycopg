@@ -38,6 +38,8 @@ jobs:
           - {impl: c, python: "3.11", postgres: "postgres:12", libpq: oldest}
           - {impl: c, python: "3.12", postgres: "postgres:11", libpq: newest}
 
+          - {impl: python, python: "3.8", ext: gevent, postgres: "postgres:16"}
+          - {impl: c, python: "3.12", ext: gevent, postgres: "postgres:14"}
           - {impl: python, python: "3.9", ext: dns, postgres: "postgres:14"}
           - {impl: python, python: "3.9", ext: postgis, postgres: "postgis/postgis"}
           - {impl: python, python: "3.10", ext: numpy, postgres: "postgres:14"}
@@ -45,6 +47,10 @@ jobs:
 
           # Test with minimum dependencies versions
           - {impl: c, python: "3.8", ext: min, postgres: "postgres:15"}
+
+          # Test with PyPy.
+          - {impl: python, python: "pypy3.9", postgres: "postgres:13"}
+          - {impl: python, python: "pypy3.10", postgres: "postgres:14"}
 
     env:
       PSYCOPG_IMPL: ${{ matrix.impl }}
@@ -76,6 +82,12 @@ jobs:
         run: |
           echo "DEPS=$DEPS ./psycopg_c" >> $GITHUB_ENV
 
+      - name: Include gevent to the packages to install
+        if: ${{ matrix.ext == 'gevent' }}
+        run: |
+          echo "DEPS=$DEPS gevent" >> $GITHUB_ENV
+          echo "MARKERS=$MARKERS gevent" >> $GITHUB_ENV
+
       - name: Include dnspython to the packages to install
         if: ${{ matrix.ext == 'dns' }}
         run: |
@@ -93,10 +105,15 @@ jobs:
           echo "DEPS=$DEPS numpy" >> $GITHUB_ENV
           echo "MARKERS=$MARKERS numpy" >> $GITHUB_ENV
 
+      - name: Exclude certain tests from pypy
+        if: ${{ startsWith(matrix.python, 'pypy') }}
+        run: |
+          echo "NOT_MARKERS=$NOT_MARKERS timing" >> $GITHUB_ENV
+
       - name: Configure to use the oldest dependencies
         if: ${{ matrix.ext == 'min' }}
         run: |
-          echo "DEPS=$DEPS dnspython shapely numpy" >> $GITHUB_ENV
+          echo "DEPS=$DEPS dnspython shapely numpy gevent" >> $GITHUB_ENV
           echo "PIP_CONSTRAINT=${{ github.workspace }}/tests/constraints.txt" \
             >> $GITHUB_ENV
 

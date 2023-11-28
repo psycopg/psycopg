@@ -4,20 +4,35 @@ Functions to manipulate conninfo strings
 
 # Copyright (C) 2020 The Psycopg Team
 
+from __future__ import annotations
+
 import os
 import re
 import socket
 import asyncio
-from typing import Any, Dict, List, Optional
+import logging
+from typing import Any
+from random import shuffle
 from pathlib import Path
 from datetime import tzinfo
 from functools import lru_cache
 from ipaddress import ip_address
+from dataclasses import dataclass
+from typing_extensions import TypeAlias
 
 from . import pq
 from . import errors as e
 from ._tz import get_tzinfo
 from ._encodings import pgconn_encoding
+
+ConnDict: TypeAlias = "dict[str, Any]"
+
+# Default timeout for connection a attempt.
+# Arbitrary timeout, what applied by the libpq on my computer.
+# Your mileage won't vary.
+_DEFAULT_CONNECT_TIMEOUT = 130
+
+logger = logging.getLogger("psycopg")
 
 
 def make_conninfo(conninfo: str = "", **kwargs: Any) -> str:
@@ -61,7 +76,7 @@ def make_conninfo(conninfo: str = "", **kwargs: Any) -> str:
     return conninfo
 
 
-def conninfo_to_dict(conninfo: str = "", **kwargs: Any) -> Dict[str, Any]:
+def conninfo_to_dict(conninfo: str = "", **kwargs: Any) -> ConnDict:
     """
     Convert the `!conninfo` string into a dictionary of parameters.
 
@@ -84,7 +99,7 @@ def conninfo_to_dict(conninfo: str = "", **kwargs: Any) -> Dict[str, Any]:
     return rv
 
 
-def _parse_conninfo(conninfo: str) -> List[pq.ConninfoOption]:
+def _parse_conninfo(conninfo: str) -> list[pq.ConninfoOption]:
     """
     Verify that `!conninfo` is a valid connection string.
 
@@ -167,7 +182,7 @@ class ConnectionInfo:
         """
         return self._get_pgconn_attr("options")
 
-    def get_parameters(self) -> Dict[str, str]:
+    def get_parameters(self) -> dict[str, str]:
         """Return the connection parameters values.
 
         Return all the parameters set to a non-default value, which might come
@@ -228,7 +243,7 @@ class ConnectionInfo:
         """
         return pq.PipelineStatus(self.pgconn.pipeline_status)
 
-    def parameter_status(self, param_name: str) -> Optional[str]:
+    def parameter_status(self, param_name: str) -> str | None:
         """
         Return a parameter setting of the connection.
 
@@ -275,97 +290,228 @@ class ConnectionInfo:
         return value.decode(self.encoding)
 
 
-async def resolve_hostaddr_async(params: Dict[str, Any]) -> Dict[str, Any]:
+def conninfo_attempts(params: ConnDict) -> list[ConnDict]:
+    """Split a set of connection params on the single attempts to perform.
+
+    A connection param can perform more than one attempt more than one ``host``
+    is provided.
+
+    Because the libpq async function doesn't honour the timeout, we need to
+    reimplement the repeated attempts.
+    """
+    # TODO: we should actually resolve the hosts ourselves.
+    # If an host resolves to more than one ip, the libpq will make more than
+    # one attempt and wouldn't get to try the following ones, as before
+    # fixing #674.
+    attempts = _split_attempts(params)
+    if _get_param(params, "load_balance_hosts") == "random":
+        shuffle(attempts)
+    return attempts
+
+
+async def conninfo_attempts_async(params: ConnDict) -> list[ConnDict]:
+    """Split a set of connection params on the single attempts to perform.
+
+    A connection param can perform more than one attempt more than one ``host``
+    is provided.
+
+    Also perform async resolution of the hostname into hostaddr in order to
+    avoid blocking. Because a host can resolve to more than one address, this
+    can lead to yield more attempts too. Raise `OperationalError` if no host
+    could be resolved.
+
+    Because the libpq async function doesn't honour the timeout, we need to
+    reimplement the repeated attempts.
+    """
+    last_exc = None
+    attempts = []
+    for attempt in _split_attempts(params):
+        try:
+            attempts.extend(await _resolve_hostnames(attempt))
+        except OSError as ex:
+            logger.debug("failed to resolve host %r: %s", attempt.get("host"), str(ex))
+            last_exc = ex
+
+    if not attempts:
+        assert last_exc
+        # We couldn't resolve anything
+        raise e.OperationalError(str(last_exc))
+
+    if _get_param(params, "load_balance_hosts") == "random":
+        shuffle(attempts)
+
+    return attempts
+
+
+def _split_attempts(params: ConnDict) -> list[ConnDict]:
+    """
+    Split connection parameters with a sequence of hosts into separate attempts.
+    """
+
+    def split_val(key: str) -> list[str]:
+        val = _get_param(params, key)
+        return val.split(",") if val else []
+
+    hosts = split_val("host")
+    hostaddrs = split_val("hostaddr")
+    ports = split_val("port")
+
+    if hosts and hostaddrs and len(hosts) != len(hostaddrs):
+        raise e.OperationalError(
+            f"could not match {len(hosts)} host names"
+            f" with {len(hostaddrs)} hostaddr values"
+        )
+
+    nhosts = max(len(hosts), len(hostaddrs))
+
+    if 1 < len(ports) != nhosts:
+        raise e.OperationalError(
+            f"could not match {len(ports)} port numbers to {len(hosts)} hosts"
+        )
+
+    # A single attempt to make. Don't mangle the conninfo string.
+    if nhosts <= 1:
+        return [params]
+
+    if len(ports) == 1:
+        ports *= nhosts
+
+    # Now all lists are either empty or have the same length
+    rv = []
+    for i in range(nhosts):
+        attempt = params.copy()
+        if hosts:
+            attempt["host"] = hosts[i]
+        if hostaddrs:
+            attempt["hostaddr"] = hostaddrs[i]
+        if ports:
+            attempt["port"] = ports[i]
+        rv.append(attempt)
+
+    return rv
+
+
+async def _resolve_hostnames(params: ConnDict) -> list[ConnDict]:
     """
     Perform async DNS lookup of the hosts and return a new params dict.
 
-    :param params: The input parameters, for instance as returned by
-        `~psycopg.conninfo.conninfo_to_dict()`.
-
     If a ``host`` param is present but not ``hostname``, resolve the host
-    addresses dynamically.
+    addresses asynchronously.
 
-    The function may change the input ``host``, ``hostname``, ``port`` to allow
-    connecting without further DNS lookups, eventually removing hosts that are
-    not resolved, keeping the lists of hosts and ports consistent.
+    :param params: The input parameters, for instance as returned by
+        `~psycopg.conninfo.conninfo_to_dict()`. The function expects at most
+        a single entry for host, hostaddr because it is designed to further
+        process the input of _split_attempts().
 
-    Raise `~psycopg.OperationalError` if connection is not possible (e.g. no
-    host resolve, inconsistent lists length).
+    :return: A list of attempts to make (to include the case of a hostname
+        resolving to more than one IP).
     """
-    hostaddr_arg = params.get("hostaddr", os.environ.get("PGHOSTADDR", ""))
-    if hostaddr_arg:
+    host = _get_param(params, "host")
+    if not host or host.startswith("/") or host[1:2] == ":":
+        # Local path, or no host to resolve
+        return [params]
+
+    hostaddr = _get_param(params, "hostaddr")
+    if hostaddr:
         # Already resolved
-        return params
+        return [params]
 
-    host_arg: str = params.get("host", os.environ.get("PGHOST", ""))
-    if not host_arg:
-        # Nothing to resolve
-        return params
-
-    hosts_in = host_arg.split(",")
-    port_arg: str = str(params.get("port", os.environ.get("PGPORT", "")))
-    ports_in = port_arg.split(",") if port_arg else []
-    default_port = "5432"
-
-    if len(ports_in) == 1:
-        # If only one port is specified, the libpq will apply it to all
-        # the hosts, so don't mangle it.
-        default_port = ports_in.pop()
-
-    elif len(ports_in) > 1:
-        if len(ports_in) != len(hosts_in):
-            # ProgrammingError would have been more appropriate, but this is
-            # what the raise if the libpq fails connect in the same case.
-            raise e.OperationalError(
-                f"cannot match {len(hosts_in)} hosts with {len(ports_in)} port numbers"
-            )
-        ports_out = []
-
-    hosts_out = []
-    hostaddr_out = []
-    loop = asyncio.get_running_loop()
-    for i, host in enumerate(hosts_in):
-        if not host or host.startswith("/") or host[1:2] == ":":
-            # Local path
-            hosts_out.append(host)
-            hostaddr_out.append("")
-            if ports_in:
-                ports_out.append(ports_in[i])
-            continue
-
+    if is_ip_address(host):
         # If the host is already an ip address don't try to resolve it
-        if is_ip_address(host):
-            hosts_out.append(host)
-            hostaddr_out.append(host)
-            if ports_in:
-                ports_out.append(ports_in[i])
-            continue
+        return [{**params, "hostaddr": host}]
 
-        try:
-            port = ports_in[i] if ports_in else default_port
-            ans = await loop.getaddrinfo(
-                host, port, proto=socket.IPPROTO_TCP, type=socket.SOCK_STREAM
+    loop = asyncio.get_running_loop()
+
+    port = _get_param(params, "port")
+    if not port:
+        port_def = _get_param_def("port")
+        port = port_def and port_def.compiled or "5432"
+
+    ans = await loop.getaddrinfo(
+        host, int(port), proto=socket.IPPROTO_TCP, type=socket.SOCK_STREAM
+    )
+    return [{**params, "hostaddr": item[4][0]} for item in ans]
+
+
+def timeout_from_conninfo(params: ConnDict) -> int:
+    """
+    Return the timeout in seconds from the connection parameters.
+    """
+    # Follow the libpq convention:
+    #
+    # - 0 or less means no timeout (but we will use a default to simulate
+    #   the socket timeout)
+    # - at least 2 seconds.
+    #
+    # See connectDBComplete in fe-connect.c
+    value: str | int | None = _get_param(params, "connect_timeout")
+    if value is None:
+        value = _DEFAULT_CONNECT_TIMEOUT
+    try:
+        timeout = int(value)
+    except ValueError:
+        raise e.ProgrammingError(f"bad value for connect_timeout: {value!r}")
+
+    if timeout <= 0:
+        # The sync connect function will stop on the default socket timeout
+        # Because in async connection mode we need to enforce the timeout
+        # ourselves, we need a finite value.
+        timeout = _DEFAULT_CONNECT_TIMEOUT
+    elif timeout < 2:
+        # Enforce a 2s min
+        timeout = 2
+
+    return timeout
+
+
+def _get_param(params: ConnDict, name: str) -> str | None:
+    """
+    Return a value from a connection string.
+
+    The value may be also specified in a PG* env var.
+    """
+    if name in params:
+        return str(params[name])
+
+    # TODO: check if in service
+
+    paramdef = _get_param_def(name)
+    if not paramdef:
+        return None
+
+    env = os.environ.get(paramdef.envvar)
+    if env is not None:
+        return env
+
+    return None
+
+
+@dataclass
+class ParamDef:
+    """
+    Information about defaults and env vars for connection params
+    """
+
+    keyword: str
+    envvar: str
+    compiled: str | None
+
+
+def _get_param_def(keyword: str, _cache: dict[str, ParamDef] = {}) -> ParamDef | None:
+    """
+    Return the ParamDef of a connection string parameter.
+    """
+    if not _cache:
+        defs = pq.Conninfo.get_defaults()
+        for d in defs:
+            cd = ParamDef(
+                keyword=d.keyword.decode(),
+                envvar=d.envvar.decode() if d.envvar else "",
+                compiled=d.compiled.decode() if d.compiled is not None else None,
             )
-        except OSError as ex:
-            last_exc = ex
-        else:
-            for item in ans:
-                hosts_out.append(host)
-                hostaddr_out.append(item[4][0])
-                if ports_in:
-                    ports_out.append(ports_in[i])
+            _cache[cd.keyword] = cd
 
-    # Throw an exception if no host could be resolved
-    if not hosts_out:
-        raise e.OperationalError(str(last_exc))
-
-    out = params.copy()
-    out["host"] = ",".join(hosts_out)
-    out["hostaddr"] = ",".join(hostaddr_out)
-    if ports_in:
-        out["port"] = ",".join(ports_out)
-
-    return out
+    return _cache.get(keyword)
 
 
 @lru_cache()

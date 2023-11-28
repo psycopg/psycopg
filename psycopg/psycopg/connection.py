@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import logging
 from types import TracebackType
-from typing import Any, Generator, Iterator, Dict, List, Optional
+from typing import Any, Generator, Iterator, List, Optional
 from typing import Type, Union, cast, overload, TYPE_CHECKING
 from contextlib import contextmanager
 
@@ -24,7 +24,8 @@ from .rows import Row, RowFactory, tuple_row, args_row
 from .adapt import AdaptersMap
 from ._enums import IsolationLevel
 from ._compat import Self
-from .conninfo import make_conninfo, conninfo_to_dict
+from .conninfo import ConnDict, make_conninfo, conninfo_to_dict
+from .conninfo import conninfo_attempts, timeout_from_conninfo
 from ._pipeline import Pipeline
 from ._encodings import pgconn_encoding
 from .generators import notifies
@@ -89,16 +90,30 @@ class Connection(BaseConnection[Row]):
         """
 
         params = cls._get_connection_params(conninfo, **kwargs)
-        conninfo = make_conninfo(**params)
+        timeout = timeout_from_conninfo(params)
+        rv = None
+        attempts = conninfo_attempts(params)
+        for attempt in attempts:
+            try:
+                conninfo = make_conninfo(**attempt)
+                rv = cls._wait_conn(cls._connect_gen(conninfo), timeout=timeout)
+                break
+            except e._NO_TRACEBACK as ex:
+                if len(attempts) > 1:
+                    logger.debug(
+                        "connection attempt failed: host: %r port: %r, hostaddr %r: %s",
+                        attempt.get("host"),
+                        attempt.get("port"),
+                        attempt.get("hostaddr"),
+                        str(ex),
+                    )
+                last_ex = ex
 
-        try:
-            rv = cls._wait_conn(
-                cls._connect_gen(conninfo, autocommit=autocommit),
-                timeout=params["connect_timeout"],
-            )
-        except e._NO_TRACEBACK as ex:
-            raise ex.with_traceback(None)
+        if not rv:
+            assert last_ex
+            raise last_ex.with_traceback(None)
 
+        rv._autocommit = bool(autocommit)
         if row_factory:
             rv.row_factory = row_factory
         if cursor_factory:
@@ -135,23 +150,9 @@ class Connection(BaseConnection[Row]):
             self.close()
 
     @classmethod
-    def _get_connection_params(cls, conninfo: str, **kwargs: Any) -> Dict[str, Any]:
-        """Manipulate connection parameters before connecting.
-
-        :param conninfo: Connection string as received by `~Connection.connect()`.
-        :param kwargs: Overriding connection arguments as received by `!connect()`.
-        :return: Connection arguments merged and eventually modified, in a
-            format similar to `~conninfo.conninfo_to_dict()`.
-        """
-        params = conninfo_to_dict(conninfo, **kwargs)
-
-        # Make sure there is an usable connect_timeout
-        if "connect_timeout" in params:
-            params["connect_timeout"] = int(params["connect_timeout"])
-        else:
-            params["connect_timeout"] = None
-
-        return params
+    def _get_connection_params(cls, conninfo: str, **kwargs: Any) -> ConnDict:
+        """Manipulate connection parameters before connecting."""
+        return conninfo_to_dict(conninfo, **kwargs)
 
     def close(self) -> None:
         """Close the database connection."""

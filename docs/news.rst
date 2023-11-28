@@ -30,18 +30,56 @@ Psycopg 3.2 (unreleased)
 .. __: https://numpy.org/doc/stable/reference/arrays.scalars.html#built-in-scalar-types
 
 
-Psycopg 3.1.13 (unreleased)
+Psycopg 3.1.17 (unreleased)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Use `typing.Self` as a more correct return value annotation of context
+  managers and other self-returning methods (see :ticket:`708`).
+
+
+Current release
+---------------
+
+Psycopg 3.1.16
+^^^^^^^^^^^^^^
+
+- Fix empty ports handling in async multiple connection attempts
+  (:ticket:`#703`).
+
+
+Psycopg 3.1.15
+^^^^^^^^^^^^^^
+
+- Fix use of ``service`` in connection string (regression in 3.1.13,
+  :ticket:`#694`).
+- Fix async connection to hosts resolving to multiple IP addresses (regression
+  in 3.1.13, :ticket:`#695`).
+- Respect the :envvar:`PGCONNECT_TIMEOUT` environment variable to determine
+  the connection timeout.
+
+
+Psycopg 3.1.14
+^^^^^^^^^^^^^^
+
+- Fix :ref:`interaction with gevent <gevent>` (:ticket:`#527`).
+- Add support for PyPy (:ticket:`#686`).
+
+.. _gevent: https://www.gevent.org/
+
+
+Psycopg 3.1.13
+^^^^^^^^^^^^^^
 
 - Raise `DataError` instead of whatever internal failure trying to dump a
   `~datetime.time` object with with a `!tzinfo` specified as
   `~zoneinfo.ZoneInfo` (ambiguous offset, see :ticket:`#652`).
 - Handle gracefully EINTR on signals instead of raising `InterruptedError`,
   consistently with :pep:`475` guideline (:ticket:`#667`).
+- Fix support for connection strings with multiple hosts/ports and for the
+  ``load_balance_hosts`` connection parameter (:ticket:`#674`).
+- Fix memory leak receiving notifications in Python implementation
+  (:ticket:`#679`).
 
-
-Current release
----------------
 
 Psycopg 3.1.12
 ^^^^^^^^^^^^^^

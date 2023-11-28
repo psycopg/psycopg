@@ -25,7 +25,7 @@ jobs:
       fail-fast: false
       matrix:
         python-version:
-          - "3.11"
+          - "3.12"
           - "3.8"
         sqlalchemy_label:
           # what version of sqlalchemy to download is defined in the "include" section below,
@@ -39,12 +39,11 @@ jobs:
           - sqlalchemy_label: git_main
             pip_sqlalchemy: git+https://github.com/sqlalchemy/sqlalchemy.git#egg=SQLAlchemy
           - sqlalchemy_label: release
-            # TODO: remove pre once v2 is stable
-            pip_sqlalchemy: --pre sqlalchemy>=2a
+            pip_sqlalchemy: sqlalchemy>=2
 
     env:
       PSYCOPG_IMPL: ${{ matrix.impl }}
-      DEPS: ./psycopg pytest pytest-xdist
+      DEPS: ./psycopg pytest pytest-xdist greenlet
 
     services:
       postgresql:
@@ -111,7 +110,7 @@ jobs:
         env:
           URL: postgresql+psycopg://postgres:password@127.0.0.1/test
         working-directory: sa_home/sa
-        run: pytest -n 2 -q --dburi $URL --backend-only --dropfirst --color=yes
+        run: pytest -n 2 -q --dburi $URL --backend-only --dropfirst --color=yes --dbdriver psycopg_async
 
   django:
     # linux should be enough to test if everything works.
@@ -130,6 +129,8 @@ jobs:
         include:
           - django_label: git_main
             pip_django: git+https://github.com/django/django.git#egg=Django
+            # Need pylibmc wheel package to test with Python 3.12.
+            # https://github.com/lericson/pylibmc/issues/288
             python-version: "3.11"
           # TODO: Needs updating with new LTS releases, is this something we want?
           #       Also needs consideration against which python we wanna test.

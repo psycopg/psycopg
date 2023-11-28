@@ -12,6 +12,7 @@ These functions are designed to consume the generators returned by the
 import os
 import sys
 import select
+import logging
 import selectors
 from typing import Optional
 from asyncio import get_event_loop, wait_for, Event, TimeoutError
@@ -28,6 +29,8 @@ WAIT_RW = Wait.RW
 READY_R = Ready.R
 READY_W = Ready.W
 READY_RW = Ready.RW
+
+logger = logging.getLogger(__name__)
 
 
 def wait_selector(gen: PQGen[RV], fileno: int, timeout: Optional[float] = None) -> RV:
@@ -356,6 +359,27 @@ def wait_poll(gen: PQGen[RV], fileno: int, timeout: Optional[float] = None) -> R
         return rv
 
 
+def _is_select_patched() -> bool:
+    """
+    Detect if some greenlet library has patched the select library.
+
+    If this is the case, avoid to use the wait_c function as it doesn't behave
+    in a collaborative way.
+
+    Currently supported: gevent.
+    """
+    # If not imported, don't import it.
+    m = sys.modules.get("gevent.monkey")
+    if m:
+        try:
+            if m.is_module_patched("select"):
+                return True
+        except Exception as ex:
+            logger.warning("failed to detect gevent monkey-patching: %s", ex)
+
+    return False
+
+
 if _psycopg:
     wait_c = _psycopg.wait_c
 
@@ -380,7 +404,7 @@ if "PSYCOPG_WAIT_FUNC" in os.environ:
 # On Windows, for the moment, avoid using wait_c, because it was reported to
 # use excessive CPU (see #645).
 # TODO: investigate why.
-elif _psycopg and sys.platform != "win32":
+elif _psycopg and sys.platform != "win32" and not _is_select_patched():
     wait = wait_c
 
 elif selectors.DefaultSelector is getattr(selectors, "SelectSelector", None):

@@ -125,25 +125,26 @@ def test_time_from_ticks(ticks, want):
         (("host=foo user=bar",), {}, "host=foo user=bar"),
         (("host=foo",), {"user": "baz"}, "host=foo user=baz"),
         (
-            ("host=foo port=5432",),
+            ("host=foo port=5433",),
             {"host": "qux", "user": "joe"},
-            "host=qux user=joe port=5432",
+            "host=qux user=joe port=5433",
         ),
         (("host=foo",), {"user": None}, "host=foo"),
     ],
 )
-def test_connect_args(monkeypatch, pgconn, args, kwargs, want):
-    the_conninfo: str
+def test_connect_args(monkeypatch, pgconn, args, kwargs, want, setpgenv):
+    got_conninfo: str
 
     def fake_connect(conninfo):
-        nonlocal the_conninfo
-        the_conninfo = conninfo
+        nonlocal got_conninfo
+        got_conninfo = conninfo
         return pgconn
         yield
 
+    setpgenv({})
     monkeypatch.setattr(psycopg.generators, "connect", fake_connect)
     conn = psycopg.connect(*args, **kwargs)
-    assert conninfo_to_dict(the_conninfo) == conninfo_to_dict(want)
+    assert conninfo_to_dict(got_conninfo) == conninfo_to_dict(want)
     conn.close()
 
 

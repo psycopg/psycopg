@@ -11,9 +11,8 @@ from typing import Any, List
 import psycopg
 from psycopg import Notify, pq, errors as e
 from psycopg.rows import tuple_row
-from psycopg.conninfo import conninfo_to_dict, make_conninfo
+from psycopg.conninfo import conninfo_to_dict, timeout_from_conninfo
 
-from .utils import gc_collect
 from .acompat import is_async, skip_sync, skip_async
 from ._test_cursor import my_row_factory
 from ._test_connection import tx_params, tx_params_isolation, tx_values_map
@@ -49,9 +48,41 @@ def test_connect_str_subclass(conn_cls, dsn):
 def test_connect_timeout(conn_cls, deaf_port):
     t0 = time.time()
     with pytest.raises(psycopg.OperationalError, match="timeout expired"):
-        conn_cls.connect(host="localhost", port=deaf_port, connect_timeout=1)
+        conn_cls.connect(host="localhost", port=deaf_port, connect_timeout=2)
     elapsed = time.time() - t0
-    assert elapsed == pytest.approx(1.0, abs=0.05)
+    assert elapsed == pytest.approx(2.0, abs=0.05)
+
+
+@pytest.mark.slow
+@pytest.mark.timing
+def test_multi_hosts(conn_cls, proxy, dsn, deaf_port, monkeypatch):
+    args = conninfo_to_dict(dsn)
+    args["host"] = f"{proxy.client_host},{proxy.server_host}"
+    args["port"] = f"{deaf_port},{proxy.server_port}"
+    args.pop("hostaddr", None)
+    monkeypatch.setattr(psycopg.conninfo, "_DEFAULT_CONNECT_TIMEOUT", 2)
+    t0 = time.time()
+    with conn_cls.connect(**args) as conn:
+        elapsed = time.time() - t0
+        assert 2.0 < elapsed < 2.5
+        assert conn.info.port == int(proxy.server_port)
+        assert conn.info.host == proxy.server_host
+
+
+@pytest.mark.slow
+@pytest.mark.timing
+def test_multi_hosts_timeout(conn_cls, proxy, dsn, deaf_port):
+    args = conninfo_to_dict(dsn)
+    args["host"] = f"{proxy.client_host},{proxy.server_host}"
+    args["port"] = f"{deaf_port},{proxy.server_port}"
+    args.pop("hostaddr", None)
+    args["connect_timeout"] = "2"
+    t0 = time.time()
+    with conn_cls.connect(**args) as conn:
+        elapsed = time.time() - t0
+        assert 2.0 < elapsed < 2.5
+        assert conn.info.port == int(proxy.server_port)
+        assert conn.info.host == proxy.server_host
 
 
 def test_close(conn):
@@ -99,13 +130,14 @@ def test_cursor_closed(conn):
 # compiled with Cython-3.0.0b3, not before.
 
 
+@pytest.mark.slow
 @pytest.mark.xfail(
     pq.__impl__ in ("c", "binary")
     and sys.version_info[:2] == (3, 12)
     and (not is_async(__name__)),
     reason="Something with Exceptions, C, Python 3.12",
 )
-def test_connection_warn_close(conn_cls, dsn, recwarn):
+def test_connection_warn_close(conn_cls, dsn, recwarn, gc_collect):
     conn = conn_cls.connect(dsn)
     conn.close()
     del conn
@@ -113,11 +145,13 @@ def test_connection_warn_close(conn_cls, dsn, recwarn):
 
     conn = conn_cls.connect(dsn)
     del conn
+    gc_collect()
     assert "IDLE" in str(recwarn.pop(ResourceWarning).message)
 
     conn = conn_cls.connect(dsn)
     conn.execute("select 1")
     del conn
+    gc_collect()
     assert "INTRANS" in str(recwarn.pop(ResourceWarning).message)
 
     conn = conn_cls.connect(dsn)
@@ -210,7 +244,7 @@ def test_context_active_rollback_no_clobber(conn_cls, dsn, caplog):
 
 
 @pytest.mark.slow
-def test_weakref(conn_cls, dsn):
+def test_weakref(conn_cls, dsn, gc_collect):
     conn = conn_cls.connect(dsn)
     w = weakref.ref(conn)
     conn.close()
@@ -399,26 +433,26 @@ def test_autocommit_unknown(conn):
         (("dbname=foo user=bar",), {}, "dbname=foo user=bar"),
         (("dbname=foo",), {"user": "baz"}, "dbname=foo user=baz"),
         (
-            ("dbname=foo port=5432",),
+            ("dbname=foo port=5433",),
             {"dbname": "qux", "user": "joe"},
-            "dbname=qux user=joe port=5432",
+            "dbname=qux user=joe port=5433",
         ),
         (("dbname=foo",), {"user": None}, "dbname=foo"),
     ],
 )
 def test_connect_args(conn_cls, monkeypatch, setpgenv, pgconn, args, kwargs, want):
-    the_conninfo: str
+    got_conninfo: str
 
     def fake_connect(conninfo):
-        nonlocal the_conninfo
-        the_conninfo = conninfo
+        nonlocal got_conninfo
+        got_conninfo = conninfo
         return pgconn
         yield
 
     setpgenv({})
     monkeypatch.setattr(psycopg.generators, "connect", fake_connect)
     conn = conn_cls.connect(*args, **kwargs)
-    assert conninfo_to_dict(the_conninfo) == conninfo_to_dict(want)
+    assert conninfo_to_dict(got_conninfo) == conninfo_to_dict(want)
     conn.close()
 
 
@@ -789,9 +823,8 @@ def test_set_transaction_param_strange_property(conn):
 def test_get_connection_params(conn_cls, dsn, kwargs, exp, setpgenv):
     setpgenv({})
     params = conn_cls._get_connection_params(dsn, **kwargs)
-    conninfo = make_conninfo(**params)
-    assert conninfo_to_dict(conninfo) == exp[0]
-    assert params["connect_timeout"] == exp[1]
+    assert params == exp[0]
+    assert timeout_from_conninfo(params) == exp[1]
 
 
 def test_connect_context_adapters(conn_cls, dsn):

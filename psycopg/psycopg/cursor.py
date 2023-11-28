@@ -34,13 +34,11 @@ class Cursor(BaseCursor["Connection[Any]", Row]):
     __slots__ = ()
 
     @overload
-    def __init__(self: Cursor[Row], connection: Connection[Row]):
+    def __init__(self, connection: Connection[Row]):
         ...
 
     @overload
-    def __init__(
-        self: Cursor[Row], connection: Connection[Any], *, row_factory: RowFactory[Row]
-    ):
+    def __init__(self, connection: Connection[Any], *, row_factory: RowFactory[Row]):
         ...
 
     def __init__(

@@ -47,7 +47,10 @@ def version() -> int:
 
 @impl.PQnoticeReceiver  # type: ignore
 def notice_receiver(arg: c_void_p, result_ptr: impl.PGresult_struct) -> None:
-    pgconn = cast(arg, POINTER(py_object)).contents.value()
+    pgconn = cast(arg, POINTER(py_object)).contents.value
+    if callable(pgconn):  # Not a weak reference on PyPy.
+        pgconn = pgconn()
+
     if not (pgconn and pgconn.notice_handler):
         return
 
@@ -604,8 +607,9 @@ class PGconn:
         ptr = impl.PQnotifies(self._pgconn_ptr)
         if ptr:
             c = ptr.contents
-            return PGnotify(c.relname, c.be_pid, c.extra)
+            rv = PGnotify(c.relname, c.be_pid, c.extra)
             impl.PQfreemem(ptr)
+            return rv
         else:
             return None
 
