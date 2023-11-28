@@ -48,6 +48,10 @@ jobs:
           # Test with minimum dependencies versions
           - {impl: c, python: "3.7", ext: min, postgres: "postgres:15"}
 
+          # Test with PyPy.
+          - {impl: python, python: "pypy3.9", postgres: "postgres:13"}
+          - {impl: python, python: "pypy3.10", postgres: "postgres:14"}
+
     env:
       PSYCOPG_IMPL: ${{ matrix.impl }}
       DEPS: ./psycopg[test] ./psycopg_pool
@@ -95,6 +99,11 @@ jobs:
         run: |
           echo "DEPS=$DEPS shapely" >> $GITHUB_ENV
           echo "MARKERS=$MARKERS postgis" >> $GITHUB_ENV
+
+      - name: Exclude certain tests from pypy
+        if: ${{ startsWith(matrix.python, 'pypy') }}
+        run: |
+          echo "NOT_MARKERS=$NOT_MARKERS timing" >> $GITHUB_ENV
 
       - name: Configure to use the oldest dependencies
         if: ${{ matrix.ext == 'min' }}

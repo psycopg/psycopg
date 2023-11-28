@@ -11,7 +11,6 @@ from psycopg import Notify, pq, errors as e
 from psycopg.rows import tuple_row
 from psycopg.conninfo import conninfo_to_dict, make_conninfo
 
-from .utils import gc_collect
 from .test_cursor import my_row_factory
 from .test_adapt import make_bin_dumper, make_dumper
 
@@ -127,19 +126,22 @@ def test_cursor_closed(conn):
     (pq.__impl__ in ("c", "binary") and sys.version_info[:2] == (3, 12)),
     reason="Something with Exceptions, C, Python 3.12",
 )
-def test_connection_warn_close(conn_cls, dsn, recwarn):
+def test_connection_warn_close(conn_cls, dsn, recwarn, gc_collect):
     conn = conn_cls.connect(dsn)
     conn.close()
     del conn
+    gc_collect()
     assert not recwarn, [str(w.message) for w in recwarn.list]
 
     conn = conn_cls.connect(dsn)
     del conn
+    gc_collect()
     assert "IDLE" in str(recwarn.pop(ResourceWarning).message)
 
     conn = conn_cls.connect(dsn)
     conn.execute("select 1")
     del conn
+    gc_collect()
     assert "INTRANS" in str(recwarn.pop(ResourceWarning).message)
 
     conn = conn_cls.connect(dsn)
@@ -154,6 +156,7 @@ def test_connection_warn_close(conn_cls, dsn, recwarn):
     with conn_cls.connect(dsn) as conn:
         pass
     del conn
+    gc_collect()
     assert not recwarn, [str(w.message) for w in recwarn.list]
 
 
@@ -238,7 +241,7 @@ def test_context_active_rollback_no_clobber(conn_cls, dsn, caplog):
 
 
 @pytest.mark.slow
-def test_weakref(conn_cls, dsn):
+def test_weakref(conn_cls, dsn, gc_collect):
     conn = conn_cls.connect(dsn)
     w = weakref.ref(conn)
     conn.close()

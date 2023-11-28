@@ -618,12 +618,13 @@ def test_putconn_wrong_pool(dsn):
 
 
 @pytest.mark.slow
-def test_del_stop_threads(dsn):
+def test_del_stop_threads(dsn, gc):
     p = NullConnectionPool(dsn)
     assert p._sched_runner is not None
     ts = [p._sched_runner] + p._workers
     del p
     sleep(0.1)
+    gc.collect()
     for t in ts:
         assert not t.is_alive()
 

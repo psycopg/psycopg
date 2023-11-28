@@ -9,7 +9,7 @@ import psycopg
 from psycopg import pq
 from psycopg import errors as e
 
-from .utils import eur, gc_collect
+from .utils import eur
 from .fix_crdb import is_crdb
 
 
@@ -187,7 +187,7 @@ def test_diag_pickle(conn):
     (pq.__impl__ in ("c", "binary") and sys.version_info[:2] == (3, 12)),
     reason="Something with Exceptions, C, Python 3.12",
 )
-def test_diag_survives_cursor(conn):
+def test_diag_survives_cursor(conn, gc_collect):
     cur = conn.cursor()
     with pytest.raises(e.Error) as exc:
         cur.execute("select * from nosuchtable")

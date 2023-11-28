@@ -588,7 +588,7 @@ def test_putconn_wrong_pool(dsn):
                 p2.putconn(conn)
 
 
-def test_del_no_warning(dsn, recwarn):
+def test_del_no_warning(dsn, recwarn, gc_collect):
     p = pool.ConnectionPool(dsn, min_size=2)
     with p.connection() as conn:
         conn.execute("select 1")
@@ -596,17 +596,19 @@ def test_del_no_warning(dsn, recwarn):
     p.wait()
     ref = weakref.ref(p)
     del p
+    gc_collect()
     assert not ref()
     assert not recwarn, [str(w.message) for w in recwarn.list]
 
 
 @pytest.mark.slow
-def test_del_stop_threads(dsn):
+def test_del_stop_threads(dsn, gc):
     p = pool.ConnectionPool(dsn)
     assert p._sched_runner is not None
     ts = [p._sched_runner] + p._workers
     del p
     sleep(0.1)
+    gc.collect()
     for t in ts:
         assert not t.is_alive()
 

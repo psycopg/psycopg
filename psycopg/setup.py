@@ -25,11 +25,11 @@ with open("psycopg/version.py") as f:
 extras_require = {
     # Install the C extension module (requires dev tools)
     "c": [
-        f"psycopg-c == {version}",
+        f"psycopg-c == {version}; implementation_name != 'pypy'",
     ],
     # Install the stand-alone C extension module
     "binary": [
-        f"psycopg-binary == {version}",
+        f"psycopg-binary == {version}; implementation_name != 'pypy'",
     ],
     # Install the connection pool
     "pool": [

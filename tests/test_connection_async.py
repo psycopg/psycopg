@@ -9,7 +9,6 @@ from psycopg import Notify, errors as e
 from psycopg.rows import tuple_row
 from psycopg.conninfo import conninfo_to_dict, make_conninfo
 
-from .utils import gc_collect
 from .test_cursor import my_row_factory
 from .test_connection import tx_params, tx_params_isolation, tx_values_map
 from .test_connection import conninfo_params_timeout, drop_default_args_from_conninfo
@@ -126,19 +125,22 @@ async def test_cursor_closed(aconn):
         aconn.cursor()
 
 
-async def test_connection_warn_close(aconn_cls, dsn, recwarn):
+async def test_connection_warn_close(aconn_cls, dsn, recwarn, gc_collect):
     conn = await aconn_cls.connect(dsn)
     await conn.close()
     del conn
+    gc_collect()
     assert not recwarn, [str(w.message) for w in recwarn.list]
 
     conn = await aconn_cls.connect(dsn)
     del conn
+    gc_collect()
     assert "IDLE" in str(recwarn.pop(ResourceWarning).message)
 
     conn = await aconn_cls.connect(dsn)
     await conn.execute("select 1")
     del conn
+    gc_collect()
     assert "INTRANS" in str(recwarn.pop(ResourceWarning).message)
 
     conn = await aconn_cls.connect(dsn)
@@ -147,11 +149,13 @@ async def test_connection_warn_close(aconn_cls, dsn, recwarn):
     except Exception:
         pass
     del conn
+    gc_collect()
     assert "INERROR" in str(recwarn.pop(ResourceWarning).message)
 
     async with await aconn_cls.connect(dsn) as conn:
         pass
     del conn
+    gc_collect()
     assert not recwarn, [str(w.message) for w in recwarn.list]
 
 
@@ -229,7 +233,7 @@ async def test_context_active_rollback_no_clobber(aconn_cls, dsn, caplog):
 
 
 @pytest.mark.slow
-async def test_weakref(aconn_cls, dsn):
+async def test_weakref(aconn_cls, dsn, gc_collect):
     conn = await aconn_cls.connect(dsn)
     w = weakref.ref(conn)
     await conn.close()

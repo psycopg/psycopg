@@ -11,8 +11,6 @@ import psycopg
 from psycopg import pq
 import psycopg.generators
 
-from ..utils import gc_collect
-
 
 def test_connectdb(dsn):
     conn = pq.PGconn.connect(dsn.encode())
@@ -82,7 +80,7 @@ def test_finish(pgconn):
 
 
 @pytest.mark.slow
-def test_weakref(dsn):
+def test_weakref(dsn, gc_collect):
     conn = pq.PGconn.connect(dsn.encode())
     w = weakref.ref(conn)
     conn.finish()
