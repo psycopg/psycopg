@@ -2,10 +2,8 @@ import datetime as dt
 
 import pytest
 import psycopg
-import sys
 from psycopg import rows
 
-from .utils import gc_collect, gc_count
 from .fix_crdb import crdb_encoding
 
 
@@ -78,12 +76,9 @@ async def test_query_params_executemany(aconn):
 
 
 @pytest.mark.slow
-@pytest.mark.skipif(
-    sys.implementation.name == "pypy", reason="depends on refcount semantics"
-)
 @pytest.mark.parametrize("fetch", ["one", "many", "all", "iter"])
 @pytest.mark.parametrize("row_factory", ["tuple_row", "dict_row", "namedtuple_row"])
-async def test_leak(aconn_cls, dsn, faker, fetch, row_factory):
+async def test_leak(aconn_cls, dsn, faker, fetch, row_factory, gc):
     faker.choose_schema(ncols=5)
     faker.make_records(10)
     row_factory = getattr(rows, row_factory)
@@ -116,11 +111,11 @@ async def test_leak(aconn_cls, dsn, faker, fetch, row_factory):
                         pass
 
     n = []
-    gc_collect()
+    gc.collect()
     for i in range(3):
         await work()
-        gc_collect()
-        n.append(gc_count())
+        gc.collect()
+        n.append(gc.count())
 
     assert n[0] == n[1] == n[2], f"objects leaked: {n[1] - n[0]}, {n[2] - n[1]}"
 

@@ -13,7 +13,6 @@ from psycopg import Notify, pq, errors as e
 from psycopg.rows import tuple_row
 from psycopg.conninfo import conninfo_to_dict, make_conninfo
 
-from .utils import gc_collect
 from .acompat import is_async, skip_sync, skip_async
 from ._test_cursor import my_row_factory
 from ._test_connection import tx_params, tx_params_isolation, tx_values_map
@@ -137,7 +136,7 @@ def test_cursor_closed(conn):
     and (not is_async(__name__)),
     reason="Something with Exceptions, C, Python 3.12",
 )
-def test_connection_warn_close(conn_cls, dsn, recwarn):
+def test_connection_warn_close(conn_cls, dsn, recwarn, gc_collect):
     conn = conn_cls.connect(dsn)
     conn.close()
     del conn
@@ -244,7 +243,7 @@ def test_context_active_rollback_no_clobber(conn_cls, dsn, caplog):
 
 
 @pytest.mark.slow
-def test_weakref(conn_cls, dsn):
+def test_weakref(conn_cls, dsn, gc_collect):
     conn = conn_cls.connect(dsn)
     w = weakref.ref(conn)
     conn.close()

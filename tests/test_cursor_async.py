@@ -4,11 +4,8 @@ Tests for psycopg.Cursor that are not supposed to pass for subclasses.
 
 import pytest
 import psycopg
-import sys
 from psycopg import pq, rows, errors as e
 from psycopg.adapt import PyFormat
-
-from .utils import gc_collect, gc_count
 
 
 async def test_default_cursor(aconn):
@@ -65,14 +62,11 @@ async def test_query_params_executemany(aconn):
 
 
 @pytest.mark.slow
-@pytest.mark.skipif(
-    sys.implementation.name == "pypy", reason="depends on refcount semantics"
-)
 @pytest.mark.parametrize("fmt", PyFormat)
 @pytest.mark.parametrize("fmt_out", pq.Format)
 @pytest.mark.parametrize("fetch", ["one", "many", "all", "iter"])
 @pytest.mark.parametrize("row_factory", ["tuple_row", "dict_row", "namedtuple_row"])
-async def test_leak(aconn_cls, dsn, faker, fmt, fmt_out, fetch, row_factory):
+async def test_leak(aconn_cls, dsn, faker, fmt, fmt_out, fetch, row_factory, gc):
     faker.format = fmt
     faker.choose_schema(ncols=5)
     faker.make_records(10)
@@ -106,10 +100,10 @@ async def test_leak(aconn_cls, dsn, faker, fmt, fmt_out, fetch, row_factory):
                         pass
 
     n = []
-    gc_collect()
+    gc.collect()
     for i in range(3):
         await work()
-        gc_collect()
-        n.append(gc_count())
+        gc.collect()
+        n.append(gc.count())
 
     assert n[0] == n[1] == n[2], f"objects leaked: {n[1] - n[0]}, {n[2] - n[1]}"

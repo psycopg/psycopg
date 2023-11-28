@@ -6,8 +6,6 @@ import sys
 
 import pytest
 
-from ..utils import gc_collect
-
 try:
     import psycopg_pool as pool
 except ImportError:
@@ -63,7 +61,7 @@ def test_cant_create_open_outside_loop(dsn):
 
 
 @pytest.fixture
-def asyncio_run(recwarn):
+def asyncio_run(recwarn, gc_collect):
     """Fixture reuturning asyncio.run, but managing resources at exit.
 
     In certain runs, fd objects are leaked and the error will only be caught

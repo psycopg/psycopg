@@ -12,7 +12,7 @@ import psycopg
 from psycopg.pq import TransactionStatus
 from psycopg.rows import class_row, Row, TupleRow
 
-from ..utils import assert_type, Counter, gc_collect, set_autocommit
+from ..utils import assert_type, Counter, set_autocommit
 from ..acompat import Event, spawn, gather, sleep, skip_sync
 from .test_pool_common import delay_connection
 
@@ -358,7 +358,7 @@ def test_fail_rollback_close(dsn, caplog, monkeypatch):
     assert "BAD" in caplog.records[2].message
 
 
-def test_del_no_warning(dsn, recwarn):
+def test_del_no_warning(dsn, recwarn, gc_collect):
     p = pool.ConnectionPool(dsn, min_size=2, open=False)
     p.open()
     with p.connection() as conn:

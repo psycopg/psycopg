@@ -7,7 +7,6 @@ import psycopg
 from psycopg import rows, errors as e
 from psycopg.pq import Format
 
-from .utils import gc_collect
 
 pytestmark = pytest.mark.crdb_skip("server-side cursor")
 
@@ -256,7 +255,7 @@ def test_close_no_clobber(conn):
             cur.fetchall()
 
 
-def test_warn_close(conn, recwarn):
+def test_warn_close(conn, recwarn, gc_collect):
     recwarn.clear()
     cur = conn.cursor("foo")
     cur.execute("select generate_series(1, 10) as bar")
