@@ -53,7 +53,7 @@ def libpq():
         # Not available when testing the binary package
         libname = find_libpq_full_path()
         assert libname, "libpq libname not found"
-        return ctypes.pydll.LoadLibrary(libname)
+        return ctypes.cdll.LoadLibrary(libname)
     except Exception as e:
         if pq.__impl__ == "binary":
             pytest.skip(f"can't load libpq for testing: {e}")

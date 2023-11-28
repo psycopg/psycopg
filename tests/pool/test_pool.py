@@ -12,7 +12,7 @@ import psycopg
 from psycopg.pq import TransactionStatus
 from psycopg.rows import class_row, Row, TupleRow
 
-from ..utils import assert_type, Counter, set_autocommit
+from ..utils import assert_type, Counter, gc_collect, set_autocommit
 from ..acompat import Event, spawn, gather, sleep, skip_sync
 from .test_pool_common import delay_connection
 
@@ -367,6 +367,7 @@ def test_del_no_warning(dsn, recwarn):
     p.wait()
     ref = weakref.ref(p)
     del p
+    gc_collect()
     assert not ref()
     assert not recwarn, [str(w.message) for w in recwarn.list]
 

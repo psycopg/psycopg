@@ -1,5 +1,6 @@
 import string
 import hashlib
+import sys
 from io import BytesIO, StringIO
 from random import choice, randrange
 from itertools import cycle
@@ -690,6 +691,9 @@ async def test_connection_writer(aconn, format, buffer):
 
 
 @pytest.mark.slow
+@pytest.mark.skipif(
+    sys.implementation.name == "pypy", reason="depends on refcount semantics"
+)
 @pytest.mark.parametrize(
     "fmt, set_types",
     [(Format.TEXT, True), (Format.TEXT, False), (Format.BINARY, True)],
@@ -746,6 +750,9 @@ async def test_copy_to_leaks(aconn_cls, dsn, faker, fmt, set_types, method):
 
 
 @pytest.mark.slow
+@pytest.mark.skipif(
+    sys.implementation.name == "pypy", reason="depends on refcount semantics"
+)
 @pytest.mark.parametrize(
     "fmt, set_types",
     [(Format.TEXT, True), (Format.TEXT, False), (Format.BINARY, True)],

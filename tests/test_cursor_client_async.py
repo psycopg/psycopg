@@ -2,6 +2,7 @@ import datetime as dt
 
 import pytest
 import psycopg
+import sys
 from psycopg import rows
 
 from .utils import gc_collect, gc_count
@@ -77,6 +78,9 @@ async def test_query_params_executemany(aconn):
 
 
 @pytest.mark.slow
+@pytest.mark.skipif(
+    sys.implementation.name == "pypy", reason="depends on refcount semantics"
+)
 @pytest.mark.parametrize("fetch", ["one", "many", "all", "iter"])
 @pytest.mark.parametrize("row_factory", ["tuple_row", "dict_row", "namedtuple_row"])
 async def test_leak(aconn_cls, dsn, faker, fetch, row_factory):

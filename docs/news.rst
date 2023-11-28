@@ -34,6 +34,7 @@ Psycopg 3.1.14 (unreleased)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 - Fix :ref:`interaction with gevent <gevent>` (:ticket:`#527`).
+- Add support for PyPy (:ticket:`#686`).
 
 .. _gevent: https://www.gevent.org/
 

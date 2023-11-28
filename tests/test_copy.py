@@ -3,6 +3,7 @@
 # DO NOT CHANGE! Change the original file instead.
 import string
 import hashlib
+import sys
 from io import BytesIO, StringIO
 from random import choice, randrange
 from itertools import cycle
@@ -673,6 +674,9 @@ def test_connection_writer(conn, format, buffer):
 
 
 @pytest.mark.slow
+@pytest.mark.skipif(
+    sys.implementation.name == "pypy", reason="depends on refcount semantics"
+)
 @pytest.mark.parametrize(
     "fmt, set_types", [(Format.TEXT, True), (Format.TEXT, False), (Format.BINARY, True)]
 )
@@ -728,6 +732,9 @@ def test_copy_to_leaks(conn_cls, dsn, faker, fmt, set_types, method):
 
 
 @pytest.mark.slow
+@pytest.mark.skipif(
+    sys.implementation.name == "pypy", reason="depends on refcount semantics"
+)
 @pytest.mark.parametrize(
     "fmt, set_types", [(Format.TEXT, True), (Format.TEXT, False), (Format.BINARY, True)]
 )

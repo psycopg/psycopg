@@ -142,11 +142,13 @@ async def test_connection_warn_close(aconn_cls, dsn, recwarn):
 
     conn = await aconn_cls.connect(dsn)
     del conn
+    gc_collect()
     assert "IDLE" in str(recwarn.pop(ResourceWarning).message)
 
     conn = await aconn_cls.connect(dsn)
     await conn.execute("select 1")
     del conn
+    gc_collect()
     assert "INTRANS" in str(recwarn.pop(ResourceWarning).message)
 
     conn = await aconn_cls.connect(dsn)

@@ -6,7 +6,7 @@ import pytest
 
 import psycopg
 
-from ..utils import set_autocommit
+from ..utils import gc_collect, set_autocommit
 from ..acompat import AEvent, spawn, gather, asleep, is_alive, skip_async, skip_sync
 
 try:
@@ -369,6 +369,7 @@ async def test_del_stops_threads(pool_cls, dsn):
     assert p._sched_runner is not None
     ts = [p._sched_runner] + p._workers
     del p
+    gc_collect()
     await asleep(0.1)
     for t in ts:
         assert not is_alive(t), t

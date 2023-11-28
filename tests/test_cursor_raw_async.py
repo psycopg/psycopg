@@ -1,5 +1,6 @@
 import pytest
 import psycopg
+import sys
 from psycopg import pq, rows, errors as e
 from psycopg.adapt import PyFormat
 
@@ -68,6 +69,9 @@ async def test_query_params_executemany(aconn):
 
 
 @pytest.mark.slow
+@pytest.mark.skipif(
+    sys.implementation.name == "pypy", reason="depends on refcount semantics"
+)
 @pytest.mark.parametrize("fmt", PyFormat)
 @pytest.mark.parametrize("fmt_out", pq.Format)
 @pytest.mark.parametrize("fetch", ["one", "many", "all", "iter"])
