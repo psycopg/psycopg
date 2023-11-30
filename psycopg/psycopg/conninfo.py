@@ -294,11 +294,9 @@ def conninfo_attempts(params: ConnDict) -> Iterator[ConnDict]:
     if params.get("load_balance_hosts", "disable") == "random":
         attempts = list(_split_attempts(_inject_defaults(params)))
         shuffle(attempts)
-        for attempt in attempts:
-            yield attempt
+        yield from attempts
     else:
-        for attempt in _split_attempts(_inject_defaults(params)):
-            yield attempt
+        yield from _split_attempts(_inject_defaults(params))
 
 
 async def conninfo_attempts_async(params: ConnDict) -> AsyncIterator[ConnDict]:
