@@ -7,6 +7,8 @@ import psycopg
 
 pytest.importorskip("gevent")
 
+pytestmark = [pytest.mark.gevent]
+
 
 @pytest.mark.slow
 @pytest.mark.timing
