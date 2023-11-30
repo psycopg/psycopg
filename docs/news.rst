@@ -7,6 +7,17 @@
 ``psycopg`` release notes
 =========================
 
+Future releases
+---------------
+
+Psycopg 3.1.14 (unreleased)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Fix :ref:`interaction with gevent <gevent>` (:ticket:`#527`).
+
+.. _gevent: https://www.gevent.org/
+
+
 Current release
 ---------------
 
