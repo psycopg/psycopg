@@ -141,6 +141,31 @@ manually cancel connections.  This should no longer be necessary.
 .. __: https://docs.python.org/3/library/asyncio-task.html#task-cancellation
 
 
+.. index:: gevent
+
+.. _gevent:
+
+Gevent support
+--------------
+
+Psycopg 3 supports `gevent <https://www.gevent.org/>`__ out of the box. If the
+`socket` module is found patched by functions such as
+`gevent.monkey.patch_select()`__ or `patch_all()`__, psycopg will behave in a
+collaborative way.
+
+Unlike with `!psycopg2`, using the `!psycogreen` module is not required.
+
+.. __: http://www.gevent.org/api/gevent.monkey.html#gevent.monkey.patch_select
+.. __: http://www.gevent.org/api/gevent.monkey.html#gevent.monkey.patch_all
+
+.. warning::
+
+    gevent support was initially accidental, and was accidentally broken in
+    psycopg 3.1.4.
+
+    gevent is officially supported only starting from psycopg 3.1.14.
+
+
 .. index::
     pair: Asynchronous; Notifications
     pair: LISTEN; SQL command
