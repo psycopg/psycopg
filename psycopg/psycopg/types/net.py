@@ -52,14 +52,14 @@ class _LazyIpaddress:
 class InterfaceDumper(Dumper):
     oid = _oids.INET_OID
 
-    def dump(self, obj: Interface) -> bytes:
+    def dump(self, obj: Interface) -> Optional[Buffer]:
         return str(obj).encode()
 
 
 class NetworkDumper(Dumper):
     oid = _oids.CIDR_OID
 
-    def dump(self, obj: Network) -> bytes:
+    def dump(self, obj: Network) -> Optional[Buffer]:
         return str(obj).encode()
 
 
@@ -69,7 +69,7 @@ class _AIBinaryDumper(Dumper):
 
 
 class AddressBinaryDumper(_AIBinaryDumper):
-    def dump(self, obj: Address) -> bytes:
+    def dump(self, obj: Address) -> Optional[Buffer]:
         packed = obj.packed
         family = PGSQL_AF_INET if obj.version == 4 else PGSQL_AF_INET6
         head = bytes((family, obj.max_prefixlen, 0, len(packed)))
@@ -77,7 +77,7 @@ class AddressBinaryDumper(_AIBinaryDumper):
 
 
 class InterfaceBinaryDumper(_AIBinaryDumper):
-    def dump(self, obj: Interface) -> bytes:
+    def dump(self, obj: Interface) -> Optional[Buffer]:
         packed = obj.packed
         family = PGSQL_AF_INET if obj.version == 4 else PGSQL_AF_INET6
         head = bytes((family, obj.network.prefixlen, 0, len(packed)))
@@ -94,7 +94,7 @@ class InetBinaryDumper(_AIBinaryDumper, _LazyIpaddress):
         super().__init__(cls, context)
         self._ensure_module()
 
-    def dump(self, obj: Union[Address, Interface]) -> bytes:
+    def dump(self, obj: Union[Address, Interface]) -> Optional[Buffer]:
         packed = obj.packed
         family = PGSQL_AF_INET if obj.version == 4 else PGSQL_AF_INET6
         if isinstance(obj, (IPv4Interface, IPv6Interface)):
@@ -110,7 +110,7 @@ class NetworkBinaryDumper(Dumper):
     format = Format.BINARY
     oid = _oids.CIDR_OID
 
-    def dump(self, obj: Network) -> bytes:
+    def dump(self, obj: Network) -> Optional[Buffer]:
         packed = obj.network_address.packed
         family = PGSQL_AF_INET if obj.version == 4 else PGSQL_AF_INET6
         head = bytes((family, obj.prefixlen, 1, len(packed)))

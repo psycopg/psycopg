@@ -60,7 +60,7 @@ class WaitFunc(Protocol):
 
 # Adaptation types
 
-DumpFunc: TypeAlias = Callable[[Any], Buffer]
+DumpFunc: TypeAlias = Callable[[Any], Optional[Buffer]]
 LoadFunc: TypeAlias = Callable[[Buffer], Any]
 
 
@@ -109,7 +109,7 @@ class Dumper(Protocol):
     def __init__(self, cls: type, context: Optional[AdaptContext] = None):
         ...
 
-    def dump(self, obj: Any) -> Buffer:
+    def dump(self, obj: Any) -> Optional[Buffer]:
         """Convert the object `!obj` to PostgreSQL representation.
 
         :param obj: the object to convert.

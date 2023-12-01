@@ -21,14 +21,14 @@ UUID: Callable[..., "uuid.UUID"] = None  # type: ignore[assignment]
 class UUIDDumper(Dumper):
     oid = _oids.UUID_OID
 
-    def dump(self, obj: "uuid.UUID") -> bytes:
+    def dump(self, obj: "uuid.UUID") -> Optional[Buffer]:
         return obj.hex.encode()
 
 
 class UUIDBinaryDumper(UUIDDumper):
     format = Format.BINARY
 
-    def dump(self, obj: "uuid.UUID") -> bytes:
+    def dump(self, obj: "uuid.UUID") -> Optional[Buffer]:
         return obj.bytes
 
 

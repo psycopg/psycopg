@@ -260,7 +260,7 @@ class MultirangeDumper(BaseMultirangeDumper):
     The dumper can upgrade to one specific for a different range type.
     """
 
-    def dump(self, obj: Multirange[Any]) -> Buffer:
+    def dump(self, obj: Multirange[Any]) -> Optional[Buffer]:
         if not obj:
             return b"{}"
 
@@ -281,7 +281,7 @@ class MultirangeDumper(BaseMultirangeDumper):
 class MultirangeBinaryDumper(BaseMultirangeDumper):
     format = Format.BINARY
 
-    def dump(self, obj: Multirange[Any]) -> Buffer:
+    def dump(self, obj: Multirange[Any]) -> Optional[Buffer]:
         item = self._get_item(obj)
         if item is not None:
             dump = self._tx.get_dumper(item, self._adapt_format).dump

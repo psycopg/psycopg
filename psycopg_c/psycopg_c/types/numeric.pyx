@@ -55,7 +55,7 @@ cdef class _IntDumper(CDumper):
     cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
         return dump_int_to_text(obj, rv, offset)
 
-    def quote(self, obj) -> bytearray:
+    def quote(self, obj) -> Optional[Buffer]:
         cdef Py_ssize_t length
 
         rv = PyByteArray_FromStringAndSize("", 0)
@@ -303,7 +303,7 @@ cdef class _FloatDumper(CDumper):
         PyMem_Free(out)
         return length
 
-    def quote(self, obj) -> bytes:
+    def quote(self, obj) -> Optional[Buffer]:
         value = bytes(self.dump(obj))
         cdef PyObject *ptr = PyDict_GetItem(_special_float, value)
         if ptr != NULL:
@@ -405,7 +405,7 @@ cdef class DecimalDumper(CDumper):
     cdef Py_ssize_t cdump(self, obj, bytearray rv, Py_ssize_t offset) except -1:
         return dump_decimal_to_text(obj, rv, offset)
 
-    def quote(self, obj) -> bytes:
+    def quote(self, obj) -> Optional[Buffer]:
         value = bytes(self.dump(obj))
         cdef PyObject *ptr = PyDict_GetItem(_special_decimal, value)
         if ptr != NULL:

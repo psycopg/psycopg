@@ -40,7 +40,7 @@ Hstore: TypeAlias = Dict[str, Optional[str]]
 
 
 class BaseHstoreDumper(RecursiveDumper):
-    def dump(self, obj: Hstore) -> Buffer:
+    def dump(self, obj: Hstore) -> Optional[Buffer]:
         if not obj:
             return b""
 

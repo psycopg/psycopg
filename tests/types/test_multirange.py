@@ -14,6 +14,7 @@ from psycopg.types.multirange import register_multirange
 
 from ..utils import eur
 from .test_range import create_test_range
+from ..test_adapt import StrNoneDumper, StrNoneBinaryDumper
 
 pytestmark = [
     pytest.mark.pg(">= 14"),
@@ -405,6 +406,18 @@ def test_dump_custom_empty(conn, testmr):
     register_multirange(info, conn)
 
     r = Multirange()  # type: ignore[var-annotated]
+    cur = conn.execute("select '{}'::testmultirange = %s", (r,))
+    assert cur.fetchone()[0] is True
+
+
+@pytest.mark.parametrize("fmt_in", PyFormat)
+def test_dump_custom_none(conn, fmt_in):
+    info = MultirangeInfo.fetch(conn, "testmultirange")
+    register_multirange(info, conn)
+    conn.adapters.register_dumper(str, StrNoneDumper)
+    conn.adapters.register_dumper(str, StrNoneBinaryDumper)
+
+    r = Multirange[str]()
     cur = conn.execute("select '{}'::testmultirange = %s", (r,))
     assert cur.fetchone()[0] is True
 

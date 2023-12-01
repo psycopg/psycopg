@@ -98,7 +98,7 @@ class _BaseEnumDumper(Dumper, Generic[E]):
     enum: Type[E]
     _dump_map: EnumDumpMap[E]
 
-    def dump(self, value: E) -> Buffer:
+    def dump(self, value: E) -> Optional[Buffer]:
         return self._dump_map[value]
 
 
@@ -111,7 +111,7 @@ class EnumDumper(Dumper):
         super().__init__(cls, context)
         self._encoding = conn_encoding(self.connection)
 
-    def dump(self, value: E) -> Buffer:
+    def dump(self, value: E) -> Optional[Buffer]:
         return value.name.encode(self._encoding)
 
 

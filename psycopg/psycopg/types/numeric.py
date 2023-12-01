@@ -38,16 +38,18 @@ if TYPE_CHECKING:
 
 
 class _IntDumper(Dumper):
-    def dump(self, obj: Any) -> Buffer:
+    def dump(self, obj: Any) -> Optional[Buffer]:
         return str(obj).encode()
 
     def quote(self, obj: Any) -> Buffer:
         value = self.dump(obj)
+        if value is None:
+            return b"NULL"
         return value if obj >= 0 else b" " + value
 
 
 class _IntOrSubclassDumper(_IntDumper):
-    def dump(self, obj: Any) -> Buffer:
+    def dump(self, obj: Any) -> Optional[Buffer]:
         t = type(obj)
         # Convert to int in order to dump IntEnum or numpy.integer correctly
         if t is not int:
@@ -59,12 +61,16 @@ class _IntOrSubclassDumper(_IntDumper):
 class _SpecialValuesDumper(Dumper):
     _special: Dict[bytes, bytes] = {}
 
-    def dump(self, obj: Any) -> bytes:
+    def dump(self, obj: Any) -> Optional[Buffer]:
         return str(obj).encode()
 
-    def quote(self, obj: Any) -> bytes:
+    def quote(self, obj: Any) -> Buffer:
         value = self.dump(obj)
 
+        if value is None:
+            return b"NULL"
+        if not isinstance(value, bytes):
+            value = bytes(value)
         if value in self._special:
             return self._special[value]
 
@@ -89,21 +95,21 @@ class FloatBinaryDumper(Dumper):
     format = Format.BINARY
     oid = _oids.FLOAT8_OID
 
-    def dump(self, obj: float) -> bytes:
+    def dump(self, obj: float) -> Optional[Buffer]:
         return pack_float8(obj)
 
 
 class Float4BinaryDumper(FloatBinaryDumper):
     oid = _oids.FLOAT4_OID
 
-    def dump(self, obj: float) -> bytes:
+    def dump(self, obj: float) -> Optional[Buffer]:
         return pack_float4(obj)
 
 
 class DecimalDumper(_SpecialValuesDumper):
     oid = _oids.NUMERIC_OID
 
-    def dump(self, obj: Decimal) -> bytes:
+    def dump(self, obj: Decimal) -> Optional[Buffer]:
         return dump_decimal_to_text(obj)
 
     _special = {
@@ -134,7 +140,7 @@ class OidDumper(_IntOrSubclassDumper):
 
 
 class IntDumper(Dumper):
-    def dump(self, obj: Any) -> bytes:
+    def dump(self, obj: Any) -> Optional[Buffer]:
         raise TypeError(
             f"{type(self).__name__} is a dispatcher to other dumpers:"
             " dump() is not supposed to be called"
@@ -164,21 +170,21 @@ class IntDumper(Dumper):
 class Int2BinaryDumper(Int2Dumper):
     format = Format.BINARY
 
-    def dump(self, obj: int) -> bytes:
+    def dump(self, obj: int) -> Optional[Buffer]:
         return pack_int2(obj)
 
 
 class Int4BinaryDumper(Int4Dumper):
     format = Format.BINARY
 
-    def dump(self, obj: int) -> bytes:
+    def dump(self, obj: int) -> Optional[Buffer]:
         return pack_int4(obj)
 
 
 class Int8BinaryDumper(Int8Dumper):
     format = Format.BINARY
 
-    def dump(self, obj: int) -> bytes:
+    def dump(self, obj: int) -> Optional[Buffer]:
         return pack_int8(obj)
 
 
@@ -190,14 +196,14 @@ BIT_PER_PGDIGIT = log(2) / log(10_000)
 class IntNumericBinaryDumper(IntNumericDumper):
     format = Format.BINARY
 
-    def dump(self, obj: int) -> Buffer:
+    def dump(self, obj: int) -> Optional[Buffer]:
         return dump_int_to_numeric_binary(obj)
 
 
 class OidBinaryDumper(OidDumper):
     format = Format.BINARY
 
-    def dump(self, obj: int) -> bytes:
+    def dump(self, obj: int) -> Optional[Buffer]:
         return pack_uint4(obj)
 
 
@@ -350,7 +356,7 @@ class DecimalBinaryDumper(Dumper):
     format = Format.BINARY
     oid = _oids.NUMERIC_OID
 
-    def dump(self, obj: Decimal) -> Buffer:
+    def dump(self, obj: Decimal) -> Optional[Buffer]:
         return dump_decimal_to_numeric_binary(obj)
 
 
@@ -379,12 +385,12 @@ class _MixedNumericDumper(Dumper, ABC):
                 _MixedNumericDumper.int_classes = int
 
     @abstractmethod
-    def dump(self, obj: Union[Decimal, int, "numpy.integer[Any]"]) -> Buffer:
+    def dump(self, obj: Union[Decimal, int, "numpy.integer[Any]"]) -> Optional[Buffer]:
         ...
 
 
 class NumericDumper(_MixedNumericDumper):
-    def dump(self, obj: Union[Decimal, int, "numpy.integer[Any]"]) -> Buffer:
+    def dump(self, obj: Union[Decimal, int, "numpy.integer[Any]"]) -> Optional[Buffer]:
         if isinstance(obj, self.int_classes):
             return str(obj).encode()
         elif isinstance(obj, Decimal):
@@ -398,7 +404,7 @@ class NumericDumper(_MixedNumericDumper):
 class NumericBinaryDumper(_MixedNumericDumper):
     format = Format.BINARY
 
-    def dump(self, obj: Union[Decimal, int, "numpy.integer[Any]"]) -> Buffer:
+    def dump(self, obj: Union[Decimal, int, "numpy.integer[Any]"]) -> Optional[Buffer]:
         if type(obj) is int:
             return dump_int_to_numeric_binary(obj)
         elif isinstance(obj, Decimal):

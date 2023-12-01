@@ -4,7 +4,9 @@ Adapters for None.
 
 # Copyright (C) 2020 The Psycopg Team
 
-from ..abc import AdaptContext, NoneType
+from typing import Optional
+
+from ..abc import AdaptContext, NoneType, Buffer
 from ..adapt import Dumper
 
 
@@ -14,10 +16,10 @@ class NoneDumper(Dumper):
     quote(), so it can be used in sql composition.
     """
 
-    def dump(self, obj: None) -> bytes:
+    def dump(self, obj: None) -> Optional[Buffer]:
         raise NotImplementedError("NULL is passed to Postgres in other ways")
 
-    def quote(self, obj: None) -> bytes:
+    def quote(self, obj: None) -> Buffer:
         return b"NULL"
 
 

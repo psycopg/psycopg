@@ -43,12 +43,12 @@ class GeometryLoader(Loader):
 class BaseGeometryBinaryDumper(Dumper):
     format = Format.BINARY
 
-    def dump(self, obj: "BaseGeometry") -> bytes:
+    def dump(self, obj: "BaseGeometry") -> Optional[Buffer]:
         return dumps(obj)  # type: ignore
 
 
 class BaseGeometryDumper(Dumper):
-    def dump(self, obj: "BaseGeometry") -> bytes:
+    def dump(self, obj: "BaseGeometry") -> Optional[Buffer]:
         return dumps(obj, hex=True).encode()  # type: ignore
 
 
